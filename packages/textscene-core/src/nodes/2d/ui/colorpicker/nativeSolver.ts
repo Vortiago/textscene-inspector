@@ -20,6 +20,7 @@ import {
   type ButtonLabelBox,
 } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { SizeFlags } from '../../../../godot/scene/control';
@@ -36,7 +37,7 @@ import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `MODE_BUTTON_COUNT` (`color_picker.h:184`). OKHSL has no mode button: only the dropdown reaches it. */
-const MODE_BUTTON_COUNT = 3;
+export const MODE_BUTTON_COUNT = 3;
 
 /** `ColorMode::get_name()` per mode (`color_mode.h:72,94,118,148`). The first 3 label `mode_btns`. */
 export const COLOR_MODE_NAMES = ['RGB', 'HSV', 'Linear', 'OKHSL'] as const;
@@ -355,7 +356,7 @@ export function modeButtonLabel(
 /** The "#" label of `text_type` (`color_picker.cpp:1330`): a centred Button with the `button_normal` margins. */
 export function textTypeLabel(
   box: Rect2,
-  theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
+  theme: Pick<NativeTheme, 'separation' | 'widgets'>,
   text: ButtonText
 ): ButtonLabelBox {
   return centredButtonLabel(box, theme, theme.widgets.button.normal.contentMargin, text);
@@ -462,13 +463,15 @@ export function colorPickerRows(
  */
 function contentMinWidth(
   theme: NativeTheme,
+  valueFieldTheme: Pick<NativeTheme, 'widgets'>,
   props: ColorPickerProperties,
   measure: TextWidthMeasurer | null,
   emWidthPx: number
 ): number {
   const scale = colorPickerScale(theme);
   const labelWidth = Math.round(COLOR_PICKER_LABEL_WIDTH * scale);
-  const sliderRowWidth = labelWidth + 2 * theme.separation + colorPickerValueColumnWidth(theme, emWidthPx);
+  const sliderRowWidth =
+    labelWidth + 2 * theme.separation + colorPickerValueColumnWidth(valueFieldTheme, emWidthPx);
 
   const hexLabelWidth = Math.round(COLOR_PICKER_HEX_LABEL_WIDTH * scale);
   const textTypeWidth = Math.round(COLOR_PICKER_TEXT_TYPE_WIDTH * scale);
@@ -498,7 +501,7 @@ export function colorPickerEmWidthPx(widthOf: (text: string) => number): number 
  */
 export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ColorPickerProperties;
-  const { theme } = pickerChildTheme(n, ctx.theme);
+  const { theme, valueFieldTheme } = pickerChildTheme(n, ctx.theme);
   // The painter shapes in this font (`Component.tsx`), so the minimum measures in it too.
   const fontMetrics = resolveNodeFontMetrics(n, COLOR_PICKER_THEME_FONT_KEY);
   const measure: TextWidthMeasurer | null = ctx.measureText
@@ -508,7 +511,7 @@ export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const rows = colorPickerRows(0, theme, props, measure);
   const width = Math.max(
     shapeRowMinWidth(theme, props.pickerShape),
-    contentMinWidth(theme, props, measure, emWidthPx)
+    contentMinWidth(theme, valueFieldTheme, props, measure, emWidthPx)
   );
 
   return {
@@ -664,32 +667,34 @@ interface ModeRowButtons {
 
 /** A `mode_btns` button's minimum width: its text plus the `mode_button_normal` margins (`button.cpp:525`). */
 function modeButtonMinimumWidth(theme: Pick<NativeTheme, 'scale'>, textWidth: number): number {
-  return textWidth + contentMarginSize(colorPickerModeButtonStyleBox(theme, false)).x;
+  return shapedTextSizeWidthPx(textWidth) + contentMarginSize(colorPickerModeButtonStyleBox(theme, false)).x;
 }
 
 /**
  * The split of `mode_hbc` (`color_picker.cpp:2129-2154`): 3 `SIZE_EXPAND_FILL`
- * buttons of equal width, then the fixed-width `btn_mode` dropdown. An unmeasured label has no minimum.
+ * buttons of equal width, then the fixed-width `btn_mode` dropdown. `labelWidths` are the button texts.
  */
 export function modeRowButtonRects(
   mode: Rect2,
   theme: NativeTheme,
   rtl = false,
-  labelWidths: readonly number[] = []
+  labelWidths: readonly number[]
 ): ModeRowButtons {
   const scale = colorPickerScale(theme);
   const dropdownWidth = Math.round(COLOR_PICKER_BUTTON_WIDTH * scale);
   // `mode_hbc` is an HBoxContainer: three `SIZE_EXPAND_FILL` buttons, then `btn_mode`, whole pixels each (`box_container.cpp:100-130`).
   const expandFill = (index: number) => ({
-    minSize: {
-      x: labelWidths[index] === undefined ? 0 : modeButtonMinimumWidth(theme, labelWidths[index]),
-      y: 0,
-    },
+    minSize: { x: modeButtonMinimumWidth(theme, labelWidths[index]!), y: 0 },
     hSizeFlags: SizeFlags.FILL | SizeFlags.EXPAND,
     vSizeFlags: SizeFlags.FILL,
     stretchRatio: 1,
   });
-  const fixed = { ...expandFill(0), minSize: { x: dropdownWidth, y: 0 }, hSizeFlags: SizeFlags.FILL };
+  const fixed = {
+    minSize: { x: dropdownWidth, y: 0 },
+    hSizeFlags: SizeFlags.FILL,
+    vSizeFlags: SizeFlags.FILL,
+    stretchRatio: 1,
+  };
   const rects = resortBoxContainer(
     false,
     { width: mode.w, height: mode.h },

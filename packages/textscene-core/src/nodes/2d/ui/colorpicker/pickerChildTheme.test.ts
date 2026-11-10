@@ -56,6 +56,19 @@ describe('pickerChildTheme', () => {
     expect(child.lineEditColor).toEqual(BLUE);
   });
 
+  it('gives the slider value fields the SpinBoxInnerLineEdit variation, and the hex field plain LineEdit', () => {
+    const base = themeWithColors({
+      LineEdit: { font_color: RED },
+      SpinBoxInnerLineEdit: { font_color: BLUE },
+    });
+    const child = pickerChildTheme(
+      pickerUnder({ ...base, typeVariations: { SpinBoxInnerLineEdit: 'LineEdit' } }),
+      THEME
+    );
+    expect(child.valueFieldColor).toEqual(BLUE);
+    expect(child.lineEditColor).toEqual(RED);
+  });
+
   it('does not read the colour of another class', () => {
     const child = pickerChildTheme(pickerUnder(themeWithColors({ Button: { font_color: RED } })), THEME);
     expect(child.labelColor).toEqual(WHITE);

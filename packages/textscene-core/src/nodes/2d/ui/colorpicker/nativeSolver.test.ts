@@ -261,9 +261,11 @@ describe('hexRowColumns', () => {
   });
 });
 
+const NO_LABEL_WIDTHS = [0, 0, 0];
+
 describe('modeRowButtonRects', () => {
   it('splits 3 equal-width buttons + a fixed-width dropdown: color_picker.cpp:2129-2154', () => {
-    const cols = modeRowButtonRects({ x: 0, y: 0, w: 400, h: 20 }, THEME);
+    const cols = modeRowButtonRects({ x: 0, y: 0, w: 400, h: 20 }, THEME, false, NO_LABEL_WIDTHS);
     expect(cols.buttons).toEqual([
       { x: 0, y: 0, w: 120, h: 20 },
       { x: 124, y: 0, w: 120, h: 20 },
@@ -282,9 +284,17 @@ describe('modeRowButtonRects with a label wider than its share', () => {
   });
 });
 
+describe('modeRowButtonRects with a fractional label width', () => {
+  it('reserves the shaped, whole-pixel width of the text (text_server_adv.cpp:7524-7537)', () => {
+    const fractional = modeRowButtonRects({ x: 0, y: 0, w: 300, h: 20 }, THEME, false, [120.2, 10, 10]);
+    const whole = modeRowButtonRects({ x: 0, y: 0, w: 300, h: 20 }, THEME, false, [121, 10, 10]);
+    expect(fractional.buttons).toEqual(whole.buttons);
+  });
+});
+
 describe('modeRowButtonRects at a fractional share', () => {
   it('gives every button whole pixels and ends flush with the row: box_container.cpp:100-130', () => {
-    const cols = modeRowButtonRects({ x: 0, y: 0, w: 401, h: 20 }, THEME);
+    const cols = modeRowButtonRects({ x: 0, y: 0, w: 401, h: 20 }, THEME, false, NO_LABEL_WIDTHS);
     const rects = [...cols.buttons, cols.dropdown];
     for (const r of rects) {
       expect(Number.isInteger(r.x)).toBe(true);
@@ -467,7 +477,7 @@ describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-22
   it('modeRowButtonRects puts btn_mode first and RGB last', () => {
     // Reverse walk of [RGB, HSV, Linear, btn_mode]: dropdown(28) at 0, sep(4),
     // Linear(120) at 32, sep, HSV at 156, sep, RGB at 280, ending at 400.
-    const cols = modeRowButtonRects({ x: 0, y: 0, w: 400, h: 20 }, THEME, true);
+    const cols = modeRowButtonRects({ x: 0, y: 0, w: 400, h: 20 }, THEME, true, NO_LABEL_WIDTHS);
     expect(cols.dropdown).toEqual({ x: 0, y: 0, w: 28, h: 20 });
     expect(cols.buttons).toEqual([
       { x: 280, y: 0, w: 120, h: 20 },

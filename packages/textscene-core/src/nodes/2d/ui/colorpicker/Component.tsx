@@ -92,6 +92,7 @@ import {
   hueIndicatorY,
   invertRgb,
   modeRowButtonRects,
+  MODE_BUTTON_COUNT,
   sampleRowColumns,
   sliderGridRowRects,
   svAndHueRects,
@@ -276,6 +277,18 @@ function CenteredIcon({ rect, size, texture, tint, theme, rtl, renderOrder }: Ce
   );
 }
 
+/** A Button icon's colour and opacity: the Theme's icon modulate folded onto the item's tint (`button.cpp:321-329`). */
+function iconModulate(
+  toItemLinear: ReturnType<typeof useItemLinearColorOf>,
+  tint: NativeControlComponentProps['tint'],
+  modulate: Rgba
+) {
+  return {
+    color: toItemLinear(multiplyModulate(tint.own, { ...modulate, a: 1 })),
+    opacity: tint.opacity * modulate.a,
+  };
+}
+
 interface TextTypeScriptIconProps {
   rect: Rect2;
   solveNode: NativeControlComponentProps['solveNode'];
@@ -309,13 +322,13 @@ function TextTypeScriptIcon({
     solveNode.rtl
   );
   if (!iconRect) return null;
-  const disabledColor = buttonIconColor(buttonColors, 'disabled');
+  const { color, opacity } = iconModulate(toItemLinear, tint, buttonIconColor(buttonColors, 'disabled'));
   return (
     <PositionedIcon
       rect={{ ...iconRect, x: rect.x + iconRect.x, y: rect.y + iconRect.y }}
       texture={texture}
-      color={toItemLinear(multiplyModulate(tint.own, { ...disabledColor, a: 1 }))}
-      opacity={tint.opacity * disabledColor.a}
+      color={color}
+      opacity={opacity}
       renderOrder={renderOrder}
     />
   );
@@ -407,18 +420,18 @@ export function ColorPicker({
     [tint.own, child]
   );
   // The picker's Buttons modulate their icons by `icon_normal_color` of the Theme chain (`button.cpp:321-329`).
-  const iconTint = useMemo(() => {
-    const iconNormal = buttonIconColor(child.buttonColors, 'normal');
-    return {
-      ...tint,
-      color: toItemLinear(multiplyModulate(tint.own, { ...iconNormal, a: 1 })),
-      opacity: tint.opacity * iconNormal.a,
-    };
-  }, [tint, child, toItemLinear]);
+  const iconTint = useMemo(
+    () => ({ ...tint, ...iconModulate(toItemLinear, tint, buttonIconColor(child.buttonColors, 'normal')) }),
+    [tint, child, toItemLinear]
+  );
   const lineEditFontColor = useMemo(() => multiplyModulate(tint.own, child.lineEditColor), [tint.own, child]);
   const spinArrowGrey = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
-  // Every value and hex `LineEdit` uses the same box, so one inset covers both.
+  const valueFieldFontColor = useMemo(
+    () => multiplyModulate(tint.own, child.valueFieldColor),
+    [tint.own, child]
+  );
   const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
+  const valueFieldInsetX = child.valueFieldTheme.widgets.lineEdit.normal.contentMargin.left;
 
   const sampleFill = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
   const sampleColor = useItemLinearColor(sampleFill);
@@ -486,8 +499,14 @@ export function ColorPicker({
   const hueLineLinear = useItemLinearColor(hueLineColor);
   const hueY = shapeRects ? hueIndicatorY(shapeRects.hueSlider.h, hsv.h) : 0;
 
-  const modeLabelWidths = COLOR_MODE_NAMES.slice(0, 3).map((name) => measure(name).x);
-  const modeCols = rows.mode ? modeRowButtonRects(rows.mode, theme, solveNode.rtl, modeLabelWidths) : null;
+  const modeCols = rows.mode
+    ? modeRowButtonRects(
+        rows.mode,
+        theme,
+        solveNode.rtl,
+        COLOR_MODE_NAMES.slice(0, MODE_BUTTON_COUNT).map((name) => measure(name).x)
+      )
+    : null;
 
   const colorMode = props.colorMode ?? MODE_RGB;
   const editAlpha = props.editAlpha ?? true;
@@ -503,7 +522,7 @@ export function ColorPicker({
   );
   // The unceiled advance: `Font::get_char_size` does not ceil it, where `measure` does.
   const emWidthPx = colorPickerEmWidthPx((text) => shape(text).widthPx);
-  const sliderValueWidth = colorPickerValueColumnWidth(theme, emWidthPx);
+  const sliderValueWidth = colorPickerValueColumnWidth(child.valueFieldTheme, emWidthPx);
   const sliderCols = useMemo(
     () =>
       rows.sliders
@@ -949,7 +968,7 @@ export function ColorPicker({
                   <>
                     <CanvasItemGroup position={[fieldRect.x, -fieldRect.y, 0]}>
                       <StyleBoxQuad
-                        styleBox={theme.widgets.lineEdit.normal}
+                        styleBox={child.valueFieldTheme.widgets.lineEdit.normal}
                         rect={{ x: 0, y: 0, w: fieldRect.w, h: fieldRect.h }}
                         color={tint.own}
                         renderOrder={renderOrder}
@@ -959,11 +978,11 @@ export function ColorPicker({
                       rect={fieldRect}
                       layout={shape(row.valueText)}
                       fontSizePx={fontSizePx}
-                      tint={lineEditFontColor}
+                      tint={valueFieldFontColor}
                       clippingPlanes={clippingPlanes}
                       renderOrder={renderOrder}
                       alignRight
-                      inset={lineEditInsetX}
+                      inset={valueFieldInsetX}
                       rtl={solveNode.rtl}
                     />
                     <CanvasItemGroup position={[upIconPos.x, -upIconPos.y, 0]}>
