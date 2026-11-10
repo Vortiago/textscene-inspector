@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import { CanvasModulateContext } from '../canvasModulate.js';
+import { canvasNumbersOf, CanvasColorSpaceProvider, type CanvasColorSpace } from '../canvasColorSpace.js';
 import { ShadowCasterStage } from './ShadowCasterStage.js';
 import { CanvasLightSequenceProvider } from './useLightSequence.js';
 import {
@@ -49,6 +50,8 @@ interface CanvasLightPassProps {
    * of this canvas, which the pass publishes to the items, so the seed and the tint they divide out agree.
    */
   canvasModulate: Rgba;
+  /** The space the canvas draws in. The pass provides it to everything inside, so the seed and the items agree. */
+  space: CanvasColorSpace;
   children: ReactNode;
 }
 
@@ -92,9 +95,10 @@ function apartModes(
  *
  * @canonical The 2D light pass of a canvas
  */
-export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightPassProps) {
+export function CanvasLightPass({ host, canvasModulate, space, children }: CanvasLightPassProps) {
   const gl = useThree((s) => s.gl);
   const { scene, camera, readBufferSize, readClip } = host;
+  const seedModulate = useMemo(() => canvasNumbersOf(space, canvasModulate), [space, canvasModulate]);
 
   const [lights, registerLight] = useLightRegistry();
   const [placements, registerItem] = usePlacementRegistry();
@@ -225,7 +229,7 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
       lists: accumulationLists,
       passMeshes,
       seedMaterial,
-      canvasModulate,
+      canvasModulate: seedModulate,
       resolution,
       readBufferSize,
       windows,
@@ -246,7 +250,7 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
     apartPlace,
     accumulationLists,
     seedMaterial,
-    canvasModulate,
+    seedModulate,
     resolution,
   ]);
   useEffect(() => {
@@ -299,15 +303,17 @@ export function CanvasLightPass({ host, canvasModulate, children }: CanvasLightP
   ]);
 
   return (
-    <CanvasLighting2DContext.Provider value={value}>
-      {plans.length > 0 && <LightAccumulatorSeed material={seedMaterial} />}
-      {/* Occluders matter only to lights, so their registry lives with this pass. The light
-          list's order is a canvas-wide fact too, derived once here, not by each light. */}
-      <CanvasLightSequenceProvider viewportPath={host.canvasPath}>
-        <CanvasModulateContext.Provider value={canvasModulate}>
-          <ShadowCasterStage>{children}</ShadowCasterStage>
-        </CanvasModulateContext.Provider>
-      </CanvasLightSequenceProvider>
-    </CanvasLighting2DContext.Provider>
+    <CanvasColorSpaceProvider value={space}>
+      <CanvasLighting2DContext.Provider value={value}>
+        {plans.length > 0 && <LightAccumulatorSeed material={seedMaterial} />}
+        {/* Occluders matter only to lights, so their registry lives with this pass. The light
+            list's order is a canvas-wide fact too, derived once here, not by each light. */}
+        <CanvasLightSequenceProvider viewportPath={host.canvasPath}>
+          <CanvasModulateContext.Provider value={canvasModulate}>
+            <ShadowCasterStage>{children}</ShadowCasterStage>
+          </CanvasModulateContext.Provider>
+        </CanvasLightSequenceProvider>
+      </CanvasLighting2DContext.Provider>
+    </CanvasColorSpaceProvider>
   );
 }

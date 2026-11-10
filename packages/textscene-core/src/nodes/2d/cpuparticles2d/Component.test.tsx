@@ -19,7 +19,6 @@ import { CPUParticles2D } from './Component';
 import {
   canvasColorSpaceOf,
   CanvasColorSpaceProvider,
-  SRGB_CANVAS,
   type CanvasColorSpace,
 } from '../../../r3f/canvasColorSpace';
 import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
@@ -87,7 +86,7 @@ async function render(
           internalResources={options.internalResources ?? []}
           externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
         >
-          <CanvasColorSpaceProvider value={options.space ?? SRGB_CANVAS}>
+          <CanvasColorSpaceProvider value={options.space ?? canvasColorSpaceOf(false)}>
             <CPUParticles2D node={rootNode} />
           </CanvasColorSpaceProvider>
         </SceneResourcesProvider>

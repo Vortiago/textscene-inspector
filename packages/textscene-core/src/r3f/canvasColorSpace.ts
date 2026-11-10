@@ -9,6 +9,7 @@
 import { createContext, useContext } from 'react';
 import * as THREE from 'three';
 import { CANVAS_LINEAR_DEFINES, CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
+import { godotColorToLinear } from './godotColor';
 import type { ViewportTextureView } from '../resources/textures/viewporttexture/useViewportTextureSlot';
 
 export interface CanvasColorSpace {
@@ -30,7 +31,7 @@ export interface CanvasColorSpace {
 }
 
 /** The default canvas: sRGB numbers in an 8-bit target (`rendering_server.cpp:3771`). */
-export const SRGB_CANVAS: CanvasColorSpace = {
+const SRGB_CANVAS: CanvasColorSpace = {
   isLinear: false,
   defines: CANVAS_SRGB_DEFINES,
   textureColorSpace: THREE.NoColorSpace,
@@ -51,6 +52,19 @@ export function canvasColorSpaceOf(usesHdr: boolean): CanvasColorSpace {
 }
 
 /**
+ * A Godot colour in the numbers `space` draws with: the authored sRGB, or linear in a linear canvas
+ * (`renderer_canvas_render_rd.cpp:692-693`).
+ *
+ * @canonical A Godot colour in the numbers of a canvas colour space
+ */
+export function canvasNumbersOf(
+  space: CanvasColorSpace,
+  colour: { r: number; g: number; b: number }
+): { r: number; g: number; b: number } {
+  return space.isLinear ? godotColorToLinear(colour) : colour;
+}
+
+/**
  * The `defines` of a material whose vertex colours carry an instance colour. An sRGB canvas
  * multiplies them as sRGB numbers (`canvas.glsl:189`). A linear canvas multiplies the instance colour
  * raw (`canvas.glsl:255`), so three's linear multiply holds there.
@@ -59,7 +73,7 @@ export function instanceColorDefines(space: CanvasColorSpace): Readonly<Record<s
   return space.isLinear ? undefined : CANVAS_SRGB_DEFINES;
 }
 
-/** Written only by a SubViewport pass that draws a linear canvas. The root canvas is sRGB. */
+/** Written only by a canvas's lighting scope (`CanvasLightPass`, `World2DLightingBoundary`). Outside one, sRGB. */
 const CanvasColorSpaceContext = createContext<CanvasColorSpace>(SRGB_CANVAS);
 CanvasColorSpaceContext.displayName = 'CanvasColorSpaceContext';
 

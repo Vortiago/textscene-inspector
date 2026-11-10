@@ -18,7 +18,7 @@ import { copiesFilledFrom } from '../r3f/liveTargets.testkit';
 import { publishLiveTargets } from '../r3f/liveTargets';
 import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfiguredViewportTexture';
-import { SRGB_CANVAS } from '../r3f/canvasColorSpace';
+import { canvasColorSpaceOf } from '../r3f/canvasColorSpace';
 
 const RESOURCES: TscnInternalResource[] = [
   { id: 'ViewportTexture_1', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
@@ -55,8 +55,8 @@ const RESOURCES: TscnInternalResource[] = [
 
 const VIEWPORT_REF = 'SubResource("ViewportTexture_1")';
 
-const plain = createCanvasTarget(32, 32, 'plain view', SRGB_CANVAS).texture;
-const decoding = createCanvasTarget(32, 32, 'decoding view', SRGB_CANVAS).texture;
+const plain = createCanvasTarget(32, 32, 'plain view', canvasColorSpaceOf(false)).texture;
+const decoding = createCanvasTarget(32, 32, 'decoding view', canvasColorSpaceOf(false)).texture;
 
 const ENTRY = viewportEntry(
   plain,

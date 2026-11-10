@@ -19,7 +19,7 @@ import {
   type AmbientTextureSampler,
 } from './canvasItemTextureSampler';
 import { applyViewSampler } from '../resources/textures/textureView';
-import { canvasColorSpaceOf, SRGB_CANVAS } from './canvasColorSpace';
+import { canvasColorSpaceOf } from './canvasColorSpace';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../godot/scene/canvasItem';
 
 const LINEAR_CANVAS = canvasColorSpaceOf(true);
@@ -150,7 +150,10 @@ function singleLevelTexture(): THREE.Texture {
 
 describe('canvasItemViewSampler applied to a texture', () => {
   const sampleWith = (texture: THREE.Texture, filter: number, repeat = REPEAT_DISABLED) =>
-    applyViewSampler(texture, canvasItemViewSampler({ filter, repeat }, SRGB_CANVAS.textureColorSpace));
+    applyViewSampler(
+      texture,
+      canvasItemViewSampler({ filter, repeat }, canvasColorSpaceOf(false).textureColorSpace)
+    );
 
   it('samples Nearest and Linear without mipmaps, even from a mipmapped texture (material_storage.cpp:2467-2476)', () => {
     const nearest = sampleWith(mipmappedTexture(), NEAREST);
@@ -226,15 +229,17 @@ describe('canvasItemViewSampler', () => {
 
   it('samples the undecoded bytes the 2D canvas filters', () => {
     expect(
-      canvasItemViewSampler({ filter: LINEAR, repeat: REPEAT_DISABLED }, SRGB_CANVAS.textureColorSpace)
-        .colorSpace
+      canvasItemViewSampler(
+        { filter: LINEAR, repeat: REPEAT_DISABLED },
+        canvasColorSpaceOf(false).textureColorSpace
+      ).colorSpace
     ).toBe(THREE.NoColorSpace);
   });
 
   it("writes the item's filter and repeat", () => {
     const { filter, wrap } = canvasItemViewSampler(
       { filter: NEAREST, repeat: REPEAT_MIRROR },
-      SRGB_CANVAS.textureColorSpace
+      canvasColorSpaceOf(false).textureColorSpace
     );
     expect([filter?.magFilter, wrap]).toEqual([THREE.NearestFilter, THREE.MirroredRepeatWrapping]);
   });

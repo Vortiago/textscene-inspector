@@ -3139,6 +3139,18 @@ export const fixtures: Fixture[] = [
     "root": "glow-linear-upscale"
   },
   {
+    "name": "Hdr 2d Lights",
+    "file": "hdr-2d/unit-hdr-2d-lights.tscn",
+    "category": "Other",
+    "root": "hdr-2d"
+  },
+  {
+    "name": "Hdr 2d",
+    "file": "hdr-2d/unit-hdr-2d.tscn",
+    "category": "Other",
+    "root": "hdr-2d"
+  },
+  {
     "name": "Label3d Glyph Mipmaps",
     "file": "label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn",
     "category": "Other",
@@ -5374,6 +5386,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Hdr 2d Light",
+    "file": "unit-sub-viewport-hdr-2d-light.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Hdr 2d World",
     "file": "unit-sub-viewport-hdr-2d-world.tscn",
     "category": "Unit - Viewports"
@@ -5381,6 +5398,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Hdr 2d",
     "file": "unit-sub-viewport-hdr-2d.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Hdr 3d World",
+    "file": "unit-sub-viewport-hdr-3d-world.tscn",
     "category": "Unit - Viewports"
   },
   {

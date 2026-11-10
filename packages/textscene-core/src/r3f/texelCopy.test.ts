@@ -59,6 +59,16 @@ describe('copyTexels', () => {
     expect(copyWith('encode').drawn.fragment).toContain('sRGBTransferOETF');
   });
 
+  it('clamps each texel to the range an 8-bit store holds before it encodes (a half float above 1)', () => {
+    expect(copyWith('encode').drawn.fragment).toContain('sRGBTransferOETF( clamp( texel, 0.0, 1.0 ) )');
+  });
+
+  it('encodes each texel and writes alpha 1 for an opaque copy of linear texels', () => {
+    expect(copyWith('encode-opaque').drawn.fragment).toContain(
+      'vec4( sRGBTransferOETF( clamp( texel, 0.0, 1.0 ) ).rgb, 1.0 )'
+    );
+  });
+
   it('writes alpha 1 and keeps the colour for an opaque copy', () => {
     expect(copyWith('opaque').drawn.fragment).toContain('vec4( texel.rgb, 1.0 )');
   });
@@ -84,13 +94,18 @@ describe('reversedTexelRows', () => {
 
 describe('viewportTransfer', () => {
   it('keeps the alpha a transparent viewport wrote', () => {
-    expect([viewportTransfer('none', true), viewportTransfer('decode', true)]).toEqual(['none', 'decode']);
+    expect([
+      viewportTransfer('none', true),
+      viewportTransfer('decode', true),
+      viewportTransfer('encode', true),
+    ]).toEqual(['none', 'decode', 'encode']);
   });
 
   it('writes alpha 1 for an opaque viewport, keeping the colour transfer', () => {
-    expect([viewportTransfer('none', false), viewportTransfer('decode', false)]).toEqual([
-      'opaque',
-      'decode-opaque',
-    ]);
+    expect([
+      viewportTransfer('none', false),
+      viewportTransfer('decode', false),
+      viewportTransfer('encode', false),
+    ]).toEqual(['opaque', 'decode-opaque', 'encode-opaque']);
   });
 });

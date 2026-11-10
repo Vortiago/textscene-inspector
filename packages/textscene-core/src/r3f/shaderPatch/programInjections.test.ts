@@ -237,13 +237,13 @@ const INJECTIONS: readonly InjectionCase[] = [
     'lighting2d/canvasItemLighting.ts',
     'canvas item lighting',
     ['basic'],
-    () => canvasItemLightingProps(lightUniforms()).injection
+    () => canvasItemLightingProps(lightUniforms(), false).injection
   ),
   injected(
     'lighting2d/normalMappedLighting.ts',
     'normal-mapped canvas item lighting',
     ['basic'],
-    () => normalMappedLightingProps(normalMappedUniforms(), 1).injection
+    () => normalMappedLightingProps(normalMappedUniforms(), 1, false).injection
   ),
   injected('canvasGroup/clipMask.ts', 'clip children mask', ['basic'], () => createClipMask().injection),
   injected('lightmap/lightmapProgram.ts', 'lightmap read', LIT, () => LIGHTMAP_PROGRAM),

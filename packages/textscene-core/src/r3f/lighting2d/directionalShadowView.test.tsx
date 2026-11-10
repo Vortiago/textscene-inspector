@@ -16,6 +16,7 @@ import { CanvasLightPass } from './CanvasLightPass';
 import { fakeLightPassHost } from './testing/fakeLightPassHost';
 import type { CanvasClip, LightPassHost } from './lightPassHost';
 import type { Quad2, ShadowCasterEdges } from './shadowCasterEdges';
+import { canvasColorSpaceOf } from '../canvasColorSpace';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
@@ -86,7 +87,11 @@ type HarnessProps = Omit<Parameters<typeof SamplerHarness>[0], 'onSampler'>;
 
 /** The pass the 2D stage mounts, which the hook reads the canvas from. */
 function stage(children: ReactNode) {
-  return <CanvasLighting2DProvider canvasModulate={WHITE}>{children}</CanvasLighting2DProvider>;
+  return (
+    <CanvasLighting2DProvider space={canvasColorSpaceOf(false)} canvasModulate={WHITE}>
+      {children}
+    </CanvasLighting2DProvider>
+  );
 }
 
 async function mountOnStage(props: HarnessProps = {}) {
@@ -99,7 +104,7 @@ async function mountOnStage(props: HarnessProps = {}) {
 async function mountOver(host: LightPassHost, props: HarnessProps = {}) {
   let sampler!: DirectionalShadowSampler;
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasLightPass host={host} canvasModulate={WHITE}>
+    <CanvasLightPass space={canvasColorSpaceOf(false)} host={host} canvasModulate={WHITE}>
       <SamplerHarness onSampler={(s) => (sampler = s)} {...props} />
     </CanvasLightPass>
   );
@@ -181,7 +186,7 @@ describe('useDirectionalShadow, in the map it builds', () => {
       const host = fakeLightPassHost(1000, 1000);
       let sampler!: DirectionalShadowSampler;
       const mount = (casters: readonly ShadowCasterEdges[]) => (
-        <CanvasLightPass host={host} canvasModulate={WHITE}>
+        <CanvasLightPass space={canvasColorSpaceOf(false)} host={host} canvasModulate={WHITE}>
           <SamplerHarness onSampler={(s) => (sampler = s)} casters={casters} />
         </CanvasLightPass>
       );

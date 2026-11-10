@@ -9,7 +9,7 @@ import {
   useVertexColorTint,
   WHITE_MODULATE,
 } from './canvasItemModulate';
-import { canvasColorSpaceOf, CanvasColorSpaceProvider, SRGB_CANVAS } from './canvasColorSpace';
+import { canvasColorSpaceOf, CanvasColorSpaceProvider } from './canvasColorSpace';
 
 const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
@@ -51,7 +51,7 @@ describe('foldOwnPixelTint', () => {
   const halfAlpha = { r: 0.5, g: 0.5, b: 0.5, a: 0.5 };
 
   it('multiplies the canvas modulate in sRGB and converts once in an sRGB canvas', () => {
-    const tint = foldOwnPixelTint(grey, grey, SRGB_CANVAS);
+    const tint = foldOwnPixelTint(grey, grey, canvasColorSpaceOf(false));
     expect(tint.own).toEqual({ r: 0.25, g: 0.25, b: 0.25, a: 1 });
     expect(tint.color.r).toBeCloseTo(0.05088, 5);
     expect(tint.canvasModulate.r).toBe(1);
@@ -99,7 +99,7 @@ describe('useVertexColorTint', () => {
     expect(result.current.vertex).toEqual(grey);
     expect(result.current.color.r).toBe(1);
     expect(result.current.opacity).toBe(1);
-    expect(result.current.defines).toBe(SRGB_CANVAS.defines);
+    expect(result.current.defines).toBe(canvasColorSpaceOf(false).defines);
   });
 
   it('puts the converted tint on the material in a linear canvas, which decodes each vertex colour apart', () => {
