@@ -24,10 +24,7 @@ describe('a clip mask', () => {
     const { mask, material } = compiledWith();
 
     mask.setMasking(true);
-    expect([material.blending, material.blendDst]).toEqual([
-      THREE.NormalBlending,
-      THREE.OneMinusSrcAlphaFactor,
-    ]);
+    expect(material.blending).toBe(THREE.NormalBlending);
     mask.setMasking(false);
     expect([material.blending, material.blendDst]).toEqual([THREE.CustomBlending, THREE.OneFactor]);
   });

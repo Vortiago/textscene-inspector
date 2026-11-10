@@ -19,11 +19,8 @@ import { useCanvasColorSpace, type CanvasColorSpace } from '../../../r3f/canvasC
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { createCanvasFrame } from '../../../r3f/components/Canvas2DStage/canvasFrame';
-import {
-  canvasGroupRectTag,
-  registerCanvasGroup,
-  type CanvasGroupWindow,
-} from '../../../r3f/canvasGroup/canvasGroupPass';
+import { canvasGroupRectTag, registerCanvasGroup } from '../../../r3f/canvasGroup/canvasGroupPass';
+import type { CanvasGroupWindow } from '../../../r3f/canvasGroup/groupWindow';
 import type { Rgba } from '../../../godot/math/math';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { useGroupFit } from './useGroupFit';

@@ -5,7 +5,9 @@
  * program of each mesh the owner draws.
  */
 
-import * as THREE from 'three';
+import type * as THREE from 'three';
+import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
+import { canvasItemBlendState } from '../../resources/materials/canvasitemmaterial/build';
 import type { ProgramInjection } from '../materialProgramInputs';
 import { editedProgram } from '../shaderPatch/chunkPatch';
 
@@ -32,25 +34,9 @@ const UNIFORMS_GLSL = `uniform sampler2D uClipBuffer;
 uniform float uClipMasking;
 void main() {`;
 
-/** The blend fields a material has, and the MIX blend Godot's clip shader draws with. */
-const BLEND_FIELDS = [
-  'blending',
-  'blendEquation',
-  'blendSrc',
-  'blendDst',
-  'blendEquationAlpha',
-  'blendSrcAlpha',
-  'blendDstAlpha',
-] as const;
-const MIX_BLEND: Partial<THREE.Material> = {
-  blending: THREE.NormalBlending,
-  blendEquation: THREE.AddEquation,
-  blendSrc: THREE.SrcAlphaFactor,
-  blendDst: THREE.OneMinusSrcAlphaFactor,
-  blendEquationAlpha: THREE.AddEquation,
-  blendSrcAlpha: THREE.OneFactor,
-  blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
-};
+/** The blend Godot's clip children shader draws with, whatever material the owner carries. */
+const MIX_BLEND = canvasItemBlendState(CanvasItemMaterialBlendMode.MIX);
+const BLEND_FIELDS = Object.keys(MIX_BLEND) as (keyof typeof MIX_BLEND)[];
 
 /**
  * A mask of one owner. Its uniforms stay the same objects for the owner's life: three keeps the ones
@@ -59,14 +45,16 @@ const MIX_BLEND: Partial<THREE.Material> = {
 export function createClipMask(): ClipMask {
   const uniforms = { uClipBuffer: { value: null as THREE.Texture | null }, uClipMasking: { value: 0 } };
   let buffer: THREE.Texture | null = null;
+  let isMasked = false;
   // The materials the owner compiled, each with the blend of its `CanvasItemMaterial`.
   const ownBlends = new Map<THREE.Material, Partial<THREE.Material>>();
   return {
     injection: {
       cacheKey: 'godot-clip-children',
       onBeforeCompile: function (shader) {
+        if (!ownBlends.has(this)) this.addEventListener('dispose', () => ownBlends.delete(this));
         ownBlends.set(this, Object.fromEntries(BLEND_FIELDS.map((field) => [field, this[field]])));
-        this.addEventListener('dispose', () => ownBlends.delete(this));
+        if (isMasked) Object.assign(this, MIX_BLEND);
         Object.assign(shader.uniforms, uniforms);
         editedProgram(
           shader,
@@ -84,6 +72,8 @@ export function createClipMask(): ClipMask {
       buffer = texture;
     },
     setMasking: (isMasking) => {
+      if (isMasked === isMasking) return;
+      isMasked = isMasking;
       uniforms.uClipMasking.value = isMasking ? 1 : 0;
       uniforms.uClipBuffer.value = isMasking ? buffer : null;
       for (const [material, own] of ownBlends) Object.assign(material, isMasking ? MIX_BLEND : own);

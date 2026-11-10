@@ -11,7 +11,7 @@
 
 import type { TscnNode } from '../parser/types';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes';
-import { CanvasItemClipChildrenMode } from '../godot/scene/canvasItem';
+import { clipsChildren } from '../nodes/canvasitem/shared/clipAncestry';
 import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import { clampCanvasItemZ, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPlacement';
@@ -450,13 +450,6 @@ export function allocatePaintRange(
     back: { base: backSize > 0 ? end : lastPaintSequence(range), size: backSize },
     tail: { base: Math.min(cursor, end), size: Math.max(0, end - cursor) },
   };
-}
-
-/** `clip_children` as a clipping mode, under either casing the two parsers produce. */
-function clipsChildren(node: TscnNode): boolean {
-  const props = node.properties as { clip_children?: number; clipChildren?: number };
-  const mode = props.clip_children ?? props.clipChildren;
-  return mode === CanvasItemClipChildrenMode.ONLY || mode === CanvasItemClipChildrenMode.AND_DRAW;
 }
 
 /**

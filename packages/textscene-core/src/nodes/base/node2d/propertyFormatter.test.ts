@@ -11,10 +11,10 @@ function canvasItemRows(properties: Record<string, string>) {
 describe('formatNode2DProperties', () => {
   it('lists Clip Children only for a clipping item', () => {
     expect(canvasItemRows({})).not.toContainEqual(expect.objectContaining({ label: 'Clip Children' }));
-    expect(canvasItemRows({ clip_children: '1' })).toContainEqual({ label: 'Clip Children', value: 'Only' });
+    expect(canvasItemRows({ clip_children: '1' })).toContainEqual({ label: 'Clip Children', value: 'ONLY' });
     expect(canvasItemRows({ clip_children: '2' })).toContainEqual({
       label: 'Clip Children',
-      value: 'And Draw',
+      value: 'AND_DRAW',
     });
   });
 });

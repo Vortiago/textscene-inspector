@@ -39,6 +39,7 @@ import { billboardInjections } from '../surfaceBillboard';
 import { surfaceAlphaProps } from '../materials/surfaceAlphaPatch';
 import { surfaceDepthMaterial } from '../materials/surfaceDepthMaterial';
 import { AtlasDepthMaterial, ParaboloidDepthMaterial } from '../positionalShadow/atlasDepthMaterials';
+import { createClipMask } from '../canvasGroup/clipMask';
 import { canvasItemLightingProps } from '../lighting2d/canvasItemLighting';
 import { LIGHTMAP_PROGRAM } from '../lightmap/lightmapProgram';
 import { TILE_TEXTURE_PADDING } from '../tileTexturePadding';
@@ -244,6 +245,7 @@ const INJECTIONS: readonly InjectionCase[] = [
     ['basic'],
     () => normalMappedLightingProps(normalMappedUniforms(), 1).injection
   ),
+  injected('canvasGroup/clipMask.ts', 'clip children mask', ['basic'], () => createClipMask().injection),
   injected('lightmap/lightmapProgram.ts', 'lightmap read', LIT, () => LIGHTMAP_PROGRAM),
   injected('tileTexturePadding.ts', 'tile texture padding', COLOUR, () => TILE_TEXTURE_PADDING),
   injected('tileNormalOrientation.ts', 'tile normal orientation', COLOUR, () => TILE_NORMAL_ORIENTATION),

@@ -19,7 +19,11 @@ import {
 } from './canvasPaintOrder';
 
 function node(name: string, type: string, children: TscnNode[] = [], properties = {}): TscnNode {
-  return { name, type, properties, children } as unknown as TscnNode;
+  // The raw text of each property, as the parser keeps it beside the parsed value.
+  const rawProperties = Object.fromEntries(
+    Object.entries(properties).map(([key, value]) => [key, String(value)])
+  );
+  return { name, type, properties, rawProperties, children } as unknown as TscnNode;
 }
 
 /** A parsed TileMap holding `layerCount` layers, as `parseTileMap` shapes it. */
@@ -274,7 +278,7 @@ describe('allocatePaintRange', () => {
 
   it.each([
     ['a Node2D', 'Polygon2D', { clip_children: 1 }],
-    ['a Control', 'ColorRect', { clipChildren: 2 }],
+    ['a Control', 'ColorRect', { clip_children: 2 }],
   ])('draws %s with clip_children after every child, as a CanvasGroup', (_, type, properties) => {
     // A clipping item groups its children as a CanvasGroup does, so it culls them before itself.
     const clipping = node(

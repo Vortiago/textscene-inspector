@@ -10,24 +10,15 @@
 
 import * as THREE from 'three';
 import { canvasKeyOf, drawKeyedObjects } from '../canvasKeyWindow';
-import type { CanvasRunKeys } from '../canvasItemState';
 import { isNodeIcon } from '../editorHelpers';
 import { drawableLocalBox, isDrawable, type Drawable } from '../drawable';
-import { BLACK } from '../../nodes/viewport/renderGate';
 import { drawOffscreen } from '../offscreen';
-import { copyTexels, wholeTexels } from '../texelCopy';
 import { perObject } from '../../utils/perObject';
 import { beginStep, endStep } from '../frameProfile/frameProfile';
-import { renderToOffscreenTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
 import { clipOfCamera } from '../../nodes/viewport/subviewport/viewportLightPassHost';
 import type { CanvasClip } from '../lighting2d/lightPassHost';
-
-/**
- * The draw-order keys a group collects: its run's `[from, to)` without its own slot, which starts at
- * `own`, the key its rect draws at. A group culls every child before itself
- * (`renderer_canvas_cull.cpp:471-484`).
- */
-export type CanvasGroupWindow = CanvasRunKeys;
+import { collects, isOwnKey, type CanvasGroupWindow } from './groupWindow';
+import { fillBuffer, fillClipBuffer, withFrozenMatrices } from './groupBuffers';
 
 /**
  * What a clipping group asks of the pass. `clipOnly` leaves the owner out of the buffer, and
@@ -95,19 +86,6 @@ export function canvasGroupRectTag(): { tscnCanvasGroupRect: true } {
 /** Whether `object` is a group's rect mesh, tagged by `canvasGroupRectTag`. */
 function isCanvasGroupRect(object: THREE.Object3D): boolean {
   return object.userData[RECT_KEY] === true;
-}
-
-/**
- * Whether `key` is in the slot of the group's own pixels: its key, and the pieces the item draws
- * after it before the next whole key (`canvasSubOrders`).
- */
-function isOwnKey({ own }: CanvasGroupWindow, key: number): boolean {
-  return key >= own && key < own + 1;
-}
-
-/** Whether `key` is one of the keys the window collects. */
-function collects(window: CanvasGroupWindow, key: number): boolean {
-  return key >= window.from && key < window.to && !isOwnKey(window, key);
 }
 
 /** The target `draw` fills: its size is the buffers' size, and its texture is what a clip copies. */
@@ -203,18 +181,6 @@ function drawFrame(
   drawSpan(Number.POSITIVE_INFINITY);
 }
 
-/** Runs `draw` with the scene's matrices as they are: only layers change between the buffer draws. */
-function withFrozenMatrices(scene: THREE.Object3D, draw: () => void): void {
-  const previous = scene.matrixWorldAutoUpdate;
-  // Only layers change between the buffer draws, and `fit` updates each rect it moves.
-  scene.matrixWorldAutoUpdate = false;
-  try {
-    draw();
-  } finally {
-    scene.matrixWorldAutoUpdate = previous;
-  }
-}
-
 /** The clip an ortho camera shows over a frame of `width` x `height` pixels. */
 function frameClipOf(
   camera: THREE.Camera,
@@ -301,7 +267,7 @@ function fitGroups(
  * Every object of a scene with its paint-order key, from one walk a frame. `measured` marks the
  * objects whose box a group lists: visible, and under no node icon or group rect.
  */
-interface KeyedScene {
+export interface KeyedScene {
   objects: THREE.Object3D[];
   keys: number[];
   measured: boolean[];
@@ -354,73 +320,4 @@ const worldBoxOf = perObject((_object: Drawable) => new THREE.Box3());
 function worldBox(object: Drawable): THREE.Box3 | null {
   const local = drawableLocalBox(object);
   return local.isEmpty() ? null : worldBoxOf(object).copy(local).applyMatrix4(object.matrixWorld);
-}
-
-/**
- * Draws the keys the group's window collects into its buffer, if it reads one. It clears the buffer
- * to transparent black itself: a frame drawn over a kept target turns the render's colour clear off.
- */
-function fillBuffer(
-  gl: THREE.WebGLRenderer,
-  keyed: KeyedScene,
-  scene: THREE.Object3D,
-  camera: THREE.Camera,
-  { window, buffer }: CanvasGroupEntry,
-  frame: CanvasFrameTarget
-): void {
-  if (!buffer) return;
-  sizeLike(buffer, frame);
-  renderToOffscreenTarget(gl, {
-    target: buffer,
-    clearColor: BLACK,
-    transparentBg: true,
-    draw: () =>
-      drawOffscreen(gl, () => {
-        gl.clear(true, true, true);
-        drawKeyedObjects(
-          keyed.objects,
-          keyed.keys,
-          (key) => collects(window, key),
-          () => gl.render(scene, camera)
-        );
-      }),
-  });
-}
-
-function sizeLike(buffer: THREE.WebGLRenderTarget, frame: CanvasFrameTarget): void {
-  if (buffer.width !== frame.width || buffer.height !== frame.height)
-    buffer.setSize(frame.width, frame.height);
-}
-
-/**
- * Starts the clipping group's buffer as the canvas drawn so far, and draws the group's items over
- * it. The owner draws there too in CLIP_AND_DRAW (`renderer_canvas_render_rd.cpp:822-828`), unmasked.
- */
-function fillClipBuffer(
-  gl: THREE.WebGLRenderer,
-  keyed: KeyedScene,
-  scene: THREE.Object3D,
-  camera: THREE.Camera,
-  { window, buffer, clip }: CanvasGroupEntry,
-  frame: CanvasFrameTarget
-): void {
-  sizeLike(buffer!, frame);
-  drawOffscreen(gl, () => copyTexels(gl, frame.texture, buffer!, wholeTexels(frame.width, frame.height)));
-  clip!.setMasking(false);
-  // The owner draws before every child, behind-parent children included
-  // (`renderer_canvas_render_rd.cpp:822-828` queues it ahead of the group's items).
-  const drawKeys = (inKeys: (key: number) => boolean) =>
-    drawOffscreen(gl, () =>
-      drawKeyedObjects(keyed.objects, keyed.keys, inKeys, () => gl.render(scene, camera))
-    );
-  renderToOffscreenTarget(gl, {
-    target: buffer!,
-    clearColor: BLACK,
-    transparentBg: true,
-    keepsColor: true,
-    draw: () => {
-      if (clip!.mode === 'clipAndDraw') drawKeys((key) => isOwnKey(window, key));
-      drawKeys((key) => collects(window, key));
-    },
-  });
 }
