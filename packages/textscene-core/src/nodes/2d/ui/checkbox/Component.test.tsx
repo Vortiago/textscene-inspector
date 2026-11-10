@@ -13,6 +13,7 @@ import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
+import { textQuadCounts } from '../../../../r3f/controls/native/testing/textQuadCounts';
 import { CheckBox } from './Component';
 import type { CheckBoxProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -305,5 +306,28 @@ describe('<CheckBox> — text_overrun_behavior trims the label to its paragraph 
     const cut = await render({ overrunBehavior: 0 });
     expect(glyphQuadCount(trimmed)).toBe(4);
     expect(glyphQuadCount(cut)).toBeGreaterThan(4);
+  });
+});
+
+describe('<CheckBox> — autowrap_mode wraps the label at its paragraph box (button.cpp:428-432)', () => {
+  async function render(properties: Partial<CheckBoxProperties>) {
+    return ReactThreeTestRenderer.create(
+      <CheckBox
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'alpha bravo charlie', ...properties })}
+        rect={{ x: 0, y: 0, w: 80, h: 77 }}
+        renderOrder={0}
+      />
+    );
+  }
+
+  it('draws three lines, and cuts the last at the box: "charli", not "charlie"', async () => {
+    const wrapped = await render({ autowrapMode: 2 });
+    expect(textQuadCounts(wrapped.scene)).toEqual([5, 5, 6]);
+  });
+
+  it('draws one line at AUTOWRAP_OFF', async () => {
+    const unwrapped = await render({});
+    expect(textQuadCounts(unwrapped.scene)).toHaveLength(1);
   });
 });

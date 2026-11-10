@@ -18,6 +18,7 @@ import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderCont
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { ButtonProperties } from './types';
+import { textQuadCounts } from '../../../../r3f/controls/native/testing/textQuadCounts';
 import { Button } from './Component';
 import { buttonMinimumSize } from './nativeSolver';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
@@ -297,15 +298,6 @@ describe('<Button> — the label is cut to its paragraph box whatever clip_text 
     expect(textQuadCounts(renderer.scene)).toEqual([2]);
   });
 });
-
-/** The glyph quads of each text mesh, in draw order. */
-function textQuadCounts(scene: Rendered['scene']): number[] {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined)
-    .map((m) => m.geometry.attributes.position!.count / 4);
-}
 
 describe('<Button> — icon (ControlQuad), via ResourceLoader/SceneResources', () => {
   function fakeTexture(w: number, h: number): THREE.Texture {

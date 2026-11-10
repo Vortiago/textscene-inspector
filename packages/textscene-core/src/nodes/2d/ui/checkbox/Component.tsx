@@ -14,6 +14,7 @@ import { CHECK_BOX_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { isButtonAutowrapped } from '../../../../r3f/controls/native/buttonBase';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
@@ -21,6 +22,7 @@ import {
   checkBoxIconMaxWidth,
   checkBoxHSeparation,
   checkBoxCheckVOffset,
+  checkBoxLabelWrapWidthPx,
   checkBoxIconNaturalSize,
   checkBoxTextTheme,
   fitIconSize,
@@ -60,7 +62,13 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const bidi = useControlBidiOptions(props, solveNode);
-  const layout = useButtonLabelLayout(solveNode, CHECKBOX_THEME_FONT_KEY, text, fontSizePx, bidi);
+  const layout = useButtonLabelLayout(solveNode, props, {
+    themeFontKey: CHECKBOX_THEME_FONT_KEY,
+    text,
+    fontSizePx,
+    bidi,
+    boxWidthPx: checkBoxLabelWrapWidthPx(rect, solveNode, { theme }),
+  });
 
   const content = useMemo(
     () =>
@@ -98,6 +106,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           layout={layout}
           overrunBehavior={props.overrunBehavior}
           bidi={bidi}
+          isWrapped={isButtonAutowrapped(props)}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}

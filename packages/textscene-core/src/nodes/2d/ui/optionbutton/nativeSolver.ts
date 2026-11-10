@@ -21,6 +21,7 @@ import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat'
 import {
   pickButtonStyleBox,
   resolveButtonDrawState,
+  labelWrapWidthPx,
   reservedLabelBox,
   textMinimumWidthPx,
   tintColor,
@@ -123,6 +124,24 @@ export function optionButtonHSeparation(
   return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
 
+/**
+ * The width the drawn label wraps at in `rect` (`button.cpp:428-432`): the rect less the stylebox margins, the
+ * arrow and `h_separation`. The minimum size never wraps its items (below), so only the painter calls it.
+ */
+export function optionButtonLabelWrapWidthPx(
+  rect: Rect2,
+  styleMargin: { left: number; right: number },
+  arrowSize: Vector2,
+  constants: SolveNode['constants'],
+  ctx: Pick<SolveContext, 'theme'>
+): number {
+  return labelWrapWidthPx(
+    rect,
+    styleMargin.left + styleMargin.right,
+    arrowSize.x + optionButtonHSeparation(constants, ctx)
+  );
+}
+
 // Minimum size
 
 /**
@@ -151,7 +170,8 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
       // Each item goes through `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492`), whose
       // `paragraph->get_size()` is ceiled (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`),
       // so the max is over whole-pixel widths.
-      // `clip_text` or a trimming overrun zeroes the width (`button.cpp:493-495`).
+      // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`). An item shapes
+      // a new paragraph of width -1 (`button.cpp:484-489`), so it never wraps and the height stays one line.
       textW = Math.max(textW, textMinimumWidthPx(size.x, props));
       textH = Math.max(textH, size.y);
     }

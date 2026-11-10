@@ -19,7 +19,9 @@ import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistr
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   fitIconSize,
+  labelWrapWidthPx,
   reservedLabelBox,
+  shapeWrappedButtonLabel,
   textMinimumWidthPx,
   tintColor,
   type ButtonLabelBox,
@@ -32,7 +34,9 @@ import {
 } from '../../../../r3f/controls/native/textTheme';
 import type { CheckBoxIcons } from '../../../../r3f/controls/native/themeIcons';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { CheckBoxProperties } from './types';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Vector2 } from '../../../../godot/math/vector';
 import {
   CONTROL_FONT_COLOR,
@@ -199,6 +203,23 @@ export function checkBoxCheckVOffset(constants: SolveNode['constants']): number 
 }
 
 /**
+ * The width a wrapping label shapes at in `rect` (`button.cpp:428-432`): the rect less the margins, the check
+ * and `h_separation`, which `_internal_margin` always reserves (`check_box.cpp:96-101`).
+ */
+export function checkBoxLabelWrapWidthPx(
+  rect: Rect2 | undefined,
+  n: Pick<SolveNode, 'textureSlots' | 'constants'>,
+  ctx: Pick<SolveContext, 'theme'>
+): number {
+  const iconSize = fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
+  return labelWrapWidthPx(
+    rect,
+    2 * ctx.theme.contentMargin,
+    iconSize.x + checkBoxHSeparation(n.constants, ctx)
+  );
+}
+
+/**
  * `CheckBox::get_minimum_size` (`check_box.cpp:64-79`): Button's text-only floor plus the check
  * icon's width, and its height floors the result. `padding` is `_get_largest_stylebox_size()`,
  * which for CheckBox is `cbx_empty`'s uniform margin on every state, so both axes double
@@ -209,17 +230,26 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const margin = ctx.theme.contentMargin;
 
   const text = props.text ?? '';
-  const hasText = text.length > 0;
   const state = resolveCheckBoxDrawState(props);
   const { fontSizePx } = checkBoxTextTheme(n, props, state, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, CHECKBOX_THEME_FONT_KEY);
   // `Button::get_minimum_size` (`button.cpp:492`) reads `paragraph->get_size()`, the ceiled
   // extent (`text_paragraph.cpp:601-608`, `text_server_adv.cpp:7524-7537`). The icon and
-  // separation are added outside the ceil (`check_box.cpp:63-73`).
-  const measured =
-    hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
-  // `clip_text` or a trimming overrun zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
-  const textSize = { x: textMinimumWidthPx(measured.x, props), y: measured.y };
+  // separation are added outside the ceil (`check_box.cpp:63-73`). A wrapping label's rows
+  // follow the tentative width, as `button.cpp:429-432` leaves `text_buf`.
+  const layout =
+    text.length > 0 && ctx.measureText
+      ? shapeWrappedButtonLabel(text, props, {
+          fontSizePx,
+          fontMetrics,
+          bidi: controlBidiOptions(props, n),
+          boxWidthPx: checkBoxLabelWrapWidthPx(ctx.tentativeRect?.(n), n, ctx),
+        })
+      : null;
+  // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
+  const textSize = layout
+    ? { x: textMinimumWidthPx(layout.widthPx, props), y: layout.heightPx }
+    : { x: 0, y: 0 };
 
   const iconSize = fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
   const hSeparation = checkBoxHSeparation(n.constants, ctx);

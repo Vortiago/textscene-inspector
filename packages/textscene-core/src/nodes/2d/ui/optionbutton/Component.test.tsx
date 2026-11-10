@@ -14,6 +14,7 @@ import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
+import { textQuadCounts } from '../../../../r3f/controls/native/testing/textQuadCounts';
 import { OptionButton } from './Component';
 import type { OptionButtonProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -293,5 +294,28 @@ describe('<OptionButton> — text_overrun_behavior trims the label to its paragr
     const cut = await render({ overrunBehavior: 0 });
     expect(glyphQuadCount(trimmed)).toBe(4);
     expect(glyphQuadCount(cut)).toBeGreaterThan(4);
+  });
+});
+
+describe('<OptionButton> — autowrap_mode wraps the drawn label though the box keeps one line (button.cpp:428-432)', () => {
+  async function render(properties: Partial<OptionButtonProperties>) {
+    return ReactThreeTestRenderer.create(
+      <OptionButton
+        {...painterEnv()}
+        solveNode={solveNode({ items: [{ text: 'alpha bravo charlie', id: 0 }], selected: 0, ...properties })}
+        rect={{ x: 0, y: 0, w: 100, h: 40 }}
+        renderOrder={0}
+      />
+    );
+  }
+
+  it('draws three lines', async () => {
+    const wrapped = await render({ autowrapMode: 2 });
+    expect(textQuadCounts(wrapped.scene)).toEqual([5, 5, 7]);
+  });
+
+  it('draws one line at AUTOWRAP_OFF', async () => {
+    const unwrapped = await render({});
+    expect(textQuadCounts(unwrapped.scene)).toHaveLength(1);
   });
 });

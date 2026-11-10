@@ -15,6 +15,8 @@ import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
 import { drawnLinesInBox, textParagraphLineShiftPx } from './text/lineDrawClip';
 import {
+  BREAK_TRIM_END_EDGE_SPACES,
+  clampAutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
@@ -85,7 +87,7 @@ export function fitIconSize(size: Vector2, maxWidth: number): Vector2 {
 }
 
 /** What a Button-family label shapes with, beyond its text. */
-interface ButtonLabelShapeOptions {
+export interface ButtonLabelShapeOptions {
   fontSizePx: number;
   fontMetrics: FontMetrics;
   /** The paragraph's direction, language and override ranges (`button.cpp:564-569`). Undefined shapes at AUTO in the root locale. */
@@ -97,7 +99,7 @@ interface ButtonLabelShapeOptions {
    */
   boxWidthPx?: number;
   autowrapMode?: EnumValue<typeof AutowrapMode>;
-  /** `autowrap_flags_trim`, ORed onto the break flags at `:560`. Undefined keeps the class default, both edge-space trims. */
+  /** `autowrap_flags_trim`, ORed onto the break flags at `:560`. Undefined trims both edge spaces, Label's default: `shapeWrappedButtonLabel` passes Button's own. */
   autowrapTrimFlags?: number;
 }
 
@@ -118,9 +120,43 @@ export function shapeButtonLabel(text: string, options: ButtonLabelShapeOptions)
     // Not Label's 3: no Button-family control sets `line_spacing` on its `text_buf`
     // (`button.cpp`, `check_box.cpp`, `option_button.cpp`).
     lineSpacingPx: 0,
+    hasEndGlyph: false,
     fontMetrics,
     autowrapTrimFlags,
     ...bidi,
+  });
+}
+
+/** `Button::autowrap_flags_trim` default (`button.h:48`): end spaces only, where Label also trims start spaces. */
+const BUTTON_DEFAULT_TRIM_FLAGS = BREAK_TRIM_END_EDGE_SPACES;
+
+/** The properties `Button::_shape` and `get_minimum_size_for_text_and_icon` read to wrap a label (`button.cpp:493,546-561`). */
+export interface ButtonWrapProperties {
+  autowrapMode?: number;
+  autowrapTrimFlags?: number;
+}
+
+/** Whether `props` wraps the label at its box. An out-of-range mode is OFF, as `set_autowrap_mode` leaves it. */
+export function isButtonAutowrapped(props: ButtonWrapProperties): boolean {
+  return clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF) !== AutowrapMode.AUTOWRAP_OFF;
+}
+
+/**
+ * The one step that shapes a Button-family label for its `autowrap_mode`: Button, CheckBox, CheckButton,
+ * MenuButton and OptionButton call it. `options.boxWidthPx` is the width the label wraps at
+ * ({@link buttonTextBufWidthPx}); it is ignored at AUTOWRAP_OFF.
+ */
+export function shapeWrappedButtonLabel(
+  text: string,
+  props: ButtonWrapProperties,
+  options: Omit<ButtonLabelShapeOptions, 'autowrapMode' | 'autowrapTrimFlags'>
+): TextLayoutResult {
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
+  return shapeButtonLabel(text, {
+    ...options,
+    boxWidthPx: autowrapMode === AutowrapMode.AUTOWRAP_OFF ? 0 : options.boxWidthPx,
+    autowrapMode,
+    autowrapTrimFlags: props.autowrapTrimFlags ?? BUTTON_DEFAULT_TRIM_FLAGS,
   });
 }
 
@@ -360,9 +396,23 @@ export function reservedLabelBox(input: {
   return {
     leftPx: margin.left + (isReservedOnLeft ? reservedPx : 0),
     topPx: centredTextTopPx(rectSize.y - margin.top - margin.bottom, textHeightPx, margin.top),
-    widthPx: rectSize.x - margin.left - margin.right - reservedPx,
+    widthPx: reservedLabelWidthPx(rectSize.x, margin.left + margin.right, reservedPx),
     alignment: rtl ? swapAlignmentSide(textAlignment) : textAlignment,
   };
+}
+
+/** The drawable width of a label that reserves `reservedPx` beside its margins (`button.cpp:332-352,444-456`). */
+export function reservedLabelWidthPx(rectWidthPx: number, marginsPx: number, reservedPx: number): number {
+  return rectWidthPx - marginsPx - reservedPx;
+}
+
+/**
+ * The width a wrapping label shapes at in `rect`: the rect less the margins and the reservation, shaped as
+ * the draw does (`button.cpp:428-432`). A minimum-size solver passes its tentative rect, which is
+ * `undefined` on the first solve pass; that pass shapes unwrapped, so the width is 0.
+ */
+export function labelWrapWidthPx(rect: Rect2 | undefined, marginsPx: number, reservedPx: number): number {
+  return rect === undefined ? 0 : buttonTextBufWidthPx(reservedLabelWidthPx(rect.w, marginsPx, reservedPx));
 }
 
 /** `button.cpp:266-275`: LEFT and RIGHT trade places under RTL, and any other value stays. */
@@ -374,10 +424,13 @@ function swapAlignmentSide(alignment: number): number {
 
 /**
  * A Button-family label's width contribution to the minimum size: the ceiled shaped width, or 0 when
- * {@link isTextWidthClipped}, since a narrower box cuts or trims the label.
+ * {@link isTextWidthClipped} or the label wraps, since a narrower box cuts, trims or wraps it (`button.cpp:493-495`).
  */
-export function textMinimumWidthPx(measuredWidthPx: number, props: TextClipProperties): number {
-  return isTextWidthClipped(props) ? 0 : shapedTextSizeWidthPx(measuredWidthPx);
+export function textMinimumWidthPx(
+  measuredWidthPx: number,
+  props: TextClipProperties & ButtonWrapProperties
+): number {
+  return isTextWidthClipped(props) || isButtonAutowrapped(props) ? 0 : shapedTextSizeWidthPx(measuredWidthPx);
 }
 
 /**

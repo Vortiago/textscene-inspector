@@ -57,3 +57,20 @@ describe('parseCheckBox — text_overrun_behavior', () => {
     expect(parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), {}).overrunBehavior).toBeUndefined();
   });
 });
+
+describe('parseCheckBox — autowrap_mode and autowrap_trim_flags', () => {
+  it('reads both', () => {
+    const p = parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), {
+      autowrap_mode: '2',
+      autowrap_trim_flags: '0',
+    });
+    expect(p.autowrapMode).toBe(2);
+    expect(p.autowrapTrimFlags).toBe(0);
+  });
+
+  it('leaves both undefined when absent', () => {
+    const p = parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), {});
+    expect(p.autowrapMode).toBeUndefined();
+    expect(p.autowrapTrimFlags).toBeUndefined();
+  });
+});

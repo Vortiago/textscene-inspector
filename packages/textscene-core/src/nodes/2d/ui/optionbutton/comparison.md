@@ -14,7 +14,9 @@ that item's text and the theme's arrow inside the button's chrome. `clip_text` z
 item's text width in the minimum size, and `TextParagraph::draw` cuts the label to its paragraph
 box. The previewer does both, so a box narrower than the item shows only the glyphs that fit.
 A trimming `text_overrun_behavior` zeroes the width the same way. The previewer trims the item
-to the box, with an ellipsis where Godot adds one, as Button does.
+to the box, with an ellipsis where Godot adds one, as Button does. `autowrap_mode` wraps the drawn
+item at its paragraph box. The box does not grow: Godot sizes every item as one line, so a wrapped
+item overflows the box above and below.
 
 ## Linting
 

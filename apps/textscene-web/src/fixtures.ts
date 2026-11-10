@@ -4235,6 +4235,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Button Family Autowrap",
+    "file": "unit-button-family-autowrap.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Button Family Clip Text",
     "file": "unit-button-family-clip-text.tscn",
     "category": "Unit - 2D UI Controls"

@@ -345,3 +345,18 @@ describe('optionButtonMinimumSize — a trimming text_overrun_behavior zeroes ea
     expect(result.x).toBe(16 + AB_SHAPED_WIDTH + 12 + 4);
   });
 });
+
+describe('optionButtonMinimumSize — autowrap_mode zeroes each item text width and never wraps it (button.cpp:484-489,493-495)', () => {
+  const items = [{ text: 'alpha bravo charlie', id: 0 }];
+
+  it('drops the text width', () => {
+    const result = optionButtonMinimumSize(node({ items, selected: 0, autowrapMode: 2 }), ctx());
+    expect(result.x).toBe(16 + 12 + 4);
+  });
+
+  it('keeps one line of height, though a tentative width would wrap the drawn label', () => {
+    const context: SolveContext = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 80, h: 40 }) };
+    const result = optionButtonMinimumSize(node({ items, selected: 0, autowrapMode: 2 }), context);
+    expect(result.y).toBe(8 + FONT_HEIGHT);
+  });
+});

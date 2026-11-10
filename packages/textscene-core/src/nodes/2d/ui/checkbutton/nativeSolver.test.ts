@@ -402,3 +402,33 @@ describe('checkButtonMinimumSize — a trimming text_overrun_behavior zeroes the
     expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 4 + 32);
   });
 });
+
+describe('checkButtonMinimumSize — autowrap_mode wraps the label at the tentative width (button.cpp:429-432,493-495)', () => {
+  const text = 'alpha bravo charlie';
+
+  function minSize(props: Partial<CheckButtonProperties>, tentativeWidthPx?: number) {
+    const context: SolveContext = {
+      ...ctx(),
+      ...(tentativeWidthPx === undefined
+        ? {}
+        : { tentativeRect: () => ({ x: 0, y: 0, w: tentativeWidthPx, h: 40 }) }),
+    };
+    return checkButtonMinimumSize(node(props), context);
+  }
+
+  it('drops the text width and the h_separation, keeping the margins and the toggle', () => {
+    expect(minSize({ text, autowrapMode: 2 }).x).toBe(12 + 32);
+  });
+
+  it('grows to one font height per wrapped row at a narrow tentative width', () => {
+    expect(minSize({ text, autowrapMode: 2 }, 100).y).toBe(8 + 3 * FONT_HEIGHT);
+  });
+
+  it('stays one row high until a tentative width is known', () => {
+    expect(minSize({ text, autowrapMode: 2 }).y).toBe(8 + FONT_HEIGHT);
+  });
+
+  it('never wraps at AUTOWRAP_OFF, whatever the tentative width says', () => {
+    expect(minSize({ text }, 100).y).toBe(8 + FONT_HEIGHT);
+  });
+});

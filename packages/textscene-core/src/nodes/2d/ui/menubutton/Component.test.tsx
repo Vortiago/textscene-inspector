@@ -11,6 +11,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { MenuButtonProperties } from './types';
+import { textQuadCounts } from '../../../../r3f/controls/native/testing/textQuadCounts';
 import { MenuButton } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -108,5 +109,19 @@ describe('<MenuButton> (isolated painter contract)', () => {
 
     expect(ltrRight).toBeGreaterThan(ltrLeft);
     expect(rtlLeft).toBe(ltrRight);
+  });
+});
+
+describe('<MenuButton> — autowrap_mode wraps the label as Button does (button.cpp:428-432)', () => {
+  it('draws three centred lines', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <MenuButton
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'alpha bravo charlie', autowrapMode: 2 })}
+        rect={{ x: 0, y: 0, w: 80, h: 77 }}
+        renderOrder={0}
+      />
+    );
+    expect(textQuadCounts(renderer.scene)).toHaveLength(3);
   });
 });

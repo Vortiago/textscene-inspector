@@ -422,3 +422,33 @@ describe('checkBoxMinimumSize — a trimming text_overrun_behavior zeroes the te
     expect(result.x).toBe(8 + AB_SHAPED_WIDTH + 4 + 16);
   });
 });
+
+describe('checkBoxMinimumSize — autowrap_mode wraps the label at the tentative width (button.cpp:429-432,493-495)', () => {
+  const text = 'alpha bravo charlie';
+
+  function minSize(props: Partial<CheckBoxProperties>, tentativeWidthPx?: number) {
+    const context: SolveContext = {
+      ...ctx(),
+      ...(tentativeWidthPx === undefined
+        ? {}
+        : { tentativeRect: () => ({ x: 0, y: 0, w: tentativeWidthPx, h: 40 }) }),
+    };
+    return checkBoxMinimumSize(node(props), context);
+  }
+
+  it('drops the text width and the h_separation, keeping the margins and the check', () => {
+    expect(minSize({ text, autowrapMode: 2 }).x).toBe(minSize({}).x);
+  });
+
+  it('grows to one font height per wrapped row at a narrow tentative width', () => {
+    expect(minSize({ text, autowrapMode: 2 }, 80).y).toBe(8 + 3 * FONT_HEIGHT);
+  });
+
+  it('stays one row high until a tentative width is known', () => {
+    expect(minSize({ text, autowrapMode: 2 }).y).toBe(8 + FONT_HEIGHT);
+  });
+
+  it('never wraps at AUTOWRAP_OFF, whatever the tentative width says', () => {
+    expect(minSize({ text }, 80).y).toBe(8 + FONT_HEIGHT);
+  });
+});

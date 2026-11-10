@@ -8,3 +8,5 @@ import { checkButtonMinimumSize, checkButtonTextureSlots } from './nativeSolver'
 controlComponentRegistry.register({ typeName: 'CheckButton', Component: CheckButton });
 controlSolverRegistry.registerMinimumSize('CheckButton', checkButtonMinimumSize);
 controlSolverRegistry.registerTextureSlots('CheckButton', checkButtonTextureSlots);
+// As Button's: `autowrap_mode` makes the label's height depend on this node's own width.
+controlSolverRegistry.registerSizeDependentMinimum('CheckButton');

@@ -15,7 +15,8 @@ StyleBox chrome (CheckButton's own StyleBoxes are all a `StyleBoxEmpty`). `clip_
 label's width in the minimum size, and `TextParagraph::draw` cuts the label to its paragraph
 box. The previewer does both, so a box narrower than the label shows only the glyphs that fit.
 A trimming `text_overrun_behavior` zeroes the width the same way. The previewer trims the label
-to the box, with an ellipsis where Godot adds one, as Button does.
+to the box, with an ellipsis where Godot adds one, as Button does. `autowrap_mode` wraps the label at
+its paragraph box and `autowrap_trim_flags` trims its edge spaces. The box grows to the wrapped height.
 
 ## Linting
 

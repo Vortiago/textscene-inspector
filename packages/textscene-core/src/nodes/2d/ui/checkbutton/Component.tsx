@@ -13,6 +13,7 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { isButtonAutowrapped } from '../../../../r3f/controls/native/buttonBase';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import {
@@ -22,6 +23,7 @@ import {
   checkButtonDrawnIconSize,
   checkButtonIconMaxWidth,
   checkButtonIconNaturalSize,
+  checkButtonLabelWrapWidthPx,
   checkButtonMarginX,
   checkButtonMarginY,
   checkButtonTextTheme,
@@ -73,7 +75,13 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const bidi = useControlBidiOptions(props, solveNode);
-  const layout = useButtonLabelLayout(solveNode, CHECKBUTTON_THEME_FONT_KEY, text, fontSizePx, bidi);
+  const layout = useButtonLabelLayout(solveNode, props, {
+    themeFontKey: CHECKBUTTON_THEME_FONT_KEY,
+    text,
+    fontSizePx,
+    bidi,
+    boxWidthPx: checkButtonLabelWrapWidthPx(rect, solveNode, props.disabled === true, { theme }),
+  });
 
   const content = useMemo(
     () =>
@@ -109,6 +117,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
           layout={layout}
           overrunBehavior={props.overrunBehavior}
           bidi={bidi}
+          isWrapped={isButtonAutowrapped(props)}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}

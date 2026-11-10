@@ -19,7 +19,9 @@ import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistr
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   fitIconSize,
+  labelWrapWidthPx,
   reservedLabelBox,
+  shapeWrappedButtonLabel,
   textMinimumWidthPx,
   tintColor,
   type ButtonLabelBox,
@@ -33,7 +35,9 @@ import {
 import type { CheckButtonIcons } from '../../../../r3f/controls/native/themeIcons';
 import { CHECK_BUTTON_ICON_NATURAL_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { CheckButtonProperties } from './types';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import {
@@ -209,6 +213,27 @@ export function checkButtonCheckVOffset(constants: SolveNode['constants']): numb
 }
 
 /**
+ * The width a wrapping label shapes at in `rect` (`button.cpp:428-432`): the rect less the margins, the toggle
+ * and `h_separation`, which `_internal_margin` always reserves (`check_button.cpp:96-104`).
+ */
+export function checkButtonLabelWrapWidthPx(
+  rect: Rect2 | undefined,
+  n: Pick<SolveNode, 'textureSlots' | 'constants' | 'rtl'>,
+  isDisabled: boolean,
+  ctx: Pick<SolveContext, 'theme'>
+): number {
+  const iconSize = fitIconSize(
+    checkButtonIconNaturalSize(n, isDisabled, n.rtl),
+    checkButtonIconMaxWidth(n.constants)
+  );
+  return labelWrapWidthPx(
+    rect,
+    2 * checkButtonMarginX(ctx),
+    iconSize.x + checkButtonHSeparation(n.constants, ctx)
+  );
+}
+
+/**
  * `CheckButton::get_minimum_size` (`check_button.cpp:64-79`): Button's text-only floor plus the icon's
  * width, and `h_separation` only with text. Not `buttonMinimumSize`, whose flat stylebox is Button's:
  * the lookup is keyed by the node's own class, where every state is `cb_empty` (`default_theme.cpp:316-325`).
@@ -220,16 +245,25 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const marginY = checkButtonMarginY(ctx);
 
   const text = props.text ?? '';
-  const hasText = text.length > 0;
   const state = resolveCheckButtonDrawState(props);
   const { fontSizePx } = checkButtonTextTheme(n, props, state, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, CHECKBUTTON_THEME_FONT_KEY);
   // `Button::get_minimum_size` (`button.cpp:492`) reads `paragraph->get_size()`, the ceiled
-  // extent. The icon and separation are added outside the ceil (`check_button.cpp:66-77`).
-  const measured =
-    hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
-  // `clip_text` or a trimming overrun zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
-  const textSize = { x: textMinimumWidthPx(measured.x, props), y: measured.y };
+  // extent. The icon and separation are added outside the ceil (`check_button.cpp:66-77`). A
+  // wrapping label's rows follow the tentative width, as `button.cpp:429-432` leaves `text_buf`.
+  const layout =
+    text.length > 0 && ctx.measureText
+      ? shapeWrappedButtonLabel(text, props, {
+          fontSizePx,
+          fontMetrics,
+          bidi: controlBidiOptions(props, n),
+          boxWidthPx: checkButtonLabelWrapWidthPx(ctx.tentativeRect?.(n), n, props.disabled === true, ctx),
+        })
+      : null;
+  // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
+  const textSize = layout
+    ? { x: textMinimumWidthPx(layout.widthPx, props), y: layout.heightPx }
+    : { x: 0, y: 0 };
 
   const iconSize = fitIconSize(
     checkButtonIconNaturalSize(n, state === 'disabled', n.rtl),

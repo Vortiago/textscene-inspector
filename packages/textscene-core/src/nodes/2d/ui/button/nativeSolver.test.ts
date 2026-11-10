@@ -480,7 +480,24 @@ describe('buttonLabelShape — the wrap width and trim flags reach the shaper (b
     expect(rows({ text: 'alphabravo', autowrapMode: 1 }, 50).length).toBeGreaterThan(1);
   });
 
-  it('keeps the trailing edge space when autowrap_trim_flags clears it (label.h:45)', () => {
+  it('keeps the leading space of a row an arbitrary break starts, as Button trims only end spaces by default (button.h:48)', () => {
+    expect(rows({ text: 'supercalifragilistic expialidocious', autowrapMode: 1 }, 142)).toEqual([
+      'supercalifragilistic',
+      ' expialidocious',
+    ]);
+  });
+
+  it('adds no row for a last grapheme wider than the box: TextParagraph appends no terminator (text_paragraph.cpp)', () => {
+    expect(rows({ text: 'ab', autowrapMode: 1 }, 1)).toEqual(['a', 'b']);
+  });
+
+  it('trims that leading space once autowrap_trim_flags asks for it', () => {
+    expect(
+      rows({ text: 'supercalifragilistic expialidocious', autowrapMode: 1, autowrapTrimFlags: 64 | 128 }, 142)
+    ).toEqual(['supercalifragilistic', 'expialidocious']);
+  });
+
+  it('keeps the trailing edge space when autowrap_trim_flags clears it (button.h:48)', () => {
     // BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES is 64 | 128.
     // Authoring 0 keeps both edges.
     expect(rows({ text: 'alpha bravo', autowrapMode: 2, autowrapTrimFlags: 0 }, 50)).toEqual([

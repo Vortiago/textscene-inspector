@@ -17,10 +17,11 @@ import {
   fitIconSize,
   pickButtonStyleBox,
   resolveButtonDrawState,
-  shapeButtonLabel,
+  shapeWrappedButtonLabel,
+  labelWrapWidthPx,
+  textMinimumWidthPx,
   type ButtonDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
-import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import {
@@ -30,7 +31,6 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { clampAutowrapMode, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ButtonProperties } from './types';
 import {
@@ -38,7 +38,6 @@ import {
   CONTROL_FONT_DISABLED_COLOR,
   CONTROL_FONT_FOCUS_COLOR,
 } from '../../../../godot/scene/theme';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 
 /**
@@ -135,16 +134,13 @@ export function buttonLabelShape(
   if (text.length === 0) return null;
   const state = resolveButtonDrawState(props.disabled);
   const { fontSizePx } = buttonTextTheme(n, props, state, { theme });
-  const mode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
   // Not `ctx.measureText`: its `Vector2` drops the layout the painter needs, and its readiness
   // gate belongs to the solver. The painter shapes unconditionally.
-  return shapeButtonLabel(text, {
+  return shapeWrappedButtonLabel(text, props, {
     fontSizePx,
     fontMetrics: resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY),
     bidi: controlBidiOptions(props, n),
-    boxWidthPx: mode === AutowrapMode.AUTOWRAP_OFF ? 0 : boxWidthPx,
-    autowrapMode: mode,
-    autowrapTrimFlags: props.autowrapTrimFlags,
+    boxWidthPx,
   });
 }
 
@@ -184,9 +180,11 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height
   // depends on. Pass 1 shapes unwrapped. `is_clipped` is true under autowrap
   // (`button.cpp:332`), so the icon's reservation does not depend on the text.
-  const tentative = ctx.tentativeRect?.(n);
-  const wrapWidthPx =
-    tentative === undefined ? 0 : tentative.w - marginX - buttonIconReservationPx(n, props, ctx);
+  const wrapWidthPx = labelWrapWidthPx(
+    ctx.tentativeRect?.(n),
+    marginX,
+    buttonIconReservationPx(n, props, ctx)
+  );
   // An absent `ctx.measureText` means the text contributes nothing, while the margin and
   // the icon still count (`solverRegistry.ts`'s contract).
   const layout: TextLayoutResult | null = ctx.measureText
@@ -194,14 +192,11 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
     : null;
   // `minsize` starts from `paragraph->get_size()` (`button.cpp:492`), a max
   // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`):
-  // the ceiled extent, not the raw pen advance.
-  const textSize = layout ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx } : { x: 0, y: 0 };
-  // button.cpp:493-495: `clip_text`, a trimming overrun behaviour or autowrap zeroes the
-  // text's width contribution, since a narrower box trims or wraps it. The icon still counts.
-  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
-  if (isTextWidthClipped(props) || autowrapMode !== AutowrapMode.AUTOWRAP_OFF) {
-    textSize.x = 0;
-  }
+  // the ceiled extent, not the raw pen advance. Its width drops under `clip_text`, a trimming
+  // overrun behaviour or autowrap, since a narrower box trims or wraps it (`button.cpp:493-495`).
+  const textSize = layout
+    ? { x: textMinimumWidthPx(layout.widthPx, props), y: layout.heightPx }
+    : { x: 0, y: 0 };
 
   let width = textSize.x;
   let height = textSize.y;
