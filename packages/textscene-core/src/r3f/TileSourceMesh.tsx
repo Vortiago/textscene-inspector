@@ -3,10 +3,10 @@
  * 2D material of Sprite2D. It resolves the source's texture as any Texture2D slot is resolved.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 import * as THREE from 'three';
-import { useTexture2D } from '../resources/useTexture2D';
+import { useCanvasItemTextureSampledBy } from './canvasItemTexture';
 import { NO_RESOURCES } from './SceneResourcesContext';
 import { buildPaddedStandInGeometryArrays, buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
@@ -17,9 +17,12 @@ import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import { WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
 import type { Rgba } from '../godot/math/math';
 import { TILE_TEXTURE_PADDING, TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
+import { TILE_NORMAL_ORIENTATION, TILE_NORMAL_ORIENTATION_ATTRIBUTE } from './tileNormalOrientation';
 import { materialProgramInputs } from './materialProgramInputs';
 import { usePaddedAtlasStandIn } from './paddedAtlasStandIn';
-import type { CanvasItemPixelMaterial } from './components/LitCanvasItemPixels';
+import { useSurfacePixelMaterial } from './components/LitCanvasItemPixels';
+import { CanvasItemSurfaceSource } from './canvasItemSurface';
+import type { CanvasItemSurface } from './lighting2d/normalMappedLighting';
 
 interface TileSourceMeshProps {
   source: AtlasSourceModel;
@@ -31,9 +34,7 @@ interface TileSourceMeshProps {
   tint: VertexColorTint;
   /** Group name for the per-source missing-texture placeholder. */
   name?: string;
-  /** The tile canvas item's facing, blend state and light list. */
-  pixelMaterial: CanvasItemPixelMaterial;
-  /** The layer's effective filter and repeat, which every source of the layer samples with. */
+  /** The layer's effective filter and repeat, which a source's CanvasTexture may override. */
   sampler: CanvasItemTextureSampler;
 }
 
@@ -44,29 +45,31 @@ export function TileSourceMesh({
   renderOrder,
   tint,
   name,
-  pixelMaterial,
-  sampler,
+  sampler: layerSampler,
 }: TileSourceMeshProps) {
   const slot = source.texture;
-  const texResult = useTexture2D(
+  const texResult = useCanvasItemTextureSampledBy(
+    layerSampler,
     slot?.ref,
     slot?.externalResources ?? NO_RESOURCES.externalResources,
     slot?.internalResources ?? NO_RESOURCES.internalResources,
-    undefined,
     slot?.isHeldLocally
   );
   const standIn = usePaddedAtlasStandIn(texResult, source);
   const isStandIn = standIn !== null;
-  const tex = useCanvas2DTexture(standIn ?? texResult.texture, sampler);
+  const tex = useCanvas2DTexture(standIn ?? texResult.texture, texResult.sampler);
   const image = tex?.image as { width?: number; height?: number } | undefined;
   const texW = image?.width;
   const texH = image?.height;
 
+  const { canvasTexture } = texResult;
+  const hasNormalMap = Boolean(canvasTexture?.slot.texture.normalTexture);
   const arrays = useMemo(() => {
     if (!texW || !texH) return null;
-    const build = isStandIn ? buildPaddedStandInGeometryArrays : buildTileGeometryArrays;
-    return build(cells, source, grid, texW, texH);
-  }, [cells, source, grid, texW, texH, isStandIn]);
+    return isStandIn
+      ? buildPaddedStandInGeometryArrays(cells, source, grid, texW, texH)
+      : buildTileGeometryArrays(cells, source, grid, texW, texH, hasNormalMap);
+  }, [cells, source, grid, texW, texH, isStandIn, hasNormalMap]);
   const colors = useMemo(() => arrays && tintedColors(arrays.colors, tint.vertex), [arrays, tint.vertex]);
   const geometry = useMemo(() => {
     if (!arrays || !colors) return null;
@@ -76,11 +79,16 @@ export function TileSourceMesh({
     geom.setAttribute('color', new THREE.BufferAttribute(colors, 4));
     if (arrays.uvBounds)
       geom.setAttribute(TILE_UV_BOUNDS_ATTRIBUTE, new THREE.BufferAttribute(arrays.uvBounds, 4));
+    if (arrays.orientations)
+      geom.setAttribute(TILE_NORMAL_ORIENTATION_ATTRIBUTE, new THREE.BufferAttribute(arrays.orientations, 1));
     geom.setIndex(new THREE.BufferAttribute(arrays.indices, 1));
     return geom;
   }, [arrays, colors]);
   // R3F does not dispose a geometry passed as a prop, so this releases it.
   useDisposeOnRelease(geometry);
+  // The run's own maps, so runs of one tile item from different sources each light with theirs.
+  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
+  const pixelMaterial = useSurfacePixelMaterial(surface);
 
   // A source with no texture draws nothing (`tile_map_layer.cpp:724`). A failed load gets one
   // placeholder for the whole source (the panel row comes from the resolver's missing report).
@@ -104,13 +112,26 @@ export function TileSourceMesh({
       depthWrite: false,
       defines: tint.defines,
     },
-    merge: [pixelMaterial, padsInShader(source, isStandIn) ? { injection: TILE_TEXTURE_PADDING } : undefined],
+    merge: [
+      pixelMaterial,
+      padsInShader(source, isStandIn) ? { injection: TILE_TEXTURE_PADDING } : undefined,
+      surface && arrays?.orientations ? { injection: TILE_NORMAL_ORIENTATION } : undefined,
+    ],
   });
 
   return (
-    <mesh renderOrder={renderOrder} geometry={geometry}>
-      <meshBasicMaterial key={program.key} {...program.props} />
-    </mesh>
+    <>
+      <mesh renderOrder={renderOrder} geometry={geometry}>
+        <meshBasicMaterial key={program.key} {...program.props} />
+      </mesh>
+      {hasNormalMap && canvasTexture && (
+        <CanvasItemSurfaceSource
+          slot={canvasTexture.slot}
+          sampler={canvasTexture.sampler}
+          onSurface={setSurface}
+        />
+      )}
+    </>
   );
 }
 

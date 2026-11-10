@@ -19,7 +19,10 @@ import type { Texture2DResult } from '../resources/useTexture2D';
  * The stand-in `source` samples at its padded regions in place of `slot`'s texture, or null for a
  * texture the source samples itself. The caller never disposes the stand-in.
  */
-export function usePaddedAtlasStandIn(slot: Texture2DResult, source: AtlasSourceModel): THREE.Texture | null {
+export function usePaddedAtlasStandIn(
+  slot: Pick<Texture2DResult, 'texture' | 'hasNoImage'>,
+  source: AtlasSourceModel
+): THREE.Texture | null {
   const { texture } = slot;
   const isPadded = source.usesTexturePadding && texture !== null;
   const isUnrenderedTarget = isPadded && isLiveTarget(texture);
