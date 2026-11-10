@@ -21,10 +21,11 @@ import {
   fitIconSize,
   labelWrapWidthPx,
   reservedLabelBox,
-  shapeWrappedButtonLabel,
-  labelMinimumTextSize,
+  resolveToggleDrawState,
+  shapedLabelMinimumTextSize,
   tintColor,
   type ButtonLabelBox,
+  type ToggleDrawState,
   type ButtonWrapProperties,
 } from '../../../../r3f/controls/native/buttonBase';
 import {
@@ -56,12 +57,8 @@ export { fitIconSize, tintColor };
  * `BaseButton::get_draw_mode()` (`base_button.cpp:325-358`) without input: `status.hovering` and
  * `status.press_attempt` stay false, so `button_pressed` alone selects pressed, and `disabled` wins.
  */
-type CheckButtonDrawState = 'normal' | 'pressed' | 'disabled';
-
-export function resolveCheckButtonDrawState(props: CheckButtonProperties): CheckButtonDrawState {
-  if (props.disabled) return 'disabled';
-  if (props.buttonPressed) return 'pressed';
-  return 'normal';
+export function resolveCheckButtonDrawState(props: CheckButtonProperties): ToggleDrawState {
+  return resolveToggleDrawState(props.disabled, props.buttonPressed);
 }
 
 /** CheckButton's own `font_color` default (`default_theme.cpp:340`). */
@@ -71,7 +68,7 @@ const CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
 /** CheckButton's own `font_disabled_color` default (`default_theme.cpp:345`). */
 const CHECKBUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
-const CHECKBUTTON_THEME_KEYS: Record<CheckButtonDrawState, TextThemeKeys> = {
+const CHECKBUTTON_THEME_KEYS: Record<ToggleDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
   pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
   disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
@@ -81,7 +78,7 @@ const CHECKBUTTON_THEME_KEYS: Record<CheckButtonDrawState, TextThemeKeys> = {
 export function checkButtonTextTheme(
   n: SolveNode,
   props: CheckButtonProperties,
-  state: CheckButtonDrawState,
+  state: ToggleDrawState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = {
@@ -251,9 +248,12 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   // `Button::get_minimum_size` (`button.cpp:492`) reads `paragraph->get_size()`, the ceiled
   // extent. The icon and separation are added outside the ceil (`check_button.cpp:66-77`). A
   // wrapping label's rows follow the tentative width, as `button.cpp:429-432` leaves `text_buf`.
-  const layout =
-    text.length > 0 && ctx.measureText
-      ? shapeWrappedButtonLabel(text, props, {
+  // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
+  const textSize = shapedLabelMinimumTextSize(
+    text,
+    props,
+    ctx.measureText
+      ? {
           fontSizePx,
           fontMetrics,
           bidi: controlBidiOptions(props, n),
@@ -264,10 +264,9 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
             props.disabled === true,
             ctx
           ),
-        })
-      : null;
-  // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
-  const textSize = labelMinimumTextSize(layout, props);
+        }
+      : null
+  );
 
   const iconSize = fitIconSize(
     checkButtonIconNaturalSize(n, state === 'disabled', n.rtl),

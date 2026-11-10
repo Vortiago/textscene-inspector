@@ -34,17 +34,11 @@ import {
   resolveTextTheme,
   type ResolvedTextTheme,
   type TextThemeDefaults,
-  type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { OptionButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import {
-  CONTROL_FONT_COLOR,
-  CONTROL_FONT_DISABLED_COLOR,
-  CONTROL_FONT_PRESSED_COLOR,
-} from '../../../../godot/scene/theme';
-import type { Rgba } from '../../../../godot/math/math';
+import { BUTTON_DEFAULT_FONT_COLORS, BUTTON_THEME_KEYS } from '../button/nativeSolver';
 
 // Re-exported so Component.tsx imports the shared Button pieces under one name.
 export { pickButtonStyleBox, resolveToggleDrawState, tintColor };
@@ -55,26 +49,11 @@ export { pickButtonStyleBox, resolveToggleDrawState, tintColor };
  */
 export const OPTION_BUTTON_THEME_FONT_KEY = 'font';
 
-// Theme font colours
-
-/** OptionButton's `font_color` default (`default_theme.cpp:240`). */
-const OPTION_BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-/** OptionButton's `font_disabled_color` default (`default_theme.cpp:245`). */
-const OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
-
-const OPTION_BUTTON_DEFAULT_FONT_COLORS: Readonly<Record<ToggleDrawState, Rgba>> = {
-  normal: OPTION_BUTTON_DEFAULT_FONT_COLOR,
-  pressed: CONTROL_FONT_PRESSED_COLOR,
-  disabled: OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR,
-};
-
-const OPTION_BUTTON_THEME_KEYS: Record<ToggleDrawState, TextThemeKeys> = {
-  normal: { sizeKey: 'font_size', colorKey: 'font_color' },
-  pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
-  disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
-};
-
-/** OptionButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else OptionButton's literal (`resolveTextTheme`). */
+/**
+ * OptionButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the
+ * theme default, else OptionButton's literal (`resolveTextTheme`). Its literals (`default_theme.cpp:240-245`)
+ * equal Button's, so it reads Button's tables.
+ */
 export function optionButtonTextTheme(
   n: SolveNode,
   props: OptionButtonProperties,
@@ -83,9 +62,9 @@ export function optionButtonTextTheme(
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color: OPTION_BUTTON_DEFAULT_FONT_COLORS[state],
+    color: BUTTON_DEFAULT_FONT_COLORS[state],
   };
-  return resolveTextTheme(n, props, OPTION_BUTTON_THEME_KEYS[state], defaults);
+  return resolveTextTheme(n, props, BUTTON_THEME_KEYS[state], defaults);
 }
 
 // StyleBox chrome

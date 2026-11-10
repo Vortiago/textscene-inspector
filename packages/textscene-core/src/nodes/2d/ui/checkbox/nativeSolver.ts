@@ -21,10 +21,11 @@ import {
   fitIconSize,
   labelWrapWidthPx,
   reservedLabelBox,
-  shapeWrappedButtonLabel,
-  labelMinimumTextSize,
+  resolveToggleDrawState,
+  shapedLabelMinimumTextSize,
   tintColor,
   type ButtonLabelBox,
+  type ToggleDrawState,
   type ButtonWrapProperties,
 } from '../../../../r3f/controls/native/buttonBase';
 import {
@@ -62,12 +63,8 @@ export { fitIconSize, tintColor };
  * wins first. Measured with `pnpm ref:godot --mode 2d`: a checked row's label reads (255,255,255),
  * `font_pressed_color`, not the `control_font_color` grey of `DRAW_NORMAL`.
  */
-type CheckBoxDrawState = 'normal' | 'pressed' | 'disabled';
-
-export function resolveCheckBoxDrawState(props: CheckBoxProperties): CheckBoxDrawState {
-  if (props.disabled) return 'disabled';
-  if (props.buttonPressed) return 'pressed';
-  return 'normal';
+export function resolveCheckBoxDrawState(props: CheckBoxProperties): ToggleDrawState {
+  return resolveToggleDrawState(props.disabled, props.buttonPressed);
 }
 
 /** CheckBox's own `font_color` default (`default_theme.cpp:300`). */
@@ -77,7 +74,7 @@ const CHECKBOX_DEFAULT_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
 /** CheckBox's own `font_disabled_color` default (`default_theme.cpp:305`). */
 const CHECKBOX_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
-const CHECKBOX_THEME_KEYS: Record<CheckBoxDrawState, TextThemeKeys> = {
+const CHECKBOX_THEME_KEYS: Record<ToggleDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
   pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
   disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
@@ -87,7 +84,7 @@ const CHECKBOX_THEME_KEYS: Record<CheckBoxDrawState, TextThemeKeys> = {
 export function checkBoxTextTheme(
   n: SolveNode,
   props: CheckBoxProperties,
-  state: CheckBoxDrawState,
+  state: ToggleDrawState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = {
@@ -237,17 +234,19 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   // extent (`text_paragraph.cpp:601-608`, `text_server_adv.cpp:7524-7537`). The icon and
   // separation are added outside the ceil (`check_box.cpp:63-73`). A wrapping label's rows
   // follow the tentative width, as `button.cpp:429-432` leaves `text_buf`.
-  const layout =
-    text.length > 0 && ctx.measureText
-      ? shapeWrappedButtonLabel(text, props, {
+  // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
+  const textSize = shapedLabelMinimumTextSize(
+    text,
+    props,
+    ctx.measureText
+      ? {
           fontSizePx,
           fontMetrics,
           bidi: controlBidiOptions(props, n),
           boxWidthPx: checkBoxLabelWrapWidthPx(props, ctx.tentativeRect?.(n), n, ctx),
-        })
-      : null;
-  // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
-  const textSize = labelMinimumTextSize(layout, props);
+        }
+      : null
+  );
 
   const iconSize = fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
   const hSeparation = checkBoxHSeparation(n.constants, ctx);

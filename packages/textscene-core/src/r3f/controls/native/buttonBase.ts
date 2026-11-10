@@ -104,8 +104,6 @@ interface ButtonLabelShapeOptions {
   autowrapMode?: EnumValue<typeof AutowrapMode>;
   /** `autowrap_flags_trim`, ORed onto the break flags at `:560`. Undefined trims both edge spaces, Label's default: `shapeWrappedButtonLabel` passes Button's own. */
   autowrapTrimFlags?: number;
-  /** `TextParagraph` shapes no end glyph (`ShapeTextOptions.hasEndGlyph`); a wrapping label passes false. */
-  hasEndGlyph?: boolean;
 }
 
 /** Shapes a Button-family label, the one measure its painters and solvers share. */
@@ -117,7 +115,6 @@ export function shapeButtonLabel(text: string, options: ButtonLabelShapeOptions)
     boxWidthPx = 0,
     autowrapMode = AutowrapMode.AUTOWRAP_OFF,
     autowrapTrimFlags,
-    hasEndGlyph,
   } = options;
   return shapeText(text, {
     fontSizePx,
@@ -126,7 +123,8 @@ export function shapeButtonLabel(text: string, options: ButtonLabelShapeOptions)
     // Not Label's 3: no Button-family control sets `line_spacing` on its `text_buf`
     // (`button.cpp`, `check_box.cpp`, `option_button.cpp`).
     lineSpacingPx: 0,
-    hasEndGlyph,
+    // `TextParagraph` shapes no end glyph, which would add a blank row after a glyph wider than the box.
+    hasEndGlyph: false,
     fontMetrics,
     autowrapTrimFlags,
     ...bidi,
@@ -160,12 +158,11 @@ export function isButtonNodeAutowrapped(n: SolveNode): boolean {
 export function shapeWrappedButtonLabel(
   text: string,
   props: ButtonWrapProperties,
-  options: Omit<ButtonLabelShapeOptions, 'autowrapMode' | 'autowrapTrimFlags' | 'hasEndGlyph'>
+  options: Omit<ButtonLabelShapeOptions, 'autowrapMode' | 'autowrapTrimFlags'>
 ): TextLayoutResult {
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
   return shapeButtonLabel(text, {
     ...options,
-    hasEndGlyph: false,
     boxWidthPx: autowrapMode === AutowrapMode.AUTOWRAP_OFF ? 0 : options.boxWidthPx,
     autowrapMode,
     autowrapTrimFlags: props.autowrapTrimFlags ?? BUTTON_DEFAULT_TRIM_FLAGS,
@@ -421,12 +418,33 @@ function reservedLabelWidthPx(rectWidthPx: number, marginsPx: number, reservedPx
   return rectWidthPx - marginsPx - reservedPx;
 }
 
+/**
+ * The shaped text size `layoutButtonContent` aligns against: the ceiled width, not the raw pen advance
+ * (`button.cpp:343,349` read the same `text_buf->get_size()` as the minimum size). The height needs no
+ * ceil: the line pitch sums independently ceiled ascent and descent and an integral theme spacing.
+ */
+export function labelNaturalSize(layout: TextLayoutResult | null): Vector2 {
+  return layout ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx } : { x: 0, y: 0 };
+}
+
 /** A shaped label's contribution to a minimum size: its text width ({@link textMinimumWidthPx}) and height, or none without a layout. */
 export function labelMinimumTextSize(
   layout: TextLayoutResult | null,
   props: TextClipProperties & ButtonWrapProperties
 ): Vector2 {
   return layout ? { x: textMinimumWidthPx(layout.widthPx, props), y: layout.heightPx } : { x: 0, y: 0 };
+}
+
+/** The text's contribution to a CheckBox-style minimum size: its wrapped layout through {@link labelMinimumTextSize}, or none without text or a measurer. */
+export function shapedLabelMinimumTextSize(
+  text: string,
+  props: TextClipProperties & ButtonWrapProperties,
+  options: Omit<ButtonLabelShapeOptions, 'autowrapMode' | 'autowrapTrimFlags'> | null
+): Vector2 {
+  return labelMinimumTextSize(
+    options && text.length > 0 ? shapeWrappedButtonLabel(text, props, options) : null,
+    props
+  );
 }
 
 /**
@@ -452,15 +470,20 @@ function swapAlignmentSide(alignment: number): number {
   return alignment;
 }
 
+/** `Button::is_clipped` (`button.cpp:332`): `clip_text`, a trimming overrun or autowrap. */
+export function isButtonTextClipped(props: TextClipProperties & ButtonWrapProperties): boolean {
+  return isTextWidthClipped(props) || isButtonAutowrapped(props);
+}
+
 /**
  * A Button-family label's width contribution to the minimum size: the ceiled shaped width, or 0 when
- * {@link isTextWidthClipped} or the label wraps, since a narrower box cuts, trims or wraps it (`button.cpp:493-495`).
+ * {@link isButtonTextClipped}, since a narrower box cuts, trims or wraps it (`button.cpp:493-495`).
  */
 export function textMinimumWidthPx(
   measuredWidthPx: number,
   props: TextClipProperties & ButtonWrapProperties
 ): number {
-  return isTextWidthClipped(props) || isButtonAutowrapped(props) ? 0 : shapedTextSizeWidthPx(measuredWidthPx);
+  return isButtonTextClipped(props) ? 0 : shapedTextSizeWidthPx(measuredWidthPx);
 }
 
 /**

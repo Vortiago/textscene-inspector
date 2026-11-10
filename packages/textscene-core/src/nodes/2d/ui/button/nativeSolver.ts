@@ -12,6 +12,8 @@
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import type { Rect2 } from '../../../../godot/math/rect2';
+import type { Vector2 } from '../../../../godot/math/vector';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   fitIconSize,
@@ -20,6 +22,11 @@ import {
   shapeWrappedButtonLabel,
   labelWrapWidthPx,
   labelMinimumTextSize,
+  labelNaturalSize,
+  isButtonAutowrapped,
+  layoutButtonContent,
+  buttonTextBufWidthPx,
+  type ButtonContentInput,
   type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
 import { type Rgba } from '../../../../godot/math/math';
@@ -151,6 +158,73 @@ export function buttonLabelShape(
   });
 }
 
+interface ButtonContentInputFields {
+  alignment?: number;
+  iconAlignment?: number;
+  verticalIconAlignment?: number;
+  expandIcon?: boolean;
+  /** {@link isButtonTextClipped}. */
+  isClipped: boolean;
+  constants: SolveNode['constants'];
+  separationPx: number;
+  rtl: boolean;
+  rectSize: Vector2;
+  styleMargin: ButtonContentInput['styleMargin'];
+  iconNaturalSize: Vector2 | null;
+  hasText: boolean;
+}
+
+/** What `layoutButtonContent` reads of the node, shared by the painter and the wrap width of an expanded icon. The caller adds the shaped text's size. */
+export function buttonContentInput(
+  fields: ButtonContentInputFields
+): Omit<ButtonContentInput, 'textNaturalSize' | 'isTextRtl'> {
+  return {
+    rectSize: fields.rectSize,
+    styleMargin: fields.styleMargin,
+    hSeparation: fields.constants.h_separation ?? fields.separationPx,
+    iconMaxWidth: fields.constants.icon_max_width ?? 0,
+    // Aligned against the ceiled text width (`scene/gui/button.cpp:343,349`).
+    textAlignment: fields.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
+    iconAlignment: fields.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    verticalIconAlignment: fields.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+    expandIcon: fields.expandIcon === true,
+    iconNaturalSize: fields.iconNaturalSize,
+    hasText: fields.hasText,
+    isClipped: fields.isClipped,
+    rtl: fields.rtl,
+  };
+}
+
+/**
+ * The width the label wraps at beside an expanded icon: what the painter's layout leaves
+ * (`button.cpp:345,428-432`), since the icon's size follows the box. 0 without a rect or an icon.
+ */
+function expandedIconWrapWidthPx(
+  n: ShareNode,
+  props: ButtonProperties,
+  ctx: Pick<SolveContext, 'theme'>,
+  rect: Rect2,
+  styleMargin: ButtonContentInput['styleMargin']
+): number {
+  const unwrapped = buttonLabelShape(n, ctx.theme);
+  const { drawableSize } = layoutButtonContent({
+    ...buttonContentInput({
+      ...props,
+      isClipped: true,
+      constants: n.constants,
+      separationPx: ctx.theme.separation,
+      rtl: n.rtl,
+      rectSize: { x: rect.w, y: rect.h },
+      styleMargin,
+      iconNaturalSize: n.textureSize,
+      hasText: unwrapped !== null,
+    }),
+    textNaturalSize: labelNaturalSize(unwrapped),
+    isTextRtl: false,
+  });
+  return buttonTextBufWidthPx(drawableSize.x);
+}
+
 /**
  * The icon's share of the label's box, `drawable_size_remained.width`'s icon term
  * (`button.cpp:332-352`). The wrap width needs it before the text is shaped, so
@@ -187,9 +261,11 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height
   // depends on. Pass 1 shapes unwrapped. `is_clipped` is true under autowrap
   // (`button.cpp:332`), so the icon's reservation does not depend on the text.
-  const wrapWidthPx = labelWrapWidthPx(props, ctx.tentativeRect?.(n), marginX, () =>
-    buttonIconReservationPx(n, props, ctx)
-  );
+  const rect = ctx.tentativeRect?.(n);
+  const wrapWidthPx =
+    props.expandIcon && n.textureSize && rect && isButtonAutowrapped(props)
+      ? expandedIconWrapWidthPx(n, props, ctx, rect, styleBox.contentMargin)
+      : labelWrapWidthPx(props, rect, marginX, () => buttonIconReservationPx(n, props, ctx));
   // An absent `ctx.measureText` means the text contributes nothing, while the margin and
   // the icon still count (`solverRegistry.ts`'s contract).
   const layout: TextLayoutResult | null = ctx.measureText

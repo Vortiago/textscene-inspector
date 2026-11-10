@@ -12,6 +12,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import * as logger from '../../../../logger';
 import type { ButtonProperties } from './types';
 import {
@@ -461,6 +462,26 @@ describe('Button.autowrap_mode (button.cpp:493,546-561)', () => {
 
   it('never wraps at AUTOWRAP_OFF, whatever the tentative rect says', () => {
     expect(minSize({ text: LONG }, 80).y).toBe(minSize({ text: LONG }).y);
+  });
+});
+
+describe('Button.expand_icon under autowrap shapes at the drawn width (button.cpp:332-345,428-432)', () => {
+  it('wraps the minimum at the width the expanded icon leaves, as the painter does', () => {
+    const theme = nativeTheme(1);
+    const { x: marginX, y: marginY } = contentMarginSize(theme.widgets.button.normal);
+    const rect = { x: 0, y: 0, w: 130, h: 40 };
+    // `is_clipped` keeps the text's width out of the icon's, so a square icon takes the box height.
+    const iconWidth = Math.round(rect.h - marginY);
+    const wrapWidth = Math.ceil(Math.max(1, rect.w - marginX - iconWidth - theme.separation));
+    const props = { text: 'alpha bravo charlie delta', autowrapMode: 2, expandIcon: true };
+    const expected = buttonLabelShape(node(props), theme, wrapWidth)!.heightPx;
+
+    const size = buttonMinimumSize(node(props, {}, { x: 16, y: 16 }), {
+      ...ctx(),
+      tentativeRect: () => rect,
+    });
+
+    expect(size.y).toBe(expected + marginY);
   });
 });
 

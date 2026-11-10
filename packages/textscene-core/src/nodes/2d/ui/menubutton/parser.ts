@@ -6,14 +6,13 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { MenuButtonProperties } from './types';
-import { parseButton, parseButtonPressed } from '../button/parser';
+import { parseButton } from '../button/parser';
 
 export function parseMenuButton(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): MenuButtonProperties {
-  const result = parseButton(heading, properties);
+  const result = parseButton(heading, properties, true);
   if (properties.flat === undefined) result.flat = true;
-  result.buttonPressed = parseButtonPressed(properties, true);
   return result;
 }

@@ -11,12 +11,16 @@ import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
  * Whether `button_pressed` is on: `BaseButton::set_pressed` refuses a button that is no toggle. `isToggleByDefault`
  * is the class's `toggle_mode` default: true for OptionButton (`option_button.cpp:652`) and MenuButton (`menu_button.cpp:240`).
  */
-export function parseButtonPressed(properties: Record<string, string>, isToggleByDefault: boolean): boolean {
+function parseButtonPressed(properties: Record<string, string>, isToggleByDefault: boolean): boolean {
   const isToggle = boolSlotValue(properties.toggle_mode) ?? isToggleByDefault;
   return isToggle === true && boolSlotValue(properties.button_pressed) === true;
 }
 
-export function parseButton(heading: ParsedHeading, properties: Record<string, string>): ButtonProperties {
+export function parseButton(
+  heading: ParsedHeading,
+  properties: Record<string, string>,
+  isToggleByDefault = false
+): ButtonProperties {
   const result: ButtonProperties = {
     ...parseControl(heading, properties),
     ...parseTextDirectionProperties(properties, heading.attributes.type ?? 'Button'),
@@ -24,7 +28,7 @@ export function parseButton(heading: ParsedHeading, properties: Record<string, s
   if (properties.text !== undefined) result.text = unquoteString(properties.text);
   result.disabled = boolSlotValue(properties.disabled) === true;
   result.flat = boolSlotValue(properties.flat) === true;
-  result.buttonPressed = parseButtonPressed(properties, false);
+  result.buttonPressed = parseButtonPressed(properties, isToggleByDefault);
   result.alignment = parseOptionalInt(properties.alignment);
   // class_button.html: icon_alignment 0 (LEFT), vertical_icon_alignment 1
   // (CENTER), expand_icon false. An icon-only button carries no text.

@@ -74,3 +74,16 @@ describe('parseCheckBox — autowrap_mode and autowrap_trim_flags', () => {
     expect(p.autowrapTrimFlags).toBeUndefined();
   });
 });
+
+describe('parseCheckBox button_pressed', () => {
+  const parse = (properties: Record<string, string>) =>
+    parseCheckBox(h({ name: 'X', type: 'CheckBox' }), properties).buttonPressed;
+
+  it('is on without toggle_mode, which the constructor sets', () => {
+    expect(parse({ button_pressed: 'true' })).toBe(true);
+  });
+
+  it('is off once toggle_mode is false, as BaseButton::set_pressed refuses it', () => {
+    expect(parse({ toggle_mode: 'false', button_pressed: 'true' })).toBe(false);
+  });
+});

@@ -7,7 +7,7 @@
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';
 import { parseOptionalInt } from '../../../../parser/valueParsers';
 import type { OptionItem, OptionButtonProperties } from './types';
-import { parseButton, parseButtonPressed } from '../button/parser';
+import { parseButton } from '../button/parser';
 import { slotCount, slotInt } from '../../../../godot/variant/intSlots.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { OPTION_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
@@ -18,8 +18,7 @@ export function parseOptionButton(
   properties: Record<string, string>
 ): OptionButtonProperties {
   const result: OptionButtonProperties = {
-    ...parseButton(heading, properties),
-    buttonPressed: parseButtonPressed(properties, true),
+    ...parseButton(heading, properties, true),
   };
 
   // A dense array, one slot per index, so `selected`, the raw Godot index, aligns with items[selected]
