@@ -19,14 +19,11 @@ import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixels';
-import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import {
   multiplyModulate,
   useItemLinearColor,
   useItemLinearColorOf,
   useVertexColorTint,
-  type VertexColorTint,
 } from '../../../../r3f/canvasItemModulate';
 import { parseColor } from '../../../../utils/colorParser';
 import { AlphaCheckerboardQuad } from '../shared/AlphaCheckerboardQuad';
@@ -38,7 +35,6 @@ import {
   COLOR_PICKER_CURSOR_SIZE,
   COLOR_PICKER_MENU_ICON,
   COLOR_PICKER_OVERBRIGHT_ICON,
-  COLOR_SCRIPT_ICON,
   COLOR_PICKER_PIPETTE_ICON,
   COLOR_PICKER_SHAPE_RECT_ICON,
   FOLDABLE_CONTAINER_ICONS,
@@ -51,22 +47,23 @@ import { isColorOverbright } from '../shared/colorOverbright';
 import { TextDirection } from '../../../../godot/text/textServerEnums';
 import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
 import { pickerChildTheme } from './pickerChildTheme';
-import { IconButton } from './IconButton';
+import { IconButton, iconModulate } from './IconButton';
+import { GradientMesh, buildGeometry, tintVertexColors } from './GradientMesh';
+import { LabelledText } from './LabelledText';
+import { TextTypeScriptIcon } from './TextTypeScriptIcon';
 import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
 import type { ButtonLabelBox } from '../../../../r3f/controls/native/buttonBase';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import {
   infersRtl,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { iconOnlyButtonIconRect, shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
+import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { buttonIconColor } from '../button/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { hsvToRgb } from '../../../../godot/math/color';
-import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   COLOR_MODE_NAMES,
   COLOR_PICKER_SAMPLE_HEIGHT_FRACTION,
@@ -106,7 +103,6 @@ import {
   linearizeStops,
   svSquareBaseLayer,
   svSquareHueLayer,
-  type QuadGeometry,
 } from './svGradient';
 import {
   MODE_HSV,
@@ -133,173 +129,6 @@ import {
 import type { ColorPickerProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
-import { useDisposeOnRelease } from '../../../../r3f/useDisposeOnRelease';
-
-function buildGeometry(g: QuadGeometry): THREE.BufferGeometry {
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(g.positions), 3));
-  geometry.setIndex(g.indices);
-  geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(g.colors), 4));
-  return geometry;
-}
-
-interface GradientMeshProps {
-  geometry: THREE.BufferGeometry;
-  renderOrder: number;
-  clippingPlanes: THREE.Plane[];
-  /**
-   * The vertex colours are already linear (`linearizeStops`), so the GPU's linear lerp reproduces
-   * `GRADIENT_COLOR_SPACE_LINEAR_SRGB`. Otherwise they are sRGB, interpolated as stored, since
-   * interpolating two sRGB colours in linear space moves the ramp's midpoint.
-   */
-  linear?: boolean;
-  /** The item's tint, whose vertex factor the geometry's colours already carry. */
-  tint: VertexColorTint;
-}
-
-/** One vertex-coloured, single-pass mesh: the SV square's two layers, the hue strip and every channel-slider band. */
-function GradientMesh({ geometry, renderOrder, clippingPlanes, linear, tint }: GradientMeshProps) {
-  const canvasItemMerge = useCanvasItemMerge();
-  useDisposeOnRelease(geometry);
-  const program = materialProgramInputs({
-    props: {
-      color: tint.color,
-      opacity: tint.opacity,
-      vertexColors: true,
-      transparent: true,
-      depthWrite: false,
-      clippingPlanes,
-      defines: linear ? undefined : tint.defines,
-    },
-    merge: canvasItemMerge,
-  });
-  return (
-    <mesh renderOrder={renderOrder}>
-      <primitive object={geometry} attach="geometry" />
-      <meshBasicMaterial key={program.key} {...program.props} />
-    </mesh>
-  );
-}
-
-/**
- * The rendering server applies a CanvasItem's accumulated modulate to every draw call, so the
- * vertex factor of `useVertexColorTint` multiplies into each colour.
- */
-function tintVertexColors(colors: number[], tint: { r: number; g: number; b: number; a: number }): number[] {
-  const out = new Array<number>(colors.length);
-  for (let i = 0; i < colors.length; i += 4) {
-    out[i] = colors[i]! * tint.r;
-    out[i + 1] = colors[i + 1]! * tint.g;
-    out[i + 2] = colors[i + 2]! * tint.b;
-    out[i + 3] = colors[i + 3]! * tint.a;
-  }
-  return out;
-}
-
-interface LabelledTextProps {
-  rect: Rect2;
-  layout: TextLayoutResult | null;
-  fontSizePx: number;
-  tint: Rgba;
-  clippingPlanes: THREE.Plane[];
-  renderOrder: number;
-  /** Right-aligns within `rect`, as the SpinBox's `LineEdit` does for a number (`line_edit.cpp`). A plain `Label` aligns left. */
-  alignRight?: boolean;
-  /** Centres within `rect`: `Button`'s default `alignment` (`button.h:54`), which `mode_btns` and `text_type` keep. `btn_preset` and `btn_recent_preset` set LEFT (`color_picker.cpp:2248,2283`). Wins over `alignRight`. */
-  center?: boolean;
-  /** The `x_ofs` floor of `LineEdit::_notification(NOTIFICATION_DRAW)`: the gap between the text and its aligned edge. 0 for a Label or Button, which has no box under the text. */
-  inset?: number;
-  /** `Control::is_layout_rtl()`: swaps the leading and trailing arms and leaves centre alone, as `label.cpp:497-509`, `line_edit.cpp:1397-1421` and `button.cpp:262-276` do. */
-  rtl?: boolean;
-}
-
-/** One row of shaped text, vertically centred in `rect`. */
-function LabelledText({
-  rect,
-  layout,
-  fontSizePx,
-  tint,
-  clippingPlanes,
-  renderOrder,
-  alignRight,
-  center,
-  inset = 0,
-  rtl = false,
-}: LabelledTextProps) {
-  if (!layout) return null;
-  const width = shapedTextSizeWidthPx(layout.widthPx);
-  const trailing = Math.max(inset, rect.w - width - inset);
-  const x = center ? Math.max(0, (rect.w - width) / 2) : (alignRight ?? false) !== rtl ? trailing : inset;
-  const y = Math.max(0, (rect.h - layout.heightPx) / 2);
-  return (
-    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]}>
-      <TextRun
-        layout={layout}
-        fontSizePx={fontSizePx}
-        tint={tint}
-        clippingPlanes={clippingPlanes}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
-  );
-}
-
-/** A Button icon's colour and opacity: the Theme's icon modulate folded onto the item's tint (`button.cpp:321-329`). */
-function iconModulate(
-  toItemLinear: ReturnType<typeof useItemLinearColorOf>,
-  tint: NativeControlComponentProps['tint'],
-  iconColor: Rgba
-) {
-  return {
-    color: toItemLinear(multiplyModulate(tint.own, { ...iconColor, a: 1 })),
-    opacity: tint.opacity * iconColor.a,
-  };
-}
-
-interface TextTypeScriptIconProps {
-  rect: Rect2;
-  solveNode: NativeControlComponentProps['solveNode'];
-  theme: NativeControlComponentProps['theme'];
-  buttonColors: NativeControlComponentProps['solveNode']['colors'];
-  tint: NativeControlComponentProps['tint'];
-  renderOrder: number;
-}
-
-/**
- * The `color_script` icon of `text_type`, which `_update_text_value` disables while the colour is
- * not a valid hex (`color_picker.cpp:1319-1325`). The `Button` places it at its disabled box's left
- * margin (`button.cpp:349-405`) and modulates it by `icon_disabled_color`. Only a picker that draws
- * it loads the texture.
- */
-function TextTypeScriptIcon({
-  rect,
-  solveNode,
-  theme,
-  buttonColors,
-  tint,
-  renderOrder,
-}: TextTypeScriptIconProps) {
-  const toItemLinear = useItemLinearColorOf();
-  const texture = useNodeIcon(solveNode.icons.color_script, COLOR_SCRIPT_ICON);
-  if (!texture) return null;
-  const iconRect = iconOnlyButtonIconRect(
-    { x: rect.w, y: rect.h },
-    theme.widgets.button.disabled.contentMargin,
-    { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE },
-    solveNode.rtl
-  );
-  if (!iconRect) return null;
-  const { color, opacity } = iconModulate(toItemLinear, tint, buttonIconColor(buttonColors, 'disabled'));
-  return (
-    <PositionedIcon
-      rect={{ ...iconRect, x: rect.x + iconRect.x, y: rect.y + iconRect.y }}
-      texture={texture}
-      color={color}
-      opacity={opacity}
-      renderOrder={renderOrder}
-    />
-  );
-}
 
 /** The picker's child Buttons keep the `text_direction` and `language` defaults. */
 const AUTO_TEXT_DIRECTION = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };

@@ -6,12 +6,14 @@
 import type * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import { multiplyModulate, type useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { iconOnlyButtonIconRect } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { Rect2 } from '../../../../godot/math/rect2';
+import type { Rgba } from '../../../../godot/math/math';
 
 interface IconButtonProps {
   rect: Rect2;
@@ -62,4 +64,16 @@ export function IconButton({ rect, box, size, texture, tint, iconTint, rtl, rend
       )}
     </>
   );
+}
+
+/** A Button icon's colour and opacity: the Theme's icon modulate folded onto the item's tint (`button.cpp:321-329`). */
+export function iconModulate(
+  toItemLinear: ReturnType<typeof useItemLinearColorOf>,
+  tint: NativeControlComponentProps['tint'],
+  iconColor: Rgba
+) {
+  return {
+    color: toItemLinear(multiplyModulate(tint.own, { ...iconColor, a: 1 })),
+    opacity: tint.opacity * iconColor.a,
+  };
 }
