@@ -39,12 +39,17 @@ export function canvasTexture(data: Record<string, string>): TscnInternalResourc
 }
 
 /**
- * Renders `item` on a lit canvas with the flat grey texture and `resources` in the scene, and
- * returns the first mesh it draws, that mesh's map and an `update` that swaps the item.
+ * Renders `item` on a lit canvas with the flat grey texture and `resources` in the scene. The
+ * canvas spies on the reads the item declares, and `lists` gives the light list of every placement.
+ * `update` swaps the item.
  */
-export async function renderLitItem(item: ReactElement, resources: readonly TscnInternalResource[]) {
+export async function renderOnLitCanvas(
+  item: ReactElement,
+  resources: readonly TscnInternalResource[],
+  lists: CanvasLighting2D['lists'] = INERT_CANVAS_LIGHTING.lists
+) {
   const registerItem = vi.fn((_placement: ItemPlacement, _read: LitItemRead) => () => {});
-  const lighting: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, registerItem };
+  const lighting: CanvasLighting2D = { ...INERT_CANVAS_LIGHTING, lists, registerItem };
   const loader = createFakeResourceLoader().loader;
   const onLitCanvas = (drawn: ReactElement) => (
     <ResourceLoaderProvider loader={loader}>
@@ -56,9 +61,15 @@ export async function renderLitItem(item: ReactElement, resources: readonly Tscn
   const renderer = await ReactThreeTestRenderer.create(onLitCanvas(item));
   /** Renders `next` in place of the item, on the same canvas. */
   const update = (next: ReactElement) => renderer.update(onLitCanvas(next));
-  const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
+  return { renderer, update, registerItem };
+}
+
+/** `renderOnLitCanvas` for an item that draws one mesh, which it returns with its map. */
+export async function renderLitItem(item: ReactElement, resources: readonly TscnInternalResource[]) {
+  const canvas = await renderOnLitCanvas(item, resources);
+  const mesh = canvas.renderer.scene.findByType('Mesh').instance as THREE.Mesh;
   const map = (mesh.material as THREE.MeshBasicMaterial).map!;
-  return { renderer, update, registerItem, mesh, map };
+  return { ...canvas, mesh, map };
 }
 
 /**
