@@ -1,7 +1,8 @@
 /**
  * The picture size of an Ogg Theora file, read from its identification header. Godot makes the
  * stream's texture that size (`modules/theora/video_stream_theora.cpp:444-452`) once the file's
- * Theora stream has all three header packets (`:339-375`). Nothing here decodes a frame.
+ * Theora stream has all three header packets (`:339-375`). Every page read passes its checksum. Nothing
+ * here decodes a frame.
  */
 
 import type { Vector2 } from '../../../godot/math/vector';
@@ -9,6 +10,9 @@ import { ByteReader, ReadPastEndError, hasAsciiPrefix } from '../binaryresource/
 
 const OGG_PAGE_MAGIC = 'OggS';
 const OGG_FIXED_HEADER_BYTES = 27;
+const CHECKSUM_OFFSET = 22;
+const CHECKSUM_BYTES = 4;
+const OGG_CHECKSUM_POLYNOMIAL = 0x04c11db7;
 const BEGINNING_OF_STREAM = 0x02;
 const CONTINUED_PACKET = 0x01;
 /** A lacing value below this ends a packet. */
@@ -38,20 +42,43 @@ interface OggPage {
   segments: readonly Uint8Array[];
 }
 
+/** The CRC-32 table for the Ogg polynomial, built once at import and never written again. */
+const CHECKSUM_TABLE = Uint32Array.from({ length: 256 }, (_, byte) => {
+  let register = byte << 24;
+  for (let bit = 0; bit < 8; bit++)
+    register = register & 0x80000000 ? (register << 1) ^ OGG_CHECKSUM_POLYNOMIAL : register << 1;
+  return register >>> 0;
+});
+
+/** The Ogg checksum of a page, its checksum field read as zero (libogg `framing.c:255-275`). */
+function oggChecksum(page: Uint8Array): number {
+  let register = 0;
+  page.forEach((byte, index) => {
+    const checksumByte = index >= CHECKSUM_OFFSET && index < CHECKSUM_OFFSET + CHECKSUM_BYTES ? 0 : byte;
+    register = ((register << 8) ^ CHECKSUM_TABLE[((register >>> 24) ^ checksumByte) & 0xff]!) >>> 0;
+  });
+  return register;
+}
+
 /**
- * The page at the reader's position, or null when the bytes there are not an Ogg page. A page cut
- * short throws `ReadPastEndError`.
+ * The page at the reader's position, or null when the bytes there are not an Ogg page or the page
+ * fails its checksum, which leaves Godot without a video stream (`framing.c:671-696`, measured).
+ * A page cut short throws `ReadPastEndError`.
  */
-function readOggPage(reader: ByteReader): OggPage | null {
+function readOggPage(bytes: Uint8Array, reader: ByteReader): OggPage | null {
   if (reader.remaining < OGG_FIXED_HEADER_BYTES) return null;
+  const start = reader.position;
   if (!hasAsciiPrefix(reader.take(OGG_PAGE_MAGIC.length), OGG_PAGE_MAGIC)) return null;
   reader.take(1); // stream structure version
   const flags = reader.u8();
   reader.take(8); // granule position
   const serial = reader.u32();
-  reader.take(8); // page sequence number and checksum
+  reader.take(4); // page sequence number
+  const checksum = reader.u32();
   const lacing = reader.take(reader.u8());
-  return { flags, serial, segments: Array.from(lacing, (length) => reader.take(length)) };
+  const segments = Array.from(lacing, (length) => reader.take(length));
+  if (oggChecksum(bytes.subarray(start, reader.position)) !== checksum) return null;
+  return { flags, serial, segments };
 }
 
 function isTheoraHeaderPacket(packet: Uint8Array): boolean {
@@ -109,7 +136,7 @@ export function readTheoraPictureSize(bytes: Uint8Array): Vector2 | null {
   let packetHead: Uint8Array | null = null;
 
   try {
-    for (let page = readOggPage(reader); page; page = readOggPage(reader)) {
+    for (let page = readOggPage(bytes, reader); page; page = readOggPage(bytes, reader)) {
       // The identification header is 42 bytes, so one segment holds it whole.
       const firstSegment = page.segments[0];
       if (theoraSerial === null) {
