@@ -483,7 +483,7 @@ The draw-order keys a CanvasGroup collects into its buffer: its run at its own `
 _Avoid_: "group range", "group layer".
 
 **Clip group** (`r3f/canvasGroup/canvasGroupPass.ts`):
-The canvas group of a `clip_children` owner. The pass copies the canvas drawn so far into a buffer, draws the owner's group window there (the owner first in CLIP_AND_DRAW), then draws the owner over the frame with its pixels taken from the buffer under its own alpha. An owner that draws nothing has no clip group.
+The canvas group of a `clip_children` owner. The pass copies the canvas drawn so far into a buffer. It draws the owner's group window there, with the owner first in CLIP_AND_DRAW. It then draws the owner over the frame, with the pixels of the buffer under the owner's own alpha. An owner that draws nothing has no clip group.
 _Avoid_: "clip mask", "stencil".
 
 **Frame AABB** (`r3f/components/FrameAabb.tsx`):

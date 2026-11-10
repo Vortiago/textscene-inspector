@@ -28,4 +28,19 @@ describe('a clip mask', () => {
     mask.setMasking(false);
     expect([material.blending, material.blendDst]).toEqual([THREE.CustomBlending, THREE.OneFactor]);
   });
+
+  it('keeps the own blend of an owner whose program recompiles while masking', () => {
+    const { mask, material } = compiledWith();
+    mask.setMasking(true);
+    const shader = {
+      vertexShader: THREE.ShaderLib.basic.vertexShader,
+      fragmentShader: THREE.ShaderLib.basic.fragmentShader,
+      uniforms: {},
+    };
+
+    mask.injection.onBeforeCompile.call(material, shader);
+    mask.setMasking(false);
+
+    expect([material.blending, material.blendDst]).toEqual([THREE.CustomBlending, THREE.OneFactor]);
+  });
 });

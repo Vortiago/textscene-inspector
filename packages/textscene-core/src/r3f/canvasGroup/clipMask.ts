@@ -52,8 +52,11 @@ export function createClipMask(): ClipMask {
     injection: {
       cacheKey: 'godot-clip-children',
       onBeforeCompile: function (shader) {
-        if (!ownBlends.has(this)) this.addEventListener('dispose', () => ownBlends.delete(this));
-        ownBlends.set(this, Object.fromEntries(BLEND_FIELDS.map((field) => [field, this[field]])));
+        // Once per material: a recompile while masked would read the MIX blend as the owner's own.
+        if (!ownBlends.has(this)) {
+          ownBlends.set(this, Object.fromEntries(BLEND_FIELDS.map((field) => [field, this[field]])));
+          this.addEventListener('dispose', () => ownBlends.delete(this));
+        }
         if (isMasked) Object.assign(this, MIX_BLEND);
         Object.assign(shader.uniforms, uniforms);
         editedProgram(

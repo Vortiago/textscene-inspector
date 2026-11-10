@@ -11,6 +11,7 @@
 
 import type { TscnNode } from '../parser/types';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes';
+import { ruleInt } from '../godot/variant/intSlots';
 import { clipsChildren } from '../nodes/canvasitem/shared/clipAncestry';
 import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
@@ -452,12 +453,18 @@ export function allocatePaintRange(
   };
 }
 
+/** Whether the previewer clips: a mode of 1 or 2, as `parseClipChildrenMode` reads it, which a negative one is not. */
+function drawsClipped(node: TscnNode): boolean {
+  const mode = ruleInt(node.rawProperties.clip_children ?? '0');
+  return clipsChildren(node) && mode !== null && mode > 0;
+}
+
 /**
  * A CanvasGroup draws its composite rect over the buffer its children fill, and a clipping item
  * draws its mask over it, so each child draws first (`renderer_canvas_cull.cpp:471-484`).
  */
-function drawsEveryChildFirst(node: TscnNode): boolean {
-  return node.type === 'CanvasGroup' || clipsChildren(node);
+export function drawsEveryChildFirst(node: TscnNode): boolean {
+  return node.type === 'CanvasGroup' || drawsClipped(node);
 }
 
 /** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */

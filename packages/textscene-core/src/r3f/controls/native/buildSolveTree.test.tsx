@@ -1043,6 +1043,18 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
     expect(hoisted!.paintSequence).toBeGreaterThanOrEqual(root!.paintRange.base + root!.paintRange.size);
   });
 
+  it('draws the children of a clip_children Control before it, as the world walk does', () => {
+    const clipping = node('Clip', 'ColorRect', {
+      properties: { name: 'Clip' },
+      rawProperties: { clip_children: '1' },
+      children: [label('Child')],
+    });
+
+    const { result } = renderHook(() => useBuildSolveTree([clipping], [], []));
+    const [owner] = result.current.tree;
+    expect(owner!.children[0]!.paintSequence).toBeLessThan(owner!.paintSequence);
+  });
+
   it('orders a Control hoisted to a CanvasLayer against THAT layer’s own roots', () => {
     // The layer's counter is `CanvasLayer::get_sort_index()` (canvas_layer.cpp:261-267)
     // over its own roots, in pre-order [First, Detached, Second]: the hoisted item

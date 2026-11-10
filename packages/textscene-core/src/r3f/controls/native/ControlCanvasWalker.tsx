@@ -19,6 +19,7 @@ import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModul
 import { useInheritedTextureSampler } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
 import { ClipChildrenScope } from '../../../nodes/2d/canvasgroup/ClipChildrenScope';
+import { ClipMaskProvider } from '../../canvasGroup/ClipMaskContext';
 import {
   useCanvasAncestorMaterial,
   useResolvedCanvasItemMaterial,
@@ -247,7 +248,7 @@ function ControlItemGroup({ solveNode, solved, theme, measureText, snapToPixels 
         childRects={childRects}
         meta={solvedEntry?.meta}
       >
-        {wrapsChildren ? childElements : undefined}
+        {wrapsChildren ? <ClipMaskProvider value={null}>{childElements}</ClipMaskProvider> : undefined}
       </Painter>
     </NodePathProvider>
   );

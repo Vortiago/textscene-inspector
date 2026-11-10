@@ -137,7 +137,15 @@ export function drawCanvasGroups(
   const isFrameKey = (key: number) =>
     !outermost.some((group) => collects(group.window, key)) &&
     !skippedOwners.some((group) => isOwnKey(group.window, key));
-  drawFrame({ gl, scene, camera, frame, keyed, draw }, clipping, isFrameKey);
+  try {
+    // The matrices are current from the walk above, so no span of the frame walks them again.
+    withFrozenMatrices(scene, () =>
+      drawFrame({ gl, scene, camera, frame, keyed, draw }, clipping, isFrameKey)
+    );
+  } finally {
+    // A later draw of the scene, or a draw that threw, must not find an owner still masked.
+    for (const group of clipping) group.clip!.setMasking(false);
+  }
 }
 
 /** What `drawFrame` and `fillClipBuffer` draw through: the renderer, the scene and its keys. */

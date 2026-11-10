@@ -108,6 +108,7 @@ import { liveScenePassResults } from '../../liveScenePass';
 import { patchedNode } from '../../nodePatch';
 import {
   allocatePaintRange,
+  drawsEveryChildFirst,
   canvasRootRanges,
   internalBackRoom,
   listedChildOrder,
@@ -905,6 +906,7 @@ function buildForest(
     const inlineChildren = groups.filter((g) => !isInjected(g)).flatMap((g) => g.children);
     const allocated = allocatePaintRange(paintRange, inlineChildren, {
       sortsChildren: sortsChildren(collapsed),
+      drawsChildrenFirst: drawsEveryChildFirst(collapsed),
       frontRoom: internalFrontRoom(collapsed),
       backRoom: internalBackRoom(collapsed),
       listedOrder: listedChildOrder(collapsed, inlineChildren),

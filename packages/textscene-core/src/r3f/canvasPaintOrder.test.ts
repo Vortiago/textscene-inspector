@@ -293,6 +293,15 @@ describe('allocatePaintRange', () => {
     expect(allocated.children[1]!.base).toBeLessThan(allocated.self);
   });
 
+  it('draws an item whose clip_children is negative in the order of its children, as the parser reads it', () => {
+    const plain = node('Plain', 'Polygon2D', [node('Behind', 'Sprite2D', [], { show_behind_parent: true })], {
+      clip_children: -1,
+    });
+    const allocated = allocateNodePaintRange({ base: 0, size: paintRangeSize(plain) }, plain);
+
+    expect(allocated.children[0]!.base).toBeLessThan(allocated.self);
+  });
+
   it('draws an item whose clip_children is DISABLED in the order of its children', () => {
     const plain = node('Plain', 'Polygon2D', [node('Behind', 'Sprite2D', [], { show_behind_parent: true })], {
       clip_children: 0,
