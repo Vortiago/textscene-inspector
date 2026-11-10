@@ -15,6 +15,7 @@ import { useLiveSceneNodes } from '../../../../r3f/useLiveSceneTree';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { DispatchedScene } from '../../../../r3f/testing/DispatchedScene';
 import { settleLoads } from '../../../../r3f/testing/settleLoads';
+import { computeWorldBoundingBox } from '../../../../r3f/bounds';
 import { compareKeys, paintKey } from '../../../../r3f/testing/paintOrder';
 import '../../../../r3f/nodes/index';
 
@@ -168,7 +169,7 @@ export function drawnMeshes(renderer: Renderer): { box: Box; mesh: THREE.Object3
   const meshes: { box: Box; mesh: THREE.Object3D }[] = [];
   root.traverse((object) => {
     if (!(object as THREE.Mesh).isMesh) return;
-    const box = new THREE.Box3().setFromObject(object);
+    const box = computeWorldBoundingBox(object);
     // The canvas flips y: three's y is Godot's negated.
     const godotBox = [box.min.x, -box.max.y, box.max.x - box.min.x, box.max.y - box.min.y].map(Math.round);
     meshes.push({ box: godotBox as Box, mesh: object });
