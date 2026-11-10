@@ -515,7 +515,9 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
   });
 
   it('ignores a TabBar theme entry for a key the container pushes (tab_container.cpp:306-337)', () => {
-    const projectTheme = themeResource({ colors: { TabBar: { font_selected_color: '#ff0000' } } });
+    const projectTheme = themeResource({
+      colors: { TabBar: { font_selected_color: { r: 1, g: 0, b: 0, a: 1 } } },
+    });
     const n = container({}, projectTheme);
     const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
     expect(bar.colors.font_selected_color).toBeUndefined();
