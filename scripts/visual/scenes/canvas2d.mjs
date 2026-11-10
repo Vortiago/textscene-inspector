@@ -1180,6 +1180,12 @@ export const CANVAS_2D_SCENES = [
   { name: 'popup-menu-rtl', file: 'unit-popup-menu-rtl.tscn', mode: '2d' },
   // Thirty items are cut to the frame height and show the bar. Max 3 at the grabber corners, mean 0.305.
   { name: 'popup-menu-scroll', file: 'unit-popup-menu-scroll.tscn', mode: '2d' },
+  // The theme outline: a ring under each item label, and the separator's own ring. Max 17 at the check icon rim, mean 0.327.
+  { name: 'popup-menu-outline', file: 'unit-popup-menu-outline.tscn', mode: '2d' },
+  // A `size` line below the items keeps the unlimited item height instead of the embedder's. Max 1, mean 0.249.
+  { name: 'popup-menu-size-after-items', file: 'unit-popup-menu-size-after-items.tscn', mode: '2d' },
+  // A menu under a Window embeds in the root, not in the window. Max 6 at the window's close icon and corners, mean 0.410.
+  { name: 'popup-menu-in-window', file: 'unit-popup-menu-in-window.tscn', mode: '2d' },
   // Theme overrides: the frame, the title colour, size and outline ring. Mean 0.426.
   { name: 'window-theme', file: 'unit-window-theme.tscn', mode: '2d' },
   // Under a right-to-left parent the title trims from its start and the close icon stays right. Max 70, mean 0.407.

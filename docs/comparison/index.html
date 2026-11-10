@@ -6115,7 +6115,7 @@ tr:last-child td{border-bottom:0}
         <span class="status st-done">Done</span>
       </header>
       
-      <div class="prose intro"><p>Godot's menu of items. The previewer draws a visible one as an embedded, borderless, transparent window. It draws the panel and each item row. A scroll bar shows where the items do not fit.</p></div>
+      <div class="prose intro"><p>Godot's menu of items. The previewer draws a visible one as an embedded, borderless, transparent window. It draws the panel and each item row. A scroll bar shows where the items do not fit. The menu embeds in the nearest viewport above it that embeds subwindows, which is never a Window under an embedding root.</p></div>
       
       <section class="prop">
         <div class="prop-head"><h3>Items</h3><span class="status st-done">Done</span></div>
@@ -6167,11 +6167,62 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>The menu height is limited to the embedder's. Items taller than that scroll, and the vertical bar takes 8 px from the width of the item column.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Outline</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-popup-menu-outline-godot.png" alt="Godot render of Outline">
+          <img class="img-ours" src="images/unit-popup-menu-outline-ours.png" alt="Our render of Outline">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>The <code>outline_size</code> and <code>font_outline_color</code> theme items stroke a ring under each item label. A separator label takes <code>separator_outline_size</code> and <code>font_separator_outline_color</code>. A size of 0, or a colour with no alpha, draws no ring.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Size line below the items</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-popup-menu-size-after-items-godot.png" alt="Godot render of Size line below the items">
+          <img class="img-ours" src="images/unit-popup-menu-size-after-items-ours.png" alt="Our render of Size line below the items">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>Godot applies the properties in file order. A <code>size</code> line below the items is clamped to the minimum of those items while the menu is outside the tree, so the window keeps the full item height and does not take the height limit. Godot saves <code>size</code> above the items, which gives the limited height.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Under a Window</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-popup-menu-in-window-godot.png" alt="Godot render of Under a Window">
+          <img class="img-ours" src="images/unit-popup-menu-in-window-ours.png" alt="Our render of Under a Window">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A Window that enters the tree under an embedding root resets its own <code>gui_embed_subwindows</code> to <code>force_native</code>. A menu below it therefore embeds in the root viewport and draws over the frame, not inside the Window. A SubViewport with <code>gui_embed_subwindows</code> keeps its menus inside it, and limits their height to its own.</p></div>
       </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks these <code>PopupMenu</code> properties, plus 45 inherited from Window, 47 inherited from Viewport, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>allow_search</code></td><td>true or false</td><td></td></tr><tr><td><code>hide_on_checkable_item_selection</code></td><td>true or false</td><td></td></tr><tr><td><code>hide_on_item_selection</code></td><td>true or false</td><td></td></tr><tr><td><code>hide_on_state_item_selection</code></td><td>true or false</td><td></td></tr><tr><td><code>item_#/*</code></td><td>item_&lt;index&gt;/&lt;leaf&gt; (see popup_menu.cpp, PropertyListHelper-backed)</td><td></td></tr><tr><td><code>item_count</code></td><td>integer &gt;= 0</td><td>error below</td></tr><tr><td><code>prefer_native_menu</code></td><td>true or false</td><td></td></tr><tr><td><code>shrink_height</code></td><td>true or false</td><td></td></tr><tr><td><code>shrink_width</code></td><td>true or false</td><td></td></tr><tr><td><code>submenu_popup_delay</code></td><td>float &gt; 0</td><td>error at or below 0</td></tr><tr><td><code>system_menu_id</code></td><td>enum 0/2/3/4/5 (INVALID_MENU_ID/APPLICATION_MENU_ID/WINDOW_MENU_ID/HELP_MENU_ID/DOCK_MENU_ID)</td><td>warning</td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-window-properties</code> (type-family match)</td><td><code>window-max-size-below-min-size</code></td><td>info</td></tr><tr><td></td><td><code>window-size-clamped-by-limits</code></td><td>warning</td></tr><tr><td></td><td><code>window-content-scale-factor-floored</code></td><td>warning</td></tr><tr><td><code>valid-popupmenu-properties</code> (type-family match)</td><td><code>popupmenu-item-index-out-of-range</code></td><td>error</td></tr></tbody></table></div>
-<p>The lenient parser reads the Window keys with the PopupMenu class defaults: hidden, borderless, transparent and <code>wrap_controls</code> on. It also reads the <code>item_&lt;index&gt;/&lt;leaf&gt;</code> family: text, icon, checkable, checked, disabled and separator. An item past <code>item_count</code> is dropped. A <code>checkable</code> outside 0 to 2 reads as not checkable. Shortcuts, accelerators, submenus, indents and tooltips are not read.</p></div>
+<p>The lenient parser reads the Window keys with the PopupMenu class defaults: hidden, borderless, transparent and <code>wrap_controls</code> on. It also reads the <code>item_&lt;index&gt;/&lt;leaf&gt;</code> family: text, icon, checkable, checked, disabled and separator, which are the only item keys a scene file sets. An item past <code>item_count</code> is dropped. A <code>checkable</code> outside 0 to 2 reads as not checkable.</p></div>
     </article>
     <article class="sheet" data-type="PopupPanel" hidden>
       <header class="sheet-head">
