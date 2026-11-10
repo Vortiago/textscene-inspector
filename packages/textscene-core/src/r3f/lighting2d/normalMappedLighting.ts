@@ -16,7 +16,8 @@ import type { Rgba } from '../../godot/math/math.js';
 import { editedProgram } from '../shaderPatch/chunkPatch.js';
 import {
   ITEM_ALBEDO_GLSL,
-  ITEM_LIGHTING_GLSL,
+  canvasProgramKey,
+  itemLightingGlsl,
   LIGHT_MODE_GLSL,
   type CanvasItemLightingProps,
   type CanvasItemLightingUniforms,
@@ -44,7 +45,7 @@ export interface CanvasItemSurface {
  */
 export interface NormalMappedLightingUniforms extends Pick<
   CanvasItemLightingUniforms,
-  'resolution' | 'canvasModulate' | 'lightMode' | 'isLinearCanvas'
+  'resolution' | 'canvasModulate' | 'lightMode'
 > {
   /** `ApartLightBuffers.buffer`. */
   readonly lightLayers: THREE.IUniform;
@@ -74,7 +75,7 @@ const VERTEX_INJECTION = `#include <project_vertex>
 vCanvasPosition = (modelMatrix * vec4(transformed, 1.0)).xy;
 vItemAxes = vec4(normalize(modelMatrix[0].xy), normalize(modelMatrix[1].xy));`;
 
-const FRAGMENT_PREAMBLE = `uniform highp sampler2DArray uLightLayers;
+const fragmentPreamble = (isLinearCanvas: boolean) => `uniform highp sampler2DArray uLightLayers;
 uniform highp sampler2DArray uShadowTintLayers;
 uniform vec3 uLightPlaces[APART_LIGHT_COUNT];
 uniform vec3 uLightModes[APART_LIGHT_COUNT];
@@ -82,7 +83,7 @@ uniform sampler2D uNormalMap;
 uniform sampler2D uSpecularMap;
 uniform vec4 uSpecular;
 uniform float uUsesSpecular;
-${ITEM_LIGHTING_GLSL}
+${itemLightingGlsl(isLinearCanvas)}
 varying vec2 vCanvasPosition;
 varying vec4 vItemAxes;
 
@@ -169,12 +170,13 @@ if (!unshaded) {
  */
 export function normalMappedLightingProps(
   uniforms: NormalMappedLightingUniforms,
-  lightCount: number
+  lightCount: number,
+  isLinearCanvas: boolean
 ): CanvasItemLightingProps {
   return {
     transparent: true,
     injection: {
-      cacheKey: `godot-canvas-normal-light-${lightCount}`,
+      cacheKey: canvasProgramKey(`godot-canvas-normal-light-${lightCount}`, isLinearCanvas),
       onBeforeCompile: (shader) => {
         shader.uniforms.uLightLayers = uniforms.lightLayers;
         shader.uniforms.uShadowTintLayers = uniforms.shadowTintLayers;
@@ -187,7 +189,6 @@ export function normalMappedLightingProps(
         shader.uniforms.uLightResolution = uniforms.resolution;
         shader.uniforms.uCanvasModulate = uniforms.canvasModulate;
         shader.uniforms.uLightMode = uniforms.lightMode;
-        shader.uniforms.uLinearCanvas = uniforms.isLinearCanvas;
 
         editedProgram(
           shader,
@@ -199,7 +200,7 @@ export function normalMappedLightingProps(
             fragment: [
               {
                 three: 'void main() {',
-                godot: `#define APART_LIGHT_COUNT ${lightCount}\n${FRAGMENT_PREAMBLE}`,
+                godot: `#define APART_LIGHT_COUNT ${lightCount}\n${fragmentPreamble(isLinearCanvas)}`,
               },
               { three: '#include <colorspace_fragment>', godot: FRAGMENT_INJECTION },
             ],

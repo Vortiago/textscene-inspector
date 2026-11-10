@@ -111,8 +111,8 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
 
   return createPortal(
     <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
-      <World2DLightingBoundary canvasModulate={canvasModulate}>
-        <SubViewportCanvasScope properties={properties} canvasSpace={canvasSpace}>
+      <World2DLightingBoundary canvasModulate={canvasModulate} space={canvasSpace}>
+        <SubViewportCanvasScope properties={properties}>
           <ViewportControls
             path={path}
             viewport={node}

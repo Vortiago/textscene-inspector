@@ -63,7 +63,6 @@ function createUniforms(resolution: THREE.Vector2): CanvasItemLightingUniforms {
     resolution: { value: resolution },
     canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
     lightMode: { value: CanvasItemMaterialLightMode.NORMAL },
-    isLinearCanvas: { value: 0 },
   };
 }
 
@@ -73,7 +72,6 @@ function createNormalMappedUniforms(plain: CanvasItemLightingUniforms): NormalMa
     resolution: plain.resolution,
     canvasModulate: plain.canvasModulate,
     lightMode: plain.lightMode,
-    isLinearCanvas: plain.isLinearCanvas,
     lightLayers: { value: EMPTY_LIGHT_LAYERS as THREE.Texture },
     shadowTintLayers: { value: EMPTY_LIGHT_LAYERS as THREE.Texture },
     places: { value: [] },
@@ -140,6 +138,8 @@ export interface LitItem {
   readonly plain: CanvasItemLightingUniforms;
   /** The material props of a surface that has no normal map, which never change once mounted. */
   readonly plainProps: CanvasItemLightingProps;
+  /** The canvas space the item shades in, which picks its program variant. */
+  readonly isLinearCanvas: boolean;
   /**
    * For the object that holds the item's own geometry, its child items left out. The per-item cap
    * measures its rect (`itemLightCap.ts`).
@@ -186,15 +186,15 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
   bound.resolution.value = resolution;
   const tint = useMemo(() => canvasNumbersOf(canvasSpace, canvasModulate), [canvasSpace, canvasModulate]);
   (bound.canvasModulate.value as THREE.Vector3).set(tint.r, tint.g, tint.b);
-  bound.isLinearCanvas.value = canvasSpace.isLinear ? 1 : 0;
   // The mode rides the uniforms too: a re-parse changes `light_mode` under a
   // mounted item, and three would keep the program it first compiled.
   bound.lightMode.value = lightMode;
 
-  const plainProps = useMemo(() => canvasItemLightingProps(bound), [bound]);
+  const { isLinear: isLinearCanvas } = canvasSpace;
+  const plainProps = useMemo(() => canvasItemLightingProps(bound, isLinearCanvas), [bound, isLinearCanvas]);
   return useMemo(
-    () => ({ placement, lightMode, list, plain: bound, plainProps, geometryRef }),
-    [placement, lightMode, list, bound, plainProps]
+    () => ({ placement, lightMode, list, plain: bound, plainProps, isLinearCanvas, geometryRef }),
+    [placement, lightMode, list, bound, plainProps, isLinearCanvas]
   );
 }
 
@@ -207,7 +207,7 @@ export function useSurfaceLighting(
   item: LitItem,
   surface: CanvasItemSurface | null
 ): CanvasItemLightingProps {
-  const { placement, lightMode, list, plain, plainProps } = item;
+  const { placement, lightMode, list, plain, plainProps, isLinearCanvas } = item;
   const readsNormals = surface !== null && lightMode !== CanvasItemMaterialLightMode.UNSHADED;
   const lightOnly = lightMode === CanvasItemMaterialLightMode.LIGHT_ONLY;
   const read: LitItemRead = readsNormals ? 'apart' : lightOnly ? 'lightOnly' : 'plain';
@@ -222,7 +222,8 @@ export function useSurfaceLighting(
   // Mode-independent by design: the props change only with the count of lights kept apart, which
   // sizes the program, and the key that follows it remounts the material.
   return useMemo(
-    () => (shaded && apartCount > 0 ? normalMappedLightingProps(shaded, apartCount) : plainProps),
-    [plainProps, shaded, apartCount]
+    () =>
+      shaded && apartCount > 0 ? normalMappedLightingProps(shaded, apartCount, isLinearCanvas) : plainProps,
+    [plainProps, shaded, apartCount, isLinearCanvas]
   );
 }

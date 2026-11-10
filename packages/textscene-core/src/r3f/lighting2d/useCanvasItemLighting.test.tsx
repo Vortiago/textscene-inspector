@@ -147,22 +147,22 @@ describe('useCanvasItemLighting in a linear canvas', () => {
       </CanvasColorSpaceProvider>
     );
     const { result } = renderHook(() => useCanvasItemLighting({ zFinal: 0, material: null }), { wrapper });
-    return boundUniforms(result.current);
+    return {
+      tint: (boundUniforms(result.current).uCanvasModulate!.value as THREE.Vector3).x,
+      programKey: result.current.props.injection.cacheKey,
+    };
   }
 
-  it('divides the tint out in linear, and shades the linear fragment as it is', () => {
-    const uniforms = boundIn(canvasColorSpaceOf(true));
-    expect([(uniforms.uCanvasModulate!.value as THREE.Vector3).x, uniforms.uLinearCanvas!.value]).toEqual([
-      expect.closeTo(0.214, 3),
-      1,
-    ]);
+  it('divides the tint out in linear, and compiles the linear program variant', () => {
+    const { tint, programKey } = boundIn(canvasColorSpaceOf(true));
+    expect(tint).toBeCloseTo(0.214, 3);
+    expect(programKey).toBe('godot-canvas-light-linear');
   });
 
   it('keeps the authored tint in an sRGB canvas, which decodes the fragment to compare', () => {
-    const uniforms = boundIn(canvasColorSpaceOf(false));
-    expect([(uniforms.uCanvasModulate!.value as THREE.Vector3).x, uniforms.uLinearCanvas!.value]).toEqual([
-      0.5, 0,
-    ]);
+    const { tint, programKey } = boundIn(canvasColorSpaceOf(false));
+    expect(tint).toBe(0.5);
+    expect(programKey).toBe('godot-canvas-light');
   });
 });
 

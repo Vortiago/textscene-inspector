@@ -18,7 +18,7 @@ import { useCanvasModulate } from '../canvasModulate';
 import type { Rgba } from '../../godot/math/math';
 import { settleLoads } from '../testing/settleLoads';
 import { withStubbedGl } from '../testing/stubbedGl';
-import { canvasColorSpaceOf, CanvasColorSpaceProvider, type CanvasColorSpace } from '../canvasColorSpace';
+import { canvasColorSpaceOf, type CanvasColorSpace } from '../canvasColorSpace';
 import { renderLightLists } from './lightAccumulationPass';
 
 vi.mock('./lightAccumulationPass', async (importOriginal) => {
@@ -60,7 +60,7 @@ interface Draw {
 async function mount(host: LightPassHost, normalMapped = false) {
   const seen: Seen = {};
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasLightPass host={host} canvasModulate={WHITE}>
+    <CanvasLightPass space={canvasColorSpaceOf(false)} host={host} canvasModulate={WHITE}>
       <Scene seen={seen} normalMapped={normalMapped} />
     </CanvasLightPass>
   );
@@ -162,7 +162,11 @@ describe('CanvasLightPass', () => {
       return null;
     }
     await ReactThreeTestRenderer.create(
-      <CanvasLightPass host={fakeLightPassHost(300, 200)} canvasModulate={night}>
+      <CanvasLightPass
+        space={canvasColorSpaceOf(false)}
+        host={fakeLightPassHost(300, 200)}
+        canvasModulate={night}
+      >
         <ReadModulate />
       </CanvasLightPass>
     );
@@ -177,11 +181,9 @@ describe('CanvasLightPass', () => {
       const host = fakeLightPassHost(300, 200);
       const seen: Seen = {};
       await ReactThreeTestRenderer.create(
-        <CanvasColorSpaceProvider value={space}>
-          <CanvasLightPass host={host} canvasModulate={NIGHT}>
-            <Scene seen={seen} />
-          </CanvasLightPass>
-        </CanvasColorSpaceProvider>
+        <CanvasLightPass space={space} host={host} canvasModulate={NIGHT}>
+          <Scene seen={seen} />
+        </CanvasLightPass>
       );
       await settleLoads();
       vi.mocked(renderLightLists).mockClear();

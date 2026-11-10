@@ -21,10 +21,10 @@ void main() {
 }
 `;
 
-function compile(lightMode: EnumValue<typeof CanvasItemMaterialLightMode>) {
+function compile(lightMode: EnumValue<typeof CanvasItemMaterialLightMode>, isLinearCanvas = false) {
   const shared = lightUniforms();
   shared.lightMode.value = lightMode;
-  const props = canvasItemLightingProps(shared);
+  const props = canvasItemLightingProps(shared, isLinearCanvas);
   const shader = {
     vertexShader: '',
     fragmentShader: STOCK_FRAGMENT,
@@ -96,13 +96,15 @@ describe('canvasItemLightingProps', () => {
     expect(shader.fragmentShader).toContain('#include <colorspace_fragment>');
   });
 
-  it('shades a linear canvas as it is, with no clamp and no sRGB round trip', () => {
+  it('defines the linear canvas at compile time, with a program key of its own', () => {
     // Godot adds the light to the linear albedo in a half-float target, which holds above 1
     // (`canvas.glsl:727-760`); the copy to the screen clamps.
-    const { shader, shared } = compile(CanvasItemMaterialLightMode.NORMAL);
-    expect(shader.fragmentShader).toContain('uLinearCanvas > 0.5 ? fragment : godotToSrgb(fragment)');
-    expect(shader.fragmentShader).toContain('uLinearCanvas > 0.5 ? color : godotToLinear');
-    expect(shader.uniforms.uLinearCanvas).toBe(shared.isLinearCanvas);
+    const linear = compile(CanvasItemMaterialLightMode.NORMAL, true);
+    const srgb = compile(CanvasItemMaterialLightMode.NORMAL);
+    expect(linear.shader.fragmentShader).toContain('#define LINEAR_CANVAS\n');
+    expect(srgb.shader.fragmentShader).not.toContain('#define LINEAR_CANVAS');
+    expect(linear.shader.uniforms.uLinearCanvas).toBeUndefined();
+    expect(linear.props.injection.cacheKey).not.toBe(srgb.props.injection.cacheKey);
   });
 
   it('declares the mode uniform, so a light_mode edit reaches the GPU', () => {
@@ -142,7 +144,7 @@ describe('canvasItemLightingProps', () => {
   });
 
   it('throws, naming the hook, for a shader with no colorspace hook (error case)', () => {
-    const props = canvasItemLightingProps(lightUniforms());
+    const props = canvasItemLightingProps(lightUniforms(), false);
     const shader = {
       vertexShader: '',
       fragmentShader: 'void other() {}',

@@ -114,9 +114,7 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
     <ViewportSizeProvider size={layoutSize}>
       <LayerRanksProvider value={canvasLayers}>
         <ViewportCanvasScope>
-          <SubViewportCanvasScope properties={properties} canvasSpace={canvasSpace}>
-            {inner}
-          </SubViewportCanvasScope>
+          <SubViewportCanvasScope properties={properties}>{inner}</SubViewportCanvasScope>
         </ViewportCanvasScope>
       </LayerRanksProvider>
     </ViewportSizeProvider>
@@ -162,7 +160,9 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
         ) : null}
         {kind === 'empty' ? <GateOnlyPass node={node} path={path} /> : null}
         {rendersInline ? (
-          <World2DLightingBoundary canvasModulate={canvasModulate}>{contents}</World2DLightingBoundary>
+          <World2DLightingBoundary canvasModulate={canvasModulate} space={canvasSpace}>
+            {contents}
+          </World2DLightingBoundary>
         ) : null}
       </EnclosingViewportProvider>
     </Node>

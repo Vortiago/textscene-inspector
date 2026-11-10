@@ -13,7 +13,6 @@ export function lightUniforms(): CanvasItemLightingUniforms {
     resolution: { value: new THREE.Vector2(2, 2) },
     canvasModulate: { value: new THREE.Vector3(1, 1, 1) },
     lightMode: { value: CanvasItemMaterialLightMode.NORMAL },
-    isLinearCanvas: { value: 0 },
   };
 }
 

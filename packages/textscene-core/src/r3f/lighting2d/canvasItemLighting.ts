@@ -3,7 +3,7 @@
  * composes `albedo × canvas_modulation`, so the injection divides the tint out. A non-HDR 2D
  * viewport (`hdr_2d` false) never goes linear, so the injection decodes to sRGB, does Godot's
  * arithmetic with its [0, 1] clamp, and re-encodes before three's `colorspace_fragment`. A linear
- * canvas (`hdr_2d` true) holds linear half floats, where Godot adds the light to the linear albedo
+ * canvas (`hdr_2d` true), a program variant, holds linear half floats, where Godot adds the light to the linear albedo
  * with no clamp (`canvas.glsl:727-760`); the light colours stay the authored numbers.
  */
 /*
@@ -62,25 +62,39 @@ export interface CanvasItemLightingUniforms {
    * item. On Godot 4.6.3 Light Only masks alpha: transparent where unlit, authored colour where lit.
    */
   readonly lightMode: THREE.IUniform;
-  /** `1` in a linear canvas, whose fragments hold linear values to shade as they are, else `0`. */
-  readonly isLinearCanvas: THREE.IUniform;
 }
 
-/** The uniforms every lit item's program reads, with the sRGB transfer it shades in. */
-export const ITEM_LIGHTING_GLSL = `uniform vec2 uLightResolution;
+/**
+ * The uniforms every lit item's program reads, with the sRGB transfer it shades in. A linear canvas
+ * is a compile-time `#define`, not a uniform: the canvas space is fixed per viewport, and the
+ * program then carries no dead branch or transfer call (cache key suffix: `canvasProgramKey`).
+ */
+export function itemLightingGlsl(isLinearCanvas: boolean): string {
+  return `${isLinearCanvas ? '#define LINEAR_CANVAS\n' : ''}uniform vec2 uLightResolution;
 uniform vec3 uCanvasModulate;
 uniform float uLightMode;
-uniform float uLinearCanvas;
 ${TRANSFER_GLSL}
-vec3 canvasAlbedo(vec3 fragment) { return uLinearCanvas > 0.5 ? fragment : godotToSrgb(fragment); }
-vec3 canvasShaded(vec3 color) { return uLinearCanvas > 0.5 ? color : godotToLinear(clamp(color, 0.0, 1.0)); }`;
+#ifdef LINEAR_CANVAS
+vec3 canvasAlbedo(vec3 fragment) { return fragment; }
+vec3 canvasShaded(vec3 color) { return color; }
+#else
+vec3 canvasAlbedo(vec3 fragment) { return godotToSrgb(fragment); }
+vec3 canvasShaded(vec3 color) { return godotToLinear(clamp(color, 0.0, 1.0)); }
+#endif`;
+}
 
-/** Both injections depend only on module constants, so they are built once. */
-const UNIFORM_PREAMBLE = `uniform sampler2D uLightList;
+/** The program cache key of `base`, apart for a linear canvas, whose source differs. */
+export const canvasProgramKey = (base: string, isLinearCanvas: boolean): string =>
+  isLinearCanvas ? `${base}-linear` : base;
+
+const preambleFor = (isLinearCanvas: boolean): string => `uniform sampler2D uLightList;
 uniform sampler2D uShadowTint;
 uniform float uLit;
-${ITEM_LIGHTING_GLSL}
+${itemLightingGlsl(isLinearCanvas)}
 void main() {`;
+
+/** The two preambles depend only on module constants, so they are built once. */
+const UNIFORM_PREAMBLES = { srgb: preambleFor(false), linear: preambleFor(true) };
 
 /** Midpoints between adjacent LightMode ordinals, so the GLSL never tests equality. */
 const midpoint = (a: number, b: number) => ((a + b) / 2).toFixed(1);
@@ -114,7 +128,7 @@ if (!unshaded && (uLit > 0.5 || lightOnly)) {
 }
 #include <colorspace_fragment>`;
 
-/** Constant: the injected source is the same literal for every item. */
+/** The injected source is the same literal for every item of one canvas space. */
 const PROGRAM_CACHE_KEY = 'godot-canvas-light';
 
 /**
@@ -122,11 +136,14 @@ const PROGRAM_CACHE_KEY = 'godot-canvas-light';
  * `materialProgramInputs()`. An item that passes none stays unlit, as every 3D consumer needs. The
  * props are the same for every light mode, with or without lights: both are uniforms.
  */
-export function canvasItemLightingProps(uniforms: CanvasItemLightingUniforms): CanvasItemLightingProps {
+export function canvasItemLightingProps(
+  uniforms: CanvasItemLightingUniforms,
+  isLinearCanvas: boolean
+): CanvasItemLightingProps {
   return {
     transparent: true,
     injection: {
-      cacheKey: PROGRAM_CACHE_KEY,
+      cacheKey: canvasProgramKey(PROGRAM_CACHE_KEY, isLinearCanvas),
       onBeforeCompile: (shader) => {
         shader.uniforms.uLightList = uniforms.lightBuffer;
         shader.uniforms.uShadowTint = uniforms.shadowTintBuffer;
@@ -134,13 +151,15 @@ export function canvasItemLightingProps(uniforms: CanvasItemLightingUniforms): C
         shader.uniforms.uLightResolution = uniforms.resolution;
         shader.uniforms.uCanvasModulate = uniforms.canvasModulate;
         shader.uniforms.uLightMode = uniforms.lightMode;
-        shader.uniforms.uLinearCanvas = uniforms.isLinearCanvas;
 
         editedProgram(
           shader,
           {
             fragment: [
-              { three: 'void main() {', godot: UNIFORM_PREAMBLE },
+              {
+                three: 'void main() {',
+                godot: isLinearCanvas ? UNIFORM_PREAMBLES.linear : UNIFORM_PREAMBLES.srgb,
+              },
               { three: '#include <colorspace_fragment>', godot: LIGHT_INJECTION },
             ],
           },
