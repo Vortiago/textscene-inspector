@@ -60,7 +60,12 @@ const internalNodes = perObject((_dialog: SolveNode) => new Map<string, SolveNod
  * dialog's own theme items (`panel`, `buttons_separation`) apply to it. Its own come through the
  * dialog's theme chain.
  */
-function internalControl(dialog: SolveNode, type: string, name: string, properties: object): SolveNode {
+function internalControl(
+  dialog: SolveNode,
+  type: string,
+  name: string,
+  makeProperties: () => object
+): SolveNode {
   const byName = internalNodes(dialog);
   const built = byName.get(name);
   if (built) return built;
@@ -68,7 +73,7 @@ function internalControl(dialog: SolveNode, type: string, name: string, properti
     name,
     type,
     children: [],
-    properties: { name, ...parseControlCanvasItem({}, name), ...properties } as ControlProperties,
+    properties: { name, ...parseControlCanvasItem({}, name), ...makeProperties() } as ControlProperties,
     rawProperties: {},
   };
   const control: SolveNode = {
@@ -104,11 +109,10 @@ export function cachedMessageLabelNode(dialog: SolveNode): SolveNode {
 
 /** One cached Label per wrap setting: the name carries `wraps`, which is the only thing the two differ by. */
 function messageLabel(dialog: SolveNode, wraps: boolean): SolveNode {
-  const props = dialog.node.properties as DialogProperties;
-  const properties: Partial<LabelProperties> = {
-    text: props.dialog_text,
+  const properties = (): Partial<LabelProperties> => ({
+    text: (dialog.node.properties as DialogProperties).dialog_text,
     autowrapMode: wraps ? AutowrapMode.AUTOWRAP_WORD : AutowrapMode.AUTOWRAP_OFF,
-  };
+  });
   return internalControl(dialog, 'Label', wraps ? 'WrappingMessageLabel' : 'MessageLabel', properties);
 }
 
@@ -125,10 +129,10 @@ export function dialogButtonText(dialog: SolveNode, role: DialogButtonRole): str
 export function dialogButtonNode(dialog: SolveNode, role: DialogButtonRole): SolveNode {
   const buttonsMinWidth = dialog.constants.buttons_min_width ?? 0;
   const buttonsMinHeight = dialog.constants.buttons_min_height ?? 0;
-  const properties: Partial<ButtonProperties> = {
+  const properties = (): Partial<ButtonProperties> => ({
     text: dialogButtonText(dialog, role),
     customMinimumSize: { x: buttonsMinWidth, y: buttonsMinHeight },
     hasFocus: role === 'ok',
-  };
+  });
   return internalControl(dialog, 'Button', role === 'ok' ? 'OkButton' : 'CancelButton', properties);
 }

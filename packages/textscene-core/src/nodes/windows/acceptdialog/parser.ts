@@ -49,21 +49,22 @@ function readsTextUnwrappedWhileVisible(properties: Record<string, string>): boo
   return !keys.slice(0, textAt).some((key) => LINES_THAT_CACHE_THE_MINIMUM_EARLY.has(key));
 }
 
+/** A quoted text property, or `fallback` when the scene line is absent. An empty string stays empty. */
 export function textOr(raw: string | undefined, fallback: string): string {
   return raw === undefined ? fallback : unquoteString(raw);
 }
 
 export function parseDialog(heading: ParsedHeading, properties: Record<string, string>): DialogProperties {
   const okText = textOr(properties.ok_button_text, '');
-  const window = parseWindow(heading, properties);
+  const windowProperties = parseWindow(heading, properties);
   return {
-    ...window,
+    ...windowProperties,
     dialog_text: textOr(properties.dialog_text, ''),
     ok_button_text: okText === '' ? DEFAULT_OK_TEXT : okText,
     dialog_autowrap: boolOr(
       properties.dialog_autowrap,
       false,
-      `${viewportParseContext(heading, window.name)}.dialog_autowrap`
+      `${viewportParseContext(heading, windowProperties.name)}.dialog_autowrap`
     ),
     has_unwrapped_message_minimum: readsTextUnwrappedWhileVisible(properties),
   };

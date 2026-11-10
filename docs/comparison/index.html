@@ -156,7 +156,19 @@ tr:last-child td{border-bottom:0}
       </header>
       
       <div class="prose intro"><p>A base dialog with an OK button and a message, which ConfirmationDialog and FileDialog build on. The previewer draws a visible dialog as an embedded window: the panel, the <code>dialog_text</code> message and the focused OK button, sized to its content. A child Control fills the content area with the message.</p></div>
-      
+      <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-accept-dialog-embedded-godot.png" alt="Godot render of AcceptDialog">
+          <img class="img-ours" src="images/unit-accept-dialog-embedded-ours.png" alt="Our render of AcceptDialog">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
       <section class="prop">
         <div class="prop-head"><h3>Message and buttons</h3><span class="status st-done">Done</span></div>
         <div class="compare">

@@ -1,7 +1,9 @@
 ---
 type: AcceptDialog
 category: Other
+status: done
 fixture: unit-accept-dialog-embedded.tscn
+image: unit-accept-dialog-embedded
 renders_as: an embedded window with a panel, a message and buttons
 ---
 

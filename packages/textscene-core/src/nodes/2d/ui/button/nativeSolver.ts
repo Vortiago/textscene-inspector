@@ -95,7 +95,7 @@ export function buttonIconColor(colors: SolveNode['colors'], state: ButtonDrawSt
   return colors[BUTTON_ICON_COLOR_KEYS[state]] ?? BUTTON_ICON_MODULATE[state];
 }
 
-/** The icon modulate of a focused Button in the normal draw mode: `icon_focus_color`, else the normal one (`button.cpp:286-288`). */
+/** The icon modulate of a focused Button in the normal draw mode: `icon_focus_color`, else white, never `icon_normal_color` (`button.cpp:286-288`). */
 export function buttonFocusIconColor(colors: SolveNode['colors']): Rgba {
   return colors[BUTTON_ICON_FOCUS_COLOR_KEY] ?? BUTTON_ICON_MODULATE.normal;
 }

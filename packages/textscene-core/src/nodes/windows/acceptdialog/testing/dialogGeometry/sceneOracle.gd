@@ -1,4 +1,5 @@
 extends Node
+# Dialog geometry for the scenes in scn/, named as user arguments after `--`. Prints the same rects as oracle.gd.
 func rect_of(c: Control) -> Array:
 	var p = c.get_global_rect()
 	return [p.position.x, p.position.y, p.size.x, p.size.y]
@@ -20,5 +21,8 @@ func _ready():
 				kids.append(rect_of(ch))
 		e["children"] = kids
 		out[f] = e
+		# One exclusive child window at a time, so free this scene before the next.
+		root.queue_free()
+		await get_tree().process_frame
 	print("ORACLE " + JSON.stringify(out))
 	get_tree().quit()

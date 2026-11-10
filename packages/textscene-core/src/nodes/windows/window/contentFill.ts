@@ -1,4 +1,12 @@
-/** The two steps a Window's content rect takes for the Controls it holds: size the largest, give each the same rect. */
+/**
+ * The two steps a Window's content rect takes for the Controls it holds: size the largest, give each
+ * the same rect.
+ *
+ * Portions ported from Godot Engine (MIT).
+ * Copyright (c) 2014-present Godot Engine contributors.
+ * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+ * See THIRD-PARTY-NOTICES.md.
+ */
 
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';

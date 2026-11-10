@@ -15,6 +15,7 @@ import type { Vector2 } from '../../../godot/math/vector';
 import { SizeFlags, DEFAULT_SIZE_FLAGS } from '../../../godot/scene/control';
 import { internalChildThemeItems } from '../../../r3f/controls/native/themeItems';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
+import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import type {
   ContainerLayoutFn,
   MinimumSizeFn,
@@ -105,15 +106,29 @@ function buttonRow(dialog: SolveNode, ctx: SolveContext): ButtonRow {
 }
 
 /** The rect every authored Control takes (`dialogs.cpp:249-259`): the panel less the button row and its separation. */
-function dialogContentRect(dialog: SolveNode, size: Vector2, ctx: SolveContext): Rect2 {
-  const panel = dialogPanelBox(dialog, ctx.theme);
+function contentRectAbove(
+  panel: ResolvedStyleBox,
+  size: Vector2,
+  rowHeight: number,
+  separation: number
+): Rect2 {
   const margins = contentMarginSize(panel);
   return {
     x: panel.contentMargin.left,
     y: panel.contentMargin.top,
     w: size.x - margins.x,
-    h: size.y - margins.y - buttonRow(dialog, ctx).minimum.y - buttonsSeparation(dialog, ctx.theme),
+    h: size.y - margins.y - rowHeight - separation,
   };
+}
+
+function dialogContentRect(dialog: SolveNode, size: Vector2, ctx: SolveContext): Rect2 {
+  const panel = dialogPanelBox(dialog, ctx.theme);
+  return contentRectAbove(
+    panel,
+    size,
+    buttonRow(dialog, ctx).minimum.y,
+    buttonsSeparation(dialog, ctx.theme)
+  );
 }
 
 /**
@@ -131,7 +146,7 @@ export function dialogGeometry(dialog: SolveNode, size: Vector2, ctx: SolveConte
     w: size.x - margins.x,
     h: row.minimum.y,
   };
-  const content = dialogContentRect(dialog, size, ctx);
+  const content = contentRectAbove(panel, size, row.minimum.y, buttonsSeparation(dialog, ctx.theme));
 
   const rects = resortBoxContainer(
     false,

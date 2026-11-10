@@ -110,6 +110,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/windows/window/contentScale.ts` | `scene/main/window.cpp` (`Window::_update_viewport_size`'s content scale) and `scene/main/viewport.cpp` (`Viewport::_sub_window_update`'s target rect and black bars) |
 | `packages/textscene-core/src/nodes/windows/window/decoration.ts` | `scene/main/viewport.cpp` (`Viewport::_sub_window_update`'s title and close icon placement) |
 | `packages/textscene-core/src/nodes/windows/popuppanel/contentLayout.ts` | `scene/gui/popup.cpp` (`PopupPanel::_get_contents_minimum_size`, `_update_shadow_offsets`, `_update_child_rects`) |
+| `packages/textscene-core/src/nodes/windows/window/contentFill.ts` | `scene/gui/popup.cpp` (`PopupPanel::_get_contents_minimum_size`, `_update_child_rects`) and `scene/gui/dialogs.cpp` (`AcceptDialog::_update_child_rects`, `_get_contents_minimum_size`) |
 | `packages/textscene-core/src/nodes/windows/acceptdialog/dialogLayout.ts` | `scene/gui/dialogs.cpp` (`AcceptDialog::_update_child_rects`, `_get_contents_minimum_size`) |
 | `packages/textscene-core/src/nodes/windows/acceptdialog/dialogParts.ts` | `scene/gui/dialogs.cpp` (`AcceptDialog::AcceptDialog`'s internal Label, Button row and panel, `_update_theme_item_cache`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/fitChildInRect.ts` | `scene/gui/container.cpp` (`Container::fit_child_in_rect`) and `scene/gui/control.h` (the `SizeFlags` bitmask, `Container::as_sortable_control`'s visibility test) |
