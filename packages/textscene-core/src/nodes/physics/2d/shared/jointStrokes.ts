@@ -1,37 +1,37 @@
 /**
  * The editor marker of the 2D joints: the lines `PinJoint2D`, `GrooveJoint2D` and `DampedSpringJoint2D`
- * draw in their `NOTIFICATION_DRAW`, in Godot canvas pixels. The `frame` and `offset` styles are the
+ * draw in their `NOTIFICATION_DRAW`, in Godot canvas pixels. The `frame` and `offset` lists are the
  * two looks Godot draws them in, which `JointMarker` holds.
  */
 
 import type { Line2 } from '../../../../r3f/gizmo/thickLines';
 
-export type JointStrokeStyle = 'frame' | 'offset';
-
-export type JointStroke = Line2 & { style: JointStrokeStyle };
+export interface JointStrokes {
+  frame: Line2[];
+  offset: Line2[];
+}
 
 /** Half the 20 px bar every joint draws across its axis (`pin_joint_2d.cpp:45`). */
 const BAR_HALF_LENGTH = 10;
 
-const stroke = (style: JointStrokeStyle, fx: number, fy: number, tx: number, ty: number): JointStroke => ({
-  style,
+const line = (fx: number, fy: number, tx: number, ty: number): Line2 => ({
   from: { x: fx, y: fy },
   to: { x: tx, y: ty },
 });
 
-const bar = (style: JointStrokeStyle, y: number) => stroke(style, -BAR_HALF_LENGTH, y, BAR_HALF_LENGTH, y);
+const bar = (y: number) => line(-BAR_HALF_LENGTH, y, BAR_HALF_LENGTH, y);
 
 /** `pin_joint_2d.cpp:45-46`: two lines crossing at the origin. */
-export function pinMarker(): JointStroke[] {
-  return [bar('frame', 0), stroke('frame', 0, -BAR_HALF_LENGTH, 0, BAR_HALF_LENGTH)];
+export function pinMarker(): JointStrokes {
+  return { frame: [bar(0), line(0, -BAR_HALF_LENGTH, 0, BAR_HALF_LENGTH)], offset: [] };
 }
 
 /** `damped_spring_joint_2d.cpp:46-48`: a bar at the origin and at `length`, and the line between. */
-export function dampedSpringMarker(length: number): JointStroke[] {
-  return [bar('frame', 0), bar('frame', length), stroke('frame', 0, 0, 0, length)];
+export function dampedSpringMarker(length: number): JointStrokes {
+  return { frame: [bar(0), bar(length), line(0, 0, 0, length)], offset: [] };
 }
 
 /** `groove_joint_2d.cpp:46-49`: the spring marker, and a bar at `initialOffset`. */
-export function grooveMarker(length: number, initialOffset: number): JointStroke[] {
-  return [...dampedSpringMarker(length), bar('offset', initialOffset)];
+export function grooveMarker(length: number, initialOffset: number): JointStrokes {
+  return { frame: dampedSpringMarker(length).frame, offset: [bar(initialOffset)] };
 }

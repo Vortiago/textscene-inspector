@@ -4,11 +4,9 @@ import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { JointNode } from '../shared/JointNode';
 import { pinMarker } from '../shared/jointStrokes';
 
-const PIN_STROKES = pinMarker();
-
 export function PinJoint2D({ node, children }: NodeComponentProps) {
   return (
-    <JointNode node={node} strokes={PIN_STROKES}>
+    <JointNode node={node} strokesOf={pinMarker}>
       {children}
     </JointNode>
   );
