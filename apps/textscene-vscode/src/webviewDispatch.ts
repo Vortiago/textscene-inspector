@@ -59,7 +59,10 @@ const CARRIES_ITS_PAYLOAD: {
   copyNodePath: (m) => isString(m.nodePath),
   // `resourceType` only when present: the byte layer requests a file it knows no type for.
   loadResource: (m) =>
-    isString(m.path) && (m.resourceType === undefined || isString(m.resourceType)) && isString(m.requestId),
+    isString(m.path) &&
+    (m.resourceType === undefined || isString(m.resourceType)) &&
+    (m.maxBytes === undefined || typeof m.maxBytes === 'number') &&
+    isString(m.requestId),
   log: (m) => isString(m.level) && isString(m.message) && Array.isArray(m.args),
   previewCaptured: (m) => isString(m.requestId) && isString(m.dataUrl),
   previewCaptureError: (m) => isString(m.requestId) && isString(m.error),

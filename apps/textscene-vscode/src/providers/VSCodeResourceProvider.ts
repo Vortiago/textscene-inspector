@@ -38,14 +38,20 @@ export class VSCodeResourceProvider implements ResourceProvider {
     private documentUri: vscode.Uri
   ) {}
 
-  async loadResource(resourcePath: string, type?: string): Promise<string | ArrayBuffer> {
+  async loadResource(resourcePath: string, type?: string, maxBytes?: number): Promise<string | ArrayBuffer> {
     info(`[VSCodeResourceProvider] Loading ${type ?? 'file'}: ${resourcePath}`);
     try {
       const fsPath = await this.resolve(resourcePath);
       info(`[VSCodeResourceProvider] Resolved to: ${fsPath.fsPath}`);
       this.servedResources.set(pathKey(fsPath.fsPath, HOST_PATH_CASE), resourcePath);
       const fileData = await readWorkspaceFile(fsPath);
-      return resourceContent(fileData, type, resourcePath);
+      // The host reads the whole file, as `vscode.workspace.fs` has no ranged read and the web host build
+      // takes no Node builtin. Cutting here keeps the rest out of the base64 string and the webview.
+      return resourceContent(
+        maxBytes === undefined ? fileData : fileData.subarray(0, maxBytes),
+        type,
+        resourcePath
+      );
     } catch (cause) {
       const errorMsg = `Failed to load resource: ${resourcePath} (${cause instanceof Error ? cause.message : 'Unknown error'})`;
       error(`[VSCodeResourceProvider] ${errorMsg}`);

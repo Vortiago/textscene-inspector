@@ -40,7 +40,7 @@ export class WebviewResourceProvider implements ResourceProvider {
     });
   }
 
-  async loadResource(path: string, type?: string): Promise<string | ArrayBuffer> {
+  async loadResource(path: string, type?: string, maxBytes?: number): Promise<string | ArrayBuffer> {
     const requestId = `resource_${this.requestCounter++}`;
 
     return new Promise((resolve, reject) => {
@@ -57,6 +57,7 @@ export class WebviewResourceProvider implements ResourceProvider {
         type: 'loadResource',
         path,
         resourceType: type,
+        maxBytes,
         requestId,
       } satisfies WebviewToHostMessage);
     });

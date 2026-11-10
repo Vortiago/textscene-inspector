@@ -9,6 +9,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { theoraPictureSizeOf } from '../../../../resources/formats/theoravideo/parse';
 import { videoStreamPlayerMinimumSize, videoStreamPlayerTextureSlots } from './nativeSolver';
 
 const CTX: SolveContext = {
@@ -50,7 +51,7 @@ describe('videoStreamPlayerTextureSlots', () => {
     const requests = videoStreamPlayerTextureSlots(
       controlNode('V', 'VideoStreamPlayer', { stream: 'ExtResource("1")' })
     );
-    expect(requests).toEqual([{ key: 'stream', ref: 'ExtResource("1")' }]);
+    expect(requests).toEqual([{ key: 'stream', ref: 'ExtResource("1")', sizeOfFile: theoraPictureSizeOf }]);
   });
 
   it('asks for nothing with no stream authored', () => {

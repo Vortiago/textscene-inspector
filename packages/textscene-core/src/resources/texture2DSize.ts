@@ -9,7 +9,6 @@ import type { TscnInternalResource } from '../parser/types.js';
 import { peelCanvasTextures, resolveSubResourceRef, unwrapCanvasTextureRef } from './SubResourceResolver.js';
 import { atlasTextureSize, decodeAtlasTexture } from './textures/atlastexture/decode.js';
 import { decodeGradientTexture2D } from './textures/gradienttexture2d/decode.js';
-import { theoraPictureSizeOf } from './formats/theoravideo/parse.js';
 import { imageRefSize } from './textures/image/decode.js';
 import { decodeNoiseTexture2D } from './textures/noisetexture2d/decode.js';
 import { parsedResourceTexture } from './textures/parsedResourceTexture.js';
@@ -100,16 +99,12 @@ const DECLARED_SIZES: Readonly<
 
 /**
  * The pixel size of an `ExtResource` slot from its parsed resource file, for a caller with a
- * synchronous cache instead of hooks. A Theora stream reports its picture size, the size of the
- * texture a `VideoStreamPlayer` takes from it. Null for any other file that holds no texture the
- * scene could state inline.
+ * synchronous cache instead of hooks. Null for a file that holds no texture the scene could state inline.
  */
 export function extResourceTexture2DSize(
   parsed: ParsedResource,
   sizing: ViewportTextureSizing = BEFORE_SETUP
 ): Texture2DSize | null {
-  const picture = theoraPictureSizeOf(parsed);
-  if (picture) return picture;
   const saved = parsedResourceTexture(parsed);
   return inlineTexture2DSize(saved.ref, saved.internalResources, sizing);
 }

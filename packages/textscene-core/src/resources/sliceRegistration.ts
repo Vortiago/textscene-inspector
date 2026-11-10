@@ -37,6 +37,11 @@ interface ResourceSliceRegistration {
    */
   parseBytes?: (bytes: ArrayBuffer) => ParsedResource | Promise<ParsedResource>;
   /**
+   * The slice reads only this many leading bytes of its files, so a host reads no more. A video can
+   * run to hundreds of megabytes while its parse needs the first page of headers.
+   */
+  headBytes?: number;
+  /**
    * Whether a cached value is shared scene-graph state that each consumer must
    * clone (an `Object3D` has one parent). Read by `useResource` per bus.
    */
@@ -101,6 +106,11 @@ export const resourceSliceRegistry = {
   busTypeOfPath: (path: string): ResourceBusType | null => {
     const extension = fileExtension(path);
     return (extension !== null && byExtension.get(extension)?.busType) || null;
+  },
+  /** How many leading bytes the slice claiming the path's extension reads, or undefined for the whole file. */
+  headBytesOfPath: (path: string): number | undefined => {
+    const extension = fileExtension(path);
+    return extension === null ? undefined : byExtension.get(extension)?.headBytes;
   },
   /** Whether the slice claiming `busType` marks its values clone-per-consumer. */
   clonesPerConsumer: (busType: ResourceBusType): boolean =>

@@ -64,6 +64,20 @@ describe('WebviewResourceProvider', () => {
     });
   });
 
+  describe('Bounded reads', () => {
+    it('asks the host for only the leading bytes the caller needs', () => {
+      void provider.loadResource('res://video/clip.ogv', undefined, 1024);
+
+      expect(mockVsCode.postMessage).toHaveBeenCalledWith({
+        type: 'loadResource',
+        path: 'res://video/clip.ogv',
+        resourceType: undefined,
+        maxBytes: 1024,
+        requestId: 'resource_0',
+      });
+    });
+  });
+
   describe('Text Resource Loading', () => {
     it('should load text resource successfully', async () => {
       const loadPromise = provider.loadResource('res://test.txt', 'Resource');

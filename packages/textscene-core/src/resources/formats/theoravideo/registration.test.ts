@@ -16,4 +16,12 @@ describe('theoravideo slice registration', () => {
   it('reads an .ogv through its own bytes parser, not the RSRC reader', () => {
     expect(resourceSliceRegistry.byExtension('.ogv')?.parseBytes).toBe(parseTheoraVideo);
   });
+
+  it('asks a host for the first mebibyte of an .ogv, where its headers sit', () => {
+    expect(resourceSliceRegistry.headBytesOfPath('res://video/intro.OGV')).toBe(1024 * 1024);
+  });
+
+  it('asks for the whole file of a path no slice caps', () => {
+    expect(resourceSliceRegistry.headBytesOfPath('res://textures/icon.png')).toBeUndefined();
+  });
 });
