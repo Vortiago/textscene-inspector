@@ -4,6 +4,7 @@ import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { themeResource } from '../../../../r3f/controls/native/testing/themeResource';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import type { TscnInternalResource } from '../../../../parser/types';
 import { pickerChildTheme } from './pickerChildTheme';
@@ -15,15 +16,7 @@ const BLUE = { r: 0, g: 0, b: 1, a: 1 };
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
 function themeWithColors(colors: Record<string, Record<string, typeof RED>>): ThemeResource {
-  return {
-    defaultFont: null,
-    defaultFontSize: undefined,
-    fonts: {},
-    fontSizes: {},
-    typeVariations: {},
-    properties: {},
-    colors,
-  };
+  return themeResource({ colors });
 }
 
 function pickerUnder(...themeChain: ThemeResource[]): SolveNode {

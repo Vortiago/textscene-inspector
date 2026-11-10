@@ -34,4 +34,6 @@ offset_bottom = 404.0
 color = Color(0.2, 0.4, 0.6, 0.8)
 picker_shape = 4
 sampler_visible = false
-slider_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false

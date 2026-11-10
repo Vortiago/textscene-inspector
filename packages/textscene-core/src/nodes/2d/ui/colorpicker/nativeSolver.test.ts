@@ -4,7 +4,6 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { pickerChildTheme } from './pickerChildTheme';
-import { extractHsv } from './colorModes';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
   invertRgb,
@@ -39,6 +38,11 @@ function node(properties: Record<string, unknown>): SolveNode {
 }
 
 const THEME = pickerChildTheme(node({}), nativeTheme(1)).theme;
+
+/** `THEME` with some widget boxes replaced. */
+function themeWithWidgets(widgets: Partial<typeof THEME.widgets>): typeof THEME {
+  return { ...THEME, widgets: { ...THEME.widgets, ...widgets } };
+}
 const CTX: SolveContext = { theme: THEME, measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
 
 /** Every assertion below is on the height alone. */
@@ -49,29 +53,6 @@ function minHeight(result: ReturnType<typeof colorPickerMinimumSize>): number {
 describe('invertRgb', () => {
   it('flips rgb and leaves alpha: core/math/color.h Color::inverted()', () => {
     expect(invertRgb({ r: 0.2, g: 0.4, b: 0.6, a: 0.5 })).toEqual({ r: 0.8, g: 0.6, b: 0.4, a: 0.5 });
-  });
-});
-
-describe('extractHsv', () => {
-  it('matches Color::get_h/get_s/get_v directly for a non-overbright colour', () => {
-    // color_picker.cpp:593-602: multiplier is 1 for any channel <= 1, so
-    // color_normalized === color and this is the plain HSV extraction.
-    const { h, s, v } = extractHsv({ r: 1, g: 0, b: 0, a: 1 });
-    expect(h).toBeCloseTo(0);
-    expect(s).toBeCloseTo(1);
-    expect(v).toBeCloseTo(1);
-  });
-
-  it('normalises an overbright colour before extracting h/s/v: color_picker.cpp:593-602', () => {
-    // r=2 (linear-equivalent overbright red): multiplier > 1, so v settles
-    // back to 1 after the srgb round-trip, not 2.
-    const { s, v } = extractHsv({ r: 2, g: 0, b: 0, a: 1 });
-    expect(s).toBeCloseTo(1, 2);
-    expect(v).toBeCloseTo(1, 2);
-  });
-
-  it('is achromatic (h=0) for pure black', () => {
-    expect(extractHsv({ r: 0, g: 0, b: 0, a: 1 })).toEqual({ h: 0, s: 0, v: 0 });
   });
 });
 
@@ -286,19 +267,15 @@ describe('modeRowButtonRects', () => {
   });
 });
 
-const WIDE_PRESSED_THEME = {
-  ...THEME,
-  widgets: {
-    ...THEME.widgets,
-    tabContainer: {
-      ...THEME.widgets.tabContainer,
-      selected: {
-        ...THEME.widgets.tabContainer.selected,
-        contentMargin: { left: 30, top: 10, right: 30, bottom: 10 },
-      },
+const WIDE_PRESSED_THEME = themeWithWidgets({
+  tabContainer: {
+    ...THEME.widgets.tabContainer,
+    selected: {
+      ...THEME.widgets.tabContainer.selected,
+      contentMargin: { left: 30, top: 10, right: 30, bottom: 10 },
     },
   },
-};
+});
 
 describe('the slider rows with a SpinBox inner LineEdit box', () => {
   it('take their height from the value field theme, and the hex row from the plain LineEdit box', () => {
@@ -309,7 +286,7 @@ describe('the slider rows with a SpinBox inner LineEdit box', () => {
     const rows = colorPickerRows(
       400,
       THEME,
-      { widgets: { ...THEME.widgets, lineEdit: { ...THEME.widgets.lineEdit, normal: tall } } },
+      themeWithWidgets({ lineEdit: { ...THEME.widgets.lineEdit, normal: tall } }),
       { ...ALL_ROWS_HIDDEN, slidersVisible: true, hexVisible: true, editAlpha: false, editIntensity: false },
       measure
     );
@@ -340,19 +317,15 @@ describe('the pressed mode button with wider margins than the others', () => {
   });
 });
 
-const WIDE_FLAT_THEME = {
-  ...THEME,
-  widgets: {
-    ...THEME.widgets,
-    flatMenuButton: {
-      ...THEME.widgets.flatMenuButton,
-      normal: {
-        ...THEME.widgets.flatMenuButton.normal,
-        contentMargin: { left: 14, top: 10, right: 14, bottom: 10 },
-      },
+const WIDE_FLAT_THEME = themeWithWidgets({
+  flatMenuButton: {
+    ...THEME.widgets.flatMenuButton,
+    normal: {
+      ...THEME.widgets.flatMenuButton.normal,
+      contentMargin: { left: 14, top: 10, right: 14, bottom: 10 },
     },
   },
-};
+});
 
 describe('the FlatMenuButton box of the Theme chain', () => {
   it('widens btn_shape to the icon plus its margins when that exceeds the 28 minimum (color_picker.cpp:122-124)', () => {
@@ -690,6 +663,13 @@ describe('sampleRowColumns', () => {
     expect(cols.pick).toEqual({ x: 0, y: 0, w: 28, h: 24 });
     expect(cols.sample).toEqual({ x: 32, y: 0, w: 336, h: 24 }); // 400 - 28 - 4 - 32
     expect(cols.shape).toEqual({ x: 372, y: 0, w: 28, h: 24 });
+  });
+
+  it('scales the pick and shape buttons to 28 * scale in a scale-2 theme: color_picker.cpp:122-124', () => {
+    const doubled = pickerChildTheme(node({}), nativeTheme(2)).theme;
+    const cols = sampleRowColumns({ x: 0, y: 0, w: 400, h: 48 }, doubled, 0);
+    expect(cols.pick.w).toBe(56);
+    expect(cols.shape!.w).toBe(56);
   });
 
   it('drops the shape button at SHAPE_NONE (4): color_picker.cpp:321', () => {

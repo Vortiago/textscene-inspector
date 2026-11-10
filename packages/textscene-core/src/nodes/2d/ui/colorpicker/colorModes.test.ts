@@ -8,6 +8,7 @@ import {
   colorModeChannels,
   colorModeIntensityChannel,
   colorNormalized,
+  extractHsv,
   colorPickerSliderLabels,
   formatSliderValue,
   hexFieldText,
@@ -267,5 +268,28 @@ describe('alphaChannelGradientStops', () => {
       { r: 1, g: 0, b: 0, a: 0 },
       { r: 1, g: 0, b: 0, a: 1 },
     ]);
+  });
+});
+
+describe('extractHsv', () => {
+  it('matches Color::get_h/get_s/get_v directly for a non-overbright colour', () => {
+    // color_picker.cpp:593-602: multiplier is 1 for any channel <= 1, so
+    // color_normalized === color and this is the plain HSV extraction.
+    const { h, s, v } = extractHsv({ r: 1, g: 0, b: 0, a: 1 });
+    expect(h).toBeCloseTo(0);
+    expect(s).toBeCloseTo(1);
+    expect(v).toBeCloseTo(1);
+  });
+
+  it('normalises an overbright colour before extracting h/s/v: color_picker.cpp:593-602', () => {
+    // r=2 (linear-equivalent overbright red): multiplier > 1, so v settles
+    // back to 1 after the srgb round-trip, not 2.
+    const { s, v } = extractHsv({ r: 2, g: 0, b: 0, a: 1 });
+    expect(s).toBeCloseTo(1, 2);
+    expect(v).toBeCloseTo(1, 2);
+  });
+
+  it('is achromatic (h=0) for pure black', () => {
+    expect(extractHsv({ r: 0, g: 0, b: 0, a: 1 })).toEqual({ h: 0, s: 0, v: 0 });
   });
 });

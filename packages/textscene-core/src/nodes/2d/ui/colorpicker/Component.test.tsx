@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { themeResource } from '../../../../r3f/controls/native/testing/themeResource';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
@@ -268,10 +269,7 @@ describe('<ColorPicker> (isolated painter contract)', () => {
   it('sizes every slider band to 185px in a 300px picker, as Godot measures (band ends at x = 210)', async () => {
     // The value column is the SpinBox minimum with the W advance unrounded (15.125 px), then truncated by
     // `GridContainer` to 86 (`grid_container.cpp:290`).
-    const renderer = await renderPicker(
-      { ...ONLY_SLIDERS, color: 'Color(0.8, 0.6, 0.4, 1)', colorMode: 1 },
-      { w: 300, h: 160 }
-    );
+    const renderer = await renderPicker({ ...ONLY_SLIDERS, colorMode: 1 }, { w: 300, h: 160 });
     const bandWidths = renderer.scene
       .findAllByType('Mesh')
       .map((mesh) => {
@@ -281,8 +279,11 @@ describe('<ColorPicker> (isolated painter contract)', () => {
         return box.max.x - box.min.x;
       })
       .filter((width) => width > 100);
-    // Every band is 185px wide. The intensity track is 186px: it is not a band.
-    expect(new Set(bandWidths)).toEqual(new Set([185, 186]));
+    // H's grey base and rainbow, S, V, A and the checkerboard under A: six 185px bands. The intensity
+    // track is the one 186px mesh.
+    expect(bandWidths.filter((width) => width === 185)).toHaveLength(6);
+    expect(bandWidths.filter((width) => width === 186)).toHaveLength(1);
+    expect(bandWidths).toHaveLength(7);
   });
 
   it('draws the H row of color_mode HSV as a grey polygon and the color_hue rainbow over it: color_mode.cpp:200-221', async () => {
@@ -329,15 +330,7 @@ describe('<ColorPicker> (isolated painter contract)', () => {
 
   it('modulates the picker Buttons icons by icon_normal_color of the Theme chain', async () => {
     const half = { r: 1, g: 1, b: 1, a: 0.5 };
-    const theme: ThemeResource = {
-      defaultFont: null,
-      defaultFontSize: undefined,
-      fonts: {},
-      fontSizes: {},
-      typeVariations: {},
-      properties: {},
-      colors: { Button: { icon_normal_color: half } },
-    };
+    const theme = themeResource({ colors: { Button: { icon_normal_color: half } } });
     const halfIcons = async (themeChain: ThemeResource[]) => {
       const renderer = await renderPicker({ ...ONLY_SWATCHES }, { w: 400, h: 100 }, themeChain);
       return renderer.scene
@@ -345,7 +338,7 @@ describe('<ColorPicker> (isolated painter contract)', () => {
         .map((mesh) => (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
         .filter((material) => material.map && Math.abs(material.opacity - 0.5) < 1e-6);
     };
-    expect((await halfIcons([theme])).length).toBeGreaterThanOrEqual(3);
+    expect(await halfIcons([theme])).toHaveLength(3);
     expect(await halfIcons([])).toHaveLength(0);
   });
 
@@ -355,21 +348,27 @@ describe('<ColorPicker> (isolated painter contract)', () => {
       type: 'StyleBoxFlat',
       data: { bg_color: 'Color(1, 0, 0, 1)', content_margin_left: '6.0', content_margin_right: '6.0' },
     };
-    const themed: ThemeResource = {
-      defaultFont: null,
-      defaultFontSize: undefined,
-      fonts: {},
-      fontSizes: {},
-      typeVariations: {},
-      properties: {},
+    const themed = themeResource({
       colors: {},
       styles: { FlatMenuButton: { normal: 'SubResource("box")' } },
       resources: { externalResources: [], internalResources: [box] },
-    };
+    });
     const meshes = async (themeChain: ThemeResource[]) =>
-      (await renderPicker({ ...ONLY_SWATCHES }, { w: 400, h: 100 }, themeChain)).scene.findAllByType('Mesh')
-        .length;
-    expect(await meshes([themed])).toBe((await meshes([])) + 1);
+      (await renderPicker({ ...ONLY_SWATCHES }, { w: 400, h: 100 }, themeChain)).scene.findAllByType('Mesh');
+    /** A box mesh's first vertex colour, linear: the StyleBox's `bg_color` before the tint. */
+    const isRedBox = (mesh: { instance: unknown }) => {
+      const colors = (mesh.instance as THREE.Mesh).geometry.getAttribute('color');
+      return colors !== undefined && colors.getX(0) === 1 && colors.getY(0) === 0 && colors.getZ(0) === 0;
+    };
+    const redBoxes = async (themeChain: ThemeResource[]) => (await meshes(themeChain)).filter(isRedBox);
+    expect(await redBoxes([])).toHaveLength(0);
+    const [redBox] = await redBoxes([themed]);
+    const mesh = redBox!.instance as THREE.Mesh;
+    mesh.updateWorldMatrix(true, false);
+    const bounds = new THREE.Box3().setFromObject(mesh);
+    // The menu button sits on the trailing edge of the swatches row (`color_picker.cpp:2255`).
+    expect(bounds.min.x).toBeGreaterThan(200);
+    expect(await meshes([themed])).toHaveLength((await meshes([])).length + 1);
   });
 
   it('swatches row draws its two button labels: presets_visible default true', async () => {
