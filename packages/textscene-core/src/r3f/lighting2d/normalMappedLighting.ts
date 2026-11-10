@@ -80,11 +80,26 @@ ${ITEM_LIGHTING_GLSL}
 varying vec2 vCanvasPosition;
 varying vec4 vItemAxes;
 
+// Where a tile samples its maps: the diffuse's uv, held inside the tile where the diffuse is
+// (tile_set.cpp:5622-5671, which pads every map of a CanvasTexture alike).
+vec2 surfaceUv() {
+#ifdef TILE_UV_BOUNDS
+  return clamp(vMapUv, vTileUvBounds.xy, vTileUvBounds.zw);
+#else
+  return vMapUv;
+#endif
+}
+
 // canvas.glsl:652-665 and :706-712. Godot's decode, vec2(2, -2) - vec2(1, -1), flips y into its
-// y-down canvas. The world frame is y up, so the flip drops out.
+// y-down canvas. The world frame is y up, so the flip drops out, and Godot's transpose, which swaps
+// the y-down components, negates both here. A tile's flips then negate their own component.
 vec3 itemNormal() {
   vec3 normal;
-  normal.xy = texture2D(uNormalMap, vMapUv).xy * 2.0 - 1.0;
+  normal.xy = texture2D(uNormalMap, surfaceUv()).xy * 2.0 - 1.0;
+#ifdef TILE_NORMAL_ORIENTATION
+  if (vTileNormalOrientation.z > 0.5) normal.xy = -normal.yx;
+  normal.xy *= vTileNormalOrientation.xy;
+#endif
   normal.z = sqrt(max(0.0, 1.0 - dot(normal.xy, normal.xy)));
   normal.xy = mat2(vItemAxes.xy, vItemAxes.zw) * normal.xy;
   return normalize(normal);
@@ -122,7 +137,7 @@ if (!unshaded) {
   ${ITEM_ALBEDO_GLSL}
   vec3 normal = itemNormal();
   bool usesSpecular = uUsesSpecular > 0.5;
-  vec4 specular = usesSpecular ? texture2D(uSpecularMap, vMapUv) * uSpecular : vec4(1.0);
+  vec4 specular = usesSpecular ? texture2D(uSpecularMap, surfaceUv()) * uSpecular : vec4(1.0);
   vec3 color = albedo * lightSeed;
   float lightOnlyAlpha = 0.0;
   for (int i = 0; i < APART_LIGHT_COUNT; i++) {

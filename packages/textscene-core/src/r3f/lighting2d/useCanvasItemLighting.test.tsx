@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import { act, renderHook } from '@testing-library/react';
-import { useCanvasItemLighting } from './useCanvasItemLighting';
+import { useLitItem, useSurfaceLighting } from './useCanvasItemLighting';
 import {
   CanvasLighting2DContext,
   INERT_CANVAS_LIGHTING,
@@ -65,6 +65,15 @@ function apartLights(): ApartLightBuffers {
 
 function surface(overrides: Partial<CanvasItemSurface> = {}): CanvasItemSurface {
   return { normalMap: new THREE.Texture(), specularMap: null, specular: null, ...overrides };
+}
+
+/** The lighting of an item whose pixels are the one `surface`, as `LitCanvasItemPixels` takes it. */
+function useCanvasItemLighting({
+  surface = null,
+  ...options
+}: Parameters<typeof useLitItem>[0] & { surface?: CanvasItemSurface | null }) {
+  const item = useLitItem(options);
+  return { props: useSurfaceLighting(item, surface), geometryRef: item.geometryRef };
 }
 
 /** The uniform objects the hook bound, read back off the injection it returns. */

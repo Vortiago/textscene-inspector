@@ -140,6 +140,23 @@ function buildArrays(
   return { positions, uvs, colors, indices, uvBounds };
 }
 
+/**
+ * Per vertex, how a cell's flips and transpose turn its normal map's normal: the sign each flip
+ * gives its x and y, then 1 where the cell swaps its axes, else 0. The draw shader flips the
+ * normal by the sign of the source rect and swaps its axes for a transposed rect
+ * (`canvas.glsl:655-661`), and the geometry's UVs already carry the diffuse through the same
+ * orientation, so the normal map is sampled where the diffuse is and turned here.
+ */
+export function tileNormalOrientations(cells: readonly DrawableCell[]): Float32Array {
+  const orientations = new Float32Array(cells.length * 4 * 3);
+  cells.forEach((cell, i) => {
+    const { flipH, flipV, transpose } = tileDrawInfo(cell.source, cell).orientation;
+    const vertex = [flipH ? -1 : 1, flipV ? -1 : 1, transpose ? 1 : 0];
+    for (let corner = 0; corner < 4; corner++) orientations.set(vertex, (i * 4 + corner) * 3);
+  });
+  return orientations;
+}
+
 /** The UV rect inset by half a texel, on a quad's four corners. */
 function writeCornerUvBounds(
   bounds: Float32Array,
