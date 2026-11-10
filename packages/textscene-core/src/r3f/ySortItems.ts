@@ -93,13 +93,10 @@ function ownBodyOf(node: TscnNode): TscnNode {
  */
 function toSortRootOf(child: TscnNode, parent: YSortParent): Transform2DColumns {
   if (descendsFromClass(child.type, 'Node3D')) return parent.toSortRoot;
-  const toChild = multiplyTransform2D(
+  return multiplyTransform2D(
     parent.toSortRoot,
     node2DLocalTransform(child.properties as Partial<Node2DLocalTransform>)
   );
-  // A scene tile sorts as its instance root, which sits inside the placement node that stands for it.
-  const root = (child as LiveNode).ySortRoot;
-  return root ? multiplyTransform2D(toChild, root.pose) : toChild;
 }
 
 /**
@@ -110,7 +107,9 @@ function toSortRootOf(child: TscnNode, parent: YSortParent): Transform2DColumns 
 function itemSortKey(child: TscnNode, parent: YSortParent): YSortParent & { sortY: number } {
   const props = child.properties as Record<string, unknown>;
   const toSortRoot = toSortRootOf(child, parent);
-  const sortY = toSortRoot.ty;
+  // A scene tile sorts as its instance root, which sits inside the placement node that stands for it.
+  const root = (child as LiveNode).ySortRoot;
+  const sortY = root ? multiplyTransform2D(toSortRoot, root.pose).ty : toSortRoot.ty;
 
   // The same accumulation the light cull uses: `_collect_ysort_children` (renderer_canvas_cull.cpp
   // 143-148) and `_cull_canvas_item` (430-434) both run
@@ -120,7 +119,6 @@ function itemSortKey(child: TscnNode, parent: YSortParent): YSortParent & { sort
     z_index: (props.z_index as number | undefined) ?? 0,
     z_as_relative: props.z_as_relative as boolean | undefined,
   });
-  const root = (child as LiveNode).ySortRoot;
   const effectiveZ = root
     ? accumulateCanvasItemZ(ownZ, { z_index: root.zIndex, z_as_relative: root.zAsRelative })
     : ownZ;

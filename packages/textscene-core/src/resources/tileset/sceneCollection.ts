@@ -59,9 +59,16 @@ export function resolveSceneCollectionSource(
   return { scenes };
 }
 
-/** The scene `value` names, or null for `null` or a reference that names no resource. */
+/**
+ * The scene `value` names, or null for `null`, a reference that names no resource, or one that is
+ * no PackedScene: the property takes a PackedScene, so the tile has no scene.
+ */
 function sceneOf(value: string, tables: SceneTables): SceneTileModel['scene'] {
-  return parseResourceReference(value)?.type === 'ExtResource'
+  const reference = parseResourceReference(value);
+  const isPackedScene =
+    reference?.type === 'ExtResource' &&
+    tables.externalResources.some(({ id, type }) => id === reference.id && type === 'PackedScene');
+  return isPackedScene
     ? { ref: value, externalResources: tables.externalResources, internalResources: tables.internalResources }
     : null;
 }

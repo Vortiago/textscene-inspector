@@ -10,7 +10,7 @@ import type { LiveNode, YSortRoot } from '../../../../resources/liveNode';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes';
 import { sceneTileCells, type SceneTileCell } from '../../../../resources/tileset/sceneTileCells';
 import { sceneTilePlacement, type SceneRootKind } from '../../../../resources/tileset/sceneTilePlacement';
-import type { TileScene, TileSetModel } from '../../../../resources/tileset/types';
+import type { TileGrid, TileScene, TileSetModel } from '../../../../resources/tileset/types';
 import { perObject } from '../../../../utils/perObject';
 import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedScenePathsContext';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
@@ -55,39 +55,37 @@ export function useSceneTileNodes(
   );
   // One instance node and one live step per distinct scene: a layer repeats few scenes across many cells.
   const scenes = useMemo(() => [...new Set(tiles.map(({ tile }) => tile.scene!))], [tiles]);
-  const sceneNodes = useMemo(() => scenes.map((scene) => instanceNodesOf(scope)(scene)), [scenes, scope]);
+  const sceneNodes = useMemo(() => scenes.map(instanceNodesOf(scope)), [scenes, scope]);
   const sceneSteps = useLiveStepsOf(sceneNodes, scope);
 
   return useMemo(() => {
     if (!model) return NO_DRAWING;
-    // The root judged once per scene, not per tile.
-    const loaded = new Map<TileScene, LoadedScene>();
+    // The root judged once per scene, not per tile. `set_scene_tile_scene` refuses a root that is no
+    // CanvasItem, so a tile of that scene has no scene.
+    const placeable = new Map<TileScene, PlaceableScene>();
+    const refusedScenes = new Set<TileScene>();
+    const instanceOf = instanceNodesOf(scope);
     scenes.forEach((scene, index) => {
       const step = sceneSteps[index]!;
       // A scene not yet loaded has no root to judge: its tile draws nothing and shows no disc.
       const root = step.isMerged ? rootKindOf(step.node.type) : 'node2d';
-      loaded.set(scene, {
-        instance: sceneNodes[index]!,
-        root,
-        ySortRoot: root && ySortRootOf(step.node, root),
-      });
+      if (root === null) refusedScenes.add(scene);
+      else
+        placeable.set(scene, { instance: instanceOf(scene), root, ySortRoot: ySortRootOf(step.node, root) });
     });
-    // `set_scene_tile_scene` refuses a root that is no CanvasItem, so that tile has no scene.
-    const refused = new Set<SceneTileCell>();
     const placed: LiveNode[] = [];
     const names = new TileNames();
     for (const sceneTile of tiles) {
-      const scene = loaded.get(sceneTile.tile.scene!)!;
-      if (scene.root === null) refused.add(sceneTile);
-      else placed.push(placementNode(names.nameAt(sceneTile.cell.coords), sceneTile, scene, model));
+      const scene = placeable.get(sceneTile.tile.scene!);
+      if (scene) placed.push(placementNode(names.nameAt(sceneTile.cell.coords), sceneTile, scene, model));
     }
     return {
       instances: placed,
       placeholderTiles: allTiles.filter(
-        (tile) => !tile.tile.scene || tile.tile.displayPlaceholder || refused.has(tile)
+        ({ tile }) => !tile.scene || tile.displayPlaceholder || refusedScenes.has(tile.scene)
       ),
     };
-  }, [model, allTiles, tiles, scenes, sceneNodes, sceneSteps]);
+  }, [model, allTiles, tiles, scenes, sceneSteps, scope]);
 }
 
 /**
@@ -143,7 +141,7 @@ function rootKindOf(rootType: string): SceneRootKind | null {
 
 /**
  * The instance root as the sort reads it. A Node2D root has its own transform and z. A Control root
- * sits at its offsets, the rect of a parent with no size, and keeps the placement's z.
+ * sits at its offsets, the rect of a parent with no size, and has the z of its own CanvasItem.
  */
 function ySortRootOf(rootNode: LiveNode, root: SceneRootKind): YSortRoot {
   if (root === 'node2d') {
@@ -154,28 +152,34 @@ function ySortRootOf(rootNode: LiveNode, root: SceneRootKind): YSortRoot {
     const pose = node2DLocalTransform(rootNode.properties as Partial<Node2DLocalTransform>);
     return { pose, zIndex, zAsRelative };
   }
-  const { offsetLeft = 0, offsetTop = 0 } = rootNode.properties as {
+  const {
+    offsetLeft = 0,
+    offsetTop = 0,
+    zIndex = 0,
+    zAsRelative = true,
+  } = rootNode.properties as {
     offsetLeft?: number;
     offsetTop?: number;
+    zIndex?: number;
+    zAsRelative?: boolean;
   };
-  return { pose: { ...TRANSFORM2D_IDENTITY, tx: offsetLeft, ty: offsetTop }, zIndex: 0, zAsRelative: true };
+  return { pose: { ...TRANSFORM2D_IDENTITY, tx: offsetLeft, ty: offsetTop }, zIndex, zAsRelative };
 }
 
 /** A tile scene as its tiles share it: the instance node, and its loaded root as the sort reads it. */
-interface LoadedScene {
+interface PlaceableScene {
   instance: LiveNode;
-  /** Null for a root that is no CanvasItem. */
-  root: SceneRootKind | null;
-  ySortRoot: YSortRoot | null;
+  root: SceneRootKind;
+  ySortRoot: YSortRoot;
 }
 
 function placementNode(
   name: string,
   { cell }: SceneTileCell,
-  { instance, root, ySortRoot }: LoadedScene,
-  grid: TileSetModel
+  { instance, root, ySortRoot }: PlaceableScene,
+  grid: TileGrid
 ): LiveNode {
-  const placement = sceneTilePlacement(grid, cell.coords, cell.alternativeId, root!);
+  const placement = sceneTilePlacement(grid, cell.coords, cell.alternativeId, root);
   return {
     name,
     type: 'Node2D',
@@ -185,6 +189,6 @@ function placementNode(
     rawProperties: {},
     isUnowned: true,
     hasControlRoot: root === 'control',
-    ySortRoot: ySortRoot!,
+    ySortRoot,
   };
 }

@@ -16,7 +16,10 @@ afterEach(() => {
   warnSpy.mockRestore();
 });
 
-const externals: TscnExternalResource[] = [{ id: '5', type: 'PackedScene', path: 'res://tile.tscn' }];
+const externals: TscnExternalResource[] = [
+  { id: '5', type: 'PackedScene', path: 'res://tile.tscn' },
+  { id: '6', type: 'Texture2D', path: 'res://icon.png' },
+];
 
 function tileSetWith(sceneSource: Record<string, string>) {
   const internals: TscnInternalResource[] = [
@@ -33,6 +36,14 @@ describe('a TileSetScenesCollectionSource in a scene', () => {
       scene: { ref: 'ExtResource("5")', externalResources: externals, internalResources: internals },
       displayPlaceholder: false,
     });
+  });
+
+  it.each([
+    ['an ExtResource that is no PackedScene', 'ExtResource("6")'],
+    ['an ExtResource the file lacks', 'ExtResource("9")'],
+  ])('gives a tile no scene for %s', (_name, reference) => {
+    const { model } = tileSetWith({ 'scenes/1/scene': reference });
+    expect(model.sceneSources.get(2)!.scenes.get(1)!.scene).toBeNull();
   });
 
   it('reads display_placeholder beside the scene', () => {
