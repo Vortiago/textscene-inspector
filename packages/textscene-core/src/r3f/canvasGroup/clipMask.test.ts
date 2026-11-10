@@ -44,3 +44,17 @@ describe('a clip mask', () => {
     expect([material.blending, material.blendDst]).toEqual([THREE.CustomBlending, THREE.OneFactor]);
   });
 });
+
+describe('a clip mask over a blend that changes', () => {
+  it('restores the blend the owner holds after a change between masked draws', () => {
+    const { mask, material } = compiledWith();
+    mask.setMasking(true);
+    mask.setMasking(false);
+
+    Object.assign(material, canvasItemBlendState(CanvasItemMaterialBlendMode.MIX));
+    mask.setMasking(true);
+    mask.setMasking(false);
+
+    expect(material.blending).toBe(THREE.NormalBlending);
+  });
+});

@@ -50,18 +50,31 @@ export function createClipMask(): ClipMask {
   const uniforms = { uClipBuffer: { value: null as THREE.Texture | null }, uClipMasking: { value: 0 } };
   let buffer: THREE.Texture | null = null;
   let isMasked = false;
-  // The materials the owner compiled, each with the blend of its `CanvasItemMaterial`.
+  // The materials the owner compiled. While masked, each maps to the blend its `CanvasItemMaterial`
+  // held when the mask took over: a prop change lands only between masked draws, so it is current.
+  const materials = new Set<THREE.Material>();
   const ownBlends = new Map<THREE.Material, Partial<THREE.Material>>();
+  const takeMixBlend = (material: THREE.Material) => {
+    ownBlends.set(material, Object.fromEntries(BLEND_FIELDS.map((field) => [field, material[field]])));
+    Object.assign(material, MIX_BLEND);
+  };
+  const restoreOwnBlend = (material: THREE.Material) => {
+    Object.assign(material, ownBlends.get(material));
+    ownBlends.delete(material);
+  };
   return {
     injection: {
       cacheKey: 'godot-clip-children',
       onBeforeCompile: function (shader) {
         // Once per material: a recompile while masked would read the MIX blend as the owner's own.
-        if (!ownBlends.has(this)) {
-          ownBlends.set(this, Object.fromEntries(BLEND_FIELDS.map((field) => [field, this[field]])));
-          this.addEventListener('dispose', () => ownBlends.delete(this));
+        if (!materials.has(this)) {
+          materials.add(this);
+          this.addEventListener('dispose', () => {
+            materials.delete(this);
+            ownBlends.delete(this);
+          });
+          if (isMasked) takeMixBlend(this);
         }
-        if (isMasked) Object.assign(this, MIX_BLEND);
         Object.assign(shader.uniforms, uniforms);
         editedProgram(
           shader,
@@ -83,7 +96,7 @@ export function createClipMask(): ClipMask {
       isMasked = isMasking;
       uniforms.uClipMasking.value = isMasking ? 1 : 0;
       uniforms.uClipBuffer.value = isMasking ? buffer : null;
-      for (const [material, own] of ownBlends) Object.assign(material, isMasking ? MIX_BLEND : own);
+      for (const material of materials) (isMasking ? takeMixBlend : restoreOwnBlend)(material);
     },
   };
 }

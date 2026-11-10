@@ -40,8 +40,9 @@ function recordingRenderer(meshes: Record<string, THREE.Mesh>) {
     setRenderTarget: (target: Target) => {
       bound = target;
     },
-    clear: () => {
-      clears.push(bound);
+    // A colour clear only: a clip buffer keeps the colour it copied, and clears its depth.
+    clear: (clearsColor?: boolean) => {
+      if (clearsColor) clears.push(bound);
     },
     render: (_scene: THREE.Object3D, camera: THREE.Camera) => {
       const names = Object.keys(meshes).filter((name) => seen(meshes[name]!, camera));

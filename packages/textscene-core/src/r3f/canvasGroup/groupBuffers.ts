@@ -92,6 +92,8 @@ export function fillClipBuffer(
     transparentBg: true,
     keepsColor: true,
     draw: () => {
+      // The copy holds no depth, and the last frame's depth would cull this frame's items.
+      gl.clear(false, true, false);
       if (clip!.mode === 'clipAndDraw') drawKeys((key) => isOwnKey(window, key));
       drawKeys((key) => collects(window, key));
     },

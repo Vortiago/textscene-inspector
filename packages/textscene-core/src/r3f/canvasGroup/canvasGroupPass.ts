@@ -149,7 +149,7 @@ export function drawCanvasGroups(
   }
 }
 
-/** What `drawFrame` and `fillClipBuffer` draw through: the renderer, the scene and its keys. */
+/** What `drawFrame` draws through: the renderer, the scene, its keys and the frame's own draw. */
 interface FrameDraw {
   gl: THREE.WebGLRenderer;
   scene: THREE.Object3D;
