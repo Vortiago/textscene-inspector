@@ -80,7 +80,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
     text,
     fontSizePx,
     bidi,
-    boxWidthPx: checkButtonLabelWrapWidthPx(rect, solveNode, props.disabled === true, { theme }),
+    boxWidthPx: checkButtonLabelWrapWidthPx(props, rect, solveNode, props.disabled === true, { theme }),
   });
 
   const content = useMemo(

@@ -25,6 +25,7 @@ import {
   labelMinimumTextSize,
   tintColor,
   type ButtonLabelBox,
+  type ButtonWrapProperties,
 } from '../../../../r3f/controls/native/buttonBase';
 import {
   resolveTextTheme,
@@ -207,16 +208,15 @@ export function checkBoxCheckVOffset(constants: SolveNode['constants']): number 
  * and `h_separation`, which `_internal_margin` always reserves (`check_box.cpp:96-101`).
  */
 export function checkBoxLabelWrapWidthPx(
+  props: ButtonWrapProperties,
   rect: Rect2 | undefined,
   n: Pick<SolveNode, 'textureSlots' | 'constants'>,
   ctx: Pick<SolveContext, 'theme'>
 ): number {
-  const iconSize = fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
-  return labelWrapWidthPx(
-    rect,
-    2 * ctx.theme.contentMargin,
-    iconSize.x + checkBoxHSeparation(n.constants, ctx)
-  );
+  return labelWrapWidthPx(props, rect, 2 * ctx.theme.contentMargin, () => {
+    const iconSize = fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
+    return iconSize.x + checkBoxHSeparation(n.constants, ctx);
+  });
 }
 
 /**
@@ -243,7 +243,7 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
           fontSizePx,
           fontMetrics,
           bidi: controlBidiOptions(props, n),
-          boxWidthPx: checkBoxLabelWrapWidthPx(ctx.tentativeRect?.(n), n, ctx),
+          boxWidthPx: checkBoxLabelWrapWidthPx(props, ctx.tentativeRect?.(n), n, ctx),
         })
       : null;
   // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`), so the separation below drops with it.

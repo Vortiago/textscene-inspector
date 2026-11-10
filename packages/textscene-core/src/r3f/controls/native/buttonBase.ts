@@ -11,6 +11,7 @@
  */
 
 import { multiplyModulate } from '../../canvasItemModulate';
+import type { SolveNode } from './solveTree';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
 import { drawnLinesInBox, textParagraphLineShiftPx } from './text/lineDrawClip';
@@ -154,6 +155,11 @@ export interface ButtonWrapProperties {
 /** Whether `props` wraps the label at its box. An out-of-range mode is OFF, as `set_autowrap_mode` leaves it. */
 export function isButtonAutowrapped(props: ButtonWrapProperties): boolean {
   return clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF) !== AutowrapMode.AUTOWRAP_OFF;
+}
+
+/** Whether a Button-family node wraps its label, so its minimum size reads the node's own width. */
+export function isButtonNodeAutowrapped(n: SolveNode): boolean {
+  return isButtonAutowrapped(n.node.properties as ButtonWrapProperties);
 }
 
 /**
@@ -433,10 +439,17 @@ export function labelMinimumTextSize(
 /**
  * The width a wrapping label shapes at in `rect`: the rect less the margins and the reservation, shaped as
  * the draw does (`button.cpp:428-432`). A minimum-size solver passes its tentative rect, which is
- * `undefined` on the first solve pass; that pass shapes unwrapped, so the width is 0.
+ * `undefined` on the first solve pass; that pass shapes unwrapped, so the width is 0, as it is at
+ * AUTOWRAP_OFF. `reservedPx` is a function so that neither case computes the reservation.
  */
-export function labelWrapWidthPx(rect: Rect2 | undefined, marginsPx: number, reservedPx: number): number {
-  return rect === undefined ? 0 : buttonTextBufWidthPx(reservedLabelWidthPx(rect.w, marginsPx, reservedPx));
+export function labelWrapWidthPx(
+  props: ButtonWrapProperties,
+  rect: Rect2 | undefined,
+  marginsPx: number,
+  reservedPx: () => number
+): number {
+  if (rect === undefined || !isButtonAutowrapped(props)) return 0;
+  return buttonTextBufWidthPx(reservedLabelWidthPx(rect.w, marginsPx, reservedPx()));
 }
 
 /** `button.cpp:266-275`: LEFT and RIGHT trade places under RTL, and any other value stays. */

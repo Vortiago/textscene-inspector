@@ -226,12 +226,12 @@ export function createSolveContext(
 }
 
 /**
- * Whether any node's type is registered through `registerSizeDependentMinimum`,
+ * Whether any node's minimum size reads `tentativeRect` (`registerSizeDependentMinimum`),
  * which alone makes `solveControlTree` run its second pass.
  */
 function hasSizeDependentMinimum(roots: readonly SolveNode[]): boolean {
   for (const node of roots) {
-    if (controlSolverRegistry.isSizeDependentMinimum(node.node.type)) return true;
+    if (controlSolverRegistry.readsTentativeRect(node)) return true;
     if (hasSizeDependentMinimum(node.children)) return true;
   }
   return false;

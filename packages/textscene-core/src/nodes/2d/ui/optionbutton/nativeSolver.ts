@@ -27,6 +27,7 @@ import {
   tintColor,
   type ButtonDrawState,
   type ButtonLabelBox,
+  type ButtonWrapProperties,
 } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
@@ -129,6 +130,7 @@ export function optionButtonHSeparation(
  * arrow and `h_separation`. The minimum size never wraps its items (below), so only the painter calls it.
  */
 export function optionButtonLabelWrapWidthPx(
+  props: ButtonWrapProperties,
   rect: Rect2,
   styleMargin: { left: number; right: number },
   arrowSize: Vector2,
@@ -136,9 +138,10 @@ export function optionButtonLabelWrapWidthPx(
   ctx: Pick<SolveContext, 'theme'>
 ): number {
   return labelWrapWidthPx(
+    props,
     rect,
     styleMargin.left + styleMargin.right,
-    arrowSize.x + optionButtonHSeparation(constants, ctx)
+    () => arrowSize.x + optionButtonHSeparation(constants, ctx)
   );
 }
 

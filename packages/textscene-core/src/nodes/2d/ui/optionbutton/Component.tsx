@@ -65,6 +65,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
     fontSizePx,
     bidi,
     boxWidthPx: optionButtonLabelWrapWidthPx(
+      props,
       rect,
       baseStyleBox.contentMargin,
       arrowSize,

@@ -187,9 +187,7 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height
   // depends on. Pass 1 shapes unwrapped. `is_clipped` is true under autowrap
   // (`button.cpp:332`), so the icon's reservation does not depend on the text.
-  const wrapWidthPx = labelWrapWidthPx(
-    ctx.tentativeRect?.(n),
-    marginX,
+  const wrapWidthPx = labelWrapWidthPx(props, ctx.tentativeRect?.(n), marginX, () =>
     buttonIconReservationPx(n, props, ctx)
   );
   // An absent `ctx.measureText` means the text contributes nothing, while the margin and

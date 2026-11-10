@@ -831,6 +831,19 @@ describe('solveControlTree — a second pass for a size-dependent MinimumSizeFn 
     expect(solved.get('Leaf')?.rect).toEqual({ x: 0, y: 0, w: 200, h: 100 });
   });
 
+  it('a registered type whose predicate rejects the node never triggers a second pass', () => {
+    let calls = 0;
+    controlSolverRegistry.registerMinimumSize(TYPE, () => {
+      calls++;
+      return { x: 0, y: 0 };
+    });
+    controlSolverRegistry.registerSizeDependentMinimum(TYPE, () => false);
+
+    solveControlTree([node('Leaf', TYPE, {})], VIEWPORT, ctx());
+
+    expect(calls).toBe(1);
+  });
+
   it('a tree with the type registered but ABSENT from it never triggers a second pass', () => {
     controlSolverRegistry.registerMinimumSize(TYPE, () => ({ x: 0, y: 0 }));
     controlSolverRegistry.registerSizeDependentMinimum(TYPE);

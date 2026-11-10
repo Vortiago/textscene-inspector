@@ -62,6 +62,9 @@ export interface SolveContext {
  */
 export type MinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vector2;
 
+/** Whether a node of a size-dependent type reads `SolveContext.tentativeRect` (`registerSizeDependentMinimum`). */
+export type SizeDependentPredicate = (n: SolveNode) => boolean;
+
 /** A `ContainerLayoutFn`'s result when it also seals a solve handoff for its own painter. */
 export interface ContainerLayoutResult {
   /** Every child's rect. */
@@ -176,7 +179,7 @@ class ControlSolverRegistry {
     'controlSolverRegistry.childVisibility'
   );
   private readonly canvasBoundaryTypes = new Set<string>();
-  private readonly sizeDependentMinimumTypes = new Set<string>();
+  private readonly sizeDependentMinimumTypes = new Map<string, SizeDependentPredicate | undefined>();
 
   /**
    * Declares a type in the Control walk that is not a `CanvasItem`, such as
@@ -199,16 +202,26 @@ class ControlSolverRegistry {
 
   /**
    * Declares a type whose `MinimumSizeFn` reads `SolveContext.tentativeRect`.
-   * A set, so `solveControlTree` decides on a second pass with a membership
-   * test during `assignPaintIndex` rather than a traversal of its own.
+   * A map, so `solveControlTree` decides on a second pass with a lookup
+   * during `assignPaintIndex` rather than a traversal of its own. `isDependent`
+   * narrows the type to the nodes whose minimum does read it: a Button that does
+   * not wrap costs its scene no second pass.
    */
-  registerSizeDependentMinimum(typeName: string): void {
-    this.sizeDependentMinimumTypes.add(typeName);
+  registerSizeDependentMinimum(typeName: string, isDependent?: SizeDependentPredicate): void {
+    this.sizeDependentMinimumTypes.set(typeName, isDependent);
   }
 
-  /** Whether this type's `MinimumSizeFn` reads `SolveContext.tentativeRect` (see `registerSizeDependentMinimum`). */
+  /** Whether this type's `MinimumSizeFn` may read `SolveContext.tentativeRect` (see `registerSizeDependentMinimum`). */
   isSizeDependentMinimum(typeName: string): boolean {
     return this.sizeDependentMinimumTypes.has(typeName);
+  }
+
+  /** Whether this node's `MinimumSizeFn` reads `SolveContext.tentativeRect`: its type is registered and its predicate agrees. */
+  readsTentativeRect(n: SolveNode): boolean {
+    const type = n.node.type;
+    return (
+      this.sizeDependentMinimumTypes.has(type) && (this.sizeDependentMinimumTypes.get(type)?.(n) ?? true)
+    );
   }
 
   registerContainerLayout(typeName: string, fn: ContainerLayoutFn): void {

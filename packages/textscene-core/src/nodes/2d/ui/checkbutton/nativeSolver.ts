@@ -25,6 +25,7 @@ import {
   labelMinimumTextSize,
   tintColor,
   type ButtonLabelBox,
+  type ButtonWrapProperties,
 } from '../../../../r3f/controls/native/buttonBase';
 import {
   resolveTextTheme,
@@ -217,20 +218,19 @@ export function checkButtonCheckVOffset(constants: SolveNode['constants']): numb
  * and `h_separation`, which `_internal_margin` always reserves (`check_button.cpp:96-104`).
  */
 export function checkButtonLabelWrapWidthPx(
+  props: ButtonWrapProperties,
   rect: Rect2 | undefined,
   n: Pick<SolveNode, 'textureSlots' | 'constants' | 'rtl'>,
   isDisabled: boolean,
   ctx: Pick<SolveContext, 'theme'>
 ): number {
-  const iconSize = fitIconSize(
-    checkButtonIconNaturalSize(n, isDisabled, n.rtl),
-    checkButtonIconMaxWidth(n.constants)
-  );
-  return labelWrapWidthPx(
-    rect,
-    2 * checkButtonMarginX(ctx),
-    iconSize.x + checkButtonHSeparation(n.constants, ctx)
-  );
+  return labelWrapWidthPx(props, rect, 2 * checkButtonMarginX(ctx), () => {
+    const iconSize = fitIconSize(
+      checkButtonIconNaturalSize(n, isDisabled, n.rtl),
+      checkButtonIconMaxWidth(n.constants)
+    );
+    return iconSize.x + checkButtonHSeparation(n.constants, ctx);
+  });
 }
 
 /**
@@ -257,7 +257,13 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
           fontSizePx,
           fontMetrics,
           bidi: controlBidiOptions(props, n),
-          boxWidthPx: checkButtonLabelWrapWidthPx(ctx.tentativeRect?.(n), n, props.disabled === true, ctx),
+          boxWidthPx: checkButtonLabelWrapWidthPx(
+            props,
+            ctx.tentativeRect?.(n),
+            n,
+            props.disabled === true,
+            ctx
+          ),
         })
       : null;
   // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`), so the separation below drops with it.

@@ -67,7 +67,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     text,
     fontSizePx,
     bidi,
-    boxWidthPx: checkBoxLabelWrapWidthPx(rect, solveNode, { theme }),
+    boxWidthPx: checkBoxLabelWrapWidthPx(props, rect, solveNode, { theme }),
   });
 
   const content = useMemo(
