@@ -8,26 +8,48 @@
 
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
+import type { TscnNode } from '../../../../parser/types';
+import type { TileSetModel } from '../../../../resources/tileset/types';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel';
 import { YSortDispatcher } from '../../../../r3f/YSortDispatcher';
+import { SceneTileInstances } from '../shared/SceneTileInstances';
+import { useSceneTileNodes } from '../shared/useSceneTileNodes';
 import type { TileMapLayerProperties } from './types';
 
 export function TileMapLayer({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapLayerProperties;
-  if (!props.y_sort_enabled) return <QuadrantLayer node={node}>{children}</QuadrantLayer>;
+  const { model, status } = useTileSetModel(props.tile_set);
+  const sceneTiles = useSceneTileNodes(model, props.cells, {
+    isEnabled: props.enabled && props.drawsSceneTiles !== false,
+    owner: '',
+  });
+  if (!props.y_sort_enabled) {
+    return (
+      <QuadrantLayer node={node} model={model} status={status} sceneTiles={sceneTiles}>
+        {children}
+      </QuadrantLayer>
+    );
+  }
+  // A scene tile is a child canvas item of the layer, so it sorts with the layer's rows and children.
+  const withSceneTiles = sceneTiles.length ? { ...node, children: [...node.children, ...sceneTiles] } : node;
   return (
     <CanvasItem2D node={node} props={props}>
-      <YSortDispatcher node={node}>{children}</YSortDispatcher>
+      <YSortDispatcher node={withSceneTiles}>{children}</YSortDispatcher>
     </CanvasItem2D>
   );
 }
 
-function QuadrantLayer({ node, children }: NodeComponentProps) {
+interface QuadrantLayerProps extends NodeComponentProps {
+  model: TileSetModel | null;
+  status: 'pending' | 'loaded' | 'unavailable';
+  sceneTiles: readonly TscnNode[];
+}
+
+function QuadrantLayer({ node, model, status, sceneTiles, children }: QuadrantLayerProps) {
   const props = node.properties as TileMapLayerProperties;
-  const { model, status } = useTileSetModel(props.tile_set);
   const cells = props.cells ?? null;
   const { y_sort_origin: ySortOrigin, rendering_quadrant_size: quadrantSize } = props;
 
@@ -61,6 +83,7 @@ function QuadrantLayer({ node, children }: NodeComponentProps) {
       }
     >
       {children}
+      <SceneTileInstances node={node} instances={sceneTiles} />
     </CanvasItem2D>
   );
 }

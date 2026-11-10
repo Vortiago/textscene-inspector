@@ -19,19 +19,48 @@ import { useTileSetModel } from '../../../../r3f/useTileSetModel';
 import { YSortDispatcher } from '../../../../r3f/YSortDispatcher';
 import type { TscnNode } from '../../../../parser/types';
 import type { TileMapLayerProperties } from '../tilemaplayer/types';
+import type { TileSetModel } from '../../../../resources/tileset/types';
+import { SceneTileInstances } from '../shared/SceneTileInstances';
+import { useSceneTileNodes } from '../shared/useSceneTileNodes';
+import type { PlacedCell } from '../shared/tileData';
 import { childCanvasItemProperties } from '../shared/childCanvasItem';
 import type { TileMapLayerData, TileMapProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 
 export function TileMap({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapProperties;
-  if (!props.y_sort_enabled) return <LayeredTileMap node={node}>{children}</LayeredTileMap>;
-  return <YSortedTileMap node={node}>{children}</YSortedTileMap>;
+  const { model, status } = useTileSetModel(props.tile_set);
+  // The TileMap, not a layer, holds the instances of every layer (`tile_map_layer.cpp:1645-1652`).
+  const sceneTiles = useSceneTileNodes(model, enabledLayerCells(props.layers), {
+    isEnabled: true,
+    owner: '',
+  });
+  if (!props.y_sort_enabled) {
+    return (
+      <LayeredTileMap node={node} model={model} status={status} sceneTiles={sceneTiles}>
+        {children}
+      </LayeredTileMap>
+    );
+  }
+  return (
+    <YSortedTileMap node={node} sceneTiles={sceneTiles}>
+      {children}
+    </YSortedTileMap>
+  );
 }
 
-function YSortedTileMap({ node, children }: NodeComponentProps) {
+/** The cells of the layers that are enabled, layer by layer: the order the TileMap adds their instances in. */
+function enabledLayerCells(layers: readonly TileMapLayerData[]): PlacedCell[] {
+  return layers.flatMap((layer) => (layer.enabled ? (layer.cells ?? []) : []));
+}
+
+function YSortedTileMap({
+  node,
+  sceneTiles,
+  children,
+}: { sceneTiles: readonly TscnNode[] } & NodeComponentProps) {
   const props = node.properties as TileMapProperties;
-  const withLayers = useMemo(() => withLayerNodes(node), [node]);
+  const withLayers = useMemo(() => withLayerNodes(node, sceneTiles), [node, sceneTiles]);
   return (
     <CanvasItem2D node={node} props={props}>
       <YSortDispatcher node={withLayers}>{children}</YSortDispatcher>
@@ -42,9 +71,10 @@ function YSortedTileMap({ node, children }: NodeComponentProps) {
 /**
  * The TileMap with its layers in front of its child nodes, as Godot's internal front children are.
  * A layer node is named `@TileMapLayer@<index>`, as Godot names a generated node, so no authored
- * child shares its path.
+ * child shares its path. The scene tile instances come last, as `add_child` appends them, and the
+ * layers leave them to the TileMap.
  */
-function withLayerNodes(map: TscnNode): TscnNode {
+function withLayerNodes(map: TscnNode, sceneTiles: readonly TscnNode[]): TscnNode {
   const { layers, ...props } = map.properties as TileMapProperties;
   const layerNodes = layers.map((layer, index): TscnNode => ({
     name: `@TileMapLayer@${index}`,
@@ -56,6 +86,7 @@ function withLayerNodes(map: TscnNode): TscnNode {
       enabled: layer.enabled,
       rendering_quadrant_size: props.rendering_quadrant_size,
       cells: layer.cells,
+      drawsSceneTiles: false,
       y_sort_enabled: layer.ySortEnabled,
       y_sort_origin: layer.ySortOrigin,
       z_index: layer.zIndex,
@@ -64,12 +95,17 @@ function withLayerNodes(map: TscnNode): TscnNode {
     rawProperties: {},
     children: [],
   }));
-  return { ...map, children: [...layerNodes, ...map.children] };
+  return { ...map, children: [...layerNodes, ...map.children, ...sceneTiles] };
 }
 
-function LayeredTileMap({ node, children }: NodeComponentProps) {
+interface LayeredTileMapProps extends NodeComponentProps {
+  model: TileSetModel | null;
+  status: 'pending' | 'loaded' | 'unavailable';
+  sceneTiles: readonly TscnNode[];
+}
+
+function LayeredTileMap({ node, model, status, sceneTiles, children }: LayeredTileMapProps) {
   const props = node.properties as TileMapProperties;
-  const { model, status } = useTileSetModel(props.tile_set);
   const paintRange = usePaintRange();
   // The layers are internal front children in Godot, in no `.tscn` child list,
   // so they draw from the `front` run, between this node and its authored
@@ -133,6 +169,7 @@ function LayeredTileMap({ node, children }: NodeComponentProps) {
       }
     >
       {children}
+      <SceneTileInstances node={node} instances={sceneTiles} />
     </CanvasItem2D>
   );
 }

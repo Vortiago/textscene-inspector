@@ -64,6 +64,11 @@ export interface LiveNode extends TscnNode {
    * matched, so the tree finds its row by that key and matches nothing again.
    */
   readonly glbTargetRelPath?: string;
+  /**
+   * Set on a node a tile layer instantiates for a scene tile: the edited scene owns neither it nor
+   * what it holds, so a click on it selects no node of its own.
+   */
+  readonly isUnowned?: boolean;
 }
 
 /** The host child `node` stands for: itself, or the child it is the re-anchored copy of. */

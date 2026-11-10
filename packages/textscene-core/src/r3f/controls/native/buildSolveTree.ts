@@ -437,6 +437,8 @@ const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource
 
 /** What the forest starts from, which its roots cannot see above them. */
 interface ForestStart {
+  /** The run the forest's roots draw from. The whole canvas unless a node's own run holds the forest. */
+  rootRange?: PaintRange;
   /**
    * `Control::is_layout_rtl()` for the nearest ancestor Control or Window above
    * this forest, `null` for a scene's roots. A `SubViewport`'s caller passes its
@@ -479,7 +481,7 @@ function buildForest(
   projectSettings: ProjectSettings | null,
   hiddenNodePaths: ReadonlySet<string>,
   layoutDirectionEnv: LayoutDirectionEnv,
-  { inheritedRtl, contentRoot, themeOwners }: ForestStart,
+  { inheritedRtl, contentRoot, themeOwners, rootRange = WHOLE_CANVAS_RANGE }: ForestStart,
   viewportTargetSize: ViewportTargetSize
 ): ForestResult {
   const pendingScenes = new Map<string, PendingScene>();
@@ -1036,7 +1038,7 @@ function buildForest(
       : { nodes: [solved], hoisted: hoistedBelow };
   }
 
-  const rootRanges = allocatePaintRange(WHOLE_CANVAS_RANGE, nodes).children;
+  const rootRanges = allocatePaintRange(rootRange, nodes).children;
   const ownerThemeChain = themeOwners.flatMap(({ node, scope }) => withOwnTheme(node, scope, []));
   const walked = joinWalked(
     tree.fold(
@@ -1081,6 +1083,23 @@ export function useBuildSolveTree(
   inheritedRtl: boolean | null = null
 ): UseBuildSolveTreeResult {
   const start = useMemo(() => ({ inheritedRtl, contentRoot: null, themeOwners: NO_OWNERS }), [inheritedRtl]);
+  return useSolveForest(nodes, externalResources, internalResources, start);
+}
+
+/**
+ * The Control forest of unowned `nodes` (`LiveNode.isUnowned`), drawn from the run `rootRange`, not
+ * from the whole canvas: a tile layer's scene tiles sit among the draws of the layer's children.
+ */
+export function useBuildUnownedTree(
+  nodes: readonly TscnNode[],
+  externalResources: readonly TscnExternalResource[],
+  internalResources: readonly TscnInternalResource[],
+  rootRange: PaintRange
+): UseBuildSolveTreeResult {
+  const start = useMemo(
+    () => ({ inheritedRtl: null, contentRoot: null, themeOwners: NO_OWNERS, rootRange }),
+    [rootRange]
+  );
   return useSolveForest(nodes, externalResources, internalResources, start);
 }
 
