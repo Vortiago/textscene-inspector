@@ -3,6 +3,7 @@
  * `Color(...)` literals, and checks that every scalable metric passes through
  * `scaledGodotTheme` unchanged while colours are not scaled.
  */
+import { DEFAULT_THEME_TYPE_VARIATIONS, FLAT_MENU_BUTTON_VARIATION } from '../../../godot/scene/theme';
 import { describe, expect, it } from 'vitest';
 import { scaledGodotTheme } from '../../../godot/scene/theme';
 import { nativeTheme } from './nativeTheme';
@@ -263,6 +264,23 @@ describe('nativeTheme', () => {
       expect(theme.widgets.lineEdit.normal.cornerRadius).toEqual(uniformCorners(6));
       expect(theme.widgets.lineEdit.normal.borderWidth).toEqual({ left: 0, top: 0, right: 0, bottom: 2 });
       expect(theme.widgets.lineEdit.readOnly.borderWidth).toEqual({ left: 0, top: 0, right: 0, bottom: 2 });
+    });
+  });
+
+  describe('the default type variations it models', () => {
+    // Each variation whose boxes `widgets` holds must be registered, with its base, in the table the Theme lookup walks.
+    it.each([[FLAT_MENU_BUTTON_VARIATION, 'flatMenuButton']] as const)(
+      'registers %s with a base type, as widgets.%s holds its boxes',
+      (variation, widget) => {
+        expect(DEFAULT_THEME_TYPE_VARIATIONS[variation]).toBeTruthy();
+        expect(nativeTheme(1).widgets[widget]).toBeDefined();
+      }
+    );
+
+    it('gives the FlatMenuButton boxes the margins of the Button box and no fill (default_theme.cpp:360-375)', () => {
+      const { widgets } = nativeTheme(1);
+      expect(widgets.flatMenuButton.normal.contentMargin).toEqual(widgets.button.normal.contentMargin);
+      expect(widgets.flatMenuButton.normal.bgColor.a).toBe(0);
     });
   });
 });

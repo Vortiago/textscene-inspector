@@ -25,7 +25,7 @@ import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/n
 import { SizeFlags } from '../../../../godot/scene/control';
 import { ContainerAlignment } from '../../../../godot/scene/container';
 import { resortBoxContainer } from '../shared/boxContainerSolver';
-import { pickerChildTheme, type PickerTheme } from './pickerChildTheme';
+import { pickerChildTheme } from './pickerChildTheme';
 import { MODE_RGB } from './colorModes';
 import { gridCellMinimumExtent } from '../shared/gridCellMinimum';
 import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
@@ -209,13 +209,13 @@ function lineRowHeight(box: StyleBoxFlatData, textHeightPx: number): number {
  * `btn_mode` has the icon, and its custom minimum floors only its width (`color_picker.cpp:124`).
  */
 function modeRowSize(
-  theme: Pick<PickerTheme, 'separation' | 'scale' | 'widgets' | 'modeButton'>,
+  theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
   measure: TextWidthMeasurer | null,
   pressedMode: number
 ): Vector2 {
   const btnModeWidth = iconButtonWidth(theme, theme.widgets.flatMenuButton.normal);
-  const normalMarginY = contentMarginSize(theme.modeButton.normal).y;
-  const pressedMarginY = contentMarginSize(theme.modeButton.pressed).y;
+  const normalMarginY = contentMarginSize(theme.widgets.tabContainer.unselected).y;
+  const pressedMarginY = contentMarginSize(theme.widgets.tabContainer.selected).y;
   const btnModeHeight = colorPickerMenuButtonSize(theme).y;
   let height = Math.max(normalMarginY, pressedMarginY, btnModeHeight);
   if (!measure) return { x: btnModeWidth, y: height };
@@ -382,7 +382,8 @@ function swatchesRowSize(
  */
 export function colorPickerRows(
   width: number,
-  theme: PickerTheme,
+  theme: NativeTheme,
+  valueFieldTheme: Pick<NativeTheme, 'widgets'>,
   props: Pick<
     ColorPickerProperties,
     | 'pickerShape'
@@ -406,7 +407,7 @@ export function colorPickerRows(
   const sampleHeight = sampleRowHeight(theme, props.pickerShape);
   const modeSize = modeRowSize(theme, measure, props.colorMode ?? MODE_RGB);
   const sliderRowCount = colorPickerSliderRowCount(props);
-  const sliderRowHeight = lineRowHeight(theme.valueFieldBox, textHeightPx);
+  const sliderRowHeight = lineRowHeight(valueFieldTheme.widgets.lineEdit.normal, textHeightPx);
   const slidersHeight = sliderRowCount * sliderRowHeight + (sliderRowCount - 1) * theme.separation;
   const hexHeight = lineRowHeight(theme.widgets.lineEdit.normal, textHeightPx);
   const swatchesSize = swatchesRowSize(theme, measure);
@@ -464,7 +465,7 @@ export function colorPickerRows(
  * (`comparison.md`).
  */
 function contentMinWidth(
-  theme: PickerTheme,
+  theme: NativeTheme,
   valueFieldTheme: Pick<NativeTheme, 'widgets'>,
   props: ColorPickerProperties,
   rows: Pick<ColorPickerRows, 'modeMinWidth' | 'swatchesMinWidth'>,
@@ -517,7 +518,7 @@ export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
       return { x: shapedTextSizeWidthPx(size.x), y: size.y };
     });
   const emWidthPx = measureUnceiled ? colorPickerEmWidthPx((text) => measureUnceiled(text).x) : 0;
-  const rows = colorPickerRows(0, theme, props, measure);
+  const rows = colorPickerRows(0, theme, valueFieldTheme, props, measure);
   const width = Math.max(
     shapeRowMinWidth(theme, props.pickerShape),
     contentMinWidth(theme, valueFieldTheme, props, rows, emWidthPx)
@@ -685,7 +686,7 @@ function modeButtonMinimumWidth(styleBox: StyleBoxFlatData, textWidth: number): 
  */
 export function modeRowButtonRects(
   mode: Rect2,
-  theme: PickerTheme,
+  theme: NativeTheme,
   rtl: boolean,
   labelWidths: readonly number[],
   pressedMode: number
@@ -723,8 +724,9 @@ export function modeRowButtonRects(
  * `tab_unselected` and `tab_selected` of `TabContainer` (`color_picker.cpp:2060-2061`).
  * The `mode_button_hover` bind (`:2062`) is left out: a static preview never hovers.
  */
-export function modeButtonBox(theme: Pick<PickerTheme, 'modeButton'>, index: number, pressedMode: number) {
-  return index === pressedMode ? theme.modeButton.pressed : theme.modeButton.normal;
+export function modeButtonBox(theme: Pick<NativeTheme, 'widgets'>, index: number, pressedMode: number) {
+  const { selected, unselected } = theme.widgets.tabContainer;
+  return index === pressedMode ? selected : unselected;
 }
 
 interface SampleRowColumns {

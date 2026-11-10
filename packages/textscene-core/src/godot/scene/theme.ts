@@ -172,9 +172,12 @@ export function scaledGodotTheme(scale: number): ScaledGodotTheme {
  * `:394-400`, `:814`, `:845`, `:1167-1171`). A Theme that sets items for one of them is read for a
  * Control that names it, though no scene Theme registers it.
  */
+/** The variation the picker's `btn_shape`, `btn_mode` and `menu_btn` name (`color_picker.cpp:2098,2148,2255`). */
+export const FLAT_MENU_BUTTON_VARIATION = 'FlatMenuButton';
+
 export const DEFAULT_THEME_TYPE_VARIATIONS: Readonly<Record<string, string>> = {
   FlatButton: 'Button',
-  FlatMenuButton: 'MenuButton',
+  [FLAT_MENU_BUTTON_VARIATION]: 'MenuButton',
   HeaderSmall: 'Label',
   HeaderMedium: 'Label',
   HeaderLarge: 'Label',

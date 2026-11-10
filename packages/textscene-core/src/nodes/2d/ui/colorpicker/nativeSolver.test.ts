@@ -101,20 +101,21 @@ const measureText: SolveContext['measureText'] = (text) => measure(text);
 
 describe('colorPickerRows', () => {
   it('sizes the shape row from sv_width/sv_height/h_width at scale 1: default_theme.cpp:1077-1079, no other row present', () => {
-    const rows = colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
+    const rows = colorPickerRows(400, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
     expect(rows.shape).toEqual({ x: 0, y: 0, w: 400, h: 256 });
     expect(rows.sample).toBeNull();
     expect(rows.totalHeight).toBe(256);
   });
 
   it('floors the shape row at its own minimum when the solved width is narrower', () => {
-    const rows = colorPickerRows(50, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
+    const rows = colorPickerRows(50, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
     expect(rows.shape!.w).toBe(290); // 256 + 4 + 30
   });
 
   it('draws no shape row for any picker_shape but SHAPE_HSV_RECTANGLE, keeping the row a (zero-height) stacking slot', () => {
     const wheel = colorPickerRows(
       400,
+      THEME,
       THEME,
       { ...ALL_ROWS_HIDDEN, pickerShape: 1, samplerVisible: true },
       null
@@ -124,11 +125,11 @@ describe('colorPickerRows', () => {
   });
 
   it('draws no shape row for SHAPE_NONE (4): matches Godot exactly, not a gap', () => {
-    expect(colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 4 }, null).shape).toBeNull();
+    expect(colorPickerRows(400, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 4 }, null).shape).toBeNull();
   });
 
   it('drops every hidden row AND its separation gap: color_picker.cpp:1906-1956', () => {
-    const rows = colorPickerRows(400, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, measure);
+    const rows = colorPickerRows(400, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, measure);
     expect(rows.mode).toBeNull();
     expect(rows.sliders).toBeNull();
     expect(rows.hex).toBeNull();
@@ -139,7 +140,7 @@ describe('colorPickerRows', () => {
   });
 
   it('sizes every row when all are visible, with a deterministic 10px/char measurer', () => {
-    const rows = colorPickerRows(400, THEME, { pickerShape: 0 }, measure);
+    const rows = colorPickerRows(400, THEME, THEME, { pickerShape: 0 }, measure);
     // mode: 3 buttons ("RGB"=30,"HSV"=30,"Linear"=60) + dropdown(28) + 3*sep(4) = 160.
     // height: max(tab stylebox margin(8), btn_mode nat(16+8=24), text(20)+tab margin(8)=28) = 28.
     expect(rows.mode).toEqual({ x: 0, y: 288, w: 400, h: 28 });
@@ -155,13 +156,13 @@ describe('colorPickerRows', () => {
   });
 
   it('edit_alpha=false drops one slider row and its own trailing space', () => {
-    const rows = colorPickerRows(400, THEME, { pickerShape: 0, editAlpha: false }, measure);
+    const rows = colorPickerRows(400, THEME, THEME, { pickerShape: 0, editAlpha: false }, measure);
     expect(rows.sliderRowCount).toBe(4);
     expect(rows.sliders!.h).toBe(4 * 28 + 3 * 4); // 124
   });
 
   it('edit_intensity=false drops one slider row', () => {
-    const rows = colorPickerRows(400, THEME, { pickerShape: 0, editIntensity: false }, measure);
+    const rows = colorPickerRows(400, THEME, THEME, { pickerShape: 0, editIntensity: false }, measure);
     expect(rows.sliderRowCount).toBe(4);
   });
 
@@ -169,6 +170,7 @@ describe('colorPickerRows', () => {
     // `btn_preset` and `btn_recent_preset` each hold the `folded_arrow` icon, also with no `measure`.
     const rows = colorPickerRows(
       400,
+      THEME,
       THEME,
       { ...ALL_ROWS_HIDDEN, pickerShape: 4, presetsVisible: true },
       null
@@ -297,18 +299,28 @@ describe('modeRowButtonRects', () => {
 
 const WIDE_PRESSED_THEME = {
   ...THEME,
-  modeButton: {
-    ...THEME.modeButton,
-    pressed: { ...THEME.modeButton.pressed, contentMargin: { left: 30, top: 10, right: 30, bottom: 10 } },
+  widgets: {
+    ...THEME.widgets,
+    tabContainer: {
+      ...THEME.widgets.tabContainer,
+      selected: {
+        ...THEME.widgets.tabContainer.selected,
+        contentMargin: { left: 30, top: 10, right: 30, bottom: 10 },
+      },
+    },
   },
 };
 
 describe('the slider rows with a SpinBox inner LineEdit box', () => {
-  it('take their height from valueFieldBox, and the hex row from the plain LineEdit box', () => {
-    const tall = { ...THEME.valueFieldBox, contentMargin: { left: 4, top: 10, right: 4, bottom: 10 } };
+  it('take their height from the value field theme, and the hex row from the plain LineEdit box', () => {
+    const tall = {
+      ...THEME.widgets.lineEdit.normal,
+      contentMargin: { left: 4, top: 10, right: 4, bottom: 10 },
+    };
     const rows = colorPickerRows(
       400,
-      { ...THEME, valueFieldBox: tall },
+      THEME,
+      { widgets: { ...THEME.widgets, lineEdit: { ...THEME.widgets.lineEdit, normal: tall } } },
       { ...ALL_ROWS_HIDDEN, slidersVisible: true, hexVisible: true, editAlpha: false, editIntensity: false },
       measure
     );
@@ -330,6 +342,7 @@ describe('the pressed mode button with wider margins than the others', () => {
     const rows = (colorMode: number) =>
       colorPickerRows(
         400,
+        WIDE_PRESSED_THEME,
         WIDE_PRESSED_THEME,
         { ...ALL_ROWS_HIDDEN, colorModesVisible: true, colorMode },
         measure
@@ -372,8 +385,13 @@ describe('the FlatMenuButton box of the Theme chain', () => {
 
   it('makes the sample row as tall as btn_shape, unless SHAPE_NONE hides it', () => {
     const sampleHeight = (pickerShape: number) =>
-      colorPickerRows(400, WIDE_FLAT_THEME, { ...ALL_ROWS_HIDDEN, samplerVisible: true, pickerShape }, null)
-        .sample!.h;
+      colorPickerRows(
+        400,
+        WIDE_FLAT_THEME,
+        WIDE_FLAT_THEME,
+        { ...ALL_ROWS_HIDDEN, samplerVisible: true, pickerShape },
+        null
+      ).sample!.h;
     expect(sampleHeight(0)).toBe(16 + 20);
     expect(sampleHeight(4)).toBe(16 + 8);
   });
@@ -738,14 +756,17 @@ describe('modeButtonLabel', () => {
   const direction = { rtl: false, isTextRtl: false };
 
   it('centres the text in the drawable width after the style margins', () => {
-    const label = modeButtonLabel(box, THEME, THEME.modeButton.normal, { size: text, direction });
+    const label = modeButtonLabel(box, THEME, THEME.widgets.tabContainer.unselected, {
+      size: text,
+      direction,
+    });
     expect(label.alignment).toBe(1);
     expect(label.leftPx).toBeGreaterThan(box.x);
     expect(label.widthPx).toBeLessThan(box.w);
   });
 
   it.each([false, true])('starts the box at the left margin of the style (pressed: %s)', (isPressed) => {
-    const styleBox = isPressed ? THEME.modeButton.pressed : THEME.modeButton.normal;
+    const styleBox = isPressed ? THEME.widgets.tabContainer.selected : THEME.widgets.tabContainer.unselected;
     const label = modeButtonLabel(box, THEME, styleBox, { size: text, direction });
     expect(label.leftPx).toBe(box.x + styleBox.contentMargin.left);
   });

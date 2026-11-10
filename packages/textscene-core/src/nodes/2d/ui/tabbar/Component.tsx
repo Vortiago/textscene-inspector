@@ -4,6 +4,7 @@
  * current tab draws last at the same `renderOrder`, so it overlaps its neighbours as in the
  * source's two-pass draw.
  */
+import type { TabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
 import { useMemo } from 'react';
 import type { Plane } from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -33,7 +34,6 @@ import {
   layoutScrollArrows,
   layoutTabContent,
   pickTabStyleBox,
-  reconstructThemeScale,
   resolveTabDrawState,
   isTabUnselectable,
   resolveTabBarCurrentTab,
@@ -41,7 +41,6 @@ import {
   tabBarFontColor,
   tabBarFontSizePx,
   tabBarIconColor,
-  tabBarStyleBoxes,
   tabBarThemeIconSize,
   tabContentWidth,
   tabDrawX,
@@ -82,8 +81,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
   const tabSeparation = solveNode.constants.tab_separation ?? 0;
   const iconMaxWidth = solveNode.constants.icon_max_width ?? 0;
 
-  const scale = reconstructThemeScale(theme);
-  const defaults = useMemo(() => tabBarStyleBoxes(scale), [scale]);
+  const defaults = theme.widgets.tabContainer;
   const overrides = solveNode.styleBoxes;
   const closeButtonMargin = theme.widgets.button.normal.contentMargin;
   const closeIconSize = tabBarThemeIconSize(solveNode, 'close');
@@ -231,7 +229,7 @@ interface TabBarTabChromeProps {
   currentTab: number;
   solveNode: SolveNode;
   overrides: Readonly<Record<string, StyleBoxFlatData>>;
-  defaults: ReturnType<typeof tabBarStyleBoxes>;
+  defaults: TabBarStyleBoxes;
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;
   barHeight: number;

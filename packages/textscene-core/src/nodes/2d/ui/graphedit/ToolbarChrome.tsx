@@ -20,11 +20,8 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
-import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
-import {
-  shapedTextSizeWidthPx,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { LabelledText } from '../shared/LabelledText';
+import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { GRAPH_EDIT_ICONS, GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
@@ -32,7 +29,6 @@ import { iconOnlyButtonIconRectIn } from '../../../../r3f/controls/native/button
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
-import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 
@@ -99,46 +95,6 @@ function arrowPosition(spinBox: Rect2, button: Rect2): { x: number; y: number } 
   return { x: spinBox.x + local.x, y: spinBox.y + local.y };
 }
 
-interface ToolbarTextProps {
-  rect: Rect2;
-  layout: TextLayoutResult;
-  fontSizePx: number;
-  tint: Rgba;
-  clippingPlanes: THREE.Plane[];
-  renderOrder: number;
-  /** `HORIZONTAL_ALIGNMENT_CENTER`, as `zoom_label` sets (`graph_edit.cpp:3242`). The SpinBox field is LEFT (`spin_box.cpp:731`). */
-  centred?: boolean;
-  /** The `x_ofs` of `LineEdit::_notification(NOTIFICATION_DRAW)`: the field text sits one content margin in. */
-  inset?: number;
-}
-
-/** One run of text, vertically centred in `rect`. */
-function ToolbarText({
-  rect,
-  layout,
-  fontSizePx,
-  tint,
-  clippingPlanes,
-  renderOrder,
-  centred,
-  inset = 0,
-}: ToolbarTextProps) {
-  const width = shapedTextSizeWidthPx(layout.widthPx);
-  const x = centred ? Math.max(0, (rect.w - width) / 2) : inset;
-  const y = Math.max(0, (rect.h - layout.heightPx) / 2);
-  return (
-    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]} renderOrder={renderOrder}>
-      <TextRun
-        layout={layout}
-        fontSizePx={fontSizePx}
-        tint={tint}
-        clippingPlanes={clippingPlanes}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
-  );
-}
-
 /** Each item is a child item of `menu_hbox` (`graph_edit.cpp:3235-3321`): its box draws before its content. */
 const TOOLBAR_ITEM_PIECES = ['boxes', 'content'] as const;
 
@@ -187,7 +143,7 @@ export function GraphEditToolbarChrome({
       {toolbar.items.map((item) => {
         if (item.kind === 'label') {
           return (
-            <ToolbarText
+            <LabelledText
               key={item.id}
               rect={item.rect}
               layout={shape(text.zoomLabel)}
@@ -241,7 +197,7 @@ export function GraphEditToolbarChrome({
                 renderOrder={items.boxes.key}
               />
             </CanvasItemGroup>
-            <ToolbarText
+            <LabelledText
               rect={fieldRect}
               layout={shape(text.snappingDistance)}
               fontSizePx={theme.fontSize}

@@ -1,3 +1,4 @@
+import { tabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
 import { describe, expect, it } from 'vitest';
 import {
   computeTabBarDrawLayout,
@@ -9,7 +10,6 @@ import {
   isTabUnselectable,
   resolveTabBarCurrentTab,
   tabBarMinimumSize,
-  tabBarStyleBoxes,
   tabBarThemeIconSize,
   tabBarFontSizePx,
   tabContentWidth,

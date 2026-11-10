@@ -4,42 +4,27 @@
  * (`Control::get_theme_stylebox`, `control.cpp:3078`), not the ColorPicker's own.
  */
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
+import {
+  CONTROL_FONT_PRESSED_COLOR,
+  DEFAULT_THEME_TYPE_VARIATIONS,
+  FLAT_MENU_BUTTON_VARIATION,
+} from '../../../../godot/scene/theme';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
 import { internalChildThemeItems, type InternalThemeItems } from '../../../../r3f/controls/native/themeItems';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { tabBarStyleBoxes, pickTabStyleBox, type TabBarStyleBoxes } from '../tabbar/nativeSolver';
+import { pickTabStyleBox } from '../tabbar/nativeSolver';
+import { perObject } from '../../../../utils/perObject';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
 import { LABEL_DEFAULT_FONT_COLOR } from '../label/nativeSolver';
 import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
 import { LINE_EDIT_DEFAULT_FONT_COLOR, pickLineEditStyleBox } from '../lineedit/nativeSolver';
 
-/**
- * `theme` with the mode buttons' two boxes. `mode_button_normal` and `mode_button_pressed` bind
- * `tab_unselected` and `tab_selected` of `TabContainer` (`color_picker.cpp:2060-2061`).
- */
-export interface PickerTheme extends NativeTheme {
-  modeButton: { normal: StyleBoxFlatData; pressed: StyleBoxFlatData };
-  /** The `normal` box of the `SpinBox` inner LineEdit, which sets the height of a slider row (`spin_box.cpp:82-86`). */
-  valueFieldBox: StyleBoxFlatData;
-}
-
-/** `theme` with the default mode button boxes, for a picker with no Theme. */
-function defaultPickerTheme(theme: NativeTheme, boxes: TabBarStyleBoxes): PickerTheme {
-  return {
-    ...theme,
-    modeButton: { normal: boxes.unselected, pressed: boxes.selected },
-    valueFieldBox: theme.widgets.lineEdit.normal,
-  };
-}
-
 export interface PickerChildTheme {
-  /** `theme` with the Button, FlatMenuButton and LineEdit styleboxes of the Theme chain. */
-  theme: PickerTheme;
+  /** `theme` with the Button, FlatMenuButton, TabContainer and LineEdit styleboxes of the Theme chain. */
+  theme: NativeTheme;
   /** `theme` with the `SpinBox` inner LineEdit's styleboxes, for the slider value fields. */
-  valueFieldTheme: PickerTheme;
+  valueFieldTheme: NativeTheme;
   valueFieldColor: Rgba;
   labelColor: Rgba;
   buttonColor: Rgba;
@@ -50,7 +35,7 @@ export interface PickerChildTheme {
   lineEditColor: Rgba;
 }
 
-function withLineEditBoxes(theme: PickerTheme, items: InternalThemeItems): PickerTheme {
+function withLineEditBoxes(theme: NativeTheme, items: InternalThemeItems): NativeTheme {
   const { lineEdit } = theme.widgets;
   return {
     ...theme,
@@ -64,17 +49,28 @@ function withLineEditBoxes(theme: PickerTheme, items: InternalThemeItems): Picke
   };
 }
 
-export function pickerChildTheme(n: SolveNode, nativeTheme: NativeTheme): PickerChildTheme {
+/**
+ * The picker's child items for one theme, built once for each node and theme: the painter and
+ * `colorPickerMinimumSize` read the same object.
+ */
+export const pickerChildTheme = (n: SolveNode, nativeTheme: NativeTheme): PickerChildTheme =>
+  childThemesOf(n).get(nativeTheme) ?? buildPickerChildTheme(n, nativeTheme);
+
+const childThemesOf = perObject((_node: SolveNode) => new WeakMap<NativeTheme, PickerChildTheme>());
+
+function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildTheme {
   const label = internalChildThemeItems(n, 'Label');
   const button = internalChildThemeItems(n, 'Button');
-  const flatMenuButton = internalChildThemeItems(n, 'MenuButton', 'FlatMenuButton');
+  const flatMenuButton = internalChildThemeItems(
+    n,
+    DEFAULT_THEME_TYPE_VARIATIONS[FLAT_MENU_BUTTON_VARIATION]!,
+    FLAT_MENU_BUTTON_VARIATION
+  );
   const lineEdit = internalChildThemeItems(n, 'LineEdit');
   const valueField = spinBoxFieldThemeItems(n);
   const tabs = internalChildThemeItems(n, 'TabContainer');
-  const defaultTabs = tabBarStyleBoxes(nativeTheme.scale);
-  const theme = defaultPickerTheme(nativeTheme, defaultTabs);
   const { widgets } = theme;
-  const withButtonBoxes: PickerTheme = {
+  const withBoxes: NativeTheme = {
     ...theme,
     widgets: {
       ...widgets,
@@ -87,19 +83,16 @@ export function pickerChildTheme(n: SolveNode, nativeTheme: NativeTheme): Picker
         normal: pickButtonStyleBox(flatMenuButton.styleBoxes, widgets.flatMenuButton, 'normal', n.rtl),
         disabled: pickButtonStyleBox(flatMenuButton.styleBoxes, widgets.flatMenuButton, 'disabled', n.rtl),
       },
-    },
-    modeButton: {
-      normal: pickTabStyleBox(tabs.styleBoxes, defaultTabs, 'unselected'),
-      pressed: pickTabStyleBox(tabs.styleBoxes, defaultTabs, 'selected'),
+      tabContainer: {
+        ...widgets.tabContainer,
+        unselected: pickTabStyleBox(tabs.styleBoxes, widgets.tabContainer, 'unselected'),
+        selected: pickTabStyleBox(tabs.styleBoxes, widgets.tabContainer, 'selected'),
+      },
     },
   };
-  const valueFieldTheme = withLineEditBoxes(theme, valueField);
-  return {
-    theme: {
-      ...withLineEditBoxes(withButtonBoxes, lineEdit),
-      valueFieldBox: valueFieldTheme.widgets.lineEdit.normal,
-    },
-    valueFieldTheme,
+  const result: PickerChildTheme = {
+    theme: withLineEditBoxes(withBoxes, lineEdit),
+    valueFieldTheme: withLineEditBoxes(theme, valueField),
     valueFieldColor: valueField.colors.font_color ?? LINE_EDIT_DEFAULT_FONT_COLOR,
     labelColor: label.colors.font_color ?? LABEL_DEFAULT_FONT_COLOR,
     buttonColor: button.colors.font_color ?? BUTTON_DEFAULT_FONT_COLOR,
@@ -107,4 +100,6 @@ export function pickerChildTheme(n: SolveNode, nativeTheme: NativeTheme): Picker
     buttonColors: button.colors,
     lineEditColor: lineEdit.colors.font_color ?? LINE_EDIT_DEFAULT_FONT_COLOR,
   };
+  childThemesOf(n).set(theme, result);
+  return result;
 }

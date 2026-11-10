@@ -49,7 +49,7 @@ import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/cont
 import { pickerChildTheme } from './pickerChildTheme';
 import { IconButton, iconModulate } from './IconButton';
 import { GradientMesh, buildGeometry, tintVertexColors } from './GradientMesh';
-import { LabelledText } from './LabelledText';
+import { LabelledText } from '../shared/LabelledText';
 import { TextTypeScriptIcon } from './TextTypeScriptIcon';
 import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
 import type { ButtonLabelBox } from '../../../../r3f/controls/native/buttonBase';
@@ -140,7 +140,7 @@ export function ColorPicker({
   renderOrder,
   theme: defaultTheme,
 }: NativeControlComponentProps) {
-  const child = useMemo(() => pickerChildTheme(solveNode, defaultTheme), [solveNode, defaultTheme]);
+  const child = pickerChildTheme(solveNode, defaultTheme);
   const theme = child.theme;
   const toItemLinear = useItemLinearColorOf();
   const props = painterView<ColorPickerProperties>(solveNode);
@@ -189,7 +189,7 @@ export function ColorPicker({
 
   const contentWidth = Math.max(0, rect.w - 2 * theme.contentMargin);
   const rows = useMemo(
-    () => colorPickerRows(contentWidth, theme, props, measure),
+    () => colorPickerRows(contentWidth, theme, child.valueFieldTheme, props, measure),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       contentWidth,

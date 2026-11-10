@@ -1,5 +1,5 @@
 /**
- * One row of shaped picker text, placed inside its box.
+ * One row of shaped text for a picker or toolbar, vertically centred inside its box.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -25,6 +25,8 @@ interface LabelledTextProps {
   renderOrder: number;
   /** Right-aligns within `rect`, as the SpinBox's `LineEdit` does for a number (`line_edit.cpp`). A plain `Label` aligns left. */
   alignRight?: boolean;
+  /** Centres within `rect` (`HORIZONTAL_ALIGNMENT_CENTER`): `zoom_label` sets it (`graph_edit.cpp:3242`). Wins over `alignRight`. */
+  centred?: boolean;
   /** The `x_ofs` floor of `LineEdit::_notification(NOTIFICATION_DRAW)`: the gap between the text and its aligned edge. 0 for a Label or Button, which has no box under the text. */
   inset?: number;
   /** `Control::is_layout_rtl()`: swaps the leading and trailing arms and leaves centre alone, as `label.cpp:497-509`, `line_edit.cpp:1397-1421` and `button.cpp:262-276` do. */
@@ -40,16 +42,17 @@ export function LabelledText({
   clippingPlanes,
   renderOrder,
   alignRight,
+  centred,
   inset = 0,
   rtl = false,
 }: LabelledTextProps) {
   if (!layout) return null;
   const width = shapedTextSizeWidthPx(layout.widthPx);
   const trailing = Math.max(inset, rect.w - width - inset);
-  const x = (alignRight ?? false) !== rtl ? trailing : inset;
+  const x = centred ? Math.max(0, (rect.w - width) / 2) : (alignRight ?? false) !== rtl ? trailing : inset;
   const y = Math.max(0, (rect.h - layout.heightPx) / 2);
   return (
-    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]}>
+    <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]} renderOrder={renderOrder}>
       <TextRun
         layout={layout}
         fontSizePx={fontSizePx}

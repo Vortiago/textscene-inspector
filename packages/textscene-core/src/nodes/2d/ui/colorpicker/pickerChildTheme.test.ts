@@ -31,6 +31,12 @@ function pickerUnder(...themeChain: ThemeResource[]): SolveNode {
 }
 
 describe('pickerChildTheme', () => {
+  it('builds once for each node and theme, so the painter and the minimum size share it', () => {
+    const picker = pickerUnder();
+    expect(pickerChildTheme(picker, THEME)).toBe(pickerChildTheme(picker, THEME));
+    expect(pickerChildTheme(picker, nativeTheme(2))).not.toBe(pickerChildTheme(picker, THEME));
+  });
+
   it('reads the default colours without a Theme', () => {
     const child = pickerChildTheme(pickerUnder(), THEME);
     expect(child.labelColor).toEqual(WHITE);
@@ -138,8 +144,8 @@ describe('pickerChildTheme', () => {
         }),
         THEME
       );
-      expect(child.theme.modeButton.normal.contentMargin.left).toBe(10);
-      expect(child.theme.modeButton.pressed.contentMargin.bottom).toBe(9);
+      expect(child.theme.widgets.tabContainer.unselected.contentMargin.left).toBe(10);
+      expect(child.theme.widgets.tabContainer.selected.contentMargin.bottom).toBe(9);
     });
 
     it('keeps the default styleboxes without an override', () => {
