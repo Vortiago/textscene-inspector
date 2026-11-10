@@ -15,7 +15,7 @@ import { allocateNodePaintRange, packPaintRanges } from '../../../../r3f/canvasP
 import { usePaintRange } from '../../../../r3f/contexts/PaintOrderContext';
 import { childCanvasPlace } from '../../../../r3f/canvasItemState';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
-import { useTileSetModel } from '../../../../r3f/useTileSetModel';
+import { useTileSetModel, type TileSetStatus } from '../../../../r3f/useTileSetModel';
 import { YSortDispatcher } from '../../../../r3f/YSortDispatcher';
 import type { TscnNode } from '../../../../parser/types';
 import type { TileMapLayerProperties } from '../tilemaplayer/types';
@@ -113,7 +113,7 @@ function withLayerNodes(map: TscnNode, sceneTiles: readonly TscnNode[]): TscnNod
 
 interface LayeredTileMapProps extends NodeComponentProps {
   model: TileSetModel | null;
-  status: 'pending' | 'loaded' | 'unavailable';
+  status: TileSetStatus;
   sceneTiles: SceneTileDrawing;
 }
 

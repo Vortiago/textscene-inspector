@@ -12,7 +12,7 @@ import type { TileSetModel } from '../../../../resources/tileset/types';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
-import { useTileSetModel } from '../../../../r3f/useTileSetModel';
+import { useTileSetModel, type TileSetStatus } from '../../../../r3f/useTileSetModel';
 import { YSortDispatcher } from '../../../../r3f/YSortDispatcher';
 import { SceneTileInstances } from '../shared/SceneTileInstances';
 import { ScenePlaceholders } from '../shared/ScenePlaceholders';
@@ -59,7 +59,7 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
 
 interface QuadrantLayerProps extends NodeComponentProps {
   model: TileSetModel | null;
-  status: 'pending' | 'loaded' | 'unavailable';
+  status: TileSetStatus;
   sceneTiles: SceneTileDrawing;
 }
 
