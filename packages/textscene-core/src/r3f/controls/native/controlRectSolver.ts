@@ -233,7 +233,7 @@ function record(
   out: Map<string, SolvedControl>,
   scale?: Vector2
 ): void {
-  out.set(n.path, { rect, minSize, scale });
+  out.set(n.path, scale ? { rect, minSize, scale } : { rect, minSize });
 }
 
 /**
