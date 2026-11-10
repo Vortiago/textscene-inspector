@@ -4,7 +4,6 @@
  * StyleBox is the same `StyleBoxEmpty`. `ControlCanvasWalker` owns `visible`, the children and
  * the transform.
  */
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -14,6 +13,7 @@ import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/nati
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import {
   checkButtonCheckVOffset,
   checkButtonHSeparation,

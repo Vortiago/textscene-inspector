@@ -5,10 +5,10 @@
  * and `useInheritedTextureSampler` resolves the sampler. The walker owns the transform.
  */
 
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import {
   useCanvasItemViewSampler,
   useInheritedTextureSampler,

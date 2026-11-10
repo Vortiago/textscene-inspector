@@ -4,7 +4,6 @@
  * the "normal" StyleBox is a `StyleBoxEmpty`. `ControlCanvasWalker` owns `visible`, the
  * children and the transform.
  */
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -13,6 +12,7 @@ import { useCheckBoxIcon } from './useCheckBoxIcon';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
   checkBoxDrawnIconSize,

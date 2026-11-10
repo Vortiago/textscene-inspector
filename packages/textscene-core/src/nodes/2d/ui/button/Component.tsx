@@ -4,7 +4,6 @@
  * comes only from `disabled`: a static viewer has no hover, pressed or focus.
  * `ControlCanvasWalker` owns `visible`, the children and the transform.
  */
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -29,6 +28,7 @@ import {
   layoutButtonContent,
   buttonTextBufWidthPx,
 } from '../../../../r3f/controls/native/buttonBase';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import {
   buttonLabelShape,
@@ -177,12 +177,7 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
       )}
       {content.icon && iconTexture && (
         <TextureQuad
-          rect={{
-            x: content.icon.rect.x,
-            y: content.icon.rect.y,
-            w: content.icon.rect.w,
-            h: content.icon.rect.h,
-          }}
+          rect={content.icon.rect}
           texture={iconTexture}
           color={iconLinearColor}
           opacity={tintedIconColorSrgb.a}

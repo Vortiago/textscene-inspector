@@ -4,7 +4,6 @@
  * drawn as one `<OutlinedTextRun>` per line and style run, or one `<RichTextImage>` per
  * `[img]`, through the MSDF text engine `<Label>` uses. Other tags are a non-goal.
  */
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useCallback, useMemo } from 'react';
 import type * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -46,6 +45,7 @@ import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnum
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { ResolvedTextTheme, TextOutlineTheme } from '../../../../r3f/controls/native/textTheme';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 
 interface ImageLike {
   width?: number;

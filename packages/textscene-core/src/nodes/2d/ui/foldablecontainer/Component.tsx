@@ -4,7 +4,6 @@
  * title bar, the arrow, the title text and, unless `folded`, the content `panel`.
  * `ControlCanvasWalker` draws the children.
  */
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -27,6 +26,7 @@ import {
   type FoldableContainerArrow,
 } from './nativeSolver';
 import { FOLDABLE_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { TITLE_POSITION_TOP, type FoldableContainerProperties } from './types';
 
 const ARROW_ICON_URL: Record<FoldableContainerArrow, string> = {

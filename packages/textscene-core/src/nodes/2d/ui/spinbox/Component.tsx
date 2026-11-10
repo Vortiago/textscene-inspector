@@ -4,7 +4,6 @@
  * chrome, the glyphs of the text that end inside `ofs_max` and the stepper arrows. `ControlCanvasWalker` owns `visible`,
  * children and the transform.
  */
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -15,6 +14,7 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import {
   pickLineEditStyleBox,
   resolveLineEditStyleState,

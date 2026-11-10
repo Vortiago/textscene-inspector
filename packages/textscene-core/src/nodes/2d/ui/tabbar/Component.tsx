@@ -4,7 +4,6 @@
  * current tab draws last at the same `renderOrder`, so it overlaps its neighbours as in the
  * source's two-pass draw.
  */
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useMemo } from 'react';
 import type { Plane } from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -24,6 +23,7 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import type { TabBarProperties, TabBarTabProperties } from './types';
 import { TAB_BAR_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import {
   TAB_ALIGNMENT_LEFT,
   TAB_BAR_THEME_FONT_KEY,
@@ -309,12 +309,7 @@ function TabBarTabChrome({
       />
       {content.icon && iconTexture && (
         <TextureQuad
-          rect={{
-            x: content.icon.rect.x,
-            y: content.icon.rect.y,
-            w: content.icon.rect.w,
-            h: content.icon.rect.h,
-          }}
+          rect={content.icon.rect}
           texture={iconTexture}
           color={iconLinearColor}
           opacity={tintedIconColor.a}

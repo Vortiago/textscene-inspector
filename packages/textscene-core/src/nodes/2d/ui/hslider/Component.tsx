@@ -4,14 +4,13 @@
  * `grabber_area` fill to the grabber's centre, each `tick`, then the `grabber`.
  * `shared/sliderSolver.ts` owns the geometry, `ControlCanvasWalker` `visible`, `children` and the transform.
  */
-import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SLIDER_GRABBER_ICONS, SLIDER_TICK_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import {
   resolveSliderRatio,
   sliderGrabberAreaRect,
@@ -67,16 +66,14 @@ export function HSlider({ solveNode, tint, rect, theme, renderOrder }: NativeCon
         />
       </CanvasItemGroup>
       {tickRects.map((tickRect, i) => (
-        <CanvasItemGroup key={tickIndices[i]} position={[tickRect.x, -tickRect.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={tickRect.w}
-            height={tickRect.h}
-            color={tint.color}
-            opacity={tint.opacity}
-            map={tickTexture}
-          />
-        </CanvasItemGroup>
+        <TextureQuad
+          key={tickIndices[i]}
+          rect={tickRect}
+          texture={tickTexture}
+          color={tint.color}
+          opacity={tint.opacity}
+          renderOrder={renderOrder}
+        />
       ))}
       <TextureQuad
         rect={grabberRect}
