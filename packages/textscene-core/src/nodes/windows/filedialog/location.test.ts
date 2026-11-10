@@ -134,6 +134,10 @@ describe('FileDialog current_dir with dot parts (measured in Godot 4.6.3, dir_ac
     expect(location({ current_dir: JSON.stringify(target) }).path_text).toBe(shown);
   });
 
+  it.each([['user://..'], ['user://a/..']])('shows %s as the user:// root', (target) => {
+    expect(location({ access: '1', current_dir: JSON.stringify(target) }).path_text).toBe('user://');
+  });
+
   it('refuses a folder above the root and stays where it was', () => {
     expect(location({ current_dir: '"res://.."' }).path_text).toBe('res://');
     expect(location({ current_dir: '"res://sub"', current_path: '"res://../y.png"' }).path_text).toBe(

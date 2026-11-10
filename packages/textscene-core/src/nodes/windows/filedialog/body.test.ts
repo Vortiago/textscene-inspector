@@ -188,9 +188,9 @@ describe('FileDialog toolbar icon sizes', () => {
     expect(prevWidth(themed)).toBeGreaterThan(prevWidth(base));
   });
 
-  it('makes no room for a themed icon whose size is not known yet', () => {
+  it('gives a themed icon whose size is not known yet the default room', () => {
     const loading = { ...base, icons: { back_folder: themedIcon }, textureSlots: { back_folder: null } };
-    expect(prevWidth(loading)).toBeLessThan(prevWidth(base));
+    expect(prevWidth(loading)).toBe(prevWidth(base));
   });
 
   it('requests one slot for each icon the Theme gives', () => {

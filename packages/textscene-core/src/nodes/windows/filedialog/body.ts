@@ -281,11 +281,12 @@ function themedIconsOf(
 }
 
 /**
- * The size of a toolbar icon: the dialog Theme's texture once its size is known, `null` until then, and the
- * vendored default's `FILE_DIALOG_ICON_SIZE` when the Theme gives none.
+ * The size of a toolbar icon: the dialog Theme's texture once its size is known, else the vendored default's
+ * `FILE_DIALOG_ICON_SIZE`. A pending icon takes the default room, as every other themed slot does, so the layout
+ * does not jump when an icon of that size arrives.
  */
-function iconSizeOf(dialog: SolveNode, name: FileDialogThemeIcon): Vector2 | null {
-  return dialog.icons[name] ? (dialog.textureSlots[name] ?? null) : FILE_DIALOG_ICON_SIZE;
+function iconSizeOf(dialog: SolveNode, name: FileDialogThemeIcon): Vector2 {
+  return dialog.textureSlots[name] ?? FILE_DIALOG_ICON_SIZE;
 }
 
 /** One slot for each toolbar icon a Theme gives the dialog, so `iconSizeOf` reads its size. */
