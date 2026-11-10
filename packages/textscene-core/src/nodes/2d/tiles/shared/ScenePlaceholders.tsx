@@ -45,7 +45,9 @@ function circlesByColour(circles: readonly PlaceholderCircle[]): PlaceholderCirc
   const groups = new Map<string, PlaceholderCircle[]>();
   for (const circle of circles) {
     const key = colourKey(circle.color);
-    groups.set(key, [...(groups.get(key) ?? []), circle]);
+    const group = groups.get(key);
+    if (group) group.push(circle);
+    else groups.set(key, [circle]);
   }
   return [...groups.values()];
 }

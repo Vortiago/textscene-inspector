@@ -69,6 +69,8 @@ export interface LiveNode extends TscnNode {
    * what it holds, so a click on it selects no node of its own.
    */
   readonly isUnowned?: boolean;
+  /** An unowned node whose instance root is a Control, which the world walk does not draw. */
+  readonly hasControlRoot?: boolean;
 }
 
 /** The host child `node` stands for: itself, or the child it is the re-anchored copy of. */

@@ -22,10 +22,15 @@ import type { TileMapLayerProperties } from './types';
 export function TileMapLayer({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapLayerProperties;
   const { model, status } = useTileSetModel(props.tile_set);
-  const sceneTiles = useSceneTileNodes(model, props.cells, {
-    isEnabled: props.enabled && props.drawsSceneTiles !== false,
-    owner: '',
-  });
+  const sceneTiles = useSceneTileNodes(
+    model,
+    props.enabled && props.drawsSceneTiles !== false ? props.cells : null
+  );
+  // A scene tile is a child canvas item of the layer, so it sorts with the layer's rows and children.
+  const withSceneTiles = useMemo(
+    () => ({ ...node, children: [...node.children, ...sceneTiles.instances] }),
+    [node, sceneTiles.instances]
+  );
   if (!props.y_sort_enabled) {
     return (
       <QuadrantLayer node={node} model={model} status={status} sceneTiles={sceneTiles}>
@@ -33,15 +38,18 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
       </QuadrantLayer>
     );
   }
-  // A scene tile is a child canvas item of the layer, so it sorts with the layer's rows and children.
-  const { instances, placeholderTiles } = sceneTiles;
-  const withSceneTiles = instances.length ? { ...node, children: [...node.children, ...instances] } : node;
   return (
     <CanvasItem2D
       node={node}
       props={props}
       ownItems={(state) =>
-        model && <ScenePlaceholders grid={model} tiles={placeholderTiles} modulate={state.tint.inherited} />
+        model && (
+          <ScenePlaceholders
+            grid={model}
+            tiles={sceneTiles.placeholderTiles}
+            modulate={state.tint.inherited}
+          />
+        )
       }
     >
       <YSortDispatcher node={withSceneTiles}>{children}</YSortDispatcher>

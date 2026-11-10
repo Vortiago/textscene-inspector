@@ -178,9 +178,11 @@ export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
     <UnownedSubtree>
       {scoped}
       {/* The world walk draws no Control, and the scene's own Control forest never sees this node. */}
-      <PendingSuspense>
-        <UnownedNodeControls node={node} />
-      </PendingSuspense>
+      {node.hasControlRoot && (
+        <PendingSuspense>
+          <UnownedNodeControls node={node} />
+        </PendingSuspense>
+      )}
     </UnownedSubtree>
   );
 }

@@ -35,19 +35,14 @@ export interface SceneTileDrawing {
 }
 
 /**
- * The scene tiles of `cells` drawn, or none while the layer is not `enabled` or has no TileSet.
- * `owner` makes the instance names unique across the layers of a TileMap, whose instances share
- * the TileMap as parent.
+ * The scene tiles of `cells` drawn, or none with no TileSet or no cells. A caller passes no cells
+ * for a layer that is not `enabled`.
  */
 export function useSceneTileNodes(
   model: TileSetModel | null,
-  cells: readonly PlacedCell[] | null | undefined,
-  { isEnabled, owner }: { isEnabled: boolean; owner: string }
+  cells: readonly PlacedCell[] | null | undefined
 ): SceneTileDrawing {
-  const allTiles = useMemo(
-    () => (model && isEnabled && cells ? sceneTileCells(model, cells) : NO_TILES),
-    [model, isEnabled, cells]
-  );
+  const allTiles = useMemo(() => (model && cells ? sceneTileCells(model, cells) : NO_TILES), [model, cells]);
   const tiles = useMemo(() => instancedTiles(allTiles), [allTiles]);
   const ambient = useSceneResources();
   const enclosingScenePaths = useInstancedScenePaths();
@@ -66,8 +61,7 @@ export function useSceneTileNodes(
     tiles.forEach((tile, index) => {
       const root = rootKindOf(steps[index]!.node.type);
       if (root === null) refused.add(tile.tile);
-      else
-        placed.push(placementNode(`@SceneTile@${owner}${index}`, tile.tile, instances[index]!, model, root));
+      else placed.push(placementNode(`@SceneTile@${index}`, tile.tile, instances[index]!, model, root));
     });
     return {
       instances: placed,
@@ -75,7 +69,7 @@ export function useSceneTileNodes(
         (tile) => !tile.tile.scene || tile.tile.displayPlaceholder || refused.has(tile)
       ),
     };
-  }, [model, allTiles, tiles, instances, steps, owner]);
+  }, [model, allTiles, tiles, instances, steps]);
 }
 
 const NO_TILES: readonly SceneTileCell[] = [];
@@ -130,5 +124,6 @@ function placementNode(
     properties: parseNode2D(heading, { transform: `Transform2D(${a}, ${b}, ${c}, ${d}, ${tx}, ${ty})` }),
     rawProperties: {},
     isUnowned: true,
+    hasControlRoot: root === 'control',
   };
 }

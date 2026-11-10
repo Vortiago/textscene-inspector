@@ -32,10 +32,8 @@ export function TileMap({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapProperties;
   const { model, status } = useTileSetModel(props.tile_set);
   // The TileMap, not a layer, holds the instances of every layer (`tile_map_layer.cpp:1645-1652`).
-  const sceneTiles = useSceneTileNodes(model, enabledLayerCells(props.layers), {
-    isEnabled: true,
-    owner: '',
-  });
+  const enabledCells = useMemo(() => enabledLayerCells(props.layers), [props.layers]);
+  const sceneTiles = useSceneTileNodes(model, enabledCells);
   if (!props.y_sort_enabled) {
     return (
       <LayeredTileMap node={node} model={model} status={status} sceneTiles={sceneTiles}>
