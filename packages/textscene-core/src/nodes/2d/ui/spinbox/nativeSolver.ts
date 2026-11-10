@@ -12,10 +12,9 @@ import { formatControlNumber } from '../../../../godot/text/numberFormat';
 import type {
   MinimumSizeFn,
   SolveContext,
-  TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { shapeLineEditText } from '../lineedit/nativeSolver';
 import { textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
@@ -74,12 +73,7 @@ const SPIN_BOX_ICON_NAMES: readonly SpinBoxIconName[] = ['up', 'down'];
 
 /** Which of `up`/`down` have a themed answer, for `SolveNode.textureSlots`. */
 export const spinBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
-  const requests: TextureSlotRequest[] = [];
-  for (const name of SPIN_BOX_ICON_NAMES) {
-    const themed = themedIcons[name];
-    if (themed) requests.push(themedSlotRequest(name, themed));
-  }
-  return requests;
+  return themedSlotRequests(SPIN_BOX_ICON_NAMES, themedIcons);
 };
 
 /** This icon's resolved size: themed if `SolveNode.textureSlots` resolved it, else the vendored default. */

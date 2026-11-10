@@ -149,6 +149,19 @@ export function themedSlotRequest(key: string, themed: ThemedIconRef): TextureSl
   return { key, ref: themed.ref, scope: themed.resources, isHeldLocally: themed.isHeldLocally };
 }
 
+/** The requests for those of `names` that have a themed answer. */
+export function themedSlotRequests(
+  names: Iterable<string>,
+  themedIcons: Readonly<Record<string, ThemedIconRef>>
+): TextureSlotRequest[] {
+  const requests: TextureSlotRequest[] = [];
+  for (const name of names) {
+    const themed = themedIcons[name];
+    if (themed) requests.push(themedSlotRequest(name, themed));
+  }
+  return requests;
+}
+
 /**
  * Which Texture2D-valued slots a type carries, given the live node and its theme
  * icons. A per-type fact on the slice, not a central list `buildSolveTree.ts`

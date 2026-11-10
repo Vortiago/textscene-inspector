@@ -21,7 +21,7 @@ import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
 import type { TextOutlineTheme } from '../../../r3f/controls/native/textTheme';
 import type { TextLayoutResult } from '../../../r3f/controls/native/text/textLayout';
 import { checkIconKey, checkIconSize, type Gutter, gutterWidth, widestCheckIcon } from './menuItems';
-import type { MenuRow } from './menuLayout';
+import { isRowInView, type MenuRow } from './menuLayout';
 import type { PopupMenuTheme } from './menuTheme';
 
 interface SeparatorLine {
@@ -195,15 +195,21 @@ function itemRowDrawing(context: RowContext, row: MenuRow): RowDrawing {
   };
 }
 
-/** Every row of the menu as `_draw_items` draws it, for an item control `width` wide. */
+/**
+ * The rows of the menu in view as `_draw_items` draws them, for an item control `width` wide and a scroll
+ * area `viewHeight` tall. The gutter reads every row, so a row below the view only costs that read.
+ */
 export function popupMenuDrawing(
   n: SolveNode,
   menu: PopupMenuTheme,
   rows: readonly MenuRow[],
-  width: number
+  width: number,
+  viewHeight: number
 ): readonly RowDrawing[] {
   const context = { n, menu, gutter: drawnGutter(rows, menu, n), width };
-  return rows.map((row) =>
-    row.entry.item.separator ? separatorRowDrawing(context, row) : itemRowDrawing(context, row)
-  );
+  return rows
+    .filter((row) => isRowInView(row, viewHeight))
+    .map((row) =>
+      row.entry.item.separator ? separatorRowDrawing(context, row) : itemRowDrawing(context, row)
+    );
 }

@@ -25,7 +25,7 @@ import { ScrollBarChrome } from '../../2d/ui/shared/ScrollChrome';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { checkIconSize } from './menuItems';
 import { popupMenuDrawing, type RowDrawing } from './menuDrawing';
-import { isRowInView, menuModel, popupMenuGeometry } from './menuLayout';
+import { menuModel, popupMenuGeometry } from './menuLayout';
 
 type Solved = NativeControlComponentProps['solveNode'];
 
@@ -150,8 +150,8 @@ export function PopupMenuChrome({
     [solveNode, rect.w, rect.h, model]
   );
   const rows = useMemo(
-    () => popupMenuDrawing(solveNode, menu, geometry.rows, geometry.control.w),
-    [solveNode, menu, geometry.rows, geometry.control.w]
+    () => popupMenuDrawing(solveNode, menu, geometry.rows, geometry.control.w, geometry.scroll.h),
+    [solveNode, menu, geometry.rows, geometry.control.w, geometry.scroll.h]
   );
   const { anchorRef, clip } = useWorldClipPlanes(geometry.scroll);
   const orders = canvasSubOrders(slot, ['rows', 'bars']);
@@ -170,7 +170,6 @@ export function PopupMenuChrome({
         <CanvasItemGroup position={[geometry.control.x, -geometry.control.y, 0]}>
           {rows.map((drawing, index) => {
             const row = geometry.rows[index]!;
-            if (!isRowInView(row, geometry.scroll.h)) return null;
             return (
               <RowParts
                 key={index}

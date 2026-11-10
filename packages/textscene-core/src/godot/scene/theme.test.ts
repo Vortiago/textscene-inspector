@@ -91,9 +91,7 @@ describe('scaledGodotTheme', () => {
       sliderTrackThickness: 8, // two margins of make_flat_stylebox(…, 4, 4, 4, 4, 4), default_theme.cpp:579
       sliderCornerRadius: 4, // the corner radius of that call, default_theme.cpp:579
       sliderGrabberSize: 16, // the slider_grabber icon's 16x16 box
-      sliderGrabberRadius: 7, // its circle's r="7"
       sliderTickBox: 4, // the 4x8 canvas of hslider_tick.svg
-      sliderTickThickness: 2, // the 2px bar `pnpm ref:godot` measures
     });
   });
 
@@ -113,9 +111,7 @@ describe('scaledGodotTheme', () => {
       sliderTrackThickness: 16,
       sliderCornerRadius: 8,
       sliderGrabberSize: 32,
-      sliderGrabberRadius: 14,
       sliderTickBox: 8,
-      sliderTickThickness: 4,
     });
   });
 
@@ -147,9 +143,7 @@ describe('scaledGodotTheme', () => {
       sliderTrackThickness: 4,
       sliderCornerRadius: 2,
       sliderGrabberSize: 8,
-      sliderGrabberRadius: 4,
       sliderTickBox: 2,
-      sliderTickThickness: 1,
     });
   });
 });

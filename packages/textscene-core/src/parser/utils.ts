@@ -1,3 +1,5 @@
+import { stringArrayBodies } from '../godot/variant/variantParser';
+
 /** Zero-based character offsets on one line, `end` exclusive. */
 export interface ValueSpan {
   start: number;
@@ -455,4 +457,18 @@ export function isPropertyOverrideHeading(heading: ParsedHeading): boolean {
     !heading.attributes.instance &&
     !heading.attributes.instance_placeholder
   );
+}
+
+/**
+ * `PackedStringArray("a")`, `Array[String](["a"])` or `["a"]` as unescaped elements, or `null` if malformed. The
+ * four string-array getters return `TypedArray<String>` (code_edit.cpp:2036, :2065, :2222, :956), so the serializer
+ * writes `Array[String]` (core/variant/variant_parser.cpp:2341-2344). The packed spelling reads back too, and a bare
+ * `[…]` loads because `TypedArray<T>(const Array &)` converts element-wise (core/variant/typed_array.h:43-50).
+ *
+ * @canonical A String array literal's unescaped elements
+ */
+export function parsePackedStringArray(value: string): string[] | null {
+  // `unquoteString`, not a `\\(.)` collapse: the tokenizer resolves `\\uXXXX` and
+  // `\\n`, `\\r`, `\\t` before any setter runs, so `\\u00ab` is one code point, not `u00ab`.
+  return stringArrayBodies(value)?.map(unquoteString) ?? null;
 }

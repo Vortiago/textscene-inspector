@@ -101,19 +101,16 @@ const SLIDER_CORNER_RADIUS = 4;
 
 /**
  * The `slider_grabber` icon: a 16x16 box Godot positions, holding
- * `<circle cx="8" cy="8" r="7" fill="#fefefe" fill-opacity=".75"/>`. `generate_icon` rasterises through
+ * a circle of radius 7. `generate_icon` rasterises through
  * `DPITexture::create_from_string(source, scale)`, so it scales with the theme.
  */
 const SLIDER_GRABBER_SIZE = 16;
-const SLIDER_GRABBER_RADIUS = 7;
 
 /**
  * `hslider_tick.svg`/`vslider_tick.svg` declare a 4x8 canvas, and the rasteriser
- * clips the path to it: `pnpm ref:godot` measures an 8px band. A tick is a 2px bar
- * across the 8px track, centred in a 4px-wide box.
+ * clips the path to it: `pnpm ref:godot` measures an 8px band. The tick box is 4px wide.
  */
 const SLIDER_TICK_BOX = 4;
-const SLIDER_TICK_THICKNESS = 2;
 
 /** The default theme at a project's `gui/theme/default_theme_scale`. Every metric above is `scale = 1`. */
 export interface ScaledGodotTheme {
@@ -137,12 +134,8 @@ export interface ScaledGodotTheme {
   sliderCornerRadius: number;
   /** The `slider_grabber` icon's box, in px. */
   sliderGrabberSize: number;
-  /** The circle drawn inside that box, in px. */
-  sliderGrabberRadius: number;
   /** The `tick` icon's box along the slider's main axis, in px. */
   sliderTickBox: number;
-  /** The visible tick bar's thickness, in px. */
-  sliderTickThickness: number;
 }
 
 /** `Math::round(base * scale)`, the scale applied to one default-theme pixel value (`default_theme.cpp`). */
@@ -176,8 +169,6 @@ export function scaledGodotTheme(scale: number): ScaledGodotTheme {
     sliderTrackThickness: 2 * scaledPx(SLIDER_STYLE_MARGIN, scale),
     sliderCornerRadius: scaledPx(SLIDER_CORNER_RADIUS, scale),
     sliderGrabberSize: scaledPx(SLIDER_GRABBER_SIZE, scale),
-    sliderGrabberRadius: scaledPx(SLIDER_GRABBER_RADIUS, scale),
     sliderTickBox: scaledPx(SLIDER_TICK_BOX, scale),
-    sliderTickThickness: scaledPx(SLIDER_TICK_THICKNESS, scale),
   };
 }

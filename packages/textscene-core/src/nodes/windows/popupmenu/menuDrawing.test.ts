@@ -21,7 +21,7 @@ function drawingOf(window: SolveNode) {
   const size = wrappedWindowSize(window, THEME, measureText, EMBEDDER);
   const model = menuModel(window, { theme: THEME, measureText });
   const geometry = popupMenuGeometry(window, size, model);
-  const rows = popupMenuDrawing(window, model.menu, geometry.rows, geometry.control.w);
+  const rows = popupMenuDrawing(window, model.menu, geometry.rows, geometry.control.w, geometry.scroll.h);
   return { rows, geometry, width: geometry.control.w };
 }
 

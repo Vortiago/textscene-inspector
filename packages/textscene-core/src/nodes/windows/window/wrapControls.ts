@@ -3,7 +3,7 @@
  * out at its loaded size. Pure: no React, no THREE.
  */
 
-import type { Vector2 } from '../../../godot/math/vector';
+import { type Vector2, vector2Max } from '../../../godot/math/vector';
 import { embeddedWindowSize } from '../../../godot/scene/window';
 import { createSolveContext, solveControlTree } from '../../../r3f/controls/native/controlRectSolver';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
@@ -51,7 +51,7 @@ function sizeAtLoad(window: SolveNode, ctx: SolveContext): Vector2 {
   const minimum = controlSolverRegistry.loadedMinimumSize(window.node.type)?.(window, ctx);
   if (!minimum) return size;
   const { canvasScale: factor } = windowContentScale(size, content_scale);
-  return { x: Math.max(size.x, minimum.x * factor), y: Math.max(size.y, minimum.y * factor) };
+  return vector2Max(size, { x: minimum.x * factor, y: minimum.y * factor });
 }
 
 /**
@@ -68,6 +68,6 @@ export function wrappedWindowSize(
   const limits = { minSize: props.min_size, maxSize: props.max_size };
   const ctx = createSolveContext(theme, measureText, undefined, embedderSize);
   const loaded = sizeAtLoad(window, ctx);
-  if (!props.wrap_controls) return embeddedWindowSize(loaded, limits);
-  return embeddedWindowSize(loaded, limits, scaledContentsMinimumSize(window, ctx));
+  const contentsMinimum = props.wrap_controls ? scaledContentsMinimumSize(window, ctx) : undefined;
+  return embeddedWindowSize(loaded, limits, contentsMinimum);
 }

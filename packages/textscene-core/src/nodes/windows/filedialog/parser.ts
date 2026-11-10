@@ -5,7 +5,7 @@
  */
 
 import type { ParsedHeading } from '../../../parser/utils';
-import { unquoteString } from '../../../parser/utils';
+import { parsePackedStringArray, unquoteString } from '../../../parser/utils';
 import {
   finishLocation,
   setAccess,
@@ -18,7 +18,6 @@ import {
 } from './location';
 import { stringToInt } from '../../../godot/string/string.js';
 import { indexedKeyRegex } from '../../../godot/classdb/indexedKey.js';
-import { stringArrayBodies } from '../../../godot/variant/variantParser';
 import { boolOr, intOr } from '../../../parser/valueParsers';
 import { MAX_WALKED_ELEMENTS } from '../../2d/ui/shared/countWalk';
 import { viewportParseContext } from '../../viewport/shared/parser';
@@ -69,10 +68,6 @@ function clampedDefault(index: number, values: readonly string[]): number {
   return Math.min(Math.max(index, 0), last);
 }
 
-function parseStringArray(raw: string): string[] {
-  return stringArrayBodies(raw)?.map(unquoteString) ?? [];
-}
-
 /** The options after each `option_*` line has run in file order. */
 function replayOptions(properties: Record<string, string>, context: string): FileDialogOption[] {
   let options: FileDialogOption[] = [];
@@ -90,7 +85,7 @@ function replayOptions(properties: Record<string, string>, context: string): Fil
     const option = options[index]!;
     if (match[2] === 'name') options[index] = { ...option, name: unquoteString(raw) };
     else if (match[2] === 'values') {
-      const values = parseStringArray(raw);
+      const values = parsePackedStringArray(raw) ?? [];
       options[index] = { ...option, values, defaultIndex: clampedDefault(option.defaultIndex, values) };
     } else {
       const defaultIndex = clampedDefault(intOr(raw, 0, `${context}.${key}`), option.values);
@@ -150,7 +145,7 @@ export function parseFileDialog(
   const dialog = parseConfirmationDialog(heading, properties);
   const context = viewportParseContext(heading, dialog.name);
   const { mode, title } = replayModeTexts(properties, dialog.title, context);
-  const flag = (raw: string | undefined, key: string) => boolOr(raw, true, `${context}.${key}`);
+  const flag = (key: string) => boolOr(properties[key], true, `${context}.${key}`);
   return {
     ...dialog,
     title,
@@ -169,14 +164,14 @@ export function parseFileDialog(
       `${context}.display_mode`
     ),
     ...replayLocation(properties, context),
-    filters: properties.filters === undefined ? [] : parseStringArray(properties.filters),
+    filters: properties.filters === undefined ? [] : (parsePackedStringArray(properties.filters) ?? []),
     options: replayOptions(properties, context),
-    hidden_files_toggle_enabled: flag(properties.hidden_files_toggle_enabled, 'hidden_files_toggle_enabled'),
-    file_filter_toggle_enabled: flag(properties.file_filter_toggle_enabled, 'file_filter_toggle_enabled'),
-    file_sort_options_enabled: flag(properties.file_sort_options_enabled, 'file_sort_options_enabled'),
-    folder_creation_enabled: flag(properties.folder_creation_enabled, 'folder_creation_enabled'),
-    favorites_enabled: flag(properties.favorites_enabled, 'favorites_enabled'),
-    recent_list_enabled: flag(properties.recent_list_enabled, 'recent_list_enabled'),
-    layout_toggle_enabled: flag(properties.layout_toggle_enabled, 'layout_toggle_enabled'),
+    hidden_files_toggle_enabled: flag('hidden_files_toggle_enabled'),
+    file_filter_toggle_enabled: flag('file_filter_toggle_enabled'),
+    file_sort_options_enabled: flag('file_sort_options_enabled'),
+    folder_creation_enabled: flag('folder_creation_enabled'),
+    favorites_enabled: flag('favorites_enabled'),
+    recent_list_enabled: flag('recent_list_enabled'),
+    layout_toggle_enabled: flag('layout_toggle_enabled'),
   };
 }

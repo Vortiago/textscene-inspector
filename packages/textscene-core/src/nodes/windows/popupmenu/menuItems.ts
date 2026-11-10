@@ -9,7 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Vector2 } from '../../../godot/math/vector';
+import { type Vector2, vector2Max } from '../../../godot/math/vector';
 import { ItemCheckableType } from '../../../godot/scene/popupMenu';
 import { TextDirection } from '../../../godot/text/textServerEnums';
 import { fitIconSize, shapeButtonLabel } from '../../../r3f/controls/native/buttonBase';
@@ -86,18 +86,12 @@ export function checkIconKey(item: PopupMenuItem): CheckBoxIconKey {
 export function minimumCheckSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 {
   const checked = checkIconSize(n, 'checked');
   const radio = checkIconSize(n, 'radioChecked');
-  return { x: Math.max(checked.x, radio.x), y: Math.max(checked.y, radio.y) };
+  return vector2Max(checked, radio);
 }
 
 /** The widest of all eight check icons, which the draw reserves its gutter from (`popup_menu.cpp:889-894`). */
 export function widestCheckIcon(n: Pick<SolveNode, 'textureSlots'>): number {
   return Math.max(...CHECK_ICON_KEYS.map((key) => checkIconSize(n, key).x));
-}
-
-/** `_get_item_icon_size` (`popup_menu.cpp:189-209`): the icon at its texture size, limited to `icon_max_width`. */
-function itemIconSize(n: SolveNode, item: PopupMenuItem, index: number, theme: PopupMenuTheme): Vector2 {
-  const natural = item.icon === undefined ? undefined : n.textureSlots[menuItemIconSlot(index)];
-  return natural ? fitIconSize(natural, theme.iconMaxWidth) : { x: 0, y: 0 };
 }
 
 /** `_shape_item` (`popup_menu.cpp:1087-1107`): the text at the item's font, in the menu's layout direction. */
@@ -152,8 +146,10 @@ export function menuItems(
   return items.map((item, index) => {
     const text = ctx.measureText ? shapeItem(n, item, theme) : null;
     const textSize = text ? { x: shapedTextSizeWidthPx(text.widthPx), y: text.heightPx } : { x: 0, y: 0 };
-    const iconSize = itemIconSize(n, item, index, theme);
-    const hasIcon = item.icon !== undefined && n.textureSlots[menuItemIconSlot(index)] !== undefined;
+    // `_get_item_icon_size` (`popup_menu.cpp:189-209`): the icon at its texture size, limited to `icon_max_width`.
+    const natural = item.icon === undefined ? undefined : n.textureSlots[menuItemIconSlot(index)];
+    const hasIcon = natural !== undefined;
+    const iconSize = natural ? fitIconSize(natural, theme.iconMaxWidth) : { x: 0, y: 0 };
     return {
       item,
       text,

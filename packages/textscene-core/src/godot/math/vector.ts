@@ -59,6 +59,15 @@ export function vector2Add(a: Vector2, b: Vector2): Vector2 {
 }
 
 /**
+ * `Vector2::max` (`core/math/vector2.h`): the larger of each component.
+ *
+ * @canonical A Vector2 component-wise maximum
+ */
+export function vector2Max(a: Vector2, b: Vector2): Vector2 {
+  return { x: Math.max(a.x, b.x), y: Math.max(a.y, b.y) };
+}
+
+/**
  * `Vector2::operator-` (`core/math/vector2.h`) in `real_t` float.
  *
  * @canonical A Vector2 difference in float32

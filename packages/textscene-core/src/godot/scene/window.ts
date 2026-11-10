@@ -2,7 +2,7 @@
 
 import { enumNamesByValue } from '../classdb/enumNames.js';
 import { findInClassChain } from '../classdb/classBaseTypes.js';
-import type { Vector2 } from '../math/vector.js';
+import { type Vector2, vector2Max } from '../math/vector.js';
 
 /**
  * `Window::Mode` without `MODE_`, each member the `DisplayServer::WindowMode` it aliases
@@ -161,7 +161,7 @@ export function validMaxSize({ minSize, maxSize }: WindowSizeLimits): Vector2 | 
 
 /** `_update_window_size`'s clamp (`window.cpp:1183-1196`): the floor, then a valid cap. */
 function clampWindowSize(size: Vector2, floor: Vector2, limits: WindowSizeLimits): Vector2 {
-  const floored = { x: Math.max(size.x, floor.x), y: Math.max(size.y, floor.y) };
+  const floored = vector2Max(size, floor);
   const cap = validMaxSize(limits);
   return cap ? { x: Math.min(floored.x, cap.x), y: Math.min(floored.y, cap.y) } : floored;
 }
@@ -195,9 +195,7 @@ export function embeddedWindowSize(
   contentsMinimum?: Vector2
 ): Vector2 {
   const { minSize } = limits;
-  const floor = contentsMinimum
-    ? { x: Math.max(minSize.x, contentsMinimum.x), y: Math.max(minSize.y, contentsMinimum.y) }
-    : minSize;
+  const floor = contentsMinimum ? vector2Max(minSize, contentsMinimum) : minSize;
   const size = clampWindowSize(loaded, floor, limits);
   return { x: Math.max(size.x, 1), y: Math.max(size.y, 1) };
 }

@@ -24,7 +24,7 @@ import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/n
 import { GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { isMinimapEnabled } from './minimap';
 import type { GraphEditProperties } from './types';
-import type { Vector2 } from '../../../../godot/math/vector';
+import { type Vector2, vector2Max } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
 
 /** `menu_panel->set_position(Vector2(10, 10))` (`graph_edit.cpp:3232`): unscaled. */
@@ -137,7 +137,7 @@ function toolbarButtonMinSize(theme: NativeTheme): Vector2 {
 function toolbarSpinBoxMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics): Vector2 {
   const normal = contentMarginSize(theme.widgets.lineEdit.normal);
   const readOnly = contentMarginSize(theme.widgets.lineEdit.readOnly);
-  const styleMin = { x: Math.max(normal.x, readOnly.x), y: Math.max(normal.y, readOnly.y) };
+  const styleMin = vector2Max(normal, readOnly);
   return {
     x:
       styleMin.x +

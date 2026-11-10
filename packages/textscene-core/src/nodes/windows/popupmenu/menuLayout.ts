@@ -19,7 +19,7 @@ import type {
   MinimumSizeFn,
   SolveContext,
 } from '../../../r3f/controls/native/solverRegistry';
-import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize, contentRect } from '../../../r3f/controls/native/styleBoxFlat';
 import {
   scrollBarPlacement,
   scrollBarMinimumSize,
@@ -185,15 +185,8 @@ function verticalBar(
 /** The geometry of menu `n` in a window of `size`, from the same items its minimum reads. */
 export function popupMenuGeometry(n: SolveNode, size: Vector2, model: MenuModel): MenuGeometry {
   const { theme, menu, items } = model;
-  const margins = contentMarginSize(menu.panel);
-
   const panel = panelRect(shadowInsets(menu.panel, n.rtl), n.rtl, size);
-  const scroll = {
-    x: panel.x + menu.panel.contentMargin.left,
-    y: panel.y + menu.panel.contentMargin.top,
-    w: panel.w - margins.x,
-    h: panel.h - margins.y,
-  };
+  const scroll = contentRect(panel, menu.panel);
   const contentHeight = itemsTotalHeight(items, menu);
   const bar = verticalBar(scroll, contentHeight, n.rtl, theme);
   const reserved = bar.visible ? bar.rect.w : 0;

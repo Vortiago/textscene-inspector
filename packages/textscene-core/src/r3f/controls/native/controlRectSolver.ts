@@ -21,7 +21,7 @@ import {
 } from './solverRegistry';
 import type { SealedHandoff } from './solveHandoff';
 import { resolveControlLayout, type ControlLayoutOrder } from '../controlAnchors.js';
-import type { Vector2 } from '../../../godot/math/vector.js';
+import { type Vector2, vector2Max } from '../../../godot/math/vector.js';
 import { GrowDirection } from '../../../godot/scene/control.js';
 
 export interface SolvedControl {
@@ -178,7 +178,7 @@ export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
   const typeFn = controlSolverRegistry.minimumSize(n.node.type);
   const typeMin = typeFn ? typeFn(sortableView(n), ctx) : { x: 0, y: 0 };
   const custom = controlProps(n).customMinimumSize ?? { x: 0, y: 0 };
-  return { x: Math.max(typeMin.x, custom.x), y: Math.max(typeMin.y, custom.y) };
+  return vector2Max(typeMin, custom);
 }
 
 /**

@@ -9,13 +9,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2 } from '../../../godot/math/rect2';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import type { ContainerLayoutFn, MinimumSizeFn } from '../../../r3f/controls/native/solverRegistry';
 import { everyChildFills, largestLaidOutChildMinimum } from '../window/contentFill';
-import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize, contentRect } from '../../../r3f/controls/native/styleBoxFlat';
 import { insetSize, panelRect, shadowInsets, type PanelInsets } from '../window/panelInsets';
 
 /** `theme_cache.panel_style`, the `panel` StyleBox or the default theme's, and its shadow insets. */
@@ -46,12 +45,5 @@ export const popupPanelContentsMinimumSize: MinimumSizeFn = (n, ctx) => {
 export const popupPanelLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
   const { style, insets } = popupPanelBox(n, ctx.theme);
   const box = panelRect(insets, n.rtl, { x: rect.w, y: rect.h });
-  const panel = contentMarginSize(style);
-  const content: Rect2 = {
-    x: box.x + style.contentMargin.left,
-    y: box.y + style.contentMargin.top,
-    w: box.w - panel.x,
-    h: box.h - panel.y,
-  };
-  return everyChildFills(children, content);
+  return everyChildFills(children, contentRect(box, style));
 };

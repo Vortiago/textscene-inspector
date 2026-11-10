@@ -87,6 +87,11 @@ export interface SyntheticControl {
   syntheticDraw?: SolveNode['syntheticDraw'];
 }
 
+/** The path a synthetic Control gets: its parent's, then its own name. A container lays its children out by this link. */
+export function syntheticPath(parentPath: string, name: string): string {
+  return `${parentPath}/@${name}`;
+}
+
 /**
  * A Control `memnew`d inside `dialog` as a `SolveNode` in the dialog's scope. It has no scene node, so
  * none of the dialog's own theme items (`panel`, `buttons_separation`) apply to it. Its own come through
@@ -105,7 +110,7 @@ export function syntheticControl(dialog: SolveNode, spec: SyntheticControl): Sol
   const defaults = spec.variationDefaults ?? {};
   return {
     ...dialog,
-    path: `${spec.parentPath ?? dialog.path}/@${name}`,
+    path: syntheticPath(spec.parentPath ?? dialog.path, name),
     node,
     children: spec.children ?? [],
     styleBoxes: { ...defaults.styleBoxes, ...items.styleBoxes },

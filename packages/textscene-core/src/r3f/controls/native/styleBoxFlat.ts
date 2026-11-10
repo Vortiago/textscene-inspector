@@ -5,6 +5,7 @@
  */
 
 import type { Rgba } from '../../../godot/math/math';
+import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
 
 export interface StyleBoxFlatData {
@@ -111,5 +112,16 @@ export function contentMarginSize(box: StyleBoxFlatData): Vector2 {
   return {
     x: box.contentMargin.left + box.contentMargin.right,
     y: box.contentMargin.top + box.contentMargin.bottom,
+  };
+}
+
+/** `rect` less the box's content margins: `StyleBox::get_content_rect`'s inset. */
+export function contentRect(rect: Rect2, box: StyleBoxFlatData): Rect2 {
+  const margins = contentMarginSize(box);
+  return {
+    x: rect.x + box.contentMargin.left,
+    y: rect.y + box.contentMargin.top,
+    w: rect.w - margins.x,
+    h: rect.h - margins.y,
   };
 }
