@@ -4188,6 +4188,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D UI Controls"
   },
   {
+    "name": "Button Icon Zero Size",
+    "file": "unit-button-icon-zero-size.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
     "name": "Button Rtl",
     "file": "unit-button-rtl.tscn",
     "category": "Unit - 2D UI Controls"
