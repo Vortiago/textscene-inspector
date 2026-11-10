@@ -125,6 +125,27 @@ describe('<Bone2D> gizmo', () => {
     expect(colour(kiteOf(renderer, 'Upper')!, 0)[0]).toBeCloseTo(0.10048, 4);
   });
 
+  // `skeleton_2d.cpp:235-241`: a bone that carries the meta draws every fill point in `bone_ik_color`
+  // (`editor_settings.cpp:978`). A scene saves the meta, as `metadata/` keys are stored (`object.cpp:649-661`).
+  it('shades the whole fill in the IK colour for a bone that carries the pose override meta', async () => {
+    const renderer = await render(scene('metadata/_local_pose_override_enabled_ = true'));
+    drawOnce(renderer);
+    const kite = kiteOf(renderer, 'Upper')!;
+    for (const i of [0, 1, 2, 3]) {
+      const fill = colour(kite, FILL_AT + i);
+      expect(fill[0]).toBeCloseTo(0.78741, 4);
+      expect(fill[2]).toBeCloseTo(0.17064, 4);
+      expect(fill[3]).toBeCloseTo(0.7, 5);
+    }
+    expect(colour(kite, 0)[0]).toBeCloseTo(0.10048, 4);
+  });
+
+  it('draws the kite of a bone after the kite of its child', async () => {
+    const renderer = await render(scene());
+    drawOnce(renderer);
+    expect(kiteOf(renderer, 'Upper')!.renderOrder).toBeGreaterThan(kiteOf(renderer, 'Lower')!.renderOrder);
+  });
+
   it('draws a bone with no child along its length and angle', async () => {
     const renderer = await render(
       scene('', 'auto_calculate_length_and_angle = false\nlength = 40.0\nbone_angle = 90.0')

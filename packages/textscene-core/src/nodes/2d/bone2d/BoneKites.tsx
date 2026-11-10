@@ -18,7 +18,9 @@ import { lookupDrawnObjects, type DrawnObjects } from '../../../r3f/drawnObjects
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
 import { canvasTransformInto, writeGodotPointAsThree } from '../../../r3f/node2dTransform';
+import { useLiveScenePass } from '../../../r3f/liveScenePass';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera';
+import { bindBoneChildren } from './boneChildren';
 import {
   boneKitesOf,
   FILL_POINT_COUNT,
@@ -46,17 +48,29 @@ const FILL_COLORS = [
   vertexColor({ r: 1, g: 1, b: 1, a: 0.7 }),
   vertexColor({ r: 0.6, g: 0.6, b: 0.6, a: 0.7 }),
 ];
+const POSE_OVERRIDE_COLOR = vertexColor({ r: 0.9, g: 0.9, b: 0.45, a: 0.7 });
 const SELECTED_OUTLINE_COLOR = vertexColor({ r: 0.9, g: 0.45, b: 0.45, a: 0.7 });
 const OUTLINE_COLOR = vertexColor({ r: 0.35, g: 0.35, b: 0.35, a: 0.5 });
 
-/** Writes the colour of every point of every kite: the outline in one colour, the fill in two alternating. */
-function writeColors(geometry: THREE.BufferGeometry, isSelected: boolean): void {
+/** The state that picks the colours of a kite. */
+interface KiteLook {
+  isSelected: boolean;
+  /** The bone carries `_local_pose_override_enabled_`, which Skeleton2D sets while an IK drives it. */
+  hasPoseOverride: boolean;
+}
+
+/**
+ * Writes the colour of every point of every kite: the outline in one colour, the fill in two
+ * alternating, or all in the IK colour for a bone with a pose override (`skeleton_2d.cpp:235-241`).
+ */
+function writeColors(geometry: THREE.BufferGeometry, { isSelected, hasPoseOverride }: KiteLook): void {
   const colors = geometry.getAttribute('color') as THREE.BufferAttribute;
   const outline = isSelected ? SELECTED_OUTLINE_COLOR : OUTLINE_COLOR;
   const pointCount = colors.count;
   for (let point = 0; point < pointCount; point++) {
     const inKite = point % POINTS_PER_KITE;
-    const color = inKite < OUTLINE_POINT_COUNT ? outline : FILL_COLORS[(inKite - OUTLINE_POINT_COUNT) % 2]!;
+    const fill = hasPoseOverride ? POSE_OVERRIDE_COLOR : FILL_COLORS[(inKite - OUTLINE_POINT_COUNT) % 2]!;
+    const color = inKite < OUTLINE_POINT_COUNT ? outline : fill;
     colors.array.set(color, point * FLOATS_PER_COLOR);
   }
   colors.needsUpdate = true;
@@ -109,12 +123,13 @@ function writeKites(geometry: THREE.BufferGeometry, kites: readonly BoneKite[]):
   geometry.computeBoundingSphere();
 }
 
-/** The names of the Bone2D children, in order: the bones Godot draws a kite to (`skeleton_2d.cpp:223-228`). */
-function boneChildNames(node: TscnNode): string[] {
-  return node.children.filter((child) => child.type === 'Bone2D').map((child) => child.name);
-}
+/** A scene stores a meta as `metadata/<name>`, and `has_meta` ignores its value. */
+const POSE_OVERRIDE_KEY = 'metadata/_local_pose_override_enabled_';
 
 const TRANSFORM_TERMS = 6;
+
+/** The children of a bone the pass has not reached. */
+const NO_CHILDREN: readonly string[] = [];
 
 function storeTerm(out: Float64Array, at: number, term: number): boolean {
   const hasChanged = out[at] !== term;
@@ -182,14 +197,19 @@ export function BoneKites({ node }: { node: TscnNode }) {
   const props = node.properties as Bone2DProperties;
   const path = useNodePath();
   const isSelected = useIsSelected();
-  const childPaths = useMemo(() => boneChildNames(node).map((name) => `${path}/${name}`), [node, path]);
+  const source = useLiveScenePass(bindBoneChildren, path);
+  const childPaths = source?.children ?? NO_CHILDREN;
   // A bone with no Bone2D child still draws one kite, along its own length.
   const kiteCount = Math.max(1, childPaths.length);
   const geometry = useMemo(() => kiteGeometry(kiteCount), [kiteCount]);
-  useEffect(() => writeColors(geometry, isSelected), [geometry, isSelected]);
+  const hasPoseOverride = POSE_OVERRIDE_KEY in node.rawProperties;
+  useEffect(
+    () => writeColors(geometry, { isSelected, hasPoseOverride }),
+    [geometry, isSelected, hasPoseOverride]
+  );
   // A bone that calculates falls back to its own rotation (`skeleton_2d.cpp:447-448`).
   const angle = props.auto_calculate_length_and_angle ? props.rotation : props.bone_angle;
   const reach = useMemo(() => ({ length: props.length, angle }), [props.length, angle]);
   useKiteFollow(geometry, path, childPaths, reach);
-  return <GizmoMesh geometry={geometry} color={0xffffff} alpha={1} />;
+  return <GizmoMesh geometry={geometry} color={0xffffff} alpha={1} order={source?.drawOrder} />;
 }
