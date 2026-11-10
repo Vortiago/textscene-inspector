@@ -1148,7 +1148,8 @@ func _await_rendered(source: Viewport) -> void:
 	var quiet_since := Time.get_ticks_msec()
 	while Engine.get_process_frames() < NEVER_SETTLES_CAPTURE_FRAME:
 		await RenderingServer.frame_post_draw
-		var picture := _viewport_image(source).get_data()
+		# Raw texels: equal pictures stay equal after the HDR conversion, which would cost a pass per frame.
+		var picture := source.get_texture().get_image().get_data()
 		var now_pending := _pending_work()
 		var now_transforms := _global_transforms(movers)
 		var repeats := pictures.size() == period and picture == pictures[0]

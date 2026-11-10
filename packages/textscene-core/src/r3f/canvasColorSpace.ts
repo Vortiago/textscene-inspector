@@ -30,7 +30,7 @@ export interface CanvasColorSpace {
 }
 
 /** The default canvas: sRGB numbers in an 8-bit target (`rendering_server.cpp:3771`). */
-export const SRGB_CANVAS: CanvasColorSpace = {
+const SRGB_CANVAS: CanvasColorSpace = {
   isLinear: false,
   defines: CANVAS_SRGB_DEFINES,
   textureColorSpace: THREE.NoColorSpace,

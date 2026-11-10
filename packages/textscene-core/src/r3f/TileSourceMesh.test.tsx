@@ -22,7 +22,7 @@ import { NodePathProvider } from './contexts/NodePathContext';
 import { ViewportTexturePublisher, viewportEntry } from './testing/ViewportTexturePublisher';
 import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
 import { WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
-import { SRGB_CANVAS } from './canvasColorSpace';
+import { canvasColorSpaceOf } from './canvasColorSpace';
 import { isLocalToScene } from '../resources/textures/viewporttexture/localToScene';
 
 const TEXTURE = 'res://tiles.png';
@@ -30,7 +30,7 @@ const WHITE_TINT: VertexColorTint = {
   vertex: WHITE_MODULATE,
   color: new THREE.Color(1, 1, 1),
   opacity: 1,
-  defines: SRGB_CANVAS.defines,
+  defines: canvasColorSpaceOf(false).defines,
 };
 const grid: TileGrid = {
   shape: TileShape.TILE_SHAPE_SQUARE,
@@ -64,7 +64,7 @@ async function render(source: AtlasSourceModel, texture: THREE.Texture | null, s
 
 /** `source` drawn at `Root/Tiles`, beside a SubViewport published at `Root/SubViewport`. */
 async function renderBesideViewport(source: AtlasSourceModel, isTransparent: boolean) {
-  const target = createCanvasTarget(32, 32, 'SubViewport', SRGB_CANVAS);
+  const target = createCanvasTarget(32, 32, 'SubViewport', canvasColorSpaceOf(false));
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
       <ViewportTextureProvider>

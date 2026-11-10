@@ -512,12 +512,12 @@ describe('--mode 2d-root renders the scene as the root window', () => {
 });
 
 describe('bootstrapScript — the capture of an HDR viewport', () => {
-  it('converts the float image to sRGB before it saves, and the settle comparison reads the same picture', () => {
+  it('converts the float image to sRGB before it saves, and the settle comparison reads the raw texels', () => {
     const script = bootstrap();
     expect(script).toContain('_viewport_image(source).save_png(OUT)');
     expect(script).toContain('if source.use_hdr_2d:');
     expect(script).toContain('image.convert(Image.FORMAT_RGBAF)');
-    expect(script).toContain('var picture := _viewport_image(source).get_data()');
+    expect(script).toContain('var picture := source.get_texture().get_image().get_data()');
   });
 });
 

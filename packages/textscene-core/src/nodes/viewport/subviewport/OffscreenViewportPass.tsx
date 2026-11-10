@@ -16,6 +16,7 @@ import {
   WorldEnvironmentScope,
 } from '../../../r3f/environment/WorldEnvironmentScope';
 import { drawWith } from '../../../r3f/environment/sceneEnvironment';
+import { CanvasColorSpaceProvider } from '../../../r3f/canvasColorSpace';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
@@ -350,10 +351,12 @@ export function OffscreenViewportPass({
 
   const canvasBackdropAndItems = canvasOverWorld ? (
     <>
-      <PendingSuspense>
-        <CanvasOverWorld world={target.texture} size={viewSize} anchor={backdropAnchor} space={canvasSpace} />
-      </PendingSuspense>
-      <CanvasOverWorldScopeProvider>{canvasOverWorld}</CanvasOverWorldScopeProvider>
+      <CanvasColorSpaceProvider value={canvasSpace}>
+        <PendingSuspense>
+          <CanvasOverWorld world={target.texture} size={viewSize} anchor={backdropAnchor} />
+        </PendingSuspense>
+        <CanvasOverWorldScopeProvider>{canvasOverWorld}</CanvasOverWorldScopeProvider>
+      </CanvasColorSpaceProvider>
     </>
   ) : null;
   const canvasPortal =
