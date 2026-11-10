@@ -113,3 +113,14 @@ export function contentMarginSize(box: StyleBoxFlatData): Vector2 {
     y: box.contentMargin.top + box.contentMargin.bottom,
   };
 }
+
+/**
+ * Freezes a box and its nested colour, width and margin objects. A theme shares one box between
+ * states, so a consumer that edits a margin in place would change every state: it throws instead.
+ */
+export function freezeStyleBox(box: StyleBoxFlatData): Readonly<StyleBoxFlatData> {
+  for (const value of Object.values(box)) {
+    if (typeof value === 'object' && value !== null) Object.freeze(value);
+  }
+  return Object.freeze(box);
+}

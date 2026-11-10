@@ -350,6 +350,23 @@ describe('layoutButtonContent: expand_icon', () => {
   });
 });
 
+describe('layoutButtonContent: expand_icon with no room left', () => {
+  it('draws no icon but still takes its negative size off the text box (button.cpp:349-405)', () => {
+    // 56x62, margins 10/8, text 36x30: w=36-(36+4)=-4, h=46-30=16; iw=16>w -> iw=ih=-4.
+    const { icon, drawableSize } = layoutButtonContent({
+      ...BASE_INPUT,
+      rectSize: { x: 56, y: 62 },
+      styleMargin: { left: 10, top: 8, right: 10, bottom: 8 },
+      textNaturalSize: { x: 36, y: 30 },
+      expandIcon: true,
+      iconNaturalSize: { x: 24, y: 24 },
+      verticalIconAlignment: VERTICAL_ALIGNMENT_TOP,
+    });
+    expect(icon).toBeNull();
+    expect(drawableSize).toEqual({ x: 36, y: 50 });
+  });
+});
+
 describe('layoutButtonContent: icon_max_width clamps the FINAL icon size', () => {
   it('clamps a non-expanding icon before it is positioned', () => {
     const { icon } = layoutButtonContent({

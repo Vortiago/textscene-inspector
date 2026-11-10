@@ -268,7 +268,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     }
     size = fitIconSize(size, iconMaxWidth);
     size = { x: Math.round(size.x), y: Math.round(size.y) };
-    if (size.x > 0) iconSize = size;
+    iconSize = size;
   }
 
   let iconLayout: ButtonIconLayout | null = null;
@@ -307,13 +307,16 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
       if (verticalIconAlignment !== V_CENTER) drawableHeight -= iconSize.y;
     }
 
-    iconLayout = { rect: { x: Math.floor(iconX), y: Math.floor(iconY), w: iconSize.x, h: iconSize.y } };
+    // An `expand_icon` with no room left has a negative size: it reserves that much, and draws nothing.
+    if (iconSize.x > 0) {
+      iconLayout = { rect: { x: Math.floor(iconX), y: Math.floor(iconY), w: iconSize.x, h: iconSize.y } };
+    }
   }
 
   let textLayout: ButtonTextLayout | null = null;
   if (hasText) {
     let boxLeftPx = styleMargin.left;
-    if (iconLayout && iconAlign === H_LEFT) {
+    if (iconSize && iconAlign === H_LEFT) {
       // Only a LEFT icon pushes the text right. A RIGHT or CENTER icon has
       // already narrowed `drawableWidth`.
       boxLeftPx += customElementSize.x - drawableWidth;
@@ -322,7 +325,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
       boxLeftPx + buttonTextAlignShiftPx(textNaturalSize.x, drawableWidth, textAlign, isTextRtl);
 
     let textOffsetY = centredTextTopPx(drawableHeight, textNaturalSize.y, styleMargin.top);
-    if (iconLayout && verticalIconAlignment === V_TOP) {
+    if (iconSize && verticalIconAlignment === V_TOP) {
       textOffsetY += customElementSize.y - drawableHeight;
     }
     textLayout = { offset: { x: textOffsetX, y: textOffsetY }, boxLeftPx };

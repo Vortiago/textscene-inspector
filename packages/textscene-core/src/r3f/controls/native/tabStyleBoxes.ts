@@ -10,7 +10,7 @@
  */
 
 import type { Rgba } from '../../../godot/math/math';
-import { flatStyleBox, type StyleBoxFlatData } from './styleBoxFlat';
+import { flatStyleBox, freezeStyleBox, type StyleBoxFlatData } from './styleBoxFlat';
 
 /** `Color(1, 1, 1, 0.75)`: `style_focus_color` (`default_theme.cpp:117`), `style_tab_selected`'s top border (`:975-976`). */
 const TAB_SELECTED_BORDER_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.75 };
@@ -26,10 +26,10 @@ const TAB_SELECTED_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.6 };
 const TAB_HOVERED_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.3 };
 
 export interface TabBarStyleBoxes {
-  selected: StyleBoxFlatData;
-  unselected: StyleBoxFlatData;
-  disabled: StyleBoxFlatData;
-  hovered: StyleBoxFlatData;
+  readonly selected: Readonly<StyleBoxFlatData>;
+  readonly unselected: Readonly<StyleBoxFlatData>;
+  readonly disabled: Readonly<StyleBoxFlatData>;
+  readonly hovered: Readonly<StyleBoxFlatData>;
 }
 
 /**
@@ -37,6 +37,7 @@ export interface TabBarStyleBoxes {
  * `make_flat_stylebox(color, 10, 4, 10, 4, 0)`, each with a border width scaled
  * apart from the margins: `round(2 * scale)` on selected's top, `round(scale)` on
  * unselected's sides. `tab_disabled`/`tab_hovered` duplicate unselected and change only `bg_color` (`:982-985`).
+ * The boxes are frozen, because a theme shares them.
  */
 export function tabBarStyleBoxes(scale: number): TabBarStyleBoxes {
   const contentMargin = {
@@ -59,5 +60,10 @@ export function tabBarStyleBoxes(scale: number): TabBarStyleBoxes {
   const disabled = { ...unselected, bgColor: TAB_DISABLED_FILL };
   const hovered = { ...unselected, bgColor: TAB_HOVERED_FILL };
 
-  return { selected, unselected, disabled, hovered };
+  return {
+    selected: freezeStyleBox(selected),
+    unselected: freezeStyleBox(unselected),
+    disabled: freezeStyleBox(disabled),
+    hovered: freezeStyleBox(hovered),
+  };
 }

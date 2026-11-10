@@ -1026,6 +1026,7 @@ export const CANVAS_2D_SCENES = [
   // each type needs its own scene: CheckBox and CheckButton swap which edge the
   // check sits on, OptionButton its arrow, LinkButton its text origin.
   { name: 'button-rtl', file: 'unit-button-rtl.tscn', mode: '2d' },
+  { name: 'button-expand-icon-no-room', file: 'unit-button-expand-icon-no-room.tscn', mode: '2d' },
   { name: 'checkbox-rtl', file: 'unit-checkbox-rtl.tscn', mode: '2d' },
   { name: 'check-button-rtl', file: 'unit-check-button-rtl.tscn', mode: '2d' },
   { name: 'optionbutton-rtl', file: 'unit-optionbutton-rtl.tscn', mode: '2d' },

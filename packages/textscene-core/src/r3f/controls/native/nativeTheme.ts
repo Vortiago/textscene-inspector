@@ -5,7 +5,7 @@
  * rather than setting a CSS `rgba(...)` background.
  */
 
-import { flatStyleBox as makeFlatStyleBox } from './styleBoxFlat';
+import { flatStyleBox as makeFlatStyleBox, freezeStyleBox } from './styleBoxFlat';
 import {
   LINE_EDIT_BORDER_BOTTOM_WIDTH,
   scaledGodotTheme,
@@ -208,7 +208,7 @@ export function nativeTheme(scale: number): NativeTheme {
     right: scaled.contentMargin,
     bottom: scaled.contentMargin,
   };
-  const flatMenuButtonBox = flatStyleBox(TRANSPARENT, buttonMargin, 0);
+  const flatMenuButtonBox = freezeStyleBox(flatStyleBox(TRANSPARENT, buttonMargin, 0));
   const optionButtonMargin = {
     left: scaled.optionButtonMarginX,
     top: scaled.optionButtonMarginY,
