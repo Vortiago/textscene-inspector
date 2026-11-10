@@ -23,10 +23,10 @@ import {
   pickButtonStyleBox,
   tintColor,
   layoutButtonContent,
-  buttonTextBufWidthPx,
   isButtonAutowrapped,
   isButtonTextClipped,
   labelNaturalSize,
+  wrappedLabelWidthPx,
 } from '../../../../r3f/controls/native/buttonBase';
 import {
   buttonLabelShape,
@@ -143,15 +143,8 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   // `is_clipped` is true under autowrap (`:332`), so the icon's reservation does not move
   // with the text. Godot reaches the same state over two frames.
   const wraps = isButtonAutowrapped(props);
-  const drawableWidthPx = wraps
-    ? layoutButtonContent({
-        ...contentInput,
-        textNaturalSize: labelNaturalSize(unwrapped),
-        isTextRtl: infersRtl(unwrapped),
-      }).drawableSize.x
-    : 0;
   const layout: TextLayoutResult | null = wraps
-    ? buttonLabelShape(solveNode, theme, buttonTextBufWidthPx(drawableWidthPx))
+    ? buttonLabelShape(solveNode, theme, wrappedLabelWidthPx(contentInput, unwrapped))
     : unwrapped;
   const content = useMemo(
     () =>

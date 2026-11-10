@@ -12,7 +12,6 @@
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
@@ -21,12 +20,9 @@ import {
   pickButtonStyleBox,
   resolveToggleDrawState,
   shapeWrappedButtonLabel,
-  labelWrapWidthPx,
   labelMinimumTextSize,
-  labelNaturalSize,
   isButtonAutowrapped,
-  layoutButtonContent,
-  buttonTextBufWidthPx,
+  wrappedLabelWidthPx,
   type ButtonContentInput,
   type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
@@ -175,7 +171,7 @@ interface ButtonContentInputFields {
   hasText: boolean;
 }
 
-/** What `layoutButtonContent` reads of the node, shared by the painter and the wrap width of an expanded icon. The caller adds the shaped text's size. */
+/** What `layoutButtonContent` reads of the node, shared by the painter and the minimum-size solver. The caller adds the shaped text's size. */
 export function buttonContentInput(
   fields: ButtonContentInputFields
 ): Omit<ButtonContentInput, 'textNaturalSize' | 'isTextRtl'> {
@@ -197,56 +193,6 @@ export function buttonContentInput(
 }
 
 /**
- * The width the label wraps at beside an expanded icon: what the painter's layout leaves
- * (`button.cpp:345,428-432`), since the icon's size follows the box. 0 without a rect or an icon.
- */
-function expandedIconWrapWidthPx(
-  n: ShareNode,
-  props: ButtonProperties,
-  ctx: Pick<SolveContext, 'theme'>,
-  rect: Rect2,
-  styleMargin: ButtonContentInput['styleMargin']
-): number {
-  const unwrapped = buttonLabelShape(n, ctx.theme);
-  const { drawableSize } = layoutButtonContent({
-    ...buttonContentInput({
-      ...props,
-      isClipped: true,
-      constants: n.constants,
-      separationPx: ctx.theme.separation,
-      rtl: n.rtl,
-      rectSize: { x: rect.w, y: rect.h },
-      styleMargin,
-      iconNaturalSize: n.textureSize,
-      hasText: unwrapped !== null,
-    }),
-    textNaturalSize: labelNaturalSize(unwrapped),
-    isTextRtl: false,
-  });
-  return buttonTextBufWidthPx(drawableSize.x);
-}
-
-/**
- * The icon's share of the label's box, `drawable_size_remained.width`'s icon term
- * (`button.cpp:332-352`). The wrap width needs it before the text is shaped, so
- * before `layoutButtonContent` can run.
- */
-function buttonIconReservationPx(
-  n: ShareNode,
-  props: ButtonProperties,
-  ctx: Pick<SolveContext, 'theme'> & { theme: SolveContext['theme'] }
-): number {
-  if (!n.textureSize || n.textureSize.x <= 0 || n.textureSize.y <= 0) return 0;
-  if (
-    (props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT) ===
-    HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
-  )
-    return 0;
-  const iconSize = fitIconSize(n.textureSize, n.constants.icon_max_width ?? 0);
-  return Math.round(iconSize.x) + Math.max(0, n.constants.h_separation ?? ctx.theme.separation);
-}
-
-/**
  * `Button::get_minimum_size_for_text_and_icon` (`button.cpp:481-526`), shaped by {@link buttonLabelShape},
  * without `align_to_largest_stylebox`, which the default theme disables (`:174`). `n.rtl` reaches only
  * the stylebox pick (`:525`, `<state>_mirrored`): the icon terms test `horizontal_icon_alignment`
@@ -259,14 +205,27 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
   const hasText = (props.text ?? '').length > 0;
-  // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height
-  // depends on. Pass 1 shapes unwrapped. `is_clipped` is true under autowrap
-  // (`button.cpp:332`), so the icon's reservation does not depend on the text.
+  // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height depends on.
+  // Pass 1 shapes unwrapped. The label wraps at what the painter's layout leaves beside the icon.
   const rect = ctx.tentativeRect?.(n);
   const wrapWidthPx =
-    props.expandIcon && n.textureSize && rect && isButtonAutowrapped(props)
-      ? expandedIconWrapWidthPx(n, props, ctx, rect, styleBox.contentMargin)
-      : labelWrapWidthPx(props, rect, marginX, () => buttonIconReservationPx(n, props, ctx));
+    rect && isButtonAutowrapped(props)
+      ? wrappedLabelWidthPx(
+          buttonContentInput({
+            ...props,
+            isClipped: true,
+            constants: n.constants,
+            separationPx: ctx.theme.separation,
+            rtl: n.rtl,
+            rectSize: { x: rect.w, y: rect.h },
+            styleMargin: styleBox.contentMargin,
+            iconNaturalSize: n.textureSize,
+            hasText,
+          }),
+          // `is_clipped` leaves the text's width out of the icon, so only an expanded icon reads its height.
+          props.expandIcon ? buttonLabelShape(n, ctx.theme) : null
+        )
+      : 0;
   // An absent `ctx.measureText` means the text contributes nothing, while the margin and
   // the icon still count (`solverRegistry.ts`'s contract).
   const layout: TextLayoutResult | null = ctx.measureText

@@ -18,6 +18,7 @@ import { drawnLinesInBox, textParagraphLineShiftPx } from './text/lineDrawClip';
 import {
   BREAK_TRIM_END_EDGE_SPACES,
   clampAutowrapMode,
+  infersRtl,
   shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
@@ -205,7 +206,7 @@ export interface ButtonContentInput {
   /** Whether the shaped text infers RTL (`shaped_text_get_inferred_direction`): an overflowing CENTER line then ends at the trailing edge. */
   isTextRtl: boolean;
   /** `clip_text`, a trimming overrun or autowrap (`button.cpp:332`): an expanded icon then keeps the text's width (`:345`). */
-  isClipped?: boolean;
+  isClipped: boolean;
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): swaps the icon and text alignment sides. */
   rtl: boolean;
 }
@@ -427,6 +428,7 @@ function iconOnlyButtonIconRect(
     hasText: false,
     textNaturalSize: { x: 0, y: 0 },
     isTextRtl: false,
+    isClipped: false,
     rtl,
   });
   return icon?.rect ?? null;
@@ -481,12 +483,30 @@ export function labelNaturalSize(layout: TextLayoutResult | null): Vector2 {
   return layout ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx } : { x: 0, y: 0 };
 }
 
+/**
+ * The width a wrapping label shapes at: what `layoutButtonContent` leaves of the box after the icon
+ * (`button.cpp:428-432`), from the label's unwrapped shape. The painter and the minimum-size solver
+ * both call it, so they wrap alike.
+ */
+export function wrappedLabelWidthPx(
+  input: Omit<ButtonContentInput, 'textNaturalSize' | 'isTextRtl'>,
+  unwrapped: TextLayoutResult | null
+): number {
+  const { drawableSize } = layoutButtonContent({
+    ...input,
+    textNaturalSize: labelNaturalSize(unwrapped),
+    isTextRtl: infersRtl(unwrapped),
+  });
+  return buttonTextBufWidthPx(drawableSize.x);
+}
+
 /** A shaped label's contribution to a minimum size: its text width ({@link textMinimumWidthPx}) and height, or none without a layout. */
 export function labelMinimumTextSize(
   layout: TextLayoutResult | null,
   props: TextClipProperties & ButtonWrapProperties
 ): Vector2 {
-  return layout ? { x: textMinimumWidthPx(layout.widthPx, props), y: layout.heightPx } : { x: 0, y: 0 };
+  const size = labelNaturalSize(layout);
+  return isButtonTextClipped(props) ? { x: 0, y: size.y } : size;
 }
 
 /** The text's contribution to a CheckBox-style minimum size: its wrapped layout through {@link labelMinimumTextSize}, or none without text or a measurer. */
