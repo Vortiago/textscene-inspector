@@ -16,6 +16,7 @@ import {
   DisplayMode,
   firstFilterLabel,
   isOpenFileMode,
+  FILE_DIALOG_THEME_ICONS,
   type FileDialogThemeIcon,
 } from '../../../godot/scene/fileDialog';
 import { SizeFlags } from '../../../godot/scene/control';
@@ -24,6 +25,7 @@ import { flatButtonBoxes } from '../../../r3f/controls/native/flatButtonBoxes';
 import { FILE_DIALOG_ICON_URLS } from '../../../r3f/controls/native/themeIcons';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
+import { themedSlotRequest, type TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
 import { perObject } from '../../../utils/perObject';
 import { syntheticControl } from '../acceptdialog/dialogParts';
 import type { FileDialogOption, FileDialogProperties } from './parser';
@@ -271,6 +273,21 @@ function themedIconsOf(
   return themed ? { [name]: themed } : undefined;
 }
 
+/**
+ * The size of a toolbar icon: the dialog Theme's texture once its size is known, `null` until then, and the
+ * vendored default's `FILE_DIALOG_ICON_SIZE` when the Theme gives none.
+ */
+function iconSizeOf(dialog: SolveNode, name: FileDialogThemeIcon): Vector2 | null {
+  return dialog.icons[name] ? (dialog.textureSlots[name] ?? null) : FILE_DIALOG_ICON_SIZE;
+}
+
+/** One slot for each toolbar icon a Theme gives the dialog, so `iconSizeOf` reads its size. */
+export const fileDialogTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) =>
+  FILE_DIALOG_THEME_ICONS.flatMap((name) => {
+    const themed = themedIcons[name];
+    return themed ? [themedSlotRequest(name, themed)] : [];
+  });
+
 function build(dialog: SolveNode, theme: NativeTheme, spec: Widget, parentPath: string): SolveNode {
   const parsed = parseNodeWithRegistry(
     { type: 'node', attributes: { name: spec.name, type: spec.type } },
@@ -294,7 +311,7 @@ function build(dialog: SolveNode, theme: NativeTheme, spec: Widget, parentPath: 
     variation: spec.variation,
     variationDefaults: isFlatButton(spec.variation) ? { styleBoxes: flatButtonBoxes(theme) } : undefined,
     icons: themedIconsOf(dialog, spec.icon),
-    textureSize: spec.icon ? FILE_DIALOG_ICON_SIZE : undefined,
+    textureSize: spec.icon && iconSizeOf(dialog, spec.icon),
   });
 }
 

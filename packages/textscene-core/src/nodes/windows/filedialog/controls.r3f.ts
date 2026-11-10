@@ -2,7 +2,9 @@
 
 import { registerDialogControls } from '../acceptdialog/controls.r3f';
 import { registerDialogBody } from '../acceptdialog/dialogParts';
-import { fileDialogBody } from './body';
+import { controlSolverRegistry } from '../../../r3f/controls/native/solverRegistry';
+import { fileDialogBody, fileDialogTextureSlots } from './body';
 
 registerDialogControls('FileDialog');
 registerDialogBody('FileDialog', fileDialogBody);
+controlSolverRegistry.registerTextureSlots('FileDialog', fileDialogTextureSlots);

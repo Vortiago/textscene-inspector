@@ -61,12 +61,6 @@ Strict parsing format-checks these `FileDialog` properties, plus 1 inherited fro
 | `valid-filedialog-properties` (type-family match) | `filedialog-option-index-out-of-range` | error |
 <!-- lint:end -->
 
-The lenient parser registers the plain `Node` reader, which reads only the heading attributes and an optional `transform`. A `file_mode` of `5`, which `set_file_mode` refuses at runtime, is never read, substituted or reported on the lenient path.
-
-## Known limitations
-
-- **Not drawn** Godot displays the dialog once popped up, but the previewer draws nothing for it.
-
 ## Known limitations
 
 - **Not drawn** The file list always shows no entry, so a folder's files and directories do not appear, and the Favorites and Recent lists stay empty.

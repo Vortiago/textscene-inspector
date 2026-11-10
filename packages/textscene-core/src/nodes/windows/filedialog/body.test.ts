@@ -15,6 +15,7 @@ import '../../../r3f/controls/index';
 import { dialogGeometry } from '../acceptdialog/dialogLayout';
 import { wrappedWindowSize } from '../window/wrapControls';
 import oracle from './testing/fileDialogGeometry/oracle.out.json';
+import { fileDialogTextureSlots } from './body';
 import { parseFileDialog } from './parser';
 
 const THEME = nativeTheme(1);
@@ -155,5 +156,40 @@ describe.each(Object.keys(CASES))('FileDialog %s', (name) => {
     const placed = body.map(({ control, rect }) => ({ type: control.node.type, rect }));
     const wanted = oracleBody(expected.nodes).map((row) => ({ type: row.type, rect: rectOf(row.rect) }));
     expect(placed).toEqual(wanted);
+  });
+});
+
+describe('FileDialog toolbar icon sizes', () => {
+  const themedIcon = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
+  const prevWidth = (dialog: SolveNode) => {
+    const ctx = createSolveContext(THEME, measureText);
+    const prev = dialogGeometry(dialog, { x: 640, y: 360 }, ctx).body.find(
+      ({ control }) => control.node.name === 'DirPrev'
+    );
+    return prev!.rect.w;
+  };
+  const base = fileDialog(CASES.open!);
+
+  it('gives the vendored default the 16x16 it has', () => {
+    expect(prevWidth(base)).toBe(prevWidth({ ...base, icons: {}, textureSlots: {} }));
+  });
+
+  it('lays out the size of the texture a Theme gives the icon', () => {
+    const themed = {
+      ...base,
+      icons: { back_folder: themedIcon },
+      textureSlots: { back_folder: { x: 40, y: 40 } },
+    };
+    expect(prevWidth(themed)).toBeGreaterThan(prevWidth(base));
+  });
+
+  it('makes no room for a themed icon whose size is not known yet', () => {
+    const loading = { ...base, icons: { back_folder: themedIcon }, textureSlots: { back_folder: null } };
+    expect(prevWidth(loading)).toBeLessThan(prevWidth(base));
+  });
+
+  it('requests one slot for each icon the Theme gives', () => {
+    const requests = fileDialogTextureSlots(base.node, { back_folder: themedIcon });
+    expect(requests.map(({ key }) => key)).toEqual(['back_folder']);
   });
 });

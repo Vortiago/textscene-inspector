@@ -5,6 +5,7 @@
  */
 
 import { neutralStyleBox } from '../../../resources/styles/stylebox/decode';
+import { perObject } from '../../../utils/perObject';
 import type { NativeTheme } from './nativeTheme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 
@@ -14,7 +15,8 @@ export type FlatButtonBoxes = Readonly<Record<'normal' | 'hover' | 'pressed' | '
 /** `flat_button_pressed` (`default_theme.cpp:363-364`): `button_pressed` with `style_pressed_color * Color(1, 1, 1, 0.85)`. */
 const PRESSED_ALPHA = 0.85;
 
-export function flatButtonBoxes(theme: NativeTheme): FlatButtonBoxes {
+/** The boxes of `theme`, built once per theme: each Button of a dialog body asks for them. */
+export const flatButtonBoxes = perObject((theme: NativeTheme): FlatButtonBoxes => {
   const { normal, pressed } = theme.widgets.button;
   // `button_normal->get_margin(side) + get_border_width(side)` (`default_theme.cpp:361-363`).
   const margin = {
@@ -30,4 +32,4 @@ export function flatButtonBoxes(theme: NativeTheme): FlatButtonBoxes {
     disabled: empty,
     pressed: { ...pressed, bgColor: { ...pressed.bgColor, a: pressed.bgColor.a * PRESSED_ALPHA } },
   };
-}
+});

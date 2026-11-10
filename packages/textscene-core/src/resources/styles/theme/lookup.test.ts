@@ -570,6 +570,14 @@ describe('the default theme font size of a Label type variation (default_theme.c
     expect(sizeOf(variation)).toBe(size);
   });
 
+  it('does not scale with the theme: the step adds to the unscaled default_font_size (default_theme.cpp:50,395)', () => {
+    const scope = themeResolutionScope('Label', 'HeaderSmall', [], {
+      ...NO_PROJECT_FONTS,
+      projectTheme: null,
+    });
+    expect(resolveThemeFontSizeIn(scope, 'font_size', undefined, 32)).toBe(20);
+  });
+
   it('keeps the built-in size for a variation the default theme lacks', () => {
     expect(sizeOf('Unknown')).toBe(16);
     expect(sizeOf(undefined)).toBe(16);

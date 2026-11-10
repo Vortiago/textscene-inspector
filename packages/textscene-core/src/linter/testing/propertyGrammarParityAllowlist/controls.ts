@@ -114,11 +114,12 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   // Like the container bases, BaseButton has no parser.ts, so one entry covers
-  // Button and every button leaf below it. `disabled` is absent because
-  // button/parser.ts does read it: the preview dims a disabled button.
+  // Button and every button leaf below it. `disabled` and `button_pressed` are absent because
+  // button/parser.ts reads them: the preview dims a disabled button and draws a toggle that is on
+  // pressed. `toggle_mode` stays for the leaves that do not read it, as a Button reads it only with `button_pressed`.
   BaseButton: {
     linterOnly: [
-      // Interaction state and press semantics, all meaningless in a still frame.
+      // Press semantics, all meaningless in a still frame.
       'toggle_mode',
       'action_mode',
       'button_mask',
