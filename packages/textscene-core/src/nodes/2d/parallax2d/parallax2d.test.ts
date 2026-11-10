@@ -1,25 +1,22 @@
-/**
- * Parallax2D is parsed and validated, not yet rendered. Its base component
- * registers under `renderIntent: 'pending'`, so the badge reads a gap.
- */
+/** Parallax2D registers its own parser and a drawing component. */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
 import { rendersOwnVisual } from '../../../r3f/nodeSupport';
-import { parseNode2D } from '../../base/node2d/parser';
+import { Parallax2D } from './Component';
+import { parseParallax2D } from './parser';
 import './index';
 import './index.r3f';
 
 describe('Parallax2D registration', () => {
-  it('registers the parseNode2D parse it reuses', () => {
-    const registration = nodeRegistry.getRegistration('Parallax2D');
-    expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode2D);
+  it('registers the parse that reads the scroll keys', () => {
+    expect(nodeRegistry.getRegistration('Parallax2D')!.parser).toBe(parseParallax2D);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('Parallax2D')).toBe('pending');
-    expect(rendersOwnVisual('Parallax2D')).toBe('not-implemented');
+  it('registers its component as a drawn node, not a declared gap', () => {
+    expect(nodeComponentRegistry.get('Parallax2D')).toBe(Parallax2D);
+    expect(nodeComponentRegistry.renderIntentOf('Parallax2D')).not.toBe('pending');
+    expect(rendersOwnVisual('Parallax2D')).not.toBe('not-implemented');
   });
 });

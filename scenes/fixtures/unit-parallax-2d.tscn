@@ -15,3 +15,10 @@ limit_end = Vector2(2000, 2000)
 follow_viewport = false
 ignore_camera_scroll = true
 screen_offset = Vector2(0, -10)
+
+; Godot 4.6.3 draws this square at (10, 105) and (522, 105): `_update_scroll` moves the node to
+; (-502, 5) and `repeat_times = 3` draws the copies at -512, 0, 512 and 1024 px.
+[node name="Square" type="Polygon2D" parent="MyParallax2D"]
+position = Vector2(0, 100)
+color = Color(0.9, 0.7, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 40, 0, 40, 40, 0, 40)

@@ -1,17 +1,17 @@
 ---
 type: Parallax2D
 category: 2D
-status: unimplemented
+status: done
 fixture: unit-parallax-2d.tscn
-# image: unit-parallax-2d
-renders_as: nothing yet, Godot repeats and scroll-offsets its children, the previewer does not
+image: unit-parallax-2d
+renders_as: a Node2D scrolled by the camera, repeated over repeat_size
 ---
 
 # Parallax2D
 
 Parallax2D repeats and scroll-offsets its children to fake camera depth. The previewer
-parses and validates it but applies no motion, so it draws nothing
-and its children show at their authored transform.
+replaces its position with Godot's scroll formula each render pass and draws the subtree once
+per repeat copy. A sub-viewport's current Camera2D writes the screen offset.
 
 ## Linting
 
@@ -38,11 +38,14 @@ Strict parsing format-checks these `Parallax2D` properties, plus 12 inherited fr
 |  | `canvasitem-ancestor-is-canvasgroup` | warning |
 <!-- lint:end -->
 
-The lenient parser reuses `parseNode2D` unchanged, so none of the ten parallax keys is
-read. A malformed `repeat_size` or `repeat_times` is dropped with no fallback, the same
-as a well-formed one.
+An unreadable scroll key falls back to its Godot default: `scroll_scale` `Vector2(1, 1)`,
+the offsets and `repeat_size` `Vector2(0, 0)`, `repeat_times` 1, the limits `-10000000` and
+`10000000`, `follow_viewport` true. A negative `repeat_size` component is clamped to `0` and
+`repeat_times` below 1 to 1, as the setters do.
 
 ## Known limitations
 
-- **Not drawn** The children draw once, at their authored transform, without the scroll
-  offset and repeats Godot applies to them.
+- **Needs runtime** `autoscroll` moves the node only in a running game, so a still frame
+  shows none, as in Godot.
+- **Approximated** Picking a repeat copy, other than the last, selects the Parallax2D's
+  child, not the copy.
