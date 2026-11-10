@@ -67,8 +67,8 @@ function buildMenuModel(
 }
 
 /**
- * The model of the scene's own items. Shaping each label is the heaviest work of a menu (225 ms for 2000
- * items), and the minimum and the chrome both read the model, so one node shapes once per theme and measurer.
+ * The model of the scene's own items. Shaping each label is the heaviest work of a menu, and the minimum
+ * and the chrome both read the model, so one node shapes once per theme and measurer.
  */
 export function menuModel(n: SolveNode, ctx: Pick<SolveContext, 'theme' | 'measureText'>): MenuModel {
   const cached = modelOfNode.get(n);
@@ -124,9 +124,10 @@ export const popupMenuContentsMinimumSize: MinimumSizeFn = (n, ctx) =>
 
 /** The minimum of the items set when the `size` line is applied: the menu is not in the tree, so nothing limits its height. */
 export const popupMenuLoadedMinimumSize: LoadedMinimumSizeFn = (n, ctx) => {
-  const { itemsAtSize } = n.node.properties as PopupMenuProperties;
+  const { items, itemsAtSize } = n.node.properties as PopupMenuProperties;
   if (!itemsAtSize) return null;
-  return contentsMinimumSize(n, ctx, buildMenuModel(n, ctx, itemsAtSize), Number.POSITIVE_INFINITY);
+  const model = itemsAtSize === items ? menuModel(n, ctx) : buildMenuModel(n, ctx, itemsAtSize);
+  return contentsMinimumSize(n, ctx, model, Number.POSITIVE_INFINITY);
 };
 
 export interface MenuRow {

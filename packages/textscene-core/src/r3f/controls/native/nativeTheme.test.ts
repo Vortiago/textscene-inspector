@@ -266,6 +266,13 @@ describe('nativeTheme', () => {
     });
   });
 
+  describe('dialogPanel', () => {
+    it('scales the margin twice, as the call passes a scaled margin to make_flat_stylebox', () => {
+      expect(nativeTheme(1).widgets.dialogPanel.contentMargin).toEqual(uniform(8));
+      expect(nativeTheme(1.5).widgets.dialogPanel.contentMargin).toEqual(uniform(18));
+    });
+  });
+
   describe('cache', () => {
     it('returns the same theme for the same scale', () => {
       expect(nativeTheme(1)).toBe(nativeTheme(1));

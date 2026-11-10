@@ -42,7 +42,12 @@ async function meshBounds(window: SolveNode) {
     const mesh = instance as THREE.Mesh;
     mesh.updateWorldMatrix(true, false);
     const box = new THREE.Box3().setFromObject(mesh);
-    return { x: box.min.x, y: -box.max.y + 0, w: box.max.x - box.min.x, h: box.max.y - box.min.y };
+    return {
+      x: box.min.x, // `0 -`, not a bare negation: it turns -0 into 0 for `toEqual`.
+      y: 0 - box.max.y,
+      w: box.max.x - box.min.x,
+      h: box.max.y - box.min.y,
+    };
   });
 }
 

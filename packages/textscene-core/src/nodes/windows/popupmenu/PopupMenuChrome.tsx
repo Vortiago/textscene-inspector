@@ -82,7 +82,7 @@ function RowText({ text, tint, renderOrder }: PartProps & { text: NonNullable<Ro
   const color = useMemo(() => tintColor(text.color, tint.own), [text.color, tint.own]);
   const outline = useTintedOutline(text.outline, tint.own);
   return (
-    <CanvasItemGroup position={[text.position.x, -text.position.y, 0]}>
+    <CanvasItemGroup position={[text.position.x, -text.position.y, 0]} renderOrder={renderOrder}>
       <OutlinedTextRun
         layout={text.layout}
         outline={outline}
@@ -108,7 +108,7 @@ const RowParts = memo(function RowParts({ drawing, iconRef, solveNode, tint, ren
   return (
     <>
       {drawing.separators.map(({ style, rect }, index) => (
-        <CanvasItemGroup key={index} position={[rect.x, -rect.y, 0]}>
+        <CanvasItemGroup key={index} position={[rect.x, -rect.y, 0]} renderOrder={renderOrder}>
           <StyleBoxQuad
             styleBox={style}
             color={tint.own}

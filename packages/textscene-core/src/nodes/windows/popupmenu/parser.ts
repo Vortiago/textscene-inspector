@@ -52,9 +52,9 @@ export function parsePopupMenu(
 ): PopupMenuProperties {
   const window = parseWindow(heading, properties);
   const beforeSize = propertiesBeforeSize(properties);
-  return {
-    ...window,
-    items: parseItems(properties, window.name),
-    itemsAtSize: beforeSize && parseItems(beforeSize, window.name),
-  };
+  const items = parseItems(properties, window.name);
+  const itemsAtSize = beforeSize && parseItems(beforeSize, window.name);
+  // The same array when the size line follows every item, so the layout shapes the items once.
+  const isSameItems = itemsAtSize !== null && JSON.stringify(itemsAtSize) === JSON.stringify(items);
+  return { ...window, items, itemsAtSize: isSameItems ? items : itemsAtSize };
 }

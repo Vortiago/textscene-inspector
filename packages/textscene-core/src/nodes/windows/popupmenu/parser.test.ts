@@ -88,4 +88,13 @@ describe('parsePopupMenu itemsAtSize', () => {
     const items = parse({ item_count: '1', size: 'Vector2i(300, 200)', 'item_0/text': '"Open"' });
     expect(items?.map(({ text }) => text)).toEqual(['']);
   });
+
+  it('is the very array of items when the size line follows every item', () => {
+    const menu = parsePopupMenu(heading('PopupMenu', { name: 'Menu' }), {
+      item_count: '1',
+      'item_0/text': '"Open"',
+      size: 'Vector2i(300, 200)',
+    });
+    expect(menu.itemsAtSize).toBe(menu.items);
+  });
 });

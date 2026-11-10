@@ -4,7 +4,6 @@
  * mounts the Control walker into a detached scene, draws it through a fixed camera
  * framing the target rect, and publishes a texture consumers sample directly.
  */
-import { embedsSubwindows } from './viewportBoundary.js';
 import { useCallback, useMemo } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -25,6 +24,7 @@ import {
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { useCanvasPass } from './useCanvasPass.js';
 import { useResolvedGate } from './useViewportGate.js';
+import { embedsSubwindows } from './viewportBoundary.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import { useViewportRenderState } from './useGatedViewport.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';

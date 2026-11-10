@@ -95,8 +95,8 @@ export function widestCheckIcon(n: Pick<SolveNode, 'textureSlots'>): number {
 }
 
 /** `_get_item_icon_size` (`popup_menu.cpp:189-209`): the icon at its texture size, limited to `icon_max_width`. */
-function itemIconSize(n: SolveNode, index: number, theme: PopupMenuTheme): Vector2 {
-  const natural = n.textureSlots[menuItemIconSlot(index)];
+function itemIconSize(n: SolveNode, item: PopupMenuItem, index: number, theme: PopupMenuTheme): Vector2 {
+  const natural = item.icon === undefined ? undefined : n.textureSlots[menuItemIconSlot(index)];
   return natural ? fitIconSize(natural, theme.iconMaxWidth) : { x: 0, y: 0 };
 }
 
@@ -152,7 +152,7 @@ export function menuItems(
   return items.map((item, index) => {
     const text = ctx.measureText ? shapeItem(n, item, theme) : null;
     const textSize = text ? { x: shapedTextSizeWidthPx(text.widthPx), y: text.heightPx } : { x: 0, y: 0 };
-    const iconSize = itemIconSize(n, index, theme);
+    const iconSize = itemIconSize(n, item, index, theme);
     const hasIcon = item.icon !== undefined && n.textureSlots[menuItemIconSlot(index)] !== undefined;
     return {
       item,

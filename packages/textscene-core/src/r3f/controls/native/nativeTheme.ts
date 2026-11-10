@@ -193,7 +193,7 @@ const SPLIT_CONTAINER_AUTOHIDE = true;
 // A widget reuses `contentMargin`/`cornerRadius` where its `default_theme.cpp` call passes
 // `default_margin` (4) or `default_corner_radius` (3). A call passing another
 // literal, such as ScrollBar's 10, gets its own scaled constant.
-/** The AcceptDialog panel margin before the theme scale (`default_theme.cpp:693`). */
+/** The AcceptDialog panel margin before the theme scale, which `default_theme.cpp:693` applies twice. */
 const DIALOG_PANEL_MARGIN = 8;
 
 /** Written only by `nativeTheme`. One project setting gives one scale, so one entry is enough. */
@@ -219,11 +219,13 @@ function buildNativeTheme(scale: number): NativeTheme {
     right: scaled.optionButtonMarginX,
     bottom: scaled.optionButtonMarginY,
   };
+  // The call passes `Math::round(8 * scale)`, and `make_flat_stylebox` scales that margin again.
+  const dialogMargin = scaledPx(scaledPx(DIALOG_PANEL_MARGIN, scale), scale);
   const dialogPanelMargin = {
-    left: scaledPx(DIALOG_PANEL_MARGIN, scale),
-    top: scaledPx(DIALOG_PANEL_MARGIN, scale),
-    right: scaledPx(DIALOG_PANEL_MARGIN, scale),
-    bottom: scaledPx(DIALOG_PANEL_MARGIN, scale),
+    left: dialogMargin,
+    top: dialogMargin,
+    right: dialogMargin,
+    bottom: dialogMargin,
   };
   const scrollBarCornerRadius = Math.round(SCROLL_BAR_CORNER_RADIUS * scale);
 

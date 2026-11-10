@@ -3,13 +3,15 @@
  * (`testing/menuGeometry/`, a 1152x648 embedder at the default theme scale).
  */
 import { describe, expect, it } from 'vitest';
+import { heading } from '../../../parser/testing/parserKit';
 import { createSolveContext } from '../../../r3f/controls/native/controlRectSolver';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { measureText } from '../../../r3f/controls/native/text/measurer';
 import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
-import { menuModel, popupMenuGeometry } from './menuLayout';
+import { menuModel, popupMenuGeometry, popupMenuLoadedMinimumSize } from './menuLayout';
+import { parsePopupMenu } from './parser';
 import { many, menu, text } from './testing/menuNode';
 
 const THEME = nativeTheme(1);
@@ -26,6 +28,19 @@ function sizeOf(window: SolveNode) {
 
 function geometryOf(window: SolveNode) {
   return popupMenuGeometry(window, sizeOf(window), menuModel(window, { theme: THEME, measureText }));
+}
+
+/** One item whose lines are written above the `size` line, and the `lateLines` below it. A sized icon stands in for the loaded texture. */
+function menuWithLines(lateLines: readonly string[]): SolveNode {
+  const base = menu([{ text: 'Open', icon: { x: 60, y: 30 } }]);
+  const late = Object.fromEntries(lateLines.map((key) => [key, 'ExtResource("1_icon")']));
+  const properties = parsePopupMenu(heading('PopupMenu', { name: 'Menu' }), {
+    item_count: '1',
+    'item_0/text': '"Open"',
+    size: 'Vector2i(300, 200)',
+    ...late,
+  });
+  return { ...base, node: { ...base.node, properties } };
 }
 
 const rect = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });
@@ -170,6 +185,13 @@ describe('a size line written below the items', () => {
     const sized = menu(many(30), {}, false, size);
     expect(sizeOf(sized).y).toBe(contentsMinimum(sized, unlimited).y);
     expect(sizeOf(sized).y).toBeGreaterThan(648);
+  });
+
+  it('measures no icon for an item whose icon line follows the size line', () => {
+    const iconBelow = menuWithLines(['item_0/icon']);
+    const iconless = menuWithLines([]);
+    const ctx = createSolveContext(THEME, measureText, undefined, EMBEDDER);
+    expect(popupMenuLoadedMinimumSize(iconBelow, ctx)).toEqual(popupMenuLoadedMinimumSize(iconless, ctx));
   });
 
   it('does not clamp to the items when the menu does not wrap its controls', () => {
