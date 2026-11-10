@@ -15,7 +15,7 @@ quadrants in Godot's cell order, as on TileMapLayer (`tile_map_layer.cpp:306-311
 `:412-566`). A quadrant draws as one or more canvas items, a new one at each change of
 tile material or `z_index`. Each canvas item takes its own lights at its layer's
 `z_index` plus the tile's own. A tile samples its atlas as on TileMapLayer, with
-`use_texture_padding` honoured.
+`use_texture_padding` honoured, and lights through its CanvasTexture's normal map as there.
 
 ## Linting
 

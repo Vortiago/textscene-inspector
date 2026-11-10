@@ -56,7 +56,7 @@ the square untinted by them.
 `height` tilts the light from the canvas plane, 0, toward the viewer, 1. A plain Sprite2D takes it
 head-on whatever the height. Two normal-mapped ones take it by their normals: Flat tilts to +x, and
 Dome sweeps from -x to +x. Each lands on Godot. A Polygon2D, Line2D, AnimatedSprite2D,
-CPUParticles2D or MeshInstance2D takes a normal map the same way.
+CPUParticles2D, MeshInstance2D, TileMapLayer or TileMap takes a normal map the same way.
 
 ## Linting
 

@@ -1,8 +1,8 @@
 /**
  * The hook side of `canvasItemLightingProps` and `normalMappedLightingProps`. It owns one set of
- * uniform objects per item for its whole life and mutates their `.value`: three captures what
- * `onBeforeCompile` assigns at first compile, and R3F never sets `needsUpdate`, so a fresh uniform
- * object never reaches the GPU.
+ * uniform objects per item, and one per normal-mapped surface, for their whole life and mutates
+ * their `.value`: three captures what `onBeforeCompile` assigns at first compile, and R3F never
+ * sets `needsUpdate`, so a fresh uniform object never reaches the GPU.
  */
 
 import { useMemo, useRef, useState, type RefObject } from 'react';
@@ -15,7 +15,7 @@ import {
   type CanvasItemLightingProps,
   type CanvasItemLightingUniforms,
 } from './canvasItemLighting.js';
-import { placementId, type LitItemRead } from './itemLightList.js';
+import { placementId, type ItemPlacement, type LitItemRead } from './itemLightList.js';
 import { releasedOnUnmount } from '../sharedTexture.js';
 import { useCanvasLayerIndex } from './canvasItemPlacement.js';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial.js';
@@ -24,7 +24,7 @@ import {
   type CanvasItemSurface,
   type NormalMappedLightingUniforms,
 } from './normalMappedLighting.js';
-import type { ApartLightBuffers } from './lightPassContext.js';
+import type { ApartLightBuffers, CanvasLightList } from './lightPassContext.js';
 import { defaultWhiteTexture } from '../materials/defaultWhiteTexture.js';
 
 export type { CanvasItemLightingProps };
@@ -102,35 +102,41 @@ function bindNormalMapped(
 }
 
 /**
- * The normal-mapped program's uniforms, created once and bound to `apart` and `surface` while both
- * are there.
+ * The normal-mapped program's uniforms, created once for the first surface and bound to `apart`
+ * and `surface` while both are there. Null while no surface has asked for them.
  */
 function useNormalMappedUniforms(
   plain: CanvasItemLightingUniforms,
   apart: ApartLightBuffers | null,
   surface: CanvasItemSurface | null
-): NormalMappedLightingUniforms {
+): NormalMappedLightingUniforms | null {
   const uniforms = useRef<NormalMappedLightingUniforms | null>(null);
-  uniforms.current ??= createNormalMappedUniforms(plain);
-  if (apart && surface) bindNormalMapped(uniforms.current, apart, surface);
+  if (surface) uniforms.current ??= createNormalMappedUniforms(plain);
+  if (uniforms.current && apart && surface) bindNormalMapped(uniforms.current, apart, surface);
   return uniforms.current;
 }
 
 /** Where an item sits and what it draws with, for its light list. */
-interface CanvasItemLightingOptions {
+interface LitItemOptions {
   material: CanvasItemMaterialProperties | null;
   /** The item's CanvasItem `light_mask`, or Godot's default 1 for a node without one. */
   lightMask?: number;
   /** The item's own `z_final`, which a light's z window tests (`canvasItemState.tsx`). */
   zFinal: number;
-  /** The item's normal and specular maps, or null for an item that has none. */
-  surface?: CanvasItemSurface | null;
 }
 
-/** What an item binds to read its light list. */
-interface CanvasItemLighting {
-  /** The material props, which never change once mounted. */
-  readonly props: CanvasItemLightingProps;
+/**
+ * What the surfaces of one lit canvas item share: its place, its light list and its plain
+ * uniforms. A surface is a mesh that draws with its own normal and specular maps, or with none.
+ */
+export interface LitItem {
+  readonly placement: ItemPlacement;
+  readonly lightMode: CanvasItemMaterialProperties['lightMode'];
+  /** Undefined while no light reaches the item. */
+  readonly list: CanvasLightList | undefined;
+  readonly plain: CanvasItemLightingUniforms;
+  /** The material props of a surface that has no normal map, which never change once mounted. */
+  readonly plainProps: CanvasItemLightingProps;
   /**
    * For the object that holds the item's own geometry, its child items left out. The per-item cap
    * measures its rect (`itemLightCap.ts`).
@@ -138,12 +144,7 @@ interface CanvasItemLighting {
   readonly geometryRef: RefObject<THREE.Object3D | null>;
 }
 
-export function useCanvasItemLighting({
-  material,
-  lightMask = 1,
-  zFinal,
-  surface = null,
-}: CanvasItemLightingOptions): CanvasItemLighting {
+export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions): LitItem {
   const { lists, resolution } = useCanvasLighting2D();
   const canvasLayer = useCanvasLayerIndex();
   // The raw canvas tint, not the light-mode-gated one: the shader divides out
@@ -159,11 +160,11 @@ export function useCanvasItemLighting({
   // past the render's budget, the item drops the later ones from its list.
   const geometryRef = useRef<THREE.Object3D | null>(null);
   const [takenLights, setTakenLights] = useState<readonly number[] | null>(null);
-  const placement = { lightMask, z: zFinal, layer: canvasLayer, takenLights };
+  const placement = useMemo<ItemPlacement>(
+    () => ({ lightMask, z: zFinal, layer: canvasLayer, takenLights }),
+    [lightMask, zFinal, canvasLayer, takenLights]
+  );
   useCapItemLights(placement, geometryRef, setTakenLights);
-  const readsNormals = surface !== null && lightMode !== CanvasItemMaterialLightMode.UNSHADED;
-  const read: LitItemRead = readsNormals ? 'apart' : lightOnly ? 'lightOnly' : 'plain';
-  useRegisterLitItem(placement, read);
   const list = lists.get(placementId(placement));
 
   const uniforms = useRef<CanvasItemLightingUniforms | null>(null);
@@ -184,17 +185,38 @@ export function useCanvasItemLighting({
   // mounted item, and three would keep the program it first compiled.
   bound.lightMode.value = lightMode;
 
+  const plainProps = useMemo(() => canvasItemLightingProps(bound), [bound]);
+  return useMemo(
+    () => ({ placement, lightMode, list, plain: bound, plainProps, geometryRef }),
+    [placement, lightMode, list, bound, plainProps]
+  );
+}
+
+/**
+ * The material props of one surface of `item`, which declare the accumulation the surface reads.
+ * A surface with a normal map takes each light apart, and one without takes the item's plain
+ * accumulation, so the surfaces of one item may read both.
+ */
+export function useSurfaceLighting(
+  item: LitItem,
+  surface: CanvasItemSurface | null
+): CanvasItemLightingProps {
+  const { placement, lightMode, list, plain, plainProps } = item;
+  const readsNormals = surface !== null && lightMode !== CanvasItemMaterialLightMode.UNSHADED;
+  const lightOnly = lightMode === CanvasItemMaterialLightMode.LIGHT_ONLY;
+  const read: LitItemRead = readsNormals ? 'apart' : lightOnly ? 'lightOnly' : 'plain';
+  useRegisterLitItem(placement, read);
+
   // A normal map scales each light by its own normal term, so it shades the lights the list keeps
   // apart.
   const apart = read === 'apart' ? (list?.apart ?? null) : null;
-  const shaded = useNormalMappedUniforms(bound, apart, surface);
+  const shaded = useNormalMappedUniforms(plain, apart, surface);
   const apartCount = apart?.places.length ?? 0;
 
   // Mode-independent by design: the props change only with the count of lights kept apart, which
   // sizes the program, and the key that follows it remounts the material.
-  const props = useMemo(
-    () => (apartCount > 0 ? normalMappedLightingProps(shaded, apartCount) : canvasItemLightingProps(bound)),
-    [bound, shaded, apartCount]
+  return useMemo(
+    () => (shaded && apartCount > 0 ? normalMappedLightingProps(shaded, apartCount) : plainProps),
+    [plainProps, shaded, apartCount]
   );
-  return useMemo(() => ({ props, geometryRef }), [props]);
 }

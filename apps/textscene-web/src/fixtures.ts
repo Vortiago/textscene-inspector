@@ -3767,6 +3767,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tilemaplayer Normal Map",
+    "file": "unit-tilemaplayer-normal-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Area Light Atlas Texture",
     "file": "unit-area-light-atlas-texture.tscn",
     "category": "Unit - Lights"

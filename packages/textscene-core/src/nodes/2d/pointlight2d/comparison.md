@@ -168,10 +168,10 @@ not listed. Here 100 directional lights leave room for the first 156 positional 
 
 <!-- compare: image=unit-pointlight2d-normal-map-height status=done fixture=unit-pointlight2d-normal-map-height.tscn -->
 
-A Sprite2D, Polygon2D, Line2D, AnimatedSprite2D, CPUParticles2D or MeshInstance2D whose
-CanvasTexture has a `normal_texture` takes each light at an angle, so `height` counts. Here two
-Sprite2Ds carry the same normal map, which tilts to +x. The light at height 0 lights only the side
-that faces it. The light at height 50 also reaches the side that faces away and the top.
+A Sprite2D, Polygon2D, Line2D, AnimatedSprite2D, CPUParticles2D, MeshInstance2D, TileMapLayer or
+TileMap whose CanvasTexture has a `normal_texture` takes each light at an angle, so `height`
+counts. Here two Sprite2Ds carry the same normal map, which tilts to +x. The light at height 0
+lights only the side that faces it. The light at height 50 also reaches the side that faces away and the top.
 The previewer keeps each light that reaches a normal-mapped item in a buffer of its own. The item
 shades each one by its normal, then blends them in Godot's order.
 

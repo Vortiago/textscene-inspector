@@ -67,6 +67,26 @@ describe('normalMappedLightingProps', () => {
     expect(shader.vertexShader).toContain('normalize(modelMatrix[0].xy)');
   });
 
+  it("samples the maps where a padded tile's diffuse is clamped (tile_set.cpp:5622-5671)", () => {
+    const { fragmentShader } = compile(1).shader;
+    expect(fragmentShader).toContain('#ifdef TILE_UV_BOUNDS');
+    expect(fragmentShader).toContain('clamp(vMapUv, vTileUvBounds.xy, vTileUvBounds.zw)');
+    expect(fragmentShader).toContain('texture2D(uNormalMap, surfaceUv())');
+    expect(fragmentShader).toContain('texture2D(uSpecularMap, surfaceUv())');
+  });
+
+  it("turns the normal by a tile's flips and transpose, transposed first (canvas.glsl:655-661)", () => {
+    const { fragmentShader } = compile(1).shader;
+    const orientation = fragmentShader.slice(fragmentShader.indexOf('#ifdef TILE_NORMAL_ORIENTATION'));
+    expect(orientation.indexOf('normal.xy = -normal.yx;')).toBeGreaterThan(-1);
+    expect(orientation.indexOf('normal.x = -normal.x;')).toBeGreaterThan(
+      orientation.indexOf('normal.xy = -normal.yx;')
+    );
+    expect(orientation.indexOf('normal.y = -normal.y;')).toBeGreaterThan(
+      orientation.indexOf('normal.xy = -normal.yx;')
+    );
+  });
+
   it('keys the program on the light count, which sizes it', () => {
     expect(compile(2).props.injection.cacheKey).not.toBe(compile(3).props.injection.cacheKey);
   });
