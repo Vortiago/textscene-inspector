@@ -265,4 +265,27 @@ describe('nativeTheme', () => {
       expect(theme.widgets.lineEdit.readOnly.borderWidth).toEqual({ left: 0, top: 0, right: 0, bottom: 2 });
     });
   });
+
+  describe('cache', () => {
+    it('returns the same theme for the same scale', () => {
+      expect(nativeTheme(1)).toBe(nativeTheme(1));
+    });
+
+    it('builds a new theme when the scale changes', () => {
+      const first = nativeTheme(1);
+      expect(nativeTheme(2)).not.toBe(first);
+      expect(nativeTheme(2).scale).toBe(2);
+    });
+
+    it('rebuilds for NaN, which never equals itself', () => {
+      expect(nativeTheme(Number.NaN)).not.toBe(nativeTheme(Number.NaN));
+    });
+  });
+
+  describe('popupMenuPanel corner detail', () => {
+    it('truncates the scaled detail to an int, as set_corner_detail does', () => {
+      expect(nativeTheme(1).widgets.popupMenuPanel.cornerDetail).toBe(5);
+      expect(nativeTheme(1.5).widgets.popupMenuPanel.cornerDetail).toBe(7);
+    });
+  });
 });

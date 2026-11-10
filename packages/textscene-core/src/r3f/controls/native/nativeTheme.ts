@@ -190,6 +190,12 @@ const SPLIT_CONTAINER_GRABBER_EXTENT = 8;
 /** `autohide` (`default_theme.cpp:1264-1266`). */
 const SPLIT_CONTAINER_AUTOHIDE = true;
 
+// A widget reuses `contentMargin`/`cornerRadius` where its `default_theme.cpp` call passes
+// `default_margin` (4) or `default_corner_radius` (3). A call passing another
+// literal, such as ScrollBar's 10, gets its own scaled constant.
+/** The AcceptDialog panel margin before the theme scale (`default_theme.cpp:693`). */
+const DIALOG_PANEL_MARGIN = 8;
+
 /** Written only by `nativeTheme`. One project setting gives one scale, so one entry is enough. */
 let lastTheme: { scale: number; theme: NativeTheme } | null = null;
 
@@ -198,12 +204,6 @@ export function nativeTheme(scale: number): NativeTheme {
   if (lastTheme?.scale !== scale) lastTheme = { scale, theme: buildNativeTheme(scale) };
   return lastTheme.theme;
 }
-
-// A widget reuses `contentMargin`/`cornerRadius` where its `default_theme.cpp` call passes
-// `default_margin` (4) or `default_corner_radius` (3). A call passing another
-// literal, such as ScrollBar's 10, gets its own scaled constant.
-/** The AcceptDialog panel margin before the theme scale (`default_theme.cpp:693`). */
-const DIALOG_PANEL_MARGIN = 8;
 
 function buildNativeTheme(scale: number): NativeTheme {
   const scaled = scaledGodotTheme(scale);
@@ -241,8 +241,9 @@ function buildNativeTheme(scale: number): NativeTheme {
           borderWidth: POPUP_MENU_DEFAULTS.panelBorderWidth,
           borderColor: POPUP_MENU_DEFAULTS.panelBorderColor,
         }),
-        // `make_flat_stylebox` sets `MIN(ceil(1.5 * radius), 6) * scale` (`default_theme.cpp:65`).
-        cornerDetail: Math.min(Math.ceil(1.5 * DEFAULT_CORNER_RADIUS), 6) * scale,
+        // `make_flat_stylebox` sets `MIN(ceil(1.5 * radius), 6) * scale` (`default_theme.cpp:65`),
+        // and `set_corner_detail` takes an `int`, so a fractional product truncates.
+        cornerDetail: Math.trunc(Math.min(Math.ceil(1.5 * DEFAULT_CORNER_RADIUS), 6) * scale),
       },
       dialogPanel: makeFlatStyleBox(STYLE_FILL.popup, {
         contentMargin: dialogPanelMargin,
