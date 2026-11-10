@@ -117,8 +117,7 @@ import {
   formatSliderValue,
   hexFieldText,
   hsvChannelGradientStops,
-  hsvHueChannelBase,
-  hsvHueChannelStops,
+  hsvHueChannelLayers,
   okhslHueChannelStops,
   okhslLightnessGradientStops,
   okhslSaturationGradientStops,
@@ -372,8 +371,9 @@ export function ColorPicker({
         stops = rgbChannelGradientStops(i, normalized);
       } else if (colorMode === MODE_HSV) {
         if (i === 0) {
-          underlay = { kind: 'grey', color: hsvHueChannelBase(normalized) };
-          stops = hsvHueChannelStops(normalized);
+          const hue = hsvHueChannelLayers(normalized);
+          underlay = { kind: 'grey', color: hue.base };
+          stops = hue.stops;
         } else {
           stops = hsvChannelGradientStops(i as 1 | 2, normalized);
         }

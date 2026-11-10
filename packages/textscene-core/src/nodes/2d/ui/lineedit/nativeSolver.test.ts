@@ -498,7 +498,7 @@ describe('layoutLineEditContent: NOTIFICATION_DRAW x_ofs/y_ofs (line_edit.cpp:13
     expect(result.textOffset.y).toBe(3);
   });
 
-  it("y_ofs includes the ACTIVE style's own TOP margin: `style->get_offset().y` (style_box.cpp:87-89) — not just the text/area centring term", () => {
+  it("y_ofs includes the ACTIVE style's own TOP margin: `style->get_offset().y` (style_box.cpp:87-89), not just the text/area centring term", () => {
     // A margin-heavy style shifts y_ofs down by its own top margin, while the centring term
     // (y_area - text_height)/2 matches the LEFT case above.
     const result = layoutLineEditContent({

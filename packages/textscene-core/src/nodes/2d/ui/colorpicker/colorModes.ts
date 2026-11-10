@@ -214,20 +214,16 @@ export function hsvChannelGradientStops(channel: 1 | 2, normalized: Rgba): [Rgba
 }
 
 /**
- * `ColorModeHSV::slider_draw`'s H channel (`color_mode.cpp:218-221`): a flat
- * grey base at `color.get_v()`, then the 7-stop `color_hue` rainbow over it with
- * a `Color::from_hsv(0, 0, v, s)` modulate. This is the base, and
- * `hsvHueChannelStops` is the rainbow.
+ * `ColorModeHSV::slider_draw`'s H channel (`color_mode.cpp:218-221`): a flat grey `base` at
+ * `color.get_v()`, then the 7-stop `color_hue` rainbow over it with a `Color::from_hsv(0, 0, v, s)`
+ * modulate. At `s` = 0 the rainbow vanishes. One extraction serves both.
  */
-export function hsvHueChannelBase(normalized: Rgba): Rgba {
-  const { v } = extractHsv(normalized);
-  return { r: v, g: v, b: v, a: 1 };
-}
-
-/** The `color_hue` stops of `hsvHueChannelBase`'s overlay, each times `v` at alpha `s`. At `s` = 0 the rainbow vanishes. */
-export function hsvHueChannelStops(normalized: Rgba): Rgba[] {
+export function hsvHueChannelLayers(normalized: Rgba): { base: Rgba; stops: Rgba[] } {
   const { s, v } = extractHsv(normalized);
-  return COLOR_HUE_STOPS.map((c) => ({ r: c.r * v, g: c.g * v, b: c.b * v, a: s }));
+  return {
+    base: { r: v, g: v, b: v, a: 1 },
+    stops: COLOR_HUE_STOPS.map((c) => ({ r: c.r * v, g: c.g * v, b: c.b * v, a: s })),
+  };
 }
 
 /**

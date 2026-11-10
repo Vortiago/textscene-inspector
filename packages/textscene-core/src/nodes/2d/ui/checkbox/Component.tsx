@@ -78,12 +78,17 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment, solveNode.rtl]
   );
 
+  const iconRect = useMemo(
+    () => ({ ...content.iconPosition, w: drawnIconSize.x, h: drawnIconSize.y }),
+    [content.iconPosition, drawnIconSize.x, drawnIconSize.y]
+  );
+
   // The icon colour is opaque white in both states (`default_theme.cpp:312-313`), and
   // the disabled SVGs carry their own dimming, so the icon takes the tint directly.
   return (
     <>
       <PositionedIcon
-        rect={{ ...content.iconPosition, w: drawnIconSize.x, h: drawnIconSize.y }}
+        rect={iconRect}
         texture={iconTexture}
         color={tint.color}
         opacity={tint.opacity}
