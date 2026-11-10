@@ -37,6 +37,8 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   // reach it through this parser and nothing else.
   CanvasLayer: '2d/ui/canvaslayer/parser.ts',
   Node: 'node/parser.ts',
+  // A ConfirmationDialog reads the message and the OK text through its AcceptDialog base.
+  AcceptDialog: 'windows/acceptdialog/parser.ts',
   // The container and mesh hops, measured by walking NODE_BASE_TYPES for every
   // slice that reuses a base parser.
   VBoxContainer: '2d/ui/vboxcontainer/parser.ts',

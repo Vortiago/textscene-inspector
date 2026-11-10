@@ -17,6 +17,9 @@ export const CONTROL_FONT_LOWER_COLOR: Rgba = { r: 0.65, g: 0.65, b: 0.65, a: 1 
 /** `control_font_hover_color` (`default_theme.cpp:104`). */
 export const CONTROL_FONT_HOVER_COLOR: Rgba = { r: 0.95, g: 0.95, b: 0.95, a: 1 };
 
+/** `control_font_focus_color` (`default_theme.cpp:105`): a focused Button's text, as bright as a hovered one's. */
+export const CONTROL_FONT_FOCUS_COLOR: Rgba = { ...CONTROL_FONT_HOVER_COLOR };
+
 /** `control_font_disabled_color`: {@link CONTROL_FONT_COLOR} at half alpha (`default_theme.cpp:106`). */
 export const CONTROL_FONT_DISABLED_COLOR: Rgba = { ...CONTROL_FONT_COLOR, a: 0.5 };
 
@@ -50,6 +53,8 @@ export const STYLE_FILL = {
   popupHover: { r: 0.4, g: 0.4, b: 0.4, a: 1 },
   /** `style_progress_color`. */
   progress: { r: 1, g: 1, b: 1, a: 0.4 },
+  /** `style_focus_color`. The outline of a focused Button. */
+  focus: { r: 1, g: 1, b: 1, a: 0.75 },
 } as const satisfies Record<string, Rgba>;
 
 /** `default_corner_radius` = 3 (px): the corner radius of every default flat stylebox. */

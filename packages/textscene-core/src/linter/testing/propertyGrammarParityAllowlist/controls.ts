@@ -7,6 +7,12 @@
 import type { AsymmetryEntry } from './types.js';
 
 export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
+  // Dialogs: closing a dialog needs input, so a frozen frame never shows it.
+  AcceptDialog: {
+    linterOnly: ['dialog_close_on_escape', 'dialog_hide_on_ok'],
+    reason: 'An Escape press or an OK press closes the dialog, and a frozen frame has neither.',
+  },
+
   // Text-bearing leaves: carets, selection, context menus and virtual keyboards
   // have no frozen-frame surface.
 

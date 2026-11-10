@@ -61,24 +61,42 @@ interface WindowClassDefaults {
   wrapControls: boolean;
   borderless: boolean;
   transparent: boolean;
+  exclusive: boolean;
+  title: string;
+  minSize: Vector2;
 }
 
-/** `window.h:126-140`: a Window starts visible, decorated and opaque. */
+/** `window.h:126-140`: a Window starts visible, decorated and opaque, with no title or size floor. */
 const WINDOW_DEFAULTS: WindowClassDefaults = {
   visible: true,
   wrapControls: false,
   borderless: false,
   transparent: false,
+  exclusive: false,
+  title: '',
+  minSize: { x: 0, y: 0 },
+};
+
+/** `AcceptDialog::AcceptDialog()` (`dialogs.cpp:464-470,497`): hidden, wrapping and exclusive. */
+const ACCEPT_DIALOG_DEFAULTS: WindowClassDefaults = {
+  ...WINDOW_DEFAULTS,
+  visible: false,
+  wrapControls: true,
+  exclusive: true,
+  title: 'Alert!',
 };
 
 /**
  * Each constructor's own flags, keyed by the class that sets them: `Popup::Popup()`
- * (`popup.cpp:215-225`) and `PopupPanel::PopupPanel()` (`popup.cpp:430`).
+ * (`popup.cpp:215-225`), `PopupPanel::PopupPanel()` (`popup.cpp:430`) and the two dialogs
+ * (`dialogs.cpp:464-534`).
  */
 const CLASS_DEFAULTS: Readonly<Record<string, WindowClassDefaults>> = {
   Window: WINDOW_DEFAULTS,
-  Popup: { visible: false, wrapControls: true, borderless: true, transparent: false },
-  PopupPanel: { visible: false, wrapControls: true, borderless: true, transparent: true },
+  Popup: { ...WINDOW_DEFAULTS, visible: false, wrapControls: true, borderless: true },
+  PopupPanel: { ...WINDOW_DEFAULTS, visible: false, wrapControls: true, borderless: true, transparent: true },
+  AcceptDialog: ACCEPT_DIALOG_DEFAULTS,
+  ConfirmationDialog: { ...ACCEPT_DIALOG_DEFAULTS, title: 'Please Confirm...', minSize: { x: 200, y: 70 } },
 };
 
 /** The defaults of `type`, from the nearest class in its chain that sets its own. */

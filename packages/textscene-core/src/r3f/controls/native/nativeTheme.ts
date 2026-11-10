@@ -72,6 +72,30 @@ function lineEditStyleBox(
   };
 }
 
+/** The focus outline's border width and expand margin before the theme scale (`default_theme.cpp:142-144`). */
+const FOCUS_BORDER_WIDTH = 2;
+
+/**
+ * `make_flat_stylebox(style_focus_color, 4, 4, 4, 4, 3, false, 2)` expanded by 2 (`default_theme.cpp:142-144`):
+ * an uncentred ring that sits flush outside the button it marks. The colour only fills the centre,
+ * so the ring keeps `StyleBoxFlat`'s default border colour. `width` is already scaled and rounded.
+ */
+function focusStyleBox(
+  contentMargin: { left: number; top: number; right: number; bottom: number },
+  cornerRadius: number,
+  width: number
+): StyleBoxFlatData {
+  return {
+    ...makeFlatStyleBox(STYLE_FILL.focus, {
+      contentMargin,
+      cornerRadius,
+      borderWidth: width,
+      expandMargin: { left: width, top: width, right: width, bottom: width },
+    }),
+    drawCenter: false,
+  };
+}
+
 /** `style_pressed_color` (`default_theme.cpp:115`): LineEdit `normal`'s bottom-border colour (`:408`). */
 const LINE_EDIT_NORMAL_BORDER_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0.6 };
 
@@ -91,6 +115,8 @@ interface NativeThemeWidgets {
     hover: StyleBoxFlatData;
     pressed: StyleBoxFlatData;
     disabled: StyleBoxFlatData;
+    /** `focus` (`default_theme.cpp:142-150`): an outline drawn around a focused Button, flush with it. */
+    focus: StyleBoxFlatData;
   };
   /** LineEdit's `normal`/`read_only` styleboxes, `default_theme.cpp:405-417`. */
   lineEdit: {
@@ -190,6 +216,7 @@ export function nativeTheme(scale: number): NativeTheme {
         hover: flatStyleBox(STYLE_FILL.hover, buttonMargin, scaled.cornerRadius),
         pressed: flatStyleBox(STYLE_FILL.pressed, buttonMargin, scaled.cornerRadius),
         disabled: flatStyleBox(STYLE_FILL.disabled, buttonMargin, scaled.cornerRadius),
+        focus: focusStyleBox(buttonMargin, scaled.cornerRadius, Math.round(FOCUS_BORDER_WIDTH * scale)),
       },
       lineEdit: {
         // default_theme.cpp:405-409: make_flat_stylebox(style_normal_color) + border.
