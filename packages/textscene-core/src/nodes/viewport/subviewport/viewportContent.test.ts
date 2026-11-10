@@ -6,11 +6,18 @@
 import { describe, expect, it } from 'vitest';
 
 import { TscnParser } from '../../../parser/TscnParser';
-import { resolveStandaloneViewportSubtree, viewportContent, viewportContentKind } from './viewportContent';
+import {
+  resolveStandaloneViewportSubtree,
+  viewportContent as contentUnder,
+  viewportContentKind as kindUnder,
+} from './viewportContent';
 import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
 import { sourcesOver, sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
 import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
+
+const viewportContent = (node: Parameters<typeof contentUnder>[0]) => contentUnder(node, true);
+const viewportContentKind = (node: Parameters<typeof kindUnder>[0]) => kindUnder(node, true);
 
 /** The `Viewport` node of a parsed one-viewport scene. */
 function viewport(body: string) {

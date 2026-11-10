@@ -4,6 +4,7 @@
  * all of them load the host's scene when both files declare the same ExtResource id.
  */
 import { describe, expect, it } from 'vitest';
+import { LTR_LAYOUT_ENV } from '../godot/scene/control';
 import { collectLiveNodes, resolveLiveEntry } from './liveSceneTree';
 import { collectControlRasterViewports } from '../nodes/viewport/subviewport/controlRasterViewports';
 import { resolveInstancePath } from '../resources/SubResourceResolver';
@@ -35,7 +36,9 @@ describe('a node grafted into an instanced sub-scene', () => {
       {
         externalResources: hostScene.externalResources,
         internalResources: hostScene.internalResources,
-      }
+      },
+      LTR_LAYOUT_ENV,
+      true
     );
 
     expect(resolveInstancePath('ExtResource("2")', viewport!.externalResources)).toBe(HOST_LEAF_PATH);

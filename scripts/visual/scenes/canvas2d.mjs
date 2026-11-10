@@ -1186,6 +1186,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'popup-menu-size-after-items', file: 'unit-popup-menu-size-after-items.tscn', mode: '2d' },
   // A menu under a Window embeds in the root, not in the window. Max 6 at the window's close icon and corners, mean 0.410.
   { name: 'popup-menu-in-window', file: 'unit-popup-menu-in-window.tscn', mode: '2d' },
+  // A project that embeds no windows lets a Window keep its own embedding: the menu draws inside it. Max 7 at the close icon, mean 0.972.
+  { name: 'popup-menu-embed-off', file: 'window-embed-off/unit-popup-menu-embed-off.tscn', mode: '2d' },
   // Theme overrides: the frame, the title colour, size and outline ring. Mean 0.426.
   { name: 'window-theme', file: 'unit-window-theme.tscn', mode: '2d' },
   // Under a right-to-left parent the title trims from its start and the close icon stays right. Max 70, mean 0.407.

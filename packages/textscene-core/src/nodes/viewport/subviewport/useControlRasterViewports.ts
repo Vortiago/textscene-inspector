@@ -8,7 +8,11 @@ import { useMemo } from 'react';
 import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
 import { useLayoutDirectionEnv } from '../../../r3f/contexts/useLayoutDirectionEnv.js';
-import { useLiveTreeVersion, useProjectPhysicsClock } from '../../../r3f/useLiveSceneTree.js';
+import {
+  useLiveTreeVersion,
+  useProjectEmbedsSubwindows,
+  useProjectPhysicsClock,
+} from '../../../r3f/useLiveSceneTree.js';
 import { collectControlRasterViewports, type ControlRasterViewport } from './controlRasterViewports.js';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
 
@@ -23,6 +27,7 @@ export function useControlRasterViewports(
   // sub-viewport and its Controls' come from one source.
   const layoutDirectionEnv = useLayoutDirectionEnv();
   const physicsClock = useProjectPhysicsClock();
+  const rootEmbeds = useProjectEmbedsSubwindows();
 
   return useMemo(
     () =>
@@ -31,11 +36,21 @@ export function useControlRasterViewports(
         // No loader is mounted on first paint or in an isolated test.
         { sceneCache: loader?.scenes ?? NOTHING_CACHED, physicsClock },
         { internalResources, externalResources },
-        layoutDirectionEnv
+        layoutDirectionEnv,
+        rootEmbeds
       ),
     // `liveTreeVersion` is an intentional cache-buster: it ticks when a
     // sub-scene finishes loading, which is when the walk can find more.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [nodes, internalResources, externalResources, loader, physicsClock, layoutDirectionEnv, liveTreeVersion]
+    [
+      nodes,
+      internalResources,
+      externalResources,
+      loader,
+      physicsClock,
+      layoutDirectionEnv,
+      rootEmbeds,
+      liveTreeVersion,
+    ]
   );
 }

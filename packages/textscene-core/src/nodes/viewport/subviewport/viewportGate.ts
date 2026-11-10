@@ -37,13 +37,18 @@ export interface UpdateGate {
   enclosingPath: string | null;
 }
 
-export function viewportGateAt(tree: LiveTree, path: string, authoredMode: number): ViewportGate {
+export function viewportGateAt(
+  tree: LiveTree,
+  path: string,
+  authoredMode: number,
+  rootEmbeds: boolean
+): ViewportGate {
   const parentPath = parentPathOf(path);
   const isUnderContainer =
     parentPath !== null && tree.at(parentPath)?.step.node.type === 'SubViewportContainer';
   return {
     authoredMode,
-    enclosingPath: enclosingViewportPathAt(tree, path),
+    enclosingPath: enclosingViewportPathAt(tree, path, rootEmbeds),
     visibilityChain: isUnderContainer ? visibilityChainAt(tree, parentPath) : null,
   };
 }
@@ -73,13 +78,13 @@ export function resolveGate(gate: ViewportGate, animatedVisible: ReadonlyMap<str
  * is the viewport it sits in (`viewport.cpp:579`). An embedded window's is its embedder
  * (`viewport.cpp:339`): the nearest viewport above that embeds windows (`window.cpp:1400-1420`).
  */
-function enclosingViewportPathAt(tree: LiveTree, path: string): string | null {
+function enclosingViewportPathAt(tree: LiveTree, path: string, rootEmbeds: boolean): string | null {
   const node = tree.at(path)?.step.node;
   const isGatedByEmbedder = node !== undefined && isEmbeddableWindow(node);
   for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
     const aboveNode = tree.at(above)?.step.node;
     if (!aboveNode || !isViewportBoundary(aboveNode.type)) continue;
-    if (!isGatedByEmbedder || embedsSubwindows(aboveNode)) return above;
+    if (!isGatedByEmbedder || embedsSubwindows(aboveNode, rootEmbeds)) return above;
   }
   return null;
 }

@@ -58,6 +58,13 @@ A Window that enters the tree under an embedding root resets its own `gui_embed_
 inside the Window. A SubViewport with `gui_embed_subwindows` keeps its menus inside it, and limits their
 height to its own.
 
+## Project that embeds no windows
+
+<!-- compare: image=unit-popup-menu-embed-off status=done fixture=window-embed-off/unit-popup-menu-embed-off.tscn -->
+
+When `display/window/subwindows/embed_subwindows` is off, the root resets no Window. A Window that
+authors `gui_embed_subwindows` keeps it, so the menu below it draws inside the Window.
+
 ## Linting
 
 <!-- lint:begin PopupMenu -->

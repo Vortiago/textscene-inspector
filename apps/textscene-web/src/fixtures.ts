@@ -3235,6 +3235,12 @@ export const fixtures: Fixture[] = [
     "root": "touch-screen-button"
   },
   {
+    "name": "Popup Menu Embed Off",
+    "file": "window-embed-off/unit-popup-menu-embed-off.tscn",
+    "category": "Other",
+    "root": "window-embed-off"
+  },
+  {
     "name": "Window Theme Scale Label",
     "file": "window-theme-scale/unit-window-theme-scale-label.tscn",
     "category": "Other",

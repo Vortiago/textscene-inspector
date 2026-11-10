@@ -7,7 +7,7 @@
 
 import type { TscnNode } from '../../../parser/types.js';
 import type { ControlProperties } from '../../2d/ui/control/types.js';
-import { LTR_LAYOUT_ENV, resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
+import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
 import {
   liveTreeOf,
@@ -75,10 +75,11 @@ export function inheritedRtlAt(tree: LiveTree, path: string, env: LayoutDirectio
 }
 
 /** `Window::get_embedder` (`window.cpp:1400-1415`): the nearest viewport above that embeds subwindows. */
-function enclosingViewport(tree: LiveTree, path: string): EnclosingViewport | null {
+function enclosingViewport(tree: LiveTree, path: string, rootEmbeds: boolean): EnclosingViewport | null {
   for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
     const node = tree.at(above)?.step.node;
-    if (node && isViewportBoundary(node.type) && embedsSubwindows(node)) return { path: above, node };
+    if (node && isViewportBoundary(node.type) && embedsSubwindows(node, rootEmbeds))
+      return { path: above, node };
   }
   return null;
 }
@@ -92,7 +93,8 @@ export function collectControlRasterViewports(
   roots: readonly TscnNode[],
   sources: LiveTreeSources,
   scope: SceneScope,
-  layoutDirectionEnv: LayoutDirectionEnv = LTR_LAYOUT_ENV
+  layoutDirectionEnv: LayoutDirectionEnv,
+  rootEmbeds: boolean
 ): ControlRasterViewport[] {
   const found: ControlRasterViewport[] = [];
   const ctx: LiveTreeContext = {
@@ -111,7 +113,7 @@ export function collectControlRasterViewports(
     // decline and leave the consumer blank.
     if (
       isViewportBoundary(step.node.type) &&
-      viewportContentKind(resolveViewportSubtree(tree, link)) === 'dom'
+      viewportContentKind(resolveViewportSubtree(tree, link), rootEmbeds) === 'dom'
     ) {
       const { render_target_update_mode: authoredMode } = step.node.properties as SubViewportProperties;
       found.push({
@@ -119,8 +121,8 @@ export function collectControlRasterViewports(
         node: step.node,
         inheritedRtl,
         themeOwners: viewportThemeOwners(tree, path),
-        embedder: enclosingViewport(tree, path),
-        gate: viewportGateAt(tree, path, authoredMode),
+        embedder: enclosingViewport(tree, path, rootEmbeds),
+        gate: viewportGateAt(tree, path, authoredMode, rootEmbeds),
         ...step.scope,
       });
     }

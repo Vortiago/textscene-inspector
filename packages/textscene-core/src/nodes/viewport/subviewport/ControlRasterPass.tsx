@@ -23,6 +23,7 @@ import {
 } from './offscreenViewport.js';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { useCanvasPass } from './useCanvasPass.js';
+import { useProjectEmbedsSubwindows } from '../../../r3f/useLiveSceneTree.js';
 import { useResolvedGate } from './useViewportGate.js';
 import { embedsSubwindows } from './viewportBoundary.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
@@ -62,6 +63,7 @@ function useEnclosingViewportSize(embedder: ControlRasterViewport['embedder']): 
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const { path, node, inheritedRtl, themeOwners, embedder, internalResources, externalResources } = viewport;
   const gate = useResolvedGate(viewport.gate);
+  const rootEmbeds = useProjectEmbedsSubwindows();
 
   const properties = node.properties as SubViewportProperties;
   const { transparent_bg: transparentBg, render_target_clear_mode: clearMode } = properties;
@@ -132,7 +134,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
             inheritedRtl={inheritedRtl}
             themeOwners={themeOwners}
             enclosingViewportSize={enclosingViewportSize}
-            embedsWindows={embedsSubwindows(node)}
+            embedsWindows={embedsSubwindows(node, rootEmbeds)}
           />
         </SubViewportCanvasScope>
       </World2DLightingBoundary>
