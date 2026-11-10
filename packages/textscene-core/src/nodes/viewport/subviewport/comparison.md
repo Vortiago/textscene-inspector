@@ -32,7 +32,7 @@ A quad, a translucent Polygon2D and an opaque one share a SubViewport, and a Can
 
 <!-- compare: image=unit-sub-viewport-hdr-2d status=done fixture=unit-sub-viewport-hdr-2d.tscn -->
 
-With `use_hdr_2d`, a sub-viewport draws its canvas in linear colour. The half-float target keeps values above 1 (`texture_storage.cpp:4541-4547`). Each colour of the canvas converts from sRGB to linear before it multiplies, and translucent items blend the linear values. A canvas item samples each texture through its decoding view. The SubViewportContainer shows the stored numbers as if they were sRGB bytes. So the left target draws darker than the sRGB target beside it. The bottom target keeps its value above 1 under the container's modulate of 0.5. The root viewport takes the project's `rendering/viewport/hdr_2d` the same way (`scene_tree.cpp:2088-2089`), and the copy to the screen converts its linear canvas to sRGB and clamps it (`blit.glsl:136`).
+With `use_hdr_2d`, a sub-viewport draws its canvas in linear colour. The half-float target keeps values above 1 (`texture_storage.cpp:4541-4547`). Each colour of the canvas converts from sRGB to linear before it multiplies, and translucent items blend the linear values. A canvas item samples each texture through its decoding view. The SubViewportContainer shows the stored numbers as if they were sRGB bytes. So the left target draws darker than the sRGB target beside it. The bottom target keeps its value above 1 under the container's modulate of 0.5. The root viewport takes the project's `rendering/viewport/hdr_2d` the same way (`scene_tree.cpp:2088-2089`). The copy to the screen converts its linear canvas to sRGB and clamps it (`blit.glsl:136`).
 
 ## HDR 3D world
 
