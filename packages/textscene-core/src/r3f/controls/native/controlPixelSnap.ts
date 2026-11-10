@@ -127,16 +127,20 @@ export function controlItemOriginUnder(
   return snapSumLess(position, offset, (sum) => controlItemOrigin(sum, transform, snapEnabled));
 }
 
+/** The scale of a node with none authored, and of a container child `fit_child_in_rect` reset. */
 const UNIT_SCALE: Readonly<Vector2> = Object.freeze({ x: 1, y: 1 });
+/** A Control that no container fitted. */
+const NO_FIT = Object.freeze({ resets: false });
 
 /**
  * The rotation, scale and pivot a Control draws with. `Container::fit_child_in_rect` resets a
- * container child to rotation 0 and scale 1, and the solve may hold a scale of its own for it.
+ * container child to rotation 0 and scale 1, and the solve may hold a scale of its own for it,
+ * which wins over both the authored scale and the reset.
  */
 export function controlDrawTransformOf(
   control: { rotation?: number; scale?: Vector2; pivotOffset?: Vector2; pivotOffsetRatio?: Vector2 },
   rect: { w: number; h: number },
-  fit: { resets: boolean; solvedScale?: Vector2 } = { resets: false }
+  fit: { resets: boolean; solvedScale?: Vector2 } = NO_FIT
 ): ControlDrawTransform {
   const { resets, solvedScale } = fit;
   return {

@@ -101,16 +101,19 @@ describe('TileMapLayer scene tile placeholders', () => {
   it.each([
     ['a scene that instances itself', 18, []],
     ['a scene that instances an absent scene', 19, ['res://absent.tscn']],
-  ])('keeps the scene of a tile whose scene is %s, with no tile disc', async (_name, id, failedScenes) => {
-    // Godot 4.6.3 loads the tile scene and drops the child it cannot instantiate, so the tile draws
-    // an empty Node2D. The previewer marks that child as it marks any failed instance.
-    const { renderer } = await renderSceneTiles(layerScene(), {
-      showGizmos: true,
-      failedScenes,
-      prepare: withCells([cell(1, 0, id)]),
-    });
-    expect(drawnBoxes(renderer)).toEqual([[196, 52, 1, 1]]);
-  });
+  ])(
+    'draws no tile disc for a tile whose scene is %s, only the marker of its failed child',
+    async (_name, id, failedScenes) => {
+      // Godot 4.6.3 loads the tile scene and drops the child it cannot instantiate, so the tile draws
+      // an empty Node2D. The previewer marks that child as it marks any failed instance.
+      const { renderer } = await renderSceneTiles(layerScene(), {
+        showGizmos: true,
+        failedScenes,
+        prepare: withCells([cell(1, 0, id)]),
+      });
+      expect(drawnBoxes(renderer)).toEqual([[196, 52, 1, 1]]);
+    }
+  );
 
   it('draws no disc for a tile with a scene and no flag', async () => {
     expect(drawnBoxes(await renderLayer([cell(0, 1, 2)], { showGizmos: true }))).toEqual([

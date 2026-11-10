@@ -312,13 +312,16 @@ export interface RenderSceneTilesOptions {
 export async function renderSceneTiles(tscn: string, options: RenderSceneTilesOptions = {}) {
   await import('../../../../r3f/controls/native/UnownedNodeControls');
   const fake = createFakeResourceLoader();
+  const fail = (path: string) => fake.scenes._fail(path, `cannot load ${path}`);
+  const failedScenes = options.failedScenes ?? [];
   for (const [path, text] of Object.entries(TILE_SCENES)) {
     if (options.withheldScenes?.includes(path)) continue;
-    if (options.failedScenes?.includes(path)) fake.scenes._fail(path, `cannot load ${path}`);
+    if (failedScenes.includes(path)) fail(path);
     else fake.scenes._resolve(path, new TscnParser().parse(text));
   }
-  for (const path of options.failedScenes ?? []) {
-    if (!(path in TILE_SCENES)) fake.scenes._fail(path, `cannot load ${path}`);
+  // A scene a tile scene instances is no tile scene, so it has no entry above.
+  for (const path of failedScenes) {
+    if (!(path in TILE_SCENES)) fail(path);
   }
   const probe: SceneTileProbe = { selection: null, livePaths: [] };
   const treeOf = (text: string, prepare?: (scene: TscnScene) => void) => {
