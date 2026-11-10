@@ -262,7 +262,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [OptionButton](../../packages/textscene-core/src/nodes/2d/ui/optionbutton/comparison.md): a collapsed dropdown box
 - [Panel](../../packages/textscene-core/src/nodes/2d/ui/panel/comparison.md): a StyleBox quad
 - [PanelContainer](../../packages/textscene-core/src/nodes/2d/ui/panelcontainer/comparison.md): a StyleBox panel around its child
-- [Parallax2D](../../packages/textscene-core/src/nodes/2d/parallax2d/comparison.md): nothing yet, Godot repeats and scroll-offsets its children, the previewer does not
+- [Parallax2D](../../packages/textscene-core/src/nodes/2d/parallax2d/comparison.md): a Node2D scrolled by the camera, repeated over repeat_size
 - [ParallaxBackground](../../packages/textscene-core/src/nodes/2d/parallaxbackground/comparison.md): a viewport-anchored group holding its ParallaxLayer children
 - [ParallaxLayer](../../packages/textscene-core/src/nodes/2d/parallaxlayer/comparison.md): a Node2D transform group, repeated once per mirrored axis
 - [Path2D](../../packages/textscene-core/src/nodes/2d/path2d/comparison.md): nothing at runtime, a curve gizmo for every node

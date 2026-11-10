@@ -50,6 +50,12 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'Camera2D linter validates follow/drag/smoothing properties that only matter at runtime; the static previewer ignores them.',
   },
 
+  Parallax2D: {
+    linterOnly: ['autoscroll'],
+    reason:
+      '`_update_process` runs `autoscroll` only outside the editor (`parallax_2d.cpp:98-100`), and the preview freezes one frame, so it moves nothing.',
+  },
+
   Line2D: {
     linterOnly: ['antialiased'],
     reason: GODOT_IGNORES_ANTIALIASED,
