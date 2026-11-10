@@ -1,11 +1,10 @@
 [gd_scene format=3]
 
 ; One variable: the editor kite of a Bone2D chain (skeleton_2d.cpp:189-354). It draws only with the
-; Gizmos toggle on, which the goldens bone2d-unselected and bone2d-selected set, so no other scene shows
-; a regression in it. The chain holds a bone turned and scaled by its
-; parent, a child bone that sets its own gizmo off, a leaf that draws along its authored length and
-; angle, and a leaf that calculates its angle from its own rotation. Upper bone scale 1.5 shows the
-; kite width staying 5 pixels where the bone grows.
+; Gizmos toggle on, which the goldens bone2d-unselected and bone2d-selected set, so no other scene
+; shows a regression in it. The chain holds a bone turned and scaled by its parent, a child bone that
+; sets its own gizmo off, a leaf that draws along its authored length and angle, and a leaf that
+; calculates its angle from its own rotation. The scale of 1.5 shows the kite width staying 5 pixels.
 
 [node name="Bone2DRoot" type="Node2D"]
 

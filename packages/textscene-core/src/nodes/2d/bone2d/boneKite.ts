@@ -10,11 +10,22 @@
  */
 
 import { transform2DGetScale, type Transform2DColumns } from '../../../godot/math/transform2d.js';
-import { normalizedVector2, vector2Scaled, type Vector2 } from '../../../godot/math/vector.js';
+import {
+  normalizedVector2,
+  vector2Add,
+  vector2Orthogonal,
+  vector2Scaled,
+  vector2Sub,
+  type Vector2,
+} from '../../../godot/math/vector.js';
 
 /** `editors/2d/bone_width` and `editors/2d/bone_outline_size` (`editor_settings.cpp:974,980`). */
 const BONE_WIDTH = 5;
 const BONE_OUTLINE_WIDTH = 2;
+
+/** The points of a kite's outline and of its fill. */
+export const OUTLINE_POINT_COUNT = 6;
+export const FILL_POINT_COUNT = 4;
 
 /** The polygons of one kite, in the bone's own pixels. */
 export interface BoneKite {
@@ -36,13 +47,13 @@ function rotated({ x, y }: Vector2, angle: number): Vector2 {
   return { x: x * cos - y * sin, y: x * sin + y * cos };
 }
 
-function add(...points: Vector2[]): Vector2 {
-  return points.reduce((sum, point) => ({ x: sum.x + point.x, y: sum.y + point.y }));
+function add(...points: [Vector2, ...Vector2[]]): Vector2 {
+  return points.reduce(vector2Add);
 }
 
 /** `Bone2D::_editor_get_bone_shape` (`skeleton_2d.cpp:313-354`) for the tip `rel`, a bone's offset to its child. */
 function kiteTo(rel: Vector2): BoneKite {
-  const relt = vector2Scaled(normalizedVector2(rotated(rel, Math.PI / 2)), BONE_WIDTH);
+  const relt = vector2Scaled(normalizedVector2(vector2Scaled(vector2Orthogonal(rel), -1)), BONE_WIDTH);
   const reln = normalizedVector2(rel);
   const reltn = normalizedVector2(relt);
   const near = vector2Scaled(rel, 0.2);
@@ -84,7 +95,7 @@ export function boneKitesOf(
   const rels =
     childOrigins.length > 0
       ? childOrigins.map((origin) =>
-          rotated({ x: origin.x - global.tx, y: origin.y - global.ty }, -globalRotation)
+          rotated(vector2Sub(origin, { x: global.tx, y: global.ty }), -globalRotation)
         )
       : reachRel(reach, scale);
   return rels.map((rel) => {

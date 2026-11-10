@@ -7,6 +7,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNode2D, parseTransform2DColumns } from '../../base/node2d/parser';
 import type { Transform2DColumns } from '../../../godot/math/transform2d.js';
+import { degToRad } from '../../../godot/math/math.js';
 import { warn } from '../../../logger';
 import { boolOr, floatOr } from '../../../parser/valueParsers';
 import type { Bone2DProperties } from './types';
@@ -22,7 +23,7 @@ export function parseBone2D(heading: ParsedHeading, properties: Record<string, s
     auto_calculate_length_and_angle: boolOr(properties.auto_calculate_length_and_angle, true),
     // `default_length` is the alias `_set` maps onto `length` (`skeleton_2d.cpp:48-49`).
     length: floatOr(properties.length ?? properties.default_length, DEFAULT_LENGTH),
-    bone_angle: (floatOr(properties.bone_angle, 0) * Math.PI) / 180,
+    bone_angle: degToRad(floatOr(properties.bone_angle, 0)),
     show_bone_gizmo: boolOr(properties['editor_settings/show_bone_gizmo'], true),
   };
 }

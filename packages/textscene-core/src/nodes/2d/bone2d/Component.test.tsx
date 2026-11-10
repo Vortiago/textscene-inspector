@@ -13,6 +13,7 @@ import { DispatchedScene } from '../../../r3f/testing/DispatchedScene';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import '../../../r3f/nodes/index';
+import { OUTLINE_POINT_COUNT } from './boneKite';
 
 function scene(upperLines = '', lowerLines = ''): string {
   return `[gd_scene format=3]
@@ -75,8 +76,8 @@ function colour(mesh: THREE.Mesh, index: number): number[] {
   return [colours.getX(index), colours.getY(index), colours.getZ(index), colours.getW(index)];
 }
 
-// A kite is the six points of its outline and then the four of its fill.
-const FILL_AT = 6;
+// A kite is the points of its outline and then those of its fill.
+const FILL_AT = OUTLINE_POINT_COUNT;
 
 describe('<Bone2D> gizmo', () => {
   it('draws the kite from the bone to its Bone2D child in the bone space', async () => {
