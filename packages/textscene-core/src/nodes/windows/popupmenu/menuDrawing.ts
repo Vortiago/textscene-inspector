@@ -47,13 +47,21 @@ export interface RowDrawing {
 
 /** The gutter as the draw reads it: separators skipped, the widest of all eight check icons (`popup_menu.cpp:870-896`). */
 function drawnGutter(rows: readonly MenuRow[], menu: PopupMenuTheme, n: SolveNode): Gutter {
-  const items = rows.map(({ entry }) => entry).filter(({ item }) => !item.separator);
-  const checkables = items.filter(({ item }) => item.checkable !== ItemCheckableType.NONE);
+  let iconWidth = 0;
+  let hasCheck = false;
+  let hasCheckIcon = false;
+  for (const { entry } of rows) {
+    if (entry.item.separator) continue;
+    iconWidth = Math.max(iconWidth, entry.iconSize.x);
+    if (entry.item.checkable === ItemCheckableType.NONE) continue;
+    hasCheck = true;
+    hasCheckIcon ||= entry.hasIcon;
+  }
   return {
-    iconWidth: Math.max(0, ...items.map(({ iconSize }) => iconSize.x)),
-    checkWidth: checkables.length > 0 ? widestCheckIcon(n) : 0,
-    hasCheck: checkables.length > 0,
-    isCompact: menu.isGutterCompact && !checkables.some(({ hasIcon }) => hasIcon),
+    iconWidth,
+    checkWidth: hasCheck ? widestCheckIcon(n) : 0,
+    hasCheck,
+    isCompact: menu.isGutterCompact && !hasCheckIcon,
   };
 }
 
@@ -106,8 +114,7 @@ interface RowContext {
 /** A separator row: its lines, its icon and its label, centred (`popup_menu.cpp:906-1033`). */
 function separatorRowDrawing({ n, menu, width }: RowContext, row: MenuRow): RowDrawing {
   const { entry, y } = row;
-  const { iconSize, textSize, height } = entry;
-  const { hasIcon } = entry;
+  const { iconSize, textSize, height, hasIcon } = entry;
   if (!isLabelled(entry)) {
     return {
       separators: [separatorLine(menu.separator, y, height, 0, width)],

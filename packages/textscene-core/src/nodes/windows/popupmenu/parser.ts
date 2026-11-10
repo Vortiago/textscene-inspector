@@ -5,14 +5,12 @@ import { unquoteString } from '../../../parser/utils';
 import { boolOr, intOr } from '../../../parser/valueParsers';
 import { indexedElements } from '../../../godot/classdb/indexedKey';
 import { POPUP_MENU_ITEMS } from '../../../godot/classdb/propertyListFamilies';
-import { ItemCheckableType } from '../../../godot/scene/popupMenu';
+import { ITEM_CHECKABLE_TYPE_NAMES, ItemCheckableType } from '../../../godot/scene/popupMenu';
 import { holdsResource } from '../../../godot/scene/resourceLiteral';
 import { slotCount } from '../../../godot/variant/intSlots';
 import { MAX_WALKED_ELEMENTS } from '../../2d/ui/shared/countWalk';
 import { parseWindow } from '../window/parser';
 import type { PopupMenuItem, PopupMenuProperties } from './types';
-
-const CHECKABLE_TYPES: ReadonlySet<number> = new Set(Object.values(ItemCheckableType));
 
 /**
  * The first `item_count` items. Each leaf setter opens with `ERR_FAIL_INDEX`, so a line past the count
@@ -31,7 +29,7 @@ function parseItems(properties: Record<string, string>, context: string): PopupM
     items.push({
       text: unquoteString(leaves?.get('text') ?? '""'),
       ...(holdsResource(icon) ? { icon } : {}),
-      checkable: CHECKABLE_TYPES.has(checkable) ? checkable : ItemCheckableType.NONE,
+      checkable: checkable in ITEM_CHECKABLE_TYPE_NAMES ? checkable : ItemCheckableType.NONE,
       checked: boolOr(leaves?.get('checked'), false, `${at}/checked`),
       disabled: boolOr(leaves?.get('disabled'), false, `${at}/disabled`),
       separator: boolOr(leaves?.get('separator'), false, `${at}/separator`),
