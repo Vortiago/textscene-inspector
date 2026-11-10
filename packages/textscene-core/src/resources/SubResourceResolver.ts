@@ -83,7 +83,7 @@ export function parsedResourcePath(
 export function isResourceFilePath(path: string): boolean {
   return (
     fileExtension(path) === GODOT_TEXT_RESOURCE_FILE_EXTENSION ||
-    resourceSliceRegistry.busTypeOfPath(path) === 'resource'
+    resourceSliceRegistry.byPath(path)?.busType === 'resource'
   );
 }
 

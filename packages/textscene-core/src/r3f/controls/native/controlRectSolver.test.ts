@@ -561,8 +561,8 @@ describe("solveControlTree — a registered ContainerLayoutFn overrides its chil
     const placer = node('Placer', 'Placer', { anchorsPreset: 15 }, [node('Placer/Child', 'Control', {})]);
 
     const solved = solveControlTree([stack, placer], VIEWPORT, ctx());
-    expect(solved.get('Stack/Child')?.resetsTransform).toBe(true);
-    expect(solved.get('Placer/Child')?.resetsTransform).toBe(false);
+    expect(solved.get('Stack/Child')?.resetsChildTransform).toBe(true);
+    expect(solved.get('Placer/Child')?.resetsChildTransform).toBe(false);
   });
 
   it("re-floors a container-assigned rect against the child's FULL-PRECISION minimum", () => {

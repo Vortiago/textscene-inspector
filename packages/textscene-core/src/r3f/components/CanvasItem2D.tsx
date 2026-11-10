@@ -47,6 +47,8 @@ interface CanvasItem2DProps {
    * specular maps light the pixels, and without a normal map they light flat (`canvas.glsl:652-665`).
    */
   canvasTexture?: CanvasItemTexture;
+  /** Whether `body` draws any pixels, true when omitted. A body that draws none declares no light read. */
+  isDrawn?: boolean;
   /**
    * Draws this node's own child canvas items, each with its own light list, as a TileMapLayer's
    * rendering quadrants are. A node that draws them passes no `body`. They take this node's
@@ -56,7 +58,15 @@ interface CanvasItem2DProps {
   children?: ReactNode;
 }
 
-export function CanvasItem2D({ node, props, body, canvasTexture, ownItems, children }: CanvasItem2DProps) {
+export function CanvasItem2D({
+  node,
+  props,
+  body,
+  canvasTexture,
+  isDrawn,
+  ownItems,
+  children,
+}: CanvasItem2DProps) {
   const local = useMemo(() => node2dGroupProps(props), [props]);
   const transform = useMemo(() => node2dGroupSpread(local), [local]);
   // What a canvas root nested below this item cancels: the transform every
@@ -103,6 +113,7 @@ export function CanvasItem2D({ node, props, body, canvasTexture, ownItems, child
                 lightMask={state.lightMask}
                 zFinal={zFinal}
                 surface={surface}
+                isDrawn={isDrawn}
               >
                 {(pixelMaterial) => body(tint, material, pixelMaterial)}
               </LitCanvasItemPixels>

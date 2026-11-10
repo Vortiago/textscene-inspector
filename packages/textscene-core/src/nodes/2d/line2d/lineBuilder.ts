@@ -94,11 +94,26 @@ function toPoints(flat: Float32Array): Vector2[] {
   }));
 }
 
-/** The pair that ends the first segment of a closed line, which its last segment closes on. */
+/**
+ * The pair that ends the first segment of a closed line, which its last segment closes on. Null
+ * where the width factor there is 0: Godot's `1 / 0` weight makes the pair NaN (`line_builder.cpp:316`),
+ * and measured on 4.6.3 its closing quad draws nothing.
+ */
 interface FirstJoint {
+  pair: EdgePair | null;
+  isSharp: boolean;
+}
+
+/** The two edge points of the stroke across one point of the line. */
+interface EdgePair {
   up: Vector2;
   down: Vector2;
-  isSharp: boolean;
+}
+
+/** `pair` scaled by `weight` about its midpoint, as Godot's `first_pos_center.lerp(...)` does. */
+function scaledAboutMidpoint({ up, down }: EdgePair, weight: number): EdgePair {
+  const center = vector2Lerp(up, down, 0.5);
+  return { up: vector2Lerp(center, up, weight), down: vector2Lerp(center, down, weight) };
 }
 
 /** One pass of `LineBuilder::build` along a line, with the state it carries from point to point. */
@@ -281,10 +296,7 @@ class StrokeWalk {
       const isClosingJoint = wrapsAround && i === lastIndex;
       if (isClosingJoint && first && this.options.widthFactorAt && !first.isSharp) {
         // A width curve that does not meet itself ends on the first pair, scaled to the last width.
-        const center = vector2Scaled(vector2Add(first.up, first.down), 0.5);
-        const up = vector2Lerp(center, first.up, this.widthFactor);
-        const down = vector2Lerp(center, first.down, this.widthFactor);
-        stripAddQuad(this.strip, up, down, color1, this.uvx);
+        if (first.pair) this.addClosingQuad(first.pair, color1);
         return;
       }
       stripAddQuad(this.strip, joint.up1, joint.down1, color1, this.uvx);
@@ -302,14 +314,15 @@ class StrokeWalk {
   }
 
   private firstJointOf(joint: Joint): FirstJoint {
-    const center = vector2Scaled(vector2Add(joint.up1, joint.down1), 0.5);
-    // A width factor of 0 gives the zero-width limit, where Godot's 1 / 0 gives an infinite weight and NaN.
-    const weight = this.widthFactor === 0 ? 0 : f(1 / this.widthFactor);
-    return {
-      up: vector2Lerp(center, joint.up1, weight),
-      down: vector2Lerp(center, joint.down1, weight),
-      isSharp: joint.jointMode === LineJointMode.SHARP,
-    };
+    const isSharp = joint.jointMode === LineJointMode.SHARP;
+    if (this.widthFactor === 0) return { pair: null, isSharp };
+    const pair = scaledAboutMidpoint({ up: joint.up1, down: joint.down1 }, f(1 / this.widthFactor));
+    return { pair, isSharp };
+  }
+
+  private addClosingQuad(first: EdgePair, color: Rgba | null): void {
+    const { up, down } = scaledAboutMidpoint(first, this.widthFactor);
+    stripAddQuad(this.strip, up, down, color, this.uvx);
   }
 
   /** The bevel triangle or the round fan that fills the outside of a corner (`line_builder.cpp:289-338`). */

@@ -171,3 +171,15 @@ describe('TileMapLayer with a padded CanvasTexture over an unset ViewportTexture
     expect(meshes).toEqual([]);
   });
 });
+
+describe('TileMapLayer whose atlas source has no texture', () => {
+  it('draws no tile and registers no light read', async () => {
+    const sources = [
+      subResource('TileSetAtlasSource', 'atlas', { texture_region_size: 'Vector2i(8, 8)', '0:0/0': '0' }),
+      subResource('TileSet', 'ts', { 'sources/0': 'SubResource("atlas")' }),
+    ];
+    const canvas = await renderOnLitCanvas(<TileMapLayer node={layerNode()} />, sources);
+    expect(canvas.renderer.scene.findAllByType('Mesh')).toEqual([]);
+    expect(canvas.registerItem).not.toHaveBeenCalled();
+  });
+});
