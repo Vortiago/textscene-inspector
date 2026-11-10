@@ -273,6 +273,15 @@ describe('modeRowButtonRects', () => {
   });
 });
 
+describe('modeRowButtonRects with a label wider than its share', () => {
+  it('keeps that button at its minimum and shares the rest (box_container.cpp:100-130)', () => {
+    const cols = modeRowButtonRects({ x: 0, y: 0, w: 300, h: 20 }, THEME, false, [120, 10, 10]);
+    expect(cols.buttons[0]!.w).toBeGreaterThanOrEqual(120);
+    expect(cols.buttons[1]!.w).toBeLessThan(cols.buttons[0]!.w);
+    expect(cols.dropdown.x + cols.dropdown.w).toBe(300);
+  });
+});
+
 describe('modeRowButtonRects at a fractional share', () => {
   it('gives every button whole pixels and ends flush with the row: box_container.cpp:100-130', () => {
     const cols = modeRowButtonRects({ x: 0, y: 0, w: 401, h: 20 }, THEME);

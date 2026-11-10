@@ -18,6 +18,8 @@ export interface PickerChildTheme {
   theme: NativeTheme;
   labelColor: Rgba;
   buttonColor: Rgba;
+  /** The Button items' colours, for the icon modulates (`icon_disabled_color`). */
+  buttonColors: SolveNode['colors'];
   /** `font_pressed_color`, the selected mode button's text. */
   buttonPressedColor: Rgba;
   lineEditColor: Rgba;
@@ -45,6 +47,7 @@ export function pickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildT
       },
     },
     labelColor: label.colors.font_color ?? LABEL_DEFAULT_FONT_COLOR,
+    buttonColors: button.colors,
     buttonColor: button.colors.font_color ?? BUTTON_DEFAULT_FONT_COLOR,
     buttonPressedColor: button.colors.font_pressed_color ?? CONTROL_FONT_PRESSED_COLOR,
     lineEditColor: lineEdit.colors.font_color ?? LINE_EDIT_DEFAULT_FONT_COLOR,

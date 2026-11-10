@@ -11,6 +11,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import { ColorPicker } from './Component';
 import { canvasColorSpaceOf, CanvasColorSpaceProvider } from '../../../../r3f/canvasColorSpace';
 
@@ -18,9 +19,9 @@ const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 const THEME = nativeTheme(1);
 
-function node(properties: Record<string, unknown>): SolveNode {
+function node(properties: Record<string, unknown>, themeChain: ThemeResource[] = []): SolveNode {
   const tscnNode: TscnNode = controlNode('P', 'ColorPicker', properties);
-  return { ...emptySolveNode(), path: 'P', node: tscnNode };
+  return { ...emptySolveNode(), path: 'P', node: tscnNode, themeChain };
 }
 
 /** Hides every row the shape and sample tests are not about, so their mesh counts stay isolated. */
@@ -41,6 +42,15 @@ const ONLY_SLIDERS = {
   presetsVisible: false,
 };
 
+/** Hides every row but the swatches row. */
+const ONLY_SWATCHES = {
+  pickerShape: 4,
+  samplerVisible: false,
+  colorModesVisible: false,
+  slidersVisible: false,
+  hexVisible: false,
+};
+
 /** Hides every row but the hex row. */
 const ONLY_HEX = {
   pickerShape: 4,
@@ -50,12 +60,16 @@ const ONLY_HEX = {
   presetsVisible: false,
 };
 
-async function renderPicker(properties: Record<string, unknown>, size = { w: 400, h: 400 }) {
+async function renderPicker(
+  properties: Record<string, unknown>,
+  size = { w: 400, h: 400 },
+  themeChain: ThemeResource[] = []
+) {
   return ReactThreeTestRenderer.create(
     <ColorPicker
       {...painterEnv()}
       theme={THEME}
-      solveNode={node(properties)}
+      solveNode={node(properties, themeChain)}
       rect={{ x: 0, y: 0, ...size }}
       renderOrder={0}
     />
@@ -311,6 +325,28 @@ describe('<ColorPicker> (isolated painter contract)', () => {
     };
     expect(await iconOpacities('Color(1.5, 0.5, 0.25, 1)')).toHaveLength(1);
     expect(await iconOpacities('Color(0.8, 0.6, 0.4, 1)')).toHaveLength(0);
+  });
+
+  it('modulates the picker Buttons icons by icon_normal_color of the Theme chain', async () => {
+    const half = { r: 1, g: 1, b: 1, a: 0.5 };
+    const theme: ThemeResource = {
+      defaultFont: null,
+      defaultFontSize: undefined,
+      fonts: {},
+      fontSizes: {},
+      typeVariations: {},
+      properties: {},
+      colors: { Button: { icon_normal_color: half } },
+    };
+    const halfIcons = async (themeChain: ThemeResource[]) => {
+      const renderer = await renderPicker({ ...ONLY_SWATCHES }, { w: 400, h: 100 }, themeChain);
+      return renderer.scene
+        .findAllByType('Mesh')
+        .map((mesh) => (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+        .filter((material) => material.map && Math.abs(material.opacity - 0.5) < 1e-6);
+    };
+    expect((await halfIcons([theme])).length).toBeGreaterThanOrEqual(3);
+    expect(await halfIcons([])).toHaveLength(0);
   });
 
   it('swatches row draws its two button labels: presets_visible default true', async () => {

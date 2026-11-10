@@ -231,7 +231,7 @@ function modeRowSize(
   let width = btnModeWidth;
   for (const name of COLOR_MODE_NAMES.slice(0, MODE_BUTTON_COUNT)) {
     const m = measure(name);
-    width += m.x + theme.separation;
+    width += modeButtonMinimumWidth(theme, m.x) + theme.separation;
     height = Math.max(height, m.y + tabMarginY);
   }
   return { x: width, y: height };
@@ -662,28 +662,41 @@ interface ModeRowButtons {
   dropdown: Rect2;
 }
 
+/** A `mode_btns` button's minimum width: its text plus the `mode_button_normal` margins (`button.cpp:525`). */
+function modeButtonMinimumWidth(theme: Pick<NativeTheme, 'scale'>, textWidth: number): number {
+  return textWidth + contentMarginSize(colorPickerModeButtonStyleBox(theme, false)).x;
+}
+
 /**
  * The split of `mode_hbc` (`color_picker.cpp:2129-2154`): 3 `SIZE_EXPAND_FILL`
- * buttons of equal width, then the fixed-width `btn_mode` dropdown.
+ * buttons of equal width, then the fixed-width `btn_mode` dropdown. An unmeasured label has no minimum.
  */
-export function modeRowButtonRects(mode: Rect2, theme: NativeTheme, rtl = false): ModeRowButtons {
+export function modeRowButtonRects(
+  mode: Rect2,
+  theme: NativeTheme,
+  rtl = false,
+  labelWidths: readonly number[] = []
+): ModeRowButtons {
   const scale = colorPickerScale(theme);
   const dropdownWidth = Math.round(COLOR_PICKER_BUTTON_WIDTH * scale);
   // `mode_hbc` is an HBoxContainer: three `SIZE_EXPAND_FILL` buttons, then `btn_mode`, whole pixels each (`box_container.cpp:100-130`).
-  const expandFill = {
-    minSize: { x: 0, y: 0 },
+  const expandFill = (index: number) => ({
+    minSize: {
+      x: labelWidths[index] === undefined ? 0 : modeButtonMinimumWidth(theme, labelWidths[index]),
+      y: 0,
+    },
     hSizeFlags: SizeFlags.FILL | SizeFlags.EXPAND,
     vSizeFlags: SizeFlags.FILL,
     stretchRatio: 1,
-  };
-  const fixed = { ...expandFill, minSize: { x: dropdownWidth, y: 0 }, hSizeFlags: SizeFlags.FILL };
+  });
+  const fixed = { ...expandFill(0), minSize: { x: dropdownWidth, y: 0 }, hSizeFlags: SizeFlags.FILL };
   const rects = resortBoxContainer(
     false,
     { width: mode.w, height: mode.h },
     theme.separation,
     ContainerAlignment.ALIGNMENT_BEGIN,
     rtl,
-    [...Array.from({ length: MODE_BUTTON_COUNT }, () => expandFill), fixed]
+    [...Array.from({ length: MODE_BUTTON_COUNT }, (_, i) => expandFill(i)), fixed]
   ).map((r) => ({ ...r, x: mode.x + r.x, y: mode.y + r.y }));
   return { buttons: rects.slice(0, MODE_BUTTON_COUNT), dropdown: rects[MODE_BUTTON_COUNT]! };
 }

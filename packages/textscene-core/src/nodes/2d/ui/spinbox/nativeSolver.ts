@@ -320,9 +320,8 @@ export const spinBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const editable = props.editable !== false;
   const { fontSizePx, fontMetrics } = spinBoxFieldTextTheme(n, ctx, editable);
 
-  // The field is `add_child`ed at construction (`spin_box.cpp:724-731`), never a scene node, so a
-  // SpinBox's `theme_override_styles/*` address its own items (`up_background`, …). The field reads
-  // only the Theme chain's LineEdit boxes.
+  // The field is `add_child`ed at construction (`spin_box.cpp:724-731`), so the SpinBox's own
+  // `theme_override_styles/*` never reach it. It reads the Theme chain's LineEdit boxes only.
   const { styleBoxes } = spinBoxFieldThemeItems(n);
   const styleMinSize = lineEditStyleMinSize(
     pickLineEditStyleBox(styleBoxes, ctx.theme.widgets.lineEdit, 'normal'),

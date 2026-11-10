@@ -280,6 +280,7 @@ interface TextTypeScriptIconProps {
   rect: Rect2;
   solveNode: NativeControlComponentProps['solveNode'];
   theme: NativeControlComponentProps['theme'];
+  buttonColors: NativeControlComponentProps['solveNode']['colors'];
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;
 }
@@ -290,7 +291,14 @@ interface TextTypeScriptIconProps {
  * margin (`button.cpp:349-405`) and modulates it by `icon_disabled_color`. Only a picker that draws
  * it loads the texture.
  */
-function TextTypeScriptIcon({ rect, solveNode, theme, tint, renderOrder }: TextTypeScriptIconProps) {
+function TextTypeScriptIcon({
+  rect,
+  solveNode,
+  theme,
+  buttonColors,
+  tint,
+  renderOrder,
+}: TextTypeScriptIconProps) {
   const toItemLinear = useItemLinearColorOf();
   const texture = useNodeIcon(solveNode.icons.color_script, COLOR_SCRIPT_ICON);
   if (!texture) return null;
@@ -301,7 +309,7 @@ function TextTypeScriptIcon({ rect, solveNode, theme, tint, renderOrder }: TextT
     solveNode.rtl
   );
   if (!iconRect) return null;
-  const disabledColor = buttonIconColor(solveNode.colors, 'disabled');
+  const disabledColor = buttonIconColor(buttonColors, 'disabled');
   return (
     <PositionedIcon
       rect={{ ...iconRect, x: rect.x + iconRect.x, y: rect.y + iconRect.y }}
@@ -398,6 +406,15 @@ export function ColorPicker({
     () => multiplyModulate(tint.own, child.buttonPressedColor),
     [tint.own, child]
   );
+  // The picker's Buttons modulate their icons by `icon_normal_color` of the Theme chain (`button.cpp:321-329`).
+  const iconTint = useMemo(() => {
+    const iconNormal = buttonIconColor(child.buttonColors, 'normal');
+    return {
+      ...tint,
+      color: toItemLinear(multiplyModulate(tint.own, { ...iconNormal, a: 1 })),
+      opacity: tint.opacity * iconNormal.a,
+    };
+  }, [tint, child, toItemLinear]);
   const lineEditFontColor = useMemo(() => multiplyModulate(tint.own, child.lineEditColor), [tint.own, child]);
   const spinArrowGrey = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
   // Every value and hex `LineEdit` uses the same box, so one inset covers both.
@@ -469,7 +486,8 @@ export function ColorPicker({
   const hueLineLinear = useItemLinearColor(hueLineColor);
   const hueY = shapeRects ? hueIndicatorY(shapeRects.hueSlider.h, hsv.h) : 0;
 
-  const modeCols = rows.mode ? modeRowButtonRects(rows.mode, theme, solveNode.rtl) : null;
+  const modeLabelWidths = COLOR_MODE_NAMES.slice(0, 3).map((name) => measure(name).x);
+  const modeCols = rows.mode ? modeRowButtonRects(rows.mode, theme, solveNode.rtl, modeLabelWidths) : null;
 
   const colorMode = props.colorMode ?? MODE_RGB;
   const editAlpha = props.editAlpha ?? true;
@@ -627,7 +645,7 @@ export function ColorPicker({
             rect={sampleCols.pick}
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
             texture={pickIconTexture}
-            tint={tint}
+            tint={iconTint}
             theme={theme}
             rtl={solveNode.rtl}
             renderOrder={renderOrder}
@@ -637,7 +655,7 @@ export function ColorPicker({
               rect={sampleCols.shape}
               size={COLOR_PICKER_BUTTON_ICON_SIZE}
               texture={shapeIconTexture}
-              tint={tint}
+              tint={iconTint}
               theme={theme}
               rtl={solveNode.rtl}
               renderOrder={renderOrder}
@@ -759,7 +777,7 @@ export function ColorPicker({
             rect={modeCols.dropdown}
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
             texture={menuIconTexture}
-            tint={tint}
+            tint={iconTint}
             theme={theme}
             rtl={solveNode.rtl}
             renderOrder={renderOrder}
@@ -999,6 +1017,7 @@ export function ColorPicker({
               rect={hexCols.textType}
               solveNode={solveNode}
               theme={theme}
+              buttonColors={child.buttonColors}
               tint={tint}
               renderOrder={renderOrder}
             />
@@ -1039,8 +1058,8 @@ export function ColorPicker({
                 <PositionedIcon
                   rect={icon}
                   texture={dropdownArrowTexture}
-                  color={tint.color}
-                  opacity={tint.opacity}
+                  color={iconTint.color}
+                  opacity={iconTint.opacity}
                   renderOrder={renderOrder}
                 />
                 {buttonLabel(key, text, buttonFontColor, label)}
@@ -1051,7 +1070,7 @@ export function ColorPicker({
             rect={swatchesCols.menuButton}
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
             texture={menuIconTexture}
-            tint={tint}
+            tint={iconTint}
             theme={theme}
             rtl={solveNode.rtl}
             renderOrder={renderOrder}
