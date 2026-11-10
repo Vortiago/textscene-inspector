@@ -98,7 +98,7 @@ const CONFIRMATION_DIALOG_DEFAULTS: WindowClassDefaults = {
 /**
  * Each constructor's own flags, keyed by the class that sets them: `Popup::Popup()`
  * (`popup.cpp:215-225`), `PopupPanel::PopupPanel()` (`popup.cpp:430`), `PopupMenu::PopupMenu()`
- * (`popup_menu.cpp:3464`), the dialogs (`dialogs.cpp:464-534`) and `FileDialog`.
+ * (`popup_menu.cpp:3480-3481`), the dialogs (`dialogs.cpp:464-534`) and `FileDialog`.
  */
 const CLASS_DEFAULTS: Readonly<Record<string, WindowClassDefaults>> = {
   Window: WINDOW_DEFAULTS,

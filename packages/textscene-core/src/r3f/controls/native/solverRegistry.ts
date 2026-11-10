@@ -70,7 +70,8 @@ export type MinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vector2;
 
 /**
  * The contents minimum a window's own properties give when its `size` is applied at load, before its
- * Controls and the tree exist (`Window::set_size`, `window.cpp:2240-2250`), or `null` where it sets none.
+ * Controls and the tree exist (`Window::set_size` clamps in `_update_window_size`, `window.cpp:1183-1190`),
+ * or `null` where it sets none.
  */
 export type LoadedMinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vector2 | null;
 

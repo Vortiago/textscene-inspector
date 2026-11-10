@@ -370,7 +370,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // Native and system menus are drawn by the OS, never on the canvas.
       'prefer_native_menu',
       'system_menu_id',
-      // Read through a computed key, as OptionButton\'s identical family is.
+      // Read through a computed key, as the identical family of OptionButton is.
       'item_#/*',
     ],
     reason:
