@@ -151,7 +151,7 @@ export function controlDrawTransformOf(
 }
 
 /** `Control::get_combined_pivot_offset()`: the pivot offset plus the ratio of the rect size. */
-export function combinedPivotOffset(
+function combinedPivotOffset(
   control: { pivotOffset?: Vector2; pivotOffsetRatio?: Vector2 },
   size: { w: number; h: number }
 ): Vector2 {
