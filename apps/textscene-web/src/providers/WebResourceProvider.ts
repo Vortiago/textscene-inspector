@@ -135,12 +135,15 @@ async function readBytes(response: Response, maxBytes: number | undefined): Prom
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
   let received = 0;
-  while (received < maxBytes) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    received += value.length;
+  try {
+    while (received < maxBytes) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+    }
+  } finally {
+    await reader.cancel();
   }
-  await reader.cancel();
   return new Blob(chunks).slice(0, maxBytes).arrayBuffer();
 }

@@ -43,6 +43,8 @@ export function dispatchWebviewMessage(msg: unknown, handlers: WebviewMessageHan
 
 /** Fields present, and of the type the handler is about to read them as. */
 const isString = (v: unknown): v is string => typeof v === 'string';
+/** A negative cap would make `subarray` drop bytes from the end, so only a whole count passes. */
+const isByteCount = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0;
 
 /**
  * One payload check per message type, exhaustive like {@link WebviewMessageHandlers},
@@ -61,7 +63,7 @@ const CARRIES_ITS_PAYLOAD: {
   loadResource: (m) =>
     isString(m.path) &&
     (m.resourceType === undefined || isString(m.resourceType)) &&
-    (m.maxBytes === undefined || typeof m.maxBytes === 'number') &&
+    (m.maxBytes === undefined || isByteCount(m.maxBytes)) &&
     isString(m.requestId),
   log: (m) => isString(m.level) && isString(m.message) && Array.isArray(m.args),
   previewCaptured: (m) => isString(m.requestId) && isString(m.dataUrl),

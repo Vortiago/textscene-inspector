@@ -82,9 +82,13 @@ export function readTheoraPictureSize(bytes: Uint8Array): Vector2 | null {
     for (let page = readOggPage(reader); page; page = readOggPage(reader)) {
       // The identification header is 42 bytes, so one segment holds it whole.
       const firstSegment = page.segments[0];
-      if (theoraSerial === null && (page.flags & BEGINNING_OF_STREAM) !== 0 && firstSegment) {
+      if (theoraSerial === null) {
+        // Godot stops looking for a stream at the first page that does not begin one (`:306-312`).
+        if ((page.flags & BEGINNING_OF_STREAM) === 0) return null;
         const isIdentification =
-          firstSegment[0] === IDENTIFICATION_PACKET_TYPE && isTheoraHeaderPacket(firstSegment);
+          firstSegment !== undefined &&
+          firstSegment[0] === IDENTIFICATION_PACKET_TYPE &&
+          isTheoraHeaderPacket(firstSegment);
         if (isIdentification) theoraSerial = page.serial;
       }
       if (page.serial !== theoraSerial) continue;

@@ -28,6 +28,13 @@ describe('readTheoraPictureSize', () => {
     expect(readTheoraPictureSize(clip.subarray(0, 100))).toBeNull();
   });
 
+  it('gives null when the first page does not begin a stream, as Godot stops looking there', () => {
+    const clip = clipBytes('clip-64x48.ogv').slice();
+    const FLAGS_OFFSET = 5;
+    clip[FLAGS_OFFSET] = clip[FLAGS_OFFSET]! & ~0x02;
+    expect(readTheoraPictureSize(clip)).toBeNull();
+  });
+
   it('gives null for bytes that are not an Ogg file', () => {
     expect(readTheoraPictureSize(new TextEncoder().encode('not an ogg file at all'))).toBeNull();
   });
