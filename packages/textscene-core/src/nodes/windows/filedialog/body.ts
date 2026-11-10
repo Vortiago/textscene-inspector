@@ -282,8 +282,8 @@ function themedIconsOf(
 
 /**
  * The size of a toolbar icon: the dialog Theme's texture once its size is known, else the vendored default's
- * `FILE_DIALOG_ICON_SIZE`. A pending icon takes the default room, as every other themed slot does, so the layout
- * does not jump when an icon of that size arrives.
+ * `FILE_DIALOG_ICON_SIZE`. A pending icon takes the default room, as CheckBox, OptionButton and the split grabber
+ * do, so the layout only moves when the arriving texture is not that size.
  */
 function iconSizeOf(dialog: SolveNode, name: FileDialogThemeIcon): Vector2 {
   return dialog.textureSlots[name] ?? FILE_DIALOG_ICON_SIZE;

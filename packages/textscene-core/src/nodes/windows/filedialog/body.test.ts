@@ -15,6 +15,7 @@ import '../../../r3f/controls/index';
 import { dialogGeometry } from '../acceptdialog/dialogLayout';
 import { wrappedWindowSize } from '../window/wrapControls';
 import oracle from './testing/fileDialogGeometry/oracle.out.json';
+import { FILE_DIALOG_THEME_ICONS } from '../../../godot/scene/fileDialog';
 import { fileDialogTextureSlots } from './body';
 import { parseFileDialog } from './parser';
 
@@ -191,6 +192,20 @@ describe('FileDialog toolbar icon sizes', () => {
   it('gives a themed icon whose size is not known yet the default room', () => {
     const loading = { ...base, icons: { back_folder: themedIcon }, textureSlots: { back_folder: null } };
     expect(prevWidth(loading)).toBe(prevWidth(base));
+  });
+
+  it('lays out the whole body as the default when every themed icon is pending', () => {
+    const names = FILE_DIALOG_THEME_ICONS;
+    const pending = {
+      ...base,
+      icons: Object.fromEntries(names.map((name) => [name, themedIcon])),
+      textureSlots: Object.fromEntries(names.map((name) => [name, null])),
+    };
+    const rects = (dialog: SolveNode) =>
+      dialogGeometry(dialog, { x: 640, y: 360 }, createSolveContext(THEME, measureText)).body.map(
+        ({ rect }) => rect
+      );
+    expect(rects(pending)).toEqual(rects(base));
   });
 
   it('requests one slot for each icon the Theme gives', () => {
