@@ -187,7 +187,7 @@ function ControlItemGroup({ solveNode, solved, theme, measureText, snapToPixels 
 
   // The solve says whether `Container::fit_child_in_rect` reset this child to rotation 0 and
   // scale 1, and the snap's rotation gate must see that too.
-  const resets = solvedEntry?.resetsTransform === true;
+  const resets = solvedEntry?.resetsChildTransform === true;
   const rotation = resets ? 0 : (props.rotation ?? 0);
   const { x: scaleX, y: scaleY } = solvedEntry?.scale ?? (resets ? UNIT_SCALE : (props.scale ?? UNIT_SCALE));
   const hasOwnTransform = rotation !== 0 || scaleX !== 1 || scaleY !== 1;

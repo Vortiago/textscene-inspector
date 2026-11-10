@@ -109,8 +109,6 @@ export const resourceSliceRegistry = {
   byExtension: (extension: string): ResourceSliceRegistration | null => byExtension.get(extension) ?? null,
   /** The slice claiming the path's extension, or null when no slice claims it. */
   byPath,
-  /** The slot the slice claiming the path's extension loads it on, or null when no slice claims it. */
-  busTypeOfPath: (path: string): ResourceBusType | null => byPath(path)?.busType ?? null,
   /** Whether the slice claiming `busType` marks its values clone-per-consumer. */
   clonesPerConsumer: (busType: ResourceBusType): boolean =>
     all.some((r) => r.busType === busType && r.clonePerConsumer === true),

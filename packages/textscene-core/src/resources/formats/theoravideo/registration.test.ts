@@ -6,7 +6,7 @@ import './index';
 
 describe('theoravideo slice registration', () => {
   it('claims .ogv for the generic resource bus slot', () => {
-    expect(resourceSliceRegistry.busTypeOfPath('res://video/intro.ogv')).toBe('resource');
+    expect(resourceSliceRegistry.byPath('res://video/intro.ogv')?.busType).toBe('resource');
   });
 
   it('fetches an .ogv as bytes', () => {

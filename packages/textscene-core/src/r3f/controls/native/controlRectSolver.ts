@@ -40,7 +40,7 @@ export interface SolvedControl {
    * True when the parent's layout reset this node to rotation 0 and scale 1, as
    * `Container::fit_child_in_rect` does.
    */
-  resetsTransform?: boolean;
+  resetsChildTransform?: boolean;
 }
 
 // --- Anchors ---------------------------------------------------------------
@@ -239,10 +239,6 @@ function hasSizeDependentMinimum(roots: readonly SolveNode[]): boolean {
 
 // --- Phase 2: top-down rect assignment ---------------------------------------
 
-function record(n: SolveNode, solved: SolvedControl, out: Map<string, SolvedControl>): void {
-  out.set(n.path, solved);
-}
-
 /**
  * Solves `n`'s own rect against `parentRect` on the free path
  * (`Control::_size_changed`), then dispatches its children.
@@ -272,7 +268,7 @@ function solveFree(
     );
     if (n.rtl) rect = mirrorRectRtl(rect, anchorable.w);
   }
-  record(n, { rect, minSize, resetsTransform: resetsChildTransform }, out);
+  out.set(n.path, { rect, minSize, resetsChildTransform });
   dispatchChildren(n, rect, { x: origin.x + rect.x, y: origin.y + rect.y }, viewport, ctx, out);
 }
 
@@ -350,16 +346,12 @@ function dispatchChildren(
       );
       childRect = child.rtl ? mirrorRectRtl(floored, rect.w) : floored;
     }
-    record(
-      child,
-      {
-        rect: childRect,
-        minSize,
-        scale: childScales?.get(child.path),
-        resetsTransform: resetsChildTransform,
-      },
-      out
-    );
+    out.set(child.path, {
+      rect: childRect,
+      minSize,
+      scale: childScales?.get(child.path),
+      resetsChildTransform,
+    });
     dispatchChildren(
       child,
       childRect,
