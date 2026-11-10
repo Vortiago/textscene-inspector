@@ -35,6 +35,18 @@ This y-sorted layer turns 30 degrees and scales by 1.5 in its parent. It draws e
 
 A y-sorted layer sorts its tile rows with its child nodes by y (`renderer_canvas_cull.cpp:110-170`). A child draws over the rows above its y and under the rows below it. The left layer roots a sort and the right layer sits in a y-sorted Node2D. The cyan and yellow children each cover row 0 and sit under row 1. A child that ties a row in y draws over it, and a y-sorted child merges its own children into the sort. A y-sorted TileMap with a y-sorted layer sorts the same way. A child that an AnimationPlayer moves across a row re-sorts on the frame the mixer moves it. The previewer matches Godot 4.6.3 in each case, and at 0.5 s of the `unit-tile-map-layer-y-sort-animated-child` clip.
 
+## Scene tiles
+
+<!-- compare: image=unit-tile-map-layer-scene-tiles status=done fixture=unit-tile-map-layer-scene-tiles.tscn -->
+
+A cell that names a scene tile of a `TileSetScenesCollectionSource` instantiates that scene at the cell (`tile_map_layer.cpp:1569-1659`). The instances come after the layer's authored children, in the order of `tile_map_data`. The instance is an ordinary instanced scene, so a later instance draws over an earlier one and over an authored child. A Node2D root takes the cell's flip and transpose bits and a Control root ignores them (`:1706-1723`). A scene id the source lacks, atlas coords other than (0, 0) and a missing source draw nothing. A root that is no CanvasItem is refused. A scene that fails to load, or that is no PackedScene, leaves the tile with no scene. A scene Godot refuses to instantiate draws nothing. A disabled layer draws no instance. An instance has no row in the Scene tree, and a click on it selects the layer. On a y-sorted layer an instance sorts with the rows and the child nodes. It sorts on the origin of its root and in the z bucket of its root. A Control root draws at the cell centre plus its position, rounded to whole pixels (`:1636`). An odd tile size shows this. A `top_level` Control root ignores the layer's transform and draws in the canvas at that sum (`canvas_item.cpp:565-571`). The previewer matches Godot 4.6.3 in each case.
+
+## Scene tile placeholder
+
+<!-- compare: image=unit-tile-map-layer-scene-tile-placeholders status=done fixture=unit-tile-map-layer-scene-tile-placeholders.tscn -->
+
+The editor marks a scene tile with a translucent disc when the tile has no scene or sets `display_placeholder` (`tile_map_layer.cpp:1661-1700`). A scene that failed to load, or whose root is no CanvasItem, leaves the tile with no scene. The disc has a quarter of the shorter tile side as radius, and its colour comes from the tile's ids. The previewer draws the disc while the Gizmos toggle is on, tinted by the layer's modulate, and a capture keeps the toggle off. A running game draws no disc, so Godot's reference render shows none.
+
 ## Padded atlas from a ViewportTexture
 
 <!-- compare: image=unit-tile-atlas-viewport-padding status=done fixture=unit-tile-atlas-viewport-padding.tscn -->
@@ -95,5 +107,4 @@ the raw reference string, so a dangling reference draws no tiles. Malformed
 
 ## Known limitations
 
-- **Resource gap** Scene-collection sources are skipped with a warning, and animated tiles
-  show their first frame.
+- **Resource gap** Animated tiles show their first frame.

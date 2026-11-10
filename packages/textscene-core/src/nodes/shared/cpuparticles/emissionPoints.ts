@@ -31,7 +31,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { GodotRandomPCG } from './godotRng';
+import { GodotRandomPCG } from '../../../godot/math/randomPcg';
 import { transform2DBasisXform } from '../../../godot/math/transform2d.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 

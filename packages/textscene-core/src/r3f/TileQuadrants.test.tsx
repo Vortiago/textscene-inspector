@@ -87,6 +87,7 @@ const MODEL: TileSetModel = {
     [1, atlasSource(1)],
     [FAILED_SOURCE, atlasSource(FAILED_SOURCE)],
   ]),
+  sceneSources: new Map(),
 };
 
 function cell(sourceId: number, x: number, y: number, alternativeId = 0): PlacedCell {

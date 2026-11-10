@@ -316,6 +316,25 @@ export function useLiveStepOf(node: LiveNode, scope: SceneScope): LiveStep {
   return useReadAtLoadTick(watched, readAt, Object.is);
 }
 
+/**
+ * {@link useLiveStepOf} for several nodes of one scope, read together at each load tick: a reader
+ * with a list of instances calls one hook, not one per item. `nodes` and `scope` must be stable.
+ */
+export function useLiveStepsOf(nodes: readonly LiveNode[], scope: SceneScope): readonly LiveStep[] {
+  const loader = useResourceLoader();
+  const physicsClock = useProjectPhysicsClock();
+  // No nodes read no cache, so such a reader watches no load, as `useLiveStepOf` does for a plain node.
+  const watched = nodes.length > 0 ? loader : null;
+  const readAt = useCallback(
+    (version: number) => {
+      const tree = loaderTreesOf(physicsClock)(watched, version);
+      return nodes.map((node) => tree.stepOf(node, scope));
+    },
+    [physicsClock, watched, nodes, scope]
+  );
+  return useReadAtLoadTick(watched, readAt, sameElements);
+}
+
 /** The live nodes matching `predicate`. Pass a stable `predicate` (module-level or memoised), or the memo recomputes every render. */
 export function useLiveSceneNodes(
   predicate: (node: TscnNode) => boolean,

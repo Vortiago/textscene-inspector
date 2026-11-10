@@ -498,6 +498,14 @@ _Avoid_: "quadrant" for this, "sub-quadrant".
 A placed tile cell whose atlas source, tile and alternative tile all exist, so Godot draws it (`tile_map_layer.cpp:527-531`).
 _Avoid_: "valid cell".
 
+**Scene tile** (`resources/tileset/sceneTileCells.ts`):
+A cell that names a tile of a `TileSetScenesCollectionSource`. Its layer instantiates the tile's scene as a child at the cell (`tile_map_layer.cpp:1569-1659`).
+_Avoid_: "scene cell", "instance tile".
+
+**Unowned node** (`LiveNode.isUnowned`):
+A node that a layer adds to the live tree and the edited scene does not own. The Scene dock lists no row for it, and a click on it selects its owner (`scene_tree_editor.cpp:278-290`).
+_Avoid_: "internal node" for this, "hidden node".
+
 **Viewport mode**:
 The single `'2D' | '3D'` display state of the centre viewport: `3D` mounts the R3F canvas, and `2D` mounts the pannable 2D stage.
 A heuristic on the scene root type picks the default, and the toolbar toggle overrides it.

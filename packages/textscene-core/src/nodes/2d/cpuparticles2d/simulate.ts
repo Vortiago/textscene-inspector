@@ -36,7 +36,8 @@ import type { Curve } from '../../../resources/curves/curve/types';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
 // The pure `Gradient::get_color_at_offset` port, so no renderer enters the import closure.
 import { sampleGradientColor, storedGradient } from '../../../resources/textures/gradienttexture2d/sample';
-import { GodotRandomPCG, type SeedRef } from '../../shared/cpuparticles/godotRng';
+import { GodotRandomPCG } from '../../../godot/math/randomPcg';
+import type { SeedRef } from '../../shared/cpuparticles/godotRng';
 import {
   pickPoint,
   previewProcessRng,

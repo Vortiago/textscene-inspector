@@ -12,6 +12,7 @@ import { v } from '../../linter/validators/index.js';
 import { layerFamilyKeys } from './layerValidators.js';
 import { TILE_LAYOUT_NAMES, TILE_OFFSET_AXIS_NAMES, TILE_SHAPE_NAMES } from '../../godot/scene/tileSet.js';
 import { terrainSetValidator } from './terrainValidators.js';
+import { sceneTileValidator } from './sceneCollectionValidators.js';
 import { patternValidator, sourceValidator, tileProxyValidator } from './sourceValidators.js';
 
 validatorRegistry.registerAll(
@@ -49,3 +50,7 @@ validatorRegistry.registerAll(
     'pattern_#': patternValidator,
   }
 );
+
+// `TileSetScenesCollectionSource` has no ADD_PROPERTY: its keys are `scenes/<id>/<leaf>`
+// (tile_set.cpp:5906-5917), so the plain path wildcard routes them to one validator.
+validatorRegistry.registerAll('TileSetScenesCollectionSource', {}, {}, { 'scenes/*': sceneTileValidator });

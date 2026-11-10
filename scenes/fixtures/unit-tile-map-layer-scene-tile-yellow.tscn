@@ -1,0 +1,5 @@
+[gd_scene format=3 uid="uid://unittilemaplayerscenetileyellow"]
+
+[node name="Root" type="Polygon2D"]
+color = Color(1, 1, 0, 1)
+polygon = PackedVector2Array(-10, -100, 10, -100, 10, 0, -10, 0)

@@ -16,6 +16,9 @@ quadrants in Godot's cell order, as on TileMapLayer (`tile_map_layer.cpp:306-311
 tile material or `z_index`. Each canvas item takes its own lights at its layer's
 `z_index` plus the tile's own. A tile samples its atlas as on TileMapLayer, with
 `use_texture_padding` honoured, and lights through its CanvasTexture's normal map as there.
+A cell that names a scene tile of a scene-collection source instantiates its scene as a child
+of the TileMap, as on TileMapLayer (`tile_map_layer.cpp:1645-1652`). The instance takes the
+TileMap's transform and neither the layer's `modulate` nor its `z_index`.
 
 ## Linting
 
@@ -52,5 +55,5 @@ passes through as the raw reference string, so a dangling reference draws no til
 
 ## Known limitations
 
-- **Resource gap** Scene-collection sources are skipped with a warning, animated tiles
-  show their first frame, and legacy formats 0 and 1 draw nothing.
+- **Resource gap** Animated tiles show their first frame, and legacy formats 0 and 1 draw
+  nothing.
