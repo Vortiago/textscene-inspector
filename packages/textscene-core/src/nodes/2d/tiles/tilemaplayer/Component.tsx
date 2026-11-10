@@ -26,10 +26,11 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
     model,
     props.enabled && props.drawsSceneTiles !== false ? props.cells : null
   );
-  // A scene tile is a child canvas item of the layer, so it sorts with the layer's rows and children.
+  // A scene tile is a child canvas item of the layer, so a y-sorted layer sorts it with its rows and
+  // children. An unsorted layer draws them through <SceneTileInstances>, so it builds no copy.
   const withSceneTiles = useMemo(
-    () => ({ ...node, children: [...node.children, ...sceneTiles.instances] }),
-    [node, sceneTiles.instances]
+    () => (props.y_sort_enabled ? { ...node, children: [...node.children, ...sceneTiles.instances] } : node),
+    [node, props.y_sort_enabled, sceneTiles.instances]
   );
   if (!props.y_sort_enabled) {
     return (

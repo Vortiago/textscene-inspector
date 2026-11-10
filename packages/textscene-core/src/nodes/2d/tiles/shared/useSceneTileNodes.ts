@@ -14,6 +14,7 @@ import type { TileScene, TileSetModel } from '../../../../resources/tileset/type
 import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedScenePathsContext';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useLiveStepsOf } from '../../../../r3f/useLiveSceneTree';
+import type { LiveStep } from '../../../../r3f/liveSceneTree';
 import { parseNode2D } from '../../../base/node2d/parser';
 import { TRANSFORM2D_IDENTITY, type Transform2DColumns } from '../../../../godot/math/transform2d';
 import { node2DLocalTransform } from '../../../../r3f/node2dTransform';
@@ -54,8 +55,14 @@ export function useSceneTileNodes(
     () => ({ ...ambient, instancedScenePaths: enclosingScenePaths }),
     [ambient, enclosingScenePaths]
   );
-  const instances = useMemo(() => tiles.map((tile) => instanceNode(tile.scene, scope)), [tiles, scope]);
-  const steps = useLiveStepsOf(instances, scope);
+  // One instance node and one live step per distinct scene: a layer repeats few scenes across many cells.
+  const instanceOf = useMemo(() => {
+    const byScene = new Map<TileScene, LiveNode>();
+    for (const { scene } of tiles) if (!byScene.has(scene)) byScene.set(scene, instanceNode(scene, scope));
+    return byScene;
+  }, [tiles, scope]);
+  const distinctInstances = useMemo(() => [...instanceOf.values()], [instanceOf]);
+  const distinctSteps = useLiveStepsOf(distinctInstances, scope);
 
   return useMemo(() => {
     if (!model) return NO_DRAWING;
@@ -63,21 +70,17 @@ export function useSceneTileNodes(
     const refused = new Set<SceneTileCell>();
     const placed: LiveNode[] = [];
     const names = new TileNames();
-    tiles.forEach((tile, index) => {
-      const step = steps[index]!;
+    const stepOf = new Map<LiveNode, LiveStep>();
+    distinctInstances.forEach((instance, index) => stepOf.set(instance, distinctSteps[index]!));
+    tiles.forEach((tile) => {
+      const instance = instanceOf.get(tile.scene)!;
+      const step = stepOf.get(instance)!;
       // A scene not yet loaded has no root to judge: its tile draws nothing and shows no disc.
       const root = step.isMerged ? rootKindOf(step.node.type) : 'node2d';
       if (root === null) refused.add(tile.tile);
       else
         placed.push(
-          placementNode(
-            names.nameAt(tile.tile.cell.coords),
-            tile.tile,
-            instances[index]!,
-            model,
-            root,
-            step.node
-          )
+          placementNode(names.nameAt(tile.tile.cell.coords), tile.tile, instance, model, root, step.node)
         );
     });
     return {
@@ -86,7 +89,7 @@ export function useSceneTileNodes(
         (tile) => !tile.tile.scene || tile.tile.displayPlaceholder || refused.has(tile)
       ),
     };
-  }, [model, allTiles, tiles, instances, steps]);
+  }, [model, allTiles, tiles, instanceOf, distinctInstances, distinctSteps]);
 }
 
 /**
