@@ -35,7 +35,11 @@ describe('FileEventBus', () => {
       eventBus.request('res://textures/icon.png');
 
       await vi.waitFor(() => {
-        expect(mockProvider.loadResource).toHaveBeenCalledWith('res://textures/icon.png');
+        expect(mockProvider.loadResource).toHaveBeenCalledWith(
+          'res://textures/icon.png',
+          undefined,
+          undefined
+        );
       });
     });
 

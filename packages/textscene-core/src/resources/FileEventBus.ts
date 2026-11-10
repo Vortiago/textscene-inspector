@@ -61,10 +61,7 @@ export class FileEventBus {
 
   /** The provider's read of `path`, capped to the leading bytes the claiming slice needs. */
   private readFile(path: string): Promise<FileData | null> {
-    const headBytes = resourceSliceRegistry.headBytesOfPath(path);
-    return headBytes === undefined
-      ? this.provider.loadResource(path)
-      : this.provider.loadResource(path, undefined, headBytes);
+    return this.provider.loadResource(path, undefined, resourceSliceRegistry.headBytesOfPath(path));
   }
 
   private async loadAsync(path: string): Promise<void> {

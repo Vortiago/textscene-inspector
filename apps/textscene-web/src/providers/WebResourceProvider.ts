@@ -142,12 +142,5 @@ async function readBytes(response: Response, maxBytes: number | undefined): Prom
     received += value.length;
   }
   await reader.cancel();
-  const head = new Uint8Array(Math.min(received, maxBytes));
-  let at = 0;
-  for (const chunk of chunks) {
-    const part = chunk.subarray(0, head.length - at);
-    head.set(part, at);
-    at += part.length;
-  }
-  return head.buffer;
+  return new Blob(chunks).slice(0, maxBytes).arrayBuffer();
 }

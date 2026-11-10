@@ -5,7 +5,7 @@
  */
 
 import type { Vector2 } from '../../../godot/math/vector';
-import { ByteReader, ReadPastEndError } from '../binaryresource/byteReader';
+import { ByteReader, ReadPastEndError, hasAsciiPrefix } from '../binaryresource/byteReader';
 
 const OGG_PAGE_MAGIC = 'OggS';
 const OGG_FIXED_HEADER_BYTES = 27;
@@ -31,19 +31,13 @@ interface OggPage {
   segments: readonly Uint8Array[];
 }
 
-function hasPrefix(bytes: Uint8Array, text: string, offset = 0): boolean {
-  if (bytes.length < offset + text.length) return false;
-  for (let i = 0; i < text.length; i++) if (bytes[offset + i] !== text.charCodeAt(i)) return false;
-  return true;
-}
-
 /**
  * The page at the reader's position, or null when the bytes there are not an Ogg page. A page cut
  * short throws `ReadPastEndError`.
  */
 function readOggPage(reader: ByteReader): OggPage | null {
   if (reader.remaining < OGG_FIXED_HEADER_BYTES) return null;
-  if (!hasPrefix(reader.take(OGG_PAGE_MAGIC.length), OGG_PAGE_MAGIC)) return null;
+  if (!hasAsciiPrefix(reader.take(OGG_PAGE_MAGIC.length), OGG_PAGE_MAGIC)) return null;
   reader.take(1); // stream structure version
   const flags = reader.u8();
   reader.take(8); // granule position
@@ -54,7 +48,7 @@ function readOggPage(reader: ByteReader): OggPage | null {
 }
 
 function isTheoraHeaderPacket(packet: Uint8Array): boolean {
-  return packet[0]! >= HEADER_FLAG && hasPrefix(packet, THEORA_MAGIC, 1);
+  return packet[0]! >= HEADER_FLAG && hasAsciiPrefix(packet, THEORA_MAGIC, 1);
 }
 
 /** The picture size an identification header states, or null for a header libtheora would refuse. */
