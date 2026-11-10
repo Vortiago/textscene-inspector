@@ -105,7 +105,7 @@ function buttonRow(dialog: SolveNode, ctx: SolveContext): ButtonRow {
 }
 
 /** The rect every authored Control takes (`dialogs.cpp:249-259`): the panel less the button row and its separation. */
-export function dialogContentRect(dialog: SolveNode, size: Vector2, ctx: SolveContext): Rect2 {
+function dialogContentRect(dialog: SolveNode, size: Vector2, ctx: SolveContext): Rect2 {
   const panel = dialogPanelBox(dialog, ctx.theme);
   const margins = contentMarginSize(panel);
   return {
