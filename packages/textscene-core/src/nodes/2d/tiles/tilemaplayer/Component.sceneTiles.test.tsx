@@ -86,6 +86,23 @@ describe('TileMapLayer scene tiles', () => {
     expect(drawnBoxes(await render([placed]))).toEqual([]);
   });
 
+  it('draws no instance for a scene whose loaded root is a plain Node', async () => {
+    // `set_scene_tile_scene` refuses a root that is no CanvasItem (`tile_set.cpp:5826-5827`).
+    const { renderer } = await renderSceneTiles(layerScene(), {
+      showGizmos: false,
+      prepare: withCells([cell(0, 0, 7)]),
+    });
+    expect(drawnBoxes(renderer)).toEqual([]);
+  });
+
+  it('draws no instance for a scene that has not loaded', async () => {
+    const { renderer } = await renderSceneTiles(layerScene(), {
+      withheldScenes: ['res://polygon.tscn'],
+      prepare: withCells([cell(0, 0, 1)]),
+    });
+    expect(drawnBoxes(renderer)).toEqual([]);
+  });
+
   it('draws no instance on a disabled layer', async () => {
     expect(drawnBoxes(await render([cell(0, 0, 1)], 'enabled = false\n'))).toEqual([]);
   });

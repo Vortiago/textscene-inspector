@@ -58,9 +58,26 @@ describe('a TileSetScenesCollectionSource in a scene', () => {
     expect(model.sources.has(2)).toBe(false);
   });
 
-  it('drops a negative scene id, which create_scene_tile re-seats (tile_set.cpp:5781-5783)', () => {
+  it('re-seats a negative scene id at next_scene_id (tile_set.cpp:5781-5783)', () => {
     const { model } = tileSetWith({ 'scenes/-4/scene': 'ExtResource("5")' });
-    expect(model.sceneSources.get(2)!.scenes.size).toBe(0);
+    expect([...model.sceneSources.get(2)!.scenes.keys()]).toEqual([1]);
+    expect(model.sceneSources.get(2)!.scenes.get(1)!.scene).not.toBeNull();
+  });
+
+  it('seats a negative id past the ids already taken, in the order of the keys', () => {
+    const { model } = tileSetWith({
+      'scenes/1/scene': 'ExtResource("5")',
+      'scenes/-1/scene': 'ExtResource("5")',
+      'scenes/2/scene': 'ExtResource("5")',
+    });
+    // Tile 1 is taken, so the negative id lands on 2 (`:5739-5743`). Id 2 then exists, so the
+    // later `scenes/2/scene` sets that tile's scene instead of creating one.
+    expect([...model.sceneSources.get(2)!.scenes.keys()].sort()).toEqual([1, 2]);
+  });
+
+  it('loses the placeholder flag of a negative id, which names no tile (tile_set.cpp:5844-5845)', () => {
+    const { model } = tileSetWith({ 'scenes/-1/display_placeholder': 'true' });
+    expect(model.sceneSources.get(2)!.scenes.get(1)).toEqual({ scene: null, displayPlaceholder: false });
   });
 
   it('still warns for a source type it does not know', () => {

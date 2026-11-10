@@ -12,6 +12,7 @@ import type { PlacedCell } from '../shared/tileData';
 import {
   SCENE_TILESET_RESOURCES,
   boxesInPaintOrder,
+  drawnMeshes,
   drawnBoxes,
   onlyMesh,
   nodesOfType,
@@ -74,6 +75,16 @@ describe('TileMap scene tiles', () => {
       prepare: withLayerCells([cell(0, 0, 1)], [cell(2, 0, 1)]),
     });
     expect(drawnBoxes(renderer)).toEqual([[260, 52, 20, 10]]);
+  });
+
+  it('keeps the instances of the other layers mounted when a layer is toggled', async () => {
+    const prepare = withLayerCells([cell(0, 0, 1)], [cell(2, 0, 1)]);
+    const { renderer, edit } = await renderSceneTiles(mapScene(), { prepare });
+    const instanceAt260 = () => drawnMeshes(renderer).find(({ box }) => box[0] === 260)!.mesh;
+    const before = instanceAt260();
+    await edit(mapScene('layer_0/enabled = false\n'), prepare);
+    expect(drawnBoxes(renderer)).toEqual([[260, 52, 20, 10]]);
+    expect(instanceAt260()).toBe(before);
   });
 
   it('takes no z_index of the layer: an authored child above the TileMap still covers the instance', async () => {

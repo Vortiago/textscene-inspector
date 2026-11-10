@@ -15,6 +15,7 @@ import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedSceneP
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useLiveStepsOf } from '../../../../r3f/useLiveSceneTree';
 import { parseNode2D } from '../../../base/node2d/parser';
+import type { Vector2 } from '../../../../godot/math/vector';
 import type { PlacedCell } from './tileData';
 
 /** The instance's name below its placement node. The Scene dock lists neither. */
@@ -58,10 +59,16 @@ export function useSceneTileNodes(
     // `set_scene_tile_scene` refuses a root that is no CanvasItem, so that tile has no scene.
     const refused = new Set<SceneTileCell>();
     const placed: LiveNode[] = [];
+    const names = new TileNames();
     tiles.forEach((tile, index) => {
-      const root = rootKindOf(steps[index]!.node.type);
+      const step = steps[index]!;
+      // A scene not yet loaded has no root to judge: its tile draws nothing and shows no disc.
+      const root = step.isMerged ? rootKindOf(step.node.type) : 'node2d';
       if (root === null) refused.add(tile.tile);
-      else placed.push(placementNode(`@SceneTile@${index}`, tile.tile, instances[index]!, model, root));
+      else
+        placed.push(
+          placementNode(names.nameAt(tile.tile.cell.coords), tile.tile, instances[index]!, model, root)
+        );
     });
     return {
       instances: placed,
@@ -70,6 +77,21 @@ export function useSceneTileNodes(
       ),
     };
   }, [model, allTiles, tiles, instances, steps]);
+}
+
+/**
+ * Names a tile's placement node by its cell, so a change elsewhere in the layers leaves the name, and
+ * so the mounted instance, alone. A cell that a second layer holds again takes a numbered name.
+ */
+class TileNames {
+  private readonly seen = new Map<string, number>();
+
+  nameAt({ x, y }: Vector2): string {
+    const cell = `${x}_${y}`;
+    const count = this.seen.get(cell) ?? 0;
+    this.seen.set(cell, count + 1);
+    return count === 0 ? `@SceneTile@${cell}` : `@SceneTile@${cell}@${count}`;
+  }
 }
 
 const NO_TILES: readonly SceneTileCell[] = [];
@@ -97,13 +119,10 @@ function instanceNode(scene: TileScene, ambient: SceneScope): LiveNode {
   };
 }
 
-/**
- * Null for a root type that is no CanvasItem. A root not yet loaded reads as `Node`, a Node2D here:
- * the instance draws nothing until its scene arrives.
- */
+/** Null for a root type that is no CanvasItem, which `set_scene_tile_scene` refuses (`tile_set.cpp:5826-5827`). */
 function rootKindOf(rootType: string): SceneRootKind | null {
   if (descendsFromClass(rootType, 'Control')) return 'control';
-  if (descendsFromClass(rootType, 'Node2D') || rootType === 'Node') return 'node2d';
+  if (descendsFromClass(rootType, 'Node2D')) return 'node2d';
   return null;
 }
 

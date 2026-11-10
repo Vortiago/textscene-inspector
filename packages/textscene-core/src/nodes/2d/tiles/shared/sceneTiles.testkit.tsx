@@ -67,12 +67,23 @@ color = Color(1, 0, 1, 1)
 polygon = PackedVector2Array(-15, -100, 15, -100, 15, 0, -15, 0)
 `;
 
+/** Scene tile 7: a plain Node root, which Godot refuses (`tile_set.cpp:5814-5836`). Its polygon never draws. */
+const PLAIN_NODE_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="Node"]
+
+[node name="Shape" type="Polygon2D" parent="."]
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 20, 0, 20, 10, 0, 10)
+`;
+
 /** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with scene tiles 1 to 5 in source 0. */
 export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="res://polygon.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://offset.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://control.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://yellow.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://magenta.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://plain.tscn" id="6"]
 
 [sub_resource type="TileSetScenesCollectionSource" id="scenes"]
 scenes/1/scene = ExtResource("1")
@@ -80,6 +91,7 @@ scenes/2/scene = ExtResource("3")
 scenes/3/scene = ExtResource("2")
 scenes/4/scene = ExtResource("4")
 scenes/5/scene = ExtResource("5")
+scenes/7/scene = ExtResource("6")
 
 [sub_resource type="TileSet" id="tileset"]
 tile_size = Vector2i(64, 64)
@@ -92,6 +104,7 @@ const TILE_SCENES: Record<string, string> = {
   'res://control.tscn': CONTROL_SCENE,
   'res://yellow.tscn': YELLOW_SCENE,
   'res://magenta.tscn': MAGENTA_SCENE,
+  'res://plain.tscn': PLAIN_NODE_SCENE,
 };
 
 /** What the viewport and the Scene dock see of the rendered scene. */
@@ -112,6 +125,8 @@ function Probe({ probe, children }: { probe: SceneTileProbe; children: ReactNode
 export interface RenderSceneTilesOptions {
   showGizmos?: boolean;
   selectedPath?: string | null;
+  /** The `res://` paths of tile scenes that never finish loading. */
+  withheldScenes?: string[];
   /** Changes the parsed scene before it renders, such as the cells of a layer. */
   prepare?: (scene: TscnScene) => void;
 }
@@ -124,6 +139,7 @@ export async function renderSceneTiles(tscn: string, options: RenderSceneTilesOp
   await import('../../../../r3f/controls/native/UnownedNodeControls');
   const fake = createFakeResourceLoader();
   for (const [path, text] of Object.entries(TILE_SCENES)) {
+    if (options.withheldScenes?.includes(path)) continue;
     fake.scenes._resolve(path, new TscnParser().parse(text));
   }
   const probe: SceneTileProbe = { selection: null, livePaths: [] };

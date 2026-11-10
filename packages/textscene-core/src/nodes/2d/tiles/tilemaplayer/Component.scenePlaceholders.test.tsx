@@ -72,6 +72,19 @@ describe('TileMapLayer scene tile placeholders', () => {
     ]);
   });
 
+  it('draws the disc for a scene whose loaded root is a plain Node, which has no scene', async () => {
+    expect(drawnBoxes(await renderLayer([cell(1, 0, 7)], { showGizmos: true }))).toEqual([[180, 36, 32, 32]]);
+  });
+
+  it('draws no disc for a scene that has not loaded', async () => {
+    const { renderer } = await renderSceneTiles(layerScene(), {
+      showGizmos: true,
+      withheldScenes: ['res://plain.tscn'],
+      prepare: withCells([cell(1, 0, 7)]),
+    });
+    expect(drawnBoxes(renderer)).toEqual([]);
+  });
+
   it('draws no disc for a tile with a scene and no flag', async () => {
     expect(drawnBoxes(await renderLayer([cell(0, 1, 2)], { showGizmos: true }))).toEqual([
       [127, 111, 10, 10],
