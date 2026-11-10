@@ -86,6 +86,7 @@ function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: Bu
     hasText: false,
     textNaturalSize: { x: 0, y: 0 },
     isTextRtl: false,
+    isClipped: false,
     rtl,
   });
   if (!layout.icon) return null;

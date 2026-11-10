@@ -89,6 +89,34 @@ describe('<OptionButton> (isolated painter contract)', () => {
     expect(color.getW(0)).toBeCloseTo(0.3, 5);
   });
 
+  it('draws the pressed fill once button_pressed=true (style_pressed_color)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <OptionButton
+        {...painterEnv()}
+        solveNode={solveNode({ buttonPressed: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const mesh = findChromeMesh(renderer.scene)!;
+    const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
+    expect(color.getX(0)).toBeCloseTo(0, 5);
+    expect(color.getW(0)).toBeCloseTo(0.6, 5);
+  });
+
+  it('uses control_font_pressed_color for the label once button_pressed=true', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <OptionButton
+        {...painterEnv()}
+        solveNode={solveNode({ items: ITEMS, selected: 1, buttonPressed: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    expect(material.uniforms.uColor!.value.x).toBeCloseTo(1, 5);
+  });
+
   it('skips the chrome StyleBox when flat, keeping the arrow', async () => {
     // `OptionButton : Button`, and Button's `if (!flat)` (`button.cpp:216`) paints the stylebox beneath
     // everything OptionButton draws. The minimum size keeps the margins either way (`button.cpp:525`).

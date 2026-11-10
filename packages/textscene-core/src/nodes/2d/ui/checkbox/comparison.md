@@ -47,3 +47,5 @@ outline ring (ADR-0064).
 
 ## Known limitations
 
+- **Not drawn** Button's inherited `icon` property (distinct from the check glyph) is
+  parsed but never drawn, and the minimum size and wrap width ignore it (#1433).

@@ -1,8 +1,8 @@
 /**
  * OptionButton's native rect solver and content layout: `get_minimum_size`, `_refresh_size_cache` and
  * `_notification` (`scene/gui/option_button.cpp`), with the defaults `scene/theme/default_theme.cpp:212-251`
- * registers for "OptionButton". Its "pressed" means an open popup, which a static preview never reaches, so
- * `get_draw_mode()` gives only `DRAW_NORMAL` or `DRAW_DISABLED`.
+ * registers for "OptionButton". A static preview has no pointer or open popup, so `get_draw_mode()` gives
+ * `DRAW_NORMAL`, `DRAW_DISABLED`, or `DRAW_PRESSED` for an authored `button_pressed` (`base_button.cpp:326-352`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -20,13 +20,13 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   pickButtonStyleBox,
-  resolveButtonDrawState,
+  resolveToggleDrawState,
   labelWrapWidthPx,
   reservedLabelBox,
   textMinimumWidthPx,
   tintColor,
-  type ButtonDrawState,
   type ButtonLabelBox,
+  type ToggleDrawState,
   type ButtonWrapProperties,
 } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -39,10 +39,15 @@ import {
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { OptionButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
+import {
+  CONTROL_FONT_COLOR,
+  CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_PRESSED_COLOR,
+} from '../../../../godot/scene/theme';
+import type { Rgba } from '../../../../godot/math/math';
 
 // Re-exported so Component.tsx imports the shared Button pieces under one name.
-export { pickButtonStyleBox, resolveButtonDrawState, tintColor };
+export { pickButtonStyleBox, resolveToggleDrawState, tintColor };
 
 /**
  * OptionButton's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:237`). This
@@ -57,8 +62,15 @@ const OPTION_BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 /** OptionButton's `font_disabled_color` default (`default_theme.cpp:245`). */
 const OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
-const OPTION_BUTTON_THEME_KEYS: Record<ButtonDrawState, TextThemeKeys> = {
+const OPTION_BUTTON_DEFAULT_FONT_COLORS: Readonly<Record<ToggleDrawState, Rgba>> = {
+  normal: OPTION_BUTTON_DEFAULT_FONT_COLOR,
+  pressed: CONTROL_FONT_PRESSED_COLOR,
+  disabled: OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR,
+};
+
+const OPTION_BUTTON_THEME_KEYS: Record<ToggleDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
+  pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
   disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
 };
 
@@ -66,13 +78,12 @@ const OPTION_BUTTON_THEME_KEYS: Record<ButtonDrawState, TextThemeKeys> = {
 export function optionButtonTextTheme(
   n: SolveNode,
   props: OptionButtonProperties,
-  state: ButtonDrawState,
+  state: ToggleDrawState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color:
-      state === 'disabled' ? OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR : OPTION_BUTTON_DEFAULT_FONT_COLOR,
+    color: OPTION_BUTTON_DEFAULT_FONT_COLORS[state],
   };
   return resolveTextTheme(n, props, OPTION_BUTTON_THEME_KEYS[state], defaults);
 }
@@ -155,7 +166,7 @@ export function optionButtonLabelWrapWidthPx(
  */
 export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as OptionButtonProperties;
-  const state = resolveButtonDrawState(props.disabled);
+  const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
   const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.optionButton, state, n.rtl);
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
@@ -174,7 +185,8 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
       // `paragraph->get_size()` is ceiled (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`),
       // so the max is over whole-pixel widths.
       // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`). An item shapes
-      // a new paragraph of width -1 (`button.cpp:484-489`), so it never wraps and the height stays one line.
+      // a fresh paragraph (`button.cpp:484-489`, from `option_button.cpp:455-459`) and only the draw sets a
+      // width, on `text_buf` (`button.cpp:432`), so an item never wraps and the height stays one line.
       textW = Math.max(textW, textMinimumWidthPx(size.x, props));
       textH = Math.max(textH, size.y);
     }

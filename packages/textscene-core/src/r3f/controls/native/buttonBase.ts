@@ -40,18 +40,8 @@ import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 // --- Draw-state + StyleBox chrome ------------------------------------------
 
-export type ButtonDrawState = 'normal' | 'disabled';
-
-/** A Button's draw mode: `DRAW_PRESSED` is a toggle that is on (`base_button.cpp:352`), which only a Button has. */
-export type ToggleDrawState = ButtonDrawState | 'pressed';
-
-/**
- * `Button::get_draw_mode()` with no pointer or keyboard input: hover, pressed and
- * focus states never occur, so only an authored `disabled` leaves `normal`.
- */
-export function resolveButtonDrawState(disabled: boolean | undefined): ButtonDrawState {
-  return disabled ? 'disabled' : 'normal';
-}
+/** A Button's draw mode: `DRAW_PRESSED` is a toggle that is on (`base_button.cpp:352`). */
+export type ToggleDrawState = 'normal' | 'disabled' | 'pressed';
 
 /** `BaseButton::get_draw_mode()` with no pointer: a disabled button wins over a toggle that is on (`base_button.cpp:326-328`). */
 export function resolveToggleDrawState(
@@ -217,6 +207,8 @@ export interface ButtonContentInput {
   textNaturalSize: Vector2;
   /** Whether the shaped text infers RTL (`shaped_text_get_inferred_direction`): an overflowing CENTER line then ends at the trailing edge. */
   isTextRtl: boolean;
+  /** `clip_text`, a trimming overrun or autowrap (`button.cpp:332`): an expanded icon then keeps the text's width (`:345`). */
+  isClipped: boolean;
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): swaps the icon and text alignment sides. */
   rtl: boolean;
 }
@@ -266,8 +258,8 @@ const {
 } = VerticalAlignment;
 
 /**
- * `Button::_notification`'s icon and text placement (`button.cpp:233-456`), with
- * every clip branch at its non-clipped case: sizing reads `clip_text` and the rest.
+ * `Button::_notification`'s icon and text placement (`button.cpp:233-456`). `isClipped` is its one
+ * clip branch (`:345`); sizing reads `clip_text` and the rest.
  * `<TextRun>` has no alignment, so the TextServer's shift (`text_buf->set_alignment`)
  * folds into the text offset, as `layoutLabelLines` does for Label.
  */
@@ -285,6 +277,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     hasText,
     textNaturalSize,
     isTextRtl,
+    isClipped,
     rtl,
   } = input;
   const hSeparation = Math.max(0, hSeparationRaw);
@@ -310,7 +303,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     if (expandIcon) {
       let w = customElementSize.x;
       let h = customElementSize.y;
-      if (iconAlign !== H_CENTER && textNaturalSize.x > 0) {
+      if (!isClipped && iconAlign !== H_CENTER && textNaturalSize.x > 0) {
         w -= textNaturalSize.x + hSeparation;
       }
       if (verticalIconAlignment !== V_CENTER) {

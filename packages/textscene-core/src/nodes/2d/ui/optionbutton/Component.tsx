@@ -23,7 +23,7 @@ import {
   optionButtonHSeparation,
   optionButtonTextTheme,
   pickButtonStyleBox,
-  resolveButtonDrawState,
+  resolveToggleDrawState,
   optionButtonArrowSize,
   optionButtonLabelWrapWidthPx,
   resolveOptionButtonSelectedText,
@@ -34,7 +34,7 @@ import type { OptionButtonProperties } from './types';
 
 export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<OptionButtonProperties>(solveNode);
-  const state = resolveButtonDrawState(props.disabled);
+  const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
 
   const baseStyleBox = pickButtonStyleBox(
     solveNode.styleBoxes,

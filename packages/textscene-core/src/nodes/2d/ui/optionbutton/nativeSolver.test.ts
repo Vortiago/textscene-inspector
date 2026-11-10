@@ -10,7 +10,6 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import { resolveButtonDrawState } from '../../../../r3f/controls/native/buttonBase';
 import * as logger from '../../../../logger';
 import type { OptionButtonProperties } from './types';
 import {
@@ -200,13 +199,6 @@ describe('optionButtonTextTheme', () => {
       b: 0,
       a: 1,
     });
-  });
-});
-
-describe('resolveButtonDrawState reused for OptionButton (no CheckBox-style pressed complication)', () => {
-  it('the popup being closed means OptionButton never draws DRAW_PRESSED regardless of `selected`', () => {
-    expect(resolveButtonDrawState(false)).toBe('normal');
-    expect(resolveButtonDrawState(true)).toBe('disabled');
   });
 });
 

@@ -23,6 +23,7 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
+import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   resolveToggleDrawState,
   pickButtonStyleBox,
@@ -108,6 +109,7 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
   const iconLinearColor = useItemLinearColor(tintedIconColorSrgb);
 
+  const isClipped = isTextWidthClipped(props) || isButtonAutowrapped(props);
   const contentInput = useMemo(
     () => ({
       rectSize: { x: rect.w, y: rect.h },
@@ -121,6 +123,7 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
       expandIcon: props.expandIcon === true,
       iconNaturalSize,
       hasText,
+      isClipped,
       rtl: solveNode.rtl,
     }),
     [
@@ -134,6 +137,7 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
       props.expandIcon,
       iconNaturalSize,
       hasText,
+      isClipped,
       theme.separation,
       solveNode.rtl,
     ]
