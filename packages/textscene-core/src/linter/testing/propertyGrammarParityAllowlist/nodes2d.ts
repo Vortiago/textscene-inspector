@@ -61,19 +61,6 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: GODOT_IGNORES_ANTIALIASED,
   },
 
-  Bone2D: {
-    renderGap: [
-      // The editor bone gizmo, which the previewer does not draw yet, reads all four
-      // (`skeleton_2d.cpp:189-354`). The Skeleton2D modification stack reads length and bone_angle too.
-      'auto_calculate_length_and_angle',
-      'bone_angle',
-      'editor_settings/show_bone_gizmo',
-      'length',
-    ],
-    reason:
-      'rest is parsed for the Polygon2D skin; the bone gizmo and the modification stack, neither drawn yet, read the rest.',
-  },
-
   CPUParticles2D: {
     linterOnly: [...PARTICLE_PARAM_KEYS],
     reason:

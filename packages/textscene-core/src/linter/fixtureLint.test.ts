@@ -27,6 +27,11 @@ import { isGodotTextResourcePath } from '../godot/project/resourceFormats.js';
  * the advisory is the fixture's point: fixing the fixture is the default.
  */
 const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; reason: string }>> = {
+  'unit-bone2d-gizmo-child.tscn': {
+    rules: ['bone2d-invalid-parent', 'bone2d-chain-does-not-terminate'],
+    reason:
+      'the sub-scene whose Bone2D root joins no Skeleton2D on its own; the kite of the bone that instances it reaches this root',
+  },
   'unit-legacy-format.tscn': {
     rules: ['legacy-format-version'],
     reason:
