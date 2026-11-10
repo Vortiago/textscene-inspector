@@ -22,6 +22,8 @@ import { LINE_EDIT_DEFAULT_FONT_COLOR, pickLineEditStyleBox } from '../lineedit/
  */
 export interface PickerTheme extends NativeTheme {
   modeButton: { normal: StyleBoxFlatData; pressed: StyleBoxFlatData };
+  /** The `normal` box of the `SpinBox` inner LineEdit, which sets the height of a slider row (`spin_box.cpp:82-86`). */
+  valueFieldBox: StyleBoxFlatData;
 }
 
 /** `theme` with the default mode button boxes, for a picker with no Theme. */
@@ -29,7 +31,11 @@ export function defaultPickerTheme(
   theme: NativeTheme,
   boxes: TabBarStyleBoxes = tabBarStyleBoxes(theme.scale)
 ): PickerTheme {
-  return { ...theme, modeButton: { normal: boxes.unselected, pressed: boxes.selected } };
+  return {
+    ...theme,
+    modeButton: { normal: boxes.unselected, pressed: boxes.selected },
+    valueFieldBox: theme.widgets.lineEdit.normal,
+  };
 }
 
 export interface PickerChildTheme {
@@ -90,9 +96,13 @@ export function pickerChildTheme(n: SolveNode, nativeTheme: NativeTheme): Picker
       pressed: pickTabStyleBox(tabs.styleBoxes, defaultTabs, 'selected'),
     },
   };
+  const valueFieldTheme = withLineEditBoxes(theme, valueField);
   return {
-    theme: withLineEditBoxes(withButtonBoxes, lineEdit),
-    valueFieldTheme: withLineEditBoxes(theme, valueField),
+    theme: {
+      ...withLineEditBoxes(withButtonBoxes, lineEdit),
+      valueFieldBox: valueFieldTheme.widgets.lineEdit.normal,
+    },
+    valueFieldTheme,
     valueFieldColor: valueField.colors.font_color ?? LINE_EDIT_DEFAULT_FONT_COLOR,
     labelColor: label.colors.font_color ?? LABEL_DEFAULT_FONT_COLOR,
     buttonColor: button.colors.font_color ?? BUTTON_DEFAULT_FONT_COLOR,

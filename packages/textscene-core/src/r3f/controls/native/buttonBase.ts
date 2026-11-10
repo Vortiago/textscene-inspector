@@ -347,7 +347,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
  * to the trailing edge in an RTL layout) and the default `vertical_icon_alignment` (CENTER), local to the
  * button. Null for an empty icon.
  */
-export function iconOnlyButtonIconRect(
+function iconOnlyButtonIconRect(
   rectSize: Vector2,
   styleMargin: ButtonContentInput['styleMargin'],
   iconSize: Vector2,

@@ -197,9 +197,9 @@ export function colorPickerSliderRowCount(
   return 3 + (rowVisible(props.editAlpha) ? 1 : 0) + (rowVisible(props.editIntensity) ? 1 : 0);
 }
 
-/** The height of one channel row, which the SpinBox's `LineEdit` sets (`spin_box.cpp:82-86`). */
-function lineRowHeight(theme: Pick<NativeTheme, 'widgets'>, textHeightPx: number): number {
-  return textHeightPx + contentMarginSize(theme.widgets.lineEdit.normal).y;
+/** The height of a row whose `LineEdit` draws `box` (`spin_box.cpp:82-86`). */
+function lineRowHeight(box: StyleBoxFlatData, textHeightPx: number): number {
+  return textHeightPx + contentMarginSize(box).y;
 }
 
 /**
@@ -214,15 +214,15 @@ function modeRowSize(
   pressedMode: number
 ): Vector2 {
   const btnModeWidth = iconButtonWidth(theme, theme.widgets.flatMenuButton.normal);
-  const normalMarginY = contentMarginSize(colorPickerModeButtonStyleBox(theme, false)).y;
-  const pressedMarginY = contentMarginSize(colorPickerModeButtonStyleBox(theme, true)).y;
+  const normalMarginY = contentMarginSize(theme.modeButton.normal).y;
+  const pressedMarginY = contentMarginSize(theme.modeButton.pressed).y;
   const btnModeHeight = colorPickerMenuButtonSize(theme).y;
   let height = Math.max(normalMarginY, pressedMarginY, btnModeHeight);
   if (!measure) return { x: btnModeWidth, y: height };
   let width = btnModeWidth;
   COLOR_MODE_NAMES.slice(0, MODE_BUTTON_COUNT).forEach((name, index) => {
     const m = measure(name);
-    width += modeButtonMinimumWidth(theme, m.x, index === pressedMode) + theme.separation;
+    width += modeButtonMinimumWidth(modeButtonBox(theme, index, pressedMode), m.x) + theme.separation;
     height = Math.max(height, m.y + (index === pressedMode ? pressedMarginY : normalMarginY));
   });
   return { x: width, y: height };
@@ -345,12 +345,11 @@ function centredButtonLabel(
 /** The label of a `mode_btns` button (`color_picker.cpp:2162-2174`): centred, with the style's own margins. */
 export function modeButtonLabel(
   box: Rect2,
-  theme: PickerTheme,
-  isPressed: boolean,
+  theme: Pick<NativeTheme, 'separation'>,
+  styleBox: StyleBoxFlatData,
   text: ButtonText
 ): ButtonLabelBox {
-  const { contentMargin } = colorPickerModeButtonStyleBox(theme, isPressed);
-  return centredButtonLabel(box, theme, contentMargin, text);
+  return centredButtonLabel(box, theme, styleBox.contentMargin, text);
 }
 
 /** The "#" label of `text_type` (`color_picker.cpp:1330`): a centred Button with the `button_normal` margins. */
@@ -407,9 +406,9 @@ export function colorPickerRows(
   const sampleHeight = sampleRowHeight(theme, props.pickerShape);
   const modeSize = modeRowSize(theme, measure, props.colorMode ?? MODE_RGB);
   const sliderRowCount = colorPickerSliderRowCount(props);
-  const sliderRowHeight = lineRowHeight(theme, textHeightPx);
+  const sliderRowHeight = lineRowHeight(theme.valueFieldBox, textHeightPx);
   const slidersHeight = sliderRowCount * sliderRowHeight + (sliderRowCount - 1) * theme.separation;
-  const hexHeight = lineRowHeight(theme, textHeightPx);
+  const hexHeight = lineRowHeight(theme.widgets.lineEdit.normal, textHeightPx);
   const swatchesSize = swatchesRowSize(theme, measure);
 
   let y = 0;
@@ -507,10 +506,17 @@ export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { theme, valueFieldTheme } = pickerChildTheme(n, ctx.theme);
   // The painter shapes in this font (`Component.tsx`), so the minimum measures in it too.
   const fontMetrics = resolveNodeFontMetrics(n, COLOR_PICKER_THEME_FONT_KEY);
-  const measure: TextWidthMeasurer | null = ctx.measureText
+  const measureUnceiled: TextWidthMeasurer | null = ctx.measureText
     ? (text) => ctx.measureText!(text, theme.fontSize, 0, fontMetrics)
     : null;
-  const emWidthPx = measure ? colorPickerEmWidthPx((text) => measure(text).x) : 0;
+  // The painter reserves the whole-pixel shaped width of a text, and the em of "W" stays unceiled.
+  const measure: TextWidthMeasurer | null =
+    measureUnceiled &&
+    ((text) => {
+      const size = measureUnceiled(text);
+      return { x: shapedTextSizeWidthPx(size.x), y: size.y };
+    });
+  const emWidthPx = measureUnceiled ? colorPickerEmWidthPx((text) => measureUnceiled(text).x) : 0;
   const rows = colorPickerRows(0, theme, props, measure);
   const width = Math.max(
     shapeRowMinWidth(theme, props.pickerShape),
@@ -669,14 +675,8 @@ interface ModeRowButtons {
 }
 
 /** A `mode_btns` button's minimum width: its text plus the margins of the box it draws (`button.cpp:525`). */
-function modeButtonMinimumWidth(
-  theme: Pick<PickerTheme, 'modeButton'>,
-  textWidth: number,
-  pressed: boolean
-): number {
-  return (
-    shapedTextSizeWidthPx(textWidth) + contentMarginSize(colorPickerModeButtonStyleBox(theme, pressed)).x
-  );
+function modeButtonMinimumWidth(styleBox: StyleBoxFlatData, textWidth: number): number {
+  return shapedTextSizeWidthPx(textWidth) + contentMarginSize(styleBox).x;
 }
 
 /**
@@ -693,7 +693,10 @@ export function modeRowButtonRects(
   const dropdownWidth = iconButtonWidth(theme, theme.widgets.flatMenuButton.normal);
   // `mode_hbc` is an HBoxContainer: three `SIZE_EXPAND_FILL` buttons, then `btn_mode`, whole pixels each (`box_container.cpp:100-130`).
   const expandFill = (index: number) => ({
-    minSize: { x: modeButtonMinimumWidth(theme, labelWidths[index]!, index === pressedMode), y: 0 },
+    minSize: {
+      x: modeButtonMinimumWidth(modeButtonBox(theme, index, pressedMode), labelWidths[index]!),
+      y: 0,
+    },
     hSizeFlags: SizeFlags.FILL | SizeFlags.EXPAND,
     vSizeFlags: SizeFlags.FILL,
     stretchRatio: 1,
@@ -720,8 +723,8 @@ export function modeRowButtonRects(
  * `tab_unselected` and `tab_selected` of `TabContainer` (`color_picker.cpp:2060-2061`).
  * The `mode_button_hover` bind (`:2062`) is left out: a static preview never hovers.
  */
-export function colorPickerModeButtonStyleBox(theme: Pick<PickerTheme, 'modeButton'>, pressed: boolean) {
-  return pressed ? theme.modeButton.pressed : theme.modeButton.normal;
+export function modeButtonBox(theme: Pick<PickerTheme, 'modeButton'>, index: number, pressedMode: number) {
+  return index === pressedMode ? theme.modeButton.pressed : theme.modeButton.normal;
 }
 
 interface SampleRowColumns {

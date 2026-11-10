@@ -10,7 +10,6 @@ import {
   buttonContentSize,
   buttonDrawnLabel,
   fitIconSize,
-  iconOnlyButtonIconRect,
   iconOnlyButtonIconRectIn,
   layoutButtonContent,
   pickButtonStyleBox,
@@ -572,7 +571,7 @@ describe('iconOnlyButtonIconRect: an icon with no text sits at the left margin a
 
   it("puts a 16px icon of a 28x31 button at (4, 7), as pnpm ref:godot measures text_type's script icon", () => {
     // x: style margin 4. y: floor((31 - 8 - 16) / 2) = 3, plus margin 4.
-    expect(iconOnlyButtonIconRect({ x: 28, y: 31 }, margin, { x: 16, y: 16 }, false)).toEqual({
+    expect(iconOnlyButtonIconRectIn({ x: 0, y: 0, w: 28, h: 31 }, margin, { x: 16, y: 16 }, false)).toEqual({
       x: 4,
       y: 7,
       w: 16,
@@ -591,7 +590,7 @@ describe('iconOnlyButtonIconRect: an icon with no text sits at the left margin a
   });
 
   it('puts the icon on the trailing edge in a right-to-left layout', () => {
-    expect(iconOnlyButtonIconRect({ x: 28, y: 31 }, margin, { x: 16, y: 16 }, true)).toEqual({
+    expect(iconOnlyButtonIconRectIn({ x: 0, y: 0, w: 28, h: 31 }, margin, { x: 16, y: 16 }, true)).toEqual({
       x: 8,
       y: 7,
       w: 16,
@@ -601,7 +600,9 @@ describe('iconOnlyButtonIconRect: an icon with no text sits at the left margin a
 
   it('floors a centred icon of a 29x31 button to whole pixels (icon_alignment CENTER)', () => {
     const centred = 1;
-    expect(iconOnlyButtonIconRect({ x: 29, y: 31 }, margin, { x: 16, y: 16 }, false, centred)).toEqual({
+    expect(
+      iconOnlyButtonIconRectIn({ x: 0, y: 0, w: 29, h: 31 }, margin, { x: 16, y: 16 }, false, centred)
+    ).toEqual({
       x: 6,
       y: 7,
       w: 16,

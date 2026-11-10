@@ -24,7 +24,7 @@ import {
   sliderGridRowRects,
   colorPickerValueColumnWidth,
   colorPickerLabelColumnWidth,
-  colorPickerModeButtonStyleBox,
+  modeButtonBox,
   colorPickerSliderBoxRect,
   colorPickerChannelGrabberRect,
   colorPickerIntensityRatio,
@@ -190,6 +190,18 @@ describe('colorPickerMinimumSize', () => {
     expect(colorPickerMinimumSize(swatchesOnly, ctx).x).toBe(158 + 8);
   });
 
+  it('reserves the whole-pixel shaped width of the preset texts, as the painter draws them (text_server_adv.cpp:7524-7537)', () => {
+    const fractional: SolveContext['measureText'] = (text) => ({ x: text.length * 10.4, y: 20 });
+    const ctx: SolveContext = {
+      theme: THEME,
+      measureText: fractional,
+      combinedMinimumSize: () => ({ x: 0, y: 0 }),
+    };
+    const swatchesOnly = node({ ...ALL_ROWS_HIDDEN, pickerShape: 4, presetsVisible: true });
+    // btn_recent_preset: ceil(135.2) = 136, plus icon(16), sep(4) and margin(8) = 164, plus internal_margin 8.
+    expect(colorPickerMinimumSize(swatchesOnly, ctx).x).toBe(164 + 8);
+  });
+
   it('drops the shape row contribution once picker_shape selects an undrawn shape', () => {
     expect(colorPickerMinimumSize(node({ pickerShape: 2, ...ALL_ROWS_HIDDEN }), CTX)).toEqual({ x: 8, y: 8 });
   });
@@ -290,6 +302,20 @@ const WIDE_PRESSED_THEME = {
     pressed: { ...THEME.modeButton.pressed, contentMargin: { left: 30, top: 10, right: 30, bottom: 10 } },
   },
 };
+
+describe('the slider rows with a SpinBox inner LineEdit box', () => {
+  it('take their height from valueFieldBox, and the hex row from the plain LineEdit box', () => {
+    const tall = { ...THEME.valueFieldBox, contentMargin: { left: 4, top: 10, right: 4, bottom: 10 } };
+    const rows = colorPickerRows(
+      400,
+      { ...THEME, valueFieldBox: tall },
+      { ...ALL_ROWS_HIDDEN, slidersVisible: true, hexVisible: true, editAlpha: false, editIntensity: false },
+      measure
+    );
+    expect(rows.sliders!.h).toBe(3 * (20 + 20) + 2 * 4);
+    expect(rows.hex!.h).toBe(20 + 8);
+  });
+});
 
 describe('the pressed mode button with wider margins than the others', () => {
   it('reserves its own margins for the pressed button (button.cpp:525)', () => {
@@ -479,22 +505,20 @@ describe('colorPickerLabelColumnWidth', () => {
   });
 });
 
-describe('colorPickerModeButtonStyleBox', () => {
+describe('modeButtonBox', () => {
   // color_picker.cpp:2060-2061: BIND_THEME_ITEM_EXT to TabContainer's tab_unselected/tab_selected.
   it('picks tab_unselected (black 60%) when not pressed', () => {
-    expect(colorPickerModeButtonStyleBox(THEME, false).bgColor).toEqual({ r: 0, g: 0, b: 0, a: 0.6 });
+    expect(modeButtonBox(THEME, 1, 0).bgColor).toEqual({ r: 0, g: 0, b: 0, a: 0.6 });
   });
 
   it('picks tab_selected (dark grey 60%, top border) when pressed', () => {
-    const box = colorPickerModeButtonStyleBox(THEME, true);
+    const box = modeButtonBox(THEME, 0, 0);
     expect(box.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
     expect(box.borderWidth.top).toBe(2);
   });
 
   it('both states share the same content margin (10,4,10,4)', () => {
-    expect(colorPickerModeButtonStyleBox(THEME, false).contentMargin).toEqual(
-      colorPickerModeButtonStyleBox(THEME, true).contentMargin
-    );
+    expect(modeButtonBox(THEME, 1, 0).contentMargin).toEqual(modeButtonBox(THEME, 0, 0).contentMargin);
   });
 });
 
@@ -714,15 +738,16 @@ describe('modeButtonLabel', () => {
   const direction = { rtl: false, isTextRtl: false };
 
   it('centres the text in the drawable width after the style margins', () => {
-    const label = modeButtonLabel(box, THEME, false, { size: text, direction });
+    const label = modeButtonLabel(box, THEME, THEME.modeButton.normal, { size: text, direction });
     expect(label.alignment).toBe(1);
     expect(label.leftPx).toBeGreaterThan(box.x);
     expect(label.widthPx).toBeLessThan(box.w);
   });
 
   it.each([false, true])('starts the box at the left margin of the style (pressed: %s)', (isPressed) => {
-    const label = modeButtonLabel(box, THEME, isPressed, { size: text, direction });
-    expect(label.leftPx).toBe(box.x + colorPickerModeButtonStyleBox(THEME, isPressed).contentMargin.left);
+    const styleBox = isPressed ? THEME.modeButton.pressed : THEME.modeButton.normal;
+    const label = modeButtonLabel(box, THEME, styleBox, { size: text, direction });
+    expect(label.leftPx).toBe(box.x + styleBox.contentMargin.left);
   });
 });
 

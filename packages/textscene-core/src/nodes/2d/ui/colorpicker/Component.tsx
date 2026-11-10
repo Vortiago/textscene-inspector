@@ -71,7 +71,7 @@ import {
   colorPickerChannelGrabberRect,
   colorPickerIntensityRatio,
   colorPickerLabelColumnWidth,
-  colorPickerModeButtonStyleBox,
+  modeButtonBox,
   colorPickerRows,
   colorPickerScale,
   colorPickerSliderBoxRect,
@@ -202,6 +202,7 @@ export function ColorPicker({
       props.presetsVisible,
       props.editAlpha,
       props.editIntensity,
+      props.colorMode,
       fontSizePx,
       fontMetrics,
     ]
@@ -567,7 +568,7 @@ export function ColorPicker({
           {modeCols.buttons.map((r, i) => (
             <CanvasItemGroup key={`${COLOR_MODE_NAMES[i]}-box`} position={[r.x, -r.y, 0]}>
               <StyleBoxQuad
-                styleBox={colorPickerModeButtonStyleBox(theme, colorMode === i)}
+                styleBox={modeButtonBox(theme, i, colorMode)}
                 rect={{ x: 0, y: 0, w: r.w, h: r.h }}
                 color={tint.own}
                 renderOrder={renderOrder}
@@ -579,7 +580,7 @@ export function ColorPicker({
               COLOR_MODE_NAMES[i]!,
               COLOR_MODE_NAMES[i]!,
               colorMode === i ? pressedFontColor : buttonFontColor,
-              modeButtonLabel(r, theme, colorMode === i, buttonText(COLOR_MODE_NAMES[i]!))
+              modeButtonLabel(r, theme, modeButtonBox(theme, i, colorMode), buttonText(COLOR_MODE_NAMES[i]!))
             )
           )}
           <IconButton
