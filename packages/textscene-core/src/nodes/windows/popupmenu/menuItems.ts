@@ -27,7 +27,7 @@ import type { PopupMenuTheme } from './menuTheme';
 import type { PopupMenuItem, PopupMenuProperties } from './types';
 
 /** The texture slot of item `index`'s `icon` (`item_<n>/icon`). */
-export function menuItemIconSlot(index: number): string {
+function menuItemIconSlot(index: number): string {
   return `item_${index}/icon`;
 }
 

@@ -134,7 +134,7 @@ export const CHECK_BOX_ICON_THEME_NAME: Record<CheckBoxIconKey, string> = {
   radioUncheckedDisabled: 'radio_unchecked_disabled',
 };
 
-export const CHECK_BOX_ICON_THEME_NAMES = Object.values(CHECK_BOX_ICON_THEME_NAME);
+const CHECK_BOX_ICON_THEME_NAMES = Object.values(CHECK_BOX_ICON_THEME_NAME);
 
 /**
  * Which of CheckBox's 8 icon slots have a themed answer, for `SolveNode.textureSlots`. The walker

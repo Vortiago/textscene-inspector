@@ -110,6 +110,11 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/windows/window/contentScale.ts` | `scene/main/window.cpp` (`Window::_update_viewport_size`'s content scale) and `scene/main/viewport.cpp` (`Viewport::_sub_window_update`'s target rect and black bars) |
 | `packages/textscene-core/src/nodes/windows/window/decoration.ts` | `scene/main/viewport.cpp` (`Viewport::_sub_window_update`'s title and close icon placement) |
 | `packages/textscene-core/src/nodes/windows/popuppanel/contentLayout.ts` | `scene/gui/popup.cpp` (`PopupPanel::_get_contents_minimum_size`, `_update_shadow_offsets`, `_update_child_rects`) |
+| `packages/textscene-core/src/nodes/windows/popupmenu/menuItems.ts` | `scene/gui/popup_menu.cpp` (`PopupMenu::_get_item_icon_size`, the check icon sizes and the gutter width of `_get_contents_minimum_size`) |
+| `packages/textscene-core/src/nodes/windows/popupmenu/menuLayout.ts` | `scene/gui/popup_menu.cpp` (`PopupMenu::_get_item_height`, `_get_contents_minimum_size`, `_update_shadow_offsets`, the item rows of `_draw_items`) |
+| `packages/textscene-core/src/nodes/windows/popupmenu/menuDrawing.ts` | `scene/gui/popup_menu.cpp` (`PopupMenu::_draw_items`: separators, check marks, icons and text) |
+| `packages/textscene-core/src/nodes/windows/popupmenu/menuTheme.ts` | `scene/gui/popup_menu.cpp` (the `PopupMenu` theme items) and `scene/theme/default_theme.cpp` (the default menu panel and separator styles) |
+| `packages/textscene-core/src/nodes/windows/window/panelInsets.ts` | `scene/gui/popup.cpp` (`PopupPanel::_update_shadow_offsets`) and `scene/gui/popup_menu.cpp` (`PopupMenu::_update_shadow_offsets`) |
 | `packages/textscene-core/src/nodes/windows/window/contentFill.ts` | `scene/gui/popup.cpp` (`PopupPanel::_get_contents_minimum_size`, `_update_child_rects`) and `scene/gui/dialogs.cpp` (`AcceptDialog::_update_child_rects`, `_get_contents_minimum_size`) |
 | `packages/textscene-core/src/nodes/windows/acceptdialog/dialogLayout.ts` | `scene/gui/dialogs.cpp` (`AcceptDialog::_update_child_rects`, `_get_contents_minimum_size`) |
 | `packages/textscene-core/src/nodes/windows/acceptdialog/dialogParts.ts` | `scene/gui/dialogs.cpp` (`AcceptDialog::AcceptDialog`'s internal Label, Button row and panel, `_update_theme_item_cache`) |

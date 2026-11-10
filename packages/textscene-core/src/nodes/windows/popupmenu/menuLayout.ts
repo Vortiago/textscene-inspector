@@ -48,7 +48,7 @@ export function menuModel(n: SolveNode, ctx: Pick<SolveContext, 'theme' | 'measu
 }
 
 /** `_get_items_total_height` (`popup_menu.cpp:255-263`): every item and the gap under it. */
-export function itemsTotalHeight(items: readonly MenuItem[], menu: PopupMenuTheme): number {
+function itemsTotalHeight(items: readonly MenuItem[], menu: PopupMenuTheme): number {
   return items.reduce((sum, { height }) => sum + height + menu.vSeparation, 0);
 }
 

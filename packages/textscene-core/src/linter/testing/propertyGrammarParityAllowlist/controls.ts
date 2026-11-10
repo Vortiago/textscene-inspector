@@ -339,4 +339,25 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     ],
     reason: 'The click mask is hit-testing only; it cannot change a frozen frame.',
   },
+
+  PopupMenu: {
+    linterOnly: [
+      // The hide-on-selection flags, the search and the submenu delay act on input, which a frozen frame has none of.
+      'hide_on_item_selection',
+      'hide_on_checkable_item_selection',
+      'hide_on_state_item_selection',
+      'allow_search',
+      'submenu_popup_delay',
+      // `_pre_popup` shrinks the size when `popup()` runs (`popup_menu.cpp:3453-3454`); a loaded scene never calls it.
+      'shrink_height',
+      'shrink_width',
+      // Native and system menus are drawn by the OS, never on the canvas.
+      'prefer_native_menu',
+      'system_menu_id',
+      // Read through a computed key, as OptionButton\'s identical family is.
+      'item_#/*',
+    ],
+    reason:
+      'Input handling, a runtime popup() shrink and OS-drawn native menus change nothing in a loaded still frame; the item family is read through a computed key the scrape cannot match.',
+  },
 };
