@@ -31,7 +31,7 @@ const cell = (x: number, y: number, alternativeId: number, sourceId = 0): Placed
 });
 
 const withCells = (cells: PlacedCell[]) => (scene: TscnScene) => {
-  (nodesOfType(scene.nodes, 'TileMapLayer')[0]!.properties as TileMapLayerProperties).cells = cells;
+  (nodesOfType(scene, 'TileMapLayer')[0]!.properties as TileMapLayerProperties).cells = cells;
 };
 
 async function renderLayer(cells: PlacedCell[], options: { showGizmos: boolean; layerExtra?: string }) {

@@ -15,7 +15,6 @@ import { perObject } from '../../../../utils/perObject';
 import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedScenePathsContext';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useLiveStepsOf } from '../../../../r3f/useLiveSceneTree';
-import type { LiveStep } from '../../../../r3f/liveSceneTree';
 import { parseNode2D } from '../../../base/node2d/parser';
 import { TRANSFORM2D_IDENTITY, transform2DDecompose } from '../../../../godot/math/transform2d';
 import { node2DLocalTransform } from '../../../../r3f/node2dTransform';
@@ -25,12 +24,6 @@ import type { PlacedCell } from './tileData';
 
 /** The instance's name below its placement node. The Scene dock lists neither. */
 const INSTANCE_NAME = 'Instance';
-
-/** A scene tile that has a scene to instantiate. */
-interface InstancedSceneTile {
-  tile: SceneTileCell;
-  scene: TileScene;
-}
 
 /** What a layer draws for the scene tiles of its cells. */
 export interface SceneTileDrawing {
@@ -53,7 +46,7 @@ export function useSceneTileNodes(
     () => (model?.sceneSources.size && cells ? sceneTileCells(model, cells) : NO_TILES),
     [model, cells]
   );
-  const tiles = useMemo(() => instancedTiles(allTiles), [allTiles]);
+  const tiles = useMemo(() => allTiles.filter(({ tile }) => tile.scene), [allTiles]);
   const ambient = useSceneResources();
   const enclosingScenePaths = useInstancedScenePaths();
   const scope = useMemo<SceneScope>(
@@ -61,41 +54,40 @@ export function useSceneTileNodes(
     [ambient, enclosingScenePaths]
   );
   // One instance node and one live step per distinct scene: a layer repeats few scenes across many cells.
-  const instanceOf = useMemo(() => {
-    const byScene = new Map<TileScene, LiveNode>();
-    for (const { scene } of tiles)
-      if (!byScene.has(scene)) byScene.set(scene, cachedInstanceNode(scene, scope));
-    return byScene;
-  }, [tiles, scope]);
-  const distinctInstances = useMemo(() => [...instanceOf.values()], [instanceOf]);
-  const distinctSteps = useLiveStepsOf(distinctInstances, scope);
+  const scenes = useMemo(() => [...new Set(tiles.map(({ tile }) => tile.scene!))], [tiles]);
+  const sceneNodes = useMemo(() => scenes.map((scene) => instanceNodesOf(scope)(scene)), [scenes, scope]);
+  const sceneSteps = useLiveStepsOf(sceneNodes, scope);
 
   return useMemo(() => {
     if (!model) return NO_DRAWING;
+    // The root judged once per scene, not per tile.
+    const loaded = new Map<TileScene, LoadedScene>();
+    scenes.forEach((scene, index) => {
+      const step = sceneSteps[index]!;
+      // A scene not yet loaded has no root to judge: its tile draws nothing and shows no disc.
+      const root = step.isMerged ? rootKindOf(step.node.type) : 'node2d';
+      loaded.set(scene, {
+        instance: sceneNodes[index]!,
+        root,
+        ySortRoot: root && ySortRootOf(step.node, root),
+      });
+    });
     // `set_scene_tile_scene` refuses a root that is no CanvasItem, so that tile has no scene.
     const refused = new Set<SceneTileCell>();
     const placed: LiveNode[] = [];
     const names = new TileNames();
-    const stepOf = new Map<LiveNode, LiveStep>();
-    distinctInstances.forEach((instance, index) => stepOf.set(instance, distinctSteps[index]!));
-    tiles.forEach((tile) => {
-      const instance = instanceOf.get(tile.scene)!;
-      const step = stepOf.get(instance)!;
-      // A scene not yet loaded has no root to judge: its tile draws nothing and shows no disc.
-      const root = step.isMerged ? rootKindOf(step.node.type) : 'node2d';
-      if (root === null) refused.add(tile.tile);
-      else
-        placed.push(
-          placementNode(names.nameAt(tile.tile.cell.coords), tile.tile, instance, model, root, step.node)
-        );
-    });
+    for (const sceneTile of tiles) {
+      const scene = loaded.get(sceneTile.tile.scene!)!;
+      if (scene.root === null) refused.add(sceneTile);
+      else placed.push(placementNode(names.nameAt(sceneTile.cell.coords), sceneTile, scene, model));
+    }
     return {
       instances: placed,
       placeholderTiles: allTiles.filter(
         (tile) => !tile.tile.scene || tile.tile.displayPlaceholder || refused.has(tile)
       ),
     };
-  }, [model, allTiles, tiles, instanceOf, distinctInstances, distinctSteps]);
+  }, [model, allTiles, tiles, scenes, sceneNodes, sceneSteps]);
 }
 
 /**
@@ -119,12 +111,7 @@ const PLACEMENT_DEFAULTS = parseNode2D({ type: 'Node2D', attributes: { name: '',
 const NO_TILES: readonly SceneTileCell[] = [];
 const NO_DRAWING: SceneTileDrawing = { instances: [], placeholderTiles: [] };
 
-function instancedTiles(tiles: readonly SceneTileCell[]): InstancedSceneTile[] {
-  return tiles.flatMap((tile) => (tile.tile.scene ? [{ tile, scene: tile.tile.scene }] : []));
-}
-
 /** A cell edit keeps the node of a scene it still draws, so the instances mounted below it keep their memos. */
-const cachedInstanceNode = (scene: TileScene, scope: SceneScope): LiveNode => instanceNodesOf(scope)(scene);
 const instanceNodesOf = perObject((scope: SceneScope) =>
   perObject((scene: TileScene) => instanceNode(scene, scope))
 );
@@ -174,15 +161,21 @@ function ySortRootOf(rootNode: LiveNode, root: SceneRootKind): YSortRoot {
   return { pose: { ...TRANSFORM2D_IDENTITY, tx: offsetLeft, ty: offsetTop }, zIndex: 0, zAsRelative: true };
 }
 
+/** A tile scene as its tiles share it: the instance node, and its loaded root as the sort reads it. */
+interface LoadedScene {
+  instance: LiveNode;
+  /** Null for a root that is no CanvasItem. */
+  root: SceneRootKind | null;
+  ySortRoot: YSortRoot | null;
+}
+
 function placementNode(
   name: string,
   { cell }: SceneTileCell,
-  instance: LiveNode,
-  grid: TileSetModel,
-  root: SceneRootKind,
-  rootNode: LiveNode
+  { instance, root, ySortRoot }: LoadedScene,
+  grid: TileSetModel
 ): LiveNode {
-  const placement = sceneTilePlacement(grid, cell.coords, cell.alternativeId, root);
+  const placement = sceneTilePlacement(grid, cell.coords, cell.alternativeId, root!);
   return {
     name,
     type: 'Node2D',
@@ -192,6 +185,6 @@ function placementNode(
     rawProperties: {},
     isUnowned: true,
     hasControlRoot: root === 'control',
-    ySortRoot: ySortRootOf(rootNode, root),
+    ySortRoot: ySortRoot!,
   };
 }

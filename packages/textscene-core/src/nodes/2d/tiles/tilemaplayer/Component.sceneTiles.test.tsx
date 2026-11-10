@@ -50,7 +50,7 @@ const cell = (
 
 /** Sets the cells of the layer, which the parse would read from `tile_map_data`. */
 const withCells = (cells: PlacedCell[]) => (scene: TscnScene) => {
-  (nodesOfType(scene.nodes, 'TileMapLayer')[0]!.properties as TileMapLayerProperties).cells = cells;
+  (nodesOfType(scene, 'TileMapLayer')[0]!.properties as TileMapLayerProperties).cells = cells;
 };
 
 function renderWithProbe(cells: PlacedCell[], layerExtra = '', authoredChildren = '') {

@@ -7,6 +7,7 @@ import { expect } from 'vitest';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { flatten } from '../../../../parser/testing/parserKit';
 import { createSceneGraphFromTscnScene } from '../../../../core/SceneGraph.testkit';
 import { TscnParser } from '../../../../parser/TscnParser';
 import type { TscnNode, TscnScene } from '../../../../parser/types';
@@ -275,21 +276,16 @@ export function boxesInPaintOrder(renderer: Renderer): Box[] {
     .map(({ box }) => box);
 }
 
-/** Every node of `nodes` and below, for a test that sets cells on a parsed node. */
-export function nodesOfType(nodes: readonly TscnNode[], type: string, out: TscnNode[] = []): TscnNode[] {
-  for (const node of nodes) {
-    if (node.type === type) out.push(node);
-    nodesOfType(node.children, type, out);
-  }
-  return out;
-}
-
 /** Sets the cells of each layer of a TileMap, which the parse would read from `layer_N/tile_data`. */
 export const withLayerCells =
   (...layerCells: PlacedCell[][]) =>
   (scene: TscnScene) => {
-    const { layers } = nodesOfType(scene.nodes, 'TileMap')[0]!.properties as TileMapProperties;
+    const { layers } = nodesOfType(scene, 'TileMap')[0]!.properties as TileMapProperties;
     layerCells.forEach((cells, index) => {
       layers[index]!.cells = cells;
     });
   };
+
+/** The nodes of a parsed scene of one type, for a test that sets cells on a parsed node. */
+export const nodesOfType = (scene: TscnScene, type: string): TscnNode[] =>
+  flatten(scene).filter((node) => node.type === type);

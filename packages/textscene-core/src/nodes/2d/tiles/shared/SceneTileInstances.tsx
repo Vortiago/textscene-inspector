@@ -31,11 +31,15 @@ export function SceneTileInstances({ node, instances }: SceneTileInstancesProps)
     [order, node.children.length, instances.length]
   );
 
-  return instances.map((instance, index) => (
-    <PaintRangeProvider key={instance.name} value={ranges[index]!}>
-      <TreeOrderProvider order={orders[index]!}>
-        <DispatchedNode node={instance as LiveNode} path={joinPath(path, instance.name)} />
-      </TreeOrderProvider>
-    </PaintRangeProvider>
-  ));
+  return useMemo(
+    () =>
+      instances.map((instance, index) => (
+        <PaintRangeProvider key={instance.name} value={ranges[index]!}>
+          <TreeOrderProvider order={orders[index]!}>
+            <DispatchedNode node={instance as LiveNode} path={joinPath(path, instance.name)} />
+          </TreeOrderProvider>
+        </PaintRangeProvider>
+      )),
+    [instances, ranges, orders, path]
+  );
 }
