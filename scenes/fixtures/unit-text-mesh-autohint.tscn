@@ -1,0 +1,47 @@
+[gd_scene load_steps=7 format=3 uid="uid://unittextmeshautohint"]
+
+; The one variable: a TextMesh with a TrueType font that has no hints of its own. Godot loads its
+; glyphs through FreeType's auto-hinter, which snaps the stems, the x-height and the cap height to
+; whole pixels. The scene is that of unit-text-mesh-hinting.tscn otherwise, at 12 px and 17 px.
+; Every other TrueType golden font carries its own hints, or is a variable WOFF2 at 64 px.
+
+[ext_resource type="FontFile" path="res://fonts/noto-sans-regular-subset.ttf" id="1_font"]
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="TextMesh" id="TextMesh_12"]
+material = SubResource("StandardMaterial3D_uv")
+text = "Hoa"
+font = ExtResource("1_font")
+font_size = 12
+pixel_size = 0.0533333
+depth = 0.0
+
+[sub_resource type="TextMesh" id="TextMesh_17"]
+material = SubResource("StandardMaterial3D_uv")
+text = "Hoa"
+font = ExtResource("1_font")
+font_size = 17
+pixel_size = 0.0376471
+depth = 0.0
+
+[node name="Root" type="Node3D"]
+
+[node name="Small" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, -1.1, 0, 0)
+mesh = SubResource("TextMesh_12")
+
+[node name="Odd" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, 1.1, 0, 0)
+mesh = SubResource("TextMesh_17")

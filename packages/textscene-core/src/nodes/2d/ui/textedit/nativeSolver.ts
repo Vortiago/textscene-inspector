@@ -12,11 +12,15 @@
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  getFontEmboldenedAdvancePx,
+  getFontTabStopsPx,
   getFontLinePitchPx,
   type FontMetrics,
 } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import {
+  controlBidiOptions,
+  type TextBidiOptions,
+} from '../../../../r3f/controls/native/text/textBidiOptions';
 import {
   clampAutowrapMode,
   shapeText,
@@ -37,7 +41,11 @@ import type { CodeHighlighterColorSpan } from '../../../../resources/styles/code
 import type { TextEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
+import {
+  CONTROL_FONT_COLOR,
+  CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_PLACEHOLDER_COLOR,
+} from '../../../../godot/scene/theme';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `SceneStringName(font)` = `"font"`: `default_theme.cpp:460` (TextEdit), `:501` (CodeEdit). */
@@ -86,21 +94,29 @@ const TEXT_EDIT_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 /** TextEdit's `font_readonly_color` default (`default_theme.cpp:468`). CodeEdit computes the same value inline (`:516`). */
 const TEXT_EDIT_DEFAULT_READONLY_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
-const TEXT_EDIT_THEME_KEYS: Record<TextEditStyleState, TextThemeKeys> = {
+/** TextEdit's `font_placeholder_color` default (`default_theme.cpp:469`). CodeEdit's is the same (`:517`). */
+const TEXT_EDIT_DEFAULT_PLACEHOLDER_COLOR = CONTROL_FONT_PLACEHOLDER_COLOR;
+
+/** The text states `NOTIFICATION_DRAW` picks a colour for: the placeholder wins over `editable` (`text_edit.cpp:1346-1352`). */
+type TextEditTextState = TextEditStyleState | 'placeholder';
+
+const TEXT_EDIT_THEME_KEYS: Record<TextEditTextState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
   read_only: { sizeKey: 'font_size', colorKey: 'font_readonly_color' },
+  placeholder: { sizeKey: 'font_size', colorKey: 'font_placeholder_color' },
 };
 
-const TEXT_EDIT_DEFAULT_COLORS: Record<TextEditStyleState, Rgba> = {
+const TEXT_EDIT_DEFAULT_COLORS: Record<TextEditTextState, Rgba> = {
   normal: TEXT_EDIT_DEFAULT_FONT_COLOR,
   read_only: TEXT_EDIT_DEFAULT_READONLY_COLOR,
+  placeholder: TEXT_EDIT_DEFAULT_PLACEHOLDER_COLOR,
 };
 
 /** Resolves this node's theme font size and colour for `state` (overrides, else the ancestor Theme chain, theme default or TextEdit's literal). CodeEdit shares it, since its defaults are the same. */
 export function textEditTextTheme(
   n: SolveNode,
   props: TextEditProperties,
-  state: TextEditStyleState,
+  state: TextEditTextState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = {
@@ -110,29 +126,69 @@ export function textEditTextTheme(
   return resolveTextTheme(n, props, TEXT_EDIT_THEME_KEYS[state], defaults);
 }
 
+/**
+ * `_using_placeholder` (`text_edit.cpp:3377-3379`): a buffer of one empty line draws `placeholder_text` in its
+ * place, as one paragraph that breaks at its own newlines. A buffer of `\n` holds two lines and is real text.
+ */
+export function textEditDrawnLines(
+  text: string | undefined,
+  placeholderText: string | undefined
+): { lines: string[]; isPlaceholder: boolean } {
+  if (!text) return { lines: [placeholderText ?? ''], isPlaceholder: true };
+  return { lines: text.split('\n'), isPlaceholder: false };
+}
+
 /** A single buffer line's already-shaped rows plus its own start row index within the whole TextEdit. */
 interface TextEditLineLayout {
   layout: TextLayoutResult;
   startRow: number;
 }
 
+/** What each buffer line shapes with, beyond its text. */
+interface TextEditShapeOptions {
+  fontSizePx: number;
+  fontMetrics: FontMetrics;
+  /** `LineWrappingMode`. Only `LINE_WRAPPING_BOUNDARY` (1) wraps. */
+  wrapMode?: number;
+  autowrapMode?: number;
+  wrapWidthPx?: number;
+  tabStopsPx?: number[];
+  /** `draw_control_chars`. */
+  preserveControl?: boolean;
+  /** `indent_wrapped_lines`: adds `BREAK_TRIM_INDENT` (`text_edit.cpp:285-287`). */
+  indentWrappedLines?: boolean;
+  /** Every line's direction, language and override ranges (`text_edit.cpp:3394-3401`). */
+  bidi?: TextBidiOptions;
+  /**
+   * Shapes `lines` as the placeholder paragraph. Its override is dropped: `_update_placeholder` sets
+   * `placeholder_bidi_override` only when it is empty (`text_edit.cpp:3349-3351`), so none applies.
+   */
+  placeholder?: boolean;
+}
+
 /**
- * Shapes each buffer line on its own, as each `TextEdit::Text` `Line` owns a `TextParagraph`.
- * Only `LINE_WRAPPING_BOUNDARY` (1) wraps (`_update_wrap_at_column`, `text_edit.cpp:8536-8586`).
- * `indentWrappedLines` adds `BREAK_TRIM_INDENT` (`:285-287`), which narrows each row past the
- * leading whitespace. {@link textEditWrapIndentPx} is the matching draw-side step-in.
+ * Shapes each buffer line on its own, as each `TextEdit::Text` `Line` owns a `TextParagraph`, so an
+ * AUTO line infers its own direction and the structured parser runs per line (`text_edit.cpp:297-324`).
+ * Only `LINE_WRAPPING_BOUNDARY` wraps (`_update_wrap_at_column`, `:8536-8586`). `indentWrappedLines`
+ * narrows each row past the leading whitespace. {@link textEditWrapIndentPx} is the matching draw-side step-in.
  */
 export function shapeTextEditLines(
   lines: readonly string[],
-  fontSizePx: number,
-  wrapMode: number | undefined,
-  autowrapMode: number | undefined,
-  wrapWidthPx: number,
-  fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics'],
-  tabStopsPx: number[] = [],
-  preserveControl = false,
-  indentWrappedLines = false
+  options: TextEditShapeOptions
 ): TextEditLineLayout[] {
+  const {
+    fontSizePx,
+    fontMetrics,
+    wrapMode,
+    autowrapMode,
+    wrapWidthPx = 0,
+    tabStopsPx = [],
+    preserveControl = false,
+    indentWrappedLines = false,
+    bidi,
+    placeholder = false,
+  } = options;
+  const lineBidi = placeholder ? { ...bidi, bidiOverride: undefined } : bidi;
   const mode =
     wrapMode === 1
       ? clampAutowrapMode(autowrapMode, AutowrapMode.AUTOWRAP_WORD_SMART)
@@ -147,9 +203,8 @@ export function shapeTextEditLines(
       fontMetrics,
       tabStopsPx,
       preserveControl,
-      // `Text::_shape_line` sets `BREAK_TRIM_INDENT` from the same flag
-      // (`text_edit.cpp:285-287`).
       trimIndent: indentWrappedLines,
+      ...lineBidi,
     });
     const entry: TextEditLineLayout = { layout, startRow: row };
     row += layout.lines.length;
@@ -178,7 +233,7 @@ export function textEditWrapWidthPx(
 
 /**
  * `_update_scrollbars`'s `content_size_cache` (`text_edit.cpp:8601-8614`) for `fit_content_*`,
- * without the `scroll_past_end_of_file`/placeholder terms: `(max width + gutters + minimap when
+ * without the `scroll_past_end_of_file` term: `(max width + gutters + minimap when
  * drawn + 10, MAX(total_rows, 1) * line_height)`. `text.get_max_width()` is the widest row's ceiled
  * `data_buf` width, here the max `shapedTextSizeWidthPx` over every shaped row.
  */
@@ -211,20 +266,13 @@ function textEditContentSize(
  */
 export const TEXT_EDIT_DEFAULT_TAB_SIZE = 4;
 
-/**
- * `Text::invalidate_cache` (`text_edit.cpp:348-352`, and `invalidate_all_lines`, `:394-398`): one
- * repeating stop of `MAX(1, (space width + get_spacing(SPACING_SPACE)) * tab_size)`. The spacing is
- * 0 for every font here (`richTextTabStopsPx`, `../richtextlabel/nativeSolver.ts`).
- */
+/** `Text::invalidate_cache` (`text_edit.cpp:348-352`, and `invalidate_all_lines`, `:394-398`). */
 export function textEditTabStopsPx(
   tabSize: number | undefined,
   fontMetrics: FontMetrics,
   fontSizePx: number
 ): number[] {
-  const size = tabSize ?? TEXT_EDIT_DEFAULT_TAB_SIZE;
-  // `tab_size <= 0` skips tab alignment, and `[]` is `shapeText`'s no-op input.
-  if (size <= 0) return [];
-  return [Math.max(1, size * getFontEmboldenedAdvancePx(fontMetrics, ' ', fontSizePx))];
+  return getFontTabStopsPx(fontMetrics, tabSize ?? TEXT_EDIT_DEFAULT_TAB_SIZE, fontSizePx);
 }
 
 /**
@@ -264,17 +312,19 @@ export function textEditMinimumSizeWith(
         );
   const effectiveWrapMode = rectWidthPx === undefined ? 0 : props.wrapMode;
 
-  const lines = (props.text ?? '').split('\n');
-  const lineLayouts = shapeTextEditLines(
-    lines,
+  const { lines, isPlaceholder } = textEditDrawnLines(props.text, props.placeholderText);
+  const lineLayouts = shapeTextEditLines(lines, {
     fontSizePx,
-    effectiveWrapMode,
-    props.autowrapMode,
-    wrapWidthPx,
     fontMetrics,
-    textEditTabStopsPx(tabSize, fontMetrics, fontSizePx),
-    props.drawControlChars
-  );
+    wrapMode: effectiveWrapMode,
+    autowrapMode: props.autowrapMode,
+    wrapWidthPx,
+    tabStopsPx: textEditTabStopsPx(tabSize, fontMetrics, fontSizePx),
+    preserveControl: props.drawControlChars,
+    indentWrappedLines: props.indentWrappedLines,
+    bidi: controlBidiOptions(props, n),
+    placeholder: isPlaceholder,
+  });
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
   const content = textEditContentSize(
     lineLayouts,
@@ -458,6 +508,19 @@ function colorAt(spans: readonly CodeHighlighterColorSpan[], index: number, fall
 }
 
 /**
+ * The buffer-line index a glyph's colour is read at: `glyphs[j].start` (`text_edit.cpp:1674`). A
+ * decomposed character's marks share their base's index, so the glyph's place in the row is only
+ * the fallback for a glyph with no `sourceIndex`.
+ */
+export function textEditGlyphLineIndex(
+  glyph: GlyphPlacement,
+  rowStartIndex: number,
+  glyphIndex: number
+): number {
+  return glyph.sourceIndex ?? rowStartIndex + glyphIndex;
+}
+
+/**
  * The glyph colour at `lineIndex`: `text_edit.cpp:1674`'s `gl_color = current_color`, which also
  * tints the `tab`/`space` icons (`:1714,1718`), not a fixed `font_color`. With no highlighter
  * (`spans` undefined) it is `fallback`, as in `textEditRowColorRuns`.
@@ -480,21 +543,45 @@ interface TextEditGlyphColorRun {
 }
 
 /**
+ * Which glyphs of one row `NOTIFICATION_DRAW` draws (`text_edit.cpp:1724`): a glyph whose advance box
+ * starts before `xmargin_beg` or ends past `xmargin_end` is dropped whole, not clipped. The walk stops
+ * after the first glyph whose pen reaches `xmargin_end` (`:1736-1738`), so the array ends there and a
+ * later glyph, with its tab or space icon, is not visited. `charMarginPx` is the row's pen origin.
+ */
+export function textEditDrawnGlyphs(
+  rowGlyphs: readonly GlyphPlacement[],
+  charMarginPx: number,
+  xMarginBeginPx: number,
+  xMarginEndPx: number
+): boolean[] {
+  const drawn: boolean[] = [];
+  for (const glyph of rowGlyphs) {
+    const startX = charMarginPx + glyph.x;
+    const endX = startX + glyph.advance;
+    drawn.push(startX >= xMarginBeginPx && endX <= xMarginEndPx);
+    if (endX >= xMarginEndPx) break;
+  }
+  return drawn;
+}
+
+/**
  * Groups one wrapped row's glyphs into same-colour runs, one `<TextRun>` each. `spans` covers
- * the whole buffer line, and `rowStartIndex` is this row's offset (`textEditRowStartIndices`). No
- * highlighter, or an empty row, yields one `fallbackColor` run, so every row renders a `<TextRun>`.
+ * the whole buffer line, and `rowStartIndex` is this row's offset (`textEditRowStartIndices`). A glyph
+ * `isDrawn` marks false, or one past its end, is left out but keeps its index for the colour lookup.
+ * No highlighter, or an empty row, yields one `fallbackColor` run, so every row renders a `<TextRun>`.
  */
 export function textEditRowColorRuns(
   rowGlyphs: readonly GlyphPlacement[],
   rowStartIndex: number,
   spans: readonly CodeHighlighterColorSpan[] | undefined,
-  fallbackColor: Rgba
+  fallbackColor: Rgba,
+  isDrawn?: readonly boolean[]
 ): TextEditGlyphColorRun[] {
-  if (rowGlyphs.length === 0) return [{ glyphs: [], color: fallbackColor }];
   const runs: TextEditGlyphColorRun[] = [];
   let current: TextEditGlyphColorRun | undefined;
   rowGlyphs.forEach((glyph, k) => {
-    const color = spans ? colorAt(spans, rowStartIndex + k, fallbackColor) : fallbackColor;
+    if (isDrawn && !isDrawn[k]) return;
+    const color = textEditGlyphColorAt(spans, textEditGlyphLineIndex(glyph, rowStartIndex, k), fallbackColor);
     if (current && sameColor(current.color, color)) {
       current.glyphs.push(glyph);
     } else {
@@ -502,7 +589,7 @@ export function textEditRowColorRuns(
       runs.push(current);
     }
   });
-  return runs;
+  return runs.length > 0 ? runs : [{ glyphs: [], color: fallbackColor }];
 }
 
 /** One colour run's glyphs as a `TextLineLayout`, `soloLineLayout`'s input, so a run renders through the same `<TextRun>` path as a whole row. */
@@ -514,5 +601,6 @@ export function textEditColorRunLine(run: TextEditGlyphColorRun): TextLineLayout
     text: run.glyphs.map((glyph) => glyph.char).join(''),
     glyphs: run.glyphs,
     widthPx,
+    paragraphIndex: 0,
   };
 }

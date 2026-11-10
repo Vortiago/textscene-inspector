@@ -10,7 +10,7 @@
  */
 
 import { halfOfInt } from '../../../godot/scene/window';
-import { AutowrapMode } from '../../../godot/text/textServerEnums';
+import { AutowrapMode, TextDirection } from '../../../godot/text/textServerEnums';
 import type { FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
 import { shapeText, type TextLayoutResult } from '../../../r3f/controls/native/text/textLayout';
 import type { Vector2 } from '../../../godot/math/vector';
@@ -39,12 +39,24 @@ export function closeIconOrigin(
   return { x: width - closeHOffset, y: -closeVOffset };
 }
 
+/** What the title shapes with, beyond its text. */
+interface TitleShapeOptions {
+  fontSizePx: number;
+  fontMetrics: FontMetrics;
+  /** The window's `is_layout_rtl()`, which sets the line's direction (`viewport.cpp:375`). */
+  isRtl: boolean;
+}
+
 /**
  * The title as one `TextLine` (`viewport.cpp:374`): no wrap and no mandatory break, so a newline
  * stays inside the line at zero width.
  */
-export function shapeTitle(title: string, fontSizePx: number, fontMetrics: FontMetrics): TextLayoutResult {
+export function shapeTitle(
+  title: string,
+  { fontSizePx, fontMetrics, isRtl }: TitleShapeOptions
+): TextLayoutResult {
   return shapeText(title, {
+    direction: isRtl ? TextDirection.TEXT_DIRECTION_RTL : TextDirection.TEXT_DIRECTION_LTR,
     fontSizePx,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,

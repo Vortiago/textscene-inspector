@@ -5,7 +5,8 @@
  * what it accepts as well as in what it draws: FreeType refuses a charstring for an operand of the
  * wrong type, an out-of-range subroutine or an operator short of operands, and so does this. Such a
  * charstring draws nothing. The outline is hinted in y, as Godot loads it: the hints move stem
- * edges onto the pixel grid, and the glyph path in `cffGlyphPath.ts` applies them.
+ * edges onto the pixel grid, and the glyph path in `cffGlyphPath.ts` applies them. The auto-hinter
+ * loads it unhinted.
  *
  * Portions ported from FreeType (FreeType Project License).
  * Copyright 2007-2014 Adobe Systems Incorporated.
@@ -129,11 +130,12 @@ class CharstringRun {
     charstring: { start: number; end: number },
     private readonly contours: CharstringContour[],
     private readonly isComponent: boolean,
-    origin: { x: number; y: number }
+    origin: { x: number; y: number },
+    private readonly isHinted: boolean
   ) {
     this.stack = new OperandStack(font.isCff2 ? OPERAND_STACK_CFF2 : OPERAND_STACK_CFF1);
     this.arithmetic = new ArithmeticOperators(this.stack);
-    this.glyphPath = new GlyphPath(new ContourBuilder(contours), this.hints, blues, origin.y);
+    this.glyphPath = new GlyphPath(new ContourBuilder(contours), this.hints, blues, origin.y, isHinted);
     this.path = new PathOperators(this.stack, this.glyphPath, origin.x, origin.y);
     this.cursor = new ByteCursor(font.dv, charstring.start, charstring.end);
     this.vsindex = glyphPrivate.vsindex;
@@ -348,7 +350,8 @@ class CharstringRun {
       charstring,
       this.contours,
       true,
-      origin
+      origin,
+      this.isHinted
     ).execute();
   }
 }
@@ -372,14 +375,42 @@ function blueZonesAt(blues: PrivateBlues, scale: number): BlueZones {
 
 /**
  * The contours glyph `glyphIndex` draws at `scale`, the 16.16 factor from a design unit to a
- * pixel, with the Private DICT `glyphPrivate` of its font dict, or null for a glyph that does not
- * exist or whose charstring FreeType would refuse to load.
+ * pixel, hinted in y, with the Private DICT `glyphPrivate` of its font dict, or null for a glyph
+ * that does not exist or whose charstring FreeType would refuse to load.
  */
 export function interpretCharstring(
   font: CffFont,
   glyphIndex: number,
   glyphPrivate: CffPrivate,
   scale: number
+): CharstringContour[] | null {
+  return runCharstring(font, glyphIndex, glyphPrivate, scale, true);
+}
+
+/**
+ * `cf2_getScaleAndHintFlag`'s scale for an unhinted load, 1/64 in 16.16, which draws a design unit
+ * as one 26.6 unit: `cff_slot_load` scales the outline itself.
+ */
+const UNHINTED_SCALE = 0x400;
+
+/**
+ * The contours of `interpretCharstring`, unhinted at 1/64 px a unit, as `FT_LOAD_NO_SCALE` loads
+ * them: their points in 26.6 come out in design units.
+ */
+export function interpretUnhintedCharstring(
+  font: CffFont,
+  glyphIndex: number,
+  glyphPrivate: CffPrivate
+): CharstringContour[] | null {
+  return runCharstring(font, glyphIndex, glyphPrivate, UNHINTED_SCALE, false);
+}
+
+function runCharstring(
+  font: CffFont,
+  glyphIndex: number,
+  glyphPrivate: CffPrivate,
+  scale: number,
+  isHinted: boolean
 ): CharstringContour[] | null {
   const charstring = font.charStrings.entry(glyphIndex);
   if (!charstring) return null;
@@ -392,7 +423,8 @@ export function interpretCharstring(
       charstring,
       contours,
       false,
-      ORIGIN
+      ORIGIN,
+      isHinted
     ).execute();
   } catch (error) {
     // A DataView read that leaves the table is a corrupt font, which FreeType also refuses.

@@ -36,8 +36,13 @@ beyond the inherited Control set. `button_pressed` and `disabled` become `false`
 value that does not read as `true`, with no warning. `button_group` is stored as the raw
 string.
 
+CheckBox draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
+does (`button.cpp:458-462`). A ring of `outline_size / 4` px sits under the fill. No ring
+draws at an `outline_size` of 0 or a zero alpha. The ring strokes on the canvas painter for the
+bundled font too (ADR-0040).
+
+A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
+outline ring (ADR-0064).
+
 ## Known limitations
 
-- **Approximated** Under `layout_direction = 3` or `text_direction = 2`, the label's glyphs
-  keep left-to-right order for a right-to-left script or trailing punctuation, though
-  `layout_direction = 3` swaps the label, icon and chrome.

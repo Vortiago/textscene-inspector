@@ -24,6 +24,7 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { unquoteString } from '../../../../parser/utils';
 import type { TscnNode } from '../../../../parser/types';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { MenuBarProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
@@ -59,8 +60,9 @@ function menuTitleText(child: TscnNode): string {
 }
 
 /**
- * Shapes every title once, as `MenuBar::shape()` (`menu_bar.cpp:520-527`): one `TextLine`, no wrap, no
- * `line_spacing`. It matches Button-family shaping but is spelled out, since a title is no Button label.
+ * Shapes every title once, as `MenuBar::shape()` (`menu_bar.cpp:520-528`): one `TextLine` in the bar's
+ * direction and language, no wrap, no `line_spacing`. It matches Button-family shaping but is spelled
+ * out, since a title is no Button label.
  */
 function menuBarTitles(
   n: ShareNode,
@@ -68,8 +70,10 @@ function menuBarTitles(
   fontMetrics: FontMetrics,
   marginSize: Vector2
 ): MenuBarTitle[] {
+  const bidi = controlBidiOptions(n.node.properties as MenuBarProperties, n);
   return popupChildren(n).map((child) => {
     const layout = shapeText(menuTitleText(child), {
+      ...bidi,
       fontSizePx,
       boxWidthPx: 0,
       autowrapMode: AutowrapMode.AUTOWRAP_OFF,

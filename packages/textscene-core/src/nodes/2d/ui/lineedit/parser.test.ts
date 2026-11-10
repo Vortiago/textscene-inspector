@@ -79,4 +79,25 @@ describe('parseLineEdit', () => {
     expect(result.editable).toBeUndefined();
     expect(result.secret).toBeUndefined();
   });
+
+  it('defaults the direction, language and structured override', () => {
+    const result = parseLineEdit(heading, {});
+    expect(result.textDirection).toBe(0);
+    expect(result.language).toBe('');
+    expect(result.structuredTextBidiOverride).toBe(0);
+    expect(result.structuredTextBidiOverrideOptions).toEqual([]);
+  });
+
+  it('reads the direction, language and structured override', () => {
+    const result = parseLineEdit(heading, {
+      text_direction: '2',
+      language: '"he"',
+      structured_text_bidi_override: '2',
+      structured_text_bidi_override_options: '["x"]',
+    });
+    expect(result.textDirection).toBe(2);
+    expect(result.language).toBe('he');
+    expect(result.structuredTextBidiOverride).toBe(2);
+    expect(result.structuredTextBidiOverrideOptions).toEqual(['x']);
+  });
 });

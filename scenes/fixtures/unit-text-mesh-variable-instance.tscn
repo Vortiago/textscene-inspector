@@ -1,0 +1,53 @@
+[gd_scene load_steps=7 format=3 uid="uid://unittextmeshvariableinstance"]
+
+; The one variable: a `FontVariation` whose `variation_opentype` sets the `wght` axis of a hinted variable
+; TrueType font to 700 (tag 2003265652). The left text is the default instance, and the right text is
+; the bold one: its `gvar` deltas move the points and its `cvar` values move the hints. Both texts are
+; flat, at 16 px. No other TextMesh golden draws a variable font off its defaults.
+
+[ext_resource type="FontFile" path="res://fonts/cascadia-code-subset.ttf" id="1_font"]
+
+[sub_resource type="FontVariation" id="FontVariation_bold"]
+base_font = ExtResource("1_font")
+variation_opentype = {
+2003265652: 700.0
+}
+
+[sub_resource type="Gradient" id="Gradient_uv"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.33, 0.67)
+colors = PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_uv"]
+gradient = SubResource("Gradient_uv")
+fill_to = Vector2(1, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv"]
+shading_mode = 0
+albedo_texture = SubResource("GradientTexture2D_uv")
+
+[sub_resource type="TextMesh" id="TextMesh_default"]
+material = SubResource("StandardMaterial3D_uv")
+text = "Hob"
+font = ExtResource("1_font")
+font_size = 16
+pixel_size = 0.04
+depth = 0.0
+
+[sub_resource type="TextMesh" id="TextMesh_bold"]
+material = SubResource("StandardMaterial3D_uv")
+text = "Hob"
+font = SubResource("FontVariation_bold")
+font_size = 16
+pixel_size = 0.04
+depth = 0.0
+
+[node name="Root" type="Node3D"]
+
+[node name="Default" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, -1.1, 0, 0)
+mesh = SubResource("TextMesh_default")
+
+[node name="Bold" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.906308, 0, 0.422618, 0, 1, 0, -0.422618, 0, 0.906308, 1.1, 0, 0)
+mesh = SubResource("TextMesh_bold")

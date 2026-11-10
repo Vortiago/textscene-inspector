@@ -8,6 +8,7 @@
 import { useCallback, useMemo } from 'react';
 import type { TscnNode } from '../../parser/types';
 import { useSceneFontSettleCount } from '../controls/native/text/useSceneFontSettleCount';
+import { useLayoutDirectionEnv } from '../contexts/useLayoutDirectionEnv';
 import type { ProjectFonts } from '../../resources/fonts/font/projectFonts';
 import type { LoadedFile, LoadedFont } from '../../resources/scopedResource';
 import { useLoadedFilesAndFonts } from '../../resources/useLoadedFilesAndFonts';
@@ -32,10 +33,11 @@ export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
   );
   // A plan with no shape that can read a font names no font bus, so it listens to none.
   const readsFonts = shapes.some(({ shape }) => shape.readsFonts);
+  const locale = useLayoutDirectionEnv().applicationLocale;
   const fontsPlan = useCallback(
     (loadedFont: LoadedFont, loadedFile: LoadedFile, projectFonts: ProjectFonts) =>
-      subtreeFontFiles(shapes, { ...pools, loadedFile, loadedFont, projectFonts }),
-    [shapes, pools]
+      subtreeFontFiles(shapes, { ...pools, loadedFile, loadedFont, projectFonts, locale }),
+    [shapes, pools, locale]
   );
   const { loadedFile, loadedFont, projectFonts, isLoading, isLoadingFonts } = useLoadedFilesAndFonts(
     filesPlan,
@@ -44,8 +46,8 @@ export function useCsgGeometryContext(root: TscnNode | null): CsgGeometrySetup {
   );
 
   const loaded = useMemo(
-    (): CsgGeometryContext => ({ ...pools, loadedFile, loadedFont, projectFonts }),
-    [pools, loadedFile, loadedFont, projectFonts]
+    (): CsgGeometryContext => ({ ...pools, loadedFile, loadedFont, projectFonts, locale }),
+    [pools, loadedFile, loadedFont, projectFonts, locale]
   );
   const isAwaitingFont = shapes.some(({ properties, shape }) => shape.awaitsFont?.(properties, loaded));
   useSceneFontSettleCount(isAwaitingFont);

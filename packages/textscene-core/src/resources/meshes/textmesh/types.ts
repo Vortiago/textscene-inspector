@@ -1,9 +1,13 @@
 import type { Vector2 } from '../../../godot/math/vector';
 import type { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
 import type { EnumValue } from '../../../godot/classdb/enumNames';
+import type {
+  StructuredTextOverrideProperties,
+  TextDirectionProperties,
+} from '../../../godot/text/paragraphDirection';
 
 /** What a TextMesh's build reads of its own properties, each as the setter leaves it. */
-export interface TextMeshProperties {
+export interface TextMeshProperties extends TextDirectionProperties, StructuredTextOverrideProperties {
   text: string;
   fontSize: number;
   horizontalAlignment: EnumValue<typeof HorizontalAlignment>;

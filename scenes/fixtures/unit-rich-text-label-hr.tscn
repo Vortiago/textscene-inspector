@@ -1,0 +1,137 @@
+; One variable: the [hr] tag. add_hr (rich_text_label.cpp:4159-4199) pushes a paragraph item, so the
+; text before the rule ends its line, then draws the 2 x 2 white horizontal_rule icon at the given
+; width, height, colour and alignment. The text after the tag joins the rule's line (measured in
+; Godot 4.6.3). No other scene authors an [hr].
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="SharesLineBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 280.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="SharesLine" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 280.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "Above the rule[hr]Below the rule"
+
+[node name="OwnLinesBox" type="ColorRect" parent="."]
+offset_left = 300.0
+offset_top = 10.0
+offset_right = 560.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="OwnLines" type="RichTextLabel" parent="."]
+offset_left = 300.0
+offset_top = 10.0
+offset_right = 560.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "Above the rule[hr]\nBelow the rule"
+
+[node name="StyledBox" type="ColorRect" parent="."]
+offset_left = 580.0
+offset_top = 10.0
+offset_right = 840.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Styled" type="RichTextLabel" parent="."]
+offset_left = 580.0
+offset_top = 10.0
+offset_right = 840.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "Above the rule[hr align=left width=50% height=4 color=#e0a030]\nBelow the rule"
+
+[node name="PixelsBox" type="ColorRect" parent="."]
+offset_left = 860.0
+offset_top = 10.0
+offset_right = 1120.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Pixels" type="RichTextLabel" parent="."]
+offset_left = 860.0
+offset_top = 10.0
+offset_right = 1120.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "Above the rule[hr align=right width=100 height=6%]\nBelow the rule"
+
+[node name="AtStartBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 170.0
+offset_right = 280.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="AtStart" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 170.0
+offset_right = 280.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[hr]\nStarts with the rule"
+
+[node name="TruncatedBox" type="ColorRect" parent="."]
+offset_left = 300.0
+offset_top = 170.0
+offset_right = 560.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Truncated" type="RichTextLabel" parent="."]
+offset_left = 300.0
+offset_top = 170.0
+offset_right = 560.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "Above the rule[hr width=33%]\nBelow the rule"
+
+[node name="NegativeWidthBox" type="ColorRect" parent="."]
+offset_left = 580.0
+offset_top = 170.0
+offset_right = 840.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="NegativeWidth" type="RichTextLabel" parent="."]
+offset_left = 580.0
+offset_top = 170.0
+offset_right = 840.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "Above the rule[hr width=-5]Below the rule"
+
+[node name="CentreBox" type="ColorRect" parent="."]
+offset_left = 860.0
+offset_top = 170.0
+offset_right = 1120.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="Centre" type="RichTextLabel" parent="."]
+offset_left = 860.0
+offset_top = 170.0
+offset_right = 1120.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[center]Above the rule[hr color=red]\nBelow the rule[/center]"

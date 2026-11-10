@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import * as logger from '../../../../logger';
 import type { ParsedHeading } from '../../../../parser/utils';
 import { parseCheckButton } from './parser';
 
@@ -7,6 +8,16 @@ function h(attributes: Record<string, string>): ParsedHeading {
 }
 
 describe('parseCheckButton', () => {
+  it('names CheckButton, not Button, when it keeps the default for a text_direction the setter refuses', () => {
+    const warn = vi.spyOn(logger, 'warn').mockImplementation(() => {});
+    try {
+      parseCheckButton(h({ name: 'Sound', type: 'CheckButton' }), { text_direction: '7' });
+      expect(String(warn.mock.calls[0]?.[0])).toContain('CheckButton.text_direction');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it("reads text, the checked flag and disabled through Button's own parse", () => {
     const p = parseCheckButton(h({ name: 'Sound', type: 'CheckButton' }), {
       text: '"Enable Sound"',

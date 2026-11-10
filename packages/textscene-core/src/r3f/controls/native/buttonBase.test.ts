@@ -19,6 +19,7 @@ import {
 } from './buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
 import { shapeText, type TextLineLayout } from './text/textLayout';
+import { visualChars } from './text/textLayout.testkit';
 import { OPEN_SANS_FONT_METRICS } from './text/openSansFontMetrics';
 import { AutowrapMode, OverrunBehavior } from '../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
@@ -144,6 +145,7 @@ const BASE_INPUT: ButtonContentInput = {
   iconNaturalSize: null,
   hasText: true,
   textNaturalSize: { x: 50, y: 26 },
+  isTextRtl: false,
   rtl: false,
 };
 
@@ -201,16 +203,25 @@ describe('layoutButtonContent — the paragraph box the alignment measures again
     expect(text!.offset.x).toBeCloseTo(34.75, 10);
   });
 
-  it('CENTER does not shift an OVERFLOWING line at all (text_paragraph.cpp:902)', () => {
-    // length 200 > text_buf_width 112, so the centring arm is skipped entirely
-    // and the else-branch needs an RTL inferred direction this shaper never
-    // produces. Only the style margin is left.
+  it('CENTER does not shift an OVERFLOWING left-to-right line at all (text_paragraph.cpp:902)', () => {
+    // length 200 > text_buf_width 112, so the centring arm is skipped. Only the style margin is left.
     const { text } = layoutButtonContent({
       ...BASE_INPUT,
       textAlignment: HORIZONTAL_ALIGNMENT_CENTER,
       textNaturalSize: { x: 200, y: 26 },
     });
     expect(text!.offset.x).toBe(4);
+  });
+
+  it('CENTER ends an OVERFLOWING right-to-left line at the trailing edge (text_paragraph.cpp:908-910)', () => {
+    // 112 - 200 = -88, after the style margin 4.
+    const { text } = layoutButtonContent({
+      ...BASE_INPUT,
+      textAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+      textNaturalSize: { x: 200, y: 26 },
+      isTextRtl: true,
+    });
+    expect(text!.offset.x).toBe(-84);
   });
 
   it('RIGHT hugs the CEILED width, not the raw drawable (text_paragraph.cpp:916-922)', () => {
@@ -423,8 +434,15 @@ describe('layoutButtonContent — RTL swaps the icon side', () => {
 
 /** `a`..`j` and `klmno`, each glyph a 10 px advance at pen x 0, 10, 20, and so on. */
 function lineOf(text: string): TextLineLayout {
-  const glyphs = [...text].map((char, index) => ({ char, x: index * 10, advance: 10, glyph: null }));
-  return { text, glyphs, widthPx: glyphs.length * 10 };
+  const glyphs = [...text].map((char, index) => ({
+    char,
+    x: index * 10,
+    advance: 10,
+    glyph: null,
+    fontSizePx: 10,
+    fontMetrics: OPEN_SANS_FONT_METRICS,
+  }));
+  return { text, glyphs, widthPx: glyphs.length * 10, paragraphIndex: 0 };
 }
 
 describe('buttonDrawnLabel — each line cut to the paragraph box as TextParagraph::draw cuts it', () => {
@@ -493,6 +511,7 @@ describe('textMinimumWidthPx — the label width a minimum size keeps (button.cp
 
 describe('trimButtonLabel — the label trimmed to its paragraph box (button.cpp:428-432, text_paragraph.cpp:286-293)', () => {
   const FONT_SIZE_PX = 16;
+  const UNWRAPPED = { isWrapped: false, fontSizePx: FONT_SIZE_PX, isDrawnRtl: false };
 
   function shaped(
     text: string,
@@ -510,35 +529,37 @@ describe('trimButtonLabel — the label trimmed to its paragraph box (button.cpp
 
   it('trims a line wider than the box', () => {
     const layout = shaped('alpha bravo charlie');
-    const trimmed = trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 60, FONT_SIZE_PX);
+    const trimmed = trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 60, UNWRAPPED);
     expect(trimmed.lines[0]!.widthPx).toBeLessThanOrEqual(60);
-    expect(trimmed.lines[0]!.text.length).toBeLessThan(layout.lines[0]!.text.length);
+    expect(visualChars(trimmed.lines[0]!).length).toBeLessThan(visualChars(layout.lines[0]!).length);
   });
 
   it('keeps a line that fits', () => {
     const layout = shaped('alpha');
-    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 200, FONT_SIZE_PX)).toBe(layout);
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 200, UNWRAPPED)).toBe(layout);
   });
 
   it('keeps every line of a wrapped label', () => {
     const layout = shaped('alpha bravo charlie', 40, AutowrapMode.AUTOWRAP_WORD);
     expect(layout.lines.length).toBeGreaterThan(1);
-    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 40, FONT_SIZE_PX)).toBe(layout);
+    expect(
+      trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 40, { ...UNWRAPPED, isWrapped: true })
+    ).toBe(layout);
   });
 
   it('keeps the label under OVERRUN_NO_TRIMMING', () => {
     const layout = shaped('alpha bravo charlie');
-    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_NO_TRIMMING, 60, FONT_SIZE_PX)).toBe(layout);
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_NO_TRIMMING, 60, UNWRAPPED)).toBe(layout);
   });
 
   it('trims at the ceiled box width, with a floor of 1 px', () => {
     const layout = shaped('alpha bravo charlie');
-    const atCeil = trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 59.2, FONT_SIZE_PX);
+    const atCeil = trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 59.2, UNWRAPPED);
     expect(atCeil.lines[0]).toEqual(
-      trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 60, FONT_SIZE_PX).lines[0]
+      trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, 60, UNWRAPPED).lines[0]
     );
-    expect(
-      trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, -5, FONT_SIZE_PX).lines[0]!.widthPx
-    ).toBe(0);
+    expect(trimButtonLabel(layout, OverrunBehavior.OVERRUN_TRIM_CHAR, -5, UNWRAPPED).lines[0]!.widthPx).toBe(
+      0
+    );
   });
 });

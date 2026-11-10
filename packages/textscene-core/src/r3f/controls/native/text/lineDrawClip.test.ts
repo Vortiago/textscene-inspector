@@ -6,13 +6,22 @@
 import { describe, expect, it } from 'vitest';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { drawnLinesInBox, textParagraphLineShiftPx } from './lineDrawClip';
-import type { TextLineLayout } from './textLayout';
+import type { GlyphPlacement, TextLineLayout } from './textLayout';
+import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 
 /** Ten glyphs `a`..`j`, each a 10 px advance at pen x 0, 10, 20, and so on. */
 const LINE: TextLineLayout = {
   text: 'abcdefghij',
   widthPx: 100,
-  glyphs: [...'abcdefghij'].map((char, index) => ({ char, x: index * 10, advance: 10, glyph: null })),
+  paragraphIndex: 0,
+  glyphs: [...'abcdefghij'].map((char, index) => ({
+    char,
+    x: index * 10,
+    advance: 10,
+    glyph: null,
+    fontSizePx: 10,
+    fontMetrics: OPEN_SANS_FONT_METRICS,
+  })),
 };
 
 describe('drawnLinesInBox cuts each line to the box', () => {
@@ -56,10 +65,19 @@ describe('drawnLinesInBox cuts each line to the box', () => {
 });
 
 describe('drawnLinesInBox leaves a trim ellipsis uncut (text_server.cpp:1811-1822)', () => {
-  const ellipsis = { char: '…', x: 20, advance: 13, glyph: null, isEllipsis: true };
+  const ellipsis: GlyphPlacement = {
+    char: '…',
+    x: 20,
+    advance: 13,
+    glyph: null,
+    fontSizePx: 10,
+    fontMetrics: OPEN_SANS_FONT_METRICS,
+    isEllipsis: true,
+  };
   const trimmed: TextLineLayout = {
     text: 'ab…',
     widthPx: 33,
+    paragraphIndex: 0,
     glyphs: [...LINE.glyphs.slice(0, 2), ellipsis],
   };
 
@@ -69,7 +87,7 @@ describe('drawnLinesInBox leaves a trim ellipsis uncut (text_server.cpp:1811-182
   });
 
   it('draws the ellipsis of a line that kept no glyph', () => {
-    const lone: TextLineLayout = { text: '…', widthPx: 13, glyphs: [ellipsis] };
+    const lone: TextLineLayout = { text: '…', widthPx: 13, glyphs: [ellipsis], paragraphIndex: 0 };
     const [drawn] = drawnLinesInBox([lone], 2, HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT, false);
     expect(drawn!.line.text).toBe('…');
   });

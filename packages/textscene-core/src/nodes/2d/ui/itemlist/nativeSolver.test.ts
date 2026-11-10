@@ -31,6 +31,7 @@ import {
   itemListSeparation,
   itemMinimumSize,
   itemTextColor,
+  isItemListTextWrapped,
   itemTextDrawOffset,
   packItemListRows,
   shapeItemListText,
@@ -39,6 +40,7 @@ import { ItemListIconMode } from '../../../../godot/scene/gui';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { ItemListScrollRange } from './nativeSolver';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const itemListMinimumSize = controlSolverRegistry.minimumSize('ItemList')!;
 
@@ -84,6 +86,21 @@ describe('itemListSeparation / line_separation', () => {
   });
 });
 
+describe('shapeItemListText — direction (item_list.h:73-74)', () => {
+  it('takes the direction of neutral text from the locale (`item_list.cpp:45`)', () => {
+    const layout = shapeItemListText({
+      text: '123!',
+      fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      widthPx: 0,
+      iconMode: ICON_MODE_LEFT,
+      maxTextLines: 1,
+      locale: 'he',
+    });
+    expect(visualChars(layout!.lines[0]!)).toBe('!123');
+  });
+});
+
 describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
   const wrapInput = {
     text: 'AA AA AA',
@@ -91,6 +108,7 @@ describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
     fontMetrics: OPEN_SANS_FONT_METRICS,
     widthPx: 30,
     overrunBehavior: 0,
+    locale: '',
   };
 
   it('wraps only TOP icon mode with max_text_lines > 0 (happy path)', () => {
@@ -119,16 +137,20 @@ describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TR
     fontMetrics: OPEN_SANS_FONT_METRICS,
     iconMode: ICON_MODE_LEFT,
     maxTextLines: 1,
+    locale: '',
   };
+
+  /** The characters the first line draws, left to right: `line.text` keeps the untrimmed source. */
+  const drawnChars = (layout: ReturnType<typeof shapeItemListText>) => visualChars(layout!.lines[0]!);
 
   it('trims to the shape width by default, appending an ellipsis (matches text_overrun.test.ts derivation)', () => {
     const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', widthPx: 100 });
-    expect(layout!.lines[0]!.text).toBe('AAAAAAAA…');
+    expect(drawnChars(layout)).toBe('AAAAAAAA…');
   });
 
   it('is a no-op at an unconstrained shape width — nothing to trim against', () => {
     const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', widthPx: 0 });
-    expect(layout!.lines[0]!.text).toBe('AAAAAAAAAAAA');
+    expect(drawnChars(layout)).toBe('AAAAAAAAAAAA');
   });
 
   it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed at a constrained width', () => {
@@ -138,7 +160,17 @@ describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TR
       widthPx: 100,
       overrunBehavior: 0,
     });
-    expect(layout!.lines[0]!.text).toBe('AAAAAAAAAAAA');
+    expect(drawnChars(layout)).toBe('AAAAAAAAAAAA');
+  });
+
+  // `unit-item-list-text-direction` in Godot 4.6.3: the fill keeps the visual left part.
+  it('keeps the visual left part of an AUTO Hebrew item and ends in the ellipsis', () => {
+    const text = 'שלום עולם רחב מאוד';
+    const whole = shapeItemListText({ ...baseInput, text, widthPx: 0 })!;
+    const chars = visualChars(
+      shapeItemListText({ ...baseInput, text, widthPx: whole.widthPx * 0.75 })!.lines[0]!
+    );
+    expect([chars[0], chars.at(-1)]).toEqual(['ד', '…']);
   });
 });
 
@@ -401,10 +433,11 @@ describe('shapeItemListText — against TextParagraph (text_paragraph.cpp:225-26
       fontMetrics: OPEN_SANS_FONT_METRICS,
       iconMode: top ? ItemListIconMode.ICON_MODE_TOP : ICON_MODE_LEFT,
       maxTextLines: max,
+      locale: '',
       widthPx: width,
       overrunBehavior: overrun,
     })!;
-    expect(layout.lines.map((line) => line.text)).toEqual(lines);
+    expect(layout.lines.map(visualChars)).toEqual(lines);
     expect(layout.lines.map((line) => shapedTextSizeWidthPx(line.widthPx))).toEqual(widths);
     expect(layout.heightPx).toBe(lines.length * LINE_HEIGHT_PX);
   });
@@ -703,20 +736,13 @@ describe('packItemListRows', () => {
 });
 
 describe('itemTextDrawOffset', () => {
-  it('TOP mode centres the pen at half separation past the icon offset (happy path)', () => {
-    const offset = itemTextDrawOffset(
-      ItemListIconMode.ICON_MODE_TOP,
-      { x: 0, y: 20 },
-      { x: 100, y: 50 },
-      10,
-      4,
-      6
-    );
+  it('wrapped text centres the pen at half separation past the icon offset (happy path)', () => {
+    const offset = itemTextDrawOffset(true, { x: 0, y: 20 }, { x: 100, y: 50 }, 10, 4, 6);
     expect(offset).toEqual({ x: 2, y: 23 });
   });
 
-  it('LEFT mode vertically centres the text block within the item rect (error path)', () => {
-    const offset = itemTextDrawOffset(ICON_MODE_LEFT, { x: 20, y: 0 }, { x: 100, y: 50 }, 20, 4, 6);
+  it('a single line vertically centres the text block within the item rect (error path)', () => {
+    const offset = itemTextDrawOffset(false, { x: 20, y: 0 }, { x: 100, y: 50 }, 20, 4, 6);
     expect(offset).toEqual({ x: 22, y: 15 });
   });
 });
@@ -735,8 +761,8 @@ describe('itemIconColor / itemTextColor', () => {
 });
 
 describe('itemListGuideLines', () => {
-  // item_list.cpp:1447-1458 -- one hairline per row-packing separator, spanning
-  // the panel's own content width, only outside TOP icon mode.
+  // item_list.cpp:1447-1458: one hairline per row-packing separator, spanning the panel's own
+  // content width, only outside TOP icon mode. Each quad starts half a pixel above its separator.
   it('one line per separator, spanning contentWidth, in LEFT icon mode (happy path)', () => {
     expect(itemListGuideLines(ICON_MODE_LEFT, [24, 48], 100, 0)).toEqual([
       { y: 24, width: 100, x: 0 },
@@ -943,5 +969,20 @@ describe('itemListMaxColumnWidth', () => {
   });
   it('is zero without items', () => {
     expect(itemListMaxColumnWidth([], 4)).toBe(0);
+  });
+});
+
+// item_list.cpp:1624: only TOP mode with max_text_lines above 0 draws the wrapped paragraph.
+describe('isItemListTextWrapped', () => {
+  it('wraps TOP-mode text with max_text_lines above 0', () => {
+    expect(isItemListTextWrapped(ItemListIconMode.ICON_MODE_TOP, 2)).toBe(true);
+  });
+
+  it('draws TOP-mode text with max_text_lines 0 as a single line', () => {
+    expect(isItemListTextWrapped(ItemListIconMode.ICON_MODE_TOP, 0)).toBe(false);
+  });
+
+  it('draws LEFT-mode text as a single line', () => {
+    expect(isItemListTextWrapped(ICON_MODE_LEFT, 2)).toBe(false);
   });
 });

@@ -10,25 +10,35 @@
  */
 import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { getFontLinePitchPx } from '../../../../r3f/controls/native/text/fontMetrics';
+import { defineShare } from '../../../../r3f/controls/native/solveHandoff';
+import {
+  LABEL_SETTINGS_FONT_LOADING,
+  type ShareNode,
+  type SolveNode,
+} from '../../../../r3f/controls/native/solveTree';
+import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { peekSettledSceneFontMetrics } from '../../../../r3f/controls/native/text/sceneFontLoader';
 import {
   clampAutowrapMode,
   shapeText,
   shapedTextSizeWidthPx,
+  startsParagraph,
+  widestLineWidthPx,
   type TextLayoutResult,
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
-import { fitLineToWidth, justifyToLineIndex } from '../../../../r3f/controls/native/text/textJustify';
+import { justifyParagraphs } from '../../../../r3f/controls/native/text/textJustify';
 import {
+  resolveTextOutline,
   resolveTextTheme,
   type ResolvedTextTheme,
   type TextThemeDefaults,
   type TextThemeKeys,
+  type TextThemeProps,
 } from '../../../../r3f/controls/native/textTheme';
 import type { LabelProperties } from './types';
+import { sliceCodePoints } from '../../../../godot/string/codePoints.js';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import {
@@ -36,16 +46,16 @@ import {
   VisibleCharactersBehavior,
   DEFAULT_JUSTIFICATION_FLAGS,
 } from '../../../../godot/text/textServerEnums';
+import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 
 /**
- * Label's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:381`).
- * {@link labelUnwrappedShape} and `Component.tsx`'s autowrap-on re-shape both pass it to
- * `resolveNodeFontMetrics`, so the two shape in the same font.
+ * Label's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:381`),
+ * which {@link labelFontState} falls back to.
  */
-export const LABEL_THEME_FONT_KEY = 'font';
+const LABEL_THEME_FONT_KEY = 'font';
 
 /**
  * `scene/theme/default_theme.cpp:392` sets Label's `line_spacing` to `Math::round(3 * scale)`,
@@ -54,6 +64,9 @@ export const LABEL_THEME_FONT_KEY = 'font';
  * against this one constant, so they agree on the line pitch.
  */
 export const LABEL_LINE_SPACING_PX = 3;
+
+/** Label's `paragraph_spacing` theme constant: the default theme sets none, so it is 0. */
+const LABEL_PARAGRAPH_SPACING_PX = 0;
 
 /**
  * `Label.paragraph_separator`'s default (`label.cpp:158`, `c_unescape`'d). Label splits on it
@@ -72,45 +85,70 @@ const LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 /** This Label's theme font size and colour: its overrides, else the ancestor Theme chain, else the theme default, else Label's white (`resolveTextTheme`). */
 export function labelTextTheme(
   n: ShareNode,
-  props: LabelProperties,
+  props: TextThemeProps,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: LABEL_DEFAULT_FONT_COLOR };
   return resolveTextTheme(n, props, LABEL_THEME_KEYS, defaults);
 }
 
-interface LabelEffectiveTextTheme {
+interface LabelSpacing {
+  lineSpacingPx: number;
+  paragraphSpacingPx: number;
+}
+
+interface LabelEffectiveTextTheme extends LabelSpacing {
   fontSizePx: number;
   color: Rgba;
-  lineSpacingPx: number;
+}
+
+interface LabelFontState {
+  metrics: FontMetrics;
+  /** True while the settings font is unresolved: its file loads, or its metrics parse (ADR-0059). */
+  isLoading: boolean;
 }
 
 /**
- * A valid `label_settings` replaces the theme, never merges with it, for `font_size`
- * (label.cpp:186,759), `font_color` (`:761`) and `line_spacing` (`:346`), even where a field keeps
- * its class default. `get_line_spacing()` is a `real_t` stored in an `int`, so it truncates toward
- * zero. `font` (`:185`) is not ported: Label shapes in its theme font (`comparison.md`).
+ * The font the Label shapes and draws in: `settings->get_font()` when it is valid, else the theme
+ * font (`label.cpp:112,349,473,523,758,913,978,1024`). The solver and the painter both read this, so
+ * the solved rect fits the drawn glyphs. A font still loading answers with the theme font, and the
+ * painter draws nothing meanwhile. One peek serves both answers.
+ */
+export function labelFontState(n: ShareNode): LabelFontState {
+  const font = n.labelSettingsFont;
+  const settled =
+    font === null || font === LABEL_SETTINGS_FONT_LOADING ? null : peekSettledSceneFontMetrics(font, n.path);
+  if (settled) return { metrics: settled, isLoading: false };
+  return { metrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY), isLoading: font !== null };
+}
+
+/**
+ * A valid `label_settings` replaces the theme, never merges with it, for `font_size` (label.cpp:186,759),
+ * `font_color` (`:761`), `line_spacing` (`:346`) and `paragraph_spacing` (`:347`), even at a class default.
+ * The two spacings are `real_t` stored in an `int`, so they truncate toward zero. Without settings they
+ * are `constants`, resolved through the node's overrides and the Theme chain. `font` is {@link labelFontState}.
  */
 export function labelEffectiveTextTheme(
   themeResolved: ResolvedTextTheme,
-  settings: SolveNode['labelSettings']
+  settings: SolveNode['labelSettings'],
+  constants: SolveNode['constants']
 ): LabelEffectiveTextTheme {
   if (!settings) {
     return {
       fontSizePx: themeResolved.fontSizePx,
       color: themeResolved.color,
-      lineSpacingPx: LABEL_LINE_SPACING_PX,
+      lineSpacingPx: constants['line_spacing'] ?? LABEL_LINE_SPACING_PX,
+      paragraphSpacingPx: constants['paragraph_spacing'] ?? LABEL_PARAGRAPH_SPACING_PX,
     };
   }
   return {
     fontSizePx: settings.fontSize,
     color: settings.fontColor,
     lineSpacingPx: Math.trunc(settings.lineSpacing),
+    paragraphSpacingPx: Math.trunc(settings.paragraphSpacing),
   };
 }
 
-/** `default_theme.cpp:386`: Label's `font_outline_color` defaults to opaque black. */
-const LABEL_DEFAULT_OUTLINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 /** `default_theme.cpp:385`: Label's `font_shadow_color` defaults to transparent, so a Label draws no shadow until a scene sets it. */
 const LABEL_DEFAULT_SHADOW_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0 };
 /**
@@ -129,10 +167,8 @@ interface LabelOutlineTheme {
 export function labelOutlineTheme(n: SolveNode): LabelOutlineTheme {
   const settings = n.labelSettings;
   if (settings) return { size: settings.outlineSize, color: settings.outlineColor };
-  return {
-    size: n.constants['outline_size'] ?? 0,
-    color: n.colors['font_outline_color'] ?? LABEL_DEFAULT_OUTLINE_COLOR,
-  };
+  const { color, sizePx } = resolveTextOutline(n);
+  return { size: sizePx, color };
 }
 
 interface LabelShadowTheme {
@@ -194,14 +230,26 @@ export function labelVisibleLineRange(
   return { start, end };
 }
 
+function countParagraphs(lines: readonly TextLineLayout[]): number {
+  let count = 0;
+  for (let i = 0; i < lines.length; i++) if (startsParagraph(lines, i)) count++;
+  return count;
+}
+
 /**
  * `layout.lines` cut to `range`, with height and width summed over the kept lines only, as
- * `_update_visible` and `get_layout_data` do (`label.cpp:359-361`, `:556-559`).
+ * `_update_visible` and `get_layout_data` do (`label.cpp:359-361`, `:556-559`). The height holds
+ * one `paragraphSpacingPx` per paragraph that keeps a line (`:381,:587`).
  */
-export function windowLabelLines(layout: TextLayoutResult, range: LabelLineRange): TextLayoutResult {
+export function windowLabelLines(
+  layout: TextLayoutResult,
+  range: LabelLineRange,
+  paragraphSpacingPx: number
+): TextLayoutResult {
   const lines = layout.lines.slice(range.start, range.end);
-  const widthPx = lines.reduce((max, l) => Math.max(max, l.widthPx), 0);
-  return { ...layout, lines, heightPx: lines.length * layout.linePitchPx, widthPx };
+  const widthPx = widestLineWidthPx(lines);
+  const heightPx = lines.length * layout.linePitchPx + countParagraphs(lines) * paragraphSpacingPx;
+  return { ...layout, lines, heightPx, widthPx };
 }
 
 // visible_characters and visible_characters_behavior: label.cpp:778-883
@@ -222,56 +270,7 @@ export function labelPreShapeText(
     VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING
   )
     return text;
-  return text.slice(0, visibleChars);
-}
-
-interface VisibleCharsBudget {
-  behavior: number;
-  /** Final resolved `visible_chars`, the budget of CHARS_AFTER_SHAPING. */
-  visibleChars: number | undefined;
-  /** Final resolved `visible_ratio`, the budget of the GLYPHS_* behaviours. */
-  visibleRatio: number | undefined;
-  /** `is_layout_rtl()` (`SolveNode.rtl`), which picks the end GLYPHS_AUTO trims from (`label.cpp:779-780`). Defaults `false`. */
-  rtl?: boolean;
-}
-
-/**
- * `draw_text`'s per-glyph `skip` (`label.cpp:778-780,label.h:197-240`) over lines already shaped
- * and windowed to `label.cpp`'s `start`/`end` (`:548-559`). CHARS_AFTER_SHAPING counts characters and GLYPHS_LTR glyphs from the front,
- * GLYPHS_RTL from the back (`label.cpp:780`), and GLYPHS_AUTO picks by `rtl_layout` (`:779-780`). One
- * glyph is one character here (no ligatures), except across a trimmed edge space (`comparison.md`).
- */
-export function applyVisibleCharsReveal(
-  lines: readonly TextLineLayout[],
-  budget: VisibleCharsBudget
-): TextLineLayout[] {
-  if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_BEFORE_SHAPING) return [...lines];
-
-  let limit: number;
-  let fromEnd = false;
-  if (budget.behavior === VisibleCharactersBehavior.VC_CHARS_AFTER_SHAPING) {
-    if (budget.visibleChars === undefined || budget.visibleChars < 0) return [...lines];
-    limit = budget.visibleChars;
-  } else {
-    if (budget.visibleRatio === undefined || budget.visibleRatio >= 1) return [...lines];
-    const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
-    limit = Math.trunc(totalGlyphs * Math.max(0, budget.visibleRatio));
-    fromEnd =
-      budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_RTL ||
-      (budget.behavior === VisibleCharactersBehavior.VC_GLYPHS_AUTO && budget.rtl === true);
-  }
-
-  const totalGlyphs = lines.reduce((sum, l) => sum + l.glyphs.length, 0);
-  const hideBefore = fromEnd ? totalGlyphs - limit : 0;
-  let seen = 0;
-  return lines.map((line) => ({
-    ...line,
-    glyphs: line.glyphs.filter(() => {
-      const keep = fromEnd ? seen >= hideBefore : seen < limit;
-      seen++;
-      return keep;
-    }),
-  }));
+  return sliceCodePoints(text, visibleChars);
 }
 
 /**
@@ -284,9 +283,10 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, them
   const props = n.node.properties as LabelProperties;
   const text = labelPreShapeText(props.text ?? '', props.visibleCharacters, props.visibleCharactersBehavior);
   if (text.length === 0) return null;
-  const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(
+  const { fontSizePx, lineSpacingPx, paragraphSpacingPx } = labelEffectiveTextTheme(
     labelTextTheme(n, props, { theme }),
-    n.labelSettings
+    n.labelSettings,
+    n.constants
   );
   const layout = shapeText(text, {
     fontSizePx,
@@ -294,28 +294,32 @@ export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, them
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx,
     uppercase: props.uppercase,
-    fontMetrics: resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY),
+    fontMetrics: labelFontState(n).metrics,
     paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
     tabStopsPx: props.tabStopsPx,
     autowrapTrimFlags: props.autowrapTrimFlags,
+    ...controlBidiOptions(props, n),
   });
   return windowLabelLines(
     layout,
-    labelVisibleLineRange(layout.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible)
+    labelVisibleLineRange(layout.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible),
+    paragraphSpacingPx
   );
 });
 
 /**
  * `minsize.height` (`label.cpp:246-262`): the windowed extent, floored at one font line pitch.
- * `_update_visible` (`:344-388`) subtracts one trailing `line_spacing`, since N lines carry N-1
- * gaps, while `shapeText` returns `N * linePitchPx`.
+ * `_update_visible` (`:344-388`) subtracts one trailing `line_spacing` and `paragraph_spacing`,
+ * since the last line and paragraph carry no gap after them, while `windowLabelLines` counts both.
  */
 function labelMinimumHeightPx(
   windowed: TextLayoutResult,
-  lineSpacingPx: number,
+  spacing: LabelSpacing,
   fontHeightPx: number
 ): number {
-  return Math.max(Math.max(0, windowed.heightPx - lineSpacingPx), fontHeightPx);
+  const extentPx =
+    windowed.heightPx > 0 ? windowed.heightPx - spacing.lineSpacingPx - spacing.paragraphSpacingPx : 0;
+  return Math.max(extentPx, fontHeightPx);
 }
 
 /**
@@ -327,8 +331,9 @@ function labelMinimumHeightPx(
 export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LabelProperties;
   const themeResolved = labelTextTheme(n, props, ctx);
-  const { fontSizePx, lineSpacingPx } = labelEffectiveTextTheme(themeResolved, n.labelSettings);
-  const fontMetrics = resolveNodeFontMetrics(n, LABEL_THEME_FONT_KEY);
+  const spacing = labelEffectiveTextTheme(themeResolved, n.labelSettings, n.constants);
+  const { fontSizePx } = spacing;
+  const fontMetrics = labelFontState(n).metrics;
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
   // `props.visibleCharacters` is already resolved (label.cpp:1285-1327). CHARS_BEFORE_SHAPING
   // truncates before shaping, so it runs before the empty-text gate. `uppercase` stays a `shapeText`
@@ -355,22 +360,24 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
       fontSizePx,
       boxWidthPx: shapedWidthPx === undefined ? 0 : labelShapingWidthPx(shapedWidthPx),
       autowrapMode: shapedWidthPx === undefined ? AutowrapMode.AUTOWRAP_OFF : autowrapMode,
-      lineSpacingPx,
+      lineSpacingPx: spacing.lineSpacingPx,
       uppercase: props.uppercase,
       fontMetrics,
       paragraphSeparator: props.paragraphSeparator ?? LABEL_PARAGRAPH_SEPARATOR,
       tabStopsPx: props.tabStopsPx,
       autowrapTrimFlags: props.autowrapTrimFlags,
+      ...controlBidiOptions(props, n),
     });
     // Not modelled: `min_size.height = 1` and the `max_lines_visible` clamp (`:985-987`), which
     // need `clip` or an `overrun_behavior` other than `OVERRUN_NO_TRIMMING`.
     const range = labelVisibleLineRange(wrapped.lines.length, props.linesSkipped ?? 0, props.maxLinesVisible);
-    return { x: 1, y: labelMinimumHeightPx(windowLabelLines(wrapped, range), lineSpacingPx, fontHeightPx) };
+    const windowed = windowLabelLines(wrapped, range, spacing.paragraphSpacingPx);
+    return { x: 1, y: labelMinimumHeightPx(windowed, spacing, fontHeightPx) };
   }
 
   // Non-null: empty text, the share's only null, returned above.
   const windowed = labelUnwrappedShape(n, ctx.theme)!;
-  const height = labelMinimumHeightPx(windowed, lineSpacingPx, fontHeightPx);
+  const height = labelMinimumHeightPx(windowed, spacing, fontHeightPx);
   // `minsize.width` is the widest line's ceiled `shaped_text_get_size(...).x` (`label.cpp:252-257`).
   // The max of the ceils is the ceil of the max, so the widest raw line converts once.
   // `clip_text` or an overrun behaviour other than NO_TRIMMING drops the width floor to 1
@@ -410,11 +417,13 @@ function horizontalOffsetPx(
   lineWidthPx: number,
   boxWidthPx: number,
   alignment: number | undefined,
-  rtl: boolean
+  direction: LineDirection
 ): number {
+  const { rtl, isRtlParagraph, isAutowrapped } = direction;
   // `rtl_layout` swaps the two arms outright (`:481-497`): LEFT takes the
   // trailing-edge expression and RIGHT takes `style->get_offset().x`, which is
-  // zero for the StyleBoxEmpty above. CENTER carries no arm.
+  // zero for the StyleBoxEmpty above. CENTER carries no arm. FILL's own arm reads
+  // the inferred paragraph direction instead (`:472-478`).
   const trailingEdge = Math.trunc(boxWidthPx - lineWidthPx);
   switch (alignment ?? H_LEFT) {
     case H_CENTER:
@@ -425,20 +434,45 @@ function horizontalOffsetPx(
     case H_LEFT:
       return rtl ? trailingEdge : 0;
     case H_FILL:
+      return isRtlParagraph && isAutowrapped ? trailingEdge : 0;
     default:
       return 0;
   }
 }
 
-/**
- * `_get_line_rect`'s x reads two directions (`label.cpp:470-471`), and only `rtl_layout` is here.
- * The paragraph direction follows `text_direction`, default `TEXT_DIRECTION_AUTO` (`label.h:70`),
- * which infers LTR for Latin text (`:179`, `text_server_adv.cpp:7241-7247`). FILL's own arm
- * (`:472`) is unreachable while `text_direction` is unmodelled (`comparison.md`).
- */
-interface LabelLayoutDirection {
+/** The two directions `_get_line_rect`'s x reads (`label.cpp:470-471`), and the autowrap gate of FILL's arm. */
+interface LineDirection {
+  /** `is_layout_rtl()`. */
+  rtl: boolean;
+  /** `shaped_text_get_inferred_direction() == DIRECTION_RTL` of the line's paragraph. */
+  isRtlParagraph: boolean;
+  isAutowrapped: boolean;
+}
+
+interface LabelLayoutOptions extends Partial<LabelSpacing> {
+  // The spacings default to Label's theme defaults, which the Graph titlebar's title Label uses.
   /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
   rtl?: boolean;
+  /** `autowrap_mode != AUTOWRAP_OFF`, the gate of FILL's RTL arm (`label.cpp:473`). Defaults `false`. */
+  isAutowrapped?: boolean;
+  /** The overrun trim `_shape` runs on each line after the fit, before `_get_line_rect` aligns it (`label.cpp:319-330`). */
+  trim?: LineTrim;
+}
+
+/** The two overrun trims of `_shape` with autowrap off (`label.cpp:319-330`). */
+export interface LineTrim {
+  /** Trims a line that FILL did not fit first. */
+  line: (line: TextLineLayout) => TextLineLayout;
+  /** Trims a line FILL fitted, then fits it again with `justificationFlags` (`label.cpp:325`). */
+  filledLine: (line: TextLineLayout, justificationFlags: number) => TextLineLayout;
+}
+
+/**
+ * Whether the fit of a line stopped above the smallest spaces: `fit_width_minimum_reached` is false
+ * (`text_server_adv.cpp:5660`), so a justification-aware trim returns early (`:5947`).
+ */
+function isFitAboveMinimum(fitted: TextLineLayout, widthPx: number): boolean {
+  return Math.floor(widthPx) >= Math.floor(fitted.widthPx);
 }
 
 /**
@@ -453,18 +487,20 @@ export function layoutLabelLines(
   horizontalAlignment: number | undefined,
   verticalAlignment: number | undefined,
   justificationFlags: number = DEFAULT_JUSTIFICATION_FLAGS,
-  // Feeds only `fitLineToWidth`'s 0.1*font_size shrink floor. The default is the theme's 16.
-  fontSizePx: number = 16,
-  direction: LabelLayoutDirection = {}
+  options: LabelLayoutOptions = {}
 ): LabelLinePlacement[] {
-  const { rtl = false } = direction;
+  const {
+    rtl = false,
+    isAutowrapped = false,
+    trim,
+    lineSpacingPx = LABEL_LINE_SPACING_PX,
+    paragraphSpacingPx = LABEL_PARAGRAPH_SPACING_PX,
+  } = options;
   const lineCount = layout.lines.length;
   if (lineCount === 0) return [];
 
-  const lineSpacingPx = LABEL_LINE_SPACING_PX;
-  // label.cpp:599: `total_h - line_spacing - paragraph_spacing`, with one paragraph, so
-  // paragraph_spacing is 0. `labelMinimumSize` applies the same correction.
-  const contentHeightPx = layout.heightPx - lineSpacingPx;
+  // label.cpp:599: `total_h - line_spacing - paragraph_spacing`. `labelMinimumSize` applies the same correction.
+  const contentHeightPx = layout.heightPx - lineSpacingPx - paragraphSpacingPx;
 
   // `get_layout_data` declares `int vbegin = 0, vsep = 0` (`label.cpp:591`), so each offset
   // truncates toward zero to a whole pixel, negative when the box is shorter than the text. The
@@ -488,25 +524,38 @@ export function layoutLabelLines(
   }
 
   const effectivePitchPx = layout.linePitchPx + vsepPx;
+  // `ofs.y += paragraph_spacing` after each paragraph's last shown line (`label.cpp:889`).
+  let paragraphGapsAbovePx = 0;
   const isFill = (horizontalAlignment ?? H_LEFT) === H_FILL;
-  const jstToLine = isFill ? justifyToLineIndex(layout.lines, justificationFlags) : 0;
+  const shapingWidthPx = labelShapingWidthPx(boxWidthPx);
   // `_shape` justifies at the truncated `int width` it broke the lines at (`label.cpp:297,331`),
   // not the raw `get_size()` that `_get_line_rect` reads.
-  const fitWidthPx = labelShapingWidthPx(boxWidthPx);
+  const fitted = isFill
+    ? justifyParagraphs(layout.lines, {
+        widthPx: shapingWidthPx,
+        flags: justificationFlags,
+      })
+    : layout.lines;
+  // With autowrap off, FILL trims `OVERRUN_JUSTIFICATION_AWARE` (`label.cpp:322-325`).
+  const isTrimJustificationAware = isFill && !isAutowrapped;
+  const lines = trim
+    ? fitted.map((line, index) => {
+        const shaped = layout.lines[index]!;
+        if (!isTrimJustificationAware || line === shaped) return trim.line(line);
+        return isFitAboveMinimum(line, shapingWidthPx) ? line : trim.filledLine(line, justificationFlags);
+      })
+    : fitted;
 
-  return layout.lines.map((line, lineIndex) => {
-    const y = vbeginPx + lineIndex * effectivePitchPx;
-    if (isFill) {
-      const justified =
-        lineIndex < jstToLine
-          ? fitLineToWidth(line, fitWidthPx, justificationFlags, { fontSizePx }).line
-          : line;
-      return { x: 0, y, line: justified };
+  return lines.map((line, lineIndex) => {
+    if (lineIndex > 0 && startsParagraph(lines, lineIndex)) {
+      paragraphGapsAbovePx += paragraphSpacingPx;
     }
+    const y = vbeginPx + lineIndex * effectivePitchPx + paragraphGapsAbovePx;
     // `_get_line_rect` aligns against the ceiled `TS->shaped_text_get_size(rid)` (`label.cpp:478`),
-    // not the raw pen advance `fitLineToWidth` needs.
+    // not the raw pen advance the fit needs.
+    const direction = { rtl, isRtlParagraph: line.isRtl === true, isAutowrapped };
     return {
-      x: horizontalOffsetPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, horizontalAlignment, rtl),
+      x: horizontalOffsetPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, horizontalAlignment, direction),
       y,
       line,
     };

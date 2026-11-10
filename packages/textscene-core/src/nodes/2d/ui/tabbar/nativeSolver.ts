@@ -36,7 +36,12 @@ import {
   CONTROL_FONT_HOVER_COLOR,
   CONTROL_FONT_LOW_COLOR,
 } from '../../../../godot/scene/theme';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { AutowrapMode, TextDirection } from '../../../../godot/text/textServerEnums';
+import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
+import {
+  controlBidiOptions,
+  type ControlTextEnv,
+} from '../../../../r3f/controls/native/text/textBidiOptions';
 
 /**
  * `TabBar::current` once tabs load: `set_tab_count` moves the `-1` default to 0 unless the bar can
@@ -338,18 +343,25 @@ export function isCloseButtonVisible(policy: number, index: number, currentTab: 
   return policy === 2 || (policy === 1 && index === currentTab);
 }
 
-/** Natural, untruncated text: TabBar never wraps and sets no `line_spacing` on `text_buf`, like `buttonBase.ts`'s `shapeButtonLabel`, but TabBar is not a Button. */
+/** A tab's own `text_direction` and `language`, which no scene sets (`tab_bar.h:77`): the layout direction and the locale. */
+const TAB_TITLE_BIDI = { textDirection: TextDirection.TEXT_DIRECTION_INHERITED, language: '' };
+
+/**
+ * Natural, untruncated text: TabBar never wraps and sets no `line_spacing` on `text_buf`, like
+ * `buttonBase.ts`'s `shapeButtonLabel`, but TabBar is not a Button. `_shape` takes the layout
+ * direction (`tab_bar.cpp:358-362`).
+ */
 export function shapeTabLabel(
   text: string,
-  fontSizePx: number,
-  fontMetrics: Parameters<typeof shapeText>[1]['fontMetrics']
+  env: ControlTextEnv,
+  font: { fontSizePx: number; fontMetrics?: FontMetrics }
 ): TextLayoutResult {
   return shapeText(text, {
-    fontSizePx,
+    ...controlBidiOptions(TAB_TITLE_BIDI, env),
+    ...font,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
     lineSpacingPx: 0,
-    fontMetrics,
   });
 }
 
@@ -410,7 +422,7 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
     const hasText = tab.title.length > 0;
     // `text_buf->get_size().y` (`:82`) always folds into the height, since an empty
     // title still shapes one line. The width below is gated on `!is_empty()`.
-    const layout = ctx.measureText ? shapeTabLabel(tab.title, fontSizePx, fontMetrics) : null;
+    const layout = ctx.measureText ? shapeTabLabel(tab.title, n, { fontSizePx, fontMetrics }) : null;
     const textWidth = layout ? shapedTextSizeWidthPx(layout.widthPx) : 0;
     height = Math.max(height, (layout?.heightPx ?? 0) + yMargin);
 

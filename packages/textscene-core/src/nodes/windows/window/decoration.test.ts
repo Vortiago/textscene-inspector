@@ -40,7 +40,11 @@ describe('closeIconOrigin', () => {
 
 describe('shapeTitle', () => {
   it('keeps a title with a newline on one line, as its one TextLine does (`viewport.cpp:374`)', () => {
-    const shaped = shapeTitle('First\nSecond', 14, OPEN_SANS_FONT_METRICS);
+    const shaped = shapeTitle('First\nSecond', {
+      fontSizePx: 14,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      isRtl: false,
+    });
     expect(shaped.lines).toHaveLength(1);
     expect(shaped.lines[0]!.glyphs.map((g) => g.char).join('')).toContain('Second');
   });

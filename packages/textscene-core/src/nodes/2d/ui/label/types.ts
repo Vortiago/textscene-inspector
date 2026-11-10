@@ -1,6 +1,12 @@
 import type { ControlProperties } from '../control/types';
+import type {
+  StructuredTextOverrideProperties,
+  TextDirectionProperties,
+} from '../../../../godot/text/paragraphDirection';
 
-export interface LabelProperties extends ControlProperties {
+/** Each paragraph shapes in `text_direction` and `language`, else the locale (`label.cpp:139,178-181,195`). */
+export interface LabelProperties
+  extends ControlProperties, TextDirectionProperties, StructuredTextOverrideProperties {
   text?: string;
   /** Godot HorizontalAlignment: 0 left, 1 center, 2 right, 3 fill. */
   horizontalAlignment?: number;

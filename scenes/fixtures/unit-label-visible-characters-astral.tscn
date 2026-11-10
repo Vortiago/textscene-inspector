@@ -1,0 +1,35 @@
+; One variable: astral characters (U+1F600) in the text of a Label with visible_ratio = 0.5. Godot
+; counts code points (label.cpp:1375-1377), so twelve characters derive visible_characters 6 and the
+; reveal ends after "ab". Counting UTF-16 units derives 8 and shows two more letters. The first Label
+; cuts before shaping, the second after (CHARS_AFTER_SHAPING). unit-label-visible-characters.tscn
+; uses BMP text only, so it cannot show the difference.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.16, 0.1, 0.16, 1)
+
+[node name="BeforeShaping" type="Label" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 24.0
+offset_bottom = 64.0
+text = "😀😀😀😀abcdefgh"
+visible_ratio = 0.5
+
+[node name="AfterShaping" type="Label" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 84.0
+offset_bottom = 124.0
+text = "😀😀😀😀abcdefgh"
+visible_characters_behavior = 1
+visible_ratio = 0.5

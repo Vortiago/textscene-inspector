@@ -12,6 +12,8 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
+import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import {
   checkButtonCheckVOffset,
@@ -68,8 +70,10 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = checkButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  const textOutline = useTintedTextOutline(solveNode, tint.own);
 
-  const layout = useButtonLabelLayout(solveNode, CHECKBUTTON_THEME_FONT_KEY, text, fontSizePx);
+  const bidi = useControlBidiOptions(props, solveNode);
+  const layout = useButtonLabelLayout(solveNode, CHECKBUTTON_THEME_FONT_KEY, text, fontSizePx, bidi);
 
   const content = useMemo(
     () =>
@@ -104,9 +108,11 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
         <ButtonLabel
           layout={layout}
           overrunBehavior={props.overrunBehavior}
+          bidi={bidi}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}
+          outline={textOutline}
           clippingPlanes={clippingPlanes}
           renderOrder={renderOrder}
         />

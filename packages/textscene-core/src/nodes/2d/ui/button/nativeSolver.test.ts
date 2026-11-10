@@ -5,13 +5,13 @@
  * not a line pitch, since it sets no `line_spacing`. Measured: a `content_margin` 6 button is 35.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { FontResource } from '../../../../resources/fonts/font/types';
 import * as logger from '../../../../logger';
 import type { ButtonProperties } from './types';
 import {
@@ -23,6 +23,7 @@ import {
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { controlProps } from '../control/testing/controlProps';
+import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const minSize = buttonMinimumSize;
 
@@ -255,6 +256,32 @@ describe('buttonLabelShape — the one shaping the solver and the painter share'
   });
 });
 
+describe('buttonLabelShape — direction and language (button.cpp:564-569)', () => {
+  /** The shaped line's glyph characters, left to right. */
+  function visual(props: Partial<ButtonProperties>, overrides: Partial<SolveNode> = {}): string {
+    const layout = buttonLabelShape({ ...node(props), ...overrides }, ctx().theme)!;
+    return visualChars(layout.lines[0]!);
+  }
+
+  it('shapes an RTL paragraph with `!` at the visual left', () => {
+    expect(visual({ text: 'Hello!', textDirection: 2 })).toBe('!Hello');
+  });
+
+  it('shapes an INHERITED paragraph at the layout direction', () => {
+    expect(visual({ text: 'Hello!', textDirection: 3 }, { rtl: true })).toBe('!Hello');
+    expect(visual({ text: 'Hello!', textDirection: 3 }, { rtl: false })).toBe('Hello!');
+  });
+
+  it('keeps an AUTO Latin paragraph left to right under an RTL layout', () => {
+    expect(visual({ text: 'Hello!', textDirection: 0 }, { rtl: true })).toBe('Hello!');
+  });
+
+  it('takes a neutral paragraph from the language, else the locale', () => {
+    expect(visual({ text: '123!', textDirection: 0, language: 'he' })).toBe('!123');
+    expect(visual({ text: '123!', textDirection: 0 }, { locale: 'he_IL' })).toBe('!123');
+  });
+});
+
 describe('buttonTextTheme — font_color / font_disabled_color key mapping', () => {
   it('resolves the theme default control_font_color for the normal state', () => {
     expect(buttonTextTheme(node({}), {} as ButtonProperties, 'normal', ctx())).toEqual({
@@ -274,13 +301,20 @@ describe('buttonTextTheme — font_color / font_disabled_color key mapping', () 
   it('a theme_override_colors/font_disabled_color override wins over the default disabled color', () => {
     const props: ButtonProperties = controlProps({
       name: 'B',
+      textDirection: 0,
+      language: '',
       themeOverrideColors: { font_disabled_color: { r: 1, g: 0, b: 0, a: 1 } },
     });
     expect(buttonTextTheme(node(props), props, 'disabled', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
   it('theme_override_font_sizes/font_size overrides the theme default for BOTH states', () => {
-    const props: ButtonProperties = controlProps({ name: 'B', themeOverrideFontSizes: { font_size: 24 } });
+    const props: ButtonProperties = controlProps({
+      name: 'B',
+      textDirection: 0,
+      language: '',
+      themeOverrideFontSizes: { font_size: 24 },
+    });
     expect(buttonTextTheme(node(props), props, 'normal', ctx()).fontSizePx).toBe(24);
     expect(buttonTextTheme(node(props), props, 'disabled', ctx()).fontSizePx).toBe(24);
   });
@@ -307,7 +341,7 @@ describe('buttonIconColor — icon_normal_color / icon_disabled_color (default_t
 
 describe(`buttonMinimumSize — resolves this Button's own theme font key ("font", default_theme.cpp:152)`, () => {
   // Without a DOM, `peekSceneFontMetrics` always answers the bundled default, so a
-  // resolved value cannot be observed. It warns for an unresolvable font (a SystemFont),
+  // resolved value cannot be observed. It warns for an unresolvable font (a FontFile with no bytes),
   // which proves the lookup found something.
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
@@ -318,15 +352,18 @@ describe(`buttonMinimumSize — resolves this Button's own theme font key ("font
   });
 
   it("a theme_override_fonts/font local override is fed to the text engine (proven by peekSceneFontMetrics's own warn)", () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = {
+      ...node({ text: 'A' }),
+      fontOverrides: { font: unresolvableFont },
+    };
     buttonMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
   it('a local override under a different key is not consulted', () => {
-    const systemFont: FontResource = { kind: 'system', fontNames: ['sans-serif'], properties: {} };
-    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { normal_font: systemFont } };
+    const unresolvableFont = fontFile(undefined);
+    const n: SolveNode = { ...node({ text: 'A' }), fontOverrides: { normal_font: unresolvableFont } };
     buttonMinimumSize(n, ctx());
     expect(warnSpy).not.toHaveBeenCalled();
   });
