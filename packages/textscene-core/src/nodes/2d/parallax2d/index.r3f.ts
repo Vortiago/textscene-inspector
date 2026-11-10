@@ -1,14 +1,10 @@
-/**
- * Parallax2D is not drawn yet, so the badge reads "not implemented". The Node2D
- * base still mounts, for `visible` and the workspace split.
- */
+/** Registers the Parallax2D render component. */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { Node2D } from '../../base/node2d/Component';
+import { Parallax2D } from './Component';
 
 nodeComponentRegistry.register({
   typeName: 'Parallax2D',
-  Component: Node2D,
+  Component: Parallax2D,
   canvasItem: true,
-  renderIntent: 'pending',
 });
