@@ -4,6 +4,7 @@
  * linter reads never carries it.
  */
 import type { SceneScope, TscnNode } from '../parser/types.js';
+import type { Rect2 } from '../godot/math/rect2.js';
 import type { Transform2DColumns } from '../godot/math/transform2d.js';
 import type { HandOffDecision } from '../parser/nodeOwner.js';
 import type { UniqueNameTable } from './instanceNameTable.js';
@@ -77,6 +78,11 @@ export interface LiveNode extends TscnNode {
    * canvas item of the layer, so the y-sort pass reads the placement and the root's pose and z.
    */
   readonly ySortRoot?: YSortRoot;
+  /**
+   * Set on an unowned placement node whose root is a Control: receives the rect the Control walk
+   * solved for that root, which the tile layer sorts the node on.
+   */
+  readonly reportRootRect?: (rect: Rect2) => void;
 }
 
 /** The instance root a placement node stands for, as the y-sort reads it. */

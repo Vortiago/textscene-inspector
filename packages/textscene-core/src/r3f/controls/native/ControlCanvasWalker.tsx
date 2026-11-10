@@ -4,7 +4,7 @@
  * never shears. A registered painter draws the chrome, `<ControlFallback>` otherwise.
  * Children render beside the painter, since the solve has already placed them.
  */
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { controlProps, type SolveNode } from './solveTree';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
@@ -50,6 +50,8 @@ interface ControlCanvasWalkerProps {
    * that owns another viewport must state it.
    */
   snapToPixels?: boolean;
+  /** Receives the solve of `tree`, for a caller that needs a rect the walk draws from. */
+  onSolved?: (solved: ReadonlyMap<string, SolvedControl>) => void;
 }
 
 const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
@@ -61,6 +63,7 @@ export function ControlCanvasWalker({
   theme,
   measurer,
   snapToPixels,
+  onSolved,
 }: ControlCanvasWalkerProps) {
   // Per viewport in Godot (`Viewport::snap_controls_to_pixels`,
   // `scene/main/viewport.h`). `main/main.cpp` applies the project setting to the
@@ -75,6 +78,7 @@ export function ControlCanvasWalker({
     // `tree` can change while `tree` keeps its reference.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree, generation, measurer, viewport, theme]);
+  useEffect(() => onSolved?.(solved), [solved, onSolved]);
 
   return (
     <>

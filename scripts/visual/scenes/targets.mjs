@@ -42,6 +42,11 @@ export const TILE_AND_TARGET_SCENES = [
   // placeholder disc for the tiles that ask for it (Gizmos on). Verified against Godot 4.6.3.
   { name: 'tile-map-layer-scene-tiles', file: 'unit-tile-map-layer-scene-tiles.tscn', mode: '2d' },
   {
+    name: 'tile-map-layer-scene-tile-control-sort',
+    file: 'unit-tile-map-layer-scene-tile-control-sort.tscn',
+    mode: '2d',
+  },
+  {
     name: 'tile-map-layer-scene-tile-placeholders',
     file: 'unit-tile-map-layer-scene-tile-placeholders.tscn',
     mode: '2d',

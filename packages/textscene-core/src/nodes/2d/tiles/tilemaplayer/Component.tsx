@@ -14,7 +14,6 @@ import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel, type TileSetStatus } from '../../../../r3f/useTileSetModel';
 import { YSortDispatcher } from '../../../../r3f/YSortDispatcher';
-import { SceneTileControlRoots } from '../shared/SceneTileControlRoots';
 import { SceneTileInstances } from '../shared/SceneTileInstances';
 import { ScenePlaceholders } from '../shared/ScenePlaceholders';
 import { useSceneTileNodes, type SceneTileDrawing } from '../shared/useSceneTileNodes';
@@ -54,7 +53,6 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
         )
       }
     >
-      <SceneTileControlRoots drawing={sceneTiles} />
       <YSortDispatcher node={withSceneTiles}>{children}</YSortDispatcher>
     </CanvasItem2D>
   );
@@ -111,7 +109,6 @@ function QuadrantLayer({ node, model, status, sceneTiles, children }: QuadrantLa
     >
       {children}
       <SceneTileInstances node={node} instances={sceneTiles.instances} />
-      <SceneTileControlRoots drawing={sceneTiles} />
     </CanvasItem2D>
   );
 }

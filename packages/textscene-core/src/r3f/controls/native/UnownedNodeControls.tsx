@@ -5,10 +5,11 @@
  * is, so a canvas with none loads none.
  */
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import '../index.js';
 import type { Rect2 } from '../../../godot/math/rect2';
-import type { TscnNode } from '../../../parser/types';
+import type { LiveNode } from '../../../resources/liveNode';
+import type { SolvedControl } from './controlRectSolver';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { usePaintRange } from '../../contexts/PaintOrderContext';
 import { useSceneResources } from '../../SceneResourcesContext';
@@ -19,7 +20,7 @@ import { measureText } from './text/measurer';
 
 const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
 
-export default function UnownedNodeControls({ node }: { node: TscnNode }) {
+export default function UnownedNodeControls({ node }: { node: LiveNode }) {
   const { externalResources, internalResources } = useSceneResources();
   const { themeScale } = useProjectSettings();
   const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
@@ -30,6 +31,15 @@ export default function UnownedNodeControls({ node }: { node: TscnNode }) {
     internalResources,
     usePaintRange()
   );
+  // The tree's first node is the Control root the placement holds, which the tile layer sorts on.
+  const { reportRootRect } = node;
+  const onSolved = useCallback(
+    (solved: ReadonlyMap<string, SolvedControl>) => {
+      const rect = tree[0] && solved.get(tree[0].path)?.rect;
+      if (rect) reportRootRect?.(rect);
+    },
+    [tree, reportRootRect]
+  );
   return (
     <ControlCanvasWalker
       tree={tree}
@@ -37,6 +47,7 @@ export default function UnownedNodeControls({ node }: { node: TscnNode }) {
       viewport={ZERO_RECT}
       theme={theme}
       measurer={measureText}
+      onSolved={onSolved}
     />
   );
 }

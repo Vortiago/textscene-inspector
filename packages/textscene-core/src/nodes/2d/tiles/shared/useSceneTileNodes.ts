@@ -4,14 +4,13 @@
  * instance loader, its materials and the paint order are the ones an `instance=` node uses.
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { SceneScope, TscnNode } from '../../../../parser/types';
 import type { LiveNode, YSortRoot } from '../../../../resources/liveNode';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes';
 import { sceneTileCells, type SceneTileCell } from '../../../../resources/tileset/sceneTileCells';
 import { sceneTilePlacement, type SceneRootKind } from '../../../../resources/tileset/sceneTilePlacement';
 import type { TileGrid, TileScene, TileSetModel } from '../../../../resources/tileset/types';
-import { useByValue } from '../../../../r3f/hooks/useByValue';
 import { perObject } from '../../../../utils/perObject';
 import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedScenePathsContext';
 import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
@@ -40,16 +39,6 @@ export interface SceneTileDrawing {
   instances: TscnNode[];
   /** The tiles the editor marks with a placeholder disc: no scene, a refused root or `display_placeholder`. */
   placeholderTiles: SceneTileCell[];
-  /** The loaded Control roots of the scenes, which the sort reads the solved rect of. */
-  controlRoots: ControlRoot[];
-  /** Receives the solved rect of each Control root. The sort of its tiles follows it. */
-  onRootRects: (rects: ReadonlyMap<TileScene, Rect2>) => void;
-}
-
-/** A tile scene whose root is a Control: its rect needs the Control solver. */
-export interface ControlRoot {
-  scene: TileScene;
-  node: LiveNode;
 }
 
 /**
@@ -78,26 +67,9 @@ export function useSceneTileNodes(
   const sceneNodes = useMemo(() => scenes.map(instanceNodesOf(scope)), [scenes, scope]);
   const sceneSteps = useLiveStepsOf(sceneNodes, scope);
 
-  const judgedRoots = useMemo(
-    () =>
-      scenes.flatMap((scene, index) => {
-        const step = sceneSteps[index]!;
-        const isControlRoot = step.isMerged && rootKindOf(step.node.type) === 'control';
-        return isControlRoot && !step.isRefusedInstance ? [{ scene, node: step.node }] : [];
-      }),
-    [scenes, sceneSteps]
-  );
-  // A live-step tick that leaves the roots alone keeps the roots the solver is already solving.
-  const controlRoots = useByValue(judgedRoots, sameControlRoots);
-  // The solver's rect of each Control root, once the Control walk has solved it. The sort reads the
-  // authored offsets until then.
-  const [rootRects, setRootRects] = useState<ReadonlyMap<TileScene, Rect2>>(NO_RECTS);
-  // The same rects keep the same map: a new map would rebuild every placement node for nothing.
-  const reportRootRects = useCallback(
-    (rects: ReadonlyMap<TileScene, Rect2>) =>
-      setRootRects((previous) => (sameRects(previous, rects) ? previous : rects)),
-    []
-  );
+  // The rect the Control walk solved for the root of each Control scene. The sort reads the offsets
+  // until then, and ignores a rect solved for an earlier root of the scene.
+  const [solvedRoots, setSolvedRoots] = useState<ReadonlyMap<TileScene, SolvedRoot>>(NO_SOLVED_ROOTS);
 
   return useMemo(() => {
     if (!model) return NO_DRAWING;
@@ -116,7 +88,14 @@ export function useSceneTileNodes(
         placeable.set(scene, {
           instance: sceneNodes[index]!,
           root,
-          ySortRoot: ySortRootOf(step.node, root, snapToPixels, rootRects.get(scene)),
+          ySortRoot: ySortRootOf(
+            step.node,
+            root,
+            snapToPixels,
+            currentRect(solvedRoots.get(scene), step.node)
+          ),
+          reportRootRect: (rect) =>
+            setSolvedRoots((previous) => withSolvedRoot(previous, scene, step.node, rect)),
         });
     });
     const placed: LiveNode[] = [];
@@ -130,21 +109,8 @@ export function useSceneTileNodes(
       placeholderTiles: allTiles.filter(
         ({ tile }) => !tile.scene || tile.displayPlaceholder || sceneless.has(tile.scene)
       ),
-      controlRoots,
-      onRootRects: reportRootRects,
     };
-  }, [
-    model,
-    allTiles,
-    tiles,
-    scenes,
-    sceneNodes,
-    sceneSteps,
-    snapToPixels,
-    rootRects,
-    controlRoots,
-    reportRootRects,
-  ]);
+  }, [model, allTiles, tiles, scenes, sceneNodes, sceneSteps, snapToPixels, solvedRoots]);
 }
 
 /**
@@ -166,29 +132,32 @@ class TileNames {
 const PLACEMENT_DEFAULTS = parseNode2D({ type: 'Node2D', attributes: { name: '', parent: '.' } }, {});
 
 const NO_TILES: readonly SceneTileCell[] = [];
-export const NO_RECTS: ReadonlyMap<TileScene, Rect2> = new Map();
-function sameControlRoots(a: readonly ControlRoot[], b: readonly ControlRoot[]): boolean {
-  return (
-    a.length === b.length && a.every((root, i) => root.scene === b[i]!.scene && root.node === b[i]!.node)
-  );
+/** A Control root as a tile scene's walk solved it: the rect belongs to this loaded root. */
+interface SolvedRoot {
+  root: LiveNode;
+  rect: Rect2;
 }
 
-function sameRects(a: ReadonlyMap<TileScene, Rect2>, b: ReadonlyMap<TileScene, Rect2>): boolean {
-  if (a.size !== b.size) return false;
-  for (const [scene, rect] of a) {
-    const other = b.get(scene);
-    if (!other || other.x !== rect.x || other.y !== rect.y || other.w !== rect.w || other.h !== rect.h)
-      return false;
-  }
-  return true;
+const NO_SOLVED_ROOTS: ReadonlyMap<TileScene, SolvedRoot> = new Map();
+
+/** The solved rect, unless it was solved for a root the scene has since replaced. */
+function currentRect(solved: SolvedRoot | undefined, root: LiveNode): Rect2 | undefined {
+  return solved?.root === root ? solved.rect : undefined;
 }
 
-const NO_DRAWING: SceneTileDrawing = {
-  instances: [],
-  placeholderTiles: [],
-  controlRoots: [],
-  onRootRects: () => {},
-};
+/** `solved` with the rect of `scene`, or `solved` itself when the rect is the one it holds. */
+function withSolvedRoot(
+  solved: ReadonlyMap<TileScene, SolvedRoot>,
+  scene: TileScene,
+  root: LiveNode,
+  rect: Rect2
+): ReadonlyMap<TileScene, SolvedRoot> {
+  const held = currentRect(solved.get(scene), root);
+  if (held && held.x === rect.x && held.y === rect.y && held.w === rect.w && held.h === rect.h) return solved;
+  return new Map(solved).set(scene, { root, rect });
+}
+
+const NO_DRAWING: SceneTileDrawing = { instances: [], placeholderTiles: [] };
 
 /** A cell edit keeps the node of a scene it still draws, so the instances mounted below it keep their memos. */
 const instanceNodesOf = perObject((scope: SceneScope) =>
@@ -271,12 +240,14 @@ interface PlaceableScene {
   instance: LiveNode;
   root: SceneRootKind;
   ySortRoot: YSortRoot;
+  /** Receives the rect the Control walk solves for a Control root. */
+  reportRootRect: (rect: Rect2) => void;
 }
 
 function placementNode(
   name: string,
   { cell }: SceneTileCell,
-  { instance, root, ySortRoot }: PlaceableScene,
+  { instance, root, ySortRoot, reportRootRect }: PlaceableScene,
   grid: TileGrid
 ): LiveNode {
   const placement = sceneTilePlacement(grid, cell.coords, cell.alternativeId, root);
@@ -290,5 +261,6 @@ function placementNode(
     isUnowned: true,
     hasControlRoot: root === 'control',
     ySortRoot,
+    ...(root === 'control' && { reportRootRect }),
   };
 }

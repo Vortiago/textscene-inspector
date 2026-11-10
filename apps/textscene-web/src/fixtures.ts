@@ -3752,8 +3752,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Map Layer Scene Tile Control Sort",
+    "file": "unit-tile-map-layer-scene-tile-control-sort.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer Scene Tile Control",
     "file": "unit-tile-map-layer-scene-tile-control.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Grown",
+    "file": "unit-tile-map-layer-scene-tile-grown.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

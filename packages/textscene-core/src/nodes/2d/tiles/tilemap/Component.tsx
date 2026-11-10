@@ -20,7 +20,6 @@ import { YSortDispatcher } from '../../../../r3f/YSortDispatcher';
 import type { TscnNode } from '../../../../parser/types';
 import type { TileMapLayerProperties } from '../tilemaplayer/types';
 import type { TileSetModel } from '../../../../resources/tileset/types';
-import { SceneTileControlRoots } from '../shared/SceneTileControlRoots';
 import { SceneTileInstances } from '../shared/SceneTileInstances';
 import { LayerPlaceholders } from './LayerPlaceholders';
 import { useSceneTileNodes, type SceneTileDrawing } from '../shared/useSceneTileNodes';
@@ -77,7 +76,6 @@ function YSortedTileMap({
         )
       }
     >
-      <SceneTileControlRoots drawing={sceneTiles} />
       <YSortDispatcher node={withLayers}>{children}</YSortDispatcher>
     </CanvasItem2D>
   );
@@ -195,7 +193,6 @@ function LayeredTileMap({ node, model, status, sceneTiles, children }: LayeredTi
     >
       {children}
       <SceneTileInstances node={node} instances={sceneTiles.instances} />
-      <SceneTileControlRoots drawing={sceneTiles} />
     </CanvasItem2D>
   );
 }
