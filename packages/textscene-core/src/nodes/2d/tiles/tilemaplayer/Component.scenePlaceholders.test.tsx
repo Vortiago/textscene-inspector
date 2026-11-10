@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import type { TscnScene } from '../../../../parser/types';
 import type { PlacedCell } from '../shared/tileData';
-import { drawnBoxes, drawnMeshes, nodesOfType, renderSceneTiles } from '../shared/sceneTiles.testkit';
+import { drawnBoxes, nodesOfType, onlyMesh, renderSceneTiles } from '../shared/sceneTiles.testkit';
 import { PLACEHOLDER_TILESET_RESOURCES } from '../shared/scenePlaceholders.testkit';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { placeholderColor } from '../../../../resources/tileset/scenePlaceholder';
@@ -49,8 +49,8 @@ describe('TileMapLayer scene tile placeholders', () => {
   });
 
   it('draws the disc in the colour Godot derives from the ids', async () => {
-    const [{ mesh }] = drawnMeshes(await renderLayer([cell(1, 0, 6)], { showGizmos: true }));
-    const material = (mesh as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const material = onlyMesh(await renderLayer([cell(1, 0, 6)], { showGizmos: true }))
+      .material as THREE.MeshBasicMaterial;
     const expected = placeholderColor(0, 6);
     expect(material.opacity).toBeCloseTo(0.8, 6);
     // The gizmo colour is linear: the sRGB channels, decoded.
@@ -96,8 +96,7 @@ describe('TileMapLayer scene tile placeholders', () => {
       showGizmos: true,
       layerExtra: 'modulate = Color(1, 1, 1, 0.5)\n',
     });
-    const [{ mesh }] = drawnMeshes(renderer);
-    expect(((mesh as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity).toBeCloseTo(0.4, 6);
+    expect((onlyMesh(renderer).material as THREE.MeshBasicMaterial).opacity).toBeCloseTo(0.4, 6);
   });
 
   it('draws the disc on a y-sorted layer too', async () => {

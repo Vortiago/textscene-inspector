@@ -38,6 +38,15 @@ export const TILE_AND_TARGET_SCENES = [
     file: 'unit-tile-map-layer-texture-padding.tscn',
     mode: '2d',
   },
+  // The scenes of a TileSetScenesCollectionSource instantiated at their cells, and the editor's
+  // placeholder disc for the tiles that ask for it (Gizmos on). Verified against Godot 4.6.3.
+  { name: 'tile-map-layer-scene-tiles', file: 'unit-tile-map-layer-scene-tiles.tscn', mode: '2d' },
+  {
+    name: 'tile-map-layer-scene-tile-placeholders',
+    file: 'unit-tile-map-layer-scene-tile-placeholders.tscn',
+    mode: '2d',
+    gizmos: true,
+  },
   // A tile's own TileData. Each scene moves one property, and its header says why.
   { name: 'tile-map-layer-tile-modulate', file: 'unit-tile-map-layer-tile-modulate.tscn', mode: '2d' },
   { name: 'tile-map-layer-tile-material', file: 'unit-tile-map-layer-tile-material.tscn', mode: '2d' },

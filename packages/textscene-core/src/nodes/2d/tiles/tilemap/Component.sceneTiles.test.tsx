@@ -13,7 +13,7 @@ import {
   SCENE_TILESET_RESOURCES,
   boxesInPaintOrder,
   drawnBoxes,
-  drawnMeshes,
+  onlyMesh,
   nodesOfType,
   renderSceneTiles,
 } from '../shared/sceneTiles.testkit';
@@ -95,8 +95,7 @@ polygon = PackedVector2Array(64, 300, 114, 300, 114, 340, 64, 340)
     const { renderer } = await renderSceneTiles(mapScene('layer_0/modulate = Color(0, 0, 1, 1)\n'), {
       prepare: withLayerCells([cell(0, 5, 4)]),
     });
-    const [{ mesh }] = drawnMeshes(renderer);
-    const { color } = (mesh as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    const { color } = onlyMesh(renderer).material as THREE.MeshBasicMaterial;
     expect([color.r, color.g, color.b]).toEqual([1, 1, 0]);
   });
 
@@ -104,7 +103,7 @@ polygon = PackedVector2Array(64, 300, 114, 300, 114, 340, 64, 340)
     const { renderer, probe } = await renderSceneTiles(mapScene(), {
       prepare: withLayerCells([cell(0, 0, 1)]),
     });
-    const [{ mesh }] = drawnMeshes(renderer);
+    const mesh = onlyMesh(renderer);
     expect(resolvePathFromObject(mesh, probe.selection!.objectPathMap)).toBe('Root/Map');
     expect(probe.livePaths).toEqual(['Root', 'Root/Map']);
   });

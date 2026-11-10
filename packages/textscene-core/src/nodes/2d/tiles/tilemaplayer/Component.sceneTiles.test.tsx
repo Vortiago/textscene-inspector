@@ -16,7 +16,7 @@ import {
   SCENE_TILESET_RESOURCES,
   boxesInPaintOrder,
   drawnBoxes,
-  drawnMeshes,
+  onlyMesh,
   nodesOfType,
   renderSceneTiles,
 } from '../shared/sceneTiles.testkit';
@@ -115,7 +115,7 @@ polygon = PackedVector2Array(64, 300, 114, 300, 114, 340, 64, 340)
 
   it('selects the layer on a click on an instance', async () => {
     const { renderer, probe } = await renderWithProbe([cell(0, 0, 1)]);
-    const [{ mesh }] = drawnMeshes(renderer);
+    const mesh = onlyMesh(renderer);
     expect(resolvePathFromObject(mesh, probe.selection!.objectPathMap)).toBe('Root/Layer');
   });
 

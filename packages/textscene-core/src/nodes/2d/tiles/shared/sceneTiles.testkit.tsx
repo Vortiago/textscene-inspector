@@ -3,6 +3,7 @@
  * instantiate, the resources that name them, and a render that reads back what is drawn. The
  * scenes and the 64 px grid are the ones the Godot 4.6.3 measurements in the tests were taken on.
  */
+import { expect } from 'vitest';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -173,6 +174,13 @@ export function drawnMeshes(renderer: Renderer): { box: Box; mesh: THREE.Object3
     meshes.push({ box: godotBox as Box, mesh: object });
   });
   return meshes;
+}
+
+/** The one mesh the scene draws. */
+export function onlyMesh(renderer: Renderer): THREE.Mesh {
+  const meshes = drawnMeshes(renderer);
+  expect(meshes).toHaveLength(1);
+  return meshes[0]!.mesh as THREE.Mesh;
 }
 
 /** The Godot-pixel box of every mesh the scene draws, left to right. */

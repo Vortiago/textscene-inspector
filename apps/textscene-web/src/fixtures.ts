@@ -3712,6 +3712,41 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Map Layer Scene Tile Control",
+    "file": "unit-tile-map-layer-scene-tile-control.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Magenta",
+    "file": "unit-tile-map-layer-scene-tile-magenta.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Offset",
+    "file": "unit-tile-map-layer-scene-tile-offset.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Placeholders",
+    "file": "unit-tile-map-layer-scene-tile-placeholders.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Polygon",
+    "file": "unit-tile-map-layer-scene-tile-polygon.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Yellow",
+    "file": "unit-tile-map-layer-scene-tile-yellow.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tiles",
+    "file": "unit-tile-map-layer-scene-tiles.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer Texture Padding",
     "file": "unit-tile-map-layer-texture-padding.tscn",
     "category": "Unit - 2D Canvas"
