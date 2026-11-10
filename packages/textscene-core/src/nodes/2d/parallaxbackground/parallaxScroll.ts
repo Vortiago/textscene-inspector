@@ -174,8 +174,9 @@ export function parallaxLayerDelta(
  * Where a repeat source draws its copies, in its own local space
  * (`renderer_canvas_render_rd.cpp:2233-2250`): `(-(times / 2) + i) * size` for `i` in
  * `0..times` per axis with a non-zero size, as a grid. The unrepeated copy comes last:
- * @canonical The offsets of a repeat source's copies (Parallax2D, ParallaxLayer mirroring)
  * `registerNodeObject` keeps a path's last writer, so picking selects the node itself.
+ *
+ * @canonical The offsets of a repeat source's copies (Parallax2D, ParallaxLayer mirroring)
  */
 export function parallaxRepeatOffsets(size: Vector2, times: number): readonly Vector2[] {
   if (!size.x && !size.y) return NO_REPEATS;

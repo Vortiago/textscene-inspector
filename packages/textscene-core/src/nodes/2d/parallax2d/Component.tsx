@@ -14,7 +14,7 @@ import { Node2D } from '../../base/node2d/Component';
 import { currentCameraFraming } from '../parallaxbackground/currentCameraFraming';
 import { parallaxRepeatOffsets } from '../parallaxbackground/parallaxScroll';
 import { parallax2DCameraScreenOffset, parallax2DPosition } from './parallax2dScroll';
-import { RepeatBaseCopyProvider, useIsRepeatBaseCopy } from './repeatCopyContext';
+import { RepeatCopies, useIsRepeatBaseCopy } from '../parallaxbackground/RepeatCopies';
 import type { Parallax2DProperties } from './types';
 
 export function Parallax2D({ node, children }: NodeComponentProps) {
@@ -56,17 +56,7 @@ export function Parallax2D({ node, children }: NodeComponentProps) {
     // every mesh below and so is the group three reads the key from.
     <group ref={groupRef}>
       <Node2D node={node}>
-        {!isRepeatSource
-          ? children
-          : copies.map((offset, index) => (
-              // paint-order-safe: wraps dispatched children, each of which
-              // brings its own canvas-item wrapper nearer than this one.
-              <group key={`repeat-${index}`} position={[offset.x, 0 - offset.y, 0]}>
-                <RepeatBaseCopyProvider value={offset.x === 0 && offset.y === 0}>
-                  {children}
-                </RepeatBaseCopyProvider>
-              </group>
-            ))}
+        {isRepeatSource ? <RepeatCopies offsets={copies}>{children}</RepeatCopies> : children}
       </Node2D>
     </group>
   );
