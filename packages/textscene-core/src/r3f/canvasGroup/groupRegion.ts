@@ -5,10 +5,10 @@
  */
 
 import * as THREE from 'three';
-import { isNodeIcon } from '../editorHelpers';
 import { drawableLocalBox, isDrawable, type Drawable } from '../drawable';
 import { perObject } from '../../utils/perObject';
-import { collects, isOwnKey, type CanvasGroupWindow } from './groupWindow';
+import type { CanvasFrameTarget, KeyedScene } from './canvasGroupPass';
+import type { CanvasGroupWindow } from './groupWindow';
 
 /** A rectangle of frame texels in GL texel space: the corner at the bottom left, then the size. */
 export interface TexelRegion {
@@ -22,7 +22,7 @@ export interface TexelRegion {
  * The texels a filter or a derivative at the edge of the region reads beyond it, and the clear
  * margin Godot grows a group's rect by (`renderer_canvas_cull.cpp`, 5 texels), plus one.
  */
-export const REGION_PAD = 6;
+const REGION_PAD = 6;
 
 /** Each drawable's world box, reused every frame. Written only by `worldBox`. */
 const worldBoxOf = perObject((_object: Drawable) => new THREE.Box3());
@@ -33,41 +33,34 @@ export function worldBox(object: Drawable): THREE.Box3 | null {
   return local.isEmpty() ? null : worldBoxOf(object).copy(local).applyMatrix4(object.matrixWorld);
 }
 
-/** The scene's objects with their paint-order keys, as `keyedScene` lists them. */
-interface Keyed {
-  objects: THREE.Object3D[];
-  keys: number[];
-  measured: boolean[];
-}
-
 const corner = new THREE.Vector3();
+const view = new THREE.Matrix4();
 
 /**
  * The texel region of each group in `groups`, which are sorted by window and do not overlap. A
  * group whose items fall outside the frame answers an empty region.
  */
 export function clipRegions(
-  { objects, keys, measured }: Keyed,
+  { objects, keys, measured }: KeyedScene,
   camera: THREE.Camera,
-  frame: { width: number; height: number },
+  frame: CanvasFrameTarget,
   groups: readonly { window: CanvasGroupWindow }[]
 ): TexelRegion[] {
   const bounds = groups.map(() => ({ minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }));
-  const view = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  view.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
   for (let i = 0; i < objects.length; i++) {
     const object = objects[i]!;
-    if (!measured[i] || !isDrawable(object) || isNodeIcon(object) || !camera.layers.test(object.layers))
-      continue;
+    if (!measured[i] || !isDrawable(object) || !camera.layers.test(object.layers)) continue;
     const at = groupAt(groups, keys[i]!);
     if (at < 0) continue;
     const box = worldBox(object);
     if (!box) continue;
-    grow(bounds[at]!, box, view, frame);
+    grow(bounds[at]!, box, frame);
   }
   return bounds.map((b) => regionOf(b, frame));
 }
 
-/** The index of the group whose window the key is in, collected or its owner's, or -1. */
+/** The index of the group whose window holds the key, its owner's slot included, or -1. */
 function groupAt(groups: readonly { window: CanvasGroupWindow }[], key: number): number {
   let low = 0;
   let high = groups.length - 1;
@@ -76,7 +69,7 @@ function groupAt(groups: readonly { window: CanvasGroupWindow }[], key: number):
     const { window } = groups[mid]!;
     if (key < window.from) high = mid - 1;
     else if (key >= window.to) low = mid + 1;
-    else return collects(window, key) || isOwnKey(window, key) ? mid : -1;
+    else return mid;
   }
   return -1;
 }
@@ -88,26 +81,20 @@ interface PixelBounds {
   maxY: number;
 }
 
-function grow(
-  into: PixelBounds,
-  box: THREE.Box3,
-  view: THREE.Matrix4,
-  frame: { width: number; height: number }
-) {
-  for (const x of [box.min.x, box.max.x])
-    for (const y of [box.min.y, box.max.y])
-      for (const z of [box.min.z, box.max.z]) {
-        corner.set(x, y, z).applyMatrix4(view);
-        const px = (corner.x + 1) * 0.5 * frame.width;
-        const py = (corner.y + 1) * 0.5 * frame.height;
-        into.minX = Math.min(into.minX, px);
-        into.maxX = Math.max(into.maxX, px);
-        into.minY = Math.min(into.minY, py);
-        into.maxY = Math.max(into.maxY, py);
-      }
+function grow(into: PixelBounds, box: THREE.Box3, frame: CanvasFrameTarget) {
+  // An orthographic view: z moves neither pixel axis, so the four corners of the xy face bound the box.
+  for (let i = 0; i < 4; i++) {
+    corner.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, box.min.z).applyMatrix4(view);
+    const px = (corner.x + 1) * 0.5 * frame.width;
+    const py = (corner.y + 1) * 0.5 * frame.height;
+    into.minX = Math.min(into.minX, px);
+    into.maxX = Math.max(into.maxX, px);
+    into.minY = Math.min(into.minY, py);
+    into.maxY = Math.max(into.maxY, py);
+  }
 }
 
-function regionOf(b: PixelBounds, { width, height }: { width: number; height: number }): TexelRegion {
+function regionOf(b: PixelBounds, { width, height }: CanvasFrameTarget): TexelRegion {
   const left = Math.max(0, Math.floor(b.minX) - REGION_PAD);
   const bottom = Math.max(0, Math.floor(b.minY) - REGION_PAD);
   const right = Math.min(width, Math.ceil(b.maxX) + REGION_PAD);

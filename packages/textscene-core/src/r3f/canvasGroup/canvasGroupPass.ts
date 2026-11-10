@@ -181,11 +181,11 @@ function drawFrame(
     drawKeyedObjects(keyed.objects, keyed.keys, inSpan, drawOver);
     isFirstSpan = false;
   };
-  const regions = clipRegions(keyed, camera, frame, clipping);
+  const regions = clipping.length > 0 ? clipRegions(keyed, camera, frame, clipping) : [];
   clipping.forEach((group, i) => {
     drawSpan(group.window.from);
     spanFrom = group.window.from;
-    withFrozenMatrices(scene, () => fillClipBuffer(gl, keyed, scene, camera, group, frame, regions[i]!));
+    fillClipBuffer(gl, keyed, scene, camera, group, frame, regions[i]!);
     group.clip!.setMasking(true);
   });
   drawSpan(Number.POSITIVE_INFINITY);
