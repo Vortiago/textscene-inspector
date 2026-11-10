@@ -73,7 +73,7 @@ function useLitSurface({
   ...options
 }: Parameters<typeof useLitItem>[0] & { surface?: CanvasItemSurface | null }) {
   const item = useLitItem(options);
-  return { props: useSurfaceLighting(item, surface), geometryRef: item.geometryRef };
+  return { props: useSurfaceLighting(item, surface, true), geometryRef: item.geometryRef };
 }
 
 /** The uniform objects the hook bound, read back off the injection it returns. */

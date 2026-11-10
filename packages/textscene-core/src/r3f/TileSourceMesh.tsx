@@ -6,9 +6,13 @@
 import { useMemo, useState } from 'react';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 import * as THREE from 'three';
-import { useCanvasItemTextureSampledBy, type CanvasItemTexture } from './canvasItemTexture';
+import { useCanvasItemTextureSampledBy } from './canvasItemTexture';
 import { NO_RESOURCES } from './SceneResourcesContext';
-import { buildPaddedStandInGeometryArrays, buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
+import {
+  buildPaddedStandInGeometryArrays,
+  buildTileGeometryArrays,
+  buildTileOrientations,
+} from '../resources/tileset/tileGeometry';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
@@ -79,67 +83,33 @@ export function TileSourceMesh({
     geom.setAttribute('color', new THREE.BufferAttribute(colors, 4));
     if (arrays.uvBounds)
       geom.setAttribute(TILE_UV_BOUNDS_ATTRIBUTE, new THREE.BufferAttribute(arrays.uvBounds, 4));
-    if (hasNormalMap && arrays.orientations)
-      geom.setAttribute(TILE_NORMAL_ORIENTATION_ATTRIBUTE, new THREE.BufferAttribute(arrays.orientations, 1));
     geom.setIndex(new THREE.BufferAttribute(arrays.indices, 1));
     return geom;
-  }, [arrays, colors, hasNormalMap]);
+  }, [arrays, colors]);
   // R3F does not dispose a geometry passed as a prop, so this releases it.
   useDisposeOnRelease(geometry);
+  const orientsNormals = useOrientationAttribute(geometry, hasNormalMap, cells, source);
 
-  // A source with no texture draws nothing (`tile_map_layer.cpp:724`). A failed load gets one
-  // placeholder for the whole source (the panel row comes from the resolver's missing report).
+  // The run's own maps, so runs of one tile item from different sources each light with theirs.
+  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
+  // A source with no texture draws nothing (`tile_map_layer.cpp:724`), nor does a pending or failed one.
+  const isDrawn = slot !== undefined && !texResult.missing && tex !== null && geometry !== null;
+  const pixelMaterial = useSurfacePixelMaterial(surface, isDrawn);
+
   if (!slot) return null;
+  // A failed load gets one placeholder for the whole source (the panel row comes from the
+  // resolver's missing report).
   if (texResult.missing) {
     return <MissingResourcePlaceholder shape="plane" name={name} />;
   }
   // Pending: render nothing, so no placeholder flashes.
   if (!tex || !geometry) return null;
-  return (
-    <LitTileRun
-      geometry={geometry}
-      map={tex}
-      tint={tint}
-      renderOrder={renderOrder}
-      padsInShader={padsInShader(source, isStandIn)}
-      orientsNormals={arrays?.orientations != null}
-      canvasTexture={(hasNormalMap && canvasTexture) || null}
-    />
-  );
-}
 
-interface LitTileRunProps {
-  geometry: THREE.BufferGeometry;
-  map: THREE.Texture;
-  tint: VertexColorTint;
-  renderOrder: number;
-  padsInShader: boolean;
-  /** Whether the geometry carries each tile's orientation for a normal map to turn by. */
-  orientsNormals: boolean;
-  /** The source's CanvasTexture while it names a normal map, else null. */
-  canvasTexture: CanvasItemTexture | null;
-}
-
-/**
- * The run's mesh, mounted only once it draws, so a source that draws nothing registers no light read.
- * It lights with the run's own maps, so runs of one tile item from different sources each light with theirs.
- */
-function LitTileRun({
-  geometry,
-  map,
-  tint,
-  renderOrder,
-  padsInShader,
-  orientsNormals,
-  canvasTexture,
-}: LitTileRunProps) {
-  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
-  const pixelMaterial = useSurfacePixelMaterial(surface);
   // Keyed, since the program depends on it and nothing recompiles in place
   // (`materialProgramInputs.ts`). The atlas is awaited, so it holds steady.
   const program = materialProgramInputs({
     props: {
-      map,
+      map: tex,
       color: tint.color,
       opacity: tint.opacity,
       // Each tile's `modulate`, multiplied onto its pixels (`tile_map_layer.cpp:2690`) in sRGB.
@@ -150,7 +120,8 @@ function LitTileRun({
     },
     merge: [
       pixelMaterial,
-      padsInShader ? { injection: TILE_TEXTURE_PADDING } : undefined,
+      // A stand-in samples padded regions, so only the atlas itself holds samples inside each tile.
+      source.usesTexturePadding && !isStandIn ? { injection: TILE_TEXTURE_PADDING } : undefined,
       surface && orientsNormals ? { injection: TILE_NORMAL_ORIENTATION } : undefined,
     ],
   });
@@ -160,7 +131,7 @@ function LitTileRun({
       <mesh renderOrder={renderOrder} geometry={geometry}>
         <meshBasicMaterial key={program.key} {...program.props} />
       </mesh>
-      {canvasTexture && (
+      {hasNormalMap && canvasTexture && (
         <CanvasItemSurfaceSource
           slot={canvasTexture.slot}
           sampler={canvasTexture.sampler}
@@ -171,9 +142,27 @@ function LitTileRun({
   );
 }
 
-/** A padded source holds each sample inside its tile in the shader, unless it samples a stand-in. */
-function padsInShader(source: AtlasSourceModel, isStandIn: boolean): boolean {
-  return source.usesTexturePadding && !isStandIn;
+/**
+ * Adds each tile's orientation to `geometry` while the source names a normal map, and removes it
+ * otherwise, so a normal map that comes or goes rebuilds no other attribute. Answers whether the
+ * geometry holds it.
+ */
+function useOrientationAttribute(
+  geometry: THREE.BufferGeometry | null,
+  isNormalMapped: boolean,
+  cells: readonly DrawableCell[],
+  source: AtlasSourceModel
+): boolean {
+  return useMemo(() => {
+    if (!geometry) return false;
+    if (!isNormalMapped) {
+      geometry.deleteAttribute(TILE_NORMAL_ORIENTATION_ATTRIBUTE);
+      return false;
+    }
+    const orientations = buildTileOrientations(cells, source);
+    geometry.setAttribute(TILE_NORMAL_ORIENTATION_ATTRIBUTE, new THREE.BufferAttribute(orientations, 1));
+    return true;
+  }, [geometry, isNormalMapped, cells, source]);
 }
 
 /** Each tile's `modulate` with the rgb of `vertexTint` multiplied in, or the colours as built under white. */

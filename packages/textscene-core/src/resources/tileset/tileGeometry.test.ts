@@ -3,7 +3,11 @@
  * with Y negated once, and UVs under spriteFrame.ts's flipY=true convention.
  */
 import { describe, it, expect } from 'vitest';
-import { buildPaddedStandInGeometryArrays, buildTileGeometryArrays } from './tileGeometry';
+import {
+  buildPaddedStandInGeometryArrays,
+  buildTileGeometryArrays,
+  buildTileOrientations,
+} from './tileGeometry';
 import {
   TILE_ORIENTATION_FLIP_H,
   TILE_ORIENTATION_FLIP_V,
@@ -200,25 +204,20 @@ describe('tile orientations', () => {
     ['transpose and flip h and v', TRANSPOSE | FLIP_H | FLIP_V, BIT_T | BIT_H | BIT_V],
   ];
 
-  const orientationsOf = (cells: DrawableCell[]) =>
-    buildTileGeometryArrays(cells, source, grid, 4, 4).orientations;
+  const orientationsOf = (cells: DrawableCell[]) => buildTileOrientations(cells, source);
 
   it.each(ORIENTATIONS)('gives each vertex of a %s cell its bits', (_name, alternativeId, bits) => {
     const orientations = orientationsOf([drawableCellOf({ alternativeId })]);
-    expect(Array.from(orientations ?? [])).toEqual([bits, bits, bits, bits]);
+    expect(Array.from(orientations)).toEqual([bits, bits, bits, bits]);
   });
 
   it("composes the tile's own flip with the cell's, as the drawn rect does (tile_map_layer.cpp:2727-2774)", () => {
     const flippedTile = drawableCellOf({ alternativeId: FLIP_H }, { flipH: true });
-    expect(Array.from(orientationsOf([flippedTile]) ?? [])).toEqual([0, 0, 0, 0]);
+    expect(Array.from(orientationsOf([flippedTile]))).toEqual([0, 0, 0, 0]);
   });
 
   it('gives each cell its own four vertices, in cell order', () => {
     const orientations = orientationsOf([drawableCellOf({}), drawableCellOf({ alternativeId: FLIP_V })]);
-    expect(Array.from(orientations?.slice(4) ?? [])).toEqual([BIT_V, BIT_V, BIT_V, BIT_V]);
-  });
-
-  it('builds none for a stand-in', () => {
-    expect(buildPaddedStandInGeometryArrays([cell(0, 0)], source, grid, 4, 4).orientations).toBeNull();
+    expect(Array.from(orientations.slice(4))).toEqual([BIT_V, BIT_V, BIT_V, BIT_V]);
   });
 });

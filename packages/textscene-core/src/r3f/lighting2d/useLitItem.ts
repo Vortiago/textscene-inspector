@@ -195,17 +195,19 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
 /**
  * The material props of one surface of `item`, which declare the accumulation the surface reads.
  * A surface with a normal map takes each light apart, and one without takes the item's plain
- * accumulation, so the surfaces of one item may read both.
+ * accumulation, so the surfaces of one item may read both. A surface that does not draw, such as
+ * a sprite with no texture (`sprite_2d.cpp:159`), declares no read, so the pass adds no accumulation.
  */
 export function useSurfaceLighting(
   item: LitItem,
-  surface: CanvasItemSurface | null
+  surface: CanvasItemSurface | null,
+  isDrawn: boolean
 ): CanvasItemLightingProps {
   const { placement, lightMode, list, plain, plainProps } = item;
   const readsNormals = surface !== null && lightMode !== CanvasItemMaterialLightMode.UNSHADED;
   const lightOnly = lightMode === CanvasItemMaterialLightMode.LIGHT_ONLY;
   const read: LitItemRead = readsNormals ? 'apart' : lightOnly ? 'lightOnly' : 'plain';
-  useRegisterLitItem(placement, read);
+  useRegisterLitItem(placement, isDrawn ? read : null);
 
   // A normal map scales each light by its own normal term, so it shades the lights the list keeps
   // apart.
