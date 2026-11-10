@@ -10,7 +10,11 @@ import type { ScrollContainerProperties } from './types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
+import {
+  createSolveContext,
+  normalizeContainerLayoutResult,
+  solveControlTree,
+} from '../../../../r3f/controls/native/controlRectSolver';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
   scrollContainerMinimumSize,
@@ -20,14 +24,9 @@ import {
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
-/**
- * The child-rects half of `scrollContainerLayout`. `'rects' in result`, not
- * `instanceof Map`: a `Map` is not structurally a `ReadonlyMap`, so
- * `instanceof` cannot narrow it (as in `normalizeContainerLayoutResult`).
- */
+/** The child-rects half of `scrollContainerLayout`. */
 function layoutRects(...args: Parameters<typeof scrollContainerLayout>): ReadonlyMap<string, Rect2> {
-  const result = scrollContainerLayout(...args);
-  return 'rects' in result ? result.rects : result;
+  return normalizeContainerLayoutResult(scrollContainerLayout(...args)).rects;
 }
 
 const THEME = nativeTheme(1);
@@ -287,9 +286,7 @@ describe('scrollContainerLayout — the sealed solve handoff carries the FULL Sc
     const expected = scrollContainerScrollBars(n, solveCtx, RECT);
 
     expect(result).not.toBeInstanceOf(Map);
-    // `'rects' in result`, not `instanceof Map`: see `layoutRects`.
-    if (!('rects' in result)) throw new Error('unreachable');
-    expect(scrollContainerLayoutChannel.open(result.meta)).toEqual(expected);
+    expect(scrollContainerLayoutChannel.open(normalizeContainerLayoutResult(result).meta)).toEqual(expected);
   });
 });
 

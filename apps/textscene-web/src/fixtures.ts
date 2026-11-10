@@ -1093,8 +1093,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Edit Zoom In",
+    "file": "unit-graph-edit-zoom-in.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Graph Edit Zoom Label",
     "file": "unit-graph-edit-zoom-label.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Zoom Out",
+    "file": "unit-graph-edit-zoom-out.tscn",
     "category": "Other"
   },
   {

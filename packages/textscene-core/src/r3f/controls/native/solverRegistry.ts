@@ -71,6 +71,17 @@ export interface ContainerLayoutResult {
    * `SolvedControl.meta` and `NativeControlComponentProps.meta`.
    */
   meta?: SealedHandoff;
+  /**
+   * The scale the layout writes onto a child, by path, such as GraphEdit's `set_scale(zoom, zoom)`.
+   * It replaces the child's authored scale. A child without an entry keeps its own.
+   */
+  childScales?: ReadonlyMap<string, Vector2>;
+  /**
+   * False when `Container::fit_child_in_rect` never runs, as in GraphEdit (`graph_edit.h:114`),
+   * a plain `Control` that only places its children: each child then keeps its own rotation and
+   * scale, except the `childScales` entry. Defaults to true.
+   */
+  resetsChildTransform?: boolean;
 }
 
 /**

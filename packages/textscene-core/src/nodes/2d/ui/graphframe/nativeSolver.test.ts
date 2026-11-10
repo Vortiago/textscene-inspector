@@ -14,12 +14,13 @@ import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import './nativeSolver';
 import type { GraphFrameProperties } from './types';
+import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
 const graphFrameLayout = controlSolverRegistry.containerLayout('GraphFrame')!;
 const graphFrameMinimumSize = controlSolverRegistry.minimumSize('GraphFrame')!;
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
-  return 'rects' in result ? result.rects : result;
+  return normalizeContainerLayoutResult(result).rects;
 }
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {

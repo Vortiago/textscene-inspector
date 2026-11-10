@@ -35,6 +35,7 @@ import type { SplitContainerProperties } from './splitContainer';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { SizeFlags } from '../../../../godot/scene/control';
 import { controlProps } from '../control/testing/controlProps';
+import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
 /**
  * The two-child case of `computeSplitDraggerPositions`: one boundary and the deprecated singular
@@ -428,7 +429,7 @@ function layoutRects(
   const layout = makeSplitContainerLayout(vertical);
   const contentRect: Rect2 = { x: 0, y: 0, w: size.width, h: size.height };
   const result = layout(container, children, contentRect, createSolveContext(nativeTheme(1)));
-  const rects = 'rects' in result ? result.rects : result;
+  const rects = normalizeContainerLayoutResult(result).rects;
   return children.map(({ node }) => rects.get(node.path)!);
 }
 

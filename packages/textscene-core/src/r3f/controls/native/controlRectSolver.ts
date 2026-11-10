@@ -34,6 +34,13 @@ export interface SolvedControl {
    * pure in `(n, theme)`, so both sides call a share (`solveHandoff.ts`).
    */
   meta?: SealedHandoff;
+  /** The scale the parent's layout wrote onto this node, or `undefined` to keep the authored one. */
+  scale?: Vector2;
+  /**
+   * True when the parent's layout reset this node to rotation 0 and scale 1, as
+   * `Container::fit_child_in_rect` does.
+   */
+  resetsTransform?: boolean;
 }
 
 // --- Anchors ---------------------------------------------------------------
@@ -140,12 +147,21 @@ function parentAnchorableRect(n: SolveNode, parentRect: Rect2): Rect2 {
  * `instanceof Map`: TS cannot narrow a `ReadonlyMap` with `instanceof`, and no
  * `Map` has a `rects` own property, so the test is exact.
  */
-function normalizeContainerLayoutResult(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): {
+export function normalizeContainerLayoutResult(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): {
   rects: ReadonlyMap<string, Rect2>;
   meta: SealedHandoff | undefined;
+  childScales: ReadonlyMap<string, Vector2> | undefined;
+  resetsTransform: boolean;
 } {
-  if ('rects' in result) return { rects: result.rects, meta: result.meta };
-  return { rects: result, meta: undefined };
+  if ('rects' in result) {
+    return {
+      rects: result.rects,
+      meta: result.meta,
+      childScales: result.childScales,
+      resetsTransform: result.resetsChildTransform ?? true,
+    };
+  }
+  return { rects: result, meta: undefined, childScales: undefined, resetsTransform: true };
 }
 
 /**
@@ -223,8 +239,15 @@ function hasSizeDependentMinimum(roots: readonly SolveNode[]): boolean {
 
 // --- Phase 2: top-down rect assignment ---------------------------------------
 
-function record(n: SolveNode, rect: Rect2, minSize: Vector2, out: Map<string, SolvedControl>): void {
-  out.set(n.path, { rect, minSize });
+function record(
+  n: SolveNode,
+  rect: Rect2,
+  minSize: Vector2,
+  out: Map<string, SolvedControl>,
+  scale?: Vector2,
+  resetsTransform?: boolean
+): void {
+  out.set(n.path, { rect, minSize, scale, resetsTransform });
 }
 
 /**
@@ -238,7 +261,8 @@ function solveFree(
   origin: Vector2,
   viewport: Rect2,
   ctx: SolveContext,
-  out: Map<string, SolvedControl>
+  out: Map<string, SolvedControl>,
+  resetsTransform?: boolean
 ): void {
   const minSize = ctx.combinedMinimumSize(n);
   let rect: Rect2;
@@ -255,7 +279,7 @@ function solveFree(
     );
     if (n.rtl) rect = mirrorRectRtl(rect, anchorable.w);
   }
-  record(n, rect, minSize, out);
+  record(n, rect, minSize, out, undefined, resetsTransform);
   dispatchChildren(n, rect, { x: origin.x + rect.x, y: origin.y + rect.y }, viewport, ctx, out);
 }
 
@@ -282,13 +306,9 @@ function dispatchChildren(
     return;
   }
 
-  // A child the layout does not place stays free against the rect `parentAnchorableRect` gives
-  // it: zero for a promoted one, the boundary's own for one a canvas boundary adopted.
   const laidOut: SolveNode[] = [];
-  for (const child of n.children) {
-    if (isLaidOutChild(n, child)) laidOut.push(child);
-    else solveFree(child, rect, origin, viewport, ctx, out);
-  }
+  const unplaced: SolveNode[] = [];
+  for (const child of n.children) (isLaidOutChild(n, child) ? laidOut : unplaced).push(child);
 
   const childEntries = laidOut.map((child) => ({
     node: child,
@@ -296,9 +316,16 @@ function dispatchChildren(
   }));
   // No container registers chrome yet; one that does insets its own content
   // rect before calling its ContainerLayoutFn.
-  const { rects: childRects, meta: containerMeta } = normalizeContainerLayoutResult(
-    containerFn(sortableView(n), childEntries, rect, ctx)
-  );
+  const {
+    rects: childRects,
+    meta: containerMeta,
+    childScales,
+    resetsTransform,
+  } = normalizeContainerLayoutResult(containerFn(sortableView(n), childEntries, rect, ctx));
+
+  // A child the layout does not place stays free against the rect `parentAnchorableRect` gives
+  // it: zero for a promoted one, the boundary's own for one a canvas boundary adopted.
+  for (const child of unplaced) solveFree(child, rect, origin, viewport, ctx, out, resetsTransform);
 
   // The caller has already recorded `n`, so the handoff is patched in.
   if (containerMeta !== undefined) {
@@ -330,7 +357,7 @@ function dispatchChildren(
       );
       childRect = child.rtl ? mirrorRectRtl(floored, rect.w) : floored;
     }
-    record(child, childRect, minSize, out);
+    record(child, childRect, minSize, out, childScales?.get(child.path), resetsTransform);
     dispatchChildren(
       child,
       childRect,

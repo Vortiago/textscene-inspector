@@ -921,6 +921,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'graph-edit', file: 'unit-graph-edit.tscn', mode: '2d' },
   { name: 'graph-edit-frame-order', file: 'unit-graph-edit-frame-order.tscn', mode: '2d' },
   { name: 'graph-edit-menu-hidden', file: 'unit-graph-edit-menu-hidden.tscn', mode: '2d' },
+  { name: 'graph-edit-zoom-out', file: 'unit-graph-edit-zoom-out.tscn', mode: '2d' },
+  { name: 'graph-edit-zoom-in', file: 'unit-graph-edit-zoom-in.tscn', mode: '2d' },
   { name: 'graph-edit-zoom-label', file: 'unit-graph-edit-zoom-label.tscn', mode: '2d' },
   {
     name: 'graph-edit-zoom-buttons-hidden',

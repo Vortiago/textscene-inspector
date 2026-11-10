@@ -4,7 +4,7 @@ category: 2D
 status: unreviewed
 fixture: unit-graph-edit.tscn
 # image: unit-graph-edit
-renders_as: a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset and the whole rect clipped
+renders_as: a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset, scaled by zoom and the whole rect clipped
 ---
 
 # GraphEdit
@@ -18,7 +18,10 @@ resolvable `connections` entry as a curved, tinted ribbon
 endpoint (`get_output_port_position`/`get_input_port_position` in `graph_node.cpp`). A port is a
 `Point2i`, so a connection ends on a whole pixel. It
 places every GraphElement child (`GraphNode`/`GraphFrame`) at
-`position_offset * zoom - scroll_offset`, as `GraphEdit::_update_scroll_offset` does.
+`position_offset * zoom - scroll_offset`, and draws it at scale `(zoom, zoom)` about its pivot,
+as `GraphEdit::_update_scroll_offset` does (`graph_edit.cpp:446-451`). The child's authored `scale`
+has no effect, and its `rotation` and pivot stay. A child that is no GraphElement keeps its
+anchored rect and its own transform.
 The GraphFrames draw first, in reverse scene order. The connections draw next, and the other
 children last, in scene order. `add_child_notify` moves each frame to index 0 and the connection
 layer to the index after the frames (`graph_edit.cpp:714-717`).
@@ -129,7 +132,5 @@ lenient tree carries none of them, and a malformed one does not reach the tree.
 
 ## Known limitations
 
-- **Approximated** A GraphElement child's `position` scales with `zoom` but its drawn
-  pixels do not, so away from `zoom = 1` a node's chrome draws at its unscaled size.
 - **Approximated** The toolbar buttons and SpinBox draw their icons, pressed boxes, field,
   arrows and disabled state, but no hover or focus state.
