@@ -60,7 +60,7 @@ function isTheoraHeaderPacket(packet: Uint8Array): boolean {
 
 /**
  * The picture size an identification header states, or null for a header libtheora refuses
- * (`thirdparty/libtheora/decinfo.c:51-123`, `oc_info_unpack`), which leaves the stream without video.
+ * (`thirdparty/libtheora/decinfo.c:51-118`, `oc_info_unpack`), which leaves the stream without video.
  */
 function pictureSizeOfIdentification(packet: Uint8Array): Vector2 | null {
   if (packet.length < IDENTIFICATION_HEADER_BYTES) return null;
