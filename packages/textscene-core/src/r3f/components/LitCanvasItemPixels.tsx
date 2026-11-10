@@ -5,7 +5,7 @@
 
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { LIT_ITEM_USER_DATA } from '../lighting2d/itemLightCap';
-import { useLitItem, useSurfaceLighting, type LitItem } from '../lighting2d/useCanvasItemLighting';
+import { useLitItem, useSurfaceLighting, type LitItem } from '../lighting2d/useLitItem';
 import type { CanvasItemLightingProps } from '../lighting2d/canvasItemLighting';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
 import { canvasItemFacing, type CanvasItemFacing } from '../canvasItemFacing';
@@ -68,13 +68,17 @@ function blendModeOf(material: CanvasItemMaterialProperties | null) {
   return material?.blendMode ?? CanvasItemMaterialBlendMode.MIX;
 }
 
-/** The pixel material of one surface of `item`, lit with `surface` or with no normal map while it is null. */
+/**
+ * The pixel material of one surface of `item`, lit with `surface` or with no normal map while it is
+ * null. It declares a light read only while `isDrawn`.
+ */
 function usePixelMaterial(
   item: LitItem,
   blendMode: CanvasItemMaterialProperties['blendMode'],
-  surface: CanvasItemSurface | null
+  surface: CanvasItemSurface | null,
+  isDrawn: boolean
 ): CanvasItemPixelMaterial {
-  const lighting = useSurfaceLighting(item, surface);
+  const lighting = useSurfaceLighting(item, surface, isDrawn);
   return useMemo(
     () => ({ ...canvasItemFacing(), ...canvasItemBlendState(blendMode), ...lighting }),
     [blendMode, lighting]
@@ -99,17 +103,22 @@ export function LitCanvasItem({ material, lightMask, zFinal, children }: LitCanv
 
 /**
  * The pixel material of a surface of the enclosing `LitCanvasItem` that draws with `surface`, or
- * with no normal map while `surface` is null.
+ * with no normal map while `surface` is null. It declares a light read only while `isDrawn`.
  */
-export function useSurfacePixelMaterial(surface: CanvasItemSurface | null): CanvasItemPixelMaterial {
+export function useSurfacePixelMaterial(
+  surface: CanvasItemSurface | null,
+  isDrawn: boolean
+): CanvasItemPixelMaterial {
   const scope = useContext(LitItemScopeContext);
   if (!scope) throw new Error('expected a LitCanvasItem around the surface, found none');
-  return usePixelMaterial(scope.item, scope.blendMode, surface);
+  return usePixelMaterial(scope.item, scope.blendMode, surface, isDrawn);
 }
 
 interface LitCanvasItemPixelsProps extends Omit<LitCanvasItemProps, 'children'> {
   /** The normal and specular maps of the item's pixels, or null to light them flat. */
   surface?: CanvasItemSurface | null;
+  /** Whether the item draws any pixels. One that draws none declares no light read. */
+  isDrawn?: boolean;
   /** A render prop for a mesh that merges the pixel material itself, else leaves read the context. */
   children: ReactNode | ((pixelMaterial: CanvasItemPixelMaterial) => ReactNode);
 }
@@ -120,10 +129,11 @@ export function LitCanvasItemPixels({
   lightMask,
   zFinal,
   surface = null,
+  isDrawn = true,
   children,
 }: LitCanvasItemPixelsProps) {
   const item = useLitItem({ material, lightMask, zFinal });
-  const pixelMaterial = usePixelMaterial(item, blendModeOf(material), surface);
+  const pixelMaterial = usePixelMaterial(item, blendModeOf(material), surface, isDrawn);
   return (
     <object3D ref={item.geometryRef} userData={LIT_ITEM_USER_DATA}>
       <CanvasItemPixelMaterialContext.Provider value={pixelMaterial}>

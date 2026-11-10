@@ -6,7 +6,7 @@
  */
 import { useEffect, useMemo } from 'react';
 import type { Rect2 } from '../../../godot/math/rect2';
-import type { Vector2 } from '../../../godot/math/vector';
+import { VECTOR2_ZERO, type Vector2 } from '../../../godot/math/vector';
 import { controlProps, type SolveNode } from './solveTree';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
@@ -27,7 +27,11 @@ import { INHERIT_PARENT_MATERIAL } from '../../canvasAncestors';
 import { isCanvasLayerType } from '../../canvasPaintOrder';
 import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
-import { combinedPivotOffset, snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
+import {
+  combinedPivotOffset,
+  snapControlsToPixelsEnabled,
+  snappedControlOriginUnder,
+} from './controlPixelSnap';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import {
   CanvasItemChildScope,
@@ -61,7 +65,8 @@ interface ControlCanvasWalkerProps {
 }
 
 export const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
-const ZERO_OFFSET: Vector2 = { x: 0, y: 0 };
+/** The scale of a node with none authored, and of a container child `fit_child_in_rect` reset. */
+const UNIT_SCALE = { x: 1, y: 1 };
 
 export function ControlCanvasWalker({
   tree,
@@ -209,11 +214,9 @@ function ControlItemGroup({
 
   // The solve says whether `Container::fit_child_in_rect` reset this child to rotation 0 and
   // scale 1, and the snap's rotation gate must see that too.
-  const resets = solvedEntry?.resetsTransform === true;
+  const resets = solvedEntry?.resetsChildTransform === true;
   const rotation = resets ? 0 : (props.rotation ?? 0);
-  const layoutScale = solvedEntry?.scale;
-  const scaleX = layoutScale ? layoutScale.x : resets ? 1 : (props.scale?.x ?? 1);
-  const scaleY = layoutScale ? layoutScale.y : resets ? 1 : (props.scale?.y ?? 1);
+  const { x: scaleX, y: scaleY } = solvedEntry?.scale ?? (resets ? UNIT_SCALE : (props.scale ?? UNIT_SCALE));
   const hasOwnTransform = rotation !== 0 || scaleX !== 1 || scaleY !== 1;
   const { x: pivotX, y: pivotY } = combinedPivotOffset(props, rect);
 
@@ -221,14 +224,12 @@ function ControlItemGroup({
   // pivot groups add their own translation, so this is the outer half of one
   // snapped origin.
   // Only a Control under the skipped placement chain has the offset in its position. A `top_level` one does not.
-  const offset = solveNode.skippedAncestors && rootOffset ? rootOffset : ZERO_OFFSET;
-  const snapped = snappedControlOrigin(
-    { x: rect.x + offset.x, y: rect.y + offset.y },
+  const origin = snappedControlOriginUnder(
+    rect,
+    solveNode.skippedAncestors && rootOffset ? rootOffset : VECTOR2_ZERO,
     { rotation, scale: { x: scaleX, y: scaleY }, pivot: { x: pivotX, y: pivotY } },
     snapToPixels
   );
-  // The parent group adds the offset back.
-  const origin = { x: snapped.x - offset.x, y: snapped.y - offset.y };
 
   const Painter = controlComponentRegistry.get(solveNode.node.type) ?? ControlFallback;
   const childElements = solveNode.children.map((child) => (

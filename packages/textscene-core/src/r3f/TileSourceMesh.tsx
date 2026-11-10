@@ -8,7 +8,11 @@ import { useDisposeOnRelease } from './useDisposeOnRelease';
 import * as THREE from 'three';
 import { useCanvasItemTextureSampledBy } from './canvasItemTexture';
 import { NO_RESOURCES } from './SceneResourcesContext';
-import { buildPaddedStandInGeometryArrays, buildTileGeometryArrays } from '../resources/tileset/tileGeometry';
+import {
+  buildPaddedStandInGeometryArrays,
+  buildTileGeometryArrays,
+  buildTileOrientations,
+} from '../resources/tileset/tileGeometry';
 import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { AtlasSourceModel, TileGrid } from '../resources/tileset/types';
 import { MissingResourcePlaceholder } from './components/MissingResourcePlaceholder';
@@ -68,8 +72,8 @@ export function TileSourceMesh({
     if (!texW || !texH) return null;
     return isStandIn
       ? buildPaddedStandInGeometryArrays(cells, source, grid, texW, texH)
-      : buildTileGeometryArrays(cells, source, grid, texW, texH, hasNormalMap);
-  }, [cells, source, grid, texW, texH, isStandIn, hasNormalMap]);
+      : buildTileGeometryArrays(cells, source, grid, texW, texH);
+  }, [cells, source, grid, texW, texH, isStandIn]);
   const colors = useMemo(() => arrays && tintedColors(arrays.colors, tint.vertex), [arrays, tint.vertex]);
   const geometry = useMemo(() => {
     if (!arrays || !colors) return null;
@@ -79,20 +83,22 @@ export function TileSourceMesh({
     geom.setAttribute('color', new THREE.BufferAttribute(colors, 4));
     if (arrays.uvBounds)
       geom.setAttribute(TILE_UV_BOUNDS_ATTRIBUTE, new THREE.BufferAttribute(arrays.uvBounds, 4));
-    if (arrays.orientations)
-      geom.setAttribute(TILE_NORMAL_ORIENTATION_ATTRIBUTE, new THREE.BufferAttribute(arrays.orientations, 1));
     geom.setIndex(new THREE.BufferAttribute(arrays.indices, 1));
     return geom;
   }, [arrays, colors]);
   // R3F does not dispose a geometry passed as a prop, so this releases it.
   useDisposeOnRelease(geometry);
+  const orientsNormals = useOrientationAttribute(geometry, hasNormalMap, cells, source);
+
   // The run's own maps, so runs of one tile item from different sources each light with theirs.
   const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
-  const pixelMaterial = useSurfacePixelMaterial(surface);
+  // A source with no texture draws nothing (`tile_map_layer.cpp:724`), nor does a pending or failed one.
+  const isDrawn = slot !== undefined && !texResult.missing && tex !== null && geometry !== null;
+  const pixelMaterial = useSurfacePixelMaterial(surface, isDrawn);
 
-  // A source with no texture draws nothing (`tile_map_layer.cpp:724`). A failed load gets one
-  // placeholder for the whole source (the panel row comes from the resolver's missing report).
   if (!slot) return null;
+  // A failed load gets one placeholder for the whole source (the panel row comes from the
+  // resolver's missing report).
   if (texResult.missing) {
     return <MissingResourcePlaceholder shape="plane" name={name} />;
   }
@@ -114,8 +120,9 @@ export function TileSourceMesh({
     },
     merge: [
       pixelMaterial,
-      padsInShader(source, isStandIn) ? { injection: TILE_TEXTURE_PADDING } : undefined,
-      surface && arrays?.orientations ? { injection: TILE_NORMAL_ORIENTATION } : undefined,
+      // A stand-in samples padded regions, so only the atlas itself holds samples inside each tile.
+      source.usesTexturePadding && !isStandIn ? { injection: TILE_TEXTURE_PADDING } : undefined,
+      surface && orientsNormals ? { injection: TILE_NORMAL_ORIENTATION } : undefined,
     ],
   });
 
@@ -135,9 +142,27 @@ export function TileSourceMesh({
   );
 }
 
-/** A padded source holds each sample inside its tile in the shader, unless it samples a stand-in. */
-function padsInShader(source: AtlasSourceModel, isStandIn: boolean): boolean {
-  return source.usesTexturePadding && !isStandIn;
+/**
+ * Adds each tile's orientation to `geometry` while the source names a normal map, and removes it
+ * otherwise, so a normal map that comes or goes rebuilds no other attribute. Answers whether the
+ * geometry holds it.
+ */
+function useOrientationAttribute(
+  geometry: THREE.BufferGeometry | null,
+  isNormalMapped: boolean,
+  cells: readonly DrawableCell[],
+  source: AtlasSourceModel
+): boolean {
+  return useMemo(() => {
+    if (!geometry) return false;
+    if (!isNormalMapped) {
+      geometry.deleteAttribute(TILE_NORMAL_ORIENTATION_ATTRIBUTE);
+      return false;
+    }
+    const orientations = buildTileOrientations(cells, source);
+    geometry.setAttribute(TILE_NORMAL_ORIENTATION_ATTRIBUTE, new THREE.BufferAttribute(orientations, 1));
+    return true;
+  }, [geometry, isNormalMapped, cells, source]);
 }
 
 /** Each tile's `modulate` with the rgb of `vertexTint` multiplied in, or the colours as built under white. */

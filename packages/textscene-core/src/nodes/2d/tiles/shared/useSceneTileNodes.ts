@@ -16,7 +16,7 @@ import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedSceneP
 import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
 import {
   combinedPivotOffset,
-  controlItemOrigin,
+  controlItemOriginUnder,
   snapControlsToPixelsEnabled,
 } from '../../../../r3f/controls/native/controlPixelSnap';
 import type { ControlProperties } from '../../ui/control/types';
@@ -218,8 +218,7 @@ function ySortRootOf(
 /**
  * A Control root sorts on the origin of its canvas item (`control.cpp:727-737`). The tile sets its
  * position to `map_to_local + position` (`tile_map_layer.cpp:1636`), so the snap rounds that sum.
- * The solved rect holds the position the minimum size and grow direction leave
- * (`control.cpp:1773-1797`). Before the solve, the rect is the one the offsets name.
+ * The solved rect holds the position the minimum size and grow leave (`control.cpp:1773-1797`).
  */
 function controlYSortRootAt(
   control: ControlProperties,
@@ -241,13 +240,9 @@ function controlYSortRootAt(
   const zIndex = control.zIndex ?? 0;
   const zAsRelative = control.zAsRelative ?? true;
   return (placement) => {
-    const snapped = controlItemOrigin(
-      { x: rect.x + placement.x, y: rect.y + placement.y },
-      transform,
-      snapToPixels
-    );
     // The placement node adds its own position back.
-    const pose = { ...TRANSFORM2D_IDENTITY, tx: snapped.x - placement.x, ty: snapped.y - placement.y };
+    const origin = controlItemOriginUnder(rect, placement, transform, snapToPixels);
+    const pose = { ...TRANSFORM2D_IDENTITY, tx: origin.x, ty: origin.y };
     return { pose, zIndex, zAsRelative };
   };
 }

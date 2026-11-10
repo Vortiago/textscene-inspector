@@ -7,7 +7,7 @@ import { publishLiveTargets } from '../../../r3f/liveTargets';
 import { copiesFilledFrom } from '../../../r3f/liveTargets.testkit';
 import { holdUntilReleased } from '../../../r3f/useDisposeOnRelease';
 import { createCanvasTarget } from '../../../nodes/viewport/subviewport/offscreenViewport';
-import { SRGB_CANVAS } from '../../../r3f/canvasColorSpace';
+import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';
 
 const CELL = { id: 'Cell', texture: decodeAtlasTexture({ region: 'Rect2(0, 0, 8, 4)' }) };
 
@@ -26,7 +26,7 @@ describe('resolveAtlasTexture', () => {
   });
 
   it('cuts the cell out of a live target as a crop its pass refills, held by its reader', () => {
-    const target = createCanvasTarget(16, 16, 'SubViewport', SRGB_CANVAS);
+    const target = createCanvasTarget(16, 16, 'SubViewport', canvasColorSpaceOf(false));
     withdrawals.push(publishLiveTargets([target.texture], null, false));
     const resolution = resolveAtlasTexture(CELL, target.texture, [])!;
     withdrawals.push(holdUntilReleased(resolution.texture));

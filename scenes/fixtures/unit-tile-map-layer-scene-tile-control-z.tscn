@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3 uid="uid://unittilemaplayerscenetilecontrolz"]
+
+; The one variable: the z_index of a Control scene tile root (1) in a y-sorted TileMapLayer. The root
+; is a canvas item child of the layer, so it sorts in z bucket 1 (renderer_canvas_cull.cpp:143-148)
+; and draws over the red child although the child's y (40) is below the root's (32). The other scene
+; tile goldens put no z_index on a root.
+
+[ext_resource type="PackedScene" path="res://unit-tile-map-layer-scene-tile-raised-control.tscn" id="1_raised"]
+
+[sub_resource type="TileSetScenesCollectionSource" id="TileSetScenesCollectionSource_a"]
+scenes/1/scene = ExtResource("1_raised")
+
+[sub_resource type="TileSet" id="TileSet_b"]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("TileSetScenesCollectionSource_a")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+y_sort_enabled = true
+position = Vector2(100, 20)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0)
+tile_set = SubResource("TileSet_b")
+
+[node name="Low" type="Polygon2D" parent="Layer"]
+position = Vector2(30, 40)
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 20, 0, 20, 20, 0, 20)

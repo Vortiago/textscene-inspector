@@ -5,6 +5,11 @@
  * window through geometry, not texture.repeat, since every cell shares one cached texture.
  */
 
+import {
+  TILE_ORIENTATION_FLIP_H,
+  TILE_ORIENTATION_FLIP_V,
+  TILE_ORIENTATION_TRANSPOSE,
+} from './tileOrientationBits';
 import { mapToLocalPx } from './tilePlacement';
 import type { DrawableCell } from './drawableCell';
 import { tileDrawInfo, type AtlasSourceModel, type TileGrid } from './types';
@@ -24,19 +29,7 @@ interface TileGeometryArrays {
    * Godot's padded atlas does (`tile_set.cpp:5622-5671`).
    */
   uvBounds: Float32Array | null;
-  /**
-   * Per vertex, the cell's flips and transpose as the `TILE_ORIENTATION_*` bits, or null when the
-   * caller did not ask. The draw shader flips a normal by the sign of the source rect and swaps its
-   * axes for a transposed one (`canvas.glsl:655-661`), and the UVs already carry the diffuse through
-   * the same orientation, so a normal map is sampled where the diffuse is and turned by these.
-   */
-  orientations: Float32Array | null;
 }
-
-/** The bits of a vertex's orientation. */
-export const TILE_ORIENTATION_FLIP_H = 1;
-export const TILE_ORIENTATION_FLIP_V = 2;
-export const TILE_ORIENTATION_TRANSPOSE = 4;
 
 type RegionPx = ReturnType<typeof tileDrawInfo>['regionPx'];
 
@@ -46,8 +39,7 @@ export function buildTileGeometryArrays(
   source: AtlasSourceModel,
   grid: TileGrid,
   texW: number,
-  texH: number,
-  withOrientations = false
+  texH: number
 ): TileGeometryArrays {
   return buildArrays(
     cells,
@@ -57,7 +49,6 @@ export function buildTileGeometryArrays(
     {
       sampledRegion: (_cell, regionPx) => regionPx,
       hasBounds: source.usesTexturePadding,
-      hasOrientations: withOrientations,
     }
   );
 }
@@ -81,7 +72,6 @@ export function buildPaddedStandInGeometryArrays(
     {
       sampledRegion: (cell, regionPx) => paddedTileRegion(source, cell.atlasCoords, regionPx),
       hasBounds: false,
-      hasOrientations: false,
     }
   );
 }
@@ -90,7 +80,6 @@ interface Sampling {
   /** The pixel rect a cell samples, from its rect in the atlas. */
   sampledRegion(cell: DrawableCell, regionPx: RegionPx): RegionPx;
   hasBounds: boolean;
-  hasOrientations: boolean;
 }
 
 function buildArrays(
@@ -105,7 +94,6 @@ function buildArrays(
   const colors = new Float32Array(cells.length * 4 * 4);
   const indices = new Uint32Array(cells.length * 6);
   const uvBounds = sampling.hasBounds ? new Float32Array(cells.length * 4 * 4) : null;
-  const orientations = sampling.hasOrientations ? new Float32Array(cells.length * 4) : null;
 
   cells.forEach((cell, i) => {
     const center = mapToLocalPx(grid, cell.coords);
@@ -149,13 +137,28 @@ function buildArrays(
     uvs.set([...corners[0]![0]!, ...corners[0]![1]!, ...corners[1]![0]!, ...corners[1]![1]!], i * 8);
     writeCornerColors(colors, i * 16, cell.tileData.modulate);
     if (uvBounds) writeCornerUvBounds(uvBounds, i * 16, uv, texSize.x, texSize.y);
-    orientations?.fill(orientationBits(info.orientation), i * 4, i * 4 + 4);
 
     const v = i * 4;
     indices.set([v + 2, v + 3, v, v + 3, v + 1, v], i * 6);
   });
 
-  return { positions, uvs, colors, indices, uvBounds, orientations };
+  return { positions, uvs, colors, indices, uvBounds };
+}
+
+/**
+ * Per vertex of the geometry the builders above give, the cell's flips and transpose as the
+ * `TILE_ORIENTATION_*` bits. Godot's draw shader turns a normal by them (`canvas.glsl:655-661`),
+ * while the UVs already carry the diffuse through the same orientation.
+ */
+export function buildTileOrientations(
+  cells: readonly DrawableCell[],
+  source: AtlasSourceModel
+): Float32Array {
+  const orientations = new Float32Array(cells.length * 4);
+  cells.forEach((cell, i) => {
+    orientations.fill(orientationBits(tileDrawInfo(source, cell).orientation), i * 4, i * 4 + 4);
+  });
+  return orientations;
 }
 
 function orientationBits({

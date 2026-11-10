@@ -3109,6 +3109,18 @@ export const fixtures: Fixture[] = [
     "root": "glow-linear-upscale"
   },
   {
+    "name": "Hdr 2d Lights",
+    "file": "hdr-2d/unit-hdr-2d-lights.tscn",
+    "category": "Other",
+    "root": "hdr-2d"
+  },
+  {
+    "name": "Hdr 2d",
+    "file": "hdr-2d/unit-hdr-2d.tscn",
+    "category": "Other",
+    "root": "hdr-2d"
+  },
+  {
     "name": "Label3d Glyph Mipmaps",
     "file": "label3d-glyph-mipmaps/unit-label3d-glyph-mipmaps.tscn",
     "category": "Other",
@@ -3552,6 +3564,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Line2d Closed Width Curve Zero",
+    "file": "unit-line2d-closed-width-curve-zero.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Line2d Gradient",
     "file": "unit-line2d-gradient.tscn",
     "category": "Unit - 2D Canvas"
@@ -3752,8 +3769,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Map Layer Scene Tile Control Odd Grid",
+    "file": "unit-tile-map-layer-scene-tile-control-odd-grid.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer Scene Tile Control Sort",
     "file": "unit-tile-map-layer-scene-tile-control-sort.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Control Z",
+    "file": "unit-tile-map-layer-scene-tile-control-z.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -3782,8 +3809,18 @@ export const fixtures: Fixture[] = [
     "category": "Unit - 2D Canvas"
   },
   {
+    "name": "Tile Map Layer Scene Tile Plain Control",
+    "file": "unit-tile-map-layer-scene-tile-plain-control.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
     "name": "Tile Map Layer Scene Tile Polygon",
     "file": "unit-tile-map-layer-scene-tile-polygon.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tile Map Layer Scene Tile Raised Control",
+    "file": "unit-tile-map-layer-scene-tile-raised-control.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -3849,6 +3886,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tile Map",
     "file": "unit-tile-map.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Tilemaplayer Normal Map Padded Viewport",
+    "file": "unit-tilemaplayer-normal-map-padded-viewport.tscn",
     "category": "Unit - 2D Canvas"
   },
   {
@@ -5379,6 +5421,11 @@ export const fixtures: Fixture[] = [
     "category": "Unit - Viewports"
   },
   {
+    "name": "Sub Viewport Hdr 2d Light",
+    "file": "unit-sub-viewport-hdr-2d-light.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
     "name": "Sub Viewport Hdr 2d World",
     "file": "unit-sub-viewport-hdr-2d-world.tscn",
     "category": "Unit - Viewports"
@@ -5386,6 +5433,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Sub Viewport Hdr 2d",
     "file": "unit-sub-viewport-hdr-2d.tscn",
+    "category": "Unit - Viewports"
+  },
+  {
+    "name": "Sub Viewport Hdr 3d World",
+    "file": "unit-sub-viewport-hdr-3d-world.tscn",
     "category": "Unit - Viewports"
   },
   {

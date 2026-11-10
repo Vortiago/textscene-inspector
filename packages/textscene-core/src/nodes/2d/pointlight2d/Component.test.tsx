@@ -25,6 +25,7 @@ import {
   type ApartLightRecord,
 } from '../../../r3f/lighting2d/testing/apartLightProbe';
 import { LIGHT_PASS_LAYER } from '../../../r3f/lighting2d/lightPassLayers';
+import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';
 
 // happy-dom never settles a real image load, so the decode hands back a bare
 // texture. Everything after it is the real `createTextureFromBuffer`.
@@ -67,7 +68,10 @@ async function render(rootNode: TscnNode, tex = new THREE.Texture(), apartLights
           internalResources={[]}
           externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
         >
-          <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+          <CanvasLighting2DProvider
+            space={canvasColorSpaceOf(false)}
+            canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}
+          >
             <RecordApartLights record={apartLights ?? apartLightRecord()}>
               <PointLight2D node={rootNode} />
             </RecordApartLights>

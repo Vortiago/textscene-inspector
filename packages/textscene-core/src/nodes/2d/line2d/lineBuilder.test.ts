@@ -344,6 +344,15 @@ describe('buildLineStroke', () => {
     expect(Array.from(built.vertices).every(Number.isFinite)).toBe(true);
   });
 
+  it('draws no closing quad on a closed line whose width curve is 0 at the start', () => {
+    const square = [0, 0, 100, 0, 100, 100, 0, 100];
+    const closedBevel = { closed: true, jointMode: LineJointMode.BEVEL };
+    const fromZero = stroke(square, { ...closedBevel, widthFactorAt: (offset) => offset });
+    const fromHalf = stroke(square, { ...closedBevel, widthFactorAt: (offset) => 0.5 + offset / 2 });
+    // Measured on 4.6.3: Godot's closing pair is NaN (`line_builder.cpp:316`), so its quad draws nothing.
+    expect(triangles(fromZero)).toHaveLength(triangles(fromHalf).length - 2);
+  });
+
   it('closes a closed SHARP line on its start vertices, with no joint triangles', () => {
     const built = stroke([0, 0, 100, 0, 100, 100, 0, 100], { closed: true });
     // Godot's first quad is degenerate, since the strip has no vertices to start from, then 4 more.

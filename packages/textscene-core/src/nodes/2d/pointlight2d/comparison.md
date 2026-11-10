@@ -17,6 +17,8 @@ canvas item's default repeat to the viewport's disabled default (`viewport.h:419
 `viewport.cpp:4009`, `renderer_canvas_render_rd.cpp:2344`), and the light tap uses that
 item sampler (`canvas.glsl:774-782`). A light with no `texture` lights nothing and draws no
 placeholder, as `pnpm ref:godot` measures. A `texture` that is set but fails to load draws a placeholder.
+In a `use_hdr_2d` canvas the light adds to the linear albedo with no clamp, and its colour and cookie
+stay as authored (`canvas.glsl:715-760`). The SubViewport sheet shows it.
 
 ## Blend modes
 
