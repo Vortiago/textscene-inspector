@@ -135,7 +135,7 @@ export function PopupMenuChrome({
   );
   const rows = useMemo(
     () => popupMenuDrawing(solveNode, menu, geometry.rows, geometry.control.w),
-    [solveNode, menu, geometry]
+    [solveNode, menu, geometry.rows, geometry.control.w]
   );
   const { anchorRef, clip } = useWorldClipPlanes(geometry.scroll);
   const orders = canvasSubOrders(slot, ['rows', 'bars']);

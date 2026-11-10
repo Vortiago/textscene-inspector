@@ -27,8 +27,9 @@ import {
 } from '../../2d/ui/shared/scrollBarSolver';
 import { insetSize, panelRect, shadowInsets } from '../window/panelInsets';
 import { gutterWidth, menuItems, minimumCheckSize, type MenuItem } from './menuItems';
+import { perObject } from '../../../utils/perObject';
 import { popupMenuTheme, type PopupMenuTheme } from './menuTheme';
-import type { PopupMenuProperties } from './types';
+import type { PopupMenuItem, PopupMenuProperties } from './types';
 
 /** The width of the internal ScrollContainer's vertical bar, which the minimum reserves whether or not it shows (`popup_menu.cpp:230`). */
 function scrollBarWidth(theme: NativeTheme): number {
@@ -47,14 +48,35 @@ export interface MenuModel {
   items: readonly MenuItem[];
 }
 
-/** `items` defaults to the items of the scene. */
-export function menuModel(
+/**
+ * Written only by {@link menuModel}. A node keeps the model of its last theme and measurer.
+ */
+// eslint-disable-next-line no-restricted-syntax -- perObject keys on one object, and this model also depends on the theme and the measurer.
+const modelOfNode = new WeakMap<
+  SolveNode,
+  { ctx: Pick<SolveContext, 'theme' | 'measureText'>; model: MenuModel }
+>();
+
+function buildMenuModel(
   n: SolveNode,
   ctx: Pick<SolveContext, 'theme' | 'measureText'>,
-  items = (n.node.properties as PopupMenuProperties).items
+  items: readonly PopupMenuItem[]
 ): MenuModel {
   const menu = popupMenuTheme(n, ctx.theme);
   return { theme: ctx.theme, menu, items: menuItems(n, menu, ctx, items) };
+}
+
+/**
+ * The model of the scene's own items. Shaping each label is the heaviest work of a menu (225 ms for 2000
+ * items), and the minimum and the chrome both read the model, so one node shapes once per theme and measurer.
+ */
+export function menuModel(n: SolveNode, ctx: Pick<SolveContext, 'theme' | 'measureText'>): MenuModel {
+  const cached = modelOfNode.get(n);
+  if (cached && cached.ctx.theme === ctx.theme && cached.ctx.measureText === ctx.measureText)
+    return cached.model;
+  const model = buildMenuModel(n, ctx, (n.node.properties as PopupMenuProperties).items);
+  modelOfNode.set(n, { ctx: { theme: ctx.theme, measureText: ctx.measureText }, model });
+  return model;
 }
 
 /** `_get_items_total_height` (`popup_menu.cpp:255-263`): every item and the gap under it. */
@@ -104,7 +126,7 @@ export const popupMenuContentsMinimumSize: MinimumSizeFn = (n, ctx) =>
 export const popupMenuLoadedMinimumSize: LoadedMinimumSizeFn = (n, ctx) => {
   const { itemsAtSize } = n.node.properties as PopupMenuProperties;
   if (!itemsAtSize) return null;
-  return contentsMinimumSize(n, ctx, menuModel(n, ctx, itemsAtSize), Number.POSITIVE_INFINITY);
+  return contentsMinimumSize(n, ctx, buildMenuModel(n, ctx, itemsAtSize), Number.POSITIVE_INFINITY);
 };
 
 export interface MenuRow {
@@ -132,8 +154,12 @@ export function isRowInView(row: MenuRow, viewHeight: number): boolean {
   return row.y < viewHeight;
 }
 
-/** Each row from the first item's half gap, then a whole gap after every item (`popup_menu.cpp:870-872`). */
-function menuRows(items: readonly MenuItem[], menu: PopupMenuTheme): MenuRow[] {
+/**
+ * Each row from the first item's half gap, then a whole gap after every item (`popup_menu.cpp:870-872`).
+ * The rows depend on the model alone, so the same array returns until the model changes and a row
+ * drawing keyed on it survives a resize.
+ */
+const menuRows = perObject(({ items, menu }: MenuModel): readonly MenuRow[] => {
   let y = 0;
   return items.map((entry, index) => {
     y += index > 0 ? menu.vSeparation : Math.trunc(menu.vSeparation / 2);
@@ -141,7 +167,7 @@ function menuRows(items: readonly MenuItem[], menu: PopupMenuTheme): MenuRow[] {
     y += entry.height;
     return row;
   });
-}
+});
 
 /** The vertical bar of the scroll container: it shows when the items are taller than the container (`scroll_container.cpp:592-593`). */
 function verticalBar(
@@ -156,11 +182,8 @@ function verticalBar(
 }
 
 /** The geometry of menu `n` in a window of `size`, from the same items its minimum reads. */
-export function popupMenuGeometry(
-  n: SolveNode,
-  size: Vector2,
-  { theme, menu, items }: MenuModel
-): MenuGeometry {
+export function popupMenuGeometry(n: SolveNode, size: Vector2, model: MenuModel): MenuGeometry {
+  const { theme, menu, items } = model;
   const margins = contentMarginSize(menu.panel);
 
   const panel = panelRect(shadowInsets(menu.panel, n.rtl), n.rtl, size);
@@ -179,5 +202,5 @@ export function popupMenuGeometry(
     w: scroll.w - reserved,
     h: Math.max(scroll.h, contentHeight),
   };
-  return { panel, scroll, control, verticalBar: bar, rows: menuRows(items, menu) };
+  return { panel, scroll, control, verticalBar: bar, rows: menuRows(model) };
 }

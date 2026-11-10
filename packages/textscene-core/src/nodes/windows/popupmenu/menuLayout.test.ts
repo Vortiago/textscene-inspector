@@ -177,3 +177,20 @@ describe('a size line written below the items', () => {
     expect(sizeOf(unwrapped)).toEqual({ x: 300, y: 200 });
   });
 });
+
+describe('the rows of a model', () => {
+  it('stay one array while the menu resizes, so a row drawing keyed on them survives', () => {
+    const window = menu(many(200));
+    const model = menuModel(window, { theme: THEME, measureText });
+    const small = popupMenuGeometry(window, { x: 200, y: 300 }, model);
+    const tall = popupMenuGeometry(window, { x: 200, y: 500 }, model);
+    expect(tall.rows).toBe(small.rows);
+  });
+
+  it('come from one shaping of the items for the same theme and measurer', () => {
+    const window = menu(many(20));
+    expect(menuModel(window, { theme: THEME, measureText })).toBe(
+      menuModel(window, { theme: THEME, measureText })
+    );
+  });
+});
