@@ -202,7 +202,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [AudioStreamPlayer2D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer2d/comparison.md): an invisible Node2D transform group
 - [BackBufferCopy](../../packages/textscene-core/src/nodes/2d/backbuffercopy/comparison.md): nothing (a transform-only group)
 - [BaseButton](../../packages/textscene-core/src/nodes/2d/ui/basebutton/comparison.md): nothing of its own
-- [Bone2D](../../packages/textscene-core/src/nodes/2d/bone2d/comparison.md): nothing (a transform-only group, the bone gizmo is editor-only)
+- [Bone2D](../../packages/textscene-core/src/nodes/2d/bone2d/comparison.md): a kite gizmo for every bone
 - [BoxContainer](../../packages/textscene-core/src/nodes/2d/ui/boxcontainer/comparison.md): children laid out along its own `vertical`-chosen axis
 - [Button](../../packages/textscene-core/src/nodes/2d/ui/button/comparison.md): a StyleBox quad with a centred text run
 - [Camera2D](../../packages/textscene-core/src/nodes/2d/camera2d/comparison.md): a 2D view frame with no drawn geometry
