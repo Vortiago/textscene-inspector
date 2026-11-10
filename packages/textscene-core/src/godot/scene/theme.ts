@@ -30,7 +30,7 @@ export const CONTROL_FONT_PLACEHOLDER_COLOR: Rgba = { ...CONTROL_FONT_COLOR, a: 
 export const CONTROL_FONT_PRESSED_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** `default_font_size` = 16 (px). */
-export const DEFAULT_FONT_SIZE = 16;
+const DEFAULT_FONT_SIZE = 16;
 
 /**
  * The default flat-stylebox fill per draw state, the one transcription the canvas
