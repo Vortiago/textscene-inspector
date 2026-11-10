@@ -28,6 +28,7 @@ import {
   colorPickerEmWidthPx,
 } from './nativeSolver';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
+import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { measureText as measureTextWithFont } from '../../../../r3f/controls/native/text/measurer';
 
 const THEME = nativeTheme(1);
@@ -538,8 +539,12 @@ describe('presetButtonContent', () => {
 describe('colorPickerEmWidthPx', () => {
   it('gives the painter (shapeButtonLabel) and the solver (measureText) the same em', () => {
     const fontSizePx = THEME.fontSize;
-    const painterEm = colorPickerEmWidthPx((text) => shapeButtonLabel(text, { fontSizePx }).widthPx);
-    const solverEm = colorPickerEmWidthPx((text) => measureTextWithFont(text, fontSizePx, 0).x);
+    const painterEm = colorPickerEmWidthPx(
+      (text) => shapeButtonLabel(text, { fontSizePx, fontMetrics: OPEN_SANS_FONT_METRICS }).widthPx
+    );
+    const solverEm = colorPickerEmWidthPx(
+      (text) => measureTextWithFont(text, fontSizePx, 0, OPEN_SANS_FONT_METRICS).x
+    );
     expect(painterEm).toBe(solverEm);
     expect(painterEm).toBeGreaterThan(0);
   });
