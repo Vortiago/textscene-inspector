@@ -15,6 +15,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
@@ -250,16 +251,18 @@ export function GraphNode({
         </Fragment>
       ))}
       {resizerTexture && props.resizable === true && (
-        <CanvasItemGroup position={[rect.w - RESIZER_SE_ICON_SIZE.x, -(rect.h - RESIZER_SE_ICON_SIZE.y), 0]}>
-          <ControlQuad
-            width={RESIZER_SE_ICON_SIZE.x}
-            height={RESIZER_SE_ICON_SIZE.y}
-            color={resizerTint.color}
-            opacity={resizerTint.opacity}
-            map={resizerTexture}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+        <TextureQuad
+          rect={{
+            x: rect.w - RESIZER_SE_ICON_SIZE.x,
+            y: rect.h - RESIZER_SE_ICON_SIZE.y,
+            w: RESIZER_SE_ICON_SIZE.x,
+            h: RESIZER_SE_ICON_SIZE.y,
+          }}
+          texture={resizerTexture}
+          color={resizerTint.color}
+          opacity={resizerTint.opacity}
+          renderOrder={renderOrder}
+        />
       )}
     </>
   );

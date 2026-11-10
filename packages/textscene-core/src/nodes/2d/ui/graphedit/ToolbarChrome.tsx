@@ -105,7 +105,7 @@ function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: Bu
     <TextureQuad
       rect={{ x: item.rect.x + x, y: item.rect.y + y, w, h }}
       texture={texture}
-      tint={tint}
+      color={tint.color}
       opacity={item.disabled ? tint.opacity * ICON_DISABLED_ALPHA : tint.opacity}
       renderOrder={renderOrder}
     />

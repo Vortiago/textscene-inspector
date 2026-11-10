@@ -10,6 +10,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -222,16 +223,13 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         </CanvasItemGroup>
       )}
       {hasIcon && activeIconTexture && iconSize.x > 0 && iconSize.y > 0 && (
-        <CanvasItemGroup position={[iconPos.x, -iconPos.y, 0]}>
-          <ControlQuad
-            width={iconSize.x}
-            height={iconSize.y}
-            color={iconLinearColor}
-            opacity={tintedIconColor.a}
-            map={activeIconTexture}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+        <TextureQuad
+          rect={{ x: iconPos.x, y: iconPos.y, w: iconSize.x, h: iconSize.y }}
+          texture={activeIconTexture}
+          color={iconLinearColor}
+          opacity={tintedIconColor.a}
+          renderOrder={renderOrder}
+        />
       )}
       {caretRect && (
         <CanvasItemGroup position={[caretRect.x, -caretRect.y, 0]}>

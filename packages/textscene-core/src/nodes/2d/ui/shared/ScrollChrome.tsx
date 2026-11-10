@@ -11,7 +11,7 @@ import {
   type ControlDrawTransform,
 } from '../../../../r3f/controls/native/controlPixelSnap';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import { SCROLL_HINT_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { applyUvWindow, flippedUvWindow, FULL_UV_WINDOW } from '../../../../r3f/uvWindow';
@@ -72,16 +72,13 @@ export function ScrollHintChrome({
   if (!hint || !texture) return null;
   const renderOrder = scrollChromeOrders(chromeSlot).hints.key;
   return (
-    <CanvasItemGroup position={[hint.rect.x, -hint.rect.y, 0]} renderOrder={renderOrder}>
-      <ControlQuad
-        renderOrder={renderOrder}
-        width={hint.rect.w}
-        height={hint.rect.h}
-        color={color}
-        opacity={opacity}
-        map={texture}
-      />
-    </CanvasItemGroup>
+    <TextureQuad
+      rect={hint.rect}
+      texture={texture}
+      color={color}
+      opacity={opacity}
+      renderOrder={renderOrder}
+    />
   );
 }
 

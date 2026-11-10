@@ -44,7 +44,15 @@ function CheckMark({
   const texture = useCheckBoxIcon(solveNode, iconKey);
   const size = checkIconSize(solveNode, iconKey);
   const rect = { x: position.x, y: position.y, w: size.x, h: size.y };
-  return <TextureQuad rect={rect} texture={texture} tint={tint} renderOrder={renderOrder} />;
+  return (
+    <TextureQuad
+      rect={rect}
+      texture={texture}
+      color={tint.color}
+      opacity={tint.opacity}
+      renderOrder={renderOrder}
+    />
+  );
 }
 
 /** One item icon, a component of its own so its `useTexture2D` call keeps a stable call site. */
@@ -58,7 +66,15 @@ function ItemIcon({
   const { externalResources, internalResources } = solveNode.resources;
   const { texture: source } = useTexture2D(textureRef, externalResources, internalResources);
   const texture = useOwnerCanvas2DTexture(source);
-  return <TextureQuad rect={rect} texture={texture} tint={tint} renderOrder={renderOrder} />;
+  return (
+    <TextureQuad
+      rect={rect}
+      texture={texture}
+      color={tint.color}
+      opacity={tint.opacity}
+      renderOrder={renderOrder}
+    />
+  );
 }
 
 function RowText({ text, tint, renderOrder }: PartProps & { text: NonNullable<RowDrawing['text']> }) {

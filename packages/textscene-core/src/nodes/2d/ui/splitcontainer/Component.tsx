@@ -5,8 +5,7 @@
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { isSortableControl } from '../shared/fitChildInRect';
@@ -84,16 +83,14 @@ export function SplitContainer({
           iconSize
         );
         return (
-          <CanvasItemGroup key={i} position={[iconRect.x, -iconRect.y, 0]} renderOrder={renderOrder}>
-            <ControlQuad
-              renderOrder={renderOrder}
-              width={iconRect.w}
-              height={iconRect.h}
-              color={tint.color}
-              opacity={tint.opacity}
-              map={texture}
-            />
-          </CanvasItemGroup>
+          <TextureQuad
+            key={i}
+            rect={iconRect}
+            texture={texture}
+            color={tint.color}
+            opacity={tint.opacity}
+            renderOrder={renderOrder}
+          />
         );
       })}
     </>
