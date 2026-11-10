@@ -53,6 +53,8 @@ interface ControlCanvasWalkerProps {
 }
 
 const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
+/** The scale of a node with none authored, and of a container child `fit_child_in_rect` reset. */
+const UNIT_SCALE = { x: 1, y: 1 };
 
 export function ControlCanvasWalker({
   tree,
@@ -187,9 +189,7 @@ function ControlItemGroup({ solveNode, solved, theme, measureText, snapToPixels 
   // scale 1, and the snap's rotation gate must see that too.
   const resets = solvedEntry?.resetsTransform === true;
   const rotation = resets ? 0 : (props.rotation ?? 0);
-  const layoutScale = solvedEntry?.scale;
-  const scaleX = layoutScale ? layoutScale.x : resets ? 1 : (props.scale?.x ?? 1);
-  const scaleY = layoutScale ? layoutScale.y : resets ? 1 : (props.scale?.y ?? 1);
+  const { x: scaleX, y: scaleY } = solvedEntry?.scale ?? (resets ? UNIT_SCALE : (props.scale ?? UNIT_SCALE));
   const hasOwnTransform = rotation !== 0 || scaleX !== 1 || scaleY !== 1;
   const pivotX = (props.pivotOffset?.x ?? 0) + (props.pivotOffsetRatio?.x ?? 0) * rect.w;
   const pivotY = (props.pivotOffset?.y ?? 0) + (props.pivotOffsetRatio?.y ?? 0) * rect.h;
