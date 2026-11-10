@@ -6,7 +6,7 @@
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
-import { internalChildThemeItems } from '../../../../r3f/controls/native/buildSolveTree';
+import { internalChildThemeItems } from '../../../../r3f/controls/native/themeItems';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';

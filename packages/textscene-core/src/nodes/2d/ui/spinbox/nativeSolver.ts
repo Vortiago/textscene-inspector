@@ -16,7 +16,7 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
-import { internalChildThemeItems } from '../../../../r3f/controls/native/buildSolveTree';
+import { internalChildThemeItems } from '../../../../r3f/controls/native/themeItems';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { shapeLineEditText } from '../lineedit/nativeSolver';
 import { textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';

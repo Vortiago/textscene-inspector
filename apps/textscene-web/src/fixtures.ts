@@ -83,6 +83,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Accept Dialog Embedded",
+    "file": "unit-accept-dialog-embedded.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Accept Dialog Theme",
+    "file": "unit-accept-dialog-theme.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Accept Dialog",
     "file": "unit-accept-dialog.tscn",
     "category": "Other"
@@ -470,6 +480,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Cone Twist Joint 3d",
     "file": "unit-cone-twist-joint-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Confirmation Dialog Embedded",
+    "file": "unit-confirmation-dialog-embedded.tscn",
     "category": "Other"
   },
   {
@@ -1300,6 +1315,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Jacobian Ik 3d",
     "file": "unit-jacobian-ik-3d.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Joint 2d Markers",
+    "file": "unit-joint-2d-markers.tscn",
     "category": "Other"
   },
   {
@@ -3589,6 +3609,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Marker2d",
     "file": "unit-marker2d.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Parallax 2d Camera Scroll",
+    "file": "unit-parallax-2d-camera-scroll.tscn",
+    "category": "Unit - 2D Canvas"
+  },
+  {
+    "name": "Parallax 2d Repeat",
+    "file": "unit-parallax-2d-repeat.tscn",
     "category": "Unit - 2D Canvas"
   },
   {

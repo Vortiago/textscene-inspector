@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   CONTROL_FONT_COLOR,
   CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_FOCUS_COLOR,
   CONTROL_FONT_HOVER_COLOR,
   CONTROL_FONT_LOW_COLOR,
   CONTROL_FONT_LOWER_COLOR,
@@ -15,6 +16,11 @@ import {
 
 /** `fill_default_theme` (`scene/theme/default_theme.cpp:101-108`). */
 describe('default theme font colours', () => {
+  it('draws a focused Button in the hover colour, as its own object', () => {
+    expect(CONTROL_FONT_FOCUS_COLOR).toEqual({ r: 0.95, g: 0.95, b: 0.95, a: 1 });
+    expect(CONTROL_FONT_FOCUS_COLOR).not.toBe(CONTROL_FONT_HOVER_COLOR);
+  });
+
   it('draws Control text in a light grey', () => {
     expect(CONTROL_FONT_COLOR).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
   });
@@ -59,6 +65,7 @@ describe('default theme metrics', () => {
       hover: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 },
       pressed: { r: 0, g: 0, b: 0, a: 0.6 },
       disabled: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 },
+      focus: { r: 1, g: 1, b: 1, a: 0.75 },
       popup: { r: 0.25, g: 0.25, b: 0.25, a: 1 },
       popupHover: { r: 0.4, g: 0.4, b: 0.4, a: 1 },
       progress: { r: 1, g: 1, b: 1, a: 0.4 },
