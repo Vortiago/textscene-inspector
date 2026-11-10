@@ -845,7 +845,33 @@ func _render_3d(target: Node) -> void:
 	_write_bounds(target)
 
 func _save_capture(source: Viewport) -> void:
-	source.get_texture().get_image().save_png(OUT)
+	_viewport_image(source).save_png(OUT)
+
+# An HDR viewport stores linear half floats, which no screen shows as they are: the blit to the
+# screen converts them to sRGB (renderer_compositor_rd.cpp:98). Converted as floats, since
+# Image.linear_to_srgb only reads 8-bit images and would round before it converts.
+func _viewport_image(source: Viewport) -> Image:
+	var image := source.get_texture().get_image()
+	if source.use_hdr_2d:
+		_linear_to_srgb_in_place(image)
+	return image
+
+func _linear_to_srgb_in_place(image: Image) -> void:
+	image.convert(Image.FORMAT_RGBAF)
+	var values := image.get_data().to_float32_array()
+	for index in values.size():
+		if index % 4 != 3:
+			values[index] = _linear_to_srgb_value(values[index])
+	image.set_data(image.get_width(), image.get_height(), false, Image.FORMAT_RGBAF, values.to_byte_array())
+	image.convert(Image.FORMAT_RGBA8)
+
+# Color.linear_to_srgb for one channel, clamped at 0 as the 8-bit store clamps. Returned on the
+# centre of its 8-bit step, because Image.convert truncates (image.cpp:2584) where the screen blit
+# stores the nearest step (UNORM), so a bare value would read one step low half the time.
+func _linear_to_srgb_value(value: float) -> float:
+	value = maxf(value, 0.0)
+	var srgb := 12.92 * value if value < 0.0031308 else 1.055 * pow(value, 1.0 / 2.4) - 0.055
+	return (roundf(srgb * 255.0) + 0.5) / 255.0
 
 # A 2D scene has nothing to point a camera at: Godot draws it through the
 # canvas transform into the PROJECT VIEWPORT rectangle, and a Control resolves
@@ -1122,7 +1148,7 @@ func _await_rendered(source: Viewport) -> void:
 	var quiet_since := Time.get_ticks_msec()
 	while Engine.get_process_frames() < NEVER_SETTLES_CAPTURE_FRAME:
 		await RenderingServer.frame_post_draw
-		var picture := source.get_texture().get_image().get_data()
+		var picture := _viewport_image(source).get_data()
 		var now_pending := _pending_work()
 		var now_transforms := _global_transforms(movers)
 		var repeats := pictures.size() == period and picture == pictures[0]

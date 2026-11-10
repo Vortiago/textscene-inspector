@@ -337,7 +337,7 @@ describe('<SubViewportContainer> — the colour of the surface', () => {
   });
 
   it('keeps the linear multiply for a 3D-content target (edge case)', async () => {
-    const target = createSceneTarget(200, 150, 'View');
+    const target = createSceneTarget(200, 150, 'View', SRGB_CANVAS);
     expect((await surfaceMaterial(target.texture)).defines?.CANVAS_SRGB_MULTIPLY).toBeUndefined();
     target.dispose();
   });

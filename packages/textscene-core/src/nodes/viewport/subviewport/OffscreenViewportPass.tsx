@@ -50,6 +50,7 @@ import {
   selectViewportCamera2D,
   viewportAspect,
   viewportCanvasColorSpace,
+  viewportUsesDebanding,
   viewportMsaaMode,
 } from './offscreenViewport';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
@@ -132,12 +133,12 @@ export function OffscreenViewportPass({
     [rendersInline, mainScene, drawnCanvasWorld, node.name]
   );
 
-  const canvasSpace = viewportCanvasColorSpace(properties, kind);
+  const canvasSpace = viewportCanvasColorSpace(properties);
   // One sample: a 3D pass multisamples its world buffer, and a 2D pass its canvas frame.
   const target = useMemo(
     () =>
       kind === '3d'
-        ? createSceneTarget(width, height, node.name)
+        ? createSceneTarget(width, height, node.name, canvasSpace)
         : createCanvasTarget(width, height, node.name, canvasSpace),
     [kind, width, height, node.name, canvasSpace]
   );
@@ -161,7 +162,7 @@ export function OffscreenViewportPass({
             width={width}
             height={height}
             transparentBackground={transparentBg}
-            usesDebanding={properties.use_debanding}
+            usesDebanding={viewportUsesDebanding(properties)}
             name={node.name}
           />
         </ViewportPassEnvironment>
@@ -185,7 +186,7 @@ export function OffscreenViewportPass({
     kind === '2d' || drawsCanvasOverWorld ? canvasMsaaMode : 0,
     canvasSpace
   );
-  const backdropTarget = useBackdropTarget(width, height, node.name);
+  const backdropTarget = useBackdropTarget(width, height, node.name, canvasSpace);
   const canvasLayers = useMemo(() => canvasLayerRanks(node.children), [node]);
   // The scene the canvas of a 3D pass draws into, apart from the world's.
   const canvasScene = useMemo(
@@ -202,9 +203,11 @@ export function OffscreenViewportPass({
   );
   useLayoutEffect(() => lightHost?.resize(size), [lightHost, size]);
 
-  // The canvas items of a viewport draw after its 3D render, into the same target. The frame's bytes
-  // return to the SRGB8_ALPHA8 storage decoded, which the hardware encodes back to the same bytes.
+  // The canvas items of a viewport draw after its 3D render, into the same target. In sRGB, the frame's
+  // bytes return to the SRGB8_ALPHA8 storage decoded, which the hardware encodes back to the same
+  // bytes. A linear frame returns to the half-float storage as it is.
   // `inWindow` null draws every layer, which no BG_CANVAS split asks for.
+  const worldTargetColour = canvasSpace.isLinear ? 'none' : 'decode';
   const renderCanvas = useCallback(
     (into: THREE.WebGLRenderTarget, inWindow: ((key: number) => boolean) | null) =>
       renderToOffscreenTarget(gl, {
@@ -213,12 +216,12 @@ export function OffscreenViewportPass({
         transparentBg,
         draw: () => {
           const drawCanvas = () =>
-            frame.render(gl, canvasScene!, orthoCamera, viewportTransfer('decode', transparentBg));
+            frame.render(gl, canvasScene!, orthoCamera, viewportTransfer(worldTargetColour, transparentBg));
           if (inWindow) drawCanvasKeys(canvasScene!, inWindow, drawCanvas);
           else drawCanvas();
         },
       }),
-    [gl, clearColor, transparentBg, frame, canvasScene, orthoCamera]
+    [gl, clearColor, transparentBg, frame, canvasScene, orthoCamera, worldTargetColour]
   );
 
   // Godot draws a viewport's canvas through its canvas transform, the identity until a Camera2D in
@@ -348,7 +351,7 @@ export function OffscreenViewportPass({
   const canvasBackdropAndItems = canvasOverWorld ? (
     <>
       <PendingSuspense>
-        <CanvasOverWorld world={target.texture} size={viewSize} anchor={backdropAnchor} />
+        <CanvasOverWorld world={target.texture} size={viewSize} anchor={backdropAnchor} space={canvasSpace} />
       </PendingSuspense>
       <CanvasOverWorldScopeProvider>{canvasOverWorld}</CanvasOverWorldScopeProvider>
     </>

@@ -106,7 +106,7 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
   const layoutSize = useStableVector2(sizes.layout);
   const viewSize = useStableVector2(sizes.view);
   const canvasModulate = useCanvasModulateColor(node.children);
-  const canvasSpace = viewportCanvasColorSpace(properties, kind === '3d' ? '3d' : '2d');
+  const canvasSpace = viewportCanvasColorSpace(properties);
   // A canvas holds the 2D items and Controls of a viewport, in one tree-order draw. A 2D pass draws
   // it in its portal. A 3D pass draws it over its world, in a scene of its own (`OffscreenViewportPass`),
   // so the world's portal holds the children alone and each workspace drops the other's nodes.

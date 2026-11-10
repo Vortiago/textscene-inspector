@@ -24,6 +24,8 @@ import { ProjectClearColor } from '../../ProjectClearColor.js';
 import { CanvasFrameRender } from './CanvasFrameRender.js';
 import { PendingSuspense } from '../../../resources/PendingSuspense.js';
 import { ScreenshotBridge } from '../../ScreenshotBridge.js';
+import { CanvasColorSpaceProvider } from '../../canvasColorSpace.js';
+import { useRootCanvasColorSpace } from '../../rootCanvasColorSpace.js';
 
 // Through the controls barrel, whose side-effect imports register every Control
 // type: the component file alone registers none. Lazy, so the registrations stay
@@ -64,37 +66,40 @@ export function World2DContents({
   zoom,
 }: World2DCanvasProps) {
   const canvasModulate = useCanvasModulateColor(nodes);
+  const canvasSpace = useRootCanvasColorSpace();
   return (
     <TiledUploadDriver>
-      <CanvasWorkspaceProvider workspace="2d">
-        <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
-          <EditedRootProvider editableInstances={editableInstances}>
-            <CameraRig pan={pan} zoom={zoom} />
-            <ProjectClearColor />
-            <CanvasFrameRender />
-            {/* The light accumulator starts from the canvas tint, the same pure
+      <CanvasColorSpaceProvider value={canvasSpace}>
+        <CanvasWorkspaceProvider workspace="2d">
+          <SceneResourcesProvider internalResources={internalResources} externalResources={externalResources}>
+            <EditedRootProvider editableInstances={editableInstances}>
+              <CameraRig pan={pan} zoom={zoom} />
+              <ProjectClearColor />
+              <CanvasFrameRender />
+              {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}
-            <CanvasLighting2DProvider canvasModulate={canvasModulate}>
-              <CanvasWorldScope>
-                <NodeDispatcher nodes={nodes} />
-              </CanvasWorldScope>
-              {/* Inside the lighting provider, so a 2D light reaches a Control. */}
-              <PendingSuspense>
-                <ControlCanvasLayer nodes={nodes} />
-              </PendingSuspense>
-              {/* A `ViewportTexture` consumer may sample its target whoever draws
+              <CanvasLighting2DProvider canvasModulate={canvasModulate}>
+                <CanvasWorldScope>
+                  <NodeDispatcher nodes={nodes} />
+                </CanvasWorldScope>
+                {/* Inside the lighting provider, so a 2D light reaches a Control. */}
+                <PendingSuspense>
+                  <ControlCanvasLayer nodes={nodes} />
+                </PendingSuspense>
+                {/* A `ViewportTexture` consumer may sample its target whoever draws
                 the on-screen Controls. */}
-              <ControlRasterLayer
-                nodes={nodes}
-                internalResources={internalResources}
-                externalResources={externalResources}
-              />
-            </CanvasLighting2DProvider>
-          </EditedRootProvider>
-        </SceneResourcesProvider>
-        <ViewportPassOrchestrator />
-        <ScreenshotBridge />
-      </CanvasWorkspaceProvider>
+                <ControlRasterLayer
+                  nodes={nodes}
+                  internalResources={internalResources}
+                  externalResources={externalResources}
+                />
+              </CanvasLighting2DProvider>
+            </EditedRootProvider>
+          </SceneResourcesProvider>
+          <ViewportPassOrchestrator />
+          <ScreenshotBridge />
+        </CanvasWorkspaceProvider>
+      </CanvasColorSpaceProvider>
     </TiledUploadDriver>
   );
 }

@@ -59,7 +59,7 @@ export function instanceColorDefines(space: CanvasColorSpace): Readonly<Record<s
   return space.isLinear ? undefined : CANVAS_SRGB_DEFINES;
 }
 
-/** Written only by a SubViewport pass that draws a linear canvas. The root canvas is sRGB. */
+/** Written only by the root canvas (`World2DContents`) and by a SubViewport pass. Outside both, sRGB. */
 const CanvasColorSpaceContext = createContext<CanvasColorSpace>(SRGB_CANVAS);
 CanvasColorSpaceContext.displayName = 'CanvasColorSpaceContext';
 

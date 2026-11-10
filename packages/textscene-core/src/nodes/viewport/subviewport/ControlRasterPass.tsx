@@ -69,7 +69,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   // Godot draws canvas items after the tonemap pass (`RendererViewport::_draw_viewport`), so the
   // target holds sRGB values with no curve, and a 3D consumer applies its curve once: a 0.5 grey
   // ColorRect reaches it as rgb(162), not a pre-tonemapped rgb(196).
-  const canvasSpace = viewportCanvasColorSpace(properties, '2d');
+  const canvasSpace = viewportCanvasColorSpace(properties);
   const createTarget = useCallback(
     () => createCanvasTarget(width, height, node.name, canvasSpace),
     [width, height, node.name, canvasSpace]

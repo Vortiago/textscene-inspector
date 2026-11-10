@@ -137,7 +137,7 @@ describe('a reader of a live target', () => {
   });
 
   it('comes back as it is from a render target no pass publishes (edge case)', () => {
-    const target = createSceneTarget(8, 8, 'Unpublished');
+    const target = createSceneTarget(8, 8, 'Unpublished', SRGB_CANVAS);
     expect(ownedTextureView(target.texture, { colorSpace: THREE.SRGBColorSpace, window: FLIPPED })).toBe(
       target.texture
     );

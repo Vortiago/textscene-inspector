@@ -65,8 +65,15 @@ describe('useTargetViews', () => {
     expect(views.decoding.texture).toBe(target.texture);
   });
 
+  it("serves an HDR 3D target's own texture as both views, since its sRGB view is the same half floats", async () => {
+    const target = createSceneTarget(8, 8, 'Probe', LINEAR_CANVAS);
+    const { views } = await mount(target);
+    expect(views.plain.texture).toBe(target.texture);
+    expect(views.decoding.texture).toBe(target.texture);
+  });
+
   it("serves a 3D-content target's own texture as its decoding view, which its storage decodes already", async () => {
-    const target = createSceneTarget(8, 8, 'Probe');
+    const target = createSceneTarget(8, 8, 'Probe', SRGB_CANVAS);
     const { views } = await mount(target);
     expect(views.decoding.texture).toBe(target.texture);
   });
@@ -85,7 +92,7 @@ describe('useTargetViews', () => {
   });
 
   it('stores the plain copy of a 3D target in RGBA8 and marks it as sRGB bytes, which a canvas consumer filters raw', async () => {
-    const target = createSceneTarget(8, 8, 'Probe');
+    const target = createSceneTarget(8, 8, 'Probe', SRGB_CANVAS);
     const { views } = await mount(target);
     expect(views.plain.texture).not.toBe(target.texture);
     expect(views.plain.texture.internalFormat).toBe('RGBA8');
@@ -99,13 +106,13 @@ describe('useTargetViews', () => {
   });
 
   it('fills the plain copy of a 3D target while a consumer retains it', async () => {
-    const { views, fill } = await mount(createSceneTarget(8, 8, 'Probe'));
+    const { views, fill } = await mount(createSceneTarget(8, 8, 'Probe', SRGB_CANVAS));
     views.plain.retain();
     expect((await fill()).map((drawn) => drawn?.texture)).toEqual([views.plain.texture]);
   });
 
   it('fills nothing for the view that is the target itself, however many consumers retain it', async () => {
-    const scene = await mount(createSceneTarget(8, 8, 'Probe'));
+    const scene = await mount(createSceneTarget(8, 8, 'Probe', SRGB_CANVAS));
     scene.views.decoding.retain();
     expect(await scene.fill()).toEqual([]);
     const canvas = await mount(createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS));

@@ -74,7 +74,7 @@ describe('<Sprite2D> with a ViewportTexture', () => {
   });
 
   it('keeps the linear multiply for a 3D-content target (edge case)', async () => {
-    const target = createSceneTarget(16, 16, 'SubViewport');
+    const target = createSceneTarget(16, 16, 'SubViewport', SRGB_CANVAS);
     expect((await spriteMaterial(target.texture)).defines?.CANVAS_SRGB_MULTIPLY).toBeUndefined();
     target.dispose();
   });

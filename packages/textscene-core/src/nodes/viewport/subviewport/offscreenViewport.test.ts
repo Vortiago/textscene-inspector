@@ -19,6 +19,7 @@ import {
   viewportAspect,
   viewportCanvasColorSpace,
   viewportMsaaMode,
+  viewportUsesDebanding,
 } from './offscreenViewport';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { canvasColorSpaceOf, SRGB_CANVAS } from '../../../r3f/canvasColorSpace';
@@ -343,7 +344,7 @@ describe('createSceneTarget', () => {
    * with `isXRRenderTarget`: without it the quad measured 0.60-0.65x of Godot.
    */
   it('marks the target so three tonemaps the offscreen pass like the main pass', () => {
-    const target = createSceneTarget(64, 64, 'Probe');
+    const target = createSceneTarget(64, 64, 'Probe', SRGB_CANVAS);
     expect((target as { isXRRenderTarget?: boolean }).isXRRenderTarget).toBe(true);
     target.dispose();
   });
@@ -354,7 +355,7 @@ describe('createSceneTarget', () => {
    * a shader encode on the SRGB8 hardware encode and darken every sample.
    */
   it('stores the working colour space, so write and sample round-trip exactly', () => {
-    const target = createSceneTarget(64, 64, 'Probe');
+    const target = createSceneTarget(64, 64, 'Probe', SRGB_CANVAS);
     expect(target.texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
     target.dispose();
   });
@@ -365,13 +366,13 @@ describe('createSceneTarget', () => {
    * in hardware, while the LINEAR tag keeps the shader from doing either.
    */
   it('stores a tonemapped pass with sRGB precision', () => {
-    const target = createSceneTarget(64, 64, 'Probe');
+    const target = createSceneTarget(64, 64, 'Probe', SRGB_CANVAS);
     expect(target.texture.internalFormat).toBe('SRGB8_ALPHA8');
     target.dispose();
   });
 
   it('holds no sRGB bytes for a canvas consumer to multiply (edge case)', () => {
-    const target = createSceneTarget(64, 64, 'Probe');
+    const target = createSceneTarget(64, 64, 'Probe', SRGB_CANVAS);
     expect(holdsSrgbBytes(target.texture)).toBe(false);
     target.dispose();
   });
@@ -382,7 +383,7 @@ describe('createSceneTarget', () => {
    * own buffer, so the target carries neither depth nor stencil.
    */
   it('samples linearly without mipmaps, and carries neither depth nor stencil', () => {
-    const target = createSceneTarget(64, 64, 'Probe');
+    const target = createSceneTarget(64, 64, 'Probe', SRGB_CANVAS);
     expect(target.texture.minFilter).toBe(THREE.LinearFilter);
     expect(target.texture.magFilter).toBe(THREE.LinearFilter);
     expect(target.texture.generateMipmaps).toBe(false);
@@ -392,10 +393,35 @@ describe('createSceneTarget', () => {
   });
 
   it('names the texture after the sub-viewport and sizes it to the rect', () => {
-    const target = createSceneTarget(320, 240, 'Viewport');
+    const target = createSceneTarget(320, 240, 'Viewport', SRGB_CANVAS);
     expect(target.texture.name).toBe('Viewport::target');
     expect(target.width).toBe(320);
     expect(target.height).toBe(240);
+    target.dispose();
+  });
+});
+
+describe('createSceneTarget in a linear canvas', () => {
+  /** An HDR render target is `R16G16B16A16_SFLOAT`, tonemapped with no sRGB encode (`renderer_scene_render_rd.cpp:744`). */
+  it('stores the tonemapped world as linear half floats, which keep a value above 1', () => {
+    const target = createSceneTarget(64, 64, 'Probe', LINEAR_CANVAS);
+    expect(target.texture.type).toBe(THREE.HalfFloatType);
+    expect(target.texture.internalFormat).toBe('RGBA16F');
+    expect(target.texture.colorSpace).toBe(THREE.LinearSRGBColorSpace);
+    target.dispose();
+  });
+
+  it('has three write the tonemap as it is, with no depth and no stencil', () => {
+    const target = createSceneTarget(64, 64, 'Probe', LINEAR_CANVAS);
+    expect((target as { isXRRenderTarget?: boolean }).isXRRenderTarget).toBe(true);
+    expect(target.depthBuffer).toBe(false);
+    expect(target.stencilBuffer).toBe(false);
+    target.dispose();
+  });
+
+  it('marks its texture for a raw sRGB multiply, as a non-HDR canvas consumer reads the stored numbers', () => {
+    const target = createSceneTarget(64, 64, 'Probe', LINEAR_CANVAS);
+    expect(holdsSrgbBytes(target.texture)).toBe(true);
     target.dispose();
   });
 });
@@ -463,16 +489,26 @@ describe('createCanvasTarget in a linear canvas', () => {
 });
 
 describe('viewportCanvasColorSpace', () => {
-  it('draws the canvas of a 2D viewport with use_hdr_2d in linear', () => {
-    expect(viewportCanvasColorSpace({ use_hdr_2d: true }, '2d')).toBe(LINEAR_CANVAS);
+  it('draws the canvas of a viewport with use_hdr_2d in linear, over a 3D world too', () => {
+    expect(viewportCanvasColorSpace({ use_hdr_2d: true })).toBe(LINEAR_CANVAS);
   });
 
   it('draws the canvas of a viewport without use_hdr_2d in sRGB', () => {
-    expect(viewportCanvasColorSpace({ use_hdr_2d: false }, '2d')).toBe(SRGB_CANVAS);
+    expect(viewportCanvasColorSpace({ use_hdr_2d: false })).toBe(SRGB_CANVAS);
+  });
+});
+
+describe('viewportUsesDebanding', () => {
+  it('dithers the tonemap of a viewport with use_debanding (8-bit storage)', () => {
+    expect(viewportUsesDebanding({ use_debanding: true, use_hdr_2d: false })).toBe(true);
   });
 
-  it('keeps the canvas over a 3D world in sRGB, whose tonemap target stays 8-bit (edge case)', () => {
-    expect(viewportCanvasColorSpace({ use_hdr_2d: true }, '3d')).toBe(SRGB_CANVAS);
+  it('dithers nothing in a viewport that uses HDR, whose half floats are no 8-bit store (renderer_scene_render_rd.cpp:941)', () => {
+    expect(viewportUsesDebanding({ use_debanding: true, use_hdr_2d: true })).toBe(false);
+  });
+
+  it('dithers nothing without use_debanding', () => {
+    expect(viewportUsesDebanding({ use_debanding: false, use_hdr_2d: false })).toBe(false);
   });
 });
 

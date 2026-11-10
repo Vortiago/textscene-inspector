@@ -5,26 +5,28 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import type * as THREE from 'three';
+import type { CanvasColorSpace } from '../../../r3f/canvasColorSpace';
 import { createSceneTarget } from './offscreenViewport';
 
 /** Answers the target when `wanted`, made at the first call and again after a resize, else null. */
 export function useBackdropTarget(
   width: number,
   height: number,
-  name: string
+  name: string,
+  space: CanvasColorSpace
 ): (wanted: boolean) => THREE.WebGLRenderTarget | null {
   const held = useRef<THREE.WebGLRenderTarget | null>(null);
   const release = useCallback(() => {
     held.current?.dispose();
     held.current = null;
   }, []);
-  useEffect(() => release, [release, width, height, name]);
+  useEffect(() => release, [release, width, height, name, space]);
   return useCallback(
     (wanted: boolean) => {
       if (!wanted) release();
-      else held.current ??= createSceneTarget(width, height, `${name}::canvas`);
+      else held.current ??= createSceneTarget(width, height, `${name}::canvas`, space);
       return held.current;
     },
-    [release, width, height, name]
+    [release, width, height, name, space]
   );
 }
