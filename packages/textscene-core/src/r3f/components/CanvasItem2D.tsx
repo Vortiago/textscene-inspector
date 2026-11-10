@@ -106,7 +106,7 @@ export function CanvasItem2D({
     >
       <CanvasItemProvider value={key}>
         <OwnCanvasModulateProvider value={tint.canvasModulate}>
-          <ClipChildrenScope mode={props.clip_children} state={state} range={paintRange}>
+          <ClipChildrenScope mode={props.clip_children} state={state} node={node} range={paintRange}>
             {body && (
               <LitCanvasItemPixels
                 material={material}

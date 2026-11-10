@@ -30,6 +30,12 @@ function seen(mesh: THREE.Object3D, camera: THREE.Camera): boolean {
   return camera.layers.test(mesh.layers);
 }
 
+/** Whether `root` is `mesh` or one of its ancestors: a render of a subtree draws only what is below it. */
+function within(root: THREE.Object3D, mesh: THREE.Object3D): boolean {
+  for (let o: THREE.Object3D | null = mesh; o; o = o.parent) if (o === root) return true;
+  return false;
+}
+
 function recordingRenderer(meshes: Record<string, THREE.Mesh>) {
   const draws: { target: Target; seen: string[] }[] = [];
   const clears: Target[] = [];
@@ -44,8 +50,10 @@ function recordingRenderer(meshes: Record<string, THREE.Mesh>) {
     clear: (clearsColor?: boolean) => {
       if (clearsColor) clears.push(bound);
     },
-    render: (_scene: THREE.Object3D, camera: THREE.Camera) => {
-      const names = Object.keys(meshes).filter((name) => seen(meshes[name]!, camera));
+    render: (root: THREE.Object3D, camera: THREE.Camera) => {
+      const names = Object.keys(meshes).filter(
+        (name) => within(root, meshes[name]!) && seen(meshes[name]!, camera)
+      );
       draws.push({ target: bound, seen: names });
     },
     copied: (source: THREE.Texture, target: Target) => {
@@ -64,6 +72,11 @@ function item(scene: THREE.Object3D, key: number, x: number): THREE.Mesh {
   wrapper.add(mesh);
   scene.add(wrapper);
   return mesh;
+}
+
+/** A mesh under the wrapper of `owner`, as a child canvas item sits under its parent's group. */
+function childOf(owner: THREE.Mesh, key: number, x: number): THREE.Mesh {
+  return item(owner.parent!, key, x);
 }
 
 /** The rect a group's `fit` answers, as a group that draws something does. */
@@ -151,7 +164,8 @@ describe('drawCanvasGroups', () => {
   it('groups an item that draws behind the group, whose key is below the group key', () => {
     // A CanvasGroup culls every child before itself (`renderer_canvas_cull.cpp:471-484`).
     const scene = new THREE.Scene();
-    const meshes = { behind: item(scene, 10, 0), rect: item(scene, 11, 0), child: item(scene, 12, 0) };
+    const rect = item(scene, 11, 0);
+    const meshes = { behind: childOf(rect, 10, 0), rect, child: childOf(rect, 12, 0) };
     const buffer = new THREE.WebGLRenderTarget(1, 1);
     register(scene, entry({ own: 11, from: 10, to: 20 }, buffer));
     const { gl, draws } = recordingRenderer(meshes);
@@ -247,7 +261,7 @@ describe('drawCanvasGroups', () => {
       const setMasking = vi.fn((isMasking: boolean) => {
         state.masking = isMasking;
       });
-      return { ...entry(WINDOW, buffer), clip: { mode, setMasking } };
+      return { ...entry(WINDOW, buffer), clip: { mode, setMasking, behind: [] } };
     }
 
     /** The scene of a clipping parent at key 10 with a child at 11, drawn between a mesh before and one after. */
@@ -256,9 +270,10 @@ describe('drawCanvasGroups', () => {
       const meshes = {
         before: item(scene, 5, 0),
         owner: item(scene, 10, 0),
-        child: item(scene, 11, 0),
+        child: undefined as unknown as THREE.Mesh,
         after: item(scene, 25, 0),
       };
+      meshes.child = childOf(meshes.owner, 11, 0);
       return { scene, meshes };
     }
 
@@ -282,7 +297,8 @@ describe('drawCanvasGroups', () => {
 
     it("keeps the owner's own pieces, at keys inside its slot, out of the buffer", () => {
       const scene = new THREE.Scene();
-      const meshes = { owner: item(scene, 10, 0), piece: item(scene, 10.5, 0), child: item(scene, 11, 0) };
+      const owner = item(scene, 10, 0);
+      const meshes = { owner, piece: childOf(owner, 10.5, 0), child: childOf(owner, 11, 0) };
       const buffer = new THREE.WebGLRenderTarget(1, 1);
       register(scene, clipEntry('clipOnly', buffer, { masking: false }));
       const { gl, draws } = recordingRenderer(meshes);
@@ -294,6 +310,38 @@ describe('drawCanvasGroups', () => {
         [buffer, 'frame'],
         [buffer, 'child'],
         [null, 'owner', 'piece'],
+      ]);
+    });
+
+    it('hides the subtrees with no key in a span while it draws, and shows them again after', () => {
+      const { scene, meshes } = clippedScene();
+      register(scene, clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }));
+      const { gl } = recordingRenderer(meshes);
+      const hiddenAtDraw: string[][] = [];
+      const wrappers = Object.entries(meshes).map(([name, mesh]) => [name, mesh.parent!] as const);
+
+      drawCanvasGroups(gl, scene, camera, FRAME, () =>
+        hiddenAtDraw.push(wrappers.filter(([, wrapper]) => !wrapper.visible).map(([name]) => name))
+      );
+
+      // The span before the group (key 5) hides the keys from 10 on, and the span after hides key 5.
+      expect(hiddenAtDraw).toEqual([['owner', 'after'], ['before']]);
+      expect(wrappers.every(([, wrapper]) => wrapper.visible)).toBe(true);
+    });
+
+    it('draws a span only the keys inside it, also in an item that has a behind-parent child in it', () => {
+      const { scene, meshes } = clippedScene();
+      const parent = item(scene, 25, 0);
+      const behind = childOf(parent, 5, 0);
+      register(scene, clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }));
+      const { gl, draws } = recordingRenderer({ ...meshes, parent, behind });
+
+      drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+      const frameDraws = draws.filter((draw) => draw.target === null).map((draw) => draw.seen);
+      expect(frameDraws).toEqual([
+        ['before', 'behind'],
+        ['owner', 'after', 'parent'],
       ]);
     });
 
@@ -334,7 +382,8 @@ describe('drawCanvasGroups', () => {
       const filled = (mode: keyof typeof buffers) => {
         const scene = new THREE.Scene();
         // A child behind the owner, as `show_behind_parent` puts it, and a child over it.
-        const meshes = { behind: item(scene, 9, 0), owner: item(scene, 12, 0), child: item(scene, 11, 0) };
+        const owner = item(scene, 12, 0);
+        const meshes = { behind: childOf(owner, 9, 0), owner, child: childOf(owner, 11, 0) };
         register(scene, {
           ...clipEntry(mode, buffers[mode], { masking: false }),
           window: { own: 12, from: 8, to: 20 },
@@ -348,6 +397,27 @@ describe('drawCanvasGroups', () => {
 
       expect(filled('clipOnly')).toEqual([['behind', 'child']]);
       expect(filled('clipAndDraw')).toEqual([['owner'], ['behind', 'child']]);
+    });
+
+    it('draws the show_behind_parent children of an owner that draws nothing before its other children', () => {
+      const scene = new THREE.Scene();
+      // The child at index 0 sits before the one that draws behind the parent, as in the scene tree.
+      const meshes = {
+        before: item(scene, 5, 0),
+        front: item(scene, 11, 0),
+        behind: item(scene, 12, 0),
+        after: item(scene, 25, 0),
+      };
+      const state = { masking: false };
+      register(scene, {
+        ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), state),
+        clip: { mode: 'clipOnly', setMasking: vi.fn(), behind: [{ from: 12, to: 13 }] },
+      });
+      const { gl, draws } = recordingRenderer(meshes);
+
+      drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+      expect(draws.map((draw) => draw.seen)).toEqual([['before'], ['behind'], ['front', 'after']]);
     });
 
     it('draws no group for a clipping owner that draws nothing, as Godot attaches no group to an item with no commands', () => {
@@ -415,11 +485,13 @@ describe('drawCanvasGroups', () => {
 
     it('copies the canvas again for a second group, with the first one already masked in it', () => {
       const scene = new THREE.Scene();
+      const owner1 = item(scene, 10, 0);
+      const owner2 = item(scene, 30, 0);
       const meshes = {
-        owner1: item(scene, 10, 0),
-        child1: item(scene, 11, 0),
-        owner2: item(scene, 30, 0),
-        child2: item(scene, 31, 0),
+        owner1,
+        child1: childOf(owner1, 11, 0),
+        owner2,
+        child2: childOf(owner2, 31, 0),
       };
       const first = new THREE.WebGLRenderTarget(1, 1);
       const second = new THREE.WebGLRenderTarget(1, 1);

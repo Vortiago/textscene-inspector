@@ -58,6 +58,12 @@ function ChildSquare() {
   );
 }
 
+/** Whether `object` and every ancestor are visible, as a render draws only those. */
+function isShown(object: THREE.Object3D): boolean {
+  for (let o: THREE.Object3D | null = object; o; o = o.parent) if (!o.visible) return false;
+  return true;
+}
+
 /** What the pass draws, per render call: the target bound, the meshes seen, and the parent's mask. */
 async function drawParent(rawProps: Record<string, string>) {
   const renderer = await ReactThreeTestRenderer.create(
@@ -90,7 +96,7 @@ async function drawParent(rawProps: Record<string, string>) {
     clear: () => {},
     render: () => {
       const seen = [parent, child]
-        .filter((mesh) => camera.layers.test(mesh.layers))
+        .filter((mesh) => camera.layers.test(mesh.layers) && isShown(mesh))
         .map((mesh) => mesh.name || 'parent');
       const target = bound as THREE.WebGLRenderTarget | null;
       draws.push({

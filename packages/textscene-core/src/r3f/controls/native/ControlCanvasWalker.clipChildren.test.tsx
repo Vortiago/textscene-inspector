@@ -40,6 +40,12 @@ function control(path: string, properties: Record<string, unknown>, children: So
   };
 }
 
+/** Whether `object` and every ancestor are visible, as a render draws only those. */
+function isShown(object: THREE.Object3D): boolean {
+  for (let o: THREE.Object3D | null = object; o; o = o.parent) if (!o.visible) return false;
+  return true;
+}
+
 /** Which of the parent's and child's quads the pass draws into which target. */
 async function drawnBy(clipChildren: number) {
   controlComponentRegistry.register({ typeName: 'TestRect', Component: QuadPainter });
@@ -68,7 +74,7 @@ async function drawnBy(clipChildren: number) {
     clear: () => {},
     render: () => {
       const seen = [parent!, child!]
-        .filter((mesh) => camera.layers.test(mesh.layers))
+        .filter((mesh) => camera.layers.test(mesh.layers) && isShown(mesh))
         .map((mesh) => (mesh === parent ? 'parent' : 'child'));
       draws.push({ target: bound, seen });
     },

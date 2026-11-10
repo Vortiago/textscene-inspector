@@ -5,10 +5,10 @@
  */
 
 import * as THREE from 'three';
-import { drawableLocalBox, isDrawable, type Drawable } from '../drawable';
+import { drawableLocalBox, type Drawable } from '../drawable';
 import { perObject } from '../../utils/perObject';
 import type { CanvasFrameTarget, KeyedScene } from './canvasGroupPass';
-import type { CanvasGroupWindow } from './groupWindow';
+import { windowIndexAt, type CanvasGroupWindow } from './groupWindow';
 
 /** A rectangle of frame texels in GL texel space: the corner at the bottom left, then the size. */
 export interface TexelRegion {
@@ -41,37 +41,21 @@ const view = new THREE.Matrix4();
  * group whose items fall outside the frame answers an empty region.
  */
 export function clipRegions(
-  { objects, keys, measured }: KeyedScene,
+  { keys, boxes }: KeyedScene,
   camera: THREE.Camera,
   frame: CanvasFrameTarget,
   groups: readonly { window: CanvasGroupWindow }[]
 ): TexelRegion[] {
   const bounds = groups.map(() => ({ minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }));
   view.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
-  for (let i = 0; i < objects.length; i++) {
-    const object = objects[i]!;
-    if (!measured[i] || !isDrawable(object) || !camera.layers.test(object.layers)) continue;
-    const at = groupAt(groups, keys[i]!);
-    if (at < 0) continue;
-    const box = worldBox(object);
+  for (let i = 0; i < boxes.length; i++) {
+    const box = boxes[i];
     if (!box) continue;
+    const at = windowIndexAt(groups, keys[i]!);
+    if (at < 0) continue;
     grow(bounds[at]!, box, frame);
   }
   return bounds.map((b) => regionOf(b, frame));
-}
-
-/** The index of the group whose window holds the key, its owner's slot included, or -1. */
-function groupAt(groups: readonly { window: CanvasGroupWindow }[], key: number): number {
-  let low = 0;
-  let high = groups.length - 1;
-  while (low <= high) {
-    const mid = (low + high) >> 1;
-    const { window } = groups[mid]!;
-    if (key < window.from) high = mid - 1;
-    else if (key >= window.to) low = mid + 1;
-    else return mid;
-  }
-  return -1;
 }
 
 interface PixelBounds {

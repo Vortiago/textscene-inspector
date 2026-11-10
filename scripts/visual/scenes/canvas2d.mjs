@@ -22,6 +22,9 @@ export const CANVAS_2D_SCENES = [
   // A soft mask: the radial alpha of the Sprite2D scales the child. Godot probes: (175,175) (193,27,27)
   // and (220,220) (203,22,22); the corner (125,125) is background.
   { name: 'clip-children-soft-mask', file: 'unit-clip-children-soft-mask.tscn', mode: '2d' },
+  // An owner with no commands has no group: the behind-parent blue draws first and the red shows over it.
+  // Godot probe: (175,175) is (185,7,61).
+  { name: 'clip-children-no-commands', file: 'unit-clip-children-no-commands.tscn', mode: '2d' },
   // The owner's ADD material does not reach the masked draw: (125,125) is (76,139,76), (175,175) (165,38,38).
   { name: 'clip-children-material', file: 'unit-clip-children-material.tscn', mode: '2d' },
   // A Button clips a ColorRect: (160,130) is (183,30,30) and (300,130) background.

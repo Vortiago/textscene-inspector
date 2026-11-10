@@ -257,7 +257,12 @@ function ControlItemGroup({ solveNode, solved, theme, measureText, snapToPixels 
   const litPainter = isCanvasLayerType(solveNode.node.type) ? (
     painter
   ) : (
-    <ClipChildrenScope mode={props.clipChildren} state={state} range={solveNode.paintRange}>
+    <ClipChildrenScope
+      mode={props.clipChildren}
+      state={state}
+      node={solveNode.node}
+      range={solveNode.paintRange}
+    >
       <LitCanvasItemPixels material={state.material} lightMask={state.lightMask} zFinal={state.zFinal}>
         {painter}
       </LitCanvasItemPixels>

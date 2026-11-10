@@ -11,13 +11,21 @@
 import * as THREE from 'three';
 import { canvasKeyOf, drawKeyedObjects } from '../canvasKeyWindow';
 import { isNodeIcon } from '../editorHelpers';
-import { drawableLocalBox, isDrawable } from '../drawable';
+import { isDrawable } from '../drawable';
 import { drawOffscreen } from '../offscreen';
 import { perObject } from '../../utils/perObject';
 import { beginStep, endStep } from '../frameProfile/frameProfile';
 import { clipOfCamera } from '../../nodes/viewport/subviewport/viewportLightPassHost';
 import type { CanvasClip } from '../lighting2d/lightPassHost';
-import { collects, isOwnKey, type CanvasGroupWindow } from './groupWindow';
+import {
+  collects,
+  drawOrderOf,
+  isOwnKey,
+  sortedByWindow,
+  windowIndexAt,
+  type CanvasGroupWindow,
+  type KeySpan,
+} from './groupWindow';
 import { fillBuffer, fillClipBuffer, withFrozenMatrices } from './groupBuffers';
 import { clipRegions, worldBox } from './groupRegion';
 
@@ -32,6 +40,11 @@ export interface CanvasGroupClip {
    * pass turns it on while the frame draws the owner and off at every other draw.
    */
   setMasking(isMasking: boolean): void;
+  /**
+   * The keys of the owner's `show_behind_parent` children. They draw first while the owner draws
+   * nothing, which leaves it without a group.
+   */
+  readonly behind: readonly KeySpan[];
 }
 
 /** What a mounted group hands the pass of its canvas. */
@@ -112,14 +125,13 @@ export function drawCanvasGroups(
     return;
   }
   scene.updateMatrixWorld();
-  const keyed = keyedScene(scene);
-  const nesting = nestingOf(groups, clipGroupsDrawingNothing(groups.entries, keyed, camera));
-  const drawing = fitGroups(
-    nesting,
-    drawnBoxes(keyed, camera, nesting.innermostFirst),
-    frameClipOf(camera, frame)
-  );
+  const keyed = keyedScene(scene, camera);
+  const nesting = nestingOf(groups, clipGroupsDrawingNothing(groups.entries, keyed));
+  const drawing = fitGroups(nesting, drawnBoxes(keyed, nesting.innermostFirst), frameClipOf(camera, frame));
   const { outermost } = nesting;
+  const inertOwners = nesting.inert.flatMap((group) =>
+    group.clip ? [{ window: group.window, behind: group.clip.behind }] : []
+  );
   for (const group of groups.entries) group.clip?.setMasking(false);
   const clipping = outermost
     .filter((group) => group.clip && group.buffer && drawing.has(group))
@@ -128,25 +140,47 @@ export function drawCanvasGroups(
   try {
     for (const group of outermost) {
       if (drawing.has(group) && !group.clip)
-        withFrozenMatrices(scene, () => fillBuffer(gl, keyed, scene, camera, group, frame));
+        withFrozenMatrices(scene, () => fillBuffer(gl, keyed, scene, camera, group, frame, inertOwners));
     }
   } finally {
     endStep(gl, 'Canvas groups');
   }
   // A CLIP_ONLY owner with no listed child is skipped (`renderer_canvas_render_rd.cpp:841-843`).
   const skippedOwners = outermost.filter((group) => group.clip?.mode === 'clipOnly' && !drawing.has(group));
-  const isFrameKey = (key: number) =>
-    !outermost.some((group) => collects(group.window, key)) &&
-    !skippedOwners.some((group) => isOwnKey(group.window, key));
+  const isFrameKey = frameKeyTest(outermost, skippedOwners);
   try {
     // The matrices are current from the walk above, so no span of the frame walks them again.
     withFrozenMatrices(scene, () =>
-      drawFrame({ gl, scene, camera, frame, keyed, draw }, clipping, isFrameKey)
+      drawFrame({ gl, scene, camera, frame, keyed, draw, inertOwners }, clipping, isFrameKey)
     );
   } finally {
     // A later draw of the scene, or a draw that threw, must not find an owner still masked.
     for (const group of clipping) group.clip!.setMasking(false);
   }
+}
+
+/**
+ * Whether the frame draws a key: not one a group collects, nor the slot of a CLIP_ONLY owner that
+ * is skipped. The windows of the outermost groups do not overlap, so a search finds the group of a key.
+ */
+function frameKeyTest(
+  outermost: readonly CanvasGroupEntry[],
+  skippedOwners: readonly CanvasGroupEntry[]
+): (key: number) => boolean {
+  const windows = sortedByWindow(outermost);
+  const skipped = new Set(skippedOwners);
+  return (key) => {
+    const at = windowIndexAt(windows, key);
+    if (at < 0) return true;
+    const group = windows[at]!;
+    return !collects(group.window, key) && !(skipped.has(group) && isOwnKey(group.window, key));
+  };
+}
+
+/** A clipping owner that draws nothing, with the keys of its behind-parent children. */
+export interface InertOwner {
+  readonly window: CanvasGroupWindow;
+  readonly behind: readonly KeySpan[];
 }
 
 /** What `drawFrame` draws through: the renderer, the scene, its keys and the frame's own draw. */
@@ -157,6 +191,7 @@ interface FrameDraw {
   frame: CanvasFrameTarget;
   keyed: KeyedScene;
   draw: () => void;
+  inertOwners: readonly InertOwner[];
 }
 
 /**
@@ -166,7 +201,7 @@ interface FrameDraw {
  * ordered by window.
  */
 function drawFrame(
-  { gl, scene, camera, frame, keyed, draw }: FrameDraw,
+  { gl, scene, camera, frame, keyed, draw, inertOwners }: FrameDraw,
   clipping: readonly CanvasGroupEntry[],
   isFrameKey: (key: number) => boolean
 ): void {
@@ -174,18 +209,19 @@ function drawFrame(
   let spanFrom = Number.NEGATIVE_INFINITY;
   let isFirstSpan = true;
   const drawSpan = (spanTo: number) => {
-    const inSpan = (key: number) => key >= spanFrom && key < spanTo && isFrameKey(key);
-    // Over the colour already drawn: the first span draws as the frame does, which may clear it.
-    const drawOver = isFirstSpan ? draw : () => drawOffscreen(gl, draw);
-    gl.setRenderTarget(frameTarget);
-    drawKeyedObjects(keyed.objects, keyed.keys, inSpan, drawOver);
-    isFirstSpan = false;
+    for (const step of drawOrderOf(isFrameKey, spanFrom, spanTo, inertOwners)) {
+      // Over the colour already drawn: the first draw is the frame's own, which may clear it.
+      const drawOver = isFirstSpan ? draw : () => drawOffscreen(gl, draw);
+      gl.setRenderTarget(frameTarget);
+      drawKeyedObjects(keyed, step, drawOver);
+      isFirstSpan = false;
+    }
   };
   const regions = clipping.length > 0 ? clipRegions(keyed, camera, frame, clipping) : [];
   clipping.forEach((group, i) => {
     drawSpan(group.window.from);
     spanFrom = group.window.from;
-    fillClipBuffer(gl, keyed, scene, camera, group, frame, regions[i]!);
+    fillClipBuffer(gl, keyed, scene, camera, group, frame, regions[i]!, inertOwners);
     group.clip!.setMasking(true);
   });
   drawSpan(Number.POSITIVE_INFINITY);
@@ -218,16 +254,13 @@ interface GroupNesting {
  */
 function clipGroupsDrawingNothing(
   entries: ReadonlySet<CanvasGroupEntry>,
-  { objects, keys, measured }: KeyedScene,
-  camera: THREE.Camera
+  { keys, boxes }: KeyedScene
 ): CanvasGroupEntry[] {
   const clipping = [...entries].filter((group) => group.clip);
   if (clipping.length === 0) return clipping;
   const drawsNothing = new Set(clipping);
-  for (let i = 0; i < objects.length && drawsNothing.size > 0; i++) {
-    const object = objects[i]!;
-    if (!measured[i] || !isDrawable(object) || !camera.layers.test(object.layers)) continue;
-    if (drawableLocalBox(object).isEmpty()) continue;
+  for (let i = 0; i < boxes.length && drawsNothing.size > 0; i++) {
+    if (!boxes[i]) continue;
     for (const group of clipping) if (isOwnKey(group.window, keys[i]!)) drawsNothing.delete(group);
   }
   return [...drawsNothing];
@@ -281,18 +314,49 @@ export interface KeyedScene {
   objects: THREE.Object3D[];
   keys: number[];
   measured: boolean[];
+  /** The world box of each mesh `camera` draws, null for any other object. */
+  boxes: (THREE.Box3 | null)[];
+  /** The index after the last descendant of each object: its subtree is `[i, ends[i])`. */
+  ends: number[];
+  /** The lowest and the highest key of each object's subtree. */
+  minKeys: number[];
+  maxKeys: number[];
+  /** The index of the first Group drawn at each key, which is the object of a canvas item. */
+  groupAt: Map<number, number>;
 }
 
-function keyedScene(scene: THREE.Object3D): KeyedScene {
-  const keyed: KeyedScene = { objects: [], keys: [], measured: [] };
+function keyedScene(scene: THREE.Object3D, camera: THREE.Camera): KeyedScene {
+  const keyed: KeyedScene = {
+    objects: [],
+    keys: [],
+    measured: [],
+    boxes: [],
+    ends: [],
+    minKeys: [],
+    maxKeys: [],
+    groupAt: new Map(),
+  };
   const visit = (object: THREE.Object3D, inherited: number, isMeasuredBranch: boolean): void => {
     const key = canvasKeyOf(object, inherited);
     const isMeasured =
       isMeasuredBranch && object.visible && !isNodeIcon(object) && !isCanvasGroupRect(object);
+    const index = keyed.objects.length;
     keyed.objects.push(object);
     keyed.keys.push(key);
     keyed.measured.push(isMeasured);
+    keyed.boxes.push(
+      isMeasured && isDrawable(object) && camera.layers.test(object.layers) ? worldBox(object) : null
+    );
+    keyed.ends.push(index + 1);
+    keyed.minKeys.push(key);
+    keyed.maxKeys.push(key);
+    if (object instanceof THREE.Group && !keyed.groupAt.has(key)) keyed.groupAt.set(key, index);
     for (const child of object.children) visit(child, key, isMeasured);
+    keyed.ends[index] = keyed.objects.length;
+    for (let i = index + 1; i < keyed.ends[index]!; i = keyed.ends[i]!) {
+      keyed.minKeys[index] = Math.min(keyed.minKeys[index]!, keyed.minKeys[i]!);
+      keyed.maxKeys[index] = Math.max(keyed.maxKeys[index]!, keyed.maxKeys[i]!);
+    }
   };
   visit(scene, 0, true);
   return keyed;
@@ -303,22 +367,15 @@ function keyedScene(scene: THREE.Object3D): KeyedScene {
  * key. A node icon sizes itself to the editor camera, so no bounds include it.
  */
 function drawnBoxes(
-  { objects, keys, measured }: KeyedScene,
-  camera: THREE.Camera,
+  { keys, boxes }: KeyedScene,
   groups: readonly CanvasGroupEntry[]
 ): Map<CanvasGroupEntry, THREE.Box3[]> {
   const drawn = new Map(groups.map((group) => [group, [] as THREE.Box3[]]));
-  for (let i = 0; i < objects.length; i++) {
-    const object = objects[i]!;
-    if (!measured[i] || !isDrawable(object) || !camera.layers.test(object.layers)) continue;
-    // A loop, not `.filter`: no array per object per frame. The first collecting group measures the box.
-    let box: THREE.Box3 | null | undefined;
-    for (const group of groups) {
-      if (!collects(group.window, keys[i]!)) continue;
-      box ??= worldBox(object);
-      if (!box) break;
-      drawn.get(group)!.push(box);
-    }
+  for (let i = 0; i < boxes.length; i++) {
+    const box = boxes[i];
+    if (!box) continue;
+    // A loop, not `.filter`: no array per object per frame.
+    for (const group of groups) if (collects(group.window, keys[i]!)) drawn.get(group)!.push(box);
   }
   return drawn;
 }
