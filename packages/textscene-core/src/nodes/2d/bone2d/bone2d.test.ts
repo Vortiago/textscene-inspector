@@ -58,8 +58,4 @@ describe('Bone2D gizmo keys', () => {
     expect(props.bone_angle).toBeCloseTo(Math.PI / 2, 12);
     expect(props.show_bone_gizmo).toBe(false);
   });
-
-  it('reads default_length as length, the legacy alias of skeleton_2d.cpp:48-49', () => {
-    expect(read({ default_length: '25' }).length).toBe(25);
-  });
 });

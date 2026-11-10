@@ -21,8 +21,7 @@ export function parseBone2D(heading: ParsedHeading, properties: Record<string, s
     ...base,
     rest: restOf(properties.rest, base.name),
     auto_calculate_length_and_angle: boolOr(properties.auto_calculate_length_and_angle, true),
-    // `default_length` is the alias `_set` maps onto `length` (`skeleton_2d.cpp:48-49`).
-    length: floatOr(properties.length ?? properties.default_length, DEFAULT_LENGTH),
+    length: floatOr(properties.length, DEFAULT_LENGTH),
     bone_angle: degToRad(floatOr(properties.bone_angle, 0)),
     show_bone_gizmo: boolOr(properties['editor_settings/show_bone_gizmo'], true),
   };
