@@ -351,12 +351,13 @@ export function OffscreenViewportPass({
 
   const canvasBackdropAndItems = canvasOverWorld ? (
     <>
+      {/* The backdrop sits outside the viewport's canvas scope, so it takes the canvas space here. */}
       <CanvasColorSpaceProvider value={canvasSpace}>
         <PendingSuspense>
           <CanvasOverWorld world={target.texture} size={viewSize} anchor={backdropAnchor} />
         </PendingSuspense>
-        <CanvasOverWorldScopeProvider>{canvasOverWorld}</CanvasOverWorldScopeProvider>
       </CanvasColorSpaceProvider>
+      <CanvasOverWorldScopeProvider>{canvasOverWorld}</CanvasOverWorldScopeProvider>
     </>
   ) : null;
   const canvasPortal =
