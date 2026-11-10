@@ -12,7 +12,6 @@ import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { BUTTON_ICON_MODULATE } from '../button/nativeSolver';
 import { LABEL_DEFAULT_FONT_COLOR } from '../label/nativeSolver';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
@@ -198,30 +197,32 @@ export function GraphEditToolbarChrome({
               inset={lineEditInsetX}
               rtl={rtl}
             />
-            {spinUpTexture && (
-              <CanvasItemGroup position={[upPos.x, -upPos.y, 0]} renderOrder={items.content.key}>
-                <ControlQuad
-                  width={SPIN_BOX_ARROW_ICON_SIZE.x}
-                  height={SPIN_BOX_ARROW_ICON_SIZE.y}
-                  color={arrowColor}
-                  opacity={tint.opacity}
-                  map={spinUpTexture}
-                  renderOrder={items.content.key}
-                />
-              </CanvasItemGroup>
-            )}
-            {spinDownTexture && (
-              <CanvasItemGroup position={[downPos.x, -downPos.y, 0]} renderOrder={items.content.key}>
-                <ControlQuad
-                  width={SPIN_BOX_ARROW_ICON_SIZE.x}
-                  height={SPIN_BOX_ARROW_ICON_SIZE.y}
-                  color={arrowColor}
-                  opacity={tint.opacity}
-                  map={spinDownTexture}
-                  renderOrder={items.content.key}
-                />
-              </CanvasItemGroup>
-            )}
+            <PositionedIcon
+              rect={{
+                x: upPos.x,
+                y: upPos.y,
+                w: SPIN_BOX_ARROW_ICON_SIZE.x,
+                h: SPIN_BOX_ARROW_ICON_SIZE.y,
+              }}
+              texture={spinUpTexture}
+              color={arrowColor}
+              opacity={tint.opacity}
+              renderOrder={items.content.key}
+              canvasKey={items.content.key}
+            />
+            <PositionedIcon
+              rect={{
+                x: downPos.x,
+                y: downPos.y,
+                w: SPIN_BOX_ARROW_ICON_SIZE.x,
+                h: SPIN_BOX_ARROW_ICON_SIZE.y,
+              }}
+              texture={spinDownTexture}
+              color={arrowColor}
+              opacity={tint.opacity}
+              renderOrder={items.content.key}
+              canvasKey={items.content.key}
+            />
           </CanvasItemGroup>
         );
       })}
