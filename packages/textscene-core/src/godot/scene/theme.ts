@@ -33,6 +33,16 @@ export const CONTROL_FONT_PRESSED_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 export const DEFAULT_FONT_SIZE = 16;
 
 /**
+ * What the default theme adds to the default font size for each Label variation (`default_theme.cpp:394-401`).
+ * The sum is the unscaled `DEFAULT_FONT_SIZE` plus the step, so it ignores the theme scale.
+ */
+export const DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS: Readonly<Record<string, number>> = {
+  HeaderSmall: 4,
+  HeaderMedium: 8,
+  HeaderLarge: 12,
+};
+
+/**
  * The default flat-stylebox fill per draw state, the one transcription the canvas
  * renderer reads. Translucent, not pre-composited: Godot
  * blends them over the 2D clear colour, so `normal` over the default

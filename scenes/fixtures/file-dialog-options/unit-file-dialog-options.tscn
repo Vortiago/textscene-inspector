@@ -1,0 +1,26 @@
+; One variable: a FileDialog in Open File mode over an empty res:// root with a CheckBox option and a value option. It differs from file-dialog-open-empty only in the option lines, so the options row and the option grid show.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Dialog" type="FileDialog" parent="."]
+position = Vector2i(100, 100)
+visible = true
+file_mode = 0
+filters = PackedStringArray("*.png ; PNG Image")
+option_count = 2
+option_0/name = "Premultiply"
+option_1/name = "Compress"
+option_1/values = PackedStringArray("Lossless", "Lossy", "Basis")
+option_1/default = 1

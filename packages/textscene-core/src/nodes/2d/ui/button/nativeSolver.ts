@@ -16,11 +16,11 @@ import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat'
 import {
   fitIconSize,
   pickButtonStyleBox,
-  resolveButtonDrawState,
+  resolveToggleDrawState,
   shapeWrappedButtonLabel,
   labelWrapWidthPx,
   labelMinimumTextSize,
-  type ButtonDrawState,
+  type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
@@ -37,6 +37,7 @@ import {
   CONTROL_FONT_COLOR,
   CONTROL_FONT_DISABLED_COLOR,
   CONTROL_FONT_FOCUS_COLOR,
+  CONTROL_FONT_PRESSED_COLOR,
 } from '../../../../godot/scene/theme';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 
@@ -51,9 +52,10 @@ const BUTTON_THEME_FONT_KEY = 'font';
  * One `font_size` key for every draw state (`default_theme.cpp:153`), but a colour key per
  * state: `font_color` and `font_disabled_color` (`:156,161`).
  */
-export const BUTTON_THEME_KEYS: Record<ButtonDrawState, TextThemeKeys> = {
+export const BUTTON_THEME_KEYS: Record<ToggleDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
   disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
+  pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
 };
 
 /** Button's own `font_color` default (`default_theme.cpp:156`). */
@@ -62,10 +64,18 @@ export const BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 /** Button's `font_disabled_color` default (`default_theme.cpp:161`). */
 const BUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
+/** Button's font colour default for each draw state (`default_theme.cpp:156-161`). */
+export const BUTTON_DEFAULT_FONT_COLORS: Readonly<Record<ToggleDrawState, Rgba>> = {
+  normal: BUTTON_DEFAULT_FONT_COLOR,
+  pressed: CONTROL_FONT_PRESSED_COLOR,
+  disabled: BUTTON_DEFAULT_DISABLED_FONT_COLOR,
+};
+
 /** `icon_normal_color` / `icon_disabled_color` theme_override_colors keys (`default_theme.cpp:164,169`). */
-const BUTTON_ICON_COLOR_KEYS: Record<ButtonDrawState, string> = {
+const BUTTON_ICON_COLOR_KEYS: Record<ToggleDrawState, string> = {
   normal: 'icon_normal_color',
   disabled: 'icon_disabled_color',
+  pressed: 'icon_pressed_color',
 };
 
 /**
@@ -73,8 +83,9 @@ const BUTTON_ICON_COLOR_KEYS: Record<ButtonDrawState, string> = {
  * (`default_theme.cpp:164`) and `icon_disabled_color = Color(1, 1, 1, 0.4)` (`:169`). No other
  * builtin widget sets either key.
  */
-const BUTTON_ICON_MODULATE: Record<ButtonDrawState, Rgba> = {
+const BUTTON_ICON_MODULATE: Record<ToggleDrawState, Rgba> = {
   normal: { r: 1, g: 1, b: 1, a: 1 },
+  pressed: { r: 1, g: 1, b: 1, a: 1 },
   disabled: { r: 1, g: 1, b: 1, a: 0.4 },
 };
 
@@ -85,12 +96,12 @@ const BUTTON_FOCUS_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font
 const BUTTON_ICON_FOCUS_COLOR_KEY = 'icon_focus_color';
 
 /** Whether `props` draws with the focus colours: a focused Button in the normal draw mode (`button.cpp:282-285`). */
-export function isButtonFocusStyled(props: ButtonProperties, state: ButtonDrawState): boolean {
+export function isButtonFocusStyled(props: ButtonProperties, state: ToggleDrawState): boolean {
   return state === 'normal' && props.hasFocus === true;
 }
 
 /** Resolves this Button's icon modulate colour for `state`: `n.colors` (a local override or the ancestor Theme chain) wins, else the default-theme literal. */
-export function buttonIconColor(colors: SolveNode['colors'], state: ButtonDrawState): Rgba {
+export function buttonIconColor(colors: SolveNode['colors'], state: ToggleDrawState): Rgba {
   return colors[BUTTON_ICON_COLOR_KEYS[state]] ?? BUTTON_ICON_MODULATE[state];
 }
 
@@ -103,19 +114,15 @@ export function buttonFocusIconColor(colors: SolveNode['colors']): Rgba {
 export function buttonTextTheme(
   n: ShareNode,
   props: ButtonProperties,
-  state: ButtonDrawState,
+  state: ToggleDrawState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const isFocusStyled = isButtonFocusStyled(props, state);
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color: isFocusStyled ? CONTROL_FONT_FOCUS_COLOR : buttonDefaultFontColor(state),
+    color: isFocusStyled ? CONTROL_FONT_FOCUS_COLOR : BUTTON_DEFAULT_FONT_COLORS[state],
   };
   return resolveTextTheme(n, props, isFocusStyled ? BUTTON_FOCUS_KEYS : BUTTON_THEME_KEYS[state], defaults);
-}
-
-function buttonDefaultFontColor(state: ButtonDrawState): Rgba {
-  return state === 'disabled' ? BUTTON_DEFAULT_DISABLED_FONT_COLOR : BUTTON_DEFAULT_FONT_COLOR;
 }
 
 /**
@@ -132,7 +139,7 @@ export function buttonLabelShape(
   const props = n.node.properties as ButtonProperties;
   const text = props.text ?? '';
   if (text.length === 0) return null;
-  const state = resolveButtonDrawState(props.disabled);
+  const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
   const { fontSizePx } = buttonTextTheme(n, props, state, { theme });
   // Not `ctx.measureText`: its `Vector2` drops the layout the painter needs, and its readiness
   // gate belongs to the solver. The painter shapes unconditionally.
@@ -172,7 +179,7 @@ function buttonIconReservationPx(
  */
 export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ButtonProperties;
-  const state = resolveButtonDrawState(props.disabled);
+  const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
   const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.button, state, n.rtl);
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 

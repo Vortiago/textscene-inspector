@@ -41,6 +41,9 @@ import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 export type ButtonDrawState = 'normal' | 'disabled';
 
+/** A Button's draw mode: `DRAW_PRESSED` is a toggle that is on (`base_button.cpp:352`), which only a Button has. */
+export type ToggleDrawState = ButtonDrawState | 'pressed';
+
 /**
  * `Button::get_draw_mode()` with no pointer or keyboard input: hover, pressed and
  * focus states never occur, so only an authored `disabled` leaves `normal`.
@@ -49,16 +52,25 @@ export function resolveButtonDrawState(disabled: boolean | undefined): ButtonDra
   return disabled ? 'disabled' : 'normal';
 }
 
+/** `BaseButton::get_draw_mode()` with no pointer: a disabled button wins over a toggle that is on (`base_button.cpp:326-328`). */
+export function resolveToggleDrawState(
+  disabled: boolean | undefined,
+  isPressed: boolean | undefined
+): ToggleDrawState {
+  if (disabled) return 'disabled';
+  return isPressed ? 'pressed' : 'normal';
+}
+
 /**
  * A `theme_override_styles/<state>` wins over the default. Under `rtl`,
  * `<state>_mirrored` comes first (`button.cpp:100-148`). The default theme's only
  * mirrored boxes, OptionButton's, equal their plain siblings
  * (`default_theme.cpp:215-233`), so `defaults` has no mirrored twin.
  */
-export function pickButtonStyleBox(
+export function pickButtonStyleBox<State extends ToggleDrawState>(
   overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  defaults: Readonly<Record<ButtonDrawState, StyleBoxFlatData>>,
-  state: ButtonDrawState,
+  defaults: Readonly<Record<State, StyleBoxFlatData>>,
+  state: State,
   rtl = false
 ): StyleBoxFlatData {
   if (rtl) {

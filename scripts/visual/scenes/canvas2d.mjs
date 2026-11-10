@@ -1197,6 +1197,14 @@ export const CANVAS_2D_SCENES = [
   { name: 'confirmation-dialog-embedded', file: 'unit-confirmation-dialog-embedded.tscn', mode: '2d' },
   // A Theme on the dialog restyles its Button and Label: a red normal box, yellow focus text, green message. Max 7, mean 0.33.
   { name: 'accept-dialog-theme', file: 'unit-accept-dialog-theme.tscn', mode: '2d' },
+  // A visible FileDialog in Open File mode with an empty file list: toolbar, side lists, filter and a disabled OK. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-open-empty', file: 'file-dialog-open-empty/unit-file-dialog-open-empty.tscn', mode: '2d' },
+  // Save File mode adds the create-folder button, the title "Save a File" and an enabled Save. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-save-empty', file: 'file-dialog-save-empty/unit-file-dialog-save-empty.tscn', mode: '2d' },
+  // A CheckBox option and a value option draw the options row and the option grid. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-options', file: 'file-dialog-options/unit-file-dialog-options.tscn', mode: '2d' },
+  // current_path puts the dialog in a sub folder and a file name in the File field, its name before the dot selected. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-current-path', file: 'file-dialog-current-path/unit-file-dialog-current-path.tscn', mode: '2d' },
 
   // MeshInstance2D draws a mesh through the canvas. Godot 4.6.3 `--mode 2d` probes: the textured QuadMesh
   // shows its texture upside down, (75,75) blue and (75,125) red, and the PlaneMesh at (100,300) draws
