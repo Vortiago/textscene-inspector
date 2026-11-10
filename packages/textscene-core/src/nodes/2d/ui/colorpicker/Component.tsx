@@ -48,10 +48,10 @@ import { sliderTrackRect, sliderGrabberAreaRect, sliderGrabberRect } from '../sh
 import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { isColorOverbright } from '../shared/colorOverbright';
-import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { TextDirection } from '../../../../godot/text/textServerEnums';
 import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
 import { pickerChildTheme } from './pickerChildTheme';
+import { IconButton } from './IconButton';
 import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
 import type { ButtonLabelBox } from '../../../../r3f/controls/native/buttonBase';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
@@ -244,39 +244,6 @@ function LabelledText({
   );
 }
 
-interface CenteredIconProps {
-  rect: Rect2;
-  size: number;
-  texture: THREE.Texture | null;
-  tint: NativeControlComponentProps['tint'];
-  theme: NativeControlComponentProps['theme'];
-  rtl: boolean;
-  renderOrder: number;
-}
-
-/** The icon of an icon-only Button with `HORIZONTAL_ALIGNMENT_CENTER` (`color_picker.cpp:2085,2101,2153`), at the whole pixel `Button` floors to. */
-function CenteredIcon({ rect, size, texture, tint, theme, rtl, renderOrder }: CenteredIconProps) {
-  if (!texture) return null;
-  const local = iconOnlyButtonIconRect(
-    { x: rect.w, y: rect.h },
-    theme.widgets.button.normal.contentMargin,
-    { x: size, y: size },
-    rtl,
-    HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
-  );
-  if (!local) return null;
-  const iconRect = { ...local, x: rect.x + local.x, y: rect.y + local.y };
-  return (
-    <PositionedIcon
-      rect={iconRect}
-      texture={texture}
-      color={tint.color}
-      opacity={tint.opacity}
-      renderOrder={renderOrder}
-    />
-  );
-}
-
 /** A Button icon's colour and opacity: the Theme's icon modulate folded onto the item's tint (`button.cpp:321-329`). */
 function iconModulate(
   toItemLinear: ReturnType<typeof useItemLinearColorOf>,
@@ -445,7 +412,6 @@ export function ColorPicker({
     : null;
   // `btn_shape`, `btn_mode` and `menu_btn` use `FlatMenuButton`, whose boxes are `StyleBoxEmpty`
   // (`default_theme.cpp:360,372-375`). Only `btn_pick`, a plain `Button` (`default_theme.cpp:138-141`), draws one.
-  const pickButtonBox = theme.widgets.button.normal;
   const pickIconTexture = useNodeIcon(solveNode.icons.screen_picker, COLOR_PICKER_PIPETTE_ICON);
   // `shape_rect` is correct only at `SHAPE_HSV_RECTANGLE`. No other shape is drawn (`comparison.md`).
   const isHsvRectangle = (props.pickerShape ?? SHAPE_HSV_RECTANGLE) === SHAPE_HSV_RECTANGLE;
@@ -504,7 +470,8 @@ export function ColorPicker({
         rows.mode,
         theme,
         solveNode.rtl,
-        COLOR_MODE_NAMES.slice(0, MODE_BUTTON_COUNT).map((name) => measure(name).x)
+        COLOR_MODE_NAMES.slice(0, MODE_BUTTON_COUNT).map((name) => measure(name).x),
+        props.colorMode ?? MODE_RGB
       )
     : null;
 
@@ -652,30 +619,24 @@ export function ColorPicker({
       {/* Sample row */}
       {rows.sample && sampleCols && sampleQuadRect && (
         <>
-          <CanvasItemGroup position={[sampleCols.pick.x, -sampleCols.pick.y, 0]}>
-            <StyleBoxQuad
-              styleBox={pickButtonBox}
-              rect={{ x: 0, y: 0, w: sampleCols.pick.w, h: sampleCols.pick.h }}
-              color={tint.own}
-              renderOrder={renderOrder}
-            />
-          </CanvasItemGroup>
-          <CenteredIcon
+          <IconButton
             rect={sampleCols.pick}
+            box={theme.widgets.button.normal}
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
             texture={pickIconTexture}
-            tint={iconTint}
-            theme={theme}
+            tint={tint}
+            iconTint={iconTint}
             rtl={solveNode.rtl}
             renderOrder={renderOrder}
           />
           {sampleCols.shape && (
-            <CenteredIcon
+            <IconButton
               rect={sampleCols.shape}
+              box={theme.widgets.flatMenuButton.normal}
               size={COLOR_PICKER_BUTTON_ICON_SIZE}
               texture={shapeIconTexture}
-              tint={iconTint}
-              theme={theme}
+              tint={tint}
+              iconTint={iconTint}
               rtl={solveNode.rtl}
               renderOrder={renderOrder}
             />
@@ -792,12 +753,13 @@ export function ColorPicker({
               modeButtonLabel(r, theme, colorMode === i, buttonText(COLOR_MODE_NAMES[i]!))
             )
           )}
-          <CenteredIcon
+          <IconButton
             rect={modeCols.dropdown}
+            box={theme.widgets.flatMenuButton.normal}
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
             texture={menuIconTexture}
-            tint={iconTint}
-            theme={theme}
+            tint={tint}
+            iconTint={iconTint}
             rtl={solveNode.rtl}
             renderOrder={renderOrder}
           />
@@ -1085,12 +1047,13 @@ export function ColorPicker({
               </CanvasItemGroup>
             );
           })}
-          <CenteredIcon
+          <IconButton
             rect={swatchesCols.menuButton}
+            box={theme.widgets.flatMenuButton.normal}
             size={COLOR_PICKER_BUTTON_ICON_SIZE}
             texture={menuIconTexture}
-            tint={iconTint}
-            theme={theme}
+            tint={tint}
+            iconTint={iconTint}
             rtl={solveNode.rtl}
             renderOrder={renderOrder}
           />

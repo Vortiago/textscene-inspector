@@ -3,6 +3,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { defaultPickerTheme } from './pickerChildTheme';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
   invertRgb,
@@ -33,7 +34,7 @@ import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { measureText as measureTextWithFont } from '../../../../r3f/controls/native/text/measurer';
 
-const THEME = nativeTheme(1);
+const THEME = defaultPickerTheme(nativeTheme(1));
 const CTX: SolveContext = { theme: THEME, measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
 
 function node(properties: Record<string, unknown>): SolveNode {
@@ -262,10 +263,17 @@ describe('hexRowColumns', () => {
 });
 
 const NO_LABEL_WIDTHS = [0, 0, 0];
+const MODE_RGB_PRESSED = 0;
 
 describe('modeRowButtonRects', () => {
   it('splits 3 equal-width buttons + a fixed-width dropdown: color_picker.cpp:2129-2154', () => {
-    const cols = modeRowButtonRects({ x: 0, y: 0, w: 400, h: 20 }, THEME, false, NO_LABEL_WIDTHS);
+    const cols = modeRowButtonRects(
+      { x: 0, y: 0, w: 400, h: 20 },
+      THEME,
+      false,
+      NO_LABEL_WIDTHS,
+      MODE_RGB_PRESSED
+    );
     expect(cols.buttons).toEqual([
       { x: 0, y: 0, w: 120, h: 20 },
       { x: 124, y: 0, w: 120, h: 20 },
@@ -275,9 +283,92 @@ describe('modeRowButtonRects', () => {
   });
 });
 
+const WIDE_PRESSED_THEME = {
+  ...THEME,
+  modeButton: {
+    ...THEME.modeButton,
+    pressed: { ...THEME.modeButton.pressed, contentMargin: { left: 30, top: 10, right: 30, bottom: 10 } },
+  },
+};
+
+describe('the pressed mode button with wider margins than the others', () => {
+  it('reserves its own margins for the pressed button (button.cpp:525)', () => {
+    const labels = [20, 20, 20];
+    const rgb = modeRowButtonRects({ x: 0, y: 0, w: 120, h: 20 }, WIDE_PRESSED_THEME, false, labels, 0);
+    const hsv = modeRowButtonRects({ x: 0, y: 0, w: 120, h: 20 }, WIDE_PRESSED_THEME, false, labels, 1);
+    expect(rgb.buttons[0]!.w).toBeGreaterThan(hsv.buttons[0]!.w);
+    expect(hsv.buttons[1]!.w).toBeGreaterThan(rgb.buttons[1]!.w);
+  });
+
+  it('makes the mode row as tall as the pressed button: text plus its margins', () => {
+    const rows = (colorMode: number) =>
+      colorPickerRows(
+        400,
+        WIDE_PRESSED_THEME,
+        { ...ALL_ROWS_HIDDEN, colorModesVisible: true, colorMode },
+        measure
+      );
+    expect(rows(0).mode!.h).toBe(20 + 20);
+  });
+});
+
+const WIDE_FLAT_THEME = {
+  ...THEME,
+  widgets: {
+    ...THEME.widgets,
+    flatMenuButton: {
+      ...THEME.widgets.flatMenuButton,
+      normal: {
+        ...THEME.widgets.flatMenuButton.normal,
+        contentMargin: { left: 14, top: 10, right: 14, bottom: 10 },
+      },
+    },
+  },
+};
+
+describe('the FlatMenuButton box of the Theme chain', () => {
+  it('widens btn_shape to the icon plus its margins when that exceeds the 28 minimum (color_picker.cpp:122-124)', () => {
+    const cols = sampleRowColumns({ x: 0, y: 0, w: 400, h: 36 }, WIDE_FLAT_THEME, 0);
+    expect(cols.shape!.w).toBe(16 + 28);
+    expect(cols.pick.w).toBe(28);
+  });
+
+  it('widens the btn_mode dropdown the same way', () => {
+    const cols = modeRowButtonRects(
+      { x: 0, y: 0, w: 400, h: 36 },
+      WIDE_FLAT_THEME,
+      false,
+      NO_LABEL_WIDTHS,
+      0
+    );
+    expect(cols.dropdown.w).toBe(44);
+  });
+
+  it('makes the sample row as tall as btn_shape, unless SHAPE_NONE hides it', () => {
+    const sampleHeight = (pickerShape: number) =>
+      colorPickerRows(400, WIDE_FLAT_THEME, { ...ALL_ROWS_HIDDEN, samplerVisible: true, pickerShape }, null)
+        .sample!.h;
+    expect(sampleHeight(0)).toBe(16 + 20);
+    expect(sampleHeight(4)).toBe(16 + 8);
+  });
+
+  it('stretches the first swatches row to menu_btn and gives the rest to Recent Colors', () => {
+    const rects = swatchesRowRects({ x: 0, y: 0, w: 300, h: 60 }, WIDE_FLAT_THEME);
+    expect(rects.menuButton.h).toBe(36);
+    expect(rects.swatchesButton.h).toBe(36);
+    expect(rects.recentColorsButton).toMatchObject({ y: 40, h: 20 });
+  });
+});
+
 describe('modeRowButtonRects with a label wider than its share', () => {
   it('keeps that button at its minimum and shares the rest (box_container.cpp:100-130)', () => {
-    const cols = modeRowButtonRects({ x: 0, y: 0, w: 300, h: 20 }, THEME, false, [120, 10, 10]);
+    const cols = modeRowButtonRects(
+      { x: 0, y: 0, w: 300, h: 20 },
+      THEME,
+      false,
+      [120, 10, 10],
+      MODE_RGB_PRESSED
+    );
     expect(cols.buttons[0]!.w).toBeGreaterThanOrEqual(120);
     expect(cols.buttons[1]!.w).toBeLessThan(cols.buttons[0]!.w);
     expect(cols.dropdown.x + cols.dropdown.w).toBe(300);
@@ -286,15 +377,33 @@ describe('modeRowButtonRects with a label wider than its share', () => {
 
 describe('modeRowButtonRects with a fractional label width', () => {
   it('reserves the shaped, whole-pixel width of the text (text_server_adv.cpp:7524-7537)', () => {
-    const fractional = modeRowButtonRects({ x: 0, y: 0, w: 300, h: 20 }, THEME, false, [120.2, 10, 10]);
-    const whole = modeRowButtonRects({ x: 0, y: 0, w: 300, h: 20 }, THEME, false, [121, 10, 10]);
+    const fractional = modeRowButtonRects(
+      { x: 0, y: 0, w: 300, h: 20 },
+      THEME,
+      false,
+      [120.2, 10, 10],
+      MODE_RGB_PRESSED
+    );
+    const whole = modeRowButtonRects(
+      { x: 0, y: 0, w: 300, h: 20 },
+      THEME,
+      false,
+      [121, 10, 10],
+      MODE_RGB_PRESSED
+    );
     expect(fractional.buttons).toEqual(whole.buttons);
   });
 });
 
 describe('modeRowButtonRects at a fractional share', () => {
   it('gives every button whole pixels and ends flush with the row: box_container.cpp:100-130', () => {
-    const cols = modeRowButtonRects({ x: 0, y: 0, w: 401, h: 20 }, THEME, false, NO_LABEL_WIDTHS);
+    const cols = modeRowButtonRects(
+      { x: 0, y: 0, w: 401, h: 20 },
+      THEME,
+      false,
+      NO_LABEL_WIDTHS,
+      MODE_RGB_PRESSED
+    );
     const rects = [...cols.buttons, cols.dropdown];
     for (const r of rects) {
       expect(Number.isInteger(r.x)).toBe(true);
@@ -306,11 +415,11 @@ describe('modeRowButtonRects at a fractional share', () => {
 
 describe('swatchesRowRects', () => {
   it('splits palette_box (Swatches + menu_btn) then btn_recent_preset: color_picker.cpp:2239-2287', () => {
-    const cols = swatchesRowRects({ x: 0, y: 0, w: 400, h: 44 }, THEME);
-    // menu_btn's own natural width: icon(16) + button.normal margin(8) = 24, not the 16px icon alone.
-    expect(cols.swatchesButton).toEqual({ x: 0, y: 0, w: 372, h: 20 }); // 400 - sep(4) - menuBtn(24)
-    expect(cols.menuButton).toEqual({ x: 376, y: 0, w: 24, h: 20 });
-    expect(cols.recentColorsButton).toEqual({ x: 0, y: 24, w: 400, h: 20 }); // 20 + sep(4)
+    const cols = swatchesRowRects({ x: 0, y: 0, w: 400, h: 52 }, THEME);
+    // menu_btn's own natural size: icon(16) + button.normal margin(8) = 24, not the 16px icon alone.
+    expect(cols.swatchesButton).toEqual({ x: 0, y: 0, w: 372, h: 24 }); // 400 - sep(4) - menuBtn(24)
+    expect(cols.menuButton).toEqual({ x: 376, y: 0, w: 24, h: 24 });
+    expect(cols.recentColorsButton).toEqual({ x: 0, y: 28, w: 400, h: 24 }); // 24 + sep(4)
   });
 });
 
@@ -477,7 +586,13 @@ describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-22
   it('modeRowButtonRects puts btn_mode first and RGB last', () => {
     // Reverse walk of [RGB, HSV, Linear, btn_mode]: dropdown(28) at 0, sep(4),
     // Linear(120) at 32, sep, HSV at 156, sep, RGB at 280, ending at 400.
-    const cols = modeRowButtonRects({ x: 0, y: 0, w: 400, h: 20 }, THEME, true, NO_LABEL_WIDTHS);
+    const cols = modeRowButtonRects(
+      { x: 0, y: 0, w: 400, h: 20 },
+      THEME,
+      true,
+      NO_LABEL_WIDTHS,
+      MODE_RGB_PRESSED
+    );
     expect(cols.dropdown).toEqual({ x: 0, y: 0, w: 28, h: 20 });
     expect(cols.buttons).toEqual([
       { x: 280, y: 0, w: 120, h: 20 },
@@ -490,10 +605,10 @@ describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-22
     // palette_box reverse walk: menu_btn(24) at 0, sep(4), btn_preset(372) at
     // 28. `btn_recent_preset` spans the whole row, so its own mirror is the
     // identity.
-    const cols = swatchesRowRects({ x: 0, y: 0, w: 400, h: 44 }, THEME, true);
-    expect(cols.menuButton).toEqual({ x: 0, y: 0, w: 24, h: 20 });
-    expect(cols.swatchesButton).toEqual({ x: 28, y: 0, w: 372, h: 20 });
-    expect(cols.recentColorsButton).toEqual({ x: 0, y: 24, w: 400, h: 20 });
+    const cols = swatchesRowRects({ x: 0, y: 0, w: 400, h: 52 }, THEME, true);
+    expect(cols.menuButton).toEqual({ x: 0, y: 0, w: 24, h: 24 });
+    expect(cols.swatchesButton).toEqual({ x: 28, y: 0, w: 372, h: 24 });
+    expect(cols.recentColorsButton).toEqual({ x: 0, y: 28, w: 400, h: 24 });
   });
 
   it("sliderGridRowRects starts each row at the grid's right edge and walks left", () => {

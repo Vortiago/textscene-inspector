@@ -349,6 +349,29 @@ describe('<ColorPicker> (isolated painter contract)', () => {
     expect(await halfIcons([])).toHaveLength(0);
   });
 
+  it('draws the FlatMenuButton normal box of the Theme chain behind the menu button', async () => {
+    const box = {
+      id: 'box',
+      type: 'StyleBoxFlat',
+      data: { bg_color: 'Color(1, 0, 0, 1)', content_margin_left: '6.0', content_margin_right: '6.0' },
+    };
+    const themed: ThemeResource = {
+      defaultFont: null,
+      defaultFontSize: undefined,
+      fonts: {},
+      fontSizes: {},
+      typeVariations: {},
+      properties: {},
+      colors: {},
+      styles: { FlatMenuButton: { normal: 'SubResource("box")' } },
+      resources: { externalResources: [], internalResources: [box] },
+    };
+    const meshes = async (themeChain: ThemeResource[]) =>
+      (await renderPicker({ ...ONLY_SWATCHES }, { w: 400, h: 100 }, themeChain)).scene.findAllByType('Mesh')
+        .length;
+    expect(await meshes([themed])).toBe((await meshes([])) + 1);
+  });
+
   it('swatches row draws its two button labels: presets_visible default true', async () => {
     const hidden = await meshCount({
       pickerShape: 4,

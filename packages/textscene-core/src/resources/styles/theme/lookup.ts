@@ -4,6 +4,7 @@
  */
 
 import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
+import { DEFAULT_THEME_TYPE_VARIATIONS } from '../../../godot/scene/theme';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { withDefaultFonts, type DefaultFonts } from '../../fonts/font/defaultFont';
 import type { ProjectFonts } from '../../fonts/font/projectFonts';
@@ -56,7 +57,9 @@ function buildThemeTypeChain(
     const owner = themeSearchOrder(ancestorThemes, projectTheme).find((t) =>
       Object.hasOwn(t.typeVariations, typeVariation)
     );
-    if (owner) {
+    // No scene or project theme registers it: the default theme may (`theme_owner.cpp:200-208`).
+    const bases = owner ? owner.typeVariations : DEFAULT_THEME_TYPE_VARIATIONS;
+    if (owner || Object.hasOwn(DEFAULT_THEME_TYPE_VARIATIONS, typeVariation)) {
       // Godot walks this unguarded. A previewer reads files it did not write, so
       // a `MyPanel/base_type = &"MyPanel"` cycle must stop the walk.
       const seen = new Set<string>();
@@ -64,9 +67,7 @@ function buildThemeTypeChain(
       while (current !== undefined && current !== '' && !seen.has(current)) {
         seen.add(current);
         chain.push(current);
-        const base: string | undefined = Object.hasOwn(owner.typeVariations, current)
-          ? owner.typeVariations[current]
-          : undefined;
+        const base: string | undefined = Object.hasOwn(bases, current) ? bases[current] : undefined;
         current = base;
         if (current === nativeType) break;
       }

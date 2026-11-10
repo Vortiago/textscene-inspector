@@ -121,9 +121,31 @@ describe('pickerChildTheme', () => {
       expect(child.theme.widgets.lineEdit.readOnly.contentMargin.left).toBe(10);
     });
 
+    it('gives the shape, mode and menu buttons the normal and disabled styleboxes of FlatMenuButton', () => {
+      const child = pickerChildTheme(
+        themed({ FlatMenuButton: { normal: 'SubResource("box")', disabled: 'SubResource("box")' } }),
+        THEME
+      );
+      expect(child.theme.widgets.flatMenuButton.normal.contentMargin.left).toBe(10);
+      expect(child.theme.widgets.flatMenuButton.disabled.contentMargin.top).toBe(9);
+      expect(child.theme.widgets.button.normal).toBe(THEME.widgets.button.normal);
+    });
+
+    it('gives the mode buttons the tab_unselected and tab_selected styleboxes of TabContainer', () => {
+      const child = pickerChildTheme(
+        themed({
+          TabContainer: { tab_unselected: 'SubResource("box")', tab_selected: 'SubResource("box")' },
+        }),
+        THEME
+      );
+      expect(child.theme.modeButton.normal.contentMargin.left).toBe(10);
+      expect(child.theme.modeButton.pressed.contentMargin.bottom).toBe(9);
+    });
+
     it('keeps the default styleboxes without an override', () => {
       const child = pickerChildTheme(themed({}), THEME);
       expect(child.theme.widgets.button.normal).toBe(THEME.widgets.button.normal);
+      expect(child.theme.widgets.flatMenuButton.normal).toBe(THEME.widgets.flatMenuButton.normal);
     });
   });
 });

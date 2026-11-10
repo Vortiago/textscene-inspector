@@ -1081,6 +1081,10 @@ export const CANVAS_2D_SCENES = [
   { name: 'color-picker-hdr-hex', file: 'unit-color-picker-hdr-hex.tscn', mode: '2d' },
   // The one variable is an ancestor Theme that sets the font colours of Label, Button and LineEdit.
   { name: 'color-picker-theme', file: 'unit-color-picker-theme.tscn', mode: '2d' },
+  // The one variable is a FlatMenuButton box that the shape, mode and menu buttons draw and size by.
+  { name: 'color-picker-flat-menu-button', file: 'unit-color-picker-flat-menu-button.tscn', mode: '2d' },
+  // The one variable is a TabContainer tab_selected box that the pressed mode button reads.
+  { name: 'color-picker-mode-button-margins', file: 'unit-color-picker-mode-button-margins.tscn', mode: '2d' },
   // Two LTR alignment scenes. The fractional-box one needs a non-integer box
   // width: at a whole width the ceiled and raw line extents give one offset.
   { name: 'rich-text-label-center-overflow', file: 'unit-rich-text-label-center-overflow.tscn', mode: '2d' },

@@ -453,6 +453,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Color Picker Flat Menu Button",
+    "file": "unit-color-picker-flat-menu-button.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Color Picker Hdr Hex",
     "file": "unit-color-picker-hdr-hex.tscn",
     "category": "Other"
@@ -460,6 +465,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Color Picker Hsv Rows",
     "file": "unit-color-picker-hsv-rows.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Color Picker Mode Button Margins",
+    "file": "unit-color-picker-mode-button-margins.tscn",
     "category": "Other"
   },
   {

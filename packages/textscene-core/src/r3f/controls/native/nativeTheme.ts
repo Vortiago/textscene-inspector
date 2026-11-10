@@ -37,6 +37,8 @@ interface NativeThemeStyleFill {
   progress: Rgba;
 }
 
+const TRANSPARENT: Rgba = { r: 0, g: 0, b: 0, a: 0 };
+
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /**
@@ -117,6 +119,14 @@ interface NativeThemeWidgets {
     disabled: StyleBoxFlatData;
     /** `focus` (`default_theme.cpp:142-150`): an outline drawn around a focused Button, flush with it. */
     focus: StyleBoxFlatData;
+  };
+  /**
+   * `FlatMenuButton`'s `normal` and `disabled` (`default_theme.cpp:360-375`): a `StyleBoxEmpty`
+   * with the margins of `button_normal`, so it draws nothing and takes the same room.
+   */
+  flatMenuButton: {
+    normal: StyleBoxFlatData;
+    disabled: StyleBoxFlatData;
   };
   /** LineEdit's `normal`/`read_only` styleboxes, `default_theme.cpp:405-417`. */
   lineEdit: {
@@ -217,6 +227,10 @@ export function nativeTheme(scale: number): NativeTheme {
         pressed: flatStyleBox(STYLE_FILL.pressed, buttonMargin, scaled.cornerRadius),
         disabled: flatStyleBox(STYLE_FILL.disabled, buttonMargin, scaled.cornerRadius),
         focus: focusStyleBox(buttonMargin, scaled.cornerRadius, Math.round(FOCUS_BORDER_WIDTH * scale)),
+      },
+      flatMenuButton: {
+        normal: flatStyleBox(TRANSPARENT, buttonMargin, 0),
+        disabled: flatStyleBox(TRANSPARENT, buttonMargin, 0),
       },
       lineEdit: {
         // default_theme.cpp:405-409: make_flat_stylebox(style_normal_color) + border.

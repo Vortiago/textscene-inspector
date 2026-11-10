@@ -93,6 +93,16 @@ describe('the type chain themeResolutionScope builds', () => {
     expect(typeChain('Label', 'HeaderLabel', [theme()], null)).toEqual(['Label', ...CONTROL_ANCESTRY]);
   });
 
+  it('walks a variation the default theme registers when no theme does: FlatMenuButton is a MenuButton (default_theme.cpp:357-358)', () => {
+    expect(typeChain('MenuButton', 'FlatMenuButton', [theme()], null)).toEqual([
+      'FlatMenuButton',
+      'MenuButton',
+      'Button',
+      'BaseButton',
+      ...CONTROL_ANCESTRY,
+    ]);
+  });
+
   it('uses the FIRST theme (nearest ancestor before project) that registers the variation', () => {
     const nearest = theme({ typeVariations: { title_panel: 'Panel' } });
     const project = theme({ typeVariations: { title_panel: 'Control' } });

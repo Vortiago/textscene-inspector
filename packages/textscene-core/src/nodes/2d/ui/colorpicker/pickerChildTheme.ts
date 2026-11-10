@@ -7,18 +7,34 @@ import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
 import { internalChildThemeItems, type InternalThemeItems } from '../../../../r3f/controls/native/themeItems';
+import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { tabBarStyleBoxes, pickTabStyleBox } from '../tabbar/nativeSolver';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
 import { LABEL_DEFAULT_FONT_COLOR } from '../label/nativeSolver';
 import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
 import { LINE_EDIT_DEFAULT_FONT_COLOR, pickLineEditStyleBox } from '../lineedit/nativeSolver';
 
+/**
+ * `theme` with the mode buttons' two boxes. `mode_button_normal` and `mode_button_pressed` bind
+ * `tab_unselected` and `tab_selected` of `TabContainer` (`color_picker.cpp:2060-2061`).
+ */
+export interface PickerTheme extends NativeTheme {
+  modeButton: { normal: StyleBoxFlatData; pressed: StyleBoxFlatData };
+}
+
+/** `theme` with the default mode button boxes, for a picker with no Theme. */
+export function defaultPickerTheme(theme: NativeTheme): PickerTheme {
+  const boxes = tabBarStyleBoxes(theme.scale);
+  return { ...theme, modeButton: { normal: boxes.unselected, pressed: boxes.selected } };
+}
+
 export interface PickerChildTheme {
-  /** `theme` with the Button and LineEdit styleboxes of the Theme chain. */
-  theme: NativeTheme;
+  /** `theme` with the Button, FlatMenuButton and LineEdit styleboxes of the Theme chain. */
+  theme: PickerTheme;
   /** `theme` with the `SpinBox` inner LineEdit's styleboxes, for the slider value fields. */
-  valueFieldTheme: NativeTheme;
+  valueFieldTheme: PickerTheme;
   valueFieldColor: Rgba;
   labelColor: Rgba;
   buttonColor: Rgba;
@@ -29,7 +45,7 @@ export interface PickerChildTheme {
   lineEditColor: Rgba;
 }
 
-function withLineEditBoxes(theme: NativeTheme, items: InternalThemeItems): NativeTheme {
+function withLineEditBoxes(theme: PickerTheme, items: InternalThemeItems): PickerTheme {
   const { lineEdit } = theme.widgets;
   return {
     ...theme,
@@ -43,13 +59,17 @@ function withLineEditBoxes(theme: NativeTheme, items: InternalThemeItems): Nativ
   };
 }
 
-export function pickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildTheme {
+export function pickerChildTheme(n: SolveNode, nativeTheme: NativeTheme): PickerChildTheme {
   const label = internalChildThemeItems(n, 'Label');
   const button = internalChildThemeItems(n, 'Button');
+  const flatMenuButton = internalChildThemeItems(n, 'MenuButton', 'FlatMenuButton');
   const lineEdit = internalChildThemeItems(n, 'LineEdit');
   const valueField = spinBoxFieldThemeItems(n);
+  const tabs = internalChildThemeItems(n, 'TabContainer');
+  const theme = defaultPickerTheme(nativeTheme);
   const { widgets } = theme;
-  const withButtonBoxes: NativeTheme = {
+  const tabDefaults = tabBarStyleBoxes(theme.scale);
+  const withButtonBoxes: PickerTheme = {
     ...theme,
     widgets: {
       ...widgets,
@@ -58,6 +78,14 @@ export function pickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildT
         normal: pickButtonStyleBox(button.styleBoxes, widgets.button, 'normal', n.rtl),
         disabled: pickButtonStyleBox(button.styleBoxes, widgets.button, 'disabled', n.rtl),
       },
+      flatMenuButton: {
+        normal: pickButtonStyleBox(flatMenuButton.styleBoxes, widgets.flatMenuButton, 'normal', n.rtl),
+        disabled: pickButtonStyleBox(flatMenuButton.styleBoxes, widgets.flatMenuButton, 'disabled', n.rtl),
+      },
+    },
+    modeButton: {
+      normal: pickTabStyleBox(tabs.styleBoxes, tabDefaults, 'unselected'),
+      pressed: pickTabStyleBox(tabs.styleBoxes, tabDefaults, 'selected'),
     },
   };
   return {

@@ -1,0 +1,37 @@
+; The one variable: an ancestor Theme gives TabContainer tab_selected 30/10 margins. The pressed mode
+; button binds it (color_picker.cpp:2060-2061), so its width and the row height follow it.
+; No other ColorPicker scene sets a TabContainer box.
+[gd_scene format=3]
+
+[sub_resource type="StyleBoxFlat" id="Box_sel"]
+content_margin_left = 30.0
+content_margin_top = 10.0
+content_margin_right = 30.0
+content_margin_bottom = 10.0
+bg_color = Color(0.6, 0.3, 0.1, 1)
+
+[sub_resource type="Theme" id="Theme_tab"]
+TabContainer/styles/tab_selected = SubResource("Box_sel")
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_tab")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="ColorPicker" type="ColorPicker" parent="."]
+layout_mode = 1
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 404.0
+offset_bottom = 404.0
+color = Color(0.2, 0.4, 0.6, 0.8)
+picker_shape = 4
+sampler_visible = false
+slider_visible = false
