@@ -12,18 +12,21 @@ import type { TextMeasurer } from '../../../r3f/controls/native/solverRegistry';
 import { wrappedWindowSize } from './wrapControls';
 import type { WindowProperties } from './types';
 
-/** `window` is the root of the window's own forest, or `null` for a viewport that is no window. */
+/** `window` and `enclosingViewportSize` are the window's forest root and its embedder, both `null` for a viewport that is no window. */
 export function usePublishWrappedSize(
   path: string,
   window: SolveNode | null,
   theme: NativeTheme,
   measureText: TextMeasurer | null,
   generation: number,
-  enclosingViewportSize: Vector2
+  enclosingViewportSize: Vector2 | null
 ): void {
   const registerViewportRect = useRegisterViewportRect();
   const wrapped = useMemo(
-    () => (window ? wrappedWindowSize(window, theme, measureText, enclosingViewportSize) : null),
+    () =>
+      window && enclosingViewportSize
+        ? wrappedWindowSize(window, theme, measureText, enclosingViewportSize)
+        : null,
     // `generation` is a cache-buster, not read inside: a font or StyleBox that settles changes the
     // minimums without changing `window`.
     // eslint-disable-next-line react-hooks/exhaustive-deps

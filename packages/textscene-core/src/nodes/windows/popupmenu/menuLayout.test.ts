@@ -171,4 +171,9 @@ describe('a size line written below the items', () => {
     expect(sizeOf(sized).y).toBe(contentsMinimum(sized, unlimited).y);
     expect(sizeOf(sized).y).toBeGreaterThan(648);
   });
+
+  it('does not clamp to the items when the menu does not wrap its controls', () => {
+    const unwrapped = menu(many(30), {}, false, { ...size, wrap_controls: 'false' });
+    expect(sizeOf(unwrapped)).toEqual({ x: 300, y: 200 });
+  });
 });

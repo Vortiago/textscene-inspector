@@ -10,7 +10,6 @@ import { canvasSubOrders } from '../../../r3f/canvasItemState';
 import { useOwnerCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../r3f/controls/ControlComponentRegistry';
-import { multiplyModulate } from '../../../r3f/canvasItemModulate';
 import { tintColor } from '../../../r3f/controls/native/buttonBase';
 import {
   ControlClipProvider,
@@ -19,7 +18,7 @@ import {
 } from '../../../r3f/controls/native/controlClipping';
 import { TextureQuad } from '../../../r3f/controls/native/TextureQuad';
 import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
-import { OutlinedTextRun } from '../../../r3f/controls/native/text/OutlinedTextRun';
+import { OutlinedTextRun, useTintedOutline } from '../../../r3f/controls/native/text/OutlinedTextRun';
 import type { CheckBoxIconKey } from '../../2d/ui/checkbox/nativeSolver';
 import { useCheckBoxIcon } from '../../2d/ui/checkbox/useCheckBoxIcon';
 import { ScrollBarChrome } from '../../2d/ui/shared/ScrollChrome';
@@ -65,10 +64,7 @@ function ItemIcon({
 function RowText({ text, tint, renderOrder }: PartProps & { text: NonNullable<RowDrawing['text']> }) {
   const clippingPlanes = useControlClipPlanes();
   const color = useMemo(() => tintColor(text.color, tint.own), [text.color, tint.own]);
-  const outline = useMemo(
-    () => ({ color: multiplyModulate(text.outline.color, tint.own), sizePx: text.outline.sizePx }),
-    [text.outline, tint.own]
-  );
+  const outline = useTintedOutline(text.outline, tint.own);
   return (
     <CanvasItemGroup position={[text.position.x, -text.position.y, 0]}>
       <OutlinedTextRun

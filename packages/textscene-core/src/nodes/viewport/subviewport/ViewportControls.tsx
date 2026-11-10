@@ -42,8 +42,8 @@ interface ViewportControlsProps {
   inheritedRtl: boolean | null;
   /** The theme owners above a window (`viewportThemeOwners`). */
   themeOwners: readonly ThemeOwner[];
-  /** The visible size of the viewport around a window, which limits its contents height. */
-  enclosingViewportSize: Vector2;
+  /** The visible size of the viewport around a window, which limits its contents height. Null for a SubViewport's own Controls. */
+  enclosingViewportSize: Vector2 | null;
   /** The viewport's `gui_embed_subwindows`: whether it draws its windows over its Controls. */
   embedsWindows: boolean;
 }

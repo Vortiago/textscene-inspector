@@ -348,7 +348,7 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'hide_on_state_item_selection',
       'allow_search',
       'submenu_popup_delay',
-      // `_pre_popup` shrinks the size when `popup()` runs (`popup_menu.cpp:3453-3454`); a loaded scene never calls it.
+      // `_pre_popup` shrinks the size when `popup()` runs (`popup_menu.cpp:3453-3454`). A loaded scene never calls it.
       'shrink_height',
       'shrink_width',
       // Native and system menus are drawn by the OS, never on the canvas.

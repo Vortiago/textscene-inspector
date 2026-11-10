@@ -15,7 +15,7 @@ import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useCanvasWorkspace } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { EnclosingViewportProvider } from '../../../r3f/contexts/EnclosingViewportContext';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
-import { ViewportSizeProvider, useEmbedderViewportSize } from '../../../r3f/contexts/ViewportSizeContext';
+import { ViewportSizeProvider } from '../../../r3f/contexts/ViewportSizeContext';
 import { LayerRanksProvider } from '../../../r3f/contexts/PaintOrderContext';
 import { canvasLayerRanks } from '../../../r3f/canvasPaintOrder';
 import { Node } from '../../node/Component';
@@ -53,7 +53,6 @@ function MixedViewportControls({
 }) {
   const inheritedRtl = useInheritedRtl(path);
   const themeOwners = useViewportThemeOwners(path);
-  const enclosingViewportSize = useEmbedderViewportSize();
   return (
     <ViewportControls
       path={path}
@@ -61,7 +60,7 @@ function MixedViewportControls({
       size={size}
       inheritedRtl={inheritedRtl}
       themeOwners={themeOwners}
-      enclosingViewportSize={enclosingViewportSize}
+      enclosingViewportSize={null}
       embedsWindows={embedsWindows}
     />
   );
@@ -113,7 +112,7 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
   // it in its portal. A 3D pass draws it over its world, in a scene of its own (`OffscreenViewportPass`),
   // so the world's portal holds the children alone and each workspace drops the other's nodes.
   const inViewport = (inner: ReactNode) => (
-    <ViewportSizeProvider size={layoutSize} embedsWindows={properties.gui_embed_subwindows}>
+    <ViewportSizeProvider size={layoutSize}>
       <LayerRanksProvider value={canvasLayers}>
         <ViewportCanvasScope>
           <SubViewportCanvasScope properties={properties}>{inner}</SubViewportCanvasScope>

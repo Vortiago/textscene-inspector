@@ -62,7 +62,7 @@ export interface TextOutlineTheme {
 
 const DEFAULT_OUTLINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 
-/** The theme item names of one outline: a color and a size constant. */
+/** The theme item names of one outline: a colour and a size constant. */
 export interface OutlineItemNames {
   color: string;
   size: string;

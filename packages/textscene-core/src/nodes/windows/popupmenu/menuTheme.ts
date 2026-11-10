@@ -65,8 +65,10 @@ function menuFont(n: SolveNode, theme: NativeTheme, fontKey: string, sizeKey: st
 export function popupMenuTheme(n: SolveNode, theme: NativeTheme): PopupMenuTheme {
   const defaults = POPUP_MENU_DEFAULTS;
   const styleBoxes = n.styleBoxes;
-  // Built only when a separator box is not themed: every themed menu skips the allocation.
-  const defaultSeparator = () => styleBoxLineBox(defaultSeparatorStyleBoxLine('horizontal', theme));
+  // Built once, and only when a separator box is not themed: the three separator items share it.
+  let sharedSeparator: ResolvedStyleBox | undefined;
+  const defaultSeparator = () =>
+    (sharedSeparator ??= styleBoxLineBox(defaultSeparatorStyleBoxLine('horizontal', theme)));
   return {
     panel: styleBoxes.panel ?? theme.widgets.popupMenuPanel,
     separator: styleBoxes.separator ?? defaultSeparator(),

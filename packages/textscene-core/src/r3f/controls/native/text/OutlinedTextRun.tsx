@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import { multiplyModulate } from '../../../canvasItemModulate';
 import type { Rgba } from '../../../../godot/math/math';
 import { outlineStrokeWidthPx } from './textOutline';
-import { resolveTextOutline, type OutlineItemNames, type TextOutlineTheme } from '../textTheme';
+import { resolveTextOutline, type TextOutlineTheme } from '../textTheme';
 import type { ShareNode } from '../solveTree';
 import { TextRun, type TextRunProps } from './TextRun';
 import type { TextLayoutResult } from './textLayout';
@@ -21,15 +21,18 @@ export function textLayerRenderOrder(renderOrder: number, index: number, count: 
   return renderOrder + index / count;
 }
 
-/** The outline theme of `n` multiplied by the Control's own tint, in sRGB, as `<TextRun>` converts it once. */
+/** `outline` multiplied by the Control's own tint, in sRGB, as `<TextRun>` converts it once. */
+export function useTintedOutline({ color, sizePx }: TextOutlineTheme, ownTint: Rgba): TextOutlineTheme {
+  return useMemo(() => ({ color: multiplyModulate(color, ownTint), sizePx }), [color, sizePx, ownTint]);
+}
+
+/** The outline theme of `n`, tinted by {@link useTintedOutline}. */
 export function useTintedTextOutline(
   n: Pick<ShareNode, 'colors' | 'constants'>,
   ownTint: Rgba,
-  defaultColor?: Rgba,
-  names?: OutlineItemNames
+  defaultColor?: Rgba
 ): TextOutlineTheme {
-  const { color, sizePx } = resolveTextOutline(n, defaultColor, names);
-  return useMemo(() => ({ color: multiplyModulate(color, ownTint), sizePx }), [color, sizePx, ownTint]);
+  return useTintedOutline(resolveTextOutline(n, defaultColor), ownTint);
 }
 
 type RunLookProps = Pick<TextRunProps, 'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'>;

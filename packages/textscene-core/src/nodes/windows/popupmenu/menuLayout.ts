@@ -109,8 +109,6 @@ export const popupMenuLoadedMinimumSize: LoadedMinimumSizeFn = (n, ctx) => {
 
 export interface MenuRow {
   entry: MenuItem;
-  /** The item's position in the menu, which names its icon slot. */
-  index: number;
   /** The row's top within the item control (`popup_menu.cpp:870-872`). */
   y: number;
 }
@@ -139,7 +137,7 @@ function menuRows(items: readonly MenuItem[], menu: PopupMenuTheme): MenuRow[] {
   let y = 0;
   return items.map((entry, index) => {
     y += index > 0 ? menu.vSeparation : Math.trunc(menu.vSeparation / 2);
-    const row = { entry, index, y };
+    const row = { entry, y };
     y += entry.height;
     return row;
   });
