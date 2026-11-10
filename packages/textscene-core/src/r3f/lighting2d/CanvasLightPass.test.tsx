@@ -4,8 +4,6 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { renderLightLists } from './lightAccumulationPass';
-
 import * as THREE from 'three';
 import { useThree } from '@react-three/fiber';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -21,6 +19,7 @@ import type { Rgba } from '../../godot/math/math';
 import { settleLoads } from '../testing/settleLoads';
 import { withStubbedGl } from '../testing/stubbedGl';
 import { canvasColorSpaceOf, CanvasColorSpaceProvider, type CanvasColorSpace } from '../canvasColorSpace';
+import { renderLightLists } from './lightAccumulationPass';
 
 vi.mock('./lightAccumulationPass', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./lightAccumulationPass')>();
