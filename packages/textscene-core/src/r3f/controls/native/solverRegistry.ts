@@ -13,6 +13,7 @@ import type { NativeTheme } from './nativeTheme';
 import type { FontMetrics } from './text/fontMetrics';
 import type { SealedHandoff } from './solveHandoff';
 import type { Vector2 } from '../../../godot/math/vector';
+import type { ParsedResource } from '../../../parser/parsedResource';
 
 /**
  * Measures a run of text at a font size. `lineSpacingPx` is the caller's own
@@ -119,6 +120,11 @@ export interface TextureSlotRequest {
   scope?: SolveNode['resources'];
   /** Whether every resource between the node and `ref` is local to scene, true when omitted. A themed icon sets its Theme's. */
   isHeldLocally?: boolean;
+  /**
+   * How the slot reads a size out of the resource file `ref` names, for a slot whose file is not a
+   * texture. A `VideoStreamPlayer`'s stream reports its picture size. Omitted, the file is a texture resource.
+   */
+  sizeOfFile?: (parsed: ParsedResource) => Vector2 | null;
 }
 
 /** The request for a themed icon: its ref, in its theme's scope, held as its theme holds it. */
