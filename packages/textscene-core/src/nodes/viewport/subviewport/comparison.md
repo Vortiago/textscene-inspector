@@ -40,6 +40,12 @@ With `use_hdr_2d`, a sub-viewport draws its canvas in linear colour. The half-fl
 
 With `use_hdr_2d`, the tonemap pass of a 3D world writes no sRGB encode and no debanding into a half-float target (`renderer_scene_render_rd.cpp:744,941`). A canvas over that world draws linear too. The SubViewportContainer shows the stored numbers as if they were sRGB bytes, so the left world draws darker than the sRGB world beside it. The bottom world keeps a value above 1 under the container's modulate of 0.5.
 
+## HDR 2D lights
+
+<!-- compare: image=unit-sub-viewport-hdr-2d-light status=done fixture=unit-sub-viewport-hdr-2d-light.tscn -->
+
+With `use_hdr_2d`, a lit item adds each light to its linear albedo and clamps nothing (`canvas.glsl:715-760`). The light colour, the cookie and the shadow colour stay as authored (`renderer_canvas_render_rd.cpp:552-555,622-625`). Only the CanvasModulate converts to linear, and the light pass seeds it so (`renderer_canvas_render_rd.cpp:692-693`). Each pair draws one lit canvas twice, with `use_hdr_2d` on and off. The top-right pair holds a torch of energy 8 under a container modulate of 0.5, where the HDR sum above 1 survives into the consumer.
+
 ## HDR 2D canvas on a 3D surface
 
 <!-- compare: image=unit-sub-viewport-hdr-2d-world status=done fixture=unit-sub-viewport-hdr-2d-world.tscn -->

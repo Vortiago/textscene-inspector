@@ -2380,7 +2380,7 @@ tr:last-child td{border-bottom:0}
         <span class="status st-done">Done</span>
       </header>
       
-      <div class="prose intro"><p>DirectionalLight2D lights the whole canvas with <code>color</code> and <code>energy</code>, and draws nothing itself. It reaches every lit item on its canvas layers whatever the item's <code>light_mask</code> or <code>z_index</code>. The previewer adds it to the light buffer a PointLight2D uses. The three panels take one warm light, and the clear colour below them takes none.</p></div>
+      <div class="prose intro"><p>DirectionalLight2D lights the whole canvas with <code>color</code> and <code>energy</code>, and draws nothing itself. It reaches every lit item on its canvas layers whatever the item's <code>light_mask</code> or <code>z_index</code>. The previewer adds it to the light buffer a PointLight2D uses. The three panels take one warm light, and the clear colour below them takes none. In a <code>use_hdr_2d</code> canvas the light adds to the linear albedo with no clamp, and its colour stays as authored (<code>canvas.glsl:715-760</code>). The SubViewport sheet shows it.</p></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-directionallight2d-godot.png" alt="Godot render of DirectionalLight2D">
@@ -5626,7 +5626,7 @@ tr:last-child td{border-bottom:0}
         <span class="status st-done">Done</span>
       </header>
       
-      <div class="prose intro"><p>PointLight2D lights the canvas with a <code>texture</code> cookie tinted by <code>color</code> and <code>energy</code>, and draws nothing itself. The previewer accumulates each light into an offscreen buffer that every lit CanvasItem multiplies its albedo against, which is Godot's own arithmetic. The previewer samples the cookie clamped at its quad edge. Godot resolves a canvas item's default repeat to the viewport's disabled default (<code>viewport.h:419-420</code>, <code>viewport.cpp:4009</code>, <code>renderer_canvas_render_rd.cpp:2344</code>), and the light tap uses that item sampler (<code>canvas.glsl:774-782</code>). A light with no <code>texture</code> lights nothing and draws no placeholder, as <code>pnpm ref:godot</code> measures. A <code>texture</code> that is set but fails to load draws a placeholder.</p></div>
+      <div class="prose intro"><p>PointLight2D lights the canvas with a <code>texture</code> cookie tinted by <code>color</code> and <code>energy</code>, and draws nothing itself. The previewer accumulates each light into an offscreen buffer that every lit CanvasItem multiplies its albedo against, which is Godot's own arithmetic. The previewer samples the cookie clamped at its quad edge. Godot resolves a canvas item's default repeat to the viewport's disabled default (<code>viewport.h:419-420</code>, <code>viewport.cpp:4009</code>, <code>renderer_canvas_render_rd.cpp:2344</code>), and the light tap uses that item sampler (<code>canvas.glsl:774-782</code>). A light with no <code>texture</code> lights nothing and draws no placeholder, as <code>pnpm ref:godot</code> measures. A <code>texture</code> that is set but fails to load draws a placeholder. In a <code>use_hdr_2d</code> canvas the light adds to the linear albedo with no clamp, and its colour and cookie stay as authored (<code>canvas.glsl:715-760</code>). The SubViewport sheet shows it.</p></div>
       <div class="compare">
         <div class="stage">
           <img class="img-godot" src="images/unit-pointlight2d-godot.png" alt="Godot render of PointLight2D">
@@ -7818,6 +7818,23 @@ tr:last-child td{border-bottom:0}
         </div>
       </div>
         <div class="prose"><p>With <code>use_hdr_2d</code>, the tonemap pass of a 3D world writes no sRGB encode and no debanding into a half-float target (<code>renderer_scene_render_rd.cpp:744,941</code>). A canvas over that world draws linear too. The SubViewportContainer shows the stored numbers as if they were sRGB bytes, so the left world draws darker than the sRGB world beside it. The bottom world keeps a value above 1 under the container's modulate of 0.5.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>HDR 2D lights</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-sub-viewport-hdr-2d-light-godot.png" alt="Godot render of HDR 2D lights">
+          <img class="img-ours" src="images/unit-sub-viewport-hdr-2d-light-ours.png" alt="Our render of HDR 2D lights">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>With <code>use_hdr_2d</code>, a lit item adds each light to its linear albedo and clamps nothing (<code>canvas.glsl:715-760</code>). The light colour, the cookie and the shadow colour stay as authored (<code>renderer_canvas_render_rd.cpp:552-555,622-625</code>). Only the CanvasModulate converts to linear, and the light pass seeds it so (<code>renderer_canvas_render_rd.cpp:692-693</code>). Each pair draws one lit canvas twice, with <code>use_hdr_2d</code> on and off. The top-right pair holds a torch of energy 8 under a container modulate of 0.5, where the HDR sum above 1 survives into the consumer.</p></div>
       </section>
       <section class="prop">
         <div class="prop-head"><h3>HDR 2D canvas on a 3D surface</h3><span class="status st-done">Done</span></div>
