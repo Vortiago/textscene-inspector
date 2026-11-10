@@ -268,7 +268,7 @@ describe('property-grammar parity guard', () => {
   // OccluderInstance3D, PopupMenu, RayCast3D, ShapeCast3D, VideoStreamPlayer, AcceptDialog,
   // ConfirmationDialog and FileDialog read theirs.
   const SWEPT_SLICES = 151;
-  const PARSER_REUSING_SLICES = 101;
+  const PARSER_REUSING_SLICES = 100;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>
