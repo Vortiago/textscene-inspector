@@ -92,7 +92,8 @@ export function CanvasItem2D({
     sequence: useNodePaintSequence(node),
   });
   const paintRange = usePaintRange();
-  const clips = groupingClipMode(node, props.clip_children) !== CanvasItemClipChildrenMode.DISABLED;
+  const clipMode = groupingClipMode(node, props.clip_children);
+  const clips = clipMode !== CanvasItemClipChildrenMode.DISABLED;
   const behindRanges = useMemo(
     () => (clips ? behindParentRanges(paintRange, node) : []),
     [clips, paintRange, node]
@@ -113,12 +114,7 @@ export function CanvasItem2D({
     >
       <CanvasItemProvider value={key}>
         <OwnCanvasModulateProvider value={tint.canvasModulate}>
-          <ClipChildrenScope
-            mode={groupingClipMode(node, props.clip_children)}
-            state={state}
-            behindRanges={behindRanges}
-            range={paintRange}
-          >
+          <ClipChildrenScope mode={clipMode} state={state} behindRanges={behindRanges} range={paintRange}>
             {body && (
               <LitCanvasItemPixels
                 material={material}
