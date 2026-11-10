@@ -17,25 +17,34 @@ import {
 
 const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
-/** The `defines` of the backdrop material when it samples a world target made for `space`. */
-async function backdropDefinesIn(space: CanvasColorSpace) {
-  const world = createSceneTarget(8, 8, 'World', space);
+/** The `defines` of the backdrop material when a canvas of `canvasSpace` samples a world target made for `worldSpace`. */
+async function backdropDefinesIn(worldSpace: CanvasColorSpace, canvasSpace: CanvasColorSpace) {
+  const world = createSceneTarget(8, 8, 'World', worldSpace);
   const renderer = await ReactThreeTestRenderer.create(
-    <CanvasColorSpaceProvider value={space}>
+    <CanvasColorSpaceProvider value={canvasSpace}>
       <CanvasOverWorld size={{ x: 8, y: 8 }} world={world.texture} anchor={createRef()} />
     </CanvasColorSpaceProvider>
   );
   const material = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
     .material as THREE.MeshBasicMaterial;
-  return material.defines;
+  const defines = Object.keys(material.defines ?? {});
+  await renderer.unmount();
+  world.dispose();
+  return defines;
 }
 
 describe('<CanvasOverWorld>', () => {
   it('adds no multiply to the 8-bit world of an sRGB canvas, which its target decodes in hardware', async () => {
-    expect(Object.keys((await backdropDefinesIn(canvasColorSpaceOf(false))) ?? {})).toHaveLength(0);
+    expect(await backdropDefinesIn(canvasColorSpaceOf(false), canvasColorSpaceOf(false))).toHaveLength(0);
   });
 
   it('samples the half-float world as it is when the canvas is linear', async () => {
-    expect(Object.keys((await backdropDefinesIn(LINEAR_CANVAS)) ?? {})).toHaveLength(0);
+    expect(await backdropDefinesIn(LINEAR_CANVAS, LINEAR_CANVAS)).toHaveLength(0);
+  });
+
+  it('multiplies the half-float world as sRGB bytes when the canvas is sRGB (edge case)', async () => {
+    expect(await backdropDefinesIn(LINEAR_CANVAS, canvasColorSpaceOf(false))).toEqual([
+      'CANVAS_SRGB_MULTIPLY',
+    ]);
   });
 });

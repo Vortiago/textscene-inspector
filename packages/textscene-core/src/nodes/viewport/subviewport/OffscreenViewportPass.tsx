@@ -207,8 +207,8 @@ export function OffscreenViewportPass({
   // The canvas items of a viewport draw after its 3D render, into the same target. In sRGB, the frame's
   // bytes return to the SRGB8_ALPHA8 storage decoded, which the hardware encodes back to the same
   // bytes. A linear frame returns to the half-float storage as it is.
+  const canvasFrameTransfer = canvasSpace.isLinear ? 'none' : 'decode';
   // `inWindow` null draws every layer, which no BG_CANVAS split asks for.
-  const worldTargetColour = canvasSpace.isLinear ? 'none' : 'decode';
   const renderCanvas = useCallback(
     (into: THREE.WebGLRenderTarget, inWindow: ((key: number) => boolean) | null) =>
       renderToOffscreenTarget(gl, {
@@ -217,12 +217,12 @@ export function OffscreenViewportPass({
         transparentBg,
         draw: () => {
           const drawCanvas = () =>
-            frame.render(gl, canvasScene!, orthoCamera, viewportTransfer(worldTargetColour, transparentBg));
+            frame.render(gl, canvasScene!, orthoCamera, viewportTransfer(canvasFrameTransfer, transparentBg));
           if (inWindow) drawCanvasKeys(canvasScene!, inWindow, drawCanvas);
           else drawCanvas();
         },
       }),
-    [gl, clearColor, transparentBg, frame, canvasScene, orthoCamera, worldTargetColour]
+    [gl, clearColor, transparentBg, frame, canvasScene, orthoCamera, canvasFrameTransfer]
   );
 
   // Godot draws a viewport's canvas through its canvas transform, the identity until a Camera2D in

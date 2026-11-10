@@ -886,9 +886,9 @@ describe.skipIf(!hasEngine)('renderReference (real Godot)', { timeout: ENGINE_TE
     it('is converted from linear to sRGB, as the screen shows it', async () => {
       const [clear, gray] = await renderWithHdr(true);
       // Godot's Image::linear_to_srgb table reads 75 for the stored 18 (`image.cpp:4194`), which
-      // rounds before it converts. The float conversion reads 76.
-      expect(clear.rgb[0]).toBeGreaterThanOrEqual(75);
-      expect(clear.rgb[0]).toBeLessThanOrEqual(76);
+      // rounds before it converts. The float conversion reads 76, so the floor excludes the table.
+      expect(clear.rgb[0]).toBeGreaterThanOrEqual(76);
+      expect(clear.rgb[0]).toBeLessThanOrEqual(77);
       expect(gray.rgb[0]).toBeGreaterThanOrEqual(192);
       expect(gray.rgb[0]).toBeLessThanOrEqual(194);
     });
