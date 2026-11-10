@@ -284,15 +284,16 @@ describe('nativeTheme', () => {
 
     it('freezes the shared tab, FlatMenuButton and Button boxes, so an in-place margin edit throws', () => {
       const { widgets } = nativeTheme(1);
-      expect(() => {
-        widgets.tabContainer.unselected.contentMargin.left += 1;
-      }).toThrow(TypeError);
-      expect(() => {
-        widgets.flatMenuButton.normal.contentMargin.left += 1;
-      }).toThrow(TypeError);
-      expect(() => {
-        widgets.button.normal.contentMargin.left += 1;
-      }).toThrow(TypeError);
+      for (const box of [
+        widgets.tabContainer.unselected,
+        widgets.flatMenuButton.normal,
+        widgets.button.normal,
+      ]) {
+        const margin = box.contentMargin as { left: number };
+        expect(() => {
+          margin.left += 1;
+        }).toThrow(TypeError);
+      }
     });
   });
 });
