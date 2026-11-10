@@ -58,7 +58,13 @@ describe('ResourceLoader: processors read the cached ParsedResource', () => {
     const loaded = loader.eventBus.once<FontResource>('font', 'loaded', address, 2000);
     loader.fonts.request(address);
 
-    expect(await loaded).toEqual({ kind: 'system', fontNames: ['sans-serif'], properties: {} });
+    expect(await loaded).toEqual({
+      kind: 'system',
+      fontNames: ['sans-serif'],
+      baseFont: null,
+      fallbacks: [],
+      properties: {},
+    });
   });
 
   it('builds an ArrayMesh from a parsed sub-resource', async () => {

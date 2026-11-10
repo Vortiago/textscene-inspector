@@ -4,8 +4,8 @@ TextScene Inspector is MIT licensed (see `LICENSE`). It additionally contains, a
 distributes, material from the third parties below.
 
 Runtime npm dependencies are not enumerated here; each carries its own licence in its
-published package. FastNoiseLite and the Brotli decoder are the exceptions, since their
-packages keep the licence in a source comment that a bundler strips.
+published package. FastNoiseLite, the Brotli decoder and bidi-js are the exceptions, since
+their packages keep the licence in a source comment that a bundler strips, or beside the code.
 
 ---
 
@@ -65,6 +65,10 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/controls/native/text/sfntGlyf.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's TrueType glyph loader |
 | `packages/textscene-core/src/r3f/controls/native/text/glyphContours.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) |
 | `packages/textscene-core/src/r3f/controls/native/text/sfntCff.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_contours`) and FreeType's outline scaling |
+| `packages/textscene-core/src/r3f/controls/native/text/variation/axisCoordinates.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_ensure_cache_for_size`, which writes the variations, and `_tag_to_name`) |
+| `packages/textscene-core/src/godot/text/openTypeNames.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_insert_feature` calls and `_tag_to_name`) |
+| `packages/textscene-core/src/godot/text/numberFormat.ts` | `core/string/translation_server.cpp` (`TranslationServer::format_number`) and `core/string/locales.h` (`num_system_data`) |
+| `packages/textscene-core/src/godot/text/standardizeLocale.ts` | `core/string/translation_server.cpp` (`TranslationServer::standardize_locale`, `Locale`) and `core/string/locales.h` (`script_list`, `locale_variants`, `locale_renames`, `country_renames`) |
 | `packages/textscene-core/src/r3f/controls/native/text/sfntCmap.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_get_glyph_index`) |
 | `packages/textscene-core/src/resources/meshes/boxmesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`BoxMesh::create_mesh_array`) |
 | `packages/textscene-core/src/resources/meshes/planemesh/build.ts` | `scene/resources/3d/primitive_meshes.cpp` (`PlaneMesh::_create_mesh_array`) |
@@ -132,7 +136,12 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/scrollcontainer/nativeSolver.ts` | `scene/gui/scroll_container.cpp` (`ScrollContainer::get_minimum_size`, `_update_scrollbars`, `_update_scrollbar_position`, `_reposition_children`), `scene/gui/scroll_bar.cpp` (`ScrollBar::get_minimum_size`, `get_grabber_size`, `get_area_size`, `get_grabber_offset`, `NOTIFICATION_DRAW`'s grabber-rect math) and `scene/gui/range.cpp` (`Range::get_as_ratio`, `Range::set_page`'s own CLAMP) |
 | `packages/textscene-core/src/nodes/2d/ui/texturerect/nativeSolver.ts` | `scene/gui/texture_rect.cpp` (`TextureRect::get_minimum_size`'s `expand_mode` contribution, `TextureRect::_notification`'s `NOTIFICATION_DRAW` `stretch_mode` draw-rect math) and `scene/main/canvas_item.h` (`TextureFilter`/`TextureRepeat`) |
 | `packages/textscene-core/src/nodes/2d/ui/label/nativeSolver.ts` | `scene/gui/label.cpp` (`Label::get_minimum_size` and its `autowrap_mode` branch, backed by `_update_visible`'s per-line height sum and `get_line_height`'s empty-text fallback; `Label::_shape`'s `int width` line-break width and the wrapped `minsize` it leaves behind, plus its trailing `update_minimum_size()`; `Label::_notification`'s `NOTIFICATION_RESIZED` paragraph invalidation; `Label::get_layout_data`'s `vbegin`/`vsep` vertical-alignment math and `_get_line_rect`'s `int(...)` per-line horizontal offsets; `_update_visible`/`get_layout_data`'s own `lines_skipped`/`max_lines_visible` visible-line window; `draw_text`'s per-glyph `visible_characters`/`visible_characters_behavior` skip union and `Label::_shape`'s pre-shape `substr`; the `label_settings`-over-theme precedence in `get_minimum_size`/`_update_visible`/`NOTIFICATION_DRAW`) and `scene/theme/default_theme.cpp` (Label's `StyleBoxEmpty` `normal_style`, `line_spacing` 3 and opaque-white `font_color`) |
+| `packages/textscene-core/src/nodes/2d/ui/richtextlabel/listing.ts` | `scene/gui/rich_text_label.cpp` (`_find_margin`, `_get_prefix`, `_add_list_prefixes`, `_find_list`, `_find_list_item`, and the marker draw in `_draw_line`) |
+| `packages/textscene-core/src/nodes/2d/ui/richtextlabel/paragraph.ts` | `scene/gui/rich_text_label.cpp` (`_find_alignment`, `_find_direction`, `_find_stt`, `_find_language` and the `[p]` option arms of `append_text`) |
 | `packages/textscene-core/src/nodes/2d/ui/richtextlabel/nativeSolver.ts` | `scene/gui/rich_text_label.cpp` (`RichTextLabel::get_minimum_size`, backed by `get_content_height`/`get_content_width`) and `scene/theme/default_theme.cpp` (RichTextLabel's `default_color`/`line_separation`/`paragraph_separation` theme defaults; the bold/italic `FontVariation`'s `set_variation_embolden(1.2)`/`set_variation_transform`'s `0.2` shear) |
+| `packages/textscene-core/src/nodes/2d/ui/richtextlabel/scrollBar.ts` | `scene/gui/rich_text_label.cpp` (`_update_scroll_exceeds`, `_prepare_scroll_anchor`, `_update_follow_vc` and the `vscroll` setup in the constructor) |
+| `packages/textscene-core/src/nodes/2d/ui/shared/visibleChars.ts` | `scene/gui/label.cpp` (`Label::set_visible_characters`, `Label::set_visible_ratio` and `draw_text`'s per-glyph `visible_characters`/`visible_characters_behavior` skip) and `scene/gui/rich_text_label.cpp` (`set_visible_characters`, `set_visible_ratio` and `get_total_glyph_count`) |
+| `packages/textscene-core/src/nodes/2d/ui/richtextlabel/visibleCharacters.ts` | `scene/gui/rich_text_label.cpp` (the `trim_chars` and `trim_glyphs` skips of `_draw_line`, `_shape_line`'s Before Shaping cut and `get_total_glyph_count`) |
 | `packages/textscene-core/src/nodes/2d/ui/button/nativeSolver.ts` | `scene/gui/button.cpp` (`Button::get_minimum_size_for_text_and_icon`) and `scene/theme/default_theme.cpp` (Button's `font_color`/`font_disabled_color`/`icon_normal_color`/`icon_disabled_color` theme defaults) |
 | `packages/textscene-core/src/nodes/2d/ui/menubar/nativeSolver.ts` | `scene/gui/menu_bar.cpp` (`MenuBar::get_minimum_size`, `MenuBar::shape`, `MenuBar::_get_menu_item_rect`, `MenuBar::_draw_menu_item`'s normal-state StyleBox/font-colour selection and `MenuBar::_refresh_menu_names`'s title-vs-name fallback) and `scene/theme/default_theme.cpp` (MenuBar's `button_normal`/`h_separation`/`font_color` theme defaults, shared with Button's own) |
 | `packages/textscene-core/src/nodes/2d/ui/menubutton/nativeSolver.ts` | `scene/gui/button.cpp` (`Button::get_minimum_size_for_text_and_icon`, reused unchanged since `menu_button.cpp` overrides neither) and `scene/theme/default_theme.cpp` (MenuButton's own `font_disabled_color` theme default) |
@@ -157,7 +166,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/shared/sliderSolver.ts` | `scene/gui/slider.cpp` (`Slider::get_minimum_size`, `_notification`'s `NOTIFICATION_DRAW` track/`grabber_area`/grabber/tick rect math, including its per-axis `int` truncation vs `Math::round` asymmetry) and `scene/theme/default_theme.cpp` (HSlider/VSlider's `slider`/`grabber_area` styleboxes and grabber/tick icon registration) |
 | `packages/textscene-core/src/r3f/controls/native/styleBoxFlatGeometry.ts` | `scene/resources/style_box_flat.cpp` (`StyleBoxFlat::draw`, `draw_rounded_rectangle`, `adapt_values`, `set_inner_corner_radius`, `set_corner_scale`, including the anti-aliasing rings, `skew`, and the drop-shadow stage) |
 | `packages/textscene-core/src/r3f/controls/native/text/lineDrawClip.ts` | `scene/resources/text_paragraph.cpp` (`TextParagraph::draw`'s `clip_l`/`clip_r`) and `servers/text/text_server.cpp` (`shaped_text_draw`'s glyph clip) |
-| `packages/textscene-core/src/r3f/controls/native/text/TextRun.tsx` | `scene/gui/label.cpp` (`Label::_notification`'s `ofs.y += asc` baseline anchoring) and the TextServer paragraph convention `Button::_notification`'s `text_buf->draw` shares; `modules/text_server_adv/text_server_adv.cpp` (`FT_Outline_Transform`'s synthesized-italic shear pivot) |
+| `packages/textscene-core/src/r3f/controls/native/text/TextRunMesh.tsx` | `scene/gui/label.cpp` (`Label::_notification`'s `ofs.y += asc` baseline anchoring) and the TextServer paragraph convention `Button::_notification`'s `text_buf->draw` shares; `modules/text_server_adv/text_server_adv.cpp` (`FT_Outline_Transform`'s synthesized-italic shear pivot) |
 | `packages/textscene-core/src/r3f/controls/native/text/glyphQuads.ts` | `scene/gui/label.cpp` (`Label::_notification`'s `ofs.y += asc` baseline anchoring) and `modules/text_server_adv/text_server_adv.cpp` (`FT_Outline_Transform`'s synthesized-italic shear pivot) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/toolbar.ts` | `scene/gui/graph_edit.cpp` (the `menu_panel`/`menu_hbox` constructor assembly, the `set_show_*` setters and `GraphEdit::_update_zoom_label`) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/ToolbarChrome.tsx` | `scene/gui/graph_edit.cpp` (the toolbar's own `Button`/`Label` draw) and `scene/theme/default_theme.cpp` (the `FlatButton` variation) |
@@ -167,11 +176,16 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/loadOrder.ts` | `scene/gui/graph_edit.cpp` (`GraphEdit::set_scroll_offset`, `set_zoom_custom`, `set_zoom_min`/`set_zoom_max` and the constructor's zoom bounds), `scene/gui/control.cpp` (`Control::_size_changed` out of tree) and `scene/resources/packed_scene.cpp` (`SceneState::instantiate`'s property order) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/minimapConnections.ts` | `scene/gui/graph_edit.cpp` (`GraphEdit::_draw_minimap_connection_line`) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/polylineStroke.ts` | `servers/rendering/renderer_canvas_cull.cpp` (`RendererCanvasCull::canvas_item_add_polyline`, `compute_polyline_segment_dir`, `compute_polyline_edge_offset_clamped`) |
+| `packages/textscene-core/src/r3f/controls/native/text/bitmapTextPainter.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_draw_glyph`'s bitmap glyph rectangle, pen floor and fixed-size scale) |
+| `packages/textscene-core/src/resources/formats/bmfont/parseDescriptor.ts` | `scene/resources/font.cpp` (`FontFile::_load_bitmap_font`'s text and binary descriptor reader and `_oem_to_unicode`) |
+| `packages/textscene-core/src/resources/formats/bmfont/pageFill.ts` | `scene/resources/font.cpp` (`FontFile::_load_bitmap_font`'s page channel layouts and `_convert_*` page converters) |
 | `packages/textscene-core/src/r3f/controls/native/text/hexCodeBox.ts` | `servers/text/text_server.cpp` (`TextServer::get_hex_code_box_size`, `TextServer::draw_hex_code_box`, `TextServer::_draw_hex_code_box_number`) |
-| `packages/textscene-core/src/r3f/controls/native/text/textLayout.ts` | `scene/gui/label.cpp` (`Label::_shape`'s autowrap flag mapping) and `servers/text/text_server.cpp` (`TextServer::shaped_text_get_line_breaks`'s width accumulation, safe-break bookkeeping and edge-space trimming) |
+| `packages/textscene-core/src/r3f/controls/native/text/textLayout.ts` | `scene/gui/label.cpp` (`Label::_shape`'s autowrap flag mapping, language and uppercase) and `servers/text/text_server.cpp` (`TextServer::shaped_text_get_line_breaks`'s width accumulation, safe-break bookkeeping and edge-space trimming) |
 | `packages/textscene-core/src/r3f/controls/native/text/textOverrun.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shaped_text_overrun_trim_to_width`) and `servers/text/text_server.cpp` (`TextServer::get_overrun_flags_from_behavior`, `shaped_text_draw`'s trim/ellipsis consumption) |
 | `packages/textscene-core/src/r3f/controls/native/text/textJustify.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shaped_text_fit_to_width`), `scene/gui/label.cpp` (`Label::_shape`'s choice of the lines to justify) and `scene/resources/3d/primitive_meshes.cpp` (`TextMesh`'s same choice) |
 | `packages/textscene-core/src/r3f/controls/native/text/textTabStops.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shaped_text_tab_align`) |
+| `packages/textscene-core/src/r3f/controls/native/text/bidi.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_shape_substr`'s per-line reorder, `_shaped_text_shape`'s paragraph direction and override ranges, `_is_locale_right_to_left`) |
+| `packages/textscene-core/src/godot/text/structuredText.ts` | `servers/text/text_server.cpp` (`TextServer::parse_structured_text`) and `scene/gui/control.cpp` (`Control::structured_text_parser`) |
 | `packages/textscene-core/src/nodes/3d/label3d/glyphLayout.ts` | `scene/3d/label_3d.cpp` (`Label3D::_shape`'s per-line vertical origin for `VERTICAL_ALIGNMENT_*`) |
 | `packages/textscene-core/src/godot/math/alignment.ts` | `scene/3d/label_3d.cpp` (`Label3D::_shape`'s horizontal line offset) and `scene/resources/3d/primitive_meshes.cpp` (`TextMesh::_generate_glyph_mesh_data`'s), with `FILL` falling through to `CENTER` |
 | `packages/textscene-core/src/nodes/2d/ui/aspectratiocontainer/nativeSolver.ts` | `scene/gui/aspect_ratio_container.cpp` (`AspectRatioContainer::get_minimum_size` and `_notification`'s `NOTIFICATION_SORT_CHILDREN` ratio/stretch-mode/alignment math, including its proportional-TextureRect skip) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
@@ -353,18 +367,21 @@ vendors the identical font Godot ships rather than substituting a system or web 
 `packages/textscene-core/assets/fonts/OpenSans_SemiBold.woff2` is an unmodified copy of
 Godot 4.6.3's vendored file. `scripts/fonts/bake-metrics.mjs` reads it at build time
 (decompressing to a TTF in memory, since neither the metrics tool nor the atlas tool
-decompresses real Brotli woff2 itself) and bakes the four committed artifacts
+decompresses real Brotli woff2 itself) and bakes the five committed artifacts
 `openSansMetrics.ts` (font-wide scalar metrics + kerning table), `openSansAtlas.ts`
 (the pre-baked MSDF glyph table — see ADR-0003 and `packages/textscene-core/src/r3f/controls/native/text/openSansAtlas.ts`'s own citation of why a
 pre-baked atlas, not a runtime font parse, is what the VS Code webview CSP allows),
-`packages/textscene-core/src/r3f/controls/native/text/openSansAtlasImage.ts` (the atlas image) and
-`packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts` (the font's bytes as base64, which the canvas text painter loads as a font face).
+`packages/textscene-core/src/r3f/controls/native/text/openSansAtlasImage.ts` (the atlas image),
+`packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts` (the font's bytes as base64, which the canvas text painter loads as a font face) and
+`packages/textscene-core/src/r3f/controls/native/text/openSansShaping.ts` (the font's shaping tables as base64url, which the layout shapes each run with).
 
 `scenes/fixtures/fonts/open-sans-semibold-subset.ttf` is a TrueType subset of the same font: the space, `!`, the digits, the Latin letters and `é`. The TextMesh goldens and the tests that read glyph outlines use it.
 
 `scenes/fixtures/fonts/open-sans-semibold-subset-hmtx.woff2` and `open-sans-semibold-subset-hmtx-plain-glyf.woff2` are that subset in WOFF2 with a transformed `hmtx`, the first with a transformed `glyf` and the second with a plain one. The tests of the WOFF2 `hmtx` rebuild use them.
 
 `scenes/fixtures/fonts/open-sans-typo-metrics-subset.ttf` is that subset with the `OS/2` typographic ascender and descender changed to 1700 and -450, so they differ from `hhea`. The typo-metrics golden uses it.
+
+`scenes/fixtures/fonts/open-sans-variable-subset.ttf` is a subset of the Open Sans variable font, with its `wght` and `wdth` axes and its `HVAR` table: the space, the printable ASCII characters and `é`. `open-sans-variable-subset-no-hvar.ttf` is the same subset with the `HVAR` table removed. The tests of variable-font advances and the `text-mesh-variable-advance` golden use them.
 
 Per Godot's own `COPYRIGHT.txt` (`Files: thirdparty/fonts/OpenSans*.woff2`) and
 `thirdparty/README.md`:
@@ -467,17 +484,41 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 ---
 
-## Montserrat and Recursive fonts
+## Montserrat, Recursive, Cascadia Code and Carlito fonts
 
-<https://github.com/JulietaUla/Montserrat> and <https://github.com/arrowtype/recursive>
+<https://github.com/JulietaUla/Montserrat>, <https://github.com/arrowtype/recursive> and <https://github.com/microsoft/cascadia-code>
 
 The tests and goldens that read a font file's outlines use these fixture fonts:
 
 - `scenes/fixtures/fonts/montserrat-extra-bold.otf`: Montserrat Extra Bold, an OpenType-CFF font. Copyright (c) 2011-2015, Julieta Ulanovsky.
 - `scenes/fixtures/fonts/montserrat-semibold-subset.ttf`: a TrueType subset of Montserrat SemiBold. Copyright 2011 The Montserrat Project Authors (https://github.com/JulietaUla/Montserrat).
 - `scenes/fixtures/fonts/recursive-vf-subset.woff2`: a subset of the Recursive variable font, as the Godot demo `gui/bidi_and_font_features` ships it. Copyright 2019 The Recursive Project Authors (github.com/arrowtype/recursive).
+- `scenes/fixtures/fonts/cascadia-code-subset.ttf`: a subset of the Cascadia Code variable font, with its `wght` axis, its `gvar`, `cvar`, `avar` and `HVAR` tables and its hinting programs, and with a `post` table so that Chromium accepts it. Copyright (c) 2019 - Present, Microsoft Corporation, with Reserved Font Name 'Cascadia Code'.
+- `scenes/fixtures/fonts/carlito-bold-arrows-subset.ttf`: a TrueType subset of Carlito Bold: the space, the letters of `go up down back` and the arrows `U+2190` to `U+2193`. The `control-font-arrows` golden uses it. Copyright 2013 The Carlito Project Authors (https://github.com/googlefonts/carlito).
 
 Each is licensed under the SIL Open Font License, Version 1.1 (OFL-1.1), whose full text the Open Sans section above holds.
+
+---
+
+## Noto Sans font
+
+<https://notofonts.github.io>
+
+The tests and goldens of the auto-hinter read these fixture fonts:
+
+- `scenes/fixtures/fonts/noto-sans-regular-subset.ttf`: a TrueType subset of Noto Sans Regular, which has no
+  `fpgm` or `prep` table. Copyright 2015 Google Inc. All Rights Reserved.
+- `scenes/fixtures/fonts/autofit-scripts-test.ttf`: the same subset with copies of its glyphs mapped to han,
+  Oriya, Armenian and Arabic characters, renamed to the family "Autofit Scripts Test".
+
+The bidi goldens read this fixture font:
+
+- `scenes/fixtures/fonts/noto-sans-adlam-unjoined-subset.ttf`: the Adlam subset of Noto Sans Adlam Unjoined
+  Regular, as the `@fontsource/noto-sans-adlam-unjoined` package ships it. Copyright 2022 The Noto Project
+  Authors (github.com/notofonts/adlam).
+
+Each is licensed under the SIL Open Font License, Version 1.1 (OFL-1.1), whose full text the Open Sans section
+above holds.
 
 ---
 
@@ -488,6 +529,14 @@ Each is licensed under the SIL Open Font License, Version 1.1 (OFL-1.1), whose f
 `scenes/fixtures/fonts/dejavu-sans-subset-tricky.ttf` is a subset of DejaVu Sans with no `fpgm` or `prep` table,
 renamed to the family "MingLiU Test" so that FreeType flags it as a tricky font. The tests of the tricky-font
 check read it. Its `name` table holds the full licence.
+
+`scenes/fixtures/fonts/dejavu-sans-bidi-subset.ttf` is a subset of DejaVu Sans with its Latin, digits,
+punctuation, U+0130, U+2026, Hebrew and Arabic letters, and its `GSUB`, `GPOS` and hinting tables. The
+bidirectional Label fixtures draw with it. Its `name` table holds the full licence.
+
+`scenes/fixtures/fonts/dejavu-sans-numerals-subset.ttf` is a subset of DejaVu Sans with its Basic Latin, the
+Arabic-Indic and Extended Arabic-Indic digits, their separators and U+200B. The numeral-system fixtures draw with
+it. Its `name` table holds the full licence.
 
 DejaVu Sans is Copyright (c) 2003 by Bitstream, Inc. All Rights Reserved. Bitstream Vera is a trademark of
 Bitstream, Inc. Glyphs imported from Arev fonts are Copyright (c) 2006 by Tavmjong Bah. All Rights Reserved.
@@ -645,6 +694,16 @@ tricky fonts (`src/truetype/ttgload.c`, `ttinterp.c` and `ttobjs.c`), its family
 (`src/sfnt/sfobjs.c`, `ttload.c` and `ttmtx.c`), its WOFF2 `hmtx` rebuild (`src/sfnt/sfwoff2.c`)
 and `FT_Vector_Length` (`src/base/fttrigon.c`), because Godot hints and reads the outlines of a TrueType font
 with them.
+
+The files in `packages/textscene-core/src/r3f/controls/native/text/variation/` port FreeType's TrueType variation
+tables (`src/truetype/ttgxvar.c`: `fvar`, `avar`, `gvar`, `cvar`, `HVAR`, `VVAR` and their item variation
+stores) and its `GETVARIATION` instruction (`src/truetype/ttinterp.c`), because Godot draws a `FontVariation`
+of a variable TrueType font with them.
+
+The files in `packages/textscene-core/src/r3f/controls/native/text/autofit/` whose names start with `af`, with
+`autoHinter.ts`, `ftHash.ts` and `sfntAutofitFace.ts`, port FreeType's auto-hinter (`src/autofit/`), its hash
+table (`src/base/fthash.c`) and its style flags (`src/sfnt/sfobjs.c`), because Godot loads the outlines of a
+TrueType font without hints of its own, or of a font with `force_autohinter` on, through it.
 
 FreeType is by David Turner, Robert Wilhelm and Werner Lemberg, and the charstring engine is by Adobe. It is
 licensed under the FreeType Project License, separately from Godot's own MIT licence above.
@@ -896,6 +955,65 @@ SOFTWARE.
 
 ---
 
+## HarfBuzz
+
+<https://harfbuzz.github.io>
+
+`openTypeLayout.ts`, `openTypeGlyphSets.ts` and `openTypeShaping.ts`, in
+`packages/textscene-core/src/r3f/controls/native/text/autofit/`, port HarfBuzz's reading of the `GSUB` and
+`GPOS` tables, its glyph closure and its default shaper, because FreeType's auto-hinter shapes its blue
+characters and finds the glyphs of each style with HarfBuzz in Godot. `openTypeGdef.ts` in the same
+directory ports its `GDEF` glyph properties and lookup flags, and `variation/instanceKerning.ts` ports its
+pair kerning at a variable-font instance. Godot vendors it as `thirdparty/harfbuzz`. HarfBuzz is licensed under the "Old MIT" licence, separately from Godot's own MIT
+licence above.
+
+```
+HarfBuzz is licensed under the so-called "Old MIT" license.  Details follow.
+For parts of HarfBuzz that are licensed under different licenses see individual
+files names COPYING in subdirectories where applicable.
+
+Copyright © 2010-2022  Google, Inc.
+Copyright © 2015-2020  Ebrahim Byagowi
+Copyright © 2019,2020  Facebook, Inc.
+Copyright © 2012,2015  Mozilla Foundation
+Copyright © 2011  Codethink Limited
+Copyright © 2008,2010  Nokia Corporation and/or its subsidiary(-ies)
+Copyright © 2009  Keith Stribley
+Copyright © 2011  Martin Hosken and SIL International
+Copyright © 2007  Chris Wilson
+Copyright © 2005,2006,2020,2021,2022,2023  Behdad Esfahbod
+Copyright © 2004,2007,2008,2009,2010,2013,2021,2022,2023  Red Hat, Inc.
+Copyright © 1998-2005  David Turner and Werner Lemberg
+Copyright © 2016  Igalia S.L.
+Copyright © 2022  Matthias Clasen
+Copyright © 2018,2021  Khaled Hosny
+Copyright © 2018,2019,2020  Adobe, Inc
+Copyright © 2013-2015  Alexei Podtelezhnikov
+
+For full copyright notices consult the individual files in the package.
+
+
+Permission is hereby granted, without written agreement and without
+license or royalty fees, to use, copy, modify, and distribute this
+software and its documentation for any purpose, provided that the
+above copyright notice and the following two paragraphs appear in
+all copies of this software.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE TO ANY PARTY FOR
+DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES
+ARISING OUT OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN
+IF THE COPYRIGHT HOLDER HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH
+DAMAGE.
+
+THE COPYRIGHT HOLDER SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING,
+BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND
+FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
+ON AN "AS IS" BASIS, AND THE COPYRIGHT HOLDER HAS NO OBLIGATION TO
+PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+```
+
+---
+
 ## Brotli decoder
 
 <https://github.com/google/brotli>
@@ -920,6 +1038,42 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+```
+
+---
+
+## bidi-js
+
+<https://github.com/lojjic/bidi-js>
+
+The `bidi-js` npm package (1.1.0) implements the Unicode Bidirectional Algorithm. The previewer uses
+it to put the glyphs of a right-to-left or mixed-direction text in visual order, as Godot's ICU does.
+The package ships its licence beside its code, not in it, so a bundle that holds the package carries
+the notice here. It is licensed MIT, separately from Godot's own MIT licence above.
+
+```
+Copyright (c) 2021 Jason Johnston
+
+MIT License
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
 ---

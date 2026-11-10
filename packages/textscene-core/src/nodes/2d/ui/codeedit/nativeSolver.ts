@@ -8,6 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { formatControlNumber, type Numerals } from '../../../../godot/text/numberFormat';
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
@@ -34,23 +35,32 @@ const CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT = 3;
 const SPACE_PAD = ' ';
 const ZERO_PAD = '0';
 
+/** `line_number_digits`'s own default (`code_edit.h:113`), the count a CodeEdit keeps until something recomputes it. */
+const CODE_EDIT_LINE_NUMBER_DIGITS_DEFAULT = 1;
+
 /**
  * `CodeEdit::_text_changed` (`code_edit.cpp:3875`): `MAX(line_numbers_min_digits, std::log10(lc) + 1)`,
  * transcribed with `Math.log10`'s float hazard at a power of ten, which `std::log10` shares, and not
- * replaced with `String(lc).length`.
+ * replaced with `String(lc).length`. It runs on `text_set` (`:3863-3866`, `text_edit.cpp:4006`), so any
+ * `text` property, even an empty one, runs it. A changed `line_numbers_min_digits` runs it too
+ * (`:1536-1550`), but one equal to the default returns early. Otherwise the digit count stays at 1.
  */
-function codeEditLineNumberDigits(lineCount: number, minDigits: number | undefined): number {
-  const min = minDigits ?? CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT;
-  return Math.max(min, Math.floor(Math.log10(lineCount)) + 1);
+function codeEditLineNumberDigits(props: CodeEditProperties, lineCount: number): number {
+  const minDigits = props.gutterLineNumbersMinDigits ?? CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT;
+  const isRecomputed = props.text !== undefined || minDigits !== CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT;
+  if (!isRecomputed) return CODE_EDIT_LINE_NUMBER_DIGITS_DEFAULT;
+  return Math.max(minDigits, Math.floor(Math.log10(lineCount)) + 1);
 }
 
-/** `String::num_int64(line + 1).lpad(digits, padding)` (`code_edit.cpp:1569`). */
+/** `String::num_int64(line + 1).lpad(digits, padding)`, then `format_number` (`code_edit.cpp:1569-1572`). */
 export function codeEditLineNumberText(
   lineIndex: number,
   digits: number,
-  zeroPad: boolean | undefined
+  zeroPad: boolean | undefined,
+  numerals: Numerals
 ): string {
-  return String(lineIndex + 1).padStart(digits, zeroPad ? ZERO_PAD : SPACE_PAD);
+  const padded = String(lineIndex + 1).padStart(digits, zeroPad ? ZERO_PAD : SPACE_PAD);
+  return formatControlNumber(padded, numerals);
 }
 
 interface CodeEditGutterBand {
@@ -83,11 +93,11 @@ export function codeEditGutterBand(
   const mainWidthPx = mainDrawn ? rowHeightPx : 0;
 
   const lineNumbersDrawn = props.gutterDrawLineNumbers === true;
-  const lineNumberDigits = codeEditLineNumberDigits(lineCount, props.gutterLineNumbersMinDigits);
-  const lineNumberWidthPx = lineNumbersDrawn ? (lineNumberDigits + 1) * charWidth0Px : 0;
+  const lineNumberDigits = codeEditLineNumberDigits(props, lineCount);
+  const lineNumberWidthPx = lineNumbersDrawn ? Math.trunc((lineNumberDigits + 1) * charWidth0Px) : 0;
 
   const foldDrawn = props.gutterDrawFoldGutter === true;
-  const foldWidthPx = foldDrawn ? rowHeightPx / 1.2 : 0;
+  const foldWidthPx = foldDrawn ? Math.trunc(rowHeightPx / 1.2) : 0;
 
   const gutteredWidthPx = mainWidthPx + lineNumberWidthPx + foldWidthPx;
   // `_update_gutter_width` (`text_edit.cpp:8962-8977`) sets `gutter_padding = 2` and never clears it.

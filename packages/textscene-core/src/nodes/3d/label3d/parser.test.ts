@@ -7,7 +7,8 @@ import { heading } from '../../../parser/testing/parserKit';
 import { ShadowCastingSetting } from '../../../godot/rendering/rendering';
 import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
-import { HorizontalAlignment } from '../../../godot/math/alignment';
+import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
+import { AutowrapMode } from '../../../godot/text/textServerEnums';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => {
@@ -30,6 +31,55 @@ describe('Label3D Parser', () => {
       expect(props.modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 }); // default white
       expect(props.outline_size).toBe(12); // Godot default
       expect(props.outline_modulate).toEqual({ r: 0, g: 0, b: 0, a: 1 }); // default black
+    });
+
+    it('reads the layout properties', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
+        width: '120.5',
+        autowrap_mode: '3',
+        autowrap_trim_flags: '64',
+        justification_flags: '34',
+        vertical_alignment: '2',
+        uppercase: 'true',
+        offset: 'Vector2(4, -6)',
+      });
+      expect(props).toMatchObject({
+        width: 120.5,
+        autowrap_mode: AutowrapMode.AUTOWRAP_WORD_SMART,
+        autowrap_trim_flags: 64,
+        justification_flags: 34,
+        vertical_alignment: VerticalAlignment.VERTICAL_ALIGNMENT_BOTTOM,
+        uppercase: true,
+        offset: { x: 4, y: -6 },
+      });
+    });
+
+    it("defaults the layout properties to Godot's (label_3d.h:108-122)", () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {});
+      expect(props).toMatchObject({
+        width: 500,
+        autowrap_mode: AutowrapMode.AUTOWRAP_OFF,
+        autowrap_trim_flags: 192,
+        justification_flags: 163,
+        vertical_alignment: VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+        uppercase: false,
+        offset: { x: 0, y: 0 },
+      });
+    });
+
+    it('reads shaded, off by default as the constructor leaves FLAG_SHADED (label_3d.cpp:1081-1082)', () => {
+      expect(parseLabel3D(heading('Label3D', { name: 'Label' }), {}).shaded).toBe(false);
+      expect(parseLabel3D(heading('Label3D', { name: 'Label' }), { shaded: 'true' }).shaded).toBe(true);
+    });
+
+    it('keeps FILL as a vertical_alignment, which the setter accepts (label_3d.cpp:693)', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), { vertical_alignment: '3' });
+      expect(props.vertical_alignment).toBe(VerticalAlignment.VERTICAL_ALIGNMENT_FILL);
+    });
+
+    it('masks autowrap_trim_flags to BREAK_TRIM_MASK, as the setter does (label_3d.cpp:920)', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), { autowrap_trim_flags: '255' });
+      expect(props.autowrap_trim_flags).toBe(224);
     });
 
     it('reads alpha_hash_scale', () => {
@@ -208,6 +258,36 @@ describe('Label3D Parser', () => {
     it('keeps OFF for a cast_shadow it cannot read (edge case)', () => {
       const props = parseLabel3D(heading('Label3D', { name: 'Label' }), { cast_shadow: 'garbage' });
       expect(props.castShadow).toBe(ShadowCastingSetting.OFF);
+    });
+
+    it('defaults to AUTO, no language and the DEFAULT parser with no options (label_3d.h:131-134)', () => {
+      expect(parseLabel3D(heading('Label3D', { name: 'Label' }), {})).toMatchObject({
+        textDirection: 0,
+        language: '',
+        structuredTextBidiOverride: 0,
+        structuredTextBidiOverrideOptions: [],
+      });
+    });
+
+    it('reads text_direction, language, the parser and its options', () => {
+      const props = parseLabel3D(heading('Label3D', { name: 'Label' }), {
+        text_direction: '3',
+        language: '"he"',
+        structured_text_bidi_override: '2',
+        structured_text_bidi_override_options: '["/"]',
+      });
+      expect(props).toMatchObject({
+        textDirection: 3,
+        language: 'he',
+        structuredTextBidiOverride: 2,
+        structuredTextBidiOverrideOptions: ['/'],
+      });
+    });
+
+    it('keeps AUTO for a text_direction the setter refuses (label_3d.cpp:705)', () => {
+      expect(parseLabel3D(heading('Label3D', { name: 'Label' }), { text_direction: '4' }).textDirection).toBe(
+        0
+      );
     });
 
     it('reads transparency through the GeometryInstance3D parse', () => {

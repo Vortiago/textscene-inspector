@@ -31,9 +31,9 @@ export const VerticalAlignment = {
 export const VERTICAL_ALIGNMENT_NAMES = enumNamesByValue(VerticalAlignment);
 
 /**
- * Where a line of `lineWidth` starts, relative to the origin of a box with no width of its own
- * (`label_3d.cpp:588-599`, `primitive_meshes.cpp:3358-3366`). `FILL` shares `CENTER`'s branch: its
- * justification lives in the width-driven fit, which a line without a width never runs.
+ * Where a line of `lineWidth` starts, relative to the origin (`label_3d.cpp:588-599`,
+ * `primitive_meshes.cpp:3358-3366`). `FILL` shares `CENTER`'s branch: the stretch to `width` is done
+ * beforehand, so a justified line is already as wide as the box and a short last line centres.
  */
 export function lineStartOffset(lineWidth: number, alignment: EnumValue<typeof HorizontalAlignment>): number {
   switch (alignment) {
@@ -42,6 +42,25 @@ export function lineStartOffset(lineWidth: number, alignment: EnumValue<typeof H
       return -lineWidth / 2;
     case HorizontalAlignment.HORIZONTAL_ALIGNMENT_RIGHT:
       return -lineWidth;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * `vbegin` (`primitive_meshes.cpp:3321-3336`, `label_3d.cpp:567-580`): how far above the origin the
+ * first line's top sits. TOP and FILL hang the block below the origin.
+ */
+export function blockStartY(
+  alignment: EnumValue<typeof VerticalAlignment>,
+  blockHeight: number,
+  spacing: number
+): number {
+  switch (alignment) {
+    case VerticalAlignment.VERTICAL_ALIGNMENT_CENTER:
+      return (blockHeight - spacing) / 2;
+    case VerticalAlignment.VERTICAL_ALIGNMENT_BOTTOM:
+      return blockHeight - spacing;
     default:
       return 0;
   }

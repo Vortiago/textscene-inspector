@@ -55,6 +55,10 @@ export class ByteWriter {
     return this.chunks.length;
   }
 
+  u8(value: number): this {
+    return this.fixed(1, (view) => view.setUint8(0, value & 0xff));
+  }
+
   u16(value: number): this {
     return this.fixed(2, (view) => view.setUint16(0, value, !this.isBigEndian));
   }

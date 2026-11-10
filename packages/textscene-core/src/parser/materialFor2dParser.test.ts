@@ -27,6 +27,7 @@ describe('parseMaterialFor2dFields', () => {
       no_depth_test: false,
       double_sided: true,
       fixed_size: false,
+      shaded: false,
     });
   });
 
@@ -42,6 +43,7 @@ describe('parseMaterialFor2dFields', () => {
         no_depth_test: 'true',
         double_sided: 'false',
         fixed_size: 'true',
+        shaded: 'true',
       },
       'Sprite3D'
     );
@@ -55,6 +57,7 @@ describe('parseMaterialFor2dFields', () => {
       no_depth_test: true,
       double_sided: false,
       fixed_size: true,
+      shaded: true,
     });
   });
 

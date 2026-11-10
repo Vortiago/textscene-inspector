@@ -32,7 +32,20 @@ function fontContainerMimeType(path: string): string | undefined {
   return extension === null ? undefined : FONT_MIME_TYPES[extension];
 }
 
-/** A raw font file's bytes need no parsing: they are the resource. */
-export function fontResourceFromBytes(path: string, bytes: ArrayBuffer): FontFileResource {
-  return { kind: 'file', bytes, mimeType: fontContainerMimeType(path), fallbacks: [], properties: {} };
+/**
+ * A raw font file's bytes need no parsing: they are the resource. `importParams` are the `[params]`
+ * of its import sidecar, which Godot's importer sets as the `FontFile`'s properties.
+ */
+export function fontResourceFromBytes(
+  path: string,
+  bytes: ArrayBuffer,
+  importParams: Record<string, string>
+): FontFileResource {
+  return {
+    kind: 'file',
+    bytes,
+    mimeType: fontContainerMimeType(path),
+    fallbacks: [],
+    properties: importParams,
+  };
 }

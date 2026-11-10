@@ -1,0 +1,156 @@
+; One variable: a set text direction on trimmed outlined text. LinkButton, the FoldableContainer
+; title and Button each draw Hebrew and Latin rows set LTR (1) and RTL (2), with a red
+; outline_size 8 ring. A set direction is the paragraph direction, so ring and fill trim and draw
+; alike (text_server.cpp:1744,1840). The AUTO rows are in unit-text-outline-link-foldable-item-list.
+
+[gd_scene load_steps=3 format=3 uid="uid://unittextoutlinesetdirection"]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+[node name="LinkLtrHebrew" type="LinkButton" parent="."]
+offset_left = 24.0
+offset_top = 16.0
+offset_right = 144.0
+offset_bottom = 56.0
+text = "שלום עולם שלום"
+text_overrun_behavior = 3
+text_direction = 1
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="FoldLtrHebrew" type="FoldableContainer" parent="."]
+offset_left = 200.0
+offset_top = 16.0
+offset_right = 360.0
+offset_bottom = 72.0
+title = "שלום עולם שלום"
+title_text_overrun_behavior = 3
+title_text_direction = 1
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="ButtonLtrHebrew" type="Button" parent="."]
+offset_left = 420.0
+offset_top = 16.0
+offset_right = 560.0
+offset_bottom = 64.0
+text = "שלום עולם שלום"
+text_overrun_behavior = 3
+text_direction = 1
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="LinkLtrLatin" type="LinkButton" parent="."]
+offset_left = 24.0
+offset_top = 88.0
+offset_right = 144.0
+offset_bottom = 128.0
+text = "Hello wide world"
+text_overrun_behavior = 3
+text_direction = 1
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="FoldLtrLatin" type="FoldableContainer" parent="."]
+offset_left = 200.0
+offset_top = 88.0
+offset_right = 360.0
+offset_bottom = 144.0
+title = "Hello wide world"
+title_text_overrun_behavior = 3
+title_text_direction = 1
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="ButtonLtrLatin" type="Button" parent="."]
+offset_left = 420.0
+offset_top = 88.0
+offset_right = 560.0
+offset_bottom = 136.0
+text = "Hello wide world"
+text_overrun_behavior = 3
+text_direction = 1
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="LinkRtlHebrew" type="LinkButton" parent="."]
+offset_left = 24.0
+offset_top = 160.0
+offset_right = 144.0
+offset_bottom = 200.0
+text = "שלום עולם שלום"
+text_overrun_behavior = 3
+text_direction = 2
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="FoldRtlHebrew" type="FoldableContainer" parent="."]
+offset_left = 200.0
+offset_top = 160.0
+offset_right = 360.0
+offset_bottom = 216.0
+title = "שלום עולם שלום"
+title_text_overrun_behavior = 3
+title_text_direction = 2
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="ButtonRtlHebrew" type="Button" parent="."]
+offset_left = 420.0
+offset_top = 160.0
+offset_right = 560.0
+offset_bottom = 208.0
+text = "שלום עולם שלום"
+text_overrun_behavior = 3
+text_direction = 2
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="LinkRtlLatin" type="LinkButton" parent="."]
+offset_left = 24.0
+offset_top = 232.0
+offset_right = 144.0
+offset_bottom = 272.0
+text = "Hello wide world"
+text_overrun_behavior = 3
+text_direction = 2
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="FoldRtlLatin" type="FoldableContainer" parent="."]
+offset_left = 200.0
+offset_top = 232.0
+offset_right = 360.0
+offset_bottom = 288.0
+title = "Hello wide world"
+title_text_overrun_behavior = 3
+title_text_direction = 2
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8
+
+[node name="ButtonRtlLatin" type="Button" parent="."]
+offset_left = 420.0
+offset_top = 232.0
+offset_right = 560.0
+offset_bottom = 280.0
+text = "Hello wide world"
+text_overrun_behavior = 3
+text_direction = 2
+theme_override_colors/font_outline_color = Color(1, 0, 0, 1)
+theme_override_constants/outline_size = 8

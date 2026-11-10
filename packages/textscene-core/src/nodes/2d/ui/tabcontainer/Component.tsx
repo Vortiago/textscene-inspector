@@ -102,7 +102,8 @@ export function TabContainer({
         </CanvasItemGroup>
       )}
       {barRect && (
-        <CanvasItemGroup position={[barRect.x, -barRect.y, 0]}>
+        // The strip's own group key: three sorts by the nearest group's order first.
+        <CanvasItemGroup position={[barRect.x, -barRect.y, 0]} renderOrder={stripSlot.key}>
           <TabBar
             solveNode={syntheticBar}
             tint={tint}

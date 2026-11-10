@@ -59,6 +59,7 @@ export function ScrollContainer({
           opacity={tint.opacity}
           chromeSlot={chromeSlot}
         />
+        {/* `INTERNAL_MODE_BACK` children (`scroll_container.cpp:919,924`): the bars paint after every descendant. */}
         <ScrollBarChrome
           bar={layout.horizontal}
           track={theme.widgets.scrollBar.scrollHorizontal}

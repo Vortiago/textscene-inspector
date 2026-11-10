@@ -5,13 +5,9 @@
  */
 
 import { lazy, Suspense, type ReactNode } from 'react';
+import { IS_VITEST } from '../utils/isVitest';
 
 const Text = lazy(() => import('@react-three/drei/core/Text').then((m) => ({ default: m.Text })));
-
-const IS_VITEST = (() => {
-  const proc = (globalThis as { process?: { env?: { VITEST?: string } } }).process;
-  return proc?.env?.VITEST === 'true';
-})();
 
 interface InternalTextLabelProps {
   text: string;

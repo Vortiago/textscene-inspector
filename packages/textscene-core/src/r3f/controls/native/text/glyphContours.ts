@@ -12,6 +12,7 @@
 import type { Vector2 } from '../../../../godot/math/vector';
 import { ContourPointTag } from '../../../../godot/text/textServerEnums';
 import { FIXED_26_6_ONE, ftMulFix } from './fontMetrics';
+import type { FontInstance } from './variation/fontInstance';
 
 /** `ContourPointTag`: ON, or a conic or cubic control point. */
 export type ContourTag = (typeof ContourPointTag)[keyof typeof ContourPointTag];
@@ -32,8 +33,25 @@ export interface GlyphContours {
   isFillRight: boolean;
 }
 
-/** The scaled outline of a glyph at `fontSizePx` as the font loads it, or null for a glyph with no outline. */
-export type GlyphOutlineReader = (glyphIndex: number, fontSizePx: number) => ScaledOutline | null;
+/** A font's outlines as `FT_LOAD_NO_SCALE` loads them, which the auto-hinter hints from. */
+export interface UnscaledOutlines {
+  readonly unitsPerEm: number;
+  /** Whether a size rounds its ppem to whole pixels, as `head.flags` bit 3 asks of a TrueType font. */
+  readonly isPpemRounded: boolean;
+  readonly glyphCount: number;
+  /** The glyph's outline in design units, or null when FreeType fails to load it. */
+  unscaledGlyph(glyphIndex: number): ScaledOutline | null;
+}
+
+/**
+ * The scaled outline of a glyph at `fontSizePx` as the font loads it, at `instance` when the font is
+ * variable and the instance is not its default, or null for a glyph with no outline.
+ */
+export type GlyphOutlineReader = (
+  glyphIndex: number,
+  fontSizePx: number,
+  instance?: FontInstance | null
+) => ScaledOutline | null;
 
 /** A glyph's points as FreeType holds them: 26.6 fixed point, y up. */
 export interface ScaledOutline {
@@ -80,7 +98,7 @@ export function midpoint(a: Vector2, b: Vector2): Vector2 {
 const areaShift = (extent: number): number => Math.max(highestBit(extent) - AREA_COORDINATE_BITS, 0);
 
 /** The least and the greatest of `values`, which spreading into `Math.min` cannot take for a long outline. */
-function extent(values: readonly number[]): [number, number] {
+export function extent(values: readonly number[]): [number, number] {
   let least = Infinity;
   let greatest = -Infinity;
   for (const value of values) {
@@ -118,6 +136,19 @@ export function outlineOrientation(outline: ScaledOutline): OutlineOrientation {
   }
   if (area === 0) return 'none';
   return area < 0 ? 'fillRight' : 'fillLeft';
+}
+
+/** A px coordinate on FreeType's 26.6 grid. */
+export const toOutlineUnits = (px: number): number => Math.round(px * FIXED_26_6_ONE);
+
+/** The 26.6 outline, y up, that FreeType holds for `contours`: the inverse of `scaledOutlineContours`. */
+export function contoursScaledOutline({ points, contourEnds }: GlyphContours): ScaledOutline {
+  return {
+    x: points.map((point) => toOutlineUnits(point.x)),
+    y: points.map((point) => toOutlineUnits(-point.y)),
+    tags: points.map((point) => point.tag),
+    contourEnds: [...contourEnds],
+  };
 }
 
 /** The outline in px with y down, as `font_get_glyph_contours` returns it (`text_server_adv.cpp:3631-3641`). */

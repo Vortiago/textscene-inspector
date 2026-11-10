@@ -83,7 +83,9 @@ export function useCachedFiles<T extends object>(
   const loader = kind && ambientLoader;
   const cache = kind && loader ? kind.cacheOf(loader) : null;
   const readPaths = useRef<ReadonlySet<string>>(NO_PATHS);
-  const version = useCacheVersion(loader, kind?.busTypes ?? NO_BUS_TYPES, readPaths, { onlyReadKeys: true });
+  const version = useCacheVersion(loader, kind?.busTypes ?? NO_BUS_TYPES, readPaths, {
+    onlyReadKeys: true,
+  });
   const planned = useMemo(
     () => (kind ? [...new Set(plan((path) => cache?.getCached(path) ?? undefined))] : []),
     // `version` is a cache-buster: the cache changes outside React.
@@ -91,8 +93,8 @@ export function useCachedFiles<T extends object>(
     [plan, kind, cache, version]
   );
   const paths = useStableList(planned);
-  // A layout effect, not `useEffect`: a load that lands between the render and a later passive
-  // effect would miss `readPaths`, and `onlyReadKeys` would leave the file loading for good.
+  // A layout effect, not `useEffect`: `useCacheVersion` judges a load that landed before the commit
+  // against `readPaths` in its own passive effect, so the new paths must be in place by then.
   useLayoutEffect(() => {
     readPaths.current = new Set(paths);
   }, [paths]);

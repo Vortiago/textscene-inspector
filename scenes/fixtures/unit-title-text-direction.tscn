@@ -1,0 +1,150 @@
+; One variable: the paragraph direction of a title. A TabBar tab is INHERITED (tab_bar.h:77), so it
+; follows the layout direction. MenuBar and FoldableContainer read their own `text_direction` and
+; `language` (menu_bar.cpp:522-527, foldable_container.cpp:491-498).
+
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="FontFile" path="res://fonts/dejavu-sans-bidi-subset.ttf" id="1_font"]
+
+[sub_resource type="Theme" id="Theme_1"]
+default_font = ExtResource("1_font")
+default_font_size = 28
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.1, 0.12, 0.18, 1)
+
+; Under an RTL layout each tab title draws `!` first. A right-to-left control mirrors its own offsets in its parent (control.cpp:1785).
+[node name="TabBarRtl" type="TabBar" parent="."]
+layout_direction = 3
+offset_left = 352.0
+offset_top = 20.0
+offset_right = 752.0
+offset_bottom = 64.0
+tab_alignment = 0
+clip_tabs = false
+tab_count = 2
+tab_0/title = "שלום"
+tab_1/title = "Hello!"
+
+; Under an LTR layout it does not.
+[node name="TabBarLtr" type="TabBar" parent="."]
+offset_left = 400.0
+offset_top = 84.0
+offset_right = 800.0
+offset_bottom = 128.0
+tab_alignment = 0
+clip_tabs = false
+tab_count = 1
+tab_0/title = "Hello!"
+
+; A TabContainer draws its tabs through the same rule.
+[node name="TabContainerRtl" type="TabContainer" parent="."]
+layout_direction = 3
+offset_left = 22.0
+offset_top = 20.0
+offset_right = 302.0
+offset_bottom = 140.0
+tab_alignment = 0
+current_tab = 0
+clip_tabs = false
+
+[node name="Hello!" type="Control" parent="TabContainerRtl"]
+layout_mode = 2
+
+; RTL draws each title `!` first.
+[node name="MenuBarRtl" type="MenuBar" parent="."]
+offset_left = 400.0
+offset_top = 148.0
+offset_right = 800.0
+offset_bottom = 192.0
+text_direction = 2
+flat = false
+
+[node name="Hello!" type="PopupMenu" parent="MenuBarRtl"]
+title = "Hello!"
+
+; Hebrew sets the direction of neutral text.
+[node name="MenuBarNeutralHe" type="MenuBar" parent="."]
+offset_left = 400.0
+offset_top = 212.0
+offset_right = 800.0
+offset_bottom = 256.0
+language = "he"
+flat = false
+
+[node name="Numbers" type="PopupMenu" parent="MenuBarNeutralHe"]
+title = "123!"
+
+; INHERITED under an RTL layout.
+[node name="MenuBarInherited" type="MenuBar" parent="."]
+layout_direction = 3
+offset_left = 22.0
+offset_top = 148.0
+offset_right = 302.0
+offset_bottom = 192.0
+text_direction = 3
+flat = false
+
+[node name="Hello!" type="PopupMenu" parent="MenuBarInherited"]
+title = "Hello!"
+
+; RTL draws the title `!` first.
+[node name="FoldableRtl" type="FoldableContainer" parent="."]
+offset_left = 400.0
+offset_top = 276.0
+offset_right = 800.0
+offset_bottom = 320.0
+folded = true
+title = "Hello!"
+title_text_direction = 2
+
+; Hebrew sets the direction of neutral text.
+[node name="FoldableNeutralHe" type="FoldableContainer" parent="."]
+offset_left = 400.0
+offset_top = 340.0
+offset_right = 800.0
+offset_bottom = 384.0
+folded = true
+title = "123!"
+language = "he"
+
+; INHERITED under an RTL layout.
+[node name="FoldableInherited" type="FoldableContainer" parent="."]
+layout_direction = 3
+offset_left = 352.0
+offset_top = 404.0
+offset_right = 752.0
+offset_bottom = 448.0
+folded = true
+title = "Hello!"
+title_text_direction = 3
+
+; A trimmed RTL title keeps its logical start, which is the right end (text_server_adv.cpp:6053).
+[node name="FoldableTrimRtl" type="FoldableContainer" parent="."]
+offset_left = 400.0
+offset_top = 468.0
+offset_right = 600.0
+offset_bottom = 512.0
+folded = true
+title = "Hello wide world!"
+title_text_direction = 2
+title_text_overrun_behavior = 3
+
+; A trimmed AUTO Hebrew title.
+[node name="FoldableTrimAutoHebrew" type="FoldableContainer" parent="."]
+offset_left = 400.0
+offset_top = 532.0
+offset_right = 600.0
+offset_bottom = 576.0
+folded = true
+title = "שלום עולם רחב מאוד"
+title_text_overrun_behavior = 3

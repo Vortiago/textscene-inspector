@@ -8,6 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { OPEN_SANS_FONT_METRICS } from '../../../r3f/controls/native/text/openSansFontMetrics';
 import { withOutlines } from '../../../r3f/controls/native/text/fontMetrics';
+import { unshapedFace } from '../../../r3f/controls/native/text/textLayout.testkit';
 import type { GlyphContours } from '../../../r3f/controls/native/text/glyphContours';
 import measured from './build.godot.json';
 import { buildTextMeshSurface, type TextMeshFace } from './build';
@@ -42,7 +43,7 @@ function measuredFace({ glyphs }: MeasuredMesh): TextMeshFace {
       isFillRight: glyph.isFillRight,
     };
   };
-  return withOutlines(OPEN_SANS_FONT_METRICS, {
+  return withOutlines(unshapedFace(OPEN_SANS_FONT_METRICS), {
     glyphIndex: (codepoint) => (glyphs[String.fromCodePoint(codepoint)] ? codepoint : 0),
     glyphContours: (index) => contoursOf(index),
   });
@@ -63,10 +64,9 @@ function farthestFromNearest(
 const POSITION_TOLERANCE = 2e-6;
 
 describe.each(measured.surfaces as unknown as MeasuredMesh[])('TextMesh $text $raw against Godot', (mesh) => {
-  const surface = buildTextMeshSurface(
-    decodeTextMesh({ ...mesh.raw, text: JSON.stringify(mesh.text) }),
-    measuredFace(mesh)
-  );
+  const surface = buildTextMeshSurface(decodeTextMesh({ ...mesh.raw, text: JSON.stringify(mesh.text) }), '', [
+    measuredFace(mesh),
+  ]);
 
   it('writes the same number of vertices and indices', () => {
     expect([surface.positions.length / 3, surface.indices.length]).toEqual([mesh.vertices, mesh.indices]);

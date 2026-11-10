@@ -23,6 +23,7 @@ import {
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { controlProps } from '../control/testing/controlProps';
+import { buttonDrawnLabel } from '../../../../r3f/controls/native/buttonBase';
 
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
@@ -98,6 +99,8 @@ describe('checkButtonTextTheme', () => {
   it('a theme_override_colors/font_color override wins over the default', () => {
     const props: CheckButtonProperties = controlProps({
       name: 'CB',
+      textDirection: 0,
+      language: '',
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
     });
     expect(checkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
@@ -148,7 +151,12 @@ describe('checkButtonIconColor (default_theme.cpp:352-353)', () => {
   });
 
   it('a theme_override_colors/button_checked_color override (already folded into n.colors) wins when checked', () => {
-    const props: CheckButtonProperties = controlProps({ name: 'CB', buttonPressed: true });
+    const props: CheckButtonProperties = controlProps({
+      name: 'CB',
+      textDirection: 0,
+      language: '',
+      buttonPressed: true,
+    });
     expect(checkButtonIconColor(props, { button_checked_color: { r: 0, g: 1, b: 0, a: 1 } })).toEqual({
       r: 0,
       g: 1,
@@ -234,6 +242,14 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
     textHeightPx: 26,
     rtl: false,
   };
+
+  it('ends an overflowing right-to-left CENTER label at the trailing edge (text_paragraph.cpp:908-910)', () => {
+    // The text box is 150 - 2*6 - (32+4) = 102 wide: 6 + (102 - 200) = -92.
+    const { labelBox } = layoutCheckButtonContent({ ...BASE, textAlignment: 1 });
+    const rtlLine = { text: '', glyphs: [], widthPx: 200, paragraphIndex: 0, paragraphStart: 0, isRtl: true };
+    const [drawn] = buttonDrawnLabel([rtlLine], labelBox!.widthPx, labelBox!.alignment);
+    expect(labelBox!.leftPx + drawn!.offsetXPx).toBe(-92);
+  });
 
   it('icon sits flush against the RIGHT edge, vertically centred + check_v_offset', () => {
     const { iconPosition } = layoutCheckButtonContent(BASE);

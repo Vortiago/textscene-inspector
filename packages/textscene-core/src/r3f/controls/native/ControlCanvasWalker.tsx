@@ -24,7 +24,7 @@ import {
 } from '../../components/canvasItemMaterialContext';
 import { INHERIT_PARENT_MATERIAL } from '../../canvasAncestors';
 import { isCanvasLayerType } from '../../canvasPaintOrder';
-import { CanvasItemGroup, CanvasItemKeyProvider } from '../../components/CanvasItemGroup';
+import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import { snapControlsToPixelsEnabled, snappedControlOrigin } from './controlPixelSnap';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
@@ -290,7 +290,7 @@ function ControlItemGroup({
       visible={isVisible}
       renderOrder={renderOrder}
     >
-      <CanvasItemKeyProvider value={renderOrder}>
+      <CanvasItemProvider value={renderOrder}>
         {/* The painter sits in the scope too: Godot tests an item's light window against its
             own `z_final`, and its descendants start from that value. */}
         <CanvasItemChildScope state={state}>
@@ -308,7 +308,7 @@ function ControlItemGroup({
             )}
           </OwnCanvasModulateProvider>
         </CanvasItemChildScope>
-      </CanvasItemKeyProvider>
+      </CanvasItemProvider>
     </group>
   );
 }

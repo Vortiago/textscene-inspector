@@ -71,7 +71,8 @@ export interface DrawnLine {
 
 /**
  * Each line as `TextParagraph::draw` paints it in a box of `boxWidthPx`: shifted by its own
- * alignment (`shaped_text_get_width` is ceiled) and cut with `clipLineToDrawBox`.
+ * alignment (`shaped_text_get_width` is ceiled) and cut with `clipLineToDrawBox`. A line reads RTL
+ * when `rtl` is set or the line infers RTL (`text_paragraph.cpp:891,902`).
  *
  * @canonical A paragraph's lines, each shifted and cut to the paragraph box as TextParagraph draws them
  */
@@ -82,7 +83,13 @@ export function drawnLinesInBox(
   rtl: boolean
 ): DrawnLine[] {
   return lines.map((line) => {
-    const shiftPx = textParagraphLineShiftPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, alignment, rtl);
+    const isLineRtl = rtl || line.isRtl === true;
+    const shiftPx = textParagraphLineShiftPx(
+      shapedTextSizeWidthPx(line.widthPx),
+      boxWidthPx,
+      alignment,
+      isLineRtl
+    );
     return { line: clipLineToDrawBox(line, boxWidthPx, shiftPx), shiftPx };
   });
 }

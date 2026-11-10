@@ -1,0 +1,73 @@
+[gd_scene load_steps=3 format=3]
+
+; The one variable: the import sidecar's `scaling_mode` of a BMFont, at sizes that are not the
+; fixed size 16. Integer rounds size over fixed size (20 to 1, 24 to 2, 40 to 3), and Disabled draws
+; every size at the fixed size's glyphs (`text_server_adv.cpp:4093-4104`).
+
+[ext_resource type="FontFile" path="res://fonts/bmfont-blocks-integer.fnt" id="1"]
+[ext_resource type="FontFile" path="res://fonts/bmfont-blocks-disabled.fnt" id="2"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Integer20" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 20.0
+offset_right = 500.0
+offset_bottom = 100.0
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 20
+text = "Hi AV Hi"
+
+[node name="Integer24" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 110.0
+offset_right = 500.0
+offset_bottom = 190.0
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 24
+text = "Hi AV Hi"
+
+[node name="Integer40" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 200.0
+offset_right = 500.0
+offset_bottom = 280.0
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 40
+text = "Hi AV Hi"
+
+[node name="Disabled20" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 290.0
+offset_right = 500.0
+offset_bottom = 370.0
+theme_override_fonts/font = ExtResource("2")
+theme_override_font_sizes/font_size = 20
+text = "Hi AV Hi"
+
+[node name="Disabled24" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 380.0
+offset_right = 500.0
+offset_bottom = 460.0
+theme_override_fonts/font = ExtResource("2")
+theme_override_font_sizes/font_size = 24
+text = "Hi AV Hi"
+
+[node name="Disabled40" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 470.0
+offset_right = 500.0
+offset_bottom = 550.0
+theme_override_fonts/font = ExtResource("2")
+theme_override_font_sizes/font_size = 40
+text = "Hi AV Hi"

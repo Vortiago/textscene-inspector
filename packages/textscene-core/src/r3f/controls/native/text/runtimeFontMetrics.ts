@@ -3,7 +3,7 @@
  * the injected `measureWidthUnits`, so the module runs under happy-dom with a fake measurer.
  */
 
-import type { FontMetrics } from './fontMetrics';
+import type { FaceGlyphs, FontMetrics } from './fontMetrics';
 
 /** A width in design units for a string of one or more characters. `sceneFontLoader.ts` binds it to canvas. */
 export type DesignUnitWidthFn = (text: string) => number;
@@ -17,12 +17,26 @@ export interface RuntimeFontMetricsInput {
   readonly measureWidthUnits: DesignUnitWidthFn;
   /** The unique CSS font family the font was registered under, which a canvas-2D painter sets `ctx.font` to. */
   readonly cssFontFamily: string;
+  /** From the font's `cmap`: canvas has no "no glyph" signal. */
+  readonly hasGlyph: (ch: string) => boolean;
+  /** From the font's tables: the glyphs each cluster of a run draws, and where its marks sit. Absent for a font this previewer cannot read. */
+  readonly glyphs?: FaceGlyphs;
+  /** The ink box of one character, measured like `measureWidthUnits`. */
+  readonly measureInkUnits?: (ch: string) => GlyphInk;
 }
 
-/** `FontMetrics` painted with canvas-2D rather than the baked MSDF atlas. `TextRun.tsx` dispatches on `kind`. */
+/** How far a glyph's ink reaches left of its pen and right of it, design units (`TextMetrics#actualBoundingBoxLeft`/`Right`). */
+export interface GlyphInk {
+  readonly left: number;
+  readonly right: number;
+}
+
+/** `FontMetrics` painted with canvas-2D rather than the baked MSDF atlas. `TextRunMesh.tsx` dispatches on `kind`. */
 export interface CanvasFontMetrics extends FontMetrics {
   readonly kind: 'canvas';
   readonly cssFontFamily: string;
+  /** The ink box of `ch`. Absent, or undefined for one character, where the face measures none: its raster then takes a wider bound. */
+  readonly getGlyphInkUnits?: (ch: string) => GlyphInk | undefined;
 }
 
 /** Narrows a `FontMetrics` to `CanvasFontMetrics`, which names the CSS family a painter sets `ctx.font` to. */
@@ -36,10 +50,11 @@ export function isCanvasFontMetrics(metrics: FontMetrics | undefined): metrics i
  * pair on every shape.
  */
 export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): CanvasFontMetrics {
-  const { scalars, measureWidthUnits, cssFontFamily } = input;
+  const { scalars, measureWidthUnits, cssFontFamily, hasGlyph, measureInkUnits, glyphs } = input;
 
   const advanceCache = new Map<string, number>();
   const kerningCache = new Map<string, number>();
+  const inkCache = new Map<string, GlyphInk>();
   let averageAdvanceUnitsCache: number | undefined;
 
   function measureChar(ch: string): number {
@@ -57,6 +72,8 @@ export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): Canvas
     unitsPerEm: scalars.unitsPerEm,
     ascent: scalars.ascent,
     descent: scalars.descent,
+    hasGlyph,
+    ...glyphs,
 
     // Never `null`: canvas has no "no glyph" signal, and the measured width is what `fillText`
     // paints. It carries the real `hmtx` advance, not a hand-parsed one, though a measured float
@@ -64,6 +81,14 @@ export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): Canvas
     getGlyphAdvanceUnits(ch: string): number {
       return measureChar(ch);
     },
+
+    getGlyphInkUnits: measureInkUnits
+      ? (ch: string): GlyphInk => {
+          let ink = inkCache.get(ch);
+          if (!ink) inkCache.set(ch, (ink = measureInkUnits(ch)));
+          return ink;
+        }
+      : undefined,
 
     // From canvas, not a hand-parsed `kern` table: a measured pair carries the OpenType `GPOS`
     // kerning, which a `kern` reader misses.

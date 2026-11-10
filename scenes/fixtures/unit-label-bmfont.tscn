@@ -1,0 +1,63 @@
+[gd_scene load_steps=2 format=3]
+
+; The one variable: a BMFont (`fonts/bmfont-blocks.fnt`, 16 px, one RGBA page of solid blocks) as
+; the Label font. The rows are the glyph table at the fixed size, at 2 times, at 1.5 times, under a
+; font colour, and a character the descriptor lacks, which Godot draws as a hex-code box.
+
+[ext_resource type="FontFile" path="res://fonts/bmfont-blocks.fnt" id="1"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Fixed" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 400.0
+offset_bottom = 60.0
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 16
+text = "Hi AV Hi"
+
+[node name="Double" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 100.0
+offset_right = 400.0
+offset_bottom = 160.0
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 32
+text = "Hi AV Hi"
+
+[node name="OneAndAHalf" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 200.0
+offset_right = 400.0
+offset_bottom = 240.0
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 24
+text = "Hi AV Hi"
+
+[node name="Coloured" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 280.0
+offset_right = 400.0
+offset_bottom = 310.0
+theme_override_colors/font_color = Color(0.2, 1, 0.4, 1)
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 16
+text = "Hi AV Hi"
+
+[node name="Missing" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 340.0
+offset_right = 400.0
+offset_bottom = 370.0
+theme_override_fonts/font = ExtResource("1")
+theme_override_font_sizes/font_size = 16
+text = "HzH"

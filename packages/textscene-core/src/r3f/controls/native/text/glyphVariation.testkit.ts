@@ -6,8 +6,8 @@
 
 import plainReference from './ftEmbolden.godot.json';
 import type { ContourTag, GlyphContours, ScaledOutline } from './glyphContours';
-import type { GlyphVariation } from './fontMetrics';
-import { openFontOutlines } from './sfntOutlines';
+import type { GlyphVariation, OpentypeCoordinates } from './fontMetrics';
+import { CONTOUR_LOAD, openFontOutlines } from './sfntOutlines';
 import { fixtureFontBytes } from './sfntOutlines.testkit';
 
 export interface ReferenceGlyph {
@@ -17,6 +17,10 @@ export interface ReferenceGlyph {
   embolden: number;
   /** The shear of `variation_transform`. Absent is 0. */
   skew?: number;
+  /** `FontFile.force_autohinter`. Absent is off. */
+  forceAutohinter?: boolean;
+  /** The `variation_opentype` axes: a numeric key is a tag, any other key a name. */
+  opentype?: Readonly<Record<string, number | undefined>>;
   contourEnds: number[];
   isFillRight: boolean;
   /** `[x, y, tag]` as Godot's `font_get_glyph_contours` returns them. */
@@ -24,7 +28,9 @@ export interface ReferenceGlyph {
 }
 
 export const referenceGlyphTitle = (glyph: ReferenceGlyph): string =>
-  `${glyph.font} ${glyph.char} at ${glyph.sizePx} px, embolden ${glyph.embolden}, skew ${glyph.skew ?? 0}`;
+  `${glyph.font} ${glyph.char} at ${glyph.sizePx} px, embolden ${glyph.embolden}, skew ${glyph.skew ?? 0}` +
+  (glyph.forceAutohinter ? ', auto-hinter forced' : '') +
+  (glyph.opentype ? `, variation_opentype ${JSON.stringify(glyph.opentype)}` : '');
 
 /** The reference of the same glyph with neither embolden nor skew: Godot's hinted outline before either runs. */
 export function plainReferenceGlyph(glyph: ReferenceGlyph): ReferenceGlyph {
@@ -40,11 +46,24 @@ export function plainReferenceGlyph(glyph: ReferenceGlyph): ReferenceGlyph {
   return plain;
 }
 
-export const variationOf = ({ embolden, skew }: ReferenceGlyph): GlyphVariation => ({ embolden, skew });
+export const opentypeOf = (record: ReferenceGlyph['opentype']): OpentypeCoordinates | undefined =>
+  record &&
+  new Map(
+    Object.entries(record).flatMap(([key, value]) =>
+      value === undefined ? [] : [[/^\d+$/.test(key) ? Number(key) : key, value] as const]
+    )
+  );
+
+export const variationOf = ({ embolden, skew, opentype }: ReferenceGlyph): GlyphVariation => ({
+  embolden,
+  skew,
+  opentype: opentypeOf(opentype),
+});
 
 /** The contours the reader gives the font of `glyph` for its character, size and variation. */
 export async function readerContours(glyph: ReferenceGlyph): Promise<GlyphContours> {
-  const outlines = (await openFontOutlines(fixtureFontBytes(glyph.font)))!;
+  const load = { ...CONTOUR_LOAD, isAutohinterForced: glyph.forceAutohinter ?? false };
+  const outlines = (await openFontOutlines(fixtureFontBytes(glyph.font), load))!;
   return outlines.glyphContours(
     outlines.glyphIndex(glyph.char.codePointAt(0)!),
     glyph.sizePx,

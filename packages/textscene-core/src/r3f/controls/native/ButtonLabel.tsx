@@ -8,28 +8,45 @@ import { CanvasItemGroup } from '../../components/CanvasItemGroup';
 import { buttonDrawnLabel, shapeButtonLabel, trimButtonLabel, type ButtonLabelBox } from './buttonBase';
 import type { ShareNode } from './solveTree';
 import { resolveNodeFontMetrics } from './text/resolveNodeFontMetrics';
-import { TextRun, type TextRunProps } from './text/TextRun';
+import { OutlinedTextRun, type OutlinedTextRunProps } from './text/OutlinedTextRun';
 import { soloLineLayout, type TextLayoutResult } from './text/textLayout';
+import { isDrawnRtl, type TextBidiOptions } from './text/textBidiOptions';
 
 interface ButtonLabelProps extends Pick<
-  TextRunProps,
-  'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'
+  OutlinedTextRunProps,
+  'layout' | 'fontSizePx' | 'tint' | 'outline' | 'clippingPlanes' | 'renderOrder'
 > {
   box: ButtonLabelBox;
   /** `TextServer::OverrunBehavior`; absent means no trimming. */
   overrunBehavior: number | undefined;
+  /** The paragraph's bidi options: a set RTL direction draws a trimmed fill right to left. */
+  bidi: TextBidiOptions;
+  /** The label wraps, so no row is trimmed. */
+  isWrapped?: boolean;
 }
 
 /** @canonical A Button-family label drawn in its paragraph box, each line shifted and cut */
-export function ButtonLabel({ layout, box, overrunBehavior, ...runProps }: ButtonLabelProps) {
+export function ButtonLabel({
+  layout,
+  box,
+  overrunBehavior,
+  bidi,
+  isWrapped = false,
+  ...runProps
+}: ButtonLabelProps) {
   const { fontSizePx } = runProps;
+  const isLineDrawnRtl = isDrawnRtl(bidi);
   const drawnLines = useMemo(() => {
-    const trimmed = trimButtonLabel(layout, overrunBehavior, box.widthPx, fontSizePx);
+    const trimmed = trimButtonLabel(layout, overrunBehavior, box.widthPx, {
+      fontSizePx,
+      isDrawnRtl: isLineDrawnRtl,
+      isWrapped,
+    });
     return buttonDrawnLabel(trimmed.lines, box.widthPx, box.alignment).map(({ line, offsetXPx }) => ({
       lineLayout: soloLineLayout(line, trimmed),
       offsetXPx,
     }));
-  }, [layout, overrunBehavior, fontSizePx, box.widthPx, box.alignment]);
+  }, [layout, overrunBehavior, fontSizePx, isLineDrawnRtl, isWrapped, box.widthPx, box.alignment]);
   return (
     <>
       {drawnLines.map(({ lineLayout, offsetXPx }, i) => (
@@ -37,7 +54,7 @@ export function ButtonLabel({ layout, box, overrunBehavior, ...runProps }: Butto
           key={i}
           position={[box.leftPx + offsetXPx, -(box.topPx + i * layout.linePitchPx), 0]}
         >
-          <TextRun layout={lineLayout} {...runProps} />
+          <OutlinedTextRun layout={lineLayout} {...runProps} />
         </CanvasItemGroup>
       ))}
     </>
@@ -52,11 +69,12 @@ export function useButtonLabelLayout(
   solveNode: ShareNode,
   themeFontKey: string,
   text: string,
-  fontSizePx: number
+  fontSizePx: number,
+  bidi: TextBidiOptions
 ): TextLayoutResult | null {
   const fontMetrics = resolveNodeFontMetrics(solveNode, themeFontKey);
   return useMemo(
-    () => (text.length > 0 ? shapeButtonLabel(text, fontSizePx, fontMetrics) : null),
-    [text, fontSizePx, fontMetrics]
+    () => (text.length > 0 ? shapeButtonLabel(text, { fontSizePx, fontMetrics, bidi }) : null),
+    [text, fontSizePx, fontMetrics, bidi]
   );
 }

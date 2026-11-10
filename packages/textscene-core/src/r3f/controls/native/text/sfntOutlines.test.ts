@@ -213,3 +213,25 @@ describe('openFontOutlines glyph without an outline', () => {
     expect((await openSans()).glyphContours(9999, 64)).toBeNull();
   });
 });
+
+describe('openFontOutlines auto-hinted font', () => {
+  it('auto-hints a font whose GSUB lists leave the file as a font without GSUB', async () => {
+    const intact = await openFontOutlines(fixtureFontBytes('noto-sans-regular-subset.ttf'));
+    const bytes = fixtureFontBytes('noto-sans-regular-subset.ttf');
+    const dv = new DataView(bytes);
+    // The lookup list offset, past the end of the file.
+    dv.setUint16(sfntTableOffset(dv, 'GSUB') + 8, 0xffff, false);
+    const broken = await openFontOutlines(bytes);
+    expect(broken && charContours(broken, 'H', 16)).toEqual(intact && charContours(intact, 'H', 16));
+  });
+});
+
+/** The offset of table `tag` in the plain sfnt file `dv`. Throws for a table it lacks. */
+function sfntTableOffset(dv: DataView, tag: string): number {
+  for (let i = 0; i < dv.getUint16(4, false); i++) {
+    const entry = 12 + i * 16;
+    const entryTag = String.fromCharCode(...[0, 1, 2, 3].map((j) => dv.getUint8(entry + j)));
+    if (entryTag === tag) return dv.getUint32(entry + 8, false);
+  }
+  throw new Error(`expected a ${tag} table, found none`);
+}

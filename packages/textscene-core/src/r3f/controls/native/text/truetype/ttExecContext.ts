@@ -13,7 +13,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { FIXED_16_16_ONE, ftMulFix, pixRound } from '../fontMetrics';
+import { FIXED_16_16_ONE, FIXED_26_6_ONE, ftMulFix, pixRound } from '../fontMetrics';
 import { toUint16 } from '../../../../../godot/variant/intWidth';
 import { newGlyphZone, PHANTOM_POINT_COUNT, TAG_TOUCH_X, TAG_TOUCH_Y, type GlyphZone } from '../glyphHinting';
 import { dotFix14, F2DOT14_ONE, type UnitVector } from './ttArithmetic';
@@ -69,8 +69,8 @@ export const POST_IUP = BACKWARD_COMPATIBLE | IUP_X_DONE | IUP_Y_DONE;
 export interface FaceBytecode {
   readonly fontProgram: Uint8Array;
   readonly controlValueProgram: Uint8Array;
-  /** The `cvt ` table in font units. */
-  readonly controlValues: Int16Array;
+  /** The `cvt ` table in 26.6 font units: a variable font's `cvar` moves them by fractions of a unit. */
+  readonly controlValues: Int32Array;
   readonly maxStackElements: number;
   readonly maxStorage: number;
   readonly maxFunctionDefs: number;
@@ -79,6 +79,8 @@ export interface FaceBytecode {
   readonly glyphCount: number;
   /** The variation axes of the font, whose coordinates GETVARIATION pushes. */
   readonly axisCount: number;
+  /** The coordinate of each axis in 16.16, all 0 at the default instance. */
+  readonly normalizedCoordinates: Int32Array;
   /** A tricky font (`trickyFont.ts`) loads every glyph with backward compatibility off. */
   readonly isTricky: boolean;
 }
@@ -228,7 +230,10 @@ export class ExecContext {
   scaleControlValues(): void {
     const { controlValues } = this.face;
     for (let index = 0; index < controlValues.length; index++)
-      this.sizeControlValues[index] = ftMulFix(controlValues[index]!, this.scale);
+      this.sizeControlValues[index] = ftMulFix(
+        Math.trunc(controlValues[index]! / FIXED_26_6_ONE),
+        this.scale
+      );
   }
 
   /**

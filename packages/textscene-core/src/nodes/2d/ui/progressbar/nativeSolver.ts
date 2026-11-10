@@ -33,6 +33,7 @@ import type { Vector2 } from '../../../../godot/math/vector.js';
 import { isEqualApprox, type Rgba } from '../../../../godot/math/math.js';
 import { CONTROL_FONT_HOVER_COLOR } from '../../../../godot/scene/theme.js';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { formatControlPercent, type Numerals } from '../../../../godot/text/numberFormat';
 import { ProgressBarFillMode } from '../../../../godot/scene/gui';
 
 /**
@@ -109,12 +110,6 @@ export const PROGRESS_BAR_THEME_FONT_KEY = 'font';
 /** ProgressBar's `font_color` default (`default_theme.cpp:446`). */
 const PROGRESS_BAR_DEFAULT_FONT_COLOR = CONTROL_FONT_HOVER_COLOR;
 
-/** `default_theme.cpp:447`: `font_outline_color` default `Color(0, 0, 0)`. */
-const PROGRESS_BAR_DEFAULT_OUTLINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
-
-/** `default_theme.cpp:449`: `outline_size` theme constant default `0`. */
-const PROGRESS_BAR_DEFAULT_OUTLINE_SIZE = 0;
-
 /** Resolves the percent label's font size/colour (override, else the ancestor Theme chain, else ProgressBar's own `Color(0.95, 0.95, 0.95)`). */
 export function progressBarTextTheme(
   n: SolveNode,
@@ -126,16 +121,6 @@ export function progressBarTextTheme(
     color: PROGRESS_BAR_DEFAULT_FONT_COLOR,
   };
   return resolveTextTheme(n, props, PROGRESS_BAR_THEME_KEYS, defaults);
-}
-
-/** `theme_override_colors/font_outline_color`, else `Color(0, 0, 0)`. */
-export function progressBarOutlineColor(colors: SolveNode['colors']): Rgba {
-  return colors.font_outline_color ?? PROGRESS_BAR_DEFAULT_OUTLINE_COLOR;
-}
-
-/** `theme_override_constants/outline_size`, else `0`. */
-export function progressBarOutlineSize(constants: SolveNode['constants']): number {
-  return constants.outline_size ?? PROGRESS_BAR_DEFAULT_OUTLINE_SIZE;
 }
 
 /**
@@ -174,6 +159,11 @@ const progressBarMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 controlSolverRegistry.registerMinimumSize('ProgressBar', progressBarMinimumSize);
+
+/** The label's text: the rounded percentage of `ratio`, with the digits and percent sign of `numerals` (`progress_bar.cpp:168-174`). */
+export function progressBarPercentText(ratio: number, numerals: Numerals): string {
+  return formatControlPercent(String(Math.round(ratio * 100)), numerals);
+}
 
 /**
  * The percentage label's ratio (`progress_bar.cpp:149-166`). The fill uses

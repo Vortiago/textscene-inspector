@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+; Two Labels on the project theme's SystemFont, one under a FontVariation: Godot draws the project font.
+
+[sub_resource type="FontVariation" id="FontVariation_bold"]
+variation_embolden = 1.2
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Plain" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 30.0
+offset_right = 1100.0
+offset_bottom = 110.0
+theme_override_font_sizes/font_size = 56
+text = "Hog Wave 123"
+
+[node name="Bold" type="Label" parent="."]
+layout_mode = 0
+offset_left = 40.0
+offset_top = 130.0
+offset_right = 1100.0
+offset_bottom = 210.0
+theme_override_fonts/font = SubResource("FontVariation_bold")
+theme_override_font_sizes/font_size = 56
+text = "Hog Wave 123 1.2"

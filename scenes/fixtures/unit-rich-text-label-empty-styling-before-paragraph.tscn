@@ -1,0 +1,121 @@
+; One variable: an item with nothing in it before a [p]. Its line holds no text and has no height, so
+; the text after the [p] starts at the top (rich_text_label.cpp:3712-3727 and measured in Godot 4.6.3).
+; The control draws: text before the item keeps the line.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="EmptyColourBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 280.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="EmptyColour" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 280.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[color=red][/color][p]x[/p]"
+
+[node name="EmptyBoldBox" type="ColorRect" parent="."]
+offset_left = 300.0
+offset_top = 10.0
+offset_right = 560.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="EmptyBold" type="RichTextLabel" parent="."]
+offset_left = 300.0
+offset_top = 10.0
+offset_right = 560.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[b][/b][p]x[/p]"
+
+[node name="EmptyUnderlineBox" type="ColorRect" parent="."]
+offset_left = 580.0
+offset_top = 10.0
+offset_right = 840.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="EmptyUnderline" type="RichTextLabel" parent="."]
+offset_left = 580.0
+offset_top = 10.0
+offset_right = 840.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "[u][/u][s][/s][p]x[/p]"
+
+[node name="AfterTextBox" type="ColorRect" parent="."]
+offset_left = 860.0
+offset_top = 10.0
+offset_right = 1120.0
+offset_bottom = 160.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="AfterText" type="RichTextLabel" parent="."]
+offset_left = 860.0
+offset_top = 10.0
+offset_right = 1120.0
+offset_bottom = 160.0
+bbcode_enabled = true
+text = "abc[color=red][/color][p]x[/p]"
+
+[node name="EmptyParagraphBox" type="ColorRect" parent="."]
+offset_left = 20.0
+offset_top = 170.0
+offset_right = 280.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="EmptyParagraph" type="RichTextLabel" parent="."]
+offset_left = 20.0
+offset_top = 170.0
+offset_right = 280.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[p][/p][p]x[/p]"
+
+[node name="EmptyFontSizeBox" type="ColorRect" parent="."]
+offset_left = 300.0
+offset_top = 170.0
+offset_right = 560.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="EmptyFontSize" type="RichTextLabel" parent="."]
+offset_left = 300.0
+offset_top = 170.0
+offset_right = 560.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[font_size=30][/font_size][p]x[/p]"
+
+[node name="EmptyIndentBox" type="ColorRect" parent="."]
+offset_left = 580.0
+offset_top = 170.0
+offset_right = 840.0
+offset_bottom = 320.0
+color = Color(0.2, 0.2, 0.32, 1)
+
+[node name="EmptyIndent" type="RichTextLabel" parent="."]
+offset_left = 580.0
+offset_top = 170.0
+offset_right = 840.0
+offset_bottom = 320.0
+bbcode_enabled = true
+text = "[indent][/indent][p]x[/p]"

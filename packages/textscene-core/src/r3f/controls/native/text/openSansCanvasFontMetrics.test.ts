@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { OPEN_SANS_METRICS } from './openSansMetrics';
-import { getFontGlyphAdvancePx } from './fontMetrics';
+import { getFontRunGlyphAdvancePx } from './fontMetrics';
 
 const BAKED_CHARSET = Object.keys(OPEN_SANS_METRICS.advanceWidths);
 
@@ -52,8 +52,8 @@ describe('createOpenSansCanvasFontMetrics', () => {
     for (const ch of BAKED_CHARSET) {
       expect(metrics.getGlyphAdvanceUnits(ch)).toBe(OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits(ch));
       for (const size of [14, 16, 28]) {
-        expect(getFontGlyphAdvancePx(metrics, ch, size)).toBe(
-          getFontGlyphAdvancePx(OPEN_SANS_FONT_METRICS, ch, size)
+        expect(getFontRunGlyphAdvancePx(metrics, { char: ch }, size)).toBe(
+          getFontRunGlyphAdvancePx(OPEN_SANS_FONT_METRICS, { char: ch }, size)
         );
       }
     }
@@ -71,5 +71,26 @@ describe('createOpenSansCanvasFontMetrics', () => {
 
   it('returns null for a character the font has no glyph for, so a shaper falls back to averageAdvanceUnits', () => {
     expect(metrics.getGlyphAdvanceUnits('中')).toBeNull();
+  });
+});
+
+describe('createOpenSansCanvasFontMetrics — glyph ink', () => {
+  const face = createOpenSansCanvasFontMetrics('ink-test');
+
+  // The atlas `j` sits 4 atlas px left of its pen (`xoffset: -4`).
+  it('reaches left of the pen for a glyph whose ink starts there', () => {
+    expect(face.getGlyphInkUnits!('j')!.left).toBeGreaterThan(0);
+  });
+
+  it('ends the ink past the pen for every glyph with a bitmap', () => {
+    expect(face.getGlyphInkUnits!('H')!.right).toBeGreaterThan(0);
+  });
+
+  it('has no ink for a character the atlas lacks', () => {
+    expect(face.getGlyphInkUnits!('一')).toBeUndefined();
+  });
+
+  it('answers one object per character', () => {
+    expect(face.getGlyphInkUnits!('j')).toBe(face.getGlyphInkUnits!('j'));
   });
 });

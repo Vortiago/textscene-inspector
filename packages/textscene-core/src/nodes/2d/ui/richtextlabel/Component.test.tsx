@@ -16,12 +16,35 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
+import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nativeSolver';
 import { RichTextLabel } from './Component';
+import { wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+
+// The bundled canvas face, which every run draws on: the door to register it is shut under vitest,
+// and a real face would decode the bundled outlines, which a painter test does not read. The painter
+// contract tests read the MSDF uniforms, so they run where the face cannot register and the atlas fills.
+const bundledFace = vi.hoisted(() => ({ isRegistered: false }));
+vi.mock('../../../../r3f/controls/native/text/bundledCanvasFace', async () => {
+  const { createOpenSansCanvasFontMetrics } =
+    await import('../../../../r3f/controls/native/text/openSansCanvasFontMetrics');
+  const { withVariation } = await import('../../../../r3f/controls/native/text/fontMetrics');
+  const bundled = createOpenSansCanvasFontMetrics('bundled-rtl-test');
+  return {
+    useBundledCanvasFace: () => (atlasFace: FontMetrics) =>
+      bundledFace.isRegistered
+        ? withVariation(bundled, { embolden: atlasFace.embolden, skew: atlasFace.skew })
+        : null,
+  };
+});
+
+afterEach(() => {
+  bundledFace.isRegistered = false;
+});
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -32,7 +55,15 @@ function solveNode(
   overrides: Partial<SolveNode> = {}
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const tscnNode: TscnNode = controlNode(name, 'RichTextLabel', { name, ...properties });
+  // `parseRichTextLabel` fills these defaults, which the painter reads as given.
+  const parsedDefaults = {
+    justificationFlags: 163,
+    clipContents: true,
+    scrollActive: true,
+    scrollFollowing: false,
+    scrollFollowingVisibleCharacters: false,
+  };
+  const tscnNode: TscnNode = controlNode(name, 'RichTextLabel', { name, ...parsedDefaults, ...properties });
   return { ...emptySolveNode(), path, node: tscnNode, ...overrides };
 }
 
@@ -40,9 +71,28 @@ function expectedLinear(r: number, g: number, b: number): THREE.Color {
   return new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
 }
 
+/** The node's own slot at `renderOrder` 5: its vertical bar draws in it, over the text. */
+const NODE_SLOT = wholeKeySlot(5);
+
+/** The bar's track and grabber meshes: inside the node's slot, above its text, the grabber over the track. */
+function barMeshesOf(meshes: THREE.Mesh[]): { tracks: THREE.Mesh[]; grabbers: THREE.Mesh[] } {
+  const inSlot = meshes.filter((m) => 5 < m.renderOrder && m.renderOrder < 6);
+  const orders = [...new Set(inSlot.map((m) => m.renderOrder))].sort((a, b) => a - b);
+  return {
+    tracks: inSlot.filter((m) => m.renderOrder === orders[0]),
+    grabbers: inSlot.filter((m) => orders.length > 1 && m.renderOrder === orders.at(-1)),
+  };
+}
+
 async function render(properties: Record<string, unknown>, rect: Rect2 = { x: 0, y: 0, w: 300, h: 200 }) {
   return ReactThreeTestRenderer.create(
-    <RichTextLabel {...painterEnv()} solveNode={solveNode('RTL', properties)} rect={rect} renderOrder={5} />
+    <RichTextLabel
+      {...painterEnv()}
+      solveNode={solveNode('RTL', properties)}
+      rect={rect}
+      renderOrder={5}
+      slot={NODE_SLOT}
+    />
   );
 }
 
@@ -63,7 +113,13 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
 
   it('draws a separate mesh per bbcode style-run on the same line', async () => {
     const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true });
-    expect(meshesOf(renderer).length).toBeGreaterThanOrEqual(2);
+    await vi.waitFor(() => expect(meshesOf(renderer).length).toBeGreaterThanOrEqual(2));
+  });
+
+  it('draws a mesh for the marker of each [ul] item, beside the mesh of its text', async () => {
+    const list = await render({ text: '[ul]a\nb[/ul]', bbcodeEnabled: true });
+    const plain = await render({ text: 'a\nb', bbcodeEnabled: true });
+    expect(meshesOf(list)).toHaveLength(meshesOf(plain).length + 2);
   });
 
   it('forwards renderOrder to every mesh, not just the first', async () => {
@@ -73,39 +129,32 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(5);
   });
 
-  it("a [b] run's material carries the distance bias of Godot's bold (0.39375); a plain run carries 0", async () => {
+  it("draws a plain run and a [b] run, Godot's FreeType embolden, both on the bundled canvas face", async () => {
+    bundledFace.isRegistered = true;
     const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true });
-    const materials = meshesOf(renderer).map((m) => m.material as THREE.ShaderMaterial);
-    const biases = materials.map((m) => m.uniforms.uDistanceBias!.value as number);
-    expect(biases.some((bias) => Math.abs(bias - 0.39375) < 1e-9)).toBe(true);
-    expect(biases).toContain(0);
+    await vi.waitFor(() => expect(meshesOf(renderer)).toHaveLength(2));
+    const kinds = meshesOf(renderer).map((m) => (m.material as THREE.Material).type);
+    expect(kinds.filter((type) => type === 'ShaderMaterial')).toHaveLength(0);
   });
 
   it(
-    "a [b] run with no bold_font_size override draws its glyphs at Godot's FALLBACK font size (16px), " +
-      'not normal_font_size — scene/theme/default_theme.cpp:1200 leaves bold_font_size at its own -1 ' +
-      'sentinel, which Theme::get_font_size (scene/resources/theme.cpp:658-661) never falls through to a ' +
-      'sibling key for, only to ThemeDB::get_fallback_font_size() (16)',
+    "a [b] run with no bold_font_size override draws at Godot's FALLBACK font size (16px), not " +
+      'normal_font_size: default_theme.cpp:1200 leaves bold_font_size at its -1 sentinel, which ' +
+      'Theme::get_font_size (theme.cpp:658-661) falls through only to ThemeDB::get_fallback_font_size()',
     async () => {
-      const renderer = await render({
-        text: 'A[b]A[/b]',
-        bbcodeEnabled: true,
-        themeOverrideFontSizes: { normal_font_size: 32 },
-      });
-      const meshes = meshesOf(renderer);
-      expect(meshes).toHaveLength(2);
-      const widthOf = (mesh: THREE.Mesh) => {
-        const pos = (mesh.geometry as THREE.BufferGeometry).getAttribute('position');
-        return pos.getX(1) - pos.getX(0); // TR.x - TL.x, the first (only) glyph's own ink width.
+      const boldHeight = async (fontSizes: Record<string, number>) => {
+        const renderer = await render({
+          text: '[b]A[/b]',
+          bbcodeEnabled: true,
+          themeOverrideFontSizes: fontSizes,
+        });
+        await vi.waitFor(() => expect(meshesOf(renderer)).toHaveLength(1));
+        const pos = (meshesOf(renderer)[0]!.geometry as THREE.BufferGeometry).getAttribute('position');
+        return pos.getY(0) - pos.getY(2);
       };
-      const plainWidth = widthOf(meshes[0]!);
-      const boldWidth = widthOf(meshes[1]!);
-      // Atlas 'A' bitmap width 32 at bake 42 (openSansAtlas.ts): 32*32/42 at 32px,
-      // and half that at the 16px fallback. 4 digits absorb the Float32Array
-      // precision loss.
-      expect(plainWidth).toBeCloseTo((32 * 32) / 42, 4);
-      expect(boldWidth).toBeCloseTo((32 * 16) / 42, 4);
-      expect(boldWidth).toBeCloseTo(plainWidth / 2, 4);
+      const fallback = await boldHeight({ normal_font_size: 32 });
+      expect(fallback).toBe(await boldHeight({ normal_font_size: 32, bold_font_size: 16 }));
+      expect(fallback).toBeLessThan(await boldHeight({ normal_font_size: 32, bold_font_size: 32 }));
     }
   );
 
@@ -145,7 +194,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
       const textMat = text.material as THREE.ShaderMaterial;
       const textColor = textMat.uniforms.uColor!.value as THREE.Vector3;
       const textOpacity = textMat.uniforms.uOpacity!.value as number;
-      // The text run's uColor is already linear (TextRun.tsx), and three converts
+      // The text run's uColor is already linear (TextRunMesh.tsx), and three converts
       // ControlQuad's sRGB colour on upload, so both compare against the same
       // expectation as the text-run case below.
       const expected = expectedLinear(0xe0 / 255, 0xa0 / 255, 0x30 / 255);
@@ -216,7 +265,7 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
   });
 
   it('is transparent, non-depth-writing, and every material spreads the shared clip planes hook (edge: empty list)', async () => {
-    const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true });
+    const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true, clipContents: false });
     for (const mesh of meshesOf(renderer)) {
       const mat = mesh.material as THREE.ShaderMaterial;
       expect(mat.transparent).toBe(true);
@@ -233,6 +282,60 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
       return (geo.attributes.position!.array as Float32Array)[12]!;
     };
     expect(secondQuadX(withStop)).toBeGreaterThan(secondQuadX(withoutStop));
+  });
+
+  it('a [p tab_stops] paragraph moves its own tab onto its own stop, and a bare [p] ignores the node stops', async () => {
+    const secondQuadX = (r: Awaited<ReturnType<typeof render>>) => {
+      const geo = meshesOf(r)[0]!.geometry as THREE.BufferGeometry;
+      return (geo.attributes.position!.array as Float32Array)[12]!;
+    };
+    const props = { autowrapMode: 0, bbcodeEnabled: true, tabStopsPx: [40] };
+    const own = await render({ ...props, text: '[p tab_stops=90]A\tB[/p]' });
+    const bare = await render({ ...props, text: '[p]A\tB[/p]' });
+    const node = await render({ ...props, text: 'A\tB' });
+    expect(secondQuadX(own)).toBeGreaterThan(secondQuadX(node));
+    expect(secondQuadX(bare)).toBeLessThan(secondQuadX(node));
+  });
+});
+
+describe('<RichTextLabel> — [hr]', () => {
+  const rulesOf = (r: Awaited<ReturnType<typeof render>>) =>
+    meshesOf(r).filter((m) => m.geometry.type === 'PlaneGeometry');
+
+  it('draws one solid white quad, 90 percent of the width by 2px, with no texture', async () => {
+    const renderer = await render({ text: '[hr]', bbcodeEnabled: true }, { x: 0, y: 0, w: 200, h: 100 });
+    const [rule] = rulesOf(renderer);
+    const { width, height } = (rule!.geometry as THREE.PlaneGeometry).parameters;
+    expect([rulesOf(renderer).length, width, height]).toEqual([1, 180, 2]);
+    expect((rule!.material as THREE.MeshBasicMaterial).map).toBeNull();
+  });
+
+  it('tints by color= times the walker tint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <RichTextLabel
+        {...painterEnv()}
+        tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
+        solveNode={solveNode('RTL', { text: '[hr color=#e0a030]', bbcodeEnabled: true })}
+        rect={{ x: 0, y: 0, w: 200, h: 100 }}
+        renderOrder={5}
+      />
+    );
+    const expected = expectedLinear(0.5 * (0xe0 / 255), 0.5 * (0xa0 / 255), 0.5 * (0x30 / 255));
+    const { color } = rulesOf(renderer)[0]!.material as THREE.MeshBasicMaterial;
+    expect([color.r, color.g, color.b].map((c) => c.toFixed(5))).toEqual(
+      [expected.r, expected.g, expected.b].map((c) => c.toFixed(5))
+    );
+  });
+
+  it('puts the rule on a line below the text before it', async () => {
+    const renderer = await render({ text: 'a[hr]', bbcodeEnabled: true });
+    const worldTopOf = (mesh: THREE.Mesh) => {
+      mesh.updateWorldMatrix(true, false);
+      return new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld).y;
+    };
+    const rule = rulesOf(renderer)[0]!;
+    const text = meshesOf(renderer).find((m) => m.geometry.type !== 'PlaneGeometry')!;
+    expect(worldTopOf(rule)).toBeLessThan(worldTopOf(text));
   });
 });
 
@@ -282,7 +385,7 @@ describe('<RichTextLabel> — scene-font (canvas-kind FontMetrics) text path', (
 
   function canvasMeshes(renderer: Awaited<ReturnType<typeof render>>): THREE.Mesh[] {
     return meshesOf(renderer).filter(
-      (m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.CanvasTexture
+      (m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.DataTexture
     );
   }
 
@@ -389,6 +492,42 @@ describe('<RichTextLabel> — [img]', () => {
     expect(geometry.parameters.height).toBe(20);
   });
 
+  // `clip_contents` clips every glyph, image and underline to the control's own rect
+  // (`control.cpp:3948`), and RichTextLabel's constructor turns it on (`rich_text_label.cpp:8225`).
+  describe('clip_contents', () => {
+    const TEXT = `[u]Hi[/u] [img=40x20]${IMG}[/img]`;
+
+    async function clipPlaneCounts(properties: Record<string, unknown>): Promise<number[]> {
+      const fake = createFakeResourceLoader();
+      fake.textures.seed(IMG, fakeTexture(64, 64));
+      const renderer = await ReactThreeTestRenderer.create(
+        <ResourceLoaderProvider loader={fake.loader}>
+          <SceneResourcesProvider internalResources={[]} externalResources={[]}>
+            <RichTextLabel
+              {...painterEnv()}
+              solveNode={solveNode('RTL', { text: TEXT, bbcodeEnabled: true, ...properties })}
+              rect={{ x: 0, y: 0, w: 300, h: 200 }}
+              renderOrder={5}
+            />
+          </SceneResourcesProvider>
+        </ResourceLoaderProvider>
+      );
+      return renderer.scene
+        .findAllByType('Mesh')
+        .map((m) => ((m.instance as THREE.Mesh).material as THREE.Material).clippingPlanes?.length ?? 0);
+    }
+
+    it('gives the text, the underline and the image the label’s own four planes by default', async () => {
+      const counts = await clipPlaneCounts({});
+      expect(counts.length).toBeGreaterThanOrEqual(3);
+      expect(new Set(counts)).toEqual(new Set([4]));
+    });
+
+    it('gives them the inherited planes, none here, with clipContents false', async () => {
+      expect(new Set(await clipPlaneCounts({ clipContents: false }))).toEqual(new Set([0]));
+    });
+  });
+
   it('draws it at its natural size when the value form is a lone width and only a REGION is also present (aspect from the region, not the texture)', async () => {
     const renderer = await renderImage(`[img=40 region=0,0,80,40]${IMG}[/img]`, [64, 64]);
     const mesh = imageMeshOf(renderer);
@@ -463,5 +602,93 @@ describe('<RichTextLabel> — [img]', () => {
     expect(meshes.length).toBeGreaterThan(1);
     expect(meshes.some((m) => materialOf(m).type === 'MeshBasicMaterial')).toBe(true);
     expect(meshes.some((m) => materialOf(m).type !== 'MeshBasicMaterial')).toBe(true);
+  });
+});
+
+describe('<RichTextLabel> scrollbar (rich_text_label.cpp:3801-3830)', () => {
+  const TALL_BOX: Rect2 = { x: 0, y: 0, w: 160, h: 40 };
+  const TEXT = 'Wave rift over quiet stone and amber light';
+
+  /** The bar's track and grabber: `renderOrder` 5 is the node's, and the bar draws above its text. */
+  async function barMeshes(properties: Record<string, unknown>, rect: Rect2) {
+    const renderer = await render({ text: TEXT, ...properties }, rect);
+    return barMeshesOf(meshesOf(renderer));
+  }
+
+  it('draws the track and the grabber when the text is taller than the rect', async () => {
+    const { tracks, grabbers } = await barMeshes({}, TALL_BOX);
+    expect(tracks).toHaveLength(1);
+    expect(grabbers).toHaveLength(1);
+    // The bar's own origin is the rect's right edge less its 8px: x 152.
+    expect(tracks[0]!.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(152, 6);
+  });
+
+  it('mirrors the bar to the left edge under an RTL layout', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <RichTextLabel
+        {...painterEnv()}
+        solveNode={solveNode('RTL', { text: TEXT }, { rtl: true })}
+        rect={TALL_BOX}
+        renderOrder={5}
+        slot={NODE_SLOT}
+      />
+    );
+    const [track] = barMeshesOf(meshesOf(renderer)).tracks;
+    expect(track?.getWorldPosition(new THREE.Vector3()).x).toBeCloseTo(0, 6);
+  });
+
+  it('draws no bar when scroll_active is false', async () => {
+    const { tracks } = await barMeshes({ scrollActive: false }, TALL_BOX);
+    expect(tracks).toHaveLength(0);
+  });
+
+  it('draws no bar when the text fits the rect', async () => {
+    const { tracks } = await barMeshes({}, { x: 0, y: 0, w: 160, h: 80 });
+    expect(tracks).toHaveLength(0);
+  });
+});
+
+describe('<RichTextLabel> visible_characters (rich_text_label.cpp:943-947,668-671)', () => {
+  const TEXT = 'Hello world';
+
+  /** The text meshes, one per drawn line and run: `renderOrder` 5 is the node's, and the bar draws above it. */
+  async function textMeshCount(properties: Record<string, unknown>, rect: Rect2) {
+    const renderer = await render({ text: TEXT, ...properties }, rect);
+    return meshesOf(renderer).filter((m) => m.renderOrder === 5).length;
+  }
+
+  it('draws no mesh at zero characters', async () => {
+    expect(await textMeshCount({ visibleCharacters: 0 }, { x: 0, y: 0, w: 300, h: 100 })).toBe(0);
+  });
+
+  it('draws the whole text at -1 characters', async () => {
+    expect(await textMeshCount({ visibleCharacters: -1 }, { x: 0, y: 0, w: 75, h: 100 })).toBe(2);
+  });
+
+  // `Hello wor` fits the 75px rect on one line and `Hello world` does not. Before Shaping shapes only
+  // the prefix, so it keeps one line. After Shaping wraps the whole text and hides glyphs, so "wor" stays on line two.
+  it('wraps the shown prefix again under Before Shaping and not under After Shaping', async () => {
+    const rect = { x: 0, y: 0, w: 75, h: 100 };
+    expect(await textMeshCount({ visibleCharacters: 9, visibleCharactersBehavior: 0 }, rect)).toBe(1);
+    expect(await textMeshCount({ visibleCharacters: 9, visibleCharactersBehavior: 1 }, rect)).toBe(2);
+  });
+
+  // The parser counted 12 characters (an `[img]` Godot never loaded included), the text draws 11. A ratio written
+  // last takes the characters it draws: 11 * 0.82 is 9, so one line. Without the ratio, 12 shows everything.
+  it('derives the characters of a ratio from the text it draws', async () => {
+    const rect = { x: 0, y: 0, w: 75, h: 100 };
+    const staleCount = { visibleCharacters: 12, visibleRatio: 0.82 };
+    expect(await textMeshCount({ ...staleCount, visibleRatioDrives: true }, rect)).toBe(1);
+    expect(await textMeshCount(staleCount, rect)).toBe(2);
+  });
+
+  // `unit-rich-text-label-visible-characters-follow.tscn`: the bar shows over text that fits.
+  it('shows the bar over text that fits when scroll_following_visible_characters is set', async () => {
+    const renderer = await render(
+      { text: TEXT, scrollFollowingVisibleCharacters: true },
+      { x: 0, y: 0, w: 300, h: 100 }
+    );
+    const { tracks } = barMeshesOf(meshesOf(renderer));
+    expect(tracks).toHaveLength(1);
   });
 });

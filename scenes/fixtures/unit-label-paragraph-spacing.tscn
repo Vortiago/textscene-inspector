@@ -1,0 +1,101 @@
+[gd_scene load_steps=3 format=3 uid="uid://unit_label_paragraph_spacing"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_wide"]
+font_size = 20
+paragraph_spacing = 20.7
+
+[sub_resource type="LabelSettings" id="LabelSettings_negative"]
+font_size = 20
+paragraph_spacing = -10.0
+
+; One variable: the spacing a Label puts between its lines and paragraphs (`line_spacing` and
+; `paragraph_spacing`, from `label_settings` or from the theme constants). Every pane is font
+; size 20 at top 20, so only the spacing and what it feeds change: the draw pitch (panes 1, 2, 6),
+; the vertical-alignment offset (pane 3), the wrap-versus-paragraph split (pane 4) and the
+; minimum height a container reads (pane 5).
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.09, 0.12, 1)
+
+; Pane 1. paragraph_spacing 20.7 truncates to 20: three paragraphs at a pitch of 51.
+[node name="Wide" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 20.0
+offset_right = 160.0
+offset_bottom = 160.0
+text = "I\nI\nI"
+label_settings = SubResource("LabelSettings_wide")
+
+; Pane 2. paragraph_spacing -10 pulls the paragraphs together: a pitch of 21.
+[node name="Negative" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 180.0
+offset_top = 20.0
+offset_right = 316.0
+offset_bottom = 160.0
+text = "I\nI\nI"
+label_settings = SubResource("LabelSettings_negative")
+
+; Pane 3. CENTER in a 400 px box: the offset is the box minus the content minus the trailing line
+; and paragraph spacing, halved, so the first line top is 135 below the box top.
+[node name="Centred" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 336.0
+offset_top = 20.0
+offset_right = 472.0
+offset_bottom = 420.0
+text = "I\nI\nI"
+vertical_alignment = 1
+label_settings = SubResource("LabelSettings_wide")
+
+; Pane 4. A box 8 px wide breaks "I I" into two lines of one paragraph: they keep the plain pitch
+; of 31, and only the break before the next paragraph adds 20.
+[node name="Wrapped" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 492.0
+offset_top = 20.0
+offset_right = 500.0
+offset_bottom = 160.0
+text = "I I\nI"
+autowrap_mode = 1
+label_settings = SubResource("LabelSettings_wide")
+
+; Pane 5. The Label's minimum height is 79, so the next sibling sits at 20 + 79 + 4 = 103.
+[node name="Stack" type="VBoxContainer" parent="."]
+anchors_preset = 0
+offset_left = 520.0
+offset_top = 20.0
+offset_right = 656.0
+offset_bottom = 160.0
+
+[node name="Two" type="Label" parent="Stack"]
+layout_mode = 2
+text = "I\nI"
+label_settings = SubResource("LabelSettings_wide")
+
+[node name="Sibling" type="ColorRect" parent="Stack"]
+custom_minimum_size = Vector2(60, 12)
+layout_mode = 2
+color = Color(0.9, 0.4, 0.2, 1)
+
+; Pane 6. No label_settings: the theme constants line_spacing 10 and paragraph_spacing 20 set a
+; pitch of 28 + 10 + 20 = 58.
+[node name="ThemeConstants" type="Label" parent="."]
+anchors_preset = 0
+offset_left = 680.0
+offset_top = 20.0
+offset_right = 816.0
+offset_bottom = 200.0
+theme_override_constants/line_spacing = 10
+theme_override_constants/paragraph_spacing = 20
+theme_override_font_sizes/font_size = 20
+text = "I\nI\nI"
