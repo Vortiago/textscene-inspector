@@ -1,6 +1,7 @@
 /**
  * The target a 3D viewport under BG_CANVAS draws its backdrop canvas into, which the world shows as
- * its background. Made on the first draw that wants it, and freed by the first draw that does not.
+ * its background. Made on the first draw that wants it. Freed by the first draw that does not, by a
+ * change of its inputs and by the unmount.
  */
 
 import { useCallback, useMemo } from 'react';
@@ -25,7 +26,7 @@ class TargetHolder {
   }
 }
 
-/** Answers the target when `wanted`, made at the first call and again after a resize, else null. */
+/** Answers the target when `wanted`, made at the first call and again after a change of size, name or space, else null. */
 export function useBackdropTarget(
   width: number,
   height: number,
