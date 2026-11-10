@@ -1,16 +1,16 @@
 ---
 type: PinJoint2D
 category: 2D
-status: linter-only
+status: limitation
 fixture: unit-pin-joint-2d.tscn
 # image: unit-pin-joint-2d
 visual: false
-renders_as: nothing (a transform-only group)
+renders_as: a transform group with an editor marker for every node
 ---
 
 # PinJoint2D
 
-Attaches two 2D physics bodies at a single point and lets them rotate freely. Godot shows joints only as an editor gizmo, so the previewer renders it as a transform-only group (ADR-0008).
+Attaches two 2D physics bodies at a single point and lets them rotate freely. Godot draws a marker for it in the editor, and the previewer draws the same marker.
 
 ## Linting
 
@@ -36,3 +36,12 @@ Strict parsing format-checks these `PinJoint2D` properties, plus 4 inherited fro
 <!-- lint:end -->
 
 PinJoint2D reuses `parseNode2D` directly, so its own properties never reach the lenient parser. A bad `softness` is neither substituted nor defaulted, and only the strict parser reports it.
+
+## Marker
+
+Every node draws two 20 px bars crossing at its origin, in `Color(0.7, 0.6, 0, 0.5)` and 3 px wide (`pin_joint_2d.cpp:45-46`). The scene `unit-joint-2d-markers.tscn` holds the three joints' markers at several values.
+
+## Known limitations
+
+- **Editor only** The marker draws for every joint while the Gizmos toggle is on, which a capture keeps off.
+- **Needs runtime** Only a running game pins the two bodies at the origin, with `softness` and the angular limits and motor.

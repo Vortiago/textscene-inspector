@@ -10,6 +10,9 @@
 export const GIZMO_SCENES = [
   // Select the node, capture the gizmo. These pin the real tree-click → selection → gizmo path for
   // every gizmo node type. Thin AA gizmo lines and the selection box are AA-sensitive.
+  // The three 2D joint markers at the default and a long length and offset, on a rotated and a scaled node. Godot draws them
+  // for every node, so nothing is selected.
+  { name: 'joint-2d-markers', file: 'unit-joint-2d-markers.tscn', gizmos: true, mode: '2d' },
   { name: 'marker2d-selected', file: 'unit-marker2d.tscn', gizmos: true, select: 'Marker2DRoot/DefaultMarker', mode: '2d' },
   // A Bone2D chain: Godot draws a kite from each bone to its Bone2D child in every state, and only the
   // outline turns red when the bone itself is selected (`skeleton_2d.cpp:189-310`).
