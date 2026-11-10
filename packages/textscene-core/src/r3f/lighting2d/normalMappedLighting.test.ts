@@ -22,9 +22,9 @@ void main() {
 }
 `;
 
-function compile(lightCount: number) {
+function compile(lightCount: number, isLinearCanvas = false) {
   const shared = normalMappedUniforms();
-  const props = normalMappedLightingProps(shared, lightCount);
+  const props = normalMappedLightingProps(shared, lightCount, isLinearCanvas);
   const shader = {
     vertexShader: STOCK_VERTEX,
     fragmentShader: STOCK_FRAGMENT,
@@ -35,6 +35,13 @@ function compile(lightCount: number) {
 }
 
 describe('normalMappedLightingProps', () => {
+  it('defines the linear canvas at compile time, with a program key of its own', () => {
+    const linear = compile(2, true);
+    expect(linear.shader.fragmentShader).toContain('#define LINEAR_CANVAS\n');
+    expect(compile(2).shader.fragmentShader).not.toContain('#define LINEAR_CANVAS');
+    expect(linear.props.injection.cacheKey).not.toBe(compile(2).props.injection.cacheKey);
+  });
+
   it('sizes the light loop and its arrays to the lights kept apart', () => {
     const { shader } = compile(3);
     expect(shader.fragmentShader).toContain('#define APART_LIGHT_COUNT 3');

@@ -9,6 +9,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CanvasLighting2DProvider, useRegisterCanvasLight2D } from './CanvasLighting2D';
 import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from './lightCullKey';
 import { settleLoads } from '../testing/settleLoads';
+import { canvasColorSpaceOf } from '../canvasColorSpace';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
@@ -27,7 +28,11 @@ function Light({ reach = DEFAULT_LIGHT_CULL_KEY, seen }: { reach?: LightCullKey;
 }
 
 function provider(children: ReactNode) {
-  return <CanvasLighting2DProvider canvasModulate={WHITE}>{children}</CanvasLighting2DProvider>;
+  return (
+    <CanvasLighting2DProvider space={canvasColorSpaceOf(false)} canvasModulate={WHITE}>
+      {children}
+    </CanvasLighting2DProvider>
+  );
 }
 
 async function mount(children: ReactNode) {

@@ -750,6 +750,7 @@ export const CANVAS_2D_SCENES = [
   // stored. Godot 4.6.3 `--mode 2d`: (150,150) rgb(54,54,54) grey, (250,150) rgb(127,128,0) the linear
   // blend, (350,150) rgb(255,255,63) a value above 1, and (350,350) rgb(255,160,31) the same at modulate 0.5.
   { name: 'sub-viewport-hdr-2d', file: 'unit-sub-viewport-hdr-2d.tscn', mode: '2d' },
+  { name: 'sub-viewport-hdr-2d-light', file: 'unit-sub-viewport-hdr-2d-light.tscn', mode: '2d' },
   // A DirectionalLight2D shadow inside a sub-viewport, beside a sun outside it. Godot 4.6.3
   // `--mode 2d`: (150,150) rgb(63,63,63) in the Wall's shadow, (250,150) rgb(158,110,87) lit by
   // the inside sun, and (600,155) rgb(84,114,84) lit by the outside sun alone. The outside sun

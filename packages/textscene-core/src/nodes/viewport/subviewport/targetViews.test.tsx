@@ -9,7 +9,7 @@ import * as THREE from 'three';
 
 import { createCanvasTarget, createSceneTarget } from './offscreenViewport';
 import { useTargetViews } from './targetViews';
-import { canvasColorSpaceOf, SRGB_CANVAS } from '../../../r3f/canvasColorSpace';
+import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';
 import { holdsSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { ownedTextureView } from '../../../resources/textures/textureView';
 import { CaptureRenderer } from '../../../r3f/testing/CaptureRenderer';
@@ -65,27 +65,34 @@ describe('useTargetViews', () => {
     expect(views.decoding.texture).toBe(target.texture);
   });
 
+  it("serves an HDR 3D target's own texture as both views, since its sRGB view is the same half floats", async () => {
+    const target = createSceneTarget(8, 8, 'Probe', LINEAR_CANVAS);
+    const { views } = await mount(target);
+    expect(views.plain.texture).toBe(target.texture);
+    expect(views.decoding.texture).toBe(target.texture);
+  });
+
   it("serves a 3D-content target's own texture as its decoding view, which its storage decodes already", async () => {
-    const target = createSceneTarget(8, 8, 'Probe');
+    const target = createSceneTarget(8, 8, 'Probe', canvasColorSpaceOf(false));
     const { views } = await mount(target);
     expect(views.decoding.texture).toBe(target.texture);
   });
 
   it("serves a canvas target's own texture as its plain view, which holds the bytes", async () => {
-    const target = createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS);
+    const target = createCanvasTarget(8, 8, 'Probe', canvasColorSpaceOf(false));
     const { views } = await mount(target);
     expect(views.plain.texture).toBe(target.texture);
   });
 
   it('stores the decoding copy of a canvas target in SRGB8_ALPHA8, which decodes each texel before the filter', async () => {
-    const target = createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS);
+    const target = createCanvasTarget(8, 8, 'Probe', canvasColorSpaceOf(false));
     const { views } = await mount(target);
     expect(views.decoding.texture).not.toBe(target.texture);
     expect(views.decoding.texture.internalFormat).toBe('SRGB8_ALPHA8');
   });
 
   it('stores the plain copy of a 3D target in RGBA8 and marks it as sRGB bytes, which a canvas consumer filters raw', async () => {
-    const target = createSceneTarget(8, 8, 'Probe');
+    const target = createSceneTarget(8, 8, 'Probe', canvasColorSpaceOf(false));
     const { views } = await mount(target);
     expect(views.plain.texture).not.toBe(target.texture);
     expect(views.plain.texture.internalFormat).toBe('RGBA8');
@@ -93,28 +100,28 @@ describe('useTargetViews', () => {
   });
 
   it('fills the decoding copy from the plain view while a consumer retains it', async () => {
-    const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS));
+    const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe', canvasColorSpaceOf(false)));
     views.decoding.retain();
     expect((await fill()).map((drawn) => drawn?.texture)).toEqual([views.decoding.texture]);
   });
 
   it('fills the plain copy of a 3D target while a consumer retains it', async () => {
-    const { views, fill } = await mount(createSceneTarget(8, 8, 'Probe'));
+    const { views, fill } = await mount(createSceneTarget(8, 8, 'Probe', canvasColorSpaceOf(false)));
     views.plain.retain();
     expect((await fill()).map((drawn) => drawn?.texture)).toEqual([views.plain.texture]);
   });
 
   it('fills nothing for the view that is the target itself, however many consumers retain it', async () => {
-    const scene = await mount(createSceneTarget(8, 8, 'Probe'));
+    const scene = await mount(createSceneTarget(8, 8, 'Probe', canvasColorSpaceOf(false)));
     scene.views.decoding.retain();
     expect(await scene.fill()).toEqual([]);
-    const canvas = await mount(createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS));
+    const canvas = await mount(createCanvasTarget(8, 8, 'Probe', canvasColorSpaceOf(false)));
     canvas.views.plain.retain();
     expect(await canvas.fill()).toEqual([]);
   });
 
   it('fills nothing while no consumer retains a copy (edge case)', async () => {
-    const { fill } = await mount(createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS));
+    const { fill } = await mount(createCanvasTarget(8, 8, 'Probe', canvasColorSpaceOf(false)));
     expect(await fill()).toEqual([]);
   });
 
@@ -122,7 +129,7 @@ describe('useTargetViews', () => {
     afterEach(() => vi.restoreAllMocks());
 
     it('is freed once the last consumer releases it and the task ends', async () => {
-      const { views } = await mount(createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS));
+      const { views } = await mount(createCanvasTarget(8, 8, 'Probe', canvasColorSpaceOf(false)));
       const dispose = vi.spyOn(THREE.WebGLRenderTarget.prototype, 'dispose');
       const releaseFirst = views.decoding.retain();
       const releaseSecond = views.decoding.retain();
@@ -133,7 +140,7 @@ describe('useTargetViews', () => {
     });
 
     it('stays while a consumer retakes it in the same task as the release (edge case)', async () => {
-      const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS));
+      const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe', canvasColorSpaceOf(false)));
       const dispose = vi.spyOn(THREE.WebGLRenderTarget.prototype, 'dispose');
       views.decoding.retain()();
       views.decoding.retain();
@@ -144,7 +151,7 @@ describe('useTargetViews', () => {
   });
 
   it('stops filling once the last consumer releases the copy', async () => {
-    const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS));
+    const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe', canvasColorSpaceOf(false)));
     const releaseFirst = views.decoding.retain();
     const releaseSecond = views.decoding.retain();
     releaseFirst();
@@ -155,7 +162,7 @@ describe('useTargetViews', () => {
   });
 
   it("fills a reader's own copy of a view after the view", async () => {
-    const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS));
+    const { views, fill } = await mount(createCanvasTarget(8, 8, 'Probe', canvasColorSpaceOf(false)));
     views.decoding.retain();
     const reader = flippedReader(views.decoding.texture);
     const release = holdUntilReleased(reader);
@@ -164,7 +171,7 @@ describe('useTargetViews', () => {
   });
 
   it('fills its views and their readers within one save and restore of the renderer', async () => {
-    const { views, fill, gl } = await mount(createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS));
+    const { views, fill, gl } = await mount(createCanvasTarget(8, 8, 'Probe', canvasColorSpaceOf(false)));
     views.decoding.retain();
     const release = holdUntilReleased(flippedReader(views.decoding.texture));
     // `getActiveCubeFace`, not `getRenderTarget`: the stubbed renderer replaces the latter.
@@ -175,7 +182,7 @@ describe('useTargetViews', () => {
   });
 
   it('leaves the renderer alone when no reader holds a view or a copy', async () => {
-    const { fill, gl } = await mount(createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS));
+    const { fill, gl } = await mount(createCanvasTarget(8, 8, 'Probe', canvasColorSpaceOf(false)));
     // `getActiveCubeFace`, not `getRenderTarget`: the stubbed renderer replaces the latter.
     const save = vi.spyOn(gl, 'getActiveCubeFace');
     await fill();
@@ -183,7 +190,7 @@ describe('useTargetViews', () => {
   });
 
   it('gives a reader the view itself once the target is gone (edge case)', async () => {
-    const { views, unmount } = await mount(createCanvasTarget(8, 8, 'Probe', SRGB_CANVAS));
+    const { views, unmount } = await mount(createCanvasTarget(8, 8, 'Probe', canvasColorSpaceOf(false)));
     await unmount();
     expect(flippedReader(views.plain.texture)).toBe(views.plain.texture);
   });

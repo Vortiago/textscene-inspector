@@ -31,7 +31,7 @@ import { controlNode } from '../r3f/controls/native/testing/solveNode';
 import '../nodes/3d/sprite3d/index.r3f';
 import { registeredComponent } from '../r3f/testing/registeredComponent';
 import { copiesFilledFrom } from '../r3f/liveTargets.testkit';
-import { SRGB_CANVAS } from '../r3f/canvasColorSpace';
+import { canvasColorSpaceOf } from '../r3f/canvasColorSpace';
 
 const Sprite3D = registeredComponent('Sprite3D');
 
@@ -42,8 +42,8 @@ const RESOURCES: TscnInternalResource[] = [
 const VIEWPORT_REF = 'SubResource("ViewportTexture_1")';
 const RECT: Rect2 = { x: 0, y: 0, w: 320, h: 160 };
 
-const target = createCanvasTarget(32, 32, 'SubViewport', SRGB_CANVAS);
-const decodingTarget = createCanvasTarget(32, 32, 'SubViewport decoding view', SRGB_CANVAS);
+const target = createCanvasTarget(32, 32, 'SubViewport', canvasColorSpaceOf(false));
+const decodingTarget = createCanvasTarget(32, 32, 'SubViewport decoding view', canvasColorSpaceOf(false));
 /** Every renderer a test mounts, unmounted after it, so no test sees another's copies. */
 let mounted: { unmount: () => Promise<void> }[] = [];
 afterEach(async () => {

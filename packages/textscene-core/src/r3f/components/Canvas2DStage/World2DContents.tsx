@@ -24,6 +24,7 @@ import { ProjectClearColor } from '../../ProjectClearColor.js';
 import { CanvasFrameRender } from './CanvasFrameRender.js';
 import { PendingSuspense } from '../../../resources/PendingSuspense.js';
 import { ScreenshotBridge } from '../../ScreenshotBridge.js';
+import { useRootCanvasColorSpace } from '../../rootCanvasColorSpace.js';
 
 // Through the controls barrel, whose side-effect imports register every Control
 // type: the component file alone registers none. Lazy, so the registrations stay
@@ -64,6 +65,7 @@ export function World2DContents({
   zoom,
 }: World2DCanvasProps) {
   const canvasModulate = useCanvasModulateColor(nodes);
+  const canvasSpace = useRootCanvasColorSpace();
   return (
     <TiledUploadDriver>
       <CanvasWorkspaceProvider workspace="2d">
@@ -74,7 +76,7 @@ export function World2DContents({
             <CanvasFrameRender />
             {/* The light accumulator starts from the canvas tint, the same pure
               function of `nodes` the dispatcher publishes to the items. */}
-            <CanvasLighting2DProvider canvasModulate={canvasModulate}>
+            <CanvasLighting2DProvider canvasModulate={canvasModulate} space={canvasSpace}>
               <CanvasWorldScope>
                 <NodeDispatcher nodes={nodes} />
               </CanvasWorldScope>

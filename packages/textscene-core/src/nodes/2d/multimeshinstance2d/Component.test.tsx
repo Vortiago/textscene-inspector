@@ -16,7 +16,6 @@ import { parseMultiMeshInstance2D } from './parser';
 import {
   canvasColorSpaceOf,
   CanvasColorSpaceProvider,
-  SRGB_CANVAS,
   type CanvasColorSpace,
 } from '../../../r3f/canvasColorSpace';
 
@@ -52,7 +51,7 @@ function multiMeshNode(raw: Record<string, string>): TscnNode {
 async function render(
   raw: Record<string, string>,
   resources: TscnInternalResource[],
-  space: CanvasColorSpace = SRGB_CANVAS
+  space: CanvasColorSpace = canvasColorSpaceOf(false)
 ) {
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(

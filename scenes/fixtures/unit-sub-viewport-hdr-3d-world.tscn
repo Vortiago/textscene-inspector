@@ -1,0 +1,99 @@
+; One variable: the SubViewport's use_hdr_2d on a 3D world. An HDR viewport tonemaps its world with
+; no sRGB encode and no debanding (`renderer_scene_render_rd.cpp:744,941`), so its target holds
+; linear half floats, and the container shows them as if they were sRGB bytes. The left viewport is
+; HDR and the right one is not, each with an unshaded 0.5 gray quad (linear 0.214, byte 55 in the
+; HDR target) and a canvas square of alpha 0.5 over it. The bottom viewport is HDR with a quad above
+; 1, under a container modulate of 0.5. `sub-viewport-hdr-2d` is the same switch on a canvas.
+
+[gd_scene format=3]
+
+[sub_resource type="QuadMesh" id="QuadMesh_1"]
+size = Vector2(4, 4)
+
+[sub_resource type="StandardMaterial3D" id="Mat_gray"]
+shading_mode = 0
+albedo_color = Color(0.5, 0.5, 0.5, 1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_hot"]
+shading_mode = 0
+albedo_color = Color(3, 1.5, 0.5, 1)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0, 0, 0.4, 1)
+
+[node name="HdrBooth" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 80.0
+offset_right = 300.0
+offset_bottom = 280.0
+
+[node name="SubViewport" type="SubViewport" parent="HdrBooth"]
+own_world_3d = true
+use_hdr_2d = true
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="HdrBooth/SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+current = true
+
+[node name="Quad" type="MeshInstance3D" parent="HdrBooth/SubViewport"]
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("Mat_gray")
+
+[node name="Veil" type="Polygon2D" parent="HdrBooth/SubViewport"]
+color = Color(1, 0, 0, 0.5)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 200, 0, 200)
+
+[node name="SrgbBooth" type="SubViewportContainer" parent="."]
+offset_left = 400.0
+offset_top = 80.0
+offset_right = 600.0
+offset_bottom = 280.0
+
+[node name="SubViewport" type="SubViewport" parent="SrgbBooth"]
+own_world_3d = true
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="SrgbBooth/SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+current = true
+
+[node name="Quad" type="MeshInstance3D" parent="SrgbBooth/SubViewport"]
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("Mat_gray")
+
+[node name="Veil" type="Polygon2D" parent="SrgbBooth/SubViewport"]
+color = Color(1, 0, 0, 0.5)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 200, 0, 200)
+
+; An albedo of (3, 1.5, 0.5) puts red and green above 1 once linear, which the half-float target keeps.
+[node name="HotBooth" type="SubViewportContainer" parent="."]
+modulate = Color(0.5, 0.5, 0.5, 1)
+offset_left = 100.0
+offset_top = 320.0
+offset_right = 300.0
+offset_bottom = 520.0
+
+[node name="SubViewport" type="SubViewport" parent="HotBooth"]
+own_world_3d = true
+use_hdr_2d = true
+size = Vector2i(200, 200)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="HotBooth/SubViewport"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+current = true
+
+[node name="Quad" type="MeshInstance3D" parent="HotBooth/SubViewport"]
+mesh = SubResource("QuadMesh_1")
+surface_material_override/0 = SubResource("Mat_hot")

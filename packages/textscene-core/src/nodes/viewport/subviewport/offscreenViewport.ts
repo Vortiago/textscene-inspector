@@ -20,9 +20,16 @@ import type { Rect2 } from '../../../godot/math/rect2';
  * own buffer (`r3f/environment/offscreenToneMap.ts`). Godot tonemaps each viewport into its own
  * target as sRGB-encoded 8-bit texels (`tonemap.glsl` `linear_to_srgb`), so the storage is SRGB8_ALPHA8, which
  * encodes on write and decodes on sample in hardware. The LINEAR tag keeps the shader from encoding
- * too: an sRGB tag would stack a shader encode on the hardware encode.
+ * too: an sRGB tag would stack a shader encode on the hardware encode. A viewport that uses HDR
+ * skips the encode and stores linear half floats (`renderer_scene_render_rd.cpp:744`), as its canvas does.
  */
-export function createSceneTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
+export function createSceneTarget(
+  width: number,
+  height: number,
+  name: string,
+  space: CanvasColorSpace
+): THREE.WebGLRenderTarget {
+  if (space.isLinear) return createLinearCanvasTarget(width, height, name);
   const target = createTarget(width, height, name);
   // Pinned: R3F stamps `SRGBColorSpace` on a target bound to an albedo `map`, and three reads
   // this pass's output space from the tag, so the stamp would add an sRGB OETF (1.5-6.5x too bright).
@@ -100,13 +107,22 @@ function createTarget(
 
 /**
  * The colour space of a sub-viewport's canvas: linear under `use_hdr_2d`. A canvas drawn over a 3D
- * world stays sRGB, since that world's tonemap pass writes an 8-bit sRGB target here.
+ * world follows it, since that world's tonemap pass writes the same HDR target.
  */
 export function viewportCanvasColorSpace(
-  properties: Pick<SubViewportProperties, 'use_hdr_2d'>,
-  kind: '2d' | '3d'
+  properties: Pick<SubViewportProperties, 'use_hdr_2d'>
 ): CanvasColorSpace {
-  return canvasColorSpaceOf(properties.use_hdr_2d && kind === '2d');
+  return canvasColorSpaceOf(properties.use_hdr_2d);
+}
+
+/**
+ * Whether the tonemap pass dithers its output: it does when `use_debanding` asks and the target is
+ * 8-bit. An HDR target holds half floats, so Godot clears the flag (`renderer_scene_render_rd.cpp:941`).
+ */
+export function viewportUsesDebanding(
+  properties: Pick<SubViewportProperties, 'use_debanding' | 'use_hdr_2d'>
+): boolean {
+  return properties.use_debanding && !properties.use_hdr_2d;
 }
 
 /**

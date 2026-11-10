@@ -23,6 +23,8 @@ import type { CappedItem } from './itemLightCap';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
 import { canvasItemMaterial } from '../testing/canvasItemMaterial';
+import { canvasColorSpaceOf, CanvasColorSpaceProvider, type CanvasColorSpace } from '../canvasColorSpace';
+import { CanvasModulateContext } from '../canvasModulate';
 
 type LightMode = EnumValue<typeof CanvasItemMaterialLightMode>;
 
@@ -131,6 +133,35 @@ describe('useLitSurface', () => {
     // No material is Godot's default light mode, not a fourth state.
     rerender({ mode: null });
     expect(mode.value).toBe(CanvasItemMaterialLightMode.NORMAL);
+  });
+});
+
+describe('useLitSurface in a linear canvas', () => {
+  const NIGHT = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+
+  function boundIn(space: CanvasColorSpace) {
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <CanvasColorSpaceProvider value={space}>
+        <CanvasModulateContext.Provider value={NIGHT}>{children}</CanvasModulateContext.Provider>
+      </CanvasColorSpaceProvider>
+    );
+    const { result } = renderHook(() => useLitSurface({ zFinal: 0, material: null }), { wrapper });
+    return {
+      tint: (boundUniforms(result.current).uCanvasModulate!.value as THREE.Vector3).x,
+      programKey: result.current.props.injection.cacheKey,
+    };
+  }
+
+  it('divides the tint out in linear, and compiles the linear program variant', () => {
+    const { tint, programKey } = boundIn(canvasColorSpaceOf(true));
+    expect(tint).toBeCloseTo(0.214, 3);
+    expect(programKey).toBe('godot-canvas-light-linear');
+  });
+
+  it('keeps the authored tint in an sRGB canvas, which decodes the fragment to compare', () => {
+    const { tint, programKey } = boundIn(canvasColorSpaceOf(false));
+    expect(tint).toBe(0.5);
+    expect(programKey).toBe('godot-canvas-light');
   });
 });
 

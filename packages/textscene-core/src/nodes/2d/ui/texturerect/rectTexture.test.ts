@@ -6,12 +6,12 @@ import { TextureStretchMode } from '../../../../godot/scene/textureStretch';
 import { unconfiguredViewportTexture } from '../../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../../godot/scene/canvasItem';
 import { canvasItemViewSampler } from '../../../../r3f/canvasItemTextureSampler';
-import { SRGB_CANVAS } from '../../../../r3f/canvasColorSpace';
+import { canvasColorSpaceOf } from '../../../../r3f/canvasColorSpace';
 
 const TEXTURE_SIZE = { x: 64, y: 32 };
 const SAMPLER = canvasItemViewSampler(
   { filter: CanvasItemTextureFilter.NEAREST, repeat: CanvasItemTextureRepeat.DISABLED },
-  SRGB_CANVAS.textureColorSpace
+  canvasColorSpaceOf(false).textureColorSpace
 );
 const WHOLE = { offset: { x: 0, y: 0 }, size: TEXTURE_SIZE, tile: false, textureSize: TEXTURE_SIZE };
 const NO_FLIP = { flipH: false, flipV: false };

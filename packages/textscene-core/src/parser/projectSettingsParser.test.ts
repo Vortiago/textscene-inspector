@@ -19,6 +19,7 @@ import {
   projectCanvasTextureDefaults,
   projectClearColor,
   projectTransparentBackground,
+  projectUsesHdr2D,
   projectDrawsDepthPrepass,
   projectEmbedsSubwindows,
   projectTracesHalfSizeReflections,
@@ -283,6 +284,24 @@ describe('projectTransparentBackground', () => {
   it('is opaque with no project or a malformed value', () => {
     expect(projectTransparentBackground(null)).toBe(false);
     expect(projectTransparentBackground({ 'rendering/viewport/transparent_background': 'yes' })).toBe(false);
+  });
+});
+
+describe('projectUsesHdr2D', () => {
+  const KEY = 'rendering/viewport/hdr_2d';
+
+  it('reads an HDR root', () => {
+    expect(projectUsesHdr2D({ [KEY]: 'true' })).toBe(true);
+  });
+
+  it('reads 1 as true, as the bool slot booleanizes it', () => {
+    expect(projectUsesHdr2D({ [KEY]: '1' })).toBe(true);
+  });
+
+  it('is off by default, with no project and for a malformed value', () => {
+    expect(projectUsesHdr2D({})).toBe(false);
+    expect(projectUsesHdr2D(null)).toBe(false);
+    expect(projectUsesHdr2D({ [KEY]: 'yes' })).toBe(false);
   });
 });
 

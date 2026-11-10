@@ -1,5 +1,6 @@
 /** What the 2D-world canvas mounts, rendered through @react-three/test-renderer. */
 import { describe, expect, it, vi } from 'vitest';
+import { waitFor } from '@testing-library/react';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SelectionProvider } from '../../contexts/SelectionContext';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
@@ -14,8 +15,14 @@ vi.mock('../../controls/index.js', () => ({
 // A stand-in dispatcher shows the edited root's `[editable]` paths that reach the nodes.
 vi.mock('../../NodeDispatcher.js', async () => {
   const { useInstanceOwners } = await import('../../contexts/InstanceOwnersContext');
+  const { useCanvasColorSpace } = await import('../../canvasColorSpace');
   return {
-    NodeDispatcher: () => <mesh name={`editable:${useInstanceOwners()[0]!.editablePaths.join(',')}`} />,
+    NodeDispatcher: () => (
+      <>
+        <mesh name={`editable:${useInstanceOwners()[0]!.editablePaths.join(',')}`} />
+        <mesh name={`canvas-linear:${useCanvasColorSpace().isLinear}`} />
+      </>
+    ),
   };
 });
 
@@ -25,6 +32,7 @@ vi.mock('./CanvasFrameRender.js', () => ({
 }));
 
 import { World2DContents } from './World2DContents';
+import { withProject } from '../../testing/ProjectFixture';
 import { TiledUploadQueue } from '../../tiledUpload/TiledUploadQueue';
 
 const baseProps = {
@@ -65,6 +73,30 @@ describe('World2DContents canvas frame', () => {
       </SelectionProvider>
     );
     expect(rendered.scene.findAllByProps({ name: 'canvas-frame-render-stub' })).toHaveLength(1);
+  });
+});
+
+describe('World2DContents canvas colour space', () => {
+  const canvasIsLinearUnder = async (project: string | null) => {
+    const ProjectFixture = withProject(project);
+    const rendered = await ReactThreeTestRenderer.create(
+      <ProjectFixture>
+        <SelectionProvider>
+          <World2DContents {...baseProps} />
+        </SelectionProvider>
+      </ProjectFixture>
+    );
+    return rendered.scene.findAllByProps({ name: 'canvas-linear:true' }).length === 1;
+  };
+
+  it('draws its items linear when the project turns hdr_2d on', async () => {
+    await waitFor(async () =>
+      expect(await canvasIsLinearUnder('[rendering]\nviewport/hdr_2d=true\n')).toBe(true)
+    );
+  });
+
+  it('draws its items in sRGB by default', async () => {
+    expect(await canvasIsLinearUnder(null)).toBe(false);
   });
 });
 
