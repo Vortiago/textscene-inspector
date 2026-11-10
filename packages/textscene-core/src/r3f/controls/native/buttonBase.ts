@@ -101,6 +101,8 @@ interface ButtonLabelShapeOptions {
   autowrapMode?: EnumValue<typeof AutowrapMode>;
   /** `autowrap_flags_trim`, ORed onto the break flags at `:560`. Undefined trims both edge spaces, Label's default: `shapeWrappedButtonLabel` passes Button's own. */
   autowrapTrimFlags?: number;
+  /** `TextParagraph` shapes no end glyph (`ShapeTextOptions.hasEndGlyph`); a wrapping label passes false. */
+  hasEndGlyph?: boolean;
 }
 
 /** Shapes a Button-family label, the one measure its painters and solvers share. */
@@ -112,6 +114,7 @@ export function shapeButtonLabel(text: string, options: ButtonLabelShapeOptions)
     boxWidthPx = 0,
     autowrapMode = AutowrapMode.AUTOWRAP_OFF,
     autowrapTrimFlags,
+    hasEndGlyph,
   } = options;
   return shapeText(text, {
     fontSizePx,
@@ -120,7 +123,7 @@ export function shapeButtonLabel(text: string, options: ButtonLabelShapeOptions)
     // Not Label's 3: no Button-family control sets `line_spacing` on its `text_buf`
     // (`button.cpp`, `check_box.cpp`, `option_button.cpp`).
     lineSpacingPx: 0,
-    hasEndGlyph: false,
+    hasEndGlyph,
     fontMetrics,
     autowrapTrimFlags,
     ...bidi,
@@ -149,11 +152,12 @@ export function isButtonAutowrapped(props: ButtonWrapProperties): boolean {
 export function shapeWrappedButtonLabel(
   text: string,
   props: ButtonWrapProperties,
-  options: Omit<ButtonLabelShapeOptions, 'autowrapMode' | 'autowrapTrimFlags'>
+  options: Omit<ButtonLabelShapeOptions, 'autowrapMode' | 'autowrapTrimFlags' | 'hasEndGlyph'>
 ): TextLayoutResult {
   const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
   return shapeButtonLabel(text, {
     ...options,
+    hasEndGlyph: false,
     boxWidthPx: autowrapMode === AutowrapMode.AUTOWRAP_OFF ? 0 : options.boxWidthPx,
     autowrapMode,
     autowrapTrimFlags: props.autowrapTrimFlags ?? BUTTON_DEFAULT_TRIM_FLAGS,
