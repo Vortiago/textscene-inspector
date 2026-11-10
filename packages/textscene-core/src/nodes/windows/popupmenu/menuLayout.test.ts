@@ -9,7 +9,7 @@ import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { measureText } from '../../../r3f/controls/native/text/measurer';
 import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
-import { popupMenuGeometry } from './menuLayout';
+import { menuModel, popupMenuGeometry } from './menuLayout';
 import { many, menu, text } from './testing/menuNode';
 
 const THEME = nativeTheme(1);
@@ -25,7 +25,7 @@ function sizeOf(window: SolveNode) {
 }
 
 function geometryOf(window: SolveNode) {
-  return popupMenuGeometry(window, sizeOf(window), createSolveContext(THEME, measureText));
+  return popupMenuGeometry(window, sizeOf(window), menuModel(window, { theme: THEME, measureText }));
 }
 
 const rect = (x: number, y: number, w: number, h: number) => ({ x, y, w, h });

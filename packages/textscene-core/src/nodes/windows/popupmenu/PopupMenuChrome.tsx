@@ -16,7 +16,6 @@ import {
   useControlClipPlanes,
   useWorldClipPlanes,
 } from '../../../r3f/controls/native/controlClipping';
-import { createSolveContext } from '../../../r3f/controls/native/controlRectSolver';
 import { ControlQuad } from '../../../r3f/controls/native/controlQuad';
 import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
 import { CHECK_BOX_ICONS } from '../../../r3f/controls/native/themeIcons';
@@ -27,8 +26,7 @@ import { ScrollBarChrome } from '../../2d/ui/shared/ScrollChrome';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { checkIconSize, type CheckIconKey } from './menuItems';
 import { popupMenuDrawing, type RowDrawing } from './menuDrawing';
-import { popupMenuGeometry } from './menuLayout';
-import { popupMenuTheme } from './menuTheme';
+import { menuModel, popupMenuGeometry } from './menuLayout';
 
 /** `font_outline_size` is 0 in the default theme; the text outline is not drawn here. */
 const NO_OUTLINE = { sizePx: 0, color: { r: 0, g: 0, b: 0, a: 0 } };
@@ -159,11 +157,11 @@ export function PopupMenuChrome({
   measureText,
   snapToPixels,
 }: NativeControlComponentProps) {
-  const menu = useMemo(() => popupMenuTheme(solveNode, theme), [solveNode, theme]);
-  const ctx = useMemo(() => createSolveContext(theme, measureText), [theme, measureText]);
+  const model = useMemo(() => menuModel(solveNode, { theme, measureText }), [solveNode, theme, measureText]);
+  const { menu } = model;
   const geometry = useMemo(
-    () => popupMenuGeometry(solveNode, { x: rect.w, y: rect.h }, ctx),
-    [solveNode, rect.w, rect.h, ctx]
+    () => popupMenuGeometry(solveNode, { x: rect.w, y: rect.h }, model),
+    [solveNode, rect.w, rect.h, model]
   );
   const rows = useMemo(
     () => popupMenuDrawing(solveNode, menu, geometry.rows, geometry.control.w),

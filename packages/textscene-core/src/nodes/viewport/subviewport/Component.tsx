@@ -113,7 +113,7 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
   // it in its portal. A 3D pass draws it over its world, in a scene of its own (`OffscreenViewportPass`),
   // so the world's portal holds the children alone and each workspace drops the other's nodes.
   const inViewport = (inner: ReactNode) => (
-    <ViewportSizeProvider size={layoutSize}>
+    <ViewportSizeProvider size={layoutSize} embedsWindows={properties.gui_embed_subwindows}>
       <LayerRanksProvider value={canvasLayers}>
         <ViewportCanvasScope>
           <SubViewportCanvasScope properties={properties}>{inner}</SubViewportCanvasScope>

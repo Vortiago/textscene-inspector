@@ -35,6 +35,18 @@ function widestIcon(items: readonly MenuItem[]): number {
   return Math.max(0, ...items.map(({ iconSize }) => iconSize.x));
 }
 
+/** What a PopupMenu's size and geometry both read: its theme items and its measured items. */
+export interface MenuModel {
+  theme: NativeTheme;
+  menu: PopupMenuTheme;
+  items: readonly MenuItem[];
+}
+
+export function menuModel(n: SolveNode, ctx: Pick<SolveContext, 'theme' | 'measureText'>): MenuModel {
+  const menu = popupMenuTheme(n, ctx.theme);
+  return { theme: ctx.theme, menu, items: menuItems(n, menu, ctx) };
+}
+
 /** `_get_items_total_height` (`popup_menu.cpp:255-263`): every item and the gap under it. */
 export function itemsTotalHeight(items: readonly MenuItem[], menu: PopupMenuTheme): number {
   return items.reduce((sum, { height }) => sum + height + menu.vSeparation, 0);
@@ -46,14 +58,13 @@ export function itemsTotalHeight(items: readonly MenuItem[], menu: PopupMenuThem
  * (`:246-250,268-277`). The height is limited to the embedder's and ceiled (`:280-286`).
  */
 export const popupMenuContentsMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const menu = popupMenuTheme(n, ctx.theme);
-  const items = menuItems(n, menu, ctx);
+  const { menu, items } = menuModel(n, ctx);
   const margins = contentMarginSize(menu.panel);
   const shadow = insetSize(shadowInsets(menu.panel, n.rtl));
 
   const checkables = items.filter(({ item }) => item.checkable !== ItemCheckableType.NONE && !item.separator);
   const bodyWidth = Math.max(0, ...items.map(({ textSize }) => textSize.x));
-  const hasCheckIcon = checkables.some(({ item }) => item.icon !== undefined);
+  const hasCheckIcon = checkables.some(({ hasIcon }) => hasIcon);
   const gutter = gutterWidth(
     {
       iconWidth: widestIcon(items),
@@ -125,9 +136,11 @@ function verticalBar(
 }
 
 /** The geometry of menu `n` in a window of `size`, from the same items its minimum reads. */
-export function popupMenuGeometry(n: SolveNode, size: Vector2, ctx: SolveContext): MenuGeometry {
-  const menu = popupMenuTheme(n, ctx.theme);
-  const items = menuItems(n, menu, ctx);
+export function popupMenuGeometry(
+  n: SolveNode,
+  size: Vector2,
+  { theme, menu, items }: MenuModel
+): MenuGeometry {
   const margins = contentMarginSize(menu.panel);
 
   const panel = panelRect(shadowInsets(menu.panel, n.rtl), n.rtl, size);
@@ -138,7 +151,7 @@ export function popupMenuGeometry(n: SolveNode, size: Vector2, ctx: SolveContext
     h: panel.h - margins.y,
   };
   const contentHeight = itemsTotalHeight(items, menu);
-  const bar = verticalBar(scroll, contentHeight, n.rtl, ctx.theme);
+  const bar = verticalBar(scroll, contentHeight, n.rtl, theme);
   const reserved = bar.visible ? bar.rect.w : 0;
   const control = {
     x: scroll.x + (n.rtl ? reserved : 0),

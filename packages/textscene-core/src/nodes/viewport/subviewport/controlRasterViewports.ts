@@ -23,7 +23,7 @@ import type { SubViewportProperties } from './types.js';
 import { viewportGateAt, type ViewportGate } from './viewportGate.js';
 import { viewportThemeOwners, type ThemeOwner } from '../../windows/window/themeOwners.js';
 
-/** The viewport around another: the one a window embeds in, whose visible size limits the window's height. */
+/** The viewport a window embeds in, whose visible size limits the window's height. */
 interface EnclosingViewport {
   path: string;
   node: TscnNode;
@@ -74,10 +74,17 @@ export function inheritedRtlAt(tree: LiveTree, path: string, env: LayoutDirectio
   return link ? rtlBelow(link.step.node, inheritedRtlAt(tree, above, env), env) : null;
 }
 
+/** `Window::get_embedder` (`window.cpp:1400-1415`): the nearest viewport above that embeds subwindows. */
 function enclosingViewport(tree: LiveTree, path: string): EnclosingViewport | null {
   for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
-    const link = tree.at(above);
-    if (link && isViewportBoundary(link.step.node.type)) return { path: above, node: link.step.node };
+    const node = tree.at(above)?.step.node;
+    if (
+      node &&
+      isViewportBoundary(node.type) &&
+      (node.properties as SubViewportProperties).gui_embed_subwindows
+    ) {
+      return { path: above, node };
+    }
   }
   return null;
 }

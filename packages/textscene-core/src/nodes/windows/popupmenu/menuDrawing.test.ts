@@ -3,15 +3,13 @@
  * scale: a check gutter of 16 + 4, a start padding of 2, a gap of 4 and 23 px item rows.
  */
 import { describe, expect, it } from 'vitest';
-import { createSolveContext } from '../../../r3f/controls/native/controlRectSolver';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { measureText } from '../../../r3f/controls/native/text/measurer';
 import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
 import { popupMenuDrawing } from './menuDrawing';
-import { popupMenuGeometry } from './menuLayout';
-import { popupMenuTheme } from './menuTheme';
+import { menuModel, popupMenuGeometry } from './menuLayout';
 import { menu, text, type ItemLines } from './testing/menuNode';
 
 const THEME = nativeTheme(1);
@@ -21,8 +19,9 @@ const ROW_HEIGHT = 23;
 
 function drawingOf(window: SolveNode) {
   const size = wrappedWindowSize(window, THEME, measureText, EMBEDDER);
-  const geometry = popupMenuGeometry(window, size, createSolveContext(THEME, measureText));
-  const rows = popupMenuDrawing(window, popupMenuTheme(window, THEME), geometry.rows, geometry.control.w);
+  const model = menuModel(window, { theme: THEME, measureText });
+  const geometry = popupMenuGeometry(window, size, model);
+  const rows = popupMenuDrawing(window, model.menu, geometry.rows, geometry.control.w);
   return { rows, geometry, width: geometry.control.w };
 }
 

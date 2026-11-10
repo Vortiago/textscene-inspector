@@ -46,6 +46,8 @@ export interface MenuItem {
   text: TextLayoutResult | null;
   /** `text_buf->get_size()`: the ceiled extent. */
   textSize: Vector2;
+  /** Whether the item's icon has loaded: Godot's `icon.is_valid()`, which an unresolved reference fails. */
+  hasIcon: boolean;
   /** `_get_item_icon_size`: zero without a loaded icon. */
   iconSize: Vector2;
   /** `_get_item_height`. */
@@ -152,7 +154,15 @@ export function menuItems(
     const text = ctx.measureText ? shapeItem(n, item, theme) : null;
     const textSize = text ? { x: shapedTextSizeWidthPx(text.widthPx), y: text.heightPx } : { x: 0, y: 0 };
     const iconSize = itemIconSize(n, index, theme);
-    return { item, text, textSize, iconSize, height: itemHeight(n, item, textSize.y, iconSize.y, theme) };
+    const hasIcon = n.textureSlots[menuItemIconSlot(index)] !== undefined;
+    return {
+      item,
+      text,
+      textSize,
+      hasIcon,
+      iconSize,
+      height: itemHeight(n, item, textSize.y, iconSize.y, theme),
+    };
   });
 }
 

@@ -1,4 +1,4 @@
-/** PopupMenu registers the PopupMenu parse, the Window parse plus its items. Property knowledge for the linter lives in linterParser.ts. */
+/** PopupMenu parses as a Window plus its items. The linter's property knowledge lives in linterParser.ts. */
 import { registerWindowParser } from '../window/registerWindowType';
 import { parsePopupMenu } from './parser';
 

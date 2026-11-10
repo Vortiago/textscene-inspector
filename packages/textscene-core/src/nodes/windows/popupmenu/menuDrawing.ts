@@ -23,7 +23,6 @@ import {
   type CheckIconKey,
   type Gutter,
   gutterWidth,
-  menuItemIconSlot,
   widestCheckIcon,
 } from './menuItems';
 import type { MenuRow } from './menuLayout';
@@ -38,8 +37,8 @@ export interface RowDrawing {
   separators: readonly SeparatorLine[];
   /** The check icon and its top-left. */
   check: { key: CheckIconKey; position: Vector2 } | null;
-  /** The texture slot and the rect the icon stretches over. */
-  icon: { slot: string; rect: Rect2 } | null;
+  /** The rect the icon stretches over. */
+  icon: { rect: Rect2 } | null;
   text: { layout: TextLayoutResult; position: Vector2; color: Rgba } | null;
 }
 
@@ -51,7 +50,7 @@ function drawnGutter(rows: readonly MenuRow[], menu: PopupMenuTheme, n: SolveNod
     iconWidth: Math.max(0, ...items.map(({ iconSize }) => iconSize.x)),
     checkWidth: checkables.length > 0 ? widestCheckIcon(n) : 0,
     hasCheck: checkables.length > 0,
-    isCompact: menu.isGutterCompact && !checkables.some(({ item }) => item.icon !== undefined),
+    isCompact: menu.isGutterCompact && !checkables.some(({ hasIcon }) => hasIcon),
   };
 }
 
@@ -91,7 +90,7 @@ function labelledSeparator(
 
 /** Whether a separator has a label or an icon, which turns it into two lines around them. */
 function isLabelled(entry: MenuRow['entry']): boolean {
-  return entry.item.text.length > 0 || entry.item.icon !== undefined;
+  return entry.item.text.length > 0 || entry.hasIcon;
 }
 
 interface RowContext {
@@ -103,9 +102,9 @@ interface RowContext {
 
 /** A separator row: its lines, its icon and its label, centred (`popup_menu.cpp:906-1033`). */
 function separatorRowDrawing({ n, menu, width }: RowContext, row: MenuRow): RowDrawing {
-  const { entry, index, y } = row;
+  const { entry, y } = row;
   const { iconSize, textSize, height } = entry;
-  const hasIcon = entry.item.icon !== undefined;
+  const { hasIcon } = entry;
   if (!isLabelled(entry)) {
     return {
       separators: [separatorLine(menu.separator, y, height, 0, width)],
@@ -122,10 +121,7 @@ function separatorRowDrawing({ n, menu, width }: RowContext, row: MenuRow): RowD
   if (hasIcon) {
     textX = Math.trunc(textX - (iconSize.x + menu.hSeparation) / 2);
     const x = n.rtl ? width - textX - iconSize.x : textX;
-    icon = {
-      slot: menuItemIconSlot(index),
-      rect: { x, y: centredY(y, height, iconSize.y), w: iconSize.x, h: iconSize.y },
-    };
+    icon = { rect: { x, y: centredY(y, height, iconSize.y), w: iconSize.x, h: iconSize.y } };
     // The RTL branch leaves the text where the centring put it (`popup_menu.cpp:987-993`).
     if (!n.rtl) textX = Math.trunc(textX + iconSize.x + menu.hSeparation);
   }
@@ -144,7 +140,7 @@ function separatorRowDrawing({ n, menu, width }: RowContext, row: MenuRow): RowD
 /** An item row: its check mark, its icon and its text, mirrored under RTL (`popup_menu.cpp:944-1064`). */
 function itemRowDrawing(context: RowContext, row: MenuRow): RowDrawing {
   const { n, menu, gutter, width } = context;
-  const { entry, index, y } = row;
+  const { entry, y } = row;
   const { item, iconSize, textSize, height } = entry;
   const startX = menu.itemStartPadding;
   const fromStart = (x: number, extent: number) => (n.rtl ? width - x - extent : x);
@@ -157,10 +153,9 @@ function itemRowDrawing(context: RowContext, row: MenuRow): RowDrawing {
   }
 
   let icon: RowDrawing['icon'] = null;
-  if (item.icon !== undefined) {
+  if (entry.hasIcon) {
     const checkWidth = gutter.isCompact || !gutter.hasCheck ? 0 : gutter.checkWidth + menu.hSeparation;
     icon = {
-      slot: menuItemIconSlot(index),
       rect: {
         x: fromStart(startX + checkWidth, iconSize.x),
         y: centredY(y, height, iconSize.y),
