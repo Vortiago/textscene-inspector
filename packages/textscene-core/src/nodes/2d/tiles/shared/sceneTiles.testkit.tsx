@@ -21,6 +21,7 @@ import { compareKeys, paintKey } from '../../../../r3f/testing/paintOrder';
 import '../../../../r3f/nodes/index';
 import type { PlacedCell } from './tileData';
 import type { TileMapProperties } from '../tilemap/types';
+import type { TileMapLayerProperties } from '../tilemaplayer/types';
 
 /** Scene tile 1: a Node2D root holding a 20x10 red polygon. */
 const POLYGON_SCENE = `[gd_scene format=3]
