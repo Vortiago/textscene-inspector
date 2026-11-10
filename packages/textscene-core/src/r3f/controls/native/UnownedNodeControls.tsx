@@ -7,18 +7,16 @@
 
 import { useCallback, useMemo } from 'react';
 import '../index.js';
-import type { Rect2 } from '../../../godot/math/rect2';
+import type { Vector2 } from '../../../godot/math/vector';
 import type { LiveNode } from '../../../resources/liveNode';
 import type { SolvedControl } from './controlRectSolver';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { usePaintRange } from '../../contexts/PaintOrderContext';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { useBuildUnownedTree } from './buildSolveTree';
-import { ControlCanvasWalker } from './ControlCanvasWalker';
+import { ControlCanvasWalker, ZERO_RECT } from './ControlCanvasWalker';
 import { nativeTheme } from './nativeTheme';
 import { measureText } from './text/measurer';
-
-const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
 
 export default function UnownedNodeControls({ node }: { node: LiveNode }) {
   const { externalResources, internalResources } = useSceneResources();
@@ -31,6 +29,8 @@ export default function UnownedNodeControls({ node }: { node: LiveNode }) {
     internalResources,
     usePaintRange()
   );
+  // The placement's position is the one the tile sets on a Control root before the snap.
+  const placement = (node.properties as { position: Vector2 }).position;
   // The first tree node is the Control root the placement holds, which the tile layer sorts on.
   const rootPath = tree[0]?.path;
   const { reportRootRect } = node;
@@ -48,6 +48,7 @@ export default function UnownedNodeControls({ node }: { node: LiveNode }) {
       viewport={ZERO_RECT}
       theme={theme}
       measurer={measureText}
+      rootOffset={placement}
       onSolved={onSolved}
     />
   );

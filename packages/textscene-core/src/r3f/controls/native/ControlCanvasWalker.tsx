@@ -6,6 +6,7 @@
  */
 import { useEffect, useMemo } from 'react';
 import type { Rect2 } from '../../../godot/math/rect2';
+import type { Vector2 } from '../../../godot/math/vector';
 import { controlProps, type SolveNode } from './solveTree';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
@@ -50,11 +51,17 @@ interface ControlCanvasWalkerProps {
    * that owns another viewport must state it.
    */
   snapToPixels?: boolean;
+  /**
+   * A position the root Controls' parent adds before the snap. Godot sets a scene tile root's position
+   * to `map_to_local + position`, so the snap rounds the sum (`tile_map_layer.cpp:1636`).
+   */
+  rootOffset?: Vector2;
   /** Called after each solve, with the solved controls keyed by tree path. */
   onSolved?: (solved: ReadonlyMap<string, SolvedControl>) => void;
 }
 
-const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
+export const ZERO_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
+const ZERO_OFFSET: Vector2 = { x: 0, y: 0 };
 
 export function ControlCanvasWalker({
   tree,
@@ -63,6 +70,7 @@ export function ControlCanvasWalker({
   theme,
   measurer,
   snapToPixels,
+  rootOffset,
   onSolved,
 }: ControlCanvasWalkerProps) {
   // Per viewport in Godot (`Viewport::snap_controls_to_pixels`,
@@ -78,7 +86,9 @@ export function ControlCanvasWalker({
     // `tree` can change while `tree` keeps its reference.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tree, generation, measurer, viewport, theme]);
-  useEffect(() => onSolved?.(solved), [solved, onSolved]);
+  useEffect(() => {
+    onSolved?.(solved);
+  }, [solved, onSolved]);
 
   return (
     <>
@@ -90,6 +100,7 @@ export function ControlCanvasWalker({
           theme={theme}
           measureText={measurer}
           snapToPixels={snapEnabled}
+          rootOffset={rootOffset}
         />
       ))}
     </>
@@ -103,6 +114,8 @@ interface ControlNodeGroupProps {
   measureText: TextMeasurer | null;
   /** `Viewport::is_snap_controls_to_pixels_enabled()` (`controlPixelSnap.ts`). */
   snapToPixels: boolean;
+  /** `ControlCanvasWalkerProps.rootOffset`, set on the roots of the walk only. */
+  rootOffset?: Vector2;
 }
 
 /**
@@ -166,7 +179,14 @@ function ControlNodeGroup(props: ControlNodeGroupProps) {
   );
 }
 
-function ControlItemGroup({ solveNode, solved, theme, measureText, snapToPixels }: ControlNodeGroupProps) {
+function ControlItemGroup({
+  solveNode,
+  solved,
+  theme,
+  measureText,
+  snapToPixels,
+  rootOffset = ZERO_OFFSET,
+}: ControlNodeGroupProps) {
   const props = controlProps(solveNode);
   const state = useControlState(solveNode, props);
   const { key: renderOrder, tint } = state;
@@ -200,11 +220,13 @@ function ControlItemGroup({ solveNode, solved, theme, measureText, snapToPixels 
   // Godot snaps the canvas item, leaving `get_rect()` at full precision. The inner
   // pivot groups add their own translation, so this is the outer half of one
   // snapped origin.
-  const origin = snappedControlOrigin(
-    rect,
+  const snapped = snappedControlOrigin(
+    { x: rect.x + rootOffset.x, y: rect.y + rootOffset.y },
     { rotation, scale: { x: scaleX, y: scaleY }, pivot: { x: pivotX, y: pivotY } },
     snapToPixels
   );
+  // The parent group adds `rootOffset` back.
+  const origin = { x: snapped.x - rootOffset.x, y: snapped.y - rootOffset.y };
 
   const Painter = controlComponentRegistry.get(solveNode.node.type) ?? ControlFallback;
   const childElements = solveNode.children.map((child) => (

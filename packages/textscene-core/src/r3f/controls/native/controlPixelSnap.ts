@@ -88,7 +88,7 @@ export function snappedControlOrigin(
 
 /**
  * Where the canvas item of a Control sits in its parent: `_update_canvas_item_transform`'s origin
- * (`control.cpp:726-736`), the position plus the internal translation, whole pixels when it snaps.
+ * (`control.cpp:727-737`), the position plus the internal translation, whole pixels when it snaps.
  * A y-sorted parent sorts the Control on this origin's y.
  */
 export function controlItemOrigin(

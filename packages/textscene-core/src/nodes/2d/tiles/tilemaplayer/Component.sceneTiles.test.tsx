@@ -80,7 +80,7 @@ describe('TileMapLayer scene tiles', () => {
   });
 
   it.each([
-    ['a scene id the source lacks', cell(0, 0, 15)],
+    ['a scene id the source lacks', cell(0, 0, 17)],
     ['atlas coords other than (0, 0)', cell(0, 0, 1, { atlasCoords: { x: 1, y: 0 } })],
     ['a source the TileSet lacks', cell(0, 0, 1, { sourceId: 5 })],
   ])('draws no instance for %s', async (_name, placed) => {
@@ -88,7 +88,7 @@ describe('TileMapLayer scene tiles', () => {
   });
 
   it('draws no instance for a scene whose loaded root is a plain Node', async () => {
-    // `set_scene_tile_scene` refuses a root that is no CanvasItem (`tile_set.cpp:5826-5827`).
+    // `set_scene_tile_scene` refuses a root that is no CanvasItem (`tile_set.cpp:5828-5829`).
     const { renderer } = await renderSceneTiles(layerScene(), {
       showGizmos: false,
       prepare: withCells([cell(0, 0, 7)]),
@@ -226,6 +226,29 @@ polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)
       [132, 88, 10, 30],
       [100, 100, 10, 10],
     ]);
+  });
+
+  it('sorts a Control root in the z bucket of its own z_index', async () => {
+    // The root's z_index of 1 puts it after the z 0 child, although its y of 32 is above the child at 300.
+    const authored = `
+[node name="Low" type="Polygon2D" parent="Layer"]
+position = Vector2(0, 300)
+polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)
+`;
+    const renderer = await render([cell(0, 0, 16)], 'y_sort_enabled = true\n', authored);
+    expect(boxesInPaintOrder(renderer)).toEqual([
+      [100, 320, 10, 10],
+      [132, 52, 10, 10],
+    ]);
+  });
+
+  it('snaps the sum of the cell centre and the Control root position, as Godot sets it', async () => {
+    // A 15 px cell centres at 7.5, which the snap rounds up with the root's 0: Godot 4.6.3 draws at 108, 28.
+    const { renderer } = await renderSceneTiles(
+      layerScene('y_sort_enabled = true\n').replace('Vector2i(64, 64)', 'Vector2i(15, 15)'),
+      { prepare: withCells([cell(0, 0, 15)]) }
+    );
+    expect(drawnBoxes(renderer)).toEqual([[108, 28, 10, 10]]);
   });
 
   it('keeps the draw order inside each of 400 instances', async () => {

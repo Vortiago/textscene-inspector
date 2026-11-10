@@ -163,7 +163,26 @@ grow_vertical = 0
 color = Color(0, 0, 1, 1)
 `;
 
-/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5 and 7 to 14 in source 0. */
+/** Scene tile 15: a 10x10 blue ColorRect root at the origin. */
+const PLAIN_CONTROL_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="ColorRect"]
+offset_right = 10.0
+offset_bottom = 10.0
+color = Color(0, 0, 1, 1)
+`;
+
+/** Scene tile 16: a ColorRect root with `z_index = 1`. */
+const RAISED_CONTROL_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="ColorRect"]
+z_index = 1
+offset_right = 10.0
+offset_bottom = 10.0
+color = Color(0, 1, 0, 1)
+`;
+
+/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5 and 7 to 16 in source 0. */
 export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="res://polygon.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://offset.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://control.tscn" id="3"]
@@ -177,6 +196,8 @@ export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="r
 [ext_resource type="PackedScene" path="res://refused.tscn" id="11"]
 [ext_resource type="PackedScene" path="res://turned-control.tscn" id="12"]
 [ext_resource type="PackedScene" path="res://grown-control.tscn" id="13"]
+[ext_resource type="PackedScene" path="res://plain-control.tscn" id="14"]
+[ext_resource type="PackedScene" path="res://raised-control.tscn" id="15"]
 
 [sub_resource type="TileSetScenesCollectionSource" id="scenes"]
 scenes/1/scene = ExtResource("1")
@@ -192,6 +213,8 @@ scenes/11/scene = ExtResource("10")
 scenes/12/scene = ExtResource("11")
 scenes/13/scene = ExtResource("12")
 scenes/14/scene = ExtResource("13")
+scenes/15/scene = ExtResource("14")
+scenes/16/scene = ExtResource("15")
 
 [sub_resource type="TileSet" id="tileset"]
 tile_size = Vector2i(64, 64)
@@ -212,6 +235,8 @@ const TILE_SCENES: Record<string, string> = {
   'res://refused.tscn': REFUSED_SCENE,
   'res://turned-control.tscn': TURNED_CONTROL_SCENE,
   'res://grown-control.tscn': GROWN_CONTROL_SCENE,
+  'res://plain-control.tscn': PLAIN_CONTROL_SCENE,
+  'res://raised-control.tscn': RAISED_CONTROL_SCENE,
 };
 
 /** What the viewport and the Scene dock see of the rendered scene. */

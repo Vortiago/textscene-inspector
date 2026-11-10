@@ -86,7 +86,7 @@ describe('TileMapLayer scene tile placeholders', () => {
   });
 
   it('draws the disc for a scene that failed to load, as for a tile with no scene', async () => {
-    // `get_scene_tile_scene` is null for a missing scene (`tile_map_layer.cpp:1676-1678`).
+    // `get_scene_tile_scene` is null for a missing scene (`tile_map_layer.cpp:1683`).
     const { renderer } = await renderSceneTiles(layerScene(), {
       showGizmos: true,
       failedScenes: ['res://polygon.tscn'],
@@ -96,7 +96,7 @@ describe('TileMapLayer scene tile placeholders', () => {
   });
 
   it('draws nothing for a scene Godot refuses to instantiate, as add_child(nullptr) does', async () => {
-    // The scene is valid, so there is no disc (`:1676`), and `instantiate()` returns null (`:1592-1593`).
+    // The scene is valid, so there is no disc (`:1683`), and `instantiate()` returns null (`:1632`).
     const { renderer } = await renderSceneTiles(layerScene(), {
       showGizmos: true,
       prepare: withCells([cell(1, 0, 12)]),
@@ -111,7 +111,7 @@ describe('TileMapLayer scene tile placeholders', () => {
   });
 
   it.each([
-    ['a scene id the source lacks', cell(0, 0, 15)],
+    ['a scene id the source lacks', cell(0, 0, 17)],
     ['a source the TileSet lacks', cell(0, 0, 6, 5)],
   ])('draws no disc for %s', async (_name, placed) => {
     expect(drawnBoxes(await renderLayer([placed], { showGizmos: true }))).toEqual([]);

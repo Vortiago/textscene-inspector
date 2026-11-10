@@ -187,7 +187,16 @@ const SPLIT_CONTAINER_AUTOHIDE = true;
 // `default_margin` (4) or `default_corner_radius` (3). A call passing another
 // literal, such as ScrollBar's 10, gets its own scaled constant.
 /** `NativeTheme` at a project's `gui/theme/default_theme_scale`. */
+const themeAtScale = new Map<number, NativeTheme>();
+
+/** The theme at `scale`, built once per scale: a walker per scene tile asks for the same one. */
 export function nativeTheme(scale: number): NativeTheme {
+  let theme = themeAtScale.get(scale);
+  if (!theme) themeAtScale.set(scale, (theme = buildNativeTheme(scale)));
+  return theme;
+}
+
+function buildNativeTheme(scale: number): NativeTheme {
   const scaled = scaledGodotTheme(scale);
   const buttonMargin = {
     left: scaled.contentMargin,
