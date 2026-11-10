@@ -50,7 +50,7 @@ export function thickLinesGeometry(lines: readonly Line2[], width: number): THRE
         vertices[i + 1]!
       );
     }
-    strokeIndices.forEach((index) => (indices[indexAt++] = vertexAt + index));
+    for (const index of strokeIndices) indices[indexAt++] = vertexAt + index;
     vertexAt += vertices.length / 2;
   }
   const geometry = new THREE.BufferGeometry();

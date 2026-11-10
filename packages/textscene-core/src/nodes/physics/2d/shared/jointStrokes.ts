@@ -26,12 +26,14 @@ export function pinMarker(): JointStrokes {
   return { frame: [bar(0), line(0, -BAR_HALF_LENGTH, 0, BAR_HALF_LENGTH)], offset: [] };
 }
 
-/** `damped_spring_joint_2d.cpp:46-48`: a bar at the origin and at `length`, and the line between. */
+/** A bar at the origin and at `length`, and the line between (`damped_spring_joint_2d.cpp:46-48`). */
+const axis = (length: number): Line2[] => [bar(0), bar(length), line(0, 0, 0, length)];
+
 export function dampedSpringMarker(length: number): JointStrokes {
-  return { frame: [bar(0), bar(length), line(0, 0, 0, length)], offset: [] };
+  return { frame: axis(length), offset: [] };
 }
 
 /** `groove_joint_2d.cpp:46-49`: the spring marker, and a bar at `initialOffset`. */
 export function grooveMarker(length: number, initialOffset: number): JointStrokes {
-  return { frame: dampedSpringMarker(length).frame, offset: [bar(initialOffset)] };
+  return { frame: axis(length), offset: [bar(initialOffset)] };
 }
