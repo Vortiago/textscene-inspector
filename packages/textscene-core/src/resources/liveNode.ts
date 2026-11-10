@@ -73,10 +73,17 @@ export interface LiveNode extends TscnNode {
   /** An unowned node whose instance root is a Control, which the world walk does not draw. */
   readonly hasControlRoot?: boolean;
   /**
-   * Set on an unowned placement node: the transform of its instance root inside it. Godot sorts the
-   * root, a child canvas item of the layer, so the y-sort pass reads the placement and this pose.
+   * Set on an unowned placement node: its instance root inside it. Godot sorts the root, a child
+   * canvas item of the layer, so the y-sort pass reads the placement and the root's pose and z.
    */
-  readonly ySortPose?: Transform2DColumns;
+  readonly ySortRoot?: YSortRoot;
+}
+
+/** The instance root a placement node stands for, as the y-sort reads it. */
+export interface YSortRoot {
+  pose: Transform2DColumns;
+  zIndex: number;
+  zAsRelative: boolean;
 }
 
 /** The host child `node` stands for: itself, or the child it is the re-anchored copy of. */

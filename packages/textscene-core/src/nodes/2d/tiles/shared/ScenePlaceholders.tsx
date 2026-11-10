@@ -71,14 +71,18 @@ function discsGeometry(circles: readonly PlaceholderCircle[]): THREE.BufferGeome
     const first = discIndex * verticesPerDisc;
     for (let i = 0; i < rimPoints; i++) {
       const angle = (i * Math.PI * 2) / PLACEHOLDER_SEGMENTS;
-      positions.set(
-        [center.x + Math.cos(angle) * radius, -(center.y + Math.sin(angle) * radius), 0],
-        (first + i) * 3
-      );
+      const at = (first + i) * 3;
+      positions[at] = center.x + Math.cos(angle) * radius;
+      positions[at + 1] = -(center.y + Math.sin(angle) * radius);
     }
-    positions.set([center.x, -center.y, 0], (first + rimPoints) * 3);
+    const centerAt = (first + rimPoints) * 3;
+    positions[centerAt] = center.x;
+    positions[centerAt + 1] = -center.y;
     for (let i = 0; i < PLACEHOLDER_SEGMENTS; i++) {
-      indices.set([first + rimPoints, first + i, first + i + 1], (discIndex * PLACEHOLDER_SEGMENTS + i) * 3);
+      const at = (discIndex * PLACEHOLDER_SEGMENTS + i) * 3;
+      indices[at] = first + rimPoints;
+      indices[at + 1] = first + i;
+      indices[at + 2] = first + i + 1;
     }
   });
   const geometry = new THREE.BufferGeometry();

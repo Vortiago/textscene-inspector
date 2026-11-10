@@ -98,8 +98,8 @@ function toSortRootOf(child: TscnNode, parent: YSortParent): Transform2DColumns 
     node2DLocalTransform(child.properties as Partial<Node2DLocalTransform>)
   );
   // A scene tile sorts as its instance root, which sits inside the placement node that stands for it.
-  const rootPose = (child as LiveNode).ySortPose;
-  return rootPose ? multiplyTransform2D(toChild, rootPose) : toChild;
+  const root = (child as LiveNode).ySortRoot;
+  return root ? multiplyTransform2D(toChild, root.pose) : toChild;
 }
 
 /**
@@ -116,10 +116,14 @@ function itemSortKey(child: TscnNode, parent: YSortParent): YSortParent & { sort
   // 143-148) and `_cull_canvas_item` (430-434) both run
   // `CLAMP(p_z + z_index, CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX)` under `z_relative`
   // and assign `z_index` unclamped otherwise. A second copy could drift from the lights.
-  const effectiveZ = accumulateCanvasItemZ(parent.effectiveZ, {
+  const ownZ = accumulateCanvasItemZ(parent.effectiveZ, {
     z_index: (props.z_index as number | undefined) ?? 0,
     z_as_relative: props.z_as_relative as boolean | undefined,
   });
+  const root = (child as LiveNode).ySortRoot;
+  const effectiveZ = root
+    ? accumulateCanvasItemZ(ownZ, { z_index: root.zIndex, z_as_relative: root.zAsRelative })
+    : ownZ;
   return { toSortRoot, sortY, effectiveZ };
 }
 

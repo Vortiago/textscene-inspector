@@ -15,6 +15,7 @@ import type { TscnScene } from '../../../../parser/types';
 import {
   SCENE_TILESET_RESOURCES,
   boxesInPaintOrder,
+  drawnMeshes,
   drawnBoxes,
   onlyMesh,
   nodesOfType,
@@ -79,7 +80,7 @@ describe('TileMapLayer scene tiles', () => {
   });
 
   it.each([
-    ['a scene id the source lacks', cell(0, 0, 10)],
+    ['a scene id the source lacks', cell(0, 0, 12)],
     ['atlas coords other than (0, 0)', cell(0, 0, 1, { atlasCoords: { x: 1, y: 0 } })],
     ['a source the TileSet lacks', cell(0, 0, 1, { sourceId: 5 })],
   ])('draws no instance for %s', async (_name, placed) => {
@@ -149,6 +150,14 @@ polygon = PackedVector2Array(64, 300, 114, 300, 114, 340, 64, 340)
     expect(drawnBoxes(renderer)).toEqual([[201, 55, 10, 10]]);
   });
 
+  it('keeps the instance of an unchanged cell mounted when another cell changes', async () => {
+    const { renderer, edit } = await renderWithProbe([cell(0, 0, 1), cell(1, 0, 3)]);
+    const instanceAt132 = () => drawnMeshes(renderer).find(({ box }) => box[0] === 132)!.mesh;
+    const before = instanceAt132();
+    await edit(layerScene(), withCells([cell(0, 0, 1), cell(2, 0, 3)]));
+    expect(instanceAt132()).toBe(before);
+  });
+
   it('sorts an instance of a y-sorted layer with the layer children by the cell centre', async () => {
     const authored = `
 [node name="Low" type="Polygon2D" parent="Layer"]
@@ -175,6 +184,27 @@ polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)
       [132, 56, 30, 30],
       [132, 42, 30, 30],
     ]);
+  });
+
+  it('sorts an instance in the z bucket of its root: a raised root below a later child still draws over it', async () => {
+    // The root's z_index of 1 puts it with the z 1 child, where the lower y of the child draws first.
+    const authored = `
+[node name="Raised" type="Polygon2D" parent="Layer"]
+z_index = 1
+position = Vector2(0, 300)
+polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)
+`;
+    const renderer = await render([cell(0, 6, 11)], 'y_sort_enabled = true\n', authored);
+    expect(boxesInPaintOrder(renderer)).toEqual([
+      [100, 320, 10, 10],
+      [127, 431, 10, 10],
+    ]);
+  });
+
+  it('keeps the draw order inside each of 400 instances', async () => {
+    const stacked = Array.from({ length: 400 }, (_, i) => cell(i % 40, Math.floor(i / 40), 10));
+    const widths = boxesInPaintOrder(await render(stacked)).map(([, , width]) => width);
+    expect(widths.filter((width, i) => width !== [30, 20, 10][i % 3])).toEqual([]);
   });
 
   it('draws a Control root of a y-sorted layer at the cell', async () => {

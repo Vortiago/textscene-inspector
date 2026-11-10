@@ -100,7 +100,33 @@ color = Color(0, 0, 1, 1)
 polygon = PackedVector2Array(0, -60, 30, -60, 30, -30, 0, -30)
 `;
 
-/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5, 7, 8 and 9 in source 0. */
+/** Scene tile 10: a Node2D root with three polygons of widths 30, 20 and 10 that draw in that order. */
+const STACK_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Wide" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, 0, 30, 0, 30, 10, 0, 10)
+
+[node name="Middle" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, 0, 20, 0, 20, 10, 0, 10)
+
+[node name="Narrow" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)
+`;
+
+/** Scene tile 11: a Node2D root with a z_index of 1 that holds a 10x10 green polygon. */
+const RAISED_ROOT_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+z_index = 1
+
+[node name="Shape" type="Polygon2D" parent="."]
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(-5, -5, 5, -5, 5, 5, -5, 5)
+`;
+
+/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5 and 7 to 11 in source 0. */
 export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="res://polygon.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://offset.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://control.tscn" id="3"]
@@ -109,6 +135,8 @@ export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="r
 [ext_resource type="PackedScene" path="res://plain.tscn" id="6"]
 [ext_resource type="PackedScene" path="res://low-root.tscn" id="7"]
 [ext_resource type="PackedScene" path="res://plain-root.tscn" id="8"]
+[ext_resource type="PackedScene" path="res://stack.tscn" id="9"]
+[ext_resource type="PackedScene" path="res://raised-root.tscn" id="10"]
 
 [sub_resource type="TileSetScenesCollectionSource" id="scenes"]
 scenes/1/scene = ExtResource("1")
@@ -119,6 +147,8 @@ scenes/5/scene = ExtResource("5")
 scenes/7/scene = ExtResource("6")
 scenes/8/scene = ExtResource("7")
 scenes/9/scene = ExtResource("8")
+scenes/10/scene = ExtResource("9")
+scenes/11/scene = ExtResource("10")
 
 [sub_resource type="TileSet" id="tileset"]
 tile_size = Vector2i(64, 64)
@@ -134,6 +164,8 @@ const TILE_SCENES: Record<string, string> = {
   'res://plain.tscn': PLAIN_NODE_SCENE,
   'res://low-root.tscn': LOW_ROOT_SCENE,
   'res://plain-root.tscn': PLAIN_ROOT_SCENE,
+  'res://stack.tscn': STACK_SCENE,
+  'res://raised-root.tscn': RAISED_ROOT_SCENE,
 };
 
 /** What the viewport and the Scene dock see of the rendered scene. */

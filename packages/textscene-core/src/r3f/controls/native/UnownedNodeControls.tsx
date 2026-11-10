@@ -1,9 +1,8 @@
 /**
- * The Controls inside a node the scene does not list (`LiveNode.isUnowned`), drawn by the native
- * Control walker in the run of draw sequences the node holds. The world walk draws no Control, and
- * the scene's own Control forest never sees such a node. A Control root anchors to the zero rect of
- * its parent canvas item (`control.cpp` `get_parent_anchorable_rect`). Loaded lazily and through
- * the controls barrel, as `ViewportControls` is, so a canvas with none loads none.
+ * The Controls inside an unowned node (`LiveNode.isUnowned`), drawn by the native Control walker in
+ * the run of draw sequences the node holds. A Control root anchors to the zero rect of its parent
+ * canvas item (`control.cpp` `get_parent_anchorable_rect`). Loaded lazily, as `ViewportControls`
+ * is, so a canvas with none loads none.
  */
 
 import { useMemo } from 'react';

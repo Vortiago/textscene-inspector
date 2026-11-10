@@ -6,17 +6,18 @@
 
 import { useMemo } from 'react';
 import type { SceneScope, TscnNode } from '../../../../parser/types';
-import type { LiveNode } from '../../../../resources/liveNode';
+import type { LiveNode, YSortRoot } from '../../../../resources/liveNode';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes';
 import { sceneTileCells, type SceneTileCell } from '../../../../resources/tileset/sceneTileCells';
 import { sceneTilePlacement, type SceneRootKind } from '../../../../resources/tileset/sceneTilePlacement';
 import type { TileScene, TileSetModel } from '../../../../resources/tileset/types';
+import { perObject } from '../../../../utils/perObject';
 import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedScenePathsContext';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useLiveStepsOf } from '../../../../r3f/useLiveSceneTree';
 import type { LiveStep } from '../../../../r3f/liveSceneTree';
 import { parseNode2D } from '../../../base/node2d/parser';
-import { TRANSFORM2D_IDENTITY, type Transform2DColumns } from '../../../../godot/math/transform2d';
+import { TRANSFORM2D_IDENTITY, transform2DDecompose } from '../../../../godot/math/transform2d';
 import { node2DLocalTransform } from '../../../../r3f/node2dTransform';
 import type { Node2DLocalTransform } from '../../../base/node2d/types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -47,7 +48,11 @@ export function useSceneTileNodes(
   model: TileSetModel | null,
   cells: readonly PlacedCell[] | null | undefined
 ): SceneTileDrawing {
-  const allTiles = useMemo(() => (model && cells ? sceneTileCells(model, cells) : NO_TILES), [model, cells]);
+  // An atlas-only TileSet names no scene tile, so its cells need no scan.
+  const allTiles = useMemo(
+    () => (model?.sceneSources.size && cells ? sceneTileCells(model, cells) : NO_TILES),
+    [model, cells]
+  );
   const tiles = useMemo(() => instancedTiles(allTiles), [allTiles]);
   const ambient = useSceneResources();
   const enclosingScenePaths = useInstancedScenePaths();
@@ -58,7 +63,8 @@ export function useSceneTileNodes(
   // One instance node and one live step per distinct scene: a layer repeats few scenes across many cells.
   const instanceOf = useMemo(() => {
     const byScene = new Map<TileScene, LiveNode>();
-    for (const { scene } of tiles) if (!byScene.has(scene)) byScene.set(scene, instanceNode(scene, scope));
+    for (const { scene } of tiles)
+      if (!byScene.has(scene)) byScene.set(scene, cachedInstanceNode(scene, scope));
     return byScene;
   }, [tiles, scope]);
   const distinctInstances = useMemo(() => [...instanceOf.values()], [instanceOf]);
@@ -107,12 +113,21 @@ class TileNames {
   }
 }
 
+/** A Node2D at its defaults: a placement node differs from it by its name and transform only. */
+const PLACEMENT_DEFAULTS = parseNode2D({ type: 'Node2D', attributes: { name: '', parent: '.' } }, {});
+
 const NO_TILES: readonly SceneTileCell[] = [];
 const NO_DRAWING: SceneTileDrawing = { instances: [], placeholderTiles: [] };
 
 function instancedTiles(tiles: readonly SceneTileCell[]): InstancedSceneTile[] {
   return tiles.flatMap((tile) => (tile.tile.scene ? [{ tile, scene: tile.tile.scene }] : []));
 }
+
+/** A cell edit keeps the node of a scene it still draws, so the instances mounted below it keep their memos. */
+const cachedInstanceNode = (scene: TileScene, scope: SceneScope): LiveNode => instanceNodesOf(scope)(scene);
+const instanceNodesOf = perObject((scope: SceneScope) =>
+  perObject((scene: TileScene) => instanceNode(scene, scope))
+);
 
 /** The instance, resolved in the tables of the file that holds the TileSet, not the scene's. */
 function instanceNode(scene: TileScene, ambient: SceneScope): LiveNode {
@@ -140,16 +155,23 @@ function rootKindOf(rootType: string): SceneRootKind | null {
 }
 
 /**
- * Where the instance root sits in its placement node, for the sort. A Node2D root has its own
- * transform. A Control root sits at its offsets, the rect of a parent with no size.
+ * The instance root as the sort reads it. A Node2D root has its own transform and z. A Control root
+ * sits at its offsets, the rect of a parent with no size, and keeps the placement's z.
  */
-function rootPose(rootNode: LiveNode, root: SceneRootKind): Transform2DColumns {
-  if (root === 'node2d') return node2DLocalTransform(rootNode.properties as Partial<Node2DLocalTransform>);
+function ySortRootOf(rootNode: LiveNode, root: SceneRootKind): YSortRoot {
+  if (root === 'node2d') {
+    const { z_index: zIndex = 0, z_as_relative: zAsRelative = true } = rootNode.properties as {
+      z_index?: number;
+      z_as_relative?: boolean;
+    };
+    const pose = node2DLocalTransform(rootNode.properties as Partial<Node2DLocalTransform>);
+    return { pose, zIndex, zAsRelative };
+  }
   const { offsetLeft = 0, offsetTop = 0 } = rootNode.properties as {
     offsetLeft?: number;
     offsetTop?: number;
   };
-  return { ...TRANSFORM2D_IDENTITY, tx: offsetLeft, ty: offsetTop };
+  return { pose: { ...TRANSFORM2D_IDENTITY, tx: offsetLeft, ty: offsetTop }, zIndex: 0, zAsRelative: true };
 }
 
 function placementNode(
@@ -160,17 +182,16 @@ function placementNode(
   root: SceneRootKind,
   rootNode: LiveNode
 ): LiveNode {
-  const { a, b, c, d, tx, ty } = sceneTilePlacement(grid, cell.coords, cell.alternativeId, root);
-  const heading = { type: 'Node2D', attributes: { name, parent: '.' } };
+  const placement = sceneTilePlacement(grid, cell.coords, cell.alternativeId, root);
   return {
     name,
     type: 'Node2D',
     parent: '.',
     children: [instance],
-    properties: parseNode2D(heading, { transform: `Transform2D(${a}, ${b}, ${c}, ${d}, ${tx}, ${ty})` }),
+    properties: { ...PLACEMENT_DEFAULTS, name, ...transform2DDecompose(placement) },
     rawProperties: {},
     isUnowned: true,
     hasControlRoot: root === 'control',
-    ySortPose: rootPose(rootNode, root),
+    ySortRoot: ySortRootOf(rootNode, root),
   };
 }
