@@ -18,6 +18,8 @@ import { settleLoads } from '../../../../r3f/testing/settleLoads';
 import { computeWorldBoundingBox } from '../../../../r3f/bounds';
 import { compareKeys, paintKey } from '../../../../r3f/testing/paintOrder';
 import '../../../../r3f/nodes/index';
+import type { PlacedCell } from './tileData';
+import type { TileMapProperties } from '../tilemap/types';
 
 /** Scene tile 1: a Node2D root holding a 20x10 red polygon. */
 const POLYGON_SCENE = `[gd_scene format=3]
@@ -98,7 +100,7 @@ color = Color(0, 0, 1, 1)
 polygon = PackedVector2Array(0, -60, 30, -60, 30, -30, 0, -30)
 `;
 
-/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with scene tiles 1 to 5 in source 0. */
+/** The `[ext_resource]` and `[sub_resource]` headings of a TileSet with the scene tiles 1 to 5, 7, 8 and 9 in source 0. */
 export const SCENE_TILESET_RESOURCES = `[ext_resource type="PackedScene" path="res://polygon.tscn" id="1"]
 [ext_resource type="PackedScene" path="res://offset.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://control.tscn" id="3"]
@@ -159,7 +161,7 @@ export interface RenderSceneTilesOptions {
 }
 
 /**
- * Renders `tscn` in the 2D canvas with the five tile scenes loaded. The Controls of a scene tile
+ * Renders `tscn` in the 2D canvas with the tile scenes loaded. The Controls of a scene tile
  * load lazily, so their module loads first and the first settle mounts them.
  */
 export async function renderSceneTiles(tscn: string, options: RenderSceneTilesOptions = {}) {
@@ -249,3 +251,13 @@ export function nodesOfType(nodes: readonly TscnNode[], type: string, out: TscnN
   }
   return out;
 }
+
+/** Sets the cells of each layer of a TileMap, which the parse would read from `layer_N/tile_data`. */
+export const withLayerCells =
+  (...layerCells: PlacedCell[][]) =>
+  (scene: TscnScene) => {
+    const { layers } = nodesOfType(scene.nodes, 'TileMap')[0]!.properties as TileMapProperties;
+    layerCells.forEach((cells, index) => {
+      layers[index]!.cells = cells;
+    });
+  };

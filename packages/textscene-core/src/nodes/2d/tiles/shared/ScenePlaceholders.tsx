@@ -66,7 +66,7 @@ function discsGeometry(circles: readonly PlaceholderCircle[]): THREE.BufferGeome
   const rimPoints = PLACEHOLDER_SEGMENTS + 1;
   const verticesPerDisc = rimPoints + 1;
   const positions = new Float32Array(circles.length * verticesPerDisc * 3);
-  const indices: number[] = [];
+  const indices = new Uint32Array(circles.length * PLACEHOLDER_SEGMENTS * 3);
   circles.forEach(({ center, radius }, discIndex) => {
     const first = discIndex * verticesPerDisc;
     for (let i = 0; i < rimPoints; i++) {
@@ -77,10 +77,12 @@ function discsGeometry(circles: readonly PlaceholderCircle[]): THREE.BufferGeome
       );
     }
     positions.set([center.x, -center.y, 0], (first + rimPoints) * 3);
-    for (let i = 0; i < PLACEHOLDER_SEGMENTS; i++) indices.push(first + rimPoints, first + i, first + i + 1);
+    for (let i = 0; i < PLACEHOLDER_SEGMENTS; i++) {
+      indices.set([first + rimPoints, first + i, first + i + 1], (discIndex * PLACEHOLDER_SEGMENTS + i) * 3);
+    }
   });
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  geometry.setIndex(indices);
+  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   return geometry;
 }

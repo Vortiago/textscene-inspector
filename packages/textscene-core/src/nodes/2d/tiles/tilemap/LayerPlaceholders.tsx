@@ -24,6 +24,7 @@ export function LayerPlaceholders({ grid, layers, tiles, modulate }: LayerPlaceh
   const tilesByLayer = useMemo(
     () =>
       layers.map((layer) => {
+        if (tiles.length === 0) return tiles;
         const cells = new Set(layer.cells);
         return tiles.filter((tile) => cells.has(tile.cell));
       }),

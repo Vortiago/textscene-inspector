@@ -4,11 +4,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { TscnScene } from '../../../../parser/types';
 import type { PlacedCell } from '../shared/tileData';
-import { drawnBoxes, drawnMeshes, nodesOfType, renderSceneTiles } from '../shared/sceneTiles.testkit';
+import { drawnBoxes, drawnMeshes, renderSceneTiles, withLayerCells } from '../shared/sceneTiles.testkit';
 import { PLACEHOLDER_TILESET_RESOURCES } from '../shared/scenePlaceholders.testkit';
-import type { TileMapProperties } from './types';
 
 const mapScene = (mapExtra = '') => `[gd_scene format=3]
 
@@ -30,15 +28,6 @@ const placeholderCell = (x: number): PlacedCell => ({
   atlasCoords: { x: 0, y: 0 },
   alternativeId: 6,
 });
-
-const withLayerCells =
-  (...layerCells: PlacedCell[][]) =>
-  (scene: TscnScene) => {
-    const { layers } = nodesOfType(scene.nodes, 'TileMap')[0]!.properties as TileMapProperties;
-    layerCells.forEach((cells, index) => {
-      layers[index]!.cells = cells;
-    });
-  };
 
 const opacityOf = ({ mesh }: { mesh: THREE.Object3D }) =>
   ((mesh as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity;

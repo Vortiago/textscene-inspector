@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { sceneTileCells } from './sceneTileCells';
 import { TILE_TRANSFORM_FLIP_H } from '../../godot/scene/tileSet';
 import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
-import type { SceneTileModel, TileSetModel } from './types';
+import type { SceneTileModel } from './types';
 
 const SCENE_TILE: SceneTileModel = {
   scene: { ref: 'ExtResource("5")', externalResources: [], internalResources: [] },
@@ -19,7 +19,7 @@ const cell = (overrides: Partial<PlacedCell>): PlacedCell => ({
   ...overrides,
 });
 
-const named = (cells: PlacedCell[]) => sceneTileCells(model as unknown as TileSetModel, cells);
+const named = (cells: PlacedCell[]) => sceneTileCells(model, cells);
 
 describe('sceneTileCells', () => {
   it('names a cell whose source is a scene collection, at atlas (0, 0), by its scene id', () => {

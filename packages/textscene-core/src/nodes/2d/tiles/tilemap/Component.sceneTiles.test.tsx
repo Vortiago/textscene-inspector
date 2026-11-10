@@ -7,7 +7,6 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { resolvePathFromObject } from '../../../../r3f/hooks/resolvePathFromObject';
 import { TILE_TRANSFORM_FLIP_H } from '../../../../godot/scene/tileSet';
-import type { TscnScene } from '../../../../parser/types';
 import type { PlacedCell } from '../shared/tileData';
 import {
   SCENE_TILESET_RESOURCES,
@@ -15,10 +14,9 @@ import {
   drawnMeshes,
   drawnBoxes,
   onlyMesh,
-  nodesOfType,
   renderSceneTiles,
+  withLayerCells,
 } from '../shared/sceneTiles.testkit';
-import type { TileMapProperties } from './types';
 
 function mapScene(mapExtra = '', authoredChildren = ''): string {
   return `[gd_scene format=3]
@@ -43,15 +41,6 @@ const cell = (x: number, y: number, alternativeId: number): PlacedCell => ({
 });
 
 /** Sets the cells of each layer, which the parse would read from `layer_N/tile_data`. */
-const withLayerCells =
-  (...layerCells: PlacedCell[][]) =>
-  (scene: TscnScene) => {
-    const { layers } = nodesOfType(scene.nodes, 'TileMap')[0]!.properties as TileMapProperties;
-    layerCells.forEach((cells, index) => {
-      layers[index]!.cells = cells;
-    });
-  };
-
 describe('TileMap scene tiles', () => {
   it('draws the instance at the cell, flipped, in the TileMap transform', async () => {
     const { renderer } = await renderSceneTiles(mapScene(), {

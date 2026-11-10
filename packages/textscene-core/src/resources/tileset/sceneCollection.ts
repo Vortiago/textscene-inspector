@@ -16,13 +16,13 @@ interface SceneTables {
   internalResources: readonly TscnInternalResource[];
 }
 
+/** `(next_scene_id % 1073741823) + 1`: the ids wrap at 2 ** 30 (`tile_set.cpp:5741`). */
+const MAX_SCENE_ID = 1073741823;
+
 /**
  * `_set` splits the name into at most three parts and gates the id on `is_valid_int()`, which skips
  * one leading sign (`tile_set.cpp:5870-5874`). Any other leaf sets nothing (`:5892`).
  */
-/** `(next_scene_id % 1073741823) + 1`: the ids wrap at 2 ** 30 (`tile_set.cpp:5741`). */
-const MAX_SCENE_ID = 1073741823;
-
 const SCENE_KEY_RE = indexedKeyRegex('^scenes/(#)/(scene|display_placeholder)$', 'is_valid_int');
 
 export function resolveSceneCollectionSource(
@@ -53,7 +53,7 @@ export function resolveSceneCollectionSource(
       // A missing tile is created empty. The flag then lands on the tile of that id, which a
       // negative id never names, so `set_scene_tile_display_placeholder` fails (`:5844-5845`).
       const tile = existing ?? createTile(sceneId, null);
-      if (scenes.get(sceneId) === tile) tile.displayPlaceholder = boolSlotValue(value) === true;
+      if (sceneId >= 0) tile.displayPlaceholder = boolSlotValue(value) === true;
     }
   }
   return { scenes };

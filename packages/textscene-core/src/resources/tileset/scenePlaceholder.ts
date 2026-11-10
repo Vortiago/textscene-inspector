@@ -40,9 +40,17 @@ export function placeholderColor(sourceId: number, alternativeId: number): Rgba 
 /** The discs for `tiles`, a quarter of the shorter tile side in radius (`:1698`). */
 export function placeholderCircles(grid: TileGrid, tiles: readonly SceneTileCell[]): PlaceholderCircle[] {
   const radius = Math.min(grid.tileSize.x, grid.tileSize.y) / 4;
+  // A layer holds few distinct (source, alternative) pairs, and each colour costs a hash and an RNG.
+  const colors = new Map<string, Rgba>();
+  const colorOf = (sourceId: number, alternativeId: number): Rgba => {
+    const key = `${sourceId}:${alternativeId}`;
+    let color = colors.get(key);
+    if (!color) colors.set(key, (color = placeholderColor(sourceId, alternativeId)));
+    return color;
+  };
   return tiles.map(({ cell }) => ({
     center: mapToLocalPx(grid, cell.coords),
     radius,
-    color: placeholderColor(cell.sourceId, cell.alternativeId),
+    color: colorOf(cell.sourceId, cell.alternativeId),
   }));
 }
