@@ -1,15 +1,16 @@
 ---
 type: ScriptCreateDialog
 category: Other
-status: unimplemented
-fixture: unit-script-create-dialog.tscn
+status: linter-only
+fixture: unit-script-create-dialog-placeholder.tscn
 # image: unit-script-create-dialog
-renders_as: nothing yet, not implemented
+visual: false
+renders_as: nothing (a transform-only group)
 ---
 
 # ScriptCreateDialog
 
-Godot's editor-only "Attach Node Script" popup, built on ConfirmationDialog. No shipped game scene carries it. The previewer parses and validates it but does not draw it. The base `Node` mounts under `renderIntent: 'pending'` as an empty group, and its children still show (ADR-0045).
+Godot's editor-only "Attach Node Script" popup, built on ConfirmationDialog. It is an editor class (`editor/register_editor_types.cpp:182`), so `ClassDB::instantiate` refuses it outside the editor (`class_db.cpp:579-581`) and the scene loader makes a placeholder in its place (`packed_scene.cpp:316-345`). A game draws nothing for the dialog, and its children still load and draw. The previewer matches: the base `Node` mounts as a transform-only group (ADR-0008).
 
 ## Linting
 
@@ -25,7 +26,3 @@ Strict parsing format-checks the inherited set (1 inherited from ConfirmationDia
 <!-- lint:end -->
 
 ScriptCreateDialog declares no property of its own, so the lenient `Node` reader and the strict linter agree by construction. A bad inherited AcceptDialog or Window value is never read or substituted on the lenient path.
-
-## Known limitations
-
-- **Not drawn** Godot displays the dialog inside the editor, but the previewer draws nothing for it.
