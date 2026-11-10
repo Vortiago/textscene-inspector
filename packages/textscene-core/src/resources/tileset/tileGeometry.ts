@@ -151,8 +151,11 @@ export function tileNormalOrientations(cells: readonly DrawableCell[]): Float32A
   const orientations = new Float32Array(cells.length * 4 * 3);
   cells.forEach((cell, i) => {
     const { flipH, flipV, transpose } = tileDrawInfo(cell.source, cell).orientation;
-    const vertex = [flipH ? -1 : 1, flipV ? -1 : 1, transpose ? 1 : 0];
-    for (let corner = 0; corner < 4; corner++) orientations.set(vertex, (i * 4 + corner) * 3);
+    for (let k = i * 12; k < i * 12 + 12; k += 3) {
+      orientations[k] = flipH ? -1 : 1;
+      orientations[k + 1] = flipV ? -1 : 1;
+      orientations[k + 2] = transpose ? 1 : 0;
+    }
   });
   return orientations;
 }

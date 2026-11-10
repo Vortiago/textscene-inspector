@@ -102,17 +102,17 @@ function bindNormalMapped(
 }
 
 /**
- * The normal-mapped program's uniforms, created once and bound to `apart` and `surface` while both
- * are there.
+ * The normal-mapped program's uniforms, created once for the first surface and bound to `apart`
+ * and `surface` while both are there. Null while no surface has asked for them.
  */
 function useNormalMappedUniforms(
   plain: CanvasItemLightingUniforms,
   apart: ApartLightBuffers | null,
   surface: CanvasItemSurface | null
-): NormalMappedLightingUniforms {
+): NormalMappedLightingUniforms | null {
   const uniforms = useRef<NormalMappedLightingUniforms | null>(null);
-  uniforms.current ??= createNormalMappedUniforms(plain);
-  if (apart && surface) bindNormalMapped(uniforms.current, apart, surface);
+  if (surface) uniforms.current ??= createNormalMappedUniforms(plain);
+  if (uniforms.current && apart && surface) bindNormalMapped(uniforms.current, apart, surface);
   return uniforms.current;
 }
 
@@ -216,7 +216,7 @@ export function useSurfaceLighting(
   // Mode-independent by design: the props change only with the count of lights kept apart, which
   // sizes the program, and the key that follows it remounts the material.
   return useMemo(
-    () => (apartCount > 0 ? normalMappedLightingProps(shaded, apartCount) : plainProps),
+    () => (shaded && apartCount > 0 ? normalMappedLightingProps(shaded, apartCount) : plainProps),
     [plainProps, shaded, apartCount]
   );
 }

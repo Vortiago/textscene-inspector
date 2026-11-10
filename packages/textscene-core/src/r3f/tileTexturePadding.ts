@@ -6,15 +6,10 @@
  */
 
 import type { ProgramInjection } from './materialProgramInputs';
-import { editedChunk, editedProgram, type TextEdit } from './shaderPatch/chunkPatch';
+import { afterInclude, editedChunk, editedProgram } from './shaderPatch/chunkPatch';
 
 /** The per-vertex attribute that holds a tile's bounds, `tileGeometry.ts`'s `uvBounds`. */
 export const TILE_UV_BOUNDS_ATTRIBUTE = 'tileUvBounds';
-
-/** `include` followed by `addition`. */
-function afterInclude(include: string, addition: string): TextEdit {
-  return { three: include, godot: `${include}\n${addition}` };
-}
 
 /**
  * The map chunk as it stands when the program compiles, the canvas sRGB multiply included, with its
