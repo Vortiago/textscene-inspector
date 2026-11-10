@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 import { multiplyModulate } from '../../../canvasItemModulate';
 import type { Rgba } from '../../../../godot/math/math';
 import { outlineStrokeWidthPx } from './textOutline';
-import { resolveTextOutline, type TextOutlineTheme } from '../textTheme';
+import { resolveTextOutline, type OutlineItemNames, type TextOutlineTheme } from '../textTheme';
 import type { ShareNode } from '../solveTree';
 import { TextRun, type TextRunProps } from './TextRun';
 import type { TextLayoutResult } from './textLayout';
@@ -25,9 +25,10 @@ export function textLayerRenderOrder(renderOrder: number, index: number, count: 
 export function useTintedTextOutline(
   n: Pick<ShareNode, 'colors' | 'constants'>,
   ownTint: Rgba,
-  defaultColor?: Rgba
+  defaultColor?: Rgba,
+  names?: OutlineItemNames
 ): TextOutlineTheme {
-  const { color, sizePx } = resolveTextOutline(n, defaultColor);
+  const { color, sizePx } = resolveTextOutline(n, defaultColor, names);
   return useMemo(() => ({ color: multiplyModulate(color, ownTint), sizePx }), [color, sizePx, ownTint]);
 }
 

@@ -1,15 +1,18 @@
 /**
- * PopupMenu as the root of its own Control canvas: a canvas boundary whose contents minimum, which
- * `wrap_controls` reads, holds its items, painted with the panel and the rows (`PopupMenuChrome.tsx`).
+ * PopupMenu as the root of its own Control canvas: its contents minimum holds its items, and
+ * `PopupMenuChrome.tsx` paints the panel and the rows.
  */
 
-import { controlComponentRegistry } from '../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../r3f/controls/native/solverRegistry';
+import { registerWindowControls } from '../window/registerWindowControls.r3f';
 import { popupMenuTextureSlots } from './menuItems';
-import { popupMenuContentsMinimumSize } from './menuLayout';
+import { popupMenuContentsMinimumSize, popupMenuLoadedMinimumSize } from './menuLayout';
 import { PopupMenuChrome } from './PopupMenuChrome';
 
-controlSolverRegistry.registerCanvasBoundary('PopupMenu');
-controlSolverRegistry.registerMinimumSize('PopupMenu', popupMenuContentsMinimumSize);
+registerWindowControls({
+  typeName: 'PopupMenu',
+  Component: PopupMenuChrome,
+  minimumSize: popupMenuContentsMinimumSize,
+  loadedMinimumSize: popupMenuLoadedMinimumSize,
+});
 controlSolverRegistry.registerTextureSlots('PopupMenu', popupMenuTextureSlots);
-controlComponentRegistry.register({ typeName: 'PopupMenu', Component: PopupMenuChrome });

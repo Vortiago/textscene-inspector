@@ -1,0 +1,36 @@
+/**
+ * `<TextureQuad>`: a texture stretched over a rect in its Control's top-left space, the quad that
+ * `draw_texture_rect` makes for an icon. It draws nothing until the texture has loaded.
+ *
+ * @canonical Draw an icon texture over a rect of a Control
+ */
+import type * as THREE from 'three';
+import type { Rect2 } from '../../../godot/math/rect2';
+import { CanvasItemGroup } from '../../components/CanvasItemGroup';
+import type { NativeControlComponentProps } from '../ControlComponentRegistry';
+import { ControlQuad } from './controlQuad';
+
+interface TextureQuadProps {
+  rect: Rect2;
+  texture: THREE.Texture | null;
+  tint: NativeControlComponentProps['tint'];
+  /** Replaces `tint.opacity`, for an icon a disabled state fades. */
+  opacity?: number;
+  renderOrder: number;
+}
+
+export function TextureQuad({ rect, texture, tint, opacity = tint.opacity, renderOrder }: TextureQuadProps) {
+  if (!texture) return null;
+  return (
+    <CanvasItemGroup position={[rect.x, -rect.y, 0]} renderOrder={renderOrder}>
+      <ControlQuad
+        renderOrder={renderOrder}
+        width={rect.w}
+        height={rect.h}
+        color={tint.color}
+        opacity={opacity}
+        map={texture}
+      />
+    </CanvasItemGroup>
+  );
+}

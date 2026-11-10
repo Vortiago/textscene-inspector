@@ -10,6 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { scaledPx } from '../../../godot/scene/theme';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { TscnNode } from '../../../parser/types';
@@ -17,7 +18,6 @@ import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { internalChildThemeItems } from '../../../r3f/controls/native/themeItems';
 import { perObject } from '../../../utils/perObject';
-import { flatStyleBox } from '../../../r3f/controls/native/styleBoxFlat';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import { parseControlCanvasItem } from '../../2d/ui/control/parser';
 import type { ControlProperties } from '../../2d/ui/control/types';
@@ -33,23 +33,17 @@ export function dialogButtonRoles(dialogType: string): readonly DialogButtonRole
   return descendsFromClass(dialogType, 'ConfirmationDialog') ? ['cancel', 'ok'] : ['ok'];
 }
 
-/** The dialog's panel margin and button gap before the theme scale (`default_theme.cpp:693-694`). */
-const PANEL_MARGIN = 8;
+/** The button gap before the theme scale (`default_theme.cpp:694`). */
 const BUTTONS_SEPARATION = 10;
 
 /** `theme_cache.panel_style`: `panel`, or the default theme's flush, square box (`default_theme.cpp:693`). */
 export function dialogPanelBox(n: SolveNode, theme: NativeTheme): ResolvedStyleBox {
-  const style = n.styleBoxes.panel;
-  if (style) return style;
-  const margin = Math.round(PANEL_MARGIN * theme.scale);
-  return flatStyleBox(theme.styleFill.popup, {
-    contentMargin: { left: margin, top: margin, right: margin, bottom: margin },
-  });
+  return n.styleBoxes.panel ?? theme.widgets.dialogPanel;
 }
 
 /** `buttons_separation` (`dialogs.cpp:422`): the gap between the content and the button row. The default theme sets it to 10. */
 export function buttonsSeparation(n: SolveNode, theme: NativeTheme): number {
-  return n.constants.buttons_separation ?? Math.round(BUTTONS_SEPARATION * theme.scale);
+  return n.constants.buttons_separation ?? scaledPx(BUTTONS_SEPARATION, theme.scale);
 }
 
 /** Written only by `internalControl`. A dialog node is replaced when the scene changes it, so each internal Control is built once per dialog node. */

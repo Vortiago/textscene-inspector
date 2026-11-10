@@ -41,6 +41,18 @@ function scaledContentsMinimumSize(window: SolveNode, ctx: SolveContext): Vector
 }
 
 /**
+ * The size the loaded `size` line gives: `set_size` clamps it to the minimum the window's own
+ * properties set so far, which a registered type reads without the height limit of a window in the tree.
+ */
+function sizeAtLoad(window: SolveNode, ctx: SolveContext): Vector2 {
+  const { size, content_scale } = window.node.properties as WindowProperties;
+  const minimum = controlSolverRegistry.loadedMinimumSize(window.node.type)?.(window, ctx);
+  if (!minimum) return size;
+  const { canvasScale: factor } = windowContentScale(size, content_scale);
+  return { x: Math.max(size.x, minimum.x * factor), y: Math.max(size.y, minimum.y * factor) };
+}
+
+/**
  * The size `window` takes once its Controls are ready. Godot wraps at `NOTIFICATION_READY`, after
  * the Controls laid out at the loaded size, so their positions are the ones that size gives.
  */
@@ -52,10 +64,8 @@ export function wrappedWindowSize(
 ): Vector2 {
   const props = window.node.properties as WindowProperties;
   const limits = { minSize: props.min_size, maxSize: props.max_size };
-  if (!props.wrap_controls) return embeddedWindowSize(props.size, limits);
-  return embeddedWindowSize(
-    props.size,
-    limits,
-    scaledContentsMinimumSize(window, createSolveContext(theme, measureText, undefined, embedderSize))
-  );
+  const ctx = createSolveContext(theme, measureText, undefined, embedderSize);
+  const loaded = sizeAtLoad(window, ctx);
+  if (!props.wrap_controls) return embeddedWindowSize(loaded, limits);
+  return embeddedWindowSize(loaded, limits, scaledContentsMinimumSize(window, ctx));
 }

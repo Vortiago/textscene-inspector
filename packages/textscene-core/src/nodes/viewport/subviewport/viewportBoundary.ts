@@ -54,9 +54,14 @@ function embeddingProperties(node: EmbeddingNode): EmbeddingProperties {
   return node.properties as EmbeddingProperties;
 }
 
-/** Whether a viewport embeds the windows below it: the climb to an embedder stops there. */
+/**
+ * Whether a viewport embeds the windows below it: the climb to an embedder stops there. A window
+ * that enters the tree under an embedding root has `gui_embed_subwindows` reset to `force_native`
+ * (`window.cpp:1534-1537`), so its authored value never counts.
+ */
 export function embedsSubwindows(node: EmbeddingNode): boolean {
-  return embeddingProperties(node).gui_embed_subwindows === true;
+  const { gui_embed_subwindows, force_native } = embeddingProperties(node);
+  return (isEmbeddedWindow(node.type) ? force_native : gui_embed_subwindows) === true;
 }
 
 /** Whether an embedder draws this node: a window that is not native, which draws outside the frame. */

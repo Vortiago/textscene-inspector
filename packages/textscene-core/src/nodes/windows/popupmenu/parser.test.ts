@@ -66,3 +66,26 @@ describe('parsePopupMenu window defaults', () => {
     expect(props.transparent_bg).toBe(true);
   });
 });
+
+describe('parsePopupMenu itemsAtSize', () => {
+  const parse = (properties: Record<string, string>) =>
+    parsePopupMenu(heading('PopupMenu', { name: 'Menu' }), properties).itemsAtSize;
+
+  it('is null without a size line', () => {
+    expect(parse({ item_count: '1' })).toBeNull();
+  });
+
+  it('is empty when the size line comes before the items', () => {
+    expect(parse({ size: 'Vector2i(300, 200)', item_count: '1', 'item_0/text': '"Open"' })).toEqual([]);
+  });
+
+  it('holds every item when the size line comes after them', () => {
+    const items = parse({ item_count: '1', 'item_0/text': '"Open"', size: 'Vector2i(300, 200)' });
+    expect(items?.map(({ text }) => text)).toEqual(['Open']);
+  });
+
+  it('holds an item without the leaves that follow the size line', () => {
+    const items = parse({ item_count: '1', size: 'Vector2i(300, 200)', 'item_0/text': '"Open"' });
+    expect(items?.map(({ text }) => text)).toEqual(['']);
+  });
+});

@@ -40,10 +40,23 @@ function parseItems(properties: Record<string, string>, context: string): PopupM
   return items;
 }
 
+/** The properties a scene sets before its `size` line, in file order (`null` when it has none). */
+function propertiesBeforeSize(properties: Record<string, string>): Record<string, string> | null {
+  const keys = Object.keys(properties);
+  const sizeAt = keys.indexOf('size');
+  if (sizeAt < 0) return null;
+  return Object.fromEntries(keys.slice(0, sizeAt).map((key) => [key, properties[key]!]));
+}
+
 export function parsePopupMenu(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): PopupMenuProperties {
   const window = parseWindow(heading, properties);
-  return { ...window, items: parseItems(properties, window.name) };
+  const beforeSize = propertiesBeforeSize(properties);
+  return {
+    ...window,
+    items: parseItems(properties, window.name),
+    itemsAtSize: beforeSize && parseItems(beforeSize, window.name),
+  };
 }

@@ -12,19 +12,15 @@
 import type { Rgba } from '../../../godot/math/math';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
+import type { CheckBoxIconKey } from '../../2d/ui/checkbox/nativeSolver';
 import { ItemCheckableType } from '../../../godot/scene/popupMenu';
+import { mirrorX } from '../../../r3f/controls/native/controlRectSolver';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
+import type { TextOutlineTheme } from '../../../r3f/controls/native/textTheme';
 import type { TextLayoutResult } from '../../../r3f/controls/native/text/textLayout';
-import {
-  checkIconKey,
-  checkIconSize,
-  type CheckIconKey,
-  type Gutter,
-  gutterWidth,
-  widestCheckIcon,
-} from './menuItems';
+import { checkIconKey, checkIconSize, type Gutter, gutterWidth, widestCheckIcon } from './menuItems';
 import type { MenuRow } from './menuLayout';
 import type { PopupMenuTheme } from './menuTheme';
 
@@ -36,10 +32,17 @@ interface SeparatorLine {
 export interface RowDrawing {
   separators: readonly SeparatorLine[];
   /** The check icon and its top-left. */
-  check: { key: CheckIconKey; position: Vector2 } | null;
+  check: { key: CheckBoxIconKey; position: Vector2 } | null;
   /** The rect the icon stretches over. */
   icon: { rect: Rect2 } | null;
-  text: { layout: TextLayoutResult; position: Vector2; color: Rgba } | null;
+  text: {
+    layout: TextLayoutResult;
+    position: Vector2;
+    color: Rgba;
+    fontSizePx: number;
+    /** The theme outline, before the Control's own tint. */
+    outline: TextOutlineTheme;
+  } | null;
 }
 
 /** The gutter as the draw reads it: separators skipped, the widest of all eight check icons (`popup_menu.cpp:870-896`). */
@@ -120,7 +123,7 @@ function separatorRowDrawing({ n, menu, width }: RowContext, row: MenuRow): RowD
   let icon: RowDrawing['icon'] = null;
   if (hasIcon) {
     textX = Math.trunc(textX - (iconSize.x + menu.hSeparation) / 2);
-    const x = n.rtl ? width - textX - iconSize.x : textX;
+    const x = n.rtl ? mirrorX(textX, iconSize.x, width) : textX;
     icon = { rect: { x, y: centredY(y, height, iconSize.y), w: iconSize.x, h: iconSize.y } };
     // The RTL branch leaves the text where the centring put it (`popup_menu.cpp:987-993`).
     if (!n.rtl) textX = Math.trunc(textX + iconSize.x + menu.hSeparation);
@@ -133,6 +136,8 @@ function separatorRowDrawing({ n, menu, width }: RowContext, row: MenuRow): RowD
       layout: entry.text,
       position: { x: textX, y: centredY(y, height, textSize.y) },
       color: menu.fontSeparatorColor,
+      fontSizePx: menu.separatorFont.sizePx,
+      outline: menu.separatorOutline,
     },
   };
 }
@@ -143,7 +148,7 @@ function itemRowDrawing(context: RowContext, row: MenuRow): RowDrawing {
   const { entry, y } = row;
   const { item, iconSize, textSize, height } = entry;
   const startX = menu.itemStartPadding;
-  const fromStart = (x: number, extent: number) => (n.rtl ? width - x - extent : x);
+  const fromStart = (x: number, extent: number) => (n.rtl ? mirrorX(x, extent, width) : x);
 
   let check: RowDrawing['check'] = null;
   if (item.checkable !== ItemCheckableType.NONE) {
@@ -177,6 +182,8 @@ function itemRowDrawing(context: RowContext, row: MenuRow): RowDrawing {
         y: textY,
       },
       color: item.disabled ? menu.fontDisabledColor : menu.fontColor,
+      fontSizePx: menu.font.sizePx,
+      outline: menu.outline,
     },
   };
 }

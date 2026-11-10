@@ -7,6 +7,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { flatStyleBox, type StyleBoxFlatData } from '../../../r3f/controls/native/styleBoxFlat';
+import { measureText } from '../../../r3f/controls/native/text/measurer';
 import { painterEnv } from '../../../r3f/controls/native/testing/painterProps';
 import { PopupMenuChrome } from './PopupMenuChrome';
 import { many, menu, text } from './testing/menuNode';
@@ -29,7 +30,13 @@ const BAR_MESH_WIDTH = 8 + 1;
 /** The bounds of every mesh the painter draws, in Godot pixels. */
 async function meshBounds(window: SolveNode) {
   const renderer = await ReactThreeTestRenderer.create(
-    <PopupMenuChrome {...painterEnv()} solveNode={window} rect={WINDOW_RECT} renderOrder={0} />
+    <PopupMenuChrome
+      {...painterEnv()}
+      measureText={measureText}
+      solveNode={window}
+      rect={WINDOW_RECT}
+      renderOrder={0}
+    />
   );
   return renderer.scene.findAllByType('Mesh').map(({ instance }) => {
     const mesh = instance as THREE.Mesh;
@@ -64,5 +71,11 @@ describe('<PopupMenuChrome>', () => {
   it('moves the scroll bar to the left edge in right-to-left layout', async () => {
     const bounds = await meshBounds(withPanel(menu(many(30), {}, true)));
     expect(bounds.filter(({ w }) => w === BAR_MESH_WIDTH)[0]!.x).toBe(MARGIN - 0.5);
+  });
+
+  it('builds no row below the window, so a long menu costs what its visible rows cost', async () => {
+    const thirty = await meshBounds(withPanel(menu(many(30))));
+    const twoHundred = await meshBounds(withPanel(menu(many(200))));
+    expect(twoHundred).toHaveLength(thirty.length);
   });
 });

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../../../parser/types';
 import {
   embedsAWindow,
+  embedsSubwindows,
   isEmbeddedWindow,
   isSubViewport,
   isViewportBoundary,
@@ -75,5 +76,22 @@ describe('embedsAWindow — whether a viewport draws a window over its canvas', 
       node('Window', { force_native: true }),
     ]);
     expect(embedsAWindow(viewport)).toBe(false);
+  });
+});
+
+describe('embedsSubwindows — whether a viewport is the embedder of the windows below it', () => {
+  const node = (type: string, properties: Record<string, unknown>) => ({ type, properties });
+
+  it('reads gui_embed_subwindows of a SubViewport', () => {
+    expect(embedsSubwindows(node('SubViewport', { gui_embed_subwindows: true }))).toBe(true);
+    expect(embedsSubwindows(node('SubViewport', { gui_embed_subwindows: false }))).toBe(false);
+  });
+
+  it('ignores the authored gui_embed_subwindows of a window, which entering the tree resets (`window.cpp:1534-1537`)', () => {
+    expect(embedsSubwindows(node('Window', { gui_embed_subwindows: true, force_native: false }))).toBe(false);
+  });
+
+  it('lets a native window embed the windows below it, as entering the tree sets it to force_native', () => {
+    expect(embedsSubwindows(node('Window', { gui_embed_subwindows: false, force_native: true }))).toBe(true);
   });
 });

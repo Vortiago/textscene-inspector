@@ -103,3 +103,28 @@ describe('a disabled item', () => {
     expect(rows[0]!.text!.color).toEqual({ r: 0.4, g: 0.4, b: 0.4, a: 0.8 });
   });
 });
+
+describe('the text outline', () => {
+  const RED = { r: 1, g: 0, b: 0, a: 1 };
+  const GREEN = { r: 0, g: 1, b: 0, a: 1 };
+  const themed = (window: SolveNode): SolveNode => ({
+    ...window,
+    constants: { outline_size: 4, separator_outline_size: 3 },
+    colors: { font_outline_color: RED, font_separator_outline_color: GREEN },
+  });
+
+  it('draws no ring by default: the default theme sets the outline size to 0', () => {
+    const { rows } = drawingOf(menu(text('Open')));
+    expect(rows[0]!.text!.outline.sizePx).toBe(0);
+  });
+
+  it('gives an item label the item outline (`popup_menu.cpp:1016-1017`)', () => {
+    const { rows } = drawingOf(themed(menu(text('Open'))));
+    expect(rows[0]!.text!.outline).toEqual({ color: RED, sizePx: 4 });
+  });
+
+  it('gives a separator label its own outline (`popup_menu.cpp:998-999`)', () => {
+    const { rows } = drawingOf(themed(menu([{ text: 'Group', separator: true }])));
+    expect(rows[0]!.text!.outline).toEqual({ color: GREEN, sizePx: 3 });
+  });
+});

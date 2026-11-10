@@ -112,7 +112,12 @@ function floorAtMinimumSize(
  * them (`:1775-1797`) touches neither `x` nor `w`.
  */
 function mirrorRectRtl(rect: Rect2, parentWidth: number): Rect2 {
-  return { ...rect, x: parentWidth - rect.x - rect.w };
+  return { ...rect, x: mirrorX(rect.x, rect.w, parentWidth) };
+}
+
+/** The left edge of a span of `width` at `x`, mirrored inside a parent `parentWidth` wide. */
+export function mirrorX(x: number, width: number, parentWidth: number): number {
+  return parentWidth - x - width;
 }
 
 /**

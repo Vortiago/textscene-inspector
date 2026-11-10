@@ -10,8 +10,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { CHECK_BOX_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
+import { useCheckBoxIcon } from './useCheckBoxIcon';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
@@ -28,7 +27,6 @@ import {
   resolveCheckBoxDrawState,
   resolveCheckBoxIconKey,
   tintColor,
-  CHECK_BOX_ICON_THEME_NAME,
   CHECKBOX_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { CheckBoxProperties } from './types';
@@ -42,10 +40,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const clippingPlanes = useControlClipPlanes();
 
   const iconKey = resolveCheckBoxIconKey(props);
-  const iconTexture = useNodeIcon(
-    solveNode.icons[CHECK_BOX_ICON_THEME_NAME[iconKey]],
-    CHECK_BOX_ICONS[iconKey]
-  );
+  const iconTexture = useCheckBoxIcon(solveNode, iconKey);
   // Fitted, not rounded: CheckBox draws `_fit_icon_size` as it is (`check_box.cpp:61`, `:140-142`).
   const iconSize = useMemo(
     () => fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants)),

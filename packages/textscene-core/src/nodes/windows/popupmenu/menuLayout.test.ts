@@ -157,3 +157,18 @@ describe('the geometry', () => {
     expect(geometry.control).toEqual(rect(12, 4, 84, 810));
   });
 });
+
+describe('a size line written below the items', () => {
+  const size = { size: 'Vector2i(300, 200)' };
+  const unlimited = { x: 1152, y: 100000 };
+
+  it('wraps to the height limit when the size line comes first, as Godot saves a menu', () => {
+    expect(sizeOf(menu(many(30), size)).y).toBe(648);
+  });
+
+  it('keeps the unlimited height the items give when the size line follows them', () => {
+    const sized = menu(many(30), {}, false, size);
+    expect(sizeOf(sized).y).toBe(contentsMinimum(sized, unlimited).y);
+    expect(sizeOf(sized).y).toBeGreaterThan(648);
+  });
+});

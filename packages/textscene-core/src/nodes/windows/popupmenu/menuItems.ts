@@ -21,6 +21,7 @@ import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../r3f/contr
 import {
   CHECKBOX_ICON_NATURAL_SIZE,
   CHECK_BOX_ICON_THEME_NAME,
+  type CheckBoxIconKey,
   checkBoxTextureSlots,
 } from '../../2d/ui/checkbox/nativeSolver';
 import type { PopupMenuTheme } from './menuTheme';
@@ -54,23 +55,21 @@ export interface MenuItem {
   height: number;
 }
 
-export type CheckIconKey = keyof typeof CHECK_BOX_ICON_THEME_NAME;
-
-const CHECK_ICON_KEYS = Object.keys(CHECK_BOX_ICON_THEME_NAME) as readonly CheckIconKey[];
+const CHECK_ICON_KEYS = Object.keys(CHECK_BOX_ICON_THEME_NAME) as readonly CheckBoxIconKey[];
 
 /** The size of a check icon, which a theme replaces by name. */
-export function checkIconSize(n: Pick<SolveNode, 'textureSlots'>, key: CheckIconKey): Vector2 {
+export function checkIconSize(n: Pick<SolveNode, 'textureSlots'>, key: CheckBoxIconKey): Vector2 {
   return n.textureSlots[CHECK_BOX_ICON_THEME_NAME[key]] ?? CHECKBOX_ICON_NATURAL_SIZE;
 }
 
 /** The icons a checkable item draws, by `checkable_type - 1 + 2 * disabled` (`popup_menu.cpp:853-855`). */
-const CHECKED_ICON_KEYS: readonly CheckIconKey[] = [
+const CHECKED_ICON_KEYS: readonly CheckBoxIconKey[] = [
   'checked',
   'radioChecked',
   'checkedDisabled',
   'radioCheckedDisabled',
 ];
-const UNCHECKED_ICON_KEYS: readonly CheckIconKey[] = [
+const UNCHECKED_ICON_KEYS: readonly CheckBoxIconKey[] = [
   'unchecked',
   'radioUnchecked',
   'uncheckedDisabled',
@@ -78,7 +77,7 @@ const UNCHECKED_ICON_KEYS: readonly CheckIconKey[] = [
 ];
 
 /** The icon a checkable item draws (`popup_menu.cpp:962-965`). */
-export function checkIconKey(item: PopupMenuItem): CheckIconKey {
+export function checkIconKey(item: PopupMenuItem): CheckBoxIconKey {
   const keys = item.checked ? CHECKED_ICON_KEYS : UNCHECKED_ICON_KEYS;
   return keys[item.checkable - 1 + (item.disabled ? 2 : 0)]!;
 }
@@ -143,18 +142,18 @@ function itemHeight(
   return Math.max(separator, text, icon);
 }
 
-/** The items of `n` as the menu measures them. Without a text engine an item's text measures as nothing. */
+/** `items` of `n` as the menu measures them. Without a text engine an item's text measures as nothing. */
 export function menuItems(
   n: SolveNode,
   theme: PopupMenuTheme,
-  ctx: Pick<SolveContext, 'measureText'>
+  ctx: Pick<SolveContext, 'measureText'>,
+  items: readonly PopupMenuItem[]
 ): readonly MenuItem[] {
-  const { items } = n.node.properties as PopupMenuProperties;
   return items.map((item, index) => {
     const text = ctx.measureText ? shapeItem(n, item, theme) : null;
     const textSize = text ? { x: shapedTextSizeWidthPx(text.widthPx), y: text.heightPx } : { x: 0, y: 0 };
     const iconSize = itemIconSize(n, index, theme);
-    const hasIcon = n.textureSlots[menuItemIconSlot(index)] !== undefined;
+    const hasIcon = item.icon !== undefined && n.textureSlots[menuItemIconSlot(index)] !== undefined;
     return {
       item,
       text,

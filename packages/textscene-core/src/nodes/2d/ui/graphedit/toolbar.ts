@@ -19,7 +19,7 @@ import {
   resortBoxContainer,
   type BoxChildInput,
 } from '../shared/boxContainerSolver';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
+import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH, scaledPx } from '../../../../godot/scene/theme';
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { isMinimapEnabled } from './minimap';
@@ -100,10 +100,10 @@ export function graphEditMenuPanelStyleBox(theme: NativeTheme): StyleBoxFlatData
     },
     expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
     contentMargin: {
-      left: Math.round(4 * scale),
-      top: Math.round(2 * scale),
-      right: Math.round(4 * scale),
-      bottom: Math.round(2 * scale),
+      left: scaledPx(4, scale),
+      top: scaledPx(2, scale),
+      right: scaledPx(4, scale),
+      bottom: scaledPx(2, scale),
     },
     drawCenter: true,
     borderBlend: false,

@@ -68,6 +68,12 @@ export interface SolveContext {
  */
 export type MinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vector2;
 
+/**
+ * The contents minimum a window's own properties give when its `size` is applied at load, before its
+ * Controls and the tree exist (`Window::set_size`, `window.cpp:2240-2250`), or `null` where it sets none.
+ */
+export type LoadedMinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vector2 | null;
+
 /** A `ContainerLayoutFn`'s result when it also seals a solve handoff for its own painter. */
 export interface ContainerLayoutResult {
   /** Every child's rect. */
@@ -177,6 +183,9 @@ class ControlSolverRegistry {
   private readonly childVisibilityFns = createTypeRegistry<ChildVisibilityFn>(
     'controlSolverRegistry.childVisibility'
   );
+  private readonly loadedMinimumSizeFns = createTypeRegistry<LoadedMinimumSizeFn>(
+    'controlSolverRegistry.loadedMinimumSize'
+  );
   private readonly canvasBoundaryTypes = new Set<string>();
   private readonly sizeDependentMinimumTypes = new Set<string>();
 
@@ -211,6 +220,14 @@ class ControlSolverRegistry {
   /** Whether this type's `MinimumSizeFn` reads `SolveContext.tentativeRect` (see `registerSizeDependentMinimum`). */
   isSizeDependentMinimum(typeName: string): boolean {
     return this.sizeDependentMinimumTypes.has(typeName);
+  }
+
+  registerLoadedMinimumSize(typeName: string, fn: LoadedMinimumSizeFn): void {
+    this.loadedMinimumSizeFns.register(typeName, fn);
+  }
+
+  loadedMinimumSize(typeName: string): LoadedMinimumSizeFn | undefined {
+    return this.loadedMinimumSizeFns.get(typeName);
   }
 
   registerContainerLayout(typeName: string, fn: ContainerLayoutFn): void {
@@ -251,6 +268,7 @@ class ControlSolverRegistry {
   clear(): void {
     this.minimumSizeFns.clear();
     this.containerLayoutFns.clear();
+    this.loadedMinimumSizeFns.clear();
     this.textureSlotFns.clear();
     this.childVisibilityFns.clear();
     this.canvasBoundaryTypes.clear();

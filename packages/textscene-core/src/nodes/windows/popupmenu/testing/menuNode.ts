@@ -18,13 +18,14 @@ export interface ItemLines {
   icon?: { x: number; y: number };
 }
 
-/** A PopupMenu SolveNode with `items` set as the scene lines `item_<n>/<leaf>` set them. */
+/** A PopupMenu SolveNode with `items` set as the scene lines `item_<n>/<leaf>` set them. `extra` lines are written above the items, as Godot saves a Window's `size`, and `afterItems` below them. */
 export function menu(
   items: readonly ItemLines[],
   extra: Record<string, string> = {},
-  rtl = false
+  rtl = false,
+  afterItems: Record<string, string> = {}
 ): SolveNode {
-  const lines: Record<string, string> = { item_count: String(items.length), ...extra };
+  const lines: Record<string, string> = { ...extra, item_count: String(items.length) };
   const textureSlots: Record<string, { x: number; y: number }> = {};
   items.forEach((item, index) => {
     if (item.text !== undefined) lines[`item_${index}/text`] = JSON.stringify(item.text);
@@ -37,6 +38,7 @@ export function menu(
       textureSlots[`item_${index}/icon`] = item.icon;
     }
   });
+  Object.assign(lines, afterItems);
   const node = {
     name: 'Menu',
     type: 'PopupMenu',

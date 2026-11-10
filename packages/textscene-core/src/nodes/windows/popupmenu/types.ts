@@ -16,4 +16,9 @@ export interface PopupMenuItem {
 
 export interface PopupMenuProperties extends WindowProperties {
   items: readonly PopupMenuItem[];
+  /**
+   * The items as they stand when the `size` line is applied, `null` without one. `Window::set_size`
+   * clamps to the minimum of the items set so far, before the menu is in the tree and limits its height.
+   */
+  itemsAtSize: readonly PopupMenuItem[] | null;
 }

@@ -135,6 +135,11 @@ export interface ScaledGodotTheme {
   sliderTickThickness: number;
 }
 
+/** `Math::round(base * scale)`, the scale applied to one default-theme pixel value (`default_theme.cpp`). */
+export function scaledPx(base: number, scale: number): number {
+  return Math.round(base * scale);
+}
+
 /**
  * Godot builds the default theme once at startup and rounds each product on its
  * own (`fill_default_theme`, `make_flat_stylebox`), so at 1.5 the font is 24 and
@@ -144,25 +149,25 @@ export interface ScaledGodotTheme {
 export function scaledGodotTheme(scale: number): ScaledGodotTheme {
   // JS and Godot rounding differ only on negative halves, which the
   // [0.5, 8] clamp in `projectThemeScale` rules out.
-  const contentMargin = Math.round(DEFAULT_CONTENT_MARGIN * scale);
+  const contentMargin = scaledPx(DEFAULT_CONTENT_MARGIN, scale);
   return {
     scale,
-    fontSize: Math.round(DEFAULT_FONT_SIZE * scale),
-    cornerRadius: Math.round(DEFAULT_CORNER_RADIUS * scale),
+    fontSize: scaledPx(DEFAULT_FONT_SIZE, scale),
+    cornerRadius: scaledPx(DEFAULT_CORNER_RADIUS, scale),
     contentMargin,
     // The OptionButton styleboxes take `2 * default_margin` across and `default_margin`
     // down (`default_theme.cpp:215`).
-    optionButtonMarginX: Math.round(2 * DEFAULT_CONTENT_MARGIN * scale),
+    optionButtonMarginX: scaledPx(2 * DEFAULT_CONTENT_MARGIN, scale),
     optionButtonMarginY: contentMargin,
     // `Math::round(4 * scale)`, default_theme.cpp:1249-1251.
-    separation: Math.round(DEFAULT_SEPARATION * scale),
+    separation: scaledPx(DEFAULT_SEPARATION, scale),
     // Twice a rounded margin, not the rounding of twice the margin: the two
     // diverge at any scale whose margin lands on a half.
-    sliderTrackThickness: 2 * Math.round(SLIDER_STYLE_MARGIN * scale),
-    sliderCornerRadius: Math.round(SLIDER_CORNER_RADIUS * scale),
-    sliderGrabberSize: Math.round(SLIDER_GRABBER_SIZE * scale),
-    sliderGrabberRadius: Math.round(SLIDER_GRABBER_RADIUS * scale),
-    sliderTickBox: Math.round(SLIDER_TICK_BOX * scale),
-    sliderTickThickness: Math.round(SLIDER_TICK_THICKNESS * scale),
+    sliderTrackThickness: 2 * scaledPx(SLIDER_STYLE_MARGIN, scale),
+    sliderCornerRadius: scaledPx(SLIDER_CORNER_RADIUS, scale),
+    sliderGrabberSize: scaledPx(SLIDER_GRABBER_SIZE, scale),
+    sliderGrabberRadius: scaledPx(SLIDER_GRABBER_RADIUS, scale),
+    sliderTickBox: scaledPx(SLIDER_TICK_BOX, scale),
+    sliderTickThickness: scaledPx(SLIDER_TICK_THICKNESS, scale),
   };
 }

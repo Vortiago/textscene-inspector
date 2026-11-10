@@ -6,9 +6,12 @@
  */
 
 import { flatStyleBox as makeFlatStyleBox } from './styleBoxFlat';
+import { POPUP_MENU_DEFAULTS } from '../../../godot/scene/popupMenu';
 import {
+  DEFAULT_CORNER_RADIUS,
   LINE_EDIT_BORDER_BOTTOM_WIDTH,
   scaledGodotTheme,
+  scaledPx,
   STYLE_FILL,
   type ScaledGodotTheme,
 } from '../../../godot/scene/theme';
@@ -110,6 +113,10 @@ interface NativeThemeWidgets {
   panel: StyleBoxFlatData;
   /** PopupPanel's `panel`, `make_flat_stylebox(style_normal_color)` (`default_theme.cpp:726`). */
   popupPanel: StyleBoxFlatData;
+  /** PopupMenu's `panel`: `make_flat_stylebox(style_popup_color)` with a 2 px border (`default_theme.cpp:743-745`). */
+  popupMenuPanel: StyleBoxFlatData;
+  /** AcceptDialog's `panel`: a flush, square box in `style_popup_color` with an 8 px margin (`default_theme.cpp:693`). */
+  dialogPanel: StyleBoxFlatData;
   button: {
     normal: StyleBoxFlatData;
     hover: StyleBoxFlatData;
@@ -186,6 +193,9 @@ const SPLIT_CONTAINER_AUTOHIDE = true;
 // A widget reuses `contentMargin`/`cornerRadius` where its `default_theme.cpp` call passes
 // `default_margin` (4) or `default_corner_radius` (3). A call passing another
 // literal, such as ScrollBar's 10, gets its own scaled constant.
+/** The AcceptDialog panel margin before the theme scale (`default_theme.cpp:693`). */
+const DIALOG_PANEL_MARGIN = 8;
+
 /** `NativeTheme` at a project's `gui/theme/default_theme_scale`. */
 export function nativeTheme(scale: number): NativeTheme {
   const scaled = scaledGodotTheme(scale);
@@ -201,6 +211,12 @@ export function nativeTheme(scale: number): NativeTheme {
     right: scaled.optionButtonMarginX,
     bottom: scaled.optionButtonMarginY,
   };
+  const dialogPanelMargin = {
+    left: scaledPx(DIALOG_PANEL_MARGIN, scale),
+    top: scaledPx(DIALOG_PANEL_MARGIN, scale),
+    right: scaledPx(DIALOG_PANEL_MARGIN, scale),
+    bottom: scaledPx(DIALOG_PANEL_MARGIN, scale),
+  };
   const scrollBarCornerRadius = Math.round(SCROLL_BAR_CORNER_RADIUS * scale);
 
   return {
@@ -210,6 +226,19 @@ export function nativeTheme(scale: number): NativeTheme {
       // default_theme.cpp:134: make_flat_stylebox(style_normal_color, 0, 0, 0, 0).
       panel: flatStyleBox(STYLE_FILL.normal, ZERO_SIDES, scaled.cornerRadius),
       popupPanel: flatStyleBox(STYLE_FILL.normal, buttonMargin, scaled.cornerRadius),
+      popupMenuPanel: {
+        ...makeFlatStyleBox(STYLE_FILL.popup, {
+          contentMargin: buttonMargin,
+          cornerRadius: scaled.cornerRadius,
+          borderWidth: POPUP_MENU_DEFAULTS.panelBorderWidth,
+          borderColor: POPUP_MENU_DEFAULTS.panelBorderColor,
+        }),
+        // `make_flat_stylebox` sets `MIN(ceil(1.5 * radius), 6) * scale` (`default_theme.cpp:65`).
+        cornerDetail: Math.min(Math.ceil(1.5 * DEFAULT_CORNER_RADIUS), 6) * scale,
+      },
+      dialogPanel: makeFlatStyleBox(STYLE_FILL.popup, {
+        contentMargin: dialogPanelMargin,
+      }),
       button: {
         // default_theme.cpp:138-141: make_flat_stylebox(color), every default arg.
         normal: flatStyleBox(STYLE_FILL.normal, buttonMargin, scaled.cornerRadius),

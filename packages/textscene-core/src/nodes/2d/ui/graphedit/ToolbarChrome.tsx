@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { TextureQuad } from '../../../../r3f/controls/native/TextureQuad';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -99,18 +100,15 @@ function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: Bu
     rtl,
   });
   if (!layout.icon) return null;
-  const icon = layout.icon.rect;
+  const { x, y, w, h } = layout.icon.rect;
   return (
-    <CanvasItemGroup position={[item.rect.x + icon.x, -(item.rect.y + icon.y), 0]} renderOrder={renderOrder}>
-      <ControlQuad
-        width={icon.w}
-        height={icon.h}
-        color={tint.color}
-        opacity={item.disabled ? tint.opacity * ICON_DISABLED_ALPHA : tint.opacity}
-        map={texture}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
+    <TextureQuad
+      rect={{ x: item.rect.x + x, y: item.rect.y + y, w, h }}
+      texture={texture}
+      tint={tint}
+      opacity={item.disabled ? tint.opacity * ICON_DISABLED_ALPHA : tint.opacity}
+      renderOrder={renderOrder}
+    />
   );
 }
 

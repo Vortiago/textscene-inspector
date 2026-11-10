@@ -97,7 +97,7 @@ export function checkBoxTextTheme(
   return resolveTextTheme(n, props, CHECKBOX_THEME_KEYS[state], defaults);
 }
 
-type CheckBoxIconKey = keyof CheckBoxIcons;
+export type CheckBoxIconKey = keyof CheckBoxIcons;
 
 /**
  * `NOTIFICATION_DRAW` (`check_box.cpp:112-131`): a valid `button_group` swaps in the `radio_*`

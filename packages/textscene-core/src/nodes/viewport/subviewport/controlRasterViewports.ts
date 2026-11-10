@@ -17,7 +17,7 @@ import {
   type SceneScope,
 } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
-import { isViewportBoundary } from './viewportBoundary.js';
+import { embedsSubwindows, isViewportBoundary } from './viewportBoundary.js';
 import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
 import type { SubViewportProperties } from './types.js';
 import { viewportGateAt, type ViewportGate } from './viewportGate.js';
@@ -78,13 +78,7 @@ export function inheritedRtlAt(tree: LiveTree, path: string, env: LayoutDirectio
 function enclosingViewport(tree: LiveTree, path: string): EnclosingViewport | null {
   for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
     const node = tree.at(above)?.step.node;
-    if (
-      node &&
-      isViewportBoundary(node.type) &&
-      (node.properties as SubViewportProperties).gui_embed_subwindows
-    ) {
-      return { path: above, node };
-    }
+    if (node && isViewportBoundary(node.type) && embedsSubwindows(node)) return { path: above, node };
   }
   return null;
 }

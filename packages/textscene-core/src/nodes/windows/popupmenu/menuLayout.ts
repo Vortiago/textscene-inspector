@@ -14,16 +14,21 @@ import type { Vector2 } from '../../../godot/math/vector';
 import { ItemCheckableType } from '../../../godot/scene/popupMenu';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
-import type { MinimumSizeFn, SolveContext } from '../../../r3f/controls/native/solverRegistry';
+import type {
+  LoadedMinimumSizeFn,
+  MinimumSizeFn,
+  SolveContext,
+} from '../../../r3f/controls/native/solverRegistry';
 import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
 import {
-  scrollBarGrabberGeometry,
+  scrollBarPlacement,
   scrollBarMinimumSize,
   type ScrollBarPlacement,
 } from '../../2d/ui/shared/scrollBarSolver';
 import { insetSize, panelRect, shadowInsets } from '../window/panelInsets';
 import { gutterWidth, menuItems, minimumCheckSize, type MenuItem } from './menuItems';
 import { popupMenuTheme, type PopupMenuTheme } from './menuTheme';
+import type { PopupMenuProperties } from './types';
 
 /** The width of the internal ScrollContainer's vertical bar, which the minimum reserves whether or not it shows (`popup_menu.cpp:230`). */
 function scrollBarWidth(theme: NativeTheme): number {
@@ -42,9 +47,14 @@ export interface MenuModel {
   items: readonly MenuItem[];
 }
 
-export function menuModel(n: SolveNode, ctx: Pick<SolveContext, 'theme' | 'measureText'>): MenuModel {
+/** `items` defaults to the items of the scene. */
+export function menuModel(
+  n: SolveNode,
+  ctx: Pick<SolveContext, 'theme' | 'measureText'>,
+  items = (n.node.properties as PopupMenuProperties).items
+): MenuModel {
   const menu = popupMenuTheme(n, ctx.theme);
-  return { theme: ctx.theme, menu, items: menuItems(n, menu, ctx) };
+  return { theme: ctx.theme, menu, items: menuItems(n, menu, ctx, items) };
 }
 
 /** `_get_items_total_height` (`popup_menu.cpp:255-263`): every item and the gap under it. */
@@ -57,8 +67,8 @@ function itemsTotalHeight(items: readonly MenuItem[], menu: PopupMenuTheme): num
  * reserved in a compact gutter, and a checkable item with an icon turns the compact gutter off
  * (`:246-250,268-277`). The height is limited to the embedder's and ceiled (`:280-286`).
  */
-export const popupMenuContentsMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const { menu, items } = menuModel(n, ctx);
+function contentsMinimumSize(n: SolveNode, ctx: SolveContext, model: MenuModel, limit: number): Vector2 {
+  const { menu, items } = model;
   const margins = contentMarginSize(menu.panel);
   const shadow = insetSize(shadowInsets(menu.panel, n.rtl));
 
@@ -84,8 +94,17 @@ export const popupMenuContentsMinimumSize: MinimumSizeFn = (n, ctx) => {
     menu.itemEndPadding +
     gutter;
   const height = margins.y + shadow.y + itemsTotalHeight(items, menu);
-  const limit = ctx.embedderSize?.y ?? Number.POSITIVE_INFINITY;
   return { x: width, y: Math.ceil(Math.min(height, limit)) };
+}
+
+export const popupMenuContentsMinimumSize: MinimumSizeFn = (n, ctx) =>
+  contentsMinimumSize(n, ctx, menuModel(n, ctx), ctx.embedderSize?.y ?? Number.POSITIVE_INFINITY);
+
+/** The minimum of the items set when the `size` line is applied: the menu is not in the tree, so nothing limits its height. */
+export const popupMenuLoadedMinimumSize: LoadedMinimumSizeFn = (n, ctx) => {
+  const { itemsAtSize } = n.node.properties as PopupMenuProperties;
+  if (!itemsAtSize) return null;
+  return contentsMinimumSize(n, ctx, menuModel(n, ctx, itemsAtSize), Number.POSITIVE_INFINITY);
 };
 
 export interface MenuRow {
@@ -105,6 +124,14 @@ export interface MenuGeometry {
   /** The vertical bar, relative to the scroll container. */
   verticalBar: ScrollBarPlacement;
   rows: readonly MenuRow[];
+}
+
+/**
+ * Whether a row is inside the scroll container at the scroll offset 0 a still frame has. A row
+ * below it is clipped away whole, so a menu of any length draws only the rows it shows.
+ */
+export function isRowInView(row: MenuRow, viewHeight: number): boolean {
+  return row.y < viewHeight;
 }
 
 /** Each row from the first item's half gap, then a whole gap after every item (`popup_menu.cpp:870-872`). */
@@ -127,12 +154,7 @@ function verticalBar(
 ): ScrollBarPlacement {
   const width = scrollBarWidth(theme);
   const rect = { x: isRtl ? 0 : scroll.w - width, y: 0, w: width, h: scroll.h };
-  const grabber = scrollBarGrabberGeometry(true, rect.h, theme, 0, contentHeight, rect.h, 0);
-  return {
-    visible: contentHeight > scroll.h,
-    rect,
-    grabberRect: { x: 0, y: grabber.offset, w: width, h: grabber.size },
-  };
+  return scrollBarPlacement(true, rect, theme, contentHeight, 0, contentHeight > scroll.h);
 }
 
 /** The geometry of menu `n` in a window of `size`, from the same items its minimum reads. */

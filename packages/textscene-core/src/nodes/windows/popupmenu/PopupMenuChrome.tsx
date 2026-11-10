@@ -3,33 +3,30 @@
  * rows inside the ScrollContainer's clip, then its vertical bar. A still frame has no scroll offset,
  * hover or open submenu, so each row draws as `_draw_items` lays it out (`menuDrawing.ts`).
  */
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
 import { canvasSubOrders } from '../../../r3f/canvasItemState';
 import { useOwnerCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../r3f/controls/ControlComponentRegistry';
+import { multiplyModulate } from '../../../r3f/canvasItemModulate';
 import { tintColor } from '../../../r3f/controls/native/buttonBase';
 import {
   ControlClipProvider,
   useControlClipPlanes,
   useWorldClipPlanes,
 } from '../../../r3f/controls/native/controlClipping';
-import { ControlQuad } from '../../../r3f/controls/native/controlQuad';
+import { TextureQuad } from '../../../r3f/controls/native/TextureQuad';
 import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
-import { CHECK_BOX_ICONS } from '../../../r3f/controls/native/themeIcons';
 import { OutlinedTextRun } from '../../../r3f/controls/native/text/OutlinedTextRun';
-import { useNodeIcon } from '../../../r3f/controls/native/useIconTexture';
-import { CHECK_BOX_ICON_THEME_NAME } from '../../2d/ui/checkbox/nativeSolver';
+import type { CheckBoxIconKey } from '../../2d/ui/checkbox/nativeSolver';
+import { useCheckBoxIcon } from '../../2d/ui/checkbox/useCheckBoxIcon';
 import { ScrollBarChrome } from '../../2d/ui/shared/ScrollChrome';
 import { useTexture2D } from '../../../resources/useTexture2D';
-import { checkIconSize, type CheckIconKey } from './menuItems';
+import { checkIconSize } from './menuItems';
 import { popupMenuDrawing, type RowDrawing } from './menuDrawing';
-import { menuModel, popupMenuGeometry } from './menuLayout';
-
-/** `font_outline_size` is 0 in the default theme; the text outline is not drawn here. */
-const NO_OUTLINE = { sizePx: 0, color: { r: 0, g: 0, b: 0, a: 0 } };
+import { isRowInView, menuModel, popupMenuGeometry } from './menuLayout';
 
 type Solved = NativeControlComponentProps['solveNode'];
 
@@ -44,21 +41,11 @@ function CheckMark({
   solveNode,
   tint,
   renderOrder,
-}: PartProps & { iconKey: CheckIconKey; position: Vector2; solveNode: Solved }) {
-  const texture = useNodeIcon(solveNode.icons[CHECK_BOX_ICON_THEME_NAME[iconKey]], CHECK_BOX_ICONS[iconKey]);
+}: PartProps & { iconKey: CheckBoxIconKey; position: Vector2; solveNode: Solved }) {
+  const texture = useCheckBoxIcon(solveNode, iconKey);
   const size = checkIconSize(solveNode, iconKey);
-  return (
-    <CanvasItemGroup position={[position.x, -position.y, 0]}>
-      <ControlQuad
-        renderOrder={renderOrder}
-        width={size.x}
-        height={size.y}
-        color={tint.color}
-        opacity={tint.opacity}
-        map={texture}
-      />
-    </CanvasItemGroup>
-  );
+  const rect = { x: position.x, y: position.y, w: size.x, h: size.y };
+  return <TextureQuad rect={rect} texture={texture} tint={tint} renderOrder={renderOrder} />;
 }
 
 /** One item icon, a component of its own so its `useTexture2D` call keeps a stable call site. */
@@ -72,34 +59,22 @@ function ItemIcon({
   const { externalResources, internalResources } = solveNode.resources;
   const { texture: source } = useTexture2D(textureRef, externalResources, internalResources);
   const texture = useOwnerCanvas2DTexture(source);
-  return (
-    <CanvasItemGroup position={[rect.x, -rect.y, 0]}>
-      <ControlQuad
-        renderOrder={renderOrder}
-        width={rect.w}
-        height={rect.h}
-        color={tint.color}
-        opacity={tint.opacity}
-        map={texture}
-      />
-    </CanvasItemGroup>
-  );
+  return <TextureQuad rect={rect} texture={texture} tint={tint} renderOrder={renderOrder} />;
 }
 
-function RowText({
-  text,
-  fontSizePx,
-  tint,
-  renderOrder,
-}: PartProps & { text: NonNullable<RowDrawing['text']>; fontSizePx: number }) {
+function RowText({ text, tint, renderOrder }: PartProps & { text: NonNullable<RowDrawing['text']> }) {
   const clippingPlanes = useControlClipPlanes();
   const color = useMemo(() => tintColor(text.color, tint.own), [text.color, tint.own]);
+  const outline = useMemo(
+    () => ({ color: multiplyModulate(text.outline.color, tint.own), sizePx: text.outline.sizePx }),
+    [text.outline, tint.own]
+  );
   return (
     <CanvasItemGroup position={[text.position.x, -text.position.y, 0]}>
       <OutlinedTextRun
         layout={text.layout}
-        outline={NO_OUTLINE}
-        fontSizePx={fontSizePx}
+        outline={outline}
+        fontSizePx={text.fontSizePx}
         tint={color}
         clippingPlanes={clippingPlanes}
         renderOrder={renderOrder}
@@ -112,12 +87,11 @@ interface RowProps extends PartProps {
   drawing: RowDrawing;
   /** The item's `icon` property, which names the texture the drawing stretches over its rect. */
   iconRef: string | undefined;
-  fontSizePx: number;
   solveNode: Solved;
 }
 
 /** One row: separator lines under the check mark, the icon and the text. */
-function RowParts({ drawing, iconRef, fontSizePx, solveNode, tint, renderOrder }: RowProps) {
+const RowParts = memo(function RowParts({ drawing, iconRef, solveNode, tint, renderOrder }: RowProps) {
   const part = { tint, renderOrder };
   return (
     <>
@@ -142,10 +116,10 @@ function RowParts({ drawing, iconRef, fontSizePx, solveNode, tint, renderOrder }
       {drawing.icon && iconRef !== undefined && (
         <ItemIcon {...part} textureRef={iconRef} rect={drawing.icon.rect} solveNode={solveNode} />
       )}
-      {drawing.text && <RowText {...part} text={drawing.text} fontSizePx={fontSizePx} />}
+      {drawing.text && <RowText {...part} text={drawing.text} />}
     </>
   );
-}
+});
 
 export function PopupMenuChrome({
   solveNode,
@@ -183,13 +157,13 @@ export function PopupMenuChrome({
       <ControlClipProvider value={clip}>
         <CanvasItemGroup position={[geometry.control.x, -geometry.control.y, 0]}>
           {rows.map((drawing, index) => {
-            const { item } = geometry.rows[index]!.entry;
+            const row = geometry.rows[index]!;
+            if (!isRowInView(row, geometry.scroll.h)) return null;
             return (
               <RowParts
                 key={index}
                 drawing={drawing}
-                iconRef={item.icon}
-                fontSizePx={(item.separator ? menu.separatorFont : menu.font).sizePx}
+                iconRef={row.entry.item.icon}
                 solveNode={solveNode}
                 tint={tint}
                 renderOrder={rowOrder}

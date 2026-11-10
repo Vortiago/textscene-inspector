@@ -4,6 +4,7 @@
  * mounts the Control walker into a detached scene, draws it through a fixed camera
  * framing the target rect, and publishes a texture consumers sample directly.
  */
+import { embedsSubwindows } from './viewportBoundary.js';
 import { useCallback, useMemo } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -131,7 +132,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
             inheritedRtl={inheritedRtl}
             themeOwners={themeOwners}
             enclosingViewportSize={enclosingViewportSize}
-            embedsWindows={properties.gui_embed_subwindows}
+            embedsWindows={embedsSubwindows(node)}
           />
         </SubViewportCanvasScope>
       </World2DLightingBoundary>
