@@ -35,7 +35,7 @@ The lenient parser reads `length` and `initial_offset` on top of the Node2D tran
 
 ## Marker
 
-Every node draws a 20 px bar at 0 and at `length` and the line between them, in `Color(0.7, 0.6, 0, 0.5)` and 3 px wide. A 20 px bar at `initial_offset` follows, in `Color(0.8, 0.8, 0.9, 0.5)` and 5 px wide (`groove_joint_2d.cpp:46-49`). A zero or negative `length` and `initial_offset` draw where they say, with no clamp. The marker draws while the Gizmos toggle is on, which a capture keeps off. The scene `unit-joint-2d-markers.tscn` holds the three joints' markers at several values.
+Every node draws a 20 px bar at 0 and at `length` and the line between them, in `Color(0.7, 0.6, 0, 0.5)` and 3 px wide. A 20 px bar at `initial_offset` follows, in `Color(0.8, 0.8, 0.9, 0.5)` and 5 px wide (`groove_joint_2d.cpp:46-49`). A zero or negative `length` and `initial_offset` draw where they say, with no clamp. The scene `unit-joint-2d-markers.tscn` holds the three joints' markers at several values.
 
 ## Known limitations
 

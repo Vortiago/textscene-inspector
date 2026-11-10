@@ -24,7 +24,11 @@ const STROKE_LOOKS: Record<
 };
 
 export function JointMarker({ strokes }: { strokes: readonly JointStroke[] }) {
-  const isDrawn = useGizmoDrawn('every-node');
+  // The gate sits above the geometry, so a hidden marker builds no vertices.
+  return useGizmoDrawn('every-node') ? <StrokeLayers strokes={strokes} /> : null;
+}
+
+function StrokeLayers({ strokes }: { strokes: readonly JointStroke[] }) {
   const layers = useMemo(
     () =>
       (Object.keys(STROKE_LOOKS) as JointStrokeStyle[]).flatMap((style) => {
@@ -36,7 +40,6 @@ export function JointMarker({ strokes }: { strokes: readonly JointStroke[] }) {
       }),
     [strokes]
   );
-  if (!isDrawn) return null;
   return layers.map(({ style, geometry }) => (
     <GizmoMesh
       key={style}

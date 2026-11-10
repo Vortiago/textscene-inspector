@@ -39,7 +39,7 @@ PinJoint2D reuses `parseNode2D` directly, so its own properties never reach the 
 
 ## Marker
 
-Every node draws two 20 px bars crossing at its origin, in `Color(0.7, 0.6, 0, 0.5)` and 3 px wide (`pin_joint_2d.cpp:45-46`). The marker draws while the Gizmos toggle is on, which a capture keeps off. The scene `unit-joint-2d-markers.tscn` holds the three joints' markers at several values.
+Every node draws two 20 px bars crossing at its origin, in `Color(0.7, 0.6, 0, 0.5)` and 3 px wide (`pin_joint_2d.cpp:45-46`). The scene `unit-joint-2d-markers.tscn` holds the three joints' markers at several values.
 
 ## Known limitations
 
