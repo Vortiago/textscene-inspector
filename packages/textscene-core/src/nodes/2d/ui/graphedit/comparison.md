@@ -132,8 +132,7 @@ lenient tree carries none of them, and a malformed one does not reach the tree.
 
 ## Known limitations
 
-- **Approximated** Text under a scale above 1, in a zoomed GraphElement child as in any scaled
-  Control, keeps the sharp edge of the bundled font's atlas, where Godot magnifies a base-size
-  bitmap (`canvas_item.cpp:146`, `text_server_adv.cpp:3981-3996`).
+- **Approximated** Text under a scale above 1 keeps the sharp edge of the bundled font's atlas, where Godot
+  magnifies a base-size bitmap (`canvas_item.cpp:146`, `text_server_adv.cpp:3981-3996`).
 - **Approximated** The toolbar buttons and SpinBox draw their icons, pressed boxes, field,
   arrows and disabled state, but no hover or focus state.
