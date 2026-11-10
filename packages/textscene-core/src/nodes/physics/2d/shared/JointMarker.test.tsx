@@ -38,7 +38,7 @@ describe('<JointMarker>', () => {
   it.each([
     ['nothing is selected', null],
     ['the node is selected', 'Joint'],
-  ])('draws at full strength when %s', async (_label, selectedPath) => {
+  ])('draws at alpha 0.5 when %s: the marker ignores selection', async (_label, selectedPath) => {
     const [frame] = meshes(await render(true, selectedPath));
     expect((frame!.material as THREE.MeshBasicMaterial).opacity).toBe(0.5);
   });
