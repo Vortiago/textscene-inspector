@@ -14,12 +14,13 @@ export interface BoneKiteSource {
   /** The live paths of its Bone2D children, in order. */
   children: readonly string[];
   /**
-   * Where its kite draws among all kites, later for a greater rank. Godot makes the
-   * gizmo item of a bone on its first draw, after the items of the bones below it exist, and items
-   * of one z draw in tree order (`skeleton_2d.cpp:197-202`). So a kite draws after every kite below
-   * it and after the kites of earlier bones: the order is the post-order of the bones.
+   * Where its kite draws among all kites, from 0 up to but not including 1, later for a greater
+   * value. Godot makes the gizmo item of a bone on its first draw, after the items of the bones below
+   * it exist, and items of one z draw in tree order (`skeleton_2d.cpp:197-202`). So the order is the
+   * post-order of the bones, as `rank / (rank + 1)`: that stays below 1 for any bone count, and
+   * adding a bone changes only the kites after it.
    */
-  drawRank: number;
+  drawOrder: number;
 }
 
 /** Written only by {@link kept}: the last source of each bone node, by live path. */
@@ -47,6 +48,9 @@ export function bindBoneChildren(tree: LiveTree): ReadonlyMap<string, BoneKiteSo
     bones.push({ path, node: step.node, children });
   });
   return new Map(
-    bones.map(({ path, node, children }, drawRank) => [path, kept(node, path, { children, drawRank })])
+    bones.map(({ path, node, children }, rank) => [
+      path,
+      kept(node, path, { children, drawOrder: rank / (rank + 1) }),
+    ])
   );
 }

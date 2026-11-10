@@ -9,7 +9,7 @@ import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import { FLOATS_PER_VERTEX } from '../../../godot/math/vector';
-import { mutableTransform2D, type MutableTransform2D } from '../../../godot/math/transform2d.js';
+import { mutableTransform2D } from '../../../godot/math/transform2d.js';
 import { triangulatePolygon } from '../../../godot/math/triangulate';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
@@ -20,6 +20,7 @@ import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
 import { canvasTransformInto, writeGodotPointAsThree } from '../../../r3f/node2dTransform';
 import { useLiveScenePass } from '../../../r3f/liveScenePass';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera';
+import { WorldMatrixWatch, withCanvasFrames } from '../../../r3f/worldMatrixWatch';
 import { bindBoneChildren } from './boneChildren';
 import {
   boneKitesOf,
@@ -35,9 +36,6 @@ const POSE_OVERRIDE_KEY = 'metadata/_local_pose_override_enabled_';
 
 /** The children of a bone the pass has not reached. */
 const NO_CHILDREN: readonly string[] = [];
-
-/** One rank of {@link BoneKiteSource.drawRank} in render order, small enough that 10,000 bones stay below the next layer. */
-const DRAW_RANK_STEP = 1e-4;
 
 const POINTS_PER_KITE = OUTLINE_POINT_COUNT + FILL_POINT_COUNT;
 /** Ear clipping gives a polygon of n points n - 2 triangles. */
@@ -132,24 +130,6 @@ function writeKites(geometry: THREE.BufferGeometry, kites: readonly BoneKite[]):
   geometry.computeBoundingSphere();
 }
 
-const TRANSFORM_TERMS = 6;
-
-function storeTerm(out: Float64Array, at: number, term: number): boolean {
-  const hasChanged = out[at] !== term;
-  out[at] = term;
-  return hasChanged;
-}
-
-/** Writes the terms of `t` at `at` in `out`, and whether any differed from what was there. Allocates nothing: it runs every render. */
-function storeTransform(out: Float64Array, at: number, t: MutableTransform2D): boolean {
-  let hasChanged = storeTerm(out, at, t.a);
-  hasChanged = storeTerm(out, at + 1, t.b) || hasChanged;
-  hasChanged = storeTerm(out, at + 2, t.c) || hasChanged;
-  hasChanged = storeTerm(out, at + 3, t.d) || hasChanged;
-  hasChanged = storeTerm(out, at + 4, t.tx) || hasChanged;
-  return storeTerm(out, at + 5, t.ty) || hasChanged;
-}
-
 /**
  * Updates `geometry` each render from the drawn bone at `path` and its children, and only when one
  * of their transforms moved.
@@ -166,23 +146,26 @@ function useKiteFollow(
     if (path === null || !nodeObjects) return;
     const paths = [path, ...childPaths];
     const transforms = paths.map(() => mutableTransform2D());
-    const written = new Float64Array(paths.length * TRANSFORM_TERMS).fill(NaN);
+    const watch = new WorldMatrixWatch();
     let drawn: DrawnObjects | null = null;
+    /** Found again only when the lookup finds other objects. */
+    let watched: (THREE.Object3D | null)[] = [];
+    let areAllDrawn = false;
     return observeSceneCamera(scene, () => {
-      drawn = lookupDrawnObjects(nodeObjects, paths, drawn);
-      const objects = drawn.objects;
-      let hasMoved = false;
-      for (let i = 0; i < objects.length; i++) {
-        const object = objects[i];
-        if (!object) {
-          geometry.setDrawRange(0, 0);
-          written.fill(NaN);
-          return;
-        }
-        canvasTransformInto(transforms[i]!, object);
-        hasMoved = storeTransform(written, i * TRANSFORM_TERMS, transforms[i]!) || hasMoved;
+      const looked = lookupDrawnObjects(nodeObjects, paths, drawn);
+      if (looked !== drawn) {
+        drawn = looked;
+        watched = withCanvasFrames(looked.objects);
+        areAllDrawn = looked.objects.every((object) => object !== null);
       }
-      if (!hasMoved) return;
+      const objects = looked.objects;
+      if (!areAllDrawn) {
+        geometry.setDrawRange(0, 0);
+        watch.forget();
+        return;
+      }
+      if (!watch.hasMoved(watched)) return;
+      objects.forEach((object, i) => canvasTransformInto(transforms[i]!, object!));
       const [bone, ...children] = transforms;
       writeKites(
         geometry,
@@ -214,12 +197,5 @@ export function BoneKites({ node }: { node: TscnNode }) {
   const angle = props.auto_calculate_length_and_angle ? props.rotation : props.bone_angle;
   const reach = useMemo(() => ({ length: props.length, angle }), [props.length, angle]);
   useKiteFollow(geometry, path, childPaths, reach);
-  return (
-    <GizmoMesh
-      geometry={geometry}
-      color={0xffffff}
-      alpha={1}
-      order={(source?.drawRank ?? 0) * DRAW_RANK_STEP}
-    />
-  );
+  return <GizmoMesh geometry={geometry} color={0xffffff} alpha={1} order={source?.drawOrder ?? 0} />;
 }

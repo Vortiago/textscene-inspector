@@ -50,10 +50,23 @@ describe('bindBoneChildren', () => {
   // Godot makes the gizmo canvas item of a bone on its first draw, after the items of its children
   // exist, so a bone's kite draws after every kite below it and after the kites of earlier siblings.
   it('orders the kites children first, then parents, siblings in tree order', () => {
-    const order = (path: string) => bindBoneChildren(tree()).get(path)!.drawRank;
+    const order = (path: string) => bindBoneChildren(tree()).get(path)!.drawOrder;
     expect(order('Root/Arm/Forearm')).toBeLessThan(order('Root/Arm/Hand/Finger'));
     expect(order('Root/Arm/Hand/Finger')).toBeLessThan(order('Root/Arm/Hand'));
     expect(order('Root/Arm/Hand')).toBeLessThan(order('Root/Arm'));
     expect(order('Root/Arm')).toBeLessThan(order('Root/Bystander/Stray'));
+  });
+
+  it('keeps every draw order inside [0, 1) and increasing, above 10,000 bones', () => {
+    const bones = Array.from({ length: 20000 }, (_, i) => `[node name="B${i}" type="Bone2D" parent="."]`);
+    const scene = new TscnParser().parse(
+      `[gd_scene format=3]\n[node name="Root" type="Node2D"]\n${bones.join('\n')}\n`
+    );
+    const orders = [...bindBoneChildren(liveTreeOf(scene.nodes, contextOver(scene, {}))).values()].map(
+      (source) => source.drawOrder
+    );
+    expect(orders).toHaveLength(20000);
+    expect(orders[orders.length - 1]!).toBeLessThan(1);
+    expect(orders.every((order, i) => i === 0 || order > orders[i - 1]!)).toBe(true);
   });
 });

@@ -15,11 +15,11 @@ import {
   type MutableTransform2D,
 } from '../../../godot/math/transform2d.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
-import { canvasFrameOf } from '../../../r3f/canvasFrame.js';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext.js';
 import { lookupDrawnObjects, type DrawnObjects } from '../../../r3f/drawnObjects.js';
 import { canvasTransformInto, writeGodotPointAsThree } from '../../../r3f/node2dTransform.js';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera.js';
+import { WorldMatrixWatch, withCanvasFrames } from '../../../r3f/worldMatrixWatch.js';
 import { skinnedPointsInto } from './polygonSkin.js';
 import type { PolygonSkeletonBinding } from './skeletonBinding.js';
 
@@ -46,14 +46,11 @@ export function useSkeletonSkin(
   }, [scene, mesh, geometry, binding, nodeObjects]);
 }
 
-/** The world matrix terms a 2D transform reads: the x and y columns and the origin. */
-const TRANSFORM_2D_ELEMENTS = [0, 1, 4, 5, 12, 13] as const;
-
 /** The drawn skeleton and bones a skin reads, and every object whose world matrix moves the skin. */
 interface SkinObjects {
   skeleton: THREE.Object3D;
   bones: THREE.Object3D[];
-  /** The mesh, the frame of its canvas and of the skeleton's, the skeleton, and each bone. */
+  /** The mesh, the skeleton and each bone, then the frames of their canvases. */
   watched: (THREE.Object3D | null)[];
 }
 
@@ -64,12 +61,7 @@ class MeshSkin {
   private drawn: DrawnObjects | null = null;
   /** Written only by `update` with `drawn`: null while the skeleton or a bone is not drawn. */
   private objects: SkinObjects | null = null;
-  /**
-   * The world matrix terms of every watched object at the last write, so a render where nothing
-   * moved builds no transform. Two buffers swap, so a render where nothing moved allocates none.
-   */
-  private writtenAt: Float64Array;
-  private readAt: Float64Array;
+  private readonly watch = new WorldMatrixWatch();
   /** Written only by `skinned`, so a render where the skin moves builds no transform object. */
   private readonly boneMatrices: MutableTransform2D[];
   private readonly skeletonGlobal = mutableTransform2D();
@@ -86,9 +78,6 @@ class MeshSkin {
   ) {
     this.restPoints = godotPointsOf(geometry, binding.influences.vertexCount);
     this.paths = [binding.skeletonPath, ...binding.bonePaths];
-    const terms = (this.paths.length + 3) * TRANSFORM_2D_ELEMENTS.length;
-    this.writtenAt = new Float64Array(terms).fill(NaN);
-    this.readAt = new Float64Array(terms);
     this.boneMatrices = binding.bonePaths.map(() => mutableTransform2D());
     this.skinnedBuffer = this.restPoints.map(() => ({ x: 0, y: 0 }));
   }
@@ -99,26 +88,13 @@ class MeshSkin {
       this.drawn = drawn;
       this.objects = skinObjectsOf(this.mesh, drawn.objects);
     }
-    if (!this.objects || !this.moved(this.objects.watched)) return;
+    if (!this.objects || !this.watch.hasMoved(this.objects.watched)) return;
     this.write(this.skinned(this.objects));
   }
 
   /** Writes the undeformed points back, so the next skin of this geometry starts from them. */
   release(): void {
     this.write(this.restPoints);
-  }
-
-  /** Whether a world matrix of `objects` moved since the last write. A null frame reads as zeros. */
-  private moved(objects: readonly (THREE.Object3D | null)[]): boolean {
-    let at = 0;
-    for (const object of objects) {
-      for (const element of TRANSFORM_2D_ELEMENTS)
-        this.readAt[at++] = object?.matrixWorld.elements[element] ?? 0;
-    }
-    let isSame = true;
-    for (let i = 0; i < at && isSame; i++) isSame = this.readAt[i] === this.writtenAt[i];
-    [this.writtenAt, this.readAt] = [this.readAt, this.writtenAt];
-    return !isSame;
   }
 
   /**
@@ -162,8 +138,7 @@ class MeshSkin {
 function skinObjectsOf(mesh: THREE.Mesh, drawn: readonly (THREE.Object3D | null)[]): SkinObjects | null {
   const [skeleton, ...bones] = drawn;
   if (!skeleton || !bones.every((bone): bone is THREE.Object3D => bone !== null)) return null;
-  const frames = [canvasFrameOf(mesh), canvasFrameOf(skeleton)];
-  return { skeleton, bones, watched: [mesh, ...frames, skeleton, ...bones] };
+  return { skeleton, bones, watched: withCanvasFrames([mesh, skeleton, ...bones]) };
 }
 
 /** The first `count` points of `geometry`, back in Godot's +Y-down pixels. */
