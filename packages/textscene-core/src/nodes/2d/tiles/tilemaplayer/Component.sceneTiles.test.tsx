@@ -79,7 +79,7 @@ describe('TileMapLayer scene tiles', () => {
   });
 
   it.each([
-    ['a scene id the source lacks', cell(0, 0, 9)],
+    ['a scene id the source lacks', cell(0, 0, 10)],
     ['atlas coords other than (0, 0)', cell(0, 0, 1, { atlasCoords: { x: 1, y: 0 } })],
     ['a source the TileSet lacks', cell(0, 0, 1, { sourceId: 5 })],
   ])('draws no instance for %s', async (_name, placed) => {
@@ -165,6 +165,15 @@ polygon = PackedVector2Array(0, 0, 10, 0, 10, 10, 0, 10)
       [100, 320, 10, 10],
       [122, 272, 20, 100],
       [100, 420, 10, 10],
+    ]);
+  });
+
+  it('sorts an instance by its root offset: a root at y 80 draws over the one at the next cell', async () => {
+    // Godot 4.6.3 sorts the roots, children of the layer, on their own y: 112 for the red one, 96 for the blue one.
+    const renderer = await render([cell(0, 0, 8), cell(0, 1, 9)], 'y_sort_enabled = true\n');
+    expect(boxesInPaintOrder(renderer)).toEqual([
+      [132, 56, 30, 30],
+      [132, 42, 30, 30],
     ]);
   });
 

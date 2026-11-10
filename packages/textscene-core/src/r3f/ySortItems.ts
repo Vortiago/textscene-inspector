@@ -19,6 +19,7 @@ import type { Node2DLocalTransform } from '../nodes/base/node2d/types.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { NO_PATCHES, patchedNode, type NodePatches } from './nodePatch.js';
 import { joinPath } from '../utils/nodePath.js';
+import type { LiveNode } from '../resources/liveNode.js';
 
 /** What `_collect_ysort_children` threads down to the children of one y-sorted item. */
 export interface YSortParent {
@@ -92,10 +93,13 @@ function ownBodyOf(node: TscnNode): TscnNode {
  */
 function toSortRootOf(child: TscnNode, parent: YSortParent): Transform2DColumns {
   if (descendsFromClass(child.type, 'Node3D')) return parent.toSortRoot;
-  return multiplyTransform2D(
+  const toChild = multiplyTransform2D(
     parent.toSortRoot,
     node2DLocalTransform(child.properties as Partial<Node2DLocalTransform>)
   );
+  // A scene tile sorts as its instance root, which sits inside the placement node that stands for it.
+  const rootPose = (child as LiveNode).ySortPose;
+  return rootPose ? multiplyTransform2D(toChild, rootPose) : toChild;
 }
 
 /**

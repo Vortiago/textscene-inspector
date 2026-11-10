@@ -4,7 +4,8 @@
  * stale while a clip plays. This reads the poses on the groups instead.
  */
 
-import { Matrix4, type Object3D } from 'three';
+import { Matrix4, Vector3, type Object3D } from 'three';
+import type { Transform2DColumns } from '../godot/math/transform2d.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { pathsAlong } from './liveNodePatches.js';
 import type { YSortItem } from './ySortItems.js';
@@ -12,8 +13,9 @@ import type { YSortItem } from './ySortItems.js';
 /** The group that draws the node at a scene path, or null while it is not mounted. */
 export type GroupAt = (path: string) => Object3D | null;
 
-/** Written only by {@link sortYOfChain}, which reads it back before it returns. */
+/** Written only by {@link sortYOfChain}, which reads each back before it returns. */
 const toSortRoot = new Matrix4();
+const rootOrigin = new Vector3();
 
 /**
  * The live group of each node between the sort root and `item`, outermost first. Null where the
@@ -33,13 +35,17 @@ export function liveGroupChain(item: YSortItem, basePath: string, groupAt: Group
   return chain;
 }
 
-/** The y of the origin that `chain` places in the sort root's space. */
-export function sortYOfChain(chain: readonly Object3D[]): number {
+/**
+ * The y of the origin that `chain` places in the sort root's space. `rootPose` is where the sorted
+ * item's own origin sits in the last group: a scene tile sorts as its instance root.
+ */
+export function sortYOfChain(chain: readonly Object3D[], rootPose?: Transform2DColumns): number {
   toSortRoot.identity();
   for (const group of chain) {
     if (group.matrixAutoUpdate) group.updateMatrix();
     toSortRoot.multiply(group.matrix);
   }
   // THREE's y runs up where Godot's runs down (`threeMatrixFromTransform2D`).
-  return -toSortRoot.elements[13]!;
+  if (!rootPose) return -toSortRoot.elements[13]!;
+  return -rootOrigin.set(rootPose.tx, -rootPose.ty, 0).applyMatrix4(toSortRoot).y;
 }

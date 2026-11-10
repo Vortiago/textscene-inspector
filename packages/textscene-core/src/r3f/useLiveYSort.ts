@@ -11,6 +11,7 @@ import { trackTargetFinder } from './animation/trackTargets.js';
 import { liveGroupChain, sortYOfChain, type GroupAt } from './ySortLiveItems.js';
 import { compareYSortItems } from './ySortOrder.js';
 import { ySortItemId, type YSortItem } from './ySortItems.js';
+import type { LiveNode } from '../resources/liveNode.js';
 
 type LiveYs = ReadonlyMap<string, number>;
 const NO_YS: LiveYs = new Map();
@@ -87,7 +88,7 @@ export function useLiveYSort(items: readonly YSortItem[], basePath: string): rea
         }
         // A pose that moved none of the item's groups leaves its y as it was read.
         if (!chain || (posed && !hasPosedGroup(chain, posed))) continue;
-        const y = sortYOfChain(chain);
+        const y = sortYOfChain(chain, (item.node as LiveNode | undefined)?.ySortPose);
         if (y !== (pose.ys.get(id) ?? item.sortY)) moves.push([id, y]);
       }
       // Sorted only when some y moved: the frames of a held pose cost a read of each moved group.

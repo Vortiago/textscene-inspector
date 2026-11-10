@@ -15,6 +15,9 @@ import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedSceneP
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useLiveStepsOf } from '../../../../r3f/useLiveSceneTree';
 import { parseNode2D } from '../../../base/node2d/parser';
+import { TRANSFORM2D_IDENTITY, type Transform2DColumns } from '../../../../godot/math/transform2d';
+import { node2DLocalTransform } from '../../../../r3f/node2dTransform';
+import type { Node2DLocalTransform } from '../../../base/node2d/types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { PlacedCell } from './tileData';
 
@@ -67,7 +70,14 @@ export function useSceneTileNodes(
       if (root === null) refused.add(tile.tile);
       else
         placed.push(
-          placementNode(names.nameAt(tile.tile.cell.coords), tile.tile, instances[index]!, model, root)
+          placementNode(
+            names.nameAt(tile.tile.cell.coords),
+            tile.tile,
+            instances[index]!,
+            model,
+            root,
+            step.node
+          )
         );
     });
     return {
@@ -126,12 +136,26 @@ function rootKindOf(rootType: string): SceneRootKind | null {
   return null;
 }
 
+/**
+ * Where the instance root sits in its placement node, for the sort. A Node2D root has its own
+ * transform. A Control root sits at its offsets, the rect of a parent with no size.
+ */
+function rootPose(rootNode: LiveNode, root: SceneRootKind): Transform2DColumns {
+  if (root === 'node2d') return node2DLocalTransform(rootNode.properties as Partial<Node2DLocalTransform>);
+  const { offsetLeft = 0, offsetTop = 0 } = rootNode.properties as {
+    offsetLeft?: number;
+    offsetTop?: number;
+  };
+  return { ...TRANSFORM2D_IDENTITY, tx: offsetLeft, ty: offsetTop };
+}
+
 function placementNode(
   name: string,
   { cell }: SceneTileCell,
   instance: LiveNode,
   grid: TileSetModel,
-  root: SceneRootKind
+  root: SceneRootKind,
+  rootNode: LiveNode
 ): LiveNode {
   const { a, b, c, d, tx, ty } = sceneTilePlacement(grid, cell.coords, cell.alternativeId, root);
   const heading = { type: 'Node2D', attributes: { name, parent: '.' } };
@@ -144,5 +168,6 @@ function placementNode(
     rawProperties: {},
     isUnowned: true,
     hasControlRoot: root === 'control',
+    ySortPose: rootPose(rootNode, root),
   };
 }

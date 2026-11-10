@@ -4,6 +4,7 @@
  * linter reads never carries it.
  */
 import type { SceneScope, TscnNode } from '../parser/types.js';
+import type { Transform2DColumns } from '../godot/math/transform2d.js';
 import type { HandOffDecision } from '../parser/nodeOwner.js';
 import type { UniqueNameTable } from './instanceNameTable.js';
 import { resolveInstancePath } from './SubResourceResolver.js';
@@ -71,6 +72,11 @@ export interface LiveNode extends TscnNode {
   readonly isUnowned?: boolean;
   /** An unowned node whose instance root is a Control, which the world walk does not draw. */
   readonly hasControlRoot?: boolean;
+  /**
+   * Set on an unowned placement node: the transform of its instance root inside it. Godot sorts the
+   * root, a child canvas item of the layer, so the y-sort pass reads the placement and this pose.
+   */
+  readonly ySortPose?: Transform2DColumns;
 }
 
 /** The host child `node` stands for: itself, or the child it is the re-anchored copy of. */

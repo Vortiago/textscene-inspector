@@ -8,7 +8,7 @@ import { stringToInt } from '../../godot/string/string.js';
 import { boolSlotValue } from '../../godot/variant/variantBool.js';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { parseResourceReference } from '../SubResourceResolver';
-import type { SceneCollectionSourceModel, SceneTileModel } from './types';
+import type { SceneCollectionSourceModel, SceneTileModel, TileScene } from './types';
 
 /** The tables a scene reference resolves in: those of the file that holds the TileSet. */
 interface SceneTables {
