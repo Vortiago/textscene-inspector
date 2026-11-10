@@ -11,10 +11,11 @@
 
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
-import { isLaidOutChild, type SolveNode } from '../../../r3f/controls/native/solveTree';
+import { type SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import type { ContainerLayoutFn, MinimumSizeFn } from '../../../r3f/controls/native/solverRegistry';
+import { everyChildFills, largestLaidOutChildMinimum } from '../window/contentFill';
 import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
 
 /** The internal Panel's offsets from the window's edges: the right and bottom ones are zero or less. */
@@ -80,15 +81,8 @@ export const popupPanelContentsMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { style, insets } = popupPanelBox(n, ctx.theme);
   const shadow = insetSize(insets);
   const panel = contentMarginSize(style);
-  let x = 0;
-  let y = 0;
-  for (const child of n.children) {
-    if (!isLaidOutChild(n, child)) continue;
-    const childMin = ctx.combinedMinimumSize(child);
-    x = Math.max(x, childMin.x);
-    y = Math.max(y, childMin.y);
-  }
-  return { x: x + shadow.x + panel.x, y: y + shadow.y + panel.y };
+  const children = largestLaidOutChildMinimum(n, ctx);
+  return { x: children.x + shadow.x + panel.x, y: children.y + shadow.y + panel.y };
 };
 
 /**
@@ -105,5 +99,5 @@ export const popupPanelLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
     w: box.w - panel.x,
     h: box.h - panel.y,
   };
-  return new Map(children.map(({ node }) => [node.path, content]));
+  return everyChildFills(children, content);
 };

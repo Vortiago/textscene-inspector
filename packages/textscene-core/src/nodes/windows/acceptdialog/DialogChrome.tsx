@@ -29,9 +29,9 @@ export function DialogChrome(props: NativeControlComponentProps) {
     () =>
       geometry.buttons.map((button) => ({
         ...button,
-        node: dialogButtonNode(solveNode, button.role, theme),
+        node: dialogButtonNode(solveNode, button.role),
       })),
-    [geometry, solveNode, theme]
+    [geometry, solveNode]
   );
   const panelBox = useMemo(() => dialogPanelBox(solveNode, theme), [solveNode, theme]);
   const panelRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);

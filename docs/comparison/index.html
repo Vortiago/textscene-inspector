@@ -154,12 +154,15 @@ tr:last-child td{border-bottom:0}
         <a class="fixture" href="https://textscene-inspector.pages.dev/?fixture=unit-accept-dialog-embedded.tscn" target="_blank" rel="noopener" title="Open unit-accept-dialog-embedded.tscn in the previewer"><code>unit-accept-dialog-embedded.tscn</code> ↗</a>
         <span class="status st-done">Done</span>
       </header>
-      <div class="status-note st-done"></div>
       
-      <div class="compare">
+      <div class="prose intro"><p>A base dialog with an OK button and a message, which ConfirmationDialog and FileDialog build on. The previewer draws a visible dialog as an embedded window: the panel, the <code>dialog_text</code> message and the focused OK button, sized to its content. A child Control fills the content area with the message.</p></div>
+      
+      <section class="prop">
+        <div class="prop-head"><h3>Message and buttons</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
         <div class="stage">
-          <img class="img-godot" src="images/unit-accept-dialog-embedded-godot.png" alt="Godot render of AcceptDialog">
-          <img class="img-ours" src="images/unit-accept-dialog-embedded-ours.png" alt="Our render of AcceptDialog">
+          <img class="img-godot" src="images/unit-accept-dialog-embedded-godot.png" alt="Godot render of Message and buttons">
+          <img class="img-ours" src="images/unit-accept-dialog-embedded-ours.png" alt="Our render of Message and buttons">
           <div class="handle"></div>
           <span class="tag g">Godot 4.6.3</span>
           <span class="tag o">Ours</span>
@@ -169,8 +172,25 @@ tr:last-child td{border-bottom:0}
           <button data-mode="sbs" aria-pressed="false">Side by side</button>
         </div>
       </div>
-      <div class="prose"><p>A base dialog with an OK button and a message, which ConfirmationDialog and FileDialog build on. The previewer draws a visible dialog as an embedded window: the panel, the <code>dialog_text</code> message and the focused OK button, sized to its content. A child Control fills the content area with the message.</p>
-<h3>Linting</h3>
+        <div class="prose"><p>The panel, the message and the focused OK button, sized to the content.</p></div>
+      </section>
+      <section class="prop">
+        <div class="prop-head"><h3>Theme</h3><span class="status st-done">Done</span></div>
+        <div class="compare">
+        <div class="stage">
+          <img class="img-godot" src="images/unit-accept-dialog-theme-godot.png" alt="Godot render of Theme">
+          <img class="img-ours" src="images/unit-accept-dialog-theme-ours.png" alt="Our render of Theme">
+          <div class="handle"></div>
+          <span class="tag g">Godot 4.6.3</span>
+          <span class="tag o">Ours</span>
+        </div>
+        <div class="modes">
+          <button data-mode="slider" aria-pressed="true">Slider</button>
+          <button data-mode="sbs" aria-pressed="false">Side by side</button>
+        </div>
+      </div>
+        <div class="prose"><p>A Theme on the dialog or an ancestor restyles the Button and the Label inside it, as it does a Button and a Label in the scene.</p></div>
+      </section><div class="prose"><h3>Linting</h3>
 <p>Strict parsing format-checks these <code>AcceptDialog</code> properties, plus 45 inherited from Window, 47 inherited from Viewport, 10 inherited from Node. A malformed value is always an <strong>error</strong>; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a <strong>warning</strong> where only the property's inspector hint states the bound (<a class="adr" href="https://github.com/Vortiago/textscene-inspector/blob/main/docs/adr/0032-diagnostics-are-grounded-in-the-engine-source.md" target="_blank" rel="noopener">ADR-0032</a>).</p>
 <div class="tablewrap"><table><thead><tr><th>Property</th><th>Accepts</th><th>Out of range</th></tr></thead><tbody><tr><td><code>dialog_autowrap</code></td><td>true or false</td><td></td></tr><tr><td><code>dialog_close_on_escape</code></td><td>true or false</td><td></td></tr><tr><td><code>dialog_hide_on_ok</code></td><td>true or false</td><td></td></tr><tr><td><code>dialog_text</code></td><td>quoted string, or the &amp;&quot;…&quot; StringName or NodePath(&quot;…&quot;) it converts</td><td></td></tr><tr><td><code>ok_button_text</code></td><td>quoted string, or the &amp;&quot;…&quot; StringName or NodePath(&quot;…&quot;) it converts</td><td></td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>Rule</th><th>Reports</th><th>Severity</th></tr></thead><tbody><tr><td><code>binary-resource-reference</code> (all nodes)</td><td><code>binary-resource-reference</code></td><td>info</td></tr><tr><td><code>valid-window-properties</code> (type-family match)</td><td><code>window-max-size-below-min-size</code></td><td>info</td></tr><tr><td></td><td><code>window-size-clamped-by-limits</code></td><td>warning</td></tr><tr><td></td><td><code>window-content-scale-factor-floored</code></td><td>warning</td></tr></tbody></table></div>

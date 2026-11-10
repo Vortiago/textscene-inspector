@@ -1,15 +1,23 @@
 ---
 type: AcceptDialog
 category: Other
-status: done
 fixture: unit-accept-dialog-embedded.tscn
-image: unit-accept-dialog-embedded
 renders_as: an embedded window with a panel, a message and buttons
 ---
 
 # AcceptDialog
 
 A base dialog with an OK button and a message, which ConfirmationDialog and FileDialog build on. The previewer draws a visible dialog as an embedded window: the panel, the `dialog_text` message and the focused OK button, sized to its content. A child Control fills the content area with the message.
+
+## Message and buttons
+<!-- compare: image=unit-accept-dialog-embedded status=done fixture=unit-accept-dialog-embedded.tscn -->
+
+The panel, the message and the focused OK button, sized to the content.
+
+## Theme
+<!-- compare: image=unit-accept-dialog-theme status=done fixture=unit-accept-dialog-theme.tscn -->
+
+A Theme on the dialog or an ancestor restyles the Button and the Label inside it, as it does a Button and a Label in the scene.
 
 ## Linting
 

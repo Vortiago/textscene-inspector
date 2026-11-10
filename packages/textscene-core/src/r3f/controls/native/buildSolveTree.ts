@@ -253,6 +253,26 @@ function resolveThemedIcons(
   return mergeThemedRecord(themeScope, local, iconRefsOfTheme);
 }
 
+/**
+ * The theme items of a Control `memnew`d inside `parent` and never serialised, such as a dialog's
+ * buttons. It resolves them through the parent's theme chain by its own class chain
+ * (`Control::get_theme_stylebox`, `control.cpp:3078`, then `ThemeOwner::get_theme_item_in_types`), and no
+ * scene line overrides them.
+ */
+export function internalChildThemeItems(
+  parent: SolveNode,
+  type: string
+): Pick<SolveNode, 'styleBoxes' | 'colors' | 'constants' | 'icons'> {
+  const themeScope = themeResolutionScope(type, undefined, parent.themeChain, parent.projectFonts);
+  const node = { name: type, type, children: [], properties: {}, rawProperties: {} } as TscnNode;
+  return {
+    styleBoxes: resolveStyleBoxes(node, parent.resources, themeScope),
+    colors: resolveThemedColors(node, themeScope),
+    constants: resolveThemedConstants(node, themeScope),
+    icons: resolveThemedIcons(node, parent.resources, themeScope),
+  };
+}
+
 /** A Label's `label_settings` with the font it names. */
 interface OwnLabelSettings {
   settings: LabelSettingsResource | null;

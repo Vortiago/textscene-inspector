@@ -15,6 +15,8 @@ import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { TscnNode } from '../../../parser/types';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
+import { internalChildThemeItems } from '../../../r3f/controls/native/buildSolveTree';
+import { perObject } from '../../../utils/perObject';
 import { flatStyleBox } from '../../../r3f/controls/native/styleBoxFlat';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import { parseControlCanvasItem } from '../../2d/ui/control/parser';
@@ -45,20 +47,23 @@ export function dialogPanelBox(n: SolveNode, theme: NativeTheme): ResolvedStyleB
   });
 }
 
-/** The three `AcceptDialog` theme constants (`dialogs.cpp:422-424`). The default theme sets only the separation. */
-export function dialogConstants(n: SolveNode, theme: NativeTheme) {
-  return {
-    buttonsSeparation: n.constants.buttons_separation ?? Math.round(BUTTONS_SEPARATION * theme.scale),
-    buttonsMinWidth: n.constants.buttons_min_width ?? 0,
-    buttonsMinHeight: n.constants.buttons_min_height ?? 0,
-  };
+/** `buttons_separation` (`dialogs.cpp:422`): the gap between the content and the button row. The default theme sets it to 10. */
+export function buttonsSeparation(n: SolveNode, theme: NativeTheme): number {
+  return n.constants.buttons_separation ?? Math.round(BUTTONS_SEPARATION * theme.scale);
 }
+
+/** Written only by `internalControl`. A dialog node is replaced when the scene changes it, so each internal Control is built once per dialog node. */
+const internalNodes = perObject((_dialog: SolveNode) => new Map<string, SolveNode>());
 
 /**
  * An internal Control as a `SolveNode` in the dialog's scope. It has no scene node, so none of the
- * dialog's own theme items (`panel`, `buttons_separation`) apply to it.
+ * dialog's own theme items (`panel`, `buttons_separation`) apply to it. Its own come through the
+ * dialog's theme chain.
  */
 function internalControl(dialog: SolveNode, type: string, name: string, properties: object): SolveNode {
+  const byName = internalNodes(dialog);
+  const built = byName.get(name);
+  if (built) return built;
   const node: TscnNode = {
     name,
     type,
@@ -66,35 +71,48 @@ function internalControl(dialog: SolveNode, type: string, name: string, properti
     properties: { name, ...parseControlCanvasItem({}, name), ...properties } as ControlProperties,
     rawProperties: {},
   };
-  return {
+  const control: SolveNode = {
     ...dialog,
     path: `${dialog.path}/@${name}`,
     node,
     children: [],
-    styleBoxes: {},
-    colors: {},
-    constants: {},
-    icons: {},
+    ...internalChildThemeItems(dialog, type),
     fontOverrides: {},
     textureSize: null,
     textureSlots: {},
     labelSettings: null,
     labelSettingsFont: null,
   };
+  byName.set(name, control);
+  return control;
+}
+
+/** `message_label` (`dialogs.cpp:474-479`): `dialog_autowrap` picks `AUTOWRAP_WORD` (`:196-198`). */
+export function messageLabelNode(dialog: SolveNode): SolveNode {
+  const props = dialog.node.properties as DialogProperties;
+  return messageLabel(dialog, 'MessageLabel', props.dialog_autowrap);
 }
 
 /**
- * `message_label` (`dialogs.cpp:474-479`): `dialog_autowrap` picks `AUTOWRAP_WORD` (`:196-198`).
- * `asCached` gives the label the wrap its minimum size was cached with (`DialogProperties.has_unwrapped_message_minimum`).
+ * The message label with the wrap its minimum size was cached with
+ * (`DialogProperties.has_unwrapped_message_minimum`).
  */
-export function messageLabelNode(dialog: SolveNode, { asCached = false } = {}): SolveNode {
+export function cachedMessageLabelNode(dialog: SolveNode): SolveNode {
   const props = dialog.node.properties as DialogProperties;
-  const wraps = props.dialog_autowrap && !(asCached && props.has_unwrapped_message_minimum);
+  return messageLabel(
+    dialog,
+    'CachedMessageLabel',
+    props.dialog_autowrap && !props.has_unwrapped_message_minimum
+  );
+}
+
+function messageLabel(dialog: SolveNode, name: string, wraps: boolean): SolveNode {
+  const props = dialog.node.properties as DialogProperties;
   const properties: Partial<LabelProperties> = {
     text: props.dialog_text,
     autowrapMode: wraps ? AutowrapMode.AUTOWRAP_WORD : AutowrapMode.AUTOWRAP_OFF,
   };
-  return internalControl(dialog, 'Label', 'MessageLabel', properties);
+  return internalControl(dialog, 'Label', name, properties);
 }
 
 /** The label of a button: the OK text, or the Cancel text only a ConfirmationDialog carries. */
@@ -107,8 +125,9 @@ export function dialogButtonText(dialog: SolveNode, role: DialogButtonRole): str
  * A dialog button, floored at the theme's `buttons_min_width` and `buttons_min_height`
  * (`dialogs.cpp:239-246`). The OK button holds the dialog's focus (`dialogs.cpp:60-68`).
  */
-export function dialogButtonNode(dialog: SolveNode, role: DialogButtonRole, theme: NativeTheme): SolveNode {
-  const { buttonsMinWidth, buttonsMinHeight } = dialogConstants(dialog, theme);
+export function dialogButtonNode(dialog: SolveNode, role: DialogButtonRole): SolveNode {
+  const buttonsMinWidth = dialog.constants.buttons_min_width ?? 0;
+  const buttonsMinHeight = dialog.constants.buttons_min_height ?? 0;
   const properties: Partial<ButtonProperties> = {
     text: dialogButtonText(dialog, role),
     customMinimumSize: { x: buttonsMinWidth, y: buttonsMinHeight },

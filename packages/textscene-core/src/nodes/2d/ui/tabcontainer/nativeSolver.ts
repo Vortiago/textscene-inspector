@@ -19,6 +19,7 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { isTopLevelItem } from '../../../../r3f/canvasPaintOrder';
+import { internalChildThemeItems } from '../../../../r3f/controls/native/buildSolveTree';
 import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -165,13 +166,18 @@ export function buildInternalTabBarNode(
       ),
     },
   };
+  const barItems = internalChildThemeItems(n, 'TabBar');
   return {
     ...n,
     node: { ...n.node, type: 'TabBar', properties: barProps, children: [] },
     children: [],
-    // `constants` remaps TabContainer's keys (`internalTabBarThemeConstants`). `colors` and
-    // `styleBoxes`, spread from `n`, use the same key names, so they need no remap.
-    constants: internalTabBarThemeConstants(n.constants, theme),
+    // The bar's own theme items sit under what the container pushes (`tab_container.cpp:290-343`).
+    // `constants` remaps TabContainer's keys (`internalTabBarThemeConstants`). `colors`, `icons` and
+    // `styleBoxes` use the same key names, so they need no remap.
+    styleBoxes: { ...barItems.styleBoxes, ...n.styleBoxes },
+    colors: { ...barItems.colors, ...n.colors },
+    icons: { ...barItems.icons, ...n.icons },
+    constants: { ...barItems.constants, ...internalTabBarThemeConstants(n.constants, theme) },
     // `tab_bar->add_theme_font_override(font, theme_cache.tab_font)` (`:338`),
     // the font twin of the size push above.
     fontOverrides: {

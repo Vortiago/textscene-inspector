@@ -18,6 +18,7 @@ import {
   buttonMinimumSize,
   buttonTextTheme,
   buttonIconColor,
+  buttonFocusIconColor,
   BUTTON_DEFAULT_FONT_COLOR,
   buttonLabelShape,
 } from './nativeSolver';
@@ -358,8 +359,8 @@ describe('a focused Button (button.cpp:282-288)', () => {
   });
 
   it('reads icon_focus_color for the icon, white without a theme item', () => {
-    expect(buttonIconColor({}, 'normal', true)).toEqual({ r: 1, g: 1, b: 1, a: 1 });
-    expect(buttonIconColor({ icon_focus_color: { r: 1, g: 0, b: 0, a: 1 } }, 'normal', true)).toEqual({
+    expect(buttonFocusIconColor({})).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(buttonFocusIconColor({ icon_focus_color: { r: 1, g: 0, b: 0, a: 1 } })).toEqual({
       r: 1,
       g: 0,
       b: 0,

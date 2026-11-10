@@ -31,7 +31,13 @@ import {
   buttonTextBufWidthPx,
 } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
-import { buttonLabelShape, buttonTextTheme, buttonIconColor, isButtonFocusStyled } from './nativeSolver';
+import {
+  buttonLabelShape,
+  buttonTextTheme,
+  buttonIconColor,
+  buttonFocusIconColor,
+  isButtonFocusStyled,
+} from './nativeSolver';
 import type { ButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
@@ -87,7 +93,9 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   );
 
   const isFocusStyled = isButtonFocusStyled(props, state);
-  const baseIconColor = buttonIconColor(solveNode.colors, state, isFocusStyled);
+  const baseIconColor = isFocusStyled
+    ? buttonFocusIconColor(solveNode.colors)
+    : buttonIconColor(solveNode.colors, state);
   const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
   const iconLinearColor = useItemLinearColor(tintedIconColorSrgb);
 

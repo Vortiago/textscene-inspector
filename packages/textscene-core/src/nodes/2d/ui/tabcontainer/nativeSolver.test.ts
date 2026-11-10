@@ -507,6 +507,13 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
     return (bar.node.properties as TabBarProperties).themeOverrideFontSizes?.font_size;
   }
 
+  it("resolves the bar's own theme items the container does not push, such as TabBar/icons/close", () => {
+    const projectTheme = themeResource({ icons: { TabBar: { close: 'ExtResource("1")' } } });
+    const n = container({}, projectTheme);
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    expect(bar.icons.close?.ref).toBe('ExtResource("1")');
+  });
+
   it("pushes the container's own theme_override_font_sizes/font_size", () => {
     expect(barFontSize(container({ themeOverrideFontSizes: { font_size: 28 } }))).toBe(28);
   });

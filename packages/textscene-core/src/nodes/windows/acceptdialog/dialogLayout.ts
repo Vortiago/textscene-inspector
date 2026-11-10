@@ -13,7 +13,7 @@
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
 import { SizeFlags, DEFAULT_SIZE_FLAGS } from '../../../godot/scene/control';
-import { isLaidOutChild, type SolveNode } from '../../../r3f/controls/native/solveTree';
+import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type {
   ContainerLayoutFn,
   MinimumSizeFn,
@@ -23,15 +23,16 @@ import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
 import { boxContainerMinimumSize, resortBoxContainer } from '../../2d/ui/shared/boxContainerSolver';
 import type { BoxChildInput } from '../../2d/ui/shared/boxContainerSolver';
 import { labelMinimumSize } from '../../2d/ui/label/nativeSolver';
+import { everyChildFills, largestLaidOutChildMinimum } from '../window/contentFill';
 import { windowContentScale } from '../window/contentScale';
 import type { WindowProperties } from '../window/types';
 import {
   dialogButtonNode,
   dialogButtonText,
   dialogButtonRoles,
-  dialogConstants,
+  buttonsSeparation,
   dialogPanelBox,
-  messageLabelNode,
+  cachedMessageLabelNode,
   type DialogButtonRole,
 } from './dialogParts';
 
@@ -72,7 +73,7 @@ function buttonRow(dialog: SolveNode, ctx: SolveContext): ButtonRow {
   const inputs: BoxChildInput[] = [SPACER];
   const buttonSlots: number[] = [];
   for (const role of dialogButtonRoles(dialog.node.type)) {
-    const minSize = ctx.combinedMinimumSize(dialogButtonNode(dialog, role, ctx.theme));
+    const minSize = ctx.combinedMinimumSize(dialogButtonNode(dialog, role));
     buttonSlots.push(inputs.length);
     inputs.push({
       minSize,
@@ -101,7 +102,7 @@ function buttonRow(dialog: SolveNode, ctx: SolveContext): ButtonRow {
 export function dialogGeometry(dialog: SolveNode, size: Vector2, ctx: SolveContext): DialogGeometry {
   const panel = dialogPanelBox(dialog, ctx.theme);
   const margins = contentMarginSize(panel);
-  const { buttonsSeparation } = dialogConstants(dialog, ctx.theme);
+  const separation = buttonsSeparation(dialog, ctx.theme);
   const row = buttonRow(dialog, ctx);
 
   const rowRect: Rect2 = {
@@ -114,7 +115,7 @@ export function dialogGeometry(dialog: SolveNode, size: Vector2, ctx: SolveConte
     x: panel.contentMargin.left,
     y: panel.contentMargin.top,
     w: size.x - margins.x,
-    h: size.y - margins.y - row.minimum.y - buttonsSeparation,
+    h: size.y - margins.y - row.minimum.y - separation,
   };
 
   const rects = resortBoxContainer(
@@ -150,24 +151,11 @@ function wrapWidth(dialog: SolveNode, otherMinimumWidth: number, marginsWidth: n
 
 /** The message label's combined minimum, wrapped at `width` when `dialog_autowrap` is on. */
 function messageMinimumSize(dialog: SolveNode, ctx: SolveContext, width: number): Vector2 {
-  const label = messageLabelNode(dialog, { asCached: true });
+  const label = cachedMessageLabelNode(dialog);
   return labelMinimumSize(label, {
     ...ctx,
     tentativeRect: (n) => (n === label ? { x: 0, y: 0, w: width, h: 0 } : undefined),
   });
-}
-
-/** The largest combined minimum of the authored Controls the dialog places (`dialogs.cpp:281-300`). */
-function authoredMinimumSize(dialog: SolveNode, ctx: SolveContext): Vector2 {
-  let x = 0;
-  let y = 0;
-  for (const child of dialog.children) {
-    if (!isLaidOutChild(dialog, child)) continue;
-    const childMin = ctx.combinedMinimumSize(child);
-    x = Math.max(x, childMin.x);
-    y = Math.max(y, childMin.y);
-  }
-  return { x, y };
 }
 
 /**
@@ -176,20 +164,20 @@ function authoredMinimumSize(dialog: SolveNode, ctx: SolveContext): Vector2 {
  */
 export const dialogContentsMinimumSize: MinimumSizeFn = (dialog, ctx) => {
   const margins = contentMarginSize(dialogPanelBox(dialog, ctx.theme));
-  const { buttonsSeparation } = dialogConstants(dialog, ctx.theme);
+  const separation = buttonsSeparation(dialog, ctx.theme);
   const row = buttonRow(dialog, ctx).minimum;
-  const authored = authoredMinimumSize(dialog, ctx);
+  const authored = largestLaidOutChildMinimum(dialog, ctx);
   const widthWithoutMessage = Math.max(row.x, authored.x);
   const message = messageMinimumSize(dialog, ctx, wrapWidth(dialog, widthWithoutMessage, margins.x));
   const content = { x: Math.max(authored.x, message.x), y: Math.max(authored.y, message.y) };
   return {
     x: Math.max(row.x, content.x) + margins.x,
-    y: content.y + row.y + buttonsSeparation + margins.y,
+    y: content.y + row.y + separation + margins.y,
   };
 };
 
 /** Every authored Control takes the content rect (`dialogs.cpp:249-259`). */
 export const dialogLayout: ContainerLayoutFn = (dialog, children, rect, ctx) => {
   const { content } = dialogGeometry(dialog, { x: rect.w, y: rect.h }, ctx);
-  return new Map(children.map(({ node }) => [node.path, content]));
+  return everyChildFills(children, content);
 };
