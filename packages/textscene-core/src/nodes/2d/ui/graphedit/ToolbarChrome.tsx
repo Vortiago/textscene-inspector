@@ -27,19 +27,10 @@ import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { iconOnlyButtonIconRectIn } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatButtonBoxes } from '../../../../r3f/controls/native/flatButtonBoxes';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
-
-/**
- * `flat_button_pressed` (`default_theme.cpp:363-364`): `button_pressed` with `bg_color * Color(1, 1, 1, 0.85)`.
- * Every button is a `FlatButton` (`:3249`), whose `normal` and `disabled` boxes are `StyleBoxEmpty`
- * (`default_theme.cpp:360-370`), so only a pressed toggle draws a box.
- */
-function flatButtonPressedStyleBox(base: StyleBoxFlatData): StyleBoxFlatData {
-  return { ...base, bgColor: { ...base.bgColor, a: base.bgColor.a * 0.85 } };
-}
 
 interface GraphEditToolbarProps {
   toolbar: GraphEditToolbar;
@@ -110,7 +101,7 @@ export function GraphEditToolbarChrome({
 }: GraphEditToolbarProps) {
   const items = canvasSubOrders(slot, TOOLBAR_ITEM_PIECES);
   const panelStyle = useMemo(() => graphEditMenuPanelStyleBox(theme), [theme]);
-  const pressedStyle = useMemo(() => flatButtonPressedStyleBox(theme.widgets.button.pressed), [theme]);
+  const pressedStyle = useMemo(() => flatButtonBoxes(theme).pressed, [theme]);
   const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_DEFAULT_FONT_COLOR), [tint.own]);
   const fieldColor = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
   const arrowColor = useItemLinearColor(fieldColor);

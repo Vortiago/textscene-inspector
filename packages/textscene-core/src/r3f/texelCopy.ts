@@ -36,25 +36,35 @@ export function reversedTexelRows(width: number, height: number): TexelPlacement
 
 /**
  * What a copy does to each texel. `decode` fills an SRGB8_ALPHA8 storage from bytes, which it
- * encodes back to the same byte. `encode` fills an RGBA8 storage from an SRGB8_ALPHA8 one, whose
- * sample decoded the stored byte. `none` copies the texel as it is. `opaque` and `decode-opaque`
- * write alpha 1, as Godot samples a viewport without `transparent_bg` with `swizzle_a = ONE`
+ * encodes back to the same byte. `encode` fills an RGBA8 storage from linear texels, those of an
+ * SRGB8_ALPHA8 storage or a half float, and clamps them to what 8 bits hold, as the screen blit
+ * does (`blit.glsl:136`). `none` copies the texel as it is. The `-opaque` transfers write alpha 1,
+ * as Godot samples a viewport without `transparent_bg` with `swizzle_a = ONE`
  * (`texture_storage.cpp:3641-3642`): a SUB or MUL item that lowers the alpha never shows through.
  */
-export type TexelTransfer = 'none' | 'decode' | 'encode' | 'opaque' | 'decode-opaque';
+export type TexelTransfer = 'none' | 'decode' | 'encode' | 'opaque' | 'decode-opaque' | 'encode-opaque';
+
+const OPAQUE_TRANSFER: Record<'none' | 'decode' | 'encode', TexelTransfer> = {
+  none: 'opaque',
+  decode: 'decode-opaque',
+  encode: 'encode-opaque',
+};
 
 /** The transfer a viewport's frame copy takes: `colour`, with alpha 1 unless `isTransparent`. */
-export function viewportTransfer(colour: 'none' | 'decode', isTransparent: boolean): TexelTransfer {
-  if (isTransparent) return colour;
-  return colour === 'none' ? 'opaque' : 'decode-opaque';
+export function viewportTransfer(
+  colour: 'none' | 'decode' | 'encode',
+  isTransparent: boolean
+): TexelTransfer {
+  return isTransparent ? colour : OPAQUE_TRANSFER[colour];
 }
 
 const TRANSFERS: Record<TexelTransfer, string> = {
   none: 'texel',
   decode: 'vec4( sRGBTransferEOTF( texel ).rgb, texel.a )',
-  encode: 'vec4( sRGBTransferOETF( texel ).rgb, texel.a )',
+  encode: 'vec4( sRGBTransferOETF( clamp( texel, 0.0, 1.0 ) ).rgb, texel.a )',
   opaque: 'vec4( texel.rgb, 1.0 )',
   'decode-opaque': 'vec4( sRGBTransferEOTF( texel ).rgb, 1.0 )',
+  'encode-opaque': 'vec4( sRGBTransferOETF( clamp( texel, 0.0, 1.0 ) ).rgb, 1.0 )',
 };
 
 const copyFragment = (transfer: TexelTransfer) => /* glsl */ `
@@ -73,13 +83,12 @@ void main() {
  * The passes of one renderer, one per transfer, not per copy: three leaves a dispose listener that
  * closes over the renderer on each material it draws.
  */
-const copyPassesFor = perObject<THREE.WebGLRenderer, Record<TexelTransfer, THREE.ShaderMaterial>>(() => ({
-  none: copyPass('none'),
-  decode: copyPass('decode'),
-  encode: copyPass('encode'),
-  opaque: copyPass('opaque'),
-  'decode-opaque': copyPass('decode-opaque'),
-}));
+const copyPassesFor = perObject<THREE.WebGLRenderer, Record<TexelTransfer, THREE.ShaderMaterial>>(
+  () =>
+    Object.fromEntries(
+      (Object.keys(TRANSFERS) as TexelTransfer[]).map((transfer) => [transfer, copyPass(transfer)])
+    ) as Record<TexelTransfer, THREE.ShaderMaterial>
+);
 
 function copyPass(transfer: TexelTransfer): THREE.ShaderMaterial {
   return fullScreenPass(`TexelCopy:${transfer}`, copyFragment(transfer), {

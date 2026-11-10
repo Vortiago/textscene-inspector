@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import { offscreenRendererState } from '../../../nodes/viewport/subviewport/offscreenRenderer.testkit';
 import { createCanvasFrame } from './canvasFrame';
 import { registerCanvasGroup } from '../../canvasGroup/canvasGroupPass';
-import { canvasColorSpaceOf, SRGB_CANVAS } from '../../canvasColorSpace';
+import { canvasColorSpaceOf } from '../../canvasColorSpace';
 import { innermostStep, startFrameProfile } from '../../frameProfile/frameProfile';
 import { profiledRendererMembers } from '../../frameProfile/frameProfile.testkit';
 import type { RenderStep } from '../../frameProfile/frameStats';
@@ -52,7 +52,7 @@ const camera = new THREE.OrthographicCamera();
 
 /** A frame at `samples`, as `useMultisampledTarget` sets them. */
 function multisampledFrame(samples: number): ReturnType<typeof createCanvasFrame> {
-  const frame = createCanvasFrame(SRGB_CANVAS);
+  const frame = createCanvasFrame(canvasColorSpaceOf(false));
   frame.samples = samples;
   return frame;
 }
@@ -236,7 +236,7 @@ describe('createCanvasFrame', () => {
   });
 
   it('blends sRGB numbers in an sRGB canvas: RGBA8 under an sRGB tag, which three encodes into', () => {
-    const frame = createCanvasFrame(SRGB_CANVAS);
+    const frame = createCanvasFrame(canvasColorSpaceOf(false));
     expect(frame.texture.internalFormat).toBe('RGBA8');
     expect(frame.texture.colorSpace).toBe(THREE.SRGBColorSpace);
     frame.dispose();

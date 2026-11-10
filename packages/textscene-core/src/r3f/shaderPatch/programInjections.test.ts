@@ -236,13 +236,13 @@ const INJECTIONS: readonly InjectionCase[] = [
     'lighting2d/canvasItemLighting.ts',
     'canvas item lighting',
     ['basic'],
-    () => canvasItemLightingProps(lightUniforms()).injection
+    () => canvasItemLightingProps(lightUniforms(), false).injection
   ),
   injected(
     'lighting2d/normalMappedLighting.ts',
     'normal-mapped canvas item lighting',
     ['basic'],
-    () => normalMappedLightingProps(normalMappedUniforms(), 1).injection
+    () => normalMappedLightingProps(normalMappedUniforms(), 1, false).injection
   ),
   injected('lightmap/lightmapProgram.ts', 'lightmap read', LIT, () => LIGHTMAP_PROGRAM),
   injected('tileTexturePadding.ts', 'tile texture padding', COLOUR, () => TILE_TEXTURE_PADDING),

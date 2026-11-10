@@ -44,10 +44,10 @@ describe('rendersOwnVisual', () => {
   });
 
   it('reports a parsed-but-undrawn type as not-implemented', () => {
-    // `FileDialog` is parsed and validated, and nothing draws it, so the badge says
+    // `MultiMeshInstance3D` is parsed and validated, and nothing draws it, so the badge says
     // "not implemented". A parser registration alone never clears it.
-    expect(nodeRegistry.getRegistration('FileDialog')).not.toBeNull();
-    expect(rendersOwnVisual('FileDialog')).toBe('not-implemented');
+    expect(nodeRegistry.getRegistration('MultiMeshInstance3D')).not.toBeNull();
+    expect(rendersOwnVisual('MultiMeshInstance3D')).toBe('not-implemented');
   });
 
   it('reports every registered type as one of the three states', () => {

@@ -95,7 +95,12 @@ export interface LiveTreeEntry {
  */
 function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
   const own = scopeOf(node, scope);
-  return collapseInstance(node, own, loadedInstance(node, own, sceneCache), sceneCache);
+  return collapseInstance(
+    node,
+    own,
+    loadedInstance(lookupInstance(node, own, sceneCache), own, sceneCache),
+    sceneCache
+  );
 }
 
 /** The collapse of `node` over the scene it instances, unchanged where there is none or Godot refuses it. */
@@ -128,19 +133,24 @@ interface LoadedInstance {
   isRefused: boolean;
 }
 
-/**
- * The loaded scene `node` instances where its scope is `own`, or null where it instances none,
- * a scene that already encloses it, or one the cache has not loaded.
- */
+/** What the cache answers for the scene `node` instances: null is a failed load, undefined is no answer yet. */
+interface InstanceLookup {
+  scenePath: string | null;
+  cached: CachedScene | null | undefined;
+}
+
+function lookupInstance(node: LiveNode, own: SceneScope, sceneCache: CachedSceneSource): InstanceLookup {
+  const scenePath = loadableScenePath(node, own);
+  return { scenePath, cached: scenePath ? sceneCache.getCached(scenePath) : undefined };
+}
+
+/** The loaded scene a lookup found, or null where `node` instances none, an enclosing scene, or one not loaded. */
 function loadedInstance(
-  node: LiveNode,
+  { scenePath, cached }: InstanceLookup,
   own: SceneScope,
   sceneCache: CachedSceneSource
 ): LoadedInstance | null {
-  const scenePath = loadableScenePath(node, own);
-  if (!scenePath) return null;
-  const cached = sceneCache.getCached(scenePath);
-  if (!cached) return null;
+  if (!scenePath || !cached) return null;
   return { scenePath, cached, isRefused: isRefusedScene(cached, scenePath, own, sceneCache) };
 }
 
@@ -170,9 +180,13 @@ function holdsRefusedInstance(
   scenes: CachedSceneSource
 ): boolean {
   const content = contentScopeOf(cached, chain);
-  const isRefusedAt = (node: TscnNode): boolean =>
-    (loadedInstance(node, scopeOf(node, content), scenes)?.isRefused ?? false) ||
-    node.children.some(isRefusedAt);
+  const isRefusedAt = (node: TscnNode): boolean => {
+    const own = scopeOf(node, content);
+    return (
+      (loadedInstance(lookupInstance(node, own, scenes), own, scenes)?.isRefused ?? false) ||
+      node.children.some(isRefusedAt)
+    );
+  };
   return cached.nodes.some(isRefusedAt);
 }
 
@@ -442,6 +456,8 @@ export interface LiveStep {
   readonly scope: SceneScope;
   /** Whether the node instances a scene that Godot refuses to instantiate, which draws as a failed load. */
   readonly isRefusedInstance: boolean;
+  /** Whether the loader failed to load the scene the node instances, as opposed to not having loaded it yet. */
+  readonly isFailedInstance: boolean;
   /** What is below the node, in the order the tree shows it. */
   readonly groups: readonly LiveChildGroup[];
 }
@@ -459,7 +475,8 @@ function liveStep(
 ): LiveStep {
   const instancePath = liveInstancePath(node, groupScope);
   const own = scopeOf(node, groupScope);
-  const instanced = loadedInstance(node, own, sceneCache);
+  const lookup = lookupInstance(node, own, sceneCache);
+  const instanced = loadedInstance(lookup, own, sceneCache);
   const merged = collapseInstance(node, own, instanced, sceneCache);
   if (merged === node) {
     const groups = liveChildGroups(node, own, instanced, glbCache);
@@ -469,6 +486,7 @@ function liveStep(
       instancePath,
       scope: own,
       isRefusedInstance: instanced?.isRefused ?? false,
+      isFailedInstance: lookup.scenePath !== null && lookup.cached === null,
       groups,
     };
   }
@@ -479,6 +497,7 @@ function liveStep(
     instancePath,
     scope: groups[0]!.scope,
     isRefusedInstance: false,
+    isFailedInstance: false,
     groups,
   };
 }

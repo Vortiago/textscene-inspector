@@ -115,3 +115,18 @@ describe('the drawing buffer alpha', () => {
     expect(fragments.some((fragment) => fragment.includes(WRITES_ALPHA_ONE))).toBe(false);
   });
 });
+
+const ENCODES_AND_WRITES_ALPHA_ONE = 'vec4( sRGBTransferOETF( clamp( texel, 0.0, 1.0 ) ).rgb, 1.0 )';
+
+describe('the drawing buffer copy', () => {
+  it('converts the linear frame of an HDR root to sRGB and clamps it, as the screen blit does', async () => {
+    const fragments = await copyFragmentsOneFrameIn('[rendering]\nviewport/hdr_2d=true\n');
+    expect(fragments.some((fragment) => fragment.includes(ENCODES_AND_WRITES_ALPHA_ONE))).toBe(true);
+  });
+
+  it('copies the sRGB frame of a root with no hdr_2d as it is', async () => {
+    const fragments = await copyFragmentsOneFrameIn('[rendering]\nviewport/hdr_2d=false\n');
+    expect(fragments).not.toHaveLength(0);
+    expect(fragments.some((fragment) => fragment.includes('sRGBTransfer'))).toBe(false);
+  });
+});

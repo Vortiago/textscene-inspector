@@ -12,7 +12,9 @@ renders_as: one term over the whole light buffer that every lit CanvasItem multi
 DirectionalLight2D lights the whole canvas with `color` and `energy`, and draws nothing
 itself. It reaches every lit item on its canvas layers whatever the item's `light_mask` or
 `z_index`. The previewer adds it to the light buffer a PointLight2D uses. The three panels
-take one warm light, and the clear colour below them takes none.
+take one warm light, and the clear colour below them takes none. In a `use_hdr_2d` canvas the light
+adds to the linear albedo with no clamp, and its colour stays as authored (`canvas.glsl:715-760`).
+The SubViewport sheet shows it.
 
 ## Hard shadows: a parallel shadow map
 <!-- compare: image=unit-directionallight2d-shadow status=done fixture=unit-directionallight2d-shadow.tscn -->

@@ -9,7 +9,7 @@ import { act, renderHook } from '@testing-library/react';
 import * as THREE from 'three';
 import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
 import { canvasMapProps } from '../../canvas2DTextureDecode';
-import { SRGB_CANVAS } from '../../canvasColorSpace';
+import { canvasColorSpaceOf } from '../../canvasColorSpace';
 import { useIconTexture, useOptionalIconTexture, useNodeIcon } from './useIconTexture';
 import { fakeCanvasRenderer } from '../../testing/fakeCanvasRenderer';
 import { TextureSampler2DContext } from '../../canvasItemTextureSampler';
@@ -47,7 +47,7 @@ describe('useIconTexture', () => {
   });
 
   it('turns on the sRGB multiply every painter draws it through', () => {
-    const { result } = renderHook(() => canvasMapProps(useIconTexture(ICON), SRGB_CANVAS));
+    const { result } = renderHook(() => canvasMapProps(useIconTexture(ICON), canvasColorSpaceOf(false)));
 
     expect(result.current.defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
   });

@@ -27,12 +27,7 @@ import { CanvasItemProvider } from './components/CanvasItemGroup';
 import { canvasRenderOrder } from './canvasPaintOrder';
 import { CanvasModulateContext } from './canvasModulate';
 import { WHITE_MODULATE } from './canvasItemModulate';
-import {
-  canvasColorSpaceOf,
-  CanvasColorSpaceProvider,
-  SRGB_CANVAS,
-  type CanvasColorSpace,
-} from './canvasColorSpace';
+import { canvasColorSpaceOf, CanvasColorSpaceProvider, type CanvasColorSpace } from './canvasColorSpace';
 import { type CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
 import type { Rgba } from '../godot/math/math';
 import { CanvasItemMaterialBlendMode, CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial';
@@ -92,6 +87,7 @@ const MODEL: TileSetModel = {
     [1, atlasSource(1)],
     [FAILED_SOURCE, atlasSource(FAILED_SOURCE)],
   ]),
+  sceneSources: new Map(),
 };
 
 function cell(sourceId: number, x: number, y: number, alternativeId = 0): PlacedCell {
@@ -116,7 +112,7 @@ function render(
     material = null,
     canvasModulate = WHITE_MODULATE,
     selfTint = WHITE_MODULATE,
-    space = SRGB_CANVAS,
+    space = canvasColorSpaceOf(false),
   }: Layer = {}
 ) {
   const fake = createFakeResourceLoader();

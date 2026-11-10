@@ -22,6 +22,7 @@ import {
   BUTTON_DEFAULT_FONT_COLOR,
   buttonLabelShape,
 } from './nativeSolver';
+import { resolveToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { controlProps } from '../control/testing/controlProps';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
@@ -487,5 +488,28 @@ describe('buttonLabelShape: the wrap width and trim flags reach the shaper (butt
       'alpha ',
       'bravo',
     ]);
+  });
+});
+
+describe('a pressed toggle Button (base_button.cpp:326-352, button.cpp:303-312)', () => {
+  it('draws pressed only for a toggle that is on, and disabled wins', () => {
+    expect(resolveToggleDrawState(false, true)).toBe('pressed');
+    expect(resolveToggleDrawState(false, false)).toBe('normal');
+    expect(resolveToggleDrawState(true, true)).toBe('disabled');
+  });
+
+  it('takes the pressed font colour: control_font_pressed_color, white (default_theme.cpp:108,155)', () => {
+    expect(buttonTextTheme(node({}), {} as ButtonProperties, 'pressed', ctx()).color).toEqual({
+      r: 1,
+      g: 1,
+      b: 1,
+      a: 1,
+    });
+  });
+
+  it('takes the icon_pressed_color override over the white default', () => {
+    const red = { r: 1, g: 0, b: 0, a: 1 };
+    expect(buttonIconColor({ icon_pressed_color: red }, 'pressed')).toEqual(red);
+    expect(buttonIconColor({}, 'pressed')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 });

@@ -5,6 +5,8 @@
  * (`default_theme_icons_builders.py`). Licence: Godot Engine, MIT, see THIRD-PARTY-NOTICES.md.
  */
 
+import type { FileDialogThemeIcon } from '../../../godot/scene/fileDialog';
+
 export function svgDataUrl(base64: string): string {
   return `data:image/svg+xml;base64,${base64}`;
 }
@@ -208,11 +210,11 @@ const ARROW_DOWN_B64 =
 const ARROW_UP_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTExLjAxMTA2MyA5Ljk3NzYyNDYtMy4wMjIyMDk0LTIuOTc3NjI0Ni0yLjk3NzYyNDcgMy4wMjIyMSIvPjwvc3ZnPgo=';
 
-/** `scene/theme/icons/arrow_right.svg` (16x16): FoldableContainer's `folded_arrow`. */
+/** `scene/theme/icons/arrow_right.svg` (16x16): FoldableContainer's `folded_arrow` and FileDialog's `forward_folder`. */
 const ARROW_RIGHT_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTYgMTEgMy0zLTMtMyIvPjwvc3ZnPgo=';
 
-/** `scene/theme/icons/arrow_left.svg` (16x16): FoldableContainer's `folded_arrow_mirrored` (RTL only, never selected here). */
+/** `scene/theme/icons/arrow_left.svg` (16x16): FoldableContainer's `folded_arrow_mirrored` (RTL only) and FileDialog's `back_folder`. */
 const ARROW_LEFT_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTkgMTEtMy0zIDMtMyIvPjwvc3ZnPgo=';
 
@@ -444,3 +446,64 @@ export const GRAPH_EDIT_MINIMAP_RESIZER_ICON = svgDataUrl(GRAPH_EDIT_MINIMAP_RES
 
 /** Every GraphEdit/GraphEditMinimap icon above shares this authored size: 16x16, never rescaled by the project theme scale (same limitation as `SPIN_BOX_ARROW_ICON_SIZE`). */
 export const GRAPH_EDIT_ICON_SIZE = 16;
+
+/** `scene/theme/icons/folder_up.svg` (16x16), bound as `FileDialog/parent_folder` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_PARENT_FOLDER_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTggMTFWNG00IDRMOCA0IDQgOCIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/reload.svg` (16x16), bound as `FileDialog/reload` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_RELOAD_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTUgOGE0IDQgMCAxIDEgNCA0djJhNiA2IDAgMSAwLTYtNkgxbDMgNCAzLTR6Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/favorite.svg` (16x16), bound as `FileDialog/favorite` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_FAVORITE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0iTTggMS43IDUuNjI2IDUuNzk3IDEgNi44OTVsMy4yMzYgMy40MDgtLjM1OSA0LjY3MyA0LjE0LTEuOTc3IDQuMTU3IDEuOTQyLS4zOTYtNC42NTNMMTUgNi44OTVsLTQuNjI2LTEuMDk4eiIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/folder_create.svg` (16x16), bound as `FileDialog/create_folder` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_CREATE_FOLDER_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTIgM2ExIDEgMCAwIDAtMSAxdjEwYTEgMSAwIDAgMCAxIDFoOHYtMUg4di00aDJWOGg0djJoMVY3YTEgMSAwIDAgMC0xLTFoLTRhMSAxIDAgMCAxLTEtMVY0YTEgMSAwIDAgMC0xLTFaIi8+PHBhdGggZmlsbD0iI2ZlZmZmZSIgZD0iTTEzIDEzaDJ2LTJoLTJWOWgtMnYySDl2MmgydjJoMnoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/visibility_visible.svg` (16x16), bound as `FileDialog/toggle_hidden` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_TOGGLE_HIDDEN_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTggMkM1LjQ0MyAyIDIuMjA5IDMuOTQ4IDEuMDQ1IDcuNzA1YTEgMSAwIDAgMCAwIC41NUMyLjE2MyAxMi4yMTEgNS41IDE0IDggMTRzNS44MzYtMS43ODkgNi45NjEtNS43MjVhMSAxIDAgMCAwIDAtLjU1QzEzLjg2MSAzLjkzNSAxMC41NTQgMiA4IDJ6bTAgMmE0IDQgMCAwIDEgMCA4IDQgNCAwIDAgMSAwLTh6bTAgMmEyIDIgMCAwIDAgMCA0IDIgMiAwIDAgMCAwLTR6Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/file_mode_thumbnail.svg` (16x16), bound as `FileDialog/thumbnail_mode` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_THUMBNAIL_MODE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0ibTIgMnY1aDV2LTV6bTcgMHY1aDV2LTV6bS03IDd2NWg1di01em03IDB2NWg1di01eiIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/file_mode_list.svg` (16x16), bound as `FileDialog/list_mode` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_LIST_MODE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0ibTIgMnYyaDJ2LTJ6bTQgMHYyaDh2LTJ6bS00IDV2Mmgydi0yem00IDB2Mmg4di0yem0tNCA1djJoMnYtMnptNCAwdjJoOHYtMnoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/toggle_filename_filter.svg` (16x16), bound as `FileDialog/toggle_filename_filter` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_TOGGLE_FILENAME_FILTER_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGcgZmlsbD0iI2UwZTBlMCI+PHBhdGggZD0ibTEzLjI5Ny43MTRoLTEzLjAxM2EuNDU0LjQ1NCAwIDAgMCAtLjMxOC43NzlsNC42MTUgNC41MDd2Ny4wODZhLjQ1LjQ1IDAgMCAwIC43MzguMzU0bDMuNTExLTIuODEyYS40NTQuNDU0IDAgMCAwIC4xNy0uMzU0di00LjI3NGw0LjYxNC00LjUwNmEuNDU0LjQ1NCAwIDAgMCAtLjMxNy0uNzc5eiIvPjxwYXRoIGQ9Im0xMS4wODU4MzIgMTQuMTgxOTZjMy4zOTk0NDMgMS45NzQ1NyA2Ljg1NTkyNS0yLjQ0MTA5NCA0LjA3NDEwMi01LjE4MTUxNjQtMi43ODE4MjUtMi43NDA0MjE3LTcuMjY0MjAwOC42NjQ2MTc0LTUuMjU5Nzk5NCA0LjAxMzQ2NTRsLTEuOTAwMTM0NiAxLjg3MTg1NCAxLjE4NTY5NzMgMS4xNjgwNTF6bTEuNjk5NzIzLTQuNDk0NTk4MWMyLjIzNjEwOSAwIDIuMjM2MTA5IDMuMzA0MjQ0MSAwIDMuMzA0MjQ0MS0yLjIzNjEwOCAwLTIuMjM2MTA4LTMuMzA0MjQ0MSAwLTMuMzA0MjQ0MXoiLz48L2c+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/sort.svg` (16x16), bound as `FileDialog/sort` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_SORT_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0iTTkgMXYyaDZWMXpNNCAxYTEgMSAwIDAgMC0uNjkxLjI5MWwtMiAyYTEgMSAwIDAgMCAxLjQxNCAxLjQxNGwuMjkzLS4yOTN2Ny4xNzJsLS4yOTMtLjI5M2ExIDEgMCAwIDAtMS40MTQgMS40MTRsMiAyYTEgMSAwIDAgMCAxLjQxNCAwbDItMmExIDEgMCAwIDAtMS40MTQtMS40MTRsLS4yOTMuMjkzVjQuNDEybC4yOTMuMjkzYTEgMSAwIDAgMCAxLjQxNC0xLjQxNGwtMi0yQTEgMSAwIDAgMCA0IDF6bTUgNnYyaDRWN3ptMCA2djJoMnYtMnoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/move_up.svg` (16x16), bound as `FileDialog/favorite_up` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_FAVORITE_UP_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTBlMGUwIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTYgMTRoNG0tMi00VjJtNCA1TDggMiA0IDciLz48L3N2Zz4K';
+
+/** `scene/theme/icons/move_down.svg` (16x16), bound as `FileDialog/favorite_down` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_FAVORITE_DOWN_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTBlMGUwIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTEwIDJINm0yIDR2OE00IDlsNCA1IDQtNSIvPjwvc3ZnPgo=';
+
+/** The vendored default of each `FileDialog` theme icon the toolbar buttons show (`default_theme.cpp:702-716`). `back_folder` and `forward_folder` are `arrow_left.svg` and `arrow_right.svg`. */
+export const FILE_DIALOG_ICON_URLS: Readonly<Record<FileDialogThemeIcon, string>> = {
+  back_folder: svgDataUrl(ARROW_LEFT_B64),
+  forward_folder: svgDataUrl(ARROW_RIGHT_B64),
+  parent_folder: svgDataUrl(FILE_DIALOG_PARENT_FOLDER_B64),
+  reload: svgDataUrl(FILE_DIALOG_RELOAD_B64),
+  favorite: svgDataUrl(FILE_DIALOG_FAVORITE_B64),
+  create_folder: svgDataUrl(FILE_DIALOG_CREATE_FOLDER_B64),
+  toggle_hidden: svgDataUrl(FILE_DIALOG_TOGGLE_HIDDEN_B64),
+  thumbnail_mode: svgDataUrl(FILE_DIALOG_THUMBNAIL_MODE_B64),
+  list_mode: svgDataUrl(FILE_DIALOG_LIST_MODE_B64),
+  toggle_filename_filter: svgDataUrl(FILE_DIALOG_TOGGLE_FILENAME_FILTER_B64),
+  sort: svgDataUrl(FILE_DIALOG_SORT_B64),
+  favorite_up: svgDataUrl(FILE_DIALOG_FAVORITE_UP_B64),
+  favorite_down: svgDataUrl(FILE_DIALOG_FAVORITE_DOWN_B64),
+};

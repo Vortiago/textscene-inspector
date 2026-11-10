@@ -462,7 +462,7 @@ Each piece owns a slot inside its parent's, so a piece can hand out sub-orders o
 _Avoid_: "render-order offset", "fraction".
 
 **Canvas colour space** (`r3f/canvasColorSpace.ts`):
-Whether a canvas multiplies sRGB numbers into an 8-bit target, or linear values into a half-float one. Only a sub-viewport with `use_hdr_2d` draws a linear canvas. Its target, texture views, material defines and tint all follow this one value.
+Whether a canvas multiplies sRGB numbers into an 8-bit target, or linear values into a half-float one. A viewport with `use_hdr_2d` draws a linear canvas: a SubViewport, the canvas over its 3D world, and the root under `rendering/viewport/hdr_2d`. Its target, texture views, material defines and tint all follow this one value.
 _Avoid_: "HDR mode", "linear mode".
 
 **Flipbook cell** (`r3f/particlesFlipbook.ts`):
@@ -475,7 +475,7 @@ One of the instances a MultiMesh draws: the first `visible_instance_count`, or a
 _Avoid_: "visible instance" for the record, which names only the count.
 
 **Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
-The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.
+The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). It stores sRGB numbers, or linear half floats in a linear canvas colour space, which the root's copy to the drawing buffer converts to sRGB. Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.
 _Avoid_: "MSAA frame".
 
 **Group window** (`r3f/canvasGroup/canvasGroupPass.ts`):
@@ -497,6 +497,14 @@ _Avoid_: "quadrant" for this, "sub-quadrant".
 **Drawable cell** (`resources/tileset/drawableCell.ts`):
 A placed tile cell whose atlas source, tile and alternative tile all exist, so Godot draws it (`tile_map_layer.cpp:527-531`).
 _Avoid_: "valid cell".
+
+**Scene tile** (`resources/tileset/sceneTileCells.ts`):
+A cell that names a tile of a `TileSetScenesCollectionSource`. Its layer instantiates the tile's scene as a child at the cell (`tile_map_layer.cpp:1569-1659`).
+_Avoid_: "scene cell", "instance tile".
+
+**Unowned node** (`LiveNode.isUnowned`):
+A node that a layer adds to the live tree and the edited scene does not own. The Scene dock lists no row for it, and a click on it selects its owner (`scene_tree_editor.cpp:278-290`).
+_Avoid_: "internal node" for this, "hidden node".
 
 **Viewport mode**:
 The single `'2D' | '3D'` display state of the centre viewport: `3D` mounts the R3F canvas, and `2D` mounts the pannable 2D stage.
@@ -534,6 +542,10 @@ _Avoid_: "viewport container" for the concept. "render target" for the surface.
 **Embedded window** (`nodes/windows/window/`):
 A visible Window, Popup or PopupPanel that a viewport draws on its own canvas instead of the system's. The window's Controls draw into its target as a **sub-viewport**'s do, rooted at the window itself (ADR-0033).
 _Avoid_: "dialog" for the base case. "native window", which Godot draws through the system.
+
+**Dialog body** (`nodes/windows/filedialog/body.ts`):
+The Controls a dialog's constructor `memnew`s above its button row, which no scene serialises, such as a FileDialog's `main_vbox`. They are synthetic `SolveNode`s in the dialog's scope, solved by the Control solver and painted by `DialogChrome`.
+_Avoid_: "dialog content", which is the rect that authored children fill.
 
 **Embedder**:
 The viewport that draws an **Embedded window**: the nearest viewport above it with `gui_embed_subwindows`, the root through `display/window/subwindows/embed_subwindows`. It draws each window's frame, title, close icon and target on its subwindow canvas, layer 1024, in stack order (`viewport.cpp:342-401`).

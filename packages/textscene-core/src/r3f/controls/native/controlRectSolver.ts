@@ -40,7 +40,7 @@ export interface SolvedControl {
    * True when the parent's layout reset this node to rotation 0 and scale 1, as
    * `Container::fit_child_in_rect` does.
    */
-  resetsTransform?: boolean;
+  resetsChildTransform?: boolean;
 }
 
 // --- Anchors ---------------------------------------------------------------
@@ -151,17 +151,17 @@ export function normalizeContainerLayoutResult(result: ReadonlyMap<string, Rect2
   rects: ReadonlyMap<string, Rect2>;
   meta: SealedHandoff | undefined;
   childScales: ReadonlyMap<string, Vector2> | undefined;
-  resetsTransform: boolean;
+  resetsChildTransform: boolean;
 } {
   if ('rects' in result) {
     return {
       rects: result.rects,
       meta: result.meta,
       childScales: result.childScales,
-      resetsTransform: result.resetsChildTransform ?? true,
+      resetsChildTransform: result.resetsChildTransform ?? true,
     };
   }
-  return { rects: result, meta: undefined, childScales: undefined, resetsTransform: true };
+  return { rects: result, meta: undefined, childScales: undefined, resetsChildTransform: true };
 }
 
 /**
@@ -239,17 +239,6 @@ function hasSizeDependentMinimum(roots: readonly SolveNode[]): boolean {
 
 // --- Phase 2: top-down rect assignment ---------------------------------------
 
-function record(
-  n: SolveNode,
-  rect: Rect2,
-  minSize: Vector2,
-  out: Map<string, SolvedControl>,
-  scale?: Vector2,
-  resetsTransform?: boolean
-): void {
-  out.set(n.path, { rect, minSize, scale, resetsTransform });
-}
-
 /**
  * Solves `n`'s own rect against `parentRect` on the free path
  * (`Control::_size_changed`), then dispatches its children.
@@ -262,7 +251,7 @@ function solveFree(
   viewport: Rect2,
   ctx: SolveContext,
   out: Map<string, SolvedControl>,
-  resetsTransform?: boolean
+  resetsChildTransform?: boolean
 ): void {
   const minSize = ctx.combinedMinimumSize(n);
   let rect: Rect2;
@@ -279,7 +268,7 @@ function solveFree(
     );
     if (n.rtl) rect = mirrorRectRtl(rect, anchorable.w);
   }
-  record(n, rect, minSize, out, undefined, resetsTransform);
+  out.set(n.path, { rect, minSize, resetsChildTransform });
   dispatchChildren(n, rect, { x: origin.x + rect.x, y: origin.y + rect.y }, viewport, ctx, out);
 }
 
@@ -320,12 +309,12 @@ function dispatchChildren(
     rects: childRects,
     meta: containerMeta,
     childScales,
-    resetsTransform,
+    resetsChildTransform,
   } = normalizeContainerLayoutResult(containerFn(sortableView(n), childEntries, rect, ctx));
 
   // A child the layout does not place stays free against the rect `parentAnchorableRect` gives
   // it: zero for a promoted one, the boundary's own for one a canvas boundary adopted.
-  for (const child of unplaced) solveFree(child, rect, origin, viewport, ctx, out, resetsTransform);
+  for (const child of unplaced) solveFree(child, rect, origin, viewport, ctx, out, resetsChildTransform);
 
   // The caller has already recorded `n`, so the handoff is patched in.
   if (containerMeta !== undefined) {
@@ -357,7 +346,12 @@ function dispatchChildren(
       );
       childRect = child.rtl ? mirrorRectRtl(floored, rect.w) : floored;
     }
-    record(child, childRect, minSize, out, childScales?.get(child.path), resetsTransform);
+    out.set(child.path, {
+      rect: childRect,
+      minSize,
+      scale: childScales?.get(child.path),
+      resetsChildTransform,
+    });
     dispatchChildren(
       child,
       childRect,

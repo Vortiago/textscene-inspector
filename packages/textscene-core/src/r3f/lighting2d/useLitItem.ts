@@ -8,6 +8,7 @@
 import { useMemo, useRef, useState, type RefObject } from 'react';
 import * as THREE from 'three';
 import { useCanvasModulate } from '../canvasModulate.js';
+import { canvasNumbersOf, useCanvasColorSpace } from '../canvasColorSpace.js';
 import { type CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types.js';
 import { useCanvasLighting2D, useCapItemLights, useRegisterLitItem } from './CanvasLighting2D.js';
 import {
@@ -150,6 +151,7 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
   // The raw canvas tint, not the light-mode-gated one: the shader divides out
   // exactly what the CPU folded in, and the floor is applied on both sides.
   const canvasModulate = useCanvasModulate();
+  const canvasSpace = useCanvasColorSpace();
   const lightMode = material?.lightMode ?? CanvasItemMaterialLightMode.NORMAL;
   const lightOnly = lightMode === CanvasItemMaterialLightMode.LIGHT_ONLY;
 
@@ -180,12 +182,14 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
   // The provider owns these textures and this vector, so a resize or a
   // reallocation reaches every item without a re-render.
   bound.resolution.value = resolution;
-  (bound.canvasModulate.value as THREE.Vector3).set(canvasModulate.r, canvasModulate.g, canvasModulate.b);
+  const tint = useMemo(() => canvasNumbersOf(canvasSpace, canvasModulate), [canvasSpace, canvasModulate]);
+  (bound.canvasModulate.value as THREE.Vector3).set(tint.r, tint.g, tint.b);
   // The mode rides the uniforms too: a re-parse changes `light_mode` under a
   // mounted item, and three would keep the program it first compiled.
   bound.lightMode.value = lightMode;
 
-  const plainProps = useMemo(() => canvasItemLightingProps(bound), [bound]);
+  const { isLinear: isLinearCanvas } = canvasSpace;
+  const plainProps = useMemo(() => canvasItemLightingProps(bound, isLinearCanvas), [bound, isLinearCanvas]);
   return useMemo(
     () => ({ placement, lightMode, list, plain: bound, plainProps, geometryRef }),
     [placement, lightMode, list, bound, plainProps]
@@ -195,17 +199,20 @@ export function useLitItem({ material, lightMask = 1, zFinal }: LitItemOptions):
 /**
  * The material props of one surface of `item`, which declare the accumulation the surface reads.
  * A surface with a normal map takes each light apart, and one without takes the item's plain
- * accumulation, so the surfaces of one item may read both.
+ * accumulation, so the surfaces of one item may read both. A surface that does not draw, such as
+ * a sprite with no texture (`sprite_2d.cpp:159`), declares no read, so the pass adds no accumulation.
  */
 export function useSurfaceLighting(
   item: LitItem,
-  surface: CanvasItemSurface | null
+  surface: CanvasItemSurface | null,
+  isDrawn: boolean
 ): CanvasItemLightingProps {
   const { placement, lightMode, list, plain, plainProps } = item;
+  const { isLinear: isLinearCanvas } = useCanvasColorSpace();
   const readsNormals = surface !== null && lightMode !== CanvasItemMaterialLightMode.UNSHADED;
   const lightOnly = lightMode === CanvasItemMaterialLightMode.LIGHT_ONLY;
   const read: LitItemRead = readsNormals ? 'apart' : lightOnly ? 'lightOnly' : 'plain';
-  useRegisterLitItem(placement, read);
+  useRegisterLitItem(placement, isDrawn ? read : null);
 
   // A normal map scales each light by its own normal term, so it shades the lights the list keeps
   // apart.
@@ -216,7 +223,8 @@ export function useSurfaceLighting(
   // Mode-independent by design: the props change only with the count of lights kept apart, which
   // sizes the program, and the key that follows it remounts the material.
   return useMemo(
-    () => (shaded && apartCount > 0 ? normalMappedLightingProps(shaded, apartCount) : plainProps),
-    [plainProps, shaded, apartCount]
+    () =>
+      shaded && apartCount > 0 ? normalMappedLightingProps(shaded, apartCount, isLinearCanvas) : plainProps,
+    [plainProps, shaded, apartCount, isLinearCanvas]
   );
 }

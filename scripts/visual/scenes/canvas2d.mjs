@@ -42,6 +42,9 @@ export const CANVAS_2D_SCENES = [
   // orphan; (120,40) green, its child re-rooted on its own; (40,120) blue, below a moved parent that
   // does not apply. Dropped, all three are the grey background.
   { name: 'orphan-reroot', file: 'unit-orphan-reroot.tscn', mode: '2d' },
+  // A closed BEVEL Line2D whose width curve is 0 at its start: Godot 4.6.3 `--mode 2d` draws no
+  // closing segment, so (100,250) on the left side is the background, rgb(76).
+  { name: 'line2d-closed-width-curve-zero', file: 'unit-line2d-closed-width-curve-zero.tscn', mode: '2d' },
   // A ScriptCreateDialog is an editor class: a game loads a placeholder, and its children still draw.
   { name: 'script-create-dialog-placeholder', file: 'unit-script-create-dialog-placeholder.tscn', mode: '2d' },
   // Two chained Bone2Ds, each turned and moved, with a bar under each. Godot
@@ -157,6 +160,13 @@ export const CANVAS_2D_SCENES = [
   // of it, 24 left, 24 right, 100 right, 100 above and 100 below: Plain rgb(226, 244, 168, 128, 160, 161),
   // FlippedH rgb(128, 170, 244, 225, 161, 161) and Transposed rgb(160, 206, 205, 161, 226, 128).
   { name: 'tilemaplayer-normal-map', file: 'unit-tilemaplayer-normal-map.tscn', mode: '2d' },
+  // The same tiles over a padded CanvasTexture whose diffuse windows a SubViewport. Godot 4.6.3
+  // `--mode 2d`: rgb(0) at (192,324), (576,324) and (960,224), the unrendered target, unlit.
+  {
+    name: 'tilemaplayer-normal-map-padded-viewport',
+    file: 'unit-tilemaplayer-normal-map-padded-viewport.tscn',
+    mode: '2d',
+  },
   // A Line2D whose CanvasTexture carries a normal map; only the item's rotation turns the normal. Godot
   // 4.6.3 `--mode 2d`: Vertical rgb(226) at (100,324), rgb(160) at (200,224) and rgb(161) at (200,424).
   // Turned rgb(161) at (852,324), rgb(226) at (952,224) and rgb(128) at (952,424).
@@ -740,6 +750,7 @@ export const CANVAS_2D_SCENES = [
   // stored. Godot 4.6.3 `--mode 2d`: (150,150) rgb(54,54,54) grey, (250,150) rgb(127,128,0) the linear
   // blend, (350,150) rgb(255,255,63) a value above 1, and (350,350) rgb(255,160,31) the same at modulate 0.5.
   { name: 'sub-viewport-hdr-2d', file: 'unit-sub-viewport-hdr-2d.tscn', mode: '2d' },
+  { name: 'sub-viewport-hdr-2d-light', file: 'unit-sub-viewport-hdr-2d-light.tscn', mode: '2d' },
   // A DirectionalLight2D shadow inside a sub-viewport, beside a sun outside it. Godot 4.6.3
   // `--mode 2d`: (150,150) rgb(63,63,63) in the Wall's shadow, (250,150) rgb(158,110,87) lit by
   // the inside sun, and (600,155) rgb(84,114,84) lit by the outside sun alone. The outside sun
@@ -1196,6 +1207,14 @@ export const CANVAS_2D_SCENES = [
   { name: 'confirmation-dialog-embedded', file: 'unit-confirmation-dialog-embedded.tscn', mode: '2d' },
   // A Theme on the dialog restyles its Button and Label: a red normal box, yellow focus text, green message. Max 7, mean 0.33.
   { name: 'accept-dialog-theme', file: 'unit-accept-dialog-theme.tscn', mode: '2d' },
+  // A visible FileDialog in Open File mode with an empty file list: toolbar, side lists, filter and a disabled OK. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-open-empty', file: 'file-dialog-open-empty/unit-file-dialog-open-empty.tscn', mode: '2d' },
+  // Save File mode adds the create-folder button, the title "Save a File" and an enabled Save. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-save-empty', file: 'file-dialog-save-empty/unit-file-dialog-save-empty.tscn', mode: '2d' },
+  // A CheckBox option and a value option draw the options row and the option grid. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-options', file: 'file-dialog-options/unit-file-dialog-options.tscn', mode: '2d' },
+  // current_path puts the dialog in a sub folder and a file name in the File field, its name before the dot selected. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-current-path', file: 'file-dialog-current-path/unit-file-dialog-current-path.tscn', mode: '2d' },
 
   // MeshInstance2D draws a mesh through the canvas. Godot 4.6.3 `--mode 2d` probes: the textured QuadMesh
   // shows its texture upside down, (75,75) blue and (75,125) red, and the PlaneMesh at (100,300) draws

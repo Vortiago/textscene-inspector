@@ -26,6 +26,7 @@ import { errorsOf } from '../../linter/testing/tierLists';
 import { settleLoads } from '../../r3f/testing/settleLoads';
 import '../../r3f/nodes'; // side-effect: registers every node's r3f component
 import '../../linter/index'; // side-effect: registers every node's linter validators
+import { canvasColorSpaceOf } from '../../r3f/canvasColorSpace';
 
 function parseLightNode(tscn: string): TscnNode {
   const light = flatten(new TscnParser().parse(tscn)).find((n) => n.type === 'PointLight2D');
@@ -57,7 +58,7 @@ async function renderScene(tscn: string) {
       {/* The light's camera layer is its cull-mask class's layer, and only
           the provider assigns one. Mounted here so the quad these pins
           look for lands where the real 2D stage puts it. */}
-      <CanvasLighting2DProvider canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
+      <CanvasLighting2DProvider space={canvasColorSpaceOf(false)} canvasModulate={{ r: 1, g: 1, b: 1, a: 1 }}>
         <NodeDispatcher nodes={scene.nodes} />
       </CanvasLighting2DProvider>
     </SceneStack>

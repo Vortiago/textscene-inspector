@@ -420,6 +420,14 @@ export function projectTransparentBackground(settings: ProjectSettings | null): 
 }
 
 /**
+ * `rendering/viewport/hdr_2d`, which the root viewport takes (`scene/main/scene_tree.cpp:2088-2089`).
+ * Off by default (`rendering_server.cpp:3771`).
+ */
+export function projectUsesHdr2D(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['rendering/viewport/hdr_2d']) === true;
+}
+
+/**
  * The `internationalization/*` settings `Control::is_layout_rtl()` reads, as the four
  * booleans its branches produce ({@link LayoutDirectionEnv}). Two inputs are plain
  * settings (`core/config/project_settings.cpp:1797-1798`), and the RTL locale table is

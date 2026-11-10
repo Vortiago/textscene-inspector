@@ -38,6 +38,35 @@ export const TILE_AND_TARGET_SCENES = [
     file: 'unit-tile-map-layer-texture-padding.tscn',
     mode: '2d',
   },
+  // The scenes of a TileSetScenesCollectionSource instantiated at their cells, and the editor's
+  // placeholder disc for the tiles that ask for it (Gizmos on). Verified against Godot 4.6.3.
+  { name: 'tile-map-layer-scene-tiles', file: 'unit-tile-map-layer-scene-tiles.tscn', mode: '2d' },
+  {
+    name: 'tile-map-layer-scene-tile-control-sort',
+    file: 'unit-tile-map-layer-scene-tile-control-sort.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'tile-map-layer-scene-tile-control-odd-grid',
+    file: 'unit-tile-map-layer-scene-tile-control-odd-grid.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'tile-map-layer-scene-tile-control-top-level',
+    file: 'unit-tile-map-layer-scene-tile-control-top-level.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'tile-map-layer-scene-tile-control-z',
+    file: 'unit-tile-map-layer-scene-tile-control-z.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'tile-map-layer-scene-tile-placeholders',
+    file: 'unit-tile-map-layer-scene-tile-placeholders.tscn',
+    mode: '2d',
+    gizmos: true,
+  },
   // A tile's own TileData. Each scene moves one property, and its header says why.
   { name: 'tile-map-layer-tile-modulate', file: 'unit-tile-map-layer-tile-modulate.tscn', mode: '2d' },
   { name: 'tile-map-layer-tile-material', file: 'unit-tile-map-layer-tile-material.tscn', mode: '2d' },
@@ -121,6 +150,9 @@ export const TILE_AND_TARGET_SCENES = [
   // quad's blend rgb(187,188,0) and value above 1 rgb(255,255,136), against rgb(127,128,0) and
   // rgb(255,252,100) on the sRGB quad.
   { name: 'sub-viewport-hdr-2d-world', file: 'unit-sub-viewport-hdr-2d-world.tscn', camera: 'Root/Camera3D' },
+  // A 3D world in a `use_hdr_2d` SubViewport tonemaps with no sRGB encode: the container shows the
+  // 0.5 gray quad as byte 55, where the sRGB viewport shows 127.
+  { name: 'sub-viewport-hdr-3d-world', file: 'unit-sub-viewport-hdr-3d-world.tscn', mode: '2d' },
   // `tonemap_exposure` under LINEAR inside the target, with glow on the main view: the exposure
   // applies inside the target and again on the quad.
   { name: 'sub-viewport-shared-world-exposure', file: 'unit-sub-viewport-shared-world-exposure.tscn' },
@@ -186,6 +218,11 @@ export const TILE_AND_TARGET_SCENES = [
   // why no other golden shows them.
   { name: 'msaa-3d', file: 'msaa-3d/unit-msaa-3d.tscn' },
   { name: 'msaa-2d', file: 'msaa-2d/unit-msaa-2d.tscn', mode: '2d' },
+  // The root viewport's hdr_2d, from a Fixture project's project.godot: the root canvas draws linear
+  // half floats and the copy to the screen converts them to sRGB. Every other golden runs at the default, off.
+  { name: 'hdr-2d', file: 'hdr-2d/unit-hdr-2d.tscn', mode: '2d' },
+  // Lighting in that root: the linear albedo plus an unclamped light, with the authored light colour.
+  { name: 'hdr-2d-lights', file: 'hdr-2d/unit-hdr-2d-lights.tscn', mode: '2d' },
   { name: 'sub-viewport-msaa', file: 'unit-sub-viewport-msaa.tscn', mode: '2d' },
   // Alpha antialiasing's three modes on a scissor cut: under msaa_3d 2X, from its own Fixture project,
   // and at one sample, where the coverage is all or none.

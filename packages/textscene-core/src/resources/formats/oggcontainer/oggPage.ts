@@ -19,6 +19,9 @@ export const FULL_SEGMENT = 255;
 
 const OGG_PAGE_MAGIC = 'OggS';
 const OGG_FIXED_HEADER_BYTES = 27;
+const STREAM_STRUCTURE_VERSION_BYTES = 1;
+const GRANULE_POSITION_BYTES = 8;
+const PAGE_SEQUENCE_NUMBER_BYTES = 4;
 const CHECKSUM_OFFSET = 22;
 const CHECKSUM_BYTES = 4;
 const CHECKSUM_END = CHECKSUM_OFFSET + CHECKSUM_BYTES;
@@ -52,11 +55,11 @@ export function readOggPage(reader: ByteReader): OggPage | null {
   if (reader.remaining < OGG_FIXED_HEADER_BYTES) return null;
   const start = reader.position;
   if (!hasAsciiPrefix(reader.take(OGG_PAGE_MAGIC.length), OGG_PAGE_MAGIC)) return null;
-  reader.take(1); // stream structure version
+  reader.take(STREAM_STRUCTURE_VERSION_BYTES);
   const flags = reader.u8();
-  reader.take(8); // granule position
+  reader.take(GRANULE_POSITION_BYTES);
   const serial = reader.u32();
-  reader.take(4); // page sequence number
+  reader.take(PAGE_SEQUENCE_NUMBER_BYTES);
   const checksum = reader.u32();
   const lacing = reader.take(reader.u8());
   const segments = Array.from(lacing, (length) => reader.take(length));

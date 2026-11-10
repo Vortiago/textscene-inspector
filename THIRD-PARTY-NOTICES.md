@@ -113,6 +113,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/windows/window/contentFill.ts` | `scene/gui/popup.cpp` (`PopupPanel::_get_contents_minimum_size`, `_update_child_rects`) and `scene/gui/dialogs.cpp` (`AcceptDialog::_update_child_rects`, `_get_contents_minimum_size`) |
 | `packages/textscene-core/src/nodes/windows/acceptdialog/dialogLayout.ts` | `scene/gui/dialogs.cpp` (`AcceptDialog::_update_child_rects`, `_get_contents_minimum_size`) |
 | `packages/textscene-core/src/nodes/windows/acceptdialog/dialogParts.ts` | `scene/gui/dialogs.cpp` (`AcceptDialog::AcceptDialog`'s internal Label, Button row and panel, `_update_theme_item_cache`) |
+| `packages/textscene-core/src/nodes/windows/filedialog/body.ts` | `scene/gui/file_dialog.cpp` (`FileDialog::FileDialog`'s Control tree, `update_customization`, `_update_option_controls`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/fitChildInRect.ts` | `scene/gui/container.cpp` (`Container::fit_child_in_rect`) and `scene/gui/control.h` (the `SizeFlags` bitmask, `Container::as_sortable_control`'s visibility test) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/boxContainerSolver.ts` | `scene/gui/box_container.cpp` (`BoxContainer::_resort`, `BoxContainer::get_minimum_size`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/splitContainerSolver.ts` | `scene/gui/split_container.cpp` (`SplitContainer::_update_default_dragger_positions`, `_update_dragger_positions`, `_get_valid_range`, `_get_separation`, `_resort`, `get_minimum_size`, `SplitContainerDragger::_notification`'s `NOTIFICATION_DRAW` icon-draw condition) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
@@ -213,7 +214,8 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/textureprogressbar/radialFill.ts` | `scene/gui/texture_progress_bar.cpp` (`get_relative_center`, `draw_circular_progress` and its `radial_initial_angle`/`radial_fill_degrees` fan) and `core/math/math_funcs.h` (`Math::fposmod`) |
 | `packages/textscene-core/src/resources/curves/curve/sample.ts` | `scene/resources/curve.cpp` (`Curve::sample`, `Curve::sample_local_nocheck`, `Curve::get_index`) and `core/math/math_funcs.h` (`Math::bezier_interpolate`) |
 | `packages/textscene-core/src/resources/curves/curve/bakedSample.ts` | `scene/resources/curve.cpp` (`Curve::_bake`, `Curve::sample_baked`) |
-| `packages/textscene-core/src/nodes/shared/cpuparticles/godotRng.ts` | `core/math/random_pcg.h` (`RandomPCG::seed`, `RandomPCG::randf`), `thirdparty/misc/pcg.cpp` (`pcg32_random_r`, `pcg32_srandom_r` — see the PCG note below), `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (`idhash`, `rand_from_seed`) |
+| `packages/textscene-core/src/godot/math/randomPcg.ts` | `core/math/random_pcg.h` (`RandomPCG::seed`, `RandomPCG::randf`), `thirdparty/misc/pcg.cpp` (`pcg32_random_r`, `pcg32_srandom_r` — see the PCG note below) |
+| `packages/textscene-core/src/nodes/shared/cpuparticles/godotRng.ts` | `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (`idhash`, `rand_from_seed`) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/simulate.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`: the cycle bookkeeping, the restart branch and its emission shapes, the alive branch, the appearance pass, `_update_particle_data_buffer` with `SortLifetime`, and the `_update_internal` preprocess loop) and `core/math/color.cpp` (the YIQ-style hue-rotation basis) |
 | `packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/simulate.ts` | `scene/3d/cpu_particles_3d.cpp` (`_particles_process`, the emission shapes and `_update_particle_data_buffer`) |
 | `packages/textscene-core/src/nodes/shared/cpuparticles/process.ts` | `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (the `_update_internal` settle loop, the restart instant and the particle colour) |
@@ -623,7 +625,7 @@ SOFTWARE.
 
 <https://www.pcg-random.org>
 
-`packages/textscene-core/src/nodes/shared/cpuparticles/godotRng.ts` reproduces the minimal
+`packages/textscene-core/src/godot/math/randomPcg.ts` reproduces the minimal
 PCG32 generator (`pcg32_random_r` / `pcg32_srandom_r`), because CPUParticles2D's particle
 layout IS that generator's output and a statistically-equivalent substitute would put
 every particle somewhere else. Godot vendors the same implementation under
