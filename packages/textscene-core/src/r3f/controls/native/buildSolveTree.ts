@@ -957,34 +957,19 @@ function buildForest(
   };
 }
 
-/** The Control forest of `nodes`, a scene's roots or a SubViewport's children. */
+/** The Control forest of `nodes`: a scene's roots, a SubViewport's children, or the unowned nodes of a tile layer. */
 export function useBuildSolveTree(
   nodes: readonly TscnNode[],
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
   /** `ForestStart.inheritedRtl`. */
-  inheritedRtl: boolean | null = null
+  inheritedRtl: boolean | null = null,
+  /** The run of draws the roots take. A tile layer's scene tiles sit among the draws of the layer's children. */
+  rootRange: PaintRange = WHOLE_CANVAS_RANGE
 ): UseBuildSolveTreeResult {
   const start = useMemo(
-    () => ({ inheritedRtl, contentRoot: null, themeOwners: NO_OWNERS, rootRange: WHOLE_CANVAS_RANGE }),
-    [inheritedRtl]
-  );
-  return useSolveForest(nodes, externalResources, internalResources, start);
-}
-
-/**
- * The Control forest of unowned `nodes` (`LiveNode.isUnowned`), drawn from the run `rootRange`, not
- * from the whole canvas: a tile layer's scene tiles sit among the draws of the layer's children.
- */
-export function useBuildUnownedTree(
-  nodes: readonly TscnNode[],
-  externalResources: readonly TscnExternalResource[],
-  internalResources: readonly TscnInternalResource[],
-  rootRange: PaintRange
-): UseBuildSolveTreeResult {
-  const start = useMemo(
-    () => ({ inheritedRtl: null, contentRoot: null, themeOwners: NO_OWNERS, rootRange }),
-    [rootRange]
+    () => ({ inheritedRtl, contentRoot: null, themeOwners: NO_OWNERS, rootRange }),
+    [inheritedRtl, rootRange]
   );
   return useSolveForest(nodes, externalResources, internalResources, start);
 }

@@ -1,7 +1,7 @@
 /**
  * The editor's placeholder discs for a tile layer's scene tiles, drawn as a gizmo while the Gizmos
  * toggle is on. Godot draws them in a child canvas item of the layer (`tile_map_layer.cpp:157-166`),
- * so the layer's inherited modulate tints them; the gizmo layer draws above every canvas item, as
+ * so the layer's inherited modulate tints them. The gizmo layer draws above every canvas item, as
  * that item's top z_index does.
  */
 

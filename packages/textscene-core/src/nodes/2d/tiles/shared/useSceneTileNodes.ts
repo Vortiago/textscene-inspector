@@ -117,10 +117,11 @@ export function useSceneTileNodes(
     // Every tile of a scene solves the same root, so the first tile reports it for all.
     const reporting = new Set<TileScene>();
     for (const sceneTile of tiles) {
-      const scene = placeable.get(sceneTile.tile.scene!);
+      const tileScene = sceneTile.tile.scene!;
+      const scene = placeable.get(tileScene);
       if (!scene) continue;
-      const reports = !reporting.has(sceneTile.tile.scene!);
-      reporting.add(sceneTile.tile.scene!);
+      const reports = !reporting.has(tileScene);
+      reporting.add(tileScene);
       placed.push(placementNode(names.nameAt(sceneTile.cell.coords), sceneTile, scene, model, reports));
     }
     return {
@@ -194,7 +195,7 @@ function rootKindOf(rootType: string): SceneRootKind | null {
 /** The instance root as the sort reads it, given where the placement node puts it in the layer. */
 type YSortRootAt = (placement: Vector2) => YSortRoot;
 
-/** A Node2D root has its own transform and z. */
+/** The sort root of a scene's root: a Control by its solved rect, a Node2D by its own transform and z. */
 function ySortRootOf(
   rootNode: LiveNode,
   root: SceneRootKind,

@@ -11,17 +11,15 @@ import {
   TILE_TRANSFORM_TRANSPOSE,
 } from '../../../../godot/scene/tileSet';
 import type { PlacedCell } from '../shared/tileData';
-import type { TscnScene } from '../../../../parser/types';
 import {
   SCENE_TILESET_RESOURCES,
   boxesInPaintOrder,
   drawnMeshes,
   drawnBoxes,
   onlyMesh,
-  nodesOfType,
+  withCells,
   renderSceneTiles,
 } from '../shared/sceneTiles.testkit';
-import type { TileMapLayerProperties } from './types';
 
 function layerScene(layerExtra = ''): string {
   return `[gd_scene format=3]
@@ -47,11 +45,6 @@ const cell = (
   alternativeId,
   ...overrides,
 });
-
-/** Sets the cells of the layer, which the parse would read from `tile_map_data`. */
-const withCells = (cells: PlacedCell[]) => (scene: TscnScene) => {
-  (nodesOfType(scene, 'TileMapLayer')[0]!.properties as TileMapLayerProperties).cells = cells;
-};
 
 function renderWithProbe(cells: PlacedCell[], layerExtra = '', authoredChildren = '') {
   return renderSceneTiles(layerScene(layerExtra) + authoredChildren, { prepare: withCells(cells) });

@@ -14,7 +14,7 @@ import type { TileMapLayerData } from './types';
 interface LayerPlaceholdersProps {
   grid: TileSetModel;
   layers: readonly TileMapLayerData[];
-  /** The placeholder tiles of every layer; a tile belongs to the layer whose cells hold its cell. */
+  /** The placeholder tiles of every layer. A tile belongs to the layer whose cells hold its cell. */
   tiles: readonly SceneTileCell[];
   /** The TileMap's inherited modulate. */
   modulate: Rgba;

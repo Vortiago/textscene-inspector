@@ -362,6 +362,11 @@ export function boxesInPaintOrder(renderer: Renderer): Box[] {
     .map(({ box }) => box);
 }
 
+/** Sets the cells of the layer, which the parse would read from `tile_map_data`. */
+export const withCells = (cells: PlacedCell[]) => (scene: TscnScene) => {
+  (nodesOfType(scene, 'TileMapLayer')[0]!.properties as TileMapLayerProperties).cells = cells;
+};
+
 /** Sets the cells of each layer of a TileMap, which the parse would read from `layer_N/tile_data`. */
 export const withLayerCells =
   (...layerCells: PlacedCell[][]) =>

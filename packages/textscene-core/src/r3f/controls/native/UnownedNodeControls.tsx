@@ -13,7 +13,7 @@ import type { SolvedControl } from './controlRectSolver';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import { usePaintRange } from '../../contexts/PaintOrderContext';
 import { useSceneResources } from '../../SceneResourcesContext';
-import { useBuildUnownedTree } from './buildSolveTree';
+import { useBuildSolveTree } from './buildSolveTree';
 import { ZERO_RECT } from '../../../godot/math/rect2';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
 import { nativeTheme } from './nativeTheme';
@@ -27,10 +27,11 @@ export default function UnownedNodeControls({ node }: { node: LiveNode }) {
   const { themeScale } = useProjectSettings();
   const theme = nativeTheme(themeScale);
   const nodes = useMemo(() => [node], [node]);
-  const { tree, generation } = useBuildUnownedTree(
+  const { tree, generation } = useBuildSolveTree(
     nodes,
     externalResources,
     internalResources,
+    null,
     usePaintRange()
   );
   // The placement's position is the one the tile sets on a Control root before the snap.

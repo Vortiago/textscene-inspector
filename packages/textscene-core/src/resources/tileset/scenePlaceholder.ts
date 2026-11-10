@@ -8,7 +8,7 @@ import { hsvToRgb } from '../../godot/math/color.js';
 import { hashIntArray } from '../../godot/math/hashFuncs.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Vector2 } from '../../godot/math/vector.js';
-import { GodotRandomPCG } from '../../nodes/shared/cpuparticles/godotRng.js';
+import { GodotRandomPCG } from '../../godot/math/randomPcg.js';
 import { mapToLocalPx } from './tilePlacement.js';
 import type { SceneTileCell } from './sceneTileCells.js';
 import type { TileGrid } from './types.js';
@@ -27,7 +27,7 @@ export interface PlaceholderCircle {
 
 /**
  * The disc's colour, drawn from the hash of the cell's source id and its alternative, transform
- * bits included (`:1681-1693`). Hue takes the top byte of the first `RandomPCG` word; saturation
+ * bits included (`:1681-1693`). Hue takes the top byte of the first `RandomPCG` word. Saturation
  * and value take the next two bytes, each lerped into the upper half.
  */
 function placeholderColor(sourceId: number, alternativeId: number): Rgba {

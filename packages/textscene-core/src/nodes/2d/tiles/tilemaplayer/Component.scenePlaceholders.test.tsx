@@ -5,13 +5,11 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { TscnScene } from '../../../../parser/types';
 import type { PlacedCell } from '../shared/tileData';
-import { drawnBoxes, nodesOfType, onlyMesh, renderSceneTiles } from '../shared/sceneTiles.testkit';
+import { drawnBoxes, onlyMesh, renderSceneTiles, withCells } from '../shared/sceneTiles.testkit';
 import { PLACEHOLDER_TILESET_RESOURCES } from '../shared/scenePlaceholders.testkit';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { placeholderColorOf } from '../../../../resources/tileset/scenePlaceholder.testkit';
-import type { TileMapLayerProperties } from './types';
 
 const layerScene = (layerExtra = '') => `[gd_scene format=3]
 
@@ -29,10 +27,6 @@ const cell = (x: number, y: number, alternativeId: number, sourceId = 0): Placed
   atlasCoords: { x: 0, y: 0 },
   alternativeId,
 });
-
-const withCells = (cells: PlacedCell[]) => (scene: TscnScene) => {
-  (nodesOfType(scene, 'TileMapLayer')[0]!.properties as TileMapLayerProperties).cells = cells;
-};
 
 async function renderLayer(cells: PlacedCell[], options: { showGizmos: boolean; layerExtra?: string }) {
   const { renderer } = await renderSceneTiles(layerScene(options.layerExtra), {
