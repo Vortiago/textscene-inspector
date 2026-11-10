@@ -21,7 +21,7 @@ import { measureText } from './text/measurer';
 export default function UnownedNodeControls({ node }: { node: LiveNode }) {
   const { externalResources, internalResources } = useSceneResources();
   const { themeScale } = useProjectSettings();
-  const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
+  const theme = nativeTheme(themeScale);
   const nodes = useMemo(() => [node], [node]);
   const { tree, generation } = useBuildUnownedTree(
     nodes,
@@ -30,7 +30,7 @@ export default function UnownedNodeControls({ node }: { node: LiveNode }) {
     usePaintRange()
   );
   // The placement's position is the one the tile sets on a Control root before the snap.
-  const placement = (node.properties as { position: Vector2 }).position;
+  const placement = (node.properties as { position?: Vector2 }).position;
   // The first tree node is the Control root the placement holds, which the tile layer sorts on.
   const rootPath = tree[0]?.path;
   const { reportRootRect } = node;

@@ -185,7 +185,7 @@ function ControlItemGroup({
   theme,
   measureText,
   snapToPixels,
-  rootOffset = ZERO_OFFSET,
+  rootOffset,
 }: ControlNodeGroupProps) {
   const props = controlProps(solveNode);
   const state = useControlState(solveNode, props);
@@ -220,13 +220,15 @@ function ControlItemGroup({
   // Godot snaps the canvas item, leaving `get_rect()` at full precision. The inner
   // pivot groups add their own translation, so this is the outer half of one
   // snapped origin.
+  // Only a Control under the skipped placement chain has the offset in its position. A `top_level` one does not.
+  const offset = solveNode.skippedAncestors && rootOffset ? rootOffset : ZERO_OFFSET;
   const snapped = snappedControlOrigin(
-    { x: rect.x + rootOffset.x, y: rect.y + rootOffset.y },
+    { x: rect.x + offset.x, y: rect.y + offset.y },
     { rotation, scale: { x: scaleX, y: scaleY }, pivot: { x: pivotX, y: pivotY } },
     snapToPixels
   );
-  // The parent group adds `rootOffset` back.
-  const origin = { x: snapped.x - rootOffset.x, y: snapped.y - rootOffset.y };
+  // The parent group adds the offset back.
+  const origin = { x: snapped.x - offset.x, y: snapped.y - offset.y };
 
   const Painter = controlComponentRegistry.get(solveNode.node.type) ?? ControlFallback;
   const childElements = solveNode.children.map((child) => (

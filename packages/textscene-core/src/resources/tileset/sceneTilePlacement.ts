@@ -19,7 +19,7 @@ export type SceneRootKind = 'node2d' | 'control';
 /**
  * A Node2D root takes `xform * own transform`, where `xform` flips and transposes the axes and
  * moves to the cell (`tile_map_layer.cpp:1706-1723`). A Control root only moves to the cell:
- * `position = map_to_local(coords) + own position` (`:1632-1633`).
+ * `position = map_to_local(coords) + own position` (`:1636`).
  */
 export function sceneTilePlacement(
   grid: TileGrid,
