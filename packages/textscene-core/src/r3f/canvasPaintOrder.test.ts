@@ -152,9 +152,8 @@ describe('paintRangeSize', () => {
     // Each layer is an internal child CanvasItem (`tile_map.cpp:279`), so it
     // needs a value of its own. A fixed reserve runs out past its size.
     const children = [node('Marker', 'Sprite2D')];
-    // A TileMap also holds back the room its scene tile instances take, whatever the layer count.
-    const perLayer = paintRangeSize(tileMap(5000, children)) - paintRangeSize(tileMap(1, children));
-    expect(perLayer).toBe(4999);
+    // A TileMap also holds back a reserve of 4096 values for its scene tile instances, after its children.
+    expect(paintRangeSize(tileMap(5000, children))).toBe(1 + 5000 + 4096);
   });
 });
 

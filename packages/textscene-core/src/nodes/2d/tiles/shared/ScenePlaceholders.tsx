@@ -29,22 +29,22 @@ interface ScenePlaceholdersProps {
 
 export function ScenePlaceholders({ grid, tiles, modulate }: ScenePlaceholdersProps) {
   const showGizmos = useShowGizmos();
-  const colourGroups = useMemo(
-    () => (showGizmos ? circlesByColour(placeholderCircles(grid, tiles)) : []),
+  const colorGroups = useMemo(
+    () => (showGizmos ? circlesByColor(placeholderCircles(grid, tiles)) : []),
     [showGizmos, grid, tiles]
   );
-  return colourGroups.map((circles) => (
-    <PlaceholderDiscs key={colourKey(circles[0]!.color)} circles={circles} modulate={modulate} />
+  return colorGroups.map((circles) => (
+    <PlaceholderDiscs key={colorKey(circles[0]!.color)} circles={circles} modulate={modulate} />
   ));
 }
 
-const colourKey = ({ r, g, b }: Rgba): string => `${r},${g},${b}`;
+const colorKey = ({ r, g, b }: Rgba): string => `${r},${g},${b}`;
 
 /** One mesh per colour: the gizmo mesh takes a single colour. Two cells share one when their ids hash alike. */
-function circlesByColour(circles: readonly PlaceholderCircle[]): PlaceholderCircle[][] {
+function circlesByColor(circles: readonly PlaceholderCircle[]): PlaceholderCircle[][] {
   const groups = new Map<string, PlaceholderCircle[]>();
   for (const circle of circles) {
-    const key = colourKey(circle.color);
+    const key = colorKey(circle.color);
     const group = groups.get(key);
     if (group) group.push(circle);
     else groups.set(key, [circle]);
