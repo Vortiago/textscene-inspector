@@ -205,6 +205,7 @@ export function GraphEditToolbarChrome({
               clippingPlanes={clippingPlanes}
               renderOrder={items.content.key}
               inset={lineEditInsetX}
+              rtl={rtl}
             />
             {spinUpTexture && (
               <CanvasItemGroup position={[upPos.x, -upPos.y, 0]} renderOrder={items.content.key}>

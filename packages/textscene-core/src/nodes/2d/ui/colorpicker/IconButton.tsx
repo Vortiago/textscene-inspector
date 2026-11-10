@@ -53,7 +53,7 @@ export function IconButton({ rect, box, size, texture, tint, iconTint, rtl, rend
           />
         </CanvasItemGroup>
       )}
-      {texture && iconRect && (
+      {iconRect && (
         <PositionedIcon
           rect={iconRect}
           texture={texture}

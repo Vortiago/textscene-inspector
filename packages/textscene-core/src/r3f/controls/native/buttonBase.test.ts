@@ -599,9 +599,14 @@ describe('iconOnlyButtonIconRect: an icon with no text sits at the left margin a
   });
 
   it('floors a centred icon of a 29x31 button to whole pixels (icon_alignment CENTER)', () => {
-    const centred = 1;
     expect(
-      iconOnlyButtonIconRectIn({ x: 0, y: 0, w: 29, h: 31 }, margin, { x: 16, y: 16 }, false, centred)
+      iconOnlyButtonIconRectIn(
+        { x: 0, y: 0, w: 29, h: 31 },
+        margin,
+        { x: 16, y: 16 },
+        false,
+        HORIZONTAL_ALIGNMENT_CENTER
+      )
     ).toEqual({
       x: 6,
       y: 7,
@@ -612,9 +617,14 @@ describe('iconOnlyButtonIconRect: an icon with no text sits at the left margin a
 });
 
 describe('buttonContentSize', () => {
-  const left = 0;
-  const center = 1;
-  const base = { textSize: { x: 50, y: 20 }, hasText: true, hSeparation: 4, verticalIconAlignment: center };
+  const left = HORIZONTAL_ALIGNMENT_LEFT;
+  const center = HORIZONTAL_ALIGNMENT_CENTER;
+  const base = {
+    textSize: { x: 50, y: 20 },
+    hasText: true,
+    hSeparation: 4,
+    verticalIconAlignment: VERTICAL_ALIGNMENT_CENTER,
+  };
 
   it('adds a side icon and the separation to the text width and floors the height on the icon', () => {
     const size = buttonContentSize({ ...base, iconSize: { x: 16, y: 24 }, iconAlignment: left });
