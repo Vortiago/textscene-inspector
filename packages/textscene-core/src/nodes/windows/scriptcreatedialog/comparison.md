@@ -2,7 +2,7 @@
 type: ScriptCreateDialog
 category: Other
 status: linter-only
-fixture: unit-script-create-dialog.tscn
+fixture: unit-script-create-dialog-placeholder.tscn
 # image: unit-script-create-dialog
 visual: false
 renders_as: nothing (a transform-only group)
