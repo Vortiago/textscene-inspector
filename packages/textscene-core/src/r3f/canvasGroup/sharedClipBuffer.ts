@@ -16,7 +16,7 @@ type CanvasFrame = ReturnType<typeof createCanvasFrame>;
 const buffersOf = perObject((_scene: THREE.Object3D) => new Map<CanvasColorSpace, CanvasFrame>());
 
 /** The clip buffer of the canvas `scene` draws, in the colour space of its frame. */
-export function sharedClipBuffer(scene: THREE.Object3D, space: CanvasColorSpace): CanvasFrame {
+function sharedClipBuffer(scene: THREE.Object3D, space: CanvasColorSpace): CanvasFrame {
   const buffers = buffersOf(scene);
   let buffer = buffers.get(space);
   if (!buffer) {

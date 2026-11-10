@@ -33,8 +33,9 @@ export function useGroupFit(margins: { fitMargin: number; clearMargin: number })
     (drawn, frameClip) => {
       // A canvas with no light pass, such as an inline SubViewport's, takes the frame's own clip.
       const framed = clip.current ?? frameClip;
-      const pixels = framed && fittedRect(drawn, framed, frameClip, fitMargin);
-      if (!framed || !pixels) return null;
+      if (!framed) return null;
+      const pixels = fittedRect(drawn, framed, frameClip, fitMargin);
+      if (!pixels) return null;
       return {
         fitted: worldBoxOfCanvasPixels(pixels, framed, fittedBox),
         cleared: worldBoxOfCanvasPixels(rect2Grow(pixels, clearMargin), framed, cleared),

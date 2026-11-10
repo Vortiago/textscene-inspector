@@ -9,7 +9,7 @@
  */
 
 import * as THREE from 'three';
-import { canvasKeyOf, drawKeyedObjects } from '../canvasKeyWindow';
+import { canvasKeyOf, drawKeyedObjects, type KeyedObjects } from '../canvasKeyWindow';
 import { isNodeIcon } from '../editorHelpers';
 import { isDrawable } from '../drawable';
 import { drawOffscreen } from '../offscreen';
@@ -208,14 +208,22 @@ function drawFrame(
   const frameTarget = gl.getRenderTarget();
   let spanFrom = Number.NEGATIVE_INFINITY;
   let isFirstSpan = true;
+  // An inert owner draws its behind children once, in the span its window starts in.
+  const emitted: InertOwner[] = [];
+  const isNotEmitted = (key: number) =>
+    isFrameKey(key) &&
+    !emitted.some((owner) => owner.behind.some((span) => key >= span.from && key < span.to));
   const drawSpan = (spanTo: number) => {
-    for (const step of drawOrderOf(isFrameKey, spanFrom, spanTo, inertOwners)) {
+    const owners = inertOwners.filter((owner) => owner.window.from >= spanFrom && owner.window.from < spanTo);
+    const accept = emitted.length > 0 ? isNotEmitted : isFrameKey;
+    for (const step of drawOrderOf(accept, spanFrom, spanTo, inertOwners)) {
       // Over the colour already drawn: the first draw is the frame's own, which may clear it.
       const drawOver = isFirstSpan ? draw : () => drawOffscreen(gl, draw);
       gl.setRenderTarget(frameTarget);
       drawKeyedObjects(keyed, step, drawOver);
       isFirstSpan = false;
     }
+    emitted.push(...owners.filter((owner) => owner.behind.length > 0));
   };
   const regions = clipping.length > 0 ? clipRegions(keyed, camera, frame, clipping) : [];
   clipping.forEach((group, i) => {
@@ -258,12 +266,29 @@ function clipGroupsDrawingNothing(
 ): CanvasGroupEntry[] {
   const clipping = [...entries].filter((group) => group.clip);
   if (clipping.length === 0) return clipping;
-  const drawsNothing = new Set(clipping);
-  for (let i = 0; i < boxes.length && drawsNothing.size > 0; i++) {
+  // The own slots `[own, own + 1)` do not overlap, so a search finds the owner of a key.
+  const byOwn = [...clipping].sort((a, b) => a.window.own - b.window.own);
+  const draws = new Set<CanvasGroupEntry>();
+  for (let i = 0; i < boxes.length && draws.size < byOwn.length; i++) {
     if (!boxes[i]) continue;
-    for (const group of clipping) if (isOwnKey(group.window, keys[i]!)) drawsNothing.delete(group);
+    const owner = ownerOfKey(byOwn, keys[i]!);
+    if (owner) draws.add(owner);
   }
-  return [...drawsNothing];
+  return clipping.filter((group) => !draws.has(group));
+}
+
+/** The group whose own slot holds `key`, among `byOwn`, which are sorted by `window.own`. */
+function ownerOfKey(byOwn: readonly CanvasGroupEntry[], key: number): CanvasGroupEntry | undefined {
+  let low = 0;
+  let high = byOwn.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const { window } = byOwn[mid]!;
+    if (key < window.own) high = mid - 1;
+    else if (key >= window.own + 1) low = mid + 1;
+    else return byOwn[mid];
+  }
+  return undefined;
 }
 
 /** `nestingOf` over the groups that are not in `inert`, which only a clipping owner with no pixel is. */
@@ -310,15 +335,14 @@ function fitGroups(
  * Every object of a scene with its paint-order key, from one walk a frame. `measured` marks the
  * objects whose box a group lists: visible, and under no node icon or group rect.
  */
-export interface KeyedScene {
+export interface KeyedScene extends KeyedObjects {
   objects: THREE.Object3D[];
   keys: number[];
+  /** Whether the object is visible and under no node icon or group rect, so a group lists it. */
   measured: boolean[];
   /** The world box of each mesh `camera` draws, null for any other object. */
   boxes: (THREE.Box3 | null)[];
-  /** The index after the last descendant of each object: its subtree is `[i, ends[i])`. */
   ends: number[];
-  /** The lowest and the highest key of each object's subtree. */
   minKeys: number[];
   maxKeys: number[];
   /** The index of the first Group drawn at each key, which is the object of a canvas item. */

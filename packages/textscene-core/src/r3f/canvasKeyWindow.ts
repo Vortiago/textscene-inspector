@@ -53,6 +53,11 @@ export interface KeyedObjects {
   maxKeys: readonly number[];
 }
 
+/** Whether `key` is below `to`; a span that ends at infinity holds the infinite key of OVER_EVERY_LAYER. */
+function isBefore(key: number, to: number): boolean {
+  return key < to || to === Number.POSITIVE_INFINITY;
+}
+
 /**
  * {@link drawCanvasKeys} over objects already keyed, for the keys `[from, to)` that `admits` lets
  * through. A subtree with no key in the span is hidden, so the render skips it whole: a frame with
@@ -67,10 +72,10 @@ export function drawKeyedObjects<T>(
 ): T {
   const rejected: THREE.Object3D[] = [];
   const hidden: THREE.Object3D[] = [];
-  const inSpan = (key: number) => key >= from && key < to && admits(key);
+  const inSpan = (key: number) => key >= from && isBefore(key, to) && admits(key);
   for (let i = start; i < end;) {
     const object = objects[i]!;
-    if (maxKeys[i]! < from || minKeys[i]! >= to) {
+    if (maxKeys[i]! < from || !isBefore(minKeys[i]!, to)) {
       if (object.visible) {
         object.visible = false;
         hidden.push(object);

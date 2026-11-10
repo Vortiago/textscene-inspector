@@ -420,6 +420,31 @@ describe('drawCanvasGroups', () => {
       expect(draws.map((draw) => draw.seen)).toEqual([['before'], ['behind'], ['front', 'after']]);
     });
 
+    it('draws the behind children of an owner that draws nothing once, when a clipping group splits its window', () => {
+      const scene = new THREE.Scene();
+      const clipOwner = item(scene, 15, 0);
+      const meshes = {
+        clipOwner,
+        clipChild: childOf(clipOwner, 16, 0),
+        behind: item(scene, 28, 0),
+      };
+      register(scene, {
+        ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }),
+        window: { own: 10, from: 10, to: 30 },
+        clip: { mode: 'clipOnly', setMasking: vi.fn(), behind: [{ from: 28, to: 29 }] },
+      });
+      register(scene, {
+        ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }),
+        window: { own: 15, from: 15, to: 20 },
+      });
+      const { gl, draws } = recordingRenderer(meshes);
+
+      drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+      const times = draws.filter((draw) => draw.target === null && draw.seen.includes('behind')).length;
+      expect(times).toBe(1);
+    });
+
     it('draws no group for a clipping owner that draws nothing, as Godot attaches no group to an item with no commands', () => {
       const scene = new THREE.Scene();
       const meshes = { before: item(scene, 5, 0), child: item(scene, 11, 0) };
