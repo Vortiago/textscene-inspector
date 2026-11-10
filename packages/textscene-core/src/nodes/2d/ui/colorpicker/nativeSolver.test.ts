@@ -8,7 +8,6 @@ import { extractHsv } from './colorModes';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
   invertRgb,
-  colorPickerScale,
   colorPickerRows,
   colorPickerMinimumSize,
   svAndHueRects,
@@ -73,16 +72,6 @@ describe('extractHsv', () => {
 
   it('is achromatic (h=0) for pure black', () => {
     expect(extractHsv({ r: 0, g: 0, b: 0, a: 1 })).toEqual({ h: 0, s: 0, v: 0 });
-  });
-});
-
-describe('colorPickerScale', () => {
-  it('is 1 at the default theme', () => {
-    expect(colorPickerScale(THEME)).toBe(1);
-  });
-
-  it("reads the theme's own raw scale", () => {
-    expect(colorPickerScale({ scale: 2 })).toBe(2);
   });
 });
 

@@ -41,7 +41,7 @@ export function LabelledText({
   tint,
   clippingPlanes,
   renderOrder,
-  alignRight,
+  alignRight = false,
   centred,
   inset = 0,
   rtl = false,
@@ -49,7 +49,7 @@ export function LabelledText({
   if (!layout) return null;
   const width = shapedTextSizeWidthPx(layout.widthPx);
   const trailing = Math.max(inset, rect.w - width - inset);
-  const x = centred ? Math.max(0, (rect.w - width) / 2) : (alignRight ?? false) !== rtl ? trailing : inset;
+  const x = centred ? Math.max(0, (rect.w - width) / 2) : alignRight !== rtl ? trailing : inset;
   const y = Math.max(0, (rect.h - layout.heightPx) / 2);
   return (
     <CanvasItemGroup position={[rect.x + x, -(rect.y + y), 0]} renderOrder={renderOrder}>

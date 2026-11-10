@@ -208,6 +208,7 @@ export function nativeTheme(scale: number): NativeTheme {
     right: scaled.contentMargin,
     bottom: scaled.contentMargin,
   };
+  const flatMenuButtonBox = flatStyleBox(TRANSPARENT, buttonMargin, 0);
   const optionButtonMargin = {
     left: scaled.optionButtonMarginX,
     top: scaled.optionButtonMarginY,
@@ -231,10 +232,7 @@ export function nativeTheme(scale: number): NativeTheme {
         disabled: flatStyleBox(STYLE_FILL.disabled, buttonMargin, scaled.cornerRadius),
         focus: focusStyleBox(buttonMargin, scaled.cornerRadius, Math.round(FOCUS_BORDER_WIDTH * scale)),
       },
-      flatMenuButton: {
-        normal: flatStyleBox(TRANSPARENT, buttonMargin, 0),
-        disabled: flatStyleBox(TRANSPARENT, buttonMargin, 0),
-      },
+      flatMenuButton: { normal: flatMenuButtonBox, disabled: flatMenuButtonBox },
       tabContainer: tabBarStyleBoxes(scale),
       lineEdit: {
         // default_theme.cpp:405-409: make_flat_stylebox(style_normal_color) + border.

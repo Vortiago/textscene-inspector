@@ -106,7 +106,7 @@ function colorPickerButtonIconVector(theme: Pick<NativeTheme, 'scale'>): Vector2
 
 /** The side of the square `menu_option` and `folded_arrow` icons (`default_theme.cpp:1088`). */
 function colorPickerButtonIconSize(theme: Pick<NativeTheme, 'scale'>): number {
-  return Math.round(COLOR_PICKER_SAMPLE_ICON_SIZE * colorPickerScale(theme));
+  return Math.round(COLOR_PICKER_SAMPLE_ICON_SIZE * theme.scale);
 }
 
 /**
@@ -131,15 +131,7 @@ function iconButtonSize(theme: Pick<NativeTheme, 'scale'>, box: StyleBoxFlatData
  * floors the icon plus the margins of the `box` the button draws (`button.cpp:525`).
  */
 function iconButtonWidth(theme: Pick<NativeTheme, 'scale'>, box: StyleBoxFlatData): number {
-  return Math.max(
-    Math.round(COLOR_PICKER_BUTTON_WIDTH * colorPickerScale(theme)),
-    iconButtonSize(theme, box).x
-  );
-}
-
-/** `ScaledGodotTheme.scale` (`godot/scene/theme.ts`): the raw `gui/theme/default_theme_scale`. */
-export function colorPickerScale(theme: Pick<NativeTheme, 'scale'>): number {
-  return theme.scale;
+  return Math.max(Math.round(COLOR_PICKER_BUTTON_WIDTH * theme.scale), iconButtonSize(theme, box).x);
 }
 
 /** `Color::inverted()` (`core/math/color.h`): flips rgb and keeps alpha. */
@@ -179,7 +171,7 @@ function shapeRowMinWidth(
   pickerShape: number | undefined
 ): number {
   if ((pickerShape ?? SHAPE_HSV_RECTANGLE) !== SHAPE_HSV_RECTANGLE) return 0;
-  const scale = colorPickerScale(theme);
+  const scale = theme.scale;
   return (
     Math.round(COLOR_PICKER_SV_SIZE * scale) + theme.separation + Math.round(COLOR_PICKER_HUE_WIDTH * scale)
   );
@@ -398,7 +390,7 @@ export function colorPickerRows(
   >,
   measure: TextWidthMeasurer | null
 ): ColorPickerRows {
-  const scale = colorPickerScale(theme);
+  const scale = theme.scale;
   const svSize = Math.round(COLOR_PICKER_SV_SIZE * scale);
   const drawShape = (props.pickerShape ?? SHAPE_HSV_RECTANGLE) === SHAPE_HSV_RECTANGLE;
   const shapeHeight = drawShape ? svSize : 0;
@@ -471,7 +463,7 @@ function contentMinWidth(
   rows: Pick<ColorPickerRows, 'modeMinWidth' | 'swatchesMinWidth'>,
   emWidthPx: number
 ): number {
-  const scale = colorPickerScale(theme);
+  const scale = theme.scale;
   const labelWidth = Math.round(COLOR_PICKER_LABEL_WIDTH * scale);
   const sliderRowWidth =
     labelWidth + 2 * theme.separation + colorPickerValueColumnWidth(valueFieldTheme, emWidthPx);
@@ -559,7 +551,7 @@ export function svAndHueRects(
   theme: Pick<NativeTheme, 'separation' | 'scale'>,
   rtl = false
 ): ShapeRowSplit {
-  const scale = colorPickerScale(theme);
+  const scale = theme.scale;
   const hueWidth = Math.round(COLOR_PICKER_HUE_WIDTH * scale);
   const svWidth = shape.w - theme.separation - hueWidth;
   return {
@@ -605,7 +597,7 @@ export function colorPickerLabelColumnWidth(
   measure: TextWidthMeasurer | null,
   labels: readonly string[]
 ): number {
-  const floor = Math.round(COLOR_PICKER_LABEL_WIDTH * colorPickerScale(theme));
+  const floor = Math.round(COLOR_PICKER_LABEL_WIDTH * theme.scale);
   if (!measure) return floor;
   let width = floor;
   for (const label of labels) width = Math.max(width, measure(label).x);
@@ -651,7 +643,7 @@ interface HexRowColumns {
 
 /** The 3-column split of `hex_hbc` (`color_picker.cpp:2191-2222`). */
 export function hexRowColumns(hex: Rect2, theme: NativeTheme, rtl = false): HexRowColumns {
-  const scale = colorPickerScale(theme);
+  const scale = theme.scale;
   const labelWidth = Math.round(COLOR_PICKER_HEX_LABEL_WIDTH * scale);
   const textTypeWidth = Math.round(COLOR_PICKER_TEXT_TYPE_WIDTH * scale);
   const fieldX = hex.x + labelWidth + theme.separation + textTypeWidth + theme.separation;

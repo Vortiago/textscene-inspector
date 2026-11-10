@@ -73,7 +73,6 @@ import {
   colorPickerLabelColumnWidth,
   modeButtonBox,
   colorPickerRows,
-  colorPickerScale,
   colorPickerSliderBoxRect,
   colorPickerSliderRowCount,
   colorPickerValueColumnWidth,
@@ -148,7 +147,7 @@ export function ColorPicker({
   const hsv = useMemo(() => extractHsv(fill), [fill]);
   const normalized = useMemo(() => colorNormalized(fill), [fill]);
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
-  const scale = colorPickerScale(theme);
+  const scale = theme.scale;
 
   const fontSizePx = theme.fontSize;
   // Read in the render body, not a `useMemo` (`Label`'s `Component.tsx` says why).

@@ -17,7 +17,6 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { DEFAULT_FONT_SIZE } from '../../../../godot/scene/theme';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -48,19 +47,9 @@ const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 /** `StyleBoxFlat`'s unset default (`style_box_flat.h:40`): `make_flat_stylebox` never sets the border colour. */
 const DEFAULT_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
 
-/**
- * Recovers `gui/theme/default_theme_scale` from `theme.fontSize`
- * (`Math.round(DEFAULT_FONT_SIZE * scale)`): `NativeTheme` carries its other
- * metrics already rounded, and none of them is 2 or 6. Exact for any scale
- * that is a multiple of 1/16.
- */
-function reconstructThemeScale(theme: Pick<NativeTheme, 'fontSize'>): number {
-  return theme.fontSize / DEFAULT_FONT_SIZE;
-}
-
 /** `make_flat_stylebox` (`default_theme.cpp:57-70`) at ProgressBar's own margin/corner-radius literals. */
-function progressBarFlatStyleBox(bgColor: Rgba, theme: Pick<NativeTheme, 'fontSize'>): StyleBoxFlatData {
-  const scale = reconstructThemeScale(theme);
+function progressBarFlatStyleBox(bgColor: Rgba, theme: Pick<NativeTheme, 'scale'>): StyleBoxFlatData {
+  const { scale } = theme;
   const margin = Math.round(PROGRESS_BAR_STYLE_MARGIN * scale);
   const cornerRadius = Math.round(PROGRESS_BAR_CORNER_RADIUS * scale);
   // `set_corner_detail(MIN(Math::ceil(1.5 * p_corner_radius), 6) * scale)`
