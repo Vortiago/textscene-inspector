@@ -19,7 +19,7 @@ import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext.js'
 import { lookupDrawnObjects, type DrawnObjects } from '../../../r3f/drawnObjects.js';
 import { canvasTransformInto, writeGodotPointAsThree } from '../../../r3f/node2dTransform.js';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera.js';
-import { WorldMatrixWatch, withCanvasFrames } from '../../../r3f/worldMatrixWatch.js';
+import { WorldMatrixWatch } from '../../../r3f/worldMatrixWatch.js';
 import { skinnedPointsInto } from './polygonSkin.js';
 import type { PolygonSkeletonBinding } from './skeletonBinding.js';
 
@@ -50,7 +50,7 @@ export function useSkeletonSkin(
 interface SkinObjects {
   skeleton: THREE.Object3D;
   bones: THREE.Object3D[];
-  /** The mesh, the skeleton and each bone, then the frames of their canvases. */
+  /** The mesh, the skeleton and each bone. */
   watched: (THREE.Object3D | null)[];
 }
 
@@ -138,7 +138,7 @@ class MeshSkin {
 function skinObjectsOf(mesh: THREE.Mesh, drawn: readonly (THREE.Object3D | null)[]): SkinObjects | null {
   const [skeleton, ...bones] = drawn;
   if (!skeleton || !bones.every((bone): bone is THREE.Object3D => bone !== null)) return null;
-  return { skeleton, bones, watched: withCanvasFrames([mesh, skeleton, ...bones]) };
+  return { skeleton, bones, watched: [mesh, skeleton, ...bones] };
 }
 
 /** The first `count` points of `geometry`, back in Godot's +Y-down pixels. */

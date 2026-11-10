@@ -1,6 +1,8 @@
 /**
  * Tells a per-render hook whether the objects it draws from moved since its last write. It compares
- * the world matrix terms a 2D transform reads, so a render where nothing moved builds no transform.
+ * the world matrix terms a 2D transform reads, of each object and of the frame of its canvas, so a
+ * render where nothing moved builds no transform. The frame is found on each call: an object moved
+ * under another canvas keeps its lookup, and a cached frame would go stale.
  */
 
 import type * as THREE from 'three';
@@ -9,21 +11,11 @@ import { canvasFrameOf } from './canvasFrame';
 /** The world matrix terms a 2D transform reads: the x and y columns and the origin. */
 const TRANSFORM_2D_ELEMENTS = [0, 1, 4, 5, 12, 13] as const;
 
-/**
- * The objects to watch for a 2D transform: `objects`, then the frame of each canvas that
- * `canvasTransformInto` reads them in, once each.
- */
-export function withCanvasFrames(objects: readonly (THREE.Object3D | null)[]): (THREE.Object3D | null)[] {
-  const frames = new Set<THREE.Object3D>();
-  for (const object of objects) {
-    const frame = object && canvasFrameOf(object);
-    if (frame) frames.add(frame);
-  }
-  return [...objects, ...frames];
-}
+/** The terms of an object's own matrix and of its canvas frame's. */
+const TERMS_PER_OBJECT = 2 * TRANSFORM_2D_ELEMENTS.length;
 
 /**
- * Whether the world matrices of a set of objects moved since the last call.
+ * Whether the world matrices of a set of objects, and of their canvas frames, moved since the last call.
  *
  * @canonical Whether drawn 2D objects moved since the last write
  */
@@ -38,7 +30,7 @@ export class WorldMatrixWatch {
    * call, after {@link forget}, or when the object count changes. A null object reads as zeros.
    */
   hasMoved(objects: readonly (THREE.Object3D | null)[]): boolean {
-    const length = objects.length * TRANSFORM_2D_ELEMENTS.length;
+    const length = objects.length * TERMS_PER_OBJECT;
     let isMoved = this.isStale;
     this.isStale = false;
     if (this.reading.length !== length) {
@@ -48,11 +40,16 @@ export class WorldMatrixWatch {
     }
     let at = 0;
     for (const object of objects) {
+      const frame = object && canvasFrameOf(object);
       for (const element of TRANSFORM_2D_ELEMENTS)
         this.reading[at++] = object?.matrixWorld.elements[element] ?? 0;
+      for (const element of TRANSFORM_2D_ELEMENTS)
+        this.reading[at++] = frame?.matrixWorld.elements[element] ?? 0;
     }
     for (let i = 0; i < at && !isMoved; i++) isMoved = this.reading[i] !== this.seen[i];
-    [this.seen, this.reading] = [this.reading, this.seen];
+    const seen = this.seen;
+    this.seen = this.reading;
+    this.reading = seen;
     return isMoved;
   }
 

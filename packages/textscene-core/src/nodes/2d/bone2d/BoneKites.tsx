@@ -20,7 +20,7 @@ import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
 import { canvasTransformInto, writeGodotPointAsThree } from '../../../r3f/node2dTransform';
 import { useLiveScenePass } from '../../../r3f/liveScenePass';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera';
-import { WorldMatrixWatch, withCanvasFrames } from '../../../r3f/worldMatrixWatch';
+import { WorldMatrixWatch } from '../../../r3f/worldMatrixWatch';
 import { bindBoneChildren } from './boneChildren';
 import {
   boneKitesOf,
@@ -148,14 +148,11 @@ function useKiteFollow(
     const transforms = paths.map(() => mutableTransform2D());
     const watch = new WorldMatrixWatch();
     let drawn: DrawnObjects | null = null;
-    /** Found again only when the lookup finds other objects. */
-    let watched: (THREE.Object3D | null)[] = [];
     let areAllDrawn = false;
     return observeSceneCamera(scene, () => {
       const looked = lookupDrawnObjects(nodeObjects, paths, drawn);
       if (looked !== drawn) {
         drawn = looked;
-        watched = withCanvasFrames(looked.objects);
         areAllDrawn = looked.objects.every((object) => object !== null);
       }
       const objects = looked.objects;
@@ -164,7 +161,7 @@ function useKiteFollow(
         watch.forget();
         return;
       }
-      if (!watch.hasMoved(watched)) return;
+      if (!watch.hasMoved(objects)) return;
       objects.forEach((object, i) => canvasTransformInto(transforms[i]!, object!));
       const [bone, ...children] = transforms;
       writeKites(

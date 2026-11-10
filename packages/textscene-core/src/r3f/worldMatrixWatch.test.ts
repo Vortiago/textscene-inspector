@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { markCanvasFrame } from './canvasFrame';
-import { WorldMatrixWatch, withCanvasFrames } from './worldMatrixWatch';
+import { WorldMatrixWatch } from './worldMatrixWatch';
 
 function objectAt(x: number): THREE.Object3D {
   const object = new THREE.Object3D();
@@ -55,14 +55,45 @@ describe('WorldMatrixWatch', () => {
   });
 });
 
-describe('withCanvasFrames', () => {
-  it('appends each canvas frame once, and none for an object outside a canvas', () => {
+describe('WorldMatrixWatch canvas frames', () => {
+  function framedObject(): { frame: THREE.Group; object: THREE.Object3D } {
     const frame = new THREE.Group();
     markCanvasFrame(frame);
-    const first = new THREE.Object3D();
-    const second = new THREE.Object3D();
-    frame.add(first, second);
-    const bare = new THREE.Object3D();
-    expect(withCanvasFrames([first, second, bare, null])).toEqual([first, second, bare, null, frame]);
+    const object = new THREE.Object3D();
+    frame.add(object);
+    frame.updateMatrixWorld(true);
+    return { frame, object };
+  }
+
+  it('reports a moved frame as a move of the object under it', () => {
+    const watch = new WorldMatrixWatch();
+    const { frame, object } = framedObject();
+    watch.hasMoved([object]);
+    frame.position.x = 40;
+    frame.updateMatrixWorld(true);
+    expect(watch.hasMoved([object])).toBe(true);
+  });
+
+  it('reports an object moved under another frame, with the same object list', () => {
+    const watch = new WorldMatrixWatch();
+    const { object } = framedObject();
+    watch.hasMoved([object]);
+    const other = new THREE.Group();
+    markCanvasFrame(other);
+    other.position.x = 25;
+    other.add(object);
+    other.updateMatrixWorld(true);
+    expect(watch.hasMoved([object])).toBe(true);
+  });
+
+  it('reports an object moved out of its frame onto the root canvas', () => {
+    const watch = new WorldMatrixWatch();
+    const { frame, object } = framedObject();
+    frame.position.x = 40;
+    frame.updateMatrixWorld(true);
+    watch.hasMoved([object]);
+    frame.remove(object);
+    object.updateMatrixWorld(true);
+    expect(watch.hasMoved([object])).toBe(true);
   });
 });
