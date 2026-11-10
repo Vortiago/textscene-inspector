@@ -49,6 +49,7 @@ const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
 
   const rects = new Map<string, Rect2>();
   const childScales = new Map<string, Vector2>();
+  const zoomScale = { x: zoom, y: zoom };
   for (const { node: child } of children) {
     const childProps = child.node.properties as ControlProperties;
     const layout = resolveControlLayout(childProps, controlLayoutOrder(child), () =>
@@ -71,7 +72,7 @@ const graphEditLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
         w: natural.w,
         h: natural.h,
       });
-      childScales.set(child.path, { x: zoom, y: zoom });
+      childScales.set(child.path, zoomScale);
     } else {
       // `_update_scroll_offset` skips a non-GraphElement (`:441-444`), so it keeps its anchored rect.
       // A registered container's child never reaches `controlRectSolver.ts`'s own anchored path.

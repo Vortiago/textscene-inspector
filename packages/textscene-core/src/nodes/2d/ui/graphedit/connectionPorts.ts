@@ -11,6 +11,7 @@
  */
 
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry.js';
+import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver.js';
 import {
   combinedMinimumSize,
   createSolveContext,
@@ -56,7 +57,7 @@ export function graphNodePorts(
   const childEntries = child.children.map((c) => ({ node: c, minSize: combinedMinimumSize(c, ctx) }));
   const contentRect: Rect2 = { x: 0, y: 0, w: outerSize.x, h: outerSize.y };
   const result = layoutFn(child, childEntries, contentRect, ctx);
-  const childRects = 'rects' in result ? result.rects : result;
+  const { rects: childRects } = normalizeContainerLayoutResult(result);
 
   const props = child.node.properties as GraphNodeProperties;
   const { panel } = graphNodeStyles(child, theme);

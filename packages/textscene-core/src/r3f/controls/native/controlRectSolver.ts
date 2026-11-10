@@ -142,7 +142,7 @@ function parentAnchorableRect(n: SolveNode, parentRect: Rect2): Rect2 {
  * `instanceof Map`: TS cannot narrow a `ReadonlyMap` with `instanceof`, and no
  * `Map` has a `rects` own property, so the test is exact.
  */
-function normalizeContainerLayoutResult(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): {
+export function normalizeContainerLayoutResult(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): {
   rects: ReadonlyMap<string, Rect2>;
   meta: SealedHandoff | undefined;
   childScales: ReadonlyMap<string, Vector2> | undefined;
@@ -233,7 +233,7 @@ function record(
   out: Map<string, SolvedControl>,
   scale?: Vector2
 ): void {
-  out.set(n.path, scale ? { rect, minSize, scale } : { rect, minSize });
+  out.set(n.path, { rect, minSize, scale });
 }
 
 /**

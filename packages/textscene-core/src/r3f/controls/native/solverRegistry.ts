@@ -210,9 +210,12 @@ class ControlSolverRegistry {
     this.placementOnlyTypes.add(typeName);
   }
 
-  /** Whether this type's children keep their own rotation and scale (see `registerPlacementOnlyLayout`). */
-  isPlacementOnly(typeName: string): boolean {
-    return this.placementOnlyTypes.has(typeName);
+  /**
+   * Whether this type's children keep their own rotation and scale: it has no layout, or only a
+   * placement-only one (see `registerPlacementOnlyLayout`). `Container::fit_child_in_rect` resets both.
+   */
+  keepsChildTransform(typeName: string): boolean {
+    return !this.containerLayoutFns.get(typeName) || this.placementOnlyTypes.has(typeName);
   }
 
   registerTextureSlots(typeName: string, fn: TextureSlotsFn): void {
