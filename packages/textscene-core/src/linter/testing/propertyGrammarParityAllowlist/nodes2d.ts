@@ -6,6 +6,10 @@
 import { PARTICLE_PARAM_KEYS } from './particleParamKeys.js';
 import type { AsymmetryEntry } from './types.js';
 
+/** Godot 4.6.3 stores `antialiased` on Line2D and Polygon2D, and no draw reads it. */
+const GODOT_IGNORES_ANTIALIASED =
+  'Godot 4.6.3 stores antialiased and no draw reads it, so there is nothing to draw.';
+
 export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   AnimatedSprite2D: {
     linterOnly: [
@@ -47,20 +51,14 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   },
 
   Line2D: {
-    renderGap: [
-      // `antialiased` is read by no Godot draw (`Line2D::_draw`).
-      'antialiased',
-    ],
-    reason: 'Godot 4.6.3 ignores antialiased, so there is nothing to draw.',
+    linterOnly: ['antialiased'],
+    reason: GODOT_IGNORES_ANTIALIASED,
   },
 
   Polygon2D: {
-    linterOnly: [
-      // Display tweak with no rendering parity requirement.
-      'antialiased',
-    ],
-    reason:
-      'polygon/polygons/vertex_colors/bones/skeleton are parsed AND validated now; antialiased is a display tweak with no equivalent.',
+    // `polygon_2d.cpp:395-401,507-514` draws a mesh and only stores the flag.
+    linterOnly: ['antialiased'],
+    reason: GODOT_IGNORES_ANTIALIASED,
   },
 
   Bone2D: {
