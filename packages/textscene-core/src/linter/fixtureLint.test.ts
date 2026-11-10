@@ -21,12 +21,33 @@ import { fixturesDir, sceneFiles } from '../parser/testing/parserKit.js';
 import { isGodotTextResourcePath } from '../godot/project/resourceFormats.js';
 
 /**
- * `unit-*` fixtures allowed an advisory (warning or info), keyed by the exact rules they may trip and asserted as set
- * equality. A unit fixture shows one node configured correctly, so an advisory usually means the fixture is wrong.
+ * Fixtures allowed an advisory (warning or info), keyed by the exact rules they may trip and asserted as set equality.
+ * Only `edge-*` fixtures are exempt, by pattern. A fixture shows one thing configured correctly, so an advisory usually
+ * means the fixture is wrong.
  * Keyed by rule, not filename, so the exemption does not blind a fixture to every later rule. Add an entry only when
  * the advisory is the fixture's point: fixing the fixture is the default.
  */
-const UNIT_FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; reason: string }>> = {
+const FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; reason: string }>> = {
+  'integration-trail-foreign-owner-in-content.tscn': {
+    rules: ['unresolved-parent-path'],
+    reason:
+      'the heading names a parent="Missing" that walks nowhere on purpose: Godot falls back to the parent_id_path trail (packed_scene.cpp:161-163), and the linter cannot open the instanced scene to follow it',
+  },
+  'integration-trail-name-in-content.tscn': {
+    rules: ['unresolved-parent-path'],
+    reason:
+      'the heading names a parent="Missing" that walks nowhere on purpose: Godot falls back to the parent_id_path trail (packed_scene.cpp:161-163), and the linter cannot open the instanced scene to follow it',
+  },
+  'integration-trail-parent-in-content.tscn': {
+    rules: ['unresolved-parent-path'],
+    reason:
+      'the heading names a parent="Missing" that walks nowhere on purpose: Godot falls back to the parent_id_path trail (packed_scene.cpp:161-163), and the linter cannot open the instanced scene to follow it',
+  },
+  'integration-unsupported-hierarchy.tscn': {
+    rules: ['collisionshape3d-invalid-parent', 'collisionobject3d-needs-collision-shape'],
+    reason:
+      'the hierarchy Godot allows but does not treat as collision geometry IS the fixture: a shape under a mesh, and bodies with no shape',
+  },
   'unit-bone2d-gizmo-child.tscn': {
     rules: ['bone2d-invalid-parent', 'bone2d-chain-does-not-terminate'],
     reason:
@@ -197,6 +218,11 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 /** How many fixtures that list is meant to hold; see the pin at the bottom. */
 const NEGATIVE_FIXTURE_COUNT = 8;
 
+/** An `edge-*` fixture is malformed or odd on purpose, so any advisory it draws is the fixture's point. */
+function isEdgeFixture(name: string): boolean {
+  return basename(name).startsWith('edge-');
+}
+
 /** The fixtures' roots: a fixture is linted in the nearest `project.godot` above it, and a flat one in none. */
 const fixtureRoots = createDiskResRoots(null);
 
@@ -262,11 +288,11 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     expect(all.some((linted) => linted.provider !== null)).toBe(true);
   });
 
-  it('every unit-* fixture reports an advisory only where allowlisted, rule by rule', () => {
+  it('every fixture but the edge-* ones reports an advisory only where allowlisted, rule by rule', () => {
     const unexpected: string[] = [];
     for (const { name } of all) {
-      if (!basename(name).startsWith('unit-')) continue;
-      const allowed = new Set(UNIT_FIXTURE_ADVISORIES[name]?.rules ?? []);
+      if (isEdgeFixture(name)) continue;
+      const allowed = new Set(FIXTURE_ADVISORIES[name]?.rules ?? []);
       unexpected.push(
         ...advisoryRulesFor(name)
           .filter((rule) => !allowed.has(rule))
@@ -280,7 +306,7 @@ describe('shipped scenes lint clean (bulk fixture guard)', () => {
     // Set equality both ways. An entry that stopped firing means the fixture was
     // fixed or the rule changed, and the exemption is now a lie about the file.
     const stale: string[] = [];
-    for (const [file, { rules }] of Object.entries(UNIT_FIXTURE_ADVISORIES)) {
+    for (const [file, { rules }] of Object.entries(FIXTURE_ADVISORIES)) {
       const firing = new Set(advisoryRulesFor(file));
       for (const rule of rules) {
         if (!firing.has(rule)) stale.push(`${file}: ${rule} is allowlisted but no longer fires`);

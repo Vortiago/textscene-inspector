@@ -1288,6 +1288,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Joint 2d Markers",
+    "file": "unit-joint-2d-markers.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Joint 3d Gizmos 6dof",
     "file": "unit-joint-3d-gizmos-6dof.tscn",
     "category": "Other"
