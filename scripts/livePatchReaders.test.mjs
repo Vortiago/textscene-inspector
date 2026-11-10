@@ -27,6 +27,10 @@ const NEEDS_NO_OVERLAY = new Map([
     'Reads the polygon, its bones and weights, and the types it binds, which no pass patches. The pose comes from the drawn objects.',
   ],
   [
+    'nodes/2d/bone2d/boneChildren.ts',
+    'Reads the type of each node, which no pass patches, and ranks the Bone2D nodes it finds.',
+  ],
+  [
     'nodes/2d/skeleton2d/skeletonBones.ts',
     'Reads the type and `rest` of each Bone2D, which no pass patches.',
   ],
