@@ -4,7 +4,7 @@
  * instance loader, its materials and the paint order are the ones an `instance=` node uses.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { SceneScope, TscnNode } from '../../../../parser/types';
 import type { LiveNode, YSortRoot } from '../../../../resources/liveNode';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes';
@@ -70,6 +70,16 @@ export function useSceneTileNodes(
   // The rect the Control walk solved for each loaded Control root. The sort reads the offsets until
   // then, and a replaced root has no entry.
   const [solvedRects, setSolvedRects] = useState<ReadonlyMap<LiveNode, Rect2>>(NO_SOLVED_RECTS);
+  // A root the scene has replaced is dropped, so edits do not grow the map.
+  useEffect(
+    () =>
+      setSolvedRects((previous) => {
+        const live = new Set(sceneSteps.map(({ node }) => node));
+        const kept = [...previous].filter(([root]) => live.has(root));
+        return kept.length === previous.size ? previous : new Map(kept);
+      }),
+    [sceneSteps]
+  );
   // One reporter per scene root, stable while the step is: a solve that changes a rect must not make
   // every Control tile report again.
   const reporters = useMemo(
@@ -110,7 +120,8 @@ export function useSceneTileNodes(
     for (const sceneTile of tiles) {
       const scene = placeable.get(sceneTile.tile.scene!);
       if (!scene) continue;
-      const reports = reporting.size < reporting.add(sceneTile.tile.scene!).size;
+      const reports = !reporting.has(sceneTile.tile.scene!);
+      reporting.add(sceneTile.tile.scene!);
       placed.push(placementNode(names.nameAt(sceneTile.cell.coords), sceneTile, scene, model, reports));
     }
     return {
