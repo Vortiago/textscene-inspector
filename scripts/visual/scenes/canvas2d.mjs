@@ -204,6 +204,12 @@ export const CANVAS_2D_SCENES = [
   // `scroll_ignore_camera_zoom` under a zoom-2 Camera2D in a sub-viewport. Godot 4.6.3 draws Bar
   // at screen 125..204 x 100..129, its authored size, and Band at 110..389 x 140..179.
   { name: 'parallax-ignore-camera-zoom', file: 'unit-parallax-ignore-camera-zoom.tscn', mode: '2d' },
+  // `repeat_size` with `repeat_times = 3` on the main stage. Godot 4.6.3 draws the square at x 0, 200,
+  // 400 and 600 (y 100), copies on both sides of the node.
+  { name: 'parallax-2d-repeat', file: 'unit-parallax-2d-repeat.tscn', mode: '2d' },
+  // A sub-viewport Camera2D writes `screen_offset`. Godot 4.6.3 draws Bar at screen x 120, 220 and 320
+  // (y 100) and Marker at (110, 230); a camera-less scroll puts Bar at y 200 and hides Marker.
+  { name: 'parallax-2d-camera-scroll', file: 'unit-parallax-2d-camera-scroll.tscn', mode: '2d' },
   // The one emitter with no `preprocess`, so the previewer substitutes its
   // instant. Its lifetime is not a multiple of the step, so the settle's
   // whole-frame overshoot is in the picture. Compare with Godot through
