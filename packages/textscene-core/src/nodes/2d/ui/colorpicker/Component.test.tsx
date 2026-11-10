@@ -248,7 +248,7 @@ describe('<ColorPicker> (isolated painter contract)', () => {
     );
   });
 
-  it('sizes the slider band to 185px in a 300px picker, as Godot measures: band 25..210, field at 214', async () => {
+  it('sizes every slider band to 185px in a 300px picker, as Godot measures (band ends at x = 210)', async () => {
     // The value column is the SpinBox minimum with the W advance unrounded (15.125 px), then truncated by
     // `GridContainer` to 86 (`grid_container.cpp:290`). A ceiled advance gave 90 and a 181px band.
     const renderer = await ReactThreeTestRenderer.create(
@@ -319,10 +319,13 @@ describe('<ColorPicker> (isolated painter contract)', () => {
           renderOrder={0}
         />
       );
-      return renderer.scene
-        .findAllByType('Mesh')
-        .map((mesh) => ((mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity)
-        .filter((opacity) => Math.abs(opacity - 0.4) < 1e-6);
+      return (
+        renderer.scene
+          .findAllByType('Mesh')
+          .map((mesh) => (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+          // The icon is the textured quad at `icon_disabled_color`'s alpha.
+          .filter((material) => material.map && Math.abs(material.opacity - 0.4) < 1e-6)
+      );
     };
     expect(await iconOpacities('Color(1.5, 0.5, 0.25, 1)')).toHaveLength(1);
     expect(await iconOpacities('Color(0.8, 0.6, 0.4, 1)')).toHaveLength(0);

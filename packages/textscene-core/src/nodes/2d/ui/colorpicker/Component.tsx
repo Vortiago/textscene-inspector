@@ -275,6 +275,7 @@ interface TextTypeScriptIconProps {
 function TextTypeScriptIcon({ rect, solveNode, theme, tint, renderOrder }: TextTypeScriptIconProps) {
   const toItemLinear = useItemLinearColorOf();
   const texture = useNodeIcon(solveNode.icons.color_script, COLOR_SCRIPT_ICON);
+  if (!texture) return null;
   const iconRect = iconOnlyButtonIconRect(
     { x: rect.w, y: rect.h },
     theme.widgets.button.disabled.contentMargin,
@@ -721,14 +722,16 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
           if (!col) return null;
           const geometry = sliderGeometries[i];
           // `_reset_sliders_theme` (`color_picker.cpp:628-651`) gives every row but intensity the
-          // `bar_arrow` grabber and a gradient band. Only such a row has `hueBase` or `stops`.
+          // `bar_arrow` grabber and a gradient band. Only such a row has `stops`.
           // Intensity keeps the stock `HSlider` track, fill and grabber.
-          const isColorized = row.stops.length >= 2 || !!row.hueBase;
+          const isColorized = row.stops.length >= 2;
           const grabberIconSize = isColorized
             ? { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE }
             : { x: theme.sliderGrabberSize, y: theme.sliderGrabberSize };
           const sliderBox = colorPickerSliderBoxRect(col.slider, theme, grabberIconSize);
           const sliderBoxSize = { x: sliderBox.w, y: sliderBox.h };
+          // `margin = 16 * base_scale` (`color_mode.cpp:187`, `color_picker.cpp:1433`): the grey, the rainbow and the checkerboard share it.
+          const bandHeight = Math.min(col.slider.h, 16 * scale);
           return (
             <CanvasItemGroup key={`${row.label}-${i}`} position={[0, 0, 0]}>
               <LabelledText
@@ -795,7 +798,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                 {row.hasCheckerboard && (
                   <AlphaCheckerboardQuad
                     width={sliderBox.w}
-                    height={Math.min(sliderBox.h, 16 * scale)}
+                    height={bandHeight}
                     color={tint.color}
                     opacity={tint.opacity}
                     renderOrder={renderOrder}
@@ -805,7 +808,7 @@ export function ColorPicker({ solveNode, tint, rect, renderOrder, theme }: Nativ
                 {row.hueBase && (
                   <ControlQuad
                     width={sliderBox.w}
-                    height={sliderBox.h}
+                    height={bandHeight}
                     color={toItemLinear(multiplyModulate(tint.own, row.hueBase))}
                     opacity={tint.opacity}
                     renderOrder={renderOrder}

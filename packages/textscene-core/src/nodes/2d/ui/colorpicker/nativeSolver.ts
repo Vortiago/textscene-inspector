@@ -63,10 +63,8 @@ const COLOR_PICKER_HEX_LABEL_WIDTH = 38;
 const COLOR_PICKER_TEXT_TYPE_WIDTH = 28;
 
 /**
- * The width of the value column of `slider_gc`: the `SpinBox` minimum (`spin_box.cpp:82-86`),
- * `LineEdit::get_minimum_size()` (`line_edit.cpp:2443-2477`) plus the buttons block, truncated
- * because `GridContainer` keeps each column minimum as an `int` (`grid_container.cpp:290`).
- * `create_slider` sets no custom minimum on the value `SpinBox` (`color_picker.cpp:456-458`).
+ * The value column of `slider_gc`: the `SpinBox` minimum (`spin_box.cpp:82-86`), a `LineEdit` minimum
+ * plus the buttons block, truncated as `GridContainer` keeps columns as `int` (`grid_container.cpp:290`).
  * `emWidthPx` is the unrounded advance of "W": `Font::get_char_size` does not ceil it.
  */
 export function colorPickerValueColumnWidth(theme: Pick<NativeTheme, 'widgets'>, emWidthPx: number): number {
