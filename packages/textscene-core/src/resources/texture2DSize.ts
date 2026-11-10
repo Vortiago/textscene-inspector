@@ -101,8 +101,8 @@ const DECLARED_SIZES: Readonly<
 /**
  * The pixel size of an `ExtResource` slot from its parsed resource file, for a caller with a
  * synchronous cache instead of hooks. A Theora stream reports its picture size, the size of the
- * texture a `VideoStreamPlayer` takes from it. Null for a file that holds no texture the scene could
- * state inline.
+ * texture a `VideoStreamPlayer` takes from it. Null for any other file that holds no texture the
+ * scene could state inline.
  */
 export function extResourceTexture2DSize(
   parsed: ParsedResource,

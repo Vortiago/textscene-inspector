@@ -8,9 +8,6 @@ import type { ParsedResource } from '../../../parser/parsedResource';
 import type { Vector2 } from '../../../godot/math/vector';
 import { readTheoraPictureSize } from './pictureSize';
 
-/** The one extension Godot's Theora loader recognises (`video_stream_theora.cpp:792-823`). */
-export const THEORA_VIDEO_EXTENSION = '.ogv';
-
 const VIDEO_STREAM_THEORA_TYPE = 'VideoStreamTheora';
 
 /** A file Godot finds no Theora stream in leaves both keys unset. */
@@ -18,7 +15,7 @@ export function parseTheoraVideo(bytes: ArrayBuffer): ParsedResource {
   const size = readTheoraPictureSize(new Uint8Array(bytes));
   return {
     resourceType: VIDEO_STREAM_THEORA_TYPE,
-    properties: size ? { picture_width: String(size.width), picture_height: String(size.height) } : {},
+    properties: size ? { picture_width: String(size.x), picture_height: String(size.y) } : {},
     extResources: [],
     subResources: [],
   };

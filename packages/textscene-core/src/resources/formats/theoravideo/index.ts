@@ -5,13 +5,14 @@
  */
 
 import { registerResourceSlice } from '../../sliceRegistration';
-import { THEORA_VIDEO_EXTENSION } from './parse';
+import { parseTheoraVideo } from './parse';
 
 registerResourceSlice({
   slice: 'theoravideo',
   kind: 'foreign-format',
   typeNames: [],
-  extensions: [THEORA_VIDEO_EXTENSION],
+  extensions: ['.ogv'],
+  parseBytes: parseTheoraVideo,
   binaryBytes: true,
   busType: 'resource',
 });

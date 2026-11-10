@@ -10,6 +10,7 @@ import type { FileEventBus, FileData } from '../FileEventBus';
 import type { ParsedResource } from '../../parser/parsedResource';
 import { createTresResourceProcessor } from './createTresResourceProcessor';
 import { fixturesDir } from '../../parser/testing/parserKit';
+import '../formats/theoravideo/index';
 import { theoraPictureSizeOf } from '../formats/theoravideo/parse';
 import { ragdollBytes } from '../testing/ragdollBake';
 

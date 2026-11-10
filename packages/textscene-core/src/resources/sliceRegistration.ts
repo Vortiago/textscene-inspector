@@ -5,6 +5,7 @@
  * linter entry point can read it. Each slice's `index.ts` registers itself.
  */
 
+import type { ParsedResource } from '../parser/parsedResource';
 import { fileExtension } from './fileExtension';
 
 /**
@@ -30,6 +31,11 @@ interface ResourceSliceRegistration {
   extensions?: readonly string[];
   /** Whether the provider must fetch bytes (not text) for this slice's files. */
   binaryBytes?: boolean;
+  /**
+   * Reads this slice's bytes into the ParsedResource its files give on the `resource` bus. A binary
+   * slice without it holds Godot's RSRC container.
+   */
+  parseBytes?: (bytes: ArrayBuffer) => ParsedResource;
   /**
    * Whether a cached value is shared scene-graph state that each consumer must
    * clone (an `Object3D` has one parent). Read by `useResource` per bus.
