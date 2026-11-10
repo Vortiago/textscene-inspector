@@ -1126,6 +1126,16 @@ describe('harnessWarnings', () => {
   });
 });
 
+describe('the reference shows the collision hints on request', () => {
+  // The editor runs a game with `--debug-collisions` (`editor/run/editor_run.cpp:80`), which sets
+  // `SceneTree::debug_collisions_hint` (`scene_tree.cpp:942`). The 2D joints read it to draw their
+  // marker in a game (`pin_joint_2d.cpp:42-50`).
+  it('passes --debug-collisions to the render pass only when asked', () => {
+    expect(renderArgv('/tmp/work')).not.toContain('--debug-collisions');
+    expect(renderArgv('/tmp/work', { debugCollisions: true })).toContain('--debug-collisions');
+  });
+});
+
 describe('the render wait fits inside the render pass', () => {
   it('quits after more frames than the longest fog convergence and its quiet window draw', () => {
     const argv = renderArgv('/tmp/work');

@@ -44,10 +44,10 @@ describe('rendersOwnVisual', () => {
   });
 
   it('reports a parsed-but-undrawn type as not-implemented', () => {
-    // `AcceptDialog` is parsed and validated, and nothing draws it, so the badge says
+    // `FileDialog` is parsed and validated, and nothing draws it, so the badge says
     // "not implemented". A parser registration alone never clears it.
-    expect(nodeRegistry.getRegistration('AcceptDialog')).not.toBeNull();
-    expect(rendersOwnVisual('AcceptDialog')).toBe('not-implemented');
+    expect(nodeRegistry.getRegistration('FileDialog')).not.toBeNull();
+    expect(rendersOwnVisual('FileDialog')).toBe('not-implemented');
   });
 
   it('reports every registered type as one of the three states', () => {

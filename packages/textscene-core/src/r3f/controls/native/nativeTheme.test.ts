@@ -51,6 +51,12 @@ describe('nativeTheme', () => {
   const uniformCorners = (n: number) => ({ topLeft: n, topRight: n, bottomRight: n, bottomLeft: n });
 
   describe('widgets', () => {
+    it('Button focus: an uncentred 2 px ring flush outside the button, scaled with the theme (default_theme.cpp:142-144)', () => {
+      const { focus } = nativeTheme(1).widgets.button;
+      expect([focus.drawCenter, focus.borderWidth.left, focus.expandMargin.left]).toEqual([false, 2, 2]);
+      expect(nativeTheme(1.5).widgets.button.focus.borderWidth.left).toBe(3);
+    });
+
     it('Panel: make_flat_stylebox(style_normal_color, 0, 0, 0, 0) — default_theme.cpp:134', () => {
       const theme = nativeTheme(1);
       expect(theme.widgets.panel).toEqual({

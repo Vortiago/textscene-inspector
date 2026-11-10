@@ -1,17 +1,16 @@
 /**
- * DampedSpringJoint2D registration: the parser.
- *
- * It reuses the Node2D parse, and property knowledge lives in linterParser.ts. It
- * draws nothing by design (ADR-0008), so index.r3f.ts registers Node2D and its children
- * still land in the right transform space.
+ * DampedSpringJoint2D registration: the parser. Property knowledge for the linter lives in linterParser.ts.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
-import { parseNode2D } from '../../../base/node2d/parser';
+import { parseDampedSpringJoint2D } from './parser';
 
 const dampedSpringJoint2DRegistration: NodeTypeRegistration = {
   typeName: 'DampedSpringJoint2D',
-  parser: parseNode2D,
+  parser: parseDampedSpringJoint2D,
 };
 
 nodeRegistry.register(dampedSpringJoint2DRegistration);
+
+export * from './parser';
+export * from './types';

@@ -388,6 +388,7 @@ export function parseArgs(argv) {
     particles: PARTICLES_PROCESS_DEFAULT,
     // Null lets the engine pick, so the default reference is not pinned to one rasteriser.
     renderingDriver: null,
+    debugCollisions: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -458,6 +459,11 @@ export function parseArgs(argv) {
         // `preprocess` (`cpu_particles_2d.cpp:727-731`): `2` on `preprocess = 1.5` settles at 3.5 s.
         // Record the value in the fixture header and the sheet.
         args.particles = nonNegativeNumber('--particles', argv[++i]);
+        break;
+      case '--debug-collisions':
+        // The editor's "Visible Collision Shapes" run flag: a 2D joint draws its marker in a game too
+        // (`pin_joint_2d.cpp:42-50`).
+        args.debugCollisions = true;
         break;
       case '--rendering-driver':
         args.renderingDriver = oneOf('--rendering-driver', DRIVER_NAMES, argv[++i]);
@@ -1378,7 +1384,7 @@ script = ExtResource("1")
  * wall clock: `CPUParticles2D::_update_internal` then jumps a whole `1/fixed_fps` step on a slow
  * host, only sometimes, and the reference still renders.
  */
-export function renderArgv(work, { renderingDriver = null } = {}) {
+export function renderArgv(work, { renderingDriver = null, debugCollisions = false } = {}) {
   const argv = [
     '--path',
     work,
@@ -1387,6 +1393,7 @@ export function renderArgv(work, { renderingDriver = null } = {}) {
     '--quit-after',
     String(RENDER_QUIT_AFTER_FRAMES),
   ];
+  if (debugCollisions) argv.push('--debug-collisions');
   // main.cpp:2582 aborts on a driver its method does not offer, so the driver alone would abort
   // under the default `forward_plus`.
   if (renderingDriver) {
@@ -1513,6 +1520,7 @@ export async function renderReference({
   fovExplicit = false,
   particles = PARTICLES_PROCESS_DEFAULT,
   renderingDriver = null,
+  debugCollisions = false,
   keepWork = false,
 }) {
   const scenePath = resolve(scene);
@@ -1545,6 +1553,7 @@ export async function renderReference({
       fovExplicit,
       particles,
       renderingDriver,
+      debugCollisions,
     });
   } finally {
     // Each run copies the whole res:// root, which on a tmpfs /tmp stays in RAM, and the
@@ -1573,6 +1582,7 @@ async function renderInto(
     fovExplicit,
     particles,
     renderingDriver,
+    debugCollisions,
   }
 ) {
   // Inside the scratch project, not beside the image: the mode and the drift report are read once,
@@ -1638,7 +1648,7 @@ async function renderInto(
     restage: stage,
   });
 
-  const render = runGodot(renderArgv(work, { renderingDriver }), {
+  const render = runGodot(renderArgv(work, { renderingDriver, debugCollisions }), {
     display: true,
     screen: rootWindow ? canvas2DSize : null,
   });
@@ -1698,6 +1708,9 @@ async function main() {
     console.error('usage: pnpm ref:godot <scene.tscn> [--out png] [--camera x,y,z]');
     console.error(
       '       [--look-at x,y,z] [--probe x,y] [--patch n] [--no-previews] [--width n] [--height n]'
+    );
+    console.error(
+      '       [--debug-collisions]  (a 2D joint draws its marker, and a collision shape its outline)'
     );
     console.error(
       `       [--mode ${RENDER_MODES.join('|')}]  (2d renders the project viewport, ` +
