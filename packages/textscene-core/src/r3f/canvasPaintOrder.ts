@@ -148,11 +148,12 @@ export function canvasLayerRanks(nodes: readonly TscnNode[]): readonly number[] 
 
 /**
  * Whether a node draws pieces the tree does not list: a tile layer, which a
- * y-sort pass splits into one group per tile row once the tileset loads, and an
- * `instance=` node, whose sub-scene roots arrive once the PackedScene loads.
+ * y-sort pass splits into one group per tile row once the tileset loads and which instantiates its
+ * scene tiles after its children (a TileMap does the same), and an `instance=` node, whose sub-scene
+ * roots arrive once the PackedScene loads.
  */
 function reservesRoom(node: TscnNode): boolean {
-  return node.type === 'TileMapLayer' || node.instance !== undefined;
+  return node.type === 'TileMapLayer' || node.type === 'TileMap' || node.instance !== undefined;
 }
 
 /**

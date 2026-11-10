@@ -8,7 +8,7 @@ import type { Object3D } from 'three';
 import { useOnMixerPose } from './contexts/AnimatedValueContext.js';
 import { useOptionalSelection } from './contexts/SelectionContext.js';
 import { trackTargetFinder } from './animation/trackTargets.js';
-import { liveGroupChain, sortYOfChain, type GroupAt } from './ySortLiveItems.js';
+import { liveGroupChain, liveRootPose, sortYOfChain, type GroupAt } from './ySortLiveItems.js';
 import { compareYSortItems } from './ySortOrder.js';
 import { ySortItemId, type YSortItem } from './ySortItems.js';
 
@@ -87,7 +87,7 @@ export function useLiveYSort(items: readonly YSortItem[], basePath: string): rea
         }
         // A pose that moved none of the item's groups leaves its y as it was read.
         if (!chain || (posed && !hasPosedGroup(chain, posed))) continue;
-        const y = sortYOfChain(chain);
+        const y = sortYOfChain(chain, liveRootPose(item));
         if (y !== (pose.ys.get(id) ?? item.sortY)) moves.push([id, y]);
       }
       // Sorted only when some y moved: the frames of a held pose cost a read of each moved group.

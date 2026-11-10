@@ -29,7 +29,6 @@ import {
   TAB_ALIGNMENT_RIGHT,
   TAB_BAR_THEME_FONT_KEY,
   TAB_BAR_THEME_FONT_SIZE_KEY,
-  reconstructThemeScale,
   isTabUnselectable,
   resolveTabBarCurrentTab,
   tabBarMinimumSize,
@@ -286,7 +285,7 @@ const tabContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     // `side_margin` widens the minimum only for LEFT or RIGHT alignment. No popup is
     // modelled, so the RIGHT branch's popup exception never applies (`tab_container.cpp:1039-1042`).
     if (alignment !== TAB_ALIGNMENT_CENTER) {
-      width += Math.round(SIDE_MARGIN_LITERAL * reconstructThemeScale(ctx.theme));
+      width += Math.round(SIDE_MARGIN_LITERAL * ctx.theme.scale);
     }
   }
 

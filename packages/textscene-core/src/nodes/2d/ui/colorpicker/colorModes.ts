@@ -10,10 +10,42 @@
 import { linearChannelToSRGB, sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { formatGodotNumber } from '../spinbox/nativeSolver';
-import { extractHsv } from './nativeSolver';
-import { hsvToRgb } from '../../../../godot/math/color';
+import { colorHue, colorSaturation, hsvToRgb } from '../../../../godot/math/color';
 import { okhslToSrgb, srgbToOkhsl } from './okhsl';
+import { COLOR_HUE_STOPS } from './svGradient';
 import type { Rgba } from '../../../../godot/math/math';
+
+interface HsvColor {
+  h: number;
+  s: number;
+  v: number;
+}
+
+/**
+ * The HSV of `_set_pick_color` (`color_picker.cpp:324-345`): `_copy_color_to_normalized_and_intensity`
+ * (`:593-602`) divides out an HDR `intensity` so no channel of `color_normalized`
+ * exceeds 1. `_copy_normalized_to_hsv_okhsl` (`:552-565`) then reads the HSV of that
+ * normalised colour with `Color::get_h/get_s/get_v` (`core/math/color.cpp:136-180`).
+ */
+export function extractHsv(color: Rgba): HsvColor {
+  const linear = {
+    r: sRGBChannelToLinear(color.r),
+    g: sRGBChannelToLinear(color.g),
+    b: sRGBChannelToLinear(color.b),
+  };
+  const multiplier = Math.max(1, linear.r, linear.g, linear.b);
+  const normalized = {
+    r: linearChannelToSRGB(linear.r / multiplier),
+    g: linearChannelToSRGB(linear.g / multiplier),
+    b: linearChannelToSRGB(linear.b / multiplier),
+  };
+
+  return {
+    h: colorHue(normalized),
+    s: colorSaturation(normalized),
+    v: Math.max(normalized.r, normalized.g, normalized.b),
+  };
+}
 
 /** `ColorModeType` (`color_picker.h`). `MODE_RAW` is a deprecated alias with the value of `MODE_LINEAR` (`:105-107`). */
 export const MODE_RGB = 0;
@@ -182,18 +214,16 @@ export function hsvChannelGradientStops(channel: 1 | 2, normalized: Rgba): [Rgba
 }
 
 /**
- * `ColorModeHSV::slider_draw`'s H channel (`color_mode.cpp:218-221`): a flat
- * grey base at `color.get_v()`, then the 7-stop `color_hue` rainbow over it with
- * a `Color::from_hsv(0, 0, v, s)` modulate. This is the base, and the overlay
- * alpha is `hsvHueChannelOverlayAlpha`.
+ * `ColorModeHSV::slider_draw`'s H channel (`color_mode.cpp:218-221`): a flat grey `base` at
+ * `color.get_v()`, then the 7-stop `color_hue` rainbow over it with a `Color::from_hsv(0, 0, v, s)`
+ * modulate. At `s` = 0 the rainbow vanishes. One extraction serves both.
  */
-export function hsvHueChannelBase(normalized: Rgba): Rgba {
-  const { v } = extractHsv(normalized);
-  return { r: v, g: v, b: v, a: 1 };
-}
-
-export function hsvHueChannelOverlayAlpha(normalized: Rgba): number {
-  return extractHsv(normalized).s;
+export function hsvHueChannelLayers(normalized: Rgba): { base: Rgba; stops: Rgba[] } {
+  const { s, v } = extractHsv(normalized);
+  return {
+    base: { r: v, g: v, b: v, a: 1 },
+    stops: COLOR_HUE_STOPS.map((c) => ({ r: c.r * v, g: c.g * v, b: c.b * v, a: s })),
+  };
 }
 
 /**

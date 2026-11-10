@@ -1,0 +1,9 @@
+; A res:// root of its own with a `sub` folder: the FileDialog's current_path names it, and the PNG filter hides its only file.
+
+config_version=5
+
+[application]
+
+config/name="FileDialog current path"
+run/main_scene="res://unit-file-dialog-current-path.tscn"
+config/features=PackedStringArray("4.6")

@@ -10,6 +10,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { TabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -33,7 +34,6 @@ import {
   layoutScrollArrows,
   layoutTabContent,
   pickTabStyleBox,
-  reconstructThemeScale,
   resolveTabDrawState,
   isTabUnselectable,
   resolveTabBarCurrentTab,
@@ -41,7 +41,6 @@ import {
   tabBarFontColor,
   tabBarFontSizePx,
   tabBarIconColor,
-  tabBarStyleBoxes,
   tabBarThemeIconSize,
   tabContentWidth,
   tabDrawX,
@@ -82,8 +81,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
   const tabSeparation = solveNode.constants.tab_separation ?? 0;
   const iconMaxWidth = solveNode.constants.icon_max_width ?? 0;
 
-  const scale = reconstructThemeScale(theme);
-  const defaults = useMemo(() => tabBarStyleBoxes(scale), [scale]);
+  const defaults = theme.widgets.tabContainer;
   const overrides = solveNode.styleBoxes;
   const closeButtonMargin = theme.widgets.button.normal.contentMargin;
   const closeIconSize = tabBarThemeIconSize(solveNode, 'close');
@@ -231,7 +229,7 @@ interface TabBarTabChromeProps {
   currentTab: number;
   solveNode: SolveNode;
   overrides: Readonly<Record<string, StyleBoxFlatData>>;
-  defaults: ReturnType<typeof tabBarStyleBoxes>;
+  defaults: TabBarStyleBoxes;
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;
   barHeight: number;

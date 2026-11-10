@@ -19,7 +19,7 @@ import {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { DEFAULT_FONT_SIZE, STYLE_FILL } from '../../../../godot/scene/theme';
+import { STYLE_FILL } from '../../../../godot/scene/theme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   resolveTextTheme,
@@ -95,20 +95,11 @@ const itemListTextureSlots: TextureSlotsFn = (node: TscnNode) => {
 
 // --- Theme constants not exposed on NativeTheme ---------------------------
 
-/**
- * Reconstructs the project's `gui/theme/default_theme_scale` from `theme.fontSize`:
- * see `spinbox/nativeSolver.ts` / `progressbar/nativeSolver.ts`'s own copy
- * of this same technique; `nativeTheme.ts` cannot be extended from this slice.
- */
-function reconstructThemeScale(theme: Pick<NativeTheme, 'fontSize'>): number {
-  return theme.fontSize / DEFAULT_FONT_SIZE;
-}
-
 /** `default_theme.cpp:949`: `theme->set_constant(line_separation, "ItemList", round(2*scale))`. */
 const ITEM_LIST_LINE_SEPARATION_BASE = 2;
 
-function itemListLineSeparation(theme: Pick<NativeTheme, 'fontSize'>): number {
-  return Math.round(ITEM_LIST_LINE_SEPARATION_BASE * reconstructThemeScale(theme));
+function itemListLineSeparation(theme: Pick<NativeTheme, 'scale'>): number {
+  return Math.round(ITEM_LIST_LINE_SEPARATION_BASE * theme.scale);
 }
 
 /**
@@ -325,7 +316,7 @@ interface ItemContentInput {
  */
 function itemContentMinSize(
   input: ItemContentInput,
-  theme: Pick<NativeTheme, 'fontSize' | 'separation'>
+  theme: Pick<NativeTheme, 'fontSize' | 'separation' | 'scale'>
 ): Vector2 {
   let x = 0;
   let y = 0;
@@ -372,7 +363,7 @@ export function itemListMaxColumnWidth(itemSizes: readonly Vector2[], hSeparatio
 /** The full per-item minsize, including h/v separation (`item_list.cpp:1789-1790`). */
 export function itemMinimumSize(
   input: ItemContentInput,
-  theme: Pick<NativeTheme, 'fontSize' | 'separation'>
+  theme: Pick<NativeTheme, 'fontSize' | 'separation' | 'scale'>
 ): Vector2 {
   const content = itemContentMinSize(input, theme);
   const sep = itemListSeparation(theme);

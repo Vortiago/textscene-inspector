@@ -502,6 +502,14 @@ _Avoid_: "quadrant" for this, "sub-quadrant".
 A placed tile cell whose atlas source, tile and alternative tile all exist, so Godot draws it (`tile_map_layer.cpp:527-531`).
 _Avoid_: "valid cell".
 
+**Scene tile** (`resources/tileset/sceneTileCells.ts`):
+A cell that names a tile of a `TileSetScenesCollectionSource`. Its layer instantiates the tile's scene as a child at the cell (`tile_map_layer.cpp:1569-1659`).
+_Avoid_: "scene cell", "instance tile".
+
+**Unowned node** (`LiveNode.isUnowned`):
+A node that a layer adds to the live tree and the edited scene does not own. The Scene dock lists no row for it, and a click on it selects its owner (`scene_tree_editor.cpp:278-290`).
+_Avoid_: "internal node" for this, "hidden node".
+
 **Viewport mode**:
 The single `'2D' | '3D'` display state of the centre viewport: `3D` mounts the R3F canvas, and `2D` mounts the pannable 2D stage.
 A heuristic on the scene root type picks the default, and the toolbar toggle overrides it.
@@ -538,6 +546,10 @@ _Avoid_: "viewport container" for the concept. "render target" for the surface.
 **Embedded window** (`nodes/windows/window/`):
 A visible Window, Popup or PopupPanel that a viewport draws on its own canvas instead of the system's. The window's Controls draw into its target as a **sub-viewport**'s do, rooted at the window itself (ADR-0033).
 _Avoid_: "dialog" for the base case. "native window", which Godot draws through the system.
+
+**Dialog body** (`nodes/windows/filedialog/body.ts`):
+The Controls a dialog's constructor `memnew`s above its button row, which no scene serialises, such as a FileDialog's `main_vbox`. They are synthetic `SolveNode`s in the dialog's scope, solved by the Control solver and painted by `DialogChrome`.
+_Avoid_: "dialog content", which is the rect that authored children fill.
 
 **Embedder**:
 The viewport that draws an **Embedded window**: the nearest viewport above it with `gui_embed_subwindows`, the root through `display/window/subwindows/embed_subwindows`. It draws each window's frame, title, close icon and target on its subwindow canvas, layer 1024, in stack order (`viewport.cpp:342-401`).

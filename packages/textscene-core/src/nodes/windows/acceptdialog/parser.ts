@@ -27,6 +27,11 @@ export interface DialogProperties extends WindowProperties {
    * a size line or `dialog_autowrap` came first.
    */
   has_unwrapped_message_minimum: boolean;
+  /**
+   * The OK button is disabled. Not a scene property: only a dialog that decides it from a state a scene
+   * lacks sets it, as FileDialog does (`_is_open_should_be_disabled`, `file_dialog.cpp:549-566`).
+   */
+  ok_button_disabled?: boolean;
 }
 
 /**

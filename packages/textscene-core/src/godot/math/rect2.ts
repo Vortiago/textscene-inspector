@@ -12,6 +12,9 @@ export interface Rect2 {
   h: number;
 }
 
+/** The empty rect at the origin. Shared, so a caller must not write to it. */
+export const ZERO_RECT: Rect2 = Object.freeze({ x: 0, y: 0, w: 0, h: 0 });
+
 /** `Rect2::intersects` without borders (`rect2.h:54-89`): rects that only touch miss. */
 export function rect2Intersects(a: Rect2, b: Rect2): boolean {
   return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
@@ -40,4 +43,9 @@ export function rect2Merge(a: Rect2, b: Rect2): Rect2 {
 /** `Rect2::grow` (`rect2.h:212-225`): each edge moved out by `amount`. */
 export function rect2Grow(r: Rect2, amount: number): Rect2 {
   return { x: r.x - amount, y: r.y - amount, w: r.w + amount * 2, h: r.h + amount * 2 };
+}
+
+/** Whether both rects have the same position and size. */
+export function rect2Equals(a: Rect2, b: Rect2): boolean {
+  return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
 }

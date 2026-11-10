@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { tabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
 import {
   computeTabBarDrawLayout,
   isCloseButtonVisible,
@@ -9,7 +10,6 @@ import {
   isTabUnselectable,
   resolveTabBarCurrentTab,
   tabBarMinimumSize,
-  tabBarStyleBoxes,
   tabBarThemeIconSize,
   tabBarFontSizePx,
   tabContentWidth,

@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://unittilemaplayerscenetilegrown"]
+
+[node name="Root" type="ColorRect"]
+custom_minimum_size = Vector2(10, 30)
+offset_top = 64.0
+offset_right = 10.0
+offset_bottom = 66.0
+grow_vertical = 0
+color = Color(0, 0, 1, 1)

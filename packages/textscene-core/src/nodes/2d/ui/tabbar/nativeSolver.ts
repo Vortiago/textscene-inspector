@@ -18,6 +18,7 @@ import { controlSolverRegistry, themedSlotRequest } from '../../../../r3f/contro
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { TabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
@@ -26,7 +27,6 @@ import {
   resolveNodeFontSizePx,
 } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { fitIconSize } from '../../../../r3f/controls/native/buttonBase';
-import { DEFAULT_FONT_SIZE } from '../../../../godot/scene/theme';
 import type { TabBarProperties, TabBarTabProperties } from './types';
 import { TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -82,101 +82,6 @@ export function resolveTabDrawState(
   if (tab.disabled) return 'disabled';
   if (index === currentTab) return 'selected';
   return 'unselected';
-}
-
-/** `Color(1, 1, 1, 0.75)`: `style_focus_color` (`default_theme.cpp:117`), `style_tab_selected`'s top border (`:975-976`). */
-const TAB_SELECTED_BORDER_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.75 };
-/** `Color(0.175, 0.175, 0.175, 1)`: `style_popup_border_color` (`default_theme.cpp:119`), `style_tab_unselected`'s left and right border (`:981`), inherited by `tab_disabled`/`tab_hovered`. */
-const TAB_UNSELECTED_BORDER_COLOR: Rgba = { r: 0.175, g: 0.175, b: 0.175, a: 1 };
-/** `style_pressed_color` (`default_theme.cpp:115`): `style_tab_unselected`'s fill (`:977`). */
-const TAB_UNSELECTED_FILL: Rgba = { r: 0, g: 0, b: 0, a: 0.6 };
-/** `style_disabled_color` (`default_theme.cpp:116`): `style_tab_disabled`'s fill, set on the `duplicate()` (`:983`). */
-const TAB_DISABLED_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.3 };
-/** `style_normal_color` (`default_theme.cpp:112`): `style_tab_selected`'s fill (`:974`). */
-const TAB_SELECTED_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.6 };
-/** A `Color(0.1, 0.1, 0.1, 0.3)` literal: `style_tab_hovered`'s fill (`default_theme.cpp:985`), apart from `TAB_DISABLED_FILL` although the numbers match. */
-const TAB_HOVERED_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.3 };
-
-const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
-
-/**
- * `theme.fontSize` is `Math.round(DEFAULT_FONT_SIZE * scale)`, so dividing back
- * recovers `gui/theme/default_theme_scale` closely enough for every other
- * `Math.round(literal * scale)` here. `nativeTheme.ts` exposes no raw `scale`.
- */
-export function reconstructThemeScale(theme: Pick<NativeTheme, 'fontSize'>): number {
-  return theme.fontSize / DEFAULT_FONT_SIZE;
-}
-
-/**
- * `make_flat_stylebox` restricted to what `StyleBoxFlatData` models: a copy of
- * `nativeTheme.ts`'s private `flatStyleBox`, which is not exported.
- */
-function flatBox(
-  bgColor: Rgba,
-  marginLeft: number,
-  marginTop: number,
-  marginRight: number,
-  marginBottom: number,
-  cornerRadius: number,
-  scale: number
-): StyleBoxFlatData {
-  return {
-    bgColor,
-    borderColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 },
-    borderWidth: ZERO_SIDES,
-    cornerRadius: {
-      topLeft: Math.round(cornerRadius * scale),
-      topRight: Math.round(cornerRadius * scale),
-      bottomRight: Math.round(cornerRadius * scale),
-      bottomLeft: Math.round(cornerRadius * scale),
-    },
-    expandMargin: ZERO_SIDES,
-    contentMargin: {
-      left: Math.round(marginLeft * scale),
-      top: Math.round(marginTop * scale),
-      right: Math.round(marginRight * scale),
-      bottom: Math.round(marginBottom * scale),
-    },
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail: 8,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
-}
-
-interface TabBarStyleBoxes {
-  selected: StyleBoxFlatData;
-  unselected: StyleBoxFlatData;
-  disabled: StyleBoxFlatData;
-  hovered: StyleBoxFlatData;
-}
-
-/**
- * `default_theme.cpp:974-985`: `tab_selected` and `tab_unselected` are
- * `make_flat_stylebox(color, 10, 4, 10, 4, 0)`, each with a border width scaled
- * apart from the margins: `round(2 * scale)` on selected's top, `round(scale)` on
- * unselected's sides. `tab_disabled`/`tab_hovered` duplicate unselected and change only `bg_color` (`:982-985`).
- */
-export function tabBarStyleBoxes(scale: number): TabBarStyleBoxes {
-  const selected = flatBox(TAB_SELECTED_FILL, 10, 4, 10, 4, 0, scale);
-  selected.borderWidth = { left: 0, top: Math.round(2 * scale), right: 0, bottom: 0 };
-  selected.borderColor = TAB_SELECTED_BORDER_COLOR;
-
-  const unselectedBorder = Math.round(1 * scale);
-  const unselected = flatBox(TAB_UNSELECTED_FILL, 10, 4, 10, 4, 0, scale);
-  unselected.borderWidth = { left: unselectedBorder, top: 0, right: unselectedBorder, bottom: 0 };
-  unselected.borderColor = TAB_UNSELECTED_BORDER_COLOR;
-
-  const disabled = { ...unselected, bgColor: TAB_DISABLED_FILL };
-  const hovered = { ...unselected, bgColor: TAB_HOVERED_FILL };
-
-  return { selected, unselected, disabled, hovered };
 }
 
 /** `overrides['tab_<state>']` (`theme_override_styles/tab_<state>`) wins over the default-theme box for that state. */
@@ -387,8 +292,7 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
 
   if (tabs.length === 0) return { x: 0, y: 0 };
 
-  const scale = reconstructThemeScale(ctx.theme);
-  const defaults = tabBarStyleBoxes(scale);
+  const defaults = ctx.theme.widgets.tabContainer;
   const overrides = n.styleBoxes;
   const unselectedBox = pickTabStyleBox(overrides, defaults, 'unselected');
   const selectedBox = pickTabStyleBox(overrides, defaults, 'selected');
