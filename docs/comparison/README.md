@@ -227,7 +227,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [FlowContainer](../../packages/textscene-core/src/nodes/2d/ui/flowcontainer/comparison.md): children flowed along one axis and wrapped into lines
 - [FoldableContainer](../../packages/textscene-core/src/nodes/2d/ui/foldablecontainer/comparison.md): a collapsible titled panel (accordion)
 - [GPUParticles2D](../../packages/textscene-core/src/nodes/2d/particles/gpuparticles2d/comparison.md): nothing yet, Godot draws a particle cloud, the previewer does not
-- [GraphEdit](../../packages/textscene-core/src/nodes/2d/ui/graphedit/comparison.md): a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset and the whole rect clipped
+- [GraphEdit](../../packages/textscene-core/src/nodes/2d/ui/graphedit/comparison.md): a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset, scaled by zoom and the whole rect clipped
 - [GraphElement](../../packages/textscene-core/src/nodes/2d/ui/graphelement/comparison.md): an invisible container that fits its children into its own rect
 - [GraphFrame](../../packages/textscene-core/src/nodes/2d/ui/graphframe/comparison.md): a titled frame around its own content rect
 - [GraphNode](../../packages/textscene-core/src/nodes/2d/ui/graphnode/comparison.md): a titled panel with slot rows and left/right port icons
@@ -300,7 +300,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [Tree](../../packages/textscene-core/src/nodes/2d/ui/tree/comparison.md): an empty panel, with a blank header row when column_titles_visible
 - [VBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/vboxcontainer/comparison.md): children laid out down a column
 - [VFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/vflowcontainer/comparison.md): children flowed down a column, wrapping to a new column
-- [VideoStreamPlayer](../../packages/textscene-core/src/nodes/2d/ui/videostreamplayer/comparison.md): nothing (no decoded frame ever reaches it)
+- [VideoStreamPlayer](../../packages/textscene-core/src/nodes/2d/ui/videostreamplayer/comparison.md): a transparent rect at the Ogg Theora picture size, as in the Godot editor
 - [VisibleOnScreenEnabler2D](../../packages/textscene-core/src/nodes/2d/visibleonscreenenabler2d/comparison.md): nothing (a transform-only group)
 - [VisibleOnScreenNotifier2D](../../packages/textscene-core/src/nodes/2d/visibleonscreennotifier2d/comparison.md): nothing (a transform-only group)
 - [VScrollBar](../../packages/textscene-core/src/nodes/2d/ui/vscrollbar/comparison.md): a vertical track with a rectangular grabber

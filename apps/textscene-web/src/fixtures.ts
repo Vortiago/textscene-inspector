@@ -1098,8 +1098,18 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Edit Zoom In",
+    "file": "unit-graph-edit-zoom-in.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Graph Edit Zoom Label",
     "file": "unit-graph-edit-zoom-label.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Graph Edit Zoom Out",
+    "file": "unit-graph-edit-zoom-out.tscn",
     "category": "Other"
   },
   {
@@ -2795,6 +2805,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "V Separator",
     "file": "unit-v-separator.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Video Stream Player Picture Size",
+    "file": "unit-video-stream-player-picture-size.tscn",
     "category": "Other"
   },
   {

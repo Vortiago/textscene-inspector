@@ -477,6 +477,15 @@ export const CANVAS_2D_SCENES = [
     file: 'unit-texture-rect-filter-inherit.tscn',
     mode: '2d',
   },
+  // VideoStreamPlayer takes its Theora picture size as its minimum size with `expand` off. Each
+  // player has a 1 x 1 authored rect and a full-rect ColorRect child. Godot 4.6.3 `--mode 2d`:
+  // x 8-71 y 8-55 (autoplay, stopped, paused or not), x 100-227 y 8-103 (expand), 1 x 1 for a
+  // Vorbis-only file, and x 100-169 y 230-259 for a 70 x 30 picture in an 80 x 32 frame.
+  {
+    name: 'video-stream-player-picture-size',
+    file: 'unit-video-stream-player-picture-size.tscn',
+    mode: '2d',
+  },
   // The same atlas decode reached through SpriteFrames. It shares the decode but
   // not the resource pools, so the atlas entry can pass while this one draws
   // nothing.
@@ -921,6 +930,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'graph-edit', file: 'unit-graph-edit.tscn', mode: '2d' },
   { name: 'graph-edit-frame-order', file: 'unit-graph-edit-frame-order.tscn', mode: '2d' },
   { name: 'graph-edit-menu-hidden', file: 'unit-graph-edit-menu-hidden.tscn', mode: '2d' },
+  { name: 'graph-edit-zoom-out', file: 'unit-graph-edit-zoom-out.tscn', mode: '2d' },
+  { name: 'graph-edit-zoom-in', file: 'unit-graph-edit-zoom-in.tscn', mode: '2d' },
   { name: 'graph-edit-zoom-label', file: 'unit-graph-edit-zoom-label.tscn', mode: '2d' },
   {
     name: 'graph-edit-zoom-buttons-hidden',

@@ -15,13 +15,14 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import './nativeSolver';
 import { solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
 const gridContainerLayout = controlSolverRegistry.containerLayout('GridContainer')!;
 const gridContainerMinimumSize = controlSolverRegistry.minimumSize('GridContainer')!;
 
 /** `gridContainerLayout`'s `rects` half only: see `ContainerLayoutResult`'s own doc for why the union is here at all. */
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
-  return 'rects' in result ? result.rects : result;
+  return normalizeContainerLayoutResult(result).rects;
 }
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {

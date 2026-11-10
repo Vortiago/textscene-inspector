@@ -86,6 +86,10 @@ The `.import` file Godot writes beside a source asset to record its importer and
 No scene references it, so a missing one is an ordinary outcome and not a **Missing resource**.
 _Avoid_: "import file" for the asset itself.
 
+**Picture size** (`resources/formats/theoravideo/pictureSize.ts`):
+The width and height an Ogg Theora file's identification header states for its visible picture, inside the larger coded frame. A `VideoStreamPlayer` takes it as its texture size, and as its minimum size while `expand` is off.
+_Avoid_: "video size" and "frame size", which suggest the coded frame.
+
 **Imported mip chain** (`resources/processing/mipChain.ts`):
 The levels Godot's texture importer builds on the CPU for an image whose **Import sidecar** sets `mipmaps/generate`: each level averages the bytes of the one above, renormalised for a normal map.
 The texture carries them as its own levels, so the GPU builds no chain over them.

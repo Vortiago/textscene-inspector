@@ -91,11 +91,12 @@ export class WebResourceProvider implements ResourceProvider {
     return this.deliveredMirrorFiles.has(key) ? `mirror:${this.resourceRoot}` : null;
   }
 
-  async loadResource(path: string, type?: string): Promise<string | ArrayBuffer | null> {
+  async loadResource(path: string, type?: string, maxBytes?: number): Promise<string | ArrayBuffer | null> {
     // Uploaded files of the active corpus root first.
     const upload = this.uploadedFiles.get(this.uploadKey(path));
     if (upload) {
-      return isBinaryResourceType(type, path) ? upload.file.arrayBuffer() : upload.file.text();
+      if (!isBinaryResourceType(type, path)) return upload.file.text();
+      return (maxBytes === undefined ? upload.file : upload.file.slice(0, maxBytes)).arrayBuffer();
     }
 
     // A path the mirror cannot hold, or a host without the mirror, holds no file.
@@ -116,9 +117,33 @@ export class WebResourceProvider implements ResourceProvider {
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('text/html')) return null;
 
-    const content = isBinaryResourceType(type, path) ? await response.arrayBuffer() : await response.text();
+    const content = isBinaryResourceType(type, path)
+      ? await readBytes(response, maxBytes)
+      : await response.text();
     this.deliveredMirrorFiles.add(mirrorKey);
     info(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
     return content;
   }
+}
+
+/**
+ * The response body, or its first `maxBytes` bytes. A static host may ignore a `Range` header, so the
+ * stream is read to the cap and cancelled, which stops the transfer either way.
+ */
+async function readBytes(response: Response, maxBytes: number | undefined): Promise<ArrayBuffer> {
+  if (maxBytes === undefined || !response.body) return response.arrayBuffer();
+  const reader = response.body.getReader();
+  const chunks: Uint8Array<ArrayBuffer>[] = [];
+  let received = 0;
+  try {
+    while (received < maxBytes) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+    }
+  } finally {
+    await reader.cancel();
+  }
+  return new Blob(chunks).slice(0, maxBytes).arrayBuffer();
 }
