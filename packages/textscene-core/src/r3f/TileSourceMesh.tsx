@@ -73,7 +73,8 @@ export function TileSourceMesh({
   }, [cells, source, grid, texW, texH, isStandIn]);
   const colors = useMemo(() => arrays && tintedColors(arrays.colors, tint.vertex), [arrays, tint.vertex]);
   const { canvasTexture } = texResult;
-  const hasNormalMap = Boolean(canvasTexture?.slot.texture.normalTexture);
+  // A stand-in's UVs address one texel, so the CanvasTexture's maps cannot be sampled through them.
+  const hasNormalMap = !isStandIn && Boolean(canvasTexture?.slot.texture.normalTexture);
   const orientations = useMemo(
     () => (hasNormalMap ? tileNormalOrientations(cells) : null),
     [hasNormalMap, cells]
@@ -122,7 +123,7 @@ export function TileSourceMesh({
     merge: [
       pixelMaterial,
       padsInShader(source, isStandIn) ? { injection: TILE_TEXTURE_PADDING } : undefined,
-      orientations ? { injection: TILE_NORMAL_ORIENTATION } : undefined,
+      surface && orientations ? { injection: TILE_NORMAL_ORIENTATION } : undefined,
     ],
   });
 
