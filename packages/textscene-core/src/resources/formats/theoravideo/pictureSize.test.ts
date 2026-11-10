@@ -10,6 +10,7 @@ function clipBytes(name: string): Uint8Array {
 
 /** The first page's lacing table is one segment, so the identification packet starts at byte 28. */
 const IDENTIFICATION_OFFSET = 28;
+const IDENTIFICATION_BYTES = 42;
 
 describe('readTheoraPictureSize', () => {
   it('reads the picture size of a 4:2:0 clip', () => {
@@ -55,7 +56,7 @@ describe('readTheoraPictureSize', () => {
 
   it('gives null when a later header page has a corrupt byte', () => {
     const clip = clipBytes('clip-64x48.ogv').slice();
-    const secondPage = 28 + clip[26]! + 42 - 1;
+    const secondPage = IDENTIFICATION_OFFSET + IDENTIFICATION_BYTES;
     clip[secondPage + 27 + clip[secondPage + 26]! + 20]! ^= 0xff;
     expect(readTheoraPictureSize(clip)).toBeNull();
   });

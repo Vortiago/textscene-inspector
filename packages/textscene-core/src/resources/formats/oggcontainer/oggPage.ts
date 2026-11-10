@@ -46,7 +46,7 @@ function oggChecksum(page: Uint8Array): number {
 /**
  * The page at the reader's position, or null when the bytes there are not an Ogg page or the page
  * fails its checksum (`framing.c:671-696`). Godot then finds no video stream (measured). A page cut
- * short throws `ReadPastEndError`.
+ * short throws `ReadPastEndError`. The reader is little endian, as an Ogg page stores its numbers.
  */
 export function readOggPage(reader: ByteReader): OggPage | null {
   if (reader.remaining < OGG_FIXED_HEADER_BYTES) return null;

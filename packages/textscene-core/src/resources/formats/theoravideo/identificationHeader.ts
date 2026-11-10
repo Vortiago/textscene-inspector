@@ -16,7 +16,9 @@ const SUPPORTED_MINOR_VERSION = 2;
 const AFTER_FRAME_RATE_BYTES = 11;
 const RESERVED_PIXEL_FORMAT = 1;
 const RESERVED_BITS = 3;
+const PIXEL_FORMAT_MASK = 0b11;
 
+/** The caller has checked that `packet` starts with the identification type byte and `theora`. */
 export function pictureSizeOfIdentification(packet: Uint8Array): Vector2 | null {
   if (packet.length < IDENTIFICATION_HEADER_BYTES) return null;
   const reader = ByteReader.bigEndian(packet);
@@ -34,11 +36,15 @@ export function pictureSizeOfIdentification(packet: Uint8Array): Vector2 | null 
   const frameHeight = reader.u16() * FRAME_MACROBLOCK_PIXELS;
   const width = (reader.u8() << 16) | reader.u16();
   const height = (reader.u8() << 16) | reader.u16();
-  const x = reader.u8();
-  const y = reader.u8();
+  const pictureOffsetX = reader.u8();
+  const pictureOffsetY = reader.u8();
   const frameRateNumerator = reader.u32();
   const frameRateDenominator = reader.u32();
-  const fitsFrame = frameWidth > 0 && frameHeight > 0 && x + width <= frameWidth && y + height <= frameHeight;
+  const fitsFrame =
+    frameWidth > 0 &&
+    frameHeight > 0 &&
+    pictureOffsetX + width <= frameWidth &&
+    pictureOffsetY + height <= frameHeight;
   if (!fitsFrame || frameRateNumerator === 0 || frameRateDenominator === 0) return null;
   reader.take(AFTER_FRAME_RATE_BYTES);
   return hasReservedPixelFormatOrBits(reader.u8()) ? null : { x: width, y: height };
@@ -46,6 +52,6 @@ export function pictureSizeOfIdentification(packet: Uint8Array): Vector2 | null 
 
 /** The last byte holds the end of the key frame shift (3 bits), the pixel format (2) and the reserved bits (3), which must be zero. */
 function hasReservedPixelFormatOrBits(lastByte: number): boolean {
-  const pixelFormat = (lastByte >> RESERVED_BITS) & 0b11;
+  const pixelFormat = (lastByte >> RESERVED_BITS) & PIXEL_FORMAT_MASK;
   return pixelFormat === RESERVED_PIXEL_FORMAT || (lastByte & ((1 << RESERVED_BITS) - 1)) !== 0;
 }
