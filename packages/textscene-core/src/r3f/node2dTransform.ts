@@ -7,6 +7,7 @@
  */
 
 import * as THREE from 'three';
+import { canvasFrameOf } from './canvasFrame';
 import type { Node2DLocalTransform } from '../nodes/base/node2d/types';
 import type { Vec3Tuple } from './nodeTransform';
 import {
@@ -118,10 +119,7 @@ export function transform2DFromThreeMatrix(matrix: THREE.Matrix4): Transform2DCo
 }
 
 /** {@link transform2DFromThreeMatrix} written into `out`, for a render that allocates nothing. */
-export function transform2DFromThreeMatrixInto(
-  out: MutableTransform2D,
-  matrix: THREE.Matrix4
-): MutableTransform2D {
+function transform2DFromThreeMatrixInto(out: MutableTransform2D, matrix: THREE.Matrix4): MutableTransform2D {
   const e = matrix.elements;
   out.a = e[0]!;
   out.b = 0 - e[1]!;
@@ -130,6 +128,18 @@ export function transform2DFromThreeMatrixInto(
   out.tx = e[12]!;
   out.ty = 0 - e[13]!;
   return out;
+}
+
+/** Written only by {@link canvasTransformInto}, and read back before it returns. */
+const scratchMatrix = new THREE.Matrix4();
+
+/** The node's global transform in Godot pixels, written into `out`: its world matrix within the frame of its canvas. */
+export function canvasTransformInto(out: MutableTransform2D, object: THREE.Object3D): MutableTransform2D {
+  const frame = canvasFrameOf(object);
+  const matrix = frame
+    ? scratchMatrix.copy(frame.matrixWorld).invert().multiply(object.matrixWorld)
+    : object.matrixWorld;
+  return transform2DFromThreeMatrixInto(out, matrix);
 }
 
 /**
