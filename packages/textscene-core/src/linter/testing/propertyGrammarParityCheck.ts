@@ -102,7 +102,7 @@ export function unsweptListErrors({ listed, linterParserSlices, sweptSlices }: U
       errors.push(`${slice}: has no linterParser.ts. Delete its line from UNSWEPT_SLICES.`);
     } else if (swept.has(slice)) {
       errors.push(
-        `${slice}: has a parser of its own, so the guard sweeps it. Delete its line from UNSWEPT_SLICES.`
+        `${slice}: registers a parser that is no base parser, so the guard sweeps it. Delete its line from UNSWEPT_SLICES, or add the hop of an ancestor's parser to BASE_TYPE_TO_PARSER_SUBPATH.`
       );
     }
   });

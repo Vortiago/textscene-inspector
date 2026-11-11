@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 import { PNG } from 'pngjs';
 import { degToRad } from '../../packages/textscene-core/src/godot/math/math.ts';
+import { REPO_ROOT } from '../repoRoot.mjs';
 import { LAVAPIPE_LOADER_ENV } from './lavapipe.mjs';
 import {
   CANVAS_2D_CAPTURE,
@@ -49,8 +50,6 @@ import {
   rootOnlyDriftMessage,
   harnessWarnings,
 } from './run.mjs';
-
-const REPO_ROOT = join(import.meta.dirname, '..', '..');
 
 /** The generated bootstrap, with only the field under test spelled out. */
 function bootstrap(overrides = {}) {

@@ -18,6 +18,15 @@ import { reusedParserFiles } from './templates/reusedParser.mjs';
 import { sheetFile } from './templates/sheet.mjs';
 import { kebab, wireImport, wireUnsweptSlice } from './wiring.mjs';
 
+/**
+ * Whether the parser at `importPath`, seen from `sliceDir`, is a base parser of the parity guard. A
+ * slice that registers one is unswept. The guard sweeps a slice that registers any other parser.
+ */
+function isGuardBaseParser(sliceDir, importPath) {
+  const subpath = relative(NODES_ROOT, resolve(sliceDir, `${importPath}.ts`)).replaceAll('\\', '/');
+  return Object.values(BASE_TYPE_TO_PARSER_SUBPATH).includes(subpath);
+}
+
 export function scaffoldSlice({ typeName, category, base: baseKey, intent, linter, dryRun }) {
   const { parent: chain, note: chainNote } = checkChain(typeName);
   // Only `draws` gets its own types, parser and Component: property knowledge lives in
@@ -55,11 +64,7 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
     propsType: base.propsType,
     typesPath: `${toBase}/types`,
   });
-  // The parity guard sweeps a slice by the parser it registers, so the scaffold asks the same table.
-  const reusedParserSubpath = relative(NODES_ROOT, resolve(sliceDir, `${reusedParser.importPath}.ts`));
-  const isBaseParser = Object.values(BASE_TYPE_TO_PARSER_SUBPATH).includes(
-    reusedParserSubpath.replaceAll('\\', '/')
-  );
+  const reusesGuardBaseParser = isGuardBaseParser(sliceDir, reusedParser.importPath);
   // Resolved once for the generated import and the plan line, since it walks the whole nodes/ tree.
   const parentLinterImport = linter
     ? parentLinterParser(typeName, chain, sliceDir, `${toBase}/linterParser.js`)
@@ -112,7 +117,7 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
         `'../nodes/${category}/`
       )
     );
-    if (reusesBaseParser && isBaseParser) wirings.push(wireUnsweptSlice(sliceRel));
+    if (reusesBaseParser) wirings.push(wireUnsweptSlice(sliceRel));
   }
 
   const imageBasename = fixtureName.replace(/\.tscn$/, '');
@@ -126,9 +131,9 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
   for (const w of wirings) console.log(`  wire    ${w.filePath.slice(REPO_ROOT.length + 1)} (${w.action})`);
   console.log(`  chain   ${chainNote}`);
   console.log(`  parser  ${reusedParser.fn} from ${reusedParser.importPath}`);
-  if (linter && reusesBaseParser && !isBaseParser) {
+  if (linter && reusesBaseParser && !reusesGuardBaseParser) {
     console.log(
-      `  note    ${reusedParser.fn} is no base parser yet: add its hop to BASE_TYPE_TO_PARSER_SUBPATH`
+      `  note    the parity guard knows no ${reusedParser.fn} hop: add it to BASE_TYPE_TO_PARSER_SUBPATH`
     );
   }
   if (linter) {

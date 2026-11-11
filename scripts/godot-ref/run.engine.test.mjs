@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PNG } from 'pngjs';
 import { degToRad } from '../../packages/textscene-core/src/godot/math/math.ts';
+import { REPO_ROOT } from '../repoRoot.mjs';
 import { CANVAS_2D_CAPTURE } from '../visual/preview/appContract.mjs';
 import {
   EDITOR_CAMERA_DIRECTION,
@@ -21,8 +22,6 @@ import {
   probePixels,
   renderReference,
 } from './run.mjs';
-
-const REPO_ROOT = join(import.meta.dirname, '..', '..');
 
 /**
  * A test's budget: a render runs two engine passes, an import and the draw, and a test may render

@@ -421,9 +421,10 @@ describe('new-node-slice intent shapes', () => {
     }
   });
 
-  it('asks for a hop instead of a line when the reused parser is no base parser of the guard', () => {
-    expect(results.reusesUnsweptAncestor.out).toContain('parseCamera3D is no base parser yet');
-    expect(results.reusesUnsweptAncestor.out).not.toContain('propertyGrammarParityUnswept.ts');
+  it('asks for the hop that makes the line true when the reused parser is no base parser of the guard', () => {
+    expect(results.reusesUnsweptAncestor.out).toContain('knows no parseCamera3D hop');
+    expect(results.reusesUnsweptAncestor.out).toContain('propertyGrammarParityUnswept.ts');
+    expect(results.transformOnly.out).not.toContain('hop');
   });
 
   it('lists no slice that has a parser of its own or no linterParser.ts (edge case)', () => {

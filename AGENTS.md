@@ -120,9 +120,9 @@ status:
 
 Never drop a registration to mark a type undrawn.
 
-With `--linter`, a slice that reuses a base parser of `linter/testing/baseParserSubpaths.ts` gets
-a line in `UNSWEPT_SLICES` (`linter/testing/propertyGrammarParityUnswept.ts`), and so does a
-`--tier`. Delete the line when the slice gets a parser of its own.
+With `--linter`, a slice that reuses a parser gets a line in `UNSWEPT_SLICES`
+(`linter/testing/propertyGrammarParityUnswept.ts`), and so does a `--tier`. Delete the line when
+the slice gets a parser of its own.
 
 The Godot parent comes from ClassDB (`pnpm nodes:base-types`), never by hand. A class the
 pinned ClassDB lacks goes in the `UNCATALOGUED` table of `godot/classdb/nodeBaseTypes.ts`, with the

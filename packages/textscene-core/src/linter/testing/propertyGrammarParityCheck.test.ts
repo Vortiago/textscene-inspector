@@ -48,10 +48,10 @@ describe('unsweptListErrors', () => {
     ]);
   });
 
-  it('names a listed slice that has a parser of its own now (error case)', () => {
+  it('names a listed slice that the guard sweeps now (error case)', () => {
     const listed = ['2d/bone2d', '3d/camera3d', 'physics/3d/area3d'];
     expect(unsweptListErrors({ ...tree, listed })).toEqual([
-      '3d/camera3d: has a parser of its own, so the guard sweeps it. Delete its line from UNSWEPT_SLICES.',
+      "3d/camera3d: registers a parser that is no base parser, so the guard sweeps it. Delete its line from UNSWEPT_SLICES, or add the hop of an ancestor's parser to BASE_TYPE_TO_PARSER_SUBPATH.",
     ]);
   });
 
