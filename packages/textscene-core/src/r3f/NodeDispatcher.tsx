@@ -4,9 +4,8 @@
  * `<Canvas>` and no context provider: `<TscnCanvas>` and `<TscnPreviewShell>` own those.
  */
 
-import { Fragment, lazy, useCallback, useEffect, useMemo } from 'react';
+import { Fragment, lazy, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import type * as THREE from 'three';
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import type { LiveNode } from '../resources/liveNode.js';
 import { belowRoot, joinPath } from '../utils/nodePath.js';
@@ -35,6 +34,7 @@ import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
 import { useAnimatedValueAt } from './contexts/AnimatedValueContext.js';
+import { useNodeObjectRegistration } from './hooks/useNodeObjectRegistration.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { childOrders, TreeOrderProvider, useTreeOrder, type TreeOrder } from './contexts/TreeOrderContext.js';
 import { VisibilityParentScope } from './visibilityRange/VisibilityParentContext.js';
@@ -43,7 +43,7 @@ import {
   useInstancedScenePaths,
 } from './contexts/InstancedScenePathsContext.js';
 import { InstanceOwnerProvider } from './contexts/InstanceOwnersContext.js';
-import { UnownedSubtree, useIsUnownedSubtree } from './contexts/UnownedSubtreeContext.js';
+import { UnownedSubtree } from './contexts/UnownedSubtreeContext.js';
 import { useLiveStepOf } from './useLiveSceneTree.js';
 import { useLiveDrawnNode } from './liveNodePatches.js';
 import { useResourceLoader } from '../resources/useResource.js';
@@ -279,8 +279,7 @@ function PlainNode({
     () => childOrders(inlineBase, node.children.length),
     [inlineBase, node.children.length]
   );
-  const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
-  const isUnowned = useIsUnownedSubtree();
+  const { hiddenNodePaths } = useSelection();
   const workspace = useCanvasWorkspace();
   const paintRange = usePaintRange();
   // Before the early returns, for rules-of-hooks. Memoized: `allocateNodePaintRange`
@@ -306,17 +305,7 @@ function PlainNode({
   // Whether `Object::cast_to<CanvasItem>(get_parent())` succeeds for this node.
   const parentIsCanvasItem = useParentSpaceFamily() === 'CanvasItem';
 
-  const wrapperRef = useCallback(
-    (object: THREE.Object3D | null) => {
-      if (isUnowned) return;
-      if (object) {
-        registerNodeObject(path, object);
-      } else {
-        unregisterNodeObject(path);
-      }
-    },
-    [path, isUnowned, registerNodeObject, unregisterNodeObject]
-  );
+  const wrapperRef = useNodeObjectRegistration(path);
 
   if (!drawsInWorkspace(node.type, workspace)) return null;
 

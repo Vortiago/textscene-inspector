@@ -52,18 +52,36 @@ void main() {
 `;
 
 /**
+ * The outputs of a light quad, one per buffer of the list it draws into (`ListAttachments`): the
+ * light term, the albedo-free `shadow_color` term, and the Light Only term, which is the light
+ * term over another seed. An output with no attachment is dropped, so one program serves every list.
+ */
+export const LIGHT_OUTPUTS = /* glsl */ `
+layout(location = 0) out highp vec4 lightColor;
+layout(location = 1) out highp vec4 shadowTint;
+layout(location = 2) out highp vec4 lightOnlyColor;
+void writeLight(vec4 light, vec4 tint) {
+  lightColor = light;
+  shadowTint = tint;
+  lightOnlyColor = light;
+}
+`;
+
+/**
  * The cookie arrives raw, tagged `NoColorSpace`, as Godot's non-HDR canvas reads it
  * (`texture_storage.cpp:754`). Nothing is clamped: the accumulator is a float, and Godot
- * clamps only after the light has been multiplied into an item's albedo.
+ * clamps only after the light has been multiplied into an item's albedo. With no shadow the
+ * `shadow_color` term is the alpha alone, which a MIX blend scales that buffer by.
  */
 export const FRAGMENT = /* glsl */ `
 ${COOKIE_TAP}
+${LIGHT_OUTPUTS}
 uniform vec3 uColor;
 uniform float uEnergy;
 varying vec2 vLightUv;
 void main() {
   vec4 cookie = sampleCookie(vLightUv);
-  gl_FragColor = vec4(cookie.rgb * uColor * uEnergy, cookie.a);
+  writeLight(vec4(cookie.rgb * uColor * uEnergy, cookie.a), vec4(0.0, 0.0, 0.0, cookie.a));
 }
 `;
 
@@ -119,12 +137,17 @@ float shadowFraction() {
 `;
 
 /**
- * The cookie quad's share of `canvas.glsl:547`, with the albedo in `C` (line 814) and `S` the shadow
- * colour: `C·(1−s)·cookie.a·((1−s) + S.a·s)`. At the transparent default that is a (1−s)² falloff,
- * as Godot 4.6.3 shows: PCF5 over 0.25 steps 167/129/100/80/67/63 of 255, not (1−s)'s 167/146/…/64.
+ * `canvas.glsl:543-547` replaces the light term, `light_color = mix(light_color, shadow_color, shadow)`
+ * after `shadow_color.a *= light_color.a`, and the previewer splits it in two buffers. The light
+ * term carries the albedo `C` (line 814): `C·(1−s)·cookie.a·((1−s) + S.a·s)`. At the transparent
+ * default that is a (1−s)² falloff, as Godot 4.6.3 shows: PCF5 over 0.25 steps 167/129/100/80/67/63
+ * of 255, not (1−s)'s 167/146/…/64. The `shadow_color` term is never albedo-scaled: rgb `S.rgb·s`
+ * under the light's whole alpha, the same alpha the light term carries, so a MIX blend scales both
+ * buffers alike. At `s = 1` the quad draws `(S.rgb, cookie.a · S.a)`.
  */
 export const SHADOWED_FRAGMENT = /* glsl */ `
 ${COOKIE_TAP}
+${LIGHT_OUTPUTS}
 uniform vec3 uColor;
 uniform float uEnergy;
 uniform vec4 uShadowColor;
@@ -133,26 +156,9 @@ void main() {
   vec4 cookie = sampleCookie(vLightUv);
   float s = shadowFraction();
   float lit = 1.0 - s;
-  gl_FragColor = vec4(
-    cookie.rgb * uColor * uEnergy * lit,
-    cookie.a * (lit + s * uShadowColor.a)
-  );
-}
-`;
-
-/**
- * The `shadow_color` quad's share, never albedo-scaled: rgb `S.rgb·s` under the light's whole alpha
- * `cookie.a·((1−s) + S.a·s)`, the same alpha the cookie quad carries. A MIX blend then scales both
- * buffers alike, and at `s = 1` the quad draws `(S.rgb, cookie.a · S.a)`.
- */
-export const SHADOWED_TINT_FRAGMENT = /* glsl */ `
-${COOKIE_TAP}
-uniform vec4 uShadowColor;
-varying vec2 vLightUv;
-
-void main() {
-  vec4 cookie = sampleCookie(vLightUv);
-  float s = shadowFraction();
-  gl_FragColor = vec4(uShadowColor.rgb * s, cookie.a * ((1.0 - s) + s * uShadowColor.a));
+  float alpha = cookie.a * (lit + s * uShadowColor.a);
+  vec4 light = vec4(cookie.rgb * uColor * uEnergy * lit, alpha);
+  vec4 tint = vec4(uShadowColor.rgb * s, alpha);
+  writeLight(light, tint);
 }
 `;

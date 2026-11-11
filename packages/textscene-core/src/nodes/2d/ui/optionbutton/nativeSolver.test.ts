@@ -15,14 +15,16 @@ import type { OptionButtonProperties } from './types';
 import {
   optionButtonMinimumSize,
   optionButtonTextTheme,
-  resolveOptionButtonSelectedText,
-  layoutOptionButtonContent,
+  selectedOptionItem,
+  layoutOptionButtonContent as layoutContent,
   optionButtonArrowSize,
   optionButtonTextureSlots,
   OPTION_BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import type { ButtonContentInput } from '../../../../r3f/controls/native/buttonBase';
 import { controlProps } from '../control/testing/controlProps';
+import { internalMarginAt } from '../../../../r3f/controls/native/buttonBase';
 
 const A_ADVANCE = 1354 * (16 / 2048); // 10.578125
 // 'B' is 1350 design units, not 'A''s 1354.
@@ -65,6 +67,36 @@ describe('optionButtonTextureSlots', () => {
   });
 });
 
+describe("optionButtonTextureSlots: items' icons (option_button.cpp:424,451)", () => {
+  const items = [
+    { text: 'A', id: 0, icon: 'ExtResource("1")' },
+    { text: 'B', id: 1, icon: 'ExtResource("2")' },
+    { text: 'C', id: 2 },
+  ];
+  const slots = (props: Partial<OptionButtonProperties>) =>
+    optionButtonTextureSlots(controlNode('Opt', 'OptionButton', { name: 'Opt', ...props }), {});
+
+  it("requests the selected item's icon as Button's icon, first, and every item's own icon after it", () => {
+    const requests = slots({ items, selected: 1 });
+    expect(requests.map(({ key, ref }) => [key, ref])).toEqual([
+      ['icon', 'ExtResource("2")'],
+      ['popup/item_0/icon', 'ExtResource("1")'],
+      ['popup/item_1/icon', 'ExtResource("2")'],
+    ]);
+  });
+
+  it('requests no Button icon when nothing is selected, though each item still sizes the minimum', () => {
+    expect(slots({ items }).map(({ key }) => key)).toEqual(['popup/item_0/icon', 'popup/item_1/icon']);
+  });
+
+  it('requests no Button icon for a selected item without an icon', () => {
+    expect(slots({ items, selected: 2 }).map(({ key }) => key)).toEqual([
+      'popup/item_0/icon',
+      'popup/item_1/icon',
+    ]);
+  });
+});
+
 describe('optionButtonArrowSize', () => {
   it("is option_button_arrow.svg's own authored 12x12 when no arrow is themed", () => {
     expect(optionButtonArrowSize({ textureSlots: {} })).toEqual({ x: 12, y: 12 });
@@ -97,24 +129,24 @@ describe('theme.widgets.optionButton', () => {
   });
 });
 
-describe("resolveOptionButtonSelectedText (parity with Component.tsx's own bounds-guarded lookup)", () => {
+describe('selectedOptionItem (the bounds-guarded lookup: an absent or out-of-range selected is none)', () => {
   it('resolves items[selected].text when selected is a valid index', () => {
     const items = [
       { text: 'Easy', id: 0 },
       { text: 'Normal', id: 1 },
       { text: 'Hard', id: 2 },
     ];
-    expect(resolveOptionButtonSelectedText({ items, selected: 1 } as OptionButtonProperties)).toBe('Normal');
+    expect(selectedOptionItem({ items, selected: 1 } as OptionButtonProperties)?.text ?? '').toBe('Normal');
   });
 
   it('is empty string when selected is out of range', () => {
     const items = [{ text: 'Easy', id: 0 }];
-    expect(resolveOptionButtonSelectedText({ items, selected: 5 } as OptionButtonProperties)).toBe('');
+    expect(selectedOptionItem({ items, selected: 5 } as OptionButtonProperties)?.text ?? '').toBe('');
   });
 
   it('is empty string when selected is absent or items is absent', () => {
-    expect(resolveOptionButtonSelectedText({} as OptionButtonProperties)).toBe('');
-    expect(resolveOptionButtonSelectedText({ selected: 0 } as OptionButtonProperties)).toBe('');
+    expect(selectedOptionItem({} as OptionButtonProperties)?.text ?? '').toBe('');
+    expect(selectedOptionItem({ selected: 0 } as OptionButtonProperties)?.text ?? '').toBe('');
   });
 });
 
@@ -167,6 +199,69 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
   });
 });
 
+describe("optionButtonMinimumSize: each item's icon (option_button.cpp:451, button.cpp:481-526)", () => {
+  const withIcons = (
+    props: Partial<OptionButtonProperties>,
+    icons: Record<number, { x: number; y: number }>
+  ) => ({
+    ...node(props),
+    textureSlots: Object.fromEntries(
+      Object.entries(icons).map(([i, size]) => [`popup/item_${i}/icon`, size])
+    ),
+  });
+
+  it("adds the icon's width and h_separation beside the text, and takes the taller of the two", () => {
+    const n = withIcons(
+      { items: [{ text: 'AB', id: 0, icon: 'ExtResource("1")' }] },
+      { 0: { x: 20, y: 30 } }
+    );
+    // text 22 + 20 + 4 (h_separation) = 46; height max(23, 30) = 30; plus the arrow 12 + 4 and margins 16 by 8.
+    expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 16 + 46 + 12 + 4, y: 8 + 30 });
+  });
+
+  it('counts an icon-only item by its icon alone, with no separation', () => {
+    const n = withIcons({ items: [{ text: '', id: 0, icon: 'ExtResource("1")' }] }, { 0: { x: 20, y: 30 } });
+    expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 16 + 20 + 12 + 4, y: 8 + 30 });
+  });
+
+  it("measures an empty item text as the button's own selected text (button.cpp:485-486, 515)", () => {
+    const n = withIcons(
+      {
+        selected: 0,
+        items: [
+          { text: 'AB', id: 0 },
+          { text: '', id: 1, icon: 'ExtResource("1")' },
+        ],
+      },
+      { 1: { x: 20, y: 30 } }
+    );
+    // item 1 reuses `text_buf` ("AB", 22) beside its icon: 22 + 20 + 4 = 46, height max(23, 30).
+    expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 16 + 46 + 12 + 4, y: 8 + 30 });
+  });
+
+  it('takes the widest item over text and icon together', () => {
+    const n = withIcons(
+      {
+        items: [
+          { text: 'AB', id: 0 },
+          { text: 'A', id: 1, icon: 'ExtResource("1")' },
+        ],
+      },
+      { 1: { x: 40, y: 10 } }
+    );
+    // item 1: ceil(10.58) = 11 + 40 + 4 = 55 beats item 0's 22.
+    expect(optionButtonMinimumSize(n, ctx()).x).toBe(16 + 55 + 12 + 4);
+  });
+
+  it('leaves the icon out under expand_icon, which sizes it from the box', () => {
+    const n = withIcons(
+      { expandIcon: true, items: [{ text: 'AB', id: 0, icon: 'ExtResource("1")' }] },
+      { 0: { x: 20, y: 30 } }
+    );
+    expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 16 + 22 + 12 + 4, y: 8 + 23 });
+  });
+});
+
 describe('optionButtonTextTheme', () => {
   it('resolves control_font_color for the normal state', () => {
     // default_theme.cpp:101,240: control_font_color.
@@ -212,6 +307,30 @@ const LAYOUT_BASE = {
   textAlignment: 0,
   rtl: false,
 };
+
+/** The facts the painter builds for a label of `textHeightPx` and an arrow of `arrowSize`, as the tests state them. */
+function layoutOptionButtonContent(input: typeof LAYOUT_BASE & Partial<ButtonContentInput>) {
+  const { arrowSize, arrowMargin, textHeightPx, ...rest } = input;
+  const layout = layoutContent({
+    arrowSize,
+    arrowMargin,
+    content: {
+      iconMaxWidth: 0,
+      iconAlignment: 0,
+      verticalIconAlignment: 1,
+      expandIcon: false,
+      iconNaturalSize: null,
+      hasText: true,
+      textNaturalSize: { x: 50, y: textHeightPx },
+      isTextRtl: false,
+      isClipped: false,
+      internalMargin: internalMarginAt(input.rtl ? 'left' : 'right', arrowSize.x),
+      ...rest,
+    },
+  });
+  // `hasText` is true above, so the box exists.
+  return { ...layout, labelBox: layout.labelBox! };
+}
 
 describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-260,444-456)', () => {
   it('the arrow sits at (rect.w - arrowSize.w - arrowMargin), NOT the content-margin edge', () => {
@@ -368,5 +487,26 @@ describe('optionButtonMinimumSize: autowrap_mode zeroes each item text width and
     const context: SolveContext = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 80, h: 40 }) };
     const result = optionButtonMinimumSize(node({ items, selected: 0, autowrapMode: 2 }), context);
     expect(result.y).toBe(8 + FONT_HEIGHT);
+  });
+});
+
+describe("layoutOptionButtonContent: the selected item's icon (button.cpp:333-405)", () => {
+  const WITH_ICON = { ...LAYOUT_BASE, iconNaturalSize: { x: 12, y: 12 } };
+
+  it('draws a LEFT icon at the left margin and moves the label past it and h_separation', () => {
+    const { icon, labelBox } = layoutOptionButtonContent(WITH_ICON);
+    // y = 4 + (24 - 12) / 2 = 10; the label keeps its width less 12 + 4: 118 - 16 = 102.
+    expect(icon!.rect).toEqual({ x: 8, y: 10, w: 12, h: 12 });
+    expect(labelBox).toMatchObject({ leftPx: 24, widthPx: 102 });
+  });
+
+  it('draws a RIGHT icon short of the arrow and its separation', () => {
+    const { icon } = layoutOptionButtonContent({ ...WITH_ICON, iconAlignment: 2 });
+    // 150 - 8 (margin) - 16 (arrow + separation) - 12.
+    expect(icon!.rect.x).toBe(114);
+  });
+
+  it('draws no icon without a natural size', () => {
+    expect(layoutOptionButtonContent(LAYOUT_BASE).icon).toBeNull();
   });
 });
