@@ -48,7 +48,7 @@ Flags:
 
 | Flag | Effect |
 |---|---|
-| `<fixture.tscn>` | The scene to open. The name must match `src/fixtures.ts` exactly. |
+| `<fixture.tscn>` | The scene to open. The name must match the generated `src/fixtures.ts` exactly. |
 | `--select <nodePath>` | Clicks the outliner row, then screenshots the page and reads the inspector. Repeatable. |
 | `--upload <file>` | Picks the file in the toolbar's file input after the fixture opens. Repeat it for the scene and its textures. |
 | `--camera <path>` | Opens through that Camera3D (`?camera=`), for example `Root/Camera3D`. |
