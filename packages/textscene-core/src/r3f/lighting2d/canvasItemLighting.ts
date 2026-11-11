@@ -84,10 +84,8 @@ uniform vec3 uCanvasModulate;
 uniform float uLightMode;
 const float canvasModulateFloor = ${canvasModulateFloorIn(isLinearCanvas)};
 #ifdef LINEAR_CANVAS
-vec3 canvasAlbedo(vec3 fragment) { return fragment; }
 vec3 canvasShaded(vec3 color) { return color; }
 #else
-vec3 canvasAlbedo(vec3 fragment) { return fragment; }
 vec3 canvasShaded(vec3 color) { return clamp(color, 0.0, 1.0); }
 #endif`;
 }
@@ -121,7 +119,7 @@ bool lightOnly = uLightMode > ${ABOVE_UNSHADED};`;
  */
 export const ITEM_ALBEDO_GLSL = `vec3 lightSeed = lightOnly ? vec3(1.0) : uCanvasModulate;
 vec2 lightUv = gl_FragCoord.xy / uLightResolution;
-vec3 albedo = canvasAlbedo(gl_FragColor.rgb) / max(lightSeed, vec3(canvasModulateFloor));`;
+vec3 albedo = gl_FragColor.rgb / max(lightSeed, vec3(canvasModulateFloor));`;
 
 const LIGHT_INJECTION = `#include <colorspace_fragment>
 ${LIGHT_MODE_GLSL}

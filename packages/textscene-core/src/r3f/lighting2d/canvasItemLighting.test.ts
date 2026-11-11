@@ -112,7 +112,7 @@ describe('canvasItemLightingProps', () => {
     const encoded = shader.fragmentShader.indexOf('#include <colorspace_fragment>');
     expect(encoded).toBeGreaterThan(-1);
     expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = canvasShaded')).toBeGreaterThan(encoded);
-    expect(shader.fragmentShader.indexOf('canvasAlbedo(gl_FragColor.rgb)')).toBeGreaterThan(encoded);
+    expect(shader.fragmentShader.indexOf('vec3 albedo = gl_FragColor.rgb')).toBeGreaterThan(encoded);
   });
 
   it('defines the linear canvas at compile time, with a program key of its own', () => {
@@ -159,7 +159,7 @@ describe('canvasItemLightingProps', () => {
     // Both seeds live in one program and `uLightMode` picks at runtime. The divide-out is by the
     // seed, so Light Only's 1.0 makes it a no-op.
     expect(shader.fragmentShader).toContain('lightOnly ? vec3(1.0) : uCanvasModulate');
-    expect(shader.fragmentShader).toContain('canvasAlbedo(gl_FragColor.rgb) / max(lightSeed');
+    expect(shader.fragmentShader).toContain('gl_FragColor.rgb / max(lightSeed');
   });
 
   it('throws, naming the hook, for a shader with no colorspace hook (error case)', () => {
