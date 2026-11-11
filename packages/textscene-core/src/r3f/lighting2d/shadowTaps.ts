@@ -17,7 +17,7 @@ import { imageSize } from '../../resources/formats/image/imagePixels';
 
 /**
  * `float shadowBins()`, the texels in the light's map: `shadow_texture_size`. A uniform, not
- * `textureSize`, so a fragment's thirteen taps read one value. `shadowBinsUniform` writes it from
+ * `textureSize`, so a fragment's thirteen taps read one value. `shadowMapUniforms` writes it from
  * the map's own width, so the texture and every tap agree on it.
  */
 export const SHADOW_BINS = /* glsl */ `
@@ -25,10 +25,11 @@ uniform float uShadowBins;
 float shadowBins() { return uShadowBins; }
 `;
 
-export function shadowBinsUniform(map: THREE.Texture): THREE.IUniform<number> {
+/** `uShadowMap` and the `uShadowBins` its taps divide by, which a light declares together. */
+export function shadowMapUniforms(map: THREE.Texture): Record<'uShadowMap' | 'uShadowBins', THREE.IUniform> {
   const size = imageSize(map.image);
   if (!size) throw new Error('expected a shadow map with an image, got a texture without one');
-  return { value: size.width };
+  return { uShadowMap: { value: map }, uShadowBins: { value: size.width } };
 }
 
 /**

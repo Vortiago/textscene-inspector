@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Light2DShadowFilter } from '../../godot/scene/light2d.js';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
-import { shadowBinsUniform } from './shadowTaps.js';
+import { shadowMapUniforms } from './shadowTaps.js';
 import { shadowMapZFarInv, type ShadowPolarLight } from './shadowPolarMap.js';
 
 /**
@@ -106,8 +106,7 @@ export function shadowSamplingParameters(shadow: ShadowSampling): Pick<
   return {
     defines: { SHADOW_FILTER: shadow.filter },
     uniforms: {
-      uShadowMap: { value: shadow.map },
-      uShadowBins: shadowBinsUniform(shadow.map),
+      ...shadowMapUniforms(shadow.map),
       ...shadow.pose,
       uShadowSmooth: { value: shadow.smooth },
     },

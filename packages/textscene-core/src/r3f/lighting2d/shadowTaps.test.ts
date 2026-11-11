@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { SHADOW_BINS, SHADOW_TAPS, shadowBinsUniform } from './shadowTaps';
+import { SHADOW_BINS, SHADOW_TAPS, shadowMapUniforms } from './shadowTaps';
 
 describe('SHADOW_BINS', () => {
   it('is the width of the map it samples, so the atlas size has one source', () => {
@@ -14,10 +14,16 @@ describe('SHADOW_BINS', () => {
   });
 });
 
-describe('shadowBinsUniform', () => {
-  it("is the map's width", () => {
+describe('shadowMapUniforms', () => {
+  it('holds the map and its width', () => {
     const map = new THREE.DataTexture(new Float32Array(512), 512, 1, THREE.RedFormat, THREE.FloatType);
-    expect(shadowBinsUniform(map).value).toBe(512);
+    const uniforms = shadowMapUniforms(map);
+    expect(uniforms.uShadowMap!.value).toBe(map);
+    expect(uniforms.uShadowBins!.value).toBe(512);
+  });
+
+  it('names the expected map when the texture has no image', () => {
+    expect(() => shadowMapUniforms(new THREE.Texture())).toThrow('expected a shadow map with an image');
   });
 });
 

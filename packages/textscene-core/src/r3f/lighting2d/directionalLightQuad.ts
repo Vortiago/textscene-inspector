@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import { accumulationState, shadowColorUniform } from './lightQuad.js';
 import { FULL_SCREEN_VERTEX } from '../fullScreenPass.js';
 import { SHADOW_MAP_FAR } from './shadowPolarMap.js';
-import { SHADOW_BINS, SHADOW_TAPS, shadowBinsUniform } from './shadowTaps.js';
+import { SHADOW_BINS, SHADOW_TAPS, shadowMapUniforms } from './shadowTaps.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Light2DShadowFilter } from '../../godot/scene/light2d.js';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
@@ -124,8 +124,7 @@ interface DirectionalLightQuadOptions {
 
 function shadowUniforms(shadow: DirectionalShadowSampling): Record<string, THREE.IUniform> {
   return {
-    uShadowMap: { value: shadow.map },
-    uShadowBins: shadowBinsUniform(shadow.map),
+    ...shadowMapUniforms(shadow.map),
     uShadowSmooth: { value: shadow.smooth },
     uNdcToShadow: { value: shadow.ndcToShadow },
     uShadowColor: { value: shadowColorUniform(shadow.shadowColor) },
