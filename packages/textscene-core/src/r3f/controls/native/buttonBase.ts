@@ -637,7 +637,7 @@ export function trimButtonLabel(
 }
 
 /** The width `button.cpp:424-432` gives the text buffer: the drawable width, at least 1, ceiled. */
-export function buttonTextBufWidthPx(drawableWidthPx: number): number {
+function buttonTextBufWidthPx(drawableWidthPx: number): number {
   return Math.ceil(Math.max(1, drawableWidthPx));
 }
 
