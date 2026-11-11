@@ -464,9 +464,13 @@ function drawsClipped(node: TscnNode): boolean {
   return isClipping && !ysortsChildren(node);
 }
 
-/** Whether `node` re-orders its children by `y_sort_enabled`, so the behind/ahead split does not apply. */
+/**
+ * Whether `node` re-orders its children by `y_sort_enabled`, so the behind/ahead split does not
+ * apply. Under either casing: a Control's properties are camelCase.
+ */
 export function ysortsChildren(node: TscnNode): boolean {
-  return (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true;
+  const props = node.properties as { y_sort_enabled?: boolean; ySortEnabled?: boolean };
+  return props.y_sort_enabled === true || props.ySortEnabled === true;
 }
 
 /**

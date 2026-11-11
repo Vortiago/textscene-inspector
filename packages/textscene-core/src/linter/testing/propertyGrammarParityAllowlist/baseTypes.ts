@@ -265,9 +265,6 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   Control: {
     linterOnly: [
-      // From the CanvasItem tier: the Node2D family renders y-sorting, so it sits on
-      // Control, not the shared tier.
-      'y_sort_enabled',
       // Input routing and assistive tech touch no frozen frame: accessibility,
       // focus order, shortcut context, the mouse keys and the tooltip.
       'accessibility_name',

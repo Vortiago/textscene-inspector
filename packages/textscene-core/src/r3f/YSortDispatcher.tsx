@@ -5,7 +5,7 @@
  * (`ySortRows`), each interleaving with sibling CanvasItems.
  */
 
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import type { TileSetModel } from '../resources/tileset/types.js';
 import { ySortRows } from '../resources/tileset/tileYSort.js';
@@ -27,6 +27,7 @@ import {
   isTopLevelItem,
   packPaintRanges,
   paintRangeSize,
+  type PaintRange,
 } from './canvasPaintOrder.js';
 import { PaintRangeProvider, useCanvasRootRanges, usePaintRange } from './contexts/PaintOrderContext.js';
 import { joinPath } from '../utils/nodePath.js';
@@ -37,18 +38,25 @@ import { transform2DXform } from '../godot/math/transform2d.js';
 import { DispatchedNode } from './NodeDispatcher.js';
 import { NodePathProvider, useNodePath } from './contexts/NodePathContext.js';
 import { useLiveDrawnPatchesBelow } from './liveNodePatches.js';
+import { useControlOrigins, usePublishControlRuns } from './contexts/ControlYSortContext.js';
+import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 
 /** Performs the y-sort pass on a y_sort_enabled Node2D's or TileMapLayer's children. */
 export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children: ReactNode }) {
   const path = useNodePath() ?? node.name;
   const patches = useLiveDrawnPatchesBelow(path);
+  const controlOrigins = useControlOrigins();
   // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer). A layer that
   // roots the sort lists its own rows first, so its children number from 1.
   const rawItems = useMemo(() => {
     const ownRows = collectSortRootRows(node);
-    const children = collectYSortedItems(node, Y_SORT_ROOT, ownRows ? 1 : 0, [], { path, patches });
+    const children = collectYSortedItems(node, Y_SORT_ROOT, ownRows ? 1 : 0, [], {
+      path,
+      patches,
+      controlOrigins,
+    });
     return ownRows ? [ownRows, ...children] : children;
-  }, [node, path, patches]);
+  }, [node, path, patches, controlOrigins]);
   // Each y-sorted layer expands against its own grid, so every distinct
   // `tile_set` in the list is resolved, not just the first one's.
   const refs = useMemo(() => tileSetRefsOf(rawItems), [rawItems]);
@@ -114,6 +122,20 @@ function SortedChildren({
     const rangeOf = new Map(sorted.map((item, i) => [ySortItemId(item), ranges[i]!]));
     return liveItems.map((item) => ({ item, range: rangeOf.get(ySortItemId(item))! }));
   }, [sorted, liveItems, ownSequence, paintRange]);
+
+  // The Control walk draws a Control child, so it takes the run this sort gives it.
+  const publishRuns = usePublishControlRuns(useId());
+  useEffect(() => {
+    if (!publishRuns) return;
+    const runs = new Map<string, PaintRange>();
+    for (const { item, range } of packed) {
+      if (item.node && descendsFromClass(item.node.type, 'Control')) {
+        runs.set(liftedPath(basePath, item.liftedPast, item.node.name), range);
+      }
+    }
+    publishRuns(runs);
+  }, [packed, basePath, publishRuns]);
+  useEffect(() => () => publishRuns?.(null), [publishRuns]);
 
   return (
     <>

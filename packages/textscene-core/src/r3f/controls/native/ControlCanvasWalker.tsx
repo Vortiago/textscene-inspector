@@ -30,11 +30,9 @@ import { isCanvasLayerType, ysortsChildren } from '../../canvasPaintOrder';
 import { CanvasRootScope } from '../../canvasRootScope';
 import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
-import {
-  controlDrawTransformOf,
-  snapControlsToPixelsEnabled,
-  snappedControlOriginUnder,
-} from './controlPixelSnap';
+import { snapControlsToPixelsEnabled, snappedControlOriginUnder } from './controlPixelSnap';
+import { placeInRuns, solvedDrawTransformOf, sortYSortedControls } from './controlYSort';
+import type { ControlRuns } from '../../contexts/ControlYSortContext';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import {
   CanvasItemChildScope,
@@ -64,6 +62,8 @@ interface ControlCanvasWalkerProps {
    * the first root and each root promoted past the placement chain; a `top_level` root sits at it.
    */
   rootOffset?: Vector2;
+  /** The runs a y-sorted node in the world gave the Controls beneath it, by tree path (`placeInRuns`). */
+  runs?: ControlRuns;
   /** Called after each solve, with the solved controls keyed by tree path. */
   onSolved?: (solved: ReadonlyMap<string, SolvedControl>) => void;
 }
@@ -76,6 +76,7 @@ export function ControlCanvasWalker({
   measurer,
   snapToPixels,
   rootOffset,
+  runs,
   onSolved,
 }: ControlCanvasWalkerProps) {
   // Per viewport in Godot (`Viewport::snap_controls_to_pixels`,
@@ -94,14 +95,19 @@ export function ControlCanvasWalker({
   useEffect(() => {
     onSolved?.(solved);
   }, [solved, onSolved]);
+  // A y-sorted Control's children draw in the order the solve gives their origins.
+  const drawn = useMemo(
+    () => sortYSortedControls(runs ? placeInRuns(tree, runs) : tree, solved, snapEnabled),
+    [tree, runs, solved, snapEnabled]
+  );
 
   return (
     <>
-      {tree.map((n) => (
+      {drawn.map((n) => (
         <WalkRoot
           key={n.path}
           solveNode={n}
-          isFirst={n === tree[0]}
+          isFirst={n === drawn[0]}
           solved={solved}
           theme={theme}
           measureText={measurer}
@@ -242,10 +248,7 @@ function ControlItemGroup({
 
   // The solve says whether `Container::fit_child_in_rect` reset this child to rotation 0 and
   // scale 1, and the snap's rotation gate must see that too.
-  const transform = controlDrawTransformOf(props, rect, {
-    resets: solvedEntry?.resetsChildTransform === true,
-    solvedScale: solvedEntry?.scale,
-  });
+  const transform = solvedDrawTransformOf(solveNode, solvedEntry ?? { rect });
   const { rotation, scale, pivot } = transform;
   const hasOwnTransform = rotation !== 0 || scale.x !== 1 || scale.y !== 1;
 

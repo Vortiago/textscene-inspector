@@ -83,6 +83,11 @@ export interface ControlProperties {
    */
   topLevel: boolean;
   /**
+   * CanvasItem `y_sort_enabled`: the Control draws its children in y order
+   * (`canvas_item.cpp:706-709`). Default `false`.
+   */
+  ySortEnabled: boolean;
+  /**
    * CanvasItem `light_mask`: the 2D lights that reach this Control, ANDed with a light's
    * `range_item_cull_mask`. Default `1` (`scene/main/canvas_item.h:98`). Children do not inherit it.
    */
@@ -154,6 +159,7 @@ export type ControlCanvasItemFields = Pick<
   | 'zAsRelative'
   | 'showBehindParent'
   | 'topLevel'
+  | 'ySortEnabled'
   | 'lightMask'
   | 'clipChildren'
   | 'useParentMaterial'

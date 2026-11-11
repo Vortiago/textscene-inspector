@@ -20,6 +20,8 @@ import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { NO_PATCHES, patchedNode, type NodePatches } from './nodePatch.js';
 import { joinPath } from '../utils/nodePath.js';
 import type { LiveNode } from '../resources/liveNode.js';
+import type { ControlOrigins } from './contexts/ControlYSortContext.js';
+import { VECTOR2_ZERO, type Vector2 } from '../godot/math/vector.js';
 
 /** What `_collect_ysort_children` threads down to the children of one y-sorted item. */
 export interface YSortParent {
@@ -89,10 +91,20 @@ function ownBodyOf(node: TscnNode): TscnNode {
 
 /**
  * A child's transform in the sort root's space, `ysort_xform` (`renderer_canvas_cull.cpp:131`).
- * A Node3D child has no 2D transform: its Vector3 `rotation` would make every sort y NaN.
+ * A Node3D child has no 2D transform: its Vector3 `rotation` would make every sort y NaN. A Control
+ * child has no `position` either: its canvas item sits at `controlOrigin`, which the Control walk
+ * publishes after its solve, and at the parent's origin until then.
  */
-function toSortRootOf(child: TscnNode, parent: YSortParent): Transform2DColumns {
+function toSortRootOf(
+  child: TscnNode,
+  parent: YSortParent,
+  controlOrigin: Vector2 | undefined
+): Transform2DColumns {
   if (descendsFromClass(child.type, 'Node3D')) return parent.toSortRoot;
+  if (descendsFromClass(child.type, 'Control')) {
+    const { x: tx, y: ty } = controlOrigin ?? VECTOR2_ZERO;
+    return multiplyTransform2D(parent.toSortRoot, { ...TRANSFORM2D_IDENTITY, tx, ty });
+  }
   return multiplyTransform2D(
     parent.toSortRoot,
     node2DLocalTransform(child.properties as Partial<Node2DLocalTransform>)
@@ -104,9 +116,13 @@ function toSortRootOf(child: TscnNode, parent: YSortParent): Transform2DColumns 
  * and what it threads to its own children: its transform there and its z bucket. A TileMapLayer's
  * `y_sort_origin` moves only its rows (`tile_map_layer.cpp:547`), never the layer's own origin.
  */
-function itemSortKey(child: TscnNode, parent: YSortParent): YSortParent & { sortY: number } {
+function itemSortKey(
+  child: TscnNode,
+  parent: YSortParent,
+  controlOrigin: Vector2 | undefined
+): YSortParent & { sortY: number } {
   const props = child.properties as Record<string, unknown>;
-  const toSortRoot = toSortRootOf(child, parent);
+  const toSortRoot = toSortRootOf(child, parent, controlOrigin);
   // A scene tile sorts as its instance root, which sits inside the placement node that stands for it.
   const root = (child as LiveNode).ySortRoot;
   const sortY = root ? multiplyTransform2D(toSortRoot, root.pose).ty : toSortRoot.ty;
@@ -155,6 +171,8 @@ export function collectSortRootRows(node: TscnNode): YSortItem | null {
 export interface YSortLivePoses {
   path: string;
   patches: NodePatches;
+  /** Where the Control walk put each Control's canvas item, by path, which a Control child sorts on. */
+  controlOrigins?: ControlOrigins;
 }
 
 const AUTHORED_POSES: YSortLivePoses = { path: '', patches: NO_PATCHES };
@@ -185,7 +203,11 @@ export function collectYSortedItems(
     const childPoses = { path: joinPath(live.path, child.name), patches: live.patches };
     // Godot sorts on the transform it draws (`renderer_canvas_cull.cpp:131`), such as the pose a
     // RemoteTransform2D pushes.
-    const key = itemSortKey(patchedNode(child, live.patches.get(childPoses.path)), parent);
+    const key = itemSortKey(
+      patchedNode(child, live.patches.get(childPoses.path)),
+      parent,
+      live.controlOrigins?.get(childPoses.path)
+    );
     const props = child.properties as Record<string, unknown>;
     const isYSort = props.y_sort_enabled === true;
 
