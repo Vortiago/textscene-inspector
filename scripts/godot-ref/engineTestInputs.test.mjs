@@ -49,6 +49,7 @@ describe('resourceClosure', () => {
     'scenes/fixtures/materials/a.tres': `[ext_resource type="Texture2D" path="res://materials/a.png" id="1"]`,
     'scenes/fixtures/materials/a.png': 'binary path="res://not-a-reference.png"',
     'scenes/fixtures/unit-other.tscn': '',
+    'scenes/fixtures/project.godot': 'config/name="x"',
   };
   const closure = resourceClosure(
     ['scenes/fixtures/unit-a.tscn', 'scenes/fixtures/unit-missing.tscn'],
@@ -60,8 +61,13 @@ describe('resourceClosure', () => {
     expect([...closure].sort()).toEqual([
       'scenes/fixtures/materials/a.png',
       'scenes/fixtures/materials/a.tres',
+      'scenes/fixtures/project.godot',
       'scenes/fixtures/unit-a.tscn',
     ]);
+  });
+
+  it('takes the project file of a scene, which the harness reads and no scene names', () => {
+    expect(closure.has('scenes/fixtures/project.godot')).toBe(true);
   });
 
   it('leaves out a scene and a resource that are no file (edge case)', () => {
@@ -134,6 +140,10 @@ describe('isEngineTestInput', () => {
     expect(isEngineTestInput('scenes/fixtures/subviewport-snap-off/unit-subviewport-snap-off.tscn')).toBe(
       true
     );
+  });
+
+  it('takes the project file of a rendered fixture', () => {
+    expect(isEngineTestInput('scenes/fixtures/subviewport-snap-off/project.godot')).toBe(true);
   });
 
   it('leaves out a file of the harness that no real-Godot test reads (edge case)', () => {

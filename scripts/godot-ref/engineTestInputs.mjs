@@ -39,8 +39,8 @@ export function sceneCandidates(scene) {
 }
 
 /**
- * The files among `scenes` and every resource they load through a `res://` path, as repository
- * paths. `rootOf` gives the `res://` root of a scene. `readSource` answers undefined for a path
+ * The files among `scenes`, every resource they load through a `res://` path and the project file
+ * of each, as repository paths. `rootOf` gives the `res://` root of a scene. `readSource` answers undefined for a path
  * that is no file, which the closure leaves out.
  */
 export function resourceClosure(scenes, readSource, rootOf) {
@@ -53,7 +53,12 @@ export function resourceClosure(scenes, readSource, rootOf) {
     if (!TEXT_RESOURCE.test(path)) return;
     for (const [, loaded] of src.matchAll(/\bpath="res:\/\/([^"]+)"/g)) visit(posix.join(root, loaded), root);
   };
-  for (const scene of scenes) visit(scene, rootOf(scene));
+  for (const scene of scenes) {
+    const root = rootOf(scene);
+    visit(scene, root);
+    // The harness reads the project file of a rendered scene, and no scene names it.
+    if (seen.has(scene)) visit(posix.join(root, 'project.godot'), root);
+  }
   return seen;
 }
 
