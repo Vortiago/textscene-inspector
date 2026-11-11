@@ -8,9 +8,9 @@
 
 import { VECTOR2_ZERO } from '../../../godot/math/vector';
 import { transform2DFromParts } from '../../../godot/math/transform2d';
-import { parentPathOf } from '../../../utils/nodePath';
+import { joinPath, parentPathOf, relativeTo } from '../../../utils/nodePath';
 import type { PaintRange } from '../../canvasPaintOrder';
-import type { ControlTransforms, YSortShifts } from '../../contexts/ControlYSortContext';
+import type { ControlTransforms, YSortShift, YSortShifts } from '../../contexts/ControlYSortContext';
 import type { SolvedControl } from './controlRectSolver';
 import { controlDrawTransformOf, controlItemOriginUnder } from './controlPixelSnap';
 import { controlProps, isPromotedControl, type SolveNode } from './solveTree';
@@ -49,6 +49,26 @@ export function controlTransformsOf(
   };
   tree.forEach(visit);
   return transforms;
+}
+
+/**
+ * The world sort keys a node by its live path, and a viewport's forest holds paths relative to the
+ * viewport (`livePath`, `''` for the root canvas). This keys `transforms` by live path.
+ */
+export function transformsAtLivePaths(livePath: string, transforms: ControlTransforms): ControlTransforms {
+  if (livePath === '') return transforms;
+  return new Map([...transforms].map(([path, transform]) => [joinPath(livePath, path), transform]));
+}
+
+/** The shifts the world sort gave the nodes below `livePath`, keyed by the forest's own paths. */
+export function shiftsOfForest(livePath: string, shifts: YSortShifts): YSortShifts {
+  if (livePath === '') return shifts;
+  const own = new Map<string, YSortShift>();
+  for (const [path, shift] of shifts) {
+    const relative = relativeTo(livePath, path);
+    if (relative) own.set(relative, shift);
+  }
+  return own;
 }
 
 /**

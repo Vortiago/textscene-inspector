@@ -29,6 +29,12 @@ positional lights in total.
 
 This y-sorted layer turns 30 degrees and scales by 1.5 in its parent. It draws each tile row through its whole transform. A row sorts by the y of its origin in the parent's space (`renderer_canvas_cull.cpp:131`). The two white bars hide under the rows that sort below them. Rows that a rotation lays on one y keep their order within `is_equal_approx`. The previewer matches Godot 4.6.3 at rotations 0, 30 and -90 degrees, scales 0.5, 2, (-1, -1) and (1, -1), and skew 0.3.
 
+## Animated y-sorted layer
+
+<!-- compare: image=unit-tile-map-layer-y-sort-animated-layer status=done fixture=unit-tile-map-layer-y-sort-animated-layer.tscn -->
+
+A track on the transform of a y-sorted layer in a y-sorted Node2D moves every row of the layer, since the layer's path names the group the rows share. The rows re-sort against the layer's siblings on the frame the mixer moves the layer. At 0.5 s of this clip the rows sort at y 132, 196 and 260, so the white bar (240) draws over rows 0 and 1 and under row 2. The previewer matches Godot 4.6.3 at that pose, shown as a static scene with the layer at y 100.
+
 ## Child nodes of a y-sorted layer
 
 <!-- compare: image=unit-tile-map-layer-y-sort-children status=done fixture=unit-tile-map-layer-y-sort-children.tscn -->
@@ -74,31 +80,33 @@ where it samples its diffuse. The layer's rotation and scale turn the normal aft
 ## Linting
 
 <!-- lint:begin TileMapLayer -->
+
 Strict parsing format-checks these `TileMapLayer` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property | Accepts | Out of range |
-| --- | --- | --- |
-| `collision_enabled` | true or false |  |
-| `collision_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
-| `enabled` | true or false |  |
-| `navigation_enabled` | true or false |  |
-| `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
-| `occlusion_enabled` | true or false |  |
-| `physics_quadrant_size` | integer >= 1 | error below |
-| `rendering_quadrant_size` | integer >= 1 | error below |
-| `tile_map_data` | PackedByteArray(…) int array of bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule) |  |
-| `tile_set` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
-| `use_kinematic_bodies` | true or false |  |
-| `x_draw_order_reversed` | true or false |  |
-| `y_sort_origin` | integer |  |
+| Property                     | Accepts                                                                                                                             | Out of range |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| `collision_enabled`          | true or false                                                                                                                       |              |
+| `collision_visibility_mode`  | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE)                                                                                            | warning      |
+| `enabled`                    | true or false                                                                                                                       |              |
+| `navigation_enabled`         | true or false                                                                                                                       |              |
+| `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE)                                                                                            | warning      |
+| `occlusion_enabled`          | true or false                                                                                                                       |              |
+| `physics_quadrant_size`      | integer >= 1                                                                                                                        | error below  |
+| `rendering_quadrant_size`    | integer >= 1                                                                                                                        | error below  |
+| `tile_map_data`              | PackedByteArray(…) int array of bytes, or a base64-quoted PackedByteArray("…") (decoded by the tilemaplayer-invalid-tile-data rule) |              |
+| `tile_set`                   | null, SubResource("id"), ExtResource("id") or Resource("path")                                                                      |              |
+| `use_kinematic_bodies`       | true or false                                                                                                                       |              |
+| `x_draw_order_reversed`      | true or false                                                                                                                       |              |
+| `y_sort_origin`              | integer                                                                                                                             |              |
 
-| Rule | Reports | Severity |
-| --- | --- | --- |
-| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
-| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
-|  | `canvasitem-ancestor-is-canvasgroup` | warning |
-| `valid-tilemaplayer` | `tilemaplayer-requires-tileset` | info |
-|  | `tilemaplayer-invalid-tile-data` | error |
+| Rule                                                 | Reports                              | Severity |
+| ---------------------------------------------------- | ------------------------------------ | -------- |
+| `binary-resource-reference` (all nodes)              | `binary-resource-reference`          | info     |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning  |
+|                                                      | `canvasitem-ancestor-is-canvasgroup` | warning  |
+| `valid-tilemaplayer`                                 | `tilemaplayer-requires-tileset`      | info     |
+|                                                      | `tilemaplayer-invalid-tile-data`     | error    |
+
 <!-- lint:end -->
 
 `enabled` falls back to `true` when absent or unparseable. `tile_set` passes through as

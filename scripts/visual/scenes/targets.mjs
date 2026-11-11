@@ -102,6 +102,17 @@ export const TILE_AND_TARGET_SCENES = [
     animationTime: 0.5,
   },
 
+  // The layer sits in a y-sorted parent and slides down: at 0.5 s its rows sort at y 132, 196 and
+  // 260, so the bar (240) draws over rows 0 and 1 and under row 2. Verified against Godot 4.6.3 at
+  // that pose, as a static scene with the layer at y 100.
+  {
+    name: 'tile-map-layer-y-sort-animated-layer',
+    file: 'unit-tile-map-layer-y-sort-animated-layer.tscn',
+    mode: '2d',
+    select: 'World/Player',
+    animationTime: 0.5,
+  },
+
   // RemoteTransform3D and RemoteTransform2D copy their transform onto the node
   // remote_path names, resolved over the Live scene tree (remoteTransforms.ts).
   // Each target is authored away from its relay. Verified against Godot 4.6.3.

@@ -135,6 +135,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
             themeOwners={themeOwners}
             enclosingViewportSize={enclosingViewportSize}
             embedsWindows={embedsSubwindows(node, rootEmbeds)}
+            sortsLocally
           />
         </SubViewportCanvasScope>
       </World2DLightingBoundary>
