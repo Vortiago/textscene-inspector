@@ -380,6 +380,7 @@ export interface TabLayoutItem {
 interface TabBarDrawLayout {
   /** Every non-hidden tab from `offset` to `maxDrawnTab` inclusive, matching `if (tabs[i].hidden) continue`. */
   items: readonly TabLayoutItem[];
+  /** The first drawn tab: `TabBar::offset`. */
   offset: number;
   maxDrawnTab: number;
   missingRight: boolean;
@@ -391,68 +392,82 @@ export const TAB_ALIGNMENT_LEFT = 0;
 export const TAB_ALIGNMENT_CENTER = 1;
 export const TAB_ALIGNMENT_RIGHT = 2;
 
-/**
- * `TabBar::_update_cache` (`tab_bar.cpp:1196-1291`) with `offset` at 0: it is not
- * serialised (`tab_bar.h:106`), and nothing here scrolls it. `maxTabWidthPx > 0` truncates
- * a wider tab (`:1215-1223`) to `textBudgetPx = max(max(sizeTextless, maxTabWidthPx) - sizeTextless, 1)`.
- * The painter places the close button from that budget but draws the whole title, with no
- * `OVERRUN_TRIM_ELLIPSIS` trim (`comparison.md`).
- */
-export function computeTabBarDrawLayout(
-  tabs: readonly TabLayoutInput[],
-  barWidthPx: number,
-  alignment: number,
-  clipTabs: boolean,
-  maxTabWidthPx: number,
-  tabSeparation: number,
-  incrementIconWidth: number,
-  // The default serves `tabcontainer/nativeSolver.ts`, which passes one scroll-icon
-  // width. TabBar's `Component.tsx` passes both, since a theme can size them apart.
-  decrementIconWidth: number = incrementIconWidth
-): TabBarDrawLayout {
-  if (tabs.length === 0) {
-    return { items: [], offset: 0, maxDrawnTab: 0, missingRight: false, buttonsVisible: false };
+export interface TabBarLayoutInput {
+  barWidthPx: number;
+  alignment: number;
+  clipTabs: boolean;
+  /** `max_width`: 0 leaves a tab untruncated. */
+  maxTabWidthPx: number;
+  tabSeparation: number;
+  incrementIconWidth: number;
+  decrementIconWidth: number;
+  /** `TabBar::current`, -1 for none. */
+  currentTab: number;
+  /** `scroll_to_selected` (`tab_bar.h:132`). */
+  scrollToSelected: boolean;
+}
+
+interface TabSizes {
+  size: number[];
+  textBudget: number[];
+  truncated: boolean[];
+}
+
+/** `_update_cache`'s per-tab `size_cache` and `size_text` (`tab_bar.cpp:1211-1223`), truncated by `max_width`. */
+function measureTabSizes(tabs: readonly TabLayoutInput[], maxTabWidthPx: number): TabSizes {
+  const sizes: TabSizes = { size: [], textBudget: [], truncated: [] };
+  for (const tab of tabs) {
+    let size = tab.naturalWidth;
+    let text = tab.naturalTextWidth;
+    const truncated = maxTabWidthPx > 0 && size > maxTabWidthPx;
+    if (truncated) {
+      const sizeTextless = size - text;
+      text = Math.max(Math.max(sizeTextless, maxTabWidthPx) - sizeTextless, 1);
+      size = sizeTextless + text;
+    }
+    sizes.size.push(size);
+    sizes.textBudget.push(text);
+    sizes.truncated.push(truncated);
   }
+  return sizes;
+}
 
-  const limit = barWidthPx;
-  const limitMinusButtons = limit - incrementIconWidth - decrementIconWidth;
+interface TabPlacement {
+  /** `ofs_cache` before alignment: 0 for a tab outside `offset..maxDrawnTab`. */
+  ofs: number[];
+  maxDrawnTab: number;
+  /** The running width `w` after the last tab, which alignment reads. */
+  usedWidthPx: number;
+}
 
-  const ofsCache = new Array<number>(tabs.length).fill(0);
-  const sizeCache = new Array<number>(tabs.length).fill(0);
-  const textBudget = new Array<number>(tabs.length).fill(0);
-  const truncated = new Array<boolean>(tabs.length).fill(false);
-
+/** `_update_cache`'s placement loop (`tab_bar.cpp:1225-1261`) for a strip that starts at tab `offset`. */
+function placeTabs(
+  tabs: readonly TabLayoutInput[],
+  sizes: TabSizes,
+  input: TabBarLayoutInput,
+  offset: number
+): TabPlacement {
+  const { barWidthPx: limit, clipTabs, tabSeparation } = input;
+  const limitMinusButtons = limit - input.incrementIconWidth - input.decrementIconWidth;
+  const ofs = new Array<number>(tabs.length).fill(0);
   let w = 0;
   let maxDrawnTab = tabs.length - 1;
 
-  for (let i = 0; i < tabs.length; i++) {
-    const tab = tabs[i]!;
-    let size = tab.naturalWidth;
-    let text = tab.naturalTextWidth;
-    if (maxTabWidthPx > 0 && size > maxTabWidthPx) {
-      truncated[i] = true;
-      const sizeTextless = size - text;
-      const mw = Math.max(sizeTextless, maxTabWidthPx);
-      text = Math.max(mw - sizeTextless, 1);
-      size = sizeTextless + text;
-    }
-    sizeCache[i] = size;
-    textBudget[i] = text;
+  for (let i = offset; i < tabs.length; i++) {
+    ofs[i] = w;
+    if (tabs[i]!.hidden) continue;
 
-    ofsCache[i] = w;
-    if (tab.hidden) continue;
+    w += sizes.size[i]!;
 
-    w += size;
-
-    if (clipTabs && i > 0 && w > limit) {
-      ofsCache[i] = 0;
-      w -= size;
+    if (clipTabs && i > offset && (w > limit || (offset > 0 && w > limitMinusButtons))) {
+      ofs[i] = 0;
+      w -= sizes.size[i]!;
       w -= tabSeparation;
       maxDrawnTab = i - 1;
-      while (w > limitMinusButtons && maxDrawnTab > 0) {
-        ofsCache[maxDrawnTab] = 0;
+      while (w > limitMinusButtons && maxDrawnTab > offset) {
+        ofs[maxDrawnTab] = 0;
         if (!tabs[maxDrawnTab]!.hidden) {
-          w -= sizeCache[maxDrawnTab]!;
+          w -= sizes.size[maxDrawnTab]!;
           w -= tabSeparation;
         }
         maxDrawnTab--;
@@ -462,9 +477,74 @@ export function computeTabBarDrawLayout(
       w += tabSeparation;
     }
   }
+  return { ofs, maxDrawnTab, usedWidthPx: w };
+}
 
+/**
+ * `TabBar::ensure_tab_visible` (`tab_bar.cpp:1875-1920`) for a current tab past `maxDrawnTab`: the
+ * new `offset`, stepping past leading tabs until the strip fits beside the scroll arrows. It adds no
+ * `tab_separation` to `total_w`, as Godot does not.
+ */
+function offsetThatShows(
+  index: number,
+  sizes: TabSizes,
+  placement: TabPlacement,
+  hidden: (tab: number) => boolean,
+  limitMinusButtons: number
+): number {
+  let offset = 0;
+  let totalWidth = placement.ofs[placement.maxDrawnTab]! - placement.ofs[offset]!;
+  for (let i = placement.maxDrawnTab; i <= index; i++) {
+    if (!hidden(i)) totalWidth += sizes.size[i]!;
+  }
+  for (let i = 0; i < index; i++) {
+    if (hidden(i)) continue;
+    if (totalWidth <= limitMinusButtons) break;
+    totalWidth -= sizes.size[i]!;
+    offset++;
+  }
+  return offset;
+}
+
+/**
+ * `TabBar::_update_cache` (`tab_bar.cpp:1196-1291`) as a loaded scene leaves it. `offset` is not
+ * serialised (`tab_bar.h:106`), so the scene decides it: the strip starts at tab 0, and a current tab
+ * past the last drawn one then scrolls into view through `ensure_tab_visible` (`:390,774,819`),
+ * which reruns the cache. `maxTabWidthPx > 0` truncates a wider tab (`:1215-1223`) to
+ * `textBudgetPx = max(max(sizeTextless, maxTabWidthPx) - sizeTextless, 1)`. The painter places the
+ * close button from that budget but draws the whole title, with no `OVERRUN_TRIM_ELLIPSIS` trim
+ * (`comparison.md`).
+ */
+export function computeTabBarDrawLayout(
+  tabs: readonly TabLayoutInput[],
+  input: TabBarLayoutInput
+): TabBarDrawLayout {
+  if (tabs.length === 0) {
+    return { items: [], offset: 0, maxDrawnTab: 0, missingRight: false, buttonsVisible: false };
+  }
+
+  const { barWidthPx: limit, alignment, tabSeparation } = input;
+  const limitMinusButtons = limit - input.incrementIconWidth - input.decrementIconWidth;
+  const sizes = measureTabSizes(tabs, input.maxTabWidthPx);
+
+  let offset = 0;
+  let placement = placeTabs(tabs, sizes, input, offset);
+  const { currentTab } = input;
+  const isScrollable = placement.maxDrawnTab < tabs.length - 1;
+  if (
+    input.scrollToSelected &&
+    isScrollable &&
+    currentTab > placement.maxDrawnTab &&
+    !tabs[currentTab]!.hidden
+  ) {
+    offset = offsetThatShows(currentTab, sizes, placement, (i) => tabs[i]!.hidden, limitMinusButtons);
+    placement = placeTabs(tabs, sizes, input, offset);
+  }
+
+  const { ofs, maxDrawnTab } = placement;
+  let w = placement.usedWidthPx;
   const missingRight = maxDrawnTab < tabs.length - 1;
-  const buttonsVisible = missingRight;
+  const buttonsVisible = offset > 0 || missingRight;
 
   if (alignment !== TAB_ALIGNMENT_LEFT) {
     if (alignment === TAB_ALIGNMENT_CENTER) {
@@ -472,26 +552,26 @@ export function computeTabBarDrawLayout(
     } else if (alignment === TAB_ALIGNMENT_RIGHT) {
       w = (buttonsVisible ? limitMinusButtons : limit) - w;
     }
-    for (let i = 0; i <= maxDrawnTab; i++) {
+    for (let i = offset; i <= maxDrawnTab; i++) {
       if (tabs[i]!.hidden) continue;
-      ofsCache[i] = w;
-      w += sizeCache[i]! + tabSeparation;
+      ofs[i] = w;
+      w += sizes.size[i]! + tabSeparation;
     }
   }
 
   const items: TabLayoutItem[] = [];
-  for (let i = 0; i <= maxDrawnTab; i++) {
+  for (let i = offset; i <= maxDrawnTab; i++) {
     if (tabs[i]!.hidden) continue;
     items.push({
       index: i,
-      ofs: ofsCache[i]!,
-      width: sizeCache[i]!,
-      textBudgetPx: textBudget[i]!,
-      truncated: truncated[i]!,
+      ofs: ofs[i]!,
+      width: sizes.size[i]!,
+      textBudgetPx: sizes.textBudget[i]!,
+      truncated: sizes.truncated[i]!,
     });
   }
 
-  return { items, offset: 0, maxDrawnTab, missingRight, buttonsVisible };
+  return { items, offset, maxDrawnTab, missingRight, buttonsVisible };
 }
 
 /** `TabBar::_get_tab_icon_size` (`:1806-1826`), restricted to the theme-constant clamp: a per-tab `icon_max_width` is `set_tab_icon_max_width`-only (script, never serialised), always 0. */
@@ -584,10 +664,10 @@ interface ScrollArrowsLayout {
 }
 
 /**
- * `TabBar::_notification(DRAW)`'s `buttons_visible` block (`tab_bar.cpp:564-592`).
- * `offset` stays 0, so the arrow toward the start is always dim and `missing_right`
- * lights the other. RTL puts the pair at the left edge, swaps those roles, and steps
- * by the increment icon's width (`:575`) where LTR uses the decrement's (`:587`).
+ * `TabBar::_notification(DRAW)`'s `buttons_visible` block (`tab_bar.cpp:564-592`). The arrow toward
+ * the start lights when `offset > 0` and the one toward the end when `missing_right`. RTL puts the
+ * pair at the left edge, swaps those roles, and steps by the increment icon's width (`:575`) where
+ * LTR uses the decrement's (`:587`).
  */
 export function layoutScrollArrows(input: {
   barWidthPx: number;
@@ -595,21 +675,23 @@ export function layoutScrollArrows(input: {
   incrementIconSize: Vector2;
   decrementIconSize: Vector2;
   missingRight: boolean;
+  /** `offset > 0`: tabs sit before the first drawn one. */
+  canScrollBack: boolean;
   rtl: boolean;
 }): ScrollArrowsLayout {
-  const { barWidthPx, incrementIconSize, decrementIconSize, missingRight, rtl } = input;
+  const { barWidthPx, incrementIconSize, decrementIconSize, missingRight, canScrollBack, rtl } = input;
   // `vofs` is an `int` off the increment icon's height for both arrows (`:565`),
   // so an odd leftover truncates rather than landing on a half pixel.
   const y = Math.trunc((input.barHeightPx - incrementIconSize.y) / 2);
   if (rtl) {
     return {
       decrement: { x: 0, y, dim: !missingRight },
-      increment: { x: incrementIconSize.x, y, dim: true },
+      increment: { x: incrementIconSize.x, y, dim: !canScrollBack },
     };
   }
   const limitMinusButtons = barWidthPx - incrementIconSize.x - decrementIconSize.x;
   return {
-    decrement: { x: limitMinusButtons, y, dim: true },
+    decrement: { x: limitMinusButtons, y, dim: !canScrollBack },
     increment: { x: limitMinusButtons + decrementIconSize.x, y, dim: !missingRight },
   };
 }

@@ -2708,6 +2708,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tab Bar Scroll To Current",
+    "file": "unit-tab-bar-scroll-to-current.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Tab Bar",
     "file": "unit-tab-bar.tscn",
     "category": "Other"

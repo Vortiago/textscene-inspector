@@ -1,0 +1,157 @@
+; One variable: where the current tab sits in a clipped strip. A clipped TabBar scrolls so the
+; current tab shows (tab_bar.cpp:1875-1920). The bars vary the current tab, the bar width, the
+; alignment and the tab count. Every other tab scene keeps its current tab inside the first
+; drawn tabs, so none shows a strip that starts past tab 0.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Cur0" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 268.0
+offset_bottom = 44.0
+current_tab = 0
+clip_tabs = true
+tab_count = 4
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+
+[node name="Cur1" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 52.0
+offset_right = 268.0
+offset_bottom = 88.0
+current_tab = 1
+clip_tabs = true
+tab_count = 4
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+
+[node name="Cur2" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 96.0
+offset_right = 268.0
+offset_bottom = 132.0
+current_tab = 2
+clip_tabs = true
+tab_count = 4
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+
+[node name="Cur3" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 140.0
+offset_right = 268.0
+offset_bottom = 176.0
+current_tab = 3
+clip_tabs = true
+tab_count = 4
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+
+[node name="Six2" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 184.0
+offset_right = 268.0
+offset_bottom = 220.0
+current_tab = 2
+clip_tabs = true
+tab_count = 6
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+tab_4/title = "Map"
+tab_5/title = "Quests"
+
+[node name="Six5" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 228.0
+offset_right = 268.0
+offset_bottom = 264.0
+current_tab = 5
+clip_tabs = true
+tab_count = 6
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+tab_4/title = "Map"
+tab_5/title = "Quests"
+
+[node name="Wide3" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 272.0
+offset_right = 338.0
+offset_bottom = 308.0
+current_tab = 3
+clip_tabs = true
+tab_count = 4
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+
+[node name="Narrow3" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 316.0
+offset_right = 188.0
+offset_bottom = 352.0
+current_tab = 3
+clip_tabs = true
+tab_count = 4
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+
+[node name="Centre3" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 360.0
+offset_right = 268.0
+offset_bottom = 396.0
+current_tab = 3
+tab_alignment = 1
+clip_tabs = true
+tab_count = 4
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"
+
+[node name="Right2" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 404.0
+offset_right = 268.0
+offset_bottom = 440.0
+current_tab = 2
+tab_alignment = 2
+clip_tabs = true
+tab_count = 4
+tab_0/title = "Inventory"
+tab_1/title = "Equipment"
+tab_2/title = "Journal"
+tab_3/title = "Settings"

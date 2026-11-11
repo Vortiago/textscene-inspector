@@ -76,6 +76,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
   const alignment = props.tabAlignment ?? TAB_ALIGNMENT_LEFT;
   const clipTabs = props.clipTabs ?? true;
   const maxTabWidth = props.maxTabWidth ?? 0;
+  const scrollToSelected = props.scrollToSelected ?? true;
   const closeDisplayPolicy = props.tabCloseDisplayPolicy ?? 0;
   const hSeparation = solveNode.constants.h_separation ?? theme.separation;
   const tabSeparation = solveNode.constants.tab_separation ?? 0;
@@ -139,16 +140,17 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
 
   const drawLayout = useMemo(
     () =>
-      computeTabBarDrawLayout(
-        drawInputs,
-        rect.w,
+      computeTabBarDrawLayout(drawInputs, {
+        barWidthPx: rect.w,
         alignment,
         clipTabs,
-        maxTabWidth,
+        maxTabWidthPx: maxTabWidth,
         tabSeparation,
-        incrementIconSize.x,
-        decrementIconSize.x
-      ),
+        incrementIconWidth: incrementIconSize.x,
+        decrementIconWidth: decrementIconSize.x,
+        currentTab,
+        scrollToSelected,
+      }),
     [
       drawInputs,
       rect.w,
@@ -158,6 +160,8 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
       tabSeparation,
       incrementIconSize.x,
       decrementIconSize.x,
+      currentTab,
+      scrollToSelected,
     ]
   );
 
@@ -211,6 +215,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
           rect={rect}
           rtl={solveNode.rtl}
           missingRight={drawLayout.missingRight}
+          canScrollBack={drawLayout.offset > 0}
           incrementIconTexture={incrementIconTexture}
           decrementIconTexture={decrementIconTexture}
           incrementIconSize={incrementIconSize}
@@ -349,6 +354,7 @@ interface ScrollArrowsProps {
   rect: NativeControlComponentProps['rect'];
   rtl: boolean;
   missingRight: boolean;
+  canScrollBack: boolean;
   incrementIconTexture: ReturnType<typeof useNodeIcon>;
   decrementIconTexture: ReturnType<typeof useNodeIcon>;
   incrementIconSize: { x: number; y: number };
@@ -357,11 +363,12 @@ interface ScrollArrowsProps {
   renderOrder: number;
 }
 
-/** `tab_bar.cpp:564-592` through `layoutScrollArrows`: which edge the pair sits against, and which of the two `missing_right` lights up, both follow the layout direction. */
+/** `tab_bar.cpp:564-592` through `layoutScrollArrows`: which edge the pair sits against, and which arrow `offset > 0` and `missing_right` light, both follow the layout direction. */
 function ScrollArrows({
   rect,
   rtl,
   missingRight,
+  canScrollBack,
   incrementIconTexture,
   decrementIconTexture,
   incrementIconSize,
@@ -375,6 +382,7 @@ function ScrollArrows({
     incrementIconSize,
     decrementIconSize,
     missingRight,
+    canScrollBack,
     rtl,
   });
   const white = useItemLinearColor({ r: 1, g: 1, b: 1 });
