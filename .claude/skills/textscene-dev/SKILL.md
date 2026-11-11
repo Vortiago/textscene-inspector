@@ -208,7 +208,7 @@ The web previewer is a Vite app for fast testing and debugging of `@textscene/co
 apps/textscene-web/src/
 ├── main.ts           # Entry point (mounts the React app)
 ├── r3f-main.tsx      # App shell: fixture picker, uploads, <TscnPreviewShell>
-├── fixtures.ts       # Generated fixture catalog (pnpm generate:fixtures)
+├── fixtures.ts       # Generated, untracked fixture catalog (pnpm generate:fixtures)
 └── logger.ts         # Log adapter wiring
 ```
 

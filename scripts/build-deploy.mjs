@@ -11,7 +11,6 @@ import { runSteps } from './runSteps.mjs';
 
 const steps = [
   ['node', ['scripts/vendor-godot-games.mjs']],
-  ['node', ['scripts/generate-fixtures.js']],
   ['pnpm', ['--filter', '@textscene/web-previewer', 'build']],
 ];
 
