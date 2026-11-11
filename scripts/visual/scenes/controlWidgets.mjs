@@ -315,5 +315,12 @@ export const CONTROL_WIDGET_SCENES = [
   // Control-only SubViewport, and in the Control root of a scene tile.
   { name: 'control-y-sort-viewport', file: 'unit-control-y-sort-viewport.tscn', mode: '2d' },
   { name: 'control-y-sort-viewport-mixed', file: 'unit-control-y-sort-viewport-mixed.tscn', mode: '2d' },
+  // A Node2D child of the y-sorted Control in a viewport that holds 2D content sorts with the Control
+  // children by y: High (50) under Sprite (75) under Low (100), though Sprite is listed last.
+  {
+    name: 'control-y-sort-viewport-node2d-child',
+    file: 'unit-control-y-sort-viewport-node2d-child.tscn',
+    mode: '2d',
+  },
   { name: 'control-y-sort-scene-tile', file: 'unit-control-y-sort-scene-tile.tscn', mode: '2d' },
 ];
