@@ -22,8 +22,10 @@ const DIFF_FULL_DELTA = 32;
  * Compares two PNG buffers. Returns `{ sizeMismatch }` for two different rectangles, whose caller
  * reports the shapes. `diff: true` also paints each pixel `changedPixels` counts red over a faded
  * baseline, saturated by how far it moved, so the picture and the number always agree.
+ * `overDelta` also counts the pixels that moved by more than that step and bounds them, as `over`:
+ * a mean hides ten strong pixels, and a maximum hides whether one pixel or a region is that far.
  */
-export function compareImages(expectedBuffer, actualBuffer, { diff = false } = {}) {
+export function compareImages(expectedBuffer, actualBuffer, { diff = false, overDelta } = {}) {
   const expected = PNG.sync.read(expectedBuffer);
   const actual = PNG.sync.read(actualBuffer);
   if (expected.width !== actual.width || expected.height !== actual.height) {
@@ -41,6 +43,7 @@ export function compareImages(expectedBuffer, actualBuffer, { diff = false } = {
   let changedPixels = 0;
   let maxChannelDelta = 0;
   let channelErrorSum = 0;
+  const over = overDelta === undefined ? undefined : { pixels: 0, bounds: null };
 
   for (let i = 0; i < expected.data.length; i += 4) {
     let pixelDelta = 0;
@@ -53,6 +56,7 @@ export function compareImages(expectedBuffer, actualBuffer, { diff = false } = {
       changedPixels++;
       if (maxChannelDelta < pixelDelta) maxChannelDelta = pixelDelta;
     }
+    if (over && pixelDelta > overDelta) countOver(over, (i / 4) % width, Math.floor(i / 4 / width));
     if (diffImage) writeDiffPixel(diffImage.data, expected.data, i, pixelDelta);
   }
 
@@ -71,7 +75,19 @@ export function compareImages(expectedBuffer, actualBuffer, { diff = false } = {
     // the captures are opaque, and an identical channel would hide a quarter of the colour error.
     meanChannelError: pixels === 0 ? 0 : channelErrorSum / (pixels * 3),
     diff: diffImage,
+    over,
   };
+}
+
+/** Adds the pixel at (`x`, `y`) to `over`, and grows its inclusive bounding box to hold it. */
+function countOver(over, x, y) {
+  over.pixels++;
+  over.bounds ??= { left: x, top: y, right: x, bottom: y };
+  const { bounds } = over;
+  if (x < bounds.left) bounds.left = x;
+  if (y < bounds.top) bounds.top = y;
+  if (x > bounds.right) bounds.right = x;
+  if (y > bounds.bottom) bounds.bottom = y;
 }
 
 /** Red where the pixel moved, a faded copy of the baseline where it did not. */

@@ -6,13 +6,18 @@
 
 import type { GodotKeyframeValue } from './keyframeValues.js';
 import { parseValueArray } from './keyframeValues.js';
+import { clamp } from '../../../godot/math/math.js';
+import { ANIMATION_UPDATE_MODE_CEILING, AnimationUpdateMode } from '../../../godot/scene/animation.js';
+import { parseGodotInt } from '../../../godot/variant/intReader.js';
 import { parseGodotFloat } from '../../../godot/variant/number.js';
 import { boolSlotValue, scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import { info, warn } from '../../../logger';
 import { literalText } from '../../../godot/string/string.js';
 import {
   packedArrayCallAnywhere,
+  dictBoolField,
   dictCallField,
+  dictNumberField,
   nodePathLiteral,
 } from '../../../godot/variant/variantParser.js';
 
@@ -45,8 +50,8 @@ export interface GodotTrack {
    */
   interp: number;
   /**
-   * VALUE-track update mode: CONTINUOUS 0, DISCRETE 1, CAPTURE 2. DISCRETE
-   * FORCES nearest interpolation regardless of `interp` (`animation.cpp`).
+   * The `AnimationUpdateMode` of a `value` track. DISCRETE holds each key until the next, whatever
+   * `interp` says. A 3D transform track has no update mode.
    */
   updateMode?: number;
   /** `Track::loop_wrap` (`animation.h:110`): whether the span past the last key runs on to the first. */
@@ -87,10 +92,8 @@ export function parseTracks(data: Readonly<Record<string, string>>): GodotTrack[
     const type = literalText(data[`tracks/${i}/type`] ?? '');
     const rawPath = data[`tracks/${i}/path`] ?? '';
     const rawKeys = data[`tracks/${i}/keys`] ?? '';
-    // class_animation.html / animation.h: interp defaults to 1 (LINEAR),
-    // update_mode to 0 (CONTINUOUS).
+    // `Track::interpolation` defaults to INTERPOLATION_LINEAR (animation.h:109).
     const interp = numberOr(data[`tracks/${i}/interp`], 1);
-    const updateMode = numberOr(data[`tracks/${i}/update`], 0);
     const loopWrap = trackLoopWraps(data, i);
 
     // `hasOwn` so a track type that collides with an Object.prototype key
@@ -109,7 +112,6 @@ export function parseTracks(data: Readonly<Record<string, string>>): GodotTrack[
         ...target,
         property: transform3d.property,
         interp,
-        updateMode,
         loopWrap,
         keys,
       });
@@ -130,7 +132,7 @@ export function parseTracks(data: Readonly<Record<string, string>>): GodotTrack[
       subnames: [],
       property: target.property,
       interp,
-      updateMode,
+      updateMode: updateModeOf(rawKeys),
       loopWrap,
       keys,
     });
@@ -161,6 +163,22 @@ function parseNodePath(raw: string): { targetPath: string; property: string } | 
 // (animation.cpp:267, :285).
 const readTimesField = dictCallField('times', 'PackedFloat32Array');
 const readTransitionsField = dictCallField('transitions', 'PackedFloat32Array');
+
+const UPDATE_FIELD = dictNumberField('update');
+const CONTINUOUS_FIELD = dictBoolField('cont');
+
+/**
+ * The update mode a value track's key Dictionary names: `update` clamped as Godot clamps it, else
+ * the older `cont` bool, else continuous (animation.cpp:251-262).
+ */
+function updateModeOf(keysStr: string): number {
+  const update = parseGodotInt(UPDATE_FIELD.exec(keysStr)?.[1] ?? '');
+  if (update !== null && !Number.isNaN(update)) {
+    return clamp(update, AnimationUpdateMode.CONTINUOUS, ANIMATION_UPDATE_MODE_CEILING);
+  }
+  const isContinuous = boolSlotValue(CONTINUOUS_FIELD.exec(keysStr)?.[1]);
+  return isContinuous === false ? AnimationUpdateMode.DISCRETE : AnimationUpdateMode.CONTINUOUS;
+}
 
 function parseKeys(keysStr: string): GodotKeyframe[] {
   if (keysStr.length === 0) return [];

@@ -30,6 +30,7 @@
     "type-check:tests": "pnpm -r type-check:tests",
     "validate": "pnpm format:check && pnpm check:dep-scripts && pnpm canonical --check && pnpm build && pnpm type-check && pnpm type-check:tests && pnpm lint && pnpm test:unit && pnpm lint:scenes && pnpm docs:lint-sections --check && pnpm docs:index --check && pnpm docs:gallery --check && pnpm fonts:bake --check && pnpm fonts:combining-classes --check && pnpm godot:dfg --check && pnpm godot:ltc --check && pnpm vsc:package && pnpm check:bundle-size && pnpm check:package",
     "check": "node scripts/githooks/check.mjs",
+    "pr:state": "node scripts/pr-state/run.mjs",
     "check:bundle-size": "node scripts/check-bundle-size.mjs --enforce",
     "check:dep-scripts": "node scripts/ci/checkDepScripts.mjs",
     "fonts:bake": "node scripts/fonts/bake-metrics.mjs",
