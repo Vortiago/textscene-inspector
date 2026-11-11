@@ -196,7 +196,7 @@ export function labelShadowTheme(n: SolveNode): LabelShadowTheme {
 /** The content margin of the `normal` StyleBox a Label reads (`theme_cache.normal_style`). */
 export type LabelMargin = StyleBoxFlatData['contentMargin'];
 
-export const NO_LABEL_MARGIN: LabelMargin = { left: 0, top: 0, right: 0, bottom: 0 };
+const NO_LABEL_MARGIN: LabelMargin = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /** `theme_cache.normal_style` (`label.cpp:1460`): the Theme's `normal`, else the default theme's empty box. */
 export function labelStyleBox(n: SolveNode): ResolvedStyleBox {

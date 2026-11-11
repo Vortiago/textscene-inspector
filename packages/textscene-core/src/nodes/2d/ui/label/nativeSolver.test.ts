@@ -25,7 +25,6 @@ import {
 import {
   labelMinimumSize,
   labelShapingWidthPx,
-  NO_LABEL_MARGIN,
   labelUnwrappedShape,
   LABEL_LINE_SPACING_PX,
   LABEL_PARAGRAPH_SEPARATOR,
@@ -58,6 +57,8 @@ import {
   VisibleCharactersBehavior,
   JustificationFlag,
 } from '../../../../godot/text/textServerEnums';
+
+const NO_LABEL_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
 
 const minSize = labelMinimumSize;
 

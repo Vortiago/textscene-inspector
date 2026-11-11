@@ -14,7 +14,7 @@ import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { Label } from './Component';
-import { labelMinimumSize, labelShapingWidthPx, layoutLabelLines, NO_LABEL_MARGIN } from './nativeSolver';
+import { labelMinimumSize, labelShapingWidthPx, layoutLabelLines } from './nativeSolver';
 import type { LabelProperties } from './types';
 
 /** Margins 10 left, 6 top, 14 right, 4 bottom: a different number on each side, so a swapped side fails. */
@@ -26,6 +26,7 @@ const MARGINS = {
 };
 const BOX = drawnStyleBox(MARGINS);
 const MARGIN = { left: 10, top: 6, right: 14, bottom: 4 };
+const NO_LABEL_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
 
 function label(props: Partial<LabelProperties>, withBox = true): SolveNode {
   return {
