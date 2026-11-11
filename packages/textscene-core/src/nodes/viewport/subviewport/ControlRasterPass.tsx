@@ -36,11 +36,11 @@ import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLighting
 import { useStableVector2 } from '../../../r3f/hooks/useStableVector2';
 
 export interface ControlRasterPassesProps {
-  /** The Control-only sub-viewports found in the scene, each with its own resource scope (ADR-0009). */
+  /** The sub-viewports with no world content found in the scene, each with its own resource scope (ADR-0009). */
   viewports: readonly ControlRasterViewport[];
 }
 
-/** One native offscreen pass per Control-only sub-viewport in the scene. */
+/** One native offscreen pass per sub-viewport with no world content in the scene. */
 export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
   return (
     <>
