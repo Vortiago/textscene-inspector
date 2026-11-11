@@ -26,6 +26,7 @@ import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { findTextMesh } from '../../../../r3f/controls/native/testing/ownIcon';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -89,13 +90,6 @@ function findFillColor(mesh: THREE.Mesh): { r: number; g: number; b: number; a: 
 }
 
 /** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms); the chrome does not. */
-function findTextMesh(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
-}
-
 /** The `<group position=[x,-y,0]>` wrapping the text mesh, whose local x and y give the pen offset. */
 function findTextGroup(scene: Rendered['scene']) {
   return scene

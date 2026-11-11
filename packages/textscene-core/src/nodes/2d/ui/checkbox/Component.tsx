@@ -1,6 +1,6 @@
 /**
- * `<CheckBox>`, the native (WebGL canvas) painter: the check or radio icon, always drawn
- * (`check_box.cpp::_notification` has no visibility gate), then the label. It draws no chrome:
+ * `<CheckBox>`, the native (WebGL canvas) painter: Button's own icon, the label, and the check or radio
+ * icon, always drawn (`check_box.cpp::_notification` has no visibility gate). It draws no chrome:
  * the "normal" StyleBox is a `StyleBoxEmpty`. `ControlCanvasWalker` owns `visible`, the
  * children and the transform.
  */
@@ -9,18 +9,24 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useCheckBoxIcon } from './useCheckBoxIcon';
-import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
+import { ButtonLabel, useWrappingButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
-import { isButtonAutowrapped, tintColor } from '../../../../r3f/controls/native/buttonBase';
-import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
-import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
-import { HorizontalAlignment } from '../../../../godot/math/alignment';
+import { infersRtl } from '../../../../r3f/controls/native/text/textLayout';
 import {
+  ownButtonIconSize,
+  isButtonAutowrapped,
+  labelNaturalSize,
+  tintColor,
+} from '../../../../r3f/controls/native/buttonBase';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
+import { useIconModulate, useIconRefTexture } from '../../../../r3f/controls/native/useButtonIcon';
+import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
+import { buttonIconColor } from '../button/nativeSolver';
+import {
+  checkBoxContentFacts,
   checkBoxDrawnIconSize,
   checkBoxFittedIconSize,
-  checkBoxHSeparation,
   checkBoxCheckVOffset,
-  checkBoxLabelWrapWidthPx,
   checkBoxTextTheme,
   layoutCheckBoxContent,
   resolveCheckBoxDrawState,
@@ -33,64 +39,67 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const props = painterView<CheckBoxProperties>(solveNode);
   const state = resolveCheckBoxDrawState(props);
 
-  // `renderOrder` reaches both meshes. `<TextRun>` builds its own material, so it takes
-  // the clip planes explicitly, while the icon quad reads them itself.
+  // `renderOrder` reaches every mesh. `<TextRun>` builds its own material, so it takes
+  // the clip planes explicitly, while the icon quads read them themselves.
   const clippingPlanes = useControlClipPlanes();
 
-  const iconKey = resolveCheckBoxIconKey(props);
-  const iconTexture = useCheckBoxIcon(solveNode, iconKey);
+  const checkKey = resolveCheckBoxIconKey(props);
+  const checkTexture = useCheckBoxIcon(solveNode, checkKey);
   // Fitted, not rounded: CheckBox draws `_fit_icon_size` as it is (`check_box.cpp:61`, `:140-142`).
-  const iconSize = useMemo(() => checkBoxFittedIconSize(solveNode), [solveNode]);
-  const drawnIconSize = useMemo(() => checkBoxDrawnIconSize(solveNode, iconKey), [solveNode, iconKey]);
+  const checkSize = useMemo(() => checkBoxFittedIconSize(solveNode), [solveNode]);
+  const drawnCheckSize = useMemo(() => checkBoxDrawnIconSize(solveNode, checkKey), [solveNode, checkKey]);
+
+  const ownIconTexture = useIconRefTexture(solveNode, props.icon);
+  const ownIconSize = ownButtonIconSize(solveNode);
+  const ownIconModulate = useIconModulate(buttonIconColor(solveNode.colors, state), tint.own);
 
   const text = props.text ?? '';
-  const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = checkBoxTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const bidi = useControlBidiOptions(props, solveNode);
-  const layout = useButtonLabelLayout(solveNode, props, {
-    themeFontKey: CHECKBOX_THEME_FONT_KEY,
-    text,
-    fontSizePx,
-    bidi,
-    boxWidthPx: checkBoxLabelWrapWidthPx(props, rect, solveNode, { theme }),
-  });
+  const facts = useMemo(
+    () => checkBoxContentFacts(solveNode, props, { theme }, { x: rect.w, y: rect.h }, ownIconSize),
+    [solveNode, props, theme, rect.w, rect.h, ownIconSize]
+  );
+  const layout = useWrappingButtonLabelLayout(
+    solveNode,
+    props,
+    { themeFontKey: CHECKBOX_THEME_FONT_KEY, text, fontSizePx, bidi },
+    facts
+  );
 
   const content = useMemo(
     () =>
       layoutCheckBoxContent({
-        rectSize: { x: rect.w, y: rect.h },
-        margin: theme.contentMargin,
-        iconSize,
-        checkVOffset: checkBoxCheckVOffset(solveNode.constants),
-        hSeparation: checkBoxHSeparation(solveNode.constants, { theme }),
-        hasText,
-        rtl: solveNode.rtl,
         // The height sums independently ceiled ascent and descent and an integral spacing.
-        textHeightPx: layout?.heightPx ?? 0,
-        textAlignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+        content: { ...facts, textNaturalSize: labelNaturalSize(layout), isTextRtl: infersRtl(layout) },
+        checkSize,
+        checkVOffset: checkBoxCheckVOffset(solveNode.constants),
       }),
-    [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment, solveNode.rtl]
+    [facts, layout, checkSize, solveNode.constants]
   );
 
-  const iconRect = useMemo(
-    () => ({ ...content.iconPosition, w: drawnIconSize.x, h: drawnIconSize.y }),
-    [content.iconPosition, drawnIconSize.x, drawnIconSize.y]
+  const checkRect = useMemo(
+    () => ({ ...content.checkPosition, w: drawnCheckSize.x, h: drawnCheckSize.y }),
+    [content.checkPosition, drawnCheckSize.x, drawnCheckSize.y]
   );
 
-  // The icon colour is opaque white in both states (`default_theme.cpp:312-313`), and
-  // the disabled SVGs carry their own dimming, so the icon takes the tint directly.
+  // Button draws its icon and label first (`button.cpp:333-456`), then CheckBox its check. The check's
+  // colour is opaque white in both states (`default_theme.cpp:312-313`), and the disabled SVGs carry their
+  // own dimming, so it takes the tint directly.
   return (
     <>
-      <PositionedIcon
-        rect={iconRect}
-        texture={iconTexture}
-        color={tint.color}
-        opacity={tint.opacity}
-        renderOrder={renderOrder}
-      />
+      {content.icon && (
+        <PositionedIcon
+          rect={content.icon.rect}
+          texture={ownIconTexture}
+          color={ownIconModulate.color}
+          opacity={ownIconModulate.opacity}
+          renderOrder={renderOrder}
+        />
+      )}
       {content.labelBox && layout && (
         <ButtonLabel
           layout={layout}
@@ -105,6 +114,13 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           renderOrder={renderOrder}
         />
       )}
+      <PositionedIcon
+        rect={checkRect}
+        texture={checkTexture}
+        color={tint.color}
+        opacity={tint.opacity}
+        renderOrder={renderOrder}
+      />
     </>
   );
 }

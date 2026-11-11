@@ -242,6 +242,7 @@ function colorPickerPresetButtonSize(
   const margin = contentMarginSize(theme.widgets.button.normal);
   const content = buttonContentSize({
     textSize: text,
+    lineHeightPx: text.y,
     hasText: true,
     iconSize: colorPickerButtonIconVector(theme),
     iconAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,

@@ -194,6 +194,17 @@ describe('buttonMinimumSize: icon contribution (!expand_icon && icon present)', 
     }
   );
 
+  it('vertical_icon_alignment TOP under a wrapped label: the paragraph and the icon, then ONE line height (button.cpp:497-502,517-521)', () => {
+    const tentative: SolveContext = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 60, h: 100 }) };
+    const wrapped = node(
+      { text: 'AB AB AB', autowrapMode: 2, verticalIconAlignment: 0 },
+      {},
+      { x: 10, y: 15 }
+    );
+    // 'AB AB AB' wraps to three rows of 23 at 60 - 8 - 10 - 4 = 38 px: 69 + 15 + 23, not 69 + 15 + 69.
+    expect(minSize(wrapped, tentative).y).toBe(8 + 3 * FONT_HEIGHT + 15 + FONT_HEIGHT);
+  });
+
   it('icon_alignment CENTER: width is the MAX of icon/text, no h_separation added', () => {
     const result = minSize(node({ text: 'AB', iconAlignment: 1 }, {}, { x: 30, y: 10 }), ctx());
     expect(result.x).toBeCloseTo(8 + 30, 6); // 30 > 21.125, floors width; no +4 separation

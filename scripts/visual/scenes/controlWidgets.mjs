@@ -225,6 +225,14 @@ export const CONTROL_WIDGET_SCENES = [
   { name: 'checkbox-rtl', file: 'unit-checkbox-rtl.tscn' },
   { name: 'check-button-rtl', file: 'unit-check-button-rtl.tscn' },
   { name: 'spin-box-rtl', file: 'unit-spin-box-rtl.tscn' },
+  // The icon Button draws beside the label in CheckBox and CheckButton, ahead of the check
+  // (check_box.cpp:96-101): its alignment, and the wrap and minimum size it takes from the label.
+  { name: 'check-family-button-icon-alignment', file: 'unit-check-family-button-icon-alignment.tscn' },
+  { name: 'check-family-button-icon-wrap', file: 'unit-check-family-button-icon-wrap.tscn' },
+  // OptionButton shows the selected item's icon as Button's `icon` (option_button.cpp:424) and sizes by every item's.
+  { name: 'button-option-icon-alignment', file: 'unit-option-button-icon-alignment.tscn' },
+  { name: 'button-option-icon-minimum-size', file: 'unit-option-button-icon-minimum-size.tscn' },
+  { name: 'button-menu-icon-alignment', file: 'unit-menu-button-icon-alignment.tscn' },
   // Each text Control's own paragraph direction, language and structured override, as the label-bidi
   // scenes hold them for a Label: the button family, the editors, RichTextLabel paragraphs, the
   // TabBar, MenuBar and FoldableContainer titles, and ItemList items.

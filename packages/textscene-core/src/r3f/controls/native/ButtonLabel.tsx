@@ -10,10 +10,13 @@ import {
   isButtonAutowrapped,
   shapeWrappedButtonLabel,
   trimButtonLabel,
+  wrappedLabelWidthPx,
+  type ButtonContentFacts,
   type ButtonLabelBox,
   type ButtonWrapProperties,
 } from './buttonBase';
 import type { ShareNode } from './solveTree';
+import type { FontMetrics } from './text/fontMetrics';
 import { resolveNodeFontMetrics } from './text/resolveNodeFontMetrics';
 import { OutlinedTextRun, type OutlinedTextRunProps } from './text/OutlinedTextRun';
 import { soloLineLayout, type TextLayoutResult } from './text/textLayout';
@@ -74,7 +77,7 @@ interface ButtonLabelShapeInput {
   text: string;
   fontSizePx: number;
   bidi: TextBidiOptions;
-  /** The width a wrapping label shapes at ({@link labelWrapWidthPx}). Ignored at AUTOWRAP_OFF. */
+  /** The width a wrapping label shapes at ({@link wrappedLabelWidthPx}). Ignored at AUTOWRAP_OFF. */
   boxWidthPx: number;
 }
 
@@ -82,12 +85,11 @@ interface ButtonLabelShapeInput {
  * The shaped label of a Button-family control, or null for empty text. The font metrics
  * are read in the render body, not in the `useMemo`, for the reason Label's Component.tsx gives.
  */
-export function useButtonLabelLayout(
-  solveNode: ShareNode,
+function useButtonLabelLayout(
   wrap: ButtonWrapProperties,
-  { themeFontKey, text, fontSizePx, bidi, boxWidthPx }: ButtonLabelShapeInput
+  { text, fontSizePx, bidi, boxWidthPx }: ButtonLabelShapeInput,
+  fontMetrics: FontMetrics
 ): TextLayoutResult | null {
-  const fontMetrics = resolveNodeFontMetrics(solveNode, themeFontKey);
   const { autowrapMode, autowrapTrimFlags } = wrap;
   // The width keys the memo only while the label wraps: at AUTOWRAP_OFF a resize re-shapes nothing.
   const wrapWidthPx = isButtonAutowrapped(wrap) ? boxWidthPx : 0;
@@ -102,4 +104,32 @@ export function useButtonLabelLayout(
         : null,
     [text, fontSizePx, fontMetrics, bidi, autowrapMode, autowrapTrimFlags, wrapWidthPx]
   );
+}
+
+/**
+ * {@link useButtonLabelLayout} for a label that wraps at what `layoutButtonContent` leaves beside the icon
+ * (`button.cpp:428-432`). The unwrapped label is shaped only for `expand_icon`, which sizes the icon from
+ * it, and the final shape keys on the width alone. `facts` is memoised by the caller.
+ */
+export function useWrappingButtonLabelLayout(
+  solveNode: ShareNode,
+  wrap: ButtonWrapProperties & { expandIcon?: boolean },
+  shapeInput: Omit<ButtonLabelShapeInput, 'boxWidthPx'>,
+  facts: ButtonContentFacts
+): TextLayoutResult | null {
+  const { themeFontKey, text, fontSizePx, bidi } = shapeInput;
+  const fontMetrics = resolveNodeFontMetrics(solveNode, themeFontKey);
+  const { autowrapMode, autowrapTrimFlags, expandIcon } = wrap;
+  const boxWidthPx = useMemo(() => {
+    if (text.length === 0 || !isButtonAutowrapped({ autowrapMode })) return 0;
+    const unwrapped = expandIcon
+      ? shapeWrappedButtonLabel(
+          text,
+          { autowrapMode, autowrapTrimFlags },
+          { fontSizePx, fontMetrics, bidi, boxWidthPx: 0 }
+        )
+      : null;
+    return wrappedLabelWidthPx(facts, unwrapped);
+  }, [text, fontSizePx, fontMetrics, bidi, autowrapMode, autowrapTrimFlags, expandIcon, facts]);
+  return useButtonLabelLayout(wrap, { ...shapeInput, boxWidthPx }, fontMetrics);
 }

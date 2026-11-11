@@ -108,4 +108,15 @@ describe('parseOptionButton button_pressed', () => {
   it('is off once toggle_mode is false', () => {
     expect(parse({ toggle_mode: 'false', button_pressed: 'true' })).toBe(false);
   });
+
+  it("keeps an item's icon reference, and no icon key for an item without one (option_button.cpp:424)", () => {
+    const p = parseOptionButton(h({ name: 'Difficulty', type: 'OptionButton' }), {
+      item_count: '2',
+      'popup/item_0/text': '"Easy"',
+      'popup/item_0/icon': 'ExtResource("1")',
+      'popup/item_1/text': '"Hard"',
+    });
+    expect(p.items?.[0]).toEqual({ text: 'Easy', id: 0, icon: 'ExtResource("1")' });
+    expect(p.items?.[1]).not.toHaveProperty('icon');
+  });
 });

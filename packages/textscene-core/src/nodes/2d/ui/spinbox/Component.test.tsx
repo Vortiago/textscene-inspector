@@ -15,6 +15,7 @@ import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { SpinBox } from './Component';
 import type { SpinBoxProperties } from './types';
+import { findTextMesh } from '../../../../r3f/controls/native/testing/ownIcon';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 100, h: 30 };
 
@@ -55,13 +56,6 @@ function findChromeMeshes(scene: Rendered['scene']) {
 }
 
 /** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMesh(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
-}
-
 /** The two arrow icon `ControlQuad` meshes (`PlaneGeometry`), in source order: up, then down. */
 function findIconMeshes(scene: Rendered['scene']) {
   return scene
