@@ -16,6 +16,12 @@ import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { TscnNode } from '../../../parser/types';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
+import {
+  themedSlotRequest,
+  type BuiltIconsFn,
+  type TextureSlotRequest,
+  type TextureSlotsFn,
+} from '../../../r3f/controls/native/solverRegistry';
 import { internalChildThemeItems } from '../../../r3f/controls/native/themeItems';
 import { perObject } from '../../../utils/perObject';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
@@ -85,6 +91,28 @@ export interface SyntheticControl {
   syntheticDraw?: SolveNode['syntheticDraw'];
 }
 
+/** The `textureSlots` key of the theme icon `icon` that a Control of `type` built inside a dialog resolves. */
+export function builtButtonIconKey(type: string, variation?: string): string {
+  return variation === undefined ? `built:${type}` : `built:${type}/${variation}`;
+}
+
+/** One request for the theme icon `icon` of each Button class in `types`, for those the theme chain gives one. */
+export function builtButtonIconRequests(
+  types: readonly string[],
+  builtIcons?: BuiltIconsFn
+): TextureSlotRequest[] {
+  const requests: TextureSlotRequest[] = [];
+  for (const type of types) {
+    const themed = builtIcons?.(type).icon;
+    if (themed) requests.push(themedSlotRequest(builtButtonIconKey(type), themed));
+  }
+  return requests;
+}
+
+/** The slots a dialog needs for its own OK and Cancel buttons: both are plain Buttons (`dialogs.cpp:339-340,489`). */
+export const dialogTextureSlots: TextureSlotsFn = (_node, _themedIcons, builtIcons) =>
+  builtButtonIconRequests(['Button'], builtIcons);
+
 /** The path a synthetic Control gets: its parent's, then its own name. A container lays its children out by this link. */
 export function syntheticPath(parentPath: string, name: string): string {
   return `${parentPath}/@${name}`;
@@ -105,6 +133,13 @@ export function syntheticControl(dialog: SolveNode, spec: SyntheticControl): Sol
     rawProperties: {},
   };
   const items = internalChildThemeItems(dialog, type, variation);
+  const hasThemeIcon = !(spec.properties as ButtonProperties).icon && items.icons.icon;
+  const textureSize =
+    spec.textureSize !== undefined
+      ? spec.textureSize
+      : hasThemeIcon && descendsFromClass(type, 'Button')
+        ? (dialog.textureSlots[builtButtonIconKey(type, variation)] ?? null)
+        : null;
   return {
     ...dialog,
     path: syntheticPath(spec.parentPath ?? dialog.path, name),
@@ -115,7 +150,7 @@ export function syntheticControl(dialog: SolveNode, spec: SyntheticControl): Sol
     constants: items.constants,
     icons: { ...spec.icons, ...items.icons },
     fontOverrides: {},
-    textureSize: spec.textureSize ?? null,
+    textureSize,
     syntheticDraw: spec.syntheticDraw,
     textureSlots: {},
     labelSettings: null,

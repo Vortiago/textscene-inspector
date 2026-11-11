@@ -13,6 +13,8 @@ import { solveNode } from '../../../r3f/controls/native/testing/solveNode';
 import '../../../parser/TscnParser';
 import '../../../r3f/controls/index';
 import { dialogGeometry } from '../acceptdialog/dialogLayout';
+import { builtButtonIconKey } from '../acceptdialog/dialogParts';
+import { themeResource } from '../../../r3f/controls/native/testing/themeResource';
 import { wrappedWindowSize } from '../window/wrapControls';
 import oracle from './testing/fileDialogGeometry/oracle.out.json';
 import { FILE_DIALOG_THEME_ICONS } from '../../../godot/scene/fileDialog';
@@ -245,6 +247,39 @@ describe('FileDialog toolbar icon sizes', () => {
   it('requests one slot for each icon the Theme gives', () => {
     const requests = fileDialogTextureSlots(base.node, { back_folder: themedIcon });
     expect(requests.map(({ key }) => key)).toEqual(['back_folder']);
+  });
+});
+
+describe('FileDialog built Button icon sizes', () => {
+  const FILTER_ICON = { x: 30, y: 20 };
+  const TOOLBAR_ICON = { x: 40, y: 40 };
+  const themedIcon = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
+  const themed = {
+    ...fileDialog(CASES.open!),
+    themeChain: [themeResource({ icons: { OptionButton: { icon: 'ExtResource("1")' } } })],
+    icons: { back_folder: themedIcon },
+    textureSlots: { [builtButtonIconKey('OptionButton')]: FILTER_ICON, back_folder: TOOLBAR_ICON },
+  };
+  const bodyControl = (name: string) => {
+    const size = wrappedWindowSize(themed, THEME, measureText, EMBEDDER);
+    const { body } = dialogGeometry(themed, size, createSolveContext(THEME, measureText));
+    return body.find(({ control }) => control.node.name === name)!.control;
+  };
+
+  it('sizes the filter OptionButton by the theme icon of OptionButton', () => {
+    expect(bodyControl('Filter').textureSize).toEqual(FILTER_ICON);
+  });
+
+  it('keeps the size of the toolbar button own icon', () => {
+    expect(bodyControl('DirPrev').textureSize).toEqual(TOOLBAR_ICON);
+  });
+
+  it('requests the theme icon of each Button class the body builds without an icon', () => {
+    const builtIcons = () => ({ icon: themedIcon });
+    const keys = fileDialogTextureSlots(themed.node, {}, builtIcons).map(({ key }) => key);
+    expect(keys).toEqual(
+      expect.arrayContaining(['Button', 'OptionButton', 'CheckBox'].map((type) => builtButtonIconKey(type)))
+    );
   });
 });
 

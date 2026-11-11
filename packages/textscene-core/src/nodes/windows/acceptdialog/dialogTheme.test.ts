@@ -10,7 +10,7 @@ import { measureText } from '../../../r3f/controls/native/text/measurer';
 import { solveNode } from '../../../r3f/controls/native/testing/solveNode';
 import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
-import { dialogButtonNode, messageLabelNode } from './dialogParts';
+import { builtButtonIconKey, dialogButtonNode, messageLabelNode } from './dialogParts';
 import { dialogGeometry } from './dialogLayout';
 import { parseConfirmationDialog } from '../confirmationdialog/parser';
 import { parseDialog } from './parser';
@@ -18,8 +18,9 @@ import { parseDialog } from './parser';
 const THEME = nativeTheme(1);
 const EMBEDDER = { x: 1152, y: 648 };
 const RED = { r: 1, g: 0, b: 0, a: 1 };
+const ICON_SIZE = { x: 24, y: 20 };
 
-function themeOf(parts: Pick<ThemeResource, 'colors' | 'constants'>): ThemeResource {
+function themeOf(parts: Partial<Pick<ThemeResource, 'colors' | 'constants' | 'icons'>>): ThemeResource {
   return {
     defaultFont: null,
     defaultFontSize: undefined,
@@ -40,6 +41,20 @@ function dialog(themeChain: readonly ThemeResource[]): SolveNode {
 }
 
 describe('a dialog under a Theme', () => {
+  const iconTheme = themeOf({ icons: { Button: { icon: 'ExtResource("1")' } } });
+  const sizedDialog = (themeChain: readonly ThemeResource[]): SolveNode => ({
+    ...dialog(themeChain),
+    textureSlots: { [builtButtonIconKey('Button')]: ICON_SIZE },
+  });
+
+  it('sizes the OK button by the size the dialog holds for the theme icon of Button', () => {
+    expect(dialogButtonNode(sizedDialog([iconTheme]), 'ok').textureSize).toEqual(ICON_SIZE);
+  });
+
+  it('leaves the OK button without an icon size when the theme has no icon', () => {
+    expect(dialogButtonNode(sizedDialog([]), 'ok').textureSize).toBeNull();
+  });
+
   it('gives the OK button the theme colours of Button', () => {
     const themed = dialog([themeOf({ colors: { Button: { font_focus_color: RED } } })]);
     expect(dialogButtonNode(themed, 'ok').colors.font_focus_color).toEqual(RED);

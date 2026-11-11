@@ -7,12 +7,15 @@
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import type * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
+import { builtButtonIconKey } from '../../../nodes/windows/acceptdialog/dialogParts';
+import '../index';
 import { useBuildSolveTree } from './buildSolveTree';
 import type { SolveNode } from './solveTree';
 import { controlNode } from './testing/solveNode';
@@ -179,5 +182,24 @@ describe('useBuildSolveTree icons', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
     expect(result.current.tree[0]!.icons.checked?.isHeldLocally).toBe(false);
+  });
+
+  it('hands a TextureSlotsFn the icons a Control built inside the node resolves through its theme chain', () => {
+    const fake = createFakeResourceLoader();
+    fake.themes.seed('res://theme.tres', iconTheme({ Button: { icon: 'ExtResource("1")' } }));
+    fake.textures.seed('res://icon.png', { image: { width: 24, height: 20 } } as unknown as THREE.Texture);
+    const dialog = { ...controlNode('Dialog', 'AcceptDialog', {}), children: [] };
+    const root = { ...controlNode('Root', 'Control', { theme: 'ExtResource("theme")' }), children: [dialog] };
+    const { result } = renderHook(
+      () => useBuildSolveTree([root], [{ id: 'theme', path: 'res://theme.tres', type: 'Theme' }], []),
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <ResourceLoaderProvider loader={fake.loader}>{children}</ResourceLoaderProvider>
+        ),
+      }
+    );
+    expect(result.current.windows[0]!.textureSlots).toEqual({
+      [builtButtonIconKey('Button')]: { x: 24, y: 20 },
+    });
   });
 });

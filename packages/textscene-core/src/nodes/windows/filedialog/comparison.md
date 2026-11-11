@@ -29,6 +29,11 @@ A CheckBox option and a value option draw in the options row and the option grid
 
 `current_path` puts the dialog in a folder and a file name in the File field. The name before its dot is selected, and the next-folder button is disabled, as in Godot.
 
+## Theme icon
+<!-- compare: image=unit-file-dialog-theme-icon status=limitation fixture=file-dialog-theme-icon/unit-file-dialog-theme-icon.tscn -->
+
+The Cancel and OK buttons draw the theme icon `icon` of `Button`, and the filter button draws the one of `OptionButton`. The toolbar buttons keep their own icons.
+
 ## Linting
 
 <!-- lint:begin FileDialog -->

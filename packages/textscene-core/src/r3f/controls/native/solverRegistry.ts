@@ -171,13 +171,20 @@ export function themedSlotRequests(
  * would keep in sync with every Control type it walks. An unregistered type
  * keeps the single `texture` or `icon` slot.
  */
-// `themedIcons` is optional because only a type with a themeable icon reads it,
+// `themedIcons` and `builtIcons` are optional because only a type with a themeable icon reads them,
 // and a slice's tests call its `TextureSlotsFn` with one argument.
-// `buildSolveTree.ts` always passes it.
+// `buildSolveTree.ts` always passes both.
 export type TextureSlotsFn = (
   node: TscnNode,
-  themedIcons?: Readonly<Record<string, ThemedIconRef>>
+  themedIcons?: Readonly<Record<string, ThemedIconRef>>,
+  builtIcons?: BuiltIconsFn
 ) => readonly TextureSlotRequest[];
+
+/**
+ * The theme icons a Control of `type` (with its `theme_type_variation`), built inside the node and
+ * never serialised, resolves through the node's theme chain. A dialog's buttons are such Controls.
+ */
+export type BuiltIconsFn = (type: string, variation?: string) => Readonly<Record<string, ThemedIconRef>>;
 
 /**
  * The `visible` a container writes onto one direct sortable Control child
