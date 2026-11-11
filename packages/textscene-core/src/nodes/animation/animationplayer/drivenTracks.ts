@@ -5,13 +5,14 @@
  * mixer's clip builder, which warns and drops it.
  */
 
+import { AnimationUpdateMode } from '../../../godot/scene/animation.js';
 import { sampleCrossedBackward, sampleTupleTrack } from '../../../godot/scene/animationTrackSampler.js';
 import type { GodotAnimation } from './animationResolver';
 import type { PushedClip } from '../../../r3f/animation/usePushedWrites';
 import { animatedValueKey } from '../../../r3f/contexts/AnimatedValueContext';
 import type { AnimatedPose } from '../../3d/skeleton3d/skeletonPose';
 import { boneTracksOf, sampleBonePoses, type BoneTrack, type BoneTrackSource } from './boneTracks';
-import { UPDATE_DISCRETE, type GodotTrack } from './trackParser';
+import type { GodotTrack } from './trackParser';
 import { componentsOf, sampleSetupOf, trackKeyOf } from './trackSampling';
 
 /**
@@ -109,7 +110,7 @@ function valueTargetOf(track: GodotTrack, path: string, animation: GodotAnimatio
   // `frame` and `visible` hold a key until the next one, whatever `interp` says.
   const setup = sampleSetupOf(track, animation);
   if (!VALUE_PUSH_PROPERTIES[property]) setup.interp = 0;
-  const isDiscrete = track.updateMode === UPDATE_DISCRETE;
+  const isDiscrete = track.updateMode === AnimationUpdateMode.DISCRETE;
   return {
     path,
     property,

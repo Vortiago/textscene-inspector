@@ -26,11 +26,12 @@ export function startAction(action: AnimationAction, opts: ActionOpts = {}): voi
 }
 
 /**
- * Seek a paused action to `time`: start it (re-applying weight/timeScale on
+ * Seek a paused action to the clip time `time`: start it (re-applying weight/timeScale on
  * the same call as play(), so the weight invariant holds whether or not the
- * action was already running), then hold it paused at the target time.
+ * action was already running), then hold it paused at the target time, on a forward pass.
  */
 export function seekAction(action: AnimationAction, time: number, opts: ActionOpts = {}): void {
+  startForwardPass(action);
   startAction(action, opts);
   action.paused = true;
   action.time = time;

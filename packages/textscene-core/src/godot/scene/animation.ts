@@ -69,6 +69,13 @@ export const AnimationLoopMode = {
   PINGPONG: 2,
 } as const;
 
+/** `Animation::UpdateMode` (`scene/resources/animation.h:68-72`). DISCRETE holds each key until the next one. */
+export const AnimationUpdateMode = {
+  CONTINUOUS: 0,
+  DISCRETE: 1,
+  CAPTURE: 2,
+} as const;
+
 /** `Animation::InterpolationType` (`scene/resources/animation.h:58-64`). */
 export const AnimationInterpolation = {
   NEAREST: 0,

@@ -6,6 +6,9 @@
 
 import type { GodotKeyframeValue } from './keyframeValues.js';
 import { parseValueArray } from './keyframeValues.js';
+import { clamp } from '../../../godot/math/math.js';
+import { AnimationUpdateMode } from '../../../godot/scene/animation.js';
+import { parseGodotInt } from '../../../godot/variant/intReader.js';
 import { parseGodotFloat } from '../../../godot/variant/number.js';
 import { boolSlotValue, scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import { info, warn } from '../../../logger';
@@ -47,8 +50,8 @@ export interface GodotTrack {
    */
   interp: number;
   /**
-   * The update mode of a `value` track: CONTINUOUS 0, DISCRETE 1, CAPTURE 2. DISCRETE holds each
-   * key until the next, whatever `interp` says. A 3D transform track has no update mode.
+   * The `AnimationUpdateMode` of a `value` track. DISCRETE holds each key until the next, whatever
+   * `interp` says. A 3D transform track has no update mode.
    */
   updateMode?: number;
   /** `Track::loop_wrap` (`animation.h:110`): whether the span past the last key runs on to the first. */
@@ -163,23 +166,20 @@ const readTransitionsField = dictCallField('transitions', 'PackedFloat32Array');
 
 const UPDATE_FIELD = dictNumberField('update');
 const CONTINUOUS_FIELD = dictBoolField('cont');
-const UPDATE_CONTINUOUS = 0;
-/** `UPDATE_DISCRETE`: the key holds until the next one, whatever `interp` says (animation.h:70). */
-export const UPDATE_DISCRETE = 1;
-// Godot clamps to 3, one past UPDATE_CAPTURE (animation.cpp:258-259).
+// Godot clamps to 3, one past CAPTURE (animation.cpp:258-259).
 const UPDATE_CEILING = 3;
 
 /**
- * The update mode a value track's key Dictionary names: `update` clamped to the enum, else the
- * older `cont` bool, else continuous (animation.cpp:251-262).
+ * The update mode a value track's key Dictionary names: `update` clamped as Godot clamps it, else
+ * the older `cont` bool, else continuous (animation.cpp:251-262).
  */
 function updateModeOf(keysStr: string): number {
-  const update = parseGodotFloat(UPDATE_FIELD.exec(keysStr)?.[1] ?? '');
+  const update = parseGodotInt(UPDATE_FIELD.exec(keysStr)?.[1] ?? '');
   if (update !== null && !Number.isNaN(update)) {
-    return Math.min(Math.max(Math.trunc(update), UPDATE_CONTINUOUS), UPDATE_CEILING);
+    return clamp(update, AnimationUpdateMode.CONTINUOUS, UPDATE_CEILING);
   }
   const isContinuous = boolSlotValue(CONTINUOUS_FIELD.exec(keysStr)?.[1]);
-  return isContinuous === false ? UPDATE_DISCRETE : UPDATE_CONTINUOUS;
+  return isContinuous === false ? AnimationUpdateMode.DISCRETE : AnimationUpdateMode.CONTINUOUS;
 }
 
 function parseKeys(keysStr: string): GodotKeyframe[] {

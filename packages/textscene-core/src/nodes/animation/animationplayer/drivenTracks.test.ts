@@ -4,6 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { AnimationUpdateMode } from '../../../godot/scene/animation.js';
 import type { GodotAnimation } from './animationResolver';
 import { splitTracks, type TrackScene } from './drivenTracks';
 import type { GodotTrack } from './trackParser';
@@ -119,7 +120,7 @@ describe('splitTracks', () => {
 
   it('holds the earlier key for nearest interpolation, and for a discrete update mode', () => {
     const [nearest] = splitTracks(clip(FADE({ interp: 0 })), SCENE).values;
-    const [discrete] = splitTracks(clip(FADE({ updateMode: 1 })), SCENE).values;
+    const [discrete] = splitTracks(clip(FADE({ updateMode: AnimationUpdateMode.DISCRETE })), SCENE).values;
 
     expect(nearest!.sample(4, false)).toEqual([1, 1, 1, 1]);
     expect(discrete!.sample(4, false)).toEqual([1, 1, 1, 1]);
@@ -171,8 +172,8 @@ describe('splitTracks', () => {
         ],
       });
     const sampleOf = (updateMode: number) => splitTracks(clip(flipbook(updateMode)), SCENE).values[0]!.sample;
-    const discrete = sampleOf(1);
-    const continuous = sampleOf(0);
+    const discrete = sampleOf(AnimationUpdateMode.DISCRETE);
+    const continuous = sampleOf(AnimationUpdateMode.CONTINUOUS);
 
     expect([discrete(1.5, false), discrete(1.5, true)]).toEqual([[1], [2]]);
     expect([continuous(1.5, false), continuous(1.5, true)]).toEqual([[1], [1]]);

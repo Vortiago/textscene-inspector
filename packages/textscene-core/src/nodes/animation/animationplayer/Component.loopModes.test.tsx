@@ -23,6 +23,7 @@ import {
   AnimationLoopMode,
 } from '../../../godot/scene/animation';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import { subResource } from '../../../testing/subResource';
 import type { AnimationPlayerProperties } from './types';
 
 const AP_PATH = 'Root/AnimationPlayer';
@@ -31,30 +32,24 @@ const FRAME_SECONDS = 0.3;
 
 /** A one-second clip: `Mover` slides from x 0 to 10 on the mixer, and `Fader` fades from alpha 1 to 0 on the registry. */
 function clip(id: string, loopMode: number): TscnInternalResource {
-  return {
-    id,
-    type: 'Animation',
-    data: {
-      length: '1.0',
-      loop_mode: String(loopMode),
-      'tracks/0/type': '"value"',
-      'tracks/0/path': 'NodePath("Mover:position")',
-      'tracks/0/keys':
-        '{\n"times": PackedFloat32Array(0, 1),\n"values": [Vector3(0, 0, 0), Vector3(10, 0, 0)]\n}',
-      'tracks/1/type': '"value"',
-      'tracks/1/path': 'NodePath("Fader:modulate")',
-      'tracks/1/keys':
-        '{\n"times": PackedFloat32Array(0, 1),\n"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]\n}',
-    },
-  };
+  return subResource('Animation', id, {
+    length: '1.0',
+    loop_mode: String(loopMode),
+    'tracks/0/type': '"value"',
+    'tracks/0/path': 'NodePath("Mover:position")',
+    'tracks/0/keys':
+      '{\n"times": PackedFloat32Array(0, 1),\n"values": [Vector3(0, 0, 0), Vector3(10, 0, 0)]\n}',
+    'tracks/1/type': '"value"',
+    'tracks/1/path': 'NodePath("Fader:modulate")',
+    'tracks/1/keys':
+      '{\n"times": PackedFloat32Array(0, 1),\n"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]\n}',
+  });
 }
 
 const INTERNAL: TscnInternalResource[] = [
-  {
-    id: 'Lib',
-    type: 'AnimationLibrary',
-    data: { _data: '{\n"once": SubResource("N"),\n"wrap": SubResource("L"),\n"bounce": SubResource("P")\n}' },
-  },
+  subResource('AnimationLibrary', 'Lib', {
+    _data: '{\n"once": SubResource("N"),\n"wrap": SubResource("L"),\n"bounce": SubResource("P")\n}',
+  }),
   clip('N', AnimationLoopMode.NONE),
   clip('L', AnimationLoopMode.LINEAR),
   clip('P', AnimationLoopMode.PINGPONG),
@@ -137,13 +132,17 @@ async function advance(renderer: Renderer, frames: number): Promise<void> {
   }
 }
 
+async function pause(renderer: Renderer): Promise<void> {
+  await act(() => transport.pause());
+  await advance(renderer, 1);
+}
+
 /** The clip time each of the three readers stands on: the mixer's node, the pushed value and the transport. */
 async function playheads(renderer: Renderer): Promise<{ mixer: number; pushed: number; shown: number }> {
   const mixer = renderer.scene.findByProps({ name: 'Mover' }).instance.position.x / 10;
   const pushed = 1 - fadedAlpha!;
   // The transport throttles a report, and a pause flushes the exact time.
-  await act(() => transport.pause());
-  await advance(renderer, 1);
+  await pause(renderer);
   return { mixer, pushed, shown: transport.time };
 }
 
@@ -180,8 +179,7 @@ describe('AnimationPlayer loop modes', () => {
   it('scrubs the return pass of a ping-pong loop to the time asked for', async () => {
     const renderer = await play('bounce');
     await advance(renderer, 4);
-    await act(() => transport.pause());
-    await advance(renderer, 1);
+    await pause(renderer);
     await act(() => transport.seek(0.25));
     await advance(renderer, 1);
     expect(await playheads(renderer)).toEqual(allAt(0.25));
@@ -190,8 +188,7 @@ describe('AnimationPlayer loop modes', () => {
   it('plays forward when a ping-pong loop resumes from a pause on its return pass', async () => {
     const renderer = await play('bounce');
     await advance(renderer, 4);
-    await act(() => transport.pause());
-    await advance(renderer, 1);
+    await pause(renderer);
     await act(() => transport.play());
     await advance(renderer, 1);
     expect(await playheads(renderer)).toEqual(allAt(0.9));

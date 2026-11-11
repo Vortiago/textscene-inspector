@@ -53,4 +53,5 @@ A track that names a node of an instanced `.glb` uses the path Godot's importer 
 - **Not drawn** Only transform and value tracks play, so `bezier`, `method`, `audio` and nested `animation` tracks are parsed and ignored (ADR-0011).
 - **Approximated** Cubic interpolation plays as a smooth spline on node transform tracks, not Godot's cubic (ADR-0017).
 - **Approximated** Per-key `transition` easing on node transform tracks plays as linear, so an eased clip reaches the same poses on a different curve (ADR-0017).
+- **Approximated** On the return pass of a ping-pong loop, a discrete track on a node transform shows the key before the playhead, where Godot shows the key the playhead last crossed (ADR-0011).
 - **Not drawn** A `visible` value track on a `Control` plays nothing, since a hidden `Control` also leaves the layout solve, which reads the authored value.

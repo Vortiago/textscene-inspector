@@ -97,7 +97,6 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
       }
       case 'seek': {
         if (action) {
-          startForwardPass(action);
           seekAction(action, transportTime);
           mixer.update(0);
         }

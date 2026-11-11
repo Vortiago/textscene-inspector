@@ -35,6 +35,8 @@ export function usePushedWrites<T>(
   const sampled = useRef<Map<string, T>>(new Map());
   /** Written only by the frame and `release`: the playhead the values were sampled at. */
   const sampledAt = useRef<number | null>(null);
+  /** Written only by the frame: whether that sample was of a return pass, which a discrete track reads. */
+  const sampledReturnPass = useRef(false);
 
   const release = useCallback(() => {
     // The frame calls this while nothing plays, so an idle player allocates nothing.
@@ -53,11 +55,13 @@ export function usePushedWrites<T>(
     // The live playhead, which the playback loop advanced earlier this frame. A paused clip stands
     // on the values it wrote.
     const time = clipTimeOf(action);
-    if (time === sampledAt.current) return;
+    const isReturnPass = isOnReturnPass(action);
+    if (time === sampledAt.current && isReturnPass === sampledReturnPass.current) return;
     sampledAt.current = time;
+    sampledReturnPass.current = isReturnPass;
     const now = sampled.current;
     now.clear();
-    clip.sample(time, now, isOnReturnPass(action));
+    clip.sample(time, now, isReturnPass);
     for (const [key, value] of now) store.set(key, value);
     for (const key of written.current.keys()) {
       if (!now.has(key)) store.set(key, null);
