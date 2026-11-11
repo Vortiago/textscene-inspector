@@ -72,6 +72,35 @@ describe('buttonBoxesInChain', () => {
       expect(boxes.hover).toBe(THEME.widgets.button.hover);
     });
   });
+
+  describe('for the boxes only one type registers (default_theme.cpp:230-233,285,324)', () => {
+    const SIX_ACROSS = { left: 6, top: 4, right: 6, bottom: 4 };
+
+    it.each([
+      { type: 'CheckBox', margin: { left: 4, top: 4, right: 4, bottom: 4 } },
+      { type: 'CheckButton', margin: SIX_ACROSS },
+    ])('gives $type an empty hover_pressed box with its own margins', ({ type, margin }) => {
+      const boxes = buttonBoxesInChain(THEME, [type, ...BUTTON_CHAIN]);
+      expect(isDrawn(boxes.hover_pressed!)).toBe(false);
+      expect(boxes.hover_pressed!.contentMargin).toEqual(margin);
+    });
+
+    it('gives OptionButton a <state>_mirrored twin of each state box', () => {
+      const boxes = buttonBoxesInChain(THEME, ['OptionButton', ...BUTTON_CHAIN]);
+      for (const state of ['normal', 'hover', 'pressed', 'disabled'] as const) {
+        expect(boxes[`${state}_mirrored`]).toBe(THEME.widgets.optionButton[state]);
+      }
+      expect(boxes.hover_pressed).toBeUndefined();
+    });
+
+    it('gives Button and MenuButton neither', () => {
+      for (const chain of [BUTTON_CHAIN, ['MenuButton', ...BUTTON_CHAIN]]) {
+        const boxes = buttonBoxesInChain(THEME, chain);
+        expect(boxes.hover_pressed).toBeUndefined();
+        expect(boxes.normal_mirrored).toBeUndefined();
+      }
+    });
+  });
 });
 
 describe('buttonBoxesOf', () => {

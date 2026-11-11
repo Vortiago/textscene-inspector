@@ -4,8 +4,8 @@
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { ButtonPainter } from '../button/Component';
-import { menuButtonTextTheme } from './nativeSolver';
+import { MENU_BUTTON_CLASS } from './nativeSolver';
 
 export function MenuButton(props: NativeControlComponentProps) {
-  return <ButtonPainter {...props} textTheme={menuButtonTextTheme} />;
+  return <ButtonPainter {...props} buttonClass={MENU_BUTTON_CLASS} />;
 }

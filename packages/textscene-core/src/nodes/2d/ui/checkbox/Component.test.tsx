@@ -157,13 +157,13 @@ describe('<CheckBox> (isolated painter contract)', () => {
     expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
   });
 
-  it('forwards renderOrder to every mesh (icon + text)', async () => {
+  it('keeps every mesh inside its own unit of render order (icon and text)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={7} />
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     expect(meshes.length).toBeGreaterThan(0);
-    for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
+    for (const mesh of meshes) expect(Math.floor(mesh.renderOrder)).toBe(7);
   });
 
   it('draws a fitted icon at its fractional size, unrounded (check_box.cpp:140-142)', async () => {
@@ -339,6 +339,7 @@ describe("<CheckBox>: Button's inherited icon (button.cpp:333-405)", () => {
     const node: SolveNode = {
       ...solveNode({ icon: OWN_ICON_REF, ...properties }),
       resources: OWN_ICON_SCOPE,
+      textureSize: { x: 12, y: 12 },
       textureSlots: { icon: { x: 12, y: 12 } },
       rtl,
     };
@@ -386,6 +387,7 @@ describe("<CheckBox>: Button's inherited icon (button.cpp:333-405)", () => {
     const node: SolveNode = {
       ...solveNode({ icon: OWN_ICON_REF, text: 'Hi' }),
       resources: OWN_ICON_SCOPE,
+      textureSize: { x: 12, y: 12 },
       textureSlots: { icon: { x: 12, y: 12 } },
     };
     const painter = <CheckBox {...painterEnv()} solveNode={node} rect={RECT} renderOrder={0} />;

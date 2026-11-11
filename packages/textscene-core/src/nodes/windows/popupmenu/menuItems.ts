@@ -22,7 +22,7 @@ import {
   CHECKBOX_ICON_NATURAL_SIZE,
   CHECK_BOX_ICON_THEME_NAME,
   type CheckBoxIconKey,
-  checkBoxTextureSlots,
+  checkIconSlotRequests,
 } from '../../2d/ui/checkbox/nativeSolver';
 import type { PopupMenuTheme } from './menuTheme';
 import type { PopupMenuItem, PopupMenuProperties } from './types';
@@ -38,7 +38,7 @@ export const popupMenuTextureSlots: TextureSlotsFn = (node, themedIcons = {}) =>
   const icons = items.flatMap((item, index) =>
     item.icon ? [{ key: menuItemIconSlot(index), ref: item.icon }] : []
   );
-  return [...icons, ...checkBoxTextureSlots(node, themedIcons)];
+  return [...icons, ...checkIconSlotRequests(themedIcons)];
 };
 
 export interface MenuItem {

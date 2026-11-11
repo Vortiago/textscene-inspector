@@ -4,10 +4,11 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { isButtonNodeAutowrapped } from '../../../../r3f/controls/native/buttonBase';
 import { Button } from './Component';
-import { buttonMinimumSize } from './nativeSolver';
+import { buttonMinimumSize, buttonTextureSlots } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'Button', Component: Button });
 controlSolverRegistry.registerMinimumSize('Button', buttonMinimumSize);
+controlSolverRegistry.registerTextureSlots('Button', buttonTextureSlots);
 // `autowrap_mode` makes the label's height depend on this node's own width, so
 // the minimum reads `SolveContext.tentativeRect`, for a wrapping node only.
 controlSolverRegistry.registerSizeDependentMinimum('Button', isButtonNodeAutowrapped);

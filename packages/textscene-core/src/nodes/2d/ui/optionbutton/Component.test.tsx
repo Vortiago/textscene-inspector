@@ -209,7 +209,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
     expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
   });
 
-  it('forwards renderOrder to every mesh (chrome, arrow, text)', async () => {
+  it('keeps every mesh inside its own unit of render order (chrome, arrow and text)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <OptionButton
         {...painterEnv()}
@@ -220,7 +220,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     expect(meshes.length).toBeGreaterThanOrEqual(3);
-    for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
+    for (const mesh of meshes) expect(Math.floor(mesh.renderOrder)).toBe(7);
   });
 });
 
@@ -360,6 +360,7 @@ describe("<OptionButton>: the selected item's icon (option_button.cpp:424, butto
       solveNode={{
         ...solveNode({ items: ICON_ITEMS, selected }),
         resources: OWN_ICON_SCOPE,
+        textureSize: { x: 12, y: 12 },
         textureSlots: { icon: { x: 12, y: 12 } },
       }}
       rect={RECT}

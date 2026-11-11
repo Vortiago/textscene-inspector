@@ -10,8 +10,10 @@ renders_as: a toggle-switch icon followed by a text run
 # CheckButton
 
 CheckButton is a labelled on-off switch. The previewer draws the theme's
-toggle-switch icon flush against the right edge and the label to its left, with no
-StyleBox chrome (CheckButton's own StyleBoxes are all a `StyleBoxEmpty`). `clip_text` zeroes the
+toggle-switch icon against the right edge and the label to its left. The default StyleBoxes are
+empty. A themed one draws under the label as Button's does, and the toggle sits at the margin of the
+`normal` one. The theme colours `button_checked_color` and `button_unchecked_color` tint the toggle.
+`clip_text` zeroes the
 label's width in the minimum size, and `TextParagraph::draw` cuts the label to its paragraph
 box. The previewer does both, so a box narrower than the label shows only the glyphs that fit.
 A trimming `text_overrun_behavior` zeroes the width the same way. The previewer trims the label

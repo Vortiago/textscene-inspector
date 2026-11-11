@@ -32,6 +32,13 @@ describe('parseOptionButton', () => {
     expect(parseOptionButton(h({ name: 'O' }), {}).flat).toBe(false);
   });
 
+  it('parses `fit_to_longest_item` off, and leaves it unset at its true default (option_button.h:43)', () => {
+    expect(parseOptionButton(h({ name: 'O' }), { fit_to_longest_item: 'false' }).fitToLongestItem).toBe(
+      false
+    );
+    expect(parseOptionButton(h({ name: 'O' }), {}).fitToLongestItem).toBeUndefined();
+  });
+
   it('defaults to no items and not-disabled when absent', () => {
     const p = parseOptionButton(h({ name: 'Empty', type: 'OptionButton' }), {});
     expect(p.items ?? []).toEqual([]);
