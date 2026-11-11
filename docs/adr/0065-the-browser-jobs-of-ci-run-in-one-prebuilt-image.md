@@ -24,8 +24,8 @@ The image is `ghcr.io/<owner>/<repository>/ci:<tag>`, so a run in a fork publish
 image. The tag is a hash of the Dockerfile and the Playwright version of the lockfile
 (`scripts/ci/ciImage.mjs`). The `image` job of `ci.yml` builds and publishes the image only when
 the tag does not exist. So a commit that changes neither input reuses the published image, and a
-pull request that changes one runs in its own image. A build takes about 90 s, and a job pulls the
-image in 14 to 21 s.
+pull request that changes one runs in its own image. A build takes about 80 s, and a job pulls the
+image in 10 to 16 s.
 
 Node, pnpm and the workspace packages stay with `.github/actions/setup`.
 
@@ -46,7 +46,7 @@ Node, pnpm and the workspace packages stay with `.github/actions/setup`.
 
 ## Consequences
 
-- A browser job starts about 10 s later than on the runner. The pull of 14 to 21 s replaces the 4
+- A browser job starts 5 to 10 s later than on the runner. The pull of 10 to 16 s replaces the 4
   to 6 s restore of Chromium and, in the E2E job, 6 s of `apt-get`. The decision buys independence
   from the Ubuntu archive, not time.
 - The Claude review job is not in the image and still runs `apt-get`: bubblewrap needs user
