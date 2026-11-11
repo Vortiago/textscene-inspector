@@ -3,7 +3,12 @@
  * unread key that Godot declares is a gap, and a key Godot does not declare is a typo.
  */
 import { describe, expect, it } from 'vitest';
-import { collectSlices, isEngineProperty, unreadValidatorKeys } from './propertyGrammarParityCheck.js';
+import {
+  collectSlices,
+  isEngineProperty,
+  unreadValidatorKeys,
+  unsweptListErrors,
+} from './propertyGrammarParityCheck.js';
 
 describe('isEngineProperty', () => {
   it('finds a property the class declares', () => {
@@ -24,6 +29,43 @@ describe('isEngineProperty', () => {
 
   it('takes a wildcard key as the family it names, which the rows do not list (edge case)', () => {
     expect(isEngineProperty('Skeleton3D', 'bones/*')).toBe(true);
+  });
+});
+
+describe('unsweptListErrors', () => {
+  const tree = {
+    linterParserSlices: ['2d/bone2d', '3d/camera3d', 'physics/3d/area3d'],
+    sweptSlices: ['3d/camera3d'],
+  };
+
+  it('accepts a list that names every slice without a parser of its own', () => {
+    expect(unsweptListErrors({ ...tree, listed: ['2d/bone2d', 'physics/3d/area3d'] })).toEqual([]);
+  });
+
+  it('names a slice without a parser of its own that the list lacks (error case)', () => {
+    expect(unsweptListErrors({ ...tree, listed: ['2d/bone2d'] })).toEqual([
+      'physics/3d/area3d: registers no parser of its own and is not listed. Give it a parser, or add its line to UNSWEPT_SLICES.',
+    ]);
+  });
+
+  it('names a listed slice that has a parser of its own now (error case)', () => {
+    const listed = ['2d/bone2d', '3d/camera3d', 'physics/3d/area3d'];
+    expect(unsweptListErrors({ ...tree, listed })).toEqual([
+      '3d/camera3d: has a parser of its own, so the guard sweeps it. Delete its line from UNSWEPT_SLICES.',
+    ]);
+  });
+
+  it('names a listed slice that has no linterParser.ts (error case)', () => {
+    const listed = ['2d/bone2d', '2d/gone', 'physics/3d/area3d'];
+    expect(unsweptListErrors({ ...tree, listed })).toEqual([
+      '2d/gone: has no linterParser.ts. Delete its line from UNSWEPT_SLICES.',
+    ]);
+  });
+
+  it('names a line that breaks the order, which keeps two additions on different lines (edge case)', () => {
+    expect(unsweptListErrors({ ...tree, listed: ['physics/3d/area3d', '2d/bone2d'] })).toEqual([
+      '2d/bone2d: must sort after physics/3d/area3d. Keep UNSWEPT_SLICES sorted, each slice once.',
+    ]);
   });
 });
 

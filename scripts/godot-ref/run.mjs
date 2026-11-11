@@ -1544,8 +1544,7 @@ export async function renderReference({
       renderingDriver,
     });
   } finally {
-    // Each run copies the whole res:// root, which on a tmpfs /tmp stays in RAM, and the
-    // engine-gated tests run inside `pnpm test:unit`.
+    // Each run copies the whole res:// root, which on a tmpfs /tmp stays in RAM.
     if (!keepWork) await rm(work, { recursive: true, force: true });
   }
 }

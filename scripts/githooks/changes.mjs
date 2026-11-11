@@ -5,6 +5,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { changedEntries } from '../gitNameStatus.mjs';
+import { hasEngine } from '../godot-ref/engineTools.mjs';
 import { readTestsBeside } from './colocatedTests.mjs';
 import { isNegativeFixture } from './negativeFixtures.mjs';
 import { planChecks, STATIC_GATE } from './prePushPlan.mjs';
@@ -51,5 +52,5 @@ export function parseNameStatus(text) {
 export function planForFiles(files) {
   return files === undefined
     ? STATIC_GATE
-    : planChecks({ ...files, isNegativeFixture, testsBeside: readTestsBeside });
+    : planChecks({ ...files, isNegativeFixture, testsBeside: readTestsBeside, hasEngine });
 }

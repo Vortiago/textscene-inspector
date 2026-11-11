@@ -6,7 +6,7 @@
  */
 
 import { readFileSync, existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { classBaseChain } from '../../godot/classdb/classBaseTypes.js';
 import * as PROPERTY_LIST_FAMILIES from '../../godot/classdb/propertyListFamilies.js';
 import type { IndexedFamily } from '../../godot/classdb/indexedFamily.js';
@@ -65,9 +65,12 @@ export const BASE_TYPE_TO_PARSER_SUBPATH: Readonly<Record<string, string>> = {
   VisibleOnScreenNotifier3D: '3d/visibleonscreennotifier3d/parser.ts',
 };
 
+/** A slice directory as the guard names it: relative to `nodes/`, with `/` on every platform. */
+export const sliceLabel = (dir: string): string => relative(nodesRoot, dir).replaceAll('\\', '/');
+
 /**
  * Every directory holding a `linterParser.ts`, `parser.ts` or not: the set
- * {@link findSliceDirs} narrows, for the blind-spot count. Floored, because an
+ * {@link findSliceDirs} narrows, and `UNSWEPT_SLICES` accounts for the rest. Floored, because an
  * empty walk reads like a clean tree to every consumer.
  */
 export function findLinterParserDirs(dir: string): string[] {

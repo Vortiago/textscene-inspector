@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { planChecks } from './prePushPlan.mjs';
 
 const plan = (changed, deleted = [], isNegativeFixture = () => false, testsBeside = () => []) =>
-  planChecks({ changed, deleted, isNegativeFixture, testsBeside }).map((command) => command.join(' '));
+  planChecks({ changed, deleted, isNegativeFixture, testsBeside, hasEngine: () => false }).map((command) =>
+    command.join(' ')
+  );
 
 /** A negative-fixture predicate over the one fixture `edge-a.tscn`, wherever it sits. */
 const isEdgeA = (path) => path.split('/').at(-1) === 'edge-a.tscn';
@@ -32,7 +34,49 @@ const typeChecks = (...dirs) => {
 
 const EXPORT_SCAN = 'pnpm exec vitest run scripts/testOnlyExports.test.mjs';
 
+const ENGINE_TESTS = 'pnpm test:godot-ref';
+
+/** The plan on a host where `hasEngine` answers for Godot and `xvfb-run`. */
+const planOnHost = (hasEngine, changed, deleted = [], testsBeside = () => []) =>
+  planChecks({
+    changed,
+    deleted,
+    isNegativeFixture: () => false,
+    testsBeside,
+    hasEngine: () => hasEngine,
+  }).map((command) => command.join(' '));
+
 describe('planChecks', () => {
+  it('runs the real-Godot tests last for a change under scripts/godot-ref/ on a host with the engine', () => {
+    expect(planOnHost(true, ['scripts/godot-ref/run.mjs']).at(-1)).toBe(ENGINE_TESTS);
+    expect(planOnHost(true, ['scripts/godot-ref/scenes/preview-lighting.tscn']).at(-1)).toBe(ENGINE_TESTS);
+    expect(planOnHost(true, [], ['scripts/godot-ref/lavapipe.mjs'])).toEqual([ENGINE_TESTS]);
+  });
+
+  it('leaves the real-Godot tests out on a host without the engine, where they cannot run', () => {
+    expect(planOnHost(false, ['scripts/godot-ref/run.mjs'])).not.toContain(ENGINE_TESTS);
+  });
+
+  it('leaves the real-Godot tests out for a change outside scripts/godot-ref/ (edge case)', () => {
+    expect(planOnHost(true, ['scripts/godot-reference.mjs', 'scripts/visual/run.mjs'])).not.toContain(
+      ENGINE_TESTS
+    );
+  });
+
+  it('keeps a real-Godot test file out of the unit run, whose projects exclude it', () => {
+    const engineFile = 'scripts/godot-ref/run.engine.test.mjs';
+    const commands = planOnHost(true, [engineFile], [], (path) => [path]);
+    expect(commands.filter((command) => command.includes('vitest run'))).toEqual([]);
+    expect(commands.at(-1)).toBe(ENGINE_TESTS);
+  });
+
+  it('runs the real-Godot tests after the static checks when the toolchain changes too', () => {
+    expect(planOnHost(true, ['package.json', 'scripts/godot-ref/run.mjs'])).toEqual([
+      ...STATIC_GATE,
+      ENGINE_TESTS,
+    ]);
+  });
+
   it('runs the test-only export scan when a source file of core changes or goes', () => {
     expect(plan(['packages/textscene-core/src/r3f/ySort.ts'])).toContain(EXPORT_SCAN);
     expect(plan([], ['packages/textscene-core/src/r3f/ySort.tsx'])).toContain(EXPORT_SCAN);

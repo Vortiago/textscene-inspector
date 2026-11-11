@@ -21,6 +21,7 @@ import {
   getInheritedParserProps,
   nodesRoot,
   scrapeParserReads,
+  sliceLabel,
 } from './propertyGrammarParityScan.js';
 
 /** Validator keys registered directly for a node type or any of its ancestors. */
@@ -55,7 +56,7 @@ export function collectSlices(): SliceInfo[] {
     if (!nodeType) continue; // a shared-helper file, with no registerAll
 
     cachedSlices.push({
-      slice: dir.slice(nodesRoot.length + 1),
+      slice: sliceLabel(dir),
       nodeType,
       parserProps: new Set([
         ...scrapeParserReads(findParserFile(dir)!),
@@ -66,6 +67,46 @@ export function collectSlices(): SliceInfo[] {
     });
   }
   return cachedSlices;
+}
+
+interface UnsweptListInput {
+  /** The hand-kept list, in file order. */
+  listed: readonly string[];
+  /** Every slice whose `linterParser.ts` speaks for a node type. */
+  linterParserSlices: readonly string[];
+  /** The slices with a parser of their own, which the guard sweeps. */
+  sweptSlices: readonly string[];
+}
+
+/**
+ * What is wrong with the list of slices the guard cannot see, one message a slice. The list is a
+ * ratchet of names, not a count: a count says that the population moved, and not which slice
+ * moved it.
+ */
+export function unsweptListErrors({ listed, linterParserSlices, sweptSlices }: UnsweptListInput): string[] {
+  const listedSet = new Set(listed);
+  const swept = new Set(sweptSlices);
+  const withLinterParser = new Set(linterParserSlices);
+  const errors = linterParserSlices
+    .filter((slice) => !swept.has(slice) && !listedSet.has(slice))
+    .map(
+      (slice) =>
+        `${slice}: registers no parser of its own and is not listed. Give it a parser, or add its line to UNSWEPT_SLICES.`
+    );
+  listed.forEach((slice, index) => {
+    const previous = listed[index - 1];
+    if (previous !== undefined && slice <= previous) {
+      errors.push(`${slice}: must sort after ${previous}. Keep UNSWEPT_SLICES sorted, each slice once.`);
+    }
+    if (!withLinterParser.has(slice)) {
+      errors.push(`${slice}: has no linterParser.ts. Delete its line from UNSWEPT_SLICES.`);
+    } else if (swept.has(slice)) {
+      errors.push(
+        `${slice}: has a parser of its own, so the guard sweeps it. Delete its line from UNSWEPT_SLICES.`
+      );
+    }
+  });
+  return errors;
 }
 
 /** Every property name Godot declares on `nodeType` and its ancestors, by type. */

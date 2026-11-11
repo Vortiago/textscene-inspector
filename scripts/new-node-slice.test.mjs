@@ -413,6 +413,19 @@ describe('new-node-slice intent shapes', () => {
     expect(emitted.get('Component.tsx')).not.toContain('useGeometryInstance');
   });
 
+  it('lists a slice that reuses a base parser as one the parity guard cannot see', () => {
+    for (const run of [results.transformOnly, results.pending, results.tierValidatorsOnly]) {
+      expect(run.out).toContain('propertyGrammarParityUnswept.ts');
+    }
+  });
+
+  it('lists no slice that has a parser of its own or no linterParser.ts (edge case)', () => {
+    for (const run of [results.draws, results.transformOnly2D]) {
+      expect(run.ok).toBe(true);
+      expect(run.out).not.toContain('propertyGrammarParityUnswept.ts');
+    }
+  });
+
   it('writes nothing on a dry run', () => {
     // Asserted against the filesystem: the ProgressBar run prints a full plan, so a leaked write
     // would land here.

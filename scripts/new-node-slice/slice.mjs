@@ -15,7 +15,7 @@ import { fixtureFor } from './templates/fixture.mjs';
 import { linterFiles } from './templates/linterSlice.mjs';
 import { reusedParserFiles } from './templates/reusedParser.mjs';
 import { sheetFile } from './templates/sheet.mjs';
-import { kebab, wireImport } from './wiring.mjs';
+import { kebab, wireImport, wireUnsweptSlice } from './wiring.mjs';
 
 export function scaffoldSlice({ typeName, category, base: baseKey, intent, linter, dryRun }) {
   const { parent: chain, note: chainNote } = checkChain(typeName);
@@ -106,6 +106,7 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
         `'../nodes/${category}/`
       )
     );
+    if (reusesBaseParser) wirings.push(wireUnsweptSlice(`${category}/${lower}`));
   }
 
   const imageBasename = fixtureName.replace(/\.tscn$/, '');
