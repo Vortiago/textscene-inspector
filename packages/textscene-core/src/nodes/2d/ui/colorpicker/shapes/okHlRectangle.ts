@@ -10,7 +10,7 @@
 import { okhslToSrgb } from '../okhsl';
 import { rectCursorCentre, requireSlider, valueSlider, type ShapeVariant } from './shapeDrawing';
 import type { ShapeFragment } from './shapeFragment';
-import { RECTANGLE_LAYOUT } from './shapeRow';
+import { RECTANGLE_LAYOUT } from './shapeRowLayout';
 
 /** The OK colour HL rectangle shader (`color_picker_shape.cpp:126-137`). */
 const OK_HL_RECTANGLE_FRAGMENT: ShapeFragment = {

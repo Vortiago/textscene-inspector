@@ -1,7 +1,7 @@
 /**
- * The sRGB transfer function both ways, in one place. Godot authors every material colour in sRGB
- * and converts on upload, so albedo and emission share one curve. A colour that goes to linear and
- * back lands on the byte it left only while the two halves stay exact inverses.
+ * The sRGB transfer function, in one place. Godot authors every material colour in sRGB and
+ * converts on upload, so albedo and emission share one curve. The ColorPicker's normalisation goes
+ * to linear and back in Godot's float steps, so that pair lands on the byte it left.
  */
 
 /**
@@ -12,15 +12,6 @@
 export function sRGBChannelToLinear(c: number): number {
   if (c < 0.04045) return c / 12.92;
   return Math.pow((c + 0.055) / 1.055, 2.4);
-}
-
-/**
- * Godot's `Color::linear_to_srgb` (`core/math/color.h:199-204`) for one channel, unclamped: the
- * inverse of {@link sRGBChannelToLinear}, so an HDR channel above 1 stays above 1.
- */
-export function linearChannelToSRGB(c: number): number {
-  if (c < 0.0031308) return 12.92 * c;
-  return 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
 }
 
 // Bound once: a colour picker converts each channel in several float steps per colour.
@@ -37,7 +28,10 @@ export function sRGBChannelToLinearF32(channel: number): number {
     : fround(Math.pow(fround((c + 0.055) * (1 / (1 + 0.055))), fround(2.4)));
 }
 
-/** {@link linearChannelToSRGB} with the float rounding of each step, as {@link sRGBChannelToLinearF32}. */
+/**
+ * Godot's `Color::linear_to_srgb` (`core/math/color.h:199-204`) for one channel, unclamped and in
+ * float steps: the inverse of {@link sRGBChannelToLinearF32}, so an HDR channel above 1 stays above 1.
+ */
 export function linearChannelToSRGBF32(channel: number): number {
   const c = fround(channel);
   return c < fround(0.0031308)

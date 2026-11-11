@@ -89,7 +89,7 @@ import {
 import { horizontalStripGeometry, linearizeStops } from './svGradient';
 import { ShapeRow } from './shapes/ShapeRow';
 import { pickerShapeColor } from './shapes/shapeDrawing';
-import { shapeRowSplit } from './shapes/shapeRow';
+import { shapeRowSplit } from './shapes/shapeRowLayout';
 import { drawnShapeVariant } from './shapes/pickerShapes';
 import {
   MODE_HSV,

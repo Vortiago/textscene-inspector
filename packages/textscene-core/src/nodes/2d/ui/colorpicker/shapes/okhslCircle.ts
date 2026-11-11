@@ -9,7 +9,7 @@
  */
 import { circleCursorCentre, okLightnessSlider, requireSlider, type ShapeVariant } from './shapeDrawing';
 import type { ShapeFragment } from './shapeFragment';
-import { CIRCLE_LAYOUT } from './shapeRow';
+import { CIRCLE_LAYOUT } from './shapeRowLayout';
 
 /** The OK colour HSL circle shader (`color_picker_shape.cpp:89-111`). */
 const OKHSL_CIRCLE_FRAGMENT: ShapeFragment = {

@@ -10,7 +10,7 @@
 import { hsvToRgb, inverted } from '../../../../../godot/math/color';
 import { COLOR_HUE_STOPS } from '../svGradient';
 import { rectCursorCentre, requireSlider, sliderLineY, type ShapeVariant } from './shapeDrawing';
-import { RECTANGLE_LAYOUT } from './shapeRow';
+import { RECTANGLE_LAYOUT } from './shapeRowLayout';
 
 export const HSV_RECTANGLE: ShapeVariant = {
   icon: 'shape_rect',

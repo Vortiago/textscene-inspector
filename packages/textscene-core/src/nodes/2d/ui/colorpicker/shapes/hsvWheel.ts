@@ -8,7 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { circleCursorCentre, rectCursorCentre, type ShapeVariant } from './shapeDrawing';
-import { WHEEL_LAYOUT } from './shapeRow';
+import { WHEEL_LAYOUT } from './shapeRowLayout';
 import type { ShapeFragment } from './shapeFragment';
 
 /** `WHEEL_RADIUS` (`color_picker_shape.h:173`): the ring's inner radius, as a fraction of the control. */

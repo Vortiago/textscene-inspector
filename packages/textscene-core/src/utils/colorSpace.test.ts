@@ -1,12 +1,11 @@
 /**
- * The sRGB transfer function both ways, and the 8-bit rounding. The two halves must stay exact
- * inverses: a colour the ColorPicker normalises goes to linear and back, and a byte of drift there
- * shows only in a golden image.
+ * The sRGB transfer function, and the 8-bit rounding. The float halves must stay inverses: a colour
+ * the ColorPicker normalises goes to linear and back, and a byte of drift there shows only in a
+ * golden image.
  */
 import { describe, expect, it } from 'vitest';
 import {
   channelToByte,
-  linearChannelToSRGB,
   linearChannelToSRGBF32,
   sRGBChannelToLinear,
   sRGBChannelToLinearF32,
@@ -36,57 +35,37 @@ describe('sRGBChannelToLinear', () => {
   });
 });
 
-describe('linearChannelToSRGB', () => {
-  it('maps the ends and linear mid-grey onto the IEC 61966-2-1 curve', () => {
-    expect(linearChannelToSRGB(0)).toBe(0);
-    expect(linearChannelToSRGB(1)).toBeCloseTo(1, 12);
-    expect(linearChannelToSRGB(0.214041)).toBeCloseTo(0.5, 6);
-  });
-
+describe('linearChannelToSRGBF32', () => {
   it('keeps the linear segment below 0.0031308, as Color::linear_to_srgb does', () => {
-    expect(linearChannelToSRGB(0.003)).toBe(12.92 * 0.003);
-  });
-
-  it('takes the power segment at 0.0031308 itself, where Godot compares with `<`', () => {
-    expect(linearChannelToSRGB(0.0031308)).toBe(1.055 * Math.pow(0.0031308, 1 / 2.4) - 0.055);
-    expect(linearChannelToSRGB(0.0031308)).not.toBe(12.92 * 0.0031308);
+    expect(linearChannelToSRGBF32(0.003)).toBe(Math.fround(Math.fround(12.92) * Math.fround(0.003)));
   });
 
   it('joins its two segments at the threshold', () => {
-    const below = linearChannelToSRGB(0.0031308 - 1e-12);
-    const at = linearChannelToSRGB(0.0031308);
-    expect(Math.abs(at - below)).toBeLessThan(1e-6);
+    const below = linearChannelToSRGBF32(0.0031307);
+    const at = linearChannelToSRGBF32(0.0031308);
+    expect(Math.abs(at - below)).toBeLessThan(1e-5);
   });
 
   it('extrapolates an HDR channel above 1 rather than clamping it', () => {
-    expect(linearChannelToSRGB(2)).toBeGreaterThan(1);
+    expect(linearChannelToSRGBF32(2)).toBeGreaterThan(1);
   });
 
   it('keeps a negative channel on the linear segment', () => {
-    expect(linearChannelToSRGB(-0.5)).toBe(12.92 * -0.5);
+    expect(linearChannelToSRGBF32(-0.5)).toBe(Math.fround(Math.fround(12.92) * -0.5));
   });
 });
 
-describe('the two halves', () => {
+describe('the two float halves', () => {
   it('bring every sRGB byte back to itself through linear', () => {
     const drifted = BYTES.filter(
-      (byte) => channelToByte(linearChannelToSRGB(sRGBChannelToLinear(byte / 255))) !== byte
+      (byte) => channelToByte(linearChannelToSRGBF32(sRGBChannelToLinearF32(byte / 255))) !== byte
     );
     expect(drifted).toEqual([]);
   });
 
-  it('drift from each other by no more than float rounding, far inside one byte', () => {
-    const drift = BYTES.map((byte) => {
-      const start = byte / 255;
-      return Math.abs(linearChannelToSRGB(sRGBChannelToLinear(start)) - start);
-    });
-    const worst = Math.max(...drift);
-    expect(worst).toBeLessThan(1e-12);
-  });
-
   it('bring every linear byte back to itself through sRGB', () => {
     const drifted = BYTES.filter(
-      (byte) => channelToByte(sRGBChannelToLinear(linearChannelToSRGB(byte / 255))) !== byte
+      (byte) => channelToByte(sRGBChannelToLinearF32(linearChannelToSRGBF32(byte / 255))) !== byte
     );
     expect(drifted).toEqual([]);
   });

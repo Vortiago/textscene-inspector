@@ -25,7 +25,7 @@ type DrawnPickerShape = Exclude<PickerShape, typeof ColorPickerShape.SHAPE_NONE>
  * `set_picker_shape` refuses a value outside 0 to 6 (`ERR_FAIL_INDEX`, `color_picker.cpp:854`), so
  * the constructor's `SHAPE_HSV_RECTANGLE` stays.
  */
-export function resolvePickerShape(value: number | undefined): PickerShape {
+function resolvePickerShape(value: number | undefined): PickerShape {
   const isKnown = Number.isInteger(value) && value! >= 0 && value! <= ColorPickerShape.SHAPE_OK_HL_RECTANGLE;
   return isKnown ? (value as PickerShape) : ColorPickerShape.SHAPE_HSV_RECTANGLE;
 }

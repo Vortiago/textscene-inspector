@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../../r3f/controls/native/nativeTheme';
-import { CIRCLE_LAYOUT, RECTANGLE_LAYOUT, WHEEL_LAYOUT, shapeRowMinWidth, shapeRowSplit } from './shapeRow';
+import {
+  CIRCLE_LAYOUT,
+  RECTANGLE_LAYOUT,
+  WHEEL_LAYOUT,
+  shapeRowMinWidth,
+  shapeRowSplit,
+} from './shapeRowLayout';
 
 const THEME = nativeTheme(1);
 /** The `shape_container` of a 300 px picker: 300 less `internal_margin`'s 4 px on each side. */

@@ -17,7 +17,7 @@ import { clamp } from '../../../../../godot/math/math';
 import { extractHsv } from '../colorModes';
 import { okhslToSrgb, srgbToOkhsl } from '../okhsl';
 import type { ShapeFragment } from './shapeFragment';
-import type { ShapeRowLayout, ShapeRowSplit } from './shapeRow';
+import type { ShapeRowLayout, ShapeRowSplit } from './shapeRowLayout';
 
 /**
  * The picker's colour as the shapes read it: `h`, `s`, `v` and `ok_hsl_h`, `ok_hsl_s`, `ok_hsl_l`

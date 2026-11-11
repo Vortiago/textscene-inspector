@@ -26,7 +26,7 @@ import { SizeFlags } from '../../../../godot/scene/control';
 import { ContainerAlignment } from '../../../../godot/scene/container';
 import { resortBoxContainer } from '../shared/boxContainerSolver';
 import { pickerChildTheme } from './pickerChildTheme';
-import { shapeRowHeight, shapeRowMinWidth } from './shapes/shapeRow';
+import { shapeRowHeight, shapeRowMinWidth } from './shapes/shapeRowLayout';
 import { drawnShapeVariant } from './shapes/pickerShapes';
 import { MODE_RGB } from './colorModes';
 import { gridCellMinimumExtent } from '../shared/gridCellMinimum';

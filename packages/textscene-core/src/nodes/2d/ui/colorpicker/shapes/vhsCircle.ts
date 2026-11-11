@@ -10,7 +10,7 @@
 import { hsvToRgb } from '../../../../../godot/math/color';
 import { circleCursorCentre, requireSlider, valueSlider, type ShapeVariant } from './shapeDrawing';
 import type { ShapeFragment } from './shapeFragment';
-import { CIRCLE_LAYOUT } from './shapeRow';
+import { CIRCLE_LAYOUT } from './shapeRowLayout';
 import { BLACK } from '../svGradient';
 
 /** The circle shader (`color_picker_shape.cpp:64-87`). */

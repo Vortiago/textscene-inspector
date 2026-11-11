@@ -9,7 +9,7 @@
  */
 import { okLightnessSlider, rectCursorCentre, requireSlider, type ShapeVariant } from './shapeDrawing';
 import type { ShapeFragment } from './shapeFragment';
-import { RECTANGLE_LAYOUT } from './shapeRow';
+import { RECTANGLE_LAYOUT } from './shapeRowLayout';
 
 /** The OK colour HS rectangle shader (`color_picker_shape.cpp:113-124`). */
 const OK_HS_RECTANGLE_FRAGMENT: ShapeFragment = {
