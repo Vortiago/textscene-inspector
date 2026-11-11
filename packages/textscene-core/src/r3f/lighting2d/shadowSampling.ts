@@ -83,8 +83,8 @@ function fillShadowPolarTexture(texture: THREE.DataTexture, bins: Float32Array):
 /**
  * `existing` refilled from `bins` where it can be, a fresh texture otherwise. The
  * map rebuilds whenever an occluder settles or moves, and the materials hold the
- * texture's identity in `uShadowMap`, so keeping it makes a rebuild an 8 KB
- * re-upload rather than a rebuild of both materials.
+ * texture's identity in `uShadowMap`, so keeping it makes a rebuild a
+ * re-upload of the row (8 KB at the default size) rather than a rebuild of both materials.
  */
 export function updateShadowPolarTexture(
   existing: THREE.DataTexture | null,
