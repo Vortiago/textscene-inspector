@@ -60,5 +60,8 @@ family (`title`/`tooltip`/`icon`/`disabled`), aligned to `tab_count` like Option
 
 - **Not drawn** The drag drop-mark, and the hover and pressed chrome of a tab, its close
   button and the scroll arrows, since each needs a pointer.
+- **Approximated** A TabContainer with a hidden page before the current one and a clipped
+  strip can scroll one tab short of Godot: Godot reruns `ensure_tab_visible` on load events this
+  port does not model (measured: Equipment hidden, current page 5 of 6).
 - **Approximated** `max_tab_width` caps a tab's width as Godot does, but the title draws
   unclipped instead of with Godot's `OVERRUN_TRIM_ELLIPSIS` "…" truncation.

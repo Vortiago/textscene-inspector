@@ -39,7 +39,7 @@ export interface TabBarProperties extends ControlProperties {
   dragToRearrangeEnabled?: boolean;
   /** `tab_bar.h:134`, default true. Interaction only. */
   switchOnDragHover?: boolean;
-  /** `tab_bar.h:132`, default true. Gates `ensure_tab_visible` for the current tab (`tab_bar.cpp:398,491,773`). */
+  /** `tab_bar.h:132`, default true. Gates `ensure_tab_visible` for the current tab (`tab_bar.cpp:400,492,773`). */
   scrollToSelected?: boolean;
   /** `tab_bar.h:120`, default false. Interaction only. */
   selectWithRmb?: boolean;
