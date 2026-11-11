@@ -11,6 +11,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { buttonBoxesOf } from '../../../../r3f/controls/native/defaultThemeButton';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -53,7 +54,12 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   const props = painterView<ButtonProperties>(solveNode);
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
 
-  const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, state, solveNode.rtl);
+  const baseStyleBox = pickButtonStyleBox(
+    solveNode.styleBoxes,
+    buttonBoxesOf(solveNode, theme),
+    state,
+    solveNode.rtl
+  );
 
   // `renderOrder` and the clip planes reach every mesh. `<TextRun>` builds its own
   // ShaderMaterial, so it takes the planes explicitly, or the label escapes an

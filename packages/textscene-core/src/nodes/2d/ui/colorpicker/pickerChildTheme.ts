@@ -4,11 +4,7 @@
  * (`Control::get_theme_stylebox`, `control.cpp:3078`), not the ColorPicker's own.
  */
 import type { Rgba } from '../../../../godot/math/math';
-import {
-  CONTROL_FONT_PRESSED_COLOR,
-  DEFAULT_THEME_TYPE_VARIATIONS,
-  FLAT_MENU_BUTTON_VARIATION,
-} from '../../../../godot/scene/theme';
+import { CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
 import { internalChildThemeItems, type InternalThemeItems } from '../../../../r3f/controls/native/themeItems';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -61,11 +57,7 @@ const childThemesOf = perObject((_node: SolveNode) => new WeakMap<NativeTheme, P
 function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildTheme {
   const label = internalChildThemeItems(n, 'Label');
   const button = internalChildThemeItems(n, 'Button');
-  const flatMenuButton = internalChildThemeItems(
-    n,
-    DEFAULT_THEME_TYPE_VARIATIONS[FLAT_MENU_BUTTON_VARIATION]!,
-    FLAT_MENU_BUTTON_VARIATION
-  );
+  const flatMenuButton = internalChildThemeItems(n, 'MenuButton', 'FlatMenuButton');
   const lineEdit = internalChildThemeItems(n, 'LineEdit');
   const valueField = spinBoxFieldThemeItems(n);
   const tabs = internalChildThemeItems(n, 'TabContainer');

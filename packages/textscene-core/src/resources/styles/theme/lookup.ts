@@ -3,11 +3,7 @@
  * `ThemeResource`s `decode.ts` produces. Pure: no I/O, no parsing.
  */
 
-import {
-  DEFAULT_FONT_SIZE,
-  DEFAULT_THEME_TYPE_VARIATIONS,
-  DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS,
-} from '../../../godot/scene/theme';
+import { DEFAULT_FONT_SIZE, defaultThemeVariation } from '../../../godot/scene/theme';
 import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { withDefaultFonts, type DefaultFonts } from '../../fonts/font/defaultFont';
@@ -62,12 +58,13 @@ function buildThemeTypeChain(
       Object.hasOwn(t.typeVariations, typeVariation)
     );
     // No scene or project theme registers it: the default theme may (`theme_owner.cpp:200-208`).
-    const bases = owner
-      ? owner.typeVariations
-      : Object.hasOwn(DEFAULT_THEME_TYPE_VARIATIONS, typeVariation)
-        ? DEFAULT_THEME_TYPE_VARIATIONS
-        : undefined;
-    if (bases) {
+    const baseOf = (variation: string): string | undefined =>
+      owner
+        ? Object.hasOwn(owner.typeVariations, variation)
+          ? owner.typeVariations[variation]
+          : undefined
+        : defaultThemeVariation(variation)?.base;
+    if (owner || defaultThemeVariation(typeVariation)) {
       // Godot walks this unguarded. A previewer reads files it did not write, so
       // a `MyPanel/base_type = &"MyPanel"` cycle must stop the walk.
       const seen = new Set<string>();
@@ -75,8 +72,7 @@ function buildThemeTypeChain(
       while (current !== undefined && current !== '' && !seen.has(current)) {
         seen.add(current);
         chain.push(current);
-        const base: string | undefined = Object.hasOwn(bases, current) ? bases[current] : undefined;
-        current = base;
+        current = baseOf(current);
         if (current === nativeType) break;
       }
     }
@@ -282,9 +278,8 @@ export function resolveThemeFontSizeIn(
 /** The default theme's font size for a variation, which sits after every Theme a scene or a project sets. */
 function defaultThemeVariationFontSize(variation: string | undefined, name: string): number | undefined {
   if (variation === undefined || name !== 'font_size') return undefined;
-  // Own keys only: a variation named `constructor` must not read `Object.prototype`.
-  if (!Object.hasOwn(DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS, variation)) return undefined;
-  return DEFAULT_FONT_SIZE + DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS[variation]!;
+  const step = defaultThemeVariation(variation)?.fontSizeStep;
+  return step === undefined ? undefined : DEFAULT_FONT_SIZE + step;
 }
 
 /**

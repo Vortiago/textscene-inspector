@@ -51,6 +51,12 @@ Button's own keys, `text`, `disabled`, `flat`, `alignment`, `icon`, `icon_alignm
 no warning. The three alignments go through `parseOptionalInt`, so a malformed value
 becomes `undefined` and the render default applies.
 
+A `theme_type_variation` the default theme defines draws that variation's items
+(`default_theme.cpp:357-401`). `FlatButton` and `FlatMenuButton` draw no box in the normal, hover and
+disabled states and keep the margins of Button's box. A Label variation such as `HeaderSmall` takes
+Label's empty `normal` box with no margin and Label's white `font_color`, and Button's boxes for the other
+states. A Theme that sets an item wins over the default theme's.
+
 Button draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
 does (`button.cpp:458-462`). A ring of `outline_size / 4` px sits under the fill. No ring
 draws at an `outline_size` of 0 or a zero alpha. The ring strokes on the canvas painter for the

@@ -4,11 +4,7 @@
  * `scaledGodotTheme` unchanged while colours are not scaled.
  */
 import { describe, expect, it } from 'vitest';
-import {
-  DEFAULT_THEME_TYPE_VARIATIONS,
-  FLAT_MENU_BUTTON_VARIATION,
-  scaledGodotTheme,
-} from '../../../godot/scene/theme';
+import { DEFAULT_THEME_VARIATIONS, scaledGodotTheme } from '../../../godot/scene/theme';
 import { nativeTheme } from './nativeTheme';
 
 describe('nativeTheme', () => {
@@ -302,7 +298,7 @@ describe('nativeTheme', () => {
 
   describe('the default type variations it models', () => {
     it('registers FlatMenuButton with a base type, as widgets.flatMenuButton holds its boxes', () => {
-      expect(DEFAULT_THEME_TYPE_VARIATIONS[FLAT_MENU_BUTTON_VARIATION]).toBeTruthy();
+      expect(DEFAULT_THEME_VARIATIONS.FlatMenuButton).toBeTruthy();
       expect(nativeTheme(1).widgets.flatMenuButton).toBeDefined();
     });
 

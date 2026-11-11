@@ -513,3 +513,45 @@ describe('a pressed toggle Button (base_button.cpp:326-352, button.cpp:303-312)'
     expect(buttonIconColor({}, 'pressed')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 });
+
+describe('a Button on a default-theme type variation (default_theme.cpp:357-383)', () => {
+  const FLAT = { themeTypeVariation: 'FlatButton' };
+  const HEADER = { themeTypeVariation: 'HeaderSmall' };
+
+  it('keeps the Button margins on FlatButton, whose empty boxes copy them (:360-363)', () => {
+    expect(minSize(node(FLAT), ctx())).toEqual({ x: 8, y: 8 });
+  });
+
+  it('keeps the pressed margins on a pressed FlatButton toggle', () => {
+    expect(minSize(node({ ...FLAT, buttonPressed: true }), ctx())).toEqual({ x: 8, y: 8 });
+  });
+
+  it('drops the margins on a Label variation, whose empty normal box has none (:379)', () => {
+    expect(minSize(node(HEADER), ctx())).toEqual({ x: 0, y: 0 });
+  });
+
+  it('keeps the Button margins on a Label variation for the states Label sets no box for', () => {
+    expect(minSize(node({ ...HEADER, disabled: true }), ctx())).toEqual({ x: 8, y: 8 });
+    expect(minSize(node({ ...HEADER, buttonPressed: true }), ctx())).toEqual({
+      x: 8,
+      y: 8,
+    });
+  });
+
+  it("takes Label's white font_color on a Label variation, in the normal state only (:383)", () => {
+    const white = { r: 1, g: 1, b: 1, a: 1 };
+    expect(buttonTextTheme(node(HEADER), HEADER as ButtonProperties, 'normal', ctx()).color).toEqual(white);
+    expect(buttonTextTheme(node(HEADER), HEADER as ButtonProperties, 'disabled', ctx()).color).toEqual({
+      r: 0.875,
+      g: 0.875,
+      b: 0.875,
+      a: 0.5,
+    });
+  });
+
+  it("takes the Button's own font_color on FlatButton", () => {
+    expect(buttonTextTheme(node(FLAT), FLAT as ButtonProperties, 'normal', ctx()).color).toEqual(
+      BUTTON_DEFAULT_FONT_COLOR
+    );
+  });
+});

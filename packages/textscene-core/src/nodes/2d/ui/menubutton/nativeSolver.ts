@@ -17,7 +17,12 @@ import {
   type ResolvedTextTheme,
   type TextThemeDefaults,
 } from '../../../../r3f/controls/native/textTheme';
-import { BUTTON_DEFAULT_FONT_COLORS, BUTTON_THEME_KEYS, buttonMinimumSize } from '../button/nativeSolver';
+import {
+  BUTTON_DEFAULT_FONT_COLORS,
+  BUTTON_THEME_KEYS,
+  buttonDefaultFontColor,
+  buttonMinimumSize,
+} from '../button/nativeSolver';
 import type { MenuButtonProperties } from './types';
 
 /** `Color(1, 1, 1, 0.3)`: MenuButton's own disabled font colour (`default_theme.cpp:268`), not Button's `control_font_disabled_color` (`:161`). */
@@ -38,7 +43,7 @@ export function menuButtonTextTheme(
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color: MENU_BUTTON_DEFAULT_FONT_COLORS[state],
+    color: buttonDefaultFontColor(n, MENU_BUTTON_DEFAULT_FONT_COLORS, state),
   };
   return resolveTextTheme(n, props, BUTTON_THEME_KEYS[state], defaults);
 }

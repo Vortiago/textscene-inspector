@@ -174,6 +174,10 @@ _Avoid_: "composed glyph", which names one step of it.
 The two files the **Project settings** name for every font lookup: the project theme (`gui/theme/custom`) and the **Project default font**. The Control solve tree, TextMesh and Label3D each resolve them from one source.
 _Avoid_: "theme context", which Godot's `ThemeContext` also names.
 
+**Default-theme variation** (`DEFAULT_THEME_VARIATIONS` in `godot/scene/theme.ts`):
+A `theme_type_variation` that Godot's default theme registers, such as `FlatButton` or `HeaderSmall`, with its base type. A Control that names one reads its items under the variation and its base before its own class, after every scene and project Theme. The table holds the base and the font size step. `r3f/controls/native/defaultThemeButton.ts` holds the Button boxes and the font colour.
+_Avoid_: "style variant". "scene variation" for one a scene Theme registers, which `ThemeResource.typeVariations` holds.
+
 **Style face** (`nodes/2d/ui/richtextlabel/styleFaces.ts`):
 The font a RichTextLabel draws a `[b]`, `[i]` or `[b][i]` span in: the theme's `bold_font`, `italics_font` or `bold_italics_font`. Where no theme sets the key, it is a `FontVariation` over the **Project default font** with embolden 1.2, skew 0.2, or both.
 _Avoid_: "synthetic bold" for a face a theme sets.

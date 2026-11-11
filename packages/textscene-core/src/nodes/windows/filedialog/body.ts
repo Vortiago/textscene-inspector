@@ -22,7 +22,6 @@ import {
 } from '../../../godot/scene/fileDialog';
 import { SizeFlags } from '../../../godot/scene/control';
 import type { Vector2 } from '../../../godot/math/vector';
-import { flatButtonBoxes } from '../../../r3f/controls/native/flatButtonBoxes';
 import { FILE_DIALOG_ICON_URLS } from '../../../r3f/controls/native/themeIcons';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
@@ -260,10 +259,6 @@ function mainVBox(dialog: Dialog): Widget {
   });
 }
 
-function isFlatButton(variation: string | undefined): boolean {
-  return variation === FLAT_BUTTON || variation === FLAT_MENU_BUTTON;
-}
-
 /** The `FileDialog` theme icon `name` as the dialog's theme chain resolves it, or none when the theme leaves it to the vendored icon. */
 function themedIconsOf(
   dialog: SolveNode,
@@ -286,7 +281,7 @@ function iconSizeOf(dialog: SolveNode, name: FileDialogThemeIcon): Vector2 {
 export const fileDialogTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) =>
   themedSlotRequests(FILE_DIALOG_THEME_ICONS, themedIcons);
 
-function build(dialog: SolveNode, theme: NativeTheme, spec: Widget, parentPath: string): SolveNode {
+function build(dialog: SolveNode, spec: Widget, parentPath: string): SolveNode {
   const parsed = parseNodeWithRegistry(
     { type: 'node', attributes: { name: spec.name, type: spec.type } },
     spec.raw ?? {}
@@ -303,10 +298,9 @@ function build(dialog: SolveNode, theme: NativeTheme, spec: Widget, parentPath: 
     properties,
     parentPath,
     children: (spec.children ?? []).map((child) =>
-      build(dialog, theme, child, syntheticPath(parentPath, spec.name))
+      build(dialog, child, syntheticPath(parentPath, spec.name))
     ),
     variation: spec.variation,
-    variationDefaults: isFlatButton(spec.variation) ? { styleBoxes: flatButtonBoxes(theme) } : undefined,
     icons: themedIconsOf(dialog, spec.icon),
     textureSize: spec.icon && iconSizeOf(dialog, spec.icon),
     syntheticDraw: {
@@ -325,7 +319,7 @@ export function fileDialogBody(dialog: SolveNode, theme: NativeTheme): SolveNode
   const known = byTheme.get(theme);
   if (known) return known;
   const props = dialog.node.properties as FileDialogProperties;
-  const body = build(dialog, theme, mainVBox({ props, rtl: dialog.rtl, scale: theme.scale }), dialog.path);
+  const body = build(dialog, mainVBox({ props, rtl: dialog.rtl, scale: theme.scale }), dialog.path);
   byTheme.set(theme, body);
   return body;
 }

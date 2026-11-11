@@ -62,7 +62,10 @@ are present in every GraphEdit, whatever the scene file says:
   hides the panel. `show_zoom_label`, `show_zoom_buttons`, `show_grid_buttons`,
   `show_minimap_button` and `show_arrange_button` hide widgets inside it, which re-flows
   the row and re-sizes the panel. `show_grid`, `snapping_enabled` and `minimap_enabled`
-  each press their toggle, and the SpinBox shows `snapping_distance`.
+  each press their toggle, and the SpinBox shows `snapping_distance`. Its Label, `FlatButton`
+  Buttons and SpinBox read their own class's items through the GraphEdit's ancestor Theme chain
+  (`graph_edit.cpp:3229-3300`): the boxes, the font and icon colours, and the minimum size of
+  each widget follow a Theme that sets them.
 - The two **scrollbars**, anchored to the bottom and right edges. `_update_scrollbars`
   grows the scroll range past the page in every GraphEdit with a non-zero rect, so both
   are always visible. The size and offset of each grabber come from that range and

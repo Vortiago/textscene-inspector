@@ -78,8 +78,6 @@ export interface SyntheticControl {
   children?: readonly SolveNode[];
   /** The `theme_type_variation` its constructor sets. */
   variation?: string;
-  /** Theme items the default theme gives the variation. Any item the dialog's theme chain sets wins over them. */
-  variationDefaults?: Partial<Pick<SolveNode, 'styleBoxes' | 'colors' | 'constants'>>;
   /** Icons its dialog's theme gives it, by name. Any the dialog's theme chain gives its type override them. */
   icons?: SolveNode['icons'];
   textureSize?: SolveNode['textureSize'];
@@ -107,15 +105,14 @@ export function syntheticControl(dialog: SolveNode, spec: SyntheticControl): Sol
     rawProperties: {},
   };
   const items = internalChildThemeItems(dialog, type, variation);
-  const defaults = spec.variationDefaults ?? {};
   return {
     ...dialog,
     path: syntheticPath(spec.parentPath ?? dialog.path, name),
     node,
     children: spec.children ?? [],
-    styleBoxes: { ...defaults.styleBoxes, ...items.styleBoxes },
-    colors: { ...defaults.colors, ...items.colors },
-    constants: { ...defaults.constants, ...items.constants },
+    styleBoxes: items.styleBoxes,
+    colors: items.colors,
+    constants: items.constants,
     icons: { ...spec.icons, ...items.icons },
     fontOverrides: {},
     textureSize: spec.textureSize ?? null,

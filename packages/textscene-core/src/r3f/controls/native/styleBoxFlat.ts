@@ -115,6 +115,17 @@ export function contentMarginSize(box: StyleBoxFlatData): Vector2 {
   };
 }
 
+/** Whether `box` paints a pixel: a `StyleBoxEmpty`, or a flat box whose fill, border and shadow are absent or clear, paints none. */
+export function isDrawn(box: StyleBoxFlatData): boolean {
+  const { left, top, right, bottom } = box.borderWidth;
+  const hasBorder = left > 0 || top > 0 || right > 0 || bottom > 0;
+  return (
+    (box.drawCenter && box.bgColor.a > 0) ||
+    (hasBorder && box.borderColor.a > 0) ||
+    (box.shadowSize > 0 && box.shadowColor.a > 0)
+  );
+}
+
 /** `rect` less the box's content margins: `StyleBox::get_content_rect`'s inset. */
 export function contentRect(rect: Rect2, box: StyleBoxFlatData): Rect2 {
   const margins = contentMarginSize(box);

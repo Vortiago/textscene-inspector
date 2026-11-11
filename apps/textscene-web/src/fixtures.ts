@@ -1133,6 +1133,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Edit Toolbar Theme",
+    "file": "unit-graph-edit-toolbar-theme.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Graph Edit Zoom Bound Order",
     "file": "unit-graph-edit-zoom-bound-order.tscn",
     "category": "Other"
@@ -4317,6 +4322,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Button Clip Text",
     "file": "unit-button-clip-text.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Button Default Theme Variations",
+    "file": "unit-button-default-theme-variations.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

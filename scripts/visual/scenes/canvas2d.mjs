@@ -423,6 +423,10 @@ export const CANVAS_2D_SCENES = [
   { name: 'richtext-label-bbcode', file: 'unit-rich-text-label.tscn', mode: '2d' },
   { name: 'button-states', file: 'unit-button-states.tscn', mode: '2d' },
   // The one variable: the theme text outline of Button, CheckBox, CheckButton, OptionButton and MenuButton.
+  // The one variable: the theme type variation of a Button, FlatButton and HeaderSmall beside a plain one.
+  // FlatButton and a Label variation draw no normal box, and HeaderSmall takes Label's white text (Godot 4.6.3
+  // `--mode 2d`: max 2 of 255 over the grid).
+  { name: 'button-default-theme-variations', file: 'unit-button-default-theme-variations.tscn', mode: '2d' },
   { name: 'button-family-outline', file: 'unit-button-family-outline.tscn', mode: '2d' },
   // The one variable: the theme text outline of LinkButton, the FoldableContainer title and ItemList
   // items, left to right and as a trimmed AUTO Hebrew line, whose ring trims by the inferred direction.
@@ -954,6 +958,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'graph-edit-zoom-out', file: 'unit-graph-edit-zoom-out.tscn', mode: '2d' },
   { name: 'graph-edit-zoom-in', file: 'unit-graph-edit-zoom-in.tscn', mode: '2d' },
   { name: 'graph-edit-zoom-label', file: 'unit-graph-edit-zoom-label.tscn', mode: '2d' },
+  // The one variable: an ancestor Theme that sets the toolbar's Label, FlatButton, LineEdit and SpinBox items.
+  { name: 'graph-edit-toolbar-theme', file: 'unit-graph-edit-toolbar-theme.tscn', mode: '2d' },
   {
     name: 'graph-edit-zoom-buttons-hidden',
     file: 'unit-graph-edit-zoom-buttons-hidden.tscn',

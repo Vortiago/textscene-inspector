@@ -18,6 +18,7 @@ import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/Co
 import { GraphEdit } from './Component';
 import type { GraphEditConnection, GraphEditProperties } from './types';
 import { canvasSubOrders, wholeKeySlot } from '../../../../r3f/canvasItemState';
+import { graphEditUnder } from './toolbarTheme.testkit';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 100, h: 100 };
 
@@ -287,6 +288,25 @@ describe('<GraphEdit> constructor chrome (graph_edit.cpp:3229-3340)', () => {
     expect(
       band(await render({ showMenu: true, showGridButtons: false }), TOOLBAR_BAND, MINIMAP_BAND)
     ).toHaveLength(1);
+  });
+
+  it('draws the normal box an ancestor Theme gives FlatButton under every unpressed button (graph_edit.cpp:3250)', async () => {
+    const themed = {
+      ...graphEdit({ showMenu: true, showGridButtons: false, showGrid: false }, [node]),
+      themeChain: graphEditUnder({ FlatButton: { normal: 6 } }).themeChain,
+    };
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphEdit
+        {...painterEnv()}
+        childRects={childRects}
+        solveNode={themed}
+        rect={{ x: 0, y: 0, w: 400, h: 320 }}
+        renderOrder={0}
+        chromeSlot={wholeKeySlot(9)}
+      />
+    );
+    // The panel, the three zoom buttons, the minimap button and the arrange button.
+    expect(band(renderer, TOOLBAR_BAND, MINIMAP_BAND)).toHaveLength(6);
   });
 
   it('draws the minimap panel, one node rect and the camera rect when enabled', async () => {

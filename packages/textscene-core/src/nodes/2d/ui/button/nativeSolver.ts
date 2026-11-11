@@ -21,6 +21,7 @@ import {
   shapeButtonLabel,
   type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
+import { buttonBoxesOf, defaultFontColorOf } from '../../../../r3f/controls/native/defaultThemeButton';
 import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
@@ -112,6 +113,18 @@ export function buttonFocusIconColor(colors: SolveNode['colors']): Rgba {
   return colors[BUTTON_ICON_FOCUS_COLOR_KEY] ?? BUTTON_ICON_MODULATE.normal;
 }
 
+/**
+ * `state`'s default font colour: `font_color` is the one a Label variation sets (`HeaderSmall`), so it
+ * reaches the normal state only. `colors` holds the class's own default for each state.
+ */
+export function buttonDefaultFontColor(
+  n: ShareNode,
+  colors: Readonly<Record<ToggleDrawState, Rgba>>,
+  state: ToggleDrawState
+): Rgba {
+  return state === 'normal' ? defaultFontColorOf(n, colors.normal) : colors[state];
+}
+
 /** Resolves this Button's theme font size and colour for `state`: overrides, else the ancestor Theme chain, the theme default or Button's own literal. */
 export function buttonTextTheme(
   n: ShareNode,
@@ -122,7 +135,9 @@ export function buttonTextTheme(
   const isFocusStyled = isButtonFocusStyled(props, state);
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color: isFocusStyled ? CONTROL_FONT_FOCUS_COLOR : BUTTON_DEFAULT_FONT_COLORS[state],
+    color: isFocusStyled
+      ? CONTROL_FONT_FOCUS_COLOR
+      : buttonDefaultFontColor(n, BUTTON_DEFAULT_FONT_COLORS, state),
   };
   return resolveTextTheme(n, props, isFocusStyled ? BUTTON_FOCUS_KEYS : BUTTON_THEME_KEYS[state], defaults);
 }
@@ -185,7 +200,7 @@ function buttonIconReservationPx(
 export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ButtonProperties;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
-  const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.button, state, n.rtl);
+  const styleBox = pickButtonStyleBox(n.styleBoxes, buttonBoxesOf(n, ctx.theme), state, n.rtl);
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
   const hasText = (props.text ?? '').length > 0;

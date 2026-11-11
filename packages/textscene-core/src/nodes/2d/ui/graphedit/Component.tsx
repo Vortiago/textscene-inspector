@@ -40,6 +40,7 @@ import {
 import { formatGodotNumber, rangeStepDecimals } from '../spinbox/nativeSolver';
 import { graphEditToolbar, zoomLabelText } from './toolbar';
 import { GraphEditToolbarChrome } from './ToolbarChrome';
+import { graphEditToolbarTheme } from './toolbarTheme';
 import {
   graphEditElements,
   isMinimapEnabled,
@@ -241,7 +242,8 @@ export function GraphEdit({
     }
     return layout;
   };
-  const toolbar = graphEditToolbar(props, theme, {
+  const toolbarTheme = graphEditToolbarTheme(solveNode, theme);
+  const toolbar = graphEditToolbar(props, theme, toolbarTheme, {
     measure: (text) => {
       const l = shape(text);
       return { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx };
@@ -341,6 +343,7 @@ export function GraphEdit({
         {toolbar && (
           <GraphEditToolbarChrome
             toolbar={toolbar}
+            items={toolbarTheme}
             icons={solveNode.icons}
             theme={theme}
             tint={tint}

@@ -6,6 +6,9 @@
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { graphEditToolbar, zoomLabelText } from './toolbar';
+import { graphEditToolbarTheme } from './toolbarTheme';
+import { graphEditUnder } from './toolbarTheme.testkit';
+import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { ToolbarTextMetrics } from './toolbar';
 import type { GraphEditProperties } from './types';
 
@@ -21,9 +24,13 @@ const metrics: ToolbarTextMetrics = {
 };
 
 const theme = nativeTheme(1);
+const items = graphEditToolbarTheme(
+  { ...solveNode(), path: 'G', node: controlNode('G', 'GraphEdit') },
+  theme
+);
 
 function idsOf(p: Partial<GraphEditProperties>): string[] {
-  return (graphEditToolbar(props(p), theme, metrics)?.items ?? []).map((i) => i.id);
+  return (graphEditToolbar(props(p), theme, items, metrics)?.items ?? []).map((i) => i.id);
 }
 
 describe('zoomLabelText (GraphEdit::_update_zoom_label, graph_edit.cpp:2620-2624)', () => {
@@ -81,7 +88,7 @@ describe('graphEditToolbar item set (graph_edit.cpp:2812-2870)', () => {
   });
 
   it('draws nothing at all when show_menu is false (:2812-2815)', () => {
-    expect(graphEditToolbar(props({ showMenu: false }), theme, metrics)).toBeNull();
+    expect(graphEditToolbar(props({ showMenu: false }), theme, items, metrics)).toBeNull();
   });
 
   it('still draws the bare panel when show_menu is true and every item is hidden', () => {
@@ -93,6 +100,7 @@ describe('graphEditToolbar item set (graph_edit.cpp:2812-2870)', () => {
         showArrangeButton: false,
       }),
       theme,
+      items,
       metrics
     );
     // An empty HBoxContainer has a zero minimum size, so the panel is exactly
@@ -103,7 +111,7 @@ describe('graphEditToolbar item set (graph_edit.cpp:2812-2870)', () => {
 });
 
 describe('graphEditToolbar geometry (PanelContainer + HBoxContainer at scale 1)', () => {
-  const bar = graphEditToolbar(props({ showZoomLabel: true }), theme, metrics)!;
+  const bar = graphEditToolbar(props({ showZoomLabel: true }), theme, items, metrics)!;
 
   it("sits at the constructor's own hardcoded (10, 10) (graph_edit.cpp:3232)", () => {
     expect(bar.panelRect.x).toBe(10);
@@ -120,7 +128,7 @@ describe('graphEditToolbar geometry (PanelContainer + HBoxContainer at scale 1)'
   });
 
   it("sizes the SpinBox field by 'W' advance as it is, not as a ceiled run (line_edit.cpp:2451)", () => {
-    const fractional = graphEditToolbar(props({ showZoomLabel: true }), theme, {
+    const fractional = graphEditToolbar(props({ showZoomLabel: true }), theme, items, {
       ...metrics,
       emSpaceWidthPx: 7.5,
     })!;
@@ -146,7 +154,7 @@ describe('graphEditToolbar geometry (PanelContainer + HBoxContainer at scale 1)'
 
 describe('graphEditToolbar toggle states', () => {
   function pressed(p: Partial<GraphEditProperties>, id: string): boolean {
-    return graphEditToolbar(props(p), theme, metrics)!.items.find((i) => i.id === id)!.pressed;
+    return graphEditToolbar(props(p), theme, items, metrics)!.items.find((i) => i.id === id)!.pressed;
   }
 
   it('presses toggle_grid with show_grid (graph_edit.cpp:2735) — on by default', () => {
@@ -172,7 +180,7 @@ describe('graphEditToolbar toggle states', () => {
 
 describe('graphEditToolbar disabled states (graph_edit.cpp:2445-2446)', () => {
   function disabled(p: Partial<GraphEditProperties>, id: string): boolean {
-    return graphEditToolbar(props(p), theme, metrics)!.items.find((i) => i.id === id)!.disabled;
+    return graphEditToolbar(props(p), theme, items, metrics)!.items.find((i) => i.id === id)!.disabled;
   }
 
   it('leaves every button enabled while zoom sits between its bounds — the constructor sets no disabled flag', () => {
@@ -195,8 +203,48 @@ describe('graphEditToolbar disabled states (graph_edit.cpp:2445-2446)', () => {
     const all = graphEditToolbar(
       props({ zoomMinusDisabled: true, zoomPlusDisabled: true }),
       theme,
+      items,
       metrics
     )!.items;
     expect(all.filter((i) => i.disabled).map((i) => i.id)).toEqual(['zoom_minus', 'zoom_plus']);
+  });
+});
+
+describe('graphEditToolbar under an ancestor Theme (graph_edit.cpp:3229-3300)', () => {
+  const sizeOf = (
+    themeItems: ReturnType<typeof graphEditToolbarTheme>,
+    p: Partial<GraphEditProperties>,
+    id: string
+  ) => graphEditToolbar(props(p), theme, themeItems, metrics)!.items.find((i) => i.id === id)!.rect;
+
+  it("sizes a button by the margins of FlatButton's box, 2*10 + a 16px icon", () => {
+    const themed = graphEditToolbarTheme(graphEditUnder({ FlatButton: { normal: 10 } }), theme);
+    expect(sizeOf(themed, {}, 'zoom_reset')).toMatchObject({ w: 36, h: 36 });
+  });
+
+  it('sizes a pressed toggle by the pressed box and a disabled button by the disabled box, as wide as their margins (the row stretches every height)', () => {
+    const themed = graphEditToolbarTheme(
+      graphEditUnder({ Button: { normal: 10, pressed: 12, disabled: 14 } }),
+      theme
+    );
+    const p = { showGrid: true, zoomMinusDisabled: true };
+    expect(sizeOf(themed, p, 'toggle_grid')).toMatchObject({ w: 40 });
+    expect(sizeOf(themed, p, 'zoom_minus')).toMatchObject({ w: 44 });
+    expect(sizeOf(themed, p, 'zoom_reset')).toMatchObject({ w: 36 });
+  });
+
+  it("sizes the zoom label by the margins of Label's normal box (label.cpp:973-997)", () => {
+    const themed = graphEditToolbarTheme(graphEditUnder({ Label: { normal: 20 } }), theme);
+    // 4 characters of 8px + 2*20 wide, and the 19px font height + 2*20 tall.
+    expect(sizeOf(themed, { showZoomLabel: true }, 'zoom_label')).toMatchObject({ w: 72, h: 59 });
+  });
+
+  it("sizes the snapping field by the margins of LineEdit's boxes (line_edit.cpp:2443-2477)", () => {
+    const plain = sizeOf(items, {}, 'snapping_distance');
+    const themed = graphEditToolbarTheme(graphEditUnder({ LineEdit: { normal: 12, read_only: 12 } }), theme);
+    const wide = sizeOf(themed, {}, 'snapping_distance');
+    // The plain field has margins of 4 + 4 side to side and 4 + 4 top to bottom, so 12 adds 16 each way.
+    expect(wide.w - plain.w).toBe(16);
+    expect(wide.h - plain.h).toBe(16);
   });
 });
