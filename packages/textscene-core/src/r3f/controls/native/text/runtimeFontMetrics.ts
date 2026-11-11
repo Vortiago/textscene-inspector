@@ -32,19 +32,30 @@ export interface GlyphInk {
 }
 
 /** `FontMetrics` of a face the canvas painter draws into one raster. `TextRunMesh.tsx` dispatches on `kind`. */
-export interface CanvasFontMetrics extends FontMetrics {
+export type CanvasFontMetrics = RegisteredCanvasFontMetrics | OutlineCanvasFontMetrics;
+
+interface CanvasFaceMetrics extends FontMetrics {
   readonly kind: 'canvas';
+}
+
+/** A face of a registered `FontFace`: the browser draws a glyph with no contour as text. */
+export interface RegisteredCanvasFontMetrics extends CanvasFaceMetrics {
+  /** The CSS family of the `FontFace`, which the painter sets `ctx.font` to. */
+  readonly cssFontFamily: string;
   /**
-   * The CSS family of the registered `FontFace` that draws a glyph with no contour as text. Absent
-   * for a face that draws from its `outlines` alone: such a glyph then draws nothing, as FreeType
-   * gives it an empty bitmap.
-   */
-  readonly cssFontFamily?: string;
-  /**
-   * The ink box of `ch` as the browser draws it, for a glyph the painter draws as text. Absent, or
-   * undefined for one character, where the face measures none: its raster then takes a wider bound.
+   * The ink box of `ch` as the browser draws it. Absent, or undefined for one character, where the
+   * face measures none: its raster then takes a wider bound.
    */
   readonly getGlyphInkUnits?: (ch: string) => GlyphInk | undefined;
+}
+
+/**
+ * A face that draws from its `outlines` alone. A glyph with no contour draws nothing, as FreeType
+ * gives it an empty bitmap, so the face has no ink box to measure.
+ */
+export interface OutlineCanvasFontMetrics extends CanvasFaceMetrics {
+  readonly cssFontFamily?: undefined;
+  readonly getGlyphInkUnits?: undefined;
 }
 
 /** Narrows a `FontMetrics` to `CanvasFontMetrics`. */
@@ -53,11 +64,11 @@ export function isCanvasFontMetrics(metrics: FontMetrics | undefined): metrics i
 }
 
 /**
- * Builds a `CanvasFontMetrics` from raw scalars and an injected width measurer. It memoises each
+ * Builds a `RegisteredCanvasFontMetrics` from raw scalars and an injected width measurer. It memoises each
  * advance and pair, because the measurer is a DOM call and the shaper asks once per character and
  * pair on every shape.
  */
-export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): CanvasFontMetrics {
+export function createRuntimeFontMetrics(input: RuntimeFontMetricsInput): RegisteredCanvasFontMetrics {
   const { scalars, measureWidthUnits, cssFontFamily, hasGlyph, measureInkUnits, glyphs } = input;
 
   const advanceCache = new Map<string, number>();

@@ -8,7 +8,7 @@
 // `createRuntimeFontMetrics`. Its `measureText` floats enter the fixed-point chain
 // (`ftadvanc.c:52`, `hb-ft.cc:519,523`) up to a 1/64 px step off the integer `hmtx` value.
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
-import type { CanvasFontMetrics } from './runtimeFontMetrics';
+import type { OutlineCanvasFontMetrics } from './runtimeFontMetrics';
 
 /**
  * The bundled font's baked metrics as `'canvas'`-kind. It names no CSS family: Godot loads its
@@ -16,7 +16,7 @@ import type { CanvasFontMetrics } from './runtimeFontMetrics';
  * every glyph draws from the outlines `bundledCanvasFace.ts` adds. Getters, not a snapshot, so a
  * live mutation of `OPEN_SANS_METRICS` stays visible.
  */
-export const OPEN_SANS_CANVAS_FONT_METRICS: CanvasFontMetrics = {
+export const OPEN_SANS_CANVAS_FONT_METRICS: OutlineCanvasFontMetrics = {
   kind: 'canvas',
   get unitsPerEm() {
     return OPEN_SANS_FONT_METRICS.unitsPerEm;

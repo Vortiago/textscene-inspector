@@ -1,16 +1,13 @@
 /**
- * happy-dom has neither `FontFace` nor a 2D canvas context, so the scene arm's registration path
- * sits behind `IS_VITEST`. These tests cover its fallback decisions, the warn-once dedupe and the
- * peek contract. `fontFaceDoor.test.ts` reaches the shared door for real.
+ * happy-dom has neither `FontFace` nor a 2D canvas context, so a font file with bytes fails to
+ * load here unless a test stubs both. These tests cover the fallback decisions, the warn-once
+ * dedupe and the peek contract. `fontFaceDoor.test.ts` reaches the shared door for real.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
 import { peekSceneFontMetrics, peekSettledSceneFontMetrics } from './sceneFontLoader';
 import { fontWork, onSceneFontSettled, sceneFontSettleCount } from './settledChannel';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
-
-/** What a FontFile with bytes settles on here: the bundled advances, without the bundled shaping. */
-const VITEST_STAND_IN = { ...OPEN_SANS_FONT_METRICS, shaping: undefined };
 import { FACELESS_FONT } from './sceneFontResolution';
 import type { CanvasFontMetrics } from './runtimeFontMetrics';
 import { drawnOpentype, getFontAscentPx, getFontRunGlyphAdvancePx, getFontLinePitchPx } from './fontMetrics';
@@ -67,14 +64,6 @@ describe('peekSceneFontMetrics', () => {
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('under this test environment (no FontFace/canvas), even a FontFile WITH real bytes falls back to the bundled default -- by design, silently (no warning): this is the documented IS_VITEST short-circuit, not a load failure', async () => {
-    const leaf = fontFile(new ArrayBuffer(4));
-    peekSceneFontMetrics(leaf, 'Root/C');
-    await settleLoads();
-    expect(peekSceneFontMetrics(leaf, 'Root/C')).toEqual(VITEST_STAND_IN);
-    expect(warnSpy).not.toHaveBeenCalled();
-  });
-
   it('peekSceneFontMetrics returns the bundled default synchronously while a real load would still be in flight, and never throws', () => {
     const leaf = fontFile(new ArrayBuffer(4));
     const metrics = peekSceneFontMetrics(leaf, 'Root/D');
@@ -116,7 +105,7 @@ describe('peekSettledSceneFontMetrics', () => {
     const leaf = fontFile(new ArrayBuffer(4));
     expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toBeNull();
     await settleLoads();
-    expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toEqual(VITEST_STAND_IN);
+    expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toBe(OPEN_SANS_FONT_METRICS);
   });
 
   it('shares the load with peekSceneFontMetrics, which answers the default meanwhile', async () => {
@@ -178,9 +167,9 @@ describe('peekSceneFontMetrics — FontVariation embolden', () => {
   });
 
   it('leaves the base face untouched when the variation has no embolden, or an embolden of 0', async () => {
-    expect(await settledPeek(variation(fontFile(bytes), {}))).toEqual(VITEST_STAND_IN);
-    expect(await settledPeek(variation(fontFile(bytes), { variation_embolden: '0.0' }))).toEqual(
-      VITEST_STAND_IN
+    expect(await settledPeek(variation(fontFile(bytes), {}))).toBe(OPEN_SANS_FONT_METRICS);
+    expect(await settledPeek(variation(fontFile(bytes), { variation_embolden: '0.0' }))).toBe(
+      OPEN_SANS_FONT_METRICS
     );
   });
 
@@ -357,19 +346,16 @@ describe('sceneFontSettleCount', () => {
 });
 
 /**
- * `IS_VITEST` is read at module scope, so stubbing the env and re-importing runs `loadRuntimeFont`.
- * happy-dom then supplies the non-DOM environment, where a bare global read throws a ReferenceError
- * that reports a broken font rather than an absent environment.
+ * happy-dom supplies the non-DOM environment, where a bare global read throws a ReferenceError that
+ * reports a broken font rather than an absent environment. Each test imports the loader fresh.
  */
 describe('scene font in an environment with no font door', () => {
   afterEach(() => {
-    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  async function loaderWithoutVitestGuard() {
-    vi.stubEnv('VITEST', 'false');
+  async function freshLoader() {
     vi.resetModules();
     const logger = await import('../../../../logger');
     vi.spyOn(logger, 'warn').mockImplementation(() => {});
@@ -380,7 +366,7 @@ describe('scene font in an environment with no font door', () => {
   }
 
   it('falls back to the bundled default and names the absent environment when there is no FontFace', async () => {
-    const { peekSceneFontMetrics: peek, logger, bundled } = await loaderWithoutVitestGuard();
+    const { peekSceneFontMetrics: peek, logger, bundled } = await freshLoader();
 
     const font = fontFile(new ArrayBuffer(4));
     peek(font, 'Root/NoDom');
@@ -401,7 +387,7 @@ describe('scene font in an environment with no font door', () => {
       }
     );
     vi.stubGlobal('document', undefined);
-    const { peekSceneFontMetrics: peek, logger, bundled } = await loaderWithoutVitestGuard();
+    const { peekSceneFontMetrics: peek, logger, bundled } = await freshLoader();
 
     const font = fontFile(new ArrayBuffer(4));
     peek(font, 'Root/NoDocument');
@@ -413,7 +399,7 @@ describe('scene font in an environment with no font door', () => {
   });
 
   it('draws the bundled default for a face that fails to load, and drops a fallback that fails', async () => {
-    const { peekSettledChainFaces: peekChain, bundled } = await loaderWithoutVitestGuard();
+    const { peekSettledChainFaces: peekChain, bundled } = await freshLoader();
 
     const fallback = fontFile(new ArrayBuffer(4));
     const font = fontFile(new ArrayBuffer(4), [fallback]);
@@ -423,7 +409,7 @@ describe('scene font in an environment with no font door', () => {
   });
 
   it('keeps the embolden of a FontVariation over a face that fails to load', async () => {
-    const { peekSceneFontMetrics: peek } = await loaderWithoutVitestGuard();
+    const { peekSceneFontMetrics: peek } = await freshLoader();
 
     const font: FontResource = {
       kind: 'variation',
@@ -439,13 +425,11 @@ describe('scene font in an environment with no font door', () => {
 
 describe('peekSettledSceneFontMetrics — the glyph outlines an emboldened canvas face follows', () => {
   afterEach(() => {
-    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
   async function loaderWithFontDoor() {
-    vi.stubEnv('VITEST', 'false');
     vi.resetModules();
     // A browser with a `FontFace` door and a 2D canvas that measures every glyph 500 design units wide.
     vi.stubGlobal(
