@@ -42,6 +42,19 @@ export function resolveGradientTexture2D(
   );
 }
 
+/**
+ * Whether `ref` names an inline GradientTexture2D that sets no `gradient`. Its `_update` returns
+ * early, so the texture never gets an image and Godot samples the 2D placeholder in its place
+ * (`gradient_texture.cpp:229-233,400`). A gradient that names a missing resource is no such case.
+ */
+export function isGradientTextureWithoutGradient(
+  ref: string | undefined,
+  internalResources: readonly TscnInternalResource[]
+): boolean {
+  const texture = findTypedSubResource(ref, internalResources, 'GradientTexture2D');
+  return texture !== null && (texture.data.gradient === undefined || texture.data.gradient === 'null');
+}
+
 /** Texture properties and their Gradient resource to pixels. Null with no gradient. */
 function rasterize(
   properties: Record<string, string>,

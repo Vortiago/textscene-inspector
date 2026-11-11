@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { DEFAULT_CANVAS_SHADOW_ATLAS_SIZE } from '../../godot/rendering/canvasShadowAtlas';
 import * as THREE from 'three';
 import {
   createLightQuadMaterial,
@@ -12,7 +13,7 @@ import {
   updateShadowPolarTexture,
   type ShadowSampling,
 } from './lightQuad';
-import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
+import { SHADOW_MAP_FAR } from './shadowPolarMap';
 import { SHADOW_TAPS } from './shadowTaps';
 import { createShadowPoseUniforms, writeShadowPose } from './shadowSampling';
 import { shadowSampling } from './testing/shadowSampling';
@@ -136,12 +137,12 @@ describe('updateShadowPolarTexture', () => {
   it('carries the atlas state Godot samples the map with', () => {
     // `renderer_canvas_render_rd.cpp:975-980,1930-1934`: an R32_SFLOAT row behind a nearest
     // sampler that repeats on u, so a tap at bin -1 reads the last bin.
-    const texture = updateShadowPolarTexture(null, new Float32Array(SHADOW_MAP_BINS));
+    const texture = updateShadowPolarTexture(null, new Float32Array(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE));
     expect(texture.type).toBe(THREE.FloatType);
     expect(texture.minFilter).toBe(THREE.NearestFilter);
     expect(texture.magFilter).toBe(THREE.NearestFilter);
     expect(texture.wrapS).toBe(THREE.RepeatWrapping);
-    expect(texture.image.width).toBe(SHADOW_MAP_BINS);
+    expect(texture.image.width).toBe(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE);
     expect(texture.image.height).toBe(1);
     expect(texture.colorSpace).toBe(THREE.NoColorSpace);
     expect(texture.generateMipmaps).toBe(false);
@@ -150,7 +151,7 @@ describe('updateShadowPolarTexture', () => {
   it('keeps an occluder distance at full float precision', () => {
     // A half float rounds 0.6 + 2^-20 to 0.6, and a fragment on the occluder line then reads as
     // shadowed where Godot lights it.
-    const bins = new Float32Array(SHADOW_MAP_BINS).fill(SHADOW_MAP_FAR);
+    const bins = new Float32Array(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE).fill(SHADOW_MAP_FAR);
     bins[7] = Math.fround(0.6 + 2 ** -20);
     const texture = updateShadowPolarTexture(null, bins);
     const data = texture.image.data as Float32Array;
@@ -159,17 +160,17 @@ describe('updateShadowPolarTexture', () => {
   });
 
   it('refills a texture of the same size in place, so the materials keep it', () => {
-    const texture = updateShadowPolarTexture(null, new Float32Array(SHADOW_MAP_BINS));
-    const bins = new Float32Array(SHADOW_MAP_BINS).fill(SHADOW_MAP_FAR);
+    const texture = updateShadowPolarTexture(null, new Float32Array(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE));
+    const bins = new Float32Array(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE).fill(SHADOW_MAP_FAR);
     expect(updateShadowPolarTexture(texture, bins)).toBe(texture);
     expect((texture.image.data as Float32Array)[0]).toBe(SHADOW_MAP_FAR);
   });
 
   it('makes a fresh texture for bins of another size (edge case)', () => {
     const texture = updateShadowPolarTexture(null, new Float32Array(8));
-    const next = updateShadowPolarTexture(texture, new Float32Array(SHADOW_MAP_BINS));
+    const next = updateShadowPolarTexture(texture, new Float32Array(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE));
     expect(next).not.toBe(texture);
-    expect(next.image.width).toBe(SHADOW_MAP_BINS);
+    expect(next.image.width).toBe(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE);
   });
 });
 
@@ -195,13 +196,13 @@ describe('createLightQuadMaterial with a shadow', () => {
   it('reads a bin at its centre and lets the map repeat past either end', () => {
     // A clamp here would turn the tap at bin -1 into bin 0, where Godot's sampler reads bin 2047.
     expect(shadowedMaterial().fragmentShader).toContain(
-      'texture2D(uShadowMap, vec2((texel + 0.5) / 2048.0, 0.5)).r'
+      'texture2D(uShadowMap, vec2((texel + 0.5) / shadowBins(), 0.5)).r'
     );
   });
 
-  it('offsets the taps along the map axis by (1 + smooth) / 2048', () => {
+  it('hands the taps shadow_filter_smooth, which they step by over the map width', () => {
     const mat = shadowedMaterial(shadowSampling({ smooth: 8 }));
-    expect(mat.uniforms.uShadowPixelSize!.value).toBe(9 / 2048);
+    expect(mat.uniforms.uShadowSmooth!.value).toBe(8);
   });
 
   it('reads the light-local transform and z_far from the pose the light writes', () => {

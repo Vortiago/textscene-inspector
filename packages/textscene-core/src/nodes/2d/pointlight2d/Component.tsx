@@ -12,6 +12,8 @@ import { useTexture2D } from '../../../resources/useTexture2D';
 import type { ViewSampler } from '../../../resources/textures/textureView';
 import { useTextureView } from '../../../r3f/useTextureView';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { isGradientTextureWithoutGradient } from '../../../resources/textures/gradienttexture2d/resolveGradientTexture';
+import { texture2DPlaceholder } from '../../../resources/textures/texture2DPlaceholder';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { PointLight2DProperties } from './types';
 import {
@@ -20,6 +22,7 @@ import {
   type ShadowSampling,
 } from '../../../r3f/lighting2d/lightQuad';
 import { buildShadowPolarMap } from '../../../r3f/lighting2d/shadowPolarMap';
+import { useShadowAtlasSize } from '../../../r3f/lighting2d/useShadowAtlasSize';
 import { createShadowPoseUniforms, writeShadowPose } from '../../../r3f/lighting2d/shadowSampling';
 import { useLightSequence } from '../../../r3f/lighting2d/useLightSequence';
 import { lightDrawSequence } from '../../../r3f/lighting2d/lightSequence';
@@ -59,12 +62,12 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   // The cookie is often a GradientTexture2D, a radial falloff described inline,
   // not an image. `useTexture2D` resolves either kind. The plain view in either canvas colour
   // space, as `COOKIE_SAMPLER` reads the texels raw.
-  const { texture: cookieSource, missing } = useTexture2D(
-    props.texture,
-    externalResources,
-    internalResources,
-    'plain'
-  );
+  const slot = useTexture2D(props.texture, externalResources, internalResources, 'plain');
+  // A gradient-less GradientTexture2D holds no image: the light draws Godot's placeholder at the
+  // placeholder's own size (`renderer_viewport.cpp:455-460`), not the texture's width and height.
+  const hasNoImage = isGradientTextureWithoutGradient(props.texture, internalResources);
+  const cookieSource = hasNoImage ? texture2DPlaceholder() : slot.texture;
+  const missing = slot.missing && !hasNoImage;
   // A light that draws no quad makes no view: it would clone and upload a cookie nothing draws.
   const cookie = useTextureView(props.enabled && !missing ? cookieSource : null, COOKIE_SAMPLER);
 
@@ -232,11 +235,12 @@ function QuadMesh({
   // the tree: the world matrix it needs does not exist before that.
   const [quad, setQuad] = useState<THREE.Mesh | null>(null);
   const light = useShadowLightPose(quad, casters.length > 0);
+  const atlasSize = useShadowAtlasSize();
 
-  // A pure function of the pose and the casters, so it rebuilds exactly when either moves.
+  // A pure function of the pose, the casters and the atlas size, so it rebuilds exactly when one moves.
   const bins = useMemo(
-    () => (light && casters.length > 0 ? buildShadowPolarMap(light, casters) : null),
-    [light, casters]
+    () => (light && casters.length > 0 ? buildShadowPolarMap(light, casters, atlasSize) : null),
+    [light, casters, atlasSize]
   );
 
   // The texture outlives each rebuild: both quad materials hold its identity in

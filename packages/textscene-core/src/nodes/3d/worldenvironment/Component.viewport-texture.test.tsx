@@ -19,7 +19,7 @@ import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { WorldEnvironmentScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { usePassToneMap } from '../../../r3f/environment/passToneMap';
 import type { EnvironmentLayerProps } from '../../../r3f/environment/EnvironmentLayer';
-import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import { texture2DPlaceholder } from '../../../resources/textures/texture2DPlaceholder';
 
 import '../../../r3f/nodes/index';
 
@@ -147,7 +147,7 @@ describe('WorldEnvironment: a panorama ViewportTexture', () => {
     ['the PanoramaSkyMaterial', { ...EVERY_HOLDER, material: false }],
   ])('samples the placeholder when %s is not local to scene', async (_holder, holders) => {
     const renderer = await renderScene(panoramaScene(holders));
-    expect(drawnPanorama(renderer)).toBe(unconfiguredViewportTexture());
+    expect(drawnPanorama(renderer)).toBe(texture2DPlaceholder());
   });
 });
 
@@ -159,7 +159,7 @@ describe('WorldEnvironment: a glow map ViewportTexture', () => {
 
   it('samples the placeholder under an Environment that is not local to scene', async () => {
     const renderer = await renderScene(glowMapScene(false));
-    expect(drawnGlowMap(renderer)).toBe(unconfiguredViewportTexture());
+    expect(drawnGlowMap(renderer)).toBe(texture2DPlaceholder());
   });
 });
 
@@ -213,7 +213,7 @@ environment = ExtResource("1_env")
 
   it('samples the placeholder when the file does not mark the Environment local to scene', async () => {
     const renderer = await renderScene(tresScene(), { 'res://environment.tres': environmentFile(false) });
-    expect(drawnPanorama(renderer)).toBe(unconfiguredViewportTexture());
+    expect(drawnPanorama(renderer)).toBe(texture2DPlaceholder());
   });
 });
 
@@ -237,6 +237,6 @@ environment = SubResource("Env_1")
 
   it('samples the placeholder when the Environment is not local to scene', async () => {
     const renderer = await renderScene(cameraScene(false));
-    expect(drawnPanorama(renderer, 'DrawnEnvironmentLayer')).toBe(unconfiguredViewportTexture());
+    expect(drawnPanorama(renderer, 'DrawnEnvironmentLayer')).toBe(texture2DPlaceholder());
   });
 });

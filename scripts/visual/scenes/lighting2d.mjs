@@ -109,4 +109,20 @@ export const LIGHTING_2D_SCENES = [
   // a PCF5 tap one bin wide mixes two bins, which shifts the edge by half a bin.
   { name: 'pointlight2d-shadow-none-bins', file: 'unit-pointlight2d-shadow-none-bins.tscn', mode: '2d' },
   { name: 'pointlight2d-shadow-pcf5-bins', file: 'unit-pointlight2d-shadow-pcf5-bins.tscn', mode: '2d' },
+  // `rendering/2d/shadow_atlas/size` 512 in the folder's project.godot: each PCF5 tap is four
+  // times as wide as at the 2048 default. Godot 4.6.3 `--mode 2d`: both scenes within 1/255 of ours
+  // for the point light, 4/255 on 102 pixels for the sun.
+  {
+    name: 'pointlight2d-shadow-atlas-size',
+    file: 'shadow-atlas-size/unit-pointlight2d-shadow-atlas-size.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'directionallight2d-shadow-atlas-size',
+    file: 'shadow-atlas-size/unit-directionallight2d-shadow-atlas-size.tscn',
+    mode: '2d',
+  },
+  // A GradientTexture2D with no gradient holds no image, so the light draws Godot's 4 by 4 placeholder.
+  // Godot 4.6.3 `--mode 2d`: the 8 magenta texels at (548..551, 298..301) read rgb(152,25,152).
+  { name: 'pointlight2d-gradient-no-gradient', file: 'unit-pointlight2d-gradient-no-gradient.tscn', mode: '2d' },
 ];

@@ -17,7 +17,7 @@ import {
   resolveSubResourceRef,
 } from './SubResourceResolver.js';
 import { isLocalToScene } from './textures/viewporttexture/localToScene.js';
-import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfiguredViewportTexture.js';
+import { texture2DPlaceholder } from './textures/texture2DPlaceholder.js';
 import { atlasTextureSize } from './textures/atlastexture/decode.js';
 import { imageSize, type ImageSize } from './formats/image/imagePixels.js';
 import {
@@ -256,7 +256,7 @@ function useTexture2DSlot(
       resolveSubResourceRef(sourceRef, slot.internalResources),
     ].every((holder) => !holder || isLocalToScene(holder));
   const viewport = useViewportTextureSlot(isSetUp ? sourceRef : undefined, slot.internalResources, view);
-  const unconfigured = isViewport && !isSetUp ? unconfiguredViewportTexture() : null;
+  const unconfigured = isViewport && !isSetUp ? texture2DPlaceholder() : null;
 
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
   // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook

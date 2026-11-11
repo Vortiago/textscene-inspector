@@ -12,7 +12,7 @@ import { isLiveTarget, unrenderedTexel } from './liveTargets';
 import { useDisposeOnRelease } from './useDisposeOnRelease';
 import type { AtlasSourceModel } from '../resources/tileset/types';
 import { colourDataTexture } from '../resources/textures/colourDataTexture';
-import { unconfiguredViewportTexture } from '../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import { texture2DPlaceholder } from '../resources/textures/texture2DPlaceholder';
 import type { Texture2DResult } from '../resources/useTexture2D';
 
 /**
@@ -31,7 +31,7 @@ export function usePaddedAtlasStandIn(
     [isUnrenderedTarget, texture]
   );
   useDisposeOnRelease(snapshot);
-  if (isPadded && slot.hasNoImage) return unconfiguredViewportTexture();
+  if (isPadded && slot.hasNoImage) return texture2DPlaceholder();
   return snapshot;
 }
 

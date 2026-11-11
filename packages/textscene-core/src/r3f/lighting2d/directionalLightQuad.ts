@@ -13,9 +13,8 @@
 import * as THREE from 'three';
 import { accumulationState, shadowColorUniform } from './lightQuad.js';
 import { FULL_SCREEN_VERTEX } from '../fullScreenPass.js';
-import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap.js';
-import { SHADOW_TAPS, shadowPixelSize } from './shadowTaps.js';
-import { glslFloat } from '../../utils/glslLiterals.js';
+import { SHADOW_MAP_FAR } from './shadowPolarMap.js';
+import { SHADOW_BINS, SHADOW_TAPS } from './shadowTaps.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Light2DShadowFilter } from '../../godot/scene/light2d.js';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
@@ -54,11 +53,11 @@ void main() {
 const SHADOW_SAMPLE = /* glsl */ `
 uniform sampler2D uShadowMap;
 varying vec2 vShadow;
-
+${SHADOW_BINS}
 // An empty bin never shadows. The camera can show past the viewport's far edge, where depth
 // exceeds SHADOW_MAP_FAR, and a bin left at SHADOW_MAP_FAR would shadow all of it.
 float shadowTexel(float texel) {
-  float binDepth = texture2D(uShadowMap, vec2((clamp(texel, 0.0, ${glslFloat(SHADOW_MAP_BINS - 1)}) + 0.5) / ${glslFloat(SHADOW_MAP_BINS)}, 0.5)).r;
+  float binDepth = texture2D(uShadowMap, vec2((clamp(texel, 0.0, shadowBins() - 1.0) + 0.5) / shadowBins(), 0.5)).r;
   return binDepth >= float(${SHADOW_MAP_FAR}) ? ${EMPTY_BIN_DEPTH} : binDepth;
 }
 ${SHADOW_TAPS}
@@ -126,7 +125,7 @@ interface DirectionalLightQuadOptions {
 function shadowUniforms(shadow: DirectionalShadowSampling): Record<string, THREE.IUniform> {
   return {
     uShadowMap: { value: shadow.map },
-    uShadowPixelSize: { value: shadowPixelSize(shadow.smooth) },
+    uShadowSmooth: { value: shadow.smooth },
     uNdcToShadow: { value: shadow.ndcToShadow },
     uShadowColor: { value: shadowColorUniform(shadow.shadowColor) },
   };
@@ -174,14 +173,8 @@ export function createDirectionalShadowColorMaterial(
  * texel and a half float rounds a depth near 1 by 1/2048 of `z_far`, 5 px at the default
  * `max_distance`. `writeDirectionalShadowMap` fills it.
  */
-export function createDirectionalShadowTexture(): THREE.DataTexture {
-  const texture = new THREE.DataTexture(
-    new Float32Array(SHADOW_MAP_BINS),
-    SHADOW_MAP_BINS,
-    1,
-    THREE.RedFormat,
-    THREE.FloatType
-  );
+export function createDirectionalShadowTexture(bins: number): THREE.DataTexture {
+  const texture = new THREE.DataTexture(new Float32Array(bins), bins, 1, THREE.RedFormat, THREE.FloatType);
   texture.minFilter = THREE.NearestFilter;
   texture.magFilter = THREE.NearestFilter;
   texture.wrapS = THREE.ClampToEdgeWrapping;
@@ -191,7 +184,7 @@ export function createDirectionalShadowTexture(): THREE.DataTexture {
   return texture;
 }
 
-/** Uploads `bins`, `SHADOW_MAP_BINS` long, into a texture from `createDirectionalShadowTexture`. */
+/** Uploads `bins`, as many as the texture holds, into a texture from `createDirectionalShadowTexture`. */
 export function writeDirectionalShadowMap(texture: THREE.DataTexture, bins: Float32Array): void {
   const data = texture.image.data as Float32Array;
   // `set` accepts a shorter source and keeps the old bins past its end.

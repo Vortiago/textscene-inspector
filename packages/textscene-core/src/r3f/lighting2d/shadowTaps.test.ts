@@ -4,15 +4,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { SHADOW_TAPS, shadowPixelSize } from './shadowTaps';
-import { SHADOW_MAP_BINS } from './shadowPolarMap';
+import { SHADOW_BINS, SHADOW_TAPS } from './shadowTaps';
 
-describe('shadowPixelSize', () => {
-  it('is one atlas texel widened by shadow_filter_smooth', () => {
-    expect(shadowPixelSize(0)).toBe(1 / 2048);
-    expect(shadowPixelSize(8)).toBe(9 / 2048);
-    // Smooth 5 is the dungeon lights' penumbra.
-    expect(shadowPixelSize(5) * SHADOW_MAP_BINS).toBe(6);
+describe('SHADOW_BINS', () => {
+  it('is the width of the map it samples, so the atlas size has one source', () => {
+    expect(SHADOW_BINS).toContain('float shadowBins() { return float(textureSize(uShadowMap, 0).x); }');
+    expect(SHADOW_BINS).not.toContain('2048');
   });
 });
 
@@ -20,7 +17,15 @@ describe('SHADOW_TAPS', () => {
   it('takes one nearest bin under NONE, floored by the canvas-wide bin and not the smoothed one', () => {
     // `canvas.glsl:508`: `floor(shadow_uv.xy / canvas_data.shadow_pixel_size)`, so a fragment lit on
     // the exact ray reads as shadowed when its bin lies behind the occluder.
-    expect(SHADOW_TAPS).toContain('return step(shadowTexel(floor(u * 2048.0)), depth);');
+    expect(SHADOW_TAPS).toContain('return step(shadowTexel(floor(u * shadowBins())), depth);');
+  });
+
+  it('has no atlas size baked in', () => {
+    expect(SHADOW_TAPS).not.toContain('2048');
+  });
+
+  it('steps a PCF tap by `(1 + shadow_filter_smooth) / shadow_texture_size` (`:629`)', () => {
+    expect(SHADOW_TAPS).toContain('float tapStep = (1.0 + uShadowSmooth) / shadowBins();');
   });
 
   it('mixes the steps of bins i−1 and i by the fraction past bin i in each PCF tap', () => {
@@ -35,7 +40,7 @@ describe('SHADOW_TAPS', () => {
       '#if SHADOW_FILTER == 2\n  const int reach = 6;\n#else\n  const int reach = 2;'
     );
     expect(SHADOW_TAPS).toContain(
-      'for (int tap = -reach; tap <= reach; tap++) shadow += textureShadow(u + uShadowPixelSize * float(tap), depth);\n  return shadow / float(2 * reach + 1);'
+      'for (int tap = -reach; tap <= reach; tap++) shadow += textureShadow(u + tapStep * float(tap), depth);\n  return shadow / float(2 * reach + 1);'
     );
   });
 });

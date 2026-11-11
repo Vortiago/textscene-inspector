@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   projectPrimitiveMeshTexelSize,
+  projectShadowAtlasSize,
   DEFAULT_THEME_SCALE,
   DEFAULT_VIEWPORT_HEIGHT,
   DEFAULT_VIEWPORT_WIDTH,
@@ -381,6 +382,25 @@ describe('projectPrimitiveMeshTexelSize', () => {
   it('takes a size at or below zero as 0.2, as every PrimitiveMesh does (edge case)', () => {
     expect(projectPrimitiveMeshTexelSize({ [KEY]: '0' })).toBe(0.2);
     expect(projectPrimitiveMeshTexelSize({ [KEY]: '-1' })).toBe(0.2);
+  });
+});
+
+describe('projectShadowAtlasSize', () => {
+  const KEY = 'rendering/2d/shadow_atlas/size';
+
+  it('reads the size the project sets', () => {
+    expect(projectShadowAtlasSize({ [KEY]: '512' })).toBe(512);
+  });
+
+  it('is 2048 with no project, no setting or a malformed value', () => {
+    expect(projectShadowAtlasSize(null)).toBe(2048);
+    expect(projectShadowAtlasSize({})).toBe(2048);
+    expect(projectShadowAtlasSize({ [KEY]: 'big' })).toBe(2048);
+  });
+
+  it('is 2048 for a size at or below zero (edge case)', () => {
+    expect(projectShadowAtlasSize({ [KEY]: '0' })).toBe(2048);
+    expect(projectShadowAtlasSize({ [KEY]: '-512' })).toBe(2048);
   });
 });
 

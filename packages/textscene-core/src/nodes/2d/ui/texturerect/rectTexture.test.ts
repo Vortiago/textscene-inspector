@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { rectTextureSampler, sampledDraw } from './rectTexture';
 import { textureRectDraw } from './nativeSolver';
 import { TextureStretchMode } from '../../../../godot/scene/textureStretch';
-import { unconfiguredViewportTexture } from '../../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import { texture2DPlaceholder } from '../../../../resources/textures/texture2DPlaceholder';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../../godot/scene/canvasItem';
 import { canvasItemViewSampler } from '../../../../r3f/canvasItemTextureSampler';
 import { canvasColorSpaceOf } from '../../../../r3f/canvasColorSpace';
@@ -55,7 +55,7 @@ describe('sampledDraw', () => {
 
   /** Godot lays out by the reported size 0 (`viewport.cpp:156-160`) and samples the 4x4 placeholder. */
   it('lays an unset ViewportTexture out at size 0 and samples the placeholder image', () => {
-    expect(sampledDraw(unconfiguredViewportTexture(), { width: 0, height: 0 }, keep)).toMatchObject({
+    expect(sampledDraw(texture2DPlaceholder(), { width: 0, height: 0 }, keep)).toMatchObject({
       size: { x: 0, y: 0 },
       textureSize: { x: 4, y: 4 },
     });

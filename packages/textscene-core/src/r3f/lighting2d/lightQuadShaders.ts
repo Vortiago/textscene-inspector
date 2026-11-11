@@ -8,9 +8,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { SHADOW_MAP_BINS } from './shadowPolarMap.js';
-import { SHADOW_TAPS } from './shadowTaps.js';
-import { glslFloat } from '../../utils/glslLiterals.js';
+import { SHADOW_BINS, SHADOW_TAPS } from './shadowTaps.js';
 
 /**
  * The cookie tap. Godot reads the cookie from a light atlas cleared to transparent black, so a
@@ -79,9 +77,9 @@ uniform sampler2D uShadowMap;
 uniform mat3 uWorldToLight;
 uniform float uShadowZFarInv;
 varying vec2 vWorld;
-
+${SHADOW_BINS}
 float shadowTexel(float texel) {
-  return texture2D(uShadowMap, vec2((texel + 0.5) / ${glslFloat(SHADOW_MAP_BINS)}, 0.5)).r;
+  return texture2D(uShadowMap, vec2((texel + 0.5) / shadowBins(), 0.5)).r;
 }
 ${SHADOW_TAPS}
 float shadowFraction() {

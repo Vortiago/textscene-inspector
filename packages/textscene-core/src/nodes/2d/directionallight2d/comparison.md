@@ -37,6 +37,13 @@ the viewport's camera. Every occluder casts on every lit item: the directional p
 `shadow_filter = PCF5` averages five taps across the parallel map. The taps keep one width
 along the whole band, unlike a point light's penumbra, which widens with distance.
 
+## The shadow atlas size
+<!-- compare: image=unit-directionallight2d-shadow-atlas-size status=done fixture=shadow-atlas-size/unit-directionallight2d-shadow-atlas-size.tscn -->
+
+`rendering/2d/shadow_atlas/size` sets the bins in the parallel map, 2048 by default. A smaller
+size makes each PCF tap wider, so the penumbra widens. The previewer reads the setting and builds the
+map to that size.
+
 ## The eight-light cap and CanvasLayers
 <!-- compare: image=unit-directionallight2d-canvas-layer-cap status=done fixture=unit-directionallight2d-canvas-layer-cap.tscn -->
 

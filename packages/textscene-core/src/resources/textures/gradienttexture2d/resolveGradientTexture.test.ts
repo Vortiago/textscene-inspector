@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { NO_FILES, poolsOf } from '../../testing/loadedFiles';
-import { resolveGradientTexture2D } from './resolveGradientTexture';
+import { isGradientTextureWithoutGradient, resolveGradientTexture2D } from './resolveGradientTexture';
 import { proceduralTextureKey } from '../proceduralTextureCache';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -100,6 +100,36 @@ describe('resolveGradientTexture2D', () => {
   it('returns null for undefined / malformed references', () => {
     expect(resolveGradientTexture2D(undefined, poolsOf(coinResources), NO_FILES)).toBeNull();
     expect(resolveGradientTexture2D('res://foo.png', poolsOf(coinResources), NO_FILES)).toBeNull();
+  });
+});
+
+describe('isGradientTextureWithoutGradient', () => {
+  const textureWith = (data: Record<string, string>): TscnInternalResource[] => [
+    { id: 'T', type: 'GradientTexture2D', data },
+  ];
+
+  it('is true for a texture that sets no gradient or sets null', () => {
+    expect(isGradientTextureWithoutGradient('SubResource("T")', textureWith({ fill: '1' }))).toBe(true);
+    expect(isGradientTextureWithoutGradient('SubResource("T")', textureWith({ gradient: 'null' }))).toBe(
+      true
+    );
+  });
+
+  it('is false once a gradient is named, even one that does not resolve', () => {
+    expect(
+      isGradientTextureWithoutGradient(
+        'SubResource("T")',
+        textureWith({ gradient: 'SubResource("Missing")' })
+      )
+    ).toBe(false);
+  });
+
+  it('is false for another reference form or resource type', () => {
+    expect(isGradientTextureWithoutGradient(undefined, textureWith({}))).toBe(false);
+    expect(isGradientTextureWithoutGradient('ExtResource("1")', textureWith({}))).toBe(false);
+    expect(
+      isGradientTextureWithoutGradient('SubResource("C")', [{ id: 'C', type: 'CanvasTexture', data: {} }])
+    ).toBe(false);
   });
 });
 
