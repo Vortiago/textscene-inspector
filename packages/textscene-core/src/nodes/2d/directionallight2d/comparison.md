@@ -37,6 +37,13 @@ the viewport's camera. Every occluder casts on every lit item: the directional p
 `shadow_filter = PCF5` averages five taps across the parallel map. The taps keep one width
 along the whole band, unlike a point light's penumbra, which widens with distance.
 
+## An occluder end on a bin centre
+<!-- compare: image=unit-directionallight2d-shadow-end-on-bin status=done fixture=unit-directionallight2d-shadow-end-on-bin.tscn -->
+
+An end that lands exactly on a bin centre covers that bin only from its left, the rasteriser's
+top-left rule, as on a PointLight2D's map. Here the end is the right side of the occluder, so the
+shadow stops one column short of it.
+
 ## The shadow atlas size
 <!-- compare: image=unit-directionallight2d-shadow-atlas-size status=done fixture=shadow-atlas-size/unit-directionallight2d-shadow-atlas-size.tscn -->
 
