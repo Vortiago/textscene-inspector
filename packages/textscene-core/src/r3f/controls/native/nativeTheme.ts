@@ -5,7 +5,7 @@
  * rather than setting a CSS `rgba(...)` background.
  */
 
-import { flatStyleBox as makeFlatStyleBox, freezeStyleBox } from './styleBoxFlat';
+import { flatStyleBox as makeFlatStyleBox, freezeStyleBox, ZERO_SIDES } from './styleBoxFlat';
 import { POPUP_MENU_DEFAULTS } from '../../../godot/scene/popupMenu';
 import {
   DEFAULT_CONTENT_MARGIN,
@@ -43,8 +43,6 @@ interface NativeThemeStyleFill {
 }
 
 const TRANSPARENT: Rgba = { r: 0, g: 0, b: 0, a: 0 };
-
-const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /**
  * `make_flat_stylebox` (`default_theme.cpp:57-70`) for the fields

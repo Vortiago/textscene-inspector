@@ -44,7 +44,7 @@ import { LABEL_FONT_COLOR } from '../../../../godot/scene/theme';
 import type { Rgba } from '../../../../godot/math/math';
 import { defaultLabelFontColorOf, LABEL_NORMAL_BOX } from '../../../../r3f/controls/native/defaultThemeItems';
 import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { sidesSize, ZERO_SIDES, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   AutowrapMode,
   VisibleCharactersBehavior,
@@ -196,8 +196,6 @@ export function labelShadowTheme(n: SolveNode): LabelShadowTheme {
 /** The content margin of the `normal` StyleBox a Label reads (`theme_cache.normal_style`). */
 export type LabelMargin = StyleBoxFlatData['contentMargin'];
 
-const NO_LABEL_MARGIN: LabelMargin = { left: 0, top: 0, right: 0, bottom: 0 };
-
 /** `theme_cache.normal_style` (`label.cpp:1460`): the Theme's `normal`, else the default theme's empty box. */
 export function labelStyleBox(n: SolveNode): ResolvedStyleBox {
   return n.styleBoxes.normal ?? LABEL_NORMAL_BOX;
@@ -211,7 +209,7 @@ export function labelStyleBox(n: SolveNode): ResolvedStyleBox {
  * this, so the solved height is the height of the drawn lines.
  */
 export function labelShapingWidthPx(controlWidthPx: number, margin: LabelMargin): number {
-  return Math.trunc(controlWidthPx - margin.left - margin.right);
+  return Math.trunc(controlWidthPx - sidesSize(margin).x);
 }
 
 // lines_skipped and max_lines_visible: label.cpp:344-361,520-561
@@ -342,7 +340,8 @@ function labelMinimumHeightPx(
 export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
   const margin = labelStyleBox(n).contentMargin;
   const { x, y } = labelTextMinimumSize(n, ctx, margin);
-  return { x: x + margin.left + margin.right, y: y + margin.top + margin.bottom };
+  const boxSize = sidesSize(margin);
+  return { x: x + boxSize.x, y: y + boxSize.y };
 };
 
 /** The minimum size of the text alone, before the `normal` box adds its own (`label.cpp:983-996`). */
@@ -514,7 +513,7 @@ export function layoutLabelLines(
     rtl = false,
     isAutowrapped = false,
     trim,
-    contentMargin = NO_LABEL_MARGIN,
+    contentMargin = ZERO_SIDES,
     lineSpacingPx = LABEL_LINE_SPACING_PX,
     paragraphSpacingPx = LABEL_PARAGRAPH_SPACING_PX,
   } = options;

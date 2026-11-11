@@ -9,7 +9,11 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import {
+  contentMarginSize,
+  ZERO_SIDES,
+  type StyleBoxFlatData,
+} from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
@@ -18,7 +22,6 @@ import type { Rgba } from '../../../../godot/math/math';
 const TREE_PANEL_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.6 };
 
 const DEFAULT_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
-const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /**
  * `default_theme.cpp:860`: `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, whose bottom

@@ -3,6 +3,7 @@
  * the box adds its minimum size, narrows the shaping width, offsets the lines and draws under the text.
  * Hand numbers use OpenSans at size 16: font height 23, 'AB' shaped 22 wide (see `nativeSolver.test.ts`).
  */
+import { ZERO_SIDES } from '../../../../r3f/controls/native/styleBoxFlat';
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -26,8 +27,6 @@ const MARGINS = {
 };
 const BOX = drawnStyleBox(MARGINS);
 const MARGIN = { left: 10, top: 6, right: 14, bottom: 4 };
-const NO_LABEL_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
-
 function label(props: Partial<LabelProperties>, withBox = true): SolveNode {
   return {
     ...emptySolveNode(),
@@ -57,7 +56,7 @@ describe('Label minimum size with a normal box (label.cpp:983-996)', () => {
 describe('Label shaping width with a normal box (label.cpp:141-142)', () => {
   it('truncates the width less the box margins', () => {
     expect(labelShapingWidthPx(100.7, MARGIN)).toBe(76);
-    expect(labelShapingWidthPx(100.7, NO_LABEL_MARGIN)).toBe(100);
+    expect(labelShapingWidthPx(100.7, ZERO_SIDES)).toBe(100);
   });
 });
 

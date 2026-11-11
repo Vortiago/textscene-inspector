@@ -109,10 +109,20 @@ export function flatStyleBox(bgColor: Rgba, options: FlatStyleBoxOptions = {}): 
  * inset by. The margins are already effective values.
  */
 export function contentMarginSize(box: StyleBoxFlatData): Vector2 {
-  return {
-    x: box.contentMargin.left + box.contentMargin.right,
-    y: box.contentMargin.top + box.contentMargin.bottom,
-  };
+  return sidesSize(box.contentMargin);
+}
+
+/** Four sides that are all zero. Shared, so a caller never writes the literal again. */
+export const ZERO_SIDES: StyleBoxFlatData['contentMargin'] = Object.freeze({
+  left: 0,
+  top: 0,
+  right: 0,
+  bottom: 0,
+});
+
+/** The horizontal and vertical space four sides take together. */
+export function sidesSize(sides: StyleBoxFlatData['contentMargin']): Vector2 {
+  return { x: sides.left + sides.right, y: sides.top + sides.bottom };
 }
 
 /** Whether `box` paints a pixel: a `StyleBoxEmpty`, or a flat box whose fill, border and shadow are absent or clear, paints none. */

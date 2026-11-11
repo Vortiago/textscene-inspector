@@ -20,7 +20,11 @@ import {
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { STYLE_FILL } from '../../../../godot/scene/theme';
-import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import {
+  contentMarginSize,
+  ZERO_SIDES,
+  type StyleBoxFlatData,
+} from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -112,7 +116,6 @@ export function itemListSeparation(theme: Pick<NativeTheme, 'separation'>): numb
   return theme.separation;
 }
 
-const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 /** `StyleBoxFlat`'s own unset default (`style_box_flat.h:40`). */
 const DEFAULT_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
 

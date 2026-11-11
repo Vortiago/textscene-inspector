@@ -10,7 +10,6 @@ import { PositionedIcon } from './PositionedIcon';
 import { PositionedStyleBox } from './PositionedStyleBox';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import { iconOnlyButtonIconRectIn } from './buttonBase';
-import { HorizontalAlignment } from '../../../godot/math/alignment';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Rgba } from '../../../godot/math/math';
 
@@ -22,6 +21,8 @@ interface IconButtonProps {
   tint: NativeControlComponentProps['tint'];
   iconTint: Pick<NativeControlComponentProps['tint'], 'color' | 'opacity'>;
   rtl: boolean;
+  /** `icon_alignment` of the Button: LEFT unless the owner sets it (`button.h:55`). */
+  iconAlignment: number;
   renderOrder: number;
   /** The order of the box when it differs from the icon's. Defaults to `renderOrder`. */
   boxRenderOrder?: number;
@@ -36,17 +37,12 @@ export function IconButton({
   tint,
   iconTint,
   rtl,
+  iconAlignment,
   renderOrder,
   boxRenderOrder = renderOrder,
 }: IconButtonProps) {
   const iconRect = texture
-    ? iconOnlyButtonIconRectIn(
-        rect,
-        box.contentMargin,
-        { x: size, y: size },
-        rtl,
-        HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
-      )
+    ? iconOnlyButtonIconRectIn(rect, box.contentMargin, { x: size, y: size }, rtl, iconAlignment)
     : null;
   return (
     <>

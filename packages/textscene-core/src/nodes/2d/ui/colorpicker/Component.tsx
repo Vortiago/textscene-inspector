@@ -9,6 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -460,6 +461,7 @@ export function ColorPicker({
             tint={tint}
             iconTint={iconTint}
             rtl={solveNode.rtl}
+            iconAlignment={HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER}
             renderOrder={renderOrder}
           />
           {sampleCols.shape && (
@@ -471,6 +473,7 @@ export function ColorPicker({
               tint={tint}
               iconTint={iconTint}
               rtl={solveNode.rtl}
+              iconAlignment={HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER}
               renderOrder={renderOrder}
             />
           )}
@@ -594,6 +597,7 @@ export function ColorPicker({
             tint={tint}
             iconTint={iconTint}
             rtl={solveNode.rtl}
+            iconAlignment={HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER}
             renderOrder={renderOrder}
           />
         </>
@@ -888,6 +892,7 @@ export function ColorPicker({
             tint={tint}
             iconTint={iconTint}
             rtl={solveNode.rtl}
+            iconAlignment={HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER}
             renderOrder={renderOrder}
           />
         </>

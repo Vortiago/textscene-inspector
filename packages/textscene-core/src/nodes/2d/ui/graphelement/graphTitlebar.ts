@@ -11,7 +11,7 @@
  */
 
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { sidesSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
   resolveThemeFontIn,
@@ -90,9 +90,9 @@ export function shapeTitleText(text: string, fontTheme: TitlebarFontTheme): Text
 
 /** The shaped title's own minimum size: `Label::get_minimum_size`'s OFF branch (`label.cpp:983-996`), the `normal` box margins and the empty-text short-circuit included. */
 export function titleTextMinimumSize(text: string, fontTheme: TitlebarFontTheme): { x: number; y: number } {
-  const { left, top, right, bottom } = fontTheme.box.contentMargin;
   const textSize = shapedTitleTextSize(text, fontTheme);
-  return { x: textSize.x + left + right, y: textSize.y + top + bottom };
+  const boxSize = sidesSize(fontTheme.box.contentMargin);
+  return { x: textSize.x + boxSize.x, y: textSize.y + boxSize.y };
 }
 
 function shapedTitleTextSize(text: string, fontTheme: TitlebarFontTheme): { x: number; y: number } {

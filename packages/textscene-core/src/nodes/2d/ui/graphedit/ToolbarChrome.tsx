@@ -9,6 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { useMemo } from 'react';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -116,6 +117,14 @@ export function GraphEditToolbarChrome({
   const spinDownTexture = useNodeIcon(icons.down, SPIN_BOX_ICONS.down);
 
   const toItemLinear = useItemLinearColorOf();
+  const buttonIconTints = useMemo(
+    () => ({
+      normal: iconModulate(toItemLinear, tint, buttonIconColor(toolbarTheme.buttonColors, 'normal')),
+      pressed: iconModulate(toItemLinear, tint, buttonIconColor(toolbarTheme.buttonColors, 'pressed')),
+      disabled: iconModulate(toItemLinear, tint, buttonIconColor(toolbarTheme.buttonColors, 'disabled')),
+    }),
+    [toItemLinear, tint, toolbarTheme]
+  );
   const { panelRect } = toolbar;
   const fieldBox = toolbarTheme.fieldBoxes.normal;
 
@@ -163,7 +172,8 @@ export function GraphEditToolbarChrome({
                 size={GRAPH_EDIT_ICON_SIZE}
                 texture={iconTextures[item.id] ?? null}
                 tint={tint}
-                iconTint={iconModulate(toItemLinear, tint, buttonIconColor(toolbarTheme.buttonColors, state))}
+                iconTint={buttonIconTints[state]}
+                iconAlignment={HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT}
                 rtl={rtl}
                 renderOrder={pieces.content.key}
                 boxRenderOrder={pieces.boxes.key}
