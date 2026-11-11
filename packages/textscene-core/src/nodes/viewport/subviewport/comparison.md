@@ -68,7 +68,7 @@ A sub-viewport that holds nothing, or holds only non-drawing nodes, still draws 
 
 <!-- compare: image=unit-subviewport-stretch-clear-once status=done fixture=unit-subviewport-stretch-clear-once.tscn -->
 
-A SubViewportContainer with `stretch` sizes its viewport before the viewport's first render (`subviewport_container.cpp:94`), so a `render_target_clear_mode` of ONCE clears the target that the container shows (`renderer_viewport.cpp:375`). The previewer renders such a viewport once its container has laid out and published its rect. The fixture shows an empty viewport at `stretch_shrink` 1, 2 and 3, and one holding a Control and one holding a Polygon2D.
+A SubViewportContainer with `stretch` sizes its viewport before the first render (`subviewport_container.cpp:94`). So a `render_target_clear_mode` of ONCE clears the target that the container shows (`renderer_viewport.cpp:375`). The previewer renders such a viewport once its container has laid out and published its rect. The fixture shows an empty viewport at `stretch_shrink` 1, 2 and 3, and one holding a Control and one holding a Polygon2D.
 
 ## Update mode
 
