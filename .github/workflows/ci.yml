@@ -128,9 +128,6 @@ jobs:
       - uses: ./.github/actions/setup
 
       # Godot renders on lavapipe under xvfb-run, as `pnpm ref:godot` does on a developer's host.
-      # The update comes first: the runner image's package index names a version the mirrors drop
-      # once a newer one is out, and the install then fails.
-      - run: sudo apt-get update
       - run: sudo apt-get install -y --no-install-recommends xvfb mesa-vulkan-drivers
 
       - name: Install Godot
@@ -256,8 +253,6 @@ jobs:
       - uses: ./.github/actions/playwright
 
       # The rasteriser gate in test:gpu needs lavapipe, the driver pnpm ref:godot renders on.
-      # The update comes first, for the reason the godot-ref job gives.
-      - run: sudo apt-get update
       - run: sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers
 
       - run: pnpm test:e2e:web
