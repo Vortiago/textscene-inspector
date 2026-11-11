@@ -12,24 +12,21 @@ import { parseArgs } from 'node:util';
 import { git } from '../githooks/changes.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { coreTestOnlyExports, KEPT_TEST_ONLY_EXPORTS } from '../testOnlyExports.core.mjs';
-import { EXEMPTION_TABLES, prStateReport } from './prState.mjs';
+import { EXEMPTION_TABLES, parsePullRequest, prStateReport } from './prState.mjs';
 
 /** A pull request into a feature branch passes that branch as `--base`. */
 const DEFAULT_BASE = 'origin/main';
 
-/** The draft and merge state of pull request `number`, read through the `gh` CLI. */
+/** GitHub's JSON for pull request `number`, read through the `gh` CLI. */
 function readPullRequest(number) {
   const endpoint = `repos/{owner}/{repo}/pulls/${number}`;
-  let json;
   try {
-    json = execFileSync('gh', ['api', endpoint], { encoding: 'utf8' });
+    return execFileSync('gh', ['api', endpoint], { encoding: 'utf8' });
   } catch (error) {
     throw new Error(`read pull request ${number} with \`gh api ${endpoint}\`: ${error.message}`, {
       cause: error,
     });
   }
-  const { draft, mergeable_state: mergeableState, head } = JSON.parse(json);
-  return { number, draft, mergeableState, headSha: head.sha };
 }
 
 /** A table that moved would leave its edits out of the report with no sign, so a missing one stops the run. */
@@ -42,7 +39,7 @@ function assertExemptionTablesExist() {
 }
 
 /** The committed change only, so every section describes the head commit the report names. */
-function readBranchChange(baseRef, pullNumber) {
+function readBranchChange(baseRef) {
   const headSha = git('rev-parse', 'HEAD');
   const baseSha = git('merge-base', headSha, baseRef);
   return {
@@ -50,13 +47,21 @@ function readBranchChange(baseRef, pullNumber) {
     base: { ref: baseRef, sha: baseSha },
     nameStatus: git('diff', '--name-status', '--no-renames', baseSha, headSha),
     diff: git('diff', '-U0', baseSha, headSha),
-    unkeptTestOnlyExports: coreTestOnlyExports().filter((id) => !KEPT_TEST_ONLY_EXPORTS.includes(id)),
-    pullRequest: pullNumber === undefined ? undefined : readPullRequest(Number(pullNumber)),
   };
+}
+
+function unkeptTestOnlyExports() {
+  return coreTestOnlyExports().filter((id) => !KEPT_TEST_ONLY_EXPORTS.includes(id));
 }
 
 assertExemptionTablesExist();
 const { values } = parseArgs({
   options: { base: { type: 'string', default: DEFAULT_BASE }, pr: { type: 'string' } },
 });
-process.stdout.write(prStateReport(readBranchChange(values.base, values.pr)));
+process.stdout.write(
+  prStateReport({
+    ...readBranchChange(values.base),
+    unkeptTestOnlyExports: unkeptTestOnlyExports(),
+    pullRequest: values.pr === undefined ? undefined : parsePullRequest(readPullRequest(values.pr)),
+  })
+);

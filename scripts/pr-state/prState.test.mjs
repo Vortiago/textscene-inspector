@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { prStateReport } from './prState.mjs';
+import { parsePullRequest, prStateReport } from './prState.mjs';
 
 const HEAD = { sha: '55a649fd0000000000000000000000000000beef', branch: 'claude/y-sort' };
 const BASE = { ref: 'origin/main', sha: '97c833d0000000000000000000000000000cafe' };
@@ -92,6 +92,17 @@ describe('prStateReport', () => {
     expect(report).not.toContain('const order');
   });
 
+  it('quotes a comment that names a fallback, and no code that uses the word (edge case)', () => {
+    const report = reportOf({
+      diff: additions('packages/textscene-core/src/r3f/ySort.ts', 7, [
+        '// Fallback until the nested sort lands: scene order.',
+        'const fallbackFont = theme.fallback;',
+      ]),
+    });
+    expect(report).toContain('ySort.ts:7` // Fallback until the nested sort lands: scene order.');
+    expect(report).not.toContain('fallbackFont');
+  });
+
   it('quotes an added line that records a limit of a feature', () => {
     const report = reportOf({
       diff: additions('packages/textscene-core/src/nodes/control/comparison.md', 12, [
@@ -158,7 +169,7 @@ describe('prStateReport', () => {
     const pullRequest = { number: 1448, draft: true, mergeableState: 'unstable', headSha: 'fc7d2f5a' };
     const report = reportOf({ pullRequest });
     expect(report).toContain('- Pull request #1448: draft, mergeable state `unstable`');
-    expect(report).toContain('its head is `fc7d2f5a`, not the local head. Push or pull first.');
+    expect(report).toContain('Its head is `fc7d2f5a`, not the local head. Push or pull first.');
   });
 
   it('leaves the head warning out when the pull request is at the local head', () => {
@@ -167,5 +178,22 @@ describe('prStateReport', () => {
     });
     expect(report).toContain('- Pull request #7: ready, mergeable state `clean`');
     expect(report).not.toContain('not the local head');
+  });
+});
+
+describe('parsePullRequest', () => {
+  it('reads the draft state, the merge state and the head of a GitHub pull request', () => {
+    const json = JSON.stringify({
+      number: 1448,
+      draft: true,
+      mergeable_state: 'unstable',
+      head: { sha: 'fc7d2f5a' },
+    });
+    expect(parsePullRequest(json)).toEqual({
+      number: 1448,
+      draft: true,
+      mergeableState: 'unstable',
+      headSha: 'fc7d2f5a',
+    });
   });
 });

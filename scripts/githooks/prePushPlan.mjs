@@ -33,9 +33,9 @@ const VENDORED = /^\.claude\/(?:skills\/conventional-commits\/|rules\/|agents\/s
 const EXTENSION_HOST_SUITE = /^apps\/textscene-vscode\/src\/test\//;
 
 /**
- * A source file of core. Adding an export there, or deleting its last production importer, can
+ * A source file of core. Adding an export there, or deleting its last importer inside core, can
  * leave an export that only tests import, so the push runs the scan that finds one. The scan sits
- * beside no source file, and without this the full unit run is the first to report it.
+ * beside no source file. CI stays the first to report an importer deleted outside core.
  */
 const CORE_SOURCE = /^packages\/textscene-core\/src\/.*\.tsx?$/;
 const TEST_ONLY_EXPORT_SCAN = 'scripts/testOnlyExports.test.mjs';

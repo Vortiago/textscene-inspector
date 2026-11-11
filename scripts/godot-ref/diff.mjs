@@ -10,20 +10,21 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { basename, join, relative as relativePath, resolve, sep } from 'node:path';
 import { PNG } from 'pngjs';
+import { tableLines } from '../compare-docs/markdownTable.mjs';
+import { REPO_ROOT } from '../repoRoot.mjs';
 import { compareImages } from '../visual/imageDelta.mjs';
 import { renderReference } from './run.mjs';
 import { captureOurs } from './capture-ours.mjs';
 import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 
-const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 const FIXTURE_DIR = join(REPO_ROOT, 'scenes', 'fixtures');
 const OUT_DIR = join(import.meta.dirname, 'output');
-/** The trees the catalog lists from their own `res://` root, so a name drops the prefix. */
 /**
  * A leftover against Godot of at most this many levels is residue: recorded, not investigated.
  * So each result counts the pixels past it, which decide whether a difference is residue.
  */
 const RESIDUE_MAX_DELTA = 2;
+/** The trees the catalog lists from their own `res://` root, so a name drops the prefix. */
 const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `${root}/`);
 
 function usage() {
@@ -198,7 +199,7 @@ function formatResult(result) {
     `(${result.changedPixels} px of ${result.width}x${result.height})  ` +
     `max ${String(result.maxChannelDelta).padStart(3)}/255  ` +
     `mean ${result.meanChannelError.toFixed(3)}/255  ` +
-    `over ${result.over.delta}/255 ${result.over.pixels} px${result.over.pixels > 0 ? ` at ${placeOf(result.over.bounds)}` : ''}` +
+    `over ${RESIDUE_MAX_DELTA}/255 ${result.over.pixels} px${result.over.bounds ? ` at ${placeOf(result.over.bounds)}` : ''}` +
     (result.diffPath ? `  ${result.diffPath}` : '')
   );
 }
@@ -213,12 +214,16 @@ function placeOf({ left, top, right, bottom }) {
  * whether a difference is residue. A scene with no numbers says why in its second cell.
  */
 export function residueTable(results) {
-  return [
-    `| Scene | Changed px | Max /255 | Mean /255 | Px over ${RESIDUE_MAX_DELTA}/255 | Where |`,
-    '| --- | --- | --- | --- | --- | --- |',
-    ...results.map((result) => `| \`${result.label}\` | ${residueCells(result).join(' | ')} |`),
-    '',
-  ].join('\n');
+  const header = [
+    'Scene',
+    'Changed px',
+    'Max /255',
+    'Mean /255',
+    `Px over ${RESIDUE_MAX_DELTA}/255`,
+    'Where',
+  ];
+  const rows = results.map((result) => [`\`${result.label}\``, ...residueCells(result)]);
+  return [...tableLines(header, rows), ''].join('\n');
 }
 
 function residueCells(result) {

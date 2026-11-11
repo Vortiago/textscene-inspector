@@ -8,6 +8,7 @@
 import { cpSync, readdirSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { basename, dirname, extname, join, relative } from 'node:path';
+import { gitEnvironmentFor } from '../vendor-git.mjs';
 
 /** The binary form a text copy replaces: a scene, as the previewer loads only a text scene. */
 const TEXT_COPY_EXTENSIONS = new Set(['.scn']);
@@ -41,16 +42,12 @@ function binaryResourceBeside(checkout, rel) {
   return join(dirname(rel), matches[0].name);
 }
 
-/**
- * The ceiling keeps git from finding a repository above the checkout. Inside one, `git apply`
- * reads each path against that repository, skips every file and exits 0.
- */
 function applyPatch(patch, checkout) {
   try {
     execFileSync('git', ['apply', '--whitespace=nowarn', patch], {
       cwd: checkout,
       stdio: 'pipe',
-      env: { ...process.env, GIT_CEILING_DIRECTORIES: dirname(checkout) },
+      env: gitEnvironmentFor(checkout),
     });
   } catch (e) {
     throw new Error(`${basename(patch)} does not apply to the checkout: ${e.stderr ?? e}`, {

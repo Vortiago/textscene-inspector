@@ -105,7 +105,7 @@ describe('compareImages', () => {
     setRed(3, 2, 9);
     setRed(7, 5, 3);
     const { over } = compareImages(buffer(expected), buffer(actual), { overDelta: 2 });
-    expect(over).toEqual({ delta: 2, pixels: 2, bounds: { left: 3, top: 2, right: 7, bottom: 5 } });
+    expect(over).toEqual({ pixels: 2, bounds: { left: 3, top: 2, right: 7, bottom: 5 } });
   });
 
   it('counts no pixel that moved by exactly the step (edge case)', () => {
@@ -116,7 +116,7 @@ describe('compareImages', () => {
         overDelta: 2,
       }
     );
-    expect(over).toEqual({ delta: 2, pixels: 0, bounds: null });
+    expect(over).toEqual({ pixels: 0, bounds: null });
   });
 
   it('reports nothing about a step unless one is asked for', () => {

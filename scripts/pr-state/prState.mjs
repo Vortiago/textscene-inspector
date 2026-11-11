@@ -4,15 +4,19 @@
  * work, the exemption tables it edits and the exports only tests import. It reads git's text only.
  */
 
+import { changedEntries } from '../gitNameStatus.mjs';
 import { goldenNameOf } from '../visual/baselinePath.mjs';
 
-const CHANGE_WORDS = { A: 'added', D: 'removed' };
-
 /** A line that puts work off or switches a test off: a reviewer asks for the reason of each. */
-const DEFERS_WORK = /\b(TODO|FIXME|HACK)\b|\b(it|test|describe)\.(skip|todo|only)\b|\bfallback\b/;
+const DEFERS_WORK = /\b(TODO|FIXME|HACK)\b|\b(it|test|describe)\.(skip|todo|only)\b/;
+
+/** A comment that names a fallback. Code is left out: core uses the word in over 500 lines of it. */
+const FALLBACK_COMMENT = /(\/\/|\/\*|^\s*\*|#|<!--).*\bfallback\b/i;
 
 /** A line that records a gap of a feature, in the words the comparison sheets use. */
 const RECORDS_LIMIT = /known limitation|approximated|not supported|unsupported/i;
+
+const FLAGS = [DEFERS_WORK, FALLBACK_COMMENT, RECORDS_LIMIT];
 
 /** The files that hold a table of exemptions from a gate, each with what its table exempts. */
 export const EXEMPTION_TABLES = new Map([
@@ -20,6 +24,8 @@ export const EXEMPTION_TABLES = new Map([
   ['scripts/testOnlyExports.core.mjs', 'the exports kept although only tests import them'],
   ['scripts/ci/visualScope.mjs', 'the files a change may touch with no visual run'],
   ['eslint.config.js', 'the lint rules and the files they skip'],
+  ['scripts/vendor-prune.mjs', 'the importers whose sidecars the previewer reads'],
+  ['scripts/import-sidecar-allowlist.test.mjs', 'the import parameters a vendored sidecar may set'],
 ]);
 
 /**
@@ -32,12 +38,18 @@ export const EXEMPTION_TABLES = new Map([
  * @property {{ number: number, draft: boolean, mergeableState: string, headSha: string }} [pullRequest]
  */
 
+/** The draft state, the merge state and the head of a pull request, from GitHub's JSON for it. */
+export function parsePullRequest(json) {
+  const { number, draft, mergeable_state: mergeableState, head } = JSON.parse(json);
+  return { number, draft, mergeableState, headSha: head.sha };
+}
+
 /**
  * @param {BranchChange} change
  * @returns {string} the report, as Markdown.
  */
 export function prStateReport(change) {
-  const files = parseChangedFiles(change.nameStatus);
+  const files = changedEntries(change.nameStatus);
   return [
     '# Pull request state',
     '',
@@ -68,21 +80,13 @@ function pullRequestLine({ number, draft, mergeableState, headSha }, localSha) {
   const state = `- Pull request #${number}: ${draft ? 'draft' : 'ready'}, mergeable state \`${mergeableState}\``;
   return headSha === localSha
     ? state
-    : `${state}; its head is \`${headSha}\`, not the local head. Push or pull first.`;
+    : `${state}. Its head is \`${headSha}\`, not the local head. Push or pull first.`;
 }
 
 /** A titled list with its count, or "None." so an empty section reads as checked, not as missing. */
 function section(title, entries) {
   const body = entries.length === 0 ? 'None.' : entries.map((entry) => `- ${entry}`).join('\n');
   return `## ${title} (${entries.length})\n\n${body}\n`;
-}
-
-/** The `{ change, path }` of each `<status>\t<path>` line. A type change reads as changed. */
-function parseChangedFiles(nameStatus) {
-  return nameStatus.split('\n').flatMap((line) => {
-    const [status, path] = line.split('\t');
-    return path ? [{ change: CHANGE_WORDS[status] ?? 'changed', path }] : [];
-  });
 }
 
 function baselineEntry({ change, path }) {
@@ -105,7 +109,7 @@ function exemptionEntry({ path }) {
 
 function flaggedLines(diff) {
   return addedLines(diff)
-    .filter(({ text }) => DEFERS_WORK.test(text) || RECORDS_LIMIT.test(text))
+    .filter(({ text }) => FLAGS.some((flag) => flag.test(text)))
     .map(({ path, line, text }) => `\`${path}:${line}\` ${text.trim()}`);
 }
 

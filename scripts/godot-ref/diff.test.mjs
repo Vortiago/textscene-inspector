@@ -146,7 +146,7 @@ describe('comparePngs', () => {
     ours.data[(4 * 10 + 6) * 4] = 59;
     ours.data[0] = 52;
     const result = comparePngs(solidPng(10, 10, [50, 50, 50]), PNG.sync.write(ours));
-    expect(result.over).toEqual({ delta: 2, pixels: 1, bounds: { left: 6, top: 4, right: 6, bottom: 4 } });
+    expect(result.over).toEqual({ pixels: 1, bounds: { left: 6, top: 4, right: 6, bottom: 4 } });
   });
 
   it('names both shapes instead of a number when the frames differ in size', () => {
@@ -324,7 +324,7 @@ describe('residueTable', () => {
     changedPixels: 134,
     maxChannelDelta: 5,
     meanChannelError: 0.0123,
-    over: { delta: 2, pixels: 14, bounds: { left: 540, top: 130, right: 560, bottom: 150 } },
+    over: { pixels: 14, bounds: { left: 540, top: 130, right: 560, bottom: 150 } },
   };
 
   it('gives one row per scene with the numbers the residue rule reads', () => {
@@ -339,7 +339,7 @@ describe('residueTable', () => {
   });
 
   it('leaves the place empty for a scene with no pixel past the step', () => {
-    const clean = { ...measured, maxChannelDelta: 1, over: { delta: 2, pixels: 0, bounds: null } };
+    const clean = { ...measured, maxChannelDelta: 1, over: { pixels: 0, bounds: null } };
     expect(residueTable([clean])).toContain('| `unit-shadow` | 134 | 1 | 0.012 | 0 |  |');
   });
 

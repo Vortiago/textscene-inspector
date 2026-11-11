@@ -43,7 +43,7 @@ export function compareImages(expectedBuffer, actualBuffer, { diff = false, over
   let changedPixels = 0;
   let maxChannelDelta = 0;
   let channelErrorSum = 0;
-  const over = overDelta === undefined ? undefined : { delta: overDelta, pixels: 0, bounds: null };
+  const over = overDelta === undefined ? undefined : { pixels: 0, bounds: null };
 
   for (let i = 0; i < expected.data.length; i += 4) {
     let pixelDelta = 0;
@@ -56,7 +56,7 @@ export function compareImages(expectedBuffer, actualBuffer, { diff = false, over
       changedPixels++;
       if (maxChannelDelta < pixelDelta) maxChannelDelta = pixelDelta;
     }
-    if (over && pixelDelta > over.delta) countOver(over, (i / 4) % width, Math.floor(i / 4 / width));
+    if (over && pixelDelta > overDelta) countOver(over, (i / 4) % width, Math.floor(i / 4 / width));
     if (diffImage) writeDiffPixel(diffImage.data, expected.data, i, pixelDelta);
   }
 
@@ -82,13 +82,12 @@ export function compareImages(expectedBuffer, actualBuffer, { diff = false, over
 /** Adds the pixel at (`x`, `y`) to `over`, and grows its inclusive bounding box to hold it. */
 function countOver(over, x, y) {
   over.pixels++;
-  const { left = x, top = y, right = x, bottom = y } = over.bounds ?? {};
-  over.bounds = {
-    left: Math.min(left, x),
-    top: Math.min(top, y),
-    right: Math.max(right, x),
-    bottom: Math.max(bottom, y),
-  };
+  over.bounds ??= { left: x, top: y, right: x, bottom: y };
+  const { bounds } = over;
+  if (x < bounds.left) bounds.left = x;
+  if (y < bounds.top) bounds.top = y;
+  if (x > bounds.right) bounds.right = x;
+  if (y > bounds.bottom) bounds.bottom = y;
 }
 
 /** Red where the pixel moved, a faded copy of the baseline where it did not. */

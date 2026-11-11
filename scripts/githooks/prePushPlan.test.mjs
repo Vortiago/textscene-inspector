@@ -30,11 +30,12 @@ const typeChecks = (...dirs) => {
   ];
 };
 
+const EXPORT_SCAN = 'pnpm exec vitest run scripts/testOnlyExports.test.mjs';
+
 describe('planChecks', () => {
   it('runs the test-only export scan when a source file of core changes or goes', () => {
-    const scan = 'pnpm exec vitest run scripts/testOnlyExports.test.mjs';
-    expect(plan(['packages/textscene-core/src/r3f/ySort.ts'])).toContain(scan);
-    expect(plan([], ['packages/textscene-core/src/r3f/ySort.tsx'])).toContain(scan);
+    expect(plan(['packages/textscene-core/src/r3f/ySort.ts'])).toContain(EXPORT_SCAN);
+    expect(plan([], ['packages/textscene-core/src/r3f/ySort.tsx'])).toContain(EXPORT_SCAN);
   });
 
   it('runs the scan in the one test run, with the tests beside the changed file', () => {
@@ -45,8 +46,8 @@ describe('planChecks', () => {
   });
 
   it('leaves the scan out for a change outside the source of core (edge case)', () => {
-    const plans = [plan(['apps/textscene-web/src/App.tsx']), plan(['packages/textscene-core/README.md'])];
-    expect(plans.flat().join(' ')).not.toContain('testOnlyExports');
+    expect(plan(['apps/textscene-web/src/App.tsx'])).not.toContain(EXPORT_SCAN);
+    expect(plan(['packages/textscene-core/README.md'])).not.toContain(EXPORT_SCAN);
   });
 
   it('runs nothing for files no check reads', () => {
