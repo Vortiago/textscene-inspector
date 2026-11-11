@@ -29,7 +29,7 @@ export function solvedDrawTransformOf(
  * The origin of a Control's canvas item in its parent, which `_collect_ysort_children` sorts on
  * (`renderer_canvas_cull.cpp:131`).
  */
-export function controlItemOriginOf(node: SolveNode, solved: SolvedControl, snapToPixels: boolean): Vector2 {
+function controlItemOriginOf(node: SolveNode, solved: SolvedControl, snapToPixels: boolean): Vector2 {
   return controlItemOriginUnder(solved.rect, VECTOR2_ZERO, solvedDrawTransformOf(node, solved), snapToPixels);
 }
 
