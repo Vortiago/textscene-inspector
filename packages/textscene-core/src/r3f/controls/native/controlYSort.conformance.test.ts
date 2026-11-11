@@ -80,6 +80,14 @@ describe('applyYSortShifts', () => {
     expect((moved as unknown as Record<string, unknown>)[key]).toBe(SENTINEL)
   );
 
+  it('leaves a top_level node where scene order drew it', () => {
+    const top = solveNodeAt('Root/A/Top', 12);
+    (top.node as { properties: Record<string, unknown> }).properties = { top_level: true };
+    const parent = { ...solveNodeAt('Root/A', 10), children: [top] };
+    const [movedParent] = applyYSortShifts([parent], shifts) as SolveNode[];
+    expect(movedParent!.children[0]!.paintRange).toEqual(range(12));
+  });
+
   it('returns the same tree when nothing moved', () => {
     expect(applyYSortShifts(tree, new Map())).toBe(tree);
   });

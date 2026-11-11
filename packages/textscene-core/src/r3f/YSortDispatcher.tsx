@@ -133,7 +133,12 @@ function SortedChildren({
   const publishShifts = usePublishYSortShifts();
   const owner = useId();
   useLayoutEffect(() => {
-    if (!publishShifts || !hasControl(node)) return;
+    if (!publishShifts) return;
+    // A node that no longer holds a Control withdraws the shifts it gave, which the unmount cleanup alone would keep.
+    if (!hasControl(node)) {
+      publishShifts(owner, null);
+      return;
+    }
     const sceneOrderBases = sceneOrderBasesBelow(node, paintRange, basePath);
     const shifts = new Map<string, YSortShift>();
     for (const { item, range } of packed) {
