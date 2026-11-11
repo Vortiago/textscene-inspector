@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import { drawKeyedObjects } from '../canvasKeyWindow';
 import { drawOffscreen } from '../offscreen';
+import { withScenePose } from '../sceneRenderCamera';
 import { perObject } from '../../utils/perObject';
 import { beginStep, endStep } from '../frameProfile/frameProfile';
 import { clipOfCamera } from '../../nodes/viewport/subviewport/viewportLightPassHost';
@@ -60,6 +61,19 @@ export function drawCanvasGroups(
   scene.updateMatrixWorld();
   // The camera sits outside the scene, and the regions read its view before the first render updates it.
   camera.updateMatrixWorld();
+  // A buffer renders the subtree of its group, which fires no hook of the scene, so the pose is held.
+  withScenePose(scene, () => drawFittedGroups(gl, scene, camera, frame, draw, groups));
+}
+
+/** Fits the groups to the scene as its matrices hold it, then draws their buffers and the frame. */
+function drawFittedGroups(
+  gl: THREE.WebGLRenderer,
+  scene: THREE.Object3D,
+  camera: THREE.Camera,
+  frame: CanvasFrameTarget,
+  draw: () => void,
+  groups: SceneGroups
+): void {
   const keyed = keyedScene(scene, camera, keyIsInWindowSpan(groups.entries));
   const nesting = nestingOf(groups, clipGroupsDrawingNothing(groups.entries, keyed));
   const drawn = drawnBoxes(keyed, nesting.innermostFirst);

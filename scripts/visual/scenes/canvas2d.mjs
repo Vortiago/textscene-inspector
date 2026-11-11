@@ -347,6 +347,36 @@ export const CANVAS_2D_SCENES = [
   // lower half and orange (255,127,51) at (330,160). Undeformed, each strip would cover (240,100) and
   // (390,120) instead, which read the background.
   { name: 'polygon2d-skeleton', file: 'unit-polygon2d-skeleton.tscn', mode: '2d' },
+  // A LookAt modification turns the bone at the red target below it. Godot probes: orange
+  // (242,140,38) at (294,250) and blue (51,153,242) at (264,250). Unsolved, the bars lie flat and
+  // both points read the background.
+  { name: 'skeleton2d-lookat', file: 'unit-skeleton2d-lookat.tscn', mode: '2d' },
+  // The LookAt scene under a CanvasGroup, whose buffer draws the solved pose too. Godot probes as
+  // for skeleton2d-lookat: orange at (294,250) and blue at (264,250).
+  { name: 'skeleton2d-canvas-group', file: 'unit-skeleton2d-canvas-group.tscn', mode: '2d' },
+  // The same scene with the stack not enabled: the bones keep the scene's pose. Godot probes:
+  // orange at (304,150) and blue at (304,180), and background at (294,250).
+  { name: 'skeleton2d-stack-disabled', file: 'unit-skeleton2d-stack-disabled.tscn', mode: '2d' },
+  // TwoBoneIK bends two bones so that the second ends on the red target at (450,350). Godot probes:
+  // orange at (362,174), blue at (442,272) and the skinned strip, green (76,204,102), at (421,236).
+  { name: 'skeleton2d-twoboneik', file: 'unit-skeleton2d-twoboneik.tscn', mode: '2d' },
+  // The same solve at a stack strength of 0.5: each bone turns half way. Godot probes: orange at
+  // (375,162) and blue at (497,227), which the full solve leaves as background.
+  { name: 'skeleton2d-stack-strength', file: 'unit-skeleton2d-stack-strength.tscn', mode: '2d' },
+  // CCDIK curls three bones until the Tip node meets the red target at (400,380). Godot probes:
+  // orange at (298,168), blue at (355,236) and purple (153,102,229) at (386,329).
+  { name: 'skeleton2d-ccdik', file: 'unit-skeleton2d-ccdik.tscn', mode: '2d' },
+  // CCDIK on four equal bones, whose first pass folds the last bone onto its parent: the chain then
+  // bends to the side the last bit of each bone transform picks. Godot probes: orange at (441,137),
+  // blue at (452,163), green (76,204,102) at (468,170) and purple at (477,176).
+  { name: 'skeleton2d-ccdik-fold', file: 'unit-skeleton2d-ccdik-fold.tscn', mode: '2d' },
+  // FABRIK reaches the same target with three bones. Godot probes: orange at (290,173), blue at
+  // (365,238) and purple at (397,327).
+  { name: 'skeleton2d-fabrik', file: 'unit-skeleton2d-fabrik.tscn', mode: '2d' },
+  // A FABRIK chain on the skeleton Near whose joints name the bones of the skeleton Far: Far reaches
+  // the red target at (330,500), and Near takes the same pose. Godot probes: orange at (237,134) and
+  // (237,344), blue at (300,179) and (300,389). Unsolved, all four read the background.
+  { name: 'skeleton2d-fabrik-foreign', file: 'unit-skeleton2d-fabrik-foreign.tscn', mode: '2d' },
   // clip_children CLIP_ONLY: the red child shows only over the green parent, in its own colour. Godot
   // probes: (125,125) background, the parent alone; (175,175) red; (425,125) green, the unclipped twin.
   { name: 'clip-children-only', file: 'unit-clip-children-only.tscn', mode: '2d' },

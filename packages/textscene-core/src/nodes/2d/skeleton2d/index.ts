@@ -1,15 +1,14 @@
 /**
- * Registers the Skeleton2D parser. It reuses the Node2D parse, and its property
- * knowledge lives in linterParser.ts. Its modification stack is not run here yet
- * (ADR-0045), so index.r3f.ts registers Node2D as `pending`.
+ * Registers the Skeleton2D parser: the Node2D parse and the modification stack reference.
+ * linterParser.ts holds the property validators.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
-import { parseNode2D } from '../../base/node2d/parser';
+import { parseSkeleton2D } from './parser';
 
 const skeleton2DRegistration: NodeTypeRegistration = {
   typeName: 'Skeleton2D',
-  parser: parseNode2D,
+  parser: parseSkeleton2D,
 };
 
 nodeRegistry.register(skeleton2DRegistration);

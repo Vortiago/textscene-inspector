@@ -9,7 +9,11 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { transform2DGetScale, type Transform2DColumns } from '../../../godot/math/transform2d.js';
+import {
+  transform2DGetScale,
+  transform2DOrigin,
+  type Transform2DColumns,
+} from '../../../godot/math/transform2d.js';
 import {
   normalizedVector2,
   vector2Add,
@@ -18,6 +22,7 @@ import {
   vector2Sub,
   type Vector2,
 } from '../../../godot/math/vector.js';
+import type { BoneReach } from './boneReach.js';
 
 /** `editors/2d/bone_width` and `editors/2d/bone_outline_size` (`editor_settings.cpp:974,980`). */
 const BONE_WIDTH = 5;
@@ -36,12 +41,6 @@ export interface BoneKite {
   fill: Vector2[];
   /** The border, a hexagon that holds the kite. */
   outline: Vector2[];
-}
-
-/** What a bone with no Bone2D child draws along (`skeleton_2d.cpp:329`). */
-export interface BoneReach {
-  length: number;
-  angle: number;
 }
 
 function rotated({ x, y }: Vector2, angle: number): Vector2 {
@@ -103,9 +102,7 @@ export function boneKitesOf(
   const globalRotation = Math.atan2(global.b, global.a);
   const rels =
     childOrigins.length > 0
-      ? childOrigins.map((origin) =>
-          rotated(vector2Sub(origin, { x: global.tx, y: global.ty }), -globalRotation)
-        )
+      ? childOrigins.map((origin) => rotated(vector2Sub(origin, transform2DOrigin(global)), -globalRotation))
       : reachRel(reach, scale);
   return rels.map((rel) => {
     const kite = kiteTo(rel);

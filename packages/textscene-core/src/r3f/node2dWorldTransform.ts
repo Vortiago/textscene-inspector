@@ -8,6 +8,7 @@ import type { RawNode, TscnNode } from '../parser/types';
 import { liveNodeChain, type LiveTreeContext } from './liveSceneTree';
 import { NO_PATCHES, type NodePatches } from './nodePatch';
 import { parentLookup, type ParentLookup } from '../linter/parentType.js';
+import { transform2DOrigin } from '../godot/math/transform2d.js';
 import { resolveGlobalTransform2D, type Node2DPose } from '../nodes/canvasitem/shared/globalTransform2D.js';
 
 /**
@@ -51,5 +52,5 @@ export function node2dWorldPosition(
     posesAlong(chain, path, placed)
   );
   if (verdict.kind === 'unknowable') return null;
-  return { x: verdict.transform.tx, y: verdict.transform.ty };
+  return transform2DOrigin(verdict.transform);
 }

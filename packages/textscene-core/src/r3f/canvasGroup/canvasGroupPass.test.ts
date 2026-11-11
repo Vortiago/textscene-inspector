@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { offscreenRendererState } from '../../nodes/viewport/subviewport/offscreenRenderer.testkit';
 import { drawCanvasGroups, registerCanvasGroup } from './canvasGroupPass';
+import { observeScenePose } from '../sceneRenderCamera';
 import { canvasGroupRectTag } from './keyedScene';
 import type { CanvasGroupEntry, CompositeEntry } from './groupEntries';
 import type { KeySpan } from './groupWindow';
@@ -120,6 +121,28 @@ describe('drawCanvasGroups', () => {
       { target: null, seen: ['before', 'after'] },
     ]);
     expect(seen(meshes.grouped, camera)).toBe(true);
+  });
+
+  // A buffer draws the subtree of its group, which is no render of the scene and fires no hook of it.
+  it('fits and draws a group with the pose of the scene written', () => {
+    const scene = new THREE.Scene();
+    item(scene, 11, 0);
+    const steps: string[] = [];
+    const group = {
+      ...entry(WINDOW, new THREE.WebGLRenderTarget(1, 1)),
+      fit: () => (steps.push('fit'), FITTED),
+    };
+    register(scene, group);
+    releases.push(
+      observeScenePose(scene, { write: () => steps.push('write'), restore: () => steps.push('restore') })
+    );
+    const { gl } = recordingRenderer({});
+    const render = gl.render;
+    gl.render = (root, renderCamera) => (steps.push('draw'), render(root, renderCamera));
+
+    drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+    expect(steps).toEqual(['write', 'fit', 'draw', 'draw', 'restore']);
   });
 
   it('clears the buffer when the renderer clears no colour on render, as over a kept target', () => {

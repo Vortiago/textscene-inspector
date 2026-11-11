@@ -130,7 +130,7 @@ function transform2DFromThreeMatrixInto(out: MutableTransform2D, matrix: THREE.M
   return out;
 }
 
-/** Written only by {@link canvasTransformInto}, and read back before it returns. */
+/** Written by {@link canvasTransformInto} and {@link transform2DWithin}, and read back before each returns. */
 const scratchMatrix = new THREE.Matrix4();
 
 /** The node's global transform in Godot pixels, written into `out`: its world matrix within the frame of its canvas. */
@@ -140,6 +140,25 @@ export function canvasTransformInto(out: MutableTransform2D, object: THREE.Objec
     ? scratchMatrix.copy(frame.matrixWorld).invert().multiply(object.matrixWorld)
     : object.matrixWorld;
   return transform2DFromThreeMatrixInto(out, matrix);
+}
+
+/**
+ * The transform of `object` within `ancestor` in Godot pixels, or null where `ancestor` is not
+ * above it. The product of the local matrices between the two, not a world matrix through an
+ * inverse: a node then keeps the transform its file stores, to the last bit.
+ *
+ * @canonical The transform of a drawn 2D node within a drawn ancestor
+ */
+export function transform2DWithin(
+  object: THREE.Object3D,
+  ancestor: THREE.Object3D
+): Transform2DColumns | null {
+  scratchMatrix.copy(object.matrix);
+  for (let above = object.parent; above !== ancestor; above = above.parent) {
+    if (!above) return null;
+    scratchMatrix.premultiply(above.matrix);
+  }
+  return transform2DFromThreeMatrix(scratchMatrix);
 }
 
 /**

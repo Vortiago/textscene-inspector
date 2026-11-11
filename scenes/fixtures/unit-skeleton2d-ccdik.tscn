@@ -1,0 +1,70 @@
+[gd_scene format=3]
+
+; Moves one variable: a SkeletonModification2DCCDIK in an enabled stack. No other golden runs a
+; CCDIK solve, so none shows a regression in its chain. The three bones, their bar children and the
+; strip skinned to them curl until the Tip node reaches the red target.
+
+[sub_resource type="SkeletonModification2DCCDIK" id="chain"]
+target_nodepath = NodePath("../Target")
+tip_nodepath = NodePath("A/B/C/Tip")
+ccdik_data_chain_length = 3
+joint_data/0/bone_index = 0
+joint_data/0/bone2d_node = NodePath("A")
+joint_data/1/bone_index = 1
+joint_data/1/bone2d_node = NodePath("A/B")
+joint_data/2/bone_index = 2
+joint_data/2/bone2d_node = NodePath("A/B/C")
+
+[sub_resource type="SkeletonModificationStack2D" id="stack"]
+enabled = true
+modification_count = 1
+modifications/0 = SubResource("chain")
+
+[node name="Root" type="Node2D"]
+
+[node name="Skeleton" type="Skeleton2D" parent="."]
+position = Vector2(250, 150)
+modification_stack = SubResource("stack")
+
+[node name="A" type="Bone2D" parent="Skeleton"]
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+
+[node name="Bar" type="Polygon2D" parent="Skeleton/A"]
+color = Color(0.95, 0.55, 0.15, 1)
+polygon = PackedVector2Array(0, -10, 100, -10, 100, 10, 0, 10)
+
+[node name="B" type="Bone2D" parent="Skeleton/A"]
+position = Vector2(100, 0)
+rotation = 0.3
+rest = Transform2D(1, 0, 0, 1, 100, 0)
+
+[node name="Bar" type="Polygon2D" parent="Skeleton/A/B"]
+color = Color(0.2, 0.6, 0.95, 1)
+polygon = PackedVector2Array(0, -10, 100, -10, 100, 10, 0, 10)
+
+[node name="C" type="Bone2D" parent="Skeleton/A/B"]
+position = Vector2(100, 0)
+rest = Transform2D(1, 0, 0, 1, 100, 0)
+auto_calculate_length_and_angle = false
+length = 100.0
+
+[node name="Bar" type="Polygon2D" parent="Skeleton/A/B/C"]
+color = Color(0.6, 0.4, 0.9, 1)
+polygon = PackedVector2Array(0, -10, 100, -10, 100, 10, 0, 10)
+
+[node name="Tip" type="Node2D" parent="Skeleton/A/B/C"]
+position = Vector2(100, 0)
+
+[node name="Strip" type="Polygon2D" parent="."]
+position = Vector2(250, 150)
+skeleton = NodePath("../Skeleton")
+color = Color(0.3, 0.8, 0.4, 1)
+polygon = PackedVector2Array(0, 20, 100, 20, 200, 20, 300, 20, 300, 40, 200, 40, 100, 40, 0, 40)
+bones = [NodePath("A"), PackedFloat32Array(1, 0.5, 0, 0, 0, 0, 0.5, 1), NodePath("A/B"), PackedFloat32Array(0, 0.5, 0.5, 0, 0, 0.5, 0.5, 0), NodePath("A/B/C"), PackedFloat32Array(0, 0, 0.5, 1, 1, 0.5, 0, 0)]
+
+[node name="Target" type="Node2D" parent="."]
+position = Vector2(400, 380)
+
+[node name="Mark" type="Polygon2D" parent="Target"]
+color = Color(0.9, 0.25, 0.25, 1)
+polygon = PackedVector2Array(-6, -6, 6, -6, 6, 6, -6, 6)

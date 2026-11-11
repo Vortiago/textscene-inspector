@@ -79,6 +79,7 @@ import './noise/fastnoiselite/index.js';
 import './tileset/index.js';
 import './meshlibrary/index.js';
 import './skin/index.js';
+import './skeleton/skeletonmodificationstack2d/index.js';
 
 // Foreign formats
 import './formats/binaryresource/index.js';

@@ -1,5 +1,5 @@
 /**
- * The Skeleton2D scene pass over the Live scene tree. A Polygon2D attaches the Skeleton2D its
+ * The Polygon skin scene pass over the Live scene tree. A Polygon2D attaches the Skeleton2D its
  * `skeleton` path names when `invert_enabled` is off and `bones` is not empty
  * (`polygon_2d.cpp:127-132`), and each `bones` entry finds its Bone2D from the skeleton
  * (`polygon_2d.cpp:257-266`).
@@ -44,26 +44,8 @@ function bindingOf(content: string): PolygonSkeletonBinding | undefined {
 }
 
 describe('bindPolygonsToSkeletons', () => {
-  it('binds the bones of the named Skeleton2D in tree order', () => {
-    const binding = bindingOf(scene(UPPER_STRIP));
-    expect(binding?.skeletonPath).toBe('Root/Skeleton');
-    expect(binding?.bonePaths).toEqual([
-      'Root/Skeleton/Upper',
-      'Root/Skeleton/Upper/Lower',
-      'Root/Skeleton/Upper/Lower/Free',
-    ]);
-  });
-
-  it('inverts the rest each bone composes down the chain', () => {
-    const binding = bindingOf(scene(UPPER_STRIP));
-    const { a, b, c, d, tx, ty } = binding!.restInverses[1]!;
-    expect([a, b, c, d, tx, ty].map((value) => value + 0)).toEqual([1, 0, 0, 1, -100, 0]);
-  });
-
-  it('leaves a singular rest uninverted, as affine_invert does', () => {
-    // The unset rest of Free zeroes the basis, and its parent's rest still carries the origin.
-    const binding = bindingOf(scene(UPPER_STRIP));
-    expect(binding?.restInverses[2]).toEqual({ a: 0, b: 0, c: 0, d: 0, tx: 100, ty: 0 });
+  it('binds the Skeleton2D the polygon names', () => {
+    expect(bindingOf(scene(UPPER_STRIP))?.skeletonPath).toBe('Root/Skeleton');
   });
 
   it('weights each vertex to the bone its entry names', () => {

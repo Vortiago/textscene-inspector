@@ -5,9 +5,10 @@
  * root (ADR-0060). It also ranks the kites in Godot's draw order.
  */
 
+import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
 import type { LiveTree } from '../../../r3f/liveSceneTree.js';
-import { perObject } from '../../../utils/perObject.js';
-import { sameData } from '../../../utils/sameData.js';
+import { keptPerLivePath } from '../../../r3f/keptPerLivePath.js';
+import { bindSkeleton2DRigs } from '../skeleton2d/skeletonRig.js';
 
 /** What a Bone2D needs of the tree to draw its kite. */
 export interface BoneKiteSource {
@@ -21,19 +22,17 @@ export interface BoneKiteSource {
    * adding a bone changes only the kites after it.
    */
   drawOrder: number;
+  /** The Skeleton2D the bone joins and its index there, or null for a bone that joins none. */
+  joint: BoneJoint | null;
 }
 
-/** Written only by {@link kept}: the last source of each bone node, by live path. */
-const keptSources = perObject(() => new Map<string, BoneKiteSource>());
-
-/** `source`, or the equal one this bone had before, so a load that changes nothing re-renders nothing. */
-function kept(node: object, bonePath: string, source: BoneKiteSource): BoneKiteSource {
-  const sources = keptSources(node);
-  const previous = sources.get(bonePath);
-  if (previous && sameData(previous, source)) return previous;
-  sources.set(bonePath, source);
-  return source;
+export interface BoneJoint {
+  /** The live path of the Skeleton2D. */
+  skeletonPath: string;
+  index: number;
 }
+
+const kept = keptPerLivePath<BoneKiteSource>();
 
 /** The kite source of each Bone2D of `tree`, by the live path of the bone. */
 export function bindBoneChildren(tree: LiveTree): ReadonlyMap<string, BoneKiteSource> {
@@ -47,10 +46,14 @@ export function bindBoneChildren(tree: LiveTree): ReadonlyMap<string, BoneKiteSo
     descend(path);
     bones.push({ path, node: step.node, children });
   });
+  const joints = new Map<string, BoneJoint>();
+  for (const [skeletonPath, rig] of liveScenePassResults(bindSkeleton2DRigs, tree)) {
+    for (const [bonePath, index] of rig.indexOf) joints.set(bonePath, { skeletonPath, index });
+  }
   return new Map(
     bones.map(({ path, node, children }, rank) => [
       path,
-      kept(node, path, { children, drawOrder: rank / (rank + 1) }),
+      kept(node, path, { children, drawOrder: rank / (rank + 1), joint: joints.get(path) ?? null }),
     ])
   );
 }
