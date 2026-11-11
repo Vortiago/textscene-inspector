@@ -37,6 +37,16 @@ describe('parseWindow', () => {
     });
   });
 
+  it('drops a force_native the setter refuses on a visible window (window.cpp:1384-1386)', () => {
+    expect(parseWindow(heading('Window'), { force_native: 'true' }).force_native).toBe(false);
+  });
+
+  it('keeps a force_native written while the window is hidden', () => {
+    expect(parseWindow(heading('Window'), { visible: 'false', force_native: 'true' }).force_native).toBe(
+      true
+    );
+  });
+
   it('hides a Popup and drops its border unless the scene says otherwise', () => {
     expect(parseWindow(heading('Popup'), {})).toMatchObject({
       visible: false,

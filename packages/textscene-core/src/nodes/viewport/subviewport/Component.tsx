@@ -25,6 +25,7 @@ import { SubViewportCanvasScope } from './SubViewportCanvasScope';
 import { useViewportContent } from './useViewportContent';
 import { useInheritedRtl } from './useInheritedRtl';
 import { useViewportThemeOwners } from '../../windows/window/useViewportThemeOwners';
+import { ControlYSortProvider } from '../../../r3f/contexts/ControlYSortContext';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
@@ -44,12 +45,10 @@ function MixedViewportControls({
   path,
   viewport,
   size,
-  embedsWindows,
 }: {
   path: string;
   viewport: TscnNode;
   size: Vector2;
-  embedsWindows: boolean;
 }) {
   const inheritedRtl = useInheritedRtl(path);
   const themeOwners = useViewportThemeOwners(path);
@@ -61,7 +60,7 @@ function MixedViewportControls({
       inheritedRtl={inheritedRtl}
       themeOwners={themeOwners}
       enclosingViewportSize={null}
-      embedsWindows={embedsWindows}
+      sortsLocally={false}
     />
   );
 }
@@ -120,20 +119,17 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
       </LayerRanksProvider>
     </ViewportSizeProvider>
   );
+  // The viewport's own exchange between its y-sorts and its Control walk: its Controls are not the
+  // root canvas's, so their runs and origins stay out of that canvas's sort.
   const canvasContents = inViewport(
-    <>
+    <ControlYSortProvider>
       {holdsCanvasItems ? children : null}
       {holdsControls ? (
         <PendingSuspense>
-          <MixedViewportControls
-            path={path}
-            viewport={node}
-            size={layoutSize}
-            embedsWindows={properties.gui_embed_subwindows}
-          />
+          <MixedViewportControls path={path} viewport={node} size={layoutSize} />
         </PendingSuspense>
       ) : null}
-    </>
+    </ControlYSortProvider>
   );
   const contents = kind === '2d' ? canvasContents : inViewport(children);
   const drawsCanvasOverWorld = kind === '3d' && (holdsControls || holdsCanvasItems);

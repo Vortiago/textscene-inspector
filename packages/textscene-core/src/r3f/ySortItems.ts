@@ -48,9 +48,18 @@ export interface YSortItem {
   kind: 'node' | 'tileGroup';
   /**
    * For 'tileGroup': TileMapLayer tile props. `toSortRoot` is the layer's transform in the sort
-   * root's space, through every lifted-past ancestor, which places each row's sort y.
+   * root's space, through every lifted-past ancestor, which places each row's sort y. A row also
+   * holds its origin in the layer's space, `rowOrigin`, which the live sort places through the layer's group.
+   * `rootsSort` marks the rows of the layer that is the sort root: they sort in its own space, so
+   * no pose of the layer moves them.
    */
-  tileData?: { tileSetRef: string; toSortRoot: Transform2DColumns; cells?: readonly DrawableCell[] };
+  tileData?: {
+    tileSetRef: string;
+    toSortRoot: Transform2DColumns;
+    cells?: readonly DrawableCell[];
+    rowOrigin?: Transform2DColumns;
+    rootsSort?: boolean;
+  };
   /**
    * The TscnNode to re-dispatch. For a y_sort_enabled node this is its body only
    * (`ownBodyOf`): its children are items of their own in this list, so the whole
@@ -160,7 +169,11 @@ export function collectSortRootRows(node: TscnNode): YSortItem | null {
     effectiveZ: Y_SORT_ROOT.effectiveZ,
     treeOrder: 0,
     kind: 'tileGroup',
-    tileData: { tileSetRef: group.describe(node).tileSetRef, toSortRoot: Y_SORT_ROOT.toSortRoot },
+    tileData: {
+      tileSetRef: group.describe(node).tileSetRef,
+      toSortRoot: Y_SORT_ROOT.toSortRoot,
+      rootsSort: true,
+    },
     node: ownBodyOf(group.asRootRows(node)),
     liftedPast: [],
   };

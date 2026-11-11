@@ -44,25 +44,15 @@ export function isViewportBoundary(type: string): boolean {
 }
 
 /** The fields of a node the embedding tests read. */
-type EmbeddingNode = Pick<TscnNode, 'type' | 'properties'>;
+export type EmbeddingNode = Pick<TscnNode, 'type' | 'properties'>;
 
 /** The viewport and window keys the embedding tests read, absent on a node of another type. */
 type EmbeddingProperties = Partial<
   Pick<WindowProperties, 'gui_embed_subwindows' | 'force_native' | 'visible'>
 >;
 
-function embeddingProperties(node: EmbeddingNode): EmbeddingProperties {
+export function embeddingProperties(node: EmbeddingNode): EmbeddingProperties {
   return node.properties as EmbeddingProperties;
-}
-
-/**
- * Whether a viewport embeds the windows below it: the climb to an embedder stops there. A window
- * that enters the tree under an embedding root (`rootEmbeds`) has `gui_embed_subwindows` reset to
- * `force_native` (`window.cpp:1534-1537`), so its authored value counts only under a root that embeds none.
- */
-export function embedsSubwindows(node: EmbeddingNode, rootEmbeds: boolean): boolean {
-  const { gui_embed_subwindows, force_native } = embeddingProperties(node);
-  return (isEmbeddedWindow(node.type) && rootEmbeds ? force_native : gui_embed_subwindows) === true;
 }
 
 /** Whether an embedder draws this node: a window that is not native, which draws outside the frame. */
@@ -73,23 +63,6 @@ export function isEmbeddableWindow(node: EmbeddingNode): boolean {
 /** Whether a window registers with its embedder: an embeddable one that is visible (`window.cpp:1546-1563`). */
 export function isRegisteredWindow(node: EmbeddingNode): boolean {
   return isEmbeddableWindow(node) && embeddingProperties(node).visible !== false;
-}
-
-/**
- * Whether `viewport` draws a window over its canvas: it embeds windows, and one below it climbs to
- * it, past each viewport that embeds none (`Window::get_embedder`). A native window draws outside.
- */
-export function embedsAWindow(viewport: TscnNode, rootEmbeds: boolean): boolean {
-  return embedsSubwindows(viewport, rootEmbeds) && reachesEmbedder(viewport.children, rootEmbeds);
-}
-
-/** A hidden window does not register, but its children still climb. */
-function reachesEmbedder(nodes: readonly TscnNode[], rootEmbeds: boolean): boolean {
-  return nodes.some(
-    (node) =>
-      isRegisteredWindow(node) ||
-      (!embedsSubwindows(node, rootEmbeds) && reachesEmbedder(node.children, rootEmbeds))
-  );
 }
 
 /**

@@ -556,7 +556,7 @@ The Controls a dialog's constructor `memnew`s above its button row, which no sce
 _Avoid_: "dialog content", which is the rect that authored children fill.
 
 **Embedder**:
-The viewport that draws an **Embedded window**: the nearest viewport above it with `gui_embed_subwindows`, the root through `display/window/subwindows/embed_subwindows`. It draws each window's frame, title, close icon and target on its subwindow canvas, layer 1024, in stack order (`viewport.cpp:342-401`).
+The viewport that draws an **Embedded window**: the nearest viewport above it with `gui_embed_subwindows`, the root through `display/window/subwindows/embed_subwindows`. A window below an embedding root embeds only when `force_native` (`window.cpp:1534-1537`), whatever it authors. The embedder draws each window's frame, title, close icon and target on its subwindow canvas, layer 1024, in stack order (`viewport.cpp:342-401`). The **Live scene tree** holds the root's answer (`LiveTreeContext.project`), and `windowEmbedder.ts` answers each reader from the tree.
 _Avoid_: "parent viewport", which may not embed.
 
 **Pass gate** (`PassGate` in `r3f/contexts/ViewportPassRegistryContext.tsx`, `nodes/viewport/renderGate.ts`):
@@ -579,6 +579,10 @@ The scene, camera, buffer size and clip rect that one `CanvasLightPass` accumula
 **Light kept apart** (`r3f/lighting2d/apartLight.ts`):
 A light on a list that a normal-mapped canvas item reads, drawn alone into its own layer instead of the list's accumulation buffer, with where it sits and its height, so the item shades it by its own normal term (ADR-0062).
 _Avoid_: "per-light buffer" for the light itself. The layer is its buffer.
+
+**List attachments** (`ListAttachments` in `r3f/lighting2d/itemLightList.ts`):
+Which attachment of a light list's one render target holds each buffer its items read: the light, the `shadow_color` and the Light Only buffer, at attachments 0, 1 and 2. A light quad writes all three outputs in one draw, and an output with no attachment is dropped (ADR-0067).
+_Avoid_: "tint pass", which no longer exists. The `shadow_color` buffer is an attachment.
 
 **ViewportPassRegistry**:
 The pass-ordering half of the same seam (`ViewportPassRegistryContext.tsx`): one `<ViewportPassOrchestrator>` per canvas runs every registered sub-viewport pass in dependency order each frame.

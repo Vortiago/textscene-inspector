@@ -30,20 +30,12 @@ import { DEFAULT_LIGHT_CULL_KEY, type LightCullKey } from '../../../r3f/lighting
 import { useLightShadowCasters } from '../../../r3f/lighting2d/ShadowCasterStage';
 import { useShadowLightPose } from '../../../r3f/lighting2d/shadowLightPose';
 import type { WorldShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
-import { useLightQuadMaterials, type LightQuadMaterials } from './useLightQuadMaterials';
+import { useLightQuadMaterials } from './useLightQuadMaterials';
 import { placePositionalLight, useApartLightOrigin } from '../../../r3f/lighting2d/apartLight';
 import type { Rgba } from '../../../godot/math/math';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 import { Light2DBlendMode, type Light2DShadowFilter } from '../../../godot/scene/light2d.js';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
-
-/** The quads a light draws besides its lit quad, each only when its material exists. */
-const OPTIONAL_ROLES = [
-  'tint',
-  'fade',
-  'unshadowed',
-  'unshadowedFade',
-] as const satisfies readonly (keyof LightQuadMaterials & PassMeshRole)[];
 
 /**
  * Godot resolves a canvas item's DEFAULT repeat to the viewport's DISABLED default
@@ -125,7 +117,6 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
               shadowFilterSmooth={props.shadow_filter_smooth}
               ordinal={ordinal}
               sequence={sequence}
-              tintsShadow={tintsShadow}
               reachesUnshadowedItem={reachesUnshadowedItem}
               casters={casters}
             />
@@ -139,9 +130,9 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
 }
 
 /**
- * The cookie quad, the unshadowed quad and the `shadow_color` quad share this component, so their
- * geometry and offset cannot drift. Only their role and material differ. The pass draws the
- * unshadowed quad only for a list on which the light is unshadowed.
+ * The lit quad and the unshadowed quad share this component, so their geometry and offset cannot
+ * drift. Only their role and material differ. The pass draws the unshadowed quad only for a list on
+ * which the light is unshadowed.
  */
 function LightQuad({
   ordinal,
@@ -155,7 +146,7 @@ function LightQuad({
 }: {
   /** The light's ordinal, or null while it is undeclared. */
   ordinal: number | null;
-  /** Which passes draw the quad. */
+  /** Which lists draw the quad: `lit` over the lists that shadow the light, `unshadowed` over the others. */
   role: PassMeshRole;
   /** Receives the mounted mesh, and null on unmount. */
   onMesh?: (mesh: THREE.Mesh | null) => void;
@@ -193,7 +184,6 @@ function QuadMesh({
   shadowFilterSmooth,
   ordinal,
   sequence,
-  tintsShadow,
   reachesUnshadowedItem,
   casters,
 }: {
@@ -209,8 +199,6 @@ function QuadMesh({
   shadowFilter: EnumValue<typeof Light2DShadowFilter>;
   /** `Light2D.shadow_filter_smooth`: how wide the PCF taps spread the boundary. */
   shadowFilterSmooth: number;
-  /** Whether the light casts with a visible `shadow_color`. */
-  tintsShadow: boolean;
   /** Whether an item the light reaches can miss `shadow_item_cull_mask`. */
   reachesUnshadowedItem: boolean;
   /** This light's ordinal on the canvas, or null while undeclared. */
@@ -274,7 +262,6 @@ function QuadMesh({
     color,
     energy,
     blendMode,
-    tintsShadow,
     sampling,
     drawsUnshadowed: casters.length > 0 && reachesUnshadowedItem,
   });
@@ -284,10 +271,7 @@ function QuadMesh({
   return (
     <>
       <LightQuad role="lit" onMesh={setQuad} material={materials.lit} {...shape} />
-      {OPTIONAL_ROLES.map(
-        (role) =>
-          materials[role] && <LightQuad key={role} role={role} material={materials[role]} {...shape} />
-      )}
+      {materials.unshadowed && <LightQuad role="unshadowed" material={materials.unshadowed} {...shape} />}
     </>
   );
 }

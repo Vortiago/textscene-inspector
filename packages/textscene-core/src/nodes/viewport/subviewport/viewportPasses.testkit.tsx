@@ -6,6 +6,7 @@ import { TscnParser } from '../../../parser/TscnParser';
 import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import { CanvasWorldScope } from '../../../r3f/environment/WorldEnvironmentScope';
 import { ViewportModeProvider } from '../../../r3f/contexts/ViewportModeContext';
+import { withProject } from '../../../r3f/testing/ProjectFixture';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
@@ -54,6 +55,42 @@ export function ViewportPassStack({
       </ViewportPassProvider>
     </ViewportTextureProvider>
   );
+}
+
+/**
+ * The scene the pass `passName` draws in one frame of `tscn` under the `project.godot` text
+ * `project`, once the lazily loaded Control painters have mounted. Null is no project.
+ */
+export async function portalSceneOf(
+  tscn: string,
+  passName: string,
+  project: string | null = null
+): Promise<THREE.Object3D> {
+  const parsed = new TscnParser().parse(tscn);
+  const ProjectFixture = withProject(project);
+  const captured: { current: THREE.WebGLRenderer | null } = { current: null };
+  const renderer = await ReactThreeTestRenderer.create(
+    <SceneStack workspace="2d" loader={createFakeResourceLoader().loader} scene={parsed}>
+      <ProjectFixture>
+        <ViewportPassStack captured={captured}>
+          <NodeDispatcher nodes={parsed.nodes} />
+        </ViewportPassStack>
+      </ProjectFixture>
+    </SceneStack>
+  );
+  await settleLoads();
+  let portal: THREE.Object3D | undefined;
+  await withStubbedGl(
+    captured.current!,
+    {
+      onRender: (_bound, drawn) => {
+        if (drawn.name === passName) portal = drawn;
+      },
+    },
+    () => renderer.advanceFrames(1, 16)
+  );
+  if (!portal) throw new Error(`expected a draw of ${passName}, got none`);
+  return portal;
 }
 
 /** One `gl.render` of a frame, with what was bound and what the scene held at that moment. */

@@ -69,7 +69,7 @@ export function applyRemoteTransforms(tree: LiveTree): RelayPoses {
     if (localTarget) push(localTarget, queue);
     pushing.delete(relay);
   };
-  const flushes = harnessFlushes(tree.ctx.physicsClock);
+  const flushes = harnessFlushes(tree.ctx.project.physicsClock);
   replayTransformFlushes(entered, flushes, (entry, queue) => {
     if (entry.kind === 'relay') push(entry, queue);
     else entry.notified = liveGlobalTransform3D(tree, entry.link.path, placed)!;

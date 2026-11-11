@@ -30,8 +30,7 @@ function collect(scene: TscnScene, sceneCache?: CachedSceneSource) {
       internalResources: scene.internalResources,
       externalResources: scene.externalResources,
     },
-    LTR_LAYOUT_ENV,
-    true
+    LTR_LAYOUT_ENV
   );
 }
 
@@ -155,8 +154,7 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
         internalResources: host.internalResources,
         externalResources: host.externalResources,
       },
-      LTR_LAYOUT_ENV,
-      true
+      LTR_LAYOUT_ENV
     );
 
     expect(found.map((v) => v.path)).toEqual(['World/Refused/Own']);
@@ -207,8 +205,7 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
         [],
         sourcesOver(),
         { internalResources: [], externalResources: [] },
-        LTR_LAYOUT_ENV,
-        true
+        LTR_LAYOUT_ENV
       )
     ).toEqual([]);
   });
@@ -226,8 +223,8 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 
 /**
  * In a parsed subtree an `instance=` child is an untyped childless `Node`, which
- * `viewportContentKind` reads as 3D. Both owners of a registry key classify the
- * subtree `resolveViewportSubtree` returns, or a key goes unpublished and its
+ * the viewport's content reads as 3D. Both owners of a registry key classify the
+ * subtree with its instances resolved, or a key goes unpublished and its
  * consumer stays blank.
  */
 describe('collectControlRasterViewports — an instanced Control sub-scene', () => {

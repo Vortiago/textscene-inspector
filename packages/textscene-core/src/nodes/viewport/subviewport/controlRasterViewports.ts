@@ -18,9 +18,10 @@ import {
 } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
-import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
+import { viewportContentAt } from './viewportContent.js';
 import type { SubViewportProperties } from './types.js';
-import { viewportGateAt, windowEmbedderPathAt, type ViewportGate } from './viewportGate.js';
+import { viewportGateAt, type ViewportGate } from './viewportGate.js';
+import { windowEmbedderPathAt } from './windowEmbedder.js';
 import { viewportThemeOwners, type ThemeOwner } from '../../windows/window/themeOwners.js';
 
 /** The viewport a window embeds in, whose visible size limits the window's height. */
@@ -74,8 +75,8 @@ export function inheritedRtlAt(tree: LiveTree, path: string, env: LayoutDirectio
   return link ? rtlBelow(link.step.node, inheritedRtlAt(tree, above, env), env) : null;
 }
 
-function enclosingViewport(tree: LiveTree, path: string, rootEmbeds: boolean): EnclosingViewport | null {
-  const embedderPath = windowEmbedderPathAt(tree, path, rootEmbeds);
+function enclosingViewport(tree: LiveTree, path: string): EnclosingViewport | null {
+  const embedderPath = windowEmbedderPathAt(tree, path);
   const node = embedderPath === null ? undefined : tree.at(embedderPath)?.step.node;
   return embedderPath !== null && node ? { path: embedderPath, node } : null;
 }
@@ -89,8 +90,7 @@ export function collectControlRasterViewports(
   roots: readonly TscnNode[],
   sources: LiveTreeSources,
   scope: SceneScope,
-  layoutDirectionEnv: LayoutDirectionEnv,
-  rootEmbeds: boolean
+  layoutDirectionEnv: LayoutDirectionEnv
 ): ControlRasterViewport[] {
   const found: ControlRasterViewport[] = [];
   const ctx: LiveTreeContext = {
@@ -107,18 +107,15 @@ export function collectControlRasterViewports(
     // Classified on the resolved subtree, as `useViewportContent` does: a
     // raw `instance=` child reads as 3D, so both owners of this key would
     // decline and leave the consumer blank.
-    if (
-      isViewportBoundary(step.node.type) &&
-      viewportContentKind(resolveViewportSubtree(tree, link), rootEmbeds) === 'dom'
-    ) {
+    if (isViewportBoundary(step.node.type) && viewportContentAt(tree, link).kind === 'dom') {
       const { render_target_update_mode: authoredMode } = step.node.properties as SubViewportProperties;
       found.push({
         path,
         node: step.node,
         inheritedRtl,
         themeOwners: viewportThemeOwners(tree, path),
-        embedder: enclosingViewport(tree, path, rootEmbeds),
-        gate: viewportGateAt(tree, path, authoredMode, rootEmbeds),
+        embedder: enclosingViewport(tree, path),
+        gate: viewportGateAt(tree, path, authoredMode),
         ...step.scope,
       });
     }

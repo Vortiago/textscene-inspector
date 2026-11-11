@@ -1,6 +1,6 @@
 /**
  * The native (WebGL) render-to-texture publisher for a Control-only sub-viewport
- * (`viewportContentKind === 'dom'`), which `<SubViewport>`'s own pass declines. It
+ * (`viewportContentAt(…).kind === 'dom'`), which `<SubViewport>`'s own pass declines. It
  * mounts the Control walker into a detached scene, draws it through a fixed camera
  * framing the target rect, and publishes a texture consumers sample directly.
  */
@@ -23,9 +23,7 @@ import {
 } from './offscreenViewport.js';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { useCanvasPass } from './useCanvasPass.js';
-import { useProjectEmbedsSubwindows } from '../../../r3f/useLiveSceneTree.js';
 import { useResolvedGate } from './useViewportGate.js';
-import { embedsSubwindows } from './viewportBoundary.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import { useViewportRenderState } from './useGatedViewport.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
@@ -63,7 +61,6 @@ function useEnclosingViewportSize(embedder: ControlRasterViewport['embedder']): 
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const { path, node, inheritedRtl, themeOwners, embedder, internalResources, externalResources } = viewport;
   const gate = useResolvedGate(viewport.gate);
-  const rootEmbeds = useProjectEmbedsSubwindows();
 
   const properties = node.properties as SubViewportProperties;
   const { transparent_bg: transparentBg, render_target_clear_mode: clearMode } = properties;
@@ -134,7 +131,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
             inheritedRtl={inheritedRtl}
             themeOwners={themeOwners}
             enclosingViewportSize={enclosingViewportSize}
-            embedsWindows={embedsSubwindows(node, rootEmbeds)}
+            sortsLocally
           />
         </SubViewportCanvasScope>
       </World2DLightingBoundary>
