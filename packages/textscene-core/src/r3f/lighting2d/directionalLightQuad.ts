@@ -67,7 +67,10 @@ float shadowFraction() {
 }
 `;
 
-/** Writes the three outputs of `LIGHT_OUTPUTS`; a light with no shadow has the alpha alone as its `shadow_color` term. */
+/**
+ * Writes the three outputs of `LIGHT_OUTPUTS`. With no shadow, the `shadow_color` term is the alpha
+ * alone.
+ */
 const FRAGMENT = /* glsl */ `
 ${LIGHT_OUTPUTS}
 uniform vec3 uColor;
@@ -118,7 +121,7 @@ function shadowUniforms(shadow: DirectionalShadowSampling): Record<string, THREE
   };
 }
 
-/** The light's quad: it fills every buffer of a list, the albedo-multiplied term, `shadow_color` and Light Only, in one draw. */
+/** The light's quad: one draw fills the light, `shadow_color` and Light Only buffers of a list. */
 export function createDirectionalLightMaterial({
   color,
   energy,

@@ -209,6 +209,9 @@ export interface ListAttachments {
   readonly count: number;
 }
 
+/** The attachments of a layered target that keeps the lights of a list apart: the light, then the `shadow_color`. */
+export const APART_ATTACHMENTS = { light: 0, shadowTint: 1 } as const;
+
 /** The attachments a list needs for what its items `reads`, or null while none reads a summed buffer. */
 export function listAttachments(
   reads: ReadonlySet<LitItemRead>,

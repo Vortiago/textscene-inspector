@@ -20,6 +20,7 @@ import { ShadowCasterStage } from './ShadowCasterStage.js';
 import { CanvasLightSequenceProvider } from './useLightSequence.js';
 import {
   planLightLists,
+  APART_ATTACHMENTS,
   type ApartLightPlan,
   type ListAttachments,
   type CanvasLightDeclaration,
@@ -76,7 +77,10 @@ function apartShapes(
         ? [
             [
               plan.id,
-              { layers: plan.lightsApart.entries.length, attachments: plan.lightsApart.tintsShadow ? 2 : 1 },
+              {
+                layers: plan.lightsApart.entries.length,
+                attachments: plan.lightsApart.tintsShadow ? APART_ATTACHMENTS.shadowTint + 1 : 1,
+              },
             ],
           ]
         : []
@@ -89,8 +93,9 @@ function summedTexture(
   summed: SummedAccumulation | null,
   buffer: keyof Omit<ListAttachments, 'count'>
 ): THREE.Texture | null {
-  const attachment = summed?.attachments[buffer] ?? -1;
-  return attachment < 0 ? null : summed!.target.textures[attachment]!;
+  if (!summed) return null;
+  const attachment = summed.attachments[buffer];
+  return attachment < 0 ? null : summed.target.textures[attachment]!;
 }
 
 /** Each layer's mode, as `ApartLightBuffers.modes` describes it. */
@@ -119,15 +124,10 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
   const [placements, registerItem] = usePlacementRegistry();
   const plans = useMemo(() => planLightLists(lights, placements), [lights, placements]);
 
-  // One target per list holds every buffer an item of the list reads, in its attachments
-  // (`ListAttachments`), and one draw of the list's lights fills them all: the shadow of a light is
-  // evaluated once per fragment, as `light_shadow_compute` does (`canvas.glsl:839`). A float, since
-  // Godot clamps only after multiplying the light into the albedo: blending onto the canvas would
-  // clamp first and flatten an `energy = 2` torch into a disc with no falloff. Alpha holds the
-  // summed cookie coverage `light_only_alpha` (`color.a *= light_only_alpha`). Light Only seeds
-  // from white, and MIX interpolates toward the light, so that buffer is a seed of its own over the
-  // same quads. Godot's transparent default `shadow_color` (`light_2d.h:58`) adds nothing, so the
-  // `shadow_color` buffer exists only for a list a tinting light shadows.
+  // One target per list holds the buffers its items read, and one draw fills them all: a light's
+  // shadow is evaluated once per fragment, as in Godot (`canvas.glsl:839`). The buffers are floats,
+  // since blending onto the canvas would clamp before the albedo multiply and flatten `energy = 2`.
+  // The `shadow_color` buffer exists only for a list a tinting light shadows (`light_2d.h:58`).
   const summedTargets = useAccumulationTargets(summedAttachments(plans));
   // A normal term scales each light before it blends, so a normal-mapped item reads each light alone.
   const apartTargets = useLayeredAccumulationTargets(apartShapes(plans));
@@ -276,8 +276,8 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
         lightOnlyBuffer: summedTexture(summed, 'lightOnly'),
         shadowTintBuffer: summedTexture(summed, 'shadowTint'),
         apart: apart && {
-          buffer: apart.target.textures[0]!,
-          shadowTintBuffer: apart.target.textures[1] ?? null,
+          buffer: apart.target.textures[APART_ATTACHMENTS.light]!,
+          shadowTintBuffer: apart.target.textures[APART_ATTACHMENTS.shadowTint] ?? null,
           places: apart.entries.map((entry) => apartPlace(entry.ordinal)),
           modes: apartModes(lights, apart),
         },

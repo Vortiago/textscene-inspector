@@ -146,7 +146,7 @@ function LightQuad({
 }: {
   /** The light's ordinal, or null while it is undeclared. */
   ordinal: number | null;
-  /** Which passes draw the quad. */
+  /** Which lists draw the quad: `lit` over the lists that shadow the light, `unshadowed` over the others. */
   role: PassMeshRole;
   /** Receives the mounted mesh, and null on unmount. */
   onMesh?: (mesh: THREE.Mesh | null) => void;
