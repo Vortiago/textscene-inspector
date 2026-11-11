@@ -1,10 +1,14 @@
 /**
  * The bones a modification stack moves, solved on the Live scene tree from the transforms the scene
  * file stores. A scene pass that reads a pose below a bone stands where Godot's Skeleton2D puts it.
- * An AnimationPlayer pose does not reach the solve, and a stack in a `.tres` file is not read.
+ * A stack in a `.tres` file solves once the loader holds the file. An AnimationPlayer pose does not reach the solve.
  */
 
-import { equalTransform2D, transform2DDecompose } from '../../../godot/math/transform2d.js';
+import {
+  TRANSFORM2D_IDENTITY,
+  equalTransform2D,
+  transform2DDecompose,
+} from '../../../godot/math/transform2d.js';
 import { storedTransform2D } from '../../../godot/math/real.js';
 import { decodeModificationStack } from '../../../resources/skeleton/skeletonmodificationstack2d/index.js';
 import { liveScenePassResults, type LiveScenePass } from '../../../r3f/liveScenePass.js';
@@ -21,9 +25,6 @@ import { bindSkeleton2DRigs, type Skeleton2DRig } from './skeletonRig.js';
 import type { Skeleton2DProperties } from './types.js';
 import { anchorPathsOf, stackTargets } from './stackTargets.js';
 
-/** A stack in the scene file needs no other file, and a stack in one is not read here. */
-const NO_FILES = (): undefined => undefined;
-
 /** Where the nodes of `tree` stand as the scene file stores them, each named by its live path. */
 function storedPoseSource(tree: LiveTree): PoseSource<string> {
   const chains = new Map<string, ReadonlyMap<string, TscnNode>>();
@@ -32,7 +33,8 @@ function storedPoseSource(tree: LiveTree): PoseSource<string> {
     return chains.get(path)!;
   };
   return {
-    canvas: (path) => storedTransform2D(transform2DOnCanvas(path, stored(path))),
+    // A Control on the way reads as the identity here: this solve has no better answer for it.
+    canvas: (path) => storedTransform2D(transform2DOnCanvas(path, stored(path)) ?? TRANSFORM2D_IDENTITY),
     within: (path, ancestor) => storedTransform2D(transform2DWithinPath(path, ancestor, stored(path))),
     parent: parentPathOf,
   };
@@ -62,7 +64,7 @@ function solveSkeleton(
   const { modificationStack } = step.node.properties as Skeleton2DProperties;
   if (modificationStack === undefined) return;
   const rig = rigs.get(path);
-  const stack = decodeModificationStack(modificationStack, step.scope, NO_FILES);
+  const stack = decodeModificationStack(modificationStack, step.scope, (file) => tree.loadedResource(file));
   if (!rig || !stack) return;
   const targets = stackTargets(stackNodePaths(stack), path, tree, rigs);
   const anchors = new Set(anchorPathsOf(targets.values()));

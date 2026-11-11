@@ -381,6 +381,9 @@ export const CANVAS_2D_SCENES = [
   // green square. Godot probes: green (76,204,102) at (300,350), the end of the turned arm, and the
   // background at (500,150), where the arm ends in the file.
   { name: 'skeleton2d-remote-transform', file: 'unit-skeleton2d-remote-transform.tscn', mode: '2d' },
+  // The same scene with the stack in a .tres file: the green square stands at the same place once the
+  // file has loaded. Godot probes: green (76,204,102) at (300,350), background (76,76,76) at (500,150).
+  { name: 'skeleton2d-remote-transform-tres', file: 'unit-skeleton2d-remote-transform-tres.tscn', mode: '2d' },
   // clip_children CLIP_ONLY: the red child shows only over the green parent, in its own colour. Godot
   // probes: (125,125) background, the parent alone; (175,175) red; (425,125) green, the unclipped twin.
   { name: 'clip-children-only', file: 'unit-clip-children-only.tscn', mode: '2d' },

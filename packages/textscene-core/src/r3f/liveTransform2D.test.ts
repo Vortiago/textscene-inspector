@@ -20,9 +20,35 @@ function chainTo(path: string): ReadonlyMap<string, TscnNode> {
 
 describe('transform2DOnCanvas', () => {
   it('composes every node on the way down', () => {
-    const t = transform2DOnCanvas('Root/Mid/Leaf', chainTo('Root/Mid/Leaf'));
+    const t = transform2DOnCanvas('Root/Mid/Leaf', chainTo('Root/Mid/Leaf'))!;
 
     expect([t.tx, t.ty]).toEqual([105, 10]);
+  });
+});
+
+describe('transform2DOnCanvas under a node it cannot decode', () => {
+  const CONTROL = `[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="Panel" type="Control" parent="."]
+[node name="Leaf" type="Node2D" parent="Panel"]
+position = Vector2(5, 0)
+`;
+
+  it('reads no transform below a Control (edge case)', () => {
+    const chain = nodesOnTheWayTo(liveTreeOfText(CONTROL), 'Root/Panel/Leaf', NO_PATCHES);
+
+    expect(transform2DOnCanvas('Root/Panel/Leaf', chain)).toBeNull();
+  });
+
+  it('stops at a top-level node (edge case)', () => {
+    const topLevel = SCENE.replace(
+      'position = Vector2(0, 10)',
+      'position = Vector2(0, 10)\ntop_level = true'
+    );
+    const chain = nodesOnTheWayTo(liveTreeOfText(topLevel), 'Root/Mid/Leaf', NO_PATCHES);
+
+    const t = transform2DOnCanvas('Root/Mid/Leaf', chain)!;
+    expect([t.tx, t.ty]).toEqual([5, 10]);
   });
 });
 

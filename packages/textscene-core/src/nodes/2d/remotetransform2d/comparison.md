@@ -51,3 +51,4 @@ Strict parsing format-checks these `RemoteTransform2D` properties, plus 12 inher
 ## Known limitations
 
 - **Needs runtime** A relay cycle moves on every frame in Godot, and the previewer shows one frame of that motion.
+- **Approximated** A relay in global coordinates pushes nothing where a Control lies above it or its target.

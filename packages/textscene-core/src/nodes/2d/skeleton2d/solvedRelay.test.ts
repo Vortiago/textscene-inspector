@@ -99,4 +99,38 @@ describe('the RemoteTransform2D pass below a solved bone', () => {
     expect(held.position.x).toBeCloseTo(300, 2);
     expect(held.position.y).toBeCloseTo(350, 2);
   });
+
+  it('solves a stack that a .tres file holds once the file is loaded', () => {
+    const inFile = LOOK_AT_ARM.replace(
+      /\[sub_resource type="SkeletonModificationStack2D"[\s\S]*?modifications\/0 = SubResource\("lookat"\)\n\n/,
+      ''
+    )
+      .replace(
+        '[gd_scene format=3]',
+        '[gd_scene load_steps=2 format=3]\n[ext_resource type="Resource" path="res://stack.tres" id="1_stack"]'
+      )
+      .replace('SubResource("stack")', 'ExtResource("1_stack")');
+    const stackFile = `[gd_resource type="SkeletonModificationStack2D" load_steps=2 format=3]
+[ext_resource type="Resource" path="res://lookat.tres" id="1_look"]
+[resource]
+enabled = true
+modification_count = 1
+modifications/0 = ExtResource("1_look")
+`;
+    const lookAtFile = `[gd_resource type="SkeletonModification2DLookAt" format=3]
+[resource]
+bone_index = 0
+bone2d_node = NodePath("Arm")
+target_nodepath = NodePath("../Target")
+`;
+
+    const patches = liveScenePassResults(
+      liveNodePatches,
+      liveTreeOfText(inFile, {}, { 'res://stack.tres': stackFile, 'res://lookat.tres': lookAtFile })
+    );
+
+    const held = patches.get('Root/Held') as { position: { x: number; y: number } };
+    expect(held.position.x).toBeCloseTo(300, 2);
+    expect(held.position.y).toBeCloseTo(350, 2);
+  });
 });

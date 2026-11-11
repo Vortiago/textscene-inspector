@@ -1,6 +1,6 @@
 /**
  * React hooks over the pure **live scene tree** (`liveSceneTree.ts`). They supply the
- * loader's scene and GLB cache snapshots, and re-render when the tree grows because an
+ * loader's scene, GLB and `.tres` cache snapshots, and re-render when the tree grows because an
  * instance sub-scene or GLB finishes loading after the parsed SceneGraph was built.
  */
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
@@ -36,7 +36,11 @@ export interface SharedLiveTree {
 
 /** The caches of `loader` that a live-tree context reads. With no loader, every path reads as never requested. */
 function loaderCaches(loader: ResourceLoader | null | undefined) {
-  return { sceneCache: loader?.scenes ?? NOTHING_CACHED, glbCache: loader?.glbMeshes };
+  return {
+    sceneCache: loader?.scenes ?? NOTHING_CACHED,
+    glbCache: loader?.glbMeshes,
+    resourceCache: loader?.resources,
+  };
 }
 
 /**
@@ -64,7 +68,8 @@ function liveTreeContext(
   };
 }
 
-const LIVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'glb'];
+/** `resource` so a pass that reads a `.tres` file, such as a Skeleton2D stack, runs again when the file loads. */
+const LIVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'glb', 'resource'];
 
 /** What {@link useLiveTreeVersion} reads of one loader. */
 interface LoadTicks {
@@ -116,7 +121,7 @@ function loadTicksOf(loader: ResourceLoader | null | undefined): LoadTicks {
 }
 
 /**
- * A counter that moves whenever a scene or GLB loads or fails, so a deleted
+ * A counter that moves whenever a scene, GLB or `.tres` file loads or fails, so a deleted
  * instance leaves the tree. A reader of the whole tree re-derives on it; {@link useLiveTreeSelection}
  * re-renders only where its value changed. The scenes and
  * GLBs it reads are `useResource` consumers' keys, which they request again. It is one

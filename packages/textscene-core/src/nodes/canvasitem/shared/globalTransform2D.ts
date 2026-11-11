@@ -52,9 +52,10 @@ export interface Node2DPose {
 /**
  * A Node2D's own local `Transform2D`, built as `Node2D::_update_transform` builds it. An
  * absent key takes Node2D's field default (`node_2d.h`): position `(0, 0)`, rotation `0`,
- * scale `(1, 1)` and skew `0`, together the identity.
+ * scale `(1, 1)` and skew `0`, together the identity. Null for a vector that narrows to a number the
+ * file does not state.
  */
-function localTransform2D(node: RawNode, pose: Node2DPose | undefined): Transform2DColumns | null {
+export function localTransform2D(node: RawNode, pose?: Node2DPose): Transform2DColumns | null {
   const props = node.rawProperties;
   const position = pose?.position ?? readVector2Property(props.position, { x: 0, y: 0 });
   const rotation = pose?.rotation ?? parseScalar(props.rotation, 0);
