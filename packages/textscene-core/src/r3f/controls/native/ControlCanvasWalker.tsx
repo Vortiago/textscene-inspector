@@ -19,12 +19,14 @@ import { ControlFallback } from './ControlFallback';
 import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useInheritedTextureSampler } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
+import { ClipChildrenScope } from '../../canvasGroup/ClipChildrenScope';
+import { ClipMaskProvider } from '../../canvasGroup/ClipMaskContext';
 import {
   useCanvasAncestorMaterial,
   useResolvedCanvasItemMaterial,
 } from '../../components/canvasItemMaterialContext';
 import { INHERIT_PARENT_MATERIAL } from '../../canvasAncestors';
-import { isCanvasLayerType } from '../../canvasPaintOrder';
+import { isCanvasLayerType, ysortsChildren } from '../../canvasPaintOrder';
 import { CanvasRootScope } from '../../canvasRootScope';
 import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
@@ -295,7 +297,7 @@ function ControlItemGroup({
         childRects={childRects}
         meta={solvedEntry?.meta}
       >
-        {wrapsChildren ? childElements : undefined}
+        {wrapsChildren ? <ClipMaskProvider value={null}>{childElements}</ClipMaskProvider> : undefined}
       </Painter>
     </NodePathProvider>
   );
@@ -304,9 +306,17 @@ function ControlItemGroup({
   const litPainter = isCanvasLayerType(solveNode.node.type) ? (
     painter
   ) : (
-    <LitCanvasItemPixels material={state.material} lightMask={state.lightMask} zFinal={state.zFinal}>
-      {painter}
-    </LitCanvasItemPixels>
+    <ClipChildrenScope
+      mode={props.clipChildren}
+      isYSorted={ysortsChildren(solveNode.node)}
+      state={state}
+      behindRanges={solveNode.behindRanges}
+      range={solveNode.paintRange}
+    >
+      <LitCanvasItemPixels material={state.material} lightMask={state.lightMask} zFinal={state.zFinal}>
+        {painter}
+      </LitCanvasItemPixels>
+    </ClipChildrenScope>
   );
   const content = wrapsChildren ? (
     litPainter

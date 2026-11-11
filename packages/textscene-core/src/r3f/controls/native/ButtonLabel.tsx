@@ -5,7 +5,14 @@
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../components/CanvasItemGroup';
-import { buttonDrawnLabel, shapeButtonLabel, trimButtonLabel, type ButtonLabelBox } from './buttonBase';
+import {
+  buttonDrawnLabel,
+  isButtonAutowrapped,
+  shapeWrappedButtonLabel,
+  trimButtonLabel,
+  type ButtonLabelBox,
+  type ButtonWrapProperties,
+} from './buttonBase';
 import type { ShareNode } from './solveTree';
 import { resolveNodeFontMetrics } from './text/resolveNodeFontMetrics';
 import { OutlinedTextRun, type OutlinedTextRunProps } from './text/OutlinedTextRun';
@@ -21,8 +28,8 @@ interface ButtonLabelProps extends Pick<
   overrunBehavior: number | undefined;
   /** The paragraph's bidi options: a set RTL direction draws a trimmed fill right to left. */
   bidi: TextBidiOptions;
-  /** The label wraps, so no row is trimmed. */
-  isWrapped?: boolean;
+  /** The label wraps ({@link isButtonAutowrapped}), so no row is trimmed. */
+  isWrapped: boolean;
 }
 
 /** @canonical A Button-family label drawn in its paragraph box, each line shifted and cut */
@@ -31,7 +38,7 @@ export function ButtonLabel({
   box,
   overrunBehavior,
   bidi,
-  isWrapped = false,
+  isWrapped,
   ...runProps
 }: ButtonLabelProps) {
   const { fontSizePx } = runProps;
@@ -61,20 +68,38 @@ export function ButtonLabel({
   );
 }
 
+/** What {@link useButtonLabelLayout} shapes. */
+interface ButtonLabelShapeInput {
+  themeFontKey: string;
+  text: string;
+  fontSizePx: number;
+  bidi: TextBidiOptions;
+  /** The width a wrapping label shapes at ({@link labelWrapWidthPx}). Ignored at AUTOWRAP_OFF. */
+  boxWidthPx: number;
+}
+
 /**
- * The shaped one-line label of a Button-family control, or null for empty text. The font metrics
+ * The shaped label of a Button-family control, or null for empty text. The font metrics
  * are read in the render body, not in the `useMemo`, for the reason Label's Component.tsx gives.
  */
 export function useButtonLabelLayout(
   solveNode: ShareNode,
-  themeFontKey: string,
-  text: string,
-  fontSizePx: number,
-  bidi: TextBidiOptions
+  wrap: ButtonWrapProperties,
+  { themeFontKey, text, fontSizePx, bidi, boxWidthPx }: ButtonLabelShapeInput
 ): TextLayoutResult | null {
   const fontMetrics = resolveNodeFontMetrics(solveNode, themeFontKey);
+  const { autowrapMode, autowrapTrimFlags } = wrap;
+  // The width keys the memo only while the label wraps: at AUTOWRAP_OFF a resize re-shapes nothing.
+  const wrapWidthPx = isButtonAutowrapped(wrap) ? boxWidthPx : 0;
   return useMemo(
-    () => (text.length > 0 ? shapeButtonLabel(text, { fontSizePx, fontMetrics, bidi }) : null),
-    [text, fontSizePx, fontMetrics, bidi]
+    () =>
+      text.length > 0
+        ? shapeWrappedButtonLabel(
+            text,
+            { autowrapMode, autowrapTrimFlags },
+            { fontSizePx, fontMetrics, bidi, boxWidthPx: wrapWidthPx }
+          )
+        : null,
+    [text, fontSizePx, fontMetrics, bidi, autowrapMode, autowrapTrimFlags, wrapWidthPx]
   );
 }

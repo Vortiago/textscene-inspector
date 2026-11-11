@@ -53,6 +53,31 @@ const FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; re
     reason:
       'the sub-scene whose Bone2D root joins no Skeleton2D on its own; the kite of the bone that instances it reaches this root',
   },
+  'unit-clip-children-nested-inert.tscn': {
+    rules: ['canvasitem-ancestor-clips-children'],
+    reason:
+      'the inner owner clips under a clipping ancestor on purpose: Godot warns and still groups it, and the nested draw order is the fixture',
+  },
+  'unit-clip-children-nested-behind-order.tscn': {
+    rules: ['canvasitem-ancestor-clips-children'],
+    reason:
+      'the inner owner clips under a clipping ancestor on purpose: the behind child of a nested inert owner draws first, and that order is the fixture',
+  },
+  'unit-clip-children-behind-owner.tscn': {
+    rules: ['canvasitem-ancestor-clips-children'],
+    reason:
+      'the behind child clips under a clipping ancestor on purpose: Godot warns and still groups it, and its draw order before the sibling is the fixture',
+  },
+  'unit-clip-children-nested-boundary.tscn': {
+    rules: ['canvasitem-ancestor-clips-children'],
+    reason:
+      'the group and the inner owner clip under a clipping ancestor on purpose: Godot warns and still groups them, and the order across the group is the fixture',
+  },
+  'unit-clip-children-behind-groups.tscn': {
+    rules: ['canvasitem-ancestor-clips-children'],
+    reason:
+      'both groups clip under a clipping ancestor on purpose: Godot warns and still groups them, and what each copies is the fixture',
+  },
   'unit-legacy-format.tscn': {
     rules: ['legacy-format-version'],
     reason:

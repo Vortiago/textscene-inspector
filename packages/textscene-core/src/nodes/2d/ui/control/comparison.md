@@ -110,6 +110,8 @@ malformed `anchor_left`, `offset_top`, `rotation`, `scale`, `pivot_offset`,
 renderer applies its own default. `theme_override_styles/*` is stored unparsed.
 `visible` is `true` for anything other than a value that reads as `false`.
 
+`clip_children` clips a Control's children to its drawn pixels, as it does for a Node2D (the Node2D sheet gives the rules). The `clip-children-control` golden has a Button clip a ColorRect.
+
 ## Known limitations
 
 - **Approximated** A Control set to SYSTEM_LOCALE, or to APPLICATION_LOCALE with no

@@ -11,21 +11,20 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { useCheckBoxIcon } from './useCheckBoxIcon';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { isButtonAutowrapped, tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
   checkBoxDrawnIconSize,
-  checkBoxIconMaxWidth,
+  checkBoxFittedIconSize,
   checkBoxHSeparation,
   checkBoxCheckVOffset,
-  checkBoxIconNaturalSize,
+  checkBoxLabelWrapWidthPx,
   checkBoxTextTheme,
-  fitIconSize,
   layoutCheckBoxContent,
   resolveCheckBoxDrawState,
   resolveCheckBoxIconKey,
-  tintColor,
   CHECKBOX_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { CheckBoxProperties } from './types';
@@ -41,10 +40,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const iconKey = resolveCheckBoxIconKey(props);
   const iconTexture = useCheckBoxIcon(solveNode, iconKey);
   // Fitted, not rounded: CheckBox draws `_fit_icon_size` as it is (`check_box.cpp:61`, `:140-142`).
-  const iconSize = useMemo(
-    () => fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants)),
-    [solveNode]
-  );
+  const iconSize = useMemo(() => checkBoxFittedIconSize(solveNode), [solveNode]);
   const drawnIconSize = useMemo(() => checkBoxDrawnIconSize(solveNode, iconKey), [solveNode, iconKey]);
 
   const text = props.text ?? '';
@@ -54,7 +50,13 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const bidi = useControlBidiOptions(props, solveNode);
-  const layout = useButtonLabelLayout(solveNode, CHECKBOX_THEME_FONT_KEY, text, fontSizePx, bidi);
+  const layout = useButtonLabelLayout(solveNode, props, {
+    themeFontKey: CHECKBOX_THEME_FONT_KEY,
+    text,
+    fontSizePx,
+    bidi,
+    boxWidthPx: checkBoxLabelWrapWidthPx(props, rect, solveNode, { theme }),
+  });
 
   const content = useMemo(
     () =>
@@ -94,6 +96,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           layout={layout}
           overrunBehavior={props.overrunBehavior}
           bidi={bidi}
+          isWrapped={isButtonAutowrapped(props)}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}

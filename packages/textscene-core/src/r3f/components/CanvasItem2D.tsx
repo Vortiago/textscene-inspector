@@ -6,6 +6,8 @@
  */
 
 import { useMemo, useState, type ReactNode } from 'react';
+import { CanvasItemClipChildrenMode } from '../../godot/scene/canvasItem';
+import { behindParentRanges, ysortsChildren } from '../canvasPaintOrder';
 import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2dTransform';
@@ -15,7 +17,7 @@ import { useNode2DTextureSampler } from '../canvasItemTextureSampler';
 import { CanvasItemSurfaceSource } from '../canvasItemSurface';
 import type { CanvasItemTexture } from '../canvasItemTexture';
 import { LitCanvasItemPixels, type CanvasItemPixelMaterial } from './LitCanvasItemPixels';
-import { useNodePaintSequence } from '../contexts/PaintOrderContext';
+import { useNodePaintSequence, usePaintRange } from '../contexts/PaintOrderContext';
 import { useAnimatedValue } from '../contexts/AnimatedValueContext';
 import { CanvasItemProvider } from './CanvasItemGroup';
 import { useCanvasItemMaterial } from './canvasItemMaterialContext';
@@ -27,6 +29,7 @@ import {
 } from '../canvasItemState';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
+import { ClipChildrenScope } from '../canvasGroup/ClipChildrenScope';
 
 interface CanvasItem2DProps {
   node: TscnNode;
@@ -88,6 +91,12 @@ export function CanvasItem2D({
     lightMask: props.light_mask,
     sequence: useNodePaintSequence(node),
   });
+  const paintRange = usePaintRange();
+  const clips = props.clip_children !== CanvasItemClipChildrenMode.DISABLED;
+  const behindRanges = useMemo(
+    () => (clips ? behindParentRanges(paintRange, node) : []),
+    [clips, paintRange, node]
+  );
   const { key, zFinal, tint, material } = state;
   // A pushed `visible` takes the place of the authored one, as for a Node3D.
   const animatedVisible = useAnimatedValue('visible', (value) => value[0] !== 0);
@@ -104,18 +113,26 @@ export function CanvasItem2D({
     >
       <CanvasItemProvider value={key}>
         <OwnCanvasModulateProvider value={tint.canvasModulate}>
-          {body && (
-            <LitCanvasItemPixels
-              material={material}
-              lightMask={state.lightMask}
-              zFinal={zFinal}
-              surface={surface}
-              isDrawn={isDrawn}
-            >
-              {(pixelMaterial) => body(tint, material, pixelMaterial)}
-            </LitCanvasItemPixels>
-          )}
-          {ownItems?.(state)}
+          <ClipChildrenScope
+            mode={props.clip_children}
+            isYSorted={ysortsChildren(node)}
+            state={state}
+            behindRanges={behindRanges}
+            range={paintRange}
+          >
+            {body && (
+              <LitCanvasItemPixels
+                material={material}
+                lightMask={state.lightMask}
+                zFinal={zFinal}
+                surface={surface}
+                isDrawn={isDrawn}
+              >
+                {(pixelMaterial) => body(tint, material, pixelMaterial)}
+              </LitCanvasItemPixels>
+            )}
+            {ownItems?.(state)}
+          </ClipChildrenScope>
         </OwnCanvasModulateProvider>
         {canvasTexture?.slot.texture.normalTexture && (
           <CanvasItemSurfaceSource

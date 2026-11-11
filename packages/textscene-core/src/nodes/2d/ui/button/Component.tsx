@@ -17,31 +17,27 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
-import {
-  clampAutowrapMode,
-  infersRtl,
-  shapedTextSizeWidthPx,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
+import { infersRtl, type TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import {
   resolveToggleDrawState,
   pickButtonStyleBox,
   tintColor,
   layoutButtonContent,
-  buttonTextBufWidthPx,
+  isButtonAutowrapped,
+  isButtonTextClipped,
+  labelNaturalSize,
+  wrappedLabelWidthPx,
 } from '../../../../r3f/controls/native/buttonBase';
-import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import {
   buttonLabelShape,
   buttonTextTheme,
   buttonIconColor,
   buttonFocusIconColor,
   isButtonFocusStyled,
+  buttonContentInput,
 } from './nativeSolver';
 import type { ButtonProperties } from './types';
-import type { Vector2 } from '../../../../godot/math/vector';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 interface ButtonPainterProps extends NativeControlComponentProps {
@@ -114,63 +110,53 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
   const iconLinearColor = useItemLinearColor(tintedIconColorSrgb);
 
+  const isClipped = isButtonTextClipped(props);
+  const { alignment, iconAlignment, verticalIconAlignment, expandIcon } = props;
   const contentInput = useMemo(
-    () => ({
-      rectSize: { x: rect.w, y: rect.h },
-      styleMargin: baseStyleBox.contentMargin,
-      hSeparation: solveNode.constants.h_separation ?? theme.separation,
-      iconMaxWidth: solveNode.constants.icon_max_width ?? 0,
-      // Aligned against the ceiled text width (`scene/gui/button.cpp:343,349`).
-      textAlignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
-      iconAlignment: props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-      verticalIconAlignment: props.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
-      expandIcon: props.expandIcon === true,
-      iconNaturalSize,
-      hasText,
-      rtl: solveNode.rtl,
-    }),
+    () =>
+      buttonContentInput({
+        alignment,
+        iconAlignment,
+        verticalIconAlignment,
+        expandIcon,
+        isClipped,
+        constants: solveNode.constants,
+        separationPx: theme.separation,
+        rtl: solveNode.rtl,
+        rectSize: { x: rect.w, y: rect.h },
+        styleMargin: baseStyleBox.contentMargin,
+        iconNaturalSize,
+        hasText,
+      }),
     [
+      alignment,
+      iconAlignment,
+      verticalIconAlignment,
+      expandIcon,
+      isClipped,
+      solveNode.constants,
+      theme.separation,
+      solveNode.rtl,
       rect.w,
       rect.h,
       baseStyleBox.contentMargin,
-      solveNode.constants,
-      props.alignment,
-      props.iconAlignment,
-      props.verticalIconAlignment,
-      props.expandIcon,
       iconNaturalSize,
       hasText,
-      theme.separation,
-      solveNode.rtl,
     ]
   );
-
-  /**
-   * The ceiled shaped width, not the raw pen advance: Godot's draw path (`button.cpp:343,349`)
-   * reads the same `text_buf->get_size()` as the minimum size. The height needs no ceil: the
-   * line pitch sums independently ceiled ascent and descent and an integral theme spacing.
-   */
-  const naturalSize = (l: TextLayoutResult | null): Vector2 =>
-    l ? { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx } : { x: 0, y: 0 };
 
   // `button.cpp:428-432` re-shapes a wrapping label at the width the unwrapped pass measured:
   // `is_clipped` is true under autowrap (`:332`), so the icon's reservation does not move
   // with the text. Godot reaches the same state over two frames.
-  const wraps =
-    clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF) !== AutowrapMode.AUTOWRAP_OFF;
-  const drawableWidthPx = layoutButtonContent({
-    ...contentInput,
-    textNaturalSize: naturalSize(unwrapped),
-    isTextRtl: infersRtl(unwrapped),
-  }).drawableSize.x;
+  const wraps = isButtonAutowrapped(props);
   const layout: TextLayoutResult | null = wraps
-    ? buttonLabelShape(solveNode, theme, buttonTextBufWidthPx(drawableWidthPx))
+    ? buttonLabelShape(solveNode, theme, wrappedLabelWidthPx(contentInput, unwrapped))
     : unwrapped;
   const content = useMemo(
     () =>
       layoutButtonContent({
         ...contentInput,
-        textNaturalSize: naturalSize(layout),
+        textNaturalSize: labelNaturalSize(layout),
         isTextRtl: infersRtl(layout),
       }),
     [contentInput, layout]

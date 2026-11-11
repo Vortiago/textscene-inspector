@@ -178,6 +178,7 @@ export function ColorPicker({
       layout={shape(text)}
       box={box}
       overrunBehavior={undefined}
+      isWrapped={false}
       bidi={bidi}
       fontSizePx={fontSizePx}
       tint={tintOfText}

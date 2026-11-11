@@ -7,7 +7,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { rect2Grow, rect2Merge, rect2Touches, type Rect2 } from '../../../godot/math/rect2';
+import { rect2Grow, rect2Merge, rect2Touches, type Rect2 } from '../../godot/math/rect2';
 
 /**
  * The merge of the drawn item rects that meet `clip`, grown by `fitMargin`. Null when none meets

@@ -1,0 +1,18 @@
+; One variable: `clip_children` is CLIP_AND_DRAW (2) on a green Polygon2D parent, against
+; unit-clip-children-only.tscn. The parent now shows, and its red child, at alpha 0.5, blends over it
+; inside the parent only. Where the child crosses the edge the canvas shows through, unchanged.
+
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Clipped" type="Polygon2D" parent="."]
+position = Vector2(100, 100)
+clip_children = 2
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Child" type="Polygon2D" parent="Clipped"]
+position = Vector2(50, 50)
+color = Color(1, 0, 0, 0.5)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)

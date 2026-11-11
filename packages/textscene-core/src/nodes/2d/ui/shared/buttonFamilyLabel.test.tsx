@@ -5,13 +5,13 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { ComponentType } from 'react';
-import * as THREE from 'three';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { Button } from '../button/Component';
+import { textQuadCounts } from '../../../../r3f/controls/native/testing/textQuadCounts';
 import { CheckBox } from '../checkbox/Component';
 import { CheckButton } from '../checkbutton/Component';
 import { MenuButton } from '../menubutton/Component';
@@ -31,12 +31,7 @@ async function glyphQuadCount(
   const rendered = await ReactThreeTestRenderer.create(
     <Component {...painterEnv()} solveNode={solveNode(type, properties)} rect={rect} renderOrder={0} />
   );
-  // One text mesh per drawn line.
-  return rendered.scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined)
-    .reduce((glyphs, m) => glyphs + m.geometry.attributes.position!.count / 4, 0);
+  return textQuadCounts(rendered.scene).reduce((glyphs, quads) => glyphs + quads, 0);
 }
 
 const ALPHA_BRAVO = { text: 'alpha bravo', clipText: true };

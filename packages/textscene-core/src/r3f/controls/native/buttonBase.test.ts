@@ -13,7 +13,7 @@ import {
   iconOnlyButtonIconRectIn,
   layoutButtonContent,
   pickButtonStyleBox,
-  resolveButtonDrawState,
+  resolveToggleDrawState,
   textMinimumWidthPx,
   tintColor,
   trimButtonLabel,
@@ -54,11 +54,18 @@ function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
   };
 }
 
-describe('resolveButtonDrawState', () => {
-  it('is "normal" when disabled is false/undefined, "disabled" when true (no hover/pressed/focus: no input modelled)', () => {
-    expect(resolveButtonDrawState(undefined)).toBe('normal');
-    expect(resolveButtonDrawState(false)).toBe('normal');
-    expect(resolveButtonDrawState(true)).toBe('disabled');
+describe('resolveToggleDrawState', () => {
+  it('is "normal" when disabled and pressed are false or undefined', () => {
+    expect(resolveToggleDrawState(undefined, undefined)).toBe('normal');
+    expect(resolveToggleDrawState(false, false)).toBe('normal');
+  });
+
+  it('is "pressed" for a toggle that is on', () => {
+    expect(resolveToggleDrawState(false, true)).toBe('pressed');
+  });
+
+  it('is "disabled" over a toggle that is on (base_button.cpp:326-328)', () => {
+    expect(resolveToggleDrawState(true, true)).toBe('disabled');
   });
 });
 
@@ -148,6 +155,7 @@ const BASE_INPUT: ButtonContentInput = {
   hasText: true,
   textNaturalSize: { x: 50, y: 26 },
   isTextRtl: false,
+  isClipped: false,
   rtl: false,
 };
 
@@ -347,6 +355,19 @@ describe('layoutButtonContent: expand_icon', () => {
     // w=58, h=24; iw=100*24/16=150 > 58 -> iw=58, ih=16*58/100=9.28 -> round 9.
     // iconY (vertical CENTER) = 4 + (24-9)/2 = 4+7.5=11.5 -> floor 11.
     expect(icon).toEqual({ rect: { x: 4, y: 11, w: 58, h: 9 } });
+  });
+});
+
+describe('layoutButtonContent: expand_icon under a clipped label', () => {
+  it('leaves the text out of the icon width, as `!is_clipped` skips the subtraction (button.cpp:345)', () => {
+    const { icon } = layoutButtonContent({
+      ...BASE_INPUT,
+      expandIcon: true,
+      isClipped: true,
+      iconNaturalSize: { x: 100, y: 16 },
+    });
+    // w=112, h=24; iw=150 > 112 -> iw=112, ih=16*112/100=17.92 -> round 18.
+    expect(icon).toEqual({ rect: { x: 4, y: 7, w: 112, h: 18 } });
   });
 });
 

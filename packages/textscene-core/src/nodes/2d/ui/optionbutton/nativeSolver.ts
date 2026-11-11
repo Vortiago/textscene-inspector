@@ -1,8 +1,8 @@
 /**
  * OptionButton's native rect solver and content layout: `get_minimum_size`, `_refresh_size_cache` and
  * `_notification` (`scene/gui/option_button.cpp`), with the defaults `scene/theme/default_theme.cpp:212-251`
- * registers for "OptionButton". Its "pressed" means an open popup, which a static preview never reaches, so
- * `get_draw_mode()` gives only `DRAW_NORMAL` or `DRAW_DISABLED`.
+ * registers for "OptionButton". A static preview has no pointer or open popup, so `get_draw_mode()` gives
+ * `DRAW_NORMAL`, `DRAW_DISABLED`, or `DRAW_PRESSED` for an authored `button_pressed` (`base_button.cpp:326-352`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -19,28 +19,30 @@ import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistr
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
+  BUTTON_THEME_KEYS,
   pickButtonStyleBox,
-  resolveButtonDrawState,
+  resolveToggleDrawState,
+  labelWrapWidthPx,
   reservedLabelBox,
   textMinimumWidthPx,
   tintColor,
-  type ButtonDrawState,
   type ButtonLabelBox,
+  type ToggleDrawState,
+  type ButtonWrapProperties,
 } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
   type TextThemeDefaults,
-  type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { OptionButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
+import { BUTTON_DEFAULT_FONT_COLORS } from '../button/nativeSolver';
 
 // Re-exported so Component.tsx imports the shared Button pieces under one name.
-export { pickButtonStyleBox, resolveButtonDrawState, tintColor };
+export { pickButtonStyleBox, resolveToggleDrawState, tintColor };
 
 /**
  * OptionButton's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:237`). This
@@ -48,31 +50,22 @@ export { pickButtonStyleBox, resolveButtonDrawState, tintColor };
  */
 export const OPTION_BUTTON_THEME_FONT_KEY = 'font';
 
-// Theme font colours
-
-/** OptionButton's `font_color` default (`default_theme.cpp:240`). */
-const OPTION_BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-/** OptionButton's `font_disabled_color` default (`default_theme.cpp:245`). */
-const OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
-
-const OPTION_BUTTON_THEME_KEYS: Record<ButtonDrawState, TextThemeKeys> = {
-  normal: { sizeKey: 'font_size', colorKey: 'font_color' },
-  disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
-};
-
-/** OptionButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else OptionButton's literal (`resolveTextTheme`). */
+/**
+ * OptionButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the
+ * theme default, else OptionButton's literal (`resolveTextTheme`). Its literals (`default_theme.cpp:240-245`)
+ * equal Button's, so it reads Button's tables.
+ */
 export function optionButtonTextTheme(
   n: SolveNode,
   props: OptionButtonProperties,
-  state: ButtonDrawState,
+  state: ToggleDrawState,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color:
-      state === 'disabled' ? OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR : OPTION_BUTTON_DEFAULT_FONT_COLOR,
+    color: BUTTON_DEFAULT_FONT_COLORS[state],
   };
-  return resolveTextTheme(n, props, OPTION_BUTTON_THEME_KEYS[state], defaults);
+  return resolveTextTheme(n, props, BUTTON_THEME_KEYS[state], defaults);
 }
 
 // StyleBox chrome
@@ -123,6 +116,26 @@ export function optionButtonHSeparation(
   return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
 
+/**
+ * The width the drawn label wraps at in `rect` (`button.cpp:428-432`): the rect less the stylebox margins, the
+ * arrow and `h_separation`. The minimum size never wraps its items (below), so only the painter calls it.
+ */
+export function optionButtonLabelWrapWidthPx(
+  props: ButtonWrapProperties,
+  rect: Rect2,
+  styleMargin: { left: number; right: number },
+  arrowSize: Vector2,
+  constants: SolveNode['constants'],
+  ctx: Pick<SolveContext, 'theme'>
+): number {
+  return labelWrapWidthPx(
+    props,
+    rect,
+    styleMargin.left + styleMargin.right,
+    () => arrowSize.x + optionButtonHSeparation(constants, ctx)
+  );
+}
+
 // Minimum size
 
 /**
@@ -133,7 +146,7 @@ export function optionButtonHSeparation(
  */
 export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as OptionButtonProperties;
-  const state = resolveButtonDrawState(props.disabled);
+  const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
   const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.optionButton, state, n.rtl);
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
@@ -151,7 +164,9 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
       // Each item goes through `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492`), whose
       // `paragraph->get_size()` is ceiled (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`),
       // so the max is over whole-pixel widths.
-      // `clip_text` or a trimming overrun zeroes the width (`button.cpp:493-495`).
+      // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`). An item shapes
+      // a fresh paragraph (`button.cpp:484-489`, from `option_button.cpp:455-459`) and only the draw sets a
+      // width, on `text_buf` (`button.cpp:432`), so an item never wraps and the height stays one line.
       textW = Math.max(textW, textMinimumWidthPx(size.x, props));
       textH = Math.max(textH, size.y);
     }

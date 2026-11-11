@@ -10,7 +10,6 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import { resolveButtonDrawState } from '../../../../r3f/controls/native/buttonBase';
 import * as logger from '../../../../logger';
 import type { OptionButtonProperties } from './types';
 import {
@@ -203,13 +202,6 @@ describe('optionButtonTextTheme', () => {
   });
 });
 
-describe('resolveButtonDrawState reused for OptionButton (no CheckBox-style pressed complication)', () => {
-  it('the popup being closed means OptionButton never draws DRAW_PRESSED regardless of `selected`', () => {
-    expect(resolveButtonDrawState(false)).toBe('normal');
-    expect(resolveButtonDrawState(true)).toBe('disabled');
-  });
-});
-
 const LAYOUT_BASE = {
   rectSize: { x: 150, y: 32 },
   styleMargin: { left: 8, top: 4, right: 8, bottom: 4 },
@@ -267,7 +259,7 @@ describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-2
  * (option_button.cpp:126), the internal margin reserves SIDE_LEFT instead of SIDE_RIGHT (`:141-143`), and
  * the constructor's `HORIZONTAL_ALIGNMENT_LEFT` (`:654`) becomes RIGHT through Button's swap (`button.cpp:271-275`).
  */
-describe('layoutOptionButtonContent — RTL puts the arrow on the left', () => {
+describe('layoutOptionButtonContent: RTL puts the arrow on the left', () => {
   const RTL = { ...LAYOUT_BASE, rtl: true };
 
   it('draws the arrow at arrow_margin from the LEFT edge, vertically unchanged', () => {
@@ -292,7 +284,7 @@ describe('layoutOptionButtonContent — RTL puts the arrow on the left', () => {
   });
 });
 
-describe(`optionButtonMinimumSize — resolves this OptionButton's own theme font key ("${OPTION_BUTTON_THEME_FONT_KEY}", default_theme.cpp:237)`, () => {
+describe(`optionButtonMinimumSize: resolves this OptionButton's own theme font key ("${OPTION_BUTTON_THEME_FONT_KEY}", default_theme.cpp:237)`, () => {
   // An unresolvable font's warn is the observable proof here (`resolveNodeFontMetrics.test.ts`).
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
@@ -323,7 +315,7 @@ describe(`optionButtonMinimumSize — resolves this OptionButton's own theme fon
  * (`text_paragraph.cpp:601-608`, `text_server_adv.cpp:7524-7537`). Godot 4.6.3 on `complex-2d-gui.tscn`:
  * SystemsGrid/Difficulty, items "Recon"/"Standard"/"Blackout", min = (103, 31).
  */
-describe('optionButtonMinimumSize — the shaped item extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
+describe('optionButtonMinimumSize: the shaped item extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
   it("reaches Godot's own whole-pixel minimum width 103 for the Recon/Standard/Blackout item set", () => {
     const n = node({
       items: [
@@ -336,7 +328,7 @@ describe('optionButtonMinimumSize — the shaped item extent is ceiled (text_ser
   });
 });
 
-describe('optionButtonMinimumSize — clip_text zeroes each item text width (button.cpp:493-495)', () => {
+describe('optionButtonMinimumSize: clip_text zeroes each item text width (button.cpp:493-495)', () => {
   const items = [{ text: 'AB', id: 0 }];
 
   it('keeps the margins, the arrow and the text height, and drops the text width', () => {
@@ -350,7 +342,7 @@ describe('optionButtonMinimumSize — clip_text zeroes each item text width (but
   });
 });
 
-describe('optionButtonMinimumSize — a trimming text_overrun_behavior zeroes each item text width (button.cpp:493-495)', () => {
+describe('optionButtonMinimumSize: a trimming text_overrun_behavior zeroes each item text width (button.cpp:493-495)', () => {
   const items = [{ text: 'AB', id: 0 }];
 
   it('drops the text width under OVERRUN_TRIM_ELLIPSIS', () => {
@@ -361,5 +353,20 @@ describe('optionButtonMinimumSize — a trimming text_overrun_behavior zeroes ea
   it('keeps the widest item text width under OVERRUN_NO_TRIMMING', () => {
     const result = optionButtonMinimumSize(node({ items, selected: 0, overrunBehavior: 0 }), ctx());
     expect(result.x).toBe(16 + AB_SHAPED_WIDTH + 12 + 4);
+  });
+});
+
+describe('optionButtonMinimumSize: autowrap_mode zeroes each item text width and never wraps it (button.cpp:484-489,493-495)', () => {
+  const items = [{ text: 'alpha bravo charlie', id: 0 }];
+
+  it('drops the text width', () => {
+    const result = optionButtonMinimumSize(node({ items, selected: 0, autowrapMode: 2 }), ctx());
+    expect(result.x).toBe(16 + 12 + 4);
+  });
+
+  it('keeps one line of height, though a tentative width would wrap the drawn label', () => {
+    const context: SolveContext = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 80, h: 40 }) };
+    const result = optionButtonMinimumSize(node({ items, selected: 0, autowrapMode: 2 }), context);
+    expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 });

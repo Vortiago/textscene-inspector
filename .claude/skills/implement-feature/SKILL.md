@@ -43,9 +43,9 @@ material property, or a recent node (`git log`). Broad monorepo orientation live
 - **Component test**: `Component.test.tsx`, or `Component.material-features.test.tsx` for a
   MeshInstance3D material feature, through `@react-three/test-renderer`, asserting the real
   rendered `material.*` or object. **Render is gateable. Never skip it as "visual-only".**
-- **Fixture**: `scenes/fixtures/unit-<kebab-type>.tscn`, a real parseable scene. Then regenerate
-  the web catalog with `pnpm generate:fixtures`, which rewrites the auto-generated
-  `apps/textscene-web/src/fixtures.ts`. If the fixture's filename prefix maps to no category, add
+- **Fixture**: `scenes/fixtures/unit-<kebab-type>.tscn`, a real parseable scene. Then refresh
+  the web catalog with `pnpm generate:fixtures`, which rewrites the untracked, auto-generated
+  `apps/textscene-web/src/fixtures.ts`. Do not commit that file. If the fixture's filename prefix maps to no category, add
   a branch to `detectCategory()` in `scripts/generate-fixtures.js`.
 - **Docs** and **golden**: conditional, see below.
 
@@ -126,7 +126,7 @@ render line. Only when relevant: `GLOSSARY.md` (a new domain term, not per featu
 ## Golden image (conditional)
 
 Only for a deterministic WebGL render: no 2D DOM overlays, and it must settle to two
-byte-identical frames (policy in `scripts/visual/scenes.mjs`). Add a `GOLDEN_SCENES` entry, run
+byte-identical frames (policy in `scripts/visual/scenes.mjs`). Add an entry to the chapter file of `scripts/visual/scenes/` that the scene's name prefix names, run
 `pnpm test:visual:update`, eyeball, and commit `scripts/visual/baselines/<name>.png`. Material
 scalars piggyback on the `material-features` golden. Skip non-deterministic nodes (Label3D,
 AnimationPlayer).

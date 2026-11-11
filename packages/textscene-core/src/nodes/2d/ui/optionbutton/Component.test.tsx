@@ -14,6 +14,7 @@ import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
+import { textQuadCounts } from '../../../../r3f/controls/native/testing/textQuadCounts';
 import { OptionButton } from './Component';
 import type { OptionButtonProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -86,6 +87,34 @@ describe('<OptionButton> (isolated painter contract)', () => {
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
     expect(color.getW(0)).toBeCloseTo(0.3, 5);
+  });
+
+  it('draws the pressed fill once button_pressed=true (style_pressed_color)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <OptionButton
+        {...painterEnv()}
+        solveNode={solveNode({ buttonPressed: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const mesh = findChromeMesh(renderer.scene)!;
+    const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
+    expect(color.getX(0)).toBeCloseTo(0, 5);
+    expect(color.getW(0)).toBeCloseTo(0.6, 5);
+  });
+
+  it('uses control_font_pressed_color for the label once button_pressed=true', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <OptionButton
+        {...painterEnv()}
+        solveNode={solveNode({ items: ITEMS, selected: 1, buttonPressed: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    expect(material.uniforms.uColor!.value.x).toBeCloseTo(1, 5);
   });
 
   it('skips the chrome StyleBox when flat, keeping the arrow', async () => {
@@ -199,7 +228,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
  * (`option_button.cpp:113-121` plus Button's internal margin) has nothing font-kind-specific, so an
  * atlas-bake anchor leaking into it reads correct on the atlas path and is `ascentPx - base*fontSizePx/42` px off here.
  */
-describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', () => {
+describe('<OptionButton>: scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     controlSolverRegistry.clear();
@@ -272,7 +301,7 @@ describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', ()
   });
 });
 
-describe('<OptionButton> — text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
+describe('<OptionButton>: text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
   const glyphQuadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
 
   async function render(properties: Partial<OptionButtonProperties>) {
@@ -293,5 +322,28 @@ describe('<OptionButton> — text_overrun_behavior trims the label to its paragr
     const cut = await render({ overrunBehavior: 0 });
     expect(glyphQuadCount(trimmed)).toBe(4);
     expect(glyphQuadCount(cut)).toBeGreaterThan(4);
+  });
+});
+
+describe('<OptionButton>: autowrap_mode wraps the drawn label though the box keeps one line (button.cpp:428-432)', () => {
+  async function render(properties: Partial<OptionButtonProperties>) {
+    return ReactThreeTestRenderer.create(
+      <OptionButton
+        {...painterEnv()}
+        solveNode={solveNode({ items: [{ text: 'alpha bravo charlie', id: 0 }], selected: 0, ...properties })}
+        rect={{ x: 0, y: 0, w: 100, h: 40 }}
+        renderOrder={0}
+      />
+    );
+  }
+
+  it('draws three lines', async () => {
+    const wrapped = await render({ autowrapMode: 2 });
+    expect(textQuadCounts(wrapped.scene)).toEqual([5, 5, 7]);
+  });
+
+  it('draws one line at AUTOWRAP_OFF', async () => {
+    const unwrapped = await render({});
+    expect(textQuadCounts(unwrapped.scene)).toHaveLength(1);
   });
 });
