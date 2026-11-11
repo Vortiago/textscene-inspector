@@ -57,7 +57,7 @@ CI job fails, fix the cause.
   image diff and the scene on the branch's and main's Cloudflare Pages previews.
 - A new golden moves one variable. Its `.tscn` header names that variable and says why no
   other scene shows a regression in it.
-- A 2D-UI scene sets `mode: '2d'` in `scripts/visual/scenes.mjs`.
+- A 2D chapter's scenes capture in `mode: '2d'` by default. `scripts/visual/scenes.mjs` sets it.
 - Add a golden's entry to the chapter file under `scripts/visual/scenes/` that its name prefix
   names. Two pull requests then rarely edit one file.
 - The fixture manifest `apps/textscene-web/src/fixtures.ts` and the gallery

@@ -23,6 +23,9 @@ import { PARTICLES_2D_SCENES } from './scenes/particles2d.mjs';
 import { MATERIAL_SCENES } from './scenes/materials.mjs';
 import { TILE_AND_TARGET_SCENES } from './scenes/targets.mjs';
 
+/** The 2D chapters list scenes that all capture in 2D mode, so a chapter entry leaves `mode` out. */
+const in2dMode = (scenes) => scenes.map((scene) => ({ mode: '2d', ...scene }));
+
 /** The options an entry may set. The capture reads no other, so `scenes.test.mjs` refuses one. */
 export const SCENE_OPTIONS = [
   'name',
@@ -50,11 +53,11 @@ export const GOLDEN_SCENES = [
   // The scenes with `gizmos: true` are the only real-browser guard for the editor gizmos.
   ...GIZMO_SCENES,
   ...PRIMITIVE_SCENES,
-  ...CANVAS_2D_SCENES,
-  ...CONTROL_TEXT_SCENES,
-  ...CONTROL_WIDGET_SCENES,
-  ...LIGHTING_2D_SCENES,
-  ...PARTICLES_2D_SCENES,
+  ...in2dMode(CANVAS_2D_SCENES),
+  ...in2dMode(CONTROL_TEXT_SCENES),
+  ...in2dMode(CONTROL_WIDGET_SCENES),
+  ...in2dMode(LIGHTING_2D_SCENES),
+  ...in2dMode(PARTICLES_2D_SCENES),
   ...MATERIAL_SCENES,
   ...TILE_AND_TARGET_SCENES,
 ];
