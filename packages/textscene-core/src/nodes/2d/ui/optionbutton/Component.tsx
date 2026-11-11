@@ -16,11 +16,11 @@ import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { ButtonLabel, useWrappingButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import {
-  BUTTON_ICON_SLOT_KEY,
+  ownButtonIconSize,
   isButtonAutowrapped,
   labelNaturalSize,
 } from '../../../../r3f/controls/native/buttonBase';
-import { useIconModulate, useOwnButtonTexture } from '../../../../r3f/controls/native/useButtonIcon';
+import { useIconModulate, useIconTexture } from '../../../../r3f/controls/native/useButtonIcon';
 import { infersRtl } from '../../../../r3f/controls/native/text/textLayout';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { buttonIconColor } from '../button/nativeSolver';
@@ -56,8 +56,8 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
   // The selected item's text and icon only, never the popup's full list (`option_button.cpp:423-424`).
   const selectedItem = selectedOptionItem(props);
   const text = selectedItem?.text ?? '';
-  const iconTexture = useOwnButtonTexture(solveNode, selectedItem?.icon);
-  const iconSize = solveNode.textureSlots[BUTTON_ICON_SLOT_KEY] ?? null;
+  const iconTexture = useIconTexture(solveNode, selectedItem?.icon);
+  const iconSize = ownButtonIconSize(solveNode);
   const iconModulate = useIconModulate(buttonIconColor(solveNode.colors, state), tint.own);
   const { fontSizePx, color: baseFontColor } = optionButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);

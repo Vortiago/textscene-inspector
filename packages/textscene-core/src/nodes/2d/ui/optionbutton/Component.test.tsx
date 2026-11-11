@@ -20,7 +20,7 @@ import type { OptionButtonProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
   findIconMeshes,
-  findTextMesh as findLabelMesh,
+  findTextMesh,
   OWN_ICON_REF,
   OWN_ICON_SCOPE,
   renderUnloaded,
@@ -52,14 +52,6 @@ function findChromeMesh(scene: Rendered['scene']) {
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
-}
-
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMesh(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
 /** The arrow `ControlQuad` is a `PlaneGeometry`, identified by its own `.parameters.width`. */
@@ -384,7 +376,7 @@ describe("<OptionButton>: the selected item's icon (option_button.cpp:424, butto
 
   it('moves the label past the icon and h_separation: 8 + 12 + 4', async () => {
     const renderer = await renderWithOwnIcon(painter(1), { w: 12, h: 12 });
-    expect(worldPosition(findLabelMesh(renderer.scene)!).x).toBeGreaterThanOrEqual(24);
+    expect(worldPosition(findTextMesh(renderer.scene)!).x).toBe(24);
   });
 
   it('draws only the arrow for a selected item without an icon', async () => {
@@ -396,8 +388,6 @@ describe("<OptionButton>: the selected item's icon (option_button.cpp:424, butto
     const unloaded = await renderUnloaded(painter(1));
     const loaded = await renderWithOwnIcon(painter(1), { w: 12, h: 12 });
     expect(findIconMeshes(unloaded.scene)).toHaveLength(1);
-    expect(worldPosition(findLabelMesh(unloaded.scene)!).x).toBe(
-      worldPosition(findLabelMesh(loaded.scene)!).x
-    );
+    expect(worldPosition(findTextMesh(unloaded.scene)!).x).toBe(worldPosition(findTextMesh(loaded.scene)!).x);
   });
 });

@@ -13,13 +13,13 @@ import { ButtonLabel, useWrappingButtonLabelLayout } from '../../../../r3f/contr
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { infersRtl } from '../../../../r3f/controls/native/text/textLayout';
 import {
-  BUTTON_ICON_SLOT_KEY,
+  ownButtonIconSize,
   isButtonAutowrapped,
   labelNaturalSize,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
-import { useIconModulate, useOwnButtonTexture } from '../../../../r3f/controls/native/useButtonIcon';
+import { useIconModulate, useIconTexture } from '../../../../r3f/controls/native/useButtonIcon';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { buttonIconColor } from '../button/nativeSolver';
 import {
@@ -49,8 +49,8 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const checkSize = useMemo(() => checkBoxFittedIconSize(solveNode), [solveNode]);
   const drawnCheckSize = useMemo(() => checkBoxDrawnIconSize(solveNode, checkKey), [solveNode, checkKey]);
 
-  const ownIconTexture = useOwnButtonTexture(solveNode, props.icon);
-  const ownIconSize = solveNode.textureSlots[BUTTON_ICON_SLOT_KEY] ?? null;
+  const ownIconTexture = useIconTexture(solveNode, props.icon);
+  const ownIconSize = ownButtonIconSize(solveNode);
   const ownIconModulate = useIconModulate(buttonIconColor(solveNode.colors, state), tint.own);
 
   const text = props.text ?? '';

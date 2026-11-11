@@ -190,8 +190,8 @@ export function buttonContentInput(fields: ButtonContentInputFields): ButtonCont
 interface DerivedButtonContent {
   n: Pick<SolveNode, 'constants' | 'rtl'>;
   props: ButtonProperties;
-  /** The label: `props.text`, or OptionButton's selected item. */
-  text: string;
+  /** The label when it is not `props.text`: OptionButton's selected item. */
+  text?: string;
   ctx: Pick<SolveContext, 'theme'>;
   rectSize: Vector2;
   iconNaturalSize: Vector2 | null;
@@ -204,7 +204,7 @@ interface DerivedButtonContent {
 export function derivedButtonContentFacts({
   n,
   props,
-  text,
+  text = props.text ?? '',
   ctx,
   rectSize,
   iconNaturalSize,

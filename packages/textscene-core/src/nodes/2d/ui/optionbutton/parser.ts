@@ -1,7 +1,7 @@
 /**
  * Parses an OptionButton through `parseButton`, since an OptionButton is a Button in Godot, plus the
- * `popup/item_N/...` items and `selected`. The renderer ignores `text`: `_select` overwrites it from the
- * chosen item (option_button.cpp:423), so `Component.tsx` reads the selected item's label.
+ * `popup/item_N/...` items and `selected`. The renderer ignores `text`: `_select` overwrites it, and Button's `icon`,
+ * from the chosen item (option_button.cpp:423-424), so `Component.tsx` reads the selected item's label and icon.
  */
 
 import { type ParsedHeading, unquoteString } from '../../../../parser/utils';

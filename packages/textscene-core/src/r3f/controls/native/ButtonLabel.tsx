@@ -84,7 +84,7 @@ interface ButtonLabelShapeInput {
  * The shaped label of a Button-family control, or null for empty text. The font metrics
  * are read in the render body, not in the `useMemo`, for the reason Label's Component.tsx gives.
  */
-export function useButtonLabelLayout(
+function useButtonLabelLayout(
   solveNode: ShareNode,
   wrap: ButtonWrapProperties,
   { themeFontKey, text, fontSizePx, bidi, boxWidthPx }: ButtonLabelShapeInput

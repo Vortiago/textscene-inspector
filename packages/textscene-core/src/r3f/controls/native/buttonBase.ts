@@ -13,7 +13,6 @@
 import { multiplyModulate } from '../../canvasItemModulate';
 import type { ShareNode, SolveNode } from './solveTree';
 import type { SolveContext, TextureSlotRequest } from './solverRegistry';
-import type { TscnNode } from '../../../parser/types';
 import type { TextThemeKeys } from './textTheme';
 import { resolveNodeFontMetrics } from './text/resolveNodeFontMetrics';
 import type { StyleBoxFlatData } from './styleBoxFlat';
@@ -742,12 +741,16 @@ export function withReservedElementSize(content: Vector2, element: Vector2, hSep
 export const BUTTON_ICON_SLOT_KEY = 'icon';
 
 /**
- * Button's own `icon` as a texture slot, for a Button-family type that registers a `TextureSlotsFn` of
+ * Button's own `icon` ref as a texture slot, for a Button-family type that registers a `TextureSlotsFn` of
  * its own and so loses the generic `icon` slot. It goes first: the first request is `textureSize`.
  */
-export function buttonIconSlotRequests(node: TscnNode): TextureSlotRequest[] {
-  const { icon } = node.properties as { icon?: string };
+export function buttonIconSlotRequests(icon: string | undefined): TextureSlotRequest[] {
   return icon ? [{ key: BUTTON_ICON_SLOT_KEY, ref: icon }] : [];
+}
+
+/** The size the solver holds for Button's own icon: what a painter lays out for, loaded or not. */
+export function ownButtonIconSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 | null {
+  return n.textureSlots[BUTTON_ICON_SLOT_KEY] ?? null;
 }
 
 /**

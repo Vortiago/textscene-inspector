@@ -17,7 +17,7 @@ import type {
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  BUTTON_ICON_SLOT_KEY,
+  ownButtonIconSize,
   BUTTON_THEME_KEYS,
   buttonContentMinimumSize,
   buttonIconSlotRequests,
@@ -121,7 +121,7 @@ const CHECK_BUTTON_ICON_THEME_NAMES = Object.values(CHECK_BUTTON_ICON_THEME_NAME
 
 /** Button's own `icon` and those of CheckButton's 8 icon slots that have a themed answer, as `checkBoxTextureSlots` does for CheckBox. */
 export const checkButtonTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => [
-  ...buttonIconSlotRequests(node),
+  ...buttonIconSlotRequests((node.properties as { icon?: string }).icon),
   ...themedSlotRequests(CHECK_BUTTON_ICON_THEME_NAMES, themedIcons),
 ];
 
@@ -223,7 +223,6 @@ export function checkButtonContentFacts(
   return derivedButtonContentFacts({
     n,
     props,
-    text: props.text ?? '',
     ctx,
     rectSize,
     iconNaturalSize,
@@ -244,7 +243,7 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const state = resolveCheckButtonDrawState(props);
   const { fontSizePx } = checkButtonTextTheme(n, props, state, ctx);
-  const iconNaturalSize = n.textureSlots[BUTTON_ICON_SLOT_KEY] ?? null;
+  const iconNaturalSize = ownButtonIconSize(n);
   const factsAt = (rectSize: Vector2) => checkButtonContentFacts(n, props, ctx, rectSize, iconNaturalSize);
   const label = { fontSizePx, themeFontKey: CHECKBUTTON_THEME_FONT_KEY };
   // A wrapping label's rows follow the tentative width (`button.cpp:429-432`).

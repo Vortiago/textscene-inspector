@@ -12,12 +12,12 @@ import { tintColor } from './buttonBase';
 import type { SolveNode } from './solveTree';
 
 /**
- * Button's own `icon` property as a texture, `null` until it loads and for no `icon`. A painter lays out
+ * An icon reference (Button's `icon`, a check family `icon`, an OptionButton item or a TabBar tab) as a texture, `null` until it loads and for no `icon`. A painter lays out
  * for the size the solver holds (`textureSize`, `textureSlots`), never for this texture's: the layout
  * then agrees with the minimum size on every frame, and a late load only paints the quad. It resolves
  * in the node's own scope, since a node that arrived through an instanced sub-scene names ids from that scene.
  */
-export function useOwnButtonTexture(solveNode: SolveNode, ref: string | undefined): THREE.Texture | null {
+export function useIconTexture(solveNode: SolveNode, ref: string | undefined): THREE.Texture | null {
   const { externalResources, internalResources } = solveNode.resources;
   // `useTexture2D`, not the path-only resolver: an icon may be an inline procedural texture, which has no path to load from.
   const { texture: source } = useTexture2D(ref, externalResources, internalResources);

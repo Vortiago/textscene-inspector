@@ -43,7 +43,7 @@ import type { OptionButtonProperties, OptionItem } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { BUTTON_DEFAULT_FONT_COLORS, derivedButtonContentFacts } from '../button/nativeSolver';
 
-// Re-exported so Component.tsx imports the shared Button pieces under one name.
+// Re-exported so Component.tsx imports the Button draw-state pieces under one name.
 export { pickButtonStyleBox, resolveToggleDrawState, tintColor };
 
 /**
@@ -77,14 +77,6 @@ export function optionButtonTextTheme(
 
 // Selected item
 
-/**
- * The bounds-guarded selected-item lookup: an out-of-range or absent
- * `selected` renders empty text rather than defaulting to item 0.
- */
-export function resolveOptionButtonSelectedText(props: OptionButtonProperties): string {
-  return selectedOptionItem(props)?.text ?? '';
-}
-
 /** The item `_select` copies the text and icon from (`option_button.cpp:423-424`), or none for an absent or out-of-range `selected`. */
 export function selectedOptionItem(props: OptionButtonProperties): OptionItem | undefined {
   const items = props.items ?? [];
@@ -109,9 +101,7 @@ export function optionItemIconSlotKey(index: number): string {
 export const optionButtonTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
   const props = node.properties as OptionButtonProperties;
   const selectedIcon = selectedOptionItem(props)?.icon;
-  const requests: TextureSlotRequest[] = selectedIcon
-    ? buttonIconSlotRequests({ ...node, properties: { icon: selectedIcon } })
-    : [];
+  const requests: TextureSlotRequest[] = buttonIconSlotRequests(selectedIcon);
   for (const [index, { icon }] of (props.items ?? []).entries()) {
     if (icon) requests.push({ key: optionItemIconSlotKey(index), ref: icon });
   }
@@ -130,7 +120,7 @@ export function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>): Vecto
 }
 
 /** `h_separation`: OptionButton's default (`default_theme.cpp:249`, `round(4*scale)`) equals `theme.separation`. */
-export function optionButtonHSeparation(
+function optionButtonHSeparation(
   constants: SolveNode['constants'],
   ctx: Pick<SolveContext, 'theme'>
 ): number {
@@ -182,6 +172,21 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const fontMetrics = resolveNodeFontMetrics(n, OPTION_BUTTON_THEME_FONT_KEY);
   const items = props.items ?? [];
 
+  // The facts only an item's text and icon change, and equal texts measure alike.
+  const itemFacts = optionButtonContentFacts(n, props, '', ctx, { x: 0, y: 0 }, null);
+  const measuredByText = new Map<string, Vector2>();
+  // An empty item text keeps the button's own paragraph, the selected item's text (`button.cpp:485-486`).
+  const selectedText = selectedOptionItem(props)?.text ?? '';
+  const measure = (itemText: string): Vector2 => {
+    const text = itemText || selectedText;
+    if (!ctx.measureText || !text) return { x: 0, y: 0 };
+    const known = measuredByText.get(text);
+    if (known) return known;
+    const size = ctx.measureText(text, fontSizePx, 0, fontMetrics);
+    measuredByText.set(text, size);
+    return size;
+  };
+
   let itemW = 0;
   let itemH = 0;
   for (const [index, { text }] of items.entries()) {
@@ -191,11 +196,12 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
     // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`). An item shapes
     // a fresh paragraph (`button.cpp:484-489`, from `option_button.cpp:451`) and only the draw sets a
     // width, on `text_buf` (`button.cpp:432`), so an item never wraps and the height stays one line.
-    const measured =
-      ctx.measureText && text ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
-    const iconNaturalSize = n.textureSlots[optionItemIconSlotKey(index)] ?? null;
-    const facts = optionButtonContentFacts(n, props, text, ctx, { x: 0, y: 0 }, iconNaturalSize);
-    const size = measuredContentMinimumSize(facts, measured, props);
+    const facts = {
+      ...itemFacts,
+      hasText: text.length > 0 || selectedText.length > 0,
+      iconNaturalSize: n.textureSlots[optionItemIconSlotKey(index)] ?? null,
+    };
+    const size = measuredContentMinimumSize(facts, measure(text), props);
     itemW = Math.max(itemW, size.x);
     itemH = Math.max(itemH, size.y);
   }

@@ -13,14 +13,14 @@ import { ButtonLabel, useWrappingButtonLabelLayout } from '../../../../r3f/contr
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { infersRtl } from '../../../../r3f/controls/native/text/textLayout';
 import {
-  BUTTON_ICON_SLOT_KEY,
+  ownButtonIconSize,
   isButtonAutowrapped,
   labelNaturalSize,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
-import { useIconModulate, useOwnButtonTexture } from '../../../../r3f/controls/native/useButtonIcon';
+import { useIconModulate, useIconTexture } from '../../../../r3f/controls/native/useButtonIcon';
 import { buttonIconColor } from '../button/nativeSolver';
 import {
   checkButtonCheckVOffset,
@@ -58,8 +58,8 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
   // Unlike CheckBox's fixed white, the toggle colour is a theme key a scene can override, so it
   // takes the tint before its one sRGB-to-linear conversion, as Button's icon does.
   const toggleModulate = useIconModulate(checkButtonIconColor(props, solveNode.colors), tint.own);
-  const ownIconTexture = useOwnButtonTexture(solveNode, props.icon);
-  const ownIconSize = solveNode.textureSlots[BUTTON_ICON_SLOT_KEY] ?? null;
+  const ownIconTexture = useIconTexture(solveNode, props.icon);
+  const ownIconSize = ownButtonIconSize(solveNode);
   const ownIconModulate = useIconModulate(buttonIconColor(solveNode.colors, state), tint.own);
 
   const text = props.text ?? '';

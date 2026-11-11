@@ -23,7 +23,7 @@ import {
   OWN_ICON_SCOPE,
   renderUnloaded,
   renderWithOwnIcon,
-  findTextMesh as findLabelMesh,
+  findTextMesh,
   worldPosition,
 } from '../../../../r3f/controls/native/testing/ownIcon';
 
@@ -47,13 +47,6 @@ function findIconMesh(scene: Rendered['scene']) {
 }
 
 /** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMesh(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
-}
-
 describe('<CheckBox> (isolated painter contract)', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
@@ -400,8 +393,6 @@ describe("<CheckBox>: Button's inherited icon (button.cpp:333-405)", () => {
     const loaded = await renderWithOwnIcon(painter, { w: 12, h: 12 });
     // Only the check draws until the icon loads, yet the label is already where the solver sized it.
     expect(findIconMeshes(unloaded.scene)).toHaveLength(1);
-    expect(worldPosition(findLabelMesh(unloaded.scene)!).x).toBe(
-      worldPosition(findLabelMesh(loaded.scene)!).x
-    );
+    expect(worldPosition(findTextMesh(unloaded.scene)!).x).toBe(worldPosition(findTextMesh(loaded.scene)!).x);
   });
 });

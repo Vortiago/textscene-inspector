@@ -11,7 +11,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { TabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
-import { useIconModulate, useOwnButtonTexture } from '../../../../r3f/controls/native/useButtonIcon';
+import { useIconModulate, useIconTexture } from '../../../../r3f/controls/native/useButtonIcon';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -340,7 +340,7 @@ function TabBarTabChrome({
   const style = pickTabStyleBox(overrides, defaults, state);
   const closeVisible = isCloseButtonVisible(closeDisplayPolicy, item.index, currentTab);
 
-  const iconTexture = useOwnButtonTexture(solveNode, tab.icon);
+  const iconTexture = useIconTexture(solveNode, tab.icon);
 
   const fontColor = tabBarFontColor(solveNode.colors, state);
   // `tint`, `self_modulate` folded onto `modulate`, composes into every colour before its

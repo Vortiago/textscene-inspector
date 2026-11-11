@@ -15,7 +15,7 @@ import type { OptionButtonProperties } from './types';
 import {
   optionButtonMinimumSize,
   optionButtonTextTheme,
-  resolveOptionButtonSelectedText,
+  selectedOptionItem,
   layoutOptionButtonContent as layoutContent,
   optionItemIconSlotKey,
   optionButtonArrowSize,
@@ -133,24 +133,24 @@ describe('theme.widgets.optionButton', () => {
   });
 });
 
-describe("resolveOptionButtonSelectedText (parity with Component.tsx's own bounds-guarded lookup)", () => {
+describe('selectedOptionItem (the bounds-guarded lookup: an absent or out-of-range selected is none)', () => {
   it('resolves items[selected].text when selected is a valid index', () => {
     const items = [
       { text: 'Easy', id: 0 },
       { text: 'Normal', id: 1 },
       { text: 'Hard', id: 2 },
     ];
-    expect(resolveOptionButtonSelectedText({ items, selected: 1 } as OptionButtonProperties)).toBe('Normal');
+    expect(selectedOptionItem({ items, selected: 1 } as OptionButtonProperties)?.text ?? '').toBe('Normal');
   });
 
   it('is empty string when selected is out of range', () => {
     const items = [{ text: 'Easy', id: 0 }];
-    expect(resolveOptionButtonSelectedText({ items, selected: 5 } as OptionButtonProperties)).toBe('');
+    expect(selectedOptionItem({ items, selected: 5 } as OptionButtonProperties)?.text ?? '').toBe('');
   });
 
   it('is empty string when selected is absent or items is absent', () => {
-    expect(resolveOptionButtonSelectedText({} as OptionButtonProperties)).toBe('');
-    expect(resolveOptionButtonSelectedText({ selected: 0 } as OptionButtonProperties)).toBe('');
+    expect(selectedOptionItem({} as OptionButtonProperties)?.text ?? '').toBe('');
+    expect(selectedOptionItem({ selected: 0 } as OptionButtonProperties)?.text ?? '').toBe('');
   });
 });
 
@@ -226,6 +226,21 @@ describe("optionButtonMinimumSize: each item's icon (option_button.cpp:451, butt
   it('counts an icon-only item by its icon alone, with no separation', () => {
     const n = withIcons({ items: [{ text: '', id: 0, icon: 'ExtResource("1")' }] }, { 0: { x: 20, y: 30 } });
     expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 16 + 20 + 12 + 4, y: 8 + 30 });
+  });
+
+  it("measures an empty item text as the button's own selected text (button.cpp:485-486, 515)", () => {
+    const n = withIcons(
+      {
+        selected: 0,
+        items: [
+          { text: 'AB', id: 0 },
+          { text: '', id: 1, icon: 'ExtResource("1")' },
+        ],
+      },
+      { 1: { x: 20, y: 30 } }
+    );
+    // item 1 reuses `text_buf` ("AB", 22) beside its icon: 22 + 20 + 4 = 46, height max(23, 30).
+    expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 16 + 46 + 12 + 4, y: 8 + 30 });
   });
 
   it('takes the widest item over text and icon together', () => {
