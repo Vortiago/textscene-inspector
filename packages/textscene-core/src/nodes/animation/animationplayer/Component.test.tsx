@@ -7,44 +7,18 @@
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { AnimationPlayer } from './Component';
-import type { TscnNode } from '../../../parser/types';
-import type { AnimationPlayerProperties } from './types';
-
-import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../../../godot/scene/animation';
-
-function makeNode(overrides: Partial<AnimationPlayerProperties> = {}): TscnNode {
-  const props: AnimationPlayerProperties = {
-    name: overrides.name ?? 'AnimationPlayer',
-    speed_scale: 1.0,
-    playback_default_blend_time: 0.0,
-    callback_mode_process: AnimationCallbackModeProcess.IDLE,
-    callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
-    active: true,
-    autoplay: '',
-    current_animation: '',
-    current_animation_length: 0.0,
-    current_animation_position: 0.0,
-    root_node: 'NodePath("..")',
-    libraries: [],
-    ...overrides,
-  };
-  return {
-    rawProperties: {},
-    name: props.name ?? 'AnimationPlayer',
-    type: 'AnimationPlayer',
-    children: [],
-    properties: props,
-  };
-}
+import { animationPlayerNode } from './animationPlayerNode.testkit';
 
 describe('<AnimationPlayer>', () => {
   it('renders without crashing with default props', async () => {
-    await expect(ReactThreeTestRenderer.create(<AnimationPlayer node={makeNode()} />)).resolves.toBeDefined();
+    await expect(
+      ReactThreeTestRenderer.create(<AnimationPlayer node={animationPlayerNode()} />)
+    ).resolves.toBeDefined();
   });
 
   it('mounts a group tagged with nodeType AnimationPlayer', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <AnimationPlayer node={makeNode({ name: 'Anim' })} />
+      <AnimationPlayer node={animationPlayerNode({ name: 'Anim' })} />
     );
     const group = renderer.scene.findByProps({ name: 'Anim' });
     const userData = group.instance.userData as { nodeType: string };
@@ -54,7 +28,7 @@ describe('<AnimationPlayer>', () => {
   it('positions the group at transform.origin when transform is set', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <AnimationPlayer
-        node={makeNode({
+        node={animationPlayerNode({
           name: 'Translated',
           transform: {
             basis_x: { x: 1, y: 0, z: 0 },
@@ -73,7 +47,7 @@ describe('<AnimationPlayer>', () => {
 
   it('passes children through into the group', async () => {
     const renderer = await ReactThreeTestRenderer.create(
-      <AnimationPlayer node={makeNode({ name: 'Parent' })}>
+      <AnimationPlayer node={animationPlayerNode({ name: 'Parent' })}>
         <mesh name="child-node">
           <boxGeometry args={[0.1, 0.1, 0.1]} />
           <meshBasicMaterial />
@@ -84,7 +58,7 @@ describe('<AnimationPlayer>', () => {
   });
 
   it('renders no visible meshes of its own (is a pure container)', async () => {
-    const renderer = await ReactThreeTestRenderer.create(<AnimationPlayer node={makeNode()} />);
+    const renderer = await ReactThreeTestRenderer.create(<AnimationPlayer node={animationPlayerNode()} />);
     const meshes = renderer.scene.findAllByType('Mesh');
     expect(meshes).toHaveLength(0);
   });

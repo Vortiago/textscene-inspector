@@ -4,6 +4,7 @@
  */
 
 import type { AnimationAction } from 'three';
+import { clipTimeOf } from '../../../r3f/animation/actionHelpers';
 
 /** The heaviest clip of `program`, the first of equals, or null for an empty program. */
 export function dominantClip<C extends { readonly weight: number }>(program: readonly C[]): C | null {
@@ -21,5 +22,6 @@ export function dominantActionTime(
   actions: ReadonlyMap<string, AnimationAction>
 ): number | null {
   if (!dominant) return null;
-  return actions.get(dominant.clip)?.time ?? null;
+  const action = actions.get(dominant.clip);
+  return action ? clipTimeOf(action) : null;
 }
