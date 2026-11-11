@@ -358,7 +358,7 @@ describe('layoutButtonContent: expand_icon', () => {
   });
 });
 
-describe('layoutButtonContent — expand_icon under a clipped label', () => {
+describe('layoutButtonContent: expand_icon under a clipped label', () => {
   it('leaves the text out of the icon width, as `!is_clipped` skips the subtraction (button.cpp:345)', () => {
     const { icon } = layoutButtonContent({
       ...BASE_INPUT,

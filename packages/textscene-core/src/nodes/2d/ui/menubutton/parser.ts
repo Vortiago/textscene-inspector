@@ -6,13 +6,13 @@
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { MenuButtonProperties } from './types';
-import { parseButton } from '../button/parser';
+import { parseToggleButton } from '../button/parser';
 
 export function parseMenuButton(
   heading: ParsedHeading,
   properties: Record<string, string>
 ): MenuButtonProperties {
-  const result = parseButton(heading, properties, true);
+  const result = parseToggleButton(heading, properties);
   if (properties.flat === undefined) result.flat = true;
   return result;
 }

@@ -241,7 +241,7 @@ describe('<Button> (isolated painter contract)', () => {
   });
 });
 
-describe('<Button> — the label is cut to its paragraph box whatever clip_text says (TextParagraph::draw, text_paragraph.cpp:925-931)', () => {
+describe('<Button>: the label is cut to its paragraph box whatever clip_text says (TextParagraph::draw, text_paragraph.cpp:925-931)', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
   });
@@ -299,7 +299,7 @@ describe('<Button> — the label is cut to its paragraph box whatever clip_text 
   });
 });
 
-describe('<Button> — icon (ControlQuad), via ResourceLoader/SceneResources', () => {
+describe('<Button>: icon (ControlQuad), via ResourceLoader/SceneResources', () => {
   function fakeTexture(w: number, h: number): THREE.Texture {
     const tex = new THREE.Texture();
     (tex as unknown as { image: { width: number; height: number } }).image = { width: w, height: h };
@@ -397,7 +397,7 @@ describe('<Button> registered through <ControlCanvasWalker> (end-to-end walker p
  * has nothing font-kind-specific in it. An atlas-bake anchor leaking into it reads correct
  * on the atlas path and is off here by `ascentPx - base*fontSizePx/42` px.
  */
-describe('<Button> — scene-font (canvas-kind FontMetrics) text path', () => {
+describe('<Button>: scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     controlSolverRegistry.clear();

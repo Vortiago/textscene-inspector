@@ -505,8 +505,8 @@ export function labelMinimumTextSize(
   layout: TextLayoutResult | null,
   props: TextClipProperties & ButtonWrapProperties
 ): Vector2 {
-  const size = labelNaturalSize(layout);
-  return isButtonTextClipped(props) ? { x: 0, y: size.y } : size;
+  if (!layout) return { x: 0, y: 0 };
+  return { x: textMinimumWidthPx(layout.widthPx, props), y: layout.heightPx };
 }
 
 /** The text's contribution to a CheckBox-style minimum size: its wrapped layout through {@link labelMinimumTextSize}, or none without text or a measurer. */

@@ -161,13 +161,13 @@ describe('resolveCheckBoxIconKey (check_box.cpp:112-131)', () => {
   });
 });
 
-describe('checkBoxMinimumSize (check_box.cpp:64-79) — no text', () => {
+describe('checkBoxMinimumSize (check_box.cpp:64-79): no text', () => {
   it('is 2*content_margin(4) + icon(16x16) — (24, 24) — even with no text at all', () => {
     expect(checkBoxMinimumSize(node({}), ctx())).toEqual({ x: 24, y: 24 });
   });
 });
 
-describe('checkBoxMinimumSize — with text', () => {
+describe('checkBoxMinimumSize: with text', () => {
   it('adds text width + h_separation(4) alongside the icon width; height floors on the taller of text/icon', () => {
     const result = checkBoxMinimumSize(node({ text: 'AB' }), ctx());
     // width = 8 (2*margin) + 21.125 (text) + 4 (h_separation) + 16 (icon) = 49.125.
@@ -200,7 +200,7 @@ describe('checkBoxMinimumSize — with text', () => {
   });
 });
 
-describe('checkBoxIconNaturalSize (check_box.cpp:35-62) — MAX over all 8 icons, not only the current draw state', () => {
+describe('checkBoxIconNaturalSize (check_box.cpp:35-62): MAX over all 8 icons, not only the current draw state', () => {
   it('is the vendored 16x16 default when no icon is themed', () => {
     expect(checkBoxIconNaturalSize({ textureSlots: {} })).toEqual({ x: 16, y: 16 });
   });
@@ -220,7 +220,7 @@ describe('checkBoxIconNaturalSize (check_box.cpp:35-62) — MAX over all 8 icons
   });
 });
 
-describe('checkBoxMinimumSize — a themed icon widens the minimum size (check_box.cpp:64-79)', () => {
+describe('checkBoxMinimumSize: a themed icon widens the minimum size (check_box.cpp:64-79)', () => {
   it("floors the width on the themed icon's own size, not the vendored 16x16", () => {
     const n = { ...node({}), textureSlots: { unchecked: { x: 24, y: 24 } } };
     // No text: content_size is the icon alone (check_box.cpp:66-79), then
@@ -297,7 +297,7 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
  * and the internal margin moves to SIDE_RIGHT (`:98-100`). The constructor's LEFT alignment (`:174`)
  * swaps to RIGHT (`button.cpp:271-275`), so the label hugs the far end of what is left.
  */
-describe('layoutCheckBoxContent — RTL puts the check on the right and the label against it', () => {
+describe('layoutCheckBoxContent: RTL puts the check on the right and the label against it', () => {
   const BASE = {
     rectSize: { x: 150, y: 28 },
     margin: 4,
@@ -335,7 +335,7 @@ describe('layoutCheckBoxContent — RTL puts the check on the right and the labe
   });
 });
 
-describe(`checkBoxMinimumSize — resolves this CheckBox's own theme font key ("${CHECKBOX_THEME_FONT_KEY}", default_theme.cpp:297)`, () => {
+describe(`checkBoxMinimumSize: resolves this CheckBox's own theme font key ("${CHECKBOX_THEME_FONT_KEY}", default_theme.cpp:297)`, () => {
   // An unresolvable font's warning is the observable proof here, not a resolved
   // value (`resolveNodeFontMetrics.test.ts` gives the reason).
   let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -376,7 +376,7 @@ describe(`checkBoxMinimumSize — resolves this CheckBox's own theme font key ("
  * `text_paragraph.cpp:601-608`, `text_server_adv.cpp:7524-7537`). Measured in Godot 4.6.3 on
  * `scenes/fixtures/complex-2d-gui.tscn` at 1152x648: SystemsGrid/Subtitles is (222, 31).
  */
-describe('checkBoxMinimumSize — the shaped text extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
+describe('checkBoxMinimumSize: the shaped text extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
   it("'Transcribe squad chatter' reaches Godot's own whole-pixel minimum width 222", () => {
     expect(checkBoxMinimumSize(node({ text: 'Transcribe squad chatter' }), ctx()).x).toBe(222);
   });
@@ -399,7 +399,7 @@ describe('checkBoxDrawnIconSize', () => {
   });
 });
 
-describe('checkBoxMinimumSize — clip_text zeroes the text width (button.cpp:493-495)', () => {
+describe('checkBoxMinimumSize: clip_text zeroes the text width (button.cpp:493-495)', () => {
   it('keeps the icon, the margins and the text height, and drops the text width and the h_separation', () => {
     const result = checkBoxMinimumSize(node({ text: 'AB', clipText: true }), ctx());
     expect(result).toEqual({ x: 8 + 16, y: 8 + FONT_HEIGHT });
@@ -411,7 +411,7 @@ describe('checkBoxMinimumSize — clip_text zeroes the text width (button.cpp:49
   });
 });
 
-describe('checkBoxMinimumSize — a trimming text_overrun_behavior zeroes the text width (button.cpp:493-495)', () => {
+describe('checkBoxMinimumSize: a trimming text_overrun_behavior zeroes the text width (button.cpp:493-495)', () => {
   it('drops the text width and the h_separation under OVERRUN_TRIM_ELLIPSIS', () => {
     const result = checkBoxMinimumSize(node({ text: 'AB', overrunBehavior: 3 }), ctx());
     expect(result).toEqual({ x: 8 + 16, y: 8 + FONT_HEIGHT });
@@ -423,7 +423,7 @@ describe('checkBoxMinimumSize — a trimming text_overrun_behavior zeroes the te
   });
 });
 
-describe('checkBoxMinimumSize — autowrap_mode wraps the label at the tentative width (button.cpp:429-432,493-495)', () => {
+describe('checkBoxMinimumSize: autowrap_mode wraps the label at the tentative width (button.cpp:429-432,493-495)', () => {
   const text = 'alpha bravo charlie';
 
   function minSize(props: Partial<CheckBoxProperties>, tentativeWidthPx?: number) {

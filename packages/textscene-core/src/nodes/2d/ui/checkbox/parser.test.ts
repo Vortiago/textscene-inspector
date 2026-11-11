@@ -26,7 +26,7 @@ describe('parseCheckBox', () => {
   });
 });
 
-describe('parseCheckBox — clip_text', () => {
+describe('parseCheckBox: clip_text', () => {
   it('reads clip_text', () => {
     const p = parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), { text: '"Sound"', clip_text: 'true' });
     expect(p.clipText).toBe(true);
@@ -37,7 +37,7 @@ describe('parseCheckBox — clip_text', () => {
   });
 });
 
-describe('parseCheckBox — alignment', () => {
+describe('parseCheckBox: alignment', () => {
   it('reads alignment, which Button declares and CheckBox inherits', () => {
     expect(parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), { alignment: '2' }).alignment).toBe(2);
   });
@@ -47,7 +47,7 @@ describe('parseCheckBox — alignment', () => {
   });
 });
 
-describe('parseCheckBox — text_overrun_behavior', () => {
+describe('parseCheckBox: text_overrun_behavior', () => {
   it('reads text_overrun_behavior', () => {
     const p = parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), { text_overrun_behavior: '3' });
     expect(p.overrunBehavior).toBe(3);
@@ -58,7 +58,7 @@ describe('parseCheckBox — text_overrun_behavior', () => {
   });
 });
 
-describe('parseCheckBox — autowrap_mode and autowrap_trim_flags', () => {
+describe('parseCheckBox: autowrap_mode and autowrap_trim_flags', () => {
   it('reads both', () => {
     const p = parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), {
       autowrap_mode: '2',

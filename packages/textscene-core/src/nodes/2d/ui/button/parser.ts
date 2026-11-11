@@ -16,10 +16,23 @@ function parseButtonPressed(properties: Record<string, string>, isToggleByDefaul
   return isToggle === true && boolSlotValue(properties.button_pressed) === true;
 }
 
-export function parseButton(
+/** Parses a Button, whose `toggle_mode` defaults to false. */
+export function parseButton(heading: ParsedHeading, properties: Record<string, string>): ButtonProperties {
+  return parseButtonWithToggleDefault(heading, properties, false);
+}
+
+/** Parses a Button subclass whose constructor sets `toggle_mode`: CheckBox, CheckButton, OptionButton and MenuButton. */
+export function parseToggleButton(
+  heading: ParsedHeading,
+  properties: Record<string, string>
+): ButtonProperties {
+  return parseButtonWithToggleDefault(heading, properties, true);
+}
+
+function parseButtonWithToggleDefault(
   heading: ParsedHeading,
   properties: Record<string, string>,
-  isToggleByDefault = false
+  isToggleByDefault: boolean
 ): ButtonProperties {
   const result: ButtonProperties = {
     ...parseControl(heading, properties),

@@ -209,7 +209,7 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   // Pass 1 shapes unwrapped. The label wraps at what the painter's layout leaves beside the icon.
   const rect = ctx.tentativeRect?.(n);
   const wrapWidthPx =
-    rect && isButtonAutowrapped(props)
+    ctx.measureText && rect && isButtonAutowrapped(props)
       ? wrappedLabelWidthPx(
           buttonContentInput({
             ...props,

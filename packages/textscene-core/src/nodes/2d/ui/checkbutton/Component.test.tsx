@@ -197,7 +197,7 @@ describe('<CheckButton> (isolated painter contract)', () => {
   });
 });
 
-describe('<CheckButton> — text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
+describe('<CheckButton>: text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
   const glyphQuadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
 
   async function render(properties: Partial<CheckButtonProperties>) {
@@ -221,7 +221,7 @@ describe('<CheckButton> — text_overrun_behavior trims the label to its paragra
   });
 });
 
-describe('<CheckButton> — autowrap_mode wraps the label at its paragraph box (button.cpp:428-432)', () => {
+describe('<CheckButton>: autowrap_mode wraps the label at its paragraph box (button.cpp:428-432)', () => {
   async function render(properties: Partial<CheckButtonProperties>) {
     return ReactThreeTestRenderer.create(
       <CheckButton

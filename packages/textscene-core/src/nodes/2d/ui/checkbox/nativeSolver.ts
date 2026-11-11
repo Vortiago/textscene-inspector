@@ -230,11 +230,10 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const state = resolveCheckBoxDrawState(props);
   const { fontSizePx } = checkBoxTextTheme(n, props, state, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, CHECKBOX_THEME_FONT_KEY);
-  // `Button::get_minimum_size` (`button.cpp:492`) reads `paragraph->get_size()`, the ceiled
-  // extent (`text_paragraph.cpp:601-608`, `text_server_adv.cpp:7524-7537`). The icon and
-  // separation are added outside the ceil (`check_box.cpp:63-73`). A wrapping label's rows
-  // follow the tentative width, as `button.cpp:429-432` leaves `text_buf`.
-  // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
+  // `button.cpp:492` reads `paragraph->get_size()`, the ceiled extent (`text_paragraph.cpp:601-608`).
+  // The icon and separation add outside the ceil (`check_box.cpp:63-73`). A wrapping label's rows
+  // follow the tentative width (`button.cpp:429-432`). `clip_text`, a trimming overrun or autowrap
+  // zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
   const textSize = shapedLabelMinimumTextSize(
     text,
     props,

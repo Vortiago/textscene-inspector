@@ -465,6 +465,19 @@ describe('Button.autowrap_mode (button.cpp:493,546-561)', () => {
   });
 });
 
+describe('buttonLabelShape at AUTOWRAP_OFF keeps one row per hard-break line (no end glyph)', () => {
+  const rows = (text: string) =>
+    (buttonLabelShape(node({ text }), nativeTheme(1))?.lines ?? []).map((l) => l.text);
+
+  it('keeps a trailing space on its row', () => {
+    expect(rows('ab ')).toEqual(['ab ']);
+  });
+
+  it('splits at a hard break and adds no blank row', () => {
+    expect(rows('ab\ncd')).toEqual(['ab', 'cd']);
+  });
+});
+
 describe('Button.expand_icon under autowrap shapes at the drawn width (button.cpp:332-345,428-432)', () => {
   it('wraps the minimum at the width the expanded icon leaves, as the painter does', () => {
     const theme = nativeTheme(1);

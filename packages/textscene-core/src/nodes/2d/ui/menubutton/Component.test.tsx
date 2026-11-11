@@ -112,7 +112,7 @@ describe('<MenuButton> (isolated painter contract)', () => {
   });
 });
 
-describe('<MenuButton> — autowrap_mode wraps the label as Button does (button.cpp:428-432)', () => {
+describe('<MenuButton>: autowrap_mode wraps the label as Button does (button.cpp:428-432)', () => {
   it('draws three centred lines', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <MenuButton

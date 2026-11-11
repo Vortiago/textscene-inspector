@@ -228,7 +228,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
  * (`option_button.cpp:113-121` plus Button's internal margin) has nothing font-kind-specific, so an
  * atlas-bake anchor leaking into it reads correct on the atlas path and is `ascentPx - base*fontSizePx/42` px off here.
  */
-describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', () => {
+describe('<OptionButton>: scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     controlSolverRegistry.clear();
@@ -301,7 +301,7 @@ describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', ()
   });
 });
 
-describe('<OptionButton> — text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
+describe('<OptionButton>: text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
   const glyphQuadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
 
   async function render(properties: Partial<OptionButtonProperties>) {
@@ -325,7 +325,7 @@ describe('<OptionButton> — text_overrun_behavior trims the label to its paragr
   });
 });
 
-describe('<OptionButton> — autowrap_mode wraps the drawn label though the box keeps one line (button.cpp:428-432)', () => {
+describe('<OptionButton>: autowrap_mode wraps the drawn label though the box keeps one line (button.cpp:428-432)', () => {
   async function render(properties: Partial<OptionButtonProperties>) {
     return ReactThreeTestRenderer.create(
       <OptionButton

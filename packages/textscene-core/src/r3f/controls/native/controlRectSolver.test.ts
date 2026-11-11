@@ -51,7 +51,7 @@ function orderedNode(path: string, type: string, rawProperties: Record<string, s
   return { ...solveNode(), path, node: tscnNode, children: [] };
 }
 
-describe('solveControlTree — LayoutPreset table (control.cpp::set_anchors_preset)', () => {
+describe('solveControlTree: LayoutPreset table (control.cpp::set_anchors_preset)', () => {
   // scene/gui/control.cpp :: Control::set_anchors_preset (:1114-1229). With no
   // offsets or minimum, the rect is the anchors times the 1152x648 viewport.
   // `layout_mode` is UNCONTROLLED (3), a parentless Control's stored mode, which
@@ -84,7 +84,7 @@ describe('solveControlTree — LayoutPreset table (control.cpp::set_anchors_pres
   }
 });
 
-describe('solveControlTree — explicit anchor_* + offset_* (incl. negative offsets)', () => {
+describe('solveControlTree: explicit anchor_* + offset_* (incl. negative offsets)', () => {
   it('a centred anchor (0.5,0.5,0.5,0.5) with symmetric offsets sizes a centred dialog', () => {
     // edge_pos[i] = offset[i] + anchor[i] * area (control.cpp:1766-1767):
     // left = -50 + 0.5*1152 = 526, right = 50 + 0.5*1152 = 626 → w = 100
@@ -121,7 +121,7 @@ describe('solveControlTree — explicit anchor_* + offset_* (incl. negative offs
   });
 });
 
-describe('solveControlTree — size floored at custom_minimum_size', () => {
+describe('solveControlTree: size floored at custom_minimum_size', () => {
   it('clamps size up to custom_minimum_size, position unchanged under the default GROW_DIRECTION_END', () => {
     // control.cpp:1773-1797. Raw rect x=571,y=319,w=10,h=10, minimum (80,24).
     // GROW_DIRECTION_END (control.h:209-210, the default) keeps the position.
@@ -162,7 +162,7 @@ describe('solveControlTree — size floored at custom_minimum_size', () => {
   });
 });
 
-describe('solveControlTree — grow direction derived from anchors_preset', () => {
+describe('solveControlTree: grow direction derived from anchors_preset', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
   });
@@ -343,7 +343,7 @@ describe('solveControlTree — grow direction derived from anchors_preset', () =
   });
 });
 
-describe('solveControlTree — nested free Controls resolve against their parent rect', () => {
+describe('solveControlTree: nested free Controls resolve against their parent rect', () => {
   it("a FULL_RECT child under a free Control fills the PARENT's rect, not the viewport", () => {
     const child = node('Root/Child', 'Control', { layoutMode: 1, anchorsPreset: 15 });
     const root = node(
@@ -401,7 +401,7 @@ describe('solveControlTree — nested free Controls resolve against their parent
   });
 });
 
-describe('solveControlTree — a promoted Control anchors against its DIRECT parent CanvasItem', () => {
+describe('solveControlTree: a promoted Control anchors against its DIRECT parent CanvasItem', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
   });
@@ -504,7 +504,7 @@ describe('solveControlTree — a promoted Control anchors against its DIRECT par
   });
 });
 
-describe('solveControlTree — unregistered types are leaves with minimum size (0, 0)', () => {
+describe('solveControlTree: unregistered types are leaves with minimum size (0, 0)', () => {
   it('combinedMinimumSize is (0,0) for a type with no registration and no custom_minimum_size', () => {
     const n = node('Leaf', 'ThisTypeIsNotRegistered', {});
     expect(combinedMinimumSize(n, ctx())).toEqual({ x: 0, y: 0 });
@@ -516,7 +516,7 @@ describe('solveControlTree — unregistered types are leaves with minimum size (
   });
 });
 
-describe("solveControlTree — a registered ContainerLayoutFn overrides its children's anchors", () => {
+describe("solveControlTree: a registered ContainerLayoutFn overrides its children's anchors", () => {
   const TYPE = 'TestSolverStackContainer';
 
   afterEach(() => {
@@ -627,7 +627,7 @@ describe("solveControlTree — a registered ContainerLayoutFn overrides its chil
   });
 });
 
-describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () => {
+describe('solveControlTree: a registered canvas boundary (CanvasLayer)', () => {
   const BOUNDARY = 'TestCanvasBoundary';
 
   afterEach(() => {
@@ -734,7 +734,7 @@ describe('solveControlTree — a registered canvas boundary (CanvasLayer)', () =
   });
 });
 
-describe('solveControlTree — the ContainerLayoutFn solve handoff', () => {
+describe('solveControlTree: the ContainerLayoutFn solve handoff', () => {
   const channel = defineChannel<{ draggerPos: number }>('test');
 
   afterEach(() => {
@@ -787,7 +787,7 @@ describe('solveControlTree — the ContainerLayoutFn solve handoff', () => {
   });
 });
 
-describe('solveControlTree — a second pass for a size-dependent MinimumSizeFn (TextureRect FIT_*)', () => {
+describe('solveControlTree: a second pass for a size-dependent MinimumSizeFn (TextureRect FIT_*)', () => {
   const TYPE = 'TestTentativeRectMinimumSize';
 
   afterEach(() => {
@@ -862,7 +862,7 @@ describe('solveControlTree — a second pass for a size-dependent MinimumSizeFn 
   });
 });
 
-describe('solveControlTree — file-order-aware Control layout (ADR-0035, Option B)', () => {
+describe('solveControlTree: file-order-aware Control layout (ADR-0035, Option B)', () => {
   // ADR-0035's measured case, end to end through the solver.
   // `Control::_set_anchors_layout_preset` (control.cpp:982-1032) sets anchors then
   // offsets. A later `offset_*` (`Control::set_offset`, control.cpp:798-805)
@@ -951,7 +951,7 @@ describe('solveControlTree — file-order-aware Control layout (ADR-0035, Option
  * `x = parent_rect.size.x + 2 * parent_rect.position.x - x - w`. The anchorable
  * rect starts at the origin (`control.cpp:1563-1566`), so the position term is zero.
  */
-describe('solveControlTree — RTL mirrors a free Control inside its parent', () => {
+describe('solveControlTree: RTL mirrors a free Control inside its parent', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
   });
@@ -1032,7 +1032,7 @@ describe('solveControlTree — RTL mirrors a free Control inside its parent', ()
  * un-mirrors the x it was handed (`control.cpp:906-909`) so that
  * `_size_changed`'s mirror puts it straight back.
  */
-describe('solveControlTree — RTL round-trips a container-assigned rect', () => {
+describe('solveControlTree: RTL round-trips a container-assigned rect', () => {
   const TYPE = 'TestSolverRtlContainer';
 
   afterEach(() => {

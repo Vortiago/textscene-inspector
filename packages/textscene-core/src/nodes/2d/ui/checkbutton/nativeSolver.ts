@@ -245,10 +245,10 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const state = resolveCheckButtonDrawState(props);
   const { fontSizePx } = checkButtonTextTheme(n, props, state, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, CHECKBUTTON_THEME_FONT_KEY);
-  // `Button::get_minimum_size` (`button.cpp:492`) reads `paragraph->get_size()`, the ceiled
-  // extent. The icon and separation are added outside the ceil (`check_button.cpp:66-77`). A
-  // wrapping label's rows follow the tentative width, as `button.cpp:429-432` leaves `text_buf`.
-  // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
+  // `button.cpp:492` reads `paragraph->get_size()`, the ceiled extent. The icon and separation add
+  // outside the ceil (`check_button.cpp:66-77`). A wrapping label's rows follow the tentative width
+  // (`button.cpp:429-432`). `clip_text`, a trimming overrun or autowrap zeroes the width
+  // (`button.cpp:493-495`), so the separation below drops with it.
   const textSize = shapedLabelMinimumTextSize(
     text,
     props,

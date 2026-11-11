@@ -217,7 +217,7 @@ describe('<CheckBox> (isolated painter contract)', () => {
  * nothing font-kind-specific in it. An atlas-bake anchor leaking into it reads correct on the
  * atlas path and is off here by `ascentPx - base*fontSizePx/42` px.
  */
-describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => {
+describe('<CheckBox>: scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     controlSolverRegistry.clear();
@@ -285,7 +285,7 @@ describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => 
   });
 });
 
-describe('<CheckBox> — text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
+describe('<CheckBox>: text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
   const glyphQuadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
 
   async function render(properties: Partial<CheckBoxProperties>) {
@@ -309,7 +309,7 @@ describe('<CheckBox> — text_overrun_behavior trims the label to its paragraph 
   });
 });
 
-describe('<CheckBox> — autowrap_mode wraps the label at its paragraph box (button.cpp:428-432)', () => {
+describe('<CheckBox>: autowrap_mode wraps the label at its paragraph box (button.cpp:428-432)', () => {
   async function render(properties: Partial<CheckBoxProperties>) {
     return ReactThreeTestRenderer.create(
       <CheckBox
