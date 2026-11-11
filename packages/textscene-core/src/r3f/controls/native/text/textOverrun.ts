@@ -124,6 +124,9 @@ export function overrunFlagsForBehavior(behavior: number | undefined): OverrunTr
   }
 }
 
+/** `TextLine::overrun_behavior`'s default (`text_line.h:50`), which a control's own `text_buf` keeps. */
+export const TEXT_LINE_DEFAULT_OVERRUN = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+
 /** The default ellipsis every caller falls back to, `String::chr(0x2026)` (`label.cpp:294` et al.'s `(el_char.length() > 0) ? el_char[0] : 0x2026`). */
 const DEFAULT_ELLIPSIS_CHAR = '…';
 

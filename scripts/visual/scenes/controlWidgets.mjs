@@ -294,4 +294,7 @@ export const CONTROL_WIDGET_SCENES = [
   { name: 'graph-title-theme-normal-box', file: 'unit-graph-title-theme-normal-box.tscn', mode: '2d' },
   // The one variable: an ancestor Theme that sets the toolbar's Label, FlatButton, LineEdit and SpinBox items.
   { name: 'graph-edit-toolbar-theme', file: 'unit-graph-edit-toolbar-theme.tscn', mode: '2d' },
+  { name: 'tab-bar-scroll-to-current', file: 'unit-tab-bar-scroll-to-current.tscn', mode: '2d' },
+  { name: 'tab-bar-scroll-options', file: 'unit-tab-bar-scroll-options.tscn', mode: '2d' },
+  { name: 'tab-container-hidden-pages', file: 'unit-tab-container-hidden-pages.tscn', mode: '2d' },
 ];
