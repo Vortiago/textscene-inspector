@@ -196,8 +196,6 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     "an opaque-list sentinel's material, which writes nothing and is never mutated",
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
     'one material per built text run, replaced and disposed together with its geometry; its single `defines` write happens before the material has ever been rendered',
-  'packages/textscene-core/src/r3f/controls/native/text/msdfMaterial.ts':
-    'one material per built text run; the glyph atlas travels as a uniform, so re-laying-out a run moves no program input',
   'packages/textscene-core/src/r3f/materials/useOneSurfaceStartingMaterial.ts':
     'one invisible stand-in that hides the draw groups another surface draw owns; three skips an invisible group material, so it is never rendered, so never compiled',
   'packages/textscene-core/src/r3f/csg/evaluateCsgPlan.ts':

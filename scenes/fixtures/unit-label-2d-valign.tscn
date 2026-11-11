@@ -10,10 +10,9 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-; Engine rows are the first inked row per pane, measured against Godot 4.6.3 at `--mode 2d`. The
-; golden draws from an MSDF atlas whose ink runs one row taller at the top (Label's comparison
-; sheet), so a golden a row above these numbers is that atlas difference. Pane-to-pane
-; differences other than 0 / 38 / 38 / 77 and 60 / 60 / 60 are a vertical-alignment regression.
+; Engine rows are the first inked row per pane, measured against Godot 4.6.3 at `--mode 2d`, where
+; no pixel differs. Pane-to-pane differences other than 0 / 38 / 38 / 77 and 60 / 60 / 60 are a
+; vertical-alignment regression.
 [node name="Backdrop" type="ColorRect" parent="."]
 anchors_preset = 15
 anchor_right = 1.0

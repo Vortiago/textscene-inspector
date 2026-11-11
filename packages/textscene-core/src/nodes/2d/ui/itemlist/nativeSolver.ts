@@ -284,8 +284,8 @@ export function trimItemListText(
     return layout;
   }
 
-  // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to the vendored atlas
-  // font when the caller passes none, and the trim must agree with the metrics that shaped the glyphs.
+  // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to the bundled
+  // face when the caller passes none, and the trim must agree with the metrics that shaped the glyphs.
   return trimLayoutToWidth(layout, widthPx, overrunFlags, {
     fontMetrics: layout.fontMetrics,
     fontSizePx: options.fontSizePx,

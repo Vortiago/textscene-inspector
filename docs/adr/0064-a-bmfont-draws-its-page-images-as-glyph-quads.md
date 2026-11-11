@@ -1,15 +1,14 @@
 # A BMFont draws its page images as glyph quads
 
 - Status: Accepted
-- Related: ADR-0040 (the painter follows Godot's glyph path), ADR-0059 (project fonts), ADR-0031 (resource slices).
+- Related: ADR-0069 (the bundled font draws from its outlines), ADR-0059 (project fonts), ADR-0031 (resource slices).
 
 ## Context
 
 A `.fnt` or `.font` file is an AngelCode bitmap font. Godot loads it into a `FontFile` that holds
 glyph rectangles over page images, a fixed size and a scale mode (`font.cpp:1463`). The text server
 draws each glyph as a texture rectangle at `fixed_size`, scaled to the requested size
-(`text_server_adv.cpp:4072-4108`). The two painters of ADR-0040 do not fit. The atlas painter
-reads glyphs from the bundled font, and the canvas painter rasterises outlines.
+(`text_server_adv.cpp:4072-4108`). The canvas painter of ADR-0069 does not fit: it rasterises outlines.
 
 ## Decision
 

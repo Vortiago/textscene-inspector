@@ -2,7 +2,7 @@
  * `<CodeEdit>` render contract: `<TextEditBody>` for chrome and text, plus the line-number
  * gutter. Structure only. Pixels belong to `pnpm ref:godot`.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -12,6 +12,16 @@ import { CodeEdit } from './Component';
 import type { CodeEditProperties } from './types';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  bundledRunOf,
+  bundledRunMeshes,
+  bundledRuns,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 100 };
 
@@ -30,14 +40,6 @@ function findChromeMesh(scene: Rendered['scene']) {
     .find((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
 }
 
-/** `<TextRun>` meshes, text and line numbers alike: they carry the MSDF `ShaderMaterial`. */
-function findTextMeshes(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
-}
-
 describe('<CodeEdit> — reuses TextEditBody for chrome and text', () => {
   it('draws the shared chrome StyleBox', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -51,7 +53,7 @@ describe('<CodeEdit> — reuses TextEditBody for chrome and text', () => {
       <CodeEdit {...painterEnv()} solveNode={solveNode({ text: 'a\nb' })} rect={RECT} renderOrder={0} />
     );
     // 2 buffer-line TextRuns. The gutter is off by default, so no line-number meshes.
-    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(2);
   });
 
   it('draws an empty buffer as its placeholder at font_placeholder_color, as TextEdit does', async () => {
@@ -63,8 +65,8 @@ describe('<CodeEdit> — reuses TextEditBody for chrome and text', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMeshes(renderer.scene)[0]!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.6, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.a).toBeCloseTo(0.6, 5);
   });
 });
 
@@ -73,7 +75,7 @@ describe('<CodeEdit> — line-number gutter', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CodeEdit {...painterEnv()} solveNode={solveNode({ text: 'a\nb\nc' })} rect={RECT} renderOrder={0} />
     );
-    expect(findTextMeshes(renderer.scene)).toHaveLength(3);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(3);
   });
 
   it('draws one extra TextRun mesh per buffer line once gutters_draw_line_numbers is set', async () => {
@@ -86,7 +88,7 @@ describe('<CodeEdit> — line-number gutter', () => {
       />
     );
     // 3 body TextRuns + 3 line-number TextRuns.
-    expect(findTextMeshes(renderer.scene)).toHaveLength(6);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(6);
   });
 
   it('shifts the body text right by the gutter band width once any gutter draws', async () => {
@@ -110,9 +112,7 @@ describe('<CodeEdit> — line-number gutter', () => {
         ...scene
           .findAllByType('Group')
           .map((g) => g.instance)
-          .filter((g) =>
-            g.children.some((c) => ((c as THREE.Mesh).material as THREE.ShaderMaterial)?.uniforms?.uColor)
-          )
+          .filter((g) => g.children.some((child) => bundledRunOf(child) !== undefined))
           .map((g) => g.position.x)
       );
     expect(bodyGroupX(withGutter.scene)).toBeGreaterThan(bodyGroupX(withoutGutter.scene));
@@ -142,9 +142,7 @@ describe('<CodeEdit> — line-number gutter', () => {
       const textGroups = scene
         .findAllByType('Group')
         .map((g) => g.instance)
-        .filter((g) =>
-          g.children.some((c) => ((c as THREE.Mesh).material as THREE.ShaderMaterial)?.uniforms?.uColor)
-        );
+        .filter((g) => g.children.some((child) => bundledRunOf(child) !== undefined));
       const minX = Math.min(...textGroups.map((g) => g.position.x));
       return Math.min(...textGroups.filter((g) => g.position.x === minX).map((g) => g.position.y));
     };
@@ -171,6 +169,6 @@ describe('<CodeEdit> — indent_size (text_edit.cpp:349-351)', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMeshes(wide.scene).length).toBeGreaterThan(findTextMeshes(narrow.scene).length);
+    expect(bundledRunMeshes(wide.scene).length).toBeGreaterThan(bundledRunMeshes(narrow.scene).length);
   });
 });

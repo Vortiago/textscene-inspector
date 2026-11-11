@@ -2,7 +2,7 @@
  * `<GraphFrame>` render contract: panel/titlebar chrome, title text and
  * resizer. Structure and tint only: the golden images own the pixels.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -14,6 +14,12 @@ import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/contro
 import { GraphFrame } from './Component';
 import type { GraphFrameProperties } from './types';
 import { NODE_PROPERTY } from '../../../../resources/useTexture2D';
+import { bundledRunOf, bundledRunMeshes } from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 
@@ -37,16 +43,8 @@ function iconMeshes(scene: Rendered['scene']) {
     .map((m) => m.instance as THREE.Mesh)
     .filter(
       (m) =>
-        (m.geometry as THREE.BufferGeometry).attributes.color === undefined &&
-        (m.material as THREE.ShaderMaterial).uniforms?.uColor === undefined
+        (m.geometry as THREE.BufferGeometry).attributes.color === undefined && bundledRunOf(m) === undefined
     );
-}
-
-function textMeshes(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
 /** A `panel` slot holding a StyleBoxTexture, as a themed project would author. */
@@ -98,14 +96,14 @@ describe('<GraphFrame> (isolated painter contract)', () => {
       <GraphFrame {...painterEnv()} solveNode={graphFrame()} rect={RECT} renderOrder={0} />
     );
     expect(chromeMeshes(renderer.scene)).toHaveLength(2);
-    expect(textMeshes(renderer.scene)).toHaveLength(0);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('draws a text mesh for a non-empty title', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <GraphFrame {...painterEnv()} solveNode={graphFrame({ title: 'Hello' })} rect={RECT} renderOrder={0} />
     );
-    expect(textMeshes(renderer.scene).length).toBeGreaterThan(0);
+    expect(bundledRunMeshes(renderer.scene).length).toBeGreaterThan(0);
   });
 
   it('draws no resizer when resizable is unset', async () => {

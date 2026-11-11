@@ -9,7 +9,8 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
-import { createOpenSansCanvasFontMetrics } from '../../../../r3f/controls/native/text/openSansCanvasFontMetrics';
+import { OPEN_SANS_CANVAS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansCanvasFontMetrics';
+import { TRIANGLE_OUTLINES } from '../../../../r3f/controls/native/testing/triangleOutlines';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
@@ -24,7 +25,6 @@ interface RunProps {
 
 const scene = vi.hoisted(() => ({
   metrics: undefined as FontMetrics | undefined,
-  bundled: undefined as FontMetrics | undefined,
   runs: [] as RunProps[],
 }));
 
@@ -36,8 +36,10 @@ vi.mock('../../../../r3f/controls/native/text/sceneFontLoader', async (importOri
   ...(await importOriginal<typeof import('../../../../r3f/controls/native/text/sceneFontLoader')>()),
   peekSceneFontMetrics: () => scene.metrics,
 }));
-vi.mock('../../../../r3f/controls/native/text/bundledFontLoader', () => ({
-  peekBundledCanvasFontMetrics: () => scene.bundled,
+// The bundled canvas face settles at once, with no font to decode.
+vi.mock('../../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  peekOutlines: () => TRIANGLE_OUTLINES,
 }));
 vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
   TextRunMesh: (props: RunProps) => {
@@ -68,8 +70,7 @@ async function renderBar() {
 }
 
 beforeEach(() => {
-  const bundled = createOpenSansCanvasFontMetrics('progress-bar-outline-test');
-  scene.metrics = withVariation(bundled, { embolden: 0.6 });
+  scene.metrics = withVariation(OPEN_SANS_CANVAS_FONT_METRICS, { embolden: 0.6 });
 });
 
 describe('<ProgressBar> canvas outline', () => {
@@ -86,7 +87,6 @@ describe('<ProgressBar> canvas outline', () => {
 describe('<ProgressBar> bundled-font outline', () => {
   beforeEach(() => {
     scene.metrics = OPEN_SANS_FONT_METRICS;
-    scene.bundled = createOpenSansCanvasFontMetrics('progress-bar-bundled-ring-test');
   });
 
   it('strokes the ring on the bundled canvas face, below the percentage', async () => {
@@ -105,15 +105,5 @@ describe('<ProgressBar> bundled-font outline', () => {
     const percentage = scene.runs.find((run) => !run.strokeWidthPx);
     expect(isCanvasFontMetrics(percentage?.layout.fontMetrics)).toBe(true);
     expect(percentage).not.toHaveProperty('outlineColor');
-  });
-
-  it('fills the percentage on the atlas while the bundled canvas face registers', async () => {
-    scene.bundled = undefined;
-
-    await renderBar();
-
-    await vi.waitFor(() => expect(scene.runs).toHaveLength(1));
-    expect(scene.runs[0]?.strokeWidthPx ?? 0).toBe(0);
-    expect(isCanvasFontMetrics(scene.runs[0]?.layout.fontMetrics)).toBe(false);
   });
 });

@@ -3,7 +3,7 @@
  * `packItemListRows` packs them. Structure, tint and render order only: the
  * golden images own the pixels.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -22,6 +22,12 @@ import { ItemListIconMode } from '../../../../godot/scene/gui';
 
 const { ICON_MODE_LEFT } = ItemListIconMode;
 import type { ItemListProperties } from './types';
+import { bundledRunOf, bundledRunMeshes } from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 const ICON_PATH = 'res://icon.png';
@@ -47,14 +53,6 @@ function findChromeMeshes(scene: Rendered['scene']) {
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
     .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
-}
-
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMeshes(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
 /** `<ControlQuad>` (an item's icon): a `PlaneGeometry`, identified by its own `.parameters.width`. */
@@ -126,7 +124,7 @@ describe('<ItemList> — panel + rows', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMeshes(renderer.scene).length).toBe(2);
+    expect(bundledRunMeshes(renderer.scene).length).toBe(2);
   });
 
   it('draws no icon mesh at all when no item names one', async () => {
@@ -157,10 +155,8 @@ describe('<ItemList> — panel + rows', () => {
         renderOrder={0}
       />
     );
-    const [normal, disabled] = findTextMeshes(renderer.scene);
-    const normalOpacity = (normal!.material as THREE.ShaderMaterial).uniforms.uOpacity!.value;
-    const disabledOpacity = (disabled!.material as THREE.ShaderMaterial).uniforms.uOpacity!.value;
-    expect(disabledOpacity).toBeLessThan(normalOpacity);
+    const [normal, disabled] = bundledRunMeshes(renderer.scene);
+    expect(bundledRunOf(disabled!)!.tint.a).toBeLessThan(bundledRunOf(normal!)!.tint.a);
   });
 
   it('forwards renderOrder to the panel chrome and every text mesh', async () => {
@@ -173,7 +169,7 @@ describe('<ItemList> — panel + rows', () => {
       />
     );
     expect(findChromeMeshes(renderer.scene)[0]!.renderOrder).toBe(5);
-    expect(findTextMeshes(renderer.scene)[0]!.renderOrder).toBe(5);
+    expect(bundledRunMeshes(renderer.scene)[0]!.renderOrder).toBe(5);
   });
 });
 
@@ -192,7 +188,7 @@ describe('<ItemList> — row packing', () => {
         renderOrder={0}
       />
     );
-    const textMeshes = findTextMeshes(renderer.scene);
+    const textMeshes = bundledRunMeshes(renderer.scene);
     expect(textMeshes.length).toBe(2);
     // mesh -> its own text-offset group -> the row's own outer group.
     const rowX = (mesh: THREE.Mesh) => (mesh.parent!.parent as THREE.Object3D).position.x;
@@ -209,7 +205,7 @@ describe('<ItemList> — row packing', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMeshes(renderer.scene).length).toBe(2);
+    expect(bundledRunMeshes(renderer.scene).length).toBe(2);
   });
 });
 
@@ -247,8 +243,8 @@ describe('<ItemList> — RTL', () => {
     }).shaped!;
     const ltr = await renderWithIconLoaded(RTL_ITEMS);
     const rtl = await renderWithIconLoaded(RTL_ITEMS, true);
-    expect(absoluteX(findTextMeshes(ltr.scene)[0]!)).toBeCloseTo(26, 5);
-    expect(absoluteX(findTextMeshes(rtl.scene)[0]!)).toBeCloseTo(90 + (82 - shaped.widthPx), 5);
+    expect(absoluteX(bundledRunMeshes(ltr.scene)[0]!)).toBeCloseTo(26, 5);
+    expect(absoluteX(bundledRunMeshes(rtl.scene)[0]!)).toBeCloseTo(90 + (82 - shaped.widthPx), 5);
   });
 });
 
@@ -276,6 +272,6 @@ describe('<ItemList> — row-relative vertical placement', () => {
         renderOrder={0}
       />
     );
-    expect(absoluteY(findTextMeshes(renderer.scene)[0]!.parent!)).toBeCloseTo(4 + 2, 5);
+    expect(absoluteY(bundledRunMeshes(renderer.scene)[0]!.parent!)).toBeCloseTo(4 + 2, 5);
   });
 });

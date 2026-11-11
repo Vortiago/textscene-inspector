@@ -1,6 +1,6 @@
 /**
  * `<Label>`, the native (WebGL canvas) painter for Label, drawing through the
- * MSDF text engine (`native/text/textLayout.ts` and `TextRun.tsx`).
+ * text engine (`native/text/textLayout.ts` and `TextRun.tsx`).
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
