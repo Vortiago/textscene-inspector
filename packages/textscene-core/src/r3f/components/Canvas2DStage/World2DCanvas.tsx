@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { installShaderPatches } from '../../shaderPatch/installShaderPatches.js';
+import { prepareSpikeRenderer, spikeGl } from '../../tslSpike/spikeCanvas.js';
 import { CanvasServices } from '../../CanvasServices.js';
 import { World2DContents, type World2DCanvasProps } from './World2DContents.js';
 import { World2DCamera } from './world2DCamera.js';
@@ -22,8 +22,8 @@ export function World2DCanvas(props: World2DCanvasProps) {
       // `antialias: false`: scene/main/viewport.h:309 `msaa_2d = MSAA_DISABLED`. Soft edges are
       // authored geometry (style_box_flat.cpp:555-629), and MSAA ramps them twice. A project that
       // turns `msaa_2d` on gets `<CanvasFrameRender>`'s target, at the mode's own sample count.
-      gl={{ alpha: true, localClippingEnabled: true, antialias: false }}
-      onCreated={installShaderPatches}
+      gl={spikeGl({ alpha: true, localClippingEnabled: true, antialias: false })}
+      onCreated={prepareSpikeRenderer}
       // Godot composites canvas items after `_render_buffers_post_process_and_tonemap`,
       // so 2D colour is never tone-mapped. `flat` is `NoToneMapping`, not R3F's ACES.
       // It also covers a container's 3D sub-viewport pass, whose parent viewport

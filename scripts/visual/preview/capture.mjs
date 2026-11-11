@@ -29,7 +29,9 @@ import { PNG } from 'pngjs';
  * frames of the untextured placeholder. A scene that never idles still falls through to the gate.
  */
 export async function gotoFixture(page, baseUrl, fixture, onSlow = () => {}, extraParams = {}) {
-  await page.goto(fixtureUrl(baseUrl, fixture, extraParams), { waitUntil: 'load' });
+  // The spike's renderer path for a whole run of the gate, which passes no query parameter.
+  const params = { renderer: process.env.TSL_SPIKE_RENDERER, ...extraParams };
+  await page.goto(fixtureUrl(baseUrl, fixture, params), { waitUntil: 'load' });
   await page.waitForLoadState('networkidle', { timeout: NETWORK_IDLE_MS }).catch((err) => {
     // Anything but a timeout, such as a crashed target or a closed page, is a real failure.
     if (err?.name !== 'TimeoutError') throw err;

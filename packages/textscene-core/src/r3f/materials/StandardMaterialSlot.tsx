@@ -16,6 +16,7 @@ import type { FadeVariants } from './fadeVariants';
 import { bindLightmap, LIGHTMAP_PROGRAM, readsLightmap } from '../lightmap/lightmapProgram';
 import type { LightmapAssignment } from '../lightmap/sceneLightmaps';
 import { useLightmapAssignment } from '../lightmap/useLightmapAssignment';
+import { litNodeMaterialElement } from '../tslSpike/LitNodeMaterial.js';
 
 interface StandardMaterialSlotProps {
   /** The surface's derived bags, textures bound. */
@@ -74,6 +75,8 @@ export function materialBagElement(
     bindHeightmap(material, heightmapTexture);
     bindLightmap(material, readLightmap);
   };
+  const nodeMaterial = litNodeMaterialElement(bag, attach, readLightmap !== null);
+  if (nodeMaterial) return nodeMaterial;
   const injection = composeInjections([bag.injection, readLightmap ? LIGHTMAP_PROGRAM : undefined]);
   // `attach` and the ref first: they are the mount's own props and must never shadow a derived
   // one. The key comes from the same merged bag it travels with (ADR-0038): a program input

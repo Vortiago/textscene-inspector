@@ -40,12 +40,12 @@ interface LightQuadMaterialOptions {
 
 /** One material per role, null for a role the light does not draw. */
 export interface LightQuadMaterials {
-  readonly lit: THREE.ShaderMaterial;
-  readonly shade: THREE.ShaderMaterial | null;
-  readonly tint: THREE.ShaderMaterial | null;
-  readonly fade: THREE.ShaderMaterial | null;
-  readonly unshadowed: THREE.ShaderMaterial | null;
-  readonly unshadowedFade: THREE.ShaderMaterial | null;
+  readonly lit: THREE.Material;
+  readonly shade: THREE.Material | null;
+  readonly tint: THREE.Material | null;
+  readonly fade: THREE.Material | null;
+  readonly unshadowed: THREE.Material | null;
+  readonly unshadowedFade: THREE.Material | null;
 }
 
 /**
@@ -75,10 +75,7 @@ function tintQuadMaterial(options: LightQuadMaterialOptions): THREE.ShaderMateri
  * A material built from `deps` alone, disposed when it is replaced or unmounted. Each role keeps
  * its own, so an input one role ignores rebuilds none of the others.
  */
-function useOwnedMaterial<M extends THREE.ShaderMaterial | null>(
-  build: () => M,
-  deps: readonly unknown[]
-): M {
+function useOwnedMaterial<M extends THREE.Material | null>(build: () => M, deps: readonly unknown[]): M {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- each caller lists what its `build` reads.
   const material = useMemo(build, deps);
   useDisposeOnRelease(material);
