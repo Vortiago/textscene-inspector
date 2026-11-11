@@ -63,6 +63,54 @@ jobs:
           fi
           git diff --name-only HEAD^1 HEAD | node scripts/ci/godotRefScope.mjs >> "$GITHUB_OUTPUT"
 
+  # Names the image the browser jobs run in (.github/ci-image), and builds and publishes it when no
+  # run has yet. The tag is a hash of the image's inputs, so a commit that changes none of them
+  # reuses the published image, and a pull request that changes one runs in its own image.
+  image:
+    name: CI image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      ref: ${{ steps.image.outputs.ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: image
+        run: node scripts/ci/ciImage.mjs >> "$GITHUB_OUTPUT"
+      - name: Sign in to ghcr.io
+        env:
+          TOKEN: ${{ github.token }}
+        run: docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin <<< "$TOKEN"
+      - id: registry
+        env:
+          REF: ${{ steps.image.outputs.ref }}
+        run: |
+          if ! docker manifest inspect "$REF" > /dev/null; then
+            echo "lacks-image=true" >> "$GITHUB_OUTPUT"
+          fi
+      # A run for a Dependabot pull request publishes too: the permissions above raise its token,
+      # which is read-only by default. No setting raises the token of a fork's pull request.
+      - name: Refuse to build an image that a fork's token cannot publish
+        if: steps.registry.outputs.lacks-image && github.event.pull_request.head.repo.fork
+        env:
+          REF: ${{ steps.image.outputs.ref }}
+        run: |
+          echo "::error::This pull request changes .github/ci-image/Dockerfile or the locked Playwright version, so its jobs need the image $REF, which a fork cannot publish to ghcr.io. A maintainer pushes this branch to the repository itself, where this job publishes the image."
+          exit 1
+      - name: Build and publish the image
+        if: steps.registry.outputs.lacks-image
+        env:
+          REF: ${{ steps.image.outputs.ref }}
+          PLAYWRIGHT_VERSION: ${{ steps.image.outputs.playwright-version }}
+        # The label links the package to this repository, which gives the repository's runs access.
+        run: |
+          docker build --build-arg PLAYWRIGHT_VERSION --tag "$REF" \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            .github/ci-image
+          docker push "$REF"
+
   static:
     name: Lint, type check and generated files
     runs-on: ubuntu-latest
@@ -116,29 +164,20 @@ jobs:
   godot-ref:
     name: Real-Godot reference tests
     runs-on: ubuntu-latest
-    needs: changes
+    needs: [image, changes]
     if: needs.changes.outputs.godot-ref == 'true'
+    # Chromium keeps its shared memory in /dev/shm, which Docker limits to 64 MB, so every job in
+    # the image shares the runner's.
+    container: &ci-image
+      image: ${{ needs.image.outputs.ref }}
+      options: --ipc=host
     timeout-minutes: 20
-    env:
-      ENGINE_VERSION: 4.6.3-stable
-      # Of the Linux x86_64 binary inside the release zip.
-      ENGINE_SHA256: f64d4ed19fc9df9440321653fcc80df8c6e365ba7b6de0a29e2cfa9fa71bfeb3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
 
       # Godot renders on lavapipe under xvfb-run, as `pnpm ref:godot` does on a developer's host.
-      - run: sudo apt-get install -y --no-install-recommends xvfb mesa-vulkan-drivers
-
-      - name: Install Godot
-        run: |
-          binary="Godot_v${ENGINE_VERSION}_linux.x86_64"
-          curl -fsSL -o "$RUNNER_TEMP/godot.zip" \
-            "https://github.com/godotengine/godot/releases/download/${ENGINE_VERSION}/${binary}.zip"
-          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
-          echo "${ENGINE_SHA256}  $RUNNER_TEMP/godot/${binary}" | sha256sum --check
-          sudo install -m 755 "$RUNNER_TEMP/godot/${binary}" /usr/local/bin/godot
-
+      # The image holds all three.
       - run: pnpm test:godot-ref
 
   build:
@@ -201,8 +240,9 @@ jobs:
   visual-regression:
     name: Visual regression (${{ matrix.shard }}/12)
     runs-on: ubuntu-latest
-    needs: [web-previewer, changes]
+    needs: [image, web-previewer, changes]
     if: needs.changes.outputs.visual == 'true'
+    container: *ci-image
     timeout-minutes: 20
     # The harness captures one scene at a time with software GL, and the whole set takes more
     # than an hour on one runner. Runners are free for a public repository. Each shard gets an
@@ -223,8 +263,6 @@ jobs:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      - uses: ./.github/actions/playwright
-
       - run: pnpm test:visual --shard ${{ matrix.shard }}/12
         env:
           VISUAL_SKIP_BUILD: '1'
@@ -238,7 +276,8 @@ jobs:
   e2e-web:
     name: E2E (web previewer)
     runs-on: ubuntu-latest
-    needs: web-previewer
+    needs: [image, web-previewer]
+    container: *ci-image
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -250,16 +289,12 @@ jobs:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      - uses: ./.github/actions/playwright
-
-      # The rasteriser gate in test:gpu needs lavapipe, the driver pnpm ref:godot renders on.
-      - run: sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers
-
       - run: pnpm test:e2e:web
         env:
           VISUAL_SKIP_BUILD: '1'
 
-      # The sky layer passes, which happy-dom cannot run, checked on the real shaders.
+      # The sky layer passes, which happy-dom cannot run, checked on the real shaders. Its rasteriser
+      # gate needs lavapipe, the driver pnpm ref:godot renders on.
       - run: pnpm test:gpu
 
       # Each budget scene's draw calls and render step runs per frame, against its work budget.
@@ -272,11 +307,12 @@ jobs:
   renderer-consumer:
     name: Renderer in a plain Vite app
     runs-on: ubuntu-latest
+    needs: image
+    container: *ci-image
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - uses: ./.github/actions/playwright
       - run: pnpm test:renderer-consumer
 
   integration:
@@ -384,14 +420,15 @@ jobs:
   web:
     name: VS Code for the Web
     runs-on: ubuntu-latest
+    needs: image
+    container: *ci-image
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
 
-      # The root package pins the Playwright that @vscode/test-web launches.
-      - uses: ./.github/actions/playwright
-
+      # @vscode/test-web launches the Playwright that the root package pins, whose Chromium the
+      # image holds.
       - run: pnpm --filter textscene-inspector test:web
 
       # On the build test:web made: a local folder, the preview button, and a painted viewport.
@@ -412,6 +449,7 @@ jobs:
     needs:
       [
         changes,
+        image,
         static,
         unit,
         godot-ref,

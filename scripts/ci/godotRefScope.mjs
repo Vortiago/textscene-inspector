@@ -9,8 +9,9 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { isEngineTestInput } from '../godot-ref/engineTestInputs.mjs';
 
-/** The files that define the CI run or what it installs. No import of a test names them. */
-const RUN_DEFINITION = /^(?:\.github\/(?:workflows\/ci\.yml$|actions\/)|pnpm-lock\.yaml$|package\.json$)/;
+/** The files that define the CI run, its image or what it installs. No import of a test names them. */
+const RUN_DEFINITION =
+  /^(?:\.github\/(?:workflows\/ci\.yml$|actions\/|ci-image\/)|pnpm-lock\.yaml$|package\.json$)/;
 
 /**
  * @param {string[]} changedPaths - repo-relative paths, as `git diff --name-only` prints them.
