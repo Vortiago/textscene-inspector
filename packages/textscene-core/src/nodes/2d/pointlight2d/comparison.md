@@ -108,9 +108,9 @@ shifts the edge by half a bin.
 <!-- compare: image=unit-pointlight2d-shadow-end-on-bin status=done fixture=unit-pointlight2d-shadow-end-on-bin.tscn -->
 
 Godot draws each occluder edge as a quad into the map's row, so a bin is shadowed when the
-rasteriser covers its pixel centre. A centre exactly on an end counts only from the left of that
-end, the top-left rule, and the previewer builds its map by the same rule. Here the end sits on a
-centre at the right of the occluder, so the penumbra starts one bin later.
+rasteriser covers its pixel centre. The top-left rule counts a centre exactly on an end only from
+the left of that end. The previewer builds its map by the same rule. Here the end sits on a centre
+at the right of the occluder, so the penumbra starts one bin later.
 
 ## The shadow atlas size
 
