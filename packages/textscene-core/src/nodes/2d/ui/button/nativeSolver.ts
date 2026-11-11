@@ -86,7 +86,7 @@ const BUTTON_ICON_COLOR_KEYS: Record<ToggleDrawState, string> = {
  * `Color(1, 1, 1, 1)` (`default_theme.cpp:164-165`), `icon_disabled_color` is `Color(1, 1, 1, 0.4)` (`:169`).
  * No other builtin widget sets these keys.
  */
-export const BUTTON_ICON_MODULATE: Record<ToggleDrawState, Rgba> = {
+const BUTTON_ICON_MODULATE: Record<ToggleDrawState, Rgba> = {
   normal: { r: 1, g: 1, b: 1, a: 1 },
   pressed: { r: 1, g: 1, b: 1, a: 1 },
   disabled: { r: 1, g: 1, b: 1, a: 0.4 },
