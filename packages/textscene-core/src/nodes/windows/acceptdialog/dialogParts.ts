@@ -22,7 +22,7 @@ import {
   type TextureSlotRequest,
   type TextureSlotsFn,
 } from '../../../r3f/controls/native/solverRegistry';
-import { internalChildThemeItems } from '../../../r3f/controls/native/themeItems';
+import { internalChildThemeItems, type InternalThemeItems } from '../../../r3f/controls/native/themeItems';
 import { perObject } from '../../../utils/perObject';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import { parseControlCanvasItem } from '../../2d/ui/control/parser';
@@ -91,9 +91,9 @@ export interface SyntheticControl {
   syntheticDraw?: SolveNode['syntheticDraw'];
 }
 
-/** The `textureSlots` key of the theme icon `icon` that a Control of `type` built inside a dialog resolves. */
-export function builtButtonIconKey(type: string, variation?: string): string {
-  return variation === undefined ? `built:${type}` : `built:${type}/${variation}`;
+/** The `textureSlots` key of the theme icon `icon` that a Control of `type`, built inside a dialog with no variation, resolves. */
+export function builtButtonIconKey(type: string): string {
+  return `built:${type}`;
 }
 
 /** One request for the theme icon `icon` of each Button class in `types`, for those the theme chain gives one. */
@@ -119,6 +119,20 @@ export function syntheticPath(parentPath: string, name: string): string {
 }
 
 /**
+ * The size of the theme icon `icon` a built Button draws, for one that sets no icon of its own. A variation is
+ * null: its slot is not requested, and its own `icon` entry would size it.
+ */
+function builtButtonTextureSize(
+  dialog: SolveNode,
+  { type, variation, properties }: SyntheticControl,
+  items: InternalThemeItems
+): SolveNode['textureSize'] {
+  if ((properties as ButtonProperties).icon || !items.icons.icon) return null;
+  if (variation !== undefined || !descendsFromClass(type, 'Button')) return null;
+  return dialog.textureSlots[builtButtonIconKey(type)] ?? null;
+}
+
+/**
  * A Control `memnew`d inside `dialog` as a `SolveNode` in the dialog's scope. It has no scene node, so
  * none of the dialog's own theme items (`panel`, `buttons_separation`) apply to it. Its own come through
  * the dialog's theme chain. The default theme's items for its variation are the painter's to add.
@@ -133,13 +147,8 @@ export function syntheticControl(dialog: SolveNode, spec: SyntheticControl): Sol
     rawProperties: {},
   };
   const items = internalChildThemeItems(dialog, type, variation);
-  const hasThemeIcon = !(spec.properties as ButtonProperties).icon && items.icons.icon;
   const textureSize =
-    spec.textureSize !== undefined
-      ? spec.textureSize
-      : hasThemeIcon && descendsFromClass(type, 'Button')
-        ? (dialog.textureSlots[builtButtonIconKey(type, variation)] ?? null)
-        : null;
+    spec.textureSize !== undefined ? spec.textureSize : builtButtonTextureSize(dialog, spec, items);
   return {
     ...dialog,
     path: syntheticPath(spec.parentPath ?? dialog.path, name),

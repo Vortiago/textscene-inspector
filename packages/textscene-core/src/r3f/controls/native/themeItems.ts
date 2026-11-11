@@ -163,7 +163,7 @@ export function internalChildThemeItems(
     styleBoxes: resolveStyleBoxes(node, parent.resources, themeScope),
     colors: resolveThemedColors(node, themeScope),
     constants: resolveThemedConstants(node, themeScope),
-    icons: resolveThemedIcons(node, parent.resources, themeScope),
+    icons: builtControlIcons(parent, type, variation),
   };
   byType.set(key, items);
   return items;
