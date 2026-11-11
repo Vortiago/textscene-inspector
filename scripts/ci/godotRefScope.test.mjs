@@ -16,6 +16,10 @@ describe('needsGodotRefRun', () => {
     }
   });
 
+  it('runs for a change to the image the job runs in', () => {
+    expect(needsRun(['.github/ci-image/Dockerfile'])).toBe(true);
+  });
+
   it('skips a change that reaches neither', () => {
     expect(needsRun(['packages/textscene-core/src/r3f/TscnCanvas.tsx', '.github/workflows/pages.yml'])).toBe(
       false

@@ -15,10 +15,10 @@ caches keyed on the lockfile. The golden shards then run for 500 to 990 s each.
 ## Decision
 
 The jobs that start Chromium run in one container image: the golden shards, the web previewer E2E
-run, the renderer consumer run and the VS Code for the Web run. `.github/ci-image/Dockerfile`
-builds it on Ubuntu 24.04, as `ubuntu-latest` is. It holds the system libraries that Playwright
-lists for Chromium, lavapipe, the locked Chromium, and the Godot binary with `xvfb-run` for the
-tests that render through Godot.
+run, the renderer consumer run and the VS Code for the Web run. The real-Godot reference tests
+run in it too. `.github/ci-image/Dockerfile` builds it on Ubuntu 24.04, as `ubuntu-latest` is. It
+holds the system libraries that Playwright lists for Chromium, lavapipe, the locked Chromium, and
+the Godot binary with `xvfb-run` for the tests that render through Godot.
 
 The image is `ghcr.io/<owner>/<repository>/ci:<tag>`, so a run in a fork publishes the fork's own
 image. The tag is a hash of the Dockerfile and the Playwright version of the lockfile

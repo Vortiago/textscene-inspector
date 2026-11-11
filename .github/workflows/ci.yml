@@ -164,29 +164,20 @@ jobs:
   godot-ref:
     name: Real-Godot reference tests
     runs-on: ubuntu-latest
-    needs: changes
+    needs: [image, changes]
     if: needs.changes.outputs.godot-ref == 'true'
+    # Chromium keeps its shared memory in /dev/shm, which Docker limits to 64 MB, so every job in
+    # the image shares the runner's.
+    container: &ci-image
+      image: ${{ needs.image.outputs.ref }}
+      options: --ipc=host
     timeout-minutes: 20
-    env:
-      ENGINE_VERSION: 4.6.3-stable
-      # Of the Linux x86_64 binary inside the release zip.
-      ENGINE_SHA256: f64d4ed19fc9df9440321653fcc80df8c6e365ba7b6de0a29e2cfa9fa71bfeb3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
 
       # Godot renders on lavapipe under xvfb-run, as `pnpm ref:godot` does on a developer's host.
-      - run: sudo apt-get install -y --no-install-recommends xvfb mesa-vulkan-drivers
-
-      - name: Install Godot
-        run: |
-          binary="Godot_v${ENGINE_VERSION}_linux.x86_64"
-          curl -fsSL -o "$RUNNER_TEMP/godot.zip" \
-            "https://github.com/godotengine/godot/releases/download/${ENGINE_VERSION}/${binary}.zip"
-          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
-          echo "${ENGINE_SHA256}  $RUNNER_TEMP/godot/${binary}" | sha256sum --check
-          sudo install -m 755 "$RUNNER_TEMP/godot/${binary}" /usr/local/bin/godot
-
+      # The image holds all three.
       - run: pnpm test:godot-ref
 
   build:
@@ -251,11 +242,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [image, web-previewer, changes]
     if: needs.changes.outputs.visual == 'true'
-    # Chromium keeps its shared memory in /dev/shm, which Docker limits to 64 MB, so every browser
-    # job shares the runner's.
-    container: &ci-image
-      image: ${{ needs.image.outputs.ref }}
-      options: --ipc=host
+    container: *ci-image
     timeout-minutes: 20
     # The harness captures one scene at a time with software GL, and the whole set takes more
     # than an hour on one runner. Runners are free for a public repository. Each shard gets an
