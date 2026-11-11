@@ -72,5 +72,5 @@ resource reference, and a stack that does not decode leaves the bones unsolved.
   nodes, which the previewer does not simulate.
 - **Needs runtime** A modification in the physics `execution_mode` moves no bone, where a running
   game applies it after each physics tick.
-- **Approximated** A RemoteTransform2D below a bone, and the Cameras panel preview of a Camera2D
-  below one, read the bone transform of the scene file, not the solved pose.
+- **Approximated** A RemoteTransform2D below a bone, and the Cameras panel for a Camera2D there,
+  read the bone transform of the scene file, not the solved pose.
