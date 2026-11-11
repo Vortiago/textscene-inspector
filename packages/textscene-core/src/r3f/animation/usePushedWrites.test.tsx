@@ -119,6 +119,26 @@ describe('usePushedWrites', () => {
     expect([seen('a'), seen('c')]).toEqual([null, 7]);
   });
 
+  it('samples the return pass of a ping-pong at the clip time, and says the pass runs back', async () => {
+    const actions = actionsFor('clip');
+    const action = actions.get('clip')!;
+    action.setLoop(THREE.LoopPingPong, Infinity);
+    const sample = vi.fn();
+    const renderer = await ReactThreeTestRenderer.create(
+      <Harness store={newPushStore<number>()} clip={{ name: 'clip', sample }} isPlaying actions={actions} />
+    );
+
+    action.getMixer().update(0.4);
+    await renderer.advanceFrames(1, 0.016);
+    action.getMixer().update(0.8);
+    await renderer.advanceFrames(1, 0.016);
+
+    expect(sample.mock.calls.map(([time, , isReturnPass]) => [time, isReturnPass])).toEqual([
+      [expect.closeTo(0.4), false],
+      [expect.closeTo(0.8), true],
+    ]);
+  });
+
   it('samples once while the playhead stands', async () => {
     const actions = actionsFor('clip');
     const sample = vi.fn((time: number, out: Map<string, number>) => void out.set('a', time));

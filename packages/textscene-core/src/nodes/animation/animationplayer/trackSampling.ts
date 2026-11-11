@@ -6,10 +6,7 @@
 import { storedReal } from '../../../godot/math/real.js';
 import type { SampleSetup, TrackKey } from '../../../godot/scene/animationTrackSampler.js';
 import type { GodotAnimation } from './animationResolver';
-import type { GodotKeyframe, GodotTrack } from './trackParser';
-
-/** `TrackUpdateMode.DISCRETE`: the key holds until the next one, whatever `interp` says (`animation.cpp`). */
-const UPDATE_DISCRETE = 1;
+import { UPDATE_DISCRETE, type GodotKeyframe, type GodotTrack } from './trackParser';
 
 export function sampleSetupOf(
   track: GodotTrack,

@@ -107,22 +107,22 @@ describe('splitTracks', () => {
 
     expect(mixer.tracks).toEqual([]);
     expect(values.map(({ path, property }) => [path, property])).toEqual([['Root/Decal', 'modulate']]);
-    expect(values[0]!.sample(2.5)).toEqual([1, 1, 1, 0.5]);
+    expect(values[0]!.sample(2.5, false)).toEqual([1, 1, 1, 0.5]);
   });
 
   it('holds the endpoint keys before the start and after the end of a value track', () => {
     const [fade] = splitTracks(clip(FADE()), SCENE).values;
 
-    expect(fade!.sample(-1)).toEqual([1, 1, 1, 1]);
-    expect(fade!.sample(10)).toEqual([1, 1, 1, 0]);
+    expect(fade!.sample(-1, false)).toEqual([1, 1, 1, 1]);
+    expect(fade!.sample(10, false)).toEqual([1, 1, 1, 0]);
   });
 
   it('holds the earlier key for nearest interpolation, and for a discrete update mode', () => {
     const [nearest] = splitTracks(clip(FADE({ interp: 0 })), SCENE).values;
     const [discrete] = splitTracks(clip(FADE({ updateMode: 1 })), SCENE).values;
 
-    expect(nearest!.sample(4)).toEqual([1, 1, 1, 1]);
-    expect(discrete!.sample(4)).toEqual([1, 1, 1, 1]);
+    expect(nearest!.sample(4, false)).toEqual([1, 1, 1, 1]);
+    expect(discrete!.sample(4, false)).toEqual([1, 1, 1, 1]);
   });
 
   it('eases and splines a value track as Godot does: transition 2 bends the span and cubic leaves the line', () => {
@@ -136,7 +136,7 @@ describe('splitTracks', () => {
     });
     const [target] = splitTracks(clip(eased), SCENE).values;
 
-    expect(target!.sample(1)![0]).not.toBeCloseTo(0.5, 2);
+    expect(target!.sample(1, false)![0]).not.toBeCloseTo(0.5, 2);
   });
 
   it('steps a frame track and gives the stepped key as a one-tuple', () => {
@@ -152,14 +152,36 @@ describe('splitTracks', () => {
     });
     const [target] = splitTracks(clip(frame), SCENE).values;
 
-    expect(target!.sample(0.5)).toEqual([0]);
-    expect(target!.sample(1.5)).toEqual([3]);
+    expect(target!.sample(0.5, false)).toEqual([0]);
+    expect(target!.sample(1.5, false)).toEqual([3]);
+  });
+
+  it('shows the key a discrete track last crossed while a ping-pong runs back', () => {
+    const flipbook = (updateMode: number) =>
+      track({
+        type: 'value',
+        targetPath: 'Sprite',
+        subnames: [],
+        property: 'frame',
+        updateMode,
+        keys: [
+          { time: 0, transition: 1, value: 0 },
+          { time: 1, transition: 1, value: 1 },
+          { time: 2, transition: 1, value: 2 },
+        ],
+      });
+    const sampleOf = (updateMode: number) => splitTracks(clip(flipbook(updateMode)), SCENE).values[0]!.sample;
+    const discrete = sampleOf(1);
+    const continuous = sampleOf(0);
+
+    expect([discrete(1.5, false), discrete(1.5, true)]).toEqual([[1], [2]]);
+    expect([continuous(1.5, false), continuous(1.5, true)]).toEqual([[1], [1]]);
   });
 
   it('returns null for a value track with no key to give', () => {
     const [target] = splitTracks(clip(FADE({ keys: [] })), SCENE).values;
 
-    expect(target!.sample(1)).toBeNull();
+    expect(target!.sample(1, false)).toBeNull();
   });
 
   it('holds a frame or visible key until the next, whatever interp says, and reads a bool as 1 or 0', () => {
@@ -177,7 +199,11 @@ describe('splitTracks', () => {
       });
     const [visible] = splitTracks(clip(flips('visible')), SCENE).values;
 
-    expect([visible!.sample(0), visible!.sample(1.9), visible!.sample(2)]).toEqual([[0], [0], [1]]);
+    expect([visible!.sample(0, false), visible!.sample(1.9, false), visible!.sample(2, false)]).toEqual([
+      [0],
+      [0],
+      [1],
+    ]);
   });
 
   it('keys each value by its node and property, once', () => {

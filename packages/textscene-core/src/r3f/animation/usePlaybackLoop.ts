@@ -1,14 +1,15 @@
 /**
  * The transport-to-mixer playback loop of the AnimationPlayer (ADR-0011) and GLB
  * drivers: play advances and reports, pause samples the seek, stop restores the
- * pose. `stepPlayback` decides each frame, and this hook carries it out.
+ * pose. `stepPlayback` decides each frame, and this hook carries it out. Every time it reports or
+ * seeks is a clip time (`clipTimeOf`), so the transport agrees with the pose on every pass of a loop.
  */
 import { useRef, type MutableRefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { AnimationAction, AnimationMixer } from 'three';
 import type { PlayState } from '../contexts/AnimationTransportContext';
 import { stepPlayback } from './stepPlayback';
-import { startAction, seekAction } from './actionHelpers';
+import { clipTimeOf, seekAction, startAction, startForwardPass } from './actionHelpers';
 
 export interface PlaybackLoopParams {
   playState: PlayState;
@@ -63,6 +64,8 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
     // restarting the running action.
     const reconfigureChanged = !Object.is(params.reconfigureKey, prevReconfigureKeyRef.current);
     if ((clipChanged || reconfigureChanged || mixerRebuilt) && action && selectedClip) {
+      // A new loop reads `time` its own way, so it takes over from the clip time, forward.
+      startForwardPass(action);
       params.configureAction(action, selectedClip);
     }
     prevReconfigureKeyRef.current = params.reconfigureKey;
@@ -73,26 +76,28 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
       // NaN differs from every time, so a paused rebuild samples its new action once.
       prevTime: mixerRebuilt ? Number.NaN : prevTimeRef.current,
       transportTime,
-      liveTime: action?.time ?? null,
+      liveTime: action ? clipTimeOf(action) : null,
       clipChanged,
     });
 
     if (step.flushTime && action !== null) {
-      params.reportTime(action.time, { immediate: true });
+      params.reportTime(clipTimeOf(action), { immediate: true });
     }
 
     switch (step.command) {
       case 'ensure-playing': {
+        if (action && step.resume) startForwardPass(action);
         if (action && !action.isRunning()) {
           startAction(action);
           if (mixerRebuilt) action.time = transportTime;
         }
         mixer.update(delta * speedScale);
-        if (action) params.reportTime(action.time);
+        if (action) params.reportTime(clipTimeOf(action));
         break;
       }
       case 'seek': {
         if (action) {
+          startForwardPass(action);
           seekAction(action, transportTime);
           mixer.update(0);
         }

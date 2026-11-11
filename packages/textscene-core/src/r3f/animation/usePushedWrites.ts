@@ -8,11 +8,15 @@ import { useCallback, useEffect, useRef, type MutableRefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import type { AnimationAction } from 'three';
 import type { PushStore } from '../contexts/pushStore';
+import { clipTimeOf, isOnReturnPass } from './actionHelpers';
 
-/** The clip a driver writes: its action name, and what it samples into `out` at a time, by store key. */
+/**
+ * The clip a driver writes: its action name, and what it samples into `out` at a clip time, by store
+ * key. `isReturnPass` says a ping-pong runs back, which a discrete track reads.
+ */
 export interface PushedClip<T> {
   name: string;
-  sample: (time: number, out: Map<string, T>) => void;
+  sample: (time: number, out: Map<string, T>, isReturnPass: boolean) => void;
 }
 
 /**
@@ -48,11 +52,12 @@ export function usePushedWrites<T>(
     }
     // The live playhead, which the playback loop advanced earlier this frame. A paused clip stands
     // on the values it wrote.
-    if (action.time === sampledAt.current) return;
-    sampledAt.current = action.time;
+    const time = clipTimeOf(action);
+    if (time === sampledAt.current) return;
+    sampledAt.current = time;
     const now = sampled.current;
     now.clear();
-    clip.sample(action.time, now);
+    clip.sample(time, now, isOnReturnPass(action));
     for (const [key, value] of now) store.set(key, value);
     for (const key of written.current.keys()) {
       if (!now.has(key)) store.set(key, null);

@@ -1,6 +1,6 @@
 # AnimationPlayer drives sibling objects through a THREE.AnimationMixer rooted at root_node
 
-- Status: Accepted. Name binding amended by the exact-binding amendment (below).
+- Status: Accepted. Name binding amended by the exact-binding amendment, and the playhead by the clip-time amendment (both below).
 
 Every other node component renders only itself (the "each component renders itself" invariant, with non-visual types as transform-only groups per ADR-0005 and ADR-0008). An AnimationPlayer animates *other* nodes, named by `NodePath("Child:property")` tracks. A `THREE.AnimationMixer` built on the player's **Animation root** (`root_node`, default `..`, the parent of the player) drives them. It binds `THREE.KeyframeTrack`s by name-path (`"Mesh.position"`). `THREE.PropertyBinding` resolves each target by a search of the subtree. It finds the named, transform-bearing object through the unnamed pickable wrappers of the dispatcher, so the mixer overrides the base transform of that object while it plays. `useFrame` advances the mixer, gated by the scene-level **Animation transport**. The transport starts stopped on load, showing the authored pose, until the user presses play.
 
@@ -53,3 +53,20 @@ Rejected: a central animation-value context that computes per-frame values and p
 > - Rejected: one action per target through `clipAction(clip, target)`. One animation would
 >   become several actions, which the transport, `usePlaybackLoop` and an AnimationTree blend
 >   would all have to start, seek and weight together. The uuid keeps one clip per animation.
+
+> **Amendment (clip time):** every reader of the playhead reads the **Clip time**, not
+> `action.time`. On the return pass of a `LoopPingPong` action, `action.time` still runs from
+> the start to the end. Only THREE's interpolants mirror it, so a reader of `action.time` plays
+> the return pass forward. Now:
+>
+> - `clipTimeOf(action)` gives the mirrored time on a return pass. The pushed value tracks, the
+>   bone tracks and the transport's readout all read it. `isOnReturnPass` reads THREE's private
+>   pass count. Rejected: a pass count of our own beside it, which drifts from THREE's on a seek.
+> - A seek, a resume from pause and a change of loop style call `startForwardPass` first, so the
+>   clip runs forward from the time it shows, as Godot's `play` does (`animation_player.cpp:509`).
+> - A discrete value track on a return pass shows the key the playhead last crossed, not the key
+>   at or before it, since Godot sets each key as the playhead crosses it
+>   (`animation_mixer.cpp:1635-1646`).
+> - Rejected: a playhead of our own that follows `animation_player.cpp:158-226`, with the action
+>   paused and sampled at that time. THREE picks a spline's end slopes only while it advances the
+>   action, so cubic tracks moved further from Godot.
