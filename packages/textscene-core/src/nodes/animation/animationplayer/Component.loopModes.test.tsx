@@ -17,14 +17,10 @@ import {
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { RegisteredNode } from '../../../r3f/testing/RegisteredNode';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
-import {
-  AnimationCallbackModeMethod,
-  AnimationCallbackModeProcess,
-  AnimationLoopMode,
-} from '../../../godot/scene/animation';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import { AnimationLoopMode } from '../../../godot/scene/animation';
+import type { TscnInternalResource } from '../../../parser/types';
 import { subResource } from '../../../testing/subResource';
-import type { AnimationPlayerProperties } from './types';
+import { animationPlayerNode, LIB_LIBRARY } from './animationPlayerNode.testkit';
 
 const AP_PATH = 'Root/AnimationPlayer';
 const FADER_PATH = 'Root/Fader';
@@ -60,24 +56,6 @@ const INTERNAL: TscnInternalResource[] = [
   clip('L', AnimationLoopMode.LINEAR),
   clip('P', AnimationLoopMode.PINGPONG),
 ];
-
-function playerNode(autoplay: string): TscnNode {
-  const properties: AnimationPlayerProperties = {
-    name: 'AnimationPlayer',
-    speed_scale: 1.0,
-    playback_default_blend_time: 0.0,
-    callback_mode_process: AnimationCallbackModeProcess.IDLE,
-    callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
-    active: true,
-    autoplay,
-    current_animation: '',
-    current_animation_length: 0.0,
-    current_animation_position: 0.0,
-    root_node: 'NodePath("..")',
-    libraries: [{ name: '', subResourceId: 'Lib' }],
-  };
-  return { rawProperties: {}, name: 'AnimationPlayer', type: 'AnimationPlayer', children: [], properties };
-}
 
 let transport: AnimationTransport;
 let fadedAlpha: number | null;
@@ -121,7 +99,7 @@ async function play(autoplay: string): Promise<Renderer> {
               <FaderProbe />
             </NodePathProvider>
             <NodePathProvider path={AP_PATH}>
-              <AnimationPlayer node={playerNode(autoplay)} />
+              <AnimationPlayer node={animationPlayerNode({ autoplay, libraries: LIB_LIBRARY })} />
             </NodePathProvider>
           </group>
         </AnimationTransportProvider>

@@ -26,10 +26,9 @@ import {
   useAnimationDriver,
   type AnimationDriverEntry,
 } from '../../../r3f/contexts/AnimationDriverContext';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnInternalResource } from '../../../parser/types';
+import { animationPlayerNode, LIB_LIBRARY } from './animationPlayerNode.testkit';
 import type { AnimationPlayerProperties } from './types';
-
-import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../../../godot/scene/animation';
 
 // A single "slide" clip moving Target from x=0 to x=10 over 1 second.
 const INTERNAL: TscnInternalResource[] = [
@@ -63,31 +62,6 @@ const ROT_INTERNAL: TscnInternalResource[] = [
     },
   },
 ];
-
-function makeAP(overrides: Partial<AnimationPlayerProperties> = {}): TscnNode {
-  const props: AnimationPlayerProperties = {
-    name: 'AnimationPlayer',
-    speed_scale: 1.0,
-    playback_default_blend_time: 0.0,
-    callback_mode_process: AnimationCallbackModeProcess.IDLE,
-    callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
-    active: true,
-    autoplay: '',
-    current_animation: '',
-    current_animation_length: 0.0,
-    current_animation_position: 0.0,
-    root_node: 'NodePath("..")',
-    libraries: [{ name: '', subResourceId: 'Lib' }],
-    ...overrides,
-  };
-  return {
-    rawProperties: {},
-    name: props.name ?? 'AnimationPlayer',
-    type: 'AnimationPlayer',
-    children: [],
-    properties: props,
-  };
-}
 
 const AP_PATH = 'Root/AnimationPlayer';
 
@@ -130,7 +104,7 @@ async function mountScene(
             <Capture />
             <group name="Root">
               <NodePathProvider path={AP_PATH}>
-                <AnimationPlayer node={makeAP(apProps)} />
+                <AnimationPlayer node={animationPlayerNode({ libraries: LIB_LIBRARY, ...apProps })} />
               </NodePathProvider>
               <RegisteredNode path="Root/Target">
                 <mesh name="Target">
