@@ -4,6 +4,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -11,13 +12,26 @@ import { applyLocalChanges } from './applyLocalChanges.mjs';
 
 let changes;
 let checkout;
+let enclosingRepository;
 
 function write(root, rel, text) {
   mkdirSync(dirname(join(root, rel)), { recursive: true });
   writeFileSync(join(root, rel), text);
 }
 
-const SCENE_PATCH = `--- a/3d/demo/main.tscn
+/** Seeds `root` as the checkout every case starts from: one scene that points at one binary scene. */
+function seedCheckout(root) {
+  write(
+    root,
+    '3d/demo/main.tscn',
+    '[gd_scene format=3]\n[ext_resource type="PackedScene" path="res://grid.scn" id="1"]\n'
+  );
+  write(root, '3d/demo/grid.scn', 'RSRC');
+}
+
+/** In the form `git diff` writes, as the real patch is: git reads the header's path against a repository. */
+const SCENE_PATCH = `diff --git a/3d/demo/main.tscn b/3d/demo/main.tscn
+--- a/3d/demo/main.tscn
 +++ b/3d/demo/main.tscn
 @@ -1,2 +1,2 @@
  [gd_scene format=3]
@@ -28,12 +42,9 @@ const SCENE_PATCH = `--- a/3d/demo/main.tscn
 beforeEach(() => {
   changes = mkdtempSync(join(tmpdir(), 'local-changes-'));
   checkout = mkdtempSync(join(tmpdir(), 'demo-checkout-'));
-  write(
-    checkout,
-    '3d/demo/main.tscn',
-    '[gd_scene format=3]\n[ext_resource type="PackedScene" path="res://grid.scn" id="1"]\n'
-  );
-  write(checkout, '3d/demo/grid.scn', 'RSRC');
+  enclosingRepository = mkdtempSync(join(tmpdir(), 'enclosing-repository-'));
+  execFileSync('git', ['init', '-q', enclosingRepository]);
+  seedCheckout(checkout);
   write(changes, 'text-resources/3d/demo/grid.tscn', '[gd_scene format=3]\n');
   write(changes, 'local-changes.patch', SCENE_PATCH);
 });
@@ -41,6 +52,7 @@ beforeEach(() => {
 afterEach(() => {
   rmSync(changes, { recursive: true, force: true });
   rmSync(checkout, { recursive: true, force: true });
+  rmSync(enclosingRepository, { recursive: true, force: true });
 });
 
 describe('applyLocalChanges', () => {
@@ -53,6 +65,13 @@ describe('applyLocalChanges', () => {
   it('applies the patch to the upstream files', () => {
     applyLocalChanges(changes, checkout);
     expect(readFileSync(join(checkout, '3d/demo/main.tscn'), 'utf8')).toContain('path="res://grid.tscn"');
+  });
+
+  it('applies the patch to a checkout inside another git repository (edge case)', () => {
+    const nested = join(enclosingRepository, 'work/godot-demo-projects');
+    seedCheckout(nested);
+    applyLocalChanges(changes, nested);
+    expect(readFileSync(join(nested, '3d/demo/main.tscn'), 'utf8')).toContain('path="res://grid.tscn"');
   });
 
   it('refuses a text copy that replaces no binary resource', () => {

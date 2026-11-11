@@ -41,9 +41,17 @@ function binaryResourceBeside(checkout, rel) {
   return join(dirname(rel), matches[0].name);
 }
 
+/**
+ * The ceiling keeps git from finding a repository above the checkout. Inside one, `git apply`
+ * reads each path against that repository, skips every file and exits 0.
+ */
 function applyPatch(patch, checkout) {
   try {
-    execFileSync('git', ['apply', '--whitespace=nowarn', patch], { cwd: checkout, stdio: 'pipe' });
+    execFileSync('git', ['apply', '--whitespace=nowarn', patch], {
+      cwd: checkout,
+      stdio: 'pipe',
+      env: { ...process.env, GIT_CEILING_DIRECTORIES: dirname(checkout) },
+    });
   } catch (e) {
     throw new Error(`${basename(patch)} does not apply to the checkout: ${e.stderr ?? e}`, {
       cause: e,
