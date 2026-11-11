@@ -38,6 +38,11 @@ A defect the change introduces and CI does not catch:
 - Cite every claim as a `file:line`, in the engine or here.
 - Drop a finding that a guard, a test or a caller already handles.
 
+## Coverage
+
+- Read every hunk of the diff before you answer. A large diff is no reason to read part of it.
+- End the summary with "Read every file.", or with the path of each file of the diff you did not read.
+
 ## Answer
 
 - Give each finding its file, a line the diff shows, its severity and its text, without the emoji.
