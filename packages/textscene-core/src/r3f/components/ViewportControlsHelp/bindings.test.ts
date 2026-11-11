@@ -9,18 +9,12 @@ import { resolveNavMode, resolveWheelMode } from '../../godotEditorCursor';
 import { resolveTouchMode } from '../../pointerGesture';
 import { controlsFor, type Binding, type BindingOutcome } from './bindings';
 
-/** What each outcome must be called in a row's prose. */
-const OUTCOME_LABEL: Record<string, string> = {
+/** What a row's prose calls each navigation mode. A flight direction goes by its own name. */
+const MODE_LABEL: Record<string, string> = {
   orbit: 'Orbit',
   pan: 'Pan',
   zoom: 'Zoom',
   freelook: 'Freelook',
-  forward: 'forward',
-  back: 'back',
-  left: 'left',
-  right: 'right',
-  up: 'up',
-  down: 'down',
   null: 'Select',
 };
 
@@ -29,7 +23,7 @@ function resolve(binding: Binding): BindingOutcome {
   const trigger = binding.trigger;
   if (!trigger) throw new Error('no trigger');
   if (trigger.kind === 'drag') {
-    return resolveNavMode(trigger.button, trigger.mods ?? {}, trigger.projection);
+    return resolveNavMode(trigger.button, trigger.mods ?? {}, trigger.projection ?? 'perspective');
   }
   if (trigger.kind === 'flightKeys') return theOneDirectionOf(trigger.codes);
   if (trigger.kind === 'wheel') return resolveWheelMode(trigger.mods ?? {});
@@ -66,7 +60,8 @@ describe('the advertised bindings match the resolvers', () => {
 
   it.each(TRIGGERED)('$mode $device — $binding.input is labelled for what it does', ({ binding }) => {
     // A row can resolve to 'pan' and still say "Orbit", so the prose must name the outcome.
-    expect(binding.action).toContain(OUTCOME_LABEL[String(binding.resolvesTo)]);
+    const outcome = String(binding.resolvesTo);
+    expect(binding.action).toContain(MODE_LABEL[outcome] ?? outcome);
   });
 
   it('covers every row a resolver owns, so none can quietly opt out', () => {

@@ -3,11 +3,13 @@
  * Godot keeps the same three per viewport (`freelook_active`, its input map and `freelook_speed`).
  * It is on while the right button is held, or from the toggle until the pointer lock ends.
  */
-import { freelookDirectionOf } from './editorKeyBindings.js';
+import { freelookDirectionOf, type FreelookDirection } from './editorKeyBindings.js';
+import { createExternalStore } from './hooks/createExternalStore.js';
 import {
   FREELOOK_BASE_SPEED,
   freelookMoveCursor,
   scaleFreelookSpeed,
+  zoomLimits,
   type EditorCursor,
   type FreelookKeys,
   type ZoomRange,
@@ -44,40 +46,37 @@ interface FreelookModifiers {
  * range has no scale, and Godot draws no bar for it.
  */
 function speedFractionIn(speed: number, range: ZoomRange): number {
-  const min = scaleFreelookSpeed(0, 1, range);
-  const max = scaleFreelookSpeed(Infinity, 1, range);
+  const { min, max } = zoomLimits(range);
   if (!(max > min)) return 0;
   return Math.log1p(speed - min) / Math.log1p(max - min);
 }
 
 export class Freelook {
   private isHeld = false;
-  private readonly heldDirections = new Set<keyof FreelookKeys>();
+  private readonly heldDirections = new Set<FreelookDirection>();
   private modifiers: FreelookModifiers = { shiftKey: false, altKey: false };
-  private state: FreelookState = {
+  private readonly store = createExternalStore<FreelookState>({
     isToggled: false,
     speed: FREELOOK_BASE_SPEED,
     speedFraction: 0,
     speedChangeCount: 0,
-  };
-  private readonly listeners = new Set<() => void>();
+  });
+
+  readonly getState = this.store.get;
+  readonly subscribe = this.store.subscribe;
 
   get isActive(): boolean {
-    return this.isHeld || this.state.isToggled;
+    return this.isHeld || this.isToggled;
+  }
+
+  /** Whether a frame of flight would move the camera: freelook is on and a flight key is held. */
+  get isFlying(): boolean {
+    return this.isActive && this.heldDirections.size > 0;
   }
 
   get isToggled(): boolean {
-    return this.state.isToggled;
+    return this.getState().isToggled;
   }
-
-  readonly getState = (): FreelookState => this.state;
-
-  readonly subscribe = (listener: () => void): (() => void) => {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
-  };
 
   /** The right button went down or up. */
   setHeld(isHeld: boolean): void {
@@ -87,8 +86,8 @@ export class Freelook {
 
   /** The canvas took or lost the pointer lock. */
   setToggled(isToggled: boolean): void {
-    if (isToggled === this.state.isToggled) return;
-    this.publish({ ...this.state, isToggled });
+    if (isToggled === this.isToggled) return;
+    this.store.set({ ...this.getState(), isToggled });
     this.releaseKeysWhenOff();
   }
 
@@ -120,29 +119,25 @@ export class Freelook {
 
   /** `scale_freelook_speed`: one wheel event, with the clip planes that bound the speed. */
   scaleSpeed(scale: number, range: ZoomRange): void {
-    const speed = scaleFreelookSpeed(this.state.speed, scale, range);
-    this.publish({
-      ...this.state,
+    const state = this.getState();
+    const speed = scaleFreelookSpeed(state.speed, scale, range);
+    this.store.set({
+      ...state,
       speed,
       speedFraction: speedFractionIn(speed, range),
-      speedChangeCount: this.state.speedChangeCount + 1,
+      speedChangeCount: state.speedChangeCount + 1,
     });
   }
 
-  /** One frame of flight. Returns `cursor` itself when freelook is off or no key is held. */
+  /** One frame of flight. Returns `cursor` itself when it is not flying. */
   fly(cursor: EditorCursor, deltaSeconds: number): EditorCursor {
-    if (!this.isActive || this.heldDirections.size === 0) return cursor;
+    if (!this.isFlying) return cursor;
     const keys: FreelookKeys = { sprint: this.modifiers.shiftKey, slow: this.modifiers.altKey };
     for (const direction of this.heldDirections) keys[direction] = true;
-    return freelookMoveCursor(cursor, keys, this.state.speed, deltaSeconds);
+    return freelookMoveCursor(cursor, keys, this.getState().speed, deltaSeconds);
   }
 
   private releaseKeysWhenOff(): void {
     if (!this.isActive) this.releaseKeys();
-  }
-
-  private publish(state: FreelookState): void {
-    this.state = state;
-    for (const listener of this.listeners) listener();
   }
 }

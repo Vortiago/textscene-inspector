@@ -51,11 +51,10 @@ interface ControlsHelp {
   readonly groups: readonly BindingGroup[];
 }
 
-// In both tables the mouse and keyboard rows are Godot 4.6's editor bindings. The
-// trackpad rows are its pan-gesture bindings minus the unmodified one: a browser
-// reports a two-finger scroll as a wheel event, so the wheel's zoom keeps that
-// slot. Godot's editor has no touch scheme. The arrow keys and Space of the
-// Freelook rows are the previewer's own (ADR-0029).
+// In both tables the mouse and keyboard rows are Godot 4.6's editor bindings, and the trackpad
+// rows are its pan-gesture bindings minus the unmodified one: a browser reports a two-finger
+// scroll as a wheel event, so the wheel's zoom keeps that slot. The touch rows, and the arrow
+// keys and Space of the Freelook rows, are the previewer's own (ADR-0029).
 const CONTROLS_3D: ControlsHelp = {
   summary: 'middle-drag = orbit · shift+wheel = pan · wheel = zoom',
   touchSummary: 'drag = orbit · two fingers = pan · pinch = zoom',

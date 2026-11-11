@@ -2,13 +2,12 @@
  * The Freelook button: it shows and drives the toggle of the 3D canvas's freelook through the
  * viewport actions, and says why it is off during a camera preview.
  */
-import { useEffect } from 'react';
 import { describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ViewportModeProvider, type ViewportMode } from '../../contexts/ViewportModeContext';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
 import { Freelook, type FreelookControl } from '../../freelook';
-import { useViewportActions } from '../../testing/ViewportActionsProbe';
+import { RegisteredFreelook } from '../../testing/ViewportActionsProbe';
 import { ViewportToolbar } from './ViewportToolbar';
 
 /** A canvas's freelook whose toggle the browser always grants. */
@@ -19,13 +18,6 @@ function grantedFreelook(): FreelookControl {
     getState: freelook.getState,
     subscribe: freelook.subscribe,
   };
-}
-
-/** Stands in for the 3D canvas, which registers its freelook on mount. */
-function RegisteredFreelook({ control }: { control: FreelookControl }) {
-  const { registerFreelook } = useViewportActions();
-  useEffect(() => registerFreelook(control), [registerFreelook, control]);
-  return null;
 }
 
 function renderToolbar({

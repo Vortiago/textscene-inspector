@@ -53,11 +53,22 @@ export function drag(
   element.dispatchEvent(new PointerEvent('pointerup', { ...common, button }));
 }
 
+/** A keydown from the page's body, as a key pressed with no field focused. Returns the event. */
+export function keyDown(code: string, init: KeyboardEventInit = {}): KeyboardEvent {
+  const event = new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true, ...init });
+  document.body.dispatchEvent(event);
+  return event;
+}
+
+export function keyUp(code: string, init: KeyboardEventInit = {}): void {
+  document.body.dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true, cancelable: true, ...init }));
+}
+
 export async function pressKey(code: string, init: KeyboardEventInit = {}): Promise<void> {
   await act(async () => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true, ...init }));
+    keyDown(code, init);
   });
-  window.dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true }));
+  keyUp(code, init);
 }
 
 /** Where the camera is pointing, in world space. */

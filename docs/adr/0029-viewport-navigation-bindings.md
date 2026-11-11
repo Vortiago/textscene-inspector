@@ -220,7 +220,9 @@ the control, with the speed on screen.
 ### Consequences
 
 - `TscnCanvas` takes every key while freelook is on, through one capture-phase listener on
-  `window`. A page that embeds `@textscene/renderer` loses `Shift+F` to it at all times.
+  `window`. `Shift+F` starts the toggle on any page that embeds `@textscene/renderer`.
+- `useGlobalShortcut` reads Shift with a letter as a chord of its own, so `Shift+F` does not also
+  frame the selection, which is F's job.
 - The toggle moves keyboard focus to the canvas. Space would otherwise press the toolbar button
   that started it.
 - The VS Code webview grants the lock. Measured on VS Code 1.145.3 under Xvfb: a click on the

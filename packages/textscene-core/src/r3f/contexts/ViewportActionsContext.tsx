@@ -1,8 +1,7 @@
 /**
- * What a panel's toolbar and panels do to its viewport: look through a camera,
- * frame the 2D stage, reset the view, toggle freelook and take a screenshot. `previewedCameraPath ===
- * null` means the canvas draws through the editor camera. A node path makes the canvas
- * look through the Camera3D there.
+ * What a panel's toolbar and panels do to its viewport: look through a camera, frame the 2D
+ * stage, reset the view, toggle freelook and take a screenshot. `previewedCameraPath === null`
+ * means the canvas draws through the editor camera. A node path makes it look through that Camera3D.
  */
 
 import type { SceneGraph } from '../../core/SceneGraph.js';
@@ -51,7 +50,7 @@ export interface ViewportActionsContextValue {
   resetCamera: () => void;
   /** `<TscnCanvas>` registers its `<GodotEditorControls>` reset here, and gets the cleanup. */
   registerResetHandler: (handler: () => void) => () => void;
-  /** `<GodotEditorControls>` registers its canvas's freelook here, and gets the cleanup. */
+  /** `<TscnCanvas>` registers its canvas's freelook here, and gets the cleanup. */
   registerFreelook: (control: FreelookControl) => () => void;
   /** Starts or ends the freelook toggle of the 3D canvas. It does nothing before one registers. */
   toggleFreelook: () => void;
@@ -255,10 +254,19 @@ export function ViewportActionsProvider({
 /** The 3D canvas's freelook state, live, or null with no provider or no 3D canvas. */
 export function useFreelookState(): FreelookState | null {
   const actions = useContext(ViewportActionsContext);
-  return useSyncExternalStore(
-    actions?.subscribeFreelook ?? subscribeToNothing,
-    actions?.freelookState ?? noFreelookState
-  );
+  const freelookState = actions?.freelookState ?? noFreelookState;
+  return useSyncExternalStore(actions?.subscribeFreelook ?? subscribeToNothing, freelookState, freelookState);
+}
+
+/**
+ * Whether the 3D canvas's freelook is toggled on, or null with no provider or no 3D canvas. A
+ * primitive, so its reader does not re-render on a speed change, which a trackpad sends per frame.
+ */
+export function useIsFreelookToggled(): boolean | null {
+  const actions = useContext(ViewportActionsContext);
+  const freelookState = actions?.freelookState ?? noFreelookState;
+  const isToggled = (): boolean | null => freelookState()?.isToggled ?? null;
+  return useSyncExternalStore(actions?.subscribeFreelook ?? subscribeToNothing, isToggled, isToggled);
 }
 
 const subscribeToNothing = (): (() => void) => () => {};

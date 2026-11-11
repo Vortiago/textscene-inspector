@@ -3,11 +3,9 @@
  * react-three-fiber, with its resources in scope and the camera the user picks.
  * With no scene loaded, it renders an empty canvas with default lighting.
  */
-import { Canvas, useThree } from '@react-three/fiber';
-import { useEffect } from 'react';
+import { Canvas } from '@react-three/fiber';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useSeatedRoots } from './useLiveSceneTree.js';
-import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { EditedRootProvider } from './contexts/InstanceOwnersContext.js';
@@ -17,7 +15,8 @@ import { HoverHighlight } from './components/HoverHighlight.js';
 import { InternalTextLabel } from './internalTextLabel.js';
 import { editorHelperUserData } from './editorHelpers.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
-import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls.js';
+import { EditorControlsBridge } from './EditorControlsBridge.js';
+import { GodotEditorControls } from './GodotEditorControls.js';
 import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
 import { editorCameraPosition, editorCameraProjection } from './godotEditorCamera.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
@@ -153,27 +152,8 @@ export function TscnCanvas() {
         <CameraFit />
         <FrameSelectedShortcut />
         <GodotEditorControls />
-        <EditorControlsResetBridge />
+        <EditorControlsBridge />
       </Canvas>
     </div>
   );
-}
-
-/**
- * Hands the navigation handle to `ViewportActionsContext`, so the toolbar can call
- * `reset()` from outside the `<Canvas>`. `<GodotEditorControls>` publishes it
- * as R3F's `state.controls`.
- */
-function EditorControlsResetBridge() {
-  const control = useOptionalViewportActions();
-  const registerResetHandler = control?.registerResetHandler;
-  const published = useThree((s) => s.controls);
-  const controls = published instanceof EditorControlsHandle ? published : null;
-
-  useEffect(() => {
-    if (!registerResetHandler || !controls) return undefined;
-    return registerResetHandler(() => controls.reset());
-  }, [registerResetHandler, controls]);
-
-  return null;
 }

@@ -9,7 +9,6 @@ import type { RootState } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import { isTypingTarget } from './hooks/isTypingTarget.js';
 import type { EditorControlsHandle } from './EditorControlsHandle.js';
-import type { Freelook } from './freelook.js';
 import { resolveNavMode } from './godotEditorCursor.js';
 import { isGesturePointer, type TouchPoint } from './pointerGesture.js';
 import { applyEditorDragMove, applyEditorWheel, type DragState } from './editorMouseNavigation.js';
@@ -24,7 +23,6 @@ import { applyEditorViewKey, consumeEditorViewKey } from './editorKeyBindings.js
 export function useEditorNavigation(
   gl: RootState['gl'],
   handle: EditorControlsHandle,
-  freelook: Freelook,
   invalidate: RootState['invalidate'],
   get: RootState['get']
 ): void {
@@ -58,7 +56,7 @@ export function useEditorNavigation(
       const drag = dragRef.current;
       if (!drag) return;
       dragRef.current = null;
-      freelook.setHeld(false);
+      handle.freelook.setHeld(false);
       if (element.hasPointerCapture?.(drag.pointerId)) {
         element.releasePointerCapture(drag.pointerId);
       }
@@ -90,7 +88,7 @@ export function useEditorNavigation(
         x: event.clientX,
         y: event.clientY,
       };
-      freelook.setHeld(mode === 'freelook');
+      handle.freelook.setHeld(mode === 'freelook');
       element.setPointerCapture?.(event.pointerId);
     }
 
@@ -108,7 +106,7 @@ export function useEditorNavigation(
     function handleWheel(event: WheelEvent): void {
       event.preventDefault();
       if (isPreviewing()) return;
-      if (applyEditorWheel(event, handle, freelook, get)) invalidate();
+      if (applyEditorWheel(event, handle, get)) invalidate();
     }
 
     function handleContextMenu(event: MouseEvent): void {
@@ -153,5 +151,5 @@ export function useEditorNavigation(
       endDrag();
       resetTouch();
     };
-  }, [gl, handle, freelook, invalidate, get]);
+  }, [gl, handle, invalidate, get]);
 }

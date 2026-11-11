@@ -4,9 +4,6 @@
  * outside `godotEditorCursor.ts`, as `pointerGesture.ts` does.
  */
 
-/** The `document` event that fires each time a lock starts or ends, by the page or by the browser. */
-export const POINTER_LOCK_CHANGE_EVENT = 'pointerlockchange';
-
 export function holdsPointerLock(element: Element): boolean {
   return element.ownerDocument.pointerLockElement === element;
 }

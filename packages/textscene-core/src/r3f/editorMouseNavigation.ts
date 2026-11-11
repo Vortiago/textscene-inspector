@@ -8,7 +8,6 @@
 
 import type { RootState } from '@react-three/fiber';
 import type { EditorControlsHandle } from './EditorControlsHandle.js';
-import type { Freelook } from './freelook.js';
 import {
   dollyCursor,
   freelookCursor,
@@ -65,13 +64,12 @@ export function applyEditorDragMove(
 export function applyEditorWheel(
   event: WheelEvent,
   handle: EditorControlsHandle,
-  freelook: Freelook,
   get: RootState['get']
 ): boolean {
-  if (freelook.isActive) {
+  if (handle.freelook.isActive) {
     // A wheel-up notch shrinks the orbit radius and raises the speed, so the two scales are inverse.
     const scale = 1 / wheelZoomScale(event);
-    if (scale !== 1) freelook.scaleSpeed(scale, handle.zoomRange());
+    if (scale !== 1) handle.freelook.scaleSpeed(scale, handle.zoomRange());
     return false;
   }
   if (resolveWheelMode(event) === 'pan') {

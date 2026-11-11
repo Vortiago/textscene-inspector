@@ -15,7 +15,7 @@ import {
   VIEWPORT_MODE_STORAGE_KEY,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
-import { useFreelookState, useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
+import { useIsFreelookToggled, useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { writePersisted } from '../../hooks/usePersistedState.js';
 import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
@@ -187,7 +187,7 @@ export function ViewportToolbar() {
     setShowPerformance,
   } = useViewportMode();
   const camera = useOptionalViewportActions();
-  const freelook = useFreelookState();
+  const isFreelookToggled = useIsFreelookToggled();
   const isPreviewing = camera != null && camera.previewedCameraPath !== null;
   const hierarchy = useOptionalHierarchy();
   const sceneLoaded = Boolean(hierarchy?.sceneGraph);
@@ -255,13 +255,13 @@ export function ViewportToolbar() {
         </button>
       )}
       {/* Present once a 3D canvas has registered its freelook, so it hides in 2D too. */}
-      {mode === '3D' && camera && freelook && (
+      {mode === '3D' && camera && isFreelookToggled !== null && (
         <button
           type="button"
-          className={freelook.isToggled ? `${styles.freelookButton} ${styles.active}` : styles.freelookButton}
+          className={isFreelookToggled ? `${styles.freelookButton} ${styles.active}` : styles.freelookButton}
           onClick={camera.toggleFreelook}
           disabled={isPreviewing}
-          aria-pressed={freelook.isToggled}
+          aria-pressed={isFreelookToggled}
           data-testid="freelook-button"
           title={isPreviewing ? FREELOOK_PREVIEW_TITLE : FREELOOK_TITLE}
         >

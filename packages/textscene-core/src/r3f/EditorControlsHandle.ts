@@ -6,6 +6,7 @@
 
 import type { Camera as R3FCamera } from '@react-three/fiber';
 import * as THREE from 'three';
+import { Freelook } from './freelook.js';
 import { editorCameraPosition, editorCameraProjection } from './godotEditorCamera.js';
 import {
   cursorCameraPosition,
@@ -36,6 +37,9 @@ function isPerspectiveCamera(camera: R3FCamera): camera is THREE.PerspectiveCame
 export class EditorControlsHandle extends THREE.EventDispatcher {
   /** The orbit focus point. One persistent vector: `frameSceneBounds` copies into it. */
   readonly target = new THREE.Vector3();
+
+  /** Godot keeps freelook per viewport, so each canvas's handle holds its own. */
+  readonly freelook = new Freelook();
 
   /** Written only by the projection swap: one of the pair below. */
   private editorCamera: R3FCamera;
@@ -121,7 +125,9 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
    */
   reset(): void {
     this.usePerspective();
-    Object.assign(this.perspectiveCamera, editorCameraProjection());
+    const { near, far } = editorCameraProjection();
+    this.perspectiveCamera.near = near;
+    this.perspectiveCamera.far = far;
     this.perspectiveCamera.updateProjectionMatrix();
     this.target.set(0, 0, 0);
     this.camera.position.set(...editorCameraPosition());
@@ -130,6 +136,14 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
 
   get isOrthographic(): boolean {
     return this.camera === this.orthographicCamera;
+  }
+
+  /**
+   * Godot has no freelook in a camera preview (`node_3d_editor_plugin.cpp:1826-1829`) or in
+   * orthographic view (`:2741-2742`).
+   */
+  canFreelook(rendered: R3FCamera): boolean {
+    return !this.isPreviewing(rendered) && !this.isOrthographic;
   }
 
   get projection(): Projection {

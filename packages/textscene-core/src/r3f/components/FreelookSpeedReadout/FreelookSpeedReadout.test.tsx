@@ -2,12 +2,11 @@
  * The freelook speed readout: Godot's indicator bar and "m/s" label, shown for a moment after each
  * wheel change of the flight speed.
  */
-import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import { ViewportActionsProvider } from '../../contexts/ViewportActionsContext';
 import { Freelook } from '../../freelook';
-import { useViewportActions } from '../../testing/ViewportActionsProbe';
+import { RegisteredFreelook } from '../../testing/ViewportActionsProbe';
 import { FreelookSpeedReadout } from './FreelookSpeedReadout';
 
 /** `ZOOM_FREELOOK_INDICATOR_DELAY_S` (`node_3d_editor_plugin.cpp:121`), in milliseconds. */
@@ -16,20 +15,13 @@ const INDICATOR_MS = 1500;
 /** Godot's editor camera: `default_z_near` 0.05 and `default_z_far` 4000 (`editor_settings.cpp:931-932`). */
 const EDITOR_RANGE = { near: 0.05, far: 4000 };
 
-function RegisteredFreelook({ freelook }: { freelook: Freelook }) {
-  const { registerFreelook } = useViewportActions();
-  useEffect(
-    () => registerFreelook({ toggle: () => {}, getState: freelook.getState, subscribe: freelook.subscribe }),
-    [registerFreelook, freelook]
-  );
-  return null;
-}
-
 function renderReadout(): Freelook {
   const freelook = new Freelook();
   render(
     <ViewportActionsProvider>
-      <RegisteredFreelook freelook={freelook} />
+      <RegisteredFreelook
+        control={{ toggle: () => {}, getState: freelook.getState, subscribe: freelook.subscribe }}
+      />
       <FreelookSpeedReadout />
     </ViewportActionsProvider>
   );

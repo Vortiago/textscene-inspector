@@ -403,14 +403,14 @@ describe('orthographicHeight', () => {
 
 describe('resolveNavMode', () => {
   it('maps the middle button to orbit, shift to pan and ctrl to zoom', () => {
-    expect(resolveNavMode(1, {})).toBe('orbit');
-    expect(resolveNavMode(1, { shiftKey: true })).toBe('pan');
-    expect(resolveNavMode(1, { ctrlKey: true })).toBe('zoom');
+    expect(resolveNavMode(1, {}, 'perspective')).toBe('orbit');
+    expect(resolveNavMode(1, { shiftKey: true }, 'perspective')).toBe('pan');
+    expect(resolveNavMode(1, { ctrlKey: true }, 'perspective')).toBe('zoom');
   });
 
   it('maps the right button to freelook whatever is held', () => {
-    expect(resolveNavMode(2, {})).toBe('freelook');
-    expect(resolveNavMode(2, { shiftKey: true })).toBe('freelook');
+    expect(resolveNavMode(2, {}, 'perspective')).toBe('freelook');
+    expect(resolveNavMode(2, { shiftKey: true }, 'perspective')).toBe('freelook');
   });
 
   it('pans on the right button in orthographic view, where Godot has no freelook', () => {
@@ -419,13 +419,13 @@ describe('resolveNavMode', () => {
   });
 
   it('emulates the middle button on alt+left', () => {
-    expect(resolveNavMode(0, { altKey: true })).toBe('orbit');
-    expect(resolveNavMode(0, { altKey: true, shiftKey: true })).toBe('pan');
+    expect(resolveNavMode(0, { altKey: true }, 'perspective')).toBe('orbit');
+    expect(resolveNavMode(0, { altKey: true, shiftKey: true }, 'perspective')).toBe('pan');
   });
 
   it('leaves plain left-drag to viewport selection', () => {
-    expect(resolveNavMode(0, {})).toBeNull();
-    expect(resolveNavMode(0, { shiftKey: true })).toBeNull();
-    expect(resolveNavMode(3, { altKey: true })).toBeNull();
+    expect(resolveNavMode(0, {}, 'perspective')).toBeNull();
+    expect(resolveNavMode(0, { shiftKey: true }, 'perspective')).toBeNull();
+    expect(resolveNavMode(3, { altKey: true }, 'perspective')).toBeNull();
   });
 });

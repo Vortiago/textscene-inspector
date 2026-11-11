@@ -1,7 +1,8 @@
 /**
  * Godot's 3D editor camera. `Node3DEditorViewport::Cursor()` opens every scene at `x_rot = 0.5`,
- * `y_rot = -0.5`, `distance = 4`, with the projection of `editor_settings.cpp`'s defaults. `to_camera_transform` rotates about X then Y (both negated) and
- * steps `distance` along local +Z. There is no framing step: the user presses F.
+ * `y_rot = -0.5`, `distance = 4`, with the projection of `editor_settings.cpp`'s defaults.
+ * `to_camera_transform` rotates about X then Y (both negated) and steps `distance` along local
+ * +Z. There is no framing step: the user presses F.
  */
 
 import * as THREE from 'three';

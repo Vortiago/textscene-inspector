@@ -42,6 +42,20 @@ describe('useGlobalShortcut', () => {
     expect(onTrigger).not.toHaveBeenCalled();
   });
 
+  it('ignores Shift with a letter, which is a chord of its own', () => {
+    const onTrigger = vi.fn();
+    render(<Harness onTrigger={onTrigger} />);
+    pressKey('F', undefined, { shiftKey: true });
+    expect(onTrigger).not.toHaveBeenCalled();
+  });
+
+  it('fires on a symbol that needs Shift to be typed', () => {
+    const onTrigger = vi.fn();
+    render(<Harness onTrigger={onTrigger} shortcut="?" />);
+    pressKey('?', undefined, { shiftKey: true });
+    expect(onTrigger).toHaveBeenCalledTimes(1);
+  });
+
   it('does not fire while the user is typing (isTypingTarget guard)', () => {
     const onTrigger = vi.fn();
     render(<Harness onTrigger={onTrigger} />);

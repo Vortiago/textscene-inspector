@@ -4,21 +4,26 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { act } from '@react-three/test-renderer';
 import {
+  drag,
+  keyDown,
   mountEditorControls,
   pressKey,
   previewAuthoredCamera,
   unmountEditorControls,
   viewDirection,
 } from './GodotEditorControls.testkit';
+import { holdsPointerLock } from './pointerLock';
 import { endFakePointerLock, installFakePointerLock } from './testing/fakePointerLock';
 
 /** `editors/3d/freelook/freelook_base_speed` (`editor_settings.cpp:961`). */
 const FREELOOK_BASE_SPEED = 5.0;
 
-/** `ZOOM_FREELOOK_MULTIPLIER` (`node_3d_editor_plugin.cpp:120`): one wheel notch. */
-const WHEEL_SPEED_MULTIPLIER = 1.08;
+/** `ZOOM_FREELOOK_MULTIPLIER` (`node_3d_editor_plugin.cpp:120`): one wheel notch, for zoom and speed. */
+const WHEEL_NOTCH_MULTIPLIER = 1.08;
+
+/** `_update_freelook`'s slow modifier (`node_3d_editor_plugin.cpp:3126`). */
+const FREELOOK_SLOW_MULTIPLIER = 0.333333;
 
 /** `editors/3d/freelook/freelook_sensitivity` (`editor_settings.cpp:959`), in degrees per pixel. */
 const FREELOOK_DEGREES_PER_PIXEL = 0.25;
@@ -26,39 +31,32 @@ const FREELOOK_DEGREES_PER_PIXEL = 0.25;
 /** One frame of the test renderer, whose `advanceFrames` takes its delta in seconds. */
 const FRAME_SECONDS = 0.016;
 
-/** Written by `mountFreelook`, run after each test. */
-let removeFakePointerLock: (() => void) | null = null;
+/** What a test set up outside its canvas. Filled by the helpers below, run and emptied after each test. */
+const cleanups: (() => void)[] = [];
 
 afterEach(async () => {
   await unmountEditorControls();
-  removeFakePointerLock?.();
-  removeFakePointerLock = null;
+  for (const cleanup of cleanups.splice(0)) cleanup();
 });
 
 /** A canvas in a browser that grants pointer locks. */
 async function mountFreelook() {
   const mounted = await mountEditorControls();
-  removeFakePointerLock = installFakePointerLock(mounted.element);
+  cleanups.push(installFakePointerLock(mounted.element));
   return mounted;
+}
+
+/** An element in the page for the length of one test. */
+function addToPage<T extends HTMLElement>(element: T): T {
+  document.body.appendChild(element);
+  cleanups.push(() => element.remove());
+  return element;
 }
 
 type Mounted = Awaited<ReturnType<typeof mountEditorControls>>;
 
-function keyDown(code: string, init: KeyboardEventInit = {}): KeyboardEvent {
-  const event = new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true, ...init });
-  document.body.dispatchEvent(event);
-  return event;
-}
-
-function keyUp(code: string, init: KeyboardEventInit = {}): void {
-  document.body.dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true, cancelable: true, ...init }));
-}
-
-async function toggleFreelook(): Promise<void> {
-  await act(async () => {
-    keyDown('KeyF', { key: 'F', shiftKey: true });
-  });
-  keyUp('KeyF', { key: 'F', shiftKey: true });
+function toggleFreelook(): Promise<void> {
+  return pressKey('KeyF', { key: 'F', shiftKey: true });
 }
 
 function holdRightButton(element: HTMLCanvasElement): void {
@@ -67,10 +65,6 @@ function holdRightButton(element: HTMLCanvasElement): void {
 
 function wheel(element: HTMLCanvasElement, deltaY: number): void {
   element.dispatchEvent(new WheelEvent('wheel', { deltaY, cancelable: true }));
-}
-
-function isLocked(element: HTMLCanvasElement): boolean {
-  return document.pointerLockElement === element;
 }
 
 /** How far the camera travels in one frame with the keys now held. */
@@ -92,7 +86,7 @@ describe('held freelook', () => {
     keyDown('KeyW');
 
     const travelled = (await travelInOneFrame(mounted)).length();
-    expect(travelled).toBeCloseTo(FREELOOK_BASE_SPEED * WHEEL_SPEED_MULTIPLIER ** 2 * FRAME_SECONDS, 9);
+    expect(travelled).toBeCloseTo(FREELOOK_BASE_SPEED * WHEEL_NOTCH_MULTIPLIER ** 2 * FRAME_SECONDS, 9);
     expect(get().camera.position.distanceTo(controls.target)).toBeCloseTo(radius, 9);
   });
 
@@ -104,7 +98,7 @@ describe('held freelook', () => {
     keyDown('KeyW');
 
     const travelled = (await travelInOneFrame(mounted)).length();
-    expect(travelled).toBeCloseTo((FREELOOK_BASE_SPEED / WHEEL_SPEED_MULTIPLIER) * FRAME_SECONDS, 9);
+    expect(travelled).toBeCloseTo((FREELOOK_BASE_SPEED / WHEEL_NOTCH_MULTIPLIER) * FRAME_SECONDS, 9);
   });
 
   it('keeps the wheel’s zoom when no freelook is on', async () => {
@@ -113,7 +107,7 @@ describe('held freelook', () => {
 
     wheel(element, -100);
 
-    expect(get().camera.position.distanceTo(controls.target)).toBeCloseTo(radius / 1.08, 9);
+    expect(get().camera.position.distanceTo(controls.target)).toBeCloseTo(radius / WHEEL_NOTCH_MULTIPLIER, 9);
   });
 
   it('flies at a third of the speed while Alt is held', async () => {
@@ -123,7 +117,7 @@ describe('held freelook', () => {
     keyDown('KeyW', { altKey: true });
 
     const travelled = (await travelInOneFrame(mounted)).length();
-    expect(travelled).toBeCloseTo(FREELOOK_BASE_SPEED * 0.333333 * FRAME_SECONDS, 9);
+    expect(travelled).toBeCloseTo(FREELOOK_BASE_SPEED * FREELOOK_SLOW_MULTIPLIER * FRAME_SECONDS, 9);
   });
 
   it.each([
@@ -150,10 +144,8 @@ describe('held freelook', () => {
     await pressKey('Numpad5');
     const direction = viewDirection(get().camera);
     const target = controls.target.clone();
-    const pointer = { pointerId: 1, button: 2, bubbles: true, cancelable: true };
 
-    element.dispatchEvent(new PointerEvent('pointerdown', { ...pointer, clientX: 100, clientY: 100 }));
-    element.dispatchEvent(new PointerEvent('pointermove', { ...pointer, clientX: 180, clientY: 120 }));
+    drag(element, 2, [100, 100], [180, 120]);
 
     expect(viewDirection(get().camera).distanceTo(direction)).toBeLessThan(1e-9);
     expect(controls.target.distanceTo(target)).toBeGreaterThan(0);
@@ -177,7 +169,7 @@ describe('toggled freelook', () => {
     await toggleFreelook();
     keyDown('KeyW');
 
-    expect(isLocked(mounted.element)).toBe(true);
+    expect(holdsPointerLock(mounted.element)).toBe(true);
     expect((await travelInOneFrame(mounted)).length()).toBeCloseTo(FREELOOK_BASE_SPEED * FRAME_SECONDS, 9);
   });
 
@@ -215,7 +207,7 @@ describe('toggled freelook', () => {
 
     await toggleFreelook();
 
-    expect(isLocked(element)).toBe(false);
+    expect(holdsPointerLock(element)).toBe(false);
   });
 
   it('ends on Escape', async () => {
@@ -224,7 +216,7 @@ describe('toggled freelook', () => {
 
     keyDown('Escape', { key: 'Escape' });
 
-    expect(isLocked(element)).toBe(false);
+    expect(holdsPointerLock(element)).toBe(false);
   });
 
   it('ends when the window loses focus', async () => {
@@ -233,7 +225,7 @@ describe('toggled freelook', () => {
 
     window.dispatchEvent(new Event('blur'));
 
-    expect(isLocked(element)).toBe(false);
+    expect(holdsPointerLock(element)).toBe(false);
   });
 
   it('ends when a camera preview starts', async () => {
@@ -243,7 +235,7 @@ describe('toggled freelook', () => {
     await previewAuthoredCamera(mounted.get);
     await mounted.renderer.advanceFrames(1, FRAME_SECONDS);
 
-    expect(isLocked(mounted.element)).toBe(false);
+    expect(holdsPointerLock(mounted.element)).toBe(false);
   });
 
   it('ends when the canvas unmounts', async () => {
@@ -252,7 +244,7 @@ describe('toggled freelook', () => {
 
     await unmountEditorControls();
 
-    expect(isLocked(element)).toBe(false);
+    expect(holdsPointerLock(element)).toBe(false);
   });
 
   it('stops flying when the browser ends the lock with a key still held', async () => {
@@ -271,7 +263,7 @@ describe('toggled freelook', () => {
 
     await toggleFreelook();
 
-    expect(isLocked(element)).toBe(false);
+    expect(holdsPointerLock(element)).toBe(false);
   });
 
   it('does not start in orthographic view', async () => {
@@ -280,20 +272,18 @@ describe('toggled freelook', () => {
 
     await toggleFreelook();
 
-    expect(isLocked(element)).toBe(false);
+    expect(holdsPointerLock(element)).toBe(false);
   });
 
   it('does not start from a Shift+F typed into a text field', async () => {
     const { element } = await mountFreelook();
-    const input = document.createElement('input');
-    document.body.appendChild(input);
+    const input = addToPage(document.createElement('input'));
 
     input.dispatchEvent(
       new KeyboardEvent('keydown', { code: 'KeyF', key: 'F', shiftKey: true, bubbles: true })
     );
 
-    expect(isLocked(element)).toBe(false);
-    input.remove();
+    expect(holdsPointerLock(element)).toBe(false);
   });
 
   it('stays off, and does not fly, when the browser refuses the lock', async () => {
@@ -315,19 +305,18 @@ describe('toggled freelook', () => {
     keyDown('KeyW');
 
     const travelled = (await travelInOneFrame(mounted)).length();
-    expect(travelled).toBeCloseTo(FREELOOK_BASE_SPEED * WHEEL_SPEED_MULTIPLIER * FRAME_SECONDS, 9);
+    expect(travelled).toBeCloseTo(FREELOOK_BASE_SPEED * WHEEL_NOTCH_MULTIPLIER * FRAME_SECONDS, 9);
   });
 
   it('takes focus from the control that started it, so Space cannot press that control', async () => {
     const { element } = await mountFreelook();
-    const button = document.createElement('button');
-    document.body.append(button, element);
+    const button = addToPage(document.createElement('button'));
+    addToPage(element);
     button.focus();
 
     await toggleFreelook();
 
     expect(document.activeElement).toBe(element);
-    button.remove();
   });
 });
 
@@ -352,19 +341,20 @@ describe('picking while freelook is toggled', () => {
 
 describe('keys while freelook is on', () => {
   /** The key codes a listener on `window` hears: what every other shortcut of the page would get. */
-  function hearKeys(): { heard: string[]; stop: () => void } {
+  function hearKeys(): string[] {
     const heard: string[] = [];
     const listener = (event: KeyboardEvent): void => {
       heard.push(event.code);
     };
     window.addEventListener('keydown', listener);
-    return { heard, stop: () => window.removeEventListener('keydown', listener) };
+    cleanups.push(() => window.removeEventListener('keydown', listener));
+    return heard;
   }
 
   it('keeps every key from the page’s other shortcuts, as Godot accepts each event', async () => {
     await mountFreelook();
     await toggleFreelook();
-    const { heard, stop } = hearKeys();
+    const heard = hearKeys();
 
     keyDown('KeyW');
     keyDown('ArrowUp');
@@ -372,19 +362,17 @@ describe('keys while freelook is on', () => {
     keyDown('Numpad7');
 
     expect(heard).toEqual([]);
-    stop();
   });
 
   it('gives the keys back when freelook ends', async () => {
     await mountFreelook();
     await toggleFreelook();
     await toggleFreelook();
-    const { heard, stop } = hearKeys();
+    const heard = hearKeys();
 
     keyDown('ArrowUp');
 
     expect(heard).toEqual(['ArrowUp']);
-    stop();
   });
 
   it.each(['Space', 'ArrowDown', 'AltLeft'])('stops the browser’s own action on %s', async (code) => {
@@ -402,15 +390,5 @@ describe('keys while freelook is on', () => {
     keyDown('Numpad7');
 
     expect(viewDirection(get().camera).distanceTo(direction)).toBe(0);
-  });
-
-  it('does not frame the scene on the Shift+F that starts it', async () => {
-    await mountFreelook();
-    const { heard, stop } = hearKeys();
-
-    await toggleFreelook();
-
-    expect(heard).toEqual([]);
-    stop();
   });
 });

@@ -102,17 +102,13 @@ export interface NavModifiers {
 }
 
 /**
- * Godot's button and modifier map, plus its "Emulate 3 Button Mouse" alt+left bindings always.
- * Null means navigation leaves the drag alone, as for a plain left-drag, which selects. Call it
- * on every pointer move: Godot re-reads the modifiers per motion event, so Shift mid-drag turns
- * an orbit into a pan. Freelook does not exist in orthographic view, where the right button pans.
+ * Godot's button and modifier map, plus its "Emulate 3 Button Mouse" alt+left bindings. Null
+ * means navigation leaves the drag alone, as for a plain left-drag, which selects. Godot reads
+ * the modifiers again on each motion event, so call it on every pointer move.
  */
-export function resolveNavMode(
-  button: number,
-  mods: NavModifiers,
-  projection: Projection = 'perspective'
-): NavMode | null {
+export function resolveNavMode(button: number, mods: NavModifiers, projection: Projection): NavMode | null {
   if (button === 1) return mods.ctrlKey ? 'zoom' : mods.shiftKey ? 'pan' : 'orbit';
+  // Orthographic view has no freelook (`node_3d_editor_plugin.cpp:2375-2383`).
   if (button === 2) return projection === 'orthographic' ? 'pan' : 'freelook';
   if (button === 0 && mods.altKey) return mods.shiftKey ? 'pan' : 'orbit';
   return null;
@@ -223,10 +219,17 @@ export function scaleFreelookSpeed(speed: number, scale: number, range: ZoomRang
   return clampToZoomRange(speed * scale, range);
 }
 
-/** The one range Godot derives from the clip planes. An inverted range gives its middle. */
+/** The one range Godot derives from the clip planes, for the orbit radius and the flight speed. */
+export function zoomLimits(range: ZoomRange): { min: number; max: number } {
+  return {
+    min: Math.max(range.near * 4, ZOOM_DISTANCE_MIN),
+    max: Math.min(range.far / 4, ZOOM_DISTANCE_MAX),
+  };
+}
+
+/** An inverted range gives its middle. */
 function clampToZoomRange(value: number, range: ZoomRange): number {
-  const min = Math.max(range.near * 4, ZOOM_DISTANCE_MIN);
-  const max = Math.min(range.far / 4, ZOOM_DISTANCE_MAX);
+  const { min, max } = zoomLimits(range);
   return min > max ? (min + max) / 2 : THREE.MathUtils.clamp(value, min, max);
 }
 
