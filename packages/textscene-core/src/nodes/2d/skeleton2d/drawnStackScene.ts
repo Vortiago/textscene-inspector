@@ -120,18 +120,19 @@ class DrawnNodes {
   }
 
   /**
-   * Where the drawn node `object` sits: below the bone `carrier`, else below the nearest outside
-   * bone at or above it, else on the canvas. No object is the canvas itself.
+   * Where the drawn node `object` sits: below the nearest of the bone `carrier` and an outside bone
+   * at or above it, else on the canvas. No object is the canvas itself.
    */
   private placement(object: THREE.Object3D | undefined, carrier: number): StackPlacement {
     if (!object) return { carrier: -1, offset: TRANSFORM2D_IDENTITY };
-    if (carrier >= 0) return { carrier, offset: transformWithin(object, this.bodies[carrier + 1]!) };
-    for (let above: THREE.Object3D | null = object; above; above = above.parent) {
+    const carrierBody = carrier < 0 ? null : this.bodies[carrier + 1]!;
+    for (let above: THREE.Object3D | null = object; above && above !== carrierBody; above = above.parent) {
       const target = this.outsideAt.get(above);
       if (!target) continue;
       const offset = above === object ? TRANSFORM2D_IDENTITY : transformWithin(object, above);
-      return { carrier, outsideBone: this.outsideBone(target), offset };
+      return { carrier: -1, outsideBone: this.outsideBone(target), offset };
     }
+    if (carrierBody) return { carrier, offset: transformWithin(object, carrierBody) };
     return { carrier, offset: canvasTransformOf(object) };
   }
 }
