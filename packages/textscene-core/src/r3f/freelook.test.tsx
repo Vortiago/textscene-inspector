@@ -2,7 +2,7 @@
  * Freelook through the canvas's own events: the held right-drag and the Shift+F toggle fly at one
  * speed, the wheel changes that speed, and each of Godot's end conditions ends the toggle.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { degToRad } from '../godot/math/math';
 import {
@@ -29,6 +29,9 @@ const FREELOOK_SLOW_MULTIPLIER = 0.333333;
 
 /** `editors/3d/freelook/freelook_sensitivity` (`editor_settings.cpp:959`), in degrees per pixel. */
 const FREELOOK_DEGREES_PER_PIXEL = 0.25;
+
+/** How long after the lock ends an Escape keydown still counts as the key that ended it. */
+const ESCAPE_ECHO_MS = 100;
 
 /** One frame of the test renderer, whose `advanceFrames` takes its delta in seconds. */
 const FRAME_SECONDS = 0.016;
@@ -355,6 +358,77 @@ describe('toggled freelook', () => {
     await toggleFreelook();
 
     expect(document.activeElement).toBe(element);
+  });
+});
+
+describe('the Escape that ends the toggle', () => {
+  /** How many times the toggle ended, and the Escapes the page's other shortcuts heard. */
+  function watchEscape({ controls }: Mounted): { ends: () => number; heard: string[] } {
+    let ends = 0;
+    let wasToggled = controls.freelook.isToggled;
+    cleanups.push(
+      controls.freelook.subscribe(() => {
+        if (wasToggled && !controls.freelook.isToggled) ends += 1;
+        wasToggled = controls.freelook.isToggled;
+      })
+    );
+    const heard: string[] = [];
+    const listener = (event: KeyboardEvent): void => {
+      heard.push(event.code);
+    };
+    window.addEventListener('keydown', listener);
+    cleanups.push(() => window.removeEventListener('keydown', listener));
+    return { ends: () => ends, heard };
+  }
+
+  it('ends it once when the keydown comes before the browser ends the lock', async () => {
+    const mounted = await mountFreelook();
+    await toggleFreelook();
+    const watch = watchEscape(mounted);
+
+    keyDown('Escape', { key: 'Escape' });
+    endFakePointerLock();
+
+    expect(watch.ends()).toBe(1);
+    expect(watch.heard).toEqual([]);
+  });
+
+  it('ends it once when the browser ends the lock before the keydown', async () => {
+    const mounted = await mountFreelook();
+    await toggleFreelook();
+    const watch = watchEscape(mounted);
+
+    endFakePointerLock();
+    keyDown('Escape', { key: 'Escape' });
+
+    expect(watch.ends()).toBe(1);
+    expect(watch.heard).toEqual([]);
+  });
+
+  it('ends it once when the browser ends the lock and sends no keydown', async () => {
+    const mounted = await mountFreelook();
+    await toggleFreelook();
+    const watch = watchEscape(mounted);
+
+    endFakePointerLock();
+
+    expect(watch.ends()).toBe(1);
+    expect(watch.heard).toEqual([]);
+  });
+
+  it('gives a later Escape back to the page', async () => {
+    const mounted = await mountFreelook();
+    await toggleFreelook();
+    const watch = watchEscape(mounted);
+    const now = vi.spyOn(performance, 'now');
+    cleanups.push(() => now.mockRestore());
+    now.mockReturnValue(1000);
+    endFakePointerLock();
+
+    now.mockReturnValue(1000 + ESCAPE_ECHO_MS);
+    keyDown('Escape', { key: 'Escape' });
+
+    expect(watch.heard).toEqual(['Escape']);
   });
 });
 

@@ -17,6 +17,11 @@ function isAltKey(code: string): boolean {
   return code === 'AltLeft' || code === 'AltRight';
 }
 
+// A browser that ends the lock on Escape can send that keydown after `pointerlockchange`, when
+// freelook is already off. The key still belongs to freelook for this long, so it clears no
+// selection. No person presses Escape twice in this time.
+const ESCAPE_ECHO_MS = 100;
+
 /** Starts the toggle of a canvas's freelook, or ends it. It does nothing where Godot has no freelook. */
 function toggleFreelook(handle: EditorControlsHandle, get: RootState['get']): void {
   const state = get();
@@ -82,7 +87,11 @@ export function useFreelook(
     const lockDocument = element.ownerDocument;
     const freelook = handle.freelook;
 
+    /** When the toggle last ended, on the clock of `performance.now()`. Written only by `setToggled`. */
+    let toggleEndedAt = -Infinity;
+
     function setToggled(isToggled: boolean): void {
+      if (freelook.isToggled && !isToggled) toggleEndedAt = performance.now();
       freelook.setToggled(isToggled);
       // A locked pointer has no position to pick at, so the canvas neither selects nor hovers.
       get().setEvents({ enabled: !isToggled });
@@ -106,7 +115,11 @@ export function useFreelook(
       exitPointerLock(element);
     }
 
-    const onKeyDown = (event: KeyboardEvent): void => handleKeyDown(event, handle, get);
+    function onKeyDown(event: KeyboardEvent): void {
+      const isEscapeEcho = event.code === 'Escape' && performance.now() - toggleEndedAt < ESCAPE_ECHO_MS;
+      if (isEscapeEcho) event.stopImmediatePropagation();
+      else handleKeyDown(event, handle, get);
+    }
     const onKeyUp = (event: KeyboardEvent): void => handleKeyUp(event, freelook);
 
     lockDocument.addEventListener('pointerlockchange', handlePointerLockChange);

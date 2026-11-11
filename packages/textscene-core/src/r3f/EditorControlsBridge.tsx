@@ -1,12 +1,15 @@
 /**
  * `<EditorControlsBridge>` hands the navigation handle's reset and freelook to
- * `ViewportActionsContext`, so the toolbar reaches both from outside the `<Canvas>`.
+ * `ViewportActionsContext`, so the toolbar reaches both from outside the `<Canvas>`, and ends
+ * the freelook toggle when another scene opens.
  * `<GodotEditorControls>` publishes the handle as R3F's `state.controls`.
  */
 import { useThree } from '@react-three/fiber';
 import { useEffect } from 'react';
+import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { EditorControlsHandle } from './EditorControlsHandle.js';
+import { exitPointerLock } from './pointerLock.js';
 import { freelookControlOf } from './useFreelook.js';
 
 export function EditorControlsBridge() {
@@ -26,6 +29,11 @@ export function EditorControlsBridge() {
     if (!registerFreelook || !controls) return undefined;
     return registerFreelook(freelookControlOf(controls, get));
   }, [registerFreelook, controls, get]);
+
+  // Another scene ends the freelook toggle: `<CameraFit>` frames the new scene, and a flight
+  // would fight that. A reload of the same scene keeps its root path, and so keeps the toggle.
+  const rootScene = useOptionalHierarchy()?.sceneGraph?.rootScene;
+  useEffect(() => () => exitPointerLock(get().gl.domElement), [rootScene, get]);
 
   return null;
 }

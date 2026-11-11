@@ -44,7 +44,7 @@ export interface ViewportActionsContextValue {
    */
   claimFrame2D: (requestId: number) => boolean;
   /**
-   * Ends any camera preview and returns the editor camera to its initial pose.
+   * Ends any camera preview and any freelook toggle, and returns the editor camera to its initial pose.
    * The pose waits until a canvas registers a reset handler.
    */
   resetCamera: () => void;
@@ -158,11 +158,18 @@ export function ViewportActionsProvider({
     setPreviewedCameraPath(null);
   }, []);
 
+  const {
+    ref: freelookRef,
+    register: registerFreelook,
+    subscribe: subscribeFreelookSlot,
+  } = useHandlerSlot<FreelookControl>();
   const { ref: resetHandlerRef, register: registerResetHandler } = useHandlerSlot<() => void>();
   const resetCamera = useCallback(() => {
     endCameraPreview();
+    // A flight would carry the camera off the pose the reset restores.
+    if (freelookRef.current?.getState().isToggled) freelookRef.current.toggle();
     resetHandlerRef.current?.();
-  }, [endCameraPreview, resetHandlerRef]);
+  }, [endCameraPreview, freelookRef, resetHandlerRef]);
 
   const {
     ref: screenshotSourceRef,
@@ -183,11 +190,6 @@ export function ViewportActionsProvider({
     [screenshotSourceRef]
   );
 
-  const {
-    ref: freelookRef,
-    register: registerFreelook,
-    subscribe: subscribeFreelookSlot,
-  } = useHandlerSlot<FreelookControl>();
   const toggleFreelook = useCallback(() => freelookRef.current?.toggle(), [freelookRef]);
   const freelookState = useCallback(() => freelookRef.current?.getState() ?? null, [freelookRef]);
   const subscribeFreelook = useCallback(

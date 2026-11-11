@@ -4,6 +4,8 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer, { act } from '@react-three/test-renderer';
+import { createSceneGraphFromTscnScene } from '../core/SceneGraph.testkit';
+import { HierarchyProvider } from './contexts/HierarchyContext';
 import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { EditorControlsBridge } from './EditorControlsBridge';
 import { GodotEditorControls } from './GodotEditorControls';
@@ -27,21 +29,27 @@ afterEach(async () => {
 async function mountBridgedControls() {
   const canvas = r3fStateProbe();
   const shell = viewportActionsProbe();
-  const renderer: Renderer = await ReactThreeTestRenderer.create(
-    <ViewportActionsProvider>
-      <canvas.Probe />
-      <shell.Probe />
-      <GodotEditorControls />
-      <EditorControlsBridge />
-    </ViewportActionsProvider>
+  const sceneAt = (scenePath: string) => (
+    <HierarchyProvider
+      value={{ sceneGraph: createSceneGraphFromTscnScene({ nodes: [] }, scenePath), panelId: 'panel' }}
+    >
+      <ViewportActionsProvider>
+        <canvas.Probe />
+        <shell.Probe />
+        <GodotEditorControls />
+        <EditorControlsBridge />
+      </ViewportActionsProvider>
+    </HierarchyProvider>
   );
+  const renderer: Renderer = await ReactThreeTestRenderer.create(sceneAt('res://first.tscn'));
+  const openScene = (scenePath: string) => act(async () => renderer.update(sceneAt(scenePath)));
   const element = canvas.state().gl.domElement;
   const removeFakePointerLock = installFakePointerLock(element);
   unmount = async () => {
     await act(async () => renderer.unmount());
     removeFakePointerLock();
   };
-  return { get: canvas.state, actions: shell.actions, element };
+  return { get: canvas.state, actions: shell.actions, element, openScene };
 }
 
 describe('<EditorControlsBridge>', () => {
@@ -60,6 +68,33 @@ describe('<EditorControlsBridge>', () => {
     await pressKey('Numpad5');
 
     expect(actions().freelookState()?.isAvailable).toBe(false);
+  });
+
+  it('ends the toggle on the shell’s reset', async () => {
+    const { actions, element } = await mountBridgedControls();
+    await act(async () => actions().toggleFreelook());
+
+    await act(async () => actions().resetCamera());
+
+    expect(holdsPointerLock(element)).toBe(false);
+  });
+
+  it('ends the toggle when another scene opens', async () => {
+    const { actions, element, openScene } = await mountBridgedControls();
+    await act(async () => actions().toggleFreelook());
+
+    await openScene('res://second.tscn');
+
+    expect(holdsPointerLock(element)).toBe(false);
+  });
+
+  it('keeps the toggle through a reload of the same scene', async () => {
+    const { actions, element, openScene } = await mountBridgedControls();
+    await act(async () => actions().toggleFreelook());
+
+    await openScene('res://first.tscn');
+
+    expect(holdsPointerLock(element)).toBe(true);
   });
 
   it('gives the shell no freelook once the canvas unmounts', async () => {

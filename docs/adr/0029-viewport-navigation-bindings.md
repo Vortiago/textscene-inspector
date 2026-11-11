@@ -223,8 +223,11 @@ the control, with the speed on screen.
   `window`. `Shift+F` starts the toggle on any page that embeds `@textscene/renderer`.
 - `useGlobalShortcut` reads Shift with a letter as a chord of its own, so `Shift+F` does not also
   frame the selection, which is F's job.
-- Chromium ends the lock on Escape and sends the page no keydown, so leaving freelook does not
-  also clear the selection. Measured in Chromium 153 with a `window` listener in each phase.
+- Leaving freelook on Escape does not also clear the selection, in any event order. Chromium 153
+  ends the lock and sends the page no keydown, measured with a `window` listener in each phase.
+  For a browser that sends the keydown after `pointerlockchange`, freelook keeps an Escape that
+  arrives within 100 ms of the lock's end.
+- Reset Camera ends the toggle, and so does another scene. A reload of the same scene keeps it.
 - The toolbar button is disabled in orthographic view and during a camera preview, with the
   reason in its title.
 - A flight key under Ctrl or Cmd does not fly and keeps its browser action. macOS sends no keyup
