@@ -133,6 +133,48 @@ describe('usePlaybackLoop — reportTime flush on the playing → paused edge (W
   });
 });
 
+describe('usePlaybackLoop — the return pass of a ping-pong loop', () => {
+  const asPingPong: PlaybackLoopParams['configureAction'] = (action) =>
+    action.setLoop(THREE.LoopPingPong, Infinity);
+
+  it('reports the time the clip is sampled at, not the time THREE runs on forward', async () => {
+    const reportTime = vi.fn();
+    const mixerBox = makeMixer();
+    const renderer = await ReactThreeTestRenderer.create(
+      <Harness
+        playState="playing"
+        transportTime={0}
+        reportTime={reportTime}
+        mixerBox={mixerBox}
+        configureAction={asPingPong}
+      />
+    );
+    await renderer.advanceFrames(4, 0.3); // 0.3, 0.6, 0.9, then back to 0.8
+
+    expect(reportTime.mock.lastCall![0]).toBeCloseTo(0.8);
+    expect((mixerBox.mixer.getRoot() as THREE.Object3D).position.x).toBeCloseTo(8);
+  });
+
+  it('samples a paused seek at the time asked for', async () => {
+    const mixerBox = makeMixer();
+    const view = (playState: PlayState, transportTime: number) => (
+      <Harness
+        playState={playState}
+        transportTime={transportTime}
+        reportTime={() => {}}
+        mixerBox={mixerBox}
+        configureAction={asPingPong}
+      />
+    );
+    const renderer = await ReactThreeTestRenderer.create(view('playing', 0));
+    await renderer.advanceFrames(4, 0.3);
+    await renderer.update(view('paused', 0.25));
+    await renderer.advanceFrames(1, 0.3);
+
+    expect((mixerBox.mixer.getRoot() as THREE.Object3D).position.x).toBeCloseTo(2.5);
+  });
+});
+
 describe('usePlaybackLoop — reconfigureKey (#224 live loop-override)', () => {
   it('calls configureAction once on mount, but not again on unrelated re-renders', async () => {
     const configureAction = vi.fn();

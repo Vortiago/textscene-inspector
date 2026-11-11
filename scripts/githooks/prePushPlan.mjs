@@ -4,6 +4,8 @@
  * pull request.
  */
 
+import { ENGINE_TEST_FILE } from '../godot-ref/engineTools.mjs';
+
 /**
  * A file whose change can break any static check, so the push runs them over the whole
  * repository. A workflow file is not one: locally only the format check reads it, and CI runs it
@@ -39,6 +41,9 @@ const EXTENSION_HOST_SUITE = /^apps\/textscene-vscode\/src\/test\//;
  */
 const CORE_SOURCE = /^packages\/textscene-core\/src\/.*\.tsx?$/;
 const TEST_ONLY_EXPORT_SCAN = 'scripts/testOnlyExports.test.mjs';
+
+/** Takes about 6 minutes on 4 cores, so it runs last and only for a change it can catch. */
+const ENGINE_TESTS = ['pnpm', 'test:godot-ref'];
 
 /**
  * The type checks of every package. `type-check:all` builds the packages, which
@@ -92,16 +97,26 @@ function typeChecksFor(typed) {
  * `deleted`. Each command is an argv array. An empty list means the push needs no check.
  * `isNegativeFixture` tells a scene that exists to error, which the plan does not lint.
  * `testsBeside` gives the test files beside a changed file, which the plan runs.
+ * `isEngineTestInput` tells a file the real-Godot tests read, and `hasEngine` whether this host can
+ * run them.
  */
-export function planChecks({ changed, deleted, isNegativeFixture, testsBeside }) {
+export function planChecks({
+  changed,
+  deleted,
+  isNegativeFixture,
+  testsBeside,
+  isEngineTestInput,
+  hasEngine,
+}) {
   const all = [...changed, ...deleted];
   const besideChanged = changed.filter((path) => TESTABLE.test(path)).flatMap(testsBeside);
   const exportScan = all.some((path) => CORE_SOURCE.test(path)) ? [TEST_ONLY_EXPORT_SCAN] : [];
   const tests = [...new Set([...besideChanged, ...exportScan])].filter(
-    (path) => !EXTENSION_HOST_SUITE.test(path)
+    (path) => !EXTENSION_HOST_SUITE.test(path) && !ENGINE_TEST_FILE.test(path)
   );
   const runTests = tests.length > 0 ? [['pnpm', 'exec', 'vitest', 'run', ...tests]] : [];
-  if (all.some((path) => TOOLCHAIN.test(path))) return [...STATIC_GATE, ...runTests];
+  const engineTests = all.some(isEngineTestInput) && hasEngine() ? [ENGINE_TESTS] : [];
+  if (all.some((path) => TOOLCHAIN.test(path))) return [...STATIC_GATE, ...runTests, ...engineTests];
 
   const plan = [];
   // The type checks build the packages first, which the generated-docs checks also need.
@@ -129,5 +144,6 @@ export function planChecks({ changed, deleted, isNegativeFixture, testsBeside })
   if (all.some((path) => VENDORED.test(path))) {
     plan.push(['node', 'scripts/vendor/verktoykasse.mjs', '--check']);
   }
+  plan.push(...engineTests);
   return plan;
 }

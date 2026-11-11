@@ -71,6 +71,11 @@ CI job fails, fix the cause.
 and prints exact pixels. It is a tool, not a gate.
 
 - Measure, never derive. Put a measurement in the pull request, never in a comparison sheet.
+- `pnpm test:godot-ref` runs the tests that render through real Godot
+  (`scripts/godot-ref/*.engine.test.mjs`). It takes about 6 minutes, and `pnpm test:unit` never
+  runs it. Run it after a change to a file the tests read: a module they import, a file of
+  `scripts/godot-ref/`, or a fixture they render. The pre-push hook does this on a host that has
+  `godot` and `xvfb-run`, and the CI job `Real-Godot reference tests` does it on a pull request.
 - Every capture that measures against Godot launches through `launchGodotComparisonBrowser`, so a
   screenshot is the drawing buffer. Never launch one another way. It rasterises on lavapipe, as
   `pnpm ref:godot` does, and fails without `mesa-vulkan-drivers`.
@@ -81,7 +86,7 @@ and prints exact pixels. It is a tool, not a gate.
   `ROOT_ONLY_VIEWPORT_PROPERTIES` in `scripts/godot-ref/run.mjs`.
 - A 1/255 gap on a channel whose value × 255 is fractional is not a parity defect. The driver
   rounds it: Godot clears `Color(0.3)` (76.5) to 76 under vulkan and to 77 under opengl3
-  (measured, `run.test.mjs`). Compare `--rendering-driver opengl3` with the default vulkan before
+  (measured, `run.engine.test.mjs`). Compare `--rendering-driver opengl3` with the default vulkan before
   you believe one.
 - A 1/255 split on a sampled sRGB 8-bit texture is lavapipe's polynomial decode, not a parity
   defect. See "Why a sampled sRGB texture can read one step off in Godot" in
@@ -114,6 +119,10 @@ status:
   visual or a drive of other nodes, is missing (ADR-0045).
 
 Never drop a registration to mark a type undrawn.
+
+With `--linter`, a slice that reuses a parser gets a line in `UNSWEPT_SLICES`
+(`linter/testing/propertyGrammarParityUnswept.ts`), and so does a `--tier`. Delete the line when
+the slice gets a parser of its own.
 
 The Godot parent comes from ClassDB (`pnpm nodes:base-types`), never by hand. A class the
 pinned ClassDB lacks goes in the `UNCATALOGUED` table of `godot/classdb/nodeBaseTypes.ts`, with the

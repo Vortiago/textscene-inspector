@@ -17,6 +17,7 @@ import {
   type InterpolationModes,
   type KeyframeTrack,
 } from 'three';
+import { AnimationUpdateMode } from '../../../godot/scene/animation.js';
 import type { GodotAnimation } from './animationResolver';
 import type { GodotKeyframe, GodotTrack } from './trackParser';
 import { warn } from '../../../logger';
@@ -59,8 +60,7 @@ function buildTracks(track: GodotTrack, scenePathOf: ScenePathOf): KeyframeTrack
  * shortest-path rotation, which THREE's quaternion tracks already take.
  */
 function threeInterpolation(track: GodotTrack): InterpolationModes {
-  // A VALUE track in UPDATE_DISCRETE mode is nearest whatever `interp` says (same file).
-  if (track.type === 'value' && track.updateMode === 1) return InterpolateDiscrete;
+  if (track.updateMode === AnimationUpdateMode.DISCRETE) return InterpolateDiscrete;
   switch (track.interp) {
     case 0:
       return InterpolateDiscrete;

@@ -922,6 +922,11 @@ _Avoid_: "channel".
 The registry, keyed by `${nodePath}:${property}`, through which the active **AnimationPlayer** pushes sampled non-transform **Track** values to their target.
 _Avoid_: "AnimatedFrame registry", "mixer", "central value context".
 
+**Clip time**:
+The time inside a **GodotAnimation** that playback shows, from zero to its `length`.
+On the return pass of a ping-pong loop it runs back, while the time of the `THREE.AnimationAction` runs on (ADR-0011).
+_Avoid_: "action time" for the mirrored value.
+
 **Animation transport**:
 The play, pause and scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the one driver selected in the scene tree.
 It starts stopped, and a change of selection stops playback and restores the authored pose.
