@@ -891,7 +891,10 @@ function buildForest(
       node: live,
       children: isBoundary ? [...children, ...childHoisted] : children,
       paintRange,
-      behindRanges: behindRangesOf(inlineChildren, allocated.children),
+      behindRanges: [
+        ...behindRangesOf(inlineChildren, allocated.children),
+        ...behindRangesOf(injectedChildren, injectedRanges),
+      ],
       paintSequence: allocated.self,
       backSequence: allocated.back.base,
       layerSequence: allocated.layer,

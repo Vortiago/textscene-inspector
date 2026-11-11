@@ -1,0 +1,25 @@
+; One variable: an inert `clip_children` owner whose `show_behind_parent` child is another inert owner with a
+; behind child. Godot draws the translucent red square once, so it blends once with the background. No other
+; scene nests inert owners.
+
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="I1" type="Node2D" parent="."]
+position = Vector2(100, 100)
+clip_children = 1
+
+[node name="I2" type="Node2D" parent="I1"]
+show_behind_parent = true
+clip_children = 1
+
+[node name="B" type="Polygon2D" parent="I1/I2"]
+show_behind_parent = true
+color = Color(1, 0, 0, 0.5)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="F" type="Polygon2D" parent="I1"]
+position = Vector2(60, 60)
+color = Color(0, 0, 1, 0.5)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)

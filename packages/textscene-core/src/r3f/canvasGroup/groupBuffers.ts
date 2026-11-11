@@ -11,13 +11,8 @@ import { copyTexels, wholeTexels } from '../texelCopy';
 import { renderToOffscreenTarget } from '../../nodes/viewport/subviewport/offscreenViewport';
 import { collects, drawOrderOf, isOwnKey, type DrawStep } from './groupWindow';
 import type { TexelRegion } from './groupRegion';
-import type {
-  CanvasFrameTarget,
-  ClippingEntry,
-  CompositeEntry,
-  InertOwner,
-  KeyedScene,
-} from './canvasGroupPass';
+import type { CanvasFrameTarget, ClippingEntry, CompositeEntry, InertOwner } from './groupEntries';
+import type { KeyedScene } from './keyedScene';
 
 /** Runs `draw` with the scene's matrices as they are: only layers change between the buffer draws. */
 export function withFrozenMatrices(scene: THREE.Object3D, draw: () => void): void {

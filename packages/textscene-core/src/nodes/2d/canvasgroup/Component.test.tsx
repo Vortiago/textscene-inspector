@@ -20,7 +20,8 @@ import {
   type CanvasLighting2D,
 } from '../../../r3f/lighting2d/lightPassContext';
 import type { CanvasClip } from '../../../r3f/lighting2d/lightPassHost';
-import { canvasGroupRectTag, drawCanvasGroups } from '../../../r3f/canvasGroup/canvasGroupPass';
+import { drawCanvasGroups } from '../../../r3f/canvasGroup/canvasGroupPass';
+import { canvasGroupRectTag } from '../../../r3f/canvasGroup/keyedScene';
 import type { Rgba } from '../../../godot/math/math';
 
 const WORLD_RANK = layerRankOf(layerRanks([]), 0);

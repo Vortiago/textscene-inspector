@@ -12,7 +12,8 @@ import { runKeysOf, type CanvasItemState } from '../canvasItemState';
 import type { PaintRange } from '../canvasPaintOrder';
 import { createClipMask } from './clipMask';
 import { ClipMaskProvider } from './ClipMaskContext';
-import { registerCanvasGroup, type CanvasGroupClip } from './canvasGroupPass';
+import { registerCanvasGroup } from './canvasGroupPass';
+import type { CanvasGroupClip } from './groupEntries';
 import { CanvasItemClipChildrenMode } from '../../godot/scene/canvasItem';
 import { useGroupFit } from './useGroupFit';
 
@@ -97,13 +98,8 @@ function ClippingGroup({
   );
   const behind = useMemo(
     () =>
-      behindRanges
-        .filter((run) => !isYSorted && run.size > 0)
-        .map((run) => ({
-          from: keyAt(run.base),
-          to: keyAt(run.base + run.size - 1) + 1,
-        })),
-    [isYSorted, behindRanges, keyAt]
+      isYSorted ? [] : behindRanges.filter((run) => run.size > 0).map((run) => runKeysOf(keyAt, own, run)),
+    [isYSorted, behindRanges, keyAt, own]
   );
   const fitRect = useGroupFit({ fitMargin: 0, clearMargin: CLEAR_MARGIN });
   // A CanvasItemMaterial replaces the clip shader of a CLIP_ONLY owner (`:2207-2216`), so its

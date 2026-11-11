@@ -53,6 +53,11 @@ const FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; re
     reason:
       'the sub-scene whose Bone2D root joins no Skeleton2D on its own; the kite of the bone that instances it reaches this root',
   },
+  'unit-clip-children-nested-inert.tscn': {
+    rules: ['canvasitem-ancestor-clips-children'],
+    reason:
+      'the inner owner clips under a clipping ancestor on purpose: Godot warns and still groups it, and the nested draw order is the fixture',
+  },
   'unit-legacy-format.tscn': {
     rules: ['legacy-format-version'],
     reason:

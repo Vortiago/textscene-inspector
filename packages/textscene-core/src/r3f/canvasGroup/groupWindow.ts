@@ -28,6 +28,9 @@ export interface KeySpan {
   readonly to: number;
 }
 
+/** Whether `key` lies in `span`. */
+const isIn = (span: KeySpan, key: number) => key >= span.from && key < span.to;
+
 /** One draw of the keys `[from, to)` that `admits` lets through. */
 export interface DrawStep extends KeySpan {
   admits(key: number): boolean;
@@ -47,18 +50,24 @@ export function drawOrderOf(
 ): DrawStep[] {
   const owners = inert
     .filter((owner) => owner.behind.length > 0 && owner.window.from >= from && owner.window.from < to)
-    .sort((a, b) => a.window.from - b.window.from);
+    .sort((a, b) => a.window.from - b.window.from || b.window.to - a.window.to);
   if (owners.length === 0) return [{ from, to, admits: accept }];
-  const isBehind = (key: number) =>
-    owners.some((owner) => owner.behind.some((span) => key >= span.from && key < span.to));
+  const isBehind = (key: number) => owners.some((owner) => owner.behind.some((span) => isIn(span, key)));
   const steps: DrawStep[] = [];
+  const drawnBehind: KeySpan[] = [];
   let cursor = from;
   const addRest = (start: number, end: number) => {
     if (start < end) steps.push({ from: start, to: end, admits: (key) => accept(key) && !isBehind(key) });
   };
   for (const owner of owners) {
     addRest(cursor, owner.window.from);
-    for (const span of owner.behind) steps.push({ ...span, admits: accept });
+    for (const span of owner.behind) {
+      // A behind span inside an earlier one has drawn there, in key order.
+      if (drawnBehind.some((done) => span.from >= done.from && span.to <= done.to)) continue;
+      const drawnBefore = [...drawnBehind];
+      steps.push({ ...span, admits: (key) => accept(key) && !drawnBefore.some((done) => isIn(done, key)) });
+      drawnBehind.push(span);
+    }
     cursor = owner.window.from;
   }
   addRest(cursor, to);

@@ -6,13 +6,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { offscreenRendererState } from '../../nodes/viewport/subviewport/offscreenRenderer.testkit';
-import {
-  canvasGroupRectTag,
-  drawCanvasGroups,
-  registerCanvasGroup,
-  type CanvasGroupEntry,
-  type CompositeEntry,
-} from './canvasGroupPass';
+import { drawCanvasGroups, registerCanvasGroup } from './canvasGroupPass';
+import { canvasGroupRectTag } from './keyedScene';
+import type { CanvasGroupEntry, CompositeEntry } from './groupEntries';
 
 type Target = THREE.WebGLRenderTarget | null;
 

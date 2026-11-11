@@ -428,6 +428,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Clip Children Nested Inert",
+    "file": "unit-clip-children-nested-inert.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Clip Children No Commands",
     "file": "unit-clip-children-no-commands.tscn",
     "category": "Other"

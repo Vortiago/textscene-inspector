@@ -7,7 +7,8 @@
 import * as THREE from 'three';
 import { drawableLocalBox, type Drawable } from '../drawable';
 import { perObject } from '../../utils/perObject';
-import type { CanvasFrameTarget, KeyedScene } from './canvasGroupPass';
+import type { CanvasFrameTarget } from './groupEntries';
+import type { KeyedScene } from './keyedScene';
 import { windowIndexAt, type CanvasGroupWindow } from './groupWindow';
 
 /** A rectangle of frame texels in GL texel space: the corner at the bottom left, then the size. */
