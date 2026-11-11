@@ -89,9 +89,7 @@ jobs:
           ' > "$PR_CONTEXT/conversation.md"
 
       # The scrub below refuses to start without bubblewrap. Both tools come out of the CI image
-      # (ADR-0065), at the paths of their Ubuntu packages, so no run reads the Ubuntu archive. The
-      # job stays on the runner: bubblewrap makes user namespaces, which a job container does not
-      # allow.
+      # (ADR-0065), at the paths of their Ubuntu packages, so no run reads the Ubuntu archive.
       - name: Install subprocess isolation
         run: |
           image="$(node scripts/ci/ciImage.mjs | sed -n 's/^ref=//p')"

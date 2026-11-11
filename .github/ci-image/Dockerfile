@@ -27,9 +27,8 @@ RUN apt-get update \
     mesa-vulkan-drivers xvfb xauth libxcursor1 libxinerama1 \
   && rm -rf /var/lib/apt/lists/*
 
-# No job runs these two in the image. The Claude review job copies them and libwrap onto its
-# runner, where they isolate a subprocess: bubblewrap makes user namespaces, which a job container
-# does not allow.
+# No job runs these two in the image. The Claude review job copies them and libwrap, a library of
+# socat, onto its runner.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends bubblewrap socat \
   && rm -rf /var/lib/apt/lists/*
