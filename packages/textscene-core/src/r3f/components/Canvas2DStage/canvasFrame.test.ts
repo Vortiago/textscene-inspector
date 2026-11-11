@@ -244,6 +244,14 @@ describe('createCanvasFrame', () => {
     frame.dispose();
   });
 
+  it('takes its output like the drawing buffer, so a lit item writes into it in the numbers it holds', () => {
+    for (const space of [canvasColorSpaceOf(false), LINEAR_CANVAS]) {
+      const frame = createCanvasFrame(space);
+      expect((frame as { isXRRenderTarget?: boolean }).isXRRenderTarget).toBe(true);
+      frame.dispose();
+    }
+  });
+
   it('blends linear values and keeps those above 1 in a linear canvas: RGBA16F under a linear tag', () => {
     const frame = createCanvasFrame(LINEAR_CANVAS);
     expect(frame.texture.type).toBe(THREE.HalfFloatType);

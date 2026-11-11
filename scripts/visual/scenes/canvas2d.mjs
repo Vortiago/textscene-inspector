@@ -565,4 +565,7 @@ export const CANVAS_2D_SCENES = [
   // reads (51,102,204) at (90,90), and z 0.5 reads (230,204,51) at (240,90). A MeshInstance2D under the
   // same material shows cell 0 at that width, (51,102,204) at (440,90).
   { name: 'multi-mesh-instance-2d-flipbook', file: 'unit-multi-mesh-instance-2d-flipbook.tscn', mode: '2d' },
+  // Two Add items under one textured PointLight2D, over an opaque backdrop. Godot probes: (450,230)
+  // rgb(255,102,69) the first item alone, (520,300) rgb(255,255,115) both, (590,370) rgb(98,151,96) the second.
+  { name: 'canvas-item-additive-lit', file: 'unit-canvas-item-additive-lit.tscn', mode: '2d' },
 ];
