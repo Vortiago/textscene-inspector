@@ -373,6 +373,10 @@ export const CANVAS_2D_SCENES = [
   // FABRIK reaches the same target with three bones. Godot probes: orange at (290,173), blue at
   // (365,238) and purple at (397,327).
   { name: 'skeleton2d-fabrik', file: 'unit-skeleton2d-fabrik.tscn', mode: '2d' },
+  // A FABRIK chain on the skeleton Near whose joints name the bones of the skeleton Far: Far reaches
+  // the red target at (330,500), and Near takes the same pose. Godot probes: orange at (237,134) and
+  // (237,344), blue at (300,179) and (300,389). Unsolved, all four read the background.
+  { name: 'skeleton2d-fabrik-foreign', file: 'unit-skeleton2d-fabrik-foreign.tscn', mode: '2d' },
   // clip_children CLIP_ONLY: the red child shows only over the green parent, in its own colour. Godot
   // probes: (125,125) background, the parent alone; (175,175) red; (425,125) green, the unclipped twin.
   { name: 'clip-children-only', file: 'unit-clip-children-only.tscn', mode: '2d' },

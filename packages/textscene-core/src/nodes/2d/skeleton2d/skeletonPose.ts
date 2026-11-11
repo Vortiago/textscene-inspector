@@ -19,16 +19,24 @@ import {
   type MutableTransform2D,
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
+import type { BoneReach } from '../bone2d/boneReach.js';
 import type { ModificationStack2D } from '../../../resources/skeleton/skeletonmodificationstack2d/types';
 import { storedTransform2D } from '../../../godot/math/real.js';
 import { DrawnNodeFollow } from '../../../r3f/drawnNodeFollow.js';
+import { WorldMatrixWatch } from '../../../r3f/worldMatrixWatch.js';
 import {
   canvasTransformInto,
   threeMatrixFromTransform2D,
   transform2DWithin,
 } from '../../../r3f/node2dTransform.js';
 import { solveStack, type SolvedPose } from './modificationStack/stackRun.js';
-import type { StackNode, StackPlacement, StackScene } from './modificationStack/stackScene.js';
+import {
+  outsideBonesOf,
+  type OutsideBone,
+  type StackNode,
+  type StackPlacement,
+  type StackScene,
+} from './modificationStack/stackScene.js';
 import type { Skeleton2DRig } from './skeletonRig.js';
 
 /** A node a NodePath of the stack resolves to on the Live scene tree. */
@@ -43,6 +51,8 @@ export interface StackTarget {
   indexInSkeleton: number | null;
   /** The index of the nearest bone above the node, which carries the node as it moves, or -1. */
   carrier: number;
+  /** For a Bone2D that is no bone of this skeleton: the live path of the node above it, and its reach. */
+  outsideBone: { parentPath: string | null; reach: BoneReach } | null;
 }
 
 /** A modification stack with the nodes its NodePaths name. */
@@ -80,7 +90,10 @@ interface MovedBone {
 export class Skeleton2DPose {
   /** The skeleton, then each bone by skeleton index. */
   private readonly bodies: DrawnNodeFollow;
-  /** The Node2Ds the stack names that are no bone of the skeleton, in the order of `anchorPaths`. */
+  /**
+   * The Node2Ds the stack names that are no bone of the skeleton, and the node above each outside
+   * bone, in the order of `anchorPaths`.
+   */
   private readonly anchors: DrawnNodeFollow;
   private readonly anchorPaths: readonly string[];
   /** Written only by {@link write}: what `bodies` found for the render under way. */
@@ -93,6 +106,8 @@ export class Skeleton2DPose {
   private isWritten = false;
   /** The one object {@link drawn} hands out. Its version moves in {@link write}. */
   private readonly pose: { -readonly [K in keyof DrawnSkeletonPose]: DrawnSkeletonPose[K] };
+  /** Read only by {@link drawn}: whether a body moved since it last made the bone matrices. */
+  private readonly drawnWatch = new WorldMatrixWatch();
   /** The version {@link drawn} last made the bone matrices at. */
   private matricesVersion = -1;
   private readonly skeletonGlobal = mutableTransform2D();
@@ -107,11 +122,9 @@ export class Skeleton2DPose {
   ) {
     this.bodies = new DrawnNodeFollow(registry, [skeletonPath, ...rig.bones.map((bone) => bone.path)]);
     const targets = [...(bound?.targets.values() ?? [])];
-    this.anchorPaths = [
-      ...new Set(
-        targets.filter(({ isNode2D, boneIndex }) => isNode2D && boneIndex < 0).map(({ path }) => path)
-      ),
-    ];
+    const named = targets.filter(({ isNode2D, boneIndex }) => isNode2D && boneIndex < 0);
+    const abovePaths = targets.flatMap(({ outsideBone }) => outsideBone?.parentPath ?? []);
+    this.anchorPaths = [...new Set([...named.map(({ path }) => path), ...abovePaths])];
     this.anchors = new DrawnNodeFollow(registry, this.anchorPaths);
     this.boneMatrices = rig.bones.map(() => mutableTransform2D());
     this.pose = { skeletonGlobal: this.skeletonGlobal, boneMatrices: this.boneMatrices, version: 0 };
@@ -162,6 +175,8 @@ export class Skeleton2DPose {
    */
   drawn(): DrawnSkeletonPose | null {
     if (!this.drawnBodies) return null;
+    // The stack of another skeleton can move these bones once this pose has written.
+    if (this.drawnWatch.hasMoved(this.drawnBodies)) this.pose.version++;
     if (this.matricesVersion !== this.pose.version) {
       this.matricesVersion = this.pose.version;
       this.makeBoneMatrices(this.drawnBodies);
@@ -213,9 +228,27 @@ export class Skeleton2DPose {
     anchors: readonly THREE.Object3D[],
     stack: ModificationStack2D
   ): void {
+    const anchorOf = new Map(this.anchorPaths.map((path, index) => [path, anchors[index]!]));
+    const outside = this.outsideBones(bodies, anchorOf);
+    const scene = this.sceneOf(bodies, anchorOf, outside);
     const cache = cacheLocals(bodies, this.rig);
-    this.solved = solveStack(this.sceneOf(bodies, anchors), cache, stack);
-    this.moved = movedBones(bodies, this.rig, cache, this.solved.locals);
+    this.solved = solveStack(scene, cache, stack);
+    const objectOf = new Map([...outside].map(([path, bone]) => [bone, anchorOf.get(path)!]));
+    this.moved = movedBones(
+      [
+        ...this.rig.bones.map(({ parent }, index) => ({
+          object: bodies[index + 1]!,
+          from: cache[index]!,
+          parent,
+        })),
+        ...outsideBonesOf(scene).map((bone, _index, bones) => ({
+          object: objectOf.get(bone)!,
+          from: bone.local,
+          parent: 'carrier' in bone.parent ? -1 : cache.length + bones.indexOf(bone.parent),
+        })),
+      ],
+      this.solved.locals
+    );
   }
 
   /**
@@ -234,12 +267,47 @@ export class Skeleton2DPose {
     this.isWritten = this.moved.length > 0;
   }
 
-  private sceneOf(bodies: readonly THREE.Object3D[], anchors: readonly THREE.Object3D[]): StackScene {
-    const anchorOf = new Map(this.anchorPaths.map((path, index) => [path, anchors[index]!]));
+  /**
+   * Each Bone2D the stack names that is no bone of this skeleton, by its live path. The one above
+   * it in the chain is its parent where the stack names that one too.
+   */
+  private outsideBones(
+    bodies: readonly THREE.Object3D[],
+    anchorOf: ReadonlyMap<string, THREE.Object3D>
+  ): Map<string, OutsideBone> {
+    const targets = [...this.bound!.targets.values()].filter(({ outsideBone }) => outsideBone);
+    const targetAt = new Map(targets.map((target) => [target.path, target]));
+    const made = new Map<string, OutsideBone>();
+    const make = (target: StackTarget): OutsideBone => {
+      const { parentPath, reach } = target.outsideBone!;
+      const object = anchorOf.get(target.path)!;
+      const above = parentPath === null ? undefined : anchorOf.get(parentPath);
+      const boneAbove = parentPath === null ? undefined : targetAt.get(parentPath);
+      const bone: OutsideBone = {
+        parent: boneAbove ? outsideBoneAt(boneAbove) : placementOf(above, target.carrier, bodies),
+        local: above ? transformWithin(object, above) : canvasTransformOf(object),
+        length: reach.length,
+        boneAngle: reach.angle,
+      };
+      made.set(target.path, bone);
+      return bone;
+    };
+    const outsideBoneAt = (target: StackTarget): OutsideBone => made.get(target.path) ?? make(target);
+    targets.forEach(outsideBoneAt);
+    return made;
+  }
+
+  private sceneOf(
+    bodies: readonly THREE.Object3D[],
+    anchorOf: ReadonlyMap<string, THREE.Object3D>,
+    outside: ReadonlyMap<string, OutsideBone>
+  ): StackScene {
     const nodes = new Map<string, StackNode>();
-    for (const [literal, target] of this.bound!.targets) {
-      const { boneIndex, indexInSkeleton } = target;
-      nodes.set(literal, { boneIndex, indexInSkeleton, placement: placementOf(target, bodies, anchorOf) });
+    for (const [literal, { path, isNode2D, boneIndex, indexInSkeleton, carrier }] of this.bound!.targets) {
+      let placement: StackPlacement | null = null;
+      if (boneIndex >= 0) placement = { carrier: boneIndex, offset: TRANSFORM2D_IDENTITY };
+      else if (isNode2D) placement = placementOf(anchorOf.get(path), carrier, bodies);
+      nodes.set(literal, { boneIndex, indexInSkeleton, placement, outsideBone: outside.get(path) ?? null });
     }
     return {
       skeletonGlobal: canvasTransformOf(bodies[0]!),
@@ -253,16 +321,18 @@ export class Skeleton2DPose {
   }
 }
 
+/**
+ * Where the drawn node `object` sits: below the bone `carrier`, or on the canvas for a carrier of
+ * -1. No object is the canvas itself.
+ */
 function placementOf(
-  { path, isNode2D, boneIndex, carrier }: StackTarget,
-  bodies: readonly THREE.Object3D[],
-  anchorOf: ReadonlyMap<string, THREE.Object3D>
-): StackPlacement | null {
-  if (!isNode2D) return null;
-  if (boneIndex >= 0) return { carrier: boneIndex, offset: TRANSFORM2D_IDENTITY };
-  const anchor = anchorOf.get(path)!;
-  if (carrier < 0) return { carrier, offset: canvasTransformOf(anchor) };
-  return { carrier, offset: transformWithin(anchor, bodies[carrier + 1]!) };
+  object: THREE.Object3D | undefined,
+  carrier: number,
+  bodies: readonly THREE.Object3D[]
+): StackPlacement {
+  if (!object) return { carrier: -1, offset: TRANSFORM2D_IDENTITY };
+  if (carrier < 0) return { carrier, offset: canvasTransformOf(object) };
+  return { carrier, offset: transformWithin(object, bodies[carrier + 1]!) };
 }
 
 /** The global transform of a drawn node as a `real_t` Transform2D holds it. */
@@ -290,27 +360,28 @@ function cacheLocals(bodies: readonly THREE.Object3D[], rig: Skeleton2DRig): Tra
   return rig.bones.map(({ parent }, index) => transformWithin(bodies[index + 1]!, bodies[parent + 1]!));
 }
 
-/** The bones `solved` moves from `cache`, each with the turn between the two. `bodies` holds the skeleton first. */
-function movedBones(
-  bodies: readonly THREE.Object3D[],
-  rig: Skeleton2DRig,
-  cache: readonly Transform2DColumns[],
-  solved: readonly Transform2DColumns[]
-): MovedBone[] {
+/** A bone a solve poses: its drawn object, the local transform it is drawn with and its parent in the list, or -1. */
+interface PosedBone {
+  object: THREE.Object3D;
+  from: Transform2DColumns;
+  parent: number;
+}
+
+/** The bones of `posed` that `solved` moves, each with the turn from the transform it is drawn with. */
+function movedBones(posed: readonly PosedBone[], solved: readonly Transform2DColumns[]): MovedBone[] {
   // A bone with no area has no inverse to undo, and Godot draws nothing below it either.
-  const isMoved = rig.bones.map(
-    (_bone, index) =>
-      !equalTransform2D(cache[index]!, solved[index]!) && transform2DDeterminant(cache[index]!) !== 0
+  const isMoved = posed.map(
+    ({ from }, index) => !equalTransform2D(from, solved[index]!) && transform2DDeterminant(from) !== 0
   );
   const hasMovedAncestor = (index: number): boolean => {
-    const { parent } = rig.bones[index]!;
+    const { parent } = posed[index]!;
     return parent >= 0 && (isMoved[parent]! || hasMovedAncestor(parent));
   };
-  return rig.bones.flatMap((_bone, index) => {
+  return posed.flatMap(({ object, from }, index) => {
     if (!isMoved[index]) return [];
-    const turn = multiplyTransform2D(affineInverseTransform2D(cache[index]!), solved[index]!);
+    const turn = multiplyTransform2D(affineInverseTransform2D(from), solved[index]!);
     return {
-      object: bodies[index + 1]!,
+      object,
       turn: threeMatrixFromTransform2D(turn),
       isTopmost: !hasMovedAncestor(index),
       held: new THREE.Matrix4(),

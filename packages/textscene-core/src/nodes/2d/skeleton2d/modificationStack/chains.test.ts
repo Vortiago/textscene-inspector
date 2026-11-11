@@ -10,6 +10,7 @@ import {
   expectColumns,
   freeNode,
   NO_CONSTRAINT,
+  outsideChainNodes,
   rotated,
   translation,
 } from './stackScenes.testkit';
@@ -77,6 +78,69 @@ describe('SkeletonModification2DFABRIK', () => {
     const { scene, cache } = threeBoneChain();
     const modification = { ...FABRIK, joints: FABRIK.joints.slice(0, 1) };
     expect(solveStack(scene, cache, enabledStack([modification])).locals).toEqual(cache);
+  });
+});
+
+describe('SkeletonModification2DFABRIK on the bones of another skeleton', () => {
+  /** Three bones of 80 at (200, 120), and the same chain of the skeleton Far at (200, 330). */
+  function twoChains() {
+    return chainScene(3, 80, translation(200, 120), {
+      Target: freeNode(330, 500),
+      ...outsideChainNodes(3, 80, translation(200, 330)),
+    });
+  }
+
+  const ON_FAR: FABRIKModification2D = {
+    ...FABRIK,
+    joints: FABRIK.joints.map((joint) => ({
+      ...joint,
+      bone: { ...joint.bone, node: `Far/${joint.bone.node}` },
+    })),
+  };
+
+  // Godot 4.6.3 on unit-skeleton2d-fabrik-foreign.tscn: the bones of Far, then the same on Near.
+  const SOLVED = [
+    [0.936635, 0.350307, -0.350307, 0.936635, 0, 0],
+    [0.862298, 0.506401, -0.506401, 0.862298, 80, 0],
+    [0.811691, 0.584087, -0.584087, 0.811691, 80, 0],
+  ];
+
+  it('moves the bones the joints name to the target', () => {
+    const { scene, cache } = twoChains();
+    const solved = solveStack(scene, cache, enabledStack([ON_FAR]));
+    SOLVED.forEach((columns, bone) => expectColumns(solved.locals[3 + bone]!, columns));
+  });
+
+  it('gives each bone of the skeleton the transform of the outside bone at its index', () => {
+    const { scene, cache } = twoChains();
+    const solved = solveStack(scene, cache, enabledStack([ON_FAR]));
+    SOLVED.forEach((columns, bone) => expectColumns(solved.locals[bone]!, columns));
+    expect(solved.isOverridden).toEqual([true, true, true]);
+  });
+
+  it('moves the outside bones the whole way at a stack strength of a half', () => {
+    const { scene, cache } = twoChains();
+    const solved = solveStack(scene, cache, enabledStack([ON_FAR], 0.5));
+    SOLVED.forEach((columns, bone) => expectColumns(solved.locals[3 + bone]!, columns));
+    expect(solved.locals[0]!.b).toBeCloseTo(Math.sin(Math.atan2(0.350307, 0.936635) / 2), 4);
+  });
+
+  it('moves the outside bones and no bone of the skeleton for bones that join no skeleton', () => {
+    const { scene, cache } = twoChains();
+    for (const node of scene.nodes.values()) if (node.outsideBone) node.indexInSkeleton = -1;
+    const solved = solveStack(scene, cache, enabledStack([ON_FAR]));
+    expect(solved.locals.slice(0, 3)).toEqual(cache);
+    expectColumns(solved.locals[3]!, SOLVED[0]!);
+  });
+
+  it('keeps every bone where a joint names a node that is no Bone2D', () => {
+    const { scene, cache } = twoChains();
+    const joints = [
+      ...ON_FAR.joints.slice(0, 2),
+      { ...ON_FAR.joints[2]!, bone: { index: 2, node: 'Target' } },
+    ];
+    const solved = solveStack(scene, cache, enabledStack([{ ...ON_FAR, joints }]));
+    expect(solved.locals.slice(0, 3)).toEqual(cache);
   });
 });
 

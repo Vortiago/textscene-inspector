@@ -21,7 +21,7 @@ import { parentPathOf } from '../../../utils/nodePath.js';
 import { sameData } from '../../../utils/sameData.js';
 import { stackNodePaths } from './modificationStack/stackPaths.js';
 import type { BoundStack, StackTarget } from './skeletonPose.js';
-import { bindSkeleton2DRigs, skeletonOfBone, type Skeleton2DRig } from './skeletonRig.js';
+import { bindSkeleton2DRigs, boneReachAt, skeletonOfBone, type Skeleton2DRig } from './skeletonRig.js';
 
 type Targets = ReadonlyMap<string, StackTarget>;
 
@@ -66,14 +66,21 @@ export function useBoundStack(ref: string | undefined, skeletonPath: string | nu
       const targets = new Map<string, StackTarget>();
       for (const literal of literals) {
         const path = resolveLiteralOnLiveTree(skeletonPath, literal, tree);
-        const type = path === null ? undefined : tree.at(path)?.step.node.type;
-        if (path === null || type === undefined) continue;
+        const link = path === null ? null : tree.at(path);
+        if (path === null || link === null) continue;
+        const { type } = link.step.node;
+        const isBone = type === 'Bone2D';
+        const boneIndex = bones?.get(path) ?? -1;
         targets.set(literal, {
           path,
           isNode2D: descendsFromClass(type, 'Node2D'),
-          boneIndex: bones?.get(path) ?? -1,
-          indexInSkeleton: type === 'Bone2D' ? indexInSkeletonOf(path, tree, rigs) : null,
+          boneIndex,
+          indexInSkeleton: isBone ? indexInSkeletonOf(path, tree, rigs) : null,
           carrier: carrierOf(path, bones),
+          outsideBone:
+            isBone && boneIndex < 0
+              ? { parentPath: parentPathOf(path), reach: boneReachAt(link, tree) }
+              : null,
         });
       }
       return targets;

@@ -32,17 +32,18 @@ The TwoBoneIK scene with the `strength` of the stack at 0.5: each bone turns hal
 own transform to the solved one.
 
 ## CCDIK
-<!-- compare: image=unit-skeleton2d-ccdik status=limitation fixture=unit-skeleton2d-ccdik.tscn -->
+<!-- compare: image=unit-skeleton2d-ccdik status=done fixture=unit-skeleton2d-ccdik.tscn -->
 
 A `SkeletonModification2DCCDIK` turns each joint in order until the tip node meets the red
-target. A chain whose last bones lie on one line can fold to either side, and the side can
-differ from Godot's (see Known limitations).
+target. A chain whose last bones fold onto one line bends to the side Godot bends it.
 
 ## FABRIK
 <!-- compare: image=unit-skeleton2d-fabrik status=done fixture=unit-skeleton2d-fabrik.tscn -->
 
 A `SkeletonModification2DFABRIK` moves the joints along the chain to the red target and back
-to the root. The magnet position and the target rotation of a joint apply.
+to the root. The magnet position and the target rotation of a joint apply. A joint that names a
+Bone2D of another skeleton moves that bone, and the bone of this skeleton at the same index takes
+its transform.
 
 ## Linting
 
@@ -71,9 +72,5 @@ resource reference, and a stack that does not decode leaves the bones unsolved.
   nodes, which the previewer does not simulate.
 - **Needs runtime** A modification in the physics `execution_mode` moves no bone, where a running
   game applies it after each physics tick.
-- **Approximated** A CCDIK chain that folds a bone back onto its parent can settle on the mirror
-  image of Godot's pose.
-- **Approximated** A FABRIK joint whose `bone2d_node` names a Bone2D of another skeleton moves no
-  bone, where Godot solves the chain on that bone.
 - **Approximated** The Cameras panel, a RemoteTransform2D and the inspector read the bone
   transforms of the scene file, not the solved pose.

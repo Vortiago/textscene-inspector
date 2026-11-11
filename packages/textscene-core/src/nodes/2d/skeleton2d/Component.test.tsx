@@ -93,6 +93,68 @@ position = Vector2(30, 0)
 position = Vector2(473, 192)
 `;
 
+/**
+ * The skeleton Near, whose FABRIK chain names the three bones of the skeleton Far, as in
+ * `unit-skeleton2d-fabrik-foreign.tscn`, and a strip skinned to Far.
+ */
+const CHAIN_ON_ANOTHER_SKELETON = `[gd_scene format=3]
+[sub_resource type="SkeletonModification2DFABRIK" id="chain"]
+target_nodepath = NodePath("../Target")
+fabrik_data_chain_length = 3
+joint_data/0/bone_index = 0
+joint_data/0/bone2d_node = NodePath("../Far/FarA")
+joint_data/1/bone_index = 1
+joint_data/1/bone2d_node = NodePath("../Far/FarA/FarB")
+joint_data/2/bone_index = 2
+joint_data/2/bone2d_node = NodePath("../Far/FarA/FarB/FarC")
+[sub_resource type="SkeletonModificationStack2D" id="stack"]
+enabled = true
+modification_count = 1
+modifications/0 = SubResource("chain")
+[node name="Root" type="Node2D"]
+[node name="Near" type="Skeleton2D" parent="."]
+position = Vector2(200, 120)
+modification_stack = SubResource("stack")
+[node name="NearA" type="Bone2D" parent="Near"]
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+[node name="NearB" type="Bone2D" parent="Near/NearA"]
+position = Vector2(80, 0)
+rest = Transform2D(1, 0, 0, 1, 80, 0)
+[node name="NearC" type="Bone2D" parent="Near/NearA/NearB"]
+position = Vector2(80, 0)
+rest = Transform2D(1, 0, 0, 1, 80, 0)
+auto_calculate_length_and_angle = false
+length = 80.0
+[node name="Far" type="Skeleton2D" parent="."]
+position = Vector2(200, 330)
+[node name="FarA" type="Bone2D" parent="Far"]
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+[node name="FarB" type="Bone2D" parent="Far/FarA"]
+position = Vector2(80, 0)
+rest = Transform2D(1, 0, 0, 1, 80, 0)
+[node name="FarC" type="Bone2D" parent="Far/FarA/FarB"]
+position = Vector2(80, 0)
+rest = Transform2D(1, 0, 0, 1, 80, 0)
+auto_calculate_length_and_angle = false
+length = 80.0
+[node name="Strip" type="Polygon2D" parent="."]
+position = Vector2(200, 330)
+skeleton = NodePath("../Far")
+polygon = PackedVector2Array(0, 16, 80, 16, 80, 30)
+bones = [NodePath("FarA"), PackedFloat32Array(1, 0.5, 0.5), NodePath("FarA/FarB"), PackedFloat32Array(0, 0.5, 0.5), NodePath("FarA/FarB/FarC"), PackedFloat32Array(0, 0, 0)]
+[node name="Target" type="Node2D" parent="."]
+position = Vector2(330, 500)
+`;
+
+/** The same scene with Far above Near in the tree, so the pose of Far writes before the chain moves its bones. */
+function farAboveNear(): string {
+  const text = CHAIN_ON_ANOTHER_SKELETON;
+  const near = text.indexOf('[node name="Near"');
+  const far = text.indexOf('[node name="Far"');
+  const strip = text.indexOf('[node name="Strip"');
+  return text.slice(0, near) + text.slice(far, strip) + text.slice(near, far) + text.slice(strip);
+}
+
 async function render(tscn: string) {
   const renderer = await ReactThreeTestRenderer.create(
     <DispatchedScene
@@ -243,6 +305,52 @@ describe('Skeleton2D', () => {
     const last = canvasPosition(named(renderer, 'D'));
     expect(last.x).toBeCloseTo(481.7806, 2);
     expect(last.y).toBeCloseTo(163.3138, 2);
+  });
+
+  // Godot 4.6.3 turns FarA by 0.3579, which puts FarB at (274.93, 358.02).
+  it('moves the bones of another skeleton that a FABRIK joint names', async () => {
+    const renderer = await render(CHAIN_ON_ANOTHER_SKELETON);
+    startDraw(renderer);
+    const moved = canvasPosition(named(renderer, 'FarB'));
+    expect(moved.x).toBeCloseTo(274.93, 1);
+    expect(moved.y).toBeCloseTo(358.02, 1);
+  });
+
+  it('gives each bone of the skeleton the transform of the outside bone at its index', async () => {
+    const renderer = await render(CHAIN_ON_ANOTHER_SKELETON);
+    startDraw(renderer);
+    const own = canvasPosition(named(renderer, 'NearB'));
+    expect(own.x).toBeCloseTo(274.93, 1);
+    expect(own.y).toBeCloseTo(148.02, 1);
+  });
+
+  it('puts the bones of the other skeleton back once the render ends', async () => {
+    const renderer = await render(CHAIN_ON_ANOTHER_SKELETON);
+    const outside = named(renderer, 'FarA');
+    startDraw(renderer);
+    endDraw(renderer);
+    expect(outside.matrixAutoUpdate).toBe(true);
+    expect(outside.matrix.elements[0]).toBeCloseTo(1, 6);
+  });
+
+  // The vertex at (80, 16) follows FarA and FarB by a half each.
+  it('skins a Polygon2D of the other skeleton with the bones the chain moved', async () => {
+    const renderer = await render(CHAIN_ON_ANOTHER_SKELETON);
+    startDraw(renderer);
+    const vertex = stripVertex(renderer, 1);
+    expect(vertex.x).toBeCloseTo(65.92, 1);
+    expect(vertex.y).toBeCloseTo(40.56, 1);
+  });
+
+  // The pose of a Far above Near sees its own bones where the file puts them, in each render.
+  it('skins the Polygon2D again once the chain moves the bones of the other skeleton elsewhere', async () => {
+    const renderer = await render(farAboveNear());
+    startDraw(renderer);
+    const first = stripVertex(renderer, 1);
+    endDraw(renderer);
+    named(renderer, 'Target').position.set(330, -200, 0);
+    startDraw(renderer);
+    expect(stripVertex(renderer, 1).y).toBeLessThan(first.y - 5);
   });
 
   it('draws the kite of a bone a modification holds in the IK colour', async () => {

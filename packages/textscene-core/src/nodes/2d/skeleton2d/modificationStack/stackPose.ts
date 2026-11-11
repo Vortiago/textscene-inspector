@@ -25,12 +25,14 @@ import {
 import { atan2Real } from '../../../../godot/math/realAtan2.js';
 import { storedReal as f } from '../../../../godot/math/real.js';
 import type { Vector2 } from '../../../../godot/math/vector.js';
-import type { StackBone, StackPlacement } from './stackScene';
+import type { OutsideBone, StackBone, StackPlacement } from './stackScene';
 
 /** The values `Node2D::_update_xform_values` reads from a transform (`node_2d.cpp:127-133`). */
 type XformValues = ReturnType<typeof transform2DDecompose>;
 
 export class StackPose {
+  /** The bones of the skeleton by index, then each outside bone. */
+  private readonly bones: readonly Pick<StackBone, 'length' | 'boneAngle'>[];
   private readonly transforms: Transform2DColumns[];
   /** Null while the values are stale: `set_transform` marks them dirty (`node_2d.cpp:374`). */
   private readonly values: (XformValues | null)[];
@@ -39,24 +41,31 @@ export class StackPose {
 
   constructor(
     private readonly skeletonGlobal: Transform2DColumns,
-    private readonly bones: readonly StackBone[],
-    locals: readonly Transform2DColumns[]
+    private readonly ownBones: readonly StackBone[],
+    locals: readonly Transform2DColumns[],
+    private readonly outsideBones: readonly OutsideBone[] = []
   ) {
-    this.transforms = [...locals];
-    this.values = locals.map(() => null);
-    this.globals = locals.map(() => null);
+    this.bones = [...ownBones, ...outsideBones];
+    this.transforms = [...locals, ...outsideBones.map(({ local }) => local)];
+    this.values = this.transforms.map(() => null);
+    this.globals = this.transforms.map(() => null);
   }
 
-  /** `Skeleton2D::get_bone` (`skeleton_2d.cpp:624-628`): whether `bone` indexes a bone. */
+  /** `Skeleton2D::get_bone` (`skeleton_2d.cpp:624-628`): whether `bone` indexes a bone of the skeleton. */
   has(bone: number): boolean {
-    return bone >= 0 && bone < this.bones.length;
+    return bone >= 0 && bone < this.ownBones.length;
   }
 
-  bone(bone: number): StackBone {
+  /** The index a bone outside the skeleton has in this pose, past the bones of the skeleton. */
+  indexOfOutside(bone: OutsideBone): number {
+    return this.ownBones.length + this.outsideBones.indexOf(bone);
+  }
+
+  bone(bone: number): Pick<StackBone, 'length' | 'boneAngle'> {
     return this.bones[bone]!;
   }
 
-  /** A copy of each local transform, by bone index. */
+  /** A copy of each local transform, by bone index, then of each outside bone. */
   locals(): Transform2DColumns[] {
     return [...this.transforms];
   }
@@ -136,8 +145,14 @@ export class StackPose {
   }
 
   private parentGlobal(bone: number): Transform2DColumns {
-    const { parent } = this.bones[bone]!;
+    if (bone >= this.ownBones.length) return this.outsideParentGlobal(bone);
+    const { parent } = this.ownBones[bone]!;
     return parent < 0 ? this.skeletonGlobal : this.globalTransform(parent);
+  }
+
+  private outsideParentGlobal(bone: number): Transform2DColumns {
+    const { parent } = this.outsideBones[bone - this.ownBones.length]!;
+    return 'carrier' in parent ? this.placed(parent) : this.globalTransform(this.indexOfOutside(parent));
   }
 
   private valuesOf(bone: number): XformValues {

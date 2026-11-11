@@ -26,16 +26,20 @@ import {
 } from '../../../../godot/math/vector.js';
 import type { FABRIKModification2D } from '../../../../resources/skeleton/skeletonmodificationstack2d/types';
 import { node2DGlobal, nodeAt, type StackFrame } from './stackFrame';
+import type { StackNode } from './stackScene';
 
 /** `chain_tolarance` (`skeleton_modification_2d_fabrik.h:67`): the chain stops this close to the target. */
 const CHAIN_TOLERANCE = 0.01;
 /** `chain_max_iterations` (`skeleton_modification_2d_fabrik.h:68`). */
 const CHAIN_MAX_ITERATIONS = 10;
 
-/** One run of the solve: the joints as bone indices, their reaches and the transforms the passes move. */
+/** One run of the solve: the bones of the joints, their reaches and the transforms the passes move. */
 interface Chain {
   modification: FABRIKModification2D;
+  /** The bone each joint moves, by its index in the pose. */
   bones: number[];
+  /** The bone of the skeleton that takes the transform of each joint: `bone_idx` of the joint. */
+  slots: number[];
   /** The length of each joint's kite on the canvas. */
   reaches: number[];
   transforms: Transform2DColumns[];
@@ -51,22 +55,40 @@ function direction(angle: number): Vector2 {
   return { x: Math.cos(angle), y: Math.sin(angle) };
 }
 
-/** The bone index of each joint, or null where a joint names no bone of the skeleton. */
-function chainBones(modification: FABRIKModification2D, frame: StackFrame): number[] | null {
-  const bones = modification.joints.map((joint) => nodeAt(frame, joint.bone.node)?.boneIndex ?? -1);
-  return bones.every((bone) => bone >= 0) ? bones : null;
+interface ChainJoint {
+  bone: number;
+  slot: number;
+}
+
+/**
+ * The bone a joint moves and the index its cache update stores (`:321-347`): any Bone2D its path
+ * names, of this skeleton or not. Null for no node and for a node that is no Bone2D.
+ */
+function chainJoint(node: StackNode | undefined, frame: StackFrame): ChainJoint | null {
+  if (!node) return null;
+  if (node.boneIndex >= 0) return { bone: node.boneIndex, slot: node.boneIndex };
+  if (!node.outsideBone) return null;
+  return { bone: frame.pose.indexOfOutside(node.outsideBone), slot: node.indexInSkeleton ?? -1 };
+}
+
+/** The joints of the chain, or null where one of them names no Bone2D. */
+function chainJoints(modification: FABRIKModification2D, frame: StackFrame): ChainJoint[] | null {
+  const joints = modification.joints.map((joint) => chainJoint(nodeAt(frame, joint.bone.node), frame));
+  return joints.every((joint) => joint !== null) ? joints : null;
 }
 
 export function executeFABRIK(modification: FABRIKModification2D, frame: StackFrame): void {
   const { pose } = frame;
   const target = node2DGlobal(frame, modification.target);
   if (!target || modification.joints.length <= 1) return;
-  const bones = chainBones(modification, frame);
-  if (!bones) return;
+  const joints = chainJoints(modification, frame);
+  if (!joints) return;
+  const bones = joints.map(({ bone }) => bone);
 
   const chain: Chain = {
     modification,
     bones,
+    slots: joints.map(({ slot }) => slot),
     reaches: bones.map((bone) => {
       const scale = pose.globalScale(bone);
       return pose.bone(bone).length * Math.min(scale.x, scale.y);
@@ -137,7 +159,7 @@ function chainForwards(chain: Chain): void {
 /** Each joint turns to face the next one, and the last one the target (`:187-216`). */
 function applyChain(chain: Chain, frame: StackFrame): void {
   const { pose } = frame;
-  const { modification, bones, transforms, target } = chain;
+  const { modification, bones, slots, transforms, target } = chain;
   bones.forEach((bone, i) => {
     const isLast = i === bones.length - 1;
     let faced: Transform2DColumns;
@@ -147,6 +169,6 @@ function applyChain(chain: Chain, frame: StackFrame): void {
     } else faced = transform2DLookingAt(transforms[i]!, transform2DOrigin(target));
     const turned = transform2DSetRotation(faced, transform2DGetRotation(faced) - pose.bone(bone).boneAngle);
     pose.setGlobalTransform(bone, transform2DSetScale(turned, pose.globalScale(bone)));
-    frame.override(bone, pose.transform(bone));
+    frame.override(slots[i]!, pose.transform(bone));
   });
 }

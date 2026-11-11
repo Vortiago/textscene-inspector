@@ -29,8 +29,10 @@ export function nodeAt(frame: StackFrame, path: string | undefined): StackNode |
  * another type fails `ObjectDB::get_instance<Node2D>`.
  */
 export function node2DGlobal(frame: StackFrame, path: string | undefined): Transform2DColumns | null {
-  const placement = nodeAt(frame, path)?.placement;
-  return placement ? frame.pose.placed(placement) : null;
+  const node = nodeAt(frame, path);
+  // A FABRIK chain may have moved an outside bone from where its placement holds it.
+  if (node?.outsideBone) return frame.pose.globalTransform(frame.pose.indexOfOutside(node.outsideBone));
+  return node?.placement ? frame.pose.placed(node.placement) : null;
 }
 
 /**

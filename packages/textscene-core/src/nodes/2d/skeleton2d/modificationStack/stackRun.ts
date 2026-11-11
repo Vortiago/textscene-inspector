@@ -25,12 +25,12 @@ import { executeFABRIK } from './fabrik';
 import { executeLookAt } from './lookAt';
 import type { StackFrame } from './stackFrame';
 import { StackPose } from './stackPose';
-import type { StackScene } from './stackScene';
+import { outsideBonesOf, type StackScene } from './stackScene';
 import { executeTwoBoneIK } from './twoBoneIk';
 
 /** The pose a stack leaves on its skeleton. */
 export interface SolvedPose {
-  /** The local transform of each bone, by bone index. */
+  /** The local transform of each bone, by bone index, then of each bone `outsideBonesOf` lists. */
   locals: Transform2DColumns[];
   /** Whether a modification holds each bone, which the bone shows in the IK colour of its kite. */
   isOverridden: boolean[];
@@ -52,7 +52,7 @@ export function solveStack(
   cache: readonly Transform2DColumns[],
   stack: ModificationStack2D
 ): SolvedPose {
-  const pose = new StackPose(scene.skeletonGlobal, scene.bones, cache);
+  const pose = new StackPose(scene.skeletonGlobal, scene.bones, cache, outsideBonesOf(scene));
   const overrides: (PoseOverride | undefined)[] = cache.map(() => undefined);
   const frames = new FramePoses({ locals: pose.locals(), isOverridden: cache.map(() => false) });
   for (let frame = 1; frame <= HARNESS_CAPTURE.frame; frame++) {

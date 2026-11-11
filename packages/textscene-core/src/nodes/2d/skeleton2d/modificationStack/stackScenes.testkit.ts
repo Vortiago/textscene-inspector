@@ -12,7 +12,7 @@ import type {
   ModificationStack2D,
   Modification2D,
 } from '../../../../resources/skeleton/skeletonmodificationstack2d/types';
-import type { StackNode, StackScene } from './stackScene';
+import type { OutsideBone, StackNode, StackScene } from './stackScene';
 
 export function translation(x: number, y: number): Transform2DColumns {
   return { ...TRANSFORM2D_IDENTITY, tx: x, ty: y };
@@ -24,7 +24,12 @@ export function rotated(rotation: number, x = 0, y = 0): Transform2DColumns {
 
 /** A node outside the skeleton at a canvas position. */
 export function freeNode(x: number, y: number): StackNode {
-  return { boneIndex: -1, indexInSkeleton: null, placement: { carrier: -1, offset: translation(x, y) } };
+  return {
+    boneIndex: -1,
+    indexInSkeleton: null,
+    placement: { carrier: -1, offset: translation(x, y) },
+    outsideBone: null,
+  };
 }
 
 export function boneNode(index: number): StackNode {
@@ -32,12 +37,37 @@ export function boneNode(index: number): StackNode {
     boneIndex: index,
     indexInSkeleton: index,
     placement: { carrier: index, offset: TRANSFORM2D_IDENTITY },
+    outsideBone: null,
   };
 }
 
 /** A Bone2D outside the skeleton, at `indexInSkeleton` in the skeleton it joins, or -1 for none. */
 export function foreignBoneNode(indexInSkeleton: number): StackNode {
   return { ...freeNode(0, 0), indexInSkeleton };
+}
+
+/**
+ * A chain of `count` Bone2Ds of another skeleton at `origin`, each `spacing` along its parent, as
+ * the nodes `Far/A`, `Far/A/B` and so on.
+ */
+export function outsideChainNodes(
+  count: number,
+  spacing: number,
+  origin: Transform2DColumns
+): Record<string, StackNode> {
+  const nodes: Record<string, StackNode> = {};
+  let above: OutsideBone | null = null;
+  ['Far/A', 'Far/A/B', 'Far/A/B/C'].slice(0, count).forEach((name, index) => {
+    const bone: OutsideBone = {
+      parent: above ?? { carrier: -1, offset: origin },
+      local: above ? translation(spacing, 0) : TRANSFORM2D_IDENTITY,
+      length: spacing,
+      boneAngle: 0,
+    };
+    nodes[name] = { ...freeNode(0, 0), indexInSkeleton: index, outsideBone: bone };
+    above = bone;
+  });
+  return nodes;
 }
 
 /**

@@ -80,13 +80,18 @@ function rigOf(skeleton: LiveLink, tree: LiveTree): Skeleton2DRig {
         path: link.path,
         parent: parent?.index ?? -1,
         restInverse: bindInverse(skeletonRest),
-        reach: boneReachOf(props, firstBoneChildPosition(link, tree)),
+        reach: boneReachAt(link, tree),
       });
       descend({ index, skeletonRest });
     },
     skeleton
   );
   return { bones, indexOf: new Map(bones.map((bone, index) => [bone.path, index])) };
+}
+
+/** `get_length` and `get_bone_angle` of the Bone2D at `bone`, in a skeleton or in none. */
+export function boneReachAt(bone: LiveLink, tree: LiveTree): BoneReach {
+  return boneReachOf(bone.step.node.properties as Bone2DProperties, firstBoneChildPosition(bone, tree));
 }
 
 /** The position of the first Bone2D child of `bone` in its space, or null where it has none. */
