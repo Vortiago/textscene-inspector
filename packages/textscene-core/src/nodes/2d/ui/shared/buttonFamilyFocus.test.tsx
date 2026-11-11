@@ -1,7 +1,8 @@
 /**
  * Every Button subclass draws a focused button as `Button::_notification` does: the `focus` box over the
  * chrome (`button.cpp:220-222`), and `font_focus_color` and `icon_focus_color` in the normal draw mode only
- * (`button.cpp:280-292`).
+ * (`button.cpp:280-292`). Two more facts of that draw hold for the whole family: the theme icon `icon`
+ * stands in for a missing one (`button.cpp:224-227`), and a subclass draws its own element over the label.
  */
 import { describe, expect, it } from 'vitest';
 import type { ComponentType } from 'react';
@@ -74,7 +75,6 @@ async function drawn(c: FamilyCase, properties: Record<string, unknown>, colors:
   const text = findTextMesh(rendered.scene)!;
   return {
     textColor: (text.material as THREE.ShaderMaterial).uniforms.uColor!.value as THREE.Vector3,
-    textOpacity: (text.material as THREE.ShaderMaterial).uniforms.uOpacity!.value as number,
     ownIconColor: (icons[0]!.material as THREE.MeshBasicMaterial).color,
     meshCount: rendered.scene.findAllByType('Mesh').length,
   };

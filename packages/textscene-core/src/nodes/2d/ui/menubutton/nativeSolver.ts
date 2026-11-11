@@ -1,7 +1,7 @@
 /**
- * MenuButton's native rect solver. `menu_button.cpp` overrides neither `get_minimum_size` nor
- * `NOTIFICATION_DRAW`, so it sizes through `buttonMinimumSize`. `scene/theme/default_theme.cpp`'s
- * "MenuButton" type (`:255-272`) differs from Button's only in `font_disabled_color` (`:268`).
+ * What MenuButton changes of Button. `menu_button.cpp` overrides neither `get_minimum_size` nor
+ * `NOTIFICATION_DRAW`, so it sizes and draws as a Button of `MENU_BUTTON_CLASS`. The "MenuButton" type of
+ * `scene/theme/default_theme.cpp` (`:255-272`) differs from Button's only in `font_disabled_color` (`:268`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

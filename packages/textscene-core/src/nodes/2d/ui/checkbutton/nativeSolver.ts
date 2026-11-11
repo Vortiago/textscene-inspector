@@ -1,6 +1,6 @@
 /**
  * What CheckButton adds to Button (`scene/gui/check_button.cpp`): the toggle icon it reserves as Button's
- * `_internal_margin` (`:96-104`) and draws over it (`:106-146`), its minimum size (`:68-83`) and its theme
+ * `_internal_margin` (`:95-103`) and draws over it (`:107-147`), its minimum size (`:68-84`) and its theme
  * defaults (`scene/theme/default_theme.cpp:316-353`).
  *
  * Portions ported from Godot Engine (MIT).
@@ -11,12 +11,11 @@
 import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { fitIconSize, largestThemedIconSize } from '../../../../r3f/controls/native/buttonBase';
 import { WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import {
   BUTTON_DEFAULT_FONT_COLORS,
-  buttonIconMaxWidth,
+  fittedThemedIconSize,
   buttonNormalBox,
   buttonTextureSlotsOf,
   reservingMinimumSizeOf,
@@ -32,12 +31,15 @@ import { HorizontalAlignment } from '../../../../godot/math/alignment';
 
 export type CheckButtonIconKey = keyof CheckButtonIcons;
 
+/** The two properties that pick one of the eight icons. */
+type CheckButtonIconState = Pick<CheckButtonProperties, 'disabled' | 'buttonPressed'>;
+
 /**
- * `NOTIFICATION_DRAW` (`check_button.cpp:105-127`): `is_layout_rtl()` swaps in the `_mirrored`
+ * `NOTIFICATION_DRAW` (`check_button.cpp:107-131`): `is_layout_rtl()` swaps in the `_mirrored`
  * icon table, `is_disabled()` picks the `_disabled` variant, and `button_pressed` picks the
  * checked ("on") or unchecked ("off") icon.
  */
-export function resolveCheckButtonIconKey(props: CheckButtonProperties, rtl: boolean): CheckButtonIconKey {
+export function resolveCheckButtonIconKey(props: CheckButtonIconState, rtl: boolean): CheckButtonIconKey {
   const disabled = props.disabled === true;
   const checked = props.buttonPressed === true;
   if (rtl) {
@@ -48,7 +50,7 @@ export function resolveCheckButtonIconKey(props: CheckButtonProperties, rtl: boo
   return disabled ? 'uncheckedDisabled' : 'unchecked';
 }
 
-/** Each `CheckButtonIconKey` to the Theme item name Godot registers it under (`check_button.cpp:152-159`). */
+/** Each `CheckButtonIconKey` to the Theme item name Godot registers it under (`check_button.cpp:156-163`). */
 export const CHECK_BUTTON_ICON_THEME_NAME: Record<CheckButtonIconKey, string> = {
   checked: 'checked',
   unchecked: 'unchecked',
@@ -61,18 +63,6 @@ export const CHECK_BUTTON_ICON_THEME_NAME: Record<CheckButtonIconKey, string> = 
 };
 
 const CHECK_BUTTON_ICON_THEME_NAMES = Object.values(CHECK_BUTTON_ICON_THEME_NAME);
-
-/**
- * The size Godot draws the current icon at: its own, fitted, at the offset the larger icon sets
- * (`check_button.cpp:133-145`). An icon that reports size 0 draws nothing.
- */
-function checkButtonDrawnIconSize(
-  n: Pick<SolveNode, 'textureSlots' | 'constants'>,
-  key: CheckButtonIconKey
-): Vector2 {
-  const own = n.textureSlots[CHECK_BUTTON_ICON_THEME_NAME[key]] ?? CHECK_BUTTON_ICON_NATURAL_SIZE;
-  return fitIconSize(own, buttonIconMaxWidth(n.constants));
-}
 
 /**
  * The colour `CheckButton::_notification` draws the toggle in (`check_button.cpp:142-145`):
@@ -92,19 +82,18 @@ export function checkButtonIconColor(props: CheckButtonProperties, colors: Solve
 function checkButtonFittedIconSize(
   n: Pick<SolveNode, 'node' | 'textureSlots' | 'constants' | 'rtl'>
 ): Vector2 {
-  const props = n.node.properties as CheckButtonProperties;
+  const { disabled } = n.node.properties as CheckButtonProperties;
   const names = [true, false].map(
     (buttonPressed) =>
-      CHECK_BUTTON_ICON_THEME_NAME[resolveCheckButtonIconKey({ ...props, buttonPressed }, n.rtl)]
+      CHECK_BUTTON_ICON_THEME_NAME[resolveCheckButtonIconKey({ disabled, buttonPressed }, n.rtl)]
   );
-  const largest = largestThemedIconSize(n.textureSlots, names, CHECK_BUTTON_ICON_NATURAL_SIZE);
-  return fitIconSize(largest, buttonIconMaxWidth(n.constants));
+  return fittedThemedIconSize(n, names, CHECK_BUTTON_ICON_NATURAL_SIZE);
 }
 
 /**
  * CheckButton as a Button: its font colours equal Button's (`default_theme.cpp:340-345`), its constructor
- * aligns the text LEFT (`check_button.cpp:174`), and the toggle is the internal margin of the trailing
- * side (`:96-104`).
+ * aligns the text LEFT (`check_button.cpp:173`), and the toggle is the internal margin of the trailing
+ * side (`:95-103`).
  */
 export const CHECK_BUTTON_CLASS: ReservingButtonClass = {
   fontColors: BUTTON_DEFAULT_FONT_COLORS,
@@ -135,7 +124,7 @@ export function checkButtonToggleRect(
 ): Rect2 {
   const { contentMargin } = buttonNormalBox(n, theme);
   const reserved = checkButtonFittedIconSize(n);
-  const drawn = checkButtonDrawnIconSize(n, key);
+  const drawn = fittedThemedIconSize(n, [CHECK_BUTTON_ICON_THEME_NAME[key]], CHECK_BUTTON_ICON_NATURAL_SIZE);
   return {
     x: n.rtl ? contentMargin.left : rectSize.x - (reserved.x + contentMargin.right),
     y: (rectSize.y - reserved.y) / 2 + (n.constants.check_v_offset ?? 0),

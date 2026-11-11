@@ -11,12 +11,11 @@
 import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { fitIconSize, largestThemedIconSize } from '../../../../r3f/controls/native/buttonBase';
 import { WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import {
   BUTTON_DEFAULT_FONT_COLORS,
-  buttonIconMaxWidth,
+  fittedThemedIconSize,
   buttonNormalBox,
   buttonTextureSlotsOf,
   reservingMinimumSizeOf,
@@ -78,28 +77,11 @@ export function checkIconSlotRequests(themedIcons: Parameters<typeof themedSlotR
 }
 
 /**
- * The size Godot draws the current icon at: its own, fitted, at the offset the largest icon sets
- * (`check_box.cpp:137-142`). An icon that reports size 0 draws nothing.
- */
-function checkBoxDrawnIconSize(
-  n: Pick<SolveNode, 'textureSlots' | 'constants'>,
-  key: CheckBoxIconKey
-): Vector2 {
-  const own = n.textureSlots[CHECK_BOX_ICON_THEME_NAME[key]] ?? CHECKBOX_ICON_NATURAL_SIZE;
-  return fitIconSize(own, buttonIconMaxWidth(n.constants));
-}
-
-/**
  * `CheckBox::get_icon_size` (`check_box.cpp:35-62`): the largest of all 8 icons, whichever is showing,
  * fitted to `icon_max_width`. The default theme registers all 8 (`default_theme.cpp:288-295`).
  */
 function checkBoxFittedIconSize(n: Pick<SolveNode, 'textureSlots' | 'constants'>): Vector2 {
-  const largest = largestThemedIconSize(
-    n.textureSlots,
-    CHECK_BOX_ICON_THEME_NAMES,
-    CHECKBOX_ICON_NATURAL_SIZE
-  );
-  return fitIconSize(largest, buttonIconMaxWidth(n.constants));
+  return fittedThemedIconSize(n, CHECK_BOX_ICON_THEME_NAMES, CHECKBOX_ICON_NATURAL_SIZE);
 }
 
 /**
@@ -136,7 +118,7 @@ export function checkBoxCheckRect(
 ): Rect2 {
   const { contentMargin } = buttonNormalBox(n, theme);
   const reserved = checkBoxFittedIconSize(n);
-  const drawn = checkBoxDrawnIconSize(n, key);
+  const drawn = fittedThemedIconSize(n, [CHECK_BOX_ICON_THEME_NAME[key]], CHECKBOX_ICON_NATURAL_SIZE);
   return {
     x: n.rtl ? rectSize.x - contentMargin.right - reserved.x : contentMargin.left,
     y: Math.trunc((rectSize.y - reserved.y) / 2) + (n.constants.check_v_offset ?? 0),

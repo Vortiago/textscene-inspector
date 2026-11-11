@@ -16,7 +16,7 @@ import {
 } from './nativeSolver';
 import type { CheckButtonProperties } from './types';
 
-/** The icon `CheckButton::_notification` draws after Button's own draw (`check_button.cpp:106-146`). */
+/** The icon `CheckButton::_notification` draws after Button's own draw (`check_button.cpp:107-147`). */
 function CheckButtonToggle({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<CheckButtonProperties>(solveNode);
   const iconKey = resolveCheckButtonIconKey(props, solveNode.rtl);

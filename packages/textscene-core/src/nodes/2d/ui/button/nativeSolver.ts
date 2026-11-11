@@ -20,10 +20,12 @@ import type { Vector2 } from '../../../../godot/math/vector';
 import {
   buttonContentMinimumSize,
   buttonIconSlotRequest,
+  fitIconSize,
   internalMarginAt,
   BUTTON_THEME_KEYS,
   isButtonTextClipped,
   largestStyleBoxMargins,
+  largestThemedIconSize,
   pickButtonStyleBox,
   resolveToggleDrawState,
   shapeWrappedButtonLabel,
@@ -227,6 +229,19 @@ export function buttonNormalBox(n: ShareNode, theme: NativeTheme): StyleBoxFlatD
 /** `icon_max_width`, which only Button registers: `0`, unclamped (`default_theme.cpp:172`). */
 export function buttonIconMaxWidth(constants: SolveNode['constants']): number {
   return constants.icon_max_width ?? 0;
+}
+
+/**
+ * The largest of the theme icons `names`, fitted to `icon_max_width`: the size a subclass reserves for all
+ * its icons, and the size it draws one at (`check_box.cpp:35-62,137-142`).
+ */
+export function fittedThemedIconSize(
+  n: Pick<SolveNode, 'textureSlots' | 'constants'>,
+  names: readonly string[],
+  fallback: Vector2
+): Vector2 {
+  const largest = largestThemedIconSize(n.textureSlots, names, fallback);
+  return fitIconSize(largest, buttonIconMaxWidth(n.constants));
 }
 
 /** The boxes of `n` by its own class and `theme_type_variation`, for the draw state its properties give. */
