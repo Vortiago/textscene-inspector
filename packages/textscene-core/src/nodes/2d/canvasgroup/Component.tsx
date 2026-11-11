@@ -22,7 +22,7 @@ import { canvasGroupRectTag, registerCanvasGroup } from '../../../r3f/canvasGrou
 import type { CanvasGroupWindow } from '../../../r3f/canvasGroup/groupWindow';
 import type { Rgba } from '../../../godot/math/math';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
-import { useGroupFit } from './useGroupFit';
+import { useGroupFit } from '../../../r3f/canvasGroup/useGroupFit';
 import { createCompositeMaterial } from './compositeMaterial';
 import type { CanvasGroupProperties } from './types';
 
@@ -94,6 +94,7 @@ function GroupRect({ window, tint, material, pixelMaterial, fitMargin, clearMarg
   useLayoutEffect(
     () =>
       registerCanvasGroup(scene, {
+        kind: 'composite',
         window,
         buffer: readsBuffer ? buffer : null,
         fit: (drawn, nested, frameClip) => {

@@ -13,8 +13,8 @@ import { collects, drawOrderOf, isOwnKey, type DrawStep } from './groupWindow';
 import type { TexelRegion } from './groupRegion';
 import type {
   CanvasFrameTarget,
-  CanvasGroupEntry,
   ClippingEntry,
+  CompositeEntry,
   InertOwner,
   KeyedScene,
 } from './canvasGroupPass';
@@ -40,7 +40,7 @@ export function fillBuffer(
   keyed: KeyedScene,
   scene: THREE.Object3D,
   camera: THREE.Camera,
-  { window, buffer }: CanvasGroupEntry,
+  { window, buffer }: CompositeEntry,
   frame: CanvasFrameTarget,
   inertOwners: readonly InertOwner[]
 ): void {

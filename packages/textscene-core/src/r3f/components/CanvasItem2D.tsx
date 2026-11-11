@@ -7,7 +7,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { CanvasItemClipChildrenMode } from '../../godot/scene/canvasItem';
-import { behindParentRanges, groupingClipMode } from '../canvasPaintOrder';
+import { behindParentRanges, ysortsChildren } from '../canvasPaintOrder';
 import type { TscnNode } from '../../parser/types';
 import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2dTransform';
@@ -29,7 +29,7 @@ import {
 } from '../canvasItemState';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
-import { ClipChildrenScope } from '../../nodes/2d/canvasgroup/ClipChildrenScope';
+import { ClipChildrenScope } from '../canvasGroup/ClipChildrenScope';
 
 interface CanvasItem2DProps {
   node: TscnNode;
@@ -92,8 +92,7 @@ export function CanvasItem2D({
     sequence: useNodePaintSequence(node),
   });
   const paintRange = usePaintRange();
-  const clipMode = groupingClipMode(node, props.clip_children);
-  const clips = clipMode !== CanvasItemClipChildrenMode.DISABLED;
+  const clips = props.clip_children !== CanvasItemClipChildrenMode.DISABLED;
   const behindRanges = useMemo(
     () => (clips ? behindParentRanges(paintRange, node) : []),
     [clips, paintRange, node]
@@ -114,7 +113,13 @@ export function CanvasItem2D({
     >
       <CanvasItemProvider value={key}>
         <OwnCanvasModulateProvider value={tint.canvasModulate}>
-          <ClipChildrenScope mode={clipMode} state={state} behindRanges={behindRanges} range={paintRange}>
+          <ClipChildrenScope
+            mode={props.clip_children}
+            isYSorted={ysortsChildren(node)}
+            state={state}
+            behindRanges={behindRanges}
+            range={paintRange}
+          >
             {body && (
               <LitCanvasItemPixels
                 material={material}

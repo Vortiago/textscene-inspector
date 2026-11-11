@@ -6,9 +6,9 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { rect2Grow, type Rect2 } from '../../../godot/math/rect2';
-import { useCanvasLighting2D } from '../../../r3f/lighting2d/CanvasLighting2D';
-import type { CanvasClip } from '../../../r3f/lighting2d/lightPassHost';
+import { rect2Grow, type Rect2 } from '../../godot/math/rect2';
+import { useCanvasLighting2D } from '../lighting2d/CanvasLighting2D';
+import type { CanvasClip } from '../lighting2d/lightPassHost';
 import { compositeRect } from './compositeRect';
 import { canvasPixelRect, clipPixelRect, worldBoxOfCanvasPixels } from './canvasPixels';
 

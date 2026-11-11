@@ -111,6 +111,7 @@ describe('createCanvasFrame', () => {
     const groupScene = new THREE.Scene();
     const buffer = new THREE.WebGLRenderTarget(1, 1);
     const release = registerCanvasGroup(groupScene, {
+      kind: 'composite',
       window: { own: 0, from: 0, to: 1 },
       buffer,
       fit: () => new THREE.Box3(),

@@ -6,14 +6,14 @@
 
 import { useLayoutEffect, useMemo, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
-import { useSharedClipBuffer } from '../../../r3f/canvasGroup/sharedClipBuffer';
-import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
-import type { CanvasItemState } from '../../../r3f/canvasItemState';
-import type { PaintRange } from '../../../r3f/canvasPaintOrder';
-import { createClipMask } from '../../../r3f/canvasGroup/clipMask';
-import { ClipMaskProvider } from '../../../r3f/canvasGroup/ClipMaskContext';
-import { registerCanvasGroup, type CanvasGroupClip } from '../../../r3f/canvasGroup/canvasGroupPass';
-import { CanvasItemClipChildrenMode } from '../../../godot/scene/canvasItem';
+import { useSharedClipBuffer } from './sharedClipBuffer';
+import { useCanvasColorSpace } from '../canvasColorSpace';
+import type { CanvasItemState } from '../canvasItemState';
+import type { PaintRange } from '../canvasPaintOrder';
+import { createClipMask } from './clipMask';
+import { ClipMaskProvider } from './ClipMaskContext';
+import { registerCanvasGroup, type CanvasGroupClip } from './canvasGroupPass';
+import { CanvasItemClipChildrenMode } from '../../godot/scene/canvasItem';
 import { useGroupFit } from './useGroupFit';
 
 /**
@@ -26,6 +26,11 @@ interface ClipChildrenScopeProps {
   /** The item's `clip_children`. */
   mode: number;
   state: CanvasItemState;
+  /**
+   * Whether the item y-sorts its children. Godot's y-sort branch attaches the owner's group with no
+   * child inside it, so the owner masks an empty buffer and its children draw plain.
+   */
+  isYSorted: boolean;
   /** The ranges of the children that draw behind the item, as its walk allocated them. */
   behindRanges: readonly PaintRange[];
   /** The run of draw sequences the item's subtree owns, which its group collects. */
@@ -40,11 +45,24 @@ const CLIP_MODES: ReadonlyMap<number, CanvasGroupClip['mode']> = new Map([
   [CanvasItemClipChildrenMode.AND_DRAW, 'clipAndDraw'],
 ]);
 
-export function ClipChildrenScope({ mode, state, behindRanges, range, children }: ClipChildrenScopeProps) {
+export function ClipChildrenScope({
+  mode,
+  state,
+  isYSorted,
+  behindRanges,
+  range,
+  children,
+}: ClipChildrenScopeProps) {
   const clipMode = CLIP_MODES.get(mode);
   if (!clipMode) return children;
   return (
-    <ClippingGroup mode={clipMode} state={state} behindRanges={behindRanges} range={range}>
+    <ClippingGroup
+      mode={clipMode}
+      state={state}
+      isYSorted={isYSorted}
+      behindRanges={behindRanges}
+      range={range}
+    >
       {children}
     </ClippingGroup>
   );
@@ -53,12 +71,14 @@ export function ClipChildrenScope({ mode, state, behindRanges, range, children }
 function ClippingGroup({
   mode,
   state,
+  isYSorted,
   behindRanges,
   range,
   children,
 }: {
   mode: CanvasGroupClip['mode'];
   state: CanvasItemState;
+  isYSorted: boolean;
   behindRanges: readonly PaintRange[];
   range: PaintRange;
   children: ReactNode;
@@ -73,18 +93,21 @@ function ClippingGroup({
   const { key: own, keyAt } = state;
   // Past the last key, not at `base + size`: the encoding saturates a sequence at the stride's end.
   const window = useMemo(
-    () => ({ own, from: keyAt(base), to: keyAt(base + size - 1) + 1 }),
-    [own, keyAt, base, size]
+    () =>
+      isYSorted
+        ? { own, from: own, to: own + 1 }
+        : { own, from: keyAt(base), to: keyAt(base + size - 1) + 1 },
+    [isYSorted, own, keyAt, base, size]
   );
   const behind = useMemo(
     () =>
       behindRanges
-        .filter((run) => run.size > 0)
+        .filter((run) => !isYSorted && run.size > 0)
         .map((run) => ({
           from: keyAt(run.base),
           to: keyAt(run.base + run.size - 1) + 1,
         })),
-    [behindRanges, keyAt]
+    [isYSorted, behindRanges, keyAt]
   );
   const fitRect = useGroupFit({ fitMargin: 0, clearMargin: CLEAR_MARGIN });
   // A CanvasItemMaterial replaces the clip shader of a CLIP_ONLY owner (`:2207-2216`), so its
@@ -94,7 +117,9 @@ function ClippingGroup({
     () =>
       registerCanvasGroup(scene, {
         window,
-        buffer: readsBuffer ? buffer : null,
+        kind: 'clip',
+        buffer,
+        readsBuffer,
         clip: { mode, setMasking: mask.setMasking, behind },
         fit: (drawn, _nested, frameClip) => fitRect(drawn, frameClip)?.cleared ?? null,
       }),

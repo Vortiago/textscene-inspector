@@ -47,13 +47,8 @@ export interface CanvasGroupClip {
   readonly behind: readonly KeySpan[];
 }
 
-/** What a mounted group hands the pass of its canvas. */
-export interface CanvasGroupEntry {
+interface GroupBase {
   readonly window: CanvasGroupWindow;
-  /** The target the group's items draw into while its rect reads it, or null while it does not. */
-  readonly buffer: THREE.WebGLRenderTarget | null;
-  /** Set for the owner of `clip_children`, absent for a CanvasGroup. */
-  readonly clip?: CanvasGroupClip;
   /**
    * Fits the group's rect over `drawn`, the world boxes of its drawn items, and draws it plain when
    * `nested` in another group's window. `frameClip` is the clip the frame's camera shows, null for
@@ -63,16 +58,24 @@ export interface CanvasGroupEntry {
   fit(drawn: readonly THREE.Box3[], nested: boolean, frameClip: CanvasClip | null): THREE.Box3 | null;
 }
 
-/** A group that clips: it owns a buffer and a mask. */
-export type ClippingEntry = CanvasGroupEntry & {
-  readonly buffer: THREE.WebGLRenderTarget;
-  readonly clip: CanvasGroupClip;
-};
-
-/** Whether `group` clips and reads a buffer for it. */
-function isClipping(group: CanvasGroupEntry): group is ClippingEntry {
-  return group.clip !== undefined && group.buffer !== null;
+/** A CanvasGroup: its items draw into a cleared buffer that its rect composites over the frame. */
+export interface CompositeEntry extends GroupBase {
+  readonly kind: 'composite';
+  /** The target the items draw into while the rect reads it, or null while a material replaces that. */
+  readonly buffer: THREE.WebGLRenderTarget | null;
 }
+
+/** The owner of `clip_children`: its items draw over a copy of the canvas, and its pixels take the mask. */
+export interface ClippingEntry extends GroupBase {
+  readonly kind: 'clip';
+  readonly clip: CanvasGroupClip;
+  readonly buffer: THREE.WebGLRenderTarget;
+  /** Whether the owner's shader reads `buffer`. A CanvasItemMaterial on a CLIP_ONLY owner replaces it. */
+  readonly readsBuffer: boolean;
+}
+
+/** What a mounted group hands the pass of its canvas. */
+export type CanvasGroupEntry = CompositeEntry | ClippingEntry;
 
 /** The mounted groups of one scene, and how they nest. */
 interface SceneGroups {
@@ -143,23 +146,27 @@ export function drawCanvasGroups(
   const drawing = fitGroups(nesting, drawnBoxes(keyed, nesting.innermostFirst), frameClipOf(camera, frame));
   const { outermost } = nesting;
   const inertOwners = nesting.inert.flatMap((group) =>
-    group.clip ? [{ window: group.window, behind: group.clip.behind }] : []
+    group.kind === 'clip' ? [{ window: group.window, behind: group.clip.behind }] : []
   );
-  for (const group of groups.entries) group.clip?.setMasking(false);
+  for (const group of groups.entries) if (group.kind === 'clip') group.clip.setMasking(false);
   const clipping = outermost
-    .filter((group): group is ClippingEntry => isClipping(group) && drawing.has(group))
+    .filter(
+      (group): group is ClippingEntry => group.kind === 'clip' && group.readsBuffer && drawing.has(group)
+    )
     .sort((a, b) => a.window.from - b.window.from);
   beginStep(gl, 'Canvas groups');
   try {
     for (const group of outermost) {
-      if (drawing.has(group) && !group.clip)
+      if (drawing.has(group) && group.kind === 'composite')
         withFrozenMatrices(scene, () => fillBuffer(gl, keyed, scene, camera, group, frame, inertOwners));
     }
   } finally {
     endStep(gl, 'Canvas groups');
   }
   // A CLIP_ONLY owner with no listed child is skipped (`renderer_canvas_render_rd.cpp:841-843`).
-  const skippedOwners = outermost.filter((group) => group.clip?.mode === 'clipOnly' && !drawing.has(group));
+  const skippedOwners = outermost.filter(
+    (group) => group.kind === 'clip' && group.clip.mode === 'clipOnly' && !drawing.has(group)
+  );
   const isFrameKey = frameKeyTest(outermost, skippedOwners);
   try {
     // The matrices are current from the walk above, so no span of the frame walks them again.
@@ -260,7 +267,7 @@ function frameClipOf(
 /** How the mounted groups of one scene nest. Stable while no group mounts or unmounts. */
 interface GroupNesting {
   /** The groups left out of the nesting: clipping groups whose owner draws nothing. */
-  inert: readonly CanvasGroupEntry[];
+  inert: readonly ClippingEntry[];
   /** Every group, the innermost first, so an enclosing group merges the rect of each group inside it. */
   innermostFirst: CanvasGroupEntry[];
   /** The groups whose window collects each group's own key. */
@@ -276,12 +283,12 @@ interface GroupNesting {
 function clipGroupsDrawingNothing(
   entries: ReadonlySet<CanvasGroupEntry>,
   { keys, boxes }: KeyedScene
-): CanvasGroupEntry[] {
-  const clipping = [...entries].filter((group) => group.clip);
+): ClippingEntry[] {
+  const clipping = [...entries].filter((group): group is ClippingEntry => group.kind === 'clip');
   if (clipping.length === 0) return clipping;
   // The own slots `[own, own + 1)` do not overlap, so a search finds the owner of a key.
   const byOwn = [...clipping].sort((a, b) => a.window.own - b.window.own);
-  const draws = new Set<CanvasGroupEntry>();
+  const draws = new Set<ClippingEntry>();
   for (let i = 0; i < boxes.length && draws.size < byOwn.length; i++) {
     if (!boxes[i]) continue;
     const owner = ownerOfKey(byOwn, keys[i]!);
@@ -291,7 +298,7 @@ function clipGroupsDrawingNothing(
 }
 
 /** The group whose own slot holds `key`, among `byOwn`, which are sorted by `window.own`. */
-function ownerOfKey(byOwn: readonly CanvasGroupEntry[], key: number): CanvasGroupEntry | undefined {
+function ownerOfKey(byOwn: readonly ClippingEntry[], key: number): ClippingEntry | undefined {
   let low = 0;
   let high = byOwn.length - 1;
   while (low <= high) {
@@ -305,11 +312,11 @@ function ownerOfKey(byOwn: readonly CanvasGroupEntry[], key: number): CanvasGrou
 }
 
 /** `nestingOf` over the groups that are not in `inert`, which only a clipping owner with no pixel is. */
-function nestingOf(groups: SceneGroups, inert: readonly CanvasGroupEntry[]): GroupNesting {
+function nestingOf(groups: SceneGroups, inert: readonly ClippingEntry[]): GroupNesting {
   const cached = groups.nesting;
   if (cached && cached.inert.length === inert.length && cached.inert.every((group) => inert.includes(group)))
     return cached;
-  const entries = [...groups.entries].filter((group) => !inert.includes(group));
+  const entries = [...groups.entries].filter((group) => group.kind === 'composite' || !inert.includes(group));
   const enclosing = new Map(
     entries.map((inner) => [
       inner,

@@ -456,17 +456,12 @@ export function allocatePaintRange(
 
 /**
  * Whether the previewer clips `node`'s children: a mode of 1 or 2, as `parseClipChildrenMode` reads
- * it. A y-sorted item groups nothing (`renderer_canvas_cull.cpp:437-469`), as `CanvasGroup` does.
+ * it. A y-sorted item's children draw in the sort order, outside its group.
  */
 function drawsClipped(node: TscnNode): boolean {
   const mode = ruleInt(node.rawProperties.clip_children ?? '0');
   const isClipping = mode === CanvasItemClipChildrenMode.ONLY || mode === CanvasItemClipChildrenMode.AND_DRAW;
   return isClipping && !ysortsChildren(node);
-}
-
-/** The `clip_children` mode that groups: DISABLED for a y-sorted item, which groups nothing. */
-export function groupingClipMode(node: TscnNode, mode: number): number {
-  return ysortsChildren(node) ? CanvasItemClipChildrenMode.DISABLED : mode;
 }
 
 /** Whether `node` re-orders its children by `y_sort_enabled`, so the behind/ahead split does not apply. */

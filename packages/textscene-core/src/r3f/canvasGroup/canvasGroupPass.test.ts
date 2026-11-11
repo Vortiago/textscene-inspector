@@ -11,6 +11,7 @@ import {
   drawCanvasGroups,
   registerCanvasGroup,
   type CanvasGroupEntry,
+  type CompositeEntry,
 } from './canvasGroupPass';
 
 type Target = THREE.WebGLRenderTarget | null;
@@ -82,8 +83,8 @@ function childOf(owner: THREE.Mesh, key: number, x: number): THREE.Mesh {
 /** The rect a group's `fit` answers, as a group that draws something does. */
 const FITTED = new THREE.Box3(new THREE.Vector3(-1, -1, 0), new THREE.Vector3(1, 1, 0));
 
-function entry(window: CanvasGroupEntry['window'], buffer: Target): CanvasGroupEntry {
-  return { window, buffer, fit: vi.fn(() => FITTED) };
+function entry(window: CanvasGroupEntry['window'], buffer: Target): CompositeEntry {
+  return { kind: 'composite', window, buffer, fit: vi.fn(() => FITTED) };
 }
 
 const camera = new THREE.OrthographicCamera();
@@ -261,7 +262,13 @@ describe('drawCanvasGroups', () => {
       const setMasking = vi.fn((isMasking: boolean) => {
         state.masking = isMasking;
       });
-      return { ...entry(WINDOW, buffer), clip: { mode, setMasking, behind: [] } };
+      return {
+        ...entry(WINDOW, buffer),
+        kind: 'clip' as const,
+        buffer: buffer!,
+        readsBuffer: true,
+        clip: { mode, setMasking, behind: [] },
+      };
     }
 
     /** The scene of a clipping parent at key 10 with a child at 11, drawn between a mesh before and one after. */

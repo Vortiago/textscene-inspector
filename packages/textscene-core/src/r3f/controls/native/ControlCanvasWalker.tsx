@@ -19,14 +19,14 @@ import { ControlFallback } from './ControlFallback';
 import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useInheritedTextureSampler } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
-import { ClipChildrenScope } from '../../../nodes/2d/canvasgroup/ClipChildrenScope';
+import { ClipChildrenScope } from '../../canvasGroup/ClipChildrenScope';
 import { ClipMaskProvider } from '../../canvasGroup/ClipMaskContext';
 import {
   useCanvasAncestorMaterial,
   useResolvedCanvasItemMaterial,
 } from '../../components/canvasItemMaterialContext';
 import { INHERIT_PARENT_MATERIAL } from '../../canvasAncestors';
-import { groupingClipMode, isCanvasLayerType } from '../../canvasPaintOrder';
+import { isCanvasLayerType, ysortsChildren } from '../../canvasPaintOrder';
 import { CanvasRootScope } from '../../canvasRootScope';
 import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
@@ -307,7 +307,8 @@ function ControlItemGroup({
     painter
   ) : (
     <ClipChildrenScope
-      mode={groupingClipMode(solveNode.node, props.clipChildren)}
+      mode={props.clipChildren}
+      isYSorted={ysortsChildren(solveNode.node)}
       state={state}
       behindRanges={solveNode.behindRanges}
       range={solveNode.paintRange}

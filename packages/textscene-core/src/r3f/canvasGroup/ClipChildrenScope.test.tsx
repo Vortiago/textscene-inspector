@@ -6,22 +6,22 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { offscreenRendererState } from '../../viewport/subviewport/offscreenRenderer.testkit';
-import type { TscnNode } from '../../../parser/types';
-import { Polygon2D } from '../polygon2d/Component';
-import { parsePolygon2D } from '../polygon2d/parser';
-import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
-import { canvasRenderOrder, layerRankOf, layerRanks } from '../../../r3f/canvasPaintOrder';
+import { offscreenRendererState } from '../../nodes/viewport/subviewport/offscreenRenderer.testkit';
+import type { TscnNode } from '../../parser/types';
+import { Polygon2D } from '../../nodes/2d/polygon2d/Component';
+import { parsePolygon2D } from '../../nodes/2d/polygon2d/parser';
+import { PaintRangeProvider } from '../contexts/PaintOrderContext';
+import { canvasRenderOrder, layerRankOf, layerRanks } from '../canvasPaintOrder';
 import {
   CanvasLighting2DContext,
   INERT_CANVAS_LIGHTING,
   type CanvasLighting2D,
-} from '../../../r3f/lighting2d/lightPassContext';
-import type { CanvasClip } from '../../../r3f/lighting2d/lightPassHost';
-import { drawCanvasGroups } from '../../../r3f/canvasGroup/canvasGroupPass';
+} from '../lighting2d/lightPassContext';
+import type { CanvasClip } from '../lighting2d/lightPassHost';
+import { drawCanvasGroups } from './canvasGroupPass';
 
-vi.mock('../../../r3f/texelCopy', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('../../../r3f/texelCopy')>()),
+vi.mock('../texelCopy', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../texelCopy')>()),
   copyTexels: vi.fn(),
 }));
 
@@ -163,11 +163,18 @@ describe('clip_children on a Polygon2D', () => {
     expect(draws.map(({ readsTarget }) => readsTarget)).toEqual([false, false, false, false]);
   });
 
-  it('draws a y-sorted Polygon2D as one frame, as Godot groups nothing for it', async () => {
+  it('masks a y-sorted CLIP_ONLY owner against an empty buffer and draws its child plain, as Godot does', async () => {
     const { draws } = await drawParent({ clip_children: '1', y_sort_enabled: 'true' });
 
-    expect(draws).toHaveLength(1);
-    expect(draws[0]!.seen).toEqual(['parent', 'child']);
+    // Godot's y-sort branch attaches the owner's group with no child in it (`renderer_canvas_cull.cpp:437-469`):
+    // a CLIP_ONLY owner with nothing listed is skipped, so only the child draws.
+    expect(draws.flatMap(({ seen }) => seen)).toEqual(['child']);
+  });
+
+  it('draws a y-sorted CLIP_AND_DRAW owner and its child in one frame, which the empty-buffer mask leaves as is', async () => {
+    const { draws } = await drawParent({ clip_children: '2', y_sort_enabled: 'true' });
+
+    expect(draws.map(({ seen }) => seen)).toEqual([['parent', 'child']]);
   });
 
   it('draws a Polygon2D without clip_children as one frame', async () => {

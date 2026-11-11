@@ -4,8 +4,8 @@
  */
 
 import * as THREE from 'three';
-import type { Rect2 } from '../../../godot/math/rect2';
-import type { CanvasClip } from '../../../r3f/lighting2d/lightPassHost';
+import type { Rect2 } from '../../godot/math/rect2';
+import type { CanvasClip } from '../lighting2d/lightPassHost';
 
 /** The canvas pixel rect that `box`, a world box, covers. */
 export function canvasPixelRect(box: THREE.Box3, { rect, scale }: CanvasClip): Rect2 {
