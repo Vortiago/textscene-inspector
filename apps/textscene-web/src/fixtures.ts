@@ -1928,6 +1928,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Option Menu Button Pressed",
+    "file": "unit-option-menu-button-pressed.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Orphan Reroot",
     "file": "unit-orphan-reroot.tscn",
     "category": "Other"
@@ -4322,6 +4327,16 @@ export const fixtures: Fixture[] = [
   {
     "name": "Button Expand Icon No Room",
     "file": "unit-button-expand-icon-no-room.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Button Expand Icon Wrap",
+    "file": "unit-button-expand-icon-wrap.tscn",
+    "category": "Unit - 2D UI Controls"
+  },
+  {
+    "name": "Button Family Autowrap",
+    "file": "unit-button-family-autowrap.tscn",
     "category": "Unit - 2D UI Controls"
   },
   {

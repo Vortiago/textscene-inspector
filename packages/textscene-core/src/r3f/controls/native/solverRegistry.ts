@@ -68,6 +68,9 @@ export interface SolveContext {
  */
 export type MinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vector2;
 
+/** Whether a node of a size-dependent type reads `SolveContext.tentativeRect` (`registerSizeDependentMinimum`). */
+export type SizeDependentPredicate = (n: SolveNode) => boolean;
+
 /**
  * The contents minimum a window's own properties give when its `size` is applied at load, before its
  * Controls and the tree exist (`Window::set_size` clamps in `_update_window_size`, `window.cpp:1183-1190`),
@@ -205,7 +208,7 @@ class ControlSolverRegistry {
     'controlSolverRegistry.loadedMinimumSize'
   );
   private readonly canvasBoundaryTypes = new Set<string>();
-  private readonly sizeDependentMinimumTypes = new Set<string>();
+  private readonly sizeDependentMinimumTypes = new Map<string, SizeDependentPredicate>();
 
   /**
    * Declares a type in the Control walk that is not a `CanvasItem`, such as
@@ -228,16 +231,16 @@ class ControlSolverRegistry {
 
   /**
    * Declares a type whose `MinimumSizeFn` reads `SolveContext.tentativeRect`.
-   * A set, so `solveControlTree` decides on a second pass with a membership
-   * test during `assignPaintIndex` rather than a traversal of its own.
+   * `isDependent` narrows the type to the nodes whose minimum does read it: a Button
+   * that does not wrap costs its scene no second pass.
    */
-  registerSizeDependentMinimum(typeName: string): void {
-    this.sizeDependentMinimumTypes.add(typeName);
+  registerSizeDependentMinimum(typeName: string, isDependent: SizeDependentPredicate = () => true): void {
+    this.sizeDependentMinimumTypes.set(typeName, isDependent);
   }
 
-  /** Whether this type's `MinimumSizeFn` reads `SolveContext.tentativeRect` (see `registerSizeDependentMinimum`). */
-  isSizeDependentMinimum(typeName: string): boolean {
-    return this.sizeDependentMinimumTypes.has(typeName);
+  /** Whether this node's `MinimumSizeFn` reads `SolveContext.tentativeRect`: `solveControlTree` runs its second pass for one. */
+  readsTentativeRect(n: SolveNode): boolean {
+    return this.sizeDependentMinimumTypes.get(n.node.type)?.(n) ?? false;
   }
 
   registerLoadedMinimumSize(typeName: string, fn: LoadedMinimumSizeFn): void {

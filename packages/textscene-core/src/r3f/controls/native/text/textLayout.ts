@@ -141,6 +141,11 @@ export interface ShapeTextOptions {
    */
   terminateLastParagraph?: boolean;
   /**
+   * Whether each paragraph ends with a zero-advance space glyph the break loop measures. Default true.
+   * A `TextParagraph` shapes none: a last glyph wider than the box would otherwise gain a blank row.
+   */
+  hasEndGlyph?: boolean;
+  /**
    * `Label.tab_stops` and `TextParagraph.tab_stops`, px, applied twice as `Label::_shape` does
    * (`label.cpp:196-198,228-230`): over the paragraph before line breaking, so the aligned advance
    * decides the wrap, then per line from its own pen origin. Undefined or empty is a no-op.
@@ -174,7 +179,7 @@ export interface ShapeTextOptions {
 
 /** `TextServer::LineBreakFlag` subset this module reads (`servers/text/text_server.h:113-120`). */
 const BREAK_TRIM_START_EDGE_SPACES = 1 << 6;
-const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
+export const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
 
 /** One glyph's placement within its line, in target-font-size px. */
 export interface GlyphPlacement {
@@ -761,13 +766,19 @@ function pushRunGlyphs(
  * zero-advance whitespace terminator Label appends (`label.cpp:164`). `chars` are the characters
  * the glyphs draw, mirrored where the level is odd, and `style` sets the size, face and level of each.
  */
-function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveControl = false): BreakGlyph[] {
+function toBreakGlyphs(
+  chars: ArrayLike<string>,
+  style: RunStyle,
+  preserveControl = false,
+  hasEndGlyph = true
+): BreakGlyph[] {
   const glyphs: BreakGlyph[] = [];
   for (const range of runRanges(style, chars.length))
     pushRunGlyphs(glyphs, chars, range, style, preserveControl);
   kernGlyphs(glyphs, chars, style);
   placeMarks(glyphs, style);
   roundAdvancesToWholePixels(glyphs, chars, style);
+  if (!hasEndGlyph) return glyphs;
   glyphs.push({
     start: chars.length,
     end: chars.length + 1,
@@ -1237,6 +1248,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     trimIndent = false,
     preserveControl = false,
     breakMandatory = true,
+    hasEndGlyph = true,
   } = options;
   // Uppercase before indices are assigned, so a `fontSizePxAt` keyed on the transformed text lines up.
   const transformed = uppercase ? upperCaseFor(text, language) : text;
@@ -1291,7 +1303,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       spans: spanAt ? Int32Array.from({ length: paraText.length }, (_v, i) => spanAt(sourceIndex(i))) : null,
       hasUndrawnGlyph: !spansDraw,
     };
-    const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl);
+    const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl, hasEndGlyph);
     // First tab pass: the aligned advance must be in place before line breaking measures it.
     if (hasTabStops) {
       // One entry per UTF-16 unit, as `breakGlyphs` holds them: a code-point walk shifts every

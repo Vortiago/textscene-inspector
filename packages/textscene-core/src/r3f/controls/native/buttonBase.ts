@@ -11,10 +11,17 @@
  */
 
 import { multiplyModulate } from '../../canvasItemModulate';
+import type { ShareNode, SolveNode } from './solveTree';
+import type { SolveContext } from './solverRegistry';
+import type { TextThemeKeys } from './textTheme';
+import { resolveNodeFontMetrics } from './text/resolveNodeFontMetrics';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
 import { drawnLinesInBox, textParagraphLineShiftPx } from './text/lineDrawClip';
 import {
+  BREAK_TRIM_END_EDGE_SPACES,
+  clampAutowrapMode,
+  infersRtl,
   shapeText,
   shapedTextSizeWidthPx,
   type TextLayoutResult,
@@ -27,7 +34,7 @@ import {
   type TextBufferTrimOptions,
   type TextClipProperties,
 } from './text/textOverrun';
-import type { TextBidiOptions } from './text/textBidiOptions';
+import { controlBidiOptions, type BidiProperties, type TextBidiOptions } from './text/textBidiOptions';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { type Rgba } from '../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
@@ -37,18 +44,8 @@ import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
 // --- Draw-state + StyleBox chrome ------------------------------------------
 
-export type ButtonDrawState = 'normal' | 'disabled';
-
-/** A Button's draw mode: `DRAW_PRESSED` is a toggle that is on (`base_button.cpp:352`), which only a Button has. */
-export type ToggleDrawState = ButtonDrawState | 'pressed';
-
-/**
- * `Button::get_draw_mode()` with no pointer or keyboard input: hover, pressed and
- * focus states never occur, so only an authored `disabled` leaves `normal`.
- */
-export function resolveButtonDrawState(disabled: boolean | undefined): ButtonDrawState {
-  return disabled ? 'disabled' : 'normal';
-}
+/** A Button's draw mode: `DRAW_PRESSED` is a toggle that is on (`base_button.cpp:352`). */
+export type ToggleDrawState = 'normal' | 'disabled' | 'pressed';
 
 /** `BaseButton::get_draw_mode()` with no pointer: a disabled button wins over a toggle that is on (`base_button.cpp:326-328`). */
 export function resolveToggleDrawState(
@@ -109,7 +106,7 @@ interface ButtonLabelShapeOptions {
    */
   boxWidthPx?: number;
   autowrapMode?: EnumValue<typeof AutowrapMode>;
-  /** `autowrap_flags_trim`, ORed onto the break flags at `:560`. Undefined keeps the class default, both edge-space trims. */
+  /** `autowrap_flags_trim`, ORed onto the break flags at `:560`. Undefined trims both edge spaces, Label's default: `shapeWrappedButtonLabel` passes Button's own. */
   autowrapTrimFlags?: number;
 }
 
@@ -130,9 +127,49 @@ export function shapeButtonLabel(text: string, options: ButtonLabelShapeOptions)
     // Not Label's 3: no Button-family control sets `line_spacing` on its `text_buf`
     // (`button.cpp`, `check_box.cpp`, `option_button.cpp`).
     lineSpacingPx: 0,
+    // `TextParagraph` shapes no end glyph, which would add a blank row after a glyph wider than the box.
+    hasEndGlyph: false,
     fontMetrics,
     autowrapTrimFlags,
     ...bidi,
+  });
+}
+
+/** `Button::autowrap_flags_trim` default (`button.h:48`): end spaces only, where Label also trims start spaces. */
+const BUTTON_DEFAULT_TRIM_FLAGS = BREAK_TRIM_END_EDGE_SPACES;
+
+/** The properties `Button::_shape` and `get_minimum_size_for_text_and_icon` read to wrap a label (`button.cpp:493,546-561`). */
+export interface ButtonWrapProperties {
+  autowrapMode?: number;
+  autowrapTrimFlags?: number;
+}
+
+/** Whether `props` wraps the label at its box. An out-of-range mode is OFF, as `set_autowrap_mode` leaves it. */
+export function isButtonAutowrapped(props: ButtonWrapProperties): boolean {
+  return clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF) !== AutowrapMode.AUTOWRAP_OFF;
+}
+
+/** Whether a Button-family node wraps its label, so its minimum size reads the node's own width. */
+export function isButtonNodeAutowrapped(n: SolveNode): boolean {
+  return isButtonAutowrapped(n.node.properties as ButtonWrapProperties);
+}
+
+/**
+ * The one step that shapes a Button-family label for its `autowrap_mode`: Button, CheckBox, CheckButton,
+ * MenuButton and OptionButton call it. `options.boxWidthPx` is the width the label wraps at
+ * ({@link buttonTextBufWidthPx}); it is ignored at AUTOWRAP_OFF.
+ */
+export function shapeWrappedButtonLabel(
+  text: string,
+  props: ButtonWrapProperties,
+  options: Omit<ButtonLabelShapeOptions, 'autowrapMode' | 'autowrapTrimFlags'>
+): TextLayoutResult {
+  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
+  return shapeButtonLabel(text, {
+    ...options,
+    boxWidthPx: autowrapMode === AutowrapMode.AUTOWRAP_OFF ? 0 : options.boxWidthPx,
+    autowrapMode,
+    autowrapTrimFlags: props.autowrapTrimFlags ?? BUTTON_DEFAULT_TRIM_FLAGS,
   });
 }
 
@@ -171,6 +208,8 @@ export interface ButtonContentInput {
   textNaturalSize: Vector2;
   /** Whether the shaped text infers RTL (`shaped_text_get_inferred_direction`): an overflowing CENTER line then ends at the trailing edge. */
   isTextRtl: boolean;
+  /** `clip_text`, a trimming overrun or autowrap (`button.cpp:332`): an expanded icon then keeps the text's width (`:345`). */
+  isClipped: boolean;
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): swaps the icon and text alignment sides. */
   rtl: boolean;
 }
@@ -226,8 +265,8 @@ const {
 } = VerticalAlignment;
 
 /**
- * `Button::_notification`'s icon and text placement (`button.cpp:233-456`), with
- * every clip branch at its non-clipped case: sizing reads `clip_text` and the rest.
+ * `Button::_notification`'s icon and text placement (`button.cpp:233-456`). `isClipped` is its one
+ * clip branch (`:345`); sizing reads `clip_text` and the rest.
  * `<TextRun>` has no alignment, so the TextServer's shift (`text_buf->set_alignment`)
  * folds into the text offset, as `layoutLabelLines` does for Label.
  */
@@ -245,6 +284,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     hasText,
     textNaturalSize,
     isTextRtl,
+    isClipped,
     rtl,
   } = input;
   const hSeparation = Math.max(0, hSeparationRaw);
@@ -270,7 +310,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     if (expandIcon) {
       let w = customElementSize.x;
       let h = customElementSize.y;
-      if (iconAlign !== H_CENTER && textNaturalSize.x > 0) {
+      if (!isClipped && iconAlign !== H_CENTER && textNaturalSize.x > 0) {
         w -= textNaturalSize.x + hSeparation;
       }
       if (verticalIconAlignment !== V_CENTER) {
@@ -391,6 +431,7 @@ function iconOnlyButtonIconRect(
     hasText: false,
     textNaturalSize: { x: 0, y: 0 },
     isTextRtl: false,
+    isClipped: false,
     rtl,
   });
   return icon?.rect ?? null;
@@ -426,9 +467,89 @@ export function reservedLabelBox(input: {
   return {
     leftPx: margin.left + (isReservedOnLeft ? reservedPx : 0),
     topPx: centredTextTopPx(rectSize.y - margin.top - margin.bottom, textHeightPx, margin.top),
-    widthPx: rectSize.x - margin.left - margin.right - reservedPx,
+    widthPx: reservedLabelWidthPx(rectSize.x, margin.left + margin.right, reservedPx),
     alignment: rtl ? swapAlignmentSide(textAlignment) : textAlignment,
   };
+}
+
+/** The drawable width of a label that reserves `reservedPx` beside its margins (`button.cpp:332-352,444-456`). */
+function reservedLabelWidthPx(rectWidthPx: number, marginsPx: number, reservedPx: number): number {
+  return rectWidthPx - marginsPx - reservedPx;
+}
+
+/**
+ * The shaped text size `layoutButtonContent` aligns against: the ceiled width, not the raw pen advance
+ * (`button.cpp:343,349` read the same `text_buf->get_size()` as the minimum size). The height needs no
+ * ceil: the line pitch sums independently ceiled ascent and descent and an integral theme spacing.
+ */
+export function labelNaturalSize(layout: TextLayoutResult | null): Vector2 {
+  return layout ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx } : { x: 0, y: 0 };
+}
+
+/**
+ * The width a wrapping label shapes at: what `layoutButtonContent` leaves of the box after the icon
+ * (`button.cpp:428-432`), from the label's unwrapped shape. The painter and the minimum-size solver
+ * both call it, so they wrap alike.
+ */
+export function wrappedLabelWidthPx(
+  input: Omit<ButtonContentInput, 'textNaturalSize' | 'isTextRtl'>,
+  unwrapped: TextLayoutResult | null
+): number {
+  const { drawableSize } = layoutButtonContent({
+    ...input,
+    textNaturalSize: labelNaturalSize(unwrapped),
+    isTextRtl: infersRtl(unwrapped),
+  });
+  return buttonTextBufWidthPx(drawableSize.x);
+}
+
+/** A shaped label's contribution to a minimum size: its text width ({@link textMinimumWidthPx}) and height, or none without a layout. */
+export function labelMinimumTextSize(
+  layout: TextLayoutResult | null,
+  props: TextClipProperties & ButtonWrapProperties
+): Vector2 {
+  if (!layout) return { x: 0, y: 0 };
+  return { x: textMinimumWidthPx(layout.widthPx, props), y: layout.heightPx };
+}
+
+/** The text's contribution to a CheckBox-style minimum size: its wrapped layout through {@link labelMinimumTextSize}, or none without text or a measurer. */
+export function shapedLabelMinimumTextSize(
+  n: ShareNode,
+  ctx: Pick<SolveContext, 'measureText'>,
+  props: TextClipProperties & ButtonWrapProperties & BidiProperties & { text?: string },
+  label: { fontSizePx: number; themeFontKey: string; boxWidthPx: number }
+): Vector2 {
+  const text = props.text ?? '';
+  const { fontSizePx, themeFontKey, boxWidthPx } = label;
+  // Resolved for empty text too: an unresolvable font warns once per solve, as the painter's does.
+  const fontMetrics = resolveNodeFontMetrics(n, themeFontKey);
+  return labelMinimumTextSize(
+    ctx.measureText && text.length > 0
+      ? shapeWrappedButtonLabel(text, props, {
+          fontSizePx,
+          fontMetrics,
+          bidi: controlBidiOptions(props, n),
+          boxWidthPx,
+        })
+      : null,
+    props
+  );
+}
+
+/**
+ * The width a wrapping label shapes at in `rect`: the rect less the margins and the reservation, shaped as
+ * the draw does (`button.cpp:428-432`). A minimum-size solver passes its tentative rect, which is
+ * `undefined` on the first solve pass; that pass shapes unwrapped, so the width is 0, as it is at
+ * AUTOWRAP_OFF. `reservedPx` is a function so that neither case computes the reservation.
+ */
+export function labelWrapWidthPx(
+  props: ButtonWrapProperties,
+  rect: Rect2 | undefined,
+  marginsPx: number,
+  reservedPx: () => number
+): number {
+  if (rect === undefined || !isButtonAutowrapped(props)) return 0;
+  return buttonTextBufWidthPx(reservedLabelWidthPx(rect.w, marginsPx, reservedPx()));
 }
 
 /** `button.cpp:266-275`: LEFT and RIGHT trade places under RTL, and any other value stays. */
@@ -438,12 +559,20 @@ function swapAlignmentSide(alignment: number): number {
   return alignment;
 }
 
+/** `Button::is_clipped` (`button.cpp:332`): `clip_text`, a trimming overrun or autowrap. */
+export function isButtonTextClipped(props: TextClipProperties & ButtonWrapProperties): boolean {
+  return isTextWidthClipped(props) || isButtonAutowrapped(props);
+}
+
 /**
  * A Button-family label's width contribution to the minimum size: the ceiled shaped width, or 0 when
- * {@link isTextWidthClipped}, since a narrower box cuts or trims the label.
+ * {@link isButtonTextClipped}, since a narrower box cuts, trims or wraps it (`button.cpp:493-495`).
  */
-export function textMinimumWidthPx(measuredWidthPx: number, props: TextClipProperties): number {
-  return isTextWidthClipped(props) ? 0 : shapedTextSizeWidthPx(measuredWidthPx);
+export function textMinimumWidthPx(
+  measuredWidthPx: number,
+  props: TextClipProperties & ButtonWrapProperties
+): number {
+  return isButtonTextClipped(props) ? 0 : shapedTextSizeWidthPx(measuredWidthPx);
 }
 
 /**
@@ -523,7 +652,7 @@ export function trimButtonLabel(
 }
 
 /** The width `button.cpp:424-432` gives the text buffer: the drawable width, at least 1, ceiled. */
-export function buttonTextBufWidthPx(drawableWidthPx: number): number {
+function buttonTextBufWidthPx(drawableWidthPx: number): number {
   return Math.ceil(Math.max(1, drawableWidthPx));
 }
 
@@ -563,3 +692,13 @@ export function buttonContentSize(input: ButtonContentSizeInput): Vector2 {
 
   return { x: width, y: height };
 }
+
+/**
+ * One `font_size` key for every draw state (`default_theme.cpp:153`), but a colour key per
+ * state: `font_color` and `font_disabled_color` (`:156,161`).
+ */
+export const BUTTON_THEME_KEYS: Record<ToggleDrawState, TextThemeKeys> = {
+  normal: { sizeKey: 'font_size', colorKey: 'font_color' },
+  disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
+  pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
+};

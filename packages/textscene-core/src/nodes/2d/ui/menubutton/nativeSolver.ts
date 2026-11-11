@@ -10,14 +10,14 @@
  */
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
-import type { ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
+import { BUTTON_THEME_KEYS, type ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import { type Rgba } from '../../../../godot/math/math';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
   type TextThemeDefaults,
 } from '../../../../r3f/controls/native/textTheme';
-import { BUTTON_DEFAULT_FONT_COLORS, BUTTON_THEME_KEYS, buttonMinimumSize } from '../button/nativeSolver';
+import { BUTTON_DEFAULT_FONT_COLORS, buttonMinimumSize } from '../button/nativeSolver';
 import type { MenuButtonProperties } from './types';
 
 /** `Color(1, 1, 1, 0.3)`: MenuButton's own disabled font colour (`default_theme.cpp:268`), not Button's `control_font_disabled_color` (`:161`). */

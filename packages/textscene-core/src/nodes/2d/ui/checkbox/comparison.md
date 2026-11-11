@@ -14,7 +14,8 @@ previewer draws the theme's indicator icon and the label beside it. `clip_text` 
 label's width in the minimum size, and `TextParagraph::draw` cuts the label to its paragraph
 box. The previewer does both, so a box narrower than the label shows only the glyphs that fit.
 A trimming `text_overrun_behavior` zeroes the width the same way. The previewer trims the label
-to the box, with an ellipsis where Godot adds one, as Button does.
+to the box, with an ellipsis where Godot adds one, as Button does. `autowrap_mode` wraps the label at
+its paragraph box and `autowrap_trim_flags` trims its edge spaces. The box grows to the wrapped height.
 
 ## Linting
 
@@ -46,3 +47,5 @@ outline ring (ADR-0064).
 
 ## Known limitations
 
+- **Not drawn** Button's inherited `icon` property (distinct from the check glyph) is
+  parsed but never drawn, and the minimum size and wrap width ignore it.

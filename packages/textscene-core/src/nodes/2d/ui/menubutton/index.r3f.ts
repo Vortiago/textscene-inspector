@@ -5,10 +5,11 @@
 
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import { isButtonNodeAutowrapped } from '../../../../r3f/controls/native/buttonBase';
 import { MenuButton } from './Component';
 import { menuButtonMinimumSize } from './nativeSolver';
 
 controlComponentRegistry.register({ typeName: 'MenuButton', Component: MenuButton });
 controlSolverRegistry.registerMinimumSize('MenuButton', menuButtonMinimumSize);
-// As Button's: `autowrap_mode` makes the label's height depend on this node's own width.
-controlSolverRegistry.registerSizeDependentMinimum('MenuButton');
+// As Button's: a wrapping label's height depends on this node's own width.
+controlSolverRegistry.registerSizeDependentMinimum('MenuButton', isButtonNodeAutowrapped);

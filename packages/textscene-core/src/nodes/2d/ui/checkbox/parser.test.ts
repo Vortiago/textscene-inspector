@@ -26,7 +26,7 @@ describe('parseCheckBox', () => {
   });
 });
 
-describe('parseCheckBox — clip_text', () => {
+describe('parseCheckBox: clip_text', () => {
   it('reads clip_text', () => {
     const p = parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), { text: '"Sound"', clip_text: 'true' });
     expect(p.clipText).toBe(true);
@@ -37,7 +37,7 @@ describe('parseCheckBox — clip_text', () => {
   });
 });
 
-describe('parseCheckBox — alignment', () => {
+describe('parseCheckBox: alignment', () => {
   it('reads alignment, which Button declares and CheckBox inherits', () => {
     expect(parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), { alignment: '2' }).alignment).toBe(2);
   });
@@ -47,7 +47,7 @@ describe('parseCheckBox — alignment', () => {
   });
 });
 
-describe('parseCheckBox — text_overrun_behavior', () => {
+describe('parseCheckBox: text_overrun_behavior', () => {
   it('reads text_overrun_behavior', () => {
     const p = parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), { text_overrun_behavior: '3' });
     expect(p.overrunBehavior).toBe(3);
@@ -55,5 +55,35 @@ describe('parseCheckBox — text_overrun_behavior', () => {
 
   it('leaves overrunBehavior undefined when absent', () => {
     expect(parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), {}).overrunBehavior).toBeUndefined();
+  });
+});
+
+describe('parseCheckBox: autowrap_mode and autowrap_trim_flags', () => {
+  it('reads both', () => {
+    const p = parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), {
+      autowrap_mode: '2',
+      autowrap_trim_flags: '0',
+    });
+    expect(p.autowrapMode).toBe(2);
+    expect(p.autowrapTrimFlags).toBe(0);
+  });
+
+  it('leaves both undefined when absent', () => {
+    const p = parseCheckBox(h({ name: 'Sound', type: 'CheckBox' }), {});
+    expect(p.autowrapMode).toBeUndefined();
+    expect(p.autowrapTrimFlags).toBeUndefined();
+  });
+});
+
+describe('parseCheckBox button_pressed', () => {
+  const parse = (properties: Record<string, string>) =>
+    parseCheckBox(h({ name: 'X', type: 'CheckBox' }), properties).buttonPressed;
+
+  it('is on without toggle_mode, which the constructor sets', () => {
+    expect(parse({ button_pressed: 'true' })).toBe(true);
+  });
+
+  it('is off once toggle_mode is false, as BaseButton::set_pressed refuses it', () => {
+    expect(parse({ toggle_mode: 'false', button_pressed: 'true' })).toBe(false);
   });
 });

@@ -180,7 +180,7 @@ describe('checkButtonMarginX / checkButtonMarginY (default_theme.cpp:317)', () =
   });
 });
 
-describe('checkButtonMinimumSize (check_button.cpp:64-79) — no text', () => {
+describe('checkButtonMinimumSize (check_button.cpp:64-79): no text', () => {
   it('is 2*marginX(6) + icon(32x16) width, 2*marginY(4) + icon height — (44, 24)', () => {
     expect(checkButtonMinimumSize(node({}), ctx())).toEqual({ x: 44, y: 24 });
   });
@@ -197,7 +197,7 @@ describe('checkButtonMinimumSize (check_button.cpp:64-79) — no text', () => {
   });
 });
 
-describe('checkButtonMinimumSize — with text', () => {
+describe('checkButtonMinimumSize: with text', () => {
   it('adds text width + h_separation(4) alongside the icon width; height floors on the taller of text/icon', () => {
     const result = checkButtonMinimumSize(node({ text: 'AB' }), ctx());
     // width = 12 (2*marginX) + 22 (shaped text) + 4 (h_separation) + 32 (icon) = 70.
@@ -296,7 +296,7 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
  * reserves SIDE_LEFT (`:98-104`), and the constructor's LEFT alignment (`:174`) becomes RIGHT
  * through `Button::_notification`'s swap (`button.cpp:271-275`).
  */
-describe('layoutCheckButtonContent — RTL puts the toggle on the left', () => {
+describe('layoutCheckButtonContent: RTL puts the toggle on the left', () => {
   const BASE = {
     rectSize: { x: 150, y: 28 },
     marginX: 6,
@@ -332,7 +332,7 @@ describe('layoutCheckButtonContent — RTL puts the toggle on the left', () => {
  * (`check_button.cpp:39-46`, `:109-120`): separate Theme entries the default theme fills with
  * the `toggle_*_mirrored` SVGs (`default_theme.cpp:332-335`), not a flip of the plain ones.
  */
-describe('resolveCheckButtonIconKey — RTL selects the mirrored variant', () => {
+describe('resolveCheckButtonIconKey: RTL selects the mirrored variant', () => {
   it('picks the mirrored twin of whichever state is showing', () => {
     expect(resolveCheckButtonIconKey({} as CheckButtonProperties, true)).toBe('uncheckedMirrored');
     expect(resolveCheckButtonIconKey({ buttonPressed: true } as CheckButtonProperties, true)).toBe(
@@ -351,7 +351,7 @@ describe('resolveCheckButtonIconKey — RTL selects the mirrored variant', () =>
   });
 });
 
-describe('checkButtonMinimumSize — RTL sizes off the mirrored icon pair', () => {
+describe('checkButtonMinimumSize: RTL sizes off the mirrored icon pair', () => {
   it('widens on a themed unchecked_mirrored, and ignores it under LTR', () => {
     const slots = { textureSlots: { unchecked_mirrored: { x: 40, y: 20 } } };
     expect(checkButtonMinimumSize({ ...node({}), ...slots, rtl: true }, ctx())).toEqual({ x: 52, y: 28 });
@@ -379,7 +379,7 @@ describe('checkButtonDrawnIconSize', () => {
   });
 });
 
-describe('checkButtonMinimumSize — clip_text zeroes the text width (button.cpp:493-495)', () => {
+describe('checkButtonMinimumSize: clip_text zeroes the text width (button.cpp:493-495)', () => {
   it('keeps the icon, the margins and the text height, and drops the text width and the h_separation', () => {
     const result = checkButtonMinimumSize(node({ text: 'AB', clipText: true }), ctx());
     expect(result).toEqual({ x: 12 + 32, y: 8 + FONT_HEIGHT });
@@ -391,7 +391,7 @@ describe('checkButtonMinimumSize — clip_text zeroes the text width (button.cpp
   });
 });
 
-describe('checkButtonMinimumSize — a trimming text_overrun_behavior zeroes the text width (button.cpp:493-495)', () => {
+describe('checkButtonMinimumSize: a trimming text_overrun_behavior zeroes the text width (button.cpp:493-495)', () => {
   it('drops the text width and the h_separation under OVERRUN_TRIM_ELLIPSIS', () => {
     const result = checkButtonMinimumSize(node({ text: 'AB', overrunBehavior: 3 }), ctx());
     expect(result).toEqual({ x: 12 + 32, y: 8 + FONT_HEIGHT });
@@ -400,5 +400,35 @@ describe('checkButtonMinimumSize — a trimming text_overrun_behavior zeroes the
   it('keeps the whole text width under OVERRUN_NO_TRIMMING', () => {
     const result = checkButtonMinimumSize(node({ text: 'AB', overrunBehavior: 0 }), ctx());
     expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 4 + 32);
+  });
+});
+
+describe('checkButtonMinimumSize: autowrap_mode wraps the label at the tentative width (button.cpp:429-432,493-495)', () => {
+  const text = 'alpha bravo charlie';
+
+  function minSize(props: Partial<CheckButtonProperties>, tentativeWidthPx?: number) {
+    const context: SolveContext = {
+      ...ctx(),
+      ...(tentativeWidthPx === undefined
+        ? {}
+        : { tentativeRect: () => ({ x: 0, y: 0, w: tentativeWidthPx, h: 40 }) }),
+    };
+    return checkButtonMinimumSize(node(props), context);
+  }
+
+  it('drops the text width and the h_separation, keeping the margins and the toggle', () => {
+    expect(minSize({ text, autowrapMode: 2 }).x).toBe(12 + 32);
+  });
+
+  it('grows to one font height per wrapped row at a narrow tentative width', () => {
+    expect(minSize({ text, autowrapMode: 2 }, 100).y).toBe(8 + 3 * FONT_HEIGHT);
+  });
+
+  it('stays one row high until a tentative width is known', () => {
+    expect(minSize({ text, autowrapMode: 2 }).y).toBe(8 + FONT_HEIGHT);
+  });
+
+  it('never wraps at AUTOWRAP_OFF, whatever the tentative width says', () => {
+    expect(minSize({ text }, 100).y).toBe(8 + FONT_HEIGHT);
   });
 });

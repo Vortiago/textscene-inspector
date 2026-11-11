@@ -96,3 +96,16 @@ describe('a Variant int Godot reads differently from `parseInt`', () => {
     expect(result.items?.[0]?.text).toBe('Play');
   });
 });
+
+describe('parseOptionButton button_pressed', () => {
+  const parse = (properties: Record<string, string>) =>
+    parseOptionButton(h({ name: 'O', type: 'OptionButton' }), properties).buttonPressed;
+
+  it('is on without toggle_mode: the constructor sets it (option_button.cpp:652)', () => {
+    expect(parse({ button_pressed: 'true' })).toBe(true);
+  });
+
+  it('is off once toggle_mode is false', () => {
+    expect(parse({ toggle_mode: 'false', button_pressed: 'true' })).toBe(false);
+  });
+});

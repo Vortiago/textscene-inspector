@@ -14,6 +14,7 @@ import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons'
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { isButtonAutowrapped } from '../../../../r3f/controls/native/buttonBase';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
@@ -21,8 +22,9 @@ import {
   optionButtonHSeparation,
   optionButtonTextTheme,
   pickButtonStyleBox,
-  resolveButtonDrawState,
+  resolveToggleDrawState,
   optionButtonArrowSize,
+  optionButtonLabelWrapWidthPx,
   resolveOptionButtonSelectedText,
   tintColor,
   OPTION_BUTTON_THEME_FONT_KEY,
@@ -31,7 +33,7 @@ import type { OptionButtonProperties } from './types';
 
 export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<OptionButtonProperties>(solveNode);
-  const state = resolveButtonDrawState(props.disabled);
+  const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
 
   const baseStyleBox = pickButtonStyleBox(
     solveNode.styleBoxes,
@@ -53,10 +55,25 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const bidi = useControlBidiOptions(props, solveNode);
-  const layout = useButtonLabelLayout(solveNode, OPTION_BUTTON_THEME_FONT_KEY, text, fontSizePx, bidi);
-
   // Content layout: text and arrow placement within the solved rect
   const arrowMargin = solveNode.constants.arrow_margin ?? theme.separation;
+
+  const layout = useButtonLabelLayout(solveNode, props, {
+    themeFontKey: OPTION_BUTTON_THEME_FONT_KEY,
+    text,
+    fontSizePx,
+    bidi,
+    boxWidthPx: optionButtonLabelWrapWidthPx(
+      props,
+      rect,
+      baseStyleBox.contentMargin,
+      arrowSize,
+      solveNode.constants,
+      {
+        theme,
+      }
+    ),
+  });
 
   const content = useMemo(
     () =>
@@ -105,6 +122,7 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
           layout={layout}
           overrunBehavior={props.overrunBehavior}
           bidi={bidi}
+          isWrapped={isButtonAutowrapped(props)}
           box={content.labelBox}
           fontSizePx={fontSizePx}
           tint={tintedFontColor}

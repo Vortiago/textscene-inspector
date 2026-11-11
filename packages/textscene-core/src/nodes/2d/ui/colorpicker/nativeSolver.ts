@@ -294,6 +294,7 @@ function colorPickerButtonContent(
     hasText: true,
     textNaturalSize: text.size,
     isTextRtl: text.direction.isTextRtl,
+    isClipped: false,
     rtl: text.direction.rtl,
   });
   const label = layout.labelBox!;

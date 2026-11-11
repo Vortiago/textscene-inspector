@@ -12,16 +12,21 @@
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import type { Vector2 } from '../../../../godot/math/vector';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   buttonContentSize,
   fitIconSize,
+  BUTTON_THEME_KEYS,
   pickButtonStyleBox,
   resolveToggleDrawState,
-  shapeButtonLabel,
+  shapeWrappedButtonLabel,
+  labelMinimumTextSize,
+  isButtonAutowrapped,
+  wrappedLabelWidthPx,
+  type ButtonContentInput,
   type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
-import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import {
@@ -31,7 +36,6 @@ import {
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
-import { clampAutowrapMode, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ButtonProperties } from './types';
 import {
@@ -40,7 +44,6 @@ import {
   CONTROL_FONT_FOCUS_COLOR,
   CONTROL_FONT_PRESSED_COLOR,
 } from '../../../../godot/scene/theme';
-import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 
 /**
@@ -49,16 +52,6 @@ import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBid
  * two agree on the font.
  */
 const BUTTON_THEME_FONT_KEY = 'font';
-
-/**
- * One `font_size` key for every draw state (`default_theme.cpp:153`), but a colour key per
- * state: `font_color` and `font_disabled_color` (`:156,161`).
- */
-export const BUTTON_THEME_KEYS: Record<ToggleDrawState, TextThemeKeys> = {
-  normal: { sizeKey: 'font_size', colorKey: 'font_color' },
-  disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
-  pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
-};
 
 /** Button's own `font_color` default (`default_theme.cpp:156`). */
 export const BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
@@ -143,37 +136,51 @@ export function buttonLabelShape(
   if (text.length === 0) return null;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
   const { fontSizePx } = buttonTextTheme(n, props, state, { theme });
-  const mode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
   // Not `ctx.measureText`: its `Vector2` drops the layout the painter needs, and its readiness
   // gate belongs to the solver. The painter shapes unconditionally.
-  return shapeButtonLabel(text, {
+  return shapeWrappedButtonLabel(text, props, {
     fontSizePx,
     fontMetrics: resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY),
     bidi: controlBidiOptions(props, n),
-    boxWidthPx: mode === AutowrapMode.AUTOWRAP_OFF ? 0 : boxWidthPx,
-    autowrapMode: mode,
-    autowrapTrimFlags: props.autowrapTrimFlags,
+    boxWidthPx,
   });
 }
 
-/**
- * The icon's share of the label's box, `drawable_size_remained.width`'s icon term
- * (`button.cpp:332-352`). The wrap width needs it before the text is shaped, so
- * before `layoutButtonContent` can run.
- */
-function buttonIconReservationPx(
-  n: ShareNode,
-  props: ButtonProperties,
-  ctx: Pick<SolveContext, 'theme'> & { theme: SolveContext['theme'] }
-): number {
-  if (!n.textureSize || n.textureSize.x <= 0 || n.textureSize.y <= 0) return 0;
-  if (
-    (props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT) ===
-    HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
-  )
-    return 0;
-  const iconSize = fitIconSize(n.textureSize, n.constants.icon_max_width ?? 0);
-  return Math.round(iconSize.x) + Math.max(0, n.constants.h_separation ?? ctx.theme.separation);
+interface ButtonContentInputFields {
+  alignment?: number;
+  iconAlignment?: number;
+  verticalIconAlignment?: number;
+  expandIcon?: boolean;
+  /** {@link isButtonTextClipped}. */
+  isClipped: boolean;
+  constants: SolveNode['constants'];
+  separationPx: number;
+  rtl: boolean;
+  rectSize: Vector2;
+  styleMargin: ButtonContentInput['styleMargin'];
+  iconNaturalSize: Vector2 | null;
+  hasText: boolean;
+}
+
+/** What `layoutButtonContent` reads of the node, shared by the painter and the minimum-size solver. The caller adds the shaped text's size. */
+export function buttonContentInput(
+  fields: ButtonContentInputFields
+): Omit<ButtonContentInput, 'textNaturalSize' | 'isTextRtl'> {
+  return {
+    rectSize: fields.rectSize,
+    styleMargin: fields.styleMargin,
+    hSeparation: fields.constants.h_separation ?? fields.separationPx,
+    iconMaxWidth: fields.constants.icon_max_width ?? 0,
+    // Aligned against the ceiled text width (`scene/gui/button.cpp:343,349`).
+    textAlignment: fields.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
+    iconAlignment: fields.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    verticalIconAlignment: fields.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+    expandIcon: fields.expandIcon === true,
+    iconNaturalSize: fields.iconNaturalSize,
+    hasText: fields.hasText,
+    isClipped: fields.isClipped,
+    rtl: fields.rtl,
+  };
 }
 
 /**
@@ -189,12 +196,27 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
   const hasText = (props.text ?? '').length > 0;
-  // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height
-  // depends on. Pass 1 shapes unwrapped. `is_clipped` is true under autowrap
-  // (`button.cpp:332`), so the icon's reservation does not depend on the text.
-  const tentative = ctx.tentativeRect?.(n);
+  // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height depends on.
+  // Pass 1 shapes unwrapped. The label wraps at what the painter's layout leaves beside the icon.
+  const rect = ctx.tentativeRect?.(n);
   const wrapWidthPx =
-    tentative === undefined ? 0 : tentative.w - marginX - buttonIconReservationPx(n, props, ctx);
+    ctx.measureText && rect && isButtonAutowrapped(props)
+      ? wrappedLabelWidthPx(
+          buttonContentInput({
+            ...props,
+            isClipped: true,
+            constants: n.constants,
+            separationPx: ctx.theme.separation,
+            rtl: n.rtl,
+            rectSize: { x: rect.w, y: rect.h },
+            styleMargin: styleBox.contentMargin,
+            iconNaturalSize: n.textureSize,
+            hasText,
+          }),
+          // `is_clipped` leaves the text's width out of the icon, so only an expanded icon reads its height.
+          props.expandIcon ? buttonLabelShape(n, ctx.theme) : null
+        )
+      : 0;
   // An absent `ctx.measureText` means the text contributes nothing, while the margin and
   // the icon still count (`solverRegistry.ts`'s contract).
   const layout: TextLayoutResult | null = ctx.measureText
@@ -202,14 +224,9 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
     : null;
   // `minsize` starts from `paragraph->get_size()` (`button.cpp:492`), a max
   // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`):
-  // the ceiled extent, not the raw pen advance.
-  const textSize = layout ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx } : { x: 0, y: 0 };
-  // button.cpp:493-495: `clip_text`, a trimming overrun behaviour or autowrap zeroes the
-  // text's width contribution, since a narrower box trims or wraps it. The icon still counts.
-  const autowrapMode = clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF);
-  if (isTextWidthClipped(props) || autowrapMode !== AutowrapMode.AUTOWRAP_OFF) {
-    textSize.x = 0;
-  }
+  // the ceiled extent, not the raw pen advance. Its width drops under `clip_text`, a trimming
+  // overrun behaviour or autowrap, since a narrower box trims or wraps it (`button.cpp:493-495`).
+  const textSize = labelMinimumTextSize(layout, props);
 
   const iconSize =
     !props.expandIcon && n.textureSize && n.textureSize.x > 0 && n.textureSize.y > 0

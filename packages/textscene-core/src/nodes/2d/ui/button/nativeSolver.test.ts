@@ -12,6 +12,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import * as logger from '../../../../logger';
 import type { ButtonProperties } from './types';
 import {
@@ -464,6 +465,39 @@ describe('Button.autowrap_mode (button.cpp:493,546-561)', () => {
   });
 });
 
+describe('buttonLabelShape at AUTOWRAP_OFF keeps one row per hard-break line (no end glyph)', () => {
+  const rows = (text: string) =>
+    (buttonLabelShape(node({ text }), nativeTheme(1))?.lines ?? []).map((l) => l.text);
+
+  it('keeps a trailing space on its row', () => {
+    expect(rows('ab ')).toEqual(['ab ']);
+  });
+
+  it('splits at a hard break and adds no blank row', () => {
+    expect(rows('ab\ncd')).toEqual(['ab', 'cd']);
+  });
+});
+
+describe('Button.expand_icon under autowrap shapes at the drawn width (button.cpp:332-345,428-432)', () => {
+  it('wraps the minimum at the width the expanded icon leaves, as the painter does', () => {
+    const theme = nativeTheme(1);
+    const { x: marginX, y: marginY } = contentMarginSize(theme.widgets.button.normal);
+    const rect = { x: 0, y: 0, w: 130, h: 40 };
+    // `is_clipped` keeps the text's width out of the icon's, so a square icon takes the box height.
+    const iconWidth = Math.round(rect.h - marginY);
+    const wrapWidth = Math.ceil(Math.max(1, rect.w - marginX - iconWidth - theme.separation));
+    const props = { text: 'alpha bravo charlie delta', autowrapMode: 2, expandIcon: true };
+    const expected = buttonLabelShape(node(props), theme, wrapWidth)!.heightPx;
+
+    const size = buttonMinimumSize(node(props, {}, { x: 16, y: 16 }), {
+      ...ctx(),
+      tentativeRect: () => rect,
+    });
+
+    expect(size.y).toBe(expected + marginY);
+  });
+});
+
 describe('buttonLabelShape: the wrap width and trim flags reach the shaper (button.cpp:428-432,546-561)', () => {
   function rows(props: Partial<ButtonProperties>, boxWidthPx: number): string[] {
     return (buttonLabelShape(node(props), nativeTheme(1), boxWidthPx)?.lines ?? []).map((l) => l.text);
@@ -481,7 +515,24 @@ describe('buttonLabelShape: the wrap width and trim flags reach the shaper (butt
     expect(rows({ text: 'alphabravo', autowrapMode: 1 }, 50).length).toBeGreaterThan(1);
   });
 
-  it('keeps the trailing edge space when autowrap_trim_flags clears it (label.h:45)', () => {
+  it('keeps the leading space of a row an arbitrary break starts, as Button trims only end spaces by default (button.h:48)', () => {
+    expect(rows({ text: 'supercalifragilistic expialidocious', autowrapMode: 1 }, 142)).toEqual([
+      'supercalifragilistic',
+      ' expialidocious',
+    ]);
+  });
+
+  it('adds no row for a last grapheme wider than the box: TextParagraph appends no terminator (text_paragraph.cpp)', () => {
+    expect(rows({ text: 'ab', autowrapMode: 1 }, 1)).toEqual(['a', 'b']);
+  });
+
+  it('trims that leading space once autowrap_trim_flags asks for it', () => {
+    expect(
+      rows({ text: 'supercalifragilistic expialidocious', autowrapMode: 1, autowrapTrimFlags: 64 | 128 }, 142)
+    ).toEqual(['supercalifragilistic', 'expialidocious']);
+  });
+
+  it('keeps the trailing edge space when autowrap_trim_flags clears it (button.h:48)', () => {
     // BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES is 64 | 128.
     // Authoring 0 keeps both edges.
     expect(rows({ text: 'alpha bravo', autowrapMode: 2, autowrapTrimFlags: 0 }, 50)).toEqual([
