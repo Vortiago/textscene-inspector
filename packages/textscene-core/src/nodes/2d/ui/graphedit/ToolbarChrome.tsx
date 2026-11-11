@@ -31,6 +31,7 @@ import {
 import {
   iconOnlyButtonIconRectIn,
   resolveToggleDrawState,
+  type ToggleDrawState,
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -56,6 +57,7 @@ interface GraphEditToolbarProps {
 
 interface ButtonIconProps {
   item: ToolbarItem;
+  state: ToggleDrawState;
   texture: THREE.Texture | null;
   box: StyleBoxFlatData;
   colors: GraphEditToolbarTheme['buttonColors'];
@@ -69,8 +71,7 @@ interface ButtonIconProps {
  * margins of the box its draw state reads, centred vertically, floored to a whole pixel, and modulated by
  * that state's `icon_*_color` (`button.cpp:281-288`).
  */
-function ButtonIcon({ item, texture, box, colors, tint, rtl, renderOrder }: ButtonIconProps) {
-  const state = resolveToggleDrawState(item.disabled, item.pressed);
+function ButtonIcon({ item, state, texture, box, colors, tint, rtl, renderOrder }: ButtonIconProps) {
   const iconColorSrgb = useMemo(
     () => tintColor(buttonIconColor(colors, state), tint.own),
     [colors, state, tint.own]
@@ -93,6 +94,28 @@ function ButtonIcon({ item, texture, box, colors, tint, rtl, renderOrder }: Butt
       renderOrder={renderOrder}
       canvasKey={renderOrder}
     />
+  );
+}
+
+interface ItemBoxProps {
+  box: StyleBoxFlatData;
+  rect: Rect2;
+  tint: NativeControlComponentProps['tint'];
+  renderOrder: number;
+}
+
+/** `box` over `rect` in the toolbar's coordinates, drawn only where it paints. */
+function ItemBox({ box, rect, tint, renderOrder }: ItemBoxProps) {
+  if (!isDrawn(box)) return null;
+  return (
+    <CanvasItemGroup position={[rect.x, -rect.y, 0]}>
+      <StyleBoxQuad
+        styleBox={box}
+        color={tint.own}
+        rect={{ x: 0, y: 0, w: rect.w, h: rect.h }}
+        renderOrder={renderOrder}
+      />
+    </CanvasItemGroup>
   );
 }
 
@@ -167,16 +190,7 @@ export function GraphEditToolbarChrome({
           const { labelBox } = toolbarTheme;
           return (
             <CanvasItemGroup key={item.id}>
-              {isDrawn(labelBox) && (
-                <CanvasItemGroup position={[item.rect.x, -item.rect.y, 0]}>
-                  <StyleBoxQuad
-                    styleBox={labelBox}
-                    color={tint.own}
-                    rect={{ x: 0, y: 0, w: item.rect.w, h: item.rect.h }}
-                    renderOrder={pieces.boxes.key}
-                  />
-                </CanvasItemGroup>
-              )}
+              <ItemBox box={labelBox} rect={item.rect} tint={tint} renderOrder={pieces.boxes.key} />
               <LabelledText
                 rect={contentRect(item.rect, labelBox)}
                 layout={shape(text.zoomLabel)}
@@ -191,21 +205,14 @@ export function GraphEditToolbarChrome({
         }
 
         if (item.kind === 'button') {
-          const box = toolbarTheme.buttonBoxes[resolveToggleDrawState(item.disabled, item.pressed)];
+          const state = resolveToggleDrawState(item.disabled, item.pressed);
+          const box = toolbarTheme.buttonBoxes[state];
           return (
             <CanvasItemGroup key={item.id}>
-              {isDrawn(box) && (
-                <CanvasItemGroup position={[item.rect.x, -item.rect.y, 0]}>
-                  <StyleBoxQuad
-                    styleBox={box}
-                    color={tint.own}
-                    rect={{ x: 0, y: 0, w: item.rect.w, h: item.rect.h }}
-                    renderOrder={pieces.boxes.key}
-                  />
-                </CanvasItemGroup>
-              )}
+              <ItemBox box={box} rect={item.rect} tint={tint} renderOrder={pieces.boxes.key} />
               <ButtonIcon
                 item={item}
+                state={state}
                 texture={iconTextures[item.id] ?? null}
                 box={box}
                 colors={toolbarTheme.buttonColors}
@@ -225,14 +232,7 @@ export function GraphEditToolbarChrome({
         const downPos = arrowPosition(item.rect, layout.downRect);
         return (
           <CanvasItemGroup key={item.id}>
-            <CanvasItemGroup position={[fieldRect.x, -fieldRect.y, 0]}>
-              <StyleBoxQuad
-                styleBox={fieldBox}
-                color={tint.own}
-                rect={{ x: 0, y: 0, w: fieldRect.w, h: fieldRect.h }}
-                renderOrder={pieces.boxes.key}
-              />
-            </CanvasItemGroup>
+            <ItemBox box={fieldBox} rect={fieldRect} tint={tint} renderOrder={pieces.boxes.key} />
             <LabelledText
               rect={fieldRect}
               layout={shape(text.snappingDistance)}

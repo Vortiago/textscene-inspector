@@ -5,7 +5,7 @@
  * (`Control::get_theme_stylebox`, `control.cpp:3078`), not the GraphEdit's own.
  */
 import type { Rgba } from '../../../../godot/math/math';
-import { themeResolutionScope } from '../../../../resources/styles/theme/lookup';
+import { buildThemeTypeChain } from '../../../../resources/styles/theme/lookup';
 import { perObject } from '../../../../utils/perObject';
 import { pickButtonStyleBox, type ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import { buttonBoxesInChain, LABEL_NORMAL_BOX } from '../../../../r3f/controls/native/defaultThemeButton';
@@ -35,22 +35,22 @@ export interface GraphEditToolbarTheme {
   spinBoxColors: SolveNode['colors'];
 }
 
+/** Written only by `graphEditToolbarTheme`. A node is replaced when the scene changes. */
+const toolbarThemesOf = perObject((_node: SolveNode) => new WeakMap<NativeTheme, GraphEditToolbarTheme>());
+
 /** The toolbar's items for one node and theme, built once: the solver and the painter read the same object. */
 export const graphEditToolbarTheme = (n: SolveNode, theme: NativeTheme): GraphEditToolbarTheme =>
   toolbarThemesOf(n).get(theme) ?? buildToolbarTheme(n, theme);
-
-/** Written only by `graphEditToolbarTheme`. A node is replaced when the scene changes. */
-const toolbarThemesOf = perObject((_node: SolveNode) => new WeakMap<NativeTheme, GraphEditToolbarTheme>());
 
 function buildToolbarTheme(n: SolveNode, theme: NativeTheme): GraphEditToolbarTheme {
   const button = internalChildThemeItems(n, 'Button', TOOLBAR_BUTTON_VARIATION);
   const label = internalChildThemeItems(n, 'Label');
   const field = spinBoxFieldThemeItems(n);
-  const { typeChain } = themeResolutionScope(
+  const typeChain = buildThemeTypeChain(
     'Button',
     TOOLBAR_BUTTON_VARIATION,
     n.themeChain,
-    n.projectFonts
+    n.projectFonts.projectTheme
   );
   const defaults = buttonBoxesInChain(theme, typeChain);
   const buttonBox = (state: ToggleDrawState) => pickButtonStyleBox(button.styleBoxes, defaults, state, n.rtl);

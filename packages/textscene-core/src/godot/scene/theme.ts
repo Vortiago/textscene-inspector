@@ -29,6 +29,9 @@ export const CONTROL_FONT_PLACEHOLDER_COLOR: Rgba = { ...CONTROL_FONT_COLOR, a: 
 /** `control_font_pressed_color` (`default_theme.cpp:108`). */
 export const CONTROL_FONT_PRESSED_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
+/** `Label`'s `font_color` (`default_theme.cpp:383`): opaque white. */
+export const LABEL_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+
 /** `default_font_size` = 16 (px). */
 export const DEFAULT_FONT_SIZE = 16;
 

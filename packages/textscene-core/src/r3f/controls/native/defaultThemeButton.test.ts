@@ -83,19 +83,24 @@ describe('buttonBoxesOf', () => {
     expect(buttonBoxesOf(button('NoSuchVariation'), THEME)).toEqual(THEME.widgets.button);
   });
 
-  it('resolves once for each node and theme', () => {
-    const node = button('FlatButton');
-    expect(buttonBoxesOf(node, THEME)).toBe(buttonBoxesOf(node, THEME));
+  it('returns the theme boxes themselves where the chain sets none', () => {
+    expect(buttonBoxesOf(button(), THEME)).toBe(THEME.widgets.button);
   });
 });
 
 describe('defaultFontColorOf', () => {
-  it("is white for a Label variation, which Label's font_color sets before Button's", () => {
-    expect(defaultFontColorOf(button('HeaderSmall'), CONTROL_FONT_COLOR)).toEqual(WHITE);
+  const colors = { normal: CONTROL_FONT_COLOR, pressed: WHITE, disabled: CONTROL_FONT_COLOR };
+
+  it("is white in the normal state for a Label variation, which Label's font_color sets before Button's", () => {
+    expect(defaultFontColorOf(button('HeaderSmall'), colors, 'normal')).toEqual(WHITE);
   });
 
-  it('is the fallback for FlatButton and for no variation', () => {
-    expect(defaultFontColorOf(button('FlatButton'), CONTROL_FONT_COLOR)).toEqual(CONTROL_FONT_COLOR);
-    expect(defaultFontColorOf(button(), CONTROL_FONT_COLOR)).toEqual(CONTROL_FONT_COLOR);
+  it("is the class's own colour in every other state of a Label variation", () => {
+    expect(defaultFontColorOf(button('HeaderSmall'), colors, 'disabled')).toBe(colors.disabled);
+  });
+
+  it("is the class's own colour for FlatButton and for no variation", () => {
+    expect(defaultFontColorOf(button('FlatButton'), colors, 'normal')).toBe(colors.normal);
+    expect(defaultFontColorOf(button(), colors, 'normal')).toBe(colors.normal);
   });
 });

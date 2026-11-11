@@ -5,14 +5,15 @@
  */
 
 import { neutralStyleBox } from '../../../resources/styles/stylebox/decode';
-import { themeResolutionScope } from '../../../resources/styles/theme/lookup';
+import { buildThemeTypeChain } from '../../../resources/styles/theme/lookup';
+import { LABEL_FONT_COLOR } from '../../../godot/scene/theme';
 import { perObject } from '../../../utils/perObject';
 import type { ShareNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Rgba } from '../../../godot/math/math';
-import { LABEL_DEFAULT_FONT_COLOR } from '../../../nodes/2d/ui/label/nativeSolver';
+import type { ToggleDrawState } from './buttonBase';
 
 /** The boxes a Button draws by draw state: `NativeTheme`'s own, or the default theme's for a variation. */
 export type ButtonBoxes = NativeTheme['widgets']['button'];
@@ -29,7 +30,7 @@ const PRESSED_ALPHA = 0.85;
  * The boxes of `FlatButton` and `FlatMenuButton` (`default_theme.cpp:366-375`), built once per theme: an empty
  * box that keeps `button_normal`'s margins, which `widgets.flatMenuButton` holds, and a darker pressed box.
  */
-export const flatButtonBoxes = perObject((theme: NativeTheme): Required<TypeBoxes> => {
+const flatButtonBoxes = perObject((theme: NativeTheme): Required<TypeBoxes> => {
   const { normal: empty, disabled } = theme.widgets.flatMenuButton;
   const { pressed } = theme.widgets.button;
   return {
@@ -43,67 +44,59 @@ export const flatButtonBoxes = perObject((theme: NativeTheme): Required<TypeBoxe
 /** `Label`'s `normal`, a `StyleBoxEmpty` with no margin (`default_theme.cpp:379`): a Button on a Label variation reads it. */
 export const LABEL_NORMAL_BOX = neutralStyleBox({ left: 0, top: 0, right: 0, bottom: 0 });
 
-/** Every type that sets a Button box in the default theme and is not `Button` itself. */
-const TYPE_BOXES: Readonly<Record<string, (theme: NativeTheme) => TypeBoxes>> = {
-  FlatButton: flatButtonBoxes,
-  FlatMenuButton: flatButtonBoxes,
-  Label: () => ({ normal: LABEL_NORMAL_BOX }),
-};
+const LABEL_BOXES: TypeBoxes = { normal: LABEL_NORMAL_BOX };
 
-const BOX_NAMES: readonly BoxName[] = ['normal', 'hover', 'pressed', 'disabled'];
+/** The boxes each type other than `Button` sets in the default theme. */
+function typeBoxes(type: string, theme: NativeTheme): TypeBoxes | undefined {
+  if (type === 'FlatButton' || type === 'FlatMenuButton') return flatButtonBoxes(theme);
+  return type === 'Label' ? LABEL_BOXES : undefined;
+}
 
 /**
  * `Control::get_theme_stylebox` over the default theme (`theme_owner.cpp:236-245`): each box comes from the
  * first type of `typeChain` that sets it, and from `Button` where none does. A box a scene Theme sets is
- * not read here: the caller lets it win.
+ * not read here: the caller lets it win. A chain that sets none returns `Button`'s own boxes.
  */
 export function buttonBoxesInChain(theme: NativeTheme, typeChain: readonly string[]): ButtonBoxes {
-  const boxes = { ...theme.widgets.button };
-  for (const name of BOX_NAMES) {
-    for (const type of typeChain) {
-      const given = Object.hasOwn(TYPE_BOXES, type) ? TYPE_BOXES[type]!(theme)[name] : undefined;
-      if (!given) continue;
-      boxes[name] = given;
-      break;
+  let boxes: ButtonBoxes | undefined;
+  const taken = new Set<BoxName>();
+  for (const type of typeChain) {
+    const given = typeBoxes(type, theme);
+    if (!given) continue;
+    boxes ??= { ...theme.widgets.button };
+    for (const name of Object.keys(given) as BoxName[]) {
+      if (taken.has(name)) continue;
+      taken.add(name);
+      boxes[name] = given[name]!;
     }
   }
-  return boxes;
+  return boxes ?? theme.widgets.button;
 }
 
 /** Written only by `typeChainOf`. A node is replaced when the scene changes, so its chain resolves once. */
-const typeChains = perObject(
-  (n: ShareNode): readonly string[] =>
-    themeResolutionScope(
-      n.node.type,
-      (n.node.properties as ControlProperties).themeTypeVariation,
-      n.themeChain,
-      n.projectFonts
-    ).typeChain
+const typeChains = perObject((n: ShareNode): readonly string[] =>
+  buildThemeTypeChain(
+    n.node.type,
+    (n.node.properties as ControlProperties).themeTypeVariation,
+    n.themeChain,
+    n.projectFonts.projectTheme
+  )
 );
-
-/** Written only by `buttonBoxesOf`. */
-const boxesOfNode = perObject((_node: ShareNode) => new WeakMap<NativeTheme, ButtonBoxes>());
 
 /** The default-theme Button boxes of `n`, by its own type and `theme_type_variation`. */
 export function buttonBoxesOf(n: ShareNode, theme: NativeTheme): ButtonBoxes {
-  const byTheme = boxesOfNode(n);
-  const known = byTheme.get(theme);
-  if (known) return known;
-  const boxes = buttonBoxesInChain(theme, typeChains(n));
-  byTheme.set(theme, boxes);
-  return boxes;
+  return buttonBoxesInChain(theme, typeChains(n));
 }
 
-/** `Label`'s `font_color` (`default_theme.cpp:383`), which a Button on a Label variation reads before its own. */
-const TYPE_FONT_COLORS: Readonly<Record<string, Rgba>> = { Label: LABEL_DEFAULT_FONT_COLOR };
-
 /**
- * The default theme's `font_color` for `n`: the first type of its chain that sets one, else `fallback`,
- * the colour its own class sets. A colour a scene Theme sets is not read here: the caller lets it win.
+ * The default theme's `font_color` for `n` in `state`: `Label` sets one (`default_theme.cpp:383`), which a
+ * Button on a Label variation reads in the normal state, since Label sets no other state's colour. Else
+ * `colors[state]`, the colour its own class sets. A colour a scene Theme sets is not read here.
  */
-export function defaultFontColorOf(n: ShareNode, fallback: Rgba): Rgba {
-  for (const type of typeChains(n)) {
-    if (Object.hasOwn(TYPE_FONT_COLORS, type)) return TYPE_FONT_COLORS[type]!;
-  }
-  return fallback;
+export function defaultFontColorOf(
+  n: ShareNode,
+  colors: Readonly<Record<ToggleDrawState, Rgba>>,
+  state: ToggleDrawState
+): Rgba {
+  return state === 'normal' && typeChains(n).includes('Label') ? LABEL_FONT_COLOR : colors[state];
 }

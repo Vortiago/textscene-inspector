@@ -42,7 +42,7 @@ function themeSearchOrder(
  * type names one item lookup tries, in order. The native inheritance chain is
  * always appended, whatever the variation walk finds.
  */
-function buildThemeTypeChain(
+export function buildThemeTypeChain(
   nativeType: string,
   typeVariation: string | undefined,
   ancestorThemes: readonly ThemeResource[],
