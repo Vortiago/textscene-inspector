@@ -53,13 +53,24 @@ export type CapturePingMessage = {
   pingId: string;
 };
 
+/**
+ * Whether the panel's tab shows. A hidden panel keeps its webview alive
+ * (`retainContextWhenHidden`), so the webview stops rendering until it shows again. Posted once
+ * after `webviewReady`, and on each change.
+ */
+export type PreviewVisibilityMessage = {
+  type: 'previewVisibility';
+  isVisible: boolean;
+};
+
 export type HostToWebviewMessage =
   | LoadTscnMessage
   | ResourceLoadedMessage
   | ResourceLoadErrorMessage
   | ResourceChangedMessage
   | CapturePreviewMessage
-  | CapturePingMessage;
+  | CapturePingMessage
+  | PreviewVisibilityMessage;
 
 /**
  * Anything can post to a webview, so a listener narrows before it reads: a
