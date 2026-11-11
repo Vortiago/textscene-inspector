@@ -102,8 +102,8 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
   // Not built for a texture box, but the hook always runs, so the hook order
   // never depends on `kind`.
   const flatGeometry = useMemo(
-    () => (kind === 'texture' ? null : buildGeometry(tintedStyleBox, flatRect)),
-    [tintedStyleBox, flatRect, kind]
+    () => (kind === 'texture' || !isDrawn(flatBox) ? null : buildGeometry(tintedStyleBox, flatRect)),
+    [tintedStyleBox, flatBox, flatRect, kind]
   );
   // R3F does not dispose a geometry passed through `attach="geometry"`.
   useDisposeOnRelease(flatGeometry);
@@ -121,7 +121,7 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
     );
   }
 
-  if (!flatGeometry || !isDrawn(flatBox)) return null;
+  if (!flatGeometry) return null;
 
   const program = materialProgramInputs({
     props: {

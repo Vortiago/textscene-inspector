@@ -1,0 +1,62 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitgraphtitlenorm"]
+
+; The title Label of a GraphNode or GraphFrame is a Label, so a Theme `normal` box on Label draws under the title, adds
+; its margins to the title minimum size and offsets the title text (label.cpp:472-512,757-775,983-996). The Theme on each
+; node is the one variable. A plain node and a plain frame sit beside them.
+
+[sub_resource type="StyleBoxFlat" id="Title_normal"]
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 14.0
+content_margin_bottom = 4.0
+bg_color = Color(0.5, 0.25, 0.1, 1)
+
+[sub_resource type="Theme" id="Theme_title"]
+Label/styles/normal = SubResource("Title_normal")
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.2, 0.2, 0.2, 1)
+
+[node name="PlainNode" type="GraphNode" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 168.0
+offset_bottom = 88.0
+title = "Plain"
+
+[node name="BoxedNode" type="GraphNode" parent="."]
+layout_mode = 0
+offset_left = 176.0
+offset_top = 8.0
+offset_right = 336.0
+offset_bottom = 88.0
+theme = SubResource("Theme_title")
+title = "Boxed node"
+
+[node name="PlainFrame" type="GraphFrame" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 104.0
+offset_right = 168.0
+offset_bottom = 184.0
+title = "Plain frame"
+
+[node name="BoxedFrame" type="GraphFrame" parent="."]
+layout_mode = 0
+offset_left = 176.0
+offset_top = 104.0
+offset_right = 336.0
+offset_bottom = 184.0
+theme = SubResource("Theme_title")
+title = "Boxed frame"

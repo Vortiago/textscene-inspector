@@ -13,6 +13,7 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { PositionedStyleBox } from '../../../../r3f/controls/native/PositionedStyleBox';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { isStyleBoxTexture, type ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -97,9 +98,19 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
     () =>
       titleLayout
         ? // `title_label` sets `HORIZONTAL_ALIGNMENT_CENTER` explicitly (`graph_frame.cpp:356`): alignment 1.
-          layoutLabelLines(titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h, 1, undefined)
+          layoutLabelLines(
+            titleLayout,
+            titlebarBand.contentRect.w,
+            titlebarBand.contentRect.h,
+            1,
+            undefined,
+            undefined,
+            {
+              contentMargin: fontTheme.box.contentMargin,
+            }
+          )
         : [],
-    [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h]
+    [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h, fontTheme.box]
   );
   const titleLineLayouts = useMemo(
     () => (titleLayout ? titlePlacements.map((p) => soloLineLayout(p.line, titleLayout)) : []),
@@ -137,6 +148,12 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
         renderOrder={renderOrder}
       />
 
+      <PositionedStyleBox
+        box={fontTheme.box}
+        rect={titlebarBand.contentRect}
+        tint={tint}
+        renderOrder={renderOrder}
+      />
       {titleLayout &&
         titlePlacements.map((placement, i) => (
           <CanvasItemGroup

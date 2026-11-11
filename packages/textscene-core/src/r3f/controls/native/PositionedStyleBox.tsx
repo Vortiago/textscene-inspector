@@ -3,10 +3,10 @@ import type { NativeControlComponentProps } from '../ControlComponentRegistry';
 import { CanvasItemGroup } from '../../components/CanvasItemGroup';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { StyleBoxQuad } from './StyleBoxQuad';
-import type { StyleBoxFlatData } from './styleBoxFlat';
+import type { ResolvedStyleBox } from './parseStyleBox';
 
 interface PositionedStyleBoxProps {
-  box: StyleBoxFlatData;
+  box: ResolvedStyleBox;
   rect: Rect2;
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;

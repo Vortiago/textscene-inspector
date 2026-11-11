@@ -169,6 +169,7 @@ export function GraphEditToolbarChrome({
                 }}
                 rtl={rtl}
                 renderOrder={pieces.content.key}
+                boxRenderOrder={pieces.boxes.key}
               />
             </CanvasItemGroup>
           );

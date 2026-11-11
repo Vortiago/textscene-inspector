@@ -1188,6 +1188,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Title Theme Normal Box",
+    "file": "unit-graph-title-theme-normal-box.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Grid Map Billboard Shadow",
     "file": "unit-grid-map-billboard-shadow.tscn",
     "category": "Other"

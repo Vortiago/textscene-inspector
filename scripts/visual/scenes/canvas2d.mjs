@@ -434,6 +434,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'label-default-theme-variations', file: 'unit-label-default-theme-variations.tscn', mode: '2d' },
   // The one variable: the Theme `font_color` of Label on a GraphNode and a GraphFrame title (Godot 4.6.3 `--mode 2d`: max 2 of 255).
   { name: 'graph-title-theme-colour', file: 'unit-graph-title-theme-colour.tscn', mode: '2d' },
+  // The one variable: the Theme `normal` StyleBox of Label on a GraphNode and a GraphFrame title (Godot 4.6.3 `--mode 2d`: max 2 of 255).
+  { name: 'graph-title-theme-normal-box', file: 'unit-graph-title-theme-normal-box.tscn', mode: '2d' },
   // The one variable: the theme text outline of Button, CheckBox, CheckButton, OptionButton and MenuButton.
   { name: 'button-family-outline', file: 'unit-button-family-outline.tscn', mode: '2d' },
   // The one variable: the theme text outline of LinkButton, the FoldableContainer title and ItemList

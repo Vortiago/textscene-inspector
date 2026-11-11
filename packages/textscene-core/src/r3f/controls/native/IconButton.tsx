@@ -23,10 +23,22 @@ interface IconButtonProps {
   iconTint: NativeControlComponentProps['tint'];
   rtl: boolean;
   renderOrder: number;
+  /** The order of the box when it differs from the icon's. Defaults to `renderOrder`. */
+  boxRenderOrder?: number;
 }
 
 /** The icon sits at the whole pixel `Button` floors to. */
-export function IconButton({ rect, box, size, texture, tint, iconTint, rtl, renderOrder }: IconButtonProps) {
+export function IconButton({
+  rect,
+  box,
+  size,
+  texture,
+  tint,
+  iconTint,
+  rtl,
+  renderOrder,
+  boxRenderOrder = renderOrder,
+}: IconButtonProps) {
   const iconRect = texture
     ? iconOnlyButtonIconRectIn(
         rect,
@@ -38,7 +50,7 @@ export function IconButton({ rect, box, size, texture, tint, iconTint, rtl, rend
     : null;
   return (
     <>
-      <PositionedStyleBox box={box} rect={rect} tint={tint} renderOrder={renderOrder} />
+      <PositionedStyleBox box={box} rect={rect} tint={tint} renderOrder={boxRenderOrder} />
       {iconRect && (
         <PositionedIcon
           rect={iconRect}

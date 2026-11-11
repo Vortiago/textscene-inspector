@@ -24,11 +24,15 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { internalChildThemeItems } from '../../../../r3f/controls/native/themeItems';
 import { layoutLabelLines, LABEL_LINE_SPACING_PX, LABEL_PARAGRAPH_SEPARATOR } from '../label/nativeSolver';
 import type { Rgba } from '../../../../godot/math/math';
 import { LABEL_FONT_COLOR } from '../../../../godot/scene/theme';
-import { defaultLabelFontColorInChain } from '../../../../r3f/controls/native/defaultThemeItems';
+import {
+  defaultLabelFontColorInChain,
+  LABEL_NORMAL_BOX,
+} from '../../../../r3f/controls/native/defaultThemeItems';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `title_label`'s real Godot class: both variations are declared `set_type_variation("Label")`. */
@@ -38,6 +42,8 @@ interface TitlebarFontTheme {
   fontSizePx: number;
   color: Rgba;
   fontMetrics: FontMetrics;
+  /** `title_label`'s `normal` box: the Theme chain's, else Label's empty one. */
+  box: ResolvedStyleBox;
 }
 
 /**
@@ -57,11 +63,13 @@ export function resolveTitleFontTheme(
   const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined, defaultSizePx);
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
-  const color = internalChildThemeItems(n, TITLE_LABEL_NATIVE_TYPE, typeVariation).colors.font_color;
+  const items = internalChildThemeItems(n, TITLE_LABEL_NATIVE_TYPE, typeVariation);
+  const color = items.colors.font_color;
   return {
     fontSizePx,
     color: color ?? defaultLabelFontColorInChain(scope.typeChain) ?? LABEL_FONT_COLOR,
     fontMetrics,
+    box: items.styleBoxes.normal ?? LABEL_NORMAL_BOX,
   };
 }
 
@@ -81,8 +89,14 @@ export function shapeTitleText(text: string, fontTheme: TitlebarFontTheme): Text
   });
 }
 
-/** The shaped title's own minimum size: `Label::get_minimum_size`'s OFF branch (`label.cpp:992-996`), empty-text short-circuit included. */
+/** The shaped title's own minimum size: `Label::get_minimum_size`'s OFF branch (`label.cpp:983-996`), the `normal` box margins and the empty-text short-circuit included. */
 export function titleTextMinimumSize(text: string, fontTheme: TitlebarFontTheme): { x: number; y: number } {
+  const { left, top, right, bottom } = fontTheme.box.contentMargin;
+  const textSize = shapedTitleTextSize(text, fontTheme);
+  return { x: textSize.x + left + right, y: textSize.y + top + bottom };
+}
+
+function shapedTitleTextSize(text: string, fontTheme: TitlebarFontTheme): { x: number; y: number } {
   if (text.length === 0) {
     // `label.cpp:239-241`: `Size2(1, get_line_height())`: `get_line_height()`
     // with no shaped lines returns `font->get_height(font_size)`, no

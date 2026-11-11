@@ -218,7 +218,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
           rtl: solveNode.rtl,
           isAutowrapped: autowrapMode !== AutowrapMode.AUTOWRAP_OFF,
           trim,
-          contentMargin: contentMargin,
+          contentMargin,
           lineSpacingPx: textTheme.lineSpacingPx,
           paragraphSpacingPx: textTheme.paragraphSpacingPx,
         }
@@ -265,17 +265,21 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
 
   const lineLayouts = useSoloLineLayouts(revealedPlacements, layout);
 
+  // `Label::_notification` draws the box before any text, so a loading font leaves it drawn.
+  const box =
+    style === LABEL_NORMAL_BOX ? null : (
+      <StyleBoxQuad styleBox={style} color={tint.own} rect={ownRect} renderOrder={renderOrder} />
+    );
+
   // A settings font that is still loading draws nothing, never the theme font (ADR-0059).
-  if (isFontLoading) return <CanvasItemGroup ref={anchorRef} />;
+  if (isFontLoading) return <CanvasItemGroup ref={anchorRef}>{box}</CanvasItemGroup>;
 
   // Each run takes `renderOrder` itself, since three never inherits it, and sits in a
   // `<CanvasItemGroup>`, since three reads the nearest group's order first and a bare `<group>`
   // resets it to zero (`r3f/canvasPaintOrder.ts`).
   return (
     <CanvasItemGroup ref={anchorRef}>
-      {style !== LABEL_NORMAL_BOX && (
-        <StyleBoxQuad styleBox={style} color={tint.own} rect={ownRect} renderOrder={renderOrder} />
-      )}
+      {box}
       {layers.map((layer, layerIndex) => (
         <LayerRuns
           key={layerIndex}
