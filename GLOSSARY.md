@@ -365,6 +365,11 @@ A tool the VS Code extension registers through `vscode.lm` for a coding agent in
 The agent tools lint a scene, read its node tree, open or capture its preview, and list its missing resources.
 _Avoid_: "action" for an agent tool.
 
+**Preview visibility** (`r3f/contexts/PreviewVisibilityContext.tsx`):
+Whether the host shows the preview: the VS Code panel's `visible`, or the web page's `document.visibilityState`.
+A hidden preview renders no frame and runs no frame callback, except while its scene still loads, and a capture of it renders one frame with no time passed.
+_Avoid_: "active" for a VS Code panel, which means it has focus. A panel in an unfocused window is still visible.
+
 ### Code organisation
 
 **Vertical slice**:

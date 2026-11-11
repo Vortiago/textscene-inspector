@@ -20,6 +20,7 @@ import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
 import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls.js';
 import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
+import { usePreviewFrameloop } from './contexts/PreviewVisibilityContext.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { installShaderPatches } from './shaderPatch/installShaderPatches.js';
@@ -123,6 +124,7 @@ function EmptySceneIndicator() {
 
 /** Reads everything from context. A test mounts `<TscnSceneContents>` instead. */
 export function TscnCanvas() {
+  const frameloop = usePreviewFrameloop();
   return (
     <div className={styles.root}>
       {/* Without `shadows`, a `shadow_enabled = true` light casts nothing. `percentage`
@@ -143,6 +145,7 @@ export function TscnCanvas() {
         shadows="percentage"
         gl={{ localClippingEnabled: true, antialias: false }}
         flat
+        frameloop={frameloop}
         onCreated={installShaderPatches}
       >
         <CanvasServices />

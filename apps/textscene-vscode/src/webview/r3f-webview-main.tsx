@@ -59,6 +59,8 @@ class WebviewLogAdapter implements LogAdapter {
 
 function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   const [content, setContent] = useState<string>('');
+  /** Written by the host's `previewVisibility`. A host that never posts one shows the preview. */
+  const [isVisible, setIsVisible] = useState(true);
   /** The scene text last handed to the shell. Written only by the `loadTscn` handler. */
   const contentRef = useRef('');
 
@@ -111,6 +113,8 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
       } else if (message.type === 'capturePreview') {
         if (captureStateRef.current.status === 'pending') heldRequestsRef.current.push(message.requestId);
         else vscode.postMessage(captureAnswer(message.requestId, captureStateRef.current));
+      } else if (message.type === 'previewVisibility') {
+        setIsVisible(message.isVisible);
       } else if (message.type === 'capturePing') {
         vscode.postMessage({ type: 'capturePong', pingId: message.pingId } satisfies WebviewToHostMessage);
       }
@@ -155,6 +159,7 @@ function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
         onCopyNodePath={handleCopyNodePath}
         initialViewportMode={INITIAL_VIEWPORT_MODE}
         onCaptureStateChange={handleCaptureStateChange}
+        isVisible={isVisible}
       />
     </ResourceLoaderProvider>
   );
