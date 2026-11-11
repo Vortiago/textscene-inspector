@@ -4,6 +4,7 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { degToRad } from '../godot/math/math';
 import {
   drag,
   keyDown,
@@ -224,9 +225,7 @@ describe('toggled freelook', () => {
     const turned = viewDirection(camera).angleTo(direction);
     const pitch = Math.asin(direction.y);
     // A yaw of 10 degrees sweeps a pitched view direction through a smaller angle.
-    const expected =
-      2 *
-      Math.asin(Math.cos(pitch) * Math.sin(THREE.MathUtils.degToRad(40 * FREELOOK_DEGREES_PER_PIXEL) / 2));
+    const expected = 2 * Math.asin(Math.cos(pitch) * Math.sin(degToRad(40 * FREELOOK_DEGREES_PER_PIXEL) / 2));
     expect(turned).toBeCloseTo(expected, 9);
     expect(camera.position.distanceTo(eye)).toBeLessThan(1e-9);
   });

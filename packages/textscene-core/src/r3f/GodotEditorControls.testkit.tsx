@@ -6,7 +6,8 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer, { act } from '@react-three/test-renderer';
 import type { RootState } from '@react-three/fiber';
 import { r3fStateProbe } from './testing/R3FStateProbe';
-import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls';
+import { EditorControlsHandle } from './EditorControlsHandle';
+import { GodotEditorControls } from './GodotEditorControls';
 
 type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 

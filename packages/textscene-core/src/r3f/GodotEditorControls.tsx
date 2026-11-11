@@ -13,8 +13,6 @@ import { EditorControlsHandle } from './EditorControlsHandle.js';
 import { useEditorNavigation } from './useEditorNavigation.js';
 import { useFreelook } from './useFreelook.js';
 
-export { EditorControlsHandle } from './EditorControlsHandle.js';
-
 // No damping: Godot's `orbit_inertia` and `freelook_inertia` default to 0, and a camera that
 // stops dead settles at once for the capture harnesses. F belongs to `<FrameSelectedShortcut>`.
 export function GodotEditorControls() {
