@@ -88,26 +88,6 @@ jobs:
               | "## \(.author.login), \(.createdAt // .submittedAt)\n\n\(.body)\n")
           ' > "$PR_CONTEXT/conversation.md"
 
-      # TEMPORARY measurement, removed before the final head.
-      - name: Measure bubblewrap on the runner
-        run: |
-          probe() { if "$1" --ro-bind / / true; then echo "RESULT $2: exit 0"; else echo "RESULT $2: exit $?"; fi; }
-          echo "RESULT sysctl: $(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)"
-          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends bubblewrap
-          probe /usr/bin/bwrap "apt bwrap"
-          sudo cp /usr/bin/bwrap /tmp/bwrap-apt
-          sudo apt-get remove -y bubblewrap > /dev/null
-          image="$(node scripts/ci/ciImage.mjs | sed -n 's/^ref=//p')"
-          container="$(docker create "$image")"
-          sudo docker cp -L "$container:/usr/bin/bwrap" /usr/bin/bwrap
-          docker rm "$container" > /dev/null
-          echo "RESULT same file: $(cmp /usr/bin/bwrap /tmp/bwrap-apt && echo yes || echo no)"
-          probe /usr/bin/bwrap "copied bwrap"
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          probe /usr/bin/bwrap "copied bwrap, sysctl 0"
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=1
-          sudo rm /usr/bin/bwrap
-
       # The scrub below refuses to start without bubblewrap. Both tools come out of the CI image
       # (ADR-0065), at the paths of their Ubuntu packages, so no run reads the Ubuntu archive. The
       # job stays on the runner: bubblewrap makes user namespaces, which a job container does not
@@ -122,8 +102,9 @@ jobs:
             sudo docker cp -L "$container:$file" "$file"
           done
           docker rm "$container" > /dev/null
-          # Proves that each tool loads on the runner. Not a namespace: the runner refuses
-          # bubblewrap its uid map, and the scrub below needs only that bubblewrap is present.
+          # Proves that each tool loads on the runner. Not a namespace: a runner sets
+          # kernel.apparmor_restrict_unprivileged_userns to 1, and bubblewrap then makes none,
+          # from the Ubuntu package or from the image.
           bwrap --version
           socat -V > /dev/null
 
