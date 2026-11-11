@@ -3,6 +3,7 @@
  * the dialog's own text properties (`scene/gui/dialogs.cpp:398-410,508-513`).
  */
 
+import type { OverrideLayer } from '../../../core/NodeRegistry';
 import type { ParsedHeading } from '../../../parser/utils';
 import { unquoteString } from '../../../parser/utils';
 import { boolOr } from '../../../parser/valueParsers';
@@ -59,9 +60,13 @@ export function textOr(raw: string | undefined, fallback: string): string {
   return raw === undefined ? fallback : unquoteString(raw);
 }
 
-export function parseDialog(heading: ParsedHeading, properties: Record<string, string>): DialogProperties {
+export function parseDialog(
+  heading: ParsedHeading,
+  properties: Record<string, string>,
+  override?: OverrideLayer<DialogProperties>
+): DialogProperties {
   const okText = textOr(properties.ok_button_text, '');
-  const windowProperties = parseWindow(heading, properties);
+  const windowProperties = parseWindow(heading, properties, override);
   return {
     ...windowProperties,
     dialog_text: textOr(properties.dialog_text, ''),

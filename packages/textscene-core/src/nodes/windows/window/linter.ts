@@ -20,7 +20,8 @@ import {
   isWindowSizeKey,
   replayWindowSize,
   isMaxSizeSet,
-  isVisibleWhenForceNativeIsRead,
+  constructedForceNativeState,
+  replayForceNative,
   validMaxSize,
   windowClassDefaults,
   type WindowSizeWrite,
@@ -139,7 +140,7 @@ function checkContentScaleFloored(node: RuleContext['node'], rawProps: Record<st
 
 function checkForceNativeRefused(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
   if (boolSlotValue(rawProps.force_native) !== true) return [];
-  if (!isVisibleWhenForceNativeIsRead(node.type, rawProps)) return [];
+  if (replayForceNative(constructedForceNativeState(node.type), rawProps)) return [];
   return [
     armDiagnostic(
       arms.forceNativeRefusedWhileVisible,

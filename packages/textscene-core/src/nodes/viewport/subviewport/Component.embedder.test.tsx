@@ -5,7 +5,7 @@
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { PROJECT_ROOT_EMBEDS_NO_WINDOWS } from '../../../r3f/testing/ProjectFixture';
+import { PROJECT_ROOT_EMBEDS_NO_WINDOWS } from '../../../parser/projectSettings.testkit';
 import { portalSceneOf } from './viewportPasses.testkit';
 
 import '../../../r3f/nodes/index';

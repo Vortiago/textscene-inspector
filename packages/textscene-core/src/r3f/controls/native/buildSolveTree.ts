@@ -73,12 +73,11 @@ import {
 } from '../../liveSceneTree';
 import { NOTHING_CACHED, recordingReads } from '../../cacheSources';
 import { scopeOf } from '../../../resources/liveNode';
-import { embedsSubwindows } from '../../../nodes/viewport/subviewport/windowEmbedder';
+import { embedsSubwindows, mayHoldWindowBelow } from '../../../nodes/viewport/subviewport/windowEmbedder';
 import {
   isEmbeddableWindow,
   isEmbeddedWindow,
   isViewportBoundary,
-  mayHoldWindow,
 } from '../../../nodes/viewport/subviewport/viewportBoundary';
 import type { WindowProperties } from '../../../nodes/windows/window/types';
 import { NO_OWNERS, type ThemeOwner } from '../../../nodes/windows/window/themeOwners';
@@ -350,14 +349,6 @@ function descendForWindows(
 ): WalkResult {
   if (mayHoldWindowBelow(step)) descend(ancestry);
   return NOTHING_WALKED;
-}
-
-/**
- * Whether a window may sit below `step`: the children a fold descends into, which hold a sub-scene's
- * nodes where the step instances one, and its raw node's children do not.
- */
-function mayHoldWindowBelow(step: LiveStep): boolean {
-  return step.groups.some((group) => group.children.some(mayHoldWindow));
 }
 
 /** The SolveNode forest for one nodes and resource-scope pair. Not a hook: `useBuildSolveTree` is. */

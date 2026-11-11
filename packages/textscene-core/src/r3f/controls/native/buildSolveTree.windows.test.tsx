@@ -11,7 +11,8 @@ import { useBuildSolveTree, useBuildViewportTree } from './buildSolveTree';
 import { themeResource } from './testing/themeResource';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { PROJECT_ROOT_EMBEDS_NO_WINDOWS, withProject } from '../../testing/ProjectFixture';
+import { PROJECT_ROOT_EMBEDS_NO_WINDOWS } from '../../../parser/projectSettings.testkit';
+import { withProject } from '../../testing/ProjectFixture';
 import '../../nodes/index';
 import '../index';
 

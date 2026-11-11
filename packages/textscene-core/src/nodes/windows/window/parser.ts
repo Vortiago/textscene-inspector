@@ -3,6 +3,7 @@
  * defaults (`windowClassDefaults`), and the scene lines override them.
  */
 
+import type { OverrideLayer } from '../../../core/NodeRegistry';
 import type { ParsedHeading } from '../../../parser/utils';
 import { unquoteString } from '../../../parser/utils';
 import type { Vector2 } from '../../../godot/math/vector';
@@ -10,7 +11,8 @@ import { boolOr, floatOr, intOr, parseOptionalVector2i, vec2iOr } from '../../..
 import {
   clampLimitSize,
   InitialPosition,
-  isVisibleWhenForceNativeIsRead,
+  constructedForceNativeState,
+  replayForceNative,
   isWindowSizeKey,
   replayWindowSize,
   windowClassDefaults,
@@ -74,7 +76,26 @@ function parseTransparentBackground(
   return isFlagLast ? flag : boolOr(properties.transparent_bg, classDefault, context);
 }
 
-export function parseWindow(heading: ParsedHeading, properties: Record<string, string>): WindowProperties {
+/**
+ * `force_native` after the scene lines run: an override's lines over what the base left, or one
+ * file's lines over what the constructor left.
+ */
+function parseForceNative(
+  type: string,
+  properties: Record<string, string>,
+  override: OverrideLayer<WindowProperties> | undefined
+): boolean {
+  if (properties.force_native === undefined) return false;
+  return override
+    ? replayForceNative(override.held, override.written)
+    : replayForceNative(constructedForceNativeState(type), properties);
+}
+
+export function parseWindow(
+  heading: ParsedHeading,
+  properties: Record<string, string>,
+  override?: OverrideLayer<WindowProperties>
+): WindowProperties {
   const viewport = parseViewport(heading, properties);
   const type = heading.attributes.type ?? 'Window';
   const defaults = windowClassDefaults(type);
@@ -107,9 +128,7 @@ export function parseWindow(heading: ParsedHeading, properties: Record<string, s
     always_on_top: boolOr(properties.always_on_top, false, context),
     exclusive: boolOr(properties.exclusive, defaults.exclusive, context),
     wrap_controls: boolOr(properties.wrap_controls, defaults.wrapControls, context),
-    // The setter refuses `force_native` on a visible window (`window.cpp:1384-1386`).
-    force_native:
-      boolOr(properties.force_native, false, context) && !isVisibleWhenForceNativeIsRead(type, properties),
+    force_native: parseForceNative(type, properties, override),
     min_size: clampLimitSize(vec2iOr(properties.min_size, defaults.minSize, context)),
     max_size: clampLimitSize(vec2iOr(properties.max_size, ORIGIN, context)),
     content_scale: parseContentScale(properties, context),

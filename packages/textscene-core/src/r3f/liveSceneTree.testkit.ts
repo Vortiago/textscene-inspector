@@ -21,11 +21,6 @@ export function liveNodeAt(path: string, roots: readonly TscnNode[], ctx: LiveTr
   return resolveLiveEntry(path, roots, ctx)?.node ?? null;
 }
 
-/** The settings of a project whose root window embeds no windows, so each window below it is native. */
-export const ROOT_EMBEDS_NO_WINDOWS: ProjectSettings = {
-  'display/window/subwindows/embed_subwindows': 'false',
-};
-
 /**
  * The sources a live-tree builder reads: `sceneCache` and the tree settings of `settings`, which
  * default to no project and so to Godot's defaults.

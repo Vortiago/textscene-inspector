@@ -4,13 +4,14 @@
  * reader asks here and none holds the root's answer.
  */
 import type { TscnNode } from '../../../parser/types.js';
-import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
+import type { LiveLink, LiveStep, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
 import {
   embeddingProperties,
   isEmbeddedWindow,
   isRegisteredWindow,
   isViewportBoundary,
+  mayHoldWindow,
   type EmbeddingNode,
 } from './viewportBoundary.js';
 
@@ -41,6 +42,14 @@ export function windowEmbedderPathAt(tree: LiveTree, path: string): string | nul
 }
 
 /**
+ * Whether a window may sit below `step`: the children a fold descends into, which hold a sub-scene's
+ * nodes where the step instances one, and its raw node's children do not.
+ */
+export function mayHoldWindowBelow(step: LiveStep): boolean {
+  return step.groups.some((group) => group.children.some(mayHoldWindow));
+}
+
+/**
  * Whether `viewport` draws a window over its canvas: it embeds windows, and a registered one below
  * it climbs to it, past each viewport that embeds none. A hidden window does not register, but the
  * windows below it still climb. `below` is the viewport's link, or absent where its children are
@@ -48,11 +57,16 @@ export function windowEmbedderPathAt(tree: LiveTree, path: string): string | nul
  */
 export function embedsAWindow(tree: LiveTree, viewport: TscnNode, below?: LiveLink): boolean {
   if (!embedsSubwindows(tree, viewport)) return false;
-  const reached = tree.fold<void, boolean>(
+  let isReached = false;
+  tree.fold<void, void>(
     undefined,
-    ({ step }, _, descend) =>
-      isRegisteredWindow(step.node) || (!embedsSubwindows(tree, step.node) && descend().some(Boolean)),
+    ({ step }, _, descend) => {
+      // One registered window answers, so the walk descends below no node after it.
+      if (isReached) return;
+      isReached = isRegisteredWindow(step.node);
+      if (!isReached && !embedsSubwindows(tree, step.node) && mayHoldWindowBelow(step)) descend();
+    },
     below
   );
-  return reached.some(Boolean);
+  return isReached;
 }

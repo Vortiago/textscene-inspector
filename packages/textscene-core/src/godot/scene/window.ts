@@ -117,18 +117,26 @@ export function windowClassDefaults(type: string): WindowClassDefaults {
   return findInClassChain(type, (className) => CLASS_DEFAULTS[className]) ?? WINDOW_DEFAULTS;
 }
 
+/** The two properties `set_force_native` reads and writes. */
+export type ForceNativeState = { visible: boolean; force_native: boolean };
+
 /**
- * Whether the window is visible when the loader reads its `force_native` line: the `visible` a line
- * above it wrote, or the class default. The loader sets the properties in file order, and
- * `set_force_native` refuses a change on a visible window (`window.cpp:1384-1386`).
+ * `force_native` after the lines of `written` run in order on a window that holds `held`.
+ * `set_force_native` refuses a change while the window is visible (`window.cpp:1380-1386`), and a
+ * bool the slot cannot read changes nothing.
  */
-export function isVisibleWhenForceNativeIsRead(type: string, properties: Record<string, string>): boolean {
-  const keys = Object.keys(properties);
-  const visibleAt = keys.indexOf('visible');
-  const isVisibleWrittenAbove = visibleAt >= 0 && visibleAt < keys.indexOf('force_native');
-  return (
-    boolSlotValue(isVisibleWrittenAbove ? properties.visible : undefined) ?? windowClassDefaults(type).visible
-  );
+export function replayForceNative(held: ForceNativeState, written: Record<string, string>): boolean {
+  let { visible, force_native } = held;
+  for (const [key, raw] of Object.entries(written)) {
+    if (key === 'visible') visible = boolSlotValue(raw) ?? visible;
+    else if (key === 'force_native' && !visible) force_native = boolSlotValue(raw) ?? force_native;
+  }
+  return force_native;
+}
+
+/** What a window of class `type` holds before a scene line runs. */
+export function constructedForceNativeState(type: string): ForceNativeState {
+  return { visible: windowClassDefaults(type).visible, force_native: false };
 }
 
 /** `window.h:105,126`: `size = Size2i(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE)`. */

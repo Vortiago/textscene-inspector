@@ -7,9 +7,6 @@ import type { ResourceProvider } from '../../resources/ResourceProvider';
 import { PROJECT_FILE_PATH } from '../../godot/project/project.js';
 import { ProjectSettingsProvider } from '../contexts/ProjectSettingsContext';
 
-/** A `project.godot` whose root window embeds no windows, so each window below it is native. */
-export const PROJECT_ROOT_EMBEDS_NO_WINDOWS = '[display]\n\nwindow/subwindows/embed_subwindows=false\n';
-
 /** Wraps `children` under a project whose `project.godot` is `project`, or under no project for null. */
 export function withProject(project: string | null) {
   const provider: ResourceProvider = {

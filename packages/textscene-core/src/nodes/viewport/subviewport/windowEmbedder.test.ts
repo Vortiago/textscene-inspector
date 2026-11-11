@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import type { ProjectSettings } from '../../../parser/projectSettingsParser';
 import type { TscnNode } from '../../../parser/types';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
-import { ROOT_EMBEDS_NO_WINDOWS, sourcesOver } from '../../../r3f/liveSceneTree.testkit';
+import { ROOT_EMBEDS_NO_WINDOWS } from '../../../parser/projectSettings.testkit';
+import { sourcesOver } from '../../../r3f/liveSceneTree.testkit';
 import { embedsAWindow, embedsSubwindows } from './windowEmbedder';
 import '../../../r3f/nodes/index';
 
