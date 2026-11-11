@@ -53,6 +53,19 @@ size = Vector2i(320, 240)
     expect(found[0]!.node.type).toBe('SubViewport');
   });
 
+  it('finds a sub-viewport that holds nothing, since Godot clears its target', () => {
+    const scene = parse(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+
+[node name="Container" type="SubViewportContainer" parent="."]
+
+[node name="Viewport" type="SubViewport" parent="Container"]
+size = Vector2i(200, 120)
+`);
+    expect(collect(scene).map((found) => found.path)).toEqual(['Root/Container/Viewport']);
+  });
+
   it('leaves 3D and 2D-world sub-viewports to the WebGL publisher', () => {
     const scene = parse(`[gd_scene format=3]
 
@@ -65,8 +78,6 @@ size = Vector2i(320, 240)
 [node name="World2D" type="SubViewport" parent="."]
 
 [node name="Sprite" type="Sprite2D" parent="World2D"]
-
-[node name="Blank" type="SubViewport" parent="."]
 `);
     expect(collect(scene)).toEqual([]);
   });

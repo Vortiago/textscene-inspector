@@ -481,6 +481,9 @@ export const CANVAS_2D_SCENES = [
   // SUB and MUL items in an opaque SubViewport over yellow. Godot 4.6.3 `--mode 2d`: the container
   // shows the viewport opaque, with no yellow through it. Mean 0.000/255 against it.
   { name: 'subviewport-opaque-alpha', file: 'unit-subviewport-opaque-alpha.tscn', mode: '2d' },
+  // A SubViewport with no content, in a container, a transparent one, a Timer-only one, a stretched one and
+  // a ViewportTexture: each shows the clear colour, as Godot 4.6.3 `--mode 2d` does.
+  { name: 'subviewport-empty', file: 'unit-subviewport-empty.tscn', mode: '2d' },
   // An OptionButton and a MenuButton with button_pressed set and no toggle_mode.
   { name: 'option-menu-button-pressed', file: 'unit-option-menu-button-pressed.tscn', mode: '2d' },
   // A MenuButton label wrapped by autowrap_mode and trimmed by text_overrun_behavior.

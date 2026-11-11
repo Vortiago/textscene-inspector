@@ -52,8 +52,12 @@ describe('viewportContent: the kind', () => {
     );
   });
 
-  it('classifies an empty sub-viewport as empty', () => {
-    expect(viewportContentKind(viewport(''))).toBe('empty');
+  it('classifies an empty sub-viewport as dom, since the Control pass clears its target', () => {
+    expect(viewportContentKind(viewport(''))).toBe('dom');
+  });
+
+  it('classifies a viewport that holds only a plain Node as dom', () => {
+    expect(viewportContentKind(viewport('\n[node name="Idle" type="Node" parent="Viewport"]'))).toBe('dom');
   });
 
   it('classifies a viewport that embeds a window as dom, since it draws the window over its canvas', () => {
@@ -73,16 +77,16 @@ describe('viewportContent: the kind', () => {
     expect(viewportContentKind(scene.nodes[0]!.children[0]!)).toBe('dom');
   });
 
-  it('classifies a viewport that embeds no window and holds only one as empty', () => {
+  it('classifies a viewport that embeds no window and holds only one as dom', () => {
     expect(viewportContentKind(viewport('\n[node name="Dialog" type="Window" parent="Viewport"]'))).toBe(
-      'empty'
+      'dom'
     );
   });
 
   /**
    * `ProgressBar` is a `Range`, so Godot calls it 2D UI, though this previewer has
-   * no component for it. Read as `'empty'`, both publishers would skip it, and a
-   * `ViewportTexture` naming the path would resolve null.
+   * no component for it. A kind that no publisher owns would leave a `ViewportTexture`
+   * naming the path resolving null.
    */
   it('classifies a Control with no DOM component of its own as dom', () => {
     expect(viewportContentKind(viewport('\n[node name="Bar" type="ProgressBar" parent="Viewport"]'))).toBe(
@@ -283,7 +287,7 @@ z_index = 3
 
 [node name="Box" type="MeshInstance3D" parent="Viewport/Inner"]`)
       )
-    ).toBe('empty');
+    ).toBe('dom');
   });
 
   /** A Control wrapping 3D content still yields a WebGL source. */
@@ -464,7 +468,7 @@ ${extra}`);
         externalResources: loaded.externalResources,
       }),
     };
-    expect(viewportContentKind(node, parsed.externalResources, cache)).toBe('empty');
+    expect(viewportContentKind(node, parsed.externalResources, cache)).toBe('dom');
   });
 });
 

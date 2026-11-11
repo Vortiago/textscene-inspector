@@ -24,6 +24,7 @@ import {
   type AnimatedValueRegistry,
 } from '../../../r3f/contexts/AnimatedValueContext';
 import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
+import { ControlRasterLayer } from './ControlRasterLayer';
 import { buildSceneGraph, tscnSceneToParsedScene } from '../../../core/SceneGraph';
 
 /** The light cookie the SubViewport lighting tests seed. */
@@ -147,6 +148,8 @@ export async function framesOf(
   frames: number,
   beforeFrame: (frame: number, controls: FrameControls) => void | Promise<void> = () => {}
 ): Promise<PassDraw[][]> {
+  // The layer lazy-loads the Control pass, which a cold first run would not have mounted in frame 0.
+  await import('./ControlRasterPass.js');
   const fake = createFakeResourceLoader();
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const animated: { current: AnimatedValueRegistry | null } = { current: null };
@@ -170,6 +173,11 @@ export async function framesOf(
               <ViewportPassStack captured={captured}>
                 <CanvasWorldScope>
                   <NodeDispatcher nodes={parsed.nodes} />
+                  <ControlRasterLayer
+                    nodes={parsed.nodes}
+                    internalResources={parsed.internalResources}
+                    externalResources={parsed.externalResources}
+                  />
                 </CanvasWorldScope>
               </ViewportPassStack>
             </ViewportModeProvider>

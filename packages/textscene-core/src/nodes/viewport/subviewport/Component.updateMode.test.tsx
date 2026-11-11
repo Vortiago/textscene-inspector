@@ -129,7 +129,7 @@ ${SHAPE}
   describe.each([
     ['2D', '[node name="Body" type="Polygon2D" parent="Outer"]\n' + SHAPE],
     ['3D', '[node name="Body" type="Node3D" parent="Outer"]'],
-    ['empty', ''],
+    ['content-free', ''],
   ])('a WHEN_PARENT_VISIBLE viewport inside a %s viewport', (_kind, body) => {
     const scene = (outerMode: number) => `[gd_scene format=3]
 

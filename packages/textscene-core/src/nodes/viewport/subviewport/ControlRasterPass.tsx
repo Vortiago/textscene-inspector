@@ -1,8 +1,9 @@
 /**
- * The native (WebGL) render-to-texture publisher for a Control-only sub-viewport
+ * The native (WebGL) render-to-texture publisher for a sub-viewport with no world content
  * (`viewportContentAt(…).kind === 'dom'`), which `<SubViewport>`'s own pass declines. It
  * mounts the Control walker into a detached scene, draws it through a fixed camera
- * framing the target rect, and publishes a texture consumers sample directly.
+ * framing the target rect, and publishes a texture consumers sample directly. A viewport
+ * with no Control publishes the clear alone.
  */
 import { useCallback, useMemo } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
