@@ -6,7 +6,7 @@
  * provider both are empty: a Control sorts at the origin and draws in the order it was authored.
  */
 import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Transform2DColumns } from '../../godot/math/transform2d.js';
+import { equalTransform2D, type Transform2DColumns } from '../../godot/math/transform2d.js';
 import type { PaintRange } from '../canvasPaintOrder.js';
 
 /** Control paths to the transform of their canvas item in their parent, written only by the Control walk. */
@@ -54,8 +54,6 @@ function sameEntries<T>(
   return true;
 }
 
-const sameTransform = (a: Transform2DColumns, b: Transform2DColumns) =>
-  a.a === b.a && a.b === b.b && a.c === b.c && a.d === b.d && a.tx === b.tx && a.ty === b.ty;
 const sameShift = (a: YSortShift, b: YSortShift) =>
   a.from === b.from && a.run.base === b.run.base && a.run.size === b.run.size;
 
@@ -81,7 +79,7 @@ function useOwnedEntries<T>(none: ReadonlyMap<string, T>, equal: (x: T, y: T) =>
 }
 
 export function ControlYSortProvider({ children }: { children: ReactNode }) {
-  const [transforms, publishTransforms] = useOwnedEntries(NO_TRANSFORMS, sameTransform);
+  const [transforms, publishTransforms] = useOwnedEntries(NO_TRANSFORMS, equalTransform2D);
   const [shifts, publishShifts] = useOwnedEntries(NO_SHIFTS, sameShift);
   const publishers = useMemo(
     () => ({ publishTransforms, publishShifts }),

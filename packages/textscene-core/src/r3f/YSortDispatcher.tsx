@@ -48,7 +48,9 @@ import {
 export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children?: ReactNode }) {
   const path = useNodePath() ?? node.name;
   const patches = useLiveDrawnPatchesBelow(path);
-  const controlTransforms = useControlTransforms();
+  // A sort with no Control below reads none, so a Control moving elsewhere leaves its memo alone.
+  const publishedTransforms = useControlTransforms();
+  const controlTransforms = hasControl(node) ? publishedTransforms : undefined;
   // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer). A layer that
   // roots the sort lists its own rows first, so its children number from 1.
   const rawItems = useMemo(() => {
@@ -131,7 +133,7 @@ function SortedChildren({
   const publishShifts = usePublishYSortShifts();
   const owner = useId();
   useLayoutEffect(() => {
-    if (!publishShifts) return;
+    if (!publishShifts || !hasControl(node)) return;
     const sceneOrderBases = sceneOrderBasesBelow(node, paintRange, basePath);
     const shifts = new Map<string, YSortShift>();
     for (const { item, range } of packed) {
