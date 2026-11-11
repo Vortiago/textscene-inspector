@@ -32,6 +32,11 @@ that has ink lacks a contour.
 - A layout shapes with the bundled face (`FontMetrics.kind` `'bundled'`). `TextRun` draws that
   layout on the bundled canvas face: the same numbers, with the outlines of the font at the
   default font's hinting (`BundledCanvasRun.tsx`, `bundledCanvasFace.ts`).
+- The kind stays apart from `'canvas'` because the two faces take their hinting from two places. A
+  scene font carries the hinting of its import. The default font takes
+  `gui/theme/default_font_hinting` from the project (`theme_db.cpp:56`, `default_theme.cpp:1383`),
+  which a layout does not hold. So the run reads the setting and picks the outlines, and it waits
+  for the project settings to load first.
 - A run of the bundled face draws nothing while its outlines load, and counts as a pending load
   for that time. Outlines that cannot be read leave the run empty, with no pending load. The
   outline reader warns once.
@@ -76,6 +81,8 @@ take the first rule, in a Control run as in a Label3D.
 - The bake needs `fontkit` and `wawoff2` only. `msdf-bmfont-xml` is no longer a dependency.
 - Text is not scale invariant. The painter rasterises at the font size, as Godot caches a glyph
   at its font size (`label_3d.cpp:345-350`), so a magnified glyph blurs as Godot's does.
-- A character outside the baked character set shapes with the average advance, as before.
+- The bundled face reads the glyph and the advance of every code point from its baked `cmap` and
+  `hmtx` tables, as a scene font reads them from its file. No table of one character set stands
+  beside them.
 - The webview CSP needs no `img-src data:` for text. `pnpm test:vscode:csp` still guards that
   text draws at the real origin.
