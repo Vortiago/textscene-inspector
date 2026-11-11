@@ -102,7 +102,9 @@ jobs:
             sudo docker cp -L "$container:$file" "$file"
           done
           docker rm "$container" > /dev/null
-          bwrap --ro-bind / / true
+          # Proves that each tool loads on the runner. Not a namespace: the runner refuses
+          # bubblewrap its uid map, and the scrub below needs only that bubblewrap is present.
+          bwrap --version
           socat -V > /dev/null
 
       - id: claude
