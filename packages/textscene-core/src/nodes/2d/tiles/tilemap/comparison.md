@@ -23,32 +23,30 @@ TileMap's transform and neither the layer's `modulate` nor its `z_index`.
 ## Linting
 
 <!-- lint:begin TileMap -->
-
 Strict parsing format-checks these `TileMap` properties, plus 12 inherited from Node2D, 16 inherited from CanvasItem, 10 inherited from Node. A malformed value is always an **error**; a value that is merely outside a bound is an error only where Godot's setter refuses it, and a **warning** where only the property's inspector hint states the bound (ADR-0032).
 
-| Property                     | Accepts                                                                           | Out of range               |
-| ---------------------------- | --------------------------------------------------------------------------------- | -------------------------- |
-| `collision_animatable`       | true or false                                                                     |                            |
-| `collision_visibility_mode`  | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE)                                          | warning                    |
-| `format`                     | INT-typed literal (a FLOAT or BOOL spelling is a dropped write, tile_map.cpp:689) |                            |
-| `layer_#/*`                  | layer                                                                             |                            |
-| `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE)                                          | warning                    |
-| `rendering_quadrant_size`    | integer 1-128                                                                     | error below, warning above |
-| `tile_set`                   | null, SubResource("id"), ExtResource("id") or Resource("path")                    |                            |
+| Property | Accepts | Out of range |
+| --- | --- | --- |
+| `collision_animatable` | true or false |  |
+| `collision_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
+| `format` | INT-typed literal (a FLOAT or BOOL spelling is a dropped write, tile_map.cpp:689) |  |
+| `layer_#/*` | layer |  |
+| `navigation_visibility_mode` | enum 0-2 (DEFAULT/FORCE_SHOW/FORCE_HIDE) | warning |
+| `rendering_quadrant_size` | integer 1-128 | error below, warning above |
+| `tile_set` | null, SubResource("id"), ExtResource("id") or Resource("path") |  |
 
-| Rule                                                 | Reports                              | Severity |
-| ---------------------------------------------------- | ------------------------------------ | -------- |
-| `binary-resource-reference` (all nodes)              | `binary-resource-reference`          | info     |
-| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning  |
-|                                                      | `canvasitem-ancestor-is-canvasgroup` | warning  |
-| `valid-tilemap`                                      | `tilemap-deprecated`                 | warning  |
-|                                                      | `tilemap-y-sort-z-index-conflict`    | warning  |
-|                                                      | `tilemap-layer-y-sort-without-node`  | warning  |
-|                                                      | `tilemap-node-y-sort-without-layer`  | warning  |
-|                                                      | `tilemap-requires-tileset`           | info     |
-|                                                      | `tilemap-unsupported-format`         | error    |
-|                                                      | `tilemap-invalid-tile-data`          | error    |
-
+| Rule | Reports | Severity |
+| --- | --- | --- |
+| `binary-resource-reference` (all nodes) | `binary-resource-reference` | info |
+| `valid-canvasitem-clip-ancestry` (type-family match) | `canvasitem-ancestor-clips-children` | warning |
+|  | `canvasitem-ancestor-is-canvasgroup` | warning |
+| `valid-tilemap` | `tilemap-deprecated` | warning |
+|  | `tilemap-y-sort-z-index-conflict` | warning |
+|  | `tilemap-layer-y-sort-without-node` | warning |
+|  | `tilemap-node-y-sort-without-layer` | warning |
+|  | `tilemap-requires-tileset` | info |
+|  | `tilemap-unsupported-format` | error |
+|  | `tilemap-invalid-tile-data` | error |
 <!-- lint:end -->
 
 `format` falls back to `2`, the current encoding, when absent or unreadable. Only format
