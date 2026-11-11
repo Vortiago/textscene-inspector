@@ -23,7 +23,7 @@ import type { ModificationStack2D } from '../../../resources/skeleton/skeletonmo
 import { DrawnNodeFollow } from '../../../r3f/drawnNodeFollow.js';
 import { canvasTransformInto, threeMatrixFromTransform2D } from '../../../r3f/node2dTransform.js';
 import { solveStack, type SolvedPose } from './modificationStack/stackRun.js';
-import type { StackNode, StackScene } from './modificationStack/stackScene.js';
+import type { StackNode, StackPlacement, StackScene } from './modificationStack/stackScene.js';
 import type { Skeleton2DRig } from './skeletonRig.js';
 
 /** A node a NodePath of the stack resolves to on the Live scene tree. */
@@ -34,6 +34,8 @@ export interface StackTarget {
   isNode2D: boolean;
   /** The index of the node in the rig of the skeleton, or -1 for a node that is no bone of it. */
   boneIndex: number;
+  /** The index of a Bone2D in the skeleton it joins, or -1 where it joins none. Null for another type. */
+  indexInSkeleton: number | null;
   /** The index of the nearest bone above the node, which carries the node as it moves, or -1. */
   carrier: number;
 }
@@ -111,11 +113,11 @@ export class Skeleton2DPose {
   }
 
   /**
-   * Runs before the observers of a render. The world matrices hold the pose of the file or of an
-   * animation here, since {@link restore} put it back, so the solve reads it and the bones take
-   * the solved pose for this render.
+   * Runs before the observers of a render. The solve reads the pose of the file or of an animation
+   * from the world matrices, and the bones take the solved pose for this render.
    */
   write(): void {
+    this.unsolveWorld();
     const bodies = (this.drawnBodies = this.bodies.objects());
     if (!bodies) return;
     const anchors = this.bound ? this.anchors.objects() : null;
@@ -177,6 +179,18 @@ export class Skeleton2DPose {
     });
   }
 
+  /**
+   * Takes the solved pose off the world matrices that still hold it. A render that keeps the
+   * matrices of the scene, such as the second buffer of a 2D light, updates none after
+   * {@link restore}, and the solve would read its own result as the pose of the file.
+   */
+  private unsolveWorld(): void {
+    for (const { object, isTopmost } of this.moved) {
+      // three clears the flag where it updates a world matrix, so a set one marks a stale matrix.
+      if (isTopmost && object.matrixWorldNeedsUpdate) object.updateMatrixWorld(true);
+    }
+  }
+
   private forgetSolve(): void {
     this.solved = null;
     this.moved = [];
@@ -234,16 +248,24 @@ export class Skeleton2DPose {
 }
 
 function stackNodeOf(
-  { path, isNode2D, boneIndex, carrier }: StackTarget,
+  target: StackTarget,
   boneGlobals: readonly Transform2DColumns[],
   anchorGlobals: ReadonlyMap<string, Transform2DColumns>
 ): StackNode {
-  if (!isNode2D) return { boneIndex, placement: null };
-  if (boneIndex >= 0) return { boneIndex, placement: { carrier: boneIndex, offset: TRANSFORM2D_IDENTITY } };
+  const { boneIndex, indexInSkeleton } = target;
+  return { boneIndex, indexInSkeleton, placement: placementOf(target, boneGlobals, anchorGlobals) };
+}
+
+function placementOf(
+  { path, isNode2D, boneIndex, carrier }: StackTarget,
+  boneGlobals: readonly Transform2DColumns[],
+  anchorGlobals: ReadonlyMap<string, Transform2DColumns>
+): StackPlacement | null {
+  if (!isNode2D) return null;
+  if (boneIndex >= 0) return { carrier: boneIndex, offset: TRANSFORM2D_IDENTITY };
   const global = anchorGlobals.get(path)!;
-  if (carrier < 0) return { boneIndex, placement: { carrier, offset: global } };
-  const offset = multiplyTransform2D(affineInverseTransform2D(boneGlobals[carrier]!), global);
-  return { boneIndex, placement: { carrier, offset } };
+  if (carrier < 0) return { carrier, offset: global };
+  return { carrier, offset: multiplyTransform2D(affineInverseTransform2D(boneGlobals[carrier]!), global) };
 }
 
 function canvasTransformOf(object: THREE.Object3D): Transform2DColumns {

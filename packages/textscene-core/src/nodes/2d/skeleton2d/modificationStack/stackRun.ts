@@ -14,6 +14,7 @@ import {
   transform2DInterpolateWith,
   type Transform2DColumns,
 } from '../../../../godot/math/transform2d.js';
+import { SkeletonModification2DExecutionMode } from '../../../../godot/scene/skeletonModification2d.js';
 import { HARNESS_CAPTURE } from '../../../../godot/scene/transformFlushes.js';
 import type {
   Modification2D,
@@ -26,9 +27,6 @@ import type { StackFrame } from './stackFrame';
 import { StackPose } from './stackPose';
 import type { StackScene } from './stackScene';
 import { executeTwoBoneIK } from './twoBoneIk';
-
-/** `execution_mode_process` (`skeleton_modification_stack_2d.h:61`), the mode of a drawn frame. */
-const PROCESS_MODE = 0;
 
 /** The pose a stack leaves on its skeleton. */
 export interface SolvedPose {
@@ -56,23 +54,23 @@ export function solveStack(
 ): SolvedPose {
   const pose = new StackPose(scene.skeletonGlobal, scene.bones, cache);
   const overrides: (PoseOverride | undefined)[] = cache.map(() => undefined);
-  let isOverridden = cache.map(() => false);
-  // The frame before the last one, where the pose alternates between two roundings of one answer.
-  let earlier: SolvedPose | null = null;
-  let previous: SolvedPose = { locals: pose.locals(), isOverridden };
+  const frames = new FramePoses({ locals: pose.locals(), isOverridden: cache.map(() => false) });
   for (let frame = 1; frame <= HARNESS_CAPTURE.frame; frame++) {
-    executeStack(stack, PROCESS_MODE, { pose, scene, overrides });
-    isOverridden = applyOverrides(pose, cache, overrides);
+    // A drawn frame is a process frame.
+    executeStack(stack, SkeletonModification2DExecutionMode.PROCESS, { pose, scene, overrides });
+    const isOverridden = applyOverrides(pose, cache, overrides);
     const current: SolvedPose = { locals: pose.locals(), isOverridden };
-    if (samePose(current, previous)) return current;
-    if (earlier && samePose(current, earlier)) {
-      // The pose repeats every second frame, so the Harness frame holds the one of its own parity.
-      return (HARNESS_CAPTURE.frame - frame) % 2 === 0 ? current : previous;
+    const repeated = frames.frameOf(current);
+    if (repeated >= 0) {
+      // A frame follows from the pose before it alone, so the poses since `repeated` come round
+      // again, and the Harness frame holds the one at its own place in that round. A chain often
+      // steps through several roundings of one answer.
+      const period = frame - repeated;
+      return frames.at(repeated + ((HARNESS_CAPTURE.frame - repeated) % period));
     }
-    earlier = previous;
-    previous = current;
+    frames.push(current);
   }
-  return previous;
+  return frames.at(HARNESS_CAPTURE.frame);
 }
 
 function samePose(a: SolvedPose, b: SolvedPose): boolean {
@@ -80,6 +78,41 @@ function samePose(a: SolvedPose, b: SolvedPose): boolean {
     a.locals.every((local, bone) => equalTransform2D(local, b.locals[bone]!)) &&
     a.isOverridden.every((held, bone) => held === b.isOverridden[bone])
   );
+}
+
+/** A number that two equal poses share, so a search compares a pose with few others. */
+function poseKey({ locals }: SolvedPose): number {
+  let key = 0;
+  for (const { a, b, tx, ty } of locals) key += a + b + tx + ty;
+  return key;
+}
+
+/** The pose each frame of a solve left, by frame. Frame 0 holds the pose the solve starts from. */
+class FramePoses {
+  private readonly poses: SolvedPose[] = [];
+  private readonly framesByKey = new Map<number, number[]>();
+
+  constructor(start: SolvedPose) {
+    this.push(start);
+  }
+
+  at(frame: number): SolvedPose {
+    return this.poses[frame]!;
+  }
+
+  /** The frame that left `pose`, or -1 where none did. */
+  frameOf(pose: SolvedPose): number {
+    const frames = this.framesByKey.get(poseKey(pose)) ?? [];
+    return frames.find((frame) => samePose(this.poses[frame]!, pose)) ?? -1;
+  }
+
+  push(pose: SolvedPose): void {
+    const key = poseKey(pose);
+    const frames = this.framesByKey.get(key);
+    if (frames) frames.push(this.poses.length);
+    else this.framesByKey.set(key, [this.poses.length]);
+    this.poses.push(pose);
+  }
 }
 
 interface StackRun {

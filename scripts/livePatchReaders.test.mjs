@@ -27,10 +27,6 @@ const NEEDS_NO_OVERLAY = new Map([
     'Reads the type, `rest` and reach properties of each Bone2D, which no pass patches.',
   ],
   [
-    'nodes/2d/skeleton2d/useBoundStack.ts',
-    'Asks whether the node a stack path names is a Node2D, by type. The pose comes from the drawn objects.',
-  ],
-  [
     'nodes/shared/remotetransform/remoteTransforms.ts',
     'A pass: it reads the tree it places nodes in, and builds the placements.',
   ],

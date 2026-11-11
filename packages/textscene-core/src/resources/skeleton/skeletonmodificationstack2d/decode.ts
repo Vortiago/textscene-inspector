@@ -7,6 +7,7 @@
 import { declaredLeafResolver, indexedElements } from '../../../godot/classdb/indexedKey.js';
 import { degToRadf, TAU } from '../../../godot/math/math.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
+import { SkeletonModification2DExecutionMode } from '../../../godot/scene/skeletonModification2d.js';
 import { slotCount } from '../../../godot/variant/intSlots.js';
 import { nodePathLiteral } from '../../../godot/variant/variantParser.js';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -75,18 +76,30 @@ function stackOf(
   if (scoped?.resource.type !== STACK_TYPE || walk.open.has(scoped.resource)) return null;
   walk.open.add(scoped.resource);
   const { data } = scoped.resource;
-  // `set_modification_count` refuses a negative count (`skeleton_modification_stack_2d.cpp:213`),
-  // and `set_modification` an index at or past it (`:193`).
+  // `set_modification_count` refuses a negative count (`skeleton_modification_stack_2d.cpp:198`),
+  // and `set_modification` an index at or past it (`:183`).
   const count = slotCount(data.modification_count) ?? 0;
   const stack: ModificationStack2D = {
     enabled: boolOr(data.enabled, false),
-    strength: realOr(data.strength, 1),
+    strength: strengthOf(data.strength),
     modifications: Array.from({ length: count }, (_unused, index) =>
       modificationOf(data[`modifications/${index}`], scoped.resources, walk)
     ),
   };
   walk.open.delete(scoped.resource);
   return stack;
+}
+
+/** `float strength = 1.0` (`skeleton_modification_stack_2d.h:58`). */
+const DEFAULT_STRENGTH = 1;
+
+/**
+ * `set_strength` refuses a strength below 0 or above 1 (`skeleton_modification_stack_2d.cpp:232-233`),
+ * so the stack keeps its default. A NaN passes both tests, and holds no bone.
+ */
+function strengthOf(raw: string | undefined): number {
+  const strength = realOr(raw, DEFAULT_STRENGTH);
+  return strength < 0 || strength > 1 ? DEFAULT_STRENGTH : strength;
 }
 
 function modificationOf(
@@ -97,7 +110,10 @@ function modificationOf(
   const scoped = followed(ref, pools, walk);
   if (!scoped) return null;
   const { type, data } = scoped.resource;
-  const base = { enabled: boolOr(data.enabled, true), executionMode: intOr(data.execution_mode, 0) };
+  const base = {
+    enabled: boolOr(data.enabled, true),
+    executionMode: intOr(data.execution_mode, SkeletonModification2DExecutionMode.PROCESS),
+  };
   switch (type) {
     case 'SkeletonModification2DLookAt':
       return {

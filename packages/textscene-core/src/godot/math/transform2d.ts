@@ -254,7 +254,7 @@ const HALF_PI_FLOAT = f(f(Math.PI) * 0.5);
  * `Transform2D::get_skew` (`transform_2d.cpp:72-75`) in `real_t` float: the angle of the y axis
  * from perpendicular to the x axis, mirrored with the sign of the determinant.
  */
-export function transform2DGetSkew(t: Transform2DColumns): number {
+function transform2DGetSkew(t: Transform2DColumns): number {
   const detSign = sign(transform2DDeterminant(t));
   const x = normalizedVector2({ x: t.a, y: t.b });
   const y = normalizedVector2({ x: t.c, y: t.d });

@@ -34,11 +34,10 @@ export function node2DGlobal(frame: StackFrame, path: string | undefined): Trans
 }
 
 /**
- * The bone index of a joint whose cache update writes the index of the Bone2D its path names
- * (`skeleton_modification_2d_lookat.cpp:211-213`). The stored index stays for no path, for a path
- * that names no node and for a node that is no bone of the skeleton.
+ * The bone index of a joint whose cache update writes the index the Bone2D at its path reports
+ * (`skeleton_modification_2d_lookat.cpp:211-213`), whatever skeleton that bone joins. The stored
+ * index stays for no path, for a path that names no node and for a node that is no Bone2D.
  */
 export function cachedBoneIndex(frame: StackFrame, bone: BoneReference): number {
-  const index = nodeAt(frame, bone.node)?.boneIndex ?? -1;
-  return index >= 0 ? index : bone.index;
+  return nodeAt(frame, bone.node)?.indexInSkeleton ?? bone.index;
 }

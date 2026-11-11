@@ -60,6 +60,13 @@ describe('decodeModificationStack', () => {
     });
   });
 
+  // `set_strength` returns before it stores such a value (`skeleton_modification_stack_2d.cpp:232-233`).
+  it.each(['1.5', '-0.25'])('keeps the default strength for the %s the setter refuses', (strength) => {
+    const pools = poolsOf([sub('stack', 'SkeletonModificationStack2D', { strength })]);
+
+    expect(decodeModificationStack('SubResource("stack")', pools, NO_FILES)?.strength).toBe(1);
+  });
+
   it('answers null for no stack and for a resource of another type', () => {
     const pools = poolsOf([sub('curve', 'Curve', {})]);
 

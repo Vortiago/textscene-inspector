@@ -73,5 +73,7 @@ resource reference, and a stack that does not decode leaves the bones unsolved.
   game applies it after each physics tick.
 - **Approximated** A CCDIK chain that folds a bone back onto its parent can settle on the mirror
   image of Godot's pose.
+- **Approximated** A FABRIK joint whose `bone2d_node` names a Bone2D of another skeleton moves no
+  bone, where Godot solves the chain on that bone.
 - **Approximated** The Cameras panel, a RemoteTransform2D and the inspector read the bone
   transforms of the scene file, not the solved pose.

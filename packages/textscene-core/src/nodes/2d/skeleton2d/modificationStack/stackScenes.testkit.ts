@@ -24,11 +24,20 @@ export function rotated(rotation: number, x = 0, y = 0): Transform2DColumns {
 
 /** A node outside the skeleton at a canvas position. */
 export function freeNode(x: number, y: number): StackNode {
-  return { boneIndex: -1, placement: { carrier: -1, offset: translation(x, y) } };
+  return { boneIndex: -1, indexInSkeleton: null, placement: { carrier: -1, offset: translation(x, y) } };
 }
 
 export function boneNode(index: number): StackNode {
-  return { boneIndex: index, placement: { carrier: index, offset: TRANSFORM2D_IDENTITY } };
+  return {
+    boneIndex: index,
+    indexInSkeleton: index,
+    placement: { carrier: index, offset: TRANSFORM2D_IDENTITY },
+  };
+}
+
+/** A Bone2D outside the skeleton, at `indexInSkeleton` in the skeleton it joins, or -1 for none. */
+export function foreignBoneNode(indexInSkeleton: number): StackNode {
+  return { ...freeNode(0, 0), indexInSkeleton };
 }
 
 /**
@@ -44,7 +53,10 @@ export function chainScene(
   const names = ['A', 'A/B', 'A/B/C', 'A/B/C/D'].slice(0, boneCount);
   const nodes = new Map<string, StackNode>(Object.entries(extraNodes));
   names.forEach((name, index) => nodes.set(name, boneNode(index)));
-  nodes.set('Tip', { boneIndex: -1, placement: { carrier: boneCount - 1, offset: translation(spacing, 0) } });
+  nodes.set('Tip', {
+    ...freeNode(0, 0),
+    placement: { carrier: boneCount - 1, offset: translation(spacing, 0) },
+  });
   return {
     scene: {
       skeletonGlobal: origin,

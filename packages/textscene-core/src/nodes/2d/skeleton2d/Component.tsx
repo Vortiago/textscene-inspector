@@ -10,7 +10,7 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useLiveScenePass } from '../../../r3f/liveScenePass';
-import { observeScenePose, observeSceneRenderEnd } from '../../../r3f/sceneRenderCamera';
+import { observeScenePose } from '../../../r3f/sceneRenderCamera';
 import { Node2D } from '../../base/node2d/Component';
 import { Skeleton2DPose, type BoundStack } from './skeletonPose';
 import { mountSkeleton2DPose } from './skeletonPoses';
@@ -30,11 +30,7 @@ function useSkeleton2DPose(path: string | null, bound: BoundStack | null): void 
   useEffect(() => {
     if (path === null || !rig || !registry) return;
     const pose = new Skeleton2DPose(rig, path, registry, bound);
-    const stops = [
-      mountSkeleton2DPose(registry, path, pose),
-      observeScenePose(scene, () => pose.write()),
-      observeSceneRenderEnd(scene, () => pose.restore()),
-    ];
+    const stops = [mountSkeleton2DPose(registry, path, pose), observeScenePose(scene, pose)];
     // A stack that loads after the first frame moves the bones with no other change to draw.
     invalidate();
     return () => {

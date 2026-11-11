@@ -18,7 +18,7 @@ export interface ModificationStack2D {
 /** `SkeletonModification2D` (`skeleton_modification_2d.h:50-52`). */
 interface ModificationBase {
   enabled: boolean;
-  /** 0 runs in the process frame, 1 in the physics frame. */
+  /** A `SkeletonModification2DExecutionMode`, or any other int the file holds, which runs in no frame. */
   executionMode: number;
 }
 

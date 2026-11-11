@@ -26,6 +26,11 @@ export interface StackPlacement {
 export interface StackNode {
   /** The index of the node as a bone of this skeleton, or -1 for any other node. */
   boneIndex: number;
+  /**
+   * `Bone2D::get_index_in_skeleton()` (`skeleton_2d.cpp:408-411`): the index of a Bone2D in the
+   * skeleton it joins, which can be another one, or -1 where it joins none. Null for another type.
+   */
+  indexInSkeleton: number | null;
   /** Null for a node that is not a Node2D, which no modification can aim at. */
   placement: StackPlacement | null;
 }

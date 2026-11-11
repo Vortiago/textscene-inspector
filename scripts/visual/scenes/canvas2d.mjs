@@ -351,6 +351,9 @@ export const CANVAS_2D_SCENES = [
   // (242,140,38) at (294,250) and blue (51,153,242) at (264,250). Unsolved, the bars lie flat and
   // both points read the background.
   { name: 'skeleton2d-lookat', file: 'unit-skeleton2d-lookat.tscn', mode: '2d' },
+  // The LookAt scene under a CanvasGroup, whose buffer draws the solved pose too. Godot probes as
+  // for skeleton2d-lookat: orange at (294,250) and blue at (264,250).
+  { name: 'skeleton2d-canvas-group', file: 'unit-skeleton2d-canvas-group.tscn', mode: '2d' },
   // The same scene with the stack not enabled: the bones keep the scene's pose. Godot probes:
   // orange at (304,150) and blue at (304,180), and background at (294,250).
   { name: 'skeleton2d-stack-disabled', file: 'unit-skeleton2d-stack-disabled.tscn', mode: '2d' },

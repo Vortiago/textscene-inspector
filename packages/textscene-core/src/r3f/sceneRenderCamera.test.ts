@@ -8,9 +8,15 @@ import {
   observeSceneCull,
   observeScenePose,
   observeSceneRenderEnd,
+  withScenePose,
 } from './sceneRenderCamera';
 import { applyOrthoFrame, orthoFrameForSize } from '../nodes/viewport/subviewport/offscreenViewport';
 import { fireSceneRender, fireSceneRenderEnd } from './testing/fireSceneRender';
+
+/** A poser that writes its two steps to `order`. */
+function recordingPoser(order: string[]) {
+  return { write: () => order.push('write'), restore: () => order.push('restore') };
+}
 
 describe('observeSceneCamera', () => {
   it('reports the camera each render uses', () => {
@@ -67,9 +73,17 @@ describe('observeSceneCamera', () => {
     const scene = new THREE.Scene();
     const order: string[] = [];
     observeSceneCamera(scene, () => order.push('skin'));
-    observeScenePose(scene, () => order.push('pose'));
+    observeScenePose(scene, recordingPoser(order));
     fireSceneRender(scene, new THREE.OrthographicCamera());
-    expect(order).toEqual(['pose', 'skin']);
+    expect(order).toEqual(['write', 'skin']);
+  });
+
+  it('restores a pose once the render has drawn', () => {
+    const scene = new THREE.Scene();
+    const order: string[] = [];
+    observeScenePose(scene, recordingPoser(order));
+    fireSceneRenderEnd(scene, new THREE.OrthographicCamera());
+    expect(order).toEqual(['restore']);
   });
 
   it('keeps the hook while a cull still observes', () => {
@@ -139,6 +153,53 @@ describe('observeSceneRenderEnd', () => {
     disposeEnd();
     expect(scene.onBeforeRender).toBe(onBeforeRender);
     expect(scene.onAfterRender).toBe(onAfterRender);
+  });
+});
+
+describe('withScenePose', () => {
+  it('writes the pose before the draw and restores it after', () => {
+    const scene = new THREE.Scene();
+    const order: string[] = [];
+    observeScenePose(scene, recordingPoser(order));
+
+    withScenePose(scene, () => order.push('draw'));
+
+    expect(order).toEqual(['write', 'draw', 'restore']);
+  });
+
+  it('holds the pose over each render of the scene inside the draw', () => {
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera();
+    const order: string[] = [];
+    observeScenePose(scene, recordingPoser(order));
+    observeSceneCamera(scene, () => order.push('render'));
+
+    withScenePose(scene, () => {
+      fireSceneRender(scene, camera);
+      fireSceneRenderEnd(scene, camera);
+    });
+
+    expect(order).toEqual(['write', 'render', 'restore']);
+  });
+
+  it('restores the pose when the draw throws', () => {
+    const scene = new THREE.Scene();
+    const order: string[] = [];
+    observeScenePose(scene, recordingPoser(order));
+    const draw = () => {
+      throw new Error('lost context');
+    };
+
+    expect(() => withScenePose(scene, draw)).toThrow('lost context');
+    fireSceneRender(scene, new THREE.OrthographicCamera());
+
+    expect(order).toEqual(['write', 'restore', 'write']);
+  });
+
+  it('runs the draw alone for a scene with no poser', () => {
+    const draw = vi.fn();
+    withScenePose(new THREE.Scene(), draw);
+    expect(draw).toHaveBeenCalledTimes(1);
   });
 });
 

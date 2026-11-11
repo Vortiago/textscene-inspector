@@ -5,6 +5,7 @@ import {
   armScene,
   enabledStack,
   expectColumns,
+  foreignBoneNode,
   freeNode,
   lookAtModification,
   NO_CONSTRAINT,
@@ -53,6 +54,36 @@ describe('SkeletonModification2DLookAt', () => {
       enabledStack([{ ...LOOK_AT, bone: { index: 0, node: undefined } }])
     );
     expectColumns(solved.locals[0]!, [0, 1, -1, 0, 0, 0]);
+  });
+
+  it('keeps the stored index for a bone path that names a node of another type', () => {
+    const { scene, cache } = armScene({ Target: freeNode(300, 400), Other: freeNode(0, 0) });
+    const solved = solveStack(
+      scene,
+      cache,
+      enabledStack([{ ...LOOK_AT, bone: { index: 0, node: 'Other' } }])
+    );
+    expectColumns(solved.locals[0]!, [0, 1, -1, 0, 0, 0]);
+  });
+
+  it('takes the index a Bone2D of another skeleton has there', () => {
+    const { scene, cache } = armScene({ Target: freeNode(300, 400), Other: foreignBoneNode(0) });
+    const solved = solveStack(
+      scene,
+      cache,
+      enabledStack([{ ...LOOK_AT, bone: { index: 5, node: 'Other' } }])
+    );
+    expectColumns(solved.locals[0]!, [0, 1, -1, 0, 0, 0]);
+  });
+
+  it('leaves the pose alone for a bone path that names a Bone2D in no skeleton', () => {
+    const { scene, cache } = armScene({ Target: freeNode(300, 400), Other: foreignBoneNode(-1) });
+    const solved = solveStack(
+      scene,
+      cache,
+      enabledStack([{ ...LOOK_AT, bone: { index: 0, node: 'Other' } }])
+    );
+    expect(solved.isOverridden).toEqual([false]);
   });
 
   it.each([

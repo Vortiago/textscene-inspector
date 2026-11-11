@@ -133,6 +133,18 @@ describe('Skeleton2D', () => {
     expect(arm.rotation.z).toBe(0);
   });
 
+  // The second buffer of a 2D light and a span of a canvas group draw the scene with its matrices kept.
+  it('draws the same pose in a render that updates no matrix of the scene', async () => {
+    const renderer = await render(scene('enabled = true\nstrength = 0.5'));
+    startDraw(renderer);
+    const first = canvasPosition(named(renderer, 'Hand'));
+    endDraw(renderer);
+    fireSceneRender(renderer.scene.instance as THREE.Scene, CAMERA);
+    const second = canvasPosition(named(renderer, 'Hand'));
+    expect(second.x).toBeCloseTo(first.x, 3);
+    expect(second.y).toBeCloseTo(first.y, 3);
+  });
+
   it('solves again for a target that moved since the last render', async () => {
     const renderer = await render(scene());
     startDraw(renderer);
