@@ -155,6 +155,15 @@ function farAboveNear(): string {
   return text.slice(0, near) + text.slice(far, strip) + text.slice(near, far) + text.slice(strip);
 }
 
+/** The chain on the other skeleton with two joints, FarA and FarC, and no joint for FarB between them. */
+function chainSkippingFarB(): string {
+  return CHAIN_ON_ANOTHER_SKELETON.replace('fabrik_data_chain_length = 3', 'fabrik_data_chain_length = 2')
+    .replace('joint_data/1/bone2d_node = NodePath("../Far/FarA/FarB")\n', '')
+    .replace('joint_data/1/bone_index = 1\n', '')
+    .replace('joint_data/2/bone_index = 2', 'joint_data/1/bone_index = 2')
+    .replace('joint_data/2/bone2d_node', 'joint_data/1/bone2d_node');
+}
+
 async function render(tscn: string) {
   const renderer = await ReactThreeTestRenderer.create(
     <DispatchedScene
@@ -314,6 +323,15 @@ describe('Skeleton2D', () => {
     const moved = canvasPosition(named(renderer, 'FarB'));
     expect(moved.x).toBeCloseTo(274.93, 1);
     expect(moved.y).toBeCloseTo(358.02, 1);
+  });
+
+  // Godot 4.6.3 leaves FarC on the origin of FarB, which turns with FarA: (248.60, 393.55).
+  it('carries an outside bone with the outside bone above it where the chain skips the one between', async () => {
+    const renderer = await render(chainSkippingFarB());
+    startDraw(renderer);
+    const moved = canvasPosition(named(renderer, 'FarC'));
+    expect(moved.x).toBeCloseTo(248.6, 1);
+    expect(moved.y).toBeCloseTo(393.55, 1);
   });
 
   it('gives each bone of the skeleton the transform of the outside bone at its index', async () => {

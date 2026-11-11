@@ -19,6 +19,8 @@ export interface StackBone {
 /** Where a node sits: `offset` below the bone `carrier`, or in canvas space for a carrier of -1. */
 export interface StackPlacement {
   carrier: number;
+  /** Set for a node no bone of the skeleton carries that sits below an outside bone: `offset` is below that bone. */
+  outsideBone?: OutsideBone;
   offset: Transform2DColumns;
 }
 
@@ -27,8 +29,8 @@ export interface StackPlacement {
  * and no frame returns it to the pose it had (`skeleton_modification_2d_fabrik.cpp:187-216`).
  */
 export interface OutsideBone {
-  /** The outside bone this one is a child of, or where the node above it sits. */
-  parent: OutsideBone | StackPlacement;
+  /** Where the node above it sits, which is the bone itself for the nearest outside bone above. */
+  parent: StackPlacement;
   /** Its transform within its parent as the solve starts. */
   local: Transform2DColumns;
   /** `Bone2D::get_length()`. */

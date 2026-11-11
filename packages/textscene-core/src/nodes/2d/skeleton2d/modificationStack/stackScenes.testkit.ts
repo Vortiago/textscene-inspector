@@ -59,7 +59,9 @@ export function outsideChainNodes(
   let above: OutsideBone | null = null;
   ['Far/A', 'Far/A/B', 'Far/A/B/C'].slice(0, count).forEach((name, index) => {
     const bone: OutsideBone = {
-      parent: above ?? { carrier: -1, offset: origin },
+      parent: above
+        ? { carrier: -1, outsideBone: above, offset: TRANSFORM2D_IDENTITY }
+        : { carrier: -1, offset: origin },
       local: above ? translation(spacing, 0) : TRANSFORM2D_IDENTITY,
       length: spacing,
       boneAngle: 0,

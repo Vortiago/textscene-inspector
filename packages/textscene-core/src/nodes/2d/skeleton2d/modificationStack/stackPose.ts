@@ -140,6 +140,10 @@ export class StackPose {
 
   /** The global transform of a node at `placement`, which moves with the bone that carries it. */
   placed(placement: StackPlacement): Transform2DColumns {
+    if (placement.outsideBone) {
+      const carrier = this.globalTransform(this.indexOfOutside(placement.outsideBone));
+      return multiplyTransform2D(carrier, placement.offset);
+    }
     if (placement.carrier < 0) return placement.offset;
     return multiplyTransform2D(this.globalTransform(placement.carrier), placement.offset);
   }
@@ -151,8 +155,7 @@ export class StackPose {
   }
 
   private outsideParentGlobal(bone: number): Transform2DColumns {
-    const { parent } = this.outsideBones[bone - this.ownBones.length]!;
-    return 'carrier' in parent ? this.placed(parent) : this.globalTransform(this.indexOfOutside(parent));
+    return this.placed(this.outsideBones[bone - this.ownBones.length]!.parent);
   }
 
   private valuesOf(bone: number): XformValues {
