@@ -69,6 +69,19 @@ export const AnimationLoopMode = {
   PINGPONG: 2,
 } as const;
 
+/** `Animation::UpdateMode` (`scene/resources/animation.h:68-72`). DISCRETE holds each key until the next one. */
+export const AnimationUpdateMode = {
+  CONTINUOUS: 0,
+  DISCRETE: 1,
+  CAPTURE: 2,
+} as const;
+
+/**
+ * The highest `update` the keys of a value track store: `Animation::_set` clamps to 3, one past
+ * CAPTURE (`scene/resources/animation.cpp:258-259`).
+ */
+export const ANIMATION_UPDATE_MODE_CEILING = 3;
+
 /** `Animation::InterpolationType` (`scene/resources/animation.h:58-64`). */
 export const AnimationInterpolation = {
   NEAREST: 0,
