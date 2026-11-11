@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { PREVIEW_URL } from '../compare-docs/gallery/vocabulary.mjs';
+import { CHANGES, changedEntries } from '../gitNameStatus.mjs';
 import { goldenNameOf } from '../visual/baselinePath.mjs';
 import { fixtureUrl } from '../visual/preview/fixtureUrl.mjs';
 import { GOLDEN_SCENES } from '../visual/scenes.mjs';
@@ -15,7 +16,6 @@ import { GOLDEN_SCENES } from '../visual/scenes.mjs';
 /** The first line of the comment, which the workflow searches for to update it in place. */
 const GOLDENS_COMMENT_MARKER = '<!-- goldens-touched -->';
 
-const STATUS_WORDS = { A: 'added', M: 'changed', D: 'removed' };
 const PAGES_HOST = new URL(PREVIEW_URL).host;
 
 // The branch alias of a Cloudflare Pages preview deployment keeps 28 characters of the branch
@@ -46,16 +46,10 @@ export function goldensComment(nameStatus, scenes, pullRequest) {
 
 /** The changed baselines, by name, in the order git lists them. */
 function parseGoldens(nameStatus) {
-  return nameStatus.split('\n').flatMap((line) => {
-    const [status, path = ''] = line.split('\t');
+  return changedEntries(nameStatus).flatMap(({ change, path }) => {
     const name = goldenNameOf(path);
-    return name ? [{ path, name, change: changeWord(status) }] : [];
+    return name ? [{ path, name, change }] : [];
   });
-}
-
-/** A type change (`T`) is the only other status `--no-renames` gives between two commits. */
-function changeWord(status) {
-  return STATUS_WORDS[status] ?? STATUS_WORDS.M;
 }
 
 /** An added golden has no scene on main, and a removed one has none on the branch. */
@@ -85,8 +79,10 @@ function branchSite(branch) {
 
 function fold(table, goldens) {
   if (goldens.length <= OPEN_ROW_LIMIT) return table;
-  const counts = Object.values(STATUS_WORDS)
-    .map((change) => [change, goldens.filter((golden) => golden.change === change).length])
+  const counts = CHANGES.map((change) => [
+    change,
+    goldens.filter((golden) => golden.change === change).length,
+  ])
     .filter(([, count]) => count > 0)
     .map(([change, count]) => `${count} ${change}`);
   return `<details><summary>${goldens.length} goldens: ${counts.join(', ')}</summary>\n\n${table}\n\n</details>`;

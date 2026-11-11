@@ -30,7 +30,26 @@ const typeChecks = (...dirs) => {
   ];
 };
 
+const EXPORT_SCAN = 'pnpm exec vitest run scripts/testOnlyExports.test.mjs';
+
 describe('planChecks', () => {
+  it('runs the test-only export scan when a source file of core changes or goes', () => {
+    expect(plan(['packages/textscene-core/src/r3f/ySort.ts'])).toContain(EXPORT_SCAN);
+    expect(plan([], ['packages/textscene-core/src/r3f/ySort.tsx'])).toContain(EXPORT_SCAN);
+  });
+
+  it('runs the scan in the one test run, with the tests beside the changed file', () => {
+    const beside = () => ['packages/textscene-core/src/r3f/ySort.test.ts'];
+    expect(plan(['packages/textscene-core/src/r3f/ySort.ts'], [], undefined, beside)).toContain(
+      'pnpm exec vitest run packages/textscene-core/src/r3f/ySort.test.ts scripts/testOnlyExports.test.mjs'
+    );
+  });
+
+  it('leaves the scan out for a change outside the source of core (edge case)', () => {
+    expect(plan(['apps/textscene-web/src/App.tsx'])).not.toContain(EXPORT_SCAN);
+    expect(plan(['packages/textscene-core/README.md'])).not.toContain(EXPORT_SCAN);
+  });
+
   it('runs nothing for files no check reads', () => {
     expect(plan(['README.md', '.claude/skills/other/SKILL.md', 'docs/adr/0001-x.md'])).toEqual([]);
   });
@@ -69,10 +88,10 @@ describe('planChecks', () => {
   });
 
   it('type-checks and lints a TypeScript change', () => {
-    expect(plan(['packages/textscene-core/src/a.ts'])).toEqual([
-      ...typeChecks('packages/textscene-core'),
-      'npx eslint --cache packages/textscene-core/src/a.ts',
-      'pnpm exec prettier --cache --check packages/textscene-core/src/a.ts',
+    expect(plan(['apps/textscene-web/src/a.ts'])).toEqual([
+      ...typeChecks('apps/textscene-web'),
+      'npx eslint --cache apps/textscene-web/src/a.ts',
+      'pnpm exec prettier --cache --check apps/textscene-web/src/a.ts',
       'pnpm canonical --check',
     ]);
   });
@@ -127,7 +146,7 @@ describe('planChecks', () => {
   });
 
   it('type-checks a deleted TypeScript file, since its importers break', () => {
-    expect(plan([], ['packages/textscene-core/src/gone.ts'])).toEqual(typeChecks('packages/textscene-core'));
+    expect(plan([], ['apps/textscene-web/src/gone.ts'])).toEqual(typeChecks('apps/textscene-web'));
   });
 
   it('type-checks each package with a TypeScript change once', () => {

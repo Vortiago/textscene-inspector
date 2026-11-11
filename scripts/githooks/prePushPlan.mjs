@@ -33,6 +33,14 @@ const VENDORED = /^\.claude\/(?:skills\/conventional-commits\/|rules\/|agents\/s
 const EXTENSION_HOST_SUITE = /^apps\/textscene-vscode\/src\/test\//;
 
 /**
+ * A source file of core. Adding an export there, or deleting its last importer inside core, can
+ * leave an export that only tests import, so the push runs the scan that finds one. The scan sits
+ * beside no source file. CI stays the first to report an importer deleted outside core.
+ */
+const CORE_SOURCE = /^packages\/textscene-core\/src\/.*\.tsx?$/;
+const TEST_ONLY_EXPORT_SCAN = 'scripts/testOnlyExports.test.mjs';
+
+/**
  * The type checks of every package. `type-check:all` builds the packages, which
  * `type-check:tests` and the docs checks read.
  */
@@ -87,7 +95,9 @@ function typeChecksFor(typed) {
  */
 export function planChecks({ changed, deleted, isNegativeFixture, testsBeside }) {
   const all = [...changed, ...deleted];
-  const tests = [...new Set(changed.filter((path) => TESTABLE.test(path)).flatMap(testsBeside))].filter(
+  const besideChanged = changed.filter((path) => TESTABLE.test(path)).flatMap(testsBeside);
+  const exportScan = all.some((path) => CORE_SOURCE.test(path)) ? [TEST_ONLY_EXPORT_SCAN] : [];
+  const tests = [...new Set([...besideChanged, ...exportScan])].filter(
     (path) => !EXTENSION_HOST_SUITE.test(path)
   );
   const runTests = tests.length > 0 ? [['pnpm', 'exec', 'vitest', 'run', ...tests]] : [];
