@@ -61,7 +61,7 @@ function useEnclosingViewportSize(embedder: ControlRasterViewport['embedder']): 
 
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const { path, node, inheritedRtl, themeOwners, embedder, internalResources, externalResources } = viewport;
-  const gate = useResolvedGate(viewport.gate);
+  const gate = useResolvedGate(viewport.gate, path);
 
   const properties = node.properties as SubViewportProperties;
   const { transparent_bg: transparentBg, render_target_clear_mode: clearMode } = properties;

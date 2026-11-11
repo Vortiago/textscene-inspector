@@ -234,3 +234,23 @@ visible = false
     expect(resolveGate(plain, new Map([['Root', false]])).updateMode).toBe(ALWAYS);
   });
 });
+
+describe('resolveGate: a stretched container', () => {
+  const scene = (stretch: string) => `[node name="Root" type="Control"]
+
+[node name="Booth" type="SubViewportContainer" parent="."]
+${stretch}
+[node name="View" type="SubViewport" parent="Booth"]
+`;
+
+  it('holds its viewport DISABLED until the container has published its rect', () => {
+    const gate = viewportGateAt(treeOf(scene('stretch = true')), 'Root/Booth/View', ONCE);
+    expect(resolveGate(gate, new Map(), false).updateMode).toBe(DISABLED);
+    expect(resolveGate(gate, new Map(), true).updateMode).toBe(ALWAYS);
+  });
+
+  it('never waits for a container that does not stretch', () => {
+    const gate = viewportGateAt(treeOf(scene('')), 'Root/Booth/View', ONCE);
+    expect(resolveGate(gate, new Map(), false).updateMode).toBe(ALWAYS);
+  });
+});

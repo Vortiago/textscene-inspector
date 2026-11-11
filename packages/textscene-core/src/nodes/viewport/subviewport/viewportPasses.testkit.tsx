@@ -25,6 +25,12 @@ import {
 } from '../../../r3f/contexts/AnimatedValueContext';
 import { HierarchyProvider } from '../../../r3f/contexts/HierarchyContext';
 import { ControlRasterLayer } from './ControlRasterLayer';
+import {
+  ViewportRectProvider,
+  useRegisterViewportRect,
+  type RegisterViewportRect,
+  type ViewportRect,
+} from '../../../r3f/contexts/ViewportRectContext';
 import { buildSceneGraph, tscnSceneToParsedScene } from '../../../core/SceneGraph';
 
 /** The light cookie the SubViewport lighting tests seed. */
@@ -127,6 +133,12 @@ function CaptureAnimatedValues({ captured }: { captured: { current: AnimatedValu
   return null;
 }
 
+/** Writes the rect publisher into `captured`. */
+function CaptureRectPublisher({ captured }: { captured: { current: RegisterViewportRect | null } }) {
+  captured.current = useRegisterViewportRect();
+  return null;
+}
+
 /** Pushes `visible` to the node at `path`, as an AnimationPlayer track does. */
 export function driveVisible(registry: AnimatedValueRegistry, path: string, isVisible: boolean): void {
   registry.set(animatedValueKey(path, 'visible'), [isVisible ? 1 : 0]);
@@ -135,6 +147,8 @@ export function driveVisible(registry: AnimatedValueRegistry, path: string, isVi
 /** What a test does to the scene between frames. */
 export interface FrameControls {
   animated: AnimatedValueRegistry;
+  /** Hands the viewport at `path` the rect its stretching container forces, as the container's layout does. */
+  publishViewportRect(path: string, rect: ViewportRect): void;
   /** Mounts the nodes of `tscn` over the ones mounted, as an edit to the scene does. */
   replaceScene(tscn: string): Promise<void>;
 }
@@ -153,6 +167,7 @@ export async function framesOf(
   const fake = createFakeResourceLoader();
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const animated: { current: AnimatedValueRegistry | null } = { current: null };
+  const rectPublisher: { current: RegisterViewportRect | null } = { current: null };
   const parsedFirst = new TscnParser().parse(tscn);
   const sceneGraph = buildSceneGraph(
     tscnSceneToParsedScene(
@@ -168,20 +183,23 @@ export async function framesOf(
       <HierarchyProvider value={{ sceneGraph, panelId: 'test' }}>
         <AnimatedValueProvider>
           <CaptureAnimatedValues captured={animated} />
-          <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-            <ViewportModeProvider initialShowPreviewEnvironment={false}>
-              <ViewportPassStack captured={captured}>
-                <CanvasWorldScope>
-                  <NodeDispatcher nodes={parsed.nodes} />
-                  <ControlRasterLayer
-                    nodes={parsed.nodes}
-                    internalResources={parsed.internalResources}
-                    externalResources={parsed.externalResources}
-                  />
-                </CanvasWorldScope>
-              </ViewportPassStack>
-            </ViewportModeProvider>
-          </SceneStack>
+          <ViewportRectProvider>
+            <CaptureRectPublisher captured={rectPublisher} />
+            <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
+              <ViewportModeProvider initialShowPreviewEnvironment={false}>
+                <ViewportPassStack captured={captured}>
+                  <CanvasWorldScope>
+                    <NodeDispatcher nodes={parsed.nodes} />
+                    <ControlRasterLayer
+                      nodes={parsed.nodes}
+                      internalResources={parsed.internalResources}
+                      externalResources={parsed.externalResources}
+                    />
+                  </CanvasWorldScope>
+                </ViewportPassStack>
+              </ViewportModeProvider>
+            </SceneStack>
+          </ViewportRectProvider>
         </AnimatedValueProvider>
       </HierarchyProvider>
     );
@@ -191,6 +209,7 @@ export async function framesOf(
     get animated() {
       return animated.current!;
     },
+    publishViewportRect: (path, rect) => void rectPublisher.current!(path, rect),
     replaceScene: async (source) => {
       await ReactThreeTestRenderer.act(async () => renderer.update(treeOf(source)));
       await settleLoads();
