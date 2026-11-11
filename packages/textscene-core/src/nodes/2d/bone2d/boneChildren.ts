@@ -5,9 +5,11 @@
  * root (ADR-0060). It also ranks the kites in Godot's draw order.
  */
 
+import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
 import type { LiveTree } from '../../../r3f/liveSceneTree.js';
 import { perObject } from '../../../utils/perObject.js';
 import { sameData } from '../../../utils/sameData.js';
+import { bindSkeleton2DRigs, skeletonOfBone } from '../skeleton2d/skeletonRig.js';
 
 /** What a Bone2D needs of the tree to draw its kite. */
 export interface BoneKiteSource {
@@ -21,6 +23,14 @@ export interface BoneKiteSource {
    * adding a bone changes only the kites after it.
    */
   drawOrder: number;
+  /** The Skeleton2D the bone joins and its index there, or null for a bone that joins none. */
+  joint: BoneJoint | null;
+}
+
+export interface BoneJoint {
+  /** The live path of the Skeleton2D. */
+  skeletonPath: string;
+  index: number;
 }
 
 /** Written only by {@link kept}: the last source of each bone node, by live path. */
@@ -47,10 +57,16 @@ export function bindBoneChildren(tree: LiveTree): ReadonlyMap<string, BoneKiteSo
     descend(path);
     bones.push({ path, node: step.node, children });
   });
+  const rigs = liveScenePassResults(bindSkeleton2DRigs, tree);
+  const jointOf = (path: string): BoneJoint | null => {
+    const skeletonPath = skeletonOfBone(path, tree);
+    const index = skeletonPath === null ? undefined : rigs.get(skeletonPath)?.indexOf.get(path);
+    return skeletonPath === null || index === undefined ? null : { skeletonPath, index };
+  };
   return new Map(
     bones.map(({ path, node, children }, rank) => [
       path,
-      kept(node, path, { children, drawOrder: rank / (rank + 1) }),
+      kept(node, path, { children, drawOrder: rank / (rank + 1), joint: jointOf(path) }),
     ])
   );
 }

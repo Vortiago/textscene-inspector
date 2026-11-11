@@ -365,7 +365,7 @@ describe('comparison sheets', () => {
     /** Every descendant of these, and the root itself, drives bones in Godot. */
     const DRIVER_FAMILY_ROOTS = ['SkeletonModifier3D', 'SpringBoneCollision3D'];
     /** Drivers whose own component runs the drive, with no scene pass. */
-    const DRIVER_COMPONENT_TYPES = new Set(['AnimationPlayer', 'AnimationTree']);
+    const DRIVER_COMPONENT_TYPES = new Set(['AnimationPlayer', 'AnimationTree', 'Skeleton2D']);
     /** The backticked hook a SkeletonModifier3D runs on, and only it. */
     const MODIFICATION_HOOK = '`_process_modification`';
 

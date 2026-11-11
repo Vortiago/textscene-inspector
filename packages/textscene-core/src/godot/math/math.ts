@@ -119,6 +119,28 @@ export function lerpf(from: number, to: number, weight: number): number {
   return f(from + f(f(to - from) * weight));
 }
 
+/** `(float)TAU`, the modulus of the float `Math::angle_difference`. */
+const TAU_FLOAT = f(TAU);
+
+/**
+ * The float `Math::angle_difference` (`core/math/math_funcs.h:486-489`): the short way from `from`
+ * to `to`, signed.
+ */
+function angleDifference(from: number, to: number): number {
+  const difference = f(f(to - from) % TAU_FLOAT);
+  return f(f(f(2 * difference) % TAU_FLOAT) - difference);
+}
+
+/**
+ * The float `Math::lerp_angle` (`core/math/math_funcs.h:494-496`): `from` turned the short way
+ * towards `to`.
+ *
+ * @canonical An angle interpolated the short way in float32
+ */
+export function lerpAngle(from: number, to: number, weight: number): number {
+  return f(from + f(angleDifference(from, to) * weight));
+}
+
 /** `(float)PI / 180.0f`, the constant of the float `Math::deg_to_rad`. */
 const DEG_TO_RAD_FLOAT = f(f(Math.PI) / 180);
 
@@ -340,4 +362,14 @@ export function posmod(x: number, y: number): number {
 export function fposmodp(x: number, y: number): number {
   const value = x % y;
   return (value < 0 ? value + y : value) + 0;
+}
+
+/**
+ * `Math::acos` (`math_funcs.h:107-112`): a cosine past 1, which float rounding produces, gives 0,
+ * and one below -1 gives π, so the engine has no NaN angle.
+ *
+ * @canonical An arc cosine that holds its argument inside -1 to 1
+ */
+export function acosClamped(cosine: number): number {
+  return cosine < -1 ? Math.PI : cosine > 1 ? 0 : Math.acos(cosine);
 }

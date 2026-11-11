@@ -1013,6 +1013,17 @@ describe('physics pause follows the previews flag', () => {
     expect(editor[freeze - 1].trim()).toBe('if PREVIEWS:');
   });
 
+  it('keeps a Skeleton2D with a stack processing in the paused tree, and its children paused', () => {
+    // The editor runs the stack too (`skeleton_2d.cpp:630-639` has no editor guard), so the pose
+    // it solves is the pose the editor shows.
+    const lines = script(true).split('\n');
+    const skeleton = lines.findIndex((l) => l.trim() === 'if node is Skeleton2D:');
+    expect(skeleton).toBeGreaterThan(lines.findIndex((l) => l.startsWith('func _freeze_game_logic')));
+    expect(lines[skeleton + 1].trim()).toBe('_keep_stack_running(node as Skeleton2D)');
+    expect(script(true)).toContain('skeleton.process_mode = Node.PROCESS_MODE_ALWAYS');
+    expect(script(true)).toContain('child.process_mode = Node.PROCESS_MODE_PAUSABLE');
+  });
+
   it('still emits the pause behind the PREVIEWS gate rather than hard-coding it', () => {
     // A copy of the line outside the `if` would pause a --no-previews render too.
     const lines = script(false).split('\n');

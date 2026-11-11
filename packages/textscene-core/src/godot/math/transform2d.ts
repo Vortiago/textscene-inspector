@@ -10,9 +10,9 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { isEqualApprox, isZeroApprox, sign } from './math.js';
+import { acosClamped, isEqualApprox, isZeroApprox, lerpAngle, sign } from './math.js';
 import { storedReal as f } from './real.js';
-import { normalizedVector2, type Vector2 } from './vector.js';
+import { normalizedVector2, vector2Length, vector2Lerp, type Vector2 } from './vector.js';
 
 /**
  * `columns[0] = (a, b)` is the x axis, `columns[1] = (c, d)` the y axis and `columns[2] = (tx, ty)`
@@ -205,10 +205,9 @@ export function transform2DDeterminant(t: Transform2DColumns): number {
  * finite. A zero determinant zeroes the signed half.
  */
 export function transform2DGetScale(t: Transform2DColumns): { x: number; y: number } {
-  const det = t.a * t.d - t.c * t.b;
   return {
-    x: Math.hypot(t.a, t.b),
-    y: sign(det) * Math.hypot(t.c, t.d),
+    x: vector2Length({ x: t.a, y: t.b }),
+    y: f(sign(transform2DDeterminant(t)) * vector2Length({ x: t.c, y: t.d })),
   };
 }
 
@@ -247,14 +246,82 @@ export function transform2DDecompose(t: Transform2DColumns): {
   const detSign = sign(t.a * t.d - t.c * t.b);
   const x = normalizedVector2({ x: t.a, y: t.b });
   const y = normalizedVector2({ x: t.c, y: t.d });
-  // The dot of unit vectors can round past 1, where `acos` has no answer.
-  const cosine = Math.max(-1, Math.min(1, x.x * detSign * y.x + x.y * detSign * y.y));
+  const cosine = x.x * detSign * y.x + x.y * detSign * y.y;
   return {
     position: { x: t.tx, y: t.ty },
     rotation: Math.atan2(t.b, t.a),
     scale: transform2DGetScale(t),
-    skew: Math.acos(cosine) - Math.PI / 2,
+    skew: acosClamped(cosine) - Math.PI / 2,
   };
+}
+
+/**
+ * `Transform2D::get_rotation` (`transform_2d.cpp:82-84`) in `real_t` float: the angle of the x axis.
+ *
+ * @canonical The rotation of a Transform2D in float32
+ */
+export function transform2DGetRotation(t: Transform2DColumns): number {
+  return f(Math.atan2(t.b, t.a));
+}
+
+const HALF_PI_FLOAT = f(f(Math.PI) * 0.5);
+
+/**
+ * `Transform2D::get_skew` (`transform_2d.cpp:72-75`) in `real_t` float: the angle of the y axis
+ * from perpendicular to the x axis, mirrored with the sign of the determinant.
+ */
+export function transform2DGetSkew(t: Transform2DColumns): number {
+  const detSign = sign(transform2DDeterminant(t));
+  const x = normalizedVector2({ x: t.a, y: t.b });
+  const y = normalizedVector2({ x: t.c, y: t.d });
+  const cosine = f(f(x.x * f(detSign * y.x)) + f(x.y * f(detSign * y.y)));
+  return f(f(acosClamped(cosine)) - HALF_PI_FLOAT);
+}
+
+/** `Transform2D(rot, pos)` (`transform_2d.cpp:97-105`): a rotation at an origin, with unit scale. */
+function rotationAt(rotation: number, t: Transform2DColumns): Transform2DColumns {
+  const cos = f(Math.cos(rotation));
+  const sin = f(Math.sin(rotation));
+  return { a: cos, b: sin, c: 0 - sin, d: cos, tx: t.tx, ty: t.ty };
+}
+
+/**
+ * `Transform2D::set_rotation` (`transform_2d.cpp:86-95`) in `real_t` float: the axes turn to
+ * `rotation` and keep the scale `get_scale` reads, so a skew is dropped. The origin stays.
+ *
+ * @canonical A Transform2D turned to a rotation in float32
+ */
+export function transform2DSetRotation(t: Transform2DColumns, rotation: number): Transform2DColumns {
+  return transform2DSetScale(rotationAt(f(rotation), t), transform2DGetScale(t));
+}
+
+/**
+ * `Transform2D::looking_at` (`transform_2d.cpp:191-196`) in `real_t` float: a transform at the
+ * origin of `t` whose x axis points at `target`, with unit scale.
+ */
+export function transform2DLookingAt(t: Transform2DColumns, target: Vector2): Transform2DColumns {
+  const facing = rotationAt(transform2DGetRotation(t), t);
+  const local = transform2DXform(affineInverseTransform2D(t), target);
+  const scale = transform2DGetScale(t);
+  const turn = f(Math.atan2(f(local.y * scale.y), f(local.x * scale.x)));
+  return transform2DSetRotation(facing, f(transform2DGetRotation(facing) + turn));
+}
+
+/**
+ * `Transform2D::interpolate_with` (`transform_2d.cpp:262-268`) in `real_t` float: the rotation and
+ * the skew turn the short way, and the scale and the origin move on a line.
+ */
+export function transform2DInterpolateWith(
+  from: Transform2DColumns,
+  to: Transform2DColumns,
+  weight: number
+): Transform2DColumns {
+  return transform2DFromParts(
+    lerpAngle(transform2DGetRotation(from), transform2DGetRotation(to), weight),
+    vector2Lerp(transform2DGetScale(from), transform2DGetScale(to), weight),
+    lerpAngle(transform2DGetSkew(from), transform2DGetSkew(to), weight),
+    vector2Lerp({ x: from.tx, y: from.ty }, { x: to.tx, y: to.ty }, weight)
+  );
 }
 
 /**

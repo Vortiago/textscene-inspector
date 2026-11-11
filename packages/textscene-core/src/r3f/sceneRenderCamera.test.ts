@@ -6,6 +6,7 @@ import {
   isViewportPass,
   observeSceneCamera,
   observeSceneCull,
+  observeScenePose,
   observeSceneRenderEnd,
 } from './sceneRenderCamera';
 import { applyOrthoFrame, orthoFrameForSize } from '../nodes/viewport/subviewport/offscreenViewport';
@@ -60,6 +61,15 @@ describe('observeSceneCamera', () => {
     observeSceneCamera(scene, () => order.push('fit'));
     fireSceneRender(scene, new THREE.OrthographicCamera());
     expect(order).toEqual(['fit', 'cull']);
+  });
+
+  it('runs a poser before every observer, whatever order they came in', () => {
+    const scene = new THREE.Scene();
+    const order: string[] = [];
+    observeSceneCamera(scene, () => order.push('skin'));
+    observeScenePose(scene, () => order.push('pose'));
+    fireSceneRender(scene, new THREE.OrthographicCamera());
+    expect(order).toEqual(['pose', 'skin']);
   });
 
   it('keeps the hook while a cull still observes', () => {

@@ -18,6 +18,7 @@ import {
   vector2Sub,
   type Vector2,
 } from '../../../godot/math/vector.js';
+import type { BoneReach } from './boneReach.js';
 
 /** `editors/2d/bone_width` and `editors/2d/bone_outline_size` (`editor_settings.cpp:974,980`). */
 const BONE_WIDTH = 5;
@@ -36,12 +37,6 @@ export interface BoneKite {
   fill: Vector2[];
   /** The border, a hexagon that holds the kite. */
   outline: Vector2[];
-}
-
-/** What a bone with no Bone2D child draws along (`skeleton_2d.cpp:329`). */
-export interface BoneReach {
-  length: number;
-  angle: number;
 }
 
 function rotated({ x, y }: Vector2, angle: number): Vector2 {

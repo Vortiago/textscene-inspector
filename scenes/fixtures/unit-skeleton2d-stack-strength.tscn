@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+; Moves one variable: the stack of unit-skeleton2d-twoboneik.tscn at `strength = 0.5`. No other
+; golden runs a stack below full strength, so none shows a regression in the blend with the authored
+; pose. The two bones stop half-way between the authored pose and the solved one.
+
+[sub_resource type="SkeletonModification2DTwoBoneIK" id="ik"]
+target_nodepath = NodePath("../Target")
+joint_one_bone_idx = 0
+joint_one_bone2d_node = NodePath("Upper")
+joint_two_bone_idx = 1
+joint_two_bone2d_node = NodePath("Upper/Lower")
+
+[sub_resource type="SkeletonModificationStack2D" id="stack"]
+enabled = true
+strength = 0.5
+modification_count = 1
+modifications/0 = SubResource("ik")
+
+[node name="Root" type="Node2D"]
+
+[node name="Skeleton" type="Skeleton2D" parent="."]
+position = Vector2(300, 150)
+modification_stack = SubResource("stack")
+
+[node name="Upper" type="Bone2D" parent="Skeleton"]
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+
+[node name="Bar" type="Polygon2D" parent="Skeleton/Upper"]
+color = Color(0.95, 0.55, 0.15, 1)
+polygon = PackedVector2Array(0, -10, 150, -10, 150, 10, 0, 10)
+
+[node name="Lower" type="Bone2D" parent="Skeleton/Upper"]
+position = Vector2(150, 0)
+rest = Transform2D(1, 0, 0, 1, 150, 0)
+auto_calculate_length_and_angle = false
+length = 150.0
+
+[node name="Bar" type="Polygon2D" parent="Skeleton/Upper/Lower"]
+color = Color(0.2, 0.6, 0.95, 1)
+polygon = PackedVector2Array(0, -10, 150, -10, 150, 10, 0, 10)
+
+[node name="Strip" type="Polygon2D" parent="."]
+position = Vector2(300, 150)
+skeleton = NodePath("../Skeleton")
+color = Color(0.3, 0.8, 0.4, 1)
+polygon = PackedVector2Array(0, 20, 150, 20, 300, 20, 300, 40, 150, 40, 0, 40)
+bones = [NodePath("Upper"), PackedFloat32Array(1, 0.5, 0, 0, 0.5, 1), NodePath("Upper/Lower"), PackedFloat32Array(0, 0.5, 1, 1, 0.5, 0)]
+
+[node name="Target" type="Node2D" parent="."]
+position = Vector2(450, 350)
+
+[node name="Mark" type="Polygon2D" parent="Target"]
+color = Color(0.9, 0.25, 0.25, 1)
+polygon = PackedVector2Array(-6, -6, 6, -6, 6, 6, -6, 6)

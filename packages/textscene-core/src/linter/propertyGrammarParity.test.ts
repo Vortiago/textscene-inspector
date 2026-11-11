@@ -265,10 +265,10 @@ describe('property-grammar parity guard', () => {
   // gap `renderIntent` already declares, so neither widens the population.
   // A type that reads its own properties through a parser of its own is a swept slice, not a reuser.
   // Bone2D, BoneAttachment3D, CanvasGroup, DampedSpringJoint2D, GrooveJoint2D, MeshInstance2D,
-  // OccluderInstance3D, PopupMenu, RayCast3D, ShapeCast3D, VideoStreamPlayer, AcceptDialog,
-  // ConfirmationDialog and FileDialog read theirs.
-  const SWEPT_SLICES = 151;
-  const PARSER_REUSING_SLICES = 100;
+  // OccluderInstance3D, PopupMenu, RayCast3D, ShapeCast3D, Skeleton2D, VideoStreamPlayer,
+  // AcceptDialog, ConfirmationDialog and FileDialog read theirs.
+  const SWEPT_SLICES = 152;
+  const PARSER_REUSING_SLICES = 99;
 
   it('accounts for every linterParser.ts, swept or knowingly not', () => {
     const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>

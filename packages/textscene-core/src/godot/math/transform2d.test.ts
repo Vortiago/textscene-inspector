@@ -15,7 +15,11 @@ import {
   mutableTransform2D,
   transform2DDecompose,
   transform2DFromParts,
+  transform2DGetRotation,
   transform2DGetScale,
+  transform2DInterpolateWith,
+  transform2DLookingAt,
+  transform2DSetRotation,
   transform2DHasZeroSkew,
   transform2DBasisXform,
   transform2DBasisXformInto,
@@ -467,5 +471,46 @@ describe('affineInverseTransform2DInto', () => {
     const out = affineInverseTransform2DInto({ ...t }, { a: 0, b: 0, c: 0, d: 0, tx: 5, ty: 5 });
 
     expect(out).toEqual(TRANSFORM2D_IDENTITY);
+  });
+});
+
+// Godot 4.6.3: `Transform2D(0.4, Vector2(2, -1.5), 0.3, Vector2(10, 20))` and
+// `Transform2D(-2.0, Vector2(1, 3), -0.2, Vector2(-5, 40))`, printed by a headless script.
+describe('the rotation methods of a Transform2D against Godot 4.6.3', () => {
+  const a = transform2DFromParts(0.4, { x: 2, y: -1.5 }, 0.3, { x: 10, y: 20 });
+  const b = transform2DFromParts(-2, { x: 1, y: 3 }, -0.2, { x: -5, y: 40 });
+  const columnsOf = (t: Transform2DColumns) => [t.a, t.b, t.c, t.d, t.tx, t.ty];
+  const expectColumns = (t: Transform2DColumns, expected: number[]) =>
+    columnsOf(t).forEach((value, i) => expect(value).toBeCloseTo(expected[i]!, 5));
+
+  it('reads the rotation of the x axis', () => {
+    expect(transform2DGetRotation(a)).toBeCloseTo(0.4, 6);
+  });
+
+  it('sets a rotation with the scale kept and the skew dropped', () => {
+    const turned = transform2DSetRotation(a, 1.1);
+
+    expectColumns(turned, [
+      2 * Math.cos(1.1),
+      2 * Math.sin(1.1),
+      1.5 * Math.sin(1.1),
+      -1.5 * Math.cos(1.1),
+      10,
+      20,
+    ]);
+  });
+
+  it('looks at a point with unit scale', () => {
+    expectColumns(
+      transform2DLookingAt(a, { x: 50, y: -30 }),
+      [0.3651234805584, -0.93095910549164, 0.93095910549164, 0.3651234805584, 10, 20]
+    );
+  });
+
+  it('interpolates rotation, scale, skew and origin apart', () => {
+    expectColumns(
+      transform2DInterpolateWith(a, b, 0.25),
+      [1.71511650085449, -0.34767135977745, -0.00937402620912, -0.37488281726837, 6.25, 25]
+    );
   });
 });
