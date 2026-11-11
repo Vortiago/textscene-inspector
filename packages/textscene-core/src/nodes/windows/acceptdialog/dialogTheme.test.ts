@@ -16,6 +16,7 @@ import { parseConfirmationDialog } from '../confirmationdialog/parser';
 import { parseDialog } from './parser';
 
 const THEME = nativeTheme(1);
+const EMBEDDER = { x: 1152, y: 648 };
 const RED = { r: 1, g: 0, b: 0, a: 1 };
 
 function themeOf(parts: Pick<ThemeResource, 'colors' | 'constants'>): ThemeResource {
@@ -50,14 +51,14 @@ describe('a dialog under a Theme', () => {
   });
 
   it('makes the message taller with a larger Label line_spacing', () => {
-    const heightOf = (window: SolveNode) => wrappedWindowSize(window, THEME, measureText).y;
+    const heightOf = (window: SolveNode) => wrappedWindowSize(window, THEME, measureText, EMBEDDER).y;
     const plain = dialog([]);
     const spaced = dialog([themeOf({ constants: { Label: { line_spacing: 20 } } })]);
     expect(heightOf(spaced)).toBeGreaterThan(heightOf(plain));
     const contentOf = (window: SolveNode) =>
       dialogGeometry(
         window,
-        wrappedWindowSize(window, THEME, measureText),
+        wrappedWindowSize(window, THEME, measureText, EMBEDDER),
         createSolveContext(THEME, measureText)
       ).content;
     expect(contentOf(spaced).h).toBeGreaterThan(contentOf(plain).h);

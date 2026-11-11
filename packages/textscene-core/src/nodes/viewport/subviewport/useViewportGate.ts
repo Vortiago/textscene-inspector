@@ -7,7 +7,7 @@ import { useMemo } from 'react';
 
 import { useAnimatedVisibility } from '../../../r3f/contexts/AnimatedValueContext.js';
 import { liveTreeOf } from '../../../r3f/liveSceneTree.js';
-import { useSharedLiveTree } from '../../../r3f/useLiveSceneTree.js';
+import { useProjectEmbedsSubwindows, useSharedLiveTree } from '../../../r3f/useLiveSceneTree.js';
 import {
   resolveGate,
   ungatedViewport,
@@ -18,12 +18,13 @@ import {
 
 export function useViewportGate(path: string, authoredMode: number): UpdateGate {
   const live = useSharedLiveTree();
+  const rootEmbeds = useProjectEmbedsSubwindows();
   const gate = useMemo(
     () =>
       live
-        ? viewportGateAt(liveTreeOf(live.roots, live.ctx), path, authoredMode)
+        ? viewportGateAt(liveTreeOf(live.roots, live.ctx), path, authoredMode, rootEmbeds)
         : ungatedViewport(authoredMode),
-    [live, path, authoredMode]
+    [live, path, authoredMode, rootEmbeds]
   );
   return useResolvedGate(gate);
 }

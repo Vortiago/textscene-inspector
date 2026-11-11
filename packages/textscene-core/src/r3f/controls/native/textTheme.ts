@@ -62,16 +62,32 @@ export interface TextOutlineTheme {
 
 const DEFAULT_OUTLINE_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 
+/** The theme item names of one outline: a colour and a size constant. */
+export interface OutlineItemNames {
+  color: string;
+  size: string;
+}
+
+const ITEM_OUTLINE_NAMES: OutlineItemNames = { color: 'font_outline_color', size: 'outline_size' };
+
+/** The separator label's own outline items of a PopupMenu (`popup_menu.cpp:3314-3315`). */
+export const SEPARATOR_OUTLINE_NAMES: OutlineItemNames = {
+  color: 'font_separator_outline_color',
+  size: 'separator_outline_size',
+};
+
 /**
  * The `font_outline_color` and `outline_size` theme items of a Control that draws its text through
- * `OutlinedTextRun` or a Label's effect layers. `defaultColor` is the type's default theme colour.
+ * `OutlinedTextRun` or a Label's effect layers. `defaultColor` is the type's default theme colour,
+ * and `names` picks another pair of items for a Control that has two.
  */
 export function resolveTextOutline(
   n: Pick<ShareNode, 'colors' | 'constants'>,
-  defaultColor: Rgba = DEFAULT_OUTLINE_COLOR
+  defaultColor: Rgba = DEFAULT_OUTLINE_COLOR,
+  names: OutlineItemNames = ITEM_OUTLINE_NAMES
 ): TextOutlineTheme {
   return {
-    color: n.colors['font_outline_color'] ?? defaultColor,
-    sizePx: n.constants['outline_size'] ?? 0,
+    color: n.colors[names.color] ?? defaultColor,
+    sizePx: n.constants[names.size] ?? 0,
   };
 }

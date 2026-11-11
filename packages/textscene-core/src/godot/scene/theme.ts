@@ -68,7 +68,7 @@ export const STYLE_FILL = {
 } as const satisfies Record<string, Rgba>;
 
 /** `default_corner_radius` = 3 (px): the corner radius of every default flat stylebox. */
-const DEFAULT_CORNER_RADIUS = 3;
+export const DEFAULT_CORNER_RADIUS = 3;
 
 /** `default_margin` = 4 (px): the Button "normal" stylebox content margin (all sides). */
 export const DEFAULT_CONTENT_MARGIN = 4;
@@ -101,19 +101,16 @@ const SLIDER_CORNER_RADIUS = 4;
 
 /**
  * The `slider_grabber` icon: a 16x16 box Godot positions, holding
- * `<circle cx="8" cy="8" r="7" fill="#fefefe" fill-opacity=".75"/>`. `generate_icon` rasterises through
+ * a circle of radius 7. `generate_icon` rasterises through
  * `DPITexture::create_from_string(source, scale)`, so it scales with the theme.
  */
 const SLIDER_GRABBER_SIZE = 16;
-const SLIDER_GRABBER_RADIUS = 7;
 
 /**
  * `hslider_tick.svg`/`vslider_tick.svg` declare a 4x8 canvas, and the rasteriser
- * clips the path to it: `pnpm ref:godot` measures an 8px band. A tick is a 2px bar
- * across the 8px track, centred in a 4px-wide box.
+ * clips the path to it: `pnpm ref:godot` measures an 8px band. The tick box is 4px wide.
  */
 const SLIDER_TICK_BOX = 4;
-const SLIDER_TICK_THICKNESS = 2;
 
 /** The default theme at a project's `gui/theme/default_theme_scale`. Every metric above is `scale = 1`. */
 export interface ScaledGodotTheme {
@@ -137,12 +134,13 @@ export interface ScaledGodotTheme {
   sliderCornerRadius: number;
   /** The `slider_grabber` icon's box, in px. */
   sliderGrabberSize: number;
-  /** The circle drawn inside that box, in px. */
-  sliderGrabberRadius: number;
   /** The `tick` icon's box along the slider's main axis, in px. */
   sliderTickBox: number;
-  /** The visible tick bar's thickness, in px. */
-  sliderTickThickness: number;
+}
+
+/** `Math::round(base * scale)`, the scale applied to one default-theme pixel value (`default_theme.cpp`). */
+export function scaledPx(base: number, scale: number): number {
+  return Math.round(base * scale);
 }
 
 /**
@@ -154,26 +152,24 @@ export interface ScaledGodotTheme {
 export function scaledGodotTheme(scale: number): ScaledGodotTheme {
   // JS and Godot rounding differ only on negative halves, which the
   // [0.5, 8] clamp in `projectThemeScale` rules out.
-  const contentMargin = Math.round(DEFAULT_CONTENT_MARGIN * scale);
+  const contentMargin = scaledPx(DEFAULT_CONTENT_MARGIN, scale);
   return {
     scale,
-    fontSize: Math.round(DEFAULT_FONT_SIZE * scale),
-    cornerRadius: Math.round(DEFAULT_CORNER_RADIUS * scale),
+    fontSize: scaledPx(DEFAULT_FONT_SIZE, scale),
+    cornerRadius: scaledPx(DEFAULT_CORNER_RADIUS, scale),
     contentMargin,
     // The OptionButton styleboxes take `2 * default_margin` across and `default_margin`
     // down (`default_theme.cpp:215`).
-    optionButtonMarginX: Math.round(2 * DEFAULT_CONTENT_MARGIN * scale),
+    optionButtonMarginX: scaledPx(2 * DEFAULT_CONTENT_MARGIN, scale),
     optionButtonMarginY: contentMargin,
     // `Math::round(4 * scale)`, default_theme.cpp:1249-1251.
-    separation: Math.round(DEFAULT_SEPARATION * scale),
+    separation: scaledPx(DEFAULT_SEPARATION, scale),
     // Twice a rounded margin, not the rounding of twice the margin: the two
     // diverge at any scale whose margin lands on a half.
-    sliderTrackThickness: 2 * Math.round(SLIDER_STYLE_MARGIN * scale),
-    sliderCornerRadius: Math.round(SLIDER_CORNER_RADIUS * scale),
-    sliderGrabberSize: Math.round(SLIDER_GRABBER_SIZE * scale),
-    sliderGrabberRadius: Math.round(SLIDER_GRABBER_RADIUS * scale),
-    sliderTickBox: Math.round(SLIDER_TICK_BOX * scale),
-    sliderTickThickness: Math.round(SLIDER_TICK_THICKNESS * scale),
+    sliderTrackThickness: 2 * scaledPx(SLIDER_STYLE_MARGIN, scale),
+    sliderCornerRadius: scaledPx(SLIDER_CORNER_RADIUS, scale),
+    sliderGrabberSize: scaledPx(SLIDER_GRABBER_SIZE, scale),
+    sliderTickBox: scaledPx(SLIDER_TICK_BOX, scale),
   };
 }
 

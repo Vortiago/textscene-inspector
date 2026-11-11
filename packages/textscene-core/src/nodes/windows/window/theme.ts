@@ -4,7 +4,7 @@
  */
 
 import type { Rgba } from '../../../godot/math/math';
-import { CONTROL_FONT_COLOR } from '../../../godot/scene/theme';
+import { CONTROL_FONT_COLOR, scaledPx } from '../../../godot/scene/theme';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { flatStyleBox, type StyleBoxFlatData } from '../../../r3f/controls/native/styleBoxFlat';
 
@@ -26,10 +26,10 @@ type Sides = { left: number; top: number; right: number; bottom: number };
 /** Each side times `scale`, rounded on its own (`make_flat_stylebox`, `sb_expand`, `:57-79`). */
 function scaledSides(left: number, top: number, right: number, bottom: number, scale: number): Sides {
   return {
-    left: Math.round(left * scale),
-    top: Math.round(top * scale),
-    right: Math.round(right * scale),
-    bottom: Math.round(bottom * scale),
+    left: scaledPx(left, scale),
+    top: scaledPx(top, scale),
+    right: scaledPx(right, scale),
+    bottom: scaledPx(bottom, scale),
   };
 }
 

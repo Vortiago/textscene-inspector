@@ -6,12 +6,12 @@ import {
   FOCUS_MODE_NAMES,
   LAYOUT_DIRECTION_NAMES,
   LayoutDirection,
-  LTR_LAYOUT_ENV,
   MOUSE_FILTER_NAMES,
   resolveLayoutRtl,
   SIZE_FLAGS_NAMES,
   type LayoutDirectionEnv,
 } from './control.js';
+import { LTR_LAYOUT_ENV } from '../../testing/ltrLayoutEnv';
 import { AUTO_TRANSLATE_MODE_NAMES, NODE_AUTO_TRANSLATE_MODE_NAMES } from './node.js';
 
 /** `Control::LayoutDirection` (`scene/gui/control.h:155-160`, bound at `control.cpp:4405-4409`). */

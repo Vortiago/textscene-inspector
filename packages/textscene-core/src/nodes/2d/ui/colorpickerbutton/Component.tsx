@@ -11,6 +11,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
+import { contentRect } from '../../../../r3f/controls/native/styleBoxFlat';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { parseColor } from '../../../../utils/colorParser';
 import { Button } from '../button/Component';
@@ -30,12 +31,7 @@ export function ColorPickerButton(props: NativeControlComponentProps) {
   // `Rect2(normal_style->get_offset(), get_size() - normal_style->get_minimum_size())`: the
   // margins of "normal" in every draw state. `normal_style` binds Button's "normal" (`default_theme.cpp:1134`).
   const normalStyle = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, 'normal');
-  const swatch = {
-    x: normalStyle.contentMargin.left,
-    y: normalStyle.contentMargin.top,
-    w: rect.w - normalStyle.contentMargin.left - normalStyle.contentMargin.right,
-    h: rect.h - normalStyle.contentMargin.top - normalStyle.contentMargin.bottom,
-  };
+  const swatch = contentRect({ x: 0, y: 0, w: rect.w, h: rect.h }, normalStyle);
 
   // `BIND_THEME_ITEM_EXT` looks `overbright_indicator` up under "ColorPicker" (`color_picker.cpp:2546`),
   // so even a local override on this node is skipped. `SolveNode.icons` walks the node's own

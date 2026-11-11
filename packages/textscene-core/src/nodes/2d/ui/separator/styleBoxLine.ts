@@ -11,6 +11,7 @@
 import type { StyleBoxLineData } from '../../../../r3f/controls/native/styleBoxLine';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rgba } from '../../../../godot/math/math';
+import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
 
 export type SeparatorOrientation = 'horizontal' | 'vertical';
 
@@ -20,14 +21,14 @@ const DEFAULT_SEPARATOR_LINE_COLOR: Rgba = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
 /**
  * The default `separator` StyleBoxLine (`default_theme.cpp:734-740,1063-1064`): `separator_horizontal`
  * and its `duplicate()` `separator_vertical` (`set_vertical(true)`, transposed margins). The
- * along-axis margin is `default_margin` (`default_theme.cpp:31`), the one `Math.round(4 * scale)`
- * that `fill_default_theme` computes and `ScaledGodotTheme.contentMargin` also reads.
+ * along-axis margin is `default_margin` (`default_theme.cpp:54`), a `const int 4` that no scale reaches.
  */
 export function defaultSeparatorStyleBoxLine(
   orientation: SeparatorOrientation,
   theme: NativeTheme
 ): StyleBoxLineData {
-  const margin = theme.contentMargin;
+  // `default_margin` is the unscaled `const int 4` (`default_theme.cpp:54,737`), so the scale never reaches it.
+  const margin = DEFAULT_CONTENT_MARGIN;
   const vertical = orientation === 'vertical';
   return {
     color: DEFAULT_SEPARATOR_LINE_COLOR,

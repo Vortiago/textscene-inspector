@@ -15,6 +15,7 @@ import { dialogGeometry } from './dialogLayout';
 import { parseDialog } from './parser';
 
 const THEME = nativeTheme(1);
+const EMBEDDER = { x: 1152, y: 648 };
 
 function dialog(type: string) {
   const properties = parseDialog(heading(type, { name: 'Dialog' }), { dialog_text: '"Delete?"' });
@@ -24,7 +25,7 @@ function dialog(type: string) {
 
 async function buttonGroupPositions(type: string) {
   const window = dialog(type);
-  const size = wrappedWindowSize(window, THEME, measureText);
+  const size = wrappedWindowSize(window, THEME, measureText, EMBEDDER);
   const geometry = dialogGeometry(window, size, createSolveContext(THEME, measureText));
   const renderer = await ReactThreeTestRenderer.create(
     <DialogChrome

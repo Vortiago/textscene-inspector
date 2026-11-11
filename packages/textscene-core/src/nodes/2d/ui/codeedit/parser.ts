@@ -6,7 +6,8 @@
 import { type ParsedHeading } from '../../../../parser/utils';
 import { parseOptionalBool, parseOptionalInt } from '../../../../parser/valueParsers';
 import { slotInt } from '../../../../godot/variant/intSlots.js';
-import { arrayBody, INT_ARRAY_FORMS, parsePackedStringArray } from './arrayForms.js';
+import { parsePackedStringArray } from '../../../../parser/utils.js';
+import { arrayBody, INT_ARRAY_FORMS } from './arrayForms.js';
 import { parseTextEdit } from '../textedit/parser';
 import type { CodeEditProperties } from './types';
 

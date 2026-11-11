@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   vector2Add,
   vector2Length,
+  vector2Max,
   vector2Scaled,
   vector2Sub,
   vector3Add,
@@ -123,6 +124,17 @@ describe('component-wise Vector2 arithmetic', () => {
   it('adds and subtracts each component, rounded to float', () => {
     expect(vector2Add(a, b)).toEqual({ x: storedReal(0.300000011921), y: 1 });
     expect(vector2Sub(a, b)).toEqual({ x: storedReal(-0.10000000149), y: storedReal(0.399999976158) });
+  });
+
+  it('takes the larger of each component', () => {
+    expect(vector2Max({ x: 1, y: 9 }, { x: 4, y: 2 })).toEqual({ x: 4, y: 9 });
+  });
+
+  it('keeps an infinite component and ignores a smaller one', () => {
+    expect(vector2Max({ x: Number.POSITIVE_INFINITY, y: -1 }, { x: 3, y: -2 })).toEqual({
+      x: Number.POSITIVE_INFINITY,
+      y: -1,
+    });
   });
 
   it('scales each component by a real_t', () => {

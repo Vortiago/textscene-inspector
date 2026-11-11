@@ -12,10 +12,9 @@
 import type {
   MinimumSizeFn,
   SolveContext,
-  TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   fitIconSize,
@@ -97,7 +96,7 @@ export function checkBoxTextTheme(
   return resolveTextTheme(n, props, CHECKBOX_THEME_KEYS[state], defaults);
 }
 
-type CheckBoxIconKey = keyof CheckBoxIcons;
+export type CheckBoxIconKey = keyof CheckBoxIcons;
 
 /**
  * `NOTIFICATION_DRAW` (`check_box.cpp:112-131`): a valid `button_group` swaps in the `radio_*`
@@ -117,7 +116,7 @@ export function resolveCheckBoxIconKey(props: CheckBoxProperties): CheckBoxIconK
 }
 
 /** Every vendored icon shares this authored size (`native/themeIcons.ts`: `checked.svg` et al, 16x16). */
-const CHECKBOX_ICON_NATURAL_SIZE: Vector2 = { x: 16, y: 16 };
+export const CHECKBOX_ICON_NATURAL_SIZE: Vector2 = { x: 16, y: 16 };
 
 /**
  * Each `CheckBoxIconKey` to the Theme item name Godot registers it under (`check_box.cpp:157-164`),
@@ -141,12 +140,7 @@ const CHECK_BOX_ICON_THEME_NAMES = Object.values(CHECK_BOX_ICON_THEME_NAME);
  * has already resolved the names (`SolveNode.icons`), and this turns them into size requests.
  */
 export const checkBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
-  const requests: TextureSlotRequest[] = [];
-  for (const name of CHECK_BOX_ICON_THEME_NAMES) {
-    const themed = themedIcons[name];
-    if (themed) requests.push(themedSlotRequest(name, themed));
-  }
-  return requests;
+  return themedSlotRequests(CHECK_BOX_ICON_THEME_NAMES, themedIcons);
 };
 
 /**

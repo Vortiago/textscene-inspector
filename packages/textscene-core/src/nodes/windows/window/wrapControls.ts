@@ -3,7 +3,7 @@
  * out at its loaded size. Pure: no React, no THREE.
  */
 
-import type { Vector2 } from '../../../godot/math/vector';
+import { type Vector2, vector2Max } from '../../../godot/math/vector';
 import { embeddedWindowSize } from '../../../godot/scene/window';
 import { createSolveContext, solveControlTree } from '../../../r3f/controls/native/controlRectSolver';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
@@ -41,20 +41,33 @@ function scaledContentsMinimumSize(window: SolveNode, ctx: SolveContext): Vector
 }
 
 /**
+ * The size the loaded `size` line gives: `set_size` clamps it to the minimum the window's own
+ * properties set so far, which a registered type reads without the height limit of a window in the tree.
+ * Only a wrapping window clamps to its contents (`Window::_get_clamped_minimum_size`, `window.cpp`).
+ */
+function sizeAtLoad(window: SolveNode, ctx: SolveContext): Vector2 {
+  const { size, content_scale, wrap_controls } = window.node.properties as WindowProperties;
+  if (!wrap_controls) return size;
+  const minimum = controlSolverRegistry.loadedMinimumSize(window.node.type)?.(window, ctx);
+  if (!minimum) return size;
+  const { canvasScale: factor } = windowContentScale(size, content_scale);
+  return vector2Max(size, { x: minimum.x * factor, y: minimum.y * factor });
+}
+
+/**
  * The size `window` takes once its Controls are ready. Godot wraps at `NOTIFICATION_READY`, after
  * the Controls laid out at the loaded size, so their positions are the ones that size gives.
  */
 export function wrappedWindowSize(
   window: SolveNode,
   theme: NativeTheme,
-  measureText: TextMeasurer | null
+  measureText: TextMeasurer | null,
+  embedderSize: Vector2
 ): Vector2 {
   const props = window.node.properties as WindowProperties;
   const limits = { minSize: props.min_size, maxSize: props.max_size };
-  if (!props.wrap_controls) return embeddedWindowSize(props.size, limits);
-  return embeddedWindowSize(
-    props.size,
-    limits,
-    scaledContentsMinimumSize(window, createSolveContext(theme, measureText))
-  );
+  const ctx = createSolveContext(theme, measureText, undefined, embedderSize);
+  const loaded = sizeAtLoad(window, ctx);
+  const contentsMinimum = props.wrap_controls ? scaledContentsMinimumSize(window, ctx) : undefined;
+  return embeddedWindowSize(loaded, limits, contentsMinimum);
 }

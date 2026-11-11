@@ -2103,6 +2103,36 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Popup Menu Embedded",
+    "file": "unit-popup-menu-embedded.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popup Menu In Window",
+    "file": "unit-popup-menu-in-window.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popup Menu Outline",
+    "file": "unit-popup-menu-outline.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popup Menu Rtl",
+    "file": "unit-popup-menu-rtl.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popup Menu Scroll",
+    "file": "unit-popup-menu-scroll.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Popup Menu Size After Items",
+    "file": "unit-popup-menu-size-after-items.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Popup Menu",
     "file": "unit-popup-menu.tscn",
     "category": "Other"
@@ -3228,6 +3258,12 @@ export const fixtures: Fixture[] = [
     "file": "touch-screen-button/unit-touch-screen-button.tscn",
     "category": "Other",
     "root": "touch-screen-button"
+  },
+  {
+    "name": "Popup Menu Embed Off",
+    "file": "window-embed-off/unit-popup-menu-embed-off.tscn",
+    "category": "Other",
+    "root": "window-embed-off"
   },
   {
     "name": "Window Theme Scale Label",

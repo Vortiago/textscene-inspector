@@ -19,10 +19,9 @@ import type {
   ContainerLayoutFn,
   MinimumSizeFn,
   SolveContext,
-  TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { STYLE_FILL } from '../../../../godot/scene/theme';
@@ -150,12 +149,7 @@ export const FOLDABLE_CONTAINER_ARROW_THEME_NAME: Record<FoldableContainerArrow,
 
 /** The arrow slots that have a themed answer, for `controlSolverRegistry.registerTextureSlots`. */
 export const foldableContainerTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
-  const requests: TextureSlotRequest[] = [];
-  for (const name of Object.values(FOLDABLE_CONTAINER_ARROW_THEME_NAME)) {
-    const themed = themedIcons[name];
-    if (themed) requests.push(themedSlotRequest(name, themed));
-  }
-  return requests;
+  return themedSlotRequests(Object.values(FOLDABLE_CONTAINER_ARROW_THEME_NAME), themedIcons);
 };
 
 /** The arrow's size: themed when `SolveNode.textureSlots` resolved it, else the scaled vendored default. */

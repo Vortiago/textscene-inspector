@@ -11,6 +11,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
 import {
@@ -157,16 +158,14 @@ function ItemListRow({
   return (
     <CanvasItemGroup position={[origin.x + rect.x, -(origin.y + rect.y), 0]}>
       {hasIcon && iconDraw.rect && iconTexture && (
-        <CanvasItemGroup position={[iconX, -iconDraw.rect.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={iconDraw.rect.w}
-            height={iconDraw.rect.h}
-            color={iconColorLinear}
-            opacity={iconColorSrgb.a}
-            map={iconTexture}
-          />
-        </CanvasItemGroup>
+        <PositionedIcon
+          rect={{ ...iconDraw.rect, x: iconX }}
+          texture={iconTexture}
+          color={iconColorLinear}
+          opacity={iconColorSrgb.a}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
       )}
       {label &&
         label.lines.map(({ lineLayout, shiftPx }, index) => (

@@ -4,8 +4,7 @@
  */
 
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
-import { unquoteString } from '../../../parser/utils';
-import { stringArrayBodies } from '../../../godot/variant/variantParser.js';
+import { parsePackedStringArray } from '../../../parser/utils';
 import { findExtResource, findSubResource, parseResourceReference } from '../../SubResourceResolver';
 import { extResourcePathsById, resolveRefToResourcePath, subResourceTypeGate } from '../../subResourcePath';
 import type { FontCacheReader, FontLoaderFn, FontResource } from './types';
@@ -28,14 +27,6 @@ function extractResourceRefs(value: string): string[] {
   let match: RegExpExecArray | null;
   while ((match = re.exec(value)) !== null) refs.push(match[0]);
   return refs;
-}
-
-/**
- * `PackedStringArray("a", "b")`, `Array[String](["a", "b"])` or `["a", "b"]` → `["a", "b"]`, each element decoded as
- * `unquoteString` decodes it, so `\n` is a newline and not the letter `n`. Empty for any other value.
- */
-function parsePackedStringArray(value: string): string[] {
-  return stringArrayBodies(value)?.map(unquoteString) ?? [];
 }
 
 /**
@@ -89,7 +80,7 @@ function fontResourceOf(
       const { font_names, ...systemRest } = rest;
       return {
         kind: 'system',
-        fontNames: font_names !== undefined ? parsePackedStringArray(font_names) : [],
+        fontNames: font_names !== undefined ? (parsePackedStringArray(font_names) ?? []) : [],
         baseFont: null,
         fallbacks,
         properties: systemRest,

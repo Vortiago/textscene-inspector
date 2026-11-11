@@ -55,9 +55,14 @@ describe('useBuildSolveTree — embedded windows', () => {
     expect(windowPaths(nodes)).toEqual([]);
   });
 
-  it('leaves out a native window, and still reaches the windows inside it', () => {
+  it('leaves out a native window and the windows it embeds (`window.cpp:1534-1537`)', () => {
     const nodes = [node('Native', 'Window', { force_native: true }, [node('Embedded', 'Window')])];
-    expect(windowPaths(nodes)).toEqual(['Native/Embedded']);
+    expect(windowPaths(nodes)).toEqual([]);
+  });
+
+  it('reaches the windows inside a window whose authored gui_embed_subwindows is reset on entering the tree', () => {
+    const nodes = [node('Host', 'Window', { gui_embed_subwindows: true }, [node('Inner', 'Window')])];
+    expect(windowPaths(nodes)).toEqual(['Host', 'Host/Inner']);
   });
 
   it('gives a window the theme of the Control above it, as a ThemeOwner does (`theme_owner.cpp`)', () => {
