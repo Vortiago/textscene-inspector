@@ -18,8 +18,8 @@ describe('shadowMapUniforms', () => {
   it('holds the map and its width', () => {
     const map = new THREE.DataTexture(new Float32Array(512), 512, 1, THREE.RedFormat, THREE.FloatType);
     const uniforms = shadowMapUniforms(map);
-    expect(uniforms.uShadowMap!.value).toBe(map);
-    expect(uniforms.uShadowBins!.value).toBe(512);
+    expect(uniforms.uShadowMap.value).toBe(map);
+    expect(uniforms.uShadowBins.value).toBe(512);
   });
 
   it('names the expected map when the texture has no image', () => {

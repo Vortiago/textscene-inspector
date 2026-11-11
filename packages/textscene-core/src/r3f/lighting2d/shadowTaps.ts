@@ -26,7 +26,10 @@ float shadowBins() { return uShadowBins; }
 `;
 
 /** `uShadowMap` and the `uShadowBins` its taps divide by, which a light declares together. */
-export function shadowMapUniforms(map: THREE.Texture): Record<'uShadowMap' | 'uShadowBins', THREE.IUniform> {
+export function shadowMapUniforms(map: THREE.Texture): {
+  uShadowMap: THREE.IUniform<THREE.Texture>;
+  uShadowBins: THREE.IUniform<number>;
+} {
   const size = imageSize(map.image);
   if (!size) throw new Error('expected a shadow map with an image, got a texture without one');
   return { uShadowMap: { value: map }, uShadowBins: { value: size.width } };
