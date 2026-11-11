@@ -13,6 +13,7 @@ import { ResourceLoaderProvider } from '../../../../index';
 import { loaderServing } from '../../../../resources/testing/servingResourceLoader';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { isInstancedMesh } from '../../../../r3f/testing/threeNarrow';
+import { settleFontWork } from '../../../../r3f/testing/settleFontWork';
 import { wallQuadSurfaces, type SurfaceKeys } from '../../../../resources/testing/arrayMeshSurfaces';
 
 const LIBRARY_PATH = 'res://stage/tiles.tres';
@@ -167,6 +168,8 @@ export async function mountGridMap({
   // Three chained loads: library .tres → tile .tres → the tile's material.
   for (let i = 0; i < 12; i++) {
     await new Promise<void>((r) => setTimeout(r, 20));
+    // A font decode outlasts every pass on a loaded runner, so each pass waits for the fonts it started.
+    await settleFontWork();
     await renderer.update(tree);
   }
   // No frame has run, so the world matrices are brought up to date from the root.
