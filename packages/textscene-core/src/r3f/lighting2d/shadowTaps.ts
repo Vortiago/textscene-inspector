@@ -6,13 +6,14 @@
  * before that.
  */
 
-import type * as THREE from 'three';
-
 /*
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
+
+import type * as THREE from 'three';
+import { imageSize } from '../../resources/formats/image/imagePixels';
 
 /**
  * `float shadowBins()`, the texels in the light's map: `shadow_texture_size`. A uniform, not
@@ -25,7 +26,9 @@ float shadowBins() { return uShadowBins; }
 `;
 
 export function shadowBinsUniform(map: THREE.Texture): THREE.IUniform<number> {
-  return { value: (map.image as { width: number }).width };
+  const size = imageSize(map.image);
+  if (!size) throw new Error('expected a shadow map with an image, got a texture without one');
+  return { value: size.width };
 }
 
 /**

@@ -112,7 +112,7 @@ export function useTexture2D(
   // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
   // draws nothing and is no resource error.
   const texture = atlas ? cropped : slot.result.texture;
-  const size = useReportedSize(texture, atlas, slot.result, slot.noImageSize);
+  const size = useReportedSize(texture, atlas, slot.result);
   return { ...slot.result, texture, size, canvasTexture: slot.canvasTexture };
 }
 
@@ -123,10 +123,9 @@ export function useTexture2D(
 function useReportedSize(
   texture: THREE.Texture | null,
   atlas: AtlasTextureReference | null,
-  sheet: Texture2DResult,
-  noImageSize: ImageSize
+  sheet: Texture2DResult
 ): ImageSize | undefined {
-  const sheetSize = sheet.hasNoImage ? noImageSize : imageSize(sheet.texture?.image);
+  const sheetSize = sheet.hasNoImage ? sheet.size : imageSize(sheet.texture?.image);
   const size = texture && (atlas ? atlasTextureSize(atlas.texture, sheetSize ?? null) : sheetSize);
   const width = size?.width;
   const height = size?.height;
@@ -184,8 +183,6 @@ interface Texture2DSlot {
   source: THREE.Texture | null;
   /** The slot's result with an AtlasTexture's sheet in its place. */
   result: Texture2DResult;
-  /** The size Godot reports while `result.hasNoImage` holds. */
-  noImageSize: ImageSize;
   /** The slot, its resource file or its AtlasTexture's sheet is a CanvasTexture, which this peeled. */
   namesCanvasTexture: boolean;
   /**
@@ -262,10 +259,12 @@ function useTexture2DSlot(
       resolveSubResourceRef(sourceRef, slot.internalResources),
     ].every((holder) => !holder || isLocalToScene(holder));
   const viewport = useViewportTextureSlot(isSetUp ? sourceRef : undefined, slot.internalResources, view);
-  const gradientSize = gradientTextureSizeWithoutGradient(sourceRef, slot.internalResources);
+  const gradientSize = useMemo(
+    () => gradientTextureSizeWithoutGradient(sourceRef, slot.internalResources),
+    [sourceRef, slot.internalResources]
+  );
   const hasNoImage = (isViewport && !isSetUp) || gradientSize !== null;
   const unconfigured = hasNoImage ? texture2DPlaceholder() : null;
-  const noImageSize = gradientSize ?? NO_AREA;
 
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
   // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook
@@ -309,7 +308,7 @@ function useTexture2DSlot(
       slot.internalResources,
     ]
   );
-  const peeled = { atlas, atlasResources, source, namesCanvasTexture, canvasTexture, noImageSize };
+  const peeled = { atlas, atlasResources, source, namesCanvasTexture, canvasTexture };
 
   if (!ref) return { ...peeled, result: NOTHING };
   // Nothing to resolve: a resource file still loading or proved absent, or a wrapper with no texture.
@@ -324,7 +323,16 @@ function useTexture2DSlot(
 
   // A target arrives after first paint and is no file on its way, so only a cycle stops it.
   if (unconfigured)
-    return { ...peeled, result: { texture: source, missing: false, isArriving: false, hasNoImage: true } };
+    return {
+      ...peeled,
+      result: {
+        texture: source,
+        missing: false,
+        isArriving: false,
+        hasNoImage: true,
+        size: gradientSize ?? NO_AREA,
+      },
+    };
   if (isViewport)
     return { ...peeled, result: { texture: source, missing: viewport.cyclic, isArriving: false } };
   const sourceMissing =

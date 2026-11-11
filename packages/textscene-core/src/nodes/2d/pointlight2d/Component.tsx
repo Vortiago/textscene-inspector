@@ -57,10 +57,8 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PointLight2DProperties;
   const { externalResources, internalResources } = useSceneResources();
 
-  // The cookie is often a GradientTexture2D, a radial falloff described inline,
-  // not an image. `useTexture2D` resolves either kind, and a gradient-less one to Godot's placeholder,
-  // which the light draws at the placeholder's own size (`renderer_viewport.cpp:455-460`). The plain view in either canvas colour
-  // space, as `COOKIE_SAMPLER` reads the texels raw.
+  // `useTexture2D` resolves a GradientTexture2D, a gradient-less one to Godot's placeholder at its
+  // own size (`renderer_viewport.cpp:455-460`). The plain view, as `COOKIE_SAMPLER` reads texels raw.
   const slot = useTexture2D(props.texture, externalResources, internalResources, 'plain');
   // A light that draws no quad makes no view: it would clone and upload a cookie nothing draws.
   const cookie = useTextureView(props.enabled && !slot.missing ? slot.texture : null, COOKIE_SAMPLER);
