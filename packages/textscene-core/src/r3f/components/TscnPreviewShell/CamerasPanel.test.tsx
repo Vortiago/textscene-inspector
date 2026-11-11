@@ -91,6 +91,41 @@ remote_path = NodePath("../Cam")
     expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('500,200@1');
   });
 
+  // The LookAt turns the arm a quarter turn at the target below it (`skeleton_2d.cpp:786-796`).
+  it('frames a Camera2D below a bone that a modification stack turned at the end of the turned bone', () => {
+    renderPanel(`[gd_scene format=3]
+
+[sub_resource type="SkeletonModification2DLookAt" id="lookat"]
+bone_index = 0
+bone2d_node = NodePath("Arm")
+target_nodepath = NodePath("../Target")
+
+[sub_resource type="SkeletonModificationStack2D" id="stack"]
+enabled = true
+modification_count = 1
+modifications/0 = SubResource("lookat")
+
+[node name="World" type="Node2D"]
+
+[node name="Skeleton" type="Skeleton2D" parent="."]
+position = Vector2(300, 150)
+modification_stack = SubResource("stack")
+
+[node name="Arm" type="Bone2D" parent="Skeleton"]
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+auto_calculate_length_and_angle = false
+length = 200.0
+
+[node name="Cam" type="Camera2D" parent="Skeleton/Arm"]
+position = Vector2(200, 0)
+
+[node name="Target" type="Node2D" parent="."]
+position = Vector2(300, 400)
+`);
+    fireEvent.click(screen.getByRole('button', { name: /Cam/ }));
+    expect(screen.getByTestId('probe').getAttribute('data-frame')).toBe('300,350@1');
+  });
+
   it('frames a Camera2D under a Node2D that a RemoteTransform2D moved with its parent', () => {
     renderPanel(`[gd_scene format=3]
 

@@ -13,6 +13,11 @@ import { fireSceneRender, fireSceneRenderEnd } from '../../../r3f/testing/fireSc
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { OUTLINE_POINT_COUNT } from '../bone2d/boneKite';
+import { liveScenePassResults } from '../../../r3f/liveScenePass';
+import { liveSolvedNodePatches } from '../../../r3f/liveNodePatches';
+import { liveTreeOfText } from '../../../r3f/liveSceneTree.testkit';
+import { node2dWorldPosition } from '../../../r3f/node2dWorldTransform';
+import { solveSkeleton2DBones } from './solvedBones';
 import '../../../r3f/nodes/index';
 
 /** One bone along +x whose LookAt aims at a target straight below it, so the bone turns a quarter. */
@@ -391,5 +396,42 @@ describe('Skeleton2D', () => {
     const hand = canvasPosition(named(renderer, 'Hand'));
     expect(hand.x).toBeCloseTo(150, 3);
     expect(hand.y).toBeCloseTo(50, 3);
+  });
+});
+
+// The relay pass and the Cameras panel read the solve of the Live scene tree, a render reads the one
+// of the drawn bones. Each bone must stand at one place in both, or a target drifts from its bone.
+describe('the solve of the Live scene tree', () => {
+  const stacks: Record<string, string> = {
+    'a LookAt': scene(),
+    'a LookAt at half strength': scene('enabled = true\nstrength = 0.5'),
+    'a CCDIK chain that folds': FOLDING_CHAIN,
+    'a FABRIK chain on another skeleton': CHAIN_ON_ANOTHER_SKELETON,
+    'a FABRIK chain that skips a bone': chainSkippingFarB(),
+  };
+
+  it.each(Object.entries(stacks))(
+    'stands each bone where the drawn pose does for %s',
+    async (_name, tscn) => {
+      const tree = liveTreeOfText(tscn);
+      const moved = [...liveScenePassResults(solveSkeleton2DBones, tree).keys()];
+      const standing = liveScenePassResults(liveSolvedNodePatches, tree);
+      const renderer = await render(tscn);
+      startDraw(renderer);
+
+      expect(moved.length).toBeGreaterThan(0);
+      for (const path of moved) {
+        const live = node2dWorldPosition(tree.roots, tree.ctx, path, standing)!;
+        const drawn = canvasPosition(named(renderer, path.split('/').pop()!));
+        expect(live.x, path).toBeCloseTo(drawn.x, 2);
+        expect(live.y, path).toBeCloseTo(drawn.y, 2);
+      }
+    }
+  );
+
+  it('moves no bone of a disabled stack', () => {
+    const tree = liveTreeOfText(scene('enabled = false'));
+
+    expect(liveScenePassResults(solveSkeleton2DBones, tree).size).toBe(0);
   });
 });

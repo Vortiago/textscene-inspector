@@ -10,8 +10,7 @@ import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
 import type { NodePatch, NodePatches } from '../../../r3f/nodePatch.js';
 import { globalMatrix3D, localMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
-import { node2DLocalTransform } from '../../../r3f/node2dTransform.js';
-import type { Node2DProperties } from '../../../nodes/base/node2d/types.js';
+import { localTransform2D, transform2DBelow } from '../../../r3f/liveTransform2D.js';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
@@ -55,7 +54,7 @@ const SPACE_3D: SpaceMath<Transform3D> = {
 
 const SPACE_2D: SpaceMath<Transform2DColumns> = {
   local: localTransform2D,
-  global: globalTransform2D,
+  global: (path, chain) => transform2DBelow(path, null, chain),
   compose: composeSelected2D,
   localFromGlobal: localFromGlobal2D,
 };
@@ -138,25 +137,8 @@ function localFromGlobal2D(
   parentPath: string | null,
   chain: Map<string, TscnNode>
 ): Transform2DColumns {
-  const parentGlobal = parentPath ? globalTransform2D(parentPath, chain) : TRANSFORM2D_IDENTITY;
+  const parentGlobal = parentPath ? transform2DBelow(parentPath, null, chain) : TRANSFORM2D_IDENTITY;
   return multiplyTransform2D(affineInverseTransform2D(parentGlobal), global);
-}
-
-function localTransform2D(node: TscnNode): Transform2DColumns {
-  const props = node.properties as Partial<Node2DProperties>;
-  if (!props || props.position === undefined) return TRANSFORM2D_IDENTITY;
-  return node2DLocalTransform(props);
-}
-
-function globalTransform2D(path: string, nodeByPath: Map<string, TscnNode>): Transform2DColumns {
-  let result = TRANSFORM2D_IDENTITY;
-  let acc = '';
-  for (const segment of path.split('/')) {
-    acc = acc ? `${acc}/${segment}` : segment;
-    const node = nodeByPath.get(acc);
-    if (node) result = multiplyTransform2D(result, localTransform2D(node));
-  }
-  return result;
 }
 
 /**

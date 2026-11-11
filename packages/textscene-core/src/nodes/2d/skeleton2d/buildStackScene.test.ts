@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { drawnStackScene } from './drawnStackScene';
+import { buildStackScene } from './buildStackScene';
+import { DRAWN_POSE_SOURCE } from './drawnPoseSource';
 import type { StackTarget } from './skeletonPose';
 import type { Skeleton2DRig } from './skeletonRig';
 
@@ -25,7 +26,7 @@ function outsideBoneAt(path: string, parentPath: string): StackTarget {
   };
 }
 
-describe('drawnStackScene', () => {
+describe('buildStackScene over drawn objects', () => {
   // Bone/Holder/X/Y: X and Y join no skeleton, and both sit below the bone of the skeleton.
   it('places an outside bone below the outside bone above it, not below the bone that carries both', () => {
     const skeleton = new THREE.Group();
@@ -44,7 +45,7 @@ describe('drawnStackScene', () => {
       ['Bone/Holder/X/Y', y],
     ]);
 
-    const { scene, posed } = drawnStackScene(targets, rig, [skeleton, bone], anchorOf);
+    const { scene, posed } = buildStackScene(targets, rig, [skeleton, bone], anchorOf, DRAWN_POSE_SOURCE);
 
     const outsideX = scene.nodes.get('X')!.outsideBone!;
     expect(scene.nodes.get('Y')!.outsideBone!.parent.outsideBone).toBe(outsideX);

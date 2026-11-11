@@ -377,6 +377,10 @@ export const CANVAS_2D_SCENES = [
   // the red target at (330,500), and Near takes the same pose. Godot probes: orange at (237,134) and
   // (237,344), blue at (300,179) and (300,389). Unsolved, all four read the background.
   { name: 'skeleton2d-fabrik-foreign', file: 'unit-skeleton2d-fabrik-foreign.tscn', mode: '2d' },
+  // A RemoteTransform2D below the arm of the LookAt scene pushes the pose the stack solved onto the
+  // green square. Godot probes: green (76,204,102) at (300,350), the end of the turned arm, and the
+  // background at (500,150), where the arm ends in the file.
+  { name: 'skeleton2d-remote-transform', file: 'unit-skeleton2d-remote-transform.tscn', mode: '2d' },
   // clip_children CLIP_ONLY: the red child shows only over the green parent, in its own colour. Godot
   // probes: (125,125) background, the parent alone; (175,175) red; (425,125) green, the unclipped twin.
   { name: 'clip-children-only', file: 'unit-clip-children-only.tscn', mode: '2d' },

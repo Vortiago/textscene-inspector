@@ -46,6 +46,7 @@ export interface Node2DPose {
   readonly position?: { readonly x: number; readonly y: number };
   readonly rotation?: number;
   readonly scale?: { readonly x: number; readonly y: number };
+  readonly skew?: number;
 }
 
 /**
@@ -59,7 +60,7 @@ function localTransform2D(node: RawNode, pose: Node2DPose | undefined): Transfor
   const rotation = pose?.rotation ?? parseScalar(props.rotation, 0);
   const scale = pose?.scale ?? readVector2Property(props.scale, { x: 1, y: 1 });
   if (position === null || scale === null) return null;
-  const skew = parseScalar(props.skew, 0);
+  const skew = pose?.skew ?? parseScalar(props.skew, 0);
 
   return transform2DFromParts(rotation, scale, skew, position);
 }

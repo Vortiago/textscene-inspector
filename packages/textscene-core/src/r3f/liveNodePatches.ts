@@ -11,6 +11,7 @@ import type { TscnNode } from '../parser/types.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { applyRemoteTransforms } from '../nodes/shared/remotetransform/remoteTransforms.js';
 import { resolveCsgPolygonPaths } from '../nodes/3d/csg/csgpolygon3d/csgPolygonPaths.js';
+import { solveSkeleton2DBones } from '../nodes/2d/skeleton2d/solvedBones.js';
 import { joinPath } from '../utils/nodePath.js';
 import { sameEntries } from '../utils/sameEntries.js';
 import { sameData } from '../utils/sameData.js';
@@ -62,8 +63,10 @@ function mergedPatches(first: NodePatches, second: NodePatches): Map<string, Nod
   return merged;
 }
 
-/** The RemoteTransform pass over `tree`, run once for both passes below. */
-const relayPosesOf = perObject(applyRemoteTransforms);
+/** The RemoteTransform pass over `tree`, run once for both passes below, over the bones the stacks solve. */
+const relayPosesOf = perObject((tree: LiveTree) =>
+  applyRemoteTransforms(tree, liveScenePassResults(solveSkeleton2DBones, tree))
+);
 
 /**
  * Every property patch of `tree`. The RemoteTransform pass runs before the CSGPolygon3D path pass,
@@ -73,6 +76,17 @@ export const liveNodePatches: LiveScenePass<NodePatch> = (tree) => {
   const { placed } = relayPosesOf(tree);
   return keptPatches(previousNodePatches, tree, mergedPatches(placed, resolveCsgPolygonPaths(tree, placed)));
 };
+
+/**
+ * {@link liveNodePatches} over the bones the modification stacks solve, for a reader that asks where
+ * a node stands in the scene as Godot runs it, not what its file stores. The Cameras panel frames a
+ * Camera2D with it.
+ */
+export const liveSolvedNodePatches: LiveScenePass<NodePatch> = (tree) =>
+  mergedPatches(
+    liveScenePassResults(solveSkeleton2DBones, tree),
+    liveScenePassResults(liveNodePatches, tree)
+  );
 
 /**
  * {@link liveNodePatches} with each mesh that draws behind its node moved to where Godot draws it.

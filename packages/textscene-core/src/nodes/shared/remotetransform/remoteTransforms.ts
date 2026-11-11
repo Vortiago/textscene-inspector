@@ -13,7 +13,7 @@ import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { liveGlobalTransform3D, nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
 import { resolveLiteralOnLiveTree } from '../../../r3f/nodePathUniqueNames.js';
-import type { NodePatch, NodePatches } from '../../../r3f/nodePatch.js';
+import { NO_PATCHES, type NodePatch, type NodePatches } from '../../../r3f/nodePatch.js';
 import { sameData } from '../../../utils/sameData.js';
 import type { Transform3D } from '../../../godot/math/transform3d.js';
 import {
@@ -47,11 +47,13 @@ const NO_POSES: RelayPoses = { placed: new Map(), drawn: new Map() };
  * reaches it (`remote_transform_3d.cpp:118-126`, `remote_transform_2d.cpp:127-136`), and a push
  * queues every relay its target carries, so the pass replays the flushes to the `ref:godot` harness
  * frame. A relay cycle takes the pose of that frame. `relayOf` says which targets Godot refuses.
+ * `solved` holds the bones a modification stack has moved by that frame (`skeleton_2d.cpp:786-796`):
+ * a push reads them, and the result leaves them out, as the inspector shows the transform Godot saves.
  */
-export function applyRemoteTransforms(tree: LiveTree): RelayPoses {
+export function applyRemoteTransforms(tree: LiveTree, solved: NodePatches = NO_PATCHES): RelayPoses {
   const relays = relaysOf(tree);
   if (relays.length === 0) return NO_POSES;
-  const placed = new Map<string, NodePatch>();
+  const placed = new Map<string, NodePatch>(solved);
 
   const queuedBy = entriesQueuedByAMoveOf(tree, relays);
   const entered = entriesOnTheListAtEnterTree(tree, relays, queuedBy);
@@ -79,6 +81,7 @@ export function applyRemoteTransforms(tree: LiveTree): RelayPoses {
     tree,
     placed
   );
+  for (const [path, patch] of solved) if (placed.get(path) === patch) placed.delete(path);
   return { placed, drawn };
 }
 

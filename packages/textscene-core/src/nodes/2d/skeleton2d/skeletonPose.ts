@@ -24,7 +24,9 @@ import { DrawnNodeFollow } from '../../../r3f/drawnNodeFollow.js';
 import { WorldMatrixWatch } from '../../../r3f/worldMatrixWatch.js';
 import { canvasTransformInto, threeMatrixFromTransform2D } from '../../../r3f/node2dTransform.js';
 import { solveStack, type SolvedPose } from './modificationStack/stackRun.js';
-import { drawnStackScene, type PosedBone } from './drawnStackScene.js';
+import { buildStackScene, type PosedBone } from './buildStackScene.js';
+import { DRAWN_POSE_SOURCE } from './drawnPoseSource.js';
+import { anchorPathsOf } from './stackTargets.js';
 import type { Skeleton2DRig } from './skeletonRig.js';
 
 /** A node a NodePath of the stack resolves to on the Live scene tree. */
@@ -111,10 +113,7 @@ export class Skeleton2DPose {
     private readonly bound: BoundStack | null
   ) {
     this.bodies = new DrawnNodeFollow(registry, [skeletonPath, ...rig.bones.map((bone) => bone.path)]);
-    const targets = [...(bound?.targets.values() ?? [])];
-    const named = targets.filter(({ isNode2D, boneIndex }) => isNode2D && boneIndex < 0);
-    const abovePaths = targets.flatMap(({ outsideBone }) => outsideBone?.parentPath ?? []);
-    this.anchorPaths = [...new Set([...named.map(({ path }) => path), ...abovePaths])];
+    this.anchorPaths = anchorPathsOf(bound?.targets.values() ?? []);
     this.anchors = new DrawnNodeFollow(registry, this.anchorPaths);
     this.boneMatrices = rig.bones.map(() => mutableTransform2D());
     this.pose = { skeletonGlobal: this.skeletonGlobal, boneMatrices: this.boneMatrices, version: 0 };
@@ -222,7 +221,7 @@ export class Skeleton2DPose {
     { stack, targets }: BoundStack
   ): void {
     const anchorOf = new Map(this.anchorPaths.map((path, index) => [path, anchors[index]!]));
-    const { scene, posed } = drawnStackScene(targets, this.rig, bodies, anchorOf);
+    const { scene, posed } = buildStackScene(targets, this.rig, bodies, anchorOf, DRAWN_POSE_SOURCE);
     const cache = posed.slice(0, this.rig.bones.length).map(({ from }) => from);
     this.solved = solveStack(scene, cache, stack);
     this.moved = movedBones(posed, this.solved.locals);
@@ -246,7 +245,10 @@ export class Skeleton2DPose {
 }
 
 /** The bones of `posed` that `solved` moves, each with the turn from the transform it is drawn with. */
-function movedBones(posed: readonly PosedBone[], solved: readonly Transform2DColumns[]): MovedBone[] {
+function movedBones(
+  posed: readonly PosedBone<THREE.Object3D>[],
+  solved: readonly Transform2DColumns[]
+): MovedBone[] {
   // A bone with no area has no inverse to undo, and Godot draws nothing below it either.
   const isMoved = posed.map(
     ({ from }, index) => !equalTransform2D(from, solved[index]!) && transform2DDeterminant(from) !== 0
@@ -255,7 +257,7 @@ function movedBones(posed: readonly PosedBone[], solved: readonly Transform2DCol
     const { parent } = posed[index]!;
     return parent >= 0 && (isMoved[parent]! || hasMovedAncestor(parent));
   };
-  return posed.flatMap(({ object, from }, index) => {
+  return posed.flatMap(({ node: object, from }, index) => {
     if (!isMoved[index]) return [];
     const turn = multiplyTransform2D(affineInverseTransform2D(from), solved[index]!);
     return {

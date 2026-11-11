@@ -893,6 +893,10 @@ _Avoid_: A second walk of the Bone2D chain. A bone named by its node path at dra
 The drawn pose of the bones of one Skeleton2D, which the skeleton owns. Before each render it reads the transforms the scene and an AnimationPlayer gave the bones, runs the **Modification stack** on them, and writes the solved transforms onto the bone objects. After the render it puts the bone transforms back, as Godot keeps the cache transform of a bone beside its override (`skeleton_2d.cpp:786-805`). The **Polygon skin** and the bone kites read this one pose.
 _Avoid_: A pose each reader derives. A solved transform left on a bone after the render.
 
+**Solved bones** (`solveSkeleton2DBones`, `nodes/2d/skeleton2d/solvedBones.ts`):
+The Bone2Ds that a **Modification stack** moves, solved on the **Live scene tree** from the transforms the scene file stores, as a **Node patch** for each moved bone. The RemoteTransform pass reads them, so a relay below a bone pushes the pose Godot's skeleton gives the bone (`skeleton_2d.cpp:786-796`), and the Cameras panel reads them for a Camera2D below a bone. A stack in the scene file solves, and no AnimationPlayer pose reaches the solve. The inspector shows the stored transform, as Godot saves it (`skeleton_2d.cpp:181-187`).
+_Avoid_: A solved transform in the patches the inspector reads. A second builder of the solve scene: `buildStackScene` serves this pass and the **Skeleton2D pose**.
+
 **Modification stack** (`solveStack`, `nodes/2d/skeleton2d/modificationStack/stackRun.ts`):
 The SkeletonModificationStack2D of a Skeleton2D: LookAt, TwoBoneIK, CCDIK, FABRIK and StackHolder modifications that pose the bones (`skeleton_2d.cpp:769-815`). Godot runs it each frame on the pose the frame before left, so the solve steps through frames until the pose repeats or the frame of the Harness capture comes. Jiggle, PhysicalBones and a modification in the physics mode need simulated time and move no bone.
 _Avoid_: One pass of each modification. A solve that starts from the solved pose of the last render.
