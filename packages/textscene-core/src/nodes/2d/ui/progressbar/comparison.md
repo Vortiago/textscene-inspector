@@ -45,7 +45,7 @@ the out-of-range write, so the node keeps its class-default mode.
 
 The percentage's outline is a stroked contour ring with a one-sided radius of `outline_size / 4` px
 (`text_server_adv.cpp:1383`), drawn before the text (`progress_bar.cpp:180-181`). It draws on the
-canvas painter for the bundled font and a scene font alike, as does the fill (ADR-0065).
+canvas painter for the bundled font and a scene font alike, as does the fill (ADR-0066).
 Each glyph and its ring draw from FreeType's bitmap, as Godot draws them.
 
 A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an

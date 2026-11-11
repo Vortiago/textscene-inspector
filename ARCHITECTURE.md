@@ -173,7 +173,7 @@ The strict parser also returns `SourceLines`, which puts each diagnostic on its 
 - **2D draw order.** One sort key for every canvas item becomes `renderOrder`
   (`canvasPaintOrder.ts`, ADR-0036).
 - **Control nodes.** They draw natively in the canvas, with no DOM (ADR-0037). Text follows
-  ADR-0065.
+  ADR-0066.
 - **2D lights.** `r3f/lighting2d/` ports Godot's canvas light shader (ADR-0030).
 - **Offscreen passes.** One orchestrator runs them in dependency order
   (`ViewportPassRegistryContext.tsx`).

@@ -71,7 +71,7 @@ the scroll bar's default max, 100, and shows the bar over text that fits (`:2659
 without the bar (`:3827-3830`).
 
 A `[b]` run and any embolden over the bundled font draw on the canvas painter, which emboldens the
-outline as FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0065). The run draws nothing until the
+outline as FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0066). The run draws nothing until the
 outlines of the bundled font load.
 
 A `FontVariation` over a variable font draws the instance that its `variation_opentype` names, as Godot sets

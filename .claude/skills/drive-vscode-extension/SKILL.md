@@ -154,7 +154,7 @@ It grants `style-src`, `script-src` (nonce + `cspSource`),
 fetch, XHR or WebSocket, for `data:` and `blob:` URLs too), no `font-src` (no CSS
 `@font-face`). So everything the webview loads ships inside the bundle. The
 bytes of the bundled font ride a script chunk, and text draws from their outlines
-(ADR-0065).
+(ADR-0066).
 
 ADR-0037 records which directives blocked troika. Read it before you propose a
 wider CSP.

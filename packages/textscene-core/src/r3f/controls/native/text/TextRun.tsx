@@ -2,7 +2,7 @@
  * The text run every text-painting Control draws: one run for each face its glyphs draw in
  * (`faceLayouts.ts`), each on the painter it needs. A run of the bundled face draws on the
  * bundled canvas face (`BundledCanvasRun.tsx`): Godot's default font is not MSDF
- * (`text_server.cpp:2386`), so FreeType fills and strokes every glyph from its outline (ADR-0065).
+ * (`text_server.cpp:2386`), so FreeType fills and strokes every glyph from its outline (ADR-0066).
  */
 import BundledCanvasRun from './BundledCanvasRun';
 import { faceLayouts } from './faceLayouts';
