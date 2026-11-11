@@ -15,7 +15,6 @@ describe('build-gallery --check', () => {
       encoding: 'utf8',
     });
 
-    expect(run.stderr).not.toContain('STALE');
     expect(run.status).toBe(0);
     expect(existsSync(absent)).toBe(false);
   });

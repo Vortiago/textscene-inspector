@@ -2,7 +2,7 @@
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BASELINE_DIR } from './baselinePath.mjs';
+import { BASELINE_DIR, goldenNameOf } from './baselinePath.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { GOLDEN_SCENES, SCENE_OPTIONS } from './scenes.mjs';
 import { CANVAS_2D_SCENES } from './scenes/canvas2d.mjs';
@@ -60,8 +60,8 @@ describe('the 2D chapters', () => {
 
 describe('the baselines', () => {
   const baselineNames = readdirSync(join(REPO_ROOT, BASELINE_DIR))
-    .filter((file) => file.endsWith('.png'))
-    .map((file) => file.slice(0, -'.png'.length));
+    .map((file) => goldenNameOf(`${BASELINE_DIR}/${file}`))
+    .filter((name) => name !== null);
   const sceneNames = GOLDEN_SCENES.map((scene) => scene.name);
 
   it('has one for every golden scene, so a new entry cannot ship without its golden', () => {
