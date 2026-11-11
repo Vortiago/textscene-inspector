@@ -509,6 +509,39 @@ describe('drawCanvasGroups', () => {
       expect(times).toBe(1);
     });
 
+    it('draws a clipping owner in the behind span of an inert owner after its buffer fills, masked', () => {
+      const scene = new THREE.Scene();
+      const owner = item(scene, 34, 0);
+      const meshes = { sibling: item(scene, 12, 0), owner, child: childOf(owner, 31, 0) };
+      register(scene, {
+        ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }),
+        window: { own: 10, from: 10, to: 40 },
+        clip: {
+          mode: 'clipOnly',
+          startMasking: vi.fn(),
+          stopMasking: vi.fn(),
+          behind: [{ from: 30, to: 35 }],
+        },
+      });
+      const state = { masking: false };
+      register(scene, {
+        ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), state),
+        window: { own: 34, from: 30, to: 35 },
+      });
+      const { gl } = recordingRenderer(meshes);
+      const maskingWhenOwnerDraws: boolean[] = [];
+      const render = gl.render;
+      gl.render = (root: THREE.Object3D, cam: THREE.Camera) => {
+        if (gl.getRenderTarget() === null && within(root, owner) && seen(owner, cam))
+          maskingWhenOwnerDraws.push(state.masking);
+        render(root, cam);
+      };
+
+      drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+      expect(maskingWhenOwnerDraws).toEqual([true]);
+    });
+
     it('draws no group for a clipping owner that draws nothing, as Godot attaches no group to an item with no commands', () => {
       const scene = new THREE.Scene();
       const meshes = { before: item(scene, 5, 0), child: item(scene, 11, 0) };

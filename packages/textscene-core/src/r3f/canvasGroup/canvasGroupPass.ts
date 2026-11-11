@@ -135,11 +135,22 @@ function drawFrame(
   let isFirstSpan = true;
   // An inert owner draws its behind children once, in the span its window starts in.
   const emitted: InertOwner[] = [];
-  const isNotEmitted = (key: number) =>
-    isFrameKey(key) && !emitted.some((owner) => owner.behind.some((span) => isIn(span, key)));
+  const started = new Set<ClippingEntry>();
+  // A clipping owner takes the mask, so it draws only once its group has filled, even inside a behind span.
+  const clippingOwnerAt = (key: number) => {
+    const at = windowIndexAt(clipping, key);
+    return at >= 0 && isOwnKey(clipping[at]!.window, key) ? clipping[at] : undefined;
+  };
+  const isDrawnNow = (key: number) => {
+    if (!isFrameKey(key)) return false;
+    const owner = clippingOwnerAt(key);
+    if (owner) return started.has(owner);
+    return !emitted.some((done) => done.behind.some((span) => isIn(span, key)));
+  };
+  const hasBehind = inertOwners.some((owner) => owner.behind.length > 0);
   const drawSpan = (spanTo: number) => {
     const owners = inertOwners.filter((owner) => owner.window.from >= spanFrom && owner.window.from < spanTo);
-    const accept = emitted.length > 0 ? isNotEmitted : isFrameKey;
+    const accept = hasBehind ? isDrawnNow : isFrameKey;
     for (const step of drawOrderOf(accept, spanFrom, spanTo, inertOwners)) {
       // Over the colour already drawn: the first draw is the frame's own, which may clear it.
       const drawOver = isFirstSpan ? draw : () => drawOffscreen(gl, draw);
@@ -155,6 +166,7 @@ function drawFrame(
     spanFrom = group.window.from;
     fillClipBuffer(gl, keyed, scene, camera, group, frame, regions[i]!, inertOwners);
     group.clip.startMasking();
+    started.add(group);
   });
   drawSpan(Number.POSITIVE_INFINITY);
 }

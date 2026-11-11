@@ -68,8 +68,12 @@ export function drawOrderOf(
         if (!emitted.has(nested) && nested.window.from >= span.from && nested.window.to <= span.to)
           addBehind(nested);
       }
-      const drawnBefore = [...drawnBehind];
-      steps.push({ ...span, admits: (key) => accept(key) && !drawnBefore.some((done) => isIn(done, key)) });
+      // The spans drawn so far, by count: `drawnBehind` only grows, so no copy per step.
+      const drawnCount = drawnBehind.length;
+      steps.push({
+        ...span,
+        admits: (key) => accept(key) && !drawnBehind.some((done, i) => i < drawnCount && isIn(done, key)),
+      });
       drawnBehind.push(span);
     }
   };
