@@ -50,7 +50,7 @@ Node, pnpm and the workspace packages stay with `.github/actions/setup`.
   to 6 s restore of Chromium and, in the E2E job, 6 s of `apt-get`. The decision buys independence
   from the Ubuntu archive, not time.
 - The Claude review job is not in the image and still runs `apt-get`: bubblewrap needs user
-  namespaces, which a job container does not give.
+  namespaces, which a job container does not give. #1586 removes that `apt-get`.
 - The image build still reads the Ubuntu archive, once for each new tag. When the archive does not
   resolve, the build installs from a mirror.
 - The token of a fork's pull request cannot publish. Such a pull request that changes an input of
