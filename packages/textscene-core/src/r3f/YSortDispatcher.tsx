@@ -49,8 +49,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
   const path = useNodePath() ?? node.name;
   const patches = useLiveDrawnPatchesBelow(path);
   // A sort reads the Controls below it only, so a Control moving under another sort leaves its memo alone.
-  const transformsBelow = useControlTransformsUnder(path);
-  const controlTransforms = hasControl(node) ? transformsBelow : undefined;
+  const controlTransforms = useControlTransformsUnder(hasControl(node) ? path : null);
   // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer). A layer that
   // roots the sort lists its own rows first, so its children number from 1.
   const rawItems = useMemo(() => {

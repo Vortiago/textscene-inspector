@@ -10,15 +10,24 @@ import {
   type Transform2DColumns,
 } from '../../../godot/math/transform2d';
 import { accumulateCanvasItemZ } from '../../lighting2d/canvasItemPlacement';
-import { packPaintRanges, paintRangeSize, ysortsChildren } from '../../canvasPaintOrder';
+import { isTopLevelItem, packPaintRanges, paintRangeSize, ysortsChildren } from '../../canvasPaintOrder';
 import type { ControlTransforms, YSortShift, YSortShifts } from '../../contexts/ControlYSortContext';
 import { compareSortY } from '../../ySortOrder';
+import type { TscnNode } from '../../../parser/types';
 import { controlProps, type SolveNode } from './solveTree';
 
 interface LocalItem {
   node: SolveNode;
   sortY: number;
   z: number;
+}
+
+/**
+ * The run an item needs. A y-sorted item is its body alone, since its children are items of their
+ * own. Any other item holds its whole subtree, or its descendants would draw inside the next run.
+ */
+function itemRunSize(node: TscnNode): number {
+  return paintRangeSize(ysortsChildren(node) ? { ...node, children: [] } : node);
 }
 
 /**
@@ -31,12 +40,17 @@ export function localYSortShifts(tree: readonly SolveNode[], transforms: Control
 
   const sortUnder = (root: SolveNode): void => {
     const items: LocalItem[] = [];
-    collect(root, TRANSFORM2D_IDENTITY, 0, items);
+    // Z compares as absolute values, so the items start from the root's own z.
+    const rootProps = controlProps(root);
+    const rootZ = accumulateCanvasItemZ(0, {
+      z_index: rootProps.zIndex ?? 0,
+      z_as_relative: rootProps.zAsRelative,
+    });
+    collect(root, TRANSFORM2D_IDENTITY, rootZ, items);
     const sorted = items
       .map((item, order) => ({ item, order }))
       .sort((a, b) => a.item.z - b.item.z || compareSortY(a.item.sortY, b.item.sortY) || a.order - b.order);
-    // A y-sorted item is its body alone: its children are items of their own.
-    const sizes = sorted.map(({ item }) => paintRangeSize({ ...item.node.node, children: [] }));
+    const sizes = sorted.map(({ item }) => itemRunSize(item.node.node));
     const runs = packPaintRanges(root.paintRange, sizes, root.paintSequence + 1);
     sorted.forEach(({ item }, i) =>
       shifts.set(item.node.path, { run: runs[i]!, from: item.node.paintRange.base })
@@ -45,6 +59,11 @@ export function localYSortShifts(tree: readonly SolveNode[], transforms: Control
 
   const collect = (parent: SolveNode, toRoot: Transform2DColumns, parentZ: number, out: LocalItem[]) => {
     for (const child of parent.children) {
+      // A top_level item is no child item of the sort, so the walk draws it at its scene-order run.
+      if (isTopLevelItem(child.node)) {
+        visit(child);
+        continue;
+      }
       const own = transforms.get(child.path);
       const toSortRoot = own ? multiplyTransform2D(toRoot, own) : toRoot;
       const props = controlProps(child);

@@ -133,3 +133,47 @@ offset_bottom = 40.0
     expect(compareKeys(keys.Mid!, keys.Deep!)).toBeLessThan(0);
   });
 });
+
+describe('a locally sorted item keeps its own children inside its run', () => {
+  it('draws every child of a higher item under the lower item', async () => {
+    const tscn =
+      rootControl(true) +
+      `[node name="Child" type="Control" parent="Box"]
+
+[node name="Last" type="ColorRect" parent="Box"]
+offset_right = 10.0
+offset_bottom = 10.0
+
+` +
+      rect('Low', 100);
+    const withBox = tscn.replace(
+      rootControl(true),
+      `${rootControl(true)}[node name="Box" type="Control" parent="."]\noffset_top = 10.0\n\n`
+    );
+    const keys = await paintKeysOf(withBox, ['Last', 'Low'], false);
+    expect(compareKeys(keys.Last!, keys.Low!)).toBeLessThan(0);
+  });
+
+  it('compares absolute z, from the z of the sort root', async () => {
+    const tscn =
+      `[gd_scene format=3]
+
+[node name="Root" type="Control"]
+y_sort_enabled = true
+z_index = 5
+` +
+      rect('Absolute', 100, 'z_as_relative = false\nz_index = 3\n') +
+      rect('Relative', 0);
+    const keys = await paintKeysOf(tscn, ['Absolute', 'Relative'], false);
+    expect(compareKeys(keys.Absolute!, keys.Relative!)).toBeLessThan(0);
+  });
+
+  it('leaves a top_level child where scene order draws it', async () => {
+    const tscn =
+      rootControl(true) + rect('Top', -100, 'top_level = true\n') + rect('Low', 50) + rect('High', 0);
+    const keys = await paintKeysOf(tscn, ['Top', 'Low', 'High'], false);
+    // It is no item of the sort: at y -100 it would sort first, and it draws after the items instead.
+    expect(compareKeys(keys.Low!, keys.Top!)).toBeLessThan(0);
+    expect(compareKeys(keys.High!, keys.Low!)).toBeLessThan(0);
+  });
+});

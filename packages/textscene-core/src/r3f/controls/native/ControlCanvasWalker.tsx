@@ -65,7 +65,7 @@ interface ControlCanvasWalkerProps {
   rootOffset?: Vector2;
   /**
    * The walk sorts its own y-sorted Controls, since no `YSortDispatcher` draws their parents: an
-   * unowned scene-tile root. A walk outside any `ControlYSortProvider` does so without the flag.
+   * unowned scene-tile root and the Controls of a sub-viewport. A walk outside any `ControlYSortProvider` does so without the flag.
    */
   sortsLocally?: boolean;
   /** Called after each solve, with the solved controls keyed by tree path. */

@@ -296,5 +296,6 @@ export const CONTROL_WIDGET_SCENES = [
   // The same sort where no world y-sort draws the Control's parent: High (50) under Low (100) in a
   // Control-only SubViewport, and in the Control root of a scene tile.
   { name: 'control-y-sort-viewport', file: 'unit-control-y-sort-viewport.tscn', mode: '2d' },
+  { name: 'control-y-sort-viewport-mixed', file: 'unit-control-y-sort-viewport-mixed.tscn', mode: '2d' },
   { name: 'control-y-sort-scene-tile', file: 'unit-control-y-sort-scene-tile.tscn', mode: '2d' },
 ];

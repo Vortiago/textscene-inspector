@@ -33,8 +33,8 @@ child merges its own children into the one sort, whether it is a Control or a No
 child of a y-sorted Node2D sorts the same way among the Node2D's own children. A Control
 inside a sorted Node2D item draws with that item.
 
-A Control-only viewport and a scene tile with a y-sorted Control root have no world sort. The Control
-walk sorts their Control items itself.
+The Control walk of a sub-viewport, and of a scene tile with a y-sorted Control root, sorts its
+Control items itself. A Node2D child of a y-sorted Control in a sub-viewport is not sorted.
 
 `layout_direction` resolves to one answer per node. An explicit LTR or RTL answers from
 the value alone. INHERITED climbs to the nearest ancestor Control or Window and steps
