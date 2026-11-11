@@ -14,7 +14,7 @@ import {
 } from './lightAccumulationPass';
 import { createSeedMaterial } from './lightSeedQuad';
 import { LIGHT_PASS_LAYER } from './lightPassLayers';
-import { listAttachments, type LightListEntry, type LitItemRead, type PassMeshRole } from './itemLightList';
+import type { LightListEntry, ListAttachments, PassMeshRole } from './itemLightList';
 import type { Rect2 } from '../../godot/math/rect2';
 
 interface Draw {
@@ -36,6 +36,17 @@ function passMesh(name: string, ordinal: number, role: PassMeshRole): PassMesh {
   return { mesh, ordinal, role };
 }
 
+/** Where `itemLightList.test.ts` pins each buffer: light first, `shadow_color` second, Light Only last beside an ordinary one. */
+function attachmentsOf(plain: boolean, lightOnly: boolean, tint: boolean): ListAttachments | null {
+  if (!plain && !lightOnly) return null;
+  return {
+    plain: plain ? 0 : -1,
+    shadowTint: tint ? 1 : -1,
+    lightOnly: lightOnly ? (plain ? 2 : 0) : -1,
+    count: plain && lightOnly ? 3 : tint ? 2 : 1,
+  };
+}
+
 function list(
   entries: LightListEntry[],
   options: {
@@ -48,10 +59,7 @@ function list(
   } = {}
 ): AccumulationList {
   const tintLayers = options.apartTintLayers;
-  const reads = new Set<LitItemRead>();
-  if (options.plain ?? true) reads.add('plain');
-  if (options.lightOnly) reads.add('lightOnly');
-  const attachments = listAttachments(reads, options.tint ?? false);
+  const attachments = attachmentsOf(options.plain ?? true, options.lightOnly ?? false, options.tint ?? false);
   return {
     entries: new Map(entries.map((entry) => [entry.ordinal, entry])),
     placementIds: options.placementIds ?? ['uncapped'],

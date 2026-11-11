@@ -258,7 +258,7 @@ describe('the outputs of a light quad', () => {
 
   it('evaluates the shadow taps once per fragment, whatever the buffers it writes', () => {
     // Godot calls `light_shadow_compute` once per light per fragment (`canvas.glsl:839`). A second
-    // evaluation per buffer is what made a tinted light cost twice the frame time (#1262).
+    // evaluation per buffer is what made a tinted light cost twice the frame time.
     expect(mainOf(shadowedMaterial()).match(/shadowFraction\(\)/g)).toHaveLength(1);
   });
 

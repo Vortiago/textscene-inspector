@@ -213,10 +213,7 @@ export interface ListAttachments {
 export const APART_ATTACHMENTS = { light: 0, shadowTint: 1 } as const;
 
 /** The attachments a list needs for what its items `reads`, or null while none reads a summed buffer. */
-export function listAttachments(
-  reads: ReadonlySet<LitItemRead>,
-  tintsShadow: boolean
-): ListAttachments | null {
+function listAttachments(reads: ReadonlySet<LitItemRead>, tintsShadow: boolean): ListAttachments | null {
   const plain = reads.has('plain');
   const lightOnly = reads.has('lightOnly');
   if (!plain && !lightOnly) return null;
