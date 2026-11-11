@@ -1,0 +1,171 @@
+; one variable: icon_alignment x vertical_icon_alignment, on the selected item's icon (option_button.cpp:424).
+; No other scene draws an OptionButton item icon, so none shows a regression in it.
+
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="Gradient" id="Gradient_icon"]
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_16x16"]
+gradient = SubResource("Gradient_icon")
+width = 16
+height = 16
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Opt0" type="OptionButton" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 198.0
+offset_bottom = 56.0
+item_count = 2
+selected = 1
+popup/item_0/text = "Easy"
+popup/item_0/icon = SubResource("GradientTexture2D_16x16")
+popup/item_0/id = 0
+popup/item_1/text = "Hard"
+popup/item_1/icon = SubResource("GradientTexture2D_16x16")
+popup/item_1/id = 1
+icon_alignment = 0
+vertical_icon_alignment = 0
+
+[node name="Opt1" type="OptionButton" parent="."]
+layout_mode = 1
+offset_left = 208.0
+offset_top = 8.0
+offset_right = 398.0
+offset_bottom = 56.0
+item_count = 2
+selected = 1
+popup/item_0/text = "Easy"
+popup/item_0/icon = SubResource("GradientTexture2D_16x16")
+popup/item_0/id = 0
+popup/item_1/text = "Hard"
+popup/item_1/icon = SubResource("GradientTexture2D_16x16")
+popup/item_1/id = 1
+icon_alignment = 1
+vertical_icon_alignment = 0
+
+[node name="Opt2" type="OptionButton" parent="."]
+layout_mode = 1
+offset_left = 408.0
+offset_top = 8.0
+offset_right = 598.0
+offset_bottom = 56.0
+item_count = 2
+selected = 1
+popup/item_0/text = "Easy"
+popup/item_0/icon = SubResource("GradientTexture2D_16x16")
+popup/item_0/id = 0
+popup/item_1/text = "Hard"
+popup/item_1/icon = SubResource("GradientTexture2D_16x16")
+popup/item_1/id = 1
+icon_alignment = 2
+vertical_icon_alignment = 0
+
+[node name="Opt3" type="OptionButton" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 64.0
+offset_right = 198.0
+offset_bottom = 112.0
+item_count = 2
+selected = 1
+popup/item_0/text = "Easy"
+popup/item_0/icon = SubResource("GradientTexture2D_16x16")
+popup/item_0/id = 0
+popup/item_1/text = "Hard"
+popup/item_1/icon = SubResource("GradientTexture2D_16x16")
+popup/item_1/id = 1
+icon_alignment = 0
+vertical_icon_alignment = 1
+
+[node name="Opt4" type="OptionButton" parent="."]
+layout_mode = 1
+offset_left = 208.0
+offset_top = 64.0
+offset_right = 398.0
+offset_bottom = 112.0
+item_count = 2
+selected = 1
+popup/item_0/text = "Easy"
+popup/item_0/icon = SubResource("GradientTexture2D_16x16")
+popup/item_0/id = 0
+popup/item_1/text = "Hard"
+popup/item_1/icon = SubResource("GradientTexture2D_16x16")
+popup/item_1/id = 1
+icon_alignment = 1
+vertical_icon_alignment = 1
+
+[node name="Opt5" type="OptionButton" parent="."]
+layout_mode = 1
+offset_left = 408.0
+offset_top = 64.0
+offset_right = 598.0
+offset_bottom = 112.0
+item_count = 2
+selected = 1
+popup/item_0/text = "Easy"
+popup/item_0/icon = SubResource("GradientTexture2D_16x16")
+popup/item_0/id = 0
+popup/item_1/text = "Hard"
+popup/item_1/icon = SubResource("GradientTexture2D_16x16")
+popup/item_1/id = 1
+icon_alignment = 2
+vertical_icon_alignment = 1
+
+[node name="Opt6" type="OptionButton" parent="."]
+layout_mode = 1
+offset_left = 8.0
+offset_top = 120.0
+offset_right = 198.0
+offset_bottom = 168.0
+item_count = 2
+selected = 1
+popup/item_0/text = "Easy"
+popup/item_0/icon = SubResource("GradientTexture2D_16x16")
+popup/item_0/id = 0
+popup/item_1/text = "Hard"
+popup/item_1/icon = SubResource("GradientTexture2D_16x16")
+popup/item_1/id = 1
+icon_alignment = 0
+vertical_icon_alignment = 2
+
+[node name="Opt7" type="OptionButton" parent="."]
+layout_mode = 1
+offset_left = 208.0
+offset_top = 120.0
+offset_right = 398.0
+offset_bottom = 168.0
+item_count = 2
+selected = 1
+popup/item_0/text = "Easy"
+popup/item_0/icon = SubResource("GradientTexture2D_16x16")
+popup/item_0/id = 0
+popup/item_1/text = "Hard"
+popup/item_1/icon = SubResource("GradientTexture2D_16x16")
+popup/item_1/id = 1
+icon_alignment = 1
+vertical_icon_alignment = 2
+
+[node name="Opt8" type="OptionButton" parent="."]
+layout_mode = 1
+offset_left = 408.0
+offset_top = 120.0
+offset_right = 598.0
+offset_bottom = 168.0
+item_count = 2
+selected = 1
+popup/item_0/text = "Easy"
+popup/item_0/icon = SubResource("GradientTexture2D_16x16")
+popup/item_0/id = 0
+popup/item_1/text = "Hard"
+popup/item_1/icon = SubResource("GradientTexture2D_16x16")
+popup/item_1/id = 1
+icon_alignment = 2
+vertical_icon_alignment = 2
+

@@ -1,7 +1,8 @@
 /**
  * Draws one row of a y-sorted TileMapLayer, an item of the parent's flat sort. A row is a child
  * canvas item of the layer (`tile_map_layer.cpp:341-357`), so it draws through `<CanvasItem2D>`
- * with the layer's transform, visibility, material, tint and z, at the sequence the sort gave it.
+ * with the layer's visibility, material, tint and z, at the sequence the sort gave it. The layer's
+ * transform sits on the group the rows share (`YSortLayerGroup`), so the row holds the identity.
  */
 
 import { useMemo, type ReactNode } from 'react';
@@ -9,7 +10,7 @@ import type { TscnNode } from '../../../../parser/types.js';
 import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D.js';
 import { drawableCells } from '../../../../resources/tileset/drawableCell.js';
 import type { TileMapLayerProperties } from './types.js';
-import { childCanvasItemProperties } from '../shared/childCanvasItem.js';
+import { childCanvasItemProperties, withoutNode2DTransform } from '../shared/childCanvasItem.js';
 import { useTileSetModel } from '../../../../r3f/useTileSetModel.js';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants.js';
 import { ySortItemId, type YSortItem } from '../../../../r3f/ySortItems.js';
@@ -21,7 +22,8 @@ import { useIsHiddenInEditor } from '../../../../r3f/canvasItemVisible.js';
 export function TileGroupRenderer({ item, node: authored }: { item: YSortItem; node: TscnNode }): ReactNode {
   const path = useNodePath();
   const node = useLiveDrawnNode(authored, path);
-  const props = node.properties as TileMapLayerProperties;
+  // Idempotent for the rows of a layer that roots its sort, which `asRootRowsNode` already reset.
+  const props = withoutNode2DTransform(node.properties as TileMapLayerProperties);
   const { model, status } = useTileSetModel(props.tile_set);
   // The y-sort pass gives the row's drawable cells. An item the pass left whole, because its
   // TileSet had not arrived there, draws every cell of the layer.

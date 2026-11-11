@@ -20,15 +20,17 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   BUTTON_THEME_KEYS,
+  buttonIconSlotRequests,
+  internalMarginAt,
+  layoutButtonContent,
+  measuredContentMinimumSize,
   pickButtonStyleBox,
   resolveToggleDrawState,
-  labelWrapWidthPx,
-  reservedLabelBox,
-  textMinimumWidthPx,
   tintColor,
-  type ButtonLabelBox,
+  type ButtonContentFacts,
+  type ButtonContentInput,
+  type ButtonContentLayout,
   type ToggleDrawState,
-  type ButtonWrapProperties,
 } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
@@ -37,11 +39,11 @@ import {
   type TextThemeDefaults,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import type { OptionButtonProperties } from './types';
+import type { OptionButtonProperties, OptionItem } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { BUTTON_DEFAULT_FONT_COLORS } from '../button/nativeSolver';
+import { BUTTON_DEFAULT_FONT_COLORS, derivedButtonContentFacts } from '../button/nativeSolver';
 
-// Re-exported so Component.tsx imports the shared Button pieces under one name.
+// Re-exported so Component.tsx imports the Button draw-state pieces under one name.
 export { pickButtonStyleBox, resolveToggleDrawState, tintColor };
 
 /**
@@ -75,15 +77,11 @@ export function optionButtonTextTheme(
 
 // Selected item
 
-/**
- * The bounds-guarded selected-item lookup: an out-of-range or absent
- * `selected` renders empty text rather than defaulting to item 0.
- */
-export function resolveOptionButtonSelectedText(props: OptionButtonProperties): string {
+/** The item `_select` copies the text and icon from (`option_button.cpp:423-424`), or none for an absent or out-of-range `selected`. */
+export function selectedOptionItem(props: OptionButtonProperties): OptionItem | undefined {
   const items = props.items ?? [];
   const selectedIndex = props.selected ?? -1;
-  const item = selectedIndex >= 0 && selectedIndex < items.length ? items[selectedIndex] : undefined;
-  return item?.text ?? '';
+  return selectedIndex >= 0 && selectedIndex < items.length ? items[selectedIndex] : undefined;
 }
 
 // Arrow
@@ -91,10 +89,23 @@ export function resolveOptionButtonSelectedText(props: OptionButtonProperties): 
 /** `option_button_arrow.svg`'s authored size (`native/themeIcons.ts`), 12x12, never run through `_fit_icon_size`. */
 const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vector2 = { x: 12, y: 12 };
 
-/** `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, OptionButton, arrow_icon, "arrow")` (`option_button.cpp:620`), the one themeable icon slot. */
-export const optionButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
+/** The slot of item `index`'s own icon, which `_refresh_size_cache` sizes the button by (`option_button.cpp:451`). */
+function optionItemIconSlotKey(index: number): string {
+  return `popup/item_${index}/icon`;
+}
+
+/**
+ * The selected item's icon as Button's `icon` (`option_button.cpp:424`), first because it is `textureSize`, then
+ * every item's own icon, then the themeable `arrow` (`BIND_THEME_ITEM_CUSTOM(... "arrow")`, `:620`).
+ */
+export const optionButtonTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
+  const props = node.properties as OptionButtonProperties;
+  const selectedIcon = selectedOptionItem(props)?.icon;
+  const requests: TextureSlotRequest[] = buttonIconSlotRequests(selectedIcon);
+  for (const [index, { icon }] of (props.items ?? []).entries()) {
+    if (icon) requests.push({ key: optionItemIconSlotKey(index), ref: icon });
+  }
   const themed = themedIcons.arrow;
-  const requests: TextureSlotRequest[] = [];
   if (themed) requests.push(themedSlotRequest('arrow', themed));
   return requests;
 };
@@ -109,7 +120,7 @@ export function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>): Vecto
 }
 
 /** `h_separation`: OptionButton's default (`default_theme.cpp:249`, `round(4*scale)`) equals `theme.separation`. */
-export function optionButtonHSeparation(
+function optionButtonHSeparation(
   constants: SolveNode['constants'],
   ctx: Pick<SolveContext, 'theme'>
 ): number {
@@ -117,32 +128,39 @@ export function optionButtonHSeparation(
 }
 
 /**
- * The width the drawn label wraps at in `rect` (`button.cpp:428-432`): the rect less the stylebox margins, the
- * arrow and `h_separation`. The minimum size never wraps its items (below), so only the painter calls it.
+ * What `layoutButtonContent` reads of an OptionButton showing `text` and `iconNaturalSize`: the arrow
+ * reserved as the internal margin on the trailing side (`option_button.cpp:83-89,139-147`), and Button's
+ * own `icon`, which `_select` sets from the selected item (`:424`).
  */
-export function optionButtonLabelWrapWidthPx(
-  props: ButtonWrapProperties,
-  rect: Rect2,
-  styleMargin: { left: number; right: number },
-  arrowSize: Vector2,
-  constants: SolveNode['constants'],
-  ctx: Pick<SolveContext, 'theme'>
-): number {
-  return labelWrapWidthPx(
+export function optionButtonContentFacts(
+  n: Pick<SolveNode, 'styleBoxes' | 'textureSlots' | 'constants' | 'rtl'>,
+  props: OptionButtonProperties,
+  text: string,
+  ctx: Pick<SolveContext, 'theme'>,
+  rectSize: Vector2,
+  iconNaturalSize: Vector2 | null
+): ButtonContentFacts {
+  const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
+  const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.optionButton, state, n.rtl);
+  return derivedButtonContentFacts({
+    n,
     props,
-    rect,
-    styleMargin.left + styleMargin.right,
-    () => arrowSize.x + optionButtonHSeparation(constants, ctx)
-  );
+    text,
+    ctx,
+    rectSize,
+    iconNaturalSize,
+    styleMargin: styleBox.contentMargin,
+    internalMargin: internalMarginAt(n.rtl ? 'left' : 'right', optionButtonArrowSize(n).x),
+  });
 }
 
 // Minimum size
 
 /**
  * `OptionButton::get_minimum_size` (`option_button.cpp:50-68`) at `fit_to_longest_item` true (`option_button.h`),
- * which is not parsed: the widest and tallest item text (`_refresh_size_cache`, `:451-458`) with the
- * stylebox minimum, plus the arrow width and `h_separation` unconditionally. CheckBox's
- * `if (content_size.width > 0 ...)` guard has no counterpart here.
+ * which is not parsed: the widest and tallest item, each with its own icon (`_refresh_size_cache`,
+ * `:446-453`), with the stylebox minimum, plus the arrow width and `h_separation` unconditionally.
+ * CheckBox's `if (content_size.width > 0 ...)` guard has no counterpart here.
  */
 export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as OptionButtonProperties;
@@ -153,88 +171,82 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { fontSizePx } = optionButtonTextTheme(n, props, state, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, OPTION_BUTTON_THEME_FONT_KEY);
   const items = props.items ?? [];
-  const texts = items.length > 0 ? items.map((item) => item.text) : [''];
 
-  let textW = 0;
-  let textH = 0;
-  if (ctx.measureText) {
-    for (const text of texts) {
-      if (!text) continue;
-      const size = ctx.measureText(text, fontSizePx, 0, fontMetrics);
-      // Each item goes through `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492`), whose
-      // `paragraph->get_size()` is ceiled (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`),
-      // so the max is over whole-pixel widths.
-      // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`). An item shapes
-      // a fresh paragraph (`button.cpp:484-489`, from `option_button.cpp:455-459`) and only the draw sets a
-      // width, on `text_buf` (`button.cpp:432`), so an item never wraps and the height stays one line.
-      textW = Math.max(textW, textMinimumWidthPx(size.x, props));
-      textH = Math.max(textH, size.y);
-    }
+  // The facts only an item's text and icon change, and equal texts measure alike.
+  const itemFacts = optionButtonContentFacts(n, props, '', ctx, { x: 0, y: 0 }, null);
+  const measuredByText = new Map<string, Vector2>();
+  // An empty item text keeps the button's own paragraph, the selected item's text (`button.cpp:485-486`).
+  const selectedText = selectedOptionItem(props)?.text ?? '';
+  const measure = (itemText: string): Vector2 => {
+    const text = itemText || selectedText;
+    if (!ctx.measureText || !text) return { x: 0, y: 0 };
+    const known = measuredByText.get(text);
+    if (known) return known;
+    const size = ctx.measureText(text, fontSizePx, 0, fontMetrics);
+    measuredByText.set(text, size);
+    return size;
+  };
+
+  let itemW = 0;
+  let itemH = 0;
+  for (const [index, { text }] of items.entries()) {
+    // Each item goes through `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492`), whose
+    // `paragraph->get_size()` is ceiled (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`),
+    // so the max is over whole-pixel widths.
+    // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`). An item shapes
+    // a fresh paragraph (`button.cpp:484-489`, from `option_button.cpp:451`) and only the draw sets a
+    // width, on `text_buf` (`button.cpp:432`), so an item never wraps and the height stays one line.
+    const facts = {
+      ...itemFacts,
+      hasText: text.length > 0 || selectedText.length > 0,
+      iconNaturalSize: n.textureSlots[optionItemIconSlotKey(index)] ?? null,
+    };
+    const size = measuredContentMinimumSize(facts, measure(text), props);
+    itemW = Math.max(itemW, size.x);
+    itemH = Math.max(itemH, size.y);
   }
 
   const hSeparation = optionButtonHSeparation(n.constants, ctx);
   const arrow = optionButtonArrowSize(n);
 
-  const width = marginX + textW + arrow.x + hSeparation;
-  const height = marginY + Math.max(textH, arrow.y);
+  const width = marginX + itemW + arrow.x + hSeparation;
+  const height = marginY + Math.max(itemH, arrow.y);
 
   return { x: width, y: height };
 };
 
-// Content layout: text and arrow placement
+// Content layout: icon, text and arrow placement
 
 interface OptionButtonContentInput {
-  /** The control's own solved rect size, Godot px. */
-  rectSize: Vector2;
-  /** The current draw-state StyleBox's content margins. */
-  styleMargin: { left: number; top: number; right: number; bottom: number };
+  /** {@link optionButtonContentFacts} plus the shaped label's size and direction. */
+  content: ButtonContentInput;
   arrowSize: Vector2;
   /** `arrow_margin` theme constant, measured from the full rect edge, not the content-margin edge. */
   arrowMargin: number;
-  /** `h_separation` theme constant, clamped to >= 0, part of the arrow's internal-margin reservation. */
-  hSeparation: number;
-  /** The selected item's shaped height, `0` with no selection. */
-  textHeightPx: number;
-  /** Text `alignment` (`HorizontalAlignment`). OptionButton's default is LEFT (`option_button.cpp:654`). */
-  textAlignment: number;
-  /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the arrow to the left edge and the label against the right margin. */
-  rtl: boolean;
 }
 
-interface OptionButtonContentLayout {
+interface OptionButtonContentLayout extends Pick<ButtonContentLayout, 'icon' | 'labelBox'> {
   /** Local to the control's top-left, Godot px. */
   arrowRect: Rect2;
-  /** The label's paragraph box. Always returned: the caller decides whether text draws. */
-  labelBox: ButtonLabelBox;
 }
 
 /**
- * The arrow `ofs` (`option_button.cpp:122-131`) and Button's internal-margin text reservation
- * (`button.cpp:247-260,444-456`), which `layoutButtonContent` does not model. The one internal margin set
- * (`option_button.cpp:83-89,139-147`) is the arrow width, and `is_layout_rtl()` picks its side
- * (option_button.cpp:139-147), so the label keeps `arrowSize.x + h_separation` clear. The arrow reads only `arrow_margin` against the full control size.
+ * The arrow `ofs` (`option_button.cpp:122-131`) beside Button's layout of its icon and label in what the
+ * arrow leaves (`button.cpp:247-259,333-456`). `is_layout_rtl()` picks the arrow's side. The arrow reads
+ * only `arrow_margin` against the full control size.
  */
-export function layoutOptionButtonContent(input: OptionButtonContentInput): OptionButtonContentLayout {
-  const { rectSize, styleMargin, arrowSize, arrowMargin, hSeparation, textHeightPx, textAlignment, rtl } =
-    input;
-
+export function layoutOptionButtonContent({
+  content,
+  arrowSize,
+  arrowMargin,
+}: OptionButtonContentInput): OptionButtonContentLayout {
+  const { rectSize, rtl } = content;
   const arrowRect: Rect2 = {
     x: Math.floor(rtl ? arrowMargin : rectSize.x - arrowSize.x - arrowMargin),
     y: Math.floor(Math.abs((rectSize.y - arrowSize.y) / 2)),
     w: arrowSize.x,
     h: arrowSize.y,
   };
-
-  // Under `rtl` the reservation moves to SIDE_LEFT, so only that arm reads `h_separation`.
-  const labelBox = reservedLabelBox({
-    rectSize,
-    margin: styleMargin,
-    reservedPx: arrowSize.x + hSeparation,
-    isReservedOnLeft: rtl,
-    textHeightPx,
-    textAlignment,
-    rtl,
-  });
-
-  return { arrowRect, labelBox };
+  const { icon, labelBox } = layoutButtonContent(content);
+  return { arrowRect, icon, labelBox };
 }

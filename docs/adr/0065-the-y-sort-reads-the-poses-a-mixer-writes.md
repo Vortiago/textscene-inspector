@@ -30,7 +30,9 @@ until the scene was rebuilt.
 
 ## Consequences
 
-- A tile row sorts on the authored pose of its layer. No mixer moves a lifted layer: the layer has
-  no registered group that a track path can name.
+- A y-sorted layer in a sort draws its rows below one group, which registers the layer's path
+  (`YSortLayerGroup`). A track on the layer's transform moves every row, and a row sorts on the pose
+  of that group, at its own y in the layer. The rows of a layer that roots its own sort sort in the
+  layer's space, so no pose of the layer moves them.
 - A node that an announcement cannot read, such as a Node3D or one that is not mounted, keeps the
   sort y of the collection pass.

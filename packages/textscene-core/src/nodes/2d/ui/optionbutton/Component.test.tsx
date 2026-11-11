@@ -18,6 +18,15 @@ import { textQuadCounts } from '../../../../r3f/controls/native/testing/textQuad
 import { OptionButton } from './Component';
 import type { OptionButtonProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  findIconMeshes,
+  findTextMesh,
+  OWN_ICON_REF,
+  OWN_ICON_SCOPE,
+  renderUnloaded,
+  renderWithOwnIcon,
+  worldPosition,
+} from '../../../../r3f/controls/native/testing/ownIcon';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 32 };
 
@@ -43,14 +52,6 @@ function findChromeMesh(scene: Rendered['scene']) {
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
-}
-
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMesh(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
 /** The arrow `ControlQuad` is a `PlaneGeometry`, identified by its own `.parameters.width`. */
@@ -345,5 +346,48 @@ describe('<OptionButton>: autowrap_mode wraps the drawn label though the box kee
   it('draws one line at AUTOWRAP_OFF', async () => {
     const unwrapped = await render({});
     expect(textQuadCounts(unwrapped.scene)).toHaveLength(1);
+  });
+});
+
+describe("<OptionButton>: the selected item's icon (option_button.cpp:424, button.cpp:333-405)", () => {
+  const ICON_ITEMS = [
+    { text: 'Easy', id: 0 },
+    { text: 'Hard', id: 1, icon: OWN_ICON_REF },
+  ];
+  const painter = (selected: number) => (
+    <OptionButton
+      {...painterEnv()}
+      solveNode={{
+        ...solveNode({ items: ICON_ITEMS, selected }),
+        resources: OWN_ICON_SCOPE,
+        textureSlots: { icon: { x: 12, y: 12 } },
+      }}
+      rect={RECT}
+      renderOrder={0}
+    />
+  );
+  const groupOf = (mesh: THREE.Mesh) => mesh.parent!.position;
+
+  it('draws the icon at the left margin, ahead of the arrow', async () => {
+    const [icon, arrow] = findIconMeshes((await renderWithOwnIcon(painter(1), { w: 12, h: 12 })).scene);
+    expect([groupOf(icon!).x, groupOf(icon!).y]).toEqual([8, -10]);
+    expect(groupOf(arrow!).x).toBe(134);
+  });
+
+  it('moves the label past the icon and h_separation: 8 + 12 + 4', async () => {
+    const renderer = await renderWithOwnIcon(painter(1), { w: 12, h: 12 });
+    expect(worldPosition(findTextMesh(renderer.scene)!).x).toBe(24);
+  });
+
+  it('draws only the arrow for a selected item without an icon', async () => {
+    const renderer = await renderWithOwnIcon(painter(0), { w: 12, h: 12 });
+    expect(findIconMeshes(renderer.scene)).toHaveLength(1);
+  });
+
+  it("lays the label out for the solver's icon size before the texture loads", async () => {
+    const unloaded = await renderUnloaded(painter(1));
+    const loaded = await renderWithOwnIcon(painter(1), { w: 12, h: 12 });
+    expect(findIconMeshes(unloaded.scene)).toHaveLength(1);
+    expect(worldPosition(findTextMesh(unloaded.scene)!).x).toBe(worldPosition(findTextMesh(loaded.scene)!).x);
   });
 });

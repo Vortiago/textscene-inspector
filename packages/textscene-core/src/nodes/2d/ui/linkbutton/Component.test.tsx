@@ -14,6 +14,7 @@ import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing
 import { LinkButton } from './Component';
 import type { LinkButtonProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { findTextMesh } from '../../../../r3f/controls/native/testing/ownIcon';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
@@ -22,13 +23,6 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 function solveNode(properties: Partial<LinkButtonProperties> = {}): SolveNode {
   const node: TscnNode = controlNode('MyLinkButton', 'LinkButton', { name: 'MyLinkButton', ...properties });
   return { ...emptySolveNode(), path: 'MyLinkButton', node };
-}
-
-function findTextMesh(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
 /** The underline stroke is a plain `MeshBasicMaterial`-backed `PlaneGeometry`, no `map`. */

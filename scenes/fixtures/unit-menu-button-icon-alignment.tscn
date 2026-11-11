@@ -1,0 +1,116 @@
+; one variable: icon_alignment x vertical_icon_alignment, on a MenuButton, which paints as Button does (menu_button.cpp has no draw).
+; No other scene draws a MenuButton icon, so none shows a regression in it.
+
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="Gradient" id="Gradient_icon"]
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_16x16"]
+gradient = SubResource("Gradient_icon")
+width = 16
+height = 16
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Menu9" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 608.0
+offset_top = 8.0
+offset_right = 798.0
+offset_bottom = 56.0
+text = "Label"
+icon = SubResource("GradientTexture2D_16x16")
+icon_alignment = 0
+vertical_icon_alignment = 0
+
+[node name="Menu10" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 808.0
+offset_top = 8.0
+offset_right = 998.0
+offset_bottom = 56.0
+text = "Label"
+icon = SubResource("GradientTexture2D_16x16")
+icon_alignment = 1
+vertical_icon_alignment = 0
+
+[node name="Menu11" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 1008.0
+offset_top = 8.0
+offset_right = 1198.0
+offset_bottom = 56.0
+text = "Label"
+icon = SubResource("GradientTexture2D_16x16")
+icon_alignment = 2
+vertical_icon_alignment = 0
+
+[node name="Menu12" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 608.0
+offset_top = 64.0
+offset_right = 798.0
+offset_bottom = 112.0
+text = "Label"
+icon = SubResource("GradientTexture2D_16x16")
+icon_alignment = 0
+vertical_icon_alignment = 1
+
+[node name="Menu13" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 808.0
+offset_top = 64.0
+offset_right = 998.0
+offset_bottom = 112.0
+text = "Label"
+icon = SubResource("GradientTexture2D_16x16")
+icon_alignment = 1
+vertical_icon_alignment = 1
+
+[node name="Menu14" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 1008.0
+offset_top = 64.0
+offset_right = 1198.0
+offset_bottom = 112.0
+text = "Label"
+icon = SubResource("GradientTexture2D_16x16")
+icon_alignment = 2
+vertical_icon_alignment = 1
+
+[node name="Menu15" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 608.0
+offset_top = 120.0
+offset_right = 798.0
+offset_bottom = 168.0
+text = "Label"
+icon = SubResource("GradientTexture2D_16x16")
+icon_alignment = 0
+vertical_icon_alignment = 2
+
+[node name="Menu16" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 808.0
+offset_top = 120.0
+offset_right = 998.0
+offset_bottom = 168.0
+text = "Label"
+icon = SubResource("GradientTexture2D_16x16")
+icon_alignment = 1
+vertical_icon_alignment = 2
+
+[node name="Menu17" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 1008.0
+offset_top = 120.0
+offset_right = 1198.0
+offset_bottom = 168.0
+text = "Label"
+icon = SubResource("GradientTexture2D_16x16")
+icon_alignment = 2
+vertical_icon_alignment = 2

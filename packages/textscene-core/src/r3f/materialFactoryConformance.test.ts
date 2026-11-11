@@ -161,6 +161,8 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     "mounts the light's aim target — an empty Object3D, added as a child",
   'packages/textscene-core/src/r3f/LiftedAncestors.tsx':
     "spreads a lifted ancestor's restored transform onto a `<group>`, which has no material slot",
+  'packages/textscene-core/src/r3f/YSortLayerGroup.tsx':
+    "spreads the layer's transform onto a `<group>`, which has no material slot",
   'packages/textscene-core/src/r3f/components/CanvasItem2D.tsx':
     "spreads the canvas item's transform onto a `<group>`, which has no material slot",
   'packages/textscene-core/src/r3f/components/CanvasItemGroup.tsx':

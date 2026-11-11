@@ -28,6 +28,12 @@ Every Texture2D slot resolves a `ViewportTexture` the same way: a material slot,
 
 A quad, a translucent Polygon2D and an opaque one share a SubViewport, and a CanvasLayer below the world's canvas holds a third. Godot draws the 3D render first and every canvas over it, so the CanvasLayer's polygon covers the quad and sits under the opaque Polygon2D.
 
+## Y-sorted Control with a Node2D child
+
+<!-- compare: image=unit-control-y-sort-viewport-node2d-child status=done fixture=unit-control-y-sort-viewport-node2d-child.tscn -->
+
+A sub-viewport that holds 2D content sorts a y-sorted Control's children as the root canvas does (`renderer_canvas_cull.cpp:110-160`). The yellow Polygon2D at y 75 is listed last and draws over High (50) and under Low (100). The previewer matches Godot 4.6.3.
+
 ## HDR 2D canvas
 
 <!-- compare: image=unit-sub-viewport-hdr-2d status=done fixture=unit-sub-viewport-hdr-2d.tscn -->

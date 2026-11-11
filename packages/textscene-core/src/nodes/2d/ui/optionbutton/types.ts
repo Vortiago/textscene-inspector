@@ -7,6 +7,8 @@ export interface OptionItem {
   text: string;
   /** Numeric option id, the array index when absent. */
   id: number;
+  /** The item's raw Texture2D ref. The button shows the selected item's one as its `icon` (`option_button.cpp:424`). */
+  icon?: string;
 }
 
 export interface OptionButtonProperties extends ButtonProperties {

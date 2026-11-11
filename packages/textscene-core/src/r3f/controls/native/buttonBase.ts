@@ -12,7 +12,7 @@
 
 import { multiplyModulate } from '../../canvasItemModulate';
 import type { ShareNode, SolveNode } from './solveTree';
-import type { SolveContext } from './solverRegistry';
+import type { SolveContext, TextureSlotRequest } from './solverRegistry';
 import type { TextThemeKeys } from './textTheme';
 import { resolveNodeFontMetrics } from './text/resolveNodeFontMetrics';
 import type { StyleBoxFlatData } from './styleBoxFlat';
@@ -210,8 +210,18 @@ export interface ButtonContentInput {
   isTextRtl: boolean;
   /** `clip_text`, a trimming overrun or autowrap (`button.cpp:332`): an expanded icon then keeps the text's width (`:345`). */
   isClipped: boolean;
+  /** `_internal_margin` (`button.cpp:247-259`): the width a derived class reserves on each side for its own element, before its `h_separation`. A Button reserves none (absent). */
+  internalMargin?: { left: number; right: number };
   /** `Control::is_layout_rtl()` (`SolveNode.rtl`): swaps the icon and text alignment sides. */
   rtl: boolean;
+}
+
+/** What `layoutButtonContent` reads of the node, before the shaped label's own size and direction. */
+export type ButtonContentFacts = Omit<ButtonContentInput, 'textNaturalSize' | 'isTextRtl'>;
+
+/** `_set_internal_margin` of one side (`check_box.cpp:96-101`, `check_button.cpp:96-104`): the other stays zero. */
+export function internalMarginAt(side: 'left' | 'right', px: number): { left: number; right: number } {
+  return side === 'left' ? { left: px, right: 0 } : { left: 0, right: px };
 }
 
 interface ButtonIconLayout {
@@ -222,7 +232,7 @@ interface ButtonIconLayout {
 interface ButtonTextLayout {
   /** The widest line's top-left, local Godot px. MenuButton and TabBar place their single line from it. Button reads only its `y`. */
   offset: Vector2;
-  /** The paragraph box's left edge before alignment: margin and a LEFT icon's push. `buttonDrawnLabel` offsets lines from it. */
+  /** The paragraph box's left edge before alignment: the margin, the left reservation and a LEFT icon's push. `buttonDrawnLabel` offsets lines from it. */
   boxLeftPx: number;
 }
 
@@ -238,7 +248,7 @@ export interface ButtonLabelBox {
   alignment: number;
 }
 
-interface ButtonContentLayout {
+export interface ButtonContentLayout {
   /** The icon to draw, `null` for no icon or an `expand_icon` one with no room left. */
   icon: ButtonIconLayout | null;
   /**
@@ -251,6 +261,11 @@ interface ButtonContentLayout {
   labelBox: ButtonLabelBox | null;
   /** `drawable_size_remained` (`button.cpp:332-352,428`): the label's box after margins and the icon. A wrapping label re-shapes at `Math::ceil(MAX(1, drawableSize.x))`. */
   drawableSize: Vector2;
+}
+
+/** `button.cpp:247-259`: a reservation brings its `h_separation` only when it is above zero. */
+function reservedWithSeparationPx(reservedPx: number, hSeparation: number): number {
+  return reservedPx > 0 ? reservedPx + hSeparation : reservedPx;
 }
 
 const {
@@ -285,19 +300,21 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     textNaturalSize,
     isTextRtl,
     isClipped,
+    internalMargin = { left: 0, right: 0 },
     rtl,
   } = input;
   const hSeparation = Math.max(0, hSeparationRaw);
+  const leftReservedPx = reservedWithSeparationPx(internalMargin.left, hSeparation);
+  const rightReservedPx = reservedWithSeparationPx(internalMargin.right, hSeparation);
   // `button.cpp:262-276`: swapped once, and CENTER never moves. The paragraph
   // direction (`:565`) is bidi this shaper does not model, nor the RTL right-hug
   // of an overflowing CENTER line (`text_paragraph.cpp:908`).
   const iconAlign = rtl ? swapAlignmentSide(iconAlignment) : iconAlignment;
   const textAlign = rtl ? swapAlignmentSide(textAlignment) : textAlignment;
 
-  // Button never sets `_internal_margin`, so the box inside the stylebox margins
-  // is the whole custom element size.
+  // The box inside the stylebox margins and the reservations: `custom_element_size` (`button.cpp:333`).
   const customElementSize: Vector2 = {
-    x: rectSize.x - styleMargin.left - styleMargin.right,
+    x: rectSize.x - styleMargin.left - styleMargin.right - leftReservedPx - rightReservedPx,
     y: rectSize.y - styleMargin.top - styleMargin.bottom,
   };
 
@@ -334,14 +351,14 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
     let iconX: number;
     switch (iconAlign) {
       case H_CENTER:
-        iconX = styleMargin.left + (customElementSize.x - iconSize.x) / 2;
+        iconX = styleMargin.left + leftReservedPx + (customElementSize.x - iconSize.x) / 2;
         break;
       case H_RIGHT:
-        iconX = rectSize.x - styleMargin.right - iconSize.x;
+        iconX = rectSize.x - styleMargin.right - rightReservedPx - iconSize.x;
         break;
       case H_LEFT:
       default:
-        iconX = styleMargin.left;
+        iconX = styleMargin.left + leftReservedPx;
         break;
     }
     let iconY: number;
@@ -375,7 +392,7 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
 
   let textLayout: ButtonTextLayout | null = null;
   if (hasText) {
-    let boxLeftPx = styleMargin.left;
+    let boxLeftPx = styleMargin.left + leftReservedPx;
     if (iconSize && iconAlign === H_LEFT) {
       // Only a LEFT icon pushes the text right. A RIGHT or CENTER icon has
       // already narrowed `drawableWidth`.
@@ -450,34 +467,6 @@ export function iconOnlyButtonIconRectIn(
 }
 
 /**
- * The label box of a Button-family Control that reserves `reservedPx` (its check, toggle or arrow plus
- * `h_separation`) on one side, as `_internal_margin` does (`button.cpp:247-260`). Under RTL the
- * reservation changes sides at the caller and the alignment swaps here (`button.cpp:271-275`).
- */
-export function reservedLabelBox(input: {
-  rectSize: Vector2;
-  margin: { left: number; top: number; right: number; bottom: number };
-  reservedPx: number;
-  isReservedOnLeft: boolean;
-  textHeightPx: number;
-  textAlignment: number;
-  rtl: boolean;
-}): ButtonLabelBox {
-  const { rectSize, margin, reservedPx, isReservedOnLeft, textHeightPx, textAlignment, rtl } = input;
-  return {
-    leftPx: margin.left + (isReservedOnLeft ? reservedPx : 0),
-    topPx: centredTextTopPx(rectSize.y - margin.top - margin.bottom, textHeightPx, margin.top),
-    widthPx: reservedLabelWidthPx(rectSize.x, margin.left + margin.right, reservedPx),
-    alignment: rtl ? swapAlignmentSide(textAlignment) : textAlignment,
-  };
-}
-
-/** The drawable width of a label that reserves `reservedPx` beside its margins (`button.cpp:332-352,444-456`). */
-function reservedLabelWidthPx(rectWidthPx: number, marginsPx: number, reservedPx: number): number {
-  return rectWidthPx - marginsPx - reservedPx;
-}
-
-/**
  * The shaped text size `layoutButtonContent` aligns against: the ceiled width, not the raw pen advance
  * (`button.cpp:343,349` read the same `text_buf->get_size()` as the minimum size). The height needs no
  * ceil: the line pitch sums independently ceiled ascent and descent and an integral theme spacing.
@@ -491,10 +480,7 @@ export function labelNaturalSize(layout: TextLayoutResult | null): Vector2 {
  * (`button.cpp:428-432`), from the label's unwrapped shape. The painter and the minimum-size solver
  * both call it, so they wrap alike.
  */
-export function wrappedLabelWidthPx(
-  input: Omit<ButtonContentInput, 'textNaturalSize' | 'isTextRtl'>,
-  unwrapped: TextLayoutResult | null
-): number {
+export function wrappedLabelWidthPx(input: ButtonContentFacts, unwrapped: TextLayoutResult | null): number {
   const { drawableSize } = layoutButtonContent({
     ...input,
     textNaturalSize: labelNaturalSize(unwrapped),
@@ -503,8 +489,24 @@ export function wrappedLabelWidthPx(
   return buttonTextBufWidthPx(drawableSize.x);
 }
 
+/**
+ * The width a wrapping label shapes at while a solver measures: what `layoutButtonContent` leaves in the
+ * node's tentative rect (`button.cpp:428-432`). The first pass has no rect and shapes unwrapped, as does
+ * AUTOWRAP_OFF, so the width is 0. Only an expanded icon reads the unwrapped label (its height), so
+ * `unwrapped` runs only then.
+ */
+export function tentativeWrapWidthPx(
+  props: ButtonWrapProperties & { expandIcon?: boolean },
+  rect: Rect2 | undefined,
+  contentAt: (rectSize: Vector2) => ButtonContentFacts,
+  unwrapped: () => TextLayoutResult | null
+): number {
+  if (rect === undefined || !isButtonAutowrapped(props)) return 0;
+  return wrappedLabelWidthPx(contentAt({ x: rect.w, y: rect.h }), props.expandIcon ? unwrapped() : null);
+}
+
 /** A shaped label's contribution to a minimum size: its text width ({@link textMinimumWidthPx}) and height, or none without a layout. */
-export function labelMinimumTextSize(
+function labelMinimumTextSize(
   layout: TextLayoutResult | null,
   props: TextClipProperties & ButtonWrapProperties
 ): Vector2 {
@@ -512,44 +514,24 @@ export function labelMinimumTextSize(
   return { x: textMinimumWidthPx(layout.widthPx, props), y: layout.heightPx };
 }
 
-/** The text's contribution to a CheckBox-style minimum size: its wrapped layout through {@link labelMinimumTextSize}, or none without text or a measurer. */
-export function shapedLabelMinimumTextSize(
+/** The label of a node shaped as `Button::_shape` does (`button.cpp:546-561`), or null for no text or no measurer. */
+export function shapedNodeLabel(
   n: ShareNode,
   ctx: Pick<SolveContext, 'measureText'>,
-  props: TextClipProperties & ButtonWrapProperties & BidiProperties & { text?: string },
+  props: ButtonWrapProperties & BidiProperties & { text?: string },
   label: { fontSizePx: number; themeFontKey: string; boxWidthPx: number }
-): Vector2 {
+): TextLayoutResult | null {
   const text = props.text ?? '';
   const { fontSizePx, themeFontKey, boxWidthPx } = label;
   // Resolved for empty text too: an unresolvable font warns once per solve, as the painter's does.
   const fontMetrics = resolveNodeFontMetrics(n, themeFontKey);
-  return labelMinimumTextSize(
-    ctx.measureText && text.length > 0
-      ? shapeWrappedButtonLabel(text, props, {
-          fontSizePx,
-          fontMetrics,
-          bidi: controlBidiOptions(props, n),
-          boxWidthPx,
-        })
-      : null,
-    props
-  );
-}
-
-/**
- * The width a wrapping label shapes at in `rect`: the rect less the margins and the reservation, shaped as
- * the draw does (`button.cpp:428-432`). A minimum-size solver passes its tentative rect, which is
- * `undefined` on the first solve pass; that pass shapes unwrapped, so the width is 0, as it is at
- * AUTOWRAP_OFF. `reservedPx` is a function so that neither case computes the reservation.
- */
-export function labelWrapWidthPx(
-  props: ButtonWrapProperties,
-  rect: Rect2 | undefined,
-  marginsPx: number,
-  reservedPx: () => number
-): number {
-  if (rect === undefined || !isButtonAutowrapped(props)) return 0;
-  return buttonTextBufWidthPx(reservedLabelWidthPx(rect.w, marginsPx, reservedPx()));
+  if (!ctx.measureText || text.length === 0) return null;
+  return shapeWrappedButtonLabel(text, props, {
+    fontSizePx,
+    fontMetrics,
+    bidi: controlBidiOptions(props, n),
+    boxWidthPx,
+  });
 }
 
 /** `button.cpp:266-275`: LEFT and RIGHT trade places under RTL, and any other value stays. */
@@ -568,7 +550,7 @@ export function isButtonTextClipped(props: TextClipProperties & ButtonWrapProper
  * A Button-family label's width contribution to the minimum size: the ceiled shaped width, or 0 when
  * {@link isButtonTextClipped}, since a narrower box cuts, trims or wraps it (`button.cpp:493-495`).
  */
-export function textMinimumWidthPx(
+function textMinimumWidthPx(
   measuredWidthPx: number,
   props: TextClipProperties & ButtonWrapProperties
 ): number {
@@ -657,7 +639,10 @@ function buttonTextBufWidthPx(drawableWidthPx: number): number {
 }
 
 interface ButtonContentSizeInput {
+  /** The whole paragraph: every row of a wrapped label. */
   textSize: Vector2;
+  /** `font->get_height()`: one line, which a stacked or centred icon adds to or floors at (`button.cpp:517-521`). */
+  lineHeightPx: number;
   hasText: boolean;
   /** The fitted icon, or `null` for no icon or an `expand_icon` one. */
   iconSize: Vector2 | null;
@@ -671,7 +656,8 @@ interface ButtonContentSizeInput {
  * without the stylebox margin, for any control that draws a Button.
  */
 export function buttonContentSize(input: ButtonContentSizeInput): Vector2 {
-  const { textSize, hasText, iconSize, iconAlignment, verticalIconAlignment, hSeparation } = input;
+  const { textSize, lineHeightPx, hasText, iconSize, iconAlignment, verticalIconAlignment, hSeparation } =
+    input;
   const isVerticallyCentred = verticalIconAlignment === VerticalAlignment.VERTICAL_ALIGNMENT_CENTER;
   const stackHeights = (above: number, below: number) =>
     isVerticallyCentred ? Math.max(above, below) : above + below;
@@ -688,9 +674,83 @@ export function buttonContentSize(input: ButtonContentSizeInput): Vector2 {
     }
   }
 
-  if (hasText) height = stackHeights(textSize.y, height);
+  if (hasText) height = stackHeights(lineHeightPx, height);
 
   return { x: width, y: height };
+}
+
+/**
+ * The icon `Button::get_minimum_size_for_text_and_icon` counts (`button.cpp:497-499`): the fitted icon, and
+ * none for an `expand_icon`, whose size the box decides, or for an icon with no area.
+ */
+function buttonMinimumIconSize(
+  naturalSize: Vector2 | null,
+  expandIcon: boolean,
+  iconMaxWidth: number
+): Vector2 | null {
+  if (expandIcon || !naturalSize || naturalSize.x <= 0 || naturalSize.y <= 0) return null;
+  return fitIconSize(naturalSize, iconMaxWidth);
+}
+
+/** {@link buttonContentSize} of the node `facts` describe, with its shaped `label`, `null` when it has none. */
+export function buttonContentMinimumSize(
+  facts: ButtonContentFacts,
+  label: TextLayoutResult | null,
+  props: TextClipProperties & ButtonWrapProperties
+): Vector2 {
+  return minimumSizeOfText(facts, labelMinimumTextSize(label, props), label?.linePitchPx ?? 0);
+}
+
+/**
+ * {@link buttonContentMinimumSize} for a text measured, not shaped: one OptionButton item, which shapes
+ * a fresh one-line paragraph (`button.cpp:484-489`, from `option_button.cpp:451`).
+ */
+export function measuredContentMinimumSize(
+  facts: ButtonContentFacts,
+  measured: Vector2,
+  props: TextClipProperties & ButtonWrapProperties
+): Vector2 {
+  return minimumSizeOfText(facts, { x: textMinimumWidthPx(measured.x, props), y: measured.y }, measured.y);
+}
+
+function minimumSizeOfText(facts: ButtonContentFacts, textSize: Vector2, lineHeightPx: number): Vector2 {
+  return buttonContentSize({
+    textSize,
+    lineHeightPx,
+    hasText: facts.hasText,
+    iconSize: buttonMinimumIconSize(facts.iconNaturalSize, facts.expandIcon, facts.iconMaxWidth),
+    iconAlignment: facts.iconAlignment,
+    verticalIconAlignment: facts.verticalIconAlignment,
+    hSeparation: facts.hSeparation,
+  });
+}
+
+/**
+ * `CheckBox::get_minimum_size` and `CheckButton::get_minimum_size` (`check_box.cpp:64-79`,
+ * `check_button.cpp:64-79`) less the margins: Button's `content` plus the element it reserves, with
+ * `h_separation` between them while both have a width. The gate is `tex_size.width > 0 || tex_size.height > 0`
+ * (`check_box.cpp:67`), so a zero-width element with height still floors the height. The caller passes `hSeparation` already clamped.
+ */
+export function withReservedElementSize(content: Vector2, element: Vector2, hSeparation: number): Vector2 {
+  if (element.x <= 0 && element.y <= 0) return content;
+  const separation = content.x > 0 && element.x > 0 ? hSeparation : 0;
+  return { x: content.x + separation + element.x, y: Math.max(content.y, element.y) };
+}
+
+/** The `SolveNode.textureSlots` key of Button's own `icon`. */
+const BUTTON_ICON_SLOT_KEY = 'icon';
+
+/**
+ * Button's own `icon` ref as a texture slot, for a Button-family type that registers a `TextureSlotsFn` of
+ * its own and so loses the generic `icon` slot. It goes first: the first request is `textureSize`.
+ */
+export function buttonIconSlotRequests(icon: string | undefined): TextureSlotRequest[] {
+  return icon ? [{ key: BUTTON_ICON_SLOT_KEY, ref: icon }] : [];
+}
+
+/** The size the solver holds for Button's own icon: what a painter lays out for, loaded or not. */
+export function ownButtonIconSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 | null {
+  return n.textureSlots[BUTTON_ICON_SLOT_KEY] ?? null;
 }
 
 /**
