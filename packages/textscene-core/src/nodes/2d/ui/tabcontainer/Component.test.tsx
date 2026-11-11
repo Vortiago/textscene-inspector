@@ -273,6 +273,7 @@ describe('<TabContainer> strip scrolled to the current page', () => {
   });
 
   it('keeps every drawn title inside the bar beside the arrows', async () => {
-    expect((await titleSpan(3)).max.x).toBeLessThanOrEqual(CONTAINER.w);
+    const arrowsWidth = 2 * 16;
+    expect((await titleSpan(3)).max.x).toBeLessThanOrEqual(CONTAINER.w - arrowsWidth);
   });
 });

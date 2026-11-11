@@ -1,8 +1,9 @@
 /**
  * `<TabContainer>`: the native (WebGL canvas) painter for `TabContainer::_notification(NOTIFICATION_DRAW)`
  * (`tab_container.cpp:247` to `:277`). It draws `panel` behind the content band, `tabbar_background`
- * across the full-width header band (`:262`, empty by default), and the strip through `<TabBar>`
- * on the synthetic node from `buildInternalTabBarNode`. No popup menu (`get_popup()`) is modelled.
+ * across the full-width header band (`:262`, empty by default), and the strip through `<TabBarStrip>`
+ * on the synthetic node from `buildInternalTabBarNode`, at the offset `resolveTabContainerStrip` finds.
+ * No popup menu (`get_popup()`) is modelled.
  */
 
 import { useMemo } from 'react';

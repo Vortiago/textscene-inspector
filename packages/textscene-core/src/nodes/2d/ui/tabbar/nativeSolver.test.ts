@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { tabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
 import {
   computeTabBarDrawLayout,
+  ensureNoOverOffset,
+  measureTabSizes,
+  placeTabs,
   type TabBarLayoutInput,
   type TabLayoutInput,
   isCloseButtonVisible,
@@ -332,6 +335,43 @@ describe('computeTabBarDrawLayout', () => {
       // tab_bar.cpp:1273: (limit_minus_buttons - w) / 2 = (130 - 32 - 80) / 2.
       expect(out.items[0]!.ofs).toBe(9);
     });
+  });
+});
+
+describe('ensureNoOverOffset (TabBar::_ensure_no_over_offset, tab_bar.cpp:1827-1860)', () => {
+  /** Three or four 40 px tabs in a 130 px bar: with 16 px arrows, 98 px sit beside them. */
+  const pullBack = (tabCount: number, offset: number) => {
+    const tabs: TabLayoutInput[] = Array.from({ length: tabCount }, () => ({
+      disabled: false,
+      hidden: false,
+      naturalWidth: 40,
+      naturalTextWidth: 10,
+    }));
+    const input: TabBarLayoutInput = {
+      barWidthPx: 130,
+      alignment: 0,
+      clipTabs: true,
+      maxTabWidthPx: 0,
+      tabSeparation: 0,
+      incrementIconWidth: 16,
+      decrementIconWidth: 16,
+      currentTab: 0,
+      scrollToSelected: true,
+    };
+    const sizes = measureTabSizes(tabs, 0);
+    return ensureNoOverOffset(tabs, sizes, placeTabs(tabs, sizes, input, offset), offset, input);
+  };
+
+  it('pulls the strip back while the tabs before it still fit beside the arrows', () => {
+    expect(pullBack(4, 3)).toBe(2);
+  });
+
+  it('pulls the strip back to tab 0 once every earlier tab fits without the arrows', () => {
+    expect(pullBack(3, 2)).toBe(0);
+  });
+
+  it('leaves a strip at tab 0 alone', () => {
+    expect(pullBack(4, 0)).toBe(0);
   });
 });
 

@@ -62,7 +62,7 @@ tab_3/title = "Settings"
 tab_4/title = "Map"
 tab_5/title = "Quests"
 
-[node name="HiddenDisabled" type="TabBar" parent="."]
+[node name="Disabled" type="TabBar" parent="."]
 layout_mode = 0
 offset_left = 8.0
 offset_top = 140.0
