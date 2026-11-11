@@ -225,8 +225,32 @@ arrays, as three's classic renderer does.
 it with its baseline. The slice is the prototype's: Godot's default lit surface, the sky and
 directional lights.
 
-The sweep covers 377 goldens and was still running when this version was written. Its counts
-follow in the next commit.
+| Result over 377 goldens | Count |
+| --- | --- |
+| Identical to the baseline | 260 |
+| Differs by at most 1/255, on 1 to 8 pixels | 28 |
+| Differs by more, and the scene holds an omni, spot or area light | 24 |
+| Differs by more, for a surface feature outside the slice | 40 |
+| Differs by more, cause not traced | 18 |
+| Fails to draw | 7 |
+
+The sweep does not record which scenes drew a node material. A scene whose surfaces all bind a
+texture keeps its classic materials, and it counts as identical.
+
+The 28 goldens at 1/255 are the cost of the slice itself. They include `directional-light-3d`, four
+sky goldens and six gizmo goldens. No pixel in them is traced to a cause.
+
+The 40 goldens name what the prototype leaves out: 18 for emission and glow, 10 for reflection
+probes, 9 for decals, and one each for screen-space reflection, screen-space ambient occlusion and
+volumetric fog. The prototype forwards only the colour, roughness, metalness and side of a
+material.
+
+The 18 untraced goldens are eight CSG scenes, five array mesh scenes, two SubViewport scenes,
+`point-mesh`, `material-features` and `meshinstance3d-material-overlay`.
+
+The seven failures have three causes. Three area light scenes fail because the handler has no LTC
+tables for three's own area light node. Three omni light scenes fail to link a program. One,
+`directional-light-limit`, passes the uniform block limit that "Samplers and limits" describes.
 
 ## The eight additions
 
@@ -386,6 +410,7 @@ step 5, or when group 3 lands first and the port follows.
 - `glslFn` as a target for the translator.
 - The bundle size after the patches go.
 - The handler installed with no node material, over the goldens.
+- The cause of each pixel that differs by 1/255, and of the 18 untraced goldens.
 
 ## Decisions for the owner
 
