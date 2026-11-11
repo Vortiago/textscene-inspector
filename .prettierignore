@@ -10,8 +10,6 @@ scripts/compare-docs/vendor/
 
 # Generated: each generator's `--check` compares its output byte for byte.
 *.generated.ts
-apps/textscene-web/src/fixtures.ts
 packages/textscene-core/src/r3f/controls/native/text/openSans*.ts
 scripts/compare-docs/*.json
-docs/comparison/index.html
 pnpm-lock.yaml

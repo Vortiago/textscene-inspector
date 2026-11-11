@@ -4,6 +4,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseFixtureManifest, readFixtureLookup, readFixtureManifest } from './fixtureManifest.mjs';
 
@@ -37,7 +38,13 @@ export const fixtures: Fixture[] = [
 });
 
 describe('readFixtureManifest', () => {
-  it('reads the committed manifest', () => {
+  it('names the command that writes the manifest when the file is absent', () => {
+    const absent = join(tmpdir(), `no-manifest-${process.pid}`, 'fixtures.ts');
+
+    expect(() => readFixtureManifest(absent)).toThrow('pnpm generate:fixtures');
+  });
+
+  it('reads the generated manifest', () => {
     expect(readFixtureManifest().some((f) => f.file === 'unit-plane-mesh.tscn')).toBe(true);
   });
 });
