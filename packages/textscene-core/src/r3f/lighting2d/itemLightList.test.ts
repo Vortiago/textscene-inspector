@@ -297,7 +297,7 @@ describe('planLightLists', () => {
     expect(plans[0]!.lightsApart?.entries.map((entry) => entry.ordinal)).toEqual([1]);
   });
 
-  it('gives a tint layer only to each light kept apart that adds a `shadow_color`', () => {
+  it('gives each light kept apart that adds a `shadow_color` its own layer as the tint layer', () => {
     const unshadowedTint = light({
       reach: key({ itemCullMask: 3 }),
       shadowItemCullMask: 2,
@@ -305,8 +305,45 @@ describe('planLightLists', () => {
     });
     const all = lights(light({ tintsShadow: true }), light(), unshadowedTint, light({ tintsShadow: true }));
     const apart = planLightLists(all, placements([ITEM, 'apart']))[0]!.lightsApart!;
-    expect(apart.tintLayers).toEqual([0, -1, -1, 1]);
-    expect(apart.tintLayerCount).toBe(2);
+    // One layered target holds both buffers, and a layer binds on every attachment alike.
+    expect(apart.tintLayers).toEqual([0, -1, -1, 3]);
+    expect(apart.tintsShadow).toBe(true);
+  });
+
+  it('adds no shadow_color attachment to a list kept apart while no light on it adds a `shadow_color`', () => {
+    const apart = planLightLists(lights(light(), light()), placements([ITEM, 'apart']))[0]!.lightsApart!;
+    expect(apart.tintLayers).toEqual([-1, -1]);
+    expect(apart.tintsShadow).toBe(false);
+  });
+});
+
+describe('the attachments of a list', () => {
+  const attachmentsOf = (reads: LitItemRead[], tinting: boolean) =>
+    planLightLists(lights(light({ tintsShadow: tinting })), placements([ITEM, ...reads]))[0]!.attachments;
+
+  it('holds the ordinary buffer alone while nothing else reads the list', () => {
+    expect(attachmentsOf(['plain'], false)).toEqual({ plain: 0, shadowTint: -1, lightOnly: -1, count: 1 });
+  });
+
+  it('adds the `shadow_color` buffer beside the ordinary one while a light tints', () => {
+    expect(attachmentsOf(['plain'], true)).toEqual({ plain: 0, shadowTint: 1, lightOnly: -1, count: 2 });
+  });
+
+  it('adds the Light Only buffer after the `shadow_color` slot, for a list with an ordinary reader too', () => {
+    expect(attachmentsOf(['plain', 'lightOnly'], true)).toEqual({
+      plain: 0,
+      shadowTint: 1,
+      lightOnly: 2,
+      count: 3,
+    });
+  });
+
+  it('puts the Light Only buffer first while no ordinary item reads the list', () => {
+    expect(attachmentsOf(['lightOnly'], true)).toEqual({ plain: -1, shadowTint: 1, lightOnly: 0, count: 2 });
+  });
+
+  it('has none while only normal-mapped items read the list', () => {
+    expect(attachmentsOf(['apart'], true)).toBeNull();
   });
 });
 
@@ -315,38 +352,18 @@ describe('drawsInPass', () => {
   const escaping = { ordinal: 0, unshadowed: true };
 
   it('draws a light absent from the list in no pass', () => {
-    for (const role of ['lit', 'tint', 'fade', 'unshadowed', 'unshadowedFade'] as const) {
-      expect(drawsInPass(undefined, role, 'light')).toBe(false);
-      expect(drawsInPass(undefined, role, 'tint')).toBe(false);
+    for (const role of ['lit', 'unshadowed'] as const) {
+      expect(drawsInPass(undefined, role)).toBe(false);
     }
   });
 
-  it('draws the lit quad in the light pass for a shadowed item', () => {
-    expect(drawsInPass(shadowed, 'lit', 'light')).toBe(true);
-    expect(drawsInPass(shadowed, 'unshadowed', 'light')).toBe(false);
-    expect(drawsInPass(shadowed, 'tint', 'light')).toBe(false);
+  it('draws the lit quad for a shadowed item and not the unshadowed one', () => {
+    expect(drawsInPass(shadowed, 'lit')).toBe(true);
+    expect(drawsInPass(shadowed, 'unshadowed')).toBe(false);
   });
 
-  it('draws only the unshadowed quad in the light pass for an escaping item', () => {
-    expect(drawsInPass(escaping, 'unshadowed', 'light')).toBe(true);
-    expect(drawsInPass(escaping, 'lit', 'light')).toBe(false);
-  });
-
-  it('draws the tint quad in the tint pass, for a shadowed item only', () => {
-    expect(drawsInPass(shadowed, 'tint', 'tint')).toBe(true);
-    expect(drawsInPass(shadowed, 'lit', 'tint')).toBe(false);
-    expect(drawsInPass(escaping, 'tint', 'tint')).toBe(false);
-  });
-
-  it('draws the fade quad, the lit alpha, in the tint pass of a shadowed item', () => {
-    expect(drawsInPass(shadowed, 'fade', 'tint')).toBe(true);
-    expect(drawsInPass(shadowed, 'fade', 'light')).toBe(false);
-    expect(drawsInPass(escaping, 'fade', 'tint')).toBe(false);
-  });
-
-  it('draws the unshadowed fade quad in the tint pass of an escaping item', () => {
-    expect(drawsInPass(escaping, 'unshadowedFade', 'tint')).toBe(true);
-    expect(drawsInPass(escaping, 'unshadowedFade', 'light')).toBe(false);
-    expect(drawsInPass(shadowed, 'unshadowedFade', 'tint')).toBe(false);
+  it('draws the unshadowed quad for an escaping item and not the lit one', () => {
+    expect(drawsInPass(escaping, 'unshadowed')).toBe(true);
+    expect(drawsInPass(escaping, 'lit')).toBe(false);
   });
 });

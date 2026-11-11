@@ -48,7 +48,7 @@ export interface ShadowSampling {
   readonly smooth: number;
   /** The light's pose, which the light writes as it moves. */
   readonly pose: ShadowPoseUniforms;
-  /** `Light2D.shadow_color`, which both the cookie quad and the tint quad read. */
+  /** `Light2D.shadow_color`, which the light quad reads for both of its terms. */
   readonly shadowColor: Rgba;
 }
 

@@ -21,6 +21,7 @@ import { CanvasLightSequenceProvider } from './useLightSequence.js';
 import {
   planLightLists,
   type ApartLightPlan,
+  type ListAttachments,
   type CanvasLightDeclaration,
   type LightListPlan,
   type PassMeshRole,
@@ -36,7 +37,12 @@ import type { LightPassHost } from './lightPassHost.js';
 import { useLightRegistry, usePlacementRegistry } from './lightRegistry.js';
 import { useAccumulationTargets, useLayeredAccumulationTargets } from './lightAccumulationTargets.js';
 import { createSeedMaterial, LightAccumulatorSeed } from './lightSeedQuad.js';
-import { renderLightLists, type AccumulationList, type PassMesh } from './lightAccumulationPass.js';
+import {
+  renderLightLists,
+  type AccumulationList,
+  type PassMesh,
+  type SummedAccumulation,
+} from './lightAccumulationPass.js';
 import { capItemLights, type CappedItem } from './itemLightCap.js';
 import type { Rect2 } from '../../godot/math/rect2.js';
 import type { Rgba } from '../../godot/math/math.js';
@@ -55,27 +61,36 @@ interface CanvasLightPassProps {
   children: ReactNode;
 }
 
-/** The ids of the plans that `needs` a buffer. */
-function planIds(plans: readonly LightListPlan[], needs: (plan: LightListPlan) => boolean): string[] {
-  return plans.filter(needs).map((plan) => plan.id);
+/** The attachment count of each plan with a summed buffer, by plan id. */
+function summedAttachments(plans: readonly LightListPlan[]): ReadonlyMap<string, number> {
+  return new Map(plans.flatMap((plan) => (plan.attachments ? [[plan.id, plan.attachments.count]] : [])));
 }
 
-/** Whether an item reads `plan`'s lights summed in one buffer, the ordinary or the Light Only one. */
-function readsWholeList(plan: LightListPlan): boolean {
-  return plan.reads.has('plain') || plan.reads.has('lightOnly');
-}
-
-/** The layer count `layersOf` gives each plan that keeps its lights apart, plans it gives 0 left out. */
-function apartLayers(
-  plans: readonly LightListPlan[],
-  layersOf: (apart: ApartLightPlan) => number
-): ReadonlyMap<string, number> {
+/** The shape of the layered target of each plan that keeps its lights apart, by plan id. */
+function apartShapes(
+  plans: readonly LightListPlan[]
+): ReadonlyMap<string, { layers: number; attachments: number }> {
   return new Map(
-    plans.flatMap((plan) => {
-      const layers = plan.lightsApart ? layersOf(plan.lightsApart) : 0;
-      return layers > 0 ? [[plan.id, layers]] : [];
-    })
+    plans.flatMap((plan) =>
+      plan.lightsApart
+        ? [
+            [
+              plan.id,
+              { layers: plan.lightsApart.entries.length, attachments: plan.lightsApart.tintsShadow ? 2 : 1 },
+            ],
+          ]
+        : []
+    )
   );
+}
+
+/** The texture of `buffer` in a list's summed target, or null while the list holds none. */
+function summedTexture(
+  summed: SummedAccumulation | null,
+  buffer: keyof Omit<ListAttachments, 'count'>
+): THREE.Texture | null {
+  const attachment = summed?.attachments[buffer] ?? -1;
+  return attachment < 0 ? null : summed!.target.textures[attachment]!;
 }
 
 /** Each layer's mode, as `ApartLightBuffers.modes` describes it. */
@@ -104,21 +119,18 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
   const [placements, registerItem] = usePlacementRegistry();
   const plans = useMemo(() => planLightLists(lights, placements), [lights, placements]);
 
-  // A float, since Godot clamps only after multiplying the light into the albedo: blending onto
-  // the canvas would clamp first and flatten an `energy = 2` torch into a disc with no falloff.
-  // Alpha holds the summed cookie coverage `light_only_alpha` (`color.a *= light_only_alpha`).
-  const targets = useAccumulationTargets(planIds(plans, (plan) => plan.reads.has('plain')));
-  // Light Only seeds from white, and MIX interpolates toward the light, so the seed must be there
-  // while the lights apply: a pass of its own over the same quads with another seed, run only for
-  // a list a Light Only item reads. Godot's transparent default `shadow_color` (`light_2d.h:58`)
-  // adds nothing, so the tint pass runs only for a list a tinting light shadows.
-  const lightOnlyTargets = useAccumulationTargets(planIds(plans, (plan) => plan.reads.has('lightOnly')));
-  const shadowTintTargets = useAccumulationTargets(
-    planIds(plans, (plan) => plan.tintsShadow && readsWholeList(plan))
-  );
+  // One target per list holds every buffer an item of the list reads, in its attachments
+  // (`ListAttachments`), and one draw of the list's lights fills them all: the shadow of a light is
+  // evaluated once per fragment, as `light_shadow_compute` does (`canvas.glsl:839`). A float, since
+  // Godot clamps only after multiplying the light into the albedo: blending onto the canvas would
+  // clamp first and flatten an `energy = 2` torch into a disc with no falloff. Alpha holds the
+  // summed cookie coverage `light_only_alpha` (`color.a *= light_only_alpha`). Light Only seeds
+  // from white, and MIX interpolates toward the light, so that buffer is a seed of its own over the
+  // same quads. Godot's transparent default `shadow_color` (`light_2d.h:58`) adds nothing, so the
+  // `shadow_color` buffer exists only for a list a tinting light shadows.
+  const summedTargets = useAccumulationTargets(summedAttachments(plans));
   // A normal term scales each light before it blends, so a normal-mapped item reads each light alone.
-  const apartTargets = useLayeredAccumulationTargets(apartLayers(plans, (apart) => apart.entries.length));
-  const apartTintTargets = useLayeredAccumulationTargets(apartLayers(plans, (apart) => apart.tintLayerCount));
+  const apartTargets = useLayeredAccumulationTargets(apartShapes(plans));
 
   // Read by the pass each frame, like the pass meshes.
   const apartPlacers = useRef(new Map<number, ApartPlacer>()).current;
@@ -195,16 +207,10 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
       plans.map((plan) => ({
         entries: new Map(plan.entries.map((entry) => [entry.ordinal, entry])),
         placementIds: plan.placementIds,
-        target: targets.get(plan.id) ?? null,
-        lightOnlyTarget: lightOnlyTargets.get(plan.id) ?? null,
-        shadowTintTarget: shadowTintTargets.get(plan.id) ?? null,
-        apart: plan.lightsApart && {
-          ...plan.lightsApart,
-          target: apartTargets.get(plan.id)!,
-          shadowTintTarget: apartTintTargets.get(plan.id) ?? null,
-        },
+        summed: plan.attachments && { target: summedTargets.get(plan.id)!, attachments: plan.attachments },
+        apart: plan.lightsApart && { ...plan.lightsApart, target: apartTargets.get(plan.id)! },
       })),
-    [plans, targets, lightOnlyTargets, shadowTintTargets, apartTargets, apartTintTargets]
+    [plans, summedTargets, apartTargets]
   );
 
   const seedMaterial = useMemo(createSeedMaterial, []);
@@ -264,14 +270,14 @@ export function CanvasLightPass({ host, canvasModulate, space, children }: Canva
     const lists = new Map<string, CanvasLightList>();
     plans.forEach((plan, index) => {
       const accumulation = accumulationLists[index]!;
-      const { apart } = accumulation;
+      const { apart, summed } = accumulation;
       const list: CanvasLightList = {
-        buffer: accumulation.target?.texture ?? null,
-        lightOnlyBuffer: accumulation.lightOnlyTarget?.texture ?? null,
-        shadowTintBuffer: accumulation.shadowTintTarget?.texture ?? null,
+        buffer: summedTexture(summed, 'plain'),
+        lightOnlyBuffer: summedTexture(summed, 'lightOnly'),
+        shadowTintBuffer: summedTexture(summed, 'shadowTint'),
         apart: apart && {
-          buffer: apart.target.texture,
-          shadowTintBuffer: apart.shadowTintTarget?.texture ?? null,
+          buffer: apart.target.textures[0]!,
+          shadowTintBuffer: apart.target.textures[1] ?? null,
           places: apart.entries.map((entry) => apartPlace(entry.ordinal)),
           modes: apartModes(lights, apart),
         },

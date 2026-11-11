@@ -7,12 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
 import * as THREE from 'three';
-import {
-  createLightQuadMaterial,
-  createShadowColorQuadMaterial,
-  updateShadowPolarTexture,
-  type ShadowSampling,
-} from './lightQuad';
+import { createLightQuadMaterial, updateShadowPolarTexture, type ShadowSampling } from './lightQuad';
 import { SHADOW_MAP_FAR } from './shadowPolarMap';
 import { SHADOW_TAPS } from './shadowTaps';
 import { createShadowPoseUniforms, writeShadowPose } from './shadowSampling';
@@ -249,22 +244,43 @@ describe('createLightQuadMaterial with a shadow', () => {
   });
 });
 
-describe('createShadowColorQuadMaterial', () => {
-  const TINT = { r: 0.15, g: 0.35, b: 1, a: 0.5 };
+describe('the outputs of a light quad', () => {
+  const mainOf = (mat: THREE.ShaderMaterial) => mat.fragmentShader.split('void main()')[1]!;
 
-  it('emits the fractional tint under the whole alpha of the light', () => {
-    // The colour rides the sampling, so this quad and the light's cookie quad read one value.
-    const mat = createShadowColorQuadMaterial({
-      cookie: new THREE.Texture(),
-      blendMode: 0,
-      shadow: shadowSampling({ shadowColor: TINT }),
-    });
-    // The alpha is the light's whole `(1 - s) + s * a`, which a MIX blend scales the buffer by, and
-    // the rgb its shadowed share.
-    expect(mat.fragmentShader).toContain(
-      'vec4(uShadowColor.rgb * s, cookie.a * ((1.0 - s) + s * uShadowColor.a))'
-    );
-    expect(mat.defines?.SHADOW_FILTER).toBe(1);
-    expect(mat.uniforms.uShadowMap).toBeDefined();
+  it('writes the light, the shadow_color and the Light Only term to attachments 0, 1 and 2', () => {
+    // One draw fills every buffer of a list (`CanvasLightPass.tsx`), so a quad declares all three.
+    const mat = shadowedMaterial();
+    expect(mat.glslVersion).toBe(THREE.GLSL3);
+    for (const location of [0, 1, 2]) {
+      expect(mat.fragmentShader).toContain(`layout(location = ${location}) out highp vec4`);
+    }
+  });
+
+  it('evaluates the shadow taps once per fragment, whatever the buffers it writes', () => {
+    // Godot calls `light_shadow_compute` once per light per fragment (`canvas.glsl:839`). A second
+    // evaluation per buffer is what made a tinted light cost twice the frame time (#1262).
+    expect(mainOf(shadowedMaterial()).match(/shadowFraction\(\)/g)).toHaveLength(1);
+  });
+
+  it('writes the shadow_color term under the same alpha as the light term', () => {
+    // A MIX blend scales both buffers by it, so the two must agree.
+    const main = mainOf(shadowedMaterial());
+    expect(main).toContain('float alpha = cookie.a * (lit + s * uShadowColor.a)');
+    expect(main).toContain('vec4(uShadowColor.rgb * s, alpha)');
+  });
+
+  it('writes the Light Only buffer the term the light buffer gets', () => {
+    expect(shadowedMaterial().fragmentShader).toContain('lightOnlyColor = light;');
+  });
+
+  it('writes an unshadowed light to the shadow_color buffer as its alpha alone', () => {
+    // A MIX light scales that buffer by its alpha even where nothing tints.
+    expect(mainOf(material(Light2DBlendMode.MIX))).toContain('vec4(0.0, 0.0, 0.0, cookie.a)');
+  });
+
+  it('carries the shadow colour as a straight sRGB uniform', () => {
+    const shadowColor = { r: 0.15, g: 0.35, b: 1, a: 0.5 };
+    const v = shadowedMaterial(shadowSampling({ shadowColor })).uniforms.uShadowColor!.value as THREE.Vector4;
+    expect([v.x, v.y, v.z, v.w]).toEqual([0.15, 0.35, 1, 0.5]);
   });
 });

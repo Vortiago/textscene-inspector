@@ -229,10 +229,10 @@ describe('usePassMeshRef', () => {
 
   it("hands the pass the mesh with its light's ordinal and its role", () => {
     const { Wrap, registerPassMesh } = spyLighting();
-    const { result } = renderHook(() => usePassMeshRef(2, 'tint'), { wrapper: Wrap });
+    const { result } = renderHook(() => usePassMeshRef(2, 'unshadowed'), { wrapper: Wrap });
     const mesh = new THREE.Mesh();
     result.current(mesh);
-    expect(registerPassMesh).toHaveBeenCalledWith(mesh, 2, 'tint');
+    expect(registerPassMesh).toHaveBeenCalledWith(mesh, 2, 'unshadowed');
   });
 
   it('withdraws the mesh when it unmounts', () => {

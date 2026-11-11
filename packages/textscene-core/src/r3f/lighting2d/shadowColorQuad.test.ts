@@ -6,16 +6,18 @@
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { createShadowColorQuadMaterial, shadowColorContributes } from './lightQuad';
+import { createLightQuadMaterial, shadowColorContributes } from './lightQuad';
 import { Light2DBlendMode, Light2DShadowFilter } from '../../godot/scene/light2d';
 import { shadowSampling } from './testing/shadowSampling';
 
 const BLUE = { r: 0.15, g: 0.35, b: 1, a: 1 };
 
-/** The tint quad of a NONE light that casts `BLUE`. */
+/** The quad of a NONE light that casts `BLUE`. */
 function tintQuad(blendMode: number = Light2DBlendMode.ADD) {
-  return createShadowColorQuadMaterial({
+  return createLightQuadMaterial({
     cookie: new THREE.Texture(),
+    color: { r: 1, g: 0.55, b: 0.2, a: 1 },
+    energy: 1.5,
     blendMode,
     shadow: shadowSampling({ filter: Light2DShadowFilter.NONE, shadowColor: BLUE }),
   });
@@ -44,7 +46,7 @@ describe('shadowColorContributes', () => {
   });
 });
 
-describe('createShadowColorQuadMaterial', () => {
+describe('the shadow_color term of a light quad', () => {
   it("takes the cookie's alpha through the edge fade, so it matches the lit quad's coverage", () => {
     const mat = tintQuad();
     expect(mat.fragmentShader).toContain('sampleCookie(vLightUv)');
@@ -57,11 +59,10 @@ describe('createShadowColorQuadMaterial', () => {
     // energy 1.5, shadow (0.15, 0.35, 1, 1)): rgb(79, 101, 171) over unlit 63 divides to one cookie
     // alpha per channel, 0.418 / 0.426 / 0.424, so energy and the warm colour are absent. The
     // cookie gives alpha only.
-    expect(mat.fragmentShader).toContain(
-      'vec4(uShadowColor.rgb * s, cookie.a * ((1.0 - s) + s * uShadowColor.a))'
-    );
-    expect(mat.fragmentShader).not.toContain('uEnergy');
-    expect(mat.fragmentShader).not.toContain('cookie.rgb');
+    const tintTerm = mat.fragmentShader.split('\n').find((line) => line.includes('uShadowColor.rgb * s'));
+    expect(tintTerm).toContain('vec4(uShadowColor.rgb * s, alpha)');
+    expect(tintTerm).not.toContain('uEnergy');
+    expect(tintTerm).not.toContain('cookie.rgb');
   });
 
   it('carries the shadow colour as a straight sRGB uniform', () => {
