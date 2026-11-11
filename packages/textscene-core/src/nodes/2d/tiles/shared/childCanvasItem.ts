@@ -9,6 +9,11 @@ import type { Rgba } from '../../../../godot/math/math';
 
 const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
+/** `props` with the Node2D transform reset to the identity. */
+export function withoutNode2DTransform<T extends Node2DProperties>(props: T): T {
+  return { ...props, position: { x: 0, y: 0 }, rotation: 0, scale: { x: 1, y: 1 }, skew: 0 };
+}
+
 /**
  * `parent`'s properties with the canvas state the group above holds reset. Self modulate, light
  * mask and sampler stay: a row takes the layer's self modulate (`tile_map_layer.cpp:358`), and the
@@ -17,11 +22,7 @@ const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 export function childCanvasItemProperties<T extends Node2DProperties>(parent: T): T {
   const { materialPath: _materialPath, ...inherited } = parent;
   return {
-    ...inherited,
-    position: { x: 0, y: 0 },
-    rotation: 0,
-    scale: { x: 1, y: 1 },
-    skew: 0,
+    ...withoutNode2DTransform(inherited as T),
     modulate: WHITE,
     z_index: 0,
     z_as_relative: true,

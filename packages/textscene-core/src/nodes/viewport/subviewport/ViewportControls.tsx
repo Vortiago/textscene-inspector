@@ -44,6 +44,8 @@ interface ViewportControlsProps {
   themeOwners: readonly ThemeOwner[];
   /** The visible size of the viewport around a window, which limits its contents height. Null for a SubViewport's own Controls. */
   enclosingViewportSize: Vector2 | null;
+  /** `ControlCanvasWalker`'s `sortsLocally`: false for a viewport that sorts through its own `ControlYSortProvider`. */
+  sortsLocally: boolean;
 }
 
 export function ViewportControls({
@@ -53,6 +55,7 @@ export function ViewportControls({
   inheritedRtl,
   themeOwners,
   enclosingViewportSize,
+  sortsLocally,
 }: ViewportControlsProps) {
   const { externalResources, internalResources } = useSceneResources();
   const { themeScale } = useProjectSettings();
@@ -89,7 +92,8 @@ export function ViewportControls({
         // root window receives `gui/common/snap_controls_to_pixels` (`main/main.cpp`), so the project's
         // opt-out never reaches a sub-viewport's Controls.
         snapToPixels
-        sortsLocally
+        sortsLocally={sortsLocally}
+        livePath={forestPath}
       />
       <EmbeddedWindows windows={windows} embedderSize={size} forestPath={forestPath} theme={theme} />
     </>

@@ -14,7 +14,7 @@ import {
   layoutButtonContent,
   pickButtonStyleBox,
   resolveToggleDrawState,
-  textMinimumWidthPx,
+  measuredContentMinimumSize,
   tintColor,
   trimButtonLabel,
   type ButtonContentInput,
@@ -156,6 +156,7 @@ const BASE_INPUT: ButtonContentInput = {
   textNaturalSize: { x: 50, y: 26 },
   isTextRtl: false,
   isClipped: false,
+  internalMargin: { left: 0, right: 0 },
   rtl: false,
 };
 
@@ -287,6 +288,70 @@ describe('layoutButtonContent: icon + text, horizontal icon_alignment', () => {
     // iconX = 4 + (112-16)/2 = 52.
     expect(icon).toEqual({ rect: { x: 52, y: 8, w: 16, h: 16 } });
     expect(text!.offset.x).toBe(35); // identical to the no-icon CENTER case above
+  });
+});
+
+/**
+ * `_internal_margin` (`button.cpp:247-259`): the width a derived class reserves for its own element,
+ * plus `h_separation` once it is above zero, comes off the box before the icon and text lay out in it.
+ * The numbers: 120 wide, style margin 4 a side, 16 px reserved and `h_separation` 4, so the reservation
+ * is 20 and the custom element is 120 - 8 - 20 = 92.
+ */
+describe('layoutButtonContent: an internal margin reserved by a derived class', () => {
+  const WITH_ICON: ButtonContentInput = {
+    ...BASE_INPUT,
+    iconNaturalSize: { x: 16, y: 16 },
+    textAlignment: HORIZONTAL_ALIGNMENT_LEFT,
+  };
+  const LEFT_RESERVED = { left: 16, right: 0 };
+  const RIGHT_RESERVED = { left: 0, right: 16 };
+
+  it('starts a LEFT icon past the left reservation and its separation (button.cpp:374-381)', () => {
+    const { icon, labelBox } = layoutButtonContent({ ...WITH_ICON, internalMargin: LEFT_RESERVED });
+    // x = 4 + 20; the label starts past the icon and its separation: 4 + 20 + 20 = 44, 92 - 20 = 72 wide.
+    expect(icon).toEqual({ rect: { x: 24, y: 8, w: 16, h: 16 } });
+    expect(labelBox).toMatchObject({ leftPx: 44, widthPx: 72 });
+  });
+
+  it('ends a RIGHT icon before the right reservation and its separation (button.cpp:385-387)', () => {
+    const { icon, labelBox } = layoutButtonContent({
+      ...WITH_ICON,
+      iconAlignment: HORIZONTAL_ALIGNMENT_RIGHT,
+      internalMargin: RIGHT_RESERVED,
+    });
+    // x = 120 - 4 - 20 - 16 = 80; the label stays at the left margin, 92 - 20 = 72 wide.
+    expect(icon).toEqual({ rect: { x: 80, y: 8, w: 16, h: 16 } });
+    expect(labelBox).toMatchObject({ leftPx: 4, widthPx: 72 });
+  });
+
+  it('centres a CENTER icon in what the reservation leaves, and keeps the label box whole (button.cpp:374-381)', () => {
+    const { icon, labelBox } = layoutButtonContent({
+      ...WITH_ICON,
+      iconAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+      internalMargin: LEFT_RESERVED,
+    });
+    // x = (92 - 16) / 2 + 4 + 20 = 62.
+    expect(icon).toEqual({ rect: { x: 62, y: 8, w: 16, h: 16 } });
+    expect(labelBox).toMatchObject({ leftPx: 24, widthPx: 92 });
+  });
+
+  it('adds no separation for a reservation of zero (button.cpp:247-259)', () => {
+    const { icon } = layoutButtonContent({ ...WITH_ICON, internalMargin: { left: 0, right: 0 } });
+    expect(icon).toEqual({ rect: { x: 4, y: 8, w: 16, h: 16 } });
+  });
+
+  it('sizes an expanded icon against the box the reservation leaves (button.cpp:333-355)', () => {
+    const { icon } = layoutButtonContent({
+      ...WITH_ICON,
+      hasText: false,
+      textNaturalSize: { x: 0, y: 0 },
+      iconAlignment: HORIZONTAL_ALIGNMENT_CENTER,
+      expandIcon: true,
+      rectSize: { x: 60, y: 32 },
+      internalMargin: LEFT_RESERVED,
+    });
+    // The box is 60 - 8 - 20 = 32 wide and 24 high: the icon grows to 24 and sits at 4 + 20 + (32 - 24) / 2.
+    expect(icon).toEqual({ rect: { x: 28, y: 4, w: 24, h: 24 } });
   });
 });
 
@@ -563,13 +628,21 @@ describe('buttonDrawnLabel: each line cut to the paragraph box as TextParagraph:
   });
 });
 
-describe('textMinimumWidthPx: the label width a minimum size keeps (button.cpp:493-495)', () => {
+/** The label width of a text-only minimum size: no style margin, icon or separation adds to it. */
+const labelWidthKept = (props: Parameters<typeof measuredContentMinimumSize>[2]) =>
+  measuredContentMinimumSize(
+    { ...BASE_INPUT, styleMargin: { left: 0, top: 0, right: 0, bottom: 0 } },
+    { x: 40.2, y: 20 },
+    props
+  ).x;
+
+describe('measuredContentMinimumSize: the label width a minimum size keeps (button.cpp:493-495)', () => {
   it('keeps the measured width, ceiled, with no clipping property', () => {
-    expect(textMinimumWidthPx(40.2, {})).toBe(41);
+    expect(labelWidthKept({})).toBe(41);
   });
 
   it('drops the width under clip_text', () => {
-    expect(textMinimumWidthPx(40.2, { clipText: true })).toBe(0);
+    expect(labelWidthKept({ clipText: true })).toBe(0);
   });
 
   it.each([
@@ -580,11 +653,11 @@ describe('textMinimumWidthPx: the label width a minimum size keeps (button.cpp:4
     OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE,
     OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE,
   ])('drops the width under text_overrun_behavior %i', (overrunBehavior) => {
-    expect(textMinimumWidthPx(40.2, { overrunBehavior })).toBe(0);
+    expect(labelWidthKept({ overrunBehavior })).toBe(0);
   });
 
   it('keeps the width under OVERRUN_NO_TRIMMING', () => {
-    expect(textMinimumWidthPx(40.2, { overrunBehavior: OverrunBehavior.OVERRUN_NO_TRIMMING })).toBe(41);
+    expect(labelWidthKept({ overrunBehavior: OverrunBehavior.OVERRUN_NO_TRIMMING })).toBe(41);
   });
 });
 
@@ -698,6 +771,7 @@ describe('buttonContentSize', () => {
   const center = HORIZONTAL_ALIGNMENT_CENTER;
   const base = {
     textSize: { x: 50, y: 20 },
+    lineHeightPx: 20,
     hasText: true,
     hSeparation: 4,
     verticalIconAlignment: VERTICAL_ALIGNMENT_CENTER,
@@ -715,5 +789,27 @@ describe('buttonContentSize', () => {
 
   it('is the text alone without an icon', () => {
     expect(buttonContentSize({ ...base, iconSize: null, iconAlignment: left })).toEqual({ x: 50, y: 20 });
+  });
+
+  it('stacks a TOP icon between the whole paragraph and ONE more line height (button.cpp:497-502,517-521)', () => {
+    const size = buttonContentSize({
+      ...base,
+      textSize: { x: 50, y: 60 },
+      iconSize: { x: 16, y: 16 },
+      iconAlignment: left,
+      verticalIconAlignment: VERTICAL_ALIGNMENT_TOP,
+    });
+    // 60 (three rows) + 16 (icon) + 20 (one line, `font->get_height`), not another 60.
+    expect(size.y).toBe(96);
+  });
+
+  it('floors a CENTRED icon on the line height too, so a one-row paragraph never drops below it', () => {
+    const size = buttonContentSize({
+      ...base,
+      textSize: { x: 50, y: 10 },
+      iconSize: null,
+      iconAlignment: left,
+    });
+    expect(size.y).toBe(20);
   });
 });
