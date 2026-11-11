@@ -15,7 +15,7 @@ changes no decision: ADR-0055 stays as it is until its owner decides.
   parts of `WebGLRenderer` that `WebGPURenderer` does not have.
 - The handler has limits that a port must design for: the shadow depth pass, multiple render
   targets and the uniform block count.
-- The handler and the node system add 86,445 B to the webview bundle, which passes the 1,000,000 B
+- The handler and the node system add 86,445 B to the webview bundle, which exceeds the 1,000,000 B
   ceiling by 20,897 B.
 
 The recommendation is a port of the lit surface to TSL node materials under the handler, behind a
