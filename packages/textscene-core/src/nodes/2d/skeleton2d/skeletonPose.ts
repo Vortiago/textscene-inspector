@@ -117,6 +117,8 @@ export class Skeleton2DPose {
    * from the world matrices, and the bones take the solved pose for this render.
    */
   write(): void {
+    // A render that threw ran no restore, and a second write would hold the solved pose as the drawn one.
+    this.restore();
     this.unsolveWorld();
     const bodies = (this.drawnBodies = this.bodies.objects());
     if (!bodies) return;
@@ -128,7 +130,11 @@ export class Skeleton2DPose {
       this.pose.version++;
       this.forgetSolve();
     }
-    if (!this.bound || !anchors) return this.forgetSolve();
+    if (!this.bound || !anchors) {
+      // A solve that stops with nothing moved, as an anchor leaves the tree, still moves the bone matrices.
+      if (this.solved) this.pose.version++;
+      return this.forgetSolve();
+    }
     if (!this.solved) this.solve(bodies, anchors, this.bound.stack);
     this.writeMoved();
   }

@@ -67,6 +67,72 @@ describe('decodeModificationStack', () => {
     expect(decodeModificationStack('SubResource("stack")', pools, NO_FILES)?.strength).toBe(1);
   });
 
+  // A slot past the last stored one is empty, and one empty slot solves as any number of them do.
+  it('keeps one empty slot past the last stored one for a count the file does not fill', () => {
+    const pools = poolsOf([
+      sub('stack', 'SkeletonModificationStack2D', {
+        modification_count: '2000000000',
+        'modifications/1': 'SubResource("jiggle")',
+      }),
+      sub('jiggle', 'SkeletonModification2DJiggle', {}),
+    ]);
+
+    const stack = decodeModificationStack('SubResource("stack")', pools, NO_FILES)!;
+
+    expect(stack.modifications.map((modification) => modification?.type ?? null)).toEqual([
+      null,
+      'SkeletonModification2DJiggle',
+      null,
+    ]);
+  });
+
+  it('keeps one empty slot for a run of slots the file leaves out below a stored one', () => {
+    const pools = poolsOf([
+      sub('stack', 'SkeletonModificationStack2D', {
+        modification_count: '2000000000',
+        'modifications/1999999998': 'SubResource("jiggle")',
+      }),
+      sub('jiggle', 'SkeletonModification2DJiggle', {}),
+    ]);
+
+    const stack = decodeModificationStack('SubResource("stack")', pools, NO_FILES)!;
+
+    expect(stack.modifications.map((modification) => modification?.type ?? null)).toEqual([
+      null,
+      'SkeletonModification2DJiggle',
+      null,
+    ]);
+  });
+
+  it.each(['SkeletonModification2DCCDIK', 'SkeletonModification2DFABRIK'] as const)(
+    'keeps one default joint past the last stored one for a %s chain the file does not fill',
+    (type) => {
+      const lengthKey = type.endsWith('CCDIK') ? 'ccdik_data_chain_length' : 'fabrik_data_chain_length';
+      const chain = decodeOne(type, { [lengthKey]: '2000000000', 'joint_data/0/bone_index': '4' });
+
+      expect(
+        (chain as { joints: { bone: { index: number } }[] }).joints.map((joint) => joint.bone.index)
+      ).toEqual([4, -1]);
+    }
+  );
+
+  it('reads the slot of a key as to_int does, so `modifications/01` fills slot 1', () => {
+    const pools = poolsOf([
+      sub('stack', 'SkeletonModificationStack2D', {
+        modification_count: '2',
+        'modifications/01': 'SubResource("jiggle")',
+      }),
+      sub('jiggle', 'SkeletonModification2DJiggle', {}),
+    ]);
+
+    const stack = decodeModificationStack('SubResource("stack")', pools, NO_FILES)!;
+
+    expect(stack.modifications.map((modification) => modification?.type ?? null)).toEqual([
+      null,
+      'SkeletonModification2DJiggle',
+    ]);
+  });
+
   it('answers null for no stack and for a resource of another type', () => {
     const pools = poolsOf([sub('curve', 'Curve', {})]);
 

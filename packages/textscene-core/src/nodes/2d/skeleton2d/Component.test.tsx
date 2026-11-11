@@ -133,6 +133,28 @@ describe('Skeleton2D', () => {
     expect(arm.rotation.z).toBe(0);
   });
 
+  it('puts the pose of the file back after a render that threw before it ended', async () => {
+    const renderer = await render(scene());
+    const arm = named(renderer, 'Arm');
+    startDraw(renderer);
+    startDraw(renderer);
+    endDraw(renderer);
+    expect(arm.matrixAutoUpdate).toBe(true);
+    expect(arm.matrix.elements[0]).toBeCloseTo(1, 6);
+  });
+
+  it('skins a Polygon2D with the pose of the file once the target of the stack is gone', async () => {
+    const renderer = await render(scene());
+    startDraw(renderer);
+    stripVertex(renderer, 1);
+    endDraw(renderer);
+    named(renderer, 'Target').removeFromParent();
+    startDraw(renderer);
+    const vertex = stripVertex(renderer, 1);
+    expect(vertex.x).toBeCloseTo(100, 3);
+    expect(vertex.y).toBeCloseTo(0, 3);
+  });
+
   // The second buffer of a 2D light and a span of a canvas group draw the scene with its matrices kept.
   it('draws the same pose in a render that updates no matrix of the scene', async () => {
     const renderer = await render(scene('enabled = true\nstrength = 0.5'));

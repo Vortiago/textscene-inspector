@@ -131,7 +131,8 @@ function localBindings(source: string): Map<string, ReadSlot | null> {
     if (slot === undefined) continue;
     const name = match[1]!;
     const seen = bound.get(name);
-    bound.set(name, seen !== undefined && seen?.key !== slot.key ? null : slot);
+    const agrees = seen === undefined || (seen?.key === slot.key && seen.isResource === slot.isResource);
+    bound.set(name, agrees ? slot : null);
   }
   return bound;
 }
@@ -230,7 +231,10 @@ function registryDeclarations(): Declarations {
   }
   return {
     forClass: (type, key) => validatorRegistry.declarationFor(type, key)?.intSlot?.width,
-    forKey: (key, subject) => byKey.get(slotOf(key, subject === 'resource')),
+    // The other kind where the bag's own declares no such key: a material decoder reads its resource
+    // through `properties`, and a read that finds no declaration is not checked.
+    forKey: (key, subject) =>
+      byKey.get(slotOf(key, subject === 'resource')) ?? byKey.get(slotOf(key, subject !== 'resource')),
   };
 }
 

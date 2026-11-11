@@ -7,6 +7,7 @@
 import { declaredLeafResolver, indexedElements } from '../../../godot/classdb/indexedKey.js';
 import { degToRadf, TAU } from '../../../godot/math/math.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
+import { stringToInt } from '../../../godot/string/string.js';
 import { SkeletonModification2DExecutionMode } from '../../../godot/scene/skeletonModification2d.js';
 import { slotCount } from '../../../godot/variant/intSlots.js';
 import { nodePathLiteral } from '../../../godot/variant/variantParser.js';
@@ -78,16 +79,52 @@ function stackOf(
   const { data } = scoped.resource;
   // `set_modification_count` refuses a negative count (`skeleton_modification_stack_2d.cpp:198`),
   // and `set_modification` an index at or past it (`:183`).
-  const count = slotCount(data.modification_count) ?? 0;
+  const stored = storedSlots(data);
+  const slots = filledSlots(slotCount(data.modification_count) ?? 0, stored.keys());
   const stack: ModificationStack2D = {
     enabled: boolOr(data.enabled, false),
     strength: strengthOf(data.strength),
-    modifications: Array.from({ length: count }, (_unused, index) =>
-      modificationOf(data[`modifications/${index}`], scoped.resources, walk)
+    modifications: slots.map((index) =>
+      index === null ? null : modificationOf(stored.get(index), scoped.resources, walk)
     ),
   };
   walk.open.delete(scoped.resource);
   return stack;
+}
+
+const SLOT_PREFIX = 'modifications/';
+
+/**
+ * The reference each `modifications/<i>` key stores, by the slot `_set` writes it to:
+ * `get_slicec('/', 1).to_int()` (`skeleton_modification_stack_2d.cpp:47-49`). A later key of one
+ * slot replaces an earlier one.
+ */
+function storedSlots(data: Record<string, string>): Map<number, string> {
+  const stored = new Map<number, string>();
+  for (const key of Object.keys(data)) {
+    if (key.startsWith(SLOT_PREFIX)) stored.set(stringToInt(key.split('/')[1]!), data[key]!);
+  }
+  return stored;
+}
+
+/**
+ * The slots below `count`, in order: the index of each one of `stored`, and one null for each run
+ * of slots the file does not store. Each of those holds the default, and one default slot solves as
+ * any number of them do. A count of 2000000000 would allocate every slot.
+ */
+function filledSlots(count: number, stored: Iterable<number>): (number | null)[] {
+  const slots: (number | null)[] = [];
+  let next = 0;
+  for (const index of [...new Set(stored)].sort((a, b) => a - b)) {
+    // A setter refuses a negative index, as it refuses one at or past the count.
+    if (index < 0) continue;
+    if (index >= count) break;
+    if (index > next) slots.push(null);
+    slots.push(index);
+    next = index + 1;
+  }
+  if (next < count) slots.push(null);
+  return slots;
 }
 
 /** `float strength = 1.0` (`skeleton_modification_stack_2d.h:58`). */
@@ -203,9 +240,11 @@ function jointsOf<Joint>(
   leafResolver: ReturnType<typeof declaredLeafResolver>,
   jointOf: (leaves: Leaves) => Joint
 ): Joint[] {
-  const length = slotCount(data[lengthKey]) ?? 0;
   const written = indexedElements(data, 'joint_data/', 'to_int', leafResolver);
-  return Array.from({ length }, (_unused, index) => jointOf((leaf) => written.get(index)?.get(leaf)));
+  const slots = filledSlots(slotCount(data[lengthKey]) ?? 0, written.keys());
+  return slots.map((index) =>
+    jointOf((leaf) => (index === null ? undefined : written.get(index)?.get(leaf)))
+  );
 }
 
 function boneOf(leaves: Leaves): BoneReference {
