@@ -90,7 +90,7 @@ export function selectedOptionItem(props: OptionButtonProperties): OptionItem | 
 const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vector2 = { x: 12, y: 12 };
 
 /** The slot of item `index`'s own icon, which `_refresh_size_cache` sizes the button by (`option_button.cpp:451`). */
-export function optionItemIconSlotKey(index: number): string {
+function optionItemIconSlotKey(index: number): string {
   return `popup/item_${index}/icon`;
 }
 

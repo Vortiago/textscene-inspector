@@ -14,7 +14,7 @@ import {
   layoutButtonContent,
   pickButtonStyleBox,
   resolveToggleDrawState,
-  textMinimumWidthPx,
+  measuredContentMinimumSize,
   tintColor,
   trimButtonLabel,
   type ButtonContentInput,
@@ -628,13 +628,21 @@ describe('buttonDrawnLabel: each line cut to the paragraph box as TextParagraph:
   });
 });
 
-describe('textMinimumWidthPx: the label width a minimum size keeps (button.cpp:493-495)', () => {
+/** The label width of a text-only minimum size: no style margin, icon or separation adds to it. */
+const labelWidthKept = (props: Parameters<typeof measuredContentMinimumSize>[2]) =>
+  measuredContentMinimumSize(
+    { ...BASE_INPUT, styleMargin: { left: 0, top: 0, right: 0, bottom: 0 } },
+    { x: 40.2, y: 20 },
+    props
+  ).x;
+
+describe('measuredContentMinimumSize: the label width a minimum size keeps (button.cpp:493-495)', () => {
   it('keeps the measured width, ceiled, with no clipping property', () => {
-    expect(textMinimumWidthPx(40.2, {})).toBe(41);
+    expect(labelWidthKept({})).toBe(41);
   });
 
   it('drops the width under clip_text', () => {
-    expect(textMinimumWidthPx(40.2, { clipText: true })).toBe(0);
+    expect(labelWidthKept({ clipText: true })).toBe(0);
   });
 
   it.each([
@@ -645,11 +653,11 @@ describe('textMinimumWidthPx: the label width a minimum size keeps (button.cpp:4
     OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE,
     OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE,
   ])('drops the width under text_overrun_behavior %i', (overrunBehavior) => {
-    expect(textMinimumWidthPx(40.2, { overrunBehavior })).toBe(0);
+    expect(labelWidthKept({ overrunBehavior })).toBe(0);
   });
 
   it('keeps the width under OVERRUN_NO_TRIMMING', () => {
-    expect(textMinimumWidthPx(40.2, { overrunBehavior: OverrunBehavior.OVERRUN_NO_TRIMMING })).toBe(41);
+    expect(labelWidthKept({ overrunBehavior: OverrunBehavior.OVERRUN_NO_TRIMMING })).toBe(41);
   });
 });
 

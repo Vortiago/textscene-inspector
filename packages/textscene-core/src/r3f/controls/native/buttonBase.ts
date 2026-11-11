@@ -550,7 +550,7 @@ export function isButtonTextClipped(props: TextClipProperties & ButtonWrapProper
  * A Button-family label's width contribution to the minimum size: the ceiled shaped width, or 0 when
  * {@link isButtonTextClipped}, since a narrower box cuts, trims or wraps it (`button.cpp:493-495`).
  */
-export function textMinimumWidthPx(
+function textMinimumWidthPx(
   measuredWidthPx: number,
   props: TextClipProperties & ButtonWrapProperties
 ): number {
@@ -738,7 +738,7 @@ export function withReservedElementSize(content: Vector2, element: Vector2, hSep
 }
 
 /** The `SolveNode.textureSlots` key of Button's own `icon`. */
-export const BUTTON_ICON_SLOT_KEY = 'icon';
+const BUTTON_ICON_SLOT_KEY = 'icon';
 
 /**
  * Button's own `icon` ref as a texture slot, for a Button-family type that registers a `TextureSlotsFn` of

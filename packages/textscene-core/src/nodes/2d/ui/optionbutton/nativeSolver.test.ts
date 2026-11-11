@@ -17,7 +17,6 @@ import {
   optionButtonTextTheme,
   selectedOptionItem,
   layoutOptionButtonContent as layoutContent,
-  optionItemIconSlotKey,
   optionButtonArrowSize,
   optionButtonTextureSlots,
   OPTION_BUTTON_THEME_FONT_KEY,
@@ -25,7 +24,7 @@ import {
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { ButtonContentInput } from '../../../../r3f/controls/native/buttonBase';
 import { controlProps } from '../control/testing/controlProps';
-import { BUTTON_ICON_SLOT_KEY, internalMarginAt } from '../../../../r3f/controls/native/buttonBase';
+import { internalMarginAt } from '../../../../r3f/controls/native/buttonBase';
 
 const A_ADVANCE = 1354 * (16 / 2048); // 10.578125
 // 'B' is 1350 design units, not 'A''s 1354.
@@ -80,23 +79,20 @@ describe("optionButtonTextureSlots: items' icons (option_button.cpp:424,451)", (
   it("requests the selected item's icon as Button's icon, first, and every item's own icon after it", () => {
     const requests = slots({ items, selected: 1 });
     expect(requests.map(({ key, ref }) => [key, ref])).toEqual([
-      [BUTTON_ICON_SLOT_KEY, 'ExtResource("2")'],
-      [optionItemIconSlotKey(0), 'ExtResource("1")'],
-      [optionItemIconSlotKey(1), 'ExtResource("2")'],
+      ['icon', 'ExtResource("2")'],
+      ['popup/item_0/icon', 'ExtResource("1")'],
+      ['popup/item_1/icon', 'ExtResource("2")'],
     ]);
   });
 
   it('requests no Button icon when nothing is selected, though each item still sizes the minimum', () => {
-    expect(slots({ items }).map(({ key }) => key)).toEqual([
-      optionItemIconSlotKey(0),
-      optionItemIconSlotKey(1),
-    ]);
+    expect(slots({ items }).map(({ key }) => key)).toEqual(['popup/item_0/icon', 'popup/item_1/icon']);
   });
 
   it('requests no Button icon for a selected item without an icon', () => {
     expect(slots({ items, selected: 2 }).map(({ key }) => key)).toEqual([
-      optionItemIconSlotKey(0),
-      optionItemIconSlotKey(1),
+      'popup/item_0/icon',
+      'popup/item_1/icon',
     ]);
   });
 });
@@ -210,7 +206,7 @@ describe("optionButtonMinimumSize: each item's icon (option_button.cpp:451, butt
   ) => ({
     ...node(props),
     textureSlots: Object.fromEntries(
-      Object.entries(icons).map(([i, size]) => [optionItemIconSlotKey(Number(i)), size])
+      Object.entries(icons).map(([i, size]) => [`popup/item_${i}/icon`, size])
     ),
   });
 
