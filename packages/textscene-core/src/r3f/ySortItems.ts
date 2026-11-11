@@ -208,7 +208,9 @@ export function collectYSortedItems(
       parent,
       live.controlOrigins?.get(childPoses.path)
     );
-    const isYSort = ysortsChildren(child);
+    // A y-sorted Control is one atomic item here: the Control walk sorts its children
+    // (`sortYSortedControls`), so the world sort must not merge them as items of its own.
+    const isYSort = ysortsChildren(child) && !isControlType(child.type);
 
     const group = ySortTileGroup(child);
     const isTileGroup = group !== undefined;

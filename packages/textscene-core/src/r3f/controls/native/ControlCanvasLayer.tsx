@@ -4,7 +4,7 @@
  * It feeds `buildSolveTree`, the project's viewport rect and theme scale, and the layer-0 canvas
  * modulate into `<ControlCanvasWalker>`. The windows the root window embeds draw over the Controls.
  */
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { useGameViewportRect } from '../../gameViewportRect.js';
@@ -70,6 +70,8 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
       publishOrigins?.(controlOriginsOf(tree, solved, snapToPixels)),
     [publishOrigins, tree, snapToPixels]
   );
+  // The origins outlive no layer: a later one at the same paths would sort on stale values.
+  useEffect(() => () => publishOrigins?.(new Map()), [publishOrigins]);
 
   return (
     <CanvasModulateContext.Provider value={canvasModulate}>

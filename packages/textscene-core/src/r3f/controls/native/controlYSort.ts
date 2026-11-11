@@ -88,7 +88,7 @@ function packedByY(
   );
   // Array#sort is stable, so equal ys keep the scene order `ysort_index` gives.
   const sorted = [...sortable].sort((a, b) => compareSortY(sortYs.get(a)!, sortYs.get(b)!));
-  let base = Math.min(...sortable.map((child) => child.paintRange.base));
+  let base = sortable.reduce((lowest, child) => Math.min(lowest, child.paintRange.base), Infinity);
   const placed = new Map<SolveNode, SolveNode>();
   for (const child of sorted) {
     placed.set(child, shiftedBy(child, base - child.paintRange.base));
