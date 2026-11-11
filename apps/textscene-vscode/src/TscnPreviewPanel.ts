@@ -285,8 +285,10 @@ export class TscnPreviewPanel {
    * window still shows. A webview that is not ready hears it on `webviewReady`.
    */
   private _postVisibility(): void {
+    // Ready first: a disposed `WebviewPanel` throws on `visible`.
+    if (!this._webviewReady || this._disposed) return;
     const isVisible = this._panel.visible;
-    if (!this._webviewReady || this._postedVisibility === isVisible) return;
+    if (this._postedVisibility === isVisible) return;
     this._postedVisibility = isVisible;
     this._postMessageToWebview({ type: 'previewVisibility', isVisible });
   }

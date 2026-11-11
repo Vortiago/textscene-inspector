@@ -3,8 +3,12 @@
  * canvases read `usePreviewFrameloop`, so the rule is written once.
  */
 
-import { createContext, useContext, type ReactNode } from 'react';
-import { useSceneAssetsSettled } from '../useSceneAssetsSettled.js';
+import { createContext, useCallback, useContext, useSyncExternalStore, type ReactNode } from 'react';
+import { useResourceLoader } from '../../resources/useResource.js';
+import { textureWork } from '../../resources/textures/textureWork.js';
+import { fontWork } from '../controls/native/text/settledChannel.js';
+
+const NO_UNSUBSCRIBE = () => {};
 
 /** A host with no visibility signal shows its preview, so every other embedder renders as before. */
 const PreviewVisibilityContext = createContext(true);
@@ -27,6 +31,24 @@ export function PreviewVisibilityProvider({
  */
 export function usePreviewFrameloop(): 'always' | 'never' {
   const isVisible = useContext(PreviewVisibilityContext);
-  const { isSettled } = useSceneAssetsSettled();
-  return isVisible || !isSettled ? 'always' : 'never';
+  const loader = useResourceLoader();
+  // A visible preview subscribes to nothing: its canvas would re-render on every count change
+  // of a load, and rebuild its whole tree, for a `frameloop` that stays 'always'.
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (isVisible) return NO_UNSUBSCRIBE;
+      const unsubscribes = [
+        loader?.subscribePending(onChange),
+        textureWork.subscribe(onChange),
+        fontWork.subscribe(onChange),
+      ];
+      return () => unsubscribes.forEach((unsubscribe) => unsubscribe?.());
+    },
+    [isVisible, loader]
+  );
+  const isLoading = useSyncExternalStore(
+    subscribe,
+    () => !isVisible && (loader?.pendingResourceCount ?? 0) + textureWork.pending() + fontWork.pending() > 0
+  );
+  return isVisible || isLoading ? 'always' : 'never';
 }
