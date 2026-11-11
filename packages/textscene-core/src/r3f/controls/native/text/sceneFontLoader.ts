@@ -283,7 +283,8 @@ function peekFace(font: FontResource, nodePath: string): FontMetrics | typeof MI
   if (metrics === undefined) return null;
   if (metrics === null) return MISSING_FACE;
   const variation = fontVariation(font);
-  // A canvas face draws every glyph from its outline. An atlas face has no contour to follow.
+  // A canvas face draws every glyph from its outline. The stand-in of the unit tests draws the
+  // outlines of the bundled font, which its run adds (`BundledCanvasRun.tsx`).
   const outlines = isCanvasFontMetrics(metrics) ? peekOutlines(face, drawLoad(face)) : null;
   return outlines === undefined ? null : withVariation(metrics, { ...variation, outlines });
 }

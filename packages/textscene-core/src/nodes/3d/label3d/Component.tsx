@@ -54,7 +54,7 @@ export function Label3D({ node, children }: NodeComponentProps) {
         userData={{ billboardMode: properties.billboard, isLabel3D: true }}
       >
         <group scale={properties.pixel_size}>
-          {/* `LabelGlyphs` holds its own pending load until the font registers. */}
+          {/* `LabelGlyphs` holds its own pending load until the font loads. */}
           <PendingSuspense>
             <LabelGlyphs nodeRef={groupRef} properties={properties} />
           </PendingSuspense>

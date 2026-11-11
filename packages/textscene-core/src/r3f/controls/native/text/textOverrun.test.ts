@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { shapeText, type TextLineLayout } from './textLayout';
 import { getFontEmboldenedAdvancePx, withVariation } from './fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
-import { createOpenSansCanvasFontMetrics } from './openSansCanvasFontMetrics';
+import { OPEN_SANS_CANVAS_FONT_METRICS } from './openSansCanvasFontMetrics';
 import {
   overrunFlagsForBehavior,
   trimFilledLineToWidth,
@@ -177,7 +177,7 @@ describe('trimLineToWidth', () => {
       100,
       overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS),
       {
-        fontMetrics: createOpenSansCanvasFontMetrics('sans-serif'),
+        fontMetrics: OPEN_SANS_CANVAS_FONT_METRICS,
         fontSizePx: FONT_SIZE_PX,
         ellipsisChar: '→',
       }

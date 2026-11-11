@@ -19,7 +19,7 @@ import { sfntFileOfTables, type SfntFile } from './sfntTables';
 let sfnt: SfntFile | undefined;
 
 /** The baked shaping tables of Open Sans as a font file, decoded at the first read. They hold no outlines. */
-export function openSansShapingSfnt(): SfntFile {
+function openSansShapingSfnt(): SfntFile {
   if (sfnt) return sfnt;
   const tables = Object.entries(OPEN_SANS_SHAPING_TABLES).map(
     ([tag, base64url]) => [tag, decodeBase64UrlBytes(base64url)] as const
@@ -43,7 +43,7 @@ function openSansGlyphs(): FaceGlyphs {
 // accessors) with getters, not a snapshot, so a live mutation (as `textLayout.test.ts` makes to
 // `.kerning`) stays visible.
 export const OPEN_SANS_FONT_METRICS: FontMetrics = {
-  kind: 'atlas',
+  kind: 'bundled',
   get unitsPerEm() {
     return OPEN_SANS_METRICS.unitsPerEm;
   },

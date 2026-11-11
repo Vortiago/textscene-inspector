@@ -31,15 +31,23 @@ export interface GlyphInk {
   readonly right: number;
 }
 
-/** `FontMetrics` painted with canvas-2D rather than the baked MSDF atlas. `TextRunMesh.tsx` dispatches on `kind`. */
+/** `FontMetrics` of a face the canvas painter draws into one raster. `TextRunMesh.tsx` dispatches on `kind`. */
 export interface CanvasFontMetrics extends FontMetrics {
   readonly kind: 'canvas';
-  readonly cssFontFamily: string;
-  /** The ink box of `ch`. Absent, or undefined for one character, where the face measures none: its raster then takes a wider bound. */
+  /**
+   * The CSS family of the registered `FontFace` that draws a glyph with no contour as text. Absent
+   * for a face that draws from its `outlines` alone: such a glyph then draws nothing, as FreeType
+   * gives it an empty bitmap.
+   */
+  readonly cssFontFamily?: string;
+  /**
+   * The ink box of `ch` as the browser draws it, for a glyph the painter draws as text. Absent, or
+   * undefined for one character, where the face measures none: its raster then takes a wider bound.
+   */
   readonly getGlyphInkUnits?: (ch: string) => GlyphInk | undefined;
 }
 
-/** Narrows a `FontMetrics` to `CanvasFontMetrics`, which names the CSS family a painter sets `ctx.font` to. */
+/** Narrows a `FontMetrics` to `CanvasFontMetrics`. */
 export function isCanvasFontMetrics(metrics: FontMetrics | undefined): metrics is CanvasFontMetrics {
   return metrics?.kind === 'canvas';
 }

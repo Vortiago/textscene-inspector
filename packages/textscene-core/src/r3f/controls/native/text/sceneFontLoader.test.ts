@@ -1,7 +1,7 @@
 /**
  * happy-dom has neither `FontFace` nor a 2D canvas context, so the scene arm's registration path
  * sits behind `IS_VITEST`. These tests cover its fallback decisions, the warn-once dedupe and the
- * peek contract. `bundledFontLoader.test.ts` reaches the shared door for real.
+ * peek contract. `fontFaceDoor.test.ts` reaches the shared door for real.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fixtureFontBytes, fontFile, systemFont } from './sfntOutlines.testkit';
@@ -127,12 +127,12 @@ describe('peekSettledSceneFontMetrics', () => {
     expect(peekSettledSceneFontMetrics(leaf, 'Root/Mesh')).toBe(peekSceneFontMetrics(leaf, 'Root/Label'));
   });
 
-  it('settles an atlas face with no outlines, since it has no contour to follow', async () => {
+  it('settles the bundled face with no outlines, since the canvas face it draws as reads them', async () => {
     const font = fontFile(fixtureFontBytes('open-sans-semibold-subset.ttf'));
-    peekSettledSceneFontMetrics(font, 'Root/Atlas');
-    await vi.waitFor(() => expect(peekSettledSceneFontMetrics(font, 'Root/Atlas')).not.toBeNull());
+    peekSettledSceneFontMetrics(font, 'Root/Bundled');
+    await vi.waitFor(() => expect(peekSettledSceneFontMetrics(font, 'Root/Bundled')).not.toBeNull());
     await settleLoads();
-    expect(peekSettledSceneFontMetrics(font, 'Root/Atlas')?.outlines).toBeUndefined();
+    expect(peekSettledSceneFontMetrics(font, 'Root/Bundled')?.outlines).toBeUndefined();
   });
 
   it('carries the embolden of a variation over a settled face', async () => {

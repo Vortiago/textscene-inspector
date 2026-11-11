@@ -14,16 +14,6 @@ import { firstEndAtOrAbove } from '../../../../utils/firstEndAtOrAbove';
  * (`unitsPerEm` = 2048), read via `fontkit` from the vendored
  * `.woff2` (decompressed in memory at bake time with `wawoff2`, since
  * fontkit does not decompress woff2 itself — see the bake script's header).
- *
- * `advanceWidths` IS a deliberate duplicate of `openSansAtlas.ts`'s own
- * glyph table's `xadvance` field — the ONE exception to "one bake, one
- * source": that table is the atlas tool's OWN glyph geometry (bitmap
- * placement inside the PNG, at the atlas's bake-size-42 resolution) —
- * `xadvance` is `glyph.advanceWidth * (fontSize / unitsPerEm)` FIXED to
- * that bake size (msdf-bmfont-xml's `index.js:400`), where THIS one is the
- * RAW `hmtx` value, quantized by nothing and at no size — see
- * `getGlyphAdvanceUnits`'s own doc for why a shaper never wants the ATLAS's
- * copy.
  */
 interface OpenSansMetrics {
   /** `font.unitsPerEm` (fontkit) — hhea/head design units per em. */
@@ -44,12 +34,9 @@ interface OpenSansMetrics {
    */
   kerning: Record<string, number>;
   /**
-   * Per-glyph `hmtx` advance width, design units, keyed by character — the
-   * SAME `CHARSET` `openSansAtlas.ts` bakes, read directly via `fontkit`'s
-   * `Glyph#advanceWidth` (`bake-metrics.mjs`'s own `bakeAdvanceWidths`
-   * doc has the full citation for why this is the correct source and
-   * `openSansAtlas.ts`'s `xadvance` is not). `getGlyphAdvanceUnits` is the
-   * only intended reader.
+   * Per-glyph `hmtx` advance width, design units, keyed by character over the
+   * bake script's `CHARSET`, read through `fontkit`'s `Glyph#advanceWidth`.
+   * `getGlyphAdvanceUnits` is the only intended reader.
    */
   advanceWidths: Record<string, number>;
   /**
@@ -72,8 +59,7 @@ interface OpenSansMetrics {
   /**
    * OS/2 `xAvgCharWidth`, design units — this font's own "typical glyph
    * width" metric, used ONLY as `textLayout.ts`'s fallback advance for a
-   * character outside `OPEN_SANS_ATLAS_GLYPHS`/`advanceWidths` (see that
-   * table's own doc in the atlas module).
+   * character outside `advanceWidths`.
    */
   averageAdvanceUnits: number;
   /** The code points the whole font maps to a glyph, as ascending `[first, last]` ranges, beyond the baked charset. */
@@ -89,21 +75,12 @@ export function getKerningAdjustmentUnits(a: string, b: string): number {
 
 /**
  * A baked character's own `hmtx` advance width, design units, or `null`
- * outside `advanceWidths` (the same charset as `OPEN_SANS_ATLAS_GLYPHS` —
- * `fontMetrics.ts`'s `getFontGlyphAdvancePx` falls back to `averageAdvanceUnits` in
- * that case).
+ * outside `advanceWidths` (`fontMetrics.ts`'s `getFontGlyphAdvancePx` falls
+ * back to `averageAdvanceUnits` in that case).
  *
- * This is the RAW design-unit value, at no size and quantized by nothing —
- * never `openSansAtlas.ts`'s own `xadvance`, which is msdf-bmfont-xml's OWN
- * atlas-bake-resolution glyph table, fixed to bake size 42
- * (`glyph.advanceWidth * (fontSize / unitsPerEm)`, msdf-bmfont-xml's
- * `index.js:400`) before this repo's bake script ever reads it back. Scaling
- * that bake-size-42 value down to a UI font size (14-28px) does not reproduce
- * HarfBuzz's own target-size shaping, and the error accumulates roughly
- * linearly with line length.
- *
- * Godot's own per-glyph advance is quantized too, just at the TARGET size
- * rather than the atlas's: `text_server_adv.cpp:7077` reads HarfBuzz's
+ * This is the RAW design-unit value, at no size and quantized by nothing.
+ * Godot's own per-glyph advance is quantized at the TARGET size:
+ * `text_server_adv.cpp:7077` reads HarfBuzz's
  * `x_advance`, which `thirdparty/harfbuzz/src/hb-ft.cc:523` has already
  * rounded to a whole number of 1/64 px (26.6) after
  * `thirdparty/freetype/src/base/ftadvanc.c:52` scaled THIS table's raw value
@@ -150,7 +127,7 @@ export function hasGlyph(ch: string): boolean {
  * FreeType's own scale quantizes to 26.6 fixed point, which this does not
  * reproduce — the same approximation `getFontAscentPx` already makes, and
  * bounded by 1/64 px (0.016), well under the half-pixel that would move a
- * snapped row at any size this atlas serves.
+ * snapped row at any size.
  *
  * At size 16: -(-100 - 50/2) * 16/2048 = 0.9765625.
  */
@@ -167,7 +144,7 @@ export function getUnderlinePositionPx(fontSizePx: number): number {
  * width (`rich_text_label.cpp:1243`: `MAX(1.0, uth * theme_cache.base_scale)`)
  * is the CALLER's job, not baked in here — `base_scale` is a UI content-scale
  * factor this renderer does not thread through text metrics, and every fixture
- * this atlas serves renders at its default (1.0), where the max is a no-op
+ * renders at its default (1.0), where the max is a no-op
  * unless the font's own thickness already exceeds 1px.
  *
  * At size 16: 50 * 16/2048 = 0.390625.

@@ -1,6 +1,7 @@
 # The painter follows Godot's own glyph path, not the font's provenance
 
-- Status: Accepted. **Supersedes ADR-0034.**
+- Status: Superseded by ADR-0065: the bundled font draws from its outlines, with no glyph atlas.
+  This record keeps why a run follows the path Godot takes for it. **Supersedes ADR-0034.**
 - Amended by ADR-0042: the webview CSP now grants `worker-src blob:`. The MSDF finding
   below stands, because runtime MSDF generation also needs `connect-src`, which stays closed.
 - Amended for 2D Controls: the fill and the outline ring of Label, Button, CheckBox, CheckButton,

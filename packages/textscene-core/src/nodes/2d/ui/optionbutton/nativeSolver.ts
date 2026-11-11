@@ -186,7 +186,7 @@ interface OptionButtonContentInput {
 interface OptionButtonContentLayout {
   /** Local to the control's top-left, Godot px. */
   arrowRect: Rect2;
-  /** The text box's top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there (`buildGlyphQuadArrays`). Always returned: the caller decides whether text draws. */
+  /** The text box's top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there. Always returned: the caller decides whether text draws. */
   textOffset: Vector2;
 }
 

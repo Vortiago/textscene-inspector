@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { OPEN_SANS_METRICS, getKerningAdjustmentUnits } from './openSansMetrics';
 import { getFontLinePitchPx } from './fontMetrics';
-import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
 
 describe('OPEN_SANS_METRICS', () => {
   it('pins the font-wide scalars independently extracted from the vendored font', () => {
@@ -29,16 +28,15 @@ describe('OPEN_SANS_METRICS', () => {
     expect(getFontLinePitchPx(OPEN_SANS_METRICS, 16, 3)).toBe(26);
   });
 
-  it("spot-checks glyph advances against values hand-computed from the vendored font's own hmtx table", () => {
-    // Atlas xadvance is `advanceWidth * (42 / unitsPerEm)`, unrounded (msdf-bmfont-xml `index.js:400`,
-    // with `roundDecimal: null` passing `index.js:298`). Each figure is hand-computed as
-    // `hmtx units * 42/2048` from fontkit 2.0.4 readings of the woff2:
-    // space 532, A 1354, M 1887, W 1936, i 571, period 561.
-    expect(OPEN_SANS_ATLAS_GLYPHS[' ']?.xadvance).toBe(10.91015625);
-    expect(OPEN_SANS_ATLAS_GLYPHS['A']?.xadvance).toBe(27.767578125);
-    expect(OPEN_SANS_ATLAS_GLYPHS['M']?.xadvance).toBe(38.6982421875);
-    expect(OPEN_SANS_ATLAS_GLYPHS['W']?.xadvance).toBe(39.703125);
-    expect(OPEN_SANS_ATLAS_GLYPHS['i']?.xadvance).toBe(11.7099609375);
-    expect(OPEN_SANS_ATLAS_GLYPHS['.']?.xadvance).toBe(11.5048828125);
+  it("spot-checks glyph advances against the vendored font's own hmtx table", () => {
+    // Read with fontkit 2.0.4 from the woff2, apart from the bake script.
+    expect(OPEN_SANS_METRICS.advanceWidths).toMatchObject({
+      ' ': 532,
+      A: 1354,
+      M: 1887,
+      W: 1936,
+      i: 571,
+      '.': 561,
+    });
   });
 });

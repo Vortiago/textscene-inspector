@@ -16,6 +16,12 @@ import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFont
 import { CheckBox } from './Component';
 import type { CheckBoxProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { bundledRunMeshes, bundledRuns } from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
@@ -34,14 +40,6 @@ function findIconMesh(scene: Rendered['scene']) {
     .find(
       (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
     );
-}
-
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMesh(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
 describe('<CheckBox> (isolated painter contract)', () => {
@@ -66,14 +64,14 @@ describe('<CheckBox> (isolated painter contract)', () => {
       <CheckBox {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
     );
     expect(findIconMesh(renderer.scene)).toBeDefined();
-    expect(findTextMesh(renderer.scene)).toBeUndefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeUndefined();
   });
 
   it('draws the text mesh when text is present', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
-    expect(findTextMesh(renderer.scene)).toBeDefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeDefined();
   });
 
   it(
@@ -88,9 +86,9 @@ describe('<CheckBox> (isolated painter contract)', () => {
           renderOrder={0}
         />
       );
-      const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-      expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(1), 5);
-      expect(material.uniforms.uOpacity!.value).toBeCloseTo(1, 5);
+      const tint = bundledRuns(renderer.scene)[0]!.tint;
+      expect(tint.r).toBeCloseTo(1, 5);
+      expect(tint.a).toBeCloseTo(1, 5);
     }
   );
 
@@ -98,9 +96,9 @@ describe('<CheckBox> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(1, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.r).toBeCloseTo(0.875, 5);
+    expect(tint.a).toBeCloseTo(1, 5);
   });
 
   it(
@@ -115,9 +113,9 @@ describe('<CheckBox> (isolated painter contract)', () => {
           renderOrder={0}
         />
       );
-      const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-      expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
-      expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 5);
+      const tint = bundledRuns(renderer.scene)[0]!.tint;
+      expect(tint.r).toBeCloseTo(0.875, 5);
+      expect(tint.a).toBeCloseTo(0.5, 5);
     }
   );
 
@@ -130,9 +128,9 @@ describe('<CheckBox> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
     // font_disabled_color, not font_pressed_color.
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 5);
+    expect(tint.a).toBeCloseTo(0.5, 5);
   });
 
   it('applies the walker-composed tint as ONE product, reaching the icon AND text alike', async () => {
@@ -149,9 +147,9 @@ describe('<CheckBox> (isolated painter contract)', () => {
     const iconMaterial = findIconMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
     expect(iconMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
 
-    const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    const textTint = bundledRuns(renderer.scene)[0]!.tint;
     // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
-    expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
+    expect(textTint.r).toBeCloseTo(0.21875, 5);
   });
 
   it('forwards renderOrder to every mesh (icon + text)', async () => {
@@ -213,8 +211,7 @@ describe('<CheckBox> (isolated painter contract)', () => {
 
 /**
  * The scene-font (canvas-kind `FontMetrics`) path. Text placement (`check_box.cpp:126-133`) has
- * nothing font-kind-specific in it. An atlas-bake anchor leaking into it reads correct on the
- * atlas path and is off here by `ascentPx - base*fontSizePx/42` px.
+ * nothing font-kind-specific in it.
  */
 describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
@@ -229,7 +226,7 @@ describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => 
     );
   }
 
-  /** The canvas painter's mesh: a `MeshBasicMaterial` over the raster's `DataTexture`, not the MSDF `ShaderMaterial`. */
+  /** The canvas painter's mesh: a `MeshBasicMaterial` over the raster's `DataTexture`. */
   function findCanvasTextMesh(scene: Rendered['scene']) {
     return scene
       .findAllByType('Mesh')
@@ -237,15 +234,15 @@ describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => 
       .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.DataTexture);
   }
 
-  it('paints the label through the canvas rasteriser — ONE quad, not one per glyph, and no MSDF material', async () => {
+  it('paints the label through the canvas rasteriser: one quad, and no run of the bundled face', async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene);
     expect(mesh).toBeDefined();
     expect(mesh!.geometry.getAttribute('position').count).toBe(4);
-    expect(findTextMesh(renderer.scene)).toBeUndefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeUndefined();
   });
 
-  it('places the text at the pure check_box.cpp offset — no atlas-bake anchor anywhere in it', async () => {
+  it('places the text at the pure check_box.cpp offset', async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene)!;
     // At 16px: ascent 13, descent 4, and no line_spacing, so the pitch is 17. Margin 4

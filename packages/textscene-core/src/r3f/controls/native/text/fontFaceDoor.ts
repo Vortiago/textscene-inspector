@@ -1,6 +1,6 @@
 /**
  * The one door through which a font reaches the page: a `FontFace` built from bytes in hand. The
- * scene fonts of `sceneFontLoader.ts` and the bundled font of `bundledFontLoader.ts` both pass it.
+ * scene fonts of `sceneFontLoader.ts` pass it.
  */
 
 /**

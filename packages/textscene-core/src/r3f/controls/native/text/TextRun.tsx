@@ -1,8 +1,8 @@
 /**
  * The text run every text-painting Control draws: one run for each face its glyphs draw in
- * (`faceLayouts.ts`), each on the painter it needs. A run of the bundled atlas face draws on the
+ * (`faceLayouts.ts`), each on the painter it needs. A run of the bundled face draws on the
  * bundled canvas face (`BundledCanvasRun.tsx`): Godot's default font is not MSDF
- * (`text_server.cpp:2386`), so FreeType fills and strokes every glyph from its outline (ADR-0040).
+ * (`text_server.cpp:2386`), so FreeType fills and strokes every glyph from its outline (ADR-0065).
  */
 import BundledCanvasRun from './BundledCanvasRun';
 import { faceLayouts } from './faceLayouts';
@@ -26,6 +26,6 @@ export function TextRun({ fallbackMipmaps, ...props }: TextRunProps) {
 }
 
 function FaceRun(props: TextRunMeshProps) {
-  if (props.layout.fontMetrics.kind === 'atlas') return <BundledCanvasRun {...props} />;
+  if (props.layout.fontMetrics.kind === 'bundled') return <BundledCanvasRun {...props} />;
   return <TextRunMesh {...props} />;
 }

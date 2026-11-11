@@ -117,7 +117,6 @@
     "happy-dom": "catalog:",
     "lint-staged": "^17.6.0",
     "minimatch": "catalog:",
-    "msdf-bmfont-xml": "catalog:",
     "playwright": "^1.64.1",
     "pngjs": "catalog:",
     "prettier": "catalog:",

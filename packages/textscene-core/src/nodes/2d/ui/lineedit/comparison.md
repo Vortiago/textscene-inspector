@@ -76,7 +76,7 @@ An empty `secret_character` falls back to the bullet, as Godot does.
 LineEdit draws the theme text outline, `font_outline_color` and `outline_size`, as Godot does
 (`line_edit.cpp:1512-1519`). A ring of `outline_size / 4` px sits under the fill. No ring draws at
 an `outline_size` of 0 or a zero alpha. The ring strokes on the canvas painter for the bundled font
-too (ADR-0040). Like the fill, the ring drops each glyph that ends past `ofs_max` and is not
+too (ADR-0065). Like the fill, the ring drops each glyph that ends past `ofs_max` and is not
 clipped to the margins (`:1512-1545`).
 
 A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an

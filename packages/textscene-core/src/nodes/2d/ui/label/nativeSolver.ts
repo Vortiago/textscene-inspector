@@ -405,7 +405,7 @@ const V_FILL = 3;
 export interface LabelLinePlacement {
   /** This line's left edge, box-local Godot px. */
   x: number;
-  /** This line's box-top Y, box-local Godot px. A single-line `<TextRun>` anchors the line at its baseline from here (`buildGlyphQuadArrays`), where Godot draws it. */
+  /** This line's box-top Y, box-local Godot px. A single-line `<TextRun>` anchors the line at its baseline from here, where Godot draws it. */
   y: number;
   /** This line for its own `<TextRun>`: justified for `HORIZONTAL_ALIGNMENT_FILL`, else unchanged. */
   line: TextLineLayout;
