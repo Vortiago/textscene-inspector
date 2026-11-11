@@ -10,6 +10,9 @@ export const CONTROL_TEXT_SCENES = [
   // theme constants. Godot 4.6.3 `--mode 2d` ink rows at font size 20: 28, 79, 130 (pitch 51) and
   // 28, 49, 70 (pitch 21). Every other Label keeps the default spacing of 3 and 0.
   { name: 'label-paragraph-spacing', file: 'unit-label-paragraph-spacing.tscn' },
+  // The one variable: the code point a Label draws in the default font, outside ASCII and Latin-1
+  // and from a canonical decomposition.
+  { name: 'label-default-font-code-points', file: 'unit-label-2d-default-font-code-points.tscn' },
   // The one variable: `gui/theme/custom_font` in the fixture's own project.godot, which every
   // Control with no theme font then draws, with the RichTextLabel's bold on the same face.
   {

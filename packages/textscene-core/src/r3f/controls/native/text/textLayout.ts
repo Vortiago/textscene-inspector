@@ -603,9 +603,9 @@ function specialGlyph(
 ): BreakGlyph | undefined {
   const ch = chars[i]!;
   const cp = ch.codePointAt(0)!;
-  // A break grapheme, U+200B and a tab take no advance whatever the face holds: the baked charset has
-  // no entry for the first two, and a tab no stop aligns is as wide as the font's glyph for it, which
-  // is none (measured in Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
+  // A break grapheme, U+200B and a tab take no advance whatever the face holds. A tab no stop aligns
+  // is as wide as the font's glyph for it, which is none (measured in Godot 4.6.3: `a<TAB>b` with
+  // `tab_size` 0 sets `b` against `a`).
   if (isLinebreak(cp) || cp === 0x200b || isTabChar(ch)) return zeroWidthGlyph(ch, i);
   // Only the "no font has a glyph" case is left (`text_server_adv.cpp:6842-6907`).
   if (isControlChar(cp)) {

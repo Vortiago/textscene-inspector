@@ -1,15 +1,12 @@
 /**
  * These metrics must not come from the `measureText` path of `runtimeFontMetrics.ts`: a canvas
- * measurement is a float, and the baked table is the font's integer `hmtx` value. Each advance
- * is pinned to the baked table and to independently read `hmtx` literals.
+ * measurement is a float, and the baked `hmtx` table holds the font's integer value. Each advance
+ * is pinned to the bundled face and to independently read `hmtx` literals.
  */
 import { describe, expect, it } from 'vitest';
 import { OPEN_SANS_CANVAS_FONT_METRICS } from './openSansCanvasFontMetrics';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
-import { OPEN_SANS_METRICS } from './openSansMetrics';
 import { getFontRunGlyphAdvancePx } from './fontMetrics';
-
-const BAKED_CHARSET = Object.keys(OPEN_SANS_METRICS.advanceWidths);
 
 /**
  * `hmtx` advance widths in design units, read with `fontkit` over the vendored `.woff2`
@@ -26,7 +23,13 @@ const INDEPENDENT_HMTX_UNITS: Record<string, number> = {
   m: 1954,
   é: 1180,
   '…': 1672,
+  // Outside ASCII and Latin-1: the face reads `hmtx` for every code point of its `cmap`.
+  Ā: 1354,
+  α: 1288,
+  Ж: 1827,
 };
+
+const CHARSET = Object.keys(INDEPENDENT_HMTX_UNITS);
 
 describe('OPEN_SANS_CANVAS_FONT_METRICS', () => {
   const metrics = OPEN_SANS_CANVAS_FONT_METRICS;
@@ -43,14 +46,8 @@ describe('OPEN_SANS_CANVAS_FONT_METRICS', () => {
     }
   });
 
-  it('reports a whole-number design-unit advance for every baked character — a measureText-derived advance would be a float', () => {
-    for (const ch of BAKED_CHARSET) {
-      expect(Number.isInteger(metrics.getGlyphAdvanceUnits(ch))).toBe(true);
-    }
-  });
-
   it('advances identically to the bundled face a layout shapes with, in design units and in quantized px at every size', () => {
-    for (const ch of BAKED_CHARSET) {
+    for (const ch of CHARSET) {
       expect(metrics.getGlyphAdvanceUnits(ch)).toBe(OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits(ch));
       for (const size of [14, 16, 28]) {
         expect(getFontRunGlyphAdvancePx(metrics, { char: ch }, size)).toBe(
@@ -72,5 +69,11 @@ describe('OPEN_SANS_CANVAS_FONT_METRICS', () => {
 
   it('returns null for a character the font has no glyph for, so a shaper falls back to averageAdvanceUnits', () => {
     expect(metrics.getGlyphAdvanceUnits('中')).toBeNull();
+  });
+
+  // HarfBuzz draws U+01CD as `A` and U+030C where the font maps both and not the whole.
+  it('has a glyph for a character the font draws from its canonical decomposition', () => {
+    expect(metrics.hasGlyph('\u01cd')).toBe(true);
+    expect(metrics.hasGlyph('中')).toBe(false);
   });
 });

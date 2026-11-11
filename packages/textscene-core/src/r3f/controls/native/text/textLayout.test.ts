@@ -1,5 +1,5 @@
 /**
- * Each expected width is hand-derived from the `hmtx` advance in `OPEN_SANS_METRICS.advanceWidths`,
+ * Each expected width is hand-derived from the `hmtx` advance of the vendored font,
  * not from the algorithm under test. A plain `units * 16/2048` is used only for even advances, where 26.6 quantisation lands on
  * the same number. The last suite pins where the two diverge against real Godot advances.
  */
@@ -133,9 +133,8 @@ describe('shapeText — glyph pen positions', () => {
   });
 });
 
-describe('shapeText — a character outside the baked charset', () => {
-  // U+03A9 OMEGA stands in for any unbaked codepoint. If the charset ever bakes it, pick another
-  // unbaked character rather than changing the assertions.
+describe('shapeText — a character outside ASCII and Latin-1', () => {
+  // U+03A9 OMEGA stands in for any code point of the font.
   const omegaLayout = (fontMetrics: FontMetrics) =>
     shapeText('AΩB', {
       fontSizePx: 16,
@@ -150,13 +149,23 @@ describe('shapeText — a character outside the baked charset', () => {
     expect(omega!.advance).toBe(12.546875);
   });
 
+  it('advances the pen by the same hmtx advance where the face shapes no run', () => {
+    const [, omega] = omegaLayout({ ...OPEN_SANS_FONT_METRICS, shaping: undefined }).lines[0]!.glyphs;
+    expect(omega!.advance).toBe(12.546875);
+  });
+
   it(
-    "advances the pen by the font's own OS/2 xAvgCharWidth fallback where the face reads no glyph " +
+    "advances the pen by the font's own OS/2 xAvgCharWidth fallback where the face reads no advance " +
       '(9.484375px at size 16: 1214 * 16/2048), rather than collapsing to a zero-width gap',
     () => {
-      const [a, omega, b] = omegaLayout({ ...OPEN_SANS_FONT_METRICS, shaping: undefined }).lines[0]!.glyphs;
+      const faceWithoutOmegaAdvance: FontMetrics = {
+        ...OPEN_SANS_FONT_METRICS,
+        shaping: undefined,
+        getGlyphAdvanceUnits: (ch) => (ch === 'Ω' ? null : OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits(ch)),
+      };
+      const [a, omega, b] = omegaLayout(faceWithoutOmegaAdvance).lines[0]!.glyphs;
       expect(omega!.advance).toBeCloseTo(9.484375, 10);
-      // The fallback advance joins the running sum like a baked one.
+      // The fallback advance joins the running sum like a read one.
       expect(b!.x).toBeCloseTo(a!.advance + omega!.advance, 10);
     }
   );
