@@ -11,6 +11,7 @@
  */
 
 import { acosClamped, isEqualApprox, isZeroApprox, lerpAngle, sign } from './math.js';
+import { atan2Real } from './realAtan2.js';
 import { storedReal as f } from './real.js';
 import { normalizedVector2, vector2Length, vector2Lerp, type Vector2 } from './vector.js';
 
@@ -245,7 +246,7 @@ export function transform2DOrigin(t: Transform2DColumns): Vector2 {
  * @canonical The rotation of a Transform2D in float32
  */
 export function transform2DGetRotation(t: Transform2DColumns): number {
-  return f(Math.atan2(t.b, t.a));
+  return atan2Real(t.b, t.a);
 }
 
 const HALF_PI_FLOAT = f(f(Math.PI) * 0.5);
@@ -308,7 +309,7 @@ export function transform2DLookingAt(t: Transform2DColumns, target: Vector2): Tr
   const facing = rotationAt(transform2DGetRotation(t), t);
   const local = transform2DXform(affineInverseTransform2D(t), target);
   const scale = transform2DGetScale(t);
-  const turn = f(Math.atan2(f(local.y * scale.y), f(local.x * scale.x)));
+  const turn = atan2Real(f(local.y * scale.y), f(local.x * scale.x));
   return transform2DSetRotation(facing, f(transform2DGetRotation(facing) + turn));
 }
 

@@ -15,6 +15,7 @@ import {
   transform2DSetRotation,
   transform2DSetScale,
 } from '../../../../godot/math/transform2d.js';
+import { atan2Real } from '../../../../godot/math/realAtan2.js';
 import { storedReal as f } from '../../../../godot/math/real.js';
 import type { Vector2 } from '../../../../godot/math/vector.js';
 import type {
@@ -26,7 +27,7 @@ import { node2DGlobal, type StackFrame } from './stackFrame';
 
 /** `from.angle_to_point(to)`: the angle of the line from `from` to `to`. */
 function angleToPoint(from: Vector2, to: Vector2): number {
-  return f(Math.atan2(f(to.y - from.y), f(to.x - from.x)));
+  return atan2Real(f(to.y - from.y), f(to.x - from.x));
 }
 
 export function executeCCDIK(modification: CCDIKModification2D, frame: StackFrame): void {

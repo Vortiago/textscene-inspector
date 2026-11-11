@@ -366,6 +366,10 @@ export const CANVAS_2D_SCENES = [
   // CCDIK curls three bones until the Tip node meets the red target at (400,380). Godot probes:
   // orange at (298,168), blue at (355,236) and purple (153,102,229) at (386,329).
   { name: 'skeleton2d-ccdik', file: 'unit-skeleton2d-ccdik.tscn', mode: '2d' },
+  // CCDIK on four equal bones, whose first pass folds the last bone onto its parent: the chain then
+  // bends to the side the last bit of each bone transform picks. Godot probes: orange at (441,137),
+  // blue at (452,163), green (76,204,102) at (468,170) and purple at (477,176).
+  { name: 'skeleton2d-ccdik-fold', file: 'unit-skeleton2d-ccdik-fold.tscn', mode: '2d' },
   // FABRIK reaches the same target with three bones. Godot probes: orange at (290,173), blue at
   // (365,238) and purple at (397,327).
   { name: 'skeleton2d-fabrik', file: 'unit-skeleton2d-fabrik.tscn', mode: '2d' },

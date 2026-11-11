@@ -47,6 +47,52 @@ position = Vector2(50, 300)
 `;
 }
 
+/**
+ * Four equal bones whose first CCDIK pass folds the last one onto its parent, as in
+ * `unit-skeleton2d-ccdik-fold.tscn`: the chain then bends to the side the last bit of each bone
+ * transform picks.
+ */
+const FOLDING_CHAIN = `[gd_scene format=3]
+[sub_resource type="SkeletonModification2DCCDIK" id="chain"]
+target_nodepath = NodePath("../Target")
+tip_nodepath = NodePath("A/B/C/D/Tip")
+ccdik_data_chain_length = 4
+joint_data/0/bone_index = 0
+joint_data/0/bone2d_node = NodePath("A")
+joint_data/1/bone_index = 1
+joint_data/1/bone2d_node = NodePath("A/B")
+joint_data/2/bone_index = 2
+joint_data/2/bone2d_node = NodePath("A/B/C")
+joint_data/3/bone_index = 3
+joint_data/3/bone2d_node = NodePath("A/B/C/D")
+[sub_resource type="SkeletonModificationStack2D" id="stack"]
+enabled = true
+modification_count = 1
+modifications/0 = SubResource("chain")
+[node name="Root" type="Node2D"]
+[node name="Skeleton" type="Skeleton2D" parent="."]
+position = Vector2(432, 122)
+modification_stack = SubResource("stack")
+[node name="A" type="Bone2D" parent="Skeleton"]
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+[node name="B" type="Bone2D" parent="Skeleton/A"]
+position = Vector2(30, 0)
+rotation = 0.3
+rest = Transform2D(1, 0, 0, 1, 30, 0)
+[node name="C" type="Bone2D" parent="Skeleton/A/B"]
+position = Vector2(30, 0)
+rest = Transform2D(1, 0, 0, 1, 30, 0)
+[node name="D" type="Bone2D" parent="Skeleton/A/B/C"]
+position = Vector2(30, 0)
+rest = Transform2D(1, 0, 0, 1, 30, 0)
+auto_calculate_length_and_angle = false
+length = 30.0
+[node name="Tip" type="Node2D" parent="Skeleton/A/B/C/D"]
+position = Vector2(30, 0)
+[node name="Target" type="Node2D" parent="."]
+position = Vector2(473, 192)
+`;
+
 async function render(tscn: string) {
   const renderer = await ReactThreeTestRenderer.create(
     <DispatchedScene
@@ -188,6 +234,15 @@ describe('Skeleton2D', () => {
     const hand = canvasPosition(named(renderer, 'Hand'));
     expect(hand.y).toBeCloseTo(50, 2);
     expect(Math.abs(hand.x - 50)).toBeCloseTo(100, 2);
+  });
+
+  // Godot 4.6.3 leaves D at (481.78064, 163.313812). The other side of the bend puts it elsewhere.
+  it('bends a chain that folds onto one line to the side Godot bends it', async () => {
+    const renderer = await render(FOLDING_CHAIN);
+    startDraw(renderer);
+    const last = canvasPosition(named(renderer, 'D'));
+    expect(last.x).toBeCloseTo(481.7806, 2);
+    expect(last.y).toBeCloseTo(163.3138, 2);
   });
 
   it('draws the kite of a bone a modification holds in the IK colour', async () => {

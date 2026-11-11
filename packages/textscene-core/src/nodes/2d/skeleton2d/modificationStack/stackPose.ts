@@ -22,6 +22,7 @@ import {
   transform2DXform,
   type Transform2DColumns,
 } from '../../../../godot/math/transform2d.js';
+import { atan2Real } from '../../../../godot/math/realAtan2.js';
 import { storedReal as f } from '../../../../godot/math/real.js';
 import type { Vector2 } from '../../../../godot/math/vector.js';
 import type { StackBone, StackPlacement } from './stackScene';
@@ -125,7 +126,7 @@ export class StackPose {
   angleTo(bone: number, point: Vector2): number {
     const local = transform2DXform(affineInverseTransform2D(this.globalTransform(bone)), point);
     const { scale } = this.valuesOf(bone);
-    return f(Math.atan2(f(local.y * scale.y), f(local.x * scale.x)));
+    return atan2Real(f(local.y * scale.y), f(local.x * scale.x));
   }
 
   /** The global transform of a node at `placement`, which moves with the bone that carries it. */

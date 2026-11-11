@@ -663,6 +663,27 @@ limitations under the License.
 
 ---
 
+## GNU C Library atan2f
+
+<https://sourceware.org/glibc/>
+
+`packages/textscene-core/src/godot/math/realAtan2.ts` ports `__ieee754_atan2f` and `__atanf`
+(`sysdeps/ieee754/flt-32/e_atan2f.c` and `s_atanf.c` of glibc 2.39), because Godot hands a
+`real_t` `atan2` to the C library, and a chain of bones that folds onto one line bends to the
+side the last bit of that angle picks. Both files carry the
+notice below, separately from Godot's own MIT licence above.
+
+```
+Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+
+Developed at SunPro, a Sun Microsystems, Inc. business.
+Permission to use, copy, modify, and distribute this
+software is freely granted, provided that this notice
+is preserved.
+```
+
+---
+
 ## bcdec block decoder
 
 <https://github.com/iOrange/bcdec>

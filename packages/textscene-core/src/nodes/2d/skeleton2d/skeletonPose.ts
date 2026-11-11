@@ -20,8 +20,13 @@ import {
   type Transform2DColumns,
 } from '../../../godot/math/transform2d.js';
 import type { ModificationStack2D } from '../../../resources/skeleton/skeletonmodificationstack2d/types';
+import { storedTransform2D } from '../../../godot/math/real.js';
 import { DrawnNodeFollow } from '../../../r3f/drawnNodeFollow.js';
-import { canvasTransformInto, threeMatrixFromTransform2D } from '../../../r3f/node2dTransform.js';
+import {
+  canvasTransformInto,
+  threeMatrixFromTransform2D,
+  transform2DWithin,
+} from '../../../r3f/node2dTransform.js';
 import { solveStack, type SolvedPose } from './modificationStack/stackRun.js';
 import type { StackNode, StackPlacement, StackScene } from './modificationStack/stackScene.js';
 import type { Skeleton2DRig } from './skeletonRig.js';
@@ -208,9 +213,8 @@ export class Skeleton2DPose {
     anchors: readonly THREE.Object3D[],
     stack: ModificationStack2D
   ): void {
-    const globals = bodies.map(canvasTransformOf);
-    const cache = cacheLocals(globals, this.rig);
-    this.solved = solveStack(this.sceneOf(globals, anchors), cache, stack);
+    const cache = cacheLocals(bodies, this.rig);
+    this.solved = solveStack(this.sceneOf(bodies, anchors), cache, stack);
     this.moved = movedBones(bodies, this.rig, cache, this.solved.locals);
   }
 
@@ -230,19 +234,15 @@ export class Skeleton2DPose {
     this.isWritten = this.moved.length > 0;
   }
 
-  private sceneOf(
-    [skeletonGlobal, ...boneGlobals]: readonly Transform2DColumns[],
-    anchors: readonly THREE.Object3D[]
-  ): StackScene {
-    const anchorGlobals = new Map(
-      this.anchorPaths.map((path, index) => [path, canvasTransformOf(anchors[index]!)])
-    );
+  private sceneOf(bodies: readonly THREE.Object3D[], anchors: readonly THREE.Object3D[]): StackScene {
+    const anchorOf = new Map(this.anchorPaths.map((path, index) => [path, anchors[index]!]));
     const nodes = new Map<string, StackNode>();
     for (const [literal, target] of this.bound!.targets) {
-      nodes.set(literal, stackNodeOf(target, boneGlobals, anchorGlobals));
+      const { boneIndex, indexInSkeleton } = target;
+      nodes.set(literal, { boneIndex, indexInSkeleton, placement: placementOf(target, bodies, anchorOf) });
     }
     return {
-      skeletonGlobal: skeletonGlobal!,
+      skeletonGlobal: canvasTransformOf(bodies[0]!),
       bones: this.rig.bones.map(({ parent, reach }) => ({
         parent,
         length: reach.length,
@@ -253,39 +253,41 @@ export class Skeleton2DPose {
   }
 }
 
-function stackNodeOf(
-  target: StackTarget,
-  boneGlobals: readonly Transform2DColumns[],
-  anchorGlobals: ReadonlyMap<string, Transform2DColumns>
-): StackNode {
-  const { boneIndex, indexInSkeleton } = target;
-  return { boneIndex, indexInSkeleton, placement: placementOf(target, boneGlobals, anchorGlobals) };
-}
-
 function placementOf(
   { path, isNode2D, boneIndex, carrier }: StackTarget,
-  boneGlobals: readonly Transform2DColumns[],
-  anchorGlobals: ReadonlyMap<string, Transform2DColumns>
+  bodies: readonly THREE.Object3D[],
+  anchorOf: ReadonlyMap<string, THREE.Object3D>
 ): StackPlacement | null {
   if (!isNode2D) return null;
   if (boneIndex >= 0) return { carrier: boneIndex, offset: TRANSFORM2D_IDENTITY };
-  const global = anchorGlobals.get(path)!;
-  if (carrier < 0) return { carrier, offset: global };
-  return { carrier, offset: multiplyTransform2D(affineInverseTransform2D(boneGlobals[carrier]!), global) };
+  const anchor = anchorOf.get(path)!;
+  if (carrier < 0) return { carrier, offset: canvasTransformOf(anchor) };
+  return { carrier, offset: transformWithin(anchor, bodies[carrier + 1]!) };
 }
 
+/** The global transform of a drawn node as a `real_t` Transform2D holds it. */
 function canvasTransformOf(object: THREE.Object3D): Transform2DColumns {
-  return canvasTransformInto(mutableTransform2D(), object);
+  return storedTransform2D(canvasTransformInto(mutableTransform2D(), object));
 }
 
 /**
- * The local transform of each bone as it is drawn: its global one in the space of its parent bone,
- * or of the skeleton. `globals` holds the skeleton, then the bones.
+ * The transform of a drawn node within a drawn node above it, as a `real_t` Transform2D holds it.
+ * A chain that folds onto one line bends to the side the last bit of an input picks, so the
+ * transform comes from the local matrices, and through the world matrices only as a last resort.
  */
-function cacheLocals(globals: readonly Transform2DColumns[], rig: Skeleton2DRig): Transform2DColumns[] {
-  return rig.bones.map(({ parent }, index) =>
-    multiplyTransform2D(affineInverseTransform2D(globals[parent + 1]!), globals[index + 1]!)
+function transformWithin(object: THREE.Object3D, ancestor: THREE.Object3D): Transform2DColumns {
+  return storedTransform2D(
+    transform2DWithin(object, ancestor) ??
+      multiplyTransform2D(affineInverseTransform2D(canvasTransformOf(ancestor)), canvasTransformOf(object))
   );
+}
+
+/**
+ * The local transform of each bone as it is drawn, within its parent bone or the skeleton.
+ * `bodies` holds the skeleton, then the bones.
+ */
+function cacheLocals(bodies: readonly THREE.Object3D[], rig: Skeleton2DRig): Transform2DColumns[] {
+  return rig.bones.map(({ parent }, index) => transformWithin(bodies[index + 1]!, bodies[parent + 1]!));
 }
 
 /** The bones `solved` moves from `cache`, each with the turn between the two. `bodies` holds the skeleton first. */

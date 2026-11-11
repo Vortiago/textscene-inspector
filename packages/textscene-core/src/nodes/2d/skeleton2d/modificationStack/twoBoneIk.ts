@@ -9,6 +9,7 @@
  */
 
 import { acosClamped, sign } from '../../../../godot/math/math.js';
+import { atan2Real } from '../../../../godot/math/realAtan2.js';
 import { transform2DOrigin } from '../../../../godot/math/transform2d.js';
 import { vector2Length, vector2Sub } from '../../../../godot/math/vector.js';
 import type { TwoBoneIKModification2D } from '../../../../resources/skeleton/skeletonmodificationstack2d/types';
@@ -38,7 +39,7 @@ export function executeTwoBoneIK(modification: TwoBoneIKModification2D, frame: S
 
   const toTarget = vector2Sub(transform2DOrigin(target), pose.globalPosition(one));
   const distance = aimedDistance(modification, vector2Length(toTarget));
-  const aim = Math.atan2(toTarget.y, toTarget.x);
+  const aim = atan2Real(toTarget.y, toTarget.x);
   const lengthOne = reach(pose, one);
   const lengthTwo = reach(pose, two);
   const angleOne = pose.bone(one).boneAngle;

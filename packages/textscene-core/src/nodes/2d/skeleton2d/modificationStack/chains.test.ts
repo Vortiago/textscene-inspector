@@ -91,6 +91,23 @@ describe('SkeletonModification2DCCDIK', () => {
     expect(solved.isOverridden).toEqual([true, true, true]);
   });
 
+  // The first pass folds the last bone onto its parent, and Godot bends the chain to the side the
+  // last bit of its `atan2f` picks. A correctly rounded atan2 bends it to the other side.
+  it('bends four equal bones that fold onto one line as Godot 4.6.3 does', () => {
+    const { scene, cache } = chainScene(4, 30, translation(432, 122), { Target: freeNode(472, 192) });
+    cache[1] = rotated(Math.fround(0.3), 30, 0);
+    const joints = ['A', 'A/B', 'A/B/C', 'A/B/C/D'].map((node, index) => ({
+      bone: { index, node },
+      rotateFromJoint: false,
+      constraint: NO_CONSTRAINT,
+    }));
+    const solved = solveStack(scene, cache, enabledStack([{ ...CCDIK, joints }]));
+    expectColumns(solved.locals[0]!, [0.539312, 0.842106, -0.842106, 0.539312, 0, 0]);
+    expectColumns(solved.locals[1]!, [0.96239, 0.27167, -0.27167, 0.96239, 30, 0]);
+    expectColumns(solved.locals[2]!, [-0.085475, -0.996341, 0.996341, -0.085475, 30, 0]);
+    expectColumns(solved.locals[3]!, [-0.730379, 0.683044, -0.683044, -0.730379, 30, 0]);
+  });
+
   it('keeps the pose where the tip path names no node', () => {
     const { scene, cache } = threeBoneChain();
     expect(solveStack(scene, cache, enabledStack([{ ...CCDIK, tip: 'Missing' }])).locals).toEqual(cache);
