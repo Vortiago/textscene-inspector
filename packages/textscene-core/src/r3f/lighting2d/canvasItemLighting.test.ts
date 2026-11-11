@@ -110,7 +110,8 @@ describe('canvasItemLightingProps', () => {
   it('writes the light after three has encoded the fragment', () => {
     const { shader } = compile(CanvasItemMaterialLightMode.NORMAL);
     const encoded = shader.fragmentShader.indexOf('#include <colorspace_fragment>');
-    expect(encoded).toBeGreaterThan(-1);
+    // One include: a second one after the light would encode its result again.
+    expect(shader.fragmentShader.split('#include <colorspace_fragment>')).toHaveLength(2);
     expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = canvasShaded')).toBeGreaterThan(encoded);
     expect(shader.fragmentShader.indexOf('vec3 albedo = gl_FragColor.rgb')).toBeGreaterThan(encoded);
   });

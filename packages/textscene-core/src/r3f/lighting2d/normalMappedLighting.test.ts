@@ -45,7 +45,7 @@ describe('normalMappedLightingProps', () => {
   it("lights in the numbers three's colour output writes, after it, with no transfer call", () => {
     const { shader } = compile(2);
     const encoded = shader.fragmentShader.indexOf('#include <colorspace_fragment>');
-    expect(encoded).toBeGreaterThan(-1);
+    expect(shader.fragmentShader.split('#include <colorspace_fragment>')).toHaveLength(2);
     expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = canvasShaded(color)')).toBeGreaterThan(encoded);
     expect(shader.fragmentShader).not.toContain('godotToSrgb');
     expect(shader.fragmentShader).not.toContain('godotToLinear');
