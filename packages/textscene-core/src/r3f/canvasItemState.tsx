@@ -136,9 +136,16 @@ export function runKeysOf(
   own: number,
   range: { base: number; size: number }
 ): CanvasRunKeys {
-  const { base, size } = range;
+  return { own, ...keySpanOf(keyAt, range) };
+}
+
+/** The keys `[from, to)` of the run `range`, with no owner: the span of a `show_behind_parent` child. */
+export function keySpanOf(
+  keyAt: (sequence: number) => number,
+  { base, size }: { base: number; size: number }
+): { from: number; to: number } {
   // Past the last key, not at `base + size`: the encoding saturates a sequence at the stride's end.
-  return { own, from: keyAt(base), to: keyAt(base + size - 1) + 1 };
+  return { from: keyAt(base), to: keyAt(base + size - 1) + 1 };
 }
 
 /** Where a canvas item draws: its draw-order key and its `z_final`. */

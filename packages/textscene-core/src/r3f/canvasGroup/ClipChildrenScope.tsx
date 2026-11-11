@@ -4,16 +4,16 @@
  * show only where its own alpha is (`canvas_item.cpp:1731-1747`).
  */
 
-import { useLayoutEffect, useMemo, type ReactNode } from 'react';
+import { useCallback, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
 import { useSharedClipBuffer } from './sharedClipBuffer';
 import { useCanvasColorSpace } from '../canvasColorSpace';
-import { runKeysOf, type CanvasItemState } from '../canvasItemState';
+import { keySpanOf, runKeysOf, type CanvasItemState } from '../canvasItemState';
 import type { PaintRange } from '../canvasPaintOrder';
 import { createClipMask } from './clipMask';
 import { ClipMaskProvider } from './ClipMaskContext';
 import { registerCanvasGroup } from './canvasGroupPass';
-import type { CanvasGroupClip } from './groupEntries';
+import type { CanvasGroupClip, CanvasGroupEntry } from './groupEntries';
 import { CanvasItemClipChildrenMode } from '../../godot/scene/canvasItem';
 import { useGroupFit } from './useGroupFit';
 
@@ -97,11 +97,14 @@ function ClippingGroup({
     [isYSorted, own, keyAt, base, size]
   );
   const behind = useMemo(
-    () =>
-      isYSorted ? [] : behindRanges.filter((run) => run.size > 0).map((run) => runKeysOf(keyAt, own, run)),
-    [isYSorted, behindRanges, keyAt, own]
+    () => (isYSorted ? [] : behindRanges.filter((run) => run.size > 0).map((run) => keySpanOf(keyAt, run))),
+    [isYSorted, behindRanges, keyAt]
   );
   const fitRect = useGroupFit({ fitMargin: 0, clearMargin: CLEAR_MARGIN });
+  const fitCleared = useCallback<CanvasGroupEntry['fit']>(
+    (drawn, frameClip) => fitRect(drawn, frameClip)?.cleared ?? null,
+    [fitRect]
+  );
   // A CanvasItemMaterial replaces the clip shader of a CLIP_ONLY owner (`:2207-2216`), so its
   // children reach no mask. CLIP_AND_DRAW takes the clip shader over any material.
   const readsBuffer = mode === 'clipAndDraw' || state.material === null;
@@ -112,10 +115,10 @@ function ClippingGroup({
         kind: 'clip',
         buffer,
         readsBuffer,
-        clip: { mode, setMasking: mask.setMasking, behind },
-        fit: (drawn, _nested, frameClip) => fitRect(drawn, frameClip)?.cleared ?? null,
+        clip: { mode, startMasking: mask.startMasking, stopMasking: mask.stopMasking, behind },
+        fit: fitCleared,
       }),
-    [scene, window, buffer, readsBuffer, mode, mask, behind, fitRect]
+    [scene, window, buffer, readsBuffer, mode, mask, behind, fitCleared]
   );
   return <ClipMaskProvider value={mask}>{children}</ClipMaskProvider>;
 }

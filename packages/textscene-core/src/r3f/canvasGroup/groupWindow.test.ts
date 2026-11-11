@@ -14,15 +14,19 @@ describe('drawOrderOf', () => {
     ]);
   });
 
-  it('draws a behind span nested in an earlier owner behind span once', () => {
+  it('draws the behind span of a nested owner before the span around it, each key once', () => {
     const outer = { window: { own: 10, from: 10, to: 30 }, behind: [{ from: 12, to: 20 }] };
     const inner = { window: { own: 12, from: 12, to: 20 }, behind: [{ from: 14, to: 16 }] };
 
     const steps = drawOrderOf(() => true, 10, 30, [inner, outer]);
 
-    // The outer span holds the inner one, so no step of its own draws [14, 16) a second time.
-    expect(steps.filter(({ from, to }) => from === 14 && to === 16)).toEqual([]);
-    expect(steps.filter(({ from, to }) => from === 12 && to === 20)).toHaveLength(1);
+    expect(steps.slice(0, 2).map(({ from, to }) => [from, to])).toEqual([
+      [14, 16],
+      [12, 20],
+    ]);
+    const drawsOf = (key: number) =>
+      steps.filter((step) => key >= step.from && key < step.to && step.admits(key)).length;
+    expect([14, 15, 17].map(drawsOf)).toEqual([1, 1, 1]);
   });
 });
 

@@ -20,6 +20,7 @@ import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { createCanvasFrame } from '../../../r3f/components/Canvas2DStage/canvasFrame';
 import { registerCanvasGroup } from '../../../r3f/canvasGroup/canvasGroupPass';
 import { canvasGroupRectTag } from '../../../r3f/canvasGroup/keyedScene';
+import type { CanvasClip } from '../../../r3f/lighting2d/lightPassHost';
 import type { CanvasGroupWindow } from '../../../r3f/canvasGroup/groupWindow';
 import type { Rgba } from '../../../godot/math/math';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
@@ -92,24 +93,25 @@ function GroupRect({ window, tint, material, pixelMaterial, fitMargin, clearMarg
   const composite = useRef<THREE.Mesh>(null);
   const plain = useRef<THREE.Mesh>(null);
   const readsBuffer = material === null;
-  useLayoutEffect(
-    () =>
-      registerCanvasGroup(scene, {
-        kind: 'composite',
-        window,
-        buffer: readsBuffer ? buffer : null,
-        fit: (drawn, nested, frameClip) => {
-          if (composite.current) composite.current.visible = false;
-          if (plain.current) plain.current.visible = false;
-          const rects = fitRect(drawn, frameClip);
-          if (!rects) return null;
-          const shown = nested || !readsBuffer ? plain.current : composite.current;
-          if (shown) placeRect(shown, rects.fitted);
-          return rects.cleared;
-        },
-      }),
-    [scene, window, buffer, readsBuffer, fitRect]
-  );
+  useLayoutEffect(() => {
+    /** Hides both rect meshes, then shows the plain one or the composite over the fitted rect. */
+    const fitAndPlace = (drawn: readonly THREE.Box3[], frameClip: CanvasClip | null, isPlain: boolean) => {
+      if (composite.current) composite.current.visible = false;
+      if (plain.current) plain.current.visible = false;
+      const rects = fitRect(drawn, frameClip);
+      if (!rects) return null;
+      const shown = isPlain ? plain.current : composite.current;
+      if (shown) placeRect(shown, rects.fitted);
+      return rects.cleared;
+    };
+    return registerCanvasGroup(scene, {
+      kind: 'composite',
+      window,
+      buffer: readsBuffer ? buffer : null,
+      fit: (drawn, frameClip) => fitAndPlace(drawn, frameClip, !readsBuffer),
+      fitNested: (drawn, frameClip) => fitAndPlace(drawn, frameClip, true),
+    });
+  }, [scene, window, buffer, readsBuffer, fitRect]);
 
   const program = materialProgramInputs({
     props: {

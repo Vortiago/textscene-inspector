@@ -11,7 +11,7 @@ import { perObject } from '../../utils/perObject';
 import { beginStep, endStep } from '../frameProfile/frameProfile';
 import { clipOfCamera } from '../../nodes/viewport/subviewport/viewportLightPassHost';
 import type { CanvasClip } from '../lighting2d/lightPassHost';
-import { collects, drawOrderOf, isOwnKey, sortedByWindow, windowIndexAt } from './groupWindow';
+import { collects, drawOrderOf, isIn, isOwnKey, sortedByWindow, windowIndexAt } from './groupWindow';
 import { fillBuffer, fillClipBuffer, withFrozenMatrices } from './groupBuffers';
 import { clipRegions } from './groupRegion';
 import type { CanvasFrameTarget, CanvasGroupEntry, ClippingEntry, InertOwner } from './groupEntries';
@@ -59,7 +59,7 @@ export function drawCanvasGroups(
   const inertOwners = nesting.inert.flatMap((group) =>
     group.kind === 'clip' ? [{ window: group.window, behind: group.clip.behind }] : []
   );
-  for (const group of groups.entries) if (group.kind === 'clip') group.clip.setMasking(false);
+  for (const group of groups.entries) if (group.kind === 'clip') group.clip.stopMasking();
   const clipping = outermost
     .filter(
       (group): group is ClippingEntry => group.kind === 'clip' && group.readsBuffer && drawing.has(group)
@@ -86,7 +86,7 @@ export function drawCanvasGroups(
     );
   } finally {
     // A later draw of the scene, or a draw that threw, must not find an owner still masked.
-    for (const group of clipping) group.clip.setMasking(false);
+    for (const group of clipping) group.clip.stopMasking();
   }
 }
 
@@ -136,8 +136,7 @@ function drawFrame(
   // An inert owner draws its behind children once, in the span its window starts in.
   const emitted: InertOwner[] = [];
   const isNotEmitted = (key: number) =>
-    isFrameKey(key) &&
-    !emitted.some((owner) => owner.behind.some((span) => key >= span.from && key < span.to));
+    isFrameKey(key) && !emitted.some((owner) => owner.behind.some((span) => isIn(span, key)));
   const drawSpan = (spanTo: number) => {
     const owners = inertOwners.filter((owner) => owner.window.from >= spanFrom && owner.window.from < spanTo);
     const accept = emitted.length > 0 ? isNotEmitted : isFrameKey;
@@ -155,7 +154,7 @@ function drawFrame(
     drawSpan(group.window.from);
     spanFrom = group.window.from;
     fillClipBuffer(gl, keyed, scene, camera, group, frame, regions[i]!, inertOwners);
-    group.clip.setMasking(true);
+    group.clip.startMasking();
   });
   drawSpan(Number.POSITIVE_INFINITY);
 }

@@ -29,7 +29,7 @@ export interface KeySpan {
 }
 
 /** Whether `key` lies in `span`. */
-const isIn = (span: KeySpan, key: number) => key >= span.from && key < span.to;
+export const isIn = (span: KeySpan, key: number) => key >= span.from && key < span.to;
 
 /** One draw of the keys `[from, to)` that `admits` lets through. */
 export interface DrawStep extends KeySpan {
@@ -55,19 +55,27 @@ export function drawOrderOf(
   const isBehind = (key: number) => owners.some((owner) => owner.behind.some((span) => isIn(span, key)));
   const steps: DrawStep[] = [];
   const drawnBehind: KeySpan[] = [];
+  const emitted = new Set<(typeof owners)[number]>();
   let cursor = from;
   const addRest = (start: number, end: number) => {
     if (start < end) steps.push({ from: start, to: end, admits: (key) => accept(key) && !isBehind(key) });
   };
-  for (const owner of owners) {
-    addRest(cursor, owner.window.from);
+  // Godot recurses through a behind child that is itself inert, so its behind spans draw before the span around them.
+  const addBehind = (owner: (typeof owners)[number]) => {
+    emitted.add(owner);
     for (const span of owner.behind) {
-      // A behind span inside an earlier one has drawn there, in key order.
-      if (drawnBehind.some((done) => span.from >= done.from && span.to <= done.to)) continue;
+      for (const nested of owners) {
+        if (!emitted.has(nested) && nested.window.from >= span.from && nested.window.to <= span.to)
+          addBehind(nested);
+      }
       const drawnBefore = [...drawnBehind];
       steps.push({ ...span, admits: (key) => accept(key) && !drawnBefore.some((done) => isIn(done, key)) });
       drawnBehind.push(span);
     }
+  };
+  for (const owner of owners) {
+    addRest(cursor, owner.window.from);
+    if (!emitted.has(owner)) addBehind(owner);
     cursor = owner.window.from;
   }
   addRest(cursor, to);

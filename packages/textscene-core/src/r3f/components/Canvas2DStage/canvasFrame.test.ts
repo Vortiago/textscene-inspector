@@ -115,6 +115,7 @@ describe('createCanvasFrame', () => {
       window: { own: 0, from: 0, to: 1 },
       buffer,
       fit: () => new THREE.Box3(),
+      fitNested: () => new THREE.Box3(),
     });
     const frame = multisampledFrame(0);
 

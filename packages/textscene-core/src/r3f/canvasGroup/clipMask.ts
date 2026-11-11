@@ -14,11 +14,12 @@ export interface ClipMask {
   /** Points the mask at the texture of the owner's group buffer. */
   readBuffer(texture: THREE.Texture): void;
   /**
-   * Whether the owner's pixels take the buffer's colour. The pass sets it, per draw. The buffer is
-   * bound to the program only while it is on: WebGL refuses a draw into a target whose texture a
-   * sampler of the program holds, even when the shader never reads it.
+   * The owner's pixels take the buffer's colour from `startMasking` to `stopMasking`. The buffer is
+   * bound to the program only then: WebGL refuses a draw into a target whose texture a sampler of
+   * the program holds, even when the shader never reads it.
    */
-  setMasking(isMasking: boolean): void;
+  startMasking(): void;
+  stopMasking(): void;
 }
 
 /**
@@ -60,6 +61,14 @@ export function createClipMask(): ClipMask {
     Object.assign(material, ownBlends.get(material));
     ownBlends.delete(material);
   };
+  const setMasking = (isMasking: boolean) => {
+    if (isMasked === isMasking) return;
+    isMasked = isMasking;
+    uniforms.uClipMasking.value = isMasking ? 1 : 0;
+    uniforms.uClipBuffer.value = isMasking ? buffer : null;
+    for (const material of materials) (isMasking ? takeMixBlend : restoreOwnBlend)(material);
+  };
+
   return {
     injection: {
       cacheKey: 'godot-clip-children',
@@ -89,12 +98,7 @@ export function createClipMask(): ClipMask {
     readBuffer: (texture) => {
       buffer = texture;
     },
-    setMasking: (isMasking) => {
-      if (isMasked === isMasking) return;
-      isMasked = isMasking;
-      uniforms.uClipMasking.value = isMasking ? 1 : 0;
-      uniforms.uClipBuffer.value = isMasking ? buffer : null;
-      for (const material of materials) (isMasking ? takeMixBlend : restoreOwnBlend)(material);
-    },
+    startMasking: () => setMasking(true),
+    stopMasking: () => setMasking(false),
   };
 }

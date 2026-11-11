@@ -27,6 +27,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'clip-children-no-commands', file: 'unit-clip-children-no-commands.tscn', mode: '2d' },
   // Nested inert owners draw the behind child once: the red square blends once, so (110,110) is (165,38,38), not doubled.
   { name: 'clip-children-nested-inert', file: 'unit-clip-children-nested-inert.tscn', mode: '2d' },
+  // A nested inert owner's behind child draws before its regular child: (150,150) is green over red, (110,110) red.
+  { name: 'clip-children-nested-behind-order', file: 'unit-clip-children-nested-behind-order.tscn', mode: '2d' },
   // A y-sorted owner groups nothing: the red child shows whole, so (175,175) is red and (125,125) stays red over green.
   { name: 'clip-children-ysort', file: 'unit-clip-children-ysort.tscn', mode: '2d' },
   // The owner's ADD material does not reach the masked draw: (125,125) is (76,139,76), (175,175) (165,38,38).

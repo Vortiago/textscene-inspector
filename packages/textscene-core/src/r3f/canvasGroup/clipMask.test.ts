@@ -23,15 +23,15 @@ describe('a clip mask', () => {
   it('draws the owner with MIX blending while masking, and with its own blend otherwise', () => {
     const { mask, material } = compiledWith();
 
-    mask.setMasking(true);
+    mask.startMasking();
     expect(material.blending).toBe(THREE.NormalBlending);
-    mask.setMasking(false);
+    mask.stopMasking();
     expect([material.blending, material.blendDst]).toEqual([THREE.CustomBlending, THREE.OneFactor]);
   });
 
   it('keeps the own blend of an owner whose program recompiles while masking', () => {
     const { mask, material } = compiledWith();
-    mask.setMasking(true);
+    mask.startMasking();
     const shader = {
       vertexShader: THREE.ShaderLib.basic.vertexShader,
       fragmentShader: THREE.ShaderLib.basic.fragmentShader,
@@ -39,7 +39,7 @@ describe('a clip mask', () => {
     };
 
     mask.injection.onBeforeCompile.call(material, shader);
-    mask.setMasking(false);
+    mask.stopMasking();
 
     expect([material.blending, material.blendDst]).toEqual([THREE.CustomBlending, THREE.OneFactor]);
   });
@@ -48,12 +48,12 @@ describe('a clip mask', () => {
 describe('a clip mask over a blend that changes', () => {
   it('restores the blend the owner holds after a change between masked draws', () => {
     const { mask, material } = compiledWith();
-    mask.setMasking(true);
-    mask.setMasking(false);
+    mask.startMasking();
+    mask.stopMasking();
 
     Object.assign(material, canvasItemBlendState(CanvasItemMaterialBlendMode.MIX));
-    mask.setMasking(true);
-    mask.setMasking(false);
+    mask.startMasking();
+    mask.stopMasking();
 
     expect(material.blending).toBe(THREE.NormalBlending);
   });

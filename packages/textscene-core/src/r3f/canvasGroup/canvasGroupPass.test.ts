@@ -80,7 +80,7 @@ function childOf(owner: THREE.Mesh, key: number, x: number): THREE.Mesh {
 const FITTED = new THREE.Box3(new THREE.Vector3(-1, -1, 0), new THREE.Vector3(1, 1, 0));
 
 function entry(window: CanvasGroupEntry['window'], buffer: Target): CompositeEntry {
-  return { kind: 'composite', window, buffer, fit: vi.fn(() => FITTED) };
+  return { kind: 'composite', window, buffer, fit: vi.fn(() => FITTED), fitNested: vi.fn(() => FITTED) };
 }
 
 const camera = new THREE.OrthographicCamera();
@@ -185,9 +185,9 @@ describe('drawCanvasGroups', () => {
     drawCanvasGroups(gl, scene, camera, FRAME, () => {});
 
     expect(draws).toEqual([]);
-    const [drawn, nested] = vi.mocked(group.fit).mock.calls[0]!;
+    const [drawn] = vi.mocked(group.fit).mock.calls[0]!;
     expect(drawn.map((box) => [box.min.x, box.max.x])).toEqual([[2.5, 3.5]]);
-    expect(nested).toBe(false);
+    expect(group.fitNested).not.toHaveBeenCalled();
   });
 
   it("hands the group the clip the frame's camera shows", () => {
@@ -197,7 +197,7 @@ describe('drawCanvasGroups', () => {
 
     drawCanvasGroups(recordingRenderer({}).gl, scene, camera, FRAME, () => {});
 
-    expect(vi.mocked(group.fit).mock.calls[0]![2]).toEqual({
+    expect(vi.mocked(group.fit).mock.calls[0]![1]).toEqual({
       rect: { x: -1, y: -1, w: 2, h: 2 },
       scale: { x: 32, y: 16 },
     });
@@ -224,7 +224,7 @@ describe('drawCanvasGroups', () => {
     const outer = entry(WINDOW, outerBuffer);
     const inner = {
       ...entry({ own: 12, from: 12, to: 15 }, innerBuffer),
-      fit: vi.fn((..._args: Parameters<CanvasGroupEntry['fit']>) => innerRect),
+      fitNested: vi.fn((..._args: Parameters<CompositeEntry['fitNested']>) => innerRect),
     };
     register(scene, outer);
     register(scene, inner);
@@ -232,7 +232,7 @@ describe('drawCanvasGroups', () => {
 
     drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
 
-    expect(inner.fit.mock.calls[0]![1]).toBe(true);
+    expect(inner.fitNested).toHaveBeenCalled();
     expect(vi.mocked(outer.fit).mock.calls[0]![0]).toContain(innerRect);
     expect(draws).toEqual([
       { target: outerBuffer, seen: ['inner'] },
@@ -255,15 +255,18 @@ describe('drawCanvasGroups', () => {
   describe('a clipping group', () => {
     /** A clipping group over `WINDOW`, its mask switch recorded as the renderer draws. */
     function clipEntry(mode: 'clipOnly' | 'clipAndDraw', buffer: Target, state: { masking: boolean }) {
-      const setMasking = vi.fn((isMasking: boolean) => {
-        state.masking = isMasking;
+      const startMasking = vi.fn(() => {
+        state.masking = true;
+      });
+      const stopMasking = vi.fn(() => {
+        state.masking = false;
       });
       return {
         ...entry(WINDOW, buffer),
         kind: 'clip' as const,
         buffer: buffer!,
         readsBuffer: true,
-        clip: { mode, setMasking, behind: [] },
+        clip: { mode, startMasking, stopMasking, behind: [] },
       };
     }
 
@@ -462,7 +465,12 @@ describe('drawCanvasGroups', () => {
       const state = { masking: false };
       register(scene, {
         ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), state),
-        clip: { mode: 'clipOnly', setMasking: vi.fn(), behind: [{ from: 12, to: 13 }] },
+        clip: {
+          mode: 'clipOnly',
+          startMasking: vi.fn(),
+          stopMasking: vi.fn(),
+          behind: [{ from: 12, to: 13 }],
+        },
       });
       const { gl, draws } = recordingRenderer(meshes);
 
@@ -482,7 +490,12 @@ describe('drawCanvasGroups', () => {
       register(scene, {
         ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }),
         window: { own: 10, from: 10, to: 30 },
-        clip: { mode: 'clipOnly', setMasking: vi.fn(), behind: [{ from: 28, to: 29 }] },
+        clip: {
+          mode: 'clipOnly',
+          startMasking: vi.fn(),
+          stopMasking: vi.fn(),
+          behind: [{ from: 28, to: 29 }],
+        },
       });
       register(scene, {
         ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }),
@@ -518,7 +531,8 @@ describe('drawCanvasGroups', () => {
 
       drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
 
-      expect(vi.mocked(inner.fit).mock.calls[0]![1]).toBe(false);
+      expect(inner.fit).toHaveBeenCalled();
+      expect(inner.fitNested).not.toHaveBeenCalled();
       expect(draws[0]).toEqual({ target: innerBuffer, seen: ['child'] });
     });
 
@@ -556,7 +570,7 @@ describe('drawCanvasGroups', () => {
         { target: outerBuffer, seen: ['before', 'owner', 'child'] },
         { target: null, seen: ['after'] },
       ]);
-      expect(inner.clip.setMasking).not.toHaveBeenCalledWith(true);
+      expect(inner.clip.startMasking).not.toHaveBeenCalled();
     });
 
     it('copies the canvas again for a second group, with the first one already masked in it', () => {

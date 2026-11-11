@@ -40,7 +40,8 @@ export function clipGroupsDrawingNothing(
   entries: ReadonlySet<CanvasGroupEntry>,
   { keys, boxes }: KeyedScene
 ): ClippingEntry[] {
-  const clipping = [...entries].filter((group): group is ClippingEntry => group.kind === 'clip');
+  const clipping: ClippingEntry[] = [];
+  for (const group of entries) if (group.kind === 'clip') clipping.push(group);
   if (clipping.length === 0) return clipping;
   // The own slots `[own, own + 1)` do not overlap, so a search finds the owner of a key.
   const byOwn = [...clipping].sort((a, b) => a.window.own - b.window.own);
@@ -99,7 +100,11 @@ export function fitGroups(
   const drawing = new Set<CanvasGroupEntry>();
   for (const group of innermostFirst) {
     const around = enclosing.get(group)!;
-    const rect = group.fit(drawn.get(group)!, around.length > 0, frameClip);
+    const items = drawn.get(group)!;
+    const rect =
+      group.kind === 'composite' && around.length > 0
+        ? group.fitNested(items, frameClip)
+        : group.fit(items, frameClip);
     if (!rect) continue;
     drawing.add(group);
     for (const outer of around) drawn.get(outer)!.push(rect);

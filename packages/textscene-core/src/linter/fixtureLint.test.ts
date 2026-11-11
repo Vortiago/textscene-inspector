@@ -58,6 +58,11 @@ const FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; re
     reason:
       'the inner owner clips under a clipping ancestor on purpose: Godot warns and still groups it, and the nested draw order is the fixture',
   },
+  'unit-clip-children-nested-behind-order.tscn': {
+    rules: ['canvasitem-ancestor-clips-children'],
+    reason:
+      'the inner owner clips under a clipping ancestor on purpose: the behind child of a nested inert owner draws first, and that order is the fixture',
+  },
   'unit-legacy-format.tscn': {
     rules: ['legacy-format-version'],
     reason:
