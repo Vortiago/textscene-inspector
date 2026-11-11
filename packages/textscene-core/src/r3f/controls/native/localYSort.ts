@@ -38,26 +38,44 @@ function itemRunSize(node: TscnNode): number {
 export function localYSortShifts(tree: readonly SolveNode[], transforms: ControlTransforms): YSortShifts {
   const shifts = new Map<string, YSortShift>();
 
-  const sortUnder = (root: SolveNode): void => {
+  /** A sort root below a non-sorted item: the outer sort moves the item, and the root with it. */
+  interface NestedRoot {
+    root: SolveNode;
+    owner: LocalItem;
+  }
+
+  /** Sorts `root`'s items into its run, which the outer sort has moved by `delta`. */
+  const sortUnder = (root: SolveNode, delta: number): void => {
     const items: LocalItem[] = [];
+    const nested: NestedRoot[] = [];
     // Z compares as absolute values, so the items start from the root's own z.
     const rootProps = controlProps(root);
     const rootZ = accumulateCanvasItemZ(0, {
       z_index: rootProps.zIndex ?? 0,
       z_as_relative: rootProps.zAsRelative,
     });
-    collect(root, TRANSFORM2D_IDENTITY, rootZ, items);
+    collect(root, TRANSFORM2D_IDENTITY, rootZ, items, nested);
     const sorted = items
       .map((item, order) => ({ item, order }))
       .sort((a, b) => a.item.z - b.item.z || compareSortY(a.item.sortY, b.item.sortY) || a.order - b.order);
     const sizes = sorted.map(({ item }) => itemRunSize(item.node.node));
-    const runs = packPaintRanges(root.paintRange, sizes, root.paintSequence + 1);
+    const movedRun = { base: root.paintRange.base + delta, size: root.paintRange.size };
+    const runs = packPaintRanges(movedRun, sizes, root.paintSequence + delta + 1);
     sorted.forEach(({ item }, i) =>
       shifts.set(item.node.path, { run: runs[i]!, from: item.node.paintRange.base })
     );
+    for (const { root: inner, owner } of nested) {
+      sortUnder(inner, shifts.get(owner.node.path)!.run.base - owner.node.paintRange.base);
+    }
   };
 
-  const collect = (parent: SolveNode, toRoot: Transform2DColumns, parentZ: number, out: LocalItem[]) => {
+  const collect = (
+    parent: SolveNode,
+    toRoot: Transform2DColumns,
+    parentZ: number,
+    out: LocalItem[],
+    nested: NestedRoot[]
+  ) => {
     for (const child of parent.children) {
       const own = transforms.get(child.path);
       const toSortRoot = own ? multiplyTransform2D(toRoot, own) : toRoot;
@@ -66,17 +84,19 @@ export function localYSortShifts(tree: readonly SolveNode[], transforms: Control
         z_index: props.zIndex ?? 0,
         z_as_relative: props.zAsRelative,
       });
-      out.push({ node: child, sortY: toSortRoot.ty, z });
-      if (ysortsChildren(child.node)) collect(child, toSortRoot, z, out);
-      else visit(child);
+      const item = { node: child, sortY: toSortRoot.ty, z };
+      out.push(item);
+      if (ysortsChildren(child.node)) collect(child, toSortRoot, z, out, nested);
+      else findSortRoots(child, (root) => nested.push({ root, owner: item }));
     }
   };
 
-  const visit = (node: SolveNode): void => {
-    if (ysortsChildren(node.node)) sortUnder(node);
-    else node.children.forEach(visit);
+  /** Calls `found` on each sort root in the subtree of `node`, the outermost of a chain only. */
+  const findSortRoots = (node: SolveNode, found: (root: SolveNode) => void): void => {
+    if (ysortsChildren(node.node)) found(node);
+    else node.children.forEach((child) => findSortRoots(child, found));
   };
 
-  tree.forEach(visit);
+  tree.forEach((node) => findSortRoots(node, (root) => sortUnder(root, 0)));
   return shifts;
 }

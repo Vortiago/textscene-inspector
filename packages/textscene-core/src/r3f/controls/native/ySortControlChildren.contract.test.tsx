@@ -167,4 +167,23 @@ z_index = 5
     const keys = await paintKeysOf(tscn, ['Absolute', 'Relative'], false);
     expect(compareKeys(keys.Absolute!, keys.Relative!)).toBeLessThan(0);
   });
+
+  it('moves a nested sort with the non-sorted item the outer sort moved', async () => {
+    const node = (name: string, parent: string, top: number, extra = '') =>
+      `[node name="${name}" type="Control" parent="${parent}"]\n${extra}offset_top = ${top}.0\n\n`;
+    const leaf = (name: string, parent: string, top: number) =>
+      `[node name="${name}" type="ColorRect" parent="${parent}"]\noffset_top = ${top}.0\noffset_right = 40.0\noffset_bottom = ${top + 40}.0\n\n`;
+    const tscn =
+      rootControl(true) +
+      node('A', '.', 100) +
+      node('B', 'A', 0, 'y_sort_enabled = true\n') +
+      leaf('B1', 'A/B', 40) +
+      leaf('B2', 'A/B', 0) +
+      leaf('C1', '.', 0) +
+      leaf('C2', '.', 0) +
+      leaf('C', '.', 0);
+    const keys = await paintKeysOf(tscn, ['B1', 'B2', 'C'], false);
+    expect(compareKeys(keys.C!, keys.B2!)).toBeLessThan(0);
+    expect(compareKeys(keys.B2!, keys.B1!)).toBeLessThan(0);
+  });
 });
