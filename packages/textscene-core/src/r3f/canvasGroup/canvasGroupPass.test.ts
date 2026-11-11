@@ -9,6 +9,7 @@ import { offscreenRendererState } from '../../nodes/viewport/subviewport/offscre
 import { drawCanvasGroups, registerCanvasGroup } from './canvasGroupPass';
 import { canvasGroupRectTag } from './keyedScene';
 import type { CanvasGroupEntry, CompositeEntry } from './groupEntries';
+import type { KeySpan } from './groupWindow';
 
 type Target = THREE.WebGLRenderTarget | null;
 
@@ -270,6 +271,15 @@ describe('drawCanvasGroups', () => {
       };
     }
 
+    /** A clipping owner that draws nothing, with the key spans of its `show_behind_parent` children. */
+    function inertOwnerEntry(window: { own: number; from: number; to: number }, behind: KeySpan[]) {
+      return {
+        ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }),
+        window,
+        clip: { mode: 'clipOnly' as const, startMasking: vi.fn(), stopMasking: vi.fn(), behind },
+      };
+    }
+
     /** The scene of a clipping parent at key 10 with a child at 11, drawn between a mesh before and one after. */
     function clippedScene() {
       const scene = new THREE.Scene();
@@ -487,16 +497,7 @@ describe('drawCanvasGroups', () => {
         clipChild: childOf(clipOwner, 16, 0),
         behind: item(scene, 28, 0),
       };
-      register(scene, {
-        ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }),
-        window: { own: 10, from: 10, to: 30 },
-        clip: {
-          mode: 'clipOnly',
-          startMasking: vi.fn(),
-          stopMasking: vi.fn(),
-          behind: [{ from: 28, to: 29 }],
-        },
-      });
+      register(scene, inertOwnerEntry({ own: 10, from: 10, to: 30 }, [{ from: 28, to: 29 }]));
       register(scene, {
         ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }),
         window: { own: 15, from: 15, to: 20 },
@@ -513,16 +514,7 @@ describe('drawCanvasGroups', () => {
       const scene = new THREE.Scene();
       const owner = item(scene, 34, 0);
       const meshes = { sibling: item(scene, 12, 0), owner, child: childOf(owner, 31, 0) };
-      register(scene, {
-        ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }),
-        window: { own: 10, from: 10, to: 40 },
-        clip: {
-          mode: 'clipOnly',
-          startMasking: vi.fn(),
-          stopMasking: vi.fn(),
-          behind: [{ from: 30, to: 35 }],
-        },
-      });
+      register(scene, inertOwnerEntry({ own: 10, from: 10, to: 40 }, [{ from: 30, to: 35 }]));
       const state = { masking: false };
       register(scene, {
         ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), state),
@@ -540,6 +532,100 @@ describe('drawCanvasGroups', () => {
       drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
 
       expect(maskingWhenOwnerDraws).toEqual([true]);
+    });
+
+    it('draws a clipping owner in the behind span of an inert owner before the other children of that owner', () => {
+      const scene = new THREE.Scene();
+      const owner = item(scene, 34, 0);
+      const meshes = { sibling: item(scene, 12, 0), owner, child: childOf(owner, 31, 0) };
+      register(scene, inertOwnerEntry({ own: 10, from: 10, to: 40 }, [{ from: 30, to: 35 }]));
+      const state = { masking: false };
+      register(scene, {
+        ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), state),
+        window: { own: 34, from: 30, to: 35 },
+      });
+      const { gl } = recordingRenderer(meshes);
+      const order: string[] = [];
+      const render = gl.render;
+      gl.render = (root: THREE.Object3D, cam: THREE.Camera) => {
+        if (gl.getRenderTarget() === null) {
+          if (within(root, owner) && seen(owner, cam)) order.push('owner');
+          if (within(root, meshes.sibling) && seen(meshes.sibling, cam)) order.push('sibling');
+        }
+        render(root, cam);
+      };
+
+      drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+      expect(order).toEqual(['owner', 'sibling']);
+    });
+
+    it('fills each clipping group in the behind span of an inert owner after the items before it', () => {
+      const scene = new THREE.Scene();
+      const meshes = {
+        sibling: item(scene, 12, 0),
+        plain: item(scene, 28, 0),
+        first: item(scene, 31, 0),
+        second: item(scene, 36, 0),
+      };
+      const events: string[] = [];
+      const clipping = (own: number, from: number, to: number, name: string) => ({
+        ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }),
+        window: { own, from, to },
+        clip: {
+          mode: 'clipOnly' as const,
+          startMasking: () => events.push(`mask ${name}`),
+          stopMasking: vi.fn(),
+          behind: [],
+        },
+      });
+      register(scene, inertOwnerEntry({ own: 10, from: 10, to: 40 }, [{ from: 28, to: 38 }]));
+      register(scene, clipping(31, 30, 32, 'first'));
+      register(scene, clipping(36, 35, 37, 'second'));
+      const { gl } = recordingRenderer(meshes);
+      const render = gl.render;
+      gl.render = (root: THREE.Object3D, cam: THREE.Camera) => {
+        if (gl.getRenderTarget() === null)
+          for (const [name, mesh] of Object.entries(meshes)) {
+            if (within(root, mesh) && seen(mesh, cam)) events.push(name);
+          }
+        render(root, cam);
+      };
+
+      drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+      expect(events).toEqual(['plain', 'mask first', 'first', 'mask second', 'second', 'sibling']);
+    });
+
+    it('fills a group between an inert owner and the inert owner it draws behind after the nested behind child', () => {
+      const scene = new THREE.Scene();
+      const meshes = { grouped: item(scene, 20, 0), plain: item(scene, 35, 0), behind: item(scene, 42, 0) };
+      const events: string[] = [];
+      register(scene, inertOwnerEntry({ own: 10, from: 10, to: 60 }, [{ from: 30, to: 50 }]));
+      register(scene, inertOwnerEntry({ own: 30, from: 30, to: 50 }, [{ from: 40, to: 45 }]));
+      register(scene, {
+        ...clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }),
+        window: { own: 20, from: 20, to: 21 },
+        clip: {
+          mode: 'clipOnly',
+          startMasking: () => events.push('mask grouped'),
+          stopMasking: vi.fn(),
+          behind: [],
+        },
+      });
+      const { gl } = recordingRenderer(meshes);
+      const render = gl.render;
+      gl.render = (root: THREE.Object3D, cam: THREE.Camera) => {
+        if (gl.getRenderTarget() === null)
+          for (const [name, mesh] of Object.entries(meshes)) {
+            if (within(root, mesh) && seen(mesh, cam)) events.push(name);
+          }
+        render(root, cam);
+      };
+
+      drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+      expect(events).toEqual(['behind', 'plain', 'mask grouped', 'grouped']);
     });
 
     it('draws no group for a clipping owner that draws nothing, as Godot attaches no group to an item with no commands', () => {

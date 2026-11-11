@@ -1,5 +1,6 @@
 ; One variable: the inert owner I2 sits behind inert owner I1 and holds a regular child C before a behind child B.
 ; Godot draws B before C wherever it recurses, so the green square covers the red one.
+; No other scene gives a nested inert owner a regular child before its behind child, so none shows that order.
 
 [gd_scene format=3]
 

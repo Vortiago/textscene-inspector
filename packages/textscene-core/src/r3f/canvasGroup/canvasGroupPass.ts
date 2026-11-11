@@ -11,7 +11,16 @@ import { perObject } from '../../utils/perObject';
 import { beginStep, endStep } from '../frameProfile/frameProfile';
 import { clipOfCamera } from '../../nodes/viewport/subviewport/viewportLightPassHost';
 import type { CanvasClip } from '../lighting2d/lightPassHost';
-import { collects, drawOrderOf, isIn, isOwnKey, sortedByWindow, windowIndexAt } from './groupWindow';
+import {
+  collects,
+  drawOrderOf,
+  isIn,
+  isOwnKey,
+  sortedByWindow,
+  windowIndexAt,
+  type DrawStep,
+  type KeySpan,
+} from './groupWindow';
 import { fillBuffer, fillClipBuffer, withFrozenMatrices } from './groupBuffers';
 import { clipRegions } from './groupRegion';
 import type { CanvasFrameTarget, CanvasGroupEntry, ClippingEntry, InertOwner } from './groupEntries';
@@ -121,9 +130,31 @@ interface FrameDraw {
   inertOwners: readonly InertOwner[];
 }
 
+/** A clipping group with the region its buffer covers. */
+interface QueuedGroup {
+  readonly group: ClippingEntry;
+  readonly region: ReturnType<typeof clipRegions>[number];
+}
+
+/** The groups of `queue`, which is sorted by window start, whose window starts inside `span`. */
+function groupsStartingIn(queue: readonly QueuedGroup[], span: KeySpan): QueuedGroup[] {
+  let low = 0;
+  let high = queue.length;
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    if (queue[mid]!.group.window.from < span.from) low = mid + 1;
+    else high = mid;
+  }
+  const starting: QueuedGroup[] = [];
+  for (let i = low; i < queue.length && isIn(span, queue[i]!.group.window.from); i++)
+    starting.push(queue[i]!);
+  return starting;
+}
+
 /**
- * Draws the frame's keys `isFrameKey` admits. Each clipping group, in window order, splits it: the
- * keys before the group draw, then the group fills its buffer, and the keys from the group on draw.
+ * Draws the frame's keys `isFrameKey` admits, in the order Godot draws them. A clipping group fills
+ * its buffer where its window starts in that order, so its copy holds what Godot has drawn by
+ * then, and its owner draws once it masks. `clipping` is sorted by window start.
  */
 function drawFrame(
   { gl, scene, camera, frame, keyed, drawn, draw, inertOwners }: FrameDraw,
@@ -131,44 +162,34 @@ function drawFrame(
   isFrameKey: (key: number) => boolean
 ): void {
   const frameTarget = gl.getRenderTarget();
-  let spanFrom = Number.NEGATIVE_INFINITY;
-  let isFirstSpan = true;
-  // An inert owner draws its behind children once, in the span its window starts in.
-  const emitted: InertOwner[] = [];
-  const started = new Set<ClippingEntry>();
-  // A clipping owner takes the mask, so it draws only once its group has filled, even inside a behind span.
-  const clippingOwnerAt = (key: number) => {
-    const at = windowIndexAt(clipping, key);
-    return at >= 0 && isOwnKey(clipping[at]!.window, key) ? clipping[at] : undefined;
-  };
-  const isDrawnNow = (key: number) => {
-    if (!isFrameKey(key)) return false;
-    const owner = clippingOwnerAt(key);
-    if (owner) return started.has(owner);
-    return !emitted.some((done) => done.behind.some((span) => isIn(span, key)));
-  };
-  const hasBehind = inertOwners.some((owner) => owner.behind.length > 0);
-  const drawSpan = (spanTo: number) => {
-    const owners = inertOwners.filter((owner) => owner.window.from >= spanFrom && owner.window.from < spanTo);
-    const accept = hasBehind ? isDrawnNow : isFrameKey;
-    for (const step of drawOrderOf(accept, spanFrom, spanTo, inertOwners)) {
-      // Over the colour already drawn: the first draw is the frame's own, which may clear it.
-      const drawOver = isFirstSpan ? draw : () => drawOffscreen(gl, draw);
-      gl.setRenderTarget(frameTarget);
-      drawKeyedObjects(keyed, step, drawOver);
-      isFirstSpan = false;
-    }
-    emitted.push(...owners.filter((owner) => owner.behind.length > 0));
-  };
   const regions = clipping.length > 0 ? clipRegions(keyed, drawn, camera, frame, clipping) : [];
-  clipping.forEach((group, i) => {
-    drawSpan(group.window.from);
-    spanFrom = group.window.from;
-    fillClipBuffer(gl, keyed, scene, camera, group, frame, regions[i]!, inertOwners);
-    group.clip.startMasking();
-    started.add(group);
-  });
-  drawSpan(Number.POSITIVE_INFINITY);
+  const queue = clipping.map((group, i) => ({ group, region: regions[i]! }));
+  const filled = new Set<QueuedGroup>();
+  let isFirstDraw = true;
+  const drawPiece = (piece: DrawStep) => {
+    // Over the colour already drawn: the first draw is the frame's own, which may clear it.
+    const drawOver = isFirstDraw ? draw : () => drawOffscreen(gl, draw);
+    gl.setRenderTarget(frameTarget);
+    drawKeyedObjects(keyed, piece, drawOver);
+    isFirstDraw = false;
+  };
+  const fill = (entry: QueuedGroup) => {
+    fillClipBuffer(gl, keyed, scene, camera, entry.group, frame, entry.region, inertOwners);
+    entry.group.clip.startMasking();
+    filled.add(entry);
+  };
+  // The steps cover every key, so each group's window start falls in one of them.
+  for (const step of drawOrderOf(isFrameKey, -Infinity, Infinity, inertOwners)) {
+    let from = step.from;
+    for (const entry of groupsStartingIn(queue, step)) {
+      if (filled.has(entry)) continue;
+      const at = entry.group.window.from;
+      if (from < at || isFirstDraw) drawPiece({ ...step, from, to: at });
+      from = at;
+      fill(entry);
+    }
+    drawPiece({ ...step, from });
+  }
 }
 
 /** The clip an ortho camera shows over a frame of `width` x `height` pixels. */

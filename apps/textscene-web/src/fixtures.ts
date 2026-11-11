@@ -418,6 +418,16 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Clip Children Behind Groups",
+    "file": "unit-clip-children-behind-groups.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Behind Owner",
+    "file": "unit-clip-children-behind-owner.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Clip Children Control",
     "file": "unit-clip-children-control.tscn",
     "category": "Other"
@@ -430,6 +440,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Clip Children Nested Behind Order",
     "file": "unit-clip-children-nested-behind-order.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Nested Boundary",
+    "file": "unit-clip-children-nested-boundary.tscn",
     "category": "Other"
   },
   {
