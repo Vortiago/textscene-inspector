@@ -182,10 +182,10 @@ export function buildShadowPolarMap(
       const span = forward <= 0.5 ? forward : 1 - forward;
 
       // Window x is `u * drawn` less a whole quadrant offset, so the bins share the raster's grid.
-      const [first, last] = coveredBins(start * drawn, (start + span) * drawn);
+      const { first, last } = coveredBins(start * drawn, (start + span) * drawn);
 
       for (let bin = first; bin <= last; bin += 1) {
-        const index = ((bin % drawn) + drawn) % drawn;
+        const index = bin % drawn;
         binRay(index, columns, ray);
 
         // s·ray = A + t·e, solved for s by crossing with e.

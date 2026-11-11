@@ -191,9 +191,9 @@ export function buildDirectionalShadowMap(
       const uB = (m00 * bx + m01 * by + m02) * view.bins;
       const depthA = m10 * ax + m11 * ay + m12;
       const depthB = m10 * bx + m11 * by + m12;
-      const [left, right] = coveredBins(Math.min(uA, uB), Math.max(uA, uB));
-      const first = Math.max(0, left);
-      const last = Math.min(view.bins - 1, right);
+      const covered = coveredBins(Math.min(uA, uB), Math.max(uA, uB));
+      const first = Math.max(0, covered.first);
+      const last = Math.min(view.bins - 1, covered.last);
 
       for (let bin = first; bin <= last; bin += 1) {
         const t = (bin + 0.5 - uA) / (uB - uA);
