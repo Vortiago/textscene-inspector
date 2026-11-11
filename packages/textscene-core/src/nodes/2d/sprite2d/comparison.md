@@ -1,7 +1,6 @@
 ---
 type: Sprite2D
 category: 2D
-status: done
 fixture: unit-sprite2d.tscn
 image: unit-sprite2d
 renders_as: an unlit textured quad
@@ -18,9 +17,9 @@ nothing, as Godot does (`sprite_2d.cpp:159`). It samples with the `texture_filte
 <!-- compare: image=unit-sprite2d-gradient-no-gradient status=done fixture=unit-sprite2d-gradient-no-gradient.tscn -->
 
 The texture never gets an image, so a Sprite2D draws Godot's 4 by 4 magenta and black placeholder
-(`gradient_texture.cpp:229-233`). Godot sizes the quad by the texture's `width` and `height` and
-divides the source rectangle by the placeholder's size, so the sprite shows the placeholder's corner
-texel stretched, where a TextureRect shows the whole checkerboard.
+(`gradient_texture.cpp:229-233`). Godot sizes the quad by the texture's `width` and `height`. It
+divides the source rectangle by the placeholder's size, so the sprite shows the corner texel
+stretched. A TextureRect shows the whole checkerboard.
 
 ## Linting
 
