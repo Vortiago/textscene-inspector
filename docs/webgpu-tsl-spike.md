@@ -25,7 +25,7 @@ switch, and a move to `WebGPURenderer` as a later and separate project.
 
 | Item | Value |
 | --- | --- |
-| Branch | `claude/project-thread-h5eutl` |
+| Branch | `spike/tsl-lit-surface` |
 | Prototype commit | `0fdcc03d0478` |
 | Base commit on `main` | `8a7e571c` |
 | three | 0.187.0 |
@@ -35,8 +35,8 @@ switch, and a move to `WebGPURenderer` as a later and separate project.
 | Browser | Chromium 156.0.8078.4, bundled with Playwright 1.64.1 |
 | Godot | 4.6.3.stable |
 
-The prototype commit is on the branch of this document's pull request. A later commit on the same
-branch removes the prototype, so the pull request changes only this document.
+The branch holds the prototype and never merges. This document's pull request changes only this
+document.
 
 The prototype has three parts.
 
@@ -412,11 +412,15 @@ step 5, or when group 3 lands first and the port follows.
 - The handler installed with no node material, over the goldens.
 - The cause of each pixel that differs by 1/255, and of the 18 untraced goldens.
 
-## Decisions for the owner
+## Decisions
 
-1. Is the port form TSL node materials, in place of ADR-0055's `ShaderMaterial`?
-2. Is the handler the first step, with `WebGPURenderer` as a later project?
-3. What is the bundle ceiling while both material kinds ship? The measured size is 1,020,897 B.
-4. May a golden move by 1/255 at the switch, or must the port find each such pixel first?
-5. Does group 3 wait for the port, or does the port wait for group 3?
-6. Does the prototype stay on a named branch? It is now reachable only through its commit.
+The owner decided these on 2026-11-11. ADR-0055 still needs its own change for the first.
+
+| Question | Decision |
+| --- | --- |
+| The form of the port | TSL node materials, in place of ADR-0055's `ShaderMaterial` |
+| The first target | The handler on today's `WebGLRenderer`. `WebGPURenderer` is a later project |
+| The bundle ceiling while both material kinds ship | 1,150,000 B |
+| A golden that moves at the switch | It may move by at most 1/255, and its comparison with Godot must not get worse |
+| The order | The port runs first, with group 7 beside it. Group 3 waits for the node lit surface |
+| The prototype | It stays on the branch `spike/tsl-lit-surface` |
