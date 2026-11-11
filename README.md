@@ -77,6 +77,7 @@ Install a `.vsix` with **Extensions: Install from VSIX…**.
 | `pnpm --filter textscene-inspector test:web` | The browser build in VS Code for the Web, as vscode.dev runs it: activation, commands, lint, Outline and the preview tab |
 | `pnpm test:vscode:web-preview` | In VS Code for the Web, a local folder's scene previews from the editor title button: the tree lists the root and the viewport paints. Run it after `test:web`, which builds the web bundle |
 | `pnpm check` | The pre-push checks, for every change since `origin/main`, uncommitted files included |
+| `pnpm pr:state [--base <ref>] [--pr <n>]` | The facts a report of a pull request needs: the head, the changed baselines and scenes, the added lines that defer work, the exemption tables edited and the test-only exports |
 | `pnpm lint` | ESLint |
 | `pnpm format` | Prettier |
 | `pnpm format:check` | Prettier check, as in CI |
