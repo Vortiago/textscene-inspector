@@ -389,8 +389,8 @@ describe('shadow_filter selects the taps', () => {
     );
     const material = litQuads(renderer)[0]!.material as THREE.ShaderMaterial;
     expect(material.defines?.SHADOW_FILTER).toBe(1);
-    // renderer_canvas_render_rd.cpp:629: (1 / 2048) * (1 + shadow_smooth).
-    expect(material.uniforms.uShadowPixelSize!.value).toBe(9 / 2048);
+    // renderer_canvas_render_rd.cpp:629: (1 / shadow_texture_size) * (1 + shadow_smooth).
+    expect(material.uniforms.uShadowSmooth!.value).toBe(8);
     // renderer_viewport.cpp:485,556: z_far is radius_cache * 1.1, and
     // radius_cache is the 1024x1024 cookie rect's diagonal.
     expect(material.uniforms.uShadowZFarInv!.value).toBeCloseTo(1 / (1024 * Math.SQRT2 * 1.1), 9);

@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import { texture2DPlaceholder } from '../../../resources/textures/texture2DPlaceholder';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { StyleBoxQuad } from './StyleBoxQuad';
 import { canvasColorSpaceOf, CanvasColorSpaceProvider } from '../../canvasColorSpace';
@@ -370,7 +370,7 @@ describe('<StyleBoxQuad>', () => {
         </ResourceLoaderProvider>
       );
       const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
-      expect((mesh.material as THREE.MeshBasicMaterial).map!.image).toBe(unconfiguredViewportTexture().image);
+      expect((mesh.material as THREE.MeshBasicMaterial).map!.image).toBe(texture2DPlaceholder().image);
     });
 
     it("draws a textured nine-patch mesh once the box's texture resolves", async () => {

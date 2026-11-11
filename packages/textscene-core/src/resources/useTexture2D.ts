@@ -17,7 +17,8 @@ import {
   resolveSubResourceRef,
 } from './SubResourceResolver.js';
 import { isLocalToScene } from './textures/viewporttexture/localToScene.js';
-import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfiguredViewportTexture.js';
+import { texture2DPlaceholder } from './textures/texture2DPlaceholder.js';
+import { gradientTextureSizeWithoutGradient } from './textures/gradienttexture2d/resolveGradientTexture.js';
 import { atlasTextureSize } from './textures/atlastexture/decode.js';
 import { imageSize, type ImageSize } from './formats/image/imagePixels.js';
 import {
@@ -54,14 +55,16 @@ export interface Texture2DResult {
   /** True while the texture, or a file or build it waits on, is still on its way. */
   isArriving: boolean;
   /**
-   * The size Godot reports for the texture: its image's, an AtlasTexture's region's, or 0 by 0 for
-   * a ViewportTexture its scene never sets up, which samples the placeholder (`viewport.cpp:150-166`).
+   * The size Godot reports for the texture: its image's, an AtlasTexture's region's, 0 by 0 for
+   * a ViewportTexture its scene never sets up (`viewport.cpp:150-166`), or the `width` and `height`
+   * of a GradientTexture2D with no gradient (`gradient_texture.cpp:400`). Both sample the placeholder.
    * Undefined while there is no texture.
    */
   size?: ImageSize;
   /**
-   * Set when the slot reaches a ViewportTexture Godot never sets up, through any wrapper, whose
-   * `get_image()` is null (`viewport.cpp:180-186`). `texture` then samples the placeholder.
+   * Set when the slot reaches a texture whose `get_image()` is null, through any wrapper: a
+   * ViewportTexture Godot never sets up (`viewport.cpp:180-186`) or a GradientTexture2D with no
+   * gradient (`gradient_texture.cpp:229-233`). `texture` then samples the placeholder.
    */
   hasNoImage?: true;
   /** The CanvasTexture the slot names, directly or in its resource file. */
@@ -122,7 +125,7 @@ function useReportedSize(
   atlas: AtlasTextureReference | null,
   sheet: Texture2DResult
 ): ImageSize | undefined {
-  const sheetSize = sheet.hasNoImage ? NO_AREA : imageSize(sheet.texture?.image);
+  const sheetSize = sheet.hasNoImage ? sheet.size : imageSize(sheet.texture?.image);
   const size = texture && (atlas ? atlasTextureSize(atlas.texture, sheetSize ?? null) : sheetSize);
   const width = size?.width;
   const height = size?.height;
@@ -256,7 +259,12 @@ function useTexture2DSlot(
       resolveSubResourceRef(sourceRef, slot.internalResources),
     ].every((holder) => !holder || isLocalToScene(holder));
   const viewport = useViewportTextureSlot(isSetUp ? sourceRef : undefined, slot.internalResources, view);
-  const unconfigured = isViewport && !isSetUp ? unconfiguredViewportTexture() : null;
+  const gradientSize = useMemo(
+    () => gradientTextureSizeWithoutGradient(sourceRef, slot.internalResources),
+    [sourceRef, slot.internalResources]
+  );
+  const hasNoImage = (isViewport && !isSetUp) || gradientSize !== null;
+  const unconfigured = hasNoImage ? texture2DPlaceholder() : null;
 
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
   // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook
@@ -315,7 +323,16 @@ function useTexture2DSlot(
 
   // A target arrives after first paint and is no file on its way, so only a cycle stops it.
   if (unconfigured)
-    return { ...peeled, result: { texture: source, missing: false, isArriving: false, hasNoImage: true } };
+    return {
+      ...peeled,
+      result: {
+        texture: source,
+        missing: false,
+        isArriving: false,
+        hasNoImage: true,
+        size: gradientSize ?? NO_AREA,
+      },
+    };
   if (isViewport)
     return { ...peeled, result: { texture: source, missing: viewport.cyclic, isArriving: false } };
   const sourceMissing =

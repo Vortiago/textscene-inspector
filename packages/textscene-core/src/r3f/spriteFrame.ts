@@ -10,7 +10,8 @@
  */
 
 import type * as THREE from 'three';
-import type { ImageSize } from '../resources/formats/image/imagePixels';
+import { imageSize, type ImageSize } from '../resources/formats/image/imagePixels';
+import type { Rect2 } from '../godot/math/rect2';
 import { FULL_UV_WINDOW, regionUvWindow, type UvWindow } from './uvWindow';
 import { frameCoords } from '../godot/scene/spriteFrames';
 
@@ -51,10 +52,16 @@ export const WHOLE_FRAME: SpriteFrameProps = Object.freeze({
 
 /**
  * The current frame's UV window over `texture`: the region-then-frame-grid composition, over the
- * full-image window.
+ * full-image window. `wholeSize` is the size Godot reports for a texture whose image is not that
+ * size (the placeholder), which Sprite2D takes as the base rect and divides by the image's size
+ * (`sprite_2d.cpp` `_get_rects`), so the window runs past the image and its edge texel stretches.
  */
-export function frameUvWindow(texture: THREE.Texture | undefined, props: SpriteFrameProps): UvWindow {
-  const base = regionWindow(texture, props) ?? FULL_UV_WINDOW;
+export function frameUvWindow(
+  texture: THREE.Texture | undefined,
+  props: SpriteFrameProps,
+  wholeSize?: ImageSize
+): UvWindow {
+  const base = regionWindow(texture, props) ?? wholeWindow(texture, wholeSize) ?? FULL_UV_WINDOW;
   return props.hframes > 1 || props.vframes > 1 ? cellWindow(base, props) : base;
 }
 
@@ -97,12 +104,19 @@ export function spriteWrapMode(texture: THREE.Texture | undefined, props: Sprite
  */
 function regionWindow(texture: THREE.Texture | undefined, props: SpriteFrameProps): UvWindow | null {
   const rect = props.region_enabled ? props.region_rect : undefined;
-  const image = texture?.image as { width?: number; height?: number } | undefined;
-  if (!rect || !image?.width || !image.height) return null;
-  return regionUvWindow(
-    { x: rect.x, y: rect.y, w: rect.width, h: rect.height },
-    { x: image.width, y: image.height }
-  );
+  return rect ? windowOver(texture, { x: rect.x, y: rect.y, w: rect.width, h: rect.height }) : null;
+}
+
+function wholeWindow(texture: THREE.Texture | undefined, wholeSize: ImageSize | undefined): UvWindow | null {
+  return wholeSize?.width && wholeSize.height
+    ? windowOver(texture, { x: 0, y: 0, w: wholeSize.width, h: wholeSize.height })
+    : null;
+}
+
+/** `rect`, in the texture's own pixels, as a window. Null without the image's dimensions. */
+function windowOver(texture: THREE.Texture | undefined, rect: Rect2): UvWindow | null {
+  const size = imageSize(texture?.image);
+  return size && size.width && size.height ? regionUvWindow(rect, { x: size.width, y: size.height }) : null;
 }
 
 /**

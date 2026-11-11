@@ -17,7 +17,7 @@ import { TileShape } from '../godot/scene/tileSet';
 import { tileTextureAt } from '../resources/tileset/testing/tileTexture';
 import type { TscnInternalResource } from '../parser/types';
 import { imageSize } from '../resources/formats/image/imagePixels';
-import { unconfiguredViewportTexture } from '../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import { texture2DPlaceholder } from '../resources/textures/texture2DPlaceholder';
 import { ViewportTextureProvider } from './contexts/ViewportTextureContext';
 import { NodePathProvider } from './contexts/NodePathContext';
 import { ViewportTexturePublisher, viewportEntry } from './testing/ViewportTexturePublisher';
@@ -173,9 +173,7 @@ describe('TileSourceMesh texture slot', () => {
    */
   it("draws Godot's placeholder for an AtlasTexture over a ViewportTexture in a TileSet that is not local to scene", async () => {
     const renderer = await render(viewportWindowSource(false, 'false'), null);
-    expect(distinctTexels(mapTexels(renderer))).toEqual(
-      distinctTexels(unconfiguredViewportTexture().image.data!)
-    );
+    expect(distinctTexels(mapTexels(renderer))).toEqual(distinctTexels(texture2DPlaceholder().image.data!));
   });
 });
 
@@ -224,9 +222,7 @@ describe('TileSourceMesh padding a texture with no image at load', () => {
   it('samples the placeholder at the padded regions when Godot never sets the ViewportTexture up', async () => {
     const renderer = await render(viewportWindowSource(true, 'false'), null);
     const mesh = drawnMeshOf(renderer);
-    expect(distinctTexels(mapTexels(renderer))).toEqual(
-      distinctTexels(unconfiguredViewportTexture().image.data!)
-    );
+    expect(distinctTexels(mapTexels(renderer))).toEqual(distinctTexels(texture2DPlaceholder().image.data!));
     // Atlas (1,0) pads to (19, 1, 16, 16) of the 4×4 placeholder.
     expect(Array.from(mesh.geometry.getAttribute('uv').array)).toEqual([
       4.75, 0.75, 8.75, 0.75, 4.75, -3.25, 8.75, -3.25,

@@ -37,6 +37,9 @@ renderer_rd's taps.** The stencil path, its volumes and its stencil buffer are g
 - `shadowTaps.ts` holds the taps once. PointLight2D and DirectionalLight2D each declare how
   to read one bin, since their maps differ only past their ends: the point map wraps, and the
   directional map clamps and reads an empty bin as lit.
+- A map holds `rendering/2d/shadow_atlas/size` bins, 2048 by default. The project setting
+  reaches the CPU build and the texture, and the shader reads the bin count from the texture's
+  width, so the two cannot disagree.
 - The point map is float32, nearest and repeating on u. A half float rounds the stored depth,
   and a fragment on the occluder line then reads as shadowed where Godot lights it.
 

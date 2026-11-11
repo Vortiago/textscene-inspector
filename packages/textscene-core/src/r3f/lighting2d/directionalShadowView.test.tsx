@@ -4,7 +4,7 @@
  * and how the editor camera reaches the map. These drive the real R3F loop.
  */
 
-import { describe, it, expect } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { useState, type ReactNode } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -17,6 +17,24 @@ import { fakeLightPassHost } from './testing/fakeLightPassHost';
 import type { CanvasClip, LightPassHost } from './lightPassHost';
 import type { Quad2, ShadowCasterEdges } from './shadowCasterEdges';
 import { canvasColorSpaceOf } from '../canvasColorSpace';
+import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
+
+/** The size Godot uses when the project sets none. */
+const DEFAULT_ATLAS_SIZE = canvasShadowAtlasSize(undefined);
+
+const projectSettingsMock = vi.hoisted(() => ({
+  settings: null as Record<string, string> | null,
+  viewportSize: { width: 1152, height: 648 },
+}));
+
+vi.mock('../contexts/ProjectSettingsContext', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../contexts/ProjectSettingsContext')>()),
+  useProjectSettings: () => projectSettingsMock,
+}));
+
+beforeEach(() => {
+  projectSettingsMock.settings = null;
+});
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
 
@@ -59,6 +77,7 @@ function binsOver(clip: CanvasClip, direction: { x: number; y: number }, maxDist
     direction,
     maxDistance,
     scale: clip.scale,
+    bins: DEFAULT_ATLAS_SIZE,
   };
   return Array.from(buildDirectionalShadowMap(view, CASTERS).bins);
 }
@@ -117,6 +136,11 @@ const STAGE_CLIP = clipOf(0, -648, 1152, 648);
 const DOWN = { x: 0, y: -1 };
 
 describe('useDirectionalShadow, in the map it builds', () => {
+  it('holds rendering/2d/shadow_atlas/size bins', async () => {
+    projectSettingsMock.settings = { 'rendering/2d/shadow_atlas/size': '512' };
+    expect((await mountOnStage()).map.image.width).toBe(512);
+  });
+
   it('sends an unrotated light down the screen, Godot +Y', async () => {
     const expected = binsOver(STAGE_CLIP, DOWN);
     expect(expected).not.toEqual(binsOver(STAGE_CLIP, { x: 1, y: 0 }));

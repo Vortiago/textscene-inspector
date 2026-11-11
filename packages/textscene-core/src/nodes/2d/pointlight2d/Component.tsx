@@ -20,6 +20,7 @@ import {
   type ShadowSampling,
 } from '../../../r3f/lighting2d/lightQuad';
 import { buildShadowPolarMap } from '../../../r3f/lighting2d/shadowPolarMap';
+import { useShadowAtlasSize } from '../../../r3f/lighting2d/useShadowAtlasSize';
 import { createShadowPoseUniforms, writeShadowPose } from '../../../r3f/lighting2d/shadowSampling';
 import { useLightSequence } from '../../../r3f/lighting2d/useLightSequence';
 import { lightDrawSequence } from '../../../r3f/lighting2d/lightSequence';
@@ -56,20 +57,14 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const props = node.properties as PointLight2DProperties;
   const { externalResources, internalResources } = useSceneResources();
 
-  // The cookie is often a GradientTexture2D, a radial falloff described inline,
-  // not an image. `useTexture2D` resolves either kind. The plain view in either canvas colour
-  // space, as `COOKIE_SAMPLER` reads the texels raw.
-  const { texture: cookieSource, missing } = useTexture2D(
-    props.texture,
-    externalResources,
-    internalResources,
-    'plain'
-  );
+  // `useTexture2D` resolves a GradientTexture2D, a gradient-less one to Godot's placeholder at its
+  // own size (`renderer_viewport.cpp:455-460`). The plain view, as `COOKIE_SAMPLER` reads texels raw.
+  const slot = useTexture2D(props.texture, externalResources, internalResources, 'plain');
   // A light that draws no quad makes no view: it would clone and upload a cookie nothing draws.
-  const cookie = useTextureView(props.enabled && !missing ? cookieSource : null, COOKIE_SAMPLER);
+  const cookie = useTextureView(props.enabled && !slot.missing ? slot.texture : null, COOKIE_SAMPLER);
 
   // With no texture the light adds nothing and draws no placeholder: measured with `pnpm ref:godot`.
-  const lights = props.enabled && !!cookieSource;
+  const lights = props.enabled && !!slot.texture;
   // `canvas.glsl:806` shadows only an item whose `light_mask` meets `shadow_item_cull_mask`. With
   // no reached item meeting it, the shadow lands nowhere, so the light casts nothing.
   const shadowReachesItem = (props.range_item_cull_mask & props.shadow_item_cull_mask) !== 0;
@@ -113,7 +108,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
       node={node}
       props={props}
       body={() =>
-        !props.enabled ? null : missing ? (
+        !props.enabled ? null : slot.missing ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
         ) : cookie ? (
           <>
@@ -232,11 +227,12 @@ function QuadMesh({
   // the tree: the world matrix it needs does not exist before that.
   const [quad, setQuad] = useState<THREE.Mesh | null>(null);
   const light = useShadowLightPose(quad, casters.length > 0);
+  const atlasSize = useShadowAtlasSize();
 
-  // A pure function of the pose and the casters, so it rebuilds exactly when either moves.
+  // A pure function of the pose, the casters and the atlas size, so it rebuilds exactly when one moves.
   const bins = useMemo(
-    () => (light && casters.length > 0 ? buildShadowPolarMap(light, casters) : null),
-    [light, casters]
+    () => (light && casters.length > 0 ? buildShadowPolarMap(light, casters, atlasSize) : null),
+    [light, casters, atlasSize]
   );
 
   // The texture outlives each rebuild: both quad materials hold its identity in

@@ -17,6 +17,8 @@ canvas item's default repeat to the viewport's disabled default (`viewport.h:419
 `viewport.cpp:4009`, `renderer_canvas_render_rd.cpp:2344`), and the light tap uses that
 item sampler (`canvas.glsl:774-782`). A light with no `texture` lights nothing and draws no
 placeholder, as `pnpm ref:godot` measures. A `texture` that is set but fails to load draws a placeholder.
+A `GradientTexture2D` with no `gradient` holds no image, so the light draws Godot's 4 by 4 magenta and
+black placeholder at its own size (`gradient_texture.cpp:229-233`, `texture_storage.cpp:588-595`).
 In a `use_hdr_2d` canvas the light adds to the linear albedo with no clamp, and its colour and cookie
 stay as authored (`canvas.glsl:715-760`). The SubViewport sheet shows it.
 
@@ -100,6 +102,23 @@ steps grow along the edge.
 At `shadow_filter_smooth = 0` the five PCF5 taps are one bin apart. Each tap mixes two
 neighbouring bins by how far past the first one it lands (`canvas.glsl:392-399`), which
 shifts the edge by half a bin.
+
+## The shadow atlas size
+
+<!-- compare: image=unit-pointlight2d-shadow-atlas-size status=done fixture=shadow-atlas-size/unit-pointlight2d-shadow-atlas-size.tscn -->
+
+`rendering/2d/shadow_atlas/size` sets the bins in each light's polar map, 2048 by default
+(`renderer_canvas_render_rd.cpp:2060`). A smaller size makes each bin and each PCF tap wider, so
+the penumbra widens and its staircase coarsens. The previewer reads the setting and builds the map to
+that size. Below 512, Godot reads the map of the wrong light when two lights cast shadows
+(`canvas.glsl:394`), and the previewer does not.
+
+## A GradientTexture2D with no gradient
+
+<!-- compare: image=unit-pointlight2d-gradient-no-gradient status=done fixture=unit-pointlight2d-gradient-no-gradient.tscn -->
+
+The texture never gets an image. The light draws the placeholder at its own 4 by 4 size times
+`texture_scale`, not at the texture's `width` and `height`. At scale 1 that is 8 magenta texels.
 
 ## Shadow receivers: shadow_item_cull_mask
 

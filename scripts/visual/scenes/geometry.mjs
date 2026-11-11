@@ -169,6 +169,9 @@ export const GEOMETRY_SCENES = [
   // before filtering, the opposite of the 2D canvas, so a procedural texture can
   // be right for Sprite2D and tagged wrongly here.
   { name: 'sprite3d-gradienttexture', file: 'unit-sprite3d-gradienttexture.tscn' },
+  // A GradientTexture2D with no gradient holds no image, so the sprite draws Godot's placeholder
+  // over a quad sized by the texture's width and height. Godot 4.6.3 `pnpm ref:diff` measures it within 1/255.
+  { name: 'sprite3d-gradient-no-gradient', file: 'unit-sprite3d-gradient-no-gradient.tscn' },
   { name: 'sprite3d-nested-modulate', file: 'unit-sprite3d-nested-modulate.tscn' },
   // The pass a default-`alpha_cut` sprite lands in, which Godot reads off the
   // generated shader: a texture with transparent texels in front of an opaque

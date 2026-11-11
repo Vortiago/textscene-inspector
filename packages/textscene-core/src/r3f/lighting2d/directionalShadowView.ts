@@ -7,7 +7,7 @@
  * hosts the light builds both, once its camera is framed.
  */
 
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import {
   buildDirectionalShadowMap,
@@ -15,6 +15,7 @@ import {
   type Affine2,
   type DirectionalShadowView,
 } from './directionalShadowMap';
+import { useShadowAtlasSize } from './useShadowAtlasSize';
 import { createDirectionalShadowTexture, writeDirectionalShadowMap } from './directionalLightQuad';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { perObject } from '../../utils/perObject.js';
@@ -56,6 +57,7 @@ function readShadowView(
   anchor: THREE.Object3D,
   clip: CanvasClip,
   maxDistance: number,
+  atlasSize: number,
   previous: DirectionalShadowView | null
 ): DirectionalShadowView {
   anchor.updateWorldMatrix(true, false);
@@ -65,12 +67,13 @@ function readShadowView(
     previous?.clip === quad &&
     previous.scale === clip.scale &&
     previous.maxDistance === maxDistance &&
+    previous.bins === atlasSize &&
     previous.direction.x === x &&
     previous.direction.y === y
   ) {
     return previous;
   }
-  return { clip: quad, direction: { x, y }, maxDistance, scale: clip.scale };
+  return { clip: quad, direction: { x, y }, maxDistance, scale: clip.scale, bins: atlasSize };
 }
 
 /** Reused by every frame's lookup, which reads it before the next one writes it. */
@@ -125,10 +128,12 @@ export function useDirectionalShadow(
   maxDistance: number
 ): DirectionalShadowSampler {
   const { registerPassStep } = useCanvasLighting2D();
-  const [sampler] = useState<DirectionalShadowSampler>(() => ({
-    map: createDirectionalShadowTexture(),
-    ndcToShadow: new THREE.Matrix3(),
-  }));
+  const atlasSize = useShadowAtlasSize();
+  // A new atlas size is a new texture: the old one has the wrong width.
+  const sampler = useMemo<DirectionalShadowSampler>(
+    () => ({ map: createDirectionalShadowTexture(atlasSize), ndcToShadow: new THREE.Matrix3() }),
+    [atlasSize]
+  );
   useDisposeOnRelease(sampler.map);
   const built = useRef<BuiltMap | null>(null);
 
@@ -140,7 +145,7 @@ export function useDirectionalShadow(
         built.current = null;
         return;
       }
-      const view = readShadowView(anchor, clip, maxDistance, built.current?.view ?? null);
+      const view = readShadowView(anchor, clip, maxDistance, atlasSize, built.current?.view ?? null);
       if (built.current?.view !== view || built.current.casters !== casters) {
         const { bins, worldToShadow } = buildDirectionalShadowMap(view, casters);
         writeDirectionalShadowMap(sampler.map, bins);
@@ -148,7 +153,7 @@ export function useDirectionalShadow(
       }
       writeNdcToShadow(sampler.ndcToShadow, camera, built.current.worldToShadow);
     },
-    [anchor, casters, maxDistance, sampler]
+    [anchor, casters, maxDistance, atlasSize, sampler]
   );
   useLayoutEffect(() => registerPassStep(step), [registerPassStep, step]);
 

@@ -5,7 +5,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
+import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
+import { SHADOW_MAP_FAR } from './shadowPolarMap';
 import {
   buildDirectionalShadowMap,
   ndcToShadowTransform,
@@ -13,6 +14,9 @@ import {
 } from './directionalShadowMap';
 import { type OccluderCullMode, type Quad2, type ShadowCasterEdges } from './shadowCasterEdges';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
+
+/** The size Godot uses when the project sets none. */
+const DEFAULT_ATLAS_SIZE = canvasShadowAtlasSize(undefined);
 
 /**
  * A 1000 px square view, the light travelling straight down (previewer -Y). The centre is
@@ -31,7 +35,7 @@ function squareView(
   direction = { x: 0, y: -1 },
   scale = { x: 1, y: 1 }
 ): DirectionalShadowView {
-  return { clip: SQUARE, direction, maxDistance, scale };
+  return { clip: SQUARE, direction, maxDistance, scale, bins: DEFAULT_ATLAS_SIZE };
 }
 
 function segment(
@@ -56,7 +60,7 @@ function segmentBounds(ax: number, ay: number, bx: number, by: number): Quad2 {
 
 /** The bin whose centre the across coordinate `x` of `squareView` lands in. */
 function binAt(x: number): number {
-  return Math.floor((0.5 + (x - 500) / (1000 * Math.SQRT2)) * SHADOW_MAP_BINS);
+  return Math.floor((0.5 + (x - 500) / (1000 * Math.SQRT2)) * DEFAULT_ATLAS_SIZE);
 }
 
 describe('buildDirectionalShadowMap: the projection', () => {
@@ -73,6 +77,16 @@ describe('buildDirectionalShadowMap: the projection', () => {
     expect(bins[879]).toBeCloseTo(0.4, 6);
     expect(bins[1168]).toBeCloseTo(0.4, 6);
     expect(bins[1169]).toBe(SHADOW_MAP_FAR);
+  });
+
+  it('fills the same share of a map of another size', () => {
+    // 200 / 1414.2 of 256 bins is 36 bins, centred on the middle bin.
+    const view = { ...squareView(), bins: 256 };
+    const { bins } = buildDirectionalShadowMap(view, [segment(400, 600, 600, 600)]);
+    expect(bins).toHaveLength(256);
+    expect(bins[128]).toBeCloseTo(0.4, 6);
+    expect(bins.filter((depth) => depth < SHADOW_MAP_FAR).length).toBeCloseTo(36, -1);
+    expect(bins[255]).toBe(SHADOW_MAP_FAR);
   });
 
   it('starts the band max_distance upstream of the view and deepens z_far by it', () => {
@@ -107,7 +121,7 @@ describe('buildDirectionalShadowMap: the projection', () => {
     const [m00, m01, m02, m10, m11, m12] = worldToShadow;
     const u = m00 * 300 + m01 * 500 + m02;
     expect(m10 * 300 + m11 * 500 + m12).toBeCloseTo(0.3, 12);
-    expect(bins[Math.floor(u * SHADOW_MAP_BINS)]).toBeCloseTo(0.3, 6);
+    expect(bins[Math.floor(u * DEFAULT_ATLAS_SIZE)]).toBeCloseTo(0.3, 6);
   });
 });
 

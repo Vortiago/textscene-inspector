@@ -27,6 +27,7 @@ import {
   VOLUMETRIC_FOG_DEFAULTS,
   type VolumetricFogProjectSettings,
 } from '../godot/rendering/environment/volumetricFog.js';
+import { canvasShadowAtlasSize } from '../godot/rendering/canvasShadowAtlas.js';
 import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
 import {
   SSAO_PROJECT_DEFAULTS,
@@ -198,6 +199,14 @@ const canvasTextureDefaultsOf = perObject((settings: ProjectSettings): CanvasIte
  */
 export function projectCanvasTextureDefaults(settings: ProjectSettings | null): CanvasItemTextureDefaults {
   return settings ? canvasTextureDefaultsOf(settings) : VIEWPORT_CANVAS_TEXTURE_DEFAULTS;
+}
+
+/**
+ * `rendering/2d/shadow_atlas/size`, the texels in one 2D light's shadow map
+ * (`renderer_canvas_render_rd.cpp:2060`).
+ */
+export function projectShadowAtlasSize(settings: ProjectSettings | null): number {
+  return canvasShadowAtlasSize(parseOptionalInt(settings?.['rendering/2d/shadow_atlas/size']));
 }
 
 /** `rendering/lightmapping/primitive_meshes/texel_size`, the world size of a texel in a PrimitiveMesh's UV2. */

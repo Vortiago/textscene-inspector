@@ -12,13 +12,6 @@
 import { edgeCastsShadow, lightRectTest, type LightRect, type ShadowCasterEdges } from './shadowCasterEdges';
 
 /**
- * Texels in one light's map: the `rendering/2d/shadow_atlas/size` row (project
- * default 2048) that `light_update_shadow` (`drivers/gles3/rasterizer_canvas_gles3.cpp:1639`)
- * fills through four 90° frusta, so it is also the bins per full turn.
- */
-export const SHADOW_MAP_BINS = 2048;
-
-/**
  * What a bin holds where nothing occludes: Godot clears the row to `p_far`,
  * which is 1.0 once normalised by `z_far`. A fragment inside the light's rect
  * never reaches it: its axis distance is at most half the diagonal, against a
@@ -43,9 +36,6 @@ export function shadowMapZFarInv(radius: number): number {
 
 /** cos/sin of 45°, `canvas.glsl:824`'s quadrant-select rotation. */
 const SQRT1_2 = 0.7071067811865476;
-
-/** The four 90° frusta split the row evenly. */
-const BINS_PER_QUADRANT = SHADOW_MAP_BINS / 4;
 
 export interface ShadowPolarLight {
   /**
@@ -94,11 +84,12 @@ function shadowMapCoord(x: number, yUp: number): number {
 /**
  * Bin `index`'s ray in Godot light-local space, its axis component 1 so the ray
  * parameter is the stored axis distance. The inverse of `shadowMapCoord`, taken
- * at the texel centre, where the rasteriser decides coverage.
+ * at the texel centre, where the rasteriser decides coverage. Each frustum fills
+ * `columns` (`floor(bins / 4)`, `renderer_canvas_render_rd.cpp:1095`).
  */
-function binRay(index: number, out: { x: number; y: number }): void {
-  const u = (index + 0.5) / SHADOW_MAP_BINS;
-  const quadrant = Math.floor(index / BINS_PER_QUADRANT);
+function binRay(index: number, columns: number, out: { x: number; y: number }): void {
+  const quadrant = Math.floor(index / columns);
+  const u = (quadrant + ((index % columns) + 0.5) / columns) / 4;
   // Quadrant 0 rasterises `(x, y, 0) → (y, 0, -x)` into `glViewport(0, …, size / 4, 2)`,
   // so a column lands at `(y/x) * (size/8) + (size/8)`: the texel `tex_ofs` addresses.
   if (quadrant === 0) {
@@ -121,17 +112,23 @@ function binRay(index: number, out: { x: number; y: number }): void {
 }
 
 /**
- * The map for one light: `SHADOW_MAP_BINS` normalised axis distances, and
- * `SHADOW_MAP_FAR` where nothing casts. `casters` are world-space occluders
+ * The map for one light: `bins` normalised axis distances, and `SHADOW_MAP_FAR` where nothing
+ * casts. `bins` is the `rendering/2d/shadow_atlas/size` row, which `light_update_shadow`
+ * (`drivers/gles3/rasterizer_canvas_gles3.cpp:1639`) fills through four 90° frusta of `bins / 4`
+ * columns each, so it is also the bins per full turn. `casters` are world-space occluders
  * narrowed by `shadow_item_cull_mask`, and `lightRectTest` drops those outside the light's rect.
  */
 export function buildShadowPolarMap(
   light: ShadowPolarLight,
-  casters: readonly ShadowCasterEdges[]
+  casters: readonly ShadowCasterEdges[],
+  bins: number
 ): Float32Array {
   // Built on the CPU from settled inputs, so the goldens see one exact texture.
   // A GPU raster carries the driver's fill-rule variance into the baseline.
-  const map = new Float32Array(SHADOW_MAP_BINS).fill(SHADOW_MAP_FAR);
+  // The `bins % 4` last texels are never drawn and keep the far value, so the frusta tile only `drawn`.
+  const columns = Math.floor(bins / 4);
+  const drawn = 4 * columns;
+  const map = new Float32Array(bins).fill(SHADOW_MAP_FAR);
 
   const near = light.radius * NEAR_SCALE;
   const far = light.radius * FAR_SCALE;
@@ -185,12 +182,12 @@ export function buildShadowPolarMap(
 
       // One bin of slack each side: the range is only a bound on the walk, and
       // the `t` test below is what actually decides coverage.
-      const first = Math.ceil(start * SHADOW_MAP_BINS - 1.5);
-      const last = Math.floor((start + span) * SHADOW_MAP_BINS - 0.5) + 1;
+      const first = Math.ceil(start * drawn - 1.5);
+      const last = Math.floor((start + span) * drawn - 0.5) + 1;
 
       for (let bin = first; bin <= last; bin += 1) {
-        const index = ((bin % SHADOW_MAP_BINS) + SHADOW_MAP_BINS) % SHADOW_MAP_BINS;
-        binRay(index, ray);
+        const index = ((bin % drawn) + drawn) % drawn;
+        binRay(index, columns, ray);
 
         // s·ray = A + t·e, solved by crossing with e and with ray in turn.
         const denominator = ray.x * ey - ray.y * ex;
