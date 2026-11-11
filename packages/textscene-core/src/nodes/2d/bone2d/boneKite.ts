@@ -9,7 +9,11 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { transform2DGetScale, type Transform2DColumns } from '../../../godot/math/transform2d.js';
+import {
+  transform2DGetScale,
+  transform2DOrigin,
+  type Transform2DColumns,
+} from '../../../godot/math/transform2d.js';
 import {
   normalizedVector2,
   vector2Add,
@@ -98,9 +102,7 @@ export function boneKitesOf(
   const globalRotation = Math.atan2(global.b, global.a);
   const rels =
     childOrigins.length > 0
-      ? childOrigins.map((origin) =>
-          rotated(vector2Sub(origin, { x: global.tx, y: global.ty }), -globalRotation)
-        )
+      ? childOrigins.map((origin) => rotated(vector2Sub(origin, transform2DOrigin(global)), -globalRotation))
       : reachRel(reach, scale);
   return rels.map((rel) => {
     const kite = kiteTo(rel);

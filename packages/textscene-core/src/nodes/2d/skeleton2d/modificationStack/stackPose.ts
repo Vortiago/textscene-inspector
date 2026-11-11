@@ -14,9 +14,10 @@ import {
   affineInverseTransform2D,
   multiplyTransform2D,
   transform2DFromParts,
+  transform2DDecompose,
   transform2DGetRotation,
   transform2DGetScale,
-  transform2DGetSkew,
+  transform2DOrigin,
   transform2DSetRotation,
   transform2DXform,
   type Transform2DColumns,
@@ -26,17 +27,14 @@ import type { Vector2 } from '../../../../godot/math/vector.js';
 import type { StackBone, StackPlacement } from './stackScene';
 
 /** The values `Node2D::_update_xform_values` reads from a transform (`node_2d.cpp:127-133`). */
-interface XformValues {
-  position: Vector2;
-  rotation: number;
-  scale: Vector2;
-  skew: number;
-}
+type XformValues = ReturnType<typeof transform2DDecompose>;
 
 export class StackPose {
   private readonly transforms: Transform2DColumns[];
   /** Null while the values are stale: `set_transform` marks them dirty (`node_2d.cpp:374`). */
   private readonly values: (XformValues | null)[];
+  /** Null for a bone whose global transform no read made since a bone last moved. */
+  private readonly globals: (Transform2DColumns | null)[];
 
   constructor(
     private readonly skeletonGlobal: Transform2DColumns,
@@ -45,6 +43,7 @@ export class StackPose {
   ) {
     this.transforms = [...locals];
     this.values = locals.map(() => null);
+    this.globals = locals.map(() => null);
   }
 
   /** `Skeleton2D::get_bone` (`skeleton_2d.cpp:624-628`): whether `bone` indexes a bone. */
@@ -68,6 +67,7 @@ export class StackPose {
   setTransform(bone: number, transform: Transform2DColumns): void {
     this.transforms[bone] = transform;
     this.values[bone] = null;
+    this.globals.fill(null);
   }
 
   /** `Node2D::get_rotation`: the stored value, which `set_rotation` does not wrap. */
@@ -80,6 +80,7 @@ export class StackPose {
     const values = { ...this.valuesOf(bone), rotation };
     this.transforms[bone] = transform2DFromParts(rotation, values.scale, values.skew, values.position);
     this.values[bone] = values;
+    this.globals.fill(null);
   }
 
   /** `Node2D::rotate` (`node_2d.cpp:249-252`). */
@@ -88,12 +89,11 @@ export class StackPose {
   }
 
   globalTransform(bone: number): Transform2DColumns {
-    return multiplyTransform2D(this.parentGlobal(bone), this.transforms[bone]!);
+    return (this.globals[bone] ??= multiplyTransform2D(this.parentGlobal(bone), this.transforms[bone]!));
   }
 
   globalPosition(bone: number): Vector2 {
-    const { tx, ty } = this.globalTransform(bone);
-    return { x: tx, y: ty };
+    return transform2DOrigin(this.globalTransform(bone));
   }
 
   globalRotation(bone: number): number {
@@ -140,12 +140,6 @@ export class StackPose {
   }
 
   private valuesOf(bone: number): XformValues {
-    const transform = this.transforms[bone]!;
-    return (this.values[bone] ??= {
-      position: { x: transform.tx, y: transform.ty },
-      rotation: transform2DGetRotation(transform),
-      scale: transform2DGetScale(transform),
-      skew: transform2DGetSkew(transform),
-    });
+    return (this.values[bone] ??= transform2DDecompose(this.transforms[bone]!));
   }
 }

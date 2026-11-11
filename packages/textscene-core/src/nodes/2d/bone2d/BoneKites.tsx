@@ -165,7 +165,7 @@ function useKiteFollow(
       }
       const objects = follow.objects();
       if (!objects) return void geometry.setDrawRange(0, 0);
-      if (!follow.hasMoved()) return;
+      if (!follow.hasMoved(objects)) return;
       objects.forEach((object, i) => canvasTransformInto(transforms[i]!, object));
       const [bone, ...children] = transforms;
       writeKites(

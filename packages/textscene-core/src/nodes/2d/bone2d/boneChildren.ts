@@ -7,9 +7,8 @@
 
 import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
 import type { LiveTree } from '../../../r3f/liveSceneTree.js';
-import { perObject } from '../../../utils/perObject.js';
-import { sameData } from '../../../utils/sameData.js';
-import { bindSkeleton2DRigs, skeletonOfBone } from '../skeleton2d/skeletonRig.js';
+import { keptPerLivePath } from '../../../r3f/keptPerLivePath.js';
+import { bindSkeleton2DRigs } from '../skeleton2d/skeletonRig.js';
 
 /** What a Bone2D needs of the tree to draw its kite. */
 export interface BoneKiteSource {
@@ -33,17 +32,7 @@ export interface BoneJoint {
   index: number;
 }
 
-/** Written only by {@link kept}: the last source of each bone node, by live path. */
-const keptSources = perObject(() => new Map<string, BoneKiteSource>());
-
-/** `source`, or the equal one this bone had before, so a load that changes nothing re-renders nothing. */
-function kept(node: object, bonePath: string, source: BoneKiteSource): BoneKiteSource {
-  const sources = keptSources(node);
-  const previous = sources.get(bonePath);
-  if (previous && sameData(previous, source)) return previous;
-  sources.set(bonePath, source);
-  return source;
-}
+const kept = keptPerLivePath<BoneKiteSource>();
 
 /** The kite source of each Bone2D of `tree`, by the live path of the bone. */
 export function bindBoneChildren(tree: LiveTree): ReadonlyMap<string, BoneKiteSource> {
@@ -57,16 +46,14 @@ export function bindBoneChildren(tree: LiveTree): ReadonlyMap<string, BoneKiteSo
     descend(path);
     bones.push({ path, node: step.node, children });
   });
-  const rigs = liveScenePassResults(bindSkeleton2DRigs, tree);
-  const jointOf = (path: string): BoneJoint | null => {
-    const skeletonPath = skeletonOfBone(path, tree);
-    const index = skeletonPath === null ? undefined : rigs.get(skeletonPath)?.indexOf.get(path);
-    return skeletonPath === null || index === undefined ? null : { skeletonPath, index };
-  };
+  const joints = new Map<string, BoneJoint>();
+  for (const [skeletonPath, rig] of liveScenePassResults(bindSkeleton2DRigs, tree)) {
+    for (const [bonePath, index] of rig.indexOf) joints.set(bonePath, { skeletonPath, index });
+  }
   return new Map(
     bones.map(({ path, node, children }, rank) => [
       path,
-      kept(node, path, { children, drawOrder: rank / (rank + 1), joint: jointOf(path) }),
+      kept(node, path, { children, drawOrder: rank / (rank + 1), joint: joints.get(path) ?? null }),
     ])
   );
 }

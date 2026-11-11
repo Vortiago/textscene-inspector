@@ -39,11 +39,10 @@ export class DrawnNodeFollow {
   }
 
   /**
-   * Whether an object of {@link objects} moved since the last call, and always true for the first
-   * call with other objects. False while a path has no drawn object.
+   * Whether an object of `objects`, the answer {@link objects} gave this render, moved since the
+   * last call, and always true for the first call with other objects.
    */
-  hasMoved(): boolean {
-    const objects = this.objects();
-    return objects !== null && this.watch.hasMoved(objects);
+  hasMoved(objects: readonly THREE.Object3D[]): boolean {
+    return this.watch.hasMoved(objects);
   }
 }

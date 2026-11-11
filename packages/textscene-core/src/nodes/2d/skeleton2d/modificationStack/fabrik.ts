@@ -11,6 +11,7 @@
 import {
   transform2DGetRotation,
   transform2DLookingAt,
+  transform2DOrigin,
   transform2DSetRotation,
   transform2DSetScale,
   type Transform2DColumns,
@@ -40,10 +41,6 @@ interface Chain {
   transforms: Transform2DColumns[];
   origin: Vector2;
   target: Transform2DColumns;
-}
-
-function originOf(transform: Transform2DColumns): Vector2 {
-  return { x: transform.tx, y: transform.ty };
 }
 
 function withOrigin(transform: Transform2DColumns, origin: Vector2): Transform2DColumns {
@@ -87,7 +84,7 @@ export function executeFABRIK(modification: FABRIKModification2D, frame: StackFr
     pose.globalPosition(lastBone),
     vector2Scaled(direction(endAngle), chain.reaches[last]!)
   );
-  if (vector2DistanceTo(end, originOf(target)) > CHAIN_TOLERANCE) {
+  if (vector2DistanceTo(end, transform2DOrigin(target)) > CHAIN_TOLERANCE) {
     for (let iteration = 0; iteration < CHAIN_MAX_ITERATIONS; iteration++) {
       chainBackwards(chain);
       chainForwards(chain);
@@ -103,20 +100,20 @@ function chainBackwards(chain: Chain): void {
   const joint = modification.joints[last]!;
   const magnetised = withOrigin(
     transforms[last]!,
-    vector2Add(originOf(transforms[last]!), joint.magnetPosition)
+    vector2Add(transform2DOrigin(transforms[last]!), joint.magnetPosition)
   );
-  const aimed = transform2DLookingAt(magnetised, originOf(target));
+  const aimed = transform2DLookingAt(magnetised, transform2DOrigin(target));
   const angle = joint.useTargetRotation ? transform2DGetRotation(target) : transform2DGetRotation(aimed);
   transforms[last] = withOrigin(
     aimed,
-    vector2Sub(originOf(target), vector2Scaled(direction(angle), reaches[last]!))
+    vector2Sub(transform2DOrigin(target), vector2Scaled(direction(angle), reaches[last]!))
   );
 
   for (let i = last - 1; i >= 0; i--) {
-    const next = originOf(transforms[i + 1]!);
+    const next = transform2DOrigin(transforms[i + 1]!);
     // The first joint has no magnet (`:245-247`).
     const magnet = i === 0 ? { x: 0, y: 0 } : modification.joints[i]!.magnetPosition;
-    const current = vector2Add(originOf(transforms[i]!), magnet);
+    const current = vector2Add(transform2DOrigin(transforms[i]!), magnet);
     const weight = reaches[i]! / vector2DistanceTo(current, next);
     transforms[i] = withOrigin(transforms[i]!, vector2Lerp(next, current, weight));
   }
@@ -130,8 +127,8 @@ function chainForwards(chain: Chain): void {
   const { transforms, reaches } = chain;
   transforms[0] = withOrigin(transforms[0]!, chain.origin);
   for (let i = 0; i < transforms.length - 1; i++) {
-    const current = originOf(transforms[i]!);
-    const next = originOf(transforms[i + 1]!);
+    const current = transform2DOrigin(transforms[i]!);
+    const next = transform2DOrigin(transforms[i + 1]!);
     const weight = reaches[i]! / vector2DistanceTo(next, current);
     transforms[i + 1] = withOrigin(transforms[i]!, vector2Lerp(current, next, weight));
   }
@@ -144,10 +141,10 @@ function applyChain(chain: Chain, frame: StackFrame): void {
   bones.forEach((bone, i) => {
     const isLast = i === bones.length - 1;
     let faced: Transform2DColumns;
-    if (!isLast) faced = transform2DLookingAt(transforms[i]!, originOf(transforms[i + 1]!));
+    if (!isLast) faced = transform2DLookingAt(transforms[i]!, transform2DOrigin(transforms[i + 1]!));
     else if (modification.joints[i]!.useTargetRotation) {
       faced = transform2DSetRotation(transforms[i]!, transform2DGetRotation(target));
-    } else faced = transform2DLookingAt(transforms[i]!, originOf(target));
+    } else faced = transform2DLookingAt(transforms[i]!, transform2DOrigin(target));
     const turned = transform2DSetRotation(faced, transform2DGetRotation(faced) - pose.bone(bone).boneAngle);
     pose.setGlobalTransform(bone, transform2DSetScale(turned, pose.globalScale(bone)));
     frame.override(bone, pose.transform(bone));

@@ -17,7 +17,7 @@ import {
 } from '../../../godot/math/transform2d.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
-import { perObject } from '../../../utils/perObject.js';
+import { keptPerLivePath } from '../../../r3f/keptPerLivePath.js';
 import { sameData } from '../../../utils/sameData.js';
 import { boneReachOf, type BoneReach } from '../bone2d/boneReach.js';
 import type { Bone2DProperties } from '../bone2d/types.js';
@@ -49,7 +49,8 @@ export interface Skeleton2DRig {
 export function bindSkeleton2DRigs(tree: LiveTree): ReadonlyMap<string, Skeleton2DRig> {
   const rigs = new Map<string, Skeleton2DRig>();
   tree.fold<void, void>(undefined, (link, _inherited, descend) => {
-    if (link.step.node.type === 'Skeleton2D') rigs.set(link.path, kept(link, rigOf(link, tree)));
+    if (link.step.node.type === 'Skeleton2D')
+      rigs.set(link.path, kept(link.step.node, link.path, rigOf(link, tree)));
     descend();
   });
   return rigs;
@@ -98,17 +99,8 @@ function firstBoneChildPosition(bone: LiveLink, tree: LiveTree): { x: number; y:
   return positions.find((position) => position !== null) ?? null;
 }
 
-/** Written only by {@link kept}: the last rig of each skeleton node, by live path. */
-const keptRigs = perObject(() => new Map<string, Skeleton2DRig>());
-
-/** `rig`, or the equal one this skeleton had before, so a load that changes nothing re-renders nothing. */
-function kept(link: LiveLink, rig: Skeleton2DRig): Skeleton2DRig {
-  const rigs = keptRigs(link.step.node);
-  const previous = rigs.get(link.path);
-  if (previous && sameData(previous.bones, rig.bones)) return previous;
-  rigs.set(link.path, rig);
-  return rig;
-}
+/** A rig holds a map beside its bones, so the bones alone tell two rigs apart. */
+const kept = keptPerLivePath<Skeleton2DRig>((previous, rig) => sameData(previous.bones, rig.bones));
 
 /**
  * The live path of the Skeleton2D the Bone2D at `bonePath` joins, or null where its chain of Bone2D

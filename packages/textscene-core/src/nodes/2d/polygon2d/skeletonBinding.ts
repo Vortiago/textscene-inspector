@@ -8,8 +8,7 @@
 import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { resolveLiteralOnLiveTree } from '../../../r3f/nodePathUniqueNames.js';
-import { perObject } from '../../../utils/perObject.js';
-import { sameData } from '../../../utils/sameData.js';
+import { keptPerLivePath } from '../../../r3f/keptPerLivePath.js';
 import { bindSkeleton2DRigs, skeletonOfBone, type Skeleton2DRig } from '../skeleton2d/skeletonRig.js';
 import { vertexInfluences, type BoneWeights, type VertexInfluences } from './polygonSkin.js';
 import type { Polygon2DProperties } from './types.js';
@@ -22,13 +21,15 @@ export interface PolygonSkeletonBinding {
   influences: VertexInfluences;
 }
 
+const kept = keptPerLivePath<PolygonSkeletonBinding>();
+
 /** The binding of every Polygon2D in `tree` that a Skeleton2D deforms, by the polygon's live path. */
 export function bindPolygonsToSkeletons(tree: LiveTree): ReadonlyMap<string, PolygonSkeletonBinding> {
   const rigs = liveScenePassResults(bindSkeleton2DRigs, tree);
   const bindings = new Map<string, PolygonSkeletonBinding>();
   tree.fold<void, void>(undefined, (link, _, descend) => {
     const binding = bindingOf(link, tree, rigs);
-    if (binding) bindings.set(link.path, kept(link, binding));
+    if (binding) bindings.set(link.path, kept(link.step.node, link.path, binding));
     descend();
   });
   return bindings;
@@ -85,16 +86,4 @@ function boneIndexOf(
   const ownSkeleton = skeletonOfBone(bonePath, tree);
   if (ownSkeleton === null) return -1;
   return rigs.get(ownSkeleton)?.indexOf.get(bonePath) ?? -1;
-}
-
-/** Written only by {@link kept}: the last binding of each polygon node, by live path. */
-const keptBindings = perObject(() => new Map<string, PolygonSkeletonBinding>());
-
-/** `binding`, or the equal one this polygon had before, so a load that changes nothing re-renders nothing. */
-function kept(link: LiveLink, binding: PolygonSkeletonBinding): PolygonSkeletonBinding {
-  const bindings = keptBindings(link.step.node);
-  const previous = bindings.get(link.path);
-  if (previous && sameData(previous, binding)) return previous;
-  bindings.set(link.path, binding);
-  return binding;
 }

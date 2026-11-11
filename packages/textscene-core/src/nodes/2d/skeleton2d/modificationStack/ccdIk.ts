@@ -11,9 +11,9 @@
 import {
   transform2DGetRotation,
   transform2DLookingAt,
+  transform2DOrigin,
   transform2DSetRotation,
   transform2DSetScale,
-  type Transform2DColumns,
 } from '../../../../godot/math/transform2d.js';
 import { storedReal as f } from '../../../../godot/math/real.js';
 import type { Vector2 } from '../../../../godot/math/vector.js';
@@ -23,10 +23,6 @@ import type {
 } from '../../../../resources/skeleton/skeletonmodificationstack2d/types';
 import { clampAngle } from './clampAngle';
 import { node2DGlobal, type StackFrame } from './stackFrame';
-
-function originOf(transform: Transform2DColumns): Vector2 {
-  return { x: transform.tx, y: transform.ty };
-}
 
 /** `from.angle_to_point(to)`: the angle of the line from `from` to `to`. */
 function angleToPoint(from: Vector2, to: Vector2): number {
@@ -39,7 +35,7 @@ export function executeCCDIK(modification: CCDIKModification2D, frame: StackFram
     const target = node2DGlobal(frame, modification.target);
     const tip = node2DGlobal(frame, modification.tip);
     if (!target || !tip) return;
-    executeJoint(joint, originOf(target), originOf(tip), frame);
+    executeJoint(joint, transform2DOrigin(target), transform2DOrigin(tip), frame);
   }
 }
 
@@ -49,7 +45,7 @@ function executeJoint(joint: CCDIKJoint2D, target: Vector2, tip: Vector2, frame:
   const bone = joint.bone.index;
   if (!pose.has(bone)) return;
   const global = pose.globalTransform(bone);
-  const origin = originOf(global);
+  const origin = transform2DOrigin(global);
   const rotation = joint.rotateFromJoint
     ? f(transform2DGetRotation(transform2DLookingAt(global, target)) - pose.bone(bone).boneAngle)
     : f(transform2DGetRotation(global) + f(angleToPoint(target, origin) - angleToPoint(tip, origin)));

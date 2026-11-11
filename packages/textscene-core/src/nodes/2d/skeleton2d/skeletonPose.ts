@@ -32,6 +32,10 @@ export interface StackTarget {
   path: string;
   /** Whether the node is a Node2D, which alone a modification can aim at. */
   isNode2D: boolean;
+  /** The index of the node in the rig of the skeleton, or -1 for a node that is no bone of it. */
+  boneIndex: number;
+  /** The index of the nearest bone above the node, which carries the node as it moves, or -1. */
+  carrier: number;
 }
 
 /** A modification stack with the nodes its NodePaths name. */
@@ -41,25 +45,30 @@ export interface BoundStack {
   targets: ReadonlyMap<string, StackTarget>;
 }
 
-/** What a Polygon2D skins with. Each object is the pose's own: a reader copies what it keeps. */
+/**
+ * What a Polygon2D skins with. The object and its transforms are the pose's own for as long as the
+ * pose lives: a reader copies what it keeps.
+ */
 export interface DrawnSkeletonPose {
   /** The global transform of the Skeleton2D. */
-  skeletonGlobal: Transform2DColumns;
+  readonly skeletonGlobal: Transform2DColumns;
   /** `accum * rest_inverse` of each bone, by skeleton index (`skeleton_2d.cpp:600-602`). */
-  boneMatrices: readonly Transform2DColumns[];
-  /** Moves each time a transform of the pose moved, and no two poses share a value. */
-  version: number;
+  readonly boneMatrices: readonly Transform2DColumns[];
+  /** Moves each time a transform of this pose moved. */
+  readonly version: number;
 }
 
-/** The local matrix a bone held before the pose wrote on it. */
-interface WrittenBone {
+/** A bone the solved pose moves from the pose it is drawn with. */
+interface MovedBone {
   object: THREE.Object3D;
-  matrix: THREE.Matrix4;
-  matrixAutoUpdate: boolean;
+  /** Takes the drawn local matrix of the bone to the solved one. */
+  turn: THREE.Matrix4;
+  /** Whether no bone above this one moves, so its world update reaches every moved bone below. */
+  isTopmost: boolean;
+  /** Written by each write: the local matrix the bone held, which the restore puts back. */
+  held: THREE.Matrix4;
+  heldAutoUpdate: boolean;
 }
-
-/** Written only by a {@link Skeleton2DPose}, so a reader tells any two states of any poses apart. */
-let lastVersion = 0;
 
 export class Skeleton2DPose {
   /** The skeleton, then each bone by skeleton index. */
@@ -67,11 +76,16 @@ export class Skeleton2DPose {
   /** The Node2Ds the stack names that are no bone of the skeleton, in the order of `anchorPaths`. */
   private readonly anchors: DrawnNodeFollow;
   private readonly anchorPaths: readonly string[];
+  /** Written only by {@link write}: what `bodies` found for the render under way. */
+  private drawnBodies: readonly THREE.Object3D[] | null = null;
   /** Written only by {@link write}: null while the stack has not run on the bones as they are drawn. */
   private solved: SolvedPose | null = null;
-  /** Written only by {@link write}, and emptied by {@link restore}. */
-  private written: WrittenBone[] = [];
-  private version = ++lastVersion;
+  /** Written with `solved`: the bones it moves. */
+  private moved: MovedBone[] = [];
+  /** Whether the moved bones hold the solved pose now. Set by {@link write}, cleared by {@link restore}. */
+  private isWritten = false;
+  /** The one object {@link drawn} hands out. Its version moves in {@link write}. */
+  private readonly pose: { -readonly [K in keyof DrawnSkeletonPose]: DrawnSkeletonPose[K] };
   /** The version {@link drawn} last made the bone matrices at. */
   private matricesVersion = -1;
   private readonly skeletonGlobal = mutableTransform2D();
@@ -88,11 +102,12 @@ export class Skeleton2DPose {
     const targets = [...(bound?.targets.values() ?? [])];
     this.anchorPaths = [
       ...new Set(
-        targets.filter(({ path, isNode2D }) => isNode2D && !rig.indexOf.has(path)).map(({ path }) => path)
+        targets.filter(({ isNode2D, boneIndex }) => isNode2D && boneIndex < 0).map(({ path }) => path)
       ),
     ];
     this.anchors = new DrawnNodeFollow(registry, this.anchorPaths);
     this.boneMatrices = rig.bones.map(() => mutableTransform2D());
+    this.pose = { skeletonGlobal: this.skeletonGlobal, boneMatrices: this.boneMatrices, version: 0 };
   }
 
   /**
@@ -101,34 +116,31 @@ export class Skeleton2DPose {
    * the solved pose for this render.
    */
   write(): void {
-    const bodies = this.bodies.objects();
+    const bodies = (this.drawnBodies = this.bodies.objects());
     if (!bodies) return;
     const anchors = this.bound ? this.anchors.objects() : null;
     // Both asked, not short-circuited: each watch must see every render.
-    const hasBodyMoved = this.bodies.hasMoved();
-    const hasAnchorMoved = this.anchors.hasMoved();
+    const hasBodyMoved = this.bodies.hasMoved(bodies);
+    const hasAnchorMoved = anchors !== null && this.anchors.hasMoved(anchors);
     if (hasBodyMoved || hasAnchorMoved) {
-      this.version = ++lastVersion;
-      this.solved = null;
+      this.pose.version++;
+      this.forgetSolve();
     }
-    if (!this.bound || !anchors) {
-      this.solved = null;
-      return;
-    }
-    const cache = cacheLocals(bodies, this.rig);
-    this.solved ??= solveStack(this.sceneOf(bodies, anchors), cache, this.bound.stack);
-    this.written = writeLocals(bodies, this.rig, cache, this.solved.locals);
+    if (!this.bound || !anchors) return this.forgetSolve();
+    if (!this.solved) this.solve(bodies, anchors, this.bound.stack);
+    this.writeMoved();
   }
 
   /** Runs once a render has drawn: each bone the pose wrote takes back the matrix it held. */
   restore(): void {
-    for (const { object, matrix, matrixAutoUpdate } of this.written) {
-      object.matrix.copy(matrix);
-      object.matrixAutoUpdate = matrixAutoUpdate;
+    if (!this.isWritten) return;
+    this.isWritten = false;
+    for (const { object, held, heldAutoUpdate } of this.moved) {
+      object.matrix.copy(held);
+      object.matrixAutoUpdate = heldAutoUpdate;
       // three updates a world matrix only where the local one says it changed.
       object.matrixWorldNeedsUpdate = true;
     }
-    this.written = [];
   }
 
   /**
@@ -136,13 +148,12 @@ export class Skeleton2DPose {
    * is not drawn.
    */
   drawn(): DrawnSkeletonPose | null {
-    const bodies = this.bodies.objects();
-    if (!bodies) return null;
-    if (this.matricesVersion !== this.version) {
-      this.matricesVersion = this.version;
-      this.makeBoneMatrices(bodies);
+    if (!this.drawnBodies) return null;
+    if (this.matricesVersion !== this.pose.version) {
+      this.matricesVersion = this.pose.version;
+      this.makeBoneMatrices(this.drawnBodies);
     }
-    return { skeletonGlobal: this.skeletonGlobal, boneMatrices: this.boneMatrices, version: this.version };
+    return this.pose;
   }
 
   /**
@@ -166,17 +177,52 @@ export class Skeleton2DPose {
     });
   }
 
-  private sceneOf(bodies: readonly THREE.Object3D[], anchors: readonly THREE.Object3D[]): StackScene {
-    const [skeleton, ...bones] = bodies.map(canvasTransformOf);
+  private forgetSolve(): void {
+    this.solved = null;
+    this.moved = [];
+  }
+
+  /** Runs the stack on the bodies as they are drawn. A render with nothing moved keeps the result. */
+  private solve(
+    bodies: readonly THREE.Object3D[],
+    anchors: readonly THREE.Object3D[],
+    stack: ModificationStack2D
+  ): void {
+    const globals = bodies.map(canvasTransformOf);
+    const cache = cacheLocals(globals, this.rig);
+    this.solved = solveStack(this.sceneOf(globals, anchors), cache, stack);
+    this.moved = movedBones(bodies, this.rig, cache, this.solved.locals);
+  }
+
+  /**
+   * Puts the solved pose on the moved bones. The drawn matrix of a bone is its Godot local transform
+   * behind the wrappers the previewer mounts, so the write keeps them and applies only the turn.
+   */
+  private writeMoved(): void {
+    for (const bone of this.moved) {
+      bone.held.copy(bone.object.matrix);
+      bone.heldAutoUpdate = bone.object.matrixAutoUpdate;
+      bone.object.matrix.multiply(bone.turn);
+      bone.object.matrixAutoUpdate = false;
+    }
+    // The render already updated the world matrices, so the bones the solve moved update theirs.
+    for (const bone of this.moved) if (bone.isTopmost) bone.object.updateMatrixWorld(true);
+    this.isWritten = this.moved.length > 0;
+  }
+
+  private sceneOf(
+    [skeletonGlobal, ...boneGlobals]: readonly Transform2DColumns[],
+    anchors: readonly THREE.Object3D[]
+  ): StackScene {
     const anchorGlobals = new Map(
       this.anchorPaths.map((path, index) => [path, canvasTransformOf(anchors[index]!)])
     );
     const nodes = new Map<string, StackNode>();
     for (const [literal, target] of this.bound!.targets) {
-      nodes.set(literal, this.stackNodeOf(target, bones, anchorGlobals));
+      nodes.set(literal, stackNodeOf(target, boneGlobals, anchorGlobals));
     }
     return {
-      skeletonGlobal: skeleton!,
+      skeletonGlobal: skeletonGlobal!,
       bones: this.rig.bones.map(({ parent, reach }) => ({
         parent,
         length: reach.length,
@@ -185,75 +231,60 @@ export class Skeleton2DPose {
       nodes,
     };
   }
+}
 
-  private stackNodeOf(
-    { path, isNode2D }: StackTarget,
-    boneGlobals: readonly Transform2DColumns[],
-    anchorGlobals: ReadonlyMap<string, Transform2DColumns>
-  ): StackNode {
-    const boneIndex = this.rig.indexOf.get(path) ?? -1;
-    if (!isNode2D) return { boneIndex, placement: null };
-    if (boneIndex >= 0) return { boneIndex, placement: { carrier: boneIndex, offset: TRANSFORM2D_IDENTITY } };
-    const global = anchorGlobals.get(path)!;
-    const carrier = carrierOf(path, this.rig);
-    if (carrier < 0) return { boneIndex, placement: { carrier, offset: global } };
-    const offset = multiplyTransform2D(affineInverseTransform2D(boneGlobals[carrier]!), global);
-    return { boneIndex, placement: { carrier, offset } };
-  }
+function stackNodeOf(
+  { path, isNode2D, boneIndex, carrier }: StackTarget,
+  boneGlobals: readonly Transform2DColumns[],
+  anchorGlobals: ReadonlyMap<string, Transform2DColumns>
+): StackNode {
+  if (!isNode2D) return { boneIndex, placement: null };
+  if (boneIndex >= 0) return { boneIndex, placement: { carrier: boneIndex, offset: TRANSFORM2D_IDENTITY } };
+  const global = anchorGlobals.get(path)!;
+  if (carrier < 0) return { boneIndex, placement: { carrier, offset: global } };
+  const offset = multiplyTransform2D(affineInverseTransform2D(boneGlobals[carrier]!), global);
+  return { boneIndex, placement: { carrier, offset } };
 }
 
 function canvasTransformOf(object: THREE.Object3D): Transform2DColumns {
   return canvasTransformInto(mutableTransform2D(), object);
 }
 
-/** The index of the nearest bone above the node at `path`, which carries the node as it moves, or -1. */
-function carrierOf(path: string, rig: Skeleton2DRig): number {
-  let carrier = -1;
-  rig.bones.forEach((bone, index) => {
-    const isAbove = path.startsWith(`${bone.path}/`);
-    if (isAbove && (carrier < 0 || bone.path.length > rig.bones[carrier]!.path.length)) carrier = index;
-  });
-  return carrier;
-}
-
 /**
  * The local transform of each bone as it is drawn: its global one in the space of its parent bone,
- * or of the skeleton. `bodies` holds the skeleton, then the bones.
+ * or of the skeleton. `globals` holds the skeleton, then the bones.
  */
-function cacheLocals(bodies: readonly THREE.Object3D[], rig: Skeleton2DRig): Transform2DColumns[] {
-  const globals = bodies.map(canvasTransformOf);
+function cacheLocals(globals: readonly Transform2DColumns[], rig: Skeleton2DRig): Transform2DColumns[] {
   return rig.bones.map(({ parent }, index) =>
     multiplyTransform2D(affineInverseTransform2D(globals[parent + 1]!), globals[index + 1]!)
   );
 }
 
-/**
- * Writes `solved` on each bone it moves from `cache`, and returns what each such bone held. The
- * drawn matrix of a bone is its Godot local transform behind the wrappers the previewer mounts, so
- * the write keeps them: it undoes the cache transform and applies the solved one.
- */
-function writeLocals(
+/** The bones `solved` moves from `cache`, each with the turn between the two. `bodies` holds the skeleton first. */
+function movedBones(
   bodies: readonly THREE.Object3D[],
   rig: Skeleton2DRig,
   cache: readonly Transform2DColumns[],
   solved: readonly Transform2DColumns[]
-): WrittenBone[] {
-  const written: WrittenBone[] = [];
-  rig.bones.forEach((_bone, index) => {
-    const from = cache[index]!;
-    const to = solved[index]!;
-    // A bone with no area has no inverse to undo, and Godot draws nothing below it either.
-    if (equalTransform2D(from, to) || transform2DDeterminant(from) === 0) return;
-    const object = bodies[index + 1]!;
-    written.push({ object, matrix: object.matrix.clone(), matrixAutoUpdate: object.matrixAutoUpdate });
-    const turn = threeMatrixFromTransform2D(multiplyTransform2D(affineInverseTransform2D(from), to));
-    object.matrix.multiply(turn);
-    object.matrixAutoUpdate = false;
+): MovedBone[] {
+  // A bone with no area has no inverse to undo, and Godot draws nothing below it either.
+  const isMoved = rig.bones.map(
+    (_bone, index) =>
+      !equalTransform2D(cache[index]!, solved[index]!) && transform2DDeterminant(cache[index]!) !== 0
+  );
+  const hasMovedAncestor = (index: number): boolean => {
+    const { parent } = rig.bones[index]!;
+    return parent >= 0 && (isMoved[parent]! || hasMovedAncestor(parent));
+  };
+  return rig.bones.flatMap((_bone, index) => {
+    if (!isMoved[index]) return [];
+    const turn = multiplyTransform2D(affineInverseTransform2D(cache[index]!), solved[index]!);
+    return {
+      object: bodies[index + 1]!,
+      turn: threeMatrixFromTransform2D(turn),
+      isTopmost: !hasMovedAncestor(index),
+      held: new THREE.Matrix4(),
+      heldAutoUpdate: true,
+    };
   });
-  if (written.length === 0) return written;
-  // The render already updated the world matrices, so the bones the solve moved update theirs.
-  rig.bones.forEach(({ parent }, index) => {
-    if (parent < 0) bodies[index + 1]!.updateMatrixWorld(true);
-  });
-  return written;
 }

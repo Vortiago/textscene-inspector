@@ -49,8 +49,9 @@ export function useSkeletonSkin(
 class MeshSkin {
   private readonly restPoints: Vector2[];
   private readonly meshWatch = new WorldMatrixWatch();
-  /** Written only by `update`: the version of the pose the vertices were last written from. */
-  private poseVersion = -1;
+  /** Written only by `update`: the pose the vertices were last written from, and its version then. */
+  private writtenPose: DrawnSkeletonPose | null = null;
+  private writtenVersion = -1;
   /** Written only by `skinned`, so a render where the skin moves builds no transform object. */
   private readonly skeletonToMesh = mutableTransform2D();
   /** Written only by `skinned`, and read by `write` in the same render. */
@@ -71,8 +72,9 @@ class MeshSkin {
     if (!pose) return;
     // Asked before the version, not short-circuited: the watch must see every render.
     const hasMeshMoved = this.meshWatch.hasMoved([this.mesh]);
-    if (!hasMeshMoved && pose.version === this.poseVersion) return;
-    this.poseVersion = pose.version;
+    if (!hasMeshMoved && pose === this.writtenPose && pose.version === this.writtenVersion) return;
+    this.writtenPose = pose;
+    this.writtenVersion = pose.version;
     this.write(this.skinned(pose));
   }
 

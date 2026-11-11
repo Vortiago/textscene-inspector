@@ -7,7 +7,7 @@
 import { declaredLeafResolver, indexedElements } from '../../../godot/classdb/indexedKey.js';
 import { degToRadf, TAU } from '../../../godot/math/math.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
-import { slotInt } from '../../../godot/variant/intSlots.js';
+import { slotCount } from '../../../godot/variant/intSlots.js';
 import { nodePathLiteral } from '../../../godot/variant/variantParser.js';
 import type { TscnInternalResource } from '../../../parser/types';
 import { boolOr, floatOr, intOr, realOr, realVec2Or } from '../../../parser/valueParsers';
@@ -77,7 +77,7 @@ function stackOf(
   const { data } = scoped.resource;
   // `set_modification_count` refuses a negative count (`skeleton_modification_stack_2d.cpp:213`),
   // and `set_modification` an index at or past it (`:193`).
-  const count = Math.max(slotInt(data.modification_count, 0) ?? 0, 0);
+  const count = slotCount(data.modification_count) ?? 0;
   const stack: ModificationStack2D = {
     enabled: boolOr(data.enabled, false),
     strength: realOr(data.strength, 1),
@@ -187,7 +187,7 @@ function jointsOf<Joint>(
   leafResolver: ReturnType<typeof declaredLeafResolver>,
   jointOf: (leaves: Leaves) => Joint
 ): Joint[] {
-  const length = Math.max(slotInt(data[lengthKey], 0) ?? 0, 0);
+  const length = slotCount(data[lengthKey]) ?? 0;
   const written = indexedElements(data, 'joint_data/', 'to_int', leafResolver);
   return Array.from({ length }, (_unused, index) => jointOf((leaf) => written.get(index)?.get(leaf)));
 }

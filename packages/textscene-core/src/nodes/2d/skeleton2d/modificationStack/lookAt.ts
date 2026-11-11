@@ -9,6 +9,7 @@
  */
 
 import type { LookAtModification2D } from '../../../../resources/skeleton/skeletonmodificationstack2d/types';
+import { transform2DOrigin } from '../../../../godot/math/transform2d.js';
 import { clampAngle } from './clampAngle';
 import { cachedBoneIndex, node2DGlobal, nodeAt, type StackFrame } from './stackFrame';
 
@@ -22,7 +23,7 @@ export function executeLookAt(modification: LookAtModification2D, frame: StackFr
   if (!pose.has(bone)) return;
 
   const turn =
-    pose.angleTo(bone, { x: target.tx, y: target.ty }) -
+    pose.angleTo(bone, transform2DOrigin(target)) -
     pose.bone(bone).boneAngle +
     modification.additionalRotation;
   const { constraint } = modification;

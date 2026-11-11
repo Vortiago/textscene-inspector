@@ -50,15 +50,19 @@ describe('DrawnNodeFollow', () => {
   it('reports a move on the first call and after an object moves, and none between', () => {
     const { registry, a, b } = drawnScene();
     const follow = new DrawnNodeFollow(registry, ['Root/A', 'Root/A/B']);
-    const seen = [follow.hasMoved(), follow.hasMoved()];
+    const objects = follow.objects()!;
+    const seen = [follow.hasMoved(objects), follow.hasMoved(objects)];
     b.position.set(5, 0, 0);
     a.updateMatrixWorld(true);
-    seen.push(follow.hasMoved(), follow.hasMoved());
+    seen.push(follow.hasMoved(objects), follow.hasMoved(objects));
     expect(seen).toEqual([true, false, true, false]);
   });
 
-  it('reports no move while a path has no drawn object', () => {
+  it('reports a move for the objects a later lookup finds', () => {
     const { registry } = drawnScene();
-    expect(new DrawnNodeFollow(registry, ['Root/Missing']).hasMoved()).toBe(false);
+    const follow = new DrawnNodeFollow(registry, ['Root/A']);
+    follow.hasMoved(follow.objects()!);
+    registry.set('Root/Other', mountNode(new THREE.Scene(), 'Other').wrapper);
+    expect(follow.hasMoved(follow.objects()!)).toBe(true);
   });
 });

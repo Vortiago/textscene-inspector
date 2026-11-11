@@ -1,43 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import type {
-  LookAtModification2D,
-  Modification2D,
-} from '../../../../resources/skeleton/skeletonmodificationstack2d/types';
+import type { Modification2D } from '../../../../resources/skeleton/skeletonmodificationstack2d/types';
 import { solveStack } from './stackRun';
-import {
-  chainScene,
-  enabledStack,
-  expectColumns,
-  freeNode,
-  NO_CONSTRAINT,
-  translation,
-} from './stackScenes.testkit';
+import { armScene, enabledStack, expectColumns, freeNode, lookAtModification } from './stackScenes.testkit';
 
-/** A LookAt that turns the one bone of {@link armScene} a quarter turn, to the target below it. */
-const LOOK_DOWN: LookAtModification2D = {
-  type: 'SkeletonModification2DLookAt',
-  enabled: true,
-  executionMode: 0,
-  bone: { index: 0, node: 'A' },
-  target: 'Below',
-  additionalRotation: 0,
-  constraint: NO_CONSTRAINT,
-};
+/** Turns the bone a quarter turn, to the target below it. */
+const LOOK_DOWN = lookAtModification('Below');
 const QUARTER_TURN = [0, 1, -1, 0, 0, 0];
 const HALF_TURN = [-1, 0, 0, -1, 0, 0];
 
-function armScene() {
-  return chainScene(1, 200, translation(300, 150), { Below: freeNode(300, 400), Left: freeNode(0, 150) });
+function twoTargetScene() {
+  return armScene({ Below: freeNode(300, 400), Left: freeNode(0, 150) });
 }
 
 function solve(modifications: (Modification2D | null)[], strength = 1) {
-  const { scene, cache } = armScene();
-  return { cache, solved: solveStack(scene, cache, { enabled: true, strength, modifications }) };
+  const { scene, cache } = twoTargetScene();
+  return { cache, solved: solveStack(scene, cache, enabledStack(modifications, strength)) };
 }
 
 describe('solveStack', () => {
   it('keeps the pose for a disabled stack, as Godot 4.6.3 solves unit-skeleton2d-stack-disabled.tscn', () => {
-    const { scene, cache } = armScene();
+    const { scene, cache } = twoTargetScene();
     const solved = solveStack(scene, cache, { ...enabledStack([LOOK_DOWN]), enabled: false });
     expect(solved).toEqual({ locals: cache, isOverridden: [false] });
   });

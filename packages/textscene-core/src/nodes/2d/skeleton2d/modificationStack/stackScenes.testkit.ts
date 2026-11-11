@@ -8,6 +8,7 @@ import {
 } from '../../../../godot/math/transform2d.js';
 import type {
   AngleConstraint,
+  LookAtModification2D,
   ModificationStack2D,
   Modification2D,
 } from '../../../../resources/skeleton/skeletonmodificationstack2d/types';
@@ -62,12 +63,30 @@ export const NO_CONSTRAINT: AngleConstraint = {
   inLocalSpace: true,
 };
 
+/** One bone `A` of 200 with the skeleton at (300, 150), as in `unit-skeleton2d-lookat.tscn`, and `nodes` beside it. */
+export function armScene(nodes: Record<string, StackNode>) {
+  return chainScene(1, 200, translation(300, 150), nodes);
+}
+
+/** A LookAt that turns the bone of {@link armScene} at the node `target`. */
+export function lookAtModification(target: string): LookAtModification2D {
+  return {
+    type: 'SkeletonModification2DLookAt',
+    enabled: true,
+    executionMode: 0,
+    bone: { index: 0, node: 'A' },
+    target,
+    additionalRotation: 0,
+    constraint: NO_CONSTRAINT,
+  };
+}
+
 export function enabledStack(modifications: (Modification2D | null)[], strength = 1): ModificationStack2D {
   return { enabled: true, strength, modifications };
 }
 
 /** The six numbers of a transform, in the order Godot prints them. */
-export function columns(t: Transform2DColumns): number[] {
+function columns(t: Transform2DColumns): number[] {
   return [t.a, t.b, t.c, t.d, t.tx, t.ty];
 }
 

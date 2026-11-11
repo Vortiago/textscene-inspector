@@ -1,61 +1,52 @@
 import { describe, expect, it } from 'vitest';
 import { TRANSFORM2D_IDENTITY } from '../../../../godot/math/transform2d.js';
-import type { LookAtModification2D } from '../../../../resources/skeleton/skeletonmodificationstack2d/types';
 import { solveStack } from './stackRun';
 import {
-  chainScene,
+  armScene,
   enabledStack,
   expectColumns,
   freeNode,
+  lookAtModification,
   NO_CONSTRAINT,
-  translation,
 } from './stackScenes.testkit';
 
-const LOOK_AT: LookAtModification2D = {
-  type: 'SkeletonModification2DLookAt',
-  enabled: true,
-  executionMode: 0,
-  bone: { index: 0, node: 'A' },
-  target: 'Target',
-  additionalRotation: 0,
-  constraint: NO_CONSTRAINT,
-};
+const LOOK_AT = lookAtModification('Target');
 
-/** The scene of `unit-skeleton2d-lookat.tscn`: one bone at (300, 150), and a target straight below it. */
-function armScene(target = freeNode(300, 400)) {
-  return chainScene(1, 200, translation(300, 150), { Target: target });
+/** The scene of `unit-skeleton2d-lookat.tscn`, with the target straight below the bone. */
+function targetScene(target = freeNode(300, 400)) {
+  return armScene({ Target: target });
 }
 
 describe('SkeletonModification2DLookAt', () => {
   it('turns the bone to point at the target, as Godot 4.6.3 solves unit-skeleton2d-lookat.tscn', () => {
-    const { scene, cache } = armScene();
+    const { scene, cache } = targetScene();
     const solved = solveStack(scene, cache, enabledStack([LOOK_AT]));
     expectColumns(solved.locals[0]!, [0, 1, -1, 0, 0, 0]);
     expect(solved.isOverridden).toEqual([true]);
   });
 
   it('adds the additional rotation to the solved one', () => {
-    const { scene, cache } = armScene();
+    const { scene, cache } = targetScene();
     const solved = solveStack(scene, cache, enabledStack([{ ...LOOK_AT, additionalRotation: Math.PI / 2 }]));
     expectColumns(solved.locals[0]!, [-1, 0, 0, -1, 0, 0]);
   });
 
   it('subtracts the bone angle, so the kite and not the x axis points at the target', () => {
-    const { scene, cache } = armScene();
+    const { scene, cache } = targetScene();
     const bones = [{ ...scene.bones[0]!, boneAngle: Math.PI / 2 }];
     const solved = solveStack({ ...scene, bones }, cache, enabledStack([LOOK_AT]));
     expectColumns(solved.locals[0]!, [1, 0, 0, 1, 0, 0]);
   });
 
   it('keeps a constrained local rotation inside the limit', () => {
-    const { scene, cache } = armScene();
+    const { scene, cache } = targetScene();
     const constraint = { ...NO_CONSTRAINT, enabled: true, min: 0, max: Math.PI / 4 };
     const solved = solveStack(scene, cache, enabledStack([{ ...LOOK_AT, constraint }]));
     expectColumns(solved.locals[0]!, [Math.SQRT1_2, Math.SQRT1_2, -Math.SQRT1_2, Math.SQRT1_2, 0, 0]);
   });
 
   it('uses the stored index where the modification names no bone path', () => {
-    const { scene, cache } = armScene();
+    const { scene, cache } = targetScene();
     const solved = solveStack(
       scene,
       cache,
@@ -72,7 +63,7 @@ describe('SkeletonModification2DLookAt', () => {
     ['a bone index past the last bone', { ...LOOK_AT, bone: { index: 1, node: undefined } }],
     ['a disabled modification', { ...LOOK_AT, enabled: false }],
   ])('leaves the pose alone for %s', (_case, modification) => {
-    const { scene, cache } = armScene();
+    const { scene, cache } = targetScene();
     const solved = solveStack(scene, cache, enabledStack([modification]));
     expect(solved.locals).toEqual([TRANSFORM2D_IDENTITY]);
     expect(solved.isOverridden).toEqual([false]);

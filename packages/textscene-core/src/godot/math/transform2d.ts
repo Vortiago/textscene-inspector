@@ -231,28 +231,12 @@ export function transform2DSetScale(
 }
 
 /**
- * The position, rotation, scale and skew a Node2D reads from its transform
- * (`Node2D::_update_xform_values`, `node_2d.cpp:127-133`): `get_rotation` is the angle of the x axis
- * (`transform_2d.cpp:82-84`), `get_scale` is {@link transform2DGetScale}, and `get_skew`
- * (`transform_2d.cpp:72-75`) is the angle of the y axis from perpendicular to the x axis, its
- * direction mirrored with the sign of the determinant. It is the inverse of {@link transform2DFromParts}.
+ * `Transform2D::get_origin`: the origin column as a point.
+ *
+ * @canonical The origin of a Transform2D
  */
-export function transform2DDecompose(t: Transform2DColumns): {
-  position: Vector2;
-  rotation: number;
-  scale: { x: number; y: number };
-  skew: number;
-} {
-  const detSign = sign(t.a * t.d - t.c * t.b);
-  const x = normalizedVector2({ x: t.a, y: t.b });
-  const y = normalizedVector2({ x: t.c, y: t.d });
-  const cosine = x.x * detSign * y.x + x.y * detSign * y.y;
-  return {
-    position: { x: t.tx, y: t.ty },
-    rotation: Math.atan2(t.b, t.a),
-    scale: transform2DGetScale(t),
-    skew: acosClamped(cosine) - Math.PI / 2,
-  };
+export function transform2DOrigin(t: Transform2DColumns): Vector2 {
+  return { x: t.tx, y: t.ty };
 }
 
 /**
@@ -276,6 +260,27 @@ export function transform2DGetSkew(t: Transform2DColumns): number {
   const y = normalizedVector2({ x: t.c, y: t.d });
   const cosine = f(f(x.x * f(detSign * y.x)) + f(x.y * f(detSign * y.y)));
   return f(f(acosClamped(cosine)) - HALF_PI_FLOAT);
+}
+
+/**
+ * The position, rotation, scale and skew a Node2D reads from its transform
+ * (`Node2D::_update_xform_values`, `node_2d.cpp:127-133`), in `real_t` float. It is the inverse of
+ * {@link transform2DFromParts}.
+ *
+ * @canonical The Node2D values of a Transform2D
+ */
+export function transform2DDecompose(t: Transform2DColumns): {
+  position: Vector2;
+  rotation: number;
+  scale: { x: number; y: number };
+  skew: number;
+} {
+  return {
+    position: transform2DOrigin(t),
+    rotation: transform2DGetRotation(t),
+    scale: transform2DGetScale(t),
+    skew: transform2DGetSkew(t),
+  };
 }
 
 /** `Transform2D(rot, pos)` (`transform_2d.cpp:97-105`): a rotation at an origin, with unit scale. */
@@ -320,7 +325,7 @@ export function transform2DInterpolateWith(
     lerpAngle(transform2DGetRotation(from), transform2DGetRotation(to), weight),
     vector2Lerp(transform2DGetScale(from), transform2DGetScale(to), weight),
     lerpAngle(transform2DGetSkew(from), transform2DGetSkew(to), weight),
-    vector2Lerp({ x: from.tx, y: from.ty }, { x: to.tx, y: to.ty }, weight)
+    vector2Lerp(transform2DOrigin(from), transform2DOrigin(to), weight)
   );
 }
 
