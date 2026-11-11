@@ -12,6 +12,7 @@ import { parseWindow } from './parser';
 import { wrappedWindowSize } from './wrapControls';
 
 const THEME = nativeTheme(1);
+const EMBEDDER = { x: 1152, y: 648 };
 
 function windowNode(type: string, properties: Record<string, string>, children: SolveNode[]): SolveNode {
   const node = {
@@ -41,14 +42,14 @@ describe('wrappedWindowSize', () => {
     const window = windowNode('Window', { size: 'Vector2i(100, 100)', wrap_controls: 'true' }, [
       placed(20, 30, { x: 400, y: 280 }),
     ]);
-    expect(wrappedWindowSize(window, THEME, null)).toEqual({ x: 420, y: 310 });
+    expect(wrappedWindowSize(window, THEME, null, EMBEDDER)).toEqual({ x: 420, y: 310 });
   });
 
   it('keeps the loaded size when it already holds the Controls', () => {
     const window = windowNode('Window', { size: 'Vector2i(500, 400)', wrap_controls: 'true' }, [
       placed(20, 30, { x: 400, y: 280 }),
     ]);
-    expect(wrappedWindowSize(window, THEME, null)).toEqual({ x: 500, y: 400 });
+    expect(wrappedWindowSize(window, THEME, null, EMBEDDER)).toEqual({ x: 500, y: 400 });
   });
 
   it('scales the Controls by the content scale factor before it wraps', () => {
@@ -57,7 +58,7 @@ describe('wrappedWindowSize', () => {
       { size: 'Vector2i(100, 100)', wrap_controls: 'true', content_scale_factor: '2.0' },
       [placed(20, 30, { x: 100, y: 80 })]
     );
-    expect(wrappedWindowSize(window, THEME, null)).toEqual({ x: 240, y: 220 });
+    expect(wrappedWindowSize(window, THEME, null, EMBEDDER)).toEqual({ x: 240, y: 220 });
   });
 
   it('scales by the factor an integer stretch floors (`window.cpp:1240-1249`)', () => {
@@ -71,16 +72,16 @@ describe('wrappedWindowSize', () => {
       },
       [placed(20, 30, { x: 100, y: 80 })]
     );
-    expect(wrappedWindowSize(window, THEME, null)).toEqual({ x: 240, y: 220 });
+    expect(wrappedWindowSize(window, THEME, null, EMBEDDER)).toEqual({ x: 240, y: 220 });
   });
 
   it('ignores the Controls of a window that does not wrap', () => {
     const window = windowNode('Window', { size: 'Vector2i(100, 100)' }, [placed(20, 30, { x: 400, y: 280 })]);
-    expect(wrappedWindowSize(window, THEME, null)).toEqual({ x: 100, y: 100 });
+    expect(wrappedWindowSize(window, THEME, null, EMBEDDER)).toEqual({ x: 100, y: 100 });
   });
 
   it('wraps a PopupPanel, which wraps by default, around its panel', () => {
     const popup = windowNode('PopupPanel', { size: 'Vector2i(10, 10)' }, [placed(0, 0, { x: 200, y: 100 })]);
-    expect(wrappedWindowSize(popup, THEME, null)).toEqual({ x: 208, y: 108 });
+    expect(wrappedWindowSize(popup, THEME, null, EMBEDDER)).toEqual({ x: 208, y: 108 });
   });
 });

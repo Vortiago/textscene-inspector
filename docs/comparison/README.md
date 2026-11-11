@@ -272,6 +272,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [PointLight2D](../../packages/textscene-core/src/nodes/2d/pointlight2d/comparison.md): the light's cookie multiplied into every CanvasItem beneath it
 - [Polygon2D](../../packages/textscene-core/src/nodes/2d/polygon2d/comparison.md): a filled, optionally textured mesh
 - [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md): its viewport's target, drawn by its embedder with no frame
+- [PopupMenu](../../packages/textscene-core/src/nodes/windows/popupmenu/comparison.md): its items in a bordered panel, drawn by its embedder with no frame
 - [PopupPanel](../../packages/textscene-core/src/nodes/windows/popuppanel/comparison.md): a panel StyleBox under its Controls, drawn by its embedder with no frame
 - [ProgressBar](../../packages/textscene-core/src/nodes/2d/ui/progressbar/comparison.md): a background and ratio-filled StyleBox pair, with a percentage label
 - [Range](../../packages/textscene-core/src/nodes/2d/ui/range/comparison.md): nothing of its own
@@ -319,7 +320,6 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [MultiplayerSpawner](../../packages/textscene-core/src/nodes/networking/multiplayerspawner/comparison.md): nothing (a transform-only group)
 - [MultiplayerSynchronizer](../../packages/textscene-core/src/nodes/networking/multiplayersynchronizer/comparison.md): nothing (a transform-only group)
 - [Node](../../packages/textscene-core/src/nodes/node/comparison.md): nothing, a non-spatial base node
-- [PopupMenu](../../packages/textscene-core/src/nodes/windows/popupmenu/comparison.md): nothing yet, not implemented
 - [ResourcePreloader](../../packages/textscene-core/src/nodes/resources/resourcepreloader/comparison.md): nothing (a transform-only group)
 - [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md): nothing (a transform-only group)
 - [ShaderGlobalsOverride](../../packages/textscene-core/src/nodes/rendering/shaderglobalsoverride/comparison.md): nothing yet, Godot re-shades every material that reads the overridden globals, the previewer does not

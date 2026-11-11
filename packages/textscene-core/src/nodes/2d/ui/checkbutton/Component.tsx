@@ -5,10 +5,8 @@
  * the transform.
  */
 import { useMemo } from 'react';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
@@ -16,6 +14,7 @@ import { useTintedTextOutline } from '../../../../r3f/controls/native/text/Outli
 import { isButtonAutowrapped } from '../../../../r3f/controls/native/buttonBase';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   checkButtonCheckVOffset,
   checkButtonHSeparation,
@@ -102,16 +101,19 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
 
   return (
     <>
-      <CanvasItemGroup position={[content.iconPosition.x, -content.iconPosition.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={drawnIconSize.x}
-          height={drawnIconSize.y}
-          color={iconLinearColor}
-          opacity={tintedIconColorSrgb.a}
-          map={iconTexture}
-        />
-      </CanvasItemGroup>
+      <PositionedIcon
+        rect={{
+          x: content.iconPosition.x,
+          y: content.iconPosition.y,
+          w: drawnIconSize.x,
+          h: drawnIconSize.y,
+        }}
+        texture={iconTexture}
+        color={iconLinearColor}
+        opacity={tintedIconColorSrgb.a}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
       {content.labelBox && layout && (
         <ButtonLabel
           layout={layout}

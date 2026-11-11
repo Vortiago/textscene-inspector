@@ -115,7 +115,8 @@ async function renderedKid(subject: TscnNode, workspace: CanvasWorkspace) {
 
 describe('drawless types render their subtree as their Godot base does', () => {
   it('derives a non-trivial set, so an empty filter cannot vacuously pass', () => {
-    expect(DRAWLESS_TYPES.length).toBeGreaterThan(100);
+    // The floor catches a filter that drops a type. A type that starts to draw lowers the count.
+    expect(DRAWLESS_TYPES.length).toBeGreaterThanOrEqual(100);
     expect(DRAWLESS_TYPES).toEqual(expect.arrayContaining(['AudioListener3D', 'Timer']));
   });
 

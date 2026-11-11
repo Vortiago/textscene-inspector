@@ -53,6 +53,12 @@ export interface SolveContext {
    * pass that runs only for a type registered with `registerSizeDependentMinimum`.
    */
   tentativeRect?(n: SolveNode): Rect2 | undefined;
+  /**
+   * The visible size of the viewport that embeds the window being wrapped
+   * (`Window::get_usable_parent_rect`, `window.cpp:2326-2340`), which a popup's contents minimum
+   * limits its height to. Absent outside a window wrap, where nothing limits it.
+   */
+  embedderSize?: Vector2;
 }
 
 /**
@@ -64,6 +70,13 @@ export type MinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vector2;
 
 /** Whether a node of a size-dependent type reads `SolveContext.tentativeRect` (`registerSizeDependentMinimum`). */
 export type SizeDependentPredicate = (n: SolveNode) => boolean;
+
+/**
+ * The contents minimum a window's own properties give when its `size` is applied at load, before its
+ * Controls and the tree exist (`Window::set_size` clamps in `_update_window_size`, `window.cpp:1183-1190`),
+ * or `null` where it sets none.
+ */
+export type LoadedMinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vector2 | null;
 
 /** A `ContainerLayoutFn`'s result when it also seals a solve handoff for its own painter. */
 export interface ContainerLayoutResult {
@@ -139,6 +152,19 @@ export function themedSlotRequest(key: string, themed: ThemedIconRef): TextureSl
   return { key, ref: themed.ref, scope: themed.resources, isHeldLocally: themed.isHeldLocally };
 }
 
+/** The requests for those of `names` that have a themed answer. */
+export function themedSlotRequests(
+  names: Iterable<string>,
+  themedIcons: Readonly<Record<string, ThemedIconRef>>
+): TextureSlotRequest[] {
+  const requests: TextureSlotRequest[] = [];
+  for (const name of names) {
+    const themed = themedIcons[name];
+    if (themed) requests.push(themedSlotRequest(name, themed));
+  }
+  return requests;
+}
+
 /**
  * Which Texture2D-valued slots a type carries, given the live node and its theme
  * icons. A per-type fact on the slice, not a central list `buildSolveTree.ts`
@@ -177,6 +203,9 @@ class ControlSolverRegistry {
   private readonly textureSlotFns = createTypeRegistry<TextureSlotsFn>('controlSolverRegistry.textureSlots');
   private readonly childVisibilityFns = createTypeRegistry<ChildVisibilityFn>(
     'controlSolverRegistry.childVisibility'
+  );
+  private readonly loadedMinimumSizeFns = createTypeRegistry<LoadedMinimumSizeFn>(
+    'controlSolverRegistry.loadedMinimumSize'
   );
   private readonly canvasBoundaryTypes = new Set<string>();
   private readonly sizeDependentMinimumTypes = new Map<string, SizeDependentPredicate>();
@@ -219,6 +248,14 @@ class ControlSolverRegistry {
     return this.sizeDependentMinimumTypes.get(n.node.type)?.(n) ?? false;
   }
 
+  registerLoadedMinimumSize(typeName: string, fn: LoadedMinimumSizeFn): void {
+    this.loadedMinimumSizeFns.register(typeName, fn);
+  }
+
+  loadedMinimumSize(typeName: string): LoadedMinimumSizeFn | undefined {
+    return this.loadedMinimumSizeFns.get(typeName);
+  }
+
   registerContainerLayout(typeName: string, fn: ContainerLayoutFn): void {
     this.containerLayoutFns.register(typeName, fn);
   }
@@ -257,6 +294,7 @@ class ControlSolverRegistry {
   clear(): void {
     this.minimumSizeFns.clear();
     this.containerLayoutFns.clear();
+    this.loadedMinimumSizeFns.clear();
     this.textureSlotFns.clear();
     this.childVisibilityFns.clear();
     this.canvasBoundaryTypes.clear();

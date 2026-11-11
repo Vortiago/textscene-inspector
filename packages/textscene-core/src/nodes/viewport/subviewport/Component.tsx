@@ -60,6 +60,7 @@ function MixedViewportControls({
       size={size}
       inheritedRtl={inheritedRtl}
       themeOwners={themeOwners}
+      enclosingViewportSize={null}
       embedsWindows={embedsWindows}
     />
   );

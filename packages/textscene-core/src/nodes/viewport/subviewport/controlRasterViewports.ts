@@ -7,7 +7,7 @@
 
 import type { TscnNode } from '../../../parser/types.js';
 import type { ControlProperties } from '../../2d/ui/control/types.js';
-import { LTR_LAYOUT_ENV, resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
+import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
 import { TWO_D_UI_TYPES } from '../../../r3f/controls/has2DUIContent.js';
 import {
   liveTreeOf,
@@ -20,8 +20,14 @@ import { parentPathOf } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
 import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
 import type { SubViewportProperties } from './types.js';
-import { viewportGateAt, type ViewportGate } from './viewportGate.js';
+import { viewportGateAt, windowEmbedderPathAt, type ViewportGate } from './viewportGate.js';
 import { viewportThemeOwners, type ThemeOwner } from '../../windows/window/themeOwners.js';
+
+/** The viewport a window embeds in, whose visible size limits the window's height. */
+interface EnclosingViewport {
+  path: string;
+  node: TscnNode;
+}
 
 /** A sub-viewport whose target is produced by rasterising a Control subtree. */
 export interface ControlRasterViewport extends SceneScope {
@@ -38,6 +44,8 @@ export interface ControlRasterViewport extends SceneScope {
   inheritedRtl: boolean | null;
   /** The theme owners above a window, whose Controls take their themes (`viewportThemeOwners`). */
   themeOwners: readonly ThemeOwner[];
+  /** The nearest viewport above, or `null` where the project's own viewport is the one around it. */
+  embedder: EnclosingViewport | null;
   /** What the tree says of the viewport's update mode: its container, and the viewport around it. */
   gate: ViewportGate;
 }
@@ -66,6 +74,12 @@ export function inheritedRtlAt(tree: LiveTree, path: string, env: LayoutDirectio
   return link ? rtlBelow(link.step.node, inheritedRtlAt(tree, above, env), env) : null;
 }
 
+function enclosingViewport(tree: LiveTree, path: string, rootEmbeds: boolean): EnclosingViewport | null {
+  const embedderPath = windowEmbedderPathAt(tree, path, rootEmbeds);
+  const node = embedderPath === null ? undefined : tree.at(embedderPath)?.step.node;
+  return embedderPath !== null && node ? { path: embedderPath, node } : null;
+}
+
 /**
  * Every Control-only sub-viewport in `roots`, depth-first, with its path and the
  * scope its Controls resolve in. A found sub-viewport is still descended into: a
@@ -75,7 +89,8 @@ export function collectControlRasterViewports(
   roots: readonly TscnNode[],
   sources: LiveTreeSources,
   scope: SceneScope,
-  layoutDirectionEnv: LayoutDirectionEnv = LTR_LAYOUT_ENV
+  layoutDirectionEnv: LayoutDirectionEnv,
+  rootEmbeds: boolean
 ): ControlRasterViewport[] {
   const found: ControlRasterViewport[] = [];
   const ctx: LiveTreeContext = {
@@ -94,7 +109,7 @@ export function collectControlRasterViewports(
     // decline and leave the consumer blank.
     if (
       isViewportBoundary(step.node.type) &&
-      viewportContentKind(resolveViewportSubtree(tree, link)) === 'dom'
+      viewportContentKind(resolveViewportSubtree(tree, link), rootEmbeds) === 'dom'
     ) {
       const { render_target_update_mode: authoredMode } = step.node.properties as SubViewportProperties;
       found.push({
@@ -102,7 +117,8 @@ export function collectControlRasterViewports(
         node: step.node,
         inheritedRtl,
         themeOwners: viewportThemeOwners(tree, path),
-        gate: viewportGateAt(tree, path, authoredMode),
+        embedder: enclosingViewport(tree, path, rootEmbeds),
+        gate: viewportGateAt(tree, path, authoredMode, rootEmbeds),
         ...step.scope,
       });
     }

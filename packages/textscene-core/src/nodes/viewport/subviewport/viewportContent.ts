@@ -96,10 +96,10 @@ export interface ViewportContent {
  * items draw after its 3D render (`renderer_viewport.cpp:380-715`). A nested sub-viewport draws
  * into its own target, so it is not descended into.
  */
-export function viewportContent(node: TscnNode): ViewportContent {
+export function viewportContent(node: TscnNode, rootEmbeds: boolean): ViewportContent {
   let sawCanvasItem = false;
   // The embedder draws its windows over its canvas, with the Controls (`EmbeddedWindows.tsx`).
-  let sawDom = embedsAWindow(node);
+  let sawDom = embedsAWindow(node, rootEmbeds);
   let sawUntypedInstance = false;
 
   // Every child is visited, so `sawDom` is complete when a 3D node comes first.
@@ -160,8 +160,8 @@ export function viewportContent(node: TscnNode): ViewportContent {
   return found(sawDom || isEmbeddedWindow(node.type) ? 'dom' : 'empty');
 }
 
-export function viewportContentKind(node: TscnNode): ViewportContentKind {
-  return viewportContent(node).kind;
+export function viewportContentKind(node: TscnNode, rootEmbeds: boolean): ViewportContentKind {
+  return viewportContent(node, rootEmbeds).kind;
 }
 
 /** The children below `from` (the roots without it) with their instances resolved. */

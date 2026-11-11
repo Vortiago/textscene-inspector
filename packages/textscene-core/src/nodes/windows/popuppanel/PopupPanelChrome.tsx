@@ -5,11 +5,12 @@
 import type { NativeControlComponentProps } from '../../../r3f/controls/ControlComponentRegistry';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
-import { popupPanelBox, popupPanelRect } from './contentLayout';
+import { panelRect } from '../window/panelInsets';
+import { popupPanelBox } from './contentLayout';
 
 export function PopupPanelChrome({ solveNode, rect, theme, tint, renderOrder }: NativeControlComponentProps) {
   const { style, insets } = popupPanelBox(solveNode, theme);
-  const panel = popupPanelRect(insets, solveNode.rtl, { x: rect.w, y: rect.h });
+  const panel = panelRect(insets, solveNode.rtl, { x: rect.w, y: rect.h });
   // `StyleBoxQuad` draws from its group's origin, so the group carries the inset.
   return (
     <CanvasItemGroup position={[panel.x, -panel.y, 0]}>

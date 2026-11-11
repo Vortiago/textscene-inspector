@@ -96,6 +96,23 @@ export function scrollBarGrabberGeometry(
 }
 
 /**
+ * One bar of a scrolled content `range`: its `rect` and its grabber when the bar sits at `ratio` of
+ * the range, a page long as the bar itself (`ScrollContainer` sets each bar's page to its length).
+ */
+export function scrollBarPlacement(
+  vertical: boolean,
+  rect: Rect2,
+  theme: NativeTheme,
+  range: number,
+  ratio: number,
+  visible: boolean
+): ScrollBarPlacement {
+  const length = vertical ? rect.h : rect.w;
+  const grabber = scrollBarGrabberGeometry(vertical, length, theme, 0, range, length, ratio);
+  return { visible, rect, grabberRect: scrollBarGrabberRect(vertical, { x: rect.w, y: rect.h }, grabber) };
+}
+
+/**
  * The `scroll`/`scroll_focus` track rect, `Rect2(ofs, area)` (`scroll_bar.cpp:295-317`): with both
  * icon terms 0 it is the whole bar. `scene/gui/scroll_bar.cpp` never calls `is_layout_rtl()`, so
  * `Control::_size_changed` mirrors a standalone bar whole (`control.cpp:1785-1787`). The highlighted

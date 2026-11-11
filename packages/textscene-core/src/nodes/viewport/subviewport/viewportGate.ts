@@ -37,13 +37,18 @@ export interface UpdateGate {
   enclosingPath: string | null;
 }
 
-export function viewportGateAt(tree: LiveTree, path: string, authoredMode: number): ViewportGate {
+export function viewportGateAt(
+  tree: LiveTree,
+  path: string,
+  authoredMode: number,
+  rootEmbeds: boolean
+): ViewportGate {
   const parentPath = parentPathOf(path);
   const isUnderContainer =
     parentPath !== null && tree.at(parentPath)?.step.node.type === 'SubViewportContainer';
   return {
     authoredMode,
-    enclosingPath: enclosingViewportPathAt(tree, path),
+    enclosingPath: enclosingViewportPathAt(tree, path, rootEmbeds),
     visibilityChain: isUnderContainer ? visibilityChainAt(tree, parentPath) : null,
   };
 }
@@ -68,18 +73,27 @@ export function resolveGate(gate: ViewportGate, animatedVisible: ReadonlyMap<str
   };
 }
 
+/** `Window::get_embedder` (`window.cpp:1400-1415`): the path of the nearest viewport above `path` that embeds subwindows. */
+export function windowEmbedderPathAt(tree: LiveTree, path: string, rootEmbeds: boolean): string | null {
+  for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
+    const aboveNode = tree.at(above)?.step.node;
+    if (aboveNode && isViewportBoundary(aboveNode.type) && embedsSubwindows(aboveNode, rootEmbeds))
+      return above;
+  }
+  return null;
+}
+
 /**
  * The viewport whose passes gate the one at `path`, null at the root viewport. A viewport's parent
  * is the viewport it sits in (`viewport.cpp:579`). An embedded window's is its embedder
  * (`viewport.cpp:339`): the nearest viewport above that embeds windows (`window.cpp:1400-1420`).
  */
-function enclosingViewportPathAt(tree: LiveTree, path: string): string | null {
+function enclosingViewportPathAt(tree: LiveTree, path: string, rootEmbeds: boolean): string | null {
   const node = tree.at(path)?.step.node;
-  const isGatedByEmbedder = node !== undefined && isEmbeddableWindow(node);
+  if (node !== undefined && isEmbeddableWindow(node)) return windowEmbedderPathAt(tree, path, rootEmbeds);
   for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
     const aboveNode = tree.at(above)?.step.node;
-    if (!aboveNode || !isViewportBoundary(aboveNode.type)) continue;
-    if (!isGatedByEmbedder || embedsSubwindows(aboveNode)) return above;
+    if (aboveNode && isViewportBoundary(aboveNode.type)) return above;
   }
   return null;
 }

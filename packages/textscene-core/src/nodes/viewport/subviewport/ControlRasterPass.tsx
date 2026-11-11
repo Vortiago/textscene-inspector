@@ -8,6 +8,8 @@ import { useCallback, useMemo } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
+import { useViewportSize } from '../../../r3f/contexts/ViewportSizeContext.js';
+import type { Vector2 } from '../../../godot/math/vector.js';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext.js';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext.js';
 import { SubViewportCanvasScope } from './SubViewportCanvasScope';
@@ -21,7 +23,9 @@ import {
 } from './offscreenViewport.js';
 import { useMultisampledTarget } from '../../../r3f/multisampledTarget.js';
 import { useCanvasPass } from './useCanvasPass.js';
+import { useProjectEmbedsSubwindows } from '../../../r3f/useLiveSceneTree.js';
 import { useResolvedGate } from './useViewportGate.js';
+import { embedsSubwindows } from './viewportBoundary.js';
 import { usePublishViewportPass } from './usePublishViewportPass.js';
 import { useViewportRenderState } from './useGatedViewport.js';
 import type { ControlRasterViewport } from './controlRasterViewports.js';
@@ -48,9 +52,18 @@ export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
   );
 }
 
+/** The visible size of the viewport around this one: its layout size, else the project's. */
+function useEnclosingViewportSize(embedder: ControlRasterViewport['embedder']): Vector2 {
+  const projectSize = useViewportSize();
+  const forced = useViewportRect(embedder?.path ?? null);
+  const layout = embedder ? viewportPassSizes(embedder.node, forced).layout : projectSize;
+  return useStableVector2(layout);
+}
+
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
-  const { path, node, inheritedRtl, themeOwners, internalResources, externalResources } = viewport;
+  const { path, node, inheritedRtl, themeOwners, embedder, internalResources, externalResources } = viewport;
   const gate = useResolvedGate(viewport.gate);
+  const rootEmbeds = useProjectEmbedsSubwindows();
 
   const properties = node.properties as SubViewportProperties;
   const { transparent_bg: transparentBg, render_target_clear_mode: clearMode } = properties;
@@ -85,6 +98,7 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
 
   const canvasModulate = useCanvasModulateColor(node.children);
   const controlsSize = useStableVector2(sizes.layout);
+  const enclosingViewportSize = useEnclosingViewportSize(embedder);
 
   const renderState = useViewportRenderState(gate.updateMode);
   const renderPass = useCallback(() => {
@@ -119,7 +133,8 @@ function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
             size={controlsSize}
             inheritedRtl={inheritedRtl}
             themeOwners={themeOwners}
-            embedsWindows={properties.gui_embed_subwindows}
+            enclosingViewportSize={enclosingViewportSize}
+            embedsWindows={embedsSubwindows(node, rootEmbeds)}
           />
         </SubViewportCanvasScope>
       </World2DLightingBoundary>

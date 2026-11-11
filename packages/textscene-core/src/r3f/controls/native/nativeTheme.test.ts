@@ -270,6 +270,36 @@ describe('nativeTheme', () => {
     });
   });
 
+  describe('dialogPanel', () => {
+    it('scales the margin twice, as the call passes a scaled margin to make_flat_stylebox', () => {
+      expect(nativeTheme(1).widgets.dialogPanel.contentMargin).toEqual(uniform(8));
+      expect(nativeTheme(1.5).widgets.dialogPanel.contentMargin).toEqual(uniform(18));
+    });
+  });
+
+  describe('cache', () => {
+    it('returns the same theme for the same scale', () => {
+      expect(nativeTheme(1)).toBe(nativeTheme(1));
+    });
+
+    it('builds a new theme when the scale changes', () => {
+      const first = nativeTheme(1);
+      expect(nativeTheme(2)).not.toBe(first);
+      expect(nativeTheme(2).scale).toBe(2);
+    });
+
+    it('rebuilds for NaN, which never equals itself', () => {
+      expect(nativeTheme(Number.NaN)).not.toBe(nativeTheme(Number.NaN));
+    });
+  });
+
+  describe('popupMenuPanel corner detail', () => {
+    it('truncates the scaled detail to an int, as set_corner_detail does', () => {
+      expect(nativeTheme(1).widgets.popupMenuPanel.cornerDetail).toBe(5);
+      expect(nativeTheme(1.5).widgets.popupMenuPanel.cornerDetail).toBe(7);
+    });
+  });
+
   describe('the default type variations it models', () => {
     it('registers FlatMenuButton with a base type, as widgets.flatMenuButton holds its boxes', () => {
       expect(DEFAULT_THEME_TYPE_VARIATIONS[FLAT_MENU_BUTTON_VARIATION]).toBeTruthy();

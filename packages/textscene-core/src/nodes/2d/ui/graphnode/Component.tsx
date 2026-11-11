@@ -15,7 +15,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
@@ -76,16 +76,14 @@ function GraphNodePort({ solveNode, iconRef, slotColor, tintOwn, x, y, renderOrd
   const { color, opacity } = useTintedColor(tintOwn, slotColor);
 
   return (
-    <CanvasItemGroup position={[x - size.x / 2, -(y - size.y / 2), 0]}>
-      <ControlQuad
-        width={size.x}
-        height={size.y}
-        color={color}
-        opacity={opacity}
-        map={texture}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
+    <PositionedIcon
+      rect={{ x: x - size.x / 2, y: y - size.y / 2, w: size.x, h: size.y }}
+      texture={texture}
+      color={color}
+      opacity={opacity}
+      renderOrder={renderOrder}
+      canvasKey={renderOrder}
+    />
   );
 }
 
@@ -250,16 +248,19 @@ export function GraphNode({
         </Fragment>
       ))}
       {resizerTexture && props.resizable === true && (
-        <CanvasItemGroup position={[rect.w - RESIZER_SE_ICON_SIZE.x, -(rect.h - RESIZER_SE_ICON_SIZE.y), 0]}>
-          <ControlQuad
-            width={RESIZER_SE_ICON_SIZE.x}
-            height={RESIZER_SE_ICON_SIZE.y}
-            color={resizerTint.color}
-            opacity={resizerTint.opacity}
-            map={resizerTexture}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+        <PositionedIcon
+          rect={{
+            x: rect.w - RESIZER_SE_ICON_SIZE.x,
+            y: rect.h - RESIZER_SE_ICON_SIZE.y,
+            w: RESIZER_SE_ICON_SIZE.x,
+            h: RESIZER_SE_ICON_SIZE.y,
+          }}
+          texture={resizerTexture}
+          color={resizerTint.color}
+          opacity={resizerTint.opacity}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
       )}
     </>
   );

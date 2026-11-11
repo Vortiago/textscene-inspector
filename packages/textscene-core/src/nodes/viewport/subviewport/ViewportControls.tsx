@@ -42,6 +42,8 @@ interface ViewportControlsProps {
   inheritedRtl: boolean | null;
   /** The theme owners above a window (`viewportThemeOwners`). */
   themeOwners: readonly ThemeOwner[];
+  /** The visible size of the viewport around a window, which limits its contents height. Null for a SubViewport's own Controls. */
+  enclosingViewportSize: Vector2 | null;
   /** The viewport's `gui_embed_subwindows`: whether it draws its windows over its Controls. */
   embedsWindows: boolean;
 }
@@ -52,6 +54,7 @@ export function ViewportControls({
   size,
   inheritedRtl,
   themeOwners,
+  enclosingViewportSize,
   embedsWindows,
 }: ViewportControlsProps) {
   const { externalResources, internalResources } = useSceneResources();
@@ -65,7 +68,14 @@ export function ViewportControls({
     themeOwners,
     inheritedRtl
   );
-  usePublishWrappedSize(path, isWindowForest ? (tree[0] ?? null) : null, theme, measureText, generation);
+  usePublishWrappedSize(
+    path,
+    isWindowForest ? (tree[0] ?? null) : null,
+    theme,
+    measureText,
+    generation,
+    enclosingViewportSize
+  );
   const rect: Rect2 = useMemo(() => ({ x: 0, y: 0, w: size.x, h: size.y }), [size.x, size.y]);
   // A window's forest is rooted at the window itself, a SubViewport's at its children.
   const forestPath = isWindowForest ? (parentPathOf(path) ?? '') : path;

@@ -6,10 +6,9 @@
  */
 
 import { useMemo } from 'react';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   useCanvasItemViewSampler,
   useInheritedTextureSampler,
@@ -74,15 +73,13 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
   if (!draw || !drawnTexture) return null;
 
   return (
-    <CanvasItemGroup position={[draw.offset.x, -draw.offset.y, 0]}>
-      <ControlQuad
-        renderOrder={renderOrder}
-        width={draw.size.x}
-        height={draw.size.y}
-        color={tint.color}
-        opacity={tint.opacity}
-        map={drawnTexture}
-      />
-    </CanvasItemGroup>
+    <PositionedIcon
+      rect={{ x: draw.offset.x, y: draw.offset.y, w: draw.size.x, h: draw.size.y }}
+      texture={drawnTexture}
+      color={tint.color}
+      opacity={tint.opacity}
+      renderOrder={renderOrder}
+      canvasKey={renderOrder}
+    />
   );
 }

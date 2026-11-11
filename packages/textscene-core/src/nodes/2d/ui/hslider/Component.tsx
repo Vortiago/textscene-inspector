@@ -8,9 +8,9 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { SLIDER_GRABBER_ICONS, SLIDER_TICK_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   resolveSliderRatio,
   sliderGrabberAreaRect,
@@ -66,27 +66,24 @@ export function HSlider({ solveNode, tint, rect, theme, renderOrder }: NativeCon
         />
       </CanvasItemGroup>
       {tickRects.map((tickRect, i) => (
-        <CanvasItemGroup key={tickIndices[i]} position={[tickRect.x, -tickRect.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={tickRect.w}
-            height={tickRect.h}
-            color={tint.color}
-            opacity={tint.opacity}
-            map={tickTexture}
-          />
-        </CanvasItemGroup>
-      ))}
-      <CanvasItemGroup position={[grabberRect.x, -grabberRect.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={grabberRect.w}
-          height={grabberRect.h}
+        <PositionedIcon
+          key={tickIndices[i]}
+          rect={tickRect}
+          texture={tickTexture}
           color={tint.color}
           opacity={tint.opacity}
-          map={grabberTexture}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
         />
-      </CanvasItemGroup>
+      ))}
+      <PositionedIcon
+        rect={grabberRect}
+        texture={grabberTexture}
+        color={tint.color}
+        opacity={tint.opacity}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
     </>
   );
 }

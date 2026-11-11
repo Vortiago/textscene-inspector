@@ -23,7 +23,7 @@ import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildIn
 import {
   SCROLL_HINT_HORIZONTAL_WIDTH,
   SCROLL_HINT_VERTICAL_HEIGHT,
-  scrollBarGrabberGeometry,
+  scrollBarPlacement,
   scrollBarMinimumSize,
   type ScrollBarPlacement,
   type ScrollHintPlacement,
@@ -319,27 +319,6 @@ export function scrollContainerScrollBars(
     y: settledScrollValue(p.scrollVertical ?? 0, largest.y, vRect.h),
   };
 
-  // scrollBarGrabberGeometry's `min` fixed at 0: ScrollContainer's embedded
-  // bars never author `min_value`, so `range` (largest.x/.y) IS `max`.
-  const hGrabber = scrollBarGrabberGeometry(
-    false,
-    hRect.w,
-    ctx.theme,
-    0,
-    largest.x,
-    hRect.w,
-    scrollRatio(scroll.x, largest.x)
-  );
-  const vGrabber = scrollBarGrabberGeometry(
-    true,
-    vRect.h,
-    ctx.theme,
-    0,
-    largest.y,
-    vRect.h,
-    scrollRatio(scroll.y, largest.y)
-  );
-
   return {
     contentSize,
     scroll,
@@ -351,16 +330,23 @@ export function scrollContainerScrollBars(
       largest,
       scroll
     ),
-    horizontal: {
-      visible: hVisible,
-      rect: hRect,
-      grabberRect: { x: hGrabber.offset, y: 0, w: hGrabber.size, h: hRect.h },
-    },
-    vertical: {
-      visible: vVisible,
-      rect: vRect,
-      grabberRect: { x: 0, y: vGrabber.offset, w: vRect.w, h: vGrabber.size },
-    },
+    // `min_value` is never authored, so `range` (largest.x/.y) is `max`.
+    horizontal: scrollBarPlacement(
+      false,
+      hRect,
+      ctx.theme,
+      largest.x,
+      scrollRatio(scroll.x, largest.x),
+      hVisible
+    ),
+    vertical: scrollBarPlacement(
+      true,
+      vRect,
+      ctx.theme,
+      largest.y,
+      scrollRatio(scroll.y, largest.y),
+      vVisible
+    ),
   };
 }
 

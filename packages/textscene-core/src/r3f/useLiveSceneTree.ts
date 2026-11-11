@@ -26,7 +26,7 @@ import { sameElements } from '../utils/sameElements.js';
 import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 import { NOTHING_CACHED } from './cacheSources.js';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
-import { projectPhysicsClock } from '../parser/projectSettingsParser.js';
+import { projectEmbedsSubwindows, projectPhysicsClock } from '../parser/projectSettingsParser.js';
 import type { PhysicsClock } from '../godot/scene/physicsTicks.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
@@ -182,6 +182,11 @@ interface LiveTreeInputs {
  */
 export function useProjectPhysicsClock(): PhysicsClock {
   return projectPhysicsClock(useProjectSettings().settings);
+}
+
+/** Whether the project's root window embeds its windows, as Godot does by default. */
+export function useProjectEmbedsSubwindows(): boolean {
+  return projectEmbedsSubwindows(useProjectSettings().settings);
 }
 
 /** The scene graph in context, or null with none, the loader and the project's physics clock. */

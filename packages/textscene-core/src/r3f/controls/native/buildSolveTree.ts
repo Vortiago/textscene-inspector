@@ -15,7 +15,11 @@ import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../..
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
-import { projectPhysicsClock, type ProjectSettings } from '../../../parser/projectSettingsParser';
+import {
+  projectEmbedsSubwindows,
+  projectPhysicsClock,
+  type ProjectSettings,
+} from '../../../parser/projectSettingsParser';
 import {
   findExtResource,
   findSubResource,
@@ -373,6 +377,7 @@ function buildForest(
   const pendingThemes = new Set<string>();
   const pendingFonts = new Set<string>();
   const windows: SolveNode[] = [];
+  const rootEmbeds = projectEmbedsSubwindows(projectSettings);
   const readKeys = new Set<string>();
   const recordRead = (path: string) => readKeys.add(path);
   const viewportSizeReads: ViewportSizeRead[] = [];
@@ -653,7 +658,7 @@ function buildForest(
     if (isEmbeddableWindow(live)) {
       windows.push(windowSolveNode(live, path, step.scope, themeChain, hidden, ancestry.inheritedRtl));
     }
-    if (embedsSubwindows(live)) return NOTHING_WALKED;
+    if (embedsSubwindows(live, rootEmbeds)) return NOTHING_WALKED;
     return descendForWindows(step, descend, {
       ...ancestry,
       themeChain,

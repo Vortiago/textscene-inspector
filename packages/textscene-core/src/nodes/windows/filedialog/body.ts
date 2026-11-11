@@ -26,9 +26,9 @@ import { flatButtonBoxes } from '../../../r3f/controls/native/flatButtonBoxes';
 import { FILE_DIALOG_ICON_URLS } from '../../../r3f/controls/native/themeIcons';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
-import { themedSlotRequest, type TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequests, type TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
 import { perObject } from '../../../utils/perObject';
-import { syntheticControl } from '../acceptdialog/dialogParts';
+import { syntheticControl, syntheticPath } from '../acceptdialog/dialogParts';
 import type { FileDialogOption, FileDialogProperties } from './parser';
 
 /** `SIZE_EXPAND_FILL` and `SIZE_SHRINK_CENTER`, as a scene line writes them. */
@@ -264,9 +264,6 @@ function isFlatButton(variation: string | undefined): boolean {
   return variation === FLAT_BUTTON || variation === FLAT_MENU_BUTTON;
 }
 
-/** The path a synthetic Control gets: its parent's, then its own name, as `syntheticControl` joins them. */
-const pathOf = (parentPath: string, name: string) => `${parentPath}/@${name}`;
-
 /** The `FileDialog` theme icon `name` as the dialog's theme chain resolves it, or none when the theme leaves it to the vendored icon. */
 function themedIconsOf(
   dialog: SolveNode,
@@ -287,10 +284,7 @@ function iconSizeOf(dialog: SolveNode, name: FileDialogThemeIcon): Vector2 {
 
 /** One slot for each toolbar icon a Theme gives the dialog, so `iconSizeOf` reads its size. */
 export const fileDialogTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) =>
-  FILE_DIALOG_THEME_ICONS.flatMap((name) => {
-    const themed = themedIcons[name];
-    return themed ? [themedSlotRequest(name, themed)] : [];
-  });
+  themedSlotRequests(FILE_DIALOG_THEME_ICONS, themedIcons);
 
 function build(dialog: SolveNode, theme: NativeTheme, spec: Widget, parentPath: string): SolveNode {
   const parsed = parseNodeWithRegistry(
@@ -309,7 +303,7 @@ function build(dialog: SolveNode, theme: NativeTheme, spec: Widget, parentPath: 
     properties,
     parentPath,
     children: (spec.children ?? []).map((child) =>
-      build(dialog, theme, child, pathOf(parentPath, spec.name))
+      build(dialog, theme, child, syntheticPath(parentPath, spec.name))
     ),
     variation: spec.variation,
     variationDefaults: isFlatButton(spec.variation) ? { styleBoxes: flatButtonBoxes(theme) } : undefined,

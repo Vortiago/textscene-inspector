@@ -22,6 +22,7 @@ import { useOwnedTextureView } from '../../../../r3f/useTextureView';
 import { regionUvWindow } from '../../../../r3f/uvWindow';
 import { rangeRatio } from '../shared/range';
 import { ninePatchGeometry } from '../../../../r3f/controls/native/ninePatchGeometry';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { drawNinePatchStretched, type NinePatchMargin } from './ninePatchProgress';
 import { linearProgressDraw } from './linearFill';
 import {
@@ -283,16 +284,14 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         </CanvasItemGroup>
       )}
       {isRadialMode && radialVal !== null && radialVal >= 1 && progressTexture && radialSize && (
-        <CanvasItemGroup position={[progressOffset.x, -progressOffset.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={radialSize.x}
-            height={radialSize.y}
-            color={progressColor}
-            opacity={progressColorSrgb.a}
-            map={progressTexture}
-          />
-        </CanvasItemGroup>
+        <PositionedIcon
+          rect={{ x: progressOffset.x, y: progressOffset.y, w: radialSize.x, h: radialSize.y }}
+          texture={progressTexture}
+          color={progressColor}
+          opacity={progressColorSrgb.a}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
       )}
       {radialGeometry && progressTexture && (
         <CanvasItemGroup position={[progressOffset.x, -progressOffset.y, 0]}>
@@ -306,16 +305,19 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
         </CanvasItemGroup>
       )}
       {progressLinear && progressCropped && (
-        <CanvasItemGroup position={[progressLinear.offset.x, -progressLinear.offset.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={progressLinear.size.x}
-            height={progressLinear.size.y}
-            color={progressColor}
-            opacity={progressColorSrgb.a}
-            map={progressCropped}
-          />
-        </CanvasItemGroup>
+        <PositionedIcon
+          rect={{
+            x: progressLinear.offset.x,
+            y: progressLinear.offset.y,
+            w: progressLinear.size.x,
+            h: progressLinear.size.y,
+          }}
+          texture={progressCropped}
+          color={progressColor}
+          opacity={progressColorSrgb.a}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
       )}
 
       {overTexture && overSize && !ninePatchStretch && (

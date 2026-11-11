@@ -21,7 +21,7 @@ import {
 } from './solverRegistry';
 import type { SealedHandoff } from './solveHandoff';
 import { resolveControlLayout, type ControlLayoutOrder } from '../controlAnchors.js';
-import type { Vector2 } from '../../../godot/math/vector.js';
+import { type Vector2, vector2Max } from '../../../godot/math/vector.js';
 import { GrowDirection } from '../../../godot/scene/control.js';
 
 export interface SolvedControl {
@@ -112,7 +112,12 @@ function floorAtMinimumSize(
  * them (`:1775-1797`) touches neither `x` nor `w`.
  */
 function mirrorRectRtl(rect: Rect2, parentWidth: number): Rect2 {
-  return { ...rect, x: parentWidth - rect.x - rect.w };
+  return { ...rect, x: mirrorX(rect.x, rect.w, parentWidth) };
+}
+
+/** The left edge of a span of `width` at `x`, mirrored inside a parent `parentWidth` wide. */
+export function mirrorX(x: number, width: number, parentWidth: number): number {
+  return parentWidth - x - width;
 }
 
 /**
@@ -173,7 +178,7 @@ export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
   const typeFn = controlSolverRegistry.minimumSize(n.node.type);
   const typeMin = typeFn ? typeFn(sortableView(n), ctx) : { x: 0, y: 0 };
   const custom = controlProps(n).customMinimumSize ?? { x: 0, y: 0 };
-  return { x: Math.max(typeMin.x, custom.x), y: Math.max(typeMin.y, custom.y) };
+  return vector2Max(typeMin, custom);
 }
 
 /**
@@ -205,7 +210,8 @@ function presetTimeMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
 export function createSolveContext(
   theme: NativeTheme,
   measureText: TextMeasurer | null = null,
-  tentativeRect?: (n: SolveNode) => Rect2 | undefined
+  tentativeRect?: (n: SolveNode) => Rect2 | undefined,
+  embedderSize?: Vector2
 ): SolveContext {
   const cache = new Map<string, Vector2>();
   const ctx: SolveContext = {
@@ -221,6 +227,7 @@ export function createSolveContext(
       return value;
     },
     tentativeRect,
+    embedderSize,
   };
   return ctx;
 }
@@ -388,7 +395,12 @@ export function solveControlTree(
   // it drives. Godot's `_size_changed`/`update_minimum_size` are reactive too, so
   // a scene that couples them through a container converges in neither.
 
-  const pass2Ctx = createSolveContext(ctx.theme, ctx.measureText, (n) => out.get(n.path)?.rect);
+  const pass2Ctx = createSolveContext(
+    ctx.theme,
+    ctx.measureText,
+    (n) => out.get(n.path)?.rect,
+    ctx.embedderSize
+  );
   const out2 = new Map<string, SolvedControl>();
   for (const root of roots) {
     solveFree(root, viewport, rootOrigin, viewport, pass2Ctx, out2);

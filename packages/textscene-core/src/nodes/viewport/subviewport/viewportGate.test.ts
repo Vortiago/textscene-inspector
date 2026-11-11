@@ -19,7 +19,7 @@ function treeOf(source: string) {
 
 /** The gate of the viewport at `path` with no animated `visible` over it. */
 function resolved(tree: ReturnType<typeof treeOf>, path: string, authoredMode: number) {
-  return resolveGate(viewportGateAt(tree, path, authoredMode), new Map());
+  return resolveGate(viewportGateAt(tree, path, authoredMode, true), new Map());
 }
 
 describe('viewportGateAt: update mode', () => {
@@ -170,7 +170,7 @@ describe('resolveGate: an animated visible', () => {
 
 [node name="View" type="SubViewport" parent="Panel/Booth"]
 `);
-  const gate = viewportGateAt(tree, 'Root/Panel/Booth/View', DISABLED);
+  const gate = viewportGateAt(tree, 'Root/Panel/Booth/View', DISABLED, true);
 
   it('hides the viewport while the container is animated to hidden', () => {
     expect(resolveGate(gate, new Map([['Root/Panel/Booth', false]])).updateMode).toBe(DISABLED);
@@ -190,7 +190,7 @@ visible = false
 
 [node name="View" type="SubViewport" parent="Panel/Booth"]
 `);
-    const hidden = viewportGateAt(hiddenTree, 'Root/Panel/Booth/View', ALWAYS);
+    const hidden = viewportGateAt(hiddenTree, 'Root/Panel/Booth/View', ALWAYS, true);
     expect(resolveGate(hidden, new Map([['Root/Panel', true]])).updateMode).toBe(ALWAYS);
   });
 
@@ -203,7 +203,7 @@ visible = false
 
 [node name="View" type="SubViewport" parent="Plain/Booth"]
 `);
-    const plain = viewportGateAt(plainTree, 'Root/Plain/Booth/View', DISABLED);
+    const plain = viewportGateAt(plainTree, 'Root/Plain/Booth/View', DISABLED, true);
     expect(resolveGate(plain, new Map([['Root', false]])).updateMode).toBe(ALWAYS);
   });
 });

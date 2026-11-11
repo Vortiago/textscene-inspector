@@ -12,10 +12,9 @@
 import type {
   MinimumSizeFn,
   SolveContext,
-  TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   fitIconSize,
@@ -127,12 +126,7 @@ const CHECK_BUTTON_ICON_THEME_NAMES = Object.values(CHECK_BUTTON_ICON_THEME_NAME
 
 /** Which of CheckButton's 8 icon slots have a themed answer, as `checkBoxTextureSlots` does for CheckBox. */
 export const checkButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
-  const requests: TextureSlotRequest[] = [];
-  for (const name of CHECK_BUTTON_ICON_THEME_NAMES) {
-    const themed = themedIcons[name];
-    if (themed) requests.push(themedSlotRequest(name, themed));
-  }
-  return requests;
+  return themedSlotRequests(CHECK_BUTTON_ICON_THEME_NAMES, themedIcons);
 };
 
 /**

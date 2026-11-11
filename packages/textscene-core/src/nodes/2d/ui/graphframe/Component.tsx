@@ -15,12 +15,12 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { isStyleBoxTexture, type ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   resolveTitleFontTheme,
   shapeTitleText,
@@ -166,16 +166,19 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
         ))}
 
       {resizerTexture && (
-        <CanvasItemGroup position={[rect.w - RESIZER_SE_ICON_SIZE.x, -(rect.h - RESIZER_SE_ICON_SIZE.y), 0]}>
-          <ControlQuad
-            width={RESIZER_SE_ICON_SIZE.x}
-            height={RESIZER_SE_ICON_SIZE.y}
-            color={resizerColor}
-            opacity={resizerCombined.a}
-            map={resizerTexture}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+        <PositionedIcon
+          rect={{
+            x: rect.w - RESIZER_SE_ICON_SIZE.x,
+            y: rect.h - RESIZER_SE_ICON_SIZE.y,
+            w: RESIZER_SE_ICON_SIZE.x,
+            h: RESIZER_SE_ICON_SIZE.y,
+          }}
+          texture={resizerTexture}
+          color={resizerColor}
+          opacity={resizerCombined.a}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
       )}
     </>
   );

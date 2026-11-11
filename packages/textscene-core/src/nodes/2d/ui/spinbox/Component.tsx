@@ -9,12 +9,12 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   pickLineEditStyleBox,
   resolveLineEditStyleState,
@@ -188,26 +188,22 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
           />
         </CanvasItemGroup>
       )}
-      <CanvasItemGroup position={[upIconPos.x, -upIconPos.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={upIconSize.x}
-          height={upIconSize.y}
-          color={upIconLinear}
-          opacity={upIconColorSrgb.a}
-          map={upIconTexture}
-        />
-      </CanvasItemGroup>
-      <CanvasItemGroup position={[downIconPos.x, -downIconPos.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={downIconSize.x}
-          height={downIconSize.y}
-          color={downIconLinear}
-          opacity={downIconColorSrgb.a}
-          map={downIconTexture}
-        />
-      </CanvasItemGroup>
+      <PositionedIcon
+        rect={{ x: upIconPos.x, y: upIconPos.y, w: upIconSize.x, h: upIconSize.y }}
+        texture={upIconTexture}
+        color={upIconLinear}
+        opacity={upIconColorSrgb.a}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
+      <PositionedIcon
+        rect={{ x: downIconPos.x, y: downIconPos.y, w: downIconSize.x, h: downIconSize.y }}
+        texture={downIconTexture}
+        color={downIconLinear}
+        opacity={downIconColorSrgb.a}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
     </CanvasItemGroup>
   );
 }

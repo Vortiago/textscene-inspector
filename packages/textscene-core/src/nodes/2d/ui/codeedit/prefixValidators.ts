@@ -6,7 +6,7 @@
 import { accepts, propertyError } from '../../../../linter/validators/index.js';
 import type { PropertyValidator } from '../../../../linter/ValidatorRegistry.js';
 import { codePointCount } from '../../../../godot/string/codePoints.js';
-import { parsePackedStringArray } from './arrayForms.js';
+import { parsePackedStringArray } from '../../../../parser/utils.js';
 
 /**
  * `code_completion_prefixes` (code_edit.cpp:3002) and `indent_automatic_prefixes` (code_edit.cpp:3008)

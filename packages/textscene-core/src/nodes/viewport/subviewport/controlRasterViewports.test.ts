@@ -15,7 +15,7 @@ import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
 import { contextOver, sourcesOver, sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
-import { LTR_LAYOUT_ENV } from '../../../godot/scene/control';
+import { LTR_LAYOUT_ENV } from '../../../testing/ltrLayoutEnv';
 
 function parse(source: string): TscnScene {
   return new TscnParser().parse(source);
@@ -23,10 +23,16 @@ function parse(source: string): TscnScene {
 
 /** `collectControlRasterViewports` over a whole parsed scene, root scope. */
 function collect(scene: TscnScene, sceneCache?: CachedSceneSource) {
-  return collectControlRasterViewports(scene.nodes, sourcesOver(sceneCache), {
-    internalResources: scene.internalResources,
-    externalResources: scene.externalResources,
-  });
+  return collectControlRasterViewports(
+    scene.nodes,
+    sourcesOver(sceneCache),
+    {
+      internalResources: scene.internalResources,
+      externalResources: scene.externalResources,
+    },
+    LTR_LAYOUT_ENV,
+    true
+  );
 }
 
 describe('collectControlRasterViewports', () => {
@@ -148,7 +154,9 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
       {
         internalResources: host.internalResources,
         externalResources: host.externalResources,
-      }
+      },
+      LTR_LAYOUT_ENV,
+      true
     );
 
     expect(found.map((v) => v.path)).toEqual(['World/Refused/Own']);
@@ -195,10 +203,13 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 
   it('returns nothing for an empty tree rather than throwing', () => {
     expect(
-      collectControlRasterViewports([], sourcesOver(), {
-        internalResources: [],
-        externalResources: [],
-      })
+      collectControlRasterViewports(
+        [],
+        sourcesOver(),
+        { internalResources: [], externalResources: [] },
+        LTR_LAYOUT_ENV,
+        true
+      )
     ).toEqual([]);
   });
 

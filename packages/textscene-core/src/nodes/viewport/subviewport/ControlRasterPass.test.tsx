@@ -3,6 +3,7 @@
  * Control-only sub-viewport, publishing a texture consumers sample directly.
  */
 import { describe, expect, it, vi } from 'vitest';
+import { LTR_LAYOUT_ENV } from '../../../testing/ltrLayoutEnv';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
@@ -57,10 +58,13 @@ function parse(source: string): TscnScene {
 }
 
 function walk(scene: TscnScene) {
-  return collectControlRasterViewports(scene.nodes, sourcesOver(), {
-    internalResources: scene.internalResources,
-    externalResources: scene.externalResources,
-  });
+  return collectControlRasterViewports(
+    scene.nodes,
+    sourcesOver(),
+    { internalResources: scene.internalResources, externalResources: scene.externalResources },
+    LTR_LAYOUT_ENV,
+    true
+  );
 }
 
 /** Reports every entry the registry resolves at `path`, in order. */

@@ -151,7 +151,9 @@ export function ColorPicker({
   const fontSizePx = theme.fontSize;
   // Read in the render body, not a `useMemo` (`Label`'s `Component.tsx` says why).
   const fontMetrics = resolveNodeFontMetrics(solveNode, COLOR_PICKER_THEME_FONT_KEY);
-  const layoutCache = useMemo(() => new Map<string, TextLayoutResult>(), []);
+  // Keyed by text only, so a new font size or face (a font that finished loading) starts an empty cache.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const layoutCache = useMemo(() => new Map<string, TextLayoutResult>(), [fontSizePx, fontMetrics]);
   const shape = (text: string): TextLayoutResult => {
     let layout = layoutCache.get(text);
     if (!layout) {

@@ -11,7 +11,7 @@
  */
 
 import type { Rect2 } from '../../../godot/math/rect2';
-import type { Vector2 } from '../../../godot/math/vector';
+import { type Vector2, vector2Max } from '../../../godot/math/vector';
 import { SizeFlags, DEFAULT_SIZE_FLAGS } from '../../../godot/scene/control';
 import { internalChildThemeItems } from '../../../r3f/controls/native/themeItems';
 import { controlProps, type SolveNode } from '../../../r3f/controls/native/solveTree';
@@ -224,7 +224,7 @@ function largestChildMinimum(dialog: SolveNode, ctx: SolveContext): Vector2 {
   const body = dialogBodyOf(dialog, ctx.theme);
   if (!body) return authored;
   const bodyMinimum = ctx.combinedMinimumSize(body);
-  return { x: Math.max(authored.x, bodyMinimum.x), y: Math.max(authored.y, bodyMinimum.y) };
+  return vector2Max(authored, bodyMinimum);
 }
 
 /**
@@ -238,7 +238,7 @@ export const dialogContentsMinimumSize: MinimumSizeFn = (dialog, ctx) => {
   const authored = largestChildMinimum(dialog, ctx);
   const widthWithoutMessage = Math.max(row.x, authored.x);
   const message = messageMinimumSize(dialog, ctx, wrapWidth(dialog, widthWithoutMessage, margins.x));
-  const content = { x: Math.max(authored.x, message.x), y: Math.max(authored.y, message.y) };
+  const content = vector2Max(authored, message);
   return {
     x: Math.max(row.x, content.x) + margins.x,
     y: content.y + row.y + separation + margins.y,
