@@ -14,17 +14,21 @@ import type { FontHinting } from '../../../../godot/text/textServerEnums';
 
 /**
  * The bundled canvas face carrying the variation of `bundledFace`, with the outlines FreeType loads
- * at the default font's hinting, and emboldens and shears. Undefined while the outlines load, and
- * null where they cannot be read: the outline reader has warned, and no text of the face draws.
+ * at the default font's hinting, and emboldens and shears. Undefined while the outlines or the
+ * project settings load, and null where the outlines cannot be read: the outline reader has
+ * warned, and no text of the face draws.
  */
 export type PeekBundledCanvasFace = (bundledFace: FontMetrics) => CanvasFontMetrics | null | undefined;
 
-/** The peek of the bundled canvas face, at the hinting the project gives the default font. */
+/**
+ * The peek of the bundled canvas face, at the hinting the project gives the default font. It
+ * answers undefined while the project settings load, so no outline loads at a hinting they replace.
+ */
 export function useBundledCanvasFace(): PeekBundledCanvasFace {
-  const { defaultFontHinting } = useProjectSettings();
+  const { defaultFontHinting, isSettled } = useProjectSettings();
   return useCallback(
-    (bundledFace) => peekBundledCanvasFace(bundledFace, defaultFontHinting),
-    [defaultFontHinting]
+    (bundledFace) => (isSettled ? peekBundledCanvasFace(bundledFace, defaultFontHinting) : undefined),
+    [defaultFontHinting, isSettled]
   );
 }
 

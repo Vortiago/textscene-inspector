@@ -9,7 +9,7 @@ import { TextRunMesh, type TextRunProps } from './TextRunMesh';
 import { useSceneFontSettleCount } from './useSceneFontSettleCount';
 import { usePendingWhile } from '../../../../resources/usePendingWhile';
 
-/** Draws nothing while the outlines of the bundled font load, and counts as a pending load meanwhile. */
+/** Draws nothing while the outlines of the bundled font or the project settings load, and counts as a pending load meanwhile. */
 export default function BundledCanvasRun({ layout, ...run }: TextRunProps) {
   // `withVariation` memoises the face, so a render keeps its identity.
   const face = useBundledCanvasFace()(layout.fontMetrics);
