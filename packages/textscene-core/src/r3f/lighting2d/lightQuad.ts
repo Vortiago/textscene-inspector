@@ -158,17 +158,7 @@ export function createLightQuadMaterial({
   blendMode,
   stencil,
   shadow,
-}: LightQuadOptions): THREE.Material {
-  // The spike's port of the light pass: the quad of a light with no polar-map shadow.
-  if (spikeRenderer() !== 'classic' && !shadow) {
-    return createLightQuadNodeMaterial({
-      cookie,
-      color,
-      energy,
-      edgeFade: edgeFade(cookie),
-      state: { ...accumulationState(blendMode), ...stencil },
-    });
-  }
+}: LightQuadOptions): THREE.ShaderMaterial {
   const sampling = shadow ? shadowSamplingParameters(shadow) : null;
   return new THREE.ShaderMaterial({
     ...(sampling ? { defines: sampling.defines } : {}),
@@ -202,5 +192,18 @@ export function createLightQuadMaterial({
     ...canvasItemFacing(),
     ...accumulationState(blendMode),
     ...stencil,
+  });
+}
+
+/** The light quad on the renderer path the page asks for. The spike ports the quad with no polar-map shadow. */
+export function createLightQuadMaterialForPath(options: LightQuadOptions): THREE.Material {
+  if (spikeRenderer() === 'classic' || options.shadow) return createLightQuadMaterial(options);
+  const { cookie, color, energy, blendMode, stencil } = options;
+  return createLightQuadNodeMaterial({
+    cookie,
+    color,
+    energy,
+    edgeFade: edgeFade(cookie),
+    state: { ...accumulationState(blendMode), ...stencil },
   });
 }

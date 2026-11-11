@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import type * as THREE from 'three';
 import {
   alphaOnly,
-  createLightQuadMaterial,
+  createLightQuadMaterialForPath,
   createShadowColorQuadMaterial,
   type ShadowSampling,
 } from '../../../r3f/lighting2d/lightQuad';
@@ -105,7 +105,7 @@ export function useLightQuadMaterials(options: LightQuadMaterialOptions): LightQ
 
   const lit = useOwnedMaterial(
     () =>
-      createLightQuadMaterial({
+      createLightQuadMaterialForPath({
         cookie,
         energy,
         blendMode,
@@ -137,7 +137,7 @@ export function useLightQuadMaterials(options: LightQuadMaterialOptions): LightQ
   const fade = useOwnedMaterial(
     () =>
       isMix && !filtered
-        ? createLightQuadMaterial({
+        ? createLightQuadMaterialForPath({
             cookie,
             energy,
             blendMode,
@@ -148,13 +148,13 @@ export function useLightQuadMaterials(options: LightQuadMaterialOptions): LightQ
     [cookie, energy, blendMode, color, isMix, filtered, stenciled, stencilRef]
   );
   const unshadowed = useOwnedMaterial(
-    () => (drawsUnshadowed ? createLightQuadMaterial({ cookie, energy, blendMode, color }) : null),
+    () => (drawsUnshadowed ? createLightQuadMaterialForPath({ cookie, energy, blendMode, color }) : null),
     [cookie, energy, blendMode, color, drawsUnshadowed]
   );
   const unshadowedFade = useOwnedMaterial(
     () =>
       drawsUnshadowed && isMix
-        ? createLightQuadMaterial({ cookie, energy, blendMode, color: alphaOnly(color) })
+        ? createLightQuadMaterialForPath({ cookie, energy, blendMode, color: alphaOnly(color) })
         : null,
     [cookie, energy, blendMode, color, drawsUnshadowed, isMix]
   );
