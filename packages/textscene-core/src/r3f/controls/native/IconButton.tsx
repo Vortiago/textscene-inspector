@@ -20,7 +20,7 @@ interface IconButtonProps {
   size: number;
   texture: THREE.Texture | null;
   tint: NativeControlComponentProps['tint'];
-  iconTint: NativeControlComponentProps['tint'];
+  iconTint: Pick<NativeControlComponentProps['tint'], 'color' | 'opacity'>;
   rtl: boolean;
   renderOrder: number;
   /** The order of the box when it differs from the icon's. Defaults to `renderOrder`. */

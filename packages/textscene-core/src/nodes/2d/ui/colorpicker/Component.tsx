@@ -219,7 +219,7 @@ export function ColorPicker({
   );
   // The picker's Buttons modulate their icons by `icon_normal_color` of the Theme chain (`button.cpp:321-329`).
   const iconTint = useMemo(
-    () => ({ ...tint, ...iconModulate(toItemLinear, tint, buttonIconColor(child.buttonColors, 'normal')) }),
+    () => iconModulate(toItemLinear, tint, buttonIconColor(child.buttonColors, 'normal')),
     [tint, child, toItemLinear]
   );
   const lineEditFontColor = useMemo(() => multiplyModulate(tint.own, child.lineEditColor), [tint.own, child]);

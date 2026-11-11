@@ -163,10 +163,7 @@ export function GraphEditToolbarChrome({
                 size={GRAPH_EDIT_ICON_SIZE}
                 texture={iconTextures[item.id] ?? null}
                 tint={tint}
-                iconTint={{
-                  ...tint,
-                  ...iconModulate(toItemLinear, tint, buttonIconColor(toolbarTheme.buttonColors, state)),
-                }}
+                iconTint={iconModulate(toItemLinear, tint, buttonIconColor(toolbarTheme.buttonColors, state))}
                 rtl={rtl}
                 renderOrder={pieces.content.key}
                 boxRenderOrder={pieces.boxes.key}

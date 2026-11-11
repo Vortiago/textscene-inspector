@@ -17,9 +17,9 @@ inside a paragraph does not.
 
 A Theme that sets the `normal` box of Label gives the Label that box. The box draws under the text and adds its
 margins to the minimum size. It narrows the wrap width and moves left-aligned and right-aligned lines. A centred
-line ignores the margins, as in Godot (`label.cpp:472-512`). A Label on a default-theme variation reads that variation's
-font size and colour: the header sizes, `GraphFrameTitleLabel` at 22 px, and `control_font_color` for `GraphNodeTitleLabel`
-and `TooltipLabel`. The Theme chain overrides each.
+line ignores the margins, as in Godot (`label.cpp:472-512`). A Label on a default-theme variation reads that
+variation's font size and colour. The header variations set the size, `GraphFrameTitleLabel` sets 22 px, and
+`GraphNodeTitleLabel` and `TooltipLabel` set `control_font_color`. The Theme chain overrides each.
 
 A FILL Label fits the lines of each paragraph on its own (`label.cpp:272-319`). The last line of each
 paragraph stays unfitted under the default flags, and a single-line paragraph is fitted.

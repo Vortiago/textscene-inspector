@@ -229,6 +229,9 @@ function buildNativeTheme(scale: number): NativeTheme {
     right: scaled.contentMargin,
     bottom: scaled.contentMargin,
   };
+  // default_theme.cpp TooltipPanel margins: 2 and 0.5 times the default content margin.
+  const tooltipAcross = scaledPx(2 * DEFAULT_CONTENT_MARGIN, scale);
+  const tooltipDown = scaledPx(0.5 * DEFAULT_CONTENT_MARGIN, scale);
   const flatMenuButtonBox = flatStyleBox(TRANSPARENT, buttonMargin, 0);
   const optionButtonMargin = {
     left: scaled.optionButtonMarginX,
@@ -255,12 +258,7 @@ function buildNativeTheme(scale: number): NativeTheme {
       popupPanel: flatStyleBox(STYLE_FILL.normal, buttonMargin, scaled.cornerRadius),
       tooltipPanel: flatStyleBox(
         { r: 0, g: 0, b: 0, a: 0.5 },
-        {
-          left: scaledPx(2 * DEFAULT_CONTENT_MARGIN, scale),
-          top: scaledPx(0.5 * DEFAULT_CONTENT_MARGIN, scale),
-          right: scaledPx(2 * DEFAULT_CONTENT_MARGIN, scale),
-          bottom: scaledPx(0.5 * DEFAULT_CONTENT_MARGIN, scale),
-        },
+        { left: tooltipAcross, top: tooltipDown, right: tooltipAcross, bottom: tooltipDown },
         scaled.cornerRadius
       ),
       popupMenuPanel: {

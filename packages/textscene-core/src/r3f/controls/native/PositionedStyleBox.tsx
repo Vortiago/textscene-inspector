@@ -3,7 +3,8 @@ import type { NativeControlComponentProps } from '../ControlComponentRegistry';
 import { CanvasItemGroup } from '../../components/CanvasItemGroup';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { StyleBoxQuad } from './StyleBoxQuad';
-import type { ResolvedStyleBox } from './parseStyleBox';
+import { isStyleBoxLine, isStyleBoxTexture, type ResolvedStyleBox } from './parseStyleBox';
+import { isDrawn } from './styleBoxFlat';
 
 interface PositionedStyleBoxProps {
   box: ResolvedStyleBox;
@@ -13,6 +14,8 @@ interface PositionedStyleBoxProps {
 }
 
 export function PositionedStyleBox({ box, rect, tint, renderOrder }: PositionedStyleBoxProps) {
+  // A texture or line box carries its paint outside the flat data `isDrawn` reads.
+  if (!isStyleBoxTexture(box) && !isStyleBoxLine(box) && !isDrawn(box)) return null;
   return (
     <CanvasItemGroup position={[rect.x, -rect.y, 0]}>
       <StyleBoxQuad

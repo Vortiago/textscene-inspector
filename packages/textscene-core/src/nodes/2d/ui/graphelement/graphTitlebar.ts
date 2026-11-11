@@ -28,7 +28,6 @@ import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyl
 import { internalChildThemeItems } from '../../../../r3f/controls/native/themeItems';
 import { layoutLabelLines, LABEL_LINE_SPACING_PX, LABEL_PARAGRAPH_SEPARATOR } from '../label/nativeSolver';
 import type { Rgba } from '../../../../godot/math/math';
-import { LABEL_FONT_COLOR } from '../../../../godot/scene/theme';
 import {
   defaultLabelFontColorInChain,
   LABEL_NORMAL_BOX,
@@ -64,10 +63,10 @@ export function resolveTitleFontTheme(
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
   const items = internalChildThemeItems(n, TITLE_LABEL_NATIVE_TYPE, typeVariation);
-  const color = items.colors.font_color;
+  // The title's chain always reaches Label, so the walk always finds a colour.
   return {
     fontSizePx,
-    color: color ?? defaultLabelFontColorInChain(scope.typeChain) ?? LABEL_FONT_COLOR,
+    color: items.colors.font_color ?? defaultLabelFontColorInChain(scope.typeChain)!,
     fontMetrics,
     box: items.styleBoxes.normal ?? LABEL_NORMAL_BOX,
   };
