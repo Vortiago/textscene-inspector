@@ -25,9 +25,10 @@ RUN getent hosts archive.ubuntu.com > /dev/null \
 # zstd: actions/cache packs with it on a runner, and an entry packed another way never matches.
 # mesa-vulkan-drivers: lavapipe, the driver of `pnpm test:gpu` and of `pnpm ref:godot`.
 # xvfb and xauth: `xvfb-run`, the display Godot renders to.
+# libatomic1: the pnpm that pnpm/action-setup installs loads it.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-    ca-certificates curl git unzip xz-utils zstd \
+    ca-certificates curl git libatomic1 unzip xz-utils zstd \
     mesa-vulkan-drivers xvfb xauth \
   && rm -rf /var/lib/apt/lists/*
 
