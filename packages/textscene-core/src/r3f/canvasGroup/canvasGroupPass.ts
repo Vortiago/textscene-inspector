@@ -1,11 +1,7 @@
 /**
- * The canvas group pass of one canvas: each group draws the items in its key window into a buffer of
- * its own, and the canvas frame draws every other item and the group's composite rect. Godot draws
- * a group's items into the render target's back buffer, cleared to transparent, and then the
- * group's rect over it (`renderer_canvas_render_rd.cpp:812-866`).
- *
- * A clipping group (`clip_children`) starts its buffer as a copy of the canvas drawn so far instead,
- * and its owner is the mask: it draws over the frame with the buffer's colour and its own alpha.
+ * The canvas group pass of one canvas: each group draws the items in its key window into its own
+ * buffer, and the frame draws every other item and the composite rect (`renderer_canvas_render_rd.cpp:812-866`).
+ * A clipping group starts its buffer as a copy of the canvas drawn so far, and its owner is the mask.
  */
 
 import * as THREE from 'three';
@@ -120,11 +116,9 @@ function isCanvasGroupRect(object: THREE.Object3D): boolean {
 export type CanvasFrameTarget = Pick<THREE.WebGLRenderTarget, 'width' | 'height' | 'texture'>;
 
 /**
- * Draws the buffers of the groups in `scene`, then `draw`, the frame's own draw of the scene, with
- * each outermost group's items left out. A group inside another's window draws plain into the outer
- * buffer, as Godot's renderer starts no group while one is open (`:812-813`). `frame` is the target
- * `draw` fills. A clipping group splits the draw: `draw` runs once for the keys before the group,
- * and again for each later span, over what the frame holds.
+ * Draws the buffers of the groups in `scene`, then `draw` with each outermost group's items left
+ * out. A group inside another's window draws plain (`:812-813`). A clipping group splits `draw`
+ * into one run for each span of keys, over what the frame holds.
  */
 export function drawCanvasGroups(
   gl: THREE.WebGLRenderer,
@@ -143,7 +137,8 @@ export function drawCanvasGroups(
   camera.updateMatrixWorld();
   const keyed = keyedScene(scene, camera, keyIsInWindowSpan(groups.entries));
   const nesting = nestingOf(groups, clipGroupsDrawingNothing(groups.entries, keyed));
-  const drawing = fitGroups(nesting, drawnBoxes(keyed, nesting.innermostFirst), frameClipOf(camera, frame));
+  const drawn = drawnBoxes(keyed, nesting.innermostFirst);
+  const drawing = fitGroups(nesting, drawn, frameClipOf(camera, frame));
   const { outermost } = nesting;
   const inertOwners = nesting.inert.flatMap((group) =>
     group.kind === 'clip' ? [{ window: group.window, behind: group.clip.behind }] : []
@@ -171,7 +166,7 @@ export function drawCanvasGroups(
   try {
     // The matrices are current from the walk above, so no span of the frame walks them again.
     withFrozenMatrices(scene, () =>
-      drawFrame({ gl, scene, camera, frame, keyed, draw, inertOwners }, clipping, isFrameKey)
+      drawFrame({ gl, scene, camera, frame, keyed, drawn, draw, inertOwners }, clipping, isFrameKey)
     );
   } finally {
     // A later draw of the scene, or a draw that threw, must not find an owner still masked.
@@ -210,18 +205,18 @@ interface FrameDraw {
   camera: THREE.Camera;
   frame: CanvasFrameTarget;
   keyed: KeyedScene;
+  /** The world boxes each group drew, nested group rects included. */
+  drawn: ReadonlyMap<CanvasGroupEntry, readonly THREE.Box3[]>;
   draw: () => void;
   inertOwners: readonly InertOwner[];
 }
 
 /**
- * Draws the frame's keys `isFrameKey` admits. Each clipping group splits it: the keys before the
- * group draw, the frame is copied into the group's buffer and the group's items draw over the
- * copy, and the keys from the group on draw after, the masked owner among them. `clipping` is
- * ordered by window.
+ * Draws the frame's keys `isFrameKey` admits. Each clipping group, in window order, splits it: the
+ * keys before the group draw, then the group fills its buffer, and the keys from the group on draw.
  */
 function drawFrame(
-  { gl, scene, camera, frame, keyed, draw, inertOwners }: FrameDraw,
+  { gl, scene, camera, frame, keyed, drawn, draw, inertOwners }: FrameDraw,
   clipping: readonly ClippingEntry[],
   isFrameKey: (key: number) => boolean
 ): void {
@@ -245,7 +240,7 @@ function drawFrame(
     }
     emitted.push(...owners.filter((owner) => owner.behind.length > 0));
   };
-  const regions = clipping.length > 0 ? clipRegions(keyed, camera, frame, clipping) : [];
+  const regions = clipping.length > 0 ? clipRegions(keyed, drawn, camera, frame, clipping) : [];
   clipping.forEach((group, i) => {
     drawSpan(group.window.from);
     spanFrom = group.window.from;

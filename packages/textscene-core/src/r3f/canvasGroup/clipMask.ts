@@ -1,8 +1,6 @@
 /**
- * The mask a `clip_children` owner draws with: the colour of the group buffer at the fragment under
- * the owner's own alpha. It is Godot's default clip children shader, `COLOR.rgb = c.rgb` of an
- * unshaded sample of the back buffer (`renderer_canvas_render_rd.cpp:2096-2111`), added to the
- * program of each mesh the owner draws.
+ * The mask a `clip_children` owner draws with: the buffer's colour under the owner's own alpha, as
+ * Godot's default clip shader (`renderer_canvas_render_rd.cpp:2096-2111`), added to each owner mesh.
  */
 
 import type * as THREE from 'three';

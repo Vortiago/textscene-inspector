@@ -37,14 +37,17 @@ const corner = new THREE.Vector3();
 const view = new THREE.Matrix4();
 
 /**
- * The texel region of each group in `groups`, which are sorted by window and do not overlap. A
- * group whose items fall outside the frame answers an empty region.
+ * The texel region of each group in `groups`, which are sorted by window and do not overlap: the
+ * pixels of the boxes in its window, its owner's included because the mask reads the buffer there,
+ * and of the rects of the groups nested in it, which `drawn` holds. A group whose items fall outside
+ * the frame answers an empty region.
  */
-export function clipRegions(
+export function clipRegions<G extends { window: CanvasGroupWindow }>(
   { keys, boxes }: KeyedScene,
+  drawn: ReadonlyMap<G, readonly THREE.Box3[]>,
   camera: THREE.Camera,
   frame: CanvasFrameTarget,
-  groups: readonly { window: CanvasGroupWindow }[]
+  groups: readonly G[]
 ): TexelRegion[] {
   const bounds = groups.map(() => ({ minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }));
   view.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
@@ -52,9 +55,11 @@ export function clipRegions(
     const box = boxes[i];
     if (!box) continue;
     const at = windowIndexAt(groups, keys[i]!);
-    if (at < 0) continue;
-    grow(bounds[at]!, box, frame);
+    if (at >= 0) grow(bounds[at]!, box, frame);
   }
+  groups.forEach((group, at) => {
+    for (const box of drawn.get(group) ?? []) grow(bounds[at]!, box, frame);
+  });
   return bounds.map((b) => regionOf(b, frame));
 }
 
@@ -79,6 +84,7 @@ function grow(into: PixelBounds, box: THREE.Box3, frame: CanvasFrameTarget) {
 }
 
 function regionOf(b: PixelBounds, { width, height }: CanvasFrameTarget): TexelRegion {
+  if (b.minX > b.maxX) return { x: 0, y: 0, width: 0, height: 0 };
   const left = Math.max(0, Math.floor(b.minX) - REGION_PAD);
   const bottom = Math.max(0, Math.floor(b.minY) - REGION_PAD);
   const right = Math.min(width, Math.ceil(b.maxX) + REGION_PAD);

@@ -1,7 +1,6 @@
 /**
- * The buffer every clipping group of one canvas fills. The pass fills a group's buffer and draws its
- * owner before it fills the next group's, so the groups take turns and one frame-sized target
- * serves all of them. A target for each group would cost 500 frames of memory for 500 owners.
+ * The buffer every clipping group of one canvas fills. The groups take turns, so one frame-sized
+ * target serves all of them: a target for each would cost 500 frames of memory for 500 owners.
  */
 
 import { useEffect, useMemo } from 'react';

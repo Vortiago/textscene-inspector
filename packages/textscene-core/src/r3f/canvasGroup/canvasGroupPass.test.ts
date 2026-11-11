@@ -302,6 +302,26 @@ describe('drawCanvasGroups', () => {
       expect(clears).toEqual([]);
     });
 
+    it('sizes the buffer region over the rect of a group nested in the clipping window, margins included', () => {
+      const { scene, meshes } = clippedScene();
+      const buffer = new THREE.WebGLRenderTarget(1, 1);
+      register(scene, clipEntry('clipOnly', buffer, { masking: false }));
+      const nestedBuffer = new THREE.WebGLRenderTarget(1, 1);
+      register(scene, entry({ own: 12, from: 12, to: 15 }, nestedBuffer));
+      const { gl } = recordingRenderer(meshes);
+      const widths: number[] = [];
+      const render = gl.render;
+      gl.render = (root: THREE.Object3D, cam: THREE.Camera) => {
+        if (buffer.scissorTest) widths.push(buffer.scissor.width);
+        render(root, cam);
+      };
+
+      drawCanvasGroups(gl, scene, camera, FRAME, () => gl.render(scene, camera));
+
+      // The nested rect (FITTED, -1 to 1) spans the 64-texel frame; the unit child alone spans 32 plus the pad.
+      expect(widths[0]).toBe(FRAME.width);
+    });
+
     it('freezes the matrices of the owner subtree it renders, so three does not recompute them', () => {
       const { scene, meshes } = clippedScene();
       register(scene, clipEntry('clipOnly', new THREE.WebGLRenderTarget(1, 1), { masking: false }));

@@ -8,7 +8,7 @@ import { useLayoutEffect, useMemo, type ReactNode } from 'react';
 import { useThree } from '@react-three/fiber';
 import { useSharedClipBuffer } from './sharedClipBuffer';
 import { useCanvasColorSpace } from '../canvasColorSpace';
-import type { CanvasItemState } from '../canvasItemState';
+import { runKeysOf, type CanvasItemState } from '../canvasItemState';
 import type { PaintRange } from '../canvasPaintOrder';
 import { createClipMask } from './clipMask';
 import { ClipMaskProvider } from './ClipMaskContext';
@@ -89,14 +89,10 @@ function ClippingGroup({
   const mask = useMemo(createClipMask, []);
   useLayoutEffect(() => mask.readBuffer(buffer.texture), [mask, buffer]);
 
-  const { base, size } = range;
   const { key: own, keyAt } = state;
-  // Past the last key, not at `base + size`: the encoding saturates a sequence at the stride's end.
+  const { base, size } = range;
   const window = useMemo(
-    () =>
-      isYSorted
-        ? { own, from: own, to: own + 1 }
-        : { own, from: keyAt(base), to: keyAt(base + size - 1) + 1 },
+    () => (isYSorted ? { own, from: own, to: own + 1 } : runKeysOf(keyAt, own, { base, size })),
     [isYSorted, own, keyAt, base, size]
   );
   const behind = useMemo(

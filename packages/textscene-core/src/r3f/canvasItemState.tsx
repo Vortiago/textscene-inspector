@@ -127,11 +127,18 @@ export function useCanvasRunKeysOfNode(node: TscnNode, own: CanvasItemZStep): Ca
   const keyAt = useCanvasKeyAt(useZFinal(own));
   const sequence = useNodePaintSequence(node);
   const { base, size } = usePaintRange();
+  return useMemo(() => runKeysOf(keyAt, keyAt(sequence), { base, size }), [keyAt, sequence, base, size]);
+}
+
+/** The keys of the run `range`, around the item keyed `own`. */
+export function runKeysOf(
+  keyAt: (sequence: number) => number,
+  own: number,
+  range: { base: number; size: number }
+): CanvasRunKeys {
+  const { base, size } = range;
   // Past the last key, not at `base + size`: the encoding saturates a sequence at the stride's end.
-  return useMemo(
-    () => ({ own: keyAt(sequence), from: keyAt(base), to: keyAt(base + size - 1) + 1 }),
-    [keyAt, sequence, base, size]
-  );
+  return { own, from: keyAt(base), to: keyAt(base + size - 1) + 1 };
 }
 
 /** Where a canvas item draws: its draw-order key and its `z_final`. */
