@@ -8,8 +8,6 @@ on:
 
 permissions:
   contents: read
-  # The browser jobs pull their image from ghcr.io.
-  packages: read
 
 # A new push to a pull request cancels its older run. Each push to main runs to the end.
 concurrency:
@@ -214,11 +212,8 @@ jobs:
     if: needs.changes.outputs.visual == 'true'
     # Chromium keeps its shared memory in /dev/shm, which Docker limits to 64 MB, so every browser
     # job shares the runner's.
-    container:
+    container: &ci-image
       image: ${{ needs.image.outputs.ref }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ github.token }}
       options: --ipc=host
     timeout-minutes: 20
     # The harness captures one scene at a time with software GL, and the whole set takes more
@@ -254,12 +249,7 @@ jobs:
     name: E2E (web previewer)
     runs-on: ubuntu-latest
     needs: [image, web-previewer]
-    container:
-      image: ${{ needs.image.outputs.ref }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ github.token }}
-      options: --ipc=host
+    container: *ci-image
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -290,12 +280,7 @@ jobs:
     name: Renderer in a plain Vite app
     runs-on: ubuntu-latest
     needs: image
-    container:
-      image: ${{ needs.image.outputs.ref }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ github.token }}
-      options: --ipc=host
+    container: *ci-image
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -408,12 +393,7 @@ jobs:
     name: VS Code for the Web
     runs-on: ubuntu-latest
     needs: image
-    container:
-      image: ${{ needs.image.outputs.ref }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ github.token }}
-      options: --ipc=host
+    container: *ci-image
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

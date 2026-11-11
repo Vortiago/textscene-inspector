@@ -57,4 +57,6 @@ Node, pnpm and the workspace packages stay with `.github/actions/setup`.
   the image fails in the `image` job, with a message that names the cause, until a maintainer
   pushes its branch to the repository. The job's `permissions` block raises the token of a
   Dependabot run, which is read-only by default.
+- The package `ci` is public, as the repository is, and a job pulls the image without a sign-in.
+  A private package would fail the browser jobs of every run, a fork's pull request too.
 - ghcr.io keeps every tag. An old tag is safe to delete once no open branch computes it.
