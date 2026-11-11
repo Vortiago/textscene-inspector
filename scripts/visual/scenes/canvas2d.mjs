@@ -422,11 +422,11 @@ export const CANVAS_2D_SCENES = [
   // the slice's sheet records. A span-layout change moves them here.
   { name: 'richtext-label-bbcode', file: 'unit-rich-text-label.tscn', mode: '2d' },
   { name: 'button-states', file: 'unit-button-states.tscn', mode: '2d' },
-  // The one variable: the theme text outline of Button, CheckBox, CheckButton, OptionButton and MenuButton.
   // The one variable: the theme type variation of a Button, FlatButton and HeaderSmall beside a plain one.
   // FlatButton and a Label variation draw no normal box, and HeaderSmall takes Label's white text (Godot 4.6.3
   // `--mode 2d`: max 2 of 255 over the grid).
   { name: 'button-default-theme-variations', file: 'unit-button-default-theme-variations.tscn', mode: '2d' },
+  // The one variable: the theme text outline of Button, CheckBox, CheckButton, OptionButton and MenuButton.
   { name: 'button-family-outline', file: 'unit-button-family-outline.tscn', mode: '2d' },
   // The one variable: the theme text outline of LinkButton, the FoldableContainer title and ItemList
   // items, left to right and as a trimmed AUTO Hebrew line, whose ring trims by the inferred direction.

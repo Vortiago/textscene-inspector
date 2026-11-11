@@ -93,7 +93,7 @@ export function syntheticPath(parentPath: string, name: string): string {
 /**
  * A Control `memnew`d inside `dialog` as a `SolveNode` in the dialog's scope. It has no scene node, so
  * none of the dialog's own theme items (`panel`, `buttons_separation`) apply to it. Its own come through
- * the dialog's theme chain, under the default theme's items for its variation.
+ * the dialog's theme chain. The default theme's items for its variation are the painter's to add.
  */
 export function syntheticControl(dialog: SolveNode, spec: SyntheticControl): SolveNode {
   const { type, name, variation } = spec;

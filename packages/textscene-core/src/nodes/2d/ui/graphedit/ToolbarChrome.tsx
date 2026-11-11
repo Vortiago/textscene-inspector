@@ -119,6 +119,19 @@ function ItemBox({ box, rect, tint, renderOrder }: ItemBoxProps) {
   );
 }
 
+/** The tint and opacity of a SpinBox arrow in its normal state. */
+function useArrowColor(
+  tint: Parameters<typeof multiplyModulate>[0],
+  toolbarTheme: GraphEditToolbarTheme,
+  direction: 'up' | 'down'
+) {
+  const color = useMemo(
+    () => multiplyModulate(tint, spinBoxIconColor(toolbarTheme.spinBoxColors, direction, 'normal')),
+    [tint, toolbarTheme, direction]
+  );
+  return { linear: useItemLinearColor(color), alpha: color.a };
+}
+
 /** A SpinBox arrow in the toolbar's coordinates. */
 function arrowPosition(spinBox: Rect2, button: Rect2): { x: number; y: number } {
   const local = spinBoxArrowPosition(button, SPIN_BOX_ARROW_ICON_SIZE);
@@ -149,16 +162,8 @@ export function GraphEditToolbarChrome({
     () => multiplyModulate(tint.own, toolbarTheme.fieldColor),
     [tint.own, toolbarTheme]
   );
-  const upArrowColor = useMemo(
-    () => multiplyModulate(tint.own, spinBoxIconColor(toolbarTheme.spinBoxColors, 'up', 'normal')),
-    [tint.own, toolbarTheme]
-  );
-  const downArrowColor = useMemo(
-    () => multiplyModulate(tint.own, spinBoxIconColor(toolbarTheme.spinBoxColors, 'down', 'normal')),
-    [tint.own, toolbarTheme]
-  );
-  const upArrowLinear = useItemLinearColor(upArrowColor);
-  const downArrowLinear = useItemLinearColor(downArrowColor);
+  const upArrow = useArrowColor(tint.own, toolbarTheme, 'up');
+  const downArrow = useArrowColor(tint.own, toolbarTheme, 'down');
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
 
   const iconTextures: Record<string, THREE.Texture | null> = {
@@ -251,8 +256,8 @@ export function GraphEditToolbarChrome({
                 h: SPIN_BOX_ARROW_ICON_SIZE.y,
               }}
               texture={spinUpTexture}
-              color={upArrowLinear}
-              opacity={upArrowColor.a}
+              color={upArrow.linear}
+              opacity={upArrow.alpha}
               renderOrder={pieces.content.key}
               canvasKey={pieces.content.key}
             />
@@ -264,8 +269,8 @@ export function GraphEditToolbarChrome({
                 h: SPIN_BOX_ARROW_ICON_SIZE.y,
               }}
               texture={spinDownTexture}
-              color={downArrowLinear}
-              opacity={downArrowColor.a}
+              color={downArrow.linear}
+              opacity={downArrow.alpha}
               renderOrder={pieces.content.key}
               canvasKey={pieces.content.key}
             />

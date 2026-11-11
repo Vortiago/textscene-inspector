@@ -73,7 +73,7 @@ export function buttonBoxesInChain(theme: NativeTheme, typeChain: readonly strin
   return boxes ?? theme.widgets.button;
 }
 
-/** Written only by `typeChainOf`. A node is replaced when the scene changes, so its chain resolves once. */
+/** Written only by `typeChains`. A node is replaced when the scene changes, so its chain resolves once. */
 const typeChains = perObject((n: ShareNode): readonly string[] =>
   buildThemeTypeChain(
     n.node.type,
@@ -83,9 +83,18 @@ const typeChains = perObject((n: ShareNode): readonly string[] =>
   )
 );
 
+/** Written only by `buttonBoxesOf`. A node's boxes build once for each theme scale. */
+const boxesByTheme = perObject((_n: ShareNode) => new WeakMap<NativeTheme, ButtonBoxes>());
+
 /** The default-theme Button boxes of `n`, by its own type and `theme_type_variation`. */
 export function buttonBoxesOf(n: ShareNode, theme: NativeTheme): ButtonBoxes {
-  return buttonBoxesInChain(theme, typeChains(n));
+  const byTheme = boxesByTheme(n);
+  let boxes = byTheme.get(theme);
+  if (!boxes) {
+    boxes = buttonBoxesInChain(theme, typeChains(n));
+    byTheme.set(theme, boxes);
+  }
+  return boxes;
 }
 
 /**

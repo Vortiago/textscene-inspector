@@ -76,20 +76,13 @@ const LABEL_PARAGRAPH_SPACING_PX = 0;
  */
 export const LABEL_PARAGRAPH_SEPARATOR = '\n';
 
-/**
- * Label's default font colour is opaque white: `default_theme.cpp` sets `font_color` for
- * "Label" to `Color(1, 1, 1)`, not the `control_font_color` gray most other
- * widget types read.
- */
-export const LABEL_DEFAULT_FONT_COLOR: Rgba = LABEL_FONT_COLOR;
-
 /** This Label's theme font size and colour: its overrides, else the ancestor Theme chain, else the theme default, else Label's white (`resolveTextTheme`). */
 export function labelTextTheme(
   n: ShareNode,
   props: TextThemeProps,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: LABEL_DEFAULT_FONT_COLOR };
+  const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: LABEL_FONT_COLOR };
   return resolveTextTheme(n, props, LABEL_THEME_KEYS, defaults);
 }
 

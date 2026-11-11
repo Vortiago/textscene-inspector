@@ -13,7 +13,7 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { internalChildThemeItems } from '../../../../r3f/controls/native/themeItems';
-import { LABEL_DEFAULT_FONT_COLOR } from '../label/nativeSolver';
+import { LABEL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { LINE_EDIT_DEFAULT_FONT_COLOR, pickLineEditStyleBox } from '../lineedit/nativeSolver';
 import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
 
@@ -63,7 +63,7 @@ function buildToolbarTheme(n: SolveNode, theme: NativeTheme): GraphEditToolbarTh
     },
     buttonColors: button.colors,
     labelBox: label.styleBoxes.normal ?? LABEL_NORMAL_BOX,
-    labelColor: label.colors.font_color ?? LABEL_DEFAULT_FONT_COLOR,
+    labelColor: label.colors.font_color ?? LABEL_FONT_COLOR,
     fieldBoxes: {
       normal: pickLineEditStyleBox(field.styleBoxes, lineEdit, 'normal'),
       readOnly: pickLineEditStyleBox(field.styleBoxes, lineEdit, 'read_only'),
