@@ -22,6 +22,9 @@ import type { TextLayoutResult } from '../../../../r3f/controls/native/text/text
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
+import { overrunFlagsForBehavior, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
+import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { TabBarProperties, TabBarTabProperties } from './types';
 import { TAB_BAR_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
@@ -52,6 +55,9 @@ import {
 } from './nativeSolver';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
+/** `TextLine`'s default `overrun_behavior` (`text_line.h:50`): what `text_buf` trims to `size_text` when `max_tab_width` truncates a tab (`tab_bar.cpp:1221`). */
+const TAB_TITLE_OVERRUN = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+
 /** A stable identity for "no tabs", so a Control with none never invalidates a memo depending on it every render. */
 const EMPTY_TABS: readonly TabBarTabProperties[] = [];
 
@@ -62,12 +68,8 @@ interface ComputedTab {
   layout: TextLayoutResult;
 }
 
-/**
- * No pointer exists, so `tab_hovered`, `tab_focus`, the close and right buttons' hover background
- * and the drag drop-mark never draw (`buttonBase.ts`). `right_button` is dead code (`nativeSolver.ts`),
- * and only TabContainer consumes `all_tabs_in_front`'s front ordering.
- */
-export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
+/** Everything about a TabBar's tabs that does not depend on its width: the TabContainer reads it to size the bar before it draws. */
+export function useTabBarModel(solveNode: SolveNode, theme: NativeControlComponentProps['theme']) {
   const props = painterView<TabBarProperties>(solveNode);
   const tabs = props.tabs ?? EMPTY_TABS;
   const currentTab = resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabs.length, (i) =>
@@ -138,22 +140,18 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
     ]
   );
 
-  const drawLayout = useMemo(
-    () =>
-      computeTabBarDrawLayout(drawInputs, {
-        barWidthPx: rect.w,
-        alignment,
-        clipTabs,
-        maxTabWidthPx: maxTabWidth,
-        tabSeparation,
-        incrementIconWidth: incrementIconSize.x,
-        decrementIconWidth: decrementIconSize.x,
-        currentTab,
-        scrollToSelected,
-      }),
+  const layoutInput = useMemo(
+    () => ({
+      alignment,
+      clipTabs,
+      maxTabWidthPx: maxTabWidth,
+      tabSeparation,
+      incrementIconWidth: incrementIconSize.x,
+      decrementIconWidth: decrementIconSize.x,
+      currentTab,
+      scrollToSelected,
+    }),
     [
-      drawInputs,
-      rect.w,
       alignment,
       clipTabs,
       maxTabWidth,
@@ -163,6 +161,65 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
       currentTab,
       scrollToSelected,
     ]
+  );
+
+  return {
+    computed,
+    drawInputs,
+    layoutInput,
+    currentTab,
+    closeDisplayPolicy,
+    hSeparation,
+    overrides,
+    defaults,
+    closeButtonMargin,
+    closeIconSize,
+    incrementIconSize,
+    decrementIconSize,
+    fontSizePx,
+    fontMetrics,
+  };
+}
+
+export type TabBarModel = ReturnType<typeof useTabBarModel>;
+
+/**
+ * No pointer exists, so `tab_hovered`, `tab_focus`, the close and right buttons' hover background
+ * and the drag drop-mark never draw (`buttonBase.ts`). `right_button` is dead code (`nativeSolver.ts`),
+ * and only TabContainer consumes `all_tabs_in_front`'s front ordering.
+ */
+export function TabBar(props: NativeControlComponentProps) {
+  const model = useTabBarModel(props.solveNode, props.theme);
+  return <TabBarStrip {...props} model={model} />;
+}
+
+interface TabBarStripProps extends NativeControlComponentProps {
+  model: TabBarModel;
+  /** The first drawn tab, when the caller resolved it. Unset, the strip scrolls to the current tab once. */
+  offset?: number;
+}
+
+/** The painter for one resolved width: it draws `model` in `rect`. */
+export function TabBarStrip({ solveNode, tint, rect, renderOrder, model, offset }: TabBarStripProps) {
+  const {
+    computed,
+    drawInputs,
+    layoutInput,
+    currentTab,
+    closeDisplayPolicy,
+    hSeparation,
+    overrides,
+    defaults,
+    closeButtonMargin,
+    closeIconSize,
+    incrementIconSize,
+    decrementIconSize,
+    fontSizePx,
+    fontMetrics,
+  } = model;
+  const drawLayout = useMemo(
+    () => computeTabBarDrawLayout(drawInputs, { ...layoutInput, barWidthPx: rect.w, offset }),
+    [drawInputs, layoutInput, rect.w, offset]
   );
 
   const closeIconTexture = useNodeIcon(solveNode.icons.close, TAB_BAR_ICONS.close);
@@ -188,6 +245,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
     closeIconTexture,
     closeIconSize,
     fontSizePx,
+    fontMetrics,
     clippingPlanes,
   };
 
@@ -245,6 +303,7 @@ interface TabBarTabChromeProps {
   closeIconTexture: ReturnType<typeof useNodeIcon>;
   closeIconSize: { x: number; y: number };
   fontSizePx: number;
+  fontMetrics: FontMetrics | undefined;
   clippingPlanes: readonly Plane[];
   closeDisplayPolicy: number;
 }
@@ -267,10 +326,22 @@ function TabBarTabChrome({
   closeIconTexture,
   closeIconSize,
   fontSizePx,
+  fontMetrics,
   clippingPlanes,
   closeDisplayPolicy,
 }: TabBarTabChromeProps) {
-  const { tab, state, iconSize, layout } = entry;
+  const { tab, state, iconSize } = entry;
+  const layout = useMemo(
+    () =>
+      item.truncated && fontMetrics
+        ? trimSoloLine(entry.layout, TAB_TITLE_OVERRUN, item.textBudgetPx, {
+            fontMetrics,
+            fontSizePx,
+            isDrawnRtl: rtl,
+          })
+        : entry.layout,
+    [item.truncated, item.textBudgetPx, entry.layout, fontMetrics, fontSizePx, rtl]
+  );
   const style = pickTabStyleBox(overrides, defaults, state);
   const closeVisible = isCloseButtonVisible(closeDisplayPolicy, item.index, currentTab);
 

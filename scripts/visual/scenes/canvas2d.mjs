@@ -1054,6 +1054,8 @@ export const CANVAS_2D_SCENES = [
   { name: 'foldable-container-rtl', file: 'unit-foldable-container-rtl.tscn', mode: '2d' },
   { name: 'tab-bar-rtl', file: 'unit-tab-bar-rtl.tscn', mode: '2d' },
   { name: 'tab-bar-scroll-to-current', file: 'unit-tab-bar-scroll-to-current.tscn', mode: '2d' },
+  { name: 'tab-bar-scroll-options', file: 'unit-tab-bar-scroll-options.tscn', mode: '2d' },
+  { name: 'tab-container-hidden-pages', file: 'unit-tab-container-hidden-pages.tscn', mode: '2d' },
   { name: 'tab-bar-rtl-scroll', file: 'unit-tab-bar-rtl-scroll.tscn', mode: '2d' },
   { name: 'tab-container-rtl', file: 'unit-tab-container-rtl.tscn', mode: '2d' },
   { name: 'menu-bar-rtl', file: 'unit-menu-bar-rtl.tscn', mode: '2d' },

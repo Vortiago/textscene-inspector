@@ -318,11 +318,6 @@ describe('computeTabBarDrawLayout', () => {
       expect(layout(tabs, { ...clipped, ...input }).offset).toBe(0);
     });
 
-    it('keeps the strip at tab 0 when the current tab is hidden', () => {
-      const out = layout([...tabs, tab(40, { hidden: true })], { ...clipped, currentTab: 4 });
-      expect(out.offset).toBe(0);
-    });
-
     it('centres the scrolled strip in the space beside the arrows', () => {
       const out = layout(tabs, { ...clipped, currentTab: 3, alignment: 1 });
       // tab_bar.cpp:1273: (limit_minus_buttons - w) / 2 = (130 - 32 - 80) / 2.

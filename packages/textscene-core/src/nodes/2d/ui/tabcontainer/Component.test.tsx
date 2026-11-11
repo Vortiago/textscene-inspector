@@ -244,3 +244,35 @@ describe('<TabContainer> internal strip at a font-size override', () => {
     expect(overridden.textTop).toBeLessThanOrEqual(overridden.tabTop);
   });
 });
+
+describe('<TabContainer> strip scrolled to the current page', () => {
+  const CONTAINER: Rect2 = { x: 0, y: 0, w: 260, h: 100 };
+  const titleSpan = async (currentTab: number) => {
+    const pages = ['Inventory', 'Equipment', 'Journal', 'Settings'].map((name) => page(name));
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        solveNode={solveNode({ currentTab }, pages)}
+        rect={CONTAINER}
+        theme={THEME}
+        renderOrder={0}
+      />
+    );
+    const box = new THREE.Box3();
+    for (const mesh of findTextMeshes(renderer.scene)) {
+      mesh.updateWorldMatrix(true, false);
+      box.union(new THREE.Box3().setFromObject(mesh));
+    }
+    return box;
+  };
+
+  it('draws the titles of the pages it scrolled in, not the first pages (tab_bar.cpp:1875-1920)', async () => {
+    const first = await titleSpan(0);
+    const last = await titleSpan(3);
+    expect(last.max.x).not.toBeCloseTo(first.max.x, 0);
+  });
+
+  it('keeps every drawn title inside the bar beside the arrows', async () => {
+    expect((await titleSpan(3)).max.x).toBeLessThanOrEqual(CONTAINER.w);
+  });
+});

@@ -1,0 +1,301 @@
+; One variable: which pages are hidden ahead of the current one in a clipped TabContainer. Godot
+; applies each tab_<i>/hidden after the strip first scrolled (tab_bar.cpp:1078-1091), and RIGHT
+; alignment reclaims side_margin on overflow (tab_container.cpp:450). T0 to T6 vary hidden pages and
+; alignment; R0 to R2 are RIGHT-aligned, overflowing with and without a hidden first page, and fitting.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="T0" type="TabContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 268.0
+offset_bottom = 48.0
+current_tab = 5
+tab_alignment = 0
+clip_tabs = true
+
+[node name="Inventory" type="Control" parent="T0"]
+layout_mode = 2
+
+[node name="Equipment" type="Control" parent="T0"]
+layout_mode = 2
+
+[node name="Journal" type="Control" parent="T0"]
+layout_mode = 2
+
+[node name="Settings" type="Control" parent="T0"]
+layout_mode = 2
+
+[node name="Map" type="Control" parent="T0"]
+layout_mode = 2
+
+[node name="Quests" type="Control" parent="T0"]
+layout_mode = 2
+
+[node name="T1" type="TabContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 56.0
+offset_right = 268.0
+offset_bottom = 96.0
+current_tab = 5
+tab_alignment = 1
+clip_tabs = true
+tab_0/hidden = true
+
+[node name="Inventory" type="Control" parent="T1"]
+layout_mode = 2
+
+[node name="Equipment" type="Control" parent="T1"]
+layout_mode = 2
+
+[node name="Journal" type="Control" parent="T1"]
+layout_mode = 2
+
+[node name="Settings" type="Control" parent="T1"]
+layout_mode = 2
+
+[node name="Map" type="Control" parent="T1"]
+layout_mode = 2
+
+[node name="Quests" type="Control" parent="T1"]
+layout_mode = 2
+
+[node name="T2" type="TabContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 104.0
+offset_right = 268.0
+offset_bottom = 144.0
+current_tab = 5
+tab_alignment = 1
+clip_tabs = true
+tab_0/hidden = true
+tab_2/hidden = true
+
+[node name="Inventory" type="Control" parent="T2"]
+layout_mode = 2
+
+[node name="Equipment" type="Control" parent="T2"]
+layout_mode = 2
+
+[node name="Journal" type="Control" parent="T2"]
+layout_mode = 2
+
+[node name="Settings" type="Control" parent="T2"]
+layout_mode = 2
+
+[node name="Map" type="Control" parent="T2"]
+layout_mode = 2
+
+[node name="Quests" type="Control" parent="T2"]
+layout_mode = 2
+
+[node name="T3" type="TabContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 152.0
+offset_right = 308.0
+offset_bottom = 192.0
+current_tab = 5
+tab_alignment = 1
+clip_tabs = true
+tab_1/hidden = true
+
+[node name="Inventory" type="Control" parent="T3"]
+layout_mode = 2
+
+[node name="Equipment" type="Control" parent="T3"]
+layout_mode = 2
+
+[node name="Journal" type="Control" parent="T3"]
+layout_mode = 2
+
+[node name="Settings" type="Control" parent="T3"]
+layout_mode = 2
+
+[node name="Map" type="Control" parent="T3"]
+layout_mode = 2
+
+[node name="Quests" type="Control" parent="T3"]
+layout_mode = 2
+
+[node name="T4" type="TabContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 200.0
+offset_right = 248.0
+offset_bottom = 240.0
+current_tab = 4
+tab_alignment = 1
+clip_tabs = true
+tab_0/hidden = true
+tab_1/hidden = true
+
+[node name="Inventory" type="Control" parent="T4"]
+layout_mode = 2
+
+[node name="Equipment" type="Control" parent="T4"]
+layout_mode = 2
+
+[node name="Journal" type="Control" parent="T4"]
+layout_mode = 2
+
+[node name="Settings" type="Control" parent="T4"]
+layout_mode = 2
+
+[node name="Map" type="Control" parent="T4"]
+layout_mode = 2
+
+[node name="Quests" type="Control" parent="T4"]
+layout_mode = 2
+
+[node name="T5" type="TabContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 248.0
+offset_right = 208.0
+offset_bottom = 288.0
+current_tab = 3
+tab_alignment = 0
+clip_tabs = true
+tab_2/hidden = true
+
+[node name="Inventory" type="Control" parent="T5"]
+layout_mode = 2
+
+[node name="Equipment" type="Control" parent="T5"]
+layout_mode = 2
+
+[node name="Journal" type="Control" parent="T5"]
+layout_mode = 2
+
+[node name="Settings" type="Control" parent="T5"]
+layout_mode = 2
+
+[node name="Map" type="Control" parent="T5"]
+layout_mode = 2
+
+[node name="Quests" type="Control" parent="T5"]
+layout_mode = 2
+
+[node name="T6" type="TabContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 296.0
+offset_right = 358.0
+offset_bottom = 336.0
+current_tab = 5
+tab_alignment = 0
+clip_tabs = true
+tab_3/hidden = true
+
+[node name="Inventory" type="Control" parent="T6"]
+layout_mode = 2
+
+[node name="Equipment" type="Control" parent="T6"]
+layout_mode = 2
+
+[node name="Journal" type="Control" parent="T6"]
+layout_mode = 2
+
+[node name="Settings" type="Control" parent="T6"]
+layout_mode = 2
+
+[node name="Map" type="Control" parent="T6"]
+layout_mode = 2
+
+[node name="Quests" type="Control" parent="T6"]
+layout_mode = 2
+
+[node name="R0" type="TabContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 344.0
+offset_right = 158.0
+offset_bottom = 384.0
+current_tab = 2
+tab_alignment = 2
+clip_tabs = true
+
+[node name="Inventory" type="Control" parent="R0"]
+layout_mode = 2
+
+[node name="Equipment" type="Control" parent="R0"]
+layout_mode = 2
+
+[node name="Journal" type="Control" parent="R0"]
+layout_mode = 2
+
+[node name="Settings" type="Control" parent="R0"]
+layout_mode = 2
+
+[node name="Map" type="Control" parent="R0"]
+layout_mode = 2
+
+[node name="Quests" type="Control" parent="R0"]
+layout_mode = 2
+
+[node name="R1" type="TabContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 392.0
+offset_right = 158.0
+offset_bottom = 432.0
+current_tab = 2
+tab_alignment = 2
+clip_tabs = true
+tab_0/hidden = true
+
+[node name="Inventory" type="Control" parent="R1"]
+layout_mode = 2
+
+[node name="Equipment" type="Control" parent="R1"]
+layout_mode = 2
+
+[node name="Journal" type="Control" parent="R1"]
+layout_mode = 2
+
+[node name="Settings" type="Control" parent="R1"]
+layout_mode = 2
+
+[node name="Map" type="Control" parent="R1"]
+layout_mode = 2
+
+[node name="Quests" type="Control" parent="R1"]
+layout_mode = 2
+
+[node name="R2" type="TabContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 440.0
+offset_right = 408.0
+offset_bottom = 480.0
+current_tab = 0
+tab_alignment = 2
+clip_tabs = true
+tab_1/hidden = true
+
+[node name="Inventory" type="Control" parent="R2"]
+layout_mode = 2
+
+[node name="Equipment" type="Control" parent="R2"]
+layout_mode = 2
+
+[node name="Journal" type="Control" parent="R2"]
+layout_mode = 2
+
+[node name="Settings" type="Control" parent="R2"]
+layout_mode = 2
+
+[node name="Map" type="Control" parent="R2"]
+layout_mode = 2
+
+[node name="Quests" type="Control" parent="R2"]
+layout_mode = 2

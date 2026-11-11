@@ -406,16 +406,18 @@ export interface TabBarLayoutInput {
   currentTab: number;
   /** `scroll_to_selected` (`tab_bar.h:132`). */
   scrollToSelected: boolean;
+  /** The first drawn tab, when the caller already ran the load sequence (`tabcontainer/loadStrip.ts`). */
+  offset?: number;
 }
 
 /** `_update_cache`'s per-tab `size_cache` and `size_text` (`tab_bar.cpp:1211-1223`), truncated by `max_width`. */
-type TabSize = Pick<TabLayoutItem, 'width' | 'textBudgetPx' | 'truncated'>;
+export type TabSize = Pick<TabLayoutItem, 'width' | 'textBudgetPx' | 'truncated'>;
 
 /**
  * `maxTabWidthPx > 0` truncates a wider tab (`:1215-1223`) to
  * `textBudgetPx = max(max(sizeTextless, maxTabWidthPx) - sizeTextless, 1)`.
  */
-function measureTabSizes(tabs: readonly TabLayoutInput[], maxTabWidthPx: number): TabSize[] {
+export function measureTabSizes(tabs: readonly TabLayoutInput[], maxTabWidthPx: number): TabSize[] {
   return tabs.map((tab) => {
     const truncated = maxTabWidthPx > 0 && tab.naturalWidth > maxTabWidthPx;
     if (!truncated) return { width: tab.naturalWidth, textBudgetPx: tab.naturalTextWidth, truncated };
@@ -430,7 +432,7 @@ function widthBesideArrows(input: TabBarLayoutInput): number {
   return input.barWidthPx - input.incrementIconWidth - input.decrementIconWidth;
 }
 
-interface TabPlacement {
+export interface TabPlacement {
   /** `ofs_cache` after alignment: 0 for a tab outside `offset..maxDrawnTab`. */
   ofs: number[];
   maxDrawnTab: number;
@@ -443,7 +445,7 @@ interface TabPlacement {
  * has scrolled, the arrows take room from the budget, so the budget is the smaller
  * `limitMinusButtons` (never above `limit`, as an icon width is not negative).
  */
-function placeTabs(
+export function placeTabs(
   tabs: readonly TabLayoutInput[],
   sizes: readonly TabSize[],
   input: TabBarLayoutInput,
@@ -499,37 +501,85 @@ function placeTabs(
 }
 
 /**
- * `TabBar::ensure_tab_visible` (`tab_bar.cpp:1875-1920`) for a strip at offset 0 and a current tab past
- * `maxDrawnTab`: the new `offset`, stepping past leading tabs until the strip fits beside the scroll arrows. It reads the
- * aligned `ofs_cache` and adds no `tab_separation`, as Godot does.
+ * `TabBar::ensure_tab_visible` (`tab_bar.cpp:1875-1920`): the `offset` that brings `currentTab` into view
+ * from a strip that starts at `offset`. It reads the aligned `ofs_cache` and adds no `tab_separation`,
+ * as Godot does. A hidden tab ends no pass early, so `offset` counts only the tabs it steps past.
  */
-function ensureTabVisible(
-  currentTab: number,
+export function ensureTabVisible(
   tabs: readonly TabLayoutInput[],
   sizes: readonly TabSize[],
   placement: TabPlacement,
+  offset: number,
   input: TabBarLayoutInput
 ): number {
+  const { currentTab } = input;
+  const isInRange = currentTab >= offset && currentTab <= placement.maxDrawnTab;
+  if (currentTab < 0 || !placement.buttonsVisible || tabs[currentTab]!.hidden || isInRange) return offset;
+  if (currentTab < offset) return currentTab;
+
   const limitMinusButtons = widthBesideArrows(input);
-  let totalWidth = placement.ofs[placement.maxDrawnTab]! - placement.ofs[0]!;
+  let totalWidth = placement.ofs[placement.maxDrawnTab]! - placement.ofs[offset]!;
   for (let i = placement.maxDrawnTab; i <= currentTab; i++) {
     if (!tabs[i]!.hidden) totalWidth += sizes[i]!.width;
   }
-  let offset = 0;
-  for (let i = 0; i < currentTab; i++) {
+  let scrolledOffset = offset;
+  for (let i = offset; i < currentTab; i++) {
     if (tabs[i]!.hidden) continue;
     if (totalWidth <= limitMinusButtons) break;
     totalWidth -= sizes[i]!.width;
-    offset++;
+    scrolledOffset++;
   }
-  return offset;
+  return scrolledOffset;
 }
 
 /**
- * `TabBar::_update_cache` (`tab_bar.cpp:1196-1291`) as a loaded scene leaves it. The scene decides
- * `offset` (`tab_bar.h:106`): the strip starts at tab 0, and a current tab past the last drawn one
- * scrolls into view through `ensure_tab_visible` (`:390,773,818`). The painter places the close
- * button from `textBudgetPx` but draws the whole title, with no `OVERRUN_TRIM_ELLIPSIS` trim.
+ * `TabBar::_ensure_no_over_offset` (`tab_bar.cpp:1827-1860`): the `offset` that pulls the strip back
+ * while the tabs before it still fit, so no room is left empty beside the arrows.
+ */
+export function ensureNoOverOffset(
+  tabs: readonly TabLayoutInput[],
+  sizes: readonly TabSize[],
+  placement: TabPlacement,
+  offset: number,
+  input: TabBarLayoutInput
+): number {
+  if (!placement.buttonsVisible) return offset;
+  const { maxDrawnTab, ofs } = placement;
+  const limitWithButtons = widthBesideArrows(input);
+  let offsetWithButtons = offset;
+  let offsetWithNoButton = offset;
+  let totalWidth = ofs[maxDrawnTab]! + sizes[maxDrawnTab]!.width - ofs[offset]!;
+  for (let i = offset - 1; i >= 0; i--) {
+    if (!tabs[i]!.hidden) totalWidth += sizes[i]!.width;
+    if (totalWidth < limitWithButtons) {
+      offsetWithButtons--;
+      offsetWithNoButton--;
+    } else if (totalWidth < input.barWidthPx) {
+      offsetWithNoButton--;
+    } else {
+      break;
+    }
+  }
+  return offsetWithNoButton === 0 ? 0 : offsetWithButtons;
+}
+
+/**
+ * A TabBar node's `offset` once its scene has loaded: `ensure_tab_visible` runs once when the bar enters
+ * the tree (`tab_bar.cpp:401`), at the width the scene gave it. Hidden tabs are TabContainer-only.
+ */
+function ensureTabVisibleOnLoad(
+  tabs: readonly TabLayoutInput[],
+  sizes: readonly TabSize[],
+  input: TabBarLayoutInput
+): number {
+  if (!input.scrollToSelected) return 0;
+  return ensureTabVisible(tabs, sizes, placeTabs(tabs, sizes, input, 0), 0, input);
+}
+
+/**
+ * `TabBar::_update_cache` (`tab_bar.cpp:1196-1291`) as a loaded scene leaves it. `offset` is not
+ * serialised (`tab_bar.h:106`), so the load sequence decides it: `ensureTabVisibleOnLoad`. The painter places the
+ * close button from `textBudgetPx` but draws the whole title, with no `OVERRUN_TRIM_ELLIPSIS` trim.
  */
 export function computeTabBarDrawLayout(
   tabs: readonly TabLayoutInput[],
@@ -539,19 +589,9 @@ export function computeTabBarDrawLayout(
     return { items: [], offset: 0, maxDrawnTab: 0, missingRight: false, buttonsVisible: false };
   }
 
-  const { currentTab } = input;
   const sizes = measureTabSizes(tabs, input.maxTabWidthPx);
-
-  let offset = 0;
-  let placement = placeTabs(tabs, sizes, input, offset);
-  // A current tab past `maxDrawnTab` implies the strip is clipped, and `-1` never passes the test.
-  // The `length` bound keeps a caller's out-of-range index from reading past the tabs.
-  const isCurrentOffscreen =
-    currentTab > placement.maxDrawnTab && currentTab < tabs.length && !tabs[currentTab]!.hidden;
-  if (input.scrollToSelected && isCurrentOffscreen) {
-    offset = ensureTabVisible(currentTab, tabs, sizes, placement, input);
-    placement = placeTabs(tabs, sizes, input, offset);
-  }
+  const offset = input.offset ?? ensureTabVisibleOnLoad(tabs, sizes, input);
+  const placement = placeTabs(tabs, sizes, input, offset);
 
   const { ofs, maxDrawnTab, missingRight, buttonsVisible } = placement;
   const items: TabLayoutItem[] = [];

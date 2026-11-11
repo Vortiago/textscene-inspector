@@ -215,7 +215,8 @@ export function tabHeaderHeight(barMinHeightPx: number, tabbarMargin: StyleMargi
  * `TabContainer::_update_margins` (`:405-460`) and `_repaint`'s vertical anchoring
  * (`:362-373`), as the rect the internal TabBar holds. Under `is_layout_rtl()` the margins
  * swap (`:412`) and `_size_changed` mirrors the inherited-direction bar (`control.cpp:1785-1787`),
- * so authored margins stay on their sides and `side_margin` moves to the opposite edge.
+ * so authored margins stay on their sides and `side_margin` moves to the opposite edge. `sideMargin` is
+ * the margin in effect: `resolveTabContainerStrip` returns 0 once RIGHT alignment reclaims it (`:450`).
  */
 export function tabBarRect(
   containerRect: Rect2,
@@ -234,9 +235,6 @@ export function tabBarRect(
   if (alignment === TAB_ALIGNMENT_LEFT) {
     offsetLeft = leftMargin + sideMargin;
   } else if (alignment === TAB_ALIGNMENT_RIGHT) {
-    // No popup is modelled, so the overflow case that reclaims `side_margin` (`get_clip_tabs() &&
-    // (offset_buttons_visible || total_tabs_width + side_margin > size.width)`, `:450`) is not
-    // reproduced. comparison.md records it.
     offsetRight = -rightMargin - sideMargin;
   }
 

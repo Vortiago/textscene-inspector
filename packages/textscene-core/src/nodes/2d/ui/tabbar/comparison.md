@@ -11,10 +11,11 @@ renders_as: a row of per-tab StyleBox quads with icon/title/close-icon content
 
 TabBar is the bare strip of tab headers, without the page switching a TabContainer adds.
 The previewer draws each tab's own `tab_selected`/`tab_unselected`/`tab_disabled` StyleBox,
-its icon and its title. It adds the close icon where `tab_close_display_policy` calls for
-it, and the scroll arrows once the tabs overflow a clipped bar. A clipped strip starts at the
-tab that brings the current tab into view, as `ensure_tab_visible` does, and TabContainer's
-strip does the same.
+its icon and its title. It adds the close icon where `tab_close_display_policy` calls for it.
+It adds the scroll arrows once the tabs overflow a clipped bar. A clipped strip starts at the
+tab that brings the current tab into view, as `ensure_tab_visible` does. TabContainer's strip
+does the same, after its hidden pages and its `side_margin` reclaim. A tab that `max_tab_width`
+caps trims its title as `TextLine` does.
 
 ## Linting
 
@@ -60,7 +61,3 @@ family (`title`/`tooltip`/`icon`/`disabled`), aligned to `tab_count` like Option
 
 - **Not drawn** The drag drop-mark, and the hover and pressed chrome of a tab, its close
   button and the scroll arrows, since each needs a pointer.
-- **Approximated** A hidden page before the current one can leave a clipped TabContainer strip
-  one tab short, since Godot's extra `ensure_tab_visible` calls are not modelled.
-- **Approximated** `max_tab_width` caps a tab's width as Godot does, but the title draws
-  unclipped instead of with Godot's `OVERRUN_TRIM_ELLIPSIS` "…" truncation.

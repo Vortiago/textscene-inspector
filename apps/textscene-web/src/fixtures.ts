@@ -2768,6 +2768,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Tab Bar Scroll Options",
+    "file": "unit-tab-bar-scroll-options.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Tab Bar Scroll To Current",
     "file": "unit-tab-bar-scroll-to-current.tscn",
     "category": "Other"
@@ -2780,6 +2785,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Tab Container Current Page",
     "file": "unit-tab-container-current-page.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Tab Container Hidden Pages",
+    "file": "unit-tab-container-hidden-pages.tscn",
     "category": "Other"
   },
   {
