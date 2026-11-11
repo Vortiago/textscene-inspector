@@ -42,16 +42,56 @@ export function drawCanvasKeys<T>(
   return drawThenRestore(rejected, draw);
 }
 
-/** {@link drawCanvasKeys} over objects already keyed, so a caller that draws a scene often walks it once. */
+/** The objects of a scene in walk order, each with its key and the keys its subtree holds. */
+export interface KeyedObjects {
+  objects: readonly THREE.Object3D[];
+  keys: readonly number[];
+  /** The index after the last descendant of each object. */
+  ends: readonly number[];
+  /** The lowest and the highest key in each object's subtree, itself included. */
+  minKeys: readonly number[];
+  maxKeys: readonly number[];
+}
+
+/** Whether `key` is below `to`; a span that ends at infinity holds the infinite key of OVER_EVERY_LAYER. */
+function isBefore(key: number, to: number): boolean {
+  return key < to || to === Number.POSITIVE_INFINITY;
+}
+
+/**
+ * {@link drawCanvasKeys} over objects already keyed, for the keys `[from, to)` that `admits` lets
+ * through. A subtree with no key in the span is hidden, so the render skips it whole: a frame with
+ * a span for each clipping group would walk the scene once for each otherwise. `range` limits the
+ * walk to a subtree that `draw` alone draws.
+ */
 export function drawKeyedObjects<T>(
-  objects: readonly THREE.Object3D[],
-  keys: readonly number[],
-  inWindow: (key: number) => boolean,
-  draw: () => T
+  { objects, keys, ends, minKeys, maxKeys }: KeyedObjects,
+  { from, to, admits }: { from: number; to: number; admits: (key: number) => boolean },
+  draw: () => T,
+  { start = 0, end = objects.length } = {}
 ): T {
   const rejected: THREE.Object3D[] = [];
-  for (let i = 0; i < objects.length; i++) rejectOutside(objects[i]!, keys[i]!, inWindow, rejected);
-  return drawThenRestore(rejected, draw);
+  const hidden: THREE.Object3D[] = [];
+  const inSpan = (key: number) => key >= from && isBefore(key, to) && admits(key);
+  for (let i = start; i < end;) {
+    const object = objects[i]!;
+    if (maxKeys[i]! < from || !isBefore(minKeys[i]!, to)) {
+      if (object.visible) {
+        object.visible = false;
+        hidden.push(object);
+      }
+      i = ends[i]!;
+      continue;
+    }
+    rejectOutside(object, keys[i]!, inSpan, rejected);
+    i++;
+  }
+  try {
+    return draw();
+  } finally {
+    for (const object of rejected) object.layers.enable(DEFAULT_CAMERA_LAYER);
+    for (const object of hidden) object.visible = true;
+  }
 }
 
 function rejectOutside(

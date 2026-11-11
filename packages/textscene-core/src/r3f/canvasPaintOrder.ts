@@ -11,6 +11,8 @@
 
 import type { TscnNode } from '../parser/types';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes';
+import { ruleInt } from '../godot/variant/intSlots';
+import { CanvasItemClipChildrenMode } from '../godot/scene/canvasItem';
 import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import { clampCanvasItemZ, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPlacement';
@@ -377,7 +379,7 @@ interface PaintRangeLayout {
   /** `y_sort_enabled`: the children are re-packed in sort order after the parent. */
   sortsChildren?: boolean;
   /**
-   * A CanvasGroup's: every child draws before the parent, in index order (lines 471-484). A parent
+   * A CanvasGroup's or a clipping item's: every child draws before the parent, in index order (lines 471-484). A parent
    * that sorts its children takes the y-sort branch instead, which groups nothing (lines 437-469).
    */
   drawsChildrenFirst?: boolean;
@@ -452,15 +454,46 @@ export function allocatePaintRange(
   };
 }
 
-/** A CanvasGroup draws its composite rect over the buffer its children fill, so each child draws first. */
-function drawsEveryChildFirst(node: TscnNode): boolean {
-  return node.type === 'CanvasGroup';
+/**
+ * Whether the previewer clips `node`'s children: a mode of 1 or 2, as `parseClipChildrenMode` reads
+ * it. A y-sorted item's children draw in the sort order, outside its group.
+ */
+function drawsClipped(node: TscnNode): boolean {
+  const mode = ruleInt(node.rawProperties.clip_children ?? '0');
+  const isClipping = mode === CanvasItemClipChildrenMode.ONLY || mode === CanvasItemClipChildrenMode.AND_DRAW;
+  return isClipping && !ysortsChildren(node);
+}
+
+/** Whether `node` re-orders its children by `y_sort_enabled`, so the behind/ahead split does not apply. */
+export function ysortsChildren(node: TscnNode): boolean {
+  return (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true;
+}
+
+/**
+ * A CanvasGroup draws its composite rect over the buffer its children fill, and a clipping item
+ * draws its mask over it, so each child draws first (`renderer_canvas_cull.cpp:471-484`).
+ */
+export function drawsEveryChildFirst(node: TscnNode): boolean {
+  return node.type === 'CanvasGroup' || drawsClipped(node);
+}
+
+/**
+ * The ranges of the children of `node` that draw behind it, in child order. A clipping item that
+ * draws nothing has no group, so these draw before its other children.
+ */
+export function behindParentRanges(range: PaintRange, node: TscnNode): PaintRange[] {
+  return behindRangesOf(node.children, allocateNodePaintRange(range, node).children);
+}
+
+/** The `ranges` of the `show_behind_parent` `children`, for a caller that allocated the ranges itself. */
+export function behindRangesOf(children: readonly TscnNode[], ranges: readonly PaintRange[]): PaintRange[] {
+  return ranges.filter((_, index) => drawsBehindParent(children[index]!));
 }
 
 /** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */
 export function allocateNodePaintRange(range: PaintRange, node: TscnNode): AllocatedPaintRange {
   return allocatePaintRange(range, node.children, {
-    sortsChildren: (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true,
+    sortsChildren: ysortsChildren(node),
     drawsChildrenFirst: drawsEveryChildFirst(node),
     frontRoom: internalFrontRoom(node),
     backRoom: internalBackRoom(node),

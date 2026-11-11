@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { canvasPixelRect, clipPixelRect, worldBoxOfCanvasPixels } from './canvasPixels';
-import type { CanvasClip } from '../../../r3f/lighting2d/lightPassHost';
+import type { CanvasClip } from '../lighting2d/lightPassHost';
 
 /** The root canvas: 1152x648 pixels at the origin, y up in the world. */
 const ROOT: CanvasClip = { rect: { x: 0, y: -648, w: 1152, h: 648 }, scale: { x: 1, y: 1 } };

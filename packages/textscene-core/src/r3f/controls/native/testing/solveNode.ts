@@ -11,6 +11,7 @@ import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts'
 import type { SolveNode } from '../solveTree';
 import {
   allocateNodePaintRange,
+  behindRangesOf,
   allocatePaintRange,
   lastPaintSequence,
   WHOLE_CANVAS_RANGE,
@@ -56,6 +57,7 @@ export function solveNode(): Pick<
   | 'icons'
   | 'resources'
   | 'paintRange'
+  | 'behindRanges'
   | 'paintSequence'
   | 'backSequence'
   | 'layerSequence'
@@ -84,6 +86,7 @@ export function solveNode(): Pick<
     // The whole canvas, which a lone Control owns. These defaults tie rather than
     // invent an order. A test asserting draw order uses `withPaintRanges`.
     paintRange: WHOLE_CANVAS_RANGE,
+    behindRanges: [],
     paintSequence: WHOLE_CANVAS_RANGE.base,
     backSequence: lastPaintSequence(WHOLE_CANVAS_RANGE),
     layerSequence: WHOLE_CANVAS_RANGE.base,
@@ -137,10 +140,12 @@ function shadowTree(n: SolveNode): TscnNode {
 
 /** Splits `own` between a node and its children through the production allocator. */
 function assignRange(node: SolveNode, own: PaintRange): SolveNode {
-  const allocated = allocateNodePaintRange(own, shadowTree(node));
+  const shadow = shadowTree(node);
+  const allocated = allocateNodePaintRange(own, shadow);
   return {
     ...node,
     paintRange: own,
+    behindRanges: behindRangesOf(shadow.children, allocated.children),
     paintSequence: allocated.self,
     backSequence: allocated.back.base,
     layerSequence: allocated.layer,

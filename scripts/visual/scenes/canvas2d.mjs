@@ -13,6 +13,34 @@ export const CANVAS_2D_SCENES = [
   // An INT component past int32 wraps as Godot stores it. Godot probes: (260,160) red, the square at
   // (200,100), and (660,360) blue, the square at (600,300). Refused, both sit at the origin.
   { name: 'int-wrap-position', file: 'edge-int-wrap-position.tscn', mode: '2d' },
+  // clip_children CLIP_ONLY: the red child shows only over the green parent, in its own colour. Godot
+  // probes: (125,125) background, the parent alone; (175,175) red; (425,125) green, the unclipped twin.
+  { name: 'clip-children-only', file: 'unit-clip-children-only.tscn', mode: '2d' },
+  // CLIP_AND_DRAW draws the parent too, and the half-alpha child blends over it: (125,125) green and
+  // (175,175) (127,128,0). Outside the parent the canvas shows through: (220,220) background.
+  { name: 'clip-children-and-draw', file: 'unit-clip-children-and-draw.tscn', mode: '2d' },
+  // A soft mask: the radial alpha of the Sprite2D scales the child. Godot probes: (175,175) (193,27,27)
+  // and (220,220) (203,22,22); the corner (125,125) is background.
+  { name: 'clip-children-soft-mask', file: 'unit-clip-children-soft-mask.tscn', mode: '2d' },
+  // An owner with no commands has no group: the behind-parent blue draws first and the red shows over it.
+  // Godot probe: (175,175) is (185,7,61).
+  { name: 'clip-children-no-commands', file: 'unit-clip-children-no-commands.tscn', mode: '2d' },
+  // Nested inert owners draw the behind child once: the red square blends once, so (110,110) is (165,38,38), not doubled.
+  { name: 'clip-children-nested-inert', file: 'unit-clip-children-nested-inert.tscn', mode: '2d' },
+  // A nested inert owner's behind child draws before its regular child: (150,150) is green over red, (110,110) red.
+  { name: 'clip-children-nested-behind-order', file: 'unit-clip-children-nested-behind-order.tscn', mode: '2d' },
+  // A clip group in an inert owner's behind span draws first, masked: (180,180) is blue over the red mask, (110,110) green.
+  { name: 'clip-children-behind-owner', file: 'unit-clip-children-behind-owner.tscn', mode: '2d' },
+  // A group between an inert owner and the inert owner it draws behind keeps the nested order: green over red at (150,150).
+  { name: 'clip-children-nested-boundary', file: 'unit-clip-children-nested-boundary.tscn', mode: '2d' },
+  // Two clip groups after a plain item in a behind span each copy what is drawn so far: (125,125) is orange, (220,130) green.
+  { name: 'clip-children-behind-groups', file: 'unit-clip-children-behind-groups.tscn', mode: '2d' },
+  // A y-sorted owner groups nothing: the red child shows whole, so (175,175) is red and (125,125) stays red over green.
+  { name: 'clip-children-ysort', file: 'unit-clip-children-ysort.tscn', mode: '2d' },
+  // The owner's ADD material does not reach the masked draw: (125,125) is (76,139,76), (175,175) (165,38,38).
+  { name: 'clip-children-material', file: 'unit-clip-children-material.tscn', mode: '2d' },
+  // A Button clips a ColorRect: (160,130) is (183,30,30) and (300,130) background.
+  { name: 'clip-children-control', file: 'unit-clip-children-control.tscn', mode: '2d' },
   { name: 'line-2d', file: 'unit-line2d.tscn', mode: '2d' },
   // Line2D as Godot's LineBuilder builds it. Caps: NONE is background at (45,50), BOX white at (45,100)
   // and (159,100), ROUND white at (41,150) and background at (42,142). A closed line ignores its caps.

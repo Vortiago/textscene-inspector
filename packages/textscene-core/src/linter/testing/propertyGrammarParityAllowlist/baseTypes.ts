@@ -45,11 +45,8 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   // One entry covers every 2D leaf and every Control.
   CanvasItem: {
     linterOnly: [
-      // Culling and clipping settings with no render equivalent:
-      // `visibility_layer` and `clip_children` gate culling and stencil
-      // clipping.
+      // A culling setting with no render equivalent: `visibility_layer` gates culling.
       'visibility_layer',
-      'clip_children',
       // canvas_item.cpp:637-656: a shader-reflected instance uniform, typed by
       // the attached ShaderMaterial's GLSL. This previewer has no ShaderMaterial
       // slice, so no parser has a uniform to reflect it onto.

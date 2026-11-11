@@ -15,6 +15,8 @@ import {
 } from '../../resources/materials/canvasitemmaterial/renderer';
 import { type CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
+import { composeInjections } from '../materialProgramInputs';
+import { useClipMask } from '../canvasGroup/ClipMaskContext';
 
 /**
  * What every canvas-item mesh merges into its material, as one `materialProgramInputs` part: the
@@ -79,9 +81,16 @@ function usePixelMaterial(
   isDrawn: boolean
 ): CanvasItemPixelMaterial {
   const lighting = useSurfaceLighting(item, surface, isDrawn);
+  const clipMask = useClipMask();
   return useMemo(
-    () => ({ ...canvasItemFacing(), ...canvasItemBlendState(blendMode), ...lighting }),
-    [blendMode, lighting]
+    () => ({
+      ...canvasItemFacing(),
+      ...canvasItemBlendState(blendMode),
+      ...lighting,
+      // The mask edits the program the lighting left, so it composes last.
+      injection: composeInjections([lighting.injection, clipMask?.injection])!,
+    }),
+    [blendMode, lighting, clipMask]
   );
 }
 

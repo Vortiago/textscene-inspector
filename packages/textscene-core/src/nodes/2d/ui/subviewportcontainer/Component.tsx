@@ -116,6 +116,7 @@ function ViewportSurfaceNative({
       // A SubViewport draws into its own target, so this root orders nothing
       // against the enclosing canvas: it starts a fresh range.
       paintRange: WHOLE_CANVAS_RANGE,
+      behindRanges: [],
       paintSequence: WHOLE_CANVAS_RANGE.base,
       backSequence: lastPaintSequence(WHOLE_CANVAS_RANGE),
       layerSequence: WHOLE_CANVAS_RANGE.base,
