@@ -26,7 +26,7 @@ function treeOf(source: string, settings: ProjectSettings | null = null) {
 
 /** The gate of the viewport at `path` with no animated `visible` over it. */
 function resolved(tree: ReturnType<typeof treeOf>, path: string, authoredMode: number) {
-  return resolveGate(viewportGateAt(tree, path, authoredMode), new Map());
+  return resolveGate(viewportGateAt(tree, path, authoredMode), new Map(), true);
 }
 
 describe('viewportGateAt: update mode', () => {
@@ -200,11 +200,11 @@ describe('resolveGate: an animated visible', () => {
   const gate = viewportGateAt(tree, 'Root/Panel/Booth/View', DISABLED);
 
   it('hides the viewport while the container is animated to hidden', () => {
-    expect(resolveGate(gate, new Map([['Root/Panel/Booth', false]])).updateMode).toBe(DISABLED);
+    expect(resolveGate(gate, new Map([['Root/Panel/Booth', false]]), true).updateMode).toBe(DISABLED);
   });
 
   it('hides the viewport while an ancestor is animated to hidden', () => {
-    expect(resolveGate(gate, new Map([['Root/Panel', false]])).updateMode).toBe(DISABLED);
+    expect(resolveGate(gate, new Map([['Root/Panel', false]]), true).updateMode).toBe(DISABLED);
   });
 
   it('shows the viewport while a hidden ancestor is animated to visible', () => {
@@ -218,7 +218,7 @@ visible = false
 [node name="View" type="SubViewport" parent="Panel/Booth"]
 `);
     const hidden = viewportGateAt(hiddenTree, 'Root/Panel/Booth/View', ALWAYS);
-    expect(resolveGate(hidden, new Map([['Root/Panel', true]])).updateMode).toBe(ALWAYS);
+    expect(resolveGate(hidden, new Map([['Root/Panel', true]]), true).updateMode).toBe(ALWAYS);
   });
 
   it('ignores an animated visible above a node that is no CanvasItem', () => {
@@ -231,7 +231,7 @@ visible = false
 [node name="View" type="SubViewport" parent="Plain/Booth"]
 `);
     const plain = viewportGateAt(plainTree, 'Root/Plain/Booth/View', DISABLED);
-    expect(resolveGate(plain, new Map([['Root', false]])).updateMode).toBe(ALWAYS);
+    expect(resolveGate(plain, new Map([['Root', false]]), true).updateMode).toBe(ALWAYS);
   });
 });
 

@@ -10,6 +10,7 @@ import { isCanvasLayerType } from '../../../r3f/canvasPaintOrder.js';
 import type { LiveTree } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
 import type { TscnNode } from '../../../parser/types.js';
+import type { SubViewportContainerProperties } from '../../2d/ui/subviewportcontainer/types.js';
 import { isEmbeddableWindow, isViewportBoundary } from './viewportBoundary.js';
 import { windowEmbedderPathAt } from './windowEmbedder.js';
 
@@ -63,7 +64,7 @@ export function ungatedViewport(authoredMode: number): ViewportGate {
 }
 
 function isStretching(container: TscnNode): boolean {
-  return (container.properties as { stretch?: boolean }).stretch === true;
+  return (container.properties as SubViewportContainerProperties).stretch === true;
 }
 
 /**
@@ -76,7 +77,7 @@ function isStretching(container: TscnNode): boolean {
 export function resolveGate(
   gate: ViewportGate,
   animatedVisible: ReadonlyMap<string, boolean>,
-  hasStretchedRect = true
+  hasStretchedRect: boolean
 ): UpdateGate {
   const { authoredMode, enclosingPath, visibilityChain, isStretched } = gate;
   if (isStretched && !hasStretchedRect) {
