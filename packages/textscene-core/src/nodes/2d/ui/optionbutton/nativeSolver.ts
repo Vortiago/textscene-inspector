@@ -210,9 +210,10 @@ interface OptionButtonContentLayout {
 
 /**
  * The arrow `ofs` (`option_button.cpp:122-131`) and Button's internal-margin text reservation
- * (`button.cpp:247-260,444-456`), which `layoutButtonContent` does not model. The one internal margin set
- * (`option_button.cpp:83-89,139-147`) is the arrow width, and `is_layout_rtl()` picks its side
- * (option_button.cpp:139-147), so the label keeps `arrowSize.x + h_separation` clear. The arrow reads only `arrow_margin` against the full control size.
+ * (`button.cpp:247-260,444-456`), laid out here and not through `layoutButtonContent`, so no Button icon draws.
+ * The one internal margin set (`option_button.cpp:83-89,139-147`) is the arrow width, and `is_layout_rtl()`
+ * picks its side, so the label keeps `arrowSize.x + h_separation` clear. The arrow reads only `arrow_margin`
+ * against the full control size.
  */
 export function layoutOptionButtonContent(input: OptionButtonContentInput): OptionButtonContentLayout {
   const { rectSize, styleMargin, arrowSize, arrowMargin, hSeparation, textHeightPx, textAlignment, rtl } =

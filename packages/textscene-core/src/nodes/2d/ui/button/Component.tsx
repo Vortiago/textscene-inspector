@@ -5,12 +5,10 @@
  * `ControlCanvasWalker` owns `visible`, the children and the transform.
  */
 import { useMemo } from 'react';
-import { sizeWithArea } from '../../../../resources/textures/textureSize';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { useIconModulate, useOwnButtonIcon } from '../../../../r3f/controls/native/useButtonIcon';
 import { buttonBoxesOf } from '../../../../r3f/controls/native/defaultThemeItems';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -38,7 +36,6 @@ import {
   buttonContentInput,
 } from './nativeSolver';
 import type { ButtonProperties } from './types';
-import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 interface ButtonPainterProps extends NativeControlComponentProps {
   /** The theme font size and colour for the Control's own class (`default_theme.cpp`). */
@@ -74,20 +71,7 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   // **solve handoff** the minimum-size solver calls too, so one shaping sizes both.
   const unwrapped: TextLayoutResult | null = buttonLabelShape(solveNode, theme);
 
-  // The node's own scope, not the ambient provider's: a Button that arrived
-  // through an instanced sub-scene names ids from that scene.
-  const { externalResources, internalResources } = solveNode.resources;
-  // `useTexture2D`, not the path-only resolver: an icon may be an inline
-  // procedural texture, which has no path to load from.
-  const { texture: iconSource, size: iconSize } = useTexture2D(
-    props.icon,
-    externalResources,
-    internalResources
-  );
-  // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB
-  // bytes (`canvas2DTextureDecode.ts`). `ControlQuad` decodes the
-  // already-filtered sample once it sees this tag.
-  const ownIconTexture = useOwnerCanvas2DTexture(iconSource);
+  const ownIcon = useOwnButtonIcon(solveNode, props.icon);
   // A theme icon the Control gave this Button: the vendored default is a 16x16 SVG whose size
   // `textureSize` already holds, since the loader returns a blank texture before the decode.
   const themedIcon = solveNode.syntheticDraw?.themedIcon;
@@ -95,20 +79,18 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
     themedIcon && solveNode.icons[themedIcon.name],
     themedIcon?.vendoredUrl ?? null
   );
-  const iconTexture = themedIcon ? themedIconTexture : ownIconTexture;
+  const iconTexture = themedIcon ? themedIconTexture : ownIcon.texture;
 
   const iconNaturalSize = useMemo(() => {
     if (!iconTexture) return null;
-    if (themedIcon) return solveNode.textureSize;
-    return props.icon ? sizeWithArea(iconSize) : null;
-  }, [props.icon, themedIcon, iconTexture, iconSize, solveNode.textureSize]);
+    return themedIcon ? solveNode.textureSize : ownIcon.naturalSize;
+  }, [iconTexture, themedIcon, solveNode.textureSize, ownIcon.naturalSize]);
 
   const isFocusStyled = isButtonFocusStyled(props, state);
-  const baseIconColor = isFocusStyled
-    ? buttonFocusIconColor(solveNode.colors)
-    : buttonIconColor(solveNode.colors, state);
-  const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
-  const iconLinearColor = useItemLinearColor(tintedIconColorSrgb);
+  const iconModulate = useIconModulate(
+    isFocusStyled ? buttonFocusIconColor(solveNode.colors) : buttonIconColor(solveNode.colors, state),
+    tint.own
+  );
 
   const isClipped = isButtonTextClipped(props);
   const { alignment, iconAlignment, verticalIconAlignment, expandIcon } = props;
@@ -181,8 +163,8 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
         <PositionedIcon
           rect={content.icon.rect}
           texture={iconTexture}
-          color={iconLinearColor}
-          opacity={tintedIconColorSrgb.a}
+          color={iconModulate.color}
+          opacity={iconModulate.opacity}
           renderOrder={renderOrder}
         />
       )}

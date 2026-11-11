@@ -20,10 +20,15 @@ import {
   checkButtonMarginX,
   checkButtonMarginY,
   checkButtonDrawnIconSize,
+  checkButtonTextureSlots,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { controlProps } from '../control/testing/controlProps';
-import { buttonDrawnLabel } from '../../../../r3f/controls/native/buttonBase';
+import {
+  buttonDrawnLabel,
+  type ButtonContentFacts,
+  type ButtonContentInput,
+} from '../../../../r3f/controls/native/buttonBase';
 
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
@@ -229,37 +234,48 @@ describe('checkButtonMinimumSize: with text', () => {
   });
 });
 
-describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-260,444-456)', () => {
-  const BASE = {
-    rectSize: { x: 150, y: 28 },
-    marginX: 6,
-    marginY: 4,
-    iconSize: { x: 32, y: 16 },
-    checkVOffset: 0,
-    hSeparation: 4,
-    hasText: true,
-    textAlignment: 0,
-    textHeightPx: 26,
-    rtl: false,
-  };
+/**
+ * What `layoutButtonContent` reads of a 150x28 CheckButton: `cb_empty`'s margins (6 across, 4 down), the
+ * label 26 px high, and the vendored 32x16 toggle, which `layoutCheckButtonContent` reserves as the internal margin.
+ */
+const CONTENT: ButtonContentFacts & Pick<ButtonContentInput, 'textNaturalSize' | 'isTextRtl'> = {
+  rectSize: { x: 150, y: 28 },
+  styleMargin: { left: 6, top: 4, right: 6, bottom: 4 },
+  hSeparation: 4,
+  iconMaxWidth: 0,
+  textAlignment: 0,
+  iconAlignment: 0,
+  verticalIconAlignment: 1,
+  expandIcon: false,
+  iconNaturalSize: null,
+  hasText: true,
+  textNaturalSize: { x: 40, y: 26 },
+  isTextRtl: false,
+  isClipped: false,
+  internalMargin: { left: 0, right: 0 },
+  rtl: false,
+};
+const BASE = { content: CONTENT, checkSize: { x: 32, y: 16 }, checkVOffset: 0 };
+const WITH_BUTTON_ICON = { ...CONTENT, iconNaturalSize: { x: 12, y: 12 } };
 
+describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-260,444-456)', () => {
   it('ends an overflowing right-to-left CENTER label at the trailing edge (text_paragraph.cpp:908-910)', () => {
     // The text box is 150 - 2*6 - (32+4) = 102 wide: 6 + (102 - 200) = -92.
-    const { labelBox } = layoutCheckButtonContent({ ...BASE, textAlignment: 1 });
+    const { labelBox } = layoutCheckButtonContent({ ...BASE, content: { ...CONTENT, textAlignment: 1 } });
     const rtlLine = { text: '', glyphs: [], widthPx: 200, paragraphIndex: 0, paragraphStart: 0, isRtl: true };
     const [drawn] = buttonDrawnLabel([rtlLine], labelBox!.widthPx, labelBox!.alignment);
     expect(labelBox!.leftPx + drawn!.offsetXPx).toBe(-92);
   });
 
-  it('icon sits flush against the RIGHT edge, vertically centred + check_v_offset', () => {
-    const { iconPosition } = layoutCheckButtonContent(BASE);
+  it('toggle sits flush against the RIGHT edge, vertically centred + check_v_offset', () => {
+    const { checkPosition } = layoutCheckButtonContent(BASE);
     // x = 150 - (32+6) = 112. y = (28-16)/2 + 0 = 6.
-    expect(iconPosition).toEqual({ x: 112, y: 6 });
+    expect(checkPosition).toEqual({ x: 112, y: 6 });
   });
 
-  it('centres the icon at the half pixel an odd height leaves, unrounded (check_button.cpp:140)', () => {
-    const { iconPosition } = layoutCheckButtonContent({ ...BASE, rectSize: { x: 150, y: 31 } });
-    expect(iconPosition.y).toBe(7.5);
+  it('centres the toggle at the half pixel an odd height leaves, unrounded (check_button.cpp:140)', () => {
+    const tall = { ...CONTENT, rectSize: { x: 150, y: 31 } };
+    expect(layoutCheckButtonContent({ ...BASE, content: tall }).checkPosition.y).toBe(7.5);
   });
 
   it('the label box starts at marginX and ends before the toggle and its h_separation', () => {
@@ -269,25 +285,62 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
   });
 
   it('hands the authored alignment to the drawn label', () => {
-    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 1 }).labelBox!.alignment).toBe(1);
-    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 2 }).labelBox!.alignment).toBe(2);
+    expect(
+      layoutCheckButtonContent({ ...BASE, content: { ...CONTENT, textAlignment: 1 } }).labelBox!.alignment
+    ).toBe(1);
+    expect(
+      layoutCheckButtonContent({ ...BASE, content: { ...CONTENT, textAlignment: 2 } }).labelBox!.alignment
+    ).toBe(2);
   });
 
   it('keeps the unceiled drawable width: the ceiling belongs to the drawn label (button.cpp:437)', () => {
-    expect(layoutCheckButtonContent({ ...BASE, rectSize: { x: 150.5, y: 28 } }).labelBox!.widthPx).toBe(
-      102.5
-    );
+    const wide = { ...CONTENT, rectSize: { x: 150.5, y: 28 } };
+    expect(layoutCheckButtonContent({ ...BASE, content: wide }).labelBox!.widthPx).toBe(102.5);
   });
 
-  it('returns labelBox: null when hasText is false (icon still positioned)', () => {
-    const { iconPosition, labelBox } = layoutCheckButtonContent({ ...BASE, hasText: false });
+  it('returns labelBox: null when hasText is false (toggle still positioned)', () => {
+    const { checkPosition, labelBox } = layoutCheckButtonContent({
+      ...BASE,
+      content: { ...CONTENT, hasText: false },
+    });
     expect(labelBox).toBeNull();
-    expect(iconPosition).toEqual({ x: 112, y: 6 });
+    expect(checkPosition).toEqual({ x: 112, y: 6 });
   });
 
-  it('check_v_offset shifts the icon vertically', () => {
-    const { iconPosition } = layoutCheckButtonContent({ ...BASE, checkVOffset: 3 });
-    expect(iconPosition.y).toBe(9);
+  it('check_v_offset shifts the toggle vertically', () => {
+    const { checkPosition } = layoutCheckButtonContent({ ...BASE, checkVOffset: 3 });
+    expect(checkPosition.y).toBe(9);
+  });
+
+  it('draws no Button icon without one', () => {
+    expect(layoutCheckButtonContent(BASE).icon).toBeNull();
+  });
+
+  it("draws Button's LEFT icon at the left margin, the toggle being on the right (button.cpp:374-381,411-423)", () => {
+    const { icon, labelBox } = layoutCheckButtonContent({ ...BASE, content: WITH_BUTTON_ICON });
+    // x = margin 6; y = floor(4 + (20 - 12) / 2) = 8. The label starts at 6 + (12 + 4) = 22, 102 - 16 = 86 wide.
+    expect(icon).toEqual({ rect: { x: 6, y: 8, w: 12, h: 12 } });
+    expect(labelBox).toMatchObject({ leftPx: 22, widthPx: 86 });
+  });
+
+  it("draws Button's RIGHT icon before the toggle and its separation (button.cpp:385-387)", () => {
+    const { icon, labelBox } = layoutCheckButtonContent({
+      ...BASE,
+      content: { ...WITH_BUTTON_ICON, iconAlignment: 2 },
+    });
+    // x = 150 - 6 - (32 + 4) - 12 = 96.
+    expect(icon!.rect.x).toBe(96);
+    expect(labelBox).toMatchObject({ leftPx: 6, widthPx: 86 });
+  });
+
+  it("centres Button's CENTER icon in the box the toggle leaves (button.cpp:374-381)", () => {
+    const { icon, labelBox } = layoutCheckButtonContent({
+      ...BASE,
+      content: { ...WITH_BUTTON_ICON, iconAlignment: 1 },
+    });
+    // x = 6 + (102 - 12) / 2 = 51; the label box keeps its whole width.
+    expect(icon!.rect.x).toBe(51);
+    expect(labelBox).toMatchObject({ leftPx: 6, widthPx: 102 });
   });
 });
 
@@ -297,33 +350,85 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
  * through `Button::_notification`'s swap (`button.cpp:271-275`).
  */
 describe('layoutCheckButtonContent: RTL puts the toggle on the left', () => {
-  const BASE = {
-    rectSize: { x: 150, y: 28 },
-    marginX: 6,
-    marginY: 4,
-    iconSize: { x: 32, y: 16 },
-    checkVOffset: 0,
-    hSeparation: 4,
-    hasText: true,
-    textAlignment: 0,
-    textHeightPx: 26,
-    rtl: true,
-  };
+  const RTL = { ...BASE, content: { ...CONTENT, rtl: true } };
 
   it('draws the toggle at the left content margin, vertically unchanged', () => {
-    const { iconPosition } = layoutCheckButtonContent(BASE);
-    expect(iconPosition).toEqual({ x: 6, y: 6 });
+    const { checkPosition } = layoutCheckButtonContent(RTL);
+    expect(checkPosition).toEqual({ x: 6, y: 6 });
   });
 
   it('puts the label box right of the toggle and aligns a LEFT label RIGHT', () => {
-    const { labelBox } = layoutCheckButtonContent(BASE);
+    const { labelBox } = layoutCheckButtonContent(RTL);
     // reserved = 32+4 = 36; drawable = 150-12-36 = 102.
     expect(labelBox).toEqual({ leftPx: 6 + 36, topPx: 1, widthPx: 102, alignment: 2 });
   });
 
   it('leaves CENTER alone and swaps RIGHT to LEFT', () => {
-    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 1 }).labelBox!.alignment).toBe(1);
-    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 2 }).labelBox!.alignment).toBe(0);
+    expect(
+      layoutCheckButtonContent({ ...RTL, content: { ...RTL.content, textAlignment: 1 } }).labelBox!.alignment
+    ).toBe(1);
+    expect(
+      layoutCheckButtonContent({ ...RTL, content: { ...RTL.content, textAlignment: 2 } }).labelBox!.alignment
+    ).toBe(0);
+  });
+
+  it("draws Button's LEFT icon at the right margin under RTL (button.cpp:262-276,385-387)", () => {
+    const { icon } = layoutCheckButtonContent({ ...RTL, content: { ...WITH_BUTTON_ICON, rtl: true } });
+    // The icon's side swaps to RIGHT, and the toggle is on the left: x = 150 - 6 - 12 = 132.
+    expect(icon!.rect.x).toBe(132);
+  });
+});
+
+describe("checkButtonMinimumSize: Button's inherited icon (check_button.cpp:64-79, button.cpp:481-526)", () => {
+  const withIcon = (props: Partial<CheckButtonProperties>, size = { x: 12, y: 12 }): SolveNode => ({
+    ...node(props),
+    textureSlots: { icon: size },
+  });
+
+  it('adds the icon and a separation between it and the toggle, though there is no text', () => {
+    // content = 12; the toggle adds h_separation 4 (the content is wider than 0) and 32: 12 + 12 + 4 + 32.
+    expect(checkButtonMinimumSize(withIcon({}), ctx())).toEqual({ x: 60, y: 8 + 16 });
+  });
+
+  it('adds the icon, its separation to the text, and the toggle', () => {
+    const result = checkButtonMinimumSize(withIcon({ text: 'AB' }), ctx());
+    // 12 + (22 + 4 + 12) + 4 + 32.
+    expect(result).toEqual({ x: 12 + AB_SHAPED_WIDTH + 4 + 12 + 4 + 32, y: 8 + FONT_HEIGHT });
+  });
+
+  it('stacks the icon above the text for a TOP icon, and adds the font height again (button.cpp:497-502,517-521)', () => {
+    const result = checkButtonMinimumSize(withIcon({ text: 'AB', verticalIconAlignment: 0 }), ctx());
+    expect(result.y).toBe(8 + FONT_HEIGHT + 12 + FONT_HEIGHT);
+  });
+
+  it('adds no icon for expand_icon (button.cpp:497)', () => {
+    expect(checkButtonMinimumSize(withIcon({ expandIcon: true }), ctx())).toEqual(
+      checkButtonMinimumSize(node({}), ctx())
+    );
+  });
+
+  it('takes the icon and the toggle off the width a wrapping label shapes at (button.cpp:428-432)', () => {
+    // Wraps at 100 - 12 - 36 = 52 for the toggle alone: 'AB AB' is 46.6 px, one row. With a 12 px icon it
+    // is 52 - 16 = 36 px: two rows.
+    const tentative: SolveContext = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 100, h: 60 }) };
+    const props = { text: 'AB AB', autowrapMode: 2 };
+    expect(checkButtonMinimumSize(node(props), tentative).y).toBe(8 + FONT_HEIGHT);
+    expect(checkButtonMinimumSize(withIcon(props), tentative).y).toBe(8 + 2 * FONT_HEIGHT);
+  });
+});
+
+describe("checkButtonTextureSlots: Button's own icon property", () => {
+  const nodeWithIcon = (icon?: string) =>
+    controlNode('CB', 'CheckButton', { name: 'CB', ...(icon ? { icon } : {}) });
+
+  it('requests the icon ref first, so `textureSize` is the icon, as it is for a Button', () => {
+    expect(checkButtonTextureSlots(nodeWithIcon('ExtResource("1")'), {})).toEqual([
+      { key: 'icon', ref: 'ExtResource("1")' },
+    ]);
+  });
+
+  it('requests nothing for no icon', () => {
+    expect(checkButtonTextureSlots(nodeWithIcon(), {})).toEqual([]);
   });
 });
 

@@ -1,6 +1,6 @@
 /**
- * `<CheckButton>`, the native (WebGL canvas) painter: a toggle-switch icon, always drawn, at the
- * content margin on the side opposite CheckBox's glyph, beside the label. No chrome: every
+ * `<CheckButton>`, the native (WebGL canvas) painter: Button's own icon, the label, and a toggle-switch icon,
+ * always drawn, at the content margin on the side opposite CheckBox's glyph. No chrome: every
  * StyleBox is the same `StyleBoxEmpty`. `ControlCanvasWalker` owns `visible`, the children and
  * the transform.
  */
@@ -9,99 +9,93 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useCheckButtonIcon } from './useCheckButtonIcon';
-import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
+import { ButtonLabel, useWrappingButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
-import { isButtonAutowrapped, tintColor } from '../../../../r3f/controls/native/buttonBase';
+import { infersRtl } from '../../../../r3f/controls/native/text/textLayout';
+import { isButtonAutowrapped, labelNaturalSize, tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
+import { useIconModulate, useOwnButtonIcon } from '../../../../r3f/controls/native/useButtonIcon';
+import { buttonIconColor } from '../button/nativeSolver';
 import {
   checkButtonCheckVOffset,
-  checkButtonHSeparation,
+  checkButtonContentFacts,
   checkButtonIconColor,
   checkButtonDrawnIconSize,
   checkButtonFittedIconSize,
-  checkButtonLabelWrapWidthPx,
-  checkButtonMarginX,
-  checkButtonMarginY,
   checkButtonTextTheme,
   layoutCheckButtonContent,
   resolveCheckButtonDrawState,
   resolveCheckButtonIconKey,
   CHECKBUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
-import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import type { CheckButtonProperties } from './types';
-import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<CheckButtonProperties>(solveNode);
   const state = resolveCheckButtonDrawState(props);
 
-  // `renderOrder` reaches both meshes. `<TextRun>` builds its own material, so it takes
-  // the clip planes explicitly, while the icon quad reads them itself.
+  // `renderOrder` reaches every mesh. `<TextRun>` builds its own material, so it takes
+  // the clip planes explicitly, while the icon quads read them themselves.
   const clippingPlanes = useControlClipPlanes();
 
-  const iconKey = resolveCheckButtonIconKey(props, solveNode.rtl);
-  const iconTexture = useCheckButtonIcon(solveNode, iconKey);
-  const iconSize = useMemo(
+  const toggleKey = resolveCheckButtonIconKey(props, solveNode.rtl);
+  const toggleTexture = useCheckButtonIcon(solveNode, toggleKey);
+  const toggleSize = useMemo(
     () => checkButtonFittedIconSize(solveNode, props.disabled === true),
     [solveNode, props.disabled]
   );
-  const drawnIconSize = useMemo(() => checkButtonDrawnIconSize(solveNode, iconKey), [solveNode, iconKey]);
+  const drawnToggleSize = useMemo(
+    () => checkButtonDrawnIconSize(solveNode, toggleKey),
+    [solveNode, toggleKey]
+  );
 
-  // Unlike CheckBox's fixed white, the icon colour is a theme key a scene can override, so it
+  // Unlike CheckBox's fixed white, the toggle colour is a theme key a scene can override, so it
   // takes the tint before its one sRGB-to-linear conversion, as Button's icon does.
-  const baseIconColor = checkButtonIconColor(props, solveNode.colors);
-  const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
-  const iconLinearColor = useItemLinearColor(tintedIconColorSrgb);
+  const toggleModulate = useIconModulate(checkButtonIconColor(props, solveNode.colors), tint.own);
+  const ownIcon = useOwnButtonIcon(solveNode, props.icon);
+  const ownIconModulate = useIconModulate(buttonIconColor(solveNode.colors, state), tint.own);
 
   const text = props.text ?? '';
-  const hasText = text.length > 0;
   const { fontSizePx, color: baseFontColor } = checkButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const bidi = useControlBidiOptions(props, solveNode);
-  const layout = useButtonLabelLayout(solveNode, props, {
-    themeFontKey: CHECKBUTTON_THEME_FONT_KEY,
-    text,
-    fontSizePx,
-    bidi,
-    boxWidthPx: checkButtonLabelWrapWidthPx(props, rect, solveNode, { theme }),
-  });
+  const facts = useMemo(
+    () => checkButtonContentFacts(solveNode, props, { theme }, { x: rect.w, y: rect.h }, ownIcon.naturalSize),
+    [solveNode, props, theme, rect.w, rect.h, ownIcon.naturalSize]
+  );
+  const layout = useWrappingButtonLabelLayout(
+    solveNode,
+    props,
+    { themeFontKey: CHECKBUTTON_THEME_FONT_KEY, text, fontSizePx, bidi },
+    facts
+  );
 
   const content = useMemo(
     () =>
       layoutCheckButtonContent({
-        rectSize: { x: rect.w, y: rect.h },
-        marginX: checkButtonMarginX({ theme }),
-        marginY: checkButtonMarginY({ theme }),
-        iconSize,
+        content: { ...facts, textNaturalSize: labelNaturalSize(layout), isTextRtl: infersRtl(layout) },
+        checkSize: toggleSize,
         checkVOffset: checkButtonCheckVOffset(solveNode.constants),
-        hSeparation: checkButtonHSeparation(solveNode.constants, { theme }),
-        hasText,
-        textHeightPx: layout?.heightPx ?? 0,
-        textAlignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-        rtl: solveNode.rtl,
       }),
-    [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment, solveNode.rtl]
+    [facts, layout, toggleSize, solveNode.constants]
   );
 
+  // Button draws its icon and label first (`button.cpp:333-456`), then CheckButton its toggle.
   return (
     <>
-      <PositionedIcon
-        rect={{
-          x: content.iconPosition.x,
-          y: content.iconPosition.y,
-          w: drawnIconSize.x,
-          h: drawnIconSize.y,
-        }}
-        texture={iconTexture}
-        color={iconLinearColor}
-        opacity={tintedIconColorSrgb.a}
-        renderOrder={renderOrder}
-        canvasKey={renderOrder}
-      />
+      {content.icon && (
+        <PositionedIcon
+          rect={content.icon.rect}
+          texture={ownIcon.texture}
+          color={ownIconModulate.color}
+          opacity={ownIconModulate.opacity}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
+      )}
       {content.labelBox && layout && (
         <ButtonLabel
           layout={layout}
@@ -116,6 +110,19 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
           renderOrder={renderOrder}
         />
       )}
+      <PositionedIcon
+        rect={{
+          x: content.checkPosition.x,
+          y: content.checkPosition.y,
+          w: drawnToggleSize.x,
+          h: drawnToggleSize.y,
+        }}
+        texture={toggleTexture}
+        color={toggleModulate.color}
+        opacity={toggleModulate.opacity}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
     </>
   );
 }

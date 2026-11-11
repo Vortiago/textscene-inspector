@@ -17,6 +17,12 @@ import { textQuadCounts } from '../../../../r3f/controls/native/testing/textQuad
 import { CheckBox } from './Component';
 import type { CheckBoxProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  findIconMeshes,
+  OWN_ICON_REF,
+  OWN_ICON_SCOPE,
+  renderWithOwnIcon,
+} from '../../../../r3f/controls/native/testing/ownIcon';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
@@ -329,5 +335,53 @@ describe('<CheckBox>: autowrap_mode wraps the label at its paragraph box (button
   it('draws one line at AUTOWRAP_OFF', async () => {
     const unwrapped = await render({});
     expect(textQuadCounts(unwrapped.scene)).toHaveLength(1);
+  });
+});
+
+describe("<CheckBox>: Button's inherited icon (button.cpp:333-405)", () => {
+  async function render(properties: Partial<CheckBoxProperties>, rtl = false) {
+    const node: SolveNode = {
+      ...solveNode({ icon: OWN_ICON_REF, ...properties }),
+      resources: OWN_ICON_SCOPE,
+      rtl,
+    };
+    return renderWithOwnIcon(<CheckBox {...painterEnv()} solveNode={node} rect={RECT} renderOrder={0} />, {
+      w: 12,
+      h: 12,
+    });
+  }
+  const groupOf = (mesh: THREE.Mesh) => mesh.parent!.position;
+
+  it('draws no second quad without an icon', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+    );
+    expect(findIconMeshes(renderer.scene)).toHaveLength(1);
+  });
+
+  it('draws the icon beside the check, past it and its separation, 12 px square', async () => {
+    const [icon, check] = findIconMeshes((await render({ text: 'Hi' })).scene);
+    // The check keeps its left margin 4. The icon starts at 4 + (16 + 4) and floors y: 4 + (20 - 12) / 2.
+    expect([groupOf(check!).x, groupOf(check!).y]).toEqual([4, -6]);
+    expect([groupOf(icon!).x, groupOf(icon!).y]).toEqual([24, -8]);
+    const { parameters } = icon!.geometry as THREE.PlaneGeometry;
+    expect([parameters.width, parameters.height]).toEqual([12, 12]);
+  });
+
+  it('draws a RIGHT icon at the right margin', async () => {
+    const [icon] = findIconMeshes((await render({ text: 'Hi', iconAlignment: 2 })).scene);
+    expect(groupOf(icon!).x).toBe(134);
+  });
+
+  it('draws a LEFT icon at the right edge, short of the check, under RTL', async () => {
+    const [icon, check] = findIconMeshes((await render({ text: 'Hi' }, true)).scene);
+    expect(groupOf(check!).x).toBe(130);
+    expect(groupOf(icon!).x).toBe(114);
+  });
+
+  it('dims the icon to icon_disabled_color alpha 0.4 and leaves the check to its own tint', async () => {
+    const [icon, check] = findIconMeshes((await render({ disabled: true })).scene);
+    expect((icon!.material as THREE.MeshBasicMaterial).opacity).toBeCloseTo(0.4, 5);
+    expect((check!.material as THREE.MeshBasicMaterial).opacity).toBeCloseTo(1, 5);
   });
 });

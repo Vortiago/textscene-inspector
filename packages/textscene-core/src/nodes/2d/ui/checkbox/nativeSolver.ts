@@ -1,8 +1,8 @@
 /**
  * CheckBox's native (WebGL canvas) rect solver and content layout: `get_minimum_size`, `get_icon_size`
  * and `_notification` (`scene/gui/check_box.cpp`) with the theme defaults
- * (`scene/theme/default_theme.cpp:274-313`). It ports the placement itself: `buttonBase.ts` does not
- * model Button's `_internal_margin` (`Button::_set_internal_margin`, `check_box.cpp:96-101`).
+ * (`scene/theme/default_theme.cpp:274-313`). `layoutCheckBoxContent` reserves the check as Button's
+ * `_internal_margin` (`check_box.cpp:96-101`) and `buttonBase.ts` lays the icon and label out beside it.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -17,16 +17,22 @@ import type {
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
+  BUTTON_ICON_SLOT_KEY,
   BUTTON_THEME_KEYS,
+  buttonContentMinimumSize,
+  buttonIconSlotRequests,
   fitIconSize,
-  labelWrapWidthPx,
-  reservedLabelBox,
+  internalMarginAt,
+  layoutButtonContent,
   resolveToggleDrawState,
-  shapedLabelMinimumTextSize,
-  type ButtonLabelBox,
+  shapedNodeLabel,
+  tentativeWrapWidthPx,
+  withReservedElementSize,
+  type ButtonContentFacts,
+  type ButtonContentInput,
   type ToggleDrawState,
-  type ButtonWrapProperties,
 } from '../../../../r3f/controls/native/buttonBase';
+import { checkFamilyContentFacts } from '../button/nativeSolver';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -34,7 +40,6 @@ import {
 } from '../../../../r3f/controls/native/textTheme';
 import type { CheckBoxIcons } from '../../../../r3f/controls/native/themeIcons';
 import type { CheckBoxProperties } from './types';
-import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Vector2 } from '../../../../godot/math/vector';
 import {
   CONTROL_FONT_COLOR,
@@ -125,12 +130,14 @@ export const CHECK_BOX_ICON_THEME_NAME: Record<CheckBoxIconKey, string> = {
 const CHECK_BOX_ICON_THEME_NAMES = Object.values(CHECK_BOX_ICON_THEME_NAME);
 
 /**
- * Which of CheckBox's 8 icon slots have a themed answer, for `SolveNode.textureSlots`. The walker
- * has already resolved the names (`SolveNode.icons`), and this turns them into size requests.
+ * Button's own `icon` and those of CheckBox's 8 icon slots that have a themed answer, for
+ * `SolveNode.textureSlots`. The walker has already resolved the names (`SolveNode.icons`), and this
+ * turns them into size requests.
  */
-export const checkBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
-  return themedSlotRequests(CHECK_BOX_ICON_THEME_NAMES, themedIcons);
-};
+export const checkBoxTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => [
+  ...buttonIconSlotRequests(node),
+  ...themedSlotRequests(CHECK_BOX_ICON_THEME_NAMES, themedIcons),
+];
 
 /**
  * `CheckBox::get_icon_size` (`check_box.cpp:35-62`): the max over all 8 icons, whichever is showing.
@@ -187,28 +194,33 @@ export function checkBoxFittedIconSize(n: Pick<SolveNode, 'textureSlots' | 'cons
 }
 
 /**
- * The width a wrapping label shapes at in `rect` (`button.cpp:428-432`): the rect less the margins, the check
- * and `h_separation`, which `_internal_margin` always reserves (`check_box.cpp:96-101`).
+ * What `layoutButtonContent` reads of a CheckBox at `rectSize`: `cbx_empty`'s margin on every side (all
+ * states share one `StyleBoxEmpty`, `default_theme.cpp:276-277`), the check reserved as the internal
+ * margin on the leading side (`check_box.cpp:96-101`), and Button's own icon.
  */
-export function checkBoxLabelWrapWidthPx(
-  props: ButtonWrapProperties,
-  rect: Rect2 | undefined,
-  n: Pick<SolveNode, 'textureSlots' | 'constants'>,
-  ctx: Pick<SolveContext, 'theme'>
-): number {
-  return labelWrapWidthPx(
+export function checkBoxContentFacts(
+  n: Pick<SolveNode, 'textureSlots' | 'constants' | 'rtl'>,
+  props: CheckBoxProperties,
+  ctx: Pick<SolveContext, 'theme'>,
+  rectSize: Vector2,
+  iconNaturalSize: Vector2 | null
+): ButtonContentFacts {
+  const margin = ctx.theme.contentMargin;
+  return checkFamilyContentFacts({
+    n,
     props,
-    rect,
-    2 * ctx.theme.contentMargin,
-    () => checkBoxFittedIconSize(n).x + checkBoxHSeparation(n.constants, ctx)
-  );
+    ctx,
+    rectSize,
+    iconNaturalSize,
+    margin: { x: margin, y: margin },
+    internalMargin: internalMarginAt(n.rtl ? 'right' : 'left', checkBoxFittedIconSize(n).x),
+  });
 }
 
 /**
- * `CheckBox::get_minimum_size` (`check_box.cpp:64-79`): Button's text-only floor plus the check
- * icon's width, and its height floors the result. `padding` is `_get_largest_stylebox_size()`,
- * which for CheckBox is `cbx_empty`'s uniform margin on every state, so both axes double
- * `theme.contentMargin`.
+ * `CheckBox::get_minimum_size` (`check_box.cpp:64-79`): Button's floor for its text and icon plus the check's
+ * width, and its height floors the result. `padding` is `_get_largest_stylebox_size()`, which for CheckBox
+ * is `cbx_empty`'s uniform margin on every state, so both axes double `theme.contentMargin`.
  */
 export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as CheckBoxProperties;
@@ -216,78 +228,61 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const state = resolveCheckBoxDrawState(props);
   const { fontSizePx } = checkBoxTextTheme(n, props, state, ctx);
+  const iconNaturalSize = n.textureSlots[BUTTON_ICON_SLOT_KEY] ?? null;
+  const factsAt = (rectSize: Vector2) => checkBoxContentFacts(n, props, ctx, rectSize, iconNaturalSize);
+  const label = { fontSizePx, themeFontKey: CHECKBOX_THEME_FONT_KEY };
+  // A wrapping label's rows follow the tentative width (`button.cpp:429-432`).
+  const boxWidthPx = tentativeWrapWidthPx(props, ctx.tentativeRect?.(n), factsAt, () =>
+    shapedNodeLabel(n, ctx, props, { ...label, boxWidthPx: 0 })
+  );
   // `button.cpp:492` reads `paragraph->get_size()`, the ceiled extent (`text_paragraph.cpp:601-608`).
-  // The icon and separation add outside the ceil (`check_box.cpp:63-73`). A wrapping label's rows
-  // follow the tentative width (`button.cpp:429-432`). `clip_text`, a trimming overrun or autowrap
-  // zeroes the width (`button.cpp:493-495`), so the separation below drops with it.
-  const textSize = shapedLabelMinimumTextSize(n, ctx, props, {
-    fontSizePx,
-    themeFontKey: CHECKBOX_THEME_FONT_KEY,
-    boxWidthPx: checkBoxLabelWrapWidthPx(props, ctx.tentativeRect?.(n), n, ctx),
-  });
+  // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`). Button's
+  // content gets the check and its separation outside the ceil (`check_box.cpp:64-79`).
+  const layout = shapedNodeLabel(n, ctx, props, { ...label, boxWidthPx });
+  const content = buttonContentMinimumSize(factsAt({ x: 0, y: 0 }), layout, props);
+  const { x, y } = withReservedElementSize(
+    content,
+    checkBoxFittedIconSize(n),
+    checkBoxHSeparation(n.constants, ctx)
+  );
 
-  const iconSize = checkBoxFittedIconSize(n);
-  const hSeparation = checkBoxHSeparation(n.constants, ctx);
-
-  // Godot's guard is `content_size.width > 0 && tex_size.width > 0` (`check_box.cpp:70`): the
-  // measured width, not the authored string. An absent measurer makes `textSize.x` 0, and
-  // `h_separation` must not appear either.
-  const width = 2 * margin + textSize.x + (textSize.x > 0 ? hSeparation : 0) + iconSize.x;
-  const height = 2 * margin + Math.max(textSize.y, iconSize.y);
-
-  return { x: width, y: height };
+  return { x: 2 * margin + x, y: 2 * margin + y };
 };
 
 interface CheckBoxContentInput {
-  /** The control's own solved rect size, Godot px. */
-  rectSize: Vector2;
-  /** `cbx_empty`'s uniform content margin, `theme.contentMargin` on all four sides. Every state shares this `StyleBoxEmpty` (`default_theme.cpp:276-277`), so nothing is drawn. */
-  margin: number;
-  /** The check icon's size, already fitted with `fitIconSize`. */
-  iconSize: Vector2;
+  /** What `layoutButtonContent` reads, less the check's reservation, which this adds. */
+  content: Omit<ButtonContentInput, 'internalMargin'>;
+  /** The check's size, already fitted with `fitIconSize`. */
+  checkSize: Vector2;
   checkVOffset: number;
-  hSeparation: number;
-  hasText: boolean;
-  /** The shaped label's height, ignored when `hasText` is false. */
-  textHeightPx: number;
-  /** Text `alignment` (`HorizontalAlignment`). CheckBox's default is LEFT. */
-  textAlignment: number;
-  /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the check to the right edge and the label against it. */
-  rtl: boolean;
 }
 
 interface CheckBoxContentLayout {
-  /** The icon's top-left, local to the control's own top-left, Godot px. */
-  iconPosition: Vector2;
-  /** The label's paragraph box. `null` when there is no text. */
-  labelBox: ButtonLabelBox | null;
+  /** The check's top-left, local to the control's own top-left, Godot px. */
+  checkPosition: Vector2;
+  icon: ReturnType<typeof layoutButtonContent>['icon'];
+  labelBox: ReturnType<typeof layoutButtonContent>['labelBox'];
 }
 
 /**
- * The icon `ofs` (`check_box.cpp:126-133`) and Button's internal-margin reservation
- * (`button.cpp:247-260,444-456`). The internal margin is always the icon's width
- * (`check_box.cpp:96-101`), never zero, so the gap is always `iconSize.x + h_separation`.
+ * The check's `ofs` (`check_box.cpp:126-133`) and Button's layout of its icon and label in what the check
+ * leaves (`button.cpp:247-259`). The internal margin is always the check's width (`check_box.cpp:96-101`),
+ * on the left, or on the right under RTL, which also moves the check to the right margin (`:129`).
  */
-export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxContentLayout {
-  const { rectSize, margin, iconSize, checkVOffset, hSeparation, hasText, textHeightPx, textAlignment, rtl } =
-    input;
-
+export function layoutCheckBoxContent({
+  content,
+  checkSize,
+  checkVOffset,
+}: CheckBoxContentInput): CheckBoxContentLayout {
+  const { rectSize, styleMargin, rtl } = content;
   // `int()` truncates the centring before the offset is added (`check_box.cpp:131-137`).
-  const iconPosition: Vector2 = {
-    x: rtl ? rectSize.x - margin - iconSize.x : margin,
-    y: Math.trunc((rectSize.y - iconSize.y) / 2) + checkVOffset,
+  const checkPosition: Vector2 = {
+    x: rtl ? rectSize.x - styleMargin.right - checkSize.x : styleMargin.left,
+    y: Math.trunc((rectSize.y - checkSize.y) / 2) + checkVOffset,
   };
-  if (!hasText) return { iconPosition, labelBox: null };
-
-  // `rtl` moves the reservation to SIDE_RIGHT (`:98-100`) and the icon to the right margin (`:129`).
-  const labelBox = reservedLabelBox({
-    rectSize,
-    margin: { left: margin, top: margin, right: margin, bottom: margin },
-    reservedPx: iconSize.x + hSeparation,
-    isReservedOnLeft: !rtl,
-    textHeightPx,
-    textAlignment,
-    rtl,
+  const { icon, labelBox } = layoutButtonContent({
+    ...content,
+    internalMargin: internalMarginAt(rtl ? 'right' : 'left', checkSize.x),
   });
-  return { iconPosition, labelBox };
+  return { checkPosition, icon, labelBox };
 }

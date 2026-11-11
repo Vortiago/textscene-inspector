@@ -15,15 +15,14 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  buttonContentSize,
-  fitIconSize,
+  buttonContentMinimumSize,
   BUTTON_THEME_KEYS,
+  isButtonTextClipped,
   pickButtonStyleBox,
   resolveToggleDrawState,
   shapeWrappedButtonLabel,
-  labelMinimumTextSize,
-  isButtonAutowrapped,
-  wrappedLabelWidthPx,
+  tentativeWrapWidthPx,
+  type ButtonContentFacts,
   type ButtonContentInput,
   type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
@@ -163,12 +162,12 @@ interface ButtonContentInputFields {
   styleMargin: ButtonContentInput['styleMargin'];
   iconNaturalSize: Vector2 | null;
   hasText: boolean;
+  /** What a derived class reserves for its own element. Button reserves none. */
+  internalMargin?: ButtonContentInput['internalMargin'];
 }
 
 /** What `layoutButtonContent` reads of the node, shared by the painter and the minimum-size solver. The caller adds the shaped text's size. */
-export function buttonContentInput(
-  fields: ButtonContentInputFields
-): Omit<ButtonContentInput, 'textNaturalSize' | 'isTextRtl'> {
+export function buttonContentInput(fields: ButtonContentInputFields): ButtonContentFacts {
   return {
     rectSize: fields.rectSize,
     styleMargin: fields.styleMargin,
@@ -182,8 +181,47 @@ export function buttonContentInput(
     iconNaturalSize: fields.iconNaturalSize,
     hasText: fields.hasText,
     isClipped: fields.isClipped,
+    internalMargin: fields.internalMargin,
     rtl: fields.rtl,
   };
+}
+
+/** The node and rect a CheckBox or CheckButton hands {@link checkFamilyContentFacts}. */
+interface CheckFamilyContent {
+  n: Pick<SolveNode, 'constants' | 'rtl'>;
+  props: ButtonProperties;
+  ctx: Pick<SolveContext, 'theme'>;
+  rectSize: Vector2;
+  iconNaturalSize: Vector2 | null;
+  /** The stylebox margin on each axis, equal on both sides. */
+  margin: Vector2;
+  /** What the check or toggle reserves (`check_box.cpp:96-101`, `check_button.cpp:96-104`). */
+  internalMargin: { left: number; right: number };
+}
+
+/** {@link buttonContentInput} for the CheckBox family, whose constructors align the text LEFT (`check_box.cpp:174`, `check_button.cpp:174`). */
+export function checkFamilyContentFacts({
+  n,
+  props,
+  ctx,
+  rectSize,
+  iconNaturalSize,
+  margin,
+  internalMargin,
+}: CheckFamilyContent): ButtonContentFacts {
+  return buttonContentInput({
+    ...props,
+    alignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    isClipped: isButtonTextClipped(props),
+    constants: n.constants,
+    separationPx: ctx.theme.separation,
+    rtl: n.rtl,
+    rectSize,
+    styleMargin: { left: margin.x, top: margin.y, right: margin.x, bottom: margin.y },
+    iconNaturalSize,
+    hasText: (props.text ?? '').length > 0,
+    internalMargin,
+  });
 }
 
 /**
@@ -199,27 +237,23 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
   const hasText = (props.text ?? '').length > 0;
+  const factsAt = (rectSize: Vector2) =>
+    buttonContentInput({
+      ...props,
+      isClipped: isButtonTextClipped(props),
+      constants: n.constants,
+      separationPx: ctx.theme.separation,
+      rtl: n.rtl,
+      rectSize,
+      styleMargin: styleBox.contentMargin,
+      iconNaturalSize: n.textureSize,
+      hasText,
+    });
   // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height depends on.
   // Pass 1 shapes unwrapped. The label wraps at what the painter's layout leaves beside the icon.
-  const rect = ctx.tentativeRect?.(n);
-  const wrapWidthPx =
-    ctx.measureText && rect && isButtonAutowrapped(props)
-      ? wrappedLabelWidthPx(
-          buttonContentInput({
-            ...props,
-            isClipped: true,
-            constants: n.constants,
-            separationPx: ctx.theme.separation,
-            rtl: n.rtl,
-            rectSize: { x: rect.w, y: rect.h },
-            styleMargin: styleBox.contentMargin,
-            iconNaturalSize: n.textureSize,
-            hasText,
-          }),
-          // `is_clipped` leaves the text's width out of the icon, so only an expanded icon reads its height.
-          props.expandIcon ? buttonLabelShape(n, ctx.theme) : null
-        )
-      : 0;
+  const wrapWidthPx = tentativeWrapWidthPx(props, ctx.tentativeRect?.(n), factsAt, () =>
+    ctx.measureText ? buttonLabelShape(n, ctx.theme) : null
+  );
   // An absent `ctx.measureText` means the text contributes nothing, while the margin and
   // the icon still count (`solverRegistry.ts`'s contract).
   const layout: TextLayoutResult | null = ctx.measureText
@@ -229,20 +263,7 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`):
   // the ceiled extent, not the raw pen advance. Its width drops under `clip_text`, a trimming
   // overrun behaviour or autowrap, since a narrower box trims or wraps it (`button.cpp:493-495`).
-  const textSize = labelMinimumTextSize(layout, props);
-
-  const iconSize =
-    !props.expandIcon && n.textureSize && n.textureSize.x > 0 && n.textureSize.y > 0
-      ? fitIconSize(n.textureSize, n.constants.icon_max_width ?? 0)
-      : null;
-  const content = buttonContentSize({
-    textSize,
-    hasText,
-    iconSize,
-    iconAlignment: props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-    verticalIconAlignment: props.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
-    hSeparation: n.constants.h_separation ?? ctx.theme.separation,
-  });
+  const content = buttonContentMinimumSize(factsAt({ x: 0, y: 0 }), layout, props);
 
   return { x: marginX + content.x, y: marginY + content.y };
 };

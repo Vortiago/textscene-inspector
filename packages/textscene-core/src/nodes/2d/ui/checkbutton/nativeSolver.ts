@@ -1,8 +1,8 @@
 /**
  * CheckButton's native (WebGL canvas) rect solver and content layout: `get_minimum_size`,
  * `get_icon_size` and `_notification` (`scene/gui/check_button.cpp`) with the theme defaults
- * (`scene/theme/default_theme.cpp:316-353`). It ports the placement itself: `buttonBase.ts` does not
- * model Button's `_internal_margin` (`Button::_set_internal_margin`, `check_button.cpp:96-104`).
+ * (`scene/theme/default_theme.cpp:316-353`). `layoutCheckButtonContent` reserves the toggle as Button's
+ * `_internal_margin` (`check_button.cpp:96-104`) and `buttonBase.ts` lays the icon and label out beside it.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -17,16 +17,22 @@ import type {
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
+  BUTTON_ICON_SLOT_KEY,
   BUTTON_THEME_KEYS,
+  buttonContentMinimumSize,
+  buttonIconSlotRequests,
   fitIconSize,
-  labelWrapWidthPx,
-  reservedLabelBox,
+  internalMarginAt,
+  layoutButtonContent,
   resolveToggleDrawState,
-  shapedLabelMinimumTextSize,
-  type ButtonLabelBox,
+  shapedNodeLabel,
+  tentativeWrapWidthPx,
+  withReservedElementSize,
+  type ButtonContentFacts,
+  type ButtonContentInput,
   type ToggleDrawState,
-  type ButtonWrapProperties,
 } from '../../../../r3f/controls/native/buttonBase';
+import { checkFamilyContentFacts } from '../button/nativeSolver';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -35,7 +41,6 @@ import {
 import type { CheckButtonIcons } from '../../../../r3f/controls/native/themeIcons';
 import { CHECK_BUTTON_ICON_NATURAL_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import type { CheckButtonProperties } from './types';
-import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import {
@@ -113,10 +118,11 @@ export const CHECK_BUTTON_ICON_THEME_NAME: Record<CheckButtonIconKey, string> = 
 
 const CHECK_BUTTON_ICON_THEME_NAMES = Object.values(CHECK_BUTTON_ICON_THEME_NAME);
 
-/** Which of CheckButton's 8 icon slots have a themed answer, as `checkBoxTextureSlots` does for CheckBox. */
-export const checkButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
-  return themedSlotRequests(CHECK_BUTTON_ICON_THEME_NAMES, themedIcons);
-};
+/** Button's own `icon` and those of CheckButton's 8 icon slots that have a themed answer, as `checkBoxTextureSlots` does for CheckBox. */
+export const checkButtonTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => [
+  ...buttonIconSlotRequests(node),
+  ...themedSlotRequests(CHECK_BUTTON_ICON_THEME_NAMES, themedIcons),
+];
 
 /**
  * `CheckButton::get_icon_size` (`check_button.cpp:35-65`): the max over the two icons the current
@@ -202,28 +208,33 @@ export function checkButtonFittedIconSize(
 }
 
 /**
- * The width a wrapping label shapes at in `rect` (`button.cpp:428-432`): the rect less the margins, the toggle
- * and `h_separation`, which `_internal_margin` always reserves (`check_button.cpp:96-104`).
+ * What `layoutButtonContent` reads of a CheckButton at `rectSize`: `cb_empty`'s margins (all states share
+ * one `StyleBoxEmpty`, `default_theme.cpp:316-325`), the toggle reserved as the internal margin on the
+ * trailing side (`check_button.cpp:96-104`), and Button's own icon.
  */
-export function checkButtonLabelWrapWidthPx(
-  props: ButtonWrapProperties & { disabled?: boolean },
-  rect: Rect2 | undefined,
+export function checkButtonContentFacts(
   n: Pick<SolveNode, 'textureSlots' | 'constants' | 'rtl'>,
-  ctx: Pick<SolveContext, 'theme'>
-): number {
-  return labelWrapWidthPx(
+  props: CheckButtonProperties,
+  ctx: Pick<SolveContext, 'theme'>,
+  rectSize: Vector2,
+  iconNaturalSize: Vector2 | null
+): ButtonContentFacts {
+  const toggleWidth = checkButtonFittedIconSize(n, props.disabled === true).x;
+  return checkFamilyContentFacts({
+    n,
     props,
-    rect,
-    2 * checkButtonMarginX(ctx),
-    () => checkButtonFittedIconSize(n, props.disabled === true).x + checkButtonHSeparation(n.constants, ctx)
-  );
+    ctx,
+    rectSize,
+    iconNaturalSize,
+    margin: { x: checkButtonMarginX(ctx), y: checkButtonMarginY(ctx) },
+    internalMargin: internalMarginAt(n.rtl ? 'left' : 'right', toggleWidth),
+  });
 }
 
 /**
- * `CheckButton::get_minimum_size` (`check_button.cpp:64-79`): Button's text-only floor plus the icon's
- * width, and `h_separation` only with text. Not `buttonMinimumSize`, whose flat stylebox is Button's:
- * the lookup is keyed by the node's own class, where every state is `cb_empty` (`default_theme.cpp:316-325`).
- * The inherited Button `icon` is not modelled (`comparison.md`).
+ * `CheckButton::get_minimum_size` (`check_button.cpp:64-79`): Button's floor for its text and icon plus the
+ * toggle's width, and `h_separation` only between content and toggle. Not `buttonMinimumSize`, whose flat stylebox
+ * is Button's: the lookup is keyed by the node's own class, where every state is `cb_empty` (`default_theme.cpp:316-325`).
  */
 export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as CheckButtonProperties;
@@ -232,85 +243,60 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const state = resolveCheckButtonDrawState(props);
   const { fontSizePx } = checkButtonTextTheme(n, props, state, ctx);
-  // `button.cpp:492` reads `paragraph->get_size()`, the ceiled extent. The icon and separation add
-  // outside the ceil (`check_button.cpp:66-77`). A wrapping label's rows follow the tentative width
-  // (`button.cpp:429-432`). `clip_text`, a trimming overrun or autowrap zeroes the width
-  // (`button.cpp:493-495`), so the separation below drops with it.
-  const textSize = shapedLabelMinimumTextSize(n, ctx, props, {
-    fontSizePx,
-    themeFontKey: CHECKBUTTON_THEME_FONT_KEY,
-    boxWidthPx: checkButtonLabelWrapWidthPx(props, ctx.tentativeRect?.(n), n, ctx),
-  });
+  const iconNaturalSize = n.textureSlots[BUTTON_ICON_SLOT_KEY] ?? null;
+  const factsAt = (rectSize: Vector2) => checkButtonContentFacts(n, props, ctx, rectSize, iconNaturalSize);
+  const label = { fontSizePx, themeFontKey: CHECKBUTTON_THEME_FONT_KEY };
+  // A wrapping label's rows follow the tentative width (`button.cpp:429-432`).
+  const boxWidthPx = tentativeWrapWidthPx(props, ctx.tentativeRect?.(n), factsAt, () =>
+    shapedNodeLabel(n, ctx, props, { ...label, boxWidthPx: 0 })
+  );
+  // `button.cpp:492` reads `paragraph->get_size()`, the ceiled extent. `clip_text`, a trimming overrun
+  // or autowrap zeroes the width (`button.cpp:493-495`). The toggle and separation add outside the ceil.
+  const layout = shapedNodeLabel(n, ctx, props, { ...label, boxWidthPx });
+  const content = buttonContentMinimumSize(factsAt({ x: 0, y: 0 }), layout, props);
+  const { x, y } = withReservedElementSize(
+    content,
+    checkButtonFittedIconSize(n, state === 'disabled'),
+    checkButtonHSeparation(n.constants, ctx)
+  );
 
-  const iconSize = checkButtonFittedIconSize(n, state === 'disabled');
-  const hSeparation = checkButtonHSeparation(n.constants, ctx);
-
-  const width = 2 * marginX + textSize.x + (textSize.x > 0 ? hSeparation : 0) + iconSize.x;
-  const height = 2 * marginY + Math.max(textSize.y, iconSize.y);
-
-  return { x: width, y: height };
+  return { x: 2 * marginX + x, y: 2 * marginY + y };
 };
 
 interface CheckButtonContentInput {
-  /** The control's own solved rect size, Godot px. */
-  rectSize: Vector2;
-  marginX: number;
-  marginY: number;
-  /** The check icon's size, already fitted with `fitIconSize`. */
-  iconSize: Vector2;
+  /** What `layoutButtonContent` reads, less the toggle's reservation, which this adds. */
+  content: Omit<ButtonContentInput, 'internalMargin'>;
+  /** The toggle's size, already fitted with `fitIconSize`. */
+  checkSize: Vector2;
   checkVOffset: number;
-  hSeparation: number;
-  hasText: boolean;
-  /** The shaped label's height, ignored when `hasText` is false. */
-  textHeightPx: number;
-  /** Text `alignment` (`HorizontalAlignment`). CheckButton's default is LEFT. */
-  textAlignment: number;
-  /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the toggle to the left edge and swaps the label's alignment side. */
-  rtl: boolean;
 }
 
 interface CheckButtonContentLayout {
-  /** The icon's top-left, local to the control's own top-left, Godot px. */
-  iconPosition: Vector2;
-  /** The label's paragraph box. `null` when there is no text. */
-  labelBox: ButtonLabelBox | null;
+  /** The toggle's top-left, local to the control's own top-left, Godot px. */
+  checkPosition: Vector2;
+  icon: ReturnType<typeof layoutButtonContent>['icon'];
+  labelBox: ReturnType<typeof layoutButtonContent>['labelBox'];
 }
 
 /**
- * The icon `ofs` (`check_button.cpp:129-137`) and Button's internal-margin reservation
- * (`button.cpp:247-260,444-456`): the internal margin is always the icon's width
- * (`check_button.cpp:96-104`), so the gap is always `iconSize.x + h_separation`. `rtl` moves both
- * to the left and swaps the alignment side (`button.cpp:271-275`, `check_button.cpp:174`).
+ * The toggle's `ofs` (`check_button.cpp:129-137`) and Button's layout of its icon and label in what the
+ * toggle leaves (`button.cpp:247-259`). The internal margin is always the toggle's width
+ * (`check_button.cpp:96-104`), on the right, or on the left under RTL, which also moves the toggle to the left margin.
  */
-export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckButtonContentLayout {
-  const {
-    rectSize,
-    marginX,
-    marginY,
-    iconSize,
-    checkVOffset,
-    hSeparation,
-    hasText,
-    textHeightPx,
-    textAlignment,
-    rtl,
-  } = input;
-
-  // Unrounded: an odd height leaves the icon on a half pixel (`check_button.cpp:135-140`).
-  const iconPosition: Vector2 = {
-    x: rtl ? marginX : rectSize.x - (iconSize.x + marginX),
-    y: (rectSize.y - iconSize.y) / 2 + checkVOffset,
+export function layoutCheckButtonContent({
+  content,
+  checkSize,
+  checkVOffset,
+}: CheckButtonContentInput): CheckButtonContentLayout {
+  const { rectSize, styleMargin, rtl } = content;
+  // Unrounded: an odd height leaves the toggle on a half pixel (`check_button.cpp:135-140`).
+  const checkPosition: Vector2 = {
+    x: rtl ? styleMargin.left : rectSize.x - (checkSize.x + styleMargin.right),
+    y: (rectSize.y - checkSize.y) / 2 + checkVOffset,
   };
-  if (!hasText) return { iconPosition, labelBox: null };
-
-  const labelBox = reservedLabelBox({
-    rectSize,
-    margin: { left: marginX, top: marginY, right: marginX, bottom: marginY },
-    reservedPx: iconSize.x + hSeparation,
-    isReservedOnLeft: rtl,
-    textHeightPx,
-    textAlignment,
-    rtl,
+  const { icon, labelBox } = layoutButtonContent({
+    ...content,
+    internalMargin: internalMarginAt(rtl ? 'left' : 'right', checkSize.x),
   });
-  return { iconPosition, labelBox };
+  return { checkPosition, icon, labelBox };
 }
