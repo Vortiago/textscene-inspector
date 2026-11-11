@@ -8,7 +8,7 @@
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { basename, join, relative as relativePath, resolve, sep } from 'node:path';
+import { basename, dirname, join, relative as relativePath, resolve, sep } from 'node:path';
 import { PNG } from 'pngjs';
 import { tableLines } from '../compare-docs/markdownTable.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
@@ -52,7 +52,9 @@ export function parseArgs(argv) {
       }
     } else if (arg === '--table') {
       args.table = argv[++i];
-      if (!args.table) throw new Error(`--table needs a file path, got "${argv[i]}"`);
+      if (!args.table || args.table.startsWith('--')) {
+        throw new Error(`--table needs a file path, got "${argv[i]}"`);
+      }
     } else if (arg === '--frame') args.frame = true;
     else if (arg === '--keep') args.keep = true;
     else if (arg.startsWith('--')) throw new Error(`unknown flag: ${arg}`);
@@ -241,6 +243,8 @@ async function main() {
     process.exit(2);
   }
   await mkdir(OUT_DIR, { recursive: true });
+  // Before the sweep: a table that cannot be written must not cost the renders of every scene.
+  if (args.table) await mkdir(dirname(resolve(args.table)), { recursive: true });
 
   const results = await diffAll(args.fixtures.map(resolveFixture), args);
   if (args.table) await writeFile(args.table, residueTable(results));

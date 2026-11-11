@@ -8,6 +8,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { gitEnvironmentFor } from '../vendor-git.mjs';
 import { applyLocalChanges } from './applyLocalChanges.mjs';
 
 let changes;
@@ -69,7 +70,8 @@ describe('applyLocalChanges', () => {
 
     beforeEach(() => {
       repository = mkdtempSync(join(tmpdir(), 'enclosing-repository-'));
-      execFileSync('git', ['init', '-q', repository]);
+      // Under a hook's `GIT_DIR`, a bare `git init` reinitialises the hook's repository and makes none here.
+      execFileSync('git', ['init', '-q', repository], { env: gitEnvironmentFor(repository) });
       nested = join(repository, 'work/godot-demo-projects');
       seedCheckout(nested);
     });

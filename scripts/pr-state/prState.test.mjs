@@ -97,10 +97,28 @@ describe('prStateReport', () => {
       diff: additions('packages/textscene-core/src/r3f/ySort.ts', 7, [
         '// Fallback until the nested sort lands: scene order.',
         'const fallbackFont = theme.fallback;',
+        'this.#fallback = font;',
       ]),
     });
     expect(report).toContain('ySort.ts:7` // Fallback until the nested sort lands: scene order.');
     expect(report).not.toContain('fallbackFont');
+    expect(report).not.toContain('#fallback');
+  });
+
+  it('quotes a document line that names a fallback or says what stays in place', () => {
+    const report = reportOf({
+      diff: additions('packages/textscene-core/src/nodes/control/comparison.md', 12, [
+        'Fallback: the box draws flat.',
+        'A Control-only viewport stays in scene order.',
+      ]),
+    });
+    expect(report).toContain('comparison.md:12` Fallback: the box draws flat.');
+    expect(report).toContain('comparison.md:13` A Control-only viewport stays in scene order.');
+  });
+
+  it('quotes no code line that holds a phrase of a document (edge case)', () => {
+    const report = reportOf({ diff: additions('a.ts', 1, ['// The cursor stays in the row.']) });
+    expect(report).toContain('## Added lines that defer work or record a limit (0)');
   });
 
   it('quotes an added line that records a limit of a feature', () => {
@@ -141,6 +159,31 @@ describe('prStateReport', () => {
     const report = reportOf({ diff });
     expect(report).toContain('- `a.ts:5` // FIXME one');
     expect(report).toContain('- `a.ts:93` // FIXME two');
+  });
+
+  it('reads an added line that starts with "++ " as a line, not as a file header (edge case)', () => {
+    const report = reportOf({ diff: additions('notes.md', 3, ['++ b/other.md', '// TODO: after the list']) });
+    expect(report).toContain('- `notes.md:4` // TODO: after the list');
+  });
+
+  it('counts a context line of a diff with context (edge case)', () => {
+    const diff = [
+      'diff --git a/a.ts b/a.ts',
+      '--- a/a.ts',
+      '+++ b/a.ts',
+      '@@ -3,2 +3,3 @@',
+      ' const a = 1;',
+      '+// FIXME between',
+      ' const b = 2;',
+    ].join('\n');
+    expect(reportOf({ diff })).toContain('- `a.ts:4` // FIXME between');
+  });
+
+  it('says when the working tree has uncommitted changes, and not when it is clean', () => {
+    expect(reportOf({ hasUncommittedChanges: true })).toContain(
+      '- The working tree has uncommitted changes.'
+    );
+    expect(reportOf({})).not.toContain('uncommitted changes');
   });
 
   it('names each exemption table the change edits', () => {

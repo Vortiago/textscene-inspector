@@ -11,6 +11,8 @@ const CHANGE_OF_STATUS = { A: 'added', D: 'removed' };
 /**
  * The `{ change, path }` of each entry, where `change` is `added`, `changed` or `removed`. A type
  * change (`T`), the only other status `--no-renames` gives between two commits, reads as changed.
+ *
+ * @canonical Read `git diff --name-status` output
  */
 export function changedEntries(nameStatus) {
   return nameStatus.split('\n').flatMap((line) => {

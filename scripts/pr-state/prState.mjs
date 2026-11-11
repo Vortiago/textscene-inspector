@@ -11,12 +11,21 @@ import { goldenNameOf } from '../visual/baselinePath.mjs';
 const DEFERS_WORK = /\b(TODO|FIXME|HACK)\b|\b(it|test|describe)\.(skip|todo|only)\b/;
 
 /** A comment that names a fallback. Code is left out: core uses the word in over 500 lines of it. */
-const FALLBACK_COMMENT = /(\/\/|\/\*|^\s*\*|#|<!--).*\bfallback\b/i;
+const FALLBACK_COMMENT = /(\/\/|\/\*|^\s*\*|#\s|<!--).*\bfallback\b/i;
 
 /** A line that records a gap of a feature, in the words the comparison sheets use. */
 const RECORDS_LIMIT = /known limitation|approximated|not supported|unsupported/i;
 
+/** The words that record a gap only in a document. Code and its comments use them for other things. */
+const RECORDS_LIMIT_IN_DOCUMENT = /\bfallback\b|\bstays in\b/i;
+
 const FLAGS = [DEFERS_WORK, FALLBACK_COMMENT, RECORDS_LIMIT];
+
+function isFlagged({ path, text }) {
+  return (
+    FLAGS.some((flag) => flag.test(text)) || (path.endsWith('.md') && RECORDS_LIMIT_IN_DOCUMENT.test(text))
+  );
+}
 
 /** The files that hold a table of exemptions from a gate, each with what its table exempts. */
 export const EXEMPTION_TABLES = new Map([
@@ -33,7 +42,8 @@ export const EXEMPTION_TABLES = new Map([
  * @property {{ sha: string, branch: string }} head
  * @property {{ ref: string, sha: string }} base - the ref the branch left, and the commit where it left.
  * @property {string} nameStatus - `git diff --name-status --no-renames <base.sha> <head.sha>` output.
- * @property {string} diff - `git diff -U0 <base.sha> <head.sha>` output.
+ * @property {string} diff - `git diff -U0 <base.sha> <head.sha>` output, uncoloured, with the `a/` and `b/` prefixes.
+ * @property {boolean} [hasUncommittedChanges] - whether the working tree differs from the head.
  * @property {string[]} unkeptTestOnlyExports - each `file#name` only tests import, the kept ones left out.
  * @property {{ number: number, draft: boolean, mergeableState: string, headSha: string }} [pullRequest]
  */
@@ -66,14 +76,19 @@ export function prStateReport(change) {
   ].join('\n');
 }
 
-function headLines({ head, base, pullRequest }) {
+function headLines({ head, base, pullRequest, hasUncommittedChanges }) {
   const lines = [
     `- Head: \`${head.sha}\` on \`${head.branch}\``,
     `- Base: \`${base.ref}\` at \`${base.sha}\``,
   ];
   if (pullRequest) lines.push(pullRequestLine(pullRequest, head.sha));
+  if (hasUncommittedChanges) lines.push(UNCOMMITTED_CHANGES_LINE);
   return lines;
 }
+
+/** The export scan reads the files on disk, so only a clean working tree makes it describe the head. */
+const UNCOMMITTED_CHANGES_LINE =
+  '- The working tree has uncommitted changes. The test-only exports describe it, not the head. Commit or stash first.';
 
 /** A pull request behind or ahead of the local head makes every section below describe another commit. */
 function pullRequestLine({ number, draft, mergeableState, headSha }, localSha) {
@@ -109,22 +124,43 @@ function exemptionEntry({ path }) {
 
 function flaggedLines(diff) {
   return addedLines(diff)
-    .filter(({ text }) => FLAGS.some((flag) => flag.test(text)))
+    .filter(isFlagged)
     .map(({ path, line, text }) => `\`${path}:${line}\` ${text.trim()}`);
 }
 
-/** Each line a unified diff adds, with its path and its line number in the new file. */
+/** A hunk header, `@@ -a,b +c,d @@`: the removed count, the first new line and the added count. */
+const HUNK_HEADER = /^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
+
+/** Git leaves a count of 1 out of a hunk header. */
+const countOf = (digits) => (digits === undefined ? 1 : Number(digits));
+
+/**
+ * Each line a unified diff adds, with its path and its line number in the new file. The counts of a
+ * hunk header bound its body, so an added line that starts with `++ ` does not read as a file header.
+ */
 function addedLines(diff) {
   const added = [];
   let path = '';
   let line = 0;
+  let oldLeft = 0;
+  let newLeft = 0;
   for (const text of diff.split('\n')) {
-    if (text.startsWith('+++ ')) {
-      path = text.slice('+++ b/'.length);
-    } else if (text.startsWith('@@')) {
-      line = Number(/\+(\d+)/.exec(text)?.[1]);
-    } else if (text.startsWith('+')) {
-      added.push({ path, line, text: text.slice(1) });
+    if (oldLeft + newLeft === 0) {
+      const hunk = HUNK_HEADER.exec(text);
+      if (hunk) {
+        oldLeft = countOf(hunk[1]);
+        line = Number(hunk[2]);
+        newLeft = countOf(hunk[3]);
+      } else if (text.startsWith('+++ ')) {
+        path = text.slice('+++ b/'.length);
+      }
+      continue;
+    }
+    const sign = text[0];
+    if (sign === '+') added.push({ path, line, text: text.slice(1) });
+    if (sign === '-' || sign === ' ') oldLeft -= 1;
+    if (sign === '+' || sign === ' ') {
+      newLeft -= 1;
       line += 1;
     }
   }

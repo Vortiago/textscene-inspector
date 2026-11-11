@@ -56,6 +56,12 @@ describe('parseArgs', () => {
     expect(() => parseArgs(['a.tscn', '--table'])).toThrow('--table needs a file path, got "undefined"');
   });
 
+  it('rejects a table flag followed by another flag (error path)', () => {
+    expect(() => parseArgs(['a.tscn', '--table', '--keep'])).toThrow(
+      '--table needs a file path, got "--keep"'
+    );
+  });
+
   it('rejects a mean bound that is not a number', () => {
     expect(() => parseArgs(['a.tscn', '--max-mean', 'loose'])).toThrow(/--max-mean/);
   });

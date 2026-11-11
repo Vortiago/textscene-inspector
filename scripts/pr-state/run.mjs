@@ -19,6 +19,7 @@ const DEFAULT_BASE = 'origin/main';
 
 /** GitHub's JSON for pull request `number`, read through the `gh` CLI. */
 function readPullRequest(number) {
+  if (!/^\d+$/.test(number)) throw new Error(`expected a pull request number for --pr, got "${number}"`);
   const endpoint = `repos/{owner}/{repo}/pulls/${number}`;
   try {
     return execFileSync('gh', ['api', endpoint], { encoding: 'utf8' });
@@ -38,7 +39,10 @@ function assertExemptionTablesExist() {
   }
 }
 
-/** The committed change only, so every section describes the head commit the report names. */
+/** A user's git configuration can colour a diff, rename its prefixes or hand it to another program. */
+const PLAIN_DIFF = ['--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-prefix=b/'];
+
+/** The committed change, and whether the working tree has moved past the head commit the report names. */
 function readBranchChange(baseRef) {
   const headSha = git('rev-parse', 'HEAD');
   const baseSha = git('merge-base', headSha, baseRef);
@@ -46,7 +50,8 @@ function readBranchChange(baseRef) {
     head: { sha: headSha, branch: git('rev-parse', '--abbrev-ref', 'HEAD') },
     base: { ref: baseRef, sha: baseSha },
     nameStatus: git('diff', '--name-status', '--no-renames', baseSha, headSha),
-    diff: git('diff', '-U0', baseSha, headSha),
+    diff: git('diff', '-U0', ...PLAIN_DIFF, baseSha, headSha),
+    hasUncommittedChanges: git('status', '--porcelain') !== '',
   };
 }
 
