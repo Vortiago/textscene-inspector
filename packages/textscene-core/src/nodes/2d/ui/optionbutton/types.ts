@@ -16,4 +16,6 @@ export interface OptionButtonProperties extends ButtonProperties {
   items?: OptionItem[];
   /** Index into `items` of the selected option. Undefined means none. */
   selected?: number;
+  /** `fit_to_longest_item`: the minimum size holds the longest item, not only the selected one. Godot default true (`option_button.h`). */
+  fitToLongestItem?: boolean;
 }

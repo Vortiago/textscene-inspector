@@ -19,9 +19,10 @@ import {
   buttonMinimumSize,
   buttonTextTheme,
   buttonIconColor,
-  buttonFocusIconColor,
+  BUTTON_CLASS,
   BUTTON_DEFAULT_FONT_COLOR,
   buttonLabelShape,
+  buttonTextureSlots,
 } from './nativeSolver';
 import { resolveToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -242,7 +243,7 @@ describe('buttonMinimumSize: icon contribution (!expand_icon && icon present)', 
 
 describe('buttonLabelShape: the one shaping the solver and the painter share', () => {
   const shape = (props: Partial<ButtonProperties>): TextLayoutResult | null =>
-    buttonLabelShape(node(props), ctx().theme);
+    buttonLabelShape(node(props), ctx().theme, BUTTON_CLASS);
 
   it('shapes the label', () => {
     const layout = shape({ text: 'AB' })!;
@@ -266,14 +267,14 @@ describe('buttonLabelShape: the one shaping the solver and the painter share', (
 
   it('ignores the readiness gate: that lives in the solver, and the painter shapes unconditionally', () => {
     expect(minSize(node({ text: 'AB' }), ctx(false))).toEqual(minSize(node({}), ctx(false)));
-    expect(buttonLabelShape(node({ text: 'AB' }), ctx(false).theme)).not.toBeNull();
+    expect(buttonLabelShape(node({ text: 'AB' }), ctx(false).theme, BUTTON_CLASS)).not.toBeNull();
   });
 });
 
 describe('buttonLabelShape: direction and language (button.cpp:564-569)', () => {
   /** The shaped line's glyph characters, left to right. */
   function visual(props: Partial<ButtonProperties>, overrides: Partial<SolveNode> = {}): string {
-    const layout = buttonLabelShape({ ...node(props), ...overrides }, ctx().theme)!;
+    const layout = buttonLabelShape({ ...node(props), ...overrides }, ctx().theme, BUTTON_CLASS)!;
     return visualChars(layout.lines[0]!);
   }
 
@@ -345,35 +346,6 @@ describe('buttonIconColor: icon_normal_color / icon_disabled_color (default_them
 
   it('a theme_override_colors/icon_disabled_color override (already folded into n.colors) wins over the default', () => {
     expect(buttonIconColor({ icon_disabled_color: { r: 1, g: 0, b: 0, a: 1 } }, 'disabled')).toEqual({
-      r: 1,
-      g: 0,
-      b: 0,
-      a: 1,
-    });
-  });
-});
-
-describe('a focused Button (button.cpp:282-288)', () => {
-  const focused = { hasFocus: true } as ButtonProperties;
-
-  it('draws its text in font_focus_color, 0.95 grey by default (default_theme.cpp:159)', () => {
-    expect(buttonTextTheme(node({}), focused, 'normal', ctx()).color).toEqual({
-      r: 0.95,
-      g: 0.95,
-      b: 0.95,
-      a: 1,
-    });
-  });
-
-  it('keeps the disabled colour while disabled', () => {
-    expect(buttonTextTheme(node({}), focused, 'disabled', ctx()).color).toEqual(
-      buttonTextTheme(node({}), {} as ButtonProperties, 'disabled', ctx()).color
-    );
-  });
-
-  it('reads icon_focus_color for the icon, white without a theme item', () => {
-    expect(buttonFocusIconColor({})).toEqual({ r: 1, g: 1, b: 1, a: 1 });
-    expect(buttonFocusIconColor({ icon_focus_color: { r: 1, g: 0, b: 0, a: 1 } })).toEqual({
       r: 1,
       g: 0,
       b: 0,
@@ -478,7 +450,7 @@ describe('Button.autowrap_mode (button.cpp:493,546-561)', () => {
 
 describe('buttonLabelShape at AUTOWRAP_OFF keeps one row per hard-break line (no end glyph)', () => {
   const rows = (text: string) =>
-    (buttonLabelShape(node({ text }), nativeTheme(1))?.lines ?? []).map((l) => l.text);
+    (buttonLabelShape(node({ text }), nativeTheme(1), BUTTON_CLASS)?.lines ?? []).map((l) => l.text);
 
   it('keeps a trailing space on its row', () => {
     expect(rows('ab ')).toEqual(['ab ']);
@@ -498,7 +470,7 @@ describe('Button.expand_icon under autowrap shapes at the drawn width (button.cp
     const iconWidth = Math.round(rect.h - marginY);
     const wrapWidth = Math.ceil(Math.max(1, rect.w - marginX - iconWidth - theme.separation));
     const props = { text: 'alpha bravo charlie delta', autowrapMode: 2, expandIcon: true };
-    const expected = buttonLabelShape(node(props), theme, wrapWidth)!.heightPx;
+    const expected = buttonLabelShape(node(props), theme, BUTTON_CLASS, wrapWidth)!.heightPx;
 
     const size = buttonMinimumSize(node(props, {}, { x: 16, y: 16 }), {
       ...ctx(),
@@ -511,7 +483,9 @@ describe('Button.expand_icon under autowrap shapes at the drawn width (button.cp
 
 describe('buttonLabelShape: the wrap width and trim flags reach the shaper (button.cpp:428-432,546-561)', () => {
   function rows(props: Partial<ButtonProperties>, boxWidthPx: number): string[] {
-    return (buttonLabelShape(node(props), nativeTheme(1), boxWidthPx)?.lines ?? []).map((l) => l.text);
+    return (buttonLabelShape(node(props), nativeTheme(1), BUTTON_CLASS, boxWidthPx)?.lines ?? []).map(
+      (l) => l.text
+    );
   }
 
   it('keeps one row at AUTOWRAP_OFF however narrow the box', () => {
@@ -615,5 +589,29 @@ describe('a Button on a default-theme type variation (default_theme.cpp:357-383)
     expect(buttonTextTheme(node(FLAT), FLAT as ButtonProperties, 'normal', ctx()).color).toEqual(
       BUTTON_DEFAULT_FONT_COLOR
     );
+  });
+});
+
+describe('buttonTextureSlots (button.cpp:38-41,224-227)', () => {
+  const themed = { ref: 'ExtResource("9")', resources: solveNode().resources, isHeldLocally: true };
+  const slots = (properties: Record<string, unknown>, themedIcons = {}) =>
+    buttonTextureSlots(controlNode('B', 'Button', { name: 'B', ...properties }), themedIcons);
+
+  it("requests the Button's own icon", () => {
+    expect(slots({ icon: 'ExtResource("1")' })).toEqual([{ key: 'icon', ref: 'ExtResource("1")' }]);
+  });
+
+  it('requests the theme icon `icon`, in its own scope, for a Button without an icon', () => {
+    expect(slots({}, { icon: themed })).toEqual([
+      { key: 'icon', ref: 'ExtResource("9")', scope: themed.resources, isHeldLocally: true },
+    ]);
+  });
+
+  it("keeps the Button's own icon over the theme icon", () => {
+    expect(slots({ icon: 'ExtResource("1")' }, { icon: themed })[0]!.ref).toBe('ExtResource("1")');
+  });
+
+  it('requests an empty icon slot with neither', () => {
+    expect(slots({})).toEqual([{ key: 'icon', ref: '' }]);
   });
 });

@@ -11,6 +11,7 @@ import {
   buttonDrawnLabel,
   fitIconSize,
   iconOnlyButtonIconRectIn,
+  largestStyleBoxMargins,
   layoutButtonContent,
   pickButtonStyleBox,
   resolveToggleDrawState,
@@ -111,6 +112,53 @@ describe('pickButtonStyleBox', () => {
     const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
     expect(pickButtonStyleBox({ normal: plain }, defaults, 'normal', true)).toBe(plain);
     expect(pickButtonStyleBox({}, defaults, 'normal', true)).toBe(defaults.normal);
+  });
+
+  // `has_theme_stylebox("normal_mirrored")` holds for an OptionButton through the default theme alone
+  // (`default_theme.cpp:230`), so the plain override is never read.
+  it('takes the default <state>_mirrored box over a plain override under RTL', () => {
+    const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
+    const mirrored = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
+    const withMirrored = { ...defaults, normal_mirrored: mirrored };
+    expect(pickButtonStyleBox({ normal: plain }, withMirrored, 'normal', true)).toBe(mirrored);
+    expect(pickButtonStyleBox({ normal: plain }, withMirrored, 'normal', false)).toBe(plain);
+  });
+});
+
+describe('largestStyleBoxMargins (button.cpp:55-95)', () => {
+  const sides = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom });
+  const box = (contentMargin: StyleBoxFlatData['contentMargin']) => styleBox({ contentMargin });
+  const small = box(sides(1, 1, 1, 1));
+  const defaults = { normal: small, pressed: small, hover: small, disabled: small };
+
+  it('takes the largest margin of each side over the four state boxes', () => {
+    const overrides = { normal: box(sides(9, 2, 3, 4)), disabled: box(sides(5, 8, 7, 6)) };
+    expect(largestStyleBoxMargins(overrides, defaults, false)).toEqual(sides(9, 8, 7, 6));
+  });
+
+  it('is the default margins without an override', () => {
+    expect(largestStyleBoxMargins({}, defaults, false)).toEqual(sides(1, 1, 1, 1));
+  });
+
+  it('measures a hover_pressed box a theme or the default theme sets (button.cpp:72-78)', () => {
+    const hoverPressed = box(sides(6, 6, 6, 6));
+    expect(largestStyleBoxMargins({ hover_pressed: hoverPressed }, defaults, false).left).toBe(6);
+    expect(largestStyleBoxMargins({}, { ...defaults, hover_pressed: hoverPressed }, false).left).toBe(6);
+  });
+
+  it('reads hover_pressed_mirrored under RTL only where hover_pressed is set too (button.cpp:72-73)', () => {
+    const mirrored = box(sides(7, 7, 7, 7));
+    const plain = box(sides(6, 6, 6, 6));
+    expect(largestStyleBoxMargins({ hover_pressed_mirrored: mirrored }, defaults, true).left).toBe(1);
+    const both = { hover_pressed: plain, hover_pressed_mirrored: mirrored };
+    expect(largestStyleBoxMargins(both, defaults, true).left).toBe(7);
+    expect(largestStyleBoxMargins(both, defaults, false).left).toBe(6);
+  });
+
+  it('measures the <state>_mirrored boxes under RTL', () => {
+    const overrides = { normal: box(sides(9, 9, 9, 9)), normal_mirrored: box(sides(4, 4, 4, 4)) };
+    expect(largestStyleBoxMargins(overrides, defaults, true).left).toBe(4);
+    expect(largestStyleBoxMargins(overrides, defaults, false).left).toBe(9);
   });
 });
 

@@ -17,7 +17,9 @@ A trimming `text_overrun_behavior` zeroes the width the same way. The previewer 
 to the box, with an ellipsis where Godot adds one, as Button does. `autowrap_mode` wraps the label at
 its paragraph box and `autowrap_trim_flags` trims its edge spaces. The box grows to the wrapped height.
 Button's inherited `icon` draws beside the label with `icon_alignment`, `vertical_icon_alignment`, `expand_icon` and
-`icon_max_width`, ahead of the check. The minimum size and the wrap width include it.
+`icon_max_width`, ahead of the check. The minimum size and the wrap width include it. A themed StyleBox draws
+under the label as Button's does, and the check sits at the margin of the `normal` one. The theme colours
+`checkbox_checked_color` and `checkbox_unchecked_color` tint the check.
 
 ## Linting
 

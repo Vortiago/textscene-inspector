@@ -1,6 +1,6 @@
 /**
  * `<CheckButton>` render contract: a toggle-switch icon, always drawn at the right edge, and
- * optional label text, with no chrome mesh. Structure, tint and render order only.
+ * optional label text, over the chrome of a themed state box. Structure, tint and render order only.
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -24,6 +24,7 @@ import {
   worldPosition,
 } from '../../../../r3f/controls/native/testing/ownIcon';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
@@ -37,15 +38,36 @@ function solveNode(properties: Partial<CheckButtonProperties> = {}): SolveNode {
   return { ...emptySolveNode(), path: 'MyCheckButton', node };
 }
 
+/** The StyleBox quads: only `<StyleBoxQuad>` builds a geometry with vertex colours. */
+function findChromeMeshes(scene: Rendered['scene']): THREE.Mesh[] {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .filter((mesh) => (mesh.geometry as THREE.BufferGeometry).attributes.color !== undefined);
+}
+
 describe('<CheckButton> (isolated painter contract)', () => {
-  it('draws NO chrome mesh — every one of its StyleBoxes is a StyleBoxEmpty', async () => {
+  it('draws no chrome mesh by default: every default box is a StyleBoxEmpty', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckButton {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
-    const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-    for (const mesh of meshes) {
-      expect((mesh.geometry as THREE.BufferGeometry).attributes.color).toBeUndefined();
-    }
+    expect(findChromeMeshes(renderer.scene)).toHaveLength(0);
+  });
+
+  it('draws a themed state box as chrome, as Button does (button.cpp:214-218)', async () => {
+    const themed = { ...solveNode({ text: 'Hi' }), styleBoxes: { normal: drawnStyleBox() } };
+    const renderer = await ReactThreeTestRenderer.create(
+      <CheckButton {...painterEnv()} solveNode={themed} rect={RECT} renderOrder={0} />
+    );
+    expect(findChromeMeshes(renderer.scene)).toHaveLength(1);
+  });
+
+  it('draws no themed state box while flat (button.cpp:216)', async () => {
+    const themed = { ...solveNode({ text: 'Hi', flat: true }), styleBoxes: { normal: drawnStyleBox() } };
+    const renderer = await ReactThreeTestRenderer.create(
+      <CheckButton {...painterEnv()} solveNode={themed} rect={RECT} renderOrder={0} />
+    );
+    expect(findChromeMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('draws the toggle icon even with no text at all (unconditional)', async () => {
@@ -127,13 +149,13 @@ describe('<CheckButton> (isolated painter contract)', () => {
     expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
   });
 
-  it('forwards renderOrder to every mesh (icon + text)', async () => {
+  it('keeps every mesh inside its own unit of render order (icon and text)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckButton {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={7} />
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     expect(meshes.length).toBeGreaterThan(0);
-    for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
+    for (const mesh of meshes) expect(Math.floor(mesh.renderOrder)).toBe(7);
   });
 
   it("defaults text alignment to LEFT (CheckButton's own constructor override), not Button's CENTER", async () => {
@@ -242,6 +264,7 @@ describe("<CheckButton>: Button's inherited icon (button.cpp:333-405)", () => {
     const node: SolveNode = {
       ...solveNode({ icon: OWN_ICON_REF, ...properties }),
       resources: OWN_ICON_SCOPE,
+      textureSize: { x: 12, y: 12 },
       textureSlots: { icon: { x: 12, y: 12 } },
       rtl,
     };
@@ -288,6 +311,7 @@ describe("<CheckButton>: Button's inherited icon (button.cpp:333-405)", () => {
     const node: SolveNode = {
       ...solveNode({ icon: OWN_ICON_REF, text: 'Hi' }),
       resources: OWN_ICON_SCOPE,
+      textureSize: { x: 12, y: 12 },
       textureSlots: { icon: { x: 12, y: 12 } },
     };
     const painter = <CheckButton {...painterEnv()} solveNode={node} rect={RECT} renderOrder={0} />;

@@ -1,0 +1,89 @@
+; one variable: the theme icon `icon`, which a Button without an `icon` property draws and sizes by
+; (button.cpp:38-41,224-227). No other scene themes it, so none shows a regression in it.
+
+[gd_scene load_steps=5 format=3]
+
+[sub_resource type="Gradient" id="Gradient_themed"]
+colors = PackedColorArray(1, 0.8, 0, 1, 1, 0, 0.6, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_themed"]
+gradient = SubResource("Gradient_themed")
+width = 24
+height = 20
+
+[sub_resource type="Gradient" id="Gradient_own"]
+colors = PackedColorArray(0, 0.8, 1, 1, 0, 0.2, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_own"]
+gradient = SubResource("Gradient_own")
+width = 16
+height = 16
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Button" type="Button" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+theme_override_icons/icon = SubResource("GradientTexture2D_themed")
+text = "Themed"
+
+[node name="ButtonOwnIcon" type="Button" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 70.0
+theme_override_icons/icon = SubResource("GradientTexture2D_themed")
+text = "Own icon"
+icon = SubResource("GradientTexture2D_own")
+
+[node name="ButtonNoText" type="Button" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 120.0
+theme_override_icons/icon = SubResource("GradientTexture2D_themed")
+
+[node name="MenuButton" type="MenuButton" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 170.0
+theme_override_icons/icon = SubResource("GradientTexture2D_themed")
+text = "Themed"
+
+[node name="CheckBox" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 20.0
+theme_override_icons/icon = SubResource("GradientTexture2D_themed")
+text = "Themed"
+
+[node name="CheckButton" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 70.0
+theme_override_icons/icon = SubResource("GradientTexture2D_themed")
+text = "Themed"
+
+[node name="OptionButton" type="OptionButton" parent="."]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 120.0
+theme_override_icons/icon = SubResource("GradientTexture2D_themed")
+selected = 0
+item_count = 1
+popup/item_0/text = "Themed"
+popup/item_0/id = 0
+
+[node name="OptionButtonItemIcon" type="OptionButton" parent="."]
+layout_mode = 0
+offset_left = 220.0
+offset_top = 170.0
+theme_override_icons/icon = SubResource("GradientTexture2D_themed")
+selected = 0
+item_count = 1
+popup/item_0/text = "Item icon"
+popup/item_0/icon = SubResource("GradientTexture2D_own")
+popup/item_0/id = 0

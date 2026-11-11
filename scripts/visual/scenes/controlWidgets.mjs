@@ -233,6 +233,15 @@ export const CONTROL_WIDGET_SCENES = [
   { name: 'button-option-icon-alignment', file: 'unit-option-button-icon-alignment.tscn' },
   { name: 'button-option-icon-minimum-size', file: 'unit-option-button-icon-minimum-size.tscn' },
   { name: 'button-menu-icon-alignment', file: 'unit-menu-button-icon-alignment.tscn' },
+  // What every Button subclass takes from `Button::_notification` and `get_minimum_size`: the state StyleBox
+  // under a check, the largest-box alignment and the theme icon. Then what each subclass reads of its own:
+  // the check colours, `modulate_arrow` and `fit_to_longest_item`.
+  { name: 'check-family-stylebox', file: 'unit-check-family-stylebox.tscn' },
+  { name: 'button-family-align-largest-stylebox', file: 'unit-button-family-align-largest-stylebox.tscn' },
+  { name: 'button-family-theme-icon', file: 'unit-button-family-theme-icon.tscn' },
+  { name: 'check-family-check-color', file: 'unit-check-family-check-color.tscn' },
+  { name: 'button-option-modulate-arrow', file: 'unit-option-button-modulate-arrow.tscn' },
+  { name: 'button-option-fit-longest-item', file: 'unit-option-button-fit-longest-item.tscn' },
   // Each text Control's own paragraph direction, language and structured override, as the label-bidi
   // scenes hold them for a Label: the button family, the editors, RichTextLabel paragraphs, the
   // TabBar, MenuBar and FoldableContainer titles, and ItemList items.

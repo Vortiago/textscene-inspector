@@ -18,7 +18,8 @@ to the box, with an ellipsis where Godot adds one, as Button does. `autowrap_mod
 item at its paragraph box. The box does not grow: Godot sizes every item as one line, so a wrapped
 item overflows the box above and below. The selected item's `icon` draws as Button's `icon` does.
 It follows `icon_alignment`, `vertical_icon_alignment`, `expand_icon` and `icon_max_width`. The minimum size takes the
-widest and tallest item with its own icon.
+widest and tallest item with its own icon, or only the selected item where `fit_to_longest_item` is off. The theme
+constant `modulate_arrow` draws the arrow in the font colour of the button's state.
 
 ## Linting
 
