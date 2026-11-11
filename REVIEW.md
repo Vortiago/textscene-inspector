@@ -13,6 +13,9 @@ A defect the change introduces and CI does not catch:
 - A broken AGENTS.md convention that no guard enforces.
 - An untrusted value in a shell command, a path that escapes its root, or a widened webview CSP.
 - A test that cannot fail, or that asserts rendered geometry under happy-dom.
+- A line the change adds to a sheet, a document or a comment that records a limit of the feature it
+  changes: "known limitation", "approximated", "not supported" or "stays in". The change fixes the
+  gap, or names the open issue of the other subsystem that owns it.
 
 ## What to skip
 
