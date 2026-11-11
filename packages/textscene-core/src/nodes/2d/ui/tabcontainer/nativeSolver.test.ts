@@ -507,6 +507,15 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
     return (bar.node.properties as TabBarProperties).themeOverrideFontSizes?.font_size;
   }
 
+  it('hands the bar the current page and leaves scroll_to_selected at the bar default, so the strip scrolls to it', () => {
+    const n = container({ currentTab: 3 });
+    const tabs = ['A', 'B', 'C', 'D'].map((title) => ({ title, tooltip: '', disabled: false }));
+    const bar = buildInternalTabBarNode(n, tabs, n.node.properties as TabContainerProperties, THEME);
+    const props = bar.node.properties as TabBarProperties;
+    expect(props.currentTab).toBe(3);
+    expect(props.scrollToSelected).toBeUndefined();
+  });
+
   it("resolves the bar's own theme items the container does not push, such as TabBar/icons/close", () => {
     const projectTheme = themeResource({ icons: { TabBar: { close: 'ExtResource("1")' } } });
     const n = container({}, projectTheme);

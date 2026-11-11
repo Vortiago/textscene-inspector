@@ -311,18 +311,16 @@ describe('computeTabBarDrawLayout', () => {
       expect(out.items.map((i) => i.index)).toEqual([2, 3]);
     });
 
-    it('keeps the strip at tab 0 when scroll_to_selected is off', () => {
-      const out = layout(tabs, { ...clipped, currentTab: 3, scrollToSelected: false });
-      expect(out.offset).toBe(0);
+    it.each([
+      ['scroll_to_selected is off', { currentTab: 3, scrollToSelected: false }],
+      ['no tab is current', { currentTab: -1 }],
+    ])('keeps the strip at tab 0 when %s', (_name, input) => {
+      expect(layout(tabs, { ...clipped, ...input }).offset).toBe(0);
     });
 
     it('keeps the strip at tab 0 when the current tab is hidden', () => {
       const out = layout([...tabs, tab(40, { hidden: true })], { ...clipped, currentTab: 4 });
       expect(out.offset).toBe(0);
-    });
-
-    it('keeps the strip at tab 0 when no tab is current', () => {
-      expect(layout(tabs, { ...clipped, currentTab: -1 }).offset).toBe(0);
     });
 
     it('centres the scrolled strip in the space beside the arrows', () => {
