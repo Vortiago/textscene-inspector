@@ -31,6 +31,12 @@ describe('colorNormalized', () => {
     expect(n.b).toBeCloseTo(0, 9);
     expect(n.a).toBe(1);
   });
+
+  it("round-trips through Godot's float srgb_to_linear and linear_to_srgb (color.h:192-204)", () => {
+    // A grey's OKHSL hue is float noise, so the hue the OK shapes draw reads this float result.
+    expect(colorNormalized({ r: 0.25, g: 0.25, b: 0.25, a: 1 }).r).toBe(0.2499999850988388);
+    expect(colorNormalized({ r: 0.7, g: 0.7, b: 0.7, a: 1 }).r).toBe(0.6999999284744263);
+  });
 });
 
 describe('colorModeChannels', () => {
@@ -148,7 +154,12 @@ describe('hsvChannelGradientStops', () => {
 
 describe('hsvHueChannelLayers base', () => {
   it('is the grey polygon at the value: color_mode.cpp:192-206', () => {
-    closeColor(hsvHueChannelLayers({ r: 0.8, g: 0.6, b: 0.4, a: 1 }).base, { r: 0.8, g: 0.8, b: 0.8, a: 1 });
+    closeColor(hsvHueChannelLayers({ r: 0.8, g: 0.6, b: 0.4, a: 1 }).base, {
+      r: 0.8,
+      g: 0.8,
+      b: 0.8,
+      a: 1,
+    });
   });
 });
 
@@ -169,7 +180,12 @@ describe('hsvHueChannelLayers stops', () => {
       [1, 0, 0],
     ];
     stops.forEach((stop, i) => {
-      closeColor(stop, { r: hues[i]![0]! * 0.8, g: hues[i]![1]! * 0.8, b: hues[i]![2]! * 0.8, a: 0.5 });
+      closeColor(stop, {
+        r: hues[i]![0]! * 0.8,
+        g: hues[i]![1]! * 0.8,
+        b: hues[i]![2]! * 0.8,
+        a: 0.5,
+      });
     });
   });
 
@@ -194,7 +210,8 @@ describe('okhslLightnessGradientStops', () => {
   it('is black, the hue at L=0.5, then white: color_mode.cpp:392-411', () => {
     const [black, mid, white] = okhslLightnessGradientStops(RED);
     expect(black).toEqual({ r: 0, g: 0, b: 0, a: 1 });
-    expect(mid.r).toBeCloseTo(0.8775765, 5);
+    // Color.from_ok_hsl(red.ok_hsl_h, red.ok_hsl_s, 0.5).r, measured in Godot 4.6.3.
+    expect(mid.r).toBeCloseTo(0.8773463368, 6);
     expect(mid.g).toBeCloseTo(0, 5);
     expect(mid.b).toBeCloseTo(0, 5);
     expect(white).toEqual({ r: 1, g: 1, b: 1, a: 1 });
@@ -280,10 +297,10 @@ describe('extractHsv', () => {
     expect(v).toBeCloseTo(1);
   });
 
-  it('normalises an overbright colour before extracting h/s/v: color_picker.cpp:593-602', () => {
+  it('reads an overbright colour after colorNormalized: color_picker.cpp:593-602', () => {
     // r=2 (linear-equivalent overbright red): multiplier > 1, so v settles
     // back to 1 after the srgb round-trip, not 2.
-    const { s, v } = extractHsv({ r: 2, g: 0, b: 0, a: 1 });
+    const { s, v } = extractHsv(colorNormalized({ r: 2, g: 0, b: 0, a: 1 }));
     expect(s).toBeCloseTo(1, 2);
     expect(v).toBeCloseTo(1, 2);
   });

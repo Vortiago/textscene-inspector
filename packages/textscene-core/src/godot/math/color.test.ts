@@ -10,6 +10,7 @@ import {
   colorHue,
   colorSaturation,
   darkened,
+  inverted,
   hsvToRgb,
   isColorString,
   lightened,
@@ -73,6 +74,12 @@ describe('namedColor', () => {
     expect(namedColor('')).toBeUndefined();
     // `Color::from_string` tries `html` first, so the table must not match a hex string.
     expect(namedColor('#ff0000')).toBeUndefined();
+  });
+});
+
+describe('inverted', () => {
+  it('flips rgb and keeps alpha', () => {
+    expect(inverted({ r: 0.25, g: 0.5, b: 1, a: 0.5 })).toEqual({ r: 0.75, g: 0.5, b: 0, a: 0.5 });
   });
 });
 

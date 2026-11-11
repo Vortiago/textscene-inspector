@@ -285,6 +285,10 @@ export const CONTROL_WIDGET_SCENES = [
   // (the `script` icon of `text_type`).
   { name: 'color-picker-hsv-rows', file: 'unit-color-picker-hsv-rows.tscn', mode: '2d' },
   { name: 'color-picker-hdr-hex', file: 'unit-color-picker-hdr-hex.tscn', mode: '2d' },
+  // The one variable is `picker_shape`: the wheel, the circles and the OK rectangles.
+  { name: 'color-picker-shapes', file: 'unit-color-picker-shapes.tscn', mode: '2d' },
+  // The one variable is `color` under the wheel, the circles and the OK HL rectangle.
+  { name: 'color-picker-shapes-colour', file: 'unit-color-picker-shapes-colour.tscn', mode: '2d' },
   // The one variable is an ancestor Theme that sets the font colours of Label, Button and LineEdit.
   { name: 'color-picker-theme', file: 'unit-color-picker-theme.tscn', mode: '2d' },
   // The one variable is a FlatMenuButton box that the shape, mode and menu buttons draw and size by.
