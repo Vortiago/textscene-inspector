@@ -23,7 +23,11 @@ import {
   checkBoxTextureSlots,
   CHECKBOX_THEME_FONT_KEY,
 } from './nativeSolver';
-import type { ButtonContentFacts, ButtonContentInput } from '../../../../r3f/controls/native/buttonBase';
+import {
+  internalMarginAt,
+  type ButtonContentFacts,
+  type ButtonContentInput,
+} from '../../../../r3f/controls/native/buttonBase';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { controlProps } from '../control/testing/controlProps';
 
@@ -256,18 +260,25 @@ const CONTENT: ButtonContentFacts & Pick<ButtonContentInput, 'textNaturalSize' |
   internalMargin: { left: 0, right: 0 },
   rtl: false,
 };
+/** The facts the painter builds: the check's width reserved on its side (`check_box.cpp:96-101`). */
+function layoutWithCheck(input: Parameters<typeof layoutCheckBoxContent>[0]) {
+  const { content, checkSize } = input;
+  const internalMargin = internalMarginAt(content.rtl ? 'right' : 'left', checkSize.x);
+  return layoutCheckBoxContent({ ...input, content: { ...content, internalMargin } });
+}
+
 const BASE = { content: CONTENT, checkSize: { x: 16, y: 16 }, checkVOffset: 0 };
 const WITH_BUTTON_ICON = { ...CONTENT, iconNaturalSize: { x: 12, y: 12 } };
 
 describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-456)', () => {
   it('check sits at (margin, vertically centred + check_v_offset)', () => {
-    const { checkPosition } = layoutCheckBoxContent(BASE);
+    const { checkPosition } = layoutWithCheck(BASE);
     // y = floor((28-16)/2 + 0) = 6.
     expect(checkPosition).toEqual({ x: 4, y: 6 });
   });
 
   it('the label box starts past the check + h_separation (the reserved "internal margin" width)', () => {
-    const { labelBox } = layoutCheckBoxContent(BASE);
+    const { labelBox } = layoutWithCheck(BASE);
     // leftPx = margin(4) + check(16) + h_separation(4) = 24; width = 150 - 8 - 20 = 122.
     expect(labelBox!.leftPx).toBe(24);
     expect(labelBox!.widthPx).toBe(122);
@@ -276,7 +287,7 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
   });
 
   it('returns labelBox: null when hasText is false (check still positioned)', () => {
-    const { checkPosition, labelBox } = layoutCheckBoxContent({
+    const { checkPosition, labelBox } = layoutWithCheck({
       ...BASE,
       content: { ...CONTENT, hasText: false },
     });
@@ -285,12 +296,12 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
   });
 
   it('check_v_offset shifts the check vertically (a rarely-set theme_override_constants key)', () => {
-    const { checkPosition } = layoutCheckBoxContent({ ...BASE, checkVOffset: 3 });
+    const { checkPosition } = layoutWithCheck({ ...BASE, checkVOffset: 3 });
     expect(checkPosition.y).toBe(9);
   });
 
   it('a smaller check (icon_max_width clamp NOT applied: already-fitted input) moves the label box accordingly', () => {
-    const { labelBox } = layoutCheckBoxContent({ ...BASE, checkSize: { x: 8, y: 8 } });
+    const { labelBox } = layoutWithCheck({ ...BASE, checkSize: { x: 8, y: 8 } });
     // leftPx = 4 + 8 + 4 = 16; width = 150 - 8 - 12 = 130.
     expect(labelBox!.leftPx).toBe(16);
     expect(labelBox!.widthPx).toBe(130);
@@ -298,7 +309,7 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
 
   it("floors a half-pixel centring remainder DOWN, matching Button's own text_ofs.y (never floored in the source itself, only per-glyph: text_server_adv.cpp:4083)", () => {
     // customElementHeight = 32-2*4=24; (24-23)/2=0.5; +margin(4)=4.5 -> floor 4.
-    const { labelBox } = layoutCheckBoxContent({
+    const { labelBox } = layoutWithCheck({
       ...BASE,
       content: { ...CONTENT, rectSize: { x: 150, y: 32 }, textNaturalSize: { x: 40, y: 23 } },
     });
@@ -306,32 +317,32 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
   });
 
   it('keeps the authored alignment (check_box.cpp:174 sets LEFT only as the default)', () => {
-    expect(
-      layoutCheckBoxContent({ ...BASE, content: { ...CONTENT, textAlignment: 1 } }).labelBox!.alignment
-    ).toBe(1);
-    expect(
-      layoutCheckBoxContent({ ...BASE, content: { ...CONTENT, textAlignment: 2 } }).labelBox!.alignment
-    ).toBe(2);
+    expect(layoutWithCheck({ ...BASE, content: { ...CONTENT, textAlignment: 1 } }).labelBox!.alignment).toBe(
+      1
+    );
+    expect(layoutWithCheck({ ...BASE, content: { ...CONTENT, textAlignment: 2 } }).labelBox!.alignment).toBe(
+      2
+    );
   });
 
   it('keeps the unceiled drawable width: the ceiling belongs to the drawn label (button.cpp:437)', () => {
     const wide = { ...CONTENT, rectSize: { x: 150.5, y: 28 } };
-    expect(layoutCheckBoxContent({ ...BASE, content: wide }).labelBox!.widthPx).toBe(122.5);
+    expect(layoutWithCheck({ ...BASE, content: wide }).labelBox!.widthPx).toBe(122.5);
   });
 
   it('draws no Button icon without one', () => {
-    expect(layoutCheckBoxContent(BASE).icon).toBeNull();
+    expect(layoutWithCheck(BASE).icon).toBeNull();
   });
 
   it("draws Button's LEFT icon past the check and its separation, and the label past both (button.cpp:374-381,411-423)", () => {
-    const { icon, labelBox } = layoutCheckBoxContent({ ...BASE, content: WITH_BUTTON_ICON });
+    const { icon, labelBox } = layoutWithCheck({ ...BASE, content: WITH_BUTTON_ICON });
     // x = margin 4 + (check 16 + 4) = 24; y = floor(4 + (20 - 12) / 2) = 8. The label starts at 24 + (12 + 4) = 40.
     expect(icon).toEqual({ rect: { x: 24, y: 8, w: 12, h: 12 } });
     expect(labelBox).toMatchObject({ leftPx: 40, widthPx: 122 - 16 });
   });
 
   it("draws Button's RIGHT icon at the right margin, the check being on the left (button.cpp:385-387)", () => {
-    const { icon, labelBox } = layoutCheckBoxContent({
+    const { icon, labelBox } = layoutWithCheck({
       ...BASE,
       content: { ...WITH_BUTTON_ICON, iconAlignment: 2 },
     });
@@ -341,7 +352,7 @@ describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-
   });
 
   it("centres Button's CENTER icon in the box the check leaves (button.cpp:374-381)", () => {
-    const { icon, labelBox } = layoutCheckBoxContent({
+    const { icon, labelBox } = layoutWithCheck({
       ...BASE,
       content: { ...WITH_BUTTON_ICON, iconAlignment: 1 },
     });
@@ -360,29 +371,29 @@ describe('layoutCheckBoxContent: RTL puts the check on the right and the label a
   const RTL = { ...BASE, content: { ...CONTENT, rtl: true } };
 
   it('draws the check at the right content margin', () => {
-    const { checkPosition } = layoutCheckBoxContent(RTL);
+    const { checkPosition } = layoutWithCheck(RTL);
     // x = 150 - 4 - 16 = 130; y is direction-independent: floor((28-16)/2) = 6.
     expect(checkPosition).toEqual({ x: 130, y: 6 });
   });
 
   it('puts the label box at the left margin, 20 px short of the check, aligned RIGHT', () => {
-    const { labelBox } = layoutCheckBoxContent(RTL);
+    const { labelBox } = layoutWithCheck(RTL);
     // drawable = 150 - 4 - 4 - (16 + 4) = 122; the left internal margin is now 0.
     expect(labelBox).toEqual({ leftPx: 4, topPx: 1, widthPx: 122, alignment: 2 });
   });
 
   it('swaps an authored RIGHT to LEFT and leaves CENTER (button.cpp:271-275)', () => {
     expect(
-      layoutCheckBoxContent({ ...RTL, content: { ...RTL.content, textAlignment: 2 } }).labelBox!.alignment
+      layoutWithCheck({ ...RTL, content: { ...RTL.content, textAlignment: 2 } }).labelBox!.alignment
     ).toBe(0);
     expect(
-      layoutCheckBoxContent({ ...RTL, content: { ...RTL.content, textAlignment: 1 } }).labelBox!.alignment
+      layoutWithCheck({ ...RTL, content: { ...RTL.content, textAlignment: 1 } }).labelBox!.alignment
     ).toBe(1);
   });
 
   it('keeps check_v_offset and the no-text case direction-independent', () => {
-    expect(layoutCheckBoxContent({ ...RTL, checkVOffset: 3 }).checkPosition.y).toBe(9);
-    const { labelBox, checkPosition } = layoutCheckBoxContent({
+    expect(layoutWithCheck({ ...RTL, checkVOffset: 3 }).checkPosition.y).toBe(9);
+    const { labelBox, checkPosition } = layoutWithCheck({
       ...RTL,
       content: { ...RTL.content, hasText: false },
     });
@@ -391,7 +402,7 @@ describe('layoutCheckBoxContent: RTL puts the check on the right and the label a
   });
 
   it("draws Button's LEFT icon at the right edge, short of the check, under RTL (button.cpp:262-276,385-387)", () => {
-    const { icon } = layoutCheckBoxContent({ ...RTL, content: { ...WITH_BUTTON_ICON, rtl: true } });
+    const { icon } = layoutWithCheck({ ...RTL, content: { ...WITH_BUTTON_ICON, rtl: true } });
     // The icon's side swaps to RIGHT: x = 150 - 4 - (16 + 4) - 12 = 114.
     expect(icon!.rect.x).toBe(114);
   });

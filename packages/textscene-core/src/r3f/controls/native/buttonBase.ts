@@ -249,7 +249,7 @@ export interface ButtonLabelBox {
   alignment: number;
 }
 
-interface ButtonContentLayout {
+export interface ButtonContentLayout {
   /** The icon to draw, `null` for no icon or an `expand_icon` one with no room left. */
   icon: ButtonIconLayout | null;
   /**

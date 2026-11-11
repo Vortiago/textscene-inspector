@@ -26,6 +26,7 @@ import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/
 import { controlProps } from '../control/testing/controlProps';
 import {
   buttonDrawnLabel,
+  internalMarginAt,
   type ButtonContentFacts,
   type ButtonContentInput,
 } from '../../../../r3f/controls/native/buttonBase';
@@ -255,51 +256,58 @@ const CONTENT: ButtonContentFacts & Pick<ButtonContentInput, 'textNaturalSize' |
   internalMargin: { left: 0, right: 0 },
   rtl: false,
 };
+/** The facts the painter builds: the check's width reserved on its side (`check_box.cpp:96-101`). */
+function layoutWithCheck(input: Parameters<typeof layoutCheckButtonContent>[0]) {
+  const { content, checkSize } = input;
+  const internalMargin = internalMarginAt(content.rtl ? 'left' : 'right', checkSize.x);
+  return layoutCheckButtonContent({ ...input, content: { ...content, internalMargin } });
+}
+
 const BASE = { content: CONTENT, checkSize: { x: 32, y: 16 }, checkVOffset: 0 };
 const WITH_BUTTON_ICON = { ...CONTENT, iconNaturalSize: { x: 12, y: 12 } };
 
 describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-260,444-456)', () => {
   it('ends an overflowing right-to-left CENTER label at the trailing edge (text_paragraph.cpp:908-910)', () => {
     // The text box is 150 - 2*6 - (32+4) = 102 wide: 6 + (102 - 200) = -92.
-    const { labelBox } = layoutCheckButtonContent({ ...BASE, content: { ...CONTENT, textAlignment: 1 } });
+    const { labelBox } = layoutWithCheck({ ...BASE, content: { ...CONTENT, textAlignment: 1 } });
     const rtlLine = { text: '', glyphs: [], widthPx: 200, paragraphIndex: 0, paragraphStart: 0, isRtl: true };
     const [drawn] = buttonDrawnLabel([rtlLine], labelBox!.widthPx, labelBox!.alignment);
     expect(labelBox!.leftPx + drawn!.offsetXPx).toBe(-92);
   });
 
   it('toggle sits flush against the RIGHT edge, vertically centred + check_v_offset', () => {
-    const { checkPosition } = layoutCheckButtonContent(BASE);
+    const { checkPosition } = layoutWithCheck(BASE);
     // x = 150 - (32+6) = 112. y = (28-16)/2 + 0 = 6.
     expect(checkPosition).toEqual({ x: 112, y: 6 });
   });
 
   it('centres the toggle at the half pixel an odd height leaves, unrounded (check_button.cpp:140)', () => {
     const tall = { ...CONTENT, rectSize: { x: 150, y: 31 } };
-    expect(layoutCheckButtonContent({ ...BASE, content: tall }).checkPosition.y).toBe(7.5);
+    expect(layoutWithCheck({ ...BASE, content: tall }).checkPosition.y).toBe(7.5);
   });
 
   it('the label box starts at marginX and ends before the toggle and its h_separation', () => {
-    const { labelBox } = layoutCheckButtonContent(BASE);
+    const { labelBox } = layoutWithCheck(BASE);
     // width = 150 - 12 - (32 + 4) = 102. customElementHeight = 28-8=20; topPx = floor((20-26)/2 + 4) = 1.
     expect(labelBox).toEqual({ leftPx: 6, topPx: 1, widthPx: 102, alignment: 0 });
   });
 
   it('hands the authored alignment to the drawn label', () => {
-    expect(
-      layoutCheckButtonContent({ ...BASE, content: { ...CONTENT, textAlignment: 1 } }).labelBox!.alignment
-    ).toBe(1);
-    expect(
-      layoutCheckButtonContent({ ...BASE, content: { ...CONTENT, textAlignment: 2 } }).labelBox!.alignment
-    ).toBe(2);
+    expect(layoutWithCheck({ ...BASE, content: { ...CONTENT, textAlignment: 1 } }).labelBox!.alignment).toBe(
+      1
+    );
+    expect(layoutWithCheck({ ...BASE, content: { ...CONTENT, textAlignment: 2 } }).labelBox!.alignment).toBe(
+      2
+    );
   });
 
   it('keeps the unceiled drawable width: the ceiling belongs to the drawn label (button.cpp:437)', () => {
     const wide = { ...CONTENT, rectSize: { x: 150.5, y: 28 } };
-    expect(layoutCheckButtonContent({ ...BASE, content: wide }).labelBox!.widthPx).toBe(102.5);
+    expect(layoutWithCheck({ ...BASE, content: wide }).labelBox!.widthPx).toBe(102.5);
   });
 
   it('returns labelBox: null when hasText is false (toggle still positioned)', () => {
-    const { checkPosition, labelBox } = layoutCheckButtonContent({
+    const { checkPosition, labelBox } = layoutWithCheck({
       ...BASE,
       content: { ...CONTENT, hasText: false },
     });
@@ -308,23 +316,23 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
   });
 
   it('check_v_offset shifts the toggle vertically', () => {
-    const { checkPosition } = layoutCheckButtonContent({ ...BASE, checkVOffset: 3 });
+    const { checkPosition } = layoutWithCheck({ ...BASE, checkVOffset: 3 });
     expect(checkPosition.y).toBe(9);
   });
 
   it('draws no Button icon without one', () => {
-    expect(layoutCheckButtonContent(BASE).icon).toBeNull();
+    expect(layoutWithCheck(BASE).icon).toBeNull();
   });
 
   it("draws Button's LEFT icon at the left margin, the toggle being on the right (button.cpp:374-381,411-423)", () => {
-    const { icon, labelBox } = layoutCheckButtonContent({ ...BASE, content: WITH_BUTTON_ICON });
+    const { icon, labelBox } = layoutWithCheck({ ...BASE, content: WITH_BUTTON_ICON });
     // x = margin 6; y = floor(4 + (20 - 12) / 2) = 8. The label starts at 6 + (12 + 4) = 22, 102 - 16 = 86 wide.
     expect(icon).toEqual({ rect: { x: 6, y: 8, w: 12, h: 12 } });
     expect(labelBox).toMatchObject({ leftPx: 22, widthPx: 86 });
   });
 
   it("draws Button's RIGHT icon before the toggle and its separation (button.cpp:385-387)", () => {
-    const { icon, labelBox } = layoutCheckButtonContent({
+    const { icon, labelBox } = layoutWithCheck({
       ...BASE,
       content: { ...WITH_BUTTON_ICON, iconAlignment: 2 },
     });
@@ -334,7 +342,7 @@ describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-26
   });
 
   it("centres Button's CENTER icon in the box the toggle leaves (button.cpp:374-381)", () => {
-    const { icon, labelBox } = layoutCheckButtonContent({
+    const { icon, labelBox } = layoutWithCheck({
       ...BASE,
       content: { ...WITH_BUTTON_ICON, iconAlignment: 1 },
     });
@@ -353,27 +361,27 @@ describe('layoutCheckButtonContent: RTL puts the toggle on the left', () => {
   const RTL = { ...BASE, content: { ...CONTENT, rtl: true } };
 
   it('draws the toggle at the left content margin, vertically unchanged', () => {
-    const { checkPosition } = layoutCheckButtonContent(RTL);
+    const { checkPosition } = layoutWithCheck(RTL);
     expect(checkPosition).toEqual({ x: 6, y: 6 });
   });
 
   it('puts the label box right of the toggle and aligns a LEFT label RIGHT', () => {
-    const { labelBox } = layoutCheckButtonContent(RTL);
+    const { labelBox } = layoutWithCheck(RTL);
     // reserved = 32+4 = 36; drawable = 150-12-36 = 102.
     expect(labelBox).toEqual({ leftPx: 6 + 36, topPx: 1, widthPx: 102, alignment: 2 });
   });
 
   it('leaves CENTER alone and swaps RIGHT to LEFT', () => {
     expect(
-      layoutCheckButtonContent({ ...RTL, content: { ...RTL.content, textAlignment: 1 } }).labelBox!.alignment
+      layoutWithCheck({ ...RTL, content: { ...RTL.content, textAlignment: 1 } }).labelBox!.alignment
     ).toBe(1);
     expect(
-      layoutCheckButtonContent({ ...RTL, content: { ...RTL.content, textAlignment: 2 } }).labelBox!.alignment
+      layoutWithCheck({ ...RTL, content: { ...RTL.content, textAlignment: 2 } }).labelBox!.alignment
     ).toBe(0);
   });
 
   it("draws Button's LEFT icon at the right margin under RTL (button.cpp:262-276,385-387)", () => {
-    const { icon } = layoutCheckButtonContent({ ...RTL, content: { ...WITH_BUTTON_ICON, rtl: true } });
+    const { icon } = layoutWithCheck({ ...RTL, content: { ...WITH_BUTTON_ICON, rtl: true } });
     // The icon's side swaps to RIGHT, and the toggle is on the left: x = 150 - 6 - 12 = 132.
     expect(icon!.rect.x).toBe(132);
   });

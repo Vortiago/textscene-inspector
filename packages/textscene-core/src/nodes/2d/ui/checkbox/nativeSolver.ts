@@ -30,6 +30,7 @@ import {
   withReservedElementSize,
   type ButtonContentFacts,
   type ButtonContentInput,
+  type ButtonContentLayout,
   type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
 import { checkFamilyContentFacts } from '../button/nativeSolver';
@@ -232,8 +233,11 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const factsAt = (rectSize: Vector2) => checkBoxContentFacts(n, props, ctx, rectSize, iconNaturalSize);
   const label = { fontSizePx, themeFontKey: CHECKBOX_THEME_FONT_KEY };
   // A wrapping label's rows follow the tentative width (`button.cpp:429-432`).
-  const boxWidthPx = tentativeWrapWidthPx(props, ctx.tentativeRect?.(n), factsAt, () =>
-    shapedNodeLabel(n, ctx, props, { ...label, boxWidthPx: 0 })
+  const boxWidthPx = tentativeWrapWidthPx(
+    props,
+    ctx.measureText ? ctx.tentativeRect?.(n) : undefined,
+    factsAt,
+    () => shapedNodeLabel(n, ctx, props, { ...label, boxWidthPx: 0 })
   );
   // `button.cpp:492` reads `paragraph->get_size()`, the ceiled extent (`text_paragraph.cpp:601-608`).
   // `clip_text`, a trimming overrun or autowrap zeroes the width (`button.cpp:493-495`). Button's
@@ -250,18 +254,16 @@ export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 interface CheckBoxContentInput {
-  /** What `layoutButtonContent` reads, less the check's reservation, which this adds. */
-  content: Omit<ButtonContentInput, 'internalMargin'>;
+  /** What `layoutButtonContent` reads, the check's `internalMargin` included. */
+  content: ButtonContentInput;
   /** The check's size, already fitted with `fitIconSize`. */
   checkSize: Vector2;
   checkVOffset: number;
 }
 
-interface CheckBoxContentLayout {
+interface CheckBoxContentLayout extends Pick<ButtonContentLayout, 'icon' | 'labelBox'> {
   /** The check's top-left, local to the control's own top-left, Godot px. */
   checkPosition: Vector2;
-  icon: ReturnType<typeof layoutButtonContent>['icon'];
-  labelBox: ReturnType<typeof layoutButtonContent>['labelBox'];
 }
 
 /**
@@ -280,9 +282,6 @@ export function layoutCheckBoxContent({
     x: rtl ? rectSize.x - styleMargin.right - checkSize.x : styleMargin.left,
     y: Math.trunc((rectSize.y - checkSize.y) / 2) + checkVOffset,
   };
-  const { icon, labelBox } = layoutButtonContent({
-    ...content,
-    internalMargin: internalMarginAt(rtl ? 'right' : 'left', checkSize.x),
-  });
+  const { icon, labelBox } = layoutButtonContent(content);
   return { checkPosition, icon, labelBox };
 }

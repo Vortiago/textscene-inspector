@@ -251,8 +251,11 @@ export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
     });
   // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height depends on.
   // Pass 1 shapes unwrapped. The label wraps at what the painter's layout leaves beside the icon.
-  const wrapWidthPx = tentativeWrapWidthPx(props, ctx.tentativeRect?.(n), factsAt, () =>
-    ctx.measureText ? buttonLabelShape(n, ctx.theme) : null
+  const wrapWidthPx = tentativeWrapWidthPx(
+    props,
+    ctx.measureText ? ctx.tentativeRect?.(n) : undefined,
+    factsAt,
+    () => (ctx.measureText ? buttonLabelShape(n, ctx.theme) : null)
   );
   // An absent `ctx.measureText` means the text contributes nothing, while the margin and
   // the icon still count (`solverRegistry.ts`'s contract).
