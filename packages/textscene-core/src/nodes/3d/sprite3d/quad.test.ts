@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
   spriteQuadAabb,
   spriteQuadGeometry,
+  spriteQuadPart,
   spriteQuadRect,
   writeSpriteQuadColour,
   writeSpriteQuadUvs,
@@ -34,6 +35,22 @@ describe('spriteQuadRect', () => {
   it('moves the rect up by a positive offset.y, in pixels', () => {
     const rect = spriteQuadRect(SIZE, { centered: false, offset: { x: 10, y: 32 }, pixel_size: 0.01 });
     expect(rect.position).toEqual({ x: 0.1, y: 0.32, z: 0 });
+  });
+});
+
+describe('spriteQuadPart', () => {
+  const quad = { position: { x: -1, y: -0.5, z: 0 }, size: { x: 2, y: 1, z: 0 } };
+  const frame = { x: 10, y: 20, w: 200, h: 100 };
+
+  it('is the whole quad for a part that is the whole frame', () => {
+    expect(spriteQuadPart(quad, frame, frame, 0.01)).toEqual(quad);
+  });
+
+  it('insets the quad from the left and from the top, where the image Y runs down', () => {
+    const part = spriteQuadPart(quad, frame, { x: 30, y: 30, w: 100, h: 50 }, 0.01);
+    expect(part.position.x).toBeCloseTo(-0.8);
+    expect(part.position.y).toBeCloseTo(-0.1);
+    expect(part.size).toEqual({ x: 1, y: 0.5, z: 0 });
   });
 });
 

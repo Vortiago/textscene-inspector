@@ -34,7 +34,7 @@ import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import { drawHookProps, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { FramePoint } from '../../../r3f/components/NodeAabb';
-import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
+import { useGeometryInstance, useInstanceDraw } from '../../../r3f/visibilityRange/geometryInstance';
 import { partsPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 
 /** What a MeshInstance3D mounts: a mesh draws triangles, a PointMesh draws points. */
@@ -84,7 +84,8 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
     [drawnParts]
   );
   // The placeholder box is not the mesh's, so the cull cannot measure the instance.
-  const shadow = useGeometryInstance(content.kind === 'unresolved' ? UNPLACED : placement);
+  useGeometryInstance(content.kind === 'unresolved' ? UNPLACED : placement);
+  const { shadow } = useInstanceDraw();
 
   // The shell is the mesh's first part, which draws triangles when the mesh has any.
   const drawsPoints = content.kind === 'surfaced' && geometryDrawsPoints(content.mesh.parts[0].geometry);

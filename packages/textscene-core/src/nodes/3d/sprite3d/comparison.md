@@ -17,6 +17,8 @@ The quad casts a shadow when Godot files its surface in the shadow pass (`render
 
 The quad's UVs hold the frame, the region and the flip, and its vertex colour holds the accumulated `modulate`, as Godot's sprite mesh does (`sprite_3d.cpp:146-161`, `:223-228`). A `material_override` or a `material_overlay` therefore samples the same frame, and reads the modulate only where it takes its albedo from the vertex colour. The `sprite3d-instance-materials` golden pins the frame under an override.
 
+An AtlasTexture draws its region alone: the quad leaves the margin out, samples the atlas and holds the UVs of the atlas (`sprite_3d.cpp:100-150`). The `sprite3d-atlas-instance-materials` golden pins this.
+
 The `texture_filter` rows follow `BaseMaterial3D`. three skips anisotropy under a nearest magnification filter, so the draw site writes it onto the GPU texture for Nearest with Mipmaps and Anisotropic (`nearestAnisotropy.ts`). The `sprite3d-texture-filter-anisotropic` golden shows the four mipmap filters at a grazing angle.
 
 ## Linting
@@ -55,4 +57,3 @@ Most keys warn then fall back to their Godot defaults. `billboard`, `alpha_cut` 
 - **Approximated** Under msaa_3d Disabled, alpha to coverage cuts the edge at alpha 0.5, where Godot's driver picks its own one-sample mask.
 - **Approximated** Under msaa_3d, `ALPHA_TO_COVERAGE_AND_TO_ONE` stores the ramped alpha where Godot stores 1, so a transparent background shows the edge fainter.
 - **Approximated** `ALPHA_HASH` keeps about Godot's share of pixels but not the same pixels, as the ported hash's `fract(1e4 * sin())` rounds differently on each GPU (`scene_forward_aa_inc.glsl:3-39`).
-- **Approximated** On a sprite with an AtlasTexture, a textured `material_override` or `material_overlay` samples its whole texture, where Godot samples the atlas cell's part (`sprite_3d.cpp:136-150`).

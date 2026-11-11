@@ -12,6 +12,7 @@
 import type * as THREE from 'three';
 import type { ImageSize } from '../resources/formats/image/imagePixels';
 import { FULL_UV_WINDOW, regionUvWindow, type UvWindow } from './uvWindow';
+import type { Rect2 } from '../godot/math/rect2';
 import { frameCoords } from '../godot/scene/spriteFrames';
 
 /**
@@ -80,13 +81,23 @@ export function frameSizePx(
 }
 
 /**
- * Godot's `texture_repeat` (`sprite_3d.cpp:163`): repeat only where the frame's UV
- * window leaves `[0, 1]`, on strict tests. Flips only swap the box's diagonal,
+ * The frame's rectangle in texture pixels, top row first: the source rect Godot draws
+ * (`sprite_3d.cpp:812-823`).
+ */
+export function frameRectPx(reportedSize: ImageSize | undefined, props: SpriteFrameProps): Rect2 {
+  const { width, height } = frameSizePx(reportedSize, props);
+  const base = props.region_enabled && props.region_rect && reportedSize ? props.region_rect : { x: 0, y: 0 };
+  const { x: col, y: row } =
+    props.frame_coords ?? frameCoords({ frame: props.frame, hframes: Math.max(1, props.hframes) });
+  return { x: base.x + col * width, y: base.y + row * height, w: width, h: height };
+}
+
+/**
+ * Godot's `texture_repeat` (`sprite_3d.cpp:163`): repeat only where `uv`, the unflipped window the
+ * quad draws, leaves `[0, 1]`, on strict tests. Flips only swap the box's diagonal,
  * and our v-window is Godot's mirrored about 0.5, which the test is symmetric under.
  */
-export function spriteWrapMode(texture: THREE.Texture | undefined, props: SpriteFrameProps): SpriteWrapMode {
-  if (!texture) return 'clamp';
-  const uv = frameUvWindow(texture, props);
+export function spriteWrapMode(uv: UvWindow): SpriteWrapMode {
   const outside = (min: number, size: number): boolean => min < 0 || min + size > 1;
   return outside(uv.offset.x, uv.repeat.x) || outside(uv.offset.y, uv.repeat.y) ? 'repeat' : 'clamp';
 }

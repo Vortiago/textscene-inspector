@@ -11,10 +11,10 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { frameSizePx, frameUvWindow, spriteWrapMode } from '../../../r3f/spriteFrame';
+import { frameRectPx, frameUvWindow, spriteWrapMode } from '../../../r3f/spriteFrame';
 import { WRAP } from '../../../r3f/canvasItemTextureSampler';
 import { useTextureView } from '../../../r3f/useTextureView';
-import { flippedUvWindow } from '../../../r3f/uvWindow';
+import { flippedUvWindow, regionUvWindow } from '../../../r3f/uvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { viewportProgramInputs } from '../../../r3f/materialProgramInputs';
@@ -36,11 +36,13 @@ import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placem
 import {
   spriteQuadAabb,
   spriteQuadGeometry,
+  spriteQuadPart,
   spriteQuadRect,
   writeSpriteQuadColour,
   writeSpriteQuadUvs,
 } from './quad';
 import { clamp } from '../../../godot/math/math';
+import { rect2Intersection } from '../../../godot/math/rect2';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
 export function Sprite3D({ node, children }: NodeComponentProps) {
@@ -50,7 +52,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
 
   const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
-  const { override } = useInstanceDraw();
+  const { override, shadow } = useInstanceDraw();
   const posedRef = useOwnMaterialPose(spriteRef, properties, transform.scale);
 
   // The sprite's material samples `texture_albedo` as `source_color` (`material.cpp:969`), so a
@@ -59,11 +61,31 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     texture: sourceTexture,
     size: reportedSize,
     missing: textureMissing,
+    atlasCell,
   } = useTexture2D(properties.texture, externalResources, internalResources, 'decoding');
 
-  // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the frame's own UV
+  // An AtlasTexture draws its region alone, so a margin is no part of the quad
+  // (`atlas_texture.cpp:193-219`). Any other texture draws the whole frame.
+  const { frame, drawn } = useMemo(() => {
+    const frame = frameRectPx(reportedSize, properties);
+    return { frame, drawn: atlasCell ? rect2Intersection(frame, atlasCell.region) : frame };
+  }, [reportedSize, properties, atlasCell]);
+  // `sprite_3d.cpp:104`.
+  const drawsNothing = drawn.w === 0 || drawn.h === 0;
+  // An AtlasTexture samples its atlas, with the UVs of the atlas (`sprite_3d.cpp:136-150`).
+  const sampledTexture = atlasCell?.sheet ?? sourceTexture;
+  const drawnWindow = useMemo(() => {
+    if (!atlasCell) return frameUvWindow(sourceTexture ?? undefined, properties);
+    const { cell, sheetSize } = atlasCell;
+    return regionUvWindow(
+      { ...drawn, x: cell.x + drawn.x, y: cell.y + drawn.y },
+      { x: sheetSize.width, y: sheetSize.height }
+    );
+  }, [sourceTexture, properties, atlasCell, drawn]);
+
+  // The wrap mode is derived, not fixed: `sprite_3d.cpp:163` reads it off the quad's own UV
   // corners, so only an overrunning window tiles.
-  const wrap = spriteWrapMode(sourceTexture ?? undefined, properties);
+  const wrap = spriteWrapMode(drawnWindow);
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
   const { blends, joinsShadowPass, shading, side, depthTest, textureFilter } = materialFor2d({
     alphaCut: properties.alpha_cut,
@@ -83,31 +105,25 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // `texture_albedo` is a `source_color` sampler (`sprite_3d.cpp:306`), so the view reads as an
   // albedo, and the node's own `texture_filter` lands on it (`material.cpp:3055`).
   const displayedTexture = useTextureView(
-    sourceTexture,
-    sourceTexture && {
-      colorSpace: sourceColorSpace(sourceTexture),
+    sampledTexture,
+    sampledTexture && {
+      colorSpace: sourceColorSpace(sampledTexture),
       filter: textureFilter,
       wrap: WRAP[wrap],
     }
   );
   // Flip mirrors through the UV window, where 2D mirrors through mesh scale.
   const frameWindow = useMemo(
-    () =>
-      flippedUvWindow(
-        frameUvWindow(sourceTexture ?? undefined, properties),
-        properties.flip_h === true,
-        properties.flip_v === true
-      ),
-    [sourceTexture, properties]
+    () => flippedUvWindow(drawnWindow, properties.flip_h === true, properties.flip_v === true),
+    [drawnWindow, properties.flip_h, properties.flip_v]
   );
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
   // before the image loads keeps the placeholder at expected scale).
   const rect = useMemo(() => {
-    const px = frameSizePx(reportedSize, properties);
-    const size = { width: px.width * properties.pixel_size, height: px.height * properties.pixel_size };
-    return spriteQuadRect(size, properties);
-  }, [reportedSize, properties]);
+    const size = { width: frame.w * properties.pixel_size, height: frame.h * properties.pixel_size };
+    return spriteQuadPart(spriteQuadRect(size, properties), frame, drawn, properties.pixel_size);
+  }, [frame, drawn, properties]);
   // The frame decides the box, so a texture still loading leaves the sprite unplaced.
   const placement = useMemo(
     () =>
@@ -120,7 +136,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         : UNPLACED,
     [sourceTexture, rect, properties.transform, properties.axis, properties.billboard]
   );
-  const shadow = useGeometryInstance(placement);
+  useGeometryInstance(placement);
 
   // `_get_color_accum()` (`sprite_3d.cpp:36-52`) folds the parent sprite's accumulation into this
   // node's modulate, r/g/b and a. Godot multiplies the stored colours and converts once, so the
@@ -167,7 +183,7 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
 
   // No texture draws nothing (`sprite_3d.cpp:798`), and so does one still pending: `useTexture2D`
   // picks it up on a later render, once the host provides the file.
-  if (!displayedTexture) {
+  if (!displayedTexture || drawsNothing) {
     return (
       <>
         <group ref={spriteRef} name={node.name} {...node3dGroupSpread(transform)}>

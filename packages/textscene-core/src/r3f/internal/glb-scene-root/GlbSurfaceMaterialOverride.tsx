@@ -1,6 +1,6 @@
 /**
  * The materials an override node sets on a mesh inside a loaded GLB: `material_override` or
- * `surface_material_override/0` in its slots, and `material_overlay` beside them. A material may
+ * `surface_material_override/N` in its slots, and `material_overlay` beside them. A material may
  * load late, so React mounts each one. The target is a cloned object with no element, so each
  * `next_pass` link and the overlay mount by hand as a sibling draw (ADR-0039).
  */
@@ -36,13 +36,22 @@ function ownSurfaceSlotsUnder(target: THREE.Object3D): SurfaceSlot[] {
   return surfaceSlotsUnder(target).filter((slot) => !extraDraws.has(slot.holder));
 }
 
+/**
+ * Whether a surface takes the override. `surfaceIndex` counts the mesh's primitives in the glTF's
+ * order, which is the surface order of the mesh Godot imports.
+ */
+export type SurfaceFilter = (current: THREE.Material, surfaceIndex: number) => boolean;
+
 interface GlbSurfaceMaterialOverrideProps {
   /** The GLB-internal object whose surface materials are being replaced. */
   target: THREE.Object3D;
   /** Where the override material lives, already resolved. */
   source: MaterialSource;
-  /** Which surface materials under `target` it replaces. Every one by default. Stable identity. */
-  replaces?: (current: THREE.Material) => boolean;
+  /**
+   * Which surfaces under `target` it replaces, by the surface's material and its index in the
+   * mesh. Every one by default. Stable identity.
+   */
+  replaces?: SurfaceFilter;
 }
 
 /**
@@ -281,7 +290,7 @@ function chainSibling(
 function useGlbMaterialSwap(
   target: THREE.Object3D,
   material: THREE.Material | null,
-  replaces: (current: THREE.Material) => boolean
+  replaces: SurfaceFilter
 ): readonly SurfaceSlot[] | null {
   const [covered, setCovered] = useState<readonly SurfaceSlot[] | null>(null);
   useEffect(() => {
@@ -292,11 +301,11 @@ function useGlbMaterialSwap(
 
     const restore: Array<() => void> = [];
     const taken: SurfaceSlot[] = [];
-    for (const slot of ownSurfaceSlotsUnder(target)) {
+    for (const [surfaceIndex, slot] of ownSurfaceSlotsUnder(target).entries()) {
       const held = slot.read();
       if (held === undefined) continue;
       const current = unfadedMaterial(held);
-      if (!replaces(current)) continue;
+      if (!replaces(current, surfaceIndex)) continue;
       slot.assign(material);
       restore.push(() => {
         const now = slot.read();

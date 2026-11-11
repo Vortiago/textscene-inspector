@@ -11,6 +11,7 @@ import { Vector3Axis } from '../../../godot/math/vector3Axis';
 import type { Sprite3DProperties } from './types';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 import type { UvWindow } from '../../../r3f/uvWindow';
+import type { Rect2 } from '../../../godot/math/rect2';
 import type { Rgba } from '../../../godot/math/math';
 import { byteOf } from '../../../godot/project/image';
 
@@ -36,6 +37,24 @@ export function spriteQuadRect(
       z: 0,
     },
     size: { x: width, y: height, z: 0 },
+  };
+}
+
+/**
+ * The part of `quad` that `drawn` of `frame` fills, both in texture pixels. An AtlasTexture draws
+ * its region alone, so a margin leaves the quad smaller than the frame (`sprite_3d.cpp:100-122`).
+ */
+export function spriteQuadPart(
+  { position, size }: Aabb,
+  frame: Rect2,
+  drawn: Rect2,
+  pixelSize: number
+): Aabb {
+  const fromLeft = drawn.x - frame.x;
+  const fromBottom = frame.y + frame.h - (drawn.y + drawn.h);
+  return {
+    position: { ...position, x: position.x + fromLeft * pixelSize, y: position.y + fromBottom * pixelSize },
+    size: { ...size, x: drawn.w * pixelSize, y: drawn.h * pixelSize },
   };
 }
 

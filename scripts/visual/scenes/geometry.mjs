@@ -182,6 +182,9 @@ export const GEOMETRY_SCENES = [
   // the frame and the flip the quad's UVs hold.
   { name: 'sprite3d-instance-materials', file: 'unit-sprite3d-instance-materials.tscn' },
   { name: 'label3d-instance-materials', file: 'unit-label3d-instance-materials.tscn' },
+  // The one variable: an AtlasTexture with a margin on a Sprite3D, under its own material and
+  // under a `material_override`. The quad covers the region alone, with the UVs of the atlas.
+  { name: 'sprite3d-atlas-instance-materials', file: 'unit-sprite3d-atlas-instance-materials.tscn' },
   // The one variable: `outline_render_priority`, below the fill's priority and equal to it.
   { name: 'label3d-outline-priority', file: 'unit-label3d-outline-priority.tscn' },
   // The one variable: `shaded`. An unshaded label, a shaded label and a shaded back face under one

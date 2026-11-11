@@ -21,14 +21,9 @@ function assignIfDefined<T, K extends keyof T>(target: T, key: K, value: T[K] | 
  */
 const SURFACE_OVERRIDE_KEY_RE = indexedKeyRegex('^surface_material_override/(#)', 'to_int');
 
-export function parseMeshInstance3D(
-  heading: ParsedHeading,
-  properties: Record<string, string>
-): MeshInstance3DProperties {
-  const geometryProps = parseGeometryInstance3D(heading, properties);
-
+/** The raw `surface_material_override/N` value of each surface index the properties name. */
+export function parseSurfaceMaterialOverrides(properties: Record<string, string>): Map<number, string> {
   const surfaceMaterialOverrides = new Map<number, string>();
-
   for (const [key, value] of Object.entries(properties)) {
     const indexedMatch = SURFACE_OVERRIDE_KEY_RE.exec(key);
     if (!indexedMatch) continue;
@@ -39,10 +34,16 @@ export function parseMeshInstance3D(
     if (surfaceIndex < 0) continue;
     surfaceMaterialOverrides.set(surfaceIndex, value);
   }
+  return surfaceMaterialOverrides;
+}
 
+export function parseMeshInstance3D(
+  heading: ParsedHeading,
+  properties: Record<string, string>
+): MeshInstance3DProperties {
   const meshInstance3DProps: MeshInstance3DProperties = {
-    ...geometryProps,
-    surfaceMaterialOverrides,
+    ...parseGeometryInstance3D(heading, properties),
+    surfaceMaterialOverrides: parseSurfaceMaterialOverrides(properties),
   };
 
   if (holdsResource(properties.mesh)) {

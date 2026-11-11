@@ -4,7 +4,7 @@
  * default font is not MSDF (`servers/text/text_server.cpp:2386`, read by `scene/theme/theme_db.cpp:59`),
  * and a distance field cannot reach as far as the FreeType outline.
  */
-import { useMemo, type RefObject } from 'react';
+import { useMemo, type ReactNode, type RefObject } from 'react';
 import * as THREE from 'three';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
 import { TextRun } from '../../../r3f/controls/native/text/TextRun';
@@ -123,8 +123,9 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
     properties.transform,
     properties.billboard,
   ]);
-  const shadow = useGeometryInstance(placement);
-  const isOverridden = useInstanceDraw().override !== undefined;
+  useGeometryInstance(placement);
+  const { shadow, override } = useInstanceDraw();
+  const isOverridden = override !== undefined;
 
   // Not memoised: `TextRun` keys its material off the blend's fields, not its identity, so a fresh
   // equal-valued one rebuilds nothing.
@@ -159,6 +160,8 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
     shadow: { ...shadow, castShadow: shadow.castShadow && (joinsShadowPass || isOverridden) },
     layers: properties.layers,
     shading,
+    // An override is lit as its own material says, which its program decides.
+    receiveShadow: shading !== undefined || isOverridden,
   };
 
   // `label_3d.cpp:401-405`: only an ALPHA_CUT_DISABLED surface is sorted by its
@@ -170,12 +173,14 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
   const surface = (priority: number, laterSurfaces: number) => ({
     renderOrder: sortsByPriority ? priority : 0,
     zShiftPx: bakesPriority ? priority : 0,
-    instance: {
-      isOverridden,
-      passes: (meshRef: RefObject<THREE.Mesh | null>) => (
-        <InstancePasses meshRef={meshRef} posedRef={posedRef} laterSurfaces={laterSurfaces} />
-      ),
-    },
+    instancePasses: (meshRef: RefObject<THREE.Mesh | null>, ownMaterial: ReactNode) => (
+      <InstancePasses
+        meshRef={meshRef}
+        posedRef={posedRef}
+        laterSurfaces={laterSurfaces}
+        ownMaterial={ownMaterial}
+      />
+    ),
   });
   // The outline is the mesh's first surface and the fill its second (`label_3d.cpp:610-615`).
   const outlineSurface = surface(properties.outline_render_priority, 1);
@@ -203,7 +208,7 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
                   tint={properties.outline_modulate}
                   strokeWidthPx={strokeWidthPx}
                   renderOrder={outlineSurface.renderOrder}
-                  instance={outlineSurface.instance}
+                  instancePasses={outlineSurface.instancePasses}
                   {...surfaceProps}
                   frameExcluded
                 />
@@ -215,7 +220,7 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
                 fontSizePx={properties.font_size}
                 tint={properties.modulate}
                 renderOrder={fillSurface.renderOrder}
-                instance={fillSurface.instance}
+                instancePasses={fillSurface.instancePasses}
                 {...surfaceProps}
                 frameExcluded
               />

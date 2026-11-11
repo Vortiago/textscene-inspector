@@ -89,7 +89,7 @@ The glyph raster has a mip chain only when its font generates mipmaps and `textu
 
 ## Known limitations
 
-- **Approximated** A `material_override` or a `material_overlay` fills one quad for each line of an outline font, where Godot fills one quad for each glyph.
+- **Approximated** A `material_override` or a `material_overlay` fills one quad for each line of an outline font, where Godot fills one quad for each glyph (#1496).
 - **Approximated** The glyph mip chain is per label raster, where Godot's is per glyph page, so a minified label differs slightly.
 - **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.
 - **Approximated** A glyph off whole pixels draws at its place, where Godot's mesh samples its glyph texture between texels.

@@ -25,7 +25,7 @@ import { CulledInstance } from './culledInstance';
 
 /** What the base hands every draw of its instance. */
 export interface InstanceDraw {
-  /** `cast_shadow`, with the draw hooks that skip a culled instance's draws. */
+  /** `cast_shadow`, with the draw hooks that skip its colour and sun-shadow draws while culled. */
   shadow: ShadowCastingEffects;
   /** `material_override`: in place of every surface's material. Undefined for none. */
   override: MaterialSource | undefined;
@@ -116,19 +116,15 @@ function useGeometryInstanceScope(): GeometryInstanceScope {
   return scope;
 }
 
-/**
- * Places the enclosing node's instance, and returns its `cast_shadow` with the draw hooks that
- * skip its colour and sun-shadow draws while the cull culls it.
- */
-export function useGeometryInstance(placement: InstancePlacement): ShadowCastingEffects {
-  const { instance, shadow } = useGeometryInstanceScope();
+/** Places the enclosing node's instance for the scene cull, until the drawer unmounts. */
+export function useGeometryInstance(placement: InstancePlacement): void {
+  const { instance } = useGeometryInstanceScope();
   useLayoutEffect(() => {
     instance.placement = placement;
     return () => {
       instance.placement = UNPLACED;
     };
   }, [instance, placement]);
-  return shadow;
 }
 
 /** What the enclosing node's base hands each draw of its instance. */

@@ -23,7 +23,7 @@ import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
 import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
 import { useCsgGeometryContext } from '../../../r3f/csg/useCsgGeometryContext';
 import { FramePoint } from '../../../r3f/components/NodeAabb';
-import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
+import { useGeometryInstance, useInstanceDraw } from '../../../r3f/visibilityRange/geometryInstance';
 import { livePlacement } from '../../../r3f/visibilityRange/placements';
 import { useLivePatchesBelow } from '../../../r3f/liveNodePatches';
 import type { CSGShape3DProperties } from './types';
@@ -167,7 +167,8 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const nodeRef = useRef<THREE.Group | null>(null);
   const drawnRef = useRef<THREE.Mesh | null>(null);
   const placement = useMemo(() => livePlacement(nodeRef, drawnRef), []);
-  const shadow = useGeometryInstance(placement);
+  useGeometryInstance(placement);
+  const { shadow } = useInstanceDraw();
 
   const transform = { ref: nodeRef, name: node.name, ...node3dGroupSpread(nodeTransform) } as const;
 

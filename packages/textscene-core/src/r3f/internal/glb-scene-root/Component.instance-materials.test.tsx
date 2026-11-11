@@ -153,6 +153,26 @@ async function twoPrimitiveRoadAlbedosAfterOverrideChange(): Promise<number[]> {
   return road.children.map((child) => albedoOf(child as THREE.Mesh)).sort((a, b) => a - b);
 }
 
+/** The albedo of each primitive of the two-primitive road, in surface order. */
+async function twoPrimitiveRoadAlbedos(rawProperties: Record<string, string>): Promise<number[]> {
+  const fake = createFakeResourceLoader();
+  fake.scenes.seed(GLB_PATH, GLB_SCENE);
+  fake.glbMeshes.seed(GLB_PATH, glbWithTwoPrimitiveRoad());
+  const renderer = await ReactThreeTestRenderer.create(
+    <SceneStack
+      loader={fake.loader}
+      scene={{
+        internalResources: INTERNALS,
+        externalResources: [{ id: 'glb_1', path: GLB_PATH, type: 'PackedScene' }],
+      }}
+    >
+      <NodeDispatcher nodes={[townWithRoad(rawProperties)]} />
+    </SceneStack>
+  );
+  const road = renderer.scene.findAll((node) => node.instance.name === 'road')[0]!.instance as THREE.Group;
+  return road.children.map((child) => albedoOf(child as THREE.Mesh));
+}
+
 function albedoOf(mesh: THREE.Mesh): number {
   return (mesh.material as THREE.MeshStandardMaterial).color.getHex();
 }
@@ -172,6 +192,21 @@ describe('GLBSceneRoot: instance materials on a GLB mesh', () => {
     });
 
     expect(albedoOf(road!)).toBe(0xff0000);
+  });
+
+  it('puts surface_material_override/N on surface N alone', async () => {
+    expect(
+      await twoPrimitiveRoadAlbedos({ 'surface_material_override/1': 'SubResource("Mat_green")' })
+    ).toEqual([GLTF_COLOR, 0x00ff00]);
+  });
+
+  it('puts each surface override on its own surface', async () => {
+    expect(
+      await twoPrimitiveRoadAlbedos({
+        'surface_material_override/0': 'SubResource("Mat_red")',
+        'surface_material_override/1': 'SubResource("Mat_green")',
+      })
+    ).toEqual([0xff0000, 0x00ff00]);
   });
 
   it('keeps the surface override where material_override is null', async () => {

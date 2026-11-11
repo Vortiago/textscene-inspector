@@ -44,6 +44,7 @@ import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveMaterialSource } from '../../materials/materialSource';
 import { GlbMaterialOverlay, GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
 import { heldResource } from '../../../godot/scene/resourceLiteral';
+import { parseSurfaceMaterialOverrides } from '../../../nodes/3d/meshinstance3d/parser';
 import { GlbAttachedChildren } from './GlbAttachedChildren';
 import { importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
 import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials';
@@ -79,7 +80,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     if (object) applyGlbNodeOverrides(object, overrides, entries);
   }, [object, overrides, entries]);
 
-  // A `surface_material_override/0` needs an ExtResource resolved and a `.tres` loaded, which
+  // A `surface_material_override/N` needs an ExtResource resolved and a `.tres` loaded, which
   // the synchronous mutation above cannot do, so each one mounts its own slot component.
   const importMaterials = useGlbImportMaterials(object);
   const materialOverrides = useGlbMaterialOverrides(object, entries, overrides);
@@ -253,9 +254,11 @@ function useGlbImportMaterials(object: THREE.Object3D | undefined): ReactNode {
   }, [object]);
 }
 
+const NO_SURFACE: ReadonlyMap<number, string> = new Map();
+
 /**
- * The materials each override node sets on its GLB mesh: `material_override`, else
- * `surface_material_override/0`, in the slots (`render_forward_clustered.cpp:4206`), and
+ * The materials each override node sets on its GLB mesh: `material_override`, else each
+ * `surface_material_override/N` on surface N (`render_forward_clustered.cpp:4206`, `:4264`), and
  * `material_overlay` beside them. `resolveGlbOverrideTarget` finds the mesh, as for a transform
  * override, so a Godot path and a three path that disagree on importer levels reach one mesh.
  */
@@ -272,10 +275,13 @@ function useGlbMaterialOverrides(
     const slots: ReactNode[] = [];
     for (const override of overrides) {
       const { material_override, material_overlay } = override.rawProperties;
-      const inSlots =
-        heldResource(material_override) ?? override.rawProperties['surface_material_override/0'];
+      const instanceOverride = heldResource(material_override);
+      const surfaceOverrides = instanceOverride
+        ? NO_SURFACE
+        : parseSurfaceMaterialOverrides(override.rawProperties);
       const overlay = heldResource(material_overlay);
-      if ((!inSlots && !overlay) || !isApplicableGlbOverride(override)) continue;
+      if (!instanceOverride && surfaceOverrides.size === 0 && !overlay) continue;
+      if (!isApplicableGlbOverride(override)) continue;
 
       const target = resolveGlbOverrideTarget(object, entries, override);
       if (!target) continue;
@@ -284,9 +290,21 @@ function useGlbMaterialOverrides(
       // renders under, and its scope carries both pools.
       const scope = override.scope ?? pools;
       const key = joinPath(override.instanceSubPath ?? '', override.name);
-      const slotSource = resolveMaterialSource(inSlots, scope);
-      if (slotSource) {
-        slots.push(<GlbSurfaceMaterialOverride key={key} target={target} source={slotSource} />);
+      const instanceSource = resolveMaterialSource(instanceOverride, scope);
+      if (instanceSource) {
+        slots.push(<GlbSurfaceMaterialOverride key={key} target={target} source={instanceSource} />);
+      }
+      for (const [surfaceIndex, reference] of surfaceOverrides) {
+        const source = resolveMaterialSource(reference, scope);
+        if (!source) continue;
+        slots.push(
+          <GlbSurfaceMaterialOverride
+            key={`${key}:surface ${surfaceIndex}`}
+            target={target}
+            source={source}
+            replaces={(_current, index) => index === surfaceIndex}
+          />
+        );
       }
       const overlaySource = resolveMaterialSource(overlay, scope);
       if (overlaySource) {

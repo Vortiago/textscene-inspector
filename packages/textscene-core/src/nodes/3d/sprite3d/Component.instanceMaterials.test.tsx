@@ -30,17 +30,25 @@ const INTERNALS: readonly TscnInternalResource[] = [
     albedo_color: 'Color(0, 0, 1, 0.5)',
     transparency: '1',
   }),
+  // The right half of the 64 px sheet, inside a 48 by 76 px cell.
+  subResource('AtlasTexture', 'Atlas_cell', {
+    atlas: 'ExtResource("1")',
+    region: 'Rect2(32, 0, 32, 64)',
+    margin: 'Rect2(8, 4, 16, 12)',
+  }),
 ];
 
+const ATLAS = { texture: 'SubResource("Atlas_cell")', pixel_size: '0.5' };
 const OVERRIDE = { material_override: 'SubResource("Mat_override")' };
 const OVERLAY = { material_overlay: 'SubResource("Mat_overlay")' };
 /** Yawed a quarter turn, so a billboard under the test camera's identity basis shows. */
 const YAWED = { transform: 'Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 3, 2, 0)' };
 
+const SHEET_PX = 64;
+
+/** A texture whose pixels read back, so an AtlasTexture can cut its cell from it. */
 function texture(): THREE.Texture {
-  const loaded = new THREE.Texture();
-  (loaded as unknown as { image: { width: number; height: number } }).image = { width: 64, height: 64 };
-  return loaded;
+  return new THREE.DataTexture(new Uint8Array(SHEET_PX * SHEET_PX * 4), SHEET_PX, SHEET_PX, THREE.RGBAFormat);
 }
 
 /** Every mesh the sprite draws after two frames, in scene-graph order. */
@@ -149,5 +157,28 @@ describe('<Sprite3D> instance materials', () => {
     const colours = quad!.geometry.getAttribute('color');
     expect(colours.normalized).toBe(true);
     expect(Array.from(colours.array.slice(0, 4))).toEqual([51, 255, 127, 254]);
+  });
+
+  it('hands the override the UVs of the atlas for an AtlasTexture', async () => {
+    const [quad] = await drawnMeshes({ ...ATLAS, ...OVERRIDE });
+
+    expect(quadUvWindow(quad!.geometry)).toEqual({ offset: { x: 0.5, y: 0 }, repeat: { x: 0.5, y: 1 } });
+  });
+
+  it('cuts the quad to the region of an AtlasTexture, at the margin position from the top left', async () => {
+    const [quad] = await drawnMeshes({ ...ATLAS, ...OVERRIDE });
+    quad!.geometry.computeBoundingBox();
+    const { min, max } = quad!.geometry.boundingBox!;
+
+    // The 48 by 76 px cell is centred: 8 px in from its left, 4 px down from its top.
+    expect([min.x, max.x]).toEqual([-8, 8]);
+    expect([min.y, max.y]).toEqual([-15, 17]);
+  });
+
+  it('samples the atlas itself with its own material, not the cut cell', async () => {
+    const [quad] = await drawnMeshes(ATLAS);
+
+    const image = (quad!.material as THREE.MeshBasicMaterial).map!.image as { width: number };
+    expect(image.width).toBe(SHEET_PX);
   });
 });
