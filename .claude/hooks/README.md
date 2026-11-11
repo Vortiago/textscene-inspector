@@ -72,8 +72,8 @@ bakes an older build and sets `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD`, so without thi
 
 1. Removes `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` from the environment (`playwrightInstallEnv` in
    `scripts/ci/`). `PLAYWRIGHT_BROWSERS_PATH` stays, so the browser lands where the launch looks.
-2. Runs `pnpm playwright:install`, the script that CI also runs, in the repository root. This is
-   a no-op when the browser is present.
+2. Runs `pnpm playwright:install` in the repository root. It installs the Chromium of the
+   Playwright version that the CI image holds, and is a no-op when the browser is present.
 3. If the install fails, prints a warning to stderr.
 4. Always exits with code 0, so a session without network access still starts.
 

@@ -74,29 +74,32 @@ jobs:
         env:
           TOKEN: ${{ github.token }}
         run: docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin <<< "$TOKEN"
-      - id: published
+      - id: registry
         env:
           REF: ${{ steps.image.outputs.ref }}
         run: |
-          if docker manifest inspect "$REF" > /dev/null; then
-            echo "published=true" >> "$GITHUB_OUTPUT"
+          if ! docker manifest inspect "$REF" > /dev/null; then
+            echo "lacks-image=true" >> "$GITHUB_OUTPUT"
           fi
       # A run for a Dependabot pull request publishes too: the permissions above raise its token,
-      # which is read-only by default. No setting raises a fork's token.
+      # which is read-only by default. No setting raises the token of a fork's pull request.
       - name: Refuse to build an image that a fork's token cannot publish
-        if: steps.published.outputs.published != 'true' && github.event.pull_request.head.repo.fork
+        if: steps.registry.outputs.lacks-image && github.event.pull_request.head.repo.fork
         env:
           REF: ${{ steps.image.outputs.ref }}
         run: |
           echo "::error::This pull request changes .github/ci-image/Dockerfile or the locked Playwright version, so its jobs need the image $REF, which a fork cannot publish to ghcr.io. A maintainer pushes this branch to the repository itself, where this job publishes the image."
           exit 1
       - name: Build and publish the image
-        if: steps.published.outputs.published != 'true'
+        if: steps.registry.outputs.lacks-image
         env:
           REF: ${{ steps.image.outputs.ref }}
           PLAYWRIGHT_VERSION: ${{ steps.image.outputs.playwright-version }}
+        # The label links the package to this repository, which gives the repository's runs access.
         run: |
-          docker build --build-arg PLAYWRIGHT_VERSION --tag "$REF" .github/ci-image
+          docker build --build-arg PLAYWRIGHT_VERSION --tag "$REF" \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            .github/ci-image
           docker push "$REF"
 
   static:
@@ -237,10 +240,6 @@ jobs:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      # The image holds the locked Chromium, so this downloads only after a Playwright update that
-      # the image has not caught up with.
-      - run: pnpm playwright:install
-
       - run: pnpm test:visual --shard ${{ matrix.shard }}/12
         env:
           VISUAL_SKIP_BUILD: '1'
@@ -272,14 +271,12 @@ jobs:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      - run: pnpm playwright:install
-
       - run: pnpm test:e2e:web
         env:
           VISUAL_SKIP_BUILD: '1'
 
       # The sky layer passes, which happy-dom cannot run, checked on the real shaders. Its rasteriser
-      # gate needs lavapipe, the driver pnpm ref:godot renders on, which the image holds.
+      # gate needs lavapipe, the driver pnpm ref:godot renders on.
       - run: pnpm test:gpu
 
       # Each budget scene's draw calls and render step runs per frame, against its work budget.
@@ -303,7 +300,6 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - run: pnpm playwright:install
       - run: pnpm test:renderer-consumer
 
   integration:
@@ -423,9 +419,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
 
-      # The root package pins the Playwright that @vscode/test-web launches.
-      - run: pnpm playwright:install
-
+      # @vscode/test-web launches the Playwright that the root package pins, whose Chromium the
+      # image holds.
       - run: pnpm --filter textscene-inspector test:web
 
       # On the build test:web made: a local folder, the preview button, and a painted viewport.

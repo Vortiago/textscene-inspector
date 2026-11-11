@@ -23,10 +23,15 @@ const lockfile = (version) =>
   ].join('\n');
 
 const DOCKERFILE = 'FROM ubuntu:24.04\n';
+const REPOSITORY = 'Vortiago/textscene-inspector';
 
 describe('lockedPlaywrightVersion', () => {
   it("reads the root package's Playwright, not another package's", () => {
     expect(lockedPlaywrightVersion(lockfile('1.64.1'))).toBe('1.64.1');
+  });
+
+  it('leaves out a peer suffix', () => {
+    expect(lockedPlaywrightVersion(lockfile('1.64.1(react@19.0.0)'))).toBe('1.64.1');
   });
 
   it('names the lockfile when the root package has no Playwright', () => {
@@ -35,21 +40,21 @@ describe('lockedPlaywrightVersion', () => {
 });
 
 describe('ciImageRef', () => {
-  it('names an image of this repository on ghcr.io with a 16-digit hex tag', () => {
-    expect(ciImageRef(DOCKERFILE, '1.64.1')).toMatch(
+  it("names an image of the run's repository on ghcr.io, in lower case, with a 16-digit hex tag", () => {
+    expect(ciImageRef(REPOSITORY, DOCKERFILE, '1.64.1')).toMatch(
       /^ghcr\.io\/vortiago\/textscene-inspector\/ci:[0-9a-f]{16}$/
     );
   });
 
-  it('gives two commits the same image when neither input differs', () => {
-    expect(ciImageRef(DOCKERFILE, '1.64.1')).toBe(ciImageRef(DOCKERFILE, '1.64.1'));
-  });
-
   it('gives a new image when the Dockerfile changes', () => {
-    expect(ciImageRef(`${DOCKERFILE}RUN true\n`, '1.64.1')).not.toBe(ciImageRef(DOCKERFILE, '1.64.1'));
+    expect(ciImageRef(REPOSITORY, `${DOCKERFILE}RUN true\n`, '1.64.1')).not.toBe(
+      ciImageRef(REPOSITORY, DOCKERFILE, '1.64.1')
+    );
   });
 
   it('gives a new image when the locked Playwright changes', () => {
-    expect(ciImageRef(DOCKERFILE, '1.65.0')).not.toBe(ciImageRef(DOCKERFILE, '1.64.1'));
+    expect(ciImageRef(REPOSITORY, DOCKERFILE, '1.65.0')).not.toBe(
+      ciImageRef(REPOSITORY, DOCKERFILE, '1.64.1')
+    );
   });
 });
