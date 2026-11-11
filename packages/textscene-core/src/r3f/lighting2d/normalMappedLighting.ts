@@ -141,7 +141,8 @@ void main() {`;
 // shadow applied, and its `shadow_color` term likewise, both negated by a SUB light. The normal term
 // is linear in the light colour, so shading the layer is shading the light, and each blend of
 // `light_blend_compute` (canvas.glsl:549-563) is `color * (1 - A·mix) + term`.
-const FRAGMENT_INJECTION = `${LIGHT_MODE_GLSL}
+const FRAGMENT_INJECTION = `#include <colorspace_fragment>
+${LIGHT_MODE_GLSL}
 if (!unshaded) {
   ${ITEM_ALBEDO_GLSL}
   vec3 normal = itemNormal();
@@ -160,8 +161,7 @@ if (!unshaded) {
   }
   if (lightOnly) gl_FragColor.a = clamp(gl_FragColor.a * lightOnlyAlpha, 0.0, 1.0);
   gl_FragColor.rgb = canvasShaded(color);
-}
-#include <colorspace_fragment>`;
+}`;
 
 /**
  * Props that make a `meshBasicMaterial` shade `lightCount` lights kept apart by the item's normal
