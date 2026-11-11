@@ -106,6 +106,9 @@ import { liveScenePassResults } from '../../liveScenePass';
 import { patchedNode } from '../../nodePatch';
 import {
   allocatePaintRange,
+  behindRangesOf,
+  ysortsChildren,
+  drawsEveryChildFirst,
   canvasRootRanges,
   internalBackRoom,
   listedChildOrder,
@@ -592,11 +595,6 @@ function buildForest(
     return { size, slots: EMPTY_TEXTURE_SLOTS };
   }
 
-  /** A `y_sort_enabled` parent re-orders its children, so the behind/ahead split does not apply. */
-  function sortsChildren(node: TscnNode): boolean {
-    return (node.properties as { y_sort_enabled?: boolean }).y_sort_enabled === true;
-  }
-
   /**
    * The `visible` a registered container writes onto each direct sortable child,
    * keyed by the raw child. The container numbers them in one `get_child(i)` loop
@@ -702,6 +700,7 @@ function buildForest(
       node: window,
       children: [],
       paintRange: WHOLE_CANVAS_RANGE,
+      behindRanges: [],
       paintSequence: WHOLE_CANVAS_RANGE.base,
       backSequence: WHOLE_CANVAS_RANGE.base,
       layerSequence: WHOLE_CANVAS_RANGE.base,
@@ -794,7 +793,8 @@ function buildForest(
     // walk makes the same split.
     const inlineChildren = groups.filter((g) => !isInjected(g)).flatMap((g) => g.children);
     const allocated = allocatePaintRange(paintRange, inlineChildren, {
-      sortsChildren: sortsChildren(collapsed),
+      sortsChildren: ysortsChildren(collapsed),
+      drawsChildrenFirst: drawsEveryChildFirst(collapsed),
       frontRoom: internalFrontRoom(collapsed),
       backRoom: internalBackRoom(collapsed),
       listedOrder: listedChildOrder(collapsed, inlineChildren),
@@ -896,6 +896,7 @@ function buildForest(
       node: live,
       children: isBoundary ? [...children, ...childHoisted] : children,
       paintRange,
+      behindRanges: behindRangesOf(inlineChildren, allocated.children),
       paintSequence: allocated.self,
       backSequence: allocated.back.base,
       layerSequence: allocated.layer,

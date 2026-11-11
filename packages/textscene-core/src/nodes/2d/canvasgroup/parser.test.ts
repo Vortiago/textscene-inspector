@@ -26,6 +26,10 @@ describe('parseCanvasGroup', () => {
     expect(props.clear_margin).toBe(10);
   });
 
+  it('never clips its children, as Godot ignores clip_children on a CanvasGroup (canvas_item.cpp:1741-1744)', () => {
+    expect(group({ clip_children: '1' }).clip_children).toBe(0);
+  });
+
   it('inherits the Node2D properties', () => {
     const props = group({ position: 'Vector2(32, 64)', self_modulate: 'Color(1, 1, 1, 0.5)' });
     expect(props.position).toEqual({ x: 32, y: 64 });

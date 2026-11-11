@@ -8,6 +8,10 @@ import type { PropertySection } from '../../../core/NodeRegistry';
 import type { Node2DProperties } from './types';
 import { formatColorRgba } from '../../../utils/colorParser';
 import type { Rgba } from '../../../godot/math/math';
+import {
+  CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES,
+  CanvasItemClipChildrenMode,
+} from '../../../godot/scene/canvasItem';
 import { formatDegrees } from '../../../utils/transform';
 
 function isWhite(color: Rgba): boolean {
@@ -60,6 +64,12 @@ export function formatNode2DProperties(properties: Node2DProperties): PropertySe
   // it on every node would bury the masks that actually cull a light.
   if (properties.light_mask !== 1) {
     canvasItems.push({ label: 'Light Mask', value: properties.light_mask.toString() });
+  }
+  if (properties.clip_children !== CanvasItemClipChildrenMode.DISABLED) {
+    canvasItems.push({
+      label: 'Clip Children',
+      value: CANVAS_ITEM_CLIP_CHILDREN_MODE_NAMES[properties.clip_children] ?? '',
+    });
   }
   if (properties.y_sort_enabled) {
     canvasItems.push({ label: 'Y Sort Enabled', value: 'Yes' });

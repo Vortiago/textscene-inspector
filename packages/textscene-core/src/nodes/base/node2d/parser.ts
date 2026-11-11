@@ -16,6 +16,7 @@ import type { Node2DProperties } from './types';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../godot/scene/canvasItem.js';
+import { parseClipChildrenMode } from '../../canvasitem/shared/clipChildrenMode';
 
 /** The setters refuse a value past `TEXTURE_FILTER_MAX` or `TEXTURE_REPEAT_MAX` (`canvas_item.cpp`), so it keeps PARENT_NODE. */
 const TEXTURE_FILTERS = Object.values(CanvasItemTextureFilter);
@@ -63,6 +64,7 @@ export function parseNode2D(heading: ParsedHeading, properties: Record<string, s
       properties.z_as_relative === undefined ? true : boolSlotValue(properties.z_as_relative) !== false,
     show_behind_parent: boolSlotValue(properties.show_behind_parent) === true,
     top_level: boolSlotValue(properties.top_level) === true,
+    clip_children: parseClipChildrenMode(properties.clip_children, `${label}.clip_children`),
     modulate: properties.modulate ? parseColor(properties.modulate) : { r: 1, g: 1, b: 1, a: 1 },
     self_modulate: properties.self_modulate
       ? parseColor(properties.self_modulate)

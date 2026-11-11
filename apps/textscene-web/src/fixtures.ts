@@ -413,6 +413,66 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Clip Children And Draw",
+    "file": "unit-clip-children-and-draw.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Behind Groups",
+    "file": "unit-clip-children-behind-groups.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Behind Owner",
+    "file": "unit-clip-children-behind-owner.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Control",
+    "file": "unit-clip-children-control.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Material",
+    "file": "unit-clip-children-material.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Nested Behind Order",
+    "file": "unit-clip-children-nested-behind-order.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Nested Boundary",
+    "file": "unit-clip-children-nested-boundary.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Nested Inert",
+    "file": "unit-clip-children-nested-inert.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children No Commands",
+    "file": "unit-clip-children-no-commands.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Only",
+    "file": "unit-clip-children-only.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Soft Mask",
+    "file": "unit-clip-children-soft-mask.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Clip Children Ysort",
+    "file": "unit-clip-children-ysort.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Code Edit Delimiters",
     "file": "unit-code-edit-delimiters.tscn",
     "category": "Other"

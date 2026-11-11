@@ -40,6 +40,12 @@ export interface Node2DProperties {
    */
   top_level: boolean;
 
+  /**
+   * CanvasItem `clip_children` (`CanvasItem::ClipChildrenMode`, `canvas_item.h:71-74`): the node's
+   * own drawing masks the children that draw at its `z_final`. Default `DISABLED`.
+   */
+  clip_children: number;
+
   /** CanvasItem RGBA tint; multiplies onto this node and all descendants. */
   modulate: Rgba;
   /** CanvasItem RGBA tint; multiplies onto this node's own pixels only (not inherited). */

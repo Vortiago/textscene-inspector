@@ -92,6 +92,8 @@ export interface ControlProperties {
    * (`useCanvasItemMaterial`). Undefined when unset.
    */
   materialPath?: string;
+  /** CanvasItem `clip_children` (`canvas_item.h:71-74`), default `DISABLED`. */
+  clipChildren: number;
   /** CanvasItem `use_parent_material` (`scene/main/canvas_item.h`), default `false`. */
   useParentMaterial: boolean;
   /**
@@ -153,6 +155,7 @@ export type ControlCanvasItemFields = Pick<
   | 'showBehindParent'
   | 'topLevel'
   | 'lightMask'
+  | 'clipChildren'
   | 'useParentMaterial'
   | 'textureFilter'
   | 'textureRepeat'

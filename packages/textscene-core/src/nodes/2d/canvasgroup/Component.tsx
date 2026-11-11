@@ -18,18 +18,13 @@ import type { CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { canvasNumbersOf, useCanvasColorSpace, type CanvasColorSpace } from '../../../r3f/canvasColorSpace';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { createCanvasFrame } from '../../../r3f/components/Canvas2DStage/canvasFrame';
-import { useCanvasLighting2D } from '../../../r3f/lighting2d/CanvasLighting2D';
+import { registerCanvasGroup } from '../../../r3f/canvasGroup/canvasGroupPass';
+import { canvasGroupRectTag } from '../../../r3f/canvasGroup/keyedScene';
 import type { CanvasClip } from '../../../r3f/lighting2d/lightPassHost';
-import {
-  canvasGroupRectTag,
-  registerCanvasGroup,
-  type CanvasGroupWindow,
-} from '../../../r3f/canvasGroup/canvasGroupPass';
-import { rect2Grow, type Rect2 } from '../../../godot/math/rect2';
+import type { CanvasGroupWindow } from '../../../r3f/canvasGroup/groupWindow';
 import type { Rgba } from '../../../godot/math/math';
 import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
-import { compositeRect } from './compositeRect';
-import { canvasPixelRect, clipPixelRect, worldBoxOfCanvasPixels } from './canvasPixels';
+import { useGroupFit } from '../../../r3f/canvasGroup/useGroupFit';
 import { createCompositeMaterial } from './compositeMaterial';
 import type { CanvasGroupProperties } from './types';
 
@@ -94,31 +89,29 @@ function GroupRect({ window, tint, material, pixelMaterial, fitMargin, clearMarg
     writeCompositeColour(compositeMaterial.uniforms.colour!.value as THREE.Vector4, tint.self, space);
   }, [compositeMaterial, tint.self, space]);
 
-  const clip = useClip();
+  const fitRect = useGroupFit({ fitMargin, clearMargin });
   const composite = useRef<THREE.Mesh>(null);
   const plain = useRef<THREE.Mesh>(null);
   const readsBuffer = material === null;
-  // The rect an enclosing group merges in the same frame: one box per group, so no two groups share it.
-  const clearedRect = useMemo(() => new THREE.Box3(), []);
-  useLayoutEffect(
-    () =>
-      registerCanvasGroup(scene, {
-        window,
-        buffer: readsBuffer ? buffer : null,
-        fit: (drawn, nested, frameClip) => {
-          if (composite.current) composite.current.visible = false;
-          if (plain.current) plain.current.visible = false;
-          // A canvas with no light pass, such as an inline SubViewport's, takes the frame's own clip.
-          const framed = clip.current ?? frameClip;
-          const pixels = framed && fittedRect(drawn, framed, frameClip, fitMargin);
-          if (!pixels) return null;
-          const shown = nested || !readsBuffer ? plain.current : composite.current;
-          if (shown) placeRect(shown, worldBoxOfCanvasPixels(pixels, framed, shownRectBox));
-          return worldBoxOfCanvasPixels(rect2Grow(pixels, clearMargin), framed, clearedRect);
-        },
-      }),
-    [scene, window, buffer, readsBuffer, clip, fitMargin, clearMargin, clearedRect]
-  );
+  useLayoutEffect(() => {
+    /** Hides both rect meshes, then shows the plain one or the composite over the fitted rect. */
+    const fitAndPlace = (drawn: readonly THREE.Box3[], frameClip: CanvasClip | null, isPlain: boolean) => {
+      if (composite.current) composite.current.visible = false;
+      if (plain.current) plain.current.visible = false;
+      const rects = fitRect(drawn, frameClip);
+      if (!rects) return null;
+      const shown = isPlain ? plain.current : composite.current;
+      if (shown) placeRect(shown, rects.fitted);
+      return rects.cleared;
+    };
+    return registerCanvasGroup(scene, {
+      kind: 'composite',
+      window,
+      buffer: readsBuffer ? buffer : null,
+      fit: (drawn, frameClip) => fitAndPlace(drawn, frameClip, !readsBuffer),
+      fitNested: (drawn, frameClip) => fitAndPlace(drawn, frameClip, true),
+    });
+  }, [scene, window, buffer, readsBuffer, fitRect]);
 
   const program = materialProgramInputs({
     props: {
@@ -145,52 +138,6 @@ function GroupRect({ window, tint, material, pixelMaterial, fitMargin, clearMarg
       </mesh>
     </>
   );
-}
-
-/** The clip of this canvas, as its light pass last framed it. */
-function useClip(): { current: CanvasClip | null } {
-  const clip = useRef<CanvasClip | null>(null);
-  const { registerPassStep } = useCanvasLighting2D();
-  useLayoutEffect(
-    () =>
-      registerPassStep((_camera, framed) => {
-        clip.current = framed;
-      }),
-    [registerPassStep]
-  );
-  return clip;
-}
-
-/** The composite rect over `drawn`, in canvas pixels, or null when the group draws nothing. */
-function fittedRect(
-  drawn: readonly THREE.Box3[],
-  clip: CanvasClip,
-  frameClip: CanvasClip | null,
-  fitMargin: number
-): Rect2 | null {
-  return compositeRect(
-    drawn.map((box) => canvasPixelRect(box, clip)),
-    shownPixelRect(clip, frameClip),
-    fitMargin
-  );
-}
-
-const shownBox = new THREE.Box3();
-
-/** The world box `placeRect` reads at once, shared by every group. */
-const shownRectBox = new THREE.Box3();
-
-/**
- * The part of the canvas the frame shows, in `clip`'s pixels, which lists the items the group
- * fits. It is the clip in a SubViewport. The root stage shows a panned view past Godot's viewport,
- * and an item there draws as it does outside any group.
- */
-function shownPixelRect(clip: CanvasClip, frameClip: CanvasClip | null): Rect2 {
-  if (!frameClip) return clipPixelRect(clip);
-  const { x, y, w, h } = frameClip.rect;
-  shownBox.min.set(x, y, 0);
-  shownBox.max.set(x + w, y + h, 0);
-  return canvasPixelRect(shownBox, clip);
 }
 
 const toLocal = new THREE.Matrix4();
