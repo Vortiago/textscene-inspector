@@ -69,7 +69,24 @@ async function paintKeysOf(tscn: string) {
   return { Tile: keyOf('Tile'), Low: keyOf('Low') };
 }
 
+/** `Low` sits in a y-sorted `Inner` at y 50, whose sort merges into `Floor`'s. */
+const nestedControl = (top: number) => `
+[node name="Inner" type="Node2D" parent="Floor"]
+y_sort_enabled = true
+position = Vector2(0, 50)
+
+[node name="Low" type="ColorRect" parent="Floor/Inner"]
+offset_top = ${top}
+offset_right = 40.0
+offset_bottom = ${top + 40}
+`;
+
 describe('a Control child of a y-sorted Node2D', () => {
+  it('sorts a Control in a nested y-sorted Node2D on its origin below that Node2D', async () => {
+    const keys = await paintKeysOf(FLOOR + tile(68) + nestedControl(30));
+    expect(compareKeys(keys.Tile, keys.Low)).toBeLessThan(0);
+  });
+
   it('draws over a Node2D sibling whose y is smaller, authored after it', async () => {
     const keys = await paintKeysOf(FLOOR + control(80) + tile(68));
     expect(compareKeys(keys.Tile, keys.Low)).toBeLessThan(0);

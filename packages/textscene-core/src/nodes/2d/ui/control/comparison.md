@@ -26,6 +26,11 @@ tints it, and a `CanvasItemMaterial` sets its `light_mode` and `blend_mode`. Wit
 Node2D between them. Its `z_index` adds onto its parent's z, or replaces it when `z_as_relative`
 is off, as for a Node2D.
 
+With `y_sort_enabled` the Control draws its Control children in y order, each sorted on the origin
+of its canvas item: its solved position plus its pivot translation, snapped as it draws. Equal ys
+keep tree order. A Control child of a y-sorted Node2D sorts the same way among the Node2D's own
+children. A Node2D child of a y-sorted Control is not sorted.
+
 `layout_direction` resolves to one answer per node. An explicit LTR or RTL answers from
 the value alone. INHERITED climbs to the nearest ancestor Control or Window and steps
 over every other node type. That includes a `SubViewport`, so the Controls inside one

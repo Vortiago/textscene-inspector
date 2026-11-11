@@ -1,0 +1,33 @@
+[gd_scene format=3]
+
+; The variable: `y_sort_enabled` on the Control `Sorted`. Its three overlapping ColorRect children
+; are listed out of y order (offset_top 80, 0, 40), so tree order draws Blue on top and y order
+; draws Red on top, then Blue, then Green.
+
+[node name="Root" type="Node2D"]
+
+[node name="Sorted" type="Control" parent="."]
+y_sort_enabled = true
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 100.0
+offset_bottom = 100.0
+
+[node name="Red" type="ColorRect" parent="Sorted"]
+offset_top = 80.0
+offset_right = 200.0
+offset_bottom = 280.0
+color = Color(0.85, 0.15, 0.15, 1)
+
+[node name="Green" type="ColorRect" parent="Sorted"]
+offset_left = 60.0
+offset_right = 260.0
+offset_bottom = 200.0
+color = Color(0.15, 0.7, 0.2, 1)
+
+[node name="Blue" type="ColorRect" parent="Sorted"]
+offset_left = 120.0
+offset_top = 40.0
+offset_right = 320.0
+offset_bottom = 240.0
+color = Color(0.15, 0.3, 0.85, 1)

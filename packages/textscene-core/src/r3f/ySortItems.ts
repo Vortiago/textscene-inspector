@@ -200,7 +200,7 @@ export function collectYSortedItems(
     // canvas instead (`canvas_item.cpp:234-285`), so it is never among them.
     // `<YSortDispatcher>` draws it as a canvas root.
     if (isTopLevelItem(child)) continue;
-    const childPoses = { path: joinPath(live.path, child.name), patches: live.patches };
+    const childPoses = { ...live, path: joinPath(live.path, child.name) };
     // Godot sorts on the transform it draws (`renderer_canvas_cull.cpp:131`), such as the pose a
     // RemoteTransform2D pushes.
     const key = itemSortKey(
