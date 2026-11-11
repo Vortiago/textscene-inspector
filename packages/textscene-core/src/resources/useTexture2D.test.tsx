@@ -17,6 +17,7 @@ import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader, withJobRunner } from './testing/createFakeResourceLoader';
 import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
 import { resetProceduralTextures, type JobRunner } from './textures/proceduralBuilds';
+import { texture2DPlaceholder } from './textures/texture2DPlaceholder';
 import { SceneStack } from '../r3f/testing/SceneStack';
 
 import '../r3f/nodes/index';
@@ -202,6 +203,18 @@ describe('useTexture2D — reference forms', () => {
       { wrapper: withLoader() }
     );
     expect(result.current.size).toEqual({ width: 16, height: 16 });
+  });
+
+  it('gives the placeholder and the declared size for a GradientTexture2D with no gradient', () => {
+    const noGradient: TscnInternalResource[] = [
+      { id: 'T', type: 'GradientTexture2D', data: { width: '200', height: '120' } },
+    ];
+    const { result } = renderHook(() => useTexture2D('SubResource("T")', [], noGradient), {
+      wrapper: withLoader(),
+    });
+    expect(result.current.texture).toBe(texture2DPlaceholder());
+    expect(result.current).toMatchObject({ hasNoImage: true, missing: false });
+    expect(result.current.size).toEqual({ width: 200, height: 120 });
   });
 
   it('reports no size for no texture (edge case)', () => {

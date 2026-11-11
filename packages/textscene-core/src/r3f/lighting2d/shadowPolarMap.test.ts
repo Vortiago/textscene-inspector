@@ -199,6 +199,22 @@ describe('buildShadowPolarMap', () => {
     expect(map[DEFAULT_ATLAS_SIZE - 1]).toBe(SHADOW_MAP_FAR);
   });
 
+  it('fills floor(size / 4) columns per frustum and leaves the rest of an uneven size unwritten', () => {
+    // Godot reads the project value raw (`renderer_canvas_render_rd.cpp:2060`) and gives each
+    // frustum `size / 4` columns, integer division (`:1095`): 130 is 32 columns, so 128 and 129 are
+    // never drawn. A segment across all four quadrants shows them still at the clear value.
+    const ring = [
+      segment(-300, -300, 300, -300),
+      segment(300, -300, 300, 300),
+      segment(300, 300, -300, 300),
+      segment(-300, 300, -300, -300),
+    ].flat();
+    const map = buildMap(lightAt(0, 0, RADIUS), ring, 130);
+    expect(map).toHaveLength(130);
+    expect(map[127]).toBeLessThan(SHADOW_MAP_FAR);
+    expect([map[128], map[129]]).toEqual([SHADOW_MAP_FAR, SHADOW_MAP_FAR]);
+  });
+
   it('spans three quadrants, and the wrap, for a wide segment', () => {
     // A horizontal segment 100 above the light in previewer space, reaching 150
     // either side. Its endpoints sit at u = 0.708 and u = 0.042, so the covered

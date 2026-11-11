@@ -34,6 +34,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     texture: sourceTexture,
     size: reportedSize,
     missing: textureMissing,
+    hasNoImage,
     sampler,
     canvasTexture,
   } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
@@ -43,8 +44,8 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   const frameWindow = useMemo(() => {
     const frameProps =
       animatedFrame !== null ? { ...props, frame: animatedFrame, frame_coords: undefined } : props;
-    return frameUvWindow(sourceTexture ?? undefined, frameProps);
-  }, [sourceTexture, props, animatedFrame]);
+    return frameUvWindow(sourceTexture ?? undefined, frameProps, hasNoImage ? reportedSize : undefined);
+  }, [sourceTexture, props, animatedFrame, hasNoImage, reportedSize]);
   const drawnTexture = useWindowedCanvas2DTexture(sourceTexture, sampler, frameWindow);
 
   // Quad size in pixels (1 px = 1 world unit in the 2D canvas).

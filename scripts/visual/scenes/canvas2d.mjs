@@ -74,6 +74,10 @@ export const CANVAS_2D_SCENES = [
     name: 'sprite2d-gradienttexture',
     file: 'unit-sprite2d-gradienttexture.tscn',
   },
+  // A GradientTexture2D with no gradient holds no image, so a Sprite2D and a TextureRect draw
+  // Godot's placeholder over the texture's width and height. The header states why no other golden
+  // shows it.
+  { name: 'sprite2d-gradient-no-gradient', file: 'unit-sprite2d-gradient-no-gradient.tscn' },
   // A GradientTexture2D whose `gradient` is a saved Gradient (.tres). The header states why no
   // other golden shows it.
   { name: 'sprite2d-gradienttexture-tres', file: 'unit-sprite2d-gradienttexture-tres.tscn' },

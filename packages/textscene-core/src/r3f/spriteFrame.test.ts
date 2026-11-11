@@ -25,6 +25,12 @@ describe('frameUvWindow', () => {
     expect(window.offset).toEqual({ x: 0, y: 0 });
   });
 
+  it("runs past an image that is smaller than the size Godot reports, as Godot's source rect does", () => {
+    const window = frameUvWindow(makeTexture(4, 4), baseProps(), { width: 200, height: 120 });
+    expect(window.repeat).toEqual({ x: 50, y: 30 });
+    expect(window.offset).toEqual({ x: 0, y: -29 });
+  });
+
   it('is the full image before the texture loads', () => {
     const region = { x: 10, y: 20, width: 50, height: 40 };
     const window = frameUvWindow(undefined, baseProps({ region_enabled: true, region_rect: region }));

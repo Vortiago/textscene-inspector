@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { NO_FILES, poolsOf } from '../../testing/loadedFiles';
-import { isGradientTextureWithoutGradient, resolveGradientTexture2D } from './resolveGradientTexture';
+import { gradientTextureSizeWithoutGradient, resolveGradientTexture2D } from './resolveGradientTexture';
 import { proceduralTextureKey } from '../proceduralTextureCache';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -103,33 +103,35 @@ describe('resolveGradientTexture2D', () => {
   });
 });
 
-describe('isGradientTextureWithoutGradient', () => {
+describe('gradientTextureSizeWithoutGradient', () => {
   const textureWith = (data: Record<string, string>): TscnInternalResource[] => [
     { id: 'T', type: 'GradientTexture2D', data },
   ];
 
-  it('is true for a texture that sets no gradient or sets null', () => {
-    expect(isGradientTextureWithoutGradient('SubResource("T")', textureWith({ fill: '1' }))).toBe(true);
-    expect(isGradientTextureWithoutGradient('SubResource("T")', textureWith({ gradient: 'null' }))).toBe(
-      true
+  it('is the width and height of a texture that sets no gradient or sets null', () => {
+    expect(
+      gradientTextureSizeWithoutGradient('SubResource("T")', textureWith({ width: '32', height: '16' }))
+    ).toEqual({ width: 32, height: 16 });
+    expect(gradientTextureSizeWithoutGradient('SubResource("T")', textureWith({ gradient: 'null' }))).toEqual(
+      { width: 64, height: 64 }
     );
   });
 
-  it('is false once a gradient is named, even one that does not resolve', () => {
+  it('is null once a gradient is named, even one that does not resolve', () => {
     expect(
-      isGradientTextureWithoutGradient(
+      gradientTextureSizeWithoutGradient(
         'SubResource("T")',
         textureWith({ gradient: 'SubResource("Missing")' })
       )
-    ).toBe(false);
+    ).toBeNull();
   });
 
-  it('is false for another reference form or resource type', () => {
-    expect(isGradientTextureWithoutGradient(undefined, textureWith({}))).toBe(false);
-    expect(isGradientTextureWithoutGradient('ExtResource("1")', textureWith({}))).toBe(false);
+  it('is null for another reference form or resource type', () => {
+    expect(gradientTextureSizeWithoutGradient(undefined, textureWith({}))).toBeNull();
+    expect(gradientTextureSizeWithoutGradient('ExtResource("1")', textureWith({}))).toBeNull();
     expect(
-      isGradientTextureWithoutGradient('SubResource("C")', [{ id: 'C', type: 'CanvasTexture', data: {} }])
-    ).toBe(false);
+      gradientTextureSizeWithoutGradient('SubResource("C")', [{ id: 'C', type: 'CanvasTexture', data: {} }])
+    ).toBeNull();
   });
 });
 

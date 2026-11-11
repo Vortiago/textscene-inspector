@@ -84,11 +84,15 @@ function shadowMapCoord(x: number, yUp: number): number {
 /**
  * Bin `index`'s ray in Godot light-local space, its axis component 1 so the ray
  * parameter is the stored axis distance. The inverse of `shadowMapCoord`, taken
- * at the texel centre, where the rasteriser decides coverage.
+ * at the texel centre, where the rasteriser decides coverage. Each frustum fills
+ * `floor(bins / 4)` columns (`renderer_canvas_render_rd.cpp:1095`), so a size four does
+ * not divide leaves its last columns unwritten: false for them, and they keep the far value.
  */
-function binRay(index: number, bins: number, out: { x: number; y: number }): void {
-  const u = (index + 0.5) / bins;
-  const quadrant = Math.floor(index / (bins / 4));
+function binRay(index: number, bins: number, out: { x: number; y: number }): boolean {
+  const columns = Math.floor(bins / 4);
+  const quadrant = Math.floor(index / columns);
+  if (quadrant > 3) return false;
+  const u = (quadrant + ((index % columns) + 0.5) / columns) / 4;
   // Quadrant 0 rasterises `(x, y, 0) → (y, 0, -x)` into `glViewport(0, …, size / 4, 2)`,
   // so a column lands at `(y/x) * (size/8) + (size/8)`: the texel `tex_ofs` addresses.
   if (quadrant === 0) {
@@ -108,6 +112,7 @@ function binRay(index: number, bins: number, out: { x: number; y: number }): voi
     out.x = 8 * u - 7;
     out.y = -1;
   }
+  return true;
 }
 
 /**
@@ -183,7 +188,7 @@ export function buildShadowPolarMap(
 
       for (let bin = first; bin <= last; bin += 1) {
         const index = ((bin % bins) + bins) % bins;
-        binRay(index, bins, ray);
+        if (!binRay(index, bins, ray)) continue;
 
         // s·ray = A + t·e, solved by crossing with e and with ray in turn.
         const denominator = ray.x * ey - ray.y * ex;

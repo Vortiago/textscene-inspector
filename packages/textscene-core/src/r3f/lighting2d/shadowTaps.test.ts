@@ -4,12 +4,20 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { SHADOW_BINS, SHADOW_TAPS } from './shadowTaps';
+import * as THREE from 'three';
+import { SHADOW_BINS, SHADOW_TAPS, shadowBinsUniform } from './shadowTaps';
 
 describe('SHADOW_BINS', () => {
   it('is the width of the map it samples, so the atlas size has one source', () => {
-    expect(SHADOW_BINS).toContain('float shadowBins() { return float(textureSize(uShadowMap, 0).x); }');
+    expect(SHADOW_BINS).toContain('float shadowBins() { return uShadowBins; }');
     expect(SHADOW_BINS).not.toContain('2048');
+  });
+});
+
+describe('shadowBinsUniform', () => {
+  it("is the map's width", () => {
+    const map = new THREE.DataTexture(new Float32Array(512), 512, 1, THREE.RedFormat, THREE.FloatType);
+    expect(shadowBinsUniform(map).value).toBe(512);
   });
 });
 

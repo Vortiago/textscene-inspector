@@ -12,8 +12,6 @@ import { useTexture2D } from '../../../resources/useTexture2D';
 import type { ViewSampler } from '../../../resources/textures/textureView';
 import { useTextureView } from '../../../r3f/useTextureView';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { isGradientTextureWithoutGradient } from '../../../resources/textures/gradienttexture2d/resolveGradientTexture';
-import { texture2DPlaceholder } from '../../../resources/textures/texture2DPlaceholder';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { PointLight2DProperties } from './types';
 import {
@@ -60,19 +58,15 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
   const { externalResources, internalResources } = useSceneResources();
 
   // The cookie is often a GradientTexture2D, a radial falloff described inline,
-  // not an image. `useTexture2D` resolves either kind. The plain view in either canvas colour
+  // not an image. `useTexture2D` resolves either kind, and a gradient-less one to Godot's placeholder,
+  // which the light draws at the placeholder's own size (`renderer_viewport.cpp:455-460`). The plain view in either canvas colour
   // space, as `COOKIE_SAMPLER` reads the texels raw.
   const slot = useTexture2D(props.texture, externalResources, internalResources, 'plain');
-  // A gradient-less GradientTexture2D holds no image: the light draws Godot's placeholder at the
-  // placeholder's own size (`renderer_viewport.cpp:455-460`), not the texture's width and height.
-  const hasNoImage = isGradientTextureWithoutGradient(props.texture, internalResources);
-  const cookieSource = hasNoImage ? texture2DPlaceholder() : slot.texture;
-  const missing = slot.missing && !hasNoImage;
   // A light that draws no quad makes no view: it would clone and upload a cookie nothing draws.
-  const cookie = useTextureView(props.enabled && !missing ? cookieSource : null, COOKIE_SAMPLER);
+  const cookie = useTextureView(props.enabled && !slot.missing ? slot.texture : null, COOKIE_SAMPLER);
 
   // With no texture the light adds nothing and draws no placeholder: measured with `pnpm ref:godot`.
-  const lights = props.enabled && !!cookieSource;
+  const lights = props.enabled && !!slot.texture;
   // `canvas.glsl:806` shadows only an item whose `light_mask` meets `shadow_item_cull_mask`. With
   // no reached item meeting it, the shadow lands nowhere, so the light casts nothing.
   const shadowReachesItem = (props.range_item_cull_mask & props.shadow_item_cull_mask) !== 0;
@@ -116,7 +110,7 @@ export function PointLight2D({ node, children }: NodeComponentProps) {
       node={node}
       props={props}
       body={() =>
-        !props.enabled ? null : missing ? (
+        !props.enabled ? null : slot.missing ? (
           <MissingResourcePlaceholder shape="plane" name={node.name} />
         ) : cookie ? (
           <>

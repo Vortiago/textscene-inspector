@@ -78,6 +78,8 @@ uniform mat3 uWorldToLight;
 uniform float uShadowZFarInv;
 varying vec2 vWorld;
 ${SHADOW_BINS}
+// Godot also quantises the row by 1/shadow_pixel_size (canvas.glsl:394,508), so below size 512
+// with two shadowed lights a light reads another's row. Not modelled: each light has its own map.
 float shadowTexel(float texel) {
   return texture2D(uShadowMap, vec2((texel + 0.5) / shadowBins(), 0.5)).r;
 }

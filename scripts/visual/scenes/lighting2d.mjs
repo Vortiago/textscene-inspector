@@ -110,8 +110,8 @@ export const LIGHTING_2D_SCENES = [
   { name: 'pointlight2d-shadow-none-bins', file: 'unit-pointlight2d-shadow-none-bins.tscn', mode: '2d' },
   { name: 'pointlight2d-shadow-pcf5-bins', file: 'unit-pointlight2d-shadow-pcf5-bins.tscn', mode: '2d' },
   // `rendering/2d/shadow_atlas/size` 512 in the folder's project.godot: each PCF5 tap is four
-  // times as wide as at the 2048 default. Godot 4.6.3 `--mode 2d`: both scenes within 1/255 of ours
-  // for the point light, 4/255 on 102 pixels for the sun.
+  // times as wide as at the 2048 default. Godot 4.6.3 `--mode 2d`: the point light is within 1/255
+  // of ours, the sun differs on 30 pixels by at most 1/255.
   {
     name: 'pointlight2d-shadow-atlas-size',
     file: 'shadow-atlas-size/unit-pointlight2d-shadow-atlas-size.tscn',

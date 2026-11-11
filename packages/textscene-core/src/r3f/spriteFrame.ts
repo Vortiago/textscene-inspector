@@ -51,10 +51,16 @@ export const WHOLE_FRAME: SpriteFrameProps = Object.freeze({
 
 /**
  * The current frame's UV window over `texture`: the region-then-frame-grid composition, over the
- * full-image window.
+ * full-image window. `wholeSize` is the size Godot reports for a texture whose image is not that
+ * size (the placeholder), which Sprite2D takes as the base rect and divides by the image's size
+ * (`sprite_2d.cpp` `_get_rects`), so the window runs past the image and its edge texel stretches.
  */
-export function frameUvWindow(texture: THREE.Texture | undefined, props: SpriteFrameProps): UvWindow {
-  const base = regionWindow(texture, props) ?? FULL_UV_WINDOW;
+export function frameUvWindow(
+  texture: THREE.Texture | undefined,
+  props: SpriteFrameProps,
+  wholeSize?: ImageSize
+): UvWindow {
+  const base = regionWindow(texture, props) ?? wholeWindow(texture, wholeSize) ?? FULL_UV_WINDOW;
   return props.hframes > 1 || props.vframes > 1 ? cellWindow(base, props) : base;
 }
 
@@ -101,6 +107,15 @@ function regionWindow(texture: THREE.Texture | undefined, props: SpriteFrameProp
   if (!rect || !image?.width || !image.height) return null;
   return regionUvWindow(
     { x: rect.x, y: rect.y, w: rect.width, h: rect.height },
+    { x: image.width, y: image.height }
+  );
+}
+
+function wholeWindow(texture: THREE.Texture | undefined, wholeSize: ImageSize | undefined): UvWindow | null {
+  const image = texture?.image as { width?: number; height?: number } | undefined;
+  if (!wholeSize || !image?.width || !image.height) return null;
+  return regionUvWindow(
+    { x: 0, y: 0, w: wholeSize.width, h: wholeSize.height },
     { x: image.width, y: image.height }
   );
 }

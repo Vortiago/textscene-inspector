@@ -5,6 +5,9 @@
  * `float shadowTexel(float texel)`, the depth of one bin, before this chunk, and `SHADOW_BINS`
  * before that.
  */
+
+import type * as THREE from 'three';
+
 /*
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -12,12 +15,18 @@
  */
 
 /**
- * `float shadowBins()`, the texels in `uShadowMap`: `shadow_texture_size`, read from the map's own
- * width so the texture and every tap agree on it. A light declares `uShadowMap` before it.
+ * `float shadowBins()`, the texels in the light's map: `shadow_texture_size`. A uniform, not
+ * `textureSize`, so a fragment's thirteen taps read one value. `shadowBinsUniform` writes it from
+ * the map's own width, so the texture and every tap agree on it.
  */
 export const SHADOW_BINS = /* glsl */ `
-float shadowBins() { return float(textureSize(uShadowMap, 0).x); }
+uniform float uShadowBins;
+float shadowBins() { return uShadowBins; }
 `;
+
+export function shadowBinsUniform(map: THREE.Texture): THREE.IUniform<number> {
+  return { value: (map.image as { width: number }).width };
+}
 
 /**
  * `shadowTaps(u, depth)` is the light's shadow fraction at map coordinate `u` for a fragment at
