@@ -1,12 +1,17 @@
 #!/usr/bin/env node
-/** Generates the web previewer's fixture manifests from the scenes on disk. */
+/**
+ * Generates the web previewer's fixture manifests from the scenes on disk. The manifests are
+ * untracked: `pnpm install` writes them, and the web app's dev and build scripts and the test
+ * runs refresh them.
+ */
 
-import { readdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'fs';
+import { readdirSync, readFileSync, existsSync, rmSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { DEMO_CATEGORY_LABELS } from './generate-fixtures/demoCategories.mjs';
 import { fixtureProjects } from './generate-fixtures/fixtureProjects.mjs';
+import { writeGenerated } from './generatedFile.mjs';
 import { ensureGodotDemos } from './vendor-godot-demos/vendor.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -367,10 +372,11 @@ export function getFixturesByCategory(): Map<string, Fixture[]> {
 `;
 
 const outputPath = join(rootDir, 'apps/textscene-web/src/fixtures.ts');
-writeFileSync(outputPath, output);
-console.log(
-  `✅ Generated fixtures.ts with ${fixtures.length} fixtures across ${categories.length} categories`
-);
+// Writes only a changed manifest, so a watcher or a build cache sees no new write.
+writeGenerated([[outputPath, output]], {
+  tool: 'fixtures.ts',
+  summary: `${fixtures.length} fixtures across ${categories.length} categories`,
+});
 
 /**
  * An optional corpus manifest goes to its own gitignored file, which
@@ -392,10 +398,10 @@ import type { Fixture } from './fixtures';
 
 export const corpusFixtures: Fixture[] = ${JSON.stringify(sorted, null, 2)};
 `;
-    writeFileSync(outPath, manifest);
-    console.log(
-      `✅ Generated ${fileName} with ${items.length} ${corpusLabel} fixtures across ${corpusCategories.length} categories`
-    );
+    writeGenerated([[outPath, manifest]], {
+      tool: fileName,
+      summary: `${items.length} ${corpusLabel} fixtures across ${corpusCategories.length} categories`,
+    });
   } else if (existsSync(outPath)) {
     rmSync(outPath);
     console.log(`🧹 Removed stale ${fileName} (no ${corpusLabel} vendored)`);
