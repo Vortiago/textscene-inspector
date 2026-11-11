@@ -1,8 +1,8 @@
 /**
- * The kind of content a sub-viewport holds, which decides its one publisher: the
- * 3D/2D offscreen pass owns `'3d'` and `'2d'` (with the Controls beside that content),
- * `ControlRasterPass.tsx` owns `'dom'`, and nothing publishes `'empty'`. Both write the same `ViewportTextureRegistry`
- * key, so the split is decided here alone.
+ * The kind of content a sub-viewport holds, which decides its one publisher. The offscreen pass
+ * owns `'3d'` and `'2d'`, with the Controls beside them, `ControlRasterPass.tsx` owns `'dom'`, and
+ * nothing publishes `'empty'`. Both write one `ViewportTextureRegistry` key, so the split is
+ * decided here alone.
  */
 
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
@@ -16,7 +16,8 @@ import {
   type LiveTreeSources,
 } from '../../../r3f/liveSceneTree.js';
 import { compositeCallPrefix } from '../../../godot/variant/variantParser.js';
-import { embedsAWindow, isEmbeddedWindow, isViewportBoundary } from './viewportBoundary.js';
+import { isEmbeddedWindow, isViewportBoundary } from './viewportBoundary.js';
+import { embedsAWindow } from './windowEmbedder.js';
 
 /**
  * The `i`-suffixed spellings are listed: `Vector2i` is as 2D as `Vector2`, and it
@@ -96,10 +97,10 @@ export interface ViewportContent {
  * items draw after its 3D render (`renderer_viewport.cpp:380-715`). A nested sub-viewport draws
  * into its own target, so it is not descended into.
  */
-export function viewportContent(node: TscnNode, rootEmbeds: boolean): ViewportContent {
+function classify(node: TscnNode, drawsAWindow: boolean): ViewportContent {
   let sawCanvasItem = false;
   // The embedder draws its windows over its canvas, with the Controls (`EmbeddedWindows.tsx`).
-  let sawDom = embedsAWindow(node, rootEmbeds);
+  let sawDom = drawsAWindow;
   let sawUntypedInstance = false;
 
   // Every child is visited, so `sawDom` is complete when a 3D node comes first.
@@ -160,10 +161,6 @@ export function viewportContent(node: TscnNode, rootEmbeds: boolean): ViewportCo
   return found(sawDom || isEmbeddedWindow(node.type) ? 'dom' : 'empty');
 }
 
-export function viewportContentKind(node: TscnNode, rootEmbeds: boolean): ViewportContentKind {
-  return viewportContent(node, rootEmbeds).kind;
-}
-
 /** The children below `from` (the roots without it) with their instances resolved. */
 function resolvedChildren(tree: LiveTree, from?: LiveLink): TscnNode[] {
   return tree.fold<void, TscnNode>(
@@ -177,26 +174,27 @@ function resolvedChildren(tree: LiveTree, from?: LiveLink): TscnNode[] {
 }
 
 /**
- * The sub-viewport's subtree with its instances resolved, the input
- * `viewportContentKind` wants: a parsed `instance=` child is a childless `Node`
- * whatever its world. `viewport` is the sub-viewport's link in `tree`, which gives each
- * instance below it its step. A nested sub-viewport is returned untouched.
+ * The content of the sub-viewport at the link `viewport` of `tree`, classified over its subtree with
+ * the instances resolved: a parsed `instance=` child is a childless `Node` whatever its world. The
+ * link gives each instance below it its step. A nested sub-viewport is left untouched.
  */
-export function resolveViewportSubtree(tree: LiveTree, viewport: LiveLink): TscnNode {
-  return { ...viewport.step.node, children: resolvedChildren(tree, viewport) };
+export function viewportContentAt(tree: LiveTree, viewport: LiveLink): ViewportContent {
+  const { node } = viewport.step;
+  const resolved = { ...node, children: resolvedChildren(tree, viewport) };
+  return classify(resolved, embedsAWindow(tree, node, viewport));
 }
 
 /**
- * {@link resolveViewportSubtree} for a sub-viewport that no walk of the live tree has visited: it
- * reads its own tree of the children. `node` is already the node as shown, so it takes no step of
- * its own, and the scope declares an empty SubResource pool because this resolution reads no id.
- * `SceneScope` says why the two pools travel together.
+ * {@link viewportContentAt} for a sub-viewport that no walk of the live tree has visited: it reads
+ * a tree of its own children. `node` is the node as shown, so it takes no step of its own. The
+ * scope has an empty SubResource pool, because this resolution reads no id.
  */
-export function resolveStandaloneViewportSubtree(
+export function standaloneViewportContent(
   node: TscnNode,
   externalResources: readonly TscnExternalResource[],
   sources: LiveTreeSources
-): TscnNode {
+): ViewportContent {
   const ctx: LiveTreeContext = { externalResources, internalResources: [], ...sources };
-  return { ...node, children: resolvedChildren(liveTreeOf(node.children, ctx)) };
+  const tree = liveTreeOf(node.children, ctx);
+  return classify({ ...node, children: resolvedChildren(tree) }, embedsAWindow(tree, node));
 }

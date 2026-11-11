@@ -1,5 +1,5 @@
 /**
- * The reactive half of content classification: `viewportContent` over the
+ * The reactive half of content classification: `standaloneViewportContent` over the
  * resolved subtree, re-derived on each live-tree tick. The kind picks which
  * publisher owns the registry key, so a change renders normally and each
  * publisher's effects tear down and re-register in order.
@@ -10,16 +10,8 @@ import { useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types.js';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
-import {
-  useLiveTreeVersion,
-  useProjectEmbedsSubwindows,
-  useProjectPhysicsClock,
-} from '../../../r3f/useLiveSceneTree.js';
-import {
-  resolveStandaloneViewportSubtree,
-  viewportContent,
-  type ViewportContent,
-} from './viewportContent.js';
+import { useLiveTreeVersion, useProjectTreeSettings } from '../../../r3f/useLiveSceneTree.js';
+import { standaloneViewportContent, type ViewportContent } from './viewportContent.js';
 import { NOTHING_CACHED } from '../../../r3f/cacheSources.js';
 
 export function useViewportContent(node: TscnNode): ViewportContent {
@@ -30,19 +22,14 @@ export function useViewportContent(node: TscnNode): ViewportContent {
   const version = useLiveTreeVersion(loader);
   // No loader is mounted in the linter bundle or an isolated test.
   const sceneCache = loader?.scenes ?? NOTHING_CACHED;
-  const physicsClock = useProjectPhysicsClock();
-  const rootEmbeds = useProjectEmbedsSubwindows();
+  const project = useProjectTreeSettings();
 
   return useMemo(
-    () =>
-      viewportContent(
-        resolveStandaloneViewportSubtree(node, externalResources, { sceneCache, physicsClock }),
-        rootEmbeds
-      ),
+    () => standaloneViewportContent(node, externalResources, { sceneCache, project }),
     // `version` is an intentional cache-buster: it increments each time a
     // sub-scene finishes loading, which is when an instance child stops being
     // typeless. The value itself is not read in the callback.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [node, externalResources, sceneCache, physicsClock, rootEmbeds, version]
+    [node, externalResources, sceneCache, project, version]
   );
 }

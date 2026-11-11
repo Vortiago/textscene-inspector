@@ -62,8 +62,7 @@ function walk(scene: TscnScene) {
     scene.nodes,
     sourcesOver(),
     { internalResources: scene.internalResources, externalResources: scene.externalResources },
-    LTR_LAYOUT_ENV,
-    true
+    LTR_LAYOUT_ENV
   );
 }
 

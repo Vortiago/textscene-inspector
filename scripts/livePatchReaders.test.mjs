@@ -59,6 +59,10 @@ const NEEDS_NO_OVERLAY = new Map([
     'Reads the type and authored `visible` of the nodes around a viewport, which no pass patches. An animated `visible` comes through AnimatedValueContext.',
   ],
   [
+    'nodes/viewport/subviewport/windowEmbedder.ts',
+    'Reads the type, `gui_embed_subwindows`, `force_native` and authored `visible` of a viewport or a window, which no pass patches.',
+  ],
+  [
     'nodes/viewport/subviewport/viewportContent.ts',
     'Reads the type of each node to classify the content, never a pose.',
   ],

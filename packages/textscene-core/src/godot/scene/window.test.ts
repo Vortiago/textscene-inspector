@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   centredWindowPosition,
   embeddedWindowSize,
+  constructedForceNativeState,
+  replayForceNative,
   replayWindowSize,
   windowClassDefaults,
   WINDOW_CONTENT_SCALE_ASPECT_NAMES,
@@ -187,5 +189,42 @@ describe('centredWindowPosition', () => {
 
   it('truncates toward zero for a window larger than its embedder', () => {
     expect(centredWindowPosition({ x: 1152, y: 648 }, { x: 1201, y: 649 })).toEqual({ x: -24, y: 0 });
+  });
+});
+
+describe('replayForceNative', () => {
+  const afterLines = (type: string, written: Record<string, string>) =>
+    replayForceNative(constructedForceNativeState(type), written);
+
+  it('refuses the line on a Window, which starts visible', () => {
+    expect(afterLines('Window', { force_native: 'true' })).toBe(false);
+  });
+
+  it('takes the line on a Popup, which starts hidden', () => {
+    expect(afterLines('Popup', { force_native: 'true' })).toBe(true);
+  });
+
+  it('takes the line where a line above hides the window', () => {
+    expect(afterLines('Window', { visible: 'false', force_native: 'true' })).toBe(true);
+  });
+
+  it('refuses the line where a line above shows a Popup', () => {
+    expect(afterLines('Popup', { visible: 'true', force_native: 'true' })).toBe(false);
+  });
+
+  it('leaves out a visible line below, which the loader reads later', () => {
+    expect(afterLines('Window', { force_native: 'true', visible: 'false' })).toBe(false);
+  });
+
+  it('keeps what the window held for a visible value no BOOL slot converts', () => {
+    expect(afterLines('Window', { visible: 'maybe', force_native: 'true' })).toBe(false);
+  });
+
+  it('keeps a held force_native when a later line shows the window', () => {
+    expect(replayForceNative({ visible: false, force_native: true }, { visible: 'true' })).toBe(true);
+  });
+
+  it('refuses to clear a held force_native on a visible window', () => {
+    expect(replayForceNative({ visible: true, force_native: true }, { force_native: 'false' })).toBe(true);
   });
 });

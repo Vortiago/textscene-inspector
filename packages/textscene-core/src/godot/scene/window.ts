@@ -1,6 +1,7 @@
 /** Godot 4.6.3's Window facts a scene's properties carry. */
 
 import { enumNamesByValue } from '../classdb/enumNames.js';
+import { boolSlotValue } from '../variant/variantBool.js';
 import { findInClassChain } from '../classdb/classBaseTypes.js';
 import { type Vector2, vector2Max } from '../math/vector.js';
 
@@ -114,6 +115,28 @@ const CLASS_DEFAULTS: Readonly<Record<string, WindowClassDefaults>> = {
 /** The defaults of `type`, from the nearest class in its chain that sets its own. */
 export function windowClassDefaults(type: string): WindowClassDefaults {
   return findInClassChain(type, (className) => CLASS_DEFAULTS[className]) ?? WINDOW_DEFAULTS;
+}
+
+/** The two properties `set_force_native` reads and writes. */
+export type ForceNativeState = { visible: boolean; force_native: boolean };
+
+/**
+ * `force_native` after the lines of `written` run in order on a window that holds `held`.
+ * `set_force_native` refuses a change while the window is visible (`window.cpp:1380-1386`), and a
+ * bool the slot cannot read changes nothing.
+ */
+export function replayForceNative(held: ForceNativeState, written: Record<string, string>): boolean {
+  let { visible, force_native } = held;
+  for (const [key, raw] of Object.entries(written)) {
+    if (key === 'visible') visible = boolSlotValue(raw) ?? visible;
+    else if (key === 'force_native' && !visible) force_native = boolSlotValue(raw) ?? force_native;
+  }
+  return force_native;
+}
+
+/** What a window of class `type` holds before a scene line runs. */
+export function constructedForceNativeState(type: string): ForceNativeState {
+  return { visible: windowClassDefaults(type).visible, force_native: false };
 }
 
 /** `window.h:105,126`: `size = Size2i(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE)`. */

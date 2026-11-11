@@ -14,6 +14,7 @@ import {
   declaredAutoloads,
   enabledEditorPlugins,
   parseProjectSettings,
+  type ProjectSettings,
   projectExtensionListPath,
   projectLayoutDirectionEnv,
   projectThemeScale,
@@ -22,7 +23,6 @@ import {
   projectTransparentBackground,
   projectUsesHdr2D,
   projectDrawsDepthPrepass,
-  projectEmbedsSubwindows,
   projectTracesHalfSizeReflections,
   projectGlowUsesBicubicUpscale,
   projectUsesLightmapBicubicFilter,
@@ -35,7 +35,7 @@ import {
   projectViewportSize,
   projectVolumetricFogSettings,
   projectAmbientOcclusionSettings,
-  projectPhysicsClock,
+  projectTreeSettings,
 } from './projectSettingsParser';
 import { DEFAULT_PHYSICS_CLOCK } from '../godot/scene/physicsTicks';
 import { Hinting } from '../godot/text/textServerEnums';
@@ -323,14 +323,23 @@ describe('projectTracesHalfSizeReflections', () => {
   });
 });
 
-describe('projectEmbedsSubwindows', () => {
+describe('projectTreeSettings: whether the root window embeds its windows', () => {
+  const KEY = 'display/window/subwindows/embed_subwindows';
+
   it('embeds by default (`project_settings.cpp:1756`)', () => {
-    expect(projectEmbedsSubwindows(null)).toBe(true);
-    expect(projectEmbedsSubwindows({})).toBe(true);
+    expect(projectTreeSettings(null).rootEmbedsSubwindows).toBe(true);
+    expect(projectTreeSettings({}).rootEmbedsSubwindows).toBe(true);
   });
 
   it('leaves the windows native when the project turns it off', () => {
-    expect(projectEmbedsSubwindows({ 'display/window/subwindows/embed_subwindows': 'false' })).toBe(false);
+    expect(projectTreeSettings({ [KEY]: 'false' }).rootEmbedsSubwindows).toBe(false);
+  });
+
+  it('hands back one object for equal values, so an edit to another setting keeps every tree keyed on it', () => {
+    expect(projectTreeSettings({ [KEY]: 'false' })).toBe(
+      projectTreeSettings({ [KEY]: 'false', 'other/key': '1' })
+    );
+    expect(projectTreeSettings({ [KEY]: 'false' })).not.toBe(projectTreeSettings(null));
   });
 });
 
@@ -845,9 +854,11 @@ describe('projectDefaultFontGeneratesMipmaps', () => {
   });
 });
 
-describe('projectPhysicsClock', () => {
+describe('projectTreeSettings: the physics clock', () => {
   const TICKS = 'physics/common/physics_ticks_per_second';
   const JITTER = 'physics/common/physics_jitter_fix';
+  const projectPhysicsClock = (settings: ProjectSettings | null) =>
+    projectTreeSettings(settings).physicsClock;
 
   it('reads both settings from a project.godot', () => {
     const settings = parseProjectSettings(

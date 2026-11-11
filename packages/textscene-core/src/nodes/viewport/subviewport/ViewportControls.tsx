@@ -44,8 +44,6 @@ interface ViewportControlsProps {
   themeOwners: readonly ThemeOwner[];
   /** The visible size of the viewport around a window, which limits its contents height. Null for a SubViewport's own Controls. */
   enclosingViewportSize: Vector2 | null;
-  /** The viewport's `gui_embed_subwindows`: whether it draws its windows over its Controls. */
-  embedsWindows: boolean;
   /** `ControlCanvasWalker`'s `sortsLocally`: false for a viewport that sorts through its own `ControlYSortProvider`. */
   sortsLocally: boolean;
 }
@@ -57,7 +55,6 @@ export function ViewportControls({
   inheritedRtl,
   themeOwners,
   enclosingViewportSize,
-  embedsWindows,
   sortsLocally,
 }: ViewportControlsProps) {
   const { externalResources, internalResources } = useSceneResources();
@@ -98,9 +95,7 @@ export function ViewportControls({
         sortsLocally={sortsLocally}
         livePath={forestPath}
       />
-      {embedsWindows ? (
-        <EmbeddedWindows windows={windows} embedderSize={size} forestPath={forestPath} theme={theme} />
-      ) : null}
+      <EmbeddedWindows windows={windows} embedderSize={size} forestPath={forestPath} theme={theme} />
     </>
   );
 }

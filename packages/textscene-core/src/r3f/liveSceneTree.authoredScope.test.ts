@@ -37,8 +37,7 @@ describe('a node grafted into an instanced sub-scene', () => {
         externalResources: hostScene.externalResources,
         internalResources: hostScene.internalResources,
       },
-      LTR_LAYOUT_ENV,
-      true
+      LTR_LAYOUT_ENV
     );
 
     expect(resolveInstancePath('ExtResource("2")', viewport!.externalResources)).toBe(HOST_LEAF_PATH);

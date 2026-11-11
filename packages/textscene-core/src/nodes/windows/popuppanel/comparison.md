@@ -32,6 +32,7 @@ Strict parsing format-checks the inherited set (45 inherited from Window, 47 inh
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 |  | `window-size-clamped-by-limits` | warning |
 |  | `window-content-scale-factor-floored` | warning |
+|  | `window-force-native-refused-while-visible` | error |
 <!-- lint:end -->
 
 The lenient parser reads the Window keys with the PopupPanel class defaults: hidden, borderless,

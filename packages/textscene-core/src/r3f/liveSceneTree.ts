@@ -16,7 +16,7 @@ import { liveInstancePath, scopeOf, withFallbackScope, type LiveNode } from '../
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 import { followTrailIn } from '../resources/sceneTrail.js';
 import type { TrailWalk } from '../godot/scene/packedScene.js';
-import type { PhysicsClock } from '../godot/scene/physicsTicks.js';
+import type { ProjectTreeSettings } from '../parser/projectSettingsParser.js';
 import { mayHandBack, seatInFile, type CollapseInstance } from '../resources/seatEscaped.js';
 import { withRootFallbacksDecided } from '../resources/ownerHandOff.js';
 import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames.js';
@@ -63,14 +63,15 @@ export interface LiveTreeContext {
   sceneCache: CachedSceneSource;
   glbCache?: CachedGlbSource;
   /**
-   * The project's physics clock, which paces a relay cycle (`remoteTransforms.ts`). Required, so
-   * every builder of a context reads it from the project and no tree falls back to a default.
+   * What the tree reads of its project: the physics clock that paces a relay cycle
+   * (`remoteTransforms.ts`), and whether the root window embeds its windows (`windowEmbedder.ts`).
+   * Required, so every builder of a context reads the project and no tree takes a default.
    */
-  physicsClock: PhysicsClock;
+  project: ProjectTreeSettings;
 }
 
-/** What a builder of a context reads beside the root scene's pools: the scene cache and the project's physics clock. */
-export type LiveTreeSources = Pick<LiveTreeContext, 'sceneCache' | 'physicsClock'>;
+/** What a builder of a context reads beside the root scene's pools. */
+export type LiveTreeSources = Pick<LiveTreeContext, 'sceneCache' | 'project'>;
 
 /** The scene cache of `ctx` as the walks over it read it: each path asked of the loader once. */
 const snapshotScenes = perObject((ctx: LiveTreeContext): CachedSceneSource => answeredOnce(ctx.sceneCache));
