@@ -33,14 +33,14 @@ RUN apt-get update \
     mesa-vulkan-drivers xvfb xauth \
   && rm -rf /var/lib/apt/lists/*
 
-ARG GODOT_VERSION=4.6.3-stable
+ARG ENGINE_VERSION=4.6.3-stable
 # Of the Linux x86_64 binary inside the release zip.
-ARG GODOT_SHA256=f64d4ed19fc9df9440321653fcc80df8c6e365ba7b6de0a29e2cfa9fa71bfeb3
-RUN binary="Godot_v${GODOT_VERSION}_linux.x86_64" \
+ARG ENGINE_SHA256=f64d4ed19fc9df9440321653fcc80df8c6e365ba7b6de0a29e2cfa9fa71bfeb3
+RUN binary="Godot_v${ENGINE_VERSION}_linux.x86_64" \
   && curl -fsSL -o /tmp/godot.zip \
-    "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/${binary}.zip" \
+    "https://github.com/godotengine/godot/releases/download/${ENGINE_VERSION}/${binary}.zip" \
   && unzip -q /tmp/godot.zip -d /tmp/godot \
-  && echo "${GODOT_SHA256}  /tmp/godot/${binary}" | sha256sum --check \
+  && echo "${ENGINE_SHA256}  /tmp/godot/${binary}" | sha256sum --check \
   && install -m 755 "/tmp/godot/${binary}" /usr/local/bin/godot \
   && rm -r /tmp/godot.zip /tmp/godot \
   && godot --headless --version
