@@ -42,14 +42,22 @@ const QUARTER_PI = f(7.8539818525e-1);
 /** The part of pi that `PI` rounds away. */
 const PI_LOW = f(-8.7422776573e-8);
 
-/** The reduced argument of `__atanf` and the index of the table entry it is measured from, or -1. */
-function reduced(x: number, magnitudeWord: number): { argument: number; table: number } {
-  if (magnitudeWord < 0x3ee00000) return { argument: x, table: -1 };
+/** The index of the table entry `__atanf` measures an argument of this magnitude from, or -1 below 0.4375. */
+function tableOf(magnitudeWord: number): number {
+  if (magnitudeWord < 0x3ee00000) return -1;
+  if (magnitudeWord < 0x3f300000) return 0;
+  if (magnitudeWord < 0x3f980000) return 1;
+  return magnitudeWord < 0x401c0000 ? 2 : 3;
+}
+
+/** The argument of `__atanf` as it is measured from the table entry at `table`. */
+function reduced(x: number, table: number): number {
+  if (table < 0) return x;
   const size = abs(x);
-  if (magnitudeWord < 0x3f300000) return { argument: f(f(f(2 * size) - 1) / f(2 + size)), table: 0 };
-  if (magnitudeWord < 0x3f980000) return { argument: f(f(size - 1) / f(size + 1)), table: 1 };
-  if (magnitudeWord < 0x401c0000) return { argument: f(f(size - 1.5) / f(1 + f(1.5 * size))), table: 2 };
-  return { argument: f(-1 / size), table: 3 };
+  if (table === 0) return f(f(f(2 * size) - 1) / f(2 + size));
+  if (table === 1) return f(f(size - 1) / f(size + 1));
+  if (table === 2) return f(f(size - 1.5) / f(1 + f(1.5 * size)));
+  return f(-1 / size);
 }
 
 /** `__atanf`: each step rounds to float, in the order the C source writes it. */
@@ -62,7 +70,9 @@ function atanFloat(x: number): number {
     return xWord > 0 ? f(ATAN_HIGH[3]! + ATAN_LOW[3]!) : f(-ATAN_HIGH[3]! - ATAN_LOW[3]!);
   // Below 2^-29 the angle is its own tangent.
   if (magnitudeWord < 0x31000000) return x;
-  const { argument, table } = reduced(x, magnitudeWord);
+  // Two numbers, not one object for both: a solve asks for an angle in every pass of every chain.
+  const table = tableOf(magnitudeWord);
+  const argument = reduced(x, table);
   const t = ATAN_TERMS;
   const z = f(argument * argument);
   const w = f(z * z);

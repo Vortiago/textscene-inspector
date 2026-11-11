@@ -86,6 +86,20 @@ describe('observeSceneCamera', () => {
     expect(order).toEqual(['restore']);
   });
 
+  it('restores the poser that wrote last first, so each takes back what it held', () => {
+    const scene = new THREE.Scene();
+    const order: string[] = [];
+    for (const name of ['near', 'far']) {
+      observeScenePose(scene, {
+        write: () => order.push(`write ${name}`),
+        restore: () => order.push(`restore ${name}`),
+      });
+    }
+    fireSceneRender(scene, new THREE.OrthographicCamera());
+    fireSceneRenderEnd(scene, new THREE.OrthographicCamera());
+    expect(order).toEqual(['write near', 'write far', 'restore far', 'restore near']);
+  });
+
   it('keeps the hook while a cull still observes', () => {
     const scene = new THREE.Scene();
     const original = scene.onBeforeRender;

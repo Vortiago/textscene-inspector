@@ -28,7 +28,7 @@ export interface ScenePoser {
 }
 
 interface SceneHook {
-  /** Write before every observer, and restore before every finisher. */
+  /** Write before every observer, and restore before every finisher, the last written first. */
   posers: Set<ScenePoser>;
   /** Written only by `withScenePose`: true while its draw holds the pose over the renders inside it. */
   isPoseHeld: boolean;
@@ -111,9 +111,17 @@ export function withScenePose(scene: THREE.Object3D, draw: () => void): void {
     for (const poser of hook.posers) poser.write();
     draw();
   } finally {
-    for (const poser of hook.posers) poser.restore();
+    restorePosers(hook.posers);
     hook.isPoseHeld = false;
   }
+}
+
+/**
+ * Last written, first restored: where two posers write one object, the later one holds what the
+ * earlier one wrote, and a restore in the write order would leave that on the object.
+ */
+function restorePosers(posers: ReadonlySet<ScenePoser>): void {
+  for (const poser of [...posers].reverse()) poser.restore();
 }
 
 /** {@link observeSceneCamera}, for the exposure, which runs after every observer and before the cull. */
@@ -174,7 +182,7 @@ function installHook(scene: THREE.Scene): SceneHook {
   };
   const chainedAfter: AfterRender = function chainedOnAfterRender(this: THREE.Object3D, ...args) {
     hook.previousAfter.apply(this, args);
-    if (!hook.isPoseHeld) for (const poser of hook.posers) poser.restore();
+    if (!hook.isPoseHeld) restorePosers(hook.posers);
     for (const fn of hook.finishers) fn();
   };
   // Chained, not replaced: several ParallaxBackgrounds and the shadow fitter share one scene.
