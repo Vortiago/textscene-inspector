@@ -120,9 +120,9 @@ jobs:
     if: needs.changes.outputs.godot-ref == 'true'
     timeout-minutes: 20
     env:
-      GODOT_VERSION: 4.6.3-stable
+      ENGINE_VERSION: 4.6.3-stable
       # Of the Linux x86_64 binary inside the release zip.
-      GODOT_SHA256: f64d4ed19fc9df9440321653fcc80df8c6e365ba7b6de0a29e2cfa9fa71bfeb3
+      ENGINE_SHA256: f64d4ed19fc9df9440321653fcc80df8c6e365ba7b6de0a29e2cfa9fa71bfeb3
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
@@ -132,11 +132,11 @@ jobs:
 
       - name: Install Godot
         run: |
-          binary="Godot_v${GODOT_VERSION}_linux.x86_64"
+          binary="Godot_v${ENGINE_VERSION}_linux.x86_64"
           curl -fsSL -o "$RUNNER_TEMP/godot.zip" \
-            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/${binary}.zip"
+            "https://github.com/godotengine/godot/releases/download/${ENGINE_VERSION}/${binary}.zip"
           unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
-          echo "${GODOT_SHA256}  $RUNNER_TEMP/godot/${binary}" | sha256sum --check
+          echo "${ENGINE_SHA256}  $RUNNER_TEMP/godot/${binary}" | sha256sum --check
           sudo install -m 755 "$RUNNER_TEMP/godot/${binary}" /usr/local/bin/godot
 
       - run: pnpm test:godot-ref
