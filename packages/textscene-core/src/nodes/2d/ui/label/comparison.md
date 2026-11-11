@@ -21,10 +21,10 @@ paragraph stays unfitted under the default flags, and a single-line paragraph is
 A Label draws its layers in Godot's order (`label.cpp:828-883`). The shadow ring and the shadow come first. Then
 each stacked shadow and each stacked outline draw from the last index to the first. The outline comes next, and the fill
 comes last. A ring is a stroked contour with a one-sided radius of `outline_size / 4` px (`text_server_adv.cpp:1383`).
-It draws on the canvas painter for the bundled font and a scene font alike (ADR-0066), as do the fill and the plain
+It draws on the canvas painter for the bundled font and a scene font alike (ADR-0069), as do the fill and the plain
 shadows. Each glyph and ring draw from FreeType's bitmap at the font's `hinting`, as Godot draws them.
 An embolden over the bundled font draws on the canvas painter, which emboldens the outline as
-FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0066).
+FreeType does (`text_server_adv.cpp:1313-1316`, ADR-0069).
 
 A `label_settings.font` resolves in the file that wrote the settings. A font that is loading draws
 nothing (`label.cpp:112`, ADR-0059).

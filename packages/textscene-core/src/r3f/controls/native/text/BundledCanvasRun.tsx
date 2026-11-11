@@ -1,7 +1,7 @@
 /**
  * A run on the bundled font, which Godot draws through FreeType: the fill from the hinted outline,
  * an embolden grown at every value (`text_server_adv.cpp:1313-1316`), and a stroked outline ring
- * (ADR-0066). It draws on the canvas painter through the bundled canvas face.
+ * (ADR-0069). It draws on the canvas painter through the bundled canvas face.
  */
 import { useMemo } from 'react';
 import { useBundledCanvasFace } from './bundledCanvasFace';

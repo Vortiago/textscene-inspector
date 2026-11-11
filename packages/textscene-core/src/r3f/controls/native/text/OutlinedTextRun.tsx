@@ -39,7 +39,7 @@ type OutlineRingRunProps = RunLookProps & {
 };
 
 /**
- * One stroked outline ring, without the fill (ADR-0066). A canvas face strokes its own ring, a
+ * One stroked outline ring, without the fill (ADR-0069). A canvas face strokes its own ring, a
  * BMFont draws its outline set, and `TextRun` strokes the bundled face on its canvas face.
  */
 export function OutlineRingRun({ sizePx, ...run }: OutlineRingRunProps) {

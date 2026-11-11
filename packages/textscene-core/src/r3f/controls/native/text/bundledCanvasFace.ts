@@ -1,7 +1,7 @@
 /**
  * The bundled font as the canvas painter draws it: the bundled face a layout shapes with, turned
  * into the bundled canvas face, which draws each glyph from FreeType's bitmap of its outline
- * (ADR-0066).
+ * (ADR-0069).
  */
 import { useCallback } from 'react';
 import { withVariation, type FontMetrics } from './fontMetrics';

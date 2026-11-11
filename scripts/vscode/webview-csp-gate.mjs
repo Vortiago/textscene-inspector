@@ -23,7 +23,7 @@ import { describeFailedRequests } from '../visual/preview/pageDiagnostics.mjs';
  * The Control fixture whose only ink is text. The preview CSP (`webviewHtml.ts`)
  * is `default-src 'none'` with no `connect-src` or `font-src`, so glyphs come
  * from the outlines of the bundled font, whose bytes ride the script, not a font library that
- * fetches a font (ADR-0066).
+ * fetches a font (ADR-0069).
  */
 const FIXTURE = 'scenes/fixtures/unit-label-2d.tscn';
 
