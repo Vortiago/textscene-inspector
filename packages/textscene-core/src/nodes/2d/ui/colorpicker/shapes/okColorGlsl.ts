@@ -117,6 +117,7 @@ vec2 find_cusp(float a, float b)
 	return vec2( L_cusp , C_cusp );
 }
 
+// Finds intersection of the line defined by
 // L = L0 * (1 - t) + t * L1;
 // C = t * C1;
 // a and b must be normalized so a^2 + b^2 == 1

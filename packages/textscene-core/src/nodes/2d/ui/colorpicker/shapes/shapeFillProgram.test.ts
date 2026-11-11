@@ -47,8 +47,14 @@ describe('shapeFillInjection', () => {
   });
 
   it('decodes the sRGB COLOR once in an sRGB canvas, and takes it as linear in a linear one', () => {
-    expect(compiled(FRAGMENT, false).fragmentShader).toContain('sRGBTransferEOTF( vec4( shapeColor.rgb');
-    expect(compiled(FRAGMENT, true).fragmentShader).not.toContain('sRGBTransferEOTF( vec4( shapeColor.rgb');
+    expect(compiled(FRAGMENT, false).fragmentShader).toContain('sRGBTransferEOTF( vec4( max( shapeColor.rgb');
+    expect(compiled(FRAGMENT, true).fragmentShader).not.toContain('sRGBTransferEOTF(');
+  });
+
+  it('clamps a negative COLOR at 0 before the sRGB decode, as the 8-bit target does', () => {
+    expect(compiled(FRAGMENT, false).fragmentShader).toContain(
+      'max( shapeColor.rgb * uShapeCanvasModulate, 0.0 )'
+    );
   });
 
   it('binds the caller-owned uniform objects, so a new value needs no recompile', () => {

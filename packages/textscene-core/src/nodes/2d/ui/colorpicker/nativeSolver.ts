@@ -1,5 +1,5 @@
 /**
- * ColorPicker's native layout and colour math. ColorPicker builds its widget
+ * ColorPicker's native layout. ColorPicker builds its widget
  * as internal children in its constructor (`scene/gui/color_picker.cpp:2069-2260`),
  * which no `.tscn` serialises, so this module ports the geometry they produce.
  *
@@ -403,7 +403,7 @@ export function colorPickerRows(
   // (`color_picker.cpp:1906-1956`), which drops the row and its gap.
   const shapeY = place(shapeHeight);
   const shape: Rect2 | null = variant
-    ? { x: 0, y: shapeY, w: Math.max(shapeRowMinWidth(theme, variant.layout), width), h: shapeHeight }
+    ? { x: 0, y: shapeY, w: Math.max(shapeRowMinWidthOf(theme, props.pickerShape), width), h: shapeHeight }
     : null;
   const sample: Rect2 | null = rowVisible(props.samplerVisible)
     ? { x: 0, y: place(sampleHeight), w: width, h: sampleHeight }

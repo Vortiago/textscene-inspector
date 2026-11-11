@@ -29,8 +29,10 @@ export interface ShapeFillUniforms {
 /** Positions run from (0, 0) at the top-left to (w, -h), so `UV` runs 0 to 1 with y down, as Godot's does. */
 const VERTEX_UV = `vShapeUv = vec2( position.x / uShapeSize.x, -position.y / uShapeSize.y );`;
 
+// Clamped at 0: `okhsl_to_srgb` goes far negative outside the circle, the 8-bit target Godot writes
+// clamps it, and `pow` of a negative base is undefined on a driver that lowers `mix` as a lerp.
 const SRGB_COLOR = `vec4 shapeColor = ${SHAPE_COLOR_FUNCTION}( vShapeUv );
-diffuseColor = vec4( sRGBTransferEOTF( vec4( shapeColor.rgb * uShapeCanvasModulate, 1.0 ) ).rgb, diffuseColor.a * shapeColor.a );`;
+diffuseColor = vec4( sRGBTransferEOTF( vec4( max( shapeColor.rgb * uShapeCanvasModulate, 0.0 ), 1.0 ) ).rgb, diffuseColor.a * shapeColor.a );`;
 
 const LINEAR_COLOR = `vec4 shapeColor = ${SHAPE_COLOR_FUNCTION}( vShapeUv );
 diffuseColor = vec4( shapeColor.rgb * uShapeCanvasModulate, diffuseColor.a * shapeColor.a );`;

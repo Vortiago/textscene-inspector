@@ -7,8 +7,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { okhslToSrgb } from '../okhsl';
-import { rectCursorCentre, requireSlider, valueSlider, type ShapeVariant } from './shapeDrawing';
+import { okSaturationSlider, rectCursorCentre, requireSlider, type ShapeVariant } from './shapeDrawing';
 import type { ShapeFragment } from './shapeFragment';
 import { RECTANGLE_LAYOUT } from './shapeRowLayout';
 
@@ -32,12 +31,7 @@ export const OK_HL_RECTANGLE: ShapeVariant = {
       fill: { rect: split.area, fragment: OK_HL_RECTANGLE_FRAGMENT, uniforms: { ok_hsl_s: s } },
       svSquare: null,
       cursors: [{ centre: rectCursorCentre(split.area, h, 1 - l), hasBackground: true }],
-      slider: valueSlider(
-        requireSlider(split),
-        [okhslToSrgb(h, 1, l), okhslToSrgb(h, 0.5, l), okhslToSrgb(h, 0, l)],
-        s,
-        okhslToSrgb(h, 1, l)
-      ),
+      slider: okSaturationSlider(requireSlider(split), okhsl),
     };
   },
 };

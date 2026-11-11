@@ -1,9 +1,10 @@
 [gd_scene format=3]
 
-; The one variable: `color`, on the wheel, the circles and the OK HL rectangle. A grey has no
-; hue, so the OKHSL hue is the float rounding noise of srgb_to_okhsl (thirdparty/misc/ok_color.h),
-; and the OK shapes take their stops from it. An HDR colour draws its normalised form
-; (color_picker.cpp:552-565). The shapes golden holds one colour, so it shows neither.
+; The one variable against unit-color-picker-shapes: `color`. Each cell keeps a shape of that
+; golden and takes a grey, an HDR colour or a saturated red. A grey has no hue, so the OKHSL hue is
+; the float rounding noise of srgb_to_okhsl (thirdparty/misc/ok_color.h), and the OK shapes take
+; their stops from it. An HDR colour draws its normalised form (color_picker.cpp:552-565). The
+; shapes golden holds one colour, so it shows neither.
 
 [node name="Root" type="Control"]
 anchors_preset = 15

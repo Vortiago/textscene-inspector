@@ -126,8 +126,7 @@ export function valueSlider(
 }
 
 /**
- * The OKHSL lightness slider of the OKHSL circle and the OK HS rectangle (`color_picker_shape.cpp:568-600`,
- * `:1062-1092`): the stops at lightness 1, 0.5 and 0, and the line in the full-saturation colour.
+ * The OKHSL lightness slider of the OKHSL circle and the OK HS rectangle (`color_picker_shape.cpp:568-600`, `:1047-1079`): the stops at lightness 1, 0.5 and 0, and the line in the full-saturation colour.
  */
 export function okLightnessSlider(rect: Rect2, { h, s, l }: PickerShapeColor['okhsl']): ShapeSlider {
   return valueSlider(
@@ -136,6 +135,15 @@ export function okLightnessSlider(rect: Rect2, { h, s, l }: PickerShapeColor['ok
     l,
     okhslToSrgb(h, 1, l)
   );
+}
+
+/**
+ * The OKHSL saturation slider of the OK HL rectangle (`color_picker_shape.cpp:651-686`): the stops at
+ * saturation 1, 0.5 and 0, and the line in the full-saturation colour.
+ */
+export function okSaturationSlider(rect: Rect2, { h, s, l }: PickerShapeColor['okhsl']): ShapeSlider {
+  const saturated = okhslToSrgb(h, 1, l);
+  return valueSlider(rect, [saturated, okhslToSrgb(h, 0.5, l), okhslToSrgb(h, 0, l)], s, saturated);
 }
 
 /** The slider of a shape that has one: every shape but the wheel. */

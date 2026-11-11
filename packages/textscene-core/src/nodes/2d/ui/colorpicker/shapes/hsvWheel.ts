@@ -35,7 +35,7 @@ const WHEEL_FRAGMENT: ShapeFragment = {
 	COLOR = vec4(clamp((abs(fract(((a - TAU) / TAU) + vec3(3.0, 2.0, 1.0) / 3.0) * 6.0 - 3.0) - 1.0), 0.0, 1.0), (b + b2 + b3 + b4) / 4.00);`,
 };
 
-/** The hue cursor's radius: halfway between the ring's inner and outer edge (`_wheel_uv_draw`, `:799-800`). */
+/** The hue cursor's radius: halfway between the ring's inner and outer edge (`_wheel_uv_draw`, `:801-802`). */
 const HUE_CURSOR_RADIUS = WHEEL_RADIUS * 2 + (1 - WHEEL_RADIUS * 2) * 0.5;
 
 export const HSV_WHEEL: ShapeVariant = {
