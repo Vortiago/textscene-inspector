@@ -13,7 +13,7 @@ import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import * as logger from '../../../../logger';
 import type { CheckBoxProperties } from './types';
 import {
-  checkBoxIconNaturalSize,
+  checkBoxFittedIconSize,
   checkBoxDrawnIconSize,
   checkBoxMinimumSize,
   checkBoxTextTheme,
@@ -200,15 +200,15 @@ describe('checkBoxMinimumSize: with text', () => {
   });
 });
 
-describe('checkBoxIconNaturalSize (check_box.cpp:35-62): MAX over all 8 icons, not only the current draw state', () => {
+describe('checkBoxFittedIconSize (check_box.cpp:35-62): MAX over all 8 icons, not only the current draw state', () => {
   it('is the vendored 16x16 default when no icon is themed', () => {
-    expect(checkBoxIconNaturalSize({ textureSlots: {} })).toEqual({ x: 16, y: 16 });
+    expect(checkBoxFittedIconSize({ textureSlots: {}, constants: {} })).toEqual({ x: 16, y: 16 });
   });
 
   it('widens to a themed "checked" icon even while the widget draws "unchecked"', () => {
     // check_box.cpp:39-40: `tex_size = tex_size.max(theme_cache.unchecked->get_size())`
     // runs regardless of which icon is actually pressed/shown.
-    expect(checkBoxIconNaturalSize({ textureSlots: { checked: { x: 24, y: 24 } } })).toEqual({
+    expect(checkBoxFittedIconSize({ textureSlots: { checked: { x: 24, y: 24 } }, constants: {} })).toEqual({
       x: 24,
       y: 24,
     });
@@ -216,7 +216,10 @@ describe('checkBoxIconNaturalSize (check_box.cpp:35-62): MAX over all 8 icons, n
 
   it("never shrinks below an unthemed icon's vendored default", () => {
     // Only "checked" themed smaller. The other 7 still default to 16x16.
-    expect(checkBoxIconNaturalSize({ textureSlots: { checked: { x: 8, y: 8 } } })).toEqual({ x: 16, y: 16 });
+    expect(checkBoxFittedIconSize({ textureSlots: { checked: { x: 8, y: 8 } }, constants: {} })).toEqual({
+      x: 16,
+      y: 16,
+    });
   });
 });
 

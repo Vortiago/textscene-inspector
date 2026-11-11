@@ -123,7 +123,7 @@ export const checkButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {})
  * `disabled` state and layout direction select, unlike CheckBox's max over all 8. A slot no theme
  * touched falls back to the vendored default's size.
  */
-export function checkButtonIconNaturalSize(
+function checkButtonIconNaturalSize(
   n: Pick<SolveNode, 'textureSlots'>,
   disabled: boolean,
   rtl: boolean
@@ -176,7 +176,7 @@ export function checkButtonMarginX(ctx: Pick<SolveContext, 'theme'>): number {
 }
 
 /** `icon_max_width`: `check_button.cpp` binds none, so Button's default (`0`, unclamped) applies through the shared `theme_override_constants` key. */
-export function checkButtonIconMaxWidth(constants: SolveNode['constants']): number {
+function checkButtonIconMaxWidth(constants: SolveNode['constants']): number {
   return constants.icon_max_width ?? 0;
 }
 

@@ -137,7 +137,7 @@ export const checkBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) =>
  * A slot no theme touched falls back to the vendored default's size, since the default theme
  * registers all 8 (`default_theme.cpp:288-295`).
  */
-export function checkBoxIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 {
+function checkBoxIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 {
   let w = 0;
   let h = 0;
   for (const name of CHECK_BOX_ICON_THEME_NAMES) {
@@ -164,7 +164,7 @@ export function checkBoxDrawnIconSize(
 const DEFAULT_CHECK_V_OFFSET = 0;
 
 /** `icon_max_width`: CheckBox registers none, so Button's default (`0`, unclamped) applies through the shared `theme_override_constants` key. */
-export function checkBoxIconMaxWidth(constants: SolveNode['constants']): number {
+function checkBoxIconMaxWidth(constants: SolveNode['constants']): number {
   return constants.icon_max_width ?? 0;
 }
 
