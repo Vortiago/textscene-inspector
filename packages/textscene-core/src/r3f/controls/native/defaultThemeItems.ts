@@ -6,9 +6,9 @@
 
 import { neutralStyleBox } from '../../../resources/styles/stylebox/decode';
 import { buildThemeTypeChain } from '../../../resources/styles/theme/lookup';
-import { LABEL_FONT_COLOR } from '../../../godot/scene/theme';
+import { defaultThemeVariation, LABEL_FONT_COLOR } from '../../../godot/scene/theme';
 import { perObject } from '../../../utils/perObject';
-import type { ShareNode } from './solveTree';
+import type { ShareNode, SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
@@ -97,15 +97,37 @@ export function buttonBoxesOf(n: ShareNode, theme: NativeTheme): ButtonBoxes {
   return boxes;
 }
 
+/** The `panel` of a Panel or PanelContainer: the scene's, else `TooltipPanel`'s where the variation names it, else `Panel`'s. */
+export function panelBoxOf(n: SolveNode, theme: NativeTheme): StyleBoxFlatData {
+  const given = n.styleBoxes.panel;
+  if (given) return given;
+  return typeChains(n).includes('TooltipPanel') ? theme.widgets.tooltipPanel : theme.widgets.panel;
+}
+
 /**
- * The default theme's `font_color` for `n` in `state`: `Label` sets one (`default_theme.cpp:383`), which a
- * Button on a Label variation reads in the normal state, since Label sets no other state's colour. Else
- * `colors[state]`, the colour its own class sets. A colour a scene Theme sets is not read here.
+ * The default theme's `font_color` for a Label-based type chain: the first variation that sets one
+ * (`default_theme.cpp:819,849,1174`), else `Label`'s white (`:383`). `undefined` for a chain that never reaches
+ * Label. A colour a scene Theme sets is not read here.
+ */
+export function defaultLabelFontColorOf(n: ShareNode): Rgba | undefined {
+  const chain = typeChains(n);
+  if (!chain.includes('Label')) return undefined;
+  for (const type of chain) {
+    const color = defaultThemeVariation(type)?.fontColor;
+    if (color) return color;
+  }
+  return LABEL_FONT_COLOR;
+}
+
+/**
+ * The default theme's `font_color` for `n` in `state`: a Label chain sets one, which a Button on a Label
+ * variation reads in the normal state, since Label sets no other state's colour. Else `colors[state]`,
+ * the colour its own class sets.
  */
 export function defaultFontColorOf(
   n: ShareNode,
   colors: Readonly<Record<ToggleDrawState, Rgba>>,
   state: ToggleDrawState
 ): Rgba {
-  return state === 'normal' && typeChains(n).includes('Label') ? LABEL_FONT_COLOR : colors[state];
+  return (state === 'normal' ? defaultLabelFontColorOf(n) : undefined) ?? colors[state];
 }

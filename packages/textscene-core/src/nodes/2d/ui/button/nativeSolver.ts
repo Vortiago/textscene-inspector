@@ -21,7 +21,7 @@ import {
   shapeButtonLabel,
   type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
-import { buttonBoxesOf, defaultFontColorOf } from '../../../../r3f/controls/native/defaultThemeButton';
+import { buttonBoxesOf, defaultFontColorOf } from '../../../../r3f/controls/native/defaultThemeItems';
 import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';

@@ -42,6 +42,9 @@ import { sliceCodePoints } from '../../../../godot/string/codePoints.js';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { LABEL_FONT_COLOR } from '../../../../godot/scene/theme';
 import type { Rgba } from '../../../../godot/math/math';
+import { defaultLabelFontColorOf, LABEL_NORMAL_BOX } from '../../../../r3f/controls/native/defaultThemeItems';
+import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
+import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   AutowrapMode,
   VisibleCharactersBehavior,
@@ -82,7 +85,10 @@ export function labelTextTheme(
   props: TextThemeProps,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: LABEL_FONT_COLOR };
+  const defaults: TextThemeDefaults = {
+    fontSizePx: ctx.theme.fontSize,
+    color: defaultLabelFontColorOf(n) ?? LABEL_FONT_COLOR,
+  };
   return resolveTextTheme(n, props, LABEL_THEME_KEYS, defaults);
 }
 
@@ -187,14 +193,25 @@ export function labelShadowTheme(n: SolveNode): LabelShadowTheme {
   };
 }
 
+/** The content margin of the `normal` StyleBox a Label reads (`theme_cache.normal_style`). */
+export type LabelMargin = StyleBoxFlatData['contentMargin'];
+
+const NO_MARGIN: LabelMargin = { left: 0, top: 0, right: 0, bottom: 0 };
+
+/** `theme_cache.normal_style` (`label.cpp:1460`): the Theme's `normal`, else the default theme's empty box. */
+export function labelStyleBox(n: SolveNode): ResolvedStyleBox {
+  return n.styleBoxes.normal ?? LABEL_NORMAL_BOX;
+}
+
 /**
  * The width `Label::_shape` breaks lines at: `int width = (get_size().width - style->get_minimum_size().width)`
- * (`label.cpp:581`), where the style is Label's zero-size `StyleBoxEmpty` (`default_theme.cpp:379`).
+ * (`label.cpp:581`). The style is the `normal` box of the Theme, else Label's zero-size `StyleBoxEmpty`
+ * (`default_theme.cpp:379`).
  * The `int` wraps a word that fits in 320.6px but not in 320. The solver and `Component.tsx` share
  * this, so the solved height is the height of the drawn lines.
  */
-export function labelShapingWidthPx(controlWidthPx: number): number {
-  return Math.trunc(controlWidthPx);
+export function labelShapingWidthPx(controlWidthPx: number, margin: LabelMargin = NO_MARGIN): number {
+  return Math.trunc(controlWidthPx - margin.left - margin.right);
 }
 
 // lines_skipped and max_lines_visible: label.cpp:344-361,520-561
@@ -318,11 +335,18 @@ function labelMinimumHeightPx(
 
 /**
  * `Label::get_minimum_size` (`:973-998`). Autowrap off (`:992-996`): {@link labelUnwrappedShape}'s widest
- * line (`:252-257`) by `_update_visible`'s height, plus a `min_style` that is zero for Label's `StyleBoxEmpty`
- * (`default_theme.cpp:379`). Autowrap on (`:984-991`): `Size2(1, height)`, with the height of the text
+ * line (`:252-257`) by `_update_visible`'s height, plus the `min_style` of its `normal` box
+ * (zero for Label's `StyleBoxEmpty`, `default_theme.cpp:379`). Autowrap on (`:984-991`): `Size2(1, height)`, with the height of the text
  * wrapped at `_shape`'s width (`:581,:227`).
  */
 export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
+  const { x, y } = labelTextMinimumSize(n, ctx);
+  const { left, top, right, bottom } = labelStyleBox(n).contentMargin;
+  return { x: x + left + right, y: y + top + bottom };
+};
+
+/** The minimum size of the text alone, before the `normal` box adds its own (`label.cpp:983-996`). */
+const labelTextMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LabelProperties;
   const themeResolved = labelTextTheme(n, props, ctx);
   const spacing = labelEffectiveTextTheme(themeResolved, n.labelSettings, n.constants);
@@ -352,7 +376,8 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
     const shapedWidthPx = ctx.tentativeRect?.(n)?.w;
     const wrapped = shapeText(text, {
       fontSizePx,
-      boxWidthPx: shapedWidthPx === undefined ? 0 : labelShapingWidthPx(shapedWidthPx),
+      boxWidthPx:
+        shapedWidthPx === undefined ? 0 : labelShapingWidthPx(shapedWidthPx, labelStyleBox(n).contentMargin),
       autowrapMode: shapedWidthPx === undefined ? AutowrapMode.AUTOWRAP_OFF : autowrapMode,
       lineSpacingPx: spacing.lineSpacingPx,
       uppercase: props.uppercase,
@@ -405,30 +430,31 @@ export interface LabelLinePlacement {
  * `Label::_get_line_rect`'s x (`label.cpp:487-512`). H_CENTER writes `int(size.width - line_size.width) / 2`
  * and H_RIGHT `int(size.width - margin - line_size.width)`, both truncating toward zero. A box narrower
  * than its line (only with `clip_text`) makes the difference negative, where `Math.floor` is a pixel
- * off. `margin` is zero for Label's `StyleBoxEmpty` (`default_theme.cpp:379`).
+ * off. `margin` is the `normal` box's, zero for Label's `StyleBoxEmpty` (`default_theme.cpp:379`).
  */
 function horizontalOffsetPx(
   lineWidthPx: number,
   boxWidthPx: number,
   alignment: number | undefined,
-  direction: LineDirection
+  direction: LineDirection,
+  margin: LabelMargin
 ): number {
   const { rtl, isRtlParagraph, isAutowrapped } = direction;
   // `rtl_layout` swaps the two arms outright (`:481-497`): LEFT takes the
-  // trailing-edge expression and RIGHT takes `style->get_offset().x`, which is
-  // zero for the StyleBoxEmpty above. CENTER carries no arm. FILL's own arm reads
+  // trailing-edge expression and RIGHT takes `style->get_offset().x`. CENTER carries no margin. FILL's own arm reads
   // the inferred paragraph direction instead (`:472-478`).
-  const trailingEdge = Math.trunc(boxWidthPx - lineWidthPx);
+  const trailingEdge = Math.trunc(boxWidthPx - margin.right - lineWidthPx);
+  const leadingEdge = margin.left;
   switch (alignment ?? H_LEFT) {
     case H_CENTER:
       // Transcribed as written: `trunc(trunc(d) / 2)` equals `trunc(d / 2)` for every real d.
       return Math.trunc(Math.trunc(boxWidthPx - lineWidthPx) / 2);
     case H_RIGHT:
-      return rtl ? 0 : trailingEdge;
+      return rtl ? leadingEdge : trailingEdge;
     case H_LEFT:
-      return rtl ? trailingEdge : 0;
+      return rtl ? trailingEdge : leadingEdge;
     case H_FILL:
-      return isRtlParagraph && isAutowrapped ? trailingEdge : 0;
+      return isRtlParagraph && isAutowrapped ? trailingEdge : leadingEdge;
     default:
       return 0;
   }
@@ -444,6 +470,8 @@ interface LineDirection {
 }
 
 interface LabelLayoutOptions extends Partial<LabelSpacing> {
+  /** The margins of the `normal` box (`style->get_offset()` and `get_margin`, `label.cpp:491-512,591-616`). Defaults to none. */
+  contentMargin?: LabelMargin;
   // The spacings default to Label's theme defaults, which the Graph titlebar's title Label uses.
   /** `is_layout_rtl()` (`SolveNode.rtl`). Defaults `false`. */
   rtl?: boolean;
@@ -487,6 +515,7 @@ export function layoutLabelLines(
     rtl = false,
     isAutowrapped = false,
     trim,
+    contentMargin = NO_MARGIN,
     lineSpacingPx = LABEL_LINE_SPACING_PX,
     paragraphSpacingPx = LABEL_PARAGRAPH_SPACING_PX,
   } = options;
@@ -494,7 +523,8 @@ export function layoutLabelLines(
   if (lineCount === 0) return [];
 
   // label.cpp:599: `total_h - line_spacing - paragraph_spacing`. `labelMinimumSize` applies the same correction.
-  const contentHeightPx = layout.heightPx - lineSpacingPx - paragraphSpacingPx;
+  const contentHeightPx =
+    layout.heightPx - lineSpacingPx - paragraphSpacingPx + contentMargin.top + contentMargin.bottom;
 
   // `get_layout_data` declares `int vbegin = 0, vsep = 0` (`label.cpp:591`), so each offset
   // truncates toward zero to a whole pixel, negative when the box is shorter than the text. The
@@ -521,7 +551,7 @@ export function layoutLabelLines(
   // `ofs.y += paragraph_spacing` after each paragraph's last shown line (`label.cpp:889`).
   let paragraphGapsAbovePx = 0;
   const isFill = (horizontalAlignment ?? H_LEFT) === H_FILL;
-  const shapingWidthPx = labelShapingWidthPx(boxWidthPx);
+  const shapingWidthPx = labelShapingWidthPx(boxWidthPx, contentMargin);
   // `_shape` justifies at the truncated `int width` it broke the lines at (`label.cpp:297,331`),
   // not the raw `get_size()` that `_get_line_rect` reads.
   const fitted = isFill
@@ -544,12 +574,18 @@ export function layoutLabelLines(
     if (lineIndex > 0 && startsParagraph(lines, lineIndex)) {
       paragraphGapsAbovePx += paragraphSpacingPx;
     }
-    const y = vbeginPx + lineIndex * effectivePitchPx + paragraphGapsAbovePx;
+    const y = contentMargin.top + vbeginPx + lineIndex * effectivePitchPx + paragraphGapsAbovePx;
     // `_get_line_rect` aligns against the ceiled `TS->shaped_text_get_size(rid)` (`label.cpp:478`),
     // not the raw pen advance the fit needs.
     const direction = { rtl, isRtlParagraph: line.isRtl === true, isAutowrapped };
     return {
-      x: horizontalOffsetPx(shapedTextSizeWidthPx(line.widthPx), boxWidthPx, horizontalAlignment, direction),
+      x: horizontalOffsetPx(
+        shapedTextSizeWidthPx(line.widthPx),
+        boxWidthPx,
+        horizontalAlignment,
+        direction,
+        contentMargin
+      ),
       y,
       line,
     };

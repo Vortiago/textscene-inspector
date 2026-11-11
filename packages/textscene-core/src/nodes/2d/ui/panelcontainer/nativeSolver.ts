@@ -21,13 +21,14 @@ import type {
   MinimumSizeFn,
   SolveContext,
 } from '../../../../r3f/controls/native/solverRegistry';
+import { panelBoxOf } from '../../../../r3f/controls/native/defaultThemeItems';
 import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
 
-/** The resolved `theme_override_styles/panel`, or the default-theme `panel` struct. */
+/** The resolved `theme_override_styles/panel`, or the default theme's `panel` for its variation. */
 function panelStyleOf(n: SolveNode, ctx: SolveContext): StyleBoxFlatData {
-  return n.styleBoxes.panel ?? ctx.theme.widgets.panel;
+  return panelBoxOf(n, ctx.theme);
 }
 
 /**

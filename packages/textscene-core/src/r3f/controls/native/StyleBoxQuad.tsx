@@ -13,7 +13,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { styleBoxFlatGeometry } from './styleBoxFlatGeometry';
-import type { StyleBoxFlatData } from './styleBoxFlat';
+import { isDrawn, type StyleBoxFlatData } from './styleBoxFlat';
 import type { ResolvedStyleBox, StyleBoxLineBox, StyleBoxTextureBox } from './parseStyleBox';
 import type { StyleBoxLineData } from './styleBoxLine';
 import type { StyleBoxTextureData } from './styleBoxTexture';
@@ -121,7 +121,7 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
     );
   }
 
-  if (!flatGeometry) return null;
+  if (!flatGeometry || !isDrawn(flatBox)) return null;
 
   const program = materialProgramInputs({
     props: {

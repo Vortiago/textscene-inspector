@@ -59,11 +59,7 @@ export function buildThemeTypeChain(
     );
     // No scene or project theme registers it: the default theme may (`theme_owner.cpp:200-208`).
     const baseOf = (variation: string): string | undefined =>
-      owner
-        ? Object.hasOwn(owner.typeVariations, variation)
-          ? owner.typeVariations[variation]
-          : undefined
-        : defaultThemeVariation(variation)?.base;
+      owner ? ownerBaseOf(owner, variation) : defaultThemeVariation(variation)?.base;
     if (owner || defaultThemeVariation(typeVariation)) {
       // Godot walks this unguarded. A previewer reads files it did not write, so
       // a `MyPanel/base_type = &"MyPanel"` cycle must stop the walk.
@@ -79,6 +75,11 @@ export function buildThemeTypeChain(
   }
 
   return [...chain, ...nativeTypeChain(nativeType)];
+}
+
+/** The base a Theme registers for a variation, if it registers it. */
+function ownerBaseOf(owner: ThemeResource, variation: string): string | undefined {
+  return Object.hasOwn(owner.typeVariations, variation) ? owner.typeVariations[variation] : undefined;
 }
 
 /**
@@ -278,8 +279,9 @@ export function resolveThemeFontSizeIn(
 /** The default theme's font size for a variation, which sits after every Theme a scene or a project sets. */
 function defaultThemeVariationFontSize(variation: string | undefined, name: string): number | undefined {
   if (variation === undefined || name !== 'font_size') return undefined;
-  const step = defaultThemeVariation(variation)?.fontSizeStep;
-  return step === undefined ? undefined : DEFAULT_FONT_SIZE + step;
+  const row = defaultThemeVariation(variation);
+  if (row?.fontSizePx !== undefined) return row.fontSizePx;
+  return row?.fontSizeStep === undefined ? undefined : DEFAULT_FONT_SIZE + row.fontSizeStep;
 }
 
 /**

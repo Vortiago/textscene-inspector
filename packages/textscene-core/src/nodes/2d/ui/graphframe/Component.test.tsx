@@ -9,6 +9,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { parseStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
+import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { GraphFrame } from './Component';
@@ -19,9 +20,10 @@ const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
+/** The default `titlebar` is a `StyleBoxEmpty` (`make_empty_stylebox`), which paints no mesh, so a test of the band gives it a box. */
 function graphFrame(properties: Partial<GraphFrameProperties> = {}): SolveNode {
   const node: TscnNode = controlNode('F', 'GraphFrame', { name: 'F', ...properties });
-  return { ...emptySolveNode(), path: 'F', node };
+  return { ...emptySolveNode(), path: 'F', node, styleBoxes: { titlebar: drawnStyleBox() } };
 }
 
 function chromeMeshes(scene: Rendered['scene']) {
@@ -55,6 +57,7 @@ function texturePanel(properties: Partial<GraphFrameProperties> = {}): SolveNode
   return {
     ...n,
     styleBoxes: {
+      ...n.styleBoxes,
       panel: parseStyleBox(
         'SubResource("frame")',
         [{ id: '1', path: 'res://frame.png', type: 'Texture2D' }],

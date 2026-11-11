@@ -30,8 +30,6 @@ import {
 import { RESIZER_SE_ICON, RESIZER_SE_ICON_SIZE } from '../graphelement/graphIcons';
 import {
   GRAPH_FRAME_RESIZER_COLOR,
-  GRAPH_FRAME_TITLE_DEFAULT_COLOR,
-  GRAPH_FRAME_TITLE_FONT_SIZE_PX,
   GRAPH_FRAME_TITLE_VARIATION,
   graphFrameStyles,
   graphFrameTitleTextMin,
@@ -88,14 +86,8 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
 
   const title = props.title ?? '';
   const fontTheme = useMemo(
-    () =>
-      resolveTitleFontTheme(
-        solveNode,
-        GRAPH_FRAME_TITLE_VARIATION,
-        GRAPH_FRAME_TITLE_FONT_SIZE_PX,
-        GRAPH_FRAME_TITLE_DEFAULT_COLOR
-      ),
-    [solveNode]
+    () => resolveTitleFontTheme(solveNode, GRAPH_FRAME_TITLE_VARIATION, theme.fontSize),
+    [solveNode, theme.fontSize]
   );
   const titleLayout = useMemo(
     () => (title.length > 0 ? shapeTitleText(title, fontTheme) : null),

@@ -11,7 +11,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
-import { buttonBoxesOf } from '../../../../r3f/controls/native/defaultThemeButton';
+import { buttonBoxesOf } from '../../../../r3f/controls/native/defaultThemeItems';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';

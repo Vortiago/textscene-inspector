@@ -8,7 +8,7 @@ import type { Rgba } from '../../../../godot/math/math';
 import { buildThemeTypeChain } from '../../../../resources/styles/theme/lookup';
 import { perObject } from '../../../../utils/perObject';
 import { pickButtonStyleBox, type ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
-import { buttonBoxesInChain, LABEL_NORMAL_BOX } from '../../../../r3f/controls/native/defaultThemeButton';
+import { buttonBoxesInChain, LABEL_NORMAL_BOX } from '../../../../r3f/controls/native/defaultThemeItems';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';

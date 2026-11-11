@@ -1183,6 +1183,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Graph Title Theme Colour",
+    "file": "unit-graph-title-theme-colour.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Grid Map Billboard Shadow",
     "file": "unit-grid-map-billboard-shadow.tscn",
     "category": "Other"
@@ -1393,6 +1398,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Label Default Theme Variations",
+    "file": "unit-label-default-theme-variations.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Label Fill Paragraphs",
     "file": "unit-label-fill-paragraphs.tscn",
     "category": "Other"
@@ -1505,6 +1515,11 @@ export const fixtures: Fixture[] = [
   {
     "name": "Label Tab Without Stop",
     "file": "unit-label-tab-without-stop.tscn",
+    "category": "Other"
+  },
+  {
+    "name": "Label Theme Normal Box",
+    "file": "unit-label-theme-normal-box.tscn",
     "category": "Other"
   },
   {

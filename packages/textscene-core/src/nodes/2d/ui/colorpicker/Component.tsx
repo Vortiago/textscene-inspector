@@ -47,7 +47,7 @@ import { isColorOverbright } from '../shared/colorOverbright';
 import { TextDirection } from '../../../../godot/text/textServerEnums';
 import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
 import { pickerChildTheme } from './pickerChildTheme';
-import { IconButton, iconModulate } from './IconButton';
+import { IconButton, iconModulate } from '../../../../r3f/controls/native/IconButton';
 import { GradientMesh, buildGeometry, tintVertexColors } from './GradientMesh';
 import { LabelledText } from '../shared/LabelledText';
 import { TextTypeScriptIcon } from './TextTypeScriptIcon';

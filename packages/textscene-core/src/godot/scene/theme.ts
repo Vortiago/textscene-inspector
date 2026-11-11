@@ -172,13 +172,17 @@ export interface DefaultThemeVariation {
   readonly base: string;
   /** What the variation adds to `default_font_size` (the unscaled 16 px), where the default theme sets a size for it. */
   readonly fontSizeStep?: number;
+  /** The font size the variation sets outright, in unscaled px (`GraphFrameTitleLabel`). */
+  readonly fontSizePx?: number;
+  /** The `font_color` the variation sets (`default_theme.cpp:819,849,1174`). */
+  readonly fontColor?: Rgba;
 }
 
 /**
  * The type variations the default theme registers (`default_theme.cpp:357-358`, `:394-401`, `:814`,
  * `:845`, `:1167-1171`), the one table the type chain, the font size and the Button boxes read. A Theme
  * that sets items for one is read for a Control that names it, though no scene Theme registers it.
- * The Button boxes of `FlatButton` and `FlatMenuButton` are `r3f/controls/native/defaultThemeButton.ts`.
+ * Its boxes are `r3f/controls/native/defaultThemeItems.ts`.
  */
 export const DEFAULT_THEME_VARIATIONS: Readonly<Record<string, DefaultThemeVariation>> = {
   FlatButton: { base: 'Button' },
@@ -186,10 +190,10 @@ export const DEFAULT_THEME_VARIATIONS: Readonly<Record<string, DefaultThemeVaria
   HeaderSmall: { base: 'Label', fontSizeStep: 4 },
   HeaderMedium: { base: 'Label', fontSizeStep: 8 },
   HeaderLarge: { base: 'Label', fontSizeStep: 12 },
-  GraphNodeTitleLabel: { base: 'Label' },
-  GraphFrameTitleLabel: { base: 'Label' },
+  GraphNodeTitleLabel: { base: 'Label', fontColor: CONTROL_FONT_COLOR },
+  GraphFrameTitleLabel: { base: 'Label', fontSizePx: 22, fontColor: LABEL_FONT_COLOR },
   TooltipPanel: { base: 'PopupPanel' },
-  TooltipLabel: { base: 'Label' },
+  TooltipLabel: { base: 'Label', fontColor: CONTROL_FONT_COLOR },
 };
 
 /** `variation`'s entry in {@link DEFAULT_THEME_VARIATIONS}. Own keys only: a variation named `constructor` must not read `Object.prototype`. */

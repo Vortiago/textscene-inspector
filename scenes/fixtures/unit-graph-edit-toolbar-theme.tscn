@@ -63,7 +63,7 @@ anchor_bottom = 1.0
 theme = SubResource("Theme_toolbar")
 
 ; minimap_enabled = false hides the minimap panel, which an empty graph draws apart from Godot and this scene does not move.
-; It holds no GraphNode: the Theme's Label items would reach the GraphNode's own Labels, which this scene does not move.
+; It holds no GraphNode: the Theme's Label items would reach the GraphNode title, which graph-title-theme-colour owns.
 ; No `scroll_offset`, as in the whole family: unit-graph-edit-family.md says why.
 [node name="Graph" type="GraphEdit" parent="."]
 layout_mode = 1

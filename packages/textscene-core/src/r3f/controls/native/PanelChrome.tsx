@@ -5,6 +5,7 @@
  * before `styleBoxFlatGeometry` converts to linear.
  */
 
+import { panelBoxOf } from './defaultThemeItems';
 import { StyleBoxQuad } from './StyleBoxQuad';
 import type { NativeControlComponentProps } from '../ControlComponentRegistry';
 import type { NativeTheme } from './nativeTheme';
@@ -22,7 +23,7 @@ interface PanelChromeProps {
 }
 
 export function PanelChrome({ solveNode, rect, theme, tint, renderOrder }: PanelChromeProps) {
-  const baseStyleBox = solveNode.styleBoxes.panel ?? theme.widgets.panel;
+  const baseStyleBox = panelBoxOf(solveNode, theme);
 
   return <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />;
 }

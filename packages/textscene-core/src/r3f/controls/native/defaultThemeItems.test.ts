@@ -8,7 +8,13 @@ import { CONTROL_FONT_COLOR } from '../../../godot/scene/theme';
 import { controlNode, solveNode } from './testing/solveNode';
 import { themeResource } from './testing/themeResource';
 import type { SolveNode } from './solveTree';
-import { buttonBoxesInChain, buttonBoxesOf, defaultFontColorOf } from './defaultThemeButton';
+import {
+  buttonBoxesInChain,
+  buttonBoxesOf,
+  defaultFontColorOf,
+  defaultLabelFontColorOf,
+  panelBoxOf,
+} from './defaultThemeItems';
 import { nativeTheme } from './nativeTheme';
 import { isDrawn } from './styleBoxFlat';
 
@@ -102,5 +108,52 @@ describe('defaultFontColorOf', () => {
   it("is the class's own colour for FlatButton and for no variation", () => {
     expect(defaultFontColorOf(button('FlatButton'), colors, 'normal')).toBe(colors.normal);
     expect(defaultFontColorOf(button(), colors, 'normal')).toBe(colors.normal);
+  });
+});
+
+function node(type: string, variation?: string): SolveNode {
+  return {
+    ...solveNode(),
+    path: 'N',
+    node: controlNode('N', type, { name: 'N', themeTypeVariation: variation }),
+  };
+}
+
+describe('defaultLabelFontColorOf', () => {
+  it('is Label white for Label and for the header variations', () => {
+    expect(defaultLabelFontColorOf(node('Label'))).toEqual(WHITE);
+    expect(defaultLabelFontColorOf(node('Label', 'HeaderLarge'))).toEqual(WHITE);
+  });
+
+  it('is control_font_color for GraphNodeTitleLabel and TooltipLabel (default_theme.cpp:819,1174)', () => {
+    expect(defaultLabelFontColorOf(node('Label', 'GraphNodeTitleLabel'))).toEqual(CONTROL_FONT_COLOR);
+    expect(defaultLabelFontColorOf(node('Label', 'TooltipLabel'))).toEqual(CONTROL_FONT_COLOR);
+  });
+
+  it('is white for GraphFrameTitleLabel (default_theme.cpp:849)', () => {
+    expect(defaultLabelFontColorOf(node('Label', 'GraphFrameTitleLabel'))).toEqual(WHITE);
+  });
+
+  it('is undefined for a chain that never reaches Label', () => {
+    expect(defaultLabelFontColorOf(node('Button'))).toBeUndefined();
+  });
+});
+
+describe('panelBoxOf', () => {
+  it("is Panel's box without a variation", () => {
+    expect(panelBoxOf(node('PanelContainer'), THEME)).toBe(THEME.widgets.panel);
+  });
+
+  it("is TooltipPanel's half-transparent black box for that variation (default_theme.cpp:1167-1168)", () => {
+    const box = panelBoxOf(node('PanelContainer', 'TooltipPanel'), THEME);
+    expect(box).toBe(THEME.widgets.tooltipPanel);
+    expect(box.bgColor).toEqual({ r: 0, g: 0, b: 0, a: 0.5 });
+    expect(box.contentMargin).toEqual({ left: 8, top: 2, right: 8, bottom: 2 });
+  });
+
+  it("lets the node's own panel win over the variation", () => {
+    const own = THEME.widgets.popupPanel;
+    const styled = { ...node('PanelContainer', 'TooltipPanel'), styleBoxes: { panel: own } };
+    expect(panelBoxOf(styled, THEME)).toBe(own);
   });
 });

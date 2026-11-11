@@ -36,7 +36,6 @@ import {
   RESIZER_SE_ICON_SIZE,
 } from '../graphelement/graphIcons';
 import {
-  GRAPH_NODE_TITLE_DEFAULT_COLOR,
   GRAPH_NODE_TITLE_VARIATION,
   graphNodeDrawRows,
   graphNodeStyles,
@@ -118,13 +117,7 @@ export function GraphNode({
 
   const title = props.title ?? '';
   const fontTheme = useMemo(
-    () =>
-      resolveTitleFontTheme(
-        solveNode,
-        GRAPH_NODE_TITLE_VARIATION,
-        theme.fontSize,
-        GRAPH_NODE_TITLE_DEFAULT_COLOR
-      ),
+    () => resolveTitleFontTheme(solveNode, GRAPH_NODE_TITLE_VARIATION, theme.fontSize),
     [solveNode, theme.fontSize]
   );
   const titleLayout = useMemo(

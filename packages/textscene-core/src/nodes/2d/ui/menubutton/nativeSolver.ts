@@ -18,7 +18,7 @@ import {
   type TextThemeDefaults,
 } from '../../../../r3f/controls/native/textTheme';
 import { BUTTON_DEFAULT_FONT_COLORS, BUTTON_THEME_KEYS, buttonMinimumSize } from '../button/nativeSolver';
-import { defaultFontColorOf } from '../../../../r3f/controls/native/defaultThemeButton';
+import { defaultFontColorOf } from '../../../../r3f/controls/native/defaultThemeItems';
 import type { MenuButtonProperties } from './types';
 
 /** `Color(1, 1, 1, 0.3)`: MenuButton's own disabled font colour (`default_theme.cpp:268`), not Button's `control_font_disabled_color` (`:161`). */

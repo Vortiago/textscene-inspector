@@ -175,7 +175,7 @@ The two files the **Project settings** name for every font lookup: the project t
 _Avoid_: "theme context", which Godot's `ThemeContext` also names.
 
 **Default-theme variation** (`DEFAULT_THEME_VARIATIONS` in `godot/scene/theme.ts`):
-A `theme_type_variation` that Godot's default theme registers, such as `FlatButton` or `HeaderSmall`, with its base type. A Control that names one reads its items under the variation and its base before its own class, after every scene and project Theme. The table holds the base and the font size step. `r3f/controls/native/defaultThemeButton.ts` holds the Button boxes and the font colour.
+A `theme_type_variation` that Godot's default theme registers, such as `FlatButton` or `HeaderSmall`, with its base type. A Control that names one reads its items under the variation and its base before its own class, after every scene and project Theme. The table holds the base, the font size and the font colour. `r3f/controls/native/defaultThemeItems.ts` holds the boxes.
 _Avoid_: "style variant". "scene variation" for one a scene Theme registers, which `ThemeResource.typeVariations` holds.
 
 **Style face** (`nodes/2d/ui/richtextlabel/styleFaces.ts`):

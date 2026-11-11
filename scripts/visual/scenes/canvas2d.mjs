@@ -426,6 +426,14 @@ export const CANVAS_2D_SCENES = [
   // FlatButton and a Label variation draw no normal box, and HeaderSmall takes Label's white text (Godot 4.6.3
   // `--mode 2d`: max 2 of 255 over the grid).
   { name: 'button-default-theme-variations', file: 'unit-button-default-theme-variations.tscn', mode: '2d' },
+  // The one variable: a Theme `normal` box on Label. It draws under the text, adds its minimum, narrows the wrap width and
+  // offsets left and right lines, not centred ones (Godot 4.6.3 `--mode 2d`: max 1 of 255, 1 px).
+  { name: 'label-theme-normal-box', file: 'unit-label-theme-normal-box.tscn', mode: '2d' },
+  // The one variable: the default theme's Label variations. Header sizes, the graph and tooltip title colours,
+  // the frame title size and the TooltipPanel box (Godot 4.6.3 `--mode 2d`: max 1 of 255, 16 px).
+  { name: 'label-default-theme-variations', file: 'unit-label-default-theme-variations.tscn', mode: '2d' },
+  // The one variable: the Theme `font_color` of Label on a GraphNode and a GraphFrame title (Godot 4.6.3 `--mode 2d`: max 2 of 255).
+  { name: 'graph-title-theme-colour', file: 'unit-graph-title-theme-colour.tscn', mode: '2d' },
   // The one variable: the theme text outline of Button, CheckBox, CheckButton, OptionButton and MenuButton.
   { name: 'button-family-outline', file: 'unit-button-family-outline.tscn', mode: '2d' },
   // The one variable: the theme text outline of LinkButton, the FoldableContainer title and ItemList
