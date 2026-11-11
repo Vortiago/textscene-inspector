@@ -11,14 +11,13 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { CheckButtonProperties } from './types';
 import {
+  checkButtonContentFacts,
   checkButtonMinimumSize,
   checkButtonTextTheme,
   resolveCheckButtonDrawState,
   resolveCheckButtonIconKey,
   checkButtonIconColor,
   layoutCheckButtonContent,
-  checkButtonMarginX,
-  checkButtonMarginY,
   checkButtonDrawnIconSize,
   checkButtonTextureSlots,
 } from './nativeSolver';
@@ -172,17 +171,20 @@ describe('checkButtonIconColor (default_theme.cpp:352-353)', () => {
   });
 });
 
-describe('checkButtonMarginX / checkButtonMarginY (default_theme.cpp:317)', () => {
+describe('checkButtonContentFacts margins (default_theme.cpp:317)', () => {
+  const margin = (theme: SolveContext['theme']) =>
+    checkButtonContentFacts(node({}), {}, { theme }, { x: 100, y: 40 }, null).styleMargin;
+
   it('marginY equals theme.contentMargin (round(4*scale))', () => {
-    expect(checkButtonMarginY(ctx())).toBe(4);
+    expect(margin(ctx().theme)).toMatchObject({ top: 4, bottom: 4 });
   });
 
   it('marginX is round(6*scale)', () => {
-    expect(checkButtonMarginX(ctx())).toBe(6);
+    expect(margin(ctx().theme)).toMatchObject({ left: 6, right: 6 });
   });
 
   it('marginX moves with a non-1 theme scale (default_theme.cpp:317: round(6*scale))', () => {
-    expect(checkButtonMarginX({ theme: nativeTheme(1.5) })).toBe(9);
+    expect(margin(nativeTheme(1.5))).toMatchObject({ left: 9, right: 9 });
   });
 });
 

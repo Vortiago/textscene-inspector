@@ -177,10 +177,7 @@ function checkBoxIconMaxWidth(constants: SolveNode['constants']): number {
 }
 
 /** `h_separation`: CheckBox's default (`default_theme.cpp:308`, `round(4*scale)`) equals `theme.separation`. */
-export function checkBoxHSeparation(
-  constants: SolveNode['constants'],
-  ctx: Pick<SolveContext, 'theme'>
-): number {
+function checkBoxHSeparation(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
   return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
 

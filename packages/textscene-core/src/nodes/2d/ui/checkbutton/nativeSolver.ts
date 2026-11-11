@@ -173,12 +173,12 @@ export function checkButtonIconColor(props: CheckButtonProperties, colors: Solve
 }
 
 /** `cb_empty`'s Y content margin, `round(4*scale)` (`default_theme.cpp:317`), which equals `theme.contentMargin`. The margin is asymmetric: X is `round(6*scale)`. */
-export function checkButtonMarginY(ctx: Pick<SolveContext, 'theme'>): number {
+function checkButtonMarginY(ctx: Pick<SolveContext, 'theme'>): number {
   return ctx.theme.contentMargin;
 }
 
 /** `cb_empty`'s X content margin, `round(6*scale)` (`default_theme.cpp:317`), from `theme.scale`: `theme.contentMargin` is a different literal. */
-export function checkButtonMarginX(ctx: Pick<SolveContext, 'theme'>): number {
+function checkButtonMarginX(ctx: Pick<SolveContext, 'theme'>): number {
   return Math.round(6 * ctx.theme.scale);
 }
 
@@ -188,10 +188,7 @@ function checkButtonIconMaxWidth(constants: SolveNode['constants']): number {
 }
 
 /** `h_separation`: CheckButton's default (`default_theme.cpp:348`, `round(4*scale)`) equals `theme.separation`. */
-export function checkButtonHSeparation(
-  constants: SolveNode['constants'],
-  ctx: Pick<SolveContext, 'theme'>
-): number {
+function checkButtonHSeparation(constants: SolveNode['constants'], ctx: Pick<SolveContext, 'theme'>): number {
   return Math.max(0, constants.h_separation ?? ctx.theme.separation);
 }
 
