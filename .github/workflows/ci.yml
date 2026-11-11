@@ -17,7 +17,8 @@ concurrency:
 jobs:
   # A pull request that changes no file a golden scene renders through skips the golden run. A push
   # or pull request whose rendering files already passed it skips it too (renderInputsKey.mjs). A
-  # manual run always runs it.
+  # manual run always runs it. A pull request that changes no file the real-Godot tests read skips
+  # them (godotRefScope.mjs).
   changes:
     name: Changed files
     runs-on: ubuntu-latest
@@ -25,6 +26,7 @@ jobs:
     outputs:
       visual: ${{ steps.passed.outputs.cache-hit == 'true' && 'false' || steps.scope.outputs.visual }}
       visual-key: ${{ steps.inputs.outputs.key }}
+      godot-ref: ${{ steps.godot-ref.outputs.godot-ref }}
     steps:
       # A pull request checks out its merge commit, whose first parent is the base branch.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -51,6 +53,15 @@ jobs:
           path: .visual-pass
           key: visual-pass-${{ steps.inputs.outputs.key }}
           lookup-only: true
+      - id: godot-ref
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "godot-ref=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only HEAD^1 HEAD | node scripts/ci/godotRefScope.mjs >> "$GITHUB_OUTPUT"
 
   static:
     name: Lint, type check and generated files
@@ -99,6 +110,36 @@ jobs:
       # Before the tests: loadCoreLinter.test.mjs skips itself when core's dist is absent.
       - run: pnpm --filter @textscene/core build
       - run: pnpm test:unit --shard=${{ matrix.shard }}/4
+
+  # The tests of `pnpm ref:godot` that render through the real engine. `pnpm test:unit` leaves them
+  # out: they take minutes, and they move only with the files the changes job reads for them.
+  godot-ref:
+    name: Real-Godot reference tests
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.godot-ref == 'true'
+    timeout-minutes: 20
+    env:
+      GODOT_VERSION: 4.6.3-stable
+      # Of the Linux x86_64 binary inside the release zip.
+      GODOT_SHA256: f64d4ed19fc9df9440321653fcc80df8c6e365ba7b6de0a29e2cfa9fa71bfeb3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      # Godot renders on lavapipe under xvfb-run, as `pnpm ref:godot` does on a developer's host.
+      - run: sudo apt-get install -y --no-install-recommends xvfb mesa-vulkan-drivers
+
+      - name: Install Godot
+        run: |
+          binary="Godot_v${GODOT_VERSION}_linux.x86_64"
+          curl -fsSL -o "$RUNNER_TEMP/godot.zip" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/${binary}.zip"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/godot"
+          echo "${GODOT_SHA256}  $RUNNER_TEMP/godot/${binary}" | sha256sum --check
+          sudo install -m 755 "$RUNNER_TEMP/godot/${binary}" /usr/local/bin/godot
+
+      - run: pnpm test:godot-ref
 
   build:
     name: Build and package
@@ -362,8 +403,9 @@ jobs:
           path: scripts/vscode/output/web-preview-gate/
 
   # The one check that branch protection requires, so a new or renamed job needs no settings change.
-  # Every job it needs must succeed. The one allowed skip is the golden run that the changes job ruled
-  # out, which this job checks itself, so the gate costs no queued job of its own.
+  # Every job it needs must succeed. The allowed skips are the golden run and the real-Godot tests,
+  # each only when the changes job ruled it out. This job checks that itself, so the gate costs no
+  # queued job of its own.
   ci-ok:
     name: CI passed
     if: always()
@@ -372,6 +414,7 @@ jobs:
         changes,
         static,
         unit,
+        godot-ref,
         build,
         web-previewer,
         visual-regression,
@@ -388,9 +431,11 @@ jobs:
       - env:
           NEEDS: ${{ toJSON(needs) }}
         run: |
-          failed=$(jq -r '.changes.outputs.visual as $scope | to_entries
+          # A job may skip only when the changes job put it out of scope.
+          failed=$(jq -r '{"visual-regression": .changes.outputs.visual,
+              "godot-ref": .changes.outputs["godot-ref"]} as $scopes | to_entries
             | map(select(.value.result != "success"
-                and (.key != "visual-regression" or .value.result != "skipped" or $scope != "false")))
+                and (.value.result != "skipped" or $scopes[.key] != "false")))
             | map("\(.key) (\(.value.result))") | join(", ")' <<< "$NEEDS")
           if [ -n "$failed" ]; then
             echo "::error::these jobs did not pass: $failed"

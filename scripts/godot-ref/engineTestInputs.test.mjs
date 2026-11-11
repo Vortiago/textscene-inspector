@@ -80,7 +80,8 @@ describe('importClosure', () => {
   const sources = {
     'scripts/godot-ref/run.engine.test.mjs': `import { r } from './run.mjs';\nimport { m } from '../../core/math.ts';`,
     'scripts/godot-ref/run.mjs': `import { c } from '../visual/contract.mjs';\nimport { r } from './run.mjs';`,
-    'scripts/visual/contract.mjs': `import { gone } from './gone.js';`,
+    'scripts/visual/contract.mjs': `import { gone } from './gone.js';\nimport shared from '../vitest.shared';`,
+    'scripts/vitest.shared.ts': '',
     'core/math.ts': `import { v } from './vector.js';`,
     'core/vector.ts': '',
     'scripts/godot-ref/diff.mjs': '',
@@ -94,6 +95,7 @@ describe('importClosure', () => {
       'scripts/godot-ref/run.engine.test.mjs',
       'scripts/godot-ref/run.mjs',
       'scripts/visual/contract.mjs',
+      'scripts/vitest.shared.ts',
     ]);
   });
 
@@ -131,6 +133,8 @@ describe('isEngineTestInput', () => {
     expect(isEngineTestInput('scripts/godot-ref/run.engine.test.mjs')).toBe(true);
     expect(isEngineTestInput('scripts/godot-ref/run.mjs')).toBe(true);
     expect(isEngineTestInput('scripts/godot-ref/engineTools.mjs')).toBe(true);
+    expect(isEngineTestInput('scripts/godot-ref/vitest.config.ts')).toBe(true);
+    expect(isEngineTestInput('vitest.shared.ts')).toBe(true);
     expect(isEngineTestInput('scripts/visual/preview/appContract.mjs')).toBe(true);
   });
 

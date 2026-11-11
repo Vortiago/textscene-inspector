@@ -72,10 +72,10 @@ and prints exact pixels. It is a tool, not a gate.
 
 - Measure, never derive. Put a measurement in the pull request, never in a comparison sheet.
 - `pnpm test:godot-ref` runs the tests that render through real Godot
-  (`scripts/godot-ref/*.engine.test.mjs`). It takes about 6 minutes, and `pnpm test:unit` and CI
-  never run it. Run it after a change to a file the tests read: a module they import, a file of
+  (`scripts/godot-ref/*.engine.test.mjs`). It takes about 6 minutes, and `pnpm test:unit` never
+  runs it. Run it after a change to a file the tests read: a module they import, a file of
   `scripts/godot-ref/`, or a fixture they render. The pre-push hook does this on a host that has
-  `godot` and `xvfb-run`.
+  `godot` and `xvfb-run`, and the CI job `Real-Godot reference tests` does it on a pull request.
 - Every capture that measures against Godot launches through `launchGodotComparisonBrowser`, so a
   screenshot is the drawing buffer. Never launch one another way. It rasterises on lavapipe, as
   `pnpm ref:godot` does, and fails without `mesa-vulkan-drivers`.

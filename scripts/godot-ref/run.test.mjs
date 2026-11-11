@@ -43,13 +43,13 @@ import {
   renderingMethodFallbackMessage,
   requestedRenderingMethod,
   SPAWN_BACKSTOP_MS,
-  resolveProjectRoot,
   projectConfig,
   probePixels,
   ROOT_ONLY_VIEWPORT_PROPERTIES,
   rootOnlyDriftMessage,
   harnessWarnings,
 } from './run.mjs';
+import { resolveProjectRoot } from './projectRoot.mjs';
 
 /** The generated bootstrap, with only the field under test spelled out. */
 function bootstrap(overrides = {}) {

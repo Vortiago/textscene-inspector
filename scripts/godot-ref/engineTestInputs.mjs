@@ -1,18 +1,17 @@
 /**
  * The files the real-Godot tests read: the modules they import, the scenes they render and the
- * resources those scenes load. The pre-push plan runs the tests for a change to one of them, since
- * CI never does.
+ * resources those scenes load. The pre-push plan and CI run the tests for a change to one of them.
  */
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, posix, relative } from 'node:path';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { ENGINE_TEST_FILE } from './engineTools.mjs';
-import { resolveProjectRoot } from './run.mjs';
+import { resolveProjectRoot } from './projectRoot.mjs';
 
 const HARNESS_DIR = 'scripts/godot-ref';
-/** The global setup of the engine run. `vitest.config.ts` names it, so no test imports it. */
-const ENGINE_TEST_SETUP = `${HARNESS_DIR}/engineTestSetup.mjs`;
+/** The configuration of the engine run and the global setup it names, which no test imports. */
+const ENGINE_RUN_ENTRIES = [`${HARNESS_DIR}/vitest.config.ts`, `${HARNESS_DIR}/engineTestSetup.mjs`];
 /** Where a test finds a scene it names without a folder: its own scenes first, then the fixtures. */
 const SCENE_DIRS = [`${HARNESS_DIR}/scenes`, 'scenes/fixtures'];
 /** A text resource, which can load further resources. Any other file is a leaf. */
@@ -62,9 +61,14 @@ export function resourceClosure(scenes, readSource, rootOf) {
   return seen;
 }
 
-/** The paths a specifier can name: itself, or the TypeScript module a `.js` specifier stands for. */
-const sourceCandidates = (path) =>
-  path.endsWith('.js') ? [path, path.replace(/\.js$/, '.ts'), path.replace(/\.js$/, '.tsx')] : [path];
+/**
+ * The paths a specifier can name: itself, the TypeScript module a `.js` specifier stands for, or
+ * the one a specifier without an extension stands for.
+ */
+function sourceCandidates(path) {
+  if (path.endsWith('.js')) return [path, path.replace(/\.js$/, '.ts'), path.replace(/\.js$/, '.tsx')];
+  return /\.(?:[cm]?[jt]s|tsx|json)$/.test(path) ? [path] : [`${path}.ts`, path];
+}
 
 /**
  * `entries` and every module they import through relative specifiers, as repository paths.
@@ -115,7 +119,7 @@ function engineTestInputs() {
   const rootOf = (scene) => repoPath(resolveProjectRoot(join(REPO_ROOT, scene)));
   inputs = {
     files: new Set([
-      ...importClosure([...tests, ENGINE_TEST_SETUP], readRepoFile),
+      ...importClosure([...tests, ...ENGINE_RUN_ENTRIES], readRepoFile),
       ...resourceClosure(scenes.flatMap(sceneCandidates), readRepoFile, rootOf),
     ]),
     sceneNames: new Set(scenes.map((scene) => posix.basename(scene))),

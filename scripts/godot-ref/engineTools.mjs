@@ -1,6 +1,7 @@
 /**
- * The tools a render through real Godot starts. CI has neither, so the tests that render are a
- * command of their own (`pnpm test:godot-ref`), and the pre-push hook runs it only where both exist.
+ * The tools a render through real Godot starts. Not every host has both, so the tests that render
+ * are a command of their own (`pnpm test:godot-ref`). The pre-push hook runs it only where both
+ * exist, and the CI job `godot-ref` installs them.
  */
 
 import { spawnSync } from 'node:child_process';
