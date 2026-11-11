@@ -1,10 +1,11 @@
 /**
  * How a canvas item takes the light, per `canvas.glsl`: `color.rgb = albedo × S`. `useCanvasItemTint`
  * composes `albedo × canvas_modulation`, so the injection divides the tint out. A non-HDR 2D
- * viewport (`hdr_2d` false) never goes linear, so the injection decodes to sRGB, does Godot's
- * arithmetic with its [0, 1] clamp, and re-encodes before three's `colorspace_fragment`. A linear
- * canvas (`hdr_2d` true) is a program variant: it holds linear half floats, so the light adds to the
- * linear albedo with no clamp (`canvas.glsl:727-760`). The light colours stay as authored.
+ * viewport (`hdr_2d` false) never goes linear, so the injection runs after three's
+ * `colorspace_fragment` has written the sRGB numbers, and does Godot's arithmetic on them with its
+ * [0, 1] clamp, as Godot's shader does, with no conversion of its own. A linear canvas (`hdr_2d`
+ * true) is a program variant: it holds linear half floats, so the light adds to the linear albedo
+ * with no clamp (`canvas.glsl:727-760`). The light colours stay as authored.
  */
 /*
  * Portions ported from Godot Engine (MIT).
@@ -15,7 +16,6 @@
 import type * as THREE from 'three';
 import type { ProgramInjection } from '../materialProgramInputs.js';
 import { editedProgram } from '../shaderPatch/chunkPatch.js';
-import { GODOT_TO_LINEAR_GLSL, GODOT_TO_SRGB_GLSL } from '../../godot/rendering/srgbTransfer.js';
 import { canvasColorSpaceOf, canvasNumbersOf } from '../canvasColorSpace.js';
 import { CanvasItemMaterialLightMode } from '../../godot/scene/canvasItemMaterial.js';
 
@@ -36,9 +36,6 @@ const canvasModulateFloorIn = (isLinearCanvas: boolean): number =>
     g: CANVAS_MODULATE_FLOOR,
     b: CANVAS_MODULATE_FLOOR,
   }).r;
-
-/** Both directions: the item side encodes to compare and decodes to write back. */
-const TRANSFER_GLSL = GODOT_TO_SRGB_GLSL + GODOT_TO_LINEAR_GLSL;
 
 /**
  * A `merge` part for `materialProgramInputs()`: the one material prop the
@@ -77,22 +74,21 @@ export interface CanvasItemLightingUniforms {
 }
 
 /**
- * The declarations every lit item's program reads, and the transfer of its canvas space. A linear canvas
+ * The declarations every lit item's program reads, and the clamp of its canvas space. A linear canvas
  * is a compile-time `#define`, not a uniform: the canvas space is fixed per viewport, and the
- * program then carries no dead branch or transfer call (cache key suffix: `canvasProgramKey`).
+ * program then carries no dead branch (cache key suffix: `canvasProgramKey`).
  */
 export function itemLightingGlsl(isLinearCanvas: boolean): string {
   return `${isLinearCanvas ? '#define LINEAR_CANVAS\n' : ''}uniform vec2 uLightResolution;
 uniform vec3 uCanvasModulate;
 uniform float uLightMode;
 const float canvasModulateFloor = ${canvasModulateFloorIn(isLinearCanvas)};
-${TRANSFER_GLSL}
 #ifdef LINEAR_CANVAS
 vec3 canvasAlbedo(vec3 fragment) { return fragment; }
 vec3 canvasShaded(vec3 color) { return color; }
 #else
-vec3 canvasAlbedo(vec3 fragment) { return godotToSrgb(fragment); }
-vec3 canvasShaded(vec3 color) { return godotToLinear(clamp(color, 0.0, 1.0)); }
+vec3 canvasAlbedo(vec3 fragment) { return fragment; }
+vec3 canvasShaded(vec3 color) { return clamp(color, 0.0, 1.0); }
 #endif`;
 }
 
@@ -127,10 +123,11 @@ export const ITEM_ALBEDO_GLSL = `vec3 lightSeed = lightOnly ? vec3(1.0) : uCanva
 vec2 lightUv = gl_FragCoord.xy / uLightResolution;
 vec3 albedo = canvasAlbedo(gl_FragColor.rgb) / max(lightSeed, vec3(canvasModulateFloor));`;
 
-const LIGHT_INJECTION = `${LIGHT_MODE_GLSL}
+const LIGHT_INJECTION = `#include <colorspace_fragment>
+${LIGHT_MODE_GLSL}
 // canvas.glsl:719: MODE_UNSHADED skips the canvas tint and the light loop,
 // so the fragment leaves as it arrived. So does an item no light reaches: the CPU already folded
-// the tint in, and the round trip through the two sRGB curves would only perturb it.
+// the tint in, and dividing it out and multiplying it back would only perturb it.
 if (!unshaded && (uLit > 0.5 || lightOnly)) {
   ${ITEM_ALBEDO_GLSL}
   vec4 accum = uLit > 0.5 ? texture2D(uLightList, lightUv) : vec4(lightSeed, 0.0);
@@ -138,8 +135,7 @@ if (!unshaded && (uLit > 0.5 || lightOnly)) {
   vec3 shadowTint = texture2D(uShadowTint, lightUv).rgb;
   if (lightOnly) gl_FragColor.a = clamp(gl_FragColor.a * accum.a, 0.0, 1.0);
   gl_FragColor.rgb = canvasShaded(albedo * accum.rgb + shadowTint);
-}
-#include <colorspace_fragment>`;
+}`;
 
 /** The injected source is the same literal for every item of one canvas space. */
 const PROGRAM_CACHE_KEY = 'godot-canvas-light';

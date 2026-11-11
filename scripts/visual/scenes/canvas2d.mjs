@@ -89,6 +89,9 @@ export const CANVAS_2D_SCENES = [
   // Lights with no texture add nothing and draw no placeholder (measured with `pnpm ref:godot`).
   { name: 'pointlight2d-untextured', file: 'unit-pointlight2d-untextured.tscn', mode: '2d' },
   { name: 'pointlight2d-blend', file: 'unit-pointlight2d-blend.tscn', mode: '2d' },
+  // Two Add items under one textured PointLight2D, over an opaque backdrop. Godot probes: (450,230)
+  // rgb(255,102,69) the first item alone, (520,300) rgb(255,255,115) both, (590,370) rgb(98,151,96) the second.
+  { name: 'canvas-item-additive-lit', file: 'unit-canvas-item-additive-lit.tscn', mode: '2d' },
   { name: 'pointlight2d-gradient', file: 'unit-pointlight2d-gradient.tscn', mode: '2d' },
   // Opaque cookie edges with fractional quad edges: the outer half texel fades, as Godot's atlas does.
   { name: 'pointlight2d-cookie-edge', file: 'unit-pointlight2d-cookie-edge.tscn', mode: '2d' },

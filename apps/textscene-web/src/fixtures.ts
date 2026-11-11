@@ -358,6 +358,11 @@ export const fixtures: Fixture[] = [
     "category": "Other"
   },
   {
+    "name": "Canvas Item Additive Lit",
+    "file": "unit-canvas-item-additive-lit.tscn",
+    "category": "Other"
+  },
+  {
     "name": "Canvas Item Sub Mul Alpha",
     "file": "unit-canvas-item-sub-mul-alpha.tscn",
     "category": "Other"

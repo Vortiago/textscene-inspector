@@ -42,6 +42,15 @@ describe('normalMappedLightingProps', () => {
     expect(linear.props.injection.cacheKey).not.toBe(compile(2).props.injection.cacheKey);
   });
 
+  it("lights in the numbers three's colour output writes, after it, with no transfer call", () => {
+    const { shader } = compile(2);
+    const encoded = shader.fragmentShader.indexOf('#include <colorspace_fragment>');
+    expect(encoded).toBeGreaterThan(-1);
+    expect(shader.fragmentShader.indexOf('gl_FragColor.rgb = canvasShaded(color)')).toBeGreaterThan(encoded);
+    expect(shader.fragmentShader).not.toContain('godotToSrgb');
+    expect(shader.fragmentShader).not.toContain('godotToLinear');
+  });
+
   it('sizes the light loop and its arrays to the lights kept apart', () => {
     const { shader } = compile(3);
     expect(shader.fragmentShader).toContain('#define APART_LIGHT_COUNT 3');
