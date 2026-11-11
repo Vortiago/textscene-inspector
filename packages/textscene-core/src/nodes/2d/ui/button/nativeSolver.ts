@@ -227,7 +227,7 @@ export function buttonNormalBox(n: ShareNode, theme: NativeTheme): StyleBoxFlatD
 }
 
 /** `icon_max_width`, which only Button registers: `0`, unclamped (`default_theme.cpp:172`). */
-export function buttonIconMaxWidth(constants: SolveNode['constants']): number {
+function buttonIconMaxWidth(constants: SolveNode['constants']): number {
   return constants.icon_max_width ?? 0;
 }
 
