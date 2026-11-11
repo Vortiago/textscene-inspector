@@ -17,6 +17,7 @@
     "test:unit": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
+    "test:godot-ref": "vitest run --config scripts/godot-ref/vitest.config.ts",
     "preview:test": "pnpm --filter @textscene/web-previewer preview",
     "lint": "eslint --cache .",
     "lint:fix": "eslint --cache --fix .",

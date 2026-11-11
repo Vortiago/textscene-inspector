@@ -12,7 +12,7 @@ import { ruleRegistry } from './RuleRegistry.js';
 import {
   allSourceFiles,
   declaredRuleNames,
-  nodesRoot,
+  nodesLabel,
   ruleFiles,
   srcLabel,
 } from './testing/ruleNameScrape.js';
@@ -60,16 +60,14 @@ describe('rule emits meta-guard', () => {
     // rule.
     const multiple = slices
       .filter((e) => e.names.length > 1)
-      .map((e) => `${e.file.slice(nodesRoot.length + 1)}: ${e.names.join(', ')}`);
+      .map((e) => `${nodesLabel(e.file)}: ${e.names.join(', ')}`);
     expect(multiple).toEqual([]);
   });
 
   it('sees a rule in every slice linter.ts, whichever spelling it uses', () => {
     // The guard above bites only on files it reads a rule out of. A factory
     // named differently escapes FACTORY_RULE_RE and leaves the inventory.
-    const invisible = slices
-      .filter((e) => e.names.length === 0)
-      .map((e) => e.file.slice(nodesRoot.length + 1));
+    const invisible = slices.filter((e) => e.names.length === 0).map((e) => nodesLabel(e.file));
     expect(invisible).toEqual([]);
   });
 

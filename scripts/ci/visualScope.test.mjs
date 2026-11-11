@@ -48,6 +48,10 @@ describe('needsVisualRun', () => {
     expect(needsVisualRun(['.github/actions/setup/action.yml'])).toBe(true);
   });
 
+  it('runs for a change to the image the capture jobs run in', () => {
+    expect(needsVisualRun(['.github/ci-image/Dockerfile'])).toBe(true);
+  });
+
   it('runs when one file of many renders', () => {
     expect(needsVisualRun(['README.md', 'packages/textscene-core/src/r3f/TscnCanvas.tsx'])).toBe(true);
   });
