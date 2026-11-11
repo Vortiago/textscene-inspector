@@ -1,5 +1,9 @@
 /** The golden-scene manifest: every entry sets only options the capture reads. */
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { BASELINE_DIR } from './baselinePath.mjs';
+import { REPO_ROOT } from '../repoRoot.mjs';
 import { GOLDEN_SCENES, SCENE_OPTIONS } from './scenes.mjs';
 import { CANVAS_2D_SCENES } from './scenes/canvas2d.mjs';
 import { CONTROL_TEXT_SCENES } from './scenes/controlText.mjs';
@@ -51,5 +55,20 @@ describe('the 2D chapters', () => {
 
     expect(misplaced).toEqual([]);
     expect(leftInCanvas).toEqual([]);
+  });
+});
+
+describe('the baselines', () => {
+  const baselineNames = readdirSync(join(REPO_ROOT, BASELINE_DIR))
+    .filter((file) => file.endsWith('.png'))
+    .map((file) => file.slice(0, -'.png'.length));
+  const sceneNames = GOLDEN_SCENES.map((scene) => scene.name);
+
+  it('has one for every golden scene, so a new entry cannot ship without its golden', () => {
+    expect(sceneNames.filter((name) => !baselineNames.includes(name))).toEqual([]);
+  });
+
+  it('belongs to a golden scene, so a baseline cannot outlive its list entry', () => {
+    expect(baselineNames.filter((name) => !sceneNames.includes(name))).toEqual([]);
   });
 });
