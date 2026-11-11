@@ -92,8 +92,7 @@ raw `Color()` member default, because `ColorPicker::ColorPicker()` calls
 
 - **Not matched** `self_modulate` tints every part of the picker, which in Godot are child
   Controls that it never reaches.
-- **Approximated** The minimum-size calculation floors the channel-label column at
-  `label_width` (10px), not the widest label's width, which the shape row's 290px floor
-  hides in every fixture.
+- **Approximated** The minimum size floors the channel-label column at `label_width`
+  (10px), which the shape row's floor (290px, or 256px for the wheel) hides in every fixture.
 - **Not drawn** Focus rings (`draw_focus_rect`/`draw_focus_circle`): a static previewer
   has no focus.

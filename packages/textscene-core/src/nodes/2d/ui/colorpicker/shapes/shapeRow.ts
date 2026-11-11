@@ -9,34 +9,19 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type { Rect2 } from '../../../../../godot/math/rect2';
-import type { EnumValue } from '../../../../../godot/classdb/enumNames';
-import { ColorPickerShape } from '../../../../../godot/scene/gui';
 import { ContainerAlignment } from '../../../../../godot/scene/container';
 import { SizeFlags } from '../../../../../godot/scene/control';
 import type { NativeTheme } from '../../../../../r3f/controls/native/nativeTheme';
 import { resortBoxContainer, type BoxChildInput } from '../../shared/boxContainerSolver';
-
-export type PickerShape = EnumValue<typeof ColorPickerShape>;
 
 /** `sv_width` and `sv_height` (`default_theme.cpp:1077-1078`), at scale 1. */
 const SV_SIZE = 256;
 /** `h_width` (`default_theme.cpp:1079`), at scale 1. */
 const SLIDER_WIDTH = 30;
 
-export type DrawnPickerShape = Exclude<PickerShape, typeof ColorPickerShape.SHAPE_NONE>;
-
 /** The row of a picker that draws a shape: `sv_height` tall. */
 export function shapeRowHeight(theme: Pick<NativeTheme, 'scale'>): number {
   return Math.round(SV_SIZE * theme.scale);
-}
-
-/**
- * `set_picker_shape` refuses a value outside 0 to 6 (`ERR_FAIL_INDEX`, `color_picker.cpp:854`), so
- * the constructor's `SHAPE_HSV_RECTANGLE` stays.
- */
-export function resolvePickerShape(value: number | undefined): PickerShape {
-  const isKnown = Number.isInteger(value) && value! >= 0 && value! <= ColorPickerShape.SHAPE_OK_HL_RECTANGLE;
-  return isKnown ? (value as PickerShape) : ColorPickerShape.SHAPE_HSV_RECTANGLE;
 }
 
 /** The controls a shape puts in `shape_container`, as its `_initialize_controls` adds them. */

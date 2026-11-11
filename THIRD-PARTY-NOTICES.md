@@ -240,18 +240,18 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/GradientMesh.tsx` | `scene/gui/color_picker_shape.cpp` and `scene/gui/color_mode.cpp` (the gradients the SV square, hue slider and channel sliders draw) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/LabelledText.tsx` | `scene/gui/label.cpp`, `scene/gui/line_edit.cpp` and `scene/gui/button.cpp` (where each aligns its text) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/TextTypeScriptIcon.tsx` | `scene/gui/color_picker.cpp` (`ColorPicker::_update_text_value`) and `scene/gui/button.cpp` (icon placement) |
-| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/shapeRow.ts` | `scene/gui/color_picker.cpp` (the `shape_container` HBoxContainer, `set_picker_shape`'s range check) and `scene/gui/color_picker_shape.cpp` (each shape's `_initialize_controls` and `update_theme`: the controls, their size flags and their `sv_width`/`h_width` minimum sizes) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/shapeRow.ts` | `scene/gui/color_picker.cpp` (the `shape_container` HBoxContainer) and `scene/gui/color_picker_shape.cpp` (each shape's `_initialize_controls` and `update_theme`: the controls, their size flags and their `sv_width`/`h_width` minimum sizes) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/shapeDrawing.ts` | `scene/gui/color_picker.cpp` (`_copy_normalized_to_hsv_okhsl`) and `scene/gui/color_picker_shape.cpp` (`draw_cursor`, `draw_circle_cursor`, the cursor clamp of the rectangles, the value sliders' line) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/shapeFragment.ts` | `scene/gui/color_picker_shape.cpp` (the `canvas_item` shader frame each shape's fill runs in) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/shapeFillProgram.ts` | `drivers/gles3/shaders/canvas.glsl` (how `COLOR` replaces the vertex colour and the canvas modulation follows) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/okColorGlsl.ts` | `thirdparty/misc/ok_color_shader.h` (MIT, Copyright (c) 2021 Björn Ottosson: `okhsl_to_srgb` and its helpers, as GLSL, copied verbatim) |
-| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/hsvRectangle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeRectangle`: its shader's fragment body, copied verbatim, and its draw functions) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/hsvRectangle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeRectangle`: its draw functions, which use no shader) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/hsvWheel.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeWheel`: its shader's fragment body, copied verbatim, and its draw functions) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/vhsCircle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeVHSCircle`: its shader's fragment body, copied verbatim, and its draw functions) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/okhslCircle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeOKHSLCircle`: its shader's fragment body, copied verbatim, and its draw functions) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/okHsRectangle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeOKHSRectangle`: its shader's fragment body, copied verbatim, and its draw functions) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/okHlRectangle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeOKHLRectangle`: its shader's fragment body, copied verbatim, and its draw functions) |
-| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/pickerShapes.ts` | `scene/gui/color_picker.cpp` (the `add_shape` order of the constructor) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/pickerShapes.ts` | `scene/gui/color_picker.cpp` (the `add_shape` order of the constructor, `set_picker_shape`'s range check) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/ShapeRow.tsx` | `scene/gui/color_picker_shape.cpp` (the draw order of the fill, the SV square, the cursors and the slider) |
 
 ### Reproduced values

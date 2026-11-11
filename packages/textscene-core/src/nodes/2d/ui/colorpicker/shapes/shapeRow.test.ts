@@ -1,33 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../../r3f/controls/native/nativeTheme';
-import { ColorPickerShape } from '../../../../../godot/scene/gui';
-import {
-  CIRCLE_LAYOUT,
-  RECTANGLE_LAYOUT,
-  WHEEL_LAYOUT,
-  resolvePickerShape,
-  shapeRowMinWidth,
-  shapeRowSplit,
-} from './shapeRow';
+import { CIRCLE_LAYOUT, RECTANGLE_LAYOUT, WHEEL_LAYOUT, shapeRowMinWidth, shapeRowSplit } from './shapeRow';
 
 const THEME = nativeTheme(1);
 /** The `shape_container` of a 300 px picker: 300 less `internal_margin`'s 4 px on each side. */
 const ROW = { x: 0, y: 0, w: 292, h: 256 };
-
-describe('resolvePickerShape', () => {
-  it('keeps every value from 0 to 6', () => {
-    expect(resolvePickerShape(6)).toBe(ColorPickerShape.SHAPE_OK_HL_RECTANGLE);
-  });
-
-  it('keeps the HSV rectangle for a value set_picker_shape refuses (color_picker.cpp:854)', () => {
-    expect(resolvePickerShape(7)).toBe(ColorPickerShape.SHAPE_HSV_RECTANGLE);
-    expect(resolvePickerShape(-1)).toBe(ColorPickerShape.SHAPE_HSV_RECTANGLE);
-  });
-
-  it('reads an omitted picker_shape as the HSV rectangle', () => {
-    expect(resolvePickerShape(undefined)).toBe(ColorPickerShape.SHAPE_HSV_RECTANGLE);
-  });
-});
 
 describe('shapeRowMinWidth', () => {
   it('is sv_width alone for the wheel', () => {

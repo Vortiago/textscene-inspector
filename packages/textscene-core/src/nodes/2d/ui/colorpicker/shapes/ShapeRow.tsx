@@ -133,7 +133,7 @@ function Cursor({
   renderOrder: number;
 }) {
   const backgroundTexture = useNodeIcon(
-    solveNode.icons.picker_cursor_bg,
+    cursor.hasBackground ? solveNode.icons.picker_cursor_bg : undefined,
     cursor.hasBackground ? COLOR_PICKER_CURSOR_BG_ICON : null
   );
   const ringTexture = useNodeIcon(solveNode.icons.picker_cursor, COLOR_PICKER_CURSOR_ICON);

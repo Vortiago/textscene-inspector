@@ -50,7 +50,7 @@ export type TextWidthMeasurer = (text: string) => Vector2;
 
 /**
  * The icon size of `btn_pick`, `btn_shape`, `btn_mode` and `menu_btn`:
- * `color_picker_pipette.svg`, `picker_shape_rectangle.svg` and `tabs_menu_hl.svg`
+ * `color_picker_pipette.svg`, the three `picker_shape_*.svg` and `tabs_menu_hl.svg`
  * are 16x16 (`scene/theme/icons/`).
  */
 const COLOR_PICKER_SAMPLE_ICON_SIZE = 16;

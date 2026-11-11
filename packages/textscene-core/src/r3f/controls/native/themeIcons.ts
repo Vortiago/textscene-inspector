@@ -395,7 +395,7 @@ export const COLOR_PICKER_SHAPE_ICONS = {
 } as const;
 export const COLOR_PICKER_BAR_ARROW_ICON = svgDataUrl(COLOR_PICKER_BAR_ARROW_B64);
 
-/** Every one of the four icons just above shares this authored size: 16x16, never rescaled by the project theme scale (same limitation as `SPIN_BOX_ARROW_ICON_SIZE`). */
+/** Every one of the six icons just above shares this authored size: 16x16, never rescaled by the project theme scale (same limitation as `SPIN_BOX_ARROW_ICON_SIZE`). */
 export const COLOR_PICKER_BUTTON_ICON_SIZE = 16;
 
 /** The cursor icons' own natural size: both 12x12. */

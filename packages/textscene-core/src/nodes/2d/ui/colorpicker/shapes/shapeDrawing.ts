@@ -11,6 +11,7 @@
 import type { Rect2 } from '../../../../../godot/math/rect2';
 import type { Rgba } from '../../../../../godot/math/math';
 import type { Vector2 } from '../../../../../godot/math/vector';
+import type { COLOR_PICKER_SHAPE_ICONS } from '../../../../../r3f/controls/native/themeIcons';
 import { inverted } from '../../../../../godot/math/color';
 import { clamp } from '../../../../../godot/math/math';
 import { extractHsv } from '../colorModes';
@@ -72,7 +73,7 @@ export interface ShapeDrawing {
 }
 
 /** The theme icon `btn_shape` shows for the shape (`color_picker_shape.h:108-227`). */
-export type ShapeIconName = 'shape_rect' | 'shape_rect_wheel' | 'shape_circle';
+export type ShapeIconName = keyof typeof COLOR_PICKER_SHAPE_ICONS;
 
 /** One `ColorPickerShape` subclass: its `btn_shape` icon, its controls and what it draws in them. */
 export interface ShapeVariant {
