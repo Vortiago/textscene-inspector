@@ -7,7 +7,7 @@ import type { TscnNode } from '../parser/types.js';
 import type { Transform3D } from '../godot/math/transform3d.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import type { LiveTree } from './liveSceneTree.js';
-import { NO_PATCHES, patchedNode, type NodePatches } from './nodePatch.js';
+import { NO_PATCHES, patchedNode, type PatchLookup } from './nodePatch.js';
 import { globalMatrix3D, matrixToTransform3D } from './nodeTreeTransforms.js';
 
 /**
@@ -18,7 +18,7 @@ import { globalMatrix3D, matrixToTransform3D } from './nodeTreeTransforms.js';
 export function liveGlobalTransform3D(
   tree: LiveTree,
   path: string,
-  placed: NodePatches = NO_PATCHES
+  placed: PatchLookup = NO_PATCHES
 ): Transform3D | null {
   const target = tree.at(path)?.step.node;
   if (!target || !descendsFromClass(target.type, 'Node3D')) return null;
@@ -26,7 +26,7 @@ export function liveGlobalTransform3D(
 }
 
 /** The node at each prefix of `path`, by prefix, each with the patch `placed` holds for it. */
-export function nodesOnTheWayTo(tree: LiveTree, path: string, placed: NodePatches): Map<string, TscnNode> {
+export function nodesOnTheWayTo(tree: LiveTree, path: string, placed: PatchLookup): Map<string, TscnNode> {
   const nodes = new Map<string, TscnNode>();
   let prefix = '';
   for (const name of path.split('/')) {

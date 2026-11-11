@@ -8,9 +8,9 @@ import type { TscnNode } from '../../../parser/types.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
-import type { NodePatch, NodePatches } from '../../../r3f/nodePatch.js';
+import type { NodePatch, PatchLookup } from '../../../r3f/nodePatch.js';
 import { globalMatrix3D, localMatrix3D, matrixToTransform3D } from '../../../r3f/nodeTreeTransforms.js';
-import { localTransform2D, transform2DBelow } from '../../../r3f/liveTransform2D.js';
+import { localTransform2D, transform2DOnCanvas } from '../../../r3f/liveTransform2D.js';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
@@ -54,20 +54,28 @@ const SPACE_3D: SpaceMath<Transform3D> = {
 
 const SPACE_2D: SpaceMath<Transform2DColumns> = {
   local: localTransform2D,
-  global: (path, chain) => transform2DBelow(path, null, chain),
+  global: transform2DOnCanvas,
   compose: composeSelected2D,
   localFromGlobal: localFromGlobal2D,
 };
 
-/** Moves `relay`'s target as `_update_remote` does, and whether Godot sets the target's transform. */
-export function moveTarget(relay: Push, tree: LiveTree, placed: Map<string, NodePatch>): boolean {
+/**
+ * Moves `relay`'s target as `_update_remote` does, and whether Godot sets the target's transform.
+ * The push reads the poses in `posed`, which holds what `placed` holds and the poses below it.
+ */
+export function moveTarget(
+  relay: Push,
+  tree: LiveTree,
+  placed: Map<string, NodePatch>,
+  posed: PatchLookup
+): boolean {
   if (!flagsAnyPart(relay.flags)) return pushSetsTarget(relay.space, relay.flags);
   if (relay.space === 'Node3D') {
-    placed.set(relay.target.path, { transform: newTargetLocal(relay, tree, placed, SPACE_3D) });
+    placed.set(relay.target.path, { transform: newTargetLocal(relay, tree, posed, SPACE_3D) });
   } else {
     // The parts Node2D reads from the matrix (`node_2d.cpp:127-133`), skew included.
     const { position, rotation, scale, skew } = transform2DDecompose(
-      newTargetLocal(relay, tree, placed, SPACE_2D)
+      newTargetLocal(relay, tree, posed, SPACE_2D)
     );
     placed.set(relay.target.path, { position, rotation, scale, skew });
   }
@@ -75,17 +83,17 @@ export function moveTarget(relay: Push, tree: LiveTree, placed: Map<string, Node
 }
 
 /**
- * The local transform `relay` gives its target, from the poses the pass has placed so far. With
+ * The local transform `relay` gives its target, from the poses the pass has posed so far. With
  * every part flagged the relay's pose is the target's, so the target's own is not read.
  */
 function newTargetLocal<T>(
   { link, target, flags }: Push,
   tree: LiveTree,
-  placed: NodePatches,
+  posed: PatchLookup,
   math: SpaceMath<T>
 ): T {
-  const relayChain = nodesOnTheWayTo(tree, link.path, placed);
-  const targetChain = nodesOnTheWayTo(tree, target.path, placed);
+  const relayChain = nodesOnTheWayTo(tree, link.path, posed);
+  const targetChain = nodesOnTheWayTo(tree, target.path, posed);
   const every = flagsEveryPart(flags);
   if (!flags.useGlobal) {
     const relayLocal = math.local(relayChain.get(link.path)!);
@@ -137,7 +145,7 @@ function localFromGlobal2D(
   parentPath: string | null,
   chain: Map<string, TscnNode>
 ): Transform2DColumns {
-  const parentGlobal = parentPath ? transform2DBelow(parentPath, null, chain) : TRANSFORM2D_IDENTITY;
+  const parentGlobal = parentPath ? transform2DOnCanvas(parentPath, chain) : TRANSFORM2D_IDENTITY;
   return multiplyTransform2D(affineInverseTransform2D(parentGlobal), global);
 }
 

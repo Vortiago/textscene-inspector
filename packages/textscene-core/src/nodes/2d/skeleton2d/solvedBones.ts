@@ -10,9 +10,10 @@ import { equalTransform2D, transform2DDecompose } from '../../../godot/math/tran
 import { storedTransform2D } from '../../../godot/math/real.js';
 import { decodeModificationStack } from '../../../resources/skeleton/skeletonmodificationstack2d/index.js';
 import { liveScenePassResults, type LiveScenePass } from '../../../r3f/liveScenePass.js';
+import type { TscnNode } from '../../../parser/types.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
-import { transform2DBelow } from '../../../r3f/liveTransform2D.js';
+import { transform2DOnCanvas, transform2DWithin } from '../../../r3f/liveTransform2D.js';
 import { NO_PATCHES, type NodePatch } from '../../../r3f/nodePatch.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
 import { buildStackScene, type PoseSource } from './buildStackScene.js';
@@ -27,10 +28,14 @@ const NO_FILES = (): undefined => undefined;
 
 /** Where the nodes of `tree` stand as the scene file stores them, each named by its live path. */
 function storedPoseSource(tree: LiveTree): PoseSource<string> {
-  const stored = (path: string) => nodesOnTheWayTo(tree, path, NO_PATCHES);
+  const chains = new Map<string, ReadonlyMap<string, TscnNode>>();
+  const stored = (path: string) => {
+    if (!chains.has(path)) chains.set(path, nodesOnTheWayTo(tree, path, NO_PATCHES));
+    return chains.get(path)!;
+  };
   return {
-    canvas: (path) => storedTransform2D(transform2DBelow(path, null, stored(path))),
-    within: (path, ancestor) => storedTransform2D(transform2DBelow(path, ancestor, stored(path))),
+    canvas: (path) => storedTransform2D(transform2DOnCanvas(path, stored(path))),
+    within: (path, ancestor) => storedTransform2D(transform2DWithin(path, ancestor, stored(path))),
     parent: parentPathOf,
   };
 }
@@ -56,14 +61,21 @@ function solveSkeleton(
   rigs: ReadonlyMap<string, Skeleton2DRig>,
   patches: Map<string, NodePatch>
 ): void {
-  const rig = rigs.get(path);
   const { modificationStack } = step.node.properties as Skeleton2DProperties;
+  if (modificationStack === undefined) return;
+  const rig = rigs.get(path);
   const stack = decodeModificationStack(modificationStack, step.scope, NO_FILES);
   if (!rig || !stack) return;
   const targets = stackTargets(stackNodePaths(stack), path, tree, rigs);
-  const anchorOf = new Map(anchorPathsOf(targets.values()).map((anchor) => [anchor, anchor]));
+  const anchors = new Set(anchorPathsOf(targets.values()));
   const bodies = [path, ...rig.bones.map((bone) => bone.path)];
-  const { scene, posed } = buildStackScene(targets, rig, bodies, anchorOf, storedPoseSource(tree));
+  const { scene, posed } = buildStackScene(
+    targets,
+    rig,
+    bodies,
+    (anchor) => (anchors.has(anchor) ? anchor : undefined),
+    storedPoseSource(tree)
+  );
   const cache = posed.slice(0, rig.bones.length).map(({ from }) => from);
   const { locals } = solveStack(scene, cache, stack);
   posed.forEach(({ node, from }, index) => {

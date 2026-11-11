@@ -6,7 +6,7 @@
 
 import type { RawNode, TscnNode } from '../parser/types';
 import { liveNodeChain, type LiveTreeContext } from './liveSceneTree';
-import { NO_PATCHES, type NodePatches } from './nodePatch';
+import { NO_PATCHES, type PatchLookup } from './nodePatch';
 import { parentLookup, type ParentLookup } from '../linter/parentType.js';
 import { transform2DOrigin } from '../godot/math/transform2d.js';
 import { resolveGlobalTransform2D, type Node2DPose } from '../nodes/canvasitem/shared/globalTransform2D.js';
@@ -21,7 +21,7 @@ function chainParentOf(chain: readonly RawNode[]): (child: RawNode) => ParentLoo
 }
 
 /** The pose each node of `chain`, which ends at the live path `path`, takes from the patches in `placed`. */
-function posesAlong(chain: readonly RawNode[], path: string, placed: NodePatches): Map<RawNode, Node2DPose> {
+function posesAlong(chain: readonly RawNode[], path: string, placed: PatchLookup): Map<RawNode, Node2DPose> {
   const names = path.split('/');
   const poses = new Map<RawNode, Node2DPose>();
   chain.forEach((node, index) => {
@@ -41,7 +41,7 @@ export function node2dWorldPosition(
   roots: readonly TscnNode[],
   ctx: LiveTreeContext,
   path: string,
-  placed: NodePatches = NO_PATCHES
+  placed: PatchLookup = NO_PATCHES
 ): { x: number; y: number } | null {
   const chain = liveNodeChain(path, roots, ctx);
   if (!chain) return null;

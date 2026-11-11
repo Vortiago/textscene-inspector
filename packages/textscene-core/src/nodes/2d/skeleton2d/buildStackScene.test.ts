@@ -45,7 +45,13 @@ describe('buildStackScene over drawn objects', () => {
       ['Bone/Holder/X/Y', y],
     ]);
 
-    const { scene, posed } = buildStackScene(targets, rig, [skeleton, bone], anchorOf, DRAWN_POSE_SOURCE);
+    const { scene, posed } = buildStackScene(
+      targets,
+      rig,
+      [skeleton, bone],
+      (path) => anchorOf.get(path),
+      DRAWN_POSE_SOURCE
+    );
 
     const outsideX = scene.nodes.get('X')!.outsideBone!;
     expect(scene.nodes.get('Y')!.outsideBone!.parent.outsideBone).toBe(outsideX);

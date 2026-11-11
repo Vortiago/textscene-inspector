@@ -221,7 +221,13 @@ export class Skeleton2DPose {
     { stack, targets }: BoundStack
   ): void {
     const anchorOf = new Map(this.anchorPaths.map((path, index) => [path, anchors[index]!]));
-    const { scene, posed } = buildStackScene(targets, this.rig, bodies, anchorOf, DRAWN_POSE_SOURCE);
+    const { scene, posed } = buildStackScene(
+      targets,
+      this.rig,
+      bodies,
+      (path) => anchorOf.get(path),
+      DRAWN_POSE_SOURCE
+    );
     const cache = posed.slice(0, this.rig.bones.length).map(({ from }) => from);
     this.solved = solveStack(scene, cache, stack);
     this.moved = movedBones(posed, this.solved.locals);
@@ -257,11 +263,11 @@ function movedBones(
     const { parent } = posed[index]!;
     return parent >= 0 && (isMoved[parent]! || hasMovedAncestor(parent));
   };
-  return posed.flatMap(({ node: object, from }, index) => {
+  return posed.flatMap(({ node, from }, index) => {
     if (!isMoved[index]) return [];
     const turn = multiplyTransform2D(affineInverseTransform2D(from), solved[index]!);
     return {
-      object,
+      object: node,
       turn: threeMatrixFromTransform2D(turn),
       isTopmost: !hasMovedAncestor(index),
       held: new THREE.Matrix4(),

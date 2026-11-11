@@ -14,7 +14,7 @@ import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { OUTLINE_POINT_COUNT } from '../bone2d/boneKite';
 import { liveScenePassResults } from '../../../r3f/liveScenePass';
-import { liveSolvedNodePatches } from '../../../r3f/liveNodePatches';
+import { solvedNodePatchesOf } from '../../../r3f/liveNodePatches';
 import { liveTreeOfText } from '../../../r3f/liveSceneTree.testkit';
 import { node2dWorldPosition } from '../../../r3f/node2dWorldTransform';
 import { solveSkeleton2DBones } from './solvedBones';
@@ -415,7 +415,7 @@ describe('the solve of the Live scene tree', () => {
     async (_name, tscn) => {
       const tree = liveTreeOfText(tscn);
       const moved = [...liveScenePassResults(solveSkeleton2DBones, tree).keys()];
-      const standing = liveScenePassResults(liveSolvedNodePatches, tree);
+      const standing = solvedNodePatchesOf(tree);
       const renderer = await render(tscn);
       startDraw(renderer);
 

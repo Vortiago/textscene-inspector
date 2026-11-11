@@ -21,22 +21,37 @@ export function localTransform2D(node: TscnNode): Transform2DColumns {
 }
 
 /**
- * The transform of the node at `path` within the node at `ancestorPath`, or within the canvas for a
- * null ancestor. `nodeByPath` holds the node at each prefix of `path`, as `nodesOnTheWayTo` makes it.
+ * The transform of the node at `path` on the canvas. `nodeByPath` holds the node at each prefix of
+ * `path`, as `nodesOnTheWayTo` makes it.
  */
-export function transform2DBelow(
+export function transform2DOnCanvas(
   path: string,
-  ancestorPath: string | null,
+  nodeByPath: ReadonlyMap<string, TscnNode>
+): Transform2DColumns {
+  return composedBelow(path, 0, nodeByPath);
+}
+
+/** The transform of the node at `path` within its ancestor at `ancestorPath`. */
+export function transform2DWithin(
+  path: string,
+  ancestorPath: string,
+  nodeByPath: ReadonlyMap<string, TscnNode>
+): Transform2DColumns {
+  return composedBelow(path, ancestorPath.split('/').length, nodeByPath);
+}
+
+/** The local transforms of the nodes of `path` from the segment `skipped` down, composed. */
+function composedBelow(
+  path: string,
+  skipped: number,
   nodeByPath: ReadonlyMap<string, TscnNode>
 ): Transform2DColumns {
   let result = TRANSFORM2D_IDENTITY;
   let prefix = '';
-  for (const segment of path.split('/')) {
+  path.split('/').forEach((segment, depth) => {
     prefix = prefix ? `${prefix}/${segment}` : segment;
-    const isAtOrAboveAncestor =
-      ancestorPath !== null && (ancestorPath === prefix || ancestorPath.startsWith(`${prefix}/`));
     const node = nodeByPath.get(prefix);
-    if (!isAtOrAboveAncestor && node) result = multiplyTransform2D(result, localTransform2D(node));
-  }
+    if (depth >= skipped && node) result = multiplyTransform2D(result, localTransform2D(node));
+  });
   return result;
 }

@@ -23,7 +23,14 @@ import {
   useLiveScenePassSelection,
   type LiveScenePass,
 } from './liveScenePass.js';
-import { NO_PATCHES, patchedNode, type NodePatch, type NodePatches } from './nodePatch.js';
+import {
+  NO_PATCHES,
+  layeredPatches,
+  patchedNode,
+  type NodePatch,
+  type NodePatches,
+  type PatchLookup,
+} from './nodePatch.js';
 
 /** The previous patch of each node of the live tree, at each live path, for one pass. */
 type PreviousPatches = (node: TscnNode) => Map<string, NodePatch>;
@@ -65,7 +72,7 @@ function mergedPatches(first: NodePatches, second: NodePatches): Map<string, Nod
 
 /** The RemoteTransform pass over `tree`, run once for both passes below, over the bones the stacks solve. */
 const relayPosesOf = perObject((tree: LiveTree) =>
-  applyRemoteTransforms(tree, liveScenePassResults(solveSkeleton2DBones, tree))
+  applyRemoteTransforms(tree, () => liveScenePassResults(solveSkeleton2DBones, tree))
 );
 
 /**
@@ -78,15 +85,16 @@ export const liveNodePatches: LiveScenePass<NodePatch> = (tree) => {
 };
 
 /**
- * {@link liveNodePatches} over the bones the modification stacks solve, for a reader that asks where
- * a node stands in the scene as Godot runs it, not what its file stores. The Cameras panel frames a
+ * The patches of `tree` over the bones the modification stacks solve, for a reader that asks where a
+ * node stands in the scene as Godot runs it, not what its file stores. The Cameras panel frames a
  * Camera2D with it.
  */
-export const liveSolvedNodePatches: LiveScenePass<NodePatch> = (tree) =>
-  mergedPatches(
+export function solvedNodePatchesOf(tree: LiveTree): PatchLookup {
+  return layeredPatches(
     liveScenePassResults(solveSkeleton2DBones, tree),
     liveScenePassResults(liveNodePatches, tree)
   );
+}
 
 /**
  * {@link liveNodePatches} with each mesh that draws behind its node moved to where Godot draws it.

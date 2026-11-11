@@ -43,13 +43,13 @@ export interface BuiltStackScene<Body> {
 
 /**
  * The scene of a stack whose targets are `targets`. `bodies` holds the skeleton, then its bones, and
- * `anchorOf` the node at each live path the stack reads that is no bone of the skeleton.
+ * `anchorOf` gives the node at each live path the stack reads that is no bone of the skeleton.
  */
 export function buildStackScene<Body>(
   targets: ReadonlyMap<string, StackTarget>,
   rig: Skeleton2DRig,
   bodies: readonly Body[],
-  anchorOf: ReadonlyMap<string, Body>,
+  anchorOf: (path: string) => Body | undefined,
   source: PoseSource<Body>
 ): BuiltStackScene<Body> {
   const sceneNodes = new SceneNodes(targets.values(), bodies, anchorOf, source);
@@ -61,6 +61,7 @@ export function buildStackScene<Body>(
     nodes,
   };
   const outside = outsideBonesOf(scene);
+  const outsideIndex = new Map(outside.map((bone, index) => [bone, index]));
   const posed: PosedBone<Body>[] = [
     ...rig.bones.map(({ parent }, index) => ({
       node: bodies[index + 1]!,
@@ -70,7 +71,7 @@ export function buildStackScene<Body>(
     ...outside.map((bone) => ({
       node: sceneNodes.nodeOf(bone),
       from: bone.local,
-      parent: bone.parent.outsideBone ? rig.bones.length + outside.indexOf(bone.parent.outsideBone) : -1,
+      parent: bone.parent.outsideBone ? rig.bones.length + outsideIndex.get(bone.parent.outsideBone)! : -1,
     })),
   ];
   return { scene, posed };
@@ -86,11 +87,11 @@ class SceneNodes<Body> {
   constructor(
     targets: Iterable<StackTarget>,
     private readonly bodies: readonly Body[],
-    private readonly anchorOf: ReadonlyMap<string, Body>,
+    private readonly anchorOf: (path: string) => Body | undefined,
     private readonly source: PoseSource<Body>
   ) {
     for (const target of targets) {
-      if (target.outsideBone) this.outsideAt.set(anchorOf.get(target.path)!, target);
+      if (target.outsideBone) this.outsideAt.set(anchorOf(target.path)!, target);
     }
   }
 
@@ -101,7 +102,7 @@ class SceneNodes<Body> {
     }
     let placement: StackPlacement | null = null;
     if (boneIndex >= 0) placement = { carrier: boneIndex, offset: TRANSFORM2D_IDENTITY };
-    else if (isNode2D) placement = this.placement(this.anchorOf.get(path), carrier);
+    else if (isNode2D) placement = this.placement(this.anchorOf(path), carrier);
     return { boneIndex, indexInSkeleton, placement, outsideBone: null };
   }
 
@@ -113,8 +114,8 @@ class SceneNodes<Body> {
     const made = this.outsideBones.get(target);
     if (made) return made;
     const { parentPath, reach } = target.outsideBone!;
-    const node = this.anchorOf.get(target.path)!;
-    const above = parentPath === null ? undefined : this.anchorOf.get(parentPath);
+    const node = this.anchorOf(target.path)!;
+    const above = parentPath === null ? undefined : this.anchorOf(parentPath);
     const bone: OutsideBone = {
       parent: this.placement(above, target.carrier),
       local: above ? this.source.within(node, above) : this.source.canvas(node),
