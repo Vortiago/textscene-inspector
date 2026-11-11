@@ -15,6 +15,14 @@ LABEL org.opencontainers.image.description="What the browser and Godot jobs of C
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# apt tries the mirrors of this list in order, so a build survives an outage of the Ubuntu
+# archive, as on 2026-11-11, when no runner could resolve archive.ubuntu.com. Every package is
+# signed, so a mirror cannot alter one.
+RUN printf '%s\tpriority:%s\n' \
+    http://archive.ubuntu.com/ubuntu/ 1 \
+    http://mirrors.edge.kernel.org/ubuntu/ 2 > /etc/apt/mirrors.txt \
+  && sed -i 's|^URIs: .*|URIs: mirror+file:/etc/apt/mirrors.txt|' /etc/apt/sources.list.d/ubuntu.sources
+
 # git: actions/checkout clones with it, and the vendor step of `pnpm install` applies patches.
 # zstd: actions/cache packs with it on a runner, and an entry packed another way never matches.
 # mesa-vulkan-drivers: lavapipe, the driver of `pnpm test:gpu` and of `pnpm ref:godot`.

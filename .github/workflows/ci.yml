@@ -81,8 +81,15 @@ jobs:
           if docker manifest inspect "$REF" > /dev/null; then
             echo "published=true" >> "$GITHUB_OUTPUT"
           fi
-      # A fork's token cannot publish. A fork's pull request that changes the image fails here,
-      # until someone with write access pushes its branch to this repository.
+      # A run for a Dependabot pull request publishes too: the permissions above raise its token,
+      # which is read-only by default. No setting raises a fork's token.
+      - name: Refuse to build an image that a fork's token cannot publish
+        if: steps.published.outputs.published != 'true' && github.event.pull_request.head.repo.fork
+        env:
+          REF: ${{ steps.image.outputs.ref }}
+        run: |
+          echo "::error::This pull request changes .github/ci-image/Dockerfile or the locked Playwright version, so its jobs need the image $REF, which a fork cannot publish to ghcr.io. A maintainer pushes this branch to the repository itself, where this job publishes the image."
+          exit 1
       - name: Build and publish the image
         if: steps.published.outputs.published != 'true'
         env:
