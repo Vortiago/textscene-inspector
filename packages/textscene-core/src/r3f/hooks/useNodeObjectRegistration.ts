@@ -1,3 +1,7 @@
+/**
+ * Registers the group of a node in the selection registry, for the nodes that mount their own wrapper.
+ */
+
 import { useCallback } from 'react';
 import type { Object3D } from 'three';
 import { useSelection } from '../contexts/SelectionContext.js';
