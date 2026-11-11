@@ -15,6 +15,7 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
+import { BUTTON_THEME_KEYS } from '../button/nativeSolver';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   fitIconSize,
@@ -31,12 +32,9 @@ import {
   resolveTextTheme,
   type ResolvedTextTheme,
   type TextThemeDefaults,
-  type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import type { CheckButtonIcons } from '../../../../r3f/controls/native/themeIcons';
 import { CHECK_BUTTON_ICON_NATURAL_SIZE } from '../../../../r3f/controls/native/themeIcons';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { CheckButtonProperties } from './types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -67,12 +65,6 @@ const CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
 /** CheckButton's own `font_disabled_color` default (`default_theme.cpp:345`). */
 const CHECKBUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
-const CHECKBUTTON_THEME_KEYS: Record<ToggleDrawState, TextThemeKeys> = {
-  normal: { sizeKey: 'font_size', colorKey: 'font_color' },
-  pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
-  disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
-};
-
 /** Resolves CheckButton's theme font size and colour for `state`: overrides, else the ancestor Theme chain, the theme default or CheckButton's own literal. */
 export function checkButtonTextTheme(
   n: SolveNode,
@@ -89,10 +81,10 @@ export function checkButtonTextTheme(
           ? CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR
           : CHECKBUTTON_DEFAULT_FONT_COLOR,
   };
-  return resolveTextTheme(n, props, CHECKBUTTON_THEME_KEYS[state], defaults);
+  return resolveTextTheme(n, props, BUTTON_THEME_KEYS[state], defaults);
 }
 
-type CheckButtonIconKey = keyof CheckButtonIcons;
+export type CheckButtonIconKey = keyof CheckButtonIcons;
 
 /**
  * `NOTIFICATION_DRAW` (`check_button.cpp:105-127`): `is_layout_rtl()` swaps in the `_mirrored`
@@ -204,24 +196,30 @@ export function checkButtonCheckVOffset(constants: SolveNode['constants']): numb
   return constants.check_v_offset ?? 0;
 }
 
+/** The toggle icon of the current draw state at its natural size, fitted to `icon_max_width`. */
+export function checkButtonFittedIconSize(
+  n: Pick<SolveNode, 'textureSlots' | 'constants' | 'rtl'>,
+  isDisabled: boolean
+): Vector2 {
+  return fitIconSize(checkButtonIconNaturalSize(n, isDisabled, n.rtl), checkButtonIconMaxWidth(n.constants));
+}
+
 /**
  * The width a wrapping label shapes at in `rect` (`button.cpp:428-432`): the rect less the margins, the toggle
  * and `h_separation`, which `_internal_margin` always reserves (`check_button.cpp:96-104`).
  */
 export function checkButtonLabelWrapWidthPx(
-  props: ButtonWrapProperties,
+  props: ButtonWrapProperties & { disabled?: boolean },
   rect: Rect2 | undefined,
   n: Pick<SolveNode, 'textureSlots' | 'constants' | 'rtl'>,
-  isDisabled: boolean,
   ctx: Pick<SolveContext, 'theme'>
 ): number {
-  return labelWrapWidthPx(props, rect, 2 * checkButtonMarginX(ctx), () => {
-    const iconSize = fitIconSize(
-      checkButtonIconNaturalSize(n, isDisabled, n.rtl),
-      checkButtonIconMaxWidth(n.constants)
-    );
-    return iconSize.x + checkButtonHSeparation(n.constants, ctx);
-  });
+  return labelWrapWidthPx(
+    props,
+    rect,
+    2 * checkButtonMarginX(ctx),
+    () => checkButtonFittedIconSize(n, props.disabled === true).x + checkButtonHSeparation(n.constants, ctx)
+  );
 }
 
 /**
@@ -235,37 +233,19 @@ export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const marginX = checkButtonMarginX(ctx);
   const marginY = checkButtonMarginY(ctx);
 
-  const text = props.text ?? '';
   const state = resolveCheckButtonDrawState(props);
   const { fontSizePx } = checkButtonTextTheme(n, props, state, ctx);
-  const fontMetrics = resolveNodeFontMetrics(n, CHECKBUTTON_THEME_FONT_KEY);
   // `button.cpp:492` reads `paragraph->get_size()`, the ceiled extent. The icon and separation add
   // outside the ceil (`check_button.cpp:66-77`). A wrapping label's rows follow the tentative width
   // (`button.cpp:429-432`). `clip_text`, a trimming overrun or autowrap zeroes the width
   // (`button.cpp:493-495`), so the separation below drops with it.
-  const textSize = shapedLabelMinimumTextSize(
-    text,
-    props,
-    ctx.measureText
-      ? {
-          fontSizePx,
-          fontMetrics,
-          bidi: controlBidiOptions(props, n),
-          boxWidthPx: checkButtonLabelWrapWidthPx(
-            props,
-            ctx.tentativeRect?.(n),
-            n,
-            props.disabled === true,
-            ctx
-          ),
-        }
-      : null
-  );
+  const textSize = shapedLabelMinimumTextSize(n, ctx, props, {
+    fontSizePx,
+    themeFontKey: CHECKBUTTON_THEME_FONT_KEY,
+    boxWidthPx: checkButtonLabelWrapWidthPx(props, ctx.tentativeRect?.(n), n, ctx),
+  });
 
-  const iconSize = fitIconSize(
-    checkButtonIconNaturalSize(n, state === 'disabled', n.rtl),
-    checkButtonIconMaxWidth(n.constants)
-  );
+  const iconSize = checkButtonFittedIconSize(n, state === 'disabled');
   const hSeparation = checkButtonHSeparation(n.constants, ctx);
 
   const width = 2 * marginX + textSize.x + (textSize.x > 0 ? hSeparation : 0) + iconSize.x;

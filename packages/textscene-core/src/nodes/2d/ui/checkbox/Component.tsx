@@ -17,13 +17,11 @@ import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useC
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import {
   checkBoxDrawnIconSize,
-  checkBoxIconMaxWidth,
+  checkBoxFittedIconSize,
   checkBoxHSeparation,
   checkBoxCheckVOffset,
   checkBoxLabelWrapWidthPx,
-  checkBoxIconNaturalSize,
   checkBoxTextTheme,
-  fitIconSize,
   layoutCheckBoxContent,
   resolveCheckBoxDrawState,
   resolveCheckBoxIconKey,
@@ -43,10 +41,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const iconKey = resolveCheckBoxIconKey(props);
   const iconTexture = useCheckBoxIcon(solveNode, iconKey);
   // Fitted, not rounded: CheckBox draws `_fit_icon_size` as it is (`check_box.cpp:61`, `:140-142`).
-  const iconSize = useMemo(
-    () => fitIconSize(checkBoxIconNaturalSize(solveNode), checkBoxIconMaxWidth(solveNode.constants)),
-    [solveNode]
-  );
+  const iconSize = useMemo(() => checkBoxFittedIconSize(solveNode), [solveNode]);
   const drawnIconSize = useMemo(() => checkBoxDrawnIconSize(solveNode, iconKey), [solveNode, iconKey]);
 
   const text = props.text ?? '';

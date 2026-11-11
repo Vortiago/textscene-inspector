@@ -8,30 +8,26 @@ import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
+import { useCheckButtonIcon } from './useCheckButtonIcon';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { isButtonAutowrapped } from '../../../../r3f/controls/native/buttonBase';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
-import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   checkButtonCheckVOffset,
   checkButtonHSeparation,
   checkButtonIconColor,
   checkButtonDrawnIconSize,
-  checkButtonIconMaxWidth,
-  checkButtonIconNaturalSize,
+  checkButtonFittedIconSize,
   checkButtonLabelWrapWidthPx,
   checkButtonMarginX,
   checkButtonMarginY,
   checkButtonTextTheme,
-  fitIconSize,
   layoutCheckButtonContent,
   resolveCheckButtonDrawState,
   resolveCheckButtonIconKey,
   tintColor,
-  CHECK_BUTTON_ICON_THEME_NAME,
   CHECKBUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
@@ -47,16 +43,9 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
   const clippingPlanes = useControlClipPlanes();
 
   const iconKey = resolveCheckButtonIconKey(props, solveNode.rtl);
-  const iconTexture = useNodeIcon(
-    solveNode.icons[CHECK_BUTTON_ICON_THEME_NAME[iconKey]],
-    CHECK_BUTTON_ICONS[iconKey]
-  );
+  const iconTexture = useCheckButtonIcon(solveNode, iconKey);
   const iconSize = useMemo(
-    () =>
-      fitIconSize(
-        checkButtonIconNaturalSize(solveNode, props.disabled === true, solveNode.rtl),
-        checkButtonIconMaxWidth(solveNode.constants)
-      ),
+    () => checkButtonFittedIconSize(solveNode, props.disabled === true),
     [solveNode, props.disabled]
   );
   const drawnIconSize = useMemo(() => checkButtonDrawnIconSize(solveNode, iconKey), [solveNode, iconKey]);
@@ -79,7 +68,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
     text,
     fontSizePx,
     bidi,
-    boxWidthPx: checkButtonLabelWrapWidthPx(props, rect, solveNode, props.disabled === true, { theme }),
+    boxWidthPx: checkButtonLabelWrapWidthPx(props, rect, solveNode, { theme }),
   });
 
   const content = useMemo(

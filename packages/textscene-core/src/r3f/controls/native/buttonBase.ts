@@ -11,7 +11,9 @@
  */
 
 import { multiplyModulate } from '../../canvasItemModulate';
-import type { SolveNode } from './solveTree';
+import type { ShareNode, SolveNode } from './solveTree';
+import type { SolveContext } from './solverRegistry';
+import { resolveNodeFontMetrics } from './text/resolveNodeFontMetrics';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
 import { drawnLinesInBox, textParagraphLineShiftPx } from './text/lineDrawClip';
@@ -31,7 +33,7 @@ import {
   type TextBufferTrimOptions,
   type TextClipProperties,
 } from './text/textOverrun';
-import type { TextBidiOptions } from './text/textBidiOptions';
+import { controlBidiOptions, type BidiProperties, type TextBidiOptions } from './text/textBidiOptions';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { type Rgba } from '../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
@@ -511,12 +513,24 @@ export function labelMinimumTextSize(
 
 /** The text's contribution to a CheckBox-style minimum size: its wrapped layout through {@link labelMinimumTextSize}, or none without text or a measurer. */
 export function shapedLabelMinimumTextSize(
-  text: string,
-  props: TextClipProperties & ButtonWrapProperties,
-  options: Omit<ButtonLabelShapeOptions, 'autowrapMode' | 'autowrapTrimFlags'> | null
+  n: ShareNode,
+  ctx: Pick<SolveContext, 'measureText'>,
+  props: TextClipProperties & ButtonWrapProperties & BidiProperties & { text?: string },
+  label: { fontSizePx: number; themeFontKey: string; boxWidthPx: number }
 ): Vector2 {
+  const text = props.text ?? '';
+  const { fontSizePx, themeFontKey, boxWidthPx } = label;
+  // Resolved for empty text too: an unresolvable font warns once per solve, as the painter's does.
+  const fontMetrics = resolveNodeFontMetrics(n, themeFontKey);
   return labelMinimumTextSize(
-    options && text.length > 0 ? shapeWrappedButtonLabel(text, props, options) : null,
+    ctx.measureText && text.length > 0
+      ? shapeWrappedButtonLabel(text, props, {
+          fontSizePx,
+          fontMetrics,
+          bidi: controlBidiOptions(props, n),
+          boxWidthPx,
+        })
+      : null,
     props
   );
 }

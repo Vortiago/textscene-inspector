@@ -29,7 +29,7 @@ interface ButtonLabelProps extends Pick<
   /** The paragraph's bidi options: a set RTL direction draws a trimmed fill right to left. */
   bidi: TextBidiOptions;
   /** The label wraps ({@link isButtonAutowrapped}), so no row is trimmed. */
-  isWrapped?: boolean;
+  isWrapped: boolean;
 }
 
 /** @canonical A Button-family label drawn in its paragraph box, each line shifted and cut */
@@ -38,7 +38,7 @@ export function ButtonLabel({
   box,
   overrunBehavior,
   bidi,
-  isWrapped = false,
+  isWrapped,
   ...runProps
 }: ButtonLabelProps) {
   const { fontSizePx } = runProps;
