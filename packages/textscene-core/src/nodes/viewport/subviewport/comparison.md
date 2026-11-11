@@ -58,6 +58,12 @@ With `use_hdr_2d`, a lit item adds each light to its linear albedo and clamps no
 
 A 3D material reads the same linear values with no decode, and a value above 1 reaches the tonemap. The top quad shows the HDR target and the bottom quad the sRGB one.
 
+## Empty viewport
+
+<!-- compare: image=unit-subviewport-empty status=done fixture=unit-subviewport-empty.tscn -->
+
+A sub-viewport that holds nothing, or holds only non-drawing nodes, still draws its target, and the target holds the clear colour. Godot clears every viewport it draws to the project's default clear colour, or to transparent under `transparent_bg` (`renderer_viewport.cpp:371`). The fixture shows a container, a transparent one, a viewport that holds a Timer, a stretched container, and a TextureRect that shows a loose viewport. The Control pass publishes each target, as it does for a viewport that holds Controls.
+
 ## Update mode
 
 <!-- compare: image=unit-sub-viewport-update-mode status=done fixture=unit-sub-viewport-update-mode.tscn -->

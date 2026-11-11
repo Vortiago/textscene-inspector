@@ -43,10 +43,22 @@ current = true
 mesh = SubResource("BoxMesh_1")
 `;
 
+const EMPTY_VIEWPORT = (clearMode: number) => `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="View" type="SubViewport" parent="."]
+size = Vector2i(32, 32)
+render_target_update_mode = 4
+render_target_clear_mode = ${clearMode}
+`;
+
 /** The draw into the `View` pass in each frame. */
 async function viewDrawsByFrame(tscn: string, frames: number): Promise<PassDraw[]> {
   const perFrame = await framesOf(tscn, frames);
-  return perFrame.map((draws) => draws.find((draw) => draw.scene.name === 'View::offscreen')!);
+  return perFrame.map((draws) =>
+    draws.find((draw) => /^View::(offscreen|control-raster)$/.test(draw.scene.name))!
+  );
 }
 
 const ALWAYS = 0;
@@ -67,6 +79,26 @@ describe('a canvas SubViewport and its clear mode', () => {
   it('clears the first render only under ONCE', async () => {
     const draws = await viewDrawsByFrame(CANVAS_VIEWPORT(ONCE), 3);
     expect(draws.map((draw) => draw.clearsColor)).toEqual([true, false, false]);
+  });
+});
+
+describe('a SubViewport with no content and its clear mode', () => {
+  it('draws its target as the project clear colour under ALWAYS', async () => {
+    const draws = await viewDrawsByFrame(EMPTY_VIEWPORT(ALWAYS), 2);
+    expect(draws.map((draw) => [draw.clearsColor, draw.clearColor])).toEqual([
+      [true, '4d4d4d'],
+      [true, '4d4d4d'],
+    ]);
+  });
+
+  it('clears no colour under NEVER', async () => {
+    const draws = await viewDrawsByFrame(EMPTY_VIEWPORT(NEVER), 2);
+    expect(draws.map((draw) => draw.clearsColor)).toEqual([false, false]);
+  });
+
+  it('clears the first render only under ONCE', async () => {
+    const draws = await viewDrawsByFrame(EMPTY_VIEWPORT(ONCE), 2);
+    expect(draws.map((draw) => draw.clearsColor)).toEqual([true, false]);
   });
 });
 
