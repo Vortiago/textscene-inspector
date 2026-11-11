@@ -6,14 +6,20 @@
 import { describe, expect, it } from 'vitest';
 
 import { TscnParser } from '../../../parser/TscnParser';
-import { resolveStandaloneViewportSubtree, viewportContent as contentUnder } from './viewportContent';
+import { standaloneViewportContent } from './viewportContent';
 import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
+import type { TscnExternalResource, TscnNode } from '../../../parser/types';
 import '../../../r3f/nodes/index';
 import { sourcesOver, sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
 import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
-const viewportContent = (node: Parameters<typeof contentUnder>[0]) => contentUnder(node, true);
-const viewportContentKind = (node: Parameters<typeof contentUnder>[0]) => viewportContent(node).kind;
+/** The content of a viewport whose sub-scenes come from `cache`, none by default. */
+const viewportContent = (
+  node: TscnNode,
+  externalResources: readonly TscnExternalResource[] = [],
+  cache?: CachedSceneSource
+) => standaloneViewportContent(node, externalResources, sourcesOver(cache));
+const viewportContentKind = (...args: Parameters<typeof viewportContent>) => viewportContent(...args).kind;
 
 /** The `Viewport` node of a parsed one-viewport scene. */
 function viewport(body: string) {
@@ -332,7 +338,7 @@ describe('viewportContent — Controls beside the drawn kind', () => {
   });
 });
 
-describe('resolveStandaloneViewportSubtree', () => {
+describe('standaloneViewportContent: instanced sub-scenes', () => {
   /** `[gd_scene]` with one instanced child, plus the sub-scene it points at. */
   function scene(subScene: string, extra = '') {
     const parsed = new TscnParser().parse(`[gd_scene format=3]
@@ -360,9 +366,7 @@ ${extra}`);
 `);
     // The parsed graph alone still guesses 3D.
     expect(viewportContentKind(node)).toBe('3d');
-    expect(
-      viewportContentKind(resolveStandaloneViewportSubtree(node, externalResources, sourcesOver(cache)))
-    ).toBe('2d');
+    expect(viewportContentKind(node, externalResources, cache)).toBe('2d');
   });
 
   it('classifies an untouched instance of a 3D sub-scene as 3d', () => {
@@ -372,12 +376,10 @@ ${extra}`);
 
 [node name="Body" type="MeshInstance3D" parent="."]
 `);
-    expect(
-      viewportContentKind(resolveStandaloneViewportSubtree(node, externalResources, sourcesOver(cache)))
-    ).toBe('3d');
+    expect(viewportContentKind(node, externalResources, cache)).toBe('3d');
   });
 
-  it('ends at a sub-scene that instances itself, keeping the repeated instance childless', () => {
+  it('ends at a sub-scene that instances itself', () => {
     const { node, externalResources, cache } = scene(`[gd_scene format=3]
 
 [ext_resource type="PackedScene" path="res://sub.tscn" id="1"]
@@ -388,13 +390,7 @@ ${extra}`);
 
 [node name="AndAgain" parent="." instance=ExtResource("1")]
 `);
-    const instanced = resolveStandaloneViewportSubtree(node, externalResources, sourcesOver(cache))
-      .children[0]!;
-    expect(instanced.type).toBe('Node2D');
-    expect(instanced.children.map((child) => [child.name, child.children.length])).toEqual([
-      ['Again', 0],
-      ['AndAgain', 0],
-    ]);
+    expect(viewportContentKind(node, externalResources, cache)).toBe('2d');
   });
 
   it('classifies an untouched instance of a Control sub-scene as dom', () => {
@@ -404,16 +400,12 @@ ${extra}`);
 
 [node name="Title" type="Label" parent="."]
 `);
-    expect(
-      viewportContentKind(resolveStandaloneViewportSubtree(node, externalResources, sourcesOver(cache)))
-    ).toBe('dom');
+    expect(viewportContentKind(node, externalResources, cache)).toBe('dom');
   });
 
-  it('leaves the subtree alone while the sub-scene is still loading', () => {
+  it('keeps the 3d assumption while the sub-scene is still loading', () => {
     const { node, externalResources } = scene('[gd_scene format=3]\n\n[node name="X" type="Node2D"]\n');
-    const resolved = resolveStandaloneViewportSubtree(node, externalResources, sourcesOver());
-    expect(resolved.children[0]?.type).toBe('Node');
-    expect(viewportContentKind(resolved)).toBe('3d');
+    expect(viewportContentKind(node, externalResources)).toBe('3d');
   });
 
   /**
@@ -447,9 +439,7 @@ ${extra}`);
 [node name="TileRoot" type="TileMapLayer"]
 `);
     const cache = sceneCacheOver({ 'res://level.tscn': level, 'res://tile.tscn': tile });
-    expect(
-      viewportContentKind(resolveStandaloneViewportSubtree(node, outer.externalResources, sourcesOver(cache)))
-    ).toBe('2d');
+    expect(viewportContentKind(node, outer.externalResources, cache)).toBe('2d');
   });
 
   it('does not descend into a nested sub-viewport', () => {
@@ -474,10 +464,7 @@ ${extra}`);
         externalResources: loaded.externalResources,
       }),
     };
-    const resolved = resolveStandaloneViewportSubtree(node, parsed.externalResources, sourcesOver(cache));
-    // Untouched: the nested viewport's own child is still the raw instance node.
-    expect(resolved.children[0]?.children[0]?.type).toBe('Node');
-    expect(viewportContentKind(resolved)).toBe('empty');
+    expect(viewportContentKind(node, parsed.externalResources, cache)).toBe('empty');
   });
 });
 

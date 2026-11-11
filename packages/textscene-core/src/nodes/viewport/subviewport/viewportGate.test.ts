@@ -4,9 +4,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../../../parser/TscnParser';
-import { projectTreeSettings, type ProjectSettings } from '../../../parser/projectSettingsParser';
+import type { ProjectSettings } from '../../../parser/projectSettingsParser';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
-import { contextOver } from '../../../r3f/liveSceneTree.testkit';
+import { ROOT_EMBEDS_NO_WINDOWS, sourcesOver } from '../../../r3f/liveSceneTree.testkit';
 import { SubViewportUpdateMode } from '../../../godot/scene/viewport';
 import { resolveGate, viewportGateAt } from './viewportGate';
 import '../../../r3f/nodes/index';
@@ -16,7 +16,11 @@ const { DISABLED, ONCE, WHEN_VISIBLE, ALWAYS } = SubViewportUpdateMode;
 /** The live tree of `source` under `settings`, which default to no project: the root embeds its windows. */
 function treeOf(source: string, settings: ProjectSettings | null = null) {
   const scene = new TscnParser().parse(`[gd_scene format=3]\n\n${source}`);
-  return liveTreeOf(scene.nodes, { ...contextOver(scene, {}), project: projectTreeSettings(settings) });
+  return liveTreeOf(scene.nodes, {
+    externalResources: scene.externalResources,
+    internalResources: scene.internalResources,
+    ...sourcesOver(undefined, settings),
+  });
 }
 
 /** The gate of the viewport at `path` with no animated `visible` over it. */
@@ -178,7 +182,7 @@ gui_embed_subwindows = true
   });
 
   it('names the window above under a root that embeds none, where its authored value stands', () => {
-    const tree = treeOf(WINDOWS, { 'display/window/subwindows/embed_subwindows': 'false' });
+    const tree = treeOf(WINDOWS, ROOT_EMBEDS_NO_WINDOWS);
     expect(resolved(tree, 'Root/Host/Inner', ALWAYS).enclosingPath).toBe('Root/Host');
   });
 });

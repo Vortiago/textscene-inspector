@@ -20,7 +20,8 @@ import { parentPathOf } from '../../../utils/nodePath.js';
 import { isViewportBoundary } from './viewportBoundary.js';
 import { viewportContentAt } from './viewportContent.js';
 import type { SubViewportProperties } from './types.js';
-import { viewportGateAt, windowEmbedderPathAt, type ViewportGate } from './viewportGate.js';
+import { viewportGateAt, type ViewportGate } from './viewportGate.js';
+import { windowEmbedderPathAt } from './windowEmbedder.js';
 import { viewportThemeOwners, type ThemeOwner } from '../../windows/window/themeOwners.js';
 
 /** The viewport a window embeds in, whose visible size limits the window's height. */

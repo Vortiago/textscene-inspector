@@ -13,7 +13,7 @@ import {
   type LiveTreeSources,
   type SceneScope,
 } from './liveSceneTree';
-import { projectTreeSettings } from '../parser/projectSettingsParser';
+import { projectTreeSettings, type ProjectSettings } from '../parser/projectSettingsParser';
 import { NOTHING_CACHED } from './cacheSources';
 
 /** The collapsed node at `path`, or null when a segment does not resolve. */
@@ -21,14 +21,22 @@ export function liveNodeAt(path: string, roots: readonly TscnNode[], ctx: LiveTr
   return resolveLiveEntry(path, roots, ctx)?.node ?? null;
 }
 
+/** The settings of a project whose root window embeds no windows, so each window below it is native. */
+export const ROOT_EMBEDS_NO_WINDOWS: ProjectSettings = {
+  'display/window/subwindows/embed_subwindows': 'false',
+};
+
 /**
- * The sources a live-tree builder reads: `sceneCache` and the tree settings of no project, which
- * are Godot's defaults.
+ * The sources a live-tree builder reads: `sceneCache` and the tree settings of `settings`, which
+ * default to no project and so to Godot's defaults.
  *
  * @canonical In tests, the scene cache and project tree settings of a live-tree builder
  */
-export function sourcesOver(sceneCache: CachedSceneSource = NOTHING_CACHED): LiveTreeSources {
-  return { sceneCache, project: projectTreeSettings(null) };
+export function sourcesOver(
+  sceneCache: CachedSceneSource = NOTHING_CACHED,
+  settings: ProjectSettings | null = null
+): LiveTreeSources {
+  return { sceneCache, project: projectTreeSettings(settings) };
 }
 
 /**

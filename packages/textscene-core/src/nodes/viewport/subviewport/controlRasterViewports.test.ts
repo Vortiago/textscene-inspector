@@ -223,7 +223,7 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 
 /**
  * In a parsed subtree an `instance=` child is an untyped childless `Node`, which
- * `viewportContent` reads as 3D. Both owners of a registry key classify the
+ * the viewport's content reads as 3D. Both owners of a registry key classify the
  * subtree with its instances resolved, or a key goes unpublished and its
  * consumer stays blank.
  */

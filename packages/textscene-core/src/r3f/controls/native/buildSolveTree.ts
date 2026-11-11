@@ -73,8 +73,8 @@ import {
 } from '../../liveSceneTree';
 import { NOTHING_CACHED, recordingReads } from '../../cacheSources';
 import { scopeOf } from '../../../resources/liveNode';
+import { embedsSubwindows } from '../../../nodes/viewport/subviewport/windowEmbedder';
 import {
-  embedsSubwindows,
   isEmbeddableWindow,
   isEmbeddedWindow,
   isViewportBoundary,
@@ -391,9 +391,7 @@ function buildForest(
     project: projectTreeSettings(projectSettings),
   };
   const tree = liveTreeOf(nodes, ctx);
-  const { rootEmbedsSubwindows } = ctx.project;
-  // The root window answers for a forest on its canvas, and a viewport for a forest on its own.
-  const embedsWindows = viewport ? embedsSubwindows(viewport, rootEmbedsSubwindows) : rootEmbedsSubwindows;
+  const embedsWindows = embedsSubwindows(tree, viewport);
   const textureCache = loader ? recordingReads(loader.textures, recordRead) : NOTHING_CACHED;
   const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const themeCache = loader ? recordingReads(loader.themes, recordRead) : NOTHING_CACHED;
@@ -647,6 +645,7 @@ function buildForest(
     ancestry: Ancestry,
     descend: (ancestry: Ancestry) => WalkResult[]
   ): WalkResult {
+    if (!embedsWindows) return NOTHING_WALKED;
     const { step, path } = link;
     const live = step.node;
     const hidden = ancestry.ancestorHidden || hiddenNodePaths.has(path);
@@ -656,7 +655,7 @@ function buildForest(
     if (isEmbeddableWindow(live)) {
       windows.push(windowSolveNode(live, path, step.scope, themeChain, hidden, ancestry.inheritedRtl));
     }
-    if (embedsSubwindows(live, rootEmbedsSubwindows)) return NOTHING_WALKED;
+    if (embedsSubwindows(tree, live)) return NOTHING_WALKED;
     return descendForWindows(step, descend, {
       ...ancestry,
       themeChain,
@@ -952,7 +951,7 @@ function buildForest(
   // (`canvas_item.cpp:265-267`).
   return {
     tree: [...walked.nodes, ...walked.hoisted],
-    windows: embedsWindows ? windows : [],
+    windows,
     pendingScenes: [...pendingScenes.values()],
     pendingTextures: [...pendingTextures],
     pendingResourceFiles: [...pendingResourceFiles],

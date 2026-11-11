@@ -1,6 +1,7 @@
 /** Godot 4.6.3's Window facts a scene's properties carry. */
 
 import { enumNamesByValue } from '../classdb/enumNames.js';
+import { boolSlotValue } from '../variant/variantBool.js';
 import { findInClassChain } from '../classdb/classBaseTypes.js';
 import { type Vector2, vector2Max } from '../math/vector.js';
 
@@ -117,14 +118,17 @@ export function windowClassDefaults(type: string): WindowClassDefaults {
 }
 
 /**
- * The `visible` line a scene writes before its `force_native` line, or undefined where none is, so
- * the class default stands. The loader sets the properties in file order, and `set_force_native`
- * refuses a change while the window is visible (`window.cpp:1384-1386`).
+ * Whether the window is visible when the loader reads its `force_native` line: the `visible` a line
+ * above it wrote, or the class default. The loader sets the properties in file order, and
+ * `set_force_native` refuses a change on a visible window (`window.cpp:1384-1386`).
  */
-export function visibleWrittenBeforeForceNative(properties: Record<string, string>): string | undefined {
+export function isVisibleWhenForceNativeIsRead(type: string, properties: Record<string, string>): boolean {
   const keys = Object.keys(properties);
   const visibleAt = keys.indexOf('visible');
-  return visibleAt >= 0 && visibleAt < keys.indexOf('force_native') ? properties.visible : undefined;
+  const isVisibleWrittenAbove = visibleAt >= 0 && visibleAt < keys.indexOf('force_native');
+  return (
+    boolSlotValue(isVisibleWrittenAbove ? properties.visible : undefined) ?? windowClassDefaults(type).visible
+  );
 }
 
 /** `window.h:105,126`: `size = Size2i(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE)`. */

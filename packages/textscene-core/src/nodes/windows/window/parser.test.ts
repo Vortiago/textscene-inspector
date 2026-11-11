@@ -37,26 +37,14 @@ describe('parseWindow', () => {
     });
   });
 
-  describe('force_native, which the setter refuses on a visible window (window.cpp:1384-1386)', () => {
-    it('drops it on a Window that is visible when the line is read', () => {
-      expect(parseWindow(heading('Window'), { force_native: 'true' }).force_native).toBe(false);
-      expect(parseWindow(heading('Popup'), { visible: 'true', force_native: 'true' }).force_native).toBe(
-        false
-      );
-    });
+  it('drops a force_native the setter refuses on a visible window (window.cpp:1384-1386)', () => {
+    expect(parseWindow(heading('Window'), { force_native: 'true' }).force_native).toBe(false);
+  });
 
-    it('keeps it where an earlier line hides the window, or the class starts hidden', () => {
-      expect(parseWindow(heading('Window'), { visible: 'false', force_native: 'true' }).force_native).toBe(
-        true
-      );
-      expect(parseWindow(heading('Popup'), { force_native: 'true' }).force_native).toBe(true);
-    });
-
-    it('drops it where the line that hides the window comes after it', () => {
-      expect(parseWindow(heading('Window'), { force_native: 'true', visible: 'false' }).force_native).toBe(
-        false
-      );
-    });
+  it('keeps a force_native written while the window is hidden', () => {
+    expect(parseWindow(heading('Window'), { visible: 'false', force_native: 'true' }).force_native).toBe(
+      true
+    );
   });
 
   it('hides a Popup and drops its border unless the scene says otherwise', () => {

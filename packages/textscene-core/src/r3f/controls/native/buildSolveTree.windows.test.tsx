@@ -11,7 +11,7 @@ import { useBuildSolveTree, useBuildViewportTree } from './buildSolveTree';
 import { themeResource } from './testing/themeResource';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { withProject } from '../../testing/ProjectFixture';
+import { PROJECT_ROOT_EMBEDS_NO_WINDOWS, withProject } from '../../testing/ProjectFixture';
 import '../../nodes/index';
 import '../index';
 
@@ -25,6 +25,9 @@ function node(
 }
 
 const NO_OWNERS = [] as const;
+
+/** A window that authors `gui_embed_subwindows`, above another window. */
+const HOST = node('Host', 'Window', { gui_embed_subwindows: true }, [node('Inner', 'Window')]);
 
 function windowPaths(nodes: TscnNode[]): string[] {
   const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
@@ -62,21 +65,19 @@ describe('useBuildSolveTree — embedded windows', () => {
   });
 
   it('reaches the windows inside a window whose authored gui_embed_subwindows is reset on entering the tree', () => {
-    const nodes = [node('Host', 'Window', { gui_embed_subwindows: true }, [node('Inner', 'Window')])];
-    expect(windowPaths(nodes)).toEqual(['Host', 'Host/Inner']);
+    expect(windowPaths([HOST])).toEqual(['Host', 'Host/Inner']);
   });
 
   describe('under a root window that embeds none', () => {
-    const wrapper = withProject('[display]\n\nwindow/subwindows/embed_subwindows=false\n');
-    const host = node('Host', 'Window', { gui_embed_subwindows: true }, [node('Inner', 'Window')]);
+    const wrapper = withProject(PROJECT_ROOT_EMBEDS_NO_WINDOWS);
 
     it('lists no window for the root, since each is native', async () => {
-      const { result } = renderHook(() => useBuildSolveTree([host], [], []), { wrapper });
+      const { result } = renderHook(() => useBuildSolveTree([HOST], [], []), { wrapper });
       await waitFor(() => expect(result.current.windows).toEqual([]));
     });
 
     it('lists the windows of a window that authors gui_embed_subwindows, which stands there', async () => {
-      const { result } = renderHook(() => useBuildViewportTree(host, [], [], NO_OWNERS), { wrapper });
+      const { result } = renderHook(() => useBuildViewportTree(HOST, [], [], NO_OWNERS), { wrapper });
       await waitFor(() =>
         expect(result.current.windows.map((window) => window.path)).toEqual(['Host/Inner'])
       );
@@ -136,8 +137,7 @@ describe('useBuildViewportTree — the Controls a viewport draws', () => {
   });
 
   it('lists no window for a window under an embedding root, whatever it authors (`window.cpp:1534-1537`)', () => {
-    const host = node('Host', 'Window', { gui_embed_subwindows: true }, [node('Inner', 'Window')]);
-    const { result } = renderHook(() => useBuildViewportTree(host, [], [], NO_OWNERS));
+    const { result } = renderHook(() => useBuildViewportTree(HOST, [], [], NO_OWNERS));
 
     expect(result.current.windows).toEqual([]);
   });

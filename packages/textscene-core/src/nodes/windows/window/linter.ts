@@ -20,8 +20,8 @@ import {
   isWindowSizeKey,
   replayWindowSize,
   isMaxSizeSet,
+  isVisibleWhenForceNativeIsRead,
   validMaxSize,
-  visibleWrittenBeforeForceNative,
   windowClassDefaults,
   type WindowSizeWrite,
 } from '../../../godot/scene/window.js';
@@ -139,9 +139,7 @@ function checkContentScaleFloored(node: RuleContext['node'], rawProps: Record<st
 
 function checkForceNativeRefused(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
   if (boolSlotValue(rawProps.force_native) !== true) return [];
-  const isVisibleAtWrite =
-    boolSlotValue(visibleWrittenBeforeForceNative(rawProps)) ?? windowClassDefaults(node.type).visible;
-  if (!isVisibleAtWrite) return [];
+  if (!isVisibleWhenForceNativeIsRead(node.type, rawProps)) return [];
   return [
     armDiagnostic(
       arms.forceNativeRefusedWhileVisible,

@@ -19,7 +19,7 @@ import { type CanvasItemMaterialProperties } from '../resources/materials/canvas
 import type { Rgba } from '../godot/math/math.js';
 import { CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial.js';
 
-/** The sub-scenes the loader holds, which is none before a scene graph exists, for each project's tree settings. */
+/** A context with no sub-scene, as before a scene graph exists, for each project's tree settings. */
 const noScenesIn = perObject((project: ProjectTreeSettings): LiveTreeContext => ({
   externalResources: [],
   internalResources: [],

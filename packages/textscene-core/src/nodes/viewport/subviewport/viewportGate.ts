@@ -9,7 +9,8 @@ import { isShownCanvasNode } from '../../../r3f/canvasScopes.js';
 import { isCanvasLayerType } from '../../../r3f/canvasPaintOrder.js';
 import type { LiveTree } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
-import { embedsSubwindows, isEmbeddableWindow, isViewportBoundary } from './viewportBoundary.js';
+import { isEmbeddableWindow, isViewportBoundary } from './viewportBoundary.js';
+import { windowEmbedderPathAt } from './windowEmbedder.js';
 
 /** A node the visibility climb of a SubViewportContainer reads, with the `visible` the scene authors. */
 interface VisibilityLink {
@@ -66,17 +67,6 @@ export function resolveGate(gate: ViewportGate, animatedVisible: ReadonlyMap<str
     updateMode: isVisible ? SubViewportUpdateMode.ALWAYS : SubViewportUpdateMode.DISABLED,
     enclosingPath,
   };
-}
-
-/** `Window::get_embedder` (`window.cpp:1400-1415`): the path of the nearest viewport above `path` that embeds subwindows. */
-export function windowEmbedderPathAt(tree: LiveTree, path: string): string | null {
-  const { rootEmbedsSubwindows } = tree.ctx.project;
-  for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
-    const aboveNode = tree.at(above)?.step.node;
-    if (aboveNode && isViewportBoundary(aboveNode.type) && embedsSubwindows(aboveNode, rootEmbedsSubwindows))
-      return above;
-  }
-  return null;
 }
 
 /**

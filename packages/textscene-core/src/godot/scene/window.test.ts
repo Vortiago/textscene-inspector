@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   centredWindowPosition,
   embeddedWindowSize,
+  isVisibleWhenForceNativeIsRead,
   replayWindowSize,
   windowClassDefaults,
   WINDOW_CONTENT_SCALE_ASPECT_NAMES,
@@ -187,5 +188,31 @@ describe('centredWindowPosition', () => {
 
   it('truncates toward zero for a window larger than its embedder', () => {
     expect(centredWindowPosition({ x: 1152, y: 648 }, { x: 1201, y: 649 })).toEqual({ x: -24, y: 0 });
+  });
+});
+
+describe('isVisibleWhenForceNativeIsRead', () => {
+  it('is true for a Window, which starts visible', () => {
+    expect(isVisibleWhenForceNativeIsRead('Window', { force_native: 'true' })).toBe(true);
+  });
+
+  it('is false for a Popup, which starts hidden', () => {
+    expect(isVisibleWhenForceNativeIsRead('Popup', { force_native: 'true' })).toBe(false);
+  });
+
+  it('is false where a line above hides the window', () => {
+    expect(isVisibleWhenForceNativeIsRead('Window', { visible: 'false', force_native: 'true' })).toBe(false);
+  });
+
+  it('is true where a line above shows a Popup', () => {
+    expect(isVisibleWhenForceNativeIsRead('Popup', { visible: 'true', force_native: 'true' })).toBe(true);
+  });
+
+  it('leaves out a visible line below, which the loader reads later', () => {
+    expect(isVisibleWhenForceNativeIsRead('Window', { force_native: 'true', visible: 'false' })).toBe(true);
+  });
+
+  it('keeps the class default for a visible value no BOOL slot converts', () => {
+    expect(isVisibleWhenForceNativeIsRead('Window', { visible: 'maybe', force_native: 'true' })).toBe(true);
   });
 });
