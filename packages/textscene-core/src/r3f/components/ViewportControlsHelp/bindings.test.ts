@@ -4,6 +4,7 @@
  * a resolver change without a table change fails, and the reverse too.
  */
 import { describe, expect, it } from 'vitest';
+import { freelookDirectionOf } from '../../editorKeyBindings';
 import { resolveNavMode, resolveWheelMode } from '../../godotEditorCursor';
 import { resolveTouchMode } from '../../pointerGesture';
 import { controlsFor, type Binding, type BindingOutcome } from './bindings';
@@ -14,6 +15,12 @@ const OUTCOME_LABEL: Record<string, string> = {
   pan: 'Pan',
   zoom: 'Zoom',
   freelook: 'Freelook',
+  forward: 'forward',
+  back: 'back',
+  left: 'left',
+  right: 'right',
+  up: 'up',
+  down: 'down',
   null: 'Select',
 };
 
@@ -21,10 +28,28 @@ const OUTCOME_LABEL: Record<string, string> = {
 function resolve(binding: Binding): BindingOutcome {
   const trigger = binding.trigger;
   if (!trigger) throw new Error('no trigger');
-  if (trigger.kind === 'drag') return resolveNavMode(trigger.button, trigger.mods ?? {});
+  if (trigger.kind === 'drag') {
+    return resolveNavMode(trigger.button, trigger.mods ?? {}, trigger.projection);
+  }
+  if (trigger.kind === 'flightKeys') return theOneDirectionOf(trigger.codes);
   if (trigger.kind === 'wheel') return resolveWheelMode(trigger.mods ?? {});
   return resolveTouchMode(trigger.pointers);
 }
+
+/** Every key of a flight row must fly the same way, or the row's one label is wrong for some key. */
+function theOneDirectionOf(codes: readonly string[]): BindingOutcome {
+  const directions = new Set(codes.map((code) => freelookDirectionOf(code) ?? null));
+  if (directions.size !== 1)
+    throw new Error(`expected one direction for ${codes.join(', ')}, got ${directions.size}`);
+  return [...directions][0]!;
+}
+
+/** Every key code a flight key could plausibly sit on: letters, arrows, Space and the modifiers. */
+const ALL_KEY_CODES = [
+  ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((letter) => `Key${letter}`),
+  ...['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Enter', 'Tab'],
+  ...['ControlLeft', 'ControlRight', 'ShiftLeft', 'ShiftRight', 'AltLeft', 'AltRight'],
+];
 
 const TRIGGERED = (['2D', '3D'] as const).flatMap((mode) =>
   controlsFor(mode).groups.flatMap((group) =>
@@ -52,5 +77,13 @@ describe('the advertised bindings match the resolvers', () => {
     }
     const mouse = controlsFor('3D').groups.find((group) => group.device === 'Mouse');
     expect(mouse?.bindings.every((binding) => binding.trigger)).toBe(true);
+  });
+
+  it('lists every flight key, so a new key cannot fly unadvertised', () => {
+    const advertised = TRIGGERED.flatMap(({ binding }) =>
+      binding.trigger?.kind === 'flightKeys' ? binding.trigger.codes : []
+    );
+    const flying = ALL_KEY_CODES.filter((code) => freelookDirectionOf(code) !== undefined);
+    expect([...advertised].sort()).toEqual(flying.sort());
   });
 });

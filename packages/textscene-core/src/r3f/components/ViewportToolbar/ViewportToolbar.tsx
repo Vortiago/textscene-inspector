@@ -1,5 +1,5 @@
 /**
- * The controls over the viewport: Reset Camera in 3D, Screenshot, the 3D/2D
+ * The controls over the viewport: Reset Camera and Freelook in 3D, Screenshot, the 3D/2D
  * switch, and the display toggles in `<DisplayMenu>`. It writes through
  * `useViewportMode()`. Screenshot downloads a PNG through the handler that the
  * active canvas's `ScreenshotBridge` registers.
@@ -15,7 +15,7 @@ import {
   VIEWPORT_MODE_STORAGE_KEY,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
-import { useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
+import { useFreelookState, useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { writePersisted } from '../../hooks/usePersistedState.js';
 import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
@@ -28,6 +28,11 @@ import { DisplayMenu, type DisplayToggle } from './DisplayMenu.js';
 import styles from './ViewportToolbar.module.css';
 
 const MODES: ViewportMode[] = ['3D', '2D'];
+
+const FREELOOK_TITLE =
+  'Fly through the scene: the mouse looks around and W A S D move (Shift+F). Escape leaves. Perspective view only.';
+/** Godot ignores navigation while it previews a camera, and the button says so, as its preview buttons do. */
+const FREELOOK_PREVIEW_TITLE = 'Freelook is off during a camera preview';
 
 /** Everything `buildDisplayToggles` needs, so a test needs no DOM. */
 interface DisplayToggleState {
@@ -182,6 +187,8 @@ export function ViewportToolbar() {
     setShowPerformance,
   } = useViewportMode();
   const camera = useOptionalViewportActions();
+  const freelook = useFreelookState();
+  const isPreviewing = camera != null && camera.previewedCameraPath !== null;
   const hierarchy = useOptionalHierarchy();
   const sceneLoaded = Boolean(hierarchy?.sceneGraph);
 
@@ -245,6 +252,20 @@ export function ViewportToolbar() {
           title="End any camera preview and return the editor camera to the default view"
         >
           Reset Camera
+        </button>
+      )}
+      {/* Present once a 3D canvas has registered its freelook, so it hides in 2D too. */}
+      {mode === '3D' && camera && freelook && (
+        <button
+          type="button"
+          className={freelook.isToggled ? `${styles.freelookButton} ${styles.active}` : styles.freelookButton}
+          onClick={camera.toggleFreelook}
+          disabled={isPreviewing}
+          aria-pressed={freelook.isToggled}
+          data-testid="freelook-button"
+          title={isPreviewing ? FREELOOK_PREVIEW_TITLE : FREELOOK_TITLE}
+        >
+          Freelook
         </button>
       )}
       {camera && (

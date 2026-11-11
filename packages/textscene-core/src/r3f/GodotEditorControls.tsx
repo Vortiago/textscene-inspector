@@ -1,24 +1,28 @@
 /**
  * `<GodotEditorControls>`: Godot's 3D editor navigation, first-party so it matches
  * exactly. Middle-drag orbits, with shift pans and with ctrl zooms. The wheel zooms,
- * shift+wheel pans, right-drag freelooks. Alt+left-drag orbits and alt+shift+left pans.
- * Plain left-drag belongs to viewport selection (`useViewportSelection`), as in Godot.
+ * shift+wheel pans, right-drag freelooks and Shift+F toggles freelook. Alt+left-drag orbits and
+ * alt+shift+left pans. Plain left-drag belongs to viewport selection (`useViewportSelection`),
+ * as in Godot.
  */
 
 import { useThree } from '@react-three/fiber';
 import { useEffect, useMemo } from 'react';
-// Event translation is in `useEditorNavigation.ts`. Its maths: `godotEditorCursor.ts`
-// (Godot's own), `pointerGesture.ts` (browser facts: fingers, `deltaMode`) and
-// `zoomToPointer.ts` (the one departure, ADR-0029). Camera state: `EditorControlsHandle.ts`.
+// Event translation is in `useEditorNavigation.ts` and `useFreelook.ts`. Its maths:
+// `godotEditorCursor.ts` (Godot's own), `pointerGesture.ts` and `pointerLock.ts` (browser facts)
+// and `zoomToPointer.ts` (a departure, ADR-0029). Camera state: `EditorControlsHandle.ts`.
+import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { EditorControlsHandle } from './EditorControlsHandle.js';
+import { Freelook } from './freelook.js';
 import { useEditorNavigation } from './useEditorNavigation.js';
+import { useFreelook } from './useFreelook.js';
 
 export { EditorControlsHandle } from './EditorControlsHandle.js';
 
-// Keys: W/A/S/D/Q/E fly during freelook (Shift sprints), Numpad 1/3/7 snap to front,
-// right and top (Ctrl for the opposite face), Numpad 5 toggles orthographic. F belongs
-// to `<FrameSelectedShortcut>`. No damping: Godot's `orbit_inertia` defaults to 0, and
-// a camera that stops dead settles at once for the capture harnesses.
+// Keys: W/A/S/D/Q/E fly during freelook (Shift is faster, Alt slower), Numpad 1/3/7 snap to
+// front, right and top (Ctrl for the opposite face), Numpad 5 toggles orthographic. F belongs
+// to `<FrameSelectedShortcut>`. No damping: Godot's `orbit_inertia` and `freelook_inertia`
+// default to 0, and a camera that stops dead settles at once for the capture harnesses.
 export function GodotEditorControls() {
   const gl = useThree((s) => s.gl);
   const size = useThree((s) => s.size);
@@ -53,7 +57,15 @@ export function GodotEditorControls() {
   // Touch has no Godot equivalent, so it follows the 3D-viewer convention: one finger
   // orbits, a one-finger tap selects (by distance travelled), two fingers pan and pinch
   // zooms. Alt+left is Godot's "Emulate 3 Button Mouse", always on, for trackpads.
-  useEditorNavigation(gl, handle, invalidate, get);
+  const freelook = useMemo(() => new Freelook(), []);
+  useEditorNavigation(gl, handle, freelook, invalidate, get);
+  const freelookControl = useFreelook(gl, handle, freelook, invalidate, get);
+
+  // The toolbar is outside the `<Canvas>`, so it reaches the toggle through the viewport actions.
+  const registerFreelook = useOptionalViewportActions()?.registerFreelook;
+  useEffect(() => {
+    return registerFreelook?.(freelookControl);
+  }, [registerFreelook, freelookControl]);
 
   return null;
 }

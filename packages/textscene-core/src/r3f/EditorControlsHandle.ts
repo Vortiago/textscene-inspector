@@ -6,7 +6,7 @@
 
 import type { Camera as R3FCamera } from '@react-three/fiber';
 import * as THREE from 'three';
-import { editorCameraPosition } from './godotEditorCamera.js';
+import { editorCameraPosition, editorCameraProjection } from './godotEditorCamera.js';
 import {
   cursorCameraPosition,
   cursorFromCamera,
@@ -14,6 +14,7 @@ import {
   orthographicHeight,
   DEGENERATE_DISTANCE,
   type EditorCursor,
+  type Projection,
   type ZoomRange,
 } from './godotEditorCursor.js';
 
@@ -114,9 +115,14 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     this.camera.updateMatrixWorld();
   }
 
-  /** Back to the pose Godot's editor opens every scene at, in perspective. */
+  /**
+   * Back to the pose and the projection Godot's editor opens every scene at. A framing narrows
+   * the clip planes to its node, and the opening pose is not on that node.
+   */
   reset(): void {
     this.usePerspective();
+    Object.assign(this.perspectiveCamera, editorCameraProjection());
+    this.perspectiveCamera.updateProjectionMatrix();
     this.target.set(0, 0, 0);
     this.camera.position.set(...editorCameraPosition());
     this.update();
@@ -124,6 +130,10 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
 
   get isOrthographic(): boolean {
     return this.camera === this.orthographicCamera;
+  }
+
+  get projection(): Projection {
+    return this.isOrthographic ? 'orthographic' : 'perspective';
   }
 
   /** Numpad 5. */

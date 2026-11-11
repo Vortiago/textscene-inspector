@@ -19,7 +19,7 @@ import { editorHelperUserData } from './editorHelpers.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
 import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls.js';
 import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
-import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
+import { editorCameraPosition, editorCameraProjection } from './godotEditorCamera.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
 import { installShaderPatches } from './shaderPatch/installShaderPatches.js';
@@ -128,8 +128,8 @@ export function TscnCanvas() {
       {/* Without `shadows`, a `shadow_enabled = true` light casts nothing. `percentage`
           selects `THREE.PCFShadowMap`, the soft-shadow type three 0.187 draws. `soft`
           selects the removed `PCFSoftShadowMap`, which three falls back from with a warning. */}
-      {/* Godot's editor opens every scene at the same fixed orbit and 70-degree
-          FOV (godotEditorCamera.ts). Framing is F there and opt-in here. */}
+      {/* Godot's editor opens every scene at the same fixed orbit, 70-degree FOV and
+          clip planes (godotEditorCamera.ts). Framing is F there and opt-in here. */}
       {/* Without `localClippingEnabled`, three ignores a `clippingPlanes` array.
           A Control-only SubViewport sampled by a 3D scene draws through this
           renderer, so its ScrollContainer clips only because the flag is set here
@@ -139,7 +139,7 @@ export function TscnCanvas() {
           before the tone curve as Godot's does. `flat`: the compositor applies every curve, so three
           adds none of its own, where R3F would apply ACES. */}
       <Canvas
-        camera={{ position: editorCameraPosition(), fov: EDITOR_CAMERA_FOV }}
+        camera={{ position: editorCameraPosition(), ...editorCameraProjection() }}
         shadows="percentage"
         gl={{ localClippingEnabled: true, antialias: false }}
         flat
