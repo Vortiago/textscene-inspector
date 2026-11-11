@@ -1,10 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { planChecks } from './prePushPlan.mjs';
 
-const plan = (changed, deleted = [], isNegativeFixture = () => false, testsBeside = () => []) =>
-  planChecks({ changed, deleted, isNegativeFixture, testsBeside, hasEngine: () => false }).map((command) =>
-    command.join(' ')
-  );
+/** A file the real-Godot tests read, in these cases: any file of the harness folder. */
+const isEngineTestInput = (path) => path.startsWith('scripts/godot-ref/');
+
+const plan = (
+  changed,
+  deleted = [],
+  isNegativeFixture = () => false,
+  testsBeside = () => [],
+  hasEngine = false
+) =>
+  planChecks({
+    changed,
+    deleted,
+    isNegativeFixture,
+    testsBeside,
+    isEngineTestInput,
+    hasEngine: () => hasEngine,
+  }).map((command) => command.join(' '));
+
+/** The plan on a host that has, or lacks, Godot and `xvfb-run`. */
+const planOnHost = (hasEngine, changed, deleted, testsBeside) =>
+  plan(changed, deleted, undefined, testsBeside, hasEngine);
 
 /** A negative-fixture predicate over the one fixture `edge-a.tscn`, wherever it sits. */
 const isEdgeA = (path) => path.split('/').at(-1) === 'edge-a.tscn';
@@ -36,18 +54,8 @@ const EXPORT_SCAN = 'pnpm exec vitest run scripts/testOnlyExports.test.mjs';
 
 const ENGINE_TESTS = 'pnpm test:godot-ref';
 
-/** The plan on a host where `hasEngine` answers for Godot and `xvfb-run`. */
-const planOnHost = (hasEngine, changed, deleted = [], testsBeside = () => []) =>
-  planChecks({
-    changed,
-    deleted,
-    isNegativeFixture: () => false,
-    testsBeside,
-    hasEngine: () => hasEngine,
-  }).map((command) => command.join(' '));
-
 describe('planChecks', () => {
-  it('runs the real-Godot tests last for a change under scripts/godot-ref/ on a host with the engine', () => {
+  it('runs the real-Godot tests last for a change to a file they read, on a host with the engine', () => {
     expect(planOnHost(true, ['scripts/godot-ref/run.mjs']).at(-1)).toBe(ENGINE_TESTS);
     expect(planOnHost(true, ['scripts/godot-ref/scenes/preview-lighting.tscn']).at(-1)).toBe(ENGINE_TESTS);
     expect(planOnHost(true, [], ['scripts/godot-ref/lavapipe.mjs'])).toEqual([ENGINE_TESTS]);
@@ -57,7 +65,7 @@ describe('planChecks', () => {
     expect(planOnHost(false, ['scripts/godot-ref/run.mjs'])).not.toContain(ENGINE_TESTS);
   });
 
-  it('leaves the real-Godot tests out for a change outside scripts/godot-ref/ (edge case)', () => {
+  it('leaves the real-Godot tests out for a change to a file they do not read (edge case)', () => {
     expect(planOnHost(true, ['scripts/godot-reference.mjs', 'scripts/visual/run.mjs'])).not.toContain(
       ENGINE_TESTS
     );

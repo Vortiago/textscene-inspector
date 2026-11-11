@@ -16,12 +16,8 @@ import {
   getFullValidatorKeys,
   unsweptListErrors,
 } from './testing/propertyGrammarParityCheck.js';
-import {
-  extractNodeType,
-  findLinterParserDirs,
-  nodesRoot,
-  sliceLabel,
-} from './testing/propertyGrammarParityScan.js';
+import { extractNodeType, findLinterParserDirs, nodesRoot } from './testing/propertyGrammarParityScan.js';
+import { nodesLabel } from './testing/ruleNameScrape.js';
 import { UNSWEPT_SLICES } from './testing/propertyGrammarParityUnswept.js';
 import './index.js';
 
@@ -254,7 +250,7 @@ describe('property-grammar parity guard', () => {
       listed: UNSWEPT_SLICES,
       linterParserSlices: findLinterParserDirs(nodesRoot)
         .filter((dir) => extractNodeType(readFileSync(join(dir, 'linterParser.ts'), 'utf8')))
-        .map(sliceLabel),
+        .map(nodesLabel),
       sweptSlices: collectSlices().map(({ slice }) => slice),
     });
     expect(errors, errors.join('\n')).toEqual([]);

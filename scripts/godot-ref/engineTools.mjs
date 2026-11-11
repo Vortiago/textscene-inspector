@@ -5,6 +5,9 @@
 
 import { spawnSync } from 'node:child_process';
 
+/** A test file that renders through real Godot. No project of the unit run includes one. */
+export const ENGINE_TEST_FILE = /\.engine\.test\.mjs$/;
+
 const ENGINE_TOOLS = ['godot', 'xvfb-run'];
 
 const isOnPath = (tool) => spawnSync('which', [tool]).status === 0;

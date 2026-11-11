@@ -73,8 +73,9 @@ and prints exact pixels. It is a tool, not a gate.
 - Measure, never derive. Put a measurement in the pull request, never in a comparison sheet.
 - `pnpm test:godot-ref` runs the tests that render through real Godot
   (`scripts/godot-ref/*.engine.test.mjs`). It takes about 6 minutes, and `pnpm test:unit` and CI
-  never run it. Run it after a change under `scripts/godot-ref/`. The pre-push hook does this on
-  a host that has `godot` and `xvfb-run`.
+  never run it. Run it after a change to a file the tests read: a module they import, a file of
+  `scripts/godot-ref/`, or a fixture they render. The pre-push hook does this on a host that has
+  `godot` and `xvfb-run`.
 - Every capture that measures against Godot launches through `launchGodotComparisonBrowser`, so a
   screenshot is the drawing buffer. Never launch one another way. It rasterises on lavapipe, as
   `pnpm ref:godot` does, and fails without `mesa-vulkan-drivers`.
@@ -119,9 +120,9 @@ status:
 
 Never drop a registration to mark a type undrawn.
 
-With `--linter`, a slice that reuses a base parser gets a line in `UNSWEPT_SLICES`
-(`linter/testing/propertyGrammarParityUnswept.ts`), and so does a `--tier`. Delete the line when
-the slice gets a parser of its own.
+With `--linter`, a slice that reuses a base parser of `linter/testing/baseParserSubpaths.ts` gets
+a line in `UNSWEPT_SLICES` (`linter/testing/propertyGrammarParityUnswept.ts`), and so does a
+`--tier`. Delete the line when the slice gets a parser of its own.
 
 The Godot parent comes from ClassDB (`pnpm nodes:base-types`), never by hand. A class the
 pinned ClassDB lacks goes in the `UNCATALOGUED` table of `godot/classdb/nodeBaseTypes.ts`, with the

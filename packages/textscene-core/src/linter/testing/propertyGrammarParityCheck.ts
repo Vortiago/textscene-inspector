@@ -14,6 +14,7 @@ import { nodeComponentRegistry } from '../../r3f/NodeComponentRegistry.js';
 import '../../r3f/nodes/index.js';
 import { validatorRegistry } from '../ValidatorRegistry.js';
 import { ASYMMETRY_ALLOWLIST } from './propertyGrammarParityAllowlist.js';
+import { nodesLabel } from './ruleNameScrape.js';
 import {
   extractNodeType,
   findParserFile,
@@ -21,7 +22,6 @@ import {
   getInheritedParserProps,
   nodesRoot,
   scrapeParserReads,
-  sliceLabel,
 } from './propertyGrammarParityScan.js';
 
 /** Validator keys registered directly for a node type or any of its ancestors. */
@@ -56,7 +56,7 @@ export function collectSlices(): SliceInfo[] {
     if (!nodeType) continue; // a shared-helper file, with no registerAll
 
     cachedSlices.push({
-      slice: sliceLabel(dir),
+      slice: nodesLabel(dir),
       nodeType,
       parserProps: new Set([
         ...scrapeParserReads(findParserFile(dir)!),

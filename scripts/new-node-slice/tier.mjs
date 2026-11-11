@@ -33,7 +33,7 @@ export function scaffoldTier({ typeName, category, rule, dryRun }) {
   const files = tierFiles({ typeName, heirs, toSrc, rule, parentLinterImport });
 
   // A tier registers no parser, so the parity guard cannot see it.
-  const wirings = [wireUnsweptSlice(sliceRel.slice('nodes/'.length))];
+  const wirings = [wireUnsweptSlice(sliceRel)];
   if (rule) {
     wirings.push(
       wireImport(

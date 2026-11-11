@@ -5,11 +5,12 @@
 
 import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, resolve } from 'node:path';
+import { BASE_TYPE_TO_PARSER_SUBPATH } from '../../packages/textscene-core/src/linter/testing/baseParserSubpaths.ts';
 import { descendsFrom, parentLinterParser, parentParser } from './ancestry.mjs';
 import { BASES, GEOMETRY_INSTANCE_BASE } from './bases.mjs';
 import { checkChain } from './catalogChecks.mjs';
-import { CORE_SRC, REPO_ROOT, fail } from './paths.mjs';
+import { CORE_SRC, NODES_ROOT, REPO_ROOT, fail } from './paths.mjs';
 import { drawsFiles } from './templates/drawsSlice.mjs';
 import { fixtureFor } from './templates/fixture.mjs';
 import { linterFiles } from './templates/linterSlice.mjs';
@@ -54,6 +55,11 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
     propsType: base.propsType,
     typesPath: `${toBase}/types`,
   });
+  // The parity guard sweeps a slice by the parser it registers, so the scaffold asks the same table.
+  const reusedParserSubpath = relative(NODES_ROOT, resolve(sliceDir, `${reusedParser.importPath}.ts`));
+  const isBaseParser = Object.values(BASE_TYPE_TO_PARSER_SUBPATH).includes(
+    reusedParserSubpath.replaceAll('\\', '/')
+  );
   // Resolved once for the generated import and the plan line, since it walks the whole nodes/ tree.
   const parentLinterImport = linter
     ? parentLinterParser(typeName, chain, sliceDir, `${toBase}/linterParser.js`)
@@ -106,7 +112,7 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
         `'../nodes/${category}/`
       )
     );
-    if (reusesBaseParser) wirings.push(wireUnsweptSlice(`${category}/${lower}`));
+    if (reusesBaseParser && isBaseParser) wirings.push(wireUnsweptSlice(sliceRel));
   }
 
   const imageBasename = fixtureName.replace(/\.tscn$/, '');
@@ -120,6 +126,11 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
   for (const w of wirings) console.log(`  wire    ${w.filePath.slice(REPO_ROOT.length + 1)} (${w.action})`);
   console.log(`  chain   ${chainNote}`);
   console.log(`  parser  ${reusedParser.fn} from ${reusedParser.importPath}`);
+  if (linter && reusesBaseParser && !isBaseParser) {
+    console.log(
+      `  note    ${reusedParser.fn} is no base parser yet: add its hop to BASE_TYPE_TO_PARSER_SUBPATH`
+    );
+  }
   if (linter) {
     console.log(`  inherit ${parentLinterImport}`);
   }

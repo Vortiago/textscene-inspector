@@ -54,10 +54,11 @@ export function withUnsweptSlice(src, slice) {
 }
 
 /**
- * Lists `slice` (relative to `nodes/`) as one with a `linterParser.ts` and no parser of its own,
- * which `propertyGrammarParity.test.ts` asks of each such slice.
+ * Lists the slice at `sliceRel` (`nodes/<category>/<name>`) as one with a `linterParser.ts` and no
+ * parser of its own, which `propertyGrammarParity.test.ts` asks of each such slice.
  */
-export function wireUnsweptSlice(slice) {
+export function wireUnsweptSlice(sliceRel) {
+  const slice = sliceRel.slice('nodes/'.length);
   const content = withUnsweptSlice(readFileSync(UNSWEPT_LIST_FILE, 'utf8'), slice);
   return content === undefined
     ? { filePath: UNSWEPT_LIST_FILE, action: 'already listed' }
