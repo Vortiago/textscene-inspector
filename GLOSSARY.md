@@ -556,7 +556,7 @@ The Controls a dialog's constructor `memnew`s above its button row, which no sce
 _Avoid_: "dialog content", which is the rect that authored children fill.
 
 **Embedder**:
-The viewport that draws an **Embedded window**: the nearest viewport above it with `gui_embed_subwindows`, the root through `display/window/subwindows/embed_subwindows`. It draws each window's frame, title, close icon and target on its subwindow canvas, layer 1024, in stack order (`viewport.cpp:342-401`).
+The viewport that draws an **Embedded window**: the nearest viewport above it with `gui_embed_subwindows`, the root through `display/window/subwindows/embed_subwindows`. A window below an embedding root embeds only when `force_native` (`window.cpp:1534-1537`), whatever it authors. The embedder draws each window's frame, title, close icon and target on its subwindow canvas, layer 1024, in stack order (`viewport.cpp:342-401`). The **Live scene tree** holds the root's answer (`LiveTreeContext.project`), and `windowEmbedder.ts` answers each reader from the tree.
 _Avoid_: "parent viewport", which may not embed.
 
 **Pass gate** (`PassGate` in `r3f/contexts/ViewportPassRegistryContext.tsx`, `nodes/viewport/renderGate.ts`):

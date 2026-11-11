@@ -9,7 +9,8 @@ import { isShownCanvasNode } from '../../../r3f/canvasScopes.js';
 import { isCanvasLayerType } from '../../../r3f/canvasPaintOrder.js';
 import type { LiveTree } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
-import { embedsSubwindows, isEmbeddableWindow, isViewportBoundary } from './viewportBoundary.js';
+import { isEmbeddableWindow, isViewportBoundary } from './viewportBoundary.js';
+import { windowEmbedderPathAt } from './windowEmbedder.js';
 
 /** A node the visibility climb of a SubViewportContainer reads, with the `visible` the scene authors. */
 interface VisibilityLink {
@@ -37,18 +38,13 @@ export interface UpdateGate {
   enclosingPath: string | null;
 }
 
-export function viewportGateAt(
-  tree: LiveTree,
-  path: string,
-  authoredMode: number,
-  rootEmbeds: boolean
-): ViewportGate {
+export function viewportGateAt(tree: LiveTree, path: string, authoredMode: number): ViewportGate {
   const parentPath = parentPathOf(path);
   const isUnderContainer =
     parentPath !== null && tree.at(parentPath)?.step.node.type === 'SubViewportContainer';
   return {
     authoredMode,
-    enclosingPath: enclosingViewportPathAt(tree, path, rootEmbeds),
+    enclosingPath: enclosingViewportPathAt(tree, path),
     visibilityChain: isUnderContainer ? visibilityChainAt(tree, parentPath) : null,
   };
 }
@@ -73,24 +69,14 @@ export function resolveGate(gate: ViewportGate, animatedVisible: ReadonlyMap<str
   };
 }
 
-/** `Window::get_embedder` (`window.cpp:1400-1415`): the path of the nearest viewport above `path` that embeds subwindows. */
-export function windowEmbedderPathAt(tree: LiveTree, path: string, rootEmbeds: boolean): string | null {
-  for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
-    const aboveNode = tree.at(above)?.step.node;
-    if (aboveNode && isViewportBoundary(aboveNode.type) && embedsSubwindows(aboveNode, rootEmbeds))
-      return above;
-  }
-  return null;
-}
-
 /**
  * The viewport whose passes gate the one at `path`, null at the root viewport. A viewport's parent
  * is the viewport it sits in (`viewport.cpp:579`). An embedded window's is its embedder
  * (`viewport.cpp:339`): the nearest viewport above that embeds windows (`window.cpp:1400-1420`).
  */
-function enclosingViewportPathAt(tree: LiveTree, path: string, rootEmbeds: boolean): string | null {
+function enclosingViewportPathAt(tree: LiveTree, path: string): string | null {
   const node = tree.at(path)?.step.node;
-  if (node !== undefined && isEmbeddableWindow(node)) return windowEmbedderPathAt(tree, path, rootEmbeds);
+  if (node !== undefined && isEmbeddableWindow(node)) return windowEmbedderPathAt(tree, path);
   for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
     const aboveNode = tree.at(above)?.step.node;
     if (aboveNode && isViewportBoundary(aboveNode.type)) return above;

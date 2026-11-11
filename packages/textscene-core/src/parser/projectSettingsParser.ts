@@ -407,7 +407,7 @@ export function projectTracesHalfSizeReflections(settings: ProjectSettings | nul
  * `display/window/subwindows/embed_subwindows`, which `main/main.cpp` hands the root window: whether
  * it embeds its windows. It does by default (`project_settings.cpp:1756`).
  */
-export function projectEmbedsSubwindows(settings: ProjectSettings | null): boolean {
+function projectEmbedsSubwindows(settings: ProjectSettings | null): boolean {
   return boolSlotValue(settings?.['display/window/subwindows/embed_subwindows']) ?? true;
 }
 
@@ -550,6 +550,34 @@ const physicsClockOf = perObject((settings: ProjectSettings): PhysicsClock => {
  * `physics/common/physics_ticks_per_second` and `physics_jitter_fix`, which pace the physics ticks
  * and so the transform flushes a scene runs by a frame (`main.cpp:4801-4806`).
  */
-export function projectPhysicsClock(settings: ProjectSettings | null): PhysicsClock {
+function projectPhysicsClock(settings: ProjectSettings | null): PhysicsClock {
   return settings ? physicsClockOf(settings) : DEFAULT_PHYSICS_CLOCK;
+}
+
+/** What a scene tree reads of the project it runs in. */
+export interface ProjectTreeSettings {
+  /** The clock that paces the physics ticks, and so the transform flushes of a frame. */
+  physicsClock: PhysicsClock;
+  /**
+   * Whether the root window embeds its windows. A window below an embedding root embeds only when
+   * `force_native` (`window.cpp:1534-1537`), so every answer to "who embeds this window" reads it.
+   */
+  rootEmbedsSubwindows: boolean;
+}
+
+/**
+ * Written only by {@link projectTreeSettings}: one object for each clock and each answer of the
+ * root window, so a cache keyed on the tree settings holds while both stay as they are.
+ */
+const treeSettingsOfClock = perObject(
+  (physicsClock: PhysicsClock): Record<'embedding' | 'native', ProjectTreeSettings> => ({
+    embedding: { physicsClock, rootEmbedsSubwindows: true },
+    native: { physicsClock, rootEmbedsSubwindows: false },
+  })
+);
+
+/** The tree settings of a project, Godot's defaults with no project: one object for equal values. */
+export function projectTreeSettings(settings: ProjectSettings | null): ProjectTreeSettings {
+  const ofClock = treeSettingsOfClock(projectPhysicsClock(settings));
+  return projectEmbedsSubwindows(settings) ? ofClock.embedding : ofClock.native;
 }

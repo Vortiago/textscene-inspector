@@ -4,6 +4,7 @@
  * order, as the loader sets them, because a later `file_mode` rewrites the title the file set before it.
  */
 
+import type { OverrideLayer } from '../../../core/NodeRegistry';
 import type { ParsedHeading } from '../../../parser/utils';
 import { parsePackedStringArray, unquoteString } from '../../../parser/utils';
 import {
@@ -140,9 +141,10 @@ function enumOr(
 
 export function parseFileDialog(
   heading: ParsedHeading,
-  properties: Record<string, string>
+  properties: Record<string, string>,
+  override?: OverrideLayer<FileDialogProperties>
 ): FileDialogProperties {
-  const dialog = parseConfirmationDialog(heading, properties);
+  const dialog = parseConfirmationDialog(heading, properties, override);
   const context = viewportParseContext(heading, dialog.name);
   const { mode, title } = replayModeTexts(properties, dialog.title, context);
   const flag = (raw: string | undefined, key: string) => boolOr(raw, true, `${context}.${key}`);

@@ -1,5 +1,6 @@
 /** The lenient parse of a PopupMenu: the Window parse plus its items (`popup_menu.cpp:3317-3328`). */
 
+import type { OverrideLayer } from '../../../core/NodeRegistry';
 import type { ParsedHeading } from '../../../parser/utils';
 import { unquoteString } from '../../../parser/utils';
 import { boolOr, intOr } from '../../../parser/valueParsers';
@@ -62,9 +63,10 @@ function parseItemsAtSize(
 
 export function parsePopupMenu(
   heading: ParsedHeading,
-  properties: Record<string, string>
+  properties: Record<string, string>,
+  override?: OverrideLayer<PopupMenuProperties>
 ): PopupMenuProperties {
-  const window = parseWindow(heading, properties);
+  const window = parseWindow(heading, properties, override);
   const items = parseItems(properties, window.name);
   return { ...window, items, itemsAtSize: parseItemsAtSize(properties, items, window.name) };
 }

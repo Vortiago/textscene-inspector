@@ -9,7 +9,6 @@ import type { TscnNode } from '../../../parser/types';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { useGameViewportRect } from '../../gameViewportRect.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
-import { projectEmbedsSubwindows } from '../../../parser/projectSettingsParser';
 import { useBuildSolveTree } from './buildSolveTree';
 import { nativeTheme } from './nativeTheme';
 import { ControlCanvasWalker } from './ControlCanvasWalker';
@@ -43,7 +42,7 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
   const { tree, generation, windows } = useBuildSolveTree(rootNodes, externalResources, internalResources);
 
   // The project's `gui/theme/default_theme_scale`, not a constant scale 1.
-  const { themeScale, settings } = useProjectSettings();
+  const { themeScale } = useProjectSettings();
   const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
   const viewport = useGameViewportRect();
   // A Control outside any `CanvasLayer` shares Godot's default canvas with the
@@ -67,10 +66,7 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
           theme={theme}
           measurer={measureText}
         />
-        {/* A window the root does not embed is a native one, drawn outside the game frame. */}
-        {projectEmbedsSubwindows(settings) ? (
-          <EmbeddedWindows windows={windows} embedderSize={embedderSize} forestPath="" theme={theme} />
-        ) : null}
+        <EmbeddedWindows windows={windows} embedderSize={embedderSize} forestPath="" theme={theme} />
       </LayerRanksProvider>
     </CanvasModulateContext.Provider>
   );

@@ -241,7 +241,7 @@ const INTEGRATION_FIXTURES_WITH_ERRORS: ReadonlySet<string> = new Set(
 );
 
 /** How many fixtures that list is meant to hold; see the pin at the bottom. */
-const NEGATIVE_FIXTURE_COUNT = 8;
+const NEGATIVE_FIXTURE_COUNT = 9;
 
 /** An `edge-*` fixture is malformed or odd on purpose, so any advisory it draws is the fixture's point. */
 function isEdgeFixture(name: string): boolean {

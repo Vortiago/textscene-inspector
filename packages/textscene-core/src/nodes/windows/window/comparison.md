@@ -63,6 +63,18 @@ with the theme.
 A window under a SubViewport without `gui_embed_subwindows` draws in the root viewport. It
 updates as the root does, though the SubViewport never updates.
 
+## A window above a window
+<!-- compare: image=unit-window-in-window status=done fixture=unit-window-in-window.tscn -->
+
+Under a root that embeds windows, a window embeds none, whatever `gui_embed_subwindows` it authors.
+The root draws the window below it, once, at its position in the root.
+
+## Force native on a visible window
+<!-- compare: image=edge-window-force-native-visible status=done fixture=edge-window-force-native-visible.tscn -->
+
+Godot refuses `force_native` on a window that is visible when the line is read, so the window stays
+embedded. The value stands only where an earlier line hides the window, or the class starts hidden.
+
 ## Content scale
 <!-- compare: image=unit-window-content-scale status=done fixture=unit-window-content-scale.tscn -->
 
@@ -128,6 +140,7 @@ Strict parsing format-checks these `Window` properties, plus 47 inherited from V
 | `valid-window-properties` (type-family match) | `window-max-size-below-min-size` | info |
 |  | `window-size-clamped-by-limits` | warning |
 |  | `window-content-scale-factor-floored` | warning |
+|  | `window-force-native-refused-while-visible` | error |
 <!-- lint:end -->
 
 The lenient parser reads every Window key it draws with. A malformed value takes the class default,
@@ -137,5 +150,5 @@ as an unset key does, and no diagnostic comes from the lenient path.
 
 - **Approximated** The title glyph edges differ from Godot's by the same amount as a Label's in the
   default font.
-- **Not drawn** A window with `force_native`, or one that no viewport embeds, draws nothing, as it
-  opens as a system window in a running game.
+- **Not drawn** A window that holds `force_native`, or one that no viewport embeds, draws nothing, as
+  it opens as a system window in a running game.
