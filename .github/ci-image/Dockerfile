@@ -18,10 +18,9 @@ RUN getent hosts archive.ubuntu.com > /dev/null \
   || sed -i 's|^URIs: .*|URIs: http://mirrors.edge.kernel.org/ubuntu/|' /etc/apt/sources.list.d/ubuntu.sources
 
 # What the actions of a job need: git for actions/checkout and the vendor step of `pnpm install`,
-# libatomic1 for the pnpm of pnpm/action-setup, and zstd for actions/cache, whose entries a runner
-# packs with it. curl and unzip fetch Godot below. mesa-vulkan-drivers is lavapipe, the driver of
-# `pnpm test:gpu` and of `pnpm ref:godot`. xvfb and xauth give `xvfb-run`, the display of Godot.
-# Godot loads libXcursor and libXinerama when it opens that display, and has none without the first.
+# libatomic1 for pnpm, and zstd for the entries of actions/cache. curl and unzip fetch Godot below.
+# mesa-vulkan-drivers is lavapipe, the driver of `pnpm test:gpu` and of Godot. xvfb and xauth give
+# `xvfb-run`, the display of Godot, which opens none without libXcursor and loads libXinerama too.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates curl git libatomic1 unzip zstd \
