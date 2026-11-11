@@ -37,15 +37,6 @@ function solveNode(properties: Partial<CheckButtonProperties> = {}): SolveNode {
   return { ...emptySolveNode(), path: 'MyCheckButton', node };
 }
 
-function findIconMesh(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .find(
-      (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
-    );
-}
-
 describe('<CheckButton> (isolated painter contract)', () => {
   it('draws NO chrome mesh — every one of its StyleBoxes is a StyleBoxEmpty', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -61,7 +52,7 @@ describe('<CheckButton> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckButton {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
     );
-    expect(findIconMesh(renderer.scene)).toBeDefined();
+    expect(findIconMeshes(renderer.scene)[0]).toBeDefined();
     expect(findTextMesh(renderer.scene)).toBeUndefined();
   });
 
@@ -69,7 +60,7 @@ describe('<CheckButton> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckButton {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
     );
-    const mesh = findIconMesh(renderer.scene)!;
+    const mesh = findIconMeshes(renderer.scene)[0]!;
     const group = mesh.parent as THREE.Object3D;
     // icon width 32, marginX 6: x = 150 - (32+6) = 112.
     expect(group.position.x).toBe(112);
@@ -127,7 +118,7 @@ describe('<CheckButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const iconMaterial = findIconMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
+    const iconMaterial = findIconMeshes(renderer.scene)[0]!.material as THREE.MeshBasicMaterial;
     // button_unchecked_color(1) * own(0.25) = 0.25 in sRGB, linearised.
     expect(iconMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
 
@@ -178,7 +169,7 @@ describe('<CheckButton> (isolated painter contract)', () => {
           renderOrder={0}
         />
       );
-      return findIconMesh(renderer.scene)!.parent!.position.x;
+      return findIconMeshes(renderer.scene)[0]!.parent!.position.x;
     };
     expect(await iconX(false)).toBe(112);
     expect(await iconX(true)).toBe(6);
@@ -191,7 +182,7 @@ describe('<CheckButton> (isolated painter contract)', () => {
       const renderer = await ReactThreeTestRenderer.create(
         <CheckButton {...painterEnv()} solveNode={{ ...solveNode({}), rtl }} rect={RECT} renderOrder={0} />
       );
-      const material = findIconMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
+      const material = findIconMeshes(renderer.scene)[0]!.material as THREE.MeshBasicMaterial;
       return (material.map!.image as { src?: string }).src;
     };
     expect(await iconSrc(false)).toBe(CHECK_BUTTON_ICONS.unchecked);

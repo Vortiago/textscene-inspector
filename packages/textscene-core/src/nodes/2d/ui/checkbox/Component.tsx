@@ -19,7 +19,7 @@ import {
   tintColor,
 } from '../../../../r3f/controls/native/buttonBase';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
-import { useIconModulate, useIconTexture } from '../../../../r3f/controls/native/useButtonIcon';
+import { useIconModulate, useIconRefTexture } from '../../../../r3f/controls/native/useButtonIcon';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { buttonIconColor } from '../button/nativeSolver';
 import {
@@ -49,7 +49,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const checkSize = useMemo(() => checkBoxFittedIconSize(solveNode), [solveNode]);
   const drawnCheckSize = useMemo(() => checkBoxDrawnIconSize(solveNode, checkKey), [solveNode, checkKey]);
 
-  const ownIconTexture = useIconTexture(solveNode, props.icon);
+  const ownIconTexture = useIconRefTexture(solveNode, props.icon);
   const ownIconSize = ownButtonIconSize(solveNode);
   const ownIconModulate = useIconModulate(buttonIconColor(solveNode.colors, state), tint.own);
 

@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { useIconModulate, useIconTexture } from '../../../../r3f/controls/native/useButtonIcon';
+import { useIconModulate, useIconRefTexture } from '../../../../r3f/controls/native/useButtonIcon';
 import { buttonBoxesOf } from '../../../../r3f/controls/native/defaultThemeItems';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -71,7 +71,7 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   // **solve handoff** the minimum-size solver calls too, so one shaping sizes both.
   const unwrapped: TextLayoutResult | null = buttonLabelShape(solveNode, theme);
 
-  const ownIconTexture = useIconTexture(solveNode, props.icon);
+  const ownIconTexture = useIconRefTexture(solveNode, props.icon);
   // A theme icon the Control gave this Button: the vendored default is a 16x16 SVG whose size
   // `textureSize` already holds, since the loader returns a blank texture before the decode.
   const themedIcon = solveNode.syntheticDraw?.themedIcon;

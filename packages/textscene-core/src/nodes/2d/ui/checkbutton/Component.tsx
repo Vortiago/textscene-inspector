@@ -20,7 +20,7 @@ import {
 } from '../../../../r3f/controls/native/buttonBase';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
-import { useIconModulate, useIconTexture } from '../../../../r3f/controls/native/useButtonIcon';
+import { useIconModulate, useIconRefTexture } from '../../../../r3f/controls/native/useButtonIcon';
 import { buttonIconColor } from '../button/nativeSolver';
 import {
   checkButtonCheckVOffset,
@@ -58,7 +58,7 @@ export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: Nativ
   // Unlike CheckBox's fixed white, the toggle colour is a theme key a scene can override, so it
   // takes the tint before its one sRGB-to-linear conversion, as Button's icon does.
   const toggleModulate = useIconModulate(checkButtonIconColor(props, solveNode.colors), tint.own);
-  const ownIconTexture = useIconTexture(solveNode, props.icon);
+  const ownIconTexture = useIconRefTexture(solveNode, props.icon);
   const ownIconSize = ownButtonIconSize(solveNode);
   const ownIconModulate = useIconModulate(buttonIconColor(solveNode.colors, state), tint.own);
 

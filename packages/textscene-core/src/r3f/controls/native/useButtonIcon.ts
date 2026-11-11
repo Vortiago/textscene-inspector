@@ -17,7 +17,7 @@ import type { SolveNode } from './solveTree';
  * then agrees with the minimum size on every frame, and a late load only paints the quad. It resolves
  * in the node's own scope, since a node that arrived through an instanced sub-scene names ids from that scene.
  */
-export function useIconTexture(solveNode: SolveNode, ref: string | undefined): THREE.Texture | null {
+export function useIconRefTexture(solveNode: SolveNode, ref: string | undefined): THREE.Texture | null {
   const { externalResources, internalResources } = solveNode.resources;
   // `useTexture2D`, not the path-only resolver: an icon may be an inline procedural texture, which has no path to load from.
   const { texture: source } = useTexture2D(ref, externalResources, internalResources);

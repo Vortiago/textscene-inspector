@@ -16,6 +16,7 @@ import {
   type ButtonWrapProperties,
 } from './buttonBase';
 import type { ShareNode } from './solveTree';
+import type { FontMetrics } from './text/fontMetrics';
 import { resolveNodeFontMetrics } from './text/resolveNodeFontMetrics';
 import { OutlinedTextRun, type OutlinedTextRunProps } from './text/OutlinedTextRun';
 import { soloLineLayout, type TextLayoutResult } from './text/textLayout';
@@ -85,11 +86,10 @@ interface ButtonLabelShapeInput {
  * are read in the render body, not in the `useMemo`, for the reason Label's Component.tsx gives.
  */
 function useButtonLabelLayout(
-  solveNode: ShareNode,
   wrap: ButtonWrapProperties,
-  { themeFontKey, text, fontSizePx, bidi, boxWidthPx }: ButtonLabelShapeInput
+  { text, fontSizePx, bidi, boxWidthPx }: ButtonLabelShapeInput,
+  fontMetrics: FontMetrics
 ): TextLayoutResult | null {
-  const fontMetrics = resolveNodeFontMetrics(solveNode, themeFontKey);
   const { autowrapMode, autowrapTrimFlags } = wrap;
   // The width keys the memo only while the label wraps: at AUTOWRAP_OFF a resize re-shapes nothing.
   const wrapWidthPx = isButtonAutowrapped(wrap) ? boxWidthPx : 0;
@@ -131,5 +131,5 @@ export function useWrappingButtonLabelLayout(
       : null;
     return wrappedLabelWidthPx(facts, unwrapped);
   }, [text, fontSizePx, fontMetrics, bidi, autowrapMode, autowrapTrimFlags, expandIcon, facts]);
-  return useButtonLabelLayout(solveNode, wrap, { ...shapeInput, boxWidthPx });
+  return useButtonLabelLayout(wrap, { ...shapeInput, boxWidthPx }, fontMetrics);
 }
