@@ -8,7 +8,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useIconModulate } from '../../../../r3f/controls/native/useButtonIcon';
-import { ButtonPainter } from '../button/Component';
+import { ButtonPainter, buttonOverlayRenderOrder } from '../button/Component';
 import { useCheckButtonIcon } from './useCheckButtonIcon';
 import {
   CHECK_BUTTON_CLASS,
@@ -36,7 +36,7 @@ function CheckButtonToggle({ solveNode, tint, rect, renderOrder, theme }: Native
       texture={texture}
       color={iconModulate.color}
       opacity={iconModulate.opacity}
-      renderOrder={renderOrder}
+      renderOrder={buttonOverlayRenderOrder(renderOrder)}
       canvasKey={renderOrder}
     />
   );

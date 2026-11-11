@@ -61,7 +61,7 @@ const CHECK_BUTTON_ICON_THEME_NAMES = Object.values(CHECK_BUTTON_ICON_THEME_NAME
 
 /** Button's own `icon` and those of CheckButton's 8 icon slots that have a themed answer, as `checkBoxTextureSlots` does for CheckBox. */
 export const checkButtonTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => [
-  buttonIconSlotRequest((node.properties as CheckButtonProperties).icon),
+  buttonIconSlotRequest((node.properties as CheckButtonProperties).icon, themedIcons),
   ...themedSlotRequests(CHECK_BUTTON_ICON_THEME_NAMES, themedIcons),
 ];
 

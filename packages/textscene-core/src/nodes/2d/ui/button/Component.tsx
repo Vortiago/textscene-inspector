@@ -5,6 +5,7 @@
  * it. Draw state comes from `disabled` and `button_pressed`: a static viewer has no hover.
  * `ControlCanvasWalker` owns `visible`, the children and the transform.
  */
+import { canvasPieceSlot, wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -78,15 +79,18 @@ export function ButtonPainter({
     [solveNode, theme, buttonClass]
   );
 
-  const ownIconTexture = useIconRefTexture(solveNode, buttonShown(buttonClass, props).icon);
+  const ownIcon = buttonShown(buttonClass, props).icon;
+  const ownIconTexture = useIconRefTexture(solveNode, ownIcon);
   // A theme icon the Control gave this Button: the vendored default is a 16x16 SVG whose size
   // `textureSize` already holds, since the loader returns a blank texture before the decode.
-  const themedIcon = solveNode.syntheticDraw?.themedIcon;
+  const givenIcon = solveNode.syntheticDraw?.themedIcon;
+  // Without either, the theme icon `icon` stands in for the property (`button.cpp:224-227`).
+  const themedIconName = givenIcon?.name ?? (ownIcon ? undefined : 'icon');
   const themedIconTexture = useNodeIcon(
-    themedIcon && solveNode.icons[themedIcon.name],
-    themedIcon?.vendoredUrl ?? null
+    themedIconName === undefined ? undefined : solveNode.icons[themedIconName],
+    givenIcon?.vendoredUrl ?? null
   );
-  const iconTexture = themedIcon ? themedIconTexture : ownIconTexture;
+  const iconTexture = themedIconName === undefined ? ownIconTexture : themedIconTexture;
   const iconModulate = useIconModulate(buttonIconColor(solveNode.colors, state, props), tint.own);
 
   const facts = useMemo(
@@ -151,6 +155,15 @@ export function ButtonPainter({
       )}
     </>
   );
+}
+
+/**
+ * The draw-order key of what a subclass draws after `Button::_notification`: the second of two pieces,
+ * two thirds into the Control's unit. The label's outline and fill sit at `renderOrder` and half a unit
+ * above it (`textLayerRenderOrder`), and the next Control starts a whole unit above.
+ */
+export function buttonOverlayRenderOrder(renderOrder: number): number {
+  return canvasPieceSlot(wholeKeySlot(renderOrder), 1, 2).key;
 }
 
 export function Button(props: NativeControlComponentProps) {

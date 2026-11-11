@@ -125,3 +125,45 @@ describe.each(FAMILY)('a focused <$name> (button.cpp:220-222,280-292)', (c) => {
     expect(focused.meshCount).toBe(plain.meshCount + 1);
   });
 });
+
+describe.each(FAMILY)('a <$name> with a themed `icon` and none of its own (button.cpp:224-227)', (c) => {
+  const themedIcon = { ref: OWN_ICON_REF, resources: OWN_ICON_SCOPE, isHeldLocally: true };
+  // An OptionButton without a selection shows no item, so Button's icon is null as it is for the others.
+  const withoutOwnIcon = c.name === 'OptionButton' ? { items: [] } : { icon: undefined };
+
+  async function iconCount(icons: SolveNode['icons']) {
+    const { Component } = c;
+    // The solve tree sizes the `icon` slot by the themed icon, and leaves it null without one.
+    const node = { ...familyNode(c, withoutOwnIcon, {}), icons, textureSize: icons.icon ? ICON_SIZE : null };
+    const rendered = await renderWithOwnIcon(
+      <Component {...painterEnv()} solveNode={node} rect={RECT} renderOrder={0} />,
+      { w: ICON_SIZE.x, h: ICON_SIZE.y }
+    );
+    return findIconMeshes(rendered.scene).length;
+  }
+
+  it('draws the themed icon as one more icon quad', async () => {
+    expect(await iconCount({ icon: themedIcon })).toBe((await iconCount({})) + 1);
+  });
+});
+
+const SUBCLASSES_WITH_AN_OVERLAY = FAMILY.filter(({ name }) => name !== 'Button' && name !== 'MenuButton');
+
+describe.each(SUBCLASSES_WITH_AN_OVERLAY)(
+  'the element <$name> draws after Button (check_box.cpp:107, check_button.cpp:107, option_button.cpp:91)',
+  (c) => {
+    it('draws over the label, outline included, and under the next Control', async () => {
+      const { Component } = c;
+      const outlined = { ...familyNode(c, {}, {}), constants: { outline_size: 4 } };
+      const rendered = await renderWithOwnIcon(
+        <Component {...painterEnv()} solveNode={outlined} rect={RECT} renderOrder={7} />,
+        { w: ICON_SIZE.x, h: ICON_SIZE.y }
+      );
+      const meshes = rendered.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
+      const element = findIconMeshes(rendered.scene).at(-1)!;
+      const others = meshes.filter((mesh) => mesh !== element).map((mesh) => mesh.renderOrder);
+      expect(element.renderOrder).toBeGreaterThan(Math.max(...others));
+      expect(element.renderOrder).toBeLessThan(8);
+    });
+  }
+);

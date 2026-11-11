@@ -22,6 +22,7 @@ import {
   BUTTON_CLASS,
   BUTTON_DEFAULT_FONT_COLOR,
   buttonLabelShape,
+  buttonTextureSlots,
 } from './nativeSolver';
 import { resolveToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -588,5 +589,29 @@ describe('a Button on a default-theme type variation (default_theme.cpp:357-383)
     expect(buttonTextTheme(node(FLAT), FLAT as ButtonProperties, 'normal', ctx()).color).toEqual(
       BUTTON_DEFAULT_FONT_COLOR
     );
+  });
+});
+
+describe('buttonTextureSlots (button.cpp:38-41,224-227)', () => {
+  const themed = { ref: 'ExtResource("9")', resources: solveNode().resources, isHeldLocally: true };
+  const slots = (properties: Record<string, unknown>, themedIcons = {}) =>
+    buttonTextureSlots(controlNode('B', 'Button', { name: 'B', ...properties }), themedIcons);
+
+  it("requests the Button's own icon", () => {
+    expect(slots({ icon: 'ExtResource("1")' })).toEqual([{ key: 'icon', ref: 'ExtResource("1")' }]);
+  });
+
+  it('requests the theme icon `icon`, in its own scope, for a Button without an icon', () => {
+    expect(slots({}, { icon: themed })).toEqual([
+      { key: 'icon', ref: 'ExtResource("9")', scope: themed.resources, isHeldLocally: true },
+    ]);
+  });
+
+  it("keeps the Button's own icon over the theme icon", () => {
+    expect(slots({ icon: 'ExtResource("1")' }, { icon: themed })[0]!.ref).toBe('ExtResource("1")');
+  });
+
+  it('requests an empty icon slot with neither', () => {
+    expect(slots({})).toEqual([{ key: 'icon', ref: '' }]);
   });
 });

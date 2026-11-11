@@ -8,7 +8,7 @@ import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useIconModulate } from '../../../../r3f/controls/native/useButtonIcon';
-import { ButtonPainter } from '../button/Component';
+import { ButtonPainter, buttonOverlayRenderOrder } from '../button/Component';
 import { OPTION_BUTTON_CLASS, optionButtonArrowColor, optionButtonArrowRect } from './nativeSolver';
 
 /** The arrow `OptionButton::_notification` draws after Button's own draw. */
@@ -25,7 +25,7 @@ function OptionButtonArrow({ solveNode, tint, rect, renderOrder, theme }: Native
       texture={texture}
       color={iconModulate.color}
       opacity={iconModulate.opacity}
-      renderOrder={renderOrder}
+      renderOrder={buttonOverlayRenderOrder(renderOrder)}
     />
   );
 }

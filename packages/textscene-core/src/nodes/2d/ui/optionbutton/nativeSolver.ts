@@ -70,7 +70,7 @@ function optionItemIconSlotKey(index: number): string {
 export const optionButtonTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
   const props = node.properties as OptionButtonProperties;
   const selectedIcon = selectedOptionItem(props)?.icon;
-  const requests: TextureSlotRequest[] = [buttonIconSlotRequest(selectedIcon)];
+  const requests: TextureSlotRequest[] = [buttonIconSlotRequest(selectedIcon, themedIcons)];
   for (const [index, { icon }] of (props.items ?? []).entries()) {
     if (icon) requests.push({ key: optionItemIconSlotKey(index), ref: icon });
   }

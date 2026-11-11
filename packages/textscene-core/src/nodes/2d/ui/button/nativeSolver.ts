@@ -9,12 +9,17 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import type {
+  MinimumSizeFn,
+  SolveContext,
+  TextureSlotsFn,
+} from '../../../../r3f/controls/native/solverRegistry';
 import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Vector2 } from '../../../../godot/math/vector';
 import {
   buttonContentMinimumSize,
+  buttonIconSlotRequest,
   BUTTON_THEME_KEYS,
   isButtonTextClipped,
   largestStyleBoxMargins,
@@ -127,6 +132,11 @@ export const BUTTON_CLASS: ButtonClass = {
 export function buttonShown(buttonClass: ButtonClass, props: ButtonProperties): ButtonShown {
   return buttonClass.shown?.(props) ?? { text: props.text ?? '', icon: props.icon };
 }
+
+/** The texture slots of a Button that shows its own `icon` property: the icon alone. */
+export const buttonTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => [
+  buttonIconSlotRequest((node.properties as ButtonProperties).icon, themedIcons),
+];
 
 /** Whether `props` draws with the focus colours: a focused Button in the normal draw mode (`button.cpp:282-285`). */
 function isButtonFocusStyled(props: Pick<ButtonProperties, 'hasFocus'>, state: ToggleDrawState): boolean {

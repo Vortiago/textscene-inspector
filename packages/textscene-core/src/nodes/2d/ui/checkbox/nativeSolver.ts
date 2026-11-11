@@ -76,7 +76,7 @@ export function checkIconSlotRequests(themedIcons: Parameters<typeof themedSlotR
 
 /** Button's own `icon`, then the themed check icons. */
 export const checkBoxTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => [
-  buttonIconSlotRequest((node.properties as CheckBoxProperties).icon),
+  buttonIconSlotRequest((node.properties as CheckBoxProperties).icon, themedIcons),
   ...checkIconSlotRequests(themedIcons),
 ];
 

@@ -11,8 +11,8 @@
  */
 
 import { multiplyModulate } from '../../canvasItemModulate';
-import type { SolveNode } from './solveTree';
-import type { TextureSlotRequest } from './solverRegistry';
+import type { SolveNode, ThemedIconRef } from './solveTree';
+import { themedSlotRequest, type TextureSlotRequest } from './solverRegistry';
 import type { TextThemeKeys } from './textTheme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
@@ -749,9 +749,14 @@ export function withReservedElementSize(content: Vector2, element: Vector2, hSep
 /**
  * Button's `icon` as the first texture slot of a type that registers a `TextureSlotsFn`, so
  * `SolveNode.textureSize` is the icon's size for every Button subclass, as it is for a Button. The slot
- * is there without an icon too, or the first themed icon would stand in for it.
+ * is there without an icon too, or the first themed icon would stand in for it. A Button without an
+ * `icon` draws the theme icon `icon` (`button.cpp:38-41,224-227`).
  */
-export function buttonIconSlotRequest(icon: string | undefined): TextureSlotRequest {
+export function buttonIconSlotRequest(
+  icon: string | undefined,
+  themedIcons: Readonly<Record<string, ThemedIconRef>>
+): TextureSlotRequest {
+  if (!icon && themedIcons.icon) return themedSlotRequest('icon', themedIcons.icon);
   return { key: 'icon', ref: icon ?? '' };
 }
 

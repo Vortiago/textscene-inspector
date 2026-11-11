@@ -127,13 +127,13 @@ describe('<CheckButton> (isolated painter contract)', () => {
     expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
   });
 
-  it('forwards renderOrder to every mesh (icon + text)', async () => {
+  it('keeps every mesh inside its own unit of render order (icon and text)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckButton {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={7} />
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     expect(meshes.length).toBeGreaterThan(0);
-    for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
+    for (const mesh of meshes) expect(Math.floor(mesh.renderOrder)).toBe(7);
   });
 
   it("defaults text alignment to LEFT (CheckButton's own constructor override), not Button's CENTER", async () => {
