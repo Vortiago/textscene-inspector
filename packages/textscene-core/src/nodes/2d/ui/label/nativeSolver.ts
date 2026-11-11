@@ -196,7 +196,7 @@ export function labelShadowTheme(n: SolveNode): LabelShadowTheme {
 /** The content margin of the `normal` StyleBox a Label reads (`theme_cache.normal_style`). */
 export type LabelMargin = StyleBoxFlatData['contentMargin'];
 
-const NO_MARGIN: LabelMargin = { left: 0, top: 0, right: 0, bottom: 0 };
+export const NO_LABEL_MARGIN: LabelMargin = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /** `theme_cache.normal_style` (`label.cpp:1460`): the Theme's `normal`, else the default theme's empty box. */
 export function labelStyleBox(n: SolveNode): ResolvedStyleBox {
@@ -210,7 +210,7 @@ export function labelStyleBox(n: SolveNode): ResolvedStyleBox {
  * The `int` wraps a word that fits in 320.6px but not in 320. The solver and `Component.tsx` share
  * this, so the solved height is the height of the drawn lines.
  */
-export function labelShapingWidthPx(controlWidthPx: number, margin: LabelMargin = NO_MARGIN): number {
+export function labelShapingWidthPx(controlWidthPx: number, margin: LabelMargin): number {
   return Math.trunc(controlWidthPx - margin.left - margin.right);
 }
 
@@ -340,13 +340,13 @@ function labelMinimumHeightPx(
  * wrapped at `_shape`'s width (`:581,:227`).
  */
 export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const { x, y } = labelTextMinimumSize(n, ctx);
-  const { left, top, right, bottom } = labelStyleBox(n).contentMargin;
-  return { x: x + left + right, y: y + top + bottom };
+  const margin = labelStyleBox(n).contentMargin;
+  const { x, y } = labelTextMinimumSize(n, ctx, margin);
+  return { x: x + margin.left + margin.right, y: y + margin.top + margin.bottom };
 };
 
 /** The minimum size of the text alone, before the `normal` box adds its own (`label.cpp:983-996`). */
-const labelTextMinimumSize: MinimumSizeFn = (n, ctx) => {
+function labelTextMinimumSize(n: SolveNode, ctx: SolveContext, margin: LabelMargin): Vector2 {
   const props = n.node.properties as LabelProperties;
   const themeResolved = labelTextTheme(n, props, ctx);
   const spacing = labelEffectiveTextTheme(themeResolved, n.labelSettings, n.constants);
@@ -376,8 +376,7 @@ const labelTextMinimumSize: MinimumSizeFn = (n, ctx) => {
     const shapedWidthPx = ctx.tentativeRect?.(n)?.w;
     const wrapped = shapeText(text, {
       fontSizePx,
-      boxWidthPx:
-        shapedWidthPx === undefined ? 0 : labelShapingWidthPx(shapedWidthPx, labelStyleBox(n).contentMargin),
+      boxWidthPx: shapedWidthPx === undefined ? 0 : labelShapingWidthPx(shapedWidthPx, margin),
       autowrapMode: shapedWidthPx === undefined ? AutowrapMode.AUTOWRAP_OFF : autowrapMode,
       lineSpacingPx: spacing.lineSpacingPx,
       uppercase: props.uppercase,
@@ -403,7 +402,7 @@ const labelTextMinimumSize: MinimumSizeFn = (n, ctx) => {
   // (label.cpp:993-995), since a narrower box trims the text.
   const widthPx = isTextWidthClipped(props) ? 1 : shapedTextSizeWidthPx(windowed.widthPx);
   return { x: widthPx, y: height };
-};
+}
 
 // Draw-time layout: per-line placement and the vertical origin.
 
@@ -515,7 +514,7 @@ export function layoutLabelLines(
     rtl = false,
     isAutowrapped = false,
     trim,
-    contentMargin = NO_MARGIN,
+    contentMargin = NO_LABEL_MARGIN,
     lineSpacingPx = LABEL_LINE_SPACING_PX,
     paragraphSpacingPx = LABEL_PARAGRAPH_SPACING_PX,
   } = options;

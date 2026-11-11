@@ -27,7 +27,8 @@ import {
 import { internalChildThemeItems } from '../../../../r3f/controls/native/themeItems';
 import { layoutLabelLines, LABEL_LINE_SPACING_PX, LABEL_PARAGRAPH_SEPARATOR } from '../label/nativeSolver';
 import type { Rgba } from '../../../../godot/math/math';
-import { defaultThemeVariation, LABEL_FONT_COLOR } from '../../../../godot/scene/theme';
+import { LABEL_FONT_COLOR } from '../../../../godot/scene/theme';
+import { defaultLabelFontColorInChain } from '../../../../r3f/controls/native/defaultThemeItems';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `title_label`'s real Godot class: both variations are declared `set_type_variation("Label")`. */
@@ -59,7 +60,7 @@ export function resolveTitleFontTheme(
   const color = internalChildThemeItems(n, TITLE_LABEL_NATIVE_TYPE, typeVariation).colors.font_color;
   return {
     fontSizePx,
-    color: color ?? defaultThemeVariation(typeVariation)?.fontColor ?? LABEL_FONT_COLOR,
+    color: color ?? defaultLabelFontColorInChain(scope.typeChain) ?? LABEL_FONT_COLOR,
     fontMetrics,
   };
 }

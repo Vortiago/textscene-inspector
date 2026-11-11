@@ -15,21 +15,12 @@
 
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type {
-  ContainerLayoutFn,
-  MinimumSizeFn,
-  SolveContext,
-} from '../../../../r3f/controls/native/solverRegistry';
+import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { ContainerLayoutFn, MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import { panelBoxOf } from '../../../../r3f/controls/native/defaultThemeItems';
 import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
-
-/** The resolved `theme_override_styles/panel`, or the default theme's `panel` for its variation. */
-function panelStyleOf(n: SolveNode, ctx: SolveContext): StyleBoxFlatData {
-  return panelBoxOf(n, ctx.theme);
-}
 
 /**
  * `PanelContainer::get_minimum_size` (`panel_container.cpp:35-51`): the
@@ -46,7 +37,7 @@ export const panelContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     y = Math.max(y, childMin.y);
   }
 
-  const styleMin = contentMarginSize(panelStyleOf(n, ctx));
+  const styleMin = contentMarginSize(panelBoxOf(n, ctx.theme));
   return { x: x + styleMin.x, y: y + styleMin.y };
 };
 
@@ -73,7 +64,7 @@ function fitChild(child: SolveNode, minSize: Vector2, rect: Rect2, rtl: boolean)
  * top-left, not the content rect's.
  */
 export const panelContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
-  const style = panelStyleOf(n, ctx);
+  const style = panelBoxOf(n, ctx.theme);
   // `contentMargin` is already the effective margin: `native/parseStyleBox.ts`
   // resolves Godot's `-1` "ask the border width" sentinel.
   const { left, top, right, bottom } = style.contentMargin;

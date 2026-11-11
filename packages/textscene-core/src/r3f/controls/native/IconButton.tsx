@@ -4,11 +4,10 @@
  */
 
 import type * as THREE from 'three';
-import { CanvasItemGroup } from '../../components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../ControlComponentRegistry';
 import { multiplyModulate, type useItemLinearColorOf } from '../../canvasItemModulate';
 import { PositionedIcon } from './PositionedIcon';
-import { StyleBoxQuad } from './StyleBoxQuad';
+import { PositionedStyleBox } from './PositionedStyleBox';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import { iconOnlyButtonIconRectIn } from './buttonBase';
 import { HorizontalAlignment } from '../../../godot/math/alignment';
@@ -39,14 +38,7 @@ export function IconButton({ rect, box, size, texture, tint, iconTint, rtl, rend
     : null;
   return (
     <>
-      <CanvasItemGroup position={[rect.x, -rect.y, 0]}>
-        <StyleBoxQuad
-          styleBox={box}
-          rect={{ x: 0, y: 0, w: rect.w, h: rect.h }}
-          color={tint.own}
-          renderOrder={renderOrder}
-        />
-      </CanvasItemGroup>
+      <PositionedStyleBox box={box} rect={rect} tint={tint} renderOrder={renderOrder} />
       {iconRect && (
         <PositionedIcon
           rect={iconRect}

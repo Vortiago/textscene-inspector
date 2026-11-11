@@ -7,6 +7,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { LABEL_NORMAL_BOX } from '../../../../r3f/controls/native/defaultThemeItems';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import {
@@ -109,6 +110,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     [effectLayers, tint.own, tintColor]
   );
   const style = labelStyleBox(solveNode);
+  const { contentMargin } = style;
   const inheritedClippingPlanes = useControlClipPlanes();
   // `clip_text` scissors this Label's own drawn ink to its rect
   // (`label.cpp:733-734`'s `canvas_item_set_clip`): always called (hooks run
@@ -138,7 +140,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     // A loading font draws nothing, so its layout shapes no text.
     const shaped = shapeText(isFontLoading ? '' : text, {
       fontSizePx: textTheme.fontSizePx,
-      boxWidthPx: labelShapingWidthPx(rect.w, style.contentMargin),
+      boxWidthPx: labelShapingWidthPx(rect.w, contentMargin),
       autowrapMode,
       lineSpacingPx: textTheme.lineSpacingPx,
       uppercase: props.uppercase,
@@ -158,7 +160,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     textTheme.lineSpacingPx,
     textTheme.paragraphSpacingPx,
     rect.w,
-    style.contentMargin,
+    contentMargin,
     autowrapMode,
     props.uppercase,
     fontMetrics,
@@ -184,7 +186,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   const overrunFlags = useMemo(() => overrunFlagsForBehavior(props.overrunBehavior), [props.overrunBehavior]);
   const trim = useMemo((): LineTrim | undefined => {
     if (autowrapMode !== AutowrapMode.AUTOWRAP_OFF || !overrunFlags.trim) return undefined;
-    const widthPx = labelShapingWidthPx(rect.w, style.contentMargin);
+    const widthPx = labelShapingWidthPx(rect.w, contentMargin);
     const options = { fontMetrics, fontSizePx: textTheme.fontSizePx, ellipsisChar: props.ellipsisChar };
     return {
       line: (line) => trimLineToWidth(line, widthPx, overrunFlags, options),
@@ -195,7 +197,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
     autowrapMode,
     overrunFlags,
     rect.w,
-    style.contentMargin,
+    contentMargin,
     fontMetrics,
     textTheme.fontSizePx,
     props.ellipsisChar,
@@ -216,7 +218,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
           rtl: solveNode.rtl,
           isAutowrapped: autowrapMode !== AutowrapMode.AUTOWRAP_OFF,
           trim,
-          contentMargin: style.contentMargin,
+          contentMargin: contentMargin,
           lineSpacingPx: textTheme.lineSpacingPx,
           paragraphSpacingPx: textTheme.paragraphSpacingPx,
         }
@@ -230,7 +232,7 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
       effectiveJustificationFlags,
       textTheme.lineSpacingPx,
       textTheme.paragraphSpacingPx,
-      style.contentMargin,
+      contentMargin,
       solveNode.rtl,
       autowrapMode,
       trim,
@@ -271,7 +273,9 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   // resets it to zero (`r3f/canvasPaintOrder.ts`).
   return (
     <CanvasItemGroup ref={anchorRef}>
-      <StyleBoxQuad styleBox={style} color={tint.own} rect={ownRect} renderOrder={renderOrder} />
+      {style !== LABEL_NORMAL_BOX && (
+        <StyleBoxQuad styleBox={style} color={tint.own} rect={ownRect} renderOrder={renderOrder} />
+      )}
       {layers.map((layer, layerIndex) => (
         <LayerRuns
           key={layerIndex}

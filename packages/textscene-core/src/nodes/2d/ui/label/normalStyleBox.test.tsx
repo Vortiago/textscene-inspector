@@ -14,7 +14,7 @@ import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { Label } from './Component';
-import { labelMinimumSize, labelShapingWidthPx, layoutLabelLines } from './nativeSolver';
+import { labelMinimumSize, labelShapingWidthPx, layoutLabelLines, NO_LABEL_MARGIN } from './nativeSolver';
 import type { LabelProperties } from './types';
 
 /** Margins 10 left, 6 top, 14 right, 4 bottom: a different number on each side, so a swapped side fails. */
@@ -56,7 +56,7 @@ describe('Label minimum size with a normal box (label.cpp:983-996)', () => {
 describe('Label shaping width with a normal box (label.cpp:141-142)', () => {
   it('truncates the width less the box margins', () => {
     expect(labelShapingWidthPx(100.7, MARGIN)).toBe(76);
-    expect(labelShapingWidthPx(100.7)).toBe(100);
+    expect(labelShapingWidthPx(100.7, NO_LABEL_MARGIN)).toBe(100);
   });
 });
 

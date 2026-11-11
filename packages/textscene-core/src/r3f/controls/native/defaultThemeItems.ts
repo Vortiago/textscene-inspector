@@ -109,14 +109,23 @@ export function panelBoxOf(n: SolveNode, theme: NativeTheme): StyleBoxFlatData {
  * (`default_theme.cpp:819,849,1174`), else `Label`'s white (`:383`). `undefined` for a chain that never reaches
  * Label. A colour a scene Theme sets is not read here.
  */
-export function defaultLabelFontColorOf(n: ShareNode): Rgba | undefined {
-  const chain = typeChains(n);
+export function defaultLabelFontColorInChain(chain: readonly string[]): Rgba | undefined {
   if (!chain.includes('Label')) return undefined;
   for (const type of chain) {
     const color = defaultThemeVariation(type)?.fontColor;
     if (color) return color;
   }
   return LABEL_FONT_COLOR;
+}
+
+/** Written only by `defaultLabelFontColorOf`. `null` records a chain that never reaches Label. */
+const labelFontColors = perObject(
+  (n: ShareNode): Rgba | null => defaultLabelFontColorInChain(typeChains(n)) ?? null
+);
+
+/** {@link defaultLabelFontColorInChain} for the type chain of `n`, resolved once per node. */
+export function defaultLabelFontColorOf(n: ShareNode): Rgba | undefined {
+  return labelFontColors(n) ?? undefined;
 }
 
 /**

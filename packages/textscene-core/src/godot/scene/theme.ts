@@ -170,10 +170,8 @@ export function scaledGodotTheme(scale: number): ScaledGodotTheme {
 export interface DefaultThemeVariation {
   /** `Theme::set_type_variation(variation, base)`: the type its lookup continues in. */
   readonly base: string;
-  /** What the variation adds to `default_font_size` (the unscaled 16 px), where the default theme sets a size for it. */
+  /** What the variation adds to `default_font_size` (the unscaled 16 px), where the default theme sets a size for it. `GraphFrameTitleLabel`'s literal 22 is 16 + 6 (`default_theme.cpp:848`). */
   readonly fontSizeStep?: number;
-  /** The font size the variation sets outright, in unscaled px (`GraphFrameTitleLabel`). */
-  readonly fontSizePx?: number;
   /** The `font_color` the variation sets (`default_theme.cpp:819,849,1174`). */
   readonly fontColor?: Rgba;
 }
@@ -191,7 +189,7 @@ export const DEFAULT_THEME_VARIATIONS: Readonly<Record<string, DefaultThemeVaria
   HeaderMedium: { base: 'Label', fontSizeStep: 8 },
   HeaderLarge: { base: 'Label', fontSizeStep: 12 },
   GraphNodeTitleLabel: { base: 'Label', fontColor: CONTROL_FONT_COLOR },
-  GraphFrameTitleLabel: { base: 'Label', fontSizePx: 22, fontColor: LABEL_FONT_COLOR },
+  GraphFrameTitleLabel: { base: 'Label', fontSizeStep: 6, fontColor: LABEL_FONT_COLOR },
   TooltipPanel: { base: 'PopupPanel' },
   TooltipLabel: { base: 'Label', fontColor: CONTROL_FONT_COLOR },
 };

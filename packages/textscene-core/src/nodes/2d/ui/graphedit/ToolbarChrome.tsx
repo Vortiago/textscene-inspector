@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { buttonIconColor } from '../button/nativeSolver';
+import { PositionedStyleBox } from '../../../../r3f/controls/native/PositionedStyleBox';
 import { IconButton, iconModulate } from '../../../../r3f/controls/native/IconButton';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -37,7 +38,7 @@ import { resolveToggleDrawState } from '../../../../r3f/controls/native/buttonBa
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { graphEditMenuPanelStyleBox, type GraphEditToolbar } from './toolbar';
 import type { GraphEditToolbarTheme } from './toolbarTheme';
-import { contentRect, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentRect } from '../../../../r3f/controls/native/styleBoxFlat';
 import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 
 interface GraphEditToolbarProps {
@@ -53,27 +54,6 @@ interface GraphEditToolbarProps {
   /** The `SpinBox` buttons block sits on the trailing edge (`spin_box.cpp:403,409`). */
   rtl: boolean;
   slot: CanvasSlot;
-}
-
-interface ItemBoxProps {
-  box: StyleBoxFlatData;
-  rect: Rect2;
-  tint: NativeControlComponentProps['tint'];
-  renderOrder: number;
-}
-
-/** `box` over `rect` in the toolbar's coordinates. */
-function ItemBox({ box, rect, tint, renderOrder }: ItemBoxProps) {
-  return (
-    <CanvasItemGroup position={[rect.x, -rect.y, 0]}>
-      <StyleBoxQuad
-        styleBox={box}
-        color={tint.own}
-        rect={{ x: 0, y: 0, w: rect.w, h: rect.h }}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
-  );
 }
 
 /** The tint and opacity of a SpinBox arrow in its normal state. */
@@ -153,7 +133,12 @@ export function GraphEditToolbarChrome({
           const { labelBox } = toolbarTheme;
           return (
             <CanvasItemGroup key={item.id}>
-              <ItemBox box={labelBox} rect={item.rect} tint={tint} renderOrder={pieces.boxes.key} />
+              <PositionedStyleBox
+                box={labelBox}
+                rect={item.rect}
+                tint={tint}
+                renderOrder={pieces.boxes.key}
+              />
               <LabelledText
                 rect={contentRect(item.rect, labelBox)}
                 layout={shape(text.zoomLabel)}
@@ -197,7 +182,7 @@ export function GraphEditToolbarChrome({
         const downPos = arrowPosition(item.rect, layout.downRect);
         return (
           <CanvasItemGroup key={item.id}>
-            <ItemBox box={fieldBox} rect={fieldRect} tint={tint} renderOrder={pieces.boxes.key} />
+            <PositionedStyleBox box={fieldBox} rect={fieldRect} tint={tint} renderOrder={pieces.boxes.key} />
             <LabelledText
               rect={fieldRect}
               layout={shape(text.snappingDistance)}

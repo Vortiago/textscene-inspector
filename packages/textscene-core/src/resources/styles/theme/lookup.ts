@@ -55,7 +55,7 @@ export function buildThemeTypeChain(
     // variation owns its `base_type` walk (`scene/theme/theme_owner.cpp:181-224`),
     // which stops before `nativeType`.
     const owner = themeSearchOrder(ancestorThemes, projectTheme).find((t) =>
-      Object.hasOwn(t.typeVariations, typeVariation)
+      registersVariation(t, typeVariation)
     );
     // No scene or project theme registers it: the default theme may (`theme_owner.cpp:200-208`).
     const baseOf = (variation: string): string | undefined =>
@@ -77,9 +77,14 @@ export function buildThemeTypeChain(
   return [...chain, ...nativeTypeChain(nativeType)];
 }
 
+/** Whether `theme` registers `variation` (`Theme::set_type_variation`). Own keys only, so a name such as `constructor` reads no prototype. */
+function registersVariation(theme: ThemeResource, variation: string): boolean {
+  return Object.hasOwn(theme.typeVariations, variation);
+}
+
 /** The base a Theme registers for a variation, if it registers it. */
 function ownerBaseOf(owner: ThemeResource, variation: string): string | undefined {
-  return Object.hasOwn(owner.typeVariations, variation) ? owner.typeVariations[variation] : undefined;
+  return registersVariation(owner, variation) ? owner.typeVariations[variation] : undefined;
 }
 
 /**
@@ -91,7 +96,7 @@ function ownerBaseOf(owner: ThemeResource, variation: string): string | undefine
 function fontInTheme(theme: ThemeResource, type: string, name: string): FontResource | undefined {
   const explicit = theme.fonts[type]?.[name];
   if (explicit !== undefined) return explicit;
-  if (Object.hasOwn(theme.typeVariations, type)) return undefined;
+  if (registersVariation(theme, type)) return undefined;
   return theme.defaultFont ?? undefined;
 }
 
@@ -99,7 +104,7 @@ function fontInTheme(theme: ThemeResource, type: string, name: string): FontReso
 function fontSizeInTheme(theme: ThemeResource, type: string, name: string): number | undefined {
   const explicit = theme.fontSizes[type]?.[name];
   if (explicit !== undefined) return explicit;
-  if (Object.hasOwn(theme.typeVariations, type)) return undefined;
+  if (registersVariation(theme, type)) return undefined;
   return theme.defaultFontSize;
 }
 
@@ -279,9 +284,8 @@ export function resolveThemeFontSizeIn(
 /** The default theme's font size for a variation, which sits after every Theme a scene or a project sets. */
 function defaultThemeVariationFontSize(variation: string | undefined, name: string): number | undefined {
   if (variation === undefined || name !== 'font_size') return undefined;
-  const row = defaultThemeVariation(variation);
-  if (row?.fontSizePx !== undefined) return row.fontSizePx;
-  return row?.fontSizeStep === undefined ? undefined : DEFAULT_FONT_SIZE + row.fontSizeStep;
+  const step = defaultThemeVariation(variation)?.fontSizeStep;
+  return step === undefined ? undefined : DEFAULT_FONT_SIZE + step;
 }
 
 /**
