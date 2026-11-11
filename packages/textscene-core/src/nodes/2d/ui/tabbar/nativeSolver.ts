@@ -514,7 +514,8 @@ export function ensureTabVisible(
 ): number {
   const { currentTab } = input;
   const isInRange = currentTab >= offset && currentTab <= placement.maxDrawnTab;
-  if (currentTab < 0 || !placement.buttonsVisible || tabs[currentTab]!.hidden || isInRange) return offset;
+  const isUnknownTab = currentTab < 0 || currentTab >= tabs.length;
+  if (isUnknownTab || !placement.buttonsVisible || tabs[currentTab]!.hidden || isInRange) return offset;
   if (currentTab < offset) return currentTab;
 
   const limitMinusButtons = widthBesideArrows(input);

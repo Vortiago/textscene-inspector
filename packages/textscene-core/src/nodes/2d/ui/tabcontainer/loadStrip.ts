@@ -39,17 +39,9 @@ export interface LoadedStrip {
 }
 
 /**
- * Replays the load as Godot runs it (`tab_container.cpp`, `tab_bar.cpp`):
- * 1. Each page's `add_child_notify` adds a tab and calls `_update_margins` (`:640-656`), before the bar
- *    is in the tree, so no `ensure_tab_visible` runs.
- * 2. The bar enters the tree and runs `ensure_tab_visible` once (`tab_bar.cpp:401`), with no page hidden.
- * 3. `NOTIFICATION_READY` applies each `tab_<i>/hidden` (`:228-237`). A hidden tab reruns
- *    `_update_cache`, `_ensure_no_over_offset` and `ensure_tab_visible` (`tab_bar.cpp:1078-1091`), then
- *    `_update_margins` (`tab_container.cpp:994-997`).
- * 4. The bar gets its width at the first frame, and `_update_margins` runs once more. For RIGHT
- *    alignment the width before it is the full container width: until then the bar is 0 wide, so the
- *    tabs overflow and every earlier decision reclaimed `side_margin`.
- * `scroll_to_selected` is the TabBar default, as TabContainer exposes no property for it.
+ * Replays the load order of `tab_container.cpp` and `tab_bar.cpp`: each page adds a tab and runs
+ * `_update_margins` (`:640-656`), the bar enters the tree, then `NOTIFICATION_READY` hides pages (`:228-237`).
+ * The first frame sizes the bar. `scroll_to_selected` is the TabBar default, as TabContainer has no property.
  */
 export function resolveTabContainerStrip(
   tabs: readonly TabLayoutInput[],
@@ -74,16 +66,21 @@ export function resolveTabContainerStrip(
     offset = ensureNoOverOffset(shown(), sizes, place(), offset, layoutInput());
   };
   const scrollToCurrent = () => {
+    if (!input.scrollToSelected) return;
     offset = ensureTabVisible(shown(), sizes, place(), offset, layoutInput());
   };
 
   /** `TabContainer::_update_margins` (`tab_container.cpp:405-460`) and the bar's `NOTIFICATION_RESIZED`. */
   const updateMargins = () => {
     if (tabCount === 0) return;
-    barWidthPx = marginedBarWidth();
-    if (!hasBarEnteredTree) return;
-    const offsetBefore = offset;
+    if (!hasBarEnteredTree) {
+      barWidthPx = marginedBarWidth();
+      return;
+    }
+    // The bar compares against the cache of its old width (`tab_bar.cpp:511-519`), so read it before the resize.
     const maxDrawnBefore = place().maxDrawnTab;
+    barWidthPx = marginedBarWidth();
+    const offsetBefore = offset;
     pullBack();
     if (offset !== offsetBefore || place().maxDrawnTab !== maxDrawnBefore) scrollToCurrent();
   };
@@ -103,8 +100,10 @@ export function resolveTabContainerStrip(
 
   for (tabCount = 1; tabCount <= tabs.length; tabCount++) updateMargins();
   tabCount = tabs.length;
+  // ENTER_TREE runs one `ensure_tab_visible`, with no page hidden (`tab_bar.cpp:401`).
   hasBarEnteredTree = true;
   scrollToCurrent();
+  // A hidden tab reruns the cache, the over-offset pull and the scroll (`tab_bar.cpp:1078-1091`), then the margins (`:994-997`).
   tabs.forEach((tab, index) => {
     if (!tab.hidden) return;
     hiddenIndices.add(index);
@@ -112,6 +111,8 @@ export function resolveTabContainerStrip(
     scrollToCurrent();
     updateMargins();
   });
+  // RIGHT alignment: the bar is the full container wide until the first frame, so every earlier
+  // decision reclaimed `side_margin`.
   if (input.alignment === TAB_ALIGNMENT_RIGHT) {
     barWidthPx = fullWidthPx;
     pullBack();
