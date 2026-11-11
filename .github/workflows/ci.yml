@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: read
+  # The browser jobs pull their image from ghcr.io.
+  packages: read
 
 # A new push to a pull request cancels its older run. Each push to main runs to the end.
 concurrency:
@@ -51,6 +53,44 @@ jobs:
           path: .visual-pass
           key: visual-pass-${{ steps.inputs.outputs.key }}
           lookup-only: true
+
+  # Names the image the browser jobs run in (.github/ci-image), and builds and publishes it when no
+  # run has yet. The tag is a hash of the image's inputs, so a commit that changes none of them
+  # reuses the published image, and a pull request that changes one runs in its own image.
+  image:
+    name: CI image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      ref: ${{ steps.image.outputs.ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: image
+        run: node scripts/ci/ciImage.mjs >> "$GITHUB_OUTPUT"
+      - name: Sign in to ghcr.io
+        env:
+          TOKEN: ${{ github.token }}
+        run: docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin <<< "$TOKEN"
+      - id: published
+        env:
+          REF: ${{ steps.image.outputs.ref }}
+        run: |
+          if docker manifest inspect "$REF" > /dev/null; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          fi
+      # A fork's token cannot publish. A fork's pull request that changes the image fails here,
+      # until someone with write access pushes its branch to this repository.
+      - name: Build and publish the image
+        if: steps.published.outputs.published != 'true'
+        env:
+          REF: ${{ steps.image.outputs.ref }}
+          PLAYWRIGHT_VERSION: ${{ steps.image.outputs.playwright-version }}
+        run: |
+          docker build --build-arg PLAYWRIGHT_VERSION --tag "$REF" .github/ci-image
+          docker push "$REF"
 
   static:
     name: Lint, type check and generated files
@@ -160,8 +200,16 @@ jobs:
   visual-regression:
     name: Visual regression (${{ matrix.shard }}/12)
     runs-on: ubuntu-latest
-    needs: [web-previewer, changes]
+    needs: [image, web-previewer, changes]
     if: needs.changes.outputs.visual == 'true'
+    # Chromium keeps its shared memory in /dev/shm, which Docker limits to 64 MB, so every browser
+    # job shares the runner's.
+    container:
+      image: ${{ needs.image.outputs.ref }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+      options: --ipc=host
     timeout-minutes: 20
     # The harness captures one scene at a time with software GL, and the whole set takes more
     # than an hour on one runner. Runners are free for a public repository. Each shard gets an
@@ -182,7 +230,9 @@ jobs:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      - uses: ./.github/actions/playwright
+      # The image holds the locked Chromium, so this downloads only after a Playwright update that
+      # the image has not caught up with.
+      - run: pnpm playwright:install
 
       - run: pnpm test:visual --shard ${{ matrix.shard }}/12
         env:
@@ -197,7 +247,13 @@ jobs:
   e2e-web:
     name: E2E (web previewer)
     runs-on: ubuntu-latest
-    needs: web-previewer
+    needs: [image, web-previewer]
+    container:
+      image: ${{ needs.image.outputs.ref }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+      options: --ipc=host
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -209,16 +265,14 @@ jobs:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      - uses: ./.github/actions/playwright
-
-      # The rasteriser gate in test:gpu needs lavapipe, the driver pnpm ref:godot renders on.
-      - run: sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers
+      - run: pnpm playwright:install
 
       - run: pnpm test:e2e:web
         env:
           VISUAL_SKIP_BUILD: '1'
 
-      # The sky layer passes, which happy-dom cannot run, checked on the real shaders.
+      # The sky layer passes, which happy-dom cannot run, checked on the real shaders. Its rasteriser
+      # gate needs lavapipe, the driver pnpm ref:godot renders on, which the image holds.
       - run: pnpm test:gpu
 
       # Each budget scene's draw calls and render step runs per frame, against its work budget.
@@ -231,11 +285,18 @@ jobs:
   renderer-consumer:
     name: Renderer in a plain Vite app
     runs-on: ubuntu-latest
+    needs: image
+    container:
+      image: ${{ needs.image.outputs.ref }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+      options: --ipc=host
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - uses: ./.github/actions/playwright
+      - run: pnpm playwright:install
       - run: pnpm test:renderer-consumer
 
   integration:
@@ -343,13 +404,20 @@ jobs:
   web:
     name: VS Code for the Web
     runs-on: ubuntu-latest
+    needs: image
+    container:
+      image: ${{ needs.image.outputs.ref }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+      options: --ipc=host
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
 
       # The root package pins the Playwright that @vscode/test-web launches.
-      - uses: ./.github/actions/playwright
+      - run: pnpm playwright:install
 
       - run: pnpm --filter textscene-inspector test:web
 
@@ -370,6 +438,7 @@ jobs:
     needs:
       [
         changes,
+        image,
         static,
         unit,
         build,
