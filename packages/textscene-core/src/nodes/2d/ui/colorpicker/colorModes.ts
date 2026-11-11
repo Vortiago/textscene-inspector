@@ -7,16 +7,10 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
+import { linearChannelToSRGBF32, sRGBChannelToLinearF32 } from '../../../../utils/colorSpace';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { formatGodotNumber } from '../spinbox/nativeSolver';
-import {
-  colorHue,
-  colorSaturation,
-  hsvToRgb,
-  linearToSrgbF32,
-  srgbToLinearF32,
-} from '../../../../godot/math/color';
+import { colorHue, colorSaturation, hsvToRgb } from '../../../../godot/math/color';
 import { okhslToSrgb, srgbToOkhsl } from './okhsl';
 import { COLOR_HUE_STOPS } from './svGradient';
 import type { Rgba } from '../../../../godot/math/math';
@@ -29,10 +23,10 @@ interface HsvColor {
 
 /**
  * The HSV of `_set_pick_color` (`color_picker.cpp:324-345`): `_copy_normalized_to_hsv_okhsl`
- * (`:552-565`) reads `color_normalized` with `Color::get_h/get_s/get_v` (`core/math/color.cpp:136-180`).
+ * (`:552-565`) reads `color_normalized`, which the caller passes, with `Color::get_h/get_s/get_v`
+ * (`core/math/color.cpp:136-180`).
  */
-export function extractHsv(color: Rgba): HsvColor {
-  const normalized = colorNormalized(color);
+export function extractHsv(normalized: Rgba): HsvColor {
   return {
     h: colorHue(normalized),
     s: colorSaturation(normalized),
@@ -45,6 +39,16 @@ export const MODE_RGB = 0;
 export const MODE_HSV = 1;
 export const MODE_LINEAR = 2;
 export const MODE_OKHSL = 3;
+
+/** `Color::srgb_to_linear` of the rgb, in Godot's float steps; alpha stays. */
+function srgbToLinearF32(color: Rgba): Rgba {
+  return {
+    r: sRGBChannelToLinearF32(color.r),
+    g: sRGBChannelToLinearF32(color.g),
+    b: sRGBChannelToLinearF32(color.b),
+    a: color.a,
+  };
+}
 
 /** The divisor of `_copy_color_to_normalized_and_intensity` (`color_picker.cpp:593-602`): 1 unless a linear channel exceeds 1. */
 function intensityMultiplier(linear: Rgba): number {
@@ -60,12 +64,12 @@ function intensityMultiplier(linear: Rgba): number {
 export function colorNormalized(color: Rgba): Rgba {
   const linear = srgbToLinearF32(color);
   const multiplier = intensityMultiplier(linear);
-  return linearToSrgbF32({
-    r: Math.fround(linear.r / multiplier),
-    g: Math.fround(linear.g / multiplier),
-    b: Math.fround(linear.b / multiplier),
+  return {
+    r: linearChannelToSRGBF32(linear.r / multiplier),
+    g: linearChannelToSRGBF32(linear.g / multiplier),
+    b: linearChannelToSRGBF32(linear.b / multiplier),
     a: color.a,
-  });
+  };
 }
 
 /** `intensity = Math::log2(multiplier)` (`color_picker.cpp:594,601`): the intensity slider's value in every `color_mode`. */
@@ -121,11 +125,7 @@ export function colorModeChannels(
       ];
     }
     case MODE_LINEAR: {
-      const linear = {
-        r: sRGBChannelToLinear(normalized.r),
-        g: sRGBChannelToLinear(normalized.g),
-        b: sRGBChannelToLinear(normalized.b),
-      };
+      const linear = srgbToLinearF32(normalized);
       return [
         { label: 'R', value: linear.r, max: 1, decimals: 3 },
         { label: 'G', value: linear.g, max: 1, decimals: 3 },

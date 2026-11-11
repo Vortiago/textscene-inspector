@@ -26,8 +26,8 @@ import { SizeFlags } from '../../../../godot/scene/control';
 import { ContainerAlignment } from '../../../../godot/scene/container';
 import { resortBoxContainer } from '../shared/boxContainerSolver';
 import { pickerChildTheme } from './pickerChildTheme';
-import { resolvePickerShape, shapeRowHeight, shapeRowMinWidth } from './shapes/shapeRow';
-import { ColorPickerShape } from '../../../../godot/scene/gui';
+import { shapeRowHeight, shapeRowMinWidth } from './shapes/shapeRow';
+import { drawnShapeVariant } from './shapes/pickerShapes';
 import { MODE_RGB } from './colorModes';
 import { gridCellMinimumExtent } from '../shared/gridCellMinimum';
 import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
@@ -190,9 +190,18 @@ function modeRowSize(
   return { x: width, y: height };
 }
 
+/** The width `shape_container` needs: none at `SHAPE_NONE`, whose row holds no control. */
+function shapeRowMinWidthOf(
+  theme: Pick<NativeTheme, 'separation' | 'scale'>,
+  pickerShape: number | undefined
+): number {
+  const variant = drawnShapeVariant(pickerShape);
+  return variant ? shapeRowMinWidth(theme, variant.layout) : 0;
+}
+
 /** `SHAPE_NONE` hides `btn_shape` (`color_picker.cpp:321`). */
 function showsShapeButton(pickerShape: number | undefined): boolean {
-  return resolvePickerShape(pickerShape) !== ColorPickerShape.SHAPE_NONE;
+  return drawnShapeVariant(pickerShape) !== null;
 }
 
 /** The height of `sample_hbc`: the taller of `btn_pick` and, unless `SHAPE_NONE` hides it, `btn_shape`. */
@@ -367,8 +376,8 @@ export function colorPickerRows(
   >,
   measure: TextWidthMeasurer | null
 ): ColorPickerRows {
-  const pickerShape = resolvePickerShape(props.pickerShape);
-  const shapeHeight = shapeRowHeight(theme, pickerShape);
+  const variant = drawnShapeVariant(props.pickerShape);
+  const shapeHeight = variant ? shapeRowHeight(theme) : 0;
 
   const textHeightPx = measure ? measure('0').y : 0;
   const sampleHeight = sampleRowHeight(theme, props.pickerShape);
@@ -393,10 +402,9 @@ export function colorPickerRows(
   // and `separation` at any shape. Every other row uses `set_visible(false)`
   // (`color_picker.cpp:1906-1956`), which drops the row and its gap.
   const shapeY = place(shapeHeight);
-  const shape: Rect2 | null =
-    pickerShape === ColorPickerShape.SHAPE_NONE
-      ? null
-      : { x: 0, y: shapeY, w: Math.max(shapeRowMinWidth(theme, pickerShape), width), h: shapeHeight };
+  const shape: Rect2 | null = variant
+    ? { x: 0, y: shapeY, w: Math.max(shapeRowMinWidth(theme, variant.layout), width), h: shapeHeight }
+    : null;
   const sample: Rect2 | null = rowVisible(props.samplerVisible)
     ? { x: 0, y: place(sampleHeight), w: width, h: sampleHeight }
     : null;
@@ -488,7 +496,7 @@ export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const emWidthPx = measureUnceiled ? colorPickerEmWidthPx((text) => measureUnceiled(text).x) : 0;
   const rows = colorPickerRows(0, theme, valueFieldTheme, props, measure);
   const width = Math.max(
-    shapeRowMinWidth(theme, resolvePickerShape(props.pickerShape)),
+    shapeRowMinWidthOf(theme, props.pickerShape),
     contentMinWidth(theme, valueFieldTheme, props, rows, emWidthPx)
   );
 

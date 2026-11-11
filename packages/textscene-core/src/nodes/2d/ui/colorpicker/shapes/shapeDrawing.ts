@@ -12,10 +12,11 @@ import type { Rect2 } from '../../../../../godot/math/rect2';
 import type { Rgba } from '../../../../../godot/math/math';
 import type { Vector2 } from '../../../../../godot/math/vector';
 import { inverted } from '../../../../../godot/math/color';
-import { colorNormalized, extractHsv } from '../colorModes';
-import { srgbToOkhsl } from '../okhsl';
+import { clamp } from '../../../../../godot/math/math';
+import { extractHsv } from '../colorModes';
+import { okhslToSrgb, srgbToOkhsl } from '../okhsl';
 import type { ShapeFragment } from './shapeFragment';
-import type { ShapeRowSplit } from './shapeRow';
+import type { ShapeRowLayout, ShapeRowSplit } from './shapeRow';
 
 /**
  * The picker's colour as the shapes read it: `h`, `s`, `v` and `ok_hsl_h`, `ok_hsl_s`, `ok_hsl_l`
@@ -26,8 +27,8 @@ export interface PickerShapeColor {
   okhsl: { h: number; s: number; l: number };
 }
 
-export function pickerShapeColor(color: Rgba): PickerShapeColor {
-  return { hsv: extractHsv(color), okhsl: srgbToOkhsl(colorNormalized(color)) };
+export function pickerShapeColor(normalized: Rgba): PickerShapeColor {
+  return { hsv: extractHsv(normalized), okhsl: srgbToOkhsl(normalized) };
 }
 
 /** A fill that a `canvas_item` shader evaluates per fragment over `rect`, with `UV` 0 to 1 and y down. */
@@ -73,9 +74,10 @@ export interface ShapeDrawing {
 /** The theme icon `btn_shape` shows for the shape (`color_picker_shape.h:108-227`). */
 export type ShapeIconName = 'shape_rect' | 'shape_rect_wheel' | 'shape_circle';
 
-/** One `ColorPickerShape` subclass: its `btn_shape` icon and what it draws in its split of the row. */
+/** One `ColorPickerShape` subclass: its `btn_shape` icon, its controls and what it draws in them. */
 export interface ShapeVariant {
   icon: ShapeIconName;
+  layout: ShapeRowLayout;
   draw(split: ShapeRowSplit, color: PickerShapeColor): ShapeDrawing;
 }
 
@@ -85,8 +87,8 @@ export interface ShapeVariant {
  */
 export function rectCursorCentre(rect: Rect2, x: number, y: number): Vector2 {
   return {
-    x: Math.min(Math.max(rect.x + rect.w * x, rect.x), rect.x + rect.w),
-    y: Math.min(Math.max(rect.y + rect.h * y, rect.y), rect.y + rect.h),
+    x: clamp(rect.x + rect.w * x, rect.x, rect.x + rect.w),
+    y: clamp(rect.y + rect.h * y, rect.y, rect.y + rect.h),
   };
 }
 
@@ -117,9 +119,22 @@ export function valueSlider(
   return {
     rect,
     stops,
-    lineY: sliderLineY(rect.h, 1 - Math.min(Math.max(value, 0), 1)),
+    lineY: sliderLineY(rect.h, 1 - clamp(value, 0, 1)),
     lineColor: inverted(lineSource),
   };
+}
+
+/**
+ * The OKHSL lightness slider of the OKHSL circle and the OK HS rectangle (`color_picker_shape.cpp:568-600`,
+ * `:1062-1092`): the stops at lightness 1, 0.5 and 0, and the line in the full-saturation colour.
+ */
+export function okLightnessSlider(rect: Rect2, { h, s, l }: PickerShapeColor['okhsl']): ShapeSlider {
+  return valueSlider(
+    rect,
+    [okhslToSrgb(h, s, 1), okhslToSrgb(h, s, 0.5), okhslToSrgb(h, s, 0)],
+    l,
+    okhslToSrgb(h, 1, l)
+  );
 }
 
 /** The slider of a shape that has one: every shape but the wheel. */

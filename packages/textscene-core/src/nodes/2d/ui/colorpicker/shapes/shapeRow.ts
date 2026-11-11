@@ -23,9 +23,11 @@ const SV_SIZE = 256;
 /** `h_width` (`default_theme.cpp:1079`), at scale 1. */
 const SLIDER_WIDTH = 30;
 
+export type DrawnPickerShape = Exclude<PickerShape, typeof ColorPickerShape.SHAPE_NONE>;
+
 /** The row of a picker that draws a shape: `sv_height` tall. */
-export function shapeRowHeight(theme: Pick<NativeTheme, 'scale'>, shape: PickerShape): number {
-  return shape === ColorPickerShape.SHAPE_NONE ? 0 : Math.round(SV_SIZE * theme.scale);
+export function shapeRowHeight(theme: Pick<NativeTheme, 'scale'>): number {
+  return Math.round(SV_SIZE * theme.scale);
 }
 
 /**
@@ -37,36 +39,33 @@ export function resolvePickerShape(value: number | undefined): PickerShape {
   return isKnown ? (value as PickerShape) : ColorPickerShape.SHAPE_HSV_RECTANGLE;
 }
 
-/** The wheel has no slider beside it (`ColorPickerShapeWheel::_initialize_controls`, `color_picker_shape.cpp:809-830`). */
-function hasSlider(shape: PickerShape): boolean {
-  return shape !== ColorPickerShape.SHAPE_HSV_WHEEL;
+/** The controls a shape puts in `shape_container`, as its `_initialize_controls` adds them. */
+export interface ShapeRowLayout {
+  /** Every shape but the wheel adds a slider beside its area. */
+  hasSlider: boolean;
+  /** `SIZE_EXPAND_FILL` on the area, so it takes what the slider leaves. */
+  areaExpands: boolean;
 }
 
-/**
- * The circles keep their `sv_width` (`color_picker_shape.cpp:875-907`). The rectangles' first control
- * is `SIZE_EXPAND_FILL` (`:438`, `:475`), so it takes what the slider leaves.
- */
-function stretchesArea(shape: PickerShape): boolean {
-  return (
-    shape === ColorPickerShape.SHAPE_HSV_RECTANGLE ||
-    shape === ColorPickerShape.SHAPE_OK_HS_RECTANGLE ||
-    shape === ColorPickerShape.SHAPE_OK_HL_RECTANGLE
-  );
-}
+/** A rectangle's area is `SIZE_EXPAND_FILL` (`color_picker_shape.cpp:438`, `:475`). */
+export const RECTANGLE_LAYOUT: ShapeRowLayout = { hasSlider: true, areaExpands: true };
+/** A circle keeps its `sv_width` beside its slider (`color_picker_shape.cpp:875-907`). */
+export const CIRCLE_LAYOUT: ShapeRowLayout = { hasSlider: true, areaExpands: false };
+/** The wheel has no slider beside it (`color_picker_shape.cpp:809-830`). */
+export const WHEEL_LAYOUT: ShapeRowLayout = { hasSlider: false, areaExpands: false };
 
 /**
  * The children of `shape_container`, as each shape's `update_theme` sizes them: the area at
  * `sv_width × sv_height`, then the value slider at `h_width`.
  */
-function shapeRowChildren(theme: Pick<NativeTheme, 'scale'>, shape: PickerShape): BoxChildInput[] {
-  if (shape === ColorPickerShape.SHAPE_NONE) return [];
+function shapeRowChildren(theme: Pick<NativeTheme, 'scale'>, layout: ShapeRowLayout): BoxChildInput[] {
   const area: BoxChildInput = {
     minSize: { x: Math.round(SV_SIZE * theme.scale), y: 0 },
-    hSizeFlags: stretchesArea(shape) ? SizeFlags.FILL | SizeFlags.EXPAND : SizeFlags.FILL,
+    hSizeFlags: layout.areaExpands ? SizeFlags.FILL | SizeFlags.EXPAND : SizeFlags.FILL,
     vSizeFlags: SizeFlags.FILL,
     stretchRatio: 1,
   };
-  if (!hasSlider(shape)) return [area];
+  if (!layout.hasSlider) return [area];
   const slider: BoxChildInput = {
     minSize: { x: Math.round(SLIDER_WIDTH * theme.scale), y: 0 },
     hSizeFlags: SizeFlags.FILL,
@@ -79,9 +78,9 @@ function shapeRowChildren(theme: Pick<NativeTheme, 'scale'>, shape: PickerShape)
 /** The minimum width of `shape_container`: its children and the `separation` between them. */
 export function shapeRowMinWidth(
   theme: Pick<NativeTheme, 'separation' | 'scale'>,
-  shape: PickerShape
+  layout: ShapeRowLayout
 ): number {
-  const children = shapeRowChildren(theme, shape);
+  const children = shapeRowChildren(theme, layout);
   const widths = children.reduce((sum, child) => sum + child.minSize.x, 0);
   return widths + Math.max(0, children.length - 1) * theme.separation;
 }
@@ -93,11 +92,11 @@ export interface ShapeRowSplit {
   slider: Rect2 | null;
 }
 
-/** Places the current shape's controls in `row`, as `BoxContainer::_resort` does (`box_container.cpp:47-192`). */
+/** Places a shape's controls in `row`, as `BoxContainer::_resort` does (`box_container.cpp:47-192`). */
 export function shapeRowSplit(
   row: Rect2,
   theme: Pick<NativeTheme, 'separation' | 'scale'>,
-  shape: Exclude<PickerShape, typeof ColorPickerShape.SHAPE_NONE>,
+  layout: ShapeRowLayout,
   rtl: boolean
 ): ShapeRowSplit {
   const [area, slider] = resortBoxContainer(
@@ -106,7 +105,7 @@ export function shapeRowSplit(
     theme.separation,
     ContainerAlignment.ALIGNMENT_CENTER,
     rtl,
-    shapeRowChildren(theme, shape)
+    shapeRowChildren(theme, layout)
   ).map((r) => ({ ...r, x: row.x + r.x, y: row.y + r.y }));
   return { area: area!, slider: slider ?? null };
 }

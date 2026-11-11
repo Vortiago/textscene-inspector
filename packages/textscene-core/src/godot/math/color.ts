@@ -226,45 +226,6 @@ export function lightened<C extends ColorChannels>(color: C, amount: number): C 
   return { ...color, r: r + (1 - r) * amount, g: g + (1 - g) * amount, b: b + (1 - b) * amount };
 }
 
-const f32 = Math.fround;
-
-/** `Color::srgb_to_linear` (`core/math/color.h:192-198`) of one channel, in Godot's float steps. */
-function srgbToLinearChannel(channel: number): number {
-  const c = f32(channel);
-  return c < f32(0.04045)
-    ? f32(c * f32(1 / 12.92))
-    : f32(Math.pow(f32((c + 0.055) * (1 / (1 + 0.055))), f32(2.4)));
-}
-
-/** `Color::linear_to_srgb` (`core/math/color.h:199-204`) of one channel, in Godot's float steps. */
-function linearToSrgbChannel(channel: number): number {
-  const c = f32(channel);
-  return c < f32(0.0031308) ? f32(f32(12.92) * c) : f32((1 + 0.055) * f32(Math.pow(c, f32(1 / 2.4))) - 0.055);
-}
-
-/**
- * `Color::srgb_to_linear`, with the float rounding of each step, where a result feeds float noise
- * that Godot's own output shows.
- */
-export function srgbToLinearF32<C extends ColorChannels>(color: C): C {
-  return {
-    ...color,
-    r: srgbToLinearChannel(color.r),
-    g: srgbToLinearChannel(color.g),
-    b: srgbToLinearChannel(color.b),
-  };
-}
-
-/** `Color::linear_to_srgb`, with the float rounding of each step, as `srgbToLinearF32`. */
-export function linearToSrgbF32<C extends ColorChannels>(color: C): C {
-  return {
-    ...color,
-    r: linearToSrgbChannel(color.r),
-    g: linearToSrgbChannel(color.g),
-    b: linearToSrgbChannel(color.b),
-  };
-}
-
 /** `Color::inverted` (`core/math/color.h`): each colour channel flips, and alpha stays. */
 export function inverted<C extends ColorChannels>(color: C): C {
   return { ...color, r: 1 - color.r, g: 1 - color.g, b: 1 - color.b };

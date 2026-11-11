@@ -7,9 +7,9 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { okhslToSrgb } from '../okhsl';
-import { rectCursorCentre, requireSlider, valueSlider, type ShapeVariant } from './shapeDrawing';
+import { okLightnessSlider, rectCursorCentre, requireSlider, type ShapeVariant } from './shapeDrawing';
 import type { ShapeFragment } from './shapeFragment';
+import { RECTANGLE_LAYOUT } from './shapeRow';
 
 /** The OK colour HS rectangle shader (`color_picker_shape.cpp:113-124`). */
 const OK_HS_RECTANGLE_FRAGMENT: ShapeFragment = {
@@ -24,18 +24,14 @@ const OK_HS_RECTANGLE_FRAGMENT: ShapeFragment = {
 
 export const OK_HS_RECTANGLE: ShapeVariant = {
   icon: 'shape_rect',
+  layout: RECTANGLE_LAYOUT,
   draw(split, { okhsl }) {
     const { h, s, l } = okhsl;
     return {
       fill: { rect: split.area, fragment: OK_HS_RECTANGLE_FRAGMENT, uniforms: { ok_hsl_l: l } },
       svSquare: null,
       cursors: [{ centre: rectCursorCentre(split.area, h, 1 - s), hasBackground: true }],
-      slider: valueSlider(
-        requireSlider(split),
-        [okhslToSrgb(h, s, 1), okhslToSrgb(h, s, 0.5), okhslToSrgb(h, s, 0)],
-        l,
-        okhslToSrgb(h, 1, l)
-      ),
+      slider: okLightnessSlider(requireSlider(split), okhsl),
     };
   },
 };

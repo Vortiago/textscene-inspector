@@ -38,8 +38,8 @@ walk. It draws these parts:
   `.tscn`-loaded picker holds: presets arrive only through `add_preset()` at runtime,
   never as a serialised property. Godot leaves the swatches grid collapsed until a viewer
   expands it, so there is no grid to draw.
-- The shape row for every `picker_shape` but `SHAPE_NONE`: the HSV rectangle's SV square and
-  hue slider, the HSV wheel, the VHS and OKHSL circles, and the OK HS and OK HL rectangles.
+- The shape row of each `picker_shape` but `SHAPE_NONE`. That is the HSV rectangle, the HSV
+  wheel, the VHS and OKHSL circles, and the OK HS and OK HL rectangles.
   Each wheel, circle and OK rectangle draws Godot's own `canvas_item` shader
   (`color_picker_shape.cpp:38-137`) with its cursors and its value slider. The row lays its
   controls out as the `shape_container` HBoxContainer does, so a circle keeps `sv_width` and a
@@ -90,9 +90,8 @@ raw `Color()` member default, because `ColorPicker::ColorPicker()` calls
 
 ## Known limitations
 
-- **Not matched** `self_modulate` tints every part of the picker. In Godot it tints only the
-  picker's own drawing, and the shape row, the buttons, the sample and the sliders are internal
-  child Controls that it does not reach.
+- **Not matched** `self_modulate` tints every part of the picker, which in Godot are child
+  Controls that it never reaches.
 - **Approximated** The minimum-size calculation floors the channel-label column at
   `label_width` (10px), not the widest label's width, which the shape row's 290px floor
   hides in every fixture.

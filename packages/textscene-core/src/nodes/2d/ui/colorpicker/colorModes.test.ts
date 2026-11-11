@@ -152,15 +152,12 @@ describe('hsvChannelGradientStops', () => {
   });
 });
 
-/** The value of (0.8, 0.6, 0.4) as Godot holds it: a float, as every `Color` channel is. */
-const PICKED_VALUE = Math.fround(0.8);
-
 describe('hsvHueChannelLayers base', () => {
   it('is the grey polygon at the value: color_mode.cpp:192-206', () => {
     closeColor(hsvHueChannelLayers({ r: 0.8, g: 0.6, b: 0.4, a: 1 }).base, {
-      r: PICKED_VALUE,
-      g: PICKED_VALUE,
-      b: PICKED_VALUE,
+      r: 0.8,
+      g: 0.8,
+      b: 0.8,
       a: 1,
     });
   });
@@ -184,9 +181,9 @@ describe('hsvHueChannelLayers stops', () => {
     ];
     stops.forEach((stop, i) => {
       closeColor(stop, {
-        r: hues[i]![0]! * PICKED_VALUE,
-        g: hues[i]![1]! * PICKED_VALUE,
-        b: hues[i]![2]! * PICKED_VALUE,
+        r: hues[i]![0]! * 0.8,
+        g: hues[i]![1]! * 0.8,
+        b: hues[i]![2]! * 0.8,
         a: 0.5,
       });
     });
@@ -300,10 +297,10 @@ describe('extractHsv', () => {
     expect(v).toBeCloseTo(1);
   });
 
-  it('normalises an overbright colour before extracting h/s/v: color_picker.cpp:593-602', () => {
+  it('reads an overbright colour after colorNormalized: color_picker.cpp:593-602', () => {
     // r=2 (linear-equivalent overbright red): multiplier > 1, so v settles
     // back to 1 after the srgb round-trip, not 2.
-    const { s, v } = extractHsv({ r: 2, g: 0, b: 0, a: 1 });
+    const { s, v } = extractHsv(colorNormalized({ r: 2, g: 0, b: 0, a: 1 }));
     expect(s).toBeCloseTo(1, 2);
     expect(v).toBeCloseTo(1, 2);
   });

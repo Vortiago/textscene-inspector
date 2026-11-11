@@ -30,7 +30,7 @@ function quad(w: number, h: number, corners: readonly [Rgba, Rgba, Rgba, Rgba]):
 }
 
 const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-const BLACK: Rgba = { r: 0, g: 0, b: 0, a: 1 };
+export const BLACK: Rgba = { r: 0, g: 0, b: 0, a: 1 };
 
 /**
  * The first `draw_polygon` of `ColorPickerShape::draw_sv_square`

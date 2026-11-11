@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../../r3f/components/CanvasItemGroup';
 import { ControlQuad } from '../../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../../r3f/controls/native/useIconTexture';
+import { PositionedIcon } from '../../../../../r3f/controls/native/PositionedIcon';
 import { useControlClipPlanes } from '../../../../../r3f/controls/native/controlClipping';
 import type { SolveNode } from '../../../../../r3f/controls/native/solveTree';
 import {
@@ -138,27 +139,26 @@ function Cursor({
   const ringTexture = useNodeIcon(solveNode.icons.picker_cursor, COLOR_PICKER_CURSOR_ICON);
   const background = useMemo(() => multiplyModulate(tint.own, { ...pickColor, a: 1 }), [tint.own, pickColor]);
   const backgroundColor = useItemLinearColor(background);
+  const rect = { x: cursor.centre.x - size / 2, y: cursor.centre.y - size / 2, w: size, h: size };
   return (
-    <CanvasItemGroup position={[cursor.centre.x - size / 2, -(cursor.centre.y - size / 2), 0]}>
+    <>
       {cursor.hasBackground && (
-        <ControlQuad
-          width={size}
-          height={size}
+        <PositionedIcon
+          rect={rect}
+          texture={backgroundTexture}
           color={backgroundColor}
           opacity={background.a}
-          map={backgroundTexture}
           renderOrder={renderOrder}
         />
       )}
-      <ControlQuad
-        width={size}
-        height={size}
+      <PositionedIcon
+        rect={rect}
+        texture={ringTexture}
         color={tint.color}
         opacity={tint.opacity}
-        map={ringTexture}
         renderOrder={renderOrder}
       />
-    </CanvasItemGroup>
+    </>
   );
 }
 

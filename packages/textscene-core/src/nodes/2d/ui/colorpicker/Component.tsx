@@ -89,9 +89,8 @@ import {
 import { horizontalStripGeometry, linearizeStops } from './svGradient';
 import { ShapeRow } from './shapes/ShapeRow';
 import { pickerShapeColor } from './shapes/shapeDrawing';
-import { resolvePickerShape, shapeRowSplit } from './shapes/shapeRow';
-import { shapeVariant } from './shapes/pickerShapes';
-import { ColorPickerShape } from '../../../../godot/scene/gui';
+import { shapeRowSplit } from './shapes/shapeRow';
+import { drawnShapeVariant } from './shapes/pickerShapes';
 import {
   MODE_HSV,
   MODE_LINEAR,
@@ -133,7 +132,7 @@ export function ColorPicker({
   const props = painterView<ColorPickerProperties>(solveNode);
   const fill = useMemo(() => parseColor(props.color), [props.color]);
   const normalized = useMemo(() => colorNormalized(fill), [fill]);
-  const shapeColor = useMemo(() => pickerShapeColor(fill), [fill]);
+  const shapeColor = useMemo(() => pickerShapeColor(normalized), [normalized]);
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
   const scale = theme.scale;
 
@@ -234,9 +233,8 @@ export function ColorPicker({
   // `btn_shape`, `btn_mode` and `menu_btn` use `FlatMenuButton`, whose boxes are `StyleBoxEmpty`
   // (`default_theme.cpp:360,372-375`). Only `btn_pick`, a plain `Button` (`default_theme.cpp:138-141`), draws one.
   const pickIconTexture = useNodeIcon(solveNode.icons.screen_picker, COLOR_PICKER_PIPETTE_ICON);
-  const pickerShape = resolvePickerShape(props.pickerShape);
-  const drawnShape = pickerShape === ColorPickerShape.SHAPE_NONE ? null : pickerShape;
-  const shapeIcon = drawnShape === null ? null : shapeVariant(drawnShape).icon;
+  const variant = drawnShapeVariant(props.pickerShape);
+  const shapeIcon = variant?.icon ?? null;
   const shapeIconTexture = useNodeIcon(
     shapeIcon ? solveNode.icons[shapeIcon] : undefined,
     shapeIcon ? COLOR_PICKER_SHAPE_ICONS[shapeIcon] : null
@@ -253,10 +251,9 @@ export function ColorPicker({
   const baseTint = vertexTint.vertex;
 
   const shapeDrawing = useMemo(() => {
-    if (!rows.shape || drawnShape === null) return null;
-    const split = shapeRowSplit(rows.shape, theme, drawnShape, solveNode.rtl);
-    return shapeVariant(drawnShape).draw(split, shapeColor);
-  }, [rows.shape, theme, drawnShape, solveNode.rtl, shapeColor]);
+    if (!rows.shape || !variant) return null;
+    return variant.draw(shapeRowSplit(rows.shape, theme, variant.layout, solveNode.rtl), shapeColor);
+  }, [rows.shape, theme, variant, solveNode.rtl, shapeColor]);
 
   const modeCols = rows.mode
     ? modeRowButtonRects(

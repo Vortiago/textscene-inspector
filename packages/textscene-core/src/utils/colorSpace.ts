@@ -23,6 +23,28 @@ export function linearChannelToSRGB(c: number): number {
   return 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
 }
 
+// Bound once: a colour picker converts each channel in several float steps per colour.
+const { fround } = Math;
+
+/**
+ * {@link sRGBChannelToLinear} with the float rounding of each step that Godot's `float` maths
+ * takes, for a result whose float noise Godot's own output shows.
+ */
+export function sRGBChannelToLinearF32(channel: number): number {
+  const c = fround(channel);
+  return c < fround(0.04045)
+    ? fround(c * fround(1 / 12.92))
+    : fround(Math.pow(fround((c + 0.055) * (1 / (1 + 0.055))), fround(2.4)));
+}
+
+/** {@link linearChannelToSRGB} with the float rounding of each step, as {@link sRGBChannelToLinearF32}. */
+export function linearChannelToSRGBF32(channel: number): number {
+  const c = fround(channel);
+  return c < fround(0.0031308)
+    ? fround(fround(12.92) * c)
+    : fround((1 + 0.055) * fround(Math.pow(c, fround(1 / 2.4))) - 0.055);
+}
+
 /** `sRGBChannelToLinear` over an RGB triple. */
 export function sRGBToLinearRGB(r: number, g: number, b: number): [number, number, number] {
   return [sRGBChannelToLinear(r), sRGBChannelToLinear(g), sRGBChannelToLinear(b)];

@@ -7,7 +7,8 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { rectCursorCentre, type ShapeVariant } from './shapeDrawing';
+import { circleCursorCentre, rectCursorCentre, type ShapeVariant } from './shapeDrawing';
+import { WHEEL_LAYOUT } from './shapeRow';
 import type { ShapeFragment } from './shapeFragment';
 
 /** `WHEEL_RADIUS` (`color_picker_shape.h:173`): the ring's inner radius, as a fraction of the control. */
@@ -39,6 +40,7 @@ const HUE_CURSOR_RADIUS = WHEEL_RADIUS * 2 + (1 - WHEEL_RADIUS * 2) * 0.5;
 
 export const HSV_WHEEL: ShapeVariant = {
   icon: 'shape_rect_wheel',
+  layout: WHEEL_LAYOUT,
   draw({ area }, { hsv }) {
     const ringRadius = { x: area.w * Math.SQRT1_2 * WHEEL_RADIUS, y: area.h * Math.SQRT1_2 * WHEEL_RADIUS };
     const centre = { x: area.w * 0.5, y: area.h * 0.5 };
@@ -48,19 +50,12 @@ export const HSV_WHEEL: ShapeVariant = {
       w: ringRadius.x * 2,
       h: ringRadius.y * 2,
     };
-    const hueAngle = hsv.h * 2 * Math.PI;
     return {
       fill: { rect: area, fragment: WHEEL_FRAGMENT, uniforms: { wheel_radius: WHEEL_RADIUS } },
       svSquare: { rect: square, hue: hsv.h },
       cursors: [
         { centre: rectCursorCentre(square, hsv.s, 1 - hsv.v), hasBackground: true },
-        {
-          centre: {
-            x: area.x + centre.x + centre.x * Math.cos(hueAngle) * HUE_CURSOR_RADIUS,
-            y: area.y + centre.y + centre.y * Math.sin(hueAngle) * HUE_CURSOR_RADIUS,
-          },
-          hasBackground: false,
-        },
+        { centre: circleCursorCentre(area, hsv.h, HUE_CURSOR_RADIUS), hasBackground: false },
       ],
       slider: null,
     };

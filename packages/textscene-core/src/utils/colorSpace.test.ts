@@ -4,7 +4,14 @@
  * shows only in a golden image.
  */
 import { describe, expect, it } from 'vitest';
-import { channelToByte, linearChannelToSRGB, sRGBChannelToLinear, sRGBToLinearRGB } from './colorSpace';
+import {
+  channelToByte,
+  linearChannelToSRGB,
+  linearChannelToSRGBF32,
+  sRGBChannelToLinear,
+  sRGBChannelToLinearF32,
+  sRGBToLinearRGB,
+} from './colorSpace';
 
 const BYTES = Array.from({ length: 256 }, (_, byte) => byte);
 
@@ -109,5 +116,23 @@ describe('channelToByte', () => {
   it('clamps a channel outside 0..1 (edge case)', () => {
     expect(channelToByte(-0.2)).toBe(0);
     expect(channelToByte(1.7)).toBe(255);
+  });
+});
+
+// Measured: Godot 4.6.3 prints `Color(0.5, 0.02, 1.5).srgb_to_linear()` and
+// `Color(0.2, 0.001, 2.0).linear_to_srgb()` with these channels, to the last float bit.
+describe('sRGBChannelToLinearF32', () => {
+  it("matches Godot's float Color::srgb_to_linear on the curve, the linear segment and above 1", () => {
+    expect([0.5, 0.02, 1.5].map(sRGBChannelToLinearF32)).toEqual([
+      0.21404114365577698, 0.0015479875728487968, 2.5371556282043457,
+    ]);
+  });
+});
+
+describe('linearChannelToSRGBF32', () => {
+  it("matches Godot's float Color::linear_to_srgb on the curve, the linear segment and above 1", () => {
+    expect([0.2, 0.001, 2.0].map(linearChannelToSRGBF32)).toEqual([
+      0.4845292568206787, 0.012920000590384007, 1.3532559871673584,
+    ]);
   });
 });

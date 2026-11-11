@@ -9,9 +9,8 @@ import { useCanvasItemMerge } from '../../../../../r3f/components/LitCanvasItemP
 import { useControlClipPlanes } from '../../../../../r3f/controls/native/controlClipping';
 import { materialProgramInputs } from '../../../../../r3f/materialProgramInputs';
 import { useDisposeOnRelease } from '../../../../../r3f/useDisposeOnRelease';
-import { useCanvasColorSpace } from '../../../../../r3f/canvasColorSpace';
+import { canvasNumbersOf, useCanvasColorSpace } from '../../../../../r3f/canvasColorSpace';
 import { useCanvasModulateFor } from '../../../../../r3f/canvasModulate';
-import { godotColorToLinear } from '../../../../../r3f/godotColor';
 import { shapeFillInjection, type ShapeFillUniforms } from './shapeFillProgram';
 import type { ShapeShaderFill } from './shapeDrawing';
 import type { ShapeFragment } from './shapeFragment';
@@ -40,19 +39,21 @@ function fillUniforms(fragment: ShapeFragment): ShapeFillUniforms {
 export function ShapeShaderQuad({ fill, renderOrder }: { fill: ShapeShaderFill; renderOrder: number }) {
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
   const canvasItemMerge = useCanvasItemMerge();
-  const { isLinear } = useCanvasColorSpace();
+  const space = useCanvasColorSpace();
+  const { isLinear } = space;
   // The shape's material is a ShaderMaterial in the default light mode, whatever the picker's own.
   const canvasModulate = useCanvasModulateFor(null);
   const { w, h } = fill.rect;
 
   const uniforms = useMemo(() => fillUniforms(fill.fragment), [fill.fragment]);
   useLayoutEffect(() => {
-    uniforms.size.value.set(w, h);
     for (const name of fill.fragment.uniforms) uniforms.shape[name]!.value = fill.uniforms[name]!;
-    uniforms.canvasModulate.value = isLinear
-      ? godotColorToLinear(canvasModulate)
-      : new THREE.Color(canvasModulate.r, canvasModulate.g, canvasModulate.b);
-  }, [uniforms, w, h, fill, isLinear, canvasModulate]);
+  }, [uniforms, fill]);
+  useLayoutEffect(() => {
+    uniforms.size.value.set(w, h);
+    const { r, g, b } = canvasNumbersOf(space, canvasModulate);
+    uniforms.canvasModulate.value.setRGB(r, g, b);
+  }, [uniforms, w, h, space, canvasModulate]);
 
   const injection = useMemo(
     () => shapeFillInjection(fill.fragment, uniforms, isLinear),
