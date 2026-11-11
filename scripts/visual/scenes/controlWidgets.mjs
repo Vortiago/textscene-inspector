@@ -293,4 +293,8 @@ export const CONTROL_WIDGET_SCENES = [
   // A Control child of a y-sorted Node2D sorts on its canvas item origin: Low (80) over the Polygon2D
   // Tile (68), High (10) under it.
   { name: 'control-y-sort-sibling', file: 'unit-control-y-sort-sibling.tscn', mode: '2d' },
+  // The same sort where no world y-sort draws the Control's parent: High (50) under Low (100) in a
+  // Control-only SubViewport, and in the Control root of a scene tile.
+  { name: 'control-y-sort-viewport', file: 'unit-control-y-sort-viewport.tscn', mode: '2d' },
+  { name: 'control-y-sort-scene-tile', file: 'unit-control-y-sort-scene-tile.tscn', mode: '2d' },
 ];

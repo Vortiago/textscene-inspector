@@ -51,6 +51,7 @@ export default function UnownedNodeControls({ node }: { node: LiveNode }) {
       theme={theme}
       measurer={measureText}
       rootOffset={placement}
+      sortsLocally
       onSolved={onSolved}
     />
   );

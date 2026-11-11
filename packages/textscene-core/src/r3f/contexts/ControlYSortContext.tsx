@@ -95,9 +95,20 @@ export function ControlYSortProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/** The transforms the Control walks published. */
-export function useControlTransforms(): ControlTransforms {
-  return useContext(TransformsContext);
+/**
+ * The transforms the Control walks published for the Controls below `path`. The map keeps its
+ * identity while those entries stay as they are, so a Control moving under another sort leaves
+ * this sort's memos alone.
+ */
+export function useControlTransformsUnder(path: string): ControlTransforms {
+  const published = useContext(TransformsContext);
+  const held = useRef<ControlTransforms>(NO_TRANSFORMS);
+  const prefix = `${path}/`;
+  const scoped = new Map<string, Transform2DColumns>();
+  for (const [key, transform] of published) if (key.startsWith(prefix)) scoped.set(key, transform);
+  // Written during render, and only to the value an equal map would give.
+  if (!sameEntries(held.current, scoped, equalTransform2D)) held.current = scoped;
+  return held.current;
 }
 
 /** The shifts the y-sorts published. */

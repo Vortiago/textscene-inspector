@@ -27,19 +27,23 @@ ${extra}`;
 }
 
 /** Renders both walks for `tscn` and returns the draw key of the mesh under each named node. */
-async function paintKeysOf(tscn: string, names: readonly string[]) {
+async function paintKeysOf(tscn: string, names: readonly string[], hasWorldSort = true) {
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <ControlYSortProvider>
-        <NodeDispatcher nodes={parsed.nodes} />
+      {hasWorldSort ? (
+        <ControlYSortProvider>
+          <NodeDispatcher nodes={parsed.nodes} />
+          <ControlCanvasLayer nodes={parsed.nodes} />
+        </ControlYSortProvider>
+      ) : (
         <ControlCanvasLayer nodes={parsed.nodes} />
-      </ControlYSortProvider>
+      )}
     </SceneStack>
   );
-  // No settle: the first committed frame already has the order, as the Control walk and the sort
-  // exchange their results in layout effects.
+  // No settle: the first committed frame already has the order. The test renderer flushes passive
+  // effects too, so this does not prove the layout-effect timing.
   const meshes = new Map<string, THREE.Object3D>();
   renderer.scene.children[0]?.instance.parent?.traverse((object: THREE.Object3D) => {
     if (!(object as THREE.Mesh).isMesh) return;
@@ -107,5 +111,25 @@ polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
       rect('Low', 50);
     const keys = await paintKeysOf(tscn, ['Low', 'Sprite']);
     expect(compareKeys(keys.Low!, keys.Sprite!)).toBeLessThan(0);
+  });
+});
+
+describe('a Control walk with no world sort to join sorts its own Controls', () => {
+  it('draws a lower child over a higher one authored after it, nested sorts merged', async () => {
+    const tscn =
+      rootControl(true) +
+      `[node name="Inner" type="Control" parent="."]
+y_sort_enabled = true
+offset_top = 100.0
+
+` +
+      `[node name="Deep" type="ColorRect" parent="Inner"]
+offset_right = 40.0
+offset_bottom = 40.0
+
+` +
+      rect('Mid', 50);
+    const keys = await paintKeysOf(tscn, ['Deep', 'Mid'], false);
+    expect(compareKeys(keys.Mid!, keys.Deep!)).toBeLessThan(0);
   });
 });

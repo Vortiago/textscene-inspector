@@ -53,8 +53,8 @@ async function paintKeysOf<const Name extends string = 'Tile' | 'Low'>(
       </ControlYSortProvider>
     </SceneStack>
   );
-  // No settle: the Control walk and the sort exchange their results in layout effects, so the
-  // first committed frame already has the order.
+  // No settle: the first committed frame already has the order. The test renderer flushes passive
+  // effects too, so this does not prove the layout-effect timing.
   const root = renderer.scene.children[0]!.instance.parent!;
   const keyOf = (name: string) => {
     let found: THREE.Object3D | undefined;
