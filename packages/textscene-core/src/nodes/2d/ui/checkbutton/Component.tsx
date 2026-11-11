@@ -11,7 +11,7 @@ import { useControlClipPlanes } from '../../../../r3f/controls/native/controlCli
 import { useCheckButtonIcon } from './useCheckButtonIcon';
 import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
-import { isButtonAutowrapped } from '../../../../r3f/controls/native/buttonBase';
+import { isButtonAutowrapped, tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
@@ -27,7 +27,6 @@ import {
   layoutCheckButtonContent,
   resolveCheckButtonDrawState,
   resolveCheckButtonIconKey,
-  tintColor,
   CHECKBUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';

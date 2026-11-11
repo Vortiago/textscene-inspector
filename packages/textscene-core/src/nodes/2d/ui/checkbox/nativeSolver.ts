@@ -15,15 +15,14 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
-import { BUTTON_THEME_KEYS } from '../button/nativeSolver';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
+  BUTTON_THEME_KEYS,
   fitIconSize,
   labelWrapWidthPx,
   reservedLabelBox,
   resolveToggleDrawState,
   shapedLabelMinimumTextSize,
-  tintColor,
   type ButtonLabelBox,
   type ToggleDrawState,
   type ButtonWrapProperties,
@@ -49,10 +48,6 @@ import {
  * and `Component.tsx` both pass it to `resolveNodeFontMetrics`, so they agree on the font.
  */
 export const CHECKBOX_THEME_FONT_KEY = 'font';
-
-// Re-exported so Component.tsx can build on the shared, Button-generic
-// pieces without importing `buttonBase.ts` a second time under a different name.
-export { fitIconSize, tintColor };
 
 /**
  * `BaseButton::get_draw_mode` (`scene/gui/base_button.cpp:325-358`) without input: `status.hovering`

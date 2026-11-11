@@ -15,15 +15,14 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
-import { BUTTON_THEME_KEYS } from '../button/nativeSolver';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
+  BUTTON_THEME_KEYS,
   fitIconSize,
   labelWrapWidthPx,
   reservedLabelBox,
   resolveToggleDrawState,
   shapedLabelMinimumTextSize,
-  tintColor,
   type ButtonLabelBox,
   type ToggleDrawState,
   type ButtonWrapProperties,
@@ -47,8 +46,6 @@ import {
 
 /** `SceneStringName(font)`, registered under CheckButton's own type (`scene/theme/default_theme.cpp:337`), not inherited from Button's. */
 export const CHECKBUTTON_THEME_FONT_KEY = 'font';
-
-export { fitIconSize, tintColor };
 
 /**
  * `BaseButton::get_draw_mode()` (`base_button.cpp:325-358`) without input: `status.hovering` and

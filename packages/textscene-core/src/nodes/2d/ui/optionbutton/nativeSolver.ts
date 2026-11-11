@@ -19,6 +19,7 @@ import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistr
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
+  BUTTON_THEME_KEYS,
   pickButtonStyleBox,
   resolveToggleDrawState,
   labelWrapWidthPx,
@@ -38,7 +39,7 @@ import {
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { OptionButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { BUTTON_DEFAULT_FONT_COLORS, BUTTON_THEME_KEYS } from '../button/nativeSolver';
+import { BUTTON_DEFAULT_FONT_COLORS } from '../button/nativeSolver';
 
 // Re-exported so Component.tsx imports the shared Button pieces under one name.
 export { pickButtonStyleBox, resolveToggleDrawState, tintColor };

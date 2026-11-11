@@ -17,6 +17,7 @@ import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat'
 import {
   buttonContentSize,
   fitIconSize,
+  BUTTON_THEME_KEYS,
   pickButtonStyleBox,
   resolveToggleDrawState,
   shapeWrappedButtonLabel,
@@ -51,16 +52,6 @@ import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBid
  * two agree on the font.
  */
 const BUTTON_THEME_FONT_KEY = 'font';
-
-/**
- * One `font_size` key for every draw state (`default_theme.cpp:153`), but a colour key per
- * state: `font_color` and `font_disabled_color` (`:156,161`).
- */
-export const BUTTON_THEME_KEYS: Record<ToggleDrawState, TextThemeKeys> = {
-  normal: { sizeKey: 'font_size', colorKey: 'font_color' },
-  disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
-  pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
-};
 
 /** Button's own `font_color` default (`default_theme.cpp:156`). */
 export const BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;

@@ -13,6 +13,7 @@
 import { multiplyModulate } from '../../canvasItemModulate';
 import type { ShareNode, SolveNode } from './solveTree';
 import type { SolveContext } from './solverRegistry';
+import type { TextThemeKeys } from './textTheme';
 import { resolveNodeFontMetrics } from './text/resolveNodeFontMetrics';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
@@ -691,3 +692,13 @@ export function buttonContentSize(input: ButtonContentSizeInput): Vector2 {
 
   return { x: width, y: height };
 }
+
+/**
+ * One `font_size` key for every draw state (`default_theme.cpp:153`), but a colour key per
+ * state: `font_color` and `font_disabled_color` (`:156,161`).
+ */
+export const BUTTON_THEME_KEYS: Record<ToggleDrawState, TextThemeKeys> = {
+  normal: { sizeKey: 'font_size', colorKey: 'font_color' },
+  disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
+  pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
+};
