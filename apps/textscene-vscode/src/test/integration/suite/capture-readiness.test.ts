@@ -10,7 +10,7 @@ import { PNG } from 'pngjs';
 import * as vscode from 'vscode';
 import { hostReturnsImageParts } from '../../../tools/imageResultSupport';
 import { godotProjectDir, removeGodotProject, writeGodotProject } from '../helpers/godotProjectHelpers';
-import { EXTENSION_ID } from '../../smokeProject/sceneEditor';
+import { EXTENSION_ID, previewTabStates } from '../../smokeProject/sceneEditor';
 import {
   CAPTURE_TEST_TIMEOUT_MS,
   imageOf,
@@ -23,6 +23,21 @@ import { invokeSceneTool } from '../../invokeSceneTool';
 const PROJECT = 'capture-readiness';
 
 const SCENE_FILE = 'noise-plane.tscn';
+
+/** A scene whose preview stays open behind the noise plane's, as the agent-tools suite leaves one. */
+const OTHER_SCENE_FILE = 'other-box.tscn';
+
+const OTHER_SCENE = [
+  '[gd_scene load_steps=2 format=3]',
+  '',
+  '[sub_resource type="BoxMesh" id="BoxMesh_b"]',
+  '',
+  '[node name="World" type="Node3D"]',
+  '',
+  '[node name="Box" type="MeshInstance3D" parent="."]',
+  'mesh = SubResource("BoxMesh_b")',
+  '',
+].join('\n');
 
 /**
  * The side of the noise texture, in pixels. Its build outlasts the canvas's first draw, and
@@ -88,7 +103,7 @@ suite('Capture readiness', () => {
     if (launchedWithoutGpu()) {
       skipBecause(this, 'the window launched with --disable-gpu, so the preview has no WebGL to capture');
     }
-    writeGodotProject(PROJECT, { [SCENE_FILE]: SCENE });
+    writeGodotProject(PROJECT, { [SCENE_FILE]: SCENE, [OTHER_SCENE_FILE]: OTHER_SCENE });
     await vscode.extensions.getExtension(EXTENSION_ID)?.activate();
   });
 
@@ -97,8 +112,7 @@ suite('Capture readiness', () => {
     await removeGodotProject(PROJECT);
   });
 
-  test('a capture of a preview it has just opened shows the procedural texture', async function () {
-    this.timeout(CAPTURE_TEST_TIMEOUT_MS);
+  async function assertCaptureShowsTexture(): Promise<void> {
     const scenePath = path.join(godotProjectDir(PROJECT), SCENE_FILE);
 
     const result = await invokeSceneTool('textscene_capture', scenePath);
@@ -109,6 +123,32 @@ suite('Capture readiness', () => {
     assert.ok(
       step >= MIN_TEXTURED_LUMA_STEP,
       `expected the noise texture, a mean luma step of at least ${MIN_TEXTURED_LUMA_STEP}, found ${step.toFixed(2)}`
+    );
+  }
+
+  test('a capture of a preview it has just opened shows the procedural texture', async function () {
+    this.timeout(CAPTURE_TEST_TIMEOUT_MS);
+
+    await assertCaptureShowsTexture();
+  });
+
+  // The failure that filed #1401: a preview left open behind another took the CPU the capture needed.
+  test('a capture still shows the texture with another preview left open and hidden', async function () {
+    this.timeout(CAPTURE_TEST_TIMEOUT_MS);
+    const otherPath = path.join(godotProjectDir(PROJECT), OTHER_SCENE_FILE);
+    await invokeSceneTool('textscene_open_preview', otherPath);
+    // The preview opens in column 2. A text editor opened over it hides the preview, which
+    // `retainContextWhenHidden` keeps alive.
+    const source = await vscode.workspace.openTextDocument(vscode.Uri.file(otherPath));
+    await vscode.window.showTextDocument(source, { viewColumn: vscode.ViewColumn.Two, preview: false });
+
+    await assertCaptureShowsTexture();
+
+    assert.ok(
+      previewTabStates().some(
+        (state) => state.startsWith('Preview: other-box.tscn') && state.includes('tab hidden')
+      ),
+      `expected the other preview hidden, found ${JSON.stringify(previewTabStates())}`
     );
   });
 });

@@ -10,17 +10,19 @@ import { fontWork } from '../controls/native/text/settledChannel.js';
 
 const NO_UNSUBSCRIBE = () => {};
 
-/** A host with no visibility signal shows its preview, so every other embedder renders as before. */
+/** The one default: a host with no visibility signal shows its preview, so every other embedder renders as before. */
 const PreviewVisibilityContext = createContext(true);
 PreviewVisibilityContext.displayName = 'PreviewVisibilityContext';
 
+/** Without `isVisible`, the context keeps its default. */
 export function PreviewVisibilityProvider({
   isVisible,
   children,
 }: {
-  isVisible: boolean;
+  isVisible?: boolean;
   children: ReactNode;
 }) {
+  if (isVisible === undefined) return children;
   return <PreviewVisibilityContext.Provider value={isVisible}>{children}</PreviewVisibilityContext.Provider>;
 }
 

@@ -270,7 +270,7 @@ describe('preview visibility', () => {
   it('shows the preview until the host says otherwise', async () => {
     await mountFresh();
 
-    expect(captured.shellProps?.isVisible).toBe(true);
+    expect(captured.shellProps?.isVisible).toBeUndefined();
   });
 
   it('hands the shell the visibility the host posts, hidden and shown again', async () => {

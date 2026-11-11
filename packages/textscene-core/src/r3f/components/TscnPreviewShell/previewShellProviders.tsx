@@ -39,7 +39,7 @@ interface PreviewShellProviderOptions {
   initialViewportMode?: ViewportMode;
   /** The mode, gizmos, grid, framing, fog and performance overlay persisted last session. */
   initialViewport?: PersistedViewport;
-  /** Whether the host shows the preview. Both canvases stop rendering while it does not. Default `true`. */
+  /** Whether the host shows the preview. Both canvases stop rendering while it is `false`. */
   isVisible?: boolean;
   panelId: string;
   rootScenePath: string;
@@ -55,7 +55,7 @@ export function previewShellProviders({
   onMissingPathsChange,
   initialViewportMode,
   initialViewport = DEFAULT_VIEWPORT,
-  isVisible = true,
+  isVisible,
   panelId,
   rootScenePath,
 }: PreviewShellProviderOptions): (children: ReactNode) => ReactNode {

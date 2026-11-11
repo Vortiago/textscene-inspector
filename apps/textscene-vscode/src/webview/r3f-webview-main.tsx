@@ -59,8 +59,8 @@ class WebviewLogAdapter implements LogAdapter {
 
 function R3FWebviewApp({ vscode }: { vscode: VsCodeApi }) {
   const [content, setContent] = useState<string>('');
-  /** Written by the host's `previewVisibility`. A host that never posts one shows the preview. */
-  const [isVisible, setIsVisible] = useState(true);
+  /** Written by the host's `previewVisibility`. Undefined until it posts one, and the shell then shows the preview. */
+  const [isVisible, setIsVisible] = useState<boolean>();
   /** The scene text last handed to the shell. Written only by the `loadTscn` handler. */
   const contentRef = useRef('');
 
