@@ -6,12 +6,8 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { pickerChildTheme } from './pickerChildTheme';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
-  invertRgb,
   colorPickerRows,
   colorPickerMinimumSize,
-  svAndHueRects,
-  svSquareCursorPosition,
-  hueIndicatorY,
   sampleRowColumns,
   hexRowColumns,
   modeRowButtonRects,
@@ -50,12 +46,6 @@ function minHeight(result: ReturnType<typeof colorPickerMinimumSize>): number {
   return result.y;
 }
 
-describe('invertRgb', () => {
-  it('flips rgb and leaves alpha: core/math/color.h Color::inverted()', () => {
-    expect(invertRgb({ r: 0.2, g: 0.4, b: 0.6, a: 0.5 })).toEqual({ r: 0.8, g: 0.6, b: 0.4, a: 0.5 });
-  });
-});
-
 const ALL_ROWS_HIDDEN = {
   samplerVisible: false,
   colorModesVisible: false,
@@ -82,16 +72,28 @@ describe('colorPickerRows', () => {
     expect(rows.shape!.w).toBe(290); // 256 + 4 + 30
   });
 
-  it('draws no shape row for any picker_shape but SHAPE_HSV_RECTANGLE, keeping the row a (zero-height) stacking slot', () => {
-    const wheel = colorPickerRows(
-      400,
-      THEME,
-      THEME,
-      { ...ALL_ROWS_HIDDEN, pickerShape: 1, samplerVisible: true },
-      null
-    );
-    expect(wheel.shape).toBeNull();
-    expect(wheel.sample).toEqual({ x: 0, y: 4, w: 400, h: 24 });
+  it('gives every shape but SHAPE_NONE an sv_height row, so the sample row sits below it', () => {
+    for (const pickerShape of [1, 2, 3, 5, 6]) {
+      const rows = colorPickerRows(
+        400,
+        THEME,
+        THEME,
+        { ...ALL_ROWS_HIDDEN, pickerShape, samplerVisible: true },
+        null
+      );
+      expect(rows.shape, `shape ${pickerShape}`).toEqual({ x: 0, y: 0, w: 400, h: 256 });
+      expect(rows.sample, `shape ${pickerShape}`).toEqual({ x: 0, y: 260, w: 400, h: 24 });
+    }
+  });
+
+  it('floors the wheel row at sv_width alone', () => {
+    const rows = colorPickerRows(50, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 1 }, null);
+    expect(rows.shape!.w).toBe(256);
+  });
+
+  it('draws the HSV rectangle row for a picker_shape set_picker_shape refuses (color_picker.cpp:854)', () => {
+    const rows = colorPickerRows(50, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 7 }, null);
+    expect(rows.shape).toEqual({ x: 0, y: 0, w: 290, h: 256 });
   });
 
   it('draws no shape row for SHAPE_NONE (4): matches Godot exactly, not a gap', () => {
@@ -174,8 +176,19 @@ describe('colorPickerMinimumSize', () => {
     expect(colorPickerMinimumSize(swatchesOnly, ctx).x).toBe(164 + 8);
   });
 
-  it('drops the shape row contribution once picker_shape selects an undrawn shape', () => {
-    expect(colorPickerMinimumSize(node({ pickerShape: 2, ...ALL_ROWS_HIDDEN }), CTX)).toEqual({ x: 8, y: 8 });
+  it('floors the minimum at the shape row of every drawn shape', () => {
+    expect(colorPickerMinimumSize(node({ pickerShape: 2, ...ALL_ROWS_HIDDEN }), CTX)).toEqual({
+      x: 290 + 8,
+      y: 256 + 8,
+    });
+    expect(colorPickerMinimumSize(node({ pickerShape: 1, ...ALL_ROWS_HIDDEN }), CTX)).toEqual({
+      x: 256 + 8,
+      y: 256 + 8,
+    });
+  });
+
+  it('drops the shape row contribution at SHAPE_NONE', () => {
+    expect(colorPickerMinimumSize(node({ pickerShape: 4, ...ALL_ROWS_HIDDEN }), CTX)).toEqual({ x: 8, y: 8 });
   });
 
   it('each row-visibility flag moves the minimum size', () => {
@@ -196,44 +209,6 @@ describe('colorPickerMinimumSize', () => {
     const baseY = minHeight(colorPickerMinimumSize(node({}), CTX));
     expect(minHeight(colorPickerMinimumSize(node({ editAlpha: false }), CTX))).toBeLessThan(baseY);
     expect(minHeight(colorPickerMinimumSize(node({ editIntensity: false }), CTX))).toBeLessThan(baseY);
-  });
-});
-
-describe('svAndHueRects', () => {
-  it('splits the shape row into sv_square and hue_slider by h_width + separation', () => {
-    const { svSquare, hueSlider } = svAndHueRects({ x: 0, y: 0, w: 400, h: 256 }, THEME);
-    expect(svSquare).toEqual({ x: 0, y: 0, w: 366, h: 256 }); // 400 - 4 - 30
-    expect(hueSlider).toEqual({ x: 370, y: 0, w: 30, h: 256 });
-  });
-});
-
-describe('svSquareCursorPosition', () => {
-  const SQUARE = { x: 10, y: 20, w: 100, h: 100 };
-
-  it('places the cursor at s along x and (1-v) along y: color_picker_shape.cpp:259-261', () => {
-    expect(svSquareCursorPosition(SQUARE, 0.5, 0.25)).toEqual({ x: 60, y: 95 });
-  });
-
-  it('clamps to the square bounds at s=0, v=1', () => {
-    expect(svSquareCursorPosition(SQUARE, 0, 1)).toEqual({ x: 10, y: 20 });
-  });
-
-  it('clamps to the square bounds at s=1, v=0', () => {
-    expect(svSquareCursorPosition(SQUARE, 1, 0)).toEqual({ x: 110, y: 120 });
-  });
-});
-
-describe('hueIndicatorY', () => {
-  it('is proportional to h across the slider height: color_picker_shape.cpp:431', () => {
-    expect(hueIndicatorY(256, 0.5)).toBe(128);
-  });
-
-  it('truncates to the whole pixel row, as the int y does', () => {
-    expect(hueIndicatorY(256, 0.6)).toBe(153);
-  });
-
-  it('is 0 at h=0', () => {
-    expect(hueIndicatorY(256, 0)).toBe(0);
   });
 });
 
@@ -458,7 +433,7 @@ describe('colorPickerValueColumnWidth', () => {
 
 describe('colorPickerMinimumSize of the hex row alone', () => {
   // line_edit.cpp:2443-2477: c_text is a plain LineEdit, with no SpinBox buttons block.
-  const HEX_ONLY = { pickerShape: 2, ...ALL_ROWS_HIDDEN, hexVisible: true };
+  const HEX_ONLY = { pickerShape: 4, ...ALL_ROWS_HIDDEN, hexVisible: true };
 
   it('is label(38) + 2 separations(8) + text_type(28) + the LineEdit margin(8) + 4*em("W")(40)', () => {
     const ctx: SolveContext = { theme: THEME, measureText, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
@@ -570,14 +545,6 @@ describe('sliderGridRowRects', () => {
  * hand, not the implementation's mirror.
  */
 describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-223)', () => {
-  it('svAndHueRects puts hue_slider first, at the left edge', () => {
-    // Reverse walk of [sv_square, hue_slider] at 400 wide: hue(30) at 0,
-    // sep(4), sv(366) at 34, ending at 400.
-    const { svSquare, hueSlider } = svAndHueRects({ x: 0, y: 0, w: 400, h: 256 }, THEME, true);
-    expect(hueSlider).toEqual({ x: 0, y: 0, w: 30, h: 256 });
-    expect(svSquare).toEqual({ x: 34, y: 0, w: 366, h: 256 });
-  });
-
   it('hexRowColumns puts the field first and hex_label last', () => {
     // Reverse walk of [hex_label, text_type, c_text]: field(326) at 0, sep(4),
     // text_type(28) at 330, sep(4), label(38) at 362, ending at 400.

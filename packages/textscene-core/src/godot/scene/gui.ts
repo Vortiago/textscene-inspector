@@ -189,7 +189,7 @@ export const COLOR_PICKER_COLOR_MODE_NAMES = enumNamesByValue(ColorPickerColorMo
  * "HSV Rectangle,HSV Rectangle Wheel,VHS Circle,OKHSL Circle,OK HS Rectangle:5,OK HL Rectangle,
  * None:4", so by value it covers 0-6.
  */
-const ColorPickerShape = {
+export const ColorPickerShape = {
   SHAPE_HSV_RECTANGLE: 0,
   SHAPE_HSV_WHEEL: 1,
   SHAPE_VHS_CIRCLE: 2,

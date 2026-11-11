@@ -89,6 +89,30 @@ describe('buildDirectionalShadowMap: the projection', () => {
     expect(bins[255]).toBe(SHADOW_MAP_FAR);
   });
 
+  // `unit-directionallight2d-shadow-end-on-bin` pins the side against Godot 4.6.3: covering the bin
+  // there puts 448 px at 63/255 off, leaving it clear matches.
+  describe('an end on the centre of bin 1000, the top-left rule', () => {
+    // x at u = 1000.5 / 2048, the centre of bin 1000.
+    const endX = 500 + (1000.5 / DEFAULT_ATLAS_SIZE - 0.5) * 1000 * Math.SQRT2;
+
+    it('leaves the bin clear when the edge lies before the end', () => {
+      const { bins } = buildDirectionalShadowMap(squareView(), [segment(400, 600, endX, 600)]);
+      expect([bins[999], bins[1000]]).toEqual([expect.closeTo(0.4, 6), SHADOW_MAP_FAR]);
+    });
+
+    it('covers the bin when the edge lies after the end', () => {
+      const { bins } = buildDirectionalShadowMap(squareView(), [segment(endX, 600, 600, 600)]);
+      expect([bins[999], bins[1000]]).toEqual([SHADOW_MAP_FAR, expect.closeTo(0.4, 6)]);
+    });
+  });
+
+  it('gives a bin the snap adds past an end that end depth, not the line extended', () => {
+    // Window x 1000.501 is 0.001 px right of bin 1000's centre. Depth runs 0.2 there to 0.7.
+    const xAt = (windowX: number) => 500 + (windowX / DEFAULT_ATLAS_SIZE - 0.5) * 1000 * Math.SQRT2;
+    const { bins } = buildDirectionalShadowMap(squareView(), [segment(xAt(1000.501), 800, xAt(1000.6), 300)]);
+    expect(bins[1000]).toBeCloseTo(0.2, 6);
+  });
+
   it('starts the band max_distance upstream of the view and deepens z_far by it', () => {
     // from = centre - dir * (500 + 1000) = (500, 2000), z_far = 2 * 500 + 1000 = 2000.
     const { bins } = buildDirectionalShadowMap(squareView(1000), [segment(400, 600, 600, 600)]);

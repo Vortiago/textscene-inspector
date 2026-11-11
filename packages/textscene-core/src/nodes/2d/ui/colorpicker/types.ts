@@ -8,8 +8,8 @@ export interface ColorPickerProperties extends VBoxContainerProperties {
    */
   color?: string;
   /**
-   * `PickerShapeType` 0-6, default `SHAPE_HSV_RECTANGLE` (0). Only 0 is drawn:
-   * every other value picks a shader-backed shape.
+   * `PickerShapeType` 0-6, default `SHAPE_HSV_RECTANGLE` (0). `set_picker_shape` refuses any
+   * other value, so the default stays (`color_picker.cpp:854`).
    */
   pickerShape?: number;
   /** `ColorModeType` 0-3 (RGB/HSV/Linear/OKHSL). Godot default `MODE_RGB` (0). */

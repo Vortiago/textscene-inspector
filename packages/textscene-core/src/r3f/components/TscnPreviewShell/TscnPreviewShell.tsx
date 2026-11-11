@@ -74,6 +74,7 @@ export function TscnPreviewShell({
   initialViewportMode,
   initialPreviewedCameraPath,
   onCaptureStateChange,
+  isVisible,
   onCopyNodePath,
 }: TscnPreviewShellProps) {
   const { sceneGraph, error } = useParsedScene(content, rootScenePath);
@@ -118,6 +119,7 @@ export function TscnPreviewShell({
     onMissingPathsChange,
     initialViewportMode,
     initialViewport,
+    isVisible,
     panelId,
     rootScenePath,
   });

@@ -1,7 +1,7 @@
 /**
- * `<ColorPicker>`: the colour sample row (with `btn_pick` and `btn_shape`), the
- * `SHAPE_HSV_RECTANGLE` SV square and hue slider, and the mode, slider-grid, hex and
- * swatches rows (`color_picker.cpp`, `color_mode.cpp`, cited in the component's doc).
+ * `<ColorPicker>`: the shape row of each `picker_shape`, the colour sample row (with `btn_pick`
+ * and `btn_shape`), and the mode, slider-grid, hex and swatches rows (`color_picker.cpp`,
+ * `color_picker_shape.cpp`, `color_mode.cpp`, cited in the component's doc).
  */
 import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
@@ -108,11 +108,12 @@ describe('<ColorPicker> (isolated painter contract)', () => {
     expect(await meshCount({ color: 'Color(1.5, 0, 0, 1)', ...ONLY_SHAPE_AND_SAMPLE })).toBe(11);
   });
 
-  it('draws only the pick button box + icon and the sample swatch for any picker_shape but SHAPE_HSV_RECTANGLE (0)', async () => {
-    // picker_shape=1 keeps btn_shape visible (only SHAPE_NONE=4 hides it) and
-    // draws its box, but `shape_rect` is only correct at SHAPE_HSV_RECTANGLE
-    // (other shapes are out of scope, `comparison.md`) so its icon stays undrawn.
-    expect(await meshCount({ color: 'Color(1, 0, 0, 1)', pickerShape: 1, ...ONLY_SHAPE_AND_SAMPLE })).toBe(3);
+  it('draws the wheel: its shader fill, the SV square, the SV and hue cursors, and the btn_shape icon', async () => {
+    // btn_pick box + btn_pick icon + btn_shape icon + swatch + (wheel fill, sv base, sv hue,
+    // sv cursor bg, sv cursor ring, hue cursor ring)
+    expect(await meshCount({ color: 'Color(1, 0, 0, 1)', pickerShape: 1, ...ONLY_SHAPE_AND_SAMPLE })).toBe(
+      10
+    );
   });
 
   it('draws only the pick button box + icon and the sample swatch at SHAPE_NONE (4), matching Godot exactly', async () => {
