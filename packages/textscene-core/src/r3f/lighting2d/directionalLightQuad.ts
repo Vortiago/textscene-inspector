@@ -12,8 +12,9 @@
 
 import * as THREE from 'three';
 import { accumulationState, shadowColorUniform } from './lightQuad.js';
-import { FULL_SCREEN_VERTEX } from '../fullScreenPass.js';
+import { FULL_SCREEN_VERTEX, multipleTargetPass } from '../fullScreenPass.js';
 import { SHADOW_MAP_FAR } from './shadowPolarMap.js';
+import { LIGHT_OUTPUTS } from './lightQuadShaders.js';
 import { SHADOW_BINS, SHADOW_TAPS, shadowMapUniforms } from './shadowTaps.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Light2DShadowFilter } from '../../godot/scene/light2d.js';
@@ -66,19 +67,27 @@ float shadowFraction() {
 }
 `;
 
+/**
+ * Writes the three outputs of `LIGHT_OUTPUTS`. With no shadow, the `shadow_color` term is the alpha
+ * alone.
+ */
 const FRAGMENT = /* glsl */ `
+${LIGHT_OUTPUTS}
 uniform vec3 uColor;
 uniform float uAlpha;
 void main() {
-  gl_FragColor = vec4(uColor, uAlpha);
+  writeLight(vec4(uColor, uAlpha), vec4(0.0, 0.0, 0.0, uAlpha));
 }
 `;
 
 /**
  * `mix(light_color, shadow_color, s)` with `shadow_color.a *= light_color.a` (`canvas.glsl:543-547`),
- * split as a PointLight2D's is (`lightQuadShaders.ts`): this quad carries the albedo-scaled half.
+ * split as a PointLight2D's is (`lightQuadShaders.ts`): the light term carries the albedo-scaled
+ * half, the `shadow_color` term the other under the light's whole alpha, so a MIX blend scales both
+ * buffers alike. One evaluation of the taps serves both.
  */
 const SHADOWED_FRAGMENT = /* glsl */ `
+${LIGHT_OUTPUTS}
 uniform vec3 uColor;
 uniform float uAlpha;
 uniform vec4 uShadowColor;
@@ -86,29 +95,10 @@ ${SHADOW_SAMPLE}
 void main() {
   float s = shadowFraction();
   float lit = 1.0 - s;
-  gl_FragColor = vec4(uColor * lit, uAlpha * (lit + s * uShadowColor.a));
-}
-`;
-
-/**
- * The other half: `shadow_color`, never albedo-scaled, so it draws in the tint pass. It carries the
- * light's whole alpha, so a MIX blend scales the tint buffer as it scales the light buffer.
- */
-const SHADOWED_TINT_FRAGMENT = /* glsl */ `
-uniform float uAlpha;
-uniform vec4 uShadowColor;
-${SHADOW_SAMPLE}
-void main() {
-  float s = shadowFraction();
-  gl_FragColor = vec4(uShadowColor.rgb * s, uAlpha * ((1.0 - s) + s * uShadowColor.a));
-}
-`;
-
-/** The tint-pass quad of a light that casts no shadow: its alpha alone. */
-const FADE_FRAGMENT = /* glsl */ `
-uniform float uAlpha;
-void main() {
-  gl_FragColor = vec4(0.0, 0.0, 0.0, uAlpha);
+  float alpha = uAlpha * (lit + s * uShadowColor.a);
+  vec4 light = vec4(uColor * lit, alpha);
+  vec4 tint = vec4(uShadowColor.rgb * s, alpha);
+  writeLight(light, tint);
 }
 `;
 
@@ -131,41 +121,26 @@ function shadowUniforms(shadow: DirectionalShadowSampling): Record<string, THREE
   };
 }
 
-function accumulationQuad(
-  options: DirectionalLightQuadOptions,
-  fragmentShader: string,
-  uniforms: Record<string, THREE.IUniform>
-): THREE.ShaderMaterial {
-  const { color, energy, blendMode, shadow } = options;
-  return new THREE.ShaderMaterial({
-    ...(shadow ? { defines: { SHADOW_FILTER: shadow.filter } } : {}),
-    vertexShader: shadow ? SHADOW_VERTEX : FULL_SCREEN_VERTEX,
-    fragmentShader,
-    uniforms: {
-      uAlpha: { value: color.a * energy },
-      ...(shadow ? shadowUniforms(shadow) : {}),
-      ...uniforms,
-    },
-    ...accumulationState(blendMode),
-  });
-}
-
-/** The albedo-multiplied term: the light's colour, withheld where its shadow falls. */
-export function createDirectionalLightMaterial(options: DirectionalLightQuadOptions): THREE.ShaderMaterial {
-  const { r, g, b } = options.color;
-  return accumulationQuad(options, options.shadow ? SHADOWED_FRAGMENT : FRAGMENT, {
-    uColor: { value: new THREE.Vector3(r, g, b) },
-  });
-}
-
-/**
- * The tint-pass quad: the albedo-free `shadow_color` term under the light's alpha. A light that
- * casts no shadow has no term, and its quad carries only the alpha a MIX blend scales by.
- */
-export function createDirectionalShadowColorMaterial(
-  options: DirectionalLightQuadOptions
-): THREE.ShaderMaterial {
-  return accumulationQuad(options, options.shadow ? SHADOWED_TINT_FRAGMENT : FADE_FRAGMENT, {});
+/** The light's quad: one draw fills the light, `shadow_color` and Light Only buffers of a list. */
+export function createDirectionalLightMaterial({
+  color,
+  energy,
+  blendMode,
+  shadow,
+}: DirectionalLightQuadOptions): THREE.ShaderMaterial {
+  return multipleTargetPass(
+    new THREE.ShaderMaterial({
+      ...(shadow ? { defines: { SHADOW_FILTER: shadow.filter } } : {}),
+      vertexShader: shadow ? SHADOW_VERTEX : FULL_SCREEN_VERTEX,
+      fragmentShader: shadow ? SHADOWED_FRAGMENT : FRAGMENT,
+      uniforms: {
+        uAlpha: { value: color.a * energy },
+        uColor: { value: new THREE.Vector3(color.r, color.g, color.b) },
+        ...(shadow ? shadowUniforms(shadow) : {}),
+      },
+      ...accumulationState(blendMode),
+    })
+  );
 }
 
 /**

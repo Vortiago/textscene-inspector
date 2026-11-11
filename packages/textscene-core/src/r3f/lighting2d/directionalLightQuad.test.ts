@@ -8,7 +8,6 @@ import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
 import * as THREE from 'three';
 import {
   createDirectionalLightMaterial,
-  createDirectionalShadowColorMaterial,
   createDirectionalShadowTexture,
   writeDirectionalShadowMap,
   type DirectionalShadowSampling,
@@ -102,10 +101,10 @@ describe('createDirectionalLightMaterial', () => {
   });
 });
 
-describe('createDirectionalShadowColorMaterial', () => {
+describe('the shadow_color term of createDirectionalLightMaterial', () => {
   it("draws Godot's `shadow_color` where the shadow falls, scaled by the light's alpha", () => {
     const shadow = sampling();
-    const mat = createDirectionalShadowColorMaterial({ color: WARM, energy: 2, blendMode: 0, shadow });
+    const mat = createDirectionalLightMaterial({ color: WARM, energy: 2, blendMode: 0, shadow });
     const tint = mat.uniforms.uShadowColor!.value as THREE.Vector4;
     expect([tint.x, tint.y, tint.z, tint.w]).toEqual([0, 0, 1, 0.5]);
     expect(mat.uniforms.uAlpha!.value).toBe(1);
@@ -114,20 +113,27 @@ describe('createDirectionalShadowColorMaterial', () => {
 
   it("carries the light's whole alpha and only the shadowed share of the colour", () => {
     // A MIX blend scales the buffer by the alpha, which is the light's over its whole reach.
-    const mat = createDirectionalShadowColorMaterial({
-      color: WARM,
-      energy: 2,
-      blendMode: 2,
-      shadow: sampling(),
-    });
-    expect(mat.fragmentShader).toContain(
-      'vec4(uShadowColor.rgb * s, uAlpha * ((1.0 - s) + s * uShadowColor.a))'
-    );
+    const mat = createDirectionalLightMaterial({ color: WARM, energy: 2, blendMode: 2, shadow: sampling() });
+    expect(mat.fragmentShader).toContain('float alpha = uAlpha * (lit + s * uShadowColor.a)');
+    expect(mat.fragmentShader).toContain('vec4(uShadowColor.rgb * s, alpha)');
   });
 
-  it('carries only the alpha for a light that casts no shadow', () => {
-    const mat = createDirectionalShadowColorMaterial({ color: WARM, energy: 2, blendMode: 2 });
-    expect(mat.fragmentShader).toContain('gl_FragColor = vec4(0.0, 0.0, 0.0, uAlpha)');
+  it('evaluates the shadow taps once per fragment, for the light and the shadow_color together', () => {
+    const mat = createDirectionalLightMaterial({ color: WARM, energy: 2, blendMode: 0, shadow: sampling() });
+    expect(mat.fragmentShader.split('void main()')[1]!.match(/shadowFraction\(\)/g)).toHaveLength(1);
+  });
+
+  it('writes the light, the shadow_color and the Light Only term to attachments 0, 1 and 2', () => {
+    const mat = createDirectionalLightMaterial({ color: WARM, energy: 2, blendMode: 0 });
+    expect(mat.glslVersion).toBe(THREE.GLSL3);
+    for (const location of [0, 1, 2]) {
+      expect(mat.fragmentShader).toContain(`layout(location = ${location}) out highp vec4`);
+    }
+  });
+
+  it('carries only the alpha as the shadow_color of a light that casts no shadow', () => {
+    const mat = createDirectionalLightMaterial({ color: WARM, energy: 2, blendMode: 2 });
+    expect(mat.fragmentShader).toContain('vec4(0.0, 0.0, 0.0, uAlpha)');
     expect(mat.uniforms.uAlpha!.value).toBe(1);
     expect(mat.uniforms.uShadowMap).toBeUndefined();
   });

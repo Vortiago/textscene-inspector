@@ -11,7 +11,13 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TscnParser } from '../../parser/TscnParser';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { LIGHT_PASS_LAYER } from './lightPassLayers';
-import { itemUniforms, ownerName, recordLightPass, type RecordedDraw } from './testing/lightPassProbe';
+import {
+  drawInto,
+  itemUniforms,
+  ownerName,
+  recordLightPass,
+  type RecordedDraw,
+} from './testing/lightPassProbe';
 import { DispatchedScene } from '../testing/DispatchedScene';
 import { underWhiteCanvasLighting } from './testing/whiteCanvasLighting';
 import { createSceneGraphFromTscnScene } from '../../core/SceneGraph.testkit';
@@ -105,21 +111,7 @@ function lightQuads(renderer: Rendered): THREE.Mesh[] {
 async function drawnFor(renderer: Rendered, name: string, uniform: string): Promise<THREE.Mesh[]> {
   const texture = itemUniforms(renderer, name)[uniform]!.value as THREE.Texture;
   const draws: RecordedDraw[] = await recordLightPass(renderer);
-  return (
-    draws.find((draw) => draw.texture === texture)?.drawn.filter((mesh) => ownerName(mesh) === 'Lamp') ?? []
-  );
-}
-
-/** The lit halves: the quads that carry the light's own colour. */
-function litQuads(renderer: Rendered): THREE.Mesh[] {
-  return lightQuads(renderer).filter((mesh) => !!(mesh.material as THREE.ShaderMaterial).uniforms?.uColor);
-}
-
-/** The `shadow_color` quads: the ones without the light's colour. */
-function tintQuads(renderer: Rendered): THREE.ShaderMaterial[] {
-  return lightQuads(renderer)
-    .map((quad) => quad.material as THREE.ShaderMaterial)
-    .filter((material) => !material.uniforms.uColor);
+  return drawInto(draws, texture)?.drawn.filter((mesh) => ownerName(mesh) === 'Lamp') ?? [];
 }
 
 /** The polar map a mesh's material samples, or undefined for an unshadowed one. */
@@ -136,7 +128,7 @@ function namedOwner(mesh: THREE.Object3D): THREE.Object3D {
 
 /** The first light's polar map, or undefined while it casts nothing. */
 function shadowMap(renderer: Rendered): THREE.DataTexture | undefined {
-  return litQuads(renderer).map(mapOf).find(Boolean);
+  return lightQuads(renderer).map(mapOf).find(Boolean);
 }
 
 /** The bins of a map an occluder fills: the ones short of the far plane. */
@@ -148,7 +140,7 @@ function occludedBins(map: THREE.DataTexture): number[] {
 describe('a shadow-enabled light with an occluder in range', () => {
   it('samples its polar map on the light pass layer alone', async () => {
     const renderer = await render(scene(`${lamp('Lamp', 400)}${caster('Caster', 576)}`));
-    const quad = litQuads(renderer)[0]!;
+    const quad = lightQuads(renderer)[0]!;
     expect(mapOf(quad)).toBeInstanceOf(THREE.DataTexture);
     expect(quad.layers.mask).toBe(1 << LIGHT_PASS_LAYER);
   });
@@ -228,14 +220,14 @@ describe('two shadowed lights in one pass', () => {
 
   it('gives each light its own map', async () => {
     const renderer = await render(TWO);
-    const maps = litQuads(renderer).map(mapOf);
+    const maps = lightQuads(renderer).map(mapOf);
     expect(maps).toHaveLength(2);
     expect(new Set(maps).size).toBe(2);
   });
 
   it('draws the lights in their canvas list order', async () => {
     const renderer = await render(TWO);
-    const orders = litQuads(renderer)
+    const orders = lightQuads(renderer)
       .map((quad) => quad.renderOrder)
       .sort((a, b) => a - b);
     expect(orders).toEqual([0, 1]);
@@ -252,16 +244,16 @@ describe('two shadowed lights in one pass', () => {
 describe('shadow_color', () => {
   const TINT = 'shadow_color = Color(0.15, 0.35, 1, 1)\n';
 
-  it("adds a tint quad that reads the cookie quad's own map", async () => {
+  it("writes the shadow_color term from the cookie quad's own map, in the one quad", async () => {
     // The `mix` runs after `light_color.rgb *= base_color.rgb`, so shadow_color
     // lands without the item's albedo. Measured: surfaces 0.25 and 0.75 in one
     // shadow read rgb(78,99,167) and rgb(207,228,255), 129 apart per channel,
     // where an albedo-scaled term differs by 135 and 146.
     const renderer = await render(scene(`${lamp('Lamp', 400, TINT)}${caster('Caster', 576)}`));
-    const tint = tintQuads(renderer);
-    expect(tint).toHaveLength(1);
-    // One map, two consumers: a second build would be a second chance to drift.
-    expect(tint[0]!.uniforms.uShadowMap!.value).toBe(shadowMap(renderer));
+    const quads = lightQuads(renderer);
+    expect(quads).toHaveLength(1);
+    expect(mapOf(quads[0]!)).toBe(shadowMap(renderer));
+    expect((quads[0]!.material as THREE.ShaderMaterial).fragmentShader).toContain('uShadowColor.rgb * s');
   });
 
   /** Surface (mask 1) takes Plain alone. Lit2 (mask 2) takes Tinting, which shadows it. */
@@ -271,11 +263,15 @@ describe('shadow_color', () => {
       `${caster('Caster', 500, 'occluder_light_mask = 3\n')}`
   );
 
-  it('draws the tint quad into the shadow_color buffer of the list it shadows', async () => {
+  it('draws the light into the shadow_color buffer of the list it shadows, in the draw of its light buffer', async () => {
     const renderer = await render(PLAIN_AND_TINTING);
     const drawn = await drawnFor(renderer, 'Lit2', 'uShadowTint');
     expect(drawn).toHaveLength(1);
     expect(mapOf(drawn[0]!)).toBeDefined();
+    const tint = itemUniforms(renderer, 'Lit2').uShadowTint!.value as THREE.Texture;
+    const light = itemUniforms(renderer, 'Lit2').uLightList!.value as THREE.Texture;
+    const draws = await recordLightPass(renderer);
+    expect(drawInto(draws, tint)).toBe(drawInto(draws, light));
   });
 
   it('gives a list no tinting light shadows no shadow_color buffer', async () => {
@@ -284,14 +280,15 @@ describe('shadow_color', () => {
     const renderer = await render(PLAIN_AND_TINTING);
     const tint = itemUniforms(renderer, 'Surface').uShadowTint!.value as THREE.Texture;
     const draws = await recordLightPass(renderer);
-    expect(draws.some((draw) => draw.texture === tint)).toBe(false);
+    expect(drawInto(draws, tint)).toBeUndefined();
   });
 
-  it('draws no tint quad at the transparent default', async () => {
+  it('allocates no shadow_color attachment at the transparent default', async () => {
     // Godot defaults shadow_color to Color(0, 0, 0, 0). Withholding the cookie
-    // is then the entire shadow, and the extra pass is never allocated.
+    // is then the entire shadow, so the list holds its light buffer alone.
     const plain = await render(scene(`${lamp('Lamp', 400)}${caster('Caster', 576)}`));
-    expect(tintQuads(plain)).toHaveLength(0);
+    const light = itemUniforms(plain, 'Surface').uLightList!.value as THREE.Texture;
+    expect(drawInto(await recordLightPass(plain), light)!.textures).toHaveLength(1);
   });
 
   it('leaves an unshadowed light alone however shadow_color is set', async () => {
@@ -303,9 +300,9 @@ describe('shadow_color', () => {
 
 /**
  * `light_blend_compute` (`canvas.glsl:549-562`) applies a light's whole `light_color` with one
- * alpha. The pass splits that term over the light and tint buffers, so each light writes both over
- * its whole reach with that alpha: a MIX light then scales the colour under it in both, as Godot
- * scales one colour.
+ * alpha. The pass splits that term over the light and shadow_color buffers, so each light writes
+ * both over its whole reach with that alpha, from one quad: a MIX light then scales the colour under
+ * it in both, as Godot scales one colour.
  */
 describe('one alpha over both buffers', () => {
   const TINT = 'shadow_color = Color(0.15, 0.35, 1, 1)\n';
@@ -314,10 +311,9 @@ describe('one alpha over both buffers', () => {
   const withTint = (lampExtra: string, x = 700) =>
     scene(`${lamp('Tint', 300, TINT)}${lamp('Lamp', x, lampExtra)}${caster('Caster', 576)}`);
 
-  function colourOf(mesh: THREE.Mesh): number[] {
-    const { uColor, uShadowColor } = (mesh.material as THREE.ShaderMaterial).uniforms;
-    const colour = (uColor ?? uShadowColor)!.value as THREE.Vector3;
-    return [colour.x, colour.y, colour.z];
+  /** Whether the quad writes its alpha alone to the shadow_color buffer, the rgb zero. */
+  function writesAlphaOnly(mesh: THREE.Mesh): boolean {
+    return (mesh.material as THREE.ShaderMaterial).fragmentShader.includes('vec4(0.0, 0.0, 0.0, cookie.a)');
   }
 
   it("adds a tinting light's shadow_color alpha to the light buffer through its cookie quad", async () => {
@@ -331,7 +327,7 @@ describe('one alpha over both buffers', () => {
     );
   });
 
-  it("carries a shadowed MIX light's alpha through its tint quad, untinted as it is", async () => {
+  it("carries a shadowed MIX light's alpha into the shadow_color buffer with its one quad", async () => {
     const renderer = await render(withTint(MIX));
     const drawn = await drawnFor(renderer, 'Surface', 'uShadowTint');
     expect(drawn).toHaveLength(1);
@@ -342,20 +338,21 @@ describe('one alpha over both buffers', () => {
     const renderer = await render(withTint(`${MIX}shadow_enabled = false\n`, 900));
     const drawn = await drawnFor(renderer, 'Surface', 'uShadowTint');
     expect(drawn.map(mapOf)).toEqual([undefined]);
-    expect(colourOf(drawn[0]!)).toEqual([0, 0, 0]);
+    expect(writesAlphaOnly(drawn[0]!)).toBe(true);
   });
 
   it('scales it over the whole rect for a MIX light whose shadow misses the item', async () => {
     const renderer = await render(withTint(`${MIX}range_item_cull_mask = 3\nshadow_item_cull_mask = 2\n`));
     const drawn = await drawnFor(renderer, 'Surface', 'uShadowTint');
     expect(drawn.map(mapOf)).toEqual([undefined]);
-    expect(colourOf(drawn[0]!)).toEqual([0, 0, 0]);
+    expect(writesAlphaOnly(drawn[0]!)).toBe(true);
   });
 
-  it('draws no quad of an ADD light into the shadow_color buffer it adds nothing to', async () => {
+  it('adds nothing to the shadow_color buffer for an ADD light at the transparent default', async () => {
     const renderer = await render(withTint(''));
     const drawn = await drawnFor(renderer, 'Surface', 'uShadowTint');
-    expect(drawn.filter((mesh) => (mesh.material as THREE.ShaderMaterial).uniforms?.uCookie)).toHaveLength(0);
+    const { uShadowColor } = (drawn[0]!.material as THREE.ShaderMaterial).uniforms;
+    expect((uShadowColor!.value as THREE.Vector4).toArray()).toEqual([0, 0, 0, 0]);
   });
 
   it("tints a filtered light's penumbra with a transparent shadow_color's rgb", async () => {
@@ -377,7 +374,7 @@ describe('shadow_filter selects the taps', () => {
   it('samples the polar map under NONE too, with no stencil', async () => {
     // `canvas.glsl:507-510`: NONE reads one nearest bin of the same map the PCF kernels read.
     const renderer = await render(scene(`${lamp('Lamp', 400)}${caster('Caster', 576)}`));
-    const material = litQuads(renderer)[0]!.material as THREE.ShaderMaterial;
+    const material = lightQuads(renderer)[0]!.material as THREE.ShaderMaterial;
     expect(material.stencilWrite).toBeFalsy();
     expect(material.defines?.SHADOW_FILTER).toBe(0);
     expect(material.uniforms.uShadowMap!.value).toBeInstanceOf(THREE.DataTexture);
@@ -387,7 +384,7 @@ describe('shadow_filter selects the taps', () => {
     const renderer = await render(
       scene(`${lamp('Lamp', 400, 'shadow_filter = 1\nshadow_filter_smooth = 8.0\n')}${caster('Caster', 576)}`)
     );
-    const material = litQuads(renderer)[0]!.material as THREE.ShaderMaterial;
+    const material = lightQuads(renderer)[0]!.material as THREE.ShaderMaterial;
     expect(material.defines?.SHADOW_FILTER).toBe(1);
     // renderer_canvas_render_rd.cpp:629: (1 / shadow_texture_size) * (1 + shadow_smooth).
     expect(material.uniforms.uShadowSmooth!.value).toBe(8);
@@ -400,13 +397,13 @@ describe('shadow_filter selects the taps', () => {
     const renderer = await render(
       scene(`${lamp('Lamp', 400, 'shadow_filter = 2\n')}${caster('Caster', 576)}`)
     );
-    const material = litQuads(renderer)[0]!.material as THREE.ShaderMaterial;
+    const material = lightQuads(renderer)[0]!.material as THREE.ShaderMaterial;
     expect(material.defines?.SHADOW_FILTER).toBe(2);
   });
 
   it('keeps its materials while it moves, and moves the transform they read', async () => {
     const renderer = await render(scene(`${lamp('Lamp', 400)}${caster('Caster', 576)}`));
-    const quad = litQuads(renderer)[0]!;
+    const quad = lightQuads(renderer)[0]!;
     const material = quad.material as THREE.ShaderMaterial;
     const worldToLight = material.uniforms.uWorldToLight!.value as THREE.Matrix3;
     expect(worldToLight.elements[6]).toBeCloseTo(-400, 6);
@@ -417,7 +414,7 @@ describe('shadow_filter selects the taps', () => {
     });
 
     // A rebuilt ShaderMaterial is a shader program relink, on every frame a light moves.
-    expect(litQuads(renderer)[0]!.material).toBe(material);
+    expect(lightQuads(renderer)[0]!.material).toBe(material);
     expect(worldToLight.elements[6]).toBeCloseTo(-450, 6);
   });
 
@@ -463,7 +460,7 @@ describe('shadow_item_cull_mask picks the items that take the shadow', () => {
           `${caster('Caster', 576, 'occluder_light_mask = 2\n')}`
       )
     );
-    expect(litQuads(renderer)).toHaveLength(1);
+    expect(lightQuads(renderer)).toHaveLength(1);
   });
 
   it('casts nothing while no item the light reaches meets the shadow mask', async () => {
@@ -474,13 +471,13 @@ describe('shadow_item_cull_mask picks the items that take the shadow', () => {
       )
     );
     expect(shadowMap(renderer)).toBeUndefined();
-    expect(litQuads(renderer)).toHaveLength(1);
+    expect(lightQuads(renderer)).toHaveLength(1);
   });
 
   it('builds no unshadowed quad while the light has no occluder to cast from', async () => {
     const renderer = await render(
       scene(lamp('Lamp', 400, 'range_item_cull_mask = 3\nshadow_item_cull_mask = 2\n'))
     );
-    expect(litQuads(renderer)).toHaveLength(1);
+    expect(lightQuads(renderer)).toHaveLength(1);
   });
 });
