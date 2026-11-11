@@ -7,6 +7,7 @@ import ReactThreeTestRenderer, { act } from '@react-three/test-renderer';
 import { ViewportActionsProvider } from './contexts/ViewportActionsContext';
 import { EditorControlsBridge } from './EditorControlsBridge';
 import { GodotEditorControls } from './GodotEditorControls';
+import { pressKey } from './GodotEditorControls.testkit';
 import { editorCameraPosition } from './godotEditorCamera';
 import { holdsPointerLock } from './pointerLock';
 import { installFakePointerLock } from './testing/fakePointerLock';
@@ -51,6 +52,14 @@ describe('<EditorControlsBridge>', () => {
 
     expect(holdsPointerLock(element)).toBe(true);
     expect(actions().freelookState()?.isToggled).toBe(true);
+  });
+
+  it('tells the shell that orthographic view has no freelook', async () => {
+    const { actions } = await mountBridgedControls();
+
+    await pressKey('Numpad5');
+
+    expect(actions().freelookState()?.isAvailable).toBe(false);
   });
 
   it('gives the shell no freelook once the canvas unmounts', async () => {

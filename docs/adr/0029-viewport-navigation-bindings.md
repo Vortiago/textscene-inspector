@@ -223,6 +223,12 @@ the control, with the speed on screen.
   `window`. `Shift+F` starts the toggle on any page that embeds `@textscene/renderer`.
 - `useGlobalShortcut` reads Shift with a letter as a chord of its own, so `Shift+F` does not also
   frame the selection, which is F's job.
+- Chromium ends the lock on Escape and sends the page no keydown, so leaving freelook does not
+  also clear the selection. Measured in Chromium 153 with a `window` listener in each phase.
+- The toolbar button is disabled in orthographic view and during a camera preview, with the
+  reason in its title.
+- A flight key under Ctrl or Cmd does not fly and keeps its browser action. macOS sends no keyup
+  for a key released under Cmd.
 - The toggle moves keyboard focus to the canvas. Space would otherwise press the toolbar button
   that started it.
 - The VS Code webview grants the lock. Measured on VS Code 1.145.3 under Xvfb: a click on the

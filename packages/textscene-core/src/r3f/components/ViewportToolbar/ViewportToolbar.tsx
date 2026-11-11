@@ -15,7 +15,11 @@ import {
   VIEWPORT_MODE_STORAGE_KEY,
   type ViewportMode,
 } from '../../contexts/ViewportModeContext.js';
-import { useIsFreelookToggled, useOptionalViewportActions } from '../../contexts/ViewportActionsContext.js';
+import {
+  useIsFreelookAvailable,
+  useIsFreelookToggled,
+  useOptionalViewportActions,
+} from '../../contexts/ViewportActionsContext.js';
 import { useOptionalHierarchy } from '../../contexts/HierarchyContext.js';
 import { writePersisted } from '../../hooks/usePersistedState.js';
 import { useLiveSceneNodes } from '../../useLiveSceneTree.js';
@@ -30,9 +34,15 @@ import styles from './ViewportToolbar.module.css';
 const MODES: ViewportMode[] = ['3D', '2D'];
 
 const FREELOOK_TITLE =
-  'Fly through the scene: the mouse looks around and W A S D move (Shift+F). Escape leaves. Perspective view only.';
+  'Fly through the scene: the mouse looks around and W A S D move (Shift+F). Escape leaves.';
 /** Godot ignores navigation while it previews a camera, and the button says so, as its preview buttons do. */
 const FREELOOK_PREVIEW_TITLE = 'Freelook is off during a camera preview';
+const FREELOOK_ORTHOGRAPHIC_TITLE = 'Freelook needs the perspective view (Numpad 5)';
+
+function freelookTitle(isPreviewing: boolean, isAvailable: boolean): string {
+  if (isPreviewing) return FREELOOK_PREVIEW_TITLE;
+  return isAvailable ? FREELOOK_TITLE : FREELOOK_ORTHOGRAPHIC_TITLE;
+}
 
 /** Everything `buildDisplayToggles` needs, so a test needs no DOM. */
 interface DisplayToggleState {
@@ -188,6 +198,7 @@ export function ViewportToolbar() {
   } = useViewportMode();
   const camera = useOptionalViewportActions();
   const isFreelookToggled = useIsFreelookToggled();
+  const isFreelookAvailable = useIsFreelookAvailable() ?? false;
   const isPreviewing = camera != null && camera.previewedCameraPath !== null;
   const hierarchy = useOptionalHierarchy();
   const sceneLoaded = Boolean(hierarchy?.sceneGraph);
@@ -260,10 +271,10 @@ export function ViewportToolbar() {
           type="button"
           className={isFreelookToggled ? `${styles.freelookButton} ${styles.active}` : styles.freelookButton}
           onClick={camera.toggleFreelook}
-          disabled={isPreviewing}
+          disabled={isPreviewing || !isFreelookAvailable}
           aria-pressed={isFreelookToggled}
           data-testid="freelook-button"
-          title={isPreviewing ? FREELOOK_PREVIEW_TITLE : FREELOOK_TITLE}
+          title={freelookTitle(isPreviewing, isFreelookAvailable)}
         >
           Freelook
         </button>

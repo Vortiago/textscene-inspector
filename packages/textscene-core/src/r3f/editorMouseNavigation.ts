@@ -28,8 +28,8 @@ export interface DragState {
 }
 
 /**
- * One mouse `pointermove` during a drag. Mutates `drag`'s last position and
- * returns whether the view moved.
+ * One mouse `pointermove` during a drag. Mutates `drag`'s last position, holds freelook on
+ * while the drag resolves to it, and returns whether the view moved.
  */
 export function applyEditorDragMove(
   event: PointerEvent,
@@ -47,6 +47,8 @@ export function applyEditorDragMove(
   // A released modifier (alt on an alt+left drag) suspends navigation without ending the drag,
   // as in Godot.
   if (!mode) return false;
+  // A projection swap mid-drag turns a right-drag pan into freelook, so the hold follows the mode.
+  handle.freelook.setHeld(mode === 'freelook');
 
   const cursor = handle.cursor();
   if (mode === 'orbit') handle.applyCursor(orbitCursor(cursor, dx, dy));

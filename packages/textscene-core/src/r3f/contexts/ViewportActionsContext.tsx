@@ -259,14 +259,22 @@ export function useFreelookState(): FreelookState | null {
 }
 
 /**
- * Whether the 3D canvas's freelook is toggled on, or null with no provider or no 3D canvas. A
+ * One boolean of the 3D canvas's freelook state, or null with no provider or no 3D canvas. A
  * primitive, so its reader does not re-render on a speed change, which a trackpad sends per frame.
  */
-export function useIsFreelookToggled(): boolean | null {
+function useFreelookBoolean(key: 'isToggled' | 'isAvailable'): boolean | null {
   const actions = useContext(ViewportActionsContext);
   const freelookState = actions?.freelookState ?? noFreelookState;
-  const isToggled = (): boolean | null => freelookState()?.isToggled ?? null;
-  return useSyncExternalStore(actions?.subscribeFreelook ?? subscribeToNothing, isToggled, isToggled);
+  const read = (): boolean | null => freelookState()?.[key] ?? null;
+  return useSyncExternalStore(actions?.subscribeFreelook ?? subscribeToNothing, read, read);
+}
+
+export function useIsFreelookToggled(): boolean | null {
+  return useFreelookBoolean('isToggled');
+}
+
+export function useIsFreelookAvailable(): boolean | null {
+  return useFreelookBoolean('isAvailable');
 }
 
 const subscribeToNothing = (): (() => void) => () => {};

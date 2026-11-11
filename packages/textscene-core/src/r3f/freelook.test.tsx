@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import {
   drag,
   keyDown,
+  keyUp,
   mountEditorControls,
   pressKey,
   previewAuthoredCamera,
@@ -160,6 +161,44 @@ describe('held freelook', () => {
 
     expect((await travelInOneFrame(mounted)).length()).toBe(0);
   });
+
+  it('flies on a right-drag that began in orthographic view, once the view is perspective', async () => {
+    const mounted = await mountFreelook();
+    await pressKey('Numpad5');
+    holdRightButton(mounted.element);
+    await pressKey('Numpad5');
+
+    mounted.element.dispatchEvent(
+      new PointerEvent('pointermove', { pointerId: 1, button: 2, clientX: 10, clientY: 0 })
+    );
+    keyDown('KeyW');
+
+    expect((await travelInOneFrame(mounted)).length()).toBeCloseTo(FREELOOK_BASE_SPEED * FRAME_SECONDS, 9);
+  });
+
+  it('keeps flying on one key of a direction when its other key lifts', async () => {
+    const mounted = await mountFreelook();
+    holdRightButton(mounted.element);
+    keyDown('ArrowUp');
+    keyDown('KeyW');
+
+    keyUp('KeyW');
+
+    expect((await travelInOneFrame(mounted)).length()).toBeCloseTo(FREELOOK_BASE_SPEED * FRAME_SECONDS, 9);
+  });
+
+  it.each([['ctrlKey'], ['metaKey']])(
+    'leaves a flight key under %s to the browser, and does not fly on it',
+    async (modifier) => {
+      const mounted = await mountFreelook();
+      holdRightButton(mounted.element);
+
+      const event = keyDown('KeyS', { [modifier]: true });
+
+      expect(event.defaultPrevented).toBe(false);
+      expect((await travelInOneFrame(mounted)).length()).toBe(0);
+    }
+  );
 });
 
 describe('toggled freelook', () => {

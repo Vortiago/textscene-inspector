@@ -21,7 +21,7 @@ function formatSpeed(unitsPerSecond: number): string {
 export function FreelookSpeedReadout() {
   const freelook = useFreelookState();
   const speedChangeCount = freelook?.speedChangeCount ?? 0;
-  /** The change count the readout last timed out on: a newer count shows it again. */
+  /** The change count the readout last timed out on: another count above zero shows it again. */
   const [expiredCount, setExpiredCount] = useState(0);
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export function FreelookSpeedReadout() {
     return () => clearTimeout(timer);
   }, [speedChangeCount]);
 
-  if (!freelook || speedChangeCount === expiredCount) return null;
+  if (!freelook || speedChangeCount === 0 || speedChangeCount === expiredCount) return null;
 
   return (
     <div className={styles.root} data-testid="freelook-speed-readout" role="status">

@@ -58,6 +58,9 @@ function handleKeyDown(event: KeyboardEvent, handle: EditorControlsHandle, get: 
     exitPointerLock(get().gl.domElement);
     return;
   }
+  // A flight key under Ctrl or Meta is a chord of the page or the browser. macOS sends no keyup
+  // for a key released under Meta, so a key pressed there would fly on with nothing held.
+  if (event.ctrlKey || event.metaKey) return;
   if (freelook.pressKey(event.code) || isAltKey(event.code)) event.preventDefault();
 }
 

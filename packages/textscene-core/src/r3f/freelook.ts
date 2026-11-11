@@ -3,7 +3,7 @@
  * Godot keeps the same three per viewport (`freelook_active`, its input map and `freelook_speed`).
  * It is on while the right button is held, or from the toggle until the pointer lock ends.
  */
-import { freelookDirectionOf, type FreelookDirection } from './editorKeyBindings.js';
+import { freelookDirectionOf } from './editorKeyBindings.js';
 import { createExternalStore } from './hooks/createExternalStore.js';
 import {
   FREELOOK_BASE_SPEED,
@@ -18,6 +18,8 @@ import {
 /** What a toolbar and a speed readout show. A new object on each change, so a store can compare it. */
 export interface FreelookState {
   readonly isToggled: boolean;
+  /** False in orthographic view, where Godot has no freelook. */
+  readonly isAvailable: boolean;
   /** The flight speed, in units per second. */
   readonly speed: number;
   /** Where the speed sits in its range, 0 to 1, on the logarithmic scale of Godot's indicator bar. */
@@ -53,10 +55,12 @@ function speedFractionIn(speed: number, range: ZoomRange): number {
 
 export class Freelook {
   private isHeld = false;
-  private readonly heldDirections = new Set<FreelookDirection>();
+  /** By key code, not direction: W and the up arrow fly one way, and one can lift while the other holds. */
+  private readonly heldKeyCodes = new Set<string>();
   private modifiers: FreelookModifiers = { shiftKey: false, altKey: false };
   private readonly store = createExternalStore<FreelookState>({
     isToggled: false,
+    isAvailable: true,
     speed: FREELOOK_BASE_SPEED,
     speedFraction: 0,
     speedChangeCount: 0,
@@ -71,7 +75,7 @@ export class Freelook {
 
   /** Whether a frame of flight would move the camera: freelook is on and a flight key is held. */
   get isFlying(): boolean {
-    return this.isActive && this.heldDirections.size > 0;
+    return this.isActive && this.heldKeyCodes.size > 0;
   }
 
   get isToggled(): boolean {
@@ -91,21 +95,26 @@ export class Freelook {
     this.releaseKeysWhenOff();
   }
 
+  /** The view went orthographic, or back to perspective. */
+  setAvailable(isAvailable: boolean): void {
+    if (isAvailable === this.getState().isAvailable) return;
+    this.store.set({ ...this.getState(), isAvailable });
+  }
+
   /** Returns whether `code` is a flight key, so the caller can keep it from the page. */
   pressKey(code: string): boolean {
-    const direction = freelookDirectionOf(code);
-    if (direction) this.heldDirections.add(direction);
-    return direction !== undefined;
+    const isFlightKey = freelookDirectionOf(code) !== undefined;
+    if (isFlightKey) this.heldKeyCodes.add(code);
+    return isFlightKey;
   }
 
   releaseKey(code: string): void {
-    const direction = freelookDirectionOf(code);
-    if (direction) this.heldDirections.delete(direction);
+    this.heldKeyCodes.delete(code);
   }
 
   /** A key that is down when focus leaves sends no keyup, so the caller drops every key then. */
   releaseKeys(): void {
-    this.heldDirections.clear();
+    this.heldKeyCodes.clear();
     this.modifiers = { shiftKey: false, altKey: false };
   }
 
@@ -133,7 +142,10 @@ export class Freelook {
   fly(cursor: EditorCursor, deltaSeconds: number): EditorCursor {
     if (!this.isFlying) return cursor;
     const keys: FreelookKeys = { sprint: this.modifiers.shiftKey, slow: this.modifiers.altKey };
-    for (const direction of this.heldDirections) keys[direction] = true;
+    for (const code of this.heldKeyCodes) {
+      const direction = freelookDirectionOf(code);
+      if (direction) keys[direction] = true;
+    }
     return freelookMoveCursor(cursor, keys, this.getState().speed, deltaSeconds);
   }
 

@@ -160,6 +160,7 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     if (this.editorCamera === this.perspectiveCamera) return;
     const cursor = this.cursor();
     this.editorCamera = this.perspectiveCamera;
+    this.freelook.setAvailable(true);
     this.setActiveCamera(this.perspectiveCamera);
     this.applyCursor(cursor);
   }
@@ -178,6 +179,7 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     this.orthographicCamera.near = perspective.near;
     this.orthographicCamera.far = perspective.far;
     this.editorCamera = this.orthographicCamera;
+    this.freelook.setAvailable(false);
     this.setActiveCamera(this.orthographicCamera);
     this.applyCursor(cursor);
   }

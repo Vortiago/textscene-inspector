@@ -11,8 +11,7 @@ import { RegisteredFreelook } from '../../testing/ViewportActionsProbe';
 import { ViewportToolbar } from './ViewportToolbar';
 
 /** A canvas's freelook whose toggle the browser always grants. */
-function grantedFreelook(): FreelookControl {
-  const freelook = new Freelook();
+function grantedFreelook(freelook = new Freelook()): FreelookControl {
   return {
     toggle: () => freelook.setToggled(!freelook.isToggled),
     getState: freelook.getState,
@@ -61,6 +60,16 @@ describe('ViewportToolbar Freelook button', () => {
 
     expect(button.disabled).toBe(true);
     expect(button.title).toContain('camera preview');
+  });
+
+  it('is disabled in orthographic view, and says why', () => {
+    const freelook = new Freelook();
+    const button = renderToolbar({ control: grantedFreelook(freelook) }) as HTMLButtonElement;
+
+    act(() => freelook.setAvailable(false));
+
+    expect(button.disabled).toBe(true);
+    expect(button.title).toContain('perspective view');
   });
 
   it('hides in 2D, where no canvas flies', () => {
