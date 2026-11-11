@@ -125,7 +125,7 @@ export const checkBoxMinimumSize: MinimumSizeFn = reservingMinimumSizeOf(CHECK_B
 /**
  * Where `CheckBox::_notification` draws the icon `key` in a box of `rectSize` (`check_box.cpp:126-142`):
  * at the `normal` box's leading margin, whatever the draw state, and at the trailing one under RTL.
- * `int()` truncates the centring before `check_v_offset` is added (`:131`). The icon draws at its own
+ * `int()` truncates the centring before `check_v_offset` is added (`:137`). The icon draws at its own
  * fitted size, unrounded, at the offset the largest icon sets.
  */
 export function checkBoxCheckRect(

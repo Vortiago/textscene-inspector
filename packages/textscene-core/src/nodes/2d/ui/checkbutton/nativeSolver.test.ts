@@ -156,7 +156,7 @@ describe('checkButtonToggleRect (check_button.cpp:129-145)', () => {
     });
   });
 
-  it('centres the toggle at the half pixel an odd height leaves, unrounded (check_button.cpp:137)', () => {
+  it('centres the toggle at the half pixel an odd height leaves, unrounded (check_button.cpp:140)', () => {
     expect(checkButtonToggleRect(node({}), THEME, 'unchecked', { x: 150, y: 31 }).y).toBe(7.5);
   });
 
@@ -165,7 +165,7 @@ describe('checkButtonToggleRect (check_button.cpp:129-145)', () => {
     expect(checkButtonToggleRect(n, THEME, 'unchecked', RECT_SIZE).y).toBe(9);
   });
 
-  it('puts the toggle at the left margin under RTL (check_button.cpp:133-134)', () => {
+  it('puts the toggle at the left margin under RTL (check_button.cpp:135-136)', () => {
     const rtl = { ...node({}), rtl: true };
     expect(checkButtonToggleRect(rtl, THEME, 'uncheckedMirrored', RECT_SIZE)).toMatchObject({ x: 6, y: 6 });
   });
@@ -192,6 +192,15 @@ describe('checkButtonToggleRect (check_button.cpp:129-145)', () => {
   it('draws nothing for an icon that reports size 0, as an unset ViewportTexture does', () => {
     const n = { ...node({}), textureSlots: { unchecked: { x: 0, y: 0 } } };
     expect(checkButtonToggleRect(n, THEME, 'unchecked', RECT_SIZE)).toMatchObject({ w: 0, h: 0 });
+  });
+});
+
+describe('checkButtonMinimumSize: the boxes of the draw states (check_button.cpp:68-83, button.cpp:55-95)', () => {
+  it('keeps the default `hover_pressed` box in the largest padding where every state box has no margin (default_theme.cpp:324)', () => {
+    const none = drawnStyleBox({});
+    const styleBoxes = { normal: none, pressed: none, hover: none, disabled: none };
+    // Measured in Godot 4.6.3: the content is max(0 - 8, 16) inside the padding 8, and 0 - 12 + 32 across.
+    expect(checkButtonMinimumSize({ ...node({}), styleBoxes }, ctx())).toEqual({ x: 32, y: 24 });
   });
 });
 

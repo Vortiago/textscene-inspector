@@ -56,42 +56,53 @@ export function resolveToggleDrawState(
 }
 
 /**
- * A `theme_override_styles/<state>` wins over the default. Under `rtl`,
- * `<state>_mirrored` comes first (`button.cpp:100-148`). The default theme's only
- * mirrored boxes, OptionButton's, equal their plain siblings
- * (`default_theme.cpp:215-233`), so `defaults` has no mirrored twin.
+ * The boxes the default theme gives a type by name: one for each `State`, and a `hover_pressed` or a
+ * `<state>_mirrored` only where it registers one (`default_theme.cpp:230-233,285,324`).
+ */
+type DefaultBoxes<State extends string> = Readonly<Record<State, StyleBoxFlatData>> &
+  Readonly<Partial<Record<string, StyleBoxFlatData>>>;
+
+/**
+ * A `theme_override_styles/<state>` wins over the default. Under `rtl`, `<state>_mirrored` comes first
+ * wherever any theme sets it (`button.cpp:101-148`). The default theme sets one for each OptionButton
+ * state (`default_theme.cpp:230-233`), so an RTL OptionButton never reads a plain override.
  */
 export function pickButtonStyleBox<State extends string>(
   overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  defaults: Readonly<Record<State, StyleBoxFlatData>>,
+  defaults: DefaultBoxes<State>,
   state: State,
   rtl = false
 ): StyleBoxFlatData {
   if (rtl) {
-    const mirrored = overrides[`${state}_mirrored`];
+    const registered: Readonly<Partial<Record<string, StyleBoxFlatData>>> = defaults;
+    const mirrored = overrides[`${state}_mirrored`] ?? registered[`${state}_mirrored`];
     if (mirrored) return mirrored;
   }
   return overrides[state] ?? defaults[state];
 }
 
-/** The boxes `Button::_update_style_margins` always measures (`button.cpp:66,75-90`). `hover_pressed` joins only where a theme sets it. */
+/** The boxes `Button::_update_theme_item_cache` always measures (`button.cpp:67-93`). `hover_pressed` joins only where a theme sets it. */
 const MEASURED_BOX_NAMES = ['normal', 'pressed', 'hover', 'disabled'] as const;
 
 type MeasuredBoxName = (typeof MEASURED_BOX_NAMES)[number];
 
 /**
- * `Button::_update_style_margins` (`button.cpp:52-95`): the largest content margin of each side over the
+ * `Button::_update_theme_item_cache` (`button.cpp:55-95`): the largest content margin of each side over the
  * boxes of every draw mode. `align_to_largest_stylebox` lays the button out in them, and a subclass takes
  * their sum as the padding around what it reserves (`_get_largest_stylebox_size`, `check_box.cpp:68`).
  */
 export function largestStyleBoxMargins(
   overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  defaults: Readonly<Record<MeasuredBoxName, StyleBoxFlatData>>,
+  defaults: DefaultBoxes<MeasuredBoxName>,
   rtl: boolean
 ): StyleBoxFlatData['contentMargin'] {
   const boxes = MEASURED_BOX_NAMES.map((name) => pickButtonStyleBox(overrides, defaults, name, rtl));
-  const hoverPressed = (rtl ? overrides.hover_pressed_mirrored : undefined) ?? overrides.hover_pressed;
-  if (hoverPressed) boxes.push(hoverPressed);
+  // Gated on the plain name: a `hover_pressed_mirrored` alone is never read (`button.cpp:72-78`).
+  const hoverPressed = overrides.hover_pressed ?? defaults.hover_pressed;
+  if (hoverPressed) {
+    const mirrored = rtl ? (overrides.hover_pressed_mirrored ?? defaults.hover_pressed_mirrored) : undefined;
+    boxes.push(mirrored ?? hoverPressed);
+  }
   const largest = { left: 0, top: 0, right: 0, bottom: 0 };
   for (const { contentMargin } of boxes) {
     largest.left = Math.max(largest.left, contentMargin.left);
@@ -748,7 +759,7 @@ function minimumSizeOfText(facts: ButtonContentFacts, textSize: Vector2, lineHei
 
 /**
  * `CheckBox::get_minimum_size` and `CheckButton::get_minimum_size` (`check_box.cpp:64-79`,
- * `check_button.cpp:64-79`) less the margins: Button's `content` plus the element it reserves, with
+ * `check_button.cpp:68-83`) less the margins: Button's `content` plus the element it reserves, with
  * `h_separation` between them while both have a width. The gate is `tex_size.width > 0 || tex_size.height > 0`
  * (`check_box.cpp:67`), so a zero-width element with height still floors the height. The caller passes `hSeparation` already clamped.
  */

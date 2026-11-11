@@ -421,4 +421,17 @@ describe('optionButtonMinimumSize: the boxes of the draw states (option_button.c
     // No item: `_cached_size` is the normal box's 60 px, and the arrow and its separation add 16.
     expect(optionButtonMinimumSize({ ...node({}), styleBoxes: { normal } }, ctx()).x).toBe(60 + 16);
   });
+
+  it('pads an RTL button by the default `normal_mirrored` box, not by a plain `normal` (default_theme.cpp:230)', () => {
+    const normal = drawnStyleBox({
+      content_margin_left: '40',
+      content_margin_top: '40',
+      content_margin_right: '40',
+      content_margin_bottom: '40',
+    });
+    const n = { ...node({}), styleBoxes: { normal }, rtl: true };
+    // Measured in Godot 4.6.3: `_cached_size` is the plain box's 80, the padding is the mirrored box's
+    // (16, 8), and the arrow and its separation add 16 across.
+    expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 96, y: 80 });
+  });
 });

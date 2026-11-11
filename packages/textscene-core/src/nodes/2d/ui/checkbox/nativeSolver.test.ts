@@ -165,13 +165,13 @@ describe('checkBoxCheckRect (check_box.cpp:126-142)', () => {
     expect(checkBoxCheckRect(node({}), THEME, 'unchecked', RECT_SIZE)).toEqual({ x: 4, y: 6, w: 16, h: 16 });
   });
 
-  it('truncates the centring before it adds check_v_offset (check_box.cpp:131)', () => {
+  it('truncates the centring before it adds check_v_offset (check_box.cpp:137)', () => {
     const n = node({ themeOverrideConstants: { check_v_offset: 3 } });
     // int((27 - 16) / 2) = 5, then + 3.
     expect(checkBoxCheckRect(n, THEME, 'unchecked', { x: 150, y: 27 }).y).toBe(8);
   });
 
-  it('puts the check short of the right margin under RTL (check_box.cpp:129)', () => {
+  it('puts the check short of the right margin under RTL (check_box.cpp:132-133)', () => {
     // x = 150 - 4 - 16.
     expect(checkBoxCheckRect({ ...node({}), rtl: true }, THEME, 'unchecked', RECT_SIZE).x).toBe(130);
   });
@@ -235,6 +235,13 @@ describe('checkBoxMinimumSize: the boxes of the draw states (check_box.cpp:64-79
     };
     // The unpressed box takes the pressed box's 60 px across.
     expect(checkBoxMinimumSize(n, ctx()).x).toBe(60 + 16);
+  });
+
+  it('keeps the default `hover_pressed` box in the largest padding where every state box has no margin (default_theme.cpp:285)', () => {
+    const none = drawnStyleBox({});
+    const styleBoxes = { normal: none, pressed: none, hover: none, disabled: none };
+    // Measured in Godot 4.6.3: the content is max(0 - 8, 16) inside the padding 8, and 0 - 8 + 16 across.
+    expect(checkBoxMinimumSize({ ...node({}), styleBoxes }, ctx())).toEqual({ x: 16, y: 24 });
   });
 });
 

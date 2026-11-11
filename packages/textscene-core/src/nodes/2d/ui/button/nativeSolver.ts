@@ -56,7 +56,7 @@ import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBid
 
 /**
  * The theme font key of Button and of every class that extends it, `SceneStringName(font)`: each registers
- * it under its own type (`scene/theme/default_theme.cpp:152,237,263,297,337`), and the lookup starts at
+ * it under its own type (`scene/theme/default_theme.cpp:152,237,261,297,337`), and the lookup starts at
  * the node's class.
  */
 export const BUTTON_THEME_FONT_KEY = 'font';
@@ -210,7 +210,7 @@ interface ButtonStyle {
   state: ToggleDrawState;
   /** `_get_current_stylebox` (`button.cpp:101-147`): the box the chrome draws. */
   box: StyleBoxFlatData;
-  /** The margins the content lays out in: the box's own, or the largest of every state under `align_to_largest_stylebox` (`button.cpp:236-239`). */
+  /** The margins the content lays out in: the box's own, or the largest of every state under `align_to_largest_stylebox` (`button.cpp:233-236`). */
   margin: StyleBoxFlatData['contentMargin'];
 }
 
@@ -219,7 +219,7 @@ export function buttonLargestMargin(n: ShareNode, theme: NativeTheme): StyleBoxF
   return largestStyleBoxMargins(n.styleBoxes, buttonBoxesOf(n, theme), n.rtl);
 }
 
-/** `theme_cache.normal_style`, the box a subclass places its element by in every draw state (`check_box.cpp:128`). */
+/** `theme_cache.normal_style`, the box a subclass places its element by in every draw state (`check_box.cpp:133-135`). */
 export function buttonNormalBox(n: ShareNode, theme: NativeTheme): StyleBoxFlatData {
   return pickButtonStyleBox(n.styleBoxes, buttonBoxesOf(n, theme), 'normal');
 }
@@ -267,7 +267,7 @@ export function buttonLabelShape(
   });
 }
 
-/** `h_separation` of `n`: every class of the family registers `round(4 * scale)` (`default_theme.cpp:171,249,308,348`). */
+/** `h_separation` of `n`: every class of the family registers `round(4 * scale)` (`default_theme.cpp:171,248,271,308,348`). */
 export function buttonHSeparation(n: Pick<SolveNode, 'constants'>, theme: NativeTheme): number {
   return n.constants.h_separation ?? theme.separation;
 }
@@ -312,7 +312,9 @@ export function buttonContentFacts(
 export function buttonMinimumSizeOf(buttonClass: ButtonClass): MinimumSizeFn {
   return (n, ctx) => {
     const props = n.node.properties as ButtonProperties;
-    const factsAt = (rectSize: Vector2) => buttonContentFacts(n, ctx.theme, buttonClass, rectSize);
+    // Only `rectSize` moves with the rect, so the boxes and the reserved element resolve once.
+    const facts = buttonContentFacts(n, ctx.theme, buttonClass, { x: 0, y: 0 });
+    const factsAt = (rectSize: Vector2): ButtonContentFacts => ({ ...facts, rectSize });
     // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height depends on.
     // Pass 1 shapes unwrapped. The label wraps at what the painter's layout leaves beside the icon.
     const wrapWidthPx = tentativeWrapWidthPx(
@@ -330,7 +332,6 @@ export function buttonMinimumSizeOf(buttonClass: ButtonClass): MinimumSizeFn {
     // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`):
     // the ceiled extent, not the raw pen advance. Its width drops under `clip_text`, a trimming
     // overrun behaviour or autowrap, since a narrower box trims or wraps it (`button.cpp:493-495`).
-    const facts = factsAt({ x: 0, y: 0 });
     const content = buttonContentMinimumSize(facts, layout, props);
     const padding = sidesSize(facts.styleMargin);
 
@@ -343,7 +344,7 @@ export const buttonMinimumSize: MinimumSizeFn = buttonMinimumSizeOf(BUTTON_CLASS
 /**
  * The minimum size of a `buttonClass` with its element reserved beside Button's content, as
  * `CheckBox::get_minimum_size` and `CheckButton::get_minimum_size` reserve their icon (`check_box.cpp:64-79`,
- * `check_button.cpp:64-79`). The content is what Button's minimum leaves inside the largest box of any
+ * `check_button.cpp:68-83`). The content is what Button's minimum leaves inside the largest box of any
  * draw state (`:68-69`).
  */
 export function reservingMinimumSizeOf(buttonClass: ReservingButtonClass): MinimumSizeFn {

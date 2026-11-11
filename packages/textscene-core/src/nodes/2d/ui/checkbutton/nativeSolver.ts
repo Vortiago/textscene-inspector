@@ -1,6 +1,6 @@
 /**
  * What CheckButton adds to Button (`scene/gui/check_button.cpp`): the toggle icon it reserves as Button's
- * `_internal_margin` (`:96-104`) and draws over it (`:106-146`), its minimum size (`:64-79`) and its theme
+ * `_internal_margin` (`:96-104`) and draws over it (`:106-146`), its minimum size (`:68-83`) and its theme
  * defaults (`scene/theme/default_theme.cpp:316-353`).
  *
  * Portions ported from Godot Engine (MIT).
@@ -118,13 +118,13 @@ export const checkButtonTextureSlots: TextureSlotsFn = buttonTextureSlotsOf(
   (_node, themedIcons = {}) => themedSlotRequests(CHECK_BUTTON_ICON_THEME_NAMES, themedIcons)
 );
 
-/** `CheckButton::get_minimum_size` (`check_button.cpp:64-79`): Button's, with the toggle reserved beside the content. */
+/** `CheckButton::get_minimum_size` (`check_button.cpp:68-83`): Button's, with the toggle reserved beside the content. */
 export const checkButtonMinimumSize: MinimumSizeFn = reservingMinimumSizeOf(CHECK_BUTTON_CLASS);
 
 /**
  * Where `CheckButton::_notification` draws the icon `key` in a box of `rectSize` (`check_button.cpp:129-145`):
  * short of the `normal` box's trailing margin, whatever the draw state, and at the leading one under RTL.
- * Unrounded: an odd height leaves the toggle on a half pixel (`:137`). The icon draws at its own fitted
+ * Unrounded: an odd height leaves the toggle on a half pixel (`:140`). The icon draws at its own fitted
  * size, at the offset the larger icon sets.
  */
 export function checkButtonToggleRect(

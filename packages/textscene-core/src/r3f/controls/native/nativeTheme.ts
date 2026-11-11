@@ -147,7 +147,7 @@ interface NativeThemeWidgets {
   /**
    * `sb_optbutton_normal`/`_hover`/`_pressed`/`_disabled` (`default_theme.cpp:212-216`):
    * the shared corner radius with OptionButton's own asymmetric X and Y margins.
-   * A static preview has no pointer, so `hover` never draws: only its margins are read (`button.cpp:80-84`).
+   * A static preview has no pointer, so `hover` never draws: only its margins are read (`button.cpp:84-88`).
    */
   optionButton: {
     normal: StyleBoxFlatData;

@@ -36,12 +36,11 @@ disabled = true
 button_pressed = true
 text = "Disabled"
 
-[node name="RadioChecked" type="CheckBox" parent="."]
+[node name="CheckBoxHalfAlpha" type="CheckBox" parent="."]
 layout_mode = 0
 offset_left = 20.0
 offset_top = 140.0
 theme_override_colors/checkbox_checked_color = Color(1, 0.4, 0.2, 0.5)
-toggle_mode = false
 button_pressed = true
 text = "Half alpha"
 

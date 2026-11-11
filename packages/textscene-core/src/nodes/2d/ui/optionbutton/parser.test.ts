@@ -32,7 +32,7 @@ describe('parseOptionButton', () => {
     expect(parseOptionButton(h({ name: 'O' }), {}).flat).toBe(false);
   });
 
-  it('parses `fit_to_longest_item` off, and leaves it unset at its true default (option_button.cpp:660)', () => {
+  it('parses `fit_to_longest_item` off, and leaves it unset at its true default (option_button.h:43)', () => {
     expect(parseOptionButton(h({ name: 'O' }), { fit_to_longest_item: 'false' }).fitToLongestItem).toBe(
       false
     );

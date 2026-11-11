@@ -16,13 +16,21 @@ import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import type { Rgba } from '../../../godot/math/math';
 import type { ToggleDrawState } from './buttonBase';
 
-/** The boxes a Button draws by draw state: `NativeTheme`'s own, or the default theme's for a variation. */
-export type ButtonBoxes = NativeTheme['widgets']['button'];
+type StateBoxName = 'normal' | 'hover' | 'pressed' | 'disabled';
 
-type BoxName = 'normal' | 'hover' | 'pressed' | 'disabled';
+/** A box `Button` sets none of: only the type that registers one has it (`default_theme.cpp:230-233,285,324`). */
+type ExtraBoxName = 'hover_pressed' | `${StateBoxName}_mirrored`;
+
+type BoxName = StateBoxName | ExtraBoxName;
+
+/** The boxes a Button draws by draw state: `NativeTheme`'s own, or the default theme's for a variation. */
+export type ButtonBoxes = NativeTheme['widgets']['button'] & Partial<Record<ExtraBoxName, StyleBoxFlatData>>;
 
 /** The boxes a type sets in the default theme, which `Button` would otherwise set. */
 type TypeBoxes = Readonly<Partial<Record<BoxName, StyleBoxFlatData>>>;
+
+/** A type that sets the box of every draw state. */
+type StateBoxes = Readonly<Record<StateBoxName, StyleBoxFlatData>>;
 
 /** `flat_button_pressed` (`default_theme.cpp:363-364`): `button_pressed` with `style_pressed_color * Color(1, 1, 1, 0.85)`. */
 const PRESSED_ALPHA = 0.85;
@@ -31,7 +39,7 @@ const PRESSED_ALPHA = 0.85;
  * The boxes of `FlatButton` and `FlatMenuButton` (`default_theme.cpp:366-375`), built once per theme: an empty
  * box that keeps `button_normal`'s margins, which `widgets.flatMenuButton` holds, and a darker pressed box.
  */
-const flatButtonBoxes = perObject((theme: NativeTheme): Required<TypeBoxes> => {
+const flatButtonBoxes = perObject((theme: NativeTheme): StateBoxes => {
   const { normal: empty, disabled } = theme.widgets.flatMenuButton;
   const { pressed } = theme.widgets.button;
   return {
@@ -47,23 +55,41 @@ export const LABEL_NORMAL_BOX = neutralStyleBox({ left: 0, top: 0, right: 0, bot
 
 const LABEL_BOXES: TypeBoxes = { normal: LABEL_NORMAL_BOX };
 
-/** One `StyleBoxEmpty` for every draw state, as CheckBox and CheckButton register (`default_theme.cpp:276-283,316-322`). */
-function emptyBoxes(contentMargin: StyleBoxFlatData['contentMargin']): Required<TypeBoxes> {
+/**
+ * One `StyleBoxEmpty` for every draw state and for `hover_pressed`, as CheckBox and CheckButton register
+ * (`default_theme.cpp:281-285,320-324`). No pointer draws `hover_pressed`: only its margins are read.
+ */
+function emptyBoxes(contentMargin: StyleBoxFlatData['contentMargin']): TypeBoxes {
   const empty = Object.freeze(neutralStyleBox(Object.freeze(contentMargin)));
-  return { normal: empty, hover: empty, pressed: empty, disabled: empty };
+  return { normal: empty, hover: empty, pressed: empty, disabled: empty, hover_pressed: empty };
 }
 
 /** `cbx_empty` (`default_theme.cpp:276-277`): `round(4 * scale)` on every side. */
-const checkBoxBoxes = perObject((theme: NativeTheme): Required<TypeBoxes> => {
+const checkBoxBoxes = perObject((theme: NativeTheme): TypeBoxes => {
   const margin = theme.contentMargin;
   return emptyBoxes({ left: margin, top: margin, right: margin, bottom: margin });
 });
 
 /** `cb_empty` (`default_theme.cpp:316-317`): `round(6 * scale)` across and `round(4 * scale)` down. */
-const checkButtonBoxes = perObject((theme: NativeTheme): Required<TypeBoxes> => {
+const checkButtonBoxes = perObject((theme: NativeTheme): TypeBoxes => {
   const across = Math.round(6 * theme.scale);
   const down = theme.contentMargin;
   return emptyBoxes({ left: across, top: down, right: across, bottom: down });
+});
+
+/** OptionButton's boxes, each with the `_mirrored` twin the default theme builds alike (`default_theme.cpp:215-233`). */
+const optionButtonBoxes = perObject((theme: NativeTheme): TypeBoxes => {
+  const { normal, hover, pressed, disabled } = theme.widgets.optionButton;
+  return {
+    normal,
+    hover,
+    pressed,
+    disabled,
+    normal_mirrored: normal,
+    hover_mirrored: hover,
+    pressed_mirrored: pressed,
+    disabled_mirrored: disabled,
+  };
 });
 
 /** The boxes each type other than `Button` sets in the default theme. MenuButton sets Button's own (`default_theme.cpp:255-258`). */
@@ -73,7 +99,7 @@ function typeBoxes(type: string, theme: NativeTheme): TypeBoxes | undefined {
     case 'FlatMenuButton':
       return flatButtonBoxes(theme);
     case 'OptionButton':
-      return theme.widgets.optionButton;
+      return optionButtonBoxes(theme);
     case 'CheckBox':
       return checkBoxBoxes(theme);
     case 'CheckButton':
