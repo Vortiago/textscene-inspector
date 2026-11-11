@@ -580,6 +580,10 @@ The scene, camera, buffer size and clip rect that one `CanvasLightPass` accumula
 A light on a list that a normal-mapped canvas item reads, drawn alone into its own layer instead of the list's accumulation buffer, with where it sits and its height, so the item shades it by its own normal term (ADR-0062).
 _Avoid_: "per-light buffer" for the light itself. The layer is its buffer.
 
+**List attachments** (`ListAttachments` in `r3f/lighting2d/itemLightList.ts`):
+Which attachment of a light list's one render target holds each buffer its items read: the light, the `shadow_color` and the Light Only buffer, at attachments 0, 1 and 2. A light quad writes all three outputs in one draw, and an output with no attachment is dropped (ADR-0067).
+_Avoid_: "tint pass", which no longer exists. The `shadow_color` buffer is an attachment.
+
 **ViewportPassRegistry**:
 The pass-ordering half of the same seam (`ViewportPassRegistryContext.tsx`): one `<ViewportPassOrchestrator>` per canvas runs every registered sub-viewport pass in dependency order each frame.
 A pass in a dependency cycle never runs, and `useViewportPassCycle` lets a consumer fall back.

@@ -22,7 +22,6 @@ import { useDirectionalShadow } from '../../../r3f/lighting2d/directionalShadowV
 import { FullScreenQuad } from '../../../r3f/lighting2d/fullScreenQuad';
 import {
   createDirectionalLightMaterial,
-  createDirectionalShadowColorMaterial,
   type DirectionalShadowSampling,
 } from '../../../r3f/lighting2d/directionalLightQuad';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
@@ -58,7 +57,6 @@ export function DirectionalLight2D({ node, children }: NodeComponentProps) {
           <DirectionalLightQuads
             props={props}
             ordinal={ordinal}
-            tintsShadow={tintsShadow}
             renderOrder={directionalRenderOrder(slot)}
             casters={casters}
           />
@@ -73,15 +71,12 @@ export function DirectionalLight2D({ node, children }: NodeComponentProps) {
 function DirectionalLightQuads({
   props,
   ordinal,
-  tintsShadow,
   renderOrder,
   casters,
 }: {
   props: DirectionalLight2DProperties;
   /** This light's ordinal on the canvas, or null while undeclared. */
   ordinal: number | null;
-  /** Whether the light casts with a visible `shadow_color`. */
-  tintsShadow: boolean;
   /** Its draw order, from its slot in the directional list. */
   renderOrder: number;
   /** The occluders this light is allowed to see, in world space. */
@@ -117,25 +112,12 @@ function DirectionalLightQuads({
   );
   useDisposeOnRelease(material);
 
-  // A MIX light scales the tint buffer under it by its alpha, so it draws there untinted too.
-  const drawsTint = blendMode === Light2DBlendMode.MIX || (!!sampling && tintsShadow);
-  const shadowMaterial = useMemo(
-    () =>
-      drawsTint ? createDirectionalShadowColorMaterial({ color, energy, blendMode, shadow: sampling }) : null,
-    [drawsTint, sampling, color, energy, blendMode]
-  );
-  useDisposeOnRelease(shadowMaterial);
-
   const litRef = usePassMeshRef<THREE.Mesh>(ordinal, 'lit', setQuad);
-  const tintRef = usePassMeshRef<THREE.Mesh>(ordinal, 'tint');
 
   return (
     <>
       <object3D ref={setOrigin} />
       <FullScreenQuad meshRef={litRef} material={material} renderOrder={renderOrder} />
-      {shadowMaterial && (
-        <FullScreenQuad meshRef={tintRef} material={shadowMaterial} renderOrder={renderOrder} />
-      )}
     </>
   );
 }
