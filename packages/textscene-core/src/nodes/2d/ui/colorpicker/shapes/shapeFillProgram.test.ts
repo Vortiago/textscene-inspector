@@ -13,7 +13,6 @@ const FRAGMENT: ShapeFragment = {
 function uniforms(): ShapeFillUniforms {
   return {
     shape: { v: { value: 0.5 } },
-    size: { value: new THREE.Vector2(256, 256) },
     canvasModulate: { value: new THREE.Color(1, 1, 1) },
   };
 }
@@ -41,9 +40,7 @@ describe('shapeFillInjection', () => {
   });
 
   it('derives UV from the position, with y down', () => {
-    expect(compiled(FRAGMENT, false).vertexShader).toContain(
-      'vShapeUv = vec2( position.x / uShapeSize.x, -position.y / uShapeSize.y );'
-    );
+    expect(compiled(FRAGMENT, false).vertexShader).toContain('vShapeUv = vec2( position.x, -position.y );');
   });
 
   it('decodes the sRGB COLOR once in an sRGB canvas, and takes it as linear in a linear one', () => {
@@ -61,7 +58,6 @@ describe('shapeFillInjection', () => {
     const own = uniforms();
     const shader = compiled(FRAGMENT, false, own);
     expect(shader.uniforms.v).toBe(own.shape.v);
-    expect(shader.uniforms.uShapeSize).toBe(own.size);
     expect(shader.uniforms.uShapeCanvasModulate).toBe(own.canvasModulate);
   });
 

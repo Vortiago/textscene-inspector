@@ -8,7 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { circleCursorCentre, rectCursorCentre, type ShapeVariant } from './shapeDrawing';
-import { WHEEL_LAYOUT } from './shapeRowLayout';
+import { WHEEL_LAYOUT, type AreaRowLayout } from './shapeRowLayout';
 import type { ShapeFragment } from './shapeFragment';
 
 /** `WHEEL_RADIUS` (`color_picker_shape.h:173`): the ring's inner radius, as a fraction of the control. */
@@ -38,7 +38,7 @@ const WHEEL_FRAGMENT: ShapeFragment = {
 /** The hue cursor's radius: halfway between the ring's inner and outer edge (`_wheel_uv_draw`, `:801-802`). */
 const HUE_CURSOR_RADIUS = WHEEL_RADIUS * 2 + (1 - WHEEL_RADIUS * 2) * 0.5;
 
-export const HSV_WHEEL: ShapeVariant = {
+export const HSV_WHEEL: ShapeVariant<AreaRowLayout> = {
   icon: 'shape_rect_wheel',
   layout: WHEEL_LAYOUT,
   draw({ area }, { hsv }) {

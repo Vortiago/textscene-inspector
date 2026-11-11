@@ -28,8 +28,15 @@ export interface PickerShapeColor {
   okhsl: { h: number; s: number; l: number };
 }
 
+/** `okhsl` converts on first read, so only the three OKHSL shapes pay for the OKLab round trip. */
 export function pickerShapeColor(normalized: Rgba): PickerShapeColor {
-  return { hsv: extractHsv(normalized), okhsl: srgbToOkhsl(normalized) };
+  let okhsl: PickerShapeColor['okhsl'] | undefined;
+  return {
+    hsv: extractHsv(normalized),
+    get okhsl() {
+      return (okhsl ??= srgbToOkhsl(normalized));
+    },
+  };
 }
 
 /** A fill that a `canvas_item` shader evaluates per fragment over `rect`, with `UV` 0 to 1 and y down. */
@@ -75,11 +82,14 @@ export interface ShapeDrawing {
 /** The theme icon `btn_shape` shows for the shape (`color_picker_shape.h:108-227`). */
 export type ShapeIconName = keyof typeof COLOR_PICKER_SHAPE_ICONS;
 
-/** One `ColorPickerShape` subclass: its `btn_shape` icon, its controls and what it draws in them. */
-export interface ShapeVariant {
+/**
+ * One `ColorPickerShape` subclass: its `btn_shape` icon, its controls and what it draws in them.
+ * `draw` takes the split of its own `layout`, so a shape with a slider reads a slider rect.
+ */
+export interface ShapeVariant<L extends ShapeRowLayout = ShapeRowLayout> {
   icon: ShapeIconName;
-  layout: ShapeRowLayout;
-  draw(split: ShapeRowSplit, color: PickerShapeColor): ShapeDrawing;
+  layout: L;
+  draw(split: ShapeRowSplit<L>, color: PickerShapeColor): ShapeDrawing;
 }
 
 /**
@@ -144,10 +154,4 @@ export function okLightnessSlider(rect: Rect2, { h, s, l }: PickerShapeColor['ok
 export function okSaturationSlider(rect: Rect2, { h, s, l }: PickerShapeColor['okhsl']): ShapeSlider {
   const saturated = okhslToSrgb(h, 1, l);
   return valueSlider(rect, [saturated, okhslToSrgb(h, 0.5, l), okhslToSrgb(h, 0, l)], s, saturated);
-}
-
-/** The slider of a shape that has one: every shape but the wheel. */
-export function requireSlider(split: ShapeRowSplit): Rect2 {
-  if (!split.slider) throw new Error('expected a shape row split with a slider, got the wheel split');
-  return split.slider;
 }

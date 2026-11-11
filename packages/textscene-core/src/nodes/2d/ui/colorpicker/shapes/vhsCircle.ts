@@ -8,9 +8,9 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { hsvToRgb } from '../../../../../godot/math/color';
-import { circleCursorCentre, requireSlider, valueSlider, type ShapeVariant } from './shapeDrawing';
+import { circleCursorCentre, valueSlider, type ShapeVariant } from './shapeDrawing';
 import type { ShapeFragment } from './shapeFragment';
-import { CIRCLE_LAYOUT } from './shapeRowLayout';
+import { CIRCLE_LAYOUT, type SliderRowLayout } from './shapeRowLayout';
 import { BLACK } from '../svGradient';
 
 /** The circle shader (`color_picker_shape.cpp:64-87`). */
@@ -34,7 +34,7 @@ const VHS_CIRCLE_FRAGMENT: ShapeFragment = {
 	COLOR = vec4(mix(vec3(1.0), clamp(abs(fract(vec3((a - TAU) / TAU) + vec3(1.0, 2.0 / 3.0, 1.0 / 3.0)) * 6.0 - vec3(3.0)) - vec3(1.0), 0.0, 1.0), ((float(sqrt(x * x + y * y)) * 2.0)) / 1.0) * vec3(v), (b + b2 + b3 + b4) / 4.00);`,
 };
 
-export const VHS_CIRCLE: ShapeVariant = {
+export const VHS_CIRCLE: ShapeVariant<SliderRowLayout> = {
   icon: 'shape_circle',
   layout: CIRCLE_LAYOUT,
   draw(split, { hsv }) {
@@ -42,12 +42,7 @@ export const VHS_CIRCLE: ShapeVariant = {
       fill: { rect: split.area, fragment: VHS_CIRCLE_FRAGMENT, uniforms: { v: hsv.v } },
       svSquare: null,
       cursors: [{ centre: circleCursorCentre(split.area, hsv.h, hsv.s), hasBackground: true }],
-      slider: valueSlider(
-        requireSlider(split),
-        [hsvToRgb(hsv.h, hsv.s, 1), BLACK],
-        hsv.v,
-        hsvToRgb(hsv.h, 1, hsv.v)
-      ),
+      slider: valueSlider(split.slider, [hsvToRgb(hsv.h, hsv.s, 1), BLACK], hsv.v, hsvToRgb(hsv.h, 1, hsv.v)),
     };
   },
 };

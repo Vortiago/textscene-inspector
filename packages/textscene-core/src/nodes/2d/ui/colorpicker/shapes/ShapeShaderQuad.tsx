@@ -8,7 +8,6 @@ import * as THREE from 'three';
 import { useCanvasItemMerge } from '../../../../../r3f/components/LitCanvasItemPixels';
 import { useControlClipPlanes } from '../../../../../r3f/controls/native/controlClipping';
 import { materialProgramInputs } from '../../../../../r3f/materialProgramInputs';
-import { useDisposeOnRelease } from '../../../../../r3f/useDisposeOnRelease';
 import { canvasNumbersOf, useCanvasColorSpace } from '../../../../../r3f/canvasColorSpace';
 import { useCanvasModulateFor } from '../../../../../r3f/canvasModulate';
 import { shapeFillInjection, type ShapeFillUniforms } from './shapeFillProgram';
@@ -17,21 +16,20 @@ import type { ShapeFragment } from './shapeFragment';
 
 const WHITE = new THREE.Color(1, 1, 1);
 
-/** The fill's quad, from (0, 0) to (w, -h), so the vertex stage reads `UV` off the position. */
-function fillQuad(w: number, h: number): THREE.BufferGeometry {
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute(
+/**
+ * The unit quad from (0, 0) to (1, -1) that every fill shares, scaled to the fill's rect, so a resize
+ * builds no geometry. It lives for the module, so no fill disposes it.
+ */
+const UNIT_QUAD = new THREE.BufferGeometry()
+  .setAttribute(
     'position',
-    new THREE.BufferAttribute(new Float32Array([0, 0, 0, w, 0, 0, w, -h, 0, 0, -h, 0]), 3)
-  );
-  geometry.setIndex([0, 1, 2, 0, 2, 3]);
-  return geometry;
-}
+    new THREE.BufferAttribute(new Float32Array([0, 0, 0, 1, 0, 0, 1, -1, 0, 0, -1, 0]), 3)
+  )
+  .setIndex([0, 1, 2, 0, 2, 3]);
 
 function fillUniforms(fragment: ShapeFragment): ShapeFillUniforms {
   return {
     shape: Object.fromEntries(fragment.uniforms.map((name) => [name, { value: 0 }])),
-    size: { value: new THREE.Vector2() },
     canvasModulate: { value: new THREE.Color() },
   };
 }
@@ -50,17 +48,14 @@ export function ShapeShaderQuad({ fill, renderOrder }: { fill: ShapeShaderFill; 
     for (const name of fill.fragment.uniforms) uniforms.shape[name]!.value = fill.uniforms[name]!;
   }, [uniforms, fill]);
   useLayoutEffect(() => {
-    uniforms.size.value.set(w, h);
     const { r, g, b } = canvasNumbersOf(space, canvasModulate);
     uniforms.canvasModulate.value.setRGB(r, g, b);
-  }, [uniforms, w, h, space, canvasModulate]);
+  }, [uniforms, space, canvasModulate]);
 
   const injection = useMemo(
     () => shapeFillInjection(fill.fragment, uniforms, isLinear),
     [fill.fragment, uniforms, isLinear]
   );
-  const geometry = useMemo(() => fillQuad(w, h), [w, h]);
-  useDisposeOnRelease(geometry);
 
   const program = materialProgramInputs({
     props: {
@@ -74,8 +69,8 @@ export function ShapeShaderQuad({ fill, renderOrder }: { fill: ShapeShaderFill; 
     merge: canvasItemMerge,
   });
   return (
-    <mesh renderOrder={renderOrder}>
-      <primitive object={geometry} attach="geometry" />
+    <mesh renderOrder={renderOrder} scale={[w, h, 1]}>
+      <primitive object={UNIT_QUAD} attach="geometry" />
       <meshBasicMaterial key={program.key} {...program.props} />
     </mesh>
   );

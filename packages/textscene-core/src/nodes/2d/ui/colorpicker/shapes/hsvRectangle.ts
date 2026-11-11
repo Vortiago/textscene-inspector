@@ -9,18 +9,17 @@
  */
 import { hsvToRgb, inverted } from '../../../../../godot/math/color';
 import { COLOR_HUE_STOPS } from '../svGradient';
-import { rectCursorCentre, requireSlider, sliderLineY, type ShapeVariant } from './shapeDrawing';
-import { RECTANGLE_LAYOUT } from './shapeRowLayout';
+import { rectCursorCentre, sliderLineY, type ShapeVariant } from './shapeDrawing';
+import { RECTANGLE_LAYOUT, type SliderRowLayout } from './shapeRowLayout';
 
-export const HSV_RECTANGLE: ShapeVariant = {
+export const HSV_RECTANGLE: ShapeVariant<SliderRowLayout> = {
   icon: 'shape_rect',
   layout: RECTANGLE_LAYOUT,
-  draw(split, { hsv }) {
-    const slider = requireSlider(split);
+  draw({ area, slider }, { hsv }) {
     return {
       fill: null,
-      svSquare: { rect: split.area, hue: hsv.h },
-      cursors: [{ centre: rectCursorCentre(split.area, hsv.s, 1 - hsv.v), hasBackground: true }],
+      svSquare: { rect: area, hue: hsv.h },
+      cursors: [{ centre: rectCursorCentre(area, hsv.s, 1 - hsv.v), hasBackground: true }],
       slider: {
         rect: slider,
         stops: COLOR_HUE_STOPS,

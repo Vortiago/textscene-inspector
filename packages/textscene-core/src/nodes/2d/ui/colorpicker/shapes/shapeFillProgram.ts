@@ -14,20 +14,18 @@ import { canvasProgramKey } from '../../../../../r3f/lighting2d/canvasItemLighti
 import { SHAPE_COLOR_FUNCTION, shapeFragmentGlsl, type ShapeFragment } from './shapeFragment';
 
 /**
- * The uniforms a fill reads. The caller owns them and writes `.value`, so a new colour or size
+ * The uniforms a fill reads. The caller owns them and writes `.value`, so a new colour or modulate
  * reaches the compiled program without a recompile.
  */
 export interface ShapeFillUniforms {
   /** One per name in `ShapeFragment.uniforms`. */
   shape: Record<string, THREE.IUniform<number>>;
-  /** The fill's size in px: the vertex stage divides the position by it to get `UV`. */
-  size: THREE.IUniform<THREE.Vector2>;
   /** The canvas modulation, in the canvas's own space: sRGB numbers or linear. */
   canvasModulate: THREE.IUniform<THREE.Color>;
 }
 
-/** Positions run from (0, 0) at the top-left to (w, -h), so `UV` runs 0 to 1 with y down, as Godot's does. */
-const VERTEX_UV = `vShapeUv = vec2( position.x / uShapeSize.x, -position.y / uShapeSize.y );`;
+/** The unit quad runs from (0, 0) at the top-left to (1, -1), so `UV` runs 0 to 1 with y down, as Godot's does. */
+const VERTEX_UV = `vShapeUv = vec2( position.x, -position.y );`;
 
 // Clamped at 0: `okhsl_to_srgb` goes far negative outside the circle, the 8-bit target Godot writes
 // clamps it, and `pow` of a negative base is undefined on a driver that lowers `mix` as a lerp.
@@ -47,7 +45,6 @@ export function shapeFillInjection(
     cacheKey: canvasProgramKey(`color-picker-shape-${fragment.name}`, isLinearCanvas),
     onBeforeCompile(shader) {
       Object.assign(shader.uniforms, uniforms.shape);
-      shader.uniforms.uShapeSize = uniforms.size;
       shader.uniforms.uShapeCanvasModulate = uniforms.canvasModulate;
       editedProgram(
         shader,
@@ -55,7 +52,7 @@ export function shapeFillInjection(
           vertex: [
             {
               three: 'void main() {',
-              godot: 'uniform vec2 uShapeSize;\nvarying vec2 vShapeUv;\nvoid main() {',
+              godot: 'varying vec2 vShapeUv;\nvoid main() {',
             },
             afterInclude('#include <begin_vertex>', VERTEX_UV),
           ],
