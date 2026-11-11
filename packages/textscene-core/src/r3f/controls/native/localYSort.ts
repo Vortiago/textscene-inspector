@@ -10,7 +10,7 @@ import {
   type Transform2DColumns,
 } from '../../../godot/math/transform2d';
 import { accumulateCanvasItemZ } from '../../lighting2d/canvasItemPlacement';
-import { isTopLevelItem, packPaintRanges, paintRangeSize, ysortsChildren } from '../../canvasPaintOrder';
+import { packPaintRanges, paintRangeSize, ysortsChildren } from '../../canvasPaintOrder';
 import type { ControlTransforms, YSortShift, YSortShifts } from '../../contexts/ControlYSortContext';
 import { compareSortY } from '../../ySortOrder';
 import type { TscnNode } from '../../../parser/types';
@@ -59,11 +59,6 @@ export function localYSortShifts(tree: readonly SolveNode[], transforms: Control
 
   const collect = (parent: SolveNode, toRoot: Transform2DColumns, parentZ: number, out: LocalItem[]) => {
     for (const child of parent.children) {
-      // A top_level item is no child item of the sort, so the walk draws it at its scene-order run.
-      if (isTopLevelItem(child.node)) {
-        visit(child);
-        continue;
-      }
       const own = transforms.get(child.path);
       const toSortRoot = own ? multiplyTransform2D(toRoot, own) : toRoot;
       const props = controlProps(child);

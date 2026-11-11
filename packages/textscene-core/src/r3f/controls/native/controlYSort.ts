@@ -9,7 +9,7 @@
 import { VECTOR2_ZERO } from '../../../godot/math/vector';
 import { transform2DFromParts } from '../../../godot/math/transform2d';
 import { parentPathOf } from '../../../utils/nodePath';
-import { isTopLevelItem, type PaintRange } from '../../canvasPaintOrder';
+import type { PaintRange } from '../../canvasPaintOrder';
 import type { ControlTransforms, YSortShifts } from '../../contexts/ControlYSortContext';
 import type { SolvedControl } from './controlRectSolver';
 import { controlDrawTransformOf, controlItemOriginUnder } from './controlPixelSnap';
@@ -101,8 +101,6 @@ function placeAll(
 
 function placeNode(node: SolveNode, shifts: YSortShifts, isRoot: boolean, inherited: number): SolveNode {
   const own = shifts.get(node.path);
-  // A top_level node is no item of the sort, so the world walk draws it at its scene-order run.
-  if (!own && isTopLevelItem(node.node)) return placeChildren(node, shifts, 0);
   const above = !own && (isRoot || isPromotedControl(node)) ? shiftAbove(node.path, shifts) : undefined;
   const delta = own ? own.run.base - node.paintRange.base : above ? above.run.base - above.from : inherited;
   return placeChildren(node, shifts, delta);

@@ -167,13 +167,4 @@ z_index = 5
     const keys = await paintKeysOf(tscn, ['Absolute', 'Relative'], false);
     expect(compareKeys(keys.Absolute!, keys.Relative!)).toBeLessThan(0);
   });
-
-  it('leaves a top_level child where scene order draws it', async () => {
-    const tscn =
-      rootControl(true) + rect('Top', -100, 'top_level = true\n') + rect('Low', 50) + rect('High', 0);
-    const keys = await paintKeysOf(tscn, ['Top', 'Low', 'High'], false);
-    // It is no item of the sort: at y -100 it would sort first, and it draws after the items instead.
-    expect(compareKeys(keys.Low!, keys.Top!)).toBeLessThan(0);
-    expect(compareKeys(keys.High!, keys.Low!)).toBeLessThan(0);
-  });
 });
