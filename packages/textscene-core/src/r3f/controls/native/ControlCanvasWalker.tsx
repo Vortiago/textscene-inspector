@@ -32,7 +32,13 @@ import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItem
 import { NodePathProvider } from '../../contexts/NodePathContext';
 import { snapControlsToPixelsEnabled, snappedControlOriginUnder } from './controlPixelSnap';
 import { localYSortShifts } from './localYSort';
-import { applyYSortShifts, controlTransformsOf, solvedDrawTransformOf } from './controlYSort';
+import {
+  applyYSortShifts,
+  controlTransformsOf,
+  shiftsOfForest,
+  solvedDrawTransformOf,
+  transformsAtLivePaths,
+} from './controlYSort';
 import { usePublishControlTransforms, useYSortShifts } from '../../contexts/ControlYSortContext';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import {
@@ -65,9 +71,12 @@ interface ControlCanvasWalkerProps {
   rootOffset?: Vector2;
   /**
    * The walk sorts its own y-sorted Controls, since no `YSortDispatcher` draws their parents: an
-   * unowned scene-tile root and the Controls of a sub-viewport. A walk outside any `ControlYSortProvider` does so without the flag.
+   * unowned scene-tile root and the Controls of a Control-only sub-viewport. A walk outside any
+   * `ControlYSortProvider` does so without the flag.
    */
   sortsLocally?: boolean;
+  /** The live path of the viewport the forest's paths hang below, for the world sort that keys by live path. */
+  livePath?: string;
   /** Called after each solve, with the solved controls keyed by tree path. */
   onSolved?: (solved: ReadonlyMap<string, SolvedControl>) => void;
 }
@@ -81,6 +90,7 @@ export function ControlCanvasWalker({
   snapToPixels,
   rootOffset,
   sortsLocally = false,
+  livePath = '',
   onSolved,
 }: ControlCanvasWalkerProps) {
   // Per viewport in Godot (`Viewport::snap_controls_to_pixels`,
@@ -105,17 +115,20 @@ export function ControlCanvasWalker({
   const publishTransforms = sortsLocally ? null : publishToWorld;
   const owner = useId();
   useLayoutEffect(() => {
-    publishTransforms?.(owner, controlTransformsOf(tree, solved, snapEnabled));
-  }, [publishTransforms, owner, tree, solved, snapEnabled]);
+    publishTransforms?.(
+      owner,
+      transformsAtLivePaths(livePath, controlTransformsOf(tree, solved, snapEnabled))
+    );
+  }, [publishTransforms, owner, tree, solved, snapEnabled, livePath]);
   useLayoutEffect(() => () => publishTransforms?.(owner, null), [publishTransforms, owner]);
   // With no world sort to join, the walk sorts its own Control items.
   const worldShifts = useYSortShifts();
   const shifts = useMemo(
     () =>
       publishTransforms
-        ? worldShifts
+        ? shiftsOfForest(livePath, worldShifts)
         : localYSortShifts(tree, controlTransformsOf(tree, solved, snapEnabled)),
-    [publishTransforms, worldShifts, tree, solved, snapEnabled]
+    [publishTransforms, worldShifts, tree, solved, snapEnabled, livePath]
   );
   const drawn = useMemo(() => applyYSortShifts(tree, shifts), [tree, shifts]);
 

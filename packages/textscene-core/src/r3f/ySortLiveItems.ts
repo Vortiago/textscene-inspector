@@ -22,15 +22,16 @@ const toSortRoot = new Matrix4();
 const rootOrigin = new Vector3();
 
 /**
- * The live group of each node between the sort root and `item`, outermost first. Null where the
- * item has no 2D pose to read: a tile row, whose layer no mixer moves while it is lifted, a
- * Node3D, a node whose group is not mounted, and a Control, which the Control walk places and
- * the world walk leaves at the identity. An unowned node, a scene tile's placement, has no
- * group and no mixer: its fixed pose is {@link liveRootPose}.
+ * The live group of each node between the sort root and `item`, outermost first. A tile row ends
+ * at the group of its layer. Null where the item has no 2D pose to read: the rows of a layer that
+ * is the sort root, which sort in the layer's own space, a Node3D, a node whose group is not
+ * mounted, and a Control, which the Control walk places and the world walk leaves at the
+ * identity. An unowned node, a scene tile's placement, has no group and no mixer: its fixed pose
+ * is {@link liveRootPose}.
  */
 export function liveGroupChain(item: YSortItem, basePath: string, groupAt: GroupAt): Object3D[] | null {
   const node = item.node;
-  if (!node || item.kind !== 'node' || descendsFromClass(node.type, 'Node3D')) return null;
+  if (!node || item.tileData?.rootsSort || descendsFromClass(node.type, 'Node3D')) return null;
   if (isControlType(node.type)) return null;
   const paths = pathsAlong(
     (node as LiveNode).isUnowned ? item.liftedPast : [...item.liftedPast, node],
@@ -46,10 +47,11 @@ export function liveGroupChain(item: YSortItem, basePath: string, groupAt: Group
 }
 
 /**
- * Where the sorted origin sits in the last group of the chain: a scene tile's placement pose, then
- * its instance root's. Undefined for every other item.
+ * Where the sorted origin sits in the last group of the chain: a tile row's origin in its layer, or
+ * a scene tile's placement pose, then its instance root's. Undefined for every other item.
  */
 export function liveRootPose(item: YSortItem): Transform2DColumns | undefined {
+  if (item.tileData?.rowOrigin) return item.tileData.rowOrigin;
   const node = item.node as LiveNode | undefined;
   if (!node?.isUnowned) return node?.ySortRoot?.pose;
   const placement = node2DLocalTransform(node.properties as Partial<Node2DLocalTransform>);
