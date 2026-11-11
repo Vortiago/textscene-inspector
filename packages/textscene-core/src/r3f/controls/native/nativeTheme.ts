@@ -5,9 +5,10 @@
  * rather than setting a CSS `rgba(...)` background.
  */
 
-import { flatStyleBox as makeFlatStyleBox, freezeStyleBox } from './styleBoxFlat';
+import { flatStyleBox as makeFlatStyleBox, freezeStyleBox, ZERO_SIDES } from './styleBoxFlat';
 import { POPUP_MENU_DEFAULTS } from '../../../godot/scene/popupMenu';
 import {
+  DEFAULT_CONTENT_MARGIN,
   DEFAULT_CORNER_RADIUS,
   LINE_EDIT_BORDER_BOTTOM_WIDTH,
   scaledGodotTheme,
@@ -42,8 +43,6 @@ interface NativeThemeStyleFill {
 }
 
 const TRANSPARENT: Rgba = { r: 0, g: 0, b: 0, a: 0 };
-
-const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /**
  * `make_flat_stylebox` (`default_theme.cpp:57-70`) for the fields
@@ -116,6 +115,8 @@ interface NativeThemeWidgets {
   panel: StyleBoxFlatData;
   /** PopupPanel's `panel`, `make_flat_stylebox(style_normal_color)` (`default_theme.cpp:726`). */
   popupPanel: StyleBoxFlatData;
+  /** `TooltipPanel`'s `panel`: black at half alpha with margins `2 * default_margin` across and `0.5 * default_margin` down (`default_theme.cpp:1167-1168`). */
+  tooltipPanel: StyleBoxFlatData;
   /** PopupMenu's `panel`: `make_flat_stylebox(style_popup_color)` with a 2 px border (`default_theme.cpp:743-745`). */
   popupMenuPanel: StyleBoxFlatData;
   /** AcceptDialog's `panel`: a flush, square box in `style_popup_color` with an 8 px margin (`default_theme.cpp:693`). */
@@ -227,6 +228,9 @@ function buildNativeTheme(scale: number): NativeTheme {
     right: scaled.contentMargin,
     bottom: scaled.contentMargin,
   };
+  // default_theme.cpp TooltipPanel margins: 2 and 0.5 times the default content margin.
+  const tooltipAcross = scaledPx(2 * DEFAULT_CONTENT_MARGIN, scale);
+  const tooltipDown = scaledPx(0.5 * DEFAULT_CONTENT_MARGIN, scale);
   const flatMenuButtonBox = flatStyleBox(TRANSPARENT, buttonMargin, 0);
   const optionButtonMargin = {
     left: scaled.optionButtonMarginX,
@@ -251,6 +255,11 @@ function buildNativeTheme(scale: number): NativeTheme {
       // default_theme.cpp:134: make_flat_stylebox(style_normal_color, 0, 0, 0, 0).
       panel: flatStyleBox(STYLE_FILL.normal, ZERO_SIDES, scaled.cornerRadius),
       popupPanel: flatStyleBox(STYLE_FILL.normal, buttonMargin, scaled.cornerRadius),
+      tooltipPanel: flatStyleBox(
+        { r: 0, g: 0, b: 0, a: 0.5 },
+        { left: tooltipAcross, top: tooltipDown, right: tooltipAcross, bottom: tooltipDown },
+        scaled.cornerRadius
+      ),
       popupMenuPanel: {
         ...makeFlatStyleBox(STYLE_FILL.popup, {
           contentMargin: buttonMargin,

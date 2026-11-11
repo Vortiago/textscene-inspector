@@ -13,7 +13,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { styleBoxFlatGeometry } from './styleBoxFlatGeometry';
-import type { StyleBoxFlatData } from './styleBoxFlat';
+import { isDrawn, type StyleBoxFlatData } from './styleBoxFlat';
 import type { ResolvedStyleBox, StyleBoxLineBox, StyleBoxTextureBox } from './parseStyleBox';
 import type { StyleBoxLineData } from './styleBoxLine';
 import type { StyleBoxTextureData } from './styleBoxTexture';
@@ -102,8 +102,8 @@ export function StyleBoxQuad({ styleBox, rect, color, renderOrder }: StyleBoxQua
   // Not built for a texture box, but the hook always runs, so the hook order
   // never depends on `kind`.
   const flatGeometry = useMemo(
-    () => (kind === 'texture' ? null : buildGeometry(tintedStyleBox, flatRect)),
-    [tintedStyleBox, flatRect, kind]
+    () => (kind === 'texture' || !isDrawn(flatBox) ? null : buildGeometry(tintedStyleBox, flatRect)),
+    [tintedStyleBox, flatBox, flatRect, kind]
   );
   // R3F does not dispose a geometry passed through `attach="geometry"`.
   useDisposeOnRelease(flatGeometry);

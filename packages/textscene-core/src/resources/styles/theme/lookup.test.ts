@@ -608,4 +608,9 @@ describe('the default theme font size of a Label type variation (default_theme.c
     const own = theme({ fontSizes: { Label: { font_size: 40 } } });
     expect(sizeOf('HeaderSmall', [own])).toBe(40);
   });
+
+  it('reaches a default theme variation through the base a scene Theme registers', () => {
+    const own = theme({ typeVariations: { MyHeader: 'HeaderLarge' } });
+    expect(sizeOf('MyHeader', [own])).toBe(28);
+  });
 });

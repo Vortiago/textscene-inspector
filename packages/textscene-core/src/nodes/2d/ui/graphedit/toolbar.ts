@@ -13,7 +13,8 @@
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize, contentRect } from '../../../../r3f/controls/native/styleBoxFlat';
+import { resolveToggleDrawState, type ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import {
   boxContainerMinimumSize,
   resortBoxContainer,
@@ -23,6 +24,7 @@ import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nati
 import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
 import { GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { isMinimapEnabled } from './minimap';
+import type { GraphEditToolbarTheme } from './toolbarTheme';
 import type { GraphEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
@@ -32,6 +34,12 @@ const GRAPH_EDIT_MENU_POSITION: Vector2 = { x: 10, y: 10 };
 
 /** `zoom_label->set_custom_minimum_size(Size2(48, 0) * base_scale)` (`graph_edit.cpp:836`). */
 const ZOOM_LABEL_MIN_WIDTH = 48;
+
+/** The rect the zoom label centres its text in: the whole width, and the height inside the box margins (`label.cpp:472-512,591-616`). */
+export function zoomLabelTextRect(itemRect: Rect2, box: StyleBoxFlatData): Rect2 {
+  const { y, h } = contentRect(itemRect, box);
+  return { ...itemRect, y, h };
+}
 
 /** `GraphEdit::_update_zoom_label` (`graph_edit.cpp:2620-2624`). */
 export function zoomLabelText(zoom: number): string {
@@ -118,24 +126,27 @@ export function graphEditMenuPanelStyleBox(theme: NativeTheme): StyleBoxFlatData
 }
 
 /**
- * One icon-only `FlatButton`'s minimum size:
- * `Button::get_minimum_size_for_text_and_icon` (`button.cpp:481-526`) with
- * empty text, plus `flat_button_normal`'s content margins, which
- * `default_theme.cpp:360-362` copies verbatim off `button_normal`.
+ * One icon-only `FlatButton`'s minimum size: `Button::get_minimum_size_for_text_and_icon`
+ * (`button.cpp:481-526`) with empty text, plus the margins of the box its draw state reads.
  */
-function toolbarButtonMinSize(theme: NativeTheme): Vector2 {
-  const margin = 2 * theme.contentMargin;
-  return { x: margin + GRAPH_EDIT_ICON_SIZE, y: margin + GRAPH_EDIT_ICON_SIZE };
+function toolbarButtonMinSize(
+  buttonBoxes: GraphEditToolbarTheme['buttonBoxes'],
+  state: ToggleDrawState
+): Vector2 {
+  const margin = contentMarginSize(buttonBoxes[state]);
+  return { x: margin.x + GRAPH_EDIT_ICON_SIZE, y: margin.y + GRAPH_EDIT_ICON_SIZE };
 }
 
 /**
  * `snapping_distance_spinbox`'s minimum size: `SpinBox::get_minimum_size`
  * (`spin_box.cpp:82-86`) over `LineEdit::get_minimum_size`
- * (`line_edit.cpp:2443-2477`). No per-node theme override reaches the
- * SpinBox's internal field, so the plain theme boxes are the whole input.
+ * (`line_edit.cpp:2443-2477`).
  */
-function toolbarSpinBoxMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics): Vector2 {
-  const styleMin = lineEditStyleMinSize(theme.widgets.lineEdit.normal, theme.widgets.lineEdit.readOnly);
+function toolbarSpinBoxMinSize(
+  fieldBoxes: GraphEditToolbarTheme['fieldBoxes'],
+  metrics: ToolbarTextMetrics
+): Vector2 {
+  const styleMin = lineEditStyleMinSize(fieldBoxes.normal, fieldBoxes.readOnly);
   return {
     x:
       styleMin.x +
@@ -145,12 +156,18 @@ function toolbarSpinBoxMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics):
   };
 }
 
-/** `zoom_label`'s minimum size: `Label::get_minimum_size` (`label.cpp:973-997`) over an empty stylebox, floored by its own `custom_minimum_size`. */
-function zoomLabelMinSize(theme: NativeTheme, metrics: ToolbarTextMetrics, zoom: number): Vector2 {
+/** `zoom_label`'s minimum size: `Label::get_minimum_size` (`label.cpp:973-997`) over its `normal` box, floored by its own `custom_minimum_size`. */
+function zoomLabelMinSize(
+  labelBox: StyleBoxFlatData,
+  theme: NativeTheme,
+  metrics: ToolbarTextMetrics,
+  zoom: number
+): Vector2 {
   const text = metrics.measure(zoomLabelText(zoom));
+  const margin = contentMarginSize(labelBox);
   return {
-    x: Math.max(text.x, ZOOM_LABEL_MIN_WIDTH * theme.scale),
-    y: Math.max(text.y, metrics.fontHeightPx),
+    x: Math.max(text.x + margin.x, ZOOM_LABEL_MIN_WIDTH * theme.scale),
+    y: Math.max(text.y, metrics.fontHeightPx) + margin.y,
   };
 }
 
@@ -169,17 +186,22 @@ interface ToolbarEntry {
 export function graphEditToolbar(
   props: GraphEditProperties,
   theme: NativeTheme,
+  items: GraphEditToolbarTheme,
   metrics: ToolbarTextMetrics
 ): GraphEditToolbar | null {
   if (props.showMenu === false) return null;
 
-  const buttonMin = toolbarButtonMinSize(theme);
   const button = (id: ToolbarItemId, pressed: boolean, disabled = false): ToolbarEntry => ({
     id,
     kind: 'button',
     pressed,
     disabled,
-    box: { minSize: buttonMin, hSizeFlags: SizeFlags.FILL, vSizeFlags: SizeFlags.FILL, stretchRatio: 1 },
+    box: {
+      minSize: toolbarButtonMinSize(items.buttonBoxes, resolveToggleDrawState(disabled, pressed)),
+      hSizeFlags: SizeFlags.FILL,
+      vSizeFlags: SizeFlags.FILL,
+      stretchRatio: 1,
+    },
   });
 
   const entries: ToolbarEntry[] = [];
@@ -190,7 +212,7 @@ export function graphEditToolbar(
       pressed: false,
       disabled: false,
       box: {
-        minSize: zoomLabelMinSize(theme, metrics, props.zoom ?? 1),
+        minSize: zoomLabelMinSize(items.labelBox, theme, metrics, props.zoom ?? 1),
         hSizeFlags: SizeFlags.FILL,
         vSizeFlags: SizeFlags.SHRINK_CENTER,
         stretchRatio: 1,
@@ -215,7 +237,7 @@ export function graphEditToolbar(
       pressed: false,
       disabled: false,
       box: {
-        minSize: toolbarSpinBoxMinSize(theme, metrics),
+        minSize: toolbarSpinBoxMinSize(items.fieldBoxes, metrics),
         hSizeFlags: SizeFlags.FILL,
         vSizeFlags: SizeFlags.FILL,
         stretchRatio: 1,

@@ -36,6 +36,11 @@ export function isStyleBoxTexture(box: ResolvedStyleBox): box is StyleBoxTexture
   return (box as StyleBoxTextureBox).styleBoxKind === 'texture';
 }
 
+/** Whether a resolved slot holds a `StyleBoxLine`, which paints a rule its flat data does not describe. */
+export function isStyleBoxLine(box: ResolvedStyleBox): box is StyleBoxLineBox {
+  return (box as StyleBoxLineBox).styleBoxKind === 'line';
+}
+
 /**
  * Wraps a `StyleBoxLineData` that is not an override, such as
  * `defaultSeparatorStyleBoxLine`, in the shape a resolved override has, so

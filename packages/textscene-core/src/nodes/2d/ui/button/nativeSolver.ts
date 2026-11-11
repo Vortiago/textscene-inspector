@@ -27,6 +27,7 @@ import {
   type ButtonContentInput,
   type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
+import { buttonBoxesOf, defaultFontColorOf } from '../../../../r3f/controls/native/defaultThemeItems';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import {
@@ -78,7 +79,7 @@ const BUTTON_ICON_COLOR_KEYS: Record<ToggleDrawState, string> = {
  * `Color(1, 1, 1, 1)` (`default_theme.cpp:164-165`), `icon_disabled_color` is `Color(1, 1, 1, 0.4)` (`:169`).
  * No other builtin widget sets these keys.
  */
-export const BUTTON_ICON_MODULATE: Record<ToggleDrawState, Rgba> = {
+const BUTTON_ICON_MODULATE: Record<ToggleDrawState, Rgba> = {
   normal: { r: 1, g: 1, b: 1, a: 1 },
   pressed: { r: 1, g: 1, b: 1, a: 1 },
   disabled: { r: 1, g: 1, b: 1, a: 0.4 },
@@ -115,7 +116,9 @@ export function buttonTextTheme(
   const isFocusStyled = isButtonFocusStyled(props, state);
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color: isFocusStyled ? CONTROL_FONT_FOCUS_COLOR : BUTTON_DEFAULT_FONT_COLORS[state],
+    color: isFocusStyled
+      ? CONTROL_FONT_FOCUS_COLOR
+      : defaultFontColorOf(n, BUTTON_DEFAULT_FONT_COLORS, state),
   };
   return resolveTextTheme(n, props, isFocusStyled ? BUTTON_FOCUS_KEYS : BUTTON_THEME_KEYS[state], defaults);
 }
@@ -192,7 +195,7 @@ export function buttonContentInput(
 export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as ButtonProperties;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
-  const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.button, state, n.rtl);
+  const styleBox = pickButtonStyleBox(n.styleBoxes, buttonBoxesOf(n, ctx.theme), state, n.rtl);
   const { x: marginX, y: marginY } = contentMarginSize(styleBox);
 
   const hasText = (props.text ?? '').length > 0;

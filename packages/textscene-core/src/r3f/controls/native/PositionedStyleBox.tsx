@@ -1,0 +1,29 @@
+/** A StyleBox over `rect`, in the coordinates of the group that holds it. A box that paints nothing draws nothing. */
+import type { NativeControlComponentProps } from '../ControlComponentRegistry';
+import { CanvasItemGroup } from '../../components/CanvasItemGroup';
+import type { Rect2 } from '../../../godot/math/rect2';
+import { StyleBoxQuad } from './StyleBoxQuad';
+import { isStyleBoxLine, isStyleBoxTexture, type ResolvedStyleBox } from './parseStyleBox';
+import { isDrawn } from './styleBoxFlat';
+
+interface PositionedStyleBoxProps {
+  box: ResolvedStyleBox;
+  rect: Rect2;
+  tint: NativeControlComponentProps['tint'];
+  renderOrder: number;
+}
+
+export function PositionedStyleBox({ box, rect, tint, renderOrder }: PositionedStyleBoxProps) {
+  // A texture or line box carries its paint outside the flat data `isDrawn` reads.
+  if (!isStyleBoxTexture(box) && !isStyleBoxLine(box) && !isDrawn(box)) return null;
+  return (
+    <CanvasItemGroup position={[rect.x, -rect.y, 0]}>
+      <StyleBoxQuad
+        styleBox={box}
+        color={tint.own}
+        rect={{ x: 0, y: 0, w: rect.w, h: rect.h }}
+        renderOrder={renderOrder}
+      />
+    </CanvasItemGroup>
+  );
+}

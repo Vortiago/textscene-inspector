@@ -29,18 +29,11 @@ export const CONTROL_FONT_PLACEHOLDER_COLOR: Rgba = { ...CONTROL_FONT_COLOR, a: 
 /** `control_font_pressed_color` (`default_theme.cpp:108`). */
 export const CONTROL_FONT_PRESSED_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
+/** `Label`'s `font_color` (`default_theme.cpp:383`): opaque white. */
+export const LABEL_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+
 /** `default_font_size` = 16 (px). */
 export const DEFAULT_FONT_SIZE = 16;
-
-/**
- * What the default theme adds to the default font size for each Label variation (`default_theme.cpp:394-401`).
- * The sum is the unscaled `DEFAULT_FONT_SIZE` plus the step, so it ignores the theme scale.
- */
-export const DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS: Readonly<Record<string, number>> = {
-  HeaderSmall: 4,
-  HeaderMedium: 8,
-  HeaderLarge: 12,
-};
 
 /**
  * The default flat-stylebox fill per draw state, the one transcription the canvas
@@ -173,22 +166,35 @@ export function scaledGodotTheme(scale: number): ScaledGodotTheme {
   };
 }
 
-/** The variation the picker's `btn_shape`, `btn_mode` and `menu_btn` name (`color_picker.cpp:2098,2148,2255`). */
-export const FLAT_MENU_BUTTON_VARIATION = 'FlatMenuButton';
+/** One type variation the default theme registers. */
+export interface DefaultThemeVariation {
+  /** `Theme::set_type_variation(variation, base)`: the type its lookup continues in. */
+  readonly base: string;
+  /** What the variation adds to `default_font_size` (the unscaled 16 px), where the default theme sets a size for it. `GraphFrameTitleLabel`'s literal 22 is 16 + 6 (`default_theme.cpp:848`). */
+  readonly fontSizeStep?: number;
+  /** The `font_color` the variation sets (`default_theme.cpp:819,849,1174`). */
+  readonly fontColor?: Rgba;
+}
 
 /**
- * The type variations the default theme registers, each with its base (`default_theme.cpp:357-358`,
- * `:394-400`, `:814`, `:845`, `:1167-1171`). A Theme that sets items for one of them is read for a
- * Control that names it, though no scene Theme registers it.
+ * The type variations the default theme registers (`default_theme.cpp:357-358`, `:394-401`, `:814`,
+ * `:845`, `:1167-1171`), the one table the type chain, the font size and the Button boxes read. A Theme
+ * that sets items for one is read for a Control that names it, though no scene Theme registers it.
+ * Its boxes are `r3f/controls/native/defaultThemeItems.ts`.
  */
-export const DEFAULT_THEME_TYPE_VARIATIONS: Readonly<Record<string, string>> = {
-  FlatButton: 'Button',
-  [FLAT_MENU_BUTTON_VARIATION]: 'MenuButton',
-  HeaderSmall: 'Label',
-  HeaderMedium: 'Label',
-  HeaderLarge: 'Label',
-  GraphNodeTitleLabel: 'Label',
-  GraphFrameTitleLabel: 'Label',
-  TooltipPanel: 'PopupPanel',
-  TooltipLabel: 'Label',
+export const DEFAULT_THEME_VARIATIONS: Readonly<Record<string, DefaultThemeVariation>> = {
+  FlatButton: { base: 'Button' },
+  FlatMenuButton: { base: 'MenuButton' },
+  HeaderSmall: { base: 'Label', fontSizeStep: 4 },
+  HeaderMedium: { base: 'Label', fontSizeStep: 8 },
+  HeaderLarge: { base: 'Label', fontSizeStep: 12 },
+  GraphNodeTitleLabel: { base: 'Label', fontColor: CONTROL_FONT_COLOR },
+  GraphFrameTitleLabel: { base: 'Label', fontSizeStep: 6, fontColor: LABEL_FONT_COLOR },
+  TooltipPanel: { base: 'PopupPanel' },
+  TooltipLabel: { base: 'Label', fontColor: CONTROL_FONT_COLOR },
 };
+
+/** `variation`'s entry in {@link DEFAULT_THEME_VARIATIONS}. Own keys only: a variation named `constructor` must not read `Object.prototype`. */
+export function defaultThemeVariation(variation: string): DefaultThemeVariation | undefined {
+  return Object.hasOwn(DEFAULT_THEME_VARIATIONS, variation) ? DEFAULT_THEME_VARIATIONS[variation] : undefined;
+}

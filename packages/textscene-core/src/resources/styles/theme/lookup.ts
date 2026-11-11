@@ -3,11 +3,7 @@
  * `ThemeResource`s `decode.ts` produces. Pure: no I/O, no parsing.
  */
 
-import {
-  DEFAULT_FONT_SIZE,
-  DEFAULT_THEME_TYPE_VARIATIONS,
-  DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS,
-} from '../../../godot/scene/theme';
+import { DEFAULT_FONT_SIZE, defaultThemeVariation } from '../../../godot/scene/theme';
 import { classInheritanceChain } from '../../../godot/classdb/classBaseTypes';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { withDefaultFonts, type DefaultFonts } from '../../fonts/font/defaultFont';
@@ -46,7 +42,7 @@ function themeSearchOrder(
  * type names one item lookup tries, in order. The native inheritance chain is
  * always appended, whatever the variation walk finds.
  */
-function buildThemeTypeChain(
+export function buildThemeTypeChain(
   nativeType: string,
   typeVariation: string | undefined,
   ancestorThemes: readonly ThemeResource[],
@@ -59,15 +55,12 @@ function buildThemeTypeChain(
     // variation owns its `base_type` walk (`scene/theme/theme_owner.cpp:181-224`),
     // which stops before `nativeType`.
     const owner = themeSearchOrder(ancestorThemes, projectTheme).find((t) =>
-      Object.hasOwn(t.typeVariations, typeVariation)
+      registersVariation(t, typeVariation)
     );
     // No scene or project theme registers it: the default theme may (`theme_owner.cpp:200-208`).
-    const bases = owner
-      ? owner.typeVariations
-      : Object.hasOwn(DEFAULT_THEME_TYPE_VARIATIONS, typeVariation)
-        ? DEFAULT_THEME_TYPE_VARIATIONS
-        : undefined;
-    if (bases) {
+    const baseOf = (variation: string): string | undefined =>
+      owner ? ownerBaseOf(owner, variation) : defaultThemeVariation(variation)?.base;
+    if (owner || defaultThemeVariation(typeVariation)) {
       // Godot walks this unguarded. A previewer reads files it did not write, so
       // a `MyPanel/base_type = &"MyPanel"` cycle must stop the walk.
       const seen = new Set<string>();
@@ -75,14 +68,23 @@ function buildThemeTypeChain(
       while (current !== undefined && current !== '' && !seen.has(current)) {
         seen.add(current);
         chain.push(current);
-        const base: string | undefined = Object.hasOwn(bases, current) ? bases[current] : undefined;
-        current = base;
+        current = baseOf(current);
         if (current === nativeType) break;
       }
     }
   }
 
   return [...chain, ...nativeTypeChain(nativeType)];
+}
+
+/** Whether `theme` registers `variation` (`Theme::set_type_variation`). Own keys only, so a name such as `constructor` reads no prototype. */
+function registersVariation(theme: ThemeResource, variation: string): boolean {
+  return Object.hasOwn(theme.typeVariations, variation);
+}
+
+/** The base a Theme registers for a variation, if it registers it. */
+function ownerBaseOf(owner: ThemeResource, variation: string): string | undefined {
+  return registersVariation(owner, variation) ? owner.typeVariations[variation] : undefined;
 }
 
 /**
@@ -94,7 +96,7 @@ function buildThemeTypeChain(
 function fontInTheme(theme: ThemeResource, type: string, name: string): FontResource | undefined {
   const explicit = theme.fonts[type]?.[name];
   if (explicit !== undefined) return explicit;
-  if (Object.hasOwn(theme.typeVariations, type)) return undefined;
+  if (registersVariation(theme, type)) return undefined;
   return theme.defaultFont ?? undefined;
 }
 
@@ -102,7 +104,7 @@ function fontInTheme(theme: ThemeResource, type: string, name: string): FontReso
 function fontSizeInTheme(theme: ThemeResource, type: string, name: string): number | undefined {
   const explicit = theme.fontSizes[type]?.[name];
   if (explicit !== undefined) return explicit;
-  if (Object.hasOwn(theme.typeVariations, type)) return undefined;
+  if (registersVariation(theme, type)) return undefined;
   return theme.defaultFontSize;
 }
 
@@ -276,15 +278,20 @@ export function resolveThemeFontSizeIn(
       if (found !== undefined) return found;
     }
   }
-  return defaultThemeVariationFontSize(scope.variation, name) ?? builtInDefaultPx;
+  return defaultThemeVariationFontSize(scope.typeChain, name) ?? builtInDefaultPx;
 }
 
-/** The default theme's font size for a variation, which sits after every Theme a scene or a project sets. */
-function defaultThemeVariationFontSize(variation: string | undefined, name: string): number | undefined {
-  if (variation === undefined || name !== 'font_size') return undefined;
-  // Own keys only: a variation named `constructor` must not read `Object.prototype`.
-  if (!Object.hasOwn(DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS, variation)) return undefined;
-  return DEFAULT_FONT_SIZE + DEFAULT_THEME_VARIATION_FONT_SIZE_STEPS[variation]!;
+/**
+ * The default theme's font size for the first type of `typeChain` that sets one, which sits after every Theme a
+ * scene or a project sets. The chain, not the named variation alone: a scene variation based on `HeaderLarge` reads its size.
+ */
+function defaultThemeVariationFontSize(typeChain: readonly string[], name: string): number | undefined {
+  if (name !== 'font_size') return undefined;
+  for (const type of typeChain) {
+    const step = defaultThemeVariation(type)?.fontSizeStep;
+    if (step !== undefined) return DEFAULT_FONT_SIZE + step;
+  }
+  return undefined;
 }
 
 /**

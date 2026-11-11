@@ -9,30 +9,42 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { useMemo } from 'react';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { BUTTON_ICON_MODULATE } from '../button/nativeSolver';
-import { LABEL_DEFAULT_FONT_COLOR } from '../label/nativeSolver';
+import { buttonIconColor } from '../button/nativeSolver';
+import { PositionedStyleBox } from '../../../../r3f/controls/native/PositionedStyleBox';
+import { IconButton, iconModulate } from '../../../../r3f/controls/native/IconButton';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
+import {
+  multiplyModulate,
+  useItemLinearColor,
+  useItemLinearColorOf,
+} from '../../../../r3f/canvasItemModulate';
 import { LabelledText } from '../shared/LabelledText';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { GRAPH_EDIT_ICONS, GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
-import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
-import { iconOnlyButtonIconRectIn } from '../../../../r3f/controls/native/buttonBase';
+import {
+  spinBoxArrowPosition,
+  spinBoxIconColor,
+  spinBoxLayout,
+  SPIN_BOX_ARROW_ICON_SIZE,
+} from '../spinbox/nativeSolver';
+import { resolveToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import { flatButtonBoxes } from '../../../../r3f/controls/native/flatButtonBoxes';
-import { graphEditMenuPanelStyleBox, type GraphEditToolbar, type ToolbarItem } from './toolbar';
-import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
+import type { Rgba } from '../../../../godot/math/math';
+import { graphEditMenuPanelStyleBox, zoomLabelTextRect, type GraphEditToolbar } from './toolbar';
+import type { GraphEditToolbarTheme } from './toolbarTheme';
 import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 
 interface GraphEditToolbarProps {
   toolbar: GraphEditToolbar;
+  items: GraphEditToolbarTheme;
   /** `solveNode.icons`: the scene's `theme_override_icons/<key>` for any of the seven keys. */
   icons: NativeControlComponentProps['solveNode']['icons'];
   theme: NativeControlComponentProps['theme'];
@@ -45,38 +57,13 @@ interface GraphEditToolbarProps {
   slot: CanvasSlot;
 }
 
-interface ButtonIconProps {
-  item: ToolbarItem;
-  texture: THREE.Texture | null;
-  contentMargin: number;
-  tint: NativeControlComponentProps['tint'];
-  rtl: boolean;
-  renderOrder: number;
-}
-
-/**
- * One button icon, laid out by the Button painter's own placement (`button.cpp:349-405`): at the
- * stylebox's left margin, centred vertically, floored to a whole pixel.
- */
-function ButtonIcon({ item, texture, contentMargin, tint, rtl, renderOrder }: ButtonIconProps) {
-  if (!texture) return null;
-  const icon = iconOnlyButtonIconRectIn(
-    item.rect,
-    { left: contentMargin, top: contentMargin, right: contentMargin, bottom: contentMargin },
-    { x: GRAPH_EDIT_ICON_SIZE, y: GRAPH_EDIT_ICON_SIZE },
-    rtl
+/** The tint and opacity of a SpinBox arrow in its normal state. */
+function useArrowColor(tint: Rgba, toolbarTheme: GraphEditToolbarTheme, direction: 'up' | 'down') {
+  const color = useMemo(
+    () => multiplyModulate(tint, spinBoxIconColor(toolbarTheme.spinBoxColors, direction, 'normal')),
+    [tint, toolbarTheme, direction]
   );
-  if (!icon) return null;
-  return (
-    <PositionedIcon
-      rect={icon}
-      texture={texture}
-      color={tint.color}
-      opacity={item.disabled ? tint.opacity * BUTTON_ICON_MODULATE.disabled.a : tint.opacity}
-      renderOrder={renderOrder}
-      canvasKey={renderOrder}
-    />
-  );
+  return { linear: useItemLinearColor(color), alpha: color.a };
 }
 
 /** A SpinBox arrow in the toolbar's coordinates. */
@@ -90,6 +77,7 @@ const TOOLBAR_ITEM_PIECES = ['boxes', 'content'] as const;
 
 export function GraphEditToolbarChrome({
   toolbar,
+  items: toolbarTheme,
   icons,
   theme,
   tint,
@@ -98,12 +86,18 @@ export function GraphEditToolbarChrome({
   rtl,
   slot,
 }: GraphEditToolbarProps) {
-  const items = canvasSubOrders(slot, TOOLBAR_ITEM_PIECES);
+  const pieces = canvasSubOrders(slot, TOOLBAR_ITEM_PIECES);
   const panelStyle = useMemo(() => graphEditMenuPanelStyleBox(theme), [theme]);
-  const pressedStyle = useMemo(() => flatButtonBoxes(theme).pressed, [theme]);
-  const labelColor = useMemo(() => multiplyModulate(tint.own, LABEL_DEFAULT_FONT_COLOR), [tint.own]);
-  const fieldColor = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
-  const arrowColor = useItemLinearColor(fieldColor);
+  const labelColor = useMemo(
+    () => multiplyModulate(tint.own, toolbarTheme.labelColor),
+    [tint.own, toolbarTheme]
+  );
+  const fieldColor = useMemo(
+    () => multiplyModulate(tint.own, toolbarTheme.fieldColor),
+    [tint.own, toolbarTheme]
+  );
+  const upArrow = useArrowColor(tint.own, toolbarTheme, 'up');
+  const downArrow = useArrowColor(tint.own, toolbarTheme, 'down');
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
 
   const iconTextures: Record<string, THREE.Texture | null> = {
@@ -118,8 +112,17 @@ export function GraphEditToolbarChrome({
   const spinUpTexture = useNodeIcon(icons.up, SPIN_BOX_ICONS.up);
   const spinDownTexture = useNodeIcon(icons.down, SPIN_BOX_ICONS.down);
 
+  const toItemLinear = useItemLinearColorOf();
+  const buttonIconTints = useMemo(
+    () => ({
+      normal: iconModulate(toItemLinear, tint, buttonIconColor(toolbarTheme.buttonColors, 'normal')),
+      pressed: iconModulate(toItemLinear, tint, buttonIconColor(toolbarTheme.buttonColors, 'pressed')),
+      disabled: iconModulate(toItemLinear, tint, buttonIconColor(toolbarTheme.buttonColors, 'disabled')),
+    }),
+    [toItemLinear, tint, toolbarTheme]
+  );
   const { panelRect } = toolbar;
-  const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
+  const fieldBox = toolbarTheme.fieldBoxes.normal;
 
   return (
     <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]} renderOrder={slot.key}>
@@ -132,40 +135,45 @@ export function GraphEditToolbarChrome({
 
       {toolbar.items.map((item) => {
         if (item.kind === 'label') {
+          const { labelBox } = toolbarTheme;
           return (
-            <LabelledText
-              key={item.id}
-              rect={item.rect}
-              layout={shape(text.zoomLabel)}
-              fontSizePx={theme.fontSize}
-              tint={labelColor}
-              clippingPlanes={clippingPlanes}
-              renderOrder={items.content.key}
-              centred
-            />
+            <CanvasItemGroup key={item.id}>
+              <PositionedStyleBox
+                box={labelBox}
+                rect={item.rect}
+                tint={tint}
+                renderOrder={pieces.boxes.key}
+              />
+              <LabelledText
+                rect={zoomLabelTextRect(item.rect, labelBox)}
+                layout={shape(text.zoomLabel)}
+                fontSizePx={theme.fontSize}
+                tint={labelColor}
+                clippingPlanes={clippingPlanes}
+                renderOrder={pieces.content.key}
+                centred
+              />
+            </CanvasItemGroup>
           );
         }
 
         if (item.kind === 'button') {
+          const state = resolveToggleDrawState(item.disabled, item.pressed);
+          const box = toolbarTheme.buttonBoxes[state];
           return (
             <CanvasItemGroup key={item.id}>
-              {item.pressed && (
-                <CanvasItemGroup position={[item.rect.x, -item.rect.y, 0]}>
-                  <StyleBoxQuad
-                    styleBox={pressedStyle}
-                    color={tint.own}
-                    rect={{ x: 0, y: 0, w: item.rect.w, h: item.rect.h }}
-                    renderOrder={items.boxes.key}
-                  />
-                </CanvasItemGroup>
-              )}
-              <ButtonIcon
-                item={item}
+              <IconButton
+                rect={item.rect}
+                box={box}
+                size={GRAPH_EDIT_ICON_SIZE}
                 texture={iconTextures[item.id] ?? null}
-                contentMargin={theme.contentMargin}
                 tint={tint}
+                iconTint={buttonIconTints[state]}
+                iconAlignment={HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT}
                 rtl={rtl}
-                renderOrder={items.content.key}
+                renderOrder={pieces.content.key}
+                boxRenderOrder={pieces.boxes.key}
+                canvasKey={pieces.content.key}
               />
             </CanvasItemGroup>
           );
@@ -179,22 +187,15 @@ export function GraphEditToolbarChrome({
         const downPos = arrowPosition(item.rect, layout.downRect);
         return (
           <CanvasItemGroup key={item.id}>
-            <CanvasItemGroup position={[fieldRect.x, -fieldRect.y, 0]}>
-              <StyleBoxQuad
-                styleBox={theme.widgets.lineEdit.normal}
-                color={tint.own}
-                rect={{ x: 0, y: 0, w: fieldRect.w, h: fieldRect.h }}
-                renderOrder={items.boxes.key}
-              />
-            </CanvasItemGroup>
+            <PositionedStyleBox box={fieldBox} rect={fieldRect} tint={tint} renderOrder={pieces.boxes.key} />
             <LabelledText
               rect={fieldRect}
               layout={shape(text.snappingDistance)}
               fontSizePx={theme.fontSize}
               tint={fieldColor}
               clippingPlanes={clippingPlanes}
-              renderOrder={items.content.key}
-              inset={lineEditInsetX}
+              renderOrder={pieces.content.key}
+              inset={fieldBox.contentMargin.left}
               rtl={rtl}
             />
             <PositionedIcon
@@ -205,10 +206,10 @@ export function GraphEditToolbarChrome({
                 h: SPIN_BOX_ARROW_ICON_SIZE.y,
               }}
               texture={spinUpTexture}
-              color={arrowColor}
-              opacity={tint.opacity}
-              renderOrder={items.content.key}
-              canvasKey={items.content.key}
+              color={upArrow.linear}
+              opacity={upArrow.alpha}
+              renderOrder={pieces.content.key}
+              canvasKey={pieces.content.key}
             />
             <PositionedIcon
               rect={{
@@ -218,10 +219,10 @@ export function GraphEditToolbarChrome({
                 h: SPIN_BOX_ARROW_ICON_SIZE.y,
               }}
               texture={spinDownTexture}
-              color={arrowColor}
-              opacity={tint.opacity}
-              renderOrder={items.content.key}
-              canvasKey={items.content.key}
+              color={downArrow.linear}
+              opacity={downArrow.alpha}
+              renderOrder={pieces.content.key}
+              canvasKey={pieces.content.key}
             />
           </CanvasItemGroup>
         );

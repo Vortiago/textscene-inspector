@@ -16,7 +16,11 @@ import {
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import {
+  contentMarginSize,
+  ZERO_SIDES,
+  type StyleBoxFlatData,
+} from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -43,7 +47,6 @@ import { ProgressBarFillMode } from '../../../../godot/scene/gui';
 const PROGRESS_BAR_STYLE_MARGIN = 2;
 const PROGRESS_BAR_CORNER_RADIUS = 6;
 
-const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 /** `StyleBoxFlat`'s unset default (`style_box_flat.h:40`): `make_flat_stylebox` never sets the border colour. */
 const DEFAULT_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
 

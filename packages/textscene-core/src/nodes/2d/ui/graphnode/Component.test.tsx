@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { GraphNode } from './Component';
@@ -163,16 +164,20 @@ describe('<GraphNode> (isolated painter contract)', () => {
       node: controlNode('c', 'Control', { name: 'c' }),
     };
     const slots = new Map([[0, { ...defaultGraphNodeSlot(), drawStylebox: true }]]);
+    const drawn = {
+      ...graphNode({ slots }, [child]),
+      styleBoxes: { titlebar: drawnStyleBox(), slot: drawnStyleBox() },
+    };
     const renderer = await ReactThreeTestRenderer.create(
       <GraphNode
         {...painterEnv()}
-        solveNode={graphNode({ slots }, [child])}
+        solveNode={drawn}
         rect={RECT}
         renderOrder={0}
         childRects={new Map([['N/c', { x: 0, y: 40, w: 100, h: 20 }]])}
       />
     );
-    // panel + titlebar + the slot stylebox
+    // panel + titlebar + the slot stylebox, each given a box that paints
     expect(chromeMeshes(renderer.scene)).toHaveLength(3);
   });
 });

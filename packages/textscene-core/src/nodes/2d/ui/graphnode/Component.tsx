@@ -14,6 +14,7 @@ import type * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { PositionedStyleBox } from '../../../../r3f/controls/native/PositionedStyleBox';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -36,7 +37,6 @@ import {
   RESIZER_SE_ICON_SIZE,
 } from '../graphelement/graphIcons';
 import {
-  GRAPH_NODE_TITLE_DEFAULT_COLOR,
   GRAPH_NODE_TITLE_VARIATION,
   graphNodeDrawRows,
   graphNodeStyles,
@@ -118,13 +118,7 @@ export function GraphNode({
 
   const title = props.title ?? '';
   const fontTheme = useMemo(
-    () =>
-      resolveTitleFontTheme(
-        solveNode,
-        GRAPH_NODE_TITLE_VARIATION,
-        theme.fontSize,
-        GRAPH_NODE_TITLE_DEFAULT_COLOR
-      ),
+    () => resolveTitleFontTheme(solveNode, GRAPH_NODE_TITLE_VARIATION, theme.fontSize),
     [solveNode, theme.fontSize]
   );
   const titleLayout = useMemo(
@@ -139,10 +133,12 @@ export function GraphNode({
             titlebarBand.contentRect.w,
             titlebarBand.contentRect.h,
             undefined,
-            undefined
+            undefined,
+            undefined,
+            { contentMargin: fontTheme.box.contentMargin }
           )
         : [],
-    [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h]
+    [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h, fontTheme.box]
   );
   const titleLineLayouts = useMemo(
     () => (titleLayout ? titlePlacements.map((p) => soloLineLayout(p.line, titleLayout)) : []),
@@ -191,6 +187,12 @@ export function GraphNode({
         renderOrder={renderOrder}
       />
 
+      <PositionedStyleBox
+        box={fontTheme.box}
+        rect={titlebarBand.contentRect}
+        tint={tint}
+        renderOrder={renderOrder}
+      />
       {titleLayout &&
         titlePlacements.map((placement, i) => (
           <CanvasItemGroup

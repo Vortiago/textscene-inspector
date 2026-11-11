@@ -213,4 +213,10 @@ export const CONTROL_TEXT_SCENES = [
   { name: 'code-edit-guidelines', file: 'unit-code-edit-guidelines.tscn' },
   // The fold arrow the delimiter tables decide.
   { name: 'code-edit-delimiters', file: 'unit-code-edit-delimiters.tscn' },
+  // The one variable: a Theme `normal` box on Label. It draws under the text, adds its minimum, narrows the wrap width and
+  // offsets left and right lines, not centred ones (Godot 4.6.3 `--mode 2d`: max 1 of 255, 1 px).
+  { name: 'label-theme-normal-box', file: 'unit-label-theme-normal-box.tscn', mode: '2d' },
+  // The one variable: the default theme's Label variations. Header sizes, the graph and tooltip title colours,
+  // the frame title size and the TooltipPanel box (Godot 4.6.3 `--mode 2d`: max 1 of 255, 16 px).
+  { name: 'label-default-theme-variations', file: 'unit-label-default-theme-variations.tscn', mode: '2d' },
 ];

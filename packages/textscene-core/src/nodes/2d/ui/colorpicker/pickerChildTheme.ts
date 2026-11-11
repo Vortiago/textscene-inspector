@@ -6,8 +6,8 @@
 import type { Rgba } from '../../../../godot/math/math';
 import {
   CONTROL_FONT_PRESSED_COLOR,
-  DEFAULT_THEME_TYPE_VARIATIONS,
-  FLAT_MENU_BUTTON_VARIATION,
+  DEFAULT_THEME_VARIATIONS,
+  LABEL_FONT_COLOR,
 } from '../../../../godot/scene/theme';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
 import { internalChildThemeItems, type InternalThemeItems } from '../../../../r3f/controls/native/themeItems';
@@ -16,7 +16,6 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { pickTabStyleBox } from '../tabbar/nativeSolver';
 import { perObject } from '../../../../utils/perObject';
 import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
-import { LABEL_DEFAULT_FONT_COLOR } from '../label/nativeSolver';
 import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
 import { LINE_EDIT_DEFAULT_FONT_COLOR, pickLineEditStyleBox } from '../lineedit/nativeSolver';
 
@@ -63,8 +62,8 @@ function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildThe
   const button = internalChildThemeItems(n, 'Button');
   const flatMenuButton = internalChildThemeItems(
     n,
-    DEFAULT_THEME_TYPE_VARIATIONS[FLAT_MENU_BUTTON_VARIATION]!,
-    FLAT_MENU_BUTTON_VARIATION
+    DEFAULT_THEME_VARIATIONS.FlatMenuButton!.base,
+    'FlatMenuButton'
   );
   const lineEdit = internalChildThemeItems(n, 'LineEdit');
   const valueField = spinBoxFieldThemeItems(n);
@@ -94,7 +93,7 @@ function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildThe
     theme: withLineEditBoxes(withBoxes, lineEdit),
     valueFieldTheme: withLineEditBoxes(theme, valueField),
     valueFieldColor: valueField.colors.font_color ?? LINE_EDIT_DEFAULT_FONT_COLOR,
-    labelColor: label.colors.font_color ?? LABEL_DEFAULT_FONT_COLOR,
+    labelColor: label.colors.font_color ?? LABEL_FONT_COLOR,
     buttonColor: button.colors.font_color ?? BUTTON_DEFAULT_FONT_COLOR,
     buttonPressedColor: button.colors.font_pressed_color ?? CONTROL_FONT_PRESSED_COLOR,
     buttonColors: button.colors,

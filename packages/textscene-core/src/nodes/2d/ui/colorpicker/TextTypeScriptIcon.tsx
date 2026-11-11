@@ -14,7 +14,7 @@ import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { COLOR_PICKER_BUTTON_ICON_SIZE, COLOR_SCRIPT_ICON } from '../../../../r3f/controls/native/themeIcons';
 import { buttonIconColor } from '../button/nativeSolver';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import { iconModulate } from './IconButton';
+import { iconModulate } from '../../../../r3f/controls/native/IconButton';
 
 interface TextTypeScriptIconProps {
   rect: Rect2;

@@ -31,15 +31,6 @@ import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
 /** `graph_frame.cpp` theme type variation for its internal title Label: `graph_frame.cpp:354`. */
 export const GRAPH_FRAME_TITLE_VARIATION = 'GraphFrameTitleLabel';
 
-/** `default_theme.cpp:849`: `GraphFrameTitleLabel`'s own `font_color`, opaque white. */
-export const GRAPH_FRAME_TITLE_DEFAULT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
-/**
- * `default_theme.cpp:848`: `theme->set_font_size(font_size, "GraphFrameTitleLabel", 22)`,
- * a literal `22` where the function scales each other constant, so it stays unscaled.
- */
-export const GRAPH_FRAME_TITLE_FONT_SIZE_PX = 22;
-
 /** `GraphFrame`'s own `resizer_color` (`default_theme.cpp:841`). */
 export const GRAPH_FRAME_RESIZER_COLOR = CONTROL_FONT_COLOR;
 
@@ -137,14 +128,9 @@ function vFlagsOf(n: SolveNode): number {
   return (n.node.properties as GraphFrameProperties).sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;
 }
 
-export function graphFrameTitleTextMin(n: SolveNode, _theme: NativeTheme): Vector2 {
+export function graphFrameTitleTextMin(n: SolveNode, theme: NativeTheme): Vector2 {
   const props = n.node.properties as GraphFrameProperties;
-  const fontTheme = resolveTitleFontTheme(
-    n,
-    GRAPH_FRAME_TITLE_VARIATION,
-    GRAPH_FRAME_TITLE_FONT_SIZE_PX,
-    GRAPH_FRAME_TITLE_DEFAULT_COLOR
-  );
+  const fontTheme = resolveTitleFontTheme(n, GRAPH_FRAME_TITLE_VARIATION, theme.fontSize);
   return titleTextMinimumSize(props.title ?? '', fontTheme);
 }
 

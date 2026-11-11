@@ -284,6 +284,16 @@ export const CONTROL_WIDGET_SCENES = [
   { name: 'button-family-autowrap', file: 'unit-button-family-autowrap.tscn', mode: '2d' },
   // A Button and a MenuButton with expand_icon and a label wrapped by autowrap_mode.
   { name: 'button-expand-icon-wrap', file: 'unit-button-expand-icon-wrap.tscn', mode: '2d' },
+  // The one variable: the theme type variation of a Button, FlatButton and HeaderSmall beside a plain one.
+  // FlatButton and a Label variation draw no normal box, and HeaderSmall takes Label's white text (Godot 4.6.3
+  // `--mode 2d`: max 2 of 255 over the grid).
+  { name: 'button-default-theme-variations', file: 'unit-button-default-theme-variations.tscn', mode: '2d' },
+  // The one variable: the Theme `font_color` of Label on a GraphNode and a GraphFrame title (Godot 4.6.3 `--mode 2d`: max 2 of 255).
+  { name: 'graph-title-theme-colour', file: 'unit-graph-title-theme-colour.tscn', mode: '2d' },
+  // The one variable: the Theme `normal` StyleBox of Label on a GraphNode and a GraphFrame title (Godot 4.6.3 `--mode 2d`: max 2 of 255).
+  { name: 'graph-title-theme-normal-box', file: 'unit-graph-title-theme-normal-box.tscn', mode: '2d' },
+  // The one variable: an ancestor Theme that sets the toolbar's Label, FlatButton, LineEdit and SpinBox items.
+  { name: 'graph-edit-toolbar-theme', file: 'unit-graph-edit-toolbar-theme.tscn', mode: '2d' },
   { name: 'tab-bar-scroll-to-current', file: 'unit-tab-bar-scroll-to-current.tscn', mode: '2d' },
   { name: 'tab-bar-scroll-options', file: 'unit-tab-bar-scroll-options.tscn', mode: '2d' },
   { name: 'tab-container-hidden-pages', file: 'unit-tab-container-hidden-pages.tscn', mode: '2d' },

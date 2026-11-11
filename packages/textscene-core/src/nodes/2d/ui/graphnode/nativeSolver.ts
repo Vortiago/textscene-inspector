@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatStyleBox as makeFlatStyleBox, ZERO_SIDES } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -27,16 +27,10 @@ import type { GraphNodeProperties, GraphNodeSlot } from './types';
 import { lightened } from '../../../../godot/math/color';
 import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
-
-const ZERO_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /** `graph_node.cpp` theme type variation for its internal title Label: `graph_node.cpp:1328`. */
 export const GRAPH_NODE_TITLE_VARIATION = 'GraphNodeTitleLabel';
-
-/** `GraphNodeTitleLabel`'s own `font_color` (`default_theme.cpp:819`). */
-export const GRAPH_NODE_TITLE_DEFAULT_COLOR = CONTROL_FONT_COLOR;
 
 function flatBox(
   bgColor: Rgba,
@@ -77,7 +71,7 @@ function defaultStyles(theme: NativeTheme) {
     theme.cornerRadius
   );
   // `make_empty_stylebox(0, 0, 0, 0)`: draws nothing, zero margin.
-  const slot = flatBox({ r: 0, g: 0, b: 0, a: 0 }, ZERO_MARGIN, 0);
+  const slot = flatBox({ r: 0, g: 0, b: 0, a: 0 }, ZERO_SIDES, 0);
   return { panel, panelSelected: panel, titlebar, titlebarSelected, slot };
 }
 
@@ -125,12 +119,7 @@ function graphNodeEffectiveSlot(slots: Map<number, GraphNodeSlot>, rawIndex: num
 
 export function graphNodeTitleTextMin(n: SolveNode, theme: NativeTheme): Vector2 {
   const props = n.node.properties as GraphNodeProperties;
-  const fontTheme = resolveTitleFontTheme(
-    n,
-    GRAPH_NODE_TITLE_VARIATION,
-    theme.fontSize,
-    GRAPH_NODE_TITLE_DEFAULT_COLOR
-  );
+  const fontTheme = resolveTitleFontTheme(n, GRAPH_NODE_TITLE_VARIATION, theme.fontSize);
   return titleTextMinimumSize(props.title ?? '', fontTheme);
 }
 
