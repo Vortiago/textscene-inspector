@@ -173,7 +173,13 @@ describe('checkButtonIconColor (default_theme.cpp:352-353)', () => {
 
 describe('checkButtonContentFacts margins (default_theme.cpp:317)', () => {
   const margin = (theme: SolveContext['theme']) =>
-    checkButtonContentFacts(node({}), {}, { theme }, { x: 100, y: 40 }, null).styleMargin;
+    checkButtonContentFacts(
+      node({}),
+      controlProps({ name: 'CB', textDirection: 0, language: '' }),
+      { theme },
+      { x: 100, y: 40 },
+      null
+    ).styleMargin;
 
   it('marginY equals theme.contentMargin (round(4*scale))', () => {
     expect(margin(ctx().theme)).toMatchObject({ top: 4, bottom: 4 });
