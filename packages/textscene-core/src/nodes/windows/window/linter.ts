@@ -1,10 +1,11 @@
 /**
  * Window's cross-field rules: a `max_size` below `min_size`, a `size` those limits clamp,
- * and a `content_scale_factor` that integer stretch floors. Each reads two or three keys
- * off one node, so none fits a single-key validator. Format checks live in linterParser.ts.
+ * a `content_scale_factor` that integer stretch floors, and a `force_native` set on a visible
+ * window. Each reads two or three keys off one node, so none fits a single-key validator. Format
+ * checks live in linterParser.ts.
  */
 
-import { scalarSlotValue } from '../../../godot/variant/variantBool.js';
+import { boolSlotValue, scalarSlotValue } from '../../../godot/variant/variantBool.js';
 import type { LintRule, Diagnostic, RuleContext } from '../../../linter/types.js';
 import { ruleRegistry } from '../../../linter/RuleRegistry.js';
 import { matchVector2i } from '../../../linter/validators/index.js';
@@ -20,6 +21,7 @@ import {
   replayWindowSize,
   isMaxSizeSet,
   validMaxSize,
+  visibleWrittenBeforeForceNative,
   windowClassDefaults,
   type WindowSizeWrite,
 } from '../../../godot/scene/window.js';
@@ -39,6 +41,11 @@ const arms = {
     severity: 'warning',
     ruleName: 'window-content-scale-factor-floored',
     grounding: { kind: 'engine', at: 'window.cpp:1240-1247' },
+  },
+  forceNativeRefusedWhileVisible: {
+    severity: 'error',
+    ruleName: 'window-force-native-refused-while-visible',
+    grounding: { kind: 'engine', at: 'window.cpp:1384-1386' },
   },
 } as const satisfies RuleArms<string>;
 
@@ -130,6 +137,20 @@ function checkContentScaleFloored(node: RuleContext['node'], rawProps: Record<st
   ];
 }
 
+function checkForceNativeRefused(node: RuleContext['node'], rawProps: Record<string, string>): Diagnostic[] {
+  if (boolSlotValue(rawProps.force_native) !== true) return [];
+  const isVisibleAtWrite =
+    boolSlotValue(visibleWrittenBeforeForceNative(rawProps)) ?? windowClassDefaults(node.type).visible;
+  if (!isVisibleAtWrite) return [];
+  return [
+    armDiagnostic(
+      arms.forceNativeRefusedWhileVisible,
+      node,
+      `Window 'force_native' is set while the window is visible, so Godot refuses it and the window stays embedded. Write 'visible = false' on a line before it.`
+    ),
+  ];
+}
+
 function checkWindow(context: RuleContext): Diagnostic[] {
   const { node } = context;
   const rawProps = node.rawProperties;
@@ -137,13 +158,15 @@ function checkWindow(context: RuleContext): Diagnostic[] {
     ...checkMaxBelowMin(node, rawProps),
     ...checkSizeClamped(node, rawProps),
     ...checkContentScaleFloored(node, rawProps),
+    ...checkForceNativeRefused(node, rawProps),
   ];
 }
 
 const windowValidationRule: LintRule = {
   meta: {
     name: 'valid-window-properties',
-    description: "Validates Window's size, size limits and content scale factor against each other",
+    description:
+      "Validates Window's size, size limits, content scale factor and force_native against the keys beside them",
     category: 'validation',
     applicableNodeTypeMatcher: (nodeType) => descendsFromClass(nodeType, 'Window'),
     emits: armEmits(arms),

@@ -94,12 +94,13 @@ export interface ViewportContent {
  * Classify a sub-viewport's subtree. Precedence is 3D > 2D > DOM, and the world pass draws one
  * kind. Controls and 2D items beside a 3D world draw over it in a canvas pass, as Godot's canvas
  * items draw after its 3D render (`renderer_viewport.cpp:380-715`). A nested sub-viewport draws
- * into its own target, so it is not descended into.
+ * into its own target, so it is not descended into. `rootEmbedsSubwindows` is the answer of the
+ * tree the subtree comes from (`LiveTreeContext.project`).
  */
-export function viewportContent(node: TscnNode, rootEmbeds: boolean): ViewportContent {
+export function viewportContent(node: TscnNode, rootEmbedsSubwindows: boolean): ViewportContent {
   let sawCanvasItem = false;
   // The embedder draws its windows over its canvas, with the Controls (`EmbeddedWindows.tsx`).
-  let sawDom = embedsAWindow(node, rootEmbeds);
+  let sawDom = embedsAWindow(node, rootEmbedsSubwindows);
   let sawUntypedInstance = false;
 
   // Every child is visited, so `sawDom` is complete when a 3D node comes first.
@@ -160,10 +161,6 @@ export function viewportContent(node: TscnNode, rootEmbeds: boolean): ViewportCo
   return found(sawDom || isEmbeddedWindow(node.type) ? 'dom' : 'empty');
 }
 
-export function viewportContentKind(node: TscnNode, rootEmbeds: boolean): ViewportContentKind {
-  return viewportContent(node, rootEmbeds).kind;
-}
-
 /** The children below `from` (the roots without it) with their instances resolved. */
 function resolvedChildren(tree: LiveTree, from?: LiveLink): TscnNode[] {
   return tree.fold<void, TscnNode>(
@@ -177,18 +174,18 @@ function resolvedChildren(tree: LiveTree, from?: LiveLink): TscnNode[] {
 }
 
 /**
- * The sub-viewport's subtree with its instances resolved, the input
- * `viewportContentKind` wants: a parsed `instance=` child is a childless `Node`
- * whatever its world. `viewport` is the sub-viewport's link in `tree`, which gives each
- * instance below it its step. A nested sub-viewport is returned untouched.
+ * The content of the sub-viewport at the link `viewport` of `tree`, classified over its subtree with
+ * the instances resolved: a parsed `instance=` child is a childless `Node` whatever its world. The
+ * link gives each instance below it its step. A nested sub-viewport is left untouched.
  */
-export function resolveViewportSubtree(tree: LiveTree, viewport: LiveLink): TscnNode {
-  return { ...viewport.step.node, children: resolvedChildren(tree, viewport) };
+export function viewportContentAt(tree: LiveTree, viewport: LiveLink): ViewportContent {
+  const resolved = { ...viewport.step.node, children: resolvedChildren(tree, viewport) };
+  return viewportContent(resolved, tree.ctx.project.rootEmbedsSubwindows);
 }
 
 /**
- * {@link resolveViewportSubtree} for a sub-viewport that no walk of the live tree has visited: it
- * reads its own tree of the children. `node` is already the node as shown, so it takes no step of
+ * The subtree {@link viewportContent} classifies, for a sub-viewport that no walk of the live tree
+ * has visited: it reads its own tree of the children. `node` is already the node as shown, so it takes no step of
  * its own, and the scope declares an empty SubResource pool because this resolution reads no id.
  * `SceneScope` says why the two pools travel together.
  */

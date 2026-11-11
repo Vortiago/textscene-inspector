@@ -8,23 +8,23 @@
 import { createContext, useContext, useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import { liveTreeOf, type LiveTreeContext } from './liveSceneTree.js';
-import { useProjectPhysicsClock, useSharedLiveTree } from './useLiveSceneTree.js';
+import { useProjectTreeSettings, useSharedLiveTree } from './useLiveSceneTree.js';
 import { canvasScopesOf } from './canvasScopes.js';
 import { NOTHING_CACHED } from './cacheSources.js';
 import { perObject } from '../utils/perObject.js';
-import type { PhysicsClock } from '../godot/scene/physicsTicks.js';
+import type { ProjectTreeSettings } from '../parser/projectSettingsParser.js';
 import { WHITE_MODULATE } from './canvasItemModulate.js';
 import { CANVAS_MODULATE_FLOOR } from './lighting2d/canvasItemLighting.js';
 import { type CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types.js';
 import type { Rgba } from '../godot/math/math.js';
 import { CanvasItemMaterialLightMode } from '../godot/scene/canvasItemMaterial.js';
 
-/** The sub-scenes the loader holds, which is none before a scene graph exists, for each physics clock. */
-const noScenesAt = perObject((physicsClock: PhysicsClock): LiveTreeContext => ({
+/** The sub-scenes the loader holds, which is none before a scene graph exists, for each project's tree settings. */
+const noScenesIn = perObject((project: ProjectTreeSettings): LiveTreeContext => ({
   externalResources: [],
   internalResources: [],
   sceneCache: NOTHING_CACHED,
-  physicsClock,
+  project,
 }));
 
 /**
@@ -34,8 +34,8 @@ const noScenesAt = perObject((physicsClock: PhysicsClock): LiveTreeContext => ({
  * in, whichever file declares it (`canvas_modulate.cpp:33-45`).
  */
 export function useCanvasModulateColor(nodes: readonly TscnNode[]): Rgba {
-  const physicsClock = useProjectPhysicsClock();
-  const ctx = useSharedLiveTree()?.ctx ?? noScenesAt(physicsClock);
+  const project = useProjectTreeSettings();
+  const ctx = useSharedLiveTree()?.ctx ?? noScenesIn(project);
   return useMemo(() => canvasScopesOf(liveTreeOf(nodes, ctx)).modulate ?? WHITE_MODULATE, [nodes, ctx]);
 }
 

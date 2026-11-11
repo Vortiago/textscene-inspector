@@ -308,3 +308,33 @@ describe('a ConfirmationDialog floor from its constructor', () => {
     });
   });
 });
+
+describe('Window force_native on a window that is visible when the line is read', () => {
+  const RULE = { ruleName: 'window-force-native-refused-while-visible' };
+
+  it('reports the refused line on a Window, which starts visible', () => {
+    expectDiagnostic(windowScene({ force_native: 'true' }), {
+      ...RULE,
+      severity: 'error',
+      nodeType: 'Window',
+      contains: ['force_native', 'visible'],
+    });
+  });
+
+  it('reports it where the line that hides the window comes after it', () => {
+    expectDiagnostic(windowScene({ force_native: 'true', visible: 'false' }), RULE);
+  });
+
+  it('reports it on a Popup that an earlier line shows', () => {
+    expectDiagnostic(scene(node('Popup', { visible: 'true', force_native: 'true' })), RULE);
+  });
+
+  it('says nothing where an earlier line hides the window, or the class starts hidden', () => {
+    expectNoDiagnostic(windowScene({ visible: 'false', force_native: 'true' }), RULE);
+    expectNoDiagnostic(scene(node('Popup', { force_native: 'true' })), RULE);
+  });
+
+  it('says nothing for force_native = false, which changes nothing', () => {
+    expectNoDiagnostic(windowScene({ force_native: 'false' }), RULE);
+  });
+});

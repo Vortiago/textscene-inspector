@@ -6,18 +6,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { TscnParser } from '../../../parser/TscnParser';
-import {
-  resolveStandaloneViewportSubtree,
-  viewportContent as contentUnder,
-  viewportContentKind as kindUnder,
-} from './viewportContent';
+import { resolveStandaloneViewportSubtree, viewportContent as contentUnder } from './viewportContent';
 import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
 import { sourcesOver, sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
 import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
 
 const viewportContent = (node: Parameters<typeof contentUnder>[0]) => contentUnder(node, true);
-const viewportContentKind = (node: Parameters<typeof kindUnder>[0]) => kindUnder(node, true);
+const viewportContentKind = (node: Parameters<typeof contentUnder>[0]) => viewportContent(node).kind;
 
 /** The `Viewport` node of a parsed one-viewport scene. */
 function viewport(body: string) {
@@ -30,7 +26,7 @@ ${body}`);
   return scene.nodes[0]!.children.find((child) => child.type === 'SubViewport')!;
 }
 
-describe('viewportContentKind', () => {
+describe('viewportContent: the kind', () => {
   it('classifies Node3D content as 3d', () => {
     expect(viewportContentKind(viewport('\n[node name="Box" type="MeshInstance3D" parent="Viewport"]'))).toBe(
       '3d'

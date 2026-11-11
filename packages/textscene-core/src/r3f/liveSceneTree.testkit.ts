@@ -13,7 +13,7 @@ import {
   type LiveTreeSources,
   type SceneScope,
 } from './liveSceneTree';
-import { DEFAULT_PHYSICS_CLOCK } from '../godot/scene/physicsTicks';
+import { projectTreeSettings } from '../parser/projectSettingsParser';
 import { NOTHING_CACHED } from './cacheSources';
 
 /** The collapsed node at `path`, or null when a segment does not resolve. */
@@ -22,12 +22,13 @@ export function liveNodeAt(path: string, roots: readonly TscnNode[], ctx: LiveTr
 }
 
 /**
- * The sources a live-tree builder reads: `sceneCache` and Godot's default physics clock.
+ * The sources a live-tree builder reads: `sceneCache` and the tree settings of no project, which
+ * are Godot's defaults.
  *
- * @canonical In tests, the scene cache and physics clock of a live-tree builder
+ * @canonical In tests, the scene cache and project tree settings of a live-tree builder
  */
 export function sourcesOver(sceneCache: CachedSceneSource = NOTHING_CACHED): LiveTreeSources {
-  return { sceneCache, physicsClock: DEFAULT_PHYSICS_CLOCK };
+  return { sceneCache, project: projectTreeSettings(null) };
 }
 
 /**

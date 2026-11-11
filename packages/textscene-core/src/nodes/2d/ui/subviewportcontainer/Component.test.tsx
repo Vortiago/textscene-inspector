@@ -41,7 +41,7 @@ import { createCanvasTarget, createSceneTarget } from '../../../viewport/subview
 import { quadsSampling } from '../../../../r3f/controls/native/testing/quadsSampling';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 // Side-effect: the Control painters and the node registrations
-// `viewportContentKind` classifies against.
+// `viewportContent` classifies against.
 import '../../../../r3f/controls/index';
 import '../../../../r3f/nodes/index';
 import { ViewportTexturePublisher, viewportEntry } from '../../../../r3f/testing/ViewportTexturePublisher';

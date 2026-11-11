@@ -15,11 +15,7 @@ import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../..
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { resolveLayoutRtl, type LayoutDirectionEnv } from '../../../godot/scene/control.js';
-import {
-  projectEmbedsSubwindows,
-  projectPhysicsClock,
-  type ProjectSettings,
-} from '../../../parser/projectSettingsParser';
+import { projectTreeSettings, type ProjectSettings } from '../../../parser/projectSettingsParser';
 import {
   findExtResource,
   findSubResource,
@@ -132,8 +128,9 @@ interface UseBuildSolveTreeResult {
   /** Bumps on every load or failure and on settled font metrics: a stable dependency for a consumer's memo. */
   generation: number;
   /**
-   * The windows this viewport would embed, in pre-order, which is the order each registers in
-   * (`viewport.cpp:308-341`). A caller whose viewport embeds no windows draws none of them.
+   * The windows this viewport embeds, in pre-order, which is the order each registers in
+   * (`viewport.cpp:308-341`). None for a viewport that embeds no windows: the embedder above draws
+   * a window below it, or the window is native.
    */
   windows: readonly SolveNode[];
 }
@@ -228,7 +225,7 @@ interface Ancestry {
    * windows that still reach this forest's embedder.
    */
   windowsOnly: boolean;
-  /** The forest's window root (`ForestStart.contentRoot`): a Control here, never a viewport boundary. */
+  /** The forest's window root (`ForestStart.viewport`): a Control here, never a viewport boundary. */
   isContentRoot: boolean;
 }
 
@@ -336,10 +333,11 @@ interface ForestStart {
    */
   inheritedRtl: boolean | null;
   /**
-   * A window whose own Controls the forest holds, the forest's one root, or `null`. It lays its
-   * Controls out against its whole rect, as a canvas of its own, and owns a theme like a Control.
+   * The viewport whose canvas the forest draws on, or `null` for the root window's. A window is the
+   * forest's one root: it lays its Controls out against its whole rect, as a canvas of its own, and
+   * owns a theme like a Control. A SubViewport's forest holds its children.
    */
-  contentRoot: TscnNode | null;
+  viewport: TscnNode | null;
   /** The theme owners above the forest, nearest first (`viewportThemeOwners`). */
   themeOwners: readonly ThemeOwner[];
 }
@@ -371,7 +369,7 @@ function buildForest(
   projectSettings: ProjectSettings | null,
   hiddenNodePaths: ReadonlySet<string>,
   layoutDirectionEnv: LayoutDirectionEnv,
-  { inheritedRtl, contentRoot, themeOwners, rootRange }: ForestStart,
+  { inheritedRtl, viewport, themeOwners, rootRange }: ForestStart,
   viewportTargetSize: ViewportTargetSize
 ): ForestResult {
   const pendingScenes = new Map<string, PendingScene>();
@@ -380,7 +378,6 @@ function buildForest(
   const pendingThemes = new Set<string>();
   const pendingFonts = new Set<string>();
   const windows: SolveNode[] = [];
-  const rootEmbeds = projectEmbedsSubwindows(projectSettings);
   const readKeys = new Set<string>();
   const recordRead = (path: string) => readKeys.add(path);
   const viewportSizeReads: ViewportSizeRead[] = [];
@@ -391,9 +388,12 @@ function buildForest(
     externalResources,
     internalResources,
     sceneCache,
-    physicsClock: projectPhysicsClock(projectSettings),
+    project: projectTreeSettings(projectSettings),
   };
   const tree = liveTreeOf(nodes, ctx);
+  const { rootEmbedsSubwindows } = ctx.project;
+  // The root window answers for a forest on its canvas, and a viewport for a forest on its own.
+  const embedsWindows = viewport ? embedsSubwindows(viewport, rootEmbedsSubwindows) : rootEmbedsSubwindows;
   const textureCache = loader ? recordingReads(loader.textures, recordRead) : NOTHING_CACHED;
   const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const themeCache = loader ? recordingReads(loader.themes, recordRead) : NOTHING_CACHED;
@@ -656,7 +656,7 @@ function buildForest(
     if (isEmbeddableWindow(live)) {
       windows.push(windowSolveNode(live, path, step.scope, themeChain, hidden, ancestry.inheritedRtl));
     }
-    if (embedsSubwindows(live, rootEmbeds)) return NOTHING_WALKED;
+    if (embedsSubwindows(live, rootEmbedsSubwindows)) return NOTHING_WALKED;
     return descendForWindows(step, descend, {
       ...ancestry,
       themeChain,
@@ -942,7 +942,7 @@ function buildForest(
         inheritedRtl,
         childVisibility: undefined,
         windowsOnly: false,
-        isContentRoot: contentRoot !== null,
+        isContentRoot: viewport !== null && isEmbeddedWindow(viewport.type),
       },
       walk
     )
@@ -952,7 +952,7 @@ function buildForest(
   // (`canvas_item.cpp:265-267`).
   return {
     tree: [...walked.nodes, ...walked.hoisted],
-    windows,
+    windows: embedsWindows ? windows : [],
     pendingScenes: [...pendingScenes.values()],
     pendingTextures: [...pendingTextures],
     pendingResourceFiles: [...pendingResourceFiles],
@@ -974,7 +974,7 @@ export function useBuildSolveTree(
   rootRange: PaintRange = WHOLE_CANVAS_RANGE
 ): UseBuildSolveTreeResult {
   const start = useMemo(
-    () => ({ inheritedRtl, contentRoot: null, themeOwners: NO_OWNERS, rootRange }),
+    () => ({ inheritedRtl, viewport: null, themeOwners: NO_OWNERS, rootRange }),
     [inheritedRtl, rootRange]
   );
   return useSolveForest(nodes, externalResources, internalResources, start);
@@ -982,7 +982,7 @@ export function useBuildSolveTree(
 
 /**
  * The Control forest a viewport draws on its canvas: a SubViewport's children, or a window rooted
- * at itself (`ForestStart.contentRoot`).
+ * at itself (`ForestStart.viewport`).
  */
 export function useBuildViewportTree(
   viewport: TscnNode,
@@ -991,11 +991,10 @@ export function useBuildViewportTree(
   themeOwners: readonly ThemeOwner[],
   inheritedRtl: boolean | null = null
 ): UseBuildSolveTreeResult {
-  const contentRoot = isEmbeddedWindow(viewport.type) ? viewport : null;
-  const nodes = useMemo(() => (contentRoot ? [contentRoot] : viewport.children), [contentRoot, viewport]);
+  const nodes = useMemo(() => (isEmbeddedWindow(viewport.type) ? [viewport] : viewport.children), [viewport]);
   const start = useMemo(
-    () => ({ inheritedRtl, contentRoot, themeOwners, rootRange: WHOLE_CANVAS_RANGE }),
-    [inheritedRtl, contentRoot, themeOwners]
+    () => ({ inheritedRtl, viewport, themeOwners, rootRange: WHOLE_CANVAS_RANGE }),
+    [inheritedRtl, viewport, themeOwners]
   );
   return useSolveForest(nodes, externalResources, internalResources, start);
 }

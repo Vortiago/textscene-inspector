@@ -12,6 +12,7 @@ import {
   InitialPosition,
   isWindowSizeKey,
   replayWindowSize,
+  visibleWrittenBeforeForceNative,
   windowClassDefaults,
   type WindowSizeWrite,
 } from '../../../godot/scene/window';
@@ -73,6 +74,19 @@ function parseTransparentBackground(
   return isFlagLast ? flag : boolOr(properties.transparent_bg, classDefault, context);
 }
 
+/**
+ * `force_native` as the window holds it once loaded: true only where the window is hidden when the
+ * line is read, since the setter refuses it on a visible window (`window.cpp:1384-1386`).
+ */
+function parseForceNative(
+  properties: Record<string, string>,
+  isVisibleByDefault: boolean,
+  context: string
+): boolean {
+  const isVisibleAtWrite = boolOr(visibleWrittenBeforeForceNative(properties), isVisibleByDefault, context);
+  return boolOr(properties.force_native, false, context) && !isVisibleAtWrite;
+}
+
 export function parseWindow(heading: ParsedHeading, properties: Record<string, string>): WindowProperties {
   const viewport = parseViewport(heading, properties);
   const defaults = windowClassDefaults(heading.attributes.type ?? 'Window');
@@ -105,7 +119,7 @@ export function parseWindow(heading: ParsedHeading, properties: Record<string, s
     always_on_top: boolOr(properties.always_on_top, false, context),
     exclusive: boolOr(properties.exclusive, defaults.exclusive, context),
     wrap_controls: boolOr(properties.wrap_controls, defaults.wrapControls, context),
-    force_native: boolOr(properties.force_native, false, context),
+    force_native: parseForceNative(properties, defaults.visible, context),
     min_size: clampLimitSize(vec2iOr(properties.min_size, defaults.minSize, context)),
     max_size: clampLimitSize(vec2iOr(properties.max_size, ORIGIN, context)),
     content_scale: parseContentScale(properties, context),

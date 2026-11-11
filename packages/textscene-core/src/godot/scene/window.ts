@@ -116,6 +116,17 @@ export function windowClassDefaults(type: string): WindowClassDefaults {
   return findInClassChain(type, (className) => CLASS_DEFAULTS[className]) ?? WINDOW_DEFAULTS;
 }
 
+/**
+ * The `visible` line a scene writes before its `force_native` line, or undefined where none is, so
+ * the class default stands. The loader sets the properties in file order, and `set_force_native`
+ * refuses a change while the window is visible (`window.cpp:1384-1386`).
+ */
+export function visibleWrittenBeforeForceNative(properties: Record<string, string>): string | undefined {
+  const keys = Object.keys(properties);
+  const visibleAt = keys.indexOf('visible');
+  return visibleAt >= 0 && visibleAt < keys.indexOf('force_native') ? properties.visible : undefined;
+}
+
 /** `window.h:105,126`: `size = Size2i(DEFAULT_WINDOW_SIZE, DEFAULT_WINDOW_SIZE)`. */
 const DEFAULT_WINDOW_SIZE: Vector2 = { x: 100, y: 100 };
 

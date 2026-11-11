@@ -1,0 +1,47 @@
+; One variable: `force_native` on a Window that is visible when the line is read. The setter refuses
+; it (`window.cpp:1384-1386`), so the window stays embedded and the root draws the window below it.
+; No other scene sets `force_native` to true. The linter reports the refused line as an error, so
+; negative-fixtures.json lists this scene.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Host" type="Window" parent="."]
+title = "Host"
+position = Vector2i(100, 100)
+size = Vector2i(500, 360)
+force_native = true
+
+[node name="Panel" type="ColorRect" parent="Host"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 130.0
+offset_bottom = 70.0
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Shape" type="Polygon2D" parent="Host"]
+position = Vector2(10, 90)
+color = Color(0.2, 0.8, 0.3, 1)
+polygon = PackedVector2Array(0, 0, 120, 0, 120, 60)
+
+[node name="Inner" type="Window" parent="Host"]
+title = "Inner"
+position = Vector2i(160, 60)
+size = Vector2i(220, 130)
+
+[node name="Fill" type="ColorRect" parent="Host/Inner"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 100.0
+offset_bottom = 50.0
+color = Color(0.95, 0.8, 0.2, 1)

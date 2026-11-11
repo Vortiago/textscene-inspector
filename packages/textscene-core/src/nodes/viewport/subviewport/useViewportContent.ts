@@ -10,11 +10,7 @@ import { useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types.js';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext.js';
 import { useResourceLoader } from '../../../resources/useResource.js';
-import {
-  useLiveTreeVersion,
-  useProjectEmbedsSubwindows,
-  useProjectPhysicsClock,
-} from '../../../r3f/useLiveSceneTree.js';
+import { useLiveTreeVersion, useProjectTreeSettings } from '../../../r3f/useLiveSceneTree.js';
 import {
   resolveStandaloneViewportSubtree,
   viewportContent,
@@ -30,19 +26,18 @@ export function useViewportContent(node: TscnNode): ViewportContent {
   const version = useLiveTreeVersion(loader);
   // No loader is mounted in the linter bundle or an isolated test.
   const sceneCache = loader?.scenes ?? NOTHING_CACHED;
-  const physicsClock = useProjectPhysicsClock();
-  const rootEmbeds = useProjectEmbedsSubwindows();
+  const project = useProjectTreeSettings();
 
   return useMemo(
     () =>
       viewportContent(
-        resolveStandaloneViewportSubtree(node, externalResources, { sceneCache, physicsClock }),
-        rootEmbeds
+        resolveStandaloneViewportSubtree(node, externalResources, { sceneCache, project }),
+        project.rootEmbedsSubwindows
       ),
     // `version` is an intentional cache-buster: it increments each time a
     // sub-scene finishes loading, which is when an instance child stops being
     // typeless. The value itself is not read in the callback.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [node, externalResources, sceneCache, physicsClock, rootEmbeds, version]
+    [node, externalResources, sceneCache, project, version]
   );
 }

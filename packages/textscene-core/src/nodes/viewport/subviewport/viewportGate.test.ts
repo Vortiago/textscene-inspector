@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { TscnParser } from '../../../parser/TscnParser';
+import { projectTreeSettings, type ProjectSettings } from '../../../parser/projectSettingsParser';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
 import { contextOver } from '../../../r3f/liveSceneTree.testkit';
 import { SubViewportUpdateMode } from '../../../godot/scene/viewport';
@@ -12,14 +13,15 @@ import '../../../r3f/nodes/index';
 
 const { DISABLED, ONCE, WHEN_VISIBLE, ALWAYS } = SubViewportUpdateMode;
 
-function treeOf(source: string) {
+/** The live tree of `source` under `settings`, which default to no project: the root embeds its windows. */
+function treeOf(source: string, settings: ProjectSettings | null = null) {
   const scene = new TscnParser().parse(`[gd_scene format=3]\n\n${source}`);
-  return liveTreeOf(scene.nodes, contextOver(scene, {}));
+  return liveTreeOf(scene.nodes, { ...contextOver(scene, {}), project: projectTreeSettings(settings) });
 }
 
 /** The gate of the viewport at `path` with no animated `visible` over it. */
 function resolved(tree: ReturnType<typeof treeOf>, path: string, authoredMode: number) {
-  return resolveGate(viewportGateAt(tree, path, authoredMode, true), new Map());
+  return resolveGate(viewportGateAt(tree, path, authoredMode), new Map());
 }
 
 describe('viewportGateAt: update mode', () => {
@@ -161,6 +163,26 @@ gui_embed_subwindows = true
   });
 });
 
+/** A window below an embedding root embeds only when `force_native` (`window.cpp:1534-1537`). */
+describe('viewportGateAt: a window above a window', () => {
+  const WINDOWS = `[node name="Root" type="Control"]
+
+[node name="Host" type="Window" parent="."]
+gui_embed_subwindows = true
+
+[node name="Inner" type="Window" parent="Host"]
+`;
+
+  it('leaves the window below to an embedding root, whatever the window above authors', () => {
+    expect(resolved(treeOf(WINDOWS), 'Root/Host/Inner', ALWAYS).enclosingPath).toBeNull();
+  });
+
+  it('names the window above under a root that embeds none, where its authored value stands', () => {
+    const tree = treeOf(WINDOWS, { 'display/window/subwindows/embed_subwindows': 'false' });
+    expect(resolved(tree, 'Root/Host/Inner', ALWAYS).enclosingPath).toBe('Root/Host');
+  });
+});
+
 describe('resolveGate: an animated visible', () => {
   const tree = treeOf(`[node name="Root" type="Control"]
 
@@ -170,7 +192,7 @@ describe('resolveGate: an animated visible', () => {
 
 [node name="View" type="SubViewport" parent="Panel/Booth"]
 `);
-  const gate = viewportGateAt(tree, 'Root/Panel/Booth/View', DISABLED, true);
+  const gate = viewportGateAt(tree, 'Root/Panel/Booth/View', DISABLED);
 
   it('hides the viewport while the container is animated to hidden', () => {
     expect(resolveGate(gate, new Map([['Root/Panel/Booth', false]])).updateMode).toBe(DISABLED);
@@ -190,7 +212,7 @@ visible = false
 
 [node name="View" type="SubViewport" parent="Panel/Booth"]
 `);
-    const hidden = viewportGateAt(hiddenTree, 'Root/Panel/Booth/View', ALWAYS, true);
+    const hidden = viewportGateAt(hiddenTree, 'Root/Panel/Booth/View', ALWAYS);
     expect(resolveGate(hidden, new Map([['Root/Panel', true]])).updateMode).toBe(ALWAYS);
   });
 
@@ -203,7 +225,7 @@ visible = false
 
 [node name="View" type="SubViewport" parent="Plain/Booth"]
 `);
-    const plain = viewportGateAt(plainTree, 'Root/Plain/Booth/View', DISABLED, true);
+    const plain = viewportGateAt(plainTree, 'Root/Plain/Booth/View', DISABLED);
     expect(resolveGate(plain, new Map([['Root', false]])).updateMode).toBe(ALWAYS);
   });
 });

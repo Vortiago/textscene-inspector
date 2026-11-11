@@ -4,13 +4,14 @@
  * the forest, since they draw in the window's own viewport.
  */
 import { describe, expect, it } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { useBuildSolveTree, useBuildViewportTree } from './buildSolveTree';
 import { themeResource } from './testing/themeResource';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
+import { withProject } from '../../testing/ProjectFixture';
 import '../../nodes/index';
 import '../index';
 
@@ -65,6 +66,23 @@ describe('useBuildSolveTree — embedded windows', () => {
     expect(windowPaths(nodes)).toEqual(['Host', 'Host/Inner']);
   });
 
+  describe('under a root window that embeds none', () => {
+    const wrapper = withProject('[display]\n\nwindow/subwindows/embed_subwindows=false\n');
+    const host = node('Host', 'Window', { gui_embed_subwindows: true }, [node('Inner', 'Window')]);
+
+    it('lists no window for the root, since each is native', async () => {
+      const { result } = renderHook(() => useBuildSolveTree([host], [], []), { wrapper });
+      await waitFor(() => expect(result.current.windows).toEqual([]));
+    });
+
+    it('lists the windows of a window that authors gui_embed_subwindows, which stands there', async () => {
+      const { result } = renderHook(() => useBuildViewportTree(host, [], [], NO_OWNERS), { wrapper });
+      await waitFor(() =>
+        expect(result.current.windows.map((window) => window.path)).toEqual(['Host/Inner'])
+      );
+    });
+  });
+
   it('gives a window the theme of the Control above it, as a ThemeOwner does (`theme_owner.cpp`)', () => {
     const loader = createFakeResourceLoader();
     loader.themes.seed(
@@ -105,6 +123,23 @@ describe('useBuildViewportTree — the Controls a viewport draws', () => {
 
     expect(result.current.tree.map((root) => root.path)).toEqual(['Dialog']);
     expect(result.current.tree[0]!.children.map((child) => child.path)).toEqual(['Dialog/Inside']);
+  });
+
+  it('lists the windows of a SubViewport that embeds them, and none where it embeds none', () => {
+    const viewport = (embeds: boolean) =>
+      node('View', 'SubViewport', { gui_embed_subwindows: embeds }, [node('Dialog', 'Window')]);
+    const windowsOf = (embeds: boolean) =>
+      renderHook(() => useBuildViewportTree(viewport(embeds), [], [], NO_OWNERS)).result.current.windows;
+
+    expect(windowsOf(true).map((window) => window.path)).toEqual(['Dialog']);
+    expect(windowsOf(false)).toEqual([]);
+  });
+
+  it('lists no window for a window under an embedding root, whatever it authors (`window.cpp:1534-1537`)', () => {
+    const host = node('Host', 'Window', { gui_embed_subwindows: true }, [node('Inner', 'Window')]);
+    const { result } = renderHook(() => useBuildViewportTree(host, [], [], NO_OWNERS));
+
+    expect(result.current.windows).toEqual([]);
   });
 
   it('roots a SubViewport’s forest at its children, as the viewport is no Control', () => {

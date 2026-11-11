@@ -531,6 +531,11 @@ export const CANVAS_2D_SCENES = [
   { name: 'window-theme-scale-label', file: 'window-theme-scale/unit-window-theme-scale-label.tscn', mode: '2d' },
   // A window under a SubViewport that never updates draws in the root, which does. Max 92, mean 0.383.
   { name: 'window-under-disabled-viewport', file: 'unit-window-under-disabled-viewport.tscn', mode: '2d' },
+  // A window that authors gui_embed_subwindows leaves the window below it to the embedding root.
+  // Max 7 at the close icons, mean 0.475.
+  { name: 'window-in-window', file: 'unit-window-in-window.tscn', mode: '2d' },
+  // force_native on a visible window is refused, so the window stays embedded. Max 7, mean 0.475.
+  { name: 'window-force-native-visible', file: 'edge-window-force-native-visible.tscn', mode: '2d' },
   // content_scale_*: factor, canvas items, viewport, expand, integer and keep-height, with black bars.
   // Max 92, mean 0.385.
   { name: 'window-content-scale', file: 'unit-window-content-scale.tscn', mode: '2d' },
