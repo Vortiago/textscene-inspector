@@ -12,8 +12,6 @@
 
 import * as THREE from 'three';
 import { canvasItemFacing } from '../canvasItemFacing.js';
-import { createLightQuadNodeMaterial } from '../tslSpike/lightQuadNodeMaterial.js';
-import { spikeRenderer } from '../tslSpike/spikeRenderer.js';
 import {
   FRAGMENT,
   SHADOW_FRAGMENT,
@@ -192,18 +190,5 @@ export function createLightQuadMaterial({
     ...canvasItemFacing(),
     ...accumulationState(blendMode),
     ...stencil,
-  });
-}
-
-/** The light quad on the renderer path the page asks for. The spike ports the quad with no polar-map shadow. */
-export function createLightQuadMaterialForPath(options: LightQuadOptions): THREE.Material {
-  if (spikeRenderer() === 'classic' || options.shadow) return createLightQuadMaterial(options);
-  const { cookie, color, energy, blendMode, stencil } = options;
-  return createLightQuadNodeMaterial({
-    cookie,
-    color,
-    energy,
-    edgeFade: edgeFade(cookie),
-    state: { ...accumulationState(blendMode), ...stencil },
   });
 }

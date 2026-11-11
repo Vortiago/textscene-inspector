@@ -22,6 +22,7 @@ import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
 import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
+import { installShaderPatches } from './shaderPatch/installShaderPatches.js';
 import { SceneShadowFitter } from './SceneShadowFitter.js';
 import { SceneMipmapBias } from './materials/SceneMipmapBias.js';
 import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
@@ -31,7 +32,6 @@ import { ActiveCameraSwitcher } from './ActiveCameraSwitcher.js';
 import { CameraFit } from './CameraFit.js';
 import { SceneCamerasProvider } from './sceneCameras.js';
 import { CanvasServices } from './CanvasServices.js';
-import { prepareSpikeRenderer, spikeGl } from './tslSpike/spikeCanvas.js';
 import styles from './TscnCanvas.module.css';
 
 /**
@@ -141,9 +141,9 @@ export function TscnCanvas() {
       <Canvas
         camera={{ position: editorCameraPosition(), fov: EDITOR_CAMERA_FOV }}
         shadows="percentage"
-        gl={spikeGl({ localClippingEnabled: true, antialias: false })}
+        gl={{ localClippingEnabled: true, antialias: false }}
         flat
-        onCreated={prepareSpikeRenderer}
+        onCreated={installShaderPatches}
       >
         <CanvasServices />
         <SceneCamerasProvider>

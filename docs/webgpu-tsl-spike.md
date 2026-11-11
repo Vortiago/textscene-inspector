@@ -26,7 +26,7 @@ switch, and a move to `WebGPURenderer` as a later and separate project.
 | Item | Value |
 | --- | --- |
 | Branch | `claude/project-thread-h5eutl` |
-| Prototype commit | `1e9bd589822e` |
+| Prototype commit | `0fdcc03d0478` |
 | Base commit on `main` | `8a7e571c` |
 | three | 0.187.0 |
 | @react-three/fiber | 9.8.2 |
