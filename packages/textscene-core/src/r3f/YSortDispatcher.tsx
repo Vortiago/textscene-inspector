@@ -5,7 +5,7 @@
  * (`ySortRows`), each interleaving with sibling CanvasItems.
  */
 
-import { useEffect, useId, useMemo, type ReactNode } from 'react';
+import { useId, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import type { TileSetModel } from '../resources/tileset/types.js';
 import { ySortRows } from '../resources/tileset/tileYSort.js';
@@ -26,9 +26,7 @@ import {
   allocateNodePaintRange,
   isTopLevelItem,
   packPaintRanges,
-  isControlType,
   paintRangeSize,
-  type PaintRange,
 } from './canvasPaintOrder.js';
 import { PaintRangeProvider, useCanvasRootRanges, usePaintRange } from './contexts/PaintOrderContext.js';
 import { joinPath } from '../utils/nodePath.js';
@@ -38,14 +36,19 @@ import { transform2DXform } from '../godot/math/transform2d.js';
 // edge resolves through `nodeComponentRegistry` at runtime, so there is no cycle.
 import { DispatchedNode } from './NodeDispatcher.js';
 import { NodePathProvider, useNodePath } from './contexts/NodePathContext.js';
+import { hasControl, sceneOrderBasesBelow } from './ySortSceneOrder.js';
 import { useLiveDrawnPatchesBelow } from './liveNodePatches.js';
-import { useControlOrigins, usePublishControlRuns } from './contexts/ControlYSortContext.js';
+import {
+  useControlTransforms,
+  usePublishYSortShifts,
+  type YSortShift,
+} from './contexts/ControlYSortContext.js';
 
 /** Performs the y-sort pass on a y_sort_enabled Node2D's or TileMapLayer's children. */
-export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children: ReactNode }) {
+export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children?: ReactNode }) {
   const path = useNodePath() ?? node.name;
   const patches = useLiveDrawnPatchesBelow(path);
-  const controlOrigins = useControlOrigins();
+  const controlTransforms = useControlTransforms();
   // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer). A layer that
   // roots the sort lists its own rows first, so its children number from 1.
   const rawItems = useMemo(() => {
@@ -53,10 +56,10 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
     const children = collectYSortedItems(node, Y_SORT_ROOT, ownRows ? 1 : 0, [], {
       path,
       patches,
-      controlOrigins,
+      controlTransforms,
     });
     return ownRows ? [ownRows, ...children] : children;
-  }, [node, path, patches, controlOrigins]);
+  }, [node, path, patches, controlTransforms]);
   // Each y-sorted layer expands against its own grid, so every distinct
   // `tile_set` in the list is resolved, not just the first one's.
   const refs = useMemo(() => tileSetRefsOf(rawItems), [rawItems]);
@@ -123,19 +126,22 @@ function SortedChildren({
     return liveItems.map((item) => ({ item, range: rangeOf.get(ySortItemId(item))! }));
   }, [sorted, liveItems, ownSequence, paintRange]);
 
-  // The Control walk draws a Control child, so it takes the run this sort gives it.
-  const publishRuns = usePublishControlRuns(useId());
-  useEffect(() => {
-    if (!publishRuns) return;
-    const runs = new Map<string, PaintRange>();
+  // The Control walk draws the Control subtrees, so it takes the runs this sort gave them. A layout
+  // effect, so the walk and the sort settle before the first paint.
+  const publishShifts = usePublishYSortShifts();
+  const owner = useId();
+  useLayoutEffect(() => {
+    if (!publishShifts) return;
+    const sceneOrderBases = sceneOrderBasesBelow(node, paintRange, basePath);
+    const shifts = new Map<string, YSortShift>();
     for (const { item, range } of packed) {
-      if (item.node && isControlType(item.node.type)) {
-        runs.set(liftedPath(basePath, item.liftedPast, item.node.name), range);
-      }
+      if (!item.node || !hasControl(item.node)) continue;
+      const path = liftedPath(basePath, item.liftedPast, item.node.name);
+      shifts.set(path, { run: range, from: sceneOrderBases.get(path) ?? range.base });
     }
-    publishRuns(runs);
-  }, [packed, basePath, publishRuns]);
-  useEffect(() => () => publishRuns?.(null), [publishRuns]);
+    publishShifts(owner, shifts);
+  }, [packed, node, paintRange, basePath, publishShifts, owner]);
+  useLayoutEffect(() => () => publishShifts?.(owner, null), [publishShifts, owner]);
 
   return (
     <>

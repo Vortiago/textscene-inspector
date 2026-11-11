@@ -17,8 +17,11 @@ import {
   isCanvasLayerType,
   canvasLayerRanks,
   hostsOwnCanvas,
+  isControlType,
   WHOLE_CANVAS_RANGE,
+  ysortsChildren,
 } from './canvasPaintOrder.js';
+import { YSortDispatcher } from './YSortDispatcher.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import {
   CanvasRootRangesProvider,
@@ -335,7 +338,13 @@ function PlainNode({
     children.push(<NodeEditorIcon key="__icon" node={node} registration={editorIcon} />);
   }
   if (inlineChildren.length > 0) {
-    children.push(<Fragment key="__inline">{inlineChildren}</Fragment>);
+    // No component of a Control sorts its children, so the world walk does for a `y_sort_enabled`
+    // one, as `CanvasItem` does for any node (`canvas_item.cpp:706-709`).
+    children.push(
+      <Fragment key="__inline">
+        {ysortsChildren(node) && isControlType(node.type) ? <YSortDispatcher node={node} /> : inlineChildren}
+      </Fragment>
+    );
   }
   if (extraChildren) {
     // Injected sub-scene roots draw after the authored children, in the room

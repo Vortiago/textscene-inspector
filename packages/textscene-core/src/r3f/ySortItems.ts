@@ -20,8 +20,7 @@ import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { NO_PATCHES, patchedNode, type NodePatches } from './nodePatch.js';
 import { joinPath } from '../utils/nodePath.js';
 import type { LiveNode } from '../resources/liveNode.js';
-import type { ControlOrigins } from './contexts/ControlYSortContext.js';
-import { VECTOR2_ZERO, type Vector2 } from '../godot/math/vector.js';
+import type { ControlTransforms } from './contexts/ControlYSortContext.js';
 
 /** What `_collect_ysort_children` threads down to the children of one y-sorted item. */
 export interface YSortParent {
@@ -92,18 +91,17 @@ function ownBodyOf(node: TscnNode): TscnNode {
 /**
  * A child's transform in the sort root's space, `ysort_xform` (`renderer_canvas_cull.cpp:131`).
  * A Node3D child has no 2D transform: its Vector3 `rotation` would make every sort y NaN. A Control
- * child has no `position` either: its canvas item sits at `controlOrigin`, which the Control walk
- * publishes after its solve, and at the parent's origin until then.
+ * child has no `position` either: its canvas item sits at `controlTransform`, which the Control
+ * walk publishes after its solve, and at the parent's origin until then.
  */
 function toSortRootOf(
   child: TscnNode,
   parent: YSortParent,
-  controlOrigin: Vector2 | undefined
+  controlTransform: Transform2DColumns | undefined
 ): Transform2DColumns {
   if (descendsFromClass(child.type, 'Node3D')) return parent.toSortRoot;
   if (isControlType(child.type)) {
-    const { x: tx, y: ty } = controlOrigin ?? VECTOR2_ZERO;
-    return multiplyTransform2D(parent.toSortRoot, { ...TRANSFORM2D_IDENTITY, tx, ty });
+    return controlTransform ? multiplyTransform2D(parent.toSortRoot, controlTransform) : parent.toSortRoot;
   }
   return multiplyTransform2D(
     parent.toSortRoot,
@@ -119,10 +117,10 @@ function toSortRootOf(
 function itemSortKey(
   child: TscnNode,
   parent: YSortParent,
-  controlOrigin: Vector2 | undefined
+  controlTransform: Transform2DColumns | undefined
 ): YSortParent & { sortY: number } {
   const props = child.properties as Record<string, unknown>;
-  const toSortRoot = toSortRootOf(child, parent, controlOrigin);
+  const toSortRoot = toSortRootOf(child, parent, controlTransform);
   // A scene tile sorts as its instance root, which sits inside the placement node that stands for it.
   const root = (child as LiveNode).ySortRoot;
   const sortY = root ? multiplyTransform2D(toSortRoot, root.pose).ty : toSortRoot.ty;
@@ -132,8 +130,9 @@ function itemSortKey(
   // `CLAMP(p_z + z_index, CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX)` under `z_relative`
   // and assign `z_index` unclamped otherwise. A second copy could drift from the lights.
   const ownZ = accumulateCanvasItemZ(parent.effectiveZ, {
-    z_index: (props.z_index as number | undefined) ?? 0,
-    z_as_relative: props.z_as_relative as boolean | undefined,
+    // A Control's properties are camelCase.
+    z_index: ((props.z_index ?? props.zIndex) as number | undefined) ?? 0,
+    z_as_relative: (props.z_as_relative ?? props.zAsRelative) as boolean | undefined,
   });
   const effectiveZ = root
     ? accumulateCanvasItemZ(ownZ, { z_index: root.zIndex, z_as_relative: root.zAsRelative })
@@ -171,8 +170,8 @@ export function collectSortRootRows(node: TscnNode): YSortItem | null {
 export interface YSortLivePoses {
   path: string;
   patches: NodePatches;
-  /** Where the Control walk put each Control's canvas item, by path, which a Control child sorts on. */
-  controlOrigins?: ControlOrigins;
+  /** Where the Control walk put each Control's canvas item in its parent, by path, which a Control child sorts on. */
+  controlTransforms?: ControlTransforms;
 }
 
 const AUTHORED_POSES: YSortLivePoses = { path: '', patches: NO_PATCHES };
@@ -206,11 +205,11 @@ export function collectYSortedItems(
     const key = itemSortKey(
       patchedNode(child, live.patches.get(childPoses.path)),
       parent,
-      live.controlOrigins?.get(childPoses.path)
+      live.controlTransforms?.get(childPoses.path)
     );
     // A y-sorted Control is one atomic item here: the Control walk sorts its children
     // (`sortYSortedControls`), so the world sort must not merge them as items of its own.
-    const isYSort = ysortsChildren(child) && !isControlType(child.type);
+    const isYSort = ysortsChildren(child);
 
     const group = ySortTileGroup(child);
     const isTileGroup = group !== undefined;

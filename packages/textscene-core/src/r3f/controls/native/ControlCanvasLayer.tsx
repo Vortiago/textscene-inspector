@@ -4,15 +4,11 @@
  * It feeds `buildSolveTree`, the project's viewport rect and theme scale, and the layer-0 canvas
  * modulate into `<ControlCanvasWalker>`. The windows the root window embeds draw over the Controls.
  */
-import { useCallback, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { useGameViewportRect } from '../../gameViewportRect.js';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
-import { useControlRuns, usePublishControlOrigins } from '../../contexts/ControlYSortContext';
-import { snapControlsToPixelsEnabled } from './controlPixelSnap';
-import { controlOriginsOf } from './controlYSort';
-import type { SolvedControl } from './controlRectSolver';
 import { projectEmbedsSubwindows } from '../../../parser/projectSettingsParser';
 import { useBuildSolveTree } from './buildSolveTree';
 import { nativeTheme } from './nativeTheme';
@@ -61,18 +57,6 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
   const ranks = useMemo(() => canvasLayerRanks(rootNodes), [rootNodes]);
   const embedderSize = useStableVector2({ x: viewport.w, y: viewport.h });
 
-  // A y-sorted node in the world sorts its Control children on the origins this solve gives them.
-  const publishOrigins = usePublishControlOrigins();
-  const runs = useControlRuns();
-  const snapToPixels = snapControlsToPixelsEnabled(settings);
-  const onSolved = useCallback(
-    (solved: ReadonlyMap<string, SolvedControl>) =>
-      publishOrigins?.(controlOriginsOf(tree, solved, snapToPixels)),
-    [publishOrigins, tree, snapToPixels]
-  );
-  // The origins outlive no layer: a later one at the same paths would sort on stale values.
-  useEffect(() => () => publishOrigins?.(new Map()), [publishOrigins]);
-
   return (
     <CanvasModulateContext.Provider value={canvasModulate}>
       <LayerRanksProvider value={ranks}>
@@ -82,8 +66,6 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
           viewport={viewport}
           theme={theme}
           measurer={measureText}
-          runs={runs}
-          onSolved={onSolved}
         />
         {/* A window the root does not embed is a native one, drawn outside the game frame. */}
         {projectEmbedsSubwindows(settings) ? (

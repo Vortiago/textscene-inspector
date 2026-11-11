@@ -1,15 +1,16 @@
 /**
- * The y-sort of a Control's children, which the rect solve has to place first: a Control sorts on
- * the origin of its canvas item (`control.cpp:719-736`), so the order is known only after the
- * solve. {@link sortYSortedControls} re-packs the draw-sequence runs `buildSolveTree` gave a
- * `y_sort_enabled` Control's children in scene order. Pure data: no React, no THREE.
+ * What a y-sort needs from the Control walk and gives back to it. A Control sorts on the origin of
+ * its canvas item (`control.cpp:719-736`), which only the rect solve knows, so
+ * {@link controlTransformsOf} reads it off the solve, and {@link applyYSortShifts} moves the
+ * draw-sequence runs `buildSolveTree` gave in scene order to where the sort put them.
+ * Pure data: no React, no THREE.
  */
 
-import type { Vector2 } from '../../../godot/math/vector';
 import { VECTOR2_ZERO } from '../../../godot/math/vector';
-import type { ControlOrigins, ControlRuns } from '../../contexts/ControlYSortContext';
-import { ysortsChildren, type PaintRange } from '../../canvasPaintOrder';
-import { compareSortY } from '../../ySortOrder';
+import { transform2DFromParts } from '../../../godot/math/transform2d';
+import { parentPathOf } from '../../../utils/nodePath';
+import type { PaintRange } from '../../canvasPaintOrder';
+import type { ControlTransforms, YSortShifts } from '../../contexts/ControlYSortContext';
 import type { SolvedControl } from './controlRectSolver';
 import { controlDrawTransformOf, controlItemOriginUnder } from './controlPixelSnap';
 import { controlProps, isPromotedControl, type SolveNode } from './solveTree';
@@ -26,44 +27,39 @@ export function solvedDrawTransformOf(
 }
 
 /**
- * The origin of a Control's canvas item in its parent, which `_collect_ysort_children` sorts on
- * (`renderer_canvas_cull.cpp:131`).
+ * The transform of every Control's canvas item in its parent: `_update_canvas_item_transform`
+ * (`control.cpp:719-737`), whose origin is the position plus the pivot translation, whole pixels
+ * when it snaps. A y-sort reads the origin of each item it sorts, and composes the whole transform
+ * down a y-sorted item it merges.
  */
-function controlItemOriginOf(node: SolveNode, solved: SolvedControl, snapToPixels: boolean): Vector2 {
-  return controlItemOriginUnder(solved.rect, VECTOR2_ZERO, solvedDrawTransformOf(node, solved), snapToPixels);
-}
-
-/**
- * The canvas item origin of each Control that parents at a non-Control: a walk root, or a Control
- * promoted past a Node2D. A y-sorted Node2D sorts those, and `sortYSortedControls` the rest.
- */
-export function controlOriginsOf(
+export function controlTransformsOf(
   tree: readonly SolveNode[],
   solved: ReadonlyMap<string, SolvedControl>,
   snapToPixels: boolean
-): ControlOrigins {
-  const origins = new Map<string, Vector2>();
-  const visit = (node: SolveNode, isRoot: boolean): void => {
+): ControlTransforms {
+  const transforms = new Map<string, ReturnType<typeof transform2DFromParts>>();
+  const visit = (node: SolveNode): void => {
     const entry = solved.get(node.path);
-    if (entry && (isRoot || isPromotedControl(node))) {
-      origins.set(node.path, controlItemOriginOf(node, entry, snapToPixels));
+    if (entry) {
+      const draw = solvedDrawTransformOf(node, entry);
+      const origin = controlItemOriginUnder(entry.rect, VECTOR2_ZERO, draw, snapToPixels);
+      transforms.set(node.path, transform2DFromParts(draw.rotation, draw.scale, 0, origin));
     }
-    for (const child of node.children) visit(child, false);
+    node.children.forEach(visit);
   };
-  for (const root of tree) visit(root, true);
-  return origins;
+  tree.forEach(visit);
+  return transforms;
 }
 
 /**
- * `node` and its subtree with every draw sequence moved by `delta`. It mirrors each sequence field
- * of `SolveNode`: a new one has to move here too.
+ * `node` over `children`, with every draw sequence of its own moved by `delta`. It mirrors each
+ * sequence field of `SolveNode`, which `controlYSort.conformance.test.ts` guards.
  */
-function shiftedBy(node: SolveNode, delta: number): SolveNode {
-  if (delta === 0) return node;
+function withShiftedRuns(node: SolveNode, delta: number, children: readonly SolveNode[]): SolveNode {
   const shift = (range: PaintRange): PaintRange => ({ base: range.base + delta, size: range.size });
   return {
     ...node,
-    children: node.children.map((child) => shiftedBy(child, delta)),
+    children,
     paintRange: shift(node.paintRange),
     behindRanges: node.behindRanges.map(shift),
     paintSequence: node.paintSequence + delta,
@@ -72,68 +68,41 @@ function shiftedBy(node: SolveNode, delta: number): SolveNode {
   };
 }
 
-/**
- * `children` re-packed in y order from the lowest base among them. A child the solve did not
- * place, or a promoted one, keeps its run: it is no child item of this node.
- */
-function packedByY(
-  children: readonly SolveNode[],
-  solved: ReadonlyMap<string, SolvedControl>,
-  snapToPixels: boolean
-): readonly SolveNode[] {
-  const sortable = children.filter((child) => !isPromotedControl(child) && solved.has(child.path));
-  if (sortable.length < 2) return children;
-  const sortYs = new Map(
-    sortable.map((child) => [child, controlItemOriginOf(child, solved.get(child.path)!, snapToPixels).y])
-  );
-  // Array#sort is stable, so equal ys keep the scene order `ysort_index` gives.
-  const sorted = [...sortable].sort((a, b) => compareSortY(sortYs.get(a)!, sortYs.get(b)!));
-  let base = sortable.reduce((lowest, child) => Math.min(lowest, child.paintRange.base), Infinity);
-  const placed = new Map<SolveNode, SolveNode>();
-  for (const child of sorted) {
-    placed.set(child, shiftedBy(child, base - child.paintRange.base));
-    base += child.paintRange.size;
+/** The shift of the nearest node above `path` that the sort moved, or undefined. */
+function shiftAbove(path: string, shifts: YSortShifts) {
+  for (let up = parentPathOf(path); up !== null; up = parentPathOf(up)) {
+    const shift = shifts.get(up);
+    if (shift) return shift;
   }
-  const repacked = children.map((child) => placed.get(child) ?? child);
-  return repacked.every((child, i) => child === children[i]) ? children : repacked;
+  return undefined;
 }
 
 /**
- * `tree` with each subtree whose path has a run moved to the base of that run. A y-sorted Node2D
- * gives its Control children their runs, and a run keeps the size the subtree already has.
+ * `tree` with each subtree the y-sort moved drawn at its new run, or `tree` itself when it moved
+ * none. A Control the sort lists as an item takes the run it gave. A Control that parents at a
+ * non-Control, a walk root or one promoted past a Node2D, moves with the nearest Node2D above it the
+ * sort moved, since that item's run holds the Control's.
  */
-export function placeInRuns(tree: readonly SolveNode[], runs: ControlRuns): readonly SolveNode[] {
-  if (runs.size === 0) return tree;
-  const placed = tree.map((node) => placedBelow(node, runs));
-  return placed.every((node, i) => node === tree[i]) ? tree : placed;
+export function applyYSortShifts(tree: readonly SolveNode[], shifts: YSortShifts): readonly SolveNode[] {
+  if (shifts.size === 0) return tree;
+  return placeAll(tree, shifts, true, 0);
 }
 
-function placedBelow(node: SolveNode, runs: ControlRuns): SolveNode {
-  const run = runs.get(node.path);
-  const moved = run ? shiftedBy(node, run.base - node.paintRange.base) : node;
-  const children = placeInRuns(moved.children, runs);
-  return children === moved.children ? moved : { ...moved, children };
-}
-
-/**
- * `tree` with each `y_sort_enabled` Control's children drawn in y order, or `tree` itself when no
- * Control sorts. The sort y is the origin of the child's canvas item, snapped as it draws.
- */
-export function sortYSortedControls(
-  tree: readonly SolveNode[],
-  solved: ReadonlyMap<string, SolvedControl>,
-  snapToPixels: boolean
+/** `nodes` placed, each by the shift of the nearest ancestor that moved, `inherited` unless it moved itself. */
+function placeAll(
+  nodes: readonly SolveNode[],
+  shifts: YSortShifts,
+  areRoots: boolean,
+  inherited: number
 ): readonly SolveNode[] {
-  const sortedTree = tree.map((node) => sortedBelow(node, solved, snapToPixels));
-  return sortedTree.every((node, i) => node === tree[i]) ? tree : sortedTree;
+  const placed = nodes.map((node) => placeNode(node, shifts, areRoots, inherited));
+  return placed.every((node, i) => node === nodes[i]) ? nodes : placed;
 }
 
-function sortedBelow(
-  node: SolveNode,
-  solved: ReadonlyMap<string, SolvedControl>,
-  snapToPixels: boolean
-): SolveNode {
-  const below = sortYSortedControls(node.children, solved, snapToPixels);
-  const ordered = ysortsChildren(node.node) ? packedByY(below, solved, snapToPixels) : below;
-  return ordered === node.children ? node : { ...node, children: ordered };
+function placeNode(node: SolveNode, shifts: YSortShifts, isRoot: boolean, inherited: number): SolveNode {
+  const own = shifts.get(node.path);
+  const above = !own && (isRoot || isPromotedControl(node)) ? shiftAbove(node.path, shifts) : undefined;
+  const delta = own ? own.run.base - node.paintRange.base : above ? above.run.base - above.from : inherited;
+  const children = placeAll(node.children, shifts, false, delta);
+  return delta === 0 && children === node.children ? node : withShiftedRuns(node, delta, children);
 }

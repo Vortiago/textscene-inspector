@@ -1,34 +1,44 @@
 /**
- * The link between a y-sorted node's world walk and the Control walk beside it. The Control walk
- * knows each Control's canvas item origin once it has solved, and the world walk packs the draw
- * order of the node's children. Each publishes what the other reads: the origins to the sort, and
- * the run the sort gives a Control child back to the Control walk. Without a provider both are
- * empty, and a Control sorts at the origin 0 in the scene order it was authored.
+ * The link between the world walk's y-sort and the Control walk beside it. The Control walk knows
+ * where each Control's canvas item sits once it has solved, and the y-sort packs the draw order of
+ * every item below a `y_sort_enabled` node. Each publishes what the other reads: the transforms to
+ * the sort, and the shifts the sort gives the Control subtrees back to the walk. Without a
+ * provider both are empty: a Control sorts at the origin and draws in the order it was authored.
  */
 import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Vector2 } from '../../godot/math/vector.js';
+import type { Transform2DColumns } from '../../godot/math/transform2d.js';
 import type { PaintRange } from '../canvasPaintOrder.js';
 
-/** Control paths to the origin of their canvas item in their parent, written only by the Control walk. */
-export type ControlOrigins = ReadonlyMap<string, Vector2>;
-/** Control paths to the draw-sequence run a y-sort gave them, written only by `YSortDispatcher`. */
-export type ControlRuns = ReadonlyMap<string, PaintRange>;
+/** Control paths to the transform of their canvas item in their parent, written only by the Control walk. */
+export type ControlTransforms = ReadonlyMap<string, Transform2DColumns>;
 
-const NO_ORIGINS: ControlOrigins = new Map();
-const NO_RUNS: ControlRuns = new Map();
-
-interface Publishers {
-  /** Replaces every origin: the Control walk publishes its whole solve. */
-  publishOrigins: (origins: ControlOrigins) => void;
-  /** Replaces the runs `owner` gave, or removes them when `runs` is null. */
-  publishRuns: (owner: string, runs: ControlRuns | null) => void;
+/** Where the y-sort moved a node's draw-sequence run, written only by `YSortDispatcher`. */
+export interface YSortShift {
+  /** The run the sort gave the node's subtree. */
+  run: PaintRange;
+  /** Where the scene order put that run, which `buildSolveTree` allocated the Control subtrees from. */
+  from: number;
 }
 
-const OriginsContext = createContext<ControlOrigins>(NO_ORIGINS);
-const RunsContext = createContext<ControlRuns>(NO_RUNS);
+/** Node paths to their shift. */
+export type YSortShifts = ReadonlyMap<string, YSortShift>;
+
+const NO_TRANSFORMS: ControlTransforms = new Map();
+const NO_SHIFTS: YSortShifts = new Map();
+
+/** Replaces the entries `owner` gave, or removes them when `entries` is null. */
+type Publish<Entries> = (owner: string, entries: Entries | null) => void;
+
+interface Publishers {
+  publishTransforms: Publish<ControlTransforms>;
+  publishShifts: Publish<YSortShifts>;
+}
+
+const TransformsContext = createContext<ControlTransforms>(NO_TRANSFORMS);
+const ShiftsContext = createContext<YSortShifts>(NO_SHIFTS);
 const PublishersContext = createContext<Publishers | null>(null);
-OriginsContext.displayName = 'ControlOriginsContext';
-RunsContext.displayName = 'ControlRunsContext';
+TransformsContext.displayName = 'ControlTransformsContext';
+ShiftsContext.displayName = 'YSortShiftsContext';
 PublishersContext.displayName = 'ControlYSortPublishers';
 
 function sameEntries<T>(
@@ -44,60 +54,65 @@ function sameEntries<T>(
   return true;
 }
 
-const sameOrigin = (a: Vector2, b: Vector2) => a.x === b.x && a.y === b.y;
-const sameRun = (a: PaintRange, b: PaintRange) => a.base === b.base && a.size === b.size;
+const sameTransform = (a: Transform2DColumns, b: Transform2DColumns) =>
+  a.a === b.a && a.b === b.b && a.c === b.c && a.d === b.d && a.tx === b.tx && a.ty === b.ty;
+const sameShift = (a: YSortShift, b: YSortShift) =>
+  a.from === b.from && a.run.base === b.run.base && a.run.size === b.run.size;
+
+/**
+ * The entries of every owner, merged, with the publisher that sets one owner's share. A publish
+ * that changes nothing leaves the merged map as it was, so no reader re-renders.
+ */
+function useOwnedEntries<T>(none: ReadonlyMap<string, T>, equal: (x: T, y: T) => boolean) {
+  const [merged, setMerged] = useState(none);
+  /** Written only by the publisher: the entries each owner gave. */
+  const byOwner = useRef(new Map<string, ReadonlyMap<string, T>>());
+  const publish = useMemo<Publish<ReadonlyMap<string, T>>>(
+    () => (owner, entries) => {
+      if (entries) byOwner.current.set(owner, entries);
+      else byOwner.current.delete(owner);
+      const next = new Map<string, T>();
+      for (const owned of byOwner.current.values()) for (const [path, entry] of owned) next.set(path, entry);
+      setMerged((held) => (sameEntries(held, next, equal) ? held : next));
+    },
+    [equal]
+  );
+  return [merged, publish] as const;
+}
 
 export function ControlYSortProvider({ children }: { children: ReactNode }) {
-  const [origins, setOrigins] = useState<ControlOrigins>(NO_ORIGINS);
-  const [runs, setRuns] = useState<ControlRuns>(NO_RUNS);
-  /** Written only by `publishRuns`: the runs each owner gave, merged into `runs`. */
-  const runsByOwner = useRef(new Map<string, ControlRuns>());
-
-  const publishers = useMemo<Publishers>(
-    () => ({
-      // A walk that publishes what it already published leaves every reader as it was.
-      publishOrigins: (next) => setOrigins((held) => (sameEntries(held, next, sameOrigin) ? held : next)),
-      publishRuns: (owner, next) => {
-        if (next) runsByOwner.current.set(owner, next);
-        else runsByOwner.current.delete(owner);
-        const merged = new Map<string, PaintRange>();
-        for (const owned of runsByOwner.current.values())
-          for (const [path, run] of owned) merged.set(path, run);
-        setRuns((held) => (sameEntries(held, merged, sameRun) ? held : merged));
-      },
-    }),
-    []
+  const [transforms, publishTransforms] = useOwnedEntries(NO_TRANSFORMS, sameTransform);
+  const [shifts, publishShifts] = useOwnedEntries(NO_SHIFTS, sameShift);
+  const publishers = useMemo(
+    () => ({ publishTransforms, publishShifts }),
+    [publishTransforms, publishShifts]
   );
 
   return (
     <PublishersContext.Provider value={publishers}>
-      <OriginsContext.Provider value={origins}>
-        <RunsContext.Provider value={runs}>{children}</RunsContext.Provider>
-      </OriginsContext.Provider>
+      <TransformsContext.Provider value={transforms}>
+        <ShiftsContext.Provider value={shifts}>{children}</ShiftsContext.Provider>
+      </TransformsContext.Provider>
     </PublishersContext.Provider>
   );
 }
 
-/** The origins the Control walk published. */
-export function useControlOrigins(): ControlOrigins {
-  return useContext(OriginsContext);
+/** The transforms the Control walks published. */
+export function useControlTransforms(): ControlTransforms {
+  return useContext(TransformsContext);
 }
 
-/** The runs the y-sorts gave their Control children. */
-export function useControlRuns(): ControlRuns {
-  return useContext(RunsContext);
+/** The shifts the y-sorts published. */
+export function useYSortShifts(): YSortShifts {
+  return useContext(ShiftsContext);
 }
 
-/** `publishOrigins` of the enclosing provider, or null where there is none. */
-export function usePublishControlOrigins(): Publishers['publishOrigins'] | null {
-  return useContext(PublishersContext)?.publishOrigins ?? null;
+/** The publisher of the Control walk's transforms, or null where there is no provider. */
+export function usePublishControlTransforms(): Publish<ControlTransforms> | null {
+  return useContext(PublishersContext)?.publishTransforms ?? null;
 }
 
-/** `publishRuns` of the enclosing provider, bound to the caller's own key, or null where there is none. */
-export function usePublishControlRuns(owner: string): ((runs: ControlRuns | null) => void) | null {
-  const publish = useContext(PublishersContext)?.publishRuns;
-  return useMemo(
-    () => (publish ? (runs: ControlRuns | null) => publish(owner, runs) : null),
-    [publish, owner]
-  );
+/** The publisher of the y-sort's shifts, or null where there is no provider. */
+export function usePublishYSortShifts(): Publish<YSortShifts> | null {
+  return useContext(PublishersContext)?.publishShifts ?? null;
 }
