@@ -1,8 +1,8 @@
 /**
- * Every Button subclass draws a focused button as `Button::_notification` does: the `focus` box over the
- * chrome (`button.cpp:220-222`), and `font_focus_color` and `icon_focus_color` in the normal draw mode only
- * (`button.cpp:280-292`). Two more facts of that draw hold for the whole family: the theme icon `icon`
- * stands in for a missing one (`button.cpp:224-227`), and a subclass draws its own element over the label.
+ * What `Button::_notification` draws holds for every Button subclass. A focused button draws the `focus`
+ * box over the chrome (`button.cpp:220-222`), and `font_focus_color` and `icon_focus_color` in the normal
+ * draw mode only (`button.cpp:280-292`). The theme icon `icon` stands in for a missing one
+ * (`button.cpp:224-227`). A subclass draws its own element over the label.
  */
 import { describe, expect, it } from 'vitest';
 import type { ComponentType } from 'react';
