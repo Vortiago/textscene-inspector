@@ -4,7 +4,7 @@
  */
 
 /** `rendering/2d/shadow_atlas/size` (`servers/rendering/rendering_server.cpp:3714`). */
-export const DEFAULT_CANVAS_SHADOW_ATLAS_SIZE = 2048;
+const DEFAULT_CANVAS_SHADOW_ATLAS_SIZE = 2048;
 
 /**
  * Texels in one light's map for a project's `rendering/2d/shadow_atlas/size`, or the default for a

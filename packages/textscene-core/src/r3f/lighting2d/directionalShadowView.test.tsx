@@ -17,7 +17,10 @@ import { fakeLightPassHost } from './testing/fakeLightPassHost';
 import type { CanvasClip, LightPassHost } from './lightPassHost';
 import type { Quad2, ShadowCasterEdges } from './shadowCasterEdges';
 import { canvasColorSpaceOf } from '../canvasColorSpace';
-import { DEFAULT_CANVAS_SHADOW_ATLAS_SIZE } from '../../godot/rendering/canvasShadowAtlas';
+import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
+
+/** The size Godot uses when the project sets none. */
+const DEFAULT_ATLAS_SIZE = canvasShadowAtlasSize(undefined);
 
 const projectSettingsMock = vi.hoisted(() => ({
   settings: null as Record<string, string> | null,
@@ -74,7 +77,7 @@ function binsOver(clip: CanvasClip, direction: { x: number; y: number }, maxDist
     direction,
     maxDistance,
     scale: clip.scale,
-    bins: DEFAULT_CANVAS_SHADOW_ATLAS_SIZE,
+    bins: DEFAULT_ATLAS_SIZE,
   };
   return Array.from(buildDirectionalShadowMap(view, CASTERS).bins);
 }

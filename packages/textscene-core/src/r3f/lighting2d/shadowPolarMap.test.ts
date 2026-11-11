@@ -4,11 +4,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_CANVAS_SHADOW_ATLAS_SIZE } from '../../godot/rendering/canvasShadowAtlas';
+import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
 import { SHADOW_MAP_FAR, buildShadowPolarMap, type ShadowPolarLight } from './shadowPolarMap';
 import { type LightRect, type OccluderCullMode, type ShadowCasterEdges } from './shadowCasterEdges';
 import { worldEdges } from './testing/worldEdges';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
+
+/** The size Godot uses when the project sets none. */
+const DEFAULT_ATLAS_SIZE = canvasShadowAtlasSize(undefined);
 
 /** A rect no test occluder falls outside, so a test not about the cull measures only its own subject. */
 const UNBOUNDED: LightRect = {
@@ -19,11 +22,7 @@ const UNBOUNDED: LightRect = {
 };
 
 /** The map at the project's default atlas size, which every test not about the size reads. */
-function buildMap(
-  light: ShadowPolarLight,
-  casters: readonly ShadowCasterEdges[],
-  bins = DEFAULT_CANVAS_SHADOW_ATLAS_SIZE
-) {
+function buildMap(light: ShadowPolarLight, casters: readonly ShadowCasterEdges[], bins = DEFAULT_ATLAS_SIZE) {
   return buildShadowPolarMap(light, casters, bins);
 }
 
@@ -33,12 +32,12 @@ function lightAt(x: number, y: number, radius: number): ShadowPolarLight {
 }
 
 /**
- * `tex_ofs * DEFAULT_CANVAS_SHADOW_ATLAS_SIZE` rounded to the nearest bin centre. Pinned apart
+ * `tex_ofs * DEFAULT_ATLAS_SIZE` rounded to the nearest bin centre. Pinned apart
  * from the mapping: quadrant 0 draws into `glViewport(0, …, shadow_texture_size / 4, 2)`
  * through `(x, y, 0) → (y, 0, -x)`, so its column is `(y/x) * 256 + 256`.
  */
 function binOf(u: number): number {
-  return Math.round(u * DEFAULT_CANVAS_SHADOW_ATLAS_SIZE - 0.5);
+  return Math.round(u * DEFAULT_ATLAS_SIZE - 0.5);
 }
 
 function segment(
@@ -80,7 +79,7 @@ function binsTowards(x: number, y: number): number[] {
 const middleBin = (bins: readonly number[]) => (bins[0]! + bins[bins.length - 1]!) / 2;
 
 /** Where a ray at `u` falls in bin indices, whose centres sit half a bin in. */
-const rayBin = (u: number) => u * DEFAULT_CANVAS_SHADOW_ATLAS_SIZE - 0.5;
+const rayBin = (u: number) => u * DEFAULT_ATLAS_SIZE - 0.5;
 
 describe('the polar mapping of the map', () => {
   it('places the four axes at the four quadrant centres', () => {
@@ -104,7 +103,7 @@ describe('the polar mapping of the map', () => {
     // wrap makes bin 0 and the last bin neighbours there.
     const seam = binsTowards(1, 1);
     expect(seam).toContain(0);
-    expect(seam).toContain(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE - 1);
+    expect(seam).toContain(DEFAULT_ATLAS_SIZE - 1);
     expect(middleBin(binsTowards(1, -1))).toBeCloseTo(rayBin(0.25), 0);
     expect(middleBin(binsTowards(-1, -1))).toBeCloseTo(rayBin(0.5), 0);
     expect(middleBin(binsTowards(-1, 1))).toBeCloseTo(rayBin(0.75), 0);
@@ -119,9 +118,7 @@ describe('the polar mapping of the map', () => {
       [-2, 5],
       [-7, -3],
     ] as const) {
-      const opposite = binsTowards(-x, -y).map(
-        (bin) => (bin + DEFAULT_CANVAS_SHADOW_ATLAS_SIZE / 2) % DEFAULT_CANVAS_SHADOW_ATLAS_SIZE
-      );
+      const opposite = binsTowards(-x, -y).map((bin) => (bin + DEFAULT_ATLAS_SIZE / 2) % DEFAULT_ATLAS_SIZE);
       expect(opposite).toEqual(binsTowards(x, y));
     }
   });
@@ -161,7 +158,7 @@ describe('buildShadowPolarMap', () => {
 
   it('leaves every bin at far when nothing casts', () => {
     const map = buildMap(lightAt(0, 0, RADIUS), []);
-    expect(map).toHaveLength(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE);
+    expect(map).toHaveLength(DEFAULT_ATLAS_SIZE);
     expect([...map].every((v) => v === SHADOW_MAP_FAR)).toBe(true);
   });
 
@@ -183,7 +180,7 @@ describe('buildShadowPolarMap', () => {
     const lo = binOf(plusXCoord(100, 50));
     const hi = binOf(plusXCoord(100, -50));
     expect(lo).toBeLessThan(hi);
-    for (let bin = 0; bin < DEFAULT_CANVAS_SHADOW_ATLAS_SIZE; bin += 1) {
+    for (let bin = 0; bin < DEFAULT_ATLAS_SIZE; bin += 1) {
       const covered = map[bin]! < SHADOW_MAP_FAR;
       // The two boundary bins straddle the endpoint ray, so only the strictly
       // interior range is asserted covered and the strictly exterior uncovered.
@@ -197,9 +194,9 @@ describe('buildShadowPolarMap', () => {
     // pos_box.y = -+1 and the covered range is exactly the +X quadrant.
     const map = buildMap(lightAt(0, 0, RADIUS), [segment(100, -100, 100, 100)]);
     expect(map[0]).toBeCloseTo(100 / ZFAR, 6);
-    expect(map[DEFAULT_CANVAS_SHADOW_ATLAS_SIZE / 4 - 1]).toBeCloseTo(100 / ZFAR, 6);
-    expect(map[DEFAULT_CANVAS_SHADOW_ATLAS_SIZE / 4]).toBe(SHADOW_MAP_FAR);
-    expect(map[DEFAULT_CANVAS_SHADOW_ATLAS_SIZE - 1]).toBe(SHADOW_MAP_FAR);
+    expect(map[DEFAULT_ATLAS_SIZE / 4 - 1]).toBeCloseTo(100 / ZFAR, 6);
+    expect(map[DEFAULT_ATLAS_SIZE / 4]).toBe(SHADOW_MAP_FAR);
+    expect(map[DEFAULT_ATLAS_SIZE - 1]).toBe(SHADOW_MAP_FAR);
   });
 
   it('spans three quadrants, and the wrap, for a wide segment', () => {
@@ -215,7 +212,7 @@ describe('buildShadowPolarMap', () => {
     // 100. Inverting `tex_ofs = pos_box.y * 0.125 + 0.125` by hand at bin 40's
     // centre gives the ray (1, 8u - 1), which meets Godot y = -100 at
     // x = 100 / (1 - 8u).
-    const u = 40.5 / DEFAULT_CANVAS_SHADOW_ATLAS_SIZE;
+    const u = 40.5 / DEFAULT_ATLAS_SIZE;
     expect(binOf(0.02)).toBe(40);
     expect(map[40]).toBeCloseTo(100 / (1 - 8 * u) / ZFAR, 6);
     // Off the ends of the arc: beyond the left endpoint, and straight down.
@@ -254,7 +251,7 @@ describe('buildShadowPolarMap', () => {
     expect(map[511]).toBeCloseTo(100 / ZFAR, 6);
     // Quadrant 1's first: ray (3 − 8u, 1), axis +Y, so it stores y where the ray
     // meets x = 100: a different number for a neighbouring texel, by design.
-    expect(map[512]).toBeCloseTo(100 / (3 - 8 * (512.5 / DEFAULT_CANVAS_SHADOW_ATLAS_SIZE)) / ZFAR, 6);
+    expect(map[512]).toBeCloseTo(100 / (3 - 8 * (512.5 / DEFAULT_ATLAS_SIZE)) / ZFAR, 6);
     expect(map[512]).not.toBeCloseTo(map[511]!, 6);
 
     // Endpoint bins by hand from the box mapping: pos_box.y = 0.5 at one end
@@ -360,7 +357,7 @@ describe('buildShadowPolarMap', () => {
  * sides, so the test is the axis distance against the bin's.
  */
 function noneTapShadows(map: Float32Array, dx: number, dyUp: number): boolean {
-  const depth = map[Math.floor(plusXCoord(dx, dyUp) * DEFAULT_CANVAS_SHADOW_ATLAS_SIZE)]!;
+  const depth = map[Math.floor(plusXCoord(dx, dyUp) * DEFAULT_ATLAS_SIZE)]!;
   return depth <= dx / (1000 * 1.1);
 }
 

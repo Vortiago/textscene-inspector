@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_CANVAS_SHADOW_ATLAS_SIZE } from '../../godot/rendering/canvasShadowAtlas';
+import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
 import * as THREE from 'three';
 import {
   createDirectionalLightMaterial,
@@ -17,11 +17,14 @@ import {
 import { Light2DBlendMode } from '../../godot/scene/light2d';
 import { Light2DShadowFilter } from '../../godot/scene/light2d.js';
 
+/** The size Godot uses when the project sets none. */
+const DEFAULT_ATLAS_SIZE = canvasShadowAtlasSize(undefined);
+
 const WARM = { r: 1, g: 0.75, b: 0.35, a: 0.5 };
 
 function sampling(overrides: Partial<DirectionalShadowSampling> = {}): DirectionalShadowSampling {
   return {
-    map: createDirectionalShadowTexture(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE),
+    map: createDirectionalShadowTexture(DEFAULT_ATLAS_SIZE),
     filter: Light2DShadowFilter.NONE,
     smooth: 0,
     ndcToShadow: new THREE.Matrix3(),
@@ -133,11 +136,11 @@ describe('createDirectionalShadowColorMaterial', () => {
 describe('createDirectionalShadowTexture', () => {
   it('holds one full-precision depth per bin, sampled texel by texel', () => {
     // A half float rounds a depth near 1 by 1/2048 of z_far, 5 px at the default max_distance.
-    const texture = createDirectionalShadowTexture(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE);
+    const texture = createDirectionalShadowTexture(DEFAULT_ATLAS_SIZE);
     expect(texture.type).toBe(THREE.FloatType);
     expect(texture.minFilter).toBe(THREE.NearestFilter);
     expect(texture.magFilter).toBe(THREE.NearestFilter);
-    expect(texture.image.width).toBe(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE);
+    expect(texture.image.width).toBe(DEFAULT_ATLAS_SIZE);
   });
 });
 
@@ -149,8 +152,8 @@ describe('createDirectionalShadowTexture at another size', () => {
 
 describe('writeDirectionalShadowMap', () => {
   it('fills the texture in place and flags the upload', () => {
-    const texture = createDirectionalShadowTexture(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE);
-    const bins = new Float32Array(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE).fill(1);
+    const texture = createDirectionalShadowTexture(DEFAULT_ATLAS_SIZE);
+    const bins = new Float32Array(DEFAULT_ATLAS_SIZE).fill(1);
     bins[3] = 0.123456;
     const versionBefore = texture.version;
     writeDirectionalShadowMap(texture, bins);
@@ -161,18 +164,18 @@ describe('writeDirectionalShadowMap', () => {
   it('refuses a longer map', () => {
     expect(() =>
       writeDirectionalShadowMap(
-        createDirectionalShadowTexture(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE),
-        new Float32Array(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE + 1)
+        createDirectionalShadowTexture(DEFAULT_ATLAS_SIZE),
+        new Float32Array(DEFAULT_ATLAS_SIZE + 1)
       )
     ).toThrow(RangeError);
   });
 
   it('refuses a shorter map rather than leaving stale bins behind', () => {
-    const texture = createDirectionalShadowTexture(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE);
-    writeDirectionalShadowMap(texture, new Float32Array(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE).fill(0.5));
-    expect(() =>
-      writeDirectionalShadowMap(texture, new Float32Array(DEFAULT_CANVAS_SHADOW_ATLAS_SIZE - 1))
-    ).toThrow(RangeError);
-    expect((texture.image.data as Float32Array)[DEFAULT_CANVAS_SHADOW_ATLAS_SIZE - 1]).toBe(0.5);
+    const texture = createDirectionalShadowTexture(DEFAULT_ATLAS_SIZE);
+    writeDirectionalShadowMap(texture, new Float32Array(DEFAULT_ATLAS_SIZE).fill(0.5));
+    expect(() => writeDirectionalShadowMap(texture, new Float32Array(DEFAULT_ATLAS_SIZE - 1))).toThrow(
+      RangeError
+    );
+    expect((texture.image.data as Float32Array)[DEFAULT_ATLAS_SIZE - 1]).toBe(0.5);
   });
 });
