@@ -11,14 +11,17 @@
 import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
-import {
-  buttonIconSlotRequest,
-  fitIconSize,
-  internalMarginAt,
-} from '../../../../r3f/controls/native/buttonBase';
-import { buttonBoxesOf } from '../../../../r3f/controls/native/defaultThemeItems';
+import { fitIconSize, largestThemedIconSize } from '../../../../r3f/controls/native/buttonBase';
+import { WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { BUTTON_DEFAULT_FONT_COLORS, reservingMinimumSizeOf, type ButtonClass } from '../button/nativeSolver';
+import {
+  BUTTON_DEFAULT_FONT_COLORS,
+  buttonIconMaxWidth,
+  buttonNormalBox,
+  buttonTextureSlotsOf,
+  reservingMinimumSizeOf,
+  type ReservingButtonClass,
+} from '../button/nativeSolver';
 import type { CheckBoxIcons } from '../../../../r3f/controls/native/themeIcons';
 import type { CheckBoxProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -74,28 +77,6 @@ export function checkIconSlotRequests(themedIcons: Parameters<typeof themedSlotR
   return themedSlotRequests(CHECK_BOX_ICON_THEME_NAMES, themedIcons);
 }
 
-/** Button's own `icon`, then the themed check icons. */
-export const checkBoxTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => [
-  buttonIconSlotRequest((node.properties as CheckBoxProperties).icon, themedIcons),
-  ...checkIconSlotRequests(themedIcons),
-];
-
-/**
- * `CheckBox::get_icon_size` (`check_box.cpp:35-62`): the max over all 8 icons, whichever is showing.
- * A slot no theme touched falls back to the vendored default's size, since the default theme
- * registers all 8 (`default_theme.cpp:288-295`).
- */
-function checkBoxIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 {
-  let w = 0;
-  let h = 0;
-  for (const name of CHECK_BOX_ICON_THEME_NAMES) {
-    const size = n.textureSlots[name] ?? CHECKBOX_ICON_NATURAL_SIZE;
-    w = Math.max(w, size.x);
-    h = Math.max(h, size.y);
-  }
-  return { x: w, y: h };
-}
-
 /**
  * The size Godot draws the current icon at: its own, fitted, at the offset the largest icon sets
  * (`check_box.cpp:137-142`). An icon that reports size 0 draws nothing.
@@ -105,17 +86,20 @@ function checkBoxDrawnIconSize(
   key: CheckBoxIconKey
 ): Vector2 {
   const own = n.textureSlots[CHECK_BOX_ICON_THEME_NAME[key]] ?? CHECKBOX_ICON_NATURAL_SIZE;
-  return fitIconSize(own, checkBoxIconMaxWidth(n.constants));
+  return fitIconSize(own, buttonIconMaxWidth(n.constants));
 }
 
-/** `icon_max_width`: CheckBox registers none, so Button's default (`0`, unclamped) applies through the shared `theme_override_constants` key. */
-function checkBoxIconMaxWidth(constants: SolveNode['constants']): number {
-  return constants.icon_max_width ?? 0;
-}
-
-/** `CheckBox::get_icon_size` (`check_box.cpp:35-62`): the largest of the 8 icons, fitted to `icon_max_width`. */
+/**
+ * `CheckBox::get_icon_size` (`check_box.cpp:35-62`): the largest of all 8 icons, whichever is showing,
+ * fitted to `icon_max_width`. The default theme registers all 8 (`default_theme.cpp:288-295`).
+ */
 function checkBoxFittedIconSize(n: Pick<SolveNode, 'textureSlots' | 'constants'>): Vector2 {
-  return fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
+  const largest = largestThemedIconSize(
+    n.textureSlots,
+    CHECK_BOX_ICON_THEME_NAMES,
+    CHECKBOX_ICON_NATURAL_SIZE
+  );
+  return fitIconSize(largest, buttonIconMaxWidth(n.constants));
 }
 
 /**
@@ -123,17 +107,20 @@ function checkBoxFittedIconSize(n: Pick<SolveNode, 'textureSlots' | 'constants'>
  * aligns the text LEFT (`check_box.cpp:174`), and the check is the internal margin of the leading side
  * (`:96-101`).
  */
-export const CHECK_BOX_CLASS: ButtonClass = {
+export const CHECK_BOX_CLASS: ReservingButtonClass = {
   fontColors: BUTTON_DEFAULT_FONT_COLORS,
   textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-  internalMargin: (n) => internalMarginAt(n.rtl ? 'right' : 'left', checkBoxFittedIconSize(n).x),
+  reservedElement: (n) => ({ side: n.rtl ? 'right' : 'left', size: checkBoxFittedIconSize(n) }),
 };
 
-/** `CheckBox::get_minimum_size` (`check_box.cpp:64-79`): Button's, with the check reserved beside the content. */
-export const checkBoxMinimumSize: MinimumSizeFn = reservingMinimumSizeOf(
+/** Button's `icon`, then the themed check icons. */
+export const checkBoxTextureSlots: TextureSlotsFn = buttonTextureSlotsOf(
   CHECK_BOX_CLASS,
-  checkBoxFittedIconSize
+  (_node, themedIcons = {}) => checkIconSlotRequests(themedIcons)
 );
+
+/** `CheckBox::get_minimum_size` (`check_box.cpp:64-79`): Button's, with the check reserved beside the content. */
+export const checkBoxMinimumSize: MinimumSizeFn = reservingMinimumSizeOf(CHECK_BOX_CLASS);
 
 /**
  * Where `CheckBox::_notification` draws the icon `key` in a box of `rectSize` (`check_box.cpp:126-142`):
@@ -147,7 +134,7 @@ export function checkBoxCheckRect(
   key: CheckBoxIconKey,
   rectSize: Vector2
 ): Rect2 {
-  const { contentMargin } = n.styleBoxes.normal ?? buttonBoxesOf(n, theme).normal;
+  const { contentMargin } = buttonNormalBox(n, theme);
   const reserved = checkBoxFittedIconSize(n);
   const drawn = checkBoxDrawnIconSize(n, key);
   return {
@@ -158,11 +145,11 @@ export function checkBoxCheckRect(
   };
 }
 
-/** `checkbox_checked_color` and `checkbox_unchecked_color`, both `Color(1, 1, 1)` (`default_theme.cpp:312-313`): the disabled icons carry their own dimming. */
-const CHECK_BOX_ICON_MODULATE_DEFAULT: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
-/** The modulate `CheckBox::_notification` draws the icon with (`check_box.cpp:139-142`). */
+/**
+ * The colour `CheckBox::_notification` draws the icon in (`check_box.cpp:139-142`): `checkbox_checked_color`
+ * or `checkbox_unchecked_color`, both white (`default_theme.cpp:312-313`). The disabled icons carry their own dimming.
+ */
 export function checkBoxCheckColor(props: CheckBoxProperties, colors: SolveNode['colors']): Rgba {
   const key = props.buttonPressed ? 'checkbox_checked_color' : 'checkbox_unchecked_color';
-  return colors[key] ?? CHECK_BOX_ICON_MODULATE_DEFAULT;
+  return colors[key] ?? WHITE_MODULATE;
 }

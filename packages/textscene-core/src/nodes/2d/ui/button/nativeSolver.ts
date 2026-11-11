@@ -20,6 +20,7 @@ import type { Vector2 } from '../../../../godot/math/vector';
 import {
   buttonContentMinimumSize,
   buttonIconSlotRequest,
+  internalMarginAt,
   BUTTON_THEME_KEYS,
   isButtonTextClipped,
   largestStyleBoxMargins,
@@ -116,10 +117,19 @@ export interface ButtonClass {
   /** The text and icon Button holds where they are not its `text` and `icon` properties: OptionButton's selected item. */
   shown?: (props: ButtonProperties) => ButtonShown;
   /**
-   * `_internal_margin` (`button.cpp:247-259`): the width the class reserves on each side for the element
-   * it draws over the Button. Absent, it reserves none.
+   * The element the class draws over the Button: its size, and the side whose `_internal_margin`
+   * reserves its width (`button.cpp:247-259`). Absent, the class reserves none.
    */
-  internalMargin?: (n: ShareNode, props: ButtonProperties) => { left: number; right: number };
+  reservedElement?: (n: ShareNode) => ReservedElement;
+}
+
+/** A class that draws an element over the Button. */
+export type ReservingButtonClass = ButtonClass & Required<Pick<ButtonClass, 'reservedElement'>>;
+
+/** What a Button subclass draws beside the content, such as CheckBox's check. */
+export interface ReservedElement {
+  side: 'left' | 'right';
+  size: Vector2;
 }
 
 /** Button itself, and a subclass that changes nothing: ColorPickerButton. */
@@ -133,10 +143,21 @@ export function buttonShown(buttonClass: ButtonClass, props: ButtonProperties): 
   return buttonClass.shown?.(props) ?? { text: props.text ?? '', icon: props.icon };
 }
 
-/** The texture slots of a Button that shows its own `icon` property: the icon alone. */
-export const buttonTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => [
-  buttonIconSlotRequest((node.properties as ButtonProperties).icon, themedIcons),
-];
+/**
+ * The texture slots of a `buttonClass`: the icon Button shows, first because it is `SolveNode.textureSize`,
+ * then the slots of the class's own element.
+ */
+export function buttonTextureSlotsOf(
+  buttonClass: ButtonClass,
+  ownSlots: TextureSlotsFn = () => []
+): TextureSlotsFn {
+  return (node, themedIcons = {}) => [
+    buttonIconSlotRequest(buttonShown(buttonClass, node.properties as ButtonProperties).icon, themedIcons),
+    ...ownSlots(node, themedIcons),
+  ];
+}
+
+export const buttonTextureSlots: TextureSlotsFn = buttonTextureSlotsOf(BUTTON_CLASS);
 
 /** Whether `props` draws with the focus colours: a focused Button in the normal draw mode (`button.cpp:282-285`). */
 function isButtonFocusStyled(props: Pick<ButtonProperties, 'hasFocus'>, state: ToggleDrawState): boolean {
@@ -191,19 +212,30 @@ interface ButtonStyle {
   box: StyleBoxFlatData;
   /** The margins the content lays out in: the box's own, or the largest of every state under `align_to_largest_stylebox` (`button.cpp:236-239`). */
   margin: StyleBoxFlatData['contentMargin'];
-  /** `_get_largest_stylebox_size` (`button.cpp:97-99`): the padding a subclass keeps around what it reserves. */
-  largestMargin: StyleBoxFlatData['contentMargin'];
+}
+
+/** `_get_largest_stylebox_size` (`button.cpp:97-99`) by side: the padding a subclass keeps around what it reserves. */
+export function buttonLargestMargin(n: ShareNode, theme: NativeTheme): StyleBoxFlatData['contentMargin'] {
+  return largestStyleBoxMargins(n.styleBoxes, buttonBoxesOf(n, theme), n.rtl);
+}
+
+/** `theme_cache.normal_style`, the box a subclass places its element by in every draw state (`check_box.cpp:128`). */
+export function buttonNormalBox(n: ShareNode, theme: NativeTheme): StyleBoxFlatData {
+  return pickButtonStyleBox(n.styleBoxes, buttonBoxesOf(n, theme), 'normal');
+}
+
+/** `icon_max_width`, which only Button registers: `0`, unclamped (`default_theme.cpp:172`). */
+export function buttonIconMaxWidth(constants: SolveNode['constants']): number {
+  return constants.icon_max_width ?? 0;
 }
 
 /** The boxes of `n` by its own class and `theme_type_variation`, for the draw state its properties give. */
 export function buttonStyle(n: ShareNode, theme: NativeTheme): ButtonStyle {
   const props = n.node.properties as ButtonProperties;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
-  const defaults = buttonBoxesOf(n, theme);
-  const box = pickButtonStyleBox(n.styleBoxes, defaults, state, n.rtl);
-  const largestMargin = largestStyleBoxMargins(n.styleBoxes, defaults, n.rtl);
-  const margin = alignsToLargestStyleBox(n.constants) ? largestMargin : box.contentMargin;
-  return { state, box, margin, largestMargin };
+  const box = pickButtonStyleBox(n.styleBoxes, buttonBoxesOf(n, theme), state, n.rtl);
+  const margin = alignsToLargestStyleBox(n.constants) ? buttonLargestMargin(n, theme) : box.contentMargin;
+  return { state, box, margin };
 }
 
 /**
@@ -251,11 +283,12 @@ export function buttonContentFacts(
   rectSize: Vector2
 ): ButtonContentFacts {
   const props = n.node.properties as ButtonProperties;
+  const reserved = buttonClass.reservedElement?.(n);
   return {
     rectSize,
     styleMargin: buttonStyle(n, theme).margin,
     hSeparation: buttonHSeparation(n, theme),
-    iconMaxWidth: n.constants.icon_max_width ?? 0,
+    iconMaxWidth: buttonIconMaxWidth(n.constants),
     // Aligned against the ceiled text width (`scene/gui/button.cpp:343,349`).
     textAlignment: props.alignment ?? buttonClass.textAlignment,
     iconAlignment: props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
@@ -265,7 +298,7 @@ export function buttonContentFacts(
     iconNaturalSize: n.textureSize,
     hasText: buttonShown(buttonClass, props).text.length > 0,
     isClipped: isButtonTextClipped(props),
-    internalMargin: buttonClass.internalMargin?.(n, props),
+    internalMargin: reserved && internalMarginAt(reserved.side, reserved.size.x),
     rtl: n.rtl,
   };
 }
@@ -297,8 +330,9 @@ export function buttonMinimumSizeOf(buttonClass: ButtonClass): MinimumSizeFn {
     // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`):
     // the ceiled extent, not the raw pen advance. Its width drops under `clip_text`, a trimming
     // overrun behaviour or autowrap, since a narrower box trims or wraps it (`button.cpp:493-495`).
-    const content = buttonContentMinimumSize(factsAt({ x: 0, y: 0 }), layout, props);
-    const padding = sidesSize(buttonStyle(n, ctx.theme).margin);
+    const facts = factsAt({ x: 0, y: 0 });
+    const content = buttonContentMinimumSize(facts, layout, props);
+    const padding = sidesSize(facts.styleMargin);
 
     return { x: padding.x + content.x, y: padding.y + content.y };
   };
@@ -307,27 +341,20 @@ export function buttonMinimumSizeOf(buttonClass: ButtonClass): MinimumSizeFn {
 export const buttonMinimumSize: MinimumSizeFn = buttonMinimumSizeOf(BUTTON_CLASS);
 
 /**
- * A minimum size with `element` reserved beside the content, as `CheckBox::get_minimum_size` and
- * `CheckButton::get_minimum_size` reserve their icon (`check_box.cpp:64-79`, `check_button.cpp:64-79`).
- * The content is what `minimumSize` leaves inside the largest box of any draw state (`:68-69`).
+ * The minimum size of a `buttonClass` with its element reserved beside Button's content, as
+ * `CheckBox::get_minimum_size` and `CheckButton::get_minimum_size` reserve their icon (`check_box.cpp:64-79`,
+ * `check_button.cpp:64-79`). The content is what Button's minimum leaves inside the largest box of any
+ * draw state (`:68-69`).
  */
-function withReservedElement(
-  n: ShareNode,
-  theme: NativeTheme,
-  minimumSize: Vector2,
-  element: Vector2
-): Vector2 {
-  const padding = sidesSize(buttonStyle(n, theme).largestMargin);
-  const content = { x: minimumSize.x - padding.x, y: minimumSize.y - padding.y };
-  const reserved = withReservedElementSize(content, element, Math.max(0, buttonHSeparation(n, theme)));
-  return { x: reserved.x + padding.x, y: reserved.y + padding.y };
-}
-
-/** The minimum size of a `buttonClass` that reserves `elementSize(n)` beside Button's content. */
-export function reservingMinimumSizeOf(
-  buttonClass: ButtonClass,
-  elementSize: (n: ShareNode) => Vector2
-): MinimumSizeFn {
+export function reservingMinimumSizeOf(buttonClass: ReservingButtonClass): MinimumSizeFn {
   const buttonSize = buttonMinimumSizeOf(buttonClass);
-  return (n, ctx) => withReservedElement(n, ctx.theme, buttonSize(n, ctx), elementSize(n));
+  return (n, ctx) => {
+    const element = buttonClass.reservedElement(n).size;
+    const padding = sidesSize(buttonLargestMargin(n, ctx.theme));
+    const minimumSize = buttonSize(n, ctx);
+    const content = { x: minimumSize.x - padding.x, y: minimumSize.y - padding.y };
+    const hSeparation = Math.max(0, buttonHSeparation(n, ctx.theme));
+    const reserved = withReservedElementSize(content, element, hSeparation);
+    return { x: reserved.x + padding.x, y: reserved.y + padding.y };
+  };
 }

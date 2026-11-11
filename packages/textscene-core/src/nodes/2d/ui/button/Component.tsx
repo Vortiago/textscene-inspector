@@ -1,12 +1,13 @@
 /**
  * `<ButtonPainter>`, the native (WebGL canvas) painter of `Button` and of every class that extends it:
- * StyleBox chrome unless `flat`, the focus box, an optional icon and an aligned label, laid out by
- * `buttonBase.ts` (`Button::_notification`, `button.cpp:203-460`). A subclass draws its own element over
- * it. Draw state comes from `disabled` and `button_pressed`: a static viewer has no hover.
- * `ControlCanvasWalker` owns `visible`, the children and the transform.
+ * what `Button::_notification` draws (`button.cpp:203-460`), laid out by `buttonBase.ts`. A subclass draws
+ * its own element over it with `<ButtonOverlayIcon>`. A static viewer has no hover draw state.
  */
-import { canvasPieceSlot, wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { useMemo } from 'react';
+import type * as THREE from 'three';
+import type { Rect2 } from '../../../../godot/math/rect2';
+import type { Rgba } from '../../../../godot/math/math';
+import { canvasPieceSlot, wholeKeySlot } from '../../../../r3f/canvasItemState';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -71,12 +72,14 @@ export function ButtonPainter({
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
-  // Pass 1, unwrapped: what the icon's own reservation is measured against. It is the
-  // **solve handoff** the minimum-size solver calls too, so one shaping sizes both. The node is
-  // rebuilt when a font settles (`solveHandoff.ts`), so its identity keys the shape.
+  // Pass 1, unwrapped: the **solve handoff** the minimum-size solver calls too, so one shaping sizes
+  // both. The node is rebuilt when a font settles (`solveHandoff.ts`), so its identity keys the shape.
+  // A wrapping label reads it only for an expanded icon's height, as `tentativeWrapWidthPx` does.
+  const wraps = isButtonAutowrapped(props);
+  const needsUnwrapped = !wraps || props.expandIcon === true;
   const unwrapped = useMemo(
-    () => buttonLabelShape(solveNode, theme, buttonClass),
-    [solveNode, theme, buttonClass]
+    () => (needsUnwrapped ? buttonLabelShape(solveNode, theme, buttonClass) : null),
+    [needsUnwrapped, solveNode, theme, buttonClass]
   );
 
   const ownIcon = buttonShown(buttonClass, props).icon;
@@ -101,7 +104,6 @@ export function ButtonPainter({
   // `button.cpp:428-432` re-shapes a wrapping label at the width the unwrapped pass measured:
   // `is_clipped` is true under autowrap (`:332`), so the icon's reservation does not move
   // with the text. Godot reaches the same state over two frames.
-  const wraps = isButtonAutowrapped(props);
   const wrapWidthPx = wraps ? wrappedLabelWidthPx(facts, unwrapped) : 0;
   const layout = useMemo(
     () => (wraps ? buttonLabelShape(solveNode, theme, buttonClass, wrapWidthPx) : unwrapped),
@@ -157,13 +159,32 @@ export function ButtonPainter({
   );
 }
 
+interface ButtonOverlayIconProps {
+  /** The icon's rect in the Button's top-left coordinates. */
+  rect: Rect2;
+  texture: THREE.Texture | null;
+  /** The theme colour the subclass draws the icon in, before the item's tint. */
+  color: Rgba;
+  tint: Rgba;
+  renderOrder: number;
+}
+
 /**
- * The draw-order key of what a subclass draws after `Button::_notification`: the second of two pieces,
- * two thirds into the Control's unit. The label's outline and fill sit at `renderOrder` and half a unit
- * above it (`textLayerRenderOrder`), and the next Control starts a whole unit above.
+ * The icon a subclass draws after `Button::_notification`, over the label. Its draw-order key is the
+ * second of two pieces of the Control's unit: the label's outline and fill sit at `renderOrder` and half
+ * a unit above it (`textLayerRenderOrder`), and the next Control starts a whole unit above.
  */
-export function buttonOverlayRenderOrder(renderOrder: number): number {
-  return canvasPieceSlot(wholeKeySlot(renderOrder), 1, 2).key;
+export function ButtonOverlayIcon({ rect, texture, color, tint, renderOrder }: ButtonOverlayIconProps) {
+  const drawn = useIconModulate(color, tint);
+  return (
+    <PositionedIcon
+      rect={rect}
+      texture={texture}
+      color={drawn.color}
+      opacity={drawn.opacity}
+      renderOrder={canvasPieceSlot(wholeKeySlot(renderOrder), 1, 2).key}
+    />
+  );
 }
 
 export function Button(props: NativeControlComponentProps) {

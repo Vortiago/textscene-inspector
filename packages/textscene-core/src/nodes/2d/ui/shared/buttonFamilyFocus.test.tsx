@@ -36,22 +36,19 @@ interface FamilyCase {
   Component: ComponentType<NativeControlComponentProps>;
   /** The properties that give the button a label and Button's own icon. */
   shown: Record<string, unknown>;
-  /** The Button icon's place among the icon quads, in draw order. */
-  ownIconIndex: number;
 }
 
 const TEXT_AND_ICON = { text: 'Go', icon: OWN_ICON_REF };
 
 const FAMILY: FamilyCase[] = [
-  { name: 'Button', Component: Button, shown: TEXT_AND_ICON, ownIconIndex: 0 },
-  { name: 'MenuButton', Component: MenuButton, shown: TEXT_AND_ICON, ownIconIndex: 0 },
-  { name: 'CheckBox', Component: CheckBox, shown: TEXT_AND_ICON, ownIconIndex: 0 },
-  { name: 'CheckButton', Component: CheckButton, shown: TEXT_AND_ICON, ownIconIndex: 0 },
+  { name: 'Button', Component: Button, shown: TEXT_AND_ICON },
+  { name: 'MenuButton', Component: MenuButton, shown: TEXT_AND_ICON },
+  { name: 'CheckBox', Component: CheckBox, shown: TEXT_AND_ICON },
+  { name: 'CheckButton', Component: CheckButton, shown: TEXT_AND_ICON },
   {
     name: 'OptionButton',
     Component: OptionButton,
     shown: { items: [{ text: 'Go', id: 0, icon: OWN_ICON_REF }], selected: 0 },
-    ownIconIndex: 0,
   },
 ];
 
@@ -75,12 +72,11 @@ async function drawn(c: FamilyCase, properties: Record<string, unknown>, colors:
   );
   const icons = findIconMeshes(rendered.scene);
   const text = findTextMesh(rendered.scene)!;
-  const meshCount = rendered.scene.findAllByType('Mesh').length;
   return {
     textColor: (text.material as THREE.ShaderMaterial).uniforms.uColor!.value as THREE.Vector3,
     textOpacity: (text.material as THREE.ShaderMaterial).uniforms.uOpacity!.value as number,
-    ownIconColor: (icons[c.ownIconIndex]!.material as THREE.MeshBasicMaterial).color,
-    meshCount,
+    ownIconColor: (icons[0]!.material as THREE.MeshBasicMaterial).color,
+    meshCount: rendered.scene.findAllByType('Mesh').length,
   };
 }
 

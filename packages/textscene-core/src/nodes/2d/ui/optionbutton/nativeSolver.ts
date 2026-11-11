@@ -19,13 +19,11 @@ import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistr
 import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize, sidesSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  buttonIconSlotRequest,
-  internalMarginAt,
   isButtonNodeAutowrapped,
   measuredContentMinimumSize,
   resolveToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
-import { buttonBoxesOf } from '../../../../r3f/controls/native/defaultThemeItems';
+import { WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
@@ -38,13 +36,14 @@ import {
   BUTTON_THEME_FONT_KEY,
   buttonContentFacts,
   buttonHSeparation,
+  buttonLargestMargin,
   buttonMinimumSizeOf,
-  buttonStyle,
+  buttonNormalBox,
+  buttonShown,
   buttonTextTheme,
-  type ButtonClass,
+  buttonTextureSlotsOf,
+  type ReservingButtonClass,
 } from '../button/nativeSolver';
-
-// Selected item
 
 /** The item `_select` copies the text and icon from (`option_button.cpp:423-424`), or none for an absent or out-of-range `selected`. */
 function selectedOptionItem(props: OptionButtonProperties): OptionItem | undefined {
@@ -53,8 +52,6 @@ function selectedOptionItem(props: OptionButtonProperties): OptionItem | undefin
   return selectedIndex >= 0 && selectedIndex < items.length ? items[selectedIndex] : undefined;
 }
 
-// Arrow
-
 /** `option_button_arrow.svg`'s authored size (`native/themeIcons.ts`), 12x12, never run through `_fit_icon_size`. */
 const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vector2 = { x: 12, y: 12 };
 
@@ -62,22 +59,6 @@ const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vector2 = { x: 12, y: 12 };
 function optionItemIconSlotKey(index: number): string {
   return `popup/item_${index}/icon`;
 }
-
-/**
- * The selected item's icon as Button's `icon` (`option_button.cpp:424`), first because it is `textureSize`, then
- * every item's own icon, then the themeable `arrow` (`BIND_THEME_ITEM_CUSTOM(... "arrow")`, `:620`).
- */
-export const optionButtonTextureSlots: TextureSlotsFn = (node, themedIcons = {}) => {
-  const props = node.properties as OptionButtonProperties;
-  const selectedIcon = selectedOptionItem(props)?.icon;
-  const requests: TextureSlotRequest[] = [buttonIconSlotRequest(selectedIcon, themedIcons)];
-  for (const [index, { icon }] of (props.items ?? []).entries()) {
-    if (icon) requests.push({ key: optionItemIconSlotKey(index), ref: icon });
-  }
-  const themed = themedIcons.arrow;
-  if (themed) requests.push(themedSlotRequest('arrow', themed));
-  return requests;
-};
 
 /**
  * `get_minimum_size` and `_notification` read `theme_cache.arrow_icon->get_size()` directly
@@ -93,17 +74,31 @@ function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 {
  * aligns the text LEFT (`option_button.cpp:654`), `_select` gives Button the selected item's text and icon
  * (`:423-424`), and the arrow is the internal margin of the trailing side (`:83-89,139-147`).
  */
-export const OPTION_BUTTON_CLASS: ButtonClass = {
+export const OPTION_BUTTON_CLASS: ReservingButtonClass = {
   fontColors: BUTTON_DEFAULT_FONT_COLORS,
   textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
   shown: (props) => {
     const selected = selectedOptionItem(props);
     return { text: selected?.text ?? '', icon: selected?.icon };
   },
-  internalMargin: (n) => internalMarginAt(n.rtl ? 'left' : 'right', optionButtonArrowSize(n).x),
+  reservedElement: (n) => ({ side: n.rtl ? 'left' : 'right', size: optionButtonArrowSize(n) }),
 };
 
-// Minimum size
+/**
+ * The selected item's icon as Button's `icon` (`option_button.cpp:424`), then every item's own icon, then
+ * the themeable `arrow` (`BIND_THEME_ITEM_CUSTOM(... "arrow")`, `:620`).
+ */
+export const optionButtonTextureSlots: TextureSlotsFn = buttonTextureSlotsOf(
+  OPTION_BUTTON_CLASS,
+  (node, themedIcons = {}) => {
+    const requests: TextureSlotRequest[] = [];
+    for (const [index, { icon }] of ((node.properties as OptionButtonProperties).items ?? []).entries()) {
+      if (icon) requests.push({ key: optionItemIconSlotKey(index), ref: icon });
+    }
+    if (themedIcons.arrow) requests.push(themedSlotRequest('arrow', themedIcons.arrow));
+    return requests;
+  }
+);
 
 const buttonMinimumSize = buttonMinimumSizeOf(OPTION_BUTTON_CLASS);
 
@@ -120,10 +115,10 @@ function longestItemMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
 
   // The facts only an item's text and icon change, and equal texts measure alike.
   const buttonFacts = buttonContentFacts(n, ctx.theme, OPTION_BUTTON_CLASS, { x: 0, y: 0 });
-  const padding = buttonFacts.styleMargin;
+  const padding = sidesSize(buttonFacts.styleMargin);
   const measuredByText = new Map<string, Vector2>();
   // An empty item text keeps the button's own paragraph, the selected item's text (`button.cpp:485-486`).
-  const selectedText = selectedOptionItem(props)?.text ?? '';
+  const selectedText = buttonShown(OPTION_BUTTON_CLASS, props).text;
   const measure = (itemText: string): Vector2 => {
     const text = itemText || selectedText;
     if (!ctx.measureText || !text) return { x: 0, y: 0 };
@@ -134,8 +129,7 @@ function longestItemMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
     return size;
   };
 
-  const normalBox = n.styleBoxes.normal ?? buttonBoxesOf(n, ctx.theme).normal;
-  const longest = contentMarginSize(normalBox);
+  const longest = contentMarginSize(buttonNormalBox(n, ctx.theme));
   for (const [index, { text }] of (props.items ?? []).entries()) {
     // `paragraph->get_size()` is ceiled (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`),
     // so the max is over whole-pixel widths. `clip_text`, a trimming overrun or autowrap zeroes the
@@ -147,8 +141,8 @@ function longestItemMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
       iconNaturalSize: n.textureSlots[optionItemIconSlotKey(index)] ?? null,
     };
     const content = measuredContentMinimumSize(facts, measure(text), props);
-    longest.x = Math.max(longest.x, padding.left + padding.right + content.x);
-    longest.y = Math.max(longest.y, padding.top + padding.bottom + content.y);
+    longest.x = Math.max(longest.x, padding.x + content.x);
+    longest.y = Math.max(longest.y, padding.y + content.y);
   }
   return longest;
 }
@@ -170,7 +164,7 @@ export function isOptionButtonSizeDependent(n: SolveNode): boolean {
  */
 export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const minimumSize = fitsToLongestItem(n) ? longestItemMinimumSize(n, ctx) : buttonMinimumSize(n, ctx);
-  const padding = sidesSize(buttonStyle(n, ctx.theme).largestMargin);
+  const padding = sidesSize(buttonLargestMargin(n, ctx.theme));
   const arrow = optionButtonArrowSize(n);
   const hSeparation = Math.max(0, buttonHSeparation(n, ctx.theme));
   return {
@@ -178,8 +172,6 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
     y: Math.max(minimumSize.y - padding.y, arrow.y) + padding.y,
   };
 };
-
-// The arrow
 
 /**
  * Where `OptionButton::_notification` draws the arrow in a box of `rectSize` (`option_button.cpp:122-131`):
@@ -197,14 +189,12 @@ export function optionButtonArrowRect(n: ShareNode, theme: NativeTheme, rectSize
   };
 }
 
-const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
 /**
  * The arrow's modulate (`option_button.cpp:98-118`): white, or the label's font colour of the draw state
  * where the theme sets `modulate_arrow`, which the default theme leaves off (`default_theme.cpp:251`).
  */
 export function optionButtonArrowColor(n: ShareNode, theme: NativeTheme): Rgba {
-  if (!n.constants.modulate_arrow) return WHITE;
+  if (!n.constants.modulate_arrow) return WHITE_MODULATE;
   const props = n.node.properties as OptionButtonProperties;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
   return buttonTextTheme(n, props, state, { theme }, OPTION_BUTTON_CLASS).color;

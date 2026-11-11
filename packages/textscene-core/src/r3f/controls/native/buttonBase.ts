@@ -37,7 +37,7 @@ import type { TextBidiOptions } from './text/textBidiOptions';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { type Rgba } from '../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
-import type { Vector2 } from '../../../godot/math/vector';
+import { vector2Max, type Vector2 } from '../../../godot/math/vector';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 
@@ -83,8 +83,6 @@ type MeasuredBoxName = (typeof MEASURED_BOX_NAMES)[number];
  * `Button::_update_style_margins` (`button.cpp:52-95`): the largest content margin of each side over the
  * boxes of every draw mode. `align_to_largest_stylebox` lays the button out in them, and a subclass takes
  * their sum as the padding around what it reserves (`_get_largest_stylebox_size`, `check_box.cpp:68`).
- * The default theme gives `hover_pressed` only to CheckBox and CheckButton, as their one empty box
- * (`default_theme.cpp:283,322`), so only a scene's own `hover_pressed` can change the answer.
  */
 export function largestStyleBoxMargins(
   overrides: Readonly<Record<string, StyleBoxFlatData>>,
@@ -168,7 +166,7 @@ export function shapeButtonLabel(text: string, options: ButtonLabelShapeOptions)
 const BUTTON_DEFAULT_TRIM_FLAGS = BREAK_TRIM_END_EDGE_SPACES;
 
 /** The properties `Button::_shape` and `get_minimum_size_for_text_and_icon` read to wrap a label (`button.cpp:493,546-561`). */
-export interface ButtonWrapProperties {
+interface ButtonWrapProperties {
   autowrapMode?: number;
   autowrapTrimFlags?: number;
 }
@@ -248,6 +246,20 @@ export interface ButtonContentInput {
 /** What `layoutButtonContent` reads of the node, before the shaped label's own size and direction. */
 export type ButtonContentFacts = Omit<ButtonContentInput, 'textNaturalSize' | 'isTextRtl'>;
 
+/**
+ * The largest of the theme icons `names`, as `CheckBox::get_icon_size` takes it (`check_box.cpp:35-62`).
+ * An icon no theme touched has the size of the vendored default, `fallback`.
+ */
+export function largestThemedIconSize(
+  textureSlots: SolveNode['textureSlots'],
+  names: readonly string[],
+  fallback: Vector2
+): Vector2 {
+  let largest: Vector2 = { x: 0, y: 0 };
+  for (const name of names) largest = vector2Max(largest, textureSlots[name] ?? fallback);
+  return largest;
+}
+
 /** `_set_internal_margin` of one side (`check_box.cpp:96-101`, `check_button.cpp:96-104`): the other stays zero. */
 export function internalMarginAt(side: 'left' | 'right', px: number): { left: number; right: number } {
   return side === 'left' ? { left: px, right: 0 } : { left: 0, right: px };
@@ -277,7 +289,7 @@ export interface ButtonLabelBox {
   alignment: number;
 }
 
-export interface ButtonContentLayout {
+interface ButtonContentLayout {
   /** The icon to draw, `null` for no icon or an `expand_icon` one with no room left. */
   icon: ButtonIconLayout | null;
   /**
