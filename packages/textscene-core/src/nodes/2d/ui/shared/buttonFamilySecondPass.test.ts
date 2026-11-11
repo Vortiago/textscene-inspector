@@ -18,10 +18,6 @@ function nodeOf(type: string, autowrapMode: number): SolveNode {
 }
 
 describe.each(['Button', 'CheckBox', 'CheckButton', 'MenuButton'])('%s second solve pass', (type) => {
-  it('is declared size-dependent', () => {
-    expect(controlSolverRegistry.isSizeDependentMinimum(type)).toBe(true);
-  });
-
   it('is read for a wrapping label', () => {
     expect(controlSolverRegistry.readsTentativeRect(nodeOf(type, AUTOWRAP_WORD_SMART))).toBe(true);
   });

@@ -238,11 +238,6 @@ class ControlSolverRegistry {
     this.sizeDependentMinimumTypes.set(typeName, isDependent);
   }
 
-  /** Whether the type is registered through `registerSizeDependentMinimum`, whatever its predicate says of a node. */
-  isSizeDependentMinimum(typeName: string): boolean {
-    return this.sizeDependentMinimumTypes.has(typeName);
-  }
-
   /** Whether this node's `MinimumSizeFn` reads `SolveContext.tentativeRect`: `solveControlTree` runs its second pass for one. */
   readsTentativeRect(n: SolveNode): boolean {
     return this.sizeDependentMinimumTypes.get(n.node.type)?.(n) ?? false;

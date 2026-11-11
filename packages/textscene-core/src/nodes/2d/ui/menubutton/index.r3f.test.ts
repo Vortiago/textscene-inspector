@@ -5,9 +5,14 @@
 import { describe, expect, it } from 'vitest';
 import './index.r3f';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 
 describe('MenuButton index.r3f self-registration', () => {
   it('declares MenuButton size-dependent, so an autowrapping label gets its second pass', () => {
-    expect(controlSolverRegistry.isSizeDependentMinimum('MenuButton')).toBe(true);
+    expect(
+      controlSolverRegistry.readsTentativeRect({
+        node: { type: 'MenuButton', properties: { autowrapMode: 3 } },
+      } as unknown as SolveNode)
+    ).toBe(true);
   });
 });
