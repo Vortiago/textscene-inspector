@@ -11,10 +11,9 @@
  */
 
 import { multiplyModulate } from '../../canvasItemModulate';
-import type { ShareNode, SolveNode } from './solveTree';
-import type { SolveContext, TextureSlotRequest } from './solverRegistry';
+import type { SolveNode } from './solveTree';
+import type { TextureSlotRequest } from './solverRegistry';
 import type { TextThemeKeys } from './textTheme';
-import { resolveNodeFontMetrics } from './text/resolveNodeFontMetrics';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
 import { drawnLinesInBox, textParagraphLineShiftPx } from './text/lineDrawClip';
@@ -34,7 +33,7 @@ import {
   type TextBufferTrimOptions,
   type TextClipProperties,
 } from './text/textOverrun';
-import { controlBidiOptions, type BidiProperties, type TextBidiOptions } from './text/textBidiOptions';
+import type { TextBidiOptions } from './text/textBidiOptions';
 import type { Rect2 } from '../../../godot/math/rect2';
 import { type Rgba } from '../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../godot/math/alignment';
@@ -62,7 +61,7 @@ export function resolveToggleDrawState(
  * mirrored boxes, OptionButton's, equal their plain siblings
  * (`default_theme.cpp:215-233`), so `defaults` has no mirrored twin.
  */
-export function pickButtonStyleBox<State extends ToggleDrawState>(
+export function pickButtonStyleBox<State extends string>(
   overrides: Readonly<Record<string, StyleBoxFlatData>>,
   defaults: Readonly<Record<State, StyleBoxFlatData>>,
   state: State,
@@ -73,6 +72,36 @@ export function pickButtonStyleBox<State extends ToggleDrawState>(
     if (mirrored) return mirrored;
   }
   return overrides[state] ?? defaults[state];
+}
+
+/** The boxes `Button::_update_style_margins` always measures (`button.cpp:66,75-90`). `hover_pressed` joins only where a theme sets it. */
+const MEASURED_BOX_NAMES = ['normal', 'pressed', 'hover', 'disabled'] as const;
+
+type MeasuredBoxName = (typeof MEASURED_BOX_NAMES)[number];
+
+/**
+ * `Button::_update_style_margins` (`button.cpp:52-95`): the largest content margin of each side over the
+ * boxes of every draw mode. `align_to_largest_stylebox` lays the button out in them, and a subclass takes
+ * their sum as the padding around what it reserves (`_get_largest_stylebox_size`, `check_box.cpp:68`).
+ * The default theme gives `hover_pressed` only to CheckBox and CheckButton, as their one empty box
+ * (`default_theme.cpp:283,322`), so only a scene's own `hover_pressed` can change the answer.
+ */
+export function largestStyleBoxMargins(
+  overrides: Readonly<Record<string, StyleBoxFlatData>>,
+  defaults: Readonly<Record<MeasuredBoxName, StyleBoxFlatData>>,
+  rtl: boolean
+): StyleBoxFlatData['contentMargin'] {
+  const boxes = MEASURED_BOX_NAMES.map((name) => pickButtonStyleBox(overrides, defaults, name, rtl));
+  const hoverPressed = (rtl ? overrides.hover_pressed_mirrored : undefined) ?? overrides.hover_pressed;
+  if (hoverPressed) boxes.push(hoverPressed);
+  const largest = { left: 0, top: 0, right: 0, bottom: 0 };
+  for (const { contentMargin } of boxes) {
+    largest.left = Math.max(largest.left, contentMargin.left);
+    largest.top = Math.max(largest.top, contentMargin.top);
+    largest.right = Math.max(largest.right, contentMargin.right);
+    largest.bottom = Math.max(largest.bottom, contentMargin.bottom);
+  }
+  return largest;
 }
 
 /** The same componentwise multiply `<StyleBoxQuad>` applies to a StyleBox's two colours, for a single `Rgba` (font/icon modulate). */
@@ -514,26 +543,6 @@ function labelMinimumTextSize(
   return { x: textMinimumWidthPx(layout.widthPx, props), y: layout.heightPx };
 }
 
-/** The label of a node shaped as `Button::_shape` does (`button.cpp:546-561`), or null for no text or no measurer. */
-export function shapedNodeLabel(
-  n: ShareNode,
-  ctx: Pick<SolveContext, 'measureText'>,
-  props: ButtonWrapProperties & BidiProperties & { text?: string },
-  label: { fontSizePx: number; themeFontKey: string; boxWidthPx: number }
-): TextLayoutResult | null {
-  const text = props.text ?? '';
-  const { fontSizePx, themeFontKey, boxWidthPx } = label;
-  // Resolved for empty text too: an unresolvable font warns once per solve, as the painter's does.
-  const fontMetrics = resolveNodeFontMetrics(n, themeFontKey);
-  if (!ctx.measureText || text.length === 0) return null;
-  return shapeWrappedButtonLabel(text, props, {
-    fontSizePx,
-    fontMetrics,
-    bidi: controlBidiOptions(props, n),
-    boxWidthPx,
-  });
-}
-
 /** `button.cpp:266-275`: LEFT and RIGHT trade places under RTL, and any other value stays. */
 function swapAlignmentSide(alignment: number): number {
   if (alignment === H_RIGHT) return H_LEFT;
@@ -737,20 +746,13 @@ export function withReservedElementSize(content: Vector2, element: Vector2, hSep
   return { x: content.x + separation + element.x, y: Math.max(content.y, element.y) };
 }
 
-/** The `SolveNode.textureSlots` key of Button's own `icon`. */
-const BUTTON_ICON_SLOT_KEY = 'icon';
-
 /**
- * Button's own `icon` ref as a texture slot, for a Button-family type that registers a `TextureSlotsFn` of
- * its own and so loses the generic `icon` slot. It goes first: the first request is `textureSize`.
+ * Button's `icon` as the first texture slot of a type that registers a `TextureSlotsFn`, so
+ * `SolveNode.textureSize` is the icon's size for every Button subclass, as it is for a Button. The slot
+ * is there without an icon too, or the first themed icon would stand in for it.
  */
-export function buttonIconSlotRequests(icon: string | undefined): TextureSlotRequest[] {
-  return icon ? [{ key: BUTTON_ICON_SLOT_KEY, ref: icon }] : [];
-}
-
-/** The size the solver holds for Button's own icon: what a painter lays out for, loaded or not. */
-export function ownButtonIconSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 | null {
-  return n.textureSlots[BUTTON_ICON_SLOT_KEY] ?? null;
+export function buttonIconSlotRequest(icon: string | undefined): TextureSlotRequest {
+  return { key: 'icon', ref: icon ?? '' };
 }
 
 /**

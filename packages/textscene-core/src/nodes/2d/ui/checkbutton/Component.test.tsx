@@ -242,6 +242,7 @@ describe("<CheckButton>: Button's inherited icon (button.cpp:333-405)", () => {
     const node: SolveNode = {
       ...solveNode({ icon: OWN_ICON_REF, ...properties }),
       resources: OWN_ICON_SCOPE,
+      textureSize: { x: 12, y: 12 },
       textureSlots: { icon: { x: 12, y: 12 } },
       rtl,
     };
@@ -288,6 +289,7 @@ describe("<CheckButton>: Button's inherited icon (button.cpp:333-405)", () => {
     const node: SolveNode = {
       ...solveNode({ icon: OWN_ICON_REF, text: 'Hi' }),
       resources: OWN_ICON_SCOPE,
+      textureSize: { x: 12, y: 12 },
       textureSlots: { icon: { x: 12, y: 12 } },
     };
     const painter = <CheckButton {...painterEnv()} solveNode={node} rect={RECT} renderOrder={0} />;

@@ -360,6 +360,7 @@ describe("<OptionButton>: the selected item's icon (option_button.cpp:424, butto
       solveNode={{
         ...solveNode({ items: ICON_ITEMS, selected }),
         resources: OWN_ICON_SCOPE,
+        textureSize: { x: 12, y: 12 },
         textureSlots: { icon: { x: 12, y: 12 } },
       }}
       rect={RECT}

@@ -1,7 +1,7 @@
 /**
- * Button's native (WebGL canvas) rect solver: `Button::get_minimum_size_for_text_and_icon`
- * (`scene/gui/button.cpp:481-526`, reached with an empty `p_text` that reuses the node's shaped text),
- * the theme-override keys and Button's default colours. The draw-time layout lives in
+ * The native (WebGL canvas) rect solver of Button and of every class that extends it:
+ * `Button::get_minimum_size_for_text_and_icon` (`scene/gui/button.cpp:481-526`), the theme items a Button
+ * reads, and what a subclass changes of both ({@link ButtonClass}). The draw-time layout lives in
  * `r3f/controls/native/buttonBase.ts`.
  *
  * Portions ported from Godot Engine (MIT).
@@ -13,19 +13,21 @@ import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/nativ
 import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   buttonContentMinimumSize,
   BUTTON_THEME_KEYS,
   isButtonTextClipped,
+  largestStyleBoxMargins,
   pickButtonStyleBox,
   resolveToggleDrawState,
   shapeWrappedButtonLabel,
   tentativeWrapWidthPx,
+  withReservedElementSize,
   type ButtonContentFacts,
-  type ButtonContentInput,
   type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
+import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { sidesSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { buttonBoxesOf, defaultFontColorOf } from '../../../../r3f/controls/native/defaultThemeItems';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
@@ -47,11 +49,11 @@ import {
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 
 /**
- * Button's theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:152`). Only
- * {@link buttonLabelShape} reads it, and this module and `Component.tsx` both call that, so the
- * two agree on the font.
+ * The theme font key of Button and of every class that extends it, `SceneStringName(font)`: each registers
+ * it under its own type (`scene/theme/default_theme.cpp:152,237,263,297,337`), and the lookup starts at
+ * the node's class.
  */
-const BUTTON_THEME_FONT_KEY = 'font';
+export const BUTTON_THEME_FONT_KEY = 'font';
 
 /** Button's own `font_color` default (`default_theme.cpp:156`). */
 export const BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
@@ -90,185 +92,232 @@ const BUTTON_FOCUS_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font
 /** `icon_focus_color` (`button.cpp:286-288`): applied only where a theme sets it. */
 const BUTTON_ICON_FOCUS_COLOR_KEY = 'icon_focus_color';
 
+/** The text and icon a Button holds and draws. */
+interface ButtonShown {
+  text: string;
+  /** A raw Texture2D ref. */
+  icon: string | undefined;
+}
+
+/**
+ * What a class that extends Button changes of Button's draw and minimum size. The painter and the solver
+ * read one of these, so a Button behaviour is written once for the whole family.
+ */
+export interface ButtonClass {
+  /** The font colour the default theme gives the class in each draw state. */
+  fontColors: Readonly<Record<ToggleDrawState, Rgba>>;
+  /** The text alignment the constructor sets: CENTER for a Button (`button.h`). */
+  textAlignment: number;
+  /** The text and icon Button holds where they are not its `text` and `icon` properties: OptionButton's selected item. */
+  shown?: (props: ButtonProperties) => ButtonShown;
+  /**
+   * `_internal_margin` (`button.cpp:247-259`): the width the class reserves on each side for the element
+   * it draws over the Button. Absent, it reserves none.
+   */
+  internalMargin?: (n: ShareNode, props: ButtonProperties) => { left: number; right: number };
+}
+
+/** Button itself, and a subclass that changes nothing: ColorPickerButton. */
+export const BUTTON_CLASS: ButtonClass = {
+  fontColors: BUTTON_DEFAULT_FONT_COLORS,
+  textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
+};
+
+/** The text and icon `props` draws as a `buttonClass`. */
+export function buttonShown(buttonClass: ButtonClass, props: ButtonProperties): ButtonShown {
+  return buttonClass.shown?.(props) ?? { text: props.text ?? '', icon: props.icon };
+}
+
 /** Whether `props` draws with the focus colours: a focused Button in the normal draw mode (`button.cpp:282-285`). */
-export function isButtonFocusStyled(props: ButtonProperties, state: ToggleDrawState): boolean {
+function isButtonFocusStyled(props: Pick<ButtonProperties, 'hasFocus'>, state: ToggleDrawState): boolean {
   return state === 'normal' && props.hasFocus === true;
 }
 
-/** Resolves this Button's icon modulate colour for `state`: `n.colors` (a local override or the ancestor Theme chain) wins, else the default-theme literal. */
-export function buttonIconColor(colors: SolveNode['colors'], state: ToggleDrawState): Rgba {
+/**
+ * A Button's icon modulate in `state` (`button.cpp:280-330`): `n.colors` (a local override or the ancestor
+ * Theme chain) wins, else the default-theme literal. A focused Button in the normal draw mode reads
+ * `icon_focus_color`, else white, never `icon_normal_color` (`:286-288`).
+ */
+export function buttonIconColor(
+  colors: SolveNode['colors'],
+  state: ToggleDrawState,
+  props: Pick<ButtonProperties, 'hasFocus'> = {}
+): Rgba {
+  if (isButtonFocusStyled(props, state)) {
+    return colors[BUTTON_ICON_FOCUS_COLOR_KEY] ?? BUTTON_ICON_MODULATE.normal;
+  }
   return colors[BUTTON_ICON_COLOR_KEYS[state]] ?? BUTTON_ICON_MODULATE[state];
 }
 
-/** The icon modulate of a focused Button in the normal draw mode: `icon_focus_color`, else white, never `icon_normal_color` (`button.cpp:286-288`). */
-export function buttonFocusIconColor(colors: SolveNode['colors']): Rgba {
-  return colors[BUTTON_ICON_FOCUS_COLOR_KEY] ?? BUTTON_ICON_MODULATE.normal;
-}
-
-/** Resolves this Button's theme font size and colour for `state`: overrides, else the ancestor Theme chain, the theme default or Button's own literal. */
+/**
+ * The theme font size and colour of a Button of `buttonClass` in `state`: overrides, else the ancestor
+ * Theme chain, the theme default or the class's own literal. A focused Button in the normal draw mode
+ * reads `font_focus_color` (`button.cpp:282-285`).
+ */
 export function buttonTextTheme(
   n: ShareNode,
   props: ButtonProperties,
   state: ToggleDrawState,
-  ctx: Pick<SolveContext, 'theme'>
+  ctx: Pick<SolveContext, 'theme'>,
+  buttonClass: ButtonClass = BUTTON_CLASS
 ): ResolvedTextTheme {
   const isFocusStyled = isButtonFocusStyled(props, state);
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color: isFocusStyled
-      ? CONTROL_FONT_FOCUS_COLOR
-      : defaultFontColorOf(n, BUTTON_DEFAULT_FONT_COLORS, state),
+    color: isFocusStyled ? CONTROL_FONT_FOCUS_COLOR : defaultFontColorOf(n, buttonClass.fontColors, state),
   };
   return resolveTextTheme(n, props, isFocusStyled ? BUTTON_FOCUS_KEYS : BUTTON_THEME_KEYS[state], defaults);
 }
 
+/** `align_to_largest_stylebox`, which the default theme turns off (`default_theme.cpp:174`). */
+function alignsToLargestStyleBox(constants: SolveNode['constants']): boolean {
+  return (constants.align_to_largest_stylebox ?? 0) !== 0;
+}
+
+/** The boxes a Button reads in one draw state. */
+interface ButtonStyle {
+  state: ToggleDrawState;
+  /** `_get_current_stylebox` (`button.cpp:101-147`): the box the chrome draws. */
+  box: StyleBoxFlatData;
+  /** The margins the content lays out in: the box's own, or the largest of every state under `align_to_largest_stylebox` (`button.cpp:236-239`). */
+  margin: StyleBoxFlatData['contentMargin'];
+  /** `_get_largest_stylebox_size` (`button.cpp:97-99`): the padding a subclass keeps around what it reserves. */
+  largestMargin: StyleBoxFlatData['contentMargin'];
+}
+
+/** The boxes of `n` by its own class and `theme_type_variation`, for the draw state its properties give. */
+export function buttonStyle(n: ShareNode, theme: NativeTheme): ButtonStyle {
+  const props = n.node.properties as ButtonProperties;
+  const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
+  const defaults = buttonBoxesOf(n, theme);
+  const box = pickButtonStyleBox(n.styleBoxes, defaults, state, n.rtl);
+  const largestMargin = largestStyleBoxMargins(n.styleBoxes, defaults, n.rtl);
+  const margin = alignsToLargestStyleBox(n.constants) ? largestMargin : box.contentMargin;
+  return { state, box, margin, largestMargin };
+}
+
 /**
- * Button's shaped label, the **solve handoff** share (`r3f/controls/native/solveHandoff.ts`) that
- * `buttonMinimumSize` and `Component.tsx` both call. `null` for empty text, which neither draws.
+ * A Button's shaped label, the **solve handoff** share (`r3f/controls/native/solveHandoff.ts`) that
+ * the minimum-size solver and `ButtonPainter` both call. `null` for empty text, which neither draws.
  * A plain function, not a `defineShare` memo: the memo's `(node, theme)` key cannot hold
  * `boxWidthPx`, and would answer the painter with the rows of the solver's tentative width.
  */
 export function buttonLabelShape(
   n: ShareNode,
   theme: SolveContext['theme'],
+  buttonClass: ButtonClass,
   boxWidthPx = 0
 ): TextLayoutResult | null {
   const props = n.node.properties as ButtonProperties;
-  const text = props.text ?? '';
+  const { text } = buttonShown(buttonClass, props);
+  // Resolved for empty text too: an unresolvable font then warns whatever the button shows.
+  const fontMetrics = resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY);
   if (text.length === 0) return null;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
-  const { fontSizePx } = buttonTextTheme(n, props, state, { theme });
+  const { fontSizePx } = buttonTextTheme(n, props, state, { theme }, buttonClass);
   // Not `ctx.measureText`: its `Vector2` drops the layout the painter needs, and its readiness
   // gate belongs to the solver. The painter shapes unconditionally.
   return shapeWrappedButtonLabel(text, props, {
     fontSizePx,
-    fontMetrics: resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY),
+    fontMetrics,
     bidi: controlBidiOptions(props, n),
     boxWidthPx,
   });
 }
 
-interface ButtonContentInputFields {
-  alignment?: number;
-  iconAlignment?: number;
-  verticalIconAlignment?: number;
-  expandIcon?: boolean;
-  /** {@link isButtonTextClipped}. */
-  isClipped: boolean;
-  constants: SolveNode['constants'];
-  separationPx: number;
-  rtl: boolean;
-  rectSize: Vector2;
-  styleMargin: ButtonContentInput['styleMargin'];
-  iconNaturalSize: Vector2 | null;
-  hasText: boolean;
-  /** What a derived class reserves for its own element. Button reserves none. */
-  internalMargin?: ButtonContentInput['internalMargin'];
-}
-
-/** What `layoutButtonContent` reads of the node, shared by the painter and the minimum-size solver. The caller adds the shaped text's size. */
-export function buttonContentInput(fields: ButtonContentInputFields): ButtonContentFacts {
-  return {
-    rectSize: fields.rectSize,
-    styleMargin: fields.styleMargin,
-    hSeparation: fields.constants.h_separation ?? fields.separationPx,
-    iconMaxWidth: fields.constants.icon_max_width ?? 0,
-    // Aligned against the ceiled text width (`scene/gui/button.cpp:343,349`).
-    textAlignment: fields.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
-    iconAlignment: fields.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-    verticalIconAlignment: fields.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
-    expandIcon: fields.expandIcon === true,
-    iconNaturalSize: fields.iconNaturalSize,
-    hasText: fields.hasText,
-    isClipped: fields.isClipped,
-    internalMargin: fields.internalMargin,
-    rtl: fields.rtl,
-  };
-}
-
-/** What a left-aligned Button subclass hands {@link derivedButtonContentFacts}. */
-interface DerivedButtonContent {
-  n: Pick<SolveNode, 'constants' | 'rtl'>;
-  props: ButtonProperties;
-  /** The label when it is not `props.text`: OptionButton's selected item. */
-  text?: string;
-  ctx: Pick<SolveContext, 'theme'>;
-  rectSize: Vector2;
-  iconNaturalSize: Vector2 | null;
-  styleMargin: ButtonContentInput['styleMargin'];
-  /** What the subclass reserves for its own element: a check, a toggle or an arrow. */
-  internalMargin: { left: number; right: number };
-}
-
-/** {@link buttonContentInput} for CheckBox, CheckButton and OptionButton, whose constructors align the text LEFT (`check_box.cpp:174`, `check_button.cpp:174`, `option_button.cpp:654`). */
-export function derivedButtonContentFacts({
-  n,
-  props,
-  text = props.text ?? '',
-  ctx,
-  rectSize,
-  iconNaturalSize,
-  styleMargin,
-  internalMargin,
-}: DerivedButtonContent): ButtonContentFacts {
-  return buttonContentInput({
-    ...props,
-    alignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-    isClipped: isButtonTextClipped(props),
-    constants: n.constants,
-    separationPx: ctx.theme.separation,
-    rtl: n.rtl,
-    rectSize,
-    styleMargin,
-    iconNaturalSize,
-    hasText: text.length > 0,
-    internalMargin,
-  });
+/** `h_separation` of `n`: every class of the family registers `round(4 * scale)` (`default_theme.cpp:171,249,308,348`). */
+export function buttonHSeparation(n: Pick<SolveNode, 'constants'>, theme: NativeTheme): number {
+  return n.constants.h_separation ?? theme.separation;
 }
 
 /**
- * `Button::get_minimum_size_for_text_and_icon` (`button.cpp:481-526`), shaped by {@link buttonLabelShape},
- * without `align_to_largest_stylebox`, which the default theme disables (`:174`). `n.rtl` reaches only
- * the stylebox pick (`:525`, `<state>_mirrored`): the icon terms test `horizontal_icon_alignment`
- * unswapped against CENTER, so the side swap cannot move a minimum size.
+ * What `layoutButtonContent` reads of `n` at `rectSize`, shared by the painter and the minimum-size
+ * solver. The caller adds the shaped text's size.
  */
-export const buttonMinimumSize: MinimumSizeFn = (n, ctx) => {
+export function buttonContentFacts(
+  n: ShareNode,
+  theme: NativeTheme,
+  buttonClass: ButtonClass,
+  rectSize: Vector2
+): ButtonContentFacts {
   const props = n.node.properties as ButtonProperties;
-  const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
-  const styleBox = pickButtonStyleBox(n.styleBoxes, buttonBoxesOf(n, ctx.theme), state, n.rtl);
-  const { x: marginX, y: marginY } = contentMarginSize(styleBox);
+  return {
+    rectSize,
+    styleMargin: buttonStyle(n, theme).margin,
+    hSeparation: buttonHSeparation(n, theme),
+    iconMaxWidth: n.constants.icon_max_width ?? 0,
+    // Aligned against the ceiled text width (`scene/gui/button.cpp:343,349`).
+    textAlignment: props.alignment ?? buttonClass.textAlignment,
+    iconAlignment: props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+    verticalIconAlignment: props.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
+    expandIcon: props.expandIcon === true,
+    // The solver's size, loaded or not, so the layout agrees with the minimum size on every frame.
+    iconNaturalSize: n.textureSize,
+    hasText: buttonShown(buttonClass, props).text.length > 0,
+    isClipped: isButtonTextClipped(props),
+    internalMargin: buttonClass.internalMargin?.(n, props),
+    rtl: n.rtl,
+  };
+}
 
-  const hasText = (props.text ?? '').length > 0;
-  const factsAt = (rectSize: Vector2) =>
-    buttonContentInput({
-      ...props,
-      isClipped: isButtonTextClipped(props),
-      constants: n.constants,
-      separationPx: ctx.theme.separation,
-      rtl: n.rtl,
-      rectSize,
-      styleMargin: styleBox.contentMargin,
-      iconNaturalSize: n.textureSize,
-      hasText,
-    });
-  // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height depends on.
-  // Pass 1 shapes unwrapped. The label wraps at what the painter's layout leaves beside the icon.
-  const wrapWidthPx = tentativeWrapWidthPx(
-    props,
-    ctx.measureText ? ctx.tentativeRect?.(n) : undefined,
-    factsAt,
-    () => (ctx.measureText ? buttonLabelShape(n, ctx.theme) : null)
-  );
-  // An absent `ctx.measureText` means the text contributes nothing, while the margin and
-  // the icon still count (`solverRegistry.ts`'s contract).
-  const layout: TextLayoutResult | null = ctx.measureText
-    ? buttonLabelShape(n, ctx.theme, wrapWidthPx)
-    : null;
-  // `minsize` starts from `paragraph->get_size()` (`button.cpp:492`), a max
-  // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`):
-  // the ceiled extent, not the raw pen advance. Its width drops under `clip_text`, a trimming
-  // overrun behaviour or autowrap, since a narrower box trims or wraps it (`button.cpp:493-495`).
-  const content = buttonContentMinimumSize(factsAt({ x: 0, y: 0 }), layout, props);
+/**
+ * `Button::get_minimum_size` for a Button of `buttonClass` (`button.cpp:481-526`), shaped by
+ * {@link buttonLabelShape}. `n.rtl` reaches only the stylebox pick (`:525`, `<state>_mirrored`): the icon
+ * terms test `horizontal_icon_alignment` unswapped against CENTER, so the side swap cannot move a minimum
+ * size. The internal margin is not in it: a subclass adds what it reserves ({@link reservingMinimumSizeOf}).
+ */
+export function buttonMinimumSizeOf(buttonClass: ButtonClass): MinimumSizeFn {
+  return (n, ctx) => {
+    const props = n.node.properties as ButtonProperties;
+    const factsAt = (rectSize: Vector2) => buttonContentFacts(n, ctx.theme, buttonClass, rectSize);
+    // Pass 2 (`tentativeRect`) knows this node's width, which a wrapping label's height depends on.
+    // Pass 1 shapes unwrapped. The label wraps at what the painter's layout leaves beside the icon.
+    const wrapWidthPx = tentativeWrapWidthPx(
+      props,
+      ctx.measureText ? ctx.tentativeRect?.(n) : undefined,
+      factsAt,
+      () => (ctx.measureText ? buttonLabelShape(n, ctx.theme, buttonClass) : null)
+    );
+    // An absent `ctx.measureText` means the text contributes nothing, while the margin and
+    // the icon still count (`solverRegistry.ts`'s contract).
+    const layout: TextLayoutResult | null = ctx.measureText
+      ? buttonLabelShape(n, ctx.theme, buttonClass, wrapWidthPx)
+      : null;
+    // `minsize` starts from `paragraph->get_size()` (`button.cpp:492`), a max
+    // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`):
+    // the ceiled extent, not the raw pen advance. Its width drops under `clip_text`, a trimming
+    // overrun behaviour or autowrap, since a narrower box trims or wraps it (`button.cpp:493-495`).
+    const content = buttonContentMinimumSize(factsAt({ x: 0, y: 0 }), layout, props);
+    const padding = sidesSize(buttonStyle(n, ctx.theme).margin);
 
-  return { x: marginX + content.x, y: marginY + content.y };
-};
+    return { x: padding.x + content.x, y: padding.y + content.y };
+  };
+}
+
+export const buttonMinimumSize: MinimumSizeFn = buttonMinimumSizeOf(BUTTON_CLASS);
+
+/**
+ * A minimum size with `element` reserved beside the content, as `CheckBox::get_minimum_size` and
+ * `CheckButton::get_minimum_size` reserve their icon (`check_box.cpp:64-79`, `check_button.cpp:64-79`).
+ * The content is what `minimumSize` leaves inside the largest box of any draw state (`:68-69`).
+ */
+function withReservedElement(
+  n: ShareNode,
+  theme: NativeTheme,
+  minimumSize: Vector2,
+  element: Vector2
+): Vector2 {
+  const padding = sidesSize(buttonStyle(n, theme).largestMargin);
+  const content = { x: minimumSize.x - padding.x, y: minimumSize.y - padding.y };
+  const reserved = withReservedElementSize(content, element, Math.max(0, buttonHSeparation(n, theme)));
+  return { x: reserved.x + padding.x, y: reserved.y + padding.y };
+}
+
+/** The minimum size of a `buttonClass` that reserves `elementSize(n)` beside Button's content. */
+export function reservingMinimumSizeOf(
+  buttonClass: ButtonClass,
+  elementSize: (n: ShareNode) => Vector2
+): MinimumSizeFn {
+  const buttonSize = buttonMinimumSizeOf(buttonClass);
+  return (n, ctx) => withReservedElement(n, ctx.theme, buttonSize(n, ctx), elementSize(n));
+}

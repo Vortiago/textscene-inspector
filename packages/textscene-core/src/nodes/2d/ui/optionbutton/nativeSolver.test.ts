@@ -13,18 +13,15 @@ import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import * as logger from '../../../../logger';
 import type { OptionButtonProperties } from './types';
 import {
+  OPTION_BUTTON_CLASS,
+  optionButtonArrowColor,
+  optionButtonArrowRect,
   optionButtonMinimumSize,
-  optionButtonTextTheme,
-  selectedOptionItem,
-  layoutOptionButtonContent as layoutContent,
-  optionButtonArrowSize,
   optionButtonTextureSlots,
-  OPTION_BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
+import { BUTTON_THEME_FONT_KEY } from '../button/nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import type { ButtonContentInput } from '../../../../r3f/controls/native/buttonBase';
-import { controlProps } from '../control/testing/controlProps';
-import { internalMarginAt } from '../../../../r3f/controls/native/buttonBase';
+import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 
 const A_ADVANCE = 1354 * (16 / 2048); // 10.578125
 // 'B' is 1350 design units, not 'A''s 1354.
@@ -57,13 +54,14 @@ function ctx(withMeasurer = true): SolveContext {
 describe('optionButtonTextureSlots', () => {
   const themed = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
 
-  it('requests one slot for a themed arrow', () => {
+  it("requests Button's icon slot first, then a themed arrow, so `textureSize` is never the arrow", () => {
     const requests = optionButtonTextureSlots(controlNode('Opt', 'OptionButton'), { arrow: themed });
-    expect(requests.map(({ key }) => key)).toEqual(['arrow']);
+    expect(requests.map(({ key }) => key)).toEqual(['icon', 'arrow']);
   });
 
-  it('requests none when no arrow is themed', () => {
-    expect(optionButtonTextureSlots(controlNode('Opt', 'OptionButton'), {})).toEqual([]);
+  it('requests no arrow when none is themed', () => {
+    const requests = optionButtonTextureSlots(controlNode('Opt', 'OptionButton'), {});
+    expect(requests.map(({ key }) => key)).toEqual(['icon']);
   });
 });
 
@@ -85,33 +83,16 @@ describe("optionButtonTextureSlots: items' icons (option_button.cpp:424,451)", (
     ]);
   });
 
-  it('requests no Button icon when nothing is selected, though each item still sizes the minimum', () => {
-    expect(slots({ items }).map(({ key }) => key)).toEqual(['popup/item_0/icon', 'popup/item_1/icon']);
-  });
-
-  it('requests no Button icon for a selected item without an icon', () => {
-    expect(slots({ items, selected: 2 }).map(({ key }) => key)).toEqual([
-      'popup/item_0/icon',
-      'popup/item_1/icon',
+  it("requests Button's icon slot with no reference when nothing is selected, and each item's icon after it", () => {
+    expect(slots({ items }).map(({ key, ref }) => [key, ref])).toEqual([
+      ['icon', ''],
+      ['popup/item_0/icon', 'ExtResource("1")'],
+      ['popup/item_1/icon', 'ExtResource("2")'],
     ]);
   });
-});
 
-describe('optionButtonArrowSize', () => {
-  it("is option_button_arrow.svg's own authored 12x12 when no arrow is themed", () => {
-    expect(optionButtonArrowSize({ textureSlots: {} })).toEqual({ x: 12, y: 12 });
-  });
-
-  it('is a themed arrow at its own size, never clamped by icon_max_width', () => {
-    expect(optionButtonArrowSize({ textureSlots: { arrow: { x: 40, y: 30 } } })).toEqual({ x: 40, y: 30 });
-  });
-
-  it('keeps the default while the themed arrow loads or after it fails (theme.cpp:306)', () => {
-    expect(optionButtonArrowSize({ textureSlots: { arrow: null } })).toEqual({ x: 12, y: 12 });
-  });
-
-  it('ignores a themed texture in another slot (edge case)', () => {
-    expect(optionButtonArrowSize({ textureSlots: { icon: { x: 40, y: 30 } } })).toEqual({ x: 12, y: 12 });
+  it("requests Button's icon slot with no reference for a selected item without an icon", () => {
+    expect(slots({ items, selected: 2 }).map(({ key, ref }) => [key, ref])[0]).toEqual(['icon', '']);
   });
 });
 
@@ -129,24 +110,25 @@ describe('theme.widgets.optionButton', () => {
   });
 });
 
-describe('selectedOptionItem (the bounds-guarded lookup: an absent or out-of-range selected is none)', () => {
-  it('resolves items[selected].text when selected is a valid index', () => {
-    const items = [
-      { text: 'Easy', id: 0 },
-      { text: 'Normal', id: 1 },
-      { text: 'Hard', id: 2 },
-    ];
-    expect(selectedOptionItem({ items, selected: 1 } as OptionButtonProperties)?.text ?? '').toBe('Normal');
+describe('the item OPTION_BUTTON_CLASS shows as Button text (option_button.cpp:423-424)', () => {
+  const shownText = (props: Partial<OptionButtonProperties>) =>
+    OPTION_BUTTON_CLASS.shown!(props as OptionButtonProperties).text;
+  const items = [
+    { text: 'Easy', id: 0 },
+    { text: 'Normal', id: 1 },
+  ];
+
+  it('is the text of items[selected]', () => {
+    expect(shownText({ items, selected: 1 })).toBe('Normal');
   });
 
-  it('is empty string when selected is out of range', () => {
-    const items = [{ text: 'Easy', id: 0 }];
-    expect(selectedOptionItem({ items, selected: 5 } as OptionButtonProperties)?.text ?? '').toBe('');
+  it('is empty when selected is out of range', () => {
+    expect(shownText({ items, selected: 5 })).toBe('');
   });
 
-  it('is empty string when selected is absent or items is absent', () => {
-    expect(selectedOptionItem({} as OptionButtonProperties)?.text ?? '').toBe('');
-    expect(selectedOptionItem({ selected: 0 } as OptionButtonProperties)?.text ?? '').toBe('');
+  it('is empty when selected or items is absent', () => {
+    expect(shownText({})).toBe('');
+    expect(shownText({ selected: 0 })).toBe('');
   });
 });
 
@@ -262,148 +244,7 @@ describe("optionButtonMinimumSize: each item's icon (option_button.cpp:451, butt
   });
 });
 
-describe('optionButtonTextTheme', () => {
-  it('resolves control_font_color for the normal state', () => {
-    // default_theme.cpp:101,240: control_font_color.
-    expect(optionButtonTextTheme(node({}), {} as OptionButtonProperties, 'normal', ctx())).toEqual({
-      fontSizePx: 16,
-      color: { r: 0.875, g: 0.875, b: 0.875, a: 1 },
-    });
-  });
-
-  it('resolves control_font_disabled_color for the disabled state', () => {
-    // default_theme.cpp:106,245: control_font_disabled_color.
-    expect(optionButtonTextTheme(node({}), {} as OptionButtonProperties, 'disabled', ctx()).color).toEqual({
-      r: 0.875,
-      g: 0.875,
-      b: 0.875,
-      a: 0.5,
-    });
-  });
-
-  it('a theme_override_colors/font_color override wins over the default', () => {
-    const props: OptionButtonProperties = controlProps({
-      name: 'O',
-      textDirection: 0,
-      language: '',
-      themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
-    });
-    expect(optionButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
-      r: 1,
-      g: 0,
-      b: 0,
-      a: 1,
-    });
-  });
-});
-
-const LAYOUT_BASE = {
-  rectSize: { x: 150, y: 32 },
-  styleMargin: { left: 8, top: 4, right: 8, bottom: 4 },
-  arrowSize: { x: 12, y: 12 },
-  arrowMargin: 4,
-  hSeparation: 4,
-  textHeightPx: 26,
-  textAlignment: 0,
-  rtl: false,
-};
-
-/** The facts the painter builds for a label of `textHeightPx` and an arrow of `arrowSize`, as the tests state them. */
-function layoutOptionButtonContent(input: typeof LAYOUT_BASE & Partial<ButtonContentInput>) {
-  const { arrowSize, arrowMargin, textHeightPx, ...rest } = input;
-  const layout = layoutContent({
-    arrowSize,
-    arrowMargin,
-    content: {
-      iconMaxWidth: 0,
-      iconAlignment: 0,
-      verticalIconAlignment: 1,
-      expandIcon: false,
-      iconNaturalSize: null,
-      hasText: true,
-      textNaturalSize: { x: 50, y: textHeightPx },
-      isTextRtl: false,
-      isClipped: false,
-      internalMargin: internalMarginAt(input.rtl ? 'left' : 'right', arrowSize.x),
-      ...rest,
-    },
-  });
-  // `hasText` is true above, so the box exists.
-  return { ...layout, labelBox: layout.labelBox! };
-}
-
-describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-260,444-456)', () => {
-  it('the arrow sits at (rect.w - arrowSize.w - arrowMargin), NOT the content-margin edge', () => {
-    const { arrowRect } = layoutOptionButtonContent(LAYOUT_BASE);
-    // Content margins are 8 by 4 (default_theme.cpp:212-215), but
-    // `arrow_margin` (`:249`, round(4*scale)) counts from the full rect edge: `pnpm ref:godot
-    // scenes/fixtures/unit-optionbutton.tscn --mode 2d` puts the chevron at 150 - 12 - 4 = 134, not 150 - 12 - 8.
-    // Probe: fill at (649,y) = 46 and background at (651,y) = 76, so the box ends flush; chevron ink at (641,y).
-    expect(arrowRect.x).toBe(134);
-  });
-
-  it('the arrow is vertically centred within the FULL rect height (not the content box)', () => {
-    const { arrowRect } = layoutOptionButtonContent(LAYOUT_BASE);
-    // floor(abs((32-12)/2)) = 10.
-    expect(arrowRect.y).toBe(10);
-  });
-
-  it('the label box starts flush at the LEFT content margin and stops short of the arrow and its h_separation', () => {
-    const { labelBox } = layoutOptionButtonContent(LAYOUT_BASE);
-    // width = 150 - 8 - 8 - (12 + 4) = 118. customElementHeight = 32-8=24; topPx = (24-26)/2 + 4 = 3.
-    expect(labelBox).toEqual({ leftPx: 8, topPx: 3, widthPx: 118, alignment: 0 });
-  });
-
-  it("floors a half-pixel centring remainder DOWN, matching Button's own text_ofs.y (never floored in the source itself, only per-glyph — text_server_adv.cpp:4083) — the ACTUAL 'Normal' item at font size 16 (ascent 18 + descent 5 = 23)", () => {
-    // customElementHeight = 32-8=24; (24-23)/2=0.5; +styleMargin.top(4)=4.5 -> floor 4.
-    const { labelBox } = layoutOptionButtonContent({ ...LAYOUT_BASE, textHeightPx: 23 });
-    expect(labelBox.topPx).toBe(4);
-  });
-
-  it('hands the authored alignment to the drawn label', () => {
-    expect(layoutOptionButtonContent({ ...LAYOUT_BASE, textAlignment: 1 }).labelBox.alignment).toBe(1);
-    expect(layoutOptionButtonContent({ ...LAYOUT_BASE, textAlignment: 2 }).labelBox.alignment).toBe(2);
-  });
-
-  it('keeps the unceiled drawable width: the ceiling belongs to the drawn label (button.cpp:437)', () => {
-    expect(
-      layoutOptionButtonContent({ ...LAYOUT_BASE, rectSize: { x: 150.5, y: 32 } }).labelBox.widthPx
-    ).toBe(118.5);
-  });
-});
-
-/**
- * `OptionButton::_notification`'s RTL arms: the arrow moves to
- * `ofs = Point2(theme_cache.arrow_margin, int(Math::abs((size.height - arrow_icon->get_height()) / 2)))`
- * (option_button.cpp:126), the internal margin reserves SIDE_LEFT instead of SIDE_RIGHT (`:141-143`), and
- * the constructor's `HORIZONTAL_ALIGNMENT_LEFT` (`:654`) becomes RIGHT through Button's swap (`button.cpp:271-275`).
- */
-describe('layoutOptionButtonContent: RTL puts the arrow on the left', () => {
-  const RTL = { ...LAYOUT_BASE, rtl: true };
-
-  it('draws the arrow at arrow_margin from the LEFT edge, vertically unchanged', () => {
-    const { arrowRect } = layoutOptionButtonContent(RTL);
-    expect(arrowRect).toEqual({ x: 4, y: 10, w: 12, h: 12 });
-  });
-
-  it('puts the label box right of the arrow and aligns a LEFT label RIGHT', () => {
-    const { labelBox } = layoutOptionButtonContent(RTL);
-    // reserved = 12+4 = 16 on the LEFT; drawable = 150-8-8-16 = 118; leftPx = 8 + 16.
-    expect(labelBox).toEqual({ leftPx: 24, topPx: 3, widthPx: 118, alignment: 2 });
-  });
-
-  it('leaves CENTER alone and swaps RIGHT to LEFT', () => {
-    expect(layoutOptionButtonContent({ ...RTL, textAlignment: 1 }).labelBox.alignment).toBe(1);
-    expect(layoutOptionButtonContent({ ...RTL, textAlignment: 2 }).labelBox.alignment).toBe(0);
-  });
-
-  it('moves the label with h_separation, which the LTR arm never feels', () => {
-    expect(layoutOptionButtonContent({ ...RTL, hSeparation: 10 }).labelBox.leftPx).toBe(30);
-    expect(layoutOptionButtonContent({ ...LAYOUT_BASE, hSeparation: 10 }).labelBox.leftPx).toBe(8);
-  });
-});
-
-describe(`optionButtonMinimumSize: resolves this OptionButton's own theme font key ("${OPTION_BUTTON_THEME_FONT_KEY}", default_theme.cpp:237)`, () => {
+describe(`optionButtonMinimumSize: resolves this OptionButton's own theme font key ("${BUTTON_THEME_FONT_KEY}", default_theme.cpp:237)`, () => {
   // An unresolvable font's warn is the observable proof here (`resolveNodeFontMetrics.test.ts`).
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
@@ -415,7 +256,7 @@ describe(`optionButtonMinimumSize: resolves this OptionButton's own theme font k
 
   it('a theme_override_fonts/font local override is fed to the text engine (resolved unconditionally, before the per-item measurement loop)', () => {
     const unresolvableFont = fontFile(undefined);
-    const n: SolveNode = { ...node({}), fontOverrides: { [OPTION_BUTTON_THEME_FONT_KEY]: unresolvableFont } };
+    const n: SolveNode = { ...node({}), fontOverrides: { [BUTTON_THEME_FONT_KEY]: unresolvableFont } };
     optionButtonMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
@@ -490,23 +331,94 @@ describe('optionButtonMinimumSize: autowrap_mode zeroes each item text width and
   });
 });
 
-describe("layoutOptionButtonContent: the selected item's icon (button.cpp:333-405)", () => {
-  const WITH_ICON = { ...LAYOUT_BASE, iconNaturalSize: { x: 12, y: 12 } };
+const RECT_SIZE = { x: 150, y: 32 };
+const THEME = nativeTheme(1);
 
-  it('draws a LEFT icon at the left margin and moves the label past it and h_separation', () => {
-    const { icon, labelBox } = layoutOptionButtonContent(WITH_ICON);
-    // y = 4 + (24 - 12) / 2 = 10; the label keeps its width less 12 + 4: 118 - 16 = 102.
-    expect(icon!.rect).toEqual({ x: 8, y: 10, w: 12, h: 12 });
-    expect(labelBox).toMatchObject({ leftPx: 24, widthPx: 102 });
+describe('optionButtonArrowRect (option_button.cpp:122-131)', () => {
+  it('puts the arrow arrow_margin from the right edge of the whole control, not of the content', () => {
+    // Content margins are 8 by 4 (default_theme.cpp:212-215), but `arrow_margin` (`:249`, round(4*scale))
+    // counts from the full rect edge: `pnpm ref:godot scenes/fixtures/unit-optionbutton.tscn --mode 2d`
+    // puts the chevron at 150 - 12 - 4 = 134. y = int(abs((32 - 12) / 2)).
+    expect(optionButtonArrowRect(node({}), THEME, RECT_SIZE)).toEqual({ x: 134, y: 10, w: 12, h: 12 });
   });
 
-  it('draws a RIGHT icon short of the arrow and its separation', () => {
-    const { icon } = layoutOptionButtonContent({ ...WITH_ICON, iconAlignment: 2 });
-    // 150 - 8 (margin) - 16 (arrow + separation) - 12.
-    expect(icon!.rect.x).toBe(114);
+  it('puts the arrow arrow_margin from the left edge under RTL', () => {
+    expect(optionButtonArrowRect({ ...node({}), rtl: true }, THEME, RECT_SIZE)).toMatchObject({
+      x: 4,
+      y: 10,
+    });
   });
 
-  it('draws no icon without a natural size', () => {
-    expect(layoutOptionButtonContent(LAYOUT_BASE).icon).toBeNull();
+  it('draws a themed arrow at its own size, never clamped by icon_max_width (option_button.cpp:131-133)', () => {
+    const n = {
+      ...node({ themeOverrideConstants: { icon_max_width: 8 } }),
+      textureSlots: { arrow: { x: 40, y: 30 } },
+    };
+    expect(optionButtonArrowRect(n, THEME, RECT_SIZE)).toMatchObject({ w: 40, h: 30 });
+  });
+
+  it('keeps the 12x12 default while a themed arrow loads or after it fails (theme.cpp:306)', () => {
+    const n = { ...node({}), textureSlots: { arrow: null } };
+    expect(optionButtonArrowRect(n, THEME, RECT_SIZE)).toMatchObject({ w: 12, h: 12 });
+  });
+
+  it('reads a themed arrow_margin', () => {
+    const n = node({ themeOverrideConstants: { arrow_margin: 20 } });
+    expect(optionButtonArrowRect(n, THEME, RECT_SIZE).x).toBe(150 - 12 - 20);
+  });
+});
+
+describe('optionButtonArrowColor (option_button.cpp:98-118)', () => {
+  const RED = { r: 1, g: 0, b: 0, a: 1 };
+  const GREEN = { r: 0, g: 1, b: 0, a: 1 };
+  const BLUE = { r: 0, g: 0, b: 1, a: 1 };
+  const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+  const themeOverrideColors = { font_color: RED, font_disabled_color: GREEN, font_focus_color: BLUE };
+  const modulated = (props: Partial<OptionButtonProperties>) =>
+    node({ ...props, themeOverrideColors, themeOverrideConstants: { modulate_arrow: 1 } });
+
+  it('is white while modulate_arrow is off, the default (default_theme.cpp:251)', () => {
+    expect(optionButtonArrowColor(node({ themeOverrideColors }), THEME)).toEqual(WHITE);
+  });
+
+  it("is the label's font colour of the draw state under modulate_arrow", () => {
+    expect(optionButtonArrowColor(modulated({}), THEME)).toEqual(RED);
+    expect(optionButtonArrowColor(modulated({ disabled: true }), THEME)).toEqual(GREEN);
+  });
+
+  it('is font_focus_color for a focused button in the normal draw mode (option_button.cpp:112-116)', () => {
+    expect(optionButtonArrowColor(modulated({ hasFocus: true }), THEME)).toEqual(BLUE);
+    expect(optionButtonArrowColor(modulated({ hasFocus: true, disabled: true }), THEME)).toEqual(GREEN);
+  });
+});
+
+describe('optionButtonMinimumSize: fit_to_longest_item off (option_button.cpp:52-56)', () => {
+  const items = [
+    { text: 'AB', id: 0 },
+    { text: 'ABABABAB', id: 1 },
+  ];
+
+  it('sizes to the selected item alone, where the default sizes to the longest', () => {
+    const selected = optionButtonMinimumSize(node({ items, selected: 0, fitToLongestItem: false }), ctx());
+    // 16 (margins) + 'AB' + arrow 12 + h_separation 4.
+    expect(selected.x).toBe(16 + AB_SHAPED_WIDTH + 12 + 4);
+    const longest = optionButtonMinimumSize(node({ items, selected: 0 }), ctx());
+    expect(longest.x).toBeGreaterThan(selected.x);
+  });
+
+  it('wraps the selected label at the tentative width, which an item never does', () => {
+    const context: SolveContext = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 80, h: 40 }) };
+    const wrapping = [{ text: 'alpha bravo charlie', id: 0 }];
+    const props = { items: wrapping, selected: 0, autowrapMode: 2, fitToLongestItem: false };
+    // 80 - 16 (margins) - 16 (arrow and separation) = 48 px: three rows.
+    expect(optionButtonMinimumSize(node(props), context).y).toBe(8 + 3 * FONT_HEIGHT);
+  });
+});
+
+describe('optionButtonMinimumSize: the boxes of the draw states (option_button.cpp:58-65,447)', () => {
+  it("floors the longest item at the `normal` box's minimum size", () => {
+    const normal = drawnStyleBox({ content_margin_left: '30', content_margin_right: '30' });
+    // No item: `_cached_size` is the normal box's 60 px, and the arrow and its separation add 16.
+    expect(optionButtonMinimumSize({ ...node({}), styleBoxes: { normal } }, ctx()).x).toBe(60 + 16);
   });
 });

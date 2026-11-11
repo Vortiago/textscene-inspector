@@ -145,12 +145,13 @@ interface NativeThemeWidgets {
     readOnly: StyleBoxFlatData;
   };
   /**
-   * `sb_optbutton_normal`/`_pressed`/`_disabled` (`default_theme.cpp:212-216`):
+   * `sb_optbutton_normal`/`_hover`/`_pressed`/`_disabled` (`default_theme.cpp:212-216`):
    * the shared corner radius with OptionButton's own asymmetric X and Y margins.
-   * A static preview has no pointer, so hover never arises.
+   * A static preview has no pointer, so `hover` never draws: only its margins are read (`button.cpp:80-84`).
    */
   optionButton: {
     normal: StyleBoxFlatData;
+    hover: StyleBoxFlatData;
     pressed: StyleBoxFlatData;
     disabled: StyleBoxFlatData;
   };
@@ -304,6 +305,7 @@ function buildNativeTheme(scale: number): NativeTheme {
         // default_theme.cpp:212-215: make_flat_stylebox(color, 2*default_margin,
         // default_margin, 2*default_margin, default_margin): X and Y differ.
         normal: flatStyleBox(STYLE_FILL.normal, optionButtonMargin, scaled.cornerRadius),
+        hover: flatStyleBox(STYLE_FILL.hover, optionButtonMargin, scaled.cornerRadius),
         pressed: flatStyleBox(STYLE_FILL.pressed, optionButtonMargin, scaled.cornerRadius),
         disabled: flatStyleBox(STYLE_FILL.disabled, optionButtonMargin, scaled.cornerRadius),
       },

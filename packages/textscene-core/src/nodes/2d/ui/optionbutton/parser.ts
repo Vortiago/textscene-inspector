@@ -12,6 +12,7 @@ import { slotCount, slotInt } from '../../../../godot/variant/intSlots.js';
 import { indexedElements } from '../../../../godot/classdb/indexedKey.js';
 import { OPTION_BUTTON_ITEMS } from '../../../../godot/classdb/propertyListFamilies.js';
 import { MAX_WALKED_ELEMENTS } from '../shared/countWalk';
+import { boolSlotValue } from '../../../../godot/variant/variantBool.js';
 
 export function parseOptionButton(
   heading: ParsedHeading,
@@ -51,5 +52,6 @@ export function parseOptionButton(
   }
 
   if (items.length > 0) result.items = items;
+  if (boolSlotValue(properties.fit_to_longest_item) === false) result.fitToLongestItem = false;
   return result;
 }

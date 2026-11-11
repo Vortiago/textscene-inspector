@@ -1,7 +1,8 @@
 /**
- * The Button items the default theme gives a Control by its theme type chain. A variation the default
- * theme registers (`FlatButton`, `FlatMenuButton`) or a Label variation (`HeaderSmall`) sets some of them
- * before `Button` does (`scene/theme/default_theme.cpp:357-382`). React-free: the items are plain data.
+ * The Button items the default theme gives a Control by its theme type chain. A class that extends Button
+ * (`OptionButton`, `CheckBox`, `CheckButton`), a variation the default theme registers (`FlatButton`,
+ * `FlatMenuButton`) or a Label variation (`HeaderSmall`) sets some of them before `Button` does
+ * (`scene/theme/default_theme.cpp:212-382`). React-free: the items are plain data.
  */
 
 import { neutralStyleBox } from '../../../resources/styles/stylebox/decode';
@@ -46,10 +47,42 @@ export const LABEL_NORMAL_BOX = neutralStyleBox({ left: 0, top: 0, right: 0, bot
 
 const LABEL_BOXES: TypeBoxes = { normal: LABEL_NORMAL_BOX };
 
-/** The boxes each type other than `Button` sets in the default theme. */
+/** One `StyleBoxEmpty` for every draw state, as CheckBox and CheckButton register (`default_theme.cpp:276-283,316-322`). */
+function emptyBoxes(contentMargin: StyleBoxFlatData['contentMargin']): Required<TypeBoxes> {
+  const empty = Object.freeze(neutralStyleBox(Object.freeze(contentMargin)));
+  return { normal: empty, hover: empty, pressed: empty, disabled: empty };
+}
+
+/** `cbx_empty` (`default_theme.cpp:276-277`): `round(4 * scale)` on every side. */
+const checkBoxBoxes = perObject((theme: NativeTheme): Required<TypeBoxes> => {
+  const margin = theme.contentMargin;
+  return emptyBoxes({ left: margin, top: margin, right: margin, bottom: margin });
+});
+
+/** `cb_empty` (`default_theme.cpp:316-317`): `round(6 * scale)` across and `round(4 * scale)` down. */
+const checkButtonBoxes = perObject((theme: NativeTheme): Required<TypeBoxes> => {
+  const across = Math.round(6 * theme.scale);
+  const down = theme.contentMargin;
+  return emptyBoxes({ left: across, top: down, right: across, bottom: down });
+});
+
+/** The boxes each type other than `Button` sets in the default theme. MenuButton sets Button's own (`default_theme.cpp:255-258`). */
 function typeBoxes(type: string, theme: NativeTheme): TypeBoxes | undefined {
-  if (type === 'FlatButton' || type === 'FlatMenuButton') return flatButtonBoxes(theme);
-  return type === 'Label' ? LABEL_BOXES : undefined;
+  switch (type) {
+    case 'FlatButton':
+    case 'FlatMenuButton':
+      return flatButtonBoxes(theme);
+    case 'OptionButton':
+      return theme.widgets.optionButton;
+    case 'CheckBox':
+      return checkBoxBoxes(theme);
+    case 'CheckButton':
+      return checkButtonBoxes(theme);
+    case 'Label':
+      return LABEL_BOXES;
+    default:
+      return undefined;
+  }
 }
 
 /**

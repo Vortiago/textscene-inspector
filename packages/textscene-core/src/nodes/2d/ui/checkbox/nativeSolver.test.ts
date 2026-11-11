@@ -13,23 +13,15 @@ import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import * as logger from '../../../../logger';
 import type { CheckBoxProperties } from './types';
 import {
-  checkBoxFittedIconSize,
-  checkBoxDrawnIconSize,
+  checkBoxCheckColor,
+  checkBoxCheckRect,
   checkBoxMinimumSize,
-  checkBoxTextTheme,
-  resolveCheckBoxDrawState,
   resolveCheckBoxIconKey,
-  layoutCheckBoxContent,
   checkBoxTextureSlots,
-  CHECKBOX_THEME_FONT_KEY,
 } from './nativeSolver';
-import {
-  internalMarginAt,
-  type ButtonContentFacts,
-  type ButtonContentInput,
-} from '../../../../r3f/controls/native/buttonBase';
+import { BUTTON_THEME_FONT_KEY } from '../button/nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { controlProps } from '../control/testing/controlProps';
+import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 
 // 'A' advances 1354 design units and 'B' 1350, so at 16px 'A' is 10.578125 and 'AB' 21.125.
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
@@ -58,68 +50,6 @@ function ctx(withMeasurer = true): SolveContext {
     combinedMinimumSize: () => ({ x: 0, y: 0 }),
   };
 }
-
-/**
- * `BaseButton::get_draw_mode` (`base_button.cpp:325-358`) with no hover or press attempt. Measured
- * with `pnpm ref:godot scenes/fixtures/unit-checkbox.tscn --mode 2d`: the checked label reads
- * (255,255,255) at (527,298), and the disabled one rgb(150,150,150) at (526,350), which is
- * `font_disabled_color` over the 76,76,76 clear colour: `0.5*223 + 0.5*76 = 149.5`.
- */
-describe('resolveCheckBoxDrawState', () => {
-  it('is "normal" when neither pressed nor disabled', () => {
-    expect(resolveCheckBoxDrawState({} as CheckBoxProperties)).toBe('normal');
-  });
-
-  it('is "pressed" when button_pressed is true (checked) and not disabled', () => {
-    expect(resolveCheckBoxDrawState({ buttonPressed: true } as CheckBoxProperties)).toBe('pressed');
-  });
-
-  it('is "disabled" when disabled is true, even if also pressed (disabled wins)', () => {
-    expect(resolveCheckBoxDrawState({ buttonPressed: true, disabled: true } as CheckBoxProperties)).toBe(
-      'disabled'
-    );
-  });
-});
-
-describe('checkBoxTextTheme', () => {
-  it('resolves control_font_color (0.875 opaque) for the normal state', () => {
-    // default_theme.cpp:101,300: control_font_color.
-    expect(checkBoxTextTheme(node({}), {} as CheckBoxProperties, 'normal', ctx())).toEqual({
-      fontSizePx: 16,
-      color: { r: 0.875, g: 0.875, b: 0.875, a: 1 },
-    });
-  });
-
-  it('resolves control_font_pressed_color (opaque white) for the pressed (checked) state', () => {
-    // default_theme.cpp:108,301: control_font_pressed_color.
-    expect(checkBoxTextTheme(node({}), {} as CheckBoxProperties, 'pressed', ctx()).color).toEqual({
-      r: 1,
-      g: 1,
-      b: 1,
-      a: 1,
-    });
-  });
-
-  it('resolves control_font_disabled_color (alpha 0.5) for the disabled state', () => {
-    // default_theme.cpp:106,305: control_font_disabled_color.
-    expect(checkBoxTextTheme(node({}), {} as CheckBoxProperties, 'disabled', ctx()).color).toEqual({
-      r: 0.875,
-      g: 0.875,
-      b: 0.875,
-      a: 0.5,
-    });
-  });
-
-  it('a theme_override_colors/font_pressed_color override wins over the default', () => {
-    const props: CheckBoxProperties = controlProps({
-      name: 'C',
-      textDirection: 0,
-      language: '',
-      themeOverrideColors: { font_pressed_color: { r: 1, g: 0, b: 0, a: 1 } },
-    });
-    expect(checkBoxTextTheme(node(props), props, 'pressed', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
-  });
-});
 
 describe('resolveCheckBoxIconKey (check_box.cpp:112-131)', () => {
   it('unchecked, not radio, not disabled -> unchecked', () => {
@@ -206,29 +136,6 @@ describe('checkBoxMinimumSize: with text', () => {
   });
 });
 
-describe('checkBoxFittedIconSize (check_box.cpp:35-62): MAX over all 8 icons, not only the current draw state', () => {
-  it('is the vendored 16x16 default when no icon is themed', () => {
-    expect(checkBoxFittedIconSize({ textureSlots: {}, constants: {} })).toEqual({ x: 16, y: 16 });
-  });
-
-  it('widens to a themed "checked" icon even while the widget draws "unchecked"', () => {
-    // check_box.cpp:39-40: `tex_size = tex_size.max(theme_cache.unchecked->get_size())`
-    // runs regardless of which icon is actually pressed/shown.
-    expect(checkBoxFittedIconSize({ textureSlots: { checked: { x: 24, y: 24 } }, constants: {} })).toEqual({
-      x: 24,
-      y: 24,
-    });
-  });
-
-  it("never shrinks below an unthemed icon's vendored default", () => {
-    // Only "checked" themed smaller. The other 7 still default to 16x16.
-    expect(checkBoxFittedIconSize({ textureSlots: { checked: { x: 8, y: 8 } }, constants: {} })).toEqual({
-      x: 16,
-      y: 16,
-    });
-  });
-});
-
 describe('checkBoxMinimumSize: a themed icon widens the minimum size (check_box.cpp:64-79)', () => {
   it("floors the width on the themed icon's own size, not the vendored 16x16", () => {
     const n = { ...node({}), textureSlots: { unchecked: { x: 24, y: 24 } } };
@@ -237,180 +144,104 @@ describe('checkBoxMinimumSize: a themed icon widens the minimum size (check_box.
     // 4px at scale 1) is added back on every side: 24 + 2*4 = 32.
     expect(checkBoxMinimumSize(n, ctx())).toEqual({ x: 32, y: 32 });
   });
-});
 
-/**
- * What `layoutButtonContent` reads of a 150x28 CheckBox: `cbx_empty`'s margin 4 on every side, the label
- * 26 px high, and the vendored 16 px check, which `layoutCheckBoxContent` reserves as the internal margin.
- */
-const CONTENT: ButtonContentFacts & Pick<ButtonContentInput, 'textNaturalSize' | 'isTextRtl'> = {
-  rectSize: { x: 150, y: 28 },
-  styleMargin: { left: 4, top: 4, right: 4, bottom: 4 },
-  hSeparation: 4,
-  iconMaxWidth: 0,
-  textAlignment: 0,
-  iconAlignment: 0,
-  verticalIconAlignment: 1,
-  expandIcon: false,
-  iconNaturalSize: null,
-  hasText: true,
-  textNaturalSize: { x: 40, y: 26 },
-  isTextRtl: false,
-  isClipped: false,
-  internalMargin: { left: 0, right: 0 },
-  rtl: false,
-};
-/** The facts the painter builds: the check's width reserved on its side (`check_box.cpp:96-101`). */
-function layoutWithCheck(input: Parameters<typeof layoutCheckBoxContent>[0]) {
-  const { content, checkSize } = input;
-  const internalMargin = internalMarginAt(content.rtl ? 'right' : 'left', checkSize.x);
-  return layoutCheckBoxContent({ ...input, content: { ...content, internalMargin } });
-}
-
-const BASE = { content: CONTENT, checkSize: { x: 16, y: 16 }, checkVOffset: 0 };
-const WITH_BUTTON_ICON = { ...CONTENT, iconNaturalSize: { x: 12, y: 12 } };
-
-describe('layoutCheckBoxContent (check_box.cpp:126-133 + button.cpp:247-260,444-456)', () => {
-  it('check sits at (margin, vertically centred + check_v_offset)', () => {
-    const { checkPosition } = layoutWithCheck(BASE);
-    // y = floor((28-16)/2 + 0) = 6.
-    expect(checkPosition).toEqual({ x: 4, y: 6 });
+  it('widens to a themed "checked" icon while the CheckBox draws "unchecked" (check_box.cpp:35-62)', () => {
+    const n = { ...node({}), textureSlots: { checked: { x: 24, y: 24 } } };
+    expect(checkBoxMinimumSize(n, ctx())).toEqual({ x: 32, y: 32 });
   });
 
-  it('the label box starts past the check + h_separation (the reserved "internal margin" width)', () => {
-    const { labelBox } = layoutWithCheck(BASE);
-    // leftPx = margin(4) + check(16) + h_separation(4) = 24; width = 150 - 8 - 20 = 122.
-    expect(labelBox!.leftPx).toBe(24);
-    expect(labelBox!.widthPx).toBe(122);
-    // customElementHeight = 28-8=20; topPx = (20-26)/2 + 4 = -3+4 = 1.
-    expect(labelBox!.topPx).toBeCloseTo(1, 10);
-  });
-
-  it('returns labelBox: null when hasText is false (check still positioned)', () => {
-    const { checkPosition, labelBox } = layoutWithCheck({
-      ...BASE,
-      content: { ...CONTENT, hasText: false },
-    });
-    expect(labelBox).toBeNull();
-    expect(checkPosition).toEqual({ x: 4, y: 6 });
-  });
-
-  it('check_v_offset shifts the check vertically (a rarely-set theme_override_constants key)', () => {
-    const { checkPosition } = layoutWithCheck({ ...BASE, checkVOffset: 3 });
-    expect(checkPosition.y).toBe(9);
-  });
-
-  it('a smaller check (icon_max_width clamp NOT applied: already-fitted input) moves the label box accordingly', () => {
-    const { labelBox } = layoutWithCheck({ ...BASE, checkSize: { x: 8, y: 8 } });
-    // leftPx = 4 + 8 + 4 = 16; width = 150 - 8 - 12 = 130.
-    expect(labelBox!.leftPx).toBe(16);
-    expect(labelBox!.widthPx).toBe(130);
-  });
-
-  it("floors a half-pixel centring remainder DOWN, matching Button's own text_ofs.y (never floored in the source itself, only per-glyph: text_server_adv.cpp:4083)", () => {
-    // customElementHeight = 32-2*4=24; (24-23)/2=0.5; +margin(4)=4.5 -> floor 4.
-    const { labelBox } = layoutWithCheck({
-      ...BASE,
-      content: { ...CONTENT, rectSize: { x: 150, y: 32 }, textNaturalSize: { x: 40, y: 23 } },
-    });
-    expect(labelBox!.topPx).toBe(4);
-  });
-
-  it('keeps the authored alignment (check_box.cpp:174 sets LEFT only as the default)', () => {
-    expect(layoutWithCheck({ ...BASE, content: { ...CONTENT, textAlignment: 1 } }).labelBox!.alignment).toBe(
-      1
-    );
-    expect(layoutWithCheck({ ...BASE, content: { ...CONTENT, textAlignment: 2 } }).labelBox!.alignment).toBe(
-      2
-    );
-  });
-
-  it('keeps the unceiled drawable width: the ceiling belongs to the drawn label (button.cpp:437)', () => {
-    const wide = { ...CONTENT, rectSize: { x: 150.5, y: 28 } };
-    expect(layoutWithCheck({ ...BASE, content: wide }).labelBox!.widthPx).toBe(122.5);
-  });
-
-  it('draws no Button icon without one', () => {
-    expect(layoutWithCheck(BASE).icon).toBeNull();
-  });
-
-  it("draws Button's LEFT icon past the check and its separation, and the label past both (button.cpp:374-381,411-423)", () => {
-    const { icon, labelBox } = layoutWithCheck({ ...BASE, content: WITH_BUTTON_ICON });
-    // x = margin 4 + (check 16 + 4) = 24; y = floor(4 + (20 - 12) / 2) = 8. The label starts at 24 + (12 + 4) = 40.
-    expect(icon).toEqual({ rect: { x: 24, y: 8, w: 12, h: 12 } });
-    expect(labelBox).toMatchObject({ leftPx: 40, widthPx: 122 - 16 });
-  });
-
-  it("draws Button's RIGHT icon at the right margin, the check being on the left (button.cpp:385-387)", () => {
-    const { icon, labelBox } = layoutWithCheck({
-      ...BASE,
-      content: { ...WITH_BUTTON_ICON, iconAlignment: 2 },
-    });
-    // x = 150 - 4 - 12 = 134.
-    expect(icon!.rect.x).toBe(134);
-    expect(labelBox).toMatchObject({ leftPx: 24, widthPx: 122 - 16 });
-  });
-
-  it("centres Button's CENTER icon in the box the check leaves (button.cpp:374-381)", () => {
-    const { icon, labelBox } = layoutWithCheck({
-      ...BASE,
-      content: { ...WITH_BUTTON_ICON, iconAlignment: 1 },
-    });
-    // x = 4 + 20 + (122 - 12) / 2 = 79; the label box keeps its whole width.
-    expect(icon!.rect.x).toBe(79);
-    expect(labelBox).toMatchObject({ leftPx: 24, widthPx: 122 });
+  it('keeps the 16x16 of the seven default icons when one themed icon is smaller', () => {
+    const n = { ...node({}), textureSlots: { checked: { x: 8, y: 8 } } };
+    expect(checkBoxMinimumSize(n, ctx())).toEqual({ x: 24, y: 24 });
   });
 });
 
-/**
- * The RTL arms: the check sits at `get_size().x - margin(SIDE_RIGHT) - icon width` (check_box.cpp:129),
- * and the internal margin moves to SIDE_RIGHT (`:98-100`). The constructor's LEFT alignment (`:174`)
- * swaps to RIGHT (`button.cpp:271-275`), so the label hugs the far end of what is left.
- */
-describe('layoutCheckBoxContent: RTL puts the check on the right and the label against it', () => {
-  const RTL = { ...BASE, content: { ...CONTENT, rtl: true } };
+const RECT_SIZE = { x: 150, y: 28 };
+const THEME = nativeTheme(1);
 
-  it('draws the check at the right content margin', () => {
-    const { checkPosition } = layoutWithCheck(RTL);
-    // x = 150 - 4 - 16 = 130; y is direction-independent: floor((28-16)/2) = 6.
-    expect(checkPosition).toEqual({ x: 130, y: 6 });
+describe('checkBoxCheckRect (check_box.cpp:126-142)', () => {
+  it('puts the check at the left margin, vertically centred', () => {
+    // y = int((28 - 16) / 2) = 6.
+    expect(checkBoxCheckRect(node({}), THEME, 'unchecked', RECT_SIZE)).toEqual({ x: 4, y: 6, w: 16, h: 16 });
   });
 
-  it('puts the label box at the left margin, 20 px short of the check, aligned RIGHT', () => {
-    const { labelBox } = layoutWithCheck(RTL);
-    // drawable = 150 - 4 - 4 - (16 + 4) = 122; the left internal margin is now 0.
-    expect(labelBox).toEqual({ leftPx: 4, topPx: 1, widthPx: 122, alignment: 2 });
+  it('truncates the centring before it adds check_v_offset (check_box.cpp:131)', () => {
+    const n = node({ themeOverrideConstants: { check_v_offset: 3 } });
+    // int((27 - 16) / 2) = 5, then + 3.
+    expect(checkBoxCheckRect(n, THEME, 'unchecked', { x: 150, y: 27 }).y).toBe(8);
   });
 
-  it('swaps an authored RIGHT to LEFT and leaves CENTER (button.cpp:271-275)', () => {
-    expect(
-      layoutWithCheck({ ...RTL, content: { ...RTL.content, textAlignment: 2 } }).labelBox!.alignment
-    ).toBe(0);
-    expect(
-      layoutWithCheck({ ...RTL, content: { ...RTL.content, textAlignment: 1 } }).labelBox!.alignment
-    ).toBe(1);
+  it('puts the check short of the right margin under RTL (check_box.cpp:129)', () => {
+    // x = 150 - 4 - 16.
+    expect(checkBoxCheckRect({ ...node({}), rtl: true }, THEME, 'unchecked', RECT_SIZE).x).toBe(130);
   });
 
-  it('keeps check_v_offset and the no-text case direction-independent', () => {
-    expect(layoutWithCheck({ ...RTL, checkVOffset: 3 }).checkPosition.y).toBe(9);
-    const { labelBox, checkPosition } = layoutWithCheck({
-      ...RTL,
-      content: { ...RTL.content, hasText: false },
+  it("reads the margin from the node's `normal` box, whatever the draw state", () => {
+    const normal = drawnStyleBox({ content_margin_left: '20', content_margin_right: '30' });
+    const pressed = drawnStyleBox({ content_margin_left: '1', content_margin_right: '1' });
+    const n = { ...node({ buttonPressed: true }), styleBoxes: { normal, pressed } };
+    expect(checkBoxCheckRect(n, THEME, 'checked', RECT_SIZE).x).toBe(20);
+    expect(checkBoxCheckRect({ ...n, rtl: true }, THEME, 'checked', RECT_SIZE).x).toBe(150 - 30 - 16);
+  });
+
+  it('draws the current icon at its own size, at the offset the largest icon sets (check_box.cpp:137-142)', () => {
+    const n = { ...node({}), textureSlots: { checked: { x: 32, y: 32 } } };
+    // The largest icon is 32 px: y = int((28 - 32) / 2) = -2. The unchecked icon keeps its 16 px.
+    expect(checkBoxCheckRect(n, THEME, 'unchecked', RECT_SIZE)).toEqual({ x: 4, y: -2, w: 16, h: 16 });
+  });
+
+  it('draws nothing for an icon that reports size 0, as an unset ViewportTexture does', () => {
+    const n = { ...node({}), textureSlots: { unchecked: { x: 0, y: 0 } } };
+    expect(checkBoxCheckRect(n, THEME, 'unchecked', RECT_SIZE)).toMatchObject({ w: 0, h: 0 });
+  });
+});
+
+describe('checkBoxCheckColor (check_box.cpp:139-142)', () => {
+  const RED = { r: 1, g: 0, b: 0, a: 1 };
+  const colors = { checkbox_checked_color: RED };
+
+  it('is white by default (default_theme.cpp:312-313)', () => {
+    expect(checkBoxCheckColor({ buttonPressed: true } as CheckBoxProperties, {})).toEqual({
+      r: 1,
+      g: 1,
+      b: 1,
+      a: 1,
     });
-    expect(labelBox).toBeNull();
-    expect(checkPosition.x).toBe(130);
   });
 
-  it("draws Button's LEFT icon at the right edge, short of the check, under RTL (button.cpp:262-276,385-387)", () => {
-    const { icon } = layoutWithCheck({ ...RTL, content: { ...WITH_BUTTON_ICON, rtl: true } });
-    // The icon's side swaps to RIGHT: x = 150 - 4 - (16 + 4) - 12 = 114.
-    expect(icon!.rect.x).toBe(114);
+  it('reads checkbox_checked_color for a checked box only', () => {
+    expect(checkBoxCheckColor({ buttonPressed: true } as CheckBoxProperties, colors)).toEqual(RED);
+    expect(checkBoxCheckColor({} as CheckBoxProperties, colors)).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+  });
+});
+
+describe('checkBoxMinimumSize: the boxes of the draw states (check_box.cpp:64-79, button.cpp:52-95,525)', () => {
+  it("adds the current state's `normal` box margins, not the default theme's", () => {
+    const normal = drawnStyleBox({
+      content_margin_left: '10',
+      content_margin_right: '10',
+      content_margin_top: '2',
+      content_margin_bottom: '2',
+    });
+    // 20 + check 16 across. Down, the content is max(0 + 4 - 8, 16) inside the largest padding 8.
+    expect(checkBoxMinimumSize({ ...node({}), styleBoxes: { normal } }, ctx())).toEqual({ x: 36, y: 24 });
+  });
+
+  it('lays out in the largest margins of every state under align_to_largest_stylebox', () => {
+    const pressed = drawnStyleBox({ content_margin_left: '30', content_margin_right: '30' });
+    const n = {
+      ...node({ themeOverrideConstants: { align_to_largest_stylebox: 1 } }),
+      styleBoxes: { pressed },
+    };
+    // The unpressed box takes the pressed box's 60 px across.
+    expect(checkBoxMinimumSize(n, ctx()).x).toBe(60 + 16);
   });
 });
 
 describe("checkBoxMinimumSize: Button's inherited icon (check_box.cpp:64-79, button.cpp:481-526)", () => {
   const withIcon = (props: Partial<CheckBoxProperties>, size = { x: 12, y: 12 }): SolveNode => ({
     ...node(props),
+    textureSize: size,
     textureSlots: { icon: size },
   });
 
@@ -466,12 +297,18 @@ describe("checkBoxTextureSlots: Button's own icon property", () => {
     ]);
   });
 
-  it('requests nothing for no icon', () => {
-    expect(checkBoxTextureSlots(nodeWithIcon(), {})).toEqual([]);
+  it('keeps the icon slot first without an icon, so `textureSize` is never a themed check icon', () => {
+    const themed = {
+      checked: { ref: 'ExtResource("2")', resources: solveNode().resources, isHeldLocally: true },
+    };
+    expect(checkBoxTextureSlots(nodeWithIcon(), themed).map((request) => request.key)).toEqual([
+      'icon',
+      'checked',
+    ]);
   });
 });
 
-describe(`checkBoxMinimumSize: resolves this CheckBox's own theme font key ("${CHECKBOX_THEME_FONT_KEY}", default_theme.cpp:297)`, () => {
+describe(`checkBoxMinimumSize: resolves this CheckBox's own theme font key ("${BUTTON_THEME_FONT_KEY}", default_theme.cpp:297)`, () => {
   // An unresolvable font's warning is the observable proof here, not a resolved
   // value (`resolveNodeFontMetrics.test.ts` gives the reason).
   let warnSpy: ReturnType<typeof vi.spyOn>;
@@ -486,7 +323,7 @@ describe(`checkBoxMinimumSize: resolves this CheckBox's own theme font key ("${C
     const unresolvableFont = fontFile(undefined);
     const n: SolveNode = {
       ...node({ text: 'A' }),
-      fontOverrides: { [CHECKBOX_THEME_FONT_KEY]: unresolvableFont },
+      fontOverrides: { [BUTTON_THEME_FONT_KEY]: unresolvableFont },
     };
     checkBoxMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
@@ -501,7 +338,7 @@ describe(`checkBoxMinimumSize: resolves this CheckBox's own theme font key ("${C
 
   it('resolves the font key even for empty text (unconditional, not gated behind hasText)', () => {
     const unresolvableFont = fontFile(undefined);
-    const n: SolveNode = { ...node({}), fontOverrides: { [CHECKBOX_THEME_FONT_KEY]: unresolvableFont } };
+    const n: SolveNode = { ...node({}), fontOverrides: { [BUTTON_THEME_FONT_KEY]: unresolvableFont } };
     checkBoxMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
@@ -519,19 +356,6 @@ describe('checkBoxMinimumSize: the shaped text extent is ceiled (text_server_adv
 
   it('keeps the icon and separation OUT of the ceil — an empty CheckBox is unchanged by it', () => {
     expect(checkBoxMinimumSize(node({}), ctx()).x).toBe(checkBoxMinimumSize(node({ text: '' }), ctx()).x);
-  });
-});
-
-/** Godot draws the current icon at its own fitted size, placed by the largest (`check_box.cpp:137-142`). */
-describe('checkBoxDrawnIconSize', () => {
-  it("is the current icon's own size, not the largest icon's", () => {
-    const n = { textureSlots: { checked: { x: 32, y: 32 } }, constants: {} };
-    expect(checkBoxDrawnIconSize(n, 'unchecked')).toEqual({ x: 16, y: 16 });
-  });
-
-  it('is 0 for an icon that reports size 0, as an unset ViewportTexture does', () => {
-    const n = { textureSlots: { unchecked: { x: 0, y: 0 } }, constants: {} };
-    expect(checkBoxDrawnIconSize(n, 'unchecked')).toEqual({ x: 0, y: 0 });
   });
 });
 

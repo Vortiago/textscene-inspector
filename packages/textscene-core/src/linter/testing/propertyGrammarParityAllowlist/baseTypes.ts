@@ -248,13 +248,8 @@ export const baseTypeAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // frame cannot show it.
       'allow_reselect',
     ],
-    renderGap: [
-      // Sizes the button to its widest item, so it changes the control's width
-      // in a static frame.
-      'fit_to_longest_item',
-    ],
     reason:
-      'The item family is read through a computed key the scrape cannot match; allow_reselect is interaction-only, while fit_to_longest_item changes the rendered width and is not implemented yet.',
+      'The item family is read through a computed key the scrape cannot match, and allow_reselect is interaction-only.',
   },
 
   CenterContainer: {
