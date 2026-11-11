@@ -18,6 +18,7 @@ import { OptionButton } from './Component';
 import type { OptionButtonProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { bundledRunMeshes, bundledRuns } from '../../../../r3f/controls/native/testing/bundledRunStub';
+import { findCanvasTextMesh } from '../../../../r3f/controls/native/testing/canvasTextMesh';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
 vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
@@ -212,14 +213,6 @@ describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', ()
         renderOrder={0}
       />
     );
-  }
-
-  /** The canvas painter's mesh: a plain `MeshBasicMaterial` over the raster's `DataTexture`. */
-  function findCanvasTextMesh(scene: Rendered['scene']) {
-    return scene
-      .findAllByType('Mesh')
-      .map((m) => m.instance as THREE.Mesh)
-      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.DataTexture);
   }
 
   it('paints the selected item through the canvas rasteriser: one quad, and no run of the bundled face', async () => {
