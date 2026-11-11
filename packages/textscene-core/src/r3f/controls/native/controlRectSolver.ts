@@ -395,7 +395,12 @@ export function solveControlTree(
   // it drives. Godot's `_size_changed`/`update_minimum_size` are reactive too, so
   // a scene that couples them through a container converges in neither.
 
-  const pass2Ctx = createSolveContext(ctx.theme, ctx.measureText, (n) => out.get(n.path)?.rect);
+  const pass2Ctx = createSolveContext(
+    ctx.theme,
+    ctx.measureText,
+    (n) => out.get(n.path)?.rect,
+    ctx.embedderSize
+  );
   const out2 = new Map<string, SolvedControl>();
   for (const root of roots) {
     solveFree(root, viewport, rootOrigin, viewport, pass2Ctx, out2);

@@ -73,6 +73,16 @@ export function resolveGate(gate: ViewportGate, animatedVisible: ReadonlyMap<str
   };
 }
 
+/** `Window::get_embedder` (`window.cpp:1400-1415`): the path of the nearest viewport above `path` that embeds subwindows. */
+export function windowEmbedderPathAt(tree: LiveTree, path: string, rootEmbeds: boolean): string | null {
+  for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
+    const aboveNode = tree.at(above)?.step.node;
+    if (aboveNode && isViewportBoundary(aboveNode.type) && embedsSubwindows(aboveNode, rootEmbeds))
+      return above;
+  }
+  return null;
+}
+
 /**
  * The viewport whose passes gate the one at `path`, null at the root viewport. A viewport's parent
  * is the viewport it sits in (`viewport.cpp:579`). An embedded window's is its embedder
@@ -80,11 +90,10 @@ export function resolveGate(gate: ViewportGate, animatedVisible: ReadonlyMap<str
  */
 function enclosingViewportPathAt(tree: LiveTree, path: string, rootEmbeds: boolean): string | null {
   const node = tree.at(path)?.step.node;
-  const isGatedByEmbedder = node !== undefined && isEmbeddableWindow(node);
+  if (node !== undefined && isEmbeddableWindow(node)) return windowEmbedderPathAt(tree, path, rootEmbeds);
   for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
     const aboveNode = tree.at(above)?.step.node;
-    if (!aboveNode || !isViewportBoundary(aboveNode.type)) continue;
-    if (!isGatedByEmbedder || embedsSubwindows(aboveNode, rootEmbeds)) return above;
+    if (aboveNode && isViewportBoundary(aboveNode.type)) return above;
   }
   return null;
 }

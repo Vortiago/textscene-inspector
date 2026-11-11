@@ -17,10 +17,10 @@ import {
   type SceneScope,
 } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
-import { embedsSubwindows, isViewportBoundary } from './viewportBoundary.js';
+import { isViewportBoundary } from './viewportBoundary.js';
 import { resolveViewportSubtree, viewportContentKind } from './viewportContent.js';
 import type { SubViewportProperties } from './types.js';
-import { viewportGateAt, type ViewportGate } from './viewportGate.js';
+import { viewportGateAt, windowEmbedderPathAt, type ViewportGate } from './viewportGate.js';
 import { viewportThemeOwners, type ThemeOwner } from '../../windows/window/themeOwners.js';
 
 /** The viewport a window embeds in, whose visible size limits the window's height. */
@@ -74,14 +74,10 @@ export function inheritedRtlAt(tree: LiveTree, path: string, env: LayoutDirectio
   return link ? rtlBelow(link.step.node, inheritedRtlAt(tree, above, env), env) : null;
 }
 
-/** `Window::get_embedder` (`window.cpp:1400-1415`): the nearest viewport above that embeds subwindows. */
 function enclosingViewport(tree: LiveTree, path: string, rootEmbeds: boolean): EnclosingViewport | null {
-  for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
-    const node = tree.at(above)?.step.node;
-    if (node && isViewportBoundary(node.type) && embedsSubwindows(node, rootEmbeds))
-      return { path: above, node };
-  }
-  return null;
+  const embedderPath = windowEmbedderPathAt(tree, path, rootEmbeds);
+  const node = embedderPath === null ? undefined : tree.at(embedderPath)?.step.node;
+  return embedderPath !== null && node ? { path: embedderPath, node } : null;
 }
 
 /**

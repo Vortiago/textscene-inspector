@@ -38,12 +38,26 @@ function parseItems(properties: Record<string, string>, context: string): PopupM
   return items;
 }
 
-/** The properties a scene sets before its `size` line, in file order (`null` when it has none). */
-function propertiesBeforeSize(properties: Record<string, string>): Record<string, string> | null {
+/** Whether `key` is one of the keys the items come from. */
+function isItemKey(key: string): boolean {
+  return key === POPUP_MENU_ITEMS.countKey.key || key.startsWith(POPUP_MENU_ITEMS.prefix);
+}
+
+/**
+ * The items as they stand when the `size` line runs, or `null` when the scene has none. The same array
+ * as `items` when no item key follows `size`, so the layout shapes the items once.
+ */
+function parseItemsAtSize(
+  properties: Record<string, string>,
+  items: PopupMenuItem[],
+  context: string
+): PopupMenuItem[] | null {
   const keys = Object.keys(properties);
   const sizeAt = keys.indexOf('size');
   if (sizeAt < 0) return null;
-  return Object.fromEntries(keys.slice(0, sizeAt).map((key) => [key, properties[key]!]));
+  if (!keys.slice(sizeAt + 1).some(isItemKey)) return items;
+  const beforeSize = Object.fromEntries(keys.slice(0, sizeAt).map((key) => [key, properties[key]!]));
+  return parseItems(beforeSize, context);
 }
 
 export function parsePopupMenu(
@@ -51,10 +65,6 @@ export function parsePopupMenu(
   properties: Record<string, string>
 ): PopupMenuProperties {
   const window = parseWindow(heading, properties);
-  const beforeSize = propertiesBeforeSize(properties);
   const items = parseItems(properties, window.name);
-  const itemsAtSize = beforeSize && parseItems(beforeSize, window.name);
-  // The same array when the size line follows every item, so the layout shapes the items once.
-  const isSameItems = itemsAtSize !== null && JSON.stringify(itemsAtSize) === JSON.stringify(items);
-  return { ...window, items, itemsAtSize: isSameItems ? items : itemsAtSize };
+  return { ...window, items, itemsAtSize: parseItemsAtSize(properties, items, window.name) };
 }
