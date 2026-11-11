@@ -48,11 +48,11 @@ export interface UpdateGate {
 export function viewportGateAt(tree: LiveTree, path: string, authoredMode: number): ViewportGate {
   const parentPath = parentPathOf(path);
   const container = parentPath === null ? undefined : tree.at(parentPath)?.step.node;
-  const isUnderContainer = container?.type === 'SubViewportContainer';
+  const isUnderContainer = parentPath !== null && container?.type === 'SubViewportContainer';
   return {
     authoredMode,
     enclosingPath: enclosingViewportPathAt(tree, path),
-    visibilityChain: isUnderContainer ? visibilityChainAt(tree, parentPath!) : null,
+    visibilityChain: isUnderContainer ? visibilityChainAt(tree, parentPath) : null,
     isStretched: isUnderContainer && isStretching(container),
   };
 }
