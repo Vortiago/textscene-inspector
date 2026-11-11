@@ -9,7 +9,7 @@ import { useFrame } from '@react-three/fiber';
 import type { AnimationAction, AnimationMixer } from 'three';
 import type { PlayState } from '../contexts/AnimationTransportContext';
 import { stepPlayback } from './stepPlayback';
-import { clipTimeOf, seekAction, startAction, startForwardPass } from './actionHelpers';
+import { clipTimeOf, seekAction, startAction, startForwardPass, switchLoopForward } from './actionHelpers';
 
 export interface PlaybackLoopParams {
   playState: PlayState;
@@ -64,9 +64,7 @@ export function usePlaybackLoop(params: PlaybackLoopParams): void {
     // restarting the running action.
     const reconfigureChanged = !Object.is(params.reconfigureKey, prevReconfigureKeyRef.current);
     if ((clipChanged || reconfigureChanged || mixerRebuilt) && action && selectedClip) {
-      // A new loop reads `time` its own way, so it takes over from the clip time, forward.
-      startForwardPass(action);
-      params.configureAction(action, selectedClip);
+      switchLoopForward(action, (reconfigured) => params.configureAction(reconfigured, selectedClip));
     }
     prevReconfigureKeyRef.current = params.reconfigureKey;
 

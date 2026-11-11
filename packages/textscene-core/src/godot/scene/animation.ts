@@ -76,6 +76,12 @@ export const AnimationUpdateMode = {
   CAPTURE: 2,
 } as const;
 
+/**
+ * The highest `update` the keys of a value track store: `Animation::_set` clamps to 3, one past
+ * CAPTURE (`scene/resources/animation.cpp:258-259`).
+ */
+export const ANIMATION_UPDATE_MODE_CEILING = 3;
+
 /** `Animation::InterpolationType` (`scene/resources/animation.h:58-64`). */
 export const AnimationInterpolation = {
   NEAREST: 0,

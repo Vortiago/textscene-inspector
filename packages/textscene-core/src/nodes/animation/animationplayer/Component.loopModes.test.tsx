@@ -30,7 +30,10 @@ const AP_PATH = 'Root/AnimationPlayer';
 const FADER_PATH = 'Root/Fader';
 const FRAME_SECONDS = 0.3;
 
-/** A one-second clip: `Mover` slides from x 0 to 10 on the mixer, and `Fader` fades from alpha 1 to 0 on the registry. */
+/**
+ * A one-second clip: `Mover` slides from x 0 to 10 on the mixer, and `Fader` fades from alpha 1 to 0
+ * on the registry. `Fader` also flips from frame 0 to frame 1 at 0.5 s, on a discrete track.
+ */
 function clip(id: string, loopMode: number): TscnInternalResource {
   return subResource('Animation', id, {
     length: '1.0',
@@ -43,6 +46,9 @@ function clip(id: string, loopMode: number): TscnInternalResource {
     'tracks/1/path': 'NodePath("Fader:modulate")',
     'tracks/1/keys':
       '{\n"times": PackedFloat32Array(0, 1),\n"values": [Color(1, 1, 1, 1), Color(1, 1, 1, 0)]\n}',
+    'tracks/2/type': '"value"',
+    'tracks/2/path': 'NodePath("Fader:frame")',
+    'tracks/2/keys': '{\n"times": PackedFloat32Array(0, 0.5),\n"update": 1,\n"values": [0, 1]\n}',
   });
 }
 
@@ -75,12 +81,14 @@ function playerNode(autoplay: string): TscnNode {
 
 let transport: AnimationTransport;
 let fadedAlpha: number | null;
+let shownFrame: number | null;
 function Probe() {
   transport = useAnimationTransport();
   return null;
 }
 function FaderProbe() {
   fadedAlpha = useAnimatedValue('modulate', (colour) => colour[3]!);
+  shownFrame = useAnimatedValue('frame', (frame) => frame[0]!);
   return null;
 }
 
@@ -95,6 +103,7 @@ const act = (change: () => void) => ReactThreeTestRenderer.act(async () => chang
 /** Mounts the player selected, with `autoplay` as the clip the transport starts on, and plays it. */
 async function play(autoplay: string): Promise<Renderer> {
   fadedAlpha = null;
+  shownFrame = null;
   const renderer = await ReactThreeTestRenderer.create(
     <SceneStack
       loader={createFakeResourceLoader().loader}
@@ -200,6 +209,24 @@ describe('AnimationPlayer loop modes', () => {
     await act(() => transport.setLoopOverride('loop'));
     await advance(renderer, 1);
     expect(await playheads(renderer)).toEqual(allAt(0.1));
+  });
+
+  it('plays forward when a ping-pong loop takes over from the Loop override', async () => {
+    const renderer = await play('bounce');
+    await act(() => transport.setLoopOverride('loop'));
+    await advance(renderer, 5);
+    await act(() => transport.setLoopOverride('auto'));
+    await advance(renderer, 1);
+    expect(await playheads(renderer)).toEqual(allAt(0.8));
+  });
+
+  it('holds the key a discrete track crossed when a ping-pong loop pauses on its return pass', async () => {
+    const renderer = await play('bounce');
+    await advance(renderer, 6);
+    await pause(renderer);
+    // The pause flushes the clip time to the transport, which comes back as a seek one frame on.
+    await advance(renderer, 1);
+    expect(shownFrame).toBe(1);
   });
 
   it('holds the end of a looping clip under the Once override', async () => {

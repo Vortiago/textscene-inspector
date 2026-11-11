@@ -7,7 +7,7 @@
 import type { GodotKeyframeValue } from './keyframeValues.js';
 import { parseValueArray } from './keyframeValues.js';
 import { clamp } from '../../../godot/math/math.js';
-import { AnimationUpdateMode } from '../../../godot/scene/animation.js';
+import { ANIMATION_UPDATE_MODE_CEILING, AnimationUpdateMode } from '../../../godot/scene/animation.js';
 import { parseGodotInt } from '../../../godot/variant/intReader.js';
 import { parseGodotFloat } from '../../../godot/variant/number.js';
 import { boolSlotValue, scalarSlotValue } from '../../../godot/variant/variantBool.js';
@@ -166,8 +166,6 @@ const readTransitionsField = dictCallField('transitions', 'PackedFloat32Array');
 
 const UPDATE_FIELD = dictNumberField('update');
 const CONTINUOUS_FIELD = dictBoolField('cont');
-// Godot clamps to 3, one past CAPTURE (animation.cpp:258-259).
-const UPDATE_CEILING = 3;
 
 /**
  * The update mode a value track's key Dictionary names: `update` clamped as Godot clamps it, else
@@ -176,7 +174,7 @@ const UPDATE_CEILING = 3;
 function updateModeOf(keysStr: string): number {
   const update = parseGodotInt(UPDATE_FIELD.exec(keysStr)?.[1] ?? '');
   if (update !== null && !Number.isNaN(update)) {
-    return clamp(update, AnimationUpdateMode.CONTINUOUS, UPDATE_CEILING);
+    return clamp(update, AnimationUpdateMode.CONTINUOUS, ANIMATION_UPDATE_MODE_CEILING);
   }
   const isContinuous = boolSlotValue(CONTINUOUS_FIELD.exec(keysStr)?.[1]);
   return isContinuous === false ? AnimationUpdateMode.DISCRETE : AnimationUpdateMode.CONTINUOUS;

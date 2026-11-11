@@ -29,12 +29,15 @@ export function startAction(action: AnimationAction, opts: ActionOpts = {}): voi
  * Seek a paused action to the clip time `time`: start it (re-applying weight/timeScale on
  * the same call as play(), so the weight invariant holds whether or not the
  * action was already running), then hold it paused at the target time, on a forward pass.
+ * A seek to the clip time the action stands on keeps its pass. The flush of a pause echoes that
+ * time, and a discrete track holds the key its return pass crossed, as a paused Godot player does.
  */
 export function seekAction(action: AnimationAction, time: number, opts: ActionOpts = {}): void {
-  startForwardPass(action);
+  const movesPlayhead = clipTimeOf(action) !== time;
+  if (movesPlayhead) startForwardPass(action);
   startAction(action, opts);
   action.paused = true;
-  action.time = time;
+  if (movesPlayhead) action.time = time;
 }
 
 /** The passes an action has finished, -1 before its first frame. THREE counts them in a private field and offers no reader. */
@@ -62,12 +65,29 @@ export function clipTimeOf(action: AnimationAction): number {
 
 /**
  * Puts an action on a return pass back on a forward pass, at the clip time it stands on.
- * `AnimationPlayer::play` starts every playback forward (`animation_player.cpp:509`), and a seek or
- * a new loop reads `time` as a forward time. An action on a forward pass stays as it is.
+ * `AnimationPlayer::play` starts every playback forward (`animation_player.cpp:509`), and a seek
+ * reads `time` as a forward time. An action on a forward pass stays as it is.
  */
 export function startForwardPass(action: AnimationAction): void {
-  if (!isOnReturnPass(action)) return;
-  const time = clipTimeOf(action);
+  if (isOnReturnPass(action)) restartAt(action, clipTimeOf(action));
+}
+
+/**
+ * Hands the action to the loop `applyLoop` sets, forward from the clip time it stands on. The pass
+ * count outlives the loop that ran it, so an odd count of `LoopRepeat` passes would read as the
+ * return pass of a `LoopPingPong`.
+ */
+export function switchLoopForward(
+  action: AnimationAction,
+  applyLoop: (action: AnimationAction) => void
+): void {
+  startForwardPass(action);
+  applyLoop(action);
+  if (isOnReturnPass(action)) restartAt(action, action.time);
+}
+
+/** Forgets the passes the action has run, and stands it on `time` of its first pass. */
+function restartAt(action: AnimationAction, time: number): void {
   action.reset();
   action.time = time;
 }

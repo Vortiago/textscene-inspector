@@ -63,8 +63,11 @@ Rejected: a central animation-value context that computes per-frame values and p
 >   bone tracks, the transport's readout and an AnimationTree's readout all read it.
 >   `isOnReturnPass` reads THREE's private pass count. Rejected: a pass count of our own beside
 >   it, which drifts from THREE's on a seek.
-> - `seekAction`, a resume from pause and a change of loop style call `startForwardPass` first, so
->   the clip runs forward from the time it shows, as Godot's `play` does (`animation_player.cpp:509`).
+> - `seekAction` and a resume from pause call `startForwardPass` first, so the clip runs forward
+>   from the time it shows, as Godot's `play` does (`animation_player.cpp:509`). A change of loop
+>   style goes through `switchLoopForward`, which also drops an odd pass count that the old style
+>   left. A seek to the clip time the action stands on keeps its pass: a pause flushes that time to
+>   the transport, and a paused Godot player holds the key a discrete track last crossed.
 > - A discrete value track that the registry pushes shows, on a return pass, the key the playhead
 >   last crossed, not the key at or before it. Godot sets each key as the playhead crosses it
 >   (`animation_mixer.cpp:1635-1646`). A discrete track that the mixer plays shows the key at or
