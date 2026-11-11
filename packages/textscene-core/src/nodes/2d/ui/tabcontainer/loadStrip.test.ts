@@ -47,12 +47,11 @@ describe('resolveTabContainerStrip with hidden pages', () => {
 
 describe('resolveTabContainerStrip with RIGHT alignment', () => {
   it('reclaims side_margin when the tabs overflow, so the bar is the container wide', () => {
-    expect(load(150, TAB_ALIGNMENT_RIGHT, 2)).toMatchObject({ barWidthPx: 150, offset: 2, sideMarginPx: 0 });
+    expect(load(150, TAB_ALIGNMENT_RIGHT, 2)).toMatchObject({ offset: 2, sideMarginPx: 0 });
   });
 
   it('keeps the reclaim when the first page is hidden', () => {
     expect(load(150, TAB_ALIGNMENT_RIGHT, 2, [0])).toMatchObject({
-      barWidthPx: 150,
       offset: 2,
       sideMarginPx: 0,
     });
@@ -60,13 +59,12 @@ describe('resolveTabContainerStrip with RIGHT alignment', () => {
 
   it('keeps side_margin when the visible tabs fit', () => {
     expect(load(400, TAB_ALIGNMENT_RIGHT, 0, [1])).toMatchObject({
-      barWidthPx: 392,
       offset: 0,
       sideMarginPx: SIDE_MARGIN,
     });
   });
 
   it('keeps side_margin when the container is wider than every tab', () => {
-    expect(load(520, TAB_ALIGNMENT_RIGHT, 0).barWidthPx).toBe(512);
+    expect(load(520, TAB_ALIGNMENT_RIGHT, 0).sideMarginPx).toBe(SIDE_MARGIN);
   });
 });

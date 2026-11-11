@@ -31,7 +31,6 @@ export interface TabContainerStripInput {
 }
 
 export interface LoadedStrip {
-  barWidthPx: number;
   /** The first drawn tab: `TabBar::offset`. */
   offset: number;
   /** The `side_margin` the bar leaves free: 0 once RIGHT alignment reclaims it. */
@@ -120,7 +119,6 @@ export function resolveTabContainerStrip(
   updateMargins();
 
   return {
-    barWidthPx,
     offset,
     sideMarginPx: input.alignment === TAB_ALIGNMENT_RIGHT && barWidthPx === fullWidthPx ? 0 : sideMarginPx,
   };
