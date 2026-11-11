@@ -468,34 +468,6 @@ export function iconOnlyButtonIconRectIn(
 }
 
 /**
- * The label box of OptionButton, which reserves `reservedPx` (its arrow plus
- * `h_separation`) on one side, as `_internal_margin` does (`button.cpp:247-259`). Under RTL the
- * reservation changes sides at the caller and the alignment swaps here (`button.cpp:271-275`).
- */
-export function reservedLabelBox(input: {
-  rectSize: Vector2;
-  margin: { left: number; top: number; right: number; bottom: number };
-  reservedPx: number;
-  isReservedOnLeft: boolean;
-  textHeightPx: number;
-  textAlignment: number;
-  rtl: boolean;
-}): ButtonLabelBox {
-  const { rectSize, margin, reservedPx, isReservedOnLeft, textHeightPx, textAlignment, rtl } = input;
-  return {
-    leftPx: margin.left + (isReservedOnLeft ? reservedPx : 0),
-    topPx: centredTextTopPx(rectSize.y - margin.top - margin.bottom, textHeightPx, margin.top),
-    widthPx: reservedLabelWidthPx(rectSize.x, margin.left + margin.right, reservedPx),
-    alignment: rtl ? swapAlignmentSide(textAlignment) : textAlignment,
-  };
-}
-
-/** The drawable width of a label that reserves `reservedPx` beside its margins (`button.cpp:332-352,444-456`). */
-function reservedLabelWidthPx(rectWidthPx: number, marginsPx: number, reservedPx: number): number {
-  return rectWidthPx - marginsPx - reservedPx;
-}
-
-/**
  * The shaped text size `layoutButtonContent` aligns against: the ceiled width, not the raw pen advance
  * (`button.cpp:343,349` read the same `text_buf->get_size()` as the minimum size). The height needs no
  * ceil: the line pitch sums independently ceiled ascent and descent and an integral theme spacing.
@@ -561,22 +533,6 @@ export function shapedNodeLabel(
     bidi: controlBidiOptions(props, n),
     boxWidthPx,
   });
-}
-
-/**
- * The width a wrapping label shapes at in `rect`: the rect less the margins and the reservation, shaped as
- * the draw does (`button.cpp:428-432`). A minimum-size solver passes its tentative rect, which is
- * `undefined` on the first solve pass; that pass shapes unwrapped, so the width is 0, as it is at
- * AUTOWRAP_OFF. `reservedPx` is a function so that neither case computes the reservation.
- */
-export function labelWrapWidthPx(
-  props: ButtonWrapProperties,
-  rect: Rect2 | undefined,
-  marginsPx: number,
-  reservedPx: () => number
-): number {
-  if (rect === undefined || !isButtonAutowrapped(props)) return 0;
-  return buttonTextBufWidthPx(reservedLabelWidthPx(rect.w, marginsPx, reservedPx()));
 }
 
 /** `button.cpp:266-275`: LEFT and RIGHT trade places under RTL, and any other value stays. */
@@ -743,9 +699,25 @@ export function buttonContentMinimumSize(
   label: TextLayoutResult | null,
   props: TextClipProperties & ButtonWrapProperties
 ): Vector2 {
+  return minimumSizeOfText(facts, labelMinimumTextSize(label, props), label?.linePitchPx ?? 0);
+}
+
+/**
+ * {@link buttonContentMinimumSize} for a text measured, not shaped: one OptionButton item, which shapes
+ * a fresh one-line paragraph (`button.cpp:484-489`, from `option_button.cpp:451`).
+ */
+export function measuredContentMinimumSize(
+  facts: ButtonContentFacts,
+  measured: Vector2,
+  props: TextClipProperties & ButtonWrapProperties
+): Vector2 {
+  return minimumSizeOfText(facts, { x: textMinimumWidthPx(measured.x, props), y: measured.y }, measured.y);
+}
+
+function minimumSizeOfText(facts: ButtonContentFacts, textSize: Vector2, lineHeightPx: number): Vector2 {
   return buttonContentSize({
-    textSize: labelMinimumTextSize(label, props),
-    lineHeightPx: label?.linePitchPx ?? 0,
+    textSize,
+    lineHeightPx,
     hasText: facts.hasText,
     iconSize: buttonMinimumIconSize(facts.iconNaturalSize, facts.expandIcon, facts.iconMaxWidth),
     iconAlignment: facts.iconAlignment,
@@ -757,7 +729,8 @@ export function buttonContentMinimumSize(
 /**
  * `CheckBox::get_minimum_size` and `CheckButton::get_minimum_size` (`check_box.cpp:64-79`,
  * `check_button.cpp:64-79`) less the margins: Button's `content` plus the element it reserves, with
- * `h_separation` between them while both have a width. The caller passes `hSeparation` already clamped.
+ * `h_separation` between them while both have a width. The gate is `tex_size.width > 0 || tex_size.height > 0`
+ * (`check_box.cpp:67`), so a zero-width element with height still floors the height. The caller passes `hSeparation` already clamped.
  */
 export function withReservedElementSize(content: Vector2, element: Vector2, hSeparation: number): Vector2 {
   if (element.x <= 0 && element.y <= 0) return content;

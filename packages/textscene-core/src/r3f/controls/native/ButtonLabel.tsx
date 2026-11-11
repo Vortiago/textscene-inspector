@@ -76,7 +76,7 @@ interface ButtonLabelShapeInput {
   text: string;
   fontSizePx: number;
   bidi: TextBidiOptions;
-  /** The width a wrapping label shapes at ({@link labelWrapWidthPx}). Ignored at AUTOWRAP_OFF. */
+  /** The width a wrapping label shapes at ({@link wrappedLabelWidthPx}). Ignored at AUTOWRAP_OFF. */
   boxWidthPx: number;
 }
 

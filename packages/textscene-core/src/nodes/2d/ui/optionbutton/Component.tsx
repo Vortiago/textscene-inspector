@@ -1,8 +1,9 @@
 /**
- * `<OptionButton>`, the native painter: Button-style StyleBox chrome, the selected item's text and the
- * chevron arrow from `OPTION_BUTTON_ICONS`. The arrow's theme colour stays white, since `modulate_arrow`
- * defaults false (`default_theme.cpp:251`), so its quad takes `tint` directly, as CheckBox's icon does.
- * `ControlCanvasWalker` owns `visible`, `children` and the transform.
+ * `<OptionButton>`, the native painter: Button-style StyleBox chrome, the selected item's icon and text, then
+ * the chevron arrow from `OPTION_BUTTON_ICONS`, as `Button::_notification` draws before the arrow does.
+ * The arrow's theme colour stays white, since `modulate_arrow` defaults false (`default_theme.cpp:251`), so
+ * its quad takes `tint` directly, as CheckBox's icon does. `ControlCanvasWalker` owns `visible`,
+ * `children` and the transform.
  */
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -12,20 +13,25 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { OPTION_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { ButtonLabel, useButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
+import { ButtonLabel, useWrappingButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
-import { isButtonAutowrapped } from '../../../../r3f/controls/native/buttonBase';
+import {
+  BUTTON_ICON_SLOT_KEY,
+  isButtonAutowrapped,
+  labelNaturalSize,
+} from '../../../../r3f/controls/native/buttonBase';
+import { useIconModulate, useOwnButtonTexture } from '../../../../r3f/controls/native/useButtonIcon';
+import { infersRtl } from '../../../../r3f/controls/native/text/textLayout';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
-import { HorizontalAlignment } from '../../../../godot/math/alignment';
+import { buttonIconColor } from '../button/nativeSolver';
 import {
   layoutOptionButtonContent,
-  optionButtonHSeparation,
+  optionButtonContentFacts,
   optionButtonTextTheme,
   pickButtonStyleBox,
   resolveToggleDrawState,
   optionButtonArrowSize,
-  optionButtonLabelWrapWidthPx,
-  resolveOptionButtonSelectedText,
+  selectedOptionItem,
   tintColor,
   OPTION_BUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
@@ -47,59 +53,39 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
   const arrowTexture = useNodeIcon(solveNode.icons.arrow, OPTION_BUTTON_ICONS.arrow);
   const arrowSize = useMemo(() => optionButtonArrowSize(solveNode), [solveNode]);
 
-  // Text: the selected item only, never the popup's full list
-  const text = resolveOptionButtonSelectedText(props);
-  const hasText = text.length > 0;
+  // The selected item's text and icon only, never the popup's full list (`option_button.cpp:423-424`).
+  const selectedItem = selectedOptionItem(props);
+  const text = selectedItem?.text ?? '';
+  const iconTexture = useOwnButtonTexture(solveNode, selectedItem?.icon);
+  const iconSize = solveNode.textureSlots[BUTTON_ICON_SLOT_KEY] ?? null;
+  const iconModulate = useIconModulate(buttonIconColor(solveNode.colors, state), tint.own);
   const { fontSizePx, color: baseFontColor } = optionButtonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
   const bidi = useControlBidiOptions(props, solveNode);
-  // Content layout: text and arrow placement within the solved rect
   const arrowMargin = solveNode.constants.arrow_margin ?? theme.separation;
 
-  const layout = useButtonLabelLayout(solveNode, props, {
-    themeFontKey: OPTION_BUTTON_THEME_FONT_KEY,
-    text,
-    fontSizePx,
-    bidi,
-    boxWidthPx: optionButtonLabelWrapWidthPx(
-      props,
-      rect,
-      baseStyleBox.contentMargin,
-      arrowSize,
-      solveNode.constants,
-      {
-        theme,
-      }
-    ),
-  });
+  const facts = useMemo(
+    () => optionButtonContentFacts(solveNode, props, text, { theme }, { x: rect.w, y: rect.h }, iconSize),
+    [solveNode, props, text, theme, rect.w, rect.h, iconSize]
+  );
+  const layout = useWrappingButtonLabelLayout(
+    solveNode,
+    props,
+    { themeFontKey: OPTION_BUTTON_THEME_FONT_KEY, text, fontSizePx, bidi },
+    facts
+  );
 
   const content = useMemo(
     () =>
       layoutOptionButtonContent({
-        rectSize: { x: rect.w, y: rect.h },
-        styleMargin: baseStyleBox.contentMargin,
+        // The height sums independently ceiled ascent and descent and an integral spacing.
+        content: { ...facts, textNaturalSize: labelNaturalSize(layout), isTextRtl: infersRtl(layout) },
         arrowSize,
         arrowMargin,
-        hSeparation: optionButtonHSeparation(solveNode.constants, { theme }),
-        rtl: solveNode.rtl,
-        // Integral: ceiled ascent plus ceiled descent plus an integral spacing.
-        textHeightPx: layout?.heightPx ?? 0,
-        textAlignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
       }),
-    [
-      rect.w,
-      rect.h,
-      baseStyleBox.contentMargin,
-      arrowSize,
-      arrowMargin,
-      layout,
-      props.alignment,
-      solveNode.constants,
-      theme,
-      solveNode.rtl,
-    ]
+    [facts, layout, arrowSize, arrowMargin]
   );
 
   return (
@@ -110,14 +96,16 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
       {!props.flat && (
         <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
       )}
-      <PositionedIcon
-        rect={content.arrowRect}
-        texture={arrowTexture}
-        color={tint.color}
-        opacity={tint.opacity}
-        renderOrder={renderOrder}
-      />
-      {hasText && layout && (
+      {content.icon && (
+        <PositionedIcon
+          rect={content.icon.rect}
+          texture={iconTexture}
+          color={iconModulate.color}
+          opacity={iconModulate.opacity}
+          renderOrder={renderOrder}
+        />
+      )}
+      {content.labelBox && layout && (
         <ButtonLabel
           layout={layout}
           overrunBehavior={props.overrunBehavior}
@@ -131,6 +119,13 @@ export function OptionButton({ solveNode, tint, rect, renderOrder, theme }: Nati
           renderOrder={renderOrder}
         />
       )}
+      <PositionedIcon
+        rect={content.arrowRect}
+        texture={arrowTexture}
+        color={tint.color}
+        opacity={tint.opacity}
+        renderOrder={renderOrder}
+      />
     </>
   );
 }

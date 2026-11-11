@@ -16,7 +16,9 @@ box. The previewer does both, so a box narrower than the item shows only the gly
 A trimming `text_overrun_behavior` zeroes the width the same way. The previewer trims the item
 to the box, with an ellipsis where Godot adds one, as Button does. `autowrap_mode` wraps the drawn
 item at its paragraph box. The box does not grow: Godot sizes every item as one line, so a wrapped
-item overflows the box above and below.
+item overflows the box above and below. The selected item's `icon` draws as Button's `icon` does,
+with `icon_alignment`, `vertical_icon_alignment`, `expand_icon` and `icon_max_width`, and the minimum size takes the
+widest and tallest item with its own icon.
 
 ## Linting
 

@@ -186,29 +186,31 @@ export function buttonContentInput(fields: ButtonContentInputFields): ButtonCont
   };
 }
 
-/** The node and rect a CheckBox or CheckButton hands {@link checkFamilyContentFacts}. */
-interface CheckFamilyContent {
+/** What a left-aligned Button subclass hands {@link derivedButtonContentFacts}. */
+interface DerivedButtonContent {
   n: Pick<SolveNode, 'constants' | 'rtl'>;
   props: ButtonProperties;
+  /** The label: `props.text`, or OptionButton's selected item. */
+  text: string;
   ctx: Pick<SolveContext, 'theme'>;
   rectSize: Vector2;
   iconNaturalSize: Vector2 | null;
-  /** The stylebox margin on each axis, equal on both sides. */
-  margin: Vector2;
-  /** What the check or toggle reserves (`check_box.cpp:96-101`, `check_button.cpp:96-104`). */
+  styleMargin: ButtonContentInput['styleMargin'];
+  /** What the subclass reserves for its own element: a check, a toggle or an arrow. */
   internalMargin: { left: number; right: number };
 }
 
-/** {@link buttonContentInput} for the CheckBox family, whose constructors align the text LEFT (`check_box.cpp:174`, `check_button.cpp:174`). */
-export function checkFamilyContentFacts({
+/** {@link buttonContentInput} for CheckBox, CheckButton and OptionButton, whose constructors align the text LEFT (`check_box.cpp:174`, `check_button.cpp:174`, `option_button.cpp:654`). */
+export function derivedButtonContentFacts({
   n,
   props,
+  text,
   ctx,
   rectSize,
   iconNaturalSize,
-  margin,
+  styleMargin,
   internalMargin,
-}: CheckFamilyContent): ButtonContentFacts {
+}: DerivedButtonContent): ButtonContentFacts {
   return buttonContentInput({
     ...props,
     alignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
@@ -217,9 +219,9 @@ export function checkFamilyContentFacts({
     separationPx: ctx.theme.separation,
     rtl: n.rtl,
     rectSize,
-    styleMargin: { left: margin.x, top: margin.y, right: margin.x, bottom: margin.y },
+    styleMargin,
     iconNaturalSize,
-    hasText: (props.text ?? '').length > 0,
+    hasText: text.length > 0,
     internalMargin,
   });
 }

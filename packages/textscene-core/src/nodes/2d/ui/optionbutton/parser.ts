@@ -46,7 +46,8 @@ export function parseOptionButton(
     const rawText = leaves?.get('text');
     const text = rawText !== undefined ? unquoteString(rawText) : '';
     const id = slotInt(leaves?.get('id'));
-    items.push({ text, id: id ?? i });
+    const icon = leaves?.get('icon');
+    items.push(icon === undefined ? { text, id: id ?? i } : { text, id: id ?? i, icon });
   }
 
   if (items.length > 0) result.items = items;

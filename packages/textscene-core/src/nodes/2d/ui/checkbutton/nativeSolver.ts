@@ -33,7 +33,7 @@ import {
   type ButtonContentLayout,
   type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
-import { checkFamilyContentFacts } from '../button/nativeSolver';
+import { derivedButtonContentFacts } from '../button/nativeSolver';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -218,13 +218,16 @@ export function checkButtonContentFacts(
   iconNaturalSize: Vector2 | null
 ): ButtonContentFacts {
   const toggleWidth = checkButtonFittedIconSize(n, props.disabled === true).x;
-  return checkFamilyContentFacts({
+  const marginX = checkButtonMarginX(ctx);
+  const marginY = checkButtonMarginY(ctx);
+  return derivedButtonContentFacts({
     n,
     props,
+    text: props.text ?? '',
     ctx,
     rectSize,
     iconNaturalSize,
-    margin: { x: checkButtonMarginX(ctx), y: checkButtonMarginY(ctx) },
+    styleMargin: { left: marginX, top: marginY, right: marginX, bottom: marginY },
     internalMargin: internalMarginAt(n.rtl ? 'left' : 'right', toggleWidth),
   });
 }

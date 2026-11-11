@@ -33,7 +33,7 @@ import {
   type ButtonContentLayout,
   type ToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
-import { checkFamilyContentFacts } from '../button/nativeSolver';
+import { derivedButtonContentFacts } from '../button/nativeSolver';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -204,13 +204,14 @@ export function checkBoxContentFacts(
   iconNaturalSize: Vector2 | null
 ): ButtonContentFacts {
   const margin = ctx.theme.contentMargin;
-  return checkFamilyContentFacts({
+  return derivedButtonContentFacts({
     n,
     props,
+    text: props.text ?? '',
     ctx,
     rectSize,
     iconNaturalSize,
-    margin: { x: margin, y: margin },
+    styleMargin: { left: margin, top: margin, right: margin, bottom: margin },
     internalMargin: internalMarginAt(n.rtl ? 'right' : 'left', checkBoxFittedIconSize(n).x),
   });
 }

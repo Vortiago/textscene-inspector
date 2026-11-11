@@ -12,9 +12,14 @@ import { useCheckBoxIcon } from './useCheckBoxIcon';
 import { ButtonLabel, useWrappingButtonLabelLayout } from '../../../../r3f/controls/native/ButtonLabel';
 import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { infersRtl } from '../../../../r3f/controls/native/text/textLayout';
-import { isButtonAutowrapped, labelNaturalSize, tintColor } from '../../../../r3f/controls/native/buttonBase';
+import {
+  BUTTON_ICON_SLOT_KEY,
+  isButtonAutowrapped,
+  labelNaturalSize,
+  tintColor,
+} from '../../../../r3f/controls/native/buttonBase';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
-import { useIconModulate, useOwnButtonIcon } from '../../../../r3f/controls/native/useButtonIcon';
+import { useIconModulate, useOwnButtonTexture } from '../../../../r3f/controls/native/useButtonIcon';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { buttonIconColor } from '../button/nativeSolver';
 import {
@@ -44,7 +49,8 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const checkSize = useMemo(() => checkBoxFittedIconSize(solveNode), [solveNode]);
   const drawnCheckSize = useMemo(() => checkBoxDrawnIconSize(solveNode, checkKey), [solveNode, checkKey]);
 
-  const ownIcon = useOwnButtonIcon(solveNode, props.icon);
+  const ownIconTexture = useOwnButtonTexture(solveNode, props.icon);
+  const ownIconSize = solveNode.textureSlots[BUTTON_ICON_SLOT_KEY] ?? null;
   const ownIconModulate = useIconModulate(buttonIconColor(solveNode.colors, state), tint.own);
 
   const text = props.text ?? '';
@@ -54,8 +60,8 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
 
   const bidi = useControlBidiOptions(props, solveNode);
   const facts = useMemo(
-    () => checkBoxContentFacts(solveNode, props, { theme }, { x: rect.w, y: rect.h }, ownIcon.naturalSize),
-    [solveNode, props, theme, rect.w, rect.h, ownIcon.naturalSize]
+    () => checkBoxContentFacts(solveNode, props, { theme }, { x: rect.w, y: rect.h }, ownIconSize),
+    [solveNode, props, theme, rect.w, rect.h, ownIconSize]
   );
   const layout = useWrappingButtonLabelLayout(
     solveNode,
@@ -88,7 +94,7 @@ export function CheckBox({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       {content.icon && (
         <PositionedIcon
           rect={content.icon.rect}
-          texture={ownIcon.texture}
+          texture={ownIconTexture}
           color={ownIconModulate.color}
           opacity={ownIconModulate.opacity}
           renderOrder={renderOrder}

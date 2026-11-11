@@ -18,7 +18,10 @@ import {
   findIconMeshes,
   OWN_ICON_REF,
   OWN_ICON_SCOPE,
+  renderUnloaded,
   renderWithOwnIcon,
+  findTextMesh as findLabelMesh,
+  worldPosition,
 } from '../../../../r3f/controls/native/testing/ownIcon';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 
@@ -255,6 +258,7 @@ describe("<CheckButton>: Button's inherited icon (button.cpp:333-405)", () => {
     const node: SolveNode = {
       ...solveNode({ icon: OWN_ICON_REF, ...properties }),
       resources: OWN_ICON_SCOPE,
+      textureSlots: { icon: { x: 12, y: 12 } },
       rtl,
     };
     return renderWithOwnIcon(<CheckButton {...painterEnv()} solveNode={node} rect={RECT} renderOrder={0} />, {
@@ -294,5 +298,21 @@ describe("<CheckButton>: Button's inherited icon (button.cpp:333-405)", () => {
   it('dims the icon to icon_disabled_color alpha 0.4', async () => {
     const [icon] = findIconMeshes((await render({ disabled: true })).scene);
     expect((icon!.material as THREE.MeshBasicMaterial).opacity).toBeCloseTo(0.4, 5);
+  });
+
+  it("lays the label out for the solver's icon size before the texture loads", async () => {
+    const node: SolveNode = {
+      ...solveNode({ icon: OWN_ICON_REF, text: 'Hi' }),
+      resources: OWN_ICON_SCOPE,
+      textureSlots: { icon: { x: 12, y: 12 } },
+    };
+    const painter = <CheckButton {...painterEnv()} solveNode={node} rect={RECT} renderOrder={0} />;
+    const unloaded = await renderUnloaded(painter);
+    const loaded = await renderWithOwnIcon(painter, { w: 12, h: 12 });
+    // Only the check draws until the icon loads, yet the label is already where the solver sized it.
+    expect(findIconMeshes(unloaded.scene)).toHaveLength(1);
+    expect(worldPosition(findLabelMesh(unloaded.scene)!).x).toBe(
+      worldPosition(findLabelMesh(loaded.scene)!).x
+    );
   });
 });

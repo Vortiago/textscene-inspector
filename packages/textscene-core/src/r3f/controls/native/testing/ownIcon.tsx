@@ -45,3 +45,28 @@ export function findIconMeshes(scene: Awaited<ReturnType<typeof renderWithOwnIco
       (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
     );
 }
+
+/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor` and `uOpacity` uniforms), which no icon or chrome mesh does. */
+export function findTextMesh(
+  scene: Awaited<ReturnType<typeof renderWithOwnIcon>>['scene']
+): THREE.Mesh | undefined {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
+}
+
+/** Where `mesh` sits in the scene, parents included. */
+export function worldPosition(mesh: THREE.Mesh): THREE.Vector3 {
+  mesh.updateWorldMatrix(true, false);
+  return new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld);
+}
+
+/** The painter output before the texture loads: no loader provider resolves the icon ref. */
+export function renderUnloaded(painter: ReactElement) {
+  return ReactThreeTestRenderer.create(
+    <SceneResourcesProvider externalResources={OWN_ICON_SCOPE.externalResources}>
+      {painter}
+    </SceneResourcesProvider>
+  );
+}

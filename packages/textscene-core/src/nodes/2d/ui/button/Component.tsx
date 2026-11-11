@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { useIconModulate, useOwnButtonIcon } from '../../../../r3f/controls/native/useButtonIcon';
+import { useIconModulate, useOwnButtonTexture } from '../../../../r3f/controls/native/useButtonIcon';
 import { buttonBoxesOf } from '../../../../r3f/controls/native/defaultThemeItems';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -71,7 +71,7 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
   // **solve handoff** the minimum-size solver calls too, so one shaping sizes both.
   const unwrapped: TextLayoutResult | null = buttonLabelShape(solveNode, theme);
 
-  const ownIcon = useOwnButtonIcon(solveNode, props.icon);
+  const ownIconTexture = useOwnButtonTexture(solveNode, props.icon);
   // A theme icon the Control gave this Button: the vendored default is a 16x16 SVG whose size
   // `textureSize` already holds, since the loader returns a blank texture before the decode.
   const themedIcon = solveNode.syntheticDraw?.themedIcon;
@@ -79,12 +79,9 @@ export function ButtonPainter({ solveNode, tint, rect, renderOrder, theme, textT
     themedIcon && solveNode.icons[themedIcon.name],
     themedIcon?.vendoredUrl ?? null
   );
-  const iconTexture = themedIcon ? themedIconTexture : ownIcon.texture;
+  const iconTexture = themedIcon ? themedIconTexture : ownIconTexture;
 
-  const iconNaturalSize = useMemo(() => {
-    if (!iconTexture) return null;
-    return themedIcon ? solveNode.textureSize : ownIcon.naturalSize;
-  }, [iconTexture, themedIcon, solveNode.textureSize, ownIcon.naturalSize]);
+  const iconNaturalSize = solveNode.textureSize;
 
   const isFocusStyled = isButtonFocusStyled(props, state);
   const iconModulate = useIconModulate(
