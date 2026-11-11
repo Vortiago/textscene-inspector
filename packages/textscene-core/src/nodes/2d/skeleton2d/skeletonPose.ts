@@ -263,11 +263,11 @@ function movedBones(
     const { parent } = posed[index]!;
     return parent >= 0 && (isMoved[parent]! || hasMovedAncestor(parent));
   };
-  return posed.flatMap(({ node, from }, index) => {
+  return posed.flatMap(({ body, from }, index) => {
     if (!isMoved[index]) return [];
     const turn = multiplyTransform2D(affineInverseTransform2D(from), solved[index]!);
     return {
-      object: node,
+      object: body,
       turn: threeMatrixFromTransform2D(turn),
       isTopmost: !hasMovedAncestor(index),
       held: new THREE.Matrix4(),

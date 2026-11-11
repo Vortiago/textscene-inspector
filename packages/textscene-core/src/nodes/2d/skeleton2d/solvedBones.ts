@@ -1,9 +1,7 @@
 /**
- * The bones a modification stack moves, solved on the Live scene tree. A scene pass that reads a
- * transform below a bone (a RemoteTransform2D, a Camera2D in the Cameras panel) stands where Godot's
- * Skeleton2D has put the bone, which the render shows through {@link Skeleton2DPose}. The solve
- * starts from the transforms the scene file stores, so an AnimationPlayer's pose does not reach it,
- * and it reads a stack that sits in the scene file, not one in a `.tres` file.
+ * The bones a modification stack moves, solved on the Live scene tree from the transforms the scene
+ * file stores. A scene pass that reads a pose below a bone stands where Godot's Skeleton2D puts it.
+ * An AnimationPlayer pose does not reach the solve, and a stack in a `.tres` file is not read.
  */
 
 import { equalTransform2D, transform2DDecompose } from '../../../godot/math/transform2d.js';
@@ -13,7 +11,7 @@ import { liveScenePassResults, type LiveScenePass } from '../../../r3f/liveScene
 import type { TscnNode } from '../../../parser/types.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
-import { transform2DOnCanvas, transform2DWithin } from '../../../r3f/liveTransform2D.js';
+import { transform2DOnCanvas, transform2DWithinPath } from '../../../r3f/liveTransform2D.js';
 import { NO_PATCHES, type NodePatch } from '../../../r3f/nodePatch.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
 import { buildStackScene, type PoseSource } from './buildStackScene.js';
@@ -35,7 +33,7 @@ function storedPoseSource(tree: LiveTree): PoseSource<string> {
   };
   return {
     canvas: (path) => storedTransform2D(transform2DOnCanvas(path, stored(path))),
-    within: (path, ancestor) => storedTransform2D(transform2DWithin(path, ancestor, stored(path))),
+    within: (path, ancestor) => storedTransform2D(transform2DWithinPath(path, ancestor, stored(path))),
     parent: parentPathOf,
   };
 }
@@ -78,7 +76,7 @@ function solveSkeleton(
   );
   const cache = posed.slice(0, rig.bones.length).map(({ from }) => from);
   const { locals } = solveStack(scene, cache, stack);
-  posed.forEach(({ node, from }, index) => {
-    if (!equalTransform2D(from, locals[index]!)) patches.set(node, transform2DDecompose(locals[index]!));
+  posed.forEach(({ body, from }, index) => {
+    if (!equalTransform2D(from, locals[index]!)) patches.set(body, transform2DDecompose(locals[index]!));
   });
 }

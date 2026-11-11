@@ -61,7 +61,7 @@ const SPACE_2D: SpaceMath<Transform2DColumns> = {
 
 /**
  * Moves `relay`'s target as `_update_remote` does, and whether Godot sets the target's transform.
- * The push reads the poses in `posed`, which holds what `placed` holds and the poses below it.
+ * A 2D push reads the poses in `posed`, which holds what `placed` holds and the solved bones below it.
  */
 export function moveTarget(
   relay: Push,
@@ -71,7 +71,7 @@ export function moveTarget(
 ): boolean {
   if (!flagsAnyPart(relay.flags)) return pushSetsTarget(relay.space, relay.flags);
   if (relay.space === 'Node3D') {
-    placed.set(relay.target.path, { transform: newTargetLocal(relay, tree, posed, SPACE_3D) });
+    placed.set(relay.target.path, { transform: newTargetLocal(relay, tree, placed, SPACE_3D) });
   } else {
     // The parts Node2D reads from the matrix (`node_2d.cpp:127-133`), skew included.
     const { position, rotation, scale, skew } = transform2DDecompose(

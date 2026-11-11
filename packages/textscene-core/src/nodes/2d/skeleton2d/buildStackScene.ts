@@ -20,17 +20,17 @@ import type { Skeleton2DRig } from './skeletonRig.js';
  * Every transform it answers is a `real_t` Transform2D.
  */
 export interface PoseSource<Body> {
-  /** The global transform of `node`. */
-  canvas(node: Body): Transform2DColumns;
-  /** The transform of `node` within `ancestor`. */
-  within(node: Body, ancestor: Body): Transform2DColumns;
-  /** The node above `node`, or null at the top. */
-  parent(node: Body): Body | null;
+  /** The global transform of `body`. */
+  canvas(body: Body): Transform2DColumns;
+  /** The transform of `body` within `ancestor`. */
+  within(body: Body, ancestor: Body): Transform2DColumns;
+  /** The body above `body`, or null at the top. */
+  parent(body: Body): Body | null;
 }
 
-/** A bone a solve poses: its node, the local transform it stands with and its parent in the list, or -1. */
+/** A bone a solve poses: its body, the local transform it stands with and its parent in the list, or -1. */
 export interface PosedBone<Body> {
-  node: Body;
+  body: Body;
   from: Transform2DColumns;
   parent: number;
 }
@@ -64,12 +64,12 @@ export function buildStackScene<Body>(
   const outsideIndex = new Map(outside.map((bone, index) => [bone, index]));
   const posed: PosedBone<Body>[] = [
     ...rig.bones.map(({ parent }, index) => ({
-      node: bodies[index + 1]!,
+      body: bodies[index + 1]!,
       from: source.within(bodies[index + 1]!, bodies[parent + 1]!),
       parent,
     })),
     ...outside.map((bone) => ({
-      node: sceneNodes.nodeOf(bone),
+      body: sceneNodes.bodyOf(bone),
       from: bone.local,
       parent: bone.parent.outsideBone ? rig.bones.length + outsideIndex.get(bone.parent.outsideBone)! : -1,
     })),
@@ -82,7 +82,7 @@ class SceneNodes<Body> {
   /** The target of each Bone2D that is no bone of the skeleton. */
   private readonly outsideAt = new Map<Body, StackTarget>();
   private readonly outsideBones = new Map<StackTarget, OutsideBone>();
-  private readonly nodes = new Map<OutsideBone, Body>();
+  private readonly bodyOfBone = new Map<OutsideBone, Body>();
 
   constructor(
     targets: Iterable<StackTarget>,
@@ -106,24 +106,24 @@ class SceneNodes<Body> {
     return { boneIndex, indexInSkeleton, placement, outsideBone: null };
   }
 
-  nodeOf(bone: OutsideBone): Body {
-    return this.nodes.get(bone)!;
+  bodyOf(bone: OutsideBone): Body {
+    return this.bodyOfBone.get(bone)!;
   }
 
   private outsideBone(target: StackTarget): OutsideBone {
     const made = this.outsideBones.get(target);
     if (made) return made;
     const { parentPath, reach } = target.outsideBone!;
-    const node = this.anchorOf(target.path)!;
+    const body = this.anchorOf(target.path)!;
     const above = parentPath === null ? undefined : this.anchorOf(parentPath);
     const bone: OutsideBone = {
       parent: this.placement(above, target.carrier),
-      local: above ? this.source.within(node, above) : this.source.canvas(node),
+      local: above ? this.source.within(body, above) : this.source.canvas(body),
       length: reach.length,
       boneAngle: reach.angle,
     };
     this.outsideBones.set(target, bone);
-    this.nodes.set(bone, node);
+    this.bodyOfBone.set(bone, body);
     return bone;
   }
 
@@ -131,20 +131,20 @@ class SceneNodes<Body> {
    * Where `node` sits: below the nearest of the bone `carrier` and an outside bone at or above it,
    * else on the canvas. No node is the canvas itself.
    */
-  private placement(node: Body | undefined, carrier: number): StackPlacement {
-    if (node === undefined) return { carrier: -1, offset: TRANSFORM2D_IDENTITY };
+  private placement(body: Body | undefined, carrier: number): StackPlacement {
+    if (body === undefined) return { carrier: -1, offset: TRANSFORM2D_IDENTITY };
     const carrierBody = carrier < 0 ? null : this.bodies[carrier + 1]!;
     for (
-      let above: Body | null = node;
+      let above: Body | null = body;
       above !== null && above !== carrierBody;
       above = this.source.parent(above)
     ) {
       const target = this.outsideAt.get(above);
       if (!target) continue;
-      const offset = above === node ? TRANSFORM2D_IDENTITY : this.source.within(node, above);
+      const offset = above === body ? TRANSFORM2D_IDENTITY : this.source.within(body, above);
       return { carrier: -1, outsideBone: this.outsideBone(target), offset };
     }
-    if (carrierBody !== null) return { carrier, offset: this.source.within(node, carrierBody) };
-    return { carrier, offset: this.source.canvas(node) };
+    if (carrierBody !== null) return { carrier, offset: this.source.within(body, carrierBody) };
+    return { carrier, offset: this.source.canvas(body) };
   }
 }

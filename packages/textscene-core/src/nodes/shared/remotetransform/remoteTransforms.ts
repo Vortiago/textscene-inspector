@@ -47,9 +47,8 @@ const NO_POSES: RelayPoses = { placed: new Map(), drawn: new Map() };
  * reaches it (`remote_transform_3d.cpp:118-126`, `remote_transform_2d.cpp:127-136`), and a push
  * queues every relay its target carries, so the pass replays the flushes to the `ref:godot` harness
  * frame. A relay cycle takes the pose of that frame. `relayOf` says which targets Godot refuses.
- * `solvedBones` gives the bones a modification stack has moved by that frame (`skeleton_2d.cpp:786-796`).
- * A push reads them under the poses placed, and `placed` never holds them, as the inspector shows the
- * transform Godot saves. It runs only for a tree that holds a relay.
+ * `solvedBones` gives the bones a modification stack moves (`skeleton_2d.cpp:786-796`). A push reads
+ * them under `placed`, which never holds them, and the pass asks for them only when a 2D push reads a pose.
  */
 export function applyRemoteTransforms(
   tree: LiveTree,
@@ -58,7 +57,7 @@ export function applyRemoteTransforms(
   const relays = relaysOf(tree);
   if (relays.length === 0) return NO_POSES;
   const placed = new Map<string, NodePatch>();
-  const posed = layeredPatches(solvedBones(), placed);
+  const posed = layeredPatches({ get: (path) => solvedBones().get(path) }, placed);
 
   const queuedBy = entriesQueuedByAMoveOf(tree, relays);
   const entered = entriesOnTheListAtEnterTree(tree, relays, queuedBy);

@@ -894,7 +894,7 @@ The drawn pose of the bones of one Skeleton2D, which the skeleton owns. Before e
 _Avoid_: A pose each reader derives. A solved transform left on a bone after the render.
 
 **Solved bones** (`solveSkeleton2DBones`, `nodes/2d/skeleton2d/solvedBones.ts`):
-The Bone2Ds that a **Modification stack** moves, solved on the **Live scene tree** from the transforms the scene file stores, as a **Node patch** for each moved bone. The RemoteTransform pass reads them, so a relay below a bone pushes the pose Godot's skeleton gives the bone (`skeleton_2d.cpp:786-796`), and the Cameras panel reads them for a Camera2D below a bone. A stack in the scene file solves, and no AnimationPlayer pose reaches the solve. The inspector shows the stored transform, as Godot saves it (`skeleton_2d.cpp:181-187`).
+The Bone2Ds that a **Modification stack** moves. The pass solves them on the **Live scene tree** from the transforms the scene file stores, and gives a **Node patch** for each moved bone. The RemoteTransform pass reads them, so a relay below a bone pushes the pose Godot's skeleton gives the bone (`skeleton_2d.cpp:786-796`). The Cameras panel reads them for a Camera2D below a bone. A stack in the scene file solves, and no AnimationPlayer pose reaches the solve. The inspector shows the stored transform, as Godot saves it (`skeleton_2d.cpp:181-187`).
 _Avoid_: A solved transform in the patches the inspector reads. A second builder of the solve scene: `buildStackScene` serves this pass and the **Skeleton2D pose**.
 
 **Modification stack** (`solveStack`, `nodes/2d/skeleton2d/modificationStack/stackRun.ts`):

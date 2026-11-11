@@ -32,7 +32,7 @@ export function transform2DOnCanvas(
 }
 
 /** The transform of the node at `path` within its ancestor at `ancestorPath`. */
-export function transform2DWithin(
+export function transform2DWithinPath(
   path: string,
   ancestorPath: string,
   nodeByPath: ReadonlyMap<string, TscnNode>
