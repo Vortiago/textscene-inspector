@@ -9,7 +9,7 @@
 import { pathToFileURL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
+import { writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT, collectSheetFiles, sheetLabel } from './sheetSources.mjs';
 // `gallery/`: `build` assembles the panels, `panels` and `nav` render them, `markdown` renders
 // sheet prose, `sheetParsing` reads a sheet, `sources` loads the catalog and screenshots,
@@ -17,10 +17,11 @@ import { REPO_ROOT, collectSheetFiles, sheetLabel } from './sheetSources.mjs';
 import { build } from './gallery/build.mjs';
 import { parseSheet } from './gallery/sheetParsing.mjs';
 
-// `--out <path>` sets the target, docs/comparison/index.html by default. `--inline` base64-embeds
-// every image so the file stands alone under an artifact's strict CSP, as in
-// `--inline --out /tmp/gallery.html`. Without it the page references `images/…`, for the
-// committed, served copy.
+// `--out <path>` sets the target, docs/comparison/index.html (untracked) by default. `--inline`
+// base64-embeds every image so the file stands alone under an artifact's strict CSP, as in
+// `--inline --out /tmp/gallery.html`. Without it the page references `images/…`, for a served
+// copy. `--check` builds the page and writes nothing: the gallery is generated, so a build that
+// throws or reports an orphaned marker is the failure to catch.
 function parseArgs(argv) {
   const args = {
     inline: false,
@@ -58,12 +59,9 @@ function main() {
   }
   const { html, missing, orphanedMarkers } = build(sheets, args.inline, args.fragment);
 
-  // Nothing else regenerates the committed copy `docs/comparison/README.md` links (the web
-  // build stages its own into `dist/`), so `--check` guards it. `pnpm validate` and CI run it.
-  const outputs = [[args.out, html]];
-  const report = { tool: 'gallery', summary: `${sheets.length} sheet(s)` };
-  if (args.check) checkGenerated(outputs, { ...report, command: 'pnpm docs:gallery' });
-  else writeGenerated(outputs, report);
+  const summary = `${sheets.length} sheet(s)`;
+  if (args.check) console.log(`[gallery] builds (${summary}).`);
+  else writeGenerated([[args.out, html]], { tool: 'gallery', summary });
   if (missing.length) {
     console.warn(`[gallery] ${missing.length} sheet(s) reference a MISSING image:`);
     for (const m of missing) console.warn(`  ${m}`);

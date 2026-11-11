@@ -95,6 +95,12 @@ apps/textscene-web/src/fixtures.games.ts
 /scenes/ld58/
 apps/textscene-web/src/fixtures.ld58.ts
 
+# Generated, never committed, so two pull requests that add scenes do not conflict on them.
+# `pnpm install` writes the manifest (postinstall) and `pnpm generate:fixtures` refreshes it. The
+# gallery is written by `pnpm docs:gallery`, and the dev site builds its own copy at /parity/.
+apps/textscene-web/src/fixtures.ts
+docs/comparison/index.html
+
 # Test projects
 ld-58/
 

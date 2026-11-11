@@ -16,6 +16,10 @@ import { SCENE_COMPOSITION_SCENES } from './scenes/composition.mjs';
 import { GIZMO_SCENES } from './scenes/gizmos.mjs';
 import { PRIMITIVE_SCENES } from './scenes/primitives.mjs';
 import { CANVAS_2D_SCENES } from './scenes/canvas2d.mjs';
+import { CONTROL_TEXT_SCENES } from './scenes/controlText.mjs';
+import { CONTROL_WIDGET_SCENES } from './scenes/controlWidgets.mjs';
+import { LIGHTING_2D_SCENES } from './scenes/lighting2d.mjs';
+import { PARTICLES_2D_SCENES } from './scenes/particles2d.mjs';
 import { MATERIAL_SCENES } from './scenes/materials.mjs';
 import { TILE_AND_TARGET_SCENES } from './scenes/targets.mjs';
 
@@ -47,6 +51,10 @@ export const GOLDEN_SCENES = [
   ...GIZMO_SCENES,
   ...PRIMITIVE_SCENES,
   ...CANVAS_2D_SCENES,
+  ...CONTROL_TEXT_SCENES,
+  ...CONTROL_WIDGET_SCENES,
+  ...LIGHTING_2D_SCENES,
+  ...PARTICLES_2D_SCENES,
   ...MATERIAL_SCENES,
   ...TILE_AND_TARGET_SCENES,
 ];

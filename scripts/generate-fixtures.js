@@ -1,5 +1,9 @@
 #!/usr/bin/env node
-/** Generates the web previewer's fixture manifests from the scenes on disk. */
+/**
+ * Generates the web previewer's fixture manifests from the scenes on disk. The manifests are
+ * untracked: `pnpm install` writes them, and the web app's dev and build scripts and the test
+ * runs refresh them.
+ */
 
 import { readdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'fs';
 import { join } from 'path';
@@ -13,6 +17,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 ensureGodotDemos();
+
+/** Leaves an unchanged manifest alone, so a watcher or a build cache sees no new write. */
+function writeIfChanged(path, text) {
+  if (existsSync(path) && readFileSync(path, 'utf8') === text) return;
+  writeFileSync(path, text);
+}
 
 /**
  * @param {string} filename
@@ -367,7 +377,7 @@ export function getFixturesByCategory(): Map<string, Fixture[]> {
 `;
 
 const outputPath = join(rootDir, 'apps/textscene-web/src/fixtures.ts');
-writeFileSync(outputPath, output);
+writeIfChanged(outputPath, output);
 console.log(
   `✅ Generated fixtures.ts with ${fixtures.length} fixtures across ${categories.length} categories`
 );
@@ -392,7 +402,7 @@ import type { Fixture } from './fixtures';
 
 export const corpusFixtures: Fixture[] = ${JSON.stringify(sorted, null, 2)};
 `;
-    writeFileSync(outPath, manifest);
+    writeIfChanged(outPath, manifest);
     console.log(
       `✅ Generated ${fileName} with ${items.length} ${corpusLabel} fixtures across ${corpusCategories.length} categories`
     );
