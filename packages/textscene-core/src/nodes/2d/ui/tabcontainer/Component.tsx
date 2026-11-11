@@ -1,8 +1,9 @@
 /**
  * `<TabContainer>`: the native (WebGL canvas) painter for `TabContainer::_notification(NOTIFICATION_DRAW)`
  * (`tab_container.cpp:247` to `:277`). It draws `panel` behind the content band, `tabbar_background`
- * across the full-width header band (`:262`, empty by default), and the strip through `<TabBar>`
- * on the synthetic node from `buildInternalTabBarNode`. No popup menu (`get_popup()`) is modelled.
+ * across the full-width header band (`:262`, empty by default), and the strip through `<TabBarStrip>`
+ * on the synthetic node from `buildInternalTabBarNode`, at the offset `resolveTabContainerStrip` finds.
+ * No popup menu (`get_popup()`) is modelled.
  */
 
 import { useMemo } from 'react';
@@ -13,7 +14,8 @@ import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { TAB_ALIGNMENT_LEFT, tabBarMinimumSize } from '../tabbar/nativeSolver';
-import { TabBar } from '../tabbar/Component';
+import { TabBarStrip, useTabBarModel } from '../tabbar/Component';
+import { resolveTabContainerStrip } from './loadStrip';
 import type { TabContainerProperties } from './types';
 import {
   TABS_POSITION_TOP,
@@ -65,9 +67,21 @@ export function TabContainer({
   const showsStrip = tabsVisible && derivedTabs.length > 0;
   const headerHeight = showsStrip ? tabHeaderHeight(barMinHeight, tabbarMargin) : 0;
 
-  const sideMargin = Math.round(SIDE_MARGIN_LITERAL * theme.scale);
+  const barModel = useTabBarModel(syntheticBar, theme);
+  const { drawInputs, layoutInput } = barModel;
+  const strip = useMemo(
+    () =>
+      resolveTabContainerStrip(drawInputs, layoutInput, {
+        containerWidthPx: rect.w,
+        leftMarginPx: solveNode.rtl ? tabbarMargin.right : tabbarMargin.left,
+        rightMarginPx: solveNode.rtl ? tabbarMargin.left : tabbarMargin.right,
+        sideMarginPx: Math.round(SIDE_MARGIN_LITERAL * theme.scale),
+        rtl: solveNode.rtl,
+      }),
+    [drawInputs, layoutInput, rect.w, solveNode.rtl, tabbarMargin, theme.scale]
+  );
   const barRect = showsStrip
-    ? tabBarRect(rect, barMinHeight, tabsPosition, alignment, sideMargin, tabbarMargin, solveNode.rtl)
+    ? tabBarRect(rect, barMinHeight, tabsPosition, alignment, strip.sideMarginPx, tabbarMargin, solveNode.rtl)
     : null;
   const contentBand = tabContentBand(rect, headerHeight, tabsPosition);
 
@@ -104,8 +118,10 @@ export function TabContainer({
       {barRect && (
         // The strip's own group key: three sorts by the nearest group's order first.
         <CanvasItemGroup position={[barRect.x, -barRect.y, 0]} renderOrder={stripSlot.key}>
-          <TabBar
+          <TabBarStrip
             solveNode={syntheticBar}
+            model={barModel}
+            offset={strip.offset}
             tint={tint}
             rect={{ x: 0, y: 0, w: barRect.w, h: barRect.h }}
             theme={theme}

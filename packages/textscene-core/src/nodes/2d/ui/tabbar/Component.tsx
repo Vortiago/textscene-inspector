@@ -22,6 +22,8 @@ import type { TextLayoutResult } from '../../../../r3f/controls/native/text/text
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
+import { TEXT_LINE_DEFAULT_OVERRUN, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
+import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { TabBarProperties, TabBarTabProperties } from './types';
 import { TAB_BAR_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
@@ -62,12 +64,8 @@ interface ComputedTab {
   layout: TextLayoutResult;
 }
 
-/**
- * No pointer exists, so `tab_hovered`, `tab_focus`, the close and right buttons' hover background
- * and the drag drop-mark never draw (`buttonBase.ts`). `right_button` is dead code (`nativeSolver.ts`),
- * and only TabContainer consumes `all_tabs_in_front`'s front ordering.
- */
-export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
+/** Everything about a TabBar's tabs that does not depend on its width: the TabContainer reads it to size the bar before it draws. */
+export function useTabBarModel(solveNode: SolveNode, theme: NativeControlComponentProps['theme']) {
   const props = painterView<TabBarProperties>(solveNode);
   const tabs = props.tabs ?? EMPTY_TABS;
   const currentTab = resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabs.length, (i) =>
@@ -76,6 +74,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
   const alignment = props.tabAlignment ?? TAB_ALIGNMENT_LEFT;
   const clipTabs = props.clipTabs ?? true;
   const maxTabWidth = props.maxTabWidth ?? 0;
+  const scrollToSelected = props.scrollToSelected ?? true;
   const closeDisplayPolicy = props.tabCloseDisplayPolicy ?? 0;
   const hSeparation = solveNode.constants.h_separation ?? theme.separation;
   const tabSeparation = solveNode.constants.tab_separation ?? 0;
@@ -137,28 +136,86 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
     ]
   );
 
-  const drawLayout = useMemo(
-    () =>
-      computeTabBarDrawLayout(
-        drawInputs,
-        rect.w,
-        alignment,
-        clipTabs,
-        maxTabWidth,
-        tabSeparation,
-        incrementIconSize.x,
-        decrementIconSize.x
-      ),
+  const layoutInput = useMemo(
+    () => ({
+      alignment,
+      clipTabs,
+      maxTabWidthPx: maxTabWidth,
+      tabSeparation,
+      incrementIconWidth: incrementIconSize.x,
+      decrementIconWidth: decrementIconSize.x,
+      currentTab,
+      scrollToSelected,
+    }),
     [
-      drawInputs,
-      rect.w,
       alignment,
       clipTabs,
       maxTabWidth,
       tabSeparation,
       incrementIconSize.x,
       decrementIconSize.x,
+      currentTab,
+      scrollToSelected,
     ]
+  );
+
+  return {
+    computed,
+    drawInputs,
+    layoutInput,
+    currentTab,
+    closeDisplayPolicy,
+    hSeparation,
+    overrides,
+    defaults,
+    closeButtonMargin,
+    closeIconSize,
+    incrementIconSize,
+    decrementIconSize,
+    fontSizePx,
+    fontMetrics,
+  };
+}
+
+export type TabBarModel = ReturnType<typeof useTabBarModel>;
+
+/**
+ * No pointer exists, so `tab_hovered`, `tab_focus`, the close and right buttons' hover background
+ * and the drag drop-mark never draw (`buttonBase.ts`). `right_button` is dead code (`nativeSolver.ts`),
+ * and only TabContainer consumes `all_tabs_in_front`'s front ordering.
+ */
+export function TabBar(props: NativeControlComponentProps) {
+  const model = useTabBarModel(props.solveNode, props.theme);
+  return <TabBarStrip {...props} model={model} />;
+}
+
+interface TabBarStripProps extends NativeControlComponentProps {
+  model: TabBarModel;
+  /** The first drawn tab, when the caller resolved it. Unset, the strip scrolls to the current tab once. */
+  offset?: number;
+}
+
+/** The painter for one resolved width: it draws `model` in `rect`. */
+export function TabBarStrip({ solveNode, tint, rect, renderOrder, model, offset }: TabBarStripProps) {
+  const {
+    computed,
+    drawInputs,
+    layoutInput,
+    currentTab,
+    closeDisplayPolicy,
+    hSeparation,
+    overrides,
+    defaults,
+    closeButtonMargin,
+    closeIconSize,
+    incrementIconSize,
+    decrementIconSize,
+    fontSizePx,
+    fontMetrics,
+  } = model;
+  const drawLayout = useMemo(
+    () => computeTabBarDrawLayout(drawInputs, { ...layoutInput, barWidthPx: rect.w, offset }),
+    [drawInputs, layoutInput, rect.w, offset]
   );
 
   const closeIconTexture = useNodeIcon(solveNode.icons.close, TAB_BAR_ICONS.close);
@@ -184,6 +241,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
     closeIconTexture,
     closeIconSize,
     fontSizePx,
+    fontMetrics,
     clippingPlanes,
   };
 
@@ -211,6 +269,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
           rect={rect}
           rtl={solveNode.rtl}
           missingRight={drawLayout.missingRight}
+          canScrollBack={drawLayout.offset > 0}
           incrementIconTexture={incrementIconTexture}
           decrementIconTexture={decrementIconTexture}
           incrementIconSize={incrementIconSize}
@@ -240,6 +299,7 @@ interface TabBarTabChromeProps {
   closeIconTexture: ReturnType<typeof useNodeIcon>;
   closeIconSize: { x: number; y: number };
   fontSizePx: number;
+  fontMetrics: FontMetrics | undefined;
   clippingPlanes: readonly Plane[];
   closeDisplayPolicy: number;
 }
@@ -262,10 +322,22 @@ function TabBarTabChrome({
   closeIconTexture,
   closeIconSize,
   fontSizePx,
+  fontMetrics,
   clippingPlanes,
   closeDisplayPolicy,
 }: TabBarTabChromeProps) {
-  const { tab, state, iconSize, layout } = entry;
+  const { tab, state, iconSize } = entry;
+  const layout = useMemo(
+    () =>
+      item.truncated && fontMetrics
+        ? trimSoloLine(entry.layout, TEXT_LINE_DEFAULT_OVERRUN, item.textBudgetPx, {
+            fontMetrics,
+            fontSizePx,
+            isDrawnRtl: rtl,
+          })
+        : entry.layout,
+    [item.truncated, item.textBudgetPx, entry.layout, fontMetrics, fontSizePx, rtl]
+  );
   const style = pickTabStyleBox(overrides, defaults, state);
   const closeVisible = isCloseButtonVisible(closeDisplayPolicy, item.index, currentTab);
 
@@ -349,6 +421,7 @@ interface ScrollArrowsProps {
   rect: NativeControlComponentProps['rect'];
   rtl: boolean;
   missingRight: boolean;
+  canScrollBack: boolean;
   incrementIconTexture: ReturnType<typeof useNodeIcon>;
   decrementIconTexture: ReturnType<typeof useNodeIcon>;
   incrementIconSize: { x: number; y: number };
@@ -357,11 +430,12 @@ interface ScrollArrowsProps {
   renderOrder: number;
 }
 
-/** `tab_bar.cpp:564-592` through `layoutScrollArrows`: which edge the pair sits against, and which of the two `missing_right` lights up, both follow the layout direction. */
+/** `tab_bar.cpp:564-592` through `layoutScrollArrows`: which edge the pair sits against, and which arrow `offset > 0` and `missing_right` light, both follow the layout direction. */
 function ScrollArrows({
   rect,
   rtl,
   missingRight,
+  canScrollBack,
   incrementIconTexture,
   decrementIconTexture,
   incrementIconSize,
@@ -375,6 +449,7 @@ function ScrollArrows({
     incrementIconSize,
     decrementIconSize,
     missingRight,
+    canScrollBack,
     rtl,
   });
   const white = useItemLinearColor({ r: 1, g: 1, b: 1 });
