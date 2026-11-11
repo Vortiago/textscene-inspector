@@ -22,8 +22,7 @@ import type { TextLayoutResult } from '../../../../r3f/controls/native/text/text
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
-import { overrunFlagsForBehavior, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
-import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { TEXT_LINE_DEFAULT_OVERRUN, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { TabBarProperties, TabBarTabProperties } from './types';
 import { TAB_BAR_ICONS } from '../../../../r3f/controls/native/themeIcons';
@@ -54,9 +53,6 @@ import {
   type TabLayoutItem,
 } from './nativeSolver';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
-
-/** `TextLine`'s default `overrun_behavior` (`text_line.h:50`): what `text_buf` trims to `size_text` when `max_tab_width` truncates a tab (`tab_bar.cpp:1221`). */
-const TAB_TITLE_OVERRUN = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
 
 /** A stable identity for "no tabs", so a Control with none never invalidates a memo depending on it every render. */
 const EMPTY_TABS: readonly TabBarTabProperties[] = [];
@@ -334,7 +330,7 @@ function TabBarTabChrome({
   const layout = useMemo(
     () =>
       item.truncated && fontMetrics
-        ? trimSoloLine(entry.layout, TAB_TITLE_OVERRUN, item.textBudgetPx, {
+        ? trimSoloLine(entry.layout, TEXT_LINE_DEFAULT_OVERRUN, item.textBudgetPx, {
             fontMetrics,
             fontSizePx,
             isDrawnRtl: rtl,

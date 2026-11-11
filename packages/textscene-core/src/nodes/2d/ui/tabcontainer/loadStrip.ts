@@ -118,5 +118,9 @@ export function resolveTabContainerStrip(
   }
   updateMargins();
 
-  return { barWidthPx, offset, sideMarginPx: barWidthPx === fullWidthPx ? 0 : sideMarginPx };
+  return {
+    barWidthPx,
+    offset,
+    sideMarginPx: input.alignment === TAB_ALIGNMENT_RIGHT && barWidthPx === fullWidthPx ? 0 : sideMarginPx,
+  };
 }

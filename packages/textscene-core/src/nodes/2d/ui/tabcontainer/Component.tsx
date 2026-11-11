@@ -67,16 +67,17 @@ export function TabContainer({
   const headerHeight = showsStrip ? tabHeaderHeight(barMinHeight, tabbarMargin) : 0;
 
   const barModel = useTabBarModel(syntheticBar, theme);
+  const { drawInputs, layoutInput } = barModel;
   const strip = useMemo(
     () =>
-      resolveTabContainerStrip(barModel.drawInputs, barModel.layoutInput, {
+      resolveTabContainerStrip(drawInputs, layoutInput, {
         containerWidthPx: rect.w,
         leftMarginPx: solveNode.rtl ? tabbarMargin.right : tabbarMargin.left,
         rightMarginPx: solveNode.rtl ? tabbarMargin.left : tabbarMargin.right,
         sideMarginPx: Math.round(SIDE_MARGIN_LITERAL * theme.scale),
         rtl: solveNode.rtl,
       }),
-    [barModel, rect.w, solveNode.rtl, tabbarMargin, theme.scale]
+    [drawInputs, layoutInput, rect.w, solveNode.rtl, tabbarMargin, theme.scale]
   );
   const barRect = showsStrip
     ? tabBarRect(rect, barMinHeight, tabsPosition, alignment, strip.sideMarginPx, tabbarMargin, solveNode.rtl)

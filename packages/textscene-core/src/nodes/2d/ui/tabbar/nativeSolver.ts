@@ -579,7 +579,7 @@ function ensureTabVisibleOnLoad(
 /**
  * `TabBar::_update_cache` (`tab_bar.cpp:1196-1291`) as a loaded scene leaves it. `offset` is not
  * serialised (`tab_bar.h:106`), so the load sequence decides it: `ensureTabVisibleOnLoad`. The painter places the
- * close button from `textBudgetPx` but draws the whole title, with no `OVERRUN_TRIM_ELLIPSIS` trim.
+ * close button and trims the title from `textBudgetPx`.
  */
 export function computeTabBarDrawLayout(
   tabs: readonly TabLayoutInput[],

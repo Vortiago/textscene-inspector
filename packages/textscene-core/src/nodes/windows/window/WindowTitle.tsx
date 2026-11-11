@@ -11,19 +11,15 @@ import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBo
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { OutlinedTextRun } from '../../../r3f/controls/native/text/OutlinedTextRun';
 import { shapedTextSizeWidthPx } from '../../../r3f/controls/native/text/textLayout';
-import { overrunFlagsForBehavior, trimSoloLine } from '../../../r3f/controls/native/text/textOverrun';
+import { TEXT_LINE_DEFAULT_OVERRUN, trimSoloLine } from '../../../r3f/controls/native/text/textOverrun';
 import { resolveNodeFont } from '../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { peekSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { resolveTextTheme } from '../../../r3f/controls/native/textTheme';
 import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
-import { OverrunBehavior } from '../../../godot/text/textServerEnums';
 import type { CanvasSlot } from '../../../r3f/canvasItemState';
 import { shapeTitle, titleOrigin, titleSpace } from './decoration';
 import type { WindowThemeDefaults } from './theme';
 import type { WindowProperties } from './types';
-
-/** `TextLine::overrun_behavior`'s default (`text_line.h:50`), which the embedder never changes. */
-const TITLE_OVERRUN_FLAGS = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
 
 interface WindowTitleProps {
   solveNode: SolveNode;
@@ -67,7 +63,7 @@ export function WindowTitle({
     const isRtl = solveNode.rtl;
     return trimSoloLine(
       shapeTitle(props.title, { fontSizePx, fontMetrics, isRtl }),
-      TITLE_OVERRUN_FLAGS,
+      TEXT_LINE_DEFAULT_OVERRUN,
       space,
       {
         fontMetrics,
