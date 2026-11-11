@@ -103,6 +103,15 @@ At `shadow_filter_smooth = 0` the five PCF5 taps are one bin apart. Each tap mix
 neighbouring bins by how far past the first one it lands (`canvas.glsl:392-399`), which
 shifts the edge by half a bin.
 
+## An occluder end on a bin centre
+
+<!-- compare: image=unit-pointlight2d-shadow-end-on-bin status=done fixture=unit-pointlight2d-shadow-end-on-bin.tscn -->
+
+Godot draws each occluder edge as a quad into the map's row, so a bin is shadowed when the
+rasteriser covers its pixel centre. A centre exactly on an end counts only from the left of that
+end, the top-left rule, and the previewer builds its map by the same rule. Here the end sits on a
+centre at the right of the occluder, so the penumbra starts one bin later.
+
 ## The shadow atlas size
 
 <!-- compare: image=unit-pointlight2d-shadow-atlas-size status=done fixture=shadow-atlas-size/unit-pointlight2d-shadow-atlas-size.tscn -->

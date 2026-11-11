@@ -10,6 +10,7 @@
  */
 
 import { edgeCastsShadow, lightRectTest, type LightRect, type ShadowCasterEdges } from './shadowCasterEdges';
+import { coveredBins } from './shadowMapRaster';
 
 /**
  * What a bin holds where nothing occludes: Godot clears the row to `p_far`,
@@ -180,20 +181,16 @@ export function buildShadowPolarMap(
       const start = forward <= 0.5 ? uA : uB;
       const span = forward <= 0.5 ? forward : 1 - forward;
 
-      // One bin of slack each side: the range is only a bound on the walk, and
-      // the `t` test below is what actually decides coverage.
-      const first = Math.ceil(start * drawn - 1.5);
-      const last = Math.floor((start + span) * drawn - 0.5) + 1;
+      // Window x is `u * drawn` less a whole quadrant offset, so the bins share the raster's grid.
+      const [first, last] = coveredBins(start * drawn, (start + span) * drawn);
 
       for (let bin = first; bin <= last; bin += 1) {
         const index = ((bin % drawn) + drawn) % drawn;
         binRay(index, columns, ray);
 
-        // s·ray = A + t·e, solved by crossing with e and with ray in turn.
+        // s·ray = A + t·e, solved for s by crossing with e.
         const denominator = ray.x * ey - ray.y * ex;
         if (denominator === 0) continue;
-        const t = (ax * ray.y - ay * ray.x) / denominator;
-        if (!(t >= 0) || !(t <= 1)) continue;
         const distance = (ax * ey - ay * ex) / denominator;
         // Outside the near and far planes the occluder is clipped away, so the
         // bin keeps whatever else reaches it.

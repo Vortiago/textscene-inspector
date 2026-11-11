@@ -434,6 +434,28 @@ describe('cull_mode against measured Godot', () => {
 });
 
 /**
+ * Pinned against Godot 4.6.3 on lavapipe: `scenes/fixtures/shadow-atlas-size/` at size 1000, whose
+ * occluder end (70, 100) lands at window x 37.5 of the +Y frustum's 250 columns, the centre of
+ * column 37. Godot's ramp at y = 520 starts one bin later than a covered column 37 puts it.
+ */
+describe('a column centre exactly on an occluder end', () => {
+  const BINS = 1000;
+  const COLUMN_37 = 250 + 37;
+
+  it('leaves the column clear when the occluder lies before the end', () => {
+    const map = buildMap(lightAt(0, 0, 1000), [segment(100, -50, 70, -100)], BINS);
+    expect(map[COLUMN_37 - 1]).toBeLessThan(SHADOW_MAP_FAR);
+    expect(map[COLUMN_37]).toBe(SHADOW_MAP_FAR);
+  });
+
+  it('covers the column when the occluder lies after the end', () => {
+    const map = buildMap(lightAt(0, 0, 1000), [segment(70, -100, -50, -100)], BINS);
+    expect(map[COLUMN_37 - 1]).toBe(SHADOW_MAP_FAR);
+    expect(map[COLUMN_37]).toBeLessThan(SHADOW_MAP_FAR);
+  });
+});
+
+/**
  * Pinned against Godot 4.6.3 (`scripts/godot-ref/reference/unit-lightoccluder2d-shadow.png`): a
  * light at Godot (400,324) and an open occluder from (576,224) to (576,424), probed with
  * `pnpm ref:godot scenes/fixtures/unit-lightoccluder2d-shadow.tscn --probe 620,198 --probe 620,199

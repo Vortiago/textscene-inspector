@@ -89,6 +89,15 @@ describe('buildDirectionalShadowMap: the projection', () => {
     expect(bins[255]).toBe(SHADOW_MAP_FAR);
   });
 
+  it('covers a bin whose centre an end lands on only from the left of that end, the top-left rule', () => {
+    // x at u = 1000.5 / 2048, the centre of bin 1000.
+    const endX = 500 + (1000.5 / DEFAULT_ATLAS_SIZE - 0.5) * 1000 * Math.SQRT2;
+    const before = buildDirectionalShadowMap(squareView(), [segment(400, 600, endX, 600)]).bins;
+    const after = buildDirectionalShadowMap(squareView(), [segment(endX, 600, 600, 600)]).bins;
+    expect([before[999], before[1000]]).toEqual([expect.closeTo(0.4, 6), SHADOW_MAP_FAR]);
+    expect([after[999], after[1000]]).toEqual([SHADOW_MAP_FAR, expect.closeTo(0.4, 6)]);
+  });
+
   it('starts the band max_distance upstream of the view and deepens z_far by it', () => {
     // from = centre - dir * (500 + 1000) = (500, 2000), z_far = 2 * 500 + 1000 = 2000.
     const { bins } = buildDirectionalShadowMap(squareView(1000), [segment(400, 600, 600, 600)]);
