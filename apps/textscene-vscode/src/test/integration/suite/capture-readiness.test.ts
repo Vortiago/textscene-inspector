@@ -132,7 +132,7 @@ suite('Capture readiness', () => {
     await assertCaptureShowsTexture();
   });
 
-  // The failure that filed #1401: a preview left open behind another took the CPU the capture needed.
+  // A preview left open behind another took the CPU the capture needed, so the capture came back blank.
   test('a capture still shows the texture with another preview left open and hidden', async function () {
     this.timeout(CAPTURE_TEST_TIMEOUT_MS);
     const otherPath = path.join(godotProjectDir(PROJECT), OTHER_SCENE_FILE);
