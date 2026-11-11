@@ -21,8 +21,8 @@ The `texture_filter` rows follow `BaseMaterial3D`. three skips anisotropy under 
 <!-- compare: image=unit-sprite3d-gradient-no-gradient status=done fixture=unit-sprite3d-gradient-no-gradient.tscn -->
 
 The texture never gets an image, so the sprite draws Godot's 4 by 4 magenta and black placeholder
-(`gradient_texture.cpp:229-233`) over a quad sized by the texture's `width` and `height`. Unlike
-Sprite2D, the placeholder fills the quad whole.
+(`gradient_texture.cpp:229-233`). The quad takes the texture's `width` and `height`. Unlike Sprite2D,
+the placeholder fills the quad whole.
 
 ## Linting
 
