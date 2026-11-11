@@ -1,0 +1,95 @@
+[gd_scene format=3]
+
+; The one variable: `color`, on the wheel, the circles and the OK HL rectangle. A grey has no
+; hue, so the OKHSL hue is the float rounding noise of srgb_to_okhsl (thirdparty/misc/ok_color.h),
+; and the OK shapes take their stops from it. An HDR colour draws its normalised form
+; (color_picker.cpp:552-565). The shapes golden holds one colour, so it shows neither.
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="WheelGrey" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 304.0
+offset_bottom = 304.0
+color = Color(0.5, 0.5, 0.5, 1)
+picker_shape = 1
+color_modes_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false
+
+[node name="WheelHdr" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 310.0
+offset_top = 4.0
+offset_right = 610.0
+offset_bottom = 304.0
+color = Color(1.6, 0.4, 0.2, 1)
+picker_shape = 1
+color_modes_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false
+
+[node name="VhsCircleRed" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 616.0
+offset_top = 4.0
+offset_right = 916.0
+offset_bottom = 304.0
+color = Color(1, 0, 0, 1)
+picker_shape = 2
+color_modes_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false
+
+[node name="OkhslCircleGrey" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 4.0
+offset_top = 330.0
+offset_right = 304.0
+offset_bottom = 630.0
+color = Color(0.7, 0.7, 0.7, 1)
+picker_shape = 3
+color_modes_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false
+
+[node name="OkhslCircleHdr" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 310.0
+offset_top = 330.0
+offset_right = 610.0
+offset_bottom = 630.0
+color = Color(0.3, 1.8, 0.9, 1)
+picker_shape = 3
+color_modes_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false
+
+[node name="OkHlRectangleGrey" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 616.0
+offset_top = 330.0
+offset_right = 916.0
+offset_bottom = 630.0
+color = Color(0.25, 0.25, 0.25, 1)
+picker_shape = 6
+color_modes_visible = false
+sliders_visible = false
+hex_visible = false
+presets_visible = false

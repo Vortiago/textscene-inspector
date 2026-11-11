@@ -36,25 +36,38 @@ function srgbTransferFunction(a: number): number {
   return 0.0031308 >= a ? 12.92 * a : 1.055 * Math.pow(a, 1 / 2.4) - 0.055;
 }
 
-/** `srgb_transfer_function_inv` (`ok_color.h:62-65`). */
-function srgbTransferFunctionInv(a: number): number {
-  return 0.04045 < a ? Math.pow((a + 0.055) / 1.055, 2.4) : a / 12.92;
+const f32 = Math.fround;
+
+/** `a * x + b * y + c * z`, each step rounded to float as `ok_color.h`'s `float` maths does. */
+function dotF32(a: number, x: number, b: number, y: number, c: number, z: number): number {
+  return f32(f32(f32(f32(a) * x) + f32(f32(b) * y)) + f32(f32(c) * z));
 }
 
-/** `linear_srgb_to_oklab` (`ok_color.h:67-82`). */
-function linearSrgbToOklab(c: RGB): Lab {
-  const l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
-  const m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
-  const s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
+/** `srgb_transfer_function_inv` (`ok_color.h:62-65`), in float, of a `Color`'s float channel. */
+function srgbTransferFunctionInv(channel: number): number {
+  const a = f32(channel);
+  return f32(0.04045) < a
+    ? f32(Math.pow(f32(f32(a + f32(0.055)) / f32(1.055)), f32(2.4)))
+    : f32(a / f32(12.92));
+}
 
-  const l_ = Math.cbrt(l);
-  const m_ = Math.cbrt(m);
-  const s_ = Math.cbrt(s);
+/**
+ * `linear_srgb_to_oklab` (`ok_color.h:67-82`), in float. A grey's `a` and `b` are float rounding
+ * noise, and its hue is their angle, so only Godot's own float steps give Godot's hue.
+ */
+function linearSrgbToOklab(c: RGB): Lab {
+  const l = dotF32(0.4122214708, c.r, 0.5363325363, c.g, 0.0514459929, c.b);
+  const m = dotF32(0.2119034982, c.r, 0.6806995451, c.g, 0.1073969566, c.b);
+  const s = dotF32(0.0883024619, c.r, 0.2817188376, c.g, 0.6299787005, c.b);
+
+  const l_ = f32(Math.cbrt(l));
+  const m_ = f32(Math.cbrt(m));
+  const s_ = f32(Math.cbrt(s));
 
   return {
-    L: 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_,
-    a: 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_,
-    b: 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_,
+    L: dotF32(0.2104542553, l_, 0.793617785, m_, -0.0040720468, s_),
+    a: dotF32(1.9779984951, l_, -2.428592205, m_, 0.4505937099, s_),
+    b: dotF32(0.0259040371, l_, 0.7827717662, m_, -0.808675766, s_),
   };
 }
 
@@ -352,7 +365,7 @@ export function srgbToOkhsl(color: Pick<Rgba, 'r' | 'g' | 'b'>): Okhsl {
   const b_ = lab.b / C;
 
   const L = lab.L;
-  const h = 0.5 + (0.5 * Math.atan2(-lab.b, -lab.a)) / Math.PI;
+  const h = f32(f32(0.5) + f32(f32(f32(0.5) * f32(Math.atan2(-lab.b, -lab.a))) / f32(Math.PI)));
 
   const { C_0, C_mid, C_max } = getCs(L, a_, b_);
 

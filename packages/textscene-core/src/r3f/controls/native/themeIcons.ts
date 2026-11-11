@@ -364,9 +364,17 @@ const COLOR_PICKER_MENU_B64 =
 const COLOR_PICKER_PIPETTE_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTEwIDNhMSAxIDAgMCAwLTQgMHYySDV2MmgxdjVjMCAuNzEyLjM2IDEuMzcyIDEgMS43M1YxNWgydi0xLjI3Yy42MTgtLjM2IDEtMSAxLTEuNzNWN2gxVjVoLTFWM3pNNyA3aDJ2NWExIDEgMCAwIDEtMiAweiIvPjwvc3ZnPgo=';
 
-/** `scene/theme/icons/picker_shape_rectangle.svg` (16x16): `ColorPicker`'s `shape_rect`, `btn_shape`'s own icon at `picker_shape = SHAPE_HSV_RECTANGLE` (`default_theme.cpp:1093`). */
+/** `scene/theme/icons/picker_shape_rectangle.svg` (16x16): `ColorPicker`'s `shape_rect`, `btn_shape`'s icon at the HSV and both OK rectangles (`default_theme.cpp:1093`). */
 const COLOR_PICKER_SHAPE_RECT_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2VhZWFlYSIgZD0iTS41IDIuNWgxMXYxMUguNXptMTIgMGgydjExaC0yeiIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/picker_shape_rectangle_wheel.svg` (16x16): `ColorPicker`'s `shape_rect_wheel`, `btn_shape`'s icon at `SHAPE_HSV_WHEEL` (`default_theme.cpp:1094`). */
+const COLOR_PICKER_SHAPE_RECT_WHEEL_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjUuMjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2VhZWFlYSIgc3Ryb2tlLXdpZHRoPSIxLjc1Ii8+PHBhdGggZmlsbD0iI2VhZWFlYSIgZD0iTTQuOSA0LjloNi4ydjYuMkg0Ljl6Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/picker_shape_circle.svg` (16x16): `ColorPicker`'s `shape_circle`, `btn_shape`'s icon at both circles (`default_theme.cpp:1092`). */
+const COLOR_PICKER_SHAPE_CIRCLE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2VhZWFlYSIgZD0iTTYuNSAyLjVhNS41IDUuNSAwIDAgMCAwIDExIDUuNSA1LjUgMCAwIDAgMC0xMW02LjUgMGgydjExaC0yeiIvPjwvc3ZnPgo=';
 
 /**
  * `scene/theme/icons/color_picker_bar_arrow.svg` (16x16, `viewBox="0 0 16 20"`): `ColorPicker`'s
@@ -376,10 +384,15 @@ const COLOR_PICKER_SHAPE_RECT_B64 =
 const COLOR_PICKER_BAR_ARROW_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDIwIj48cGF0aCBmaWxsPSIjYjJiMmIyIiBzdHJva2U9IiNiMmIyYjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Im0zLjU2NCAxNS4yMThoOC44NzJsLTQuNDM2LTQuNDM2eiIvPjwvc3ZnPgo=';
 
-/** ColorPicker's button and bar icons (`default_theme.cpp:1088-1101`). `shape_circle` and `shape_rect_wheel` are not vended, since the previewer draws only `SHAPE_HSV_RECTANGLE`. */
+/** ColorPicker's button and bar icons (`default_theme.cpp:1088-1101`). */
 export const COLOR_PICKER_MENU_ICON = svgDataUrl(COLOR_PICKER_MENU_B64);
 export const COLOR_PICKER_PIPETTE_ICON = svgDataUrl(COLOR_PICKER_PIPETTE_B64);
-export const COLOR_PICKER_SHAPE_RECT_ICON = svgDataUrl(COLOR_PICKER_SHAPE_RECT_B64);
+/** The `btn_shape` icons, by their theme item names. */
+export const COLOR_PICKER_SHAPE_ICONS = {
+  shape_rect: svgDataUrl(COLOR_PICKER_SHAPE_RECT_B64),
+  shape_rect_wheel: svgDataUrl(COLOR_PICKER_SHAPE_RECT_WHEEL_B64),
+  shape_circle: svgDataUrl(COLOR_PICKER_SHAPE_CIRCLE_B64),
+} as const;
 export const COLOR_PICKER_BAR_ARROW_ICON = svgDataUrl(COLOR_PICKER_BAR_ARROW_B64);
 
 /** Every one of the four icons just above shares this authored size: 16x16, never rescaled by the project theme scale (same limitation as `SPIN_BOX_ARROW_ICON_SIZE`). */

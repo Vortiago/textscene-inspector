@@ -1,0 +1,72 @@
+/**
+ * The program injection of a shape's shader fill: a `meshBasicMaterial` whose colour is the shape's
+ * `fragment()` at the fragment's `UV`, under one cache key per fragment and canvas space (ADR-0038).
+ *
+ * Godot's shader writes `COLOR`, which replaces the vertex colour and the modulate it carries
+ * (`drivers/gles3/shaders/canvas.glsl:181`), so only the canvas modulation multiplies after it
+ * (`:716`). In an sRGB canvas `COLOR` holds sRGB numbers, so the fill decodes once and three's
+ * output encode restores them. A linear canvas takes `COLOR` as linear, as Godot does.
+ */
+import * as THREE from 'three';
+import type { ProgramInjection } from '../../../../../r3f/materialProgramInputs';
+import { afterInclude, editedProgram } from '../../../../../r3f/shaderPatch/chunkPatch';
+import { canvasProgramKey } from '../../../../../r3f/lighting2d/canvasItemLighting';
+import { SHAPE_COLOR_FUNCTION, shapeFragmentGlsl, type ShapeFragment } from './shapeFragment';
+
+/**
+ * The uniforms a fill reads. The caller owns them and writes `.value`, so a new colour or size
+ * reaches the compiled program without a recompile.
+ */
+export interface ShapeFillUniforms {
+  /** One per name in `ShapeFragment.uniforms`. */
+  shape: Record<string, THREE.IUniform<number>>;
+  /** The fill's size in px: the vertex stage divides the position by it to get `UV`. */
+  size: THREE.IUniform<THREE.Vector2>;
+  /** The canvas modulation, in the canvas's own space: sRGB numbers or linear. */
+  canvasModulate: THREE.IUniform<THREE.Color>;
+}
+
+/** Positions run from (0, 0) at the top-left to (w, -h), so `UV` runs 0 to 1 with y down, as Godot's does. */
+const VERTEX_UV = `vShapeUv = vec2( position.x / uShapeSize.x, -position.y / uShapeSize.y );`;
+
+const SRGB_COLOR = `vec4 shapeColor = ${SHAPE_COLOR_FUNCTION}( vShapeUv );
+diffuseColor = vec4( sRGBTransferEOTF( vec4( shapeColor.rgb * uShapeCanvasModulate, 1.0 ) ).rgb, diffuseColor.a * shapeColor.a );`;
+
+const LINEAR_COLOR = `vec4 shapeColor = ${SHAPE_COLOR_FUNCTION}( vShapeUv );
+diffuseColor = vec4( shapeColor.rgb * uShapeCanvasModulate, diffuseColor.a * shapeColor.a );`;
+
+export function shapeFillInjection(
+  fragment: ShapeFragment,
+  uniforms: ShapeFillUniforms,
+  isLinearCanvas: boolean
+): ProgramInjection {
+  const declarations = shapeFragmentGlsl(fragment);
+  return {
+    cacheKey: canvasProgramKey(`color-picker-shape-${fragment.name}`, isLinearCanvas),
+    onBeforeCompile(shader) {
+      Object.assign(shader.uniforms, uniforms.shape);
+      shader.uniforms.uShapeSize = uniforms.size;
+      shader.uniforms.uShapeCanvasModulate = uniforms.canvasModulate;
+      editedProgram(
+        shader,
+        {
+          vertex: [
+            {
+              three: 'void main() {',
+              godot: 'uniform vec2 uShapeSize;\nvarying vec2 vShapeUv;\nvoid main() {',
+            },
+            afterInclude('#include <begin_vertex>', VERTEX_UV),
+          ],
+          fragment: [
+            {
+              three: 'void main() {',
+              godot: `varying vec2 vShapeUv;\nuniform vec3 uShapeCanvasModulate;\n${declarations}\nvoid main() {`,
+            },
+            afterInclude('#include <color_fragment>', isLinearCanvas ? LINEAR_COLOR : SRGB_COLOR),
+          ],
+        },
+        `ColorPicker ${fragment.name} fill`
+      );
+    },
+  };
+}

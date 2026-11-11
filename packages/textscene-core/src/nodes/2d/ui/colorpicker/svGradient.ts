@@ -1,6 +1,6 @@
 /**
- * Vertex-colour geometry of the SV square, the hue strip and the slider bands,
- * as plain arrays. `Component.tsx` builds the `THREE.BufferGeometry`.
+ * Vertex-colour geometry of the SV square, the vertical shape sliders and the channel bands,
+ * as plain arrays. `Component.tsx` and `shapes/ShapeRow.tsx` build the `THREE.BufferGeometry`.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -107,17 +107,21 @@ export const COLOR_HUE_STOPS: readonly Rgba[] = Array.from({ length: COLOR_HUE_S
   a: 1,
 }));
 
-/** `COLOR_HUE_STOPS` as one vertical strip. */
-export function hueStripGeometry(w: number, h: number): QuadGeometry {
+/**
+ * A vertical gradient strip with N stops spaced evenly from the top to the bottom of `h`: the
+ * `color_hue` rainbow of the HSV rectangle and the value sliders of the other shapes.
+ */
+export function verticalStripGeometry(w: number, h: number, stops: readonly Rgba[]): QuadGeometry {
   const positions: number[] = [];
   const colors: number[] = [];
   const indices: number[] = [];
-  COLOR_HUE_STOPS.forEach((c, i) => {
-    const y = -h * (i / (COLOR_HUE_STOPS.length - 1));
+  const segments = stops.length - 1;
+  stops.forEach((c, i) => {
+    const y = -h * (i / segments);
     positions.push(0, y, 0, w, y, 0);
-    colors.push(c.r, c.g, c.b, 1, c.r, c.g, c.b, 1);
+    colors.push(c.r, c.g, c.b, c.a, c.r, c.g, c.b, c.a);
   });
-  for (let i = 0; i < COLOR_HUE_STOPS.length - 1; i++) {
+  for (let i = 0; i < segments; i++) {
     const a = i * 2;
     indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
   }

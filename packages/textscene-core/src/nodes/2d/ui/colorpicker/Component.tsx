@@ -31,13 +31,10 @@ import { AlphaCheckerboardQuad } from '../shared/AlphaCheckerboardQuad';
 import {
   COLOR_PICKER_BAR_ARROW_ICON,
   COLOR_PICKER_BUTTON_ICON_SIZE,
-  COLOR_PICKER_CURSOR_BG_ICON,
-  COLOR_PICKER_CURSOR_ICON,
-  COLOR_PICKER_CURSOR_SIZE,
   COLOR_PICKER_MENU_ICON,
   COLOR_PICKER_OVERBRIGHT_ICON,
   COLOR_PICKER_PIPETTE_ICON,
-  COLOR_PICKER_SHAPE_RECT_ICON,
+  COLOR_PICKER_SHAPE_ICONS,
   FOLDABLE_CONTAINER_ICONS,
   SLIDER_GRABBER_ICONS,
 } from '../../../../r3f/controls/native/themeIcons';
@@ -46,7 +43,6 @@ import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '.
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { TextDirection } from '../../../../godot/text/textServerEnums';
-import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
 import { pickerChildTheme } from './pickerChildTheme';
 import { IconButton, iconModulate } from '../../../../r3f/controls/native/IconButton';
 import { GradientMesh, buildGeometry, tintVertexColors } from './GradientMesh';
@@ -64,7 +60,6 @@ import {
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import { buttonIconColor } from '../button/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { hsvToRgb } from '../../../../godot/math/color';
 import {
   COLOR_MODE_NAMES,
   COLOR_PICKER_SAMPLE_HEIGHT_FRACTION,
@@ -83,32 +78,25 @@ import {
   modeButtonLabel,
   textTypeLabel,
   COLOR_PICKER_SLIDER_GRABBER_OFFSET,
-  SHAPE_HSV_RECTANGLE,
   hexRowColumns,
-  hueIndicatorY,
-  invertRgb,
   modeRowButtonRects,
   MODE_BUTTON_COUNT,
   sampleRowColumns,
   sliderGridRowRects,
-  svAndHueRects,
-  svSquareCursorPosition,
   swatchesRowRects,
   type TextWidthMeasurer,
 } from './nativeSolver';
-import {
-  hueStripGeometry,
-  horizontalStripGeometry,
-  linearizeStops,
-  svSquareBaseLayer,
-  svSquareHueLayer,
-} from './svGradient';
+import { horizontalStripGeometry, linearizeStops } from './svGradient';
+import { ShapeRow } from './shapes/ShapeRow';
+import { pickerShapeColor } from './shapes/shapeDrawing';
+import { resolvePickerShape, shapeRowSplit } from './shapes/shapeRow';
+import { shapeVariant } from './shapes/pickerShapes';
+import { ColorPickerShape } from '../../../../godot/scene/gui';
 import {
   MODE_HSV,
   MODE_LINEAR,
   MODE_OKHSL,
   MODE_RGB,
-  extractHsv,
   alphaChannelGradientStops,
   colorModeAlphaChannel,
   colorModeChannels,
@@ -144,8 +132,8 @@ export function ColorPicker({
   const toItemLinear = useItemLinearColorOf();
   const props = painterView<ColorPickerProperties>(solveNode);
   const fill = useMemo(() => parseColor(props.color), [props.color]);
-  const hsv = useMemo(() => extractHsv(fill), [fill]);
   const normalized = useMemo(() => colorNormalized(fill), [fill]);
+  const shapeColor = useMemo(() => pickerShapeColor(fill), [fill]);
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
   const scale = theme.scale;
 
@@ -246,11 +234,12 @@ export function ColorPicker({
   // `btn_shape`, `btn_mode` and `menu_btn` use `FlatMenuButton`, whose boxes are `StyleBoxEmpty`
   // (`default_theme.cpp:360,372-375`). Only `btn_pick`, a plain `Button` (`default_theme.cpp:138-141`), draws one.
   const pickIconTexture = useNodeIcon(solveNode.icons.screen_picker, COLOR_PICKER_PIPETTE_ICON);
-  // `shape_rect` is correct only at `SHAPE_HSV_RECTANGLE`. No other shape is drawn (`comparison.md`).
-  const isHsvRectangle = (props.pickerShape ?? SHAPE_HSV_RECTANGLE) === SHAPE_HSV_RECTANGLE;
+  const pickerShape = resolvePickerShape(props.pickerShape);
+  const drawnShape = pickerShape === ColorPickerShape.SHAPE_NONE ? null : pickerShape;
+  const shapeIcon = drawnShape === null ? null : shapeVariant(drawnShape).icon;
   const shapeIconTexture = useNodeIcon(
-    solveNode.icons.shape_rect,
-    isHsvRectangle ? COLOR_PICKER_SHAPE_RECT_ICON : null
+    shapeIcon ? solveNode.icons[shapeIcon] : undefined,
+    shapeIcon ? COLOR_PICKER_SHAPE_ICONS[shapeIcon] : null
   );
   const menuIconTexture = useNodeIcon(solveNode.icons.menu_option, COLOR_PICKER_MENU_ICON);
   const barArrowTexture = useNodeIcon(solveNode.icons.bar_arrow, COLOR_PICKER_BAR_ARROW_ICON);
@@ -260,43 +249,14 @@ export function ColorPicker({
   // `up_icon_modulate` and `down_icon_modulate` default to `control_font_color` (`default_theme.cpp:634,638`).
   const spinArrowColor = useItemLinearColor(spinArrowGrey);
 
-  const shapeRects = rows.shape ? svAndHueRects(rows.shape, theme, solveNode.rtl) : null;
-
   const vertexTint = useVertexColorTint(tint.own);
   const baseTint = vertexTint.vertex;
-  const svBaseGeometry = useMemo(() => {
-    if (!shapeRects) return null;
-    const g = svSquareBaseLayer(shapeRects.svSquare.w, shapeRects.svSquare.h);
-    return buildGeometry({ ...g, colors: tintVertexColors(g.colors, baseTint) });
-  }, [shapeRects, baseTint]);
 
-  const svHueGeometry = useMemo(() => {
-    if (!shapeRects) return null;
-    const g = svSquareHueLayer(shapeRects.svSquare.w, shapeRects.svSquare.h, hsv.h);
-    return buildGeometry({ ...g, colors: tintVertexColors(g.colors, baseTint) });
-  }, [shapeRects, hsv.h, baseTint]);
-
-  const hueStrip = useMemo(() => {
-    if (!shapeRects) return null;
-    const g = hueStripGeometry(shapeRects.hueSlider.w, shapeRects.hueSlider.h);
-    return buildGeometry({ ...g, colors: tintVertexColors(g.colors, baseTint) });
-  }, [shapeRects, baseTint]);
-
-  const cursorBgTexture = useNodeIcon(solveNode.icons.picker_cursor_bg, COLOR_PICKER_CURSOR_BG_ICON);
-  const cursorTexture = useNodeIcon(solveNode.icons.picker_cursor, COLOR_PICKER_CURSOR_ICON);
-  const cursorSize = Math.round(COLOR_PICKER_CURSOR_SIZE * scale);
-  const cursorLocal = shapeRects
-    ? svSquareCursorPosition({ x: 0, y: 0, w: shapeRects.svSquare.w, h: shapeRects.svSquare.h }, hsv.s, hsv.v)
-    : null;
-  const cursorBgFill = useMemo(() => multiplyModulate(tint.own, { ...fill, a: 1 }), [tint.own, fill]);
-  const cursorBgColor = useItemLinearColor(cursorBgFill);
-
-  const hueLineColor = useMemo(() => {
-    const inverted = invertRgb(hsvToRgb(hsv.h, 1, 1));
-    return multiplyModulate(tint.own, inverted);
-  }, [hsv.h, tint.own]);
-  const hueLineLinear = useItemLinearColor(hueLineColor);
-  const hueY = shapeRects ? hueIndicatorY(shapeRects.hueSlider.h, hsv.h) : 0;
+  const shapeDrawing = useMemo(() => {
+    if (!rows.shape || drawnShape === null) return null;
+    const split = shapeRowSplit(rows.shape, theme, drawnShape, solveNode.rtl);
+    return shapeVariant(drawnShape).draw(split, shapeColor);
+  }, [rows.shape, theme, drawnShape, solveNode.rtl, shapeColor]);
 
   const modeCols = rows.mode
     ? modeRowButtonRects(
@@ -511,61 +471,15 @@ export function ColorPicker({
         </>
       )}
 
-      {/* Shape row */}
-      {shapeRects && svBaseGeometry && svHueGeometry && hueStrip && cursorLocal && (
-        <>
-          <CanvasItemGroup position={[shapeRects.svSquare.x, -shapeRects.svSquare.y, 0]}>
-            <GradientMesh
-              geometry={svBaseGeometry}
-              renderOrder={renderOrder}
-              clippingPlanes={clippingPlanes}
-              tint={vertexTint}
-            />
-            <GradientMesh
-              geometry={svHueGeometry}
-              renderOrder={renderOrder}
-              clippingPlanes={clippingPlanes}
-              tint={vertexTint}
-            />
-            <CanvasItemGroup
-              position={[cursorLocal.x - cursorSize / 2, -(cursorLocal.y - cursorSize / 2), 0]}
-            >
-              <ControlQuad
-                width={cursorSize}
-                height={cursorSize}
-                color={cursorBgColor}
-                opacity={cursorBgFill.a}
-                map={cursorBgTexture}
-                renderOrder={renderOrder}
-              />
-              <ControlQuad
-                width={cursorSize}
-                height={cursorSize}
-                color={tint.color}
-                opacity={tint.opacity}
-                map={cursorTexture}
-                renderOrder={renderOrder}
-              />
-            </CanvasItemGroup>
-          </CanvasItemGroup>
-          <CanvasItemGroup position={[shapeRects.hueSlider.x, -shapeRects.hueSlider.y, 0]}>
-            <GradientMesh
-              geometry={hueStrip}
-              renderOrder={renderOrder}
-              clippingPlanes={clippingPlanes}
-              tint={vertexTint}
-            />
-            <CanvasItemGroup position={[0, -hairlineQuadStartPx(hueY), 0]}>
-              <ControlQuad
-                width={shapeRects.hueSlider.w}
-                height={HAIRLINE_THICKNESS_PX}
-                color={hueLineLinear}
-                opacity={hueLineColor.a}
-                renderOrder={renderOrder}
-              />
-            </CanvasItemGroup>
-          </CanvasItemGroup>
-        </>
+      {shapeDrawing && (
+        <ShapeRow
+          drawing={shapeDrawing}
+          pickColor={fill}
+          solveNode={solveNode}
+          tint={tint}
+          scale={scale}
+          renderOrder={renderOrder}
+        />
       )}
 
       {/* Mode row */}

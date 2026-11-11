@@ -26,13 +26,14 @@ import { SizeFlags } from '../../../../godot/scene/control';
 import { ContainerAlignment } from '../../../../godot/scene/container';
 import { resortBoxContainer } from '../shared/boxContainerSolver';
 import { pickerChildTheme } from './pickerChildTheme';
+import { resolvePickerShape, shapeRowHeight, shapeRowMinWidth } from './shapes/shapeRow';
+import { ColorPickerShape } from '../../../../godot/scene/gui';
 import { MODE_RGB } from './colorModes';
 import { gridCellMinimumExtent } from '../shared/gridCellMinimum';
 import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { sliderMinimumSize } from '../shared/sliderSolver';
 import type { ColorPickerProperties } from './types';
-import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
 
 /** `MODE_BUTTON_COUNT` (`color_picker.h:184`). OKHSL has no mode button: only the dropdown reaches it. */
@@ -47,16 +48,6 @@ export const COLOR_PICKER_THEME_FONT_KEY = 'font';
 /** Measures one run of text at the row's font size. The solver adapts `ctx.measureText` and the painter adapts `shapeButtonLabel`. */
 export type TextWidthMeasurer = (text: string) => Vector2;
 
-/** The one `PickerShapeType` value (`color_picker.h`) this previewer draws. */
-export const SHAPE_HSV_RECTANGLE = 0;
-
-/** `SHAPE_NONE` (`color_picker.h`): the picker shows no shape and hides `btn_shape` (`color_picker.cpp:321`). */
-const SHAPE_NONE = 4;
-
-/** `sv_width`/`sv_height` (`default_theme.cpp:1077-1078`), at scale 1. */
-const COLOR_PICKER_SV_SIZE = 256;
-/** `h_width` (`default_theme.cpp:1079`), at scale 1. */
-const COLOR_PICKER_HUE_WIDTH = 30;
 /**
  * The icon size of `btn_pick`, `btn_shape`, `btn_mode` and `menu_btn`:
  * `color_picker_pipette.svg`, `picker_shape_rectangle.svg` and `tabs_menu_hl.svg`
@@ -134,13 +125,8 @@ function iconButtonWidth(theme: Pick<NativeTheme, 'scale'>, box: StyleBoxFlatDat
   return Math.max(Math.round(COLOR_PICKER_BUTTON_WIDTH * theme.scale), iconButtonSize(theme, box).x);
 }
 
-/** `Color::inverted()` (`core/math/color.h`): flips rgb and keeps alpha. */
-export function invertRgb(c: Rgba): Rgba {
-  return { r: 1 - c.r, g: 1 - c.g, b: 1 - c.b, a: c.a };
-}
-
 interface ColorPickerRows {
-  /** The rect of `shape_container`, `null` at any `picker_shape` but `SHAPE_HSV_RECTANGLE`. */
+  /** The rect of `shape_container`, `null` at `SHAPE_NONE`. */
   shape: Rect2 | null;
   /** The rect of `sample_hbc`, `null` when `sampler_visible` is false. */
   sample: Rect2 | null;
@@ -159,22 +145,6 @@ interface ColorPickerRows {
   /** The minimum widths of `mode_hbc` and `swatches_vbc`, measured once for the row heights. */
   modeMinWidth: number;
   swatchesMinWidth: number;
-}
-
-/**
- * The minimum width of the shape row: `custom_minimum_size.x` of `sv_square`
- * (`ColorPickerShapeRectangle::update_theme`, `color_picker_shape.cpp:465`),
- * plus `separation`, plus the fixed `h_width` of `hue_slider`. `0` when nothing is drawn there.
- */
-function shapeRowMinWidth(
-  theme: Pick<NativeTheme, 'separation' | 'scale'>,
-  pickerShape: number | undefined
-): number {
-  if ((pickerShape ?? SHAPE_HSV_RECTANGLE) !== SHAPE_HSV_RECTANGLE) return 0;
-  const scale = theme.scale;
-  return (
-    Math.round(COLOR_PICKER_SV_SIZE * scale) + theme.separation + Math.round(COLOR_PICKER_HUE_WIDTH * scale)
-  );
 }
 
 /** `edit_alpha`, `edit_intensity` and every row-visibility flag default to `true` (`color_picker.h:254,260,286-290`). */
@@ -220,13 +190,18 @@ function modeRowSize(
   return { x: width, y: height };
 }
 
+/** `SHAPE_NONE` hides `btn_shape` (`color_picker.cpp:321`). */
+function showsShapeButton(pickerShape: number | undefined): boolean {
+  return resolvePickerShape(pickerShape) !== ColorPickerShape.SHAPE_NONE;
+}
+
 /** The height of `sample_hbc`: the taller of `btn_pick` and, unless `SHAPE_NONE` hides it, `btn_shape`. */
 function sampleRowHeight(
   theme: Pick<NativeTheme, 'widgets' | 'scale'>,
   pickerShape: number | undefined
 ): number {
   const pick = iconButtonSize(theme, theme.widgets.button.normal).y;
-  const shape = (pickerShape ?? SHAPE_HSV_RECTANGLE) === SHAPE_NONE ? 0 : colorPickerMenuButtonSize(theme).y;
+  const shape = showsShapeButton(pickerShape) ? colorPickerMenuButtonSize(theme).y : 0;
   return Math.max(pick, shape);
 }
 
@@ -392,10 +367,8 @@ export function colorPickerRows(
   >,
   measure: TextWidthMeasurer | null
 ): ColorPickerRows {
-  const scale = theme.scale;
-  const svSize = Math.round(COLOR_PICKER_SV_SIZE * scale);
-  const drawShape = (props.pickerShape ?? SHAPE_HSV_RECTANGLE) === SHAPE_HSV_RECTANGLE;
-  const shapeHeight = drawShape ? svSize : 0;
+  const pickerShape = resolvePickerShape(props.pickerShape);
+  const shapeHeight = shapeRowHeight(theme, pickerShape);
 
   const textHeightPx = measure ? measure('0').y : 0;
   const sampleHeight = sampleRowHeight(theme, props.pickerShape);
@@ -420,9 +393,10 @@ export function colorPickerRows(
   // and `separation` at any shape. Every other row uses `set_visible(false)`
   // (`color_picker.cpp:1906-1956`), which drops the row and its gap.
   const shapeY = place(shapeHeight);
-  const shape: Rect2 | null = drawShape
-    ? { x: 0, y: shapeY, w: Math.max(shapeRowMinWidth(theme, props.pickerShape), width), h: svSize }
-    : null;
+  const shape: Rect2 | null =
+    pickerShape === ColorPickerShape.SHAPE_NONE
+      ? null
+      : { x: 0, y: shapeY, w: Math.max(shapeRowMinWidth(theme, pickerShape), width), h: shapeHeight };
   const sample: Rect2 | null = rowVisible(props.samplerVisible)
     ? { x: 0, y: place(sampleHeight), w: width, h: sampleHeight }
     : null;
@@ -514,7 +488,7 @@ export const colorPickerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const emWidthPx = measureUnceiled ? colorPickerEmWidthPx((text) => measureUnceiled(text).x) : 0;
   const rows = colorPickerRows(0, theme, valueFieldTheme, props, measure);
   const width = Math.max(
-    shapeRowMinWidth(theme, props.pickerShape),
+    shapeRowMinWidth(theme, resolvePickerShape(props.pickerShape)),
     contentMinWidth(theme, valueFieldTheme, props, rows, emWidthPx)
   );
 
@@ -535,52 +509,6 @@ function mirroredColumn(column: Rect2, row: Rect2, rtl: boolean): Rect2 {
   // `fit_child_in_rect` (`container.cpp:95-128`) adds no second mirror: `_compute_offsets`
   // (`control.cpp:904-915`) mirrors as much as `_size_changed` mirrors back (`:1785-1787`).
   return { ...column, x: row.x + row.w - (column.x - row.x) - column.w };
-}
-
-interface ShapeRowSplit {
-  svSquare: Rect2;
-  hueSlider: Rect2;
-}
-
-/**
- * Splits the shape row into `sv_square` and `hue_slider`
- * (`ColorPickerShapeRectangle::_initialize_controls`, `color_picker_shape.cpp:436-452`):
- * `hue_slider` keeps its fixed `h_width`, and `sv_square` takes the rest
- * (`SIZE_EXPAND_FILL`, `color_picker_shape.cpp:438`), with `separation` between.
- */
-export function svAndHueRects(
-  shape: Rect2,
-  theme: Pick<NativeTheme, 'separation' | 'scale'>,
-  rtl = false
-): ShapeRowSplit {
-  const scale = theme.scale;
-  const hueWidth = Math.round(COLOR_PICKER_HUE_WIDTH * scale);
-  const svWidth = shape.w - theme.separation - hueWidth;
-  return {
-    svSquare: mirroredColumn({ x: shape.x, y: shape.y, w: svWidth, h: shape.h }, shape, rtl),
-    hueSlider: mirroredColumn(
-      { x: shape.x + svWidth + theme.separation, y: shape.y, w: hueWidth, h: shape.h },
-      shape,
-      rtl
-    ),
-  };
-}
-
-/**
- * `ColorPickerShape::draw_sv_square`'s cursor placement
- * (`color_picker_shape.cpp:259-261`), clamped to the square.
- */
-export function svSquareCursorPosition(square: Rect2, s: number, v: number): Vector2 {
-  const end = { x: square.x + square.w, y: square.y + square.h };
-  return {
-    x: Math.min(Math.max(square.x + square.w * s, square.x), end.x),
-    y: Math.min(Math.max(square.y + square.h * (1 - v), square.y), end.y),
-  };
-}
-
-/** `ColorPickerShapeRectangle::_hue_slider_draw`'s indicator line: `int y = size.y * h` (`color_picker_shape.cpp:431`). */
-export function hueIndicatorY(height: number, h: number): number {
-  return Math.trunc(height * h);
 }
 
 interface SliderGridRowColumns {
@@ -742,7 +670,7 @@ export function sampleRowColumns(
 ): SampleRowColumns {
   const btnWidth = iconButtonWidth(theme, theme.widgets.button.normal);
   const shapeWidth = iconButtonWidth(theme, theme.widgets.flatMenuButton.normal);
-  const showShapeBtn = (pickerShape ?? SHAPE_HSV_RECTANGLE) !== SHAPE_NONE;
+  const showShapeBtn = showsShapeButton(pickerShape);
   const shapeBtnSpace = showShapeBtn ? shapeWidth + theme.separation : 0;
   return {
     pick: mirroredColumn({ x: sample.x, y: sample.y, w: btnWidth, h: sample.h }, sample, rtl),
