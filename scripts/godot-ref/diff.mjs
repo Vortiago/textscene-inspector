@@ -19,23 +19,29 @@ const REPO_ROOT = resolve(import.meta.dirname, '..', '..');
 const FIXTURE_DIR = join(REPO_ROOT, 'scenes', 'fixtures');
 const OUT_DIR = join(import.meta.dirname, 'output');
 /** The trees the catalog lists from their own `res://` root, so a name drops the prefix. */
+/**
+ * A leftover against Godot of at most this many levels is residue: recorded, not investigated.
+ * So each result counts the pixels past it, which decide whether a difference is residue.
+ */
+const RESIDUE_MAX_DELTA = 2;
 const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `${root}/`);
 
 function usage() {
   console.error(
-    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep]\n' +
+    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--table <file.md>]\n' +
       '\n' +
       '  <fixture.tscn>   fixture filename as listed in apps/textscene-web/src/fixtures.ts,\n' +
       '                   or a path to a .tscn under scenes/\n' +
       '  --max-mean <n>   exit 1 if any scene exceeds this mean per-channel error, in /255\n' +
       '                   (default: report only)\n' +
       '  --frame          fit-the-bounds camera on BOTH sides instead of the editor orbit\n' +
-      '  --keep           keep the per-side PNGs, not just the diff'
+      '  --keep           keep the per-side PNGs, not just the diff\n' +
+      '  --table <file>   also write the results as a Markdown table, one row per scene'
   );
 }
 
 export function parseArgs(argv) {
-  const args = { fixtures: [], maxMean: null, frame: false, keep: false };
+  const args = { fixtures: [], maxMean: null, frame: false, keep: false, table: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--max-mean') {
@@ -43,6 +49,9 @@ export function parseArgs(argv) {
       if (!Number.isFinite(args.maxMean)) {
         throw new Error(`--max-mean needs a number, got "${argv[i]}"`);
       }
+    } else if (arg === '--table') {
+      args.table = argv[++i];
+      if (!args.table) throw new Error(`--table needs a file path, got "${argv[i]}"`);
     } else if (arg === '--frame') args.frame = true;
     else if (arg === '--keep') args.keep = true;
     else if (arg.startsWith('--')) throw new Error(`unknown flag: ${arg}`);
@@ -98,7 +107,7 @@ function pathWithinScenes(scenePath) {
  * perceptual YIQ distance, which scores 0 for a flat luminance shift.
  */
 export function comparePngs(godotBuffer, oursBuffer) {
-  const result = compareImages(godotBuffer, oursBuffer, { diff: true });
+  const result = compareImages(godotBuffer, oursBuffer, { diff: true, overDelta: RESIDUE_MAX_DELTA });
   if (result.sizeMismatch) {
     const { expected, actual } = result.sizeMismatch;
     return {
@@ -188,9 +197,36 @@ function formatResult(result) {
     `${label} changed ${changed.padStart(8)}  ` +
     `(${result.changedPixels} px of ${result.width}x${result.height})  ` +
     `max ${String(result.maxChannelDelta).padStart(3)}/255  ` +
-    `mean ${result.meanChannelError.toFixed(3)}/255` +
+    `mean ${result.meanChannelError.toFixed(3)}/255  ` +
+    `over ${result.over.delta}/255 ${result.over.pixels} px${result.over.pixels > 0 ? ` at ${placeOf(result.over.bounds)}` : ''}` +
     (result.diffPath ? `  ${result.diffPath}` : '')
   );
+}
+
+/** The inclusive pixel rectangle `bounds`, as its top-left and bottom-right corners. */
+function placeOf({ left, top, right, bottom }) {
+  return `(${left},${top}) to (${right},${bottom})`;
+}
+
+/**
+ * The results as a Markdown table for a report: one row per scene, with the numbers that decide
+ * whether a difference is residue. A scene with no numbers says why in its second cell.
+ */
+export function residueTable(results) {
+  return [
+    `| Scene | Changed px | Max /255 | Mean /255 | Px over ${RESIDUE_MAX_DELTA}/255 | Where |`,
+    '| --- | --- | --- | --- | --- | --- |',
+    ...results.map((result) => `| \`${result.label}\` | ${residueCells(result).join(' | ')} |`),
+    '',
+  ].join('\n');
+}
+
+function residueCells(result) {
+  if (result.failed) return [`failed: ${result.failed}`, '', '', '', ''];
+  if (result.sizeMismatch) return [`size mismatch: ${result.sizeMismatch}`, '', '', '', ''];
+  const { changedPixels, maxChannelDelta, meanChannelError, over } = result;
+  const place = over.bounds ? placeOf(over.bounds) : '';
+  return [changedPixels, maxChannelDelta, meanChannelError.toFixed(3), over.pixels, place];
 }
 
 async function main() {
@@ -202,6 +238,7 @@ async function main() {
   await mkdir(OUT_DIR, { recursive: true });
 
   const results = await diffAll(args.fixtures.map(resolveFixture), args);
+  if (args.table) await writeFile(args.table, residueTable(results));
 
   // A scene that never rendered is over any bound: no number is worse than a
   // large one. Without `--max-mean`, only such a scene exits 1.
