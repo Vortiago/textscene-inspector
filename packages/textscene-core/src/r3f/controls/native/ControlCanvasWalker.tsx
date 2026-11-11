@@ -4,7 +4,7 @@
  * never shears. A registered painter draws the chrome, `<ControlFallback>` otherwise.
  * Children render beside the painter, since the solve has already placed them.
  */
-import { useEffect, useMemo } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo } from 'react';
 import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2';
 import { VECTOR2_ZERO, type Vector2 } from '../../../godot/math/vector';
 import { controlProps, type SolveNode } from './solveTree';
@@ -30,11 +30,10 @@ import { isCanvasLayerType, ysortsChildren } from '../../canvasPaintOrder';
 import { CanvasRootScope } from '../../canvasRootScope';
 import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';
-import {
-  controlDrawTransformOf,
-  snapControlsToPixelsEnabled,
-  snappedControlOriginUnder,
-} from './controlPixelSnap';
+import { snapControlsToPixelsEnabled, snappedControlOriginUnder } from './controlPixelSnap';
+import { localYSortShifts } from './localYSort';
+import { applyYSortShifts, controlTransformsOf, solvedDrawTransformOf } from './controlYSort';
+import { usePublishControlTransforms, useYSortShifts } from '../../contexts/ControlYSortContext';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import {
   CanvasItemChildScope,
@@ -64,6 +63,11 @@ interface ControlCanvasWalkerProps {
    * the first root and each root promoted past the placement chain; a `top_level` root sits at it.
    */
   rootOffset?: Vector2;
+  /**
+   * The walk sorts its own y-sorted Controls, since no `YSortDispatcher` draws their parents: an
+   * unowned scene-tile root and the Controls of a sub-viewport. A walk outside any `ControlYSortProvider` does so without the flag.
+   */
+  sortsLocally?: boolean;
   /** Called after each solve, with the solved controls keyed by tree path. */
   onSolved?: (solved: ReadonlyMap<string, SolvedControl>) => void;
 }
@@ -76,6 +80,7 @@ export function ControlCanvasWalker({
   measurer,
   snapToPixels,
   rootOffset,
+  sortsLocally = false,
   onSolved,
 }: ControlCanvasWalkerProps) {
   // Per viewport in Godot (`Viewport::snap_controls_to_pixels`,
@@ -94,14 +99,33 @@ export function ControlCanvasWalker({
   useEffect(() => {
     onSolved?.(solved);
   }, [solved, onSolved]);
+  // A y-sort in the world sorts the Controls on where this solve puts them, and moves their runs.
+  // A layout effect, so the sort and this walk settle before the first paint.
+  const publishToWorld = usePublishControlTransforms();
+  const publishTransforms = sortsLocally ? null : publishToWorld;
+  const owner = useId();
+  useLayoutEffect(() => {
+    publishTransforms?.(owner, controlTransformsOf(tree, solved, snapEnabled));
+  }, [publishTransforms, owner, tree, solved, snapEnabled]);
+  useLayoutEffect(() => () => publishTransforms?.(owner, null), [publishTransforms, owner]);
+  // With no world sort to join, the walk sorts its own Control items.
+  const worldShifts = useYSortShifts();
+  const shifts = useMemo(
+    () =>
+      publishTransforms
+        ? worldShifts
+        : localYSortShifts(tree, controlTransformsOf(tree, solved, snapEnabled)),
+    [publishTransforms, worldShifts, tree, solved, snapEnabled]
+  );
+  const drawn = useMemo(() => applyYSortShifts(tree, shifts), [tree, shifts]);
 
   return (
     <>
-      {tree.map((n) => (
+      {drawn.map((n) => (
         <WalkRoot
           key={n.path}
           solveNode={n}
-          isFirst={n === tree[0]}
+          isFirst={n === drawn[0]}
           solved={solved}
           theme={theme}
           measureText={measurer}
@@ -242,10 +266,7 @@ function ControlItemGroup({
 
   // The solve says whether `Container::fit_child_in_rect` reset this child to rotation 0 and
   // scale 1, and the snap's rotation gate must see that too.
-  const transform = controlDrawTransformOf(props, rect, {
-    resets: solvedEntry?.resetsChildTransform === true,
-    solvedScale: solvedEntry?.scale,
-  });
+  const transform = solvedDrawTransformOf(solveNode, solvedEntry ?? { rect });
   const { rotation, scale, pivot } = transform;
   const hasOwnTransform = rotation !== 0 || scale.x !== 1 || scale.y !== 1;
 

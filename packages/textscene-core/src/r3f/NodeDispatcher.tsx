@@ -17,8 +17,11 @@ import {
   isCanvasLayerType,
   canvasLayerRanks,
   hostsOwnCanvas,
+  isControlType,
   WHOLE_CANVAS_RANGE,
+  ysortsChildren,
 } from './canvasPaintOrder.js';
+import { YSortDispatcher } from './YSortDispatcher.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import {
   CanvasRootRangesProvider,
@@ -320,13 +323,16 @@ function PlainNode({
   // Each child gets its own run of draw-sequence values in Godot's walk order:
   // `show_behind_parent` children before this node, the rest after it. A run
   // covers the child's whole subtree, so nothing reaches a sibling's sequence.
-  const inlineChildren = node.children.map((child, i) => (
-    <PaintRangeProvider key={child.name} value={canvasRoots.get(child) ?? allocated.children[i]!}>
-      <TreeOrderProvider order={inlineOrders[i]!}>
-        <DispatchedNode node={child} path={joinPath(path, child.name)} />
-      </TreeOrderProvider>
-    </PaintRangeProvider>
-  ));
+  const sortsChildren = ysortsChildren(node) && isControlType(node.type);
+  const inlineChildren = sortsChildren
+    ? []
+    : node.children.map((child, i) => (
+        <PaintRangeProvider key={child.name} value={canvasRoots.get(child) ?? allocated.children[i]!}>
+          <TreeOrderProvider order={inlineOrders[i]!}>
+            <DispatchedNode node={child} path={joinPath(path, child.name)} />
+          </TreeOrderProvider>
+        </PaintRangeProvider>
+      ));
 
   const children: ReactNode[] = [];
   // Inside the node's own group, as a child, so the icon sits at its origin whatever the component draws.
@@ -334,8 +340,12 @@ function PlainNode({
   if (editorIcon) {
     children.push(<NodeEditorIcon key="__icon" node={node} registration={editorIcon} />);
   }
-  if (inlineChildren.length > 0) {
-    children.push(<Fragment key="__inline">{inlineChildren}</Fragment>);
+  if (node.children.length > 0) {
+    // No component of a Control sorts its children, so the world walk does for a `y_sort_enabled`
+    // one, as `CanvasItem` does for any node (`canvas_item.cpp:706-709`).
+    children.push(
+      <Fragment key="__inline">{sortsChildren ? <YSortDispatcher node={node} /> : inlineChildren}</Fragment>
+    );
   }
   if (extraChildren) {
     // Injected sub-scene roots draw after the authored children, in the room

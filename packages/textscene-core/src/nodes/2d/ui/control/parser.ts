@@ -29,6 +29,7 @@ export function parseControlCanvasItem(
     zAsRelative: boolSlotValue(properties.z_as_relative) !== false,
     showBehindParent: boolSlotValue(properties.show_behind_parent) === true,
     topLevel: boolSlotValue(properties.top_level) === true,
+    ySortEnabled: boolSlotValue(properties.y_sort_enabled) === true,
     lightMask: intOr(properties.light_mask, 1, `${label}.light_mask`),
     clipChildren: parseClipChildrenMode(properties.clip_children, `${label}.clip_children`),
     useParentMaterial: boolSlotValue(properties.use_parent_material) === true,

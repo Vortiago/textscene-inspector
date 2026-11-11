@@ -45,6 +45,12 @@ describe('a scene tile in a lifted layer', () => {
     expect(chain).toEqual([layerGroup]);
   });
 
+  it('reads no group for a Control, which the Control walk places', () => {
+    const control = { ...layer, type: 'ColorRect' } as unknown as TscnNode;
+    const controlItem = { ...item, node: control, liftedPast: [] } as YSortItem;
+    expect(liveGroupChain(controlItem, 'Root', () => new Object3D())).toBeNull();
+  });
+
   it('sorts on the layer pose moved by the mixer plus the placement and root offsets', () => {
     const layerGroup = new Object3D();
     layerGroup.position.set(0, -100, 0);

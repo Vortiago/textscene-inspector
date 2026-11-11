@@ -5,7 +5,7 @@
  * (`ySortRows`), each interleaving with sibling CanvasItems.
  */
 
-import { useMemo, type ReactNode } from 'react';
+import { memo, useId, useLayoutEffect, useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import type { TileSetModel } from '../resources/tileset/types.js';
 import { ySortRows } from '../resources/tileset/tileYSort.js';
@@ -36,19 +36,31 @@ import { transform2DXform } from '../godot/math/transform2d.js';
 // edge resolves through `nodeComponentRegistry` at runtime, so there is no cycle.
 import { DispatchedNode } from './NodeDispatcher.js';
 import { NodePathProvider, useNodePath } from './contexts/NodePathContext.js';
+import { hasControl, sceneOrderBasesBelow } from './ySortSceneOrder.js';
 import { useLiveDrawnPatchesBelow } from './liveNodePatches.js';
+import {
+  useControlTransformsUnder,
+  usePublishYSortShifts,
+  type YSortShift,
+} from './contexts/ControlYSortContext.js';
 
 /** Performs the y-sort pass on a y_sort_enabled Node2D's or TileMapLayer's children. */
-export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children: ReactNode }) {
+export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children?: ReactNode }) {
   const path = useNodePath() ?? node.name;
   const patches = useLiveDrawnPatchesBelow(path);
+  // A sort reads the Controls below it only, so a Control moving under another sort leaves its memo alone.
+  const controlTransforms = useControlTransformsUnder(hasControl(node) ? path : null);
   // Collect raw items (y_sort TileMapLayer → one tileGroup placeholder per layer). A layer that
   // roots the sort lists its own rows first, so its children number from 1.
   const rawItems = useMemo(() => {
     const ownRows = collectSortRootRows(node);
-    const children = collectYSortedItems(node, Y_SORT_ROOT, ownRows ? 1 : 0, [], { path, patches });
+    const children = collectYSortedItems(node, Y_SORT_ROOT, ownRows ? 1 : 0, [], {
+      path,
+      patches,
+      controlTransforms,
+    });
     return ownRows ? [ownRows, ...children] : children;
-  }, [node, path, patches]);
+  }, [node, path, patches, controlTransforms]);
   // Each y-sorted layer expands against its own grid, so every distinct
   // `tile_set` in the list is resolved, not just the first one's.
   const refs = useMemo(() => tileSetRefsOf(rawItems), [rawItems]);
@@ -61,7 +73,7 @@ export function YSortDispatcher({ node, children: _children }: { node: TscnNode;
 }
 
 /** The sort and re-dispatch, once every y-sorted layer's TileSet is in hand. */
-function SortedChildren({
+const SortedChildren = memo(function SortedChildren({
   node,
   rawItems,
   models,
@@ -115,6 +127,28 @@ function SortedChildren({
     return liveItems.map((item) => ({ item, range: rangeOf.get(ySortItemId(item))! }));
   }, [sorted, liveItems, ownSequence, paintRange]);
 
+  // The Control walk draws the Control subtrees, so it takes the runs this sort gave them. A layout
+  // effect, so the walk and the sort settle before the first paint.
+  const publishShifts = usePublishYSortShifts();
+  const owner = useId();
+  useLayoutEffect(() => {
+    if (!publishShifts) return;
+    // A node that no longer holds a Control withdraws the shifts it gave, which the unmount cleanup alone would keep.
+    if (!hasControl(node)) {
+      publishShifts(owner, null);
+      return;
+    }
+    const sceneOrderBases = sceneOrderBasesBelow(node, paintRange, basePath);
+    const shifts = new Map<string, YSortShift>();
+    for (const { item, range } of packed) {
+      if (!item.node || !hasControl(item.node)) continue;
+      const path = liftedPath(basePath, item.liftedPast, item.node.name);
+      shifts.set(path, { run: range, from: sceneOrderBases.get(path) ?? range.base });
+    }
+    publishShifts(owner, shifts);
+  }, [packed, node, paintRange, basePath, publishShifts, owner]);
+  useLayoutEffect(() => () => publishShifts?.(owner, null), [publishShifts, owner]);
+
   return (
     <>
       {packed.map(({ item, range }) => {
@@ -159,7 +193,7 @@ function SortedChildren({
       ))}
     </>
   );
-}
+});
 
 /**
  * The rows of a y-sorted TileMapLayer item, each a child canvas item of the layer at `(0, row y)`

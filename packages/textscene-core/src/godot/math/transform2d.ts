@@ -289,3 +289,8 @@ export function transform2DHasZeroSkew(t: Transform2DColumns): boolean {
   const normalizedDot = (a * c + b * d) / (len0 * len1);
   return isZeroApprox(normalizedDot);
 }
+
+/** Whether two transforms place a point identically, field for field. */
+export function equalTransform2D(p: Transform2DColumns, q: Transform2DColumns): boolean {
+  return p.a === q.a && p.b === q.b && p.c === q.c && p.d === q.d && p.tx === q.tx && p.ty === q.ty;
+}

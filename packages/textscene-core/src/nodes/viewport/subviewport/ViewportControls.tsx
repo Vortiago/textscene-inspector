@@ -92,6 +92,7 @@ export function ViewportControls({
         // root window receives `gui/common/snap_controls_to_pixels` (`main/main.cpp`), so the project's
         // opt-out never reaches a sub-viewport's Controls.
         snapToPixels
+        sortsLocally
       />
       {embedsWindows ? (
         <EmbeddedWindows windows={windows} embedderSize={size} forestPath={forestPath} theme={theme} />

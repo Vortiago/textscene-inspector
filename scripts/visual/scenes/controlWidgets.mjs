@@ -297,4 +297,15 @@ export const CONTROL_WIDGET_SCENES = [
   { name: 'tab-bar-scroll-to-current', file: 'unit-tab-bar-scroll-to-current.tscn', mode: '2d' },
   { name: 'tab-bar-scroll-options', file: 'unit-tab-bar-scroll-options.tscn', mode: '2d' },
   { name: 'tab-container-hidden-pages', file: 'unit-tab-container-hidden-pages.tscn', mode: '2d' },
+  // A y-sorted Control draws its Control children in y order: Red (offset_top 80) over Blue (40) over
+  // Green (0), though listed Red, Green, Blue.
+  { name: 'control-y-sort', file: 'unit-control-y-sort.tscn', mode: '2d' },
+  // A Control child of a y-sorted Node2D sorts on its canvas item origin: Low (80) over the Polygon2D
+  // Tile (68), High (10) under it.
+  { name: 'control-y-sort-sibling', file: 'unit-control-y-sort-sibling.tscn', mode: '2d' },
+  // The same sort where no world y-sort draws the Control's parent: High (50) under Low (100) in a
+  // Control-only SubViewport, and in the Control root of a scene tile.
+  { name: 'control-y-sort-viewport', file: 'unit-control-y-sort-viewport.tscn', mode: '2d' },
+  { name: 'control-y-sort-viewport-mixed', file: 'unit-control-y-sort-viewport-mixed.tscn', mode: '2d' },
+  { name: 'control-y-sort-scene-tile', file: 'unit-control-y-sort-scene-tile.tscn', mode: '2d' },
 ];

@@ -7,14 +7,13 @@
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import { TRANSFORM2D_IDENTITY, type Transform2DColumns } from '../../../godot/math/transform2d.js';
+import {
+  TRANSFORM2D_IDENTITY,
+  equalTransform2D,
+  type Transform2DColumns,
+} from '../../../godot/math/transform2d.js';
 import { transform2DFromThreeMatrix } from '../../../r3f/node2dTransform';
 import { useCanvasFrame } from '../../../r3f/canvasFrame';
-
-/** Do two transforms place the emitter identically? */
-function sameTransform2D(p: Transform2DColumns, q: Transform2DColumns): boolean {
-  return p.a === q.a && p.b === q.b && p.c === q.c && p.d === q.d && p.tx === q.tx && p.ty === q.ty;
-}
 
 /**
  * The emitter's canvas transform in Godot pixel space. The identity while
@@ -31,7 +30,7 @@ export function useEmissionTransform(
 
   useLayoutEffect(() => {
     const next = container && !localCoords ? canvasTransform(container, frame) : TRANSFORM2D_IDENTITY;
-    if (sameTransform2D(published.current, next)) return;
+    if (equalTransform2D(published.current, next)) return;
     published.current = next;
     setTransform(next);
   }, [container, localCoords, frame]);
