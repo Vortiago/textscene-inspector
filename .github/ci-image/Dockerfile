@@ -21,10 +21,11 @@ RUN getent hosts archive.ubuntu.com > /dev/null \
 # libatomic1 for the pnpm of pnpm/action-setup, and zstd for actions/cache, whose entries a runner
 # packs with it. curl and unzip fetch Godot below. mesa-vulkan-drivers is lavapipe, the driver of
 # `pnpm test:gpu` and of `pnpm ref:godot`. xvfb and xauth give `xvfb-run`, the display of Godot.
+# Godot loads libXcursor and libXinerama when it opens that display, and has none without the first.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates curl git libatomic1 unzip zstd \
-    mesa-vulkan-drivers xvfb xauth \
+    mesa-vulkan-drivers xvfb xauth libxcursor1 libxinerama1 \
   && rm -rf /var/lib/apt/lists/*
 
 ARG ENGINE_VERSION=4.6.3-stable
