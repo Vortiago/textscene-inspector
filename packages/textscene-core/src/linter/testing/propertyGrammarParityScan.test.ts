@@ -12,8 +12,8 @@ import { basename, dirname, join, relative } from 'node:path';
 import { NODE_BASE_TYPES } from '../../godot/classdb/nodeBaseTypes.js';
 import { classBaseChain } from '../../godot/classdb/classBaseTypes.js';
 import { walk } from './ruleNameScrape.js';
+import { BASE_TYPE_TO_PARSER_SUBPATH } from './baseParserSubpaths.js';
 import {
-  BASE_TYPE_TO_PARSER_SUBPATH,
   extractNodeType,
   findLinterParserDirs,
   findParserFile,
