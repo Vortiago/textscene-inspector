@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { graphEditToolbar, zoomLabelText } from './toolbar';
+import { graphEditToolbar, zoomLabelText, zoomLabelTextRect } from './toolbar';
 import { graphEditToolbarTheme } from './toolbarTheme';
 import { graphEditUnder } from './toolbarTheme.testkit';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -38,6 +38,13 @@ describe('zoomLabelText (GraphEdit::_update_zoom_label, graph_edit.cpp:2620-2624
     expect(zoomLabelText(1)).toBe('100%');
     expect(zoomLabelText(1.5)).toBe('150%');
     expect(zoomLabelText(0.2326)).toBe('23%');
+  });
+});
+
+describe('zoomLabelTextRect (label.cpp:472-512,591-616)', () => {
+  it('keeps the whole width and takes only the vertical margins', () => {
+    const box = { ...nativeTheme(1).widgets.panel, contentMargin: { left: 2, top: 6, right: 14, bottom: 4 } };
+    expect(zoomLabelTextRect({ x: 10, y: 20, w: 48, h: 30 }, box)).toEqual({ x: 10, y: 26, w: 48, h: 20 });
   });
 });
 

@@ -13,7 +13,7 @@
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize, contentRect } from '../../../../r3f/controls/native/styleBoxFlat';
 import { resolveToggleDrawState, type ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import {
   boxContainerMinimumSize,
@@ -34,6 +34,12 @@ const GRAPH_EDIT_MENU_POSITION: Vector2 = { x: 10, y: 10 };
 
 /** `zoom_label->set_custom_minimum_size(Size2(48, 0) * base_scale)` (`graph_edit.cpp:836`). */
 const ZOOM_LABEL_MIN_WIDTH = 48;
+
+/** The rect the zoom label centres its text in: the whole width, and the height inside the box margins (`label.cpp:472-512,591-616`). */
+export function zoomLabelTextRect(itemRect: Rect2, box: StyleBoxFlatData): Rect2 {
+  const { y, h } = contentRect(itemRect, box);
+  return { ...itemRect, y, h };
+}
 
 /** `GraphEdit::_update_zoom_label` (`graph_edit.cpp:2620-2624`). */
 export function zoomLabelText(zoom: number): string {

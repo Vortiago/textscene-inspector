@@ -278,14 +278,20 @@ export function resolveThemeFontSizeIn(
       if (found !== undefined) return found;
     }
   }
-  return defaultThemeVariationFontSize(scope.variation, name) ?? builtInDefaultPx;
+  return defaultThemeVariationFontSize(scope.typeChain, name) ?? builtInDefaultPx;
 }
 
-/** The default theme's font size for a variation, which sits after every Theme a scene or a project sets. */
-function defaultThemeVariationFontSize(variation: string | undefined, name: string): number | undefined {
-  if (variation === undefined || name !== 'font_size') return undefined;
-  const step = defaultThemeVariation(variation)?.fontSizeStep;
-  return step === undefined ? undefined : DEFAULT_FONT_SIZE + step;
+/**
+ * The default theme's font size for the first type of `typeChain` that sets one, which sits after every Theme a
+ * scene or a project sets. The chain, not the named variation alone: a scene variation based on `HeaderLarge` reads its size.
+ */
+function defaultThemeVariationFontSize(typeChain: readonly string[], name: string): number | undefined {
+  if (name !== 'font_size') return undefined;
+  for (const type of typeChain) {
+    const step = defaultThemeVariation(type)?.fontSizeStep;
+    if (step !== undefined) return DEFAULT_FONT_SIZE + step;
+  }
+  return undefined;
 }
 
 /**

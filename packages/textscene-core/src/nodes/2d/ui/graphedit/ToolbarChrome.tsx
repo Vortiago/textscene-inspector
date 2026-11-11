@@ -37,9 +37,9 @@ import {
 } from '../spinbox/nativeSolver';
 import { resolveToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import { graphEditMenuPanelStyleBox, type GraphEditToolbar } from './toolbar';
+import type { Rgba } from '../../../../godot/math/math';
+import { graphEditMenuPanelStyleBox, zoomLabelTextRect, type GraphEditToolbar } from './toolbar';
 import type { GraphEditToolbarTheme } from './toolbarTheme';
-import { contentRect } from '../../../../r3f/controls/native/styleBoxFlat';
 import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 
 interface GraphEditToolbarProps {
@@ -58,11 +58,7 @@ interface GraphEditToolbarProps {
 }
 
 /** The tint and opacity of a SpinBox arrow in its normal state. */
-function useArrowColor(
-  tint: Parameters<typeof multiplyModulate>[0],
-  toolbarTheme: GraphEditToolbarTheme,
-  direction: 'up' | 'down'
-) {
+function useArrowColor(tint: Rgba, toolbarTheme: GraphEditToolbarTheme, direction: 'up' | 'down') {
   const color = useMemo(
     () => multiplyModulate(tint, spinBoxIconColor(toolbarTheme.spinBoxColors, direction, 'normal')),
     [tint, toolbarTheme, direction]
@@ -149,7 +145,7 @@ export function GraphEditToolbarChrome({
                 renderOrder={pieces.boxes.key}
               />
               <LabelledText
-                rect={contentRect(item.rect, labelBox)}
+                rect={zoomLabelTextRect(item.rect, labelBox)}
                 layout={shape(text.zoomLabel)}
                 fontSizePx={theme.fontSize}
                 tint={labelColor}
@@ -177,6 +173,7 @@ export function GraphEditToolbarChrome({
                 rtl={rtl}
                 renderOrder={pieces.content.key}
                 boxRenderOrder={pieces.boxes.key}
+                canvasKey={pieces.content.key}
               />
             </CanvasItemGroup>
           );

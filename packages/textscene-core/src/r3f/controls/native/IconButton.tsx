@@ -26,6 +26,8 @@ interface IconButtonProps {
   renderOrder: number;
   /** The order of the box when it differs from the icon's. Defaults to `renderOrder`. */
   boxRenderOrder?: number;
+  /** The icon group's own canvas key, for an icon drawn at another canvas position (`PositionedIcon`). Omitted, it inherits the item's. */
+  canvasKey?: number;
 }
 
 /** The icon sits at the whole pixel `Button` floors to. */
@@ -40,6 +42,7 @@ export function IconButton({
   iconAlignment,
   renderOrder,
   boxRenderOrder = renderOrder,
+  canvasKey,
 }: IconButtonProps) {
   const iconRect = texture
     ? iconOnlyButtonIconRectIn(rect, box.contentMargin, { x: size, y: size }, rtl, iconAlignment)
@@ -54,7 +57,7 @@ export function IconButton({
           color={iconTint.color}
           opacity={iconTint.opacity}
           renderOrder={renderOrder}
-          canvasKey={renderOrder}
+          canvasKey={canvasKey}
         />
       )}
     </>
