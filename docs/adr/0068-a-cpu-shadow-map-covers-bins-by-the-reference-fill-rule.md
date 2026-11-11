@@ -19,9 +19,10 @@ about 6,500 pixels up to 11/255 off Godot.
 ## Decision
 
 Both CPU builders, `shadowPolarMap.ts` and `directionalShadowMap.ts`, take the covered bins from
-`coveredBins` (`shadowMapRaster.ts`). It snaps each end to 1/256 of a pixel, as lavapipe does, and
-covers the bin centres in `[left, right)`, the top-left rule. Lavapipe is the driver every Godot
-comparison renders on, so its rule is the reference.
+`coveredPixelRange` (`utils/coveredPixelRange.ts`). It snaps each end to 1/256 of a pixel, as
+lavapipe does, and covers the bin centres in `[left, right)`, the top-left rule. Lavapipe is the
+driver every Godot comparison renders on, so its rule is the reference. A bin that the snap adds past
+an end reads that end's depth, as the rasteriser interpolates between the snapped ends.
 
 ## Considered Options
 

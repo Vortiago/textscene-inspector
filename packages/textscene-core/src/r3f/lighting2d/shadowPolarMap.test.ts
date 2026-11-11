@@ -434,9 +434,9 @@ describe('cull_mode against measured Godot', () => {
 });
 
 /**
- * Pinned against Godot 4.6.3 on lavapipe: `scenes/fixtures/shadow-atlas-size/` at size 1000, whose
- * occluder end (70, 100) lands at window x 37.5 of the +Y frustum's 250 columns, the centre of
- * column 37. Godot's ramp at y = 520 starts one bin later than a covered column 37 puts it.
+ * Pinned against Godot 4.6.3 on lavapipe: `unit-pointlight2d-shadow-atlas-size.tscn` with its
+ * project's `2d/shadow_atlas/size` set to 1000. Its occluder end (70, 100) lands at window x 37.5
+ * of the +Y frustum's 250 columns, the centre of column 37. Godot's ramp at y = 520 starts one bin later than a covered column 37 puts it.
  */
 describe('a column centre exactly on an occluder end', () => {
   const BINS = 1000;
@@ -452,6 +452,14 @@ describe('a column centre exactly on an occluder end', () => {
     const map = buildMap(lightAt(0, 0, 1000), [segment(70, -100, -50, -100)], BINS);
     expect(map[COLUMN_37 - 1]).toBe(SHADOW_MAP_FAR);
     expect(map[COLUMN_37]).toBeLessThan(SHADOW_MAP_FAR);
+  });
+
+  it('gives a bin the snap adds past an end that end depth, not the line extended', () => {
+    // Window x in the +X frustum at 2048 bins is 256 + 256 · (Godot y / x). The near end sits
+    // 0.001 px right of column 76's centre, so the snap covers 76 from outside the segment.
+    const godotY = (windowX: number, x: number) => ((windowX - 256) / 256) * x;
+    const map = buildMap(lightAt(0, 0, 1000), [segment(100, -godotY(76.501, 100), 300, -godotY(76.6, 300))]);
+    expect(map[76]).toBeCloseTo(100 / 1100, 6);
   });
 });
 

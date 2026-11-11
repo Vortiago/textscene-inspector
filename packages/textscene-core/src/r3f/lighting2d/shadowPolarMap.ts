@@ -10,7 +10,7 @@
  */
 
 import { edgeCastsShadow, lightRectTest, type LightRect, type ShadowCasterEdges } from './shadowCasterEdges';
-import { coveredBins } from './shadowMapRaster';
+import { coveredPixelRange } from '../../utils/coveredPixelRange';
 
 /**
  * What a bin holds where nothing occludes: Godot clears the row to `p_far`,
@@ -113,6 +113,23 @@ function binRay(index: number, columns: number, out: { x: number; y: number }): 
 }
 
 /**
+ * The axis distance a bin past an end by less than the snap reads: the end's own. The rasteriser
+ * interpolates depth between the snapped ends, so it never extends the edge's line.
+ */
+function endDistance(
+  ray: { x: number; y: number },
+  ax: number,
+  ay: number,
+  ex: number,
+  ey: number,
+  t: number
+): number {
+  const [x, y] = t < 0 ? [ax, ay] : [ax + ex, ay + ey];
+  // The ray's axis component is exactly ±1, and its other one never is at a bin centre.
+  return Math.abs(ray.x) === 1 ? ray.x * x : ray.y * y;
+}
+
+/**
  * The map for one light: `bins` normalised axis distances, and `SHADOW_MAP_FAR` where nothing
  * casts. `bins` is the `rendering/2d/shadow_atlas/size` row, which `light_update_shadow`
  * (`drivers/gles3/rasterizer_canvas_gles3.cpp:1639`) fills through four 90° frusta of `bins / 4`
@@ -181,17 +198,20 @@ export function buildShadowPolarMap(
       const start = forward <= 0.5 ? uA : uB;
       const span = forward <= 0.5 ? forward : 1 - forward;
 
-      // Window x is `u * drawn` less a whole quadrant offset, so the bins share the raster's grid.
-      const { first, last } = coveredBins(start * drawn, (start + span) * drawn);
+      // Godot extrudes the edge into a quad far past the row (`renderer_canvas_render_rd.cpp:1343-1368`),
+      // so its ends are vertical sides. Window x is `u * drawn` less a whole quadrant offset (ADR-0068).
+      const { first, last } = coveredPixelRange(start * drawn, (start + span) * drawn);
 
       for (let bin = first; bin <= last; bin += 1) {
         const index = bin % drawn;
         binRay(index, columns, ray);
 
-        // s·ray = A + t·e, solved for s by crossing with e.
+        // s·ray = A + t·e, solved by crossing with e and with ray in turn.
         const denominator = ray.x * ey - ray.y * ex;
         if (denominator === 0) continue;
-        const distance = (ax * ey - ay * ex) / denominator;
+        const t = (ax * ray.y - ay * ray.x) / denominator;
+        const distance =
+          t >= 0 && t <= 1 ? (ax * ey - ay * ex) / denominator : endDistance(ray, ax, ay, ex, ey, t);
         // Outside the near and far planes the occluder is clipped away, so the
         // bin keeps whatever else reaches it.
         if (!(distance >= near) || !(distance <= far)) continue;

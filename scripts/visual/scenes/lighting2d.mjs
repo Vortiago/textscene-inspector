@@ -111,6 +111,12 @@ export const LIGHTING_2D_SCENES = [
   { name: 'pointlight2d-shadow-pcf5-bins', file: 'unit-pointlight2d-shadow-pcf5-bins.tscn', mode: '2d' },
   // The occluder's end lands exactly on a bin centre. Godot 4.6.3 `--mode 2d`: within 1/255 of ours.
   { name: 'pointlight2d-shadow-end-on-bin', file: 'unit-pointlight2d-shadow-end-on-bin.tscn', mode: '2d' },
+  // The same for the parallel map. Godot 4.6.3 `--mode 2d`: 0 px off ours; covering the bin gives 448 px at 63.
+  {
+    name: 'directionallight2d-shadow-end-on-bin',
+    file: 'unit-directionallight2d-shadow-end-on-bin.tscn',
+    mode: '2d',
+  },
   // `rendering/2d/shadow_atlas/size` 512 in the folder's project.godot: each PCF5 tap is four
   // times as wide as at the 2048 default. Godot 4.6.3 `--mode 2d`: the point light is within 1/255
   // of ours, the sun differs on 30 pixels by at most 1/255.
