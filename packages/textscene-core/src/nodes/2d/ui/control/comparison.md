@@ -26,7 +26,7 @@ tints it, and a `CanvasItemMaterial` sets its `light_mode` and `blend_mode`. Wit
 Node2D between them. Its `z_index` adds onto its parent's z, or replaces it when `z_as_relative`
 is off, as for a Node2D.
 
-With `y_sort_enabled` the Control draws its Control children in y order, each sorted on the origin
+With `y_sort_enabled` the Control draws its Control children in y order. Each sorts on the origin
 of its canvas item: its solved position plus its pivot translation, snapped as it draws. Equal ys
 keep tree order. A Control child of a y-sorted Node2D sorts the same way among the Node2D's own
 children. A Node2D child of a y-sorted Control is not sorted.

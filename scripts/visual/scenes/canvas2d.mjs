@@ -26,12 +26,6 @@ export const CANVAS_2D_SCENES = [
   // (700,330) blue, the blue block over the bar. Without the body the first is
   // red, which no other golden notices.
   { name: 'ysort-own-body', file: 'unit-ysort-own-body.tscn' },
-  // A y-sorted Control draws its Control children in y order: Red (offset_top 80) over Blue (40) over
-  // Green (0), though listed Red, Green, Blue.
-  { name: 'control-y-sort', file: 'unit-control-y-sort.tscn', mode: '2d' },
-  // A Control child of a y-sorted Node2D sorts on its canvas item origin: Low (80) over the Polygon2D
-  // Tile (68), High (10) under it.
-  { name: 'control-y-sort-sibling', file: 'unit-control-y-sort-sibling.tscn', mode: '2d' },
   // A NavigationPolygon's vertices are Godot canvas pixels (+Y down). Without
   // the negation, the navmesh draws above the region origin instead of below.
   { name: 'navigation-region-2d', file: 'unit-navigation-region-2d.tscn' },

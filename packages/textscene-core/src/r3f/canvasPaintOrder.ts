@@ -210,7 +210,7 @@ export function listedChildOrder(parent: TscnNode, children: readonly TscnNode[]
 const controlTypes = new Map<string, boolean>();
 
 /** Cached, since every allocation sizes each subtree again and the chain walk is per call. */
-function isControlType(type: string): boolean {
+export function isControlType(type: string): boolean {
   let isControl = controlTypes.get(type);
   if (isControl === undefined) {
     isControl = descendsFromClass(type, 'Control');

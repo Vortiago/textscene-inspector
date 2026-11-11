@@ -26,6 +26,7 @@ import {
   allocateNodePaintRange,
   isTopLevelItem,
   packPaintRanges,
+  isControlType,
   paintRangeSize,
   type PaintRange,
 } from './canvasPaintOrder.js';
@@ -39,7 +40,6 @@ import { DispatchedNode } from './NodeDispatcher.js';
 import { NodePathProvider, useNodePath } from './contexts/NodePathContext.js';
 import { useLiveDrawnPatchesBelow } from './liveNodePatches.js';
 import { useControlOrigins, usePublishControlRuns } from './contexts/ControlYSortContext.js';
-import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 
 /** Performs the y-sort pass on a y_sort_enabled Node2D's or TileMapLayer's children. */
 export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children: ReactNode }) {
@@ -129,7 +129,7 @@ function SortedChildren({
     if (!publishRuns) return;
     const runs = new Map<string, PaintRange>();
     for (const { item, range } of packed) {
-      if (item.node && descendsFromClass(item.node.type, 'Control')) {
+      if (item.node && isControlType(item.node.type)) {
         runs.set(liftedPath(basePath, item.liftedPast, item.node.name), range);
       }
     }

@@ -54,7 +54,10 @@ export function controlOriginsOf(
   return origins;
 }
 
-/** `node` and its subtree with every draw sequence moved by `delta`. */
+/**
+ * `node` and its subtree with every draw sequence moved by `delta`. It mirrors each sequence field
+ * of `SolveNode`: a new one has to move here too.
+ */
 function shiftedBy(node: SolveNode, delta: number): SolveNode {
   if (delta === 0) return node;
   const shift = (range: PaintRange): PaintRange => ({ base: range.base + delta, size: range.size });

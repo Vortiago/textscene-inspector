@@ -5,7 +5,7 @@
  */
 
 import type { TscnNode } from '../parser/types.js';
-import { isTopLevelItem } from './canvasPaintOrder.js';
+import { isControlType, isTopLevelItem, ysortsChildren } from './canvasPaintOrder.js';
 import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { DrawableCell } from '../resources/tileset/drawableCell.js';
@@ -101,7 +101,7 @@ function toSortRootOf(
   controlOrigin: Vector2 | undefined
 ): Transform2DColumns {
   if (descendsFromClass(child.type, 'Node3D')) return parent.toSortRoot;
-  if (descendsFromClass(child.type, 'Control')) {
+  if (isControlType(child.type)) {
     const { x: tx, y: ty } = controlOrigin ?? VECTOR2_ZERO;
     return multiplyTransform2D(parent.toSortRoot, { ...TRANSFORM2D_IDENTITY, tx, ty });
   }
@@ -208,8 +208,7 @@ export function collectYSortedItems(
       parent,
       live.controlOrigins?.get(childPoses.path)
     );
-    const props = child.properties as Record<string, unknown>;
-    const isYSort = props.y_sort_enabled === true;
+    const isYSort = ysortsChildren(child);
 
     const group = ySortTileGroup(child);
     const isTileGroup = group !== undefined;

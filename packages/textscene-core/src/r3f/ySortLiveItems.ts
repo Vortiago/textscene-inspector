@@ -7,6 +7,7 @@
 import { Matrix4, Vector3, type Object3D } from 'three';
 import { multiplyTransform2D, type Transform2DColumns } from '../godot/math/transform2d.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
+import { isControlType } from './canvasPaintOrder.js';
 import { pathsAlong } from './liveNodePatches.js';
 import type { LiveNode } from '../resources/liveNode.js';
 import type { Node2DLocalTransform } from '../nodes/base/node2d/types.js';
@@ -23,14 +24,14 @@ const rootOrigin = new Vector3();
 /**
  * The live group of each node between the sort root and `item`, outermost first. Null where the
  * item has no 2D pose to read: a tile row, whose layer no mixer moves while it is lifted, a
- * Node3D, a Control, whose canvas item the Control walk places and the world walk leaves a
- * placeholder at the identity for, and a node whose group is not mounted. An unowned node, a scene tile's placement, has no
+ * Node3D, a node whose group is not mounted, and a Control, which the Control walk places and
+ * the world walk leaves at the identity. An unowned node, a scene tile's placement, has no
  * group and no mixer: its fixed pose is {@link liveRootPose}.
  */
 export function liveGroupChain(item: YSortItem, basePath: string, groupAt: GroupAt): Object3D[] | null {
   const node = item.node;
   if (!node || item.kind !== 'node' || descendsFromClass(node.type, 'Node3D')) return null;
-  if (descendsFromClass(node.type, 'Control')) return null;
+  if (isControlType(node.type)) return null;
   const paths = pathsAlong(
     (node as LiveNode).isUnowned ? item.liftedPast : [...item.liftedPast, node],
     basePath
