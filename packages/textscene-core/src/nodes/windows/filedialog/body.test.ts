@@ -17,7 +17,8 @@ import { themeResource } from '../../../r3f/controls/native/testing/themeResourc
 import { wrappedWindowSize } from '../window/wrapControls';
 import oracle from './testing/fileDialogGeometry/oracle.out.json';
 import { FILE_DIALOG_THEME_ICONS } from '../../../godot/scene/fileDialog';
-import { fileDialogTextureSlots } from './body';
+import { fileDialogBody, fileDialogTextureSlots } from './body';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { parseFileDialog } from './parser';
 
 const THEME = nativeTheme(1);
@@ -272,11 +273,32 @@ describe('FileDialog built Button icon sizes', () => {
   it('keeps the size of the toolbar button own icon', () => {
     expect(bodyControl('DirPrev').textureSize).toEqual(TOOLBAR_ICON);
   });
+});
 
-  it('requests the theme icon of each Button class the body builds without an icon', () => {
-    const builtIcons = () => ({ icon: themedIcon });
-    const keys = fileDialogTextureSlots(themed.node, {}, builtIcons).map(({ key }) => key);
-    expect(keys).toEqual(expect.arrayContaining(['built:Button', 'built:OptionButton', 'built:CheckBox']));
+describe('FileDialog built Button classes', () => {
+  const themedIcon = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
+  const withoutOwnIcon = (node: SolveNode): SolveNode[] => [
+    ...(descendsFromClass(node.node.type, 'Button') && !node.syntheticDraw?.themedIcon ? [node] : []),
+    ...node.children.flatMap(withoutOwnIcon),
+  ];
+
+  it.each(['open', 'save', 'options', 'options_many'])(
+    'requests the theme icon of every Button class the %s body builds without an icon',
+    (name) => {
+      const dialog = fileDialog(CASES[name]!);
+      const requested = fileDialogTextureSlots(dialog.node, {}, () => ({ icon: themedIcon })).map(
+        ({ key }) => key
+      );
+      const built = withoutOwnIcon(fileDialogBody(dialog, THEME)).map(({ node }) => `built:${node.type}`);
+      expect(requested).toEqual(expect.arrayContaining(built));
+    }
+  );
+
+  it('gives no built Button without an icon a theme_type_variation, which has no icon slot', () => {
+    const variations = withoutOwnIcon(fileDialogBody(fileDialog(CASES.options!), THEME)).map(
+      ({ node }) => (node.properties as { themeTypeVariation?: string }).themeTypeVariation
+    );
+    expect(variations.filter((variation) => variation !== undefined)).toEqual([]);
   });
 });
 

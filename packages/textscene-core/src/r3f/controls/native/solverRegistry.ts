@@ -169,11 +169,10 @@ export function themedSlotRequests(
  * Which Texture2D-valued slots a type carries, given the live node and its theme
  * icons. A per-type fact on the slice, not a central list `buildSolveTree.ts`
  * would keep in sync with every Control type it walks. An unregistered type
- * keeps the single `texture` or `icon` slot.
+ * keeps the single `texture` or `icon` slot. `themedIcons` and `builtIcons` are
+ * optional because only a type with a themeable icon reads them. `buildSolveTree.ts`
+ * always passes both.
  */
-// `themedIcons` and `builtIcons` are optional because only a type with a themeable icon reads them,
-// and a slice's tests call its `TextureSlotsFn` with one argument.
-// `buildSolveTree.ts` always passes both.
 export type TextureSlotsFn = (
   node: TscnNode,
   themedIcons?: Readonly<Record<string, ThemedIconRef>>,

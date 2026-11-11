@@ -559,14 +559,14 @@ function buildForest(
   function resolveTextureSize(
     node: TscnNode,
     path: string,
-    ext: readonly TscnExternalResource[],
-    int: readonly TscnInternalResource[],
-    themedIcons: Readonly<Record<string, ThemedIconRef>>,
-    builtIcons: BuiltIconsFn
+    ownScope: SceneScope,
+    themeChain: readonly ThemeResource[],
+    themedIcons: Readonly<Record<string, ThemedIconRef>>
   ): { size: Vector2 | null; slots: Readonly<Record<string, Vector2 | null>> } {
+    const { externalResources: ext, internalResources: int } = ownScope;
     const slotsFn = controlSolverRegistry.textureSlots(node.type);
     if (slotsFn) {
-      const requests = slotsFn(node, themedIcons, builtIcons);
+      const requests = slotsFn(node, themedIcons, builtIconsOf(ownScope, themeChain));
       const slots: Record<string, Vector2 | null> = {};
       for (const { key, ref, scope, isHeldLocally = NODE_PROPERTY, sizeOfFile } of requests) {
         slots[key] = ref
@@ -699,14 +699,7 @@ function buildForest(
     const props = window.properties as WindowProperties;
     const themeScope = themeResolutionScope(window.type, props.themeTypeVariation, themeChain, projectFonts);
     const items = themeItems(window, scope, themeScope);
-    const texture = resolveTextureSize(
-      window,
-      path,
-      scope.externalResources,
-      scope.internalResources,
-      items.icons,
-      builtIconsOf(scope, themeChain)
-    );
+    const texture = resolveTextureSize(window, path, scope, themeChain, items.icons);
     return {
       path,
       node: window,
@@ -888,14 +881,7 @@ function buildForest(
       projectFonts
     );
     const items = themeItems(collapsed, ownScope, themeScope);
-    const texture = resolveTextureSize(
-      collapsed,
-      path,
-      ownScope.externalResources,
-      ownScope.internalResources,
-      items.icons,
-      builtIconsOf(ownScope, nodeThemeChain)
-    );
+    const texture = resolveTextureSize(collapsed, path, ownScope, nodeThemeChain, items.icons);
     // A canvas boundary IS the canvas every chain broken below it parents
     // to, so it adopts those; every other Control passes them further up.
     const isBoundary = controlSolverRegistry.isCanvasBoundary(collapsed.type);
