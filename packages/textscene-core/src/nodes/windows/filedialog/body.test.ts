@@ -13,7 +13,6 @@ import { solveNode } from '../../../r3f/controls/native/testing/solveNode';
 import '../../../parser/TscnParser';
 import '../../../r3f/controls/index';
 import { dialogGeometry } from '../acceptdialog/dialogLayout';
-import { builtButtonIconKey } from '../acceptdialog/dialogParts';
 import { themeResource } from '../../../r3f/controls/native/testing/themeResource';
 import { wrappedWindowSize } from '../window/wrapControls';
 import oracle from './testing/fileDialogGeometry/oracle.out.json';
@@ -258,7 +257,7 @@ describe('FileDialog built Button icon sizes', () => {
     ...fileDialog(CASES.open!),
     themeChain: [themeResource({ icons: { OptionButton: { icon: 'ExtResource("1")' } } })],
     icons: { back_folder: themedIcon },
-    textureSlots: { [builtButtonIconKey('OptionButton')]: FILTER_ICON, back_folder: TOOLBAR_ICON },
+    textureSlots: { 'built:OptionButton': FILTER_ICON, back_folder: TOOLBAR_ICON },
   };
   const bodyControl = (name: string) => {
     const size = wrappedWindowSize(themed, THEME, measureText, EMBEDDER);
@@ -277,9 +276,7 @@ describe('FileDialog built Button icon sizes', () => {
   it('requests the theme icon of each Button class the body builds without an icon', () => {
     const builtIcons = () => ({ icon: themedIcon });
     const keys = fileDialogTextureSlots(themed.node, {}, builtIcons).map(({ key }) => key);
-    expect(keys).toEqual(
-      expect.arrayContaining(['Button', 'OptionButton', 'CheckBox'].map((type) => builtButtonIconKey(type)))
-    );
+    expect(keys).toEqual(expect.arrayContaining(['built:Button', 'built:OptionButton', 'built:CheckBox']));
   });
 });
 

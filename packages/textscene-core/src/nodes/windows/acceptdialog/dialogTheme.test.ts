@@ -10,7 +10,7 @@ import { measureText } from '../../../r3f/controls/native/text/measurer';
 import { solveNode } from '../../../r3f/controls/native/testing/solveNode';
 import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
-import { builtButtonIconKey, dialogButtonNode, messageLabelNode } from './dialogParts';
+import { dialogButtonNode, messageLabelNode } from './dialogParts';
 import { dialogGeometry } from './dialogLayout';
 import { parseConfirmationDialog } from '../confirmationdialog/parser';
 import { parseDialog } from './parser';
@@ -44,7 +44,7 @@ describe('a dialog under a Theme', () => {
   const iconTheme = themeOf({ icons: { Button: { icon: 'ExtResource("1")' } } });
   const sizedDialog = (themeChain: readonly ThemeResource[]): SolveNode => ({
     ...dialog(themeChain),
-    textureSlots: { [builtButtonIconKey('Button')]: ICON_SIZE },
+    textureSlots: { 'built:Button': ICON_SIZE },
   });
 
   it('sizes the OK button by the size the dialog holds for the theme icon of Button', () => {

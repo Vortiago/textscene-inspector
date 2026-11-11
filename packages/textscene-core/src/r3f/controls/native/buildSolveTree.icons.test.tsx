@@ -14,7 +14,6 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { ProjectSettingsProvider } from '../../contexts/ProjectSettingsContext';
-import { builtButtonIconKey } from '../../../nodes/windows/acceptdialog/dialogParts';
 import '../index';
 import { useBuildSolveTree } from './buildSolveTree';
 import type { SolveNode } from './solveTree';
@@ -199,7 +198,7 @@ describe('useBuildSolveTree icons', () => {
       }
     );
     expect(result.current.windows[0]!.textureSlots).toEqual({
-      [builtButtonIconKey('Button')]: { x: 24, y: 20 },
+      'built:Button': { x: 24, y: 20 },
     });
   });
 });

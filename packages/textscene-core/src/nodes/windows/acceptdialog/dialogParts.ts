@@ -92,7 +92,7 @@ export interface SyntheticControl {
 }
 
 /** The `textureSlots` key of the theme icon `icon` that a Control of `type`, built inside a dialog with no variation, resolves. */
-export function builtButtonIconKey(type: string): string {
+function builtButtonIconKey(type: string): string {
   return `built:${type}`;
 }
 
