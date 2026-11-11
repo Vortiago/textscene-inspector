@@ -223,6 +223,9 @@ the control, with the speed on screen.
   `window`. A page that embeds `@textscene/renderer` loses `Shift+F` to it at all times.
 - The toggle moves keyboard focus to the canvas. Space would otherwise press the toolbar button
   that started it.
+- The VS Code webview grants the lock. Measured on VS Code 1.145.3 under Xvfb: a click on the
+  button locks the canvas, the keys fly, a lone Alt does not focus the menu bar, and Escape ends
+  the lock and leaves the preview tab open.
 - The test DOM has no Pointer Lock. `r3f/testing/fakePointerLock.ts` stands in for the browser,
   and `scripts/visual` cannot reach the lock, so no golden covers freelook.
 
