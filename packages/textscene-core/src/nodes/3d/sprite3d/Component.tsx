@@ -5,7 +5,7 @@
  * `meshBasicMaterial` (`material.cpp:3045`: SHADING_MODE_PER_PIXEL versus SHADING_MODE_UNSHADED).
  */
 
-import { useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { visualLayersUserData } from '../../../r3f/visualLayers';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -13,7 +13,7 @@ import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { frameSizePx, frameUvWindow, spriteWrapMode } from '../../../r3f/spriteFrame';
 import { WRAP } from '../../../r3f/canvasItemTextureSampler';
-import { useWindowedTextureView } from '../../../r3f/useTextureView';
+import { useTextureView } from '../../../r3f/useTextureView';
 import { flippedUvWindow } from '../../../r3f/uvWindow';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
@@ -28,12 +28,18 @@ import { useTexture2D } from '../../../resources/useTexture2D';
 import { sourceColorSpace } from '../../../resources/textures/sourceColorSpace';
 import type { Sprite3DProperties } from './types';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
-import { useBillboard } from '../../../r3f/hooks/useBillboard';
-import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
+import { useOwnMaterialPose } from '../../../r3f/hooks/useOwnMaterialPose';
 import { FramePoint } from '../../../r3f/components/NodeAabb';
-import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
+import { useGeometryInstance, useInstanceDraw } from '../../../r3f/visibilityRange/geometryInstance';
+import { InstancePasses } from '../../../r3f/materials/InstancePasses';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
-import { spriteQuadAabb, spriteQuadGeometry, spriteQuadRect } from './quad';
+import {
+  spriteQuadAabb,
+  spriteQuadGeometry,
+  spriteQuadRect,
+  writeSpriteQuadColour,
+  writeSpriteQuadUvs,
+} from './quad';
 import { clamp } from '../../../godot/math/math';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
 
@@ -44,13 +50,8 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
 
   const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
-  // `sprite_3d.cpp:299` hands the flag to the same cached shader the billboard
-  // mode does. Both are per-frame effects on the sprite quad itself. Fixed size first:
-  // the billboard freezes the world matrix, so a scale set after it lands a frame late.
-  useFixedSize(spriteRef, properties.fixed_size, transform.scale);
-  // Godot's billboard is a material-side effect on the sprite quad. The shared
-  // hook applies the same modes Label3D uses.
-  useBillboard(spriteRef, properties.billboard);
+  const { override } = useInstanceDraw();
+  const posedRef = useOwnMaterialPose(spriteRef, properties, transform.scale);
 
   // The sprite's material samples `texture_albedo` as `source_color` (`material.cpp:969`), so a
   // ViewportTexture gives its decoding view.
@@ -80,8 +81,15 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
     anisotropicFilteringLevel,
   });
   // `texture_albedo` is a `source_color` sampler (`sprite_3d.cpp:306`), so the view reads as an
-  // albedo, and the node's own `texture_filter` lands on it (`material.cpp:3055`). The view is this
-  // component's, never the loader's cached entry, since a frame writes its window on it.
+  // albedo, and the node's own `texture_filter` lands on it (`material.cpp:3055`).
+  const displayedTexture = useTextureView(
+    sourceTexture,
+    sourceTexture && {
+      colorSpace: sourceColorSpace(sourceTexture),
+      filter: textureFilter,
+      wrap: WRAP[wrap],
+    }
+  );
   // Flip mirrors through the UV window, where 2D mirrors through mesh scale.
   const frameWindow = useMemo(
     () =>
@@ -91,15 +99,6 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         properties.flip_v === true
       ),
     [sourceTexture, properties]
-  );
-  const displayedTexture = useWindowedTextureView(
-    sourceTexture,
-    sourceTexture && {
-      colorSpace: sourceColorSpace(sourceTexture),
-      filter: textureFilter,
-      wrap: WRAP[wrap],
-    },
-    frameWindow
   );
 
   // Quad sizing: pixel_size × the frame's pixel dimensions (1×1 fallback
@@ -132,13 +131,17 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
   // accumulates. It can move the quad to the alpha pass, which no cut arm reaches.
   // TRANSPARENCY_DISABLED never multiplies the modulate alpha into ALPHA (`material.cpp:1836`).
   const opacity = properties.transparent ? clamp(accum.a, 0, 1) : 1;
-  const castsShadow = shadow.castShadow && joinsShadowPass;
+  // The material that draws decides the shadow pass: an override's own draw hooks answer for it.
+  const castsShadow = shadow.castShadow && (joinsShadowPass || override !== undefined);
 
   // Baked into the geometry, so it stays right under the node's rotation and billboard.
   const geometry = useMemo(() => spriteQuadGeometry(rect, properties.axis), [rect, properties.axis]);
   // `geometry` goes through `<primitive>`, which R3F does not auto-dispose, so this releases the
   // GPU buffers on replacement and unmount.
   useDisposeOnRelease(geometry);
+  // Layout, not passive: the quad holds its frame and colour before the frame that first draws it.
+  useLayoutEffect(() => writeSpriteQuadUvs(geometry, frameWindow), [geometry, frameWindow]);
+  useLayoutEffect(() => writeSpriteQuadColour(geometry, accum), [geometry, accum]);
 
   // Descendants ride in a sibling group with the same transform, not inside the quad: in Godot
   // `billboard` is a shader-side effect that never spins the node's children. Every branch below
@@ -206,7 +209,8 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         ref={spriteRef}
         name={node.name}
         {...node3dGroupSpread(transform)}
-        renderOrder={properties.render_priority}
+        // `render_priority` is the sprite material's (`sprite_3d.cpp:311`).
+        renderOrder={override ? 0 : properties.render_priority}
         castShadow={castsShadow}
         receiveShadow
         onBeforeRender={shadow.onBeforeRender}
@@ -216,7 +220,11 @@ export function Sprite3D({ node, children }: NodeComponentProps) {
         userData={visualLayersUserData(properties.layers)}
       >
         <primitive object={geometry} attach="geometry" />
-        <FadedMaterials>{material}</FadedMaterials>
+        <InstancePasses
+          meshRef={spriteRef}
+          posedRef={posedRef}
+          ownMaterial={<FadedMaterials>{material}</FadedMaterials>}
+        />
       </mesh>
       {subtree}
     </>

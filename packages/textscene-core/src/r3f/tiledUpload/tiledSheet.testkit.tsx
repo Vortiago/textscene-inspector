@@ -59,6 +59,10 @@ export async function mountSheetSprite(spriteAt: (frame: number) => ReactElement
         THREE.MeshBasicMaterial | undefined;
       return material?.map ?? null;
     },
+    drawnGeometry: (): THREE.BufferGeometry => {
+      const [mesh] = renderer.scene.findAllByType('Mesh');
+      return (mesh!.instance as THREE.Mesh).geometry;
+    },
     showFrame: (frame: number) => renderer.update(tree(frame)),
     tick: async () => {
       await act(async () => {

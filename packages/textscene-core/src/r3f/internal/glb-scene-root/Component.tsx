@@ -42,7 +42,8 @@ import type { ReactNode } from 'react';
 import type { LiveNode } from '../../../resources/liveNode';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveMaterialSource } from '../../materials/materialSource';
-import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
+import { GlbMaterialOverlay, GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
+import { heldResource } from '../../../godot/scene/resourceLiteral';
 import { GlbAttachedChildren } from './GlbAttachedChildren';
 import { importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
 import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials';
@@ -253,9 +254,10 @@ function useGlbImportMaterials(object: THREE.Object3D | undefined): ReactNode {
 }
 
 /**
- * One `<GlbSurfaceMaterialOverride>` per override node with a `surface_material_override/0`. The
- * path resolves through `resolveGlbOverrideTarget`, as the transform overrides do, so a Godot path and a
- * three path that disagree about importer-synthesised levels land on one mesh.
+ * The materials each override node sets on its GLB mesh: `material_override`, else
+ * `surface_material_override/0`, in the slots (`render_forward_clustered.cpp:4206`), and
+ * `material_overlay` beside them. `resolveGlbOverrideTarget` finds the mesh, as for a transform
+ * override, so a Godot path and a three path that disagree on importer levels reach one mesh.
  */
 function useGlbMaterialOverrides(
   object: THREE.Object3D | undefined,
@@ -269,24 +271,27 @@ function useGlbMaterialOverrides(
 
     const slots: ReactNode[] = [];
     for (const override of overrides) {
-      const ref = override.rawProperties['surface_material_override/0'];
-      if (!ref || !isApplicableGlbOverride(override)) continue;
-
-      // A grafted override's ids belong to the outer scene that authored it, not the sub-scene it
-      // renders under, and its scope carries both pools.
-      const source = resolveMaterialSource(ref, override.scope ?? pools);
-      if (!source) continue;
+      const { material_override, material_overlay } = override.rawProperties;
+      const inSlots =
+        heldResource(material_override) ?? override.rawProperties['surface_material_override/0'];
+      const overlay = heldResource(material_overlay);
+      if ((!inSlots && !overlay) || !isApplicableGlbOverride(override)) continue;
 
       const target = resolveGlbOverrideTarget(object, entries, override);
       if (!target) continue;
 
-      slots.push(
-        <GlbSurfaceMaterialOverride
-          key={joinPath(override.instanceSubPath ?? '', override.name)}
-          target={target}
-          source={source}
-        />
-      );
+      // A grafted override's ids belong to the outer scene that authored it, not the sub-scene it
+      // renders under, and its scope carries both pools.
+      const scope = override.scope ?? pools;
+      const key = joinPath(override.instanceSubPath ?? '', override.name);
+      const slotSource = resolveMaterialSource(inSlots, scope);
+      if (slotSource) {
+        slots.push(<GlbSurfaceMaterialOverride key={key} target={target} source={slotSource} />);
+      }
+      const overlaySource = resolveMaterialSource(overlay, scope);
+      if (overlaySource) {
+        slots.push(<GlbMaterialOverlay key={`${key}:overlay`} target={target} source={overlaySource} />);
+      }
     }
     return slots.length > 0 ? <>{slots}</> : null;
   }, [object, entries, overrides, pools]);

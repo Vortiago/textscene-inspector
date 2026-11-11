@@ -10,7 +10,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { visualLayersUserData } from '../../../visualLayers';
 import * as THREE from 'three';
 import { getAtlasTexture, useIsAtlasDecoded } from './atlasTexture';
@@ -155,6 +155,19 @@ export interface TextRunProps {
    * auto-fit bounds past Godot's camera, which is placed before any text shapes.
    */
   frameExcluded?: boolean;
+  /**
+   * What the GeometryInstance3D the run draws for adds to the run's mesh (Label3D only). Omitted,
+   * the run draws its own material and nothing more.
+   */
+  instance?: RunInstance;
+}
+
+/** The passes a geometry instance adds to a run's mesh. */
+export interface RunInstance {
+  /** `material_override` stands, so the passes mount the surface's material and the run mounts none. */
+  isOverridden: boolean;
+  /** The instance's passes for the run's mesh, mounted inside it. */
+  passes: (meshRef: RefObject<THREE.Mesh | null>) => ReactNode;
 }
 
 /** The normal +Z on each of `vertexCount` vertices, which only a lit material reads. */
@@ -390,6 +403,7 @@ export function TextRunMesh({
   layers,
   frameExcluded,
   shading,
+  instance,
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
@@ -438,16 +452,17 @@ export function TextRunMesh({
   const material = usePaintedMaterial(run, blends?.unfaded, shading);
   const alphaPassMaterial = useAlphaPassMaterial(run, blends?.alphaPass, shading);
   const meshRef = useRef<THREE.Mesh | null>(null);
+  const isOverridden = instance?.isOverridden === true;
   useLayoutEffect(() => {
     const mesh = meshRef.current;
-    if (!swapped || !alphaPassMaterial || !mesh) return;
+    if (!swapped || !alphaPassMaterial || !mesh || isOverridden) return;
     const detachUnfaded = swapped.unfaded(mesh, material);
     const detachAlphaPass = swapped.alphaPass(mesh, alphaPassMaterial);
     return () => {
       detachAlphaPass();
       detachUnfaded();
     };
-  }, [swapped, material, alphaPassMaterial]);
+  }, [swapped, material, alphaPassMaterial, isOverridden]);
 
   // R3F does not dispose a geometry or material passed as a prop, so both leak
   // on every rebuild without this, and a Label re-shapes on every rect or font change.
@@ -484,16 +499,19 @@ export function TextRunMesh({
         ref={meshRef}
         geometry={run.geometry}
         // A faded run's materials go on through the swap alone, which the fade owns.
-        material={alphaPassMaterial ? undefined : material}
+        material={alphaPassMaterial || isOverridden ? undefined : material}
         renderOrder={renderOrder}
         userData={userData}
         castShadow={shadow?.castShadow}
-        receiveShadow={shading !== undefined}
+        // An override is lit as its own material says, which its program decides.
+        receiveShadow={shading !== undefined || isOverridden}
         onBeforeRender={shadow?.onBeforeRender}
         onAfterRender={shadow?.onAfterRender}
         onBeforeShadow={shadow?.onBeforeShadow}
         onAfterShadow={shadow?.onAfterShadow}
-      />
+      >
+        {instance?.passes(meshRef)}
+      </mesh>
       {hexBoxRects.map((r, i) => (
         <CanvasItemGroup key={i} position={[r.x, -r.y, 0]}>
           <ControlQuad

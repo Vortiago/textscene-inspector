@@ -114,6 +114,9 @@ export const MATERIAL_SCENES = [
     name: 'glb-surface-material-override',
     file: 'unit-glb-surface-material-override.tscn',
   },
+  // The one variable: `material_override` and `material_overlay` from an override node of a mesh
+  // inside an instanced `.glb`, which the scene above never sets.
+  { name: 'glb-instance-materials', file: 'unit-glb-instance-materials.tscn' },
   // A `.glb` primitive with no glTF material, lit and not overridden: the importer's own
   // non-metallic StandardMaterial3D.
   { name: 'glb-default-material', file: 'unit-glb-default-material.tscn' },

@@ -12,7 +12,8 @@ import { NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { materialFor2d } from '../../../r3f/materialFor2d';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
-import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
+import { useGeometryInstance, useInstanceDraw } from '../../../r3f/visibilityRange/geometryInstance';
+import { InstancePasses } from '../../../r3f/materials/InstancePasses';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { labelBillboardAabb } from '../../../godot/scene/billboard';
 import { breakLabel3DLines, justifyLabel3DLines, label3DAabb, layoutLabel3DLines } from './glyphLayout';
@@ -27,10 +28,12 @@ import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 export interface LabelGlyphsProps {
   /** The label's node group, whose parent places it for the scene cull. */
   nodeRef: RefObject<THREE.Object3D | null>;
+  /** `nodeRef` while the glyph material's billboard or `fixed_size` moves it (`useOwnMaterialPose`). */
+  posedRef?: RefObject<THREE.Object3D | null>;
   properties: Label3DProperties;
 }
 
-export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
+export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyphsProps) {
   // `label_3d.cpp:610`. The outline is a second, stroked run drawn first. Both runs
   // are `TRANSPARENCY_ALPHA` (`label_3d.cpp:386`) on one cached shader (`:396`),
   // `blend_mix, depth_draw_opaque` (`material.cpp:775-812`), sorted ascending by
@@ -121,6 +124,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     properties.billboard,
   ]);
   const shadow = useGeometryInstance(placement);
+  const isOverridden = useInstanceDraw().override !== undefined;
 
   // Not memoised: `TextRun` keys its material off the blend's fields, not its identity, so a fresh
   // equal-valued one rebuilds nothing.
@@ -151,22 +155,31 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     mipmapped,
     fallbackMipmaps: font?.fallbackMipmaps,
     blends,
-    shadow: { ...shadow, castShadow: shadow.castShadow && joinsShadowPass },
+    // The material that draws decides the shadow pass: an override's own draw hooks answer for it.
+    shadow: { ...shadow, castShadow: shadow.castShadow && (joinsShadowPass || isOverridden) },
     layers: properties.layers,
     shading,
   };
 
   // `label_3d.cpp:401-405`: only an ALPHA_CUT_DISABLED surface is sorted by its
-  // material's render priority. Any other mode bakes `priority * pixel_size` into
-  // the vertex Z (`:417-420`), and in Godot px inside `Component.tsx`'s
-  // `pixel_size` group the shift is the bare priority.
-  const sortedByPriority = properties.alpha_cut === AlphaCutMode.DISABLED;
-  const surface = (priority: number) => ({
-    renderOrder: sortedByPriority ? priority : 0,
-    zShiftPx: sortedByPriority ? 0 : priority,
+  // material's render priority, which an override replaces with its own. Any other mode
+  // bakes `priority * pixel_size` into the vertex Z (`:417-420`), and in Godot px inside
+  // `Component.tsx`'s `pixel_size` group the shift is the bare priority.
+  const bakesPriority = properties.alpha_cut !== AlphaCutMode.DISABLED;
+  const sortsByPriority = !bakesPriority && !isOverridden;
+  const surface = (priority: number, laterSurfaces: number) => ({
+    renderOrder: sortsByPriority ? priority : 0,
+    zShiftPx: bakesPriority ? priority : 0,
+    instance: {
+      isOverridden,
+      passes: (meshRef: RefObject<THREE.Mesh | null>) => (
+        <InstancePasses meshRef={meshRef} posedRef={posedRef} laterSurfaces={laterSurfaces} />
+      ),
+    },
   });
-  const outlineSurface = surface(properties.outline_render_priority);
-  const fillSurface = surface(properties.render_priority);
+  // The outline is the mesh's first surface and the fill its second (`label_3d.cpp:610-615`).
+  const outlineSurface = surface(properties.outline_render_priority, 1);
+  const fillSurface = surface(properties.render_priority, 0);
 
   // Nothing renders before the family registers: `ctx.fillText` against an
   // unregistered one rasterises a system font, frame-stable, so no golden catches it.
@@ -190,6 +203,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   tint={properties.outline_modulate}
                   strokeWidthPx={strokeWidthPx}
                   renderOrder={outlineSurface.renderOrder}
+                  instance={outlineSurface.instance}
                   {...surfaceProps}
                   frameExcluded
                 />
@@ -201,6 +215,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                 fontSizePx={properties.font_size}
                 tint={properties.modulate}
                 renderOrder={fillSurface.renderOrder}
+                instance={fillSurface.instance}
                 {...surfaceProps}
                 frameExcluded
               />

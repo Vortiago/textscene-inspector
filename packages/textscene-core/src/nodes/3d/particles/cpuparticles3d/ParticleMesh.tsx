@@ -4,22 +4,23 @@
  * its overlay, whose own chain draws after the part's surface chains.
  */
 
-import { useLayoutEffect, useMemo } from 'react';
+import { useLayoutEffect, useMemo, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { resolveMaterialSource, type MaterialSource } from '../../../../r3f/materials/materialSource';
+import type { MaterialSource } from '../../../../r3f/materials/materialSource';
+import { useInstanceDraw } from '../../../../r3f/visibilityRange/geometryInstance';
 import { SurfaceMaterialSlot } from '../../../../r3f/materials/SurfaceMaterialSlot';
-import { SurfaceMaterialSlots, surfaceSources } from '../../../../r3f/materials/SurfaceMaterialSlots';
+import { SurfaceMaterialSlots, overriddenSources } from '../../../../r3f/materials/SurfaceMaterialSlots';
 import {
   NOTHING_DRAWN,
   NextPassChain,
   NextPassLink,
-  nextPassRenderOrder,
   type ChainDrawFactory,
   type ChainDrawSpec,
 } from '../../../../r3f/materials/nextPass';
 import { useOneSurfaceStartingMaterial } from '../../../../r3f/materials/useOneSurfaceStartingMaterial';
 import { NO_RAYCAST, overlayDrawProps } from '../../../../r3f/materials/materialOverlay';
+import { nextPassRenderOrder, orderByPass } from '../../../../r3f/materials/passOrder';
 import { withParticleDraw } from '../../../../r3f/materials/godotParticlesProgram';
 import { useMeshContent } from '../../../../r3f/meshes/meshContent';
 import {
@@ -27,59 +28,42 @@ import {
   raycastInstancedPoints,
   useSharedInstances,
 } from '../../../../r3f/meshes/sharedInstances';
-import { drawHookProps, type ShadowCastingEffects } from '../../../../r3f/shadowCasting';
+import { drawHookProps } from '../../../../r3f/shadowCasting';
 import { visualLayersUserData } from '../../../../r3f/visualLayers';
 import { boxlessUserData } from '../../../../r3f/bounds';
 import { geometryDrawsPoints } from '../../../../resources/meshes/godotSurface';
 import { useResourceResolution } from '../../../../resources/useSubOrExtResource';
 import { particleCount, particleGeometry, writeParticles } from './particleInstances';
-import type { CPUParticles3DProperties } from './types';
 
 interface ParticleMeshProps {
-  properties: CPUParticles3DProperties;
+  /** The raw `mesh` reference each particle draws, or undefined for none. */
+  mesh: string | undefined;
   buffer: Float32Array;
-  shadow: ShadowCastingEffects;
 }
 
 /** The mesh at every particle. A node with no mesh, or one that is not loaded yet, draws none. */
-export function ParticleMesh({ properties, buffer, shadow }: ParticleMeshProps) {
-  const pools = useSceneResources();
-  const content = useMeshContent(useResourceResolution(properties.mesh, pools));
-  const override = useMemo(
-    () => resolveMaterialSource(properties.materialOverride, pools),
-    [properties.materialOverride, pools]
-  );
-  const overlay = useMemo(
-    () => resolveMaterialSource(properties.materialOverlay, pools),
-    [properties.materialOverlay, pools]
-  );
+export function ParticleMesh({ mesh, buffer }: ParticleMeshProps) {
+  const content = useMeshContent(useResourceResolution(mesh, useSceneResources()));
+  const { override } = useInstanceDraw();
   if (content.kind !== 'surfaced') return null;
   return (
     <>
-      {content.mesh.parts.map((part, i) => {
-        const draw: ParticleDraw = {
-          // `material_override` stands in front of each surface's own material (`render_forward_clustered.cpp:4206`).
-          sources: surfaceSources(part.materials).map((source) => override ?? source),
-          overlay,
-          buffer,
-          shadow,
-          godotLayers: properties.layers,
-        };
-        return <ParticlePart key={i} source={part.geometry} draw={draw} />;
-      })}
+      {content.mesh.parts.map((part, i) => (
+        <ParticlePart
+          key={i}
+          source={part.geometry}
+          draw={{ sources: overriddenSources(part.materials, override), buffer }}
+        />
+      ))}
     </>
   );
 }
 
 /** What each part of the mesh draws at every particle. */
 interface ParticleDraw {
-  /** The material of each draw group. */
+  /** The material of each draw group, `material_override` applied. */
   sources: readonly (MaterialSource | undefined)[];
-  /** `material_overlay`, drawn over every surface. */
-  overlay: MaterialSource | undefined;
   buffer: Float32Array;
-  shadow: ShadowCastingEffects;
-  godotLayers: number;
 }
 
 /** What a part's draws read together: geometry, starting material and its emitter's draw. */
@@ -119,6 +103,15 @@ function sharesInstanceMatrices(geometry: THREE.InstancedBufferGeometry) {
   };
 }
 
+/** `sharesInstanceMatrices` for an extra draw of the part, which its pass also sorts. */
+function sharesMatricesInPassOrder(geometry: THREE.InstancedBufferGeometry) {
+  const sharesMatrices = sharesInstanceMatrices(geometry);
+  return (mesh: THREE.InstancedMesh | null) => {
+    orderByPass(mesh);
+    return sharesMatrices(mesh);
+  };
+}
+
 /**
  * One chain link of the part's surfaces: the same instanced draw the surface is, at the
  * link's draw order, reading the geometry's shared instance matrices. It casts nothing
@@ -129,13 +122,14 @@ function ParticleChainDraw({ spec, points }: { spec: ChainDrawSpec; points: bool
   // A points emitter shares only geometry; an instanced one counts its instances on it.
   const instanceCount = (spec.geometry as THREE.InstancedBufferGeometry).instanceCount;
   const sharesMatrices = useMemo(
-    () => sharesInstanceMatrices(spec.geometry as THREE.InstancedBufferGeometry),
+    () => sharesMatricesInPassOrder(spec.geometry as THREE.InstancedBufferGeometry),
     [spec.geometry]
   );
   if (points) {
     // A points emitter shares only geometry, and a point's size rides its material.
     return (
       <points
+        ref={orderByPass}
         args={[spec.geometry, startingMaterial]}
         frustumCulled={false}
         renderOrder={nextPassRenderOrder(spec.ordinal)}
@@ -196,14 +190,15 @@ function useParticleGeometry(
 /** THREE.Points over the instanced geometry, picked at each instance. */
 function ParticlePoints({ draws }: { draws: ParticlePartDraws }) {
   const { geometry, startingMaterial, draw } = draws;
+  const { shadow, layers } = useInstanceDraw();
   return (
     <>
       <points
         args={[geometry, startingMaterial]}
         frustumCulled={false}
         raycast={raycastInstancedPoints}
-        {...drawHookProps(draw.shadow)}
-        userData={drawnUserData(draw.godotLayers)}
+        {...drawHookProps(shadow)}
+        userData={drawnUserData(layers)}
       >
         <SurfaceMaterialSlots sources={draw.sources} points="instances" particles={withParticleDraw} />
       </points>
@@ -211,10 +206,10 @@ function ParticlePoints({ draws }: { draws: ParticlePartDraws }) {
         sources={draw.sources}
         geometry={geometry}
         drawsPoints
-        godotLayers={draw.godotLayers}
-        shadow={draw.shadow}
+        godotLayers={layers}
+        shadow={shadow}
         draw={chainDrawOf(true)}
-        overlay={overlayOf(draws, true)}
+        overlay={overlayOf(geometry, true)}
       />
     </>
   );
@@ -224,14 +219,15 @@ function ParticlePoints({ draws }: { draws: ParticlePartDraws }) {
 function ParticleMeshInstances({ draws }: { draws: ParticlePartDraws }) {
   const { geometry, startingMaterial, draw } = draws;
   const sharesMatrices = useMemo(() => sharesInstanceMatrices(geometry), [geometry]);
+  const { shadow, layers } = useInstanceDraw();
   return (
     <>
       <instancedMesh
         ref={sharesMatrices}
         args={[geometry, startingMaterial, geometry.instanceCount]}
         frustumCulled={false}
-        {...drawHookProps(draw.shadow)}
-        userData={drawnUserData(draw.godotLayers)}
+        {...drawHookProps(shadow)}
+        userData={drawnUserData(layers)}
       >
         <SurfaceMaterialSlots sources={draw.sources} particles={withParticleDraw} />
       </instancedMesh>
@@ -239,54 +235,51 @@ function ParticleMeshInstances({ draws }: { draws: ParticlePartDraws }) {
         sources={draw.sources}
         geometry={geometry}
         drawsPoints={false}
-        godotLayers={draw.godotLayers}
-        shadow={draw.shadow}
+        godotLayers={layers}
+        shadow={shadow}
         draw={chainDrawOf(false)}
-        overlay={overlayOf(draws, false)}
+        overlay={overlayOf(geometry, false)}
       />
     </>
   );
 }
 
 /**
- * The part's overlay at the explicit order one past its surface chains, and its own
+ * The part's overlay at the ordinal one past its surface chains, and its own
  * `next_pass` chain, whose links draw after it
  * (`render_forward_clustered.cpp:4230-4239`), as another instanced draw each.
  */
 function OverlayDraw({
   geometry,
-  overlay,
-  shadow,
   points,
-  godotLayers,
-  order,
+  ordinal,
 }: {
   geometry: THREE.InstancedBufferGeometry;
-  overlay: MaterialSource;
-  shadow: ShadowCastingEffects;
   points: boolean;
-  godotLayers: number;
-  order: number;
+  ordinal: number;
 }) {
+  const { overlay, shadow, layers } = useInstanceDraw();
+  if (!overlay) return null;
   const overlayDraw = points ? (
     <points
+      ref={orderByPass}
       args={[geometry]}
       frustumCulled={false}
       {...overlayDrawProps(shadow)}
-      renderOrder={order}
+      renderOrder={nextPassRenderOrder(ordinal)}
       userData={boxlessUserData()}
     >
       <SurfaceMaterialSlot source={overlay} points="instances" particles={withParticleDraw} />
     </points>
   ) : (
-    <InstancedOverlayDraw geometry={geometry} overlay={overlay} shadow={shadow} order={order} />
+    <InstancedOverlayDraw geometry={geometry} overlay={overlay} ordinal={ordinal} />
   );
   return (
     <>
       {overlayDraw}
       <NextPassLink
         source={overlay}
-        ordinal={order}
+        ordinal={ordinal}
         drawsSelf={false}
         // The overlay drew at this order; its own key lands in the set on recursion,
         // so a cycle back to the overlay material ends its chain.
@@ -295,7 +288,7 @@ function OverlayDraw({
         attach="material"
         surfaceCount={1}
         drawsPoints={points}
-        godotLayers={godotLayers}
+        godotLayers={layers}
         shadow={shadow}
         draw={chainDrawOf(points)}
       />
@@ -307,22 +300,21 @@ function OverlayDraw({
 function InstancedOverlayDraw({
   geometry,
   overlay,
-  shadow,
-  order,
+  ordinal,
 }: {
   geometry: THREE.InstancedBufferGeometry;
   overlay: MaterialSource;
-  shadow: ShadowCastingEffects;
-  order: number;
+  ordinal: number;
 }) {
-  const sharesMatrices = useMemo(() => sharesInstanceMatrices(geometry), [geometry]);
+  const { shadow } = useInstanceDraw();
+  const sharesMatrices = useMemo(() => sharesMatricesInPassOrder(geometry), [geometry]);
   return (
     <instancedMesh
       ref={sharesMatrices}
       args={[geometry, undefined, geometry.instanceCount]}
       frustumCulled={false}
       {...overlayDrawProps(shadow)}
-      renderOrder={order}
+      renderOrder={nextPassRenderOrder(ordinal)}
       userData={boxlessUserData()}
     >
       <SurfaceMaterialSlot source={overlay} particles={withParticleDraw} />
@@ -330,22 +322,9 @@ function InstancedOverlayDraw({
   );
 }
 
-/** The part's overlay element at the order one past its surface chains, or none without an overlay. */
-function overlayOf(
-  draws: ParticlePartDraws,
-  points: boolean
-): ((order: number) => React.ReactNode) | undefined {
-  if (!draws.draw.overlay) return undefined;
-  return (order) => (
-    <OverlayDraw
-      geometry={draws.geometry}
-      overlay={draws.draw.overlay!}
-      shadow={draws.draw.shadow}
-      godotLayers={draws.draw.godotLayers}
-      points={points}
-      order={order}
-    />
-  );
+/** Renders the part's overlay at the ordinal one past its surface chains. */
+function overlayOf(geometry: THREE.InstancedBufferGeometry, points: boolean): (ordinal: number) => ReactNode {
+  return (ordinal) => <OverlayDraw geometry={geometry} points={points} ordinal={ordinal} />;
 }
 
 /** A particle draw's userData: the node's `layers`, and no box of its own for the editor. */

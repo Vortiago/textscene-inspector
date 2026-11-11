@@ -177,6 +177,13 @@ export const GEOMETRY_SCENES = [
   // depth prepass cast, and a blended surface or one with no depth test casts nothing.
   { name: 'sprite3d-shadow', file: 'unit-sprite3d-shadow.tscn' },
   { name: 'label3d-shadow', file: 'unit-label3d-shadow.tscn' },
+  // The one variable: the `material_override` and `material_overlay` of a SpriteBase3D and of a
+  // Label3D, whose own materials every other scene of theirs draws. The sprite's override samples
+  // the frame and the flip the quad's UVs hold.
+  { name: 'sprite3d-instance-materials', file: 'unit-sprite3d-instance-materials.tscn' },
+  { name: 'label3d-instance-materials', file: 'unit-label3d-instance-materials.tscn' },
+  // The one variable: `outline_render_priority`, below the fill's priority and equal to it.
+  { name: 'label3d-outline-priority', file: 'unit-label3d-outline-priority.tscn' },
   // The one variable: `shaded`. An unshaded label, a shaded label and a shaded back face under one
   // coloured sun at N·L = 0.5.
   { name: 'label3d-shaded', file: 'unit-label3d-shaded.tscn', camera: 'Root/Camera3D' },

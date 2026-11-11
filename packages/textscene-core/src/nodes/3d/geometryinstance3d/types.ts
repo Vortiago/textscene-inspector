@@ -15,13 +15,23 @@ export interface GeometryInstance3DProperties extends VisualInstance3DProperties
   visibilityRange: VisibilityRange;
   /** `custom_aabb`, which replaces a mesh's own box. Null for none, which an all-zero box also means. */
   customAabb: Aabb | null;
+  /** The raw `material_override` reference, which draws every surface in place of its own material. */
+  materialOverride: string | undefined;
+  /** The raw `material_overlay` reference, which draws every surface a second time. */
+  materialOverlay: string | undefined;
 }
 
 /** Godot's defaults (`visual_instance_3d.h:122-140`), which a scene that sets no value keeps. */
 export const GEOMETRY_INSTANCE_DEFAULTS: Readonly<
   Pick<
     GeometryInstance3DProperties,
-    'layers' | 'transparency' | 'castShadow' | 'visibilityRange' | 'customAabb'
+    | 'layers'
+    | 'transparency'
+    | 'castShadow'
+    | 'visibilityRange'
+    | 'customAabb'
+    | 'materialOverride'
+    | 'materialOverlay'
   >
 > = Object.freeze({
   layers: GODOT_DEFAULT_VISUAL_LAYERS,
@@ -29,4 +39,6 @@ export const GEOMETRY_INSTANCE_DEFAULTS: Readonly<
   castShadow: ShadowCastingSetting.ON,
   visibilityRange: NO_VISIBILITY_RANGE,
   customAabb: null,
+  materialOverride: undefined,
+  materialOverlay: undefined,
 });

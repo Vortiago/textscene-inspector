@@ -10,7 +10,7 @@ import type * as THREE from 'three';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
+import { InstancePasses } from '../../../r3f/materials/InstancePasses';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useUndrawnMeshReport } from '../../../r3f/contexts/UndrawnMeshesContext';
 import { EmptyShapeBranch, useReportEmptyShape } from '../../../r3f/contexts/EmptyShapesContext';
@@ -199,7 +199,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       userData={visualLayersUserData(properties.layers)}
     >
       {geometry}
-      <SurfaceMaterialSlots sources={materialSources} />
+      <InstancePasses meshRef={drawnRef} sources={materialSources} />
     </mesh>
   );
 

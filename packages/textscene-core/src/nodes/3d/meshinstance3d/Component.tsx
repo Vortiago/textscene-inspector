@@ -2,7 +2,7 @@
  * Renders a Godot MeshInstance3D as an R3F <mesh>: the geometry `useMeshContent` reads,
  * or a magenta wireframe placeholder for a GLB, a mesh type no slice builds, or an
  * unresolvable mesh. A node with no `mesh` draws nothing.
- * Each surface draws through `<SurfaceMaterialSlot>`, which owns the magenta
+ * Each surface draws through `<InstancePasses>`, whose slots own the magenta
  * missing-texture placeholder. A node bound to a Skeleton3D draws its triangles as a THREE.SkinnedMesh.
  */
 
@@ -25,16 +25,8 @@ import {
 } from '../../../r3f/meshes/meshContent';
 import { geometryDrawsPoints } from '../../../resources/meshes/godotSurface';
 import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
-import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
-import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
-import { overlayDrawProps } from '../../../r3f/materials/materialOverlay';
-import {
-  NOTHING_DRAWN,
-  NextPassChain,
-  NextPassLink,
-  drawnElementOf,
-  useDrawnGeometry,
-} from '../../../r3f/materials/nextPass';
+import { InstancePasses } from '../../../r3f/materials/InstancePasses';
+import { drawnElementOf } from '../../../r3f/materials/nextPass';
 import { isOutgrownBySkin, useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useMeshSkin } from './useMeshSkin';
@@ -68,18 +60,14 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   // A `.glb` resolves to nothing and falls through to the placeholder.
   const content = useMeshContent(useResourceResolution(properties.mesh, pools));
 
-  // `material_override` and `surface_material_override/N`, keyed by the mesh's own surface
-  // numbering. Godot applies them to every kind of mesh alike.
-  const meshOverrides = useMemo(() => resolveMeshOverrides(properties, pools), [properties, pools]);
-
-  // `material_overlay` never competes for a surface slot, so it resolves apart from the
-  // overrides: it is drawn on its own.
-  const overlaySource = useMemo(
-    () => resolveMaterialSource(properties.materialOverlay, pools),
-    [properties.materialOverlay, pools]
+  // `surface_material_override/N`, keyed by the mesh's own surface numbering. Godot applies them
+  // to every kind of mesh alike.
+  const surfaceOverrides = useMemo(
+    () => resolveSurfaceOverrides(properties.surfaceMaterialOverrides, pools),
+    [properties.surfaceMaterialOverrides, pools]
   );
 
-  // The ref lands on whichever `<mesh>` or `<points>` MeshShell renders, for the overlay to share.
+  // The ref lands on whichever `<mesh>` or `<points>` MeshShell renders, for the instance's passes to share.
   const meshRef = useRef<DrawnMesh | null>(null);
 
   // GeometryInstance3D's, so it reaches every surface this node draws, the overlay's too.
@@ -150,21 +138,12 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
       const { parts } = content.mesh;
       return (
         <MeshShell {...shellProps}>
-          <MeshSurfaces
-            part={parts[0]}
-            overrides={meshOverrides}
-            meshRef={meshRef}
-            skeleton={skeleton}
-            godotLayers={properties.layers}
-            overlaySource={overlaySource}
-            shadow={shadow}
-          />
+          <MeshSurfaces part={parts[0]} overrides={surfaceOverrides} meshRef={meshRef} skeleton={skeleton} />
           {parts.slice(1).map((part, i) => (
             <FollowingPart
               key={i}
               part={part}
-              overrides={meshOverrides}
-              overlaySource={overlaySource}
+              overrides={surfaceOverrides}
               shadow={shadow}
               godotLayers={properties.layers}
             />
@@ -176,74 +155,6 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
 }
 
 const NO_PARTS: readonly SurfacedPart[] = [];
-
-/**
- * `material_overlay`'s draw: the base mesh's geometry a second time, with the
- * overlay material. A separate mesh, not a material array entry: Godot's
- * overlay covers every surface (`_geometry_instance_add_surface` runs per
- * surface), and one material over a grouped geometry draws the same pixels.
- * A valid overlay's own `next_pass` chain mounts after its draw
- * (`render_forward_clustered.cpp:4230-4239`), its links sharing the base draw's
- * geometry.
- */
-function MaterialOverlayMesh({
-  meshRef,
-  drawsPoints,
-  skeleton,
-  godotLayers,
-  source,
-  shadow,
-  renderOrder,
-}: {
-  meshRef: RefObject<DrawnMesh | null>;
-  /** The base draws points, so the overlay does too. */
-  drawsPoints: boolean;
-  /** The base is skinned, so the overlay is skinned by the same skeleton. */
-  skeleton?: THREE.Skeleton | null;
-  /** The node's `layers`, which an overlay chain draw carries for the decals and probes. */
-  godotLayers: number;
-  source: MaterialSource;
-  /**
-   * The base mesh's hooks. The overlay casts nothing of its own, so only the colour pair
-   * mounts: its own material decides its billboard, and SHADOWS_ONLY skips its draw too.
-   */
-  shadow: ShadowCastingEffects;
-  /** The explicit order one past the part's surface chains (`nextPassRenderOrder`). */
-  renderOrder: number;
-}) {
-  // Read back off the base mesh rather than built again, so all four geometry branches
-  // share one component and the two meshes share one geometry.
-  const geometry = useDrawnGeometry(meshRef);
-  if (!geometry) return null;
-  const { Drawn, skin } = drawnElementOf(drawsPoints, skeleton);
-  return (
-    <>
-      <Drawn
-        {...skin}
-        geometry={geometry}
-        {...overlayDrawProps(shadow)}
-        renderOrder={renderOrder}
-        receiveShadow
-      >
-        <SurfaceMaterialSlot source={source} points={drawsPoints ? 'mesh' : undefined} />
-      </Drawn>
-      <NextPassLink
-        source={source}
-        ordinal={renderOrder}
-        drawsSelf={false}
-        // The overlay drew at this order; its own key lands in the set on recursion.
-        visited={NOTHING_DRAWN}
-        geometry={geometry}
-        attach="material"
-        surfaceCount={1}
-        drawsPoints={drawsPoints}
-        skeleton={skeleton}
-        godotLayers={godotLayers}
-        shadow={shadow}
-      />
-    </>
-  );
-}
 
 interface MeshShellProps {
   name: string;
@@ -312,64 +223,38 @@ const UNRESOLVED_MESH = (
 );
 
 /**
- * A mesh's geometry plus a `<SurfaceMaterialSlots>` over its draw groups, so one hook per
- * component serves any surface count. Godot sizes the override array to the surface count
- * (`scene/3d/mesh_instance_3d.cpp:68,407`), so the draw groups set the slot count and an extra
- * override is dropped: a PrimitiveMesh takes only surface 0's. Each group's starting material
- * carries its own `next_pass` chain through `<NextPassChain>`, and the part's overlay mounts
- * through the chain, one past the surface chains.
+ * A part's geometry and the passes its instance draws it in. Godot sizes the override array to the
+ * surface count (`scene/3d/mesh_instance_3d.cpp:68,407`), so the draw groups set the slot count and
+ * an extra override is dropped: a PrimitiveMesh takes only surface 0's.
  */
 function MeshSurfaces({
   part,
   overrides,
   meshRef,
   skeleton,
-  godotLayers,
-  overlaySource,
-  shadow,
 }: {
   part: SurfacedPart;
-  overrides: MeshOverrides;
-  /** The base draw, whose geometry every chain draw shares. */
+  overrides: SurfaceOverrides;
+  /** The part's own draw, whose geometry every extra draw shares. */
   meshRef: RefObject<DrawnMesh | null>;
   /** The skeleton that skins the shell's surfaces, or null for an unskinned draw. */
   skeleton?: THREE.Skeleton | null;
-  /** The node's `layers`, which the chain draws carry for the decals and probes. */
-  godotLayers: number;
-  overlaySource: MaterialSource | undefined;
-  shadow: ShadowCastingEffects;
 }) {
   const groupCount = Math.max(part.surfaceIndices.length, 1);
-  const sources = Array.from({ length: groupCount }, (_unused, i) =>
-    effectiveMaterialSource(overrides, part.surfaceIndices[i] ?? i, part.materials[i])
+  // The surface override stands over the mesh's material (`render_forward_clustered.cpp:4264`),
+  // as `MeshInstance3D::get_active_material` restates (`mesh_instance_3d.cpp:384`).
+  const sources = Array.from(
+    { length: groupCount },
+    (_unused, i) => overrides.get(part.surfaceIndices[i] ?? i) ?? part.materials[i]
   );
-  const drawsPoints = geometryDrawsPoints(part.geometry);
   return (
     <>
       <primitive object={part.geometry} attach="geometry" />
-      <SurfaceMaterialSlots sources={sources} points={drawsPoints ? 'mesh' : undefined} />
-      <NextPassChain
+      <InstancePasses
         meshRef={meshRef}
         sources={sources}
-        drawsPoints={drawsPoints}
+        drawsPoints={geometryDrawsPoints(part.geometry)}
         skeleton={skeleton}
-        godotLayers={godotLayers}
-        shadow={shadow}
-        overlay={
-          overlaySource
-            ? (renderOrder) => (
-                <MaterialOverlayMesh
-                  meshRef={meshRef}
-                  drawsPoints={drawsPoints}
-                  skeleton={skeleton}
-                  godotLayers={godotLayers}
-                  source={overlaySource}
-                  shadow={shadow}
-                  renderOrder={renderOrder}
-                />
-              )
-            : undefined
-        }
       />
     </>
   );
@@ -383,63 +268,34 @@ function MeshSurfaces({
 function FollowingPart({
   part,
   overrides,
-  overlaySource,
   shadow,
   godotLayers,
 }: {
   part: SurfacedPart;
-  overrides: MeshOverrides;
-  overlaySource: MaterialSource | undefined;
+  overrides: SurfaceOverrides;
   shadow: ShadowCastingEffects;
   godotLayers: number;
 }) {
   const ref = useRef<DrawnMesh | null>(null);
-  const drawsPoints = geometryDrawsPoints(part.geometry);
-  const Drawn = drawnTag(drawsPoints);
+  const Drawn = drawnTag(geometryDrawsPoints(part.geometry));
   return (
     <Drawn ref={ref} {...drawHookProps(shadow)} userData={visualLayersUserData(godotLayers)}>
-      <MeshSurfaces
-        part={part}
-        overrides={overrides}
-        meshRef={ref}
-        godotLayers={godotLayers}
-        overlaySource={overlaySource}
-        shadow={shadow}
-      />
+      <MeshSurfaces part={part} overrides={overrides} meshRef={ref} />
     </Drawn>
   );
 }
 
-/** A MeshInstance3D's two material-override properties, already resolved against the scene. */
-interface MeshOverrides {
-  /** `material_override`: in front of every surface's material. */
-  node?: MaterialSource;
-  /** `surface_material_override/N`, keyed by Godot's original surface index. */
-  perSurface: ReadonlyMap<number, MaterialSource>;
-}
+/** `surface_material_override/N`, resolved against the scene and keyed by Godot's original surface index. */
+type SurfaceOverrides = ReadonlyMap<number, MaterialSource>;
 
-function resolveMeshOverrides(properties: MeshInstance3DProperties, scene: SceneResources): MeshOverrides {
-  const perSurface = new Map<number, MaterialSource>();
-  for (const [index, ref] of properties.surfaceMaterialOverrides ?? []) {
+function resolveSurfaceOverrides(
+  refs: MeshInstance3DProperties['surfaceMaterialOverrides'],
+  scene: SceneResources
+): SurfaceOverrides {
+  const overrides = new Map<number, MaterialSource>();
+  for (const [index, ref] of refs) {
     const source = resolveMaterialSource(ref, scene);
-    if (source) perSurface.set(index, source);
+    if (source) overrides.set(index, source);
   }
-  return {
-    node: resolveMaterialSource(properties.materialOverride, scene),
-    perSurface,
-  };
-}
-
-/**
- * What Godot binds for one surface: the instance's surface override over the
- * mesh's material (`render_forward_clustered.cpp:4264`), then `material_override`
- * in front (`:4206`), else the default material (`:4221`), as
- * `MeshInstance3D::get_active_material` (`scene/3d/mesh_instance_3d.cpp:384`) restates.
- */
-function effectiveMaterialSource(
-  overrides: MeshOverrides,
-  surfaceIndex: number,
-  own: MaterialSource | undefined
-): MaterialSource | undefined {
-  return overrides.node ?? overrides.perSurface.get(surfaceIndex) ?? own;
+  return overrides;
 }

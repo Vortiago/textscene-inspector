@@ -6,6 +6,7 @@
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseNonEmptyAabb, parseOptionalFloat, parseOptionalInt } from '../../../parser/valueParsers';
 import type { VisibilityRange } from '../../../godot/rendering/visibilityRange';
+import { heldResource } from '../../../godot/scene/resourceLiteral';
 import { parseVisualInstance3D } from '../visualinstance3d/parser';
 import { GEOMETRY_INSTANCE_DEFAULTS, type GeometryInstance3DProperties } from './types';
 
@@ -19,6 +20,8 @@ export function parseGeometryInstance3D(
     castShadow: parseOptionalInt(properties.cast_shadow) ?? GEOMETRY_INSTANCE_DEFAULTS.castShadow,
     visibilityRange: parseVisibilityRange(properties),
     customAabb: parseNonEmptyAabb(properties.custom_aabb, 'custom_aabb'),
+    materialOverride: heldResource(properties.material_override),
+    materialOverlay: heldResource(properties.material_overlay),
   };
 }
 

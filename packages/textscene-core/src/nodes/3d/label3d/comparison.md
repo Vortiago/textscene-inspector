@@ -17,6 +17,8 @@ A precomposed character the font lacks draws as its base and marks in that font 
 
 A label is unlit by default. With `shaded` on, the scene's lights light its fill and outline, as Godot's `SHADING_MODE_PER_PIXEL` does (`material.cpp:3045`), and the label receives shadows. The plane faces +Z (`label_3d.cpp:422-423`). A double-sided label flips the normal of its back face (`scene_forward_clustered.glsl:1263-1266`), so its back is lit as its front. The `label3d-shaded` golden pins this.
 
+The outline is surface 0 of the label and the fill is surface 1 (`label_3d.cpp:610-615`). Each sorts in the alpha pass by its render priority. At one priority Godot draws the later surface first (`render_forward_clustered.cpp:4147-4148`), so the outline draws over the fill. The `label3d-outline-priority` golden pins this.
+
 A label casts no shadow by default, as its constructor turns `cast_shadow` off (`label_3d.cpp:1090`). With it on, the glyphs cast when Godot files their surface in the shadow pass (`render_forward_clustered.cpp:4079-4089`). That pass takes a cut surface, or an `OPAQUE_PREPASS` one, with the depth test on. An `OPAQUE_PREPASS` surface blends uncut, writes its depth in a depth prepass cut at 0.99, and cuts its shadow at 0.1 (`render_forward_clustered.cpp:1791,2770`). A blended label, the default `alpha_cut`, casts nothing. The `label3d-shadow` golden pins this.
 
 ## BMFont
@@ -87,6 +89,7 @@ The glyph raster has a mip chain only when its font generates mipmaps and `textu
 
 ## Known limitations
 
+- **Approximated** A `material_override` or a `material_overlay` fills one quad for each line of an outline font, where Godot fills one quad for each glyph.
 - **Approximated** The glyph mip chain is per label raster, where Godot's is per glyph page, so a minified label differs slightly.
 - **Resource gap** A SystemFont always draws the default font, as Godot does when no OS font matches its names, where Godot draws a matching OS font.
 - **Approximated** A glyph off whole pixels draws at its place, where Godot's mesh samples its glyph texture between texels.

@@ -1,8 +1,8 @@
 /**
- * Each GeometryInstance3D's link to the scene cull. The registry mounts every GeometryInstance3D
- * component in `withGeometryInstance`, which gives it one from the node's data, drawn or not, so a
- * visibility parent the previewer does not draw still decides its dependants. The drawer inside
- * places it and reads the shadow effects the cull gates, and the cull fades each surface it adds.
+ * Each GeometryInstance3D's link to the scene cull, and what Godot sets on the instance for every
+ * geometry type: `material_override`, `material_overlay` (`visual_instance_3d.cpp:211-228`),
+ * `layers` and `cast_shadow`. The registry mounts every GeometryInstance3D component in
+ * `withGeometryInstance`, drawn or not, so an undrawn visibility parent still decides its dependants.
  */
 
 import { useThree } from '@react-three/fiber';
@@ -15,15 +15,30 @@ import type { NodeComponent, NodeComponentProps } from '../NodeComponentRegistry
 import { useParentType } from '../parentSpaceScope';
 import { rangedShadowCastingEffects, type ShadowCastingEffects } from '../shadowCasting';
 import { FadedSurfacesContext } from '../materials/swappedMaterials';
+import { resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
+import { useSceneResources } from '../SceneResourcesContext';
+import type { DrawnInstance } from '../surfaceDrawHooks';
 import { registerVisibilityInstance } from './visibilityScene';
 import { useVisibilityParent } from './VisibilityParentContext';
 import { UNPLACED, type InstancePlacement } from './placements';
 import { CulledInstance } from './culledInstance';
 
-interface GeometryInstanceScope {
-  instance: CulledInstance;
+/** What the base hands every draw of its instance. */
+export interface InstanceDraw {
+  /** `cast_shadow`, with the draw hooks that skip a culled instance's draws. */
   shadow: ShadowCastingEffects;
+  /** `material_override`: in place of every surface's material. Undefined for none. */
+  override: MaterialSource | undefined;
+  /** `material_overlay`: every surface drawn a second time. Undefined for none. */
+  overlay: MaterialSource | undefined;
+  /** `layers`: the render mask a Decal's and a ReflectionProbe's masks test. */
+  layers: number;
+  /** The instance as the draw hooks read it: its cull state and the node's own pose. */
+  instance: DrawnInstance;
 }
+
+/** The draw, with the instance as the base places it. */
+type GeometryInstanceScope = InstanceDraw & { instance: CulledInstance };
 
 /** Null outside a GeometryInstance3D component, and inside the nodes it renders as its children. */
 const GeometryInstanceContext = createContext<GeometryInstanceScope | null>(null);
@@ -54,7 +69,20 @@ export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
       () => rangedShadowCastingEffects(properties.castShadow, instance),
       [properties.castShadow, instance]
     );
-    const scope = useMemo(() => ({ instance, shadow }), [instance, shadow]);
+    const pools = useSceneResources();
+    const override = useMemo(
+      () => resolveMaterialSource(properties.materialOverride, pools),
+      [properties.materialOverride, pools]
+    );
+    const overlay = useMemo(
+      () => resolveMaterialSource(properties.materialOverlay, pools),
+      [properties.materialOverlay, pools]
+    );
+    const { layers } = properties;
+    const scope = useMemo(
+      () => ({ shadow, override, overlay, layers, instance }),
+      [instance, shadow, override, overlay, layers]
+    );
     // The nodes it renders as children take their own scope, or none.
     return (
       <GeometryInstanceContext.Provider value={scope}>
@@ -101,4 +129,9 @@ export function useGeometryInstance(placement: InstancePlacement): ShadowCasting
     };
   }, [instance, placement]);
   return shadow;
+}
+
+/** What the enclosing node's base hands each draw of its instance. */
+export function useInstanceDraw(): InstanceDraw {
+  return useGeometryInstanceScope();
 }

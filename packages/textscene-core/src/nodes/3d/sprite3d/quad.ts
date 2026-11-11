@@ -1,6 +1,7 @@
 /**
  * The quad a SpriteBase3D draws: its rect on the sprite plane, that rect turned onto the plane
- * its `axis` faces, and the AABB the scene cull reads (`sprite_3d.cpp:100-273`).
+ * its `axis` faces, the frame and the modulate its vertices carry, and the AABB the scene cull
+ * reads (`sprite_3d.cpp:100-273`).
  */
 
 import * as THREE from 'three';
@@ -9,6 +10,9 @@ import { spriteBillboardAabb } from '../../../godot/scene/billboard';
 import { Vector3Axis } from '../../../godot/math/vector3Axis';
 import type { Sprite3DProperties } from './types';
 import type { EnumValue } from '../../../godot/classdb/enumNames.js';
+import type { UvWindow } from '../../../r3f/uvWindow';
+import type { Rgba } from '../../../godot/math/math';
+import { byteOf } from '../../../godot/project/image';
 
 /** The quad's size in world units: the frame's pixels times `pixel_size`. */
 interface QuadSize {
@@ -47,7 +51,50 @@ export function spriteQuadGeometry(
   geometry.translate(position.x + size.x / 2, position.y + size.y / 2, 0);
   if (axis === Vector3Axis.Y) geometry.rotateX(-Math.PI / 2);
   else if (axis === Vector3Axis.X) geometry.rotateY(Math.PI / 2);
+  geometry.setAttribute(
+    'color',
+    new THREE.BufferAttribute(new Uint8Array(QUAD_COLOUR_BYTES).fill(255), 4, true)
+  );
   return geometry;
+}
+
+/** One RGBA byte quadruple for each corner, white until `writeSpriteQuadColour` writes the modulate. */
+const QUAD_COLOUR_BYTES = 16;
+
+/** A PlaneGeometry's corners in vertex order: top-left, top-right, bottom-left, bottom-right. */
+const QUAD_CORNERS = [
+  { u: 0, v: 1 },
+  { u: 1, v: 1 },
+  { u: 0, v: 0 },
+  { u: 1, v: 0 },
+] as const;
+
+/**
+ * Writes the frame's window into the quad's UVs, as Godot's sprite mesh holds it
+ * (`sprite_3d.cpp:146-161`). On the mesh, not the texture, so a `material_override` or a
+ * `material_overlay` samples the same frame.
+ */
+export function writeSpriteQuadUvs(geometry: THREE.BufferGeometry, { repeat, offset }: UvWindow): void {
+  const uvs = geometry.getAttribute('uv');
+  QUAD_CORNERS.forEach(({ u, v }, vertex) => {
+    uvs.setXY(vertex, offset.x + repeat.x * u, offset.y + repeat.y * v);
+  });
+  uvs.needsUpdate = true;
+}
+
+/**
+ * Writes the accumulated modulate into the quad's vertex colour, as Godot's sprite mesh holds it:
+ * a float32 channel cut to a byte and never rounded (`sprite_3d.cpp:223-228`). The sprite's own
+ * material reads the modulate as its colour, so only a material that reads the vertex colour sees it.
+ */
+export function writeSpriteQuadColour(geometry: THREE.BufferGeometry, modulate: Rgba): void {
+  const colours = geometry.getAttribute('color') as THREE.BufferAttribute;
+  const bytes = [modulate.r, modulate.g, modulate.b, modulate.a].map((channel) =>
+    byteOf(Math.fround(channel))
+  );
+  // Into the array, not `setXYZW`: that rounds a normalised value, where Godot truncates.
+  for (let vertex = 0; vertex < colours.count; vertex++) colours.array.set(bytes, vertex * bytes.length);
+  colours.needsUpdate = true;
 }
 
 /** The quad's AABB in node space under `billboard`, as `_draw` sets it (`sprite_3d.cpp:252-273`). */

@@ -49,14 +49,6 @@ export function parseMeshInstance3D(
     meshInstance3DProps.mesh = properties.mesh;
   }
 
-  if (holdsResource(properties.material_override)) {
-    meshInstance3DProps.materialOverride = properties.material_override;
-  }
-
-  if (holdsResource(properties.material_overlay)) {
-    meshInstance3DProps.materialOverlay = properties.material_overlay;
-  }
-
   assignIfDefined(meshInstance3DProps, 'giMode', parseOptionalInt(properties.gi_mode));
   assignIfDefined(meshInstance3DProps, 'giLightmapScale', parseOptionalInt(properties.gi_lightmap_scale));
 

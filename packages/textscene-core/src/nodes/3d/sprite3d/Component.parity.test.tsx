@@ -8,6 +8,7 @@ import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode } from '../../../parser/types';
 import { findMesh } from '../testing/reactThreeTestInstance';
+import { quadUvWindow } from './testing/quadUvWindow';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
 import { patchedFragment } from '../../../r3f/testing/patchedFragment';
@@ -74,16 +75,23 @@ describe('Sprite3D parser parity', () => {
 });
 
 describe('Sprite3D render parity', () => {
-  it('flip_h mirrors the texture horizontally (negative repeat.x)', async () => {
+  it('flip_h mirrors the quad UVs horizontally', async () => {
     const r = await render({ flip_h: 'true' });
-    const map = (findMesh(r.scene).material as THREE.MeshBasicMaterial).map!;
-    expect(map.repeat.x).toBeLessThan(0);
+    expect(quadUvWindow(findMesh(r.scene).geometry).repeat.x).toBe(-1);
   });
 
-  it('flip_v mirrors the texture vertically (negative repeat.y) (#18)', async () => {
+  it('flip_v mirrors the quad UVs vertically', async () => {
     const r = await render({ flip_v: 'true' });
+    expect(quadUvWindow(findMesh(r.scene).geometry).repeat.y).toBe(-1);
+  });
+
+  it('leaves the window off the texture, so every material on the quad samples one frame', async () => {
+    const r = await render({ flip_h: 'true', hframes: '2' });
     const map = (findMesh(r.scene).material as THREE.MeshBasicMaterial).map!;
-    expect(map.repeat.y).toBeLessThan(0);
+    expect([map.repeat.toArray(), map.offset.toArray()]).toEqual([
+      [1, 1],
+      [0, 0],
+    ]);
   });
 
   it('offset displaces the quad, a positive offset.y upwards', async () => {
@@ -111,8 +119,7 @@ describe('Sprite3D render parity', () => {
       hframes: '2',
     });
     const mesh = findMesh(r.scene);
-    const map = (mesh.material as THREE.MeshBasicMaterial).map!;
-    expect(map.repeat.x).toBeCloseTo(0.2, 5);
+    expect(quadUvWindow(mesh.geometry).repeat.x).toBeCloseTo(0.2, 5);
     const geom = mesh.geometry;
     geom.computeBoundingBox();
     const size = geom.boundingBox!.getSize(new THREE.Vector3());
