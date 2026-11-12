@@ -5,26 +5,22 @@
  * draw (`renderer_canvas_render_rd.cpp:2775-2782`).
  */
 
+import { useMemo } from 'react';
 import { MultiMeshTransformFormat } from '../../../godot/scene/multiMesh';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasMeshItem } from '../../../r3f/components/CanvasMeshItem';
 import { useMeshContent } from '../../../r3f/meshes/meshContent';
-import { useMemo } from 'react';
-import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext';
-import { useNodeResource } from '../../../resources/reading';
-import { MULTI_MESH, multiMeshInstances } from '../../../resources/meshes/multimesh';
-import { useResourceResolution } from '../../../resources/useSubOrExtResource';
+import { multiMeshInstances } from '../../../resources/meshes/multimesh';
+import { useMultiMeshInstance3D } from '../../3d/multimeshinstance3d/ownAabb';
 import type { MultiMeshInstance2DProperties } from './types';
 
 export function MultiMeshInstance2D({ node, children }: NodeComponentProps) {
   const props = node.properties as MultiMeshInstance2DProperties;
-  const { value: multiMesh } = useNodeResource(props.multimesh, MULTI_MESH);
-  const { ref: meshRef, resources } = multiMesh?.meshReference ?? { ref: undefined, resources: NO_RESOURCES };
-  const content = useMeshContent(useResourceResolution(meshRef, resources));
-  const instances = useMemo(() => multiMesh && multiMeshInstances(multiMesh.drawn), [multiMesh]);
+  const { multiMesh, meshResolution } = useMultiMeshInstance3D(node);
+  const content = useMeshContent(meshResolution);
+  const instances = useMemo(() => (multiMesh ? multiMeshInstances(multiMesh.drawn) : null), [multiMesh]);
   const draws =
     multiMesh?.drawn.transformFormat === MultiMeshTransformFormat.TRANSFORM_2D &&
-    instances !== undefined &&
     instances !== null &&
     instances.length > 0 &&
     content.kind === 'surfaced';
