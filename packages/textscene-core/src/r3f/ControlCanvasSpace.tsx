@@ -26,7 +26,7 @@ function SolvedControlSpace({ node, path, children }: ControlCanvasSpaceProps) {
   const isVisible = useCanvasItemVisible(path, (node.properties as ControlProperties).visible);
   // paint-order-safe: outside every keyed item group, it only moves and hides the Node2D items below.
   return (
-    <group visible={isVisible} {...(matrix ? { matrix, matrixAutoUpdate: false } : {})}>
+    <group visible={isVisible} matrix={matrix ?? undefined} matrixAutoUpdate={matrix === null}>
       {children}
     </group>
   );
