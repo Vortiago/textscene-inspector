@@ -92,6 +92,10 @@ missing-resources row).
   `Environment::_update_tonemap`. `tonemap_agx_contrast` reaches the curve the tonemap
   pass bakes.
 
+- **A decode reads a held resource** (ADR-0071). The pure decode of a Godot-text slice takes a
+  held resource and `Follow` from `resources/reading/`, not a section with the tables of its file.
+  A nested reference resolves through `Follow`, so one decode serves every origin.
+
 ## Consequences
 
 - To add a resource type, add one slice folder and register it. The loader gets no

@@ -164,6 +164,9 @@ export const SCENE_COMPOSITION_SCENES = [
   // gizmo is off in a capture without `gizmos: true` (ADR-0056), so this pins the follower's
   // placement.
   { name: 'pathfollow3d-follow', file: 'unit-pathfollow-3d.tscn' },
+  // The two follow scenes with the curve in a `.tres`: each must match its inline twin.
+  { name: 'path2d-curve-file', file: 'unit-path2d-curve-file.tscn', mode: '2d' },
+  { name: 'path3d-curve-file', file: 'unit-path3d-curve-file.tscn' },
   // Where a Node3D's parent link ends (ADR-0008): a plain Node between two
   // Node3Ds drops the transform, and a hidden one no longer hides; top_level
   // drops the transform alone. Each box lands beside the grey reference.
