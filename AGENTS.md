@@ -84,6 +84,7 @@ and prints exact pixels. It is a tool, not a gate.
   `SHEET-STANDARD.md` names it.
 - `--debug-collisions` runs the game with collision debugging, as the editor's "Visible Collision Shapes"
   does. A 2D joint then draws its marker and a collision shape its outline. Without it a game draws neither.
+  `pnpm ref:diff <scenes> --collisions` and `pnpm ref:ours <scene> --collisions` show them on both sides.
 - `--mode 2d-root` measures a root-only setting. Add a new one to
   `ROOT_ONLY_VIEWPORT_PROPERTIES` in `scripts/godot-ref/run.mjs`.
 - A 1/255 gap on a channel whose value × 255 is fractional is not a parity defect. The driver

@@ -43,6 +43,11 @@ const FIXTURE_ADVISORIES: Readonly<Record<string, { rules: readonly string[]; re
     reason:
       'the heading names a parent="Missing" that walks nowhere on purpose: Godot falls back to the parent_id_path trail (packed_scene.cpp:161-163), and the linter cannot open the instanced scene to follow it',
   },
+  'unit-collision-shapes-2d.tscn': {
+    rules: ['collisionshape2d-polygon-shape-limited-editing'],
+    reason:
+      'the convex and concave polygon shapes are in the fixture so their drawing shows, and the editor warns about both classes (collision_shape_2d.cpp:184-189)',
+  },
   'integration-unsupported-hierarchy.tscn': {
     rules: ['collisionshape3d-invalid-parent', 'collisionobject3d-needs-collision-shape'],
     reason:

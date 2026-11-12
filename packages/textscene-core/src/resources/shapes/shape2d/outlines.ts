@@ -1,15 +1,16 @@
 /**
- * The outlines of the 2D collision shapes the gizmo draws, as closed loops of Godot-local points.
- * The loop closes implicitly: the last point joins the first.
+ * The point loops of the 2D collision shapes that a gizmo fills and outlines, as Godot builds them.
+ * Y grows downwards, as in Godot. The loop closes implicitly: the last point joins the first.
  */
 
 import type { Vector2 } from '../../../godot/math/vector';
 import { TAU } from '../../../godot/math/math.js';
 
-const CIRCLE_SEGMENTS = 32;
-const CAPSULE_CAP_SEGMENTS = 16;
+/** `circle_shape_2d.cpp:80` and `capsule_shape_2d.cpp:25` both step the turn by `TAU / 24`. */
+const TURN_STEPS = 24;
+const TURN_STEP = TAU / TURN_STEPS;
 
-/** The four corners of a centred `size` rectangle, clockwise from top-left in Godot's +Y-down frame. */
+/** The four corners of a centred `size` rectangle, clockwise from top-left (`rectangle_shape_2d.cpp:79-82`). */
 export function rectanglePoints(size: Vector2): Vector2[] {
   const hw = size.x / 2;
   const hh = size.y / 2;
@@ -21,42 +22,26 @@ export function rectanglePoints(size: Vector2): Vector2[] {
   ];
 }
 
-/** A circle of `radius` about the origin, as a closed loop of `CIRCLE_SEGMENTS` points. */
+/** A circle of `radius` about the origin, as 24 points (`circle_shape_2d.cpp:77-83`). */
 export function circlePoints(radius: number): Vector2[] {
-  const points: Vector2[] = [];
-  for (let i = 0; i < CIRCLE_SEGMENTS; i++) {
-    const t = (i / CIRCLE_SEGMENTS) * TAU;
-    points.push({ x: radius * Math.cos(t), y: radius * Math.sin(t) });
-  }
-  return points;
+  return Array.from({ length: TURN_STEPS }, (_, i) => ({
+    x: Math.cos(i * TURN_STEP) * radius,
+    y: Math.sin(i * TURN_STEP) * radius,
+  }));
 }
 
-/** Vertical capsule: two semicircle caps joined by straight sides. */
+/**
+ * A vertical capsule, `CapsuleShape2D::_get_points` (`capsule_shape_2d.cpp:25-39`): 24 points on
+ * the turn, with the arc centre moving to the other cap after the sixth and the eighteenth, which
+ * each add the mirror point on the other centre.
+ */
 export function capsulePoints(radius: number, height: number): Vector2[] {
-  const halfHeight = Math.max(0, height / 2 - radius);
   const points: Vector2[] = [];
-
-  // Right side, bottom to top.
-  points.push({ x: radius, y: -halfHeight });
-  points.push({ x: radius, y: halfHeight });
-
-  // Top cap: 0°..180° around (0, halfHeight), from the right connection point over
-  // the top to the left connection point.
-  for (let i = 1; i < CAPSULE_CAP_SEGMENTS; i++) {
-    const t = (i / CAPSULE_CAP_SEGMENTS) * Math.PI;
-    points.push({ x: radius * Math.cos(t), y: halfHeight + radius * Math.sin(t) });
+  for (let i = 0; i < TURN_STEPS; i++) {
+    const offsetY = i > 6 && i <= 18 ? -height * 0.5 + radius : height * 0.5 - radius;
+    const rim = { x: Math.sin(i * TURN_STEP) * radius, y: Math.cos(i * TURN_STEP) * radius };
+    points.push({ x: rim.x, y: rim.y + offsetY });
+    if (i === 6 || i === 18) points.push({ x: rim.x, y: rim.y - offsetY });
   }
-
-  // Left side, top to bottom.
-  points.push({ x: -radius, y: halfHeight });
-  points.push({ x: -radius, y: -halfHeight });
-
-  // Bottom cap: 180°..360° around (0, -halfHeight), from the left connection point
-  // under the bottom back to the right connection point, closing the loop.
-  for (let i = 1; i < CAPSULE_CAP_SEGMENTS; i++) {
-    const t = Math.PI + (i / CAPSULE_CAP_SEGMENTS) * Math.PI;
-    points.push({ x: radius * Math.cos(t), y: -halfHeight + radius * Math.sin(t) });
-  }
-
   return points;
 }
