@@ -6,7 +6,7 @@
 import type * as THREE from 'three';
 import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
 import { canvasItemBlendState } from '../../resources/materials/canvasitemmaterial/build';
-import type { ProgramInjection } from '../materialProgramInputs';
+import { composeInjections, type ProgramInjection } from '../materialProgramInputs';
 import { editedProgram } from '../shaderPatch/chunkPatch';
 
 export interface ClipMask {
@@ -101,4 +101,13 @@ export function createClipMask(): ClipMask {
     startMasking: () => setMasking(true),
     stopMasking: () => setMasking(false),
   };
+}
+
+/**
+ * `injection` with `mask` composed in, or `injection` as it is with no mask. The mask edits first:
+ * both insert after `colorspace_fragment`, so the edit made first runs last, and the mask replaces
+ * the lit colour, as Godot's clip shader is unshaded (`renderer_canvas_render_rd.cpp:2104`).
+ */
+export function maskedInjection(injection: ProgramInjection, mask: ClipMask | null): ProgramInjection {
+  return mask ? composeInjections([mask.injection, injection])! : injection;
 }

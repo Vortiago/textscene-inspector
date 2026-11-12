@@ -4,7 +4,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { createClipMask } from './clipMask';
+import { createClipMask, maskedInjection } from './clipMask';
+import { canvasItemLightingProps } from '../lighting2d/canvasItemLighting';
+import { lightUniforms } from '../lighting2d/testing/lightUniforms';
 import { canvasItemBlendState } from '../../resources/materials/canvasitemmaterial/build';
 import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
 
@@ -56,5 +58,23 @@ describe('a clip mask over a blend that changes', () => {
     mask.stopMasking();
 
     expect(material.blending).toBe(THREE.NormalBlending);
+  });
+});
+
+describe('a clip mask over a lit owner', () => {
+  it('replaces the lit colour, as Godot draws the owner with its unshaded clip shader', () => {
+    const lit = canvasItemLightingProps(lightUniforms(), false).injection;
+    const shader = {
+      vertexShader: THREE.ShaderLib.basic.vertexShader,
+      fragmentShader: THREE.ShaderLib.basic.fragmentShader,
+      uniforms: {},
+    };
+
+    maskedInjection(lit, createClipMask()).onBeforeCompile.call(new THREE.MeshBasicMaterial(), shader);
+
+    const lightWrite = shader.fragmentShader.indexOf('gl_FragColor.rgb = canvasShaded(');
+    const maskWrite = shader.fragmentShader.indexOf('gl_FragColor.rgb = texelFetch(uClipBuffer');
+    expect(lightWrite).toBeGreaterThan(-1);
+    expect(maskWrite).toBeGreaterThan(lightWrite);
   });
 });
