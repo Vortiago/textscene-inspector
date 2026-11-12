@@ -259,6 +259,13 @@ describe('foldableContainerTitleShape font size (default_theme.cpp:1322)', () =>
   });
 });
 
+describe('foldableContainerTitleShape title margin (make_flat_stylebox, default_theme.cpp:57-60)', () => {
+  it('scales with the theme: 6 px on every side at scale 1.5', () => {
+    const margin = { left: 6, top: 6, right: 6, bottom: 6 };
+    expect(foldableContainerTitleShape(node({}), nativeTheme(1.5)).titleStyle.contentMargin).toEqual(margin);
+  });
+});
+
 describe('foldableContainerTitleShape content panel margin (default_theme.cpp:1314)', () => {
   it.each([1, 1.5, 2])('is 4 px on every side at theme scale %s, unscaled', (scale) => {
     const margin = { left: 4, top: 4, right: 4, bottom: 4 };
