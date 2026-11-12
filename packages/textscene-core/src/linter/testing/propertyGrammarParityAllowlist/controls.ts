@@ -187,7 +187,6 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // authored scroll offset is inert.
       'scroll_horizontal',
       'scroll_vertical',
-      'scroll_past_end_of_file',
     ],
     reason:
       'Carets, selection, clipboard, word boundaries and virtual keyboards have no frozen-frame surface, and an authored scroll offset is snapped away before the first draw.',

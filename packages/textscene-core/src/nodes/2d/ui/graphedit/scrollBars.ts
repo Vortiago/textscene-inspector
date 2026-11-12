@@ -25,6 +25,91 @@ interface GraphEditScrollBars {
   vertical: ScrollBarPlacement;
 }
 
+/** The constructor's `set_min(-10000)` on both bars (`graph_edit.cpp:3218,3221`). */
+const CONSTRUCTOR_SCROLL_MIN = -10000;
+/** The constructor's `set_max(10000)` on both bars (`graph_edit.cpp:3219,3222`). */
+const CONSTRUCTOR_SCROLL_MAX = 10000;
+
+interface UpdatedScrollBarsInput {
+  /** A child of a GraphElement class, hidden or not (`:296`, `:626-668`). */
+  hasGraphElement: boolean;
+  /** A setter queued `_update_scroll_offset` while the file loaded (`:409`, `:2448`). */
+  queuedScrollOffsetUpdate: boolean;
+  /** `get_size()` before the node was parented (`loadOrder.ts`). */
+  outOfTreeSize: Vector2;
+  /** The size the layout gave the GraphEdit. */
+  solvedSize: Vector2;
+}
+
+/**
+ * Whether `_update_scrollbars` (`:464-528`) has run by the first frame. It is the only writer of
+ * the bar ranges, and a load reaches it through a GraphElement child, a queued scroll update, or
+ * `NOTIFICATION_RESIZED` (`:868`), which a size that changed after the load sends.
+ */
+export function hasUpdatedScrollBars(input: UpdatedScrollBarsInput): boolean {
+  return (
+    input.hasGraphElement ||
+    input.queuedScrollOffsetUpdate ||
+    input.outOfTreeSize.x !== input.solvedSize.x ||
+    input.outOfTreeSize.y !== input.solvedSize.y
+  );
+}
+
+function barPlacement(
+  isVertical: boolean,
+  rect: Rect2,
+  theme: NativeTheme,
+  bounds: { min: number; max: number },
+  page: number,
+  scrollValue: number,
+  visible: boolean
+): ScrollBarPlacement {
+  const grabber = scrollBarGrabberGeometry(
+    isVertical,
+    isVertical ? rect.h : rect.w,
+    theme,
+    bounds.min,
+    bounds.max,
+    page,
+    ratioOf(scrollValue, bounds.min, bounds.max)
+  );
+  return { visible, rect, grabberRect: scrollBarGrabberRect(isVertical, { x: rect.w, y: rect.h }, grabber) };
+}
+
+/**
+ * The bars where nothing has called `_update_scrollbars` yet: the constructor's range with
+ * `page` 0, and the full-length rects `NOTIFICATION_READY` anchors (`:841-852`). Both are
+ * visible and overlap in the corner, and each grabber is its minimum size at the middle.
+ */
+export function graphEditConstructorScrollBars(
+  graphEditSize: Vector2,
+  theme: NativeTheme
+): GraphEditScrollBars {
+  const hMin = scrollBarMinimumSize(false, theme);
+  const vMin = scrollBarMinimumSize(true, theme);
+  const range = { min: CONSTRUCTOR_SCROLL_MIN, max: CONSTRUCTOR_SCROLL_MAX };
+  return {
+    horizontal: barPlacement(
+      false,
+      { x: 0, y: graphEditSize.y - hMin.y, w: graphEditSize.x, h: hMin.y },
+      theme,
+      range,
+      0,
+      0,
+      true
+    ),
+    vertical: barPlacement(
+      true,
+      { x: graphEditSize.x - vMin.x, y: 0, w: vMin.x, h: graphEditSize.y },
+      theme,
+      range,
+      0,
+      0,
+      true
+    ),
+  };
+}
+
 /** `Range::get_as_ratio()`'s own CLAMP (`range.cpp:308-324`); neither bar is ever `exp_edit`. */
 function ratioOf(value: number, min: number, max: number): number {
   if (max === min) return 1;
@@ -61,35 +146,24 @@ export function graphEditScrollBars(
     h: graphEditSize.y - (hVisible ? hMin.y : 0),
   };
 
-  const hGrabber = scrollBarGrabberGeometry(
-    false,
-    hRect.w,
-    theme,
-    bounds.min.x,
-    bounds.max.x,
-    graphEditSize.x,
-    ratioOf(scrollOffset.x, bounds.min.x, bounds.max.x)
-  );
-  const vGrabber = scrollBarGrabberGeometry(
-    true,
-    vRect.h,
-    theme,
-    bounds.min.y,
-    bounds.max.y,
-    graphEditSize.y,
-    ratioOf(scrollOffset.y, bounds.min.y, bounds.max.y)
-  );
-
   return {
-    horizontal: {
-      visible: hVisible,
-      rect: hRect,
-      grabberRect: scrollBarGrabberRect(false, { x: hRect.w, y: hRect.h }, hGrabber),
-    },
-    vertical: {
-      visible: vVisible,
-      rect: vRect,
-      grabberRect: scrollBarGrabberRect(true, { x: vRect.w, y: vRect.h }, vGrabber),
-    },
+    horizontal: barPlacement(
+      false,
+      hRect,
+      theme,
+      { min: bounds.min.x, max: bounds.max.x },
+      graphEditSize.x,
+      scrollOffset.x,
+      hVisible
+    ),
+    vertical: barPlacement(
+      true,
+      vRect,
+      theme,
+      { min: bounds.min.y, max: bounds.max.y },
+      graphEditSize.y,
+      scrollOffset.y,
+      vVisible
+    ),
   };
 }

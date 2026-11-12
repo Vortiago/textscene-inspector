@@ -494,3 +494,43 @@ describe('<TextEdit> — glyphs past the end margin', () => {
     expect(findPlainQuads(renderer.scene)).toHaveLength(0);
   });
 });
+
+/** Every `<StyleBoxQuad>` mesh: the panel, and a track and a grabber for each scroll bar. */
+function chromeMeshCount(scene: Rendered['scene']) {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined).length;
+}
+
+const PANEL_MESHES = 1;
+const BAR_MESHES = 2;
+const SIX_LINES = 'one\ntwo\nthree\nfour\nfive\nsix';
+
+describe('<TextEdit> — scroll bars (text_edit.cpp:8587-8656)', () => {
+  it('draws one vertical bar, a track and a grabber, for six rows in 100 px', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={solveNode({ text: SIX_LINES })} rect={RECT} renderOrder={0} />
+    );
+    expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES + BAR_MESHES);
+  });
+
+  it('draws no bar for two rows', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'one\ntwo' })} rect={RECT} renderOrder={0} />
+    );
+    expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES);
+  });
+
+  it('draws no bar under scroll_fit_content_height', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: SIX_LINES, fitContentHeight: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES);
+  });
+});

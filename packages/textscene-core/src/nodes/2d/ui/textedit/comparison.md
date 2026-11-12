@@ -106,6 +106,15 @@ that breaks at its own newlines and at the wrap width. It paints at
 the node's direction and language but never `structured_text_bidi_override`
 (`text_edit.cpp:3348-3351`). `fit_content_*` measures its rows and widest row.
 
+The two scroll bars draw over the text, at value 0 (`text_edit.cpp:8587-8656`). The vertical bar shows when the
+rows of the buffer, wrapped rows counted, outnumber the visible rows and `scroll_fit_content_height` is off.
+The horizontal bar shows when the widest row, with the gutters and the minimap, is wider than the box less the
+style margins. A horizontal bar lowers the visible rows by its own height. `scroll_past_end_of_file` adds the
+visible rows less one to the vertical range. A vertical bar narrows the wrap width by its own width
+(`:8541-8543`), so a line can wrap only because the bar shows. Under a right-to-left layout both bars mirror
+whole: the vertical bar sits at the left edge and the horizontal bar starts after it. The previewer paints the
+bars with the same tint as the panel.
+
 A row wider than the text band drops each glyph whose advance box crosses `xmargin_beg` or
 `xmargin_end`. The glyph goes whole, not clipped. The walk stops at the end margin
 (`text_edit.cpp:1724-1738`), so a `draw_tabs` icon past that glyph is not drawn.
@@ -118,7 +127,9 @@ always shapes at the class default of 4.
 ## Known limitations
 
 - **Not drawn** The selection, IME composition, brace-match underline, word-highlight box,
-  search-result box, minimap and scrollbars, which need state a `.tscn` cannot carry.
+  search-result box and the minimap, which need state a `.tscn` cannot carry.
+- **Approximated** The minimap keeps only its width term, in the wrap width and the horizontal range.
+- **Not drawn** A scroll bar's non-zero value, since `scroll_horizontal` and `scroll_vertical` stay unread.
 - **Approximated** `draw_tabs`/`draw_spaces` overlay the `tab`/`space` theme icons
   at an unscaled size and a row-centred vertical offset, not Godot's own
   ascent-relative one (`Component.tsx`'s own doc).

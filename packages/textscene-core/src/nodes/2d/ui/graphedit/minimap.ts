@@ -78,6 +78,12 @@ export interface GraphScrollBounds {
   max: Vector2;
 }
 
+/** `min_scroll_offset` and `max_scroll_offset` as GraphEdit's constructor leaves them, until `_update_scrollbars` runs. */
+export const CONSTRUCTOR_SCROLL_BOUNDS: GraphScrollBounds = {
+  min: { x: 0, y: 0 },
+  max: { x: 0, y: 0 },
+};
+
 /**
  * `GraphEdit::_update_scrollbars`' own screen-space bounding box (`:472-493`). It merges into a
  * default `Rect2`, so the graph origin is always inside (`core/math/rect2.h:165-180`). No visibility
@@ -215,6 +221,8 @@ const GRAPH_FRAME_DEFAULT_TINT: Rgba = { r: 0.3, g: 0.3, b: 0.3, a: 0.75 };
 
 interface GraphEditElementView {
   bounds: GraphScrollBounds;
+  /** Whether GraphEdit has a child of a GraphElement class, hidden or not. */
+  hasGraphElement: boolean;
   /** Whether any GraphElement child, hidden or not, has a `position_offset` other than `(0, 0)`. */
   hasPositionedChild: boolean;
   /** Frames first, then nodes, each from the last child backwards: `_minimap_draw`'s own two loops (`:1821,1844`), so a frame never covers a node. */
@@ -279,6 +287,7 @@ export function graphEditElements(
       zoom,
       graphEditSize
     ),
+    hasGraphElement: boxes.length > 0,
     hasPositionedChild: boxes.some(({ box }) => box.positionOffset.x !== 0 || box.positionOffset.y !== 0),
     minimapElements,
   };

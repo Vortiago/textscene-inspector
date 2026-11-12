@@ -1,0 +1,104 @@
+; Seven TextEdit and CodeEdit boxes of 240x84. The one variable of each: TextEdit has six lines (vertical bar);
+; Wide has a 52 character line, wrap off (horizontal bar); Wrap has a 62 character line with wrap_mode = 1 (bar,
+; and the wrap width takes the bar's 8 px); Fits has two lines (no bar); Code is a CodeEdit with six lines and
+; line numbers; PastEnd sets scroll_past_end_of_file (a shorter grabber); FitHeight sets scroll_fit_content_height
+; (no bar). TextEdit::_update_scrollbars (text_edit.cpp:8587-8656) decides each. No other fixture overflows a box.
+
+[gd_scene load_steps=1 format=3 uid="uid://unittexteditscrollbar"]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="TextEdit" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 420.0
+offset_right = 260.0
+offset_bottom = 504.0
+text = "one
+two
+three
+four
+five
+six"
+
+[node name="Wide" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 300.0
+offset_top = 420.0
+offset_right = 540.0
+offset_bottom = 504.0
+text = "a long line that runs past the right edge of the box
+two"
+
+[node name="Wrap" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 580.0
+offset_top = 420.0
+offset_right = 820.0
+offset_bottom = 504.0
+text = "a long line that runs past the right edge of the box and wraps
+two
+three
+four"
+wrap_mode = 1
+
+[node name="Fits" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 860.0
+offset_top = 420.0
+offset_right = 1100.0
+offset_bottom = 504.0
+text = "one
+two"
+
+[node name="Code" type="CodeEdit" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 530.0
+offset_right = 260.0
+offset_bottom = 614.0
+text = "one
+two
+three
+four
+five
+six"
+gutters_draw_line_numbers = true
+
+[node name="PastEnd" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 300.0
+offset_top = 530.0
+offset_right = 540.0
+offset_bottom = 614.0
+text = "one
+two
+three
+four
+five
+six"
+scroll_past_end_of_file = true
+
+[node name="FitHeight" type="TextEdit" parent="."]
+layout_mode = 0
+offset_left = 580.0
+offset_top = 530.0
+offset_right = 820.0
+offset_bottom = 614.0
+text = "one
+two
+three
+four
+five
+six"
+scroll_fit_content_height = true

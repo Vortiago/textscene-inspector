@@ -17,6 +17,7 @@ describe('parseTextEdit', () => {
       highlight_current_line: 'true',
       scroll_fit_content_width: 'true',
       scroll_fit_content_height: 'true',
+      scroll_past_end_of_file: 'true',
       minimap_draw: 'true',
       minimap_width: '120',
       draw_control_chars: 'true',
@@ -32,6 +33,7 @@ describe('parseTextEdit', () => {
     expect(result.highlightCurrentLine).toBe(true);
     expect(result.fitContentWidth).toBe(true);
     expect(result.fitContentHeight).toBe(true);
+    expect(result.scrollPastEndOfFile).toBe(true);
     expect(result.minimapDraw).toBe(true);
     expect(result.minimapWidth).toBe(120);
     expect(result.drawControlChars).toBe(true);

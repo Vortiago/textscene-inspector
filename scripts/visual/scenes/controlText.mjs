@@ -174,6 +174,7 @@ export const CONTROL_TEXT_SCENES = [
   { name: 'text-edit-rtl', file: 'unit-text-edit-rtl.tscn' },
   { name: 'text-edit-placeholder', file: 'unit-text-edit-placeholder.tscn' },
   { name: 'text-edit-overflow', file: 'unit-text-edit-overflow.tscn' },
+  { name: 'text-edit-scroll-bars', file: 'unit-text-edit-scroll-bars.tscn' },
   { name: 'code-edit-empty-gutter', file: 'unit-code-edit-empty-gutter.tscn' },
   { name: 'code-edit-rtl', file: 'unit-code-edit-rtl.tscn' },
   { name: 'rich-text-label-rtl', file: 'unit-rich-text-label-rtl.tscn' },
