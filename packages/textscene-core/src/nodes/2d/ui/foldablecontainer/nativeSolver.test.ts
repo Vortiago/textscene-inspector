@@ -248,6 +248,26 @@ describe('foldableContainerChildVisibility — `c->set_visible(!folded)` (foldab
   });
 });
 
+describe('foldableContainerTitleShape font size (default_theme.cpp:1322)', () => {
+  it.each([1, 1.5, 2])('is 16 px at theme scale %s, unscaled', (scale) => {
+    expect(foldableContainerTitleShape(node({}), nativeTheme(scale)).fontSizePx).toBe(16);
+  });
+
+  it('keeps an authored theme_override_font_sizes/font_size at any scale', () => {
+    const authored = node({ themeOverrideFontSizes: { font_size: 30 } });
+    expect(foldableContainerTitleShape(authored, nativeTheme(1.5)).fontSizePx).toBe(30);
+  });
+});
+
+describe('foldableContainerTitleShape content panel margin (default_theme.cpp:1314)', () => {
+  it.each([1, 1.5, 2])('is 4 px on every side at theme scale %s, unscaled', (scale) => {
+    const margin = { left: 4, top: 4, right: 4, bottom: 4 };
+    expect(foldableContainerTitleShape(node({}), nativeTheme(scale)).panelStyle.contentMargin).toEqual(
+      margin
+    );
+  });
+});
+
 // `_shape` (`foldable_container.cpp:487-499`): INHERITED takes the layout direction, an empty language the locale.
 describe('foldableContainerTitleShape direction', () => {
   function visualTitle(props: Partial<FoldableContainerProperties>, rtl = false): string {

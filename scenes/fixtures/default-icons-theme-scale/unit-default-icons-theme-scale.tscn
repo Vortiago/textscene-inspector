@@ -1,6 +1,6 @@
 ; The one variable: `gui/theme/default_theme_scale = 1.5`. Every default-theme icon and every Control's
 ; minimum size scale by it, and the icons keep the browser raster of the scaled SVG (`default_theme.cpp:82-84`).
-; No FoldableContainer: Godot keeps its title at 16 px (`default_theme.cpp:1322`), which the previewer does not yet.
+; A FoldableContainer title and the Header* Label variations keep their 16 px base at this scale (`default_theme.cpp:395-401,1322`).
 
 [gd_scene load_steps=2 format=3]
 
@@ -179,3 +179,51 @@ offset_top = 8.0
 offset_right = 1090.0
 offset_bottom = 620.0
 color = Color(0.4, 0.6, 0.3, 1)
+
+[node name="Open" type="FoldableContainer" parent="."]
+layout_mode = 0
+offset_left = 300.0
+offset_top = 470.0
+offset_right = 440.0
+offset_bottom = 540.0
+title = "Open"
+
+[node name="OpenBody" type="Label" parent="Open"]
+layout_mode = 2
+text = "Body"
+
+[node name="Closed" type="FoldableContainer" parent="."]
+layout_mode = 0
+offset_left = 300.0
+offset_top = 570.0
+offset_right = 440.0
+offset_bottom = 610.0
+folded = true
+title = "Closed"
+
+[node name="HeaderSmall" type="Label" parent="."]
+layout_mode = 0
+offset_left = 470.0
+offset_top = 470.0
+offset_right = 640.0
+offset_bottom = 500.0
+theme_type_variation = &"HeaderSmall"
+text = "Header small"
+
+[node name="HeaderMedium" type="Label" parent="."]
+layout_mode = 0
+offset_left = 470.0
+offset_top = 510.0
+offset_right = 640.0
+offset_bottom = 540.0
+theme_type_variation = &"HeaderMedium"
+text = "Header medium"
+
+[node name="HeaderLarge" type="Label" parent="."]
+layout_mode = 0
+offset_left = 470.0
+offset_top = 550.0
+offset_right = 640.0
+offset_bottom = 590.0
+theme_type_variation = &"HeaderLarge"
+text = "Header large"
