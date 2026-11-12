@@ -187,13 +187,18 @@ export function useCanvasItemTint(
   const space = useCanvasColorSpace();
   const linearModulate = useGodotLinearColor(ownMultiplier);
   // Memoised as a whole: a Control painter takes it as a prop and memoises on it.
+  // Its own memo: it does not read `self_modulate`, so animating that leaves its identity alone.
+  const internalChild = useMemo(
+    () => foldOwnPixelTint(inherited, ownMultiplier, space, linearModulate),
+    [inherited, ownMultiplier, space, linearModulate]
+  );
   return useMemo(
     () => ({
       inherited,
       self,
       ...foldOwnPixelTint(self, ownMultiplier, space, linearModulate),
-      internalChild: foldOwnPixelTint(inherited, ownMultiplier, space, linearModulate),
+      internalChild,
     }),
-    [inherited, self, ownMultiplier, space, linearModulate]
+    [inherited, self, ownMultiplier, space, linearModulate, internalChild]
   );
 }

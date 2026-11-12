@@ -7,7 +7,6 @@ import type ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { NativeControlComponentProps } from '../../ControlComponentRegistry';
 import { painterTint } from './painterProps';
 import { bundledRunOf } from './bundledRunStub';
-import { drawnStyleBox } from './drawnStyleBox';
 
 type Scene = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>['scene'];
 
@@ -54,13 +53,4 @@ export function countTintSplit(scene: Scene): TintSplit {
     else if (color.g > 0.0001 && color.r < 0.0001 && color.b < 0.0001) split.child++;
   }
   return split;
-}
-
-/** A white box with a 4 px content margin: any other colour times a pure tint of the other channel reads as black. */
-export function whiteStyleBox() {
-  return drawnStyleBox({
-    bg_color: 'Color(1, 1, 1, 1)',
-    content_margin_top: '4',
-    content_margin_bottom: '4',
-  });
 }

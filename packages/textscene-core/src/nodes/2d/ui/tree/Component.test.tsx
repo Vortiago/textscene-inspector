@@ -11,7 +11,8 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { Tree } from './Component';
 import type { TreeProperties } from './types';
-import { countTintSplit, splitTints, whiteStyleBox } from '../../../../r3f/controls/native/testing/tintSplit';
+import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -163,6 +164,10 @@ describe('<Tree> — RTL header row', () => {
     expect(await headerXs(true)).toEqual([0, 5, 102, 199]);
   });
 });
+
+/** White with a 4 px margin: any other colour times a pure tint of another channel reads as black. */
+const whiteStyleBox = () =>
+  drawnStyleBox({ bg_color: 'Color(1, 1, 1, 1)', content_margin_top: '4', content_margin_bottom: '4' });
 
 describe('<Tree> — self_modulate', () => {
   it('tints the panel and the header cells with tint: Tree::set_self_modulate passes it to both child items (tree.cpp:5236-5243)', async () => {
