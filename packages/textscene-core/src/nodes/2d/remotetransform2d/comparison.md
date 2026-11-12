@@ -13,6 +13,9 @@ RemoteTransform2D draws nothing and copies its transform onto the node `remote_p
 names. The previewer applies that over the live scene tree, so the target jumps to the
 relay's position, also across an instanced scene boundary.
 
+A relay below a Control composes the Control where its offsets state its position, with its rotation and scale. A relay below a Bone2D that a modification stack moves pushes the pose the stack solves.
+Godot's Skeleton2D sets the bone before the relay pushes.
+
 A relay pushes again each time its own global transform changes, so a relay chain
 settles as in Godot, whatever its order in the file. A relay cycle draws the
 frame that `pnpm ref:godot` captures, as `docs/comparison/README.md` explains, and the
@@ -48,3 +51,4 @@ Strict parsing format-checks these `RemoteTransform2D` properties, plus 12 inher
 ## Known limitations
 
 - **Needs runtime** A relay cycle moves on every frame in Godot, and the previewer shows one frame of that motion.
+- **Approximated** A relay in global coordinates pushes nothing below a Control that a Container lays out or whose rect the file does not state alone.

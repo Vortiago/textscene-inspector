@@ -13,7 +13,7 @@ import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
 import { liveGlobalTransform3D, nodesOnTheWayTo } from '../../../r3f/liveGlobalTransform.js';
 import { resolveLiteralOnLiveTree } from '../../../r3f/nodePathUniqueNames.js';
-import type { NodePatch, NodePatches } from '../../../r3f/nodePatch.js';
+import { NO_PATCHES, layeredPatches, type NodePatch, type NodePatches } from '../../../r3f/nodePatch.js';
 import { sameData } from '../../../utils/sameData.js';
 import type { Transform3D } from '../../../godot/math/transform3d.js';
 import {
@@ -47,11 +47,17 @@ const NO_POSES: RelayPoses = { placed: new Map(), drawn: new Map() };
  * reaches it (`remote_transform_3d.cpp:118-126`, `remote_transform_2d.cpp:127-136`), and a push
  * queues every relay its target carries, so the pass replays the flushes to the `ref:godot` harness
  * frame. A relay cycle takes the pose of that frame. `relayOf` says which targets Godot refuses.
+ * `solvedBones` gives the bones a modification stack moves (`skeleton_2d.cpp:786-796`). A push reads
+ * them under `placed`, which never holds them, and the pass asks for them only when a 2D push reads a pose.
  */
-export function applyRemoteTransforms(tree: LiveTree): RelayPoses {
+export function applyRemoteTransforms(
+  tree: LiveTree,
+  solvedBones: () => NodePatches = () => NO_PATCHES
+): RelayPoses {
   const relays = relaysOf(tree);
   if (relays.length === 0) return NO_POSES;
   const placed = new Map<string, NodePatch>();
+  const posed = layeredPatches({ get: (path) => solvedBones().get(path) }, placed);
 
   const queuedBy = entriesQueuedByAMoveOf(tree, relays);
   const entered = entriesOnTheListAtEnterTree(tree, relays, queuedBy);
@@ -60,7 +66,7 @@ export function applyRemoteTransforms(tree: LiveTree): RelayPoses {
   // stops at the relay that is already pushing.
   const pushing = new Set<Relay>();
   const push = (relay: Relay, queue: QueueTransformChange<ListEntry>): void => {
-    if (pushing.has(relay) || !moveTarget(relay, tree, placed)) return;
+    if (pushing.has(relay) || !moveTarget(relay, tree, placed, posed)) return;
     pushing.add(relay);
     for (const queued of queuedBy(relay)) queue(queued);
     // A local relay pushes the moment its own local transform changes (`node_3d.cpp:398-400`,

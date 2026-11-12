@@ -122,6 +122,9 @@ export const TILE_AND_TARGET_SCENES = [
   // The pentagon is authored at the grey ghost and driven to the relay's
   // upper right.
   { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', mode: '2d' },
+  // A relay below a Control that is offset, turned and scaled pushes the pose that includes it. Godot
+  // probe: green (76,204,102) at (145,92), the relay's place; the background at the origin.
+  { name: 'remote-transform-2d-control', file: 'unit-remote-transform-2d-control.tscn', mode: '2d' },
   // The same relays and targets inside an instanced scene stand where they do in their own files.
   { name: 'remote-transform-3d-instanced', file: 'unit-remote-transform-3d-instanced.tscn' },
   { name: 'remote-transform-2d-instanced', file: 'unit-remote-transform-2d-instanced.tscn', mode: '2d' },
