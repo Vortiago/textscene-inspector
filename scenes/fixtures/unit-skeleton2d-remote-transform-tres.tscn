@@ -1,0 +1,36 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Resource" path="res://unit-skeleton2d-remote-transform-tres-stack.tres" id="1_stack"]
+
+; Moves one variable: the modification stack of the Skeleton2D in a .tres file instead of the scene.
+; The relay copies the pose the stack solves from the loaded file, so the green square stands where
+; unit-skeleton2d-remote-transform draws it. No other golden loads a stack from a file.
+
+[node name="Root" type="Node2D"]
+
+[node name="Skeleton" type="Skeleton2D" parent="."]
+position = Vector2(300, 150)
+modification_stack = ExtResource("1_stack")
+
+[node name="Arm" type="Bone2D" parent="Skeleton"]
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+auto_calculate_length_and_angle = false
+length = 200.0
+
+[node name="Bar" type="Polygon2D" parent="Skeleton/Arm"]
+color = Color(0.95, 0.55, 0.15, 1)
+polygon = PackedVector2Array(0, -10, 200, -10, 200, 10, 0, 10)
+
+[node name="Hand" type="RemoteTransform2D" parent="Skeleton/Arm"]
+position = Vector2(200, 0)
+remote_path = NodePath("../../../Held")
+
+[node name="Held" type="Polygon2D" parent="."]
+color = Color(0.3, 0.8, 0.4, 1)
+polygon = PackedVector2Array(-15, -15, 15, -15, 15, 15, -15, 15)
+
+[node name="Target" type="Node2D" parent="."]
+position = Vector2(300, 400)
+
+[node name="Mark" type="Polygon2D" parent="Target"]
+color = Color(0.9, 0.25, 0.25, 1)
+polygon = PackedVector2Array(-6, -6, 6, -6, 6, 6, -6, 6)

@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+; Moves one variable: a RemoteTransform2D below a Bone2D that a SkeletonModification2DLookAt turns.
+; The relay copies the pose the stack solves, so the green square stands at the end of the turned
+; arm, below the skeleton. No other golden has a relay below a solved bone, so none shows a
+; regression in the pose the relay reads.
+
+[sub_resource type="SkeletonModification2DLookAt" id="lookat"]
+bone_index = 0
+bone2d_node = NodePath("Arm")
+target_nodepath = NodePath("../Target")
+
+[sub_resource type="SkeletonModificationStack2D" id="stack"]
+enabled = true
+modification_count = 1
+modifications/0 = SubResource("lookat")
+
+[node name="Root" type="Node2D"]
+
+[node name="Skeleton" type="Skeleton2D" parent="."]
+position = Vector2(300, 150)
+modification_stack = SubResource("stack")
+
+[node name="Arm" type="Bone2D" parent="Skeleton"]
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+auto_calculate_length_and_angle = false
+length = 200.0
+
+[node name="Bar" type="Polygon2D" parent="Skeleton/Arm"]
+color = Color(0.95, 0.55, 0.15, 1)
+polygon = PackedVector2Array(0, -10, 200, -10, 200, 10, 0, 10)
+
+[node name="Hand" type="RemoteTransform2D" parent="Skeleton/Arm"]
+position = Vector2(200, 0)
+remote_path = NodePath("../../../Held")
+
+[node name="Held" type="Polygon2D" parent="."]
+color = Color(0.3, 0.8, 0.4, 1)
+polygon = PackedVector2Array(-15, -15, 15, -15, 15, 15, -15, 15)
+
+[node name="Target" type="Node2D" parent="."]
+position = Vector2(300, 400)
+
+[node name="Mark" type="Polygon2D" parent="Target"]
+color = Color(0.9, 0.25, 0.25, 1)
+polygon = PackedVector2Array(-6, -6, 6, -6, 6, 6, -6, 6)

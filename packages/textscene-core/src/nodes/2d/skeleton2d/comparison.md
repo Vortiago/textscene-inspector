@@ -45,6 +45,13 @@ to the root. The magnet position and the target rotation of a joint apply. A joi
 Bone2D of another skeleton moves that bone, and the bone of this skeleton at the same index takes
 its transform.
 
+## RemoteTransform2D below a bone
+<!-- compare: image=unit-skeleton2d-remote-transform status=done fixture=unit-skeleton2d-remote-transform.tscn -->
+
+A `RemoteTransform2D` below a bone pushes the pose the stack solves. Its target follows the
+turned bone, so the green square stands at the end of the arm. The Cameras panel frames a Camera2D
+below a bone at the solved bone too.
+
 ## Linting
 
 <!-- lint:begin Skeleton2D -->
@@ -72,5 +79,5 @@ resource reference, and a stack that does not decode leaves the bones unsolved.
   nodes, which the previewer does not simulate.
 - **Needs runtime** A modification in the physics `execution_mode` moves no bone, where a running
   game applies it after each physics tick.
-- **Approximated** A RemoteTransform2D below a bone, and the Cameras panel for a Camera2D there,
-  read the bone transform of the scene file, not the solved pose.
+- **Approximated** The same readers solve from the bone transforms of the scene file, so a pose
+  that an AnimationPlayer gives a bone does not reach them.
