@@ -2,7 +2,7 @@
  * `<FoldableContainer>` draws the title bar, the arrow and the title text, and the
  * content panel only when not folded. The tests assert structure and tint, not pixels.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -13,6 +13,16 @@ import type { FoldableContainerProperties } from './types';
 import { FoldableContainer } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  bundledRunMeshes,
+  bundledRuns,
+  inkedGlyphCount,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -32,14 +42,6 @@ function findChromeMeshes(scene: Rendered['scene']) {
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
     .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
-}
-
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMeshes(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
 /** `<ControlQuad>` (the arrow icon) is a `PlaneGeometry`, identified by its own `.parameters.width`. */
@@ -69,7 +71,7 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
     // One title StyleBox, no content panel StyleBox.
     expect(findChromeMeshes(renderer.scene)).toHaveLength(1);
     expect(findIconMeshes(renderer.scene)).toHaveLength(1);
-    expect(findTextMeshes(renderer.scene)).toHaveLength(1);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(1);
   });
 
   it('unfolded draws the title bar chrome AND the content panel chrome', async () => {
@@ -93,7 +95,7 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMeshes(renderer.scene)).toHaveLength(0);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
     expect(findIconMeshes(renderer.scene)).toHaveLength(1);
   });
 
@@ -106,9 +108,9 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const expandedMaterial = findTextMeshes(expanded.scene)[0]!.material as THREE.ShaderMaterial;
+    const expandedTint = bundledRuns(expanded.scene)[0]!.tint;
     // control_font_color = 0.875 sRGB, decoded to linear inside the shader uniform.
-    expect(expandedMaterial.uniforms.uColor!.value.x).toBeLessThan(0.9);
+    expect(expandedTint.r).toBeLessThan(0.9);
 
     const folded = await ReactThreeTestRenderer.create(
       <FoldableContainer
@@ -118,9 +120,9 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const foldedMaterial = findTextMeshes(folded.scene)[0]!.material as THREE.ShaderMaterial;
+    const foldedTint = bundledRuns(folded.scene)[0]!.tint;
     // control_font_pressed_color = Color(1, 1, 1): linear 1 exactly.
-    expect(foldedMaterial.uniforms.uColor!.value.x).toBeCloseTo(1, 5);
+    expect(foldedTint.r).toBeCloseTo(1, 5);
   });
 
   it('shifts the title text right for title_alignment CENTER/RIGHT, within the space left of the icon', async () => {
@@ -135,7 +137,7 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const leftMesh = findTextMeshes(left.scene)[0]!;
+    const leftMesh = bundledRunMeshes(left.scene)[0]!;
     expect((leftMesh.parent as THREE.Object3D).position.x).toBe(4 + 16 + 2);
 
     const center = await ReactThreeTestRenderer.create(
@@ -146,7 +148,7 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const centerMesh = findTextMeshes(center.scene)[0]!;
+    const centerMesh = bundledRunMeshes(center.scene)[0]!;
     expect((centerMesh.parent as THREE.Object3D).position.x).toBe(4 + 16 + 2 + Math.floor(83 / 2));
 
     const right = await ReactThreeTestRenderer.create(
@@ -157,7 +159,7 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const rightMesh = findTextMeshes(right.scene)[0]!;
+    const rightMesh = bundledRunMeshes(right.scene)[0]!;
     expect((rightMesh.parent as THREE.Object3D).position.x).toBe(4 + 16 + 2 + 83);
   });
 
@@ -172,7 +174,7 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
     const icon = findIconMeshes(renderer.scene)[0]!;
     expect((icon.parent as THREE.Object3D).position.x).toBe(120 - 4 - 16);
     // title_alignment RIGHT becomes LEFT under RTL, so no alignment shift.
-    const text = findTextMeshes(renderer.scene)[0]!;
+    const text = bundledRunMeshes(renderer.scene)[0]!;
     expect((text.parent as THREE.Object3D).position.x).toBe(4);
   });
 
@@ -183,7 +185,7 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
       const r = await ReactThreeTestRenderer.create(
         <FoldableContainer {...painterEnv()} solveNode={n} rect={RECT} renderOrder={0} />
       );
-      return (findTextMeshes(r.scene)[0]!.parent as THREE.Object3D).position.x;
+      return (bundledRunMeshes(r.scene)[0]!.parent as THREE.Object3D).position.x;
     };
     expect(await alignmentX(0)).toBe(4 + 83); // LEFT -> RIGHT
     expect(await alignmentX(1)).toBe(4 + Math.floor(83 / 2)); // CENTER unchanged
@@ -224,8 +226,8 @@ describe('<FoldableContainer> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const quadCount = (r: Rendered) => findTextMeshes(r.scene)[0]!.geometry.attributes.position!.count / 4;
-    expect(quadCount(trimmed)).toBeLessThan(quadCount(untrimmed));
+    const inkedTitleGlyphs = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
+    expect(inkedTitleGlyphs(trimmed)).toBeLessThan(inkedTitleGlyphs(untrimmed));
   });
 });
 

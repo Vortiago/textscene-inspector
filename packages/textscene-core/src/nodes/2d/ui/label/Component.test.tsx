@@ -1,10 +1,10 @@
 /**
- * `<Label>` render contract through the MSDF text engine: mesh count, group
- * position and material uniforms. The golden images own the pixels.
+ * `<Label>` render contract: the runs it hands the text engine, their count, place, tint and
+ * layout. The golden images own the pixels.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import * as THREE from 'three';
+import type * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { LABEL_SETTINGS_FONT_LOADING, type SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -15,6 +15,17 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { Label } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  inkedGlyphCount,
+  onlyBundledRun,
+  runGlyphs,
+  runPenExtentPx,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -29,10 +40,6 @@ function solveNode(path: string, properties: Record<string, unknown>): SolveNode
   const constants =
     (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
   return { ...emptySolveNode(), path, node: tscnNode, colors, constants };
-}
-
-function expectedLinear(r: number, g: number, b: number): THREE.Color {
-  return new THREE.Color().setRGB(r, g, b, THREE.SRGBColorSpace);
 }
 
 async function render(properties: Record<string, unknown>, rect: Rect2 = { x: 0, y: 0, w: 200, h: 200 }) {
@@ -72,7 +79,7 @@ describe('<Label> (isolated painter contract)', () => {
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(5);
   });
 
-  it('multiplies the resolved text colour by the walker-composed tint, converted to linear exactly once', async () => {
+  it('multiplies the resolved text colour by the walker-composed tint, in sRGB', async () => {
     const node = solveNode('L', {
       text: 'A',
       themeOverrideColors: { font_color: { r: 0.8, g: 0.4, b: 0.2, a: 0.5 } },
@@ -87,23 +94,17 @@ describe('<Label> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
+    const { tint } = onlyBundledRun(renderer.scene);
     // own(sRGB) = tint(.5,.25,.5,.5) * font_color(.8,.4,.2,.5) = (.4,.1,.1,.25)
-    const expected = expectedLinear(0.4, 0.1, 0.1);
-    const uColor = mat.uniforms.uColor!.value as THREE.Vector3;
-    expect(uColor.x).toBeCloseTo(expected.r, 6);
-    expect(uColor.y).toBeCloseTo(expected.g, 6);
-    expect(uColor.z).toBeCloseTo(expected.b, 6);
-    expect(mat.uniforms.uOpacity!.value).toBeCloseTo(0.25, 6);
+    expect(tint.r).toBeCloseTo(0.4, 6);
+    expect(tint.g).toBeCloseTo(0.1, 6);
+    expect(tint.b).toBeCloseTo(0.1, 6);
+    expect(tint.a).toBeCloseTo(0.25, 6);
   });
 
   it('defaults to opaque WHITE text (Label’s own default_theme.cpp literal), not the shared gray control_font_color', async () => {
     const renderer = await render({ text: 'A' });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    const uColor = mat.uniforms.uColor!.value as THREE.Vector3;
-    const expected = expectedLinear(1, 1, 1);
-    expect(uColor.x).toBeCloseTo(expected.r, 6);
-    expect(mat.uniforms.uOpacity!.value).toBe(1);
+    expect(onlyBundledRun(renderer.scene).tint).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 
   it('honours horizontal_alignment (1, CENTER): each line group centers independently by its own width', async () => {
@@ -122,23 +123,12 @@ describe('<Label> (isolated painter contract)', () => {
     expect(groups.every((g) => g.position.y === 0)).toBe(true);
   });
 
-  it('honours uppercase: the SAME source text renders WIDER glyphs than lowercase (A/B are wider than a/b in this atlas)', async () => {
+  it('honours uppercase: the same source text shapes wider glyphs than lowercase (A and B are wider than a and b)', async () => {
     const lower = await render({ text: 'ab', uppercase: false });
     const upper = await render({ text: 'ab', uppercase: true });
-    const lowerGeo = (lower.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
-    const upperGeo = (upper.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
-    const extent = (geo: THREE.BufferGeometry) => {
-      const pos = geo.getAttribute('position');
-      let min = Infinity;
-      let max = -Infinity;
-      for (let i = 0; i < pos.count; i++) {
-        const x = pos.getX(i);
-        min = Math.min(min, x);
-        max = Math.max(max, x);
-      }
-      return max - min;
-    };
-    expect(extent(upperGeo)).toBeGreaterThan(extent(lowerGeo));
+    expect(runPenExtentPx(onlyBundledRun(upper.scene))).toBeGreaterThan(
+      runPenExtentPx(onlyBundledRun(lower.scene))
+    );
   });
 
   it('honours autowrap_mode: WORD_SMART (3) wraps into more lines than OFF (0) at the same narrow rect', async () => {
@@ -153,38 +143,18 @@ describe('<Label> (isolated painter contract)', () => {
   it('reads theme_override_font_sizes/font_size over the theme default', async () => {
     const small = await render({ text: 'A' });
     const big = await render({ text: 'A', themeOverrideFontSizes: { font_size: 32 } });
-    const extent = (geo: THREE.BufferGeometry) => {
-      const pos = geo.getAttribute('position');
-      let min = Infinity;
-      let max = -Infinity;
-      for (let i = 0; i < pos.count; i++) {
-        max = Math.max(max, pos.getX(i));
-        min = Math.min(min, pos.getX(i));
-      }
-      return max - min;
-    };
-    const smallGeo = (small.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
-    const bigGeo = (big.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
-    expect(extent(bigGeo)).toBeCloseTo(extent(smallGeo) * 2, 0);
+    expect(onlyBundledRun(small.scene).fontSizePx).toBe(16);
+    expect(onlyBundledRun(big.scene).fontSizePx).toBe(32);
   });
 
-  it('is transparent, non-depth-writing, and spreads the shared clip planes hook (edge: empty list)', async () => {
+  it('hands the run no clip planes with no clip in force (edge: empty list)', async () => {
     const renderer = await render({ text: 'A' });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.transparent).toBe(true);
-    expect(mat.depthWrite).toBe(false);
-    expect(mat.clippingPlanes).toEqual([]);
+    expect(onlyBundledRun(renderer.scene).clippingPlanes).toEqual([]);
   });
-
-  function quadCount(renderer: Awaited<ReturnType<typeof render>>): number {
-    const geometry = (renderer.scene.findByType('Mesh').instance as THREE.Mesh)
-      .geometry as THREE.BufferGeometry;
-    return geometry.attributes.position!.count / 4;
-  }
 
   it('text_overrun_behavior trims to the rect width, replacing the tail with an ellipsis glyph', async () => {
     const untrimmed = await render({ text: 'AAAAAAAAAAAA' }, { x: 0, y: 0, w: 100, h: 200 });
-    expect(quadCount(untrimmed)).toBe(12);
+    expect(inkedGlyphCount(onlyBundledRun(untrimmed.scene))).toBe(12);
 
     // OVERRUN_TRIM_ELLIPSIS (3): text_overrun.test.ts derives "AAAAAAAA…" (9
     // ink glyphs) at this same width/font size.
@@ -192,37 +162,27 @@ describe('<Label> (isolated painter contract)', () => {
       { text: 'AAAAAAAAAAAA', overrunBehavior: 3 },
       { x: 0, y: 0, w: 100, h: 200 }
     );
-    expect(quadCount(trimmed)).toBe(9);
+    expect(inkedGlyphCount(onlyBundledRun(trimmed.scene))).toBe(9);
   });
 
   it('clip_text scissors this Label to its own rect (4 axis-aligned planes with no ancestor clip)', async () => {
     const renderer = await render({ text: 'A', clipText: true });
-    const mat = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.ShaderMaterial;
-    expect(mat.clippingPlanes).toHaveLength(4);
+    expect(onlyBundledRun(renderer.scene).clippingPlanes).toHaveLength(4);
   });
 
   it('justification_flags without WORD_BOUND (2) leaves a FILL line ragged — the default flags (label.h:46) would have stretched it', async () => {
     const rect = { x: 0, y: 0, w: 200, h: 200 };
     const stretched = await render({ text: 'A B', horizontalAlignment: 3 }, rect);
     const ragged = await render({ text: 'A B', horizontalAlignment: 3, justificationFlags: 0 }, rect);
-    const width = (r: Awaited<ReturnType<typeof render>>) => {
-      const geo = (r.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
-      const xs = geo.attributes.position!.array as Float32Array;
-      let max = -Infinity;
-      for (let i = 0; i < xs.length; i += 3) max = Math.max(max, xs[i]!);
-      return max;
-    };
-    expect(width(stretched)).toBeGreaterThan(width(ragged));
+    expect(runPenExtentPx(onlyBundledRun(stretched.scene))).toBeGreaterThan(
+      runPenExtentPx(onlyBundledRun(ragged.scene))
+    );
   });
 
   it('tab_stops moves the glyph after a tab onto the configured stop', async () => {
     const renderer = await render({ text: 'A\tB', tabStopsPx: [40] });
-    const geo = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
-    const xs = geo.attributes.position!.array as Float32Array;
-    // Quad 0 = 'A' (4 verts), quad 1 = 'B' -- its top-left vertex.x is the pen
-    // x after the tab, plus the glyph's own small atlas left-bearing offset.
-    expect(xs[12]).toBeGreaterThan(39);
-    expect(xs[12]).toBeLessThan(42);
+    const b = runGlyphs(onlyBundledRun(renderer.scene)).find((glyph) => glyph.char === 'B')!;
+    expect(b.x).toBe(40);
   });
 
   it('draws an EXTRA mesh, offset by shadow_offset_x/y, when font_shadow_color is set (label.cpp:762-767,828-835)', async () => {

@@ -13,8 +13,8 @@ import {
 } from '../../../r3f/materials/godotAlphaAntialiasing';
 import { AlphaAntiAliasing, scissorAntialiasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
-import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
+import type { SfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
+import { TRIANGLE_OUTLINES } from '../../../r3f/controls/native/testing/triangleOutlines';
 import LabelGlyphs from './LabelGlyphs';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
@@ -30,21 +30,15 @@ import { TextureFilter } from '../../../godot/rendering/materials/textureFilter'
 /** The painter's fixed anti-aliasing pad on each vertical raster edge, CSS px. */
 const CANVAS_TEXT_VERTICAL_PAD_PX = 4;
 
-// The real bundled registration settles on null under vitest (`bundledFontLoader.ts`). Mocking
-// the function `LabelGlyphs` reads through lets both sides of the gate be exercised.
-const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
-vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
-  peekBundledCanvasFontMetrics: () => loader.metrics,
-}));
-
-// The painter tests read no contour, so the bundled face settles at once, with none to follow.
+// One triangle for each glyph of the bundled font, so no test decodes the font. Undefined holds the load open.
+const bundledOutlines = vi.hoisted(() => ({ value: undefined as SfntOutlines | undefined }));
 vi.mock('../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  peekOutlines: () => null,
+  peekOutlines: () => bundledOutlines.value,
 }));
 
 beforeEach(() => {
-  loader.metrics = createOpenSansCanvasFontMetrics('label3d-test-family');
+  bundledOutlines.value = TRIANGLE_OUTLINES;
 });
 
 function boundingSize(mesh: THREE.Mesh): THREE.Vector3 {
@@ -81,7 +75,7 @@ function lineGroups(renderer: Awaited<ReturnType<typeof render>>): THREE.Group[]
 }
 
 describe('<LabelGlyphs> — the canvas rasteriser gate', () => {
-  it('paints through the canvas rasteriser, not the MSDF atlas (Godot default project font is not MSDF: text_server.cpp:2386)', async () => {
+  it('paints through the canvas rasteriser (the default project font of Godot is not MSDF: text_server.cpp:2386)', async () => {
     const renderer = await render(labelProperties({ text: 'Hi' }));
     const mesh = meshOf(renderer);
     const material = mesh.material as THREE.MeshBasicMaterial;
@@ -89,8 +83,8 @@ describe('<LabelGlyphs> — the canvas rasteriser gate', () => {
     expect(material.map).toBeTruthy();
   });
 
-  it('paints nothing at all until the bundled font registration resolves (an unregistered family rasterises a SYSTEM font silently)', async () => {
-    loader.metrics = undefined;
+  it('paints nothing at all while the outlines of the bundled font load', async () => {
+    bundledOutlines.value = undefined;
     const renderer = await render(labelProperties({ text: 'Hi' }));
     expect(renderer.scene.findAllByType('Mesh').length).toBe(0);
   });

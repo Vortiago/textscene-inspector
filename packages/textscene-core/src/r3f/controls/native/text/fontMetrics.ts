@@ -14,13 +14,13 @@ import type { RunGlyph, RunShaping } from './glyphRun';
 import type { SfntOutlines } from './sfntOutlines';
 
 /**
- * Which glyph-painting path a `FontMetrics` pairs with, since shaping is
- * font-agnostic but rasterisation is not. `'atlas'` is a baked MSDF atlas
- * (`openSansFontMetrics.ts`), the only kind `GlyphPlacement.glyph` looks up.
- * `'canvas'` is a runtime-loaded scene font (`runtimeFontMetrics.ts`) drawn through canvas-2D.
+ * Which glyph-painting path a `FontMetrics` pairs with, since shaping is font-agnostic but
+ * rasterisation is not. `'bundled'` is the baked numbers of the bundled font
+ * (`openSansFontMetrics.ts`), which a run draws as the bundled canvas face (`bundledCanvasFace.ts`).
+ * `'canvas'` is a face the canvas painter draws into one raster (`runtimeFontMetrics.ts`).
  * `'bitmap'` is a BMFont (`bitmapFontMetrics.ts`) drawn from its page images.
  */
-type FontMetricsKind = 'atlas' | 'canvas' | 'bitmap';
+type FontMetricsKind = 'bundled' | 'canvas' | 'bitmap';
 
 /**
  * Raw, design-unit font metrics a shaper needs. The functions below scale them

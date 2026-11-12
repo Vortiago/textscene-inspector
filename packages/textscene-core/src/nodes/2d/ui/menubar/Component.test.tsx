@@ -2,18 +2,23 @@
  * Tests the `<MenuBar>` render contract: one chrome StyleBox and one text run per PopupMenu child's
  * title. It asserts structure and tint only: pixels belong to the golden images and `pnpm ref:godot`.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
-import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { MenuBarProperties } from './types';
 import { MenuBar } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { bundledRunMeshes, bundledRuns } from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -42,14 +47,6 @@ function findChromeMeshes(scene: Rendered['scene']) {
     .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
 }
 
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMeshes(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
-}
-
 describe('<MenuBar> (isolated painter contract)', () => {
   afterEach(() => {
     controlSolverRegistry.clear();
@@ -65,7 +62,7 @@ describe('<MenuBar> (isolated painter contract)', () => {
       />
     );
     expect(findChromeMeshes(renderer.scene)).toHaveLength(2);
-    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(2);
   });
 
   it('draws nothing for a MenuBar with no PopupMenu children', async () => {
@@ -73,7 +70,7 @@ describe('<MenuBar> (isolated painter contract)', () => {
       <MenuBar {...painterEnv()} solveNode={solveNode({}, [])} rect={RECT} renderOrder={0} />
     );
     expect(findChromeMeshes(renderer.scene)).toHaveLength(0);
-    expect(findTextMeshes(renderer.scene)).toHaveLength(0);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('flat=true draws NO chrome mesh at all, but still draws the titles', async () => {
@@ -86,16 +83,16 @@ describe('<MenuBar> (isolated painter contract)', () => {
       />
     );
     expect(findChromeMeshes(renderer.scene)).toHaveLength(0);
-    expect(findTextMeshes(renderer.scene)).toHaveLength(1);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(1);
   });
 
   it("uses control_font_color (0.875 sRGB) for every title, tinted the node's own colour", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <MenuBar {...painterEnv()} solveNode={solveNode({}, [popup('File')])} rect={RECT} renderOrder={0} />
     );
-    const material = findTextMeshes(renderer.scene)[0]!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(1, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.r).toBeCloseTo(0.875, 5);
+    expect(tint.a).toBeCloseTo(1, 5);
   });
 
   it('applies the walker-composed tint to chrome AND text alike', async () => {
@@ -124,6 +121,6 @@ describe('<MenuBar> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMeshes(renderer.scene)).toHaveLength(1);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(1);
   });
 });

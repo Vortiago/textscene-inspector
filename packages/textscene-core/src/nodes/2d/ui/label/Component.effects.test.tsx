@@ -2,14 +2,14 @@
  * The outline rings and shadows of a `<Label>` (`label.cpp:828-883`). `<TextRunMesh>` is stubbed to
  * read the props the painter hands it, in draw order.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { Rgba } from '../../../../godot/math/math';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { LabelSettingsResource } from '../../../../resources/styles/labelsettings/types';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { createOpenSansCanvasFontMetrics } from '../../../../r3f/controls/native/text/openSansCanvasFontMetrics';
+import { TRIANGLE_OUTLINES } from '../../../../r3f/controls/native/testing/triangleOutlines';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
 import { useCanvasItemOrigin } from '../../../../r3f/components/CanvasItemGroup';
@@ -27,10 +27,10 @@ interface RunProps {
   itemOrigin: Vector2;
 }
 
-const scene = vi.hoisted(() => ({ bundled: undefined as FontMetrics | undefined }));
-
-vi.mock('../../../../r3f/controls/native/text/bundledFontLoader', () => ({
-  peekBundledCanvasFontMetrics: () => scene.bundled,
+// The bundled canvas face settles at once, with no font to decode.
+vi.mock('../../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  peekOutlines: () => TRIANGLE_OUTLINES,
 }));
 vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
   // A mesh in the scene graph stands for the run, so the runs read back in draw order, once each.
@@ -83,10 +83,6 @@ async function draw(node: SolveNode, expectedRuns: number): Promise<RunProps[]> 
 
 const rings = (runs: RunProps[]) => runs.filter((run) => run.strokeWidthPx);
 const fill = (runs: RunProps[]) => runs.at(-1)!;
-
-beforeEach(() => {
-  scene.bundled = createOpenSansCanvasFontMetrics('label-effects-test');
-});
 
 describe('<Label> outline ring', () => {
   const outlined = label({ colors: { font_outline_color: RED }, constants: { outline_size: 8 } });

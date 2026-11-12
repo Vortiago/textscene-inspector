@@ -1,7 +1,7 @@
 /**
  * The channel a font load settles through: the count and the listeners that wake a reader built
  * without the font, the work count a capture waits on, and the peek over loads keyed by object.
- * `sceneFontLoader.ts`, `sceneFontOutlines.ts` and `bundledFontLoader.ts` settle through it.
+ * `sceneFontLoader.ts` and `sceneFontOutlines.ts` settle through it.
  */
 import { createWorkCount } from '../../../../resources/workCount';
 import { createExternalStore } from '../../../hooks/createExternalStore';
@@ -17,8 +17,7 @@ export const sceneFontSettleCount = settleCount.get;
 
 /**
  * Subscribes to a font load settling, metrics or outlines, and returns an unsubscribe function. It fires once per
- * load on its first settle and once for the bundled font, never for a font that short-circuits
- * synchronously.
+ * load on its first settle, never for a font that short-circuits synchronously.
  */
 export const onSceneFontSettled = settleCount.subscribe;
 

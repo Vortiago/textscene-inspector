@@ -4,7 +4,7 @@
  * and order only: pixels are a golden-image concern (`pnpm ref:godot`).
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -17,6 +17,12 @@ import { TabContainer } from './Component';
 import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { bundledRunMeshes } from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const THEME = nativeTheme(1);
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
@@ -46,13 +52,6 @@ function findChromeMeshes(scene: Rendered['scene']) {
     .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
 }
 
-function findTextMeshes(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
-}
-
 describe('<TabContainer> (isolated painter contract)', () => {
   it('draws the panel StyleBox plus one tab strip StyleBox per page', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -66,7 +65,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
     );
     // 1 panel + 2 tab StyleBoxes.
     expect(findChromeMeshes(renderer.scene)).toHaveLength(3);
-    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(2);
   });
 
   it("derives a tab's title from its own child node name when no tab_<idx>/title override is set", async () => {
@@ -84,7 +83,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(2);
   });
 
   it('draws no tab strip at all when tabs_visible is false, and the panel spans the whole rect', async () => {
@@ -99,7 +98,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
     );
     // Only the panel StyleBox remains; no tab title to draw either.
     expect(findChromeMeshes(renderer.scene)).toHaveLength(1);
-    expect(findTextMeshes(renderer.scene)).toHaveLength(0);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('draws no strip at all for a childless TabContainer (just the empty panel)', async () => {
@@ -113,7 +112,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
       />
     );
     expect(findChromeMeshes(renderer.scene)).toHaveLength(1);
-    expect(findTextMeshes(renderer.scene)).toHaveLength(0);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it("all_tabs_in_front flips the strip from the subtree-chrome slot to this node's own paint slot", async () => {
@@ -137,7 +136,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
         subtreeChromeRenderOrder={9}
       />
     );
-    const stripMesh = (scene: Rendered['scene']) => findTextMeshes(scene)[0]!;
+    const stripMesh = (scene: Rendered['scene']) => bundledRunMeshes(scene)[0]!;
     // Default (false): the strip draws at the subtree-chrome slot (9.5), after the
     // current page, as Godot's INTERNAL_MODE_BACK does. true: this node's paint slot (5).
     expect(stripMesh(behind.scene).renderOrder).toBeCloseTo(9.5, 5);
@@ -157,7 +156,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
         subtreeChromeRenderOrder={9}
       />
     );
-    expect(nearestGroupOrder(findTextMeshes(behind.scene)[0]!)).toBeCloseTo(9.5, 5);
+    expect(nearestGroupOrder(bundledRunMeshes(behind.scene)[0]!)).toBeCloseTo(9.5, 5);
   });
 });
 
@@ -222,7 +221,7 @@ describe('<TabContainer> internal strip at a font-size override', () => {
       />
     );
     const chrome = findChromeMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).y);
-    const text = findTextMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).y);
+    const text = bundledRunMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).y);
     return { headerHeight: -chrome[0]!, tabTop: chrome[1]!, textTop: text[0]! };
   }
 

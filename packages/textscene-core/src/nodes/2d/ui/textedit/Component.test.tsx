@@ -3,7 +3,7 @@
  * `draw_tabs`/`draw_spaces` icons. Structure, tint and clip only: pixels are `pnpm ref:godot`'s job.
  */
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnInternalResource, TscnNode } from '../../../../parser/types';
@@ -13,8 +13,20 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import { TextEdit } from './Component';
 import type { TextEditProperties } from './types';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  bundledRunOf,
+  bundledRunMeshes,
+  bundledRuns,
+  inkedGlyphCount,
+  onlyBundledRun,
+  runGlyphs,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 100 };
 
@@ -51,23 +63,14 @@ function findFillColor(mesh: THREE.Mesh): { r: number; g: number; b: number; a: 
   throw new Error('no fill vertex found in chrome mesh');
 }
 
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMeshes(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
-}
-
-/** A plain `<ControlQuad>` (highlight rect or a tab/space icon): `MeshBasicMaterial`, no `color` vertex attribute, no MSDF uniforms. */
+/** A plain `<ControlQuad>` (highlight rect or a tab/space icon): `MeshBasicMaterial`, no `color` vertex attribute, no text run. */
 function findPlainQuads(scene: Rendered['scene']) {
   return scene
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
     .filter(
       (m) =>
-        (m.geometry as THREE.BufferGeometry).attributes.color === undefined &&
-        !(m.material as THREE.ShaderMaterial).uniforms?.uColor
+        (m.geometry as THREE.BufferGeometry).attributes.color === undefined && bundledRunOf(m) === undefined
     );
 }
 
@@ -97,7 +100,7 @@ describe('<TextEdit> — per-line text', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'a\nb\nc' })} rect={RECT} renderOrder={0} />
     );
-    expect(findTextMeshes(renderer.scene)).toHaveLength(3);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(3);
   });
 
   it('still advances one full row for a blank buffer line — a blank line is not zero rows', async () => {
@@ -110,14 +113,12 @@ describe('<TextEdit> — per-line text', () => {
     // Every buffer line, the empty one too, draws its own TextRun mesh, so the
     // count alone cannot tell a collapsed blank line. The row Y offsets prove the
     // blank line still takes a whole row.
-    expect(findTextMeshes(withBlank.scene)).toHaveLength(3);
+    expect(bundledRunMeshes(withBlank.scene)).toHaveLength(3);
     const yOffsets = (scene: Rendered['scene']) =>
       scene
         .findAllByType('Group')
         .map((g) => g.instance)
-        .filter((g) =>
-          g.children.some((c) => ((c as THREE.Mesh).material as THREE.ShaderMaterial)?.uniforms?.uColor)
-        )
+        .filter((g) => g.children.some((child) => bundledRunOf(child) !== undefined))
         .map((g) => g.position.y)
         .sort((a, b) => b - a);
     const blankRows = yOffsets(withBlank.scene);
@@ -139,9 +140,10 @@ describe('<TextEdit> — per-line text', () => {
         renderOrder={0}
       />
     );
-    expect(boxed.scene.findAllByType('Mesh').length).toBeGreaterThan(
-      dropped.scene.findAllByType('Mesh').length
-    );
+    const controlGlyphs = (renderer: Rendered) =>
+      runGlyphs(onlyBundledRun(renderer.scene)).filter((glyph) => glyph.controlCodepoint !== undefined);
+    expect(controlGlyphs(dropped)).toHaveLength(0);
+    expect(controlGlyphs(boxed)).toHaveLength(1);
   });
 
   it('wraps one long line into multiple rows once wrap_mode is BOUNDARY(1)', async () => {
@@ -157,8 +159,8 @@ describe('<TextEdit> — per-line text', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMeshes(off.scene)).toHaveLength(1);
-    expect(findTextMeshes(wrapped.scene).length).toBeGreaterThan(1);
+    expect(bundledRunMeshes(off.scene)).toHaveLength(1);
+    expect(bundledRunMeshes(wrapped.scene).length).toBeGreaterThan(1);
   });
 
   it('forwards renderOrder to the chrome mesh and every text mesh', async () => {
@@ -166,7 +168,7 @@ describe('<TextEdit> — per-line text', () => {
       <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'a\nb' })} rect={RECT} renderOrder={9} />
     );
     expect(findChromeMesh(renderer.scene)!.renderOrder).toBe(9);
-    for (const mesh of findTextMeshes(renderer.scene)) expect(mesh.renderOrder).toBe(9);
+    for (const mesh of bundledRunMeshes(renderer.scene)) expect(mesh.renderOrder).toBe(9);
   });
 });
 
@@ -247,10 +249,7 @@ describe('<TextEdit> — clipping', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'a' })} rect={RECT} renderOrder={0} />
     );
-    const material = findTextMeshes(renderer.scene)[0]!.material as THREE.ShaderMaterial & {
-      clippingPlanes?: THREE.Plane[];
-    };
-    const planes = material.clippingPlanes!;
+    const planes = onlyBundledRun(renderer.scene).clippingPlanes!;
     expect(planes.length).toBeGreaterThanOrEqual(4);
     const insideWholeRectButPastLineEditContentMargin = new THREE.Vector3(RECT.w - 1, -1, 0);
     expect(planes.every((p) => p.distanceToPoint(insideWholeRectButPastLineEditContentMargin) >= 0)).toBe(
@@ -277,19 +276,16 @@ describe('<TextEdit> — syntax_highlighter', () => {
     );
     // "if" (keyword_color) / " " (a space is `is_symbol`, so `symbol_color`) /
     // "x" (plain `font_color`): three colour changes, syntax_highlighter.cpp:391-401.
-    const meshes = findTextMeshes(renderer.scene);
-    expect(meshes).toHaveLength(3);
-    const colors = meshes.map(
-      (m) => (m.material as THREE.ShaderMaterial).uniforms.uColor!.value as THREE.Vector3
-    );
-    expect(colors[0]!.x).not.toBeCloseTo(colors[2]!.x, 2);
+    const runs = bundledRuns(renderer.scene);
+    expect(runs).toHaveLength(3);
+    expect(runs[0]!.tint.r).not.toBeCloseTo(runs[2]!.tint.r, 2);
   });
 
   it('paints one plain-font_color run per row when no syntax_highlighter is set', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'if x' })} rect={RECT} renderOrder={0} />
     );
-    expect(findTextMeshes(renderer.scene)).toHaveLength(1);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(1);
   });
 
   it('tints a drawn tab/space icon with the SAME per-glyph colour as the text, not a fixed font_color (text_edit.cpp:1674,1714)', async () => {
@@ -318,7 +314,7 @@ describe('<TextEdit> — syntax_highlighter', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMeshes(renderer.scene)).toHaveLength(1);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(1);
   });
 });
 
@@ -338,7 +334,7 @@ describe('<TextEdit> — RTL layout', () => {
         renderOrder={0}
       />
     );
-    const xs = findTextMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).x);
+    const xs = bundledRunMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).x);
     expect(xs.length).toBe(2);
     expect(xs[0]).toBeLessThan(xs[1]!);
     expect(xs[1]).toBeLessThan(RECT.w);
@@ -353,7 +349,7 @@ describe('<TextEdit> — RTL layout', () => {
         renderOrder={0}
       />
     );
-    const xs = findTextMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).x);
+    const xs = bundledRunMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).x);
     expect(xs[0]).toBeCloseTo(xs[1]!, 5);
   });
 });
@@ -376,7 +372,7 @@ describe('<TextEdit> — text clip band', () => {
           renderOrder={0}
         />
       );
-      const mesh = findTextMeshes(renderer.scene)[0]!;
+      const mesh = bundledRunMeshes(renderer.scene)[0]!;
       return ((mesh.material as THREE.ShaderMaterial).clippingPlanes ?? []).map((p) => p.constant);
     };
     expect(await planesOf({ x: 0, y: 200, w: 300, h: 100 })).toEqual(
@@ -388,7 +384,7 @@ describe('<TextEdit> — text clip band', () => {
 describe('<TextEdit> — placeholder_text', () => {
   afterEach(() => controlSolverRegistry.clear());
 
-  const opacityOf = (mesh: THREE.Mesh) => (mesh.material as THREE.ShaderMaterial).uniforms.uOpacity!.value;
+  const opacityOf = (mesh: THREE.Mesh) => bundledRunOf(mesh)!.tint.a;
 
   async function render(properties: Partial<TextEditProperties>, node: Partial<SolveNode> = {}) {
     return ReactThreeTestRenderer.create(
@@ -402,32 +398,34 @@ describe('<TextEdit> — placeholder_text', () => {
   }
 
   it('draws an empty buffer as its placeholder at font_placeholder_color (text_edit.cpp:1350-1352)', async () => {
-    const meshes = findTextMeshes((await render({ text: '', placeholderText: 'Type here' })).scene);
+    const meshes = bundledRunMeshes((await render({ text: '', placeholderText: 'Type here' })).scene);
     expect(meshes).toHaveLength(1);
-    const material = meshes[0]!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
+    const tint = bundledRunOf(meshes[0]!)!.tint;
+    expect(tint.r).toBeCloseTo(0.875, 5);
     expect(opacityOf(meshes[0]!)).toBeCloseTo(0.6, 5);
   });
 
   it('draws real text at font_color and no placeholder once the buffer holds text', async () => {
-    const meshes = findTextMeshes((await render({ text: 'Ada', placeholderText: 'Type here' })).scene);
+    const meshes = bundledRunMeshes((await render({ text: 'Ada', placeholderText: 'Type here' })).scene);
     expect(meshes).toHaveLength(1);
     expect(opacityOf(meshes[0]!)).toBeCloseTo(1, 5);
   });
 
   it('keeps font_placeholder_color while read-only: the placeholder test wins over editable (:1350-1352)', async () => {
-    const meshes = findTextMeshes((await render({ placeholderText: 'x', editable: false })).scene);
+    const meshes = bundledRunMeshes((await render({ placeholderText: 'x', editable: false })).scene);
     expect(opacityOf(meshes[0]!)).toBeCloseTo(0.6, 5);
   });
 
   it('breaks a placeholder at its newline into one row each', async () => {
-    expect(findTextMeshes((await render({ placeholderText: 'a\nb' })).scene)).toHaveLength(2);
+    expect(bundledRunMeshes((await render({ placeholderText: 'a\nb' })).scene)).toHaveLength(2);
   });
 
   it('wraps a placeholder at wrap_mode BOUNDARY (text_edit.cpp:3333)', async () => {
     const placeholderText = 'a repeated word wrap word wrap word wrap word wrap word wrap';
-    expect(findTextMeshes((await render({ placeholderText })).scene)).toHaveLength(1);
-    expect(findTextMeshes((await render({ placeholderText, wrapMode: 1 })).scene).length).toBeGreaterThan(1);
+    expect(bundledRunMeshes((await render({ placeholderText })).scene)).toHaveLength(1);
+    expect(bundledRunMeshes((await render({ placeholderText, wrapMode: 1 })).scene).length).toBeGreaterThan(
+      1
+    );
   });
 
   it('paints the placeholder past a syntax_highlighter, whose colour map is empty for an empty line', async () => {
@@ -446,7 +444,7 @@ describe('<TextEdit> — placeholder_text', () => {
         renderOrder={0}
       />
     );
-    const meshes = findTextMeshes(renderer.scene);
+    const meshes = bundledRunMeshes(renderer.scene);
     expect(meshes).toHaveLength(1);
     expect(opacityOf(meshes[0]!)).toBeCloseTo(0.6, 5);
   });
@@ -459,8 +457,8 @@ describe('<TextEdit> — placeholder_text', () => {
 
   it('places a placeholder row from the trailing edge under RTL, as buffer text is', async () => {
     const x = (mesh: THREE.Mesh) => mesh.getWorldPosition(new THREE.Vector3()).x;
-    const ltr = findTextMeshes((await render({ placeholderText: 'Amber' })).scene);
-    const rtl = findTextMeshes((await render({ placeholderText: 'Amber' }, { rtl: true })).scene);
+    const ltr = bundledRunMeshes((await render({ placeholderText: 'Amber' })).scene);
+    const rtl = bundledRunMeshes((await render({ placeholderText: 'Amber' }, { rtl: true })).scene);
     expect(x(rtl[0]!)).toBeGreaterThan(x(ltr[0]!));
   });
 });
@@ -469,10 +467,7 @@ describe('<TextEdit> — glyphs past the end margin', () => {
   afterEach(() => controlSolverRegistry.clear());
 
   const glyphCount = (scene: Rendered['scene']) =>
-    findTextMeshes(scene).reduce(
-      (sum, mesh) => sum + (mesh.geometry as THREE.BufferGeometry).attributes.position!.count / 4,
-      0
-    );
+    bundledRuns(scene).reduce((sum, run) => sum + inkedGlyphCount(run), 0);
 
   async function render(text: string) {
     return ReactThreeTestRenderer.create(
