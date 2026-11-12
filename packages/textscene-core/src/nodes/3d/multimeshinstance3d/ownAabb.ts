@@ -6,44 +6,36 @@
 import { useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
-import { warn } from '../../../logger';
-import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
-import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { decodeMultiMesh, multiMeshAabb, type MultiMeshData } from '../../../resources/meshes/multimesh';
+import { useNodeResource } from '../../../resources/reading';
+import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext';
+import { multiMeshAabb, MULTI_MESH, type HeldMultiMesh } from '../../../resources/meshes/multimesh';
 import { useMeshAabb } from '../meshinstance3d/meshAabb';
-import { resourceContentKey } from '../../../resources/resourceContentKey';
-import type { ScopedResource } from '../../../resources/scopedResource';
-import { useContentMemo } from '../../../resources/useContentMemo';
+import { useResourceResolution, type ResourceResolution } from '../../../resources/useSubOrExtResource';
 
-/**
- * The box in node space, `AABB()` for a node with no MultiMesh (`multimesh_instance_3d.cpp:100-102`),
- * or null while the MultiMesh or the mesh box it needs is unknown.
- */
-export function useMultiMeshInstance3DAabb(node: TscnNode): Aabb | null {
-  const scoped = useSubOrExtResource(node.rawProperties['multimesh'], useSceneResources());
-  const multiMesh = useContentMemo(scoped, ownContentKey, readMultiMesh);
-  const meshAabb = useMeshAabb(multiMesh?.mesh, scoped?.resources ?? NO_RESOURCES);
-  const hasMultiMesh = node.rawProperties['multimesh'] !== undefined;
-  return useMemo(() => {
+/** What a MultiMeshInstance3D reads of its MultiMesh. */
+export interface NodeMultiMesh {
+  /** Null while the reference is unresolved, or when it names a MultiMesh this cannot read. */
+  multiMesh: HeldMultiMesh | null;
+  /** The MultiMesh's `mesh` slot, resolved in the tables of the file that wrote the MultiMesh. */
+  meshResolution: ResourceResolution;
+  /**
+   * The box in node space, `AABB()` for a node with no MultiMesh (`multimesh_instance_3d.cpp:100-102`),
+   * or null while the MultiMesh or the mesh box it needs is unknown.
+   */
+  ownAabb: Aabb | null;
+}
+
+/** The node's MultiMesh, read from a SubResource or a file, and the box it gives the instance. */
+export function useMultiMeshInstance3D(node: TscnNode): NodeMultiMesh {
+  const multiMeshRef = node.rawProperties['multimesh'];
+  const { value: multiMesh } = useNodeResource(multiMeshRef, MULTI_MESH);
+  const { ref: meshRef, resources } = multiMesh?.meshReference ?? { ref: undefined, resources: NO_RESOURCES };
+  const meshResolution = useResourceResolution(meshRef, resources);
+  const meshAabb = useMeshAabb(meshRef, resources);
+  const hasMultiMesh = multiMeshRef !== undefined;
+  const ownAabb = useMemo(() => {
     if (multiMesh) return multiMeshAabb(multiMesh, meshAabb);
     return hasMultiMesh ? null : EMPTY_AABB;
   }, [multiMesh, meshAabb, hasMultiMesh]);
-}
-
-/** A MultiMesh reads no file, so its own content is the whole key. */
-function ownContentKey({ resource }: ScopedResource): string {
-  return resourceContentKey(resource);
-}
-
-/** The MultiMesh a bag holds, or null for another type or a packed array this cannot read. */
-function readMultiMesh({ resource }: ScopedResource): MultiMeshData | null {
-  if (resource.type !== 'MultiMesh') return null;
-  try {
-    return decodeMultiMesh(resource.data);
-  } catch (error) {
-    warn(
-      `[MultiMeshInstance3D] MultiMesh unreadable: ${error instanceof Error ? error.message : String(error)}`
-    );
-    return null;
-  }
+  return { multiMesh, meshResolution, ownAabb };
 }

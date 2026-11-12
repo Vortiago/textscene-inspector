@@ -1,0 +1,28 @@
+; The variable: the instance buffer of a MultiMeshInstance3D. Four half-size boxes sit in a row at
+; x = -1.5, -0.5, 0.5 and 1.5, each coloured through its own buffer colour (red, green, blue and
+; yellow) by vertex_color_use_as_albedo. No other golden shows it: the other MultiMesh fixture holds
+; no buffer, so it draws four degenerate instances and shows nothing.
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="mat"]
+shading_mode = 0
+vertex_color_use_as_albedo = true
+
+[sub_resource type="BoxMesh" id="box"]
+material = SubResource("mat")
+
+[sub_resource type="MultiMesh" id="mm"]
+transform_format = 1
+use_colors = true
+instance_count = 4
+mesh = SubResource("box")
+buffer = PackedFloat32Array(0.5, 0.0, 0.0, -1.5, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 1.0, 0.0, 0.0, 1.0, 0.5, 0.0, 0.0, -0.5, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 1.0, 0.0, 1.0, 0.5, 0.0, 0.0, 0.5, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.0, 0.0, 1.0, 1.0, 0.5, 0.0, 0.0, 1.5, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 1.0, 1.0, 0.0, 1.0)
+
+[node name="Root" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+current = true
+
+[node name="MM" type="MultiMeshInstance3D" parent="."]
+multimesh = SubResource("mm")
