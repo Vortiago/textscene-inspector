@@ -1,7 +1,7 @@
 ; GPUParticles3D emitting a visible burst. Without a `draw_pass_1` mesh Godot renders nothing
 ; and warns. `preprocess` runs the simulation forward, so a still capture catches spread
-; particles rather than the instant of emission. The previewer draws GPUParticles3D
-; transform-only (ADR-0008), so the sheet shows Godot's cloud beside a deliberate nothing.
+; particles rather than the instant of emission. `use_fixed_seed` makes the cloud the same on
+; each run, and the previewer draws the same pose.
 [gd_scene load_steps=4 format=3]
 
 [sub_resource type="ParticleProcessMaterial" id="Process_1"]
@@ -29,6 +29,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 amount = 200
 lifetime = 2.0
 preprocess = 1.2
+use_fixed_seed = true
+seed = 7
 process_material = SubResource("Process_1")
 draw_pass_1 = SubResource("Sphere_1")
 material_override = SubResource("Dot_1")

@@ -50,7 +50,6 @@ const UNMOVED = new Map([
   ['nodes/3d/navigationregion3d/Component.tsx', { calls: 1, issue: 1694 }],
   ['nodes/3d/occluderinstance3d/Component.tsx', { calls: 1, issue: 1694 }],
   ['nodes/shared/particles3d/ParticleMesh.tsx', { calls: 1, issue: 1685 }],
-  ['nodes/3d/particles/gpuparticles3d/useProcessMaterialEmission.ts', { calls: 1, issue: 1695 }],
   ['nodes/3d/worldenvironment/useResolvedEnvironment.ts', { calls: 3, issue: 1517 }],
   ['nodes/animation/animationplayer/animationResolver.ts', { calls: 5, issue: 1682 }],
   ['nodes/animation/animationtree/treeResources.ts', { calls: 1, issue: 1682 }],

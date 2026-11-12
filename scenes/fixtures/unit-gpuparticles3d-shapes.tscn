@@ -1,0 +1,108 @@
+; The one variable is the emission shape of a GPUParticles3D: a sphere, a sphere surface, a box and
+; a ring, side by side. `use_fixed_seed` makes the pose the same on each run, and `preprocess` runs
+; the simulation forward so the particles have left their shape. Each dot is unshaded, so no
+; lit-sphere silhouette adds to the difference with Godot. No other golden shows a regression in
+; the emission shape of a GPUParticles3D: the emission gizmo golden draws its lines, not its particles.
+[gd_scene load_steps=8 format=3]
+
+[sub_resource type="ParticleProcessMaterial" id="Sphere_process"]
+emission_shape = 1
+emission_sphere_radius = 0.6
+direction = Vector3(0, 1, 0)
+spread = 30.0
+initial_velocity_min = 0.5
+initial_velocity_max = 1.0
+gravity = Vector3(0, -1, 0)
+color = Color(0.9, 0.3, 0.2, 1)
+
+[sub_resource type="ParticleProcessMaterial" id="Surface_process"]
+emission_shape = 2
+emission_sphere_radius = 0.6
+direction = Vector3(0, 1, 0)
+spread = 30.0
+initial_velocity_min = 0.5
+initial_velocity_max = 1.0
+gravity = Vector3(0, -1, 0)
+color = Color(0.2, 0.8, 0.3, 1)
+
+[sub_resource type="ParticleProcessMaterial" id="Box_process"]
+emission_shape = 3
+emission_box_extents = Vector3(0.6, 0.3, 0.6)
+direction = Vector3(0, 1, 0)
+spread = 30.0
+initial_velocity_min = 0.5
+initial_velocity_max = 1.0
+gravity = Vector3(0, -1, 0)
+color = Color(0.2, 0.4, 0.9, 1)
+
+[sub_resource type="ParticleProcessMaterial" id="Ring_process"]
+emission_shape = 6
+emission_ring_radius = 0.7
+emission_ring_inner_radius = 0.3
+emission_ring_height = 0.4
+direction = Vector3(0, 1, 0)
+spread = 30.0
+initial_velocity_min = 0.5
+initial_velocity_max = 1.0
+gravity = Vector3(0, -1, 0)
+color = Color(0.9, 0.8, 0.2, 1)
+
+[sub_resource type="SphereMesh" id="Dot"]
+radius = 0.06
+height = 0.12
+radial_segments = 16
+rings = 8
+
+[sub_resource type="StandardMaterial3D" id="Unshaded"]
+shading_mode = 0
+vertex_color_use_as_albedo = true
+
+[node name="Root" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 7)
+current = true
+
+[node name="Sphere" type="GPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
+amount = 40
+lifetime = 2.0
+preprocess = 1.0
+use_fixed_seed = true
+seed = 3
+process_material = SubResource("Sphere_process")
+draw_pass_1 = SubResource("Dot")
+material_override = SubResource("Unshaded")
+
+[node name="SphereSurface" type="GPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 0)
+amount = 40
+lifetime = 2.0
+preprocess = 1.0
+use_fixed_seed = true
+seed = 5
+process_material = SubResource("Surface_process")
+draw_pass_1 = SubResource("Dot")
+material_override = SubResource("Unshaded")
+
+[node name="Box" type="GPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0)
+amount = 40
+lifetime = 2.0
+preprocess = 1.0
+use_fixed_seed = true
+seed = 9
+process_material = SubResource("Box_process")
+draw_pass_1 = SubResource("Dot")
+material_override = SubResource("Unshaded")
+
+[node name="Ring" type="GPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0, 0)
+amount = 40
+lifetime = 2.0
+preprocess = 1.0
+use_fixed_seed = true
+seed = 11
+process_material = SubResource("Ring_process")
+draw_pass_1 = SubResource("Dot")
+material_override = SubResource("Unshaded")

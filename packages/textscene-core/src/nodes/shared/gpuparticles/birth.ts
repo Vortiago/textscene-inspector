@@ -1,6 +1,33 @@
 /**
  * `start()` of the generated particle shader (`particle_process_material.cpp:900-950`): where a
  * restarting particle sits, how fast it moves and what colour it takes, off its own seed.
+ *
+ * Derived from Godot Engine (`scene/resources/particle_process_material.cpp`), used
+ * under the MIT licence:
+ *
+ *   Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md).
+ *   Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+ *
+ *   Permission is hereby granted, free of charge, to any person obtaining
+ *   a copy of this software and associated documentation files (the
+ *   "Software"), to deal in the Software without restriction, including
+ *   without limitation the rights to use, copy, modify, merge, publish,
+ *   distribute, sublicense, and/or sell copies of the Software, and to
+ *   permit persons to whom the Software is furnished to do so, subject to
+ *   the following conditions:
+ *
+ *   The above copyright notice and this permission notice shall be
+ *   included in all copies or substantial portions of the Software.
+ *
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ *   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ *   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ *   IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ *   CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ *   TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ *   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
+ * See THIRD-PARTY-NOTICES.md.
  */
 
 import { storedReal as f } from '../../../godot/math/real.js';
