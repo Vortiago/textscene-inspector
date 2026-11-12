@@ -26,7 +26,7 @@ catalog:
   vite: ^8.3.6
   esbuild: ^0.28.2
   happy-dom: ^21.0.3
-  jsdom: ^30.1.3
+  jsdom: ^31.0.0
 
   # Declaration bundling for @textscene/tscn: one .d.ts that imports nothing from the workspace.
   dts-bundle-generator: ^9.5.1
