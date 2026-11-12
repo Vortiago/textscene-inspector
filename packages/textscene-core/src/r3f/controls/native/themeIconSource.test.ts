@@ -46,7 +46,7 @@ describe('themeIconSource', () => {
     );
   });
 
-  it('passes a URL that is not a vendored icon through at every scale', () => {
+  it('passes a URL that is not a vendored icon through at theme scale 1', () => {
     const own = `${SVG_PREFIX}PHN2Zy8+`;
 
     expect(themeIconSource(own, 1)).toBe(own);
@@ -64,7 +64,7 @@ describe('the vendored icons', () => {
     expect(pngSize(THEME_ICON_RASTERS[key]!)).toEqual(svgSize(svgUrl));
   });
 
-  it('are registered by the four modules the bake imports and by no other', () => {
+  it('are registered by the three modules beside themeIcons.ts and by no other', () => {
     const callers = sourceFiles(join(__dirname, '../../..'))
       .filter(
         (path) => /\bvendoredIcon\(/.test(readFileSync(path, 'utf8')) && !path.endsWith('themeIcons.ts')

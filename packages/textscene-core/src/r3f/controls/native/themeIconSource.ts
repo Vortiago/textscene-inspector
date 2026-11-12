@@ -8,7 +8,7 @@ import { THEME_ICON_RASTERS } from './themeIconRasters.generated';
 import { scaledSvgDataUrl } from './scaledSvgIcon';
 import { vendoredIconKey } from './themeIcons';
 
-/** The pixels of the vendored icon `svgUrl` at `scale`. Any other URL, such as a project's own texture, comes back as it is. */
+/** The pixels of the vendored icon `svgUrl` at `scale`. At scale 1 any other URL, such as a project's own texture, comes back as it is. */
 export function themeIconSource(svgUrl: string, scale: number): string {
   const raster = scale === 1 ? THEME_ICON_RASTERS[vendoredIconKey(svgUrl) ?? ''] : undefined;
   return raster ?? scaledSvgDataUrl(svgUrl, scale);
