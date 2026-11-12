@@ -27,7 +27,12 @@ import type {
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { DEFAULT_CORNER_RADIUS, STYLE_FILL } from '../../../../godot/scene/theme';
+import {
+  DEFAULT_CONTENT_MARGIN,
+  DEFAULT_CORNER_RADIUS,
+  DEFAULT_FONT_SIZE,
+  STYLE_FILL,
+} from '../../../../godot/scene/theme';
 import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
@@ -58,6 +63,9 @@ function foldableContainerArrowSize(theme: NativeTheme): Vector2 {
   const size = Math.round(16 * theme.scale);
   return { x: size, y: size };
 }
+
+/** The default `font_size` of FoldableContainer: the bare `default_font_size`, not the scaled default theme size (`default_theme.cpp:1322`). */
+const FOLDABLE_CONTAINER_DEFAULT_FONT_SIZE = DEFAULT_FONT_SIZE;
 
 /** The default `font_color` of FoldableContainer (`default_theme.cpp:1324`). */
 const FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
@@ -121,12 +129,13 @@ function defaultTitleStyle(theme: NativeTheme, folded: boolean, titlePosition: n
   );
 }
 
+/** The content panel resets its margins to the bare `default_margin`, so they do not scale (`default_theme.cpp:1314`). */
 function defaultPanelStyle(theme: NativeTheme, titlePosition: number): StyleBoxFlatData {
   const margin = {
-    left: theme.contentMargin,
-    top: theme.contentMargin,
-    right: theme.contentMargin,
-    bottom: theme.contentMargin,
+    left: DEFAULT_CONTENT_MARGIN,
+    top: DEFAULT_CONTENT_MARGIN,
+    right: DEFAULT_CONTENT_MARGIN,
+    bottom: DEFAULT_CONTENT_MARGIN,
   };
   return flatStyleBox(
     STYLE_FILL.normal,
@@ -221,7 +230,7 @@ function foldableContainerTitleMetrics(
 
   const stateKey = folded ? 'folded' : 'expanded';
   const { fontSizePx, color } = resolveTextTheme(n, props, FOLDABLE_CONTAINER_TITLE_THEME_KEYS[stateKey], {
-    fontSizePx: ctx.theme.fontSize,
+    fontSizePx: FOLDABLE_CONTAINER_DEFAULT_FONT_SIZE,
     color: folded ? FOLDABLE_CONTAINER_DEFAULT_COLLAPSED_FONT_COLOR : FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR,
   });
 
