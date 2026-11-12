@@ -49,8 +49,9 @@ Node, pnpm and the workspace packages stay with `.github/actions/setup`.
 - A browser job starts 5 to 10 s later than on the runner. The pull of 10 to 16 s replaces the 4
   to 6 s restore of Chromium and, in the E2E job, 6 s of `apt-get`. The decision buys independence
   from the Ubuntu archive, not time.
-- The Claude review job is not in the image and still runs `apt-get`: bubblewrap needs user
-  namespaces, which a job container does not give. #1586 removes that `apt-get`.
+- The Claude review job stays on the runner. It copies `bwrap` and `socat` out of the image, so
+  it reads the Ubuntu archive in no run. A pull request that changes an input of the image gets
+  its review only after the `image` job has published its image.
 - The image build still reads the Ubuntu archive, once for each new tag. When the archive does not
   resolve, the build installs from a mirror.
 - The token of a fork's pull request cannot publish. Such a pull request that changes an input of

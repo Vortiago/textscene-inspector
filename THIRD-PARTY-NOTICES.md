@@ -292,6 +292,10 @@ orchestrator-owned:
 Each theme key is simply its SVG filename without extension (`default_theme_icons_builders.py`).
 Licensed under the same Godot Engine MIT licence below.
 
+### Vendored viewport icon
+
+`packages/textscene-core/src/r3f/components/FreelookSpeedReadout/viewportSpeedIcon.ts` embeds an unmodified copy of `editor/icons/ViewportSpeed.svg`, the icon Godot 4.6.3's 3D editor draws under its freelook speed bar, base64-encoded the same way. It is a Godot Engine file under the same MIT licence below.
+
 ### Vendored node icons
 
 `packages/textscene-core/src/r3f/nodeIcon/editorIcons.ts` embeds unmodified copies of the node icons Godot 4.6.3's 3D editor draws at the origin of a node, base64-encoded the same way. They are Godot Engine files under the same MIT licence below:
