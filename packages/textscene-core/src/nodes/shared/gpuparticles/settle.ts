@@ -88,7 +88,7 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
   const clock = startClock(emitter);
   if (drawsNothing(material)) return emptyPose(clock.phase);
   const frameTime = settleFrameTime(emitter);
-  const steps = settleStepCount(seconds, frameTime);
+  const steps = settleStepCount(Math.min(seconds, MAX_SETTLE_SECONDS), frameTime);
   const stride = particleStride(emitter.amount, steps);
   const particles = Array.from({ length: Math.ceil(emitter.amount / stride) }, inactiveParticle);
   const birth: BirthContext = {
@@ -120,6 +120,9 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
  * The most particle steps one settle runs: about a second of main thread. Each particle depends on its
  * own index only, so a larger emitter settles every `stride`-th particle exactly and draws a thinner cloud.
  */
+/** The top of the range hint of `preprocess` (`gpu_particles_3d.cpp`). A hand-written scene may pass it; the settle stops there. */
+const MAX_SETTLE_SECONDS = 600;
+
 const MAX_PARTICLE_STEPS = 2_000_000;
 
 function particleStride(amount: number, steps: number): number {

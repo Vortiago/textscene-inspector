@@ -142,8 +142,14 @@ describe('settleGpuParticles over the life of an emitter', () => {
     expect(gpuSettleSeconds({ ...emitter, oneShot: true } as never)).toBe(1);
   });
 
-  it('has no ceiling on the steps, as the engine loop has none', () => {
+  it('counts the steps of a long settle as the engine loop does', () => {
     expect(settleStepCount(200, 1 / 30)).toBe(6001);
+  });
+
+  it('stops a settle at 600 seconds, the top of the preprocess range', () => {
+    const started = performance.now();
+    settle({ amount: 1, lifetime: 1, preprocess: 1e9, fixedFps: 30 });
+    expect(performance.now() - started).toBeLessThan(5_000);
   });
 
   it('rounds the seconds that stand for --particles to a float, which takes one more step', () => {

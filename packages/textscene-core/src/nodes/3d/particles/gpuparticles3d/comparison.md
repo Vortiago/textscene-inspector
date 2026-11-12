@@ -97,4 +97,5 @@ Godot's billboard icon marks the origin of every emitter, faint while it is not 
 - **Missing** Attractors and collision nodes do not move the particles.
 - **Shader missing** A ShaderMaterial as the `process_material` is not translated, so the emitter draws no particle.
 - **Approximated** An `amount` times settle steps above 2,000,000 draws every nth particle, each where Godot puts it, so the main thread stays free.
+- **Approximated** A `preprocess` above 600 seconds, the top of its range, settles for 600 seconds.
 - **Approximated** An `amount` above `1000000`, the most Godot's own editor allows, draws `1000000` particles, where Godot draws them all.
