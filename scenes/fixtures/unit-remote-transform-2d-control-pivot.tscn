@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+; Moves one variable: the Control above the relay turns about a pivot_offset. The relay pushes the pose
+; that includes the pivot, so the green square stands at the relay. unit-remote-transform-2d-control has
+; no pivot, so it shows no regression here.
+
+[node name="Root" type="Node2D"]
+
+[node name="Panel" type="Control" parent="."]
+offset_left = 100.0
+offset_top = 50.0
+offset_right = 200.0
+offset_bottom = 120.0
+rotation = 0.5
+pivot_offset = Vector2(50, 50)
+
+[node name="Relay" type="RemoteTransform2D" parent="Panel"]
+position = Vector2(40, 10)
+remote_path = NodePath("../../Held")
+
+[node name="Held" type="Polygon2D" parent="."]
+color = Color(0.3, 0.8, 0.4, 1)
+polygon = PackedVector2Array(-15, -15, 15, -15, 15, 15, -15, 15)

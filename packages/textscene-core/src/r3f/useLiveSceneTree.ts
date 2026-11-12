@@ -27,6 +27,7 @@ import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 import { NOTHING_CACHED } from './cacheSources.js';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
 import { projectTreeSettings, type ProjectTreeSettings } from '../parser/projectSettingsParser.js';
+import { useControlLocalTransforms, type ControlLocalTransforms } from './contexts/ControlYSortContext.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
 export interface SharedLiveTree {
@@ -165,12 +166,41 @@ const sharedTreesOf = perObject((sceneGraph: SceneGraph) =>
   )
 );
 
-/** The shared tree of what {@link useLiveTreeInputs} read, at the load tick `version`. */
+/** The node types whose pass composes through a Control: a relay and a Skeleton2D. */
+const CONTROL_TRANSFORM_READERS: ReadonlySet<string> = new Set(['RemoteTransform2D', 'Skeleton2D']);
+
+/** Whether a pass over `shared` composes through the transform of a Control. */
+const readsControlTransforms = perObject((shared: SharedLiveTree): boolean => {
+  let reads = false;
+  liveTreeOf(shared.roots, shared.ctx).fold(undefined, ({ step }, _inherited, descend) => {
+    reads ||= CONTROL_TRANSFORM_READERS.has(step.node.type);
+    descend(undefined);
+  });
+  return reads;
+});
+
+/**
+ * `shared` over the transforms the Control walk solved. Written only here, one tree for each pair,
+ * so a publish that changes nothing keeps the tree and every pass result over it.
+ */
+const treesOverControlTransforms = perObject((shared: SharedLiveTree) =>
+  perObject((controlTransforms: ControlLocalTransforms): SharedLiveTree => ({
+    roots: shared.roots,
+    ctx: { ...shared.ctx, controlTransforms },
+  }))
+);
+
+/**
+ * The shared tree of what {@link useLiveTreeInputs} read, at the load tick `version`. A tree with no
+ * relay or Skeleton2D reads no solved Control, so a solve never gives it a new tree.
+ */
 function sharedTreeAt(
-  { sceneGraph, loader, project }: LiveTreeInputs & { sceneGraph: SceneGraph },
+  { sceneGraph, loader, project, controlTransforms }: LiveTreeInputs & { sceneGraph: SceneGraph },
   version: number
 ): SharedLiveTree | null {
-  return sharedTreesOf(sceneGraph)(project)(loader, version);
+  const shared = sharedTreesOf(sceneGraph)(project)(loader, version);
+  if (!shared || controlTransforms.size === 0 || !readsControlTransforms(shared)) return shared;
+  return treesOverControlTransforms(shared)(controlTransforms);
 }
 
 /** What a shared live tree is built from. */
@@ -178,6 +208,8 @@ interface LiveTreeInputs {
   sceneGraph: SceneGraph | null;
   loader: ResourceLoader | null;
   project: ProjectTreeSettings;
+  /** What the Control walk solved. Empty outside the canvas and before the walk has run. */
+  controlTransforms: ControlLocalTransforms;
 }
 
 /**
@@ -195,7 +227,8 @@ function useLiveTreeInputs(): LiveTreeInputs {
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
   const loader = useResourceLoader();
   const project = useProjectTreeSettings();
-  return { sceneGraph, loader, project };
+  const controlTransforms = useControlLocalTransforms();
+  return { sceneGraph, loader, project, controlTransforms };
 }
 
 /**
@@ -203,11 +236,11 @@ function useLiveTreeInputs(): LiveTreeInputs {
  * the one the graph, loader and load tick give, so a node collapses once however many ask.
  */
 export function useSharedLiveTree(): SharedLiveTree | null {
-  const { sceneGraph, loader, project } = useLiveTreeInputs();
+  const { sceneGraph, loader, project, controlTransforms } = useLiveTreeInputs();
   const version = useLiveTreeVersion(loader);
   return useMemo(
-    () => (sceneGraph ? sharedTreeAt({ sceneGraph, loader, project }, version) : null),
-    [sceneGraph, project, loader, version]
+    () => (sceneGraph ? sharedTreeAt({ sceneGraph, loader, project, controlTransforms }, version) : null),
+    [sceneGraph, project, loader, controlTransforms, version]
   );
 }
 
@@ -253,14 +286,14 @@ export function useLiveTreeSelection<T>(
   select: ((tree: SharedLiveTree) => T | undefined) | null,
   isSame: (a: T, b: T) => boolean
 ): T | undefined {
-  const { sceneGraph, loader, project } = useLiveTreeInputs();
+  const { sceneGraph, loader, project, controlTransforms } = useLiveTreeInputs();
   const readAt = useCallback(
     (version: number) => {
       if (!sceneGraph || !select) return undefined;
-      const tree = sharedTreeAt({ sceneGraph, loader, project }, version);
+      const tree = sharedTreeAt({ sceneGraph, loader, project, controlTransforms }, version);
       return tree ? select(tree) : undefined;
     },
-    [sceneGraph, project, loader, select]
+    [sceneGraph, project, loader, controlTransforms, select]
   );
   const isSameSelection = useCallback(
     (a: T | undefined, b: T | undefined) => sameSelection(a, b, isSame),

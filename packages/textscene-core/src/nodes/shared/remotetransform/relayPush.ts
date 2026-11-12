@@ -73,7 +73,8 @@ function reader3D(tree: LiveTree, posed: PatchLookup): SpaceReader<Transform3D> 
 /** The stored nodes with the poses of `posed` beside them, as `resolveGlobalTransform2D` reads a pose. */
 function reader2D(tree: LiveTree, posed: PatchLookup): SpaceReader<Transform2DColumns> {
   const chainTo = chainsOver(tree, NO_PATCHES);
-  const global = (path: string) => transform2DOnCanvas(path, chainTo(path), posed);
+  const global = (path: string) =>
+    transform2DOnCanvas(path, chainTo(path), posed, tree.ctx.controlTransforms);
   return {
     local: (path) => localTransform2D(chainTo(path).get(path)!, posed.get(path) as Node2DPose | undefined),
     global,
