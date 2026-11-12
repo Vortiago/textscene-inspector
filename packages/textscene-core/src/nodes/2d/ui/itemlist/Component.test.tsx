@@ -3,7 +3,7 @@
  * `packItemListRows` packs them. Structure, tint and render order only: the
  * golden images own the pixels.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -23,6 +23,17 @@ import { ItemListIconMode } from '../../../../godot/scene/gui';
 import { ICON_MODE_LEFT, ITEM_LIST_THEME_FONT_KEY, shapeItemListText } from './nativeSolver';
 
 import type { ItemListProperties } from './types';
+import {
+  bundledRunOf,
+  bundledRunMeshes,
+  bundledRuns,
+  runPenExtentPx,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 const ICON_PATH = 'res://icon.png';
@@ -48,14 +59,6 @@ function findChromeMeshes(scene: Rendered['scene']) {
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
     .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
-}
-
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMeshes(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
 /** `<ControlQuad>` (an item's icon): a `PlaneGeometry`, identified by its own `.parameters.width`. */
@@ -127,7 +130,7 @@ describe('<ItemList> — panel + rows', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMeshes(renderer.scene).length).toBe(2);
+    expect(bundledRunMeshes(renderer.scene).length).toBe(2);
   });
 
   it('draws no icon mesh at all when no item names one', async () => {
@@ -158,10 +161,8 @@ describe('<ItemList> — panel + rows', () => {
         renderOrder={0}
       />
     );
-    const [normal, disabled] = findTextMeshes(renderer.scene);
-    const normalOpacity = (normal!.material as THREE.ShaderMaterial).uniforms.uOpacity!.value;
-    const disabledOpacity = (disabled!.material as THREE.ShaderMaterial).uniforms.uOpacity!.value;
-    expect(disabledOpacity).toBeLessThan(normalOpacity);
+    const [normal, disabled] = bundledRunMeshes(renderer.scene);
+    expect(bundledRunOf(disabled!)!.tint.a).toBeLessThan(bundledRunOf(normal!)!.tint.a);
   });
 
   it('forwards renderOrder to the panel chrome and every text mesh', async () => {
@@ -174,7 +175,7 @@ describe('<ItemList> — panel + rows', () => {
       />
     );
     expect(findChromeMeshes(renderer.scene)[0]!.renderOrder).toBe(5);
-    expect(findTextMeshes(renderer.scene)[0]!.renderOrder).toBe(5);
+    expect(bundledRunMeshes(renderer.scene)[0]!.renderOrder).toBe(5);
   });
 });
 
@@ -193,7 +194,7 @@ describe('<ItemList> — row packing', () => {
         renderOrder={0}
       />
     );
-    const textMeshes = findTextMeshes(renderer.scene);
+    const textMeshes = bundledRunMeshes(renderer.scene);
     expect(textMeshes.length).toBe(2);
     // mesh -> its own text-offset group -> the row's own outer group.
     const rowX = (mesh: THREE.Mesh) => (mesh.parent!.parent as THREE.Object3D).position.x;
@@ -210,7 +211,7 @@ describe('<ItemList> — row packing', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMeshes(renderer.scene).length).toBe(2);
+    expect(bundledRunMeshes(renderer.scene).length).toBe(2);
   });
 });
 
@@ -248,8 +249,8 @@ describe('<ItemList> — RTL', () => {
     })!;
     const ltr = await renderWithIconLoaded(RTL_ITEMS);
     const rtl = await renderWithIconLoaded(RTL_ITEMS, true);
-    expect(absoluteX(findTextMeshes(ltr.scene)[0]!)).toBeCloseTo(26, 5);
-    expect(absoluteX(findTextMeshes(rtl.scene)[0]!)).toBeCloseTo(
+    expect(absoluteX(bundledRunMeshes(ltr.scene)[0]!)).toBeCloseTo(26, 5);
+    expect(absoluteX(bundledRunMeshes(rtl.scene)[0]!)).toBeCloseTo(
       90 + (82 - shapedTextSizeWidthPx(shaped.widthPx)),
       5
     );
@@ -280,15 +281,9 @@ describe('<ItemList> — row-relative vertical placement', () => {
         renderOrder={0}
       />
     );
-    expect(absoluteY(findTextMeshes(renderer.scene)[0]!.parent!)).toBeCloseTo(4 + 2, 5);
+    expect(absoluteY(bundledRunMeshes(renderer.scene)[0]!.parent!)).toBeCloseTo(4 + 2, 5);
   });
 });
-
-/** `TextRun`'s widest glyph edge, in the row's own pixels: the drawn width of one label line. */
-function drawnTextRightEdge(mesh: THREE.Mesh): number {
-  mesh.geometry.computeBoundingBox();
-  return mesh.geometry.boundingBox!.max.x;
-}
 
 function renderList(properties: Partial<ItemListProperties>, rect: Rect2, children?: React.ReactNode) {
   return ReactThreeTestRenderer.create(
@@ -309,7 +304,7 @@ describe('<ItemList> — labels fit their draw width', () => {
       { items: [{ text: 'Long word another' }], iconMode: ItemListIconMode.ICON_MODE_TOP, maxTextLines: 2 },
       { x: 0, y: 0, w: 64, h: 100 }
     );
-    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(2);
   });
 
   it('shows at most max_text_lines lines of a label wrapped at fixed_column_width', async () => {
@@ -322,7 +317,7 @@ describe('<ItemList> — labels fit their draw width', () => {
       },
       RECT
     );
-    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(2);
   });
 
   // 80 px list, 72 px content: the label box is `177 - 2 - (177 - 72)` = 70 px (`:1657-1661`).
@@ -331,7 +326,7 @@ describe('<ItemList> — labels fit their draw width', () => {
       { items: [{ text: 'A very long item name' }], iconMode: ICON_MODE_LEFT },
       { x: 0, y: 0, w: 80, h: 100 }
     );
-    expect(drawnTextRightEdge(findTextMeshes(renderer.scene)[0]!)).toBeLessThanOrEqual(71);
+    expect(runPenExtentPx(bundledRuns(renderer.scene)[0]!)).toBeLessThanOrEqual(71);
   });
 
   // `:1676-1688`: a fixed-width column draws no label once its icon and separation fill it.
@@ -340,7 +335,7 @@ describe('<ItemList> — labels fit their draw width', () => {
       items: [{ text: 'Sword', icon: 'ExtResource("1")' }],
       fixedColumnWidth: 10,
     });
-    expect(findTextMeshes(renderer.scene)).toHaveLength(0);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
   });
 });
 
@@ -348,9 +343,7 @@ describe('<ItemList> — labels fit their draw width', () => {
 describe('<ItemList> — clip_contents', () => {
   it('clips every label to the list rect', async () => {
     const renderer = await renderList({ items: [{ text: 'Sword' }] }, RECT);
-    for (const mesh of findTextMeshes(renderer.scene)) {
-      expect((mesh.material as THREE.ShaderMaterial).clippingPlanes).toHaveLength(4);
-    }
+    for (const run of bundledRuns(renderer.scene)) expect(run.clippingPlanes).toHaveLength(4);
   });
 
   it('clips every icon to the list rect', async () => {
@@ -372,9 +365,7 @@ describe('<ItemList> — clip_contents', () => {
       <ClipProbe onPlanes={(captured) => (planes = captured)} />
     );
     expect(planes).toHaveLength(0);
-    expect(
-      (findTextMeshes(renderer.scene)[0]!.material as THREE.ShaderMaterial).clippingPlanes ?? []
-    ).toHaveLength(0);
+    expect(bundledRuns(renderer.scene)[0]!.clippingPlanes ?? []).toHaveLength(0);
   });
 });
 
@@ -419,7 +410,7 @@ describe('<ItemList> — scrollbars', () => {
   it('draws only the rows that reach into the list, even with clip_contents = false (item_list.cpp:1493-1500)', async () => {
     const renderer = await renderList({ items: sixRows, clipContents: false }, RECT);
     // 100 px less the panel's 8 px holds four 23 px rows and the top of a fifth.
-    const drawn = findTextMeshes(renderer.scene).length;
+    const drawn = bundledRunMeshes(renderer.scene).length;
     expect(drawn).toBeGreaterThan(0);
     expect(drawn).toBeLessThan(sixRows.length);
   });

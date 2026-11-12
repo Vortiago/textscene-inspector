@@ -32,11 +32,14 @@ const WHEEL_ZOOM_MULTIPLIER = 1.08;
  */
 const X_ROT_LIMIT = 1.57;
 
-/** `editors/3d/freelook/freelook_base_speed`, in units per second. */
-const FREELOOK_BASE_SPEED = 5.0;
+/** `editors/3d/freelook/freelook_base_speed`, in units per second: the speed every viewport opens at. */
+export const FREELOOK_BASE_SPEED = 5.0;
 
 /** `_update_freelook`'s `freelook_speed_modifier` multiplier (Shift). */
 const FREELOOK_SPRINT_MULTIPLIER = 3.0;
+
+/** `_update_freelook`'s `freelook_slow_modifier` multiplier (Alt), written as Godot writes it. */
+const FREELOOK_SLOW_MULTIPLIER = 0.333333;
 
 /** `ZOOM_FREELOOK_MIN` / `ZOOM_FREELOOK_MAX` (single-precision editor build). */
 const ZOOM_DISTANCE_MIN = 0.01;
@@ -90,6 +93,8 @@ export const OPPOSITE_VIEW: Readonly<Record<GodotViewAngle, GodotViewAngle>> = {
 
 export type NavMode = 'orbit' | 'pan' | 'zoom' | 'freelook';
 
+export type Projection = 'perspective' | 'orthographic';
+
 export interface NavModifiers {
   shiftKey?: boolean;
   ctrlKey?: boolean;
@@ -97,14 +102,14 @@ export interface NavModifiers {
 }
 
 /**
- * Godot's button and modifier map, plus its "Emulate 3 Button Mouse" alt+left bindings always.
- * Null means navigation leaves the drag alone, as for a plain left-drag, which selects. Call it
- * on every pointer move: Godot re-reads the modifiers per motion event, so Shift mid-drag turns
- * an orbit into a pan.
+ * Godot's button and modifier map, plus its "Emulate 3 Button Mouse" alt+left bindings. Null
+ * means navigation leaves the drag alone, as for a plain left-drag, which selects. Godot reads
+ * the modifiers again on each motion event, so call it on every pointer move.
  */
-export function resolveNavMode(button: number, mods: NavModifiers): NavMode | null {
+export function resolveNavMode(button: number, mods: NavModifiers, projection: Projection): NavMode | null {
   if (button === 1) return mods.ctrlKey ? 'zoom' : mods.shiftKey ? 'pan' : 'orbit';
-  if (button === 2) return 'freelook';
+  // Orthographic view has no freelook (`node_3d_editor_plugin.cpp:2375-2383`).
+  if (button === 2) return projection === 'orthographic' ? 'pan' : 'freelook';
   if (button === 0 && mods.altKey) return mods.shiftKey ? 'pan' : 'orbit';
   return null;
 }
@@ -117,6 +122,7 @@ export interface FreelookKeys {
   up?: boolean;
   down?: boolean;
   sprint?: boolean;
+  slow?: boolean;
 }
 
 const AXIS_X = new THREE.Vector3(1, 0, 0);
@@ -202,10 +208,29 @@ export function slideCursorInViewPlane(cursor: EditorCursor, right: number, up: 
  * point and never crosses it. The range comes from the camera's clip planes, as in Godot.
  */
 export function scaleCursorDistance(cursor: EditorCursor, scale: number, range: ZoomRange): EditorCursor {
-  const min = Math.max(range.near * 4, ZOOM_DISTANCE_MIN);
-  const max = Math.min(range.far / 4, ZOOM_DISTANCE_MAX);
-  const distance = min > max ? (min + max) / 2 : THREE.MathUtils.clamp(cursor.distance * scale, min, max);
-  return { ...cursor, distance };
+  return { ...cursor, distance: clampToZoomRange(cursor.distance * scale, range) };
+}
+
+/**
+ * `scale_freelook_speed`: the wheel multiplies the flight speed while freelook is on. Godot holds
+ * the speed to the range it holds the orbit radius to.
+ */
+export function scaleFreelookSpeed(speed: number, scale: number, range: ZoomRange): number {
+  return clampToZoomRange(speed * scale, range);
+}
+
+/** The one range Godot derives from the clip planes, for the orbit radius and the flight speed. */
+export function zoomLimits(range: ZoomRange): { min: number; max: number } {
+  return {
+    min: Math.max(range.near * 4, ZOOM_DISTANCE_MIN),
+    max: Math.min(range.far / 4, ZOOM_DISTANCE_MAX),
+  };
+}
+
+/** An inverted range gives its middle. */
+function clampToZoomRange(value: number, range: ZoomRange): number {
+  const { min, max } = zoomLimits(range);
+  return min > max ? (min + max) / 2 : THREE.MathUtils.clamp(value, min, max);
 }
 
 /**
@@ -257,11 +282,12 @@ export function freelookCursor(cursor: EditorCursor, dx: number, dy: number): Ed
 /**
  * `_update_freelook`, camera-relative scheme: W/S run along the view direction with its pitch,
  * A/D along the camera's right, Q/E along its up. The direction is a sum of unit axes and not
- * normalised, since Godot's diagonals are faster.
+ * normalised, since Godot's diagonals are faster. Shift and Alt both held multiply, as in Godot.
  */
 export function freelookMoveCursor(
   cursor: EditorCursor,
   keys: FreelookKeys,
+  unitsPerSecond: number,
   deltaSeconds: number
 ): EditorCursor {
   const basis = cursorQuaternion(cursor);
@@ -278,7 +304,10 @@ export function freelookMoveCursor(
   if (keys.down) direction.sub(up);
   if (direction.lengthSq() === 0) return cursor;
 
-  const speed = FREELOOK_BASE_SPEED * (keys.sprint ? FREELOOK_SPRINT_MULTIPLIER : 1);
+  const speed =
+    unitsPerSecond *
+    (keys.sprint ? FREELOOK_SPRINT_MULTIPLIER : 1) *
+    (keys.slow ? FREELOOK_SLOW_MULTIPLIER : 1);
   const motion = direction.multiplyScalar(speed * deltaSeconds);
   return { ...cursor, target: cursor.target.clone().add(motion) };
 }

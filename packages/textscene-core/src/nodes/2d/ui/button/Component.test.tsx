@@ -13,9 +13,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
-import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { ButtonProperties } from './types';
-import { textQuadCounts } from '../../../../r3f/controls/native/testing/textQuadCounts';
 import { Button } from './Component';
 import { buttonMinimumSize } from './nativeSolver';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
@@ -31,6 +29,19 @@ import {
   renderWithOwnIcon,
   worldPosition,
 } from '../../../../r3f/controls/native/testing/ownIcon';
+import {
+  bundledRunOf,
+  bundledRunMeshes,
+  bundledRuns,
+  inkedGlyphCount,
+  inkedGlyphCounts,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+import { findCanvasTextMesh } from '../../../../r3f/controls/native/testing/canvasTextMesh';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -39,6 +50,9 @@ const THEME = nativeTheme(1);
 const RECT: Rect2 = { x: 0, y: 0, w: 120, h: 32 };
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
+/** How many glyphs of the first run of the bundled face draw ink. */
+const inkedCount = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
 
 function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
   return {
@@ -124,24 +138,24 @@ describe('<Button> (isolated painter contract)', () => {
       />
     );
     expect(findChromeMesh(renderer.scene)).toBeUndefined();
-    expect(findTextMesh(renderer.scene)).toBeDefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeDefined();
   });
 
   it('draws NO text mesh when text is absent/empty', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <Button {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
     );
-    expect(findTextMesh(renderer.scene)).toBeUndefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeUndefined();
   });
 
   it("uses control_font_color (0.875 sRGB) for the NORMAL label, tinted the object's own colour, not an approximation", async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <Button {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
-    const mesh = findTextMesh(renderer.scene)!;
-    const material = mesh.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(1, 5);
+    const mesh = bundledRunMeshes(renderer.scene)[0]!;
+    const tint = bundledRunOf(mesh)!.tint;
+    expect(tint.r).toBeCloseTo(0.875, 5);
+    expect(tint.a).toBeCloseTo(1, 5);
   });
 
   it(
@@ -156,10 +170,10 @@ describe('<Button> (isolated painter contract)', () => {
           renderOrder={0}
         />
       );
-      const mesh = findTextMesh(renderer.scene)!;
-      const material = mesh.material as THREE.ShaderMaterial;
-      expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
-      expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 5);
+      const mesh = bundledRunMeshes(renderer.scene)[0]!;
+      const tint = bundledRunOf(mesh)!.tint;
+      expect(tint.r).toBeCloseTo(0.875, 5);
+      expect(tint.a).toBeCloseTo(0.5, 5);
     }
   );
 
@@ -180,9 +194,9 @@ describe('<Button> (isolated painter contract)', () => {
     // The StyleBox's own white bgColor x tint(0.25) = 0.25, in sRGB.
     expect(chromeColor.getX(0)).toBeCloseTo(0.25, 4);
 
-    const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    const textTint = bundledRuns(renderer.scene)[0]!.tint;
     // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
-    expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
+    expect(textTint.r).toBeCloseTo(0.21875, 5);
   });
 
   it('forwards renderOrder to the chrome mesh and to the text mesh', async () => {
@@ -213,8 +227,7 @@ describe('<Button> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const quadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
-    expect(quadCount(trimmed)).toBeLessThan(quadCount(whole));
+    expect(inkedCount(trimmed)).toBeLessThan(inkedCount(whole));
   });
 });
 
@@ -222,8 +235,6 @@ describe('<Button>: the label is cut to its paragraph box whatever clip_text say
   afterEach(() => {
     controlSolverRegistry.clear();
   });
-
-  const glyphQuadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
 
   async function render(properties: Partial<ButtonProperties>, rect: Rect2) {
     return ReactThreeTestRenderer.create(
@@ -239,13 +250,13 @@ describe('<Button>: the label is cut to its paragraph box whatever clip_text say
   it('draws fewer glyphs than the whole label when the box is narrower than the text', async () => {
     const whole = await render({}, { x: 0, y: 0, w: 140, h: 32 });
     const clipped = await render({}, { x: 0, y: 0, w: 60, h: 32 });
-    expect(glyphQuadCount(clipped)).toBeLessThan(glyphQuadCount(whole));
+    expect(inkedCount(clipped)).toBeLessThan(inkedCount(whole));
   });
 
   it('draws the whole label when the box fits it', async () => {
     const fitting = await render({ clipText: true }, { x: 0, y: 0, w: 140, h: 32 });
     const unclipped = await render({}, { x: 0, y: 0, w: 140, h: 32 });
-    expect(glyphQuadCount(fitting)).toBe(glyphQuadCount(unclipped));
+    expect(inkedCount(fitting)).toBe(inkedCount(unclipped));
   });
 
   it('trims every row of an unwrapped label (text_paragraph.cpp:282-293)', async () => {
@@ -258,7 +269,7 @@ describe('<Button>: the label is cut to its paragraph box whatever clip_text say
         renderOrder={0}
       />
     );
-    expect(textQuadCounts(renderer.scene)).toEqual([2, 2]);
+    expect(inkedGlyphCounts(renderer.scene)).toEqual([2, 2]);
   });
 
   it('trims no row of a wrapped label, which hides no line (text_paragraph.cpp:228-262)', async () => {
@@ -272,7 +283,7 @@ describe('<Button>: the label is cut to its paragraph box whatever clip_text say
       />
     );
     // AUTOWRAP_WORD finds no break in one word, so the untrimmed row is only cut by the draw box.
-    expect(textQuadCounts(renderer.scene)).toEqual([2]);
+    expect(inkedGlyphCounts(renderer.scene)).toEqual([2]);
   });
 });
 
@@ -354,8 +365,7 @@ describe('<Button> registered through <ControlCanvasWalker> (end-to-end walker p
 
 /**
  * The scene-font (canvas-kind `FontMetrics`) path. Text placement (`button.cpp:233-456`)
- * has nothing font-kind-specific in it. An atlas-bake anchor leaking into it reads correct
- * on the atlas path and is off here by `ascentPx - base*fontSizePx/42` px.
+ * has nothing font-kind-specific in it.
  */
 describe('<Button>: scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
@@ -370,23 +380,15 @@ describe('<Button>: scene-font (canvas-kind FontMetrics) text path', () => {
     );
   }
 
-  /** The canvas painter's mesh: a `MeshBasicMaterial` over the raster's `DataTexture`, not the MSDF `ShaderMaterial`. */
-  function findCanvasTextMesh(scene: Rendered['scene']) {
-    return scene
-      .findAllByType('Mesh')
-      .map((m) => m.instance as THREE.Mesh)
-      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.DataTexture);
-  }
-
-  it('paints the label through the canvas rasteriser — ONE quad, not one per glyph, and no MSDF material', async () => {
+  it('paints the label through the canvas rasteriser: one quad, and no run of the bundled face', async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene);
     expect(mesh).toBeDefined();
     expect(mesh!.geometry.getAttribute('position').count).toBe(4);
-    expect(findTextMesh(renderer.scene)).toBeUndefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeUndefined();
   });
 
-  it('places the text at the pure button.cpp offset — no atlas-bake anchor anywhere in it', async () => {
+  it('places the text at the pure button.cpp offset', async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene)!;
     // At 16px: ascent 13, descent 4, no line_spacing, so pitch 17 and natural size (16, 17).
@@ -417,7 +419,7 @@ describe('<Button>: scene-font (canvas-kind FontMetrics) text path', () => {
           renderOrder={0}
         />
       );
-      return findTextMesh(renderer.scene)!.parent!.position.x;
+      return bundledRunMeshes(renderer.scene)[0]!.parent!.position.x;
     };
 
     const ltrLeft = await labelX(0, false);

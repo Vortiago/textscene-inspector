@@ -366,7 +366,7 @@ interface LineEditContentInput {
 }
 
 interface LineEditContentLayout {
-  /** The text box's top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there (`buildGlyphQuadArrays`). */
+  /** The text box's top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there. */
   textOffset: Vector2;
   /** `ofs_max` (`line_edit.cpp:1420,1482`): the rightmost x a glyph pen may reach, and RIGHT alignment's caret fallback x (`lineEditCaretRect`). */
   ofsMaxPx: number;

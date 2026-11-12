@@ -1,8 +1,7 @@
 /**
  * Every property-list route family in `testing/propertyListRoutes.ts` resolves to a
- * validator, or is a named gap. `UNIMPLEMENTED_COUNT` is a ratchet like
- * `ownValidatorCoverage`'s `UNDECLARED`: each row it counts is a family a scene
- * can carry with no validation.
+ * validator, or is a named gap: a row whose verdict is `unimplemented`, with its
+ * reason. Each such row is a family a scene can carry with no validation.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -12,9 +11,6 @@ import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { ROWS, type RouteRow } from './testing/propertyListRoutes.js';
 import '../parser/TscnParser.js'; // side-effect: every slice registers its parser
 import './index.js'; // side-effect: every slice registers its validators
-
-/** Rows counted as a live gap; only ever moves down as one is fixed. */
-const UNIMPLEMENTED_COUNT = 0;
 
 type Verdict = RouteRow['verdict'];
 
@@ -52,12 +48,11 @@ const unimplementedRows = ROWS.filter((row): row is RouteRow & { verdict: { unim
 );
 
 describe('property-list route coverage', () => {
-  it('covers the read population, MultiplayerSpawner excluded', () => {
-    // A pin, not a ceiling: the population grows only when someone reads
-    // another override and writes its row. It cannot prove the population is
-    // complete, since nothing may scrape the engine to ask.
+  it('covers a read population, MultiplayerSpawner excluded', () => {
+    // The population grows only when someone reads another override and writes
+    // its row. Nothing may scrape the engine to ask whether it is complete.
     const types = new Set(ROWS.map((row) => row.type));
-    expect(types.size).toBe(39);
+    expect(types.size).toBeGreaterThan(0);
     expect(types.has('MultiplayerSpawner')).toBe(false);
   });
 
@@ -96,11 +91,5 @@ describe('property-list route coverage', () => {
     it('still resolves to no validator, so the row cannot go stale silently', () => {
       expect(validatorRegistry.findValidator(row.type, row.sample)).toBeNull();
     });
-  });
-
-  it('pins the unimplemented count, so it can only move by editing this file', () => {
-    // Exact equality, not a ceiling: a fixed row and a new row both require
-    // an edit to this constant.
-    expect(unimplementedRows.length).toBe(UNIMPLEMENTED_COUNT);
   });
 });

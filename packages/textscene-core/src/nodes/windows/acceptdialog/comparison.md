@@ -19,6 +19,11 @@ The panel, the message and the focused OK button, sized to the content.
 
 A Theme on the dialog or an ancestor restyles the Button and the Label inside it. It does so as for a Button and a Label in the scene.
 
+## Theme icon
+<!-- compare: image=unit-accept-dialog-theme-icon status=done fixture=unit-accept-dialog-theme-icon.tscn -->
+
+A built button draws the theme icon `icon` of `Button` and grows by it, as a Button in the scene does. This holds for the OK button, the Cancel button of a ConfirmationDialog and the buttons of a FileDialog.
+
 ## Linting
 
 <!-- lint:begin AcceptDialog -->

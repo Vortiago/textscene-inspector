@@ -1,7 +1,7 @@
-/** startAction and seekAction re-apply weight and timeScale on every play(). */
+/** startAction and seekAction re-apply weight and timeScale on every play(), and clipTimeOf reads the time a loop samples. */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { startAction, seekAction } from './actionHelpers';
+import { clipTimeOf, startAction, seekAction, startForwardPass, switchLoopForward } from './actionHelpers';
 
 function makeAction(weight = 1, timeScale = 1): THREE.AnimationAction {
   const target = new THREE.Object3D();
@@ -74,5 +74,118 @@ describe('seekAction', () => {
     action.enabled = false;
     seekAction(action, 0.1);
     expect(action.enabled).toBe(true);
+  });
+});
+
+/** A playing action on a 1 s clip that slides `T` from x 0 to 1, with the object and the mixer that steps it. */
+function playLooping(loop: THREE.AnimationActionLoopStyles) {
+  const action = makeAction();
+  action.setLoop(loop, Infinity);
+  action.clampWhenFinished = true;
+  action.play();
+  const mixer = action.getMixer();
+  return { action, mixer, target: mixer.getRoot() as THREE.Object3D };
+}
+
+describe('clipTimeOf', () => {
+  it.each([
+    ['LoopOnce', THREE.LoopOnce],
+    ['LoopRepeat', THREE.LoopRepeat],
+    ['LoopPingPong', THREE.LoopPingPong],
+  ])('is the time %s samples the clip at, on every pass', (_name, loop) => {
+    const { action, mixer, target } = playLooping(loop);
+    for (let frame = 0; frame < 12; frame++) {
+      mixer.update(0.3);
+      // The track maps the clip time to x one to one, so x is the time THREE sampled.
+      expect(clipTimeOf(action)).toBeCloseTo(target.position.x, 10);
+    }
+  });
+
+  it('runs back on the return pass of a LoopPingPong, where `time` runs on forward', () => {
+    const { action, mixer } = playLooping(THREE.LoopPingPong);
+    mixer.update(1.2);
+    expect(action.time).toBeCloseTo(0.2);
+    expect(clipTimeOf(action)).toBeCloseTo(0.8);
+  });
+
+  it('is the time of an action that has not started', () => {
+    const action = makeAction();
+    action.setLoop(THREE.LoopPingPong, Infinity);
+    action.time = 0.4;
+    expect(clipTimeOf(action)).toBe(0.4);
+  });
+});
+
+describe('startForwardPass', () => {
+  it('plays forward from the clip time of a return pass', () => {
+    const { action, mixer, target } = playLooping(THREE.LoopPingPong);
+    mixer.update(1.2);
+    startForwardPass(action);
+    mixer.update(0.1);
+    expect(target.position.x).toBeCloseTo(0.9);
+  });
+
+  it('leaves a forward pass as it stands', () => {
+    const { action, mixer } = playLooping(THREE.LoopRepeat);
+    mixer.update(1.2);
+    startForwardPass(action);
+    expect(action.time).toBeCloseTo(0.2);
+    expect(action.isRunning()).toBe(true);
+  });
+});
+
+describe('seekAction on the return pass of a LoopPingPong', () => {
+  it('samples the seek at the time asked for', () => {
+    const { action, mixer, target } = playLooping(THREE.LoopPingPong);
+    mixer.update(1.2);
+    seekAction(action, 0.25);
+    mixer.update(0);
+    expect(target.position.x).toBeCloseTo(0.25);
+  });
+
+  it('plays forward from the time it seeks to', () => {
+    const { action, mixer, target } = playLooping(THREE.LoopPingPong);
+    mixer.update(1.2);
+    seekAction(action, 0.25);
+    action.paused = false;
+    mixer.update(0.1);
+    expect(target.position.x).toBeCloseTo(0.35);
+  });
+
+  it('keeps the pass on a seek to the clip time the action stands on', () => {
+    const { action, mixer, target } = playLooping(THREE.LoopPingPong);
+    mixer.update(1.2);
+    seekAction(action, clipTimeOf(action));
+    action.paused = false;
+    mixer.update(0.1);
+    expect(target.position.x).toBeCloseTo(0.7);
+  });
+});
+
+describe('switchLoopForward', () => {
+  const asLoop = (loop: THREE.AnimationActionLoopStyles) => (action: THREE.AnimationAction) =>
+    void action.setLoop(loop, Infinity);
+
+  it('plays a repeat forward from the clip time of a ping-pong return pass', () => {
+    const { action, mixer, target } = playLooping(THREE.LoopPingPong);
+    mixer.update(1.2);
+    switchLoopForward(action, asLoop(THREE.LoopRepeat));
+    mixer.update(0.1);
+    expect(target.position.x).toBeCloseTo(0.9);
+  });
+
+  it('plays a ping-pong forward after an odd count of repeat passes', () => {
+    const { action, mixer, target } = playLooping(THREE.LoopRepeat);
+    mixer.update(1.2);
+    switchLoopForward(action, asLoop(THREE.LoopPingPong));
+    mixer.update(0.1);
+    expect(target.position.x).toBeCloseTo(0.3);
+  });
+
+  it('leaves the time of an action that has not started', () => {
+    const action = makeAction();
+    action.time = 0.4;
+    switchLoopForward(action, asLoop(THREE.LoopPingPong));
+    expect(action.time).toBe(0.4);
   });
 });

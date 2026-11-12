@@ -97,6 +97,33 @@ describe('compareImages', () => {
     expect(result.meanChannelError).toBeCloseTo(255 / (100 * 3), 6);
   });
 
+  it('counts and bounds the pixels that moved by more than a given step', () => {
+    const expected = solidPng(10, 10, [0, 0, 0, 255]);
+    const actual = solidPng(10, 10, [0, 0, 0, 255]);
+    const setRed = (x, y, value) => (actual.data[(y * 10 + x) * 4] = value);
+    setRed(1, 1, 1);
+    setRed(3, 2, 9);
+    setRed(7, 5, 3);
+    const { over } = compareImages(buffer(expected), buffer(actual), { overDelta: 2 });
+    expect(over).toEqual({ pixels: 2, bounds: { left: 3, top: 2, right: 7, bottom: 5 } });
+  });
+
+  it('counts no pixel that moved by exactly the step (edge case)', () => {
+    const { over } = compareImages(
+      buffer(solidPng(4, 4, [10, 10, 10, 255])),
+      buffer(solidPng(4, 4, [12, 10, 10, 255])),
+      {
+        overDelta: 2,
+      }
+    );
+    expect(over).toEqual({ pixels: 0, bounds: null });
+  });
+
+  it('reports nothing about a step unless one is asked for', () => {
+    const png = buffer(solidPng(2, 2));
+    expect(compareImages(png, png).over).toBeUndefined();
+  });
+
   it('reports a size mismatch instead of a number', () => {
     const result = compareImages(buffer(solidPng(4, 4)), buffer(solidPng(4, 5)));
     expect(result.sizeMismatch).toEqual({

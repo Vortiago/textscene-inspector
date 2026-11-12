@@ -3,7 +3,7 @@
  * the stepper icons, with no button background without a `theme_override_styles/*` override (both
  * are `StyleBoxEmpty` by default). It asserts structure, tint and render order, not pixels.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -15,7 +15,16 @@ import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { SpinBox } from './Component';
 import type { SpinBoxProperties } from './types';
-import { findTextMesh } from '../../../../r3f/controls/native/testing/ownIcon';
+import {
+  bundledRunMeshes,
+  bundledRuns,
+  runGlyphs,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 100, h: 30 };
 
@@ -55,7 +64,6 @@ function findChromeMeshes(scene: Rendered['scene']) {
     .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
 }
 
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
 /** The two arrow icon `ControlQuad` meshes (`PlaneGeometry`), in source order: up, then down. */
 function findIconMeshes(scene: Rendered['scene']) {
   return scene
@@ -91,7 +99,7 @@ describe('<SpinBox> — field chrome + text', () => {
     expect(fields.length).toBe(1);
     // style_normal_color = Color(0.1, 0.1, 0.1, 0.6).
     expect(fillColor(fields[0]!).a).toBeCloseTo(0.6, 5);
-    expect(findTextMesh(renderer.scene)).toBeDefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeDefined();
   });
 
   it('switches to the "read_only" field box once editable=false', async () => {
@@ -190,7 +198,7 @@ describe('<SpinBox> — render order', () => {
     );
     const fields = findChromeMeshes(renderer.scene);
     expect(fields[0]!.renderOrder).toBe(7);
-    expect(findTextMesh(renderer.scene)!.renderOrder).toBe(7);
+    expect(bundledRunMeshes(renderer.scene)[0]!.renderOrder).toBe(7);
   });
 });
 
@@ -237,8 +245,8 @@ describe('<SpinBox> — RTL layout', () => {
     const ltr = await ReactThreeTestRenderer.create(
       <SpinBox {...painterEnv()} solveNode={solveNode({ value: 5, step: 1 })} rect={RECT} renderOrder={0} />
     );
-    const rtlX = findTextMesh(rtl.scene)!.getWorldPosition(new THREE.Vector3()).x;
-    const ltrX = findTextMesh(ltr.scene)!.getWorldPosition(new THREE.Vector3()).x;
+    const rtlX = bundledRunMeshes(rtl.scene)[0]!.getWorldPosition(new THREE.Vector3()).x;
+    const ltrX = bundledRunMeshes(ltr.scene)[0]!.getWorldPosition(new THREE.Vector3()).x;
     expect(rtlX).toBeGreaterThan(ltrX + FIELD_LEFT_RTL);
   });
 });
@@ -248,8 +256,8 @@ describe('<SpinBox> — field text direction (line_edit.cpp:3103-3112)', () => {
     controlSolverRegistry.clear();
   });
 
-  /** The atlas rectangle of each drawn glyph quad (four corners of u, v), left to right. */
-  async function glyphAtlasRects(locale: string): Promise<number[][]> {
+  /** The characters of the drawn glyphs, left to right. */
+  async function drawnCharacters(locale: string): Promise<string[]> {
     const renderer = await ReactThreeTestRenderer.create(
       <SpinBox
         {...painterEnv()}
@@ -261,14 +269,13 @@ describe('<SpinBox> — field text direction (line_edit.cpp:3103-3112)', () => {
         renderOrder={0}
       />
     );
-    const uv = Array.from(findTextMesh(renderer.scene)!.geometry.attributes.uv!.array);
-    return Array.from({ length: uv.length / 8 }, (_, i) => uv.slice(i * 8, i * 8 + 8));
+    return [...runGlyphs(bundledRuns(renderer.scene)[0]!)]
+      .sort((a, b) => a.x - b.x)
+      .map((glyph) => glyph.char);
   }
 
   it('draws the prefix as the first glyph under a left-to-right locale and the last under a right-to-left one', async () => {
-    const ltr = await glyphAtlasRects('en');
-    const rtl = await glyphAtlasRects('ar');
-    expect(rtl.at(-1)).toEqual(ltr[0]);
-    expect(rtl[0]).not.toEqual(ltr[0]);
+    expect((await drawnCharacters('en'))[0]).toBe('$');
+    expect((await drawnCharacters('ar')).at(-1)).toBe('$');
   });
 });

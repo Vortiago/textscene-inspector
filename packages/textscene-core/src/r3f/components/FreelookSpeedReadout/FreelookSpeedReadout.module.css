@@ -1,0 +1,68 @@
+/*
+ * Godot's `draw_indicator_bar` at editor scale 1: a bar 6 px wide and half the viewport high,
+ * 10 px from the left edge and centred, with the icon 2 px under it and the label under the icon.
+ * The colours are Godot's own, `Color(1, 0.95, 0.7)` over a dark outline, so the readout stays
+ * readable on any scene. They are not --tsi tokens.
+ */
+.root {
+  --freelook-speed-colour: rgb(255 242 179);
+  position: absolute;
+  left: 10px;
+  top: 25%;
+  height: 50%;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.bar {
+  position: relative;
+  flex: 1;
+  width: 6px;
+  background: rgb(from var(--freelook-speed-colour) r g b / 0.2);
+  outline: 1px solid rgb(0 0 0 / 0.7);
+}
+
+.fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgb(from var(--freelook-speed-colour) r g b / 0.6);
+}
+
+/*
+ * The icon is white on a black rim, and Godot multiplies it by the colour: the mask keeps the
+ * icon's shape, and the image multiplies over the colour, so white takes it and black stays.
+ * The 16 px icon centres on the 6 px bar.
+ */
+.icon {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: -5px;
+  width: 16px;
+  height: 16px;
+  background: var(--freelook-speed-colour);
+  isolation: isolate;
+}
+
+.iconInk {
+  display: block;
+  mix-blend-mode: multiply;
+}
+
+.label {
+  position: absolute;
+  top: calc(100% + 22px);
+  left: -5px;
+  white-space: nowrap;
+  font-family: var(--tsi-font-ui);
+  font-size: var(--tsi-font-md);
+  font-weight: 700;
+  color: var(--freelook-speed-colour);
+  /* Godot draws the text over a 4 px black outline. */
+  -webkit-text-stroke: 4px #000;
+  paint-order: stroke fill;
+}

@@ -9,6 +9,8 @@ import { isShownCanvasNode } from '../../../r3f/canvasScopes.js';
 import { isCanvasLayerType } from '../../../r3f/canvasPaintOrder.js';
 import type { LiveTree } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
+import type { TscnNode } from '../../../parser/types.js';
+import type { SubViewportContainerProperties } from '../../2d/ui/subviewportcontainer/types.js';
 import { isEmbeddableWindow, isViewportBoundary } from './viewportBoundary.js';
 import { windowEmbedderPathAt } from './windowEmbedder.js';
 
@@ -30,6 +32,12 @@ export interface ViewportGate {
    * `visible` replaces the authored value of a link and leaves the chain as it is.
    */
   visibilityChain: readonly VisibilityLink[] | null;
+  /**
+   * Whether the parent is a stretching SubViewportContainer, which sizes the viewport after its
+   * layout. A render before that rect lands is at the authored size and spends the ONCE clear
+   * (`subviewport_container.cpp:94`, `renderer_viewport.cpp:375`).
+   */
+  isStretched: boolean;
 }
 
 /** The gate once an animated `visible` is laid over the chain: the mode a pass renders by. */
@@ -40,27 +48,41 @@ export interface UpdateGate {
 
 export function viewportGateAt(tree: LiveTree, path: string, authoredMode: number): ViewportGate {
   const parentPath = parentPathOf(path);
-  const isUnderContainer =
-    parentPath !== null && tree.at(parentPath)?.step.node.type === 'SubViewportContainer';
+  const container = parentPath === null ? undefined : tree.at(parentPath)?.step.node;
+  const isUnderContainer = parentPath !== null && container?.type === 'SubViewportContainer';
   return {
     authoredMode,
     enclosingPath: enclosingViewportPathAt(tree, path),
     visibilityChain: isUnderContainer ? visibilityChainAt(tree, parentPath) : null,
+    isStretched: isUnderContainer && isStretching(container),
   };
 }
 
 /** The gate of a viewport with no live tree: the authored mode stands and the viewport is the root. */
 export function ungatedViewport(authoredMode: number): ViewportGate {
-  return { authoredMode, enclosingPath: null, visibilityChain: null };
+  return { authoredMode, enclosingPath: null, visibilityChain: null, isStretched: false };
+}
+
+function isStretching(container: TscnNode): boolean {
+  return (container.properties as SubViewportContainerProperties).stretch === true;
 }
 
 /**
  * The mode `gate` renders by. A SubViewportContainer parent sets ALWAYS while it is visible in
  * the tree and DISABLED while it is not (`subviewport_container.cpp:116-128`), whatever the
  * authored mode says. `animatedVisible` holds the `visible` an AnimationPlayer drives, by path.
+ * A stretched viewport whose container has not yet published its rect (`hasStretchedRect` false)
+ * renders nothing, so its first render is at the size Godot draws it.
  */
-export function resolveGate(gate: ViewportGate, animatedVisible: ReadonlyMap<string, boolean>): UpdateGate {
-  const { authoredMode, enclosingPath, visibilityChain } = gate;
+export function resolveGate(
+  gate: ViewportGate,
+  animatedVisible: ReadonlyMap<string, boolean>,
+  hasStretchedRect: boolean
+): UpdateGate {
+  const { authoredMode, enclosingPath, visibilityChain, isStretched } = gate;
+  if (isStretched && !hasStretchedRect) {
+    return { updateMode: SubViewportUpdateMode.DISABLED, enclosingPath };
+  }
   if (visibilityChain === null) return { updateMode: authoredMode, enclosingPath };
   const isVisible = visibilityChain.every((link) => animatedVisible.get(link.path) ?? link.isShown);
   return {

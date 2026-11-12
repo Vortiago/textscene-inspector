@@ -19,10 +19,9 @@ import {
   type SelectionContextValue,
 } from '../../../r3f/contexts/SelectionContext';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
-import type { TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnInternalResource } from '../../../parser/types';
+import { animationPlayerNode } from './animationPlayerNode.testkit';
 import type { AnimationPlayerProperties } from './types';
-
-import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../../../godot/scene/animation';
 
 // A single resolvable "slide" clip moving Target from x=0 to x=10 over 1s. It
 // is what proves a real animation is skipped when root_node cannot resolve.
@@ -40,31 +39,6 @@ const RESOLVABLE_INTERNAL: TscnInternalResource[] = [
     },
   },
 ];
-
-function makeAP(overrides: Partial<AnimationPlayerProperties> = {}): TscnNode {
-  const props: AnimationPlayerProperties = {
-    name: 'AnimationPlayer',
-    speed_scale: 1.0,
-    playback_default_blend_time: 0.0,
-    callback_mode_process: AnimationCallbackModeProcess.IDLE,
-    callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
-    active: true,
-    autoplay: '',
-    current_animation: '',
-    current_animation_length: 0.0,
-    current_animation_position: 0.0,
-    root_node: 'NodePath("..")',
-    libraries: [],
-    ...overrides,
-  };
-  return {
-    rawProperties: {},
-    name: props.name ?? 'AnimationPlayer',
-    type: 'AnimationPlayer',
-    children: [],
-    properties: props,
-  };
-}
 
 const AP_PATH = 'Root/AnimationPlayer';
 
@@ -91,7 +65,7 @@ async function mountScene(
           <Capture />
           <group name="Root">
             <NodePathProvider path={AP_PATH}>
-              <AnimationPlayer node={makeAP(apProps)} />
+              <AnimationPlayer node={animationPlayerNode(apProps)} />
             </NodePathProvider>
             <mesh name="Target">
               <boxGeometry args={[1, 1, 1]} />

@@ -6,6 +6,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { InterpolateDiscrete, InterpolateLinear, InterpolateSmooth } from 'three';
+import { AnimationUpdateMode } from '../../../godot/scene/animation.js';
 import { buildClip } from './clipBuilder';
 import type { GodotAnimation } from './animationResolver';
 import type { GodotTrack } from './trackParser';
@@ -57,7 +58,9 @@ describe('track interpolation', () => {
   });
 
   it('forces NEAREST for a VALUE track in UPDATE_DISCRETE mode', () => {
-    expect(interpolationOf({ interp: 2, updateMode: 1 })).toBe(InterpolateDiscrete);
+    expect(interpolationOf({ interp: 2, updateMode: AnimationUpdateMode.DISCRETE })).toBe(
+      InterpolateDiscrete
+    );
   });
 
   it('leaves UPDATE_CONTINUOUS value tracks alone', () => {

@@ -6,6 +6,7 @@
 import { useMemo } from 'react';
 
 import { useAnimatedVisibility } from '../../../r3f/contexts/AnimatedValueContext.js';
+import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext.js';
 import { liveTreeOf } from '../../../r3f/liveSceneTree.js';
 import { useSharedLiveTree } from '../../../r3f/useLiveSceneTree.js';
 import {
@@ -25,14 +26,18 @@ export function useViewportGate(path: string, authoredMode: number): UpdateGate 
         : ungatedViewport(authoredMode),
     [live, path, authoredMode]
   );
-  return useResolvedGate(gate);
+  return useResolvedGate(gate, path);
 }
 
-/** `gate` with the animated `visible` laid over it. */
-export function useResolvedGate(gate: ViewportGate): UpdateGate {
+/** `gate` with the animated `visible` and the stretched rect of the viewport at `path` laid over it. */
+export function useResolvedGate(gate: ViewportGate, path: string): UpdateGate {
   const chainPaths = useMemo(() => gate.visibilityChain?.map((link) => link.path) ?? [], [gate]);
   const animated = useAnimatedVisibility(chainPaths);
-  const { updateMode, enclosingPath } = useMemo(() => resolveGate(gate, animated), [gate, animated]);
+  const hasStretchedRect = useViewportRect(path) !== null;
+  const { updateMode, enclosingPath } = useMemo(
+    () => resolveGate(gate, animated, hasStretchedRect),
+    [gate, animated, hasStretchedRect]
+  );
   // The primitives key the object, so a change that moves neither keeps the pass registered.
   return useMemo(() => ({ updateMode, enclosingPath }), [updateMode, enclosingPath]);
 }

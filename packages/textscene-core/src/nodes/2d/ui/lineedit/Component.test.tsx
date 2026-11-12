@@ -18,7 +18,6 @@ import { ControlClipProvider } from '../../../../r3f/controls/native/controlClip
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
-import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { LineEditProperties } from './types';
 import { LineEdit } from './Component';
 import { lineEditMinimumSize } from './nativeSolver';
@@ -26,7 +25,20 @@ import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { findTextMesh } from '../../../../r3f/controls/native/testing/ownIcon';
+import {
+  bundledRunOf,
+  bundledRunMeshes,
+  bundledRuns,
+  inkedGlyphCount,
+  onlyBundledRun,
+  runGlyphs,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+import { findCanvasTextMesh } from '../../../../r3f/controls/native/testing/canvasTextMesh';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -89,19 +101,12 @@ function findFillColor(mesh: THREE.Mesh): { r: number; g: number; b: number; a: 
   throw new Error('no fill vertex found in chrome mesh');
 }
 
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms); the chrome does not. */
 /** The `<group position=[x,-y,0]>` wrapping the text mesh, whose local x and y give the pen offset. */
 function findTextGroup(scene: Rendered['scene']) {
   return scene
     .findAllByType('Group')
     .map((g) => g.instance)
-    .find((g) =>
-      g.children.some(
-        (c) =>
-          (c as THREE.Mesh).material &&
-          ((c as THREE.Mesh).material as THREE.ShaderMaterial).uniforms?.uColor !== undefined
-      )
-    );
+    .find((g) => g.children.some((child) => bundledRunOf(child) !== undefined));
 }
 
 describe('<LineEdit> — chrome (StyleBoxQuad)', () => {
@@ -156,7 +161,7 @@ describe('<LineEdit> — chrome (StyleBoxQuad)', () => {
       />
     );
     expect(findChromeMesh(renderer.scene)).toBeUndefined();
-    expect(findTextMesh(renderer.scene)).toBeDefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeDefined();
   });
 
   it('forwards renderOrder to the chrome mesh and the text mesh', async () => {
@@ -164,7 +169,7 @@ describe('<LineEdit> — chrome (StyleBoxQuad)', () => {
       <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={7} />
     );
     expect(findChromeMesh(renderer.scene)!.renderOrder).toBe(7);
-    expect(findTextMesh(renderer.scene)!.renderOrder).toBe(7);
+    expect(bundledRunMeshes(renderer.scene)[0]!.renderOrder).toBe(7);
   });
 });
 
@@ -173,7 +178,7 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <LineEdit {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
     );
-    expect(findTextMesh(renderer.scene)).toBeUndefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeUndefined();
   });
 
   it('draws the placeholder at font_placeholder_color (alpha 0.6) when text is empty', async () => {
@@ -185,9 +190,9 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.6, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.r).toBeCloseTo(0.875, 5);
+    expect(tint.a).toBeCloseTo(0.6, 5);
   });
 
   it('draws real text at font_color (alpha 1) when editable, even with a placeholder also set', async () => {
@@ -199,8 +204,8 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(1, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.a).toBeCloseTo(1, 5);
   });
 
   it('draws real text at font_uneditable_color (alpha 0.5) once editable=false', async () => {
@@ -212,8 +217,8 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.a).toBeCloseTo(0.5, 5);
   });
 
   it('a non-editable EMPTY field still shows its placeholder (not font_uneditable_color) — using_placeholder wins', async () => {
@@ -225,8 +230,8 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.6, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.a).toBeCloseTo(0.6, 5);
   });
 
   it('draw_control_chars draws a hex-code box for an unshapeable control character instead of dropping it silently', async () => {
@@ -241,12 +246,13 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
         renderOrder={0}
       />
     );
-    expect(boxed.scene.findAllByType('Mesh').length).toBeGreaterThan(
-      dropped.scene.findAllByType('Mesh').length
-    );
+    const controlGlyphs = (renderer: Rendered) =>
+      runGlyphs(onlyBundledRun(renderer.scene)).filter((glyph) => glyph.controlCodepoint !== undefined);
+    expect(controlGlyphs(dropped)).toHaveLength(0);
+    expect(controlGlyphs(boxed)).toHaveLength(1);
   });
 
-  it('secret=true substitutes an ASCII secret_character repeated to the text length (glyph count survives the atlas)', async () => {
+  it('secret=true substitutes an ASCII secret_character repeated to the text length (one glyph per character)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <LineEdit
         {...painterEnv()}
@@ -255,15 +261,12 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
         renderOrder={0}
       />
     );
-    const mesh = findTextMesh(renderer.scene)!;
-    const indexAttr = (mesh.geometry as THREE.BufferGeometry).index!;
-    // 6 indices (two triangles) per glyph quad; 'hunter2' is 7 characters.
-    expect(indexAttr.count).toBe(7 * 6);
+    expect(runGlyphs(onlyBundledRun(renderer.scene)).map((glyph) => glyph.char)).toEqual(Array(7).fill('*'));
   });
 
   it(
     'the DEFAULT secret character — U+2022 BULLET, what LineEdit ships with when the scene overrides nothing — ' +
-      'draws one quad per character, exactly like an ASCII override',
+      'draws one glyph per character, exactly like an ASCII override',
     async () => {
       const renderer = await ReactThreeTestRenderer.create(
         <LineEdit
@@ -273,11 +276,9 @@ describe('<LineEdit> — text: placeholder vs text vs secret echo', () => {
           renderOrder={0}
         />
       );
-      const mesh = findTextMesh(renderer.scene)!;
-      const indexAttr = (mesh.geometry as THREE.BufferGeometry).index!;
-      // The default bullet, the spelling most scenes use, must not be the degenerate path: an atlas
-      // missing this glyph draws zero quads while an ASCII override draws the full run.
-      expect(indexAttr.count).toBe(7 * 6);
+      expect(runGlyphs(onlyBundledRun(renderer.scene)).map((glyph) => glyph.char)).toEqual(
+        Array(7).fill('\u2022')
+      );
     }
   );
 });
@@ -319,15 +320,14 @@ describe('<LineEdit> — tint composition', () => {
     // The StyleBox's own white bgColor x tint(0.25) = 0.25, in sRGB.
     expect(chromeColor.getX(0)).toBeCloseTo(0.25, 4);
 
-    const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    const textTint = bundledRuns(renderer.scene)[0]!.tint;
     // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
-    expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
+    expect(textTint.r).toBeCloseTo(0.21875, 5);
   });
 });
 
 describe('<LineEdit> — glyphs past ofs_max', () => {
-  const glyphCount = (renderer: Rendered) =>
-    findTextMesh(renderer.scene)!.geometry.attributes.position!.count;
+  const glyphCount = (renderer: Rendered) => inkedGlyphCount(onlyBundledRun(renderer.scene));
 
   it('draws no glyph that ends past ofs_max, and no clip plane of its own', async () => {
     const narrow: Rect2 = { x: 0, y: 0, w: 40, h: 30 };
@@ -342,10 +342,7 @@ describe('<LineEdit> — glyphs past ofs_max', () => {
     const fits = await ReactThreeTestRenderer.create(
       <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hello' })} rect={RECT} renderOrder={0} />
     );
-    const material = findTextMesh(long.scene)!.material as THREE.ShaderMaterial & {
-      clippingPlanes?: THREE.Plane[];
-    };
-    expect(material.clippingPlanes ?? []).toHaveLength(0);
+    expect(onlyBundledRun(long.scene).clippingPlanes).toHaveLength(0);
     expect(glyphCount(long)).toBeLessThan(glyphCount(fits));
   });
 
@@ -356,10 +353,7 @@ describe('<LineEdit> — glyphs past ofs_max', () => {
         <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
       </ControlClipProvider>
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial & {
-      clippingPlanes?: THREE.Plane[];
-    };
-    expect(material.clippingPlanes).toContain(inheritedPlane);
+    expect(onlyBundledRun(renderer.scene).clippingPlanes).toContain(inheritedPlane);
   });
 });
 
@@ -388,8 +382,7 @@ describe('<LineEdit> registered through <ControlCanvasWalker> (end-to-end walker
 
 /**
  * The scene-font path (canvas-kind `FontMetrics`) end to end. LineEdit's placement
- * (`line_edit.cpp:1392-1427`'s `x_ofs`/`y_ofs`) has nothing font-kind-specific, so an atlas-bake anchor
- * leaking into it reads correct on the atlas path and is `ascentPx - base*fontSizePx/42` px off here.
+ * (`line_edit.cpp:1392-1427`'s `x_ofs`/`y_ofs`) has nothing font-kind-specific.
  */
 describe('<LineEdit> — scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
@@ -404,23 +397,15 @@ describe('<LineEdit> — scene-font (canvas-kind FontMetrics) text path', () => 
     );
   }
 
-  /** The canvas painter's mesh: a plain `MeshBasicMaterial` over the raster's `DataTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
-  function findCanvasTextMesh(scene: Rendered['scene']) {
-    return scene
-      .findAllByType('Mesh')
-      .map((m) => m.instance as THREE.Mesh)
-      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.DataTexture);
-  }
-
-  it('paints the run through the canvas rasteriser — ONE quad, not one per glyph, and no MSDF material', async () => {
+  it('paints the run through the canvas rasteriser: one quad, and no run of the bundled face', async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene);
     expect(mesh).toBeDefined();
     expect(mesh!.geometry.getAttribute('position').count).toBe(4);
-    expect(findTextMesh(renderer.scene)).toBeUndefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeUndefined();
   });
 
-  it('places the text at the pure line_edit.cpp offset — no atlas-bake anchor anywhere in it', async () => {
+  it('places the text at the pure line_edit.cpp offset', async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene)!;
     // Scene font at 16px: ascentPx = ceil(800*16/1000) = 13, descentPx = ceil(200*16/1000) = 4, and
@@ -442,7 +427,7 @@ describe('<LineEdit> — scene-font (canvas-kind FontMetrics) text path', () => 
 /**
  * A plain-colour `<ControlQuad>` mesh: `meshBasicMaterial`, matched by `.type` because the test
  * renderer's THREE instance differs from this file's import, with no vertex `color` (unlike chrome)
- * and no MSDF `uColor` (unlike text).
+ * and no text run.
  */
 function findControlQuadMeshes(scene: Rendered['scene']) {
   return scene
@@ -451,7 +436,11 @@ function findControlQuadMeshes(scene: Rendered['scene']) {
     .filter((m) => {
       const geo = m.geometry as THREE.BufferGeometry;
       const mat = m.material as THREE.MeshBasicMaterial;
-      return geo.attributes.color === undefined && mat.type === 'MeshBasicMaterial';
+      return (
+        geo.attributes.color === undefined &&
+        mat.type === 'MeshBasicMaterial' &&
+        bundledRunOf(m) === undefined
+      );
     });
 }
 
@@ -499,7 +488,7 @@ describe('<LineEdit> — right_icon', () => {
 
   it("ends the drawn glyphs at the icon's own (ORIGINAL_SIZE) width inside the right margin", async () => {
     const wide: Rect2 = { x: 0, y: 0, w: 60, h: 30 };
-    const glyphCount = (m: Rendered) => findTextMesh(m.scene)!.geometry.attributes.position!.count;
+    const glyphCount = (rendered: Rendered) => inkedGlyphCount(onlyBundledRun(rendered.scene));
     const withIcon = await renderWithIcon({ text: 'Hello' }, wide);
     const without = await ReactThreeTestRenderer.create(
       <LineEdit {...painterEnv()} solveNode={solveNode({ text: 'Hello' })} rect={wide} renderOrder={0} />

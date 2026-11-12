@@ -8,6 +8,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { PushStore } from '../contexts/pushStore';
 import { newPushStore } from '../contexts/pushStore.testkit';
+import { startForwardPass } from './actionHelpers';
 import { usePushedWrites, type PushedClip } from './usePushedWrites';
 
 /** A mixer playing a 1 s clip named `name`, with the action ready at time 0. */
@@ -117,6 +118,46 @@ describe('usePushedWrites', () => {
     await renderer.advanceFrames(1, 0.016);
 
     expect([seen('a'), seen('c')]).toEqual([null, 7]);
+  });
+
+  it('samples the return pass of a ping-pong at the clip time, and says the pass runs back', async () => {
+    const actions = actionsFor('clip');
+    const action = actions.get('clip')!;
+    action.setLoop(THREE.LoopPingPong, Infinity);
+    const sample = vi.fn();
+    const renderer = await ReactThreeTestRenderer.create(
+      <Harness store={newPushStore<number>()} clip={{ name: 'clip', sample }} isPlaying actions={actions} />
+    );
+
+    action.getMixer().update(0.4);
+    await renderer.advanceFrames(1, 0.016);
+    action.getMixer().update(0.8);
+    await renderer.advanceFrames(1, 0.016);
+
+    expect(sample.mock.calls.map(([time, , isReturnPass]) => [time, isReturnPass])).toEqual([
+      [expect.closeTo(0.4), false],
+      [expect.closeTo(0.8), true],
+    ]);
+  });
+
+  it('samples again when the pass turns forward though the clip time stands', async () => {
+    const actions = actionsFor('clip');
+    const action = actions.get('clip')!;
+    action.setLoop(THREE.LoopPingPong, Infinity);
+    const sample = vi.fn();
+    const renderer = await ReactThreeTestRenderer.create(
+      <Harness store={newPushStore<number>()} clip={{ name: 'clip', sample }} isPlaying actions={actions} />
+    );
+    action.getMixer().update(1.2);
+    await renderer.advanceFrames(1, 0.016);
+
+    startForwardPass(action);
+    await renderer.advanceFrames(1, 0.016);
+
+    expect(sample.mock.calls.map(([time, , isReturnPass]) => [time, isReturnPass])).toEqual([
+      [expect.closeTo(0.8), true],
+      [expect.closeTo(0.8), false],
+    ]);
   });
 
   it('samples once while the playhead stands', async () => {

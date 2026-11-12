@@ -5,32 +5,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { findRepoRoot } from './repoRoot.mjs';
-import { readImporters, readSourceTree } from './sourceTree.mjs';
-import { entryPointsOf, testOnlyExports } from './testOnlyExports.mjs';
-
-const ROOT = findRepoRoot();
-const CORE = resolve(ROOT, 'packages/textscene-core');
-
-/** Every place outside core that imports it: the apps, the dev kit and the scripts. */
-const OUTSIDE_CORE = ['apps', 'packages/textscene-dev-kit', 'scripts'].map((dir) => resolve(ROOT, dir));
+import { coreTestOnlyExports, KEPT_TEST_ONLY_EXPORTS } from './testOnlyExports.core.mjs';
+import { testOnlyExports } from './testOnlyExports.mjs';
 
 /**
  * The scan of the real tree parses over 5,000 TypeScript files of core and of its importers. That is real work: it
  * took 7.5 seconds on a slow container, past vitest's 5 second default, so the case that scans it gets room.
  */
 const TREE_SCAN_TIMEOUT_MS = 60_000;
-
-/** The value exports kept although only tests import them, each with the reason a test needs it. */
-const KEPT = [
-  // `@react-three/test-renderer` cannot wrap a real `<Canvas>`, so a scene test mounts its contents.
-  'r3f/TscnCanvas.tsx#TscnSceneContents',
-  // The builds and the cache are module state, so each test starts from the one reset that aborts
-  // the builds in flight and clears the cache.
-  'resources/textures/proceduralBuilds.ts#resetProceduralTextures',
-];
 
 /**
  * A scan of `files`, the tree at `core/` built to `core-dist/`, with `importers` outside it and
@@ -49,15 +31,7 @@ describe('testOnlyExports over @textscene/core', () => {
   it(
     'finds no value export that only tests import, beyond the kept ones',
     () => {
-      const packageJson = JSON.parse(readFileSync(resolve(CORE, 'package.json'), 'utf8'));
-      const found = testOnlyExports(readSourceTree(resolve(CORE, 'src')), {
-        tree: 'packages/textscene-core/src',
-        dist: 'packages/textscene-core/dist',
-        importers: readImporters(ROOT, OUTSIDE_CORE),
-        entries: entryPointsOf(packageJson, './src'),
-      });
-
-      expect(found).toEqual(KEPT);
+      expect(coreTestOnlyExports()).toEqual(KEPT_TEST_ONLY_EXPORTS);
     },
     TREE_SCAN_TIMEOUT_MS
   );

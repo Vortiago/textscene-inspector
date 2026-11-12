@@ -1,7 +1,7 @@
 /**
  * Tests `labelMinimumSize` against Godot 4.6.3 (`scene/gui/label.cpp:973-998`, `:344-388`, `:111-136`)
- * with numbers derived by hand from OpenSans_SemiBold's `hmtx` advances (`openSansMetrics.ts`, not the
- * atlas's rounded `xadvance`), never from the code. At size 16: ascent ceil(2189*16/2048) = 18, descent
+ * with numbers derived by hand from OpenSans_SemiBold's `hmtx` advances (`openSansMetrics.ts`),
+ * never from the code. At size 16: ascent ceil(2189*16/2048) = 18, descent
  * ceil(600*16/2048) = 5, line_spacing 3 (default_theme.cpp:392): pitch 26, font height 23.
  */
 import { ZERO_SIDES } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -146,8 +146,8 @@ describe('labelMinimumSize (label.cpp:973-998)', () => {
     expect(withOverride.y).toBe(45);
   });
 
-  it('uppercase transforms the text BEFORE measuring (label.cpp:154, read by get_minimum_size via _ensure_shaped) — uppercase glyphs are WIDER in this atlas', () => {
-    // Only `uppercase` differs, and uppercase glyphs are wider in this atlas.
+  it('uppercase transforms the text BEFORE measuring (label.cpp:154, read by get_minimum_size via _ensure_shaped) — uppercase glyphs are WIDER in this font', () => {
+    // Only `uppercase` differs, and uppercase glyphs are wider in this font.
     const lower = minSize(node({ text: 'ab', autowrapMode: 0 }), ctx());
     const upper = minSize(node({ text: 'ab', uppercase: true, autowrapMode: 0 }), ctx());
     expect(upper.x).toBeCloseTo(AB_SHAPED_WIDTH, 6);
@@ -549,7 +549,7 @@ describe('layoutLabelLines — horizontal origins vs Godot 4.6.3 (label.cpp:487-
   const FONT_SIZE = 16;
   const GODOT_LINE_WIDTH_PX = 70;
 
-  /** A one-line layout pinned to Godot's measured width of "Wave rift", so this tests the placement formula, not the atlas advances against FreeType's. */
+  /** A one-line layout pinned to Godot's measured width of "Wave rift", so this tests the placement formula, not the baked advances against FreeType's. */
   function lineOfWidth(widthPx: number) {
     const layout = shapeText('Wave rift', {
       fontSizePx: FONT_SIZE,
@@ -838,7 +838,7 @@ describe('windowLabelLines', () => {
     widthPx: 30,
     heightPx: 78,
     baselineOffsetPx: 18,
-    fontMetrics: { kind: 'atlas' } as TextLayoutResult['fontMetrics'],
+    fontMetrics: { kind: 'bundled' } as TextLayoutResult['fontMetrics'],
   };
 
   it('recomputes widthPx/heightPx over the KEPT lines only (happy path)', () => {

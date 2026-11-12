@@ -17,7 +17,6 @@ import {
   walkSources,
   type SourceFile,
 } from './testing/sourceScan';
-import { createMsdfMaterial } from './controls/native/text/msdfMaterial';
 import { createCanvasTextMaterial } from './controls/native/text/canvasTextPainter';
 import { createLightQuadMaterial } from './lighting2d/lightQuad';
 import { shadowSampling } from './lighting2d/testing/shadowSampling';
@@ -129,24 +128,13 @@ describe('Imperatively built canvas materials', () => {
   const texture = (): THREE.Texture => new THREE.Texture();
   const white = { r: 1, g: 1, b: 1, a: 1 };
 
-  it('leaves createMsdfMaterial single-pass, at its default side and a caller-chosen one', () => {
-    const base = { map: texture(), color: white, opacity: 1, pxRange: 4 };
-    const defaulted = createMsdfMaterial(base);
-    expect(defaulted.forceSinglePass).toBe(true);
-    expect(defaulted.side).toBe(THREE.DoubleSide);
-
-    const oneSided = createMsdfMaterial({ ...base, side: THREE.FrontSide });
-    expect(oneSided.forceSinglePass).toBe(true);
-    expect(oneSided.side).toBe(THREE.FrontSide);
-  });
-
   it('leaves createCanvasTextMaterial single-pass, at its default side and a caller-chosen one', () => {
     const material = createCanvasTextMaterial({ map: texture(), opacity: 1 });
     expect(material.forceSinglePass).toBe(true);
     expect(material.side).toBe(THREE.DoubleSide);
 
     // Label3D's `double_sided = false`: one-sided, still one pass. Label3D
-    // rasterises its glyphs through this painter, not the MSDF atlas.
+    // rasterises its glyphs through this painter.
     const oneSided = createCanvasTextMaterial({ map: texture(), opacity: 1, side: THREE.FrontSide });
     expect(oneSided.forceSinglePass).toBe(true);
     expect(oneSided.side).toBe(THREE.FrontSide);

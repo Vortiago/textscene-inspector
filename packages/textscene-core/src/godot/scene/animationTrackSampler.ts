@@ -1,8 +1,9 @@
 /**
  * The value of a position, rotation or scale track of an Animation at a time: `Animation::_interpolate`
  * (`scene/resources/animation.cpp:2524-2726`) for a playhead that moves forward, which is how the
- * mixer samples a track it applies (`animation_mixer.cpp:1373-1380`). Key times, transitions and
- * values are `real_t`, so a caller rounds them to float32 first.
+ * mixer samples a track it applies (`animation_mixer.cpp:1373-1380`). `sampleCrossedBackward` is the
+ * one read that depends on a playhead that runs back. Key times, transitions and values are
+ * `real_t`, so a caller rounds them to float32 first.
  */
 
 import {
@@ -99,6 +100,25 @@ export function sampleQuaternionTrack(
   setup: SampleSetup
 ): Quaternion | null {
   return sampleTrack(keys, time, setup, QUATERNION_BLEND);
+}
+
+/**
+ * The value an `UPDATE_DISCRETE` track shows at `time` while the playhead runs back. The mixer sets
+ * each key the playhead crosses (`animation_mixer.cpp:1635-1646`), so the track shows the first key
+ * at or after `time`. Past the last key it shows that key, which the forward pass left. Null where
+ * the track has no key within `length`.
+ */
+export function sampleCrossedBackward<T>(
+  keys: readonly TrackKey<T>[],
+  time: number,
+  length: number
+): T | null {
+  const last = findKey(keys, length);
+  if (last < 0) return null;
+  const atOrBefore = findKey(keys, time);
+  const landsOnKey = atOrBefore >= 0 && isEqualApprox(keys[atOrBefore]!.time, time);
+  const crossed = landsOnKey ? atOrBefore : atOrBefore + 1;
+  return keys[Math.min(crossed, last)]!.value;
 }
 
 /** The keys a span reads: `idx` to `next`, with `pre` and `post` around them for a cubic. */

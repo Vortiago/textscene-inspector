@@ -27,7 +27,7 @@ import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { themedSlotRequests, type TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
 import { perObject } from '../../../utils/perObject';
-import { syntheticControl, syntheticPath } from '../acceptdialog/dialogParts';
+import { builtButtonIconRequests, syntheticControl, syntheticPath } from '../acceptdialog/dialogParts';
 import type { FileDialogOption, FileDialogProperties } from './parser';
 
 /** `SIZE_EXPAND_FILL` and `SIZE_SHRINK_CENTER`, as a scene line writes them. */
@@ -277,9 +277,14 @@ function iconSizeOf(dialog: SolveNode, name: FileDialogThemeIcon): Vector2 {
   return dialog.textureSlots[name] ?? FILE_DIALOG_ICON_SIZE;
 }
 
-/** One slot for each toolbar icon a Theme gives the dialog, so `iconSizeOf` reads its size. */
-export const fileDialogTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) =>
-  themedSlotRequests(FILE_DIALOG_THEME_ICONS, themedIcons);
+/** The Button classes the body builds without an icon, so each takes the theme icon `icon` of its class. */
+const BUILT_BUTTON_TYPES = ['Button', 'OptionButton', 'CheckBox'];
+
+/** One slot for each toolbar icon a Theme gives the dialog, so `iconSizeOf` reads its size, then the slots of the buttons the body builds. */
+export const fileDialogTextureSlots: TextureSlotsFn = (_node, themedIcons = {}, builtIcons) => [
+  ...themedSlotRequests(FILE_DIALOG_THEME_ICONS, themedIcons),
+  ...builtButtonIconRequests(BUILT_BUTTON_TYPES, builtIcons),
+];
 
 function build(dialog: SolveNode, spec: Widget, parentPath: string): SolveNode {
   const parsed = parseNodeWithRegistry(

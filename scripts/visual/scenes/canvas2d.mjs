@@ -299,8 +299,7 @@ export const CANVAS_2D_SCENES = [
   },
   // The composition scene breaks the one-variable rule on purpose: it catches
   // interactions a single-variable scene has nothing to interact with. The
-  // `unit-*` fixture of a type localises a regression. Text-dense, so MSDF stem
-  // antialiasing dominates its diff.
+  // `unit-*` fixture of a type localises a regression.
   { name: 'complex-2d-gui', file: 'complex-2d-gui.tscn' },
   // The one variable: whether an ancestor's `modulate` crosses a CanvasLayer.
   // The Control walk and the Node2D dispatch publish that scope separately, so
@@ -518,6 +517,12 @@ export const CANVAS_2D_SCENES = [
   // SUB and MUL items in an opaque SubViewport over yellow. Godot 4.6.3 `--mode 2d`: the container
   // shows the viewport opaque, with no yellow through it. Mean 0.000/255 against it.
   { name: 'subviewport-opaque-alpha', file: 'unit-subviewport-opaque-alpha.tscn', mode: '2d' },
+  // A SubViewport with no content, in a container, a transparent one, a Timer-only one, a stretched one and
+  // a ViewportTexture: each shows the clear colour, as Godot 4.6.3 `--mode 2d` does.
+  { name: 'subviewport-empty', file: 'unit-subviewport-empty.tscn', mode: '2d' },
+  // A stretched SubViewport with clear mode ONCE, empty and with Control and Polygon2D content, at
+  // stretch_shrink 1 to 3. Godot 4.6.3 `--mode 2d` clears the shown target once.
+  { name: 'subviewport-stretch-clear-once', file: 'unit-subviewport-stretch-clear-once.tscn', mode: '2d' },
   // An OptionButton and a MenuButton with button_pressed set and no toggle_mode.
   { name: 'option-menu-button-pressed', file: 'unit-option-menu-button-pressed.tscn', mode: '2d' },
   // A MenuButton label wrapped by autowrap_mode and trimmed by text_overrun_behavior.
@@ -584,8 +589,12 @@ export const CANVAS_2D_SCENES = [
   { name: 'confirmation-dialog-embedded', file: 'unit-confirmation-dialog-embedded.tscn', mode: '2d' },
   // A Theme on the dialog restyles its Button and Label: a red normal box, yellow focus text, green message. Max 7, mean 0.33.
   { name: 'accept-dialog-theme', file: 'unit-accept-dialog-theme.tscn', mode: '2d' },
+  // A Theme icon on Button draws on the buttons an AcceptDialog and a ConfirmationDialog build, and widens them. Max 7, mean 0.31.
+  { name: 'accept-dialog-theme-icon', file: 'unit-accept-dialog-theme-icon.tscn', mode: '2d' },
   // A visible FileDialog in Open File mode with an empty file list: toolbar, side lists, filter and a disabled OK. Max 26, mean 0.22 (SVG icon edges).
   { name: 'file-dialog-open-empty', file: 'file-dialog-open-empty/unit-file-dialog-open-empty.tscn', mode: '2d' },
+  // The Button theme icon draws on the Cancel and OK buttons, and the OptionButton one on the filter; the toolbar keeps its icons. Max 26, mean 0.19 (SVG icon edges).
+  { name: 'file-dialog-theme-icon', file: 'file-dialog-theme-icon/unit-file-dialog-theme-icon.tscn', mode: '2d' },
   // Save File mode adds the create-folder button, the title "Save a File" and an enabled Save. Max 26, mean 0.22 (SVG icon edges).
   { name: 'file-dialog-save-empty', file: 'file-dialog-save-empty/unit-file-dialog-save-empty.tscn', mode: '2d' },
   // A CheckBox option and a value option draw the options row and the option grid. Max 26, mean 0.22 (SVG icon edges).

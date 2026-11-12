@@ -167,7 +167,7 @@ export function AnimationTree({ node, children }: NodeComponentProps) {
         // blend program drives N weighted actions with their own timeScale and weight, and Godot
         // has no single loop mode for a blend tree or state machine preview.
         writePose(actions, () => mixer.update(delta * transport.playbackSpeed));
-        if (dominant) transport.reportTime(actions.get(dominant.clip)?.time ?? 0);
+        if (dominant) transport.reportTime(dominantActionTime(dominant, actions) ?? 0);
         break;
       }
       case 'seek': {

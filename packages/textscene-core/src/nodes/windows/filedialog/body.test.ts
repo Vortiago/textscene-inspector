@@ -13,10 +13,12 @@ import { solveNode } from '../../../r3f/controls/native/testing/solveNode';
 import '../../../parser/TscnParser';
 import '../../../r3f/controls/index';
 import { dialogGeometry } from '../acceptdialog/dialogLayout';
+import { themeResource } from '../../../r3f/controls/native/testing/themeResource';
 import { wrappedWindowSize } from '../window/wrapControls';
 import oracle from './testing/fileDialogGeometry/oracle.out.json';
 import { FILE_DIALOG_THEME_ICONS } from '../../../godot/scene/fileDialog';
-import { fileDialogTextureSlots } from './body';
+import { fileDialogBody, fileDialogTextureSlots } from './body';
+import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { parseFileDialog } from './parser';
 
 const THEME = nativeTheme(1);
@@ -245,6 +247,58 @@ describe('FileDialog toolbar icon sizes', () => {
   it('requests one slot for each icon the Theme gives', () => {
     const requests = fileDialogTextureSlots(base.node, { back_folder: themedIcon });
     expect(requests.map(({ key }) => key)).toEqual(['back_folder']);
+  });
+});
+
+describe('FileDialog built Button icon sizes', () => {
+  const FILTER_ICON = { x: 30, y: 20 };
+  const TOOLBAR_ICON = { x: 40, y: 40 };
+  const themedIcon = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
+  const themed = {
+    ...fileDialog(CASES.open!),
+    themeChain: [themeResource({ icons: { OptionButton: { icon: 'ExtResource("1")' } } })],
+    icons: { back_folder: themedIcon },
+    textureSlots: { 'built:OptionButton': FILTER_ICON, back_folder: TOOLBAR_ICON },
+  };
+  const bodyControl = (name: string) => {
+    const size = wrappedWindowSize(themed, THEME, measureText, EMBEDDER);
+    const { body } = dialogGeometry(themed, size, createSolveContext(THEME, measureText));
+    return body.find(({ control }) => control.node.name === name)!.control;
+  };
+
+  it('sizes the filter OptionButton by the theme icon of OptionButton', () => {
+    expect(bodyControl('Filter').textureSize).toEqual(FILTER_ICON);
+  });
+
+  it('keeps the size of the toolbar button own icon', () => {
+    expect(bodyControl('DirPrev').textureSize).toEqual(TOOLBAR_ICON);
+  });
+});
+
+describe('FileDialog built Button classes', () => {
+  const themedIcon = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
+  const withoutOwnIcon = (node: SolveNode): SolveNode[] => [
+    ...(descendsFromClass(node.node.type, 'Button') && !node.syntheticDraw?.themedIcon ? [node] : []),
+    ...node.children.flatMap(withoutOwnIcon),
+  ];
+
+  it.each(['open', 'save', 'options', 'options_many'])(
+    'requests the theme icon of every Button class the %s body builds without an icon',
+    (name) => {
+      const dialog = fileDialog(CASES[name]!);
+      const requested = fileDialogTextureSlots(dialog.node, {}, () => ({ icon: themedIcon })).map(
+        ({ key }) => key
+      );
+      const built = withoutOwnIcon(fileDialogBody(dialog, THEME)).map(({ node }) => `built:${node.type}`);
+      expect(requested).toEqual(expect.arrayContaining(built));
+    }
+  );
+
+  it('gives no built Button without an icon a theme_type_variation, which has no icon slot', () => {
+    const variations = withoutOwnIcon(fileDialogBody(fileDialog(CASES.options!), THEME)).map(
+      ({ node }) => (node.properties as { themeTypeVariation?: string }).themeTypeVariation
+    );
+    expect(variations.filter((variation) => variation !== undefined)).toEqual([]);
   });
 });
 

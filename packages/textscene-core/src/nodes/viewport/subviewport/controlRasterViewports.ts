@@ -82,7 +82,7 @@ function enclosingViewport(tree: LiveTree, path: string): EnclosingViewport | nu
 }
 
 /**
- * Every Control-only sub-viewport in `roots`, depth-first, with its path and the
+ * Every sub-viewport with no world content in `roots`, depth-first, with its path and the
  * scope its Controls resolve in. A found sub-viewport is still descended into: a
  * nested one draws into its own target, and `ControlDispatcher` stops at it.
  */

@@ -1,7 +1,7 @@
 /**
  * An AnimationPlayer track on a y-sorted TileMapLayer that sits in a y-sorted parent's flat sort
  * moves every row of the layer, and the rows re-sort against the layer's siblings on the frame
- * the mixer moves it (ADR-0011, ADR-0065).
+ * the mixer moves it (ADR-0011, ADR-0070).
  */
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';

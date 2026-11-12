@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { SceneResourcesProvider } from '../../../SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
+import { bundledRunMeshes } from './bundledRunStub';
 
 const OWN_ICON_PATH = 'res://icon.png';
 
@@ -46,14 +47,11 @@ export function findIconMeshes(scene: Awaited<ReturnType<typeof renderWithOwnIco
     );
 }
 
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor` and `uOpacity` uniforms), which no icon or chrome mesh does. */
+/** The stub mesh of the first run of the bundled face. The test file mocks `text/BundledCanvasRun` with `BundledRunStub`. */
 export function findTextMesh(
   scene: Awaited<ReturnType<typeof renderWithOwnIcon>>['scene']
 ): THREE.Mesh | undefined {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
+  return bundledRunMeshes(scene)[0];
 }
 
 /** Where `mesh` sits in the scene, parents included. */

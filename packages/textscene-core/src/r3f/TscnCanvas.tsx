@@ -3,11 +3,9 @@
  * react-three-fiber, with its resources in scope and the camera the user picks.
  * With no scene loaded, it renders an empty canvas with default lighting.
  */
-import { Canvas, useThree } from '@react-three/fiber';
-import { useEffect } from 'react';
+import { Canvas } from '@react-three/fiber';
 import { useOptionalHierarchy } from './contexts/HierarchyContext.js';
 import { useSeatedRoots } from './useLiveSceneTree.js';
-import { useOptionalViewportActions } from './contexts/ViewportActionsContext.js';
 import { useViewportMode } from './contexts/ViewportModeContext.js';
 import { SceneResourcesProvider } from './SceneResourcesContext.js';
 import { EditedRootProvider } from './contexts/InstanceOwnersContext.js';
@@ -17,9 +15,10 @@ import { HoverHighlight } from './components/HoverHighlight.js';
 import { InternalTextLabel } from './internalTextLabel.js';
 import { editorHelperUserData } from './editorHelpers.js';
 import { FrameSelectedShortcut } from './FrameSelectedShortcut.js';
-import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls.js';
+import { EditorControlsBridge } from './EditorControlsBridge.js';
+import { GodotEditorControls } from './GodotEditorControls.js';
 import { WorldEnvironmentScope } from './environment/WorldEnvironmentScope.js';
-import { EDITOR_CAMERA_FOV, editorCameraPosition } from './godotEditorCamera.js';
+import { editorCameraPosition, editorCameraProjection } from './godotEditorCamera.js';
 import { usePreviewFrameloop } from './contexts/PreviewVisibilityContext.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
@@ -130,8 +129,8 @@ export function TscnCanvas() {
       {/* Without `shadows`, a `shadow_enabled = true` light casts nothing. `percentage`
           selects `THREE.PCFShadowMap`, the soft-shadow type three 0.187 draws. `soft`
           selects the removed `PCFSoftShadowMap`, which three falls back from with a warning. */}
-      {/* Godot's editor opens every scene at the same fixed orbit and 70-degree
-          FOV (godotEditorCamera.ts). Framing is F there and opt-in here. */}
+      {/* Godot's editor opens every scene at the same fixed orbit, 70-degree FOV and
+          clip planes (godotEditorCamera.ts). Framing is F there and opt-in here. */}
       {/* Without `localClippingEnabled`, three ignores a `clippingPlanes` array.
           A Control-only SubViewport sampled by a 3D scene draws through this
           renderer, so its ScrollContainer clips only because the flag is set here
@@ -141,7 +140,7 @@ export function TscnCanvas() {
           before the tone curve as Godot's does. `flat`: the compositor applies every curve, so three
           adds none of its own, where R3F would apply ACES. */}
       <Canvas
-        camera={{ position: editorCameraPosition(), fov: EDITOR_CAMERA_FOV }}
+        camera={{ position: editorCameraPosition(), ...editorCameraProjection() }}
         shadows="percentage"
         gl={{ localClippingEnabled: true, antialias: false }}
         flat
@@ -156,27 +155,8 @@ export function TscnCanvas() {
         <CameraFit />
         <FrameSelectedShortcut />
         <GodotEditorControls />
-        <EditorControlsResetBridge />
+        <EditorControlsBridge />
       </Canvas>
     </div>
   );
-}
-
-/**
- * Hands the navigation handle to `ViewportActionsContext`, so the toolbar can call
- * `reset()` from outside the `<Canvas>`. `<GodotEditorControls>` publishes it
- * as R3F's `state.controls`.
- */
-function EditorControlsResetBridge() {
-  const control = useOptionalViewportActions();
-  const registerResetHandler = control?.registerResetHandler;
-  const published = useThree((s) => s.controls);
-  const controls = published instanceof EditorControlsHandle ? published : null;
-
-  useEffect(() => {
-    if (!registerResetHandler || !controls) return undefined;
-    return registerResetHandler(() => controls.reset());
-  }, [registerResetHandler, controls]);
-
-  return null;
 }

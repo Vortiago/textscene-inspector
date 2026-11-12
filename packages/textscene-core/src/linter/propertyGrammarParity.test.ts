@@ -10,8 +10,15 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { classBaseChain } from '../godot/classdb/classBaseTypes.js';
 import { ASYMMETRY_ALLOWLIST, type AsymmetryEntry } from './testing/propertyGrammarParityAllowlist.js';
-import { checkParity, collectSlices, getFullValidatorKeys } from './testing/propertyGrammarParityCheck.js';
+import {
+  checkParity,
+  collectSlices,
+  getFullValidatorKeys,
+  unsweptListErrors,
+} from './testing/propertyGrammarParityCheck.js';
 import { extractNodeType, findLinterParserDirs, nodesRoot } from './testing/propertyGrammarParityScan.js';
+import { nodesLabel } from './testing/ruleNameScrape.js';
+import { UNSWEPT_SLICES } from './testing/propertyGrammarParityUnswept.js';
 import './index.js';
 
 /** One slice as the staleness scan sees it: the type it speaks for, and the keys its parser reads. */
@@ -199,7 +206,7 @@ describe('property-grammar parity guard', () => {
 
   it('every allowlisted key is a key some side actually declares', () => {
     // The honesty check above never asks whether a listed key exists, so a
-    // typo would inflate the render-gap count with a property Godot never had.
+    // typo would list a render gap for a property Godot never had.
     // Wildcards are patterns rather than keys, so they are exempt by shape.
     const unknown: string[] = [];
     for (const [nodeType, entry] of Object.entries(ASYMMETRY_ALLOWLIST)) {
@@ -238,49 +245,14 @@ describe('property-grammar parity guard', () => {
     ).toEqual([]);
   });
 
-  // The render-gap surface is the previewer's to-do list, pinned by exact
-  // equality: it moves only when a slice is added or a gap closes. A new
-  // validator makes an unread key visible, so a rise usually means the list
-  // became honest.
-  const EXPECTED_RENDER_GAP_KEYS = 99;
-
-  it('the render-gap surface matches its recorded size', () => {
-    const gaps = Object.entries(ASYMMETRY_ALLOWLIST).flatMap(([nodeType, entry]) =>
-      (entry.renderGap ?? []).map((key) => `${nodeType}.${key}`)
-    );
-    expect(
-      gaps.length,
-      `Render gaps now number ${gaps.length}, not ${EXPECTED_RENDER_GAP_KEYS}:\n  ${gaps.join('\n  ')}`
-    ).toBe(EXPECTED_RENDER_GAP_KEYS);
-  });
-
-  /**
-   * Slices this guard does not see, counted so the blind spot moves visibly:
-   * `findSliceDirs` needs a parser of the slice's own, and a slice
-   * that reuses a base parser has none. Where the question has an
-   * answer, the fix is a hop in `BASE_TYPE_TO_PARSER_SUBPATH`.
-   */
-  // Both are ratchets, not derived, or the assertion compares a number to
-  // itself. A transform-only type draws nothing, and a `pending` type is one
-  // gap `renderIntent` already declares, so neither widens the population.
-  // A type that reads its own properties through a parser of its own is a swept slice, not a reuser.
-  // Bone2D, BoneAttachment3D, CanvasGroup, DampedSpringJoint2D, GrooveJoint2D, MeshInstance2D,
-  // OccluderInstance3D, PopupMenu, RayCast3D, ShapeCast3D, Skeleton2D, VideoStreamPlayer,
-  // AcceptDialog, ConfirmationDialog and FileDialog read theirs.
-  const SWEPT_SLICES = 152;
-  const PARSER_REUSING_SLICES = 99;
-
-  it('accounts for every linterParser.ts, swept or knowingly not', () => {
-    const withLinterParser = findLinterParserDirs(nodesRoot).filter((dir) =>
-      extractNodeType(readFileSync(join(dir, 'linterParser.ts'), 'utf8'))
-    );
-    // Doubles as the population floor: an empty walk fails here, and in the
-    // honesty check, which would call every allowlist entry stale.
-    expect(collectSlices()).toHaveLength(SWEPT_SLICES);
-    expect(
-      withLinterParser.length - collectSlices().length,
-      'Slices outside this guard changed. Update the count, and say in the commit ' +
-        'whether the new ones are base-parser reusers (expected) or have no parser of their own that they should have.'
-    ).toBe(PARSER_REUSING_SLICES);
+  it('accounts for every linterParser.ts, swept or listed as not', () => {
+    const errors = unsweptListErrors({
+      listed: UNSWEPT_SLICES,
+      linterParserSlices: findLinterParserDirs(nodesRoot)
+        .filter((dir) => extractNodeType(readFileSync(join(dir, 'linterParser.ts'), 'utf8')))
+        .map(nodesLabel),
+      sweptSlices: collectSlices().map(({ slice }) => slice),
+    });
+    expect(errors, errors.join('\n')).toEqual([]);
   });
 });

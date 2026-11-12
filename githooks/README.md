@@ -15,6 +15,9 @@ beside `Name.ts`, and each pushed test file. CI runs the whole suite, the builds
 on each pull request and on `main`. To run every test that imports a file, run
 `pnpm exec vitest related --run <files>`.
 
+A push that changes or deletes a source file of core also runs `scripts/testOnlyExports.test.mjs`. It
+finds a value export that only tests import, which the tests beside the file do not.
+
 A pushed TypeScript file type-checks its package and every package that depends on it. A change
 in `apps/textscene-web` checks only the web previewer. A change in `packages/textscene-core`
 checks core and each app. Core, the dev kit and the CLI linter run only `type-check:tests`, because

@@ -5,9 +5,7 @@
 
 [gd_scene format=3]
 
-; Measured against Godot 4.6.3 at `--mode 2d`: same break points, line count and pitch, each right
-; edge within 2 px. Per-line ink is within about 3%. The stems' edge pixels differ because the
-; glyphs come from an MSDF atlas, so this scene guards the line box rather than the coverage.
+; Measured against Godot 4.6.3 at `--mode 2d`: no pixel differs.
 [node name="Root" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0

@@ -23,14 +23,6 @@ import { registeredTypes } from './registryPopulation.js';
 import { everyValidatorLabel, registeredKeys } from './testing/registryPopulation.js';
 
 /**
- * Unclassified validators allowed, and it only shrinks: classify the validator instead. A `v` DSL validator is a `shape`
- * (rejects only malformed input) or takes a `Grounding`; a hand-rolled one is neither until its author says which. Since
- * `ground()` sets `bounded` or `formatOnly`, never both, "bounded and ungrounded" is exactly "neither formatOnly nor
- * grounding", so one walk covers it.
- */
-const UNCLASSIFIED_VALIDATOR_BUDGET = 0;
-
-/**
  * A grounding whose cite names no engine location. It rides the shared walk rather than a private recursion, which
  * would diverge from `unclassifiedKeys`'. The walk reaches leaves because a wildcard dispatcher's own tag vouches for
  * nothing behind it.
@@ -47,14 +39,15 @@ describe('bound grounding', () => {
   });
 
   it('classifies every validator as format-only or grounded', () => {
-    // The floor first: a budget of zero is satisfied just as well by a registry that never loaded. It covers
-    // hand-rolled validators too: one outside the DSL declares neither tag, so it lands here.
+    // The floor first: a registry that never loaded has no unclassified validator either. A `v` DSL validator is a
+    // `shape` or takes a `Grounding`. A hand-rolled one declares neither tag until its author says which, so it
+    // lands here.
     expect(registeredKeys().length).toBeGreaterThan(1500);
-    expect(unclassifiedKeys()).toHaveLength(UNCLASSIFIED_VALIDATOR_BUDGET);
+    expect(unclassifiedKeys()).toEqual([]);
   });
 
   it('holds no UNGROUNDABLE entry that exempts nothing', () => {
-    // The budget above reads zero whether the named validator is still there or
+    // The check above passes whether the named validator is still there or
     // not, so without this the exemption outlives its subject and pre-forgives
     // whatever is registered under that label next.
     expect(staleUngroundable()).toEqual([]);

@@ -85,11 +85,17 @@ const SWITCH_TO_2D_HINT = 'button[title*="switch to the 2D view"]';
 /**
  * The style that paints the app's chrome out of a capture. Viewport chrome floats over the
  * canvas in both modes, and a capture composites any DOM over the canvas, so it goes from every
- * capture: the toolbar, the controls help, the Performance overlay and the "switch to 2D" hint.
+ * capture: the toolbar, the controls help, the freelook speed readout, the Performance overlay
+ * and the "switch to 2D" hint.
  * `canvas2D` also paints out the 2D stage's frame, zoom label and origin axes.
  */
 export function paintedOutChromeCss({ canvas2D }) {
-  const hidden = ['viewport-toolbar-overlay', 'viewport-controls-help', PERFORMANCE_TESTIDS.overlay];
+  const hidden = [
+    'viewport-toolbar-overlay',
+    'viewport-controls-help',
+    'freelook-speed-readout',
+    PERFORMANCE_TESTIDS.overlay,
+  ];
   if (canvas2D) {
     hidden.push(
       CANVAS_2D_TESTIDS.frame,

@@ -43,11 +43,11 @@ export interface Label3DFont {
 }
 
 /**
- * Undefined while the bundled font registers, or while the font file, the project font, the metrics
- * or, for an emboldened or sheared label, the outlines of the font load: nothing draws against
- * the wrong face meanwhile. A bundled font that cannot register leaves an atlas face undefined for good.
+ * Undefined while the font file, the project font, the metrics or the outlines of the bundled font
+ * load: nothing draws against the wrong face meanwhile. Null for a bundled font whose outlines
+ * cannot be read, which draws nothing and loads nothing more.
  */
-export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undefined {
+export function useLabel3DFont(fontRef: string | undefined): Label3DFont | null | undefined {
   const resources = useSceneResources();
   const nodePath = useNodePath() ?? 'Label3D';
   const fontsPlan = useCallback(
@@ -73,12 +73,12 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
         ? fallbackFaceMipmaps(fallbacks, chainFaces, projectMipmaps)
         : NO_FALLBACK_MIPMAPS;
     // A bitmap face draws its page images and a canvas face carries its outlines, so each draws as it
-    // is. An atlas face draws as the bundled canvas face, which stands in for that face alone and so
-    // keeps its fallbacks.
+    // is. The bundled face draws as the bundled canvas face, which stands in for that face alone and
+    // so keeps its fallbacks.
     if (isBitmapFontMetrics(settled) || isCanvasFontMetrics(settled))
       return { font: { metrics: settled, generatesMipmaps, fallbackMipmaps }, isChainSettling };
     const canvasFace = peekBundledCanvasFace(settled);
-    if (!canvasFace) return NO_FONT;
+    if (!canvasFace) return canvasFace === null ? UNREADABLE_FONT : NO_FONT;
     const metrics = withFallbacks(canvasFace, fallbacks ?? []);
     return { font: { metrics, generatesMipmaps, fallbackMipmaps }, isChainSettling };
   };
@@ -90,11 +90,13 @@ export function useLabel3DFont(fontRef: string | undefined): Label3DFont | undef
 }
 
 interface SettledLabel3DFont {
-  font: Label3DFont | undefined;
+  font: Label3DFont | null | undefined;
   isChainSettling: boolean;
 }
 
 const NO_FONT: SettledLabel3DFont = { font: undefined, isChainSettling: false };
+
+const UNREADABLE_FONT: SettledLabel3DFont = { font: null, isChainSettling: false };
 
 const NO_FALLBACK_MIPMAPS: ReadonlyMap<FontMetrics, boolean> = new Map();
 

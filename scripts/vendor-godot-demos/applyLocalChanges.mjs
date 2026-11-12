@@ -8,6 +8,7 @@
 import { cpSync, readdirSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { basename, dirname, extname, join, relative } from 'node:path';
+import { gitEnvironmentFor } from '../vendor-git.mjs';
 
 /** The binary form a text copy replaces: a scene, as the previewer loads only a text scene. */
 const TEXT_COPY_EXTENSIONS = new Set(['.scn']);
@@ -43,7 +44,11 @@ function binaryResourceBeside(checkout, rel) {
 
 function applyPatch(patch, checkout) {
   try {
-    execFileSync('git', ['apply', '--whitespace=nowarn', patch], { cwd: checkout, stdio: 'pipe' });
+    execFileSync('git', ['apply', '--whitespace=nowarn', patch], {
+      cwd: checkout,
+      stdio: 'pipe',
+      env: gitEnvironmentFor(checkout),
+    });
   } catch (e) {
     throw new Error(`${basename(patch)} does not apply to the checkout: ${e.stderr ?? e}`, {
       cause: e,

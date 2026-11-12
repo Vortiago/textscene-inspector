@@ -5,11 +5,20 @@
  */
 
 import { registerWindowControls } from '../window/registerWindowControls.r3f';
+import { controlSolverRegistry, type TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
 import { DialogChrome } from './DialogChrome';
 import { dialogContentsMinimumSize, dialogLayout } from './dialogLayout';
+import { dialogTextureSlots } from './dialogParts';
 
-/** Registers the dialog's solver hooks and painter for `typeName`: each registry matches one type name exactly. */
-export function registerDialogControls(typeName: string): void {
+/**
+ * Registers the dialog's solver hooks and painter for `typeName`: each registry matches one type name exactly.
+ * `textureSlots` replaces the slots of the OK and Cancel buttons for a dialog that adds its own.
+ */
+export function registerDialogControls(
+  typeName: string,
+  textureSlots: TextureSlotsFn = dialogTextureSlots
+): void {
+  controlSolverRegistry.registerTextureSlots(typeName, textureSlots);
   registerWindowControls({
     typeName,
     Component: DialogChrome,
