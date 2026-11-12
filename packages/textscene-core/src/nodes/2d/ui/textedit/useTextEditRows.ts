@@ -5,9 +5,10 @@ type TextEditRowsInput = Parameters<typeof solveTextEditRows>[0];
 
 /**
  * `solveTextEditRows` memoised on the fields it reads. A caller builds `input` fresh each render,
- * which a memo on `input` itself would miss.
+ * which a memo on `input` itself would miss. A caller that already solved the rows passes them as `solved`,
+ * so a painter nested in another shapes the buffer once.
  */
-export function useTextEditRows(input: TextEditRowsInput): TextEditRows {
+export function useTextEditRows(input: TextEditRowsInput, solved?: TextEditRows): TextEditRows {
   const { lines, isPlaceholder, rowHeightPx, gutterBandWidthPx, minimapWidthPx, drawMinimap } = input;
   const { scrollPastEndOfFile, fitContentHeight, rtl, theme } = input;
   const { x: width, y: height } = input.size;
@@ -16,6 +17,7 @@ export function useTextEditRows(input: TextEditRowsInput): TextEditRows {
   const { preserveControl, indentWrappedLines, bidi } = input.shape;
   return useMemo(
     () =>
+      solved ??
       solveTextEditRows({
         lines,
         isPlaceholder,
@@ -65,6 +67,7 @@ export function useTextEditRows(input: TextEditRowsInput): TextEditRows {
       indentWrappedLines,
       bidi,
       theme,
+      solved,
     ]
   );
 }

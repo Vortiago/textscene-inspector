@@ -50,12 +50,9 @@ export function solveTextEditRows(input: TextEditRowsInput): TextEditRows {
       input.drawMinimap,
       verticalBarWidthPx
     );
-  const rowsAt = (wrapWidthPx: number) => {
-    const lineLayouts = shapeTextEditLines(input.lines, {
-      ...input.shape,
-      wrapWidthPx,
-      placeholder: input.isPlaceholder,
-    });
+  const shapeAt = (wrapWidthPx: number) =>
+    shapeTextEditLines(input.lines, { ...input.shape, wrapWidthPx, placeholder: input.isPlaceholder });
+  const rowsAt = (wrapWidthPx: number, lineLayouts: TextEditLineLayout[]) => {
     const { totalRows, widestRowPx } = textEditRowStats(lineLayouts);
     const scrollBars = textEditScrollBars({
       size: input.size,
@@ -73,8 +70,13 @@ export function solveTextEditRows(input: TextEditRowsInput): TextEditRows {
     return { lineLayouts, wrapWidthPx, scrollBars };
   };
 
-  const withoutBar = rowsAt(wrapWidthFor(0));
-  // A narrower wrap never gives fewer rows, so the bar stays visible on the second pass.
-  if (withoutBar.scrollBars.verticalWidthPx === 0) return withoutBar;
-  return rowsAt(wrapWidthFor(withoutBar.scrollBars.verticalWidthPx));
+  const plainWidthPx = wrapWidthFor(0);
+  const withoutBar = rowsAt(plainWidthPx, shapeAt(plainWidthPx));
+  const barWidthPx = withoutBar.scrollBars.verticalWidthPx;
+  if (barWidthPx === 0) return withoutBar;
+  // Without wrapping the width reaches no row, so only the bars need solving again. A narrower wrap
+  // never gives fewer rows, so the vertical bar stays visible.
+  const narrowedWidthPx = wrapWidthFor(barWidthPx);
+  const isWrapping = input.shape.wrapMode === 1;
+  return rowsAt(narrowedWidthPx, isWrapping ? shapeAt(narrowedWidthPx) : withoutBar.lineLayouts);
 }

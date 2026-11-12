@@ -85,7 +85,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
     [codeEditProps.indentSize, fontMetrics, fontSizePx]
   );
   const bidi = useControlBidiOptions(codeEditProps, solveNode);
-  const { lineLayouts } = useTextEditRows({
+  const rows = useTextEditRows({
     lines: drawn.lines,
     isPlaceholder: drawn.isPlaceholder,
     size: { x: rect.w, y: rect.h },
@@ -110,7 +110,11 @@ export function CodeEdit(props: NativeControlComponentProps) {
     theme,
   });
   // A placeholder paragraph replaces the buffer's single empty line, which starts at row 0.
-  const lineStartRows = drawn.isPlaceholder ? [0] : lineLayouts.map(({ startRow }) => startRow);
+  const { lineLayouts } = rows;
+  const lineStartRows = useMemo(
+    () => (drawn.isPlaceholder ? [0] : lineLayouts.map(({ startRow }) => startRow)),
+    [drawn.isPlaceholder, lineLayouts]
+  );
 
   const numerals = { locale: solveNode.locale, localizeNumeralSystem: codeEditProps.localizeNumeralSystem };
   const lineNumberGutterXPx = codeEditLineNumberGutterXPx(styleBox.contentMargin.left, band.mainWidthPx);
@@ -188,6 +192,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
       <TextEditBody
         {...props}
         gutterBandWidthPx={band.totalWidthPx}
+        rows={rows}
         tabSize={codeEditProps.indentSize}
         underlay={guidelines.map((guideline, i) => (
           <CanvasItemGroup key={i} position={[guideline.xPx, 0, 0]}>

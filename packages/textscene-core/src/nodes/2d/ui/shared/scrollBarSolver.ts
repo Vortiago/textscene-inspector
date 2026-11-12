@@ -95,6 +95,20 @@ export function scrollBarGrabberGeometry(
   return { size, offset };
 }
 
+/** One bar whose `Range` is `min` to `max` with the given `page`, its grabber at `ratio` of the range. */
+export function scrollBarRangePlacement(
+  vertical: boolean,
+  rect: Rect2,
+  theme: NativeTheme,
+  range: { min: number; max: number; page: number },
+  ratio: number,
+  visible: boolean
+): ScrollBarPlacement {
+  const length = vertical ? rect.h : rect.w;
+  const grabber = scrollBarGrabberGeometry(vertical, length, theme, range.min, range.max, range.page, ratio);
+  return { visible, rect, grabberRect: scrollBarGrabberRect(vertical, { x: rect.w, y: rect.h }, grabber) };
+}
+
 /**
  * One bar of a scrolled content `range`: its `rect` and its grabber when the bar sits at `ratio` of
  * the range, a page long as the bar itself (`ScrollContainer` sets each bar's page to its length).
@@ -108,8 +122,7 @@ export function scrollBarPlacement(
   visible: boolean
 ): ScrollBarPlacement {
   const length = vertical ? rect.h : rect.w;
-  const grabber = scrollBarGrabberGeometry(vertical, length, theme, 0, range, length, ratio);
-  return { visible, rect, grabberRect: scrollBarGrabberRect(vertical, { x: rect.w, y: rect.h }, grabber) };
+  return scrollBarRangePlacement(vertical, rect, theme, { min: 0, max: range, page: length }, ratio, visible);
 }
 
 /**

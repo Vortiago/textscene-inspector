@@ -14,9 +14,8 @@ import type { Vector2 } from '../../../../godot/math/vector';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  scrollBarGrabberGeometry,
-  scrollBarGrabberRect,
   scrollBarMinimumSize,
+  scrollBarRangePlacement,
   type ScrollBarPlacement,
 } from '../shared/scrollBarSolver';
 
@@ -51,19 +50,6 @@ export interface TextEditScrollBars {
 /** `new_pos.x = parent width - pos.x - size.x` (`control.cpp:1785-1787`) under RTL. */
 function mirrorX(x: number, width: number, parentWidth: number, rtl: boolean): number {
   return rtl ? parentWidth - x - width : x;
-}
-
-/** A bar at value 0 of a range from 0. */
-function placementAtZero(
-  isVertical: boolean,
-  rect: Rect2,
-  max: number,
-  page: number,
-  visible: boolean,
-  theme: NativeTheme
-): ScrollBarPlacement {
-  const grabber = scrollBarGrabberGeometry(isVertical, isVertical ? rect.h : rect.w, theme, 0, max, page, 0);
-  return { visible, rect, grabberRect: scrollBarGrabberRect(isVertical, { x: rect.w, y: rect.h }, grabber) };
 }
 
 /**
@@ -104,14 +90,21 @@ export function textEditScrollBars(input: TextEditScrollBarsInput): TextEditScro
   };
 
   return {
-    horizontal: placementAtZero(false, horizontalRect, totalWidthPx, visibleWidthPx, hasHorizontal, theme),
-    vertical: placementAtZero(
+    horizontal: scrollBarRangePlacement(
+      false,
+      horizontalRect,
+      theme,
+      { min: 0, max: totalWidthPx, page: visibleWidthPx },
+      0,
+      hasHorizontal
+    ),
+    vertical: scrollBarRangePlacement(
       true,
       verticalRect,
-      totalRows,
-      visibleRows + fractionalRows,
-      hasVertical,
-      theme
+      theme,
+      { min: 0, max: totalRows, page: visibleRows + fractionalRows },
+      0,
+      hasVertical
     ),
     verticalWidthPx: hasVertical ? vMin.x : 0,
   };

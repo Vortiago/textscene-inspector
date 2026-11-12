@@ -49,6 +49,7 @@ import {
   TEXT_EDIT_THEME_FONT_KEY,
 } from './nativeSolver';
 import { useTextEditRows } from './useTextEditRows';
+import type { TextEditRows } from './rows';
 import { TEXT_EDIT_GLYPH_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import type { TextEditProperties } from './types';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
@@ -87,6 +88,8 @@ interface TextEditBodyProps extends NativeControlComponentProps {
   gutterBandWidthPx?: number;
   /** `CodeEdit.indent_size`, forwarded to `TextEdit::set_tab_size` (`code_edit.cpp:908-920`). Absent for a bare `TextEdit`, which has no `.tscn` property for it (`textEditTabStopsPx`). */
   tabSize?: number;
+  /** The rows a wrapping painter already solved, so the buffer shapes once. Absent: solved here. */
+  rows?: TextEditRows;
 }
 
 export function TextEditBody({
@@ -100,6 +103,7 @@ export function TextEditBody({
   gutterBandWidthPx = 0,
   tabSize,
   underlay,
+  rows: solvedRows,
 }: TextEditBodyProps) {
   const props = painterView<TextEditProperties>(solveNode);
   const toItemLinear = useItemLinearColorOf();
@@ -140,30 +144,33 @@ export function TextEditBody({
     [tabSize, fontMetrics, fontSizePx]
   );
   const bidi = useControlBidiOptions(props, solveNode);
-  const { lineLayouts, wrapWidthPx, scrollBars } = useTextEditRows({
-    lines,
-    isPlaceholder,
-    size: { x: rect.w, y: rect.h },
-    margins: styleBox.contentMargin,
-    rowHeightPx,
-    gutterBandWidthPx,
-    minimapWidthPx: props.minimapWidth ?? 80,
-    drawMinimap: props.minimapDraw,
-    scrollPastEndOfFile: props.scrollPastEndOfFile === true,
-    fitContentHeight: props.fitContentHeight === true,
-    rtl: solveNode.rtl,
-    shape: {
-      fontSizePx,
-      fontMetrics,
-      wrapMode: props.wrapMode,
-      autowrapMode: props.autowrapMode,
-      tabStopsPx,
-      preserveControl: props.drawControlChars,
-      indentWrappedLines: props.indentWrappedLines,
-      bidi,
+  const { lineLayouts, wrapWidthPx, scrollBars } = useTextEditRows(
+    {
+      lines,
+      isPlaceholder,
+      size: { x: rect.w, y: rect.h },
+      margins: styleBox.contentMargin,
+      rowHeightPx,
+      gutterBandWidthPx,
+      minimapWidthPx: props.minimapWidth ?? 80,
+      drawMinimap: props.minimapDraw,
+      scrollPastEndOfFile: props.scrollPastEndOfFile === true,
+      fitContentHeight: props.fitContentHeight === true,
+      rtl: solveNode.rtl,
+      shape: {
+        fontSizePx,
+        fontMetrics,
+        wrapMode: props.wrapMode,
+        autowrapMode: props.autowrapMode,
+        tabStopsPx,
+        preserveControl: props.drawControlChars,
+        indentWrappedLines: props.indentWrappedLines,
+        bidi,
+      },
+      theme,
     },
-    theme,
-  });
+    solvedRows
+  );
 
   // `syntax_highlighter` resolves in this node's scope, never `useSceneResources()`. Only a
   // `CodeHighlighter` decodes: anything else leaves `highlighter` null, and lines paint at `font_color`.

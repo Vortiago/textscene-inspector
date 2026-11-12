@@ -12,9 +12,8 @@
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
-  scrollBarGrabberGeometry,
-  scrollBarGrabberRect,
   scrollBarMinimumSize,
+  scrollBarRangePlacement,
   type ScrollBarPlacement,
 } from '../shared/scrollBarSolver';
 import type { GraphScrollBounds } from './minimap';
@@ -55,27 +54,6 @@ export function hasUpdatedScrollBars(input: UpdatedScrollBarsInput): boolean {
   );
 }
 
-function barPlacement(
-  isVertical: boolean,
-  rect: Rect2,
-  theme: NativeTheme,
-  bounds: { min: number; max: number },
-  page: number,
-  scrollValue: number,
-  visible: boolean
-): ScrollBarPlacement {
-  const grabber = scrollBarGrabberGeometry(
-    isVertical,
-    isVertical ? rect.h : rect.w,
-    theme,
-    bounds.min,
-    bounds.max,
-    page,
-    ratioOf(scrollValue, bounds.min, bounds.max)
-  );
-  return { visible, rect, grabberRect: scrollBarGrabberRect(isVertical, { x: rect.w, y: rect.h }, grabber) };
-}
-
 /**
  * The bars where nothing has called `_update_scrollbars` yet: the constructor's range with
  * `page` 0, and the full-length rects `NOTIFICATION_READY` anchors (`:841-852`). Both are
@@ -87,24 +65,23 @@ export function graphEditConstructorScrollBars(
 ): GraphEditScrollBars {
   const hMin = scrollBarMinimumSize(false, theme);
   const vMin = scrollBarMinimumSize(true, theme);
-  const range = { min: CONSTRUCTOR_SCROLL_MIN, max: CONSTRUCTOR_SCROLL_MAX };
+  const range = { min: CONSTRUCTOR_SCROLL_MIN, max: CONSTRUCTOR_SCROLL_MAX, page: 0 };
+  const middle = ratioOf(0, range.min, range.max);
   return {
-    horizontal: barPlacement(
+    horizontal: scrollBarRangePlacement(
       false,
       { x: 0, y: graphEditSize.y - hMin.y, w: graphEditSize.x, h: hMin.y },
       theme,
       range,
-      0,
-      0,
+      middle,
       true
     ),
-    vertical: barPlacement(
+    vertical: scrollBarRangePlacement(
       true,
       { x: graphEditSize.x - vMin.x, y: 0, w: vMin.x, h: graphEditSize.y },
       theme,
       range,
-      0,
-      0,
+      middle,
       true
     ),
   };
@@ -147,22 +124,20 @@ export function graphEditScrollBars(
   };
 
   return {
-    horizontal: barPlacement(
+    horizontal: scrollBarRangePlacement(
       false,
       hRect,
       theme,
-      { min: bounds.min.x, max: bounds.max.x },
-      graphEditSize.x,
-      scrollOffset.x,
+      { min: bounds.min.x, max: bounds.max.x, page: graphEditSize.x },
+      ratioOf(scrollOffset.x, bounds.min.x, bounds.max.x),
       hVisible
     ),
-    vertical: barPlacement(
+    vertical: scrollBarRangePlacement(
       true,
       vRect,
       theme,
-      { min: bounds.min.y, max: bounds.max.y },
-      graphEditSize.y,
-      scrollOffset.y,
+      { min: bounds.min.y, max: bounds.max.y, page: graphEditSize.y },
+      ratioOf(scrollOffset.y, bounds.min.y, bounds.max.y),
       vVisible
     ),
   };

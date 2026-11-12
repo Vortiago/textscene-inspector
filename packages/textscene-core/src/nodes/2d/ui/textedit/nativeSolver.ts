@@ -224,7 +224,7 @@ export function textEditWrapWidthPx(
   gutterBandWidthPx: number,
   minimapWidthPx: number,
   drawMinimap: boolean | undefined,
-  verticalBarWidthPx: number
+  verticalBarWidthPx = 0
 ): number {
   let width = rectWidthPx - styleMinWidthPx - gutterBandWidthPx;
   if (drawMinimap) width -= minimapWidthPx;
@@ -319,8 +319,7 @@ export function textEditMinimumSizeWith(
           styleMin.x,
           gutterBandWidthPx,
           props.minimapWidth ?? 80,
-          props.minimapDraw,
-          0
+          props.minimapDraw
         );
   const effectiveWrapMode = rectWidthPx === undefined ? 0 : props.wrapMode;
 
