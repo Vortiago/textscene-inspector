@@ -778,6 +778,10 @@ _Avoid_: "node material", "global material".
 A draw of a surface beside its own: a `next_pass` link or the overlay **instance material**. It shares the surface's geometry, casts nothing, and in the **alpha pass** it draws before the surface it covers, as Godot sorts the two.
 _Avoid_: "second pass", "overlay pass".
 
+**Surfaced mesh drawer** (`r3f/surfacedMeshDrawer/`):
+The module that draws a decoded mesh with the material of each surface. It draws the mesh once as a body, or at every instance of a buffer of instances. It owns each draw's object, the surface slots, every **extra draw**, the shadow hooks, the layers and the instance buffer. MeshInstance3D, the CSG shapes, GridMap and the CPU particle draw call it. A mesh inside a cloned GLB takes its extra draws from the module's adapter for a cloned object.
+_Avoid_: "mesh renderer", "surface stack".
+
 **Resource event bus** / `useResource`:
 The async resource pipeline: a component calls `useResource(path, type)`, the host `ResourceLoader` fetches, and a `loaded` or `missing` event resolves the hook.
 _Avoid_: "asset loader".

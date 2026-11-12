@@ -131,3 +131,19 @@ export function useGeometryInstance(placement: InstancePlacement): void {
 export function useInstanceDraw(): InstanceDraw {
   return useGeometryInstanceScope();
 }
+
+/** What a drawer under no GeometryInstance3D owns of its draws: it holds no instance material. */
+export type OwnInstanceDraw = Pick<InstanceDraw, 'shadow' | 'layers'>;
+
+/**
+ * `useInstanceDraw` for a drawer some callers mount under no GeometryInstance3D: `own` stands
+ * where no base does, with no instance material.
+ *
+ * @canonical The instance draw of a drawer that may sit under no GeometryInstance3D
+ */
+export function useInstanceDrawOr(own: OwnInstanceDraw | undefined): Omit<InstanceDraw, 'instance'> {
+  const scope = useContext(GeometryInstanceContext);
+  if (own) return { ...own, override: undefined, overlay: undefined };
+  if (!scope) throw new Error(MISSING_SCOPE);
+  return scope;
+}

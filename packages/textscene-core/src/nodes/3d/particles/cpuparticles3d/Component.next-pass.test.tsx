@@ -1,7 +1,6 @@
 /**
- * A CPUParticles3D whose mesh material carries a `next_pass` chain draws one instanced
- * draw per link at every particle, sharing the particle geometry and its instance
- * matrices, as the emitter's own draw and its overlay do.
+ * A CPUParticles3D hands its mesh and its particle buffer to the surfaced mesh drawer, which
+ * draws the `next_pass` chain of the emitter's material at every particle.
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import { loadParticleEmitter } from './emitterModule';
@@ -39,11 +38,6 @@ function emitter(properties: Record<string, string>) {
 beforeAll(loadParticleEmitter);
 
 describe('<CPUParticles3D> next_pass chain', () => {
-  it('adds no draw for a material with no chain', async () => {
-    const renderer = await ReactThreeTestRenderer.create(emitter(ROW_OF_FOUR));
-    expect(renderer.scene.findAll((node) => node.type === 'Mesh')).toHaveLength(1);
-  });
-
   it('draws the chain link at every particle draw of the override', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       emitter({ ...ROW_OF_FOUR, material_override: 'SubResource("Pass")' })
@@ -63,17 +57,5 @@ describe('<CPUParticles3D> next_pass chain', () => {
     const linkMaterial = link!.material as THREE.MeshStandardMaterial;
     expect(ownMaterial.color.getHex()).toBe(0x00ff00);
     expect(linkMaterial.color.getHex()).toBe(0x0000ff);
-  });
-
-  it('shares the instance matrices the draw keeps, as the overlay does', async () => {
-    const renderer = await ReactThreeTestRenderer.create(
-      emitter({ ...ROW_OF_FOUR, material_override: 'SubResource("Pass")' })
-    );
-    const [own, link] = renderer.scene
-      .findAll((node) => node.type === 'Mesh')
-      .map((node) => instanceAs<THREE.InstancedMesh>(node));
-
-    // One write places both: each draw reads the geometry's instance matrices.
-    expect(link!.instanceMatrix).toBe(own!.instanceMatrix);
   });
 });

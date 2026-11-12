@@ -13,14 +13,35 @@ import {
   writeInstanceMatrix,
 } from '../../../../r3f/meshes/sharedInstances';
 import { PARTICLE_COLOR_ATTRIBUTE } from '../../../../r3f/materials/godotParticles';
+import { withParticleDraw } from '../../../../r3f/materials/godotParticlesProgram';
+import type { MeshInstances } from '../../../../r3f/surfacedMeshDrawer/meshInstances';
 import { PARTICLE_COLOR_OFFSET, PARTICLE_CUSTOM_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
 
 /** Floats in a particle's colour and in its custom data. */
 const VEC4_FLOATS = 4;
 
 /** The particle count of `buffer`. */
-export function particleCount(buffer: Float32Array): number {
+function particleCount(buffer: Float32Array): number {
   return buffer.length / PARTICLE_FLOATS;
+}
+
+/**
+ * `buffer` as the instances the surfaced mesh drawer draws a mesh at. The program draws billboards
+ * that the matrices do not hold, so the buffer has no bounds and the scene cull's box culls it.
+ */
+export function particleInstances(buffer: Float32Array): MeshInstances {
+  return {
+    count: particleCount(buffer),
+    geometryOver: particleGeometry,
+    write: (geometry) => writeParticles(geometry, buffer),
+    boundsOver: unbounded,
+    particles: withParticleDraw,
+  };
+}
+
+/** One function for every buffer, so a new buffer leaves the draws of the last one as they are. */
+function unbounded(): null {
+  return null;
 }
 
 /** Particle `i`'s transform as a matrix, written into `target`. */
@@ -71,7 +92,7 @@ function writeSlicesInto(
  * `source` at `count` particles, each with a colour and custom data of its own. Its instance
  * matrices are an InstancedMesh's too, so one write places both a draw and its overlay.
  */
-export function particleGeometry(source: THREE.BufferGeometry, count: number): THREE.InstancedBufferGeometry {
+function particleGeometry(source: THREE.BufferGeometry, count: number): THREE.InstancedBufferGeometry {
   const geometry = sharedInstances(source, count);
   for (const name of [PARTICLE_COLOR_ATTRIBUTE, INSTANCE_CUSTOM_ATTRIBUTE]) {
     geometry.setAttribute(
@@ -86,7 +107,7 @@ export function particleGeometry(source: THREE.BufferGeometry, count: number): T
 const written = new THREE.Matrix4();
 
 /** Writes `buffer`'s transforms, colours and custom data into `geometry`'s instance attributes. */
-export function writeParticles(geometry: THREE.BufferGeometry, buffer: Float32Array): void {
+function writeParticles(geometry: THREE.BufferGeometry, buffer: Float32Array): void {
   const matrices = instanceMatrices(geometry);
   for (let i = 0; i < particleCount(buffer); i++) {
     writeInstanceMatrix(matrices, i, particleMatrix(written, buffer, i));

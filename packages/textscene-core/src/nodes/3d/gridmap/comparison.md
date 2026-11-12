@@ -4,12 +4,12 @@ category: 3D
 status: limitation
 fixture: unit-grid-map.tscn
 image: unit-grid-map
-renders_as: a THREE.InstancedMesh per MeshLibrary item surface, one THREE.Points per points surface
+renders_as: a THREE.InstancedMesh per MeshLibrary item, one THREE.Points per item of points
 ---
 
 # GridMap
 
-Instances each populated cell's `MeshLibrary` item mesh, batching the cells of each item surface into one `THREE.InstancedMesh` with that surface's material. The item mesh is an ArrayMesh or a PrimitiveMesh, embedded in the library or in its own `.tres`. A surface whose material billboards stays one instanced draw, and its program turns each cell about its own origin as Godot's does. The fixture's nine flat tiles read as one grey surface receding to the upper right in both images.
+Instances each populated cell's `MeshLibrary` item mesh, batching the cells of each item into one `THREE.InstancedMesh`. Each surface of the item draws with its own material. The item mesh is an ArrayMesh or a PrimitiveMesh, embedded in the library or in its own `.tres`. A surface whose material billboards draws in that same draw, and its program turns each cell about its own origin as Godot's does. The fixture's nine flat tiles read as one grey surface receding to the upper right in both images.
 
 Each mesh scales by `cell_scale` round its cell's place. A cell whose item has no mesh draws nothing.
 

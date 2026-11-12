@@ -5,7 +5,7 @@
  */
 
 import * as THREE from 'three';
-import { NO_RAYCAST } from './materials/materialOverlay';
+import { NO_RAYCAST } from './materials/noRaycast';
 
 /**
  * The extremes of a group order and of a `renderOrder`. A gizmo Group takes the top group order
