@@ -4,13 +4,12 @@
  * (`render_forward_clustered.cpp:4206`, `:4228-4241`). The outline is surface 0 and the fill
  * surface 1 (`label_3d.cpp:610-615`).
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { albedoOf, instanceAs } from '../testing/reactThreeTestInstance';
 import { subResource } from '../../../testing/subResource';
-import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
-import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
+import { TRIANGLE_OUTLINES } from '../../../r3f/controls/native/testing/triangleOutlines';
 import LabelGlyphs from './LabelGlyphs';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -20,18 +19,11 @@ import type { Label3DProperties } from './types';
 import { labelProperties } from './testing/labelProperties';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 
-const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
-vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
-  peekBundledCanvasFontMetrics: () => loader.metrics,
-}));
+// One triangle for each glyph of the bundled font, so no test decodes the font.
 vi.mock('../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  peekOutlines: () => null,
+  peekOutlines: () => TRIANGLE_OUTLINES,
 }));
-
-beforeEach(() => {
-  loader.metrics = createOpenSansCanvasFontMetrics('label3d-instance-materials-family');
-});
 
 const INTERNALS: readonly TscnInternalResource[] = [
   subResource('StandardMaterial3D', 'Mat_override', { albedo_color: 'Color(1, 0, 0, 1)' }),
