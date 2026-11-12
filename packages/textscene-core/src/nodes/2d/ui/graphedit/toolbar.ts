@@ -13,7 +13,12 @@
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { contentMarginSize, contentRect } from '../../../../r3f/controls/native/styleBoxFlat';
+import {
+  contentMarginSize,
+  contentRect,
+  flatCornerDetail,
+  flatStyleBox,
+} from '../../../../r3f/controls/native/styleBoxFlat';
 import { resolveToggleDrawState, type ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import {
   boxContainerMinimumSize,
@@ -30,6 +35,7 @@ import type { GraphEditToolbarTheme } from './toolbarTheme';
 import type { GraphEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
+import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
 
 /** `menu_panel->set_position(Vector2(10, 10))` (`graph_edit.cpp:3232`): unscaled. */
 const GRAPH_EDIT_MENU_POSITION: Vector2 = { x: 10, y: 10 };
@@ -98,33 +104,19 @@ export interface ToolbarTextMetrics {
  */
 export function graphEditMenuPanelStyleBox(theme: NativeTheme): StyleBoxFlatData {
   const { scale } = theme;
-  return {
-    bgColor: { r: 0.24, g: 0.24, b: 0.24, a: 0.6 },
-    borderColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 },
-    borderWidth: { left: 0, top: 0, right: 0, bottom: 0 },
-    cornerRadius: {
-      topLeft: theme.cornerRadius,
-      topRight: theme.cornerRadius,
-      bottomRight: theme.cornerRadius,
-      bottomLeft: theme.cornerRadius,
-    },
-    expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
-    contentMargin: {
-      left: Math.round(4 * scale),
-      top: Math.round(2 * scale),
-      right: Math.round(4 * scale),
-      bottom: Math.round(2 * scale),
-    },
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail: 8,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
+  return flatStyleBox(
+    { r: 0.24, g: 0.24, b: 0.24, a: 0.6 },
+    {
+      contentMargin: {
+        left: Math.round(4 * scale),
+        top: Math.round(2 * scale),
+        right: Math.round(4 * scale),
+        bottom: Math.round(2 * scale),
+      },
+      cornerRadius: theme.cornerRadius,
+      cornerDetail: flatCornerDetail(DEFAULT_CORNER_RADIUS, scale),
+    }
+  );
 }
 
 /**

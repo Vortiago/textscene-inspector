@@ -70,7 +70,7 @@ describe('nativeTheme', () => {
         borderBlend: false,
         antiAliased: true, // StyleBoxFlat's own untouched default (style_box_flat.h:49)
         aaSize: 1,
-        cornerDetail: 8,
+        cornerDetail: 5,
         skew: { x: 0, y: 0 },
         shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
         shadowSize: 0,
@@ -96,7 +96,7 @@ describe('nativeTheme', () => {
         borderBlend: false,
         antiAliased: true,
         aaSize: 1,
-        cornerDetail: 8,
+        cornerDetail: 5,
         skew: { x: 0, y: 0 },
         shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
         shadowSize: 0,
@@ -129,7 +129,7 @@ describe('nativeTheme', () => {
         borderBlend: false,
         antiAliased: true,
         aaSize: 1,
-        cornerDetail: 8,
+        cornerDetail: 6,
         skew: { x: 0, y: 0 },
         shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
         shadowSize: 0,
@@ -147,7 +147,7 @@ describe('nativeTheme', () => {
         borderBlend: false,
         antiAliased: true,
         aaSize: 1,
-        cornerDetail: 8,
+        cornerDetail: 6,
         skew: { x: 0, y: 0 },
         shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
         shadowSize: 0,
@@ -168,7 +168,7 @@ describe('nativeTheme', () => {
         borderBlend: false,
         antiAliased: true,
         aaSize: 1,
-        cornerDetail: 8,
+        cornerDetail: 6,
         skew: { x: 0, y: 0 },
         shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
         shadowSize: 0,
@@ -223,7 +223,7 @@ describe('nativeTheme', () => {
           borderBlend: false,
           antiAliased: true,
           aaSize: 1,
-          cornerDetail: 8,
+          cornerDetail: 5,
           skew: { x: 0, y: 0 },
           shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
           shadowSize: 0,
@@ -248,7 +248,7 @@ describe('nativeTheme', () => {
           borderBlend: false,
           antiAliased: true,
           aaSize: 1,
-          cornerDetail: 8,
+          cornerDetail: 5,
           skew: { x: 0, y: 0 },
           shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
           shadowSize: 0,
@@ -289,11 +289,58 @@ describe('nativeTheme', () => {
     });
   });
 
-  describe('popupMenuPanel corner detail', () => {
+  describe('corner detail', () => {
     it('truncates the scaled detail to an int, as set_corner_detail does', () => {
       expect(nativeTheme(1).widgets.popupMenuPanel.cornerDetail).toBe(5);
       expect(nativeTheme(1.5).widgets.popupMenuPanel.cornerDetail).toBe(7);
     });
+
+    // The detail follows the Godot radius before the scale: 3 for most boxes, 4 for the slider,
+    // 10 for the scroll bar, 0 for the dialog panel and the flat menu button (clamped to 1).
+    it.each([
+      [1, 5, 6, 6, 1],
+      [2, 10, 12, 12, 1],
+    ])(
+      'gives each widget the detail of its radius at scale %i',
+      (scale, defaultRadius, slider, scrollBar, none) => {
+        const { widgets } = nativeTheme(scale);
+        expect({
+          panel: widgets.panel.cornerDetail,
+          popupPanel: widgets.popupPanel.cornerDetail,
+          tooltipPanel: widgets.tooltipPanel.cornerDetail,
+          popupMenuPanel: widgets.popupMenuPanel.cornerDetail,
+          buttonNormal: widgets.button.normal.cornerDetail,
+          buttonFocus: widgets.button.focus.cornerDetail,
+          optionButton: widgets.optionButton.pressed.cornerDetail,
+          lineEdit: widgets.lineEdit.normal.cornerDetail,
+          sliderTrack: widgets.slider.track.cornerDetail,
+          sliderFill: widgets.slider.fill.cornerDetail,
+          scrollHorizontal: widgets.scrollBar.scrollHorizontal.cornerDetail,
+          scrollGrabber: widgets.scrollBar.grabber.cornerDetail,
+          dialogPanel: widgets.dialogPanel.cornerDetail,
+          flatMenuButton: widgets.flatMenuButton.normal.cornerDetail,
+          tabSelected: widgets.tabContainer.selected.cornerDetail,
+          tabHovered: widgets.tabContainer.hovered.cornerDetail,
+        }).toEqual({
+          panel: defaultRadius,
+          popupPanel: defaultRadius,
+          tooltipPanel: defaultRadius,
+          popupMenuPanel: defaultRadius,
+          buttonNormal: defaultRadius,
+          buttonFocus: defaultRadius,
+          optionButton: defaultRadius,
+          lineEdit: defaultRadius,
+          sliderTrack: slider,
+          sliderFill: slider,
+          scrollHorizontal: scrollBar,
+          scrollGrabber: scrollBar,
+          dialogPanel: none,
+          flatMenuButton: none,
+          tabSelected: none,
+          tabHovered: none,
+        });
+      }
+    );
   });
 
   describe('the default type variations it models', () => {

@@ -4,9 +4,13 @@
  */
 
 import type { Rgba } from '../../../godot/math/math';
-import { CONTROL_FONT_COLOR, scaledPx } from '../../../godot/scene/theme';
+import { CONTROL_FONT_COLOR, DEFAULT_CORNER_RADIUS, scaledPx } from '../../../godot/scene/theme';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
-import { flatStyleBox, type StyleBoxFlatData } from '../../../r3f/controls/native/styleBoxFlat';
+import {
+  flatCornerDetail,
+  flatStyleBox,
+  type StyleBoxFlatData,
+} from '../../../r3f/controls/native/styleBoxFlat';
 
 export interface WindowThemeDefaults {
   /** `embedded_border`: the focused window's frame. */
@@ -38,6 +42,7 @@ function embeddedBorder(color: Rgba, theme: NativeTheme): StyleBoxFlatData {
   return flatStyleBox(color, {
     contentMargin: scaledSides(10, 28, 10, 8, theme.scale),
     cornerRadius: theme.cornerRadius,
+    cornerDetail: flatCornerDetail(DEFAULT_CORNER_RADIUS, theme.scale),
     expandMargin: scaledSides(8, 32, 8, 6, theme.scale),
   });
 }

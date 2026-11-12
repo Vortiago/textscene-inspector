@@ -10,7 +10,7 @@
  */
 
 import type { Rgba } from '../../../godot/math/math';
-import { flatStyleBox, freezeStyleBox, type FrozenStyleBoxData } from './styleBoxFlat';
+import { flatCornerDetail, flatStyleBox, freezeStyleBox, type FrozenStyleBoxData } from './styleBoxFlat';
 
 /** `Color(1, 1, 1, 0.75)`: `style_focus_color` (`default_theme.cpp:117`), `style_tab_selected`'s top border (`:975-976`). */
 const TAB_SELECTED_BORDER_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.75 };
@@ -46,13 +46,16 @@ export function tabBarStyleBoxes(scale: number): TabBarStyleBoxes {
     bottom: Math.round(4 * scale),
   };
   const unselectedBorder = Math.round(1 * scale);
+  const cornerDetail = flatCornerDetail(0, scale);
   const selected = flatStyleBox(TAB_SELECTED_FILL, {
     contentMargin,
+    cornerDetail,
     borderWidth: { left: 0, top: Math.round(2 * scale), right: 0, bottom: 0 },
     borderColor: TAB_SELECTED_BORDER_COLOR,
   });
   const unselected = flatStyleBox(TAB_UNSELECTED_FILL, {
     contentMargin,
+    cornerDetail,
     borderWidth: { left: unselectedBorder, top: 0, right: unselectedBorder, bottom: 0 },
     borderColor: TAB_UNSELECTED_BORDER_COLOR,
   });

@@ -13,8 +13,8 @@
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
+import { flatCornerDetail, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   controlSolverRegistry,
   type ContainerLayoutFn,
@@ -40,7 +40,8 @@ function flatBox(
   borderWidth: number,
   margin: { left: number; top: number; right: number; bottom: number },
   expandTop: number,
-  cornerRadius: number
+  cornerRadius: number,
+  cornerDetail: number
 ): StyleBoxFlatData {
   return {
     bgColor,
@@ -58,7 +59,7 @@ function flatBox(
     borderBlend: false,
     antiAliased: true,
     aaSize: 1,
-    cornerDetail: 8,
+    cornerDetail,
     skew: { x: 0, y: 0 },
     shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
     shadowSize: 0,
@@ -73,9 +74,8 @@ function flatBox(
 function defaultStyles(theme: NativeTheme) {
   // `make_flat_stylebox(style_pressed_color, 18, 12, 18, 12, 3, true, 2)`:
   // margins its own literals (18, 12), corner radius the shared default (3),
-  // border_width 2 (all scaled). Scale recovered the same way GraphNode's
-  // own `defaultStyles` does: see that module's doc.
-  const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
+  // border_width 2 (all scaled).
+  const { scale } = theme;
   const panelMargin = {
     left: Math.round(18 * scale),
     top: Math.round(12 * scale),
@@ -84,13 +84,15 @@ function defaultStyles(theme: NativeTheme) {
   };
   const borderWidth = Math.round(2 * scale);
   const expandTop = Math.round(38 * scale);
+  const cornerDetail = flatCornerDetail(DEFAULT_CORNER_RADIUS, scale);
   const panel = flatBox(
     theme.styleFill.pressed,
     theme.styleFill.pressed,
     borderWidth,
     panelMargin,
     expandTop,
-    theme.cornerRadius
+    theme.cornerRadius,
+    cornerDetail
   );
   const panelSelected = flatBox(
     theme.styleFill.pressed,
@@ -98,7 +100,8 @@ function defaultStyles(theme: NativeTheme) {
     borderWidth,
     panelMargin,
     expandTop,
-    theme.cornerRadius
+    theme.cornerRadius,
+    cornerDetail
   );
   // `make_empty_stylebox(4, 4, 4, 4)`: draws nothing, margin `default_margin`.
   const titlebarMargin = {
@@ -107,7 +110,15 @@ function defaultStyles(theme: NativeTheme) {
     right: theme.contentMargin,
     bottom: theme.contentMargin,
   };
-  const titlebar = flatBox({ r: 0, g: 0, b: 0, a: 0 }, { r: 0, g: 0, b: 0, a: 0 }, 0, titlebarMargin, 0, 0);
+  const titlebar = flatBox(
+    { r: 0, g: 0, b: 0, a: 0 },
+    { r: 0, g: 0, b: 0, a: 0 },
+    0,
+    titlebarMargin,
+    0,
+    0,
+    flatCornerDetail(0, scale)
+  );
   return { panel, panelSelected, titlebar, titlebarSelected: titlebar };
 }
 
