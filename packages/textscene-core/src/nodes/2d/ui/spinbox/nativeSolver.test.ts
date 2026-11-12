@@ -65,11 +65,15 @@ describe('spinBoxButtonsBlockWidth', () => {
 
 describe('spinBoxWidestButtonIconWidth (spin_box.cpp:411-424, restricted to up/down)', () => {
   it('is the vendored 16 when neither icon is themed', () => {
-    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} })).toBe(16);
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} }, 1)).toBe(16);
+  });
+
+  it('is the vendored width at the theme scale: 24 at 1.5', () => {
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} }, 1.5)).toBe(24);
   });
 
   it('widens to a themed icon wider than the vendored default', () => {
-    expect(spinBoxWidestButtonIconWidth({ textureSlots: { down: { x: 30, y: 8 } } })).toBe(30);
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: { down: { x: 30, y: 8 } } }, 1)).toBe(30);
   });
 });
 
@@ -215,6 +219,16 @@ describe('spinBoxFieldTextTheme', () => {
       b: 0.875,
       a: 0.5,
     });
+  });
+});
+
+describe('spinBoxMinimumSize at a theme scale (spin_box.cpp:382-397)', () => {
+  it('widens the buttons block to the scaled arrow: the same minimum as themed 24x12 arrows', () => {
+    const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+    const themed = { ...node(), textureSlots: { up: { x: 24, y: 12 }, down: { x: 24, y: 12 } } };
+
+    expect(spinBoxMinimumSize(node(), at15)).toEqual(spinBoxMinimumSize(themed, at15));
+    expect(spinBoxMinimumSize(node(), at15).x).toBeGreaterThan(spinBoxMinimumSize(node(), ctx()).x);
   });
 });
 

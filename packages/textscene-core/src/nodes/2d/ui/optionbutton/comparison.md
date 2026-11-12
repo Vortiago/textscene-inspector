@@ -20,6 +20,7 @@ item overflows the box above and below. The selected item's `icon` draws as Butt
 It follows `icon_alignment`, `vertical_icon_alignment`, `expand_icon` and `icon_max_width`. The minimum size takes the
 widest and tallest item with its own icon, or only the selected item where `fit_to_longest_item` is off. The theme
 constant `modulate_arrow` draws the arrow in the font colour of the button's state.
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together, and the browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
 ## Linting
 

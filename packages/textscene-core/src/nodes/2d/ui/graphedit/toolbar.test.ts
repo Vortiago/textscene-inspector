@@ -229,6 +229,15 @@ describe('graphEditToolbar under an ancestor Theme (graph_edit.cpp:3229-3300)', 
     expect(sizeOf(themed, {}, 'zoom_reset')).toMatchObject({ w: 36, h: 36 });
   });
 
+  it('scales the icon of a button by the theme scale', () => {
+    const scale = nativeTheme(1.5);
+    const scaledItems = graphEditToolbarTheme(graphEditUnder({ FlatButton: { normal: 10 } }), scale);
+    const rect = graphEditToolbar(props({}), scale, scaledItems, metrics)!.items.find(
+      (i) => i.id === 'zoom_reset'
+    )!.rect;
+    expect(rect).toMatchObject({ w: 44, h: 44 });
+  });
+
   it('sizes a pressed toggle by the pressed box and a disabled button by the disabled box, as wide as their margins (the row stretches every height)', () => {
     const themed = graphEditToolbarTheme(
       graphEditUnder({ Button: { normal: 10, pressed: 12, disabled: 14 } }),

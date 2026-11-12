@@ -4,6 +4,7 @@
  * own times the scale, rounded (`image_loader_svg.cpp:92-93`).
  */
 
+import type { Vector2 } from '../../../godot/math/vector';
 import { svgDataUrl } from './themeIcons';
 
 const SVG_DATA_PREFIX = svgDataUrl('');
@@ -11,6 +12,11 @@ const SVG_DATA_PREFIX = svgDataUrl('');
 /** The icon's pixel size at `scale`, from its authored size. */
 export function scaledIconSize(authoredPx: number, scale: number): number {
   return Math.max(1, Math.round(authoredPx * scale));
+}
+
+/** A vendored icon's pixel size at `scale`, each axis rounded alone: 32x16 at 1.5 is 48x24. */
+export function scaledIconSizeOf(authored: Vector2, scale: number): Vector2 {
+  return { x: scaledIconSize(authored.x, scale), y: scaledIconSize(authored.y, scale) };
 }
 
 /** `tag` with the attribute `name` set to `value`, added after `<svg` when the tag has none. */

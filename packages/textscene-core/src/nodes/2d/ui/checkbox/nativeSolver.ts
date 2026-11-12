@@ -13,6 +13,7 @@ import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegist
 import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import {
   BUTTON_DEFAULT_FONT_COLORS,
   fittedThemedIconSize,
@@ -47,7 +48,7 @@ export function resolveCheckBoxIconKey(props: CheckBoxProperties): CheckBoxIconK
   return disabled ? 'uncheckedDisabled' : 'unchecked';
 }
 
-/** Every vendored icon shares this authored size (`native/themeIcons.ts`: `checked.svg` et al, 16x16). */
+/** Every vendored icon shares this authored size (`native/themeIcons.ts`: `checked.svg` et al, 16x16). The default theme rasterises it at the theme scale. */
 export const CHECKBOX_ICON_NATURAL_SIZE: Vector2 = { x: 16, y: 16 };
 
 /**
@@ -80,8 +81,15 @@ export function checkIconSlotRequests(themedIcons: Parameters<typeof themedSlotR
  * `CheckBox::get_icon_size` (`check_box.cpp:35-62`): the largest of all 8 icons, whichever is showing,
  * fitted to `icon_max_width`. The default theme registers all 8 (`default_theme.cpp:288-295`).
  */
-function checkBoxFittedIconSize(n: Pick<SolveNode, 'textureSlots' | 'constants'>): Vector2 {
-  return fittedThemedIconSize(n, CHECK_BOX_ICON_THEME_NAMES, CHECKBOX_ICON_NATURAL_SIZE);
+function checkBoxFittedIconSize(
+  n: Pick<SolveNode, 'textureSlots' | 'constants'>,
+  theme: NativeTheme
+): Vector2 {
+  return fittedThemedIconSize(
+    n,
+    CHECK_BOX_ICON_THEME_NAMES,
+    scaledIconSizeOf(CHECKBOX_ICON_NATURAL_SIZE, theme.scale)
+  );
 }
 
 /**
@@ -92,7 +100,7 @@ function checkBoxFittedIconSize(n: Pick<SolveNode, 'textureSlots' | 'constants'>
 export const CHECK_BOX_CLASS: ReservingButtonClass = {
   fontColors: BUTTON_DEFAULT_FONT_COLORS,
   textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-  reservedElement: (n) => ({ side: n.rtl ? 'right' : 'left', size: checkBoxFittedIconSize(n) }),
+  reservedElement: (n, theme) => ({ side: n.rtl ? 'right' : 'left', size: checkBoxFittedIconSize(n, theme) }),
 };
 
 /** Button's `icon`, then the themed check icons. */
@@ -117,8 +125,12 @@ export function checkBoxCheckRect(
   rectSize: Vector2
 ): Rect2 {
   const { contentMargin } = buttonNormalBox(n, theme);
-  const reserved = checkBoxFittedIconSize(n);
-  const drawn = fittedThemedIconSize(n, [CHECK_BOX_ICON_THEME_NAME[key]], CHECKBOX_ICON_NATURAL_SIZE);
+  const reserved = checkBoxFittedIconSize(n, theme);
+  const drawn = fittedThemedIconSize(
+    n,
+    [CHECK_BOX_ICON_THEME_NAME[key]],
+    scaledIconSizeOf(CHECKBOX_ICON_NATURAL_SIZE, theme.scale)
+  );
   return {
     x: n.rtl ? rectSize.x - contentMargin.right - reserved.x : contentMargin.left,
     y: Math.trunc((rectSize.y - reserved.y) / 2) + (n.constants.check_v_offset ?? 0),

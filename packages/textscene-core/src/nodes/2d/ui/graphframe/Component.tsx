@@ -29,6 +29,7 @@ import {
   titlebarGeometry,
 } from '../graphelement/graphTitlebar';
 import { RESIZER_SE_ICON, RESIZER_SE_ICON_SIZE } from '../graphelement/graphIcons';
+import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import {
   GRAPH_FRAME_RESIZER_COLOR,
   GRAPH_FRAME_TITLE_VARIATION,
@@ -63,6 +64,7 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
   const clippingPlanes = useControlClipPlanes();
   const selected = props.selected === true;
   const styles = graphFrameStyles(solveNode, theme);
+  const resizerSize = scaledIconSizeOf(RESIZER_SE_ICON_SIZE, theme.scale);
   const basePanel = selected ? styles.panelSelected : styles.panel;
   // `:126`: the untinted arm draws `sb_panel_flat` alone, so a texture panel
   // with tinting off draws nothing, as in the engine.
@@ -177,10 +179,10 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
       {resizerTexture && (
         <PositionedIcon
           rect={{
-            x: rect.w - RESIZER_SE_ICON_SIZE.x,
-            y: rect.h - RESIZER_SE_ICON_SIZE.y,
-            w: RESIZER_SE_ICON_SIZE.x,
-            h: RESIZER_SE_ICON_SIZE.y,
+            x: rect.w - resizerSize.x,
+            y: rect.h - resizerSize.y,
+            w: resizerSize.x,
+            h: resizerSize.y,
           }}
           texture={resizerTexture}
           color={resizerColor}

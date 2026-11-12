@@ -36,6 +36,8 @@ import {
   RESIZER_SE_ICON,
   RESIZER_SE_ICON_SIZE,
 } from '../graphelement/graphIcons';
+import type { Vector2 } from '../../../../godot/math/vector';
+import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import {
   GRAPH_NODE_TITLE_VARIATION,
   graphNodeDrawRows,
@@ -57,6 +59,8 @@ function useTintedColor(own: Rgba, base: Rgba): { color: THREE.Color; opacity: n
 
 interface PortProps {
   solveNode: SolveNode;
+  /** The default port icon's size at the theme scale, for a port with no icon of its own. */
+  defaultSize: Vector2;
   iconRef: string | undefined;
   slotColor: Rgba;
   tintOwn: Rgba;
@@ -67,12 +71,21 @@ interface PortProps {
 }
 
 /** One port icon. A dedicated component so its `useTexture2D` call keeps a stable hook count across a dynamic slot count. */
-function GraphNodePort({ solveNode, iconRef, slotColor, tintOwn, x, y, renderOrder }: PortProps) {
+function GraphNodePort({
+  solveNode,
+  defaultSize,
+  iconRef,
+  slotColor,
+  tintOwn,
+  x,
+  y,
+  renderOrder,
+}: PortProps) {
   const { externalResources, internalResources } = solveNode.resources;
   const custom = useTexture2D(iconRef, externalResources, internalResources);
   const defaultTexture = useNodeIcon(solveNode.icons.port, GRAPH_PORT_ICON);
   const texture = custom.texture ?? defaultTexture;
-  const size = custom.size ? { x: custom.size.width, y: custom.size.height } : GRAPH_PORT_ICON_SIZE;
+  const size = custom.size ? { x: custom.size.width, y: custom.size.height } : defaultSize;
   const { color, opacity } = useTintedColor(tintOwn, slotColor);
 
   return (
@@ -101,6 +114,8 @@ export function GraphNode({
   const clippingPlanes = useControlClipPlanes();
   const selected = props.selected === true;
   const styles = graphNodeStyles(solveNode, theme);
+  const portSize = scaledIconSizeOf(GRAPH_PORT_ICON_SIZE, theme.scale);
+  const resizerSize = scaledIconSizeOf(RESIZER_SE_ICON_SIZE, theme.scale);
   const panelStyle = selected ? styles.panelSelected : styles.panel;
   const titlebarStyle = selected ? styles.titlebarSelected : styles.titlebar;
 
@@ -228,6 +243,7 @@ export function GraphNode({
           {row.slot.leftEnabled && (
             <GraphNodePort
               solveNode={solveNode}
+              defaultSize={portSize}
               iconRef={row.slot.leftIcon}
               slotColor={row.slot.leftColor}
               tintOwn={tint.own}
@@ -239,6 +255,7 @@ export function GraphNode({
           {row.slot.rightEnabled && (
             <GraphNodePort
               solveNode={solveNode}
+              defaultSize={portSize}
               iconRef={row.slot.rightIcon}
               slotColor={row.slot.rightColor}
               tintOwn={tint.own}
@@ -252,10 +269,10 @@ export function GraphNode({
       {resizerTexture && props.resizable === true && (
         <PositionedIcon
           rect={{
-            x: rect.w - RESIZER_SE_ICON_SIZE.x,
-            y: rect.h - RESIZER_SE_ICON_SIZE.y,
-            w: RESIZER_SE_ICON_SIZE.x,
-            h: RESIZER_SE_ICON_SIZE.y,
+            x: rect.w - resizerSize.x,
+            y: rect.h - resizerSize.y,
+            w: resizerSize.x,
+            h: resizerSize.y,
           }}
           texture={resizerTexture}
           color={resizerTint.color}

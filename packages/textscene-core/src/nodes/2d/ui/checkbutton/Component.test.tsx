@@ -30,6 +30,7 @@ import {
   inkedGlyphCount,
   inkedGlyphCounts,
 } from '../../../../r3f/controls/native/testing/bundledRunStub';
+import { themeIconSource } from '../../../../r3f/controls/native/themeIconSource';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
 vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
@@ -217,8 +218,8 @@ describe('<CheckButton> (isolated painter contract)', () => {
       const material = findIconMeshes(renderer.scene)[0]!.material as THREE.MeshBasicMaterial;
       return (material.map!.image as { src?: string }).src;
     };
-    expect(await iconSrc(false)).toBe(CHECK_BUTTON_ICONS.unchecked);
-    expect(await iconSrc(true)).toBe(CHECK_BUTTON_ICONS.uncheckedMirrored);
+    expect(await iconSrc(false)).toBe(themeIconSource(CHECK_BUTTON_ICONS.unchecked, 1));
+    expect(await iconSrc(true)).toBe(themeIconSource(CHECK_BUTTON_ICONS.uncheckedMirrored, 1));
   });
 });
 

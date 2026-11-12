@@ -11,6 +11,34 @@ export function svgDataUrl(base64: string): string {
   return `data:image/svg+xml;base64,${base64}`;
 }
 
+/** Written only by `vendoredIcon`, at module load. Never cleared: the icons live as long as the page. */
+const svgUrlByKey = new Map<string, string>();
+const keyBySvgUrl = new Map<string, string>();
+
+/**
+ * The `data:` SVG URL of the Godot icon `scene/theme/icons/<key>.svg`, recorded so the bake can
+ * rasterise it and `themeIconSource` can find its raster. A key names one SVG.
+ */
+export function vendoredIcon(key: string, base64: string): string {
+  const url = svgDataUrl(base64);
+  const known = svgUrlByKey.get(key);
+  if (known !== undefined && known !== url)
+    throw new Error(`expected one SVG for the icon key ${key}, got two`);
+  svgUrlByKey.set(key, url);
+  keyBySvgUrl.set(url, key);
+  return url;
+}
+
+/** Each vendored icon's key and SVG URL, in the order the modules registered them. */
+export function vendoredIconSvgUrls(): ReadonlyMap<string, string> {
+  return svgUrlByKey;
+}
+
+/** The key of a vendored icon's SVG URL, or undefined for any other URL. */
+export function vendoredIconKey(svgUrl: string): string | undefined {
+  return keyBySvgUrl.get(svgUrl);
+}
+
 /** `scene/theme/icons/checked.svg` (16x16). */
 const CHECKED_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHJlY3Qgd2lkdGg9IjE0IiBoZWlnaHQ9IjE0IiB4PSIxIiB5PSIxIiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9Ii43NSIgcng9IjIuMzMzIi8+PHBhdGggZmlsbD0iIzFhMWExYSIgZD0ibTExLjUgMy43NS01LjYgNS42LTEuNy0xLjctMS41IDEuNSAzLjIgMy4yIDcuMS03LjF6Ii8+PC9zdmc+Cg==';
@@ -60,14 +88,14 @@ export interface CheckBoxIcons {
 }
 
 export const CHECK_BOX_ICONS: CheckBoxIcons = {
-  checked: svgDataUrl(CHECKED_B64),
-  checkedDisabled: svgDataUrl(CHECKED_DISABLED_B64),
-  unchecked: svgDataUrl(UNCHECKED_B64),
-  uncheckedDisabled: svgDataUrl(UNCHECKED_DISABLED_B64),
-  radioChecked: svgDataUrl(RADIO_CHECKED_B64),
-  radioCheckedDisabled: svgDataUrl(RADIO_CHECKED_DISABLED_B64),
-  radioUnchecked: svgDataUrl(RADIO_UNCHECKED_B64),
-  radioUncheckedDisabled: svgDataUrl(RADIO_UNCHECKED_DISABLED_B64),
+  checked: vendoredIcon('checked', CHECKED_B64),
+  checkedDisabled: vendoredIcon('checked_disabled', CHECKED_DISABLED_B64),
+  unchecked: vendoredIcon('unchecked', UNCHECKED_B64),
+  uncheckedDisabled: vendoredIcon('unchecked_disabled', UNCHECKED_DISABLED_B64),
+  radioChecked: vendoredIcon('radio_checked', RADIO_CHECKED_B64),
+  radioCheckedDisabled: vendoredIcon('radio_checked_disabled', RADIO_CHECKED_DISABLED_B64),
+  radioUnchecked: vendoredIcon('radio_unchecked', RADIO_UNCHECKED_B64),
+  radioUncheckedDisabled: vendoredIcon('radio_unchecked_disabled', RADIO_UNCHECKED_DISABLED_B64),
 };
 
 /** OptionButton's single icon: `default_theme.cpp:235`. */
@@ -76,7 +104,7 @@ interface OptionButtonIcons {
 }
 
 export const OPTION_BUTTON_ICONS: OptionButtonIcons = {
-  arrow: svgDataUrl(OPTION_BUTTON_ARROW_B64),
+  arrow: vendoredIcon('option_button_arrow', OPTION_BUTTON_ARROW_B64),
 };
 
 /** `scene/theme/icons/hsplitter.svg` (8×48): HSplitContainer's grabber. */
@@ -94,8 +122,8 @@ interface SplitContainerIcons {
 }
 
 export const SPLIT_CONTAINER_ICONS: SplitContainerIcons = {
-  hsplitter: svgDataUrl(HSPLITTER_B64),
-  vsplitter: svgDataUrl(VSPLITTER_B64),
+  hsplitter: vendoredIcon('hsplitter', HSPLITTER_B64),
+  vsplitter: vendoredIcon('vsplitter', VSPLITTER_B64),
 };
 
 /** `scene/theme/icons/slider_grabber.svg` (16x16): HSlider/VSlider's `grabber` icon. */
@@ -125,8 +153,8 @@ interface SliderGrabberIcons {
 }
 
 export const SLIDER_GRABBER_ICONS: SliderGrabberIcons = {
-  grabber: svgDataUrl(SLIDER_GRABBER_B64),
-  grabberDisabled: svgDataUrl(SLIDER_GRABBER_DISABLED_B64),
+  grabber: vendoredIcon('slider_grabber', SLIDER_GRABBER_B64),
+  grabberDisabled: vendoredIcon('slider_grabber_disabled', SLIDER_GRABBER_DISABLED_B64),
 };
 
 /** HSlider/VSlider's single `tick` icon, per axis (`default_theme.cpp:592,607`). */
@@ -136,8 +164,8 @@ interface SliderTickIcons {
 }
 
 export const SLIDER_TICK_ICONS: SliderTickIcons = {
-  hslider: svgDataUrl(HSLIDER_TICK_B64),
-  vslider: svgDataUrl(VSLIDER_TICK_B64),
+  hslider: vendoredIcon('hslider_tick', HSLIDER_TICK_B64),
+  vslider: vendoredIcon('vslider_tick', VSLIDER_TICK_B64),
 };
 
 /** `scene/theme/icons/toggle_on.svg` (32x16): CheckButton's `checked`. */
@@ -189,14 +217,14 @@ export interface CheckButtonIcons {
 }
 
 export const CHECK_BUTTON_ICONS: CheckButtonIcons = {
-  checked: svgDataUrl(TOGGLE_ON_B64),
-  checkedDisabled: svgDataUrl(TOGGLE_ON_DISABLED_B64),
-  unchecked: svgDataUrl(TOGGLE_OFF_B64),
-  uncheckedDisabled: svgDataUrl(TOGGLE_OFF_DISABLED_B64),
-  checkedMirrored: svgDataUrl(TOGGLE_ON_MIRRORED_B64),
-  checkedDisabledMirrored: svgDataUrl(TOGGLE_ON_DISABLED_MIRRORED_B64),
-  uncheckedMirrored: svgDataUrl(TOGGLE_OFF_MIRRORED_B64),
-  uncheckedDisabledMirrored: svgDataUrl(TOGGLE_OFF_DISABLED_MIRRORED_B64),
+  checked: vendoredIcon('toggle_on', TOGGLE_ON_B64),
+  checkedDisabled: vendoredIcon('toggle_on_disabled', TOGGLE_ON_DISABLED_B64),
+  unchecked: vendoredIcon('toggle_off', TOGGLE_OFF_B64),
+  uncheckedDisabled: vendoredIcon('toggle_off_disabled', TOGGLE_OFF_DISABLED_B64),
+  checkedMirrored: vendoredIcon('toggle_on_mirrored', TOGGLE_ON_MIRRORED_B64),
+  checkedDisabledMirrored: vendoredIcon('toggle_on_disabled_mirrored', TOGGLE_ON_DISABLED_MIRRORED_B64),
+  uncheckedMirrored: vendoredIcon('toggle_off_mirrored', TOGGLE_OFF_MIRRORED_B64),
+  uncheckedDisabledMirrored: vendoredIcon('toggle_off_disabled_mirrored', TOGGLE_OFF_DISABLED_MIRRORED_B64),
 };
 
 /** Every vendored CheckButton icon shares this authored size (`toggle_on.svg` et al, 32x16). */
@@ -231,10 +259,10 @@ interface FoldableContainerIcons {
 }
 
 export const FOLDABLE_CONTAINER_ICONS: FoldableContainerIcons = {
-  expandedArrow: svgDataUrl(ARROW_DOWN_B64),
-  expandedArrowMirrored: svgDataUrl(ARROW_UP_B64),
-  foldedArrow: svgDataUrl(ARROW_RIGHT_B64),
-  foldedArrowMirrored: svgDataUrl(ARROW_LEFT_B64),
+  expandedArrow: vendoredIcon('arrow_down', ARROW_DOWN_B64),
+  expandedArrowMirrored: vendoredIcon('arrow_up', ARROW_UP_B64),
+  foldedArrow: vendoredIcon('arrow_right', ARROW_RIGHT_B64),
+  foldedArrowMirrored: vendoredIcon('arrow_left', ARROW_LEFT_B64),
 };
 
 /** `scene/theme/icons/region_unfolded.svg` (12x12): CodeEdit's `can_fold_code_region`. */
@@ -252,8 +280,8 @@ interface CodeEditFoldIcons {
 }
 
 export const CODE_EDIT_FOLD_ICONS: CodeEditFoldIcons = {
-  canFold: svgDataUrl(ARROW_DOWN_B64),
-  canFoldCodeRegion: svgDataUrl(REGION_UNFOLDED_B64),
+  canFold: vendoredIcon('arrow_down', ARROW_DOWN_B64),
+  canFoldCodeRegion: vendoredIcon('region_unfolded', REGION_UNFOLDED_B64),
 };
 
 /** `scene/theme/icons/text_edit_tab.svg` (8x8): TextEdit/CodeEdit's `tab`. */
@@ -271,8 +299,8 @@ interface TextEditGlyphIcons {
 }
 
 export const TEXT_EDIT_GLYPH_ICONS: TextEditGlyphIcons = {
-  tab: svgDataUrl(TEXT_EDIT_TAB_B64),
-  space: svgDataUrl(TEXT_EDIT_SPACE_B64),
+  tab: vendoredIcon('text_edit_tab', TEXT_EDIT_TAB_B64),
+  space: vendoredIcon('text_edit_space', TEXT_EDIT_SPACE_B64),
 };
 
 /** `scene/theme/icons/scroll_hint_vertical.svg` (32x24): ScrollContainer's `scroll_hint_vertical`, a white gradient from alpha 0.3 at the top edge to 0 at the bottom, uniform across its width. */
@@ -290,8 +318,8 @@ interface ScrollHintIcons {
 }
 
 export const SCROLL_HINT_ICONS: ScrollHintIcons = {
-  vertical: svgDataUrl(SCROLL_HINT_VERTICAL_B64),
-  horizontal: svgDataUrl(SCROLL_HINT_HORIZONTAL_B64),
+  vertical: vendoredIcon('scroll_hint_vertical', SCROLL_HINT_VERTICAL_B64),
+  horizontal: vendoredIcon('scroll_hint_horizontal', SCROLL_HINT_HORIZONTAL_B64),
 };
 
 /** `scene/theme/icons/close.svg` (16x16): TabBar's `close`. */
@@ -318,9 +346,9 @@ interface TabBarIcons {
 }
 
 export const TAB_BAR_ICONS: TabBarIcons = {
-  close: svgDataUrl(TAB_BAR_CLOSE_B64),
-  incrementScroll: svgDataUrl(TAB_BAR_SCROLL_RIGHT_B64),
-  decrementScroll: svgDataUrl(TAB_BAR_SCROLL_LEFT_B64),
+  close: vendoredIcon('close', TAB_BAR_CLOSE_B64),
+  incrementScroll: vendoredIcon('scroll_button_right', TAB_BAR_SCROLL_RIGHT_B64),
+  decrementScroll: vendoredIcon('scroll_button_left', TAB_BAR_SCROLL_LEFT_B64),
 };
 
 /** Every vendored TabBar icon's authored size (16x16). Only an embedded window's `close` scales by the theme scale (`EmbeddedWindowFrame`), as `SPIN_BOX_ARROW_ICON_SIZE` does not. */
@@ -347,11 +375,17 @@ const COLOR_SCRIPT_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0iTTYgMWEyIDIgMCAwIDAtMiAydjdIMXYzYTIgMiAwIDAgMCAyIDJoN2EyIDIgMCAwIDAgMi0yVjVoM1YzYTIgMiAwIDAgMC0yLTJ6Ii8+PHBhdGggZmlsbC1vcGFjaXR5PSIuMiIgZD0iTTYgMWEyIDIgMCAwIDAtMiAydjdIMXYzYTIgMiAwIDEgMCA0IDBWM2ExIDEgMCAwIDEgMiAwdjNoNVY1SDhWM2EyIDIgMCAwIDAtMi0yek0yIDExaDJ2MmExIDEgMCAwIDEtMiAweiIvPjwvc3ZnPgo=';
 
 /** ColorPicker's/ColorPickerButton's checkerboard, overbright and cursor icons: `default_theme.cpp:1096,1098,1100-1101,1133`. */
-export const MINI_CHECKERBOARD_ICON = svgDataUrl(MINI_CHECKERBOARD_B64);
-export const COLOR_PICKER_OVERBRIGHT_ICON = svgDataUrl(COLOR_PICKER_OVERBRIGHT_B64);
-export const COLOR_SCRIPT_ICON = svgDataUrl(COLOR_SCRIPT_B64);
-export const COLOR_PICKER_CURSOR_ICON = svgDataUrl(COLOR_PICKER_CURSOR_B64);
-export const COLOR_PICKER_CURSOR_BG_ICON = svgDataUrl(COLOR_PICKER_CURSOR_BG_B64);
+export const MINI_CHECKERBOARD_ICON = vendoredIcon('mini_checkerboard', MINI_CHECKERBOARD_B64);
+export const COLOR_PICKER_OVERBRIGHT_ICON = vendoredIcon(
+  'color_picker_overbright',
+  COLOR_PICKER_OVERBRIGHT_B64
+);
+
+/** `color_picker_overbright.svg`'s authored size, 16x16. */
+export const COLOR_PICKER_OVERBRIGHT_ICON_SIZE = 16;
+export const COLOR_SCRIPT_ICON = vendoredIcon('script', COLOR_SCRIPT_B64);
+export const COLOR_PICKER_CURSOR_ICON = vendoredIcon('color_picker_cursor', COLOR_PICKER_CURSOR_B64);
+export const COLOR_PICKER_CURSOR_BG_ICON = vendoredIcon('color_picker_cursor_bg', COLOR_PICKER_CURSOR_BG_B64);
 
 /** The checkerboard tile's own natural size: 16x16. */
 export const MINI_CHECKERBOARD_SIZE = 16;
@@ -385,17 +419,17 @@ const COLOR_PICKER_BAR_ARROW_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDIwIj48cGF0aCBmaWxsPSIjYjJiMmIyIiBzdHJva2U9IiNiMmIyYjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Im0zLjU2NCAxNS4yMThoOC44NzJsLTQuNDM2LTQuNDM2eiIvPjwvc3ZnPgo=';
 
 /** ColorPicker's button and bar icons (`default_theme.cpp:1088-1101`). */
-export const COLOR_PICKER_MENU_ICON = svgDataUrl(COLOR_PICKER_MENU_B64);
-export const COLOR_PICKER_PIPETTE_ICON = svgDataUrl(COLOR_PICKER_PIPETTE_B64);
+export const COLOR_PICKER_MENU_ICON = vendoredIcon('tabs_menu_hl', COLOR_PICKER_MENU_B64);
+export const COLOR_PICKER_PIPETTE_ICON = vendoredIcon('color_picker_pipette', COLOR_PICKER_PIPETTE_B64);
 /** The `btn_shape` icons, by their theme item names. */
 export const COLOR_PICKER_SHAPE_ICONS = {
-  shape_rect: svgDataUrl(COLOR_PICKER_SHAPE_RECT_B64),
-  shape_rect_wheel: svgDataUrl(COLOR_PICKER_SHAPE_RECT_WHEEL_B64),
-  shape_circle: svgDataUrl(COLOR_PICKER_SHAPE_CIRCLE_B64),
+  shape_rect: vendoredIcon('picker_shape_rectangle', COLOR_PICKER_SHAPE_RECT_B64),
+  shape_rect_wheel: vendoredIcon('picker_shape_rectangle_wheel', COLOR_PICKER_SHAPE_RECT_WHEEL_B64),
+  shape_circle: vendoredIcon('picker_shape_circle', COLOR_PICKER_SHAPE_CIRCLE_B64),
 } as const;
-export const COLOR_PICKER_BAR_ARROW_ICON = svgDataUrl(COLOR_PICKER_BAR_ARROW_B64);
+export const COLOR_PICKER_BAR_ARROW_ICON = vendoredIcon('color_picker_bar_arrow', COLOR_PICKER_BAR_ARROW_B64);
 
-/** Every one of the six icons just above shares this authored size: 16x16, never rescaled by the project theme scale (same limitation as `SPIN_BOX_ARROW_ICON_SIZE`). */
+/** Every one of the six icons just above shares this authored size: 16x16, scaled by the project theme scale at each read (`scaledIconSize`). */
 export const COLOR_PICKER_BUTTON_ICON_SIZE = 16;
 
 /** The cursor icons' own natural size: both 12x12. */
@@ -445,19 +479,19 @@ interface GraphEditIcons {
 }
 
 export const GRAPH_EDIT_ICONS: GraphEditIcons = {
-  zoomOut: svgDataUrl(GRAPH_EDIT_ZOOM_OUT_B64),
-  zoomIn: svgDataUrl(GRAPH_EDIT_ZOOM_IN_B64),
-  zoomReset: svgDataUrl(GRAPH_EDIT_ZOOM_RESET_B64),
-  gridToggle: svgDataUrl(GRAPH_EDIT_GRID_TOGGLE_B64),
-  minimapToggle: svgDataUrl(GRAPH_EDIT_MINIMAP_TOGGLE_B64),
-  snappingToggle: svgDataUrl(GRAPH_EDIT_SNAPPING_TOGGLE_B64),
-  layout: svgDataUrl(GRAPH_EDIT_LAYOUT_B64),
+  zoomOut: vendoredIcon('zoom_less', GRAPH_EDIT_ZOOM_OUT_B64),
+  zoomIn: vendoredIcon('zoom_more', GRAPH_EDIT_ZOOM_IN_B64),
+  zoomReset: vendoredIcon('zoom_reset', GRAPH_EDIT_ZOOM_RESET_B64),
+  gridToggle: vendoredIcon('grid_toggle', GRAPH_EDIT_GRID_TOGGLE_B64),
+  minimapToggle: vendoredIcon('grid_minimap', GRAPH_EDIT_MINIMAP_TOGGLE_B64),
+  snappingToggle: vendoredIcon('grid_snap', GRAPH_EDIT_SNAPPING_TOGGLE_B64),
+  layout: vendoredIcon('grid_layout', GRAPH_EDIT_LAYOUT_B64),
 };
 
 /** GraphEditMinimap's own single icon: `default_theme.cpp:1349`. */
-export const GRAPH_EDIT_MINIMAP_RESIZER_ICON = svgDataUrl(GRAPH_EDIT_MINIMAP_RESIZER_B64);
+export const GRAPH_EDIT_MINIMAP_RESIZER_ICON = vendoredIcon('resizer_nw', GRAPH_EDIT_MINIMAP_RESIZER_B64);
 
-/** Every GraphEdit/GraphEditMinimap icon above shares this authored size: 16x16, never rescaled by the project theme scale (same limitation as `SPIN_BOX_ARROW_ICON_SIZE`). */
+/** Every GraphEdit/GraphEditMinimap icon above shares this authored size: 16x16, scaled by the project theme scale at each read (`scaledIconSize`). */
 export const GRAPH_EDIT_ICON_SIZE = 16;
 
 /** `scene/theme/icons/folder_up.svg` (16x16), bound as `FileDialog/parent_folder` (`default_theme.cpp:702-716`). */
@@ -506,19 +540,19 @@ const FILE_DIALOG_FAVORITE_DOWN_B64 =
 
 /** The vendored default of each `FileDialog` theme icon the toolbar buttons show (`default_theme.cpp:702-716`). `back_folder` and `forward_folder` are `arrow_left.svg` and `arrow_right.svg`. */
 export const FILE_DIALOG_ICON_URLS: Readonly<Record<FileDialogThemeIcon, string>> = {
-  back_folder: svgDataUrl(ARROW_LEFT_B64),
-  forward_folder: svgDataUrl(ARROW_RIGHT_B64),
-  parent_folder: svgDataUrl(FILE_DIALOG_PARENT_FOLDER_B64),
-  reload: svgDataUrl(FILE_DIALOG_RELOAD_B64),
-  favorite: svgDataUrl(FILE_DIALOG_FAVORITE_B64),
-  create_folder: svgDataUrl(FILE_DIALOG_CREATE_FOLDER_B64),
-  toggle_hidden: svgDataUrl(FILE_DIALOG_TOGGLE_HIDDEN_B64),
-  thumbnail_mode: svgDataUrl(FILE_DIALOG_THUMBNAIL_MODE_B64),
-  list_mode: svgDataUrl(FILE_DIALOG_LIST_MODE_B64),
-  toggle_filename_filter: svgDataUrl(FILE_DIALOG_TOGGLE_FILENAME_FILTER_B64),
-  sort: svgDataUrl(FILE_DIALOG_SORT_B64),
-  favorite_up: svgDataUrl(FILE_DIALOG_FAVORITE_UP_B64),
-  favorite_down: svgDataUrl(FILE_DIALOG_FAVORITE_DOWN_B64),
+  back_folder: vendoredIcon('arrow_left', ARROW_LEFT_B64),
+  forward_folder: vendoredIcon('arrow_right', ARROW_RIGHT_B64),
+  parent_folder: vendoredIcon('folder_up', FILE_DIALOG_PARENT_FOLDER_B64),
+  reload: vendoredIcon('reload', FILE_DIALOG_RELOAD_B64),
+  favorite: vendoredIcon('favorite', FILE_DIALOG_FAVORITE_B64),
+  create_folder: vendoredIcon('folder_create', FILE_DIALOG_CREATE_FOLDER_B64),
+  toggle_hidden: vendoredIcon('visibility_visible', FILE_DIALOG_TOGGLE_HIDDEN_B64),
+  thumbnail_mode: vendoredIcon('file_mode_thumbnail', FILE_DIALOG_THUMBNAIL_MODE_B64),
+  list_mode: vendoredIcon('file_mode_list', FILE_DIALOG_LIST_MODE_B64),
+  toggle_filename_filter: vendoredIcon('toggle_filename_filter', FILE_DIALOG_TOGGLE_FILENAME_FILTER_B64),
+  sort: vendoredIcon('sort', FILE_DIALOG_SORT_B64),
+  favorite_up: vendoredIcon('move_up', FILE_DIALOG_FAVORITE_UP_B64),
+  favorite_down: vendoredIcon('move_down', FILE_DIALOG_FAVORITE_DOWN_B64),
 };
 
 /** `scene/theme/icons/folder.svg` (16x16), bound as `FileDialog/folder` (`default_theme.cpp:709`). */
@@ -539,8 +573,8 @@ const FILE_DIALOG_FILE_THUMBNAIL_B64 =
 
 /** The vendored default of each icon the file list draws for a folder or a file (`file_dialog.cpp:933-940,1016-1040`). */
 export const FILE_DIALOG_LIST_ICON_URLS: Readonly<Record<FileDialogListIcon, string>> = {
-  folder: svgDataUrl(FILE_DIALOG_FOLDER_B64),
-  file: svgDataUrl(FILE_DIALOG_FILE_B64),
-  folder_thumbnail: svgDataUrl(FILE_DIALOG_FOLDER_THUMBNAIL_B64),
-  file_thumbnail: svgDataUrl(FILE_DIALOG_FILE_THUMBNAIL_B64),
+  folder: vendoredIcon('folder', FILE_DIALOG_FOLDER_B64),
+  file: vendoredIcon('file', FILE_DIALOG_FILE_B64),
+  folder_thumbnail: vendoredIcon('folder_thumbnail', FILE_DIALOG_FOLDER_THUMBNAIL_B64),
+  file_thumbnail: vendoredIcon('file_thumbnail', FILE_DIALOG_FILE_THUMBNAIL_B64),
 };

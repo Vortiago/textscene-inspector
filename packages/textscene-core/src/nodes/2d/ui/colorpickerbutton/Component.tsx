@@ -16,7 +16,11 @@ import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItem
 import { parseColor } from '../../../../utils/colorParser';
 import { Button } from '../button/Component';
 import { AlphaCheckerboardQuad } from '../shared/AlphaCheckerboardQuad';
-import { COLOR_PICKER_OVERBRIGHT_ICON } from '../../../../r3f/controls/native/themeIcons';
+import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
+import {
+  COLOR_PICKER_OVERBRIGHT_ICON,
+  COLOR_PICKER_OVERBRIGHT_ICON_SIZE,
+} from '../../../../r3f/controls/native/themeIcons';
 import { isColorOverbright } from '../shared/colorOverbright';
 import type { ColorPickerButtonProperties } from './types';
 
@@ -38,6 +42,7 @@ export function ColorPickerButton(props: NativeControlComponentProps) {
   // type chain, so the vendored icon stands in.
   const overbrightTexture = useIconTexture(COLOR_PICKER_OVERBRIGHT_ICON);
   const overbright = isColorOverbright(fill);
+  const overbrightPx = scaledIconSize(COLOR_PICKER_OVERBRIGHT_ICON_SIZE, theme.scale);
 
   // The checkerboard has no alpha gate (`color_picker.cpp:2428`), unlike the `preset_color.a < 1`
   // check of `ColorPresetButton`: an opaque swatch covers it.
@@ -66,8 +71,8 @@ export function ColorPickerButton(props: NativeControlComponentProps) {
       {overbright && (
         <CanvasItemGroup position={[normalStyle.contentMargin.left, -normalStyle.contentMargin.top, 0]}>
           <ControlQuad
-            width={16}
-            height={16}
+            width={overbrightPx}
+            height={overbrightPx}
             color={tint.color}
             opacity={tint.opacity}
             map={overbrightTexture}

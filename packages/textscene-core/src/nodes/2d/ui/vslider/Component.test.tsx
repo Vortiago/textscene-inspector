@@ -12,6 +12,7 @@ import { VSlider } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { SLIDER_TICK_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { themeIconSource } from '../../../../r3f/controls/native/themeIconSource';
 
 function solveNode(properties: Record<string, unknown>): SolveNode {
   return {
@@ -69,7 +70,7 @@ describe('<VSlider>', () => {
     expect(geometry.parameters.width).toBe(8);
     expect(geometry.parameters.height).toBe(4);
     const material = tickMesh.material as THREE.MeshBasicMaterial;
-    expect((material.map!.image as HTMLImageElement).src).toBe(SLIDER_TICK_ICONS.vslider);
+    expect((material.map!.image as HTMLImageElement).src).toBe(themeIconSource(SLIDER_TICK_ICONS.vslider, 1));
   });
 
   it('forwards renderOrder to every mesh it draws', async () => {

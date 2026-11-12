@@ -41,6 +41,7 @@ import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/contro
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { TscnNode } from '../../../../parser/types';
 import { lineEditDisplayText } from './displayText';
+import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -325,7 +326,8 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   // `icon_max_width` is the max of the two icons, never their sum. The clear button counts even
   // without text: `get_minimum_size` has no `using_placeholder` gate, unlike the draw path.
   if (props.clearButtonEnabled) {
-    const clearNaturalSize = n.textureSlots['clear'] ?? LINE_EDIT_CLEAR_ICON_NATURAL_SIZE;
+    const clearNaturalSize =
+      n.textureSlots['clear'] ?? scaledIconSizeOf(LINE_EDIT_CLEAR_ICON_NATURAL_SIZE, ctx.theme.scale);
     const size = lineEditRightIconSize(
       clearNaturalSize,
       iconExpandMode,

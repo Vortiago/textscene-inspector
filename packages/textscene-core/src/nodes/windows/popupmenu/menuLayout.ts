@@ -100,7 +100,7 @@ function contentsMinimumSize(n: SolveNode, ctx: SolveContext, model: MenuModel, 
   const gutter = gutterWidth(
     {
       iconWidth: widestIcon(items),
-      checkWidth: minimumCheckSize(n).x,
+      checkWidth: minimumCheckSize(menu).x,
       hasCheck: checkables.length > 0,
       isCompact: menu.isGutterCompact && !hasCheckIcon,
     },

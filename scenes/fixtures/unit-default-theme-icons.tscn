@@ -1,0 +1,199 @@
+; The one variable: every Control draws its default-theme icon at theme scale 1. Godot rasterises each
+; icon with ThorVG (`default_theme.cpp:82-84`), and the previewer draws Godot's own raster of it
+; (`themeIconRasters.generated.ts`). Covers the check family, OptionButton, SpinBox, LineEdit clear,
+; TabBar close, sliders, FoldableContainer, the GraphEdit toolbar, an embedded Window and ColorPicker.
+
+[gd_scene load_steps=2 format=3]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_1"]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.25, 0.35, 1)
+
+[node name="Checked" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 160.0
+offset_bottom = 40.0
+text = "Checked"
+button_pressed = true
+
+[node name="Unchecked" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 44.0
+offset_right = 160.0
+offset_bottom = 72.0
+text = "Unchecked"
+
+[node name="RadioOn" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 76.0
+offset_right = 160.0
+offset_bottom = 104.0
+button_pressed = true
+button_group = SubResource("ButtonGroup_1")
+text = "Radio on"
+
+[node name="RadioOff" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 108.0
+offset_right = 160.0
+offset_bottom = 136.0
+button_group = SubResource("ButtonGroup_1")
+text = "Radio off"
+
+[node name="CheckedDisabled" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 140.0
+offset_right = 160.0
+offset_bottom = 168.0
+disabled = true
+button_pressed = true
+text = "Disabled on"
+
+[node name="UncheckedDisabled" type="CheckBox" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 172.0
+offset_right = 160.0
+offset_bottom = 200.0
+disabled = true
+text = "Disabled off"
+
+[node name="ToggleOn" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 208.0
+offset_right = 160.0
+offset_bottom = 240.0
+button_pressed = true
+text = "On"
+
+[node name="ToggleOff" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 244.0
+offset_right = 160.0
+offset_bottom = 276.0
+text = "Off"
+
+[node name="ToggleOnDisabled" type="CheckButton" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 280.0
+offset_right = 160.0
+offset_bottom = 312.0
+disabled = true
+button_pressed = true
+text = "Disabled"
+
+[node name="Options" type="OptionButton" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 324.0
+offset_right = 160.0
+offset_bottom = 356.0
+item_count = 2
+selected = 0
+popup/item_0/text = "Easy"
+popup/item_0/id = 0
+popup/item_1/text = "Hard"
+popup/item_1/id = 1
+
+[node name="Spin" type="SpinBox" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 368.0
+offset_right = 160.0
+offset_bottom = 400.0
+value = 5.0
+
+[node name="Clearable" type="LineEdit" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 412.0
+offset_right = 160.0
+offset_bottom = 444.0
+text = "Clear me"
+clear_button_enabled = true
+
+[node name="Tabs" type="TabBar" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 456.0
+offset_right = 220.0
+offset_bottom = 488.0
+tab_close_display_policy = 2
+tab_count = 2
+tab_0/title = "One"
+tab_1/title = "Two"
+
+[node name="Horizontal" type="HSlider" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 504.0
+offset_right = 216.0
+offset_bottom = 520.0
+value = 40.0
+tick_count = 5
+
+[node name="Vertical" type="VSlider" parent="."]
+layout_mode = 0
+offset_left = 240.0
+offset_top = 12.0
+offset_right = 256.0
+offset_bottom = 160.0
+value = 60.0
+tick_count = 5
+
+[node name="Folded" type="FoldableContainer" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 536.0
+offset_right = 216.0
+offset_bottom = 570.0
+folded = true
+title = "Folded"
+
+[node name="Unfolded" type="FoldableContainer" parent="."]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 580.0
+offset_right = 216.0
+offset_bottom = 640.0
+title = "Unfolded"
+
+[node name="Graph" type="GraphEdit" parent="."]
+layout_mode = 0
+offset_left = 280.0
+offset_top = 12.0
+offset_right = 640.0
+offset_bottom = 260.0
+minimap_enabled = false
+
+[node name="Win" type="Window" parent="."]
+title = "Window"
+position = Vector2i(280, 290)
+size = Vector2i(300, 160)
+
+[node name="Picker" type="ColorPicker" parent="."]
+layout_mode = 0
+offset_left = 680.0
+offset_top = 8.0
+offset_right = 1090.0
+offset_bottom = 620.0
+color = Color(0.4, 0.6, 0.3, 1)

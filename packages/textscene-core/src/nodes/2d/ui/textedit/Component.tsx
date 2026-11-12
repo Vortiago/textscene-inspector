@@ -50,12 +50,13 @@ import {
 } from './nativeSolver';
 import { useTextEditRows } from './useTextEditRows';
 import type { TextEditRows } from './rows';
+import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { TEXT_EDIT_GLYPH_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import type { TextEditProperties } from './types';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
-/** `text_edit_tab.svg`/`text_edit_space.svg`'s authored size, unscaled: no raw theme scale reaches this slice, unlike Godot's `generate_icon`. */
-const GLYPH_ICON_SIZE_PX = 8;
+/** `text_edit_tab.svg`/`text_edit_space.svg`'s authored size. The default theme rasterises both at the theme scale. */
+const GLYPH_ICON_AUTHORED_SIZE_PX = 8;
 
 /** `default_theme.cpp:472` (TextEdit) / `:518` (CodeEdit): the same literal for both. */
 const CURRENT_LINE_COLOR = { r: 0.25, g: 0.25, b: 0.26, a: 0.8 };
@@ -107,6 +108,7 @@ export function TextEditBody({
 }: TextEditBodyProps) {
   const props = painterView<TextEditProperties>(solveNode);
   const toItemLinear = useItemLinearColorOf();
+  const glyphIconPx = scaledIconSize(GLYPH_ICON_AUTHORED_SIZE_PX, theme.scale);
   const state = resolveTextEditStyleState(props.editable);
   const styleBox = pickTextEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, state);
 
@@ -318,15 +320,15 @@ export function TextEditBody({
                       baseFontColor
                     )
                   );
-                  const iconXPx = isTabIcon ? glyph.x : glyph.x + (glyph.advance - GLYPH_ICON_SIZE_PX) / 2;
+                  const iconXPx = isTabIcon ? glyph.x : glyph.x + (glyph.advance - glyphIconPx) / 2;
                   return (
                     <CanvasItemGroup
                       key={glyphIndex}
-                      position={[iconXPx, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}
+                      position={[iconXPx, -((rowHeightPx - glyphIconPx) / 2), 0]}
                     >
                       <ControlQuad
-                        width={GLYPH_ICON_SIZE_PX}
-                        height={GLYPH_ICON_SIZE_PX}
+                        width={glyphIconPx}
+                        height={glyphIconPx}
                         color={toItemLinear(iconColor)}
                         opacity={iconColor.a}
                         map={isTabIcon ? tabIcon : spaceIcon}

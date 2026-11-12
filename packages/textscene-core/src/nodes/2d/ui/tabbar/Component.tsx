@@ -82,9 +82,9 @@ export function useTabBarModel(solveNode: SolveNode, theme: NativeControlCompone
   const defaults = theme.widgets.tabContainer;
   const overrides = solveNode.styleBoxes;
   const closeButtonMargin = theme.widgets.button.normal.contentMargin;
-  const closeIconSize = tabBarThemeIconSize(solveNode, 'close');
-  const incrementIconSize = tabBarThemeIconSize(solveNode, 'increment');
-  const decrementIconSize = tabBarThemeIconSize(solveNode, 'decrement');
+  const closeIconSize = tabBarThemeIconSize(solveNode, 'close', theme.scale);
+  const incrementIconSize = tabBarThemeIconSize(solveNode, 'increment', theme.scale);
+  const decrementIconSize = tabBarThemeIconSize(solveNode, 'decrement', theme.scale);
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, TAB_BAR_THEME_FONT_KEY);
   // Shaped here rather than carried over from the solver, so the internal bar

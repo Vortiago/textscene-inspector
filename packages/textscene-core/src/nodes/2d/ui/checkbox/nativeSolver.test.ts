@@ -103,6 +103,24 @@ describe('checkBoxMinimumSize (check_box.cpp:64-79): no text', () => {
   });
 });
 
+describe('checkBoxMinimumSize at a theme scale (check_box.cpp:64-79)', () => {
+  const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+
+  it('reserves the check at its scaled size: the same minimum as a themed 24x24 icon', () => {
+    const themed = { ...node({}), textureSlots: { unchecked: { x: 24, y: 24 } } };
+
+    expect(checkBoxMinimumSize(node({}), at15)).toEqual(checkBoxMinimumSize(themed, at15));
+    expect(checkBoxMinimumSize(node({}), at15).x).toBeGreaterThan(24);
+  });
+
+  it('draws the vendored check at 24x24 at scale 1.5', () => {
+    expect(checkBoxCheckRect(node({}), nativeTheme(1.5), 'checked', { x: 150, y: 40 })).toMatchObject({
+      w: 24,
+      h: 24,
+    });
+  });
+});
+
 describe('checkBoxMinimumSize: with text', () => {
   it('adds text width + h_separation(4) alongside the icon width; height floors on the taller of text/icon', () => {
     const result = checkBoxMinimumSize(node({ text: 'AB' }), ctx());

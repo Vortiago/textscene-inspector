@@ -21,7 +21,8 @@ import {
   type BoxChildInput,
 } from '../shared/boxContainerSolver';
 import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
-import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
+import { spinBoxArrowIconSize, spinBoxButtonsBlockWidth } from '../spinbox/nativeSolver';
+import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { isMinimapEnabled } from './minimap';
 import type { GraphEditToolbarTheme } from './toolbarTheme';
@@ -131,10 +132,12 @@ export function graphEditMenuPanelStyleBox(theme: NativeTheme): StyleBoxFlatData
  */
 function toolbarButtonMinSize(
   buttonBoxes: GraphEditToolbarTheme['buttonBoxes'],
-  state: ToggleDrawState
+  state: ToggleDrawState,
+  scale: number
 ): Vector2 {
   const margin = contentMarginSize(buttonBoxes[state]);
-  return { x: margin.x + GRAPH_EDIT_ICON_SIZE, y: margin.y + GRAPH_EDIT_ICON_SIZE };
+  const icon = scaledIconSize(GRAPH_EDIT_ICON_SIZE, scale);
+  return { x: margin.x + icon, y: margin.y + icon };
 }
 
 /**
@@ -144,14 +147,15 @@ function toolbarButtonMinSize(
  */
 function toolbarSpinBoxMinSize(
   fieldBoxes: GraphEditToolbarTheme['fieldBoxes'],
-  metrics: ToolbarTextMetrics
+  metrics: ToolbarTextMetrics,
+  scale: number
 ): Vector2 {
   const styleMin = lineEditStyleMinSize(fieldBoxes.normal, fieldBoxes.readOnly);
   return {
     x:
       styleMin.x +
       lineEditTextMinimumWidth(metrics.emSpaceWidthPx) +
-      spinBoxButtonsBlockWidth(SPIN_BOX_ARROW_ICON_SIZE.x),
+      spinBoxButtonsBlockWidth(spinBoxArrowIconSize(scale).x),
     y: styleMin.y + metrics.fontHeightPx,
   };
 }
@@ -197,7 +201,11 @@ export function graphEditToolbar(
     pressed,
     disabled,
     box: {
-      minSize: toolbarButtonMinSize(items.buttonBoxes, resolveToggleDrawState(disabled, pressed)),
+      minSize: toolbarButtonMinSize(
+        items.buttonBoxes,
+        resolveToggleDrawState(disabled, pressed),
+        theme.scale
+      ),
       hSizeFlags: SizeFlags.FILL,
       vSizeFlags: SizeFlags.FILL,
       stretchRatio: 1,
@@ -237,7 +245,7 @@ export function graphEditToolbar(
       pressed: false,
       disabled: false,
       box: {
-        minSize: toolbarSpinBoxMinSize(items.fieldBoxes, metrics),
+        minSize: toolbarSpinBoxMinSize(items.fieldBoxes, metrics, theme.scale),
         hSizeFlags: SizeFlags.FILL,
         vSizeFlags: SizeFlags.FILL,
         stretchRatio: 1,

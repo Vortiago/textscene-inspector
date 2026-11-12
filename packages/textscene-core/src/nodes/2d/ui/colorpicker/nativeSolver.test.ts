@@ -17,6 +17,7 @@ import {
   textTypeLabel,
   sliderGridRowRects,
   colorPickerValueColumnWidth,
+  colorPickerButtonIconSize,
   colorPickerLabelColumnWidth,
   modeButtonBox,
   colorPickerSliderBoxRect,
@@ -414,6 +415,12 @@ describe('colorPickerValueColumnWidth', () => {
     expect(colorPickerValueColumnWidth(THEME, 15.125)).toBe(86); // 8 + 60.5 + 18 = 86.5
   });
 
+  it('widens by the scaled buttons block at theme scale 2', () => {
+    // Arrow icon 8x4 -> 16x8: the block grows with the icon width (spin_box.cpp:82-86).
+    const widthAt = (scale: number) => colorPickerValueColumnWidth(nativeTheme(scale), 0);
+    expect(widthAt(2) - widthAt(1)).toBeGreaterThan(0);
+  });
+
   it('floors to the style margin + buttons block alone with no em width', () => {
     expect(colorPickerValueColumnWidth(THEME, 0)).toBe(26); // 8 + 0 + 18
   });
@@ -717,5 +724,12 @@ describe('textTypeLabel', () => {
     });
     expect(label.leftPx).toBe(box.x + THEME.widgets.button.normal.contentMargin.left);
     expect(label.alignment).toBe(1);
+  });
+});
+
+describe('colorPickerButtonIconSize', () => {
+  it('scales the 16px button icon by the theme scale', () => {
+    expect(colorPickerButtonIconSize(nativeTheme(1))).toBe(16);
+    expect(colorPickerButtonIconSize(nativeTheme(1.5))).toBe(24);
   });
 });

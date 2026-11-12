@@ -19,7 +19,6 @@ import { getFontLinePitchPx } from '../../../r3f/controls/native/text/fontMetric
 import { controlBidiOptions } from '../../../r3f/controls/native/text/textBidiOptions';
 import { shapedTextSizeWidthPx, type TextLayoutResult } from '../../../r3f/controls/native/text/textLayout';
 import {
-  CHECKBOX_ICON_NATURAL_SIZE,
   CHECK_BOX_ICON_THEME_NAME,
   type CheckBoxIconKey,
   checkIconSlotRequests,
@@ -57,11 +56,6 @@ export interface MenuItem {
 
 const CHECK_ICON_KEYS = Object.keys(CHECK_BOX_ICON_THEME_NAME) as readonly CheckBoxIconKey[];
 
-/** The size of a check icon, which a theme replaces by name. */
-export function checkIconSize(n: Pick<SolveNode, 'textureSlots'>, key: CheckBoxIconKey): Vector2 {
-  return n.textureSlots[CHECK_BOX_ICON_THEME_NAME[key]] ?? CHECKBOX_ICON_NATURAL_SIZE;
-}
-
 /** The icons a checkable item draws, by `checkable_type - 1 + 2 * disabled` (`popup_menu.cpp:853-855`). */
 const CHECKED_ICON_KEYS: readonly CheckBoxIconKey[] = [
   'checked',
@@ -83,15 +77,13 @@ export function checkIconKey(item: PopupMenuItem): CheckBoxIconKey {
 }
 
 /** The check icon every item reserves room for in the menu's minimum: the larger of `checked` and `radio_checked` (`popup_menu.cpp:279`). */
-export function minimumCheckSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 {
-  const checked = checkIconSize(n, 'checked');
-  const radio = checkIconSize(n, 'radioChecked');
-  return vector2Max(checked, radio);
+export function minimumCheckSize(menu: PopupMenuTheme): Vector2 {
+  return vector2Max(menu.checkIconSizes.checked, menu.checkIconSizes.radioChecked);
 }
 
 /** The widest of all eight check icons, which the draw reserves its gutter from (`popup_menu.cpp:889-894`). */
-export function widestCheckIcon(n: Pick<SolveNode, 'textureSlots'>): number {
-  return Math.max(...CHECK_ICON_KEYS.map((key) => checkIconSize(n, key).x));
+export function widestCheckIcon(menu: PopupMenuTheme): number {
+  return Math.max(...CHECK_ICON_KEYS.map((key) => menu.checkIconSizes[key].x));
 }
 
 /** `_shape_item` (`popup_menu.cpp:1087-1107`): the text at the item's font, in the menu's layout direction. */
@@ -110,7 +102,6 @@ function shapeItem(n: SolveNode, item: PopupMenuItem, theme: PopupMenuTheme): Te
  * with no text takes the font height unless it is a separator.
  */
 function itemHeight(
-  n: SolveNode,
   item: PopupMenuItem,
   textHeight: number,
   iconHeight: number,
@@ -118,7 +109,7 @@ function itemHeight(
 ): number {
   let icon = Math.trunc(iconHeight);
   if (item.checkable !== ItemCheckableType.NONE && !item.separator) {
-    icon = Math.max(icon, Math.trunc(minimumCheckSize(n).y));
+    icon = Math.max(icon, Math.trunc(minimumCheckSize(theme).y));
   }
   let text = Math.trunc(textHeight);
   if (text === 0 && !item.separator) {
@@ -156,7 +147,7 @@ export function menuItems(
       textSize,
       hasIcon,
       iconSize,
-      height: itemHeight(n, item, textSize.y, iconSize.y, theme),
+      height: itemHeight(item, textSize.y, iconSize.y, theme),
     };
   });
 }

@@ -14,7 +14,7 @@ import { ControlQuad } from '../../../r3f/controls/native/controlQuad';
 import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../r3f/controls/native/useIconTexture';
 import { TAB_BAR_ICONS, TAB_BAR_ICON_SIZE } from '../../../r3f/controls/native/themeIcons';
-import { scaledIconSize, scaledSvgDataUrl } from '../../../r3f/controls/native/scaledSvgIcon';
+import { scaledIconSize } from '../../../r3f/controls/native/scaledSvgIcon';
 import {
   canvasSubOrders,
   useCanvasItemState,
@@ -178,10 +178,8 @@ function WindowDecoration({
     closeHOffset: constants.close_h_offset ?? defaults.closeHOffset,
     closeVOffset: constants.close_v_offset ?? defaults.closeVOffset,
   };
-  // `close` and the TabBar's `close` are one default icon, `icons["close"]` (`default_theme.cpp:685,1039`),
-  // rasterised at the theme scale.
-  const vendoredClose = useMemo(() => scaledSvgDataUrl(TAB_BAR_ICONS.close, theme.scale), [theme.scale]);
-  const closeTexture = useNodeIcon(solveNode.icons.close, vendoredClose);
+  // `close` and the TabBar's `close` are one default icon, `icons["close"]` (`default_theme.cpp:685,1039`).
+  const closeTexture = useNodeIcon(solveNode.icons.close, TAB_BAR_ICONS.close);
   const closeSize = iconSize(closeTexture, theme.scale);
   const rect: Rect2 = { x: 0, y: 0, w: size.x, h: size.y };
   const closeOrigin = closeIconOrigin(size.x, offsets);

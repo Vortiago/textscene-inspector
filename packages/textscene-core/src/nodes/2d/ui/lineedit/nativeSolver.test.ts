@@ -202,6 +202,14 @@ describe('lineEditMinimumSize: right_icon / clear_button_enabled contribution (l
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 16, 6);
   });
 
+  it('the vendored clear icon is 24x24 at theme scale 1.5: the same minimum as a themed 24x24 icon', () => {
+    const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+    const plain = node({ clearButtonEnabled: true });
+    const themed = { ...plain, textureSlots: { clear: { x: 24, y: 24 } } };
+
+    expect(lineEditMinimumSize(plain, at15)).toEqual(lineEditMinimumSize(themed, at15));
+  });
+
   it('a themed "clear" icon overrides the vendored 16x16 natural size', () => {
     const n = { ...node({ clearButtonEnabled: true }), textureSlots: { clear: { x: 24, y: 24 } } };
     const result = lineEditMinimumSize(n, ctx());

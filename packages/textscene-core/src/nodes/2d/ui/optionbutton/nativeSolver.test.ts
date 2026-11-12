@@ -333,6 +333,19 @@ describe('optionButtonMinimumSize: autowrap_mode zeroes each item text width and
 const RECT_SIZE = { x: 150, y: 32 };
 const THEME = nativeTheme(1);
 
+describe('the OptionButton arrow at a theme scale (option_button.cpp:62,131-133)', () => {
+  it('draws the vendored arrow at 18x18 at scale 1.5', () => {
+    expect(optionButtonArrowRect(node({}), nativeTheme(1.5), RECT_SIZE)).toMatchObject({ w: 18, h: 18 });
+  });
+
+  it('reserves it in the minimum size: the same as a themed 18x18 arrow', () => {
+    const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+    const themed = { ...node({}), textureSlots: { arrow: { x: 18, y: 18 } } };
+
+    expect(optionButtonMinimumSize(node({}), at15)).toEqual(optionButtonMinimumSize(themed, at15));
+  });
+});
+
 describe('optionButtonArrowRect (option_button.cpp:122-131)', () => {
   it('puts the arrow arrow_margin from the right edge of the whole control, not of the content', () => {
     // Content margins are 8 by 4 (default_theme.cpp:212-215), but `arrow_margin` (`:249`, round(4*scale))
