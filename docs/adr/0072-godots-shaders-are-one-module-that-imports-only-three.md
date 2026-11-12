@@ -1,7 +1,7 @@
 # Godot's shaders are one module that imports only three
 
-- Status: Proposed. The owner asked for the shape on 2026-11-12, chose the package name and put the
-  shader translator in the package. The first publish and the three range wait for his answer.
+- Status: Proposed. The owner asked for the shape on 2026-11-12, chose the package name, put the
+  shader translator in the package and set the first publish. The three range waits for his answer.
 - Amends: ADR-0055 (where the node lit surface lives).
 - Related: ADR-0038 (one owner for every program input), ADR-0039 (one material derivation, two
   adapters), ADR-0041 (an uncompiled shader draws Godot's default surface).
@@ -57,8 +57,9 @@ publishes it.**
 - **The React mount stays in the renderer.** ADR-0039's two adapters remain: a plain object for the
   resource pipeline and a JSX element for React. Both take their material from the module.
 
-The first publish supports `WebGLRenderer` with `WebGLNodesHandler`, as ADR-0055 ports nothing that
-only `WebGPURenderer` needs.
+The first publish is 0.1.0, after the port removes the shader patches. It supports `WebGLRenderer`
+with `WebGLNodesHandler`, as ADR-0055 ports nothing that only `WebGPURenderer` needs. The caller
+supplies each pipeline input.
 
 ## Considered options
 
