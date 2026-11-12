@@ -88,8 +88,9 @@ jobs:
               | "## \(.author.login), \(.createdAt // .submittedAt)\n\n\(.body)\n")
           ' > "$PR_CONTEXT/conversation.md"
 
-      # The scrub below refuses to start without bubblewrap. Both tools come out of the CI image
-      # (ADR-0065), at the paths of their Ubuntu packages, so no run reads the Ubuntu archive.
+      # The scrub below runs a subprocess in a PID namespace of its own, which bubblewrap makes.
+      # Both tools come out of the CI image (ADR-0065), at the paths of their Ubuntu packages,
+      # so no run reads the Ubuntu archive.
       - name: Install subprocess isolation
         run: |
           image="$(node scripts/ci/ciImage.mjs | sed -n 's/^ref=//p')"
@@ -100,10 +101,11 @@ jobs:
             sudo docker cp -L "$container:$file" "$file"
           done
           docker rm "$container" > /dev/null
-          # Proves that each tool loads on the runner. Not a namespace: a runner sets
-          # kernel.apparmor_restrict_unprivileged_userns to 1, and bubblewrap then makes none,
-          # from the Ubuntu package or from the image.
-          bwrap --version
+          # Ubuntu 24.04 refuses a user namespace to bubblewrap until this setting is 0. The
+          # action sets it only for `allowed_non_write_users`, which this workflow does not use.
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          # Makes the namespace of the scrub, so the step fails on a runner where the scrub cannot.
+          bwrap --unshare-pid --ro-bind / / --proc /proc true
           socat -V > /dev/null
 
       - id: claude
@@ -141,7 +143,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REVIEW: ${{ steps.claude.outputs.structured_output }}
+        # `bash` by name runs with pipefail, so a failed render reaches the fallback.
+        shell: bash
         run: |
+          # An empty answer sent on would open a review that is never submitted, and the next
+          # post on that pull request then gets HTTP 422.
+          if [ -z "$REVIEW" ]; then
+            echo "::error::No answer from the review action. It skips when claude-review.yml differs from main."
+            exit 1
+          fi
           if ! node scripts/ci/claudeReview.mjs review <<< "$REVIEW" |
             gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews" --input - > /dev/null; then
             node scripts/ci/claudeReview.mjs comment <<< "$REVIEW" | gh pr comment "$PR_NUMBER" --body-file -
