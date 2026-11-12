@@ -34,6 +34,9 @@ export const GEOMETRY_SCENES = [
   // GPUParticles3D settled to a fixed seed: a sphere, a sphere surface, a box and a ring of
   // particles, each an unshaded dot coloured by the material.
   { name: 'gpuparticles3d-shapes', file: 'unit-gpuparticles3d-shapes.tscn' },
+  // GPUParticles3D copied by the draw order and the alignment, through a camera turned 30 degrees:
+  // four flying quads, one per `transform_align`, and two clouds of lit alpha quads, by lifetime and by depth.
+  { name: 'gpuparticles3d-align-order', file: 'unit-gpuparticles3d-align-order.tscn' },
   // A MultiMeshInstance3D with a buffer: four boxes in a row, each coloured by its instance colour.
   { name: 'multimeshinstance3d-instances', file: 'unit-multi-mesh-instance-3d-instances.tscn' },
   // A DIRECTED_POINTS CPUParticles3D: a column of boxes above its one point, turned into the point's

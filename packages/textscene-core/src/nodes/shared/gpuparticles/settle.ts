@@ -64,6 +64,12 @@ export interface GpuSettleInput {
 export interface SettledGpuParticles {
   /** The live particles in index order, each {@link PARTICLE_FLOATS} floats, in node space. */
   buffer: Float32Array;
+  /** Each live particle's velocity, three floats, in the space the particles simulate in (`particles.glsl` `velocity`). */
+  velocity: Float32Array;
+  /** The particle index of each live particle: a settle of a thinned emitter leaves gaps. */
+  indices: Int32Array;
+  /** The system phase after the last step, the double the server holds (`particles_storage.cpp:845`). */
+  phase: number;
 }
 
 /**
@@ -82,7 +88,7 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
   const frame = emissionFrame(emitter.localCoords ? identityTransform3D() : emissionTransform);
   const randomSeed = emitter.useFixedSeed ? emitter.seed : DEFAULT_PREVIEW_SEED;
   const clock = startClock(emitter);
-  if (drawsNothing(material)) return emptyPose();
+  if (drawsNothing(material)) return emptyPose(clock.phase);
   const frameTime = settleFrameTime(emitter);
   const steps = settleStepCount(Math.min(seconds, MAX_SETTLE_SECONDS), frameTime);
   const stride = particleStride(emitter.amount, steps);
@@ -109,7 +115,12 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
       if (particle.active) stepParticle(particle, restartedDelta ?? frameParams.delta, step);
     }
   }
-  return pose(particles, emitter.localCoords ? identityTransform3D() : emissionTransform);
+  return pose(
+    particles,
+    stride,
+    clock.phase,
+    emitter.localCoords ? identityTransform3D() : emissionTransform
+  );
 }
 
 /** The top of the range hint of `preprocess` (`gpu_particles_3d.cpp`). A hand-written scene may pass it; the settle stops there. */
@@ -130,8 +141,8 @@ function drawsNothing({ emission }: GpuMaterial): boolean {
   return emission.shape === EmissionShape.POINTS || emission.shape === EmissionShape.DIRECTED_POINTS;
 }
 
-function emptyPose(): SettledGpuParticles {
-  return { buffer: new Float32Array(0) };
+function emptyPose(phase: number): SettledGpuParticles {
+  return { buffer: new Float32Array(0), velocity: new Float32Array(0), indices: new Int32Array(0), phase };
 }
 
 function emissionFrame({ basis_x: x, basis_y: y, basis_z: z, origin }: Transform3D): EmissionFrame {
@@ -140,20 +151,31 @@ function emissionFrame({ basis_x: x, basis_y: y, basis_z: z, origin }: Transform
 }
 
 /** The live particles as buffer rows in node space: a world-space particle goes back through the inverse of the emission transform. */
-function pose(particles: GpuParticle[], emissionTransform: Transform3D): SettledGpuParticles {
-  const live = particles.filter((particle) => particle.active);
+function pose(
+  particles: GpuParticle[],
+  stride: number,
+  phase: number,
+  emissionTransform: Transform3D
+): SettledGpuParticles {
+  const live = particles.flatMap((particle, slot) =>
+    particle.active ? [{ particle, index: slot * stride }] : []
+  );
   const buffer = new Float32Array(live.length * PARTICLE_FLOATS);
+  const velocity = new Float32Array(live.length * 3);
+  const indices = new Int32Array(live.length);
   const toNode = affineInverseTransform3D(emissionTransform);
-  live.forEach((particle, index) => {
+  live.forEach(({ particle, index }, row) => {
     writeTransformRows(
       buffer,
-      index * PARTICLE_FLOATS,
+      row * PARTICLE_FLOATS,
       multiplyTransform3D(toNode, columnsToTransform(particle))
     );
-    buffer.set(particle.color, index * PARTICLE_FLOATS + PARTICLE_COLOR_OFFSET);
-    buffer.set(particle.custom, index * PARTICLE_FLOATS + PARTICLE_CUSTOM_OFFSET);
+    buffer.set(particle.color, row * PARTICLE_FLOATS + PARTICLE_COLOR_OFFSET);
+    buffer.set(particle.custom, row * PARTICLE_FLOATS + PARTICLE_CUSTOM_OFFSET);
+    velocity.set(particle.velocity, row * 3);
+    indices[row] = index;
   });
-  return { buffer };
+  return { buffer, velocity, indices, phase };
 }
 
 function columnsToTransform({ columns: [x, y, z], origin }: GpuParticle): Transform3D {
