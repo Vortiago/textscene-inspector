@@ -76,7 +76,7 @@ function topTextItem(textHeight: number) {
 }
 
 describe('itemListSpacing', () => {
-  it('is round(4*scale) and round(2*scale) at scale 1 (default_theme.cpp:946-949)', () => {
+  it('is round(4*scale) and round(2*scale) at scale 1 (default_theme.cpp:945-948)', () => {
     expect(itemListSpacing({}, nativeTheme(1))).toEqual({
       hSeparation: 4,
       vSeparation: 4,

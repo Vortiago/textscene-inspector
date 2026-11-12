@@ -113,7 +113,7 @@ export interface ItemListSpacing {
 }
 
 /**
- * `default_theme.cpp:946-949`: h_separation, v_separation and icon_margin are `round(4 * scale)`,
+ * `default_theme.cpp:945-948`: h_separation, v_separation and icon_margin are `round(4 * scale)`,
  * which `theme.separation` holds, and line_separation is `round(2 * scale)`.
  */
 export function itemListSpacing(

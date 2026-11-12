@@ -44,8 +44,9 @@ function sizeLineWrites(lines: Record<string, string>): WindowSizeWrite[] {
  */
 interface WindowReplay {
   lines: Record<string, string>;
-  transparent: boolean;
-  /** A class that floors its size in its constructor writes `min_size` first. */
+  /** The background before the lines run, which either background key replaces. */
+  transparentBackground: boolean;
+  /** The size writes before the lines run. A class that floors its size in its constructor writes `min_size` first. */
   size: WindowSizeWrite[];
   forceNative: ForceNativeState;
 }
@@ -59,7 +60,7 @@ function windowReplay(
     const { held } = override;
     return {
       lines: override.written,
-      transparent: held.transparent_bg,
+      transparentBackground: held.transparent_bg,
       size: [
         { key: 'min_size', value: held.min_size },
         { key: 'max_size', value: held.max_size },
@@ -71,7 +72,7 @@ function windowReplay(
   const defaults = windowClassDefaults(type);
   return {
     lines: properties,
-    transparent: defaults.transparent,
+    transparentBackground: defaults.transparent,
     size: [
       { key: 'min_size', value: defaults.minSize },
       ...(defaults.size ? [{ key: 'size' as const, value: defaults.size }] : []),
@@ -99,7 +100,10 @@ function parseContentScale(properties: Record<string, string>, context: string):
  * line written last wins. Without either, `held` stands: the constructor's flag, or what an
  * instanced base left under an override's lines.
  */
-function replayTransparentBackground({ lines, transparent: held }: WindowReplay, context: string): boolean {
+function replayTransparentBackground(
+  { lines, transparentBackground: held }: WindowReplay,
+  context: string
+): boolean {
   const flag = boolOr(lines.transparent, held, context);
   if (lines.transparent_bg === undefined) return flag;
   const keys = Object.keys(lines);
