@@ -65,6 +65,11 @@ export const LINE_EDIT_THEME_FONT_KEY = 'font';
 type LineEditStyleState = 'normal' | 'read_only';
 
 /** `editable ?? true` (Godot's `LineEdit.editable` default) as the stylebox key it selects. */
+/** The clear icon's size: the themed texture's, else the vendored icon at the theme scale. */
+export function lineEditClearIconSize(n: SolveNode, scale: number): Vector2 {
+  return n.textureSlots['clear'] ?? scaledIconSizeOf(LINE_EDIT_CLEAR_ICON_NATURAL_SIZE, scale);
+}
+
 export function resolveLineEditStyleState(editable: boolean | undefined): LineEditStyleState {
   return editable === false ? 'read_only' : 'normal';
 }
@@ -326,8 +331,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   // `icon_max_width` is the max of the two icons, never their sum. The clear button counts even
   // without text: `get_minimum_size` has no `using_placeholder` gate, unlike the draw path.
   if (props.clearButtonEnabled) {
-    const clearNaturalSize =
-      n.textureSlots['clear'] ?? scaledIconSizeOf(LINE_EDIT_CLEAR_ICON_NATURAL_SIZE, ctx.theme.scale);
+    const clearNaturalSize = lineEditClearIconSize(n, ctx.theme.scale);
     const size = lineEditRightIconSize(
       clearNaturalSize,
       iconExpandMode,

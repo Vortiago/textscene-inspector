@@ -32,14 +32,12 @@ import {
   COLOR_PICKER_BAR_ARROW_ICON,
   COLOR_PICKER_MENU_ICON,
   COLOR_PICKER_OVERBRIGHT_ICON,
-  COLOR_PICKER_OVERBRIGHT_ICON_SIZE,
   COLOR_PICKER_PIPETTE_ICON,
   COLOR_PICKER_SHAPE_ICONS,
   FOLDABLE_CONTAINER_ICONS,
   SLIDER_GRABBER_ICONS,
 } from '../../../../r3f/controls/native/themeIcons';
 import { sliderTrackRect, sliderGrabberAreaRect, sliderGrabberRect } from '../shared/sliderSolver';
-import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { spinBoxArrowIconSize, spinBoxArrowPosition, spinBoxLayout } from '../spinbox/nativeSolver';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { isColorOverbright } from '../shared/colorOverbright';
@@ -87,6 +85,7 @@ import {
   swatchesRowRects,
   type TextWidthMeasurer,
   colorPickerButtonIconSize,
+  colorPickerOverbrightIconSize,
 } from './nativeSolver';
 import { horizontalStripGeometry, linearizeStops } from './svGradient';
 import { ShapeRow } from './shapes/ShapeRow';
@@ -228,7 +227,7 @@ export function ColorPicker({
   const sampleColor = useItemLinearColor(sampleFill);
   const overbrightTexture = useNodeIcon(solveNode.icons.overbright_indicator, COLOR_PICKER_OVERBRIGHT_ICON);
   const overbright = isColorOverbright(fill);
-  const overbrightPx = scaledIconSize(COLOR_PICKER_OVERBRIGHT_ICON_SIZE, theme.scale);
+  const overbrightPx = colorPickerOverbrightIconSize(theme);
   const sampleCols = rows.sample
     ? sampleRowColumns(rows.sample, theme, props.pickerShape, solveNode.rtl)
     : null;

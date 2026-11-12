@@ -23,7 +23,10 @@ import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/text
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { spinBoxArrowIconSize, spinBoxButtonsBlockWidth } from '../spinbox/nativeSolver';
 import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
-import { COLOR_PICKER_BUTTON_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
+import {
+  COLOR_PICKER_BUTTON_ICON_SIZE,
+  COLOR_PICKER_OVERBRIGHT_ICON_SIZE,
+} from '../../../../r3f/controls/native/themeIcons';
 import { SizeFlags } from '../../../../godot/scene/control';
 import { ContainerAlignment } from '../../../../godot/scene/container';
 import { resortBoxContainer } from '../shared/boxContainerSolver';
@@ -93,6 +96,11 @@ function colorPickerHexFieldMinWidth(theme: Pick<NativeTheme, 'widgets'>, emWidt
 function colorPickerButtonIconVector(theme: Pick<NativeTheme, 'scale'>): Vector2 {
   const side = colorPickerButtonIconSize(theme);
   return { x: side, y: side };
+}
+
+/** The side of the square `overbright_indicator` icon at the theme scale. */
+export function colorPickerOverbrightIconSize(theme: Pick<NativeTheme, 'scale'>): number {
+  return scaledIconSize(COLOR_PICKER_OVERBRIGHT_ICON_SIZE, theme.scale);
 }
 
 /** The side of the square `menu_option` and `folded_arrow` icons (`default_theme.cpp:1088`), and of the other button icons at the theme scale. */

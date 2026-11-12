@@ -12,6 +12,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 
 const GODOT_VERSION = '4.6.3';
@@ -98,8 +99,7 @@ function bake() {
   const godot = process.env.GODOT_BIN ?? 'godot';
   assertGodotVersion(execFileSync(godot, ['--version'], { encoding: 'utf8' }).trim());
   const rasters = rasterise(godot, iconsOfModules());
-  writeFileSync(OUT, renderRasterModule(rasters, GODOT_VERSION));
-  console.log(`[godot-theme-icons] wrote ${Object.keys(rasters).length} rasters to ${OUT}`);
+  writeGenerated([[OUT, renderRasterModule(rasters, GODOT_VERSION)]], { tool: 'godot-theme-icons' });
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
