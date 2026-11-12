@@ -185,7 +185,6 @@ describe('<ItemList> — a theme icon and a selected row (a dialog sets both)', 
     ReactThreeTestRenderer.create(
       <ItemList {...painterEnv()} solveNode={solveNode({ items })} rect={RECT} renderOrder={0} />
     );
-  const colourOf = (mesh: THREE.Mesh) => (mesh.material as THREE.ShaderMaterial).uniforms.uColor!.value;
 
   it('draws the icon a row names by theme icon, with no item_N/icon', async () => {
     const renderer = await render([{ text: 'a.png', themedIcon: VENDORED }]);
@@ -200,9 +199,9 @@ describe('<ItemList> — a theme icon and a selected row (a dialog sets both)', 
 
   it('draws the label of a selected row in font_selected_color, white by default', async () => {
     const renderer = await render([{ text: 'a.png', isSelected: true }, { text: 'b.png' }]);
-    const [selected, plain] = findTextMeshes(renderer.scene);
-    expect(colourOf(selected!).toArray()).toEqual([1, 1, 1]);
-    expect(colourOf(plain!).toArray()).not.toEqual([1, 1, 1]);
+    const [selected, plain] = bundledRuns(renderer.scene);
+    expect(selected!.tint).toMatchObject({ r: 1, g: 1, b: 1 });
+    expect(plain!.tint).not.toMatchObject({ r: 1, g: 1, b: 1 });
   });
 
   it('draws the cursor box over the current row of a multi-select list', async () => {
