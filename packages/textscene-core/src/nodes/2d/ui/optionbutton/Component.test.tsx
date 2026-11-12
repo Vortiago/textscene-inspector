@@ -14,7 +14,6 @@ import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
-import { textQuadCounts } from '../../../../r3f/controls/native/testing/textQuadCounts';
 import { OptionButton } from './Component';
 import type { OptionButtonProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -27,6 +26,18 @@ import {
   renderWithOwnIcon,
   worldPosition,
 } from '../../../../r3f/controls/native/testing/ownIcon';
+import {
+  bundledRunMeshes,
+  bundledRuns,
+  inkedGlyphCount,
+  inkedGlyphCounts,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+import { findCanvasTextMesh } from '../../../../r3f/controls/native/testing/canvasTextMesh';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 32 };
 
@@ -114,8 +125,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(1, 5);
+    expect(bundledRuns(renderer.scene)[0]!.tint.r).toBeCloseTo(1, 5);
   });
 
   it('skips the chrome StyleBox when flat, keeping the arrow', async () => {
@@ -144,7 +154,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMesh(renderer.scene)).toBeUndefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeUndefined();
   });
 
   it("draws the SELECTED item's text, not the first item's", async () => {
@@ -156,7 +166,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMesh(renderer.scene)).toBeDefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeDefined();
   });
 
   it('uses control_font_color (0.875 sRGB) for the NORMAL label', async () => {
@@ -168,9 +178,9 @@ describe('<OptionButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(1, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.r).toBeCloseTo(0.875, 5);
+    expect(tint.a).toBeCloseTo(1, 5);
   });
 
   it('uses control_font_disabled_color (alpha 0.5) for the DISABLED label', async () => {
@@ -182,8 +192,8 @@ describe('<OptionButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.a).toBeCloseTo(0.5, 5);
   });
 
   it('applies the walker-composed tint as ONE product, reaching chrome, arrow AND text alike', async () => {
@@ -204,9 +214,9 @@ describe('<OptionButton> (isolated painter contract)', () => {
     const arrowMaterial = findArrowMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
     expect(arrowMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
 
-    const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    const textTint = bundledRuns(renderer.scene)[0]!.tint;
     // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, then linearised.
-    expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
+    expect(textTint.r).toBeCloseTo(0.21875, 5);
   });
 
   it('keeps every mesh inside its own unit of render order (chrome, arrow and text)', async () => {
@@ -226,8 +236,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
 
 /**
  * The scene-font path (canvas-kind `FontMetrics`) end to end. OptionButton's placement
- * (`option_button.cpp:113-121` plus Button's internal margin) has nothing font-kind-specific, so an
- * atlas-bake anchor leaking into it reads correct on the atlas path and is `ascentPx - base*fontSizePx/42` px off here.
+ * (`option_button.cpp:113-121` plus Button's internal margin) has nothing font-kind-specific.
  */
 describe('<OptionButton>: scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
@@ -247,23 +256,15 @@ describe('<OptionButton>: scene-font (canvas-kind FontMetrics) text path', () =>
     );
   }
 
-  /** The canvas painter's mesh: a plain `MeshBasicMaterial` over the raster's `DataTexture`, never the MSDF `ShaderMaterial` `findTextMesh` looks for. */
-  function findCanvasTextMesh(scene: Rendered['scene']) {
-    return scene
-      .findAllByType('Mesh')
-      .map((m) => m.instance as THREE.Mesh)
-      .find((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.DataTexture);
-  }
-
-  it('paints the selected item through the canvas rasteriser — ONE quad, not one per glyph, and no MSDF material', async () => {
+  it('paints the selected item through the canvas rasteriser: one quad, and no run of the bundled face', async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene);
     expect(mesh).toBeDefined();
     expect(mesh!.geometry.getAttribute('position').count).toBe(4);
-    expect(findTextMesh(renderer.scene)).toBeUndefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeUndefined();
   });
 
-  it('places the text at the pure option_button.cpp offset — no atlas-bake anchor anywhere in it', async () => {
+  it('places the text at the pure option_button.cpp offset', async () => {
     const renderer = await renderWithSceneFont();
     const mesh = findCanvasTextMesh(renderer.scene)!;
     // Scene font at 16px: ascent ceil(800*16/1000) = 13, descent 4, and a Button-family control reads no
@@ -303,7 +304,7 @@ describe('<OptionButton>: scene-font (canvas-kind FontMetrics) text path', () =>
 });
 
 describe('<OptionButton>: text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
-  const glyphQuadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
+  const inkedCount = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
 
   async function render(properties: Partial<OptionButtonProperties>) {
     return ReactThreeTestRenderer.create(
@@ -321,8 +322,8 @@ describe('<OptionButton>: text_overrun_behavior trims the label to its paragraph
     // paragraph cut alone keeps the glyphs of 'BBB' too.
     const trimmed = await render({ overrunBehavior: 2 });
     const cut = await render({ overrunBehavior: 0 });
-    expect(glyphQuadCount(trimmed)).toBe(4);
-    expect(glyphQuadCount(cut)).toBeGreaterThan(4);
+    expect(inkedCount(trimmed)).toBe(4);
+    expect(inkedCount(cut)).toBeGreaterThan(4);
   });
 });
 
@@ -340,12 +341,12 @@ describe('<OptionButton>: autowrap_mode wraps the drawn label though the box kee
 
   it('draws three lines', async () => {
     const wrapped = await render({ autowrapMode: 2 });
-    expect(textQuadCounts(wrapped.scene)).toEqual([5, 5, 7]);
+    expect(inkedGlyphCounts(wrapped.scene)).toEqual([5, 5, 7]);
   });
 
   it('draws one line at AUTOWRAP_OFF', async () => {
     const unwrapped = await render({});
-    expect(textQuadCounts(unwrapped.scene)).toHaveLength(1);
+    expect(inkedGlyphCounts(unwrapped.scene)).toHaveLength(1);
   });
 });
 

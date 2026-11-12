@@ -1,9 +1,10 @@
 /**
- * Merged glyph quads for one `shapeText` layout: every visible glyph on every line
- * as one `THREE.BufferGeometry` and material. `TextRun.tsx` routes each run here, and
- * `layout.fontMetrics.kind` picks the painter: the MSDF atlas for `'atlas'`,
- * `canvasTextPainter.ts`'s single raster quad for `'canvas'`, and `bitmapTextPainter.ts`'s quad for
- * each glyph of a BMFont for `'bitmap'`. All three place a line by its box-top Y alone.
+ * The mesh of one `shapeText` layout: every visible glyph on every line as one
+ * `THREE.BufferGeometry` and material. `TextRun.tsx` routes each run here, and
+ * `layout.fontMetrics.kind` picks the painter: `canvasTextPainter.ts`'s single raster quad for
+ * `'canvas'`, and `bitmapTextPainter.ts`'s quad for each glyph of a BMFont for `'bitmap'`. Both
+ * place a line by its box-top Y alone, and its baseline `layout.baselineOffsetPx` below that, as
+ * Godot's `ofs.y += asc` does (`scene/gui/label.cpp:616,823`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -13,8 +14,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { visualLayersUserData } from '../../../visualLayers';
 import * as THREE from 'three';
-import { getAtlasTexture, useIsAtlasDecoded } from './atlasTexture';
-import { createMsdfMaterial } from './msdfMaterial';
 import {
   useCanvasItemPixelMaterial,
   type CanvasItemPixelMaterial,
@@ -22,6 +21,7 @@ import {
 import {
   computeCanvasTextCanvasLayout,
   buildCanvasTextQuadArrays,
+  type CanvasTextQuadArrays,
   paintSceneFontCanvas,
   createCanvasTextMaterial,
   originPhase,
@@ -38,8 +38,6 @@ import { perObject } from '../../../../utils/perObject';
 import { GLYPH_DRAWER_RULES, type GlyphDrawer } from './glyphDrawer';
 import type { TextLayoutResult } from './textLayout';
 import { hexCodeBoxRects } from './hexCodeBox';
-import { buildGlyphQuadArrays, type GlyphQuadArrays } from './glyphQuads';
-import { OPEN_SANS_ATLAS_INFO } from './openSansAtlas';
 import { CanvasItemGroup, useCanvasItemOrigin } from '../../../components/CanvasItemGroup';
 import { ControlQuad } from '../controlQuad';
 import {
@@ -52,14 +50,13 @@ import { useCanvasColorSpace } from '../../../canvasColorSpace';
 import type { SurfaceBlend } from '../../../materials/surfaceBlend';
 import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
-import { usePendingWhile } from '../../../../resources/usePendingWhile';
 import type { ShadowCastingEffects } from '../../../shadowCasting';
 import type { Rgba } from '../../../../godot/math/math';
 import { VECTOR2_ZERO } from '../../../../godot/math/vector';
 import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
 import { useNearestAnisotropy } from '../../../nearestAnisotropy';
 
-/** One rectangle of a hex-code box in local Godot px, +Y down, the space of `buildGlyphQuadArrays`' `topPx` before the Y negation. */
+/** One rectangle of a hex-code box in local Godot px, +Y down, before the Y negation into three's space. */
 interface HexCodeBoxAbsoluteRect {
   x: number;
   y: number;
@@ -69,8 +66,8 @@ interface HexCodeBoxAbsoluteRect {
 
 /**
  * Every `hexCodeBoxRects` rectangle for every `controlCodepoint` placement, moved
- * from pen-relative space to the line's box-top space at the `baselinePx`
- * `buildGlyphQuadArrays` uses, since the box replaces that glyph's ink.
+ * from pen-relative space to the line's box-top space at the baseline of its line, since the box
+ * replaces that glyph's ink.
  */
 function collectHexCodeBoxRects(layout: TextLayoutResult, fontSizePx: number): HexCodeBoxAbsoluteRect[] {
   const rects: HexCodeBoxAbsoluteRect[] = [];
@@ -90,7 +87,7 @@ function collectHexCodeBoxRects(layout: TextLayoutResult, fontSizePx: number): H
 export interface TextRunProps {
   /** A `shapeText` result, already uppercased and wrapped. */
   layout: TextLayoutResult;
-  /** Must match the `fontSizePx` the layout was shaped at (atlas-bake-size geometry scales by `fontSizePx / 42`). */
+  /** Must match the `fontSizePx` the layout was shaped at. */
   fontSizePx: number;
   /** Godot colour, sRGB. `.a` is opacity, and `.r/.g/.b` are converted to linear for the shader. */
   tint: Rgba;
@@ -101,27 +98,26 @@ export interface TextRunProps {
   renderOrder?: number;
   /** Per-mesh clip planes (`controlClipping.tsx`), forwarded to the material. */
   clippingPlanes?: readonly THREE.Plane[];
-  /** Forwarded to `createMsdfMaterial`. Omitted, the material's `false` stays. */
+  /** Forwarded to the material. Omitted, the material's `false` stays. */
   depthTest?: boolean;
-  /** Forwarded to `createMsdfMaterial`. Omitted, `canvasItemFacing()`'s side stays. The run draws in one pass. */
+  /** Forwarded to the material. Omitted, `canvasItemFacing()`'s side stays. The run draws in one pass. */
   side?: THREE.Side;
   /**
    * Paints a stroked outline ring of this width (CSS px) instead of the fill, as
    * Godot's separate outline surface (`label_3d.cpp:610-615`) at the same pen
-   * positions. The default 0 fills. `TextRun` strokes an atlas face on the bundled canvas face.
+   * positions. The default 0 fills.
    */
   strokeWidthPx?: number;
   /**
    * The Godot code that draws the glyphs, `'canvasItem'` by default (`glyphDrawer.ts`). A canvas item
    * places each glyph at the run's place in the item (`useCanvasItemOrigin`): the pen on its subpixel
    * step and the baseline on a whole pixel (`text_server_adv.cpp:4074-4084`). Label3D passes `'label3D'`,
-   * whose mesh keeps both, skips small glyphs and draws no hex-code box. The MSDF atlas keeps the pen too.
+   * whose mesh keeps both, skips small glyphs and draws no hex-code box.
    */
   glyphDrawer?: GlyphDrawer;
   /**
    * The raster texture's sampler: Label3D's `texture_filter` (`label_3d.h:140`). The default is
    * Godot's default filter. A mipmapped row samples a mip chain only where `mipmapped` built one.
-   * Canvas runs only: the MSDF atlas is always sampled linearly.
    */
   textureFilter?: TextureFilterState;
   /**
@@ -132,14 +128,14 @@ export interface TextRunProps {
   mipmapped?: boolean;
   /**
    * The PBR uniforms that light the run with the scene's 3D lights and let it receive their shadows,
-   * as a shaded Label3D (`material.cpp:3045`). The quad faces +Z (`label_3d.cpp:422-423`). Canvas
-   * runs only: the MSDF atlas serves Controls, which draw unlit. Omitted, unlit.
+   * as a shaded Label3D (`material.cpp:3045`). The quad faces +Z (`label_3d.cpp:422-423`).
+   * Omitted, unlit.
    */
   shading?: SurfaceShading;
   /**
    * The `BaseMaterial3D::Transparency` this surface paints in, from a 3D caller's
    * `alpha_cut` (`label_3d.cpp:386-393`), in each pass its GeometryInstance3D's fade can draw it
-   * in. Canvas runs inside a GeometryInstance3D drawer only. Omitted, it paints
+   * in. Runs inside a GeometryInstance3D drawer only. Omitted, it paints
    * `TRANSPARENCY_ALPHA`, a Control's only mode.
    */
   blends?: FadeVariants<SurfaceBlend>;
@@ -166,14 +162,13 @@ function quadFacingPlusZ(vertexCount: number): THREE.BufferAttribute {
 }
 
 /**
- * One built run: its geometry, and on the canvas and BMFont paths the texture this component holds
- * and the last holder disposes. The atlas is shared and never disposed. `paint` builds a material
- * for the run, one for each pass a GeometryInstance3D's fade can draw it in.
+ * One built run: its geometry, and the texture this component holds and the last holder disposes.
+ * `paint` builds a material for the run, one for each pass a GeometryInstance3D's fade can draw it in.
  */
 interface BuiltTextRun {
   geometry: THREE.BufferGeometry;
   paint: (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) => THREE.Material;
-  heldTexture?: THREE.Texture;
+  heldTexture: THREE.Texture;
 }
 
 /** What both painters' materials read, apart from the blend. */
@@ -184,7 +179,7 @@ interface TextRunLook {
   side: THREE.Side | undefined;
   /** The lit Control around the run, or undefined for a run no 2D light reaches, such as Label3D's. */
   pixelMaterial: CanvasItemPixelMaterial | undefined;
-  /** `tint` as the item draws it, in linear (`useItemLinearColor`), for the atlas and BMFont painters. */
+  /** `tint` as the item draws it, in linear (`useItemLinearColor`), for the BMFont painter. */
   linearTint: THREE.Color;
 }
 
@@ -222,7 +217,7 @@ function rasterTexture(
 }
 
 /** The geometry of merged glyph quads. A lit run reads the normal, so a caller adds it. */
-function quadGeometry({ positions, uvs, indices }: GlyphQuadArrays): THREE.BufferGeometry {
+function quadGeometry({ positions, uvs, indices }: CanvasTextQuadArrays): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
@@ -302,9 +297,53 @@ function buildBitmapRun(
 }
 
 /**
- * Dispatches on `layout.fontMetrics.kind`, so no slice's `Component.tsx` branches. The face sets the
- * shear (`FontMetrics.skew`). The atlas branch ignores `canvasPaint`. A BMFont run reads its
- * stroke width as its outline pass, and its origin phase as a canvas run does.
+ * A canvas run: one quad over the raster of its glyphs, tinted in the raster. The face sets the
+ * shear (`FontMetrics.skew`).
+ */
+function buildCanvasRun(
+  layout: TextLayoutResult,
+  fontSizePx: number,
+  look: TextRunLook,
+  canvasPaint: CanvasTextPaintOptions,
+  sampling: RasterSampling
+): BuiltTextRun {
+  const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
+  const skew = layout.fontMetrics.skew ?? 0;
+  const { strokeWidthPx, originPhasePx } = canvasPaint;
+  const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx, originPhasePx);
+  const quads = buildCanvasTextQuadArrays(canvasLayout, originPhasePx);
+  const geometry = quadGeometry(quads);
+  // On every run, so toggling the shading rebuilds the material alone, not the raster.
+  geometry.setAttribute('normal', quadFacingPlusZ(quads.positions.length / 3));
+
+  const raster = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, canvasPaint);
+  const texture = rasterTexture(raster, canvasLayout);
+  // `SRGBColorSpace`, not the 2D-canvas rule's `NoColorSpace`: measured, `NoColorSpace` dips
+  // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
+  // gives the engine lines.
+  texture.colorSpace = THREE.SRGBColorSpace;
+  sampleRaster(texture, sampling);
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+
+  const paint = (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) =>
+    createCanvasTextMaterial({
+      map: texture,
+      opacity: tint.a,
+      clippingPlanes,
+      depthTest,
+      side,
+      pixelMaterial,
+      mipmapped: sampling.mipmapped,
+      shading,
+      ...blend,
+    });
+  return { geometry, paint, heldTexture: texture };
+}
+
+/**
+ * Dispatches on `layout.fontMetrics.kind`, so no slice's `Component.tsx` branches. A BMFont run
+ * reads its stroke width as its outline pass, and its origin phase as a canvas run does.
  */
 function buildTextRun(
   layout: TextLayoutResult,
@@ -313,64 +352,12 @@ function buildTextRun(
   canvasPaint: CanvasTextPaintOptions,
   sampling: RasterSampling
 ): BuiltTextRun {
-  const { tint, clippingPlanes, depthTest, side, pixelMaterial, linearTint } = look;
-  const skew = layout.fontMetrics.skew ?? 0;
-  if (isBitmapFontMetrics(layout.fontMetrics)) {
-    return buildBitmapRun(layout, layout.fontMetrics, fontSizePx, look, sampling, canvasPaint);
-  }
-  if (isCanvasFontMetrics(layout.fontMetrics)) {
-    const canvasLayout = computeCanvasTextCanvasLayout(
-      layout,
-      skew,
-      canvasPaint.strokeWidthPx,
-      canvasPaint.originPhasePx
-    );
-    const quads = buildCanvasTextQuadArrays(canvasLayout, canvasPaint.originPhasePx);
-    const geo = quadGeometry(quads);
-    const { positions } = quads;
-    // On every run, so toggling the shading rebuilds the material alone, not the raster.
-    geo.setAttribute('normal', quadFacingPlusZ(positions.length / 3));
-
-    const raster = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, canvasPaint);
-    const texture = rasterTexture(raster, canvasLayout);
-    // `SRGBColorSpace`, not the 2D-canvas rule's `NoColorSpace`: measured, `NoColorSpace` dips
-    // 5/255 below the backdrop at a glyph edge, where Godot draws a monotonic ramp. `textRun.md`
-    // gives the engine lines.
-    texture.colorSpace = THREE.SRGBColorSpace;
-    sampleRaster(texture, sampling);
-    texture.wrapS = THREE.ClampToEdgeWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-
-    const opacity = tint.a;
-    const paint = (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) =>
-      createCanvasTextMaterial({
-        map: texture,
-        opacity,
-        clippingPlanes,
-        depthTest,
-        side,
-        pixelMaterial,
-        mipmapped: sampling.mipmapped,
-        shading,
-        ...blend,
-      });
-    return { geometry: geo, paint, heldTexture: texture };
-  }
-
-  const geo = quadGeometry(buildGlyphQuadArrays(layout, fontSizePx, skew));
-
-  const options = {
-    map: getAtlasTexture(),
-    color: linearTint,
-    opacity: tint.a,
-    pxRange: OPEN_SANS_ATLAS_INFO.distanceRange,
-    clippingPlanes,
-    depthTest,
-    side,
-    pixelMaterial,
-  };
-  // The atlas painter has no blend modes: only a canvas run takes `blends`.
-  return { geometry: geo, paint: () => createMsdfMaterial(options) };
+  const { fontMetrics } = layout;
+  if (isBitmapFontMetrics(fontMetrics))
+    return buildBitmapRun(layout, fontMetrics, fontSizePx, look, sampling, canvasPaint);
+  if (isCanvasFontMetrics(fontMetrics))
+    return buildCanvasRun(layout, fontSizePx, look, canvasPaint, sampling);
+  throw new Error(`expected a canvas or bitmap face, got a ${fontMetrics.kind} face, which TextRun draws`);
 }
 
 /** Draws `props.layout` on the painter its face's `kind` names. `TextRun.tsx` routes a run here. */
@@ -394,8 +381,8 @@ export function TextRunMesh({
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
-  // The run memo keys by the phase, so a run that moves by whole pixels keeps its raster. An atlas
-  // run and a run that keeps its pen read no phase, so a move never rebuilds them.
+  // The run memo keys by the phase, so a run that moves by whole pixels keeps its raster. A run
+  // that keeps its pen reads no phase, so a move never rebuilds it.
   const itemOrigin = useCanvasItemOrigin();
   const { fontMetrics } = layout;
   const readsPhase = isBitmapFontMetrics(fontMetrics)
@@ -465,7 +452,7 @@ export function TextRunMesh({
   useDisposeOnRelease(run.geometry);
   // A canvas raster is fresh per rebuild, and a BMFont sheet texture is shared by its runs.
   useDisposeOnRelease(run.heldTexture);
-  useNearestAnisotropy(run.heldTexture ?? null);
+  useNearestAnisotropy(run.heldTexture);
 
   // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour, this run's `tint`.
   const hexBoxRects = useMemo(
@@ -484,8 +471,6 @@ export function TextRunMesh({
 
   return (
     <>
-      {/* A canvas run owns its texture. Only an atlas run waits for the atlas. */}
-      {!run.heldTexture && <AtlasPending />}
       <mesh
         ref={meshRef}
         geometry={run.geometry}
@@ -514,15 +499,6 @@ export function TextRunMesh({
       ))}
     </>
   );
-}
-
-/**
- * A pending load while the atlas has not decoded, as an atlas run draws nothing until then. A child,
- * so the decode re-renders it and not the run.
- */
-function AtlasPending(): null {
-  usePendingWhile(!useIsAtlasDecoded());
-  return null;
 }
 
 /** Sets the colour a white canvas raster multiplies by on each of its materials, or leaves them white. */

@@ -4,7 +4,7 @@
  * draw mode only (`button.cpp:280-292`). The theme icon `icon` stands in for a missing one
  * (`button.cpp:224-227`). A subclass draws its own element over the label.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ComponentType } from 'react';
 import type * as THREE from 'three';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -20,12 +20,17 @@ import {
   OWN_ICON_SCOPE,
   renderWithOwnIcon,
 } from '../../../../r3f/controls/native/testing/ownIcon';
-import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
+import { bundledRunOf } from '../../../../r3f/controls/native/testing/bundledRunStub';
 import { Button } from '../button/Component';
 import { CheckBox } from '../checkbox/Component';
 import { CheckButton } from '../checkbutton/Component';
 import { MenuButton } from '../menubutton/Component';
 import { OptionButton } from '../optionbutton/Component';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 40 };
 const ICON_SIZE = { x: 12, y: 12 };
@@ -74,7 +79,7 @@ async function drawn(c: FamilyCase, properties: Record<string, unknown>, colors:
   const icons = findIconMeshes(rendered.scene);
   const text = findTextMesh(rendered.scene)!;
   return {
-    textColor: (text.material as THREE.ShaderMaterial).uniforms.uColor!.value as THREE.Vector3,
+    textColor: bundledRunOf(text)!.tint,
     ownIconColor: (icons[0]!.material as THREE.MeshBasicMaterial).color,
     meshCount: rendered.scene.findAllByType('Mesh').length,
   };
@@ -83,12 +88,12 @@ async function drawn(c: FamilyCase, properties: Record<string, unknown>, colors:
 describe.each(FAMILY)('a focused <$name> (button.cpp:220-222,280-292)', (c) => {
   it('draws its label in font_focus_color, 0.95 grey by default (default_theme.cpp:159)', async () => {
     const { textColor } = await drawn(c, { hasFocus: true });
-    expect(textColor.x).toBeCloseTo(sRGBChannelToLinear(0.95), 5);
+    expect(textColor.r).toBeCloseTo(0.95, 5);
   });
 
   it('draws its label in a themed font_focus_color, not in font_color', async () => {
     const { textColor } = await drawn(c, { hasFocus: true }, { font_focus_color: RED, font_color: GREEN });
-    expect([textColor.x, textColor.y, textColor.z]).toEqual([1, 0, 0]);
+    expect([textColor.r, textColor.g, textColor.b]).toEqual([1, 0, 0]);
   });
 
   it("draws Button's icon in a themed icon_focus_color, not in icon_normal_color", async () => {
@@ -105,14 +110,14 @@ describe.each(FAMILY)('a focused <$name> (button.cpp:220-222,280-292)', (c) => {
   it('keeps the normal colours without focus', async () => {
     const colors = { font_focus_color: RED, font_color: GREEN, icon_focus_color: RED };
     const { textColor, ownIconColor } = await drawn(c, {}, colors);
-    expect([textColor.x, textColor.y, textColor.z]).toEqual([0, 1, 0]);
+    expect([textColor.r, textColor.g, textColor.b]).toEqual([0, 1, 0]);
     expect([ownIconColor.r, ownIconColor.g, ownIconColor.b]).toEqual([1, 1, 1]);
   });
 
   it('keeps the disabled colours while disabled, since focus colours belong to the normal draw mode', async () => {
     const colors = { font_focus_color: RED, font_disabled_color: GREEN };
     const { textColor } = await drawn(c, { hasFocus: true, disabled: true }, colors);
-    expect([textColor.x, textColor.y, textColor.z]).toEqual([0, 1, 0]);
+    expect([textColor.r, textColor.g, textColor.b]).toEqual([0, 1, 0]);
   });
 
   it('draws the focus box as one more mesh than the same button without focus', async () => {

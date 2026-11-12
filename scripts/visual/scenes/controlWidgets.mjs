@@ -10,7 +10,7 @@ export const CONTROL_WIDGET_SCENES = [
   // The one variable: a Theme `.tres`'s `default_font`/`default_font_size`, set
   // through `theme =` on the root Control. Two Labels with no font override, one
   // two hops down past a themeless Control, resolve it by the ancestor walk.
-  // Every other Control golden draws the bundled MSDF atlas.
+  // Every other Control golden draws the bundled font.
   { name: 'control-scene-font-theme', file: 'unit-control-scene-font-theme.tscn' },
   // The one variable: the arrows U+2190 to U+2193 from a scene font, as the bundled font has none.
   { name: 'control-font-arrows', file: 'unit-control-font-arrows.tscn' },

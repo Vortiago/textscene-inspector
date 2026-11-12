@@ -1,22 +1,12 @@
 /**
  * The `FontFace` a scene font registers: its bytes and the descriptors that hold a variable font at
- * its `fvar` defaults. `IS_VITEST` is read at module scope, so each test re-imports the loader with
- * the guard off. happy-dom has no 2D canvas, so the load stops after the registration these tests read.
+ * its `fvar` defaults. Each test imports the loader fresh, with a `FontFace` that records. happy-dom
+ * has no 2D canvas, so the load stops after the registration these tests read.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fontFaceRecorder, type FakeFontFace } from './fakeFontFace.testkit';
 import { faceDescriptors } from './sceneFontFace';
 import { fixtureFontBytes, fontFile } from './sfntOutlines.testkit';
-
-class FakeFontFace {
-  constructor(
-    readonly family: string,
-    readonly source: ArrayBuffer,
-    readonly descriptors?: FontFaceDescriptors
-  ) {}
-  load(): Promise<FakeFontFace> {
-    return Promise.resolve(this);
-  }
-}
 
 /**
  * A cold `.woff2` decode can take seconds, so a test waits for its own face. Each call counts faces
@@ -24,22 +14,10 @@ class FakeFontFace {
  */
 const REGISTRATION_TIMEOUT_MS = 10_000;
 
-function fontFaceRecorder(): { FontFace: typeof FakeFontFace; faces: FakeFontFace[] } {
-  const faces: FakeFontFace[] = [];
-  class RecordedFontFace extends FakeFontFace {
-    constructor(...args: ConstructorParameters<typeof FakeFontFace>) {
-      super(...args);
-      faces.push(this);
-    }
-  }
-  return { FontFace: RecordedFontFace, faces };
-}
-
 async function registeredFaceOf(bytes: ArrayBuffer): Promise<FakeFontFace> {
   const recorder = fontFaceRecorder();
   vi.stubGlobal('FontFace', recorder.FontFace);
   vi.stubGlobal('document', { fonts: { add: () => {} }, createElement: () => ({ getContext: () => null }) });
-  vi.stubEnv('VITEST', 'false');
   vi.resetModules();
   const logger = await import('../../../../logger');
   vi.spyOn(logger, 'warn').mockImplementation(() => {});
@@ -53,7 +31,6 @@ async function registeredFaceOf(bytes: ArrayBuffer): Promise<FakeFontFace> {
 
 describe('scene font registration', () => {
   afterEach(() => {
-    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });

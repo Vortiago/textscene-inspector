@@ -16,7 +16,6 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
-import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
@@ -24,27 +23,17 @@ import { RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nat
 import { RichTextLabel } from './Component';
 import { wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  bundledRunOf,
+  bundledRuns,
+  onlyBundledRun,
+  runGlyphs,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
 
-// The bundled canvas face, which every run draws on: the door to register it is shut under vitest,
-// and a real face would decode the bundled outlines, which a painter test does not read. The painter
-// contract tests read the MSDF uniforms, so they run where the face cannot register and the atlas fills.
-const bundledFace = vi.hoisted(() => ({ isRegistered: false }));
-vi.mock('../../../../r3f/controls/native/text/bundledCanvasFace', async () => {
-  const { createOpenSansCanvasFontMetrics } =
-    await import('../../../../r3f/controls/native/text/openSansCanvasFontMetrics');
-  const { withVariation } = await import('../../../../r3f/controls/native/text/fontMetrics');
-  const bundled = createOpenSansCanvasFontMetrics('bundled-rtl-test');
-  return {
-    useBundledCanvasFace: () => (atlasFace: FontMetrics) =>
-      bundledFace.isRegistered
-        ? withVariation(bundled, { embolden: atlasFace.embolden, skew: atlasFace.skew })
-        : null,
-  };
-});
-
-afterEach(() => {
-  bundledFace.isRegistered = false;
-});
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -129,12 +118,11 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     for (const mesh of meshes) expect(mesh.renderOrder).toBe(5);
   });
 
-  it("draws a plain run and a [b] run, Godot's FreeType embolden, both on the bundled canvas face", async () => {
-    bundledFace.isRegistered = true;
+  it("draws a plain run and a [b] run, Godot's FreeType embolden, both on the bundled face", async () => {
     const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true });
-    await vi.waitFor(() => expect(meshesOf(renderer)).toHaveLength(2));
-    const kinds = meshesOf(renderer).map((m) => (m.material as THREE.Material).type);
-    expect(kinds.filter((type) => type === 'ShaderMaterial')).toHaveLength(0);
+    const [plain, bold] = bundledRuns(renderer.scene).map((run) => run.layout.fontMetrics);
+    expect(plain!.embolden ?? 0).toBe(0);
+    expect(bold!.embolden).toBeGreaterThan(0);
   });
 
   it(
@@ -142,34 +130,24 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
       'normal_font_size: default_theme.cpp:1200 leaves bold_font_size at its -1 sentinel, which ' +
       'Theme::get_font_size (theme.cpp:658-661) falls through only to ThemeDB::get_fallback_font_size()',
     async () => {
-      const boldHeight = async (fontSizes: Record<string, number>) => {
+      const boldFontSizePx = async (fontSizes: Record<string, number>) => {
         const renderer = await render({
           text: '[b]A[/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: fontSizes,
         });
-        await vi.waitFor(() => expect(meshesOf(renderer)).toHaveLength(1));
-        const pos = (meshesOf(renderer)[0]!.geometry as THREE.BufferGeometry).getAttribute('position');
-        return pos.getY(0) - pos.getY(2);
+        return onlyBundledRun(renderer.scene).fontSizePx;
       };
-      const fallback = await boldHeight({ normal_font_size: 32 });
-      expect(fallback).toBe(await boldHeight({ normal_font_size: 32, bold_font_size: 16 }));
-      expect(fallback).toBeLessThan(await boldHeight({ normal_font_size: 32, bold_font_size: 32 }));
+      expect(await boldFontSizePx({ normal_font_size: 32 })).toBe(16);
+      expect(await boldFontSizePx({ normal_font_size: 32, bold_font_size: 32 })).toBe(32);
     }
   );
 
-  it("an [i] run's geometry is sheared relative to an otherwise-identical plain run (skew, not a material uniform)", async () => {
+  it('an [i] run draws on a sheared face, and an otherwise identical plain run on an upright one', async () => {
     const plain = await render({ text: 'AB', bbcodeEnabled: false });
     const italic = await render({ text: '[i]AB[/i]', bbcodeEnabled: true });
-    const plainPos = (meshesOf(plain)[0]!.geometry as THREE.BufferGeometry).getAttribute('position');
-    const italicPos = (meshesOf(italic)[0]!.geometry as THREE.BufferGeometry).getAttribute('position');
-    // A shear moves the top (index 0) and bottom (index 2) of one glyph by
-    // amounts proportional to their depth below the line top. A uniform
-    // translation would move both the same.
-    const topDx = italicPos.getX(0) - plainPos.getX(0);
-    const bottomDx = italicPos.getX(2) - plainPos.getX(2);
-    expect(topDx).not.toBe(0);
-    expect(topDx).not.toBeCloseTo(bottomDx, 3);
+    expect(onlyBundledRun(plain.scene).layout.fontMetrics.skew ?? 0).toBe(0);
+    expect(onlyBundledRun(italic.scene).layout.fontMetrics.skew).toBeGreaterThan(0);
   });
 
   it('an [u] run draws an extra underline-stroke mesh (a flat PlaneGeometry quad, not glyph geometry); a plain run draws none', async () => {
@@ -189,31 +167,24 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
       const renderer = await render({ text: '[color=#e0a030][u]AB[/u][/color]', bbcodeEnabled: true });
       const meshes = meshesOf(renderer);
       const stroke = meshes.find((m) => m.geometry.type === 'PlaneGeometry')!;
-      const text = meshes.find((m) => !(m.geometry.type === 'PlaneGeometry'))!;
+      const { tint } = onlyBundledRun(renderer.scene);
       const strokeMat = stroke.material as THREE.MeshBasicMaterial;
-      const textMat = text.material as THREE.ShaderMaterial;
-      const textColor = textMat.uniforms.uColor!.value as THREE.Vector3;
-      const textOpacity = textMat.uniforms.uOpacity!.value as number;
-      // The text run's uColor is already linear (TextRunMesh.tsx), and three converts
-      // ControlQuad's sRGB colour on upload, so both compare against the same
-      // expectation as the text-run case below.
+      // The tint of a run is sRGB, and three converts ControlQuad's sRGB colour to linear on upload.
       const expected = expectedLinear(0xe0 / 255, 0xa0 / 255, 0x30 / 255);
       expect(strokeMat.color.r).toBeCloseTo(expected.r, 5);
       expect(strokeMat.color.g).toBeCloseTo(expected.g, 5);
       expect(strokeMat.color.b).toBeCloseTo(expected.b, 5);
-      expect(textColor.x).toBeCloseTo(expected.r, 5);
-      expect(strokeMat.opacity).toBeCloseTo(textOpacity * RICH_TEXT_LABEL_UNDERLINE_ALPHA, 6);
+      expect(tint.r).toBeCloseTo(0xe0 / 255, 5);
+      expect(strokeMat.opacity).toBeCloseTo(tint.a * RICH_TEXT_LABEL_UNDERLINE_ALPHA, 6);
     }
   );
 
   it('resolves a [color=#e0a030] run to that RGBA, independent of the default text colour', async () => {
     const renderer = await render({ text: '[color=#e0a030]x[/color]', bbcodeEnabled: true });
-    const mat = meshesOf(renderer)[0]!.material as THREE.ShaderMaterial;
-    const expected = expectedLinear(0xe0 / 255, 0xa0 / 255, 0x30 / 255);
-    const uColor = mat.uniforms.uColor!.value as THREE.Vector3;
-    expect(uColor.x).toBeCloseTo(expected.r, 5);
-    expect(uColor.y).toBeCloseTo(expected.g, 5);
-    expect(uColor.z).toBeCloseTo(expected.b, 5);
+    const { tint } = onlyBundledRun(renderer.scene);
+    expect(tint.r).toBeCloseTo(0xe0 / 255, 5);
+    expect(tint.g).toBeCloseTo(0xa0 / 255, 5);
+    expect(tint.b).toBeCloseTo(0x30 / 255, 5);
   });
 
   it("multiplies the walker-composed tint by each RUN's own bbcode colour, in sRGB", async () => {
@@ -227,12 +198,10 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const mat = meshesOf(renderer)[0]!.material as THREE.ShaderMaterial;
-    const expected = expectedLinear((0.5 * 0xe0) / 255, (0.5 * 0xa0) / 255, (0.5 * 0x30) / 255);
-    const uColor = mat.uniforms.uColor!.value as THREE.Vector3;
-    expect(uColor.x).toBeCloseTo(expected.r, 5);
-    expect(uColor.y).toBeCloseTo(expected.g, 5);
-    expect(uColor.z).toBeCloseTo(expected.b, 5);
+    const { tint } = onlyBundledRun(renderer.scene);
+    expect(tint.r).toBeCloseTo((0.5 * 0xe0) / 255, 5);
+    expect(tint.g).toBeCloseTo((0.5 * 0xa0) / 255, 5);
+    expect(tint.b).toBeCloseTo((0.5 * 0x30) / 255, 5);
   });
 
   it('multiplies the walker-composed tint onto every run', async () => {
@@ -247,12 +216,10 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const mat = meshesOf(renderer)[0]!.material as THREE.ShaderMaterial;
     // run(sRGB) = tint(.25,.25,.25,.5) * default_color(1,1,1,1) = (.25,.25,.25,.5)
-    const expected = expectedLinear(0.25, 0.25, 0.25);
-    const uColor = mat.uniforms.uColor!.value as THREE.Vector3;
-    expect(uColor.x).toBeCloseTo(expected.r, 6);
-    expect(mat.uniforms.uOpacity!.value).toBeCloseTo(0.5, 6);
+    const { tint } = onlyBundledRun(renderer.scene);
+    expect(tint.r).toBeCloseTo(0.25, 6);
+    expect(tint.a).toBeCloseTo(0.5, 6);
   });
 
   it('honours autowrap_mode: the default (WORD_SMART) wraps into more lines than OFF at the same narrow rect', async () => {
@@ -264,37 +231,30 @@ describe('<RichTextLabel> (isolated painter contract)', () => {
     expect(meshesOf(wrapped).length).toBeGreaterThan(1);
   });
 
-  it('is transparent, non-depth-writing, and every material spreads the shared clip planes hook (edge: empty list)', async () => {
+  it('hands every run the shared clip planes (edge: empty list)', async () => {
     const renderer = await render({ text: 'plain [b]bold[/b]', bbcodeEnabled: true, clipContents: false });
-    for (const mesh of meshesOf(renderer)) {
-      const mat = mesh.material as THREE.ShaderMaterial;
-      expect(mat.transparent).toBe(true);
-      expect(mat.depthWrite).toBe(false);
-      expect(mat.clippingPlanes).toEqual([]);
-    }
+    const runs = bundledRuns(renderer.scene);
+    expect(runs).toHaveLength(2);
+    for (const run of runs) expect(run.clippingPlanes).toEqual([]);
   });
 
   it('tab_stops moves the glyph after a tab onto the configured stop', async () => {
     const withStop = await render({ text: 'A\tB', autowrapMode: 0, tabStopsPx: [40] });
     const withoutStop = await render({ text: 'A\tB', autowrapMode: 0 });
-    const secondQuadX = (r: Awaited<ReturnType<typeof render>>) => {
-      const geo = meshesOf(r)[0]!.geometry as THREE.BufferGeometry;
-      return (geo.attributes.position!.array as Float32Array)[12]!;
-    };
-    expect(secondQuadX(withStop)).toBeGreaterThan(secondQuadX(withoutStop));
+    const penOfB = (r: Awaited<ReturnType<typeof render>>) =>
+      runGlyphs(bundledRuns(r.scene)[0]!).find((glyph) => glyph.char === 'B')!.x;
+    expect(penOfB(withStop)).toBeGreaterThan(penOfB(withoutStop));
   });
 
   it('a [p tab_stops] paragraph moves its own tab onto its own stop, and a bare [p] ignores the node stops', async () => {
-    const secondQuadX = (r: Awaited<ReturnType<typeof render>>) => {
-      const geo = meshesOf(r)[0]!.geometry as THREE.BufferGeometry;
-      return (geo.attributes.position!.array as Float32Array)[12]!;
-    };
+    const penOfB = (r: Awaited<ReturnType<typeof render>>) =>
+      runGlyphs(bundledRuns(r.scene)[0]!).find((glyph) => glyph.char === 'B')!.x;
     const props = { autowrapMode: 0, bbcodeEnabled: true, tabStopsPx: [40] };
     const own = await render({ ...props, text: '[p tab_stops=90]A\tB[/p]' });
     const bare = await render({ ...props, text: '[p]A\tB[/p]' });
     const node = await render({ ...props, text: 'A\tB' });
-    expect(secondQuadX(own)).toBeGreaterThan(secondQuadX(node));
-    expect(secondQuadX(bare)).toBeLessThan(secondQuadX(node));
+    expect(penOfB(own)).toBeGreaterThan(penOfB(node));
+    expect(penOfB(bare)).toBeLessThan(penOfB(node));
   });
 });
 
@@ -370,8 +330,7 @@ describe('<RichTextLabel> registered through <ControlCanvasWalker> (end-to-end w
 
 /**
  * The scene-font (canvas-kind `FontMetrics`) path. A line's y is its box top,
- * so the placement must carry no atlas-bake anchor: the atlas path would hide
- * one, and here it would be off by `ascentPx - base*fontSizePx/42` px.
+ * so the placement carries no anchor of the font.
  */
 describe('<RichTextLabel> — scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
@@ -389,14 +348,12 @@ describe('<RichTextLabel> — scene-font (canvas-kind FontMetrics) text path', (
     );
   }
 
-  it('paints each run through the canvas rasteriser — ONE quad per run, not one per glyph, and no MSDF material', async () => {
+  it('paints each run through the canvas rasteriser: one quad per run, and no run of the bundled face', async () => {
     const renderer = await renderWithSceneFont({ text: 'Hello', bbcodeEnabled: false });
     const meshes = canvasMeshes(renderer);
     expect(meshes).toHaveLength(1);
     expect(meshes[0]!.geometry.getAttribute('position').count).toBe(4);
-    expect(meshesOf(renderer).every((m) => (m.material as THREE.ShaderMaterial).uniforms === undefined)).toBe(
-      true
-    );
+    expect(bundledRuns(renderer.scene)).toHaveLength(0);
   });
 
   it('steps line N down by exactly one linePitchPx from its own box top, with nothing added to line 0', async () => {
@@ -514,7 +471,9 @@ describe('<RichTextLabel> — [img]', () => {
       );
       return renderer.scene
         .findAllByType('Mesh')
-        .map((m) => ((m.instance as THREE.Mesh).material as THREE.Material).clippingPlanes?.length ?? 0);
+        .map((found) => found.instance as THREE.Mesh)
+        .map((mesh) => bundledRunOf(mesh)?.clippingPlanes ?? (mesh.material as THREE.Material).clippingPlanes)
+        .map((planes) => planes?.length ?? 0);
     }
 
     it('gives the text, the underline and the image the label’s own four planes by default', async () => {
@@ -590,18 +549,16 @@ describe('<RichTextLabel> — [img]', () => {
     expect(texture.offset.y).toBeCloseTo(1 - (4 + 8) / 32, 6);
   });
 
-  it('draws no ATLAS text mesh for an [img]-only paragraph — the placeholder character never reaches TextRun', async () => {
+  it('draws no text run for an [img]-only paragraph: the placeholder character never reaches TextRun', async () => {
     const renderer = await renderImage(`[img=10x10]${IMG}[/img]`, [64, 64]);
-    const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-    expect(meshes.every((m) => !(m.material as THREE.ShaderMaterial).uniforms)).toBe(true);
+    expect(bundledRuns(renderer.scene)).toHaveLength(0);
   });
 
   it('draws both a preceding text run and the image on the same line', async () => {
     const renderer = await renderImage(`hi[img=10x10]${IMG}[/img]`, [64, 64]);
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-    expect(meshes.length).toBeGreaterThan(1);
-    expect(meshes.some((m) => materialOf(m).type === 'MeshBasicMaterial')).toBe(true);
-    expect(meshes.some((m) => materialOf(m).type !== 'MeshBasicMaterial')).toBe(true);
+    expect(bundledRuns(renderer.scene)).toHaveLength(1);
+    expect(meshes.some((mesh) => bundledRunOf(mesh) === undefined)).toBe(true);
   });
 });
 

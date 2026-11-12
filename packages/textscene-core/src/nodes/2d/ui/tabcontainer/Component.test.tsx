@@ -4,7 +4,7 @@
  * and order only: pixels are a golden-image concern (`pnpm ref:godot`).
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -18,6 +18,17 @@ import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  bundledRunMeshes,
+  bundledRunOf,
+  runGlyphs,
+  runPenExtentPx,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const THEME = nativeTheme(1);
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
@@ -47,13 +58,6 @@ function findChromeMeshes(scene: Rendered['scene']) {
     .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
 }
 
-function findTextMeshes(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
-}
-
 describe('<TabContainer> (isolated painter contract)', () => {
   it('draws the panel StyleBox plus one tab strip StyleBox per page', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -67,7 +71,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
     );
     // 1 panel + 2 tab StyleBoxes.
     expect(findChromeMeshes(renderer.scene)).toHaveLength(3);
-    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(2);
   });
 
   it("derives a tab's title from its own child node name when no tab_<idx>/title override is set", async () => {
@@ -85,7 +89,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(2);
   });
 
   it('draws no tab strip at all when tabs_visible is false, and the panel spans the whole rect', async () => {
@@ -100,7 +104,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
     );
     // Only the panel StyleBox remains; no tab title to draw either.
     expect(findChromeMeshes(renderer.scene)).toHaveLength(1);
-    expect(findTextMeshes(renderer.scene)).toHaveLength(0);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('draws no strip at all for a childless TabContainer (just the empty panel)', async () => {
@@ -114,7 +118,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
       />
     );
     expect(findChromeMeshes(renderer.scene)).toHaveLength(1);
-    expect(findTextMeshes(renderer.scene)).toHaveLength(0);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it("all_tabs_in_front flips the strip from the chrome slot to a piece of this node's own key", async () => {
@@ -140,7 +144,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
         chromeSlot={wholeKeySlot(9)}
       />
     );
-    const stripMesh = (scene: Rendered['scene']) => findTextMeshes(scene)[0]!;
+    const stripMesh = (scene: Rendered['scene']) => bundledRunMeshes(scene)[0]!;
     // Default (false): the strip draws inside the chrome slot (9), after the current page, as
     // Godot's INTERNAL_MODE_BACK does. true: INTERNAL_MODE_FRONT, after this node's own pixels (5)
     // and before its first page (6).
@@ -163,7 +167,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
         chromeSlot={wholeKeySlot(9)}
       />
     );
-    const groupOrder = nearestGroupOrder(findTextMeshes(behind.scene)[0]!);
+    const groupOrder = nearestGroupOrder(bundledRunMeshes(behind.scene)[0]!);
     expect(9 < groupOrder && groupOrder < 10).toBe(true);
   });
 });
@@ -229,7 +233,7 @@ describe('<TabContainer> internal strip at a font-size override', () => {
       />
     );
     const chrome = findChromeMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).y);
-    const text = findTextMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).y);
+    const text = bundledRunMeshes(renderer.scene).map((m) => m.getWorldPosition(new THREE.Vector3()).y);
     return { headerHeight: -chrome[0]!, tabTop: chrome[1]!, textTop: text[0]! };
   }
 
@@ -247,7 +251,8 @@ describe('<TabContainer> internal strip at a font-size override', () => {
 
 describe('<TabContainer> strip scrolled to the current page', () => {
   const CONTAINER: Rect2 = { x: 0, y: 0, w: 260, h: 100 };
-  const titleSpan = async (currentTab: number) => {
+  /** The right edge of the drawn titles, px: the furthest pen of any run. */
+  const titlesRightEdge = async (currentTab: number) => {
     const pages = ['Inventory', 'Equipment', 'Journal', 'Settings'].map((name) => page(name));
     const renderer = await ReactThreeTestRenderer.create(
       <TabContainer
@@ -258,22 +263,23 @@ describe('<TabContainer> strip scrolled to the current page', () => {
         renderOrder={0}
       />
     );
-    const box = new THREE.Box3();
-    for (const mesh of findTextMeshes(renderer.scene)) {
+    let rightEdge = -Infinity;
+    for (const mesh of bundledRunMeshes(renderer.scene)) {
       mesh.updateWorldMatrix(true, false);
-      box.union(new THREE.Box3().setFromObject(mesh));
+      const run = bundledRunOf(mesh)!;
+      const left =
+        new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld).x + (runGlyphs(run)[0]?.x ?? 0);
+      rightEdge = Math.max(rightEdge, left + runPenExtentPx(run));
     }
-    return box;
+    return rightEdge;
   };
 
   it('draws the titles of the pages it scrolled in, not the first pages (tab_bar.cpp:1875-1920)', async () => {
-    const first = await titleSpan(0);
-    const last = await titleSpan(3);
-    expect(last.max.x).not.toBeCloseTo(first.max.x, 0);
+    expect(await titlesRightEdge(3)).not.toBeCloseTo(await titlesRightEdge(0), 0);
   });
 
   it('keeps every drawn title inside the bar beside the arrows', async () => {
     const arrowsWidth = 2 * 16;
-    expect((await titleSpan(3)).max.x).toBeLessThanOrEqual(CONTAINER.w - arrowsWidth);
+    expect(await titlesRightEdge(3)).toBeLessThanOrEqual(CONTAINER.w - arrowsWidth);
   });
 });

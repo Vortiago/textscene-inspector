@@ -18,6 +18,12 @@ import { buildTextMeshSurface } from './build';
 import { decodeTextMesh } from './decode';
 import { settledPeek } from '../../../r3f/testing/settleFontWork';
 
+// happy-dom loads no font file, so each loads as the stand-in face.
+vi.mock(
+  '../../../r3f/controls/native/text/sceneFontLoad',
+  () => import('../../../r3f/controls/native/testing/sceneFontLoadStub')
+);
+
 const loaded = (font: FontFileResource = trueTypeFontFile()) => ({ [FONT_PATH]: font });
 
 function themeWith(overrides: Partial<ThemeResource>): ThemeResource {
@@ -279,17 +285,16 @@ describe('textMeshFont on a BMFont', () => {
 });
 
 describe('textMeshFont of a face that fails to load', () => {
+  const SCENE_FONT_LOAD = '../../../r3f/controls/native/text/sceneFontLoad';
+
   afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.restoreAllMocks();
+    vi.doMock(SCENE_FONT_LOAD, () => import('../../../r3f/controls/native/testing/sceneFontLoadStub'));
   });
 
   // A face whose metrics fail draws the bundled metrics, and its own outlines would not match their advances.
   it('is unreadable, though its outlines read', async () => {
-    vi.stubEnv('VITEST', 'false');
+    vi.doMock(SCENE_FONT_LOAD, () => ({ loadSceneFontMetrics: async () => null }));
     vi.resetModules();
-    const logger = await import('../../../logger');
-    vi.spyOn(logger, 'warn').mockImplementation(() => {});
     const fresh = await import('./textMeshFont');
     const freshOutlines = await import('../../../r3f/controls/native/text/sceneFontOutlines');
     const { textMeshWith: freshMeshWith, trueTypeFontFile: freshFontFile } =

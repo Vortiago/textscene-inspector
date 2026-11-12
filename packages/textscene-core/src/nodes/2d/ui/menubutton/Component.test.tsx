@@ -2,20 +2,27 @@
  * Tests the `<MenuButton>` render contract: Button's chrome, text and icon assembly, covered in full by
  * `button/Component.test.tsx`, plus MenuButton's own disabled font colour.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
-import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import type { MenuButtonProperties } from './types';
-import { textQuadCounts } from '../../../../r3f/controls/native/testing/textQuadCounts';
 import { MenuButton } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { findTextMesh } from '../../../../r3f/controls/native/testing/ownIcon';
+import {
+  bundledRunMeshes,
+  bundledRuns,
+  inkedGlyphCounts,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
@@ -51,7 +58,7 @@ describe('<MenuButton> (isolated painter contract)', () => {
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
     // style_normal_color = Color(0.1, 0.1, 0.1, 0.6): the button_normal object MenuButton's theme entry reuses.
     expect(color.getX(0)).toBeCloseTo(0.1, 5);
-    expect(findTextMesh(renderer.scene)).toBeDefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeDefined();
   });
 
   it('flat=true (the parsed default) draws NO chrome mesh, but still draws the label', async () => {
@@ -64,7 +71,7 @@ describe('<MenuButton> (isolated painter contract)', () => {
       />
     );
     expect(findChromeMesh(renderer.scene)).toBeUndefined();
-    expect(findTextMesh(renderer.scene)).toBeDefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeDefined();
   });
 
   it("uses MenuButton's OWN disabled font colour (alpha 0.3), not Button's control_font_disabled_color (0.5)", async () => {
@@ -76,9 +83,9 @@ describe('<MenuButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(1), 5);
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.3, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.r).toBeCloseTo(1, 5);
+    expect(tint.a).toBeCloseTo(0.3, 5);
   });
 
   // MenuButton has no `_notification(NOTIFICATION_DRAW)`, so it inherits Button's alignment swap
@@ -94,7 +101,7 @@ describe('<MenuButton> (isolated painter contract)', () => {
           renderOrder={0}
         />
       );
-      return findTextMesh(renderer.scene)!.parent!.position.x;
+      return bundledRunMeshes(renderer.scene)[0]!.parent!.position.x;
     };
 
     const ltrLeft = await labelX({ alignment: 0 }, false);
@@ -116,6 +123,6 @@ describe('<MenuButton>: autowrap_mode wraps the label as Button does (button.cpp
         renderOrder={0}
       />
     );
-    expect(textQuadCounts(renderer.scene)).toHaveLength(3);
+    expect(inkedGlyphCounts(renderer.scene)).toHaveLength(3);
   });
 });

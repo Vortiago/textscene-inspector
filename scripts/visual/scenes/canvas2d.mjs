@@ -299,8 +299,7 @@ export const CANVAS_2D_SCENES = [
   },
   // The composition scene breaks the one-variable rule on purpose: it catches
   // interactions a single-variable scene has nothing to interact with. The
-  // `unit-*` fixture of a type localises a regression. Text-dense, so MSDF stem
-  // antialiasing dominates its diff.
+  // `unit-*` fixture of a type localises a regression.
   { name: 'complex-2d-gui', file: 'complex-2d-gui.tscn' },
   // The one variable: whether an ancestor's `modulate` crosses a CanvasLayer.
   // The Control walk and the Node2D dispatch publish that scope separately, so

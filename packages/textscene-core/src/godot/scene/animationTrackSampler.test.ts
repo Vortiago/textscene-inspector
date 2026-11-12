@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  sampleCrossedBackward,
   sampleQuaternionTrack,
   sampleTupleTrack,
   sampleVector3Track,
@@ -89,5 +90,33 @@ describe('sampleTupleTrack', () => {
 
   it('has no sample for a track with no key', () => {
     expect(sampleTupleTrack([], 0.5, { ...measured.col_linear })).toBeNull();
+  });
+});
+
+describe('sampleCrossedBackward', () => {
+  // A flipbook of four frames. Each expected frame is what Godot 4.6.3 shows on the return pass of
+  // a ping-pong of this one-second clip, as `AnimationPlayer.advance(0.1)` steps it back.
+  const frames = [0, 0.25, 0.5, 0.75].map((time, frame) => ({ time, transition: 1, value: frame }));
+
+  it.each([
+    [0.9, 3],
+    [0.8, 3],
+    [0.7, 3],
+    [0.6, 3],
+    [0.5, 2],
+    [0.4, 2],
+    [0.3, 2],
+    [0.2, 1],
+    [0.1, 1],
+  ])('at %f s shows the key the playhead last crossed, frame %i', (time, frame) => {
+    expect(sampleCrossedBackward(frames, time, 1)).toBe(frame);
+  });
+
+  it('does not read a key past the clip length', () => {
+    expect(sampleCrossedBackward(frames, 0.55, 0.6)).toBe(2);
+  });
+
+  it('has no sample for a track with no key', () => {
+    expect(sampleCrossedBackward([], 0.5, 1)).toBeNull();
   });
 });

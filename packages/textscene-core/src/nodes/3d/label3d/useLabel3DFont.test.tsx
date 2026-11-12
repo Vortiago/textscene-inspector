@@ -2,9 +2,10 @@ import type { ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
-import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
 import { testBitmapMetrics } from '../../../r3f/controls/native/text/bitmapFontMetrics.testkit';
-import { withFallbacks } from '../../../r3f/controls/native/text/fontMetrics';
+import { withFallbacks, type FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
+import { settleUnrelatedFontLoad } from '../../../r3f/testing/settleFontWork';
+import { TEST_SCENE_FONT_METRICS } from '../../../r3f/controls/native/testing/sceneFontMetrics';
 
 /**
  * The modules under test, imported again after each `vi.resetModules()`: the outlines of the bundled
@@ -13,9 +14,8 @@ import { withFallbacks } from '../../../r3f/controls/native/text/fontMetrics';
  */
 async function importModules() {
   vi.resetModules();
-  const [settings, fontMetrics, resources, loading, serving, hook, noFace] = await Promise.all([
+  const [settings, resources, loading, serving, hook, noFace] = await Promise.all([
     import('../../../r3f/contexts/ProjectSettingsContext'),
-    import('../../../r3f/controls/native/text/openSansCanvasFontMetrics'),
     import('../../../r3f/SceneResourcesContext'),
     import('../../../resources/ResourceLoaderContext'),
     import('../../../resources/testing/servingResourceLoader'),
@@ -24,7 +24,6 @@ async function importModules() {
   ]);
   return {
     ProjectSettingsProvider: settings.ProjectSettingsProvider,
-    createOpenSansCanvasFontMetrics: fontMetrics.createOpenSansCanvasFontMetrics,
     SceneResourcesProvider: resources.SceneResourcesProvider,
     ResourceLoaderProvider: loading.ResourceLoaderProvider,
     loaderServing: serving.loaderServing,
@@ -35,11 +34,10 @@ async function importModules() {
 
 let modules: Awaited<ReturnType<typeof importModules>>;
 
-// happy-dom has no `FontFace`, so the bundled registration answers what the test sets.
-const bundled = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
-vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
-  peekBundledCanvasFontMetrics: () => bundled.metrics,
-}));
+/** The canvas face a font file settles to, where a test has the loader say so. */
+const FILE_FACE = TEST_SCENE_FONT_METRICS;
+/** A second face of its own identity, for a fallback. */
+const FALLBACK_FACE = { ...TEST_SCENE_FONT_METRICS };
 
 const BOLD_VARIATION =
   '[gd_resource type="FontVariation" format=3]\n\n[resource]\nvariation_embolden = 2.0\n';
@@ -103,8 +101,8 @@ function renderMetrics(
 }
 
 /**
- * An emboldened face waits for the bundled font's bytes and hinters, which `vi.resetModules` makes
- * each test evaluate again: 140 ms alone, and past the default 1 s under a loaded pre-push run.
+ * The bundled canvas face waits for the bundled font's bytes and hinters, which `vi.resetModules`
+ * makes each test evaluate again: 140 ms alone, and past the default 1 s under a loaded pre-push run.
  */
 const CHUNK_LOAD_TIMEOUT_MS = 5000;
 
@@ -118,7 +116,7 @@ function settledMetrics(
 }
 
 /** happy-dom has no `FontFace`, so no font file settles to a canvas face unless the loader says so. */
-async function importSettlingTo(face: CanvasFontMetrics | undefined) {
+async function importSettlingTo(face: FontMetrics) {
   vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
     ...(await importOriginal<object>()),
     peekSettledSceneFontMetrics: () => face,
@@ -132,16 +130,7 @@ async function settle() {
   });
 }
 
-/** Settles one throwaway load inside `act`. The settle wakes every reader of the font settle count. */
-async function settleThrowawayFontLoad() {
-  const { createSettledPeek } = await import('../../../r3f/controls/native/text/settledChannel');
-  await act(async () => {
-    createSettledPeek<object, null>()({}, async () => null);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-}
-
-// An emboldened face loads the bundled bytes and both hinters as their own chunks: about 230 ms to
+// The bundled canvas face loads the bundled bytes and both hinters as their own chunks: about 230 ms to
 // transform cold. Transforming them once here leaves each test only their evaluation.
 beforeAll(async () => {
   await Promise.all([
@@ -153,25 +142,14 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   modules = await importModules();
-  bundled.metrics = modules.createOpenSansCanvasFontMetrics('label3d-font-test');
 });
 
 describe('useLabel3DFont metrics', () => {
   it('is the bundled canvas face for a label with no font in a project with none', async () => {
     const { result } = renderMetrics(undefined);
 
-    await vi.waitFor(() =>
-      expect(result.current?.metrics).toMatchObject({ cssFontFamily: bundled.metrics!.cssFontFamily })
-    );
-  });
-
-  it('is undefined until the bundled font registers', async () => {
-    bundled.metrics = undefined;
-    const { result } = renderMetrics(undefined);
-
-    await settle();
-
-    expect(result.current).toBeUndefined();
+    await settledMetrics(result, { kind: 'canvas', embolden: 0 });
+    expect(result.current!.metrics).not.toHaveProperty('cssFontFamily');
   });
 
   it('takes the embolden of the label font over the bundled font', async () => {
@@ -193,8 +171,7 @@ describe('useLabel3DFont metrics', () => {
   });
 
   // `label_3d.cpp:344-358, 601-606`: a glyph with no font RID has no texture, and the box holds hex-code boxes.
-  it('is the hex-code box metrics for a font with no face, with no wait for the bundled font', async () => {
-    bundled.metrics = undefined;
+  it('is the hex-code box metrics for a font with no face', async () => {
     const { result } = renderMetrics(undefined, FACELESS_PROJECT_FILES);
 
     await vi.waitFor(() => expect(result.current?.metrics).toBe(modules.NO_FACE_METRICS));
@@ -210,31 +187,36 @@ describe('useLabel3DFont metrics', () => {
 });
 
 describe('useLabel3DFont outlines', () => {
-  afterEach(() => vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader'));
-
-  // FreeType draws every glyph from its outline (`text_server_adv.cpp:1360-1393`), varied or not.
-  it('reads the outlines of the bundled font for a face that is neither emboldened nor sheared', async () => {
-    const { result } = renderMetrics(undefined);
-
-    await vi.waitFor(() => expect(result.current?.metrics.outlines).toBeDefined());
+  afterEach(() => {
+    vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader');
+    vi.doUnmock('../../../r3f/controls/native/text/sceneFontOutlines');
   });
 
-  it('is ready, with no outlines, for an unvaried canvas face', async () => {
-    modules = await importSettlingTo(bundled.metrics);
+  it('is null for a bundled font whose outlines cannot be read (error path)', async () => {
+    vi.doMock('../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
+      ...(await importOriginal<object>()),
+      peekOutlines: () => null,
+    }));
+    modules = await importModules();
     const { result } = renderMetrics(undefined);
 
     await settle();
 
-    expect(result.current?.metrics).toBe(bundled.metrics);
+    expect(result.current).toBeNull();
+  });
+
+  it('is ready, with no outlines, for an unvaried canvas face', async () => {
+    modules = await importSettlingTo(FILE_FACE);
+    const { result } = renderMetrics(undefined);
+
+    await settle();
+
+    expect(result.current?.metrics).toBe(FILE_FACE);
   });
 
   it('is the bitmap face of a BMFont, which draws from its page images and not the bundled font', async () => {
     const bitmap = testBitmapMetrics();
-    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
-      ...(await importOriginal<object>()),
-      peekSettledSceneFontMetrics: () => bitmap,
-    }));
-    modules = await importModules();
+    modules = await importSettlingTo(bitmap);
     const { result } = renderMetrics('SubResource("plain")');
 
     await settle();
@@ -242,11 +224,13 @@ describe('useLabel3DFont outlines', () => {
     expect(result.current?.metrics).toBe(bitmap);
   });
 
+  // FreeType draws every glyph from its outline (`text_server_adv.cpp:1360-1393`), varied or not.
   it.each([
-    ['emboldened', 'own'],
-    ['sheared', 'sheared'],
-  ])('is undefined, then holds the outlines of the bundled font, for a %s label', async (_name, id) => {
-    const { result } = renderMetrics(`SubResource("${id}")`);
+    ['an upright', undefined],
+    ['an emboldened', 'SubResource("own")'],
+    ['a sheared', 'SubResource("sheared")'],
+  ])('is undefined, then holds the outlines of the bundled font, for %s label', async (_name, fontRef) => {
+    const { result } = renderMetrics(fontRef);
 
     expect(result.current).toBeUndefined();
 
@@ -299,13 +283,13 @@ describe('useLabel3DFont mip chain of a fallback face', () => {
 
   // Each FontFile builds its own glyph textures, so a fallback keeps its own `generate_mipmaps`.
   it('follows the fallback font, not the label font', async () => {
-    const fallback = modules.createOpenSansCanvasFontMetrics('label3d-fallback-test');
+    const fallback = FALLBACK_FACE;
     const mipmappedFont = { kind: 'file', fallbacks: [], properties: { generate_mipmaps: 'true' } };
     vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
       ...(await importOriginal<object>()),
-      peekSettledSceneFontMetrics: () => withFallbacks(bundled.metrics!, [fallback]),
+      peekSettledSceneFontMetrics: () => withFallbacks(FILE_FACE, [fallback]),
       peekSettledChainFaces: () => [
-        { font: null, metrics: bundled.metrics },
+        { font: null, metrics: FILE_FACE },
         { font: mipmappedFont, metrics: fallback },
       ],
     }));
@@ -320,14 +304,14 @@ describe('useLabel3DFont mip chain of a fallback face', () => {
 
   // `withFallbacks` keeps the first face of the same metrics, so its glyphs draw in that one.
   it('follows the first fallback of the same metrics', async () => {
-    const fallback = modules.createOpenSansCanvasFontMetrics('label3d-fallback-test');
+    const fallback = FALLBACK_FACE;
     const plainFont = { kind: 'file', fallbacks: [], properties: {} };
     const mipmappedFont = { kind: 'file', fallbacks: [], properties: { generate_mipmaps: 'true' } };
     vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
       ...(await importOriginal<object>()),
-      peekSettledSceneFontMetrics: () => withFallbacks(bundled.metrics!, [fallback]),
+      peekSettledSceneFontMetrics: () => withFallbacks(FILE_FACE, [fallback]),
       peekSettledChainFaces: () => [
-        { font: null, metrics: bundled.metrics },
+        { font: null, metrics: FILE_FACE },
         { font: plainFont, metrics: fallback },
         { font: mipmappedFont, metrics: fallback },
       ],
@@ -345,10 +329,10 @@ describe('useLabel3DFont mip chain while a chain face reloads', () => {
   afterEach(() => vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader'));
 
   it('draws each fallback face at the label setting', async () => {
-    const fallback = modules.createOpenSansCanvasFontMetrics('label3d-reload-test');
+    const fallback = FALLBACK_FACE;
     vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
       ...(await importOriginal<object>()),
-      peekSettledSceneFontMetrics: () => withFallbacks(bundled.metrics!, [fallback]),
+      peekSettledSceneFontMetrics: () => withFallbacks(FILE_FACE, [fallback]),
       peekSettledChainFaces: () => null,
     }));
     modules = await importModules();
@@ -362,12 +346,12 @@ describe('useLabel3DFont mip chain while a chain face reloads', () => {
   });
 
   it('reads the mip chain of each fallback face once the chain face settles', async () => {
-    const fallback = modules.createOpenSansCanvasFontMetrics('label3d-reload-settle-test');
+    const fallback = FALLBACK_FACE;
     const mipmappedFont = { kind: 'file', fallbacks: [], properties: { generate_mipmaps: 'true' } };
     const chain = { faces: null as readonly object[] | null };
     vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
       ...(await importOriginal<object>()),
-      peekSettledSceneFontMetrics: () => withFallbacks(bundled.metrics!, [fallback]),
+      peekSettledSceneFontMetrics: () => withFallbacks(FILE_FACE, [fallback]),
       peekSettledChainFaces: () => chain.faces,
     }));
     modules = await importModules();
@@ -375,20 +359,20 @@ describe('useLabel3DFont mip chain while a chain face reloads', () => {
     await settle();
 
     chain.faces = [
-      { font: null, metrics: bundled.metrics },
+      { font: null, metrics: FILE_FACE },
       { font: mipmappedFont, metrics: fallback },
     ];
-    await settleThrowawayFontLoad();
+    await act(settleUnrelatedFontLoad);
 
     expect(result.current?.fallbackMipmaps.get(fallback)).toBe(true);
   });
 });
 
-describe('useLabel3DFont fallbacks of an atlas face', () => {
+describe('useLabel3DFont fallbacks of the bundled face', () => {
   afterEach(() => vi.doUnmock('../../../r3f/controls/native/text/sceneFontLoader'));
 
   it('keeps the fallbacks on the bundled canvas face that draws it', async () => {
-    const fallback = modules.createOpenSansCanvasFontMetrics('label3d-atlas-fallback-test');
+    const fallback = FALLBACK_FACE;
     const { OPEN_SANS_FONT_METRICS } = await import('../../../r3f/controls/native/text/openSansFontMetrics');
     vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
       ...(await importOriginal<object>()),

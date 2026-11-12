@@ -1,7 +1,7 @@
 /**
  * Tests `lineEditMinimumSize` against Godot 4.6.3 (`scene/gui/line_edit.cpp:2443-2477`) with numbers
- * derived by hand, never from the code: OpenSans_SemiBold's `hmtx` 'W' is 1936 units (`openSansMetrics.ts`,
- * not the atlas's rounded `xadvance`), 15.125 at size 16. The LineEdit margin is `round(4*scale)` = 4 on
+ * derived by hand, never from the code: OpenSans_SemiBold's `hmtx` 'W' is 1936 units (`openSansMetrics.ts`),
+ * 15.125 at size 16. The LineEdit margin is `round(4*scale)` = 4 on
  * all sides (`make_flat_stylebox`). LineEdit sets no line_spacing: the font height is 18 + 5 = 23.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';

@@ -18,6 +18,12 @@ import { wallQuadSurfaces } from '../../resources/testing/arrayMeshSurfaces';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import { arrayMeshPath, useMeshContent } from './meshContent';
 
+// happy-dom loads no font file, so each loads as the stand-in face.
+vi.mock(
+  '../controls/native/text/sceneFontLoad',
+  () => import('../controls/native/testing/sceneFontLoadStub')
+);
+
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: {} };
 const RESOURCES: SceneResources = {
   internalResources: [BOX],

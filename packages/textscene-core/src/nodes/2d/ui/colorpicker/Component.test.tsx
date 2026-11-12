@@ -3,7 +3,7 @@
  * and `btn_shape`), and the mode, slider-grid, hex and swatches rows (`color_picker.cpp`,
  * `color_picker_shape.cpp`, `color_mode.cpp`, cited in the component's doc).
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -17,6 +17,11 @@ import { ColorPicker } from './Component';
 import { canvasColorSpaceOf, CanvasColorSpaceProvider } from '../../../../r3f/canvasColorSpace';
 
 const LINEAR_CANVAS = canvasColorSpaceOf(true);
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const THEME = nativeTheme(1);
 

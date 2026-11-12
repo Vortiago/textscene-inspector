@@ -1,20 +1,7 @@
 # TextRun engine notes
 
-The reasoning behind two values in `TextRunMesh.tsx`, too long for a code comment. Every cite is
+The reasoning behind the canvas raster of `TextRunMesh.tsx`, too long for a code comment. Every cite is
 Godot 4.6.3 source.
-
-## The bake anchor (`bakeAnchorPx`)
-
-`bakeAnchorPx` is how far the bake's line-top reference sits above the baseline, at the target
-size.
-
-- A run smaller than its line's size reads a few tenths of a pixel low. Godot's FreeType light
-  hinting (`scene/theme/default_theme.h`'s `font_hinting`) snaps each size independently, and no
-  rescale of one bake matches that (the richtextlabel sheet).
-- A per-size whole-pixel ceiling is not the fix. It regresses a run at its line's own size, which
-  is exact against Godot now, by most of a pixel, and three glyphs on one run show three
-  residuals.
-- Do not retry a closed-form fix without porting the hinter.
 
 ## The scene-font texture colour space
 

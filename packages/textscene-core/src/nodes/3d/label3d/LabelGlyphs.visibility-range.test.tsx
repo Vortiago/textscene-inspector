@@ -8,8 +8,8 @@ import { visualLayersOf } from '../../../r3f/visualLayers';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useRef } from 'react';
-import type { CanvasFontMetrics } from '../../../r3f/controls/native/text/runtimeFontMetrics';
-import { createOpenSansCanvasFontMetrics } from '../../../r3f/controls/native/text/openSansCanvasFontMetrics';
+import type { SfntOutlines } from '../../../r3f/controls/native/text/sfntOutlines';
+import { TRIANGLE_OUTLINES } from '../../../r3f/controls/native/testing/triangleOutlines';
 import LabelGlyphs from './LabelGlyphs';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { withGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
@@ -31,19 +31,15 @@ import {
 } from '../../../godot/rendering/visibilityRange';
 import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 
-const loader = vi.hoisted(() => ({ metrics: undefined as CanvasFontMetrics | undefined }));
-vi.mock('../../../r3f/controls/native/text/bundledFontLoader', () => ({
-  peekBundledCanvasFontMetrics: () => loader.metrics,
-}));
-
-// The range tests read no contour, so the bundled face settles at once, with none to follow.
+// One triangle for each glyph of the bundled font, so no test decodes the font. Undefined holds the load open.
+const bundledOutlines = vi.hoisted(() => ({ value: undefined as SfntOutlines | undefined }));
 vi.mock('../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  peekOutlines: () => null,
+  peekOutlines: () => bundledOutlines.value,
 }));
 
 beforeEach(() => {
-  loader.metrics = createOpenSansCanvasFontMetrics('label3d-range-test-family');
+  bundledOutlines.value = TRIANGLE_OUTLINES;
 });
 
 function props(

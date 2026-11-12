@@ -1,8 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { planChecks } from './prePushPlan.mjs';
 
-const plan = (changed, deleted = [], isNegativeFixture = () => false, testsBeside = () => []) =>
-  planChecks({ changed, deleted, isNegativeFixture, testsBeside }).map((command) => command.join(' '));
+/** A file the real-Godot tests read, in these cases: any file of the harness folder. */
+const isEngineTestInput = (path) => path.startsWith('scripts/godot-ref/');
+
+const plan = (
+  changed,
+  deleted = [],
+  isNegativeFixture = () => false,
+  testsBeside = () => [],
+  hasEngine = false
+) =>
+  planChecks({
+    changed,
+    deleted,
+    isNegativeFixture,
+    testsBeside,
+    isEngineTestInput,
+    hasEngine: () => hasEngine,
+  }).map((command) => command.join(' '));
+
+/** The plan on a host that has, or lacks, Godot and `xvfb-run`. */
+const planOnHost = (hasEngine, changed, deleted, testsBeside) =>
+  plan(changed, deleted, undefined, testsBeside, hasEngine);
 
 /** A negative-fixture predicate over the one fixture `edge-a.tscn`, wherever it sits. */
 const isEdgeA = (path) => path.split('/').at(-1) === 'edge-a.tscn';
@@ -30,7 +50,58 @@ const typeChecks = (...dirs) => {
   ];
 };
 
+const EXPORT_SCAN = 'pnpm exec vitest run scripts/testOnlyExports.test.mjs';
+
+const ENGINE_TESTS = 'pnpm test:godot-ref';
+
 describe('planChecks', () => {
+  it('runs the real-Godot tests last for a change to a file they read, on a host with the engine', () => {
+    expect(planOnHost(true, ['scripts/godot-ref/run.mjs']).at(-1)).toBe(ENGINE_TESTS);
+    expect(planOnHost(true, ['scripts/godot-ref/scenes/preview-lighting.tscn']).at(-1)).toBe(ENGINE_TESTS);
+    expect(planOnHost(true, [], ['scripts/godot-ref/lavapipe.mjs'])).toEqual([ENGINE_TESTS]);
+  });
+
+  it('leaves the real-Godot tests out on a host without the engine, where they cannot run', () => {
+    expect(planOnHost(false, ['scripts/godot-ref/run.mjs'])).not.toContain(ENGINE_TESTS);
+  });
+
+  it('leaves the real-Godot tests out for a change to a file they do not read (edge case)', () => {
+    expect(planOnHost(true, ['scripts/godot-reference.mjs', 'scripts/visual/run.mjs'])).not.toContain(
+      ENGINE_TESTS
+    );
+  });
+
+  it('keeps a real-Godot test file out of the unit run, whose projects exclude it', () => {
+    const engineFile = 'scripts/godot-ref/run.engine.test.mjs';
+    const commands = planOnHost(true, [engineFile], [], (path) => [path]);
+    expect(commands.filter((command) => command.includes('vitest run'))).toEqual([]);
+    expect(commands.at(-1)).toBe(ENGINE_TESTS);
+  });
+
+  it('runs the real-Godot tests after the static checks when the toolchain changes too', () => {
+    expect(planOnHost(true, ['package.json', 'scripts/godot-ref/run.mjs'])).toEqual([
+      ...STATIC_GATE,
+      ENGINE_TESTS,
+    ]);
+  });
+
+  it('runs the test-only export scan when a source file of core changes or goes', () => {
+    expect(plan(['packages/textscene-core/src/r3f/ySort.ts'])).toContain(EXPORT_SCAN);
+    expect(plan([], ['packages/textscene-core/src/r3f/ySort.tsx'])).toContain(EXPORT_SCAN);
+  });
+
+  it('runs the scan in the one test run, with the tests beside the changed file', () => {
+    const beside = () => ['packages/textscene-core/src/r3f/ySort.test.ts'];
+    expect(plan(['packages/textscene-core/src/r3f/ySort.ts'], [], undefined, beside)).toContain(
+      'pnpm exec vitest run packages/textscene-core/src/r3f/ySort.test.ts scripts/testOnlyExports.test.mjs'
+    );
+  });
+
+  it('leaves the scan out for a change outside the source of core (edge case)', () => {
+    expect(plan(['apps/textscene-web/src/App.tsx'])).not.toContain(EXPORT_SCAN);
+    expect(plan(['packages/textscene-core/README.md'])).not.toContain(EXPORT_SCAN);
+  });
+
   it('runs nothing for files no check reads', () => {
     expect(plan(['README.md', '.claude/skills/other/SKILL.md', 'docs/adr/0001-x.md'])).toEqual([]);
   });
@@ -69,10 +140,10 @@ describe('planChecks', () => {
   });
 
   it('type-checks and lints a TypeScript change', () => {
-    expect(plan(['packages/textscene-core/src/a.ts'])).toEqual([
-      ...typeChecks('packages/textscene-core'),
-      'npx eslint --cache packages/textscene-core/src/a.ts',
-      'pnpm exec prettier --cache --check packages/textscene-core/src/a.ts',
+    expect(plan(['apps/textscene-web/src/a.ts'])).toEqual([
+      ...typeChecks('apps/textscene-web'),
+      'npx eslint --cache apps/textscene-web/src/a.ts',
+      'pnpm exec prettier --cache --check apps/textscene-web/src/a.ts',
       'pnpm canonical --check',
     ]);
   });
@@ -127,7 +198,7 @@ describe('planChecks', () => {
   });
 
   it('type-checks a deleted TypeScript file, since its importers break', () => {
-    expect(plan([], ['packages/textscene-core/src/gone.ts'])).toEqual(typeChecks('packages/textscene-core'));
+    expect(plan([], ['apps/textscene-web/src/gone.ts'])).toEqual(typeChecks('apps/textscene-web'));
   });
 
   it('type-checks each package with a TypeScript change once', () => {

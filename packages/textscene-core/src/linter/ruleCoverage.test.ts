@@ -13,6 +13,7 @@ import {
   declaredRuleNames,
   extractAll,
   linterDir,
+  nodesLabel,
   nodesRoot,
   REGISTER_ALL_RE,
   ruleFiles,
@@ -29,9 +30,7 @@ describe('lint rule coverage meta-guard', () => {
     // The floor stops a broken walk reporting "nothing untested" about a
     // population of zero. `ruleFiles()` also throws below it.
     expect(files.length).toBeGreaterThan(100);
-    const untested = files
-      .filter((f) => !existsSync(join(dirname(f), 'linter.test.ts')))
-      .map((f) => f.slice(nodesRoot.length + 1));
+    const untested = files.filter((f) => !existsSync(join(dirname(f), 'linter.test.ts'))).map(nodesLabel);
     expect(untested).toEqual([]);
   });
 
@@ -77,7 +76,7 @@ describe('validator coverage meta-guard', () => {
     const dead = registering
       .flatMap((e) => e.types.map((t) => ({ t, file: e.file })))
       .filter(({ t }) => !live.has(t))
-      .map(({ t, file }) => `${t} (${file.slice(nodesRoot.length + 1)})`);
+      .map(({ t, file }) => `${t} (${nodesLabel(file)})`);
     // A type here means the linterParser.ts exists but its registration
     // never runs: missing index.linter.ts wiring.
     expect(dead).toEqual([]);
@@ -90,7 +89,7 @@ describe('validator coverage meta-guard', () => {
     const untested = registering
       .map((e) => dirname(e.file))
       .filter((dir) => !readdirSync(dir).some((t) => /\.test\.tsx?$/.test(t)))
-      .map((dir) => dir.slice(nodesRoot.length + 1));
+      .map(nodesLabel);
     expect(untested).toEqual([]);
   });
 
@@ -157,7 +156,7 @@ describe('validator coverage meta-guard', () => {
     const guard = /if \(\s*node\.type\s*!==\s*'[A-Za-z0-9]+'\s*\)\s*return \[\];/;
     const restating = ruleFiles()
       .filter((f) => guard.test(readFileSync(f, 'utf8')))
-      .map((f) => f.slice(nodesRoot.length + 1));
+      .map(nodesLabel);
     expect(restating).toEqual([]);
   });
 });

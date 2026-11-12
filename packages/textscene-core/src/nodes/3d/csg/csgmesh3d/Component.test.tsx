@@ -19,6 +19,12 @@ import { registeredComponent } from '../../../../r3f/testing/registeredComponent
 import { NodePathProvider } from '../../../../r3f/contexts/NodePathContext';
 import { UndrawnMeshesProvider, useUndrawnMeshTypes } from '../../../../r3f/contexts/UndrawnMeshesContext';
 
+// happy-dom loads no font file, so each loads as the stand-in face.
+vi.mock(
+  '../../../../r3f/controls/native/text/sceneFontLoad',
+  () => import('../../../../r3f/controls/native/testing/sceneFontLoadStub')
+);
+
 const CSGMesh3D = registeredComponent('CSGMesh3D');
 
 const BOX_MESH: TscnInternalResource = {

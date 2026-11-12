@@ -2,7 +2,7 @@
  * The group a y-sorted TileMapLayer's rows share, which the layer's path registers. The rows are
  * child canvas items of the layer (`tile_map_layer.cpp:341-357`), so a track on the layer's
  * transform (ADR-0011) moves them all, and the live sort reads the layer's pose from this group
- * (ADR-0065). The rows draw below it at the identity.
+ * (ADR-0070). The rows draw below it at the identity.
  */
 
 import { useMemo, type ReactNode } from 'react';

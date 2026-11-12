@@ -43,8 +43,17 @@ export const ruleFiles = (): string[] => atLeast(walk(nodesRoot, 'linter.ts'), 1
 /** `.../src`: the whole package, not one subtree of it. */
 export const srcRoot = resolve(linterDir, '..');
 
-/** A file's `src/`-relative path with `/` separators on every platform, the form every guard reports. */
-export const srcLabel = (file: string): string => relative(srcRoot, file).replaceAll('\\', '/');
+/** The path under `root` with `/` separators on every platform, the form every guard reports. */
+const labelUnder =
+  (root: string) =>
+  (path: string): string =>
+    relative(root, path).replaceAll('\\', '/');
+
+/** A file's `src/`-relative path. */
+export const srcLabel = labelUnder(srcRoot);
+
+/** A slice's directory or file, relative to `nodes/`. */
+export const nodesLabel = labelUnder(nodesRoot);
 
 /** A source module, as opposed to a test: the population a scrape reads. */
 const isSourceModule = (name: string) => /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name);

@@ -5,17 +5,27 @@
 
 import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, resolve } from 'node:path';
+import { BASE_TYPE_TO_PARSER_SUBPATH } from '../../packages/textscene-core/src/linter/testing/baseParserSubpaths.ts';
 import { descendsFrom, parentLinterParser, parentParser } from './ancestry.mjs';
 import { BASES, GEOMETRY_INSTANCE_BASE } from './bases.mjs';
 import { checkChain } from './catalogChecks.mjs';
-import { CORE_SRC, REPO_ROOT, fail } from './paths.mjs';
+import { CORE_SRC, NODES_ROOT, REPO_ROOT, fail } from './paths.mjs';
 import { drawsFiles } from './templates/drawsSlice.mjs';
 import { fixtureFor } from './templates/fixture.mjs';
 import { linterFiles } from './templates/linterSlice.mjs';
 import { reusedParserFiles } from './templates/reusedParser.mjs';
 import { sheetFile } from './templates/sheet.mjs';
-import { kebab, wireImport } from './wiring.mjs';
+import { kebab, wireImport, wireUnsweptSlice } from './wiring.mjs';
+
+/**
+ * Whether the parser at `importPath`, seen from `sliceDir`, is a base parser of the parity guard. A
+ * slice that registers one is unswept. The guard sweeps a slice that registers any other parser.
+ */
+function isGuardBaseParser(sliceDir, importPath) {
+  const subpath = relative(NODES_ROOT, resolve(sliceDir, `${importPath}.ts`)).replaceAll('\\', '/');
+  return Object.values(BASE_TYPE_TO_PARSER_SUBPATH).includes(subpath);
+}
 
 export function scaffoldSlice({ typeName, category, base: baseKey, intent, linter, dryRun }) {
   const { parent: chain, note: chainNote } = checkChain(typeName);
@@ -54,6 +64,7 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
     propsType: base.propsType,
     typesPath: `${toBase}/types`,
   });
+  const reusesGuardBaseParser = isGuardBaseParser(sliceDir, reusedParser.importPath);
   // Resolved once for the generated import and the plan line, since it walks the whole nodes/ tree.
   const parentLinterImport = linter
     ? parentLinterParser(typeName, chain, sliceDir, `${toBase}/linterParser.js`)
@@ -106,6 +117,7 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
         `'../nodes/${category}/`
       )
     );
+    if (reusesBaseParser) wirings.push(wireUnsweptSlice(sliceRel));
   }
 
   const imageBasename = fixtureName.replace(/\.tscn$/, '');
@@ -119,6 +131,11 @@ export function scaffoldSlice({ typeName, category, base: baseKey, intent, linte
   for (const w of wirings) console.log(`  wire    ${w.filePath.slice(REPO_ROOT.length + 1)} (${w.action})`);
   console.log(`  chain   ${chainNote}`);
   console.log(`  parser  ${reusedParser.fn} from ${reusedParser.importPath}`);
+  if (linter && reusesBaseParser && !reusesGuardBaseParser) {
+    console.log(
+      `  note    the parity guard knows no ${reusedParser.fn} hop: add it to BASE_TYPE_TO_PARSER_SUBPATH`
+    );
+  }
   if (linter) {
     console.log(`  inherit ${parentLinterImport}`);
   }

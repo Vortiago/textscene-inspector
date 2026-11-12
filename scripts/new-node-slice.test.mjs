@@ -43,6 +43,8 @@ const INVOCATIONS = {
   // MeshInstance3D owns a parser.ts, so `--base node3d` and the real ancestry disagree about what
   // a SoftBody3D slice reuses.
   drawsUnderTypedAncestor: ['SoftBody3D', '3d', '--intent', 'draws'],
+  // Camera3D owns a parser.ts that is no base parser of the parity guard.
+  reusesUnsweptAncestor: ['XRCamera3D', '3d/xr', '--intent', 'pending', '--linter'],
   controlPending: ['CheckButton', '2d/ui', '--base', 'control', '--intent', 'pending'],
   unknownType: ['Widget3D', '3d', '--intent', 'pending'],
   inheritsSkippingEmpty: [
@@ -411,6 +413,25 @@ describe('new-node-slice intent shapes', () => {
       },
     });
     expect(emitted.get('Component.tsx')).not.toContain('useGeometryInstance');
+  });
+
+  it('lists a slice that reuses a base parser as one the parity guard cannot see', () => {
+    for (const run of [results.transformOnly, results.pending, results.tierValidatorsOnly]) {
+      expect(run.out).toContain('propertyGrammarParityUnswept.ts');
+    }
+  });
+
+  it('asks for the hop that makes the line true when the reused parser is no base parser of the guard', () => {
+    expect(results.reusesUnsweptAncestor.out).toContain('knows no parseCamera3D hop');
+    expect(results.reusesUnsweptAncestor.out).toContain('propertyGrammarParityUnswept.ts');
+    expect(results.transformOnly.out).not.toContain('hop');
+  });
+
+  it('lists no slice that has a parser of its own or no linterParser.ts (edge case)', () => {
+    for (const run of [results.draws, results.transformOnly2D]) {
+      expect(run.ok).toBe(true);
+      expect(run.out).not.toContain('propertyGrammarParityUnswept.ts');
+    }
   });
 
   it('writes nothing on a dry run', () => {

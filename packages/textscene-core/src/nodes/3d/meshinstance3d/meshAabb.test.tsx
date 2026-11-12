@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
@@ -17,6 +17,12 @@ import { missingResourcesWrapper } from '../../../resources/testing/missingResou
 import { subResource } from '../../../testing/subResource';
 import { fixtureFontBytes } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { useMeshAabb } from './meshAabb';
+
+// happy-dom loads no font file, so each loads as the stand-in face.
+vi.mock(
+  '../../../r3f/controls/native/text/sceneFontLoad',
+  () => import('../../../r3f/controls/native/testing/sceneFontLoadStub')
+);
 
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: { size: 'Vector3(2, 2, 2)' } };
 const ARRAY_MESH: TscnInternalResource = {
