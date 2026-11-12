@@ -37,8 +37,7 @@ export function InstancedParts({ parts, instances, owner }: InstancedPartsProps)
   return (
     <>
       {parts.map((part, index) => (
-        // Keyed on the count: three sizes the buffer of an InstancedMesh when it builds one.
-        <InstancedPart key={`${index}:${instances.count}`} part={part} instances={instances} owner={owner} />
+        <InstancedPart key={index} part={part} instances={instances} owner={owner} />
       ))}
     </>
   );
@@ -60,11 +59,12 @@ function InstancedPart({ part, instances, owner }: { part: MeshPart } & Omit<Ins
   const geometry = useMemo(() => geometryOver(source, count), [geometryOver, source, count]);
   useSharedInstances(geometry, source);
   useLayoutEffect(() => instances.write(geometry), [instances, geometry]);
+  const { boundsOver } = instances;
+  const bounds = useMemo(() => boundsOver(source), [boundsOver, source]);
   const placed = useMemo<PartAtInstances>(() => {
-    const bounds = instances.boundsOver(source);
     const userData = { ...visualLayersUserData(layers), ...(bounds ? null : boxlessUserData()) };
     return { geometry, bounds, userData, particles };
-  }, [instances, source, geometry, layers, particles]);
+  }, [geometry, bounds, layers, particles]);
 
   const sources = overriddenSources(part.materials, override);
   const drawsPoints = geometryDrawsPoints(source);
@@ -119,7 +119,8 @@ function OwnInstancedDraw({
   return (
     <instancedMesh
       ref={mounted}
-      args={[geometry, startingMaterial, geometry.instanceCount]}
+      args={[geometry, startingMaterial, NO_OWN_MATRICES]}
+      count={geometry.instanceCount}
       frustumCulled={bounds !== null}
       {...drawHookProps(shadow)}
       userData={userData}
@@ -146,7 +147,7 @@ function ExtraInstancedDraw({ spec, placed }: { spec: ChainDrawSpec; placed: Par
       particles={particles}
     />
   );
-  if (geometryDrawsPoints(geometry)) {
+  if (spec.drawsPoints) {
     return (
       <points
         ref={mounted}
@@ -164,7 +165,8 @@ function ExtraInstancedDraw({ spec, placed }: { spec: ChainDrawSpec; placed: Par
   return (
     <instancedMesh
       ref={mounted}
-      args={[geometry, startingMaterial, geometry.instanceCount]}
+      args={[geometry, startingMaterial, NO_OWN_MATRICES]}
+      count={geometry.instanceCount}
       frustumCulled={bounds !== null}
       {...extraDrawProps(spec.ordinal)}
       onBeforeRender={onBeforeRender}
@@ -175,6 +177,12 @@ function ExtraInstancedDraw({ spec, placed }: { spec: ChainDrawSpec; placed: Par
     </instancedMesh>
   );
 }
+
+/**
+ * The size of the matrix buffer an InstancedMesh builds for itself. The draw reads the geometry's
+ * matrices, so its own buffer holds nothing, and a new geometry rebuilds the draw for a new count.
+ */
+const NO_OWN_MATRICES = 0;
 
 type InstancedObject = THREE.InstancedMesh | THREE.Points;
 

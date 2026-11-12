@@ -21,7 +21,7 @@ import { PARTICLE_COLOR_OFFSET, PARTICLE_CUSTOM_OFFSET, PARTICLE_FLOATS } from '
 const VEC4_FLOATS = 4;
 
 /** The particle count of `buffer`. */
-export function particleCount(buffer: Float32Array): number {
+function particleCount(buffer: Float32Array): number {
   return buffer.length / PARTICLE_FLOATS;
 }
 
@@ -34,9 +34,14 @@ export function particleInstances(buffer: Float32Array): MeshInstances {
     count: particleCount(buffer),
     geometryOver: particleGeometry,
     write: (geometry) => writeParticles(geometry, buffer),
-    boundsOver: () => null,
+    boundsOver: unbounded,
     particles: withParticleDraw,
   };
+}
+
+/** One function for every buffer, so a new buffer leaves the draws of the last one as they are. */
+function unbounded(): null {
+  return null;
 }
 
 /** Particle `i`'s transform as a matrix, written into `target`. */

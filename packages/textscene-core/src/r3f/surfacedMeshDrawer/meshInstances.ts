@@ -16,7 +16,7 @@ import {
 export type InstancesBounds = ReturnType<typeof instancesBounds>;
 
 export interface MeshInstances {
-  /** three sizes an instance buffer once, so the drawer builds each draw again when this changes. */
+  /** The drawer builds the geometry and each draw of a part again when this changes. */
   readonly count: number;
   /**
    * `source` for `count` instances, sharing its attributes. One function for each kind of buffer,
@@ -29,7 +29,7 @@ export interface MeshInstances {
    * The bounds of every instance of `source`. Null where the instances move with no rebuild: three
    * then culls none of the draws, the framing reads no box, and the scene cull alone culls them.
    */
-  boundsOver(source: THREE.BufferGeometry): InstancesBounds | null;
+  readonly boundsOver: (source: THREE.BufferGeometry) => InstancesBounds | null;
   /** The patch each material of a particle emitter's draw takes. Omitted for a plain instance. */
   readonly particles?: ParticleProgram;
 }

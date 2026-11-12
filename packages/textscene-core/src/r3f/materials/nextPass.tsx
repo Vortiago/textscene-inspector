@@ -77,7 +77,7 @@ export function useDrawnGeometry(ref: RefObject<THREE.Object3D | null>): THREE.B
 }
 
 /** What every chain draw shares with the base it covers. */
-export interface ChainDrawBase {
+interface ChainDrawBase {
   /** The base draws points, so the chain draw does too. */
   drawsPoints: boolean;
   /** The base is skinned, so a chain draw is skinned by the same skeleton. */
@@ -135,7 +135,7 @@ function ChainDraw({
 }
 
 /** The props every pass of a chain reads. */
-export type PassProps = {
+type PassProps = {
   /** The pass material, resolved against the tables of the file that wrote it. */
   source: MaterialSource | undefined;
   /** The draw position: the surface's own draw is 0, each link its index. */
@@ -188,7 +188,7 @@ const drawAtOnePlace: ChainDrawFactory = (spec) => <ChainDraw {...spec} />;
  *
  * @canonical One pass of a material's next_pass chain
  */
-export function NextPassLink(props: PassProps) {
+function NextPassLink(props: PassProps) {
   const { source, ordinal, drawsSelf, visited, geometry, attach, surfaceCount, onOrdinal, draw, shadow } =
     props;
   const loaded = useMaterial(source);
@@ -279,18 +279,17 @@ export function visitedWith(
  * then the overlay's own `next_pass` chain (`render_forward_clustered.cpp:4230-4239`). One draw,
  * not a material array entry: one material over a grouped geometry draws every surface.
  */
-function OverlayPasses({ site }: { site: ChainDrawSpec & Pick<PassProps, 'draw'> }) {
-  const { draw = drawAtOnePlace, ...spec } = site;
+function OverlayPasses({ spec, draw }: { spec: ChainDrawSpec; draw?: ChainDrawFactory }) {
   return (
     <>
       {/* Mounted before its file lands, so the slot draws its own placeholder, as a surface's does. */}
-      {draw(spec)}
+      {(draw ?? drawAtOnePlace)(spec)}
       <NextPassLink
         {...spec}
         drawsSelf={false}
         // The overlay drew at this order. Its own key lands in the set on recursion.
         visited={NOTHING_DRAWN}
-        draw={site.draw}
+        draw={draw}
       />
     </>
   );
@@ -369,13 +368,13 @@ export function NextPassChain({
       ))}
       {overlay && overlaid && (
         <OverlayPasses
-          site={{
+          draw={draw}
+          spec={{
             source: overlay,
             ordinal: reached + 1,
             geometry: overlaid,
             attach: 'material',
             surfaceCount: 1,
-            draw,
             drawsPoints,
             skeleton,
             godotLayers,

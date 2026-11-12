@@ -7,17 +7,11 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { surfaceSlotsUnder } from '../../resources/formats/glb/surfaceMaterials';
 import { resolveMaterialSource } from '../materials/materialSource';
-import { NOTHING_DRAWN } from '../materials/nextPass';
 import { OVERLAY_ORDINAL_PAST_CHAINS, nextPassRenderOrder } from '../materials/passOrder';
 import { useSceneResources } from '../SceneResourcesContext';
 import { setVisualLayers } from '../visualLayers';
-import { ClonedNextPassLink, ClonedOverlay, isClonedExtraDraw } from './ClonedExtraDraws';
-import { albedos, underMaterials } from './testing/drawerHost';
-
-const BLUE = 0x0000ff;
-const YELLOW = 0xffff00;
-const RED = 0xff0000;
-const MAGENTA = 0xff00ff;
+import { ClonedChain, ClonedOverlay, isClonedExtraDraw } from './ClonedExtraDraws';
+import { BLUE, MAGENTA, RED, YELLOW, albedos, underMaterials } from './testing/drawerHost';
 
 /** A clone of one mesh named `road` under a root, as a GLB arrives. */
 function cloneOf(road: THREE.Object3D): THREE.Object3D {
@@ -38,17 +32,10 @@ function extraDrawsOf(clone: THREE.Object3D): THREE.Mesh[] {
   );
 }
 
-/** The chain that follows a surface material which itself drew, starting at the material `id` names. */
+/** The chain of the material `id` names, which a caller drew on every surface of the clone. */
 function Chain({ clone, id }: { clone: THREE.Object3D; id: string }) {
   const source = resolveMaterialSource(`SubResource("${id}")`, useSceneResources());
-  return (
-    <ClonedNextPassLink
-      covered={surfaceSlotsUnder(clone)}
-      source={source}
-      ordinal={1}
-      visited={NOTHING_DRAWN}
-    />
-  );
+  return source ? <ClonedChain covered={surfaceSlotsUnder(clone)} source={source} /> : null;
 }
 
 function Overlay({ clone, id }: { clone: THREE.Object3D; id: string }) {
@@ -61,7 +48,7 @@ describe('the extra draws of a cloned mesh', () => {
     const road = boxMesh();
     const clone = cloneOf(road);
 
-    await ReactThreeTestRenderer.create(underMaterials(<Chain clone={clone} id="BlueThenYellow" />));
+    await ReactThreeTestRenderer.create(underMaterials(<Chain clone={clone} id="GreenThenBlueThenYellow" />));
 
     const [first, second] = extraDrawsOf(clone);
     expect(extraDrawsOf(clone).map(albedos)).toEqual([[BLUE], [YELLOW]]);
@@ -77,7 +64,7 @@ describe('the extra draws of a cloned mesh', () => {
   it('takes the settings of an extra draw: it is picked nowhere and receives shadows', async () => {
     const clone = cloneOf(boxMesh());
 
-    await ReactThreeTestRenderer.create(underMaterials(<Chain clone={clone} id="Blue" />));
+    await ReactThreeTestRenderer.create(underMaterials(<Chain clone={clone} id="GreenThenBlue" />));
 
     const [link] = extraDrawsOf(clone);
     clone.updateMatrixWorld(true);
@@ -91,7 +78,7 @@ describe('the extra draws of a cloned mesh', () => {
 
     await ReactThreeTestRenderer.create(underMaterials(<Chain clone={clone} id="OrangeThenMagenta" />));
 
-    expect(extraDrawsOf(clone).map(albedos)).toEqual([[0xff8000], [MAGENTA]]);
+    expect(extraDrawsOf(clone).map(albedos)).toEqual([[MAGENTA]]);
   });
 
   it('draws an instanced surface again at the instances and with the draw state of its holder', async () => {
@@ -102,7 +89,7 @@ describe('the extra draws of a cloned mesh', () => {
     road.onBeforeRender = () => undefined;
     const clone = cloneOf(road);
 
-    await ReactThreeTestRenderer.create(underMaterials(<Chain clone={clone} id="Blue" />));
+    await ReactThreeTestRenderer.create(underMaterials(<Chain clone={clone} id="GreenThenBlue" />));
 
     const [link] = extraDrawsOf(clone) as THREE.InstancedMesh[];
     expect(link!.count).toBe(2);
@@ -128,7 +115,9 @@ describe('the extra draws of a cloned mesh', () => {
 
   it('leaves the clone as it was when the chain unmounts', async () => {
     const clone = cloneOf(boxMesh());
-    const renderer = await ReactThreeTestRenderer.create(underMaterials(<Chain clone={clone} id="Blue" />));
+    const renderer = await ReactThreeTestRenderer.create(
+      underMaterials(<Chain clone={clone} id="GreenThenBlue" />)
+    );
     const [link] = extraDrawsOf(clone);
 
     await renderer.unmount();

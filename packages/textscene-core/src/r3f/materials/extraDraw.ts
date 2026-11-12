@@ -1,7 +1,8 @@
 /**
- * What every extra draw of a geometry instance mounts as its `ref`: a `next_pass` link or the
- * overlay, drawn as a child of the surface draw it covers. It sorts by its pass (`passOrder.ts`),
- * and under a leaf with a node billboard or `fixed_size` it stays at the node's own pose (`extraDrawPose.ts`).
+ * What every extra draw of a geometry instance takes: a `next_pass` link or the overlay, drawn
+ * beside the surface draw it covers. `extraDrawProps` sets its object, a React element and a cloned
+ * object alike. `useExtraDrawRef` sorts a React one by its pass (`passOrder.ts`) and holds it at
+ * the node's own pose under a node billboard or `fixed_size` (`extraDrawPose.ts`).
  */
 
 import { createContext, useCallback, useContext } from 'react';

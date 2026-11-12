@@ -93,11 +93,10 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
     () => (isOutgrown ? NO_PARTS : drawnParts.map((part) => overriddenPart(part, surfaceOverrides))),
     [isOutgrown, drawnParts, surfaceOverrides]
   );
-  const body = useMemo(() => ({ ref: meshRef, name: node.name, transform }), [node.name, transform]);
   // One drawer in every branch: the body keeps the node's descendants mounted while the mesh
   // loads, since they do not depend on the `.tres`.
   return (
-    <SurfacedMeshDrawer parts={parts} body={body} skeleton={skeleton}>
+    <SurfacedMeshDrawer parts={parts} body={{ ref: meshRef, name: node.name, transform }} skeleton={skeleton}>
       {content.kind === 'unresolved' && UNRESOLVED_MESH}
       {/* A node with no mesh, and a mesh Godot builds no surface for, hold `AABB()`: a point to frame on. */}
       {(content.kind === 'none' || content.kind === 'empty') && <FramePoint />}

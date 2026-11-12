@@ -12,12 +12,8 @@ import { materialFromBag } from '../../../resources/materials/standardmaterial3d
 import { surfaceSlotsUnder, type SurfaceSlot } from '../../../resources/formats/glb/surfaceMaterials.js';
 import { GLTF_SURFACE } from '../../materials/surfaceTextures.js';
 import { useSurfaceMaterial } from '../../materials/useSurfaceMaterial.js';
-import { materialSourceKey, resolveNextPass, type MaterialSource } from '../../materials/materialSource.js';
-import {
-  ClonedNextPassLink,
-  ClonedOverlay,
-  isClonedExtraDraw,
-} from '../../surfacedMeshDrawer/ClonedExtraDraws.js';
+import { type MaterialSource } from '../../materials/materialSource.js';
+import { ClonedChain, ClonedOverlay, isClonedExtraDraw } from '../../surfacedMeshDrawer/ClonedExtraDraws.js';
 
 import { registerFadedCopyBuilders, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease.js';
@@ -58,7 +54,7 @@ export function GlbSurfaceMaterialOverride({
 }: GlbSurfaceMaterialOverrideProps) {
   // The geometry is the glTF's: no Godot mesh sub-resource for a triplanar material to tile
   // against, and UVs in Godot's top-down V.
-  const { isAbsent, bags, material: resource, scalars } = useSurfaceMaterial(source, GLTF_SURFACE);
+  const { isAbsent, bags } = useSurfaceMaterial(source, GLTF_SURFACE);
   const material = useMemo(() => {
     if (isAbsent) return null;
     if (!bags) return materialFromBag(MISSING_TEXTURE_MATERIAL);
@@ -71,15 +67,7 @@ export function GlbSurfaceMaterialOverride({
   }, [isAbsent, bags]);
   useDisposeOnRelease(material);
   const covered = useGlbMaterialSwap(target, material, replaces);
-  // The override drew the surface, so its own `next_pass` runs from ordinal 1, resolved
-  // in the tables of the file that wrote the override material.
-  const nextSource = useMemo(
-    () => (resource && scalars ? resolveNextPass(scalars.nextPass, resource) : undefined),
-    [resource, scalars]
-  );
-  const visited = useMemo(() => new Set([materialSourceKey(source)]), [source]);
-  if (nextSource === undefined) return null;
-  return <ClonedNextPassLink covered={covered} source={nextSource} ordinal={1} visited={visited} />;
+  return <ClonedChain covered={covered} source={source} />;
 }
 
 /** `material_overlay` on a mesh inside a loaded GLB, over every surface of the GLB's own under `target`. */

@@ -67,17 +67,10 @@ export function SurfacedMeshDrawer(props: SurfacedMeshDrawerProps) {
   return <BodyParts {...props} />;
 }
 
-const NO_BODY: MeshBody = {};
-
 /** The spread of a body with no transform of its own, which leaves the object's defaults alone. */
 const AT_PARENT = {};
 
-function BodyParts({
-  parts,
-  body = NO_BODY,
-  skeleton,
-  children,
-}: { parts: readonly MeshPart[] } & AtOnePlace) {
+function BodyParts({ parts, body = {}, skeleton, children }: { parts: readonly MeshPart[] } & AtOnePlace) {
   const { shadow, layers } = useInstanceDraw();
   const ownRef = useRef<DrawnBody | null>(null);
   const bodyRef = body.ref ?? ownRef;

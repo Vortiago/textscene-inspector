@@ -11,6 +11,11 @@ import { nextPassRenderOrder } from '../materials/passOrder';
 import { decomposeForR3F } from '../nodeTransform';
 import { SurfacedMeshDrawer } from './SurfacedMeshDrawer';
 import {
+  BLUE,
+  GREEN,
+  MAGENTA,
+  RED,
+  YELLOW,
   albedos,
   boxOf,
   drawn,
@@ -22,12 +27,6 @@ import {
 const BOX = new THREE.BoxGeometry(1, 1, 1);
 
 const AT_1_2_3 = decomposeForR3F(parseTransform3D('Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 2, 3)'));
-
-const RED = 0xff0000;
-const GREEN = 0x00ff00;
-const BLUE = 0x0000ff;
-const YELLOW = 0xffff00;
-const MAGENTA = 0xff00ff;
 
 function AtOnePlace({ parts, skeleton }: { parts: readonly UnresolvedPart[]; skeleton?: THREE.Skeleton }) {
   return <SurfacedMeshDrawer parts={useParts(parts)} skeleton={skeleton} />;

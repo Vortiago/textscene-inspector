@@ -290,7 +290,7 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'an opaque-list sentinel: its material writes nothing and is never mutated, and its owner removes it with its scene',
   'packages/textscene-core/src/resources/sky/build.ts':
     'the sky cube: built once, consumed by a single cube render, disposed with the environment',
-  'packages/textscene-core/src/r3f/internal/glb-scene-root/GlbSurfaceMaterialOverride.tsx':
+  'packages/textscene-core/src/r3f/surfacedMeshDrawer/ClonedExtraDraws.tsx':
     'the next_pass chain sibling: the effect builds the draw beside a long-lived clone of the loader’s mesh and removes it when the link unmounts, so the material never passes through React',
 };
 

@@ -11,6 +11,10 @@ import { shadowCastingEffects } from '../shadowCasting';
 import { instancesAt, type MeshInstances } from './meshInstances';
 import { SurfacedMeshDrawer } from './SurfacedMeshDrawer';
 import {
+  BLUE,
+  GREEN,
+  RED,
+  YELLOW,
   albedos,
   boxOf,
   drawn,
@@ -21,11 +25,6 @@ import {
 } from './testing/drawerHost';
 
 const BOX = new THREE.BoxGeometry(1, 1, 1);
-
-const RED = 0xff0000;
-const GREEN = 0x00ff00;
-const BLUE = 0x0000ff;
-const YELLOW = 0xffff00;
 
 const TWO_PLACES = instancesAt([
   new THREE.Matrix4().makeTranslation(1, 0, 0),

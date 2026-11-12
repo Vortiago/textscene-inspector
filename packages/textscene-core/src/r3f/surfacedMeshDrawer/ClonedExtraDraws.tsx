@@ -34,6 +34,28 @@ export function isClonedExtraDraw(object: THREE.Object3D): boolean {
 }
 
 /**
+ * The `next_pass` chain of a material that already drew the `covered` slots: the material a caller
+ * swapped into them. The chain resolves in the tables of the file that wrote that material.
+ */
+export function ClonedChain({
+  covered,
+  source,
+}: {
+  /** The slots the material drew, or null while it drew none. */
+  covered: readonly SurfaceSlot[] | null;
+  source: MaterialSource;
+}) {
+  const { material: resource, scalars } = useSurfaceMaterial(source, GLTF_SURFACE);
+  const nextSource = useMemo(
+    () => (resource && scalars ? resolveNextPass(scalars.nextPass, resource) : undefined),
+    [resource, scalars]
+  );
+  const visited = useMemo(() => visitedWith(NOTHING_DRAWN, source), [source]);
+  if (nextSource === undefined) return null;
+  return <ClonedNextPassLink covered={covered} source={nextSource} ordinal={1} visited={visited} />;
+}
+
+/**
  * `material_overlay` on a mesh inside a cloned GLB: one more draw of every holder among `slots`,
  * beside it, with the overlay's own `next_pass` chain after it
  * (`render_forward_clustered.cpp:4228-4241`). One material over a grouped geometry draws every
@@ -67,7 +89,7 @@ function asOneSurface(slot: SurfaceSlot): SurfaceSlot {
  * here, which requests no stencil buffer, and the walk continues past it; a link whose
  * material already drew is cut, drawing each material of a hand-written cycle once.
  */
-export function ClonedNextPassLink({
+function ClonedNextPassLink({
   covered,
   source,
   ordinal,
