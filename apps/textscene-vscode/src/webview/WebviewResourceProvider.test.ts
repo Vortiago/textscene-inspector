@@ -64,6 +64,32 @@ describe('WebviewResourceProvider', () => {
     });
   });
 
+  describe('Directory listing', () => {
+    it('asks the host for the folder and resolves with its entries', async () => {
+      const listing = provider.listDirectory('res://sub');
+      expect(mockVsCode.postMessage).toHaveBeenCalledWith({
+        type: 'listDirectory',
+        folder: 'res://sub',
+        requestId: 'listing_0',
+      });
+      const entries = [{ name: 'a.png', isDirectory: false }];
+      simulateExtensionMessage({ type: 'directoryListed', requestId: 'listing_0', entries });
+      await expect(listing).resolves.toEqual(entries);
+    });
+
+    it('resolves null for a folder the host lacks', async () => {
+      const listing = provider.listDirectory('res://nope');
+      simulateExtensionMessage({ type: 'directoryListed', requestId: 'listing_0', entries: null });
+      await expect(listing).resolves.toBeNull();
+    });
+
+    it('rejects with the host error', async () => {
+      const listing = provider.listDirectory('res://..');
+      simulateExtensionMessage({ type: 'resourceLoadError', requestId: 'listing_0', error: 'climbs out' });
+      await expect(listing).rejects.toThrow('climbs out');
+    });
+  });
+
   describe('Bounded reads', () => {
     it('asks the host for only the leading bytes the caller needs', () => {
       void provider.loadResource('res://video/clip.ogv', undefined, 1024);

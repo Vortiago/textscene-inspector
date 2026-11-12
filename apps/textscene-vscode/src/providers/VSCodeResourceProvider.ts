@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import { resourceContent } from '@textscene/core/resources/resourceProviderUtils';
 import { info, error } from '@textscene/core/logger';
+import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
 import {
   isSamePath,
@@ -56,6 +57,21 @@ export class VSCodeResourceProvider implements ResourceProvider {
       const errorMsg = `Failed to load resource: ${resourcePath} (${cause instanceof Error ? cause.message : 'Unknown error'})`;
       error(`[VSCodeResourceProvider] ${errorMsg}`);
       throw new Error(errorMsg, { cause });
+    }
+  }
+
+  /**
+   * The entries of the `res://` folder `folder`, or null when the workspace has no such folder. A link to a folder is
+   * a folder.
+   */
+  async listDirectory(folder: string): Promise<DirectoryEntry[] | null> {
+    const directory = await this.resolve(folder);
+    try {
+      const entries = await vscode.workspace.fs.readDirectory(directory);
+      return entries.map(([name, type]) => ({ name, isDirectory: (type & vscode.FileType.Directory) !== 0 }));
+    } catch {
+      // The host refuses a folder it lacks, which the file dialog takes as a folder Godot would refuse.
+      return null;
     }
   }
 

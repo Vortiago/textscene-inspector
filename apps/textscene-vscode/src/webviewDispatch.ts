@@ -65,6 +65,7 @@ const CARRIES_ITS_PAYLOAD: {
     (m.resourceType === undefined || isString(m.resourceType)) &&
     (m.maxBytes === undefined || isByteCount(m.maxBytes)) &&
     isString(m.requestId),
+  listDirectory: (m) => isString(m.folder) && isString(m.requestId),
   log: (m) => isString(m.level) && isString(m.message) && Array.isArray(m.args),
   previewCaptured: (m) => isString(m.requestId) && isString(m.dataUrl),
   previewCaptureError: (m) => isString(m.requestId) && isString(m.error),

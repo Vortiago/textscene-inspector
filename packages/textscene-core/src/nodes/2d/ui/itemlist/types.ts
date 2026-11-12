@@ -1,5 +1,6 @@
 /** ItemList property definitions: Control plus ItemList's own members and its `item_N/*` family. */
 
+import type { Rgba } from '../../../../godot/math/math';
 import type { ControlProperties } from '../control/types';
 
 /**
@@ -16,6 +17,12 @@ export interface ItemListItem {
   selectable?: boolean;
   /** `item_N/disabled`. Godot default false. */
   disabled?: boolean;
+  /** Set by a dialog only: the theme icon of this row, read from `SolveNode.icons[name]`, else the vendored default. */
+  themedIcon?: { name: string; vendoredUrl: string };
+  /** Set by a dialog only: the icon's `set_item_icon_modulate`. */
+  iconModulate?: Rgba;
+  /** Set by a dialog only: the row `select` made current (`item_list.cpp:434-444`). */
+  isSelected?: boolean;
 }
 
 export interface ItemListProperties extends ControlProperties {

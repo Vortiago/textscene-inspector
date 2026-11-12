@@ -1,6 +1,7 @@
 /** The webview ResourceProvider: it requests resources from the host by message. */
 
 import type { ResourceProvider } from '@textscene/core';
+import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
 import { isHostToWebviewMessage, type WebviewToHostMessage } from '../protocol';
 import { decodeResourceResponse } from '../wireCodec';
 
@@ -14,6 +15,10 @@ export class WebviewResourceProvider implements ResourceProvider {
   private pendingRequests: Map<
     string,
     { resolve: (value: string | ArrayBuffer) => void; reject: (error: Error) => void; timeoutId: number }
+  > = new Map();
+  private pendingListings: Map<
+    string,
+    { resolve: (entries: DirectoryEntry[] | null) => void; reject: (error: Error) => void; timeoutId: number }
   > = new Map();
   private requestCounter = 0;
 
@@ -30,11 +35,20 @@ export class WebviewResourceProvider implements ResourceProvider {
           pending.resolve(decodeResourceResponse(message));
         }
       } else if (message.type === 'resourceLoadError') {
-        const pending = this.pendingRequests.get(message.requestId);
+        const pending =
+          this.pendingRequests.get(message.requestId) ?? this.pendingListings.get(message.requestId);
         if (pending) {
           clearTimeout(pending.timeoutId);
           this.pendingRequests.delete(message.requestId);
+          this.pendingListings.delete(message.requestId);
           pending.reject(new Error(message.error));
+        }
+      } else if (message.type === 'directoryListed') {
+        const pending = this.pendingListings.get(message.requestId);
+        if (pending) {
+          clearTimeout(pending.timeoutId);
+          this.pendingListings.delete(message.requestId);
+          pending.resolve(message.entries);
         }
       }
     });
@@ -60,6 +74,20 @@ export class WebviewResourceProvider implements ResourceProvider {
         maxBytes,
         requestId,
       } satisfies WebviewToHostMessage);
+    });
+  }
+
+  async listDirectory(folder: string): Promise<DirectoryEntry[] | null> {
+    const requestId = `listing_${this.requestCounter++}`;
+
+    return new Promise((resolve, reject) => {
+      const timeoutId = window.setTimeout(() => {
+        if (this.pendingListings.delete(requestId)) reject(new Error(`Directory listing timeout: ${folder}`));
+      }, 10000);
+
+      this.pendingListings.set(requestId, { resolve, reject, timeoutId });
+
+      this.vscode.postMessage({ type: 'listDirectory', folder, requestId } satisfies WebviewToHostMessage);
     });
   }
 }

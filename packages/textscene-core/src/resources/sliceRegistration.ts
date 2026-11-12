@@ -15,7 +15,16 @@ import { fileExtension } from './fileExtension';
  * meaning in their own decode.
  */
 export type ResourceBusType =
-  'texture' | 'texture3d' | 'texture2darray' | 'scene' | 'glb' | 'resource' | 'arraymesh' | 'font' | 'theme';
+  | 'texture'
+  | 'texture3d'
+  | 'texture2darray'
+  | 'scene'
+  | 'glb'
+  | 'resource'
+  | 'arraymesh'
+  | 'font'
+  | 'theme'
+  | 'directory';
 
 interface ResourceSliceRegistration {
   /** Slice folder name under `resources/<category>/`, for example 'standardmaterial3d'. */

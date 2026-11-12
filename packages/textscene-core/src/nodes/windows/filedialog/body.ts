@@ -16,13 +16,19 @@ import {
   firstFilterLabel,
   isOpenFileMode,
   FILE_DIALOG_ICON_SIZE,
+  FILE_DIALOG_LIST_ICONS,
   FILE_DIALOG_SIDE_LIST_MINIMUM_WIDTH,
   FILE_DIALOG_THEME_ICONS,
+  FILE_DIALOG_THUMBNAIL_SIZE,
+  type FileDialogListIcon,
   type FileDialogThemeIcon,
 } from '../../../godot/scene/fileDialog';
 import { SizeFlags } from '../../../godot/scene/control';
 import type { Vector2 } from '../../../godot/math/vector';
-import { FILE_DIALOG_ICON_URLS } from '../../../r3f/controls/native/themeIcons';
+import { FILE_DIALOG_ICON_URLS, FILE_DIALOG_LIST_ICON_URLS } from '../../../r3f/controls/native/themeIcons';
+import { ItemListIconMode } from '../../../godot/scene/gui';
+import type { Rgba } from '../../../godot/math/math';
+import type { ItemListItem, ItemListProperties } from '../../2d/ui/itemlist/types';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { themedSlotRequests, type TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
@@ -44,6 +50,17 @@ interface Dialog {
   props: FileDialogProperties;
   rtl: boolean;
   scale: number;
+  /** What the file list reads from the dialog's theme (`file_dialog.cpp:820,833,938,1043`). */
+  listTheme: FileListTheme;
+}
+
+interface FileListTheme {
+  /** `thumbnail_size * get_theme_default_base_scale()`. */
+  thumbnailSize: number;
+  /** The size of the `file` icon, which the list mode draws every icon at. */
+  fileIconSize: Vector2;
+  folderIconColor: Rgba;
+  fileIconColor: Rgba;
 }
 
 /** A Control the constructor builds: its type, its name, the scene lines it sets and what it holds. */
@@ -56,6 +73,8 @@ interface Widget {
   variation?: string;
   /** The theme icon this button shows (`set_button_icon`, `file_dialog.cpp:1559`). */
   icon?: FileDialogThemeIcon;
+  /** The theme icons this Control draws by name, not through a Button (`FileList`'s rows). */
+  icons?: readonly FileDialogListIcon[];
   /** The characters selected in this LineEdit (`select`, `file_dialog.cpp:56-63`). */
   selection?: { begin: number; end: number };
   children?: readonly Widget[];
@@ -181,11 +200,64 @@ function lowerToolbar({ props }: Dialog): Widget {
   });
 }
 
+const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+
+/** The ItemList properties `update_file_list` sets for a display mode (`file_dialog.cpp:815-834`). */
+function fileListLayout({ props, listTheme }: Dialog): Partial<ItemListProperties> {
+  if (props.display_mode === DisplayMode.THUMBNAILS) {
+    return {
+      iconMode: ItemListIconMode.ICON_MODE_TOP,
+      maxColumns: 0,
+      maxTextLines: 2,
+      // Integer division, as `thumbnail_size * 3 / 2` is.
+      fixedColumnWidth: Math.trunc((listTheme.thumbnailSize * 3) / 2),
+      fixedIconSize: { x: listTheme.thumbnailSize, y: listTheme.thumbnailSize },
+    };
+  }
+  return {
+    iconMode: ItemListIconMode.ICON_MODE_LEFT,
+    maxColumns: 1,
+    maxTextLines: 1,
+    fixedColumnWidth: 0,
+    fixedIconSize: listTheme.fileIconSize,
+  };
+}
+
+/** One row of the file list: its theme icon, its icon colour and whether it is the selected row (`file_dialog.cpp:933-940,1016-1046`). */
+function fileListItems({ props, listTheme }: Dialog): ItemListItem[] {
+  const isThumbnails = props.display_mode === DisplayMode.THUMBNAILS;
+  return props.file_rows.map((row, index) => {
+    const icon: FileDialogListIcon = row.isDirectory
+      ? isThumbnails
+        ? 'folder_thumbnail'
+        : 'folder'
+      : isThumbnails
+        ? 'file_thumbnail'
+        : 'file';
+    return {
+      text: row.name,
+      themedIcon: { name: icon, vendoredUrl: FILE_DIALOG_LIST_ICON_URLS[icon] },
+      iconModulate: row.isDirectory ? listTheme.folderIconColor : listTheme.fileIconColor,
+      disabled: row.isDisabled,
+      isSelected: index === props.selected_row,
+    };
+  });
+}
+
+function fileList(dialog: Dialog): Widget {
+  const items = fileListItems(dialog);
+  return widget('ItemList', 'FileList', {
+    raw: { size_flags_vertical: EXPAND_FILL },
+    properties: { ...fileListLayout(dialog), items, itemCount: items.length },
+    icons: FILE_DIALOG_LIST_ICONS,
+  });
+}
+
 function fileColumn(dialog: Dialog): Widget {
   return widget('VBoxContainer', 'FileVBox', {
     children: [
       lowerToolbar(dialog),
-      widget('ItemList', 'FileList', { raw: { size_flags_vertical: EXPAND_FILL } }),
+      fileList(dialog),
       widget('HBoxContainer', 'FileBox', {
         children: [
           widget('Label', 'FileLabel', { raw: { text: '"File:"' } }),
@@ -259,13 +331,10 @@ function mainVBox(dialog: Dialog): Widget {
   });
 }
 
-/** The `FileDialog` theme icon `name` as the dialog's theme chain resolves it, or none when the theme leaves it to the vendored icon. */
-function themedIconsOf(
-  dialog: SolveNode,
-  name: FileDialogThemeIcon | undefined
-): SolveNode['icons'] | undefined {
-  const themed = name && dialog.icons[name];
-  return themed ? { [name]: themed } : undefined;
+/** The `FileDialog` theme icons `names` as the dialog's theme chain resolves them, leaving out those the theme leaves to the vendored icon. */
+function themedIconsOf(dialog: SolveNode, names: readonly string[]): SolveNode['icons'] | undefined {
+  const themed = names.filter((name) => dialog.icons[name]).map((name) => [name, dialog.icons[name]!]);
+  return themed.length > 0 ? Object.fromEntries(themed) : undefined;
 }
 
 /**
@@ -273,7 +342,7 @@ function themedIconsOf(
  * `FILE_DIALOG_ICON_SIZE`. A pending icon takes the default room, as CheckBox, OptionButton and the split grabber
  * do, so the layout only moves when the arriving texture is not that size.
  */
-function iconSizeOf(dialog: SolveNode, name: FileDialogThemeIcon): Vector2 {
+function iconSizeOf(dialog: SolveNode, name: FileDialogThemeIcon | FileDialogListIcon): Vector2 {
   return dialog.textureSlots[name] ?? FILE_DIALOG_ICON_SIZE;
 }
 
@@ -282,7 +351,7 @@ const BUILT_BUTTON_TYPES = ['Button', 'OptionButton', 'CheckBox'];
 
 /** One slot for each toolbar icon a Theme gives the dialog, so `iconSizeOf` reads its size, then the slots of the buttons the body builds. */
 export const fileDialogTextureSlots: TextureSlotsFn = (_node, themedIcons = {}, builtIcons) => [
-  ...themedSlotRequests(FILE_DIALOG_THEME_ICONS, themedIcons),
+  ...themedSlotRequests([...FILE_DIALOG_THEME_ICONS, ...FILE_DIALOG_LIST_ICONS], themedIcons),
   ...builtButtonIconRequests(BUILT_BUTTON_TYPES, builtIcons),
 ];
 
@@ -306,7 +375,7 @@ function build(dialog: SolveNode, spec: Widget, parentPath: string): SolveNode {
       build(dialog, child, syntheticPath(parentPath, spec.name))
     ),
     variation: spec.variation,
-    icons: themedIconsOf(dialog, spec.icon),
+    icons: themedIconsOf(dialog, [...(spec.icon ? [spec.icon] : []), ...(spec.icons ?? [])]),
     textureSize: spec.icon && iconSizeOf(dialog, spec.icon),
     syntheticDraw: {
       themedIcon: spec.icon && { name: spec.icon, vendoredUrl: FILE_DIALOG_ICON_URLS[spec.icon] },
@@ -324,7 +393,17 @@ export function fileDialogBody(dialog: SolveNode, theme: NativeTheme): SolveNode
   const known = byTheme.get(theme);
   if (known) return known;
   const props = dialog.node.properties as FileDialogProperties;
-  const body = build(dialog, mainVBox({ props, rtl: dialog.rtl, scale: theme.scale }), dialog.path);
+  const listTheme: FileListTheme = {
+    thumbnailSize: (dialog.constants.thumbnail_size ?? FILE_DIALOG_THUMBNAIL_SIZE) * theme.scale,
+    fileIconSize: iconSizeOf(dialog, 'file'),
+    folderIconColor: dialog.colors.folder_icon_color ?? WHITE,
+    fileIconColor: dialog.colors.file_icon_color ?? WHITE,
+  };
+  const body = build(
+    dialog,
+    mainVBox({ props, rtl: dialog.rtl, scale: theme.scale, listTheme }),
+    dialog.path
+  );
   byTheme.set(theme, body);
   return body;
 }

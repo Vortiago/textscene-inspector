@@ -136,6 +136,9 @@ export class TscnPreviewPanel {
       loadResource: (msg) => {
         void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId, msg.maxBytes);
       },
+      listDirectory: (msg) => {
+        void this._handleListDirectory(msg.folder, msg.requestId);
+      },
       log: (msg) => {
         relayWebviewLog(msg.level, msg.message, msg.args);
       },
@@ -390,6 +393,23 @@ export class TscnPreviewPanel {
         requestId,
         ...payload,
       });
+    } catch (error) {
+      this._postMessageToWebview({
+        type: 'resourceLoadError',
+        requestId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  private async _handleListDirectory(folder: string, requestId: string): Promise<void> {
+    try {
+      const provider = this._getResourceProvider();
+      if (!provider) {
+        throw new Error('No workspace folder found');
+      }
+      const entries = await provider.listDirectory(folder);
+      this._postMessageToWebview({ type: 'directoryListed', requestId, entries: entries && [...entries] });
     } catch (error) {
       this._postMessageToWebview({
         type: 'resourceLoadError',

@@ -9,6 +9,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parsePackedStringArray, unquoteString } from '../../../parser/utils';
 import {
   finishLocation,
+  type FolderExists,
   setAccess,
   setCurrentDir,
   setCurrentFile,
@@ -29,6 +30,7 @@ import {
   FILE_DIALOG_DISPLAY_MODE_NAMES,
   isOpenFileMode,
 } from '../../../godot/scene/fileDialog';
+import type { FileListRow } from './fileList';
 import { parseConfirmationDialog, type ConfirmationDialogProperties } from '../confirmationdialog/parser';
 
 /** One entry of the options list: a CheckBox without `values`, a Label and an OptionButton with them. */
@@ -52,6 +54,13 @@ export interface FileDialogProperties extends ConfirmationDialogProperties, File
   favorites_enabled: boolean;
   recent_list_enabled: boolean;
   layout_toggle_enabled: boolean;
+  show_hidden_files: boolean;
+  /** Whether the scene set `ok_button_text`: `set_default_ok_text` then leaves the button's text alone. */
+  has_custom_ok_text: boolean;
+  /** The file list. Empty until a folder listing settles it (`resolve.ts`). */
+  file_rows: readonly FileListRow[];
+  /** The index in `file_rows` of the selected row, or null. */
+  selected_row: number | null;
 }
 
 /** `PropertyListHelper` reads the index with `is_valid_int`, a sign included (`property_list_helper.cpp:50-58`). */
@@ -114,9 +123,13 @@ function replayModeTexts(properties: Record<string, string>, constructorTitle: s
   return { mode, title };
 }
 
-/** The lines that place the dialog, run through the setters in file order. */
-function replayLocation(properties: Record<string, string>, context: string): FileDialogLocation {
-  const state = startLocation();
+/** The lines that place the dialog, run through the setters in file order. `exists` answers for the folders they name. */
+export function replayLocation(
+  properties: Record<string, string>,
+  context: string,
+  exists?: FolderExists
+): FileDialogLocation {
+  const state = startLocation(exists);
   for (const [key, raw] of Object.entries(properties)) {
     if (key === 'access') {
       setAccess(state, enumOr(raw, FILE_DIALOG_ACCESS_NAMES, state.access, `${context}.access`));
@@ -175,5 +188,10 @@ export function parseFileDialog(
     favorites_enabled: flag(properties.favorites_enabled, 'favorites_enabled'),
     recent_list_enabled: flag(properties.recent_list_enabled, 'recent_list_enabled'),
     layout_toggle_enabled: flag(properties.layout_toggle_enabled, 'layout_toggle_enabled'),
+    show_hidden_files: boolOr(properties.show_hidden_files, false, `${context}.show_hidden_files`),
+    has_custom_ok_text:
+      properties.ok_button_text !== undefined && unquoteString(properties.ok_button_text) !== '',
+    file_rows: [],
+    selected_row: null,
   };
 }

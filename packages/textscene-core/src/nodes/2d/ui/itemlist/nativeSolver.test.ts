@@ -23,6 +23,7 @@ import {
   itemListGuideLines,
   itemListMirrorX,
   itemListRowsInClip,
+  itemListSelectedRect,
   itemListSeparatorsInClip,
   itemListMaxColumnWidth,
   itemListRowTextX,
@@ -984,5 +985,31 @@ describe('isItemListTextWrapped', () => {
 
   it('draws LEFT-mode text as a single line', () => {
     expect(isItemListTextWrapped(ICON_MODE_LEFT, 2)).toBe(false);
+  });
+});
+
+describe('itemListSelectedRect (item_list.cpp:1502-1517)', () => {
+  const input = {
+    rowRect: { x: 0, y: 20, w: 50, h: 18 },
+    baseX: 4,
+    columnCount: 1,
+    contentWidth: 200,
+    controlWidth: 208,
+    panelMarginLeft: 4,
+    panelMarginRight: 4,
+    rtl: false,
+  };
+
+  it('runs a one-column row to the right edge of the content', () => {
+    expect(itemListSelectedRect(input)).toEqual({ x: 0, y: 0, w: 200, h: 18 });
+  });
+
+  it('keeps the width of a row in a list of several columns', () => {
+    expect(itemListSelectedRect({ ...input, columnCount: 3 }).w).toBe(50);
+  });
+
+  it('mirrors inside the control under RTL', () => {
+    const rowRect = { x: 10, y: 20, w: 50, h: 18 };
+    expect(itemListSelectedRect({ ...input, rowRect, rtl: true })).toEqual({ x: -10, y: 0, w: 190, h: 18 });
   });
 });

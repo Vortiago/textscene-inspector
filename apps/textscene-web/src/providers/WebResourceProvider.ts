@@ -2,7 +2,9 @@
 
 import { isBinaryResourceType, info } from '@textscene/core';
 import type { ResourceProvider } from '@textscene/core';
+import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
 import { fixtureUrlForRes } from '../corpusRoot';
+import { FIXTURE_LISTING_URL, mirrorEntries, mirrorFolderOf, type FixtureListing } from '../fixtureListing';
 
 export interface WebResourceProviderOptions {
   /**
@@ -37,6 +39,12 @@ export class WebResourceProvider implements ResourceProvider {
    * successful fetch and never cleared, since the mirror is the static site and never changes under a running page.
    */
   private readonly deliveredMirrorFiles = new Set<string>();
+
+  /**
+   * The mirror's folders, fetched on the first listing. Written only by `fixtureListing`. A null answer is kept: the site
+   * never gains a mirror under a running page.
+   */
+  private listingLookup: Promise<FixtureListing | null> | null = null;
 
   setResourceRoot(root: string): void {
     this.resourceRoot = root;
@@ -91,6 +99,38 @@ export class WebResourceProvider implements ResourceProvider {
     return this.deliveredMirrorFiles.has(key) ? `mirror:${this.resourceRoot}` : null;
   }
 
+  /**
+   * The entries of the `res://` folder `folder`: the mirror's folder under the active corpus root, with the files uploaded to
+   * it. Null when neither holds the folder.
+   */
+  async listDirectory(folder: string): Promise<DirectoryEntry[] | null> {
+    const listing = this.hasFixturesMirror ? await this.fixtureListing() : null;
+    const mirrored = listing && mirrorEntries(listing, mirrorFolderOf(folder, this.resourceRoot));
+    const uploaded = this.uploadedEntries(folder);
+    if (!mirrored && uploaded.size === 0) return null;
+    const entries = new Map((mirrored ?? []).map((entry) => [entry.name, entry]));
+    for (const [name, entry] of uploaded) entries.set(name, entries.get(name) ?? entry);
+    return [...entries.values()];
+  }
+
+  private fixtureListing(): Promise<FixtureListing | null> {
+    this.listingLookup ??= fetchFixtureListing();
+    return this.listingLookup;
+  }
+
+  /** What the uploads of the active corpus root put in `folder`: a file directly in it, a folder for one deeper. */
+  private uploadedEntries(folder: string): Map<string, DirectoryEntry> {
+    const prefix = folder === 'res://' ? folder : `${folder}/`;
+    const entries = new Map<string, DirectoryEntry>();
+    for (const key of this.uploadedFiles.keys()) {
+      const [root, path] = key.split('\0') as [string, string];
+      if (root !== this.resourceRoot || !path.startsWith(prefix)) continue;
+      const [name, ...deeper] = path.slice(prefix.length).split('/') as [string, ...string[]];
+      entries.set(name, { name, isDirectory: deeper.length > 0 });
+    }
+    return entries;
+  }
+
   async loadResource(path: string, type?: string, maxBytes?: number): Promise<string | ArrayBuffer | null> {
     // Uploaded files of the active corpus root first.
     const upload = this.uploadedFiles.get(this.uploadKey(path));
@@ -123,6 +163,19 @@ export class WebResourceProvider implements ResourceProvider {
     this.deliveredMirrorFiles.add(mirrorKey);
     info(`[WebResourceProvider] Successfully loaded ${type}: ${path}`);
     return content;
+  }
+}
+
+/** The mirror's listing, or null where the site serves none, as the public edition does not, or the fetch fails. */
+async function fetchFixtureListing(): Promise<FixtureListing | null> {
+  try {
+    const response = await fetch(FIXTURE_LISTING_URL);
+    // The static host answers an unknown path with the SPA's HTML fallback.
+    if (!response.ok || (response.headers.get('content-type') ?? '').includes('text/html')) return null;
+    return (await response.json()) as FixtureListing;
+  } catch {
+    // An offline or refusing host has no listing, which a FileDialog draws as an empty list.
+    return null;
   }
 }
 

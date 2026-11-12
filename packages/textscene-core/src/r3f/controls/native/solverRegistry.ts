@@ -14,6 +14,7 @@ import type { FontMetrics } from './text/fontMetrics';
 import type { SealedHandoff } from './solveHandoff';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { ParsedResource } from '../../../parser/parsedResource';
+import type { DirectoryListings } from '../../../resources/directoryListing';
 
 /**
  * Measures a run of text at a font size. `lineSpacingPx` is the caller's own
@@ -201,6 +202,15 @@ export type ChildVisibilityFn = (
   count: number
 ) => boolean | undefined;
 
+/**
+ * How a type settles from the `res://` folders a host lists, such as a FileDialog's file list. `folders` names the folders to
+ * ask for given the answers so far, since one answer can lead to the next. `resolve` gives the node with every answer in.
+ */
+export interface DirectoryResolver {
+  folders(node: TscnNode, listings: DirectoryListings): readonly string[];
+  resolve(node: TscnNode, listings: DirectoryListings): TscnNode;
+}
+
 class ControlSolverRegistry {
   private readonly minimumSizeFns = createTypeRegistry<MinimumSizeFn>('controlSolverRegistry.minimumSize');
   private readonly containerLayoutFns = createTypeRegistry<ContainerLayoutFn>(
@@ -212,6 +222,9 @@ class ControlSolverRegistry {
   );
   private readonly loadedMinimumSizeFns = createTypeRegistry<LoadedMinimumSizeFn>(
     'controlSolverRegistry.loadedMinimumSize'
+  );
+  private readonly directoryResolvers = createTypeRegistry<DirectoryResolver>(
+    'controlSolverRegistry.directoryResolver'
   );
   private readonly canvasBoundaryTypes = new Set<string>();
   private readonly sizeDependentMinimumTypes = new Map<string, SizeDependentPredicate>();
@@ -265,6 +278,15 @@ class ControlSolverRegistry {
     this.textureSlotFns.register(typeName, fn);
   }
 
+  registerDirectoryResolver(typeName: string, resolver: DirectoryResolver): void {
+    this.directoryResolvers.register(typeName, resolver);
+  }
+
+  /** This type's `DirectoryResolver`, or `undefined` for a type that lists no folder. */
+  directoryResolver(typeName: string): DirectoryResolver | undefined {
+    return this.directoryResolvers.get(typeName);
+  }
+
   /** Declares a container that writes its children's `visible` (see `ChildVisibilityFn`). */
   registerChildVisibility(typeName: string, fn: ChildVisibilityFn): void {
     this.childVisibilityFns.register(typeName, fn);
@@ -297,6 +319,7 @@ class ControlSolverRegistry {
     this.containerLayoutFns.clear();
     this.loadedMinimumSizeFns.clear();
     this.textureSlotFns.clear();
+    this.directoryResolvers.clear();
     this.childVisibilityFns.clear();
     this.canvasBoundaryTypes.clear();
     this.sizeDependentMinimumTypes.clear();

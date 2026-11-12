@@ -72,6 +72,7 @@ import {
   type SceneScope,
 } from '../../liveSceneTree';
 import { NOTHING_CACHED, recordingReads } from '../../cacheSources';
+import { settleDirectories } from './directoryResolution';
 import { scopeOf } from '../../../resources/liveNode';
 import { embedsSubwindows, mayHoldWindowBelow } from '../../../nodes/viewport/subviewport/windowEmbedder';
 import {
@@ -255,6 +256,7 @@ interface ForestResult {
   pendingResourceFiles: string[];
   pendingThemes: string[];
   pendingFonts: string[];
+  pendingDirectories: string[];
   /** Every cache key the walk read, cached or not: the keys a reload must request again. */
   readKeys: ReadonlySet<string>;
   /** Every viewport size the walk read: a publish that answers each the same leaves the forest. */
@@ -325,7 +327,14 @@ const NO_KEYS: ReadonlySet<string> = new Set();
  * The buses whose caches the walk reads. An `ExtResource(AtlasTexture)` `.tres`
  * completes on the resource bus, not the texture one.
  */
-const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource', 'theme', 'font'];
+const SOLVE_TREE_BUSES: readonly ResourceType[] = [
+  'scene',
+  'texture',
+  'resource',
+  'theme',
+  'font',
+  'directory',
+];
 
 /** What the forest starts from, which its roots cannot see above them. */
 interface ForestStart {
@@ -374,6 +383,7 @@ function buildForest(
   const pendingResourceFiles = new Set<string>();
   const pendingThemes = new Set<string>();
   const pendingFonts = new Set<string>();
+  const pendingDirectories = new Set<string>();
   const windows: SolveNode[] = [];
   const readKeys = new Set<string>();
   const recordRead = (path: string) => readKeys.add(path);
@@ -393,6 +403,7 @@ function buildForest(
   const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const themeCache = loader ? recordingReads(loader.themes, recordRead) : NOTHING_CACHED;
   const fontCache: FontCacheReader = loader ? recordingReads(loader.fonts, recordRead) : NOTHING_CACHED;
+  const directoryCache = loader ? recordingReads(loader.directories, recordRead) : NOTHING_CACHED;
 
   /**
    * A Control's own `theme` (`Control::get_theme()`, `scene/gui/control.h`). An
@@ -700,9 +711,12 @@ function buildForest(
     const themeScope = themeResolutionScope(window.type, props.themeTypeVariation, themeChain, projectFonts);
     const items = themeItems(window, scope, themeScope);
     const texture = resolveTextureSize(window, path, scope, themeChain, items.icons);
+    const directoryResolver = controlSolverRegistry.directoryResolver(window.type);
     return {
       path,
-      node: window,
+      node: directoryResolver
+        ? settleDirectories(window, directoryResolver, directoryCache.getCached, pendingDirectories)
+        : window,
       children: [],
       paintRange: WHOLE_CANVAS_RANGE,
       behindRanges: [],
@@ -957,6 +971,7 @@ function buildForest(
     pendingResourceFiles: [...pendingResourceFiles],
     pendingThemes: [...pendingThemes],
     pendingFonts: [...pendingFonts],
+    pendingDirectories: [...pendingDirectories],
     readKeys,
     viewportSizeReads,
   };
@@ -1063,7 +1078,15 @@ function useSolveForest(
       generation,
     ]
   );
-  const { tree, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts } = forest;
+  const {
+    tree,
+    pendingScenes,
+    pendingTextures,
+    pendingResourceFiles,
+    pendingThemes,
+    pendingFonts,
+    pendingDirectories,
+  } = forest;
   useEffect(() => {
     readKeys.current = forest.readKeys;
     lastSizes.current = { key: sizesKey, reads: forest.viewportSizeReads };
@@ -1081,7 +1104,16 @@ function useSolveForest(
     for (const path of pendingResourceFiles) loader.resources.request(path);
     for (const path of pendingThemes) loader.themes.request(path);
     for (const path of pendingFonts) loader.fonts.request(path);
-  }, [loader, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts]);
+    for (const folder of pendingDirectories) loader.directories.request(folder);
+  }, [
+    loader,
+    pendingScenes,
+    pendingTextures,
+    pendingResourceFiles,
+    pendingThemes,
+    pendingFonts,
+    pendingDirectories,
+  ]);
 
   return { tree, generation, windows: forest.windows };
 }

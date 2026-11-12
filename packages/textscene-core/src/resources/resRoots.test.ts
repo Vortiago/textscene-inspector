@@ -471,3 +471,29 @@ describe('invalidateAll', () => {
     expect(await loose.listPaths()).toContain('res://late.png');
   });
 });
+
+describe('listDirectory', () => {
+  async function projectRoot(...paths: string[]): Promise<ResRoot> {
+    const files = memoryFiles('/work/game/project.godot', ...paths);
+    return (await createResRoots(memoryPort(files), null).rootOf('/work/game/a.tscn'))!;
+  }
+
+  it('lists the entries of the root and of a folder under it', async () => {
+    const root = await projectRoot('/work/game/a.tscn', '/work/game/sub/b.png');
+    expect(await root.listDirectory('res://')).toEqual(
+      expect.arrayContaining([
+        { name: 'a.tscn', isDirectory: false },
+        { name: 'sub', isDirectory: true },
+        { name: 'project.godot', isDirectory: false },
+      ])
+    );
+    expect(await root.listDirectory('res://sub')).toEqual([{ name: 'b.png', isDirectory: false }]);
+  });
+
+  it('answers null for a folder that is absent, a file, or outside the root', async () => {
+    const root = await projectRoot('/work/game/a.tscn');
+    expect(await root.listDirectory('res://nope')).toBeNull();
+    expect(await root.listDirectory('res://a.tscn')).toBeNull();
+    expect(await root.listDirectory('res://../other')).toBeNull();
+  });
+});

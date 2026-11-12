@@ -7,7 +7,8 @@
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -20,7 +21,7 @@ import {
   useWorldClipPlanes,
 } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
-import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   OutlinedTextRun,
   TextOutlineRing,
@@ -39,6 +40,7 @@ import {
   ICON_MODE_LEFT,
   ITEM_LIST_DEFAULT_MAX_COLUMNS,
   ITEM_LIST_THEME_FONT_KEY,
+  itemHasIcon,
   itemIconColor,
   itemIconDraw,
   itemIconPackedSize,
@@ -58,7 +60,10 @@ import {
   itemListTextTheme,
   itemListWrappedTextWidthPx,
   itemMinimumSize,
+  itemListSelectedFontColor,
+  itemListSelectedRect,
   itemTextColor,
+  pickItemListSelectedStyleBox,
   itemTextDrawOffset,
   isItemListTextWrapped,
   packItemListRows,
@@ -111,6 +116,8 @@ interface RowGeometry {
   isTextFillDrawn: boolean;
   rect: Rect2;
   textColor: Rgba;
+  /** The background of a selected row, relative to the row's origin, or `null` for a row not selected. */
+  selectedRect: Rect2 | null;
 }
 
 interface ItemListRowProps {
@@ -122,6 +129,9 @@ interface ItemListRowProps {
   renderOrder: number;
   fontSizePx: number;
   resources: SceneScope;
+  /** The list's `selected` StyleBox, drawn behind a selected row. */
+  selectedBox: StyleBoxFlatData;
+  icons: SolveNode['icons'];
 }
 
 /**
@@ -137,26 +147,51 @@ function ItemListRow({
   renderOrder,
   fontSizePx,
   resources,
+  selectedBox,
+  icons,
 }: ItemListRowProps) {
-  const { item, disabled, hasIcon, iconDraw, label, textX, textY, iconX, isTextFillDrawn, rect, textColor } =
-    geometry;
+  const {
+    item,
+    disabled,
+    hasIcon,
+    iconDraw,
+    label,
+    textX,
+    textY,
+    iconX,
+    isTextFillDrawn,
+    rect,
+    textColor,
+    selectedRect,
+  } = geometry;
 
   const { texture: iconSource } = useTexture2D(
     item.icon,
     resources.externalResources,
     resources.internalResources
   );
-  const iconTexture = useOwnerCanvas2DTexture(iconSource);
+  const ownIconTexture = useOwnerCanvas2DTexture(iconSource);
+  const themedTexture = useNodeIcon(
+    item.themedIcon && icons[item.themedIcon.name],
+    item.themedIcon?.vendoredUrl ?? null
+  );
+  const iconTexture = item.themedIcon ? themedTexture : ownIconTexture;
   // Inside the list's own `ControlClipProvider`, so a row clips to the list rect.
   const clippingPlanes = useControlClipPlanes();
 
-  const iconColorSrgb = useMemo(() => tintColor(itemIconColor(disabled), tint), [disabled, tint]);
+  const iconColorSrgb = useMemo(
+    () => tintColor(itemIconColor(disabled, item.iconModulate), tint),
+    [disabled, item.iconModulate, tint]
+  );
   const iconColorLinear = useItemLinearColor(iconColorSrgb);
   const tintedTextColor = useMemo(() => tintColor(textColor, tint), [textColor, tint]);
   const run = { fontSizePx, outline, clippingPlanes, renderOrder };
 
   return (
     <CanvasItemGroup position={[origin.x + rect.x, -(origin.y + rect.y), 0]}>
+      {selectedRect && (
+        <StyleBoxQuad styleBox={selectedBox} color={tint} rect={selectedRect} renderOrder={renderOrder} />
+      )}
       {hasIcon && iconDraw.rect && iconTexture && (
         <PositionedIcon
           rect={{ ...iconDraw.rect, x: iconX }}
@@ -206,6 +241,9 @@ export function ItemList({
   const { fontSizePx, color: baseFontColor } = itemListTextTheme(solveNode, props, { theme });
   const fontMetrics = resolveNodeFontMetrics(solveNode, ITEM_LIST_THEME_FONT_KEY);
 
+  const selectedFontColor = itemListSelectedFontColor(solveNode);
+  const selectedBox = pickItemListSelectedStyleBox(solveNode.styleBoxes, theme);
+
   const hSeparation = itemListSeparation(theme);
   const vSeparation = hSeparation;
   const iconMargin = hSeparation;
@@ -235,7 +273,7 @@ export function ItemList({
   const rows: RowContent[] = useMemo(() => {
     return items.map((item, index) => {
       const disabled = item.disabled === true;
-      const hasIcon = item.icon !== undefined;
+      const hasIcon = itemHasIcon(item);
       const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
       const iconSize = itemIconPackedSize(hasIcon, naturalSize, props.fixedIconSize, iconScale);
 
@@ -444,7 +482,19 @@ export function ItemList({
           ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX
           : 0,
         rect: packedRect,
-        textColor: itemTextColor(baseFontColor, r.disabled),
+        textColor: itemTextColor(r.item.isSelected ? selectedFontColor : baseFontColor, r.disabled),
+        selectedRect: r.item.isSelected
+          ? itemListSelectedRect({
+              rowRect: packedRect,
+              baseX: origin.x,
+              columnCount: packed.columnCount,
+              contentWidth,
+              controlWidth: rect.w,
+              panelMarginLeft: panelMargins.left,
+              panelMarginRight: panelMargins.right,
+              rtl,
+            })
+          : null,
       };
     });
   }, [
@@ -460,6 +510,9 @@ export function ItemList({
     iconMargin,
     solveNode,
     baseFontColor,
+    selectedFontColor,
+    panelMargins.left,
+    panelMargins.right,
     origin.x,
     rect.w,
     contentWidth,
@@ -495,6 +548,8 @@ export function ItemList({
           renderOrder={renderOrder}
           fontSizePx={fontSizePx}
           resources={solveNode.resources}
+          selectedBox={selectedBox}
+          icons={solveNode.icons}
         />
       ))}
       <ScrollHintChrome

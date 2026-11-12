@@ -178,6 +178,41 @@ describe('<ItemList> — panel + rows', () => {
   });
 });
 
+describe('<ItemList> — a theme icon and a selected row (a dialog sets both)', () => {
+  const VENDORED = { name: 'file', vendoredUrl: 'data:image/svg+xml;base64,PHN2Zy8+' };
+  const render = (items: NonNullable<ItemListProperties['items']>) =>
+    ReactThreeTestRenderer.create(
+      <ItemList {...painterEnv()} solveNode={solveNode({ items })} rect={RECT} renderOrder={0} />
+    );
+  const colourOf = (mesh: THREE.Mesh) => (mesh.material as THREE.ShaderMaterial).uniforms.uColor!.value;
+
+  it('draws the icon a row names by theme icon, with no item_N/icon', async () => {
+    const renderer = await render([{ text: 'a.png', themedIcon: VENDORED }]);
+    expect(findIconMeshes(renderer.scene).length).toBe(1);
+  });
+
+  it('draws a selected row on a background of its own, behind its label', async () => {
+    const plain = await render([{ text: 'a.png' }]);
+    const selected = await render([{ text: 'a.png', isSelected: true }]);
+    expect(findChromeMeshes(selected.scene).length).toBe(findChromeMeshes(plain.scene).length + 1);
+  });
+
+  it('draws the label of a selected row in font_selected_color, white by default', async () => {
+    const renderer = await render([{ text: 'a.png', isSelected: true }, { text: 'b.png' }]);
+    const [selected, plain] = findTextMeshes(renderer.scene);
+    expect(colourOf(selected!).toArray()).toEqual([1, 1, 1]);
+    expect(colourOf(plain!).toArray()).not.toEqual([1, 1, 1]);
+  });
+
+  it('draws the icon of a row in its modulate colour', async () => {
+    const renderer = await render([
+      { text: 'a', themedIcon: VENDORED, iconModulate: { r: 1, g: 0, b: 0, a: 1 } },
+    ]);
+    const mesh = findIconMeshes(renderer.scene)[0]!;
+    expect((mesh.material as THREE.MeshBasicMaterial).color.g).toBe(0);
+  });
+});
+
 describe('<ItemList> — row packing', () => {
   it('places a second column item to the right of the first, under max_columns=2', async () => {
     const renderer = await ReactThreeTestRenderer.create(
