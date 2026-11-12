@@ -20,7 +20,7 @@ import { createClearCache } from '../resourceProcessorClear';
 import type { ArrayMeshResource } from '../processors/createArrayMeshProcessor';
 import type { FontResource } from '../fonts/font/types';
 import type { ThemeResource } from '../styles/theme/types';
-import type { DirectoryEntry } from '../projectListing';
+import type { DirectoryListing } from '../directoryListing';
 import { isGodotSceneRoot } from '../formats/glb/godotNodes';
 import { tagAsLoadedGlb } from '../formats/glb/testing/loadedGlbTags';
 import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
@@ -69,7 +69,7 @@ export interface FakeResourceLoader {
   readonly arrayMeshes: FakeProcessor<ArrayMeshResource>;
   readonly fonts: FakeProcessor<FontResource>;
   readonly themes: FakeProcessor<ThemeResource>;
-  readonly directories: FakeProcessor<DirectoryEntry[]>;
+  readonly directories: FakeProcessor<DirectoryListing>;
   /** A real runner with no worker, so jobs run in-thread with the real bytes. */
   readonly jobRunner: WorkerJobRunner;
   /** Every ExtResource passed to `loader.register`, in call order. */
@@ -161,7 +161,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   const arrayMeshes = makeFakeProcessor<ArrayMeshResource>(eventBus, 'arraymesh');
   const fonts = makeFakeProcessor<FontResource>(eventBus, 'font');
   const themes = makeFakeProcessor<ThemeResource>(eventBus, 'theme');
-  const directories = makeFakeProcessor<DirectoryEntry[]>(eventBus, 'directory');
+  const directories = makeFakeProcessor<DirectoryListing>(eventBus, 'directory');
   const registerCalls: ExtResource[] = [];
 
   const byType: Record<ResourceType, FakeProcessor<unknown>> = {

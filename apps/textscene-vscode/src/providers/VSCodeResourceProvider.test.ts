@@ -112,6 +112,10 @@ describe('VSCodeResourceProvider', () => {
       expect(readPaths()).toEqual(['/workspace/icon.png']);
     });
 
+    it('lists a res:// folder that climbs out of the root as no folder, not as an error', async () => {
+      await expect(provider.listDirectory('res://../../../etc')).resolves.toBeNull();
+    });
+
     it('should prevent path traversal attacks', async () => {
       const maliciousPath = 'res://../../../etc/passwd';
 

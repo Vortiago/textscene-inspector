@@ -65,12 +65,12 @@ export class VSCodeResourceProvider implements ResourceProvider {
    * a folder.
    */
   async listDirectory(folder: string): Promise<DirectoryEntry[] | null> {
-    const directory = await this.resolve(folder);
     try {
+      const directory = await this.resolve(folder);
       const entries = await vscode.workspace.fs.readDirectory(directory);
       return entries.map(([name, type]) => ({ name, isDirectory: (type & vscode.FileType.Directory) !== 0 }));
     } catch {
-      // The host refuses a folder it lacks, which the file dialog takes as a folder Godot would refuse.
+      // A folder the host lacks or refuses, or one outside the workspace, is a folder Godot would refuse.
       return null;
     }
   }

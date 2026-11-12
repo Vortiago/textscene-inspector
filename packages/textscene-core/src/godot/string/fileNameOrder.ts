@@ -8,20 +8,15 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { simpleUpper } from './simpleUpper';
+
 const UNDERSCORE = 0x5f;
 const DOT = 0x2e;
 const ZERO = 0x30;
 
 const isDigit = (code: number) => code >= ZERO && code <= 0x39;
 
-/** `_find_upper`: the simple upper-case mapping, or the character itself where the mapping is not one code point. */
-function upperOf(code: number): number {
-  const upper = String.fromCodePoint(code).toUpperCase();
-  const mapped = upper.codePointAt(0)!;
-  return upper.length === String.fromCodePoint(mapped).length ? mapped : code;
-}
-
-/** A name as its code points, ended by 0 so a read past the end compares like Godot's terminator. */
+/** A name as its code points. A read past the end is `undefined`, which the comparisons take as Godot's terminator. */
 const codePointsOf = (name: string): number[] => [...name].map((c) => c.codePointAt(0)!);
 
 /** `natural_cmp_common`: two digit runs compared by value, leading zeros ignored (`ustring.cpp:507-546`). */
@@ -69,8 +64,8 @@ function naturalNoCaseCompare(a: number[], b: number[], start: number): number {
     } else if (isDigit(b[j]!)) {
       return 1;
     } else {
-      const upperA = upperOf(a[i]!);
-      const upperB = upperOf(b[j]!);
+      const upperA = simpleUpper(a[i]!);
+      const upperB = simpleUpper(b[j]!);
       if (upperA !== upperB) return upperA < upperB ? -1 : 1;
       i++;
       j++;

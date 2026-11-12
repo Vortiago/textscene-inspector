@@ -8,10 +8,9 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-const upper = (character: string): string => {
-  const mapped = character.toUpperCase();
-  return [...mapped].length === 1 ? mapped : character;
-};
+import { simpleUpper } from './simpleUpper';
+
+const upper = (character: string): number => simpleUpper(character.codePointAt(0)!);
 
 function matchesFrom(pattern: string[], at: number, text: string[], from: number): boolean {
   if (at === pattern.length) return from === text.length;

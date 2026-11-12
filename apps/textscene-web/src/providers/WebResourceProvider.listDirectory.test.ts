@@ -96,6 +96,17 @@ describe('WebResourceProvider listDirectory', () => {
     expect(await new WebResourceProvider().listDirectory('res://')).toBeNull();
   });
 
+  it('asks for the listing again after a server error, and keeps a later answer', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 503 }) as unknown as typeof fetch;
+    const flaky = new WebResourceProvider();
+    expect(await flaky.listDirectory('res://')).toBeNull();
+    global.fetch = answerWith(LISTING) as unknown as typeof fetch;
+    expect(await flaky.listDirectory('res://')).toEqual([
+      { name: 'sub', isDirectory: true },
+      { name: 'a.png', isDirectory: false },
+    ]);
+  });
+
   it('treats a refused fetch as no listing', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('offline')) as unknown as typeof fetch;
     expect(await new WebResourceProvider().listDirectory('res://')).toBeNull();

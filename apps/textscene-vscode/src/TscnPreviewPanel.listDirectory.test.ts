@@ -52,8 +52,10 @@ describe('TscnPreviewPanel listDirectory', () => {
     ]);
   });
 
-  it('refuses a folder that climbs out of the res:// root', async () => {
+  it('answers null for a folder that climbs out of the res:// root', async () => {
     const webview = await listFolder('res://..');
-    expect(answers(webview, 'resourceLoadError')).toHaveLength(1);
+    expect(answers(webview, 'directoryListed')).toEqual([
+      { type: 'directoryListed', requestId: 'list-1', entries: null },
+    ]);
   });
 });

@@ -114,7 +114,11 @@ export class WebResourceProvider implements ResourceProvider {
   }
 
   private fixtureListing(): Promise<FixtureListing | null> {
-    this.listingLookup ??= fetchFixtureListing();
+    // A failed fetch answers this call with no listing and is retried by the next, so a dropped network is not kept.
+    this.listingLookup ??= fetchFixtureListing().catch(() => {
+      this.listingLookup = null;
+      return null;
+    });
     return this.listingLookup;
   }
 
@@ -166,17 +170,13 @@ export class WebResourceProvider implements ResourceProvider {
   }
 }
 
-/** The mirror's listing, or null where the site serves none, as the public edition does not, or the fetch fails. */
+/** The mirror's listing, or null where the site serves none, as the public edition does not. A failed fetch or a 5xx rejects. */
 async function fetchFixtureListing(): Promise<FixtureListing | null> {
-  try {
-    const response = await fetch(FIXTURE_LISTING_URL);
-    // The static host answers an unknown path with the SPA's HTML fallback.
-    if (!response.ok || (response.headers.get('content-type') ?? '').includes('text/html')) return null;
-    return (await response.json()) as FixtureListing;
-  } catch {
-    // An offline or refusing host has no listing, which a FileDialog draws as an empty list.
-    return null;
-  }
+  const response = await fetch(FIXTURE_LISTING_URL);
+  if (response.status >= 500) throw new Error(`expected the fixture listing, got HTTP ${response.status}`);
+  // The static host answers an unknown path with the SPA's HTML fallback.
+  if (!response.ok || (response.headers.get('content-type') ?? '').includes('text/html')) return null;
+  return (await response.json()) as FixtureListing;
 }
 
 /**
