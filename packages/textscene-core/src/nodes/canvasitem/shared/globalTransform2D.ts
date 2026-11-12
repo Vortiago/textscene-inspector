@@ -1,10 +1,10 @@
 /**
  * Global `Transform2D` composition through Godot's canvas parent chain. The linter reads
  * it for the warnings that read `get_global_scale()`, `get_global_skew()` and
- * `is_conformal()` (`node_2d.cpp:353-362`, `:315-320`), and the cameras panel places a
- * Camera2D with it. It composes each Node2D's `position`, `rotation`, `scale` and `skew`
- * (`node_2d.cpp:499-503`), since Node2D's `transform` is `PROPERTY_USAGE_NONE`
- * (`node_2d.cpp:501`).
+ * `is_conformal()` (`node_2d.cpp:353-362`, `:315-320`), the cameras panel places a
+ * Camera2D with it, and the RemoteTransform pass composes through it. It composes each Node2D's
+ * `position`, `rotation`, `scale` and `skew` (`node_2d.cpp:499-503`), since Node2D's `transform` is
+ * `PROPERTY_USAGE_NONE` (`node_2d.cpp:501`), and each Control whose rect its offsets state alone.
  */
 
 import { climbAncestors, type ParentLookup } from '../../../linter/parentType.js';
@@ -49,13 +49,53 @@ export interface Node2DPose {
   readonly skew?: number;
 }
 
+/** The anchors that place the position. The right and bottom anchors only size the rect (`control.cpp:1760-1771`). */
+const POSITION_ANCHORS = ['anchor_left', 'anchor_top'] as const;
+const PIVOT_KEYS = ['pivot_offset', 'pivot_offset_ratio'] as const;
+const GROW_KEYS = ['grow_horizontal', 'grow_vertical'] as const;
+/** `Control::GROW_DIRECTION_END` (`control.h`): the left and top edge keep their place. */
+const GROW_DIRECTION_END = 1;
+
+/** Whether the raw property is absent or states the zero vector. */
+function isZeroVector2(raw: string | undefined): boolean {
+  const vector = readVector2Property(raw, { x: 0, y: 0 });
+  return vector !== null && vector.x === 0 && vector.y === 0;
+}
+
+/**
+ * The local `Transform2D` of a Control whose rect the file states alone, as
+ * `_update_canvas_item_transform` builds it (`control.cpp:719-737`): rotation and scale at the
+ * position, which is `offset_left` and `offset_top` where the anchors place nothing. A Node2D
+ * parent has an empty anchorable rect (`canvas_item.h:414`, `control.cpp:692-693`), so no anchor
+ * moves the position below it. Null where the transform needs a size or a parent rect the file
+ * does not state: a left or top anchor away from zero below a Control or no canvas item, a pivot,
+ * a grow direction that moves the left or top edge.
+ */
+function controlLocalTransform2D(node: RawNode, parent: RawNode | undefined): Transform2DColumns | null {
+  const props = node.rawProperties;
+  const parentHasRect = parent === undefined || !descendsFromClass(parent.type, 'Node2D');
+  if (parentHasRect && !POSITION_ANCHORS.every((key) => parseScalar(props[key], 0) === 0)) return null;
+  if (!PIVOT_KEYS.every((key) => isZeroVector2(props[key]))) return null;
+  if (!GROW_KEYS.every((key) => parseScalar(props[key], GROW_DIRECTION_END) === GROW_DIRECTION_END))
+    return null;
+  const scale = readVector2Property(props.scale, { x: 1, y: 1 });
+  if (scale === null) return null;
+  const position = { x: parseScalar(props.offset_left, 0), y: parseScalar(props.offset_top, 0) };
+  return transform2DFromParts(parseScalar(props.rotation, 0), scale, 0, position);
+}
+
 /**
  * A Node2D's own local `Transform2D`, built as `Node2D::_update_transform` builds it. An
  * absent key takes Node2D's field default (`node_2d.h`): position `(0, 0)`, rotation `0`,
  * scale `(1, 1)` and skew `0`, together the identity. Null for a vector that narrows to a number the
- * file does not state.
+ * file does not state. `parent` is the canvas item above the node, which a Control reads for its rect.
  */
-export function localTransform2D(node: RawNode, pose?: Node2DPose): Transform2DColumns | null {
+export function localTransform2D(
+  node: RawNode,
+  pose?: Node2DPose,
+  parent?: RawNode
+): Transform2DColumns | null {
+  if (descendsFromClass(node.type, 'Control')) return controlLocalTransform2D(node, parent);
   const props = node.rawProperties;
   const position = pose?.position ?? readVector2Property(props.position, { x: 0, y: 0 });
   const rotation = pose?.rotation ?? parseScalar(props.rotation, 0);
@@ -87,17 +127,21 @@ function canvasChain(node: RawNode, parentOf: (child: RawNode) => ParentLookup):
   const chain: RawNode[] = [node];
   if (isTopLevel(node)) return chain;
 
-  const search = climbAncestors<'terminus' | 'control'>(node, parentOf, (parent) => {
+  const search = climbAncestors<'terminus' | 'laidOut'>(node, parentOf, (parent) => {
+    // A Container sets the rect of the Control below it, which this does not solve.
+    if (
+      descendsFromClass(chain[chain.length - 1]!.type, 'Control') &&
+      descendsFromClass(parent.type, 'Container')
+    )
+      return 'laidOut';
     if (!descendsFromClass(parent.type, 'CanvasItem')) return 'terminus';
-    // A Control composes, but this decodes only a Node2D's discrete properties.
-    if (!descendsFromClass(parent.type, 'Node2D')) return 'control';
     chain.push(parent);
     return isTopLevel(parent) ? 'terminus' : undefined;
   });
   // An opaque ancestor's `top_level` and transform live in a scene this walk never
   // opens, and guessing identity would place the node wrong.
   if (search.kind === 'unknowable') return null;
-  if (search.kind === 'found' && search.value === 'control') return null;
+  if (search.kind === 'found' && search.value === 'laidOut') return null;
   return chain;
 }
 
@@ -117,7 +161,7 @@ export function resolveGlobalTransform2D(
 
   let composed = TRANSFORM2D_IDENTITY;
   for (let i = chain.length - 1; i >= 0; i--) {
-    const local = localTransform2D(chain[i]!, poses.get(chain[i]!));
+    const local = localTransform2D(chain[i]!, poses.get(chain[i]!), chain[i + 1]);
     if (local === null) return { kind: 'unknowable' };
     composed = multiplyTransform2D(composed, local);
   }

@@ -77,9 +77,15 @@ export function transform2DWithinPath(
   ancestorPath: string,
   nodeByPath: ReadonlyMap<string, TscnNode>
 ): Transform2DColumns {
-  const below = chainTo(path, nodeByPath).slice(ancestorPath.split('/').length);
-  return below.reduce(
-    (composed, node) => multiplyTransform2D(composed, localTransform2D(node) ?? TRANSFORM2D_IDENTITY),
-    TRANSFORM2D_IDENTITY
-  );
+  const chain = chainTo(path, nodeByPath);
+  return chain
+    .slice(ancestorPath.split('/').length)
+    .reduce(
+      (composed, node) =>
+        multiplyTransform2D(
+          composed,
+          localTransform2D(node, undefined, chain[chain.indexOf(node) - 1]) ?? TRANSFORM2D_IDENTITY
+        ),
+      TRANSFORM2D_IDENTITY
+    );
 }

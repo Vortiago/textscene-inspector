@@ -133,4 +133,50 @@ target_nodepath = NodePath("../Target")
     expect(held.position.x).toBeCloseTo(300, 2);
     expect(held.position.y).toBeCloseTo(350, 2);
   });
+
+  describe('below a Control whose rect the file states', () => {
+    const relayUnderPanel = `[gd_scene format=3]
+[node name="Root" type="Node2D"]
+[node name="Panel" type="Control" parent="."]
+offset_left = 100.0
+offset_top = 50.0
+[node name="Relay" type="RemoteTransform2D" parent="Panel"]
+position = Vector2(20, 10)
+remote_path = NodePath("../../Held")
+[node name="Held" type="Polygon2D" parent="."]
+`;
+
+    it('pushes the position the Control adds to its relay (control.cpp:719-737)', () => {
+      const patches = liveScenePassResults(liveNodePatches, liveTreeOfText(relayUnderPanel));
+
+      expect((patches.get('Root/Held') as { position: unknown }).position).toEqual({ x: 120, y: 60 });
+    });
+
+    it('solves a skeleton the Control carries', () => {
+      const carried = LOOK_AT_ARM.replace(
+        '[node name="Skeleton" type="Skeleton2D" parent="."]\nposition = Vector2(300, 150)',
+        '[node name="Panel" type="Control" parent="."]\noffset_left = 100.0\noffset_top = 50.0\n[node name="Skeleton" type="Skeleton2D" parent="Panel"]\nposition = Vector2(200, 100)'
+      )
+        .replaceAll('parent="Skeleton', 'parent="Panel/Skeleton')
+        .replace('NodePath("../../../Held")', 'NodePath("../../../../Held")')
+        .replace('NodePath("../Target")', 'NodePath("../../Target")');
+
+      const patches = liveScenePassResults(liveNodePatches, liveTreeOfText(carried));
+
+      const held = patches.get('Root/Held') as { position: { x: number; y: number } };
+      expect(held.position.x).toBeCloseTo(300, 2);
+      expect(held.position.y).toBeCloseTo(350, 2);
+    });
+
+    it('pushes nothing where the Control needs a size the file does not state (edge case)', () => {
+      const anchored = relayUnderPanel.replace(
+        'offset_top = 50.0',
+        'offset_top = 50.0\npivot_offset = Vector2(10, 10)'
+      );
+
+      const patches = liveScenePassResults(liveNodePatches, liveTreeOfText(anchored));
+
+      expect(patches.has('Root/Held')).toBe(false);
+    });
+  });
 });

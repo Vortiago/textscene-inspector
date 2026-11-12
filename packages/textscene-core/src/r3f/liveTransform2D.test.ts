@@ -30,11 +30,12 @@ describe('transform2DOnCanvas under a node it cannot decode', () => {
   const CONTROL = `[gd_scene format=3]
 [node name="Root" type="Node2D"]
 [node name="Panel" type="Control" parent="."]
+pivot_offset = Vector2(10, 10)
 [node name="Leaf" type="Node2D" parent="Panel"]
 position = Vector2(5, 0)
 `;
 
-  it('reads no transform below a Control (edge case)', () => {
+  it('reads no transform below a Control whose size the file does not state (edge case)', () => {
     const chain = nodesOnTheWayTo(liveTreeOfText(CONTROL), 'Root/Panel/Leaf', NO_PATCHES);
 
     expect(transform2DOnCanvas('Root/Panel/Leaf', chain)).toBeNull();
