@@ -26,13 +26,13 @@ const CURVES: readonly CurveCase[] = [
 ];
 
 describe.each(CURVES)('the $kind.name kind', (curve) => {
-  const [inScene, ...elsewhere] = originsOf(curve.kind.name, curve.body);
+  const { inScene, elsewhere } = originsOf(curve.kind.name, curve.body);
 
   it('decodes control points from a sub-resource of the scene', () => {
-    expect(loadedAt(curve.kind, inScene!)).toHaveLength(2);
+    expect(loadedAt(curve.kind, inScene)).toHaveLength(2);
   });
 
   it.each(elsewhere)('decodes the same points from $name', (origin) => {
-    expect(loadedAt(curve.kind, origin)).toEqual(loadedAt(curve.kind, inScene!));
+    expect(loadedAt(curve.kind, origin)).toEqual(loadedAt(curve.kind, inScene));
   });
 });

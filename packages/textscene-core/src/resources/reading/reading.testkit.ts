@@ -69,31 +69,36 @@ export interface Origin {
 
 /**
  * The three origins of one resource of `className` written as `body`: a `[sub_resource]` of the
- * scene, a `.tres` of its own, and a `[sub_resource]` of another `.tres`.
+ * scene, and `elsewhere` a `.tres` of its own and a `[sub_resource]` of another `.tres`.
  */
-export function originsOf(className: string, body: string): readonly Origin[] {
-  return [
-    {
+export function originsOf(
+  className: string,
+  body: string
+): { readonly inScene: Origin; readonly elsewhere: readonly Origin[] } {
+  return {
+    inScene: {
       name: 'a sub-resource of the scene',
       ref: 'SubResource("r")',
       scene: `[sub_resource type="${className}" id="r"]\n${body}`,
       files: {},
     },
-    {
-      name: 'a .tres of its own',
-      ref: 'ExtResource("1_r")',
-      scene: `[ext_resource type="${className}" path="res://own.tres" id="1_r"]`,
-      files: { 'res://own.tres': `[gd_resource type="${className}" format=3]\n\n[resource]\n${body}\n` },
-    },
-    {
-      name: 'a sub-resource of another .tres',
-      ref: 'res://holder.tres::r',
-      scene: '',
-      files: {
-        'res://holder.tres': `[gd_resource type="Resource" format=3]\n\n[sub_resource type="${className}" id="r"]\n${body}\n\n[resource]\n`,
+    elsewhere: [
+      {
+        name: 'a .tres of its own',
+        ref: 'ExtResource("1_r")',
+        scene: `[ext_resource type="${className}" path="res://own.tres" id="1_r"]`,
+        files: { 'res://own.tres': `[gd_resource type="${className}" format=3]\n\n[resource]\n${body}\n` },
       },
-    },
-  ];
+      {
+        name: 'a sub-resource of another .tres',
+        ref: 'res://holder.tres::r',
+        scene: '',
+        files: {
+          'res://holder.tres': `[gd_resource type="Resource" format=3]\n\n[sub_resource type="${className}" id="r"]\n${body}\n\n[resource]\n`,
+        },
+      },
+    ],
+  };
 }
 
 /** The value `kind` loads at `ref` in a scene written as `sceneText`. Throws unless the read loads. */

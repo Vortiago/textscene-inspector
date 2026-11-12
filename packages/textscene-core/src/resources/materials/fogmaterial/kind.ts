@@ -22,9 +22,10 @@ export const FOG_VOLUME_MATERIAL: ResourceKind<FogVolumeMaterial> = {
         densityTexture: densityTexture === undefined ? null : follow.reference(densityTexture),
       };
     }
-    const shader = properties['shader'];
+    const { shader } = properties;
+    if (shader === undefined) return { kind: 'default' };
     return follow.read(SHADER_MODE, shader).value === ShaderMode.FOG
-      ? { kind: 'shader', shader: shader! }
+      ? { kind: 'shader', shader }
       : { kind: 'default' };
   },
 };

@@ -6,7 +6,7 @@ import { nodeReference } from '../../reading/scopedReference';
 import { loadedAt, loadedValue, originsOf, sceneTables } from '../../reading/reading.testkit';
 import { FOG_VOLUME_MATERIAL } from './kind';
 
-const [inScene, ...elsewhere] = originsOf('FogMaterial', 'density = -2.0');
+const { inScene, elsewhere } = originsOf('FogMaterial', 'density = -2.0');
 
 const SHADER_MATERIAL = `[gd_resource type="ShaderMaterial" format=3]
 
@@ -18,7 +18,7 @@ shader = ExtResource("1")
 
 describe('the FOG_VOLUME_MATERIAL kind', () => {
   it('decodes the density of a FogMaterial of the scene', () => {
-    expect(loadedAt(FOG_VOLUME_MATERIAL, inScene!)).toMatchObject({
+    expect(loadedAt(FOG_VOLUME_MATERIAL, inScene)).toMatchObject({
       kind: 'material',
       material: { density: -2 },
     });

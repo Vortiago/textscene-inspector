@@ -10,7 +10,7 @@ import { NodeAabb } from '../../../r3f/components/NodeAabb';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodeResource } from '../../../resources/reading';
 import { Node3D } from '../../base/node3d/Component';
-import { OCCLUDER_3D } from './decodeOccluder';
+import { OCCLUDER_3D } from './kind';
 import type { OccluderInstance3DProperties } from './types';
 
 export function OccluderInstance3D({ node, children }: NodeComponentProps) {

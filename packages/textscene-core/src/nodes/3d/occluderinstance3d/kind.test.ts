@@ -2,17 +2,17 @@
 
 import { describe, expect, it } from 'vitest';
 import { loadedAt, originsOf } from '../../../resources/reading/reading.testkit';
-import { OCCLUDER_3D } from './decodeOccluder';
+import { OCCLUDER_3D } from './kind';
 
-const [inScene, ...elsewhere] = originsOf('BoxOccluder3D', 'size = Vector3(2, 3, 4)');
+const { inScene, elsewhere } = originsOf('BoxOccluder3D', 'size = Vector3(2, 3, 4)');
 
 describe('the OCCLUDER_3D kind', () => {
   it('decodes a box occluder of the scene', () => {
-    expect(loadedAt(OCCLUDER_3D, inScene!)).toEqual({ kind: 'box', size: { x: 2, y: 3, z: 4 } });
+    expect(loadedAt(OCCLUDER_3D, inScene)).toEqual({ kind: 'box', size: { x: 2, y: 3, z: 4 } });
   });
 
   it.each(elsewhere)('decodes the same occluder from $name', (origin) => {
-    expect(loadedAt(OCCLUDER_3D, origin)).toEqual(loadedAt(OCCLUDER_3D, inScene!));
+    expect(loadedAt(OCCLUDER_3D, origin)).toEqual(loadedAt(OCCLUDER_3D, inScene));
   });
 
   it.each(['BoxOccluder3D', 'QuadOccluder3D', 'SphereOccluder3D', 'PolygonOccluder3D', 'ArrayOccluder3D'])(

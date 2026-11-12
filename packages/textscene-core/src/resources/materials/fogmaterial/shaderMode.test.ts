@@ -6,11 +6,11 @@ import { loadedAt, loadedValue, originsOf } from '../../reading/reading.testkit'
 import { SHADER_MODE } from './shaderMode';
 
 const FOG_CODE = 'code = "shader_type fog;\\nvoid fog() {}"';
-const [inScene, ...elsewhere] = originsOf('Shader', FOG_CODE);
+const { inScene, elsewhere } = originsOf('Shader', FOG_CODE);
 
 describe('the SHADER_MODE kind', () => {
   it('reads the mode of the code of a Shader of the scene', () => {
-    expect(loadedAt(SHADER_MODE, inScene!)).toBe(ShaderMode.FOG);
+    expect(loadedAt(SHADER_MODE, inScene)).toBe(ShaderMode.FOG);
   });
 
   it.each(elsewhere)('reads the same mode from $name', (origin) => {
@@ -24,8 +24,8 @@ describe('the SHADER_MODE kind', () => {
   });
 
   it('reads a Shader with no code as spatial', () => {
-    const [empty] = originsOf('Shader', '');
-    expect(loadedAt(SHADER_MODE, empty!)).toBe(ShaderMode.SPATIAL);
+    const { inScene: empty } = originsOf('Shader', '');
+    expect(loadedAt(SHADER_MODE, empty)).toBe(ShaderMode.SPATIAL);
   });
 
   it.each([
@@ -33,8 +33,8 @@ describe('the SHADER_MODE kind', () => {
     ['mode = 99', ShaderMode.SPATIAL],
     ['', ShaderMode.SPATIAL],
   ])('reads a VisualShader with %j as %j', (body, mode) => {
-    const [visual] = originsOf('VisualShader', body);
-    expect(loadedAt(SHADER_MODE, visual!)).toBe(mode);
+    const { inScene: visual } = originsOf('VisualShader', body);
+    expect(loadedAt(SHADER_MODE, visual)).toBe(mode);
   });
 
   it('refuses a class that is no Shader', () => {

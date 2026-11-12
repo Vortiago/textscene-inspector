@@ -17,7 +17,7 @@ import { useConvexDebugLines } from '../../shared/useConvexDebugLines';
 interface ShapeCastGizmoProps {
   /** The effective `target_position`, Godot's default when unauthored. */
   target: Vector3;
-  /** The resolved shape resource, or null while it is absent or still loading. */
+  /** The shape resource, or null while it is absent, still loading, or no Shape3D. */
   shape: Shape3DResource | null;
   /** The authored `debug_shape_custom_color`, undefined when unauthored. */
   customColor?: Rgba;

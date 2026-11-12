@@ -18,15 +18,15 @@ const SHAPE_CLASSES = [
   'ConvexPolygonShape3D',
 ];
 
-const [inScene, ...elsewhere] = originsOf('BoxShape3D', 'size = Vector3(3, 4, 5)');
+const { inScene, elsewhere } = originsOf('BoxShape3D', 'size = Vector3(3, 4, 5)');
 
 describe('the SHAPE_3D kind', () => {
   it('decodes the class and the properties of a shape of the scene', () => {
-    expect(loadedAt(SHAPE_3D, inScene!)).toEqual({ type: 'BoxShape3D', data: { size: 'Vector3(3, 4, 5)' } });
+    expect(loadedAt(SHAPE_3D, inScene)).toEqual({ type: 'BoxShape3D', data: { size: 'Vector3(3, 4, 5)' } });
   });
 
   it.each(elsewhere)('decodes the same shape from $name', (origin) => {
-    expect(loadedAt(SHAPE_3D, origin)).toEqual(loadedAt(SHAPE_3D, inScene!));
+    expect(loadedAt(SHAPE_3D, origin)).toEqual(loadedAt(SHAPE_3D, inScene));
   });
 
   it.each(SHAPE_CLASSES)('accepts %s', (className) => {

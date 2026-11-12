@@ -17,8 +17,6 @@ export interface FogMaterialData {
   heightFalloff: number;
   /** The exponent of the fade from the shape's edge towards its middle. */
   edgeFade: number;
-  /** The `density_texture` reference as written, or null. */
-  densityTexture: string | null;
 }
 
 /**
