@@ -17,7 +17,6 @@ import {
   isCanvasLayerType,
   canvasLayerRanks,
   hostsOwnCanvas,
-  isControlType,
   WHOLE_CANVAS_RANGE,
   ysortsChildren,
 } from './canvasPaintOrder.js';
@@ -313,7 +312,7 @@ function PlainNode({
   // Each child gets its own run of draw-sequence values in Godot's walk order:
   // `show_behind_parent` children before this node, the rest after it. A run
   // covers the child's whole subtree, so nothing reaches a sibling's sequence.
-  const sortsChildren = ysortsChildren(node) && isControlType(node.type);
+  const sortsChildren = ysortsChildren(node);
   const inlineChildren = sortsChildren
     ? []
     : node.children.map((child, i) => (
@@ -331,8 +330,8 @@ function PlainNode({
     children.push(<NodeEditorIcon key="__icon" node={node} registration={editorIcon} />);
   }
   if (node.children.length > 0) {
-    // No component of a Control sorts its children, so the world walk does for a `y_sort_enabled`
-    // one, as `CanvasItem` does for any node (`canvas_item.cpp:706-709`).
+    // The world walk sorts the children of any `y_sort_enabled` item, as `CanvasItem` does
+    // (`canvas_item.cpp:706-709`). A TileMap or TileMapLayer sorts its own rows with them instead.
     children.push(
       <Fragment key="__inline">{sortsChildren ? <YSortDispatcher node={node} /> : inlineChildren}</Fragment>
     );

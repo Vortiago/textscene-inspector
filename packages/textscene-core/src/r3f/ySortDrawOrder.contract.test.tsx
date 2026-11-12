@@ -85,6 +85,23 @@ ${poly('Low', 'Floor', -100)}
     expect(z.get('High')!).toBeGreaterThan(z.get('Low')!);
   });
 
+  it('a y_sort_enabled Polygon2D sorts its children, as `canvas_item.cpp:706-709` does for any CanvasItem', async () => {
+    // Measured with `pnpm ref:diff` on Godot 4.6.3: a y-sorted Polygon2D root draws its high-Y child in front.
+    const z = await paintOrderByName(`[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Floor" type="Polygon2D" parent="."]
+y_sort_enabled = true
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+
+${poly('High', 'Floor', 100)}
+
+${poly('Low', 'Floor', -100)}
+`);
+    expect(z.get('High')!).toBeGreaterThan(z.get('Low')!);
+  });
+
   it('GUARDRAIL: a non-y_sort container is a single unit — its children keep tree order, not Y order', async () => {
     // `Deco` is not y_sort_enabled: inside it, tree order wins regardless of Y.
     const z = await paintOrderByName(`[gd_scene format=3]

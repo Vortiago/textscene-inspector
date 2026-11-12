@@ -5,7 +5,7 @@
  * (`ySortRows`), each interleaving with sibling CanvasItems.
  */
 
-import { memo, useId, useLayoutEffect, useMemo, type ReactNode } from 'react';
+import { memo, useId, useLayoutEffect, useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import type { TileSetModel } from '../resources/tileset/types.js';
 import { ySortRows } from '../resources/tileset/tileYSort.js';
@@ -46,8 +46,8 @@ import {
   type YSortShift,
 } from './contexts/ControlYSortContext.js';
 
-/** Performs the y-sort pass on a y_sort_enabled Node2D's or TileMapLayer's children. */
-export function YSortDispatcher({ node, children: _children }: { node: TscnNode; children?: ReactNode }) {
+/** Performs the y-sort pass on the children of a y_sort_enabled CanvasItem, and a TileMapLayer's rows. */
+export function YSortDispatcher({ node }: { node: TscnNode }) {
   const path = useNodePath() ?? node.name;
   const patches = useLiveDrawnPatchesBelow(path);
   // A sort reads the Controls below it only, so a Control moving under another sort leaves its memo alone.
