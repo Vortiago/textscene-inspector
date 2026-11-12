@@ -770,6 +770,14 @@ _Avoid_: "instance alpha", "instance transparency".
 Godot's sorted, blended draw of a surface after the opaque pass. A material's alpha mode, or a **fade alpha** below 0.999, sends a surface there.
 _Avoid_: "transparent pass".
 
+**Instance material** (`useInstanceDraw` in `r3f/visibilityRange/geometryInstance.tsx`):
+The `material_override` or the `material_overlay` of a **geometry instance**. The override draws every surface in place of that surface's own material. The overlay draws every surface one more time. The base resolves both and hands them to its leaf.
+_Avoid_: "node material", "global material".
+
+**Extra draw** (`r3f/materials/extraDraw.ts`, `passOrder.ts`):
+A draw of a surface beside its own: a `next_pass` link or the overlay **instance material**. It shares the surface's geometry, casts nothing, and in the **alpha pass** it draws before the surface it covers, as Godot sorts the two.
+_Avoid_: "second pass", "overlay pass".
+
 **Resource event bus** / `useResource`:
 The async resource pipeline: a component calls `useResource(path, type)`, the host `ResourceLoader` fetches, and a `loaded` or `missing` event resolves the hook.
 _Avoid_: "asset loader".

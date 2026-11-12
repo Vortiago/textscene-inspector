@@ -10,7 +10,7 @@ import type * as THREE from 'three';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
+import { InstancePasses } from '../../../r3f/materials/InstancePasses';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useUndrawnMeshReport } from '../../../r3f/contexts/UndrawnMeshesContext';
 import { EmptyShapeBranch, useReportEmptyShape } from '../../../r3f/contexts/EmptyShapesContext';
@@ -23,7 +23,7 @@ import { CsgRootMesh } from '../../../r3f/csg/CsgRootMesh';
 import { resolveMaterialSource } from '../../../r3f/materials/materialSource';
 import { useCsgGeometryContext } from '../../../r3f/csg/useCsgGeometryContext';
 import { FramePoint } from '../../../r3f/components/NodeAabb';
-import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
+import { useGeometryInstance, useInstanceDraw } from '../../../r3f/visibilityRange/geometryInstance';
 import { livePlacement } from '../../../r3f/visibilityRange/placements';
 import { useLivePatchesBelow } from '../../../r3f/liveNodePatches';
 import type { CSGShape3DProperties } from './types';
@@ -167,7 +167,8 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const nodeRef = useRef<THREE.Group | null>(null);
   const drawnRef = useRef<THREE.Mesh | null>(null);
   const placement = useMemo(() => livePlacement(nodeRef, drawnRef), []);
-  const shadow = useGeometryInstance(placement);
+  useGeometryInstance(placement);
+  const { shadow } = useInstanceDraw();
 
   const transform = { ref: nodeRef, name: node.name, ...node3dGroupSpread(nodeTransform) } as const;
 
@@ -199,7 +200,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
       userData={visualLayersUserData(properties.layers)}
     >
       {geometry}
-      <SurfaceMaterialSlots sources={materialSources} />
+      <InstancePasses meshRef={drawnRef} sources={materialSources} />
     </mesh>
   );
 

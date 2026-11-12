@@ -23,13 +23,9 @@ import { usePathResolution } from '../../../resources/useSubOrExtResource';
 import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
 import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
 import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/useOneSurfaceStartingMaterial';
-import {
-  NextPassChain,
-  nextPassRenderOrder,
-  type ChainDrawFactory,
-  type ChainDrawSpec,
-} from '../../../r3f/materials/nextPass';
+import { NextPassChain, type ChainDrawFactory, type ChainDrawSpec } from '../../../r3f/materials/nextPass';
 import { NO_RAYCAST } from '../../../r3f/materials/materialOverlay';
+import { nextPassRenderOrder, orderByPass } from '../../../r3f/materials/passOrder';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
 import type { Transform3D } from '../../../godot/math/transform3d';
 import type { GridMapProperties } from './types';
@@ -293,6 +289,7 @@ function ChainBatchedTiles({ spec, matrices }: { spec: ChainDrawSpec; matrices: 
   const meshRef = useRef<THREE.InstancedMesh>(null);
   // Every arg is a dependency: a changed arg rebuilds the mesh with identity instance matrices.
   useLayoutEffect(() => writeInstanceMatrices(meshRef.current, matrices), [matrices, spec.geometry]);
+  useLayoutEffect(() => orderByPass(meshRef.current));
   return (
     <instancedMesh
       key={matrices.length}
@@ -324,6 +321,7 @@ function ChainCellPoints({ spec, cellPoints }: { spec: ChainDrawSpec; cellPoints
   useLayoutEffect(() => {
     if (pointsRef.current) Object.assign(pointsRef.current, { boundingBox, boundingSphere });
   }, [boundingBox, boundingSphere]);
+  useLayoutEffect(() => orderByPass(pointsRef.current));
   return (
     <points
       ref={pointsRef}

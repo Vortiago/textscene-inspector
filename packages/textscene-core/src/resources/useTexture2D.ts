@@ -18,7 +18,13 @@ import {
 } from './SubResourceResolver.js';
 import { isLocalToScene } from './textures/viewporttexture/localToScene.js';
 import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfiguredViewportTexture.js';
-import { atlasTextureSize } from './textures/atlastexture/decode.js';
+import {
+  atlasCellRect,
+  atlasRegionInCell,
+  atlasTextureLayout,
+  atlasTextureSize,
+} from './textures/atlastexture/decode.js';
+import type { Rect2 } from '../godot/math/rect2.js';
 import { imageSize, type ImageSize } from './formats/image/imagePixels.js';
 import {
   resolveAtlasTextureRef,
@@ -65,6 +71,25 @@ export interface Texture2DResult {
   hasNoImage?: true;
   /** The CanvasTexture the slot names, directly or in its resource file. */
   canvasTexture?: CanvasTextureSlot;
+  /** For an AtlasTexture, where `texture`, the cut cell, lies in its atlas. */
+  atlasCell?: AtlasCell;
+}
+
+/**
+ * A cut cell in its atlas, for a reader that draws as Godot's 3D sprite does: the region alone,
+ * sampled from the atlas with the UVs of the atlas (`sprite_3d.cpp:100-150`).
+ */
+export interface AtlasCell extends AtlasCellRects {
+  /** The atlas itself, uncut. */
+  sheet: THREE.Texture;
+}
+
+interface AtlasCellRects {
+  sheetSize: ImageSize;
+  /** The cell in atlas pixels, margin and all. It can reach past the atlas. */
+  cell: Rect2;
+  /** The rectangle of the cell, in its pixels, that the region fills. */
+  region: Rect2;
 }
 
 /** A CanvasTexture and the resource tables its texture references resolve in. */
@@ -107,7 +132,27 @@ export function useTexture2D(
   // draws nothing and is no resource error.
   const texture = atlas ? cropped : slot.result.texture;
   const size = useReportedSize(texture, atlas, slot.result);
-  return { ...slot.result, texture, size, canvasTexture: slot.canvasTexture };
+  const sheet = slot.result.texture;
+  const cellRects = useByValue(texture && atlas ? atlasCellRects(atlas, sheet) : undefined, sameData);
+  const atlasCell = useMemo(() => sheet && cellRects && { ...cellRects, sheet }, [sheet, cellRects]);
+  return {
+    ...slot.result,
+    texture,
+    size,
+    canvasTexture: slot.canvasTexture,
+    ...(atlasCell && { atlasCell }),
+  };
+}
+
+/** Where the cell `atlas` cuts lies in `sheet`'s image. Undefined for a cell that draws nothing. */
+function atlasCellRects(
+  atlas: AtlasTextureReference,
+  sheet: THREE.Texture | null | undefined
+): AtlasCellRects | undefined {
+  const sheetSize = imageSize(sheet?.image);
+  const layout = sheetSize && atlasTextureLayout(atlas.texture, sheetSize);
+  if (!layout) return undefined;
+  return { sheetSize, cell: atlasCellRect(layout), region: atlasRegionInCell(layout) };
 }
 
 /**

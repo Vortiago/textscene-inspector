@@ -8,14 +8,15 @@ import { manualCameraAt, renderScene } from '../testing/renderScene';
 import { drawsColour } from '../testing/threePasses';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 import { NO_VISIBILITY_RANGE, type VisibilityRange } from '../../godot/rendering/visibilityRange';
-import { useGeometryInstance, withGeometryInstance } from './geometryInstance';
+import { useGeometryInstance, useInstanceDraw, withGeometryInstance } from './geometryInstance';
 import { boxPlacement } from './placements';
 
 /** A drawer that places its instance at its mesh, a unit box 5 units along +Z, drawn through its hooks. */
 function BoxDrawer({ children }: NodeComponentProps) {
   const meshRef = useRef<THREE.Mesh | null>(null);
   const placement = useMemo(() => boxPlacement(meshRef, UNIT_BOX), []);
-  const shadow = useGeometryInstance(placement);
+  useGeometryInstance(placement);
+  const { shadow } = useInstanceDraw();
   return (
     <mesh
       ref={meshRef}

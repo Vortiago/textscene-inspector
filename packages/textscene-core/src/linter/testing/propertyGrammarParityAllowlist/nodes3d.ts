@@ -281,10 +281,10 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'The CSG base has no parser; the collision keys drive physics only, and calculate_tangents = false changes normal-mapped shading the previewer does not reproduce.',
   },
 
-  // A transform-only slice whose parser reads only the instance state every
-  // drawn leaf shares, its visibility range and custom_aabb included, so one entry
-  // covers every leaf. Each leaf's parser reads the materials it draws. The rest
-  // tune baking, culling and draw order.
+  // A transform-only slice whose parser reads the instance state every drawn
+  // leaf shares, its visibility range, custom_aabb, material_override and
+  // material_overlay included, so one entry covers every leaf. The rest tune
+  // baking, culling and draw order.
   GeometryInstance3D: {
     linterOnly: [
       'gi_mode',
@@ -292,8 +292,6 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'lod_bias',
       'extra_cull_margin',
       'ignore_occlusion_culling',
-      'material_override',
-      'material_overlay',
       'sorting_offset',
       'sorting_use_aabb_center',
       // visual_instance_3d.cpp:301-364: CanvasItem's InstanceUniforms class on
@@ -302,6 +300,6 @@ export const nodes3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'instance_shader_parameters/*',
     ],
     reason:
-      'The geometry base parser reads only the instance state its drawn leaves share; each leaf parser reads the materials it renders, the bake/cull/draw-order settings are a static preview cannot honour, and instance_shader_parameters has no ShaderMaterial rendering surface to land on at all.',
+      'The geometry base parser reads only the instance state its drawn leaves share, the bake, cull and draw-order settings are ones a static preview cannot honour, and instance_shader_parameters has no ShaderMaterial rendering surface to land on.',
   },
 };

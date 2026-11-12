@@ -11,7 +11,7 @@ import type { TscnInternalResource } from '../../../../parser/types';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { instanceAs } from '../../testing/reactThreeTestInstance';
 import { registeredComponent } from '../../../../r3f/testing/registeredComponent';
-import { nextPassRenderOrder } from '../../../../r3f/materials/nextPass';
+import { nextPassRenderOrder } from '../../../../r3f/materials/passOrder';
 import { BOX, ROW_OF_FOUR, emitterNode } from './cpuparticles3d.testkit';
 import './index.r3f';
 

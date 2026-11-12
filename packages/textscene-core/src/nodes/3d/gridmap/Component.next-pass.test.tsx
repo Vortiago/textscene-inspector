@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { drawnMaterials, renderInstancedTiles } from './testing/gridMapCorpus';
-import { nextPassRenderOrder } from '../../../r3f/materials/nextPass';
+import { nextPassRenderOrder } from '../../../r3f/materials/passOrder';
 
 const LINKED_TILE = {
   subResources: '[sub_resource type="StandardMaterial3D" id="Link"]\nalbedo_color = Color(0, 0, 1, 1)\n\n',

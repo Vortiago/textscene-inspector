@@ -47,11 +47,11 @@ export function ParticleEmitter({ properties, nodeRef, emissionTransform }: Part
   const meshAabb = useMeshAabb(properties.mesh, pools);
   const ownAabb = useMemo(() => particlesAabb(properties, rows, meshAabb), [properties, rows, meshAabb]);
   const placement = useMemo(() => boxPlacement(nodeRef, ownAabb), [nodeRef, ownAabb]);
-  const shadow = useGeometryInstance(placement);
+  useGeometryInstance(placement);
 
   // Godot draws no instance while the emitter is off (`cpu_particles_3d.cpp:1338`).
   if (!settled.state) return null;
-  return <ParticleMesh properties={properties} buffer={buffer} shadow={shadow} />;
+  return <ParticleMesh mesh={properties.mesh} buffer={buffer} />;
 }
 
 /**

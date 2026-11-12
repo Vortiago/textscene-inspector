@@ -4,15 +4,16 @@
  * default font is not MSDF (`servers/text/text_server.cpp:2386`, read by `scene/theme/theme_db.cpp:59`),
  * and a distance field cannot reach as far as the FreeType outline.
  */
-import { useMemo, type RefObject } from 'react';
+import { useMemo, type ReactNode, type RefObject } from 'react';
 import * as THREE from 'three';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
-import { TextRun } from '../../../r3f/controls/native/text/TextRun';
+import { TextRun, type TextRunProps } from '../../../r3f/controls/native/text/TextRun';
 import { NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { materialFor2d } from '../../../r3f/materialFor2d';
 import { usePendingWhile } from '../../../resources/usePendingWhile';
-import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
+import { useGeometryInstance, useInstanceDraw } from '../../../r3f/visibilityRange/geometryInstance';
+import { InstancePasses } from '../../../r3f/materials/InstancePasses';
 import { authoredPlacement, UNPLACED } from '../../../r3f/visibilityRange/placements';
 import { labelBillboardAabb } from '../../../godot/scene/billboard';
 import { breakLabel3DLines, justifyLabel3DLines, label3DAabb, layoutLabel3DLines } from './glyphLayout';
@@ -27,10 +28,12 @@ import { AlphaCutMode } from '../../../godot/rendering/materials/alphaCut';
 export interface LabelGlyphsProps {
   /** The label's node group, whose parent places it for the scene cull. */
   nodeRef: RefObject<THREE.Object3D | null>;
+  /** `nodeRef` while the glyph material's billboard or `fixed_size` moves it (`useOwnMaterialPose`). */
+  posedRef?: RefObject<THREE.Object3D | null>;
   properties: Label3DProperties;
 }
 
-export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
+export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyphsProps) {
   // `label_3d.cpp:610`. The outline is a second, stroked run drawn first. Both runs
   // are `TRANSPARENCY_ALPHA` (`label_3d.cpp:386`) on one cached shader (`:396`),
   // `blend_mix, depth_draw_opaque` (`material.cpp:775-812`), sorted ascending by
@@ -120,7 +123,12 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     properties.transform,
     properties.billboard,
   ]);
-  const shadow = useGeometryInstance(placement);
+  useGeometryInstance(placement);
+  const { shadow, override, overlay } = useInstanceDraw();
+  const isOverridden = override !== undefined;
+  // An instance material fills the mesh Godot holds, one quad for each glyph (`label_3d.cpp:417-420`),
+  // where the glyph material draws the raster of the line.
+  const glyphQuads: TextRunProps['glyphQuads'] = isOverridden ? 'base' : overlay ? 'extraDraws' : undefined;
 
   // Not memoised: `TextRun` keys its material off the blend's fields, not its identity, so a fresh
   // equal-valued one rebuilds nothing.
@@ -151,22 +159,41 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
     mipmapped,
     fallbackMipmaps: font?.fallbackMipmaps,
     blends,
-    shadow: { ...shadow, castShadow: shadow.castShadow && joinsShadowPass },
+    glyphQuads,
+    // The material that draws decides the shadow pass: an override's own draw hooks answer for it.
+    shadow: { ...shadow, castShadow: shadow.castShadow && (joinsShadowPass || isOverridden) },
     layers: properties.layers,
     shading,
+    // An override is lit as its own material says, which its program decides.
+    receiveShadow: shading !== undefined || isOverridden,
   };
 
   // `label_3d.cpp:401-405`: only an ALPHA_CUT_DISABLED surface is sorted by its
-  // material's render priority. Any other mode bakes `priority * pixel_size` into
-  // the vertex Z (`:417-420`), and in Godot px inside `Component.tsx`'s
-  // `pixel_size` group the shift is the bare priority.
-  const sortedByPriority = properties.alpha_cut === AlphaCutMode.DISABLED;
-  const surface = (priority: number) => ({
-    renderOrder: sortedByPriority ? priority : 0,
-    zShiftPx: sortedByPriority ? 0 : priority,
+  // material's render priority, which an override replaces with its own. Any other mode
+  // bakes `priority * pixel_size` into the vertex Z (`:417-420`), and in Godot px inside
+  // `Component.tsx`'s `pixel_size` group the shift is the bare priority.
+  const bakesPriority = properties.alpha_cut !== AlphaCutMode.DISABLED;
+  const sortsByPriority = !bakesPriority && !isOverridden;
+  const surface = (priority: number, laterSurfaces: number) => ({
+    renderOrder: sortsByPriority ? priority : 0,
+    zShiftPx: bakesPriority ? priority : 0,
+    instancePasses: (
+      meshRef: RefObject<THREE.Mesh | null>,
+      ownMaterial: ReactNode,
+      glyphGeometry: THREE.BufferGeometry | undefined
+    ) => (
+      <InstancePasses
+        meshRef={meshRef}
+        posedRef={posedRef}
+        laterSurfaces={laterSurfaces}
+        ownMaterial={ownMaterial}
+        overlayGeometry={glyphGeometry}
+      />
+    ),
   });
-  const outlineSurface = surface(properties.outline_render_priority);
-  const fillSurface = surface(properties.render_priority);
+  // The outline is the mesh's first surface and the fill its second (`label_3d.cpp:610-615`).
+  const outlineSurface = surface(properties.outline_render_priority, 1);
+  const fillSurface = surface(properties.render_priority, 0);
 
   // Nothing renders while the font or its outlines load, or for outlines that cannot be read: no
   // glyph draws against the wrong face.
@@ -190,6 +217,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                   tint={properties.outline_modulate}
                   strokeWidthPx={strokeWidthPx}
                   renderOrder={outlineSurface.renderOrder}
+                  instancePasses={outlineSurface.instancePasses}
                   {...surfaceProps}
                   frameExcluded
                 />
@@ -201,6 +229,7 @@ export default function LabelGlyphs({ nodeRef, properties }: LabelGlyphsProps) {
                 fontSizePx={properties.font_size}
                 tint={properties.modulate}
                 renderOrder={fillSurface.renderOrder}
+                instancePasses={fillSurface.instancePasses}
                 {...surfaceProps}
                 frameExcluded
               />

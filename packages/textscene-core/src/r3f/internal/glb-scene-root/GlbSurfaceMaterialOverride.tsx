@@ -1,8 +1,8 @@
 /**
- * `surface_material_override/0` on a mesh inside a loaded GLB. Not in the pure, synchronous
- * `applyGlbNodeOverrides`: its material may load asynchronously, which React handles
- * declaratively. The override material's own `next_pass` chain links build through the
- * imperative adapter, each mounted as a sibling draw beside each replaced surface.
+ * The materials an override node sets on a mesh inside a loaded GLB: `material_override` or
+ * `surface_material_override/N` in its slots, and `material_overlay` beside them. A material may
+ * load late, so React mounts each one. The target is a cloned object with no element, so each
+ * `next_pass` link and the overlay mount by hand as a sibling draw (ADR-0039).
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -13,21 +13,45 @@ import { surfaceSlotsUnder, type SurfaceSlot } from '../../../resources/formats/
 import { GLTF_SURFACE } from '../../materials/surfaceTextures.js';
 import { useSurfaceMaterial } from '../../materials/useSurfaceMaterial.js';
 import { materialSourceKey, resolveNextPass, type MaterialSource } from '../../materials/materialSource.js';
-import { nextPassRenderOrder, visitedWith } from '../../materials/nextPass.js';
+import { NOTHING_DRAWN, visitedWith } from '../../materials/nextPass.js';
 import { NO_RAYCAST } from '../../materials/materialOverlay.js';
+import { OVERLAY_ORDINAL_PAST_CHAINS, nextPassRenderOrder, orderByPass } from '../../materials/passOrder.js';
 import { OTHER_DRAWS_SURFACE } from '../../materials/useOneSurfaceStartingMaterial.js';
 
 import { registerFadedCopyBuilders, unfadedMaterial } from '../../materials/fadedMeshMaterials.js';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease.js';
 import { setVisualLayers, visualLayersOf } from '../../visualLayers.js';
 
+/**
+ * The sibling draws `useGlbChainMount` holds in a GLB clone. Written only there: added with the
+ * mount, deleted with its release.
+ */
+const extraDraws = new WeakSet<THREE.Object3D>();
+
+/**
+ * The slots of the GLB's own surfaces under `target`. A mesh of several primitives is a Group, so
+ * an extra draw beside a primitive sits under `target` too, and it is no surface of the mesh.
+ */
+function ownSurfaceSlotsUnder(target: THREE.Object3D): SurfaceSlot[] {
+  return surfaceSlotsUnder(target).filter((slot) => !extraDraws.has(slot.holder));
+}
+
+/**
+ * Whether a surface takes the override. `surfaceIndex` counts the mesh's primitives in the glTF's
+ * order, which is the surface order of the mesh Godot imports.
+ */
+export type SurfaceFilter = (current: THREE.Material, surfaceIndex: number) => boolean;
+
 interface GlbSurfaceMaterialOverrideProps {
   /** The GLB-internal object whose surface materials are being replaced. */
   target: THREE.Object3D;
   /** Where the override material lives, already resolved. */
   source: MaterialSource;
-  /** Which surface materials under `target` it replaces. Every one by default. Stable identity. */
-  replaces?: (current: THREE.Material) => boolean;
+  /**
+   * Which surfaces under `target` it replaces, by the surface's material and its index in the
+   * mesh. Every one by default. Stable identity.
+   */
+  replaces?: SurfaceFilter;
 }
 
 /**
@@ -68,6 +92,37 @@ export function GlbSurfaceMaterialOverride({
 }
 
 /**
+ * `material_overlay` on a mesh inside a loaded GLB: one more draw of every holder under `target`,
+ * beside it, with the overlay's own `next_pass` chain after it
+ * (`render_forward_clustered.cpp:4228-4241`). One material over a grouped geometry draws every
+ * surface, so each holder takes one draw whatever its surface count.
+ */
+export function GlbMaterialOverlay({ target, source }: { target: THREE.Object3D; source: MaterialSource }) {
+  const everyHolder = useMemo(
+    () => ownSurfaceSlotsUnder(target).filter(isFirstOfHolder).map(asOneSurface),
+    [target]
+  );
+  return (
+    <GlbNextPassLink
+      covered={everyHolder}
+      source={source}
+      ordinal={OVERLAY_ORDINAL_PAST_CHAINS}
+      visited={NOTHING_DRAWN}
+      isOverlay
+    />
+  );
+}
+
+function isFirstOfHolder(slot: SurfaceSlot): boolean {
+  return slot.index === 0;
+}
+
+/** The slot as the only surface of its holder, so a chain draw over it takes one material. */
+function asOneSurface(slot: SurfaceSlot): SurfaceSlot {
+  return { ...slot, count: 1 };
+}
+
+/**
  * One link of the override material's `next_pass` chain, built through the same
  * `useSurfaceMaterial` load on the glTF surface. A stencil-reading link draws nothing
  * here, which requests no stencil buffer, and the walk continues past it; a link whose
@@ -78,12 +133,15 @@ function GlbNextPassLink({
   source,
   ordinal,
   visited,
+  isOverlay = false,
 }: {
   /** The slots the override's swap covered, or null while it covered none. */
   covered: readonly SurfaceSlot[] | null;
   source: MaterialSource | undefined;
   ordinal: number;
   visited: ReadonlySet<string>;
+  /** The overlay itself, which draws whatever it reads, as its React draw does. Only a link is skipped. */
+  isOverlay?: boolean;
 }) {
   const { isAbsent, bags, material: resource, scalars } = useSurfaceMaterial(source, GLTF_SURFACE);
   const link = useMemo(() => {
@@ -104,7 +162,8 @@ function GlbNextPassLink({
   // for a still-loading pass, a cut one and a stencil-reading one, all of which leave
   // the tree as it was while the walk continues past them.
   const cut = source !== undefined && visited.has(materialSourceKey(source));
-  useGlbChainMount(cut ? null : covered, scalars?.readsStencil === true ? null : link, ordinal);
+  const isSkipped = scalars?.readsStencil === true && !isOverlay;
+  useGlbChainMount(cut ? null : covered, isSkipped ? null : link, ordinal);
   if (cut) return null;
   if (nextSource === undefined) return null;
   return (
@@ -136,15 +195,21 @@ function useGlbChainMount(
       // instances, and a glTF's points or line primitives carry materials their own class
       // draws, which a plain Mesh sibling would not draw.
       const mesh = chainSibling(holder, chainMaterial(holder instanceof THREE.Mesh ? count : 1, index, link));
+      if (!mesh) continue;
       mesh.renderOrder = nextPassRenderOrder(ordinal);
+      orderByPass(mesh);
       mesh.raycast = NO_RAYCAST;
       mesh.receiveShadow = true;
       // Beside the holder, so the link draws where the surface draws.
       holder.parent?.add(mesh);
+      extraDraws.add(mesh);
       added.push(mesh);
     }
     return () => {
-      for (const mesh of added) mesh.parent?.remove(mesh);
+      for (const mesh of added) {
+        mesh.parent?.remove(mesh);
+        extraDraws.delete(mesh);
+      }
     };
   }, [covered, link, ordinal]);
 }
@@ -164,9 +229,13 @@ function chainMaterial(
 /**
  * The sibling draw over a surface slot's holder, where the holder draws: its transform,
  * skinning, instances, culling, visual layers and per-surface draw hooks ride along, so
- * the link lands, deforms, culls and is seen where the surface draws.
+ * the link lands, deforms, culls and is seen where the surface draws. Null for a class this mount
+ * does not mirror, which takes no extra draw.
  */
-function chainSibling(holder: THREE.Object3D, materials: THREE.Material | THREE.Material[]): THREE.Object3D {
+function chainSibling(
+  holder: THREE.Object3D,
+  materials: THREE.Material | THREE.Material[]
+): THREE.Object3D | null {
   let sibling: THREE.Object3D;
   if (holder instanceof THREE.SkinnedMesh) {
     // The skinned branch binds the surface's skinning, so the link deforms as the surface does.
@@ -193,8 +262,7 @@ function chainSibling(holder: THREE.Object3D, materials: THREE.Material | THREE.
   } else if (holder instanceof THREE.Mesh) {
     sibling = new THREE.Mesh(holder.geometry, materials);
   } else {
-    // A class this mount does not mirror drew nothing for the base either.
-    return holder;
+    return null;
   }
   sibling.position.copy(holder.position);
   sibling.quaternion.copy(holder.quaternion);
@@ -222,7 +290,7 @@ function chainSibling(holder: THREE.Object3D, materials: THREE.Material | THREE.
 function useGlbMaterialSwap(
   target: THREE.Object3D,
   material: THREE.Material | null,
-  replaces: (current: THREE.Material) => boolean
+  replaces: SurfaceFilter
 ): readonly SurfaceSlot[] | null {
   const [covered, setCovered] = useState<readonly SurfaceSlot[] | null>(null);
   useEffect(() => {
@@ -233,11 +301,11 @@ function useGlbMaterialSwap(
 
     const restore: Array<() => void> = [];
     const taken: SurfaceSlot[] = [];
-    for (const slot of surfaceSlotsUnder(target)) {
+    for (const [surfaceIndex, slot] of ownSurfaceSlotsUnder(target).entries()) {
       const held = slot.read();
       if (held === undefined) continue;
       const current = unfadedMaterial(held);
-      if (!replaces(current)) continue;
+      if (!replaces(current, surfaceIndex)) continue;
       slot.assign(material);
       restore.push(() => {
         const now = slot.read();
