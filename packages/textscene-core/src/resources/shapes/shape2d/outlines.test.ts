@@ -3,7 +3,7 @@
  * its bottom cap the bottom semicircle, so the outline never self-intersects.
  */
 import { describe, expect, it } from 'vitest';
-import { capsulePoints, circlePoints, rectanglePoints } from './collisionOutlines';
+import { capsulePoints, circlePoints, rectanglePoints } from './outlines';
 
 describe('rectanglePoints', () => {
   it('centres the corners on the origin, clockwise on screen from the top-left', () => {

@@ -7,12 +7,11 @@
 import { useMemo } from 'react';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node2D } from '../../base/node2d/Component';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
+import { useNodeResource } from '../../../resources/reading';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { canvasItemFacing } from '../../../r3f/canvasItemFacing';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
-import { decodeNavigationPolygon } from '../../../resources/navigation/navigationpolygon';
+import { NAVIGATION_POLYGON } from '../../../resources/navigation/navigationpolygon';
 import {
   buildNavFaceGeometry,
   buildNavEdgeGeometry,
@@ -31,15 +30,11 @@ const NAV_FACES_MATERIAL = materialProgramInputs({
 
 export function NavigationRegion2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as NavigationRegion2DProperties;
-  const sceneResources = useSceneResources();
   const { showNavigation } = useViewportMode();
 
-  // A NavigationPolygon is as often an inline `[sub_resource]` as a `.tres`, so
-  // both forms resolve.
-  const resource = useSubOrExtResource(properties.navigationPolygon, sceneResources)?.resource;
+  const { value: polygon } = useNodeResource(properties.navigationPolygon, NAVIGATION_POLYGON);
 
   const overlay = useMemo(() => {
-    const polygon = resource ? decodeNavigationPolygon(resource.data) : null;
     if (!polygon) return null;
     // Godot 2D vertices are +Y down; the lift to 3D positions negates Y.
     const positions = vector2ToPositions(polygon.vertices);
@@ -47,7 +42,7 @@ export function NavigationRegion2D({ node, children }: NodeComponentProps) {
       faces: buildNavFaceGeometry(positions, polygon.polygons),
       edges: buildNavEdgeGeometry(positions, polygon.polygons),
     };
-  }, [resource]);
+  }, [polygon]);
 
   // R3F does not dispose a geometry passed through `attach`, and these are per
   // component, so dispose them on rebuild and unmount.
