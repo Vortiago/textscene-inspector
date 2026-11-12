@@ -4,7 +4,7 @@ import { enumNamesByValue } from '../classdb/enumNames.js';
 import { stripEdges } from '../string/string.js';
 
 /** `FileDialog::FileMode` (`scene/gui/file_dialog.h:119-125`). */
-const FileMode = {
+export const FileMode = {
   OPEN_FILE: 0,
   OPEN_FILES: 1,
   OPEN_DIR: 2,
@@ -112,6 +112,14 @@ export const FILE_DIALOG_THEME_ICONS = [
 ] as const;
 
 export type FileDialogThemeIcon = (typeof FILE_DIALOG_THEME_ICONS)[number];
+
+/** The `FileDialog` theme icons its file list draws for a folder and a file, in list and in thumbnail mode (`file_dialog.cpp:933-940,1016-1040`). */
+export const FILE_DIALOG_LIST_ICONS = ['folder', 'file', 'folder_thumbnail', 'file_thumbnail'] as const;
+
+export type FileDialogListIcon = (typeof FILE_DIALOG_LIST_ICONS)[number];
+
+/** `thumbnail_size`, the edge of a thumbnail before the theme scale (`default_theme.cpp:697`, `file_dialog.cpp:820`). */
+export const FILE_DIALOG_THUMBNAIL_SIZE = 64;
 
 /** The size of every FileDialog icon (`scene/theme/icons/`, 16x16). */
 export const FILE_DIALOG_ICON_SIZE: Readonly<{ x: number; y: number }> = { x: 16, y: 16 };

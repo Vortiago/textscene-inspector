@@ -126,6 +126,10 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/windows/acceptdialog/dialogLayout.ts` | `scene/gui/dialogs.cpp` (`AcceptDialog::_update_child_rects`, `_get_contents_minimum_size`) |
 | `packages/textscene-core/src/nodes/windows/acceptdialog/dialogParts.ts` | `scene/gui/dialogs.cpp` (`AcceptDialog::AcceptDialog`'s internal Label, Button row and panel, `_update_theme_item_cache`) |
 | `packages/textscene-core/src/nodes/windows/filedialog/body.ts` | `scene/gui/file_dialog.cpp` (`FileDialog::FileDialog`'s Control tree, `update_customization`, `_update_option_controls`) |
+| `packages/textscene-core/src/nodes/windows/filedialog/fileList.ts` | `scene/gui/file_dialog.cpp` (`FileDialog::update_file_list`: the folders then files, the hidden names, the first filter and the selected row) |
+| `packages/textscene-core/src/godot/string/fileNameOrder.ts` | `core/string/ustring.cpp` (`String::filenocasecmp_to`) |
+| `packages/textscene-core/src/godot/string/wildcard.ts` | `core/string/ustring.cpp` (`String::matchn`) |
+| `packages/textscene-core/src/godot/string/simpleUpper.ts` | `core/string/ustring.cpp` (`_find_upper`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/fitChildInRect.ts` | `scene/gui/container.cpp` (`Container::fit_child_in_rect`) and `scene/gui/control.h` (the `SizeFlags` bitmask, `Container::as_sortable_control`'s visibility test) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/boxContainerSolver.ts` | `scene/gui/box_container.cpp` (`BoxContainer::_resort`, `BoxContainer::get_minimum_size`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/splitContainerSolver.ts` | `scene/gui/split_container.cpp` (`SplitContainer::_update_default_dragger_positions`, `_update_dragger_positions`, `_get_valid_range`, `_get_separation`, `_resort`, `get_minimum_size`, `SplitContainerDragger::_notification`'s `NOTIFICATION_DRAW` icon-draw condition) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |

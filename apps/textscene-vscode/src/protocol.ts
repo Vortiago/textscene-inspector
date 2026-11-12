@@ -28,6 +28,13 @@ export type ResourceLoadErrorMessage = {
   error: string;
 };
 
+/** The answer to a webview `listDirectory`: the folder's entries, or null when the workspace has no such folder. */
+export type DirectoryListedMessage = {
+  type: 'directoryListed';
+  requestId: string;
+  entries: { name: string; isDirectory: boolean }[] | null;
+};
+
 /**
  * A watched dependency (texture, `.tres`, sub-scene) changed on disk. The webview
  * drops its cache for `path` and re-fetches it, since the main scene is unchanged.
@@ -67,6 +74,7 @@ export type HostToWebviewMessage =
   | LoadTscnMessage
   | ResourceLoadedMessage
   | ResourceLoadErrorMessage
+  | DirectoryListedMessage
   | ResourceChangedMessage
   | CapturePreviewMessage
   | CapturePingMessage
@@ -132,6 +140,13 @@ export type LoadResourceMessage = {
   requestId: string;
 };
 
+/** Ask the host to list a `res://` folder, which has no trailing slash (`res://` is the root). */
+export type ListDirectoryMessage = {
+  type: 'listDirectory';
+  folder: string;
+  requestId: string;
+};
+
 export type LogLevel = 'trace' | 'debug' | 'info' | 'warn' | 'error';
 
 /** Forward a webview log line to the host output channel. */
@@ -188,6 +203,7 @@ export type WebviewToHostMessage =
   | JumpToNodeMessage
   | CopyNodePathMessage
   | LoadResourceMessage
+  | ListDirectoryMessage
   | LogMessage
   | PreviewCapturedMessage
   | PreviewCaptureErrorMessage

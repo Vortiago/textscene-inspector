@@ -7,8 +7,10 @@
 import * as vscode from 'vscode';
 import { resourceContent } from '@textscene/core/resources/resourceProviderUtils';
 import { info, error } from '@textscene/core/logger';
+import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
 import {
+  forwardSlashes,
   isSamePath,
   isWithinRoot,
   pathKey,
@@ -60,11 +62,39 @@ export class VSCodeResourceProvider implements ResourceProvider {
   }
 
   /**
+   * The entries of the `res://` folder `folder`, or null when the workspace has no such folder. A link to a folder is
+   * a folder.
+   */
+  async listDirectory(folder: string): Promise<DirectoryEntry[] | null> {
+    try {
+      const directory = await this.resolve(folder);
+      const entries = await vscode.workspace.fs.readDirectory(directory);
+      return entries.map(([name, type]) => ({ name, isDirectory: (type & vscode.FileType.Directory) !== 0 }));
+    } catch {
+      // A folder the host lacks or refuses, or one outside the workspace, is a folder Godot would refuse.
+      return null;
+    }
+  }
+
+  /**
    * The exact `res://` string `loadResource` served for this fsPath, or `null` when never served, so there is nothing
    * to invalidate. A lookup with no IO, not a re-derivation, so on a case-insensitive host it ignores a watcher's case.
    */
   getServedResPath(fileUri: vscode.Uri): string | null {
     return this.servedResources.get(pathKey(fileUri.fsPath, HOST_PATH_CASE)) ?? null;
+  }
+
+  /**
+   * The `res://` path of `fileUri`, or null when it lies outside the scene's `res://` root, or the scene lies outside the
+   * workspace so no root exists. For a file the preview never loaded, whose creation or removal still edits a folder listing.
+   */
+  async resPathOf(fileUri: vscode.Uri): Promise<string | null> {
+    const root = await this.resRoot().catch(() => null);
+    if (root === null) return null;
+    const rootPath = forwardSlashes(root.fsPath);
+    const filePath = forwardSlashes(fileUri.fsPath);
+    if (filePath === rootPath || !isWithinRoot(rootPath, filePath, HOST_PATH_CASE)) return null;
+    return `${RES_SCHEME}${filePath.slice(rootPath.length).replace(/^\//, '')}`;
   }
 
   /** Every `res://` path `loadResource` served, for a caller that must re-fetch them all. */

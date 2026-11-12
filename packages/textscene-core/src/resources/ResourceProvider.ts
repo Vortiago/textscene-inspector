@@ -1,5 +1,7 @@
 /** How a host loads an external resource: filesystem, HTTP or upload. */
 
+import type { DirectoryEntry } from './projectListing.js';
+
 export interface ResourceProvider {
   /**
    * @param path - Godot resource path, such as "res://scenes/player.tscn"
@@ -23,4 +25,9 @@ export interface ResourceProvider {
    * @param extension - The extension without its dot, such as "gdextension"
    */
   listFiles?(extension: string): Promise<readonly string[] | null>;
+  /**
+   * The entries of the `res://` folder `folder`, which has no trailing slash (`res://` is the root), or null when the host has
+   * no such folder. A provider without it cannot list, and a FileDialog then draws an empty file list.
+   */
+  listDirectory?(folder: string): Promise<readonly DirectoryEntry[] | null>;
 }

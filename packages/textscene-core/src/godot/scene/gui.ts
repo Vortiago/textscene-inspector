@@ -74,7 +74,7 @@ export const ScrollContainerScrollHintMode = {
 export const SCROLL_CONTAINER_SCROLL_HINT_MODE_NAMES = enumNamesByValue(ScrollContainerScrollHintMode);
 
 /** `ItemList::SelectMode` (`item_list.h:48-50`), in declaration order. */
-const ItemListSelectMode = {
+export const ItemListSelectMode = {
   SELECT_SINGLE: 0,
   SELECT_MULTI: 1,
   SELECT_TOGGLE: 2,

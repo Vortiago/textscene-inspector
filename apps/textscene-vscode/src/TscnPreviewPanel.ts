@@ -20,6 +20,9 @@ import { PreviewCaptureQueue, type PreviewCapture } from './previewCaptureQueue'
 export { dispatchWebviewMessage } from './webviewDispatch';
 export type { WebviewMessageHandlers } from './webviewDispatch';
 
+/** What a watcher saw happen to a file. */
+export type FileChange = 'changed' | 'created' | 'deleted';
+
 export class TscnPreviewPanel {
   public static readonly viewType = 'tscnPreview';
 
@@ -136,6 +139,9 @@ export class TscnPreviewPanel {
       loadResource: (msg) => {
         void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId, msg.maxBytes);
       },
+      listDirectory: (msg) => {
+        void this._handleListDirectory(msg.folder, msg.requestId);
+      },
       log: (msg) => {
         relayWebviewLog(msg.level, msg.message, msg.args);
       },
@@ -231,10 +237,11 @@ export class TscnPreviewPanel {
   /**
    * Tells the webview to re-fetch a watched dependency that changed on disk, since
    * the unchanged scene text makes `_loadTscnContent` no-op. A path missing from
-   * the served-resources map was never requested, so it has nothing to invalidate.
+   * the served-resources map was never requested, so an edit has nothing to invalidate;
+   * a created or deleted file still changes the listing of the folders above it.
    * A `project.godot` that moves the `res://` root re-fetches every served path.
    */
-  public async handleDependencyChange(fileUri: vscode.Uri): Promise<void> {
+  public async handleDependencyChange(fileUri: vscode.Uri, change: FileChange = 'changed'): Promise<void> {
     // A webview that is not ready yet loads everything fresh on mount.
     if (!this._webviewReady) {
       return;
@@ -247,7 +254,9 @@ export class TscnPreviewPanel {
       this._reloadUnderMovedRoot(provider);
       return;
     }
-    const resPath = provider.getServedResPath(fileUri);
+    // A file that appeared or went away edits a folder listing, even one never read as a resource. An edit cannot.
+    const resPath =
+      provider.getServedResPath(fileUri) ?? (change === 'changed' ? null : await provider.resPathOf(fileUri));
     if (resPath) {
       this.invalidateResource(resPath);
     }
@@ -390,6 +399,23 @@ export class TscnPreviewPanel {
         requestId,
         ...payload,
       });
+    } catch (error) {
+      this._postMessageToWebview({
+        type: 'resourceLoadError',
+        requestId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  private async _handleListDirectory(folder: string, requestId: string): Promise<void> {
+    try {
+      const provider = this._getResourceProvider();
+      if (!provider) {
+        throw new Error('No workspace folder found');
+      }
+      const entries = await provider.listDirectory(folder);
+      this._postMessageToWebview({ type: 'directoryListed', requestId, entries });
     } catch (error) {
       this._postMessageToWebview({
         type: 'resourceLoadError',

@@ -55,4 +55,26 @@ describe('<DialogChrome>', () => {
     expect(geometry.buttons.map((button) => button.role)).toEqual(['cancel', 'ok']);
     for (const button of geometry.buttons) expect(groups).toContainEqual([button.rect.x, -button.rect.y]);
   });
+
+  it('lays the buttons out again when the same dialog gets a longer OK text', async () => {
+    const withText = (okText: string) => {
+      const window = dialog('AcceptDialog');
+      const properties = { ...(window.node.properties as object), ok_button_text: okText };
+      return { ...window, node: { ...window.node, properties } as unknown as TscnNode };
+    };
+    const element = (window: ReturnType<typeof dialog>) => (
+      <DialogChrome
+        {...painterEnv()}
+        measureText={measureText}
+        solveNode={window}
+        rect={{ x: 0, y: 0, w: 640, h: 360 }}
+        renderOrder={0}
+      />
+    );
+    const renderer = await ReactThreeTestRenderer.create(element(withText('OK')));
+    const groupXs = () => renderer.scene.findAllByType('Group').map((group) => group.instance.position.x);
+    const before = groupXs();
+    await renderer.update(element(withText('Select This Folder')));
+    expect(groupXs()).not.toEqual(before);
+  });
 });

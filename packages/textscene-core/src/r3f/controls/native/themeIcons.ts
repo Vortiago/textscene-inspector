@@ -5,7 +5,7 @@
  * (`default_theme_icons_builders.py`). Licence: Godot Engine, MIT, see THIRD-PARTY-NOTICES.md.
  */
 
-import type { FileDialogThemeIcon } from '../../../godot/scene/fileDialog';
+import type { FileDialogListIcon, FileDialogThemeIcon } from '../../../godot/scene/fileDialog';
 
 export function svgDataUrl(base64: string): string {
   return `data:image/svg+xml;base64,${base64}`;
@@ -519,4 +519,28 @@ export const FILE_DIALOG_ICON_URLS: Readonly<Record<FileDialogThemeIcon, string>
   sort: svgDataUrl(FILE_DIALOG_SORT_B64),
   favorite_up: svgDataUrl(FILE_DIALOG_FAVORITE_UP_B64),
   favorite_down: svgDataUrl(FILE_DIALOG_FAVORITE_DOWN_B64),
+};
+
+/** `scene/theme/icons/folder.svg` (16x16), bound as `FileDialog/folder` (`default_theme.cpp:709`). */
+const FILE_DIALOG_FOLDER_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTIgMmExIDEgMCAwIDAtMSAxdjEwYTEgMSAwIDAgMCAxIDFoMTJhMSAxIDAgMCAwIDEtMVY2YTEgMSAwIDAgMC0xLTFoLTRhMSAxIDAgMCAxLTEtMVYzYTEgMSAwIDAgMC0xLTF6Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/file.svg` (16x16), bound as `FileDialog/file` (`default_theme.cpp:710`). */
+const FILE_DIALOG_FILE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTIgMXYxNGgxMlY2SDlWMXptOCAwdjRoNHoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/folder_thumbnail.svg` (64x64), bound as `FileDialog/folder_thumbnail` (`default_theme.cpp:718`). */
+const FILE_DIALOG_FOLDER_THUMBNAIL_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0iTTEyIDEwYTQgNCAwIDAgMC00IDR2MzZhNCA0IDAgMCAwIDQgNGg0MGE0IDQgMCAwIDAgNC00VjIyYTQgNCAwIDAgMC00LTRIMzZsLTItNGMtMS0yLTItNC00LTR6Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/file_thumbnail.svg` (64x64), bound as `FileDialog/file_thumbnail` (`default_theme.cpp:717`). */
+const FILE_DIALOG_FILE_THUMBNAIL_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHBhdGggZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuNiIgZD0iTTE0IDVhNCA0IDAgMCAwLTQgNHY0NmE0IDQgMCAwIDAgNCA0aDM2YTQgNCAwIDAgMCA0LTRWMjJhMSAxIDAgMCAwLS4yOS0uNzA3bC0xNi0xNmExIDEgMCAwIDAtLjcwNy0uMjlWNUgxNHptMCAyaDIydjEyYTQgNCAwIDAgMCA0IDRoMTJ2MzJhMiAyIDAgMCAxLTIgMkgxNGEyIDIgMCAwIDEtMi0yVjlhMiAyIDAgMCAxIDItMnoiLz48L3N2Zz4K';
+
+/** The vendored default of each icon the file list draws for a folder or a file (`file_dialog.cpp:933-940,1016-1040`). */
+export const FILE_DIALOG_LIST_ICON_URLS: Readonly<Record<FileDialogListIcon, string>> = {
+  folder: svgDataUrl(FILE_DIALOG_FOLDER_B64),
+  file: svgDataUrl(FILE_DIALOG_FILE_B64),
+  folder_thumbnail: svgDataUrl(FILE_DIALOG_FOLDER_THUMBNAIL_B64),
+  file_thumbnail: svgDataUrl(FILE_DIALOG_FILE_THUMBNAIL_B64),
 };

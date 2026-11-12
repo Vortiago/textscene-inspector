@@ -20,6 +20,7 @@ import { FILE_DIALOG_THEME_ICONS } from '../../../godot/scene/fileDialog';
 import { fileDialogBody, fileDialogTextureSlots } from './body';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { parseFileDialog } from './parser';
+import type { ItemListRuntimeProperties } from '../../2d/ui/itemlist/types';
 
 const THEME = nativeTheme(1);
 const EMBEDDER = { x: 1152, y: 648 };
@@ -136,7 +137,7 @@ function oracleBody(rows: readonly OracleRow[]): OracleRow[] {
   return rows.slice(start, end);
 }
 
-/** The oracle's res:// holds this file, which an unfiltered dialog puts in the File field. The previewer's file list is empty. */
+/** The oracle's res:// holds this file, which an unfiltered dialog puts in the File field. The previewer lists no file in that scene. */
 const ORACLE_LISTED_FILE = 'main.tscn';
 
 const rectOf = (rect: number[]) => ({ x: rect[0], y: rect[1], w: rect[2], h: rect[3] });
@@ -317,5 +318,116 @@ describe('FileDialog synthetic drawing', () => {
   it('selects the file name before its dot', () => {
     const field = bodyControl({ ...CASES.open!, current_file: '"a.png"' }, 'FilenameEdit');
     expect(field.syntheticDraw?.selection).toEqual({ begin: 0, end: 1 });
+  });
+});
+
+describe('FileDialog file list', () => {
+  const ROWS = [
+    { name: 'Alpha', isDirectory: true, isDisabled: false },
+    { name: 'a.png', isDirectory: false, isDisabled: false },
+    { name: 'b.png', isDirectory: false, isDisabled: true },
+  ];
+  const fileList = (lines: Record<string, string>, extra: Record<string, unknown> = {}) => {
+    const dialog = fileDialog(lines);
+    const props = { ...(dialog.node.properties as object), file_rows: ROWS, selected_row: 1, ...extra };
+    const found = (node: SolveNode): SolveNode | undefined =>
+      node.node.name === 'FileList' ? node : node.children.map(found).find(Boolean);
+    return found(
+      fileDialogBody({ ...dialog, node: { ...dialog.node, properties: props } as TscnNode }, THEME)
+    )!;
+  };
+  const listProps = (list: SolveNode) => list.node.properties as ItemListRuntimeProperties;
+
+  it('holds one item for each row, with the row named by selected_row selected', () => {
+    const items = listProps(fileList(CASES.open!)).items;
+    expect(items.map(({ text, isSelected }) => [text, isSelected === true])).toEqual([
+      ['Alpha', false],
+      ['a.png', true],
+      ['b.png', false],
+    ]);
+    expect(listProps(fileList(CASES.open!)).itemCount).toBe(3);
+  });
+
+  it('disables the rows the dialog disables', () => {
+    expect(listProps(fileList(CASES.open!)).items.map(({ disabled }) => disabled === true)).toEqual([
+      false,
+      false,
+      true,
+    ]);
+  });
+
+  it('gives a folder and a file their list icons in the list mode', () => {
+    const items = listProps(fileList({ ...CASES.open!, display_mode: '1' })).items;
+    expect(items.map(({ themedIcon }) => themedIcon?.name)).toEqual(['folder', 'file', 'file']);
+  });
+
+  it('gives them their thumbnail icons in the thumbnail mode', () => {
+    const items = listProps(fileList(CASES.open!)).items;
+    expect(items.map(({ themedIcon }) => themedIcon?.name)).toEqual([
+      'folder_thumbnail',
+      'file_thumbnail',
+      'file_thumbnail',
+    ]);
+  });
+
+  it('lists in one column of 16 px icons in the list mode (file_dialog.cpp:933-940)', () => {
+    const { iconMode, maxColumns, maxTextLines, fixedColumnWidth, fixedIconSize } = listProps(
+      fileList({ ...CASES.open!, display_mode: '1' })
+    );
+    expect({ iconMode, maxColumns, maxTextLines, fixedColumnWidth, fixedIconSize }).toEqual({
+      iconMode: 1,
+      maxColumns: 1,
+      maxTextLines: 1,
+      fixedColumnWidth: 0,
+      fixedIconSize: { x: 16, y: 16 },
+    });
+  });
+
+  it('lists in columns of 96 px with 64 px icons in the thumbnail mode (file_dialog.cpp:1016-1040)', () => {
+    const { iconMode, maxColumns, maxTextLines, fixedColumnWidth, fixedIconSize } = listProps(
+      fileList(CASES.open!)
+    );
+    expect({ iconMode, maxColumns, maxTextLines, fixedColumnWidth, fixedIconSize }).toEqual({
+      iconMode: 0,
+      maxColumns: 0,
+      maxTextLines: 2,
+      fixedColumnWidth: 96,
+      fixedIconSize: { x: 64, y: 64 },
+    });
+  });
+
+  it('selects several rows in the open-files mode only (file_dialog.cpp:1403-1407)', () => {
+    expect(listProps(fileList({ ...CASES.open_files! })).selectMode).toBe(1);
+    expect(listProps(fileList(CASES.open!)).selectMode).toBe(0);
+  });
+
+  it('makes the selected row the current row', () => {
+    const items = listProps(fileList(CASES.open!)).items;
+    expect(items.map(({ isCurrent }) => isCurrent === true)).toEqual([false, true, false]);
+  });
+
+  it('tints a folder with folder_icon_color and a file with file_icon_color', () => {
+    const red = { r: 1, g: 0, b: 0, a: 1 };
+    const green = { r: 0, g: 1, b: 0, a: 1 };
+    const dialog = fileDialog(CASES.open!);
+    const themed = { ...dialog, colors: { folder_icon_color: red, file_icon_color: green } };
+    const props = { ...(dialog.node.properties as object), file_rows: ROWS, selected_row: null };
+    const body = fileDialogBody(
+      { ...themed, node: { ...dialog.node, properties: props } as TscnNode },
+      THEME
+    );
+    const list = (function find(node: SolveNode): SolveNode | undefined {
+      return node.node.name === 'FileList' ? node : node.children.map(find).find(Boolean);
+    })(body)!;
+    expect(listProps(list).items.map(({ iconModulate }) => iconModulate)).toEqual([red, green, green]);
+  });
+
+  it('requests a slot for each list icon the Theme gives', () => {
+    const themedIcon = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
+    const requests = fileDialogTextureSlots(fileDialog(CASES.open!).node, {
+      folder: themedIcon,
+      file: themedIcon,
+    });
+    expect(requests.map(({ key }) => key)).toEqual(['folder', 'file']);
   });
 });

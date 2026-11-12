@@ -601,6 +601,26 @@ export const CANVAS_2D_SCENES = [
   { name: 'file-dialog-options', file: 'file-dialog-options/unit-file-dialog-options.tscn', mode: '2d' },
   // current_path puts the dialog in a sub folder and a file name in the File field, its name before the dot selected. Max 26, mean 0.22 (SVG icon edges).
   { name: 'file-dialog-current-path', file: 'file-dialog-current-path/unit-file-dialog-current-path.tscn', mode: '2d' },
+  // The dialog lists res:// in thumbnail mode: three folders, then the PNG files in natural order, the first folder selected. Max 34, mean 0.23 (SVG icon edges).
+  { name: 'file-dialog-listing', file: 'file-dialog-listing/unit-file-dialog-listing.tscn', mode: '2d' },
+  // display_mode = 1 lists res:// in one column of 16 px icons. Max 26, mean 0.22 (SVG icon edges).
+  {
+    name: 'file-dialog-listing-list-mode',
+    file: 'file-dialog-listing/unit-file-dialog-listing-list-mode.tscn',
+    mode: '2d',
+  },
+  // current_file names a file, which the list selects instead of the first row. Max 34, mean 0.23 (SVG icon edges).
+  {
+    name: 'file-dialog-listing-current-file',
+    file: 'file-dialog-listing/unit-file-dialog-listing-current-file.tscn',
+    mode: '2d',
+  },
+  // A root_subfolder that does not exist is kept as a string and ignored: the dialog lists res://. Max 34, mean 0.23 (SVG icon edges).
+  {
+    name: 'file-dialog-listing-missing-subfolder',
+    file: 'file-dialog-listing/unit-file-dialog-listing-missing-subfolder.tscn',
+    mode: '2d',
+  },
   // MeshInstance2D draws a mesh through the canvas. Godot 4.6.3 `--mode 2d` probes: the textured QuadMesh
   // shows its texture upside down, (75,75) blue and (75,125) red, and the PlaneMesh at (100,300) draws
   // nothing. The ArrayMesh quad with colours reads (241,0,14) at (355,55) and (126,0,129) at its centre.

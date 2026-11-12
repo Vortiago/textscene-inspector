@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseFileDialog } from './parser';
+import { parseFileDialog, replayLocation } from './parser';
 
 const heading = { type: 'node', attributes: { name: 'Dialog', type: 'FileDialog' } };
 const location = (lines: Record<string, string> = {}) => parseFileDialog(heading, lines);
@@ -156,5 +156,66 @@ describe('FileDialog current_dir with dot parts (measured in Godot 4.6.3, dir_ac
   it('takes a root_subfolder with dot parts as the folder they resolve to', () => {
     const lines = { root_subfolder: '"sub/../other"', current_dir: '"res://other/deep"' };
     expect(location(lines).path_text).toBe('deep');
+  });
+});
+
+/** The folders of `testing/fileListOracle`, which Godot 4.6.3 listed for the cases below. */
+const ORACLE_FOLDERS = new Set([
+  'res://',
+  'res://Alpha',
+  'res://beta',
+  'res://Gamma folder',
+  'res://.hidden-dir',
+  'res://_underscore-dir',
+  'res://d1',
+  'res://d2',
+  'res://d10',
+]);
+
+const placed = (lines: Record<string, string>) =>
+  replayLocation(lines, 'Dialog', (folder) => ORACLE_FOLDERS.has(folder));
+
+describe('FileDialog with a folder listing (fileListOracle, Godot 4.6.3)', () => {
+  it.each([
+    ['root_subfolder', { root_subfolder: '"Alpha"' }, '', 'res://Alpha'],
+    ['nested_root_subfolder', { root_subfolder: '"beta"', current_dir: '"res://beta"' }, '', 'res://beta'],
+    ['current_dir', { current_dir: '"beta"' }, 'res://beta', 'res://beta'],
+    ['current_path_dir', { current_path: '"res://beta/inner.png"' }, 'res://beta', 'res://beta'],
+  ])('lists the folder of %s', (_name, lines, path, listed) => {
+    const location = placed(lines);
+    expect([location.path_text, location.listed_dir]).toEqual([path, listed]);
+  });
+
+  it.each([
+    ['missing_root_subfolder', { root_subfolder: '"nope"' }],
+    ['missing_current_dir', { current_dir: '"nope"' }],
+    ['current_path_missing_dir', { current_path: '"res://nope/x.png"' }],
+  ])('stays in the root for %s, which Godot refuses', (_name, lines) => {
+    const location = placed(lines);
+    expect([location.path_text, location.listed_dir]).toEqual(['res://', 'res://']);
+  });
+
+  it('keeps the root_subfolder it set when a later current_dir is refused, and lists the root', () => {
+    const location = placed({ root_subfolder: '"Alpha"', current_dir: '"nope"' });
+    expect([location.path_text, location.listed_dir]).toEqual(['', 'res://']);
+  });
+
+  it('refuses a current_dir outside the root_subfolder, and lists the root', () => {
+    const location = placed({ root_subfolder: '"d1"', current_dir: '"beta"' });
+    expect([location.path_text, location.listed_dir]).toEqual(['', 'res://']);
+  });
+
+  it('reads current_dir after a root_subfolder Godot refused as a plain folder', () => {
+    const location = placed({ root_subfolder: '"nope"', current_dir: '"beta"' });
+    expect([location.path_text, location.listed_dir]).toEqual(['res://beta', 'res://beta']);
+  });
+
+  it('keeps a refused root_subfolder in the property', () => {
+    expect(placed({ root_subfolder: '"nope"' }).root_subfolder).toBe('nope');
+  });
+
+  it('shows the folder again once current_file changes the File field', () => {
+    const location = placed({ root_subfolder: '"Alpha"', current_dir: '"nope"', current_file: '"x.png"' });
+    expect(location.path_text).toBe('res://');
   });
 });

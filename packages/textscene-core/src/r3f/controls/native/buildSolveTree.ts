@@ -72,6 +72,7 @@ import {
   type SceneScope,
 } from '../../liveSceneTree';
 import { NOTHING_CACHED, recordingReads } from '../../cacheSources';
+import { settleDirectories } from './directoryResolution';
 import { scopeOf } from '../../../resources/liveNode';
 import { embedsSubwindows, mayHoldWindowBelow } from '../../../nodes/viewport/subviewport/windowEmbedder';
 import {
@@ -255,6 +256,7 @@ interface ForestResult {
   pendingResourceFiles: string[];
   pendingThemes: string[];
   pendingFonts: string[];
+  pendingDirectories: string[];
   /** Every cache key the walk read, cached or not: the keys a reload must request again. */
   readKeys: ReadonlySet<string>;
   /** Every viewport size the walk read: a publish that answers each the same leaves the forest. */
@@ -325,7 +327,14 @@ const NO_KEYS: ReadonlySet<string> = new Set();
  * The buses whose caches the walk reads. An `ExtResource(AtlasTexture)` `.tres`
  * completes on the resource bus, not the texture one.
  */
-const SOLVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'texture', 'resource', 'theme', 'font'];
+const SOLVE_TREE_BUSES: readonly ResourceType[] = [
+  'scene',
+  'texture',
+  'resource',
+  'theme',
+  'font',
+  'directory',
+];
 
 /** What the forest starts from, which its roots cannot see above them. */
 interface ForestStart {
@@ -374,6 +383,7 @@ function buildForest(
   const pendingResourceFiles = new Set<string>();
   const pendingThemes = new Set<string>();
   const pendingFonts = new Set<string>();
+  const pendingDirectories = new Set<string>();
   const windows: SolveNode[] = [];
   const readKeys = new Set<string>();
   const recordRead = (path: string) => readKeys.add(path);
@@ -393,6 +403,9 @@ function buildForest(
   const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const themeCache = loader ? recordingReads(loader.themes, recordRead) : NOTHING_CACHED;
   const fontCache: FontCacheReader = loader ? recordingReads(loader.fonts, recordRead) : NOTHING_CACHED;
+  const directoryCache = loader ? recordingReads(loader.directories, recordRead) : NOTHING_CACHED;
+  /** Written by `withListedFolders`, for this walk only: the cache it reads does not change within one. */
+  const settledFolders = new WeakMap<TscnNode, TscnNode>();
 
   /**
    * A Control's own `theme` (`Control::get_theme()`, `scene/gui/control.h`). An
@@ -683,6 +696,17 @@ function buildForest(
     };
   }
 
+  /** `node` settled with the folders its type lists, such as a FileDialog's. A window reaches here twice, as the embedder's entry and as the root of its own viewport. */
+  function withListedFolders(node: TscnNode): TscnNode {
+    const resolver = controlSolverRegistry.directoryResolver(node.type);
+    if (!resolver) return node;
+    const settled =
+      settledFolders.get(node) ??
+      settleDirectories(node, resolver, directoryCache.getCached, pendingDirectories);
+    settledFolders.set(node, settled);
+    return settled;
+  }
+
   /**
    * A window as its embedder reads it: its theme items, by the class chain from its own type
    * (`Window::_update_theme_item_cache`). It draws in no canvas of this forest, so it carries no
@@ -702,7 +726,7 @@ function buildForest(
     const texture = resolveTextureSize(window, path, scope, themeChain, items.icons);
     return {
       path,
-      node: window,
+      node: withListedFolders(window),
       children: [],
       paintRange: WHOLE_CANVAS_RANGE,
       behindRanges: [],
@@ -892,7 +916,7 @@ function buildForest(
     );
     const solved: SolveNode = {
       path,
-      node: live,
+      node: withListedFolders(live),
       children: isBoundary ? [...children, ...childHoisted] : children,
       paintRange,
       behindRanges: behindRangesOf(inlineChildren, allocated.children),
@@ -957,6 +981,7 @@ function buildForest(
     pendingResourceFiles: [...pendingResourceFiles],
     pendingThemes: [...pendingThemes],
     pendingFonts: [...pendingFonts],
+    pendingDirectories: [...pendingDirectories],
     readKeys,
     viewportSizeReads,
   };
@@ -1063,7 +1088,15 @@ function useSolveForest(
       generation,
     ]
   );
-  const { tree, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts } = forest;
+  const {
+    tree,
+    pendingScenes,
+    pendingTextures,
+    pendingResourceFiles,
+    pendingThemes,
+    pendingFonts,
+    pendingDirectories,
+  } = forest;
   useEffect(() => {
     readKeys.current = forest.readKeys;
     lastSizes.current = { key: sizesKey, reads: forest.viewportSizeReads };
@@ -1081,7 +1114,16 @@ function useSolveForest(
     for (const path of pendingResourceFiles) loader.resources.request(path);
     for (const path of pendingThemes) loader.themes.request(path);
     for (const path of pendingFonts) loader.fonts.request(path);
-  }, [loader, pendingScenes, pendingTextures, pendingResourceFiles, pendingThemes, pendingFonts]);
+    for (const folder of pendingDirectories) loader.directories.request(folder);
+  }, [
+    loader,
+    pendingScenes,
+    pendingTextures,
+    pendingResourceFiles,
+    pendingThemes,
+    pendingFonts,
+    pendingDirectories,
+  ]);
 
   return { tree, generation, windows: forest.windows };
 }

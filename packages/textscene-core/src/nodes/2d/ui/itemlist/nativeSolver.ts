@@ -22,9 +22,10 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { STYLE_FILL } from '../../../../godot/scene/theme';
 import {
   contentMarginSize,
-  ZERO_SIDES,
+  flatStyleBox,
   type StyleBoxFlatData,
 } from '../../../../r3f/controls/native/styleBoxFlat';
+import { perObject } from '../../../../utils/perObject';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -45,14 +46,14 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { rect2Intersects, type Rect2 } from '../../../../godot/math/rect2';
 import { scrollBarMinimumSize } from '../shared/scrollBarSolver';
-import type { ItemListProperties } from './types';
+import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_LOWER_COLOR } from '../../../../godot/scene/theme';
+import { CONTROL_FONT_LOWER_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
 import { isDrawnRtl, textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
-import { ItemListIconMode } from '../../../../godot/scene/gui';
+import { ItemListIconMode, ItemListSelectMode } from '../../../../godot/scene/gui';
 
 // --- Enum literals ------------------------------------------------------
 
@@ -73,7 +74,7 @@ const ITEM_LIST_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'f
 /** Resolves ItemList's own theme font size/colour (overrides, else the ancestor Theme chain / theme default). */
 export function itemListTextTheme(
   n: SolveNode,
-  props: ItemListProperties,
+  props: ItemListRuntimeProperties,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: ITEM_LIST_DEFAULT_FONT_COLOR };
@@ -87,9 +88,14 @@ export function itemListIconSlotKey(index: number): string {
   return `item_${index}`;
 }
 
+/** True for a row that names an icon by `item_N/icon` or, in a dialog, by theme icon. */
+export function itemHasIcon(item: ItemListRuntimeItem): boolean {
+  return item.icon !== undefined || item.themedIcon !== undefined;
+}
+
 /** `item_N/icon` (`item_list.cpp:2464`): one slot request per row that names an icon. */
 const itemListTextureSlots: TextureSlotsFn = (node: TscnNode) => {
-  const props = node.properties as ItemListProperties;
+  const props = node.properties as ItemListRuntimeProperties;
   const requests: TextureSlotRequest[] = [];
   (props.items ?? []).forEach((item, index) => {
     if (item.icon) requests.push({ key: itemListIconSlotKey(index), ref: item.icon });
@@ -116,42 +122,41 @@ export function itemListSeparation(theme: Pick<NativeTheme, 'separation'>): numb
   return theme.separation;
 }
 
-/** `StyleBoxFlat`'s own unset default (`style_box_flat.h:40`). */
-const DEFAULT_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
-
-/** `theme->set_stylebox(panel, "ItemList", make_flat_stylebox(style_normal_color))` (`default_theme.cpp:944`): every `make_flat_stylebox` default (margin 4, corner radius 3), both scaled. */
-function itemListPanelStyleBox(theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>): StyleBoxFlatData {
+/** `make_flat_stylebox(color)` (`default_theme.cpp:944,964`): margin 4 and corner radius 3, both scaled. */
+function itemListFlatStyleBox(
+  theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>,
+  bgColor: Rgba
+): StyleBoxFlatData {
   const m = theme.contentMargin;
-  return {
-    bgColor: STYLE_FILL.normal,
-    borderColor: DEFAULT_BORDER_COLOR,
-    borderWidth: ZERO_SIDES,
-    cornerRadius: {
-      topLeft: theme.cornerRadius,
-      topRight: theme.cornerRadius,
-      bottomRight: theme.cornerRadius,
-      bottomLeft: theme.cornerRadius,
-    },
-    expandMargin: ZERO_SIDES,
+  return flatStyleBox(bgColor, {
     contentMargin: { left: m, top: m, right: m, bottom: m },
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail: 8,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
+    cornerRadius: theme.cornerRadius,
+  });
 }
+
+/**
+ * The default `panel` and `selected` boxes of one theme. `StyleBoxQuad` and the scrollbar memo key on box
+ * identity, so a repaint must hand them the box it built before.
+ */
+const defaultBoxes = perObject((theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>) => ({
+  panel: itemListFlatStyleBox(theme, STYLE_FILL.normal),
+  selected: itemListFlatStyleBox(theme, STYLE_FILL.selected),
+}));
 
 /** This node's own `theme_override_styles/panel` if authored, else the default box. */
 export function pickItemListPanelStyleBox(
   overrides: Readonly<Record<string, StyleBoxFlatData>>,
   theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>
 ): StyleBoxFlatData {
-  return overrides.panel ?? itemListPanelStyleBox(theme);
+  return overrides.panel ?? defaultBoxes(theme).panel;
+}
+
+/** The `selected` box (`default_theme.cpp:964`). `selected_focus` is the same box in the default theme. */
+export function pickItemListSelectedStyleBox(
+  styleBoxes: Readonly<Record<string, StyleBoxFlatData>>,
+  theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>
+): StyleBoxFlatData {
+  return styleBoxes.selected ?? defaultBoxes(theme).selected;
 }
 
 // --- Icon geometry ---------------------------------------------------------
@@ -414,6 +419,8 @@ interface ItemListPackResult {
   contentWidth: number;
   /** `ofs.y + max_h`, post row-height backfill: the packed content's own total height. */
   contentHeight: number;
+  /** `current_columns` once the loop settles: a one-column list draws each row's background to the list's right edge (`item_list.cpp:1502-1504`). */
+  columnCount: number;
   vertical: ItemListScrollRange;
   horizontal: ItemListScrollRange;
 }
@@ -507,6 +514,7 @@ export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
       separators,
       contentWidth: maxW,
       contentHeight: ofsY + maxH,
+      columnCount: currentColumns,
       vertical: { visible: verticalMax > verticalPage, min: 0, max: verticalMax, page: verticalPage },
       horizontal,
     };
@@ -533,7 +541,7 @@ export const ITEM_LIST_DEFAULT_MAX_COLUMNS = 1;
  * is the one frame of convergence that decides the scrollbar terms (`item_list.cpp:1883,1903`).
  */
 const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const props = n.node.properties as ItemListProperties;
+  const props = n.node.properties as ItemListRuntimeProperties;
   const items = props.items ?? [];
 
   const minSize = { x: 0, y: 0 };
@@ -547,7 +555,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   const iconScale = props.iconScale ?? 1;
 
   const itemSizes: Vector2[] = items.map((item, i) => {
-    const hasIcon = item.icon !== undefined;
+    const hasIcon = itemHasIcon(item);
     const iconSize = itemIconPackedSize(
       hasIcon,
       n.textureSlots[itemListIconSlotKey(i)] ?? null,
@@ -687,11 +695,18 @@ export function itemTextDrawOffset(
   };
 }
 
-// --- Per-item colour: item_list.cpp:1568-1571,1607-1622, minus selected/hovered ---
+// --- Per-item colour: item_list.cpp:1568-1571,1607-1622, minus hovered ---
 
-/** `icon_modulate` is a real `Item` member but never a `PropertyListHelper` leaf, so it is always its class default `Color(1,1,1,1)` (`item_list.h:68`), dimmed on `disabled` (`item_list.cpp:1569-1571`). */
-export function itemIconColor(disabled: boolean): Rgba {
-  return { r: 1, g: 1, b: 1, a: disabled ? 0.5 : 1 };
+const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+
+/** `icon_modulate` is no `PropertyListHelper` leaf, so a scene row keeps its class default `Color(1,1,1,1)` (`item_list.h:68`). A dialog sets it. `disabled` halves the alpha (`item_list.cpp:1569-1571`). */
+export function itemIconColor(disabled: boolean, tint: Rgba = WHITE): Rgba {
+  return disabled ? { ...tint, a: tint.a * 0.5 } : tint;
+}
+
+/** `font_selected_color` (`item_list.cpp:1610-1611`), else the default theme's `control_font_pressed_color` (`default_theme.cpp:957`). */
+export function itemListSelectedFontColor(n: Pick<SolveNode, 'colors'>): Rgba {
+  return n.colors.font_selected_color ?? CONTROL_FONT_PRESSED_COLOR;
 }
 
 /** `custom_fg` is likewise never authorable, so `txt_modulate` always resolves to `font_color`, dimmed on `disabled` (`item_list.cpp:1614-1622`). */
@@ -832,4 +847,55 @@ export function itemListWrappedTextWidthPx(
   const w = itemRectWidthPx - textOffsetX * 2;
   if (wraparoundItems && w + textOffsetX > contentWidthPx) return contentWidthPx - textOffsetX;
   return w;
+}
+
+/** A one-column row's background and cursor run to the right edge of the content (`item_list.cpp:1502-1504`). */
+function rowBackgroundWidth(input: { rowRect: Rect2; columnCount: number; contentWidth: number }): number {
+  return input.columnCount === 1 ? input.contentWidth - input.rowRect.x : input.rowRect.w;
+}
+
+/**
+ * The rect a selected row's background fills, relative to the row's own origin (`item_list.cpp:1502-1517`),
+ * mirrored inside the control under RTL.
+ */
+export function itemListSelectedRect(input: {
+  rowRect: Rect2;
+  /** `base_ofs.x`, the panel's left margin. */
+  baseX: number;
+  columnCount: number;
+  contentWidth: number;
+  controlWidth: number;
+  panelMarginLeft: number;
+  panelMarginRight: number;
+  rtl: boolean;
+}): Rect2 {
+  const w = rowBackgroundWidth(input);
+  const ltrX = input.baseX + input.rowRect.x;
+  const x = input.rtl ? input.controlWidth - ltrX - w + input.panelMarginLeft - input.panelMarginRight : ltrX;
+  return { x: x - ltrX, y: 0, w, h: input.rowRect.h };
+}
+
+/** Whether the list marks its current row with the `cursor` box: only one that selects several rows (`item_list.cpp:1693`). */
+export function itemListDrawsCursor(selectMode: number): boolean {
+  return selectMode === ItemListSelectMode.SELECT_MULTI || selectMode === ItemListSelectMode.SELECT_TOGGLE;
+}
+
+/** The rect of the `cursor` box, relative to the row's origin. RTL mirrors it without the panel margins (`item_list.cpp:1698-1705`). */
+export function itemListCursorRect(input: {
+  rowRect: Rect2;
+  baseX: number;
+  columnCount: number;
+  contentWidth: number;
+  controlWidth: number;
+  rtl: boolean;
+}): Rect2 {
+  return itemListSelectedRect({ ...input, panelMarginLeft: 0, panelMarginRight: 0 });
+}
+
+/** The `cursor_unfocused` box (`item_list.cpp:2455`): the default theme binds it to its `focus` box (`default_theme.cpp:967`). */
+export function pickItemListCursorStyleBox(
+  styleBoxes: Readonly<Record<string, StyleBoxFlatData>>,
+  theme: Pick<NativeTheme, 'widgets'>
+): StyleBoxFlatData {
+  return styleBoxes.cursor_unfocused ?? theme.widgets.button.focus;
 }
