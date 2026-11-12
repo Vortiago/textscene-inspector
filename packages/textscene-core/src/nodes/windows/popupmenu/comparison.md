@@ -64,7 +64,7 @@ height to its own.
 
 When `display/window/subwindows/embed_subwindows` is off, the root resets no Window. A Window that
 authors `gui_embed_subwindows` keeps it, so the menu below it draws inside the Window.
-The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together, and the browser rasters the scaled SVG, so the edge pixels differ by a rim.
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
 ## Linting
 

@@ -20,7 +20,7 @@ The field shapes its text as an AUTO-direction LineEdit with the project locale.
 locale, a prefix, a suffix or a minus sign lands on the side Godot gives it, even beneath an LTR root
 (`line_edit.cpp:3103-3112`). The `spin-box-direction` golden shows a prefix, a prefixed negative value
 and a suffix.
-The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together, and the browser rasters the scaled SVG, so the edge pixels differ by a rim.
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
 ## Linting
 
