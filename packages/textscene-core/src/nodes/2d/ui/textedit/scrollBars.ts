@@ -45,6 +45,8 @@ export interface TextEditScrollBars {
   vertical: ScrollBarPlacement;
   /** The width the vertical bar takes from the wrap width: 0 where it is hidden (`:8541-8543`). */
   verticalWidthPx: number;
+  /** `_get_control_height()` (`:8658-8664`): the height below the style margins and the horizontal bar. */
+  controlHeightPx: number;
 }
 
 /** `new_pos.x = parent width - pos.x - size.x` (`control.cpp:1785-1787`) under RTL. */
@@ -107,5 +109,6 @@ export function textEditScrollBars(input: TextEditScrollBarsInput): TextEditScro
       hasVertical
     ),
     verticalWidthPx: hasVertical ? vMin.x : 0,
+    controlHeightPx,
   };
 }

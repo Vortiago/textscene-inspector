@@ -12,8 +12,8 @@ renders_as: a multi-line text box
 TextEdit is the multi-line text editor Control that CodeEdit builds on. The previewer
 draws its `normal`/`read_only` StyleBox, every buffer line shaped and wrapped per
 `wrap_mode`/`autowrap_mode`/`indent_wrapped_lines`, `highlight_current_line`'s row band,
-and the `draw_tabs`/`draw_spaces` control-character glyphs. While the buffer is empty it
-draws `placeholder_text`. It is a still frame with no
+and the `draw_tabs`/`draw_spaces` control-character glyphs. With `minimap_draw` it draws the minimap.
+While the buffer is empty it draws `placeholder_text`. It is a still frame with no
 selection or IME (input method editor) state. The one caret a still frame can carry is
 the `caret_draw_when_editable_disabled` one, which draws without focus.
 
@@ -97,7 +97,9 @@ nothing in a `.tscn` can move it (`nativeSolver.ts`'s own doc has the full trace
 `useSceneResources()`). A `CodeHighlighter` sub-resource or `.tres` decodes
 through `resources/styles/codehighlighter/`, and its `_get_line_syntax_highlighting_impl`
 line scanner (`highlight.ts`) colours every buffer line, one `<TextRun>` per
-colour run. Anything else the property can name (absent, unresolved, or a custom
+colour run. The plain colour is the theme `font_color` whatever `editable` says, and a read-only node caps
+each colour's alpha at `font_readonly_color`'s (`syntax_highlighter.cpp:421`, `text_edit.cpp:1666-1668`).
+Anything else the property can name (absent, unresolved, or a custom
 `SyntaxHighlighter` script) paints at the plain `font_color`.
 
 `placeholder_text` replaces an empty buffer (`text_edit.cpp:3377-3379`) as one paragraph
@@ -112,9 +114,14 @@ The horizontal bar shows when the widest row, with the gutters and the minimap, 
 style margins. A horizontal bar lowers the visible rows by its own height. `scroll_past_end_of_file` adds the
 visible rows less one to the vertical range. A vertical bar narrows the wrap width by its own width
 (`:8541-8543`), so a line can wrap only because the bar shows. Under a right-to-left layout both bars mirror
-whole: the vertical bar sits at the left edge and the horizontal bar starts after it. The unpainted minimap
-still counts its width in the wrap width and the horizontal range. The previewer paints the
-bars with the same tint as the panel.
+whole: the vertical bar sits at the left edge and the horizontal bar starts after it. The minimap counts its
+width in the wrap width and the horizontal range. The previewer paints the bars with the same tint as the panel.
+
+`minimap_draw` paints the minimap in the strip `minimap_width` wide that follows the text band, from line 0 at
+scroll 0 (`text_edit.cpp:1129-1312`). The view rectangle takes the caret colour at 0.1 alpha. Each buffer row is
+a 2 px high bar per character on a 3 px pitch. A space leaves one column blank and a tab runs to the next stop.
+A `highlight_current_line` row gets its band, and a highlighted colour draws at 0.6 alpha. Under a right-to-left
+layout the strip sits at the left edge.
 
 A row wider than the text band drops each glyph whose advance box crosses `xmargin_beg` or
 `xmargin_end`. The glyph goes whole, not clipped. The walk stops at the end margin
@@ -127,13 +134,17 @@ always shapes at the class default of 4.
 
 ## Known limitations
 
-- **Not drawn** The selection, IME composition, brace-match underline, word-highlight box,
-  search-result box and the minimap, which need state a `.tscn` cannot carry.
+- **Not drawn** The selection, IME composition, brace-match underline, word-highlight box and
+  search-result box, which need state a `.tscn` cannot carry.
+- **Not drawn** The minimap's hover and drag alpha (:1153-1160), which need pointer state a `.tscn` cannot carry.
+- **Approximated** The rows of an `indent_wrapped_lines` line in a narrow band break at other words than Godot's.
+- **Approximated** A wrapped row under a right-to-left layout sits about one space width too far right.
+- **Approximated** `self_modulate` tints the text, the caret and the minimap, which Godot draws on a child item that it does not reach.
 - **Approximated** `draw_tabs`/`draw_spaces` overlay the `tab`/`space` theme icons
   at an unscaled size and a row-centred vertical offset, not Godot's own
   ascent-relative one (`Component.tsx`'s own doc).
 - **Not drawn** The right-to-left mouse mirror (text_edit.cpp:2241,2516,4956), hit tests
   (:5024,8213-8215), empty-line caret (:1781) and end-of-line selection rect (:1517),
   which need pointer, caret or selection state.
-- **Not drawn** The minimap's RTL side (:1161-1165,1226-1235,1284-1286) and the
-  per-line background rect's (:1396-1400): neither feature is drawn at all.
+- **Not drawn** The per-line background rect (:1396-1400) and the minimap's copy of it (:1231-1236): a
+  `.tscn` sets no line background colour.
