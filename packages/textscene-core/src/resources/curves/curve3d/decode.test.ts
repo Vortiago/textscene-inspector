@@ -156,10 +156,10 @@ describe('resolveCurve3D', () => {
     expect(resolveCurve3D('SubResource("Missing")', [curve])).toEqual([]);
   });
 
-  // The path linter checks the first Curve3D under the id, so the preview draws that one.
-  it('skips a first holder of the id that is not a Curve3D (edge case)', () => {
+  // Godot keeps the first holder of a repeated id (`resource_format_text.cpp:597-603`).
+  it('reads no points when the first holder of the id is not a Curve3D (edge case)', () => {
     const other: TscnInternalResource = { id: 'Path_1', type: 'Curve2D', data: {} };
-    expect(resolveCurve3D('SubResource("Path_1")', [other, curve])).toHaveLength(2);
+    expect(resolveCurve3D('SubResource("Path_1")', [other, curve])).toEqual([]);
   });
 });
 

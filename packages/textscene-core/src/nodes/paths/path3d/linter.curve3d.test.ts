@@ -125,10 +125,12 @@ curve = SubResource("Shared")
     const TILTLESS_CURVE3D = `[sub_resource type="Curve3D" id="Shared"]\n_data = {\n${POINTS}\n}`;
     const SOUND_CURVE3D = `[sub_resource type="Curve3D" id="Shared"]\n_data = {\n${POINTS},\n"tilts": PackedFloat32Array(0, 0)\n}`;
 
-    it('checks the first Curve3D under the id when another type holds it first', () => {
-      const errors = curveErrors(lintSharedId('[sub_resource type="Curve" id="Shared"]', TILTLESS_CURVE3D));
-      expect(errors).toHaveLength(1);
-      expect(errors[0]!.message).toContain('tilts');
+    // Godot keeps the first holder of a repeated id (`resource_format_text.cpp:597-603`), so
+    // `set_curve` gets no Curve3D and a later Curve3D under the id never loads.
+    it('checks no Curve3D when another type holds the id first', () => {
+      expect(curveErrors(lintSharedId('[sub_resource type="Curve" id="Shared"]', TILTLESS_CURVE3D))).toEqual(
+        []
+      );
     });
 
     it('checks only the first of two Curve3D declarations under the id', () => {
