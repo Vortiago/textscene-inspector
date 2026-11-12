@@ -13,7 +13,6 @@ registerResourceSlice({
   busType: 'resource',
 });
 
-export { decodeMultiMesh } from './decode.js';
 export { MULTI_MESH, type HeldMultiMesh } from './kind.js';
 export { multiMeshAabb } from './aabb.js';
 export { multiMeshInstanceArrays, type InstanceArrays } from './instanceBuffer.js';
