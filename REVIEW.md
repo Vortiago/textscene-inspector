@@ -15,7 +15,7 @@ A defect the change introduces and CI does not catch:
 - A test that cannot fail, or that asserts rendered geometry under happy-dom.
 - A line the change adds to a sheet, a document or a comment that records a limit of the feature it
   changes: "known limitation", "approximated", "not supported" or "stays in". The change fixes the
-  gap, or names the open issue of the other subsystem that owns it.
+  gap, or the PR body names the open issue that owns it.
 
 ## What to skip
 
@@ -25,6 +25,8 @@ A defect the change introduces and CI does not catch:
 - Style and naming, unless a name states something false.
 - Untouched code, unless the change makes it wrong.
 - A finding without a concrete input.
+- A missing issue number in a sheet, `GLOSSARY.md` or a code comment. Those carry no issue numbers.
+  Accept a limit line when the PR body names its owning issue.
 
 ## Severity
 
