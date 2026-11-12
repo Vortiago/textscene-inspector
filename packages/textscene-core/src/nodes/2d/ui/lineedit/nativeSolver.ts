@@ -311,8 +311,8 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   let height = fontHeightPx;
   let iconMaxWidth = 0;
-  const tentative = ctx.tentativeRect?.(n);
-  const controlSize: Vector2 | null = tentative ? { x: tentative.w, y: tentative.h } : null;
+  // Both icons size against no control size: `get_minimum_size()` runs once, under a
+  // `size_cache` of `(0, 0)` (`lineEditRightIconSize`).
   const iconExpandMode = props.iconExpandMode ?? EXPAND_MODE_ORIGINAL_SIZE;
   const rightIconScale = props.rightIconScale ?? 1;
 
@@ -322,7 +322,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
       rightIconNaturalSize,
       iconExpandMode,
       fontHeightPx,
-      controlSize,
+      null,
       rightIconScale
     );
     height = Math.max(height, size.y);
@@ -332,13 +332,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   // without text: `get_minimum_size` has no `using_placeholder` gate, unlike the draw path.
   if (props.clearButtonEnabled) {
     const clearNaturalSize = lineEditClearIconSize(n, ctx.theme.scale);
-    const size = lineEditRightIconSize(
-      clearNaturalSize,
-      iconExpandMode,
-      fontHeightPx,
-      controlSize,
-      rightIconScale
-    );
+    const size = lineEditRightIconSize(clearNaturalSize, iconExpandMode, fontHeightPx, null, rightIconScale);
     height = Math.max(height, size.y);
     iconMaxWidth = Math.max(iconMaxWidth, size.x);
   }

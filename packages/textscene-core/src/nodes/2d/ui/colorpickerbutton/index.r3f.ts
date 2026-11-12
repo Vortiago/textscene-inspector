@@ -5,10 +5,12 @@
  */
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import { isButtonNodeAutowrapped } from '../../../../r3f/controls/native/buttonBase';
 import { buttonMinimumSize, buttonTextureSlots } from '../button/nativeSolver';
 import { ColorPickerButton } from './Component';
 
 controlSolverRegistry.registerMinimumSize('ColorPickerButton', buttonMinimumSize);
 controlSolverRegistry.registerTextureSlots('ColorPickerButton', buttonTextureSlots);
+controlSolverRegistry.registerSizeDependentMinimum('ColorPickerButton', isButtonNodeAutowrapped);
 
 controlComponentRegistry.register({ typeName: 'ColorPickerButton', Component: ColorPickerButton });
