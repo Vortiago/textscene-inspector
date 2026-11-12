@@ -1,6 +1,6 @@
-# The image that the browser jobs of CI run in. It holds what a job would otherwise install from
-# the Ubuntu archive or download in each run: the system libraries of Chromium, lavapipe, the
-# locked Chromium, and the Godot binary with xvfb for `pnpm ref:godot`.
+# The image that the browser jobs and the real-Godot job of CI run in. It holds what a job would
+# otherwise install from the Ubuntu archive or download in each run: the system libraries of
+# Chromium, lavapipe, the locked Chromium, and the Godot binary with xvfb for `pnpm ref:godot`.
 # scripts/ci/ciImage.mjs names the image by a hash of this file and the Playwright version.
 
 # Only `playwright install` below runs on this Node. None of it stays in the image.
@@ -25,6 +25,12 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends \
     ca-certificates curl git libatomic1 unzip zstd \
     mesa-vulkan-drivers xvfb xauth libxcursor1 libxinerama1 \
+  && rm -rf /var/lib/apt/lists/*
+
+# No job runs these two in the image. The Claude review job copies them and libwrap, a library of
+# socat, onto its runner.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends bubblewrap socat \
   && rm -rf /var/lib/apt/lists/*
 
 ARG ENGINE_VERSION=4.6.3-stable

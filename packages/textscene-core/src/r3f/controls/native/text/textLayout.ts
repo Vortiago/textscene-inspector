@@ -1,8 +1,6 @@
 /**
  * Framework-free line breaking and glyph placement for the native (WebGL) Control text engine: a
  * port of Godot's Label shaping against a `FontMetrics`, whose px quantisation is `fontMetrics.ts`.
- * Only an `'atlas'` font gets atlas bitmaps. A `'canvas'` scene font gets `glyph: null` for
- * `TextRunMesh.tsx` to rasterise, since an atlas lookup would give its advances Open Sans ink.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -10,7 +8,6 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { OPEN_SANS_ATLAS_GLYPHS, type OpenSansGlyph } from './openSansAtlas';
 import { round as godotRound } from '../../../../godot/math/math';
 import { hexCodeBoxAdvanceSize } from './hexCodeBox';
 import { isBitmapFontMetrics } from './bitmapFontMetrics';
@@ -29,7 +26,6 @@ import {
 } from './fontMetrics';
 import type { SizedClusterOffsets } from './fallbackMarkPositioning';
 import { getFontRunShaping, type RunCluster } from './glyphRun';
-import { atlasGlyphOfIndex } from './openSansAtlasGlyphs';
 import { OPEN_SANS_FONT_METRICS } from './openSansFontMetrics';
 import { tabAlignAdvances } from './textTabStops';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
@@ -59,7 +55,7 @@ export function clampAutowrapMode(
 }
 
 export interface ShapeTextOptions {
-  /** Target render font size, px, for every character when `fontSizePxAt` is absent. Atlas bitmaps, baked at 42 px, scale by `fontSizePx / 42`. */
+  /** Target render font size, px, for every character when `fontSizePxAt` is absent. */
   fontSizePx: number;
   /** Wrap width, px. `<= 0` means unconstrained: no soft wrap, only hard breaks. */
   boxWidthPx: number;
@@ -116,7 +112,7 @@ export interface ShapeTextOptions {
   /**
    * Per-character face, keyed like `fontSizePxAt`: RichTextLabel `[b]`/`[i]` spans shape in their own
    * `bold_font`/`italics_font` (`rich_text_label.cpp:3226-3296`). A character takes its advance, its
-   * kerning, its atlas bitmap and its embolden (`FontMetrics.embolden`) from its face. Each face is
+   * kerning and its embolden (`FontMetrics.embolden`) from its face. Each face is
    * its own shaped run, so kerning and the rounding remainder stop at a change. Undefined shapes every
    * character in `fontMetrics`, which also sets the line pitch and the baseline.
    */
@@ -126,7 +122,7 @@ export interface ShapeTextOptions {
    * (`text_server_adv.cpp:7401`), so no ligature or kerning pair joins two. Undefined is one span.
    */
   spanAt?: (charIndex: number) => number;
-  /** The `FontMetrics` to shape against, by default `OPEN_SANS_FONT_METRICS`. Only an `'atlas'` font gets `GlyphPlacement.glyph`. */
+  /** The `FontMetrics` to shape against, by default `OPEN_SANS_FONT_METRICS`. */
   fontMetrics?: FontMetrics;
   /**
    * `Label.paragraph_separator`, which callers pass as the engine default `'\n'`. The text splits on
@@ -186,8 +182,6 @@ export interface GlyphPlacement {
   advance: number;
   /** Index of the character this glyph shapes in the text `shapeText` took. A paragraph terminator takes its separator's index. Absent on an ellipsis glyph. */
   sourceIndex?: number;
-  /** Atlas bitmap metadata, or `null` outside the baked charset or for a non-`'atlas'` `FontMetrics`. */
-  glyph: OpenSansGlyph | null;
   /** The control character this glyph draws as a hex-code box (`draw_hex_code_box`), set only when `preserveControl` kept it. */
   controlCodepoint?: number;
   /** The font glyph the run shaping gives this glyph. Absent for a face whose glyphs this previewer cannot read. */
@@ -275,14 +269,14 @@ export interface TextLayoutResult {
   /** `lines.length * linePitchPx`, plus the `paragraph_spacing` of each paragraph where Label windows the lines (`windowLabelLines`). */
   heightPx: number;
   /**
-   * `getFontAscentPx(fontMetrics, fontSizePx)`: the baseline, measured down from the line top. Both
-   * painters anchor a line here, so a hand-built result must state it: a wrong default misses by a
-   * whole ascent on the canvas path and by the bake anchor on the atlas path.
+   * `getFontAscentPx(fontMetrics, fontSizePx)`: the baseline, measured down from the line top. Each
+   * painter anchors a line here, so a hand-built result must state it: a wrong default misses by a
+   * whole ascent.
    */
   baselineOffsetPx: number;
   /**
-   * The `FontMetrics` the layout was shaped against. `TextRunMesh.tsx` dispatches on `.kind` between the
-   * MSDF atlas and canvas painters, so an omitted value would put a scene font on the atlas path.
+   * The `FontMetrics` the layout was shaped against. `TextRun.tsx` and `TextRunMesh.tsx` dispatch
+   * on `.kind` between the painters.
    */
   fontMetrics: FontMetrics;
 }
@@ -609,9 +603,9 @@ function specialGlyph(
 ): BreakGlyph | undefined {
   const ch = chars[i]!;
   const cp = ch.codePointAt(0)!;
-  // A break grapheme, U+200B and a tab take no advance whatever the face holds: the baked charset has
-  // no entry for the first two, and a tab no stop aligns is as wide as the font's glyph for it, which
-  // is none (measured in Godot 4.6.3: `a<TAB>b` with `tab_size` 0 sets `b` against `a`).
+  // A break grapheme, U+200B and a tab take no advance whatever the face holds. A tab no stop aligns
+  // is as wide as the font's glyph for it, which is none (measured in Godot 4.6.3: `a<TAB>b` with
+  // `tab_size` 0 sets `b` against `a`).
   if (isLinebreak(cp) || cp === 0x200b || isTabChar(ch)) return zeroWidthGlyph(ch, i);
   // Only the "no font has a glyph" case is left (`text_server_adv.cpp:6842-6907`).
   if (isControlChar(cp)) {
@@ -1324,7 +1318,6 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
             char: clusterText(chars, idx, glyph.end),
             x,
             advance,
-            glyph: null,
             controlCodepoint: glyph.controlCodepoint,
             emboldenGrowthPx: glyph.emboldenGrowthPx || undefined,
             xOffset: glyph.xOffset,
@@ -1356,7 +1349,6 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
 /** The placement of each glyph of the cluster `placed` draws, at its own pen and advance. */
 function clusterPlacements(placed: GlyphPlacement, glyphs: readonly ClusterGlyph[]): GlyphPlacement[] {
   const sourceText = placed.char;
-  const isAtlas = placed.fontMetrics?.kind === 'atlas';
   let pen = placed.x;
   return glyphs.map((glyph) => {
     const { char } = glyph;
@@ -1365,8 +1357,6 @@ function clusterPlacements(placed: GlyphPlacement, glyphs: readonly ClusterGlyph
       char,
       x: pen,
       advance: glyph.advance,
-      // Atlas bitmaps exist only for the font `openSansAtlas.ts` bakes.
-      glyph: isAtlas ? atlasGlyphOf(glyph) : null,
       glyphIndex: glyph.glyphIndex,
       ...((glyphs.length > 1 || char !== sourceText) && { cluster: sourceText }),
       xOffset: glyph.xOffset !== 0 ? glyph.xOffset : undefined,
@@ -1375,12 +1365,6 @@ function clusterPlacements(placed: GlyphPlacement, glyphs: readonly ClusterGlyph
     pen += glyph.advance;
     return placement;
   });
-}
-
-/** The atlas bitmap of `glyph`: by its glyph where the run shaping read one, else by its character. */
-function atlasGlyphOf(glyph: ClusterGlyph): OpenSansGlyph | null {
-  if (glyph.glyphIndex !== undefined) return atlasGlyphOfIndex(glyph.glyphIndex);
-  return OPEN_SANS_ATLAS_GLYPHS[glyph.char] ?? null;
 }
 
 /** How far the glyph offsets of `glyphs` reach above and below the baseline, px: `-y_off` and `y_off`. */

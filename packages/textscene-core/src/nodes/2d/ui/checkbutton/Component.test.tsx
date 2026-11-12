@@ -2,7 +2,7 @@
  * `<CheckButton>` render contract: a toggle-switch icon, always drawn at the right edge, and
  * optional label text, with no chrome mesh. Structure, tint and render order only.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -14,6 +14,12 @@ import { CheckButton } from './Component';
 import type { CheckButtonProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { bundledRunMeshes, bundledRuns } from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
@@ -36,13 +42,6 @@ function findIconMesh(scene: Rendered['scene']) {
     );
 }
 
-function findTextMesh(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .find((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
-}
-
 describe('<CheckButton> (isolated painter contract)', () => {
   it('draws NO chrome mesh — every one of its StyleBoxes is a StyleBoxEmpty', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -59,7 +58,7 @@ describe('<CheckButton> (isolated painter contract)', () => {
       <CheckButton {...painterEnv()} solveNode={solveNode({})} rect={RECT} renderOrder={0} />
     );
     expect(findIconMesh(renderer.scene)).toBeDefined();
-    expect(findTextMesh(renderer.scene)).toBeUndefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeUndefined();
   });
 
   it('the icon sits flush against the RIGHT edge, not the left', async () => {
@@ -76,7 +75,7 @@ describe('<CheckButton> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckButton {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
-    expect(findTextMesh(renderer.scene)).toBeDefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeDefined();
   });
 
   it('uses font_pressed_color (opaque white) when checked and not disabled', async () => {
@@ -88,17 +87,17 @@ describe('<CheckButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(1), 5);
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(1, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.r).toBeCloseTo(1, 5);
+    expect(tint.a).toBeCloseTo(1, 5);
   });
 
   it('uses font_color (0.875 gray) for an unchecked, non-disabled switch', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckButton {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.r).toBeCloseTo(0.875, 5);
   });
 
   it('uses font_disabled_color (alpha 0.5) once disabled', async () => {
@@ -110,8 +109,8 @@ describe('<CheckButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.a).toBeCloseTo(0.5, 5);
   });
 
   it('applies the walker-composed tint as ONE product, reaching the icon AND text alike', async () => {
@@ -128,9 +127,9 @@ describe('<CheckButton> (isolated painter contract)', () => {
     // button_unchecked_color(1) * own(0.25) = 0.25 in sRGB, linearised.
     expect(iconMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
 
-    const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    const textTint = bundledRuns(renderer.scene)[0]!.tint;
     // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, linearised.
-    expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
+    expect(textTint.r).toBeCloseTo(0.21875, 5);
   });
 
   it('forwards renderOrder to every mesh (icon + text)', async () => {
@@ -154,8 +153,8 @@ describe('<CheckButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const leftGroup = findTextMesh(rendererLeft.scene)!.parent as THREE.Object3D;
-    const centerGroup = findTextMesh(rendererCenter.scene)!.parent as THREE.Object3D;
+    const leftGroup = bundledRunMeshes(rendererLeft.scene)[0]!.parent as THREE.Object3D;
+    const centerGroup = bundledRunMeshes(rendererCenter.scene)[0]!.parent as THREE.Object3D;
     // marginX(6) alone for the default. An explicit CENTER override shifts it further right.
     expect(leftGroup.position.x).toBe(6);
     expect(centerGroup.position.x).toBeGreaterThan(leftGroup.position.x);

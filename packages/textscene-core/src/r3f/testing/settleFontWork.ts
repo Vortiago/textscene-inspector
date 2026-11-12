@@ -18,6 +18,16 @@ export async function settleFontWork(): Promise<void> {
 }
 
 /**
+ * Settles a font load that nothing reads, which wakes every reader of the font settle count. The
+ * channel is imported here for the same reason as above.
+ */
+export async function settleUnrelatedFontLoad(): Promise<void> {
+  const { createSettledPeek } = await import('../controls/native/text/settledChannel');
+  createSettledPeek<object, null>()({}, () => Promise.resolve(null));
+  await settleFontWork();
+}
+
+/**
  * What `peek` answers once a peek starts no font load: each peek can start the next load, as a
  * TextMesh peeks its outlines and then its metrics.
  */

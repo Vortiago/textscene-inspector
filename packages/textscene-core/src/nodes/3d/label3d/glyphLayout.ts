@@ -39,7 +39,7 @@ type Label3DPlaceProperties = Pick<
 interface Label3DLinePlacement {
   /** This line's own left-edge x offset (`label_3d.cpp:588-599`), Godot px. */
   x: number;
-  /** This line's "box top" Y, Godot px, y-down. `<TextRun>` anchors the baseline from there (`buildGlyphQuadArrays`). */
+  /** This line's "box top" Y, Godot px, y-down. `<TextRun>` anchors the baseline from there. */
   y: number;
   line: TextLineLayout;
 }

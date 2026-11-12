@@ -1,0 +1,70 @@
+; One variable: the code point a Label draws in the default font. Each line holds characters of one
+; group, so a wrong glyph or a wrong advance moves the ink of its line. Against Godot 4.6.3 at
+; `--mode 2d`, 2 px differ, by 1 of 255.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.08, 0.09, 0.12, 1)
+
+[node name="Ascii" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 600.0
+offset_bottom = 50.0
+text = "ASCII: Wave rift 0123"
+
+[node name="Latin1" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 56.0
+offset_right = 600.0
+offset_bottom = 82.0
+text = "Latin-1: àéîõü ÆØÅ ß"
+
+; The font maps each of these code points to a glyph of its own.
+[node name="LatinExtended" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 88.0
+offset_right = 600.0
+offset_bottom = 114.0
+text = "Latin Extended: ĀčŐű Łódź ŵŷ"
+
+[node name="Greek" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 120.0
+offset_right = 600.0
+offset_bottom = 146.0
+text = "Greek: Ωαβγδ λόγος"
+
+[node name="Cyrillic" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 152.0
+offset_right = 600.0
+offset_bottom = 178.0
+text = "Cyrillic: Жди Привет"
+
+; The font maps no glyph to these code points. HarfBuzz draws each from its canonical
+; decomposition, a base letter and the marks above it.
+[node name="Decomposed" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 184.0
+offset_right = 600.0
+offset_bottom = 210.0
+text = "Decomposed: Ǎǎ Ǵǵ Ȁȁ Ǟǡ"
+
+; Above 20 px Godot rounds each advance to a whole pixel, so an advance one unit off moves a glyph.
+[node name="Large" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 224.0
+offset_right = 900.0
+offset_bottom = 270.0
+theme_override_font_sizes/font_size = 32
+text = "ĀčŐű Łódź Ǎǵ"

@@ -8,7 +8,6 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { OPEN_SANS_ATLAS_GLYPHS } from './openSansAtlas';
 import {
   firstFaceWithGlyph,
   getFontEmboldenedAdvancePx,
@@ -137,10 +136,6 @@ interface TrimBudget {
  */
 function faceWithGlyph(lastFace: FontMetrics, spanFace: FontMetrics, ch: string): FontMetrics | null {
   return lastFace.hasGlyph(ch) ? lastFace : firstFaceWithGlyph(spanFace, ch);
-}
-
-function atlasGlyphFor(fontMetrics: FontMetrics, ch: string) {
-  return fontMetrics.kind === 'atlas' ? (OPEN_SANS_ATLAS_GLYPHS[ch] ?? null) : null;
 }
 
 /** `GRAPHEME_IS_BREAK_SOFT` reduces to "is a space glyph" for this engine's ASCII/Latin word-bound rule (`textLayout.ts`'s own doc). */
@@ -282,7 +277,6 @@ function findOverrunTrim(
       ellipsis.push({
         char: ' ',
         advance: whitespaceAdvancePx,
-        glyph: atlasGlyphFor(whitespaceFace, ' '),
         fontSizePx,
         fontMetrics: whitespaceFace,
       });
@@ -291,7 +285,6 @@ function findOverrunTrim(
       ellipsis.push({
         char: dotChar,
         advance: dotAdvancePx,
-        glyph: atlasGlyphFor(dotFace, dotChar),
         emboldenGrowthPx,
         fontSizePx,
         fontMetrics: dotFace,
