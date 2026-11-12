@@ -1,6 +1,19 @@
 /** ParticleProcessMaterial decode: the emission shape with its offset and scale. */
 import { describe, expect, it } from 'vitest';
-import { decodeParticleProcessMaterial } from './decode';
+import { staticSnapshot } from '../../reading/staticSnapshot.testkit';
+import { nodeReference } from '../../reading/scopedReference';
+import { subResource } from '../../../testing/subResource';
+import { PARTICLE_PROCESS_MATERIAL } from './decode';
+
+/** The emission a scene's only ParticleProcessMaterial with these properties decodes to. */
+function decodeParticleProcessMaterial(properties: Record<string, string>) {
+  const scene = {
+    internalResources: [subResource('ParticleProcessMaterial', 'only', properties)],
+    externalResources: [],
+  };
+  return staticSnapshot({}).read(nodeReference('SubResource("only")', scene), PARTICLE_PROCESS_MATERIAL)
+    .value!;
+}
 
 describe('decodeParticleProcessMaterial', () => {
   it('reads an empty material as Godot constructs it (`particle_process_material.cpp:2405-2414`)', () => {

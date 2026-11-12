@@ -9,9 +9,7 @@ import type { ResourceKind } from '../../reading';
 import { readParticleEmission } from './emission';
 import type { ParticleEmission } from './types';
 
-export function decodeParticleProcessMaterial(
-  properties: Readonly<Record<string, string>>
-): ParticleEmission {
+function decodeParticleProcessMaterial(properties: Readonly<Record<string, string>>): ParticleEmission {
   return {
     ...readParticleEmission(properties),
     shapeOffset: realVec3Or(properties.emission_shape_offset, DEFAULTS.shapeOffset, 'emission_shape_offset'),
