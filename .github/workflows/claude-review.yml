@@ -88,9 +88,23 @@ jobs:
               | "## \(.author.login), \(.createdAt // .submittedAt)\n\n\(.body)\n")
           ' > "$PR_CONTEXT/conversation.md"
 
-      # The scrub below refuses to start without bubblewrap.
+      # The scrub below refuses to start without bubblewrap. Both tools come out of the CI image
+      # (ADR-0065), at the paths of their Ubuntu packages, so no run reads the Ubuntu archive.
       - name: Install subprocess isolation
-        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends bubblewrap socat
+        run: |
+          image="$(node scripts/ci/ciImage.mjs | sed -n 's/^ref=//p')"
+          container="$(docker create "$image")"
+          # libwrap is the one library of socat that a runner lacks. `-L` copies the file that
+          # a link names.
+          for file in /usr/bin/bwrap /usr/bin/socat /usr/lib/x86_64-linux-gnu/libwrap.so.0; do
+            sudo docker cp -L "$container:$file" "$file"
+          done
+          docker rm "$container" > /dev/null
+          # Proves that each tool loads on the runner. Not a namespace: a runner sets
+          # kernel.apparmor_restrict_unprivileged_userns to 1, and bubblewrap then makes none,
+          # from the Ubuntu package or from the image.
+          bwrap --version
+          socat -V > /dev/null
 
       - id: claude
         uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
