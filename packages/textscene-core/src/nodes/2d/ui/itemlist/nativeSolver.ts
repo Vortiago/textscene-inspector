@@ -22,9 +22,10 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { STYLE_FILL } from '../../../../godot/scene/theme';
 import {
   contentMarginSize,
-  ZERO_SIDES,
+  flatStyleBox,
   type StyleBoxFlatData,
 } from '../../../../r3f/controls/native/styleBoxFlat';
+import { perObject } from '../../../../utils/perObject';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
@@ -121,45 +122,33 @@ export function itemListSeparation(theme: Pick<NativeTheme, 'separation'>): numb
   return theme.separation;
 }
 
-/** `StyleBoxFlat`'s own unset default (`style_box_flat.h:40`). */
-const DEFAULT_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
-
 /** `make_flat_stylebox(color)` (`default_theme.cpp:944,964`): margin 4 and corner radius 3, both scaled. */
 function itemListFlatStyleBox(
   theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>,
   bgColor: Rgba
 ): StyleBoxFlatData {
   const m = theme.contentMargin;
-  return {
-    bgColor,
-    borderColor: DEFAULT_BORDER_COLOR,
-    borderWidth: ZERO_SIDES,
-    cornerRadius: {
-      topLeft: theme.cornerRadius,
-      topRight: theme.cornerRadius,
-      bottomRight: theme.cornerRadius,
-      bottomLeft: theme.cornerRadius,
-    },
-    expandMargin: ZERO_SIDES,
+  return flatStyleBox(bgColor, {
     contentMargin: { left: m, top: m, right: m, bottom: m },
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail: 8,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
+    cornerRadius: theme.cornerRadius,
+  });
 }
+
+/**
+ * The default `panel` and `selected` boxes of one theme. `StyleBoxQuad` and the scrollbar memo key on box
+ * identity, so a repaint must hand them the box it built before.
+ */
+const defaultBoxes = perObject((theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>) => ({
+  panel: itemListFlatStyleBox(theme, STYLE_FILL.normal),
+  selected: itemListFlatStyleBox(theme, STYLE_FILL.selected),
+}));
 
 /** This node's own `theme_override_styles/panel` if authored, else the default box. */
 export function pickItemListPanelStyleBox(
   overrides: Readonly<Record<string, StyleBoxFlatData>>,
   theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>
 ): StyleBoxFlatData {
-  return overrides.panel ?? itemListFlatStyleBox(theme, STYLE_FILL.normal);
+  return overrides.panel ?? defaultBoxes(theme).panel;
 }
 
 /** The `selected` box (`default_theme.cpp:964`). `selected_focus` is the same box in the default theme. */
@@ -167,7 +156,7 @@ export function pickItemListSelectedStyleBox(
   styleBoxes: Readonly<Record<string, StyleBoxFlatData>>,
   theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius'>
 ): StyleBoxFlatData {
-  return styleBoxes.selected ?? itemListFlatStyleBox(theme, STYLE_FILL.selected);
+  return styleBoxes.selected ?? defaultBoxes(theme).selected;
 }
 
 // --- Icon geometry ---------------------------------------------------------

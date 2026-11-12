@@ -102,11 +102,11 @@ interface DrawnLabelLine {
 
 /** Pass 2: this row's fully-resolved, plain-data geometry: everything but the async icon load. */
 interface RowGeometry {
+  /** The row's place in the list: its React key, which a repack that moves the row leaves unchanged. */
+  index: number;
   item: ItemListRuntimeItem;
   disabled: boolean;
   hasIcon: boolean;
-  iconNaturalSize: Vector2 | null;
-  fixedIconSizeSet: boolean;
   iconDraw: ReturnType<typeof itemIconDraw>;
   /** The label shaped again at its draw width (`item_list.cpp:1625-1661`), or `null` for an item with no text. */
   label: { linePitchPx: number; lines: DrawnLabelLine[] } | null;
@@ -475,11 +475,10 @@ export function ItemList({
         })),
       };
       return {
+        index,
         item: r.item,
         disabled: r.disabled,
         hasIcon: r.hasIcon,
-        iconNaturalSize: naturalSize,
-        fixedIconSizeSet,
         iconDraw,
         label,
         isTextFillDrawn,
@@ -559,7 +558,7 @@ export function ItemList({
       ))}
       {visibleRows.map((geometry) => (
         <ItemListRow
-          key={`${geometry.rect.x},${geometry.rect.y}`}
+          key={geometry.index}
           geometry={geometry}
           origin={origin}
           tint={tint.own}
@@ -575,7 +574,7 @@ export function ItemList({
         (geometry) =>
           geometry.cursorRect && (
             <CanvasItemGroup
-              key={`cursor-${geometry.rect.x},${geometry.rect.y}`}
+              key={`cursor-${geometry.index}`}
               position={[origin.x + geometry.rect.x, -(origin.y + geometry.rect.y), 0]}
             >
               <StyleBoxQuad

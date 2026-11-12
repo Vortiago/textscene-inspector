@@ -56,7 +56,7 @@ interface Dialog {
 }
 
 interface FileListTheme {
-  /** `thumbnail_size * get_theme_default_base_scale()`. */
+  /** `int(thumbnail_size * get_theme_default_base_scale())` (`file_dialog.cpp:820`). */
   thumbnailSize: number;
   /** The size of the `file` icon, which the list mode draws every icon at. */
   fileIconSize: Vector2;
@@ -402,7 +402,7 @@ export function fileDialogBody(dialog: SolveNode, theme: NativeTheme): SolveNode
   if (known) return known;
   const props = dialog.node.properties as FileDialogProperties;
   const listTheme: FileListTheme = {
-    thumbnailSize: (dialog.constants.thumbnail_size ?? FILE_DIALOG_THUMBNAIL_SIZE) * theme.scale,
+    thumbnailSize: Math.trunc((dialog.constants.thumbnail_size ?? FILE_DIALOG_THUMBNAIL_SIZE) * theme.scale),
     fileIconSize: iconSizeOf(dialog, 'file'),
     folderIconColor: dialog.colors.folder_icon_color ?? WHITE,
     fileIconColor: dialog.colors.file_icon_color ?? WHITE,
