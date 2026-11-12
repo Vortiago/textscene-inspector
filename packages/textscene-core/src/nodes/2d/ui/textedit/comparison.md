@@ -134,9 +134,6 @@ always shapes at the class default of 4.
 
 - **Not drawn** The selection, IME composition, brace-match underline, word-highlight box and
   search-result box, which need state a `.tscn` cannot carry.
-- **Not drawn** The minimap's hover and drag alpha (:1153-1160), which need pointer state.
-- **Not drawn** The minimap's view rectangle offset and first line at a non-zero scroll (:1138-1147),
-  since scrolling is inert here.
 - **Approximated** `draw_tabs`/`draw_spaces` overlay the `tab`/`space` theme icons
   at an unscaled size and a row-centred vertical offset, not Godot's own
   ascent-relative one (`Component.tsx`'s own doc).
