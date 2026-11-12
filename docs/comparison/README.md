@@ -113,7 +113,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [FogVolume](../../packages/textscene-core/src/nodes/3d/fogvolume/comparison.md): density, scattering and emission added to the volumetric fog
 - [Generic6DOFJoint3D](../../packages/textscene-core/src/nodes/physics/3d/generic6dofjoint3d/comparison.md): a transform group with the travel of each axis and a circle per axis for each body for every node
 - [GeometryInstance3D](../../packages/textscene-core/src/nodes/3d/geometryinstance3d/comparison.md): a transform-only group
-- [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md): nothing yet, Godot draws a particle cloud, the previewer does not
+- [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md): each draw pass at every particle, in a frozen pose
 - [GPUParticlesAttractorBox3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorbox3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesAttractorSphere3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorsphere3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesAttractorVectorField3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorvectorfield3d/comparison.md): nothing yet, not implemented

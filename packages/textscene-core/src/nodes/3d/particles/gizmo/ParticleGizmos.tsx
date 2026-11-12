@@ -1,7 +1,6 @@
 /**
  * The editor gizmos that GPUParticles3D and CPUParticles3D share: the box around the emitter, and
- * the lines of its emission shape. `undrawnGeometryInstanceWithGizmos` mounts them in a
- * `PluginGizmo`.
+ * the lines of its emission shape. Each Component mounts them in a `PluginGizmo`.
  */
 
 import { useMemo } from 'react';
