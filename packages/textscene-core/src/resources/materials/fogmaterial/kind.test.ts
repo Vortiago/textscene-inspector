@@ -3,10 +3,19 @@
 import { describe, expect, it } from 'vitest';
 import { snapshotOver } from '../../reading/snapshot';
 import { nodeReference } from '../../reading/scopedReference';
-import { loadedAt, loadedValue, originsOf, sceneTables } from '../../reading/reading.testkit';
+import { describeKindFromEveryOrigin } from '../../reading/everyOrigin.testkit';
+import { loadedValue, sceneTables } from '../../reading/reading.testkit';
 import { FOG_VOLUME_MATERIAL } from './kind';
 
-const { inScene, elsewhere } = originsOf('FogMaterial', 'density = -2.0');
+describeKindFromEveryOrigin([
+  {
+    kind: FOG_VOLUME_MATERIAL,
+    className: 'FogMaterial',
+    body: 'density = -2.0',
+    expected: 'material with density -2',
+    summarise: (value) => value.kind === 'material' && `material with density ${value.material.density}`,
+  },
+]);
 
 const SHADER_MATERIAL = `[gd_resource type="ShaderMaterial" format=3]
 
@@ -17,20 +26,6 @@ shader = ExtResource("1")
 `;
 
 describe('the FOG_VOLUME_MATERIAL kind', () => {
-  it('decodes the density of a FogMaterial of the scene', () => {
-    expect(loadedAt(FOG_VOLUME_MATERIAL, inScene)).toMatchObject({
-      kind: 'material',
-      material: { density: -2 },
-    });
-  });
-
-  it.each(elsewhere)('decodes the same FogMaterial from $name', (origin) => {
-    expect(loadedAt(FOG_VOLUME_MATERIAL, origin)).toMatchObject({
-      kind: 'material',
-      material: { density: -2 },
-    });
-  });
-
   it('hands on the density texture with the tables of the FogMaterial', () => {
     const value = loadedValue(FOG_VOLUME_MATERIAL, 'res://holder.tres::m', '', {
       'res://holder.tres':

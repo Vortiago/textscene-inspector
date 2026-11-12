@@ -59,48 +59,6 @@ export function resourceFile(properties: string, tables = ''): string {
   return `[gd_resource type="Resource" format=3]\n\n${tables}\n\n[resource]\n${properties}\n`;
 }
 
-/** One way a resource reaches a reader: the reference a node writes, the scene tables and the files behind them. */
-export interface Origin {
-  readonly name: string;
-  readonly ref: string;
-  readonly scene: string;
-  readonly files: Readonly<Record<string, string>>;
-}
-
-/**
- * The three origins of one resource of `className` written as `body`: a `[sub_resource]` of the
- * scene, and `elsewhere` a `.tres` of its own and a `[sub_resource]` of another `.tres`.
- */
-export function originsOf(
-  className: string,
-  body: string
-): { readonly inScene: Origin; readonly elsewhere: readonly Origin[] } {
-  return {
-    inScene: {
-      name: 'a sub-resource of the scene',
-      ref: 'SubResource("r")',
-      scene: `[sub_resource type="${className}" id="r"]\n${body}`,
-      files: {},
-    },
-    elsewhere: [
-      {
-        name: 'a .tres of its own',
-        ref: 'ExtResource("1_r")',
-        scene: `[ext_resource type="${className}" path="res://own.tres" id="1_r"]`,
-        files: { 'res://own.tres': `[gd_resource type="${className}" format=3]\n\n[resource]\n${body}\n` },
-      },
-      {
-        name: 'a sub-resource of another .tres',
-        ref: 'res://holder.tres::r',
-        scene: '',
-        files: {
-          'res://holder.tres': `[gd_resource type="Resource" format=3]\n\n[sub_resource type="${className}" id="r"]\n${body}\n\n[resource]\n`,
-        },
-      },
-    ],
-  };
-}
-
 /** The value `kind` loads at `ref` in a scene written as `sceneText`. Throws unless the read loads. */
 export function loadedValue<T>(
   kind: ResourceKind<T>,
@@ -111,9 +69,4 @@ export function loadedValue<T>(
   const read = staticSnapshot(files).read(nodeReference(ref, sceneTables(sceneText)), kind);
   if (read.status !== 'loaded') throw new Error(`expected the ${kind.name} to load, got ${read.status}`);
   return read.value;
-}
-
-/** The value `kind` loads at `origin`. */
-export function loadedAt<T>(kind: ResourceKind<T>, origin: Origin): T {
-  return loadedValue(kind, origin.ref, origin.scene, origin.files);
 }

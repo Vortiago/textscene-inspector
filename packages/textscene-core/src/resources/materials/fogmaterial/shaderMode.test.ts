@@ -1,22 +1,21 @@
 /** The SHADER_MODE kind reads the mode a Shader or a VisualShader runs in, from each origin. */
 
 import { describe, expect, it } from 'vitest';
+import { describeKindFromEveryOrigin } from '../../reading/everyOrigin.testkit';
 import { ShaderMode } from '../../../godot/rendering/shaderLanguage';
-import { loadedAt, loadedValue, originsOf } from '../../reading/reading.testkit';
+import { loadedValue } from '../../reading/reading.testkit';
 import { SHADER_MODE } from './shaderMode';
 
-const FOG_CODE = 'code = "shader_type fog;\\nvoid fog() {}"';
-const { inScene, elsewhere } = originsOf('Shader', FOG_CODE);
+describeKindFromEveryOrigin([
+  {
+    kind: SHADER_MODE,
+    className: 'Shader',
+    body: 'code = "shader_type fog;\\nvoid fog() {}"',
+    expected: ShaderMode.FOG,
+  },
+]);
 
 describe('the SHADER_MODE kind', () => {
-  it('reads the mode of the code of a Shader of the scene', () => {
-    expect(loadedAt(SHADER_MODE, inScene)).toBe(ShaderMode.FOG);
-  });
-
-  it.each(elsewhere)('reads the same mode from $name', (origin) => {
-    expect(loadedAt(SHADER_MODE, origin)).toBe(ShaderMode.FOG);
-  });
-
   it('reads the mode of a .gdshader file', () => {
     const scene = '[ext_resource type="Shader" path="res://wisps.gdshader" id="1"]';
     const files = { 'res://wisps.gdshader': 'shader_type fog;\nvoid fog() {}\n' };
@@ -24,8 +23,8 @@ describe('the SHADER_MODE kind', () => {
   });
 
   it('reads a Shader with no code as spatial', () => {
-    const { inScene: empty } = originsOf('Shader', '');
-    expect(loadedAt(SHADER_MODE, empty)).toBe(ShaderMode.SPATIAL);
+    const scene = '[sub_resource type="Shader" id="r"]';
+    expect(loadedValue(SHADER_MODE, 'SubResource("r")', scene)).toBe(ShaderMode.SPATIAL);
   });
 
   it.each([
@@ -33,8 +32,8 @@ describe('the SHADER_MODE kind', () => {
     ['mode = 99', ShaderMode.SPATIAL],
     ['', ShaderMode.SPATIAL],
   ])('reads a VisualShader with %j as %j', (body, mode) => {
-    const { inScene: visual } = originsOf('VisualShader', body);
-    expect(loadedAt(SHADER_MODE, visual)).toBe(mode);
+    const scene = `[sub_resource type="VisualShader" id="r"]\n${body}`;
+    expect(loadedValue(SHADER_MODE, 'SubResource("r")', scene)).toBe(mode);
   });
 
   it('refuses a class that is no Shader', () => {

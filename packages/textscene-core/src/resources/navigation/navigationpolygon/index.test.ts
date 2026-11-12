@@ -29,7 +29,7 @@ describe('navigationpolygon slice registration', () => {
     expect(resourceSliceRegistry.byTypeName('NavigationLink2D')).toBeNull();
   });
 
-  it('re-exports the decode surface', () => {
-    expect(typeof navigationPolygonSlice.decodeNavigationPolygon).toBe('function');
+  it('re-exports its kind', () => {
+    expect(navigationPolygonSlice.NAVIGATION_POLYGON.name).toBe('NavigationPolygon');
   });
 });
