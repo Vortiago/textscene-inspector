@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 import { multiMeshAabb } from './aabb';
-import type { MultiMeshData } from './types';
+import type { MultiMeshBox } from './types';
 
 const UNIT_CUBE: Aabb = { position: { x: -0.5, y: -0.5, z: -0.5 }, size: { x: 1, y: 1, z: 1 } };
 
@@ -9,8 +9,8 @@ function translation(x: number, y: number, z: number): number[] {
   return [1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z];
 }
 
-function multiMesh(fields: Partial<MultiMeshData>): MultiMeshData {
-  return { customAabb: null, mesh: 'SubResource("mesh")', boundedTransforms: new Float32Array(0), ...fields };
+function multiMesh(fields: Partial<MultiMeshBox>): MultiMeshBox {
+  return { customAabb: null, boundedTransforms: new Float32Array(0), ...fields };
 }
 
 describe('multiMeshAabb', () => {
