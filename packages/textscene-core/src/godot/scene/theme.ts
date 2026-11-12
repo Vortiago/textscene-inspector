@@ -92,7 +92,7 @@ export const LINE_EDIT_MINIMUM_CHARACTER_WIDTH = 4;
  * the `widget_height`/`widget_width` that `Slider::_notification(NOTIFICATION_DRAW)` reads.
  */
 const SLIDER_STYLE_MARGIN = 4;
-const SLIDER_CORNER_RADIUS = 4;
+export const SLIDER_CORNER_RADIUS = 4;
 
 /**
  * The `slider_grabber` icon: a 16x16 box Godot positions, holding

@@ -19,7 +19,6 @@ import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/cont
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   computeGridDots,
   computeGridLines,
@@ -54,41 +53,10 @@ import { minimapConnectionsOf } from './minimapConnections';
 import { graphEditConstructorScrollBars, graphEditScrollBars, hasUpdatedScrollBars } from './scrollBars';
 import { ScrollBarChrome } from '../shared/ScrollChrome';
 import { canvasSubOrders } from '../../../../r3f/canvasItemState';
+import { graphEditDefaultPanel } from './defaultPanel';
 import type { GraphEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { useStableVector2 } from '../../../../r3f/hooks/useStableVector2';
-
-/** `default_theme.cpp:1287`: `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, with a larger bottom margin. */
-function defaultPanel(theme: NativeControlComponentProps['theme']): StyleBoxFlatData {
-  const scale = theme.contentMargin / 4;
-  return {
-    bgColor: theme.styleFill.normal,
-    borderColor: { r: 0.8, g: 0.8, b: 0.8, a: 1 },
-    borderWidth: { left: 0, top: 0, right: 0, bottom: 0 },
-    cornerRadius: {
-      topLeft: theme.cornerRadius,
-      topRight: theme.cornerRadius,
-      bottomRight: theme.cornerRadius,
-      bottomLeft: theme.cornerRadius,
-    },
-    expandMargin: { left: 0, top: 0, right: 0, bottom: 0 },
-    contentMargin: {
-      left: Math.round(4 * scale),
-      top: Math.round(4 * scale),
-      right: Math.round(4 * scale),
-      bottom: Math.round(5 * scale),
-    },
-    drawCenter: true,
-    borderBlend: false,
-    antiAliased: true,
-    aaSize: 1,
-    cornerDetail: 8,
-    skew: { x: 0, y: 0 },
-    shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-    shadowSize: 0,
-    shadowOffset: { x: 0, y: 0 },
-  };
-}
 
 /** `default_theme.cpp:1293`: `Color(1, 1, 1, 0.05)`. */
 const GRID_MINOR_DEFAULT: Rgba = { r: 1, g: 1, b: 1, a: 0.05 };
@@ -178,7 +146,7 @@ export function GraphEdit({
   children,
 }: NativeControlComponentProps) {
   const props = painterView<GraphEditProperties>(solveNode);
-  const panelStyle = solveNode.styleBoxes.panel ?? defaultPanel(theme);
+  const panelStyle = solveNode.styleBoxes.panel ?? graphEditDefaultPanel(theme);
 
   const showGrid = props.showGrid !== false;
   const gridPattern = props.gridPattern ?? GRID_PATTERN_LINES;

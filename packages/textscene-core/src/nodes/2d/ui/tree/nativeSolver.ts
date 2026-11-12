@@ -9,8 +9,10 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
 import {
   contentMarginSize,
+  flatCornerDetail,
   ZERO_SIDES,
   type StyleBoxFlatData,
 } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -45,7 +47,7 @@ function treePanelStyleBox(theme: NativeTheme): StyleBoxFlatData {
     borderBlend: false,
     antiAliased: true,
     aaSize: 1,
-    cornerDetail: 8,
+    cornerDetail: flatCornerDetail(DEFAULT_CORNER_RADIUS, theme.scale),
     skew: { x: 0, y: 0 },
     shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
     shadowSize: 0,

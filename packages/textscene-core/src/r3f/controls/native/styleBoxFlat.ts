@@ -63,6 +63,25 @@ interface FlatStyleBoxOptions {
   borderWidth?: number | Sides;
   borderColor?: Rgba;
   expandMargin?: Sides;
+  /** The detail of the theme builder (`flatCornerDetail`). Left out, the box keeps `StyleBoxFlat`'s 8. */
+  cornerDetail?: number;
+}
+
+/** `StyleBoxFlat::set_corner_detail` clamps to 1..20 (`style_box_flat.cpp:129-130`). */
+export const CORNER_DETAIL_MIN = 1;
+export const CORNER_DETAIL_MAX = 20;
+/** `MIN(ceil(1.5 * radius), 6)` in `make_flat_stylebox`: a corner never needs more than six steps at scale 1. */
+const MAX_UNSCALED_CORNER_DETAIL = 6;
+
+/**
+ * The `corner_detail` `make_flat_stylebox` sets (`default_theme.cpp:65`):
+ * `MIN(ceil(1.5 * radius), 6) * scale`. `radius` is the radius before the theme scale.
+ * `set_corner_detail` takes an `int`, so the product truncates, then clamps to 1..20
+ * (`style_box_flat.cpp:129-130`).
+ */
+export function flatCornerDetail(radius: number, scale: number): number {
+  const detail = Math.trunc(Math.min(Math.ceil(1.5 * radius), MAX_UNSCALED_CORNER_DETAIL) * scale);
+  return Math.min(Math.max(detail, CORNER_DETAIL_MIN), CORNER_DETAIL_MAX);
 }
 
 /**
@@ -95,7 +114,7 @@ export function flatStyleBox(bgColor: Rgba, options: FlatStyleBoxOptions = {}): 
     borderBlend: false,
     antiAliased: true,
     aaSize: 1,
-    cornerDetail: 8,
+    cornerDetail: options.cornerDetail ?? 8,
     skew: { x: 0, y: 0 },
     shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
     shadowSize: 0,

@@ -18,6 +18,7 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   contentMarginSize,
+  flatCornerDetail,
   ZERO_SIDES,
   type StyleBoxFlatData,
 } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -55,10 +56,7 @@ function progressBarFlatStyleBox(bgColor: Rgba, theme: Pick<NativeTheme, 'scale'
   const { scale } = theme;
   const margin = Math.round(PROGRESS_BAR_STYLE_MARGIN * scale);
   const cornerRadius = Math.round(PROGRESS_BAR_CORNER_RADIUS * scale);
-  // `set_corner_detail(MIN(Math::ceil(1.5 * p_corner_radius), 6) * scale)`
-  // (`default_theme.cpp:65`) assigns into an `int` parameter, which truncates
-  // toward zero. `MIN(ceil(1.5*6), 6)` is always 6.
-  const cornerDetail = Math.trunc(6 * scale);
+  const cornerDetail = flatCornerDetail(PROGRESS_BAR_CORNER_RADIUS, scale);
   return {
     bgColor,
     borderColor: DEFAULT_BORDER_COLOR,

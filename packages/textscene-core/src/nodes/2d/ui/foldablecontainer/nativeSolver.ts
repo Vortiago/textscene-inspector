@@ -11,7 +11,10 @@
  */
 import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
+import {
+  flatCornerDetail,
+  flatStyleBox as makeFlatStyleBox,
+} from '../../../../r3f/controls/native/styleBoxFlat';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
@@ -24,7 +27,7 @@ import type {
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { STYLE_FILL } from '../../../../godot/scene/theme';
+import { DEFAULT_CORNER_RADIUS, STYLE_FILL } from '../../../../godot/scene/theme';
 import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
@@ -76,9 +79,10 @@ type CornerRadius = StyleBoxFlatData['cornerRadius'];
 function flatStyleBox(
   bgColor: Rgba,
   contentMargin: { left: number; top: number; right: number; bottom: number },
-  cornerRadius: CornerRadius
+  cornerRadius: CornerRadius,
+  cornerDetail: number
 ): StyleBoxFlatData {
-  return makeFlatStyleBox(bgColor, { contentMargin, cornerRadius });
+  return makeFlatStyleBox(bgColor, { contentMargin, cornerRadius, cornerDetail });
 }
 
 /**
@@ -112,7 +116,8 @@ function defaultTitleStyle(theme: NativeTheme, folded: boolean, titlePosition: n
   return flatStyleBox(
     STYLE_FILL.pressed,
     margin,
-    titleStyleCornerRadius(theme.cornerRadius, folded, titlePosition)
+    titleStyleCornerRadius(theme.cornerRadius, folded, titlePosition),
+    flatCornerDetail(DEFAULT_CORNER_RADIUS, theme.scale)
   );
 }
 
@@ -123,7 +128,12 @@ function defaultPanelStyle(theme: NativeTheme, titlePosition: number): StyleBoxF
     right: theme.contentMargin,
     bottom: theme.contentMargin,
   };
-  return flatStyleBox(STYLE_FILL.normal, margin, panelCornerRadius(theme.cornerRadius, titlePosition));
+  return flatStyleBox(
+    STYLE_FILL.normal,
+    margin,
+    panelCornerRadius(theme.cornerRadius, titlePosition),
+    flatCornerDetail(DEFAULT_CORNER_RADIUS, theme.scale)
+  );
 }
 
 export type FoldableContainerArrow = 'expanded' | 'expandedMirrored' | 'folded' | 'foldedMirrored';

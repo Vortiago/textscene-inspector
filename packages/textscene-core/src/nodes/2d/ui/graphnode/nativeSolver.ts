@@ -10,7 +10,12 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { flatStyleBox as makeFlatStyleBox, ZERO_SIDES } from '../../../../r3f/controls/native/styleBoxFlat';
+import {
+  flatCornerDetail,
+  flatStyleBox as makeFlatStyleBox,
+  ZERO_SIDES,
+} from '../../../../r3f/controls/native/styleBoxFlat';
+import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
@@ -35,9 +40,10 @@ export const GRAPH_NODE_TITLE_VARIATION = 'GraphNodeTitleLabel';
 function flatBox(
   bgColor: Rgba,
   margin: { left: number; top: number; right: number; bottom: number },
-  cornerRadius: number
+  cornerRadius: number,
+  cornerDetail: number
 ): StyleBoxFlatData {
-  return makeFlatStyleBox(bgColor, { contentMargin: margin, cornerRadius });
+  return makeFlatStyleBox(bgColor, { contentMargin: margin, cornerRadius, cornerDetail });
 }
 
 /**
@@ -56,10 +62,16 @@ function defaultStyles(theme: NativeTheme) {
     right: Math.round(18 * scale),
     bottom: Math.round(12 * scale),
   };
-  const panel = flatBox(theme.styleFill.normal, panelMargin, theme.cornerRadius);
+  const cornerDetail = flatCornerDetail(DEFAULT_CORNER_RADIUS, scale);
+  const panel = flatBox(theme.styleFill.normal, panelMargin, theme.cornerRadius, cornerDetail);
   // `graphn_sb_titlebar_selected = graphnode_normal->duplicate()` then
   // `set_bg_color(...)`: clones the panel's own margins, not the titlebar's.
-  const titlebarSelected = flatBox({ r: 1.0, g: 0.625, b: 0.625, a: 0.6 }, panelMargin, theme.cornerRadius);
+  const titlebarSelected = flatBox(
+    { r: 1.0, g: 0.625, b: 0.625, a: 0.6 },
+    panelMargin,
+    theme.cornerRadius,
+    cornerDetail
+  );
   const titlebar = flatBox(
     lightened(theme.styleFill.normal, 0.3),
     {
@@ -68,10 +80,11 @@ function defaultStyles(theme: NativeTheme) {
       right: theme.contentMargin,
       bottom: theme.contentMargin,
     },
-    theme.cornerRadius
+    theme.cornerRadius,
+    cornerDetail
   );
   // `make_empty_stylebox(0, 0, 0, 0)`: draws nothing, zero margin.
-  const slot = flatBox({ r: 0, g: 0, b: 0, a: 0 }, ZERO_SIDES, 0);
+  const slot = flatBox({ r: 0, g: 0, b: 0, a: 0 }, ZERO_SIDES, 0, flatCornerDetail(0, scale));
   return { panel, panelSelected: panel, titlebar, titlebarSelected, slot };
 }
 
