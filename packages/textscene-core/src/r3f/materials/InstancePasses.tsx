@@ -19,7 +19,7 @@ import { SurfaceMaterialSlots, overriddenSources } from './SurfaceMaterialSlots'
 
 /** The draw a leaf mounts the passes in, which every extra draw copies. */
 interface BaseDraw {
-  /** The base draw, whose geometry every extra draw shares. */
+  /** The base draw, whose geometry every extra draw shares, but for an overlay with an `overlayGeometry`. */
   meshRef: RefObject<THREE.Object3D | null>;
   /** The base draws `THREE.Points`, so every extra draw does too. */
   drawsPoints?: boolean;
@@ -35,6 +35,11 @@ interface BaseDraw {
    * extra draws then stay at the node's own pose (`extraDraw.ts`). Omitted, nothing moves it.
    */
   posedRef?: RefObject<THREE.Object3D | null>;
+  /**
+   * The geometry `material_overlay` fills, where the base draw holds another: the mesh Godot holds
+   * for a leaf whose own material draws a stand-in. Omitted, the overlay shares the base draw's.
+   */
+  overlayGeometry?: THREE.BufferGeometry;
 }
 
 interface InstancePassesProps extends BaseDraw {
@@ -52,7 +57,15 @@ const NO_CHAIN: readonly MaterialSource[] = [];
 
 /** Mounts inside the base draw: the material slot of each draw group, each slot's chain, and the overlay. */
 export function InstancePasses(props: InstancePassesProps) {
-  const { meshRef, drawsPoints = false, skeleton, laterSurfaces = 0, posedRef, ownMaterial } = props;
+  const {
+    meshRef,
+    drawsPoints = false,
+    skeleton,
+    laterSurfaces = 0,
+    posedRef,
+    ownMaterial,
+    overlayGeometry,
+  } = props;
   const { override, overlay, shadow, layers, instance } = useInstanceDraw();
   const site = useMemo(
     () => ({ nodePose: posedRef ? { instance, posedRef } : null, laterSurfaces }),
@@ -89,6 +102,7 @@ export function InstancePasses(props: InstancePassesProps) {
                   meshRef={meshRef}
                   drawsPoints={drawsPoints}
                   skeleton={skeleton}
+                  overlayGeometry={overlayGeometry}
                   source={overlay}
                   ordinal={ordinal}
                 />
@@ -101,7 +115,7 @@ export function InstancePasses(props: InstancePassesProps) {
 }
 
 /**
- * `material_overlay`'s draw: the base draw's geometry a second time, with the overlay material. A
+ * `material_overlay`'s draw: the leaf's geometry a second time, with the overlay material. A
  * separate object, not a material array entry: Godot's overlay covers every surface
  * (`_geometry_instance_add_surface` runs per surface), and one material over a grouped geometry
  * draws the same pixels. Its own `next_pass` chain follows it (`:4230-4239`).
@@ -110,17 +124,20 @@ function OverlayDraw({
   meshRef,
   drawsPoints,
   skeleton,
+  overlayGeometry,
   source,
   ordinal,
 }: Required<Pick<BaseDraw, 'meshRef' | 'drawsPoints'>> &
-  Pick<BaseDraw, 'skeleton'> & {
+  Pick<BaseDraw, 'skeleton' | 'overlayGeometry'> & {
     source: MaterialSource;
     /** One past the surface chains. */
     ordinal: number;
   }) {
   const { shadow, layers } = useInstanceDraw();
-  // Read back off the base draw, so the two share one geometry whichever leaf built it.
-  const geometry = useDrawnGeometry(meshRef);
+  // Read back off the base draw, so the two share one geometry whichever leaf built it, unless the
+  // leaf hands the overlay its own.
+  const baseGeometry = useDrawnGeometry(meshRef);
+  const geometry = overlayGeometry ?? baseGeometry;
   const drawRef = useExtraDrawRef();
   if (!geometry) return null;
   const { Drawn, skin } = drawnElementOf(drawsPoints, skeleton);

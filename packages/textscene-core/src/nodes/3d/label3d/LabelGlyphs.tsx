@@ -7,7 +7,7 @@
 import { useMemo, type ReactNode, type RefObject } from 'react';
 import * as THREE from 'three';
 import { soloLineLayout } from '../../../r3f/controls/native/text/textLayout';
-import { TextRun } from '../../../r3f/controls/native/text/TextRun';
+import { TextRun, type TextRunProps } from '../../../r3f/controls/native/text/TextRun';
 import { NO_TRANSPARENT_FLAG } from '../../../r3f/godotAlphaCut';
 import { useAnisotropicFilteringLevel } from '../../../r3f/contexts/AnisotropicFilteringContext';
 import { materialFor2d } from '../../../r3f/materialFor2d';
@@ -124,8 +124,11 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
     properties.billboard,
   ]);
   useGeometryInstance(placement);
-  const { shadow, override } = useInstanceDraw();
+  const { shadow, override, overlay } = useInstanceDraw();
   const isOverridden = override !== undefined;
+  // An instance material fills the mesh Godot holds, one quad for each glyph (`label_3d.cpp:417-420`),
+  // where the glyph material draws the raster of the line.
+  const glyphQuads: TextRunProps['glyphQuads'] = isOverridden ? 'base' : overlay ? 'extraDraws' : undefined;
 
   // Not memoised: `TextRun` keys its material off the blend's fields, not its identity, so a fresh
   // equal-valued one rebuilds nothing.
@@ -156,6 +159,7 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
     mipmapped,
     fallbackMipmaps: font?.fallbackMipmaps,
     blends,
+    glyphQuads,
     // The material that draws decides the shadow pass: an override's own draw hooks answer for it.
     shadow: { ...shadow, castShadow: shadow.castShadow && (joinsShadowPass || isOverridden) },
     layers: properties.layers,
@@ -173,12 +177,17 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
   const surface = (priority: number, laterSurfaces: number) => ({
     renderOrder: sortsByPriority ? priority : 0,
     zShiftPx: bakesPriority ? priority : 0,
-    instancePasses: (meshRef: RefObject<THREE.Mesh | null>, ownMaterial: ReactNode) => (
+    instancePasses: (
+      meshRef: RefObject<THREE.Mesh | null>,
+      ownMaterial: ReactNode,
+      glyphGeometry: THREE.BufferGeometry | undefined
+    ) => (
       <InstancePasses
         meshRef={meshRef}
         posedRef={posedRef}
         laterSurfaces={laterSurfaces}
         ownMaterial={ownMaterial}
+        overlayGeometry={glyphGeometry}
       />
     ),
   });

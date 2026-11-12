@@ -54,6 +54,15 @@ function mapOf(mesh: THREE.Mesh): THREE.Texture | null {
   return (mesh.material as THREE.MeshBasicMaterial).map;
 }
 
+function vertexCountOf(mesh: THREE.Mesh): number {
+  return mesh.geometry.getAttribute('position').count;
+}
+
+/** The RGBA bytes the first vertex of `mesh` holds as its colour. */
+function firstVertexColourOf(mesh: THREE.Mesh): number[] {
+  return Array.from(mesh.geometry.getAttribute('color').array.slice(0, 4));
+}
+
 describe('<LabelGlyphs> instance materials', () => {
   it('draws the outline and the fill with their glyph rasters when the node sets neither', async () => {
     const drawn = await drawnMeshes({});
@@ -75,8 +84,49 @@ describe('<LabelGlyphs> instance materials', () => {
 
     expect([mapOf(outline!) !== null, mapOf(fill!) !== null]).toEqual([true, true]);
     expect([albedoOf(outlineOverlay!), albedoOf(fillOverlay!)]).toEqual(['0000ff', '0000ff']);
-    expect(outlineOverlay!.geometry).toBe(outline!.geometry);
-    expect(fillOverlay!.geometry).toBe(fill!.geometry);
+  });
+
+  it('draws one line quad for each surface when the node sets neither', async () => {
+    const drawn = await drawnMeshes({});
+
+    expect(drawn.map(vertexCountOf)).toEqual([4, 4]);
+  });
+
+  it('fills one quad for each glyph under material_override, as the mesh of Godot holds them', async () => {
+    const drawn = await drawnMeshes({ materialOverride: 'SubResource("Mat_override")' });
+
+    expect(drawn.map(vertexCountOf)).toEqual([8, 8]);
+  });
+
+  it('fills one quad for each glyph with material_overlay, over the line quad of the glyph material', async () => {
+    const [outline, outlineOverlay, fill, fillOverlay] = await drawnMeshes({
+      materialOverlay: 'SubResource("Mat_overlay")',
+    });
+
+    expect([outline!, fill!].map(vertexCountOf)).toEqual([4, 4]);
+    expect([outlineOverlay!, fillOverlay!].map(vertexCountOf)).toEqual([8, 8]);
+  });
+
+  it('fills the glyph quads with the overlay of an overridden label too', async () => {
+    const drawn = await drawnMeshes({
+      materialOverride: 'SubResource("Mat_override")',
+      materialOverlay: 'SubResource("Mat_overlay")',
+    });
+
+    expect(drawn.map(vertexCountOf)).toEqual([8, 8, 8, 8]);
+  });
+
+  it('holds the modulate of each surface as the vertex colour of its glyph quads, cut to a byte', async () => {
+    const [outline, fill] = await drawnMeshes({
+      materialOverride: 'SubResource("Mat_override")',
+      modulate: { r: 1, g: 0.5, b: 0, a: 1 },
+      outline_modulate: { r: 0, g: 0, b: 1, a: 0.25 },
+    });
+
+    expect([outline!, fill!].map(firstVertexColourOf)).toEqual([
+      [0, 0, 255, 63],
+      [255, 127, 0, 255],
+    ]);
   });
 
   it('sorts an alpha-pass overlay as Godot does: the outline, the fill overlay, the fill, the outline overlay', async () => {

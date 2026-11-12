@@ -13,7 +13,7 @@ import type { EnumValue } from '../../../godot/classdb/enumNames.js';
 import type { UvWindow } from '../../../r3f/uvWindow';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Rgba } from '../../../godot/math/math';
-import { byteOf } from '../../../godot/project/image';
+import { vertexColourAttribute, writeVertexColour } from '../../../r3f/vertexColour';
 
 /** The quad's size in world units: the frame's pixels times `pixel_size`. */
 interface QuadSize {
@@ -70,15 +70,12 @@ export function spriteQuadGeometry(
   geometry.translate(position.x + size.x / 2, position.y + size.y / 2, 0);
   if (axis === Vector3Axis.Y) geometry.rotateX(-Math.PI / 2);
   else if (axis === Vector3Axis.X) geometry.rotateY(Math.PI / 2);
-  geometry.setAttribute(
-    'color',
-    new THREE.BufferAttribute(new Uint8Array(QUAD_COLOUR_BYTES).fill(255), 4, true)
-  );
+  // White until `writeSpriteQuadColour` writes the modulate.
+  geometry.setAttribute('color', vertexColourAttribute(QUAD_CORNERS.length, WHITE));
   return geometry;
 }
 
-/** One RGBA byte quadruple for each corner, white until `writeSpriteQuadColour` writes the modulate. */
-const QUAD_COLOUR_BYTES = 16;
+const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** A PlaneGeometry's corners in vertex order: top-left, top-right, bottom-left, bottom-right. */
 const QUAD_CORNERS = [
@@ -107,13 +104,7 @@ export function writeSpriteQuadUvs(geometry: THREE.BufferGeometry, { repeat, off
  * material reads the modulate as its colour, so only a material that reads the vertex colour sees it.
  */
 export function writeSpriteQuadColour(geometry: THREE.BufferGeometry, modulate: Rgba): void {
-  const colours = geometry.getAttribute('color') as THREE.BufferAttribute;
-  const bytes = [modulate.r, modulate.g, modulate.b, modulate.a].map((channel) =>
-    byteOf(Math.fround(channel))
-  );
-  // Into the array, not `setXYZW`: that rounds a normalised value, where Godot truncates.
-  for (let vertex = 0; vertex < colours.count; vertex++) colours.array.set(bytes, vertex * bytes.length);
-  colours.needsUpdate = true;
+  writeVertexColour(geometry.getAttribute('color') as THREE.BufferAttribute, modulate);
 }
 
 /** The quad's AABB in node space under `billboard`, as `_draw` sets it (`sprite_3d.cpp:252-273`). */
