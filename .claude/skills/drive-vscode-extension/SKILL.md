@@ -153,10 +153,11 @@ It grants `style-src`, `script-src` (nonce + `cspSource`),
 `default-src 'none'` base. The base denies everything else: no `connect-src` (no
 fetch, XHR or WebSocket, for `data:` and `blob:` URLs too), no `font-src` (no CSS
 `@font-face`). So everything the webview loads ships inside the bundle. The
-MSDF glyph atlas arrives as a `data:` URI under `img-src data:`.
+bytes of the bundled font ride a script chunk, and text draws from their outlines
+(ADR-0069).
 
-ADR-0037 records why the text pipeline is a baked atlas and not troika, and
-which directives blocked troika. Read it before you propose a wider CSP.
+ADR-0037 records which directives blocked troika. Read it before you propose a
+wider CSP.
 
 ## Measured baseline
 

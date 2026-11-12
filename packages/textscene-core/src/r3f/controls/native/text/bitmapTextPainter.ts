@@ -2,7 +2,8 @@
  * The BMFont painter's geometry: every glyph with ink as a quad over its page image, as
  * `font_draw_glyph` draws a bitmap glyph (`modules/text_server_adv/text_server_adv.cpp:4072-4108`).
  * The page fills of a font stack into one sheet, so a run is one mesh and one draw. Geometry is in
- * Godot pixels with Y negated once per vertex into three's Y-up space, as `glyphQuads.ts` does.
+ * Godot pixels with Y negated once per vertex into three's Y-up space, as the quad of a canvas run
+ * is (`canvasTextPainter.ts`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.

@@ -96,10 +96,6 @@ export default [
       '.spike/',
       // Vendored third-party source (minified); linted upstream, not here.
       'scripts/compare-docs/vendor/',
-      // Generated MSDF font atlas: the per-glyph JSON table is one very long line.
-      // Produced by `scripts/fonts/bake-metrics.mjs`; drift is caught by its `--check`
-      // mode, not by lint.
-      'packages/textscene-core/src/r3f/controls/native/text/openSansAtlas.ts',
       // The consumer app is copied into a temporary project, which type-checks and builds it.
       'scripts/renderer-consumer/app/',
     ],

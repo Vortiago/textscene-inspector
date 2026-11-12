@@ -1,6 +1,6 @@
 /**
  * Label3D's glyph-drawing pass, `React.lazy`-loaded so the font stays out of the
- * initial bundle. Shaped with `'canvas'` metrics, or `'bitmap'` for a BMFont, not MSDF: Godot's
+ * initial bundle. Shaped with `'canvas'` metrics, or `'bitmap'` for a BMFont: Godot's
  * default font is not MSDF (`servers/text/text_server.cpp:2386`, read by `scene/theme/theme_db.cpp:59`),
  * and a distance field cannot reach as far as the FreeType outline.
  */
@@ -41,10 +41,10 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
   const drawOutline = properties.outline_size > 0 && properties.outline_modulate.a !== 0;
   const strokeWidthPx = drawOutline ? outlineStrokeWidthPx(properties.outline_size) : 0;
 
-  // `undefined` until `document.fonts` has the family of the font; the hook re-renders once it does.
+  // Undefined while the font loads. The hook re-renders once it has.
   const font = useLabel3DFont(properties.font);
   const fontMetrics = font?.metrics;
-  usePendingWhile(!fontMetrics);
+  usePendingWhile(font === undefined);
 
   // Each memo lists the fields it reads, so an unrelated property edit keeps the layout.
   const { text, font_size, line_spacing, width, autowrap_mode, autowrap_trim_flags } = properties;
@@ -186,8 +186,8 @@ export default function LabelGlyphs({ nodeRef, posedRef, properties }: LabelGlyp
   const outlineSurface = surface(properties.outline_render_priority, 1);
   const fillSurface = surface(properties.render_priority, 0);
 
-  // Nothing renders before the family registers: `ctx.fillText` against an
-  // unregistered one rasterises a system font, frame-stable, so no golden catches it.
+  // Nothing renders while the font or its outlines load, or for outlines that cannot be read: no
+  // glyph draws against the wrong face.
   if (!fontMetrics) return null;
 
   // `modulate` is authored sRGB. Godot decodes the vertex colour (`label_3d.cpp:428`)
