@@ -3,13 +3,14 @@
  * with a `trigger` is held to its resolver by `bindings.test.ts`. This panel is
  * the only list of the bindings: the docs point to it and repeat none.
  */
-import type { NavMode, NavModifiers } from '../../godotEditorCursor.js';
+import type { FreelookDirection } from '../../editorKeyBindings.js';
+import type { NavMode, NavModifiers, Projection } from '../../godotEditorCursor.js';
 
 /**
- * What a row's input resolves to. `null` means navigation declines it, as for a
- * plain left-drag, which selects.
+ * What a row's input resolves to: a navigation mode, or the direction a flight key
+ * flies in. `null` means navigation declines it, as for a plain left-drag, which selects.
  */
-export type BindingOutcome = NavMode | null;
+export type BindingOutcome = NavMode | FreelookDirection | null;
 
 /** How to ask a resolver what a row's input does. */
 type BindingTrigger =
@@ -17,7 +18,9 @@ type BindingTrigger =
       readonly kind: 'drag';
       readonly button: number;
       readonly mods?: NavModifiers;
+      readonly projection?: Projection;
     }
+  | { readonly kind: 'flightKeys'; readonly codes: readonly string[] }
   | { readonly kind: 'wheel'; readonly mods?: NavModifiers }
   | { readonly kind: 'touch'; readonly pointers: number };
 
@@ -26,8 +29,8 @@ export interface Binding {
   readonly input: string;
   readonly action: string;
   /**
-   * Present when a resolver owns the row. Absent for the keyboard shortcuts,
-   * the zoom HUD buttons, and the taps and pinches outside the mode resolvers.
+   * Present when a resolver owns the row. Absent for the view shortcuts, the freelook
+   * toggle and modifiers, the zoom HUD buttons, and the taps and pinches outside the resolvers.
    */
   readonly trigger?: BindingTrigger;
   readonly resolvesTo?: BindingOutcome;
@@ -48,10 +51,10 @@ interface ControlsHelp {
   readonly groups: readonly BindingGroup[];
 }
 
-// In both tables the mouse and keyboard rows are Godot 4.6's editor bindings. The
-// trackpad rows are its pan-gesture bindings minus the unmodified one: a browser
-// reports a two-finger scroll as a wheel event, so the wheel's zoom keeps that
-// slot. Godot's editor has no touch scheme.
+// In both tables the mouse and keyboard rows are Godot 4.6's editor bindings, and the trackpad
+// rows are its pan-gesture bindings minus the unmodified one: a browser reports a two-finger
+// scroll as a wheel event, so the wheel's zoom keeps that slot. The touch rows, and the arrow
+// keys and Space of the Freelook rows, are the previewer's own (ADR-0029).
 const CONTROLS_3D: ControlsHelp = {
   summary: 'middle-drag = orbit · shift+wheel = pan · wheel = zoom',
   touchSummary: 'drag = orbit · two fingers = pan · pinch = zoom',
@@ -100,6 +103,12 @@ const CONTROLS_3D: ControlsHelp = {
           action: 'Freelook — turn the camera in place',
           trigger: { kind: 'drag', button: 2 },
           resolvesTo: 'freelook',
+        },
+        {
+          input: 'Right-drag in orthographic view',
+          action: 'Pan',
+          trigger: { kind: 'drag', button: 2, projection: 'orthographic' },
+          resolvesTo: 'pan',
         },
         {
           input: 'Alt + left-drag',
@@ -170,10 +179,54 @@ const CONTROLS_3D: ControlsHelp = {
           action: 'Front / right / top view; Ctrl for the opposite',
         },
         { input: 'Numpad 5', action: 'Perspective ⇄ orthographic' },
+      ],
+    },
+    {
+      device: 'Freelook',
+      bindings: [
         {
-          input: 'W A S D Q E',
-          action: 'Fly while right-dragging (Shift sprints)',
+          input: 'Shift + F',
+          action: 'Freelook on or off: the mouse looks around, and Escape leaves',
         },
+        { input: 'Right-drag', action: 'Freelook while the button is held' },
+        {
+          input: 'W or ↑',
+          action: 'Fly forward',
+          trigger: { kind: 'flightKeys', codes: ['KeyW', 'ArrowUp'] },
+          resolvesTo: 'forward',
+        },
+        {
+          input: 'S or ↓',
+          action: 'Fly back',
+          trigger: { kind: 'flightKeys', codes: ['KeyS', 'ArrowDown'] },
+          resolvesTo: 'back',
+        },
+        {
+          input: 'A or ←',
+          action: 'Fly left',
+          trigger: { kind: 'flightKeys', codes: ['KeyA', 'ArrowLeft'] },
+          resolvesTo: 'left',
+        },
+        {
+          input: 'D or →',
+          action: 'Fly right',
+          trigger: { kind: 'flightKeys', codes: ['KeyD', 'ArrowRight'] },
+          resolvesTo: 'right',
+        },
+        {
+          input: 'E or Space',
+          action: 'Fly up',
+          trigger: { kind: 'flightKeys', codes: ['KeyE', 'Space'] },
+          resolvesTo: 'up',
+        },
+        {
+          input: 'Q',
+          action: 'Fly down',
+          trigger: { kind: 'flightKeys', codes: ['KeyQ'] },
+          resolvesTo: 'down',
+        },
+        { input: 'Shift / Alt', action: 'Fly 3 times faster / 3 times slower' },
+        { input: 'Wheel', action: 'Change the flight speed' },
       ],
     },
   ],
