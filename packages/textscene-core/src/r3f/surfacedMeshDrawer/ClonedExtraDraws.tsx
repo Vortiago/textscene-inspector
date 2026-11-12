@@ -10,8 +10,8 @@ import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmate
 import { materialFromBag } from '../../resources/materials/standardmaterial3d/build.js';
 import type { SurfaceSlot } from '../../resources/formats/glb/surfaceMaterials.js';
 import { extraDrawProps } from '../materials/extraDraw.js';
-import { materialSourceKey, resolveNextPass, type MaterialSource } from '../materials/materialSource.js';
-import { NOTHING_DRAWN, visitedWith } from '../materials/nextPass.js';
+import type { MaterialSource } from '../materials/materialSource.js';
+import { NOTHING_DRAWN, loadedPassOf, nextPassStep, type LinkPass } from '../materials/nextPassWalk.js';
 import { OVERLAY_ORDINAL_PAST_CHAINS, orderByPass } from '../materials/passOrder.js';
 import { GLTF_SURFACE } from '../materials/surfaceTextures.js';
 import { OTHER_DRAWS_SURFACE } from '../materials/useOneSurfaceStartingMaterial.js';
@@ -51,10 +51,12 @@ export function ClonedChain({
   /** The caller's own load of `source`, so the chain adds no second one. */
   drawn: DrawnMaterial;
 }) {
-  const nextSource = useNextSource(drawn);
-  const visited = useMemo(() => visitedWith(NOTHING_DRAWN, source), [source]);
-  if (nextSource === undefined) return null;
-  return <ClonedLink covered={covered} source={nextSource} ordinal={1} visited={visited} />;
+  const { material, scalars } = drawn;
+  const { next } = useMemo(
+    () => nextPassStep({ source, ordinal: 0, visited: NOTHING_DRAWN }, loadedPassOf(material, scalars)),
+    [source, material, scalars]
+  );
+  return next && <ClonedLink covered={covered} {...next} />;
 }
 
 /**
@@ -68,16 +70,12 @@ export function ClonedOverlay({ slots, source }: { slots: readonly SurfaceSlot[]
   const pass = useClonedPass(source);
   // The overlay draws whatever it reads, as its React draw does. Only a link skips the stencil.
   useClonedExtraDraws(everyHolder, pass.material, OVERLAY_ORDINAL_PAST_CHAINS);
-  const visited = useMemo(() => visitedWith(NOTHING_DRAWN, source), [source]);
-  if (pass.nextSource === undefined) return null;
-  return (
-    <ClonedLink
-      covered={everyHolder}
-      source={pass.nextSource}
-      ordinal={OVERLAY_ORDINAL_PAST_CHAINS + 1}
-      visited={visited}
-    />
+  const { loaded } = pass;
+  const { next } = useMemo(
+    () => nextPassStep({ source, ordinal: OVERLAY_ORDINAL_PAST_CHAINS, visited: NOTHING_DRAWN }, loaded),
+    [source, loaded]
   );
+  return next && <ClonedLink covered={everyHolder} {...next} />;
 }
 
 function isFirstOfHolder(slot: SurfaceSlot): boolean {
@@ -89,17 +87,9 @@ function asOneSurface(slot: SurfaceSlot): SurfaceSlot {
   return { ...slot, count: 1 };
 }
 
-/** The pass after a loaded material, resolved in the tables of the file that wrote it. */
-function useNextSource({ material, scalars }: DrawnMaterial): MaterialSource | undefined {
-  return useMemo(
-    () => (material && scalars ? resolveNextPass(scalars.nextPass, material) : undefined),
-    [material, scalars]
-  );
-}
-
 /**
  * One pass over a clone, built through the same `useSurfaceMaterial` load on the glTF surface: its
- * material, disposed with the pass, and the pass after it.
+ * material, disposed with the pass, and what the walk reads of it once its resource is in.
  */
 function useClonedPass(source: MaterialSource | undefined) {
   const loaded = useSurfaceMaterial(source, GLTF_SURFACE);
@@ -112,13 +102,14 @@ function useClonedPass(source: MaterialSource | undefined) {
     return materialFromBag(bags ? bags.unfaded : MISSING_TEXTURE_MATERIAL);
   }, [isAbsent, bags]);
   useDisposeOnRelease(material);
-  return { material, nextSource: useNextSource(loaded), readsStencil: loaded.scalars?.readsStencil === true };
+  const { material: resource, scalars } = loaded;
+  const walked = useMemo(() => loadedPassOf(resource, scalars), [resource, scalars]);
+  return { material, loaded: walked };
 }
 
 /**
- * One link of a `next_pass` chain over the covered slots. A link that reads the stencil draws
- * nothing here, which requests no stencil buffer, and the walk continues past it. A link whose
- * material already drew is cut, so each material of a hand-written cycle draws once.
+ * One link of a `next_pass` chain over the covered slots, as `nextPassStep` decides it. A link that
+ * is skipped draws nothing here, which requests no stencil buffer.
  */
 function ClonedLink({
   covered,
@@ -128,24 +119,13 @@ function ClonedLink({
 }: {
   /** The slots the chain's first material drew, or null while it drew none. */
   covered: readonly SurfaceSlot[] | null;
-  source: MaterialSource;
-  ordinal: number;
-  visited: ReadonlySet<string>;
-}) {
+} & LinkPass) {
   const pass = useClonedPass(source);
-  // The mount takes a null material for a pass still loading and for one that reads the stencil,
-  // and no slots for a cut pass. Each leaves the tree as it was.
-  const isCut = visited.has(materialSourceKey(source));
-  useClonedExtraDraws(isCut ? null : covered, pass.readsStencil ? null : pass.material, ordinal);
-  if (isCut || pass.nextSource === undefined) return null;
-  return (
-    <ClonedLink
-      covered={covered}
-      source={pass.nextSource}
-      ordinal={ordinal + 1}
-      visited={visitedWith(visited, source)}
-    />
-  );
+  const { fate, next } = nextPassStep({ source, ordinal, visited }, pass.loaded);
+  // The mount takes no slots for a pass that ends the chain, and a null material for a skipped
+  // pass and for one still loading. Each leaves the tree as it was.
+  useClonedExtraDraws(fate === 'ends' ? null : covered, fate === 'skipped' ? null : pass.material, ordinal);
+  return next && <ClonedLink covered={covered} {...next} />;
 }
 
 /**

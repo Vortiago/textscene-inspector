@@ -4,7 +4,7 @@
  * draw of a part reads one instanced geometry, so one write places them all.
  */
 
-import { useLayoutEffect, useMemo } from 'react';
+import { useLayoutEffect, useMemo, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import { geometryDrawsPoints } from '../../resources/meshes/godotSurface';
 import { perObject } from '../../utils/perObject';
@@ -96,38 +96,17 @@ function OwnInstancedDraw({
   sources: readonly (MaterialSource | undefined)[];
   shadow: ShadowCastingEffects;
 }) {
-  const { geometry, bounds, userData, particles } = placed;
-  const startingMaterial = useOneSurfaceStartingMaterial(sources.length);
-  const mounted = useMemo(() => mountsAtInstances(placed), [placed]);
-  const slots = (
-    <SurfaceMaterialSlots sources={sources} points={pointPlacementOf(geometry)} particles={particles} />
-  );
-  if (geometryDrawsPoints(geometry)) {
-    return (
-      <points
-        ref={mounted}
-        args={[geometry, startingMaterial]}
-        frustumCulled={bounds !== null}
-        // `THREE.Points` tests the source positions alone, so each instance is picked by itself.
-        raycast={raycastInstancedPoints}
-        {...drawHookProps(shadow)}
-        userData={userData}
-      >
-        {slots}
-      </points>
-    );
-  }
+  const { geometry, particles } = placed;
+  // `THREE.Points` tests the source positions alone, so each instance is picked by itself.
+  const raycast = geometryDrawsPoints(geometry) ? raycastInstancedPoints : undefined;
   return (
-    <instancedMesh
-      ref={mounted}
-      args={[geometry, startingMaterial, NO_OWN_MATRICES]}
-      count={geometry.instanceCount}
-      frustumCulled={bounds !== null}
-      {...drawHookProps(shadow)}
-      userData={userData}
+    <InstancedDraw
+      placed={placed}
+      surfaceCount={sources.length}
+      settings={{ ...drawHookProps(shadow), raycast }}
     >
-      {slots}
-    </instancedMesh>
+      <SurfaceMaterialSlots sources={sources} points={pointPlacementOf(geometry)} particles={particles} />
+    </InstancedDraw>
   );
 }
 
@@ -136,30 +115,68 @@ function OwnInstancedDraw({
  * link's place in the draw order. It casts nothing of its own, so only the colour hooks mount.
  */
 function ExtraInstancedDraw({ spec, placed }: { spec: ChainDrawSpec; placed: PartAtInstances }) {
-  const { geometry, bounds, userData, particles } = placed;
-  const startingMaterial = useOneSurfaceStartingMaterial(spec.surfaceCount);
-  const mounted = useMemo(() => mountsAtInstances(placed, orderByPass), [placed]);
   const { onBeforeRender, onAfterRender } = spec.shadow;
-  const slot = (
-    <SurfaceMaterialSlot
-      source={spec.source}
-      attach={spec.attach}
-      points={pointPlacementOf(geometry)}
-      particles={particles}
-    />
+  return (
+    <InstancedDraw
+      placed={placed}
+      surfaceCount={spec.surfaceCount}
+      onMount={orderByPass}
+      settings={{ ...extraDrawProps(spec.ordinal), onBeforeRender, onAfterRender }}
+    >
+      <SurfaceMaterialSlot
+        source={spec.source}
+        attach={spec.attach}
+        points={pointPlacementOf(placed.geometry)}
+        particles={placed.particles}
+      />
+    </InstancedDraw>
   );
-  if (spec.drawsPoints) {
+}
+
+/**
+ * What the own draw and an extra draw of a part set on their object. An absent one keeps three's
+ * default: r3f skips a prop that is undefined (9.8.2 `applyProps`).
+ */
+type InstancedDrawSettings = Partial<ReturnType<typeof drawHookProps> & ReturnType<typeof extraDrawProps>>;
+
+/**
+ * One instanced draw of a part: an InstancedMesh, or a `THREE.Points` for a part that draws points.
+ * Each setting is a named prop, so the element spreads nothing that could hold a material slot.
+ */
+function InstancedDraw({
+  placed,
+  surfaceCount,
+  onMount,
+  settings,
+  children,
+}: {
+  placed: PartAtInstances;
+  /** The draw groups of the draw, which size its invisible starting materials. */
+  surfaceCount: number;
+  onMount?: (object: InstancedObject) => void;
+  settings: InstancedDrawSettings;
+  children: ReactNode;
+}) {
+  const { geometry, bounds, userData } = placed;
+  const startingMaterial = useOneSurfaceStartingMaterial(surfaceCount);
+  const mounted = useMemo(() => mountsAtInstances(placed, onMount), [placed, onMount]);
+  if (geometryDrawsPoints(geometry)) {
     return (
       <points
         ref={mounted}
         args={[geometry, startingMaterial]}
         frustumCulled={bounds !== null}
-        {...extraDrawProps(spec.ordinal)}
-        onBeforeRender={onBeforeRender}
-        onAfterRender={onAfterRender}
+        renderOrder={settings.renderOrder}
+        raycast={settings.raycast}
+        castShadow={settings.castShadow}
+        receiveShadow={settings.receiveShadow}
+        onBeforeRender={settings.onBeforeRender}
+        onAfterRender={settings.onAfterRender}
+        onBeforeShadow={settings.onBeforeShadow}
+        onAfterShadow={settings.onAfterShadow}
         userData={userData}
       >
-        {slot}
+        {children}
       </points>
     );
   }
@@ -169,12 +186,17 @@ function ExtraInstancedDraw({ spec, placed }: { spec: ChainDrawSpec; placed: Par
       args={[geometry, startingMaterial, NO_OWN_MATRICES]}
       count={geometry.instanceCount}
       frustumCulled={bounds !== null}
-      {...extraDrawProps(spec.ordinal)}
-      onBeforeRender={onBeforeRender}
-      onAfterRender={onAfterRender}
+      renderOrder={settings.renderOrder}
+      raycast={settings.raycast}
+      castShadow={settings.castShadow}
+      receiveShadow={settings.receiveShadow}
+      onBeforeRender={settings.onBeforeRender}
+      onAfterRender={settings.onAfterRender}
+      onBeforeShadow={settings.onBeforeShadow}
+      onAfterShadow={settings.onAfterShadow}
       userData={userData}
     >
-      {slot}
+      {children}
     </instancedMesh>
   );
 }

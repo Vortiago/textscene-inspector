@@ -21,7 +21,8 @@ import {
   type RefObject,
 } from 'react';
 import * as THREE from 'three';
-import { materialSourceKey, resolveNextPass, type MaterialSource } from './materialSource';
+import type { MaterialSource } from './materialSource';
+import { NOTHING_DRAWN, loadedPassOf, nextPassStep } from './nextPassWalk';
 import { extraDrawProps, useExtraDrawRef } from './extraDraw';
 import { useDrawnGeometry } from './drawnGeometry';
 import { drawnTag } from '../meshes/meshContent';
@@ -32,15 +33,6 @@ import { useOneSurfaceStartingMaterial } from './useOneSurfaceStartingMaterial';
 import type { ShadowCastingEffects } from '../shadowCasting';
 import { visualLayersUserData } from '../visualLayers';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
-
-/**
- * The visited seed every chain's walk starts from: nothing has drawn yet, so no key is
- * held. The walkers never mutate their visited set — `visitedWith` returns a new one —
- * so one instance serves every group, every owner and every overlay link per render.
- *
- * @canonical The visited seed of a next_pass chain walk
- */
-export const NOTHING_DRAWN: ReadonlySet<string> = new Set();
 
 /**
  * The element and bind props of a draw the base draws: `THREE.Points` for a points
@@ -122,7 +114,7 @@ type PassProps = {
   ordinal: number;
   /** False for a starting pass, whose draw the part's surface slot mounts. */
   drawsSelf: boolean;
-  /** Every source key from the starting material through this pass. */
+  /** Every source key from the starting material up to this pass, without its own. */
   visited: ReadonlySet<string>;
   /** The base geometry, read back from the base draw. */
   geometry: THREE.BufferGeometry | null;
@@ -167,20 +159,19 @@ const drawAtOnePlace: ChainDrawFactory = (spec) => <ChainDraw {...spec} />;
  * of a hand-written cycle once.
  */
 function NextPassLink(props: PassProps) {
-  const { source, ordinal, drawsSelf, visited, geometry, attach, surfaceCount, onOrdinal, draw, shadow } =
-    props;
+  const { source, ordinal, drawsSelf, visited, geometry, onOrdinal, draw } = props;
   const loaded = useMaterial(source);
   const material = readyMaterial(loaded);
-  const scalars = useMemo(
-    () => (material ? parseStandardMaterial3DScalars(material.resource.data) : null),
+  // Stable between loads: a re-render of an already-loaded link re-scans nothing.
+  const loadedPass = useMemo(
+    () => material && loadedPassOf(material, parseStandardMaterial3DScalars(material.resource.data)),
     [material]
   );
-  // Stable between loads: a re-render of an already-loaded link re-scans nothing.
-  const nextSource = useMemo(
-    () => (material && scalars ? resolveNextPass(scalars.nextPass, material) : undefined),
-    [material, scalars]
+  // One step until the pass changes, so the pass after it walks with one visited set.
+  const step = useMemo(
+    () => nextPassStep({ source, ordinal, visited }, loadedPass),
+    [source, ordinal, visited, loadedPass]
   );
-  const nextVisited = useMemo(() => visitedWith(visited, source), [visited, source]);
   // The pass's fate reported once it is known, in the layout pass: a resolved one
   // reached its position whether it drew or was skipped over, and a declined one ends
   // its chain there. A pass still loading waits, and the overlay's own order then
@@ -189,43 +180,22 @@ function NextPassLink(props: PassProps) {
     if (material || loaded.status === 'declined') onOrdinal?.(ordinal);
   }, [loaded.status, material, ordinal, onOrdinal]);
 
-  // A pass whose material already drew on this surface is cut: the walk drew it once
-  // and continued through it already, so its repeat ends here.
-  if (source && visited.has(materialSourceKey(source))) return null;
-  if (!material || !scalars || !source) return null;
-
-  const continuation =
-    nextSource !== undefined ? (
-      <NextPassLink
-        source={nextSource}
-        ordinal={ordinal + 1}
-        drawsSelf
-        visited={nextVisited}
-        geometry={geometry}
-        attach={attach}
-        surfaceCount={surfaceCount}
-        draw={draw}
-        onOrdinal={onOrdinal}
-        drawsPoints={props.drawsPoints}
-        skeleton={props.skeleton}
-        godotLayers={props.godotLayers}
-        shadow={shadow}
-      />
-    ) : null;
-  // No stencil buffer is requested, so a stencil-reading link draws nothing and the
-  // walk continues past it at the next ordinal, the starting pass's draw kept.
-  if (scalars.readsStencil) return continuation;
+  if (!source || step.fate === 'ends' || step.fate === 'waits') return null;
+  const continuation = step.next && <NextPassLink {...props} {...step.next} drawsSelf />;
+  // No stencil buffer is requested, so a link that reads the stencil draws nothing, and the
+  // starting pass keeps its own draw.
+  if (step.fate === 'skipped') return continuation;
   if (!geometry) return null;
   const site: ChainDrawSpec = {
     source,
     ordinal,
-    attach,
-    surfaceCount,
+    attach: props.attach,
+    surfaceCount: props.surfaceCount,
     geometry,
     drawsPoints: props.drawsPoints,
     skeleton: props.skeleton,
     godotLayers: props.godotLayers,
-    shadow,
+    shadow: props.shadow,
   };
   return (
     <>
@@ -233,23 +203,6 @@ function NextPassLink(props: PassProps) {
       {continuation}
     </>
   );
-}
-
-/**
- * The visited set the next pass walks with: every key so far, plus this pass's own. The
- * imperative GLB walk shares it, so a hand-written cycle draws each material once on
- * both.
- *
- * @canonical The visited set of a next_pass chain walk
- */
-export function visitedWith(
-  visited: ReadonlySet<string>,
-  source: MaterialSource | undefined
-): ReadonlySet<string> {
-  if (!source) return visited;
-  const own = materialSourceKey(source);
-  if (visited.has(own)) return visited;
-  return new Set([...visited, own]);
 }
 
 /**

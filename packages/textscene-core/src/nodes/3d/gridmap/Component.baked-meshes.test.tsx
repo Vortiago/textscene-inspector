@@ -17,6 +17,7 @@ import { manualCameraAt, renderScene } from '../../../r3f/testing/renderScene';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { assignedUsers, LightmapInstance, lightmapsOf } from '../../../r3f/lightmap/sceneLightmaps';
+import { LIGHTMAP_NODE_ITSELF } from '../../../godot/scene/lightmapGi';
 import type { LightmapUser } from '../../../resources/lightmapgidata/types';
 import { drawnMeshes } from '../testing/reactThreeTestInstance';
 import './index.r3f';
@@ -84,5 +85,16 @@ describe('<GridMap> with baked meshes', () => {
   it('gives the baked mesh a LightmapGI names by its index that lightmap, and no other', async () => {
     const meshes = drawnMeshes((await render(gridMapNode, lightmapNaming(1))).scene);
     expect(meshes.map(readsLightmap)).toEqual([false, true]);
+  });
+
+  it('gives the first baked mesh the lightmap that names index 0', async () => {
+    const meshes = drawnMeshes((await render(gridMapNode, lightmapNaming(0))).scene);
+    expect(meshes.map(readsLightmap)).toEqual([true, false]);
+  });
+
+  // A GridMap is no VisualInstance3D, so Godot refuses the entry (`lightmap_gi.cpp:1552-1553`).
+  it('gives no baked mesh the lightmap that names the GridMap itself (edge case)', async () => {
+    const meshes = drawnMeshes((await render(gridMapNode, lightmapNaming(LIGHTMAP_NODE_ITSELF))).scene);
+    expect(meshes.map(readsLightmap)).toEqual([false, false]);
   });
 });

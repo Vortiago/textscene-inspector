@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import { nodeComponentRegistry, type NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { parseNodeWithRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
-import { LightmapSubInstanceProvider } from '../../../r3f/lightmap/useLightmapAssignment';
+import { BakedMeshInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { Node3D } from '../../base/node3d/Component';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
 import { useMeshContent } from '../../../r3f/meshes/meshContent';
@@ -140,9 +140,9 @@ function BakedMeshes({ refs }: { refs: readonly string[] }) {
   return (
     <>
       {nodes.map((meshNode, index) => (
-        <LightmapSubInstanceProvider key={index} value={index}>
+        <BakedMeshInstance key={index} value={index}>
           <MeshInstance3D node={meshNode} />
-        </LightmapSubInstanceProvider>
+        </BakedMeshInstance>
       ))}
     </>
   );
