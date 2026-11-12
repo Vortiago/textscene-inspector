@@ -20,6 +20,7 @@ import {
   resolveNavMode,
   resolveWheelMode,
   scaleCursorDistance,
+  scaleFreelookSpeed,
   viewSnapCursor,
   wheelZoomScale,
   type EditorCursor,
@@ -39,6 +40,9 @@ const FREELOOK_BASE_SPEED = 5.0;
 
 /** `_update_freelook`'s speed modifier (`node_3d_editor_plugin.cpp:3123`). */
 const FREELOOK_SPRINT_MULTIPLIER = 3.0;
+
+/** `_update_freelook`'s slow modifier (`node_3d_editor_plugin.cpp:3126`). */
+const FREELOOK_SLOW_MULTIPLIER = 0.333333;
 
 /** `ZOOM_FREELOOK_MIN` and `ZOOM_FREELOOK_MULTIPLIER` (`node_3d_editor_plugin.cpp:119-120`). */
 const ZOOM_DISTANCE_MIN = 0.01;
@@ -267,12 +271,36 @@ describe('freelookCursor', () => {
   });
 });
 
+describe('scaleFreelookSpeed', () => {
+  // Godot's editor camera: `default_z_near` 0.05 and `default_z_far` 4000.
+  const EDITOR_RANGE = { near: 0.05, far: 4000 };
+
+  it('multiplies the speed, as one wheel notch does', () => {
+    expect(scaleFreelookSpeed(5, WHEEL_ZOOM_MULTIPLIER, EDITOR_RANGE)).toBeCloseTo(5.4, 9);
+    expect(scaleFreelookSpeed(5, 1 / WHEEL_ZOOM_MULTIPLIER, EDITOR_RANGE)).toBeCloseTo(4.62963, 5);
+  });
+
+  it('holds the speed between four near planes and a quarter of the far plane', () => {
+    expect(scaleFreelookSpeed(5, 1e-6, EDITOR_RANGE)).toBeCloseTo(0.2, 9);
+    expect(scaleFreelookSpeed(5, 1e6, EDITOR_RANGE)).toBeCloseTo(1000, 9);
+  });
+
+  it('never drops below Godot’s floor or rises above its ceiling', () => {
+    expect(scaleFreelookSpeed(5, 1e-9, { near: 0.0001, far: 1e9 })).toBe(ZOOM_DISTANCE_MIN);
+    expect(scaleFreelookSpeed(5, 1e9, { near: 0.0001, far: 1e9 })).toBe(10000);
+  });
+
+  it('takes the middle of an inverted range', () => {
+    expect(scaleFreelookSpeed(5, 2, { near: 10, far: 20 })).toBe(22.5);
+  });
+});
+
 describe('freelookMoveCursor', () => {
   const HELD = { forward: true } as const;
 
   it('flies along the view direction at Godot’s base speed', () => {
     const cursor = cursorAt(0, 0, 4);
-    const moved = freelookMoveCursor(cursor, HELD, 0.5);
+    const moved = freelookMoveCursor(cursor, HELD, FREELOOK_BASE_SPEED, 0.5);
     const delta = moved.target.clone().sub(cursor.target);
     expect(delta.length()).toBeCloseTo(FREELOOK_BASE_SPEED * 0.5, 9);
     // Forward is -Z at zero rotation.
@@ -281,32 +309,42 @@ describe('freelookMoveCursor', () => {
 
   it('carries the eye with the focus point, leaving the view direction alone', () => {
     const cursor = editorCursor();
-    const moved = freelookMoveCursor(cursor, HELD, 0.25);
+    const moved = freelookMoveCursor(cursor, HELD, FREELOOK_BASE_SPEED, 0.25);
     const eyeDelta = cursorCameraPosition(moved).sub(cursorCameraPosition(cursor));
     expect(eyeDelta.distanceTo(moved.target.clone().sub(cursor.target))).toBeLessThan(1e-9);
     expect(cursorDirection(moved).distanceTo(cursorDirection(cursor))).toBeLessThan(1e-9);
   });
 
   it('sprints on Shift', () => {
-    const plain = freelookMoveCursor(cursorAt(0, 0), HELD, 0.5).target.length();
-    const sprinting = freelookMoveCursor(
-      cursorAt(0, 0),
-      { forward: true, sprint: true },
-      0.5
-    ).target.length();
-    expect(sprinting).toBeCloseTo(plain * FREELOOK_SPRINT_MULTIPLIER, 9);
+    const sprinting = freelookMoveCursor(cursorAt(0, 0), { forward: true, sprint: true }, 2, 0.5);
+    expect(sprinting.target.length()).toBeCloseTo(2 * 0.5 * FREELOOK_SPRINT_MULTIPLIER, 9);
+  });
+
+  it('slows to a third on Alt, and both modifiers multiply', () => {
+    const slow = freelookMoveCursor(cursorAt(0, 0), { forward: true, slow: true }, 2, 0.5);
+    expect(slow.target.length()).toBeCloseTo(2 * 0.5 * FREELOOK_SLOW_MULTIPLIER, 9);
+    const both = freelookMoveCursor(cursorAt(0, 0), { forward: true, sprint: true, slow: true }, 2, 0.5);
+    expect(both.target.length()).toBeCloseTo(
+      2 * 0.5 * FREELOOK_SPRINT_MULTIPLIER * FREELOOK_SLOW_MULTIPLIER,
+      9
+    );
+  });
+
+  it('moves at the speed it is given', () => {
+    const moved = freelookMoveCursor(cursorAt(0, 0), HELD, 12.5, 0.2);
+    expect(moved.target.length()).toBeCloseTo(2.5, 9);
   });
 
   it('moves up and down along the camera’s own up axis', () => {
     const cursor = cursorAt(0, 0);
-    expect(freelookMoveCursor(cursor, { up: true }, 0.2).target.y).toBeGreaterThan(0);
-    expect(freelookMoveCursor(cursor, { down: true }, 0.2).target.y).toBeLessThan(0);
+    expect(freelookMoveCursor(cursor, { up: true }, FREELOOK_BASE_SPEED, 0.2).target.y).toBeGreaterThan(0);
+    expect(freelookMoveCursor(cursor, { down: true }, FREELOOK_BASE_SPEED, 0.2).target.y).toBeLessThan(0);
   });
 
   it('returns the same cursor when nothing is held', () => {
     const cursor = cursorAt(0, 0);
-    expect(freelookMoveCursor(cursor, {}, 0.2)).toBe(cursor);
-    expect(freelookMoveCursor(cursor, { sprint: true }, 0.2)).toBe(cursor);
+    expect(freelookMoveCursor(cursor, {}, FREELOOK_BASE_SPEED, 0.2)).toBe(cursor);
+    expect(freelookMoveCursor(cursor, { sprint: true }, FREELOOK_BASE_SPEED, 0.2)).toBe(cursor);
   });
 });
 
@@ -365,24 +403,29 @@ describe('orthographicHeight', () => {
 
 describe('resolveNavMode', () => {
   it('maps the middle button to orbit, shift to pan and ctrl to zoom', () => {
-    expect(resolveNavMode(1, {})).toBe('orbit');
-    expect(resolveNavMode(1, { shiftKey: true })).toBe('pan');
-    expect(resolveNavMode(1, { ctrlKey: true })).toBe('zoom');
+    expect(resolveNavMode(1, {}, 'perspective')).toBe('orbit');
+    expect(resolveNavMode(1, { shiftKey: true }, 'perspective')).toBe('pan');
+    expect(resolveNavMode(1, { ctrlKey: true }, 'perspective')).toBe('zoom');
   });
 
   it('maps the right button to freelook whatever is held', () => {
-    expect(resolveNavMode(2, {})).toBe('freelook');
-    expect(resolveNavMode(2, { shiftKey: true })).toBe('freelook');
+    expect(resolveNavMode(2, {}, 'perspective')).toBe('freelook');
+    expect(resolveNavMode(2, { shiftKey: true }, 'perspective')).toBe('freelook');
+  });
+
+  it('pans on the right button in orthographic view, where Godot has no freelook', () => {
+    expect(resolveNavMode(2, {}, 'orthographic')).toBe('pan');
+    expect(resolveNavMode(1, {}, 'orthographic')).toBe('orbit');
   });
 
   it('emulates the middle button on alt+left', () => {
-    expect(resolveNavMode(0, { altKey: true })).toBe('orbit');
-    expect(resolveNavMode(0, { altKey: true, shiftKey: true })).toBe('pan');
+    expect(resolveNavMode(0, { altKey: true }, 'perspective')).toBe('orbit');
+    expect(resolveNavMode(0, { altKey: true, shiftKey: true }, 'perspective')).toBe('pan');
   });
 
   it('leaves plain left-drag to viewport selection', () => {
-    expect(resolveNavMode(0, {})).toBeNull();
-    expect(resolveNavMode(0, { shiftKey: true })).toBeNull();
-    expect(resolveNavMode(3, { altKey: true })).toBeNull();
+    expect(resolveNavMode(0, {}, 'perspective')).toBeNull();
+    expect(resolveNavMode(0, { shiftKey: true }, 'perspective')).toBeNull();
+    expect(resolveNavMode(3, { altKey: true }, 'perspective')).toBeNull();
   });
 });

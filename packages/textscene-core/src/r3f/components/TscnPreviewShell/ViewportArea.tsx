@@ -15,6 +15,7 @@ import { keepsChildrenInViewport } from '../../../nodes/viewport/subviewport/vie
 import type { TscnNode } from '../../../parser/types.js';
 import { TscnCanvas } from '../../TscnCanvas.js';
 import { Canvas2DStage } from '../Canvas2DStage/Canvas2DStage.js';
+import { FreelookSpeedReadout } from '../FreelookSpeedReadout/FreelookSpeedReadout.js';
 import { ViewportControlsHelp } from '../ViewportControlsHelp/ViewportControlsHelp.js';
 import styles from './TscnPreviewShell.module.css';
 
@@ -57,6 +58,7 @@ export function ViewportArea({
     <>
       <TscnCanvas />
       <ViewportControlsHelp mode="3D" />
+      <FreelookSpeedReadout />
       {has2DContent && (
         <button
           type="button"

@@ -12,6 +12,7 @@
 /* Shared by the plain buttons. Each has its own class too, so a restyle of one
    leaves the others alone. */
 .resetButton,
+.freelookButton,
 .displayButton {
   appearance: none;
   border: 1px solid transparent;
@@ -31,17 +32,20 @@
 }
 
 .resetButton:hover:not(:disabled),
+.freelookButton:hover:not(:disabled),
 .displayButton:hover:not(:disabled) {
   background: var(--tsi-bg-hover);
   color: var(--tsi-fg-default);
 }
 
 .resetButton:active:not(:disabled),
+.freelookButton:active:not(:disabled),
 .displayButton:active:not(:disabled) {
   background: var(--tsi-bg-active);
 }
 
 .resetButton:focus-visible,
+.freelookButton:focus-visible,
 .displayButton:focus-visible {
   outline: none;
   border-color: var(--tsi-accent);
@@ -49,6 +53,7 @@
 }
 
 .resetButton:disabled,
+.freelookButton:disabled,
 .displayButton:disabled {
   opacity: 0.4;
   cursor: default;
@@ -166,5 +171,12 @@
   .segmentButton,
   .checkbox {
     min-height: 36px;
+  }
+}
+
+/* Freelook needs a mouse to look and a keyboard to move, and touch has neither (ADR-0029). */
+@media (pointer: coarse) {
+  .freelookButton {
+    display: none;
   }
 }

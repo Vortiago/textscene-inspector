@@ -1,15 +1,15 @@
 /**
- * Every input of a Godot-editor viewport gesture (pointer, wheel, keyboard, per-frame
- * freelook) routed onto an `EditorControlsHandle`. The handlers share one effect, so
- * the cleanup detaches exactly the listeners it attached. The gestures themselves
- * live in `editorMouseNavigation.ts`, `editorTouchGesture.ts` and `editorKeyBindings.ts`.
+ * The pointer, wheel and view-key inputs of a Godot-editor viewport gesture, routed onto an
+ * `EditorControlsHandle`. The handlers share one effect, so the cleanup detaches exactly the
+ * listeners it attached. The gestures themselves live in `editorMouseNavigation.ts`,
+ * `editorTouchGesture.ts` and `editorKeyBindings.ts`. Freelook's keys are in `useFreelook.ts`.
  */
 
-import { useFrame, type RootState } from '@react-three/fiber';
+import type { RootState } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import { isTypingTarget } from './hooks/isTypingTarget.js';
 import type { EditorControlsHandle } from './EditorControlsHandle.js';
-import { freelookMoveCursor, resolveNavMode } from './godotEditorCursor.js';
+import { resolveNavMode } from './godotEditorCursor.js';
 import { isGesturePointer, type TouchPoint } from './pointerGesture.js';
 import { applyEditorDragMove, applyEditorWheel, type DragState } from './editorMouseNavigation.js';
 import {
@@ -18,12 +18,7 @@ import {
   endEditorTouch,
   type TouchGesture,
 } from './editorTouchGesture.js';
-import {
-  applyEditorViewKey,
-  consumeEditorViewKey,
-  freelookKeysFrom,
-  FREELOOK_KEYS,
-} from './editorKeyBindings.js';
+import { applyEditorViewKey, consumeEditorViewKey } from './editorKeyBindings.js';
 
 export function useEditorNavigation(
   gl: RootState['gl'],
@@ -36,9 +31,6 @@ export function useEditorNavigation(
   // two at once, which a single drag slot cannot hold.
   const touchPointsRef = useRef<Map<number, TouchPoint>>(new Map());
   const touchGestureRef = useRef<TouchGesture | null>(null);
-  const freelookRef = useRef(false);
-  const heldKeysRef = useRef<Set<string>>(new Set());
-  const sprintRef = useRef(false);
 
   useEffect(() => {
     const element = gl.domElement;
@@ -64,9 +56,7 @@ export function useEditorNavigation(
       const drag = dragRef.current;
       if (!drag) return;
       dragRef.current = null;
-      freelookRef.current = false;
-      heldKeysRef.current.clear();
-      sprintRef.current = false;
+      handle.freelook.setHeld(false);
       if (element.hasPointerCapture?.(drag.pointerId)) {
         element.releasePointerCapture(drag.pointerId);
       }
@@ -87,7 +77,7 @@ export function useEditorNavigation(
         return;
       }
       if (dragRef.current) return;
-      const mode = resolveNavMode(event.button, event);
+      const mode = resolveNavMode(event.button, event, handle.projection);
       if (!mode) return;
       // Middle-click otherwise opens the platform's auto-scroll widget, which
       // eats every subsequent motion event.
@@ -98,7 +88,7 @@ export function useEditorNavigation(
         x: event.clientX,
         y: event.clientY,
       };
-      freelookRef.current = mode === 'freelook';
+      handle.freelook.setHeld(mode === 'freelook');
       element.setPointerCapture?.(event.pointerId);
     }
 
@@ -110,10 +100,7 @@ export function useEditorNavigation(
       }
       const drag = dragRef.current;
       if (!drag) return;
-      const moved = applyEditorDragMove(event, drag, handle, (freelook) => {
-        freelookRef.current = freelook;
-      });
-      if (moved) invalidate();
+      if (applyEditorDragMove(event, drag, handle)) invalidate();
     }
 
     function handleWheel(event: WheelEvent): void {
@@ -132,27 +119,11 @@ export function useEditorNavigation(
         consumeEditorViewKey(event);
         return;
       }
-
-      // Read the sprint modifier off the event rather than tracking its own
-      // keydown: Shift held before freelook started never fires one.
-      sprintRef.current = event.shiftKey;
-      if (freelookRef.current && FREELOOK_KEYS[event.code]) {
-        heldKeysRef.current.add(event.code);
-        event.preventDefault();
-        return;
-      }
-
       if (applyEditorViewKey(event, handle)) invalidate();
     }
 
-    function handleKeyUp(event: KeyboardEvent): void {
-      sprintRef.current = event.shiftKey;
-      heldKeysRef.current.delete(event.code);
-    }
-
+    // A window blur lifts fingers with no pointerup.
     function handleBlur(): void {
-      heldKeysRef.current.clear();
-      sprintRef.current = false;
       resetTouch();
     }
 
@@ -165,7 +136,6 @@ export function useEditorNavigation(
     // Not passive: a zoom must not also scroll the page behind the canvas.
     element.addEventListener('wheel', handleWheel, { passive: false });
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
     window.addEventListener('blur', handleBlur);
 
     return () => {
@@ -177,19 +147,9 @@ export function useEditorNavigation(
       element.removeEventListener('contextmenu', handleContextMenu);
       element.removeEventListener('wheel', handleWheel);
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
       endDrag();
       resetTouch();
     };
   }, [gl, handle, invalidate, get]);
-
-  // Freelook flight is continuous while the keys are held, so it advances per
-  // frame with the frame's own delta rather than per keydown repeat.
-  useFrame((_, delta) => {
-    if (!freelookRef.current || heldKeysRef.current.size === 0) return;
-    if (handle.isPreviewing(get().camera)) return;
-    const keys = freelookKeysFrom(heldKeysRef.current, sprintRef.current);
-    handle.applyCursor(freelookMoveCursor(handle.cursor(), keys, delta));
-  });
 }
