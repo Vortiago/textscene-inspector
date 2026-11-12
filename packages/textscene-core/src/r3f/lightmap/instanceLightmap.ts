@@ -1,6 +1,6 @@
 /**
  * The lightmap of one instance: the LightmapGI that names it sets it on the instance
- * (`lightmap_gi.cpp:1544-1552`), not on a surface. Both draw adapters read it here, a node drawn in
+ * (`lightmap_gi.cpp:1545-1555`), not on a surface. Both draw adapters read it here, a node drawn in
  * React through its GeometryInstance3D base and a mesh of a GLB clone through its cull instance.
  */
 

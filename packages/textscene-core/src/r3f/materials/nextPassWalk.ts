@@ -68,6 +68,8 @@ interface PassStep {
 /**
  * What the walk reads of a pass whose material and scalars are in, or null while either is not.
  * The pass after it resolves in the tables of the file that wrote the material.
+ *
+ * @canonical What a next_pass chain walk reads of a loaded pass
  */
 export function loadedPassOf(
   material: MaterialResource | null | undefined,

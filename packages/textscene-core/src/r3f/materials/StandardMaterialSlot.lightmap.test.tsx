@@ -92,7 +92,7 @@ describe('<StandardMaterialSlot> lightmap', () => {
   });
 
   it('reads none under no GeometryInstance3D, which holds no instance a LightmapGI can light', async () => {
-    // `Object::cast_to<VisualInstance3D>` fails for such a node (`lightmap_gi.cpp:1551-1552`).
+    // `Object::cast_to<VisualInstance3D>` fails for such a node (`lightmap_gi.cpp:1552-1553`).
     expect(readsDrawnLightmap(await materialAt(FLOOR, {}, (surface) => surface))).toBe(false);
   });
 

@@ -1,8 +1,9 @@
 /**
  * Each GeometryInstance3D's link to the scene cull, and what Godot sets on the instance for every
  * geometry type: `material_override`, `material_overlay` (`visual_instance_3d.cpp:211-228`),
- * `layers`, `cast_shadow` and the lightmap a LightmapGI assigns it. The registry mounts every GeometryInstance3D component in
- * `withGeometryInstance`, drawn or not, so an undrawn visibility parent still decides its dependants.
+ * `layers`, `cast_shadow` and the lightmap a LightmapGI assigns it. The registry mounts every
+ * GeometryInstance3D component in `withGeometryInstance`, drawn or not, so an undrawn visibility
+ * parent still decides its dependants.
  */
 
 import { useThree } from '@react-three/fiber';
@@ -166,7 +167,7 @@ export function useInstanceDraw(): InstanceDraw {
 /**
  * The lightmap of the enclosing GeometryInstance3D, for the one place that mounts a surface's
  * material. Null under no instance: a LightmapGI lights only a VisualInstance3D
- * (`lightmap_gi.cpp:1551-1552`).
+ * (`lightmap_gi.cpp:1552-1553`).
  */
 export function useInstanceLightmap(): LightmapAssignment | null {
   const lightmap = useContext(GeometryInstanceContext)?.lightmap ?? NO_INSTANCE_LIGHTMAP;

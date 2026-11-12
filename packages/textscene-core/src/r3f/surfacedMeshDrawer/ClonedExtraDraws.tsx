@@ -52,8 +52,10 @@ export function ClonedChain({
   drawn: DrawnMaterial;
 }) {
   const { material, scalars } = drawn;
-  const loaded = useMemo(() => loadedPassOf(material, scalars), [material, scalars]);
-  const { next } = nextPassStep({ source, ordinal: 0, visited: NOTHING_DRAWN }, loaded);
+  const { next } = useMemo(
+    () => nextPassStep({ source, ordinal: 0, visited: NOTHING_DRAWN }, loadedPassOf(material, scalars)),
+    [source, material, scalars]
+  );
   return next && <ClonedLink covered={covered} {...next} />;
 }
 
@@ -68,8 +70,11 @@ export function ClonedOverlay({ slots, source }: { slots: readonly SurfaceSlot[]
   const pass = useClonedPass(source);
   // The overlay draws whatever it reads, as its React draw does. Only a link skips the stencil.
   useClonedExtraDraws(everyHolder, pass.material, OVERLAY_ORDINAL_PAST_CHAINS);
-  const start = { source, ordinal: OVERLAY_ORDINAL_PAST_CHAINS, visited: NOTHING_DRAWN };
-  const { next } = nextPassStep(start, pass.loaded);
+  const { loaded } = pass;
+  const { next } = useMemo(
+    () => nextPassStep({ source, ordinal: OVERLAY_ORDINAL_PAST_CHAINS, visited: NOTHING_DRAWN }, loaded),
+    [source, loaded]
+  );
   return next && <ClonedLink covered={everyHolder} {...next} />;
 }
 

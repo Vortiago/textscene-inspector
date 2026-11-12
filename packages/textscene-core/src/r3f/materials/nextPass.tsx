@@ -114,7 +114,7 @@ type PassProps = {
   ordinal: number;
   /** False for a starting pass, whose draw the part's surface slot mounts. */
   drawsSelf: boolean;
-  /** Every source key from the starting material through this pass. */
+  /** Every source key from the starting material up to this pass, without its own. */
   visited: ReadonlySet<string>;
   /** The base geometry, read back from the base draw. */
   geometry: THREE.BufferGeometry | null;
@@ -167,7 +167,11 @@ function NextPassLink(props: PassProps) {
     () => material && loadedPassOf(material, parseStandardMaterial3DScalars(material.resource.data)),
     [material]
   );
-  const step = nextPassStep({ source, ordinal, visited }, loadedPass ?? null);
+  // One step until the pass changes, so the pass after it walks with one visited set.
+  const step = useMemo(
+    () => nextPassStep({ source, ordinal, visited }, loadedPass),
+    [source, ordinal, visited, loadedPass]
+  );
   // The pass's fate reported once it is known, in the layout pass: a resolved one
   // reached its position whether it drew or was skipped over, and a declined one ends
   // its chain there. A pass still loading waits, and the overlay's own order then
