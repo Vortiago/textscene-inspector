@@ -104,23 +104,28 @@ const itemListTextureSlots: TextureSlotsFn = (node: TscnNode) => {
   return requests;
 };
 
-// --- Theme constants not exposed on NativeTheme ---------------------------
-
-/** `default_theme.cpp:949`: `theme->set_constant(line_separation, "ItemList", round(2*scale))`. */
-const ITEM_LIST_LINE_SEPARATION_BASE = 2;
-
-function itemListLineSeparation(theme: Pick<NativeTheme, 'scale'>): number {
-  return Math.round(ITEM_LIST_LINE_SEPARATION_BASE * theme.scale);
+/** The ItemList spacing constants (`item_list.cpp:2431-2449`), after the node's overrides. */
+export interface ItemListSpacing {
+  hSeparation: number;
+  vSeparation: number;
+  iconMargin: number;
+  lineSeparation: number;
 }
 
 /**
- * `h_separation`/`v_separation`/`icon_margin` (`default_theme.cpp:946-948`)
- * are all `Math::round(4 * scale)`: the identical formula `theme.separation`
- * (BoxContainer's own constant) already computes, so this reuses it rather
- * than re-deriving a third `round(4*scale)`.
+ * `default_theme.cpp:946-949`: h_separation, v_separation and icon_margin are `round(4 * scale)`,
+ * which `theme.separation` holds, and line_separation is `round(2 * scale)`.
  */
-export function itemListSeparation(theme: Pick<NativeTheme, 'separation'>): number {
-  return theme.separation;
+export function itemListSpacing(
+  constants: SolveNode['constants'],
+  theme: Pick<NativeTheme, 'separation' | 'scale'>
+): ItemListSpacing {
+  return {
+    hSeparation: constants.h_separation ?? theme.separation,
+    vSeparation: constants.v_separation ?? theme.separation,
+    iconMargin: constants.icon_margin ?? theme.separation,
+    lineSeparation: constants.line_separation ?? Math.round(2 * theme.scale),
+  };
 }
 
 /** The theme fields the default boxes read. */
@@ -320,14 +325,10 @@ interface ItemContentInput {
 }
 
 /**
- * The per-item minsize before the separations `itemMinimumSize` adds
- * (`item_list.cpp:1743-1790`). `icon_margin` (item_list.cpp:1754,1756) is the same
- * `round(4*scale)` as `h_separation`/`v_separation`, added only with both an icon and text.
+ * The per-item minsize before the separations `itemMinimumSize` adds (`item_list.cpp:1743-1790`).
+ * `icon_margin` (`:1754,1756`) joins only with both an icon and text.
  */
-function itemContentMinSize(
-  input: ItemContentInput,
-  theme: Pick<NativeTheme, 'fontSize' | 'separation' | 'scale'>
-): Vector2 {
+function itemContentMinSize(input: ItemContentInput, spacing: ItemListSpacing): Vector2 {
   let x = 0;
   let y = 0;
 
@@ -336,9 +337,9 @@ function itemContentMinSize(
     y = input.iconSize.y;
     if (input.hasText) {
       if (input.iconMode === ICON_MODE_TOP) {
-        y += itemListSeparation(theme);
+        y += spacing.iconMargin;
       } else {
-        x += itemListSeparation(theme);
+        x += spacing.iconMargin;
       }
     }
   }
@@ -347,7 +348,7 @@ function itemContentMinSize(
     if (input.iconMode === ICON_MODE_TOP) {
       x = Math.max(x, input.textSize.x);
       if (input.maxTextLines > 0) {
-        y += input.textSize.y + itemListLineSeparation(theme) * input.maxTextLines;
+        y += input.textSize.y + spacing.lineSeparation * input.maxTextLines;
       } else {
         y += input.textSize.y;
       }
@@ -371,13 +372,12 @@ export function itemListMaxColumnWidth(itemSizes: readonly Vector2[], hSeparatio
 }
 
 /** The full per-item minsize, including h/v separation (`item_list.cpp:1789-1790`). */
-export function itemMinimumSize(
-  input: ItemContentInput,
-  theme: Pick<NativeTheme, 'fontSize' | 'separation' | 'scale'>
-): Vector2 {
-  const content = itemContentMinSize(input, theme);
-  const sep = itemListSeparation(theme);
-  return { x: content.x + Math.max(0, sep), y: content.y + Math.max(0, sep) };
+export function itemMinimumSize(input: ItemContentInput, spacing: ItemListSpacing): Vector2 {
+  const content = itemContentMinSize(input, spacing);
+  return {
+    x: content.x + Math.max(0, spacing.hSeparation),
+    y: content.y + Math.max(0, spacing.vSeparation),
+  };
 }
 
 // --- Row packing: force_update_list_size's phase 2 (item_list.cpp:1798-1912) -
@@ -555,6 +555,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   const maxTextLines = props.maxTextLines ?? 1;
   const fixedColumnWidth = props.fixedColumnWidth ?? 0;
   const iconScale = props.iconScale ?? 1;
+  const spacing = itemListSpacing(n.constants, ctx.theme);
 
   const itemSizes: Vector2[] = items.map((item, i) => {
     const hasIcon = itemHasIcon(item);
@@ -584,11 +585,11 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
       : { x: 0, y: 0 };
     return itemMinimumSize(
       { hasIcon, iconSize, hasText, textSize, iconMode, maxTextLines, fixedColumnWidth },
-      ctx.theme
+      spacing
     );
   });
 
-  const hSeparation = itemListSeparation(ctx.theme);
+  const { hSeparation } = spacing;
   const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
   const panelMin = contentMarginSize(pickItemListPanelStyleBox(n.styleBoxes, ctx.theme));
   const tentative = ctx.tentativeRect?.(n);

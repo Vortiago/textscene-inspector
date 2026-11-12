@@ -56,7 +56,7 @@ import {
   itemListRowsInClip,
   itemListRowTextX,
   itemListSeparatorsInClip,
-  itemListSeparation,
+  itemListSpacing,
   itemListTextTheme,
   itemListWrappedTextWidthPx,
   itemMinimumSize,
@@ -252,9 +252,8 @@ export function ItemList({
   const cursorBox = pickItemListCursorStyleBox(solveNode.styleBoxes, theme);
   const drawsCursor = itemListDrawsCursor(props.selectMode ?? 0);
 
-  const hSeparation = itemListSeparation(theme);
-  const vSeparation = hSeparation;
-  const iconMargin = hSeparation;
+  const spacing = useMemo(() => itemListSpacing(solveNode.constants, theme), [solveNode.constants, theme]);
+  const { hSeparation, vSeparation, iconMargin } = spacing;
   const wraparoundItems = props.wraparoundItems !== false;
   // Under RTL the panel and guide lines stay, and only each row's icon and label
   // move (`item_list.cpp:1582-1584,1639-1641,1664-1668`).
@@ -312,10 +311,10 @@ export function ItemList({
             maxTextLines,
             fixedColumnWidth,
           },
-          theme
+          spacing
         )
       ),
-    [rows, iconMode, maxTextLines, fixedColumnWidth, theme]
+    [rows, iconMode, maxTextLines, fixedColumnWidth, spacing]
   );
 
   const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
