@@ -370,7 +370,11 @@ export class ResourceLoader {
       fileBus: this._fileEventBus ?? undefined,
       dependencies: this.dependencies,
     });
-    // A file that appeared or went away edits the listing of each folder above it.
-    for (const folder of foldersAbove(path)) this.directories.clearCache(folder);
+    // A file that appeared or went away edits the listing of each folder above it. A dialog keeps showing the old
+    // listing until the new one arrives, so a refresh replaces it where a clear would draw the folder empty.
+    for (const folder of foldersAbove(path)) {
+      if (this.directories.isCached(folder) || this.directories.isLoading(folder))
+        this.directories.refresh(folder);
+    }
   }
 }

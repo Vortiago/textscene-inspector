@@ -52,15 +52,33 @@ describe('ResourceLoader.directories', () => {
     expect(list).toHaveBeenCalledTimes(1);
   });
 
-  it('drops the listing of every folder above a file that changed', async () => {
-    const loader = loaderWith(provider(async () => ENTRIES));
-    for (const folder of ['res://', 'res://a', 'res://b']) {
+  it('keeps the listing of each folder above a changed file until its new listing arrives', async () => {
+    const created: readonly DirectoryEntry[] = [...ENTRIES, { name: 'new.png', isDirectory: false }];
+    let answer: readonly DirectoryEntry[] = ENTRIES;
+    const list = vi.fn(async () => answer);
+    const loader = loaderWith(provider(list));
+    for (const folder of ['res://', 'res://a']) {
       loader.directories.request(folder);
       await loader.eventBus.once('directory', 'loaded', folder);
     }
+    answer = created;
+
+    loader.provideFile('res://a/new.png');
+
+    expect(loader.directories.getCached('res://a')).toEqual({ kind: 'listed', entries: ENTRIES });
+    await loader.eventBus.once('directory', 'loaded', 'res://a');
+    expect(loader.directories.getCached('res://a')).toEqual({ kind: 'listed', entries: created });
+  });
+
+  it('lists again only the folders above a changed file that were listed before', async () => {
+    const list = vi.fn(async () => ENTRIES);
+    const loader = loaderWith(provider(list));
+    loader.directories.request('res://b');
+    await loader.eventBus.once('directory', 'loaded', 'res://b');
+    list.mockClear();
+
     loader.provideFile('res://a/c.png');
-    expect(loader.directories.getCached('res://')).toBeUndefined();
-    expect(loader.directories.getCached('res://a')).toBeUndefined();
-    expect(loader.directories.getCached('res://b')).not.toBeUndefined();
+
+    expect(list).not.toHaveBeenCalled();
   });
 });

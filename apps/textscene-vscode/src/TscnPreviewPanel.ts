@@ -20,6 +20,9 @@ import { PreviewCaptureQueue, type PreviewCapture } from './previewCaptureQueue'
 export { dispatchWebviewMessage } from './webviewDispatch';
 export type { WebviewMessageHandlers } from './webviewDispatch';
 
+/** What a watcher saw happen to a file. */
+export type FileChange = 'changed' | 'created' | 'deleted';
+
 export class TscnPreviewPanel {
   public static readonly viewType = 'tscnPreview';
 
@@ -234,10 +237,11 @@ export class TscnPreviewPanel {
   /**
    * Tells the webview to re-fetch a watched dependency that changed on disk, since
    * the unchanged scene text makes `_loadTscnContent` no-op. A path missing from
-   * the served-resources map was never requested, so it has nothing to invalidate.
+   * the served-resources map was never requested, so an edit has nothing to invalidate;
+   * a created or deleted file still changes the listing of the folders above it.
    * A `project.godot` that moves the `res://` root re-fetches every served path.
    */
-  public async handleDependencyChange(fileUri: vscode.Uri): Promise<void> {
+  public async handleDependencyChange(fileUri: vscode.Uri, change: FileChange = 'changed'): Promise<void> {
     // A webview that is not ready yet loads everything fresh on mount.
     if (!this._webviewReady) {
       return;
@@ -250,7 +254,9 @@ export class TscnPreviewPanel {
       this._reloadUnderMovedRoot(provider);
       return;
     }
-    const resPath = provider.getServedResPath(fileUri);
+    // A file that appeared or went away edits a folder listing, even one never read as a resource. An edit cannot.
+    const resPath =
+      provider.getServedResPath(fileUri) ?? (change === 'changed' ? null : await provider.resPathOf(fileUri));
     if (resPath) {
       this.invalidateResource(resPath);
     }

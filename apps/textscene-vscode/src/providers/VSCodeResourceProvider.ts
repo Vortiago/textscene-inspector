@@ -10,6 +10,7 @@ import { info, error } from '@textscene/core/logger';
 import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
 import {
+  forwardSlashes,
   isSamePath,
   isWithinRoot,
   pathKey,
@@ -81,6 +82,19 @@ export class VSCodeResourceProvider implements ResourceProvider {
    */
   getServedResPath(fileUri: vscode.Uri): string | null {
     return this.servedResources.get(pathKey(fileUri.fsPath, HOST_PATH_CASE)) ?? null;
+  }
+
+  /**
+   * The `res://` path of `fileUri`, or null when it lies outside the scene's `res://` root, or the scene lies outside the
+   * workspace so no root exists. For a file the preview never loaded, whose creation or removal still edits a folder listing.
+   */
+  async resPathOf(fileUri: vscode.Uri): Promise<string | null> {
+    const root = await this.resRoot().catch(() => null);
+    if (root === null) return null;
+    const rootPath = forwardSlashes(root.fsPath);
+    const filePath = forwardSlashes(fileUri.fsPath);
+    if (filePath === rootPath || !isWithinRoot(rootPath, filePath, HOST_PATH_CASE)) return null;
+    return `${RES_SCHEME}${filePath.slice(rootPath.length).replace(/^\//, '')}`;
   }
 
   /** Every `res://` path `loadResource` served, for a caller that must re-fetch them all. */

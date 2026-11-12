@@ -3,7 +3,7 @@
  */
 
 import * as vscode from 'vscode';
-import { TscnPreviewPanel } from './TscnPreviewPanel';
+import { TscnPreviewPanel, type FileChange } from './TscnPreviewPanel';
 import { TscnDocumentSymbolProvider } from './TscnDocumentSymbolProvider';
 import { TscnDefinitionProvider } from './TscnDefinitionProvider';
 import { TscnDocumentLinkProvider } from './TscnDocumentLinkProvider';
@@ -121,7 +121,7 @@ export function activate(context: vscode.ExtensionContext) {
   // edit (git pull, branch switch) that fires no save event. The content-diff guard
   // in update() drops the in-editor save that onDidSaveTextDocument already
   // handled. Every other panel re-fetches the file as a dependency or sub-scene.
-  const handleResourceChange = async (uri: vscode.Uri, deleted = false): Promise<void> => {
+  const handleResourceChange = async (uri: vscode.Uri, change: FileChange = 'changed'): Promise<void> => {
     const changedKey = uri.toString();
     await Promise.all(
       [...panels].map(([panelKey, panel]) => {
@@ -129,12 +129,12 @@ export function activate(context: vscode.ExtensionContext) {
           // A deleted main scene cannot be re-read, and update() then raises a false
           // "Failed to load" toast on a branch switch or rename. The panel keeps its
           // last render. Other panels flip the file to its missing placeholder.
-          if (!deleted) {
+          if (change !== 'deleted') {
             panel.update(uri);
           }
           return Promise.resolve();
         }
-        return panel.handleDependencyChange(uri);
+        return panel.handleDependencyChange(uri, change);
       })
     );
   };
@@ -145,11 +145,11 @@ export function activate(context: vscode.ExtensionContext) {
       // A created or deleted file changes what `res://` completion may offer. An edit does not.
       watcher.onDidCreate((uri) => {
         resPathListing.clear();
-        return handleResourceChange(uri);
+        return handleResourceChange(uri, 'created');
       }),
       watcher.onDidDelete((uri) => {
         resPathListing.clear();
-        return handleResourceChange(uri, true);
+        return handleResourceChange(uri, 'deleted');
       })
     );
   }
