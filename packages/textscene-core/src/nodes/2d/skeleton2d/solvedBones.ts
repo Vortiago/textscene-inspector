@@ -33,9 +33,13 @@ function storedPoseSource(tree: LiveTree): PoseSource<string> {
     return chains.get(path)!;
   };
   return {
-    // A Control the file does not place alone reads as the identity here: this solve has no better answer.
-    canvas: (path) => storedTransform2D(transform2DOnCanvas(path, stored(path)) ?? TRANSFORM2D_IDENTITY),
-    within: (path, ancestor) => storedTransform2D(transform2DWithinPath(path, ancestor, stored(path))),
+    // A Control that neither the Control walk nor its offsets place reads as the identity.
+    canvas: (path) =>
+      storedTransform2D(
+        transform2DOnCanvas(path, stored(path), undefined, tree.ctx.controlTransforms) ?? TRANSFORM2D_IDENTITY
+      ),
+    within: (path, ancestor) =>
+      storedTransform2D(transform2DWithinPath(path, ancestor, stored(path), tree.ctx.controlTransforms)),
     parent: parentPathOf,
   };
 }

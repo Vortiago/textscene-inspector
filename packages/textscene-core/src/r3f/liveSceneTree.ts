@@ -31,6 +31,7 @@ import { sameElements } from '../utils/sameElements.js';
 import { perObject } from '../utils/perObject.js';
 import { NOTHING_CACHED, answeredOnce, keptWhileAnswered, type CacheSource } from './cacheSources.js';
 import type { ParsedResource } from '../parser/parsedResource.js';
+import type { Transform2DColumns } from '../godot/math/transform2d.js';
 
 /**
  * Read surface for the loader's PackedScene cache. `undefined` means never
@@ -65,6 +66,12 @@ export interface LiveTreeContext {
   glbCache?: CachedGlbSource;
   /** The `.tres` files the loader holds, which a pass that reads a resource file takes from the tree. */
   resourceCache?: CacheSource<ParsedResource>;
+  /**
+   * `Control::get_transform()` of each Control the Control walk has solved, by live path. Absent
+   * before the walk has run, and where no walk exists: a pass then composes a Control from its
+   * offsets alone (`globalTransform2D.ts`).
+   */
+  controlTransforms?: ReadonlyMap<string, Transform2DColumns>;
   /**
    * What the tree reads of its project: the physics clock that paces a relay cycle
    * (`remoteTransforms.ts`), and whether the root window embeds its windows (`windowEmbedder.ts`).

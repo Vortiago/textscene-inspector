@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+; Moves one variable: a Polygon2D below a Control with offsets. The square stands at the Control's
+; offsets plus its own position. unit-remote-transform-2d-control and the Node2D goldens put no Node2D
+; below a Control, so none shows a regression here.
+
+[node name="Root" type="Node2D"]
+
+[node name="Panel" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_left = 60.0
+offset_top = 30.0
+
+[node name="Held" type="Polygon2D" parent="Panel"]
+position = Vector2(20, 10)
+color = Color(0.3, 0.8, 0.4, 1)
+polygon = PackedVector2Array(-15, -15, 15, -15, 15, 15, -15, 15)

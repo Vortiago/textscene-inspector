@@ -128,6 +128,8 @@ export const CONTROL_WIDGET_SCENES = [
   // per branch of `Control::get_parent_anchorable_rect`, both picked by the same
   // threading. The Panel is not full-rect, so a wrong anchor moves the box.
   // Godot 4.6.3 `--mode 2d`: mean 0.006 of 255 each, the 1/255 rounding floor.
+  // The one variable: a Polygon2D below a Control with offsets. Godot probe: the square stands at (80, 40).
+  { name: 'control-node2d-child', file: 'unit-node2d-below-control.tscn', mode: '2d' },
   {
     name: 'control-anchor-parent-node2d',
     file: 'unit-control-anchor-parent-node2d.tscn',

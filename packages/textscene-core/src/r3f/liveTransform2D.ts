@@ -15,6 +15,7 @@ import {
   localTransform2D,
   resolveGlobalTransform2D,
   type Node2DPose,
+  type SolvedControls,
 } from '../nodes/canvasitem/shared/globalTransform2D.js';
 import { NO_PATCHES, type PatchLookup } from './nodePatch.js';
 
@@ -48,22 +49,42 @@ export function posesAlong(
   return poses;
 }
 
+/** The solved transform of each node of `chain`, which ends at the live path `path`, that `controlTransforms` holds. */
+export function solvedControlsAlong(
+  chain: readonly RawNode[],
+  path: string,
+  controlTransforms: ReadonlyMap<string, Transform2DColumns> | undefined
+): SolvedControls {
+  if (!controlTransforms) return NO_SOLVED_CONTROLS;
+  const names = path.split('/');
+  const solved = new Map<RawNode, Transform2DColumns>();
+  chain.forEach((node, index) => {
+    const transform = controlTransforms.get(names.slice(0, index + 1).join('/'));
+    if (transform) solved.set(node, transform);
+  });
+  return solved;
+}
+
+const NO_SOLVED_CONTROLS: SolvedControls = new Map();
+
 /**
  * The transform of the node at `path` on the canvas, with the poses of `placed` in place of the
  * stored ones. `nodeByPath` holds the node at each prefix of `path`, as `nodesOnTheWayTo` makes it.
- * Null for a chain `resolveGlobalTransform2D` cannot decode: an opaque ancestor, or a Control whose
- * rect the file does not state alone.
+ * Null for a chain `resolveGlobalTransform2D` cannot decode: an opaque ancestor, or a Control that
+ * neither `controlTransforms` nor the offsets of the file place.
  */
 export function transform2DOnCanvas(
   path: string,
   nodeByPath: ReadonlyMap<string, TscnNode>,
-  placed: PatchLookup = NO_PATCHES
+  placed: PatchLookup = NO_PATCHES,
+  controlTransforms?: ReadonlyMap<string, Transform2DColumns>
 ): Transform2DColumns | null {
   const chain = chainTo(path, nodeByPath);
   const verdict = resolveGlobalTransform2D(
     chain[chain.length - 1]!,
     chainParentOf(chain),
-    posesAlong(chain, path, placed)
+    posesAlong(chain, path, placed),
+    solvedControlsAlong(chain, path, controlTransforms)
   );
   return verdict.kind === 'known' ? verdict.transform : null;
 }
@@ -76,9 +97,11 @@ export function transform2DOnCanvas(
 export function transform2DWithinPath(
   path: string,
   ancestorPath: string,
-  nodeByPath: ReadonlyMap<string, TscnNode>
+  nodeByPath: ReadonlyMap<string, TscnNode>,
+  controlTransforms?: ReadonlyMap<string, Transform2DColumns>
 ): Transform2DColumns {
   const chain = chainTo(path, nodeByPath);
+  const solved = solvedControlsAlong(chain, path, controlTransforms);
   const firstBelow = ancestorPath.split('/').length;
   return chain
     .slice(firstBelow)
@@ -86,7 +109,7 @@ export function transform2DWithinPath(
       (composed, node, index) =>
         multiplyTransform2D(
           composed,
-          localTransform2D(node, undefined, chain[firstBelow + index - 1]) ?? TRANSFORM2D_IDENTITY
+          localTransform2D(node, undefined, chain[firstBelow + index - 1], solved) ?? TRANSFORM2D_IDENTITY
         ),
       TRANSFORM2D_IDENTITY
     );

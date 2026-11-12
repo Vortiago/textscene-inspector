@@ -39,7 +39,11 @@ import {
   solvedDrawTransformOf,
   transformsAtLivePaths,
 } from './controlYSort';
-import { usePublishControlTransforms, useYSortShifts } from '../../contexts/ControlYSortContext';
+import {
+  usePublishControlLocalTransforms,
+  usePublishControlTransforms,
+  useYSortShifts,
+} from '../../contexts/ControlYSortContext';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import {
   CanvasItemChildScope,
@@ -121,6 +125,15 @@ export function ControlCanvasWalker({
     );
   }, [publishTransforms, owner, tree, solved, snapEnabled, livePath]);
   useLayoutEffect(() => () => publishTransforms?.(owner, null), [publishTransforms, owner]);
+  // The live scene passes and the world walk's Node2D items read these, so every walk publishes them.
+  const publishLocalTransforms = usePublishControlLocalTransforms();
+  useLayoutEffect(() => {
+    publishLocalTransforms?.(
+      owner,
+      transformsAtLivePaths(livePath, controlTransformsOf(tree, solved, false))
+    );
+  }, [publishLocalTransforms, owner, tree, solved, livePath]);
+  useLayoutEffect(() => () => publishLocalTransforms?.(owner, null), [publishLocalTransforms, owner]);
   // With no world sort to join, the walk sorts its own Control items.
   const worldShifts = useYSortShifts();
   const shifts = useMemo(

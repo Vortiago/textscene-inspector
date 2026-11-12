@@ -12,6 +12,13 @@ import type { PaintRange } from '../canvasPaintOrder.js';
 /** Control paths to the transform of their canvas item in their parent, written only by the Control walk. */
 export type ControlTransforms = ReadonlyMap<string, Transform2DColumns>;
 
+/**
+ * Control paths to `Control::get_transform()`, the transform of the Control in its parent that the
+ * canvas item snaps to whole pixels (`control.cpp:731-736`). The live scene passes compose through it,
+ * as `get_global_transform()` does. Written only by the Control walk.
+ */
+export type ControlLocalTransforms = ReadonlyMap<string, Transform2DColumns>;
+
 /** Where the y-sort moved a node's draw-sequence run, written only by `YSortDispatcher`. */
 export interface YSortShift {
   /** The run the sort gave the node's subtree. */
@@ -31,13 +38,16 @@ type Publish<Entries> = (owner: string, entries: Entries | null) => void;
 
 interface Publishers {
   publishTransforms: Publish<ControlTransforms>;
+  publishLocalTransforms: Publish<ControlLocalTransforms>;
   publishShifts: Publish<YSortShifts>;
 }
 
 const TransformsContext = createContext<ControlTransforms>(NO_TRANSFORMS);
+const LocalTransformsContext = createContext<ControlLocalTransforms>(NO_TRANSFORMS);
 const ShiftsContext = createContext<YSortShifts>(NO_SHIFTS);
 const PublishersContext = createContext<Publishers | null>(null);
 TransformsContext.displayName = 'ControlTransformsContext';
+LocalTransformsContext.displayName = 'ControlLocalTransformsContext';
 ShiftsContext.displayName = 'YSortShiftsContext';
 PublishersContext.displayName = 'ControlYSortPublishers';
 
@@ -80,16 +90,19 @@ function useOwnedEntries<T>(none: ReadonlyMap<string, T>, equal: (x: T, y: T) =>
 
 export function ControlYSortProvider({ children }: { children: ReactNode }) {
   const [transforms, publishTransforms] = useOwnedEntries(NO_TRANSFORMS, equalTransform2D);
+  const [localTransforms, publishLocalTransforms] = useOwnedEntries(NO_TRANSFORMS, equalTransform2D);
   const [shifts, publishShifts] = useOwnedEntries(NO_SHIFTS, sameShift);
   const publishers = useMemo(
-    () => ({ publishTransforms, publishShifts }),
-    [publishTransforms, publishShifts]
+    () => ({ publishTransforms, publishLocalTransforms, publishShifts }),
+    [publishTransforms, publishLocalTransforms, publishShifts]
   );
 
   return (
     <PublishersContext.Provider value={publishers}>
       <TransformsContext.Provider value={transforms}>
-        <ShiftsContext.Provider value={shifts}>{children}</ShiftsContext.Provider>
+        <LocalTransformsContext.Provider value={localTransforms}>
+          <ShiftsContext.Provider value={shifts}>{children}</ShiftsContext.Provider>
+        </LocalTransformsContext.Provider>
       </TransformsContext.Provider>
     </PublishersContext.Provider>
   );
@@ -114,6 +127,16 @@ export function useControlTransformsUnder(path: string | null): ControlTransform
   return held.current;
 }
 
+/** The transform the Control walks published for the Control at `path`, or null before they solve it. */
+export function useControlTransform(path: string): Transform2DColumns | null {
+  return useContext(TransformsContext).get(path) ?? null;
+}
+
+/** The local transforms the Control walks published, empty where there is no provider or no solve yet. */
+export function useControlLocalTransforms(): ControlLocalTransforms {
+  return useContext(LocalTransformsContext);
+}
+
 /** The shifts the y-sorts published. */
 export function useYSortShifts(): YSortShifts {
   return useContext(ShiftsContext);
@@ -122,6 +145,11 @@ export function useYSortShifts(): YSortShifts {
 /** The publisher of the Control walk's transforms, or null where there is no provider. */
 export function usePublishControlTransforms(): Publish<ControlTransforms> | null {
   return useContext(PublishersContext)?.publishTransforms ?? null;
+}
+
+/** The publisher of the Control walk's local transforms, or null where there is no provider. */
+export function usePublishControlLocalTransforms(): Publish<ControlLocalTransforms> | null {
+  return useContext(PublishersContext)?.publishLocalTransforms ?? null;
 }
 
 /** The publisher of the y-sort's shifts, or null where there is no provider. */

@@ -10,7 +10,7 @@ Skeleton2D is the root of a Bone2D chain. It runs its `modification_stack` on th
 Godot does each frame, and shows the pose the stack settles on. The children of a bone, its kite
 and each Polygon2D that names the skeleton in `skeleton` follow that pose. A stack that is not
 `enabled` leaves the bones where the scene or an AnimationPlayer put them. A `strength` below 1
-moves each bone part of the way.
+moves each bone part of the way. A Skeleton2D below a Control solves in the space of the Control, with the rect the layout gave it.
 
 ## LookAt
 <!-- compare: image=unit-skeleton2d-lookat status=done fixture=unit-skeleton2d-lookat.tscn -->

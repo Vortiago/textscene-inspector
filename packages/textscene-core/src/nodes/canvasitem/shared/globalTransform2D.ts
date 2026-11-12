@@ -4,7 +4,8 @@
  * `is_conformal()` (`node_2d.cpp:353-362`, `:315-320`), the cameras panel places a
  * Camera2D with it, and the RemoteTransform pass composes through it. It composes each Node2D's
  * `position`, `rotation`, `scale` and `skew` (`node_2d.cpp:499-503`), since Node2D's `transform` is
- * `PROPERTY_USAGE_NONE` (`node_2d.cpp:501`), and each Control whose rect its offsets state alone.
+ * `PROPERTY_USAGE_NONE` (`node_2d.cpp:501`), and each Control: from the transform the Control walk
+ * solved where it has one, else from its offsets where they state its rect alone.
  */
 
 import { climbAncestors, type ParentLookup } from '../../../linter/parentType.js';
@@ -84,18 +85,24 @@ function controlLocalTransform2D(node: RawNode, parent: RawNode | undefined): Tr
   return transform2DFromParts(parseScalar(props.rotation, 0), scale, 0, position);
 }
 
+/** `Control::get_transform()` (`control.cpp:731-736`) of each Control the Control walk has solved. */
+export type SolvedControls = ReadonlyMap<RawNode, Transform2DColumns>;
+
 /**
  * A Node2D's own local `Transform2D`, built as `Node2D::_update_transform` builds it. An
  * absent key takes Node2D's field default (`node_2d.h`): position `(0, 0)`, rotation `0`,
  * scale `(1, 1)` and skew `0`, together the identity. Null for a vector that narrows to a number the
- * file does not state. `parent` is the canvas item above the node, which a Control reads for its rect.
+ * file does not state. `parent` is the canvas item above the node, which a Control reads for its rect,
+ * and `solved` holds the Controls the Control walk has solved.
  */
 export function localTransform2D(
   node: RawNode,
   pose?: Node2DPose,
-  parent?: RawNode
+  parent?: RawNode,
+  solved: SolvedControls = NO_SOLVED
 ): Transform2DColumns | null {
-  if (descendsFromClass(node.type, 'Control')) return controlLocalTransform2D(node, parent);
+  if (descendsFromClass(node.type, 'Control'))
+    return solved.get(node) ?? controlLocalTransform2D(node, parent);
   const props = node.rawProperties;
   const position = pose?.position ?? readVector2Property(props.position, { x: 0, y: 0 });
   const rotation = pose?.rotation ?? parseScalar(props.rotation, 0);
@@ -111,6 +118,7 @@ function isTopLevel(node: RawNode): boolean {
 }
 
 const NO_POSES: ReadonlyMap<RawNode, Node2DPose> = new Map();
+const NO_SOLVED: SolvedControls = new Map();
 
 type GlobalTransform2DVerdict =
   | { readonly kind: 'known'; readonly transform: Transform2DColumns }
@@ -123,15 +131,21 @@ type GlobalTransform2DVerdict =
  * parent that is not a CanvasItem, so the climb stops at either. A `top_level` node
  * composes, then stops the climb above itself.
  */
-function canvasChain(node: RawNode, parentOf: (child: RawNode) => ParentLookup): RawNode[] | null {
+function canvasChain(
+  node: RawNode,
+  parentOf: (child: RawNode) => ParentLookup,
+  solved: SolvedControls
+): RawNode[] | null {
   const chain: RawNode[] = [node];
   if (isTopLevel(node)) return chain;
 
   const search = climbAncestors<'terminus' | 'laidOut'>(node, parentOf, (parent) => {
-    // A Container sets the rect of the Control below it, which this does not solve.
+    // A Container sets the rect of the Control below it, which only the Control walk solves.
+    const child = chain[chain.length - 1]!;
     if (
-      descendsFromClass(chain[chain.length - 1]!.type, 'Control') &&
-      descendsFromClass(parent.type, 'Container')
+      descendsFromClass(child.type, 'Control') &&
+      descendsFromClass(parent.type, 'Container') &&
+      !solved.has(child)
     )
       return 'laidOut';
     if (!descendsFromClass(parent.type, 'CanvasItem')) return 'terminus';
@@ -149,19 +163,21 @@ function canvasChain(node: RawNode, parentOf: (child: RawNode) => ParentLookup):
  * Resolve `node`'s global `Transform2D`. `CanvasItem::get_global_transform()`
  * (`canvas_item.cpp:176-186`) multiplies each local transform into its parent item's
  * global one. `parentOf` is the tree's own parent lookup, so the linter climbs the file
- * and the cameras panel climbs the live tree. `poses` holds the pose that replaces a node's own.
+ * and the cameras panel climbs the live tree. `poses` holds the pose that replaces a node's own, and
+ * `solved` the Controls the Control walk has solved.
  */
 export function resolveGlobalTransform2D(
   node: RawNode,
   parentOf: (child: RawNode) => ParentLookup,
-  poses: ReadonlyMap<RawNode, Node2DPose> = NO_POSES
+  poses: ReadonlyMap<RawNode, Node2DPose> = NO_POSES,
+  solved: SolvedControls = NO_SOLVED
 ): GlobalTransform2DVerdict {
-  const chain = canvasChain(node, parentOf);
+  const chain = canvasChain(node, parentOf, solved);
   if (chain === null) return { kind: 'unknowable' };
 
   let composed = TRANSFORM2D_IDENTITY;
   for (let i = chain.length - 1; i >= 0; i--) {
-    const local = localTransform2D(chain[i]!, poses.get(chain[i]!), chain[i + 1]);
+    const local = localTransform2D(chain[i]!, poses.get(chain[i]!), chain[i + 1], solved);
     if (local === null) return { kind: 'unknowable' };
     composed = multiplyTransform2D(composed, local);
   }
