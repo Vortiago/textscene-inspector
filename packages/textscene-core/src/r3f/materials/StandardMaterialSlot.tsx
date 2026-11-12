@@ -15,7 +15,7 @@ import type { ParticleDraw, ParticleProgram } from './godotParticles';
 import type { FadeVariants } from './fadeVariants';
 import { bindLightmap, LIGHTMAP_PROGRAM, readsLightmap } from '../lightmap/lightmapProgram';
 import type { LightmapAssignment } from '../lightmap/sceneLightmaps';
-import { useLightmapAssignment } from '../lightmap/useLightmapAssignment';
+import { useInstanceLightmap } from '../visibilityRange/geometryInstance';
 
 interface StandardMaterialSlotProps {
   /** The surface's derived bags, textures bound. */
@@ -34,7 +34,7 @@ export interface SurfaceDraws {
 }
 
 export function StandardMaterialSlot({ bags, attach, draws = {} }: StandardMaterialSlotProps) {
-  const lightmap = useLightmapAssignment();
+  const lightmap = useInstanceLightmap();
   return (
     <FadedMaterials attach={attach}>
       {(pass, mount) =>

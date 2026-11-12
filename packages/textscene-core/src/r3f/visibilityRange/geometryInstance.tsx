@@ -1,12 +1,21 @@
 /**
  * Each GeometryInstance3D's link to the scene cull, and what Godot sets on the instance for every
  * geometry type: `material_override`, `material_overlay` (`visual_instance_3d.cpp:211-228`),
- * `layers` and `cast_shadow`. The registry mounts every GeometryInstance3D component in
+ * `layers`, `cast_shadow` and the lightmap a LightmapGI assigns it. The registry mounts every GeometryInstance3D component in
  * `withGeometryInstance`, drawn or not, so an undrawn visibility parent still decides its dependants.
  */
 
 import { useThree } from '@react-three/fiber';
-import { createContext, useContext, useLayoutEffect, useMemo, type ReactNode } from 'react';
+import type * as THREE from 'three';
+import {
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
+import { LIGHTMAP_NODE_ITSELF } from '../../godot/scene/lightmapGi';
 import { hasGeometryBase } from '../../godot/scene/geometryBase';
 import type { GeometryInstance3DProperties } from '../../nodes/3d/geometryinstance3d/types';
 import { useNodePath } from '../contexts/NodePathContext';
@@ -18,6 +27,8 @@ import { FadedSurfacesContext } from '../materials/swappedMaterials';
 import { resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
 import { useSceneResources } from '../SceneResourcesContext';
 import type { DrawnInstance } from '../surfaceDrawHooks';
+import { instanceLightmap } from '../lightmap/instanceLightmap';
+import type { LightmapAssignment } from '../lightmap/sceneLightmaps';
 import { registerVisibilityInstance } from './visibilityScene';
 import { useVisibilityParent } from './VisibilityParentContext';
 import { UNPLACED, type InstancePlacement } from './placements';
@@ -37,12 +48,26 @@ export interface InstanceDraw {
   instance: DrawnInstance;
 }
 
-/** The draw, with the instance as the base places it. */
-type GeometryInstanceScope = InstanceDraw & { instance: CulledInstance };
+/** The draw, with the instance as the base places it and the lightmap its surfaces read. */
+interface GeometryInstanceScope extends InstanceDraw {
+  instance: CulledInstance;
+  /** Null while no LightmapGI names the instance. */
+  lightmap: LightmapAssignment | null;
+}
 
 /** Null outside a GeometryInstance3D component, and inside the nodes it renders as its children. */
 const GeometryInstanceContext = createContext<GeometryInstanceScope | null>(null);
 GeometryInstanceContext.displayName = 'GeometryInstanceContext';
+
+/** The index of the baked mesh an instance draws, or `LIGHTMAP_NODE_ITSELF` for the node's own. */
+const BakedMeshIndexContext = createContext(LIGHTMAP_NODE_ITSELF);
+BakedMeshIndexContext.displayName = 'BakedMeshIndexContext';
+
+/**
+ * Makes the GeometryInstance3D it holds the instance of its node's baked mesh `value`: Godot gives
+ * each baked mesh an instance of its own, which a LightmapGI names by index (`grid_map.cpp:97-104`).
+ */
+export const BakedMeshInstance = BakedMeshIndexContext.Provider;
 
 /**
  * The component the registry mounts for a GeometryInstance3D type: `Drawer`, with the node's
@@ -79,9 +104,10 @@ export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
       [properties.materialOverlay, pools]
     );
     const { layers } = properties;
+    const lightmap = useLightmapOf(scene, path);
     const scope = useMemo(
-      () => ({ shadow, override, overlay, layers, instance }),
-      [instance, shadow, override, overlay, layers]
+      () => ({ shadow, override, overlay, layers, instance, lightmap }),
+      [instance, shadow, override, overlay, layers, lightmap]
     );
     // The nodes it renders as children take their own scope, or none.
     return (
@@ -96,6 +122,16 @@ export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
   }
   GeometryInstanceComponent.displayName = `withGeometryInstance(${Drawer.displayName ?? Drawer.name})`;
   return GeometryInstanceComponent;
+}
+
+/** The lightmap of the instance at `path`, or of the baked mesh the base stands for, kept live. */
+function useLightmapOf(scene: THREE.Scene, path: string | null): LightmapAssignment | null {
+  const bakedMeshIndex = useContext(BakedMeshIndexContext);
+  const lightmap = useMemo(
+    () => instanceLightmap(scene, path, bakedMeshIndex),
+    [scene, path, bakedMeshIndex]
+  );
+  return useSyncExternalStore(lightmap.subscribe, lightmap.read);
 }
 
 /** The nodes a drawer renders as its children, outside its instance's scope and fade. */
@@ -130,6 +166,15 @@ export function useGeometryInstance(placement: InstancePlacement): void {
 /** What the enclosing node's base hands each draw of its instance. */
 export function useInstanceDraw(): InstanceDraw {
   return useGeometryInstanceScope();
+}
+
+/**
+ * The lightmap of the enclosing GeometryInstance3D, for the one place that mounts a surface's
+ * material. Null under no instance: a LightmapGI lights only a VisualInstance3D
+ * (`lightmap_gi.cpp:1551-1552`).
+ */
+export function useInstanceLightmap(): LightmapAssignment | null {
+  return useContext(GeometryInstanceContext)?.lightmap ?? null;
 }
 
 /** What a drawer under no GeometryInstance3D owns of its draws: it holds no instance material. */
