@@ -1,6 +1,6 @@
 /**
- * The mesh at every particle of a settled CPUParticles3D, through the surfaced mesh drawer: each
- * part one instanced draw over the particle buffer, with the passes of the emitter's instance.
+ * The mesh at every particle of a settled particle node, through the surfaced mesh drawer: each
+ * part one instanced draw over the particle buffer, one component for each draw pass.
  */
 
 import { useMemo } from 'react';

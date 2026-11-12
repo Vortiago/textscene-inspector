@@ -1,8 +1,8 @@
 /**
  * The steps of the first frame's settle (`particles_storage.cpp:1542-1563`). No THREE and no React.
+ * The count stops at the CPU settle's ceiling: a huge `preprocess` would spin for minutes.
  */
 
-/** Ceiling on settle steps, as for the CPU settle: a huge `preprocess` would spin for minutes. */
 import { MAX_SETTLE_STEPS } from '../cpuparticles/process';
 
 /** The frame times the first frame steps: `while (todo >= 0)` overshoots the last step (`:1559-1563`). */

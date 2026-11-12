@@ -1,5 +1,5 @@
 /**
- * A CPUParticles3D's buffer as three draws it: each particle an instance of the mesh, with its
+ * A particle buffer as three draws it: each particle an instance of the mesh, with its
  * transform, its colour and its custom data. The buffer holds Godot's 3×4 rows, whose bottom row
  * the scene shader fills with `(0, 0, 0, 1)` (`scene_forward_clustered.glsl:320`), so a never-born
  * particle's zero transform sits at the emitter's origin.
