@@ -35,19 +35,16 @@ export function useParticleResources(references: ParticleResourceReferences): Pa
   const scaleZ = references.scaleCurves?.z;
   return useSnapshotRead(
     useCallback(
-      (read) => ({
-        curves: Array.from(
-          { length: CPU_PARTICLES_PARAM_COUNT },
-          (_, slot) => read(params[slot]?.curve, CURVE).value
-        ),
-        scaleCurves: {
-          x: read(scaleX, CURVE).value,
-          y: read(scaleY, CURVE).value,
-          z: read(scaleZ, CURVE).value,
-        },
-        colorRamp: read(colorRamp, GRADIENT).value,
-        colorInitialRamp: read(colorInitialRamp, GRADIENT).value,
-      }),
+      (read) => {
+        const curve = (ref: string | undefined) => read(ref, CURVE).value;
+        const gradient = (ref: string | undefined) => read(ref, GRADIENT).value;
+        return {
+          curves: Array.from({ length: CPU_PARTICLES_PARAM_COUNT }, (_, slot) => curve(params[slot]?.curve)),
+          scaleCurves: { x: curve(scaleX), y: curve(scaleY), z: curve(scaleZ) },
+          colorRamp: gradient(colorRamp),
+          colorInitialRamp: gradient(colorInitialRamp),
+        };
+      },
       [params, scaleX, scaleY, scaleZ, colorRamp, colorInitialRamp]
     )
   );

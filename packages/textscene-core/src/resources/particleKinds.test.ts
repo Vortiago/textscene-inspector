@@ -55,11 +55,7 @@ describe.each(KINDS)('the $className kind', (kase) => {
   const inScene = () =>
     loadedAt(kase, 'SubResource("r")', `[sub_resource type="${kase.className}" id="r"]\n${kase.body}`);
 
-  it('decodes a sub-resource of the scene', () => {
-    expect(inScene()).toBeTruthy();
-  });
-
-  it('decodes the same value from a .tres of its own', () => {
+  it('decodes the same value from a .tres of its own as from a sub-resource of the scene', () => {
     const files = {
       'res://r.tres': `[gd_resource type="${kase.className}" format=3]\n\n[resource]\n${kase.body}\n`,
     };

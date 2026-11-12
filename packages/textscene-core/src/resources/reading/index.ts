@@ -4,7 +4,6 @@
  * reference tables stay inside this module.
  */
 
-export type { NodeRead } from './useNodeResource';
 export type { Follow, HeldResource, Read, ResourceKind, ResourceSnapshot, UnavailableReason } from './read';
 export type { ScopedReference } from './scopedReference';
 export { useNodeResource, useSnapshotRead } from './useNodeResource';
