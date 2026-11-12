@@ -15,8 +15,9 @@ import type { MeshInstances } from './meshInstances';
 
 /**
  * `count` instances whose values `arraysOf` builds when a draw writes them, so a buffer nothing
- * draws is never expanded and no intermediate outlives the write. The instances have no bounds: the
- * node's own box culls them.
+ * draws is never expanded and no intermediate outlives the write. The instances have no bounds. A
+ * particle program draws billboards that the matrices do not hold, and a MultiMesh keeps its
+ * node's box as the cull.
  */
 export function colouredInstances(count: number, arraysOf: () => InstanceArrays): MeshInstances {
   return {

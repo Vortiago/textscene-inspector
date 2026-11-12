@@ -216,9 +216,9 @@ describe('decodeMultiMesh: the drawn instances', () => {
     });
   });
 
-  it('holds zeros for the stride of each instance when nothing sets a buffer', () => {
+  it('holds no buffer, which reads as zeros, when nothing sets one', () => {
     const properties = { use_colors: 'true', use_custom_data: 'true', ...FOUR };
-    expect(drawn(properties).buffer).toEqual(new Float32Array(4 * (12 + 4 + 4)));
+    expect(drawn(properties).buffer).toBeNull();
   });
 
   it('writes a transform_array and a color_array into one buffer', () => {
@@ -253,6 +253,6 @@ describe('decodeMultiMesh: the drawn instances', () => {
 
   it('keeps the 2D format when transform_format comes after instance_count', () => {
     const properties = { instance_count: '1', transform_format: '1', mesh: MESH };
-    expect(drawn(properties)).toMatchObject({ transformFormat: 0, buffer: new Float32Array(8) });
+    expect(drawn(properties)).toMatchObject({ transformFormat: 0, buffer: null });
   });
 });

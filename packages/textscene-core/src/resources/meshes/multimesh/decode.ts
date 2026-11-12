@@ -54,9 +54,9 @@ class MultiMeshState {
     return this.layout.stride;
   }
 
-  /** The buffer the server ends with: the CPU copy, else the set buffer, else zeros. */
-  get endBuffer(): Float32Array {
-    return this.dataCache ?? this.buffer ?? new Float32Array(this.instances * this.stride);
+  /** The buffer the server ends with: the CPU copy, else the set buffer, else null for zeros. */
+  get endBuffer(): Float32Array | null {
+    return this.dataCache ?? this.buffer;
   }
 
   /** `multimesh_allocate_data` (`mesh_storage.cpp:1543-1598`). */

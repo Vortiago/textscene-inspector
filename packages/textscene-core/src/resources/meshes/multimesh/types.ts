@@ -36,9 +36,10 @@ export interface DrawnInstances {
   count: number;
   /**
    * The buffer of every instance, `instance_count` times the stride: the transform, then the colour
-   * when `usesColors`, then the custom data when `usesCustomData`. Zeros where nothing set it.
+   * when `usesColors`, then the custom data when `usesCustomData`. Null when nothing set it, which
+   * reads as zeros: a decode that only reads the box never allocates `instance_count` rows.
    */
-  buffer: Float32Array;
+  buffer: Float32Array | null;
 }
 
 /** What a MultiMesh's box and its draw read, once the scene loader has set each property in file order. */

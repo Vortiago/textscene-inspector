@@ -4,6 +4,7 @@
  * the scene shader fills with `(0, 0, 0, 1)` (`scene_forward_clustered.glsl:320`), so a never-born
  * particle's zero transform sits at the emitter's origin.
  */
+
 import * as THREE from 'three';
 import { MATRIX_FLOATS, VEC4_FLOATS } from '../../../../resources/meshes/multimesh/types';
 import { colouredInstances } from '../../../../r3f/surfacedMeshDrawer/colouredInstances';

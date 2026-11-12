@@ -24,9 +24,10 @@ export interface InstanceArrays {
  * completes a 2D one with the row (0, 0, 1, 0) (`scene_forward_clustered.glsl:316-318`).
  */
 export function multiMeshInstanceArrays(drawn: DrawnInstances): InstanceArrays {
-  const { count, buffer, usesColors, usesCustomData } = drawn;
+  const { count, usesColors, usesCustomData } = drawn;
   const is3D = drawn.transformFormat === MultiMeshTransformFormat.TRANSFORM_3D;
   const { stride, colourOffset, customOffset } = instanceLayout(is3D, usesColors, usesCustomData);
+  const buffer = drawn.buffer ?? new Float32Array(count * stride);
   const matrices = new Float32Array(count * MATRIX_FLOATS);
   const colours = new Float32Array(count * VEC4_FLOATS);
   const customs = new Float32Array(count * VEC4_FLOATS);
