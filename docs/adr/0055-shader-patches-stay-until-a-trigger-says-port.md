@@ -2,7 +2,8 @@
 
 - Status: Accepted. Amended on 2026-11-11: the port form is TSL node materials, and the owner started the
   port.
-- Related: ADR-0038 (one owner for every program input), ADR-0039.
+- Related: ADR-0038 (one owner for every program input), ADR-0039, ADR-0072 (the module the node
+  materials live in).
 
 ## Context
 

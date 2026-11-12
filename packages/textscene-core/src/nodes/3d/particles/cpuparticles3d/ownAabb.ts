@@ -23,7 +23,7 @@ export function particlesAabb(
   if (visibilityAabb) return visibilityAabb;
   if (mesh === undefined) return EMPTY_AABB;
   return multiMeshAabb(
-    { customAabb: null, mesh, boundedTransforms: particleSlices(rows, 0, TRANSFORM_FLOATS) },
+    { customAabb: null, boundedTransforms: particleSlices(rows, 0, TRANSFORM_FLOATS) },
     meshAabb
   );
 }
