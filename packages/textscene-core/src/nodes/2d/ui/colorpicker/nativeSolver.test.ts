@@ -3,6 +3,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { spinBoxButtonsBlockWidth } from '../spinbox/nativeSolver';
 import { pickerChildTheme } from './pickerChildTheme';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
@@ -416,9 +417,12 @@ describe('colorPickerValueColumnWidth', () => {
   });
 
   it('widens by the scaled buttons block at theme scale 2', () => {
-    // Arrow icon 8x4 -> 16x8: the block grows with the icon width (spin_box.cpp:82-86).
+    // The 16x8 arrow icon doubles to 32x16 and the block follows its width (spin_box.cpp:82-86). The LineEdit margin doubles from 8 to 16 too.
     const widthAt = (scale: number) => colorPickerValueColumnWidth(nativeTheme(scale), 0);
-    expect(widthAt(2) - widthAt(1)).toBeGreaterThan(0);
+    const lineEditMarginGrowth = 8;
+    expect(widthAt(2) - widthAt(1)).toBe(
+      spinBoxButtonsBlockWidth(32) - spinBoxButtonsBlockWidth(16) + lineEditMarginGrowth
+    );
   });
 
   it('floors to the style margin + buttons block alone with no em width', () => {

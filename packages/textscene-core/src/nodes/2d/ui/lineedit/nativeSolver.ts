@@ -64,12 +64,12 @@ export const LINE_EDIT_THEME_FONT_KEY = 'font';
 /** `LineEdit::get_draw_mode`'s stylebox axis: the `theme_override_styles/*` key, and default-theme box, that the node's current `editable` selects. */
 type LineEditStyleState = 'normal' | 'read_only';
 
-/** `editable ?? true` (Godot's `LineEdit.editable` default) as the stylebox key it selects. */
 /** The clear icon's size: the themed texture's, else the vendored icon at the theme scale. */
 export function lineEditClearIconSize(n: SolveNode, scale: number): Vector2 {
   return n.textureSlots['clear'] ?? scaledIconSizeOf(LINE_EDIT_CLEAR_ICON_NATURAL_SIZE, scale);
 }
 
+/** `editable ?? true` (Godot's `LineEdit.editable` default) as the stylebox key it selects. */
 export function resolveLineEditStyleState(editable: boolean | undefined): LineEditStyleState {
   return editable === false ? 'read_only' : 'normal';
 }

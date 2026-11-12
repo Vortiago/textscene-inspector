@@ -9,6 +9,8 @@ import * as THREE from 'three';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import type { ThemedIconRef } from '../../../../r3f/controls/native/solveTree';
+import { useProjectSettings } from '../../../../r3f/contexts/ProjectSettingsContext';
+import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { MINI_CHECKERBOARD_ICON, MINI_CHECKERBOARD_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { applyUvWindow, regionUvWindow } from '../../../../r3f/uvWindow';
 
@@ -37,20 +39,22 @@ export function AlphaCheckerboardQuad({
   // `useNodeIcon` clones a themed ref or loads the vendored fallback per input, so this instance
   // is ours to mutate without a `.clone()`.
   const texture = useNodeIcon(themed, MINI_CHECKERBOARD_ICON);
+  const { themeScale } = useProjectSettings();
 
   const tiled = useMemo(() => {
     if (!texture) return null;
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    // A themed icon's own size sets the repeat. The vendored size stands in while it loads (no
-    // `.image` yet) or when nothing themed it.
+    // A themed icon's own size sets the repeat. The vendored size at the theme scale stands in
+    // while it loads (no `.image` yet) or when nothing themed it.
+    const vendoredSide = scaledIconSize(MINI_CHECKERBOARD_SIZE, themeScale);
     const tileSize = {
-      x: (texture.image as { width?: number } | undefined)?.width || MINI_CHECKERBOARD_SIZE,
-      y: (texture.image as { height?: number } | undefined)?.height || MINI_CHECKERBOARD_SIZE,
+      x: (texture.image as { width?: number } | undefined)?.width || vendoredSide,
+      y: (texture.image as { height?: number } | undefined)?.height || vendoredSide,
     };
     applyUvWindow(texture, regionUvWindow({ x: 0, y: 0, w: width, h: height }, tileSize));
     texture.needsUpdate = true;
     return texture;
-  }, [texture, width, height]);
+  }, [texture, width, height, themeScale]);
 
   useEffect(() => (tiled ? () => tiled.dispose() : undefined), [tiled]);
 

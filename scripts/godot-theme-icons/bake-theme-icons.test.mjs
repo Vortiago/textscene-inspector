@@ -43,6 +43,17 @@ describe('vendoredIconsOfSource', () => {
     ]);
   });
 
+  it('reads a call that Prettier wraps over several lines', () => {
+    const source = `
+      const A_B64 = 'QQ==';
+      export const T = vendoredIcon(
+        'alpha',
+        A_B64
+      );`;
+
+    expect(vendoredIconsOfSource(source)).toEqual([['alpha', 'QQ==']]);
+  });
+
   it('refuses a call whose constant is missing and names both (error case)', () => {
     expect(() => vendoredIconsOfSource("vendoredIcon('alpha', A_B64)")).toThrow(
       'expected a const A_B64 for the icon alpha'

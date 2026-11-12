@@ -39,7 +39,7 @@ export function vendoredIconsOfSource(source) {
   const base64ByName = new Map(
     [...source.matchAll(/const (\w+_B64) =\s*'([^']+)'/g)].map((match) => [match[1], match[2]])
   );
-  return [...source.matchAll(/vendoredIcon\('(\w+)', (\w+_B64)\)/g)].map((match) => {
+  return [...source.matchAll(/vendoredIcon\(\s*'(\w+)',\s*(\w+_B64)\s*\)/g)].map((match) => {
     const base64 = base64ByName.get(match[2]);
     if (base64 === undefined) throw new Error(`expected a const ${match[2]} for the icon ${match[1]}`);
     return [match[1], base64];

@@ -17,9 +17,9 @@ import type { TscnExternalResource, TscnInternalResource } from '../../../parser
 import type { ThemedIconRef } from './solveTree';
 
 /**
- * A vendored icon's pixels come from `themeIconSource` at the project's theme scale. Sampled with the
- * owner's filter and repeat, memoised on the URL, scale and sampler, and disposed on unmount or change. `null` allocates nothing: hook order is fixed, so a conditionally drawn icon (the
- * SplitContainer grabber, hidden by the default `autohide`) would decode an image it never renders.
+ * A vendored icon's pixels come from `themeIconSource` at the project's theme scale, sampled with the
+ * owner's filter and repeat. `null` allocates nothing: hook order is fixed, so a conditionally drawn
+ * icon (the SplitContainer grabber, hidden by the default `autohide`) would decode an image it never draws.
  */
 export function useOptionalIconTexture(dataUrl: string | null): THREE.Texture | null {
   const viewSampler = useCanvasItemViewSampler(useResolvedTextureSampler());
