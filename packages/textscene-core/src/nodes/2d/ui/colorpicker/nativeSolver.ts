@@ -21,7 +21,12 @@ import {
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
-import { spinBoxArrowIconSize, spinBoxButtonsBlockWidth } from '../spinbox/nativeSolver';
+import {
+  spinBoxArrowIconSize,
+  spinBoxButtonsBlockWidth,
+  spinBoxRangeButtonState,
+  type SpinBoxButtonState,
+} from '../spinbox/nativeSolver';
 import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import {
   COLOR_PICKER_BUTTON_ICON_SIZE,
@@ -33,7 +38,7 @@ import { resortBoxContainer } from '../shared/boxContainerSolver';
 import { pickerChildTheme } from './pickerChildTheme';
 import { shapeRowHeight, shapeRowMinWidth } from './shapes/shapeRowLayout';
 import { drawnShapeVariant } from './shapes/pickerShapes';
-import { MODE_RGB } from './colorModes';
+import { MODE_LINEAR, MODE_RGB } from './colorModes';
 import { gridCellMinimumExtent } from '../shared/gridCellMinimum';
 import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -801,4 +806,22 @@ export function colorPickerChannelGrabberRect(
  */
 export function colorPickerIntensityRatio(value: number): number {
   return (value - -10) / 20;
+}
+
+/** `values[i]->set_allow_greater(mode->get_allow_greater())` (`color_picker.cpp:725`): only the RGB and Linear modes (`color_mode.h:99,124`). */
+export function colorPickerRowAllowsGreater(mode: number): boolean {
+  return mode === MODE_RGB || mode === MODE_LINEAR;
+}
+
+/** The arrows of a value `SpinBox` that shares a slider's range. No row allows lesser values. */
+export function colorPickerSpinArrowStates(range: {
+  value: number;
+  min: number;
+  max: number;
+  allowGreater: boolean;
+}): { up: SpinBoxButtonState; down: SpinBoxButtonState } {
+  return {
+    up: spinBoxRangeButtonState(range.value, range.max, range.allowGreater),
+    down: spinBoxRangeButtonState(range.value, range.min, false),
+  };
 }

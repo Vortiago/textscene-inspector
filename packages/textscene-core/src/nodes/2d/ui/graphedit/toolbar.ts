@@ -22,6 +22,7 @@ import {
 } from '../shared/boxContainerSolver';
 import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
 import { spinBoxArrowIconSize, spinBoxButtonsBlockWidth } from '../spinbox/nativeSolver';
+import { spinBoxRangeButtonState, type SpinBoxButtonState } from '../spinbox/nativeSolver';
 import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import { isMinimapEnabled } from './minimap';
@@ -300,5 +301,19 @@ export function graphEditToolbar(
         h: laid[i]!.h,
       },
     })),
+  };
+}
+
+const GRID_MIN_SNAPPING_DISTANCE = 2;
+const GRID_MAX_SNAPPING_DISTANCE = 100;
+
+/** The arrows of `snapping_distance_spinbox`, whose range is 2 to 100 and allows nothing beyond (`graph_edit.cpp:57-58,3295-3296`). */
+export function graphEditSnappingArrowStates(snappingDistance: number): {
+  up: SpinBoxButtonState;
+  down: SpinBoxButtonState;
+} {
+  return {
+    up: spinBoxRangeButtonState(snappingDistance, GRID_MAX_SNAPPING_DISTANCE, false),
+    down: spinBoxRangeButtonState(snappingDistance, GRID_MIN_SNAPPING_DISTANCE, false),
   };
 }

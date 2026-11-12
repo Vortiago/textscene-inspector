@@ -31,7 +31,7 @@ import { ItemListIconMode, ItemListSelectMode } from '../../../godot/scene/gui';
 import type { Rgba } from '../../../godot/math/math';
 import type { ItemListProperties, ItemListRuntimeItem } from '../../2d/ui/itemlist/types';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
-import { scaledIconSizeOf } from '../../../r3f/controls/native/scaledSvgIcon';
+import { themedIconSize } from '../../../r3f/controls/native/scaledSvgIcon';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { themedSlotRequests, type TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
 import { perObject } from '../../../utils/perObject';
@@ -356,7 +356,7 @@ function iconSizeOf(
   name: FileDialogThemeIcon | FileDialogListIcon,
   scale: number
 ): Vector2 {
-  return dialog.textureSlots[name] ?? scaledIconSizeOf(FILE_DIALOG_ICON_SIZE, scale);
+  return themedIconSize(dialog.textureSlots, name, FILE_DIALOG_ICON_SIZE, scale);
 }
 
 /** The Button classes the body builds without an icon, so each takes the theme icon `icon` of its class. */

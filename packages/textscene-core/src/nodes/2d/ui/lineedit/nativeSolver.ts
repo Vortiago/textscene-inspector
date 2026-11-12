@@ -41,7 +41,7 @@ import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/contro
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { TscnNode } from '../../../../parser/types';
 import { lineEditDisplayText } from './displayText';
-import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
+import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -66,7 +66,7 @@ type LineEditStyleState = 'normal' | 'read_only';
 
 /** The clear icon's size: the themed texture's, else the vendored icon at the theme scale. */
 export function lineEditClearIconSize(n: SolveNode, scale: number): Vector2 {
-  return n.textureSlots['clear'] ?? scaledIconSizeOf(LINE_EDIT_CLEAR_ICON_NATURAL_SIZE, scale);
+  return themedIconSize(n.textureSlots, 'clear', LINE_EDIT_CLEAR_ICON_NATURAL_SIZE, scale);
 }
 
 /** `editable ?? true` (Godot's `LineEdit.editable` default) as the stylebox key it selects. */

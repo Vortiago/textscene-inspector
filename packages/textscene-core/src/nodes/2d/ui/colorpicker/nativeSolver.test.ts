@@ -4,6 +4,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { spinBoxButtonsBlockWidth } from '../spinbox/nativeSolver';
+import { MODE_HSV, MODE_LINEAR, MODE_OKHSL, MODE_RGB } from './colorModes';
 import { pickerChildTheme } from './pickerChildTheme';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
@@ -19,6 +20,8 @@ import {
   sliderGridRowRects,
   colorPickerValueColumnWidth,
   colorPickerButtonIconSize,
+  colorPickerSpinArrowStates,
+  colorPickerRowAllowsGreater,
   colorPickerLabelColumnWidth,
   modeButtonBox,
   colorPickerSliderBoxRect,
@@ -735,5 +738,47 @@ describe('colorPickerButtonIconSize', () => {
   it('scales the 16px button icon by the theme scale', () => {
     expect(colorPickerButtonIconSize(nativeTheme(1))).toBe(16);
     expect(colorPickerButtonIconSize(nativeTheme(1.5))).toBe(24);
+  });
+});
+
+describe('colorPickerSpinArrowStates (spin_box.cpp:635-646, color_picker.cpp:725,2187)', () => {
+  it('disables the up arrow at the maximum of a range that allows nothing greater', () => {
+    expect(colorPickerSpinArrowStates({ value: 255, min: 0, max: 255, allowGreater: false })).toEqual({
+      up: 'disabled',
+      down: 'normal',
+    });
+  });
+
+  it('keeps the up arrow at the maximum of a range that allows greater values (RGB and Linear rows, intensity)', () => {
+    expect(colorPickerSpinArrowStates({ value: 255, min: 0, max: 255, allowGreater: true }).up).toBe(
+      'normal'
+    );
+  });
+
+  it('disables the down arrow at the minimum, which never allows lesser values', () => {
+    expect(colorPickerSpinArrowStates({ value: 0, min: 0, max: 255, allowGreater: true }).down).toBe(
+      'disabled'
+    );
+    expect(colorPickerSpinArrowStates({ value: -10, min: -10, max: 10, allowGreater: true }).down).toBe(
+      'disabled'
+    );
+  });
+
+  it('leaves both arrows enabled inside the range', () => {
+    expect(colorPickerSpinArrowStates({ value: 102, min: 0, max: 255, allowGreater: false })).toEqual({
+      up: 'normal',
+      down: 'normal',
+    });
+  });
+});
+
+describe('colorPickerRowAllowsGreater (color_mode.h:99,124)', () => {
+  it('is true for the RGB and Linear modes only', () => {
+    expect([MODE_RGB, MODE_HSV, MODE_LINEAR, MODE_OKHSL].map(colorPickerRowAllowsGreater)).toEqual([
+      true,
+      false,
+      true,
+      false,
+    ]);
   });
 });

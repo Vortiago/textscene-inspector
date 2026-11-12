@@ -38,7 +38,7 @@ import {
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { formatGodotNumber, rangeStepDecimals } from '../spinbox/nativeSolver';
-import { graphEditToolbar, zoomLabelText } from './toolbar';
+import { graphEditSnappingArrowStates, graphEditToolbar, zoomLabelText } from './toolbar';
 import { GraphEditToolbarChrome } from './ToolbarChrome';
 import { graphEditToolbarTheme } from './toolbarTheme';
 import {
@@ -355,6 +355,7 @@ export function GraphEdit({
             theme={theme}
             tint={tint}
             text={toolbarText}
+            snappingArrows={graphEditSnappingArrowStates(snappingDistance)}
             shape={shape}
             rtl={solveNode.rtl}
             slot={topLayer.toolbar}

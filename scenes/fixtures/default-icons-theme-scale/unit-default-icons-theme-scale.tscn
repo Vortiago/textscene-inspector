@@ -1,5 +1,6 @@
 ; The one variable: `gui/theme/default_theme_scale = 1.5`. Every default-theme icon and every Control's
 ; minimum size scale by it, and the icons keep the browser raster of the scaled SVG (`default_theme.cpp:82-84`).
+; No FoldableContainer: Godot keeps its title at 16 px (`default_theme.cpp:1322`), which the previewer does not yet.
 
 [gd_scene load_steps=2 format=3]
 

@@ -38,7 +38,12 @@ import {
   SLIDER_GRABBER_ICONS,
 } from '../../../../r3f/controls/native/themeIcons';
 import { sliderTrackRect, sliderGrabberAreaRect, sliderGrabberRect } from '../shared/sliderSolver';
-import { spinBoxArrowIconSize, spinBoxArrowPosition, spinBoxLayout } from '../spinbox/nativeSolver';
+import {
+  spinBoxArrowIconSize,
+  spinBoxArrowPosition,
+  spinBoxIconColor,
+  spinBoxLayout,
+} from '../spinbox/nativeSolver';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { TextDirection } from '../../../../godot/text/textServerEnums';
@@ -86,6 +91,8 @@ import {
   type TextWidthMeasurer,
   colorPickerButtonIconSize,
   colorPickerOverbrightIconSize,
+  colorPickerRowAllowsGreater,
+  colorPickerSpinArrowStates,
 } from './nativeSolver';
 import { horizontalStripGeometry, linearizeStops } from './svGradient';
 import { ShapeRow } from './shapes/ShapeRow';
@@ -250,6 +257,11 @@ export function ColorPicker({
   const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
   // `up_icon_modulate` and `down_icon_modulate` default to `control_font_color` (`default_theme.cpp:634,638`).
   const spinArrowColor = useItemLinearColor(spinArrowGrey);
+  const spinArrowDisabledGrey = useMemo(
+    () => multiplyModulate(tint.own, spinBoxIconColor({}, 'up', 'disabled')),
+    [tint.own]
+  );
+  const spinArrowDisabledColor = useItemLinearColor(spinArrowDisabledGrey);
 
   const vertexTint = useVertexColorTint(tint.own);
   const baseTint = vertexTint.vertex;
@@ -312,6 +324,8 @@ export function ColorPicker({
     ratio: number;
     /** `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`color_mode.cpp:311`): only the R, G and B rows of `MODE_LINEAR`. */
     linearSpace?: boolean;
+    /** The value `SpinBox`'s arrows: each draws dimmed at its bound (`spin_box.cpp:635-646`). */
+    arrows: ReturnType<typeof colorPickerSpinArrowStates>;
   }
 
   // The tested source of the row order: each row below takes its label from here by index.
@@ -354,6 +368,12 @@ export function ColorPicker({
         underlay,
         ratio: c.max !== 0 ? c.value / c.max : 0,
         linearSpace: colorMode === MODE_LINEAR,
+        arrows: colorPickerSpinArrowStates({
+          value: c.value,
+          min: 0,
+          max: c.max,
+          allowGreater: colorPickerRowAllowsGreater(colorMode),
+        }),
       });
     }
     if (editIntensity) {
@@ -362,6 +382,13 @@ export function ColorPicker({
         valueText: formatValue(intensityChannel, true),
         stops: [],
         ratio: colorPickerIntensityRatio(intensityChannel.value),
+        // `intensity_slider` spans -10 to 10 and its value box allows greater (`color_picker.cpp:2184-2187`).
+        arrows: colorPickerSpinArrowStates({
+          value: intensityChannel.value,
+          min: -10,
+          max: 10,
+          allowGreater: true,
+        }),
       });
     }
     if (editAlpha) {
@@ -371,6 +398,12 @@ export function ColorPicker({
         stops: alphaChannelGradientStops(normalized),
         underlay: { kind: 'checkerboard' },
         ratio: alphaChannel.max !== 0 ? alphaChannel.value / alphaChannel.max : 0,
+        arrows: colorPickerSpinArrowStates({
+          value: alphaChannel.value,
+          min: 0,
+          max: alphaChannel.max,
+          allowGreater: false,
+        }),
       });
     }
     return out;
@@ -703,7 +736,7 @@ export function ColorPicker({
                       <ControlQuad
                         width={arrowSize.x}
                         height={arrowSize.y}
-                        color={spinArrowColor}
+                        color={row.arrows.up === 'disabled' ? spinArrowDisabledColor : spinArrowColor}
                         opacity={tint.opacity}
                         map={spinUpTexture}
                         renderOrder={renderOrder}
@@ -713,7 +746,7 @@ export function ColorPicker({
                       <ControlQuad
                         width={arrowSize.x}
                         height={arrowSize.y}
-                        color={spinArrowColor}
+                        color={row.arrows.down === 'disabled' ? spinArrowDisabledColor : spinArrowColor}
                         opacity={tint.opacity}
                         map={spinDownTexture}
                         renderOrder={renderOrder}

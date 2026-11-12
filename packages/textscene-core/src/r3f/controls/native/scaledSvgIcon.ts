@@ -19,6 +19,16 @@ export function scaledIconSizeOf(authored: Vector2, scale: number): Vector2 {
   return { x: scaledIconSize(authored.x, scale), y: scaledIconSize(authored.y, scale) };
 }
 
+/** An icon's size: the themed texture's in `slots` when the name resolved one, else the vendored icon at `scale`. */
+export function themedIconSize(
+  slots: Readonly<Record<string, Vector2 | null>>,
+  name: string,
+  authored: Vector2,
+  scale: number
+): Vector2 {
+  return slots[name] ?? scaledIconSizeOf(authored, scale);
+}
+
 /** `tag` with the attribute `name` set to `value`, added after `<svg` when the tag has none. */
 function withAttribute(tag: string, name: string, value: string): string {
   const attribute = ` ${name}="${value}"`;

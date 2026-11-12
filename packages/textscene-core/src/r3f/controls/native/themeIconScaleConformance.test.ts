@@ -9,7 +9,8 @@ import { isProductionSource, offendingLines, reportOffenders, walkSources } from
 
 const SRC_ROOT = join(import.meta.dirname, '../../..');
 const ICON_SIZE_CONSTANT = /\b[A-Z][A-Z_]*ICON_(?:NATURAL_)?SIZE\b/;
-const SCALED_READ = /\bscaledIconSize(?:Of)?\(\s*[A-Z][A-Z_]*ICON_(?:NATURAL_)?SIZE\b/;
+const SCALED_READ =
+  /\b(?:scaledIconSize(?:Of)?\(\s*|themedIconSize\([^)]*,\s*)[A-Z][A-Z_]*ICON_(?:NATURAL_)?SIZE\b/;
 /** A definition, or an import line that names only the constant. */
 const DECLARATION =
   /^\s*(?:export\s+)?const\s+[A-Z][A-Z_]*ICON_(?:NATURAL_)?SIZE\b|^\s*import\b|^\s*[A-Z][A-Z_]*,?\s*$/;
@@ -26,7 +27,7 @@ function unscaledReadLines(source: string): number[] {
 }
 
 describe('default-theme icon size conformance', () => {
-  it('reads every icon size constant through scaledIconSize or scaledIconSizeOf', () => {
+  it('reads every icon size constant through scaledIconSize, scaledIconSizeOf or themedIconSize', () => {
     const offenders = reportOffenders(SOURCES, unscaledReadLines);
     expect(
       offenders,
@@ -37,6 +38,9 @@ describe('default-theme icon size conformance', () => {
   it('would catch a bare read of an icon size constant — the check is not vacuous', () => {
     expect(unscaledReadLines('  const side = TAB_BAR_ICON_SIZE;')).toEqual([1]);
     expect(unscaledReadLines('  const side = scaledIconSize(TAB_BAR_ICON_SIZE, scale);')).toEqual([]);
+    expect(
+      unscaledReadLines("  return themedIconSize(slots, 'clear', CLEAR_ICON_NATURAL_SIZE, scale);")
+    ).toEqual([]);
     expect(unscaledReadLines('export const TAB_BAR_ICON_SIZE = 16;')).toEqual([]);
     expect(unscaledReadLines('  TAB_BAR_ICON_SIZE,')).toEqual([]);
   });

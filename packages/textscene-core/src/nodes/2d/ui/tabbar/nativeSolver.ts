@@ -205,8 +205,9 @@ export function tabBarThemeIconSize(
   name: TabBarThemeIconName,
   scale: number
 ): Vector2 {
+  if (n.textureSlots[name]) return n.textureSlots[name];
   const side = scaledIconSize(TAB_BAR_ICON_SIZE, scale);
-  return n.textureSlots[name] ?? { x: side, y: side };
+  return { x: side, y: side };
 }
 
 /**

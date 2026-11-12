@@ -34,13 +34,19 @@ import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import {
   spinBoxArrowPosition,
   spinBoxIconColor,
+  type SpinBoxButtonState,
   spinBoxLayout,
   spinBoxArrowIconSize,
 } from '../spinbox/nativeSolver';
 import { resolveToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
-import { graphEditMenuPanelStyleBox, zoomLabelTextRect, type GraphEditToolbar } from './toolbar';
+import {
+  graphEditMenuPanelStyleBox,
+  graphEditSnappingArrowStates,
+  zoomLabelTextRect,
+  type GraphEditToolbar,
+} from './toolbar';
 import type { GraphEditToolbarTheme } from './toolbarTheme';
 import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 
@@ -53,17 +59,24 @@ interface GraphEditToolbarProps {
   tint: NativeControlComponentProps['tint'];
   /** The formatted value of `snapping_distance_spinbox` and the text of the zoom label. */
   text: { zoomLabel: string; snappingDistance: string };
+  /** The `SpinBox` arrows, dimmed at the ends of the snapping range (`spin_box.cpp:635-646`). */
+  snappingArrows: ReturnType<typeof graphEditSnappingArrowStates>;
   shape: (text: string) => TextLayoutResult;
   /** The `SpinBox` buttons block sits on the trailing edge (`spin_box.cpp:403,409`). */
   rtl: boolean;
   slot: CanvasSlot;
 }
 
-/** The tint and opacity of a SpinBox arrow in its normal state. */
-function useArrowColor(tint: Rgba, toolbarTheme: GraphEditToolbarTheme, direction: 'up' | 'down') {
+/** The tint and opacity of a SpinBox arrow in `state`. */
+function useArrowColor(
+  tint: Rgba,
+  toolbarTheme: GraphEditToolbarTheme,
+  direction: 'up' | 'down',
+  state: SpinBoxButtonState
+) {
   const color = useMemo(
-    () => multiplyModulate(tint, spinBoxIconColor(toolbarTheme.spinBoxColors, direction, 'normal')),
-    [tint, toolbarTheme, direction]
+    () => multiplyModulate(tint, spinBoxIconColor(toolbarTheme.spinBoxColors, direction, state)),
+    [tint, toolbarTheme, direction, state]
   );
   return { linear: useItemLinearColor(color), alpha: color.a };
 }
@@ -84,6 +97,7 @@ export function GraphEditToolbarChrome({
   theme,
   tint,
   text,
+  snappingArrows,
   shape,
   rtl,
   slot,
@@ -98,8 +112,8 @@ export function GraphEditToolbarChrome({
     () => multiplyModulate(tint.own, toolbarTheme.fieldColor),
     [tint.own, toolbarTheme]
   );
-  const upArrow = useArrowColor(tint.own, toolbarTheme, 'up');
-  const downArrow = useArrowColor(tint.own, toolbarTheme, 'down');
+  const upArrow = useArrowColor(tint.own, toolbarTheme, 'up', snappingArrows.up);
+  const downArrow = useArrowColor(tint.own, toolbarTheme, 'down', snappingArrows.down);
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
 
   const iconTextures: Record<string, THREE.Texture | null> = {

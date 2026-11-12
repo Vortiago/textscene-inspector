@@ -1,6 +1,6 @@
 /** A vendored icon at the theme scale (`default_theme.cpp:82-84`, `image_loader_svg.cpp:92-93`). */
 import { describe, expect, it } from 'vitest';
-import { scaledIconSize, scaledIconSizeOf, scaledSvgDataUrl } from './scaledSvgIcon';
+import { scaledIconSize, scaledIconSizeOf, scaledSvgDataUrl, themedIconSize } from './scaledSvgIcon';
 import { svgDataUrl } from './themeIcons';
 
 const ICON = svgDataUrl(
@@ -41,5 +41,18 @@ describe('scaledSvgDataUrl', () => {
   it('keeps a viewBox the icon already has', () => {
     const boxed = svgDataUrl(btoa('<svg viewBox="0 0 8 8" width="16" height="16"/>'));
     expect(decode(scaledSvgDataUrl(boxed, 1.5))).toBe('<svg viewBox="0 0 8 8" width="24" height="24"/>');
+  });
+});
+
+describe('themedIconSize', () => {
+  const authored = { x: 16, y: 8 };
+
+  it('takes the size of a themed texture whatever the scale', () => {
+    expect(themedIconSize({ up: { x: 10, y: 12 } }, 'up', authored, 2)).toEqual({ x: 10, y: 12 });
+  });
+
+  it('falls back to the authored size at the scale when the name has no texture (edge case)', () => {
+    expect(themedIconSize({ up: null }, 'up', authored, 1.5)).toEqual({ x: 24, y: 12 });
+    expect(themedIconSize({}, 'down', authored, 0.5)).toEqual({ x: 8, y: 4 });
   });
 });

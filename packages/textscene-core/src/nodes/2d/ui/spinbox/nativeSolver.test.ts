@@ -13,6 +13,7 @@ import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/ope
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SpinBoxProperties } from './types';
+import { spinBoxRangeButtonState } from './nativeSolver';
 import {
   spinBoxButtonsBlockWidth,
   spinBoxLayout,
@@ -338,5 +339,16 @@ describe('the inner LineEdit reads its items through the ancestor Theme chain', 
   it('ignores the colours of another class', () => {
     const themed = under({ colors: { Button: { font_color: RED } } });
     expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
+  });
+});
+
+describe('spinBoxRangeButtonState (spin_box.cpp:635-646)', () => {
+  it('disables a button at its bound unless the range allows going past it', () => {
+    expect(spinBoxRangeButtonState(100, 100, false)).toBe('disabled');
+    expect(spinBoxRangeButtonState(100, 100, true)).toBe('normal');
+  });
+
+  it('keeps a button enabled away from its bound', () => {
+    expect(spinBoxRangeButtonState(99, 100, false)).toBe('normal');
   });
 });

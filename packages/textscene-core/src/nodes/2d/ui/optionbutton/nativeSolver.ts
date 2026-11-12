@@ -25,7 +25,7 @@ import {
 } from '../../../../r3f/controls/native/buttonBase';
 import { WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
+import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
@@ -67,7 +67,7 @@ function optionItemIconSlotKey(index: number): string {
  * changes the reserved width and the draw position. The vendored size at the theme scale is the fallback.
  */
 function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>, theme: NativeTheme): Vector2 {
-  return n.textureSlots.arrow ?? scaledIconSizeOf(OPTION_BUTTON_ARROW_NATURAL_SIZE, theme.scale);
+  return themedIconSize(n.textureSlots, 'arrow', OPTION_BUTTON_ARROW_NATURAL_SIZE, theme.scale);
 }
 
 /**

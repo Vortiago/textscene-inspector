@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { graphEditToolbar, zoomLabelText, zoomLabelTextRect } from './toolbar';
+import { graphEditSnappingArrowStates, graphEditToolbar, zoomLabelText, zoomLabelTextRect } from './toolbar';
 import { graphEditToolbarTheme } from './toolbarTheme';
 import { graphEditUnder } from './toolbarTheme.testkit';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -262,5 +262,16 @@ describe('graphEditToolbar under an ancestor Theme (graph_edit.cpp:3229-3300)', 
     // The plain field has margins of 4 + 4 side to side and 4 + 4 top to bottom, so 12 adds 16 each way.
     expect(wide.w - plain.w).toBe(16);
     expect(wide.h - plain.h).toBe(16);
+  });
+});
+
+describe('graphEditSnappingArrowStates (graph_edit.cpp:57-58,3295-3296; spin_box.cpp:635-646)', () => {
+  it('enables both arrows between GRID_MIN_SNAPPING_DISTANCE (2) and GRID_MAX_SNAPPING_DISTANCE (100)', () => {
+    expect(graphEditSnappingArrowStates(20)).toEqual({ up: 'normal', down: 'normal' });
+  });
+
+  it('disables the down arrow at 2 and the up arrow at 100', () => {
+    expect(graphEditSnappingArrowStates(2)).toEqual({ up: 'normal', down: 'disabled' });
+    expect(graphEditSnappingArrowStates(100)).toEqual({ up: 'disabled', down: 'normal' });
   });
 });
