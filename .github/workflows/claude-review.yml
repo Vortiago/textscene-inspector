@@ -143,7 +143,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REVIEW: ${{ steps.claude.outputs.structured_output }}
+        # `bash` by name runs with pipefail, so a failed render reaches the fallback.
+        shell: bash
         run: |
+          # An empty answer sent on would open a review that is never submitted, and the next
+          # post on that pull request then gets HTTP 422.
+          if [ -z "$REVIEW" ]; then
+            echo "::error::No answer from the review action. It skips when claude-review.yml differs from main."
+            exit 1
+          fi
           if ! node scripts/ci/claudeReview.mjs review <<< "$REVIEW" |
             gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/reviews" --input - > /dev/null; then
             node scripts/ci/claudeReview.mjs comment <<< "$REVIEW" | gh pr comment "$PR_NUMBER" --body-file -
