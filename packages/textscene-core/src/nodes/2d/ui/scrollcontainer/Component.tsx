@@ -14,7 +14,7 @@ import { scrollContainerScrollBars, scrollContainerLayoutChannel } from './nativ
 
 export function ScrollContainer({
   solveNode,
-  tint,
+  childTint,
   rect,
   chromeSlot,
   theme,
@@ -40,9 +40,10 @@ export function ScrollContainer({
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
   const { anchorRef, clip } = useWorldClipPlanes(ownRect);
 
-  // The hint's `modulate` composed onto the walker's tint, in the order
+  // The bars and hints are all child Controls (`scroll_container.cpp:909-924`), so the container's
+  // `self_modulate` stays off them. The hint's `modulate` composes onto the child tint, in the order
   // `<StyleBoxQuad>` composes a fill.
-  const hintColor = useMemo(() => tint.color.clone().multiply(SCROLL_HINT_MODULATE), [tint.color]);
+  const hintColor = useMemo(() => childTint.color.clone().multiply(SCROLL_HINT_MODULATE), [childTint.color]);
 
   return (
     <CanvasItemGroup ref={anchorRef}>
@@ -50,13 +51,13 @@ export function ScrollContainer({
         <ScrollHintChrome
           hint={layout.hints.topLeft}
           color={hintColor}
-          opacity={tint.opacity}
+          opacity={childTint.opacity}
           chromeSlot={chromeSlot}
         />
         <ScrollHintChrome
           hint={layout.hints.bottomRight}
           color={hintColor}
-          opacity={tint.opacity}
+          opacity={childTint.opacity}
           chromeSlot={chromeSlot}
         />
         {/* `INTERNAL_MODE_BACK` children (`scroll_container.cpp:919,924`): the bars paint after every descendant. */}
@@ -64,7 +65,7 @@ export function ScrollContainer({
           bar={layout.horizontal}
           track={theme.widgets.scrollBar.scrollHorizontal}
           grabber={theme.widgets.scrollBar.grabber}
-          color={tint.own}
+          color={childTint.own}
           chromeSlot={chromeSlot}
           snapToPixels={snapToPixels}
         />
@@ -72,7 +73,7 @@ export function ScrollContainer({
           bar={layout.vertical}
           track={theme.widgets.scrollBar.scrollVertical}
           grabber={theme.widgets.scrollBar.grabber}
-          color={tint.own}
+          color={childTint.own}
           chromeSlot={chromeSlot}
           snapToPixels={snapToPixels}
         />

@@ -170,6 +170,7 @@ function ViewportSurfaceNative({
           // Threaded for the contract; the outline is a diagnostic and
           // deliberately draws in its own colour, untinted.
           tint={tint}
+          childTint={tint}
           // A SubViewport is never the root window, so it keeps
           // `Viewport::snap_controls_to_pixels`' own `= true` initialiser
           // (`scene/main/viewport.h`) whatever the project setting says.

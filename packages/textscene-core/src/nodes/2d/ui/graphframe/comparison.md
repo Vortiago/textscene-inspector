@@ -17,6 +17,7 @@ That is the rect a freshly loaded scene shows. `attach_graph_element_to_frame` i
 runtime call with no `.tscn` surface, so no auto-resize runs before a script calls it.
 Inside a GraphEdit it draws at the GraphEdit's `zoom` and behind the connections, in reverse
 scene order against the other frames (`graph_edit.cpp:712-717`).
+`self_modulate` tints the panel, the title bar box and the resizer. The title text is a child Label and draws without it (`graph_frame.cpp:351-357`).
 
 ## Linting
 

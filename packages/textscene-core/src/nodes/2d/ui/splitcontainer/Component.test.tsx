@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { SplitContainer } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -168,7 +169,7 @@ describe('<SplitContainer> — vertical axis (vertical: true)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <SplitContainer
         {...painterEnv()}
-        tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 })}
+        childTint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 })}
         solveNode={node}
         rect={{ x: 0, y: 0, w: 60, h: 400 }}
         renderOrder={0}
@@ -178,5 +179,21 @@ describe('<SplitContainer> — vertical axis (vertical: true)', () => {
       .material as THREE.MeshBasicMaterial;
     expect(material.color.r).toBeCloseTo(new THREE.Color().setRGB(0.5, 0.5, 0.5, THREE.SRGBColorSpace).r, 6);
     expect(material.opacity).toBeCloseTo(0.5, 6);
+  });
+});
+
+describe('<SplitContainer> — self_modulate', () => {
+  it('tints the grabber icon with childTint, which has no self_modulate', async () => {
+    const node = split({ themeOverrideConstants: { autohide: 0 } }, expandChildren('sizeFlagsHorizontal'));
+    const renderer = await ReactThreeTestRenderer.create(
+      <SplitContainer
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={0}
+      />
+    );
+    expect(countTintSplit(renderer.scene)).toEqual({ own: 0, child: 1 });
   });
 });

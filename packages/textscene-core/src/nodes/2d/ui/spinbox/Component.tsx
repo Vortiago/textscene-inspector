@@ -40,7 +40,14 @@ import type { SpinBoxProperties } from './types';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
-export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+export function SpinBox({
+  solveNode,
+  tint,
+  childTint,
+  rect,
+  renderOrder,
+  theme,
+}: NativeControlComponentProps) {
   const props = painterView<SpinBoxProperties>(solveNode);
   const editable = props.editable !== false;
 
@@ -66,9 +73,13 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
     fontMetrics,
     color: baseFontColor,
   } = spinBoxFieldTextTheme(solveNode, { theme }, editable);
-  // `tint.own` is raw sRGB, `self_modulate` folded onto `modulate`: it feeds each `<StyleBoxQuad>`
-  // and multiplies into the font and arrow colours before their one sRGB-to-linear conversion.
-  const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  // `tint.own` is raw sRGB, `self_modulate` folded onto `modulate`: it feeds the arrows and their boxes.
+  // The field is the internal LineEdit (`spin_box.cpp:431`, `line_edit.cpp:726`), so its box and its
+  // text take `childTint`, which has no `self_modulate`. Each multiplies in before one sRGB-to-linear conversion.
+  const tintedFontColor = useMemo(
+    () => tintColor(baseFontColor, childTint.own),
+    [baseFontColor, childTint.own]
+  );
 
   const textLayout: TextLayoutResult = useMemo(
     () => shapeSpinBoxFieldText(text, { fontSizePx, fontMetrics }, solveNode.locale),
@@ -135,7 +146,7 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
       <CanvasItemGroup position={[layout.fieldRect.x, -layout.fieldRect.y, 0]}>
         <StyleBoxQuad
           styleBox={fieldBox}
-          color={tint.own}
+          color={childTint.own}
           rect={{ x: 0, y: 0, w: layout.fieldRect.w, h: layout.fieldRect.h }}
           renderOrder={renderOrder}
         />

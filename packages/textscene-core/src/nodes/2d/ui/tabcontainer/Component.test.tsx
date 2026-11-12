@@ -14,6 +14,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { ControlProperties } from '../control/types';
 import type { TabContainerProperties } from './types';
 import { TabContainer } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { wholeKeySlot } from '../../../../r3f/canvasItemState';
@@ -281,5 +282,23 @@ describe('<TabContainer> strip scrolled to the current page', () => {
   it('keeps every drawn title inside the bar beside the arrows', async () => {
     const arrowsWidth = 2 * 16;
     expect(await titlesRightEdge(3)).toBeLessThanOrEqual(CONTAINER.w - arrowsWidth);
+  });
+});
+
+describe('<TabContainer> — self_modulate', () => {
+  it('tints the panel with tint and the tab strip with childTint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={solveNode({ currentTab: 0 }, [page('General'), page('Advanced')])}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
+    );
+    const split = countTintSplit(renderer.scene);
+    expect(split.own).toBe(1);
+    expect(split.child).toBeGreaterThan(0);
   });
 });

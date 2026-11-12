@@ -14,6 +14,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { ControlClipProvider, useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import type { ScrollContainerProperties } from './types';
 import { ScrollContainer } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -276,23 +277,18 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
 });
 
 describe('<ScrollContainer> — tint', () => {
-  it('composes self_modulate onto the track fill, in sRGB, with a single linear conversion', async () => {
+  it('draws both bars with childTint and none with tint: the bars are child Controls (scroll_container.cpp:909-924)', async () => {
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 399, y: 800 } });
     const renderer = await ReactThreeTestRenderer.create(
       <ScrollContainer
         {...painterEnv()}
-        solveNode={scrollNode({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, [content])}
+        {...splitTints}
+        solveNode={scrollNode({}, [content])}
         rect={FIXTURE_RECT}
         renderOrder={0}
       />
     );
-    const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-    for (const mesh of meshes) {
-      const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
-      // Default-theme fills are never black, so a halved sRGB channel is a
-      // smaller number: the tint reached both meshes.
-      expect(color.getX(0)).toBeGreaterThan(0);
-    }
+    expect(countTintSplit(renderer.scene)).toEqual({ own: 0, child: 2 });
   });
 
   it('applies the walker-composed tint to the track fill exactly once', async () => {
@@ -302,7 +298,7 @@ describe('<ScrollContainer> — tint', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ScrollContainer
         {...painterEnv()}
-        tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
+        childTint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
         solveNode={scrollNode({}, [content])}
         rect={{ x: 0, y: 0, w: 300, h: 200 }}
         renderOrder={0}

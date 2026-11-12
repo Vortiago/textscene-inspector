@@ -272,6 +272,7 @@ function useShapedRichText(
 function RichTextBody({
   solveNode,
   tint,
+  childTint,
   rect,
   renderOrder,
   slot,
@@ -397,7 +398,7 @@ function RichTextBody({
           bar={scrollBar}
           track={theme.widgets.scrollBar.scrollVertical}
           grabber={theme.widgets.scrollBar.grabber}
-          color={tint.own}
+          color={childTint.own}
           chromeSlot={slot}
           snapToPixels={snapToPixels}
         />

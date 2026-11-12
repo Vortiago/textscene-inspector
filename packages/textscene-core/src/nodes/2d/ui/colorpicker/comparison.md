@@ -48,6 +48,7 @@ walk. It draws these parts:
 Every row-visibility flag also moves this node's minimum size, to match the combined
 minimum of `real_vbox`. "Known limitations" lists everything else.
 The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
+`self_modulate` tints nothing of the picker: every part is an internal child Control (`color_picker.cpp:2072-2305`).
 
 ## Linting
 
@@ -91,8 +92,6 @@ raw `Color()` member default, because `ColorPicker::ColorPicker()` calls
 
 ## Known limitations
 
-- **Not matched** `self_modulate` tints every part of the picker, which in Godot are child
-  Controls that it never reaches.
 - **Approximated** The minimum size floors the channel-label column at `label_width`
   (10px), which the shape row's floor (290px, or 256px for the wheel) hides in every fixture.
 - **Not drawn** Focus rings (`draw_focus_rect`/`draw_focus_circle`): a static previewer

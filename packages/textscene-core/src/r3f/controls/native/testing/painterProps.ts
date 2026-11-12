@@ -40,6 +40,7 @@ export function painterEnv(): Pick<
   | 'snapToPixels'
   | 'meta'
   | 'tint'
+  | 'childTint'
 > {
   return {
     theme: nativeTheme(1),
@@ -57,5 +58,6 @@ export function painterEnv(): Pick<
     meta: undefined,
     // Opaque white: the walker's fold is asserted in the walker's tests.
     tint: painterTint(),
+    childTint: painterTint(),
   };
 }

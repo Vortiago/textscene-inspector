@@ -13,6 +13,7 @@ TabContainer arranges its children into a tabbed view, showing only the active t
 child. The previewer draws the `panel` StyleBox behind the content band and positions the
 current page below (or above) the strip. It draws the strip through the same painter
 TabBar uses.
+`self_modulate` tints the panel and the header band. The tab strip is a child TabBar and draws without it (`tab_container.cpp:247`, `tab_bar.cpp:1282`).
 
 ## Linting
 

@@ -188,7 +188,7 @@ export function TabBar(props: NativeControlComponentProps) {
   return <TabBarStrip {...props} model={model} />;
 }
 
-interface TabBarStripProps extends NativeControlComponentProps {
+interface TabBarStripProps extends Omit<NativeControlComponentProps, 'childTint'> {
   model: TabBarModel;
   /** The first drawn tab, when the caller resolved it. Unset, the strip scrolls to the current tab once. */
   offset?: number;

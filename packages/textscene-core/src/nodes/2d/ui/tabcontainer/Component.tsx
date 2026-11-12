@@ -37,6 +37,7 @@ const EMPTY_CHILD_RECTS: NativeControlComponentProps['childRects'] = new Map();
 export function TabContainer({
   solveNode,
   tint,
+  childTint,
   rect,
   theme,
   renderOrder,
@@ -122,7 +123,8 @@ export function TabContainer({
             solveNode={syntheticBar}
             model={barModel}
             offset={strip.offset}
-            tint={tint}
+            // The strip is a TabBar child Control (`tab_container.cpp:247`): no `self_modulate`.
+            tint={childTint}
             rect={{ x: 0, y: 0, w: barRect.w, h: barRect.h }}
             theme={theme}
             renderOrder={stripSlot.key}

@@ -323,6 +323,7 @@ function ControlItemGroup({
         renderOrder={renderOrder}
         slot={slot}
         tint={tint}
+        childTint={tint.internalChild}
         chromeSlot={chromeSlot}
         layerSlot={layerSlot}
         theme={theme}

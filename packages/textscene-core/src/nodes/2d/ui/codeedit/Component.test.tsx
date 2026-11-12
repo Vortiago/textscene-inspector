@@ -9,6 +9,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CodeEdit } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { CodeEditProperties } from './types';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -210,5 +211,20 @@ describe('<CodeEdit> — scroll bars (text_edit.cpp:8587-8656)', () => {
       />
     );
     expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES);
+  });
+});
+
+describe('<CodeEdit> — self_modulate', () => {
+  it('tints the box with tint and the text and the line numbers with childTint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={solveNode({ text: 'a\nb', gutters_draw_line_numbers: true } as never)}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(countTintSplit(renderer.scene)).toEqual({ own: 1, child: 2 });
   });
 });

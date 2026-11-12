@@ -101,6 +101,7 @@ interface TextEditBodyProps extends NativeControlComponentProps {
 export function TextEditBody({
   solveNode,
   tint,
+  childTint,
   rect,
   renderOrder,
   slot,
@@ -246,11 +247,18 @@ export function TextEditBody({
     tabSize,
   ]);
 
-  // `tint.own` (raw sRGB, `self_modulate` folded onto `modulate`) tints the StyleBoxQuad and every
-  // font, highlight and icon colour before its one sRGB-to-linear conversion, as in LineEdit.
-  const tintedCurrentLineColor = useMemo(() => multiplyModulate(tint.own, CURRENT_LINE_COLOR), [tint.own]);
+  // `tint.own` (raw sRGB, `self_modulate` folded onto `modulate`) tints the box alone
+  // (`text_edit.cpp:915,949`). Everything else is drawn on the child item `text_ci` or by a child
+  // scroll bar (`:9284-9292`), so it takes `childTint`, before its one sRGB-to-linear conversion.
+  const tintedCurrentLineColor = useMemo(
+    () => multiplyModulate(childTint.own, CURRENT_LINE_COLOR),
+    [childTint.own]
+  );
   const caretColor = solveNode.colors.caret_color ?? CARET_COLOR;
-  const tintedCaretColor = useMemo(() => multiplyModulate(tint.own, caretColor), [tint.own, caretColor]);
+  const tintedCaretColor = useMemo(
+    () => multiplyModulate(childTint.own, caretColor),
+    [childTint.own, caretColor]
+  );
 
   // `text_edit.cpp:1376-1378,1626`: every row starts below the stylebox's top
   // margin, and its text centres in the band that follows.
@@ -285,7 +293,9 @@ export function TextEditBody({
   return (
     <CanvasItemGroup ref={anchorRef}>
       <StyleBoxQuad styleBox={styleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
-      {minimapInput && <TextEditMinimap input={minimapInput} tint={tint.own} renderOrder={renderOrder} />}
+      {minimapInput && (
+        <TextEditMinimap input={minimapInput} tint={childTint.own} renderOrder={renderOrder} />
+      )}
       {underlay}
       {props.highlightCurrentLine && (
         <CanvasItemGroup
@@ -349,7 +359,7 @@ export function TextEditBody({
                   key={runIndex}
                   layout={soloLineLayout(textEditColorRunLine(run), layout)}
                   fontSizePx={fontSizePx}
-                  tint={multiplyModulate(tint.own, run.color)}
+                  tint={multiplyModulate(childTint.own, run.color)}
                   clippingPlanes={clippingPlanes}
                   renderOrder={renderOrder}
                 />
@@ -363,7 +373,7 @@ export function TextEditBody({
                   // The per-glyph highlighted colour tints its icon, not a
                   // fixed font_color (text_edit.cpp:1674,1714).
                   const iconColor = multiplyModulate(
-                    tint.own,
+                    childTint.own,
                     textEditGlyphColorAt(
                       spans,
                       textEditGlyphLineIndex(glyph, rowStartIndex, glyphIndex),
@@ -395,7 +405,7 @@ export function TextEditBody({
         bar={scrollBars.horizontal}
         track={theme.widgets.scrollBar.scrollHorizontal}
         grabber={theme.widgets.scrollBar.grabber}
-        color={tint.own}
+        color={childTint.own}
         chromeSlot={slot}
         snapToPixels={snapToPixels}
       />
@@ -403,7 +413,7 @@ export function TextEditBody({
         bar={scrollBars.vertical}
         track={theme.widgets.scrollBar.scrollVertical}
         grabber={theme.widgets.scrollBar.grabber}
-        color={tint.own}
+        color={childTint.own}
         chromeSlot={slot}
         snapToPixels={snapToPixels}
       />

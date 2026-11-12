@@ -103,6 +103,7 @@ function GraphNodePort({
 export function GraphNode({
   solveNode,
   tint,
+  childTint,
   rect,
   theme,
   renderOrder,
@@ -175,9 +176,10 @@ export function GraphNode({
   );
   const portHOffset = portHOffsetOf(solveNode.constants);
 
+  // The title is a Label child (`graph_node.cpp:1325-1330`, `graph_frame.cpp:351-357`): no `self_modulate`.
   const titleTintColor = useMemo(
-    () => multiplyModulate(tint.own, fontTheme.color),
-    [tint.own, fontTheme.color]
+    () => multiplyModulate(childTint.own, fontTheme.color),
+    [childTint.own, fontTheme.color]
   );
 
   const resizerTexture = useNodeIcon(
@@ -205,7 +207,7 @@ export function GraphNode({
       <PositionedStyleBox
         box={fontTheme.box}
         rect={titlebarBand.contentRect}
-        tint={tint}
+        tint={childTint}
         renderOrder={renderOrder}
       />
       {titleLayout &&

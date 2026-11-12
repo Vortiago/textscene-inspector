@@ -16,6 +16,7 @@ and the `draw_tabs`/`draw_spaces` control-character glyphs. With `minimap_draw` 
 While the buffer is empty it draws `placeholder_text`. It is a still frame with no
 selection or IME (input method editor) state. The one caret a still frame can carry is
 the `caret_draw_when_editable_disabled` one, which draws without focus.
+`self_modulate` tints the `normal` box and the focus box (`text_edit.cpp:915,949`). The text, gutters, caret, minimap and both scroll bars draw without it. They sit on the child item `text_ci` or are child Controls (`text_edit.cpp:9284-9292`).
 
 ## Linting
 
@@ -139,7 +140,6 @@ always shapes at the class default of 4.
 - **Not drawn** The minimap's hover and drag alpha (:1153-1160), which need pointer state a `.tscn` cannot carry.
 - **Approximated** The rows of an `indent_wrapped_lines` line in a narrow band break at other words than Godot's.
 - **Approximated** A wrapped row under a right-to-left layout sits about one space width too far right.
-- **Approximated** `self_modulate` tints the text, the caret and the minimap, which Godot draws on a child item that it does not reach.
 - **Approximated** `draw_tabs`/`draw_spaces` overlay the `tab`/`space` theme icons
   at an unscaled size and a row-centred vertical offset, not Godot's own
   ascent-relative one (`Component.tsx`'s own doc).
