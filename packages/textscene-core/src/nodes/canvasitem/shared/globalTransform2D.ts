@@ -51,6 +51,8 @@ export interface Node2DPose {
 
 /** The anchors that place the position. The right and bottom anchors only size the rect (`control.cpp:1760-1771`). */
 const POSITION_ANCHORS = ['anchor_left', 'anchor_top'] as const;
+/** A stated `position` is set through the offsets and anchors, so the offsets alone no longer give it. */
+const POSITION_KEYS = ['position', 'global_position'] as const;
 const PIVOT_KEYS = ['pivot_offset', 'pivot_offset_ratio'] as const;
 const GROW_KEYS = ['grow_horizontal', 'grow_vertical'] as const;
 /** `Control::GROW_DIRECTION_END` (`control.h`): the left and top edge keep their place. */
@@ -63,16 +65,14 @@ function isZeroVector2(raw: string | undefined): boolean {
 }
 
 /**
- * The local `Transform2D` of a Control whose rect the file states alone, as
- * `_update_canvas_item_transform` builds it (`control.cpp:719-737`): rotation and scale at the
- * position, which is `offset_left` and `offset_top` where the anchors place nothing. A Node2D
- * parent has an empty anchorable rect (`canvas_item.h:414`, `control.cpp:692-693`), so no anchor
- * moves the position below it. Null where the transform needs a size or a parent rect the file
- * does not state: a left or top anchor away from zero below a Control or no canvas item, a pivot,
- * a grow direction that moves the left or top edge.
+ * The local `Transform2D` of a Control whose rect the file states alone (`control.cpp:719-737`):
+ * rotation and scale at `offset_left` and `offset_top`. A Node2D parent has an empty anchorable
+ * rect (`canvas_item.h:414`), so no anchor moves the position below it. Null where the position
+ * needs a size or a parent rect the file does not state: a `position`, a left or top anchor, a pivot or a grow direction.
  */
 function controlLocalTransform2D(node: RawNode, parent: RawNode | undefined): Transform2DColumns | null {
   const props = node.rawProperties;
+  if (POSITION_KEYS.some((key) => props[key] !== undefined)) return null;
   const parentHasRect = parent === undefined || !descendsFromClass(parent.type, 'Node2D');
   if (parentHasRect && !POSITION_ANCHORS.every((key) => parseScalar(props[key], 0) === 0)) return null;
   if (!PIVOT_KEYS.every((key) => isZeroVector2(props[key]))) return null;
@@ -114,7 +114,7 @@ const NO_POSES: ReadonlyMap<RawNode, Node2DPose> = new Map();
 
 type GlobalTransform2DVerdict =
   | { readonly kind: 'known'; readonly transform: Transform2DColumns }
-  /** An opaque ancestor, a non-Node2D CanvasItem, or an altered `Vector2i` component. */
+  /** An opaque ancestor, a Control the file does not place alone, or an altered `Vector2i` component. */
   | { readonly kind: 'unknowable' };
 
 /**

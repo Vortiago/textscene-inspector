@@ -75,12 +75,7 @@ function reader2D(tree: LiveTree, posed: PatchLookup): SpaceReader<Transform2DCo
   const chainTo = chainsOver(tree, NO_PATCHES);
   const global = (path: string) => transform2DOnCanvas(path, chainTo(path), posed);
   return {
-    local: (path) =>
-      localTransform2D(
-        chainTo(path).get(path)!,
-        posed.get(path) as Node2DPose | undefined,
-        chainTo(path).get(parentPathOf(path) ?? '')
-      ),
+    local: (path) => localTransform2D(chainTo(path).get(path)!, posed.get(path) as Node2DPose | undefined),
     global,
     localFromGlobal: (target, parentPath) => {
       const parentGlobal = parentPath ? global(parentPath) : TRANSFORM2D_IDENTITY;

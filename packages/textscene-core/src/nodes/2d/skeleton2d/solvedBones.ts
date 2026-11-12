@@ -33,7 +33,7 @@ function storedPoseSource(tree: LiveTree): PoseSource<string> {
     return chains.get(path)!;
   };
   return {
-    // A Control on the way reads as the identity here: this solve has no better answer for it.
+    // A Control the file does not place alone reads as the identity here: this solve has no better answer.
     canvas: (path) => storedTransform2D(transform2DOnCanvas(path, stored(path)) ?? TRANSFORM2D_IDENTITY),
     within: (path, ancestor) => storedTransform2D(transform2DWithinPath(path, ancestor, stored(path))),
     parent: parentPathOf,

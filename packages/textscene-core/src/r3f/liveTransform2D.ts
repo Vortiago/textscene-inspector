@@ -51,7 +51,8 @@ export function posesAlong(
 /**
  * The transform of the node at `path` on the canvas, with the poses of `placed` in place of the
  * stored ones. `nodeByPath` holds the node at each prefix of `path`, as `nodesOnTheWayTo` makes it.
- * Null for a chain `resolveGlobalTransform2D` cannot decode: an opaque ancestor, or a Control on the way.
+ * Null for a chain `resolveGlobalTransform2D` cannot decode: an opaque ancestor, or a Control whose
+ * rect the file does not state alone.
  */
 export function transform2DOnCanvas(
   path: string,
@@ -78,13 +79,14 @@ export function transform2DWithinPath(
   nodeByPath: ReadonlyMap<string, TscnNode>
 ): Transform2DColumns {
   const chain = chainTo(path, nodeByPath);
+  const firstBelow = ancestorPath.split('/').length;
   return chain
-    .slice(ancestorPath.split('/').length)
+    .slice(firstBelow)
     .reduce(
-      (composed, node) =>
+      (composed, node, index) =>
         multiplyTransform2D(
           composed,
-          localTransform2D(node, undefined, chain[chain.indexOf(node) - 1]) ?? TRANSFORM2D_IDENTITY
+          localTransform2D(node, undefined, chain[firstBelow + index - 1]) ?? TRANSFORM2D_IDENTITY
         ),
       TRANSFORM2D_IDENTITY
     );

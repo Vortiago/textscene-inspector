@@ -99,7 +99,8 @@ describe('resolveGlobalTransform2D', () => {
     it.each([
       ['a pivot offset', { pivot_offset: 'Vector2(10, 10)' }],
       ['a grow direction that moves the left edge', { grow_horizontal: '0' }],
-    ])('declines a Control with %s, which needs a size the file does not state', (_label, extra) => {
+      ['a stated position, which the offsets no longer give', { position: 'Vector2(5, 5)' }],
+    ])('declines a Control with %s, which the offsets alone do not place', (_label, extra) => {
       const target = node('Node2D', { position: 'Vector2(10, 5)' });
       expect(originOf(target, chainOf(panel(extra), target))).toBe('unknowable');
     });
