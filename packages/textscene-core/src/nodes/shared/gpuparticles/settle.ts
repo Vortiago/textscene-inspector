@@ -53,20 +53,46 @@ import { advanceClock, restartDelta, startClock } from './frames';
 import type { Float3 } from './float3';
 import { inactiveParticle, type EmissionFrame, type GpuParticle } from './particle';
 import { stepContextOf, stepParticle } from './step';
+import { readSection, recordStep, restartHistory, startHistory, type TrailHistory } from './trailHistory';
 
 export interface GpuSettleInput {
   emitter: GpuEmitter;
   material: GpuMaterial;
   /** The node's global transform: where a world-space particle starts. */
   emissionTransform: Transform3D;
+  /** Set when the emitter draws trails: the settle then keeps each particle's history. */
+  trail?: TrailRequest;
+}
+
+/** What a trail asks of the settle. */
+export interface TrailRequest {
+  /** The bind pose count, `S` (`particles_storage.cpp:645-647`): every particle draws `S` sections. */
+  sections: number;
+  /** `trail_lifetime`, in seconds. */
+  lifetime: number;
+}
+
+/** How the rows of a settled trail are laid out. */
+export interface TrailLayout {
+  /** The sections of each particle: its rows are contiguous, section 0 first. */
+  sections: number;
+  /** The steps of history, `H`. */
+  depth: number;
+  /** `1 / fixed_fps` as the copy shader reads it, a float. */
+  frameDelta: number;
 }
 
 export interface SettledGpuParticles {
-  /** The live particles in index order, each {@link PARTICLE_FLOATS} floats, in node space. */
+  /**
+   * The live particles in index order, each {@link PARTICLE_FLOATS} floats, in node space. With a
+   * trail, each particle holds one row for each section.
+   */
   buffer: Float32Array;
-  /** Each live particle's velocity, three floats, in the space the particles simulate in (`particles.glsl` `velocity`). */
+  /** Each row's velocity, three floats, in the space the particles simulate in (`particles.glsl` `velocity`). */
   velocity: Float32Array;
-  /** The particle index of each live particle: a settle of a thinned emitter leaves gaps. */
+  /** Null without a trail. */
+  trail: TrailLayout | null;
+  /** The particle index of each live particle (not each row): a settle of a thinned emitter leaves gaps. */
   indices: Int32Array;
   /** The system phase after the last step, the double the server holds (`particles_storage.cpp:845`). */
   phase: number;
@@ -84,16 +110,21 @@ export function gpuSettleSeconds(emitter: GpuEmitter): number {
 
 /** The pose after `seconds` of settle: {@link gpuSettleSeconds} for an emitter, or the seconds a request names. */
 export function settleGpuParticles(input: GpuSettleInput, seconds: number): SettledGpuParticles {
-  const { emitter, material, emissionTransform } = input;
+  const { emitter, material, emissionTransform, trail } = input;
   const simulationTransform = emitter.localCoords ? identityTransform3D() : emissionTransform;
   const frame = emissionFrame(simulationTransform);
   const randomSeed = emitter.useFixedSeed ? emitter.seed : DEFAULT_PREVIEW_SEED;
   const clock = startClock(emitter);
   if (drawsNothing(material)) return emptyPose(clock.phase);
-  const frameTime = settleFrameTime(emitter);
+  // Trails step at 60 fps for `fixed_fps` 0 (`particles_storage.cpp:1471-1478`).
+  const trailFps = emitter.fixedFps > 0 ? emitter.fixedFps : TRAIL_FPS;
+  const frameTime = trail ? 1.0 / trailFps : settleFrameTime(emitter);
   const steps = settleStepCount(Math.min(seconds, MAX_SETTLE_SECONDS), frameTime);
-  const stride = particleStride(emitter.amount, steps);
+  // `H = max(1, int(trail_lifetime * fps))` (`particles_storage.cpp:1484`).
+  const depth = trail ? Math.max(1, Math.trunc(trail.lifetime * trailFps)) : 1;
+  const stride = particleStride(emitter.amount, steps, depth);
   const particles = Array.from({ length: Math.ceil(emitter.amount / stride) }, inactiveParticle);
+  const history = trail ? startHistory(particles.length, depth) : null;
   const birth: BirthContext = {
     simulation: material.simulation,
     emission: material.emission,
@@ -112,16 +143,17 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
       const particle = particles[slot]!;
       const index = slot * stride;
       const restartedDelta = restartDelta(index, emitter, frameParams);
-      if (restartedDelta !== undefined) birthParticle(particle, index, birth);
-      if (particle.active) stepParticle(particle, restartedDelta ?? frameParams.delta, step);
+      if (restartedDelta !== undefined) {
+        birthParticle(particle, index, birth);
+        if (history) restartHistory(history, slot);
+      }
+      if (!particle.active) continue;
+      stepParticle(particle, restartedDelta ?? frameParams.delta, step);
+      if (history && particle.active) recordStep(history, slot, particle);
     }
   }
-  return pose(
-    particles,
-    stride,
-    clock.phase,
-    emitter.localCoords ? identityTransform3D() : emissionTransform
-  );
+  const layout = trail ? { sections: trail.sections, depth, frameDelta: f(frameTime) } : null;
+  return pose(particles, { stride, phase: clock.phase, simulationTransform, layout, history });
 }
 
 /** The top of the range hint of `preprocess` (`gpu_particles_3d.cpp`). A hand-written scene may pass it; the settle stops there. */
@@ -133,8 +165,16 @@ const MAX_SETTLE_SECONDS = 600;
  */
 const MAX_PARTICLE_STEPS = 2_000_000;
 
-function particleStride(amount: number, steps: number): number {
-  return Math.max(1, Math.ceil((amount * steps) / MAX_PARTICLE_STEPS));
+/** Trails step at 60 fps when `fixed_fps` is 0. */
+const TRAIL_FPS = 60;
+
+/** The history states one settle keeps: about 25 MB. A larger trail emitter keeps every nth particle. */
+const MAX_HISTORY_STATES = 250_000;
+
+function particleStride(amount: number, steps: number, depth: number): number {
+  const byTime = Math.ceil((amount * steps) / MAX_PARTICLE_STEPS);
+  const byHistory = Math.ceil((amount * depth) / MAX_HISTORY_STATES);
+  return Math.max(1, byTime, byHistory);
 }
 
 /** Points and directed points need the emission texture, which the previewer does not read yet. */
@@ -143,7 +183,13 @@ function drawsNothing({ emission }: GpuMaterial): boolean {
 }
 
 function emptyPose(phase: number): SettledGpuParticles {
-  return { buffer: new Float32Array(0), velocity: new Float32Array(0), indices: new Int32Array(0), phase };
+  return {
+    buffer: new Float32Array(0),
+    velocity: new Float32Array(0),
+    trail: null,
+    indices: new Int32Array(0),
+    phase,
+  };
 }
 
 function emissionFrame({ basis_x: x, basis_y: y, basis_z: z, origin }: Transform3D): EmissionFrame {
@@ -151,32 +197,63 @@ function emissionFrame({ basis_x: x, basis_y: y, basis_z: z, origin }: Transform
   return { columns: [column('x'), column('y'), column('z')], origin: [origin.x, origin.y, origin.z] };
 }
 
-/** The live particles as buffer rows in node space: a world-space particle goes back through the inverse of the emission transform. */
+/** What {@link pose} reads of the settle. */
+interface PoseInput {
+  stride: number;
+  phase: number;
+  /** The transform the particles simulate under: the identity for local coordinates. */
+  simulationTransform: Transform3D;
+  layout: TrailLayout | null;
+  history: TrailHistory | null;
+}
+
+/**
+ * The live particles as buffer rows in node space: a world-space particle goes back through the
+ * inverse of the emission transform. A trail gives each particle a row for each of its sections.
+ */
 function pose(
   particles: GpuParticle[],
-  stride: number,
-  phase: number,
-  emissionTransform: Transform3D
+  { stride, phase, simulationTransform, layout, history }: PoseInput
 ): SettledGpuParticles {
   const live = particles.flatMap((particle, slot) =>
-    particle.active ? [{ particle, index: slot * stride }] : []
+    particle.active ? [{ particle, slot, index: slot * stride }] : []
   );
-  const buffer = new Float32Array(live.length * PARTICLE_FLOATS);
-  const velocity = new Float32Array(live.length * 3);
+  const sections = layout?.sections ?? 1;
+  const buffer = new Float32Array(live.length * sections * PARTICLE_FLOATS);
+  const velocity = new Float32Array(live.length * sections * 3);
   const indices = new Int32Array(live.length);
-  const toNode = affineInverseTransform3D(emissionTransform);
-  live.forEach(({ particle, index }, row) => {
-    writeTransformRows(
-      buffer,
-      row * PARTICLE_FLOATS,
-      multiplyTransform3D(toNode, columnsToTransform(particle))
-    );
-    buffer.set(particle.color, row * PARTICLE_FLOATS + PARTICLE_COLOR_OFFSET);
-    buffer.set(particle.custom, row * PARTICLE_FLOATS + PARTICLE_CUSTOM_OFFSET);
-    velocity.set(particle.velocity, row * 3);
-    indices[row] = index;
+  const toNode = affineInverseTransform3D(simulationTransform);
+  const scratch = inactiveParticle();
+  live.forEach(({ particle, slot, index }, order) => {
+    indices[order] = index;
+    for (let section = 0; section < sections; section++) {
+      const row = order * sections + section;
+      let source = particle;
+      if (history) {
+        readSection(history, slot, section, sections, scratch);
+        source = scratch;
+      }
+      writeRow(buffer, velocity, row, source, toNode);
+    }
   });
-  return { buffer, velocity, indices, phase };
+  return { buffer, velocity, trail: layout, indices, phase };
+}
+
+function writeRow(
+  buffer: Float32Array,
+  velocity: Float32Array,
+  row: number,
+  particle: GpuParticle,
+  toNode: Transform3D
+): void {
+  writeTransformRows(
+    buffer,
+    row * PARTICLE_FLOATS,
+    multiplyTransform3D(toNode, columnsToTransform(particle))
+  );
+  buffer.set(particle.color, row * PARTICLE_FLOATS + PARTICLE_COLOR_OFFSET);
+  buffer.set(particle.custom, row * PARTICLE_FLOATS + PARTICLE_CUSTOM_OFFSET);
+  velocity.set(particle.velocity, row * 3);
 }
 
 function columnsToTransform({ columns: [x, y, z], origin }: GpuParticle): Transform3D {
