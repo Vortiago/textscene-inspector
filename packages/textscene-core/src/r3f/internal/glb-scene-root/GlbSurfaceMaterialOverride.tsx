@@ -54,7 +54,8 @@ export function GlbSurfaceMaterialOverride({
 }: GlbSurfaceMaterialOverrideProps) {
   // The geometry is the glTF's: no Godot mesh sub-resource for a triplanar material to tile
   // against, and UVs in Godot's top-down V.
-  const { isAbsent, bags } = useSurfaceMaterial(source, GLTF_SURFACE);
+  const loaded = useSurfaceMaterial(source, GLTF_SURFACE);
+  const { isAbsent, bags } = loaded;
   const material = useMemo(() => {
     if (isAbsent) return null;
     if (!bags) return materialFromBag(MISSING_TEXTURE_MATERIAL);
@@ -67,7 +68,7 @@ export function GlbSurfaceMaterialOverride({
   }, [isAbsent, bags]);
   useDisposeOnRelease(material);
   const covered = useGlbMaterialSwap(target, material, replaces);
-  return <ClonedChain covered={covered} source={source} />;
+  return <ClonedChain covered={covered} source={source} drawn={loaded} />;
 }
 
 /** `material_overlay` on a mesh inside a loaded GLB, over every surface of the GLB's own under `target`. */

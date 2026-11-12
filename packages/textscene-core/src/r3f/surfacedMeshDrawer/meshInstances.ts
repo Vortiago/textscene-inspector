@@ -34,7 +34,11 @@ export interface MeshInstances {
   readonly particles?: ParticleProgram;
 }
 
-/** A mesh at each of `matrices`, as Godot draws a MultiMesh of transforms alone. */
+/**
+ * A mesh at each of `matrices`, as Godot draws a MultiMesh of transforms alone.
+ *
+ * @canonical The instances of a mesh at a list of matrices
+ */
 export function instancesAt(matrices: readonly THREE.Matrix4[]): MeshInstances {
   return {
     count: matrices.length,

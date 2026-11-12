@@ -343,7 +343,8 @@ export function NextPassChain({
     []
   );
   const groups = surfaceSources(sources);
-  const overlaid = overlayGeometry ?? geometry;
+  // The overlay waits for the base draw's geometry, so it never draws over a surface that draws nothing yet.
+  const overlaid = geometry && (overlayGeometry ?? geometry);
   return (
     <>
       {groups.map((source, group) => (

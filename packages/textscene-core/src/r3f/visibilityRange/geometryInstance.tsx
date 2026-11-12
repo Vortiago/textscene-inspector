@@ -138,6 +138,8 @@ export type OwnInstanceDraw = Pick<InstanceDraw, 'shadow' | 'layers'>;
 /**
  * `useInstanceDraw` for a drawer some callers mount under no GeometryInstance3D: `own` stands
  * where no base does, with no instance material.
+ *
+ * @canonical The instance draw of a drawer that may sit under no GeometryInstance3D
  */
 export function useInstanceDrawOr(own: OwnInstanceDraw | undefined): Omit<InstanceDraw, 'instance'> {
   const scope = useContext(GeometryInstanceContext);

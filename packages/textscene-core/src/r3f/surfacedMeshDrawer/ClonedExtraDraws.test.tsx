@@ -8,6 +8,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { surfaceSlotsUnder } from '../../resources/formats/glb/surfaceMaterials';
 import { resolveMaterialSource } from '../materials/materialSource';
 import { OVERLAY_ORDINAL_PAST_CHAINS, nextPassRenderOrder } from '../materials/passOrder';
+import { GLTF_SURFACE } from '../materials/surfaceTextures';
+import { useSurfaceMaterial } from '../materials/useSurfaceMaterial';
 import { useSceneResources } from '../SceneResourcesContext';
 import { setVisualLayers } from '../visualLayers';
 import { ClonedChain, ClonedOverlay, isClonedExtraDraw } from './ClonedExtraDraws';
@@ -35,7 +37,8 @@ function extraDrawsOf(clone: THREE.Object3D): THREE.Mesh[] {
 /** The chain of the material `id` names, which a caller drew on every surface of the clone. */
 function Chain({ clone, id }: { clone: THREE.Object3D; id: string }) {
   const source = resolveMaterialSource(`SubResource("${id}")`, useSceneResources());
-  return source ? <ClonedChain covered={surfaceSlotsUnder(clone)} source={source} /> : null;
+  const drawn = useSurfaceMaterial(source, GLTF_SURFACE);
+  return source ? <ClonedChain covered={surfaceSlotsUnder(clone)} source={source} drawn={drawn} /> : null;
 }
 
 function Overlay({ clone, id }: { clone: THREE.Object3D; id: string }) {

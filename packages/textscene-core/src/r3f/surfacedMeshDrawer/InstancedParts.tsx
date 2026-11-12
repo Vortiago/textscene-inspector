@@ -7,6 +7,7 @@
 import { useLayoutEffect, useMemo } from 'react';
 import type * as THREE from 'three';
 import { geometryDrawsPoints } from '../../resources/meshes/godotSurface';
+import { perObject } from '../../utils/perObject';
 import { boxlessUserData } from '../bounds';
 import { extraDrawProps } from '../materials/extraDraw';
 import type { MaterialSource } from '../materials/materialSource';
@@ -187,6 +188,12 @@ const NO_OWN_MATRICES = 0;
 type InstancedObject = THREE.InstancedMesh | THREE.Points;
 
 /**
+ * The matrices each InstancedMesh built for itself, read on its first mount. r3f runs a ref more
+ * than once on a rebuilt object, and a later run would read the shared matrices as the mesh's own.
+ */
+const ownMatricesOf = perObject((mesh: THREE.InstancedMesh) => mesh.instanceMatrix);
+
+/**
  * The `ref` of one draw of a part. The draw takes the bounds of every instance, which typed props
  * do not hold, and an InstancedMesh reads the geometry's instance matrices. The mesh gets its own
  * matrices back before r3f disposes it: three frees the matrices of a disposed InstancedMesh
@@ -201,7 +208,7 @@ function mountsAtInstances(
     onMount?.(object);
     if (bounds) Object.assign(object, bounds);
     if (!('instanceMatrix' in object)) return undefined;
-    const own = object.instanceMatrix;
+    const own = ownMatricesOf(object);
     object.instanceMatrix = instanceMatrices(geometry);
     return () => {
       object.instanceMatrix = own;
