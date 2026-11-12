@@ -7,6 +7,7 @@
 
 import type { SceneScope, TscnNode } from '../parser/types';
 import type { Node2DProperties } from '../nodes/base/node2d/types';
+import type { ControlCanvasItemFields } from '../nodes/2d/ui/control/types';
 import {
   multiplyTransform2D,
   TRANSFORM2D_IDENTITY,
@@ -67,7 +68,7 @@ export function foldCanvasAncestor(
   link: TscnNode,
   scope: SceneScope
 ): CanvasAncestors {
-  const props = link.properties as Partial<Node2DProperties>;
+  const props = canvasItemFieldsOf(link);
   return {
     // The link's local transform first, then the chain above it, as `get_global_transform()` composes.
     transform: multiplyTransform2D(above.transform, node2DLocalTransform(props)),
@@ -83,6 +84,23 @@ export function foldCanvasAncestor(
       above.sampler
     ),
     material: linkMaterial(props, scope, above.material),
+  };
+}
+
+/**
+ * A link's CanvasItem fields under their scene keys. A Control's parse holds them camelCase
+ * (`ControlCanvasItemFields`), and always sets `zIndex`.
+ */
+function canvasItemFieldsOf(link: TscnNode): Partial<Node2DProperties> {
+  const props = link.properties as Partial<Node2DProperties> & Partial<ControlCanvasItemFields>;
+  if (props.zIndex === undefined) return props;
+  return {
+    ...props,
+    z_index: props.zIndex,
+    z_as_relative: props.zAsRelative,
+    texture_filter: props.textureFilter,
+    texture_repeat: props.textureRepeat,
+    use_parent_material: props.useParentMaterial,
   };
 }
 
