@@ -45,7 +45,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { rect2Intersects, type Rect2 } from '../../../../godot/math/rect2';
 import { scrollBarMinimumSize } from '../shared/scrollBarSolver';
-import type { ItemListItem, ItemListProperties } from './types';
+import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_LOWER_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
@@ -73,7 +73,7 @@ const ITEM_LIST_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'f
 /** Resolves ItemList's own theme font size/colour (overrides, else the ancestor Theme chain / theme default). */
 export function itemListTextTheme(
   n: SolveNode,
-  props: ItemListProperties,
+  props: ItemListRuntimeProperties,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: ITEM_LIST_DEFAULT_FONT_COLOR };
@@ -88,13 +88,13 @@ export function itemListIconSlotKey(index: number): string {
 }
 
 /** True for a row that names an icon by `item_N/icon` or, in a dialog, by theme icon. */
-export function itemHasIcon(item: ItemListItem): boolean {
+export function itemHasIcon(item: ItemListRuntimeItem): boolean {
   return item.icon !== undefined || item.themedIcon !== undefined;
 }
 
 /** `item_N/icon` (`item_list.cpp:2464`): one slot request per row that names an icon. */
 const itemListTextureSlots: TextureSlotsFn = (node: TscnNode) => {
-  const props = node.properties as ItemListProperties;
+  const props = node.properties as ItemListRuntimeProperties;
   const requests: TextureSlotRequest[] = [];
   (props.items ?? []).forEach((item, index) => {
     if (item.icon) requests.push({ key: itemListIconSlotKey(index), ref: item.icon });
@@ -552,7 +552,7 @@ export const ITEM_LIST_DEFAULT_MAX_COLUMNS = 1;
  * is the one frame of convergence that decides the scrollbar terms (`item_list.cpp:1883,1903`).
  */
 const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const props = n.node.properties as ItemListProperties;
+  const props = n.node.properties as ItemListRuntimeProperties;
   const items = props.items ?? [];
 
   const minSize = { x: 0, y: 0 };

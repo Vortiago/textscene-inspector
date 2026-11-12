@@ -29,7 +29,7 @@ import type { Vector2 } from '../../../godot/math/vector';
 import { FILE_DIALOG_ICON_URLS, FILE_DIALOG_LIST_ICON_URLS } from '../../../r3f/controls/native/themeIcons';
 import { ItemListIconMode, ItemListSelectMode } from '../../../godot/scene/gui';
 import type { Rgba } from '../../../godot/math/math';
-import type { ItemListItem, ItemListProperties } from '../../2d/ui/itemlist/types';
+import type { ItemListProperties, ItemListRuntimeItem } from '../../2d/ui/itemlist/types';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { themedSlotRequests, type TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
@@ -231,7 +231,7 @@ function fileListLayout({ props, listTheme }: Dialog): Partial<ItemListPropertie
 }
 
 /** One row of the file list: its theme icon, its icon colour and whether it is the selected row (`file_dialog.cpp:933-940,1016-1046`). */
-function fileListItems({ props, listTheme }: Dialog): ItemListItem[] {
+function fileListItems({ props, listTheme }: Dialog): ItemListRuntimeItem[] {
   const isThumbnails = props.display_mode === DisplayMode.THUMBNAILS;
   return props.file_rows.map((row, index) => {
     const icon: FileDialogListIcon = row.isDirectory

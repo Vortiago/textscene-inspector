@@ -4,6 +4,7 @@
  */
 
 import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
+import { resToFixtureFile } from './corpusRoot';
 
 /** Where the site serves the listing, beside the mirror it describes. */
 export const FIXTURE_LISTING_URL = '/fixtures-listing.json';
@@ -20,9 +21,7 @@ export function mirrorEntries(listing: FixtureListing, folder: string): Director
   );
 }
 
-/** The mirror folder a `res://` folder is under the corpus root `resourceRoot`. */
+/** The mirror folder a `res://` folder is under the corpus root `resourceRoot`: its fixtures path, keyed without a trailing slash. */
 export function mirrorFolderOf(resFolder: string, resourceRoot: string): string {
-  const relative = resFolder.slice('res://'.length);
-  if (resourceRoot === '') return relative;
-  return relative === '' ? resourceRoot : `${resourceRoot}/${relative}`;
+  return resToFixtureFile(resFolder, resourceRoot).replace(/\/$/, '');
 }

@@ -22,7 +22,7 @@ import { ItemList } from './Component';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
 import { ICON_MODE_LEFT, ITEM_LIST_THEME_FONT_KEY, shapeItemListText } from './nativeSolver';
 
-import type { ItemListProperties } from './types';
+import type { ItemListRuntimeProperties } from './types';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 const ICON_PATH = 'res://icon.png';
@@ -33,7 +33,7 @@ const SCOPE = {
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
-function solveNode(properties: Partial<ItemListProperties>, rtl = false, iconSlots = {}): SolveNode {
+function solveNode(properties: Partial<ItemListRuntimeProperties>, rtl = false, iconSlots = {}): SolveNode {
   const node: TscnNode = controlNode('MyItemList', 'ItemList', {
     name: 'MyItemList',
     items: [],
@@ -74,7 +74,7 @@ function fakeTexture(w: number, h: number): THREE.Texture {
   return tex;
 }
 
-async function renderWithIconLoaded(properties: Partial<ItemListProperties>, rtl = false) {
+async function renderWithIconLoaded(properties: Partial<ItemListRuntimeProperties>, rtl = false) {
   const fake = createFakeResourceLoader();
   fake.textures.seed(ICON_PATH, fakeTexture(16, 16));
   return ReactThreeTestRenderer.create(
@@ -180,7 +180,7 @@ describe('<ItemList> — panel + rows', () => {
 
 describe('<ItemList> — a theme icon and a selected row (a dialog sets both)', () => {
   const VENDORED = { name: 'file', vendoredUrl: 'data:image/svg+xml;base64,PHN2Zy8+' };
-  const render = (items: NonNullable<ItemListProperties['items']>) =>
+  const render = (items: NonNullable<ItemListRuntimeProperties['items']>) =>
     ReactThreeTestRenderer.create(
       <ItemList {...painterEnv()} solveNode={solveNode({ items })} rect={RECT} renderOrder={0} />
     );
@@ -280,7 +280,7 @@ describe('<ItemList> — row packing', () => {
 describe('<ItemList> — RTL', () => {
   // rect.w 200, panel margin 4, h_separation/icon_margin 4, a 16x16 icon and
   // fixed_column_width 100 (so rect_cache.size.width is 100 + h_separation).
-  const RTL_ITEMS: Partial<ItemListProperties> = {
+  const RTL_ITEMS: Partial<ItemListRuntimeProperties> = {
     items: [{ text: 'Sword', icon: 'ExtResource("1")' }],
     fixedColumnWidth: 100,
   };
@@ -353,7 +353,7 @@ function drawnTextRightEdge(mesh: THREE.Mesh): number {
   return mesh.geometry.boundingBox!.max.x;
 }
 
-function renderList(properties: Partial<ItemListProperties>, rect: Rect2, children?: React.ReactNode) {
+function renderList(properties: Partial<ItemListRuntimeProperties>, rect: Rect2, children?: React.ReactNode) {
   return ReactThreeTestRenderer.create(
     <ItemList {...painterEnv()} solveNode={solveNode(properties)} rect={rect} renderOrder={0}>
       {children}
@@ -451,11 +451,11 @@ describe('<ItemList> — scrollbars', () => {
   const twoRows = sixRows.slice(0, 2);
 
   /** A track and a grabber per visible bar, over the panel's own chrome mesh. */
-  const chromeMeshCount = async (properties: Partial<ItemListProperties>) =>
+  const chromeMeshCount = async (properties: Partial<ItemListRuntimeProperties>) =>
     findChromeMeshes((await renderList(properties, RECT)).scene).length;
 
   /** A guide line is the only 1 px tall `<ControlQuad>` of a list without icons. */
-  const guideLineWidths = async (properties: Partial<ItemListProperties>) => {
+  const guideLineWidths = async (properties: Partial<ItemListRuntimeProperties>) => {
     const renderer = await ReactThreeTestRenderer.create(
       <ItemList {...painterEnv()} solveNode={solveNode(properties)} rect={RECT} renderOrder={0} />
     );

@@ -20,7 +20,7 @@ import { FILE_DIALOG_THEME_ICONS } from '../../../godot/scene/fileDialog';
 import { fileDialogBody, fileDialogTextureSlots } from './body';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { parseFileDialog } from './parser';
-import type { ItemListProperties } from '../../2d/ui/itemlist/types';
+import type { ItemListRuntimeProperties } from '../../2d/ui/itemlist/types';
 
 const THEME = nativeTheme(1);
 const EMBEDDER = { x: 1152, y: 648 };
@@ -336,7 +336,7 @@ describe('FileDialog file list', () => {
       fileDialogBody({ ...dialog, node: { ...dialog.node, properties: props } as TscnNode }, THEME)
     )!;
   };
-  const listProps = (list: SolveNode) => list.node.properties as ItemListProperties;
+  const listProps = (list: SolveNode) => list.node.properties as ItemListRuntimeProperties;
 
   it('holds one item for each row, with the row named by selected_row selected', () => {
     const items = listProps(fileList(CASES.open!)).items;

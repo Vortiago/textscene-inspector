@@ -17,13 +17,20 @@ export interface ItemListItem {
   selectable?: boolean;
   /** `item_N/disabled`. Godot default false. */
   disabled?: boolean;
-  /** Set by a dialog only: the theme icon of this row, read from `SolveNode.icons[name]`, else the vendored default. */
+}
+
+/**
+ * A row with the state a runtime caller sets, as a dialog sets it on its own list. A `.tscn` cannot carry these, so the parser
+ * never produces them.
+ */
+export interface ItemListRuntimeItem extends ItemListItem {
+  /** The theme icon of this row, read from `SolveNode.icons[name]`, else the vendored default. */
   themedIcon?: { name: string; vendoredUrl: string };
-  /** Set by a dialog only: the icon's `set_item_icon_modulate`. */
+  /** The icon's `set_item_icon_modulate`. */
   iconModulate?: Rgba;
-  /** Set by a dialog only: the row `select` selected (`item_list.cpp:434-444`). */
+  /** The row `select` selected (`item_list.cpp:434-444`). */
   isSelected?: boolean;
-  /** Set by a dialog only: the row `select` made `current`, which a multi-select list marks with the `cursor` box (`item_list.cpp:1693`). */
+  /** The row `select` made `current`, which a multi-select list marks with the `cursor` box (`item_list.cpp:1693`). */
   isCurrent?: boolean;
 }
 
@@ -62,4 +69,9 @@ export interface ItemListProperties extends ControlProperties {
   clipContents?: boolean;
   /** Rows 0..`itemCount-1`, dense: `items[i]` is `{}` for an index no `item_i/*` key names. */
   items: ItemListItem[];
+}
+
+/** The properties a painter reads: the scene's, with rows that may carry runtime state. */
+export interface ItemListRuntimeProperties extends ItemListProperties {
+  items: ItemListRuntimeItem[];
 }

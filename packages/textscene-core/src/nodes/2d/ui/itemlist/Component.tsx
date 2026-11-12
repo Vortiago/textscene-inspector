@@ -76,7 +76,7 @@ import {
 import { ScrollBarChrome, ScrollHintChrome, SCROLL_HINT_MODULATE } from '../shared/ScrollChrome';
 import { itemListScrollBars } from './scrollBars';
 import { itemListDrawnLabel, isItemListLabelFillDrawn } from './labelDraw';
-import type { ItemListItem, ItemListProperties } from './types';
+import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
@@ -86,7 +86,7 @@ import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
  * exist. `minimumLayout` is the label shaped at the minimum-size width (`item_list.cpp:1763-1766`).
  */
 interface RowContent {
-  item: ItemListItem;
+  item: ItemListRuntimeItem;
   disabled: boolean;
   hasIcon: boolean;
   iconSize: Vector2;
@@ -102,7 +102,7 @@ interface DrawnLabelLine {
 
 /** Pass 2: this row's fully-resolved, plain-data geometry: everything but the async icon load. */
 interface RowGeometry {
-  item: ItemListItem;
+  item: ItemListRuntimeItem;
   disabled: boolean;
   hasIcon: boolean;
   iconNaturalSize: Vector2 | null;
@@ -231,7 +231,7 @@ export function ItemList({
   snapToPixels,
   children,
 }: NativeControlComponentProps) {
-  const props = painterView<ItemListProperties>(solveNode);
+  const props = painterView<ItemListRuntimeProperties>(solveNode);
   const items = props.items;
 
   const iconMode = props.iconMode ?? ICON_MODE_LEFT;
