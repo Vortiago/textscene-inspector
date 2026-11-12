@@ -1,13 +1,13 @@
 /**
- * The mesh at every particle of a settled CPUParticles3D, through the surfaced mesh drawer: each
- * part one instanced draw over the particle buffer, with the passes of the emitter's instance.
+ * The mesh at every particle of a settled particle node, through the surfaced mesh drawer: each
+ * part one instanced draw over the particle buffer, one component for each draw pass.
  */
 
 import { useMemo } from 'react';
-import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { useMeshContent } from '../../../../r3f/meshes/meshContent';
-import { SurfacedMeshDrawer } from '../../../../r3f/surfacedMeshDrawer/SurfacedMeshDrawer';
-import { useResourceResolution } from '../../../../resources/useSubOrExtResource';
+import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { useMeshContent } from '../../../r3f/meshes/meshContent';
+import { SurfacedMeshDrawer } from '../../../r3f/surfacedMeshDrawer/SurfacedMeshDrawer';
+import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { particleInstances } from './particleInstances';
 
 interface ParticleMeshProps {

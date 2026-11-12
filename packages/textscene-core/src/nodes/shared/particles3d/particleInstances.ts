@@ -1,14 +1,14 @@
 /**
- * A CPUParticles3D's buffer as three draws it: each particle an instance of the mesh, with its
+ * A particle buffer as three draws it: each particle an instance of the mesh, with its
  * transform, its colour and its custom data. The buffer holds Godot's 3×4 rows, whose bottom row
  * the scene shader fills with `(0, 0, 0, 1)` (`scene_forward_clustered.glsl:320`), so a never-born
  * particle's zero transform sits at the emitter's origin.
  */
 
 import * as THREE from 'three';
-import { MATRIX_FLOATS, VEC4_FLOATS } from '../../../../resources/meshes/multimesh/types';
-import { colouredInstances } from '../../../../r3f/surfacedMeshDrawer/colouredInstances';
-import type { MeshInstances } from '../../../../r3f/surfacedMeshDrawer/meshInstances';
+import { MATRIX_FLOATS, VEC4_FLOATS } from '../../../resources/meshes/multimesh/types';
+import { colouredInstances } from '../../../r3f/surfacedMeshDrawer/colouredInstances';
+import type { MeshInstances } from '../../../r3f/surfacedMeshDrawer/meshInstances';
 import { PARTICLE_COLOR_OFFSET, PARTICLE_CUSTOM_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
 
 /** The particle count of `buffer`. */

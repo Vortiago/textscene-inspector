@@ -31,6 +31,9 @@ export const GEOMETRY_SCENES = [
   // A CPUParticles3D settled to a fixed seed: four boxes in a row, each an instance of the mesh
   // coloured through `vertex_color_use_as_albedo`.
   { name: 'cpuparticles3d-row', file: 'unit-cpuparticles3d-row.tscn' },
+  // GPUParticles3D settled to a fixed seed: a sphere, a sphere surface, a box and a ring of
+  // particles, each an unshaded dot coloured by the material.
+  { name: 'gpuparticles3d-shapes', file: 'unit-gpuparticles3d-shapes.tscn' },
   // A MultiMeshInstance3D with a buffer: four boxes in a row, each coloured by its instance colour.
   { name: 'multimeshinstance3d-instances', file: 'unit-multi-mesh-instance-3d-instances.tscn' },
   // A DIRECTED_POINTS CPUParticles3D: a column of boxes above its one point, turned into the point's
