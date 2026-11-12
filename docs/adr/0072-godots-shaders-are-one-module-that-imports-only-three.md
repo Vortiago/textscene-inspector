@@ -1,7 +1,7 @@
 # Godot's shaders are one module that imports only three
 
-- Status: Proposed. The owner asked for the shape on 2026-11-12, chose the package name, put the
-  shader translator in the package and set the first publish. The three range waits for his answer.
+- Status: Accepted. The owner asked for the shape on 2026-11-12, and chose the package name, the
+  place of the shader translator, the first publish and the three range.
 - Amends: ADR-0055 (where the node lit surface lives).
 - Related: ADR-0038 (one owner for every program input), ADR-0039 (one material derivation, two
   adapters), ADR-0041 (an uncompiled shader draws Godot's default surface).
@@ -36,8 +36,8 @@ publishes it.**
   dependency. The peer range is one three minor, because TSL and `WebGLNodesHandler` change between
   minors. The package stays at 0.x, and a three upgrade in this repository is a new minor.
 - **The renderer bundles the module too.** `@textscene/renderer` does not depend on
-  `@textscene/three-godot-shaders`, as it does not depend on `@textscene/tscn`. One release then never
-  waits for another.
+  `@textscene/three-godot-shaders`, as it does not depend on `@textscene/tscn`. One release then
+  never waits for another.
 - **The module declares the types of its inputs.** A surface is the properties of Godot's
   `BaseMaterial3D` under Godot's names, with a `THREE.Texture` in each texture slot. A pipeline
   input is a plain three value: a texture, a matrix or a typed array. The resource slice decodes
