@@ -243,12 +243,7 @@ export function GraphEditMinimapChrome({
 
       {elements.map((element) => {
         const nodeRect = minimapNodeRect(transform, bounds, element, zoom);
-        const style = flatBox(element.bgColor, nodeCornerRadius, nodeCornerDetail, 0, {
-          r: 0.8,
-          g: 0.8,
-          b: 0.8,
-          a: 1,
-        });
+        const style = flatBox(element.bgColor, nodeCornerRadius, nodeCornerDetail, 0, MINIMAP_BORDER_COLOR);
         return (
           <CanvasItemGroup key={element.key} position={[nodeRect.x, -nodeRect.y, 0]}>
             <StyleBoxQuad
