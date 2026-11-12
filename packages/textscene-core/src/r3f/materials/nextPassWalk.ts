@@ -83,7 +83,8 @@ const ENDS: PassStep = { fate: 'ends', next: null };
 const WAITS: PassStep = { fate: 'waits', next: null };
 
 /**
- * The step of the walk at `pass`, whose load gave `loaded`, or null while it gave nothing.
+ * The step of the walk at `pass`, whose load gave `loaded`. A null `loaded` is a pass still
+ * loading, which waits.
  *
  * @canonical One step of a next_pass chain walk
  */

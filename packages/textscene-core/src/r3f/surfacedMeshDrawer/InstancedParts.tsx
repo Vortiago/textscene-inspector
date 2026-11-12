@@ -133,7 +133,10 @@ function ExtraInstancedDraw({ spec, placed }: { spec: ChainDrawSpec; placed: Par
   );
 }
 
-/** What the own draw and an extra draw of a part set on their object. An absent one keeps three's default. */
+/**
+ * What the own draw and an extra draw of a part set on their object. An absent one keeps three's
+ * default: r3f skips a prop that is undefined (9.8.2 `applyProps`).
+ */
 type InstancedDrawSettings = Partial<ReturnType<typeof drawHookProps> & ReturnType<typeof extraDrawProps>>;
 
 /**
