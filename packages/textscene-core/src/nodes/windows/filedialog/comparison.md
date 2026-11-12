@@ -94,8 +94,8 @@ Strict parsing format-checks these `FileDialog` properties, plus 1 inherited fro
 
 The lenient parser replays `title`, `file_mode`, `mode_overrides_title` and the `option_*` lines in file order, as Godot's loader sets them. It replays the placing lines the same way: `access`, `root_subfolder`, `current_dir`, `current_file` and `current_path`. A value the setter refuses, such as a `file_mode` of `9`, keeps the previous one. A changed `access` resets `root_subfolder`. The seven customisation flags default to true. Godot does not save `current_dir`, `current_file` or `current_path`, but the parser reads them as the loader would.
 
+The file list holds the `res://` folders of the project. A scene carries no `user://` folder, filesystem folder, Favorites or Recent entry, so those lists are empty.
+
 ## Known limitations
 
-- **Not drawn** The Favorites and Recent lists stay empty, since a scene does not carry them.
-- **Approximated** A `user://` or filesystem folder lists no entry, since the host holds no such folder for a scene.
 - **Approximated** `access = 2` opens the host's working directory and drive list (`file_dialog.cpp:1517,1620`), which a scene does not carry, so the path field is empty.
