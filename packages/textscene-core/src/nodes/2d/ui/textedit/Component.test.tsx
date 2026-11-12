@@ -311,6 +311,46 @@ describe('<TextEdit> — syntax_highlighter', () => {
     expect(runs[0]!.tint.r).not.toBeCloseTo(runs[2]!.tint.r, 2);
   });
 
+  it('caps a highlighted colour at the read-only colour alpha while !editable (text_edit.cpp:1666-1668)', async () => {
+    const draw = async (editable: boolean) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <TextEdit
+          {...painterEnv()}
+          solveNode={solveNode({ text: 'if x', editable, syntaxHighlighter: 'SubResource("CH")' }, [
+            CODE_HIGHLIGHTER,
+          ])}
+          rect={RECT}
+          renderOrder={0}
+        />
+      );
+      return bundledRuns(renderer.scene)[0]!.tint.a;
+    };
+    expect(await draw(true)).toBe(1);
+    expect(await draw(false)).toBeCloseTo(0.5, 4);
+  });
+
+  it('colours an unhighlighted run with font_color, not font_readonly_color, as the highlighter reads it (syntax_highlighter.cpp:421)', async () => {
+    const draw = async (editable: boolean) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <TextEdit
+          {...painterEnv()}
+          solveNode={{
+            ...solveNode({ text: 'if x', editable, syntaxHighlighter: 'SubResource("CH")' }, [
+              CODE_HIGHLIGHTER,
+            ]),
+            colors: { font_readonly_color: { r: 0, g: 0, b: 1, a: 1 } },
+          }}
+          rect={RECT}
+          renderOrder={0}
+        />
+      );
+      return bundledRuns(renderer.scene)[2]!.tint;
+    };
+    const readOnly = await draw(false);
+    const editable = await draw(true);
+    expect([readOnly.r, readOnly.g, readOnly.b]).toEqual([editable.r, editable.g, editable.b]);
+  });
+
   it('paints one plain-font_color run per row when no syntax_highlighter is set', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'if x' })} rect={RECT} renderOrder={0} />

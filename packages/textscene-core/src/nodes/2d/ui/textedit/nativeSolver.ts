@@ -514,6 +514,17 @@ export function textEditRowStartIndices(lineText: string, rows: readonly TextLin
   return starts;
 }
 
+/**
+ * A read-only TextEdit caps each highlighted colour's alpha at `font_readonly_color`'s
+ * (`text_edit.cpp:1666-1668`): a colour already fainter keeps its alpha.
+ */
+export function textEditCapSpanAlpha(
+  spans: readonly CodeHighlighterColorSpan[],
+  maxAlpha: number
+): CodeHighlighterColorSpan[] {
+  return spans.map((span) => ({ ...span, color: { ...span.color, a: Math.min(span.color.a, maxAlpha) } }));
+}
+
 function colorAt(spans: readonly CodeHighlighterColorSpan[], index: number, fallback: Rgba): Rgba {
   for (const span of spans) {
     if (index >= span.startIndex && index < span.endIndex) return span.color;

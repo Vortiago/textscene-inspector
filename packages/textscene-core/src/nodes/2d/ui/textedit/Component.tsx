@@ -51,6 +51,7 @@ import {
   TEXT_EDIT_THEME_FONT_KEY,
   TEXT_EDIT_DEFAULT_TAB_SIZE,
   TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
+  textEditCapSpanAlpha,
 } from './nativeSolver';
 import { useTextEditRows } from './useTextEditRows';
 import type { TextEditRows } from './rows';
@@ -127,6 +128,8 @@ export function TextEditBody({
   );
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, TEXT_EDIT_THEME_FONT_KEY);
+  // The highlighter's plain colour is the theme `font_color` whatever `editable` says (`syntax_highlighter.cpp:421`).
+  const highlighterFontColor = textEditTextTheme(solveNode, props, 'normal', { theme }).color;
   const lineSpacingPx = theme.separation; // nativeSolver.ts says why.
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
 
@@ -193,11 +196,16 @@ export function TextEditBody({
     if (!highlighter || isPlaceholder) return null;
     let region = -1;
     return lines.map((lineText) => {
-      const { spans, regionAtLineEnd } = resolveLineColors(lineText, highlighter, baseFontColor, region);
+      const { spans, regionAtLineEnd } = resolveLineColors(
+        lineText,
+        highlighter,
+        highlighterFontColor,
+        region
+      );
       region = regionAtLineEnd;
-      return spans;
+      return props.editable === false ? textEditCapSpanAlpha(spans, baseFontColor.a) : spans;
     });
-  }, [highlighter, isPlaceholder, lines, baseFontColor]);
+  }, [highlighter, isPlaceholder, lines, highlighterFontColor, baseFontColor.a, props.editable]);
 
   const minimapInput = useMemo(() => {
     if (!props.minimapDraw) return null;

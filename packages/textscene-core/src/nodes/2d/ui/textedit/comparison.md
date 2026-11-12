@@ -97,7 +97,9 @@ nothing in a `.tscn` can move it (`nativeSolver.ts`'s own doc has the full trace
 `useSceneResources()`). A `CodeHighlighter` sub-resource or `.tres` decodes
 through `resources/styles/codehighlighter/`, and its `_get_line_syntax_highlighting_impl`
 line scanner (`highlight.ts`) colours every buffer line, one `<TextRun>` per
-colour run. Anything else the property can name (absent, unresolved, or a custom
+colour run. The plain colour is the theme `font_color` whatever `editable` says, and a read-only node caps
+each colour's alpha at `font_readonly_color`'s (`syntax_highlighter.cpp:421`, `text_edit.cpp:1666-1668`).
+Anything else the property can name (absent, unresolved, or a custom
 `SyntaxHighlighter` script) paints at the plain `font_color`.
 
 `placeholder_text` replaces an empty buffer (`text_edit.cpp:3377-3379`) as one paragraph
@@ -134,6 +136,12 @@ always shapes at the class default of 4.
 
 - **Not drawn** The selection, IME composition, brace-match underline, word-highlight box and
   search-result box, which need state a `.tscn` cannot carry.
+- **Not drawn** The minimap's hover and drag alpha (:1153-1160), which need pointer state.
+- **Not drawn** The minimap's view rectangle offset and first line at a non-zero scroll (:1138-1147),
+  since scrolling is inert here.
+- **Approximated** The rows of an `indent_wrapped_lines` line in a narrow band break at other words than Godot's.
+- **Approximated** A wrapped row under a right-to-left layout sits about one space width too far right.
+- **Approximated** `self_modulate` tints the text, the caret and the minimap, which Godot draws on a child item that it does not reach.
 - **Approximated** `draw_tabs`/`draw_spaces` overlay the `tab`/`space` theme icons
   at an unscaled size and a row-centred vertical offset, not Godot's own
   ascent-relative one (`Component.tsx`'s own doc).
