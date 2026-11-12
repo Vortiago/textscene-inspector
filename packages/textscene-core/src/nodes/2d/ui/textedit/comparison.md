@@ -112,7 +112,8 @@ The horizontal bar shows when the widest row, with the gutters and the minimap, 
 style margins. A horizontal bar lowers the visible rows by its own height. `scroll_past_end_of_file` adds the
 visible rows less one to the vertical range. A vertical bar narrows the wrap width by its own width
 (`:8541-8543`), so a line can wrap only because the bar shows. Under a right-to-left layout both bars mirror
-whole: the vertical bar sits at the left edge and the horizontal bar starts after it. The previewer paints the
+whole: the vertical bar sits at the left edge and the horizontal bar starts after it. The unpainted minimap
+still counts its width in the wrap width and the horizontal range. The previewer paints the
 bars with the same tint as the panel.
 
 A row wider than the text band drops each glyph whose advance box crosses `xmargin_beg` or
@@ -128,8 +129,6 @@ always shapes at the class default of 4.
 
 - **Not drawn** The selection, IME composition, brace-match underline, word-highlight box,
   search-result box and the minimap, which need state a `.tscn` cannot carry.
-- **Approximated** The minimap keeps only its width term, in the wrap width and the horizontal range.
-- **Not drawn** A scroll bar's non-zero value, since `scroll_horizontal` and `scroll_vertical` stay unread.
 - **Approximated** `draw_tabs`/`draw_spaces` overlay the `tab`/`space` theme icons
   at an unscaled size and a row-centred vertical offset, not Godot's own
   ascent-relative one (`Component.tsx`'s own doc).
