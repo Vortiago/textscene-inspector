@@ -17,11 +17,6 @@ import './concavepolygonshape3d';
 import './rectangleshape2d';
 import './circleshape2d';
 import './capsuleshape2d';
-import './segmentshape2d';
-import './convexpolygonshape2d';
-import './concavepolygonshape2d';
-import './worldboundaryshape2d';
-import './separationrayshape2d';
 import './worldboundaryshape3d';
 import './heightmapshape3d';
 import './separationrayshape3d';
@@ -37,11 +32,6 @@ const CLAIMS: readonly (readonly [string, string])[] = [
   ['RectangleShape2D', 'rectangleshape2d'],
   ['CircleShape2D', 'circleshape2d'],
   ['CapsuleShape2D', 'capsuleshape2d'],
-  ['SegmentShape2D', 'segmentshape2d'],
-  ['ConvexPolygonShape2D', 'convexpolygonshape2d'],
-  ['ConcavePolygonShape2D', 'concavepolygonshape2d'],
-  ['WorldBoundaryShape2D', 'worldboundaryshape2d'],
-  ['SeparationRayShape2D', 'separationrayshape2d'],
   ['WorldBoundaryShape3D', 'worldboundaryshape3d'],
   ['HeightMapShape3D', 'heightmapshape3d'],
   ['SeparationRayShape3D', 'separationrayshape3d'],
