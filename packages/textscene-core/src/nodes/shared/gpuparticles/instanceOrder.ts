@@ -50,14 +50,19 @@ export function rowsInDrawOrder(
   drawOrder: number,
   input: OrderInput,
   depthOf: ((row: number) => number) | null
-): number[] | null {
+): Int32Array | null {
+  const { indices } = input;
   switch (drawOrder) {
-    case GpuDrawOrder.LIFETIME:
-      return rowsBySlot(input, lifetimeSlot(input, false));
-    case GpuDrawOrder.REVERSE_LIFETIME:
-      return rowsBySlot(input, lifetimeSlot(input, true));
+    case GpuDrawOrder.LIFETIME: {
+      const slotOf = lifetimeSlot(input);
+      return rowsSortedBy(indices.length, (row) => slotOf(indices[row]!));
+    }
+    case GpuDrawOrder.REVERSE_LIFETIME: {
+      const slotOf = lifetimeSlot(input);
+      return rowsSortedBy(indices.length, (row) => input.amount - 1 - slotOf(indices[row]!));
+    }
     case GpuDrawOrder.VIEW_DEPTH:
-      return depthOf ? rowsByDepth(input.indices.length, depthOf) : null;
+      return depthOf ? rowsSortedBy(indices.length, depthOf) : null;
     default:
       return null;
   }
@@ -65,28 +70,21 @@ export function rowsInDrawOrder(
 
 /**
  * The slot a particle is drawn at. The shader reads slot `s` from particle `src(s)`: it starts
- * `split` in, wraps at `limit`, and reads the slots backwards for REVERSE_LIFETIME. This is the inverse.
+ * `split` in and wraps at `limit`. This is the inverse.
  */
-function lifetimeSlot({ phase, amount }: OrderInput, reverse: boolean): (particle: number) => number {
+function lifetimeSlot({ phase, amount }: OrderInput): (particle: number) => number {
   const split = (Math.min(Math.trunc(amount * phase), amount - 1) + 1) % amount;
   const limit = amount - split;
-  return (particle) => {
-    const slot = particle >= split ? particle - split : particle + limit;
-    return reverse ? amount - 1 - slot : slot;
-  };
+  return (particle) => (particle >= split ? particle - split : particle + limit);
 }
 
-function rowsBySlot({ indices }: OrderInput, slotOf: (particle: number) => number): number[] {
-  const slots = Array.from(indices, slotOf);
-  return rowsOf(indices.length).sort((a, b) => slots[a]! - slots[b]!);
-}
-
-/** Far to near: ascending along the axis toward the viewer. `sort` is stable, so equal depths keep the index order. */
-function rowsByDepth(count: number, depthOf: (row: number) => number): number[] {
-  const depths = Array.from({ length: count }, (_, row) => depthOf(row));
-  return rowsOf(count).sort((a, b) => depths[a]! - depths[b]!);
-}
-
-function rowsOf(count: number): number[] {
-  return Array.from({ length: count }, (_, row) => row);
+/** The rows by ascending key. `sort` is stable, so equal keys keep the index order. */
+function rowsSortedBy(count: number, keyOf: (row: number) => number): Int32Array {
+  const keys = new Float64Array(count);
+  const rows = new Int32Array(count);
+  for (let row = 0; row < count; row++) {
+    keys[row] = keyOf(row);
+    rows[row] = row;
+  }
+  return rows.sort((a, b) => keys[a]! - keys[b]!);
 }

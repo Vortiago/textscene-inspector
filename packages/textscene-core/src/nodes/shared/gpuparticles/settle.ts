@@ -85,7 +85,8 @@ export function gpuSettleSeconds(emitter: GpuEmitter): number {
 /** The pose after `seconds` of settle: {@link gpuSettleSeconds} for an emitter, or the seconds a request names. */
 export function settleGpuParticles(input: GpuSettleInput, seconds: number): SettledGpuParticles {
   const { emitter, material, emissionTransform } = input;
-  const frame = emissionFrame(emitter.localCoords ? identityTransform3D() : emissionTransform);
+  const simulationTransform = emitter.localCoords ? identityTransform3D() : emissionTransform;
+  const frame = emissionFrame(simulationTransform);
   const randomSeed = emitter.useFixedSeed ? emitter.seed : DEFAULT_PREVIEW_SEED;
   const clock = startClock(emitter);
   if (drawsNothing(material)) return emptyPose(clock.phase);

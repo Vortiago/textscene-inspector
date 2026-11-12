@@ -25,3 +25,23 @@ export function writeTransformRows(buffer: Float32Array, at: number, t: Transfor
   buffer[at + 10] = z.z;
   buffer[at + 11] = origin.z;
 }
+
+/** Column `column` of the 3×4 transform at `at`: 0 to 2 the basis axes, 3 the origin. */
+export function readTransformColumn(
+  buffer: Float32Array,
+  at: number,
+  column: number
+): [number, number, number] {
+  return [buffer[at + column]!, buffer[at + 4 + column]!, buffer[at + 8 + column]!];
+}
+
+export function writeTransformColumn(
+  buffer: Float32Array,
+  at: number,
+  column: number,
+  [x, y, z]: readonly [number, number, number]
+): void {
+  buffer[at + column] = x;
+  buffer[at + 4 + column] = y;
+  buffer[at + 8 + column] = z;
+}

@@ -4,19 +4,13 @@
  */
 
 import { affineInverseTransform3D, type Transform3D } from '../../../godot/math/transform3d';
-import type { Vector3 } from '../../../godot/math/vector';
-import { GpuTransformAlign } from '../../../godot/scene/particles3d';
-import { PARTICLE_FLOATS } from '../particles3d/particleBuffer';
+import { GpuDrawOrder, GpuTransformAlign } from '../../../godot/scene/particles3d';
+import { PARTICLE_FLOATS, readTransformColumn, writeTransformColumn } from '../particles3d/particleBuffer';
+import type { CameraAxes } from '../particles3d/useCameraAxes';
 import { dot, normalize, type Float3 } from './float3';
 import { alignColumns, type AlignView, type Columns } from './instanceAlign';
 import { rowsInDrawOrder } from './instanceOrder';
 import type { SettledGpuParticles } from './settle';
-
-/** The camera's `basis.get_column(2)` and `get_column(1)`, in world space. */
-export interface CameraAxes {
-  axis: Vector3;
-  up: Vector3;
-}
 
 export interface InstanceCopy {
   /** `amount` of the emitter. */
@@ -30,6 +24,15 @@ export interface InstanceCopy {
   view: CameraAxes | null;
 }
 
+/** Only VIEW_DEPTH and the two billboard alignments read the camera (`particles_storage.cpp:1223`). */
+export function readsCamera(drawOrder: number, transformAlign: number): boolean {
+  return (
+    drawOrder === GpuDrawOrder.VIEW_DEPTH ||
+    transformAlign === GpuTransformAlign.Z_BILLBOARD ||
+    transformAlign === GpuTransformAlign.Z_BILLBOARD_Y_TO_VELOCITY
+  );
+}
+
 /** The instance buffer for `settled`: the settled buffer itself when nothing orders or turns it. */
 export function copyInstances(settled: SettledGpuParticles, request: InstanceCopy): Float32Array {
   const frame = simulationFrame(request);
@@ -37,7 +40,7 @@ export function copyInstances(settled: SettledGpuParticles, request: InstanceCop
   const order = rowsInDrawOrder(
     request.drawOrder,
     { phase: settled.phase, indices: settled.indices, amount: request.amount },
-    view && ((row) => dot(view.direction, frame.toSimulation(originAt(settled.buffer, row))))
+    view && depthOf(settled.buffer, frame.nodeDirection(view.direction))
   );
   const turns = turnsBasis(request.transformAlign, view);
   if (!order && !turns) return settled.buffer;
@@ -48,21 +51,37 @@ export function copyInstances(settled: SettledGpuParticles, request: InstanceCop
     const at = slot * PARTICLE_FLOATS;
     copied.set(settled.buffer.subarray(row * PARTICLE_FLOATS, (row + 1) * PARTICLE_FLOATS), at);
     if (turns) {
-      const velocity: Float3 = [
-        settled.velocity[row * 3]!,
-        settled.velocity[row * 3 + 1]!,
-        settled.velocity[row * 3 + 2]!,
-      ];
-      turnBasis(copied, at, request.transformAlign, velocity, view, frame);
+      const velocity = velocityAt(settled.velocity, row);
+      turnBasis(
+        copied,
+        at,
+        (columns) => alignColumns(request.transformAlign, columns, velocity, view),
+        frame
+      );
     }
   }
   return copied;
 }
 
-/** Y_TO_VELOCITY reads the velocity alone; the other turns read the camera (`particles_storage.cpp:1223`). */
+/** Y_TO_VELOCITY reads the velocity alone; the other turns read the camera. */
 function turnsBasis(transformAlign: number, view: AlignView | null): boolean {
   if (transformAlign === GpuTransformAlign.DISABLED) return false;
   return transformAlign === GpuTransformAlign.Y_TO_VELOCITY || view !== null;
+}
+
+/**
+ * The position of a row along `direction`, which is in node space: the order of the dots is the
+ * order in the simulation space, because the node's origin shifts every particle by one amount.
+ */
+function depthOf(buffer: Float32Array, direction: Float3): (row: number) => number {
+  return (row) => {
+    const at = row * PARTICLE_FLOATS;
+    return direction[0] * buffer[at + 3]! + direction[1] * buffer[at + 7]! + direction[2] * buffer[at + 11]!;
+  };
+}
+
+function velocityAt(velocity: Float32Array, row: number): Float3 {
+  return [velocity[row * 3]!, velocity[row * 3 + 1]!, velocity[row * 3 + 2]!];
 }
 
 /** The space the particles simulate in, against node space. */
@@ -71,49 +90,55 @@ interface SimulationFrame {
   toNode(vector: Float3): Float3;
   /** The camera axes in this space. */
   view(camera: CameraAxes): AlignView;
+  /** A direction of this space as the node space holds it. */
+  nodeDirection(direction: Float3): Float3;
 }
 
-/** World-space particles sit in the node's frame turned by its basis; local-coordinate ones sit in node space itself. */
+const NODE_FRAME: SimulationFrame = {
+  toSimulation: (vector) => vector,
+  toNode: (vector) => vector,
+  view: ({ axis, up }) => ({ direction: [axis.x, axis.y, axis.z], up: [up.x, up.y, up.z] }),
+  nodeDirection: (direction) => direction,
+};
+
+/**
+ * Local-coordinate particles sit in node space. World-space ones sit in the node's frame turned by
+ * its basis, and the sort direction of a local-coordinate emitter is the world one taken into the
+ * node's frame (`particles_storage.cpp:1307-1309`).
+ */
 function simulationFrame({ localCoords, emissionTransform }: InstanceCopy): SimulationFrame {
+  if (localCoords) {
+    return {
+      ...NODE_FRAME,
+      view: ({ axis, up }) => ({
+        direction: normalize(applied(transposed(basisRows(emissionTransform)), [axis.x, axis.y, axis.z])),
+        up: [up.x, up.y, up.z],
+      }),
+    };
+  }
   const rows = basisRows(emissionTransform);
   const inverseRows = basisRows(affineInverseTransform3D(emissionTransform));
-  const same = (vector: Float3) => vector;
+  const nodeToSimulation = transposed(rows);
   return {
-    toSimulation: localCoords ? same : (vector) => applied(rows, vector),
-    toNode: localCoords ? same : (vector) => applied(inverseRows, vector),
-    // `normalize(basis.xform_inv(axis))` for local coordinates; the up axis stays in the world (`particles_storage.cpp:1307-1309`).
-    view: ({ axis, up }) => {
-      const direction: Float3 = [axis.x, axis.y, axis.z];
-      return {
-        direction: localCoords ? normalize(applied(transposed(rows), direction)) : direction,
-        up: [up.x, up.y, up.z],
-      };
-    },
+    ...NODE_FRAME,
+    toSimulation: (vector) => applied(rows, vector),
+    toNode: (vector) => applied(inverseRows, vector),
+    nodeDirection: (direction) => applied(nodeToSimulation, direction),
   };
 }
 
-/** Turns the basis of the row at `at` in `copied`, which holds node-space rows. */
+/** Turns the basis of the row at `at` in `copied`, which holds node-space rows, through `align` in the simulation space. */
 function turnBasis(
   copied: Float32Array,
   at: number,
-  transformAlign: number,
-  velocity: Float3,
-  view: AlignView | null,
+  align: (columns: Columns) => void,
   frame: SimulationFrame
 ): void {
-  const columns = [0, 1, 2].map((column) => frame.toSimulation(columnAt(copied, at, column))) as Columns;
-  alignColumns(transformAlign, columns, velocity, view);
-  columns.forEach((column, index) => {
-    const [x, y, z] = frame.toNode(column);
-    copied[at + index] = x;
-    copied[at + 4 + index] = y;
-    copied[at + 8 + index] = z;
-  });
-}
-
-/** Column `column` of the transform in the rows at `at`; column 3 is the origin. */
-function columnAt(buffer: Float32Array, at: number, column: number): Float3 {
-  return [buffer[at + column]!, buffer[at + 4 + column]!, buffer[at + 8 + column]!];
+  const columns = [0, 1, 2].map((column) =>
+    frame.toSimulation(readTransformColumn(copied, at, column))
+  ) as Columns;
+  align(columns);
+  columns.forEach((column, index) => writeTransformColumn(copied, at, index, frame.toNode(column)));
 }
 
 function basisRows({ basis_x: x, basis_y: y, basis_z: z }: Transform3D): Float3[] {
@@ -130,9 +155,4 @@ function applied(rows: Float3[], vector: Float3): Float3 {
 
 function transposed(rows: Float3[]): Float3[] {
   return [0, 1, 2].map((column) => [rows[0]![column]!, rows[1]![column]!, rows[2]![column]!] as Float3);
-}
-
-/** Row `row`'s origin in node space. */
-function originAt(buffer: Float32Array, row: number): Float3 {
-  return columnAt(buffer, row * PARTICLE_FLOATS, 3);
 }

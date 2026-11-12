@@ -6,9 +6,8 @@
 
 import { useMemo } from 'react';
 import type { Transform3D } from '../../../../godot/math/transform3d';
-import { GpuDrawOrder, GpuTransformAlign } from '../../../../godot/scene/particles3d';
 import type { GpuMaterial } from '../../../shared/gpuparticles/emitter';
-import { copyInstances } from '../../../shared/gpuparticles/instanceCopy';
+import { copyInstances, readsCamera } from '../../../shared/gpuparticles/instanceCopy';
 import { gpuSettleSeconds, settleGpuParticles } from '../../../shared/gpuparticles/settle';
 import { ParticleMesh } from '../../../shared/particles3d/ParticleMesh';
 import { useCameraAxes } from '../../../shared/particles3d/useCameraAxes';
@@ -47,14 +46,5 @@ export function ParticleEmitter({ properties, material, emissionTransform }: Par
         <ParticleMesh key={pass} mesh={mesh} buffer={buffer} />
       ))}
     </>
-  );
-}
-
-/** Only VIEW_DEPTH and the two billboard alignments read the camera (`particles_storage.cpp:1223`). */
-function readsCamera(drawOrder: number, transformAlign: number): boolean {
-  return (
-    drawOrder === GpuDrawOrder.VIEW_DEPTH ||
-    transformAlign === GpuTransformAlign.Z_BILLBOARD ||
-    transformAlign === GpuTransformAlign.Z_BILLBOARD_Y_TO_VELOCITY
   );
 }
