@@ -918,6 +918,11 @@ _Avoid_: "channel".
 The registry, keyed by `${nodePath}:${property}`, through which the active **AnimationPlayer** pushes sampled non-transform **Track** values to their target.
 _Avoid_: "AnimatedFrame registry", "mixer", "central value context".
 
+**Clip time**:
+The time inside a **GodotAnimation** that playback shows, from zero to its `length`.
+On the return pass of a ping-pong loop it runs back, while the time of the `THREE.AnimationAction` runs on (ADR-0011).
+_Avoid_: "action time" for the mirrored value.
+
 **Animation transport**:
 The play, pause and scrub state (`AnimationTransportContext`) and its dock-tab UI, bound to the one driver selected in the scene tree.
 It starts stopped, and a change of selection stops playback and restores the authored pose.
@@ -963,7 +968,7 @@ _Avoid_: this lifecycle for the **AnimationTree driver**.
 - A **CollisionShape3D** Node references one **collision-shape resource**, which the **collision gizmo** draws.
 - The three registries (**NodeRegistry**, **NodeComponentRegistry**, **ControlComponentRegistry**) share `typeName` keys but stay separate to keep the **React-free linter boundary**.
 - A **vertical slice** exposes its behaviour through three **slice entry points**, one per registry domain.
-- **Label3D**, **Label** and **RichTextLabel** share one shaping engine and font, but each run draws with the painter Godot's text server uses for it (ADR-0040).
+- **Label3D**, **Label** and **RichTextLabel** share one shaping engine and font, but each run draws as Godot's text server draws it: FreeType's coverage of each outline (ADR-0069).
 - An **AnimationPlayer** references an **Animation library**, whose **GodotAnimation**s carry the **Track**s that the **Animation transport** plays (ADR-0011).
 - An **AnimationTree driver** drives the **AnimationPlayer** or **GLB animation driver** that it finds through the **AnimationDriverRegistry** (ADR-0019).
 - A **sub-viewport** publishes into the **ViewportTextureRegistry**, and only its **viewport surface** dispatches its canvas subtree (ADR-0033).

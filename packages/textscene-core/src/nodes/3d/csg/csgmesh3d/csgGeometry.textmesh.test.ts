@@ -18,6 +18,12 @@ import {
   csgMesh3DUndrawnMeshType,
 } from './csgGeometry';
 
+// happy-dom loads no font file, so each loads as the stand-in face.
+vi.mock(
+  '../../../../r3f/controls/native/text/sceneFontLoad',
+  () => import('../../../../r3f/controls/native/testing/sceneFontLoadStub')
+);
+
 const TEXT: TscnInternalResource = {
   id: 'Text',
   type: 'TextMesh',

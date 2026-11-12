@@ -22,15 +22,15 @@ import { describeFailedRequests } from '../visual/preview/pageDiagnostics.mjs';
 /**
  * The Control fixture whose only ink is text. The preview CSP (`webviewHtml.ts`)
  * is `default-src 'none'` with no `connect-src` or `font-src`, so glyphs come
- * from a vendored MSDF atlas riding `img-src … data:`, not a font library that
- * fetches a font (ADR-0037).
+ * from the outlines of the bundled font, whose bytes ride the script, not a font library that
+ * fetches a font (ADR-0069).
  */
 const FIXTURE = 'scenes/fixtures/unit-label-2d.tscn';
 
 /**
  * Ink floor for the label scene, far below a passing run: the count scales with
  * the virtual display. A 640x480 Xvfb screen, shared with the source editor,
- * gives a 235x357 canvas and 252 ink pixels. A blocked glyph atlas takes the
+ * gives a 235x357 canvas and 252 ink pixels. Text that cannot draw takes the
  * count to zero on any display.
  */
 const INK_FLOOR = 100;
@@ -475,7 +475,7 @@ async function main() {
   gate.check(
     withInk.inkPixels >= INK_FLOOR,
     `[with-text] only ${withInk.inkPixels} ink pixels on a ${withInk.width}x${withInk.height} ` +
-      `canvas, floor is ${INK_FLOOR} — the glyph atlas did not paint`
+      `canvas, floor is ${INK_FLOOR} — the text did not paint`
   );
   gate.check(
     withoutInk.inkPixels === 0,

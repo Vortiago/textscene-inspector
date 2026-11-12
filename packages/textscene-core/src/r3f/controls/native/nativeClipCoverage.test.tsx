@@ -20,7 +20,7 @@ import { ControlCanvasLayer } from './ControlCanvasLayer';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import { SceneStack } from '../../testing/SceneStack';
-import { settleLoads } from '../../testing/settleLoads';
+import { settlePendingLoads } from '../../testing/settleLoads';
 
 import '../../nodes/index';
 import '../index';
@@ -134,7 +134,8 @@ async function meshesOf(tscn: string): Promise<THREE.Mesh[]> {
       <ControlCanvasLayer nodes={parsed.nodes} />
     </SceneStack>
   );
-  await settleLoads();
+  // A run of the bundled font is a pending load until its outlines load.
+  await settlePendingLoads(fake.loader);
   const first = (renderer.scene as unknown as { children?: Array<{ instance?: THREE.Object3D }> })
     .children?.[0]?.instance;
   let root: THREE.Object3D | null | undefined = first;

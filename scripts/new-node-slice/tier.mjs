@@ -11,7 +11,7 @@ import { checkTier, tierParent } from './catalogChecks.mjs';
 import { parentLinterParser } from './ancestry.mjs';
 import { CORE_SRC, REPO_ROOT, fail } from './paths.mjs';
 import { tierFiles } from './templates/tier.mjs';
-import { wireImport } from './wiring.mjs';
+import { wireImport, wireUnsweptSlice } from './wiring.mjs';
 
 export function scaffoldTier({ typeName, category, rule, dryRun }) {
   const heirs = checkTier(typeName);
@@ -32,15 +32,17 @@ export function scaffoldTier({ typeName, category, rule, dryRun }) {
 
   const files = tierFiles({ typeName, heirs, toSrc, rule, parentLinterImport });
 
-  const wirings = rule
-    ? [
-        wireImport(
-          join(CORE_SRC, 'linter/index.ts'),
-          `import '../${sliceRel}/index.linter.js';`,
-          `'../nodes/${category}/`
-        ),
-      ]
-    : [];
+  // A tier registers no parser, so the parity guard cannot see it.
+  const wirings = [wireUnsweptSlice(sliceRel)];
+  if (rule) {
+    wirings.push(
+      wireImport(
+        join(CORE_SRC, 'linter/index.ts'),
+        `import '../${sliceRel}/index.linter.js';`,
+        `'../nodes/${category}/`
+      )
+    );
+  }
 
   console.log(
     `[new-node-slice] ${typeName} tier -> ${sliceRel}${rule ? ' (with family rule)' : ' (validators only)'}`

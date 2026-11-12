@@ -5,7 +5,15 @@
  */
 import { describe, expect, it } from 'vitest';
 import { PNG } from 'pngjs';
-import { catalogName, comparePngs, diffAll, diffOne, parseArgs, resolveFixture } from './diff.mjs';
+import {
+  catalogName,
+  comparePngs,
+  diffAll,
+  diffOne,
+  parseArgs,
+  residueTable,
+  resolveFixture,
+} from './diff.mjs';
 import { join, resolve } from 'node:path';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -37,6 +45,21 @@ describe('parseArgs', () => {
     expect(args.maxMean).toBe(1.5);
     expect(args.frame).toBe(true);
     expect(args.keep).toBe(true);
+  });
+
+  it('reads the file the residue table goes to', () => {
+    expect(parseArgs(['a.tscn', '--table', 'out/sweep.md']).table).toBe('out/sweep.md');
+    expect(parseArgs(['a.tscn']).table).toBeNull();
+  });
+
+  it('rejects a table flag with no file (error path)', () => {
+    expect(() => parseArgs(['a.tscn', '--table'])).toThrow('--table needs a file path, got "undefined"');
+  });
+
+  it('rejects a table flag followed by another flag (error path)', () => {
+    expect(() => parseArgs(['a.tscn', '--table', '--keep'])).toThrow(
+      '--table needs a file path, got "--keep"'
+    );
   });
 
   it('rejects a mean bound that is not a number', () => {
@@ -122,6 +145,14 @@ describe('comparePngs', () => {
     expect(result.changedPct).toBe(100);
     expect(result.maxChannelDelta).toBe(12);
     expect(result.meanChannelError).toBeCloseTo(34 / 3, 6);
+  });
+
+  it('counts the pixels past the residue step, which a mean hides', () => {
+    const ours = PNG.sync.read(solidPng(10, 10, [50, 50, 50]));
+    ours.data[(4 * 10 + 6) * 4] = 59;
+    ours.data[0] = 52;
+    const result = comparePngs(solidPng(10, 10, [50, 50, 50]), PNG.sync.write(ours));
+    expect(result.over).toEqual({ pixels: 1, bounds: { left: 6, top: 4, right: 6, bottom: 4 } });
   });
 
   it('names both shapes instead of a number when the frames differ in size', () => {
@@ -290,5 +321,40 @@ describe('diffAll', () => {
     expect(results.map((r) => r.label)).toEqual(['a', 'b']);
     expect(results[0].failed).toMatch(/produced no image/);
     expect(results[1].changedPixels).toBe(0);
+  });
+});
+
+describe('residueTable', () => {
+  const measured = {
+    label: 'unit-shadow',
+    changedPixels: 134,
+    maxChannelDelta: 5,
+    meanChannelError: 0.0123,
+    over: { pixels: 14, bounds: { left: 540, top: 130, right: 560, bottom: 150 } },
+  };
+
+  it('gives one row per scene with the numbers the residue rule reads', () => {
+    expect(residueTable([measured])).toBe(
+      [
+        '| Scene | Changed px | Max /255 | Mean /255 | Px over 2/255 | Where |',
+        '| --- | --- | --- | --- | --- | --- |',
+        '| `unit-shadow` | 134 | 5 | 0.012 | 14 | (540,130) to (560,150) |',
+        '',
+      ].join('\n')
+    );
+  });
+
+  it('leaves the place empty for a scene with no pixel past the step', () => {
+    const clean = { ...measured, maxChannelDelta: 1, over: { pixels: 0, bounds: null } };
+    expect(residueTable([clean])).toContain('| `unit-shadow` | 134 | 1 | 0.012 | 0 |  |');
+  });
+
+  it('says why a scene has no numbers (error path)', () => {
+    const table = residueTable([
+      { label: 'a', failed: 'Godot produced no image' },
+      { label: 'b', sizeMismatch: 'godot 4x4 vs ours 8x4' },
+    ]);
+    expect(table).toContain('| `a` | failed: Godot produced no image |  |  |  |  |');
+    expect(table).toContain('| `b` | size mismatch: godot 4x4 vs ours 8x4 |  |  |  |  |');
   });
 });

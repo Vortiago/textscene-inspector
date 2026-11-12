@@ -155,7 +155,6 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/shared/sliderSolver.ts` | `scene/gui/slider.cpp` (`Slider::get_minimum_size`, `_notification`'s `NOTIFICATION_DRAW` track/`grabber_area`/grabber/tick rect math, including its per-axis `int` truncation vs `Math::round` asymmetry) and `scene/theme/default_theme.cpp` (HSlider/VSlider's `slider`/`grabber_area` styleboxes and grabber/tick icon registration) |
 | `packages/textscene-core/src/r3f/controls/native/styleBoxFlatGeometry.ts` | `scene/resources/style_box_flat.cpp` (`StyleBoxFlat::draw`, `draw_rounded_rectangle`, `adapt_values`, `set_inner_corner_radius`, `set_corner_scale`, including the anti-aliasing rings, `skew`, and the drop-shadow stage) |
 | `packages/textscene-core/src/r3f/controls/native/text/TextRunMesh.tsx` | `scene/gui/label.cpp` (`Label::_notification`'s `ofs.y += asc` baseline anchoring) and the TextServer paragraph convention `Button::_notification`'s `text_buf->draw` shares; `modules/text_server_adv/text_server_adv.cpp` (`FT_Outline_Transform`'s synthesized-italic shear pivot) |
-| `packages/textscene-core/src/r3f/controls/native/text/glyphQuads.ts` | `scene/gui/label.cpp` (`Label::_notification`'s `ofs.y += asc` baseline anchoring) and `modules/text_server_adv/text_server_adv.cpp` (`FT_Outline_Transform`'s synthesized-italic shear pivot) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/toolbar.ts` | `scene/gui/graph_edit.cpp` (the `menu_panel`/`menu_hbox` constructor assembly, the `set_show_*` setters and `GraphEdit::_update_zoom_label`) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/ToolbarChrome.tsx` | `scene/gui/graph_edit.cpp` (the toolbar's own `Button`/`Label` draw) and `scene/theme/default_theme.cpp` (the `FlatButton` variation) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/minimap.ts` | `scene/gui/graph_edit.cpp` (`GraphEditMinimap::update_minimap`, `get_camera_rect`, `_get_render_size`, `_get_graph_size`, `_convert_from_graph_position`) |
@@ -358,13 +357,10 @@ vendors the identical font Godot ships rather than substituting a system or web 
 
 `packages/textscene-core/assets/fonts/OpenSans_SemiBold.woff2` is an unmodified copy of
 Godot 4.6.3's vendored file. `scripts/fonts/bake-metrics.mjs` reads it at build time
-(decompressing to a TTF in memory, since neither the metrics tool nor the atlas tool
-decompresses real Brotli woff2 itself) and bakes the five committed artifacts
-`openSansMetrics.ts` (font-wide scalar metrics + kerning table), `openSansAtlas.ts`
-(the pre-baked MSDF glyph table — see ADR-0003 and `packages/textscene-core/src/r3f/controls/native/text/openSansAtlas.ts`'s own citation of why a
-pre-baked atlas, not a runtime font parse, is what the VS Code webview CSP allows),
-`packages/textscene-core/src/r3f/controls/native/text/openSansAtlasImage.ts` (the atlas image),
-`packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts` (the font's bytes as base64, which the canvas text painter loads as a font face) and
+(decompressing to a TTF in memory, since the metrics tool does not decompress real Brotli woff2
+itself) and bakes the three committed artifacts
+`openSansMetrics.ts` (font-wide scalar metrics and the kerning table),
+`packages/textscene-core/src/r3f/controls/native/text/openSansFontBytes.ts` (the font's bytes as base64, whose outlines the canvas text painter draws) and
 `packages/textscene-core/src/r3f/controls/native/text/openSansShaping.ts` (the font's shaping tables as base64url, which the layout shapes each run with).
 
 `scenes/fixtures/fonts/open-sans-semibold-subset.ttf` is a TrueType subset of the same font: the space, `!`, the digits, the Latin letters and `é`. The TextMesh goldens and the tests that read glyph outlines use it.

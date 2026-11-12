@@ -1,13 +1,10 @@
 /**
- * The canvas-2D glyph painter, `TextRunMesh.tsx`'s second path beside the MSDF atlas.
- * It serves a runtime-loaded scene font, which has no bake, and the bundled font
- * where FreeType semantics are needed, such as Label3D's stroked outline. It runs
- * for `TextLayoutResult.fontMetrics.kind === 'canvas'`.
+ * The canvas glyph painter: one raster and one quad for a run of a scene font file or of the
+ * bundled font, each glyph as FreeType's bitmap of its outline. It runs for
+ * `TextLayoutResult.fontMetrics.kind === 'canvas'`.
  */
-// One raster and one quad: a per-glyph atlas needs a font fetch, which the CSP forbids
-// (`bake-metrics.mjs`), while canvas-2D calls pass it. Each glyph draws at the pen
-// `x` `textLayout.ts` computed, so a whole-string `fillText` cannot re-shape it
-// with the ligatures or kerning the measurer folded in (`runtimeFontMetrics.ts`).
+// Each glyph draws at the pen `x` `textLayout.ts` computed, so a whole-string `fillText` cannot
+// re-shape it with the ligatures or kerning the measurer folded in (`runtimeFontMetrics.ts`).
 import * as THREE from 'three';
 import {
   glyphContoursReader,
@@ -91,14 +88,14 @@ export function computeCanvasTextCanvasLayout(
   // An embolden reaches its full growth right and up. The pad is symmetric, so the quad stays centred.
   const emboldenPadPx = maxEmboldenGrowthPx(layout);
   const offsetYPx = CANVAS_TEXT_VERTICAL_PAD_PX + Math.ceil(strokePadPx + emboldenPadPx);
-  // The worst-case shear offset over a line's rows (`buildGlyphQuadArrays`'s
-  // `dx(y) = -skew * (y - baselinePx)`): every row of the raster above the baseline. A font's
+  // The worst-case shear offset over a line's rows, `dx(y) = -skew * (y - baselinePx)`: every row
+  // of the raster above the baseline. A font's
   // descent is shorter than its ascent, so the rows below shear less.
   const shearPadPx = Math.abs(skew) * (layout.baselineOffsetPx + offsetYPx);
   // Whole pixels, as Godot draws a glyph texture texel-aligned: a fractional pad puts each texel
   // between two screen pixels, and the linear filter thins every edge.
   const padXPx = Math.ceil(shearPadPx + strokePadPx + emboldenPadPx);
-  const { startPx, endPx } = drawnExtentPx(layout);
+  const { startPx, endPx } = drawnExtentPx(layout, skew);
   const inkLeftPx = Math.floor(startPx);
   return {
     // The quad sits `originPhasePx.x` left of the run origin, so the content reaches that much further right.
@@ -117,22 +114,25 @@ export function computeCanvasTextCanvasLayout(
 const INK_SLACK_LEFT_PX = 2;
 const INK_SLACK_RIGHT_PX = 1;
 
+/** How far the ink of a glyph reaches left of its pen and right of it, px, its pen box included. */
+interface GlyphReach {
+  leftPx: number;
+  rightPx: number;
+}
+
 /**
- * The span of the ink of the glyphs, their pen boxes, the pen snap and the hinting included. Godot
- * draws each glyph quad whole wherever its side bearing reaches, which a raster of the line box
- * would clip. The run of a fallback face keeps its glyphs at their places on the line
+ * The span of the ink of the glyphs at `skew`, their pen boxes, the pen snap and the hinting
+ * included. Godot draws each glyph quad whole wherever its side bearing reaches, which a raster of
+ * the line box would clip. The run of a fallback face keeps its glyphs at their places on the line
  * (`faceLayouts.ts`), so its raster spans them alone. A layout with no glyph spans its width.
  */
-function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: number } {
+function drawnExtentPx(layout: TextLayoutResult, skew: number): { startPx: number; endPx: number } {
   let startPx = Infinity;
   let endPx = -Infinity;
-  const inkFaces = new Map<FontMetrics, CanvasFontMetrics | null>();
+  const reachOf = glyphReachReader(layout, skew);
   for (const { glyphs } of layout.lines) {
     for (const glyph of glyphs) {
-      const face = glyph.fontMetrics;
-      let inkFace = inkFaces.get(face);
-      if (inkFace === undefined) inkFaces.set(face, (inkFace = drawsMeasuredInk(face) ? face : null));
-      const { leftPx, rightPx } = glyphReachPx(glyph, inkFace, layout.baselineOffsetPx);
+      const { leftPx, rightPx } = reachOf(glyph);
       const originX = glyph.x + (glyph.xOffset ?? 0);
       startPx = Math.min(startPx, originX - leftPx - INK_SLACK_LEFT_PX);
       endPx = Math.max(endPx, originX + rightPx + INK_SLACK_RIGHT_PX);
@@ -141,43 +141,74 @@ function drawnExtentPx(layout: TextLayoutResult): { startPx: number; endPx: numb
   return startPx === Infinity ? { startPx: 0, endPx: layout.widthPx } : { startPx, endPx };
 }
 
-/** Whether `face` draws the ink it measures: `measureText` measures the default instance alone. */
-function drawsMeasuredInk(face: FontMetrics): face is CanvasFontMetrics {
-  return isCanvasFontMetrics(face) && !drawnOpentype(face);
+/**
+ * Reads the reach of each glyph of `layout` from what the paint draws for it, one rule for every
+ * font: the box of its contours, or the browser's ink for a glyph the browser draws as text. A
+ * glyph with neither draws nothing, and spans its pen box.
+ */
+function glyphReachReader(layout: TextLayoutResult, skew: number): (glyph: GlyphPlacement) => GlyphReach {
+  const face = layout.fontMetrics;
+  if (!isCanvasFontMetrics(face)) return (glyph) => textReachPx(glyph, layout.baselineOffsetPx);
+  const contoursOf = perFontSize((fontSizePx) => placementContoursReader(face, fontSizePx, skew));
+  const drawsText = face.cssFontFamily !== undefined;
+  return (glyph) => {
+    const contours = hasOwnGlyph(glyph) ? contoursOf(glyph.fontSizePx)(glyph) : null;
+    if (contours) return contourReachPx(contours, glyph.advance);
+    return drawsText ? textReachPx(glyph, layout.baselineOffsetPx) : { leftPx: 0, rightPx: glyph.advance };
+  };
+}
+
+/** `read`, kept for each font size it has read: a run holds one size, and a RichTextLabel line a few. */
+function perFontSize<T>(read: (fontSizePx: number) => T): (fontSizePx: number) => T {
+  const bySize = new Map<number, T>();
+  return (fontSizePx) => {
+    let value = bySize.get(fontSizePx);
+    if (value === undefined) bySize.set(fontSizePx, (value = read(fontSizePx)));
+    return value;
+  };
+}
+
+/** The reach of the control box of `contours`, which bounds every curve of the outline. */
+function contourReachPx({ points }: GlyphContours, advancePx: number): GlyphReach {
+  let leftPx = 0;
+  let rightPx = advancePx;
+  for (const { x } of points) {
+    leftPx = Math.max(leftPx, -x);
+    rightPx = Math.max(rightPx, x);
+  }
+  return { leftPx, rightPx };
 }
 
 /**
- * How far `glyph`'s ink reaches left of its pen and right of it, px, its pen box included. `inkFace`
- * is its face where that face draws the ink it measures. A glyph with no such ink takes the larger
- * of `lineAscentPx` and its face's own ascent on each side: an ascent bounds the reach of any glyph.
+ * The reach of a glyph the browser draws as text: the ink its face measured, where the face draws
+ * the instance `measureText` measures. Else the larger of `lineAscentPx` and its face's own ascent
+ * on each side: an ascent bounds the reach of any glyph.
  */
-function glyphReachPx(
-  glyph: GlyphPlacement,
-  inkFace: CanvasFontMetrics | null,
-  lineAscentPx: number
-): { leftPx: number; rightPx: number } {
-  const ink = inkFace?.getGlyphInkUnits?.(glyph.char);
+function textReachPx(glyph: GlyphPlacement, lineAscentPx: number): GlyphReach {
+  const face = glyph.fontMetrics;
+  const ink =
+    isCanvasFontMetrics(face) && !drawnOpentype(face) ? face.getGlyphInkUnits?.(glyph.char) : undefined;
   if (!ink) {
-    const reachPx = Math.max(lineAscentPx, getFontAscentPx(glyph.fontMetrics, glyph.fontSizePx));
+    const reachPx = Math.max(lineAscentPx, getFontAscentPx(face, glyph.fontSizePx));
     return { leftPx: reachPx, rightPx: glyph.advance + reachPx };
   }
-  const pxPerUnit = glyph.fontSizePx / glyph.fontMetrics.unitsPerEm;
+  const pxPerUnit = glyph.fontSizePx / face.unitsPerEm;
   return {
     leftPx: Math.max(0, ink.left * pxPerUnit),
     rightPx: Math.max(glyph.advance, ink.right * pxPerUnit),
   };
 }
 
-/** The `GlyphQuadArrays` shape `buildGlyphQuadArrays` produces, always exactly one quad. */
-interface CanvasTextQuadArrays {
+/** The vertex, UV and index buffers of the one quad of a raster. */
+export interface CanvasTextQuadArrays {
   positions: Float32Array;
   uvs: Float32Array;
   indices: Uint32Array;
 }
 
 /**
- * One quad spanning the padded raster, placed so the layout origin is at x = 0 in
- * `buildGlyphQuadArrays`'s convention (Godot px, +Y down, negated to three's Y-up). The quad
+ * One quad spanning the padded raster, placed so the layout origin is at x = 0, in Godot px, +Y
+ * down, negated to three's Y-up. The quad
  * covers the ink of the glyphs (`drawnExtentPx`). It moves back by `originPhasePx`, so its texels
  * land on the item's whole pixels.
  */
@@ -192,7 +223,7 @@ export function buildCanvasTextQuadArrays(
   const top = -canvasLayout.offsetYPx - originPhasePx.y;
   const bottom = top + canvasLayout.canvasHeightPx;
 
-  // Vertex order TL, TR, BL, BR, as in buildGlyphQuadArrays.
+  // Vertex order TL, TR, BL, BR.
   const positions = new Float32Array([left, -top, 0, right, -top, 0, left, -bottom, 0, right, -bottom, 0]);
   // flipY=true: v=1 at the texture's own top row (image-space y=0).
   const uvs = new Float32Array([0, 1, 1, 1, 0, 0, 1, 0]);
@@ -251,13 +282,13 @@ function hasOwnGlyph(gp: GlyphPlacement): boolean {
 }
 
 /**
- * A CPU canvas the size of the raster, set to the font of `metrics`: the CPU rasteriser covers by
- * exact area where the GPU raster thins small glyphs (`textRun.md`). Null where the document has no
- * 2D context.
+ * A CPU canvas the size of the raster, set to the font `cssFontFamily` names: the CPU rasteriser
+ * covers by exact area where the GPU raster thins small glyphs (`textRun.md`). Null where the
+ * document has no 2D context.
  */
 function textContext(
   { canvasWidthPx, canvasHeightPx }: CanvasTextCanvasLayout,
-  metrics: CanvasFontMetrics,
+  cssFontFamily: string,
   fontSizePx: number
 ): CanvasRenderingContext2D | null {
   const canvas = document.createElement('canvas');
@@ -267,7 +298,7 @@ function textContext(
   if (!ctx) return null;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
-  ctx.font = `${fontSizePx}px "${metrics.cssFontFamily}"`;
+  ctx.font = `${fontSizePx}px "${cssFontFamily}"`;
   return ctx;
 }
 
@@ -349,10 +380,12 @@ export function paintSceneFontCanvas(
   const textGlyphs = glyphs.filter((glyph) => !glyph.contours);
   const colour = opaqueByteColour(tint);
   const { canvasWidthPx, canvasHeightPx } = canvasLayout;
-  // Only a paint with a glyph drawn as text needs a canvas: a bitmap lays on the raster alone.
+  const { cssFontFamily } = metrics;
+  // Only a paint with a glyph drawn as text needs a canvas: a bitmap lays on the raster alone. A
+  // face with no family draws no text, as `fillText` paints a host font for an unregistered family.
   let image: ImageData;
-  if (textGlyphs.length > 0) {
-    const ctx = textContext(canvasLayout, metrics, fontSizePx);
+  if (cssFontFamily !== undefined && textGlyphs.length > 0) {
+    const ctx = textContext(canvasLayout, cssFontFamily, fontSizePx);
     if (!ctx) return null;
     paintGlyphTexts(ctx, textGlyphs, `rgb(${colour.join(', ')})`, skew, strokeWidthPx);
     image = ctx.getImageData(0, 0, canvasWidthPx, canvasHeightPx);
@@ -464,9 +497,9 @@ interface CanvasTextMaterialOptions extends Partial<SurfaceBlend> {
   opacity: number;
   /** The linear colour that multiplies the map. Omitted, white: a canvas raster has its tint baked in. A BMFont page does not. */
   color?: THREE.ColorRepresentation;
-  /** `false` by default, like `createMsdfMaterial`. */
+  /** `false` by default. */
   depthTest?: boolean;
-  /** Omitted, it takes `canvasItemFacing()`'s side, like `createMsdfMaterial`. */
+  /** Omitted, it takes `canvasItemFacing()`'s side. */
   side?: THREE.Side;
   clippingPlanes?: readonly THREE.Plane[];
   /** The lit Control's blend state and light-list sampling, or omitted for an unlit run. `injection` wins: no 2D light reaches a Label3D blend run. */

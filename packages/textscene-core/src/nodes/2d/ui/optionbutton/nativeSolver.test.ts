@@ -1,8 +1,7 @@
 /**
  * Tests `optionbutton/nativeSolver.ts` against Godot 4.6.3 (`scene/gui/option_button.cpp`,
  * `scene/theme/default_theme.cpp:212-251`) with numbers derived by hand from OpenSans_SemiBold's `hmtx`
- * advances, never from the code: font height 23, 'A' 10.578125. `textOffset` is the box top-left, and
- * `<TextRun>` reconciles the MSDF line anchor (`TextRun.test.tsx`).
+ * advances, never from the code: font height 23, 'A' 10.578125. `textOffset` is the box top-left.
  */
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';

@@ -3,7 +3,7 @@
  * ports and slot boxes, and resizer. Structure and tint only: the golden images
  * own the pixels.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -20,6 +20,12 @@ import {
   UNSET_VIEWPORT_TEXTURE,
   UNSET_VIEWPORT_TEXTURE_REF,
 } from '../../../../resources/textures/viewporttexture/unsetViewportTexture.testkit';
+import { bundledRunOf, bundledRunMeshes } from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 200, h: 100 };
 
@@ -44,16 +50,8 @@ function iconMeshes(scene: Rendered['scene']) {
     .map((m) => m.instance as THREE.Mesh)
     .filter(
       (m) =>
-        (m.geometry as THREE.BufferGeometry).attributes.color === undefined &&
-        (m.material as THREE.ShaderMaterial).uniforms?.uColor === undefined
+        (m.geometry as THREE.BufferGeometry).attributes.color === undefined && bundledRunOf(m) === undefined
     );
-}
-
-function textMeshes(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
 describe('<GraphNode> (isolated painter contract)', () => {
@@ -62,7 +60,7 @@ describe('<GraphNode> (isolated painter contract)', () => {
       <GraphNode {...painterEnv()} solveNode={graphNode()} rect={RECT} renderOrder={0} />
     );
     expect(chromeMeshes(renderer.scene)).toHaveLength(2);
-    expect(textMeshes(renderer.scene)).toHaveLength(0);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
     expect(iconMeshes(renderer.scene)).toHaveLength(0);
   });
 
@@ -70,7 +68,7 @@ describe('<GraphNode> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <GraphNode {...painterEnv()} solveNode={graphNode({ title: 'Hello' })} rect={RECT} renderOrder={0} />
     );
-    expect(textMeshes(renderer.scene).length).toBeGreaterThan(0);
+    expect(bundledRunMeshes(renderer.scene).length).toBeGreaterThan(0);
   });
 
   it('draws no resizer icon when resizable is unset', async () => {

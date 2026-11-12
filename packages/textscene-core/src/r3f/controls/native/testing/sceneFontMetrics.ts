@@ -1,7 +1,7 @@
 /**
  * A deterministic `'canvas'`-kind `FontMetrics` (`text/runtimeFontMetrics.ts`) for
  * a painter's scene-font path. Under vitest `peekSceneFontMetrics` returns the
- * atlas font, so a test stubs it: `vi.spyOn(sceneFontLoader,
+ * bundled face, so a test stubs it: `vi.spyOn(sceneFontLoader,
  * 'peekSceneFontMetrics').mockReturnValue(TEST_SCENE_FONT_METRICS)`.
  */
 // Round scalars, so each pixel value is a hand check: at 16px the ascent is
