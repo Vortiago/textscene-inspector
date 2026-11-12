@@ -5,7 +5,7 @@
  */
 
 import { useLayoutEffect, useMemo } from 'react';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { geometryDrawsPoints } from '../../resources/meshes/godotSurface';
 import { perObject } from '../../utils/perObject';
 import { boxlessUserData } from '../bounds';
@@ -99,35 +99,20 @@ function OwnInstancedDraw({
   const { geometry, bounds, userData, particles } = placed;
   const startingMaterial = useOneSurfaceStartingMaterial(sources.length);
   const mounted = useMemo(() => mountsAtInstances(placed), [placed]);
-  const slots = (
-    <SurfaceMaterialSlots sources={sources} points={pointPlacementOf(geometry)} particles={particles} />
-  );
-  if (geometryDrawsPoints(geometry)) {
-    return (
-      <points
-        ref={mounted}
-        args={[geometry, startingMaterial]}
-        frustumCulled={bounds !== null}
-        // `THREE.Points` tests the source positions alone, so each instance is picked by itself.
-        raycast={raycastInstancedPoints}
-        {...drawHookProps(shadow)}
-        userData={userData}
-      >
-        {slots}
-      </points>
-    );
-  }
+  const drawsPoints = geometryDrawsPoints(geometry);
+  const Drawn = instancedTag(drawsPoints);
   return (
-    <instancedMesh
+    <Drawn
       ref={mounted}
       args={[geometry, startingMaterial, NO_OWN_MATRICES]}
-      count={geometry.instanceCount}
       frustumCulled={bounds !== null}
+      // `THREE.Points` tests the source positions alone, so each instance is picked by itself.
+      raycast={drawsPoints ? raycastInstancedPoints : RAYCAST_OF_INSTANCED_MESH}
       {...drawHookProps(shadow)}
       userData={userData}
     >
-      {slots}
-    </instancedMesh>
+      <SurfaceMaterialSlots sources={sources} points={pointPlacementOf(geometry)} particles={particles} />
+    </Drawn>
   );
 }
 
@@ -139,49 +124,40 @@ function ExtraInstancedDraw({ spec, placed }: { spec: ChainDrawSpec; placed: Par
   const { geometry, bounds, userData, particles } = placed;
   const startingMaterial = useOneSurfaceStartingMaterial(spec.surfaceCount);
   const mounted = useMemo(() => mountsAtInstances(placed, orderByPass), [placed]);
-  const { onBeforeRender, onAfterRender } = spec.shadow;
-  const slot = (
-    <SurfaceMaterialSlot
-      source={spec.source}
-      attach={spec.attach}
-      points={pointPlacementOf(geometry)}
-      particles={particles}
-    />
-  );
-  if (spec.drawsPoints) {
-    return (
-      <points
-        ref={mounted}
-        args={[geometry, startingMaterial]}
-        frustumCulled={bounds !== null}
-        {...extraDrawProps(spec.ordinal)}
-        onBeforeRender={onBeforeRender}
-        onAfterRender={onAfterRender}
-        userData={userData}
-      >
-        {slot}
-      </points>
-    );
-  }
+  const Drawn = instancedTag(spec.drawsPoints);
   return (
-    <instancedMesh
+    <Drawn
       ref={mounted}
       args={[geometry, startingMaterial, NO_OWN_MATRICES]}
-      count={geometry.instanceCount}
       frustumCulled={bounds !== null}
       {...extraDrawProps(spec.ordinal)}
-      onBeforeRender={onBeforeRender}
-      onAfterRender={onAfterRender}
+      onBeforeRender={spec.shadow.onBeforeRender}
+      onAfterRender={spec.shadow.onAfterRender}
       userData={userData}
     >
-      {slot}
-    </instancedMesh>
+      <SurfaceMaterialSlot
+        source={spec.source}
+        attach={spec.attach}
+        points={pointPlacementOf(geometry)}
+        particles={particles}
+      />
+    </Drawn>
   );
 }
 
 /**
- * The size of the matrix buffer an InstancedMesh builds for itself. The draw reads the geometry's
- * matrices, so its own buffer holds nothing, and a new geometry rebuilds the draw for a new count.
+ * The element of one instanced draw: a part that draws points instances a `THREE.Points`. Typed as
+ * the InstancedMesh alone, since a `THREE.Points` takes the same arguments and ignores the count.
+ */
+function instancedTag(drawsPoints: boolean): 'instancedMesh' {
+  return (drawsPoints ? 'points' : 'instancedMesh') as 'instancedMesh';
+}
+
+const RAYCAST_OF_INSTANCED_MESH = THREE.InstancedMesh.prototype.raycast;
+
+/**
+ * The size of the matrix buffer an InstancedMesh builds for itself, which a `THREE.Points` ignores.
+ * The draw reads the geometry's matrices, so its own buffer holds nothing.
  */
 const NO_OWN_MATRICES = 0;
 
@@ -195,7 +171,7 @@ const ownMatricesOf = perObject((mesh: THREE.InstancedMesh) => mesh.instanceMatr
 
 /**
  * The `ref` of one draw of a part. The draw takes the bounds of every instance, which typed props
- * do not hold, and an InstancedMesh reads the geometry's instance matrices. The mesh gets its own
+ * do not hold, and an InstancedMesh reads the geometry's instance matrices and count. The mesh gets its own
  * matrices back before r3f disposes it: three frees the matrices of a disposed InstancedMesh
  * (r187 `WebGLObjects.js:78`), which the part's other draws read.
  */
@@ -209,6 +185,7 @@ function mountsAtInstances(
     if (bounds) Object.assign(object, bounds);
     if (!('instanceMatrix' in object)) return undefined;
     const own = ownMatricesOf(object);
+    object.count = geometry.instanceCount;
     object.instanceMatrix = instanceMatrices(geometry);
     return () => {
       object.instanceMatrix = own;
