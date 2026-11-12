@@ -649,6 +649,10 @@ _Avoid_: "collision mesh".
 An optional wireframe of a CollisionShape3D's collision-shape resource in the 3D viewport, off by default and driven by `showCollisions`.
 _Avoid_: "debug shape".
 
+**Shape drawing** (`resources/shapes/shape2d/drawing.ts`):
+The commands that a Shape2D class's `draw()` puts on the canvas item, in draw order: fills, one pixel lines and strokes. Each colour is a role against the colour the CollisionShape2D draws the shape in, so the drawing holds no colour. The 2D collision gizmo draws it while `showCollisions` is on.
+_Avoid_: "outline", because a polygon shape draws a fill as well.
+
 **Node icon** (`r3f/nodeIcon/`):
 Godot's billboard icon at the origin of a node, at a fixed size on screen. A node type declares it through `editorIcon` in its registration. It follows the Gizmos toggle and is faint while the node is unselected (ADR-0056).
 _Avoid_: "sprite", "label".

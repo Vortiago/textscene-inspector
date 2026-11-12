@@ -195,12 +195,11 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   CollisionShape2D: {
     linterOnly: [
-      // Physics-behaviour properties with no visual counterpart.
-      'one_way_collision',
+      // The margin shifts the one-way surface in physics and draws nothing.
       'one_way_collision_margin',
     ],
     reason:
-      'CollisionShape2D one_way settings affect runtime physics only; the renderer reads shape/disabled/debug_color for visual display.',
+      'The one-way margin affects runtime physics only. The renderer reads shape, disabled, debug_color and one_way_collision for the outline and the arrow.',
   },
 
   Joint2D: {

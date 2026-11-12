@@ -251,6 +251,15 @@ export function colorHue({ r, g, b }: ColorChannels): number {
 }
 
 /**
+ * `Color::get_v` (`core/math/color.cpp:176-180`): the brightest channel.
+ *
+ * @canonical A colour's hue, saturation and conversion from HSV
+ */
+export function colorValue({ r, g, b }: ColorChannels): number {
+  return Math.max(r, g, b);
+}
+
+/**
  * `Color::get_s` (`core/math/color.cpp:165-174`): 0 for black, where the brightest channel is 0.
  *
  * @canonical A colour's hue, saturation and conversion from HSV

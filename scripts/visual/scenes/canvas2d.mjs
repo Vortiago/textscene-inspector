@@ -647,4 +647,8 @@ export const CANVAS_2D_SCENES = [
   // Two Add items under one textured PointLight2D, over an opaque backdrop. Godot probes: (450,230)
   // rgb(255,102,69) the first item alone, (520,300) rgb(255,255,115) both, (590,370) rgb(98,151,96) the second.
   { name: 'canvas-item-additive-lit', file: 'unit-canvas-item-additive-lit.tscn', mode: '2d' },
+  // Visible Collision Shapes in 2D draws every Shape2D class as Godot's `draw()` does: a polygon shape
+  // filled in its debug colour with an opaque outline, a segment, concave soup, world boundary and
+  // separation ray as strokes. A disabled shape is grey at half the alpha, a one-way shape adds an arrow.
+  { name: 'collision-shapes-2d', file: 'unit-collision-shapes-2d.tscn', collisions: true },
 ];
