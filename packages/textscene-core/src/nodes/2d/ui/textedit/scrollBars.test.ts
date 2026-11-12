@@ -116,3 +116,13 @@ describe('textEditScrollBars: a right-to-left layout', () => {
     expect(rtl.horizontal.grabberRect).toEqual(ltr.horizontal.grabberRect);
   });
 });
+
+describe('textEditScrollBars: the control height', () => {
+  it('is the height inside the style margins while no horizontal bar shows', () => {
+    expect(bars().controlHeightPx).toBe(76);
+  });
+
+  it('loses the horizontal bar height (:8658-8664)', () => {
+    expect(bars({ widestRowPx: 400 }).controlHeightPx).toBe(68);
+  });
+});

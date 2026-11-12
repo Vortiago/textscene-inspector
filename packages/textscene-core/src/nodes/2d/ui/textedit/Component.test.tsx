@@ -194,6 +194,36 @@ describe('<TextEdit> — highlight_current_line', () => {
   });
 });
 
+describe('<TextEdit> — minimap_draw', () => {
+  const RECT_240X84: Rect2 = { x: 0, y: 0, w: 240, h: 84 };
+
+  function minimapQuads(properties: Partial<TextEditProperties>) {
+    return ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={solveNode(properties)} rect={RECT_240X84} renderOrder={0} />
+    ).then((renderer) => findPlainQuads(renderer.scene));
+  }
+
+  it('draws no quad without minimap_draw', async () => {
+    expect(await minimapQuads({ text: 'one\ntwo' })).toHaveLength(0);
+  });
+
+  it('draws the view rectangle and one bar per word, 2 px high, at the strip', async () => {
+    const quads = await minimapQuads({ text: 'one\ntwo', minimapDraw: true });
+    const sizes = quads.map((quad) => {
+      const { width, height } = (quad.geometry as THREE.PlaneGeometry).parameters as {
+        width: number;
+        height: number;
+      };
+      return [width, height];
+    });
+    expect(sizes).toEqual([
+      [80, 9],
+      [3, 2],
+      [3, 2],
+    ]);
+  });
+});
+
 describe('<TextEdit> — draw_tabs / draw_spaces', () => {
   it('draws one icon quad per tab character when draw_tabs is set', async () => {
     const renderer = await ReactThreeTestRenderer.create(
