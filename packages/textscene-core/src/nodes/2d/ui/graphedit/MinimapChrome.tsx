@@ -43,6 +43,9 @@ import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemStat
 /** `draw_polyline_colors(points, colors, 0.5, lines_antialiased)` (`graph_edit.cpp:1611`). */
 const MINIMAP_LINE_WIDTH = 0.5;
 
+/** `StyleBoxFlat`'s unset border colour (`style_box_flat.h:40`), which every minimap box keeps. */
+const MINIMAP_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
+
 /** The radius of a minimap `node` box before the theme scale (`default_theme.cpp:1347`). */
 const MINIMAP_NODE_CORNER_RADIUS = 2;
 
@@ -201,7 +204,7 @@ export function GraphEditMinimapChrome({
         theme.cornerRadius,
         flatCornerDetail(DEFAULT_CORNER_RADIUS, scale),
         0,
-        { r: 0.8, g: 0.8, b: 0.8, a: 1 }
+        MINIMAP_BORDER_COLOR
       ),
     [theme.cornerRadius, scale]
   );
@@ -218,7 +221,7 @@ export function GraphEditMinimapChrome({
     [scale]
   );
   // `default_theme.cpp:1347`: make_flat_stylebox(Color(1, 1, 1), 0, 0, 0, 0, 2). Each element replaces the bg.
-  const nodeCornerRadius = Math.round(2 * scale);
+  const nodeCornerRadius = Math.round(MINIMAP_NODE_CORNER_RADIUS * scale);
   const nodeCornerDetail = flatCornerDetail(MINIMAP_NODE_CORNER_RADIUS, scale);
 
   const resizerTexture = useNodeIcon(icons.resizer, GRAPH_EDIT_MINIMAP_RESIZER_ICON);

@@ -123,11 +123,11 @@ export function itemListSeparation(theme: Pick<NativeTheme, 'separation'>): numb
   return theme.separation;
 }
 
+/** The theme fields the default boxes read. */
+type ItemListTheme = Pick<NativeTheme, 'contentMargin' | 'cornerRadius' | 'scale'>;
+
 /** `make_flat_stylebox(color)` (`default_theme.cpp:944,964`): margin 4 and corner radius 3, both scaled. */
-function itemListFlatStyleBox(
-  theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius' | 'scale'>,
-  bgColor: Rgba
-): StyleBoxFlatData {
+function itemListFlatStyleBox(theme: ItemListTheme, bgColor: Rgba): StyleBoxFlatData {
   const m = theme.contentMargin;
   return flatStyleBox(bgColor, {
     contentMargin: { left: m, top: m, right: m, bottom: m },
@@ -140,7 +140,7 @@ function itemListFlatStyleBox(
  * The default `panel` and `selected` boxes of one theme. `StyleBoxQuad` and the scrollbar memo key on box
  * identity, so a repaint must hand them the box it built before.
  */
-const defaultBoxes = perObject((theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius' | 'scale'>) => ({
+const defaultBoxes = perObject((theme: ItemListTheme) => ({
   panel: itemListFlatStyleBox(theme, STYLE_FILL.normal),
   selected: itemListFlatStyleBox(theme, STYLE_FILL.selected),
 }));
@@ -148,7 +148,7 @@ const defaultBoxes = perObject((theme: Pick<NativeTheme, 'contentMargin' | 'corn
 /** This node's own `theme_override_styles/panel` if authored, else the default box. */
 export function pickItemListPanelStyleBox(
   overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius' | 'scale'>
+  theme: ItemListTheme
 ): StyleBoxFlatData {
   return overrides.panel ?? defaultBoxes(theme).panel;
 }
@@ -156,7 +156,7 @@ export function pickItemListPanelStyleBox(
 /** The `selected` box (`default_theme.cpp:964`). `selected_focus` is the same box in the default theme. */
 export function pickItemListSelectedStyleBox(
   styleBoxes: Readonly<Record<string, StyleBoxFlatData>>,
-  theme: Pick<NativeTheme, 'contentMargin' | 'cornerRadius' | 'scale'>
+  theme: ItemListTheme
 ): StyleBoxFlatData {
   return styleBoxes.selected ?? defaultBoxes(theme).selected;
 }
