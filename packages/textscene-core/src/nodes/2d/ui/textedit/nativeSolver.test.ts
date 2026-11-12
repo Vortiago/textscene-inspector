@@ -27,6 +27,7 @@ import {
   textEditDrawnLines,
   textEditDrawnGlyphs,
   textEditRowColorRuns,
+  textEditCapSpanAlpha,
 } from './nativeSolver';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
@@ -562,5 +563,17 @@ describe('textEditRowColorRuns — a decomposed character (text_edit.cpp:1674)',
       ['Ä', red],
       ['b', blue],
     ]);
+  });
+});
+
+describe('textEditCapSpanAlpha (text_edit.cpp:1666-1668)', () => {
+  const span = (a: number) => ({ startIndex: 0, endIndex: 1, color: { r: 1, g: 0, b: 0, a } });
+
+  it('lowers an alpha above the cap to it', () => {
+    expect(textEditCapSpanAlpha([span(1)], 0.5)[0]!.color.a).toBe(0.5);
+  });
+
+  it('keeps an alpha already below the cap', () => {
+    expect(textEditCapSpanAlpha([span(0.25)], 0.5)[0]!.color.a).toBe(0.25);
   });
 });
