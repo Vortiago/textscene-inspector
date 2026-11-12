@@ -11,7 +11,7 @@
 `GenericNodeFallback` (`r3f/internal/generic-node-fallback/Component.tsx`) drew a
 semi-transparent grey cube **plus** a floating `Type: Name` text label for every node type with
 no registered render component. The unregistered 3D types were `CharacterBody3D`, `RigidBody3D`,
-`Skeleton3D`, `Path3D`, `PathFollow3D` and `GPUParticles3D`. None of them draw anything in this
+`Skeleton3D`, `Path3D` and `PathFollow3D`. None of them draw anything in this
 previewer, so a scene with several of them filled with grey boxes and overlapping labels. ADR-0005
 declared `RigidBody3D`/`CharacterBody3D` transform-only, but only `StaticBody3D`/`Area3D` were
 registered that way. `Label3D` rasterises text onto a plane in the 3D scene, which adds to the noise.
@@ -31,9 +31,8 @@ accident of a missing registration:
    (see the render-intent split amendment). `Path3D` and `PathFollow3D` have gizmos
    (ADR-0056).
 3. **Not-implemented types** also render as invisible transform-only groups: children still show, and
-   the node itself draws nothing. `GPUParticles3D` is one. Godot rasterises a particle cloud at runtime
-   and the previewer draws nothing, so it registers `renderIntent: 'pending'`, never
-   `'transform-only'`. The `SceneTreeViewer`, which lists every node with its type, is where an
+   the node itself draws nothing. Where Godot draws something at runtime that the previewer does not
+   draw yet, the type registers `renderIntent: 'pending'`, never `'transform-only'`. The `SceneTreeViewer`, which lists every node with its type, is where an
    unsupported type is discoverable. The viewport stays clean.
 4. **In-viewport text** (`Label3D` and any node-drawn text) is gated behind a `showLabels` flag on
    `ViewportModeContext`, surfaced in `ViewportToolbar` next to `showCollisions` (ADR-0006). The flag
@@ -81,10 +80,9 @@ omission.
 > status `linter-only`). `renderIntent: 'pending'` means not-implemented (sheet status
 > `unimplemented`), and the base component still mounts so the node keeps its workspace. The
 > dispatcher applies a Node3D's `visible` to every type alike. No registration at all is also not-implemented. All three render as an invisible
-> transform-only group, and `GenericNodeFallback` applies the Node3D transform. `GPUParticles3D` is in
-> the second group: Godot rasterises a particle cloud at runtime (`unit-gpuparticles3d-godot.png`)
-> and the previewer draws nothing, so it is a gap, not a node that draws nothing by nature. The
-> physics bodies and `Skeleton3D` stay in the first, as do `Path3D` and `PathFollow3D` at runtime.
+> transform-only group, and `GenericNodeFallback` applies the Node3D transform. A type that Godot
+> draws at runtime and the previewer does not is in the second group: it is a gap, not a node that
+> draws nothing by nature. The physics bodies and `Skeleton3D` stay in the first, as do `Path3D` and `PathFollow3D` at runtime.
 > Their runtime output is empty, and what an editor draws for them is the business of ADR-0056.
 
 > **Amendment (parent space):** a transform-only group positions its children only where Godot

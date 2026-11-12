@@ -12,4 +12,5 @@ registerResourceSlice({
   busType: 'resource',
 });
 
-export { PARTICLE_PROCESS_MATERIAL } from './decode';
+export { PARTICLE_PROCESS_MATERIAL, type ProcessMaterial } from './kind';
+export type { ProcessSimulation, ParamRange } from './simulation';

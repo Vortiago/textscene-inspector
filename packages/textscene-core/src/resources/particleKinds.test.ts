@@ -6,7 +6,7 @@
 import { describe, expect, it } from 'vitest';
 import { CURVE } from './curves/curve/decode';
 import { GRADIENT } from './textures/gradienttexture2d/decode';
-import { PARTICLE_PROCESS_MATERIAL } from './materials/particleprocessmaterial/decode';
+import { PARTICLE_PROCESS_MATERIAL } from './materials/particleprocessmaterial/kind';
 import { staticSnapshot } from './reading/staticSnapshot.testkit';
 import { nodeReference } from './reading/scopedReference';
 import { sceneTables } from './reading/reading.testkit';

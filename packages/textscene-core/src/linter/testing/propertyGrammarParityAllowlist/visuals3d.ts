@@ -131,37 +131,23 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   GPUParticles3D: {
     renderGap: [
-      'amount',
-      'amount_ratio',
       'collision_base_size',
       'draw_order',
       'draw_pass_1',
       'draw_pass_2',
       'draw_pass_3',
       'draw_pass_4',
-      'draw_passes',
       'draw_skin',
-      'emitting',
-      'explosiveness',
-      'fixed_fps',
-      'fract_delta',
       'interp_to_end',
       'interpolate',
-      'lifetime',
-      'local_coords',
-      'one_shot',
-      'preprocess',
-      'randomness',
-      'seed',
       'speed_scale',
       'sub_emitter',
       'trail_enabled',
       'trail_lifetime',
       'transform_align',
-      'use_fixed_seed',
     ],
     reason:
-      'GPUParticles3D is not simulated, so nothing reads the draw-pass and trail keys. Its parser reads visibility_aabb, its scene-cull box, and process_material, which its emission gizmo resolves.',
+      'GPUParticles3D draws one simulated pose, so the keys of the draw passes, the trail and the sub-emitter are not read. Its parser reads the emitter keys, visibility_aabb and process_material. speed_scale is not read: the settle of the engine runs at a speed scale of 1 (particles_storage.cpp:1555-1563).',
   },
 
   // Lights: the shared validators and parseBaseLight* helpers are walked through

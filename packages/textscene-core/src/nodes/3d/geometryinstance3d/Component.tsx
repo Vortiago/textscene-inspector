@@ -4,13 +4,11 @@
  * Each type gives the box its Godot base gives the instance.
  */
 
-import { useMemo, useRef, type ComponentType } from 'react';
+import { useMemo, useRef } from 'react';
 import type * as THREE from 'three';
 import { Node3D } from '../../base/node3d/Component';
 import type { NodeComponent, NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { boxPlacement } from '../../../r3f/visibilityRange/placements';
-import type { GizmoDrawnFor } from '../../../r3f/hooks/useGizmoState';
-import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
 import { invisibleBase } from '../../../r3f/invisibleBase';
 import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import type { TscnNode } from '../../../parser/types';
@@ -33,7 +31,7 @@ export type FrameAabbOf = (ownAabb: Aabb | null) => Aabb | null;
 const sameAsOwn: FrameAabbOf = (ownAabb) => ownAabb;
 
 /** `get_aabb()` is `AABB()`: a point at the node origin, whatever box the instance culls by. */
-export const emptyFrameAabb: FrameAabbOf = () => EMPTY_AABB;
+const emptyFrameAabb: FrameAabbOf = () => EMPTY_AABB;
 
 /** The component an undrawn GeometryInstance3D type registers, culled by the box `useOwnAabb` gives. */
 export function undrawnGeometryInstance(
@@ -54,37 +52,6 @@ export function undrawnGeometryInstance(
     );
   }
   return invisibleBase(UndrawnGeometryInstance);
-}
-
-/** What `undrawnGeometryInstanceWithGizmos` mounts: the type's gizmos, inside a `PluginGizmo`. */
-export interface GeometryInstanceGizmosProps<Properties> {
-  /** The node's properties, which are `Properties` for the type that registers the gizmos. */
-  properties: Properties;
-}
-
-/**
- * An undrawn GeometryInstance3D that carries its editor gizmos (ADR-0056). `drawnFor` says which
- * nodes Godot draws the gizmo plugin for. `Gizmos` is mounted for those nodes, and mounts the parts
- * that only a selected gizmo has in a selected-only `PluginGizmo` of their own.
- */
-export function undrawnGeometryInstanceWithGizmos<Properties>(
-  useOwnAabb: UseOwnAabb,
-  frameAabbOf: FrameAabbOf,
-  Gizmos: ComponentType<GeometryInstanceGizmosProps<Properties>>,
-  drawnFor: GizmoDrawnFor
-): NodeComponent {
-  const Undrawn = undrawnGeometryInstance(useOwnAabb, frameAabbOf);
-  function UndrawnGeometryInstanceWithGizmos({ node, children }: NodeComponentProps) {
-    return (
-      <Undrawn node={node}>
-        <PluginGizmo drawnFor={drawnFor}>
-          <Gizmos properties={node.properties as Properties} />
-        </PluginGizmo>
-        {children}
-      </Undrawn>
-    );
-  }
-  return invisibleBase(UndrawnGeometryInstanceWithGizmos);
 }
 
 /**
