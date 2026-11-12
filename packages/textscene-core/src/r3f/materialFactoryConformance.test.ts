@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
 import { repoRoot } from '../parser/testing/parserKit';
 import { ShadowCastingSetting } from '../godot/rendering/rendering';
-import { overlayDrawProps } from './materials/materialOverlay';
+import { extraDrawProps } from './materials/extraDraw';
 import { drawHookProps, shadowCastingEffects } from './shadowCasting';
 import { decomposeForR3F, node3dGroupSpread } from './nodeTransform';
 import { parseTransform3D } from '../utils/transform';
@@ -93,7 +93,7 @@ const SPREAD = /\{\.\.\./g;
 const SHEARED_BASIS = parseTransform3D('Transform3D(1, 0, 0, 0.6, 1, 0, 0, 0, 1, 0, 0, 0)');
 const SLOT_FREE_PROP_HELPERS: Readonly<Record<string, object>> = {
   drawHookProps: drawHookProps(shadowCastingEffects(ShadowCastingSetting.ON)),
-  overlayDrawProps: overlayDrawProps(shadowCastingEffects(ShadowCastingSetting.ON)),
+  extraDrawProps: extraDrawProps(1),
   node3dGroupSpread: node3dGroupSpread(decomposeForR3F(SHEARED_BASIS)),
 };
 const SLOT_FREE_SPREAD = new RegExp(
@@ -537,7 +537,7 @@ describe('Material factory conformance', () => {
     // One element, one offence, however many shapes it carries.
     expect(mounts('  <primitive object={m} {...rest} attach={a} />')).toEqual(['1:spread']);
     // A named prop helper's return is proven slot-free below, so its spread is not an offence.
-    expect(mounts('  <mesh {...drawHookProps(shadow)} {...overlayDrawProps(shadow)} />')).toEqual([]);
+    expect(mounts('  <mesh {...drawHookProps(shadow)} {...extraDrawProps(ordinal)} />')).toEqual([]);
     // Another spread beside it still names nothing.
     expect(mounts('  <mesh {...drawHookProps(shadow)} {...rest} />')).toEqual(['1:spread']);
     // A component of ours takes its props in its own body, which is scanned there.

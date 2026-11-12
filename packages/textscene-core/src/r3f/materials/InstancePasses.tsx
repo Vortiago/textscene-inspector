@@ -8,13 +8,10 @@
 import { useEffect, useLayoutEffect, useMemo, type ReactNode, type RefObject } from 'react';
 import type * as THREE from 'three';
 import { useInstanceDraw } from '../visibilityRange/geometryInstance';
-import { visualLayersUserData } from '../visualLayers';
 import type { MaterialSource } from './materialSource';
-import { overlayDrawProps } from './materialOverlay';
-import { NOTHING_DRAWN, NextPassChain, NextPassLink, drawnElementOf, useDrawnGeometry } from './nextPass';
-import { ExtraDrawSiteContext, useExtraDrawRef } from './extraDraw';
-import { nextPassRenderOrder, orderByPass } from './passOrder';
-import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
+import { NextPassChain } from './nextPass';
+import { ExtraDrawSiteContext } from './extraDraw';
+import { orderByPass } from './passOrder';
 import { SurfaceMaterialSlots, overriddenSources } from './SurfaceMaterialSlots';
 
 /** The draw a leaf mounts the passes in, which every extra draw copies. */
@@ -95,80 +92,9 @@ export function InstancePasses(props: InstancePassesProps) {
         skeleton={skeleton}
         godotLayers={layers}
         shadow={shadow}
-        overlay={
-          overlay
-            ? (ordinal) => (
-                <OverlayDraw
-                  meshRef={meshRef}
-                  drawsPoints={drawsPoints}
-                  skeleton={skeleton}
-                  overlayGeometry={overlayGeometry}
-                  source={overlay}
-                  ordinal={ordinal}
-                />
-              )
-            : undefined
-        }
+        overlay={overlay}
+        overlayGeometry={overlayGeometry}
       />
     </ExtraDrawSiteContext.Provider>
-  );
-}
-
-/**
- * `material_overlay`'s draw: the leaf's geometry a second time, with the overlay material. A
- * separate object, not a material array entry: Godot's overlay covers every surface
- * (`_geometry_instance_add_surface` runs per surface), and one material over a grouped geometry
- * draws the same pixels. Its own `next_pass` chain follows it (`:4230-4239`).
- */
-function OverlayDraw({
-  meshRef,
-  drawsPoints,
-  skeleton,
-  overlayGeometry,
-  source,
-  ordinal,
-}: Required<Pick<BaseDraw, 'meshRef' | 'drawsPoints'>> &
-  Pick<BaseDraw, 'skeleton' | 'overlayGeometry'> & {
-    source: MaterialSource;
-    /** One past the surface chains. */
-    ordinal: number;
-  }) {
-  const { shadow, layers } = useInstanceDraw();
-  // Read back off the base draw, so the two share one geometry whichever leaf built it, unless the
-  // leaf hands the overlay its own.
-  const baseGeometry = useDrawnGeometry(meshRef);
-  const geometry = overlayGeometry ?? baseGeometry;
-  const drawRef = useExtraDrawRef();
-  if (!geometry) return null;
-  const { Drawn, skin } = drawnElementOf(drawsPoints, skeleton);
-  return (
-    <>
-      <Drawn
-        {...skin}
-        ref={drawRef}
-        geometry={geometry}
-        // The overlay casts nothing of its own, so only the colour pair of the base's hooks mounts.
-        {...overlayDrawProps(shadow)}
-        renderOrder={nextPassRenderOrder(ordinal)}
-        receiveShadow
-        userData={visualLayersUserData(layers)}
-      >
-        <SurfaceMaterialSlot source={source} points={drawsPoints ? 'mesh' : undefined} />
-      </Drawn>
-      <NextPassLink
-        source={source}
-        ordinal={ordinal}
-        drawsSelf={false}
-        // The overlay drew at this order. Its own key lands in the set on recursion.
-        visited={NOTHING_DRAWN}
-        geometry={geometry}
-        attach="material"
-        surfaceCount={1}
-        drawsPoints={drawsPoints}
-        skeleton={skeleton}
-        godotLayers={layers}
-        shadow={shadow}
-      />
-    </>
   );
 }

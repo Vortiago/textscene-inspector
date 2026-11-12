@@ -7,7 +7,8 @@
 import { createContext, useCallback, useContext } from 'react';
 import type * as THREE from 'three';
 import { drawAtNodePose, type PosedLeaf } from './extraDrawPose';
-import { orderByPass } from './passOrder';
+import { NO_RAYCAST } from './noRaycast';
+import { nextPassRenderOrder, orderByPass } from './passOrder';
 
 /** What a leaf's extra draws take from the surface draw they cover. */
 export interface ExtraDrawSite {
@@ -32,4 +33,15 @@ export function useExtraDrawRef(): (object: THREE.Object3D | null) => void | (()
     },
     [nodePose, laterSurfaces]
   );
+}
+
+/**
+ * What every extra draw sets on its object, a React element and a cloned object alike: its place
+ * in the instance's draw order, no picking, since the surface's own draw is the node's pickable
+ * body, and shadows received as the surface receives them.
+ *
+ * @canonical The object settings of an extra draw
+ */
+export function extraDrawProps(ordinal: number) {
+  return { renderOrder: nextPassRenderOrder(ordinal), raycast: NO_RAYCAST, receiveShadow: true };
 }

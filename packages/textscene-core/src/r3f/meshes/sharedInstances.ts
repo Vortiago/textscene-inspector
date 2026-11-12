@@ -45,17 +45,6 @@ function share(geometry: THREE.BufferGeometry, source: THREE.BufferGeometry): vo
   geometry.setIndex(source.index);
 }
 
-/** `source` at each of `matrices`. */
-export function sharedInstancesAt(
-  source: THREE.BufferGeometry,
-  matrices: readonly THREE.Matrix4[]
-): THREE.InstancedBufferGeometry {
-  const geometry = sharedInstances(source, matrices.length);
-  const attribute = instanceMatrices(geometry);
-  matrices.forEach((matrix, place) => writeInstanceMatrix(attribute, place, matrix));
-  return geometry;
-}
-
 /** Writes `matrix` as instance `place`'s. The caller flags the attribute for upload once all are written. */
 export function writeInstanceMatrix(
   matrices: THREE.InstancedBufferAttribute,
