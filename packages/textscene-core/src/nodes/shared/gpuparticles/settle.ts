@@ -49,10 +49,10 @@ import {
 import { EmissionShape } from '../../../godot/scene/particles3d';
 import { birthParticle, type BirthContext } from './birth';
 import type { GpuEmitter, GpuMaterial } from './emitter';
-import { advanceClock, restartOf, startClock } from './frames';
+import { advanceClock, restartDelta, startClock } from './frames';
 import type { Float3 } from './float3';
 import { inactiveParticle, type EmissionFrame, type GpuParticle } from './particle';
-import { stepParticle, type StepContext } from './step';
+import { stepContextOf, stepParticle } from './step';
 
 export interface GpuSettleInput {
   emitter: GpuEmitter;
@@ -86,7 +86,10 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
   const frame = emissionFrame(emitter.localCoords ? identityTransform3D() : emissionTransform);
   const randomSeed = emitter.useFixedSeed ? emitter.seed : DEFAULT_PREVIEW_SEED;
   const clock = startClock(emitter);
-  const particles = Array.from({ length: emitter.amount }, inactiveParticle);
+  if (drawsNothing(material)) return emptyPose(clock.phase);
+  const deltas = settleFrameDeltas(seconds, settleFrameTime(emitter));
+  const stride = particleStride(emitter.amount, deltas.length);
+  const particles = Array.from({ length: Math.ceil(emitter.amount / stride) }, inactiveParticle);
   const birth: BirthContext = {
     simulation: material.simulation,
     emission: material.emission,
@@ -96,27 +99,30 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
     randomSeed,
     cycle: 0,
   };
-  const step: StepContext = {
-    simulation: material.simulation,
-    frame,
-    lifetime: f(emitter.lifetime),
-  };
+  const step = stepContextOf(material.simulation, frame, f(emitter.lifetime));
 
-  if (drawsNothing(material)) return emptyPose(clock.phase);
-  for (const delta of settleFrameDeltas(seconds, settleFrameTime(emitter))) {
+  for (const delta of deltas) {
     const frameParams = advanceClock(clock, emitter, delta);
     birth.cycle = frameParams.cycle;
-    particles.forEach((particle, index) => {
-      const restart = restartOf(index, emitter, frameParams);
-      let localDelta = frameParams.delta;
-      if (restart.restarts) {
-        birthParticle(particle, index, birth);
-        localDelta = restart.localDelta;
-      }
-      if (particle.active) stepParticle(particle, localDelta, step);
-    });
+    for (let slot = 0; slot < particles.length; slot++) {
+      const particle = particles[slot]!;
+      const index = slot * stride;
+      const restartedDelta = restartDelta(index, emitter, frameParams);
+      if (restartedDelta !== undefined) birthParticle(particle, index, birth);
+      if (particle.active) stepParticle(particle, restartedDelta ?? frameParams.delta, step);
+    }
   }
   return pose(particles, clock.phase, emitter.localCoords ? identityTransform3D() : emissionTransform);
+}
+
+/**
+ * The most particle steps one settle runs: about a second of main thread. Each particle depends on its
+ * own index only, so a larger emitter settles every `stride`-th particle exactly and draws a thinner cloud.
+ */
+const MAX_PARTICLE_STEPS = 2_000_000;
+
+function particleStride(amount: number, steps: number): number {
+  return Math.max(1, Math.ceil((amount * steps) / MAX_PARTICLE_STEPS));
 }
 
 /** Points and directed points need the emission texture, which the previewer does not read yet. */

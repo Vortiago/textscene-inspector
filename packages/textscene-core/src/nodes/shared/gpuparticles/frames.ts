@@ -80,12 +80,6 @@ export function advanceClock(clock: SystemClock, emitter: GpuEmitter, delta: num
   };
 }
 
-/** Whether a particle restarts in a step, and the delta its first step takes (`local_delta`). */
-export interface Restart {
-  restarts: boolean;
-  localDelta: number;
-}
-
 /** The phase at which particle `index` is born in each cycle (`:388-405`). */
 function restartPhase(index: number, emitter: GpuEmitter, frame: FrameParams): number {
   const total = emitter.amount;
@@ -101,25 +95,25 @@ function restartPhase(index: number, emitter: GpuEmitter, frame: FrameParams): n
   return f(phase * f(1 - emitter.explosiveness));
 }
 
-/** The restart of particle `index` in `frame`. A non-emitting system restarts nothing. */
-export function restartOf(index: number, emitter: GpuEmitter, frame: FrameParams): Restart {
-  const none: Restart = { restarts: false, localDelta: frame.delta };
-  if (!frame.emitting) return none;
+/**
+ * The delta the first step of particle `index` takes (`local_delta`) when it restarts in `frame`, else
+ * undefined. A non-emitting system restarts nothing. No object per call: the settle asks every particle on every step.
+ */
+export function restartDelta(index: number, emitter: GpuEmitter, frame: FrameParams): number | undefined {
+  if (!frame.emitting) return undefined;
   const phase = restartPhase(index, emitter, frame);
-  const lifetime = f(emitter.lifetime);
   const { systemPhase, previousPhase } = frame;
-  const fractional = (span: number): number => (emitter.fractDelta ? f(span * lifetime) : frame.delta);
   if (systemPhase > previousPhase) {
-    if (phase >= previousPhase && phase < systemPhase) {
-      return { restarts: true, localDelta: fractional(f(systemPhase - phase)) };
-    }
+    if (phase >= previousPhase && phase < systemPhase)
+      return localDelta(f(systemPhase - phase), emitter, frame);
   } else if (frame.delta > 0) {
-    if (phase >= previousPhase) {
-      return { restarts: true, localDelta: fractional(f(f(1 - phase) + systemPhase)) };
-    }
-    if (phase < systemPhase) {
-      return { restarts: true, localDelta: fractional(f(systemPhase - phase)) };
-    }
+    if (phase >= previousPhase) return localDelta(f(f(1 - phase) + systemPhase), emitter, frame);
+    if (phase < systemPhase) return localDelta(f(systemPhase - phase), emitter, frame);
   }
-  return none;
+  return undefined;
+}
+
+/** `fract_delta` spends the share of the lifetime since the restart, else the whole step. */
+function localDelta(span: number, emitter: GpuEmitter, frame: FrameParams): number {
+  return emitter.fractDelta ? f(span * f(emitter.lifetime)) : frame.delta;
 }

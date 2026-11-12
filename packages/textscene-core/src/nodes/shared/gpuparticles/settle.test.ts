@@ -153,3 +153,15 @@ describe('settleGpuParticles over the life of an emitter', () => {
     expectOrigin(atFloat, [1.496266, 0.665941, -0.101997]);
   });
 });
+
+describe('settleGpuParticles over a large emitter', () => {
+  const large = { amount: 500_000, lifetime: 5, preprocess: 0 };
+
+  it('settles every nth particle once the steps pass the budget, so the main thread is not held', () => {
+    const started = performance.now();
+    const rows = settle(large).buffer.length / PARTICLE_FLOATS;
+    expect(performance.now() - started).toBeLessThan(10_000);
+    expect(rows).toBeLessThan(large.amount / 10);
+    expect(rows).toBeGreaterThan(0);
+  });
+});

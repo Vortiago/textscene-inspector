@@ -84,7 +84,8 @@ export function birthParticle(particle: GpuParticle, index: number, context: Bir
   particle.active = randFromSeed(seed) <= context.amountRatio;
   particle.custom = [0, 0, 0, drawn.lifetimeShare];
   particle.color = tintedColour(simulation);
-  particle.columns = [frame.columns[0], frame.columns[1], frame.columns[2]];
+  // Copies: the step writes the columns in place, and the frame is shared.
+  particle.columns = [[...frame.columns[0]], [...frame.columns[1]], [...frame.columns[2]]];
   particle.origin = framePoint(frame, shapePosition(emission, seed));
   particle.velocity = frameDirection(frame, startVelocity(simulation, drawn, seed));
 }
