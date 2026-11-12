@@ -4,9 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { staticSnapshot } from '../reading/staticSnapshot.testkit';
-import { nodeReference } from '../reading/scopedReference';
-import { sceneTables } from '../reading/reading.testkit';
+import { loadedAt, originsOf } from '../reading/reading.testkit';
 import type { ResourceKind } from '../reading/read';
 import { CURVE_2D } from './curve2d';
 import { CURVE_3D } from './curve3d';
@@ -27,35 +25,14 @@ const CURVES: readonly CurveCase[] = [
   },
 ];
 
-function readAt(curve: CurveCase, ref: string, scene: string, files: Record<string, string> = {}) {
-  const read = staticSnapshot(files).read(nodeReference(ref, sceneTables(scene)), curve.kind);
-  if (read.status !== 'loaded')
-    throw new Error(`expected the ${curve.kind.name} to load, got ${read.status}`);
-  return read.value;
-}
-
 describe.each(CURVES)('the $kind.name kind', (curve) => {
-  const inScene = () =>
-    readAt(curve, 'SubResource("c")', `[sub_resource type="${curve.kind.name}" id="c"]\n${curve.body}`);
+  const [inScene, ...elsewhere] = originsOf(curve.kind.name, curve.body);
 
   it('decodes control points from a sub-resource of the scene', () => {
-    expect(inScene()).toHaveLength(2);
+    expect(loadedAt(curve.kind, inScene!)).toHaveLength(2);
   });
 
-  it('decodes the same points from a .tres of its own', () => {
-    const files = {
-      'res://curve.tres': `[gd_resource type="${curve.kind.name}" format=3]\n\n[resource]\n${curve.body}\n`,
-    };
-    const scene = `[ext_resource type="${curve.kind.name}" path="res://curve.tres" id="1_c"]`;
-
-    expect(readAt(curve, 'ExtResource("1_c")', scene, files)).toEqual(inScene());
-  });
-
-  it('decodes the same points from a sub-resource of another .tres', () => {
-    const files = {
-      'res://holder.tres': `[gd_resource type="Resource" format=3]\n\n[sub_resource type="${curve.kind.name}" id="c"]\n${curve.body}\n\n[resource]\n`,
-    };
-
-    expect(readAt(curve, 'res://holder.tres::c', '', files)).toEqual(inScene());
+  it.each(elsewhere)('decodes the same points from $name', (origin) => {
+    expect(loadedAt(curve.kind, origin)).toEqual(loadedAt(curve.kind, inScene!));
   });
 });

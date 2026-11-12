@@ -1,12 +1,12 @@
 /**
- * Reads an Occluder3D sub-resource into the shape `occluderAabb` measures. Null for a resource of
- * another class, which Godot's `occluder` slot refuses.
+ * The Occluder3D kind: an occluder from any origin, as the shape `occluderAabb` measures. Any other
+ * class is refused, as the `occluder` slot of Godot refuses it.
  */
 
 import type { OccluderShape } from '../../../godot/scene/occluder';
 import type { Vector2, Vector3 } from '../../../godot/math/vector';
-import type { TscnInternalResource } from '../../../parser/types';
 import { floatOr, packedOr, vec2Or, vec3Or } from '../../../parser/valueParsers';
+import type { ResourceKind } from '../../../resources/reading';
 import {
   NO_FLOATS,
   parsePackedVector2Array,
@@ -25,27 +25,30 @@ function pairs(components: Float32Array): Vector2[] {
   }));
 }
 
-export function decodeOccluder({ type, data }: TscnInternalResource): OccluderShape | null {
-  switch (type) {
-    case 'BoxOccluder3D':
-      return { kind: 'box', size: vec3Or(data.size, DEFAULT_SIZE_3D, 'BoxOccluder3D size') };
-    case 'QuadOccluder3D':
-      return { kind: 'quad', size: vec2Or(data.size, DEFAULT_SIZE_2D, 'QuadOccluder3D size') };
-    case 'SphereOccluder3D':
-      return { kind: 'sphere', radius: floatOr(data.radius, DEFAULT_RADIUS, 'SphereOccluder3D radius') };
-    case 'PolygonOccluder3D':
-      return {
-        kind: 'polygon',
-        polygon: pairs(
-          packedOr(data.polygon, parsePackedVector2Array, NO_FLOATS, 'PolygonOccluder3D polygon')
-        ),
-      };
-    case 'ArrayOccluder3D':
-      return {
-        kind: 'array',
-        vertices: packedOr(data.vertices, parsePackedVector3Array, NO_FLOATS, 'ArrayOccluder3D vertices'),
-      };
-    default:
-      return null;
-  }
-}
+type Properties = Readonly<Record<string, string>>;
+
+const DECODERS: Readonly<Record<string, (data: Properties) => OccluderShape>> = {
+  BoxOccluder3D: (data) => ({ kind: 'box', size: vec3Or(data.size, DEFAULT_SIZE_3D, 'BoxOccluder3D size') }),
+  QuadOccluder3D: (data) => ({
+    kind: 'quad',
+    size: vec2Or(data.size, DEFAULT_SIZE_2D, 'QuadOccluder3D size'),
+  }),
+  SphereOccluder3D: (data) => ({
+    kind: 'sphere',
+    radius: floatOr(data.radius, DEFAULT_RADIUS, 'SphereOccluder3D radius'),
+  }),
+  PolygonOccluder3D: (data) => ({
+    kind: 'polygon',
+    polygon: pairs(packedOr(data.polygon, parsePackedVector2Array, NO_FLOATS, 'PolygonOccluder3D polygon')),
+  }),
+  ArrayOccluder3D: (data) => ({
+    kind: 'array',
+    vertices: packedOr(data.vertices, parsePackedVector3Array, NO_FLOATS, 'ArrayOccluder3D vertices'),
+  }),
+};
+
+export const OCCLUDER_3D: ResourceKind<OccluderShape> = {
+  name: 'Occluder3D',
+  accepts: (type) => Object.hasOwn(DECODERS, type),
+  decode: ({ type, properties }) => DECODERS[type]!(properties),
+};

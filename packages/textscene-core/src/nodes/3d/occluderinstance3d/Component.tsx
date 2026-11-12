@@ -8,19 +8,15 @@ import { EMPTY_AABB } from '../../../godot/math/aabb';
 import { occluderAabb } from '../../../godot/scene/occluder';
 import { NodeAabb } from '../../../r3f/components/NodeAabb';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
+import { useNodeResource } from '../../../resources/reading';
 import { Node3D } from '../../base/node3d/Component';
-import { decodeOccluder } from './decodeOccluder';
+import { OCCLUDER_3D } from './decodeOccluder';
 import type { OccluderInstance3DProperties } from './types';
 
 export function OccluderInstance3D({ node, children }: NodeComponentProps) {
   const { occluder } = node.properties as OccluderInstance3DProperties;
-  const scoped = useSubOrExtResource(occluder, useSceneResources());
-  const aabb = useMemo(() => {
-    const shape = scoped ? decodeOccluder(scoped.resource) : null;
-    return shape ? occluderAabb(shape) : EMPTY_AABB;
-  }, [scoped]);
+  const shape = useNodeResource(occluder, OCCLUDER_3D).value;
+  const aabb = useMemo(() => (shape ? occluderAabb(shape) : EMPTY_AABB), [shape]);
   return (
     <Node3D node={node}>
       <NodeAabb aabb={aabb} />
