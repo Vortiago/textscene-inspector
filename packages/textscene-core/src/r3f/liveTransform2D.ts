@@ -15,6 +15,7 @@ import {
   localTransform2D,
   resolveGlobalTransform2D,
   type Node2DPose,
+  NO_SOLVED,
   type SolvedControls,
 } from '../nodes/canvasitem/shared/globalTransform2D.js';
 import { NO_PATCHES, type PatchLookup } from './nodePatch.js';
@@ -67,11 +68,9 @@ export function solvedControlsAlong(
   path: string,
   controlTransforms: ControlLocalTransforms | undefined
 ): SolvedControls {
-  if (!controlTransforms || controlTransforms.size === 0) return NO_SOLVED_CONTROLS;
+  if (!controlTransforms || controlTransforms.size === 0) return NO_SOLVED;
   return lookupAlong(chain, path, controlTransforms);
 }
-
-const NO_SOLVED_CONTROLS: SolvedControls = new Map();
 
 /**
  * The transform of the node at `path` on the canvas, with the poses of `placed` in place of the

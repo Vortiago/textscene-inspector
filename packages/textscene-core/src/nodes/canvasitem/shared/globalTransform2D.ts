@@ -87,6 +87,7 @@ function controlLocalTransform2D(node: RawNode, parent: RawNode | undefined): Tr
 
 /** `Control::get_transform()` (`control.cpp:731-736`) of each Control the Control walk has solved. */
 export type SolvedControls = ReadonlyMap<RawNode, Transform2DColumns>;
+export const NO_SOLVED: SolvedControls = new Map();
 
 /**
  * A Node2D's own local `Transform2D`, built as `Node2D::_update_transform` builds it. An
@@ -118,7 +119,6 @@ function isTopLevel(node: RawNode): boolean {
 }
 
 const NO_POSES: ReadonlyMap<RawNode, Node2DPose> = new Map();
-const NO_SOLVED: SolvedControls = new Map();
 
 type GlobalTransform2DVerdict =
   | { readonly kind: 'known'; readonly transform: Transform2DColumns }
