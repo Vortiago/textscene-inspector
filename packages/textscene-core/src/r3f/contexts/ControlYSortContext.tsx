@@ -17,7 +17,7 @@ export type ControlTransforms = ReadonlyMap<string, Transform2DColumns>;
  * canvas item snaps to whole pixels (`control.cpp:731-736`). The live scene passes compose through it,
  * as `get_global_transform()` does. Written only by the Control walk.
  */
-export type ControlLocalTransforms = ReadonlyMap<string, Transform2DColumns>;
+export type ControlLocalTransforms = ControlTransforms;
 
 /** Where the y-sort moved a node's draw-sequence run, written only by `YSortDispatcher`. */
 export interface YSortShift {

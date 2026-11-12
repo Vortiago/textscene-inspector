@@ -125,7 +125,7 @@ export function ControlCanvasWalker({
     );
   }, [publishTransforms, owner, tree, solved, snapEnabled, livePath]);
   useLayoutEffect(() => () => publishTransforms?.(owner, null), [publishTransforms, owner]);
-  // The live scene passes and the world walk's Node2D items read these, so every walk publishes them.
+  // Read by the live scene passes, which compose through a Control. Every walk publishes them, sorted or not.
   const publishLocalTransforms = usePublishControlLocalTransforms();
   useLayoutEffect(() => {
     publishLocalTransforms?.(

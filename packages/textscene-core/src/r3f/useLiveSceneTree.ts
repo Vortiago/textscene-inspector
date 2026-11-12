@@ -169,7 +169,7 @@ const sharedTreesOf = perObject((sceneGraph: SceneGraph) =>
 /** The node types whose pass composes through a Control: a relay and a Skeleton2D. */
 const CONTROL_TRANSFORM_READERS: ReadonlySet<string> = new Set(['RemoteTransform2D', 'Skeleton2D']);
 
-/** Whether a pass over `tree` composes through the transform of a Control, written only by {@link readsControlTransforms}. */
+/** Whether a pass over `shared` composes through the transform of a Control. */
 const readsControlTransforms = perObject((shared: SharedLiveTree): boolean => {
   let reads = false;
   liveTreeOf(shared.roots, shared.ctx).fold(undefined, ({ step }, _inherited, descend) => {

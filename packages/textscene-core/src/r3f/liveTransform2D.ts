@@ -18,6 +18,7 @@ import {
   type SolvedControls,
 } from '../nodes/canvasitem/shared/globalTransform2D.js';
 import { NO_PATCHES, type PatchLookup } from './nodePatch.js';
+import type { ControlLocalTransforms } from './contexts/ControlYSortContext.js';
 
 /** The nodes of `nodeByPath` that lie on `path`, root first. */
 function chainTo(path: string, nodeByPath: ReadonlyMap<string, TscnNode>): TscnNode[] {
@@ -34,35 +35,40 @@ export function chainParentOf(chain: readonly RawNode[]): (child: RawNode) => Pa
   return (child) => parentLookup(parents.get(child));
 }
 
+/** What `byPath` holds for each node of `chain`, which ends at the live path `path`, keyed by node. */
+function lookupAlong<T>(
+  chain: readonly RawNode[],
+  path: string,
+  byPath: { get(path: string): T | undefined }
+): Map<RawNode, T> {
+  const names = path.split('/');
+  const found = new Map<RawNode, T>();
+  let prefix = '';
+  chain.forEach((node, index) => {
+    prefix = index === 0 ? names[0]! : `${prefix}/${names[index]}`;
+    const value = byPath.get(prefix);
+    if (value) found.set(node, value);
+  });
+  return found;
+}
+
 /** The pose each node of `chain`, which ends at the live path `path`, takes from the patches in `placed`. */
 export function posesAlong(
   chain: readonly RawNode[],
   path: string,
   placed: PatchLookup
 ): Map<RawNode, Node2DPose> {
-  const names = path.split('/');
-  const poses = new Map<RawNode, Node2DPose>();
-  chain.forEach((node, index) => {
-    const patch = placed.get(names.slice(0, index + 1).join('/'));
-    if (patch) poses.set(node, patch as Node2DPose);
-  });
-  return poses;
+  return lookupAlong(chain, path, placed as { get(path: string): Node2DPose | undefined });
 }
 
 /** The solved transform of each node of `chain`, which ends at the live path `path`, that `controlTransforms` holds. */
 export function solvedControlsAlong(
   chain: readonly RawNode[],
   path: string,
-  controlTransforms: ReadonlyMap<string, Transform2DColumns> | undefined
+  controlTransforms: ControlLocalTransforms | undefined
 ): SolvedControls {
-  if (!controlTransforms) return NO_SOLVED_CONTROLS;
-  const names = path.split('/');
-  const solved = new Map<RawNode, Transform2DColumns>();
-  chain.forEach((node, index) => {
-    const transform = controlTransforms.get(names.slice(0, index + 1).join('/'));
-    if (transform) solved.set(node, transform);
-  });
-  return solved;
+  if (!controlTransforms || controlTransforms.size === 0) return NO_SOLVED_CONTROLS;
+  return lookupAlong(chain, path, controlTransforms);
 }
 
 const NO_SOLVED_CONTROLS: SolvedControls = new Map();
@@ -77,7 +83,7 @@ export function transform2DOnCanvas(
   path: string,
   nodeByPath: ReadonlyMap<string, TscnNode>,
   placed: PatchLookup = NO_PATCHES,
-  controlTransforms?: ReadonlyMap<string, Transform2DColumns>
+  controlTransforms?: ControlLocalTransforms
 ): Transform2DColumns | null {
   const chain = chainTo(path, nodeByPath);
   const verdict = resolveGlobalTransform2D(
@@ -98,7 +104,7 @@ export function transform2DWithinPath(
   path: string,
   ancestorPath: string,
   nodeByPath: ReadonlyMap<string, TscnNode>,
-  controlTransforms?: ReadonlyMap<string, Transform2DColumns>
+  controlTransforms?: ControlLocalTransforms
 ): Transform2DColumns {
   const chain = chainTo(path, nodeByPath);
   const solved = solvedControlsAlong(chain, path, controlTransforms);
