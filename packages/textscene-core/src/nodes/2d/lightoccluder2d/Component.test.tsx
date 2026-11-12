@@ -20,7 +20,6 @@ import {
 } from '../../../r3f/lighting2d/shadowCasterRegistry';
 import { OccluderPolygon2DCullMode } from '../../../godot/scene/lightOccluder2d';
 import { fixturesDir } from '../../../parser/testing/parserKit';
-import { parseOccluderCullMode } from './polygonShapes';
 
 // Importing the slice registers it.
 import '../../2d/lightoccluder2d/index';
@@ -28,24 +27,8 @@ import '../../2d/lightoccluder2d/index.r3f';
 import '../../../linter/index';
 import { errorsOf } from '../../../linter/testing/tierLists';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
-
-describe('parseOccluderCullMode', () => {
-  it('defaults to CULL_DISABLED when the property is absent', () => {
-    expect(parseOccluderCullMode(undefined)).toBe(OccluderPolygon2DCullMode.DISABLED);
-  });
-
-  it('reads the enum ordinals Godot writes', () => {
-    expect(parseOccluderCullMode('0')).toBe(OccluderPolygon2DCullMode.DISABLED);
-    expect(parseOccluderCullMode('1')).toBe(OccluderPolygon2DCullMode.CLOCKWISE);
-    expect(parseOccluderCullMode('2')).toBe(OccluderPolygon2DCullMode.COUNTER_CLOCKWISE);
-  });
-
-  it('falls back to CULL_DISABLED for an out-of-range or unreadable value', () => {
-    expect(parseOccluderCullMode('3')).toBe(OccluderPolygon2DCullMode.DISABLED);
-    expect(parseOccluderCullMode('-1')).toBe(OccluderPolygon2DCullMode.DISABLED);
-    expect(parseOccluderCullMode('clockwise')).toBe(OccluderPolygon2DCullMode.DISABLED);
-  });
-});
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 
 /**
  * A `Root` (Node2D) > `Occ` (LightOccluder2D) scene at Godot (200, 100) with a
@@ -67,22 +50,24 @@ ${nodeProps}
 `;
 }
 
-async function renderIntoRegistry(tscn: string) {
+async function renderIntoRegistry(tscn: string, files: Record<string, string> = {}) {
   const scene = new TscnParser().parse(tscn);
   const registry = createShadowCasterRegistry();
   await ReactThreeTestRenderer.create(
-    <CanvasWorkspaceProvider workspace="2d">
-      <SceneResourcesProvider
-        internalResources={scene.internalResources}
-        externalResources={scene.externalResources}
-      >
-        <SelectionProvider>
-          <ShadowCasterProvider registry={registry}>
-            <NodeDispatcher nodes={scene.nodes} />
-          </ShadowCasterProvider>
-        </SelectionProvider>
-      </SceneResourcesProvider>
-    </CanvasWorkspaceProvider>
+    <ResourceLoaderProvider loader={loaderServing(files)}>
+      <CanvasWorkspaceProvider workspace="2d">
+        <SceneResourcesProvider
+          internalResources={scene.internalResources}
+          externalResources={scene.externalResources}
+        >
+          <SelectionProvider>
+            <ShadowCasterProvider registry={registry}>
+              <NodeDispatcher nodes={scene.nodes} />
+            </ShadowCasterProvider>
+          </SelectionProvider>
+        </SceneResourcesProvider>
+      </CanvasWorkspaceProvider>
+    </ResourceLoaderProvider>
   );
   await settleLoads();
   return registry;
@@ -135,6 +120,36 @@ describe('LightOccluder2D publishes to the shadow-caster registry', () => {
 [node name="Occ" type="LightOccluder2D" parent="."]
 `;
     expect((await renderIntoRegistry(tscn)).casters()).toEqual([]);
+  });
+});
+
+describe('LightOccluder2D with its occluder in a file', () => {
+  const FILE = `[gd_resource type="OccluderPolygon2D" format=3]
+
+[resource]
+cull_mode = 1
+polygon = PackedVector2Array(0, 0, 16, 0, 16, 16, 0, 16)
+`;
+  const SCENE = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="OccluderPolygon2D" path="res://occluder.tres" id="1_occ"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Occ" type="LightOccluder2D" parent="."]
+occluder = ExtResource("1_occ")
+`;
+
+  it('registers a caster with the cull mode of the file once it loads', async () => {
+    const registry = await renderIntoRegistry(SCENE, { 'res://occluder.tres': FILE });
+
+    expect(worldShadowCasters(registry, 1)[0]!.cullMode).toBe(OccluderPolygon2DCullMode.CLOCKWISE);
+  });
+
+  it('registers nothing for a file of another class', async () => {
+    const wrongClass = FILE.replace('OccluderPolygon2D', 'Curve2D');
+
+    expect((await renderIntoRegistry(SCENE, { 'res://occluder.tres': wrongClass })).casters()).toEqual([]);
   });
 });
 

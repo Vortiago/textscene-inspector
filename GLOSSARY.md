@@ -235,7 +235,7 @@ A resource as a decode receives it: its class, its raw property strings, its add
 _Avoid_: "scoped resource" for this. A `ScopedResource` carries the tables.
 
 **Resource kind** (`ResourceKind`, `resources/reading/read.ts`):
-One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D`, `CURVE_3D`, `CURVE`, `GRADIENT` and `PARTICLE_PROCESS_MATERIAL` are kinds.
+One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D`, `CURVE_3D`, `CURVE`, `GRADIENT`, `PARTICLE_PROCESS_MATERIAL`, `SHAPE_2D`, `OCCLUDER_POLYGON_2D` and `NAVIGATION_POLYGON` are kinds.
 _Avoid_: one decode for each origin.
 
 **Resource snapshot** (`ResourceSnapshot`, `resources/reading/read.ts`):

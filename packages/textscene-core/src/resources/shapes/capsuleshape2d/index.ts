@@ -1,7 +1,5 @@
-/** CapsuleShape2D resource slice: claims the type name, re-exports its decode. */
+/** CapsuleShape2D resource slice: claims the type name. */
 
 import { registerGenericResourceSlice } from '../../sliceRegistration';
 
 registerGenericResourceSlice('capsuleshape2d', ['CapsuleShape2D']);
-
-export { decodeCapsuleShape2D } from './decode';
