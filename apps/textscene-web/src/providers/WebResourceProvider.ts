@@ -109,7 +109,7 @@ export class WebResourceProvider implements ResourceProvider {
     const uploaded = this.uploadedEntries(folder);
     if (!mirrored && uploaded.size === 0) return null;
     const entries = new Map((mirrored ?? []).map((entry) => [entry.name, entry]));
-    for (const [name, entry] of uploaded) entries.set(name, entries.get(name) ?? entry);
+    for (const [name, entry] of uploaded) if (!entries.has(name)) entries.set(name, entry);
     return [...entries.values()];
   }
 

@@ -6,7 +6,8 @@
 
 import type { ResourceEventBus } from '../ResourceEventBus';
 import { createResourceProcessor, type ResourceProcessor } from '../createResourceProcessor';
-import type { DirectoryEntry, DirectoryListing } from '../directoryListing';
+import type { DirectoryListing } from '../directoryListing';
+import type { DirectoryEntry } from '../projectListing';
 
 export function createDirectoryProcessor(
   eventBus: ResourceEventBus,

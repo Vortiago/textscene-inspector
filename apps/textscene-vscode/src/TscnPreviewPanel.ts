@@ -409,7 +409,7 @@ export class TscnPreviewPanel {
         throw new Error('No workspace folder found');
       }
       const entries = await provider.listDirectory(folder);
-      this._postMessageToWebview({ type: 'directoryListed', requestId, entries: entries && [...entries] });
+      this._postMessageToWebview({ type: 'directoryListed', requestId, entries });
     } catch (error) {
       this._postMessageToWebview({
         type: 'resourceLoadError',

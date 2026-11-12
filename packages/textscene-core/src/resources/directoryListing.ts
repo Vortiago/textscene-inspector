@@ -4,8 +4,6 @@
  */
 import type { DirectoryEntry } from './projectListing.js';
 
-export type { DirectoryEntry };
-
 /** A folder that was listed, or one the host says does not exist. */
 export type DirectoryListing =
   { readonly kind: 'listed'; readonly entries: readonly DirectoryEntry[] } | { readonly kind: 'missing' };

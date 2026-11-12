@@ -13,7 +13,7 @@ import { FILE_MODE_TEXT, FileMode } from '../../../godot/scene/fileDialog';
 import { fileNoCaseCompare } from '../../../godot/string/fileNameOrder';
 import { stripEdges } from '../../../godot/string/string.js';
 import { wildcardMatchNoCase } from '../../../godot/string/wildcard';
-import type { DirectoryEntry } from '../../../resources/directoryListing';
+import type { DirectoryEntry } from '../../../resources/projectListing';
 
 export interface FileListRow {
   readonly name: string;

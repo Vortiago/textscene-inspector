@@ -5,7 +5,8 @@
 
 import { describe, expect, it } from 'vitest';
 import type { TscnNode } from '../../../parser/types';
-import type { DirectoryEntry, DirectoryListings } from '../../../resources/directoryListing';
+import type { DirectoryListings } from '../../../resources/directoryListing';
+import type { DirectoryEntry } from '../../../resources/projectListing';
 import oracle from './testing/fileListOracle/oracle.out.json';
 import { parseFileDialog, type FileDialogProperties } from './parser';
 import { fileDialogFolders, resolveFileDialog } from './resolve';

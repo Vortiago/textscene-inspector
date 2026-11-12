@@ -900,10 +900,7 @@ export function itemListCursorRect(input: {
   controlWidth: number;
   rtl: boolean;
 }): Rect2 {
-  const w = rowBackgroundWidth(input);
-  const ltrX = input.baseX + input.rowRect.x;
-  const x = input.rtl ? input.controlWidth - ltrX - w : ltrX;
-  return { x: x - ltrX, y: 0, w, h: input.rowRect.h };
+  return itemListSelectedRect({ ...input, panelMarginLeft: 0, panelMarginRight: 0 });
 }
 
 /** The `cursor_unfocused` box (`item_list.cpp:2455`): the default theme binds it to its `focus` box (`default_theme.cpp:967`). */

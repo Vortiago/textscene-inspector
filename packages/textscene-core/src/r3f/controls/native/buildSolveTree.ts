@@ -404,6 +404,8 @@ function buildForest(
   const themeCache = loader ? recordingReads(loader.themes, recordRead) : NOTHING_CACHED;
   const fontCache: FontCacheReader = loader ? recordingReads(loader.fonts, recordRead) : NOTHING_CACHED;
   const directoryCache = loader ? recordingReads(loader.directories, recordRead) : NOTHING_CACHED;
+  /** Written by `withListedFolders`, for this walk only: the cache it reads does not change within one. */
+  const settledFolders = new WeakMap<TscnNode, TscnNode>();
 
   /**
    * A Control's own `theme` (`Control::get_theme()`, `scene/gui/control.h`). An
@@ -697,7 +699,12 @@ function buildForest(
   /** `node` settled with the folders its type lists, such as a FileDialog's. A window reaches here twice, as the embedder's entry and as the root of its own viewport. */
   function withListedFolders(node: TscnNode): TscnNode {
     const resolver = controlSolverRegistry.directoryResolver(node.type);
-    return resolver ? settleDirectories(node, resolver, directoryCache.getCached, pendingDirectories) : node;
+    if (!resolver) return node;
+    const settled =
+      settledFolders.get(node) ??
+      settleDirectories(node, resolver, directoryCache.getCached, pendingDirectories);
+    settledFolders.set(node, settled);
+    return settled;
   }
 
   /**
