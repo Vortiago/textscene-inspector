@@ -51,4 +51,4 @@ Strict parsing format-checks these `RemoteTransform2D` properties, plus 12 inher
 ## Known limitations
 
 - **Needs runtime** A relay cycle moves on every frame in Godot, and the previewer shows one frame of that motion.
-- **Approximated** A relay in global coordinates pushes nothing where a Control with a pivot offset, or one that a Container lays out, lies above it or its target.
+- **Approximated** A relay in global coordinates pushes nothing below a Control with a pivot offset or one that a Container lays out.
