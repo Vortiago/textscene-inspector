@@ -46,8 +46,10 @@ publishes it.**
   the lightmap and the screen-space textures come from passes of the caller. A surface with no value
   for an input draws what Godot draws without that feature. The renderer's passes stay in `r3f/` and
   fill the inputs.
-- **The inputs belong to one object for each renderer.** The module keeps no state at module level,
-  so two renderers on one page do not share an atlas.
+- **The inputs belong to one object for each renderer.** A node is built once and reads each value
+  in its update callback, from the inputs of the renderer that draws. No node imports the owner of a
+  value. The registration of a light node is page-wide, because three keeps the node class on the
+  light class (r187 `src/lights/Light.js:18-22`). It happens in the install call, never on import.
 - **One inner seam: the surface outputs.** They are the values Godot's `fragment()` writes, such as
   `ALBEDO`, `ROUGHNESS` and `NORMAL`. The lighting model reads only them. The surface
   `BaseMaterial3D` generates fills them, and so do a translated `ShaderMaterial` and the default
