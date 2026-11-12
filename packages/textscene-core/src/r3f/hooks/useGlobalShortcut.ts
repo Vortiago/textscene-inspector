@@ -15,10 +15,14 @@ export function useGlobalShortcut(key: string, onTrigger: () => void): void {
 
   useEffect(() => {
     const wanted = key.toLowerCase();
+    const isLetter = /^[a-z]$/.test(wanted);
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key.toLowerCase() !== wanted) return;
       // A held modifier means a chord (find on Ctrl/Cmd+F, OS shortcuts on Alt), never the bare key.
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // Shift with a letter is its own chord too (Shift+F toggles freelook). A symbol such as `?`
+      // needs Shift to be typed at all.
+      if (e.shiftKey && isLetter) return;
       if (isTypingTarget(e.target)) return;
       // Escape belongs to an open floating panel, so dismissing it does not also clear the
       // selection. Guarded here, not per call site, so no shortcut can forget it. `useDismissable`

@@ -28,15 +28,13 @@ export interface DragState {
 }
 
 /**
- * One mouse `pointermove` during a drag. Mutates `drag`'s last position, sets
- * `onFreelook` to whether the resolved mode is freelook (a released modifier
- * can change it mid-drag), and returns whether the view moved.
+ * One mouse `pointermove` during a drag. Mutates `drag`'s last position, holds freelook on
+ * while the drag resolves to it, and returns whether the view moved.
  */
 export function applyEditorDragMove(
   event: PointerEvent,
   drag: DragState,
-  handle: EditorControlsHandle,
-  onFreelook: (freelook: boolean) => void
+  handle: EditorControlsHandle
 ): boolean {
   if (event.pointerId !== drag.pointerId) return false;
   const dx = event.clientX - drag.x;
@@ -45,11 +43,12 @@ export function applyEditorDragMove(
   drag.y = event.clientY;
   if (dx === 0 && dy === 0) return false;
 
-  const mode = resolveNavMode(drag.button, event);
+  const mode = resolveNavMode(drag.button, event, handle.projection);
   // A released modifier (alt on an alt+left drag) suspends navigation without ending the drag,
   // as in Godot.
   if (!mode) return false;
-  onFreelook(mode === 'freelook');
+  // A projection swap mid-drag turns a right-drag pan into freelook, so the hold follows the mode.
+  handle.freelook.setHeld(mode === 'freelook');
 
   const cursor = handle.cursor();
   if (mode === 'orbit') handle.applyCursor(orbitCursor(cursor, dx, dy));
@@ -59,12 +58,22 @@ export function applyEditorDragMove(
   return true;
 }
 
-/** One wheel event: pan under shift, zoom otherwise. Returns whether the view moved. */
+/**
+ * One wheel event: the flight speed while freelook is on, as in Godot
+ * (`node_3d_editor_plugin.cpp:1880-1888`), else pan under shift and zoom otherwise.
+ * Returns whether the view moved.
+ */
 export function applyEditorWheel(
   event: WheelEvent,
   handle: EditorControlsHandle,
   get: RootState['get']
 ): boolean {
+  if (handle.freelook.isActive) {
+    // A wheel-up notch shrinks the orbit radius and raises the speed, so the two scales are inverse.
+    const scale = 1 / wheelZoomScale(event);
+    if (scale !== 1) handle.freelook.scaleSpeed(scale, handle.zoomRange());
+    return false;
+  }
   if (resolveWheelMode(event) === 'pan') {
     // Godot pans by the negated gesture delta, and the delta has to be
     // normalised first: one notch is 100px in Chrome but 3 lines in

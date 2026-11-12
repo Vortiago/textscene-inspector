@@ -5,68 +5,19 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import ReactThreeTestRenderer, { act } from '@react-three/test-renderer';
-import type { RootState } from '@react-three/fiber';
-import { r3fStateProbe } from './testing/R3FStateProbe';
-import { EditorControlsHandle, GodotEditorControls } from './GodotEditorControls';
+import { act } from '@react-three/test-renderer';
+import {
+  drag,
+  mountEditorControls as mount,
+  pressKey,
+  previewAuthoredCamera,
+  unmountEditorControls,
+  viewDirection,
+} from './GodotEditorControls.testkit';
 import { editorCameraPosition } from './godotEditorCamera';
 import { degToRad } from '../godot/math/math.js';
 
-type Renderer = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
-
-/** Written only by `mount`. Each test's canvases unmount after it, so no window listener leaks. */
-const mounted = new Set<Renderer>();
-
-afterEach(async () => {
-  for (const renderer of mounted) await act(async () => renderer.unmount());
-  mounted.clear();
-});
-
-async function mount() {
-  const { Probe, state: get } = r3fStateProbe();
-  const renderer = await ReactThreeTestRenderer.create(
-    <>
-      <Probe />
-      <GodotEditorControls />
-    </>
-  );
-  mounted.add(renderer);
-  const state = get();
-  const controls = state.controls;
-  if (!(controls instanceof EditorControlsHandle)) {
-    throw new Error('controls were not published to the R3F store');
-  }
-  return { renderer, get, controls, element: state.gl.domElement };
-}
-
-function drag(
-  element: HTMLCanvasElement,
-  button: number,
-  from: [number, number],
-  to: [number, number],
-  modifiers: { shiftKey?: boolean; ctrlKey?: boolean; altKey?: boolean } = {}
-): void {
-  const common = { pointerId: 1, bubbles: true, cancelable: true, ...modifiers };
-  element.dispatchEvent(
-    new PointerEvent('pointerdown', { ...common, button, clientX: from[0], clientY: from[1] })
-  );
-  element.dispatchEvent(
-    new PointerEvent('pointermove', { ...common, button, clientX: to[0], clientY: to[1] })
-  );
-  element.dispatchEvent(new PointerEvent('pointerup', { ...common, button }));
-}
-
-async function pressKey(code: string, init: KeyboardEventInit = {}): Promise<void> {
-  await act(async () => {
-    window.dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true, ...init }));
-  });
-  window.dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true }));
-}
-
-/** Where the camera is pointing, in world space. */
-function viewDirection(camera: THREE.Camera): THREE.Vector3 {
-  return new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-}
+afterEach(unmountEditorControls);
 
 describe('<GodotEditorControls> mounting', () => {
   it('publishes a handle with a focus point and aims the camera at it', async () => {
@@ -494,21 +445,13 @@ async function flyForward(shiftKey: boolean): Promise<number> {
 describe('<GodotEditorControls> freelook sprint', () => {
   it('sprints on Shift, including when Shift went down before freelook started', async () => {
     const walked = await flyForward(false);
+    // The first canvas still holds its freelook, and a freelook keeps every key to itself.
+    await unmountEditorControls();
     const sprinted = await flyForward(true);
     expect(walked).toBeGreaterThan(0);
     expect(sprinted).toBeCloseTo(walked * 3, 6);
   });
 });
-
-/** Makes an authored camera the one R3F renders, as previewing a Camera3D does. */
-async function previewAuthoredCamera(get: () => RootState): Promise<THREE.PerspectiveCamera> {
-  const authored = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-  authored.position.set(3, 1, 2);
-  await act(async () => {
-    get().set({ camera: authored });
-  });
-  return authored;
-}
 
 describe('<GodotEditorControls> camera preview', () => {
   it('still consumes a numpad view key during a preview, so it scrolls no page', async () => {
@@ -608,6 +551,18 @@ describe('EditorControlsHandle framing contract', () => {
 
     expect(camera.position.distanceTo(new THREE.Vector3(...editorCameraPosition()))).toBeLessThan(1e-6);
     expect(controls.target.length()).toBe(0);
+  });
+
+  it('reset() restores the clip planes that framing a node narrowed', async () => {
+    const { get, controls } = await mount();
+    const camera = get().camera;
+    camera.near = 0.5;
+    camera.far = 20000;
+
+    controls.reset();
+
+    // `editors/3d/default_z_near` and `default_z_far` (`editor_settings.cpp:931-932`).
+    expect([camera.near, camera.far]).toEqual([0.05, 4000]);
   });
 
   it('reset() leaves orthographic mode as well as the pose', async () => {
