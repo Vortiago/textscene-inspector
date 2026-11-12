@@ -80,4 +80,20 @@ visible = false
 ${HELD}`;
     expect(await isDrawn(scene, 'Held')).toBe(false);
   });
+
+  it('stands at the offsets of a y-sorted Control below a y-sorted Node2D', async () => {
+    const scene = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Floor" type="Node2D" parent="."]
+y_sort_enabled = true
+
+[node name="Panel" type="Control" parent="Floor"]
+y_sort_enabled = true
+offset_left = 60.0
+offset_top = 30.0
+${HELD.replace('parent="Panel"', 'parent="Floor/Panel"')}`;
+    expect(await canvasPositionOf(scene, 'Held')).toEqual({ x: 80, y: 40 });
+  });
 });
