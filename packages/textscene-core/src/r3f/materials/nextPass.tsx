@@ -13,7 +13,6 @@
 
 import {
   useCallback,
-  useEffect,
   useMemo,
   useLayoutEffect,
   useRef,
@@ -24,6 +23,7 @@ import {
 import * as THREE from 'three';
 import { materialSourceKey, resolveNextPass, type MaterialSource } from './materialSource';
 import { extraDrawProps, useExtraDrawRef } from './extraDraw';
+import { useDrawnGeometry } from './drawnGeometry';
 import { drawnTag } from '../meshes/meshContent';
 import { readyMaterial, useMaterial } from './useMaterial';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
@@ -54,26 +54,6 @@ export function drawnElementOf(drawsPoints: boolean, skeleton: THREE.Skeleton | 
     return { Drawn: 'skinnedMesh' as const, skin: { skeleton, bindMode: THREE.DetachedBindMode } };
   }
   return { Drawn: drawnTag(drawsPoints), skin: {} };
-}
-
-/**
- * Reads the geometry off the base draw, in place across re-parses. Dep-less, since a
- * re-parse replaces the geometry and a `[ref]` list would keep the old one; the updater
- * returns the same value when nothing moved, so the pair cannot loop. The layout pass
- * swaps a re-parsed geometry before paint, and on mount it runs before the parent's
- * ref lands, so the passive pass reads the first geometry.
- *
- * @canonical The geometry a surface draw reads back
- */
-export function useDrawnGeometry(ref: RefObject<THREE.Object3D | null>): THREE.BufferGeometry | null {
-  const [geometry, setGeometry] = useState<THREE.BufferGeometry | null>(null);
-  const readBack = () => {
-    const attached = (ref.current as { geometry?: THREE.BufferGeometry } | null)?.geometry ?? null;
-    setGeometry((previous) => (previous === attached ? previous : attached));
-  };
-  useLayoutEffect(readBack);
-  useEffect(readBack);
-  return geometry;
 }
 
 /** What every chain draw shares with the base it covers. */
@@ -185,8 +165,6 @@ const drawAtOnePlace: ChainDrawFactory = (spec) => <ChainDraw {...spec} />;
  * the link when its file lands. A stencil-reading pass draws nothing and the walk
  * continues past it; a pass whose material already drew is cut, drawing each material
  * of a hand-written cycle once.
- *
- * @canonical One pass of a material's next_pass chain
  */
 function NextPassLink(props: PassProps) {
   const { source, ordinal, drawsSelf, visited, geometry, attach, surfaceCount, onOrdinal, draw, shadow } =
