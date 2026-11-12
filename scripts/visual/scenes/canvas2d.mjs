@@ -583,8 +583,12 @@ export const CANVAS_2D_SCENES = [
   { name: 'confirmation-dialog-embedded', file: 'unit-confirmation-dialog-embedded.tscn', mode: '2d' },
   // A Theme on the dialog restyles its Button and Label: a red normal box, yellow focus text, green message. Max 7, mean 0.33.
   { name: 'accept-dialog-theme', file: 'unit-accept-dialog-theme.tscn', mode: '2d' },
+  // A Theme icon on Button draws on the buttons an AcceptDialog and a ConfirmationDialog build, and widens them. Max 7, mean 0.31.
+  { name: 'accept-dialog-theme-icon', file: 'unit-accept-dialog-theme-icon.tscn', mode: '2d' },
   // A visible FileDialog in Open File mode with an empty file list: toolbar, side lists, filter and a disabled OK. Max 26, mean 0.22 (SVG icon edges).
   { name: 'file-dialog-open-empty', file: 'file-dialog-open-empty/unit-file-dialog-open-empty.tscn', mode: '2d' },
+  // The Button theme icon draws on the Cancel and OK buttons, and the OptionButton one on the filter; the toolbar keeps its icons. Max 26, mean 0.19 (SVG icon edges).
+  { name: 'file-dialog-theme-icon', file: 'file-dialog-theme-icon/unit-file-dialog-theme-icon.tscn', mode: '2d' },
   // Save File mode adds the create-folder button, the title "Save a File" and an enabled Save. Max 26, mean 0.22 (SVG icon edges).
   { name: 'file-dialog-save-empty', file: 'file-dialog-save-empty/unit-file-dialog-save-empty.tscn', mode: '2d' },
   // A CheckBox option and a value option draw the options row and the option grid. Max 26, mean 0.22 (SVG icon edges).

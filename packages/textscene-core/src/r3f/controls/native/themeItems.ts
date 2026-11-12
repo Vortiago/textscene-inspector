@@ -158,13 +158,28 @@ export function internalChildThemeItems(
   const known = byType.get(key);
   if (known) return known;
   const themeScope = themeResolutionScope(type, variation, parent.themeChain, parent.projectFonts);
-  const node = { name: type, type, children: [], properties: {}, rawProperties: {} } as TscnNode;
+  const node = builtControlNode(type);
   const items = {
     styleBoxes: resolveStyleBoxes(node, parent.resources, themeScope),
     colors: resolveThemedColors(node, themeScope),
     constants: resolveThemedConstants(node, themeScope),
-    icons: resolveThemedIcons(node, parent.resources, themeScope),
+    icons: builtControlIcons(parent, type, variation),
   };
   byType.set(key, items);
   return items;
+}
+
+/** What a Control `memnew`d inside `parent` resolves its icons to: the `icons` of `internalChildThemeItems`, without the other items. */
+export function builtControlIcons(
+  parent: Pick<SolveNode, 'resources' | 'themeChain' | 'projectFonts'>,
+  type: string,
+  variation?: string
+): Readonly<Record<string, ThemedIconRef>> {
+  const themeScope = themeResolutionScope(type, variation, parent.themeChain, parent.projectFonts);
+  return resolveThemedIcons(builtControlNode(type), parent.resources, themeScope);
+}
+
+/** A node with no scene line, so no override. */
+function builtControlNode(type: string): TscnNode {
+  return { name: type, type, children: [], properties: {}, rawProperties: {} } as TscnNode;
 }

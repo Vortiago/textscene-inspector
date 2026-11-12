@@ -82,7 +82,12 @@ import {
 import type { WindowProperties } from '../../../nodes/windows/window/types';
 import { NO_OWNERS, type ThemeOwner } from '../../../nodes/windows/window/themeOwners';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
-import { controlSolverRegistry, type ChildVisibilityFn, type TextureSlotRequest } from './solverRegistry';
+import {
+  controlSolverRegistry,
+  type BuiltIconsFn,
+  type ChildVisibilityFn,
+  type TextureSlotRequest,
+} from './solverRegistry';
 import {
   INHERIT_PARENT_MATERIAL,
   NO_PARENT_MATERIAL,
@@ -114,6 +119,7 @@ import {
   type PaintRange,
 } from '../../canvasPaintOrder';
 import {
+  builtControlIcons,
   resolveStyleBoxes,
   resolveThemedColors,
   resolveThemedConstants,
@@ -536,6 +542,12 @@ function buildForest(
     return { x: image?.width ?? 0, y: image?.height ?? 0 };
   }
 
+  /** The theme icons of a Control built inside a node with this scope and theme chain. */
+  function builtIconsOf(scope: SceneScope, themeChain: readonly ThemeResource[]): BuiltIconsFn {
+    return (type, variation) =>
+      builtControlIcons({ resources: scope, themeChain, projectFonts }, type, variation);
+  }
+
   /** `resolveTextureSize`'s answer for a node whose type never registers a `TextureSlotsFn`. */
   const EMPTY_TEXTURE_SLOTS: Readonly<Record<string, Vector2 | null>> = {};
 
@@ -547,13 +559,14 @@ function buildForest(
   function resolveTextureSize(
     node: TscnNode,
     path: string,
-    ext: readonly TscnExternalResource[],
-    int: readonly TscnInternalResource[],
+    ownScope: SceneScope,
+    themeChain: readonly ThemeResource[],
     themedIcons: Readonly<Record<string, ThemedIconRef>>
   ): { size: Vector2 | null; slots: Readonly<Record<string, Vector2 | null>> } {
+    const { externalResources: ext, internalResources: int } = ownScope;
     const slotsFn = controlSolverRegistry.textureSlots(node.type);
     if (slotsFn) {
-      const requests = slotsFn(node, themedIcons);
+      const requests = slotsFn(node, themedIcons, builtIconsOf(ownScope, themeChain));
       const slots: Record<string, Vector2 | null> = {};
       for (const { key, ref, scope, isHeldLocally = NODE_PROPERTY, sizeOfFile } of requests) {
         slots[key] = ref
@@ -685,6 +698,8 @@ function buildForest(
   ): SolveNode {
     const props = window.properties as WindowProperties;
     const themeScope = themeResolutionScope(window.type, props.themeTypeVariation, themeChain, projectFonts);
+    const items = themeItems(window, scope, themeScope);
+    const texture = resolveTextureSize(window, path, scope, themeChain, items.icons);
     return {
       path,
       node: window,
@@ -699,9 +714,9 @@ function buildForest(
       rtl: inheritedRtl ?? layoutDirectionEnv.rootRtl,
       locale: layoutDirectionEnv.applicationLocale,
       hidden,
-      ...themeItems(window, scope, themeScope),
-      textureSize: null,
-      textureSlots: EMPTY_TEXTURE_SLOTS,
+      ...items,
+      textureSize: texture.size,
+      textureSlots: texture.slots,
       labelSettings: null,
       labelSettingsFont: null,
       resources: scope,
@@ -866,13 +881,7 @@ function buildForest(
       projectFonts
     );
     const items = themeItems(collapsed, ownScope, themeScope);
-    const texture = resolveTextureSize(
-      collapsed,
-      path,
-      ownScope.externalResources,
-      ownScope.internalResources,
-      items.icons
-    );
+    const texture = resolveTextureSize(collapsed, path, ownScope, nodeThemeChain, items.icons);
     // A canvas boundary IS the canvas every chain broken below it parents
     // to, so it adopts those; every other Control passes them further up.
     const isBoundary = controlSolverRegistry.isCanvasBoundary(collapsed.type);
