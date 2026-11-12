@@ -859,7 +859,7 @@ describe('lineEditCaretRect: RTL layout (line_edit.cpp:1560-1584)', () => {
   });
 });
 
-describe('lineEditDrawnLine: the glyphs the draw loop keeps (line_edit.cpp:1512-1545)', () => {
+describe('lineEditDrawnLayout: the glyphs the draw loop keeps (line_edit.cpp:1512-1545)', () => {
   const line = (
     advances: number[]
   ): import('../../../../r3f/controls/native/text/textLayout').TextLineLayout => ({

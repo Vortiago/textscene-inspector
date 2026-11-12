@@ -10,8 +10,7 @@ import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { godotColorToLinear } from '../../../../r3f/godotColor';
 import { godotPolylineToSegments } from '../../../../r3f/gizmo/godotPolylineToSegments';
-import type { GeometryBuffers } from '../../../2d/ui/graphedit/connectionStroke';
-import { polylineStrokeGeometry } from '../../../2d/ui/graphedit/polylineStroke';
+import { polylineStrokeGeometry, type GeometryBuffers } from '../../../../godot/rendering/canvasPolyline.js';
 import {
   roleColour,
   type ColourRole,

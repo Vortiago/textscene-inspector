@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { polylineStrokeGeometry } from './polylineStroke';
+import { polylineStrokeGeometry } from './canvasPolyline.js';
 
 const RED = { r: 1, g: 0, b: 0, a: 1 };
 const BLUE = { r: 0, g: 0, b: 1, a: 1 };

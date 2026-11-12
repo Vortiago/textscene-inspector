@@ -10,9 +10,15 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { isEqualApprox, isZeroApprox, clamp, type Rgba } from '../../../../godot/math/math';
-import type { GeometryBuffers } from './connectionStroke';
-import { normalizedVector2, type Vector2 } from '../../../../godot/math/vector.js';
+import { isEqualApprox, isZeroApprox, clamp, type Rgba } from '../math/math.js';
+import { normalizedVector2, type Vector2 } from '../math/vector.js';
+
+/** Vertex-coloured triangles: xyz positions, triangle indices and rgba colours. */
+export interface GeometryBuffers {
+  positions: number[];
+  indices: number[];
+  colors: number[];
+}
 
 /** `FEATHER_SIZE` (`renderer_canvas_cull.cpp:45`). */
 const POLYLINE_FEATHER_SIZE = 1.25;

@@ -36,6 +36,24 @@ export async function setDisplayToggle(page, label, wanted) {
   return null;
 }
 
+/**
+ * Greater than CameraFit's last load-time fit timer (1100 ms after mount), with margin for
+ * render-loop latency under host contention.
+ */
+export const FIT_QUIESCENCE_MS = 1500;
+
+/**
+ * Turns one display toggle on, lets the load-time camera fit finish, and takes the pointer off the
+ * toolbar so no hover is captured. Returns null on success, or a reason for the caller to fail with.
+ */
+export async function showDisplayOverlay(page, label) {
+  const reason = await setDisplayToggle(page, label, true);
+  if (reason) return reason;
+  await page.waitForTimeout(FIT_QUIESCENCE_MS);
+  await page.mouse.move(0, 0);
+  return null;
+}
+
 /** Which workspace the app opened the scene in, asked of the app, not re-derived. */
 export async function readViewportMode(page) {
   const stage = page.locator(`[data-testid="${CANVAS_2D_TESTIDS.stage}"]`);

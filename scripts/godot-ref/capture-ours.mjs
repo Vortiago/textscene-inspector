@@ -17,13 +17,10 @@ import {
   createCaptureContext,
   openScene,
   previewPort,
-  setDisplayToggle,
+  showDisplayOverlay,
   settleCanvas,
   withPreviewBrowser,
 } from '../visual/previewServer.mjs';
-
-/** The time `scripts/visual` gives the camera fit to finish after a toggle (`PRE_SELECT_FIT_QUIESCENCE_MS`). */
-const COLLISIONS_SETTLE_MS = 1500;
 
 export function parseArgs(argv) {
   const args = {
@@ -116,20 +113,13 @@ export function captureOurs({
         onSlow: (ms) => console.log(`[ours] no network idle within ${ms}ms`),
       });
       if (!target) throw new Error(targetReason);
-      if (showCollisions) await showCollisionShapes(page);
+      const collisionsReason = showCollisions ? await showDisplayOverlay(page, 'Collisions') : null;
+      if (collisionsReason) throw new Error(collisionsReason);
       const { buffer, reason } = await settleCanvas(page, target);
       if (!buffer) throw new Error(reason);
       return buffer;
     }
   );
-}
-
-/** Turns Visible Collision Shapes on, then lets the load-time camera fit finish and clears the pointer off the toolbar. */
-async function showCollisionShapes(page) {
-  const reason = await setDisplayToggle(page, 'Collisions', true);
-  if (reason) throw new Error(reason);
-  await page.waitForTimeout(COLLISIONS_SETTLE_MS);
-  await page.mouse.move(0, 0);
 }
 
 /**
