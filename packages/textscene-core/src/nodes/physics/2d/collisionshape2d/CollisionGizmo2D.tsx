@@ -1,5 +1,5 @@
 /**
- * Outline gizmo for the outline of a 2D collision shape, drawn as a line loop like Godot's editor
+ * The outline of a 2D collision shape as a gizmo, drawn as a line loop like Godot's editor
  * collision overlay. Component.tsx mounts it only when `showCollisions` is on.
  */
 
