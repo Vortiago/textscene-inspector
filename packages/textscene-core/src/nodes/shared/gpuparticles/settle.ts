@@ -112,13 +112,13 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
   return pose(particles, emitter.localCoords ? identityTransform3D() : emissionTransform);
 }
 
+/** The top of the range hint of `preprocess` (`gpu_particles_3d.cpp`). A hand-written scene may pass it; the settle stops there. */
+const MAX_SETTLE_SECONDS = 600;
+
 /**
  * The most particle steps one settle runs: about a second of main thread. Each particle depends on its
  * own index only, so a larger emitter settles every `stride`-th particle exactly and draws a thinner cloud.
  */
-/** The top of the range hint of `preprocess` (`gpu_particles_3d.cpp`). A hand-written scene may pass it; the settle stops there. */
-const MAX_SETTLE_SECONDS = 600;
-
 const MAX_PARTICLE_STEPS = 2_000_000;
 
 function particleStride(amount: number, steps: number): number {
