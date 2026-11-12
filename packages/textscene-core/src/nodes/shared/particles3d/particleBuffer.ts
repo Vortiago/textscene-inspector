@@ -1,4 +1,4 @@
-/** The layout of the buffer `_update_particle_data_buffer` writes, which the simulation and the draw share. */
+/** The layout of the buffer `_update_particle_data_buffer` writes, which the simulations of both particle nodes and the draw share. */
 
 /** Floats per particle in the buffer: a 3×4 transform, a colour and the custom data (`cpu_particles_3d.cpp:1279-1312`). */
 export const PARTICLE_FLOATS = 20;

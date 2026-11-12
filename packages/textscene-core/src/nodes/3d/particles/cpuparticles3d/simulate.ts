@@ -103,7 +103,11 @@ import {
 } from '../../../shared/cpuparticles/process';
 import type { ParticleEmission } from '../../../../resources/materials/particleprocessmaterial/types';
 import type { CPUParticles3DSimulation } from './types';
-import { PARTICLE_COLOR_OFFSET, PARTICLE_CUSTOM_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
+import {
+  PARTICLE_COLOR_OFFSET,
+  PARTICLE_CUSTOM_OFFSET,
+  PARTICLE_FLOATS,
+} from '../../../shared/particles3d/particleBuffer';
 
 export interface ParticleSim3DInput {
   sim: CPUParticles3DSimulation;

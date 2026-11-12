@@ -6,9 +6,9 @@
  */
 
 import * as THREE from 'three';
-import { MATRIX_FLOATS, VEC4_FLOATS } from '../../../../resources/meshes/multimesh/types';
-import { colouredInstances } from '../../../../r3f/surfacedMeshDrawer/colouredInstances';
-import type { MeshInstances } from '../../../../r3f/surfacedMeshDrawer/meshInstances';
+import { MATRIX_FLOATS, VEC4_FLOATS } from '../../../resources/meshes/multimesh/types';
+import { colouredInstances } from '../../../r3f/surfacedMeshDrawer/colouredInstances';
+import type { MeshInstances } from '../../../r3f/surfacedMeshDrawer/meshInstances';
 import { PARTICLE_COLOR_OFFSET, PARTICLE_CUSTOM_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
 
 /** The particle count of `buffer`. */

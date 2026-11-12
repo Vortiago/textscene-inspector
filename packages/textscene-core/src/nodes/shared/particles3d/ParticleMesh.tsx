@@ -4,10 +4,10 @@
  */
 
 import { useMemo } from 'react';
-import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { useMeshContent } from '../../../../r3f/meshes/meshContent';
-import { SurfacedMeshDrawer } from '../../../../r3f/surfacedMeshDrawer/SurfacedMeshDrawer';
-import { useResourceResolution } from '../../../../resources/useSubOrExtResource';
+import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { useMeshContent } from '../../../r3f/meshes/meshContent';
+import { SurfacedMeshDrawer } from '../../../r3f/surfacedMeshDrawer/SurfacedMeshDrawer';
+import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { particleInstances } from './particleInstances';
 
 interface ParticleMeshProps {
