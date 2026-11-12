@@ -61,7 +61,7 @@ states. A Theme that sets an item wins over the default theme's.
 Button draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
 does (`button.cpp:458-462`). A ring of `outline_size / 4` px sits under the fill. No ring
 draws at an `outline_size` of 0 or a zero alpha. The ring strokes on the canvas painter for the
-bundled font too (ADR-0040). A trimmed AUTO line whose paragraph resolves right-to-left trims its ring by that
+bundled font too (ADR-0069). A trimmed AUTO line whose paragraph resolves right-to-left trims its ring by that
 direction, with the ellipsis first. Its fill draws the glyphs that trim drops, from the visual
 left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`).
 

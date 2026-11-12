@@ -1,6 +1,7 @@
 # Shader patches stay until a trigger says port
 
-- Status: Accepted
+- Status: Accepted. Amended on 2026-11-11: the port form is TSL node materials, and the owner started the
+  port.
 - Related: ADR-0038 (one owner for every program input), ADR-0039.
 
 ## Context
@@ -33,11 +34,27 @@ Port the lit surface when the first of these holds:
 3. A feature must change the structure of the light loop, not lines inside it. Examples are
    Godot's per-mesh light limits and light cull masks.
 
-The lit-surface port is one `ShaderMaterial` per shading mode. It owns Godot's light functions and
-light loop, and includes three's chunks for skinning, morph targets, instancing, clipping and fog.
-It removes the light and shadow anchors, which cost the most at an upgrade.
+The lit-surface port is a set of TSL node materials. They draw on `WebGLRenderer` through three's
+`WebGLNodesHandler`, and the same nodes draw on `WebGPURenderer` later. A `ShaderMaterial` does not
+run on the WebGPU backend, so a port in that form would be done a second time.
+[`docs/webgpu-tsl-spike.md`](../webgpu-tsl-spike.md) holds the measurements.
+
+The port owns Godot's lighting model, a light node and a shadow node for each light kind, and the
+surface inputs. It removes the light and shadow anchors, which cost the most at an upgrade.
+
+On 2026-11-11 the owner started the port without a trigger, because the edits stand at 78 of 80.
+While the port runs:
+
+- The node lit surface stays behind one switch. With the switch off, every golden stays
+  pixel-identical.
+- The triggers and the limit of 80 stay. A change to the lit surface lands in the node graph, not in
+  a new patch.
+- A golden may move by at most 1/255 when a material switches to nodes, and only if its comparison
+  with Godot does not get worse.
+- The webview bundle ceiling is 1,150,000 B. The pull request that removes the patches measures the
+  bundle and proposes the next ceiling.
 
 ## Consequences
 
 The anchor test does not catch three changing code next to an anchor that it keeps. The goldens
-catch that. A trigger starts its own issue for the port, not a change inside another pull request.
+catch that. The port has its own issues. It is not a change inside another pull request.

@@ -1,9 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fontFile, systemFont } from '../../../r3f/controls/native/text/sfntOutlines.testkit';
 import { meshContentKey } from '../meshSource';
 import { FONT_PATH, readyTextMesh, textMeshWith, trueTypeFontFile } from '../textmesh/textMeshFont.testkit';
 import { isDrawablePrimitiveMesh, primitiveMeshSurface, referencesKey } from './surface';
 import { scopedMesh } from './surface.testkit';
+
+// happy-dom loads no font file, so each loads as the stand-in face.
+vi.mock(
+  '../../../r3f/controls/native/text/sceneFontLoad',
+  () => import('../../../r3f/controls/native/testing/sceneFontLoadStub')
+);
 
 const TEXEL_SIZE = 0.2;
 

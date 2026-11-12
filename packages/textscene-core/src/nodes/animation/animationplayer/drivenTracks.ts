@@ -5,7 +5,8 @@
  * mixer's clip builder, which warns and drops it.
  */
 
-import { sampleTupleTrack } from '../../../godot/scene/animationTrackSampler.js';
+import { AnimationUpdateMode } from '../../../godot/scene/animation.js';
+import { sampleCrossedBackward, sampleTupleTrack } from '../../../godot/scene/animationTrackSampler.js';
 import type { GodotAnimation } from './animationResolver';
 import type { PushedClip } from '../../../r3f/animation/usePushedWrites';
 import { animatedValueKey } from '../../../r3f/contexts/AnimatedValueContext';
@@ -32,8 +33,11 @@ export interface ValueTarget {
   property: string;
   /** Where the value is pushed: the key of the property of the node. */
   key: string;
-  /** The components of the value at `time`, or null where the track has none. */
-  sample: (time: number) => readonly number[] | null;
+  /**
+   * The components of the value at `time`, or null where the track has none. `isReturnPass` says a
+   * ping-pong runs back, where a discrete track shows the key the playhead last crossed.
+   */
+  sample: (time: number, isReturnPass: boolean) => readonly number[] | null;
 }
 
 export interface DrivenClip {
@@ -106,11 +110,15 @@ function valueTargetOf(track: GodotTrack, path: string, animation: GodotAnimatio
   // `frame` and `visible` hold a key until the next one, whatever `interp` says.
   const setup = sampleSetupOf(track, animation);
   if (!VALUE_PUSH_PROPERTIES[property]) setup.interp = 0;
+  const isDiscrete = track.updateMode === AnimationUpdateMode.DISCRETE;
   return {
     path,
     property,
     key: animatedValueKey(path, property),
-    sample: (time) => sampleTupleTrack(keys, time, setup),
+    sample: (time, isReturnPass) =>
+      isDiscrete && isReturnPass
+        ? sampleCrossedBackward(keys, time, setup.length)
+        : sampleTupleTrack(keys, time, setup),
   };
 }
 
@@ -122,9 +130,9 @@ function valueTargetOf(track: GodotTrack, path: string, animation: GodotAnimatio
 export function valuesPushedBy(clip: DrivenClip): PushedClip<readonly number[]> {
   return {
     name: clip.name,
-    sample: (time, out) => {
+    sample: (time, out, isReturnPass) => {
       for (const { key, sample } of clip.values) {
-        const value = sample(time);
+        const value = sample(time, isReturnPass);
         if (value !== null) out.set(key, value);
       }
     },

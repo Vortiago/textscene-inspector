@@ -10,6 +10,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
+import { TRIANGLE_OUTLINES } from '../../../../r3f/controls/native/testing/triangleOutlines';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { outlineStrokeWidthPx } from '../../../../r3f/controls/native/text/textOutline';
 import { LineEdit } from './Component';
@@ -30,8 +31,10 @@ vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
   },
 }));
 
-vi.mock('../../../../r3f/controls/native/text/bundledFontLoader', () => ({
-  peekBundledCanvasFontMetrics: () => TEST_SCENE_FONT_METRICS,
+// The bundled canvas face settles at once, with no font to decode.
+vi.mock('../../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  peekOutlines: () => TRIANGLE_OUTLINES,
 }));
 
 const RECT = { x: 0, y: 0, w: 200, h: 30 };

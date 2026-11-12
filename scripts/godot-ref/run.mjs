@@ -18,8 +18,8 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { PNG } from 'pngjs';
 import { CANVAS_2D_CAPTURE, CANVAS_CAPTURE, SETTLE_SIM_SECONDS } from '../visual/previewServer.mjs';
-import { FLATTENED_CORPUS_ROOTS } from '../corpusRoots.mjs';
 import { LAVAPIPE_LOADER_ENV } from './lavapipe.mjs';
+import { resolveProjectRoot } from './projectRoot.mjs';
 
 /**
  * The frame `capture-ours.mjs` produces, so a probe coordinate addresses the same surface point
@@ -475,26 +475,6 @@ export function parseArgs(argv) {
   }
 
   return args;
-}
-
-/**
- * The `res://` root for a scene: the nearest ancestor holding a `project.godot` (each vendored
- * demo is its own Godot project), else the scene's own directory. `scenes/fixtures` has no
- * project file, and its `res://` paths are relative to itself.
- */
-export function resolveProjectRoot(scenePath) {
-  let dir = dirname(resolve(scenePath));
-  const stop = resolve(join(import.meta.dirname, '..', '..'));
-  const unmarkedRoots = FLATTENED_CORPUS_ROOTS.map((r) => resolve(join(stop, 'scenes', r)));
-  while (dir.startsWith(stop) && dir !== stop) {
-    if (existsSync(join(dir, 'project.godot'))) return dir;
-    // A vendored closure that is a res:// root without saying so. Checked while
-    // walking, so a scene nested inside one resolves against the corpus rather
-    // than against its own folder.
-    if (unmarkedRoots.includes(dir)) return dir;
-    dir = dirname(dir);
-  }
-  return dirname(resolve(scenePath));
 }
 
 /**
@@ -1595,8 +1575,7 @@ export async function renderReference({
       debugCollisions,
     });
   } finally {
-    // Each run copies the whole res:// root, which on a tmpfs /tmp stays in RAM, and the
-    // engine-gated tests run inside `pnpm test:unit`.
+    // Each run copies the whole res:// root, which on a tmpfs /tmp stays in RAM.
     if (!keepWork) await rm(work, { recursive: true, force: true });
   }
 }

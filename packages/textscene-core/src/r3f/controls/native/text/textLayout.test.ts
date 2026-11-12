@@ -1,7 +1,6 @@
 /**
- * Each expected width is hand-derived from the `hmtx` advance in `OPEN_SANS_METRICS.advanceWidths`,
- * not from the algorithm under test, and not from atlas `xadvance`, which is fixed at the 42 px bake
- * size. A plain `units * 16/2048` is used only for even advances, where 26.6 quantisation lands on
+ * Each expected width is hand-derived from the `hmtx` advance of the vendored font,
+ * not from the algorithm under test. A plain `units * 16/2048` is used only for even advances, where 26.6 quantisation lands on
  * the same number. The last suite pins where the two diverge against real Godot advances.
  */
 import { afterEach, describe, expect, it } from 'vitest';
@@ -134,9 +133,8 @@ describe('shapeText — glyph pen positions', () => {
   });
 });
 
-describe('shapeText — a character outside the baked charset', () => {
-  // U+03A9 OMEGA stands in for any unbaked codepoint. If the charset ever bakes it, pick another
-  // unbaked character rather than changing the assertions.
+describe('shapeText — a character outside ASCII and Latin-1', () => {
+  // U+03A9 OMEGA stands in for any code point of the font.
   const omegaLayout = (fontMetrics: FontMetrics) =>
     shapeText('AΩB', {
       fontSizePx: 16,
@@ -148,17 +146,26 @@ describe('shapeText — a character outside the baked charset', () => {
 
   it('advances the pen by the hmtx advance of its glyph, 1605 units, which the baked tables read', () => {
     const [, omega] = omegaLayout(OPEN_SANS_FONT_METRICS).lines[0]!.glyphs;
-    expect(omega!.glyph).toBeNull();
+    expect(omega!.advance).toBe(12.546875);
+  });
+
+  it('advances the pen by the same hmtx advance where the face shapes no run', () => {
+    const [, omega] = omegaLayout({ ...OPEN_SANS_FONT_METRICS, shaping: undefined }).lines[0]!.glyphs;
     expect(omega!.advance).toBe(12.546875);
   });
 
   it(
-    "advances the pen by the font's own OS/2 xAvgCharWidth fallback where the face reads no glyph " +
+    "advances the pen by the font's own OS/2 xAvgCharWidth fallback where the face reads no advance " +
       '(9.484375px at size 16: 1214 * 16/2048), rather than collapsing to a zero-width gap',
     () => {
-      const [a, omega, b] = omegaLayout({ ...OPEN_SANS_FONT_METRICS, shaping: undefined }).lines[0]!.glyphs;
+      const faceWithoutOmegaAdvance: FontMetrics = {
+        ...OPEN_SANS_FONT_METRICS,
+        shaping: undefined,
+        getGlyphAdvanceUnits: (ch) => (ch === 'Ω' ? null : OPEN_SANS_FONT_METRICS.getGlyphAdvanceUnits(ch)),
+      };
+      const [a, omega, b] = omegaLayout(faceWithoutOmegaAdvance).lines[0]!.glyphs;
       expect(omega!.advance).toBeCloseTo(9.484375, 10);
-      // The fallback advance joins the running sum like a baked one.
+      // The fallback advance joins the running sum like a read one.
       expect(b!.x).toBeCloseTo(a!.advance + omega!.advance, 10);
     }
   );
@@ -203,12 +210,11 @@ describe('shapeText — preserveControl / control characters (text_server_adv.cp
     });
     const [a, control, b] = layout.lines[0]!.glyphs;
     expect(control!.advance).toBe(0);
-    expect(control!.glyph).toBeNull();
     expect(control!.controlCodepoint).toBeUndefined();
     expect(b!.x).toBeCloseTo(a!.advance, 10);
   });
 
-  it('with preserveControl, a control character advances by the hex-code-box width and carries its own codepoint, drawing no atlas ink', () => {
+  it('with preserveControl, a control character advances by the hex-code-box width and carries its own codepoint', () => {
     const layout = shapeText(`A${CONTROL}B`, {
       fontSizePx: 15,
       boxWidthPx: 0,
@@ -219,7 +225,6 @@ describe('shapeText — preserveControl / control characters (text_server_adv.cp
     const [a, control, b] = layout.lines[0]!.glyphs;
     // hexCodeBoxAdvanceSize(15, 1).x = (4+3*1+0+1)*1 = 8 (hexCodeBox.test.ts's own worked example).
     expect(control!.advance).toBe(8);
-    expect(control!.glyph).toBeNull();
     expect(control!.controlCodepoint).toBe(0x0001);
     expect(b!.x).toBeCloseTo(a!.advance + 8, 10);
   });
@@ -485,12 +490,6 @@ describe('shapeText — a face for each character', () => {
     expect(glyphs[1]!.advance).toBe(16);
   });
 
-  it('gives an atlas bitmap only to a character in an atlas face', () => {
-    const glyphs = shapeFaces('AA', (i) => (i === 0 ? OPEN_SANS_FONT_METRICS : wideFace));
-    expect(glyphs[0]!.glyph).not.toBeNull();
-    expect(glyphs[1]!.glyph).toBeNull();
-  });
-
   it('records the face each glyph was shaped in, and the layout face for a text with one face', () => {
     const glyphs = shapeFaces('AA', (i) => (i === 0 ? OPEN_SANS_FONT_METRICS : wideFace));
     expect([glyphs[0]!.fontMetrics, glyphs[1]!.fontMetrics]).toEqual([OPEN_SANS_FONT_METRICS, wideFace]);
@@ -545,20 +544,20 @@ describe('shapeText — empty text', () => {
 });
 
 describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the shaping/painting dispatch seam)', () => {
-  it('echoes back the default OPEN_SANS_FONT_METRICS (kind "atlas") and its own ceil(ascent) as baselineOffsetPx when no fontMetrics option is given', () => {
+  it('echoes back the default OPEN_SANS_FONT_METRICS (kind "bundled") and its own ceil(ascent) as baselineOffsetPx when no fontMetrics option is given', () => {
     const layout = shapeText('X', {
       fontSizePx: 16,
       boxWidthPx: 0,
       autowrapMode: AutowrapMode.AUTOWRAP_OFF,
       lineSpacingPx: 3,
     });
-    expect(layout.fontMetrics?.kind).toBe('atlas');
+    expect(layout.fontMetrics?.kind).toBe('bundled');
     // ceil(2189 * 16/2048) = 18, from OPEN_SANS_METRICS.ascent through the arithmetic
     // of `getFontAscentPx` in fontMetrics.ts.
     expect(layout.baselineOffsetPx).toBe(18);
   });
 
-  it('a font of kind "canvas" shapes through the SAME line-breaking/placement code but every glyph placement carries no atlas bitmap', () => {
+  it('a font of kind "canvas" shapes through the same line-breaking and placement code, at its own advances', () => {
     const canvasMetrics: FontMetrics = {
       hasGlyph: () => true,
       kind: 'canvas',
@@ -577,11 +576,7 @@ describe('shapeText — TextLayoutResult.fontMetrics / baselineOffsetPx (the sha
       lineSpacingPx: 3,
     });
     expect(layout.fontMetrics).toBe(canvasMetrics);
-    for (const gp of layout.lines[0]!.glyphs) {
-      expect(gp.glyph).toBeNull();
-    }
-    // Pen advance still comes from the injected metrics, not the atlas's own
-    // xadvance: 500 design units @ unitsPerEm 1000, size 16 -> 8px.
+    // 500 design units @ unitsPerEm 1000, size 16 -> 8px.
     expect(layout.lines[0]!.glyphs[0]!.advance).toBeCloseTo(8, 10);
     // ceil(800 * 16/1000) = 13.
     expect(layout.baselineOffsetPx).toBe(13);
@@ -601,7 +596,7 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
     averageAdvanceUnits: 500,
   };
 
-  it("echoes the parent's own fontMetrics — TextRun dispatches paint by layout.fontMetrics.kind, so a scene-font line must not fall back to the atlas painter", () => {
+  it("echoes the parent's own fontMetrics — TextRun dispatches paint by layout.fontMetrics.kind, so a scene-font line must not fall back to the bundled face", () => {
     const parent = shapeText('AB', {
       fontSizePx: 16,
       boxWidthPx: 0,
@@ -615,7 +610,7 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
     expect(solo.linePitchPx).toBe(parent.linePitchPx);
   });
 
-  it('echoes the atlas metrics when the parent was shaped against them', () => {
+  it('echoes the bundled face when the parent was shaped against it', () => {
     const parent = shapeText('AB', {
       fontSizePx: 16,
       boxWidthPx: 0,
@@ -624,7 +619,7 @@ describe('soloLineLayout — re-wrapping one line of an already-shaped result', 
     });
     const solo = soloLineLayout(parent.lines[0]!, parent);
     expect(solo.fontMetrics).toBe(parent.fontMetrics);
-    expect(solo.fontMetrics.kind).toBe('atlas');
+    expect(solo.fontMetrics.kind).toBe('bundled');
   });
 
   it('takes its width from the LINE, not the parent — a multi-line parent reports its widest line', () => {
@@ -688,7 +683,7 @@ describe('shapedTextSizeWidthPx (text_server_adv.cpp:7524-7537)', () => {
     expect(shapedTextSizeWidthPx(-2.25)).toBe(-2);
   });
 
-  it("is the ceil of shapeText's own raw advance sum, for real vendored-atlas text", () => {
+  it("is the ceil of shapeText's own raw advance sum, for text of the bundled font", () => {
     const layout = shapeText('Master volume', {
       fontSizePx: 16,
       boxWidthPx: 0,
@@ -793,7 +788,6 @@ describe('shapeText — paragraphSeparator (Label::_shape)', () => {
     expect(split.lines[0]!.text).toBe(`AAAA BBBB${'\u200b'}`);
     expect(split.widthPx).toBe(unsplit.widthPx);
     expect(split.lines[0]!.glyphs.at(-1)!.advance).toBe(0);
-    expect(split.lines[0]!.glyphs.at(-1)!.glyph).toBeNull();
   });
 
   // RichTextLabel adds its ZWSP for an ITEM_NEWLINE (`rich_text_label.cpp:626-644`), so only a

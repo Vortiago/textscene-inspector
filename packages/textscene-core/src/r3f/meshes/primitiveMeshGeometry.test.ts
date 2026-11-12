@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fontFile } from '../controls/native/text/sfntOutlines.testkit';
 import { EMPTY_AABB } from '../../godot/math/aabb';
 import { UV2_ATTRIBUTE } from '../../resources/meshes/uv2';
@@ -6,6 +6,12 @@ import { FONT_PATH, readyTextMesh, textMeshWith } from '../../resources/meshes/t
 import { primitiveMeshGeometry, primitiveMeshAabb } from './primitiveMeshGeometry';
 import { COARSE_TUBE, curveEndingAt, scopedMesh } from '../../resources/meshes/primitivemesh/surface.testkit';
 import { subResource } from '../../testing/subResource';
+
+// happy-dom loads no font file, so each loads as the stand-in face.
+vi.mock(
+  '../controls/native/text/sceneFontLoad',
+  () => import('../controls/native/testing/sceneFontLoadStub')
+);
 
 const TEXEL_SIZE = 0.2;
 /** Four segments round and one ring: vertex 6 sits on the equator, a quarter turn from the seam. */

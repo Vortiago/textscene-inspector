@@ -3,7 +3,7 @@
  * on `underline_mode` and draw state. It asserts structure, tint and render order only: pixels belong
  * to the golden images and `pnpm ref:godot`.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -14,7 +14,16 @@ import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing
 import { LinkButton } from './Component';
 import type { LinkButtonProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { findTextMesh } from '../../../../r3f/controls/native/testing/ownIcon';
+import {
+  bundledRunMeshes,
+  bundledRuns,
+  inkedGlyphCount,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
@@ -49,7 +58,7 @@ describe('<LinkButton> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <LinkButton {...painterEnv()} solveNode={solveNode({ text: 'Visit' })} rect={RECT} renderOrder={0} />
     );
-    expect(findTextMesh(renderer.scene)).toBeDefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeDefined();
   });
 
   it('draws NO StyleBox chrome mesh — LinkButton registers none of its own', async () => {
@@ -102,8 +111,8 @@ describe('<LinkButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(1), 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.r).toBeCloseTo(1, 5);
   });
 
   it('uses opaque BLACK once disabled (no font_disabled_color in its ClassDB chain)', async () => {
@@ -115,9 +124,9 @@ describe('<LinkButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0), 5);
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(1, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.r).toBeCloseTo(0, 5);
+    expect(tint.a).toBeCloseTo(1, 5);
   });
 
   it('applies the walker-composed tint to the text AND the underline alike', async () => {
@@ -130,9 +139,9 @@ describe('<LinkButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    const textTint = bundledRuns(renderer.scene)[0]!.tint;
     // control_font_color(0.875) * own(0.5) = 0.4375 in sRGB, linearised.
-    expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.4375), 5);
+    expect(textTint.r).toBeCloseTo(0.4375, 5);
 
     const underlineMaterial = findUnderlineMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
     expect(underlineMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.4375), 4);
@@ -165,8 +174,8 @@ describe('<LinkButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const quadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
-    expect(quadCount(trimmed)).toBeLessThan(quadCount(untrimmed));
+    const inkedCount = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
+    expect(inkedCount(trimmed)).toBeLessThan(inkedCount(untrimmed));
   });
 
   // `link_button.cpp:311`: under RTL the underline runs `(size.width - width) .. size.width`, flush with

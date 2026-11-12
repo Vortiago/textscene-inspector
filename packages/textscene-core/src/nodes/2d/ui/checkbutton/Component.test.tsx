@@ -2,7 +2,7 @@
  * `<CheckButton>` render contract: a toggle-switch icon, always drawn at the right edge, and
  * optional label text, over the chrome of a themed state box. Structure, tint and render order only.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -10,7 +10,6 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { textQuadCounts } from '../../../../r3f/controls/native/testing/textQuadCounts';
 import { CheckButton } from './Component';
 import type { CheckButtonProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -25,6 +24,17 @@ import {
 } from '../../../../r3f/controls/native/testing/ownIcon';
 import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
+import {
+  bundledRunMeshes,
+  bundledRuns,
+  inkedGlyphCount,
+  inkedGlyphCounts,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
@@ -92,7 +102,7 @@ describe('<CheckButton> (isolated painter contract)', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckButton {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
-    expect(findTextMesh(renderer.scene)).toBeDefined();
+    expect(bundledRunMeshes(renderer.scene)[0]).toBeDefined();
   });
 
   it('uses font_pressed_color (opaque white) when checked and not disabled', async () => {
@@ -104,17 +114,17 @@ describe('<CheckButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(1), 5);
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(1, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.r).toBeCloseTo(1, 5);
+    expect(tint.a).toBeCloseTo(1, 5);
   });
 
   it('uses font_color (0.875 gray) for an unchecked, non-disabled switch', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckButton {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.875), 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.r).toBeCloseTo(0.875, 5);
   });
 
   it('uses font_disabled_color (alpha 0.5) once disabled', async () => {
@@ -126,8 +136,8 @@ describe('<CheckButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const material = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
-    expect(material.uniforms.uOpacity!.value).toBeCloseTo(0.5, 5);
+    const tint = bundledRuns(renderer.scene)[0]!.tint;
+    expect(tint.a).toBeCloseTo(0.5, 5);
   });
 
   it('applies the walker-composed tint as ONE product, reaching the icon AND text alike', async () => {
@@ -144,9 +154,9 @@ describe('<CheckButton> (isolated painter contract)', () => {
     // button_unchecked_color(1) * own(0.25) = 0.25 in sRGB, linearised.
     expect(iconMaterial.color.r).toBeCloseTo(sRGBChannelToLinear(0.25), 4);
 
-    const textMaterial = findTextMesh(renderer.scene)!.material as THREE.ShaderMaterial;
+    const textTint = bundledRuns(renderer.scene)[0]!.tint;
     // control_font_color(0.875) * own(0.25) = 0.21875 in sRGB, linearised.
-    expect(textMaterial.uniforms.uColor!.value.x).toBeCloseTo(sRGBChannelToLinear(0.21875), 5);
+    expect(textTint.r).toBeCloseTo(0.21875, 5);
   });
 
   it('keeps every mesh inside its own unit of render order (icon and text)', async () => {
@@ -170,8 +180,8 @@ describe('<CheckButton> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const leftGroup = findTextMesh(rendererLeft.scene)!.parent as THREE.Object3D;
-    const centerGroup = findTextMesh(rendererCenter.scene)!.parent as THREE.Object3D;
+    const leftGroup = bundledRunMeshes(rendererLeft.scene)[0]!.parent as THREE.Object3D;
+    const centerGroup = bundledRunMeshes(rendererCenter.scene)[0]!.parent as THREE.Object3D;
     // marginX(6) alone for the default. An explicit CENTER override shifts it further right.
     expect(leftGroup.position.x).toBe(6);
     expect(centerGroup.position.x).toBeGreaterThan(leftGroup.position.x);
@@ -213,7 +223,7 @@ describe('<CheckButton> (isolated painter contract)', () => {
 });
 
 describe('<CheckButton>: text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
-  const glyphQuadCount = (r: Rendered) => findTextMesh(r.scene)!.geometry.attributes.position!.count / 4;
+  const inkedCount = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
 
   async function render(properties: Partial<CheckButtonProperties>) {
     return ReactThreeTestRenderer.create(
@@ -227,12 +237,12 @@ describe('<CheckButton>: text_overrun_behavior trims the label to its paragraph 
   }
 
   it('draws only the whole words that fit under OVERRUN_TRIM_WORD', async () => {
-    // 'AAAA BBBB' is 88.6 px, wider than the 80 px box: the word trim keeps 'AAAA' (4 quads), where the
-    // paragraph cut alone keeps the glyphs of 'BBB' too.
+    // 'AAAA BBBB' is 88.6 px, wider than the 80 px box: the word trim keeps the 4 glyphs of 'AAAA',
+    // where the paragraph cut alone keeps the glyphs of 'BBB' too.
     const trimmed = await render({ overrunBehavior: 2 });
     const cut = await render({ overrunBehavior: 0 });
-    expect(glyphQuadCount(trimmed)).toBe(4);
-    expect(glyphQuadCount(cut)).toBeGreaterThan(4);
+    expect(inkedCount(trimmed)).toBe(4);
+    expect(inkedCount(cut)).toBeGreaterThan(4);
   });
 });
 
@@ -250,12 +260,12 @@ describe('<CheckButton>: autowrap_mode wraps the label at its paragraph box (but
 
   it('draws three lines', async () => {
     const wrapped = await render({ autowrapMode: 2 });
-    expect(textQuadCounts(wrapped.scene)).toHaveLength(3);
+    expect(inkedGlyphCounts(wrapped.scene)).toHaveLength(3);
   });
 
   it('draws one line at AUTOWRAP_OFF', async () => {
     const unwrapped = await render({});
-    expect(textQuadCounts(unwrapped.scene)).toHaveLength(1);
+    expect(inkedGlyphCounts(unwrapped.scene)).toHaveLength(1);
   });
 });
 
@@ -317,7 +327,7 @@ describe("<CheckButton>: Button's inherited icon (button.cpp:333-405)", () => {
     const painter = <CheckButton {...painterEnv()} solveNode={node} rect={RECT} renderOrder={0} />;
     const unloaded = await renderUnloaded(painter);
     const loaded = await renderWithOwnIcon(painter, { w: 12, h: 12 });
-    // Only the check draws until the icon loads, yet the label is already where the solver sized it.
+    // Only the toggle draws until the icon loads, yet the label is already where the solver sized it.
     expect(findIconMeshes(unloaded.scene)).toHaveLength(1);
     expect(worldPosition(findTextMesh(unloaded.scene)!).x).toBe(worldPosition(findTextMesh(loaded.scene)!).x);
   });

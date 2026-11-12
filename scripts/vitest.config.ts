@@ -12,6 +12,8 @@ export default mergeConfig(
       name: 'scripts',
       environment: 'node',
       include: ['**/*.test.mjs'],
+      // The tests that render through real Godot run under `pnpm test:godot-ref`.
+      exclude: ['**/*.engine.test.mjs'],
     },
   })
 );

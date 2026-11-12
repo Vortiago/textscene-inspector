@@ -106,7 +106,7 @@ function ctx(withMeasurer = true): SolveContext {
   };
 }
 
-// hmtx advance widths from openSansMetrics.ts, not the atlas xadvance:
+// hmtx advance widths from openSansMetrics.ts:
 // 'A' is 1354 design units and 'B' 1350.
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 // The shaped size of 'AB': `TS->shaped_text_get_size(...).x` ceils the pen
@@ -1235,7 +1235,7 @@ describe('layoutRichTextRuns', () => {
     expect(placements[1]!.fontSizePx).toBe(16);
   });
 
-  it("(regression) each placement echoes the PARENT layout's fontMetrics/linePitchPx — TextRunMesh.tsx dispatches paint by layout.fontMetrics.kind, so an omitted value here would silently force every run onto the atlas path", () => {
+  it("(regression) each placement echoes the PARENT layout's fontMetrics/linePitchPx — TextRunMesh.tsx dispatches paint by layout.fontMetrics.kind, so an omitted value here would silently force every run onto the painter of the bundled face", () => {
     const runs = [textRun({ text: 'AB', fontSizePx: FONT_SIZE })];
     const layout = shape('AB');
     const placements = layoutRichTextRuns(runs, layout);
@@ -1531,11 +1531,10 @@ describe('underlineRectPx', () => {
           char: 'u',
           x: 10.4,
           advance: 4.8,
-          glyph: null,
           fontMetrics: OPEN_SANS_FONT_METRICS,
           fontSizePx: 16,
         },
-        { char: 'l', x: 15.2, advance: 8, glyph: null, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
+        { char: 'l', x: 15.2, advance: 8, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
       ],
       18,
       METRICS_16

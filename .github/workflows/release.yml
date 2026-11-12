@@ -56,7 +56,7 @@ jobs:
 
       - uses: ./.github/actions/setup
       # `fonts:combining-classes --check` reads Unicode 15.1.0, which only Python 3.13 ships.
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.13'
 
@@ -112,7 +112,7 @@ jobs:
 
       # The extension's release is the repository's "Latest": it ships most often.
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           body: ${{ needs.validate.outputs.notes }}
           make_latest: true
@@ -156,7 +156,7 @@ jobs:
           if-no-files-found: error
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           body: ${{ needs.validate.outputs.notes }}
           make_latest: false

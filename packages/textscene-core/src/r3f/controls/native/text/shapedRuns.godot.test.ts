@@ -187,7 +187,7 @@ describe('shapeText — the ligatures of the default theme font against Godot', 
   const bundledRows = rows.filter(({ font }) => font === BUNDLED_FONT);
 
   it.each(bundledRows.map((row) => [title(row), row] as const))(
-    'shapes %s on the atlas face',
+    'shapes %s on the bundled face',
     async (_, row) => {
       const glyphIndexOf = sfntGlyphIndex(await sfntOf(row.font))!;
       const placements = glyphsOf(row.text, OPEN_SANS_FONT_METRICS, row.sizePx);

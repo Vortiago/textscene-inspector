@@ -13,7 +13,7 @@ import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 /** A `FontMetrics` unlike Open Sans: every advance is 2x an 'A', so a caller that drops `fontMetrics` measures a different width. */
 const WIDE_FONT_METRICS: FontMetrics = {
   hasGlyph: () => true,
-  kind: 'atlas',
+  kind: 'bundled',
   unitsPerEm: 1000,
   ascent: 1000,
   descent: 300,

@@ -81,6 +81,35 @@ describe('resolveAnimations — value track parsing (B3)', () => {
   });
 });
 
+describe('resolveAnimations — the update mode of a value track', () => {
+  // Godot keeps the mode inside the keys Dictionary, as `update` or the older `cont`
+  // (`animation.cpp:251-262`).
+  const updateModeOf = (modeFields: string) => {
+    const internal = [
+      subResource('AnimationLibrary', 'Lib', { _data: '{\n"flip": SubResource("A")\n}' }),
+      subResource('Animation', 'A', {
+        'tracks/0/type': '"value"',
+        'tracks/0/path': 'NodePath("Sprite:frame")',
+        'tracks/0/keys': `{\n"times": PackedFloat32Array(0, 1),\n${modeFields}"values": [0, 1]\n}`,
+      }),
+    ];
+    return resolveAnimations(DEFAULT_LIB, internal)[0]!.tracks[0]!.updateMode;
+  };
+
+  it.each([
+    ['"update": 1,\n', 1],
+    ['"update": 0,\n', 0],
+    ['', 0],
+    ['"update": 7,\n', 3],
+    ['"update": -2,\n', 0],
+    ['"cont": false,\n', 1],
+    ['"cont": true,\n', 0],
+    ['"cont": false,\n"update": 0,\n', 0],
+  ])('reads %j as mode %i', (modeFields, mode) => {
+    expect(updateModeOf(modeFields)).toBe(mode);
+  });
+});
+
 describe('resolveAnimations — track path spellings', () => {
   // `tracks/N/path` is a NodePath slot (`Animation::_set` hands it to
   // `track_set_path`), and `variant.cpp:746-749` lists STRING as a strict

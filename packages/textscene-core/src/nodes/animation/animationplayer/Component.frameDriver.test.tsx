@@ -20,9 +20,7 @@ import { useOptionalSelection, type SelectionContextValue } from '../../../r3f/c
 import { NodePathProvider } from '../../../r3f/contexts/NodePathContext';
 import { SceneStack } from '../../../r3f/testing/SceneStack';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
-import type { AnimationPlayerProperties } from './types';
-
-import { AnimationCallbackModeProcess, AnimationCallbackModeMethod } from '../../../godot/scene/animation';
+import { animationPlayerNode, LIB_LIBRARY } from './animationPlayerNode.testkit';
 
 const SPRITE_PATH = 'Coin/Sprite2D';
 const AP_PATH = 'Coin/AnimationPlayer';
@@ -50,30 +48,6 @@ const INTERNAL: TscnInternalResource[] = [
 ];
 
 const spriteHeading = { type: 'node', attributes: { type: 'Sprite2D', name: 'Sprite2D' } };
-
-function makeAP(): TscnNode {
-  const props: AnimationPlayerProperties = {
-    name: 'AnimationPlayer',
-    speed_scale: 1.0,
-    playback_default_blend_time: 0.0,
-    callback_mode_process: AnimationCallbackModeProcess.IDLE,
-    callback_mode_method: AnimationCallbackModeMethod.DEFERRED,
-    active: true,
-    autoplay: 'spin',
-    current_animation: '',
-    current_animation_length: 0.0,
-    current_animation_position: 0.0,
-    root_node: 'NodePath("..")',
-    libraries: [{ name: '', subResourceId: 'Lib' }],
-  };
-  return {
-    rawProperties: {},
-    name: 'AnimationPlayer',
-    type: 'AnimationPlayer',
-    children: [],
-    properties: props,
-  };
-}
 
 let transport: AnimationTransport;
 let selection: SelectionContextValue | null;
@@ -116,7 +90,7 @@ async function mount() {
               <Sprite2D node={sprite} />
             </NodePathProvider>
             <NodePathProvider path={AP_PATH}>
-              <AnimationPlayer node={makeAP()} />
+              <AnimationPlayer node={animationPlayerNode({ autoplay: 'spin', libraries: LIB_LIBRARY })} />
             </NodePathProvider>
           </group>
         </AnimationTransportProvider>

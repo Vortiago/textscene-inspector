@@ -17,7 +17,8 @@ concurrency:
 jobs:
   # A pull request that changes no file a golden scene renders through skips the golden run. A push
   # or pull request whose rendering files already passed it skips it too (renderInputsKey.mjs). A
-  # manual run always runs it.
+  # manual run always runs it. A pull request that changes no file the real-Godot tests read skips
+  # them (godotRefScope.mjs).
   changes:
     name: Changed files
     runs-on: ubuntu-latest
@@ -25,6 +26,7 @@ jobs:
     outputs:
       visual: ${{ steps.passed.outputs.cache-hit == 'true' && 'false' || steps.scope.outputs.visual }}
       visual-key: ${{ steps.inputs.outputs.key }}
+      godot-ref: ${{ steps.godot-ref.outputs.godot-ref }}
     steps:
       # A pull request checks out its merge commit, whose first parent is the base branch.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -51,6 +53,63 @@ jobs:
           path: .visual-pass
           key: visual-pass-${{ steps.inputs.outputs.key }}
           lookup-only: true
+      - id: godot-ref
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "godot-ref=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only HEAD^1 HEAD | node scripts/ci/godotRefScope.mjs >> "$GITHUB_OUTPUT"
+
+  # Names the image the browser jobs run in (.github/ci-image), and builds and publishes it when no
+  # run has yet. The tag is a hash of the image's inputs, so a commit that changes none of them
+  # reuses the published image, and a pull request that changes one runs in its own image.
+  image:
+    name: CI image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      ref: ${{ steps.image.outputs.ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: image
+        run: node scripts/ci/ciImage.mjs >> "$GITHUB_OUTPUT"
+      - name: Sign in to ghcr.io
+        env:
+          TOKEN: ${{ github.token }}
+        run: docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin <<< "$TOKEN"
+      - id: registry
+        env:
+          REF: ${{ steps.image.outputs.ref }}
+        run: |
+          if ! docker manifest inspect "$REF" > /dev/null; then
+            echo "lacks-image=true" >> "$GITHUB_OUTPUT"
+          fi
+      # A run for a Dependabot pull request publishes too: the permissions above raise its token,
+      # which is read-only by default. No setting raises the token of a fork's pull request.
+      - name: Refuse to build an image that a fork's token cannot publish
+        if: steps.registry.outputs.lacks-image && github.event.pull_request.head.repo.fork
+        env:
+          REF: ${{ steps.image.outputs.ref }}
+        run: |
+          echo "::error::This pull request changes .github/ci-image/Dockerfile or the locked Playwright version, so its jobs need the image $REF, which a fork cannot publish to ghcr.io. A maintainer pushes this branch to the repository itself, where this job publishes the image."
+          exit 1
+      - name: Build and publish the image
+        if: steps.registry.outputs.lacks-image
+        env:
+          REF: ${{ steps.image.outputs.ref }}
+          PLAYWRIGHT_VERSION: ${{ steps.image.outputs.playwright-version }}
+        # The label links the package to this repository, which gives the repository's runs access.
+        run: |
+          docker build --build-arg PLAYWRIGHT_VERSION --tag "$REF" \
+            --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            .github/ci-image
+          docker push "$REF"
 
   static:
     name: Lint, type check and generated files
@@ -77,7 +136,7 @@ jobs:
       - run: pnpm docs:gallery --check
       - run: pnpm fonts:bake --check
       # `fonts:combining-classes --check` reads Unicode 15.1.0, which only Python 3.13 ships.
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.13'
       - run: pnpm fonts:combining-classes --check
@@ -99,6 +158,27 @@ jobs:
       # Before the tests: loadCoreLinter.test.mjs skips itself when core's dist is absent.
       - run: pnpm --filter @textscene/core build
       - run: pnpm test:unit --shard=${{ matrix.shard }}/4
+
+  # The tests of `pnpm ref:godot` that render through the real engine. `pnpm test:unit` leaves them
+  # out: they take minutes, and they move only with the files the changes job reads for them.
+  godot-ref:
+    name: Real-Godot reference tests
+    runs-on: ubuntu-latest
+    needs: [image, changes]
+    if: needs.changes.outputs.godot-ref == 'true'
+    # Chromium keeps its shared memory in /dev/shm, which Docker limits to 64 MB, so every job in
+    # the image shares the runner's.
+    container: &ci-image
+      image: ${{ needs.image.outputs.ref }}
+      options: --ipc=host
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      # Godot renders on lavapipe under xvfb-run, as `pnpm ref:godot` does on a developer's host.
+      # The image holds all three.
+      - run: pnpm test:godot-ref
 
   build:
     name: Build and package
@@ -160,8 +240,9 @@ jobs:
   visual-regression:
     name: Visual regression (${{ matrix.shard }}/12)
     runs-on: ubuntu-latest
-    needs: [web-previewer, changes]
+    needs: [image, web-previewer, changes]
     if: needs.changes.outputs.visual == 'true'
+    container: *ci-image
     timeout-minutes: 20
     # The harness captures one scene at a time with software GL, and the whole set takes more
     # than an hour on one runner. Runners are free for a public repository. Each shard gets an
@@ -182,8 +263,6 @@ jobs:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      - uses: ./.github/actions/playwright
-
       - run: pnpm test:visual --shard ${{ matrix.shard }}/12
         env:
           VISUAL_SKIP_BUILD: '1'
@@ -197,7 +276,8 @@ jobs:
   e2e-web:
     name: E2E (web previewer)
     runs-on: ubuntu-latest
-    needs: web-previewer
+    needs: [image, web-previewer]
+    container: *ci-image
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -209,16 +289,12 @@ jobs:
           name: web-previewer
           path: apps/textscene-web/dist/
 
-      - uses: ./.github/actions/playwright
-
-      # The rasteriser gate in test:gpu needs lavapipe, the driver pnpm ref:godot renders on.
-      - run: sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers
-
       - run: pnpm test:e2e:web
         env:
           VISUAL_SKIP_BUILD: '1'
 
-      # The sky layer passes, which happy-dom cannot run, checked on the real shaders.
+      # The sky layer passes, which happy-dom cannot run, checked on the real shaders. Its rasteriser
+      # gate needs lavapipe, the driver pnpm ref:godot renders on.
       - run: pnpm test:gpu
 
       # Each budget scene's draw calls and render step runs per frame, against its work budget.
@@ -231,11 +307,12 @@ jobs:
   renderer-consumer:
     name: Renderer in a plain Vite app
     runs-on: ubuntu-latest
+    needs: image
+    container: *ci-image
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - uses: ./.github/actions/playwright
       - run: pnpm test:renderer-consumer
 
   integration:
@@ -343,14 +420,15 @@ jobs:
   web:
     name: VS Code for the Web
     runs-on: ubuntu-latest
+    needs: image
+    container: *ci-image
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
 
-      # The root package pins the Playwright that @vscode/test-web launches.
-      - uses: ./.github/actions/playwright
-
+      # @vscode/test-web launches the Playwright that the root package pins, whose Chromium the
+      # image holds.
       - run: pnpm --filter textscene-inspector test:web
 
       # On the build test:web made: a local folder, the preview button, and a painted viewport.
@@ -362,16 +440,19 @@ jobs:
           path: scripts/vscode/output/web-preview-gate/
 
   # The one check that branch protection requires, so a new or renamed job needs no settings change.
-  # Every job it needs must succeed. The one allowed skip is the golden run that the changes job ruled
-  # out, which this job checks itself, so the gate costs no queued job of its own.
+  # Every job it needs must succeed. The allowed skips are the golden run and the real-Godot tests,
+  # each only when the changes job ruled it out. This job checks that itself, so the gate costs no
+  # queued job of its own.
   ci-ok:
     name: CI passed
     if: always()
     needs:
       [
         changes,
+        image,
         static,
         unit,
+        godot-ref,
         build,
         web-previewer,
         visual-regression,
@@ -388,9 +469,11 @@ jobs:
       - env:
           NEEDS: ${{ toJSON(needs) }}
         run: |
-          failed=$(jq -r '.changes.outputs.visual as $scope | to_entries
+          # A job may skip only when the changes job put it out of scope.
+          failed=$(jq -r '{"visual-regression": .changes.outputs.visual,
+              "godot-ref": .changes.outputs["godot-ref"]} as $scopes | to_entries
             | map(select(.value.result != "success"
-                and (.key != "visual-regression" or .value.result != "skipped" or $scope != "false")))
+                and (.value.result != "skipped" or $scopes[.key] != "false")))
             | map("\(.key) (\(.value.result))") | join(", ")' <<< "$NEEDS")
           if [ -n "$failed" ]; then
             echo "::error::these jobs did not pass: $failed"

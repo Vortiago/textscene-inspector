@@ -17,6 +17,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
+import { TRIANGLE_OUTLINES } from '../../../../r3f/controls/native/testing/triangleOutlines';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { outlineStrokeWidthPx } from '../../../../r3f/controls/native/text/textOutline';
 import { Button } from '../button/Component';
@@ -44,8 +45,10 @@ vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
   },
 }));
 
-vi.mock('../../../../r3f/controls/native/text/bundledFontLoader', () => ({
-  peekBundledCanvasFontMetrics: () => TEST_SCENE_FONT_METRICS,
+// The bundled canvas face settles at once, with no font to decode.
+vi.mock('../../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  peekOutlines: () => TRIANGLE_OUTLINES,
 }));
 
 const RECT = { x: 0, y: 0, w: 160, h: 40 };
@@ -91,7 +94,6 @@ async function render(
 const strokeRuns = () => [
   ...new Map(scene.runs.filter((run) => run.strokeWidthPx).map((run) => [run.layout, run])).values(),
 ];
-/** The latest fill: the atlas fill comes first while the bundled canvas face registers. */
 const fillRun = () => scene.runs.filter((run) => !run.strokeWidthPx).at(-1)!;
 
 afterEach(() => {
@@ -138,7 +140,6 @@ describe.each(CONTROLS)('<%s> theme text outline', (type, Control) => {
     it('strokes the ring and fills the text on the canvas face, as FreeType draws both', async () => {
       await render(Control, outlined(type, { font_outline_color: RED }, { outline_size: OUTLINE_SIZE }));
 
-      // The fill draws on the atlas until the bundled canvas face registers, then moves to it.
       await vi.waitFor(() => expect(fillRun().layout.fontMetrics.kind).toBe('canvas'));
       expect(strokeRuns()).toHaveLength(1);
       expect(strokeRuns()[0]!.strokeWidthPx).toBe(outlineStrokeWidthPx(OUTLINE_SIZE));

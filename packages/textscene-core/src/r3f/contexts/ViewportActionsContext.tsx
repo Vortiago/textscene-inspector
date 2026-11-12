@@ -1,11 +1,11 @@
 /**
- * What a panel's toolbar and panels do to its viewport: look through a camera,
- * frame the 2D stage, reset the view and take a screenshot. `previewedCameraPath ===
- * null` means the canvas draws through the editor camera. A node path makes the canvas
- * look through the Camera3D there.
+ * What a panel's toolbar and panels do to its viewport: look through a camera, frame the 2D
+ * stage, reset the view, toggle freelook and take a screenshot. `previewedCameraPath === null`
+ * means the canvas draws through the editor camera. A node path makes it look through that Camera3D.
  */
 
 import type { SceneGraph } from '../../core/SceneGraph.js';
+import type { FreelookControl, FreelookState } from '../freelook.js';
 import {
   createContext,
   useCallback,
@@ -13,6 +13,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type MutableRefObject,
   type ReactNode,
 } from 'react';
@@ -43,12 +44,20 @@ export interface ViewportActionsContextValue {
    */
   claimFrame2D: (requestId: number) => boolean;
   /**
-   * Ends any camera preview and returns the editor camera to its initial pose.
+   * Ends any camera preview and any freelook toggle, and returns the editor camera to its initial pose.
    * The pose waits until a canvas registers a reset handler.
    */
   resetCamera: () => void;
   /** `<TscnCanvas>` registers its `<GodotEditorControls>` reset here, and gets the cleanup. */
   registerResetHandler: (handler: () => void) => () => void;
+  /** `<TscnCanvas>` registers its canvas's freelook here, and gets the cleanup. */
+  registerFreelook: (control: FreelookControl) => () => void;
+  /** Starts or ends the freelook toggle of the 3D canvas. It does nothing before one registers. */
+  toggleFreelook: () => void;
+  /** The 3D canvas's freelook state, or null with no 3D canvas. Stable until the state changes. */
+  freelookState: () => FreelookState | null;
+  /** Calls `listener` on each new freelook state, and when a canvas registers or leaves. */
+  subscribeFreelook: (listener: () => void) => () => void;
   /** The active view, 3D or 2D, as a PNG data URL, or `null` before a canvas registers a handler. */
   takeScreenshot: () => string | null;
   /**
@@ -149,11 +158,18 @@ export function ViewportActionsProvider({
     setPreviewedCameraPath(null);
   }, []);
 
+  const {
+    ref: freelookRef,
+    register: registerFreelook,
+    subscribe: subscribeFreelookSlot,
+  } = useHandlerSlot<FreelookControl>();
   const { ref: resetHandlerRef, register: registerResetHandler } = useHandlerSlot<() => void>();
   const resetCamera = useCallback(() => {
     endCameraPreview();
+    // A flight would carry the camera off the pose the reset restores.
+    if (freelookRef.current?.getState().isToggled) freelookRef.current.toggle();
     resetHandlerRef.current?.();
-  }, [endCameraPreview, resetHandlerRef]);
+  }, [endCameraPreview, freelookRef, resetHandlerRef]);
 
   const {
     ref: screenshotSourceRef,
@@ -174,6 +190,25 @@ export function ViewportActionsProvider({
     [screenshotSourceRef]
   );
 
+  const toggleFreelook = useCallback(() => freelookRef.current?.toggle(), [freelookRef]);
+  const freelookState = useCallback(() => freelookRef.current?.getState() ?? null, [freelookRef]);
+  const subscribeFreelook = useCallback(
+    (listener: () => void) => {
+      // The canvas in the slot changes with the viewport mode, so the state subscription follows it.
+      let unsubscribeState = freelookRef.current?.subscribe(listener);
+      const unsubscribeSlot = subscribeFreelookSlot(() => {
+        unsubscribeState?.();
+        unsubscribeState = freelookRef.current?.subscribe(listener);
+        listener();
+      });
+      return () => {
+        unsubscribeSlot();
+        unsubscribeState?.();
+      };
+    },
+    [freelookRef, subscribeFreelookSlot]
+  );
+
   const value = useMemo<ViewportActionsContextValue>(
     () => ({
       previewedCameraPath,
@@ -184,6 +219,10 @@ export function ViewportActionsProvider({
       claimFrame2D,
       resetCamera,
       registerResetHandler,
+      registerFreelook,
+      toggleFreelook,
+      freelookState,
+      subscribeFreelook,
       takeScreenshot,
       registerScreenshotHandler,
       hasScreenshotHandler,
@@ -199,6 +238,10 @@ export function ViewportActionsProvider({
       claimFrame2D,
       resetCamera,
       registerResetHandler,
+      registerFreelook,
+      toggleFreelook,
+      freelookState,
+      subscribeFreelook,
       takeScreenshot,
       registerScreenshotHandler,
       hasScreenshotHandler,
@@ -209,6 +252,35 @@ export function ViewportActionsProvider({
 
   return <ViewportActionsContext.Provider value={value}>{children}</ViewportActionsContext.Provider>;
 }
+
+/** The 3D canvas's freelook state, live, or null with no provider or no 3D canvas. */
+export function useFreelookState(): FreelookState | null {
+  const actions = useContext(ViewportActionsContext);
+  const freelookState = actions?.freelookState ?? noFreelookState;
+  return useSyncExternalStore(actions?.subscribeFreelook ?? subscribeToNothing, freelookState, freelookState);
+}
+
+/**
+ * One boolean of the 3D canvas's freelook state, or null with no provider or no 3D canvas. A
+ * primitive, so its reader does not re-render on a speed change, which a trackpad sends per frame.
+ */
+function useFreelookBoolean(key: 'isToggled' | 'isAvailable'): boolean | null {
+  const actions = useContext(ViewportActionsContext);
+  const freelookState = actions?.freelookState ?? noFreelookState;
+  const read = (): boolean | null => freelookState()?.[key] ?? null;
+  return useSyncExternalStore(actions?.subscribeFreelook ?? subscribeToNothing, read, read);
+}
+
+export function useIsFreelookToggled(): boolean | null {
+  return useFreelookBoolean('isToggled');
+}
+
+export function useIsFreelookAvailable(): boolean | null {
+  return useFreelookBoolean('isAvailable');
+}
+
+const subscribeToNothing = (): (() => void) => () => {};
+const noFreelookState = (): null => null;
 
 /** The viewport actions, or null when no provider is mounted. */
 export function useOptionalViewportActions(): ViewportActionsContextValue | null {

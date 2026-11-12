@@ -281,7 +281,7 @@ export function shapeItemListText(input: ItemTextShapeInput): TextLayoutResult |
   const overrunFlags = overrunFlagsForBehavior(
     input.overrunBehavior ?? OverrunBehavior.OVERRUN_TRIM_ELLIPSIS
   );
-  // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to the vendored atlas font
+  // `layout.fontMetrics`, not `input.fontMetrics`: `shapeText` defaults to the bundled face
   // when the caller passes none, and the trim must agree with the metrics that shaped these glyphs.
   const trim = (line: TextLineLayout, flags: OverrunTrimFlags) =>
     trimTextBufferLineToWidth(line, input.widthPx, flags, {

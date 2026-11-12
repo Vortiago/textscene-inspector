@@ -7,7 +7,7 @@
 // licence OFL-1.1). Re-run the bake script to regenerate; its `--check` mode
 // fails if this file has drifted from the vendored font.
 
-// The tables below are generated data on long lines. The atlas face shapes each run through them
+// The tables below are generated data on long lines. The bundled face shapes each run through them
 // (`openSansFontMetrics.ts`), as Godot's HarfBuzz shapes the font.
 
 /** The font's shaping tables, base64url with no padding, by tag. */

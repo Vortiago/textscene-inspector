@@ -6,7 +6,7 @@ describe('bundledFontBytes', () => {
     expect(new TextDecoder().decode(new Uint8Array(bundledFontBytes(), 0, 4))).toBe('wOF2');
   });
 
-  it('decodes once, so the registration and the outline reader share one buffer', () => {
+  it('decodes once, so every read of the outlines shares one buffer', () => {
     expect(bundledFontBytes()).toBe(bundledFontBytes());
   });
 });

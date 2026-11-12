@@ -2,7 +2,7 @@
  * `<TabBar>` render contract: one StyleBox and text run per drawn tab, the current tab's chrome, and
  * the close icon where the display policy shows it. It asserts structure and colour, not pixels.
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
@@ -13,6 +13,12 @@ import type { TabBarProperties } from './types';
 import { TabBar } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { bundledRunMeshes, bundledRuns } from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+// A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
+vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
+  default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
+}));
 
 const THEME = nativeTheme(1);
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 32 };
@@ -30,14 +36,6 @@ function findChromeMeshes(scene: Rendered['scene']) {
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
     .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
-}
-
-/** `<TextRun>`'s mesh carries the MSDF `ShaderMaterial` (`uColor`/`uOpacity` uniforms). */
-function findTextMeshes(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .filter((m) => (m.material as THREE.ShaderMaterial).uniforms?.uColor !== undefined);
 }
 
 describe('<TabBar> (isolated painter contract)', () => {
@@ -58,7 +56,7 @@ describe('<TabBar> (isolated painter contract)', () => {
       />
     );
     expect(findChromeMeshes(renderer.scene)).toHaveLength(2);
-    expect(findTextMeshes(renderer.scene)).toHaveLength(2);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(2);
   });
 
   it('draws nothing for an empty tab list', async () => {
@@ -72,7 +70,7 @@ describe('<TabBar> (isolated painter contract)', () => {
       />
     );
     expect(findChromeMeshes(renderer.scene)).toHaveLength(0);
-    expect(findTextMeshes(renderer.scene)).toHaveLength(0);
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
   });
 
   it('the current tab draws with tab_selected (a top border), an unselected tab with tab_unselected (no top border)', async () => {
@@ -201,7 +199,7 @@ describe('<TabBar> (isolated painter contract)', () => {
 
   it('shapes a tab title at theme_override_font_sizes/font_size, not the theme default (tab_bar.cpp:365,2179)', async () => {
     const tabs = [{ title: 'Inventory', tooltip: '', disabled: false }];
-    const glyphHeight = async (properties: Partial<TabBarProperties>) => {
+    const titleFontSizePx = async (properties: Partial<TabBarProperties>) => {
       const renderer = await ReactThreeTestRenderer.create(
         <TabBar
           {...painterEnv()}
@@ -211,14 +209,10 @@ describe('<TabBar> (isolated painter contract)', () => {
           renderOrder={0}
         />
       );
-      const geometry = findTextMeshes(renderer.scene)[0]!.geometry as THREE.BufferGeometry;
-      geometry.computeBoundingBox();
-      const box = geometry.boundingBox!;
-      return box.max.y - box.min.y;
+      return bundledRuns(renderer.scene)[0]!.fontSizePx;
     };
-    expect(await glyphHeight({ themeOverrideFontSizes: { font_size: 28 } })).toBeGreaterThan(
-      await glyphHeight({})
-    );
+    expect(await titleFontSizePx({ themeOverrideFontSizes: { font_size: 28 } })).toBe(28);
+    expect(await titleFontSizePx({})).toBe(THEME.fontSize);
   });
 
   it('draws the scroll arrows once the tabs overflow a clipped bar', async () => {

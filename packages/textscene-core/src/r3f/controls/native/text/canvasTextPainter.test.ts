@@ -14,8 +14,8 @@ import { createRuntimeFontMetrics } from './runtimeFontMetrics';
 import { patchedFragment } from '../../../testing/patchedFragment';
 import { mipmappedTexture } from '../../../testing/mipmapBiasUniform';
 import { litPixelMaterial } from '../../../lighting2d/testing/litPixelMaterial';
-import { AutowrapMode, ContourPointTag } from '../../../../godot/text/textServerEnums';
-import type { GlyphContours } from './glyphContours';
+import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { TRIANGLE_CONTOURS } from '../testing/triangleOutlines';
 import type { SfntOutlines } from './sfntOutlines';
 import type { GlyphDrawer } from './glyphDrawer';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -164,16 +164,37 @@ describe('computeCanvasTextCanvasLayout', () => {
     expect(canvasLayout.canvasWidthPx).toBe(21);
   });
 
+  // The triangle of `TRIANGLE_CONTOURS` spans x from 1 px to 5 px, inside each 8 px pen box.
+  it('bounds the raster by the contours a glyph draws, for any face that carries outlines', () => {
+    const layout = carrying(layoutFor('AB'), 0, outlinesStub().outlines);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
+    // The pen boxes span 0 px to 16 px, and the slack adds 2 px on the left and 1 px on the right.
+    expect(canvasLayout.offsetXPx).toBe(2);
+    expect(canvasLayout.canvasWidthPx).toBe(19);
+  });
+
+  it('reaches the contour of a glyph that passes its pen box on each side', () => {
+    const wideContours = {
+      ...TRIANGLE_CONTOURS,
+      points: TRIANGLE_CONTOURS.points.map((point, i) => ({ ...point, x: [-3.5, 20, 3][i]! })),
+    };
+    const outlines: SfntOutlines = { glyphIndex: () => 7, glyphContours: () => wideContours };
+    const canvasLayout = computeCanvasTextCanvasLayout(carrying(layoutFor('A'), 0, outlines), 0);
+    // floor(-3.5 - 2) is -6, and 20 + 1 + 6 is 27.
+    expect(canvasLayout.offsetXPx).toBe(6);
+    expect(canvasLayout.canvasWidthPx).toBe(27);
+  });
+
   // `measureText` measures the default instance, which the outlines of another instance can pass.
-  it('reaches one ascent past the glyphs of a face drawn at an instance, whose measured ink is the default', () => {
+  it('bounds a face drawn at an instance by the contours of that instance, not its measured ink', () => {
     const measured = createRuntimeFontMetrics({
       hasGlyph: () => true,
       scalars: { unitsPerEm: 1000, ascent: 800, descent: 200 },
       measureWidthUnits: (text) => text.length * 500,
-      measureInkUnits: () => ({ left: 0, right: 500 }),
+      measureInkUnits: () => ({ left: 900, right: 900 }),
       cssFontFamily: 'scene-font-instance-ink-test',
     });
-    const { outlines } = instanceOutlinesStub();
+    const { outlines, glyphContours } = instanceOutlinesStub();
     const layout = shapeText('jj', {
       fontSizePx: 16,
       boxWidthPx: 0,
@@ -181,9 +202,23 @@ describe('computeCanvasTextCanvasLayout', () => {
       fontMetrics: withVariation(measured, { opentype: MONO_INSTANCE, outlines }),
       lineSpacingPx: 0,
     });
-    const reachPx = layout.baselineOffsetPx;
-    const inkLeftPx = Math.floor(-reachPx - 2);
-    expect(computeCanvasTextCanvasLayout(layout, 0).offsetXPx).toBe(-inkLeftPx);
+    expect(computeCanvasTextCanvasLayout(layout, 0).offsetXPx).toBe(2);
+    expect(glyphContours).toHaveBeenCalledWith(7, 16, { embolden: 0, skew: 0, opentype: MONO_INSTANCE });
+  });
+
+  it('spans the pen box alone for a glyph with no contour on a face that draws no text (edge case)', () => {
+    const noFamily = { ...CANVAS_METRICS, cssFontFamily: undefined };
+    const outlines: SfntOutlines = { glyphIndex: () => 7, glyphContours: () => null };
+    const layout = shapeText('AB', {
+      fontSizePx: 16,
+      boxWidthPx: 0,
+      autowrapMode: AutowrapMode.AUTOWRAP_OFF,
+      fontMetrics: withVariation(noFamily, { outlines }),
+      lineSpacingPx: 0,
+    });
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
+    expect(canvasLayout.offsetXPx).toBe(2);
+    expect(canvasLayout.canvasWidthPx).toBe(19);
   });
 
   // The rows above the baseline run up to the vertical pad, and shear furthest there. A stroke
@@ -266,19 +301,9 @@ function alphaAt(raster: ImageData | null, x: number, y: number): number {
   return raster ? raster.data[(y * raster.width + x) * 4 + 3]! : 0;
 }
 
-/** The grown outline of a glyph: a triangle 4 px wide and 6 px tall, its base on the baseline. */
-const GROWN_TRIANGLE: GlyphContours = {
-  points: [
-    { x: 1, y: 0, tag: ContourPointTag.ON },
-    { x: 5, y: 0, tag: ContourPointTag.ON },
-    { x: 3, y: -6, tag: ContourPointTag.ON },
-  ],
-  contourEnds: [2],
-  isFillRight: true,
-};
-
+/** Outlines that answer the triangle as the grown outline of every glyph, and record each read. */
 function outlinesStub(glyphIndex = 7) {
-  const glyphContours = vi.fn(() => GROWN_TRIANGLE);
+  const glyphContours = vi.fn(() => TRIANGLE_CONTOURS);
   return {
     outlines: { glyphIndex: () => glyphIndex, glyphContours } satisfies SfntOutlines,
     glyphContours,
@@ -531,6 +556,17 @@ describe('paintSceneFontCanvas — embolden fill from the grown contour', () => 
     expect(calls.every((call) => Math.abs(call.shear + 0.3) < 1e-9)).toBe(true);
   });
 
+  // FreeType gives a glyph with no contour an empty bitmap, and no host font may draw it.
+  it('draws nothing for a glyph with no contour of a face with no CSS family', () => {
+    const empty: SfntOutlines = { glyphIndex: () => 7, glyphContours: () => null };
+    const familyless = { ...CANVAS_METRICS, cssFontFamily: undefined };
+    const layout = { ...layoutFor('A', 0), fontMetrics: familyless };
+    const { calls, raster } = paintRecording(layout, 0, { outlines: empty });
+
+    expect(calls).toEqual([]);
+    expect(raster!.data.some((byte, i) => i % 4 === 3 && byte !== 0)).toBe(false);
+  });
+
   // Godot fills the hinted outline of every glyph through FreeType (`text_server_adv.cpp:1360-1373`).
   it('fills the outline of a plain glyph from its pen, in place of the text', () => {
     const layout = layoutFor('A', 0);
@@ -753,7 +789,7 @@ describe('buildCanvasTextQuadArrays', () => {
     const layout = layoutFor('AB');
     const canvasLayout = computeCanvasTextCanvasLayout(layout, 0.3);
     const arrays = buildCanvasTextQuadArrays(canvasLayout);
-    // Vertex order TL, TR, BL, BR, as in buildGlyphQuadArrays.
+    // Vertex order TL, TR, BL, BR.
     const tlX = arrays.positions[0]!;
     const tlY = arrays.positions[1]!;
     const trX = arrays.positions[3]!;
@@ -827,7 +863,7 @@ describe('createCanvasTextMaterial inside a lit Control', () => {
 });
 
 describe('createCanvasTextMaterial', () => {
-  it('is transparent, depth-write disabled, samples the given texture, and applies opacity directly (tint is pre-baked into the raster, unlike the MSDF uColor uniform)', () => {
+  it('is transparent, depth-write disabled, samples the given texture, and applies opacity directly (the raster holds the tint)', () => {
     const texture = new THREE.CanvasTexture(document.createElement('canvas'));
     const mat = createCanvasTextMaterial({ map: texture, opacity: 0.5 });
     expect(mat.transparent).toBe(true);
@@ -836,7 +872,7 @@ describe('createCanvasTextMaterial', () => {
     expect(mat.opacity).toBe(0.5);
   });
 
-  it('forwards depthTest/side/clippingPlanes, matching createMsdfMaterial’s own contract', () => {
+  it('forwards depthTest/side/clippingPlanes', () => {
     const texture = new THREE.CanvasTexture(document.createElement('canvas'));
     const planes = [new THREE.Plane(new THREE.Vector3(1, 0, 0), 0)];
     const mat = createCanvasTextMaterial({

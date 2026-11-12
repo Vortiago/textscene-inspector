@@ -36,6 +36,8 @@ export interface ProjectSettingsValue {
   msaaModes: MsaaModes;
   /** `gui/theme/default_font_hinting`, which the default font takes once (`theme_db.cpp:56`). */
   defaultFontHinting: FontHinting;
+  /** False while the read of `res://project.godot` is in flight for a new scene: every value is still Godot's default. */
+  isSettled: boolean;
 }
 
 const DEFAULT_VALUE: ProjectSettingsValue = {
@@ -47,6 +49,7 @@ const DEFAULT_VALUE: ProjectSettingsValue = {
   },
   msaaModes: projectMsaaModes(null),
   defaultFontHinting: projectDefaultFontHinting(null),
+  isSettled: true,
 };
 
 const ProjectSettingsContext = createContext<ProjectSettingsValue>(DEFAULT_VALUE);
@@ -76,11 +79,13 @@ async function readProjectSettings(bus: FileEventBus): Promise<ProjectSettings |
 export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsProviderProps) {
   const loader = useResourceLoader();
   const [settings, setSettings] = useState<ProjectSettings | null>(null);
+  const [isSettled, setIsSettled] = useState(false);
 
   useEffect(() => {
     const bus = loader?.fileEventBus;
     if (!bus) {
       setSettings(null);
+      setIsSettled(true);
       return undefined;
     }
 
@@ -91,13 +96,16 @@ export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsP
     const read = async (): Promise<void> => {
       const thisRead = ++latestRead;
       const parsed = await readProjectSettings(bus);
-      if (thisRead === latestRead) setSettings(parsed);
+      if (thisRead !== latestRead) return;
+      setSettings(parsed);
+      setIsSettled(true);
     };
 
     // Cleared before the fetch, or one frame renders the scene at the previous
     // project's theme scale. A change to the file is not cleared first: the old
     // settings stay until the new ones arrive, so the theme scale never flashes.
     setSettings(null);
+    setIsSettled(false);
     void read();
 
     const onInvalidated = (path: string) => {
@@ -118,8 +126,9 @@ export function ProjectSettingsProvider({ children, sceneKey }: ProjectSettingsP
       viewportSize: projectViewportSize(settings),
       msaaModes: projectMsaaModes(settings),
       defaultFontHinting: projectDefaultFontHinting(settings),
+      isSettled,
     }),
-    [settings]
+    [settings, isSettled]
   );
 
   return <ProjectSettingsContext.Provider value={value}>{children}</ProjectSettingsContext.Provider>;

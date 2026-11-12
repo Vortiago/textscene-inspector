@@ -4,19 +4,17 @@
  */
 
 import { storedReal } from '../../../godot/math/real.js';
+import { AnimationUpdateMode } from '../../../godot/scene/animation.js';
 import type { SampleSetup, TrackKey } from '../../../godot/scene/animationTrackSampler.js';
 import type { GodotAnimation } from './animationResolver';
 import type { GodotKeyframe, GodotTrack } from './trackParser';
-
-/** `TrackUpdateMode.DISCRETE`: the key holds until the next one, whatever `interp` says (`animation.cpp`). */
-const UPDATE_DISCRETE = 1;
 
 export function sampleSetupOf(
   track: GodotTrack,
   animation: Pick<GodotAnimation, 'length' | 'loopMode'>
 ): SampleSetup {
   return {
-    interp: track.updateMode === UPDATE_DISCRETE ? 0 : track.interp,
+    interp: track.updateMode === AnimationUpdateMode.DISCRETE ? 0 : track.interp,
     loopWrap: track.loopWrap,
     length: storedReal(animation.length),
     loopMode: animation.loopMode,
