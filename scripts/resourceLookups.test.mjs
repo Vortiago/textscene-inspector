@@ -46,7 +46,6 @@ const UNMOVED = new Map([
   ['nodes/3d/meshinstance3d/Component.tsx', { calls: 1, issue: 1685 }],
   ['nodes/3d/meshinstance3d/meshAabb.ts', { calls: 1, issue: 1685 }],
   ['nodes/3d/meshinstance3d/useMeshSkin.ts', { calls: 1, issue: 1685 }],
-  ['nodes/3d/multimeshinstance3d/Component.tsx', { calls: 1, issue: 1685 }],
   ['nodes/3d/multimeshinstance3d/ownAabb.ts', { calls: 1, issue: 1685 }],
   ['nodes/3d/navigationregion3d/Component.tsx', { calls: 1, issue: 1694 }],
   ['nodes/3d/occluderinstance3d/Component.tsx', { calls: 1, issue: 1694 }],

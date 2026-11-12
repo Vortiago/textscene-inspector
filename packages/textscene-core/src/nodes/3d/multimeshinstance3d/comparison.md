@@ -36,3 +36,4 @@ The lenient parser never runs `multimesh`'s validator. Given `multimesh = "res:/
 ## Known limitations
 
 - **Shader missing** A ShaderMaterial is not translated, so a custom shader never reads `INSTANCE_CUSTOM`, which a StandardMaterial3D flipbook does.
+- **Needs runtime** `physics_interpolation_quality` and the previous-frame buffer need a running game, so the previewer draws the buffer as saved.
