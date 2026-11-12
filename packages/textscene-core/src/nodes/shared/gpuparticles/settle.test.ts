@@ -3,7 +3,7 @@ import { transform3DOf } from '../../../godot/math/transform3d';
 import { PARTICLE_FLOATS } from '../particles3d/particleBuffer';
 import { BASE_MATERIAL, originOf, requestInput, settle } from './gpuparticles.testkit';
 import { gpuSettleSeconds, settleGpuParticles } from './settle';
-import { settleFrameDeltas } from './settleLoop';
+import { settleStepCount } from './settleLoop';
 
 /** Godot 4.6.3 `capture_aabb()` of one-particle emitters, to 1e-5. */
 function expectOrigin(actual: readonly number[], expected: readonly number[]): void {
@@ -142,10 +142,14 @@ describe('settleGpuParticles over the life of an emitter', () => {
     expect(gpuSettleSeconds({ ...emitter, oneShot: true } as never)).toBe(1);
   });
 
+  it('has no ceiling on the steps, as the engine loop has none', () => {
+    expect(settleStepCount(200, 1 / 30)).toBe(6001);
+  });
+
   it('rounds the seconds that stand for --particles to a float, which takes one more step', () => {
     const frameTime = 1 / 30;
-    expect(settleFrameDeltas(1.2, frameTime)).toHaveLength(36);
-    expect(settleFrameDeltas(Math.fround(1.2), frameTime)).toHaveLength(37);
+    expect(settleStepCount(1.2, frameTime)).toBe(36);
+    expect(settleStepCount(Math.fround(1.2), frameTime)).toBe(37);
   });
 
   it('puts the particle one step further on for the float seconds (request_particles_process)', () => {

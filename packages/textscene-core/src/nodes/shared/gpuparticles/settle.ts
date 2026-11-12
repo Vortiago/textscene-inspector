@@ -39,7 +39,7 @@ import {
   type Transform3D,
 } from '../../../godot/math/transform3d';
 import { DEFAULT_PREVIEW_SEED, settleFrameTime, settleSeconds } from '../cpuparticles/process';
-import { settleFrameDeltas } from './settleLoop';
+import { settleStepCount } from './settleLoop';
 import {
   PARTICLE_COLOR_OFFSET,
   PARTICLE_CUSTOM_OFFSET,
@@ -87,8 +87,9 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
   const randomSeed = emitter.useFixedSeed ? emitter.seed : DEFAULT_PREVIEW_SEED;
   const clock = startClock(emitter);
   if (drawsNothing(material)) return emptyPose(clock.phase);
-  const deltas = settleFrameDeltas(seconds, settleFrameTime(emitter));
-  const stride = particleStride(emitter.amount, deltas.length);
+  const frameTime = settleFrameTime(emitter);
+  const steps = settleStepCount(seconds, frameTime);
+  const stride = particleStride(emitter.amount, steps);
   const particles = Array.from({ length: Math.ceil(emitter.amount / stride) }, inactiveParticle);
   const birth: BirthContext = {
     simulation: material.simulation,
@@ -101,8 +102,8 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
   };
   const step = stepContextOf(material.simulation, frame, f(emitter.lifetime));
 
-  for (const delta of deltas) {
-    const frameParams = advanceClock(clock, emitter, delta);
+  for (let done = 0; done < steps; done++) {
+    const frameParams = advanceClock(clock, emitter, frameTime);
     birth.cycle = frameParams.cycle;
     for (let slot = 0; slot < particles.length; slot++) {
       const particle = particles[slot]!;

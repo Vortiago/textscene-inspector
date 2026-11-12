@@ -1,15 +1,11 @@
+/** The steps of the first frame's settle (`particles_storage.cpp:1542-1563`). No THREE and no React. */
+
 /**
- * The steps of the first frame's settle (`particles_storage.cpp:1542-1563`). No THREE and no React.
- * The count stops at the CPU settle's ceiling: a huge `preprocess` would spin for minutes.
+ * How many steps of `frameTime` the first frame runs: `while (todo >= 0)` overshoots the last step
+ * (`:1559-1563`). Godot has no ceiling, so neither has this count; the `todo` it subtracts is a double.
  */
-
-import { MAX_SETTLE_STEPS } from '../cpuparticles/process';
-
-/** The frame times the first frame steps: `while (todo >= 0)` overshoots the last step (`:1559-1563`). */
-export function settleFrameDeltas(seconds: number, frameTime: number): number[] {
-  const deltas: number[] = [];
-  for (let todo = seconds; todo >= 0 && deltas.length < MAX_SETTLE_STEPS; todo -= frameTime) {
-    deltas.push(frameTime);
-  }
-  return deltas;
+export function settleStepCount(seconds: number, frameTime: number): number {
+  let steps = 0;
+  for (let todo = seconds; todo >= 0; todo -= frameTime) steps++;
+  return steps;
 }
