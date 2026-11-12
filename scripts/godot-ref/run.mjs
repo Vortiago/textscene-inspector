@@ -1050,8 +1050,20 @@ func _freeze_game_logic(node: Node) -> void:
 		# rewrites its normals each frame, which the editor never does (soft_body_3d.cpp:459-478).
 		(node as SoftBody3D).disable_mode = SoftBody3D.DISABLE_MODE_REMOVE
 		(node as SoftBody3D).process_mode = Node.PROCESS_MODE_DISABLED
+	if node is Skeleton2D:
+		_keep_stack_running(node as Skeleton2D)
 	for child in node.get_children():
 		_freeze_game_logic(child)
+
+# The editor runs a modification stack on the bones (skeleton_2d.cpp:630-639 has no editor guard),
+# and the pause would stop it. A child that inherits the mode stays paused.
+func _keep_stack_running(skeleton: Skeleton2D) -> void:
+	if skeleton.get_modification_stack() == null:
+		return
+	for child in skeleton.get_children():
+		if child.process_mode == Node.PROCESS_MODE_INHERIT and not child.can_process():
+			child.process_mode = Node.PROCESS_MODE_PAUSABLE
+	skeleton.process_mode = Node.PROCESS_MODE_ALWAYS
 
 # The editor keeps the edited scene under the 2D editor's viewport, which draws
 # no 3D (editor_node.cpp:8648-8652). Every CanvasItem and CanvasLayer draws on

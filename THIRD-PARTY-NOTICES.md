@@ -103,7 +103,14 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/bone2d/boneKite.ts` | `scene/2d/skeleton_2d.cpp` (the editor kite of `Bone2D::_editor_get_bone_shape` and its `NOTIFICATION_DRAW`) |
 | `packages/textscene-core/src/nodes/2d/polygon2d/polygonSkin.ts` | `scene/2d/polygon_2d.cpp` (the bone weights of `NOTIFICATION_DRAW`), `servers/rendering/rendering_server.cpp` (the 16-bit weight store) and `servers/rendering/renderer_rd/shaders/skeleton.glsl` (the 2D skin) |
 | `packages/textscene-core/src/nodes/2d/polygon2d/polygonShapes.ts` | `scene/2d/polygon_2d.cpp` (the `invert` ring of `NOTIFICATION_DRAW`) |
-| `packages/textscene-core/src/nodes/2d/skeleton2d/skeletonBones.ts` | `scene/2d/skeleton_2d.cpp` (`Skeleton2D::_update_bone_setup`: the bone order and the bind pose) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/skeletonRig.ts` | `scene/2d/skeleton_2d.cpp` (`Skeleton2D::_update_bone_setup`: the bone order and the bind pose) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/stackRun.ts` | `scene/2d/skeleton_2d.cpp` (`Skeleton2D::execute_modifications`: the override of each bone and the apply step), `scene/resources/2d/skeleton/skeleton_modification_stack_2d.cpp` (`SkeletonModificationStack2D::execute`) and `scene/resources/2d/skeleton/skeleton_modification_2d_stackholder.cpp` (`_execute`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/stackPose.ts` | `scene/2d/node_2d.cpp` (`Node2D::set_rotation`, `rotate`, `set_global_rotation`, `set_global_transform`, `get_angle_to` and `_update_xform_values`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/clampAngle.ts` | `scene/resources/2d/skeleton/skeleton_modification_2d.cpp` (`SkeletonModification2D::clamp_angle`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/lookAt.ts` | `scene/resources/2d/skeleton/skeleton_modification_2d_lookat.cpp` (`SkeletonModification2DLookAt::_execute`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/twoBoneIk.ts` | `scene/resources/2d/skeleton/skeleton_modification_2d_twoboneik.cpp` (`SkeletonModification2DTwoBoneIK::_execute`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/ccdIk.ts` | `scene/resources/2d/skeleton/skeleton_modification_2d_ccdik.cpp` (`SkeletonModification2DCCDIK::_execute` and `_execute_ccdik_joint`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/fabrik.ts` | `scene/resources/2d/skeleton/skeleton_modification_2d_fabrik.cpp` (`SkeletonModification2DFABRIK::_execute`, `chain_backwards` and `chain_forwards`) |
 | `packages/textscene-core/src/nodes/2d/ui/margincontainer/nativeSolver.ts` | `scene/gui/margin_container.cpp` (`MarginContainer::get_minimum_size`, `MarginContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/centercontainer/nativeSolver.ts` | `scene/gui/center_container.cpp` (`CenterContainer::get_minimum_size`, `CenterContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/windows/window/embedding.ts` | `scene/main/viewport.cpp` (`Viewport::_sub_window_register`, `_sub_window_update_order`) |
@@ -226,7 +233,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/simulate.ts` | `scene/3d/cpu_particles_3d.cpp` (`_particles_process`, the emission shapes and `_update_particle_data_buffer`) |
 | `packages/textscene-core/src/nodes/shared/cpuparticles/process.ts` | `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (the `_update_internal` settle loop, the restart instant and the particle colour) |
 | `packages/textscene-core/src/nodes/shared/cpuparticles/emissionPoints.ts` | `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (the POINTS and DIRECTED_POINTS point pick, the normal turn and the point colour) and `core/math/math_funcs.h` (`Math::randf`) |
-| `packages/textscene-core/src/godot/math/transform2d.ts` | `core/math/transform_2d.cpp` (`Transform2D::operator*`, `Transform2D::affine_inverse`, the `Transform2D(rot, scale, skew, pos)` constructor) |
+| `packages/textscene-core/src/godot/math/transform2d.ts` | `core/math/transform_2d.cpp` (`Transform2D::operator*`, `Transform2D::affine_inverse`, the `Transform2D(rot, scale, skew, pos)` constructor, `get_rotation`, `get_skew`, `get_scale`, `set_rotation`, `set_scale`, `looking_at` and `interpolate_with`) |
 | `scripts/godot-ref/run.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`, `Node3DEditorViewport::Cursor()`) |
 | `packages/textscene-core/src/nodes/2d/ui/videostreamplayer/nativeSolver.ts` | `scene/gui/video_stream_player.cpp` (`VideoStreamPlayer::get_minimum_size`) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpickerbutton/Component.tsx` | `scene/gui/color_picker.cpp` (`ColorPickerButton::_notification`'s `NOTIFICATION_DRAW`: the swatch rect from the "normal" StyleBox's offset/minimum size, the unconditional checkerboard, and the overbright check) |
@@ -668,6 +675,27 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+```
+
+---
+
+## GNU C Library atan2f
+
+<https://sourceware.org/glibc/>
+
+`packages/textscene-core/src/godot/math/realAtan2.ts` ports `__ieee754_atan2f` and `__atanf`
+(`sysdeps/ieee754/flt-32/e_atan2f.c` and `s_atanf.c` of glibc 2.39), because Godot hands a
+`real_t` `atan2` to the C library, and a chain of bones that folds onto one line bends to the
+side the last bit of that angle picks. Both files carry the
+notice below, separately from Godot's own MIT licence above.
+
+```
+Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+
+Developed at SunPro, a Sun Microsystems, Inc. business.
+Permission to use, copy, modify, and distribute this
+software is freely granted, provided that this notice
+is preserved.
 ```
 
 ---

@@ -1,7 +1,8 @@
 /**
  * The kites of one Bone2D as a single vertex-coloured fill. Godot draws each kite as an outline
  * polygon and then a fill polygon (`skeleton_2d.cpp:241-308`), and the mesh keeps that order. The
- * points follow the drawn bones each render, so a bone an AnimationPlayer moves moves its kite.
+ * points follow the drawn bones each render, so a bone an AnimationPlayer or a modification of its
+ * Skeleton2D moves moves its kite.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -14,21 +15,16 @@ import { triangulatePolygon } from '../../../godot/math/triangulate';
 import { useOptionalSelection } from '../../../r3f/contexts/SelectionContext';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { GizmoMesh } from '../../../r3f/components/GizmoMesh';
-import { lookupDrawnObjects, type DrawnObjects } from '../../../r3f/drawnObjects';
+import { DrawnNodeFollow } from '../../../r3f/drawnNodeFollow';
 import { godotColorToLinear } from '../../../r3f/godotColor';
 import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
 import { canvasTransformInto, writeGodotPointAsThree } from '../../../r3f/node2dTransform';
 import { useLiveScenePass } from '../../../r3f/liveScenePass';
 import { observeSceneCamera } from '../../../r3f/sceneRenderCamera';
-import { WorldMatrixWatch } from '../../../r3f/worldMatrixWatch';
-import { bindBoneChildren } from './boneChildren';
-import {
-  boneKitesOf,
-  FILL_POINT_COUNT,
-  OUTLINE_POINT_COUNT,
-  type BoneKite,
-  type BoneReach,
-} from './boneKite';
+import { skeleton2DPoseAt } from '../skeleton2d/skeletonPoses';
+import { bindBoneChildren, type BoneJoint } from './boneChildren';
+import { boneKitesOf, FILL_POINT_COUNT, OUTLINE_POINT_COUNT, type BoneKite } from './boneKite';
+import { boneReachOf, type BoneReach } from './boneReach';
 import type { Bone2DProperties } from './types';
 
 /** A scene stores a meta as `metadata/<name>`, and `has_meta` ignores its value. */
@@ -130,39 +126,47 @@ function writeKites(geometry: THREE.BufferGeometry, kites: readonly BoneKite[]):
   geometry.computeBoundingSphere();
 }
 
+/** What a kite draws from, beside the drawn transforms. */
+interface KiteSubject {
+  reach: BoneReach;
+  joint: BoneJoint | null;
+  isSelected: boolean;
+  /** Whether the scene file stores the meta an IK leaves on a bone. */
+  hasStoredPoseOverride: boolean;
+}
+
 /**
  * Updates `geometry` each render from the drawn bone at `path` and its children, and only when one
- * of their transforms moved.
+ * of their transforms moved. The fill takes the IK colour while a modification of the skeleton
+ * holds the bone, or from the stored meta where the skeleton runs no stack.
  */
 function useKiteFollow(
   geometry: THREE.BufferGeometry,
   path: string | null,
   childPaths: readonly string[],
-  reach: BoneReach
+  { reach, joint, isSelected, hasStoredPoseOverride }: KiteSubject
 ): void {
   const scene = useThree((state) => state.scene);
   const nodeObjects = useOptionalSelection()?.nodeObjectMap ?? null;
   useEffect(() => {
-    if (path === null || !nodeObjects) return;
-    const paths = [path, ...childPaths];
-    const transforms = paths.map(() => mutableTransform2D());
-    const watch = new WorldMatrixWatch();
-    let drawn: DrawnObjects | null = null;
-    let areAllDrawn = false;
+    if (path === null || !nodeObjects) {
+      writeColors(geometry, { isSelected, hasPoseOverride: hasStoredPoseOverride });
+      return;
+    }
+    const follow = new DrawnNodeFollow(nodeObjects, [path, ...childPaths]);
+    const transforms = [path, ...childPaths].map(() => mutableTransform2D());
+    let coloured: boolean | null = null;
     return observeSceneCamera(scene, () => {
-      const looked = lookupDrawnObjects(nodeObjects, paths, drawn);
-      if (looked !== drawn) {
-        drawn = looked;
-        areAllDrawn = looked.objects.every((object) => object !== null);
+      const pose = joint && skeleton2DPoseAt(nodeObjects, joint.skeletonPath);
+      const hasPoseOverride = pose?.holds(joint!.index) ?? hasStoredPoseOverride;
+      if (hasPoseOverride !== coloured) {
+        coloured = hasPoseOverride;
+        writeColors(geometry, { isSelected, hasPoseOverride });
       }
-      const objects = looked.objects;
-      if (!areAllDrawn) {
-        geometry.setDrawRange(0, 0);
-        watch.forget();
-        return;
-      }
-      if (!watch.hasMoved(objects)) return;
-      objects.forEach((object, i) => canvasTransformInto(transforms[i]!, object!));
+      const objects = follow.objects();
+      if (!objects) return void geometry.setDrawRange(0, 0);
+      if (!follow.hasMoved(objects)) return;
+      objects.forEach((object, i) => canvasTransformInto(transforms[i]!, object));
       const [bone, ...children] = transforms;
       writeKites(
         geometry,
@@ -173,7 +177,7 @@ function useKiteFollow(
         )
       );
     });
-  }, [scene, nodeObjects, geometry, path, childPaths, reach]);
+  }, [scene, nodeObjects, geometry, path, childPaths, reach, joint, isSelected, hasStoredPoseOverride]);
 }
 
 export function BoneKites({ node }: { node: TscnNode }) {
@@ -185,14 +189,12 @@ export function BoneKites({ node }: { node: TscnNode }) {
   // A bone with no Bone2D child still draws one kite, along its own length.
   const kiteCount = Math.max(1, childPaths.length);
   const geometry = useMemo(() => kiteGeometry(kiteCount), [kiteCount]);
-  const hasPoseOverride = POSE_OVERRIDE_KEY in node.rawProperties;
-  useEffect(
-    () => writeColors(geometry, { isSelected, hasPoseOverride }),
-    [geometry, isSelected, hasPoseOverride]
-  );
-  // A bone that calculates falls back to its own rotation (`skeleton_2d.cpp:447-448`).
-  const angle = props.auto_calculate_length_and_angle ? props.rotation : props.bone_angle;
-  const reach = useMemo(() => ({ length: props.length, angle }), [props.length, angle]);
-  useKiteFollow(geometry, path, childPaths, reach);
+  const reach = useMemo(() => boneReachOf(props, null), [props]);
+  useKiteFollow(geometry, path, childPaths, {
+    reach,
+    joint: source?.joint ?? null,
+    isSelected,
+    hasStoredPoseOverride: POSE_OVERRIDE_KEY in node.rawProperties,
+  });
   return <GizmoMesh geometry={geometry} color={0xffffff} alpha={1} order={source?.drawOrder ?? 0} />;
 }

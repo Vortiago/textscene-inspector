@@ -44,6 +44,11 @@ export class TscnPreviewPanel {
    * dropped. Posts wait on this flag, and `webviewReady` replays `_previousContent`.
    */
   private _webviewReady = false;
+  /**
+   * The visibility last posted to the current document, so a view-state change that leaves it as
+   * it was posts nothing. Written by `_postVisibility`, cleared by `webviewReady`.
+   */
+  private _postedVisibility: boolean | null = null;
   /** Set by `dispose()`. `_webviewReady` stays true after it, so it is not this. */
   private _disposed = false;
   /** Set by a `webviewLoadFailed`, which loads the document once more. Cleared by `webviewReady`. */
@@ -98,12 +103,16 @@ export class TscnPreviewPanel {
     this._loadTscnContent(resource);
 
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+    this._panel.onDidChangeViewState(() => this._postVisibility(), null, this._disposables);
 
     const handlers: WebviewMessageHandlers = {
       webviewReady: (_msg) => {
         this._webviewReady = true;
         this._hasReloadedDocument = false;
         this._captures.webviewLoaded();
+        // A remounted tree has rendered nothing yet, so it hears the visibility again.
+        this._postedVisibility = null;
+        this._postVisibility();
         // Every remount, such as a move to another editor group, posts ready with
         // an empty tree. Replay always, so a ready webview holds the current text:
         // the `_previousContent` diff swallows a later re-read, which leaves the
@@ -269,6 +278,19 @@ export class TscnPreviewPanel {
       return;
     }
     this._postMessageToWebview({ type: 'resourceChanged', path: resPath });
+  }
+
+  /**
+   * Tells a ready webview whether the tab shows. `visible`, not `active`: a panel in an unfocused
+   * window still shows. A webview that is not ready hears it on `webviewReady`.
+   */
+  private _postVisibility(): void {
+    // Ready first: a disposed `WebviewPanel` throws on `visible`.
+    if (!this._webviewReady || this._disposed) return;
+    const isVisible = this._panel.visible;
+    if (this._postedVisibility === isVisible) return;
+    this._postedVisibility = isVisible;
+    this._postMessageToWebview({ type: 'previewVisibility', isVisible });
   }
 
   /** Sets a new document, which VS Code loads in place of the current one. */

@@ -365,6 +365,12 @@ A tool the VS Code extension registers through `vscode.lm` for a coding agent in
 The agent tools lint a scene, read its node tree, open or capture its preview, and list its missing resources.
 _Avoid_: "action" for an agent tool.
 
+**Preview visibility** (`r3f/contexts/PreviewVisibilityContext.tsx`):
+Whether the host shows the preview: the VS Code panel's `visible`, or the web page's `document.visibilityState`.
+A hidden preview renders no frame and runs no frame callback, except while its scene still loads.
+A capture of a hidden preview renders one frame with no time passed.
+_Avoid_: "active" for a VS Code panel, which means it has focus. A panel in an unfocused window is still visible.
+
 ### Code organisation
 
 **Vertical slice**:
@@ -876,8 +882,20 @@ The position, rotation and scale of one bone, each part optional. An AnimationPl
 _Avoid_: A write to the bone table. A pose kept in three bones.
 
 **Polygon skin** (`skinnedPoints`, `nodes/2d/polygon2d/polygonSkin.ts`):
-A Polygon2D that a Skeleton2D deforms. Each vertex keeps its four heaviest `bones` weights, and moves by `T * (sum of weight * bone matrix) * T^-1`, with `T` the polygon's global inverse times the skeleton's (`skeleton.glsl:157-182`). A bone's matrix is its pose in skeleton space times the inverse of its rest there. The **Live scene pass** in `skeletonBinding.ts` hands the polygon its bones and weights. Each render then reads the drawn transforms and writes the vertices again where one moved, as Godot's skeleton pass writes a vertex buffer before the canvas draws.
-_Avoid_: A pose read from the file alone, which an AnimationPlayer never moves.
+A Polygon2D that a Skeleton2D deforms. Each vertex keeps its four heaviest `bones` weights, and moves by `T * (sum of weight * bone matrix) * T^-1`, with `T` the polygon's global inverse times the skeleton's (`skeleton.glsl:157-182`). A bone's matrix is its pose in skeleton space times the inverse of its rest there. The **Live scene pass** in `skeletonBinding.ts` hands the polygon its weights by bone index. Each render then reads the **Skeleton2D pose** and writes the vertices again where it moved, as Godot's skeleton pass writes a vertex buffer before the canvas draws.
+_Avoid_: A pose read from the file alone, which an AnimationPlayer never moves. A skin that derives the bone matrices itself.
+
+**Skeleton2D rig** (`bindSkeleton2DRigs`, `nodes/2d/skeleton2d/skeletonRig.ts`):
+The bones of one Skeleton2D in Godot's order, each with its parent, the inverse of its rest in skeleton space and its reach (`skeleton_2d.cpp:519-548`). A **Live scene pass** builds one for each skeleton from the scene tree. The polygon skin, the bone kites and the modification stack name a bone by its index in the rig.
+_Avoid_: A second walk of the Bone2D chain. A bone named by its node path at draw time.
+
+**Skeleton2D pose** (`Skeleton2DPose`, `nodes/2d/skeleton2d/skeletonPose.ts`):
+The drawn pose of the bones of one Skeleton2D, which the skeleton owns. Before each render it reads the transforms the scene and an AnimationPlayer gave the bones, runs the **Modification stack** on them, and writes the solved transforms onto the bone objects. After the render it puts the bone transforms back, as Godot keeps the cache transform of a bone beside its override (`skeleton_2d.cpp:786-805`). The **Polygon skin** and the bone kites read this one pose.
+_Avoid_: A pose each reader derives. A solved transform left on a bone after the render.
+
+**Modification stack** (`solveStack`, `nodes/2d/skeleton2d/modificationStack/stackRun.ts`):
+The SkeletonModificationStack2D of a Skeleton2D: LookAt, TwoBoneIK, CCDIK, FABRIK and StackHolder modifications that pose the bones (`skeleton_2d.cpp:769-815`). Godot runs it each frame on the pose the frame before left, so the solve steps through frames until the pose repeats or the frame of the Harness capture comes. Jiggle, PhysicalBones and a modification in the physics mode need simulated time and move no bone.
+_Avoid_: One pass of each modification. A solve that starts from the solved pose of the last render.
 
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
 The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).

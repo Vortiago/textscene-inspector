@@ -14,8 +14,9 @@ Bone2D is one bone of a Skeleton2D chain. The previewer draws Godot's editor kit
 bone (ADR-0056). The kite runs from the bone to each Bone2D child, or along `length` and
 `bone_angle` for a bone with none. The outline turns red for the selected bone. A capture keeps the
 Gizmos toggle off, so a plain capture shows nothing, as Godot's game render does. A bone with
-`editor_settings/show_bone_gizmo` off draws no kite. A bone that carries the saved
-`metadata/_local_pose_override_enabled_` shades its kite yellow, as Godot does. Its pose against its `rest` moves the
+`editor_settings/show_bone_gizmo` off draws no kite. A bone that a modification of
+its Skeleton2D holds shades its kite yellow, as Godot does. Under a skeleton with no stack, the saved
+`metadata/_local_pose_override_enabled_` decides that. The pose of a bone against its `rest` moves the
 Polygon2Ds its skeleton deforms.
 
 ## Linting
