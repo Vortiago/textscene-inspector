@@ -48,7 +48,7 @@ export function HSplitContainer({
     return null;
   }
 
-  const iconSize = splitGrabberIconSize(solveNode.node.type, false, solveNode.textureSlots);
+  const iconSize = splitGrabberIconSize(solveNode.node.type, false, solveNode.textureSlots, theme.scale);
   // `grabberExtent` takes the icon's width, as `separationOf` in
   // `shared/splitContainerSolver.ts` does, so the icon lands on the solved boundary.
   const separation = resolveSplitSeparation(props, solveNode.constants, {

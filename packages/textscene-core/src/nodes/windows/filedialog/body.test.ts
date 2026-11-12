@@ -422,6 +422,14 @@ describe('FileDialog file list', () => {
     expect(listProps(list).items.map(({ iconModulate }) => iconModulate)).toEqual([red, green, green]);
   });
 
+  it('sizes a toolbar icon by the theme scale', () => {
+    const body = fileDialogBody(fileDialog(CASES.open!), nativeTheme(1.5));
+    const dirPrev = (function find(node: SolveNode): SolveNode | undefined {
+      return node.node.name === 'DirPrev' ? node : node.children.map(find).find(Boolean);
+    })(body)!;
+    expect(dirPrev.textureSize).toEqual({ x: 24, y: 24 });
+  });
+
   it('requests a slot for each list icon the Theme gives', () => {
     const themedIcon = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
     const requests = fileDialogTextureSlots(fileDialog(CASES.open!).node, {

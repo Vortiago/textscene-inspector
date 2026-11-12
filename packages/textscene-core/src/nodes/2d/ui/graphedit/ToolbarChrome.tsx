@@ -28,17 +28,25 @@ import {
 import { LabelledText } from '../shared/LabelledText';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { GRAPH_EDIT_ICONS, GRAPH_EDIT_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
+import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
+import type { Vector2 } from '../../../../godot/math/vector';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import {
   spinBoxArrowPosition,
   spinBoxIconColor,
+  type SpinBoxButtonState,
   spinBoxLayout,
-  SPIN_BOX_ARROW_ICON_SIZE,
+  spinBoxArrowIconSize,
 } from '../spinbox/nativeSolver';
 import { resolveToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
-import { graphEditMenuPanelStyleBox, zoomLabelTextRect, type GraphEditToolbar } from './toolbar';
+import {
+  graphEditMenuPanelStyleBox,
+  graphEditSnappingArrowStates,
+  zoomLabelTextRect,
+  type GraphEditToolbar,
+} from './toolbar';
 import type { GraphEditToolbarTheme } from './toolbarTheme';
 import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 
@@ -51,24 +59,31 @@ interface GraphEditToolbarProps {
   tint: NativeControlComponentProps['tint'];
   /** The formatted value of `snapping_distance_spinbox` and the text of the zoom label. */
   text: { zoomLabel: string; snappingDistance: string };
+  /** The `SpinBox` arrows, dimmed at the ends of the snapping range (`spin_box.cpp:635-646`). */
+  snappingArrows: ReturnType<typeof graphEditSnappingArrowStates>;
   shape: (text: string) => TextLayoutResult;
   /** The `SpinBox` buttons block sits on the trailing edge (`spin_box.cpp:403,409`). */
   rtl: boolean;
   slot: CanvasSlot;
 }
 
-/** The tint and opacity of a SpinBox arrow in its normal state. */
-function useArrowColor(tint: Rgba, toolbarTheme: GraphEditToolbarTheme, direction: 'up' | 'down') {
+/** The tint and opacity of a SpinBox arrow in `state`. */
+function useArrowColor(
+  tint: Rgba,
+  toolbarTheme: GraphEditToolbarTheme,
+  direction: 'up' | 'down',
+  state: SpinBoxButtonState
+) {
   const color = useMemo(
-    () => multiplyModulate(tint, spinBoxIconColor(toolbarTheme.spinBoxColors, direction, 'normal')),
-    [tint, toolbarTheme, direction]
+    () => multiplyModulate(tint, spinBoxIconColor(toolbarTheme.spinBoxColors, direction, state)),
+    [tint, toolbarTheme, direction, state]
   );
   return { linear: useItemLinearColor(color), alpha: color.a };
 }
 
 /** A SpinBox arrow in the toolbar's coordinates. */
-function arrowPosition(spinBox: Rect2, button: Rect2): { x: number; y: number } {
-  const local = spinBoxArrowPosition(button, SPIN_BOX_ARROW_ICON_SIZE);
+function arrowPosition(spinBox: Rect2, button: Rect2, arrowSize: Vector2): { x: number; y: number } {
+  const local = spinBoxArrowPosition(button, arrowSize);
   return { x: spinBox.x + local.x, y: spinBox.y + local.y };
 }
 
@@ -82,6 +97,7 @@ export function GraphEditToolbarChrome({
   theme,
   tint,
   text,
+  snappingArrows,
   shape,
   rtl,
   slot,
@@ -96,8 +112,8 @@ export function GraphEditToolbarChrome({
     () => multiplyModulate(tint.own, toolbarTheme.fieldColor),
     [tint.own, toolbarTheme]
   );
-  const upArrow = useArrowColor(tint.own, toolbarTheme, 'up');
-  const downArrow = useArrowColor(tint.own, toolbarTheme, 'down');
+  const upArrow = useArrowColor(tint.own, toolbarTheme, 'up', snappingArrows.up);
+  const downArrow = useArrowColor(tint.own, toolbarTheme, 'down', snappingArrows.down);
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
 
   const iconTextures: Record<string, THREE.Texture | null> = {
@@ -122,6 +138,8 @@ export function GraphEditToolbarChrome({
     [toItemLinear, tint, toolbarTheme]
   );
   const { panelRect } = toolbar;
+  const iconPx = scaledIconSize(GRAPH_EDIT_ICON_SIZE, theme.scale);
+  const arrowSize = spinBoxArrowIconSize(theme.scale);
   const fieldBox = toolbarTheme.fieldBoxes.normal;
 
   return (
@@ -165,7 +183,7 @@ export function GraphEditToolbarChrome({
               <IconButton
                 rect={item.rect}
                 box={box}
-                size={GRAPH_EDIT_ICON_SIZE}
+                size={iconPx}
                 texture={iconTextures[item.id] ?? null}
                 tint={tint}
                 iconTint={buttonIconTints[state]}
@@ -181,10 +199,10 @@ export function GraphEditToolbarChrome({
 
         // `SpinBox::_compute_sizes` (`spin_box.cpp:382-410`): the field box and
         // the up/down buttons block share the item's rect.
-        const layout = spinBoxLayout({ x: item.rect.w, y: item.rect.h }, SPIN_BOX_ARROW_ICON_SIZE.x, rtl);
+        const layout = spinBoxLayout({ x: item.rect.w, y: item.rect.h }, arrowSize.x, rtl);
         const fieldRect = { x: item.rect.x, y: item.rect.y, w: layout.fieldRect.w, h: layout.fieldRect.h };
-        const upPos = arrowPosition(item.rect, layout.upRect);
-        const downPos = arrowPosition(item.rect, layout.downRect);
+        const upPos = arrowPosition(item.rect, layout.upRect, arrowSize);
+        const downPos = arrowPosition(item.rect, layout.downRect, arrowSize);
         return (
           <CanvasItemGroup key={item.id}>
             <PositionedStyleBox box={fieldBox} rect={fieldRect} tint={tint} renderOrder={pieces.boxes.key} />
@@ -202,8 +220,8 @@ export function GraphEditToolbarChrome({
               rect={{
                 x: upPos.x,
                 y: upPos.y,
-                w: SPIN_BOX_ARROW_ICON_SIZE.x,
-                h: SPIN_BOX_ARROW_ICON_SIZE.y,
+                w: arrowSize.x,
+                h: arrowSize.y,
               }}
               texture={spinUpTexture}
               color={upArrow.linear}
@@ -215,8 +233,8 @@ export function GraphEditToolbarChrome({
               rect={{
                 x: downPos.x,
                 y: downPos.y,
-                w: SPIN_BOX_ARROW_ICON_SIZE.x,
-                h: SPIN_BOX_ARROW_ICON_SIZE.y,
+                w: arrowSize.x,
+                h: arrowSize.y,
               }}
               texture={spinDownTexture}
               color={downArrow.linear}

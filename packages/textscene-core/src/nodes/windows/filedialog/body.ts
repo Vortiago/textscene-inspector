@@ -31,6 +31,7 @@ import { ItemListIconMode, ItemListSelectMode } from '../../../godot/scene/gui';
 import type { Rgba } from '../../../godot/math/math';
 import type { ItemListProperties, ItemListRuntimeItem } from '../../2d/ui/itemlist/types';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
+import { themedIconSize } from '../../../r3f/controls/native/scaledSvgIcon';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { themedSlotRequests, type TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
 import { perObject } from '../../../utils/perObject';
@@ -347,11 +348,15 @@ function themedIconsOf(dialog: SolveNode, names: readonly string[]): SolveNode['
 
 /**
  * The size of a toolbar icon: the dialog Theme's texture once its size is known, else the vendored default's
- * `FILE_DIALOG_ICON_SIZE`. A pending icon takes the default room, as CheckBox, OptionButton and the split grabber
- * do, so the layout only moves when the arriving texture is not that size.
+ * `FILE_DIALOG_ICON_SIZE` at the theme scale. A pending icon takes the default room, as CheckBox, OptionButton and the
+ * split grabber do, so the layout only moves when the arriving texture is not that size.
  */
-function iconSizeOf(dialog: SolveNode, name: FileDialogThemeIcon | FileDialogListIcon): Vector2 {
-  return dialog.textureSlots[name] ?? FILE_DIALOG_ICON_SIZE;
+function iconSizeOf(
+  dialog: SolveNode,
+  name: FileDialogThemeIcon | FileDialogListIcon,
+  scale: number
+): Vector2 {
+  return themedIconSize(dialog.textureSlots, name, FILE_DIALOG_ICON_SIZE, scale);
 }
 
 /** The Button classes the body builds without an icon, so each takes the theme icon `icon` of its class. */
@@ -363,7 +368,7 @@ export const fileDialogTextureSlots: TextureSlotsFn = (_node, themedIcons = {}, 
   ...builtButtonIconRequests(BUILT_BUTTON_TYPES, builtIcons),
 ];
 
-function build(dialog: SolveNode, spec: Widget, parentPath: string): SolveNode {
+function build(dialog: SolveNode, spec: Widget, parentPath: string, scale: number): SolveNode {
   const parsed = parseNodeWithRegistry(
     { type: 'node', attributes: { name: spec.name, type: spec.type } },
     spec.raw ?? {}
@@ -380,11 +385,11 @@ function build(dialog: SolveNode, spec: Widget, parentPath: string): SolveNode {
     properties,
     parentPath,
     children: (spec.children ?? []).map((child) =>
-      build(dialog, child, syntheticPath(parentPath, spec.name))
+      build(dialog, child, syntheticPath(parentPath, spec.name), scale)
     ),
     variation: spec.variation,
     icons: themedIconsOf(dialog, [...(spec.icon ? [spec.icon] : []), ...(spec.icons ?? [])]),
-    textureSize: spec.icon && iconSizeOf(dialog, spec.icon),
+    textureSize: spec.icon && iconSizeOf(dialog, spec.icon, scale),
     syntheticDraw: {
       themedIcon: spec.icon && { name: spec.icon, vendoredUrl: FILE_DIALOG_ICON_URLS[spec.icon] },
       selection: spec.selection,
@@ -403,14 +408,15 @@ export function fileDialogBody(dialog: SolveNode, theme: NativeTheme): SolveNode
   const props = dialog.node.properties as FileDialogProperties;
   const listTheme: FileListTheme = {
     thumbnailSize: Math.trunc((dialog.constants.thumbnail_size ?? FILE_DIALOG_THUMBNAIL_SIZE) * theme.scale),
-    fileIconSize: iconSizeOf(dialog, 'file'),
+    fileIconSize: iconSizeOf(dialog, 'file', theme.scale),
     folderIconColor: dialog.colors.folder_icon_color ?? WHITE,
     fileIconColor: dialog.colors.file_icon_color ?? WHITE,
   };
   const body = build(
     dialog,
     mainVBox({ props, rtl: dialog.rtl, scale: theme.scale, listTheme }),
-    dialog.path
+    dialog.path,
+    theme.scale
   );
   byTheme.set(theme, body);
   return body;

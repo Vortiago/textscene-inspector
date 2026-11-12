@@ -33,6 +33,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/3d/decal/decalAtlasLayout.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_decal_atlas`: the cell sizes, the atlas size and each rectangle) |
 | `packages/textscene-core/src/r3f/areaLight/atlasMipmaps.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (the atlas's mip chain) and `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (the Gaussian blur) |
 | `packages/textscene-core/src/godot/rendering/lights/ltcTable.generated.ts` | `servers/rendering/storage/ltc/ltc_lut1.dds` and `ltc_lut2.dds` (Godot 4.7.2's LTC tables, which Eric Heitz fitted, baked by `scripts/godot-ltc/bake-ltc.mjs`) |
+| `packages/textscene-core/src/r3f/controls/native/themeIconRasters.generated.ts` | `scene/theme/icons/*.svg` rasterised by `modules/svg/image_loader_svg.cpp` (ThorVG) through `DPITexture::create_from_string`, baked by `scripts/godot-theme-icons/bake-theme-icons.mjs` |
 | `packages/textscene-core/src/resources/environment/godotToneMapping.ts` | `drivers/gles3/shaders/tonemap_inc.glsl` |
 | `packages/textscene-core/src/godot/rendering/environment/toneMapping.ts` | `servers/rendering/storage/environment_storage.cpp` (`environment_get_white` and the white of `environment_get_tonemap_parameters`) |
 | `packages/textscene-core/src/resources/environment/godotGlow.ts` | `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (`MODE_GLOW` bright pass under `FLAG_GLOW_FIRST_PASS`) and `.../effects/tonemap.glsl` (`gather_glow`, `apply_glow`, and `main()`'s pre/post-tonemap glow ordering) |
@@ -176,6 +177,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/tabcontainer/loadStrip.ts` | `scene/gui/tab_container.cpp` (`TabContainer::_update_margins`, `TabContainer::add_child_notify`) and `scene/gui/tab_bar.cpp` (`TabBar::ensure_tab_visible`, `TabBar::set_tab_hidden`) |
 | `packages/textscene-core/src/nodes/2d/ui/lineedit/nativeSolver.ts` | `scene/gui/line_edit.cpp` (`LineEdit::get_minimum_size`, `_notification`'s `NOTIFICATION_DRAW` content-rect/alignment/colour selection and its `right_icon`/clear-button inset and caret-fallback math, `LineEdit::_get_right_icon_size`) and `scene/theme/default_theme.cpp` (LineEdit's `normal`/`read_only` styleboxes, `font_color`/`font_placeholder_color`/`font_uneditable_color`/`caret_color`/`clear_button_color` theme defaults and the `caret_width` constant) |
 | `packages/textscene-core/src/nodes/2d/ui/textedit/nativeSolver.ts` | `scene/gui/text_edit.cpp` (`TextEdit::get_minimum_size`, `_update_scrollbars`'s `content_size_cache`, `_update_wrap_at_column`, `get_line_height`, `TextEdit::Text::get_line_height`, `adjust_viewport_to_caret`/`_adjust_viewport_to_caret_horizontally`'s own always-(0,0) trace, `_notification`'s `NOTIFICATION_DRAW` `left_margin`/`xmargin_beg`/`xmargin_end` row band, `TextEdit::Text::invalidate_cache`/`invalidate_all_lines`'s tab-align vector) and `scene/theme/default_theme.cpp` (TextEdit's reuse of LineEdit's `normal`/`read_only` styleboxes, `font_color`/`font_readonly_color`/`current_line_color`, the scaled `line_spacing` constant and the bare `wrap_offset`/content-size-pad literals) |
+| `packages/textscene-core/src/nodes/2d/ui/textedit/minimap.ts` | `scene/gui/text_edit.cpp` (the minimap arm of `NOTIFICATION_DRAW`: the view rectangle, the row bars, the tab stops and the wrapped-row indent) |
 | `packages/textscene-core/src/nodes/2d/ui/textedit/scrollBars.ts` | `scene/gui/text_edit.cpp` (`_update_scrollbars`'s bar rects, visible rows, total rows and ranges) |
 | `packages/textscene-core/src/nodes/2d/ui/codeedit/nativeSolver.ts` | `scene/gui/code_edit.cpp` (`CodeEdit::CodeEdit()`'s fixed gutter construction order and each gutter's own width setter, `_update_draw_main_gutter`, `_text_changed`'s line-number digit count, `_line_number_draw_callback`, `_update_line_number_gutter_width`, `set_line_numbers_zero_padded`) and `scene/theme/default_theme.cpp` (CodeEdit's reuse of TextEdit's/LineEdit's styleboxes and its own `line_number_color`) |
 | `packages/textscene-core/src/nodes/2d/ui/codeedit/delimiterRegions.ts` | `scene/gui/code_edit.cpp` (`_set_delimiters`'s per-type entry loop, `_add_delimiter`'s repeated-key refusal and longest-first insertion, `_update_delimiter_cache`, `_is_in_delimiter`, `get_delimiter_start_position`, `get_delimiter_end_position`, `_update_code_region_tags`) |
@@ -280,7 +282,9 @@ CheckButton, FoldableContainer, TextEdit/CodeEdit, TabBar and ColorPicker/
 ColorPickerButton painters need the same indicator glyphs Godot's editor bakes into its
 built-in dark theme. Rather than redraw approximations, `packages/textscene-core/src/r3f/controls/native/themeIcons.ts`
 embeds unmodified copies of the actual SVG files, base64-encoded as `data:` URLs, from
-Godot 4.6.3's `scene/theme/icons/`:
+Godot 4.6.3's `scene/theme/icons/`. At theme scale 1 the previewer draws Godot's own ThorVG
+raster of each icon instead: `packages/textscene-core/src/r3f/controls/native/themeIconRasters.generated.ts`
+holds those rasters as PNG `data:` URLs, baked by `scripts/godot-theme-icons/bake-theme-icons.mjs`.
 
 | File | Godot theme key (`scene/theme/default_theme.cpp`) |
 |---|---|

@@ -16,6 +16,7 @@ It adds the scroll arrows once the tabs overflow a clipped bar. A clipped strip 
 tab that brings the current tab into view, as `ensure_tab_visible` does. TabContainer's strip
 does the same, after its hidden pages and its `side_margin` reclaim. A tab that `max_tab_width`
 caps trims its title as `TextLine` does.
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
 ## Linting
 

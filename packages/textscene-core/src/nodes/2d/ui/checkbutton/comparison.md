@@ -21,6 +21,7 @@ to the box, with an ellipsis where Godot adds one, as Button does. `autowrap_mod
 its paragraph box and `autowrap_trim_flags` trims its edge spaces. The box grows to the wrapped height.
 Button's inherited `icon` draws beside the label with `icon_alignment`, `vertical_icon_alignment`, `expand_icon` and
 `icon_max_width`, ahead of the toggle. The minimum size and the wrap width include it.
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
 ## Linting
 

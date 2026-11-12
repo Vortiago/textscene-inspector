@@ -23,7 +23,6 @@ import type { CheckBoxIconKey } from '../../2d/ui/checkbox/nativeSolver';
 import { useCheckBoxIcon } from '../../2d/ui/checkbox/useCheckBoxIcon';
 import { ScrollBarChrome } from '../../2d/ui/shared/ScrollChrome';
 import { useTexture2D } from '../../../resources/useTexture2D';
-import { checkIconSize } from './menuItems';
 import { popupMenuDrawing, type RowDrawing } from './menuDrawing';
 import { menuModel, popupMenuGeometry } from './menuLayout';
 
@@ -37,12 +36,12 @@ interface PartProps {
 function CheckMark({
   iconKey,
   position,
+  size,
   solveNode,
   tint,
   renderOrder,
-}: PartProps & { iconKey: CheckBoxIconKey; position: Vector2; solveNode: Solved }) {
+}: PartProps & { iconKey: CheckBoxIconKey; position: Vector2; size: Vector2; solveNode: Solved }) {
   const texture = useCheckBoxIcon(solveNode, iconKey);
-  const size = checkIconSize(solveNode, iconKey);
   const rect = { x: position.x, y: position.y, w: size.x, h: size.y };
   return (
     <PositionedIcon
@@ -124,6 +123,7 @@ const RowParts = memo(function RowParts({ drawing, iconRef, solveNode, tint, ren
           {...part}
           iconKey={drawing.check.key}
           position={drawing.check.position}
+          size={drawing.check.size}
           solveNode={solveNode}
         />
       )}

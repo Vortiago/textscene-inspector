@@ -377,15 +377,20 @@ describe('ensureNoOverOffset (TabBar::_ensure_no_over_offset, tab_bar.cpp:1827-1
 
 describe('tabBarThemeIconSize (BIND_THEME_ITEM_CUSTOM(..., close_icon, "close") et al., tab_bar.cpp:2160-2182)', () => {
   it('is the vendored 16x16 default when nothing themed it', () => {
-    expect(tabBarThemeIconSize({ textureSlots: {} }, 'close')).toEqual({ x: 16, y: 16 });
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'close', 1)).toEqual({ x: 16, y: 16 });
+  });
+
+  it('is the vendored default at the theme scale: 24x24 at 1.5, never below a pixel', () => {
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'close', 1.5)).toEqual({ x: 24, y: 24 });
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'increment', 0.01)).toEqual({ x: 1, y: 1 });
   });
 
   it('is the themed size when the walker resolved a "close"/"increment"/"decrement" slot', () => {
-    expect(tabBarThemeIconSize({ textureSlots: { close: { x: 24, y: 24 } } }, 'close')).toEqual({
+    expect(tabBarThemeIconSize({ textureSlots: { close: { x: 24, y: 24 } } }, 'close', 1)).toEqual({
       x: 24,
       y: 24,
     });
-    expect(tabBarThemeIconSize({ textureSlots: {} }, 'increment')).toEqual({ x: 16, y: 16 });
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'increment', 1)).toEqual({ x: 16, y: 16 });
   });
 });
 
@@ -413,6 +418,13 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
     // styleMinWidth(0, no styleboxes resolved) + closeButtonMarginLeft(0, no button style resolved) + close(16).
     expect(size.x).toBeGreaterThanOrEqual(16);
     expect(size.y).toBeGreaterThanOrEqual(16);
+  });
+
+  it('floors on the scaled close icon: the same minimum as a themed 24x24 close at scale 1.5', () => {
+    const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+    const themed = node({ textureSlots: { close: { x: 24, y: 24 } } });
+
+    expect(tabBarMinimumSize(node(), at15)).toEqual(tabBarMinimumSize(themed, at15));
   });
 
   it('widens on a themed "close" icon bigger than the vendored default', () => {

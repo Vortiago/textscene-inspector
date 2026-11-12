@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { graphEditToolbar, zoomLabelText, zoomLabelTextRect } from './toolbar';
+import { graphEditSnappingArrowStates, graphEditToolbar, zoomLabelText, zoomLabelTextRect } from './toolbar';
 import { graphEditToolbarTheme } from './toolbarTheme';
 import { graphEditUnder } from './toolbarTheme.testkit';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -229,6 +229,15 @@ describe('graphEditToolbar under an ancestor Theme (graph_edit.cpp:3229-3300)', 
     expect(sizeOf(themed, {}, 'zoom_reset')).toMatchObject({ w: 36, h: 36 });
   });
 
+  it('scales the icon of a button by the theme scale', () => {
+    const scale = nativeTheme(1.5);
+    const scaledItems = graphEditToolbarTheme(graphEditUnder({ FlatButton: { normal: 10 } }), scale);
+    const rect = graphEditToolbar(props({}), scale, scaledItems, metrics)!.items.find(
+      (i) => i.id === 'zoom_reset'
+    )!.rect;
+    expect(rect).toMatchObject({ w: 44, h: 44 });
+  });
+
   it('sizes a pressed toggle by the pressed box and a disabled button by the disabled box, as wide as their margins (the row stretches every height)', () => {
     const themed = graphEditToolbarTheme(
       graphEditUnder({ Button: { normal: 10, pressed: 12, disabled: 14 } }),
@@ -253,5 +262,16 @@ describe('graphEditToolbar under an ancestor Theme (graph_edit.cpp:3229-3300)', 
     // The plain field has margins of 4 + 4 side to side and 4 + 4 top to bottom, so 12 adds 16 each way.
     expect(wide.w - plain.w).toBe(16);
     expect(wide.h - plain.h).toBe(16);
+  });
+});
+
+describe('graphEditSnappingArrowStates (graph_edit.cpp:57-58,3295-3296; spin_box.cpp:635-646)', () => {
+  it('enables both arrows between GRID_MIN_SNAPPING_DISTANCE (2) and GRID_MAX_SNAPPING_DISTANCE (100)', () => {
+    expect(graphEditSnappingArrowStates(20)).toEqual({ up: 'normal', down: 'normal' });
+  });
+
+  it('disables the down arrow at 2 and the up arrow at 100', () => {
+    expect(graphEditSnappingArrowStates(2)).toEqual({ up: 'normal', down: 'disabled' });
+    expect(graphEditSnappingArrowStates(100)).toEqual({ up: 'disabled', down: 'normal' });
   });
 });

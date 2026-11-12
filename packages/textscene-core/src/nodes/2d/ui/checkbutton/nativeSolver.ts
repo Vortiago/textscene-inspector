@@ -13,6 +13,7 @@ import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegist
 import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import {
   BUTTON_DEFAULT_FONT_COLORS,
   fittedThemedIconSize,
@@ -80,14 +81,15 @@ export function checkButtonIconColor(props: CheckButtonProperties, colors: Solve
  * `icon_max_width`.
  */
 function checkButtonFittedIconSize(
-  n: Pick<SolveNode, 'node' | 'textureSlots' | 'constants' | 'rtl'>
+  n: Pick<SolveNode, 'node' | 'textureSlots' | 'constants' | 'rtl'>,
+  theme: NativeTheme
 ): Vector2 {
   const { disabled } = n.node.properties as CheckButtonProperties;
   const names = [true, false].map(
     (buttonPressed) =>
       CHECK_BUTTON_ICON_THEME_NAME[resolveCheckButtonIconKey({ disabled, buttonPressed }, n.rtl)]
   );
-  return fittedThemedIconSize(n, names, CHECK_BUTTON_ICON_NATURAL_SIZE);
+  return fittedThemedIconSize(n, names, scaledIconSizeOf(CHECK_BUTTON_ICON_NATURAL_SIZE, theme.scale));
 }
 
 /**
@@ -98,7 +100,10 @@ function checkButtonFittedIconSize(
 export const CHECK_BUTTON_CLASS: ReservingButtonClass = {
   fontColors: BUTTON_DEFAULT_FONT_COLORS,
   textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-  reservedElement: (n) => ({ side: n.rtl ? 'left' : 'right', size: checkButtonFittedIconSize(n) }),
+  reservedElement: (n, theme) => ({
+    side: n.rtl ? 'left' : 'right',
+    size: checkButtonFittedIconSize(n, theme),
+  }),
 };
 
 /** Button's `icon`, then those of CheckButton's 8 icons that a theme sets. */
@@ -123,8 +128,12 @@ export function checkButtonToggleRect(
   rectSize: Vector2
 ): Rect2 {
   const { contentMargin } = buttonNormalBox(n, theme);
-  const reserved = checkButtonFittedIconSize(n);
-  const drawn = fittedThemedIconSize(n, [CHECK_BUTTON_ICON_THEME_NAME[key]], CHECK_BUTTON_ICON_NATURAL_SIZE);
+  const reserved = checkButtonFittedIconSize(n, theme);
+  const drawn = fittedThemedIconSize(
+    n,
+    [CHECK_BUTTON_ICON_THEME_NAME[key]],
+    scaledIconSizeOf(CHECK_BUTTON_ICON_NATURAL_SIZE, theme.scale)
+  );
   return {
     x: n.rtl ? contentMargin.left : rectSize.x - (reserved.x + contentMargin.right),
     y: (rectSize.y - reserved.y) / 2 + (n.constants.check_v_offset ?? 0),

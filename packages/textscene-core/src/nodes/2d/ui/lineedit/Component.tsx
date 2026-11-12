@@ -23,7 +23,7 @@ import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { lineEditDisplayText } from './displayText';
-import { LINE_EDIT_CLEAR_ICON, LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
+import { LINE_EDIT_CLEAR_ICON } from './icons';
 import {
   lineEditTextTheme,
   layoutLineEditContent,
@@ -41,6 +41,7 @@ import {
   lineEditSelection,
   EXPAND_MODE_ORIGINAL_SIZE,
   shapeLineEditText,
+  lineEditClearIconSize,
 } from './nativeSolver';
 import type { LineEditProperties } from './types';
 import { type Rgba } from '../../../../godot/math/math';
@@ -90,7 +91,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   // `.image`: the solver needs them before any texture loads. The content layout takes the icon width,
   // so the clip and pen offset see the width the text is laid out against.
   const rightIconNaturalSize = solveNode.textureSlots['right_icon'] ?? null;
-  const clearIconNaturalSize = solveNode.textureSlots['clear'] ?? LINE_EDIT_CLEAR_ICON_NATURAL_SIZE;
+  const clearIconNaturalSize = lineEditClearIconSize(solveNode, theme.scale);
   // `display_clear_icon = !using_placeholder && is_editable() && clear_button_enabled`
   // (line_edit.cpp:1289,1444) replaces `right_icon`: the two never draw together.
   const displayClearIcon = !isPlaceholder && editable && props.clearButtonEnabled === true;

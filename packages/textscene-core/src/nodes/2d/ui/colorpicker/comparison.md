@@ -47,6 +47,7 @@ walk. It draws these parts:
 
 Every row-visibility flag also moves this node's minimum size, to match the combined
 minimum of `real_vbox`. "Known limitations" lists everything else.
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
 ## Linting
 

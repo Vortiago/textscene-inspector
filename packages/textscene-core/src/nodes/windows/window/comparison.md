@@ -55,7 +55,8 @@ the start and the close icon stays at the right edge. Window has no `layout_dire
 <!-- compare: image=unit-window-theme-scale status=done fixture=window-theme-scale/unit-window-theme-scale.tscn -->
 
 With `gui/theme/default_theme_scale` at 1.5, the frame, the title font and the close icon grow
-with the theme.
+with the theme. The close icon is the browser raster of the scaled SVG, so its edge pixels differ by a rim
+from Godot's ThorVG raster. At theme scale 1 the icon is Godot's own raster and matches.
 
 ## Under a SubViewport that does not embed
 <!-- compare: image=unit-window-under-disabled-viewport status=done fixture=unit-window-under-disabled-viewport.tscn -->

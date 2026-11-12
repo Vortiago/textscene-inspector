@@ -285,6 +285,8 @@ export const CONTROL_WIDGET_SCENES = [
   // The one variable is `color_mode = 1` (HSV rainbow row) and, in the second scene, an HDR `color`
   // (the `script` icon of `text_type`).
   { name: 'color-picker-hsv-rows', file: 'unit-color-picker-hsv-rows.tscn', mode: '2d' },
+  // The SpinBox arrows draw dimmed at a bound of the range: ColorPicker rows and the GraphEdit snapping box. Max 73, mean 0.705.
+  { name: 'color-picker-spin-arrows', file: 'unit-color-picker-spin-arrows.tscn', mode: '2d' },
   { name: 'color-picker-hdr-hex', file: 'unit-color-picker-hdr-hex.tscn', mode: '2d' },
   // The one variable is `picker_shape`: the wheel, the circles and the OK rectangles.
   { name: 'color-picker-shapes', file: 'unit-color-picker-shapes.tscn', mode: '2d' },

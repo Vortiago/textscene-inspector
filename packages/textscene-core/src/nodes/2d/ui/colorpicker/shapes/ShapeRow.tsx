@@ -7,6 +7,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { scaledIconSize } from '../../../../../r3f/controls/native/scaledSvgIcon';
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../../r3f/components/CanvasItemGroup';
@@ -60,7 +61,7 @@ export function ShapeRow({ drawing, pickColor, solveNode, tint, scale, renderOrd
           pickColor={pickColor}
           solveNode={solveNode}
           tint={tint}
-          size={Math.round(COLOR_PICKER_CURSOR_SIZE * scale)}
+          size={scaledIconSize(COLOR_PICKER_CURSOR_SIZE, scale)}
           renderOrder={renderOrder}
         />
       ))}
