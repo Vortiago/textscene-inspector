@@ -161,13 +161,16 @@ function quadFacingPlusZ(vertexCount: number): THREE.BufferAttribute {
   return new THREE.BufferAttribute(normals, 3);
 }
 
+/** What `createCanvasTextMaterial` builds for either painter: a lit run takes the standard one. */
+type TextRunMaterial = THREE.MeshBasicMaterial | THREE.MeshStandardMaterial;
+
 /**
  * One built run: its geometry, and the texture this component holds and the last holder disposes.
  * `paint` builds a material for the run, one for each pass a GeometryInstance3D's fade can draw it in.
  */
 interface BuiltTextRun {
   geometry: THREE.BufferGeometry;
-  paint: (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) => THREE.Material;
+  paint: (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) => TextRunMaterial;
   heldTexture: THREE.Texture;
 }
 
@@ -504,14 +507,13 @@ export function TextRunMesh({
 /** Sets the colour a white canvas raster multiplies by on each of its materials, or leaves them white. */
 function useRasterColor(
   color: THREE.Color | null,
-  material: THREE.Material,
-  alphaPassMaterial: THREE.Material | null
+  material: TextRunMaterial,
+  alphaPassMaterial: TextRunMaterial | null
 ): void {
   useLayoutEffect(() => {
     if (!color) return;
-    for (const painted of [material, alphaPassMaterial])
-      if (painted instanceof THREE.MeshBasicMaterial || painted instanceof THREE.MeshStandardMaterial)
-        painted.color.copy(color);
+    material.color.copy(color);
+    alphaPassMaterial?.color.copy(color);
   }, [color, material, alphaPassMaterial]);
 }
 
@@ -520,7 +522,7 @@ function usePaintedMaterial(
   run: BuiltTextRun,
   blend: SurfaceBlend | undefined,
   shading: SurfaceShading | undefined
-): THREE.Material {
+): TextRunMaterial {
   return useOwnedMaterial(run, blend, shading, () => run.paint(blend, shading));
 }
 
@@ -529,7 +531,7 @@ function useAlphaPassMaterial(
   run: BuiltTextRun,
   blend: SurfaceBlend | undefined,
   shading: SurfaceShading | undefined
-): THREE.Material | null {
+): TextRunMaterial | null {
   return useOwnedMaterial(run, blend, shading, () => (blend ? run.paint(blend, shading) : null));
 }
 

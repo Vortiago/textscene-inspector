@@ -318,8 +318,8 @@ describe('<OptionButton>: text_overrun_behavior trims the label to its paragraph
   }
 
   it('draws only the whole words that fit under OVERRUN_TRIM_WORD', async () => {
-    // 'AAAA BBBB' is 88.6 px, wider than the 80 px box: the word trim keeps 'AAAA' (4 quads), where the
-    // paragraph cut alone keeps the glyphs of 'BBB' too.
+    // 'AAAA BBBB' is 88.6 px, wider than the 80 px box: the word trim keeps the 4 glyphs of 'AAAA',
+    // where the paragraph cut alone keeps the glyphs of 'BBB' too.
     const trimmed = await render({ overrunBehavior: 2 });
     const cut = await render({ overrunBehavior: 0 });
     expect(inkedCount(trimmed)).toBe(4);

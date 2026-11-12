@@ -51,6 +51,9 @@ const RECT: Rect2 = { x: 0, y: 0, w: 120, h: 32 };
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
+/** How many glyphs of the first run of the bundled face draw ink. */
+const inkedCount = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
+
 function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
   return {
     bgColor: { r: 0.2, g: 0.3, b: 0.4, a: 1 },
@@ -224,7 +227,6 @@ describe('<Button> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const inkedCount = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
     expect(inkedCount(trimmed)).toBeLessThan(inkedCount(whole));
   });
 });
@@ -233,8 +235,6 @@ describe('<Button>: the label is cut to its paragraph box whatever clip_text say
   afterEach(() => {
     controlSolverRegistry.clear();
   });
-
-  const inkedCount = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
 
   async function render(properties: Partial<ButtonProperties>, rect: Rect2) {
     return ReactThreeTestRenderer.create(
