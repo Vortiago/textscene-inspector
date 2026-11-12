@@ -12,11 +12,15 @@ export const PARTICLES_2D_SCENES = [
   // A RING fills the band between its radii, in other places than Godot's unsaved RNG picks.
   { name: 'cpuparticles2d-ring', file: 'unit-cpuparticles2d-ring.tscn' },
   { name: 'cpuparticles2d-curves', file: 'unit-cpuparticles2d-curves.tscn' },
+  // The same scene with both Curves in a `.tres`: it must match the inline one.
+  { name: 'cpuparticles2d-curves-file', file: 'unit-cpuparticles2d-curves-file.tscn' },
   { name: 'cpuparticles2d-split-scale', file: 'unit-cpuparticles2d-split-scale.tscn' },
   // A crossed `_min`/`_max` pair and a lone `_min` load as Godot's paired setters leave them:
   // 100 and 100 for the velocity, 6 and 6 for the scale.
   { name: 'cpuparticles2d-crossed-range', file: 'unit-cpuparticles2d-crossed-range.tscn' },
   { name: 'cpuparticles2d-color-ramp', file: 'unit-cpuparticles2d-color-ramp.tscn' },
+  // The same scene with both Gradients in a `.tres`: it must match the inline one.
+  { name: 'cpuparticles2d-color-ramp-file', file: 'unit-cpuparticles2d-color-ramp-file.tscn' },
   // A scaled emitter whose particles must not scale with it: Godot's default
   // `local_coords = false` emits into world space.
   { name: 'cpuparticles2d-local-coords', file: 'unit-cpuparticles2d-local-coords.tscn' },

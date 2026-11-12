@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { decodeGradientTexture2D, resolveGradient } from './decode';
+import { decodeGradientTexture2D } from './decode';
 import { gradientOf } from './gradient.testkit';
-import { parseTresFile } from '../../../parser/parsedResource';
-import type { TscnInternalResource } from '../../../parser/types';
-import type { SceneResources } from '../../../r3f/SceneResourcesContext';
-import { loadedFilesOf, NO_FILES } from '../../testing/loadedFiles';
 
 import {
   GRADIENT_TEXTURE_MAX_SIZE,
@@ -47,7 +43,7 @@ describe('the colors a Gradient reads', () => {
   });
 });
 
-describe('the Gradient body resolveGradient decodes', () => {
+describe('the Gradient body the Gradient kind decodes', () => {
   it('pairs offsets with colors into sorted float32 stops (the coin gradient)', () => {
     const gradient = gradientOf({
       interpolation_mode: '2',
@@ -149,60 +145,5 @@ describe('decodeGradientTexture2D', () => {
   it('refuses one axis without touching the other', () => {
     const tex = decodeGradientTexture2D({ width: '16385', height: '32' });
     expect(tex).toMatchObject({ width: 64, height: 32 });
-  });
-});
-
-/** A two-stop ramp: opaque orange fading to transparent. */
-const ORANGE_RAMP = {
-  offsets: 'PackedFloat32Array(0, 1)',
-  colors: 'PackedColorArray(1, 0.6, 0.2, 1, 1, 0.6, 0.2, 0)',
-};
-
-const RAMP_RESOURCE: TscnInternalResource = {
-  type: 'Gradient',
-  id: '3',
-  data: { ...ORANGE_RAMP },
-};
-
-const RAMP_PATH = 'res://ramp.tres';
-const SCENE_RAMP: SceneResources = {
-  internalResources: [RAMP_RESOURCE],
-  externalResources: [{ id: '8_ramp', type: 'Gradient', path: RAMP_PATH }],
-};
-const RAMP_FILE = loadedFilesOf({
-  [RAMP_PATH]: parseTresFile(
-    `[gd_resource type="Gradient" format=3]\n\n[resource]\n` +
-      Object.entries(ORANGE_RAMP)
-        .map(([key, value]) => `${key} = ${value}\n`)
-        .join('')
-  ),
-});
-
-describe('resolveGradient', () => {
-  it('decodes the Gradient a SubResource reference names (happy path)', () => {
-    const gradient = resolveGradient('SubResource("3")', SCENE_RAMP, NO_FILES);
-    expect(gradient?.stops).toHaveLength(2);
-    expect(gradient?.stops[0]!.color).toEqual({ r: 1, g: Math.fround(0.6), b: Math.fround(0.2), a: 1 });
-  });
-
-  it('decodes the Gradient a loaded .tres holds, as it does a SubResource', () => {
-    const fromFile = resolveGradient('ExtResource("8_ramp")', SCENE_RAMP, RAMP_FILE);
-    expect(fromFile).toEqual(resolveGradient('SubResource("3")', SCENE_RAMP, NO_FILES));
-  });
-
-  it('returns null while the .tres has not loaded', () => {
-    expect(resolveGradient('ExtResource("8_ramp")', SCENE_RAMP, NO_FILES)).toBeNull();
-  });
-
-  it('returns null when the reference names a different resource type (error path)', () => {
-    const curve: TscnInternalResource = { type: 'Curve', id: '3', data: {} };
-    expect(
-      resolveGradient('SubResource("3")', { ...SCENE_RAMP, internalResources: [curve] }, NO_FILES)
-    ).toBeNull();
-  });
-
-  it('returns null for an absent reference or an unknown id (edge case)', () => {
-    expect(resolveGradient(undefined, SCENE_RAMP, NO_FILES)).toBeNull();
-    expect(resolveGradient('SubResource("nope")', SCENE_RAMP, NO_FILES)).toBeNull();
   });
 });

@@ -11,3 +11,5 @@ registerResourceSlice({
   typeNames: ['ParticleProcessMaterial'],
   busType: 'resource',
 });
+
+export { PARTICLE_PROCESS_MATERIAL } from './decode';
