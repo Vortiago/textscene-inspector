@@ -26,8 +26,11 @@ export interface InstanceCopy {
 
 /** Only VIEW_DEPTH and the two billboard alignments read the camera (`particles_storage.cpp:1223`). */
 export function readsCamera(drawOrder: number, transformAlign: number): boolean {
+  return drawOrder === GpuDrawOrder.VIEW_DEPTH || isBillboard(transformAlign);
+}
+
+function isBillboard(transformAlign: number): boolean {
   return (
-    drawOrder === GpuDrawOrder.VIEW_DEPTH ||
     transformAlign === GpuTransformAlign.Z_BILLBOARD ||
     transformAlign === GpuTransformAlign.Z_BILLBOARD_Y_TO_VELOCITY
   );
@@ -65,8 +68,8 @@ export function copyInstances(settled: SettledGpuParticles, request: InstanceCop
 
 /** Y_TO_VELOCITY reads the velocity alone; the other turns read the camera. */
 function turnsBasis(transformAlign: number, view: AlignView | null): boolean {
-  if (transformAlign === GpuTransformAlign.DISABLED) return false;
-  return transformAlign === GpuTransformAlign.Y_TO_VELOCITY || view !== null;
+  if (transformAlign === GpuTransformAlign.Y_TO_VELOCITY) return true;
+  return isBillboard(transformAlign) && view !== null;
 }
 
 /**
