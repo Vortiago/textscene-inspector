@@ -1,6 +1,6 @@
 /**
  * The minimap a TextEdit or CodeEdit paints inside its own rect when `minimap_draw` holds: one
- * `<ControlQuad>` per rect `textEditMinimapRects` returns, tinted as the control's own chrome.
+ * `<ControlQuad>` per rect `textEditMinimapRects` returns, tinted as a child item of the control, without its `self_modulate`.
  */
 import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -13,7 +13,7 @@ type MinimapInput = Parameters<typeof textEditMinimapRects>[0];
 
 interface TextEditMinimapProps {
   input: MinimapInput;
-  /** `tint.own`, the raw sRGB `modulate` and `self_modulate` of the control. */
+  /** `childTint.own`, the raw sRGB `modulate` of the control without its `self_modulate`. */
   tint: Rgba;
   renderOrder: number;
 }

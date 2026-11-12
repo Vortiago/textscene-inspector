@@ -125,7 +125,6 @@ export function TabContainer({
             offset={strip.offset}
             // The strip is a TabBar child Control (`tab_container.cpp:247`): no `self_modulate`.
             tint={childTint}
-            childTint={childTint}
             rect={{ x: 0, y: 0, w: barRect.w, h: barRect.h }}
             theme={theme}
             renderOrder={stripSlot.key}
