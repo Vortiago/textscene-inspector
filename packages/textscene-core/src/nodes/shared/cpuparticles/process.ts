@@ -54,12 +54,16 @@ export const DEFAULT_PREVIEW_SEED = 0;
  */
 const MAX_SETTLE_STEPS = 4096;
 
-/** What the settle reads of an emitter. */
-export interface SettledEmitter {
+/** What the seconds and the step of a settle read of an emitter. */
+export interface SettleTiming {
   preprocess: number;
   lifetime: number;
   oneShot: boolean;
   fixedFps: number;
+}
+
+/** What the CPU settle reads of an emitter. */
+export interface SettledEmitter extends SettleTiming {
   /** A `double`, which `_update_internal` narrows to `real_t` when it restores it after the settle. */
   speedScale: number;
 }
@@ -70,13 +74,13 @@ export interface SettledEmitter {
  * `_update_internal` spends both through one loop (`cpu_particles_3d.cpp:677-688`),
  * so `pnpm ref:godot --particles <seconds>` renders the same instant in Godot.
  */
-export function settleSeconds({ preprocess, lifetime, oneShot }: SettledEmitter): number {
+export function settleSeconds({ preprocess, lifetime, oneShot }: SettleTiming): number {
   if (preprocess > 0) return preprocess;
   return oneShot ? lifetime * 0.5 : lifetime;
 }
 
 /** The step the settle spends its seconds in: `1.0 / fixed_fps`, else `1.0 / 30.0` (`:672-676`). */
-export function settleFrameTime({ fixedFps }: SettledEmitter): number {
+export function settleFrameTime({ fixedFps }: SettleTiming): number {
   return fixedFps > 0 ? 1.0 / fixedFps : 1.0 / 30.0;
 }
 

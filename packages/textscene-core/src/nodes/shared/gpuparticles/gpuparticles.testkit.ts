@@ -22,7 +22,6 @@ const EMITTER: GpuEmitter = {
   localCoords: false,
   useFixedSeed: true,
   seed: 0,
-  speedScale: 1,
 };
 
 /** The case of the Godot measurement most rows share. */

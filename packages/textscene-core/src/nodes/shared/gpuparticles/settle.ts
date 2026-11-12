@@ -64,10 +64,6 @@ export interface GpuSettleInput {
 export interface SettledGpuParticles {
   /** The live particles in index order, each {@link PARTICLE_FLOATS} floats, in node space. */
   buffer: Float32Array;
-  /** Three floats for each live particle: `Y_TO_VELOCITY` reads them. */
-  velocity: Float32Array;
-  /** The system phase after the last step: the `LIFETIME` draw order reads it. */
-  phase: number;
 }
 
 /**
@@ -86,7 +82,7 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
   const frame = emissionFrame(emitter.localCoords ? identityTransform3D() : emissionTransform);
   const randomSeed = emitter.useFixedSeed ? emitter.seed : DEFAULT_PREVIEW_SEED;
   const clock = startClock(emitter);
-  if (drawsNothing(material)) return emptyPose(clock.phase);
+  if (drawsNothing(material)) return emptyPose();
   const frameTime = settleFrameTime(emitter);
   const steps = settleStepCount(Math.min(seconds, MAX_SETTLE_SECONDS), frameTime);
   const stride = particleStride(emitter.amount, steps);
@@ -113,7 +109,7 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
       if (particle.active) stepParticle(particle, restartedDelta ?? frameParams.delta, step);
     }
   }
-  return pose(particles, clock.phase, emitter.localCoords ? identityTransform3D() : emissionTransform);
+  return pose(particles, emitter.localCoords ? identityTransform3D() : emissionTransform);
 }
 
 /**
@@ -134,8 +130,8 @@ function drawsNothing({ emission }: GpuMaterial): boolean {
   return emission.shape === EmissionShape.POINTS || emission.shape === EmissionShape.DIRECTED_POINTS;
 }
 
-function emptyPose(phase: number): SettledGpuParticles {
-  return { buffer: new Float32Array(0), velocity: new Float32Array(0), phase };
+function emptyPose(): SettledGpuParticles {
+  return { buffer: new Float32Array(0) };
 }
 
 function emissionFrame({ basis_x: x, basis_y: y, basis_z: z, origin }: Transform3D): EmissionFrame {
@@ -144,10 +140,9 @@ function emissionFrame({ basis_x: x, basis_y: y, basis_z: z, origin }: Transform
 }
 
 /** The live particles as buffer rows in node space: a world-space particle goes back through the inverse of the emission transform. */
-function pose(particles: GpuParticle[], phase: number, emissionTransform: Transform3D): SettledGpuParticles {
+function pose(particles: GpuParticle[], emissionTransform: Transform3D): SettledGpuParticles {
   const live = particles.filter((particle) => particle.active);
   const buffer = new Float32Array(live.length * PARTICLE_FLOATS);
-  const velocity = new Float32Array(live.length * 3);
   const toNode = affineInverseTransform3D(emissionTransform);
   live.forEach((particle, index) => {
     writeTransformRows(
@@ -157,9 +152,8 @@ function pose(particles: GpuParticle[], phase: number, emissionTransform: Transf
     );
     buffer.set(particle.color, index * PARTICLE_FLOATS + PARTICLE_COLOR_OFFSET);
     buffer.set(particle.custom, index * PARTICLE_FLOATS + PARTICLE_CUSTOM_OFFSET);
-    velocity.set(particle.velocity, index * 3);
   });
-  return { buffer, velocity, phase };
+  return { buffer };
 }
 
 function columnsToTransform({ columns: [x, y, z], origin }: GpuParticle): Transform3D {

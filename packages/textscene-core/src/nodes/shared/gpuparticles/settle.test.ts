@@ -24,12 +24,12 @@ describe('settleGpuParticles at the measured positions', () => {
     expectOrigin(originOf(settle({ fixedFps: 24 }).buffer), [1.465936, 0.672581, -0.09993]);
   });
 
-  it.each([
-    ['fixed_fps 0, which steps at 1/30', { fixedFps: 0 }],
-    ['speed_scale 2, which never moves the pose', { speedScale: 2 }],
-  ])('keeps the pose for %s', (_name, emitter) => {
-    expectOrigin(originOf(settle(emitter).buffer), [1.455826, 0.687942, -0.099241]);
-  });
+  it.each([['fixed_fps 0, which steps at 1/30', { fixedFps: 0 }]])(
+    'keeps the pose for %s',
+    (_name, emitter) => {
+      expectOrigin(originOf(settle(emitter).buffer), [1.455826, 0.687942, -0.099241]);
+    }
+  );
 
   it('draws one particle for one live particle', () => {
     expect(settle({}).buffer.length).toBe(PARTICLE_FLOATS);
@@ -137,7 +137,7 @@ describe('settleGpuParticles over the life of an emitter', () => {
   });
 
   it('settles at one lifetime for a preprocess of 0, and at half of it for a one-shot emitter', () => {
-    const emitter = { preprocess: 0, lifetime: 2, oneShot: false, fixedFps: 30, speedScale: 1 };
+    const emitter = { preprocess: 0, lifetime: 2, oneShot: false, fixedFps: 30 };
     expect(gpuSettleSeconds({ ...emitter } as never)).toBe(2);
     expect(gpuSettleSeconds({ ...emitter, oneShot: true } as never)).toBe(1);
   });

@@ -57,7 +57,6 @@ describe('parseGPUParticles3D', () => {
       localCoords: false,
       useFixedSeed: false,
       seed: 0,
-      speedScale: 1,
     });
   });
 
@@ -93,7 +92,6 @@ describe('parseGPUParticles3D', () => {
       localCoords: true,
       useFixedSeed: true,
       seed: 12345,
-      speedScale: 2,
     });
   });
 

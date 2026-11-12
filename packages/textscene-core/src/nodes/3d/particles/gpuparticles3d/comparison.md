@@ -69,7 +69,7 @@ Strict parsing also checks all 96 properties of a ParticleProcessMaterial `[sub_
 
 ## Particle draw
 
-The frozen pose sits at Godot's own `preprocess` moment, else at one `lifetime`, or half of it for a `one_shot`. The step is `1 / fixed_fps`, or `1 / 30` for `fixed_fps = 0`, and the last step overshoots, as the engine's loop does. `speed_scale` never moves the pose. `draw_passes` draws each pass up to four, with its own materials, and `material_override` and `material_overlay` draw on every instance. A particle past its lifetime, or above `amount_ratio`, draws nothing, and neither does an emitter that is not emitting.
+The frozen pose sits at Godot's own `preprocess` moment, else at one `lifetime`, or half of it for a `one_shot`. The step is `1 / fixed_fps`, or `1 / 30` for `fixed_fps = 0`, and the last step overshoots, as the engine's loop does. `speed_scale` never moves the pose, because the engine's settle runs at a speed scale of 1 (`particles_storage.cpp:1555-1563`). `draw_passes` draws each pass up to four, with its own materials, and `material_override` and `material_overlay` draw on every instance. A particle past its lifetime, or above `amount_ratio`, draws nothing, and neither does an emitter that is not emitting.
 
 With `local_coords` false the particles sit in world space, so gravity acts along the world axes. With `local_coords` true they follow the node.
 

@@ -22,8 +22,6 @@ export interface GpuEmitter {
   localCoords: boolean;
   useFixedSeed: boolean;
   seed: number;
-  /** Read only so that the pose provably ignores it: the settle runs at a speed scale of 1. */
-  speedScale: number;
 }
 
 export type GpuMaterial = ProcessMaterial;

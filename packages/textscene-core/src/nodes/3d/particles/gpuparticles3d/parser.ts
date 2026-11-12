@@ -50,7 +50,6 @@ function parseEmitter(properties: Record<string, string>, context: string): GpuE
     useFixedSeed: boolOr(properties.use_fixed_seed, false, at('use_fixed_seed')),
     // `set_seed` takes a `uint32_t`, so 4294967295 is the seed the file states, not -1.
     seed: intOr(properties.seed, 0, at('seed'), 'uint32'),
-    speedScale: floatOr(properties.speed_scale, 1, at('speed_scale')),
   };
 }
 
