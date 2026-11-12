@@ -13,4 +13,5 @@ registerResourceSlice({
   busType: 'resource',
 });
 
+export { CURVE } from './decode';
 export type { Curve, CurvePoint } from './types';

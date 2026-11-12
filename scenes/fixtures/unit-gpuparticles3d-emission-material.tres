@@ -1,0 +1,7 @@
+[gd_resource type="ParticleProcessMaterial" format=3]
+
+[resource]
+emission_shape = 3
+emission_box_extents = Vector3(1, 0.5, 1)
+emission_shape_offset = Vector3(0, 1, 0)
+emission_shape_scale = Vector3(2, 1, 1)

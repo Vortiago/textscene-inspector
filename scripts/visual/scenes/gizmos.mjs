@@ -51,6 +51,13 @@ export const GIZMO_SCENES = [
     gizmos: true,
     select: 'Root/Emitter',
   },
+  // The same scene with the material in a `.tres`: it must match the inline one.
+  {
+    name: 'gpuparticles3d-emission-file-selected',
+    file: 'unit-gpuparticles3d-emission-file.tscn',
+    gizmos: true,
+    select: 'Root/Emitter',
+  },
   { name: 'cpuparticles3d-selected', file: 'unit-cpuparticles3d-gizmo.tscn', gizmos: true, select: 'Root/Emitter' },
   // The faint variant: the Gizmos toggle on and nothing selected. CPUParticles3D draws its box and
   // axes for every node (`cpu_particles_3d_gizmo_plugin.cpp:98`) but not the solid box or the

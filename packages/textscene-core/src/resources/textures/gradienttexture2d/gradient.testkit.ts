@@ -1,11 +1,16 @@
-import { resolveGradient } from './decode';
+import { GRADIENT } from './decode';
+import { staticSnapshot } from '../../reading/staticSnapshot.testkit';
+import { nodeReference } from '../../reading/scopedReference';
 import { resolveOnlySubResource } from '../../../testing/subResource';
-import { NO_FILES } from '../../testing/loadedFiles';
 import type { Gradient } from './types';
 
 /** The Gradient a sub-resource with this property bag decodes to. */
 export function gradientOf(data: Record<string, string>): Gradient {
-  return resolveOnlySubResource('Gradient', data, (ref, internalResources) =>
-    resolveGradient(ref, { internalResources, externalResources: [] }, NO_FILES)
+  return resolveOnlySubResource(
+    'Gradient',
+    data,
+    (ref, internalResources) =>
+      staticSnapshot({}).read(nodeReference(ref, { internalResources, externalResources: [] }), GRADIENT)
+        .value
   )!;
 }
