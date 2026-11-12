@@ -1,8 +1,7 @@
 /**
  * The kind of content a sub-viewport holds, which decides its one publisher. The offscreen pass
- * owns `'3d'` and `'2d'`, with the Controls beside them, `ControlRasterPass.tsx` owns `'dom'`, and
- * nothing publishes `'empty'`. Both write one `ViewportTextureRegistry` key, so the split is
- * decided here alone.
+ * owns `'3d'` and `'2d'`, with the Controls beside them, and `ControlRasterPass.tsx` owns `'dom'`.
+ * Both write one `ViewportTextureRegistry` key, so the split is decided here alone.
  */
 
 import type { TscnExternalResource, TscnNode } from '../../../parser/types';
@@ -16,7 +15,7 @@ import {
   type LiveTreeSources,
 } from '../../../r3f/liveSceneTree.js';
 import { compositeCallPrefix } from '../../../godot/variant/variantParser.js';
-import { isEmbeddedWindow, isViewportBoundary } from './viewportBoundary.js';
+import { isViewportBoundary } from './viewportBoundary.js';
 import { embedsAWindow } from './windowEmbedder.js';
 
 /**
@@ -75,9 +74,8 @@ export type ViewportContentKind =
   | '3d'
   /** 2D-world (CanvasItem, non-Control) content, rendered through an ortho camera framing the target. */
   | '2d'
-  /** Controls only, drawn by the native Control-raster pass (`ControlRasterPass.tsx`). */
-  | 'dom'
-  | 'empty';
+  /** No world content: Controls, if any, drawn by the native Control-raster pass (`ControlRasterPass.tsx`). */
+  | 'dom';
 
 /**
  * What a sub-viewport holds: the kind its pass draws, and whether Controls and 2D-world items sit
@@ -157,8 +155,9 @@ function classify(node: TscnNode, drawsAWindow: boolean): ViewportContent {
   // 3D, but only when nothing decisive was found: anything typed, or an instance
   // whose overrides name a world, outranks it.
   if (sawUntypedInstance) return found('3d');
-  // An embedder draws a window's target even when it holds nothing, so the Control pass clears it.
-  return found(sawDom || isEmbeddedWindow(node.type) ? 'dom' : 'empty');
+  // Godot clears a viewport that holds nothing and draws its target (`renderer_viewport.cpp:371`),
+  // so the Control pass publishes the bare clear.
+  return found('dom');
 }
 
 /** The children below `from` (the roots without it) with their instances resolved. */

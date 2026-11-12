@@ -7,7 +7,6 @@
 
 import { lazy, useMemo, type ReactNode } from 'react';
 import { OffscreenViewportPass } from './OffscreenViewportPass';
-import { GateOnlyPass } from './GateOnlyPass';
 
 import type { TscnNode } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
@@ -88,8 +87,8 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
   const canvasLayers = useMemo(() => canvasLayerRanks(node.children), [node]);
 
   // Only content this subsystem can rasterise gets an offscreen pass. A Control-only viewport
-  // is the native Control-raster pass's (`ControlRasterPass.tsx`), and an empty one has nothing
-  // to draw.
+  // is the native Control-raster pass's (`ControlRasterPass.tsx`), which clears a viewport with no
+  // Control too.
   const rasterizes = kind === '3d' || kind === '2d';
 
   // The subtree draws inline only for 3D content in a shared world in a 3D
@@ -155,7 +154,6 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
             {rendersInline ? null : contents}
           </OffscreenViewportPass>
         ) : null}
-        {kind === 'empty' ? <GateOnlyPass node={node} path={path} /> : null}
         {rendersInline ? (
           <World2DLightingBoundary canvasModulate={canvasModulate} space={canvasSpace}>
             {contents}

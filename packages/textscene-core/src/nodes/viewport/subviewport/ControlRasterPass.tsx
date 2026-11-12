@@ -1,8 +1,9 @@
 /**
- * The native (WebGL) render-to-texture publisher for a Control-only sub-viewport
+ * The native (WebGL) render-to-texture publisher for a sub-viewport with no world content
  * (`viewportContentAt(…).kind === 'dom'`), which `<SubViewport>`'s own pass declines. It
  * mounts the Control walker into a detached scene, draws it through a fixed camera
- * framing the target rect, and publishes a texture consumers sample directly.
+ * framing the target rect, and publishes a texture consumers sample directly. A viewport
+ * with no Control publishes the clear alone.
  */
 import { useCallback, useMemo } from 'react';
 import { createPortal, useThree } from '@react-three/fiber';
@@ -35,11 +36,11 @@ import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLighting
 import { useStableVector2 } from '../../../r3f/hooks/useStableVector2';
 
 export interface ControlRasterPassesProps {
-  /** The Control-only sub-viewports found in the scene, each with its own resource scope (ADR-0009). */
+  /** The sub-viewports with no world content found in the scene, each with its own resource scope (ADR-0009). */
   viewports: readonly ControlRasterViewport[];
 }
 
-/** One native offscreen pass per Control-only sub-viewport in the scene. */
+/** One native offscreen pass per sub-viewport with no world content in the scene. */
 export function ControlRasterPasses({ viewports }: ControlRasterPassesProps) {
   return (
     <>
@@ -60,7 +61,7 @@ function useEnclosingViewportSize(embedder: ControlRasterViewport['embedder']): 
 
 function ControlRasterPass({ viewport }: { viewport: ControlRasterViewport }) {
   const { path, node, inheritedRtl, themeOwners, embedder, internalResources, externalResources } = viewport;
-  const gate = useResolvedGate(viewport.gate);
+  const gate = useResolvedGate(viewport.gate, path);
 
   const properties = node.properties as SubViewportProperties;
   const { transparent_bg: transparentBg, render_target_clear_mode: clearMode } = properties;
