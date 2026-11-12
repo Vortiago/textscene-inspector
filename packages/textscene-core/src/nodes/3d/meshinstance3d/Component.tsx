@@ -39,7 +39,7 @@ interface MeshInstance3DProps extends NodeComponentProps {
 
 /**
  * The mesh a node's `mesh` property names, as the surfaces a draw mounts. MeshInstance2D reads it
- * through here too, so the lookup of a mesh moves with this one entry (#1685).
+ * through here too, so the lookup of a mesh moves with this one entry.
  */
 export function useMeshInstanceContent(meshRef: string | undefined, pools: SceneResources) {
   return useMeshContent(useResourceResolution(meshRef, pools));

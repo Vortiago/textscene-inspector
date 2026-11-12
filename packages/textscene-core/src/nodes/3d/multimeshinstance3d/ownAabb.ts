@@ -27,7 +27,7 @@ export interface NodeMultiMesh {
 
 /**
  * The node's MultiMesh, read from a SubResource or a file, and the box it gives the instance.
- * MultiMeshInstance2D reads its MultiMesh through here too and takes no box (#1685).
+ * MultiMeshInstance2D reads its MultiMesh through here too and takes no box.
  */
 export function useMultiMeshInstance3D(node: TscnNode): NodeMultiMesh {
   const multiMeshRef = node.rawProperties['multimesh'];
