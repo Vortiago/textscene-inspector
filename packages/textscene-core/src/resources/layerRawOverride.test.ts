@@ -82,4 +82,32 @@ describe('layerRawOverride', () => {
       expect(forceNativeOf({}, { visible: 'false', force_native: 'true' })).toBe(true);
     });
   });
+
+  /** Measured with `pnpm ref:diff` on Godot 4.6.3: the override's setters run over the size and background the base left. */
+  describe('an override of a Window whose setters read what the base left', () => {
+    const windowOf = (baseRaw: Record<string, string>, overrideRaw: Record<string, string>) => {
+      const base = parsedNode({ name: 'Win', type: 'Window' }, baseRaw);
+      return layerRawOverride(base, base, overrideRaw).properties as WindowProperties;
+    };
+
+    it('keeps the size a base cap took when the override lifts the cap', () => {
+      const base = { size: 'Vector2i(500, 350)', max_size: 'Vector2i(300, 200)' };
+      expect(windowOf(base, { max_size: 'Vector2i(0, 0)' }).size).toEqual({ x: 300, y: 200 });
+    });
+
+    it('takes an override size under the cap the base set', () => {
+      const base = { max_size: 'Vector2i(300, 200)' };
+      expect(windowOf(base, { size: 'Vector2i(500, 350)' }).size).toEqual({ x: 300, y: 200 });
+    });
+
+    it('takes an override transparent_bg over a base whose transparent line came last', () => {
+      const base = { transparent_bg: 'true', transparent: 'false' };
+      expect(windowOf(base, { transparent_bg: 'true' }).transparent_bg).toBe(true);
+    });
+
+    it('keeps the background the base left when the override writes neither key', () => {
+      const base = { transparent_bg: 'true', transparent: 'false' };
+      expect(windowOf(base, { title: '"Other"' }).transparent_bg).toBe(false);
+    });
+  });
 });

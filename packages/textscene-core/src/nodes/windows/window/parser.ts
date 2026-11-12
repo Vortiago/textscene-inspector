@@ -27,23 +27,38 @@ import type { WindowProperties } from './types';
 /** Frozen: every parsed window shares it as a default, so no reader may write through it. */
 const ORIGIN = Object.freeze({ x: 0, y: 0 });
 
-/**
- * The size lines in file order, a malformed one skipped as the lenient parse skips any bad value.
- * A class that floors its size in its constructor writes `min_size` first.
- */
-function sizeWrites(
-  properties: Record<string, string>,
-  constructorMinSize: Vector2,
-  constructorSize: Vector2 | undefined
-): WindowSizeWrite[] {
-  const writes: WindowSizeWrite[] = [{ key: 'min_size', value: constructorMinSize }];
-  if (constructorSize) writes.push({ key: 'size', value: constructorSize });
-  for (const [key, raw] of Object.entries(properties)) {
+/** The size lines of `lines` in file order, a malformed one skipped as the lenient parse skips any bad value. */
+function sizeLineWrites(lines: Record<string, string>): WindowSizeWrite[] {
+  const writes: WindowSizeWrite[] = [];
+  for (const [key, raw] of Object.entries(lines)) {
     if (!isWindowSizeKey(key)) continue;
     const value = parseOptionalVector2i(raw);
     if (value) writes.push({ key, value });
   }
   return writes;
+}
+
+/**
+ * The size after the scene lines run: an override's lines over the size and limits the base left, or
+ * one file's lines over what the constructor left. A class that floors its size in its constructor
+ * writes `min_size` first.
+ */
+function parseSize(
+  properties: Record<string, string>,
+  defaults: ReturnType<typeof windowClassDefaults>,
+  override: OverrideLayer<WindowProperties> | undefined
+): Vector2 {
+  const start: WindowSizeWrite[] = override
+    ? [
+        { key: 'min_size', value: override.held.min_size },
+        { key: 'max_size', value: override.held.max_size },
+        { key: 'size', value: override.held.size },
+      ]
+    : [
+        { key: 'min_size', value: defaults.minSize },
+        ...(defaults.size ? [{ key: 'size' as const, value: defaults.size }] : []),
+      ];
+  return replayWindowSize([...start, ...sizeLineWrites(override ? override.written : properties)]);
 }
 
 /** The `content_scale_*` keys. A setter refuses a negative size or a factor at or below 0 (`window.cpp:1716,1774`). */
@@ -62,18 +77,15 @@ function parseContentScale(properties: Record<string, string>, context: string):
 
 /**
  * `transparent_bg` and the `transparent` flag both set the background (`window.cpp:548-549`), so the
- * line written last wins. Without either, the constructor's flag stands.
+ * line written last wins. Without either, `held` stands: the constructor's flag, or what an
+ * instanced base left under an override's lines.
  */
-function parseTransparentBackground(
-  properties: Record<string, string>,
-  classDefault: boolean,
-  context: string
-): boolean {
-  const flag = boolOr(properties.transparent, classDefault, context);
-  if (properties.transparent_bg === undefined) return flag;
-  const keys = Object.keys(properties);
+function replayTransparentBackground(lines: Record<string, string>, held: boolean, context: string): boolean {
+  const flag = boolOr(lines.transparent, held, context);
+  if (lines.transparent_bg === undefined) return flag;
+  const keys = Object.keys(lines);
   const isFlagLast = keys.indexOf('transparent') > keys.indexOf('transparent_bg');
-  return isFlagLast ? flag : boolOr(properties.transparent_bg, classDefault, context);
+  return isFlagLast ? flag : boolOr(lines.transparent_bg, held, context);
 }
 
 /**
@@ -105,8 +117,10 @@ export function parseWindow(
   return {
     ...viewport,
     ...parseThemeOwnerFields(properties),
-    transparent_bg: parseTransparentBackground(properties, defaults.transparent, context),
-    size: replayWindowSize(sizeWrites(properties, defaults.minSize, defaults.size)),
+    transparent_bg: override
+      ? replayTransparentBackground(override.written, override.held.transparent_bg, context)
+      : replayTransparentBackground(properties, defaults.transparent, context),
+    size: parseSize(properties, defaults, override),
     size_2d_override: ORIGIN,
     size_2d_override_stretch: false,
     // `Window()` disables the update (`window.cpp:3578`), and the embedder sets
