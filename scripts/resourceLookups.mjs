@@ -4,11 +4,11 @@
  * so a reference resolves the same way from a scene and from a file.
  */
 
-import { stripComments } from '../packages/textscene-dev-kit/src/commentSpans.ts';
+import ts from 'typescript';
 import { isTestFile } from './sourceTree.mjs';
 
-/** The lookups of a reference and the hops of the old layer, each banned as a name followed by `(`. */
-const BANNED = [
+/** The lookups of a reference and the hops of the old layer, each banned as the callee of a call. */
+const BANNED = new Set([
   'findSubResource',
   'resolveSubResourceRef',
   'findSubResourceOfType',
@@ -23,9 +23,7 @@ const BANNED = [
   'referencedFilePath',
   'useLoadedFiles',
   'useCachedFiles',
-];
-
-const CALL = new RegExp(`(?<![\\w$.])(${BANNED.join('|')})\\s*\\(`, 'g');
+]);
 
 /** The trees a reader of a resource lives in. */
 const SCANNED = /^(nodes|r3f|resources)\//;
@@ -35,13 +33,25 @@ const LINTER = /(^|\/)(linter|linterParser|linterValidators|index\.linter)\.ts$|
 
 const READING = 'resources/reading/';
 
-/** A quoted string on one line. A template literal is left in, so a call inside one still counts. */
-const QUOTED = /'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"/g;
+/**
+ * The banned calls in `path`, read from its syntax tree, not by a regex: a comment, a string or a
+ * method of another object never counts, and a call inside a template literal always does.
+ */
+function bannedCalls(path, text) {
+  const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, false, scriptKind(path));
+  const calls = [];
+  const visit = (node) => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && BANNED.has(node.expression.text)) {
+      calls.push(node.expression.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return calls;
+}
 
-/** The banned calls in `text`, with comments and quoted strings left out. */
-function bannedCalls(text) {
-  const code = stripComments(text).replace(QUOTED, "''");
-  return [...code.matchAll(CALL)].map((match) => match[1]);
+function scriptKind(path) {
+  return path.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
 }
 
 /**
@@ -54,7 +64,7 @@ export function lookupFailures(files, layer, unmoved) {
   for (const [path, text] of files) {
     if (isTestFile(path) || LINTER.test(path) || !SCANNED.test(path)) continue;
     if (path.startsWith(READING) || layer.has(path)) continue;
-    failures.push(...fileFailures(path, bannedCalls(text), unmoved.get(path)));
+    failures.push(...fileFailures(path, bannedCalls(path, text), unmoved.get(path)));
   }
   for (const path of unmoved.keys()) {
     if (!files.has(path))

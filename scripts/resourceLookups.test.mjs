@@ -83,7 +83,7 @@ const UNMOVED = new Map([
   ['resources/textures/textureSourceFiles.ts', { calls: 3, issue: 1518 }],
   ['resources/textures/viewporttexture/useViewportTextureSlot.ts', { calls: 2, issue: 1518 }],
   ['resources/tileset/decode.ts', { calls: 7, issue: 1680 }],
-  ['resources/useLoadedFilesAndFonts.ts', { calls: 1, issue: 1696 }],
+  ['resources/useLoadedFilesAndFonts.ts', { calls: 2, issue: 1696 }],
   ['resources/useProjectFonts.ts', { calls: 2, issue: 1696 }],
   ['resources/useTexture2D.ts', { calls: 4, issue: 1518 }],
   ['resources/useTexture3D.ts', { calls: 1, issue: 1518 }],
@@ -141,6 +141,22 @@ describe('how the scan reads a file', () => {
 
   it('passes a name in a string', () => {
     expect(failuresOf("const message = 'call findSubResource(pools, id)';\n")).toEqual([]);
+  });
+
+  it('counts a call after an apostrophe in a template literal on the same line', () => {
+    expect(failuresOf("warn(`can't ${x}`); findSubResource(t, 'id');\n")).toHaveLength(1);
+  });
+
+  it('counts a call inside a template literal interpolation', () => {
+    expect(failuresOf('const label = `${findSubResource(t, id)?.type}`;\n')).toHaveLength(1);
+  });
+
+  it('counts a call whose name and bracket are on two lines', () => {
+    expect(failuresOf('const sub = findSubResource\n  (t, id);\n')).toHaveLength(1);
+  });
+
+  it('passes a method of another object with a banned name', () => {
+    expect(failuresOf('table.findSubResource(id);\n')).toEqual([]);
   });
 
   it('passes a longer name that starts with a banned one', () => {
