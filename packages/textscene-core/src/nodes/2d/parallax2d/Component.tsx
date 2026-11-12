@@ -33,7 +33,7 @@ export function Parallax2D({ node, children }: NodeComponentProps) {
       // (`parallax_2d.cpp:84-96`); the main 2D stage frames no camera.
       const view = props.ignore_camera_scroll ? null : currentCameraFraming(scene, camera);
       const screenOffset = view ? parallax2DCameraScreenOffset(view) : props.screen_offset;
-      const position = parallax2DPosition(props, screenOffset, viewportSize, props.scale);
+      const position = parallax2DPosition(props, screenOffset, viewportSize);
       const x = position.x - props.position.x;
       const y = 0 - (position.y - props.position.y);
       if (group.position.x === x && group.position.y === y) return;
@@ -56,7 +56,7 @@ export function Parallax2D({ node, children }: NodeComponentProps) {
     // every mesh below and so is the group three reads the key from.
     <group ref={groupRef}>
       <Node2D node={node}>
-        {isRepeatSource ? <RepeatCopies offsets={copies}>{children}</RepeatCopies> : children}
+        <RepeatCopies offsets={copies}>{children}</RepeatCopies>
       </Node2D>
     </group>
   );

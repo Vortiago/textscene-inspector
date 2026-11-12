@@ -12,6 +12,7 @@ import {
   type CanvasAncestors,
 } from './canvasAncestors';
 import { parseNode2D } from '../nodes/base/node2d/parser';
+import { parseControl } from '../nodes/2d/ui/control/parser';
 import type { SceneScope, TscnNode } from '../parser/types';
 
 const SCOPE: SceneScope = {
@@ -25,6 +26,11 @@ const SCOPE: SceneScope = {
 function node2d(name: string, raw: Record<string, string> = {}): TscnNode {
   const heading = { type: 'node', attributes: { type: 'Node2D', name } };
   return { rawProperties: {}, name, type: 'Node2D', children: [], properties: parseNode2D(heading, raw) };
+}
+
+function control(name: string, raw: Record<string, string> = {}): TscnNode {
+  const heading = { type: 'node', attributes: { type: 'Control', name } };
+  return { rawProperties: {}, name, type: 'Control', children: [], properties: parseControl(heading, raw) };
 }
 
 function fold(chain: readonly TscnNode[], start: CanvasAncestorMaterial): CanvasAncestors {
@@ -78,6 +84,23 @@ describe('foldCanvasAncestors', () => {
       node2d('Inner', { texture_filter: '2' }),
     ];
     expect(fold(chain, LIFT).sampler).toEqual({ filter: 2, repeat: 3 });
+  });
+
+  it("reads a Control link's z and sampler, which its parse holds in camelCase", () => {
+    const chain = [
+      control('Link', { z_index: '2', z_as_relative: 'false', texture_filter: '1', texture_repeat: '2' }),
+    ];
+    const folded = fold(chain, LIFT);
+    expect(folded.z).toEqual([{ zIndex: 2, zAsRelative: false }]);
+    expect(folded.sampler).toEqual({ filter: 1, repeat: 2 });
+  });
+
+  it('takes the material above a Control link with `use_parent_material`', () => {
+    const chain = [
+      node2d('Outer', { material: 'SubResource("add")' }),
+      control('Link', { use_parent_material: 'true' }),
+    ];
+    expect(fold(chain, LIFT).material).toEqual(own('add'));
   });
 
   it.each<[string, Record<string, string>[], CanvasAncestorMaterial, CanvasAncestorMaterial]>([

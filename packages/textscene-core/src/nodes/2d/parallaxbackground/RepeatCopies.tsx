@@ -16,8 +16,12 @@ export function useIsRepeatBaseCopy(): boolean {
   return useContext(RepeatBaseCopyContext);
 }
 
-/** `offsets` come from `parallaxRepeatOffsets`, in the source's local space and Godot's Y down. */
+/**
+ * `offsets` come from `parallaxRepeatOffsets`, in the source's local space and Godot's Y down.
+ * No offsets draws the children once, unshifted.
+ */
 export function RepeatCopies({ offsets, children }: { offsets: readonly Vector2[]; children: ReactNode }) {
+  if (offsets.length === 0) return children;
   return offsets.map((offset, index) => (
     // paint-order-safe: wraps dispatched children, each of which
     // brings its own canvas-item wrapper nearer than this one.

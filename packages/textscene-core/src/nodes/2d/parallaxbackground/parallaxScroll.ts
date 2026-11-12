@@ -7,7 +7,7 @@
 
 import type { Vector2 } from '../../../godot/math/vector';
 
-/** Stable empty result so an unmirrored layer never re-renders on identity. */
+/** The one empty result for a node that does not repeat, so an identity check holds across renders. */
 const NO_REPEATS: readonly Vector2[] = [];
 
 /** The canvas transform a viewport renders its 2D world through. */
@@ -181,19 +181,19 @@ export function parallaxLayerDelta(
 export function parallaxRepeatOffsets(size: Vector2, times: number): readonly Vector2[] {
   if (!size.x && !size.y) return NO_REPEATS;
 
-  const countX = size.x ? times : 0;
-  const countY = size.y ? times : 0;
-  const firstCopy = -Math.trunc(times / 2);
-  const startX = size.x * firstCopy;
-  const startY = size.y * firstCopy;
+  // `0 -`, not a unary minus: `-Math.trunc(0.5)` is -0, and it would give a -0 offset.
+  const firstCopy = 0 - Math.trunc(times / 2);
+  const firstX = size.x ? firstCopy : 0;
+  const firstY = size.y ? firstCopy : 0;
+  const lastX = size.x ? firstCopy + times : 0;
+  const lastY = size.y ? firstCopy + times : 0;
   const repeats: Vector2[] = [];
-  for (let ry = 0; ry <= countY; ry++) {
-    for (let rx = 0; rx <= countX; rx++) {
-      repeats.push({ x: startX + rx * size.x, y: startY + ry * size.y });
+  for (let ry = firstY; ry <= lastY; ry++) {
+    for (let rx = firstX; rx <= lastX; rx++) {
+      if (rx !== 0 || ry !== 0) repeats.push({ x: rx * size.x, y: ry * size.y });
     }
   }
-  const baseIndex = repeats.findIndex((offset) => offset.x === 0 && offset.y === 0);
-  repeats.push(...repeats.splice(baseIndex, 1));
+  repeats.push({ x: 0, y: 0 });
   return repeats;
 }
 

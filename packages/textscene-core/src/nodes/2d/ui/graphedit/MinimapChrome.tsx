@@ -17,7 +17,7 @@ import {
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
@@ -25,7 +25,7 @@ import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixe
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { multiplyModulate, useItemLinearColor, useVertexColorTint } from '../../../../r3f/canvasItemModulate';
 import { minimapConnectionLines } from './minimapConnections';
-import { polylineStrokeGeometry } from './polylineStroke';
+import { polylineStrokeGeometry } from '../../../../godot/rendering/canvasPolyline.js';
 import {
   GRAPH_EDIT_ICON_SIZE,
   GRAPH_EDIT_MINIMAP_RESIZER_ICON,
@@ -78,7 +78,7 @@ interface MinimapConnectionsProps {
 /**
  * Every connection as one mesh: the polylines are coplanar, share a material and paint in
  * one band, so the draw count does not grow with the graph. The points and colours come from
- * `minimapConnections.ts`, and the stroke from `polylineStroke.ts` (`:1870-1883`, `:1611`).
+ * `minimapConnections.ts`, and the stroke from `canvasPolyline.ts` (`:1870-1883`, `:1611`).
  */
 function MinimapConnections({
   connections,
@@ -277,18 +277,14 @@ export function GraphEditMinimapChrome({
         />
       </CanvasItemGroup>
 
-      {resizerTexture && (
-        <CanvasItemGroup renderOrder={pieces.resizer.key}>
-          <ControlQuad
-            width={resizerPx}
-            height={resizerPx}
-            color={resizerColor}
-            opacity={resizerOpacity}
-            map={resizerTexture}
-            renderOrder={pieces.resizer.key}
-          />
-        </CanvasItemGroup>
-      )}
+      <PositionedIcon
+        rect={{ x: 0, y: 0, w: resizerPx, h: resizerPx }}
+        texture={resizerTexture}
+        color={resizerColor}
+        opacity={resizerOpacity}
+        renderOrder={pieces.resizer.key}
+        canvasKey={pieces.resizer.key}
+      />
     </CanvasItemGroup>
   );
 }

@@ -43,7 +43,7 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
 
   // The project's `gui/theme/default_theme_scale`, not a constant scale 1.
   const { themeScale } = useProjectSettings();
-  const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
+  const theme = nativeTheme(themeScale);
   const viewport = useGameViewportRect();
   // A Control outside any `CanvasLayer` shares Godot's default canvas with the
   // world, so this scans the root list `NodeDispatcher` scans. The raw roots: a

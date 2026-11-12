@@ -12,7 +12,7 @@ vi.mock('./previewServer.mjs', async (importOriginal) => {
   return {
     ...actual,
     openScene: vi.fn(),
-    setDisplayToggle: vi.fn(),
+    showDisplayOverlay: vi.fn(),
     settleCanvas: vi.fn(),
   };
 });

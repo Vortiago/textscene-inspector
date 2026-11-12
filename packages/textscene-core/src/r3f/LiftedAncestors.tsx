@@ -14,17 +14,28 @@ import {
   useCanvasAncestorMaterial,
 } from './components/canvasItemMaterialContext.js';
 import {
+  node2DLocalTransform,
   node2dGroupPropsOf,
   node2dGroupSpread,
   threeMatrixFromTransform2D,
   type Node2DGroupProps,
 } from './node2dTransform.js';
+import { canvasItemFieldsOf } from './canvasItemFields.js';
+import {
+  multiplyTransform2D,
+  TRANSFORM2D_IDENTITY,
+  type Transform2DColumns,
+} from '../godot/math/transform2d.js';
 import { CanvasSpaceProvider, useCanvasSpace } from './canvasRootScope.js';
 import { useSceneResources } from './SceneResourcesContext.js';
 import { joinPath } from '../utils/nodePath.js';
 import { pathsAlong, useLiveDrawnChain } from './liveNodePatches.js';
 import { useCanvasItemVisible } from './canvasItemVisible.js';
-import { useControlTransform } from './contexts/ControlYSortContext.js';
+import {
+  useControlTransform,
+  useControlTransformsUnder,
+  type ControlTransforms,
+} from './contexts/ControlYSortContext.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 
 /**
@@ -55,13 +66,15 @@ export function LiftedAncestors({
     () => liftedPast.map((ancestor) => node2dGroupPropsOf(ancestor.properties as Partial<Node2DProperties>)),
     [liftedPast]
   );
+  const paths = useMemo(() => pathsAlong(liftedPast, basePath), [liftedPast, basePath]);
+  const solved = useControlTransformsUnder(basePath);
   // The restored groups are real transforms in the rendered tree, so a canvas root
   // below them has to cancel them too (`canvasRootScope.tsx`).
   const ambient = useCanvasSpace();
   const liftedSpace = useMemo(() => {
-    const own = threeMatrixFromTransform2D(lifted.transform);
+    const own = threeMatrixFromTransform2D(liftedTransform(liftedPast, paths, solved));
     return ambient ? ambient.clone().multiply(own) : own;
-  }, [lifted.transform, ambient]);
+  }, [liftedPast, paths, solved, ambient]);
   const parentSampler = useContext(TextureSampler2DContext);
   const sampler = useMemo(
     () => inheritTextureSampler(lifted.sampler, parentSampler),
@@ -74,13 +87,29 @@ export function LiftedAncestors({
       <CanvasItemMaterialProvider value={material}>
         <TextureSampler2DContext.Provider value={sampler}>
           <CanvasSpaceProvider value={liftedSpace}>
-            <LiftedGroups chain={liftedPast} groups={groups} basePath={basePath}>
+            <LiftedGroups chain={liftedPast} groups={groups} paths={paths}>
               {children}
             </LiftedGroups>
           </CanvasSpaceProvider>
         </TextureSampler2DContext.Provider>
       </CanvasItemMaterialProvider>
     </SkippedCanvasItemsScope>
+  );
+}
+
+/**
+ * The composed transform the restored groups draw in, outermost first. A Control link sits where
+ * the Control walk solved it, which its properties do not state, as `LiftedGroup` places it.
+ */
+function liftedTransform(
+  chain: readonly TscnNode[],
+  paths: readonly string[],
+  solved: ControlTransforms
+): Transform2DColumns {
+  return chain.reduce(
+    (above, link, index) =>
+      multiplyTransform2D(above, solved.get(paths[index]!) ?? node2DLocalTransform(canvasItemFieldsOf(link))),
+    TRANSFORM2D_IDENTITY
   );
 }
 
@@ -92,15 +121,14 @@ export function LiftedAncestors({
 function LiftedGroups({
   chain,
   groups,
-  basePath,
+  paths,
   children,
 }: {
   chain: readonly TscnNode[];
   groups: readonly Node2DGroupProps[];
-  basePath: string;
+  paths: readonly string[];
   children: ReactNode;
 }) {
-  const paths = useMemo(() => pathsAlong(chain, basePath), [chain, basePath]);
   return chain.reduceRight<ReactNode>(
     (inner, ancestor, index) => (
       <LiftedGroup group={groups[index]!} ancestor={ancestor} path={paths[index]!}>

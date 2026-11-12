@@ -10,9 +10,15 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { isEqualApprox, isZeroApprox, clamp, type Rgba } from '../../../../godot/math/math';
-import type { GeometryBuffers } from './connectionStroke';
-import { normalizedVector2, type Vector2 } from '../../../../godot/math/vector.js';
+import { isEqualApprox, isZeroApprox, clamp, type Rgba } from '../math/math.js';
+import { normalizedVector2, type Vector2 } from '../math/vector.js';
+
+/** Vertex-coloured triangles: xyz positions, triangle indices and rgba colours. */
+export interface GeometryBuffers {
+  positions: number[];
+  indices: number[];
+  colors: number[];
+}
 
 /** `FEATHER_SIZE` (`renderer_canvas_cull.cpp:45`). */
 const POLYLINE_FEATHER_SIZE = 1.25;
@@ -89,8 +95,7 @@ function transparent(color: Rgba): Rgba {
 /**
  * `p_points`/`p_colors` in Godot px (+Y down), `p_width` the polyline's own
  * width and `p_antialiased` its AA flag: `draw_polyline_colors`' four
- * arguments. `p_colors` is expected to carry one entry per point, the only
- * shape `GraphEdit::_draw_minimap_connection_line` (`:1601-1611`) produces.
+ * arguments. A point past the end of `p_colors` keeps the colour before it (`:1099-1100`).
  */
 export function polylineStrokeGeometry(
   points: readonly Vector2[],
@@ -228,7 +233,7 @@ export function polylineStrokeGeometry(
   const flatColors: number[] = [];
   const indices: number[] = [];
   // One indexed array for the three strips: they are coplanar, draw in one pass and share no
-  // vertex. The Y flip into three space happens here, as in `connectionStroke.ts`.
+  // vertex. The Y flip into three space happens here.
   for (const strip of [core, left, right]) {
     if (!strip) continue;
     const base = positions.length / 3;

@@ -10,7 +10,7 @@ import type { Parallax2DProperties } from './types';
 
 type Parallax2DScrollProperties = Pick<
   Parallax2DProperties,
-  'scroll_scale' | 'scroll_offset' | 'repeat_size' | 'limit_begin' | 'limit_end' | 'follow_viewport'
+  'scroll_scale' | 'scroll_offset' | 'repeat_size' | 'limit_begin' | 'limit_end' | 'follow_viewport' | 'scale'
 >;
 
 /** One axis of `_update_scroll`, after the clamp and the scroll scale are known. */
@@ -34,8 +34,7 @@ function limitedAxis(screenOffset: number, begin: number, end: number, viewportS
 export function parallax2DPosition(
   props: Parallax2DScrollProperties,
   screenOffset: Vector2,
-  viewportSize: Vector2,
-  nodeScale: Vector2
+  viewportSize: Vector2
 ): Vector2 {
   const axis = (key: 'x' | 'y'): number => {
     const limited = limitedAxis(
@@ -49,7 +48,7 @@ export function parallax2DPosition(
       limited * props.scroll_scale[key],
       props.scroll_offset[key],
       props.repeat_size[key],
-      nodeScale[key]
+      props.scale[key]
     );
     return props.follow_viewport ? scrolled : scrolled - screenOffset[key];
   };

@@ -225,30 +225,27 @@ describe('lineEditMinimumSize: right_icon / clear_button_enabled contribution (l
     expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 16, 6);
   });
 
-  it(
-    'FIT_TO_LINE_EDIT contributes NOTHING when no tentativeRect exists — LineEdit never ' +
-      'registers as size-dependent, so this is every real solve, not merely a first pass',
-    () => {
-      const n = {
-        ...node({ iconExpandMode: 2 }),
-        textureSlots: { right_icon: { x: 32, y: 16 } },
-      };
-      const result = lineEditMinimumSize(n, ctx());
-      expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE, 6);
-      expect(result.y).toBe(8 + FONT_HEIGHT);
-    }
-  );
+  it('FIT_TO_LINE_EDIT contributes nothing on the first pass', () => {
+    const n = {
+      ...node({ iconExpandMode: 2 }),
+      textureSlots: { right_icon: { x: 32, y: 16 } },
+    };
+    const result = lineEditMinimumSize(n, ctx());
+    expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE, 6);
+    expect(result.y).toBe(8 + FONT_HEIGHT);
+  });
 
-  it('FIT_TO_LINE_EDIT on the SECOND pass sizes the icon against the tentative resolved rect', () => {
+  it('FIT_TO_LINE_EDIT contributes nothing on a second pass either, which another node starts', () => {
+    // `get_minimum_size()` runs once while `size_cache` is `(0, 0)` (`control.h:218`), and
+    // nothing runs it again on a resize (`line_edit.cpp:1327-1330`).
     const n = {
       ...node({ iconExpandMode: 2 }),
       textureSlots: { right_icon: { x: 32, y: 16 } },
     };
     const c = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 100, h: 30 }) };
     const result = lineEditMinimumSize(n, c);
-    // iconWidth = 32*30/16 = 60 (<=100, no clamp); iconHeight = 30.
-    expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE + 60, 6);
-    expect(result.y).toBe(8 + 30);
+    expect(result.x).toBeCloseTo(8 + 4 * W_ADVANCE, 6);
+    expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 });
 
@@ -859,7 +856,7 @@ describe('lineEditCaretRect: RTL layout (line_edit.cpp:1560-1584)', () => {
   });
 });
 
-describe('lineEditDrawnLine: the glyphs the draw loop keeps (line_edit.cpp:1512-1545)', () => {
+describe('lineEditDrawnLayout: the glyphs the draw loop keeps (line_edit.cpp:1512-1545)', () => {
   const line = (
     advances: number[]
   ): import('../../../../r3f/controls/native/text/textLayout').TextLineLayout => ({

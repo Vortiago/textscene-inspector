@@ -513,6 +513,9 @@ export const CANVAS_2D_SCENES = [
   // stored. Godot 4.6.3 `--mode 2d`: (150,150) rgb(54,54,54) grey, (250,150) rgb(127,128,0) the linear
   // blend, (350,150) rgb(255,255,63) a value above 1, and (350,350) rgb(255,160,31) the same at modulate 0.5.
   { name: 'sub-viewport-hdr-2d', file: 'unit-sub-viewport-hdr-2d.tscn', mode: '2d' },
+  // Each lit pair with `use_hdr_2d` on and off. Godot 4.6.3 through `pnpm ref:diff`: torch (200,150)
+  // rgb(135,84,33) on, (600,150) rgb(204,153,102) off; sun (200,450) rgb(73,94,114) on, (600,450)
+  // rgb(197,244,255) off; hot (900,150) rgb(146,88,42) on, (900,450) rgb(128,128,112) off. Mean 0.002/255.
   { name: 'sub-viewport-hdr-2d-light', file: 'unit-sub-viewport-hdr-2d-light.tscn', mode: '2d' },
   // SUB and MUL items in an opaque SubViewport over yellow. Godot 4.6.3 `--mode 2d`: the container
   // shows the viewport opaque, with no yellow through it. Mean 0.000/255 against it.

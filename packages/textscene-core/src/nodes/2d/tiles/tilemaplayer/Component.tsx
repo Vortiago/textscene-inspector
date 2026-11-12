@@ -53,7 +53,8 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
         )
       }
     >
-      <YSortDispatcher node={withSceneTiles}>{children}</YSortDispatcher>
+      {/* The sort of the world walk in `children` is left out: this one sorts the rows with the children. */}
+      <YSortDispatcher node={withSceneTiles} />
     </CanvasItem2D>
   );
 }

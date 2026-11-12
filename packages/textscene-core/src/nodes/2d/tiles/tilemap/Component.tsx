@@ -42,9 +42,8 @@ export function TileMap({ node, children }: NodeComponentProps) {
     );
   }
   return (
-    <YSortedTileMap node={node} model={model} sceneTiles={sceneTiles}>
-      {children}
-    </YSortedTileMap>
+    // The sort of the world walk in `children` is left out: this one sorts the layers with the children.
+    <YSortedTileMap node={node} model={model} sceneTiles={sceneTiles} />
   );
 }
 
@@ -57,7 +56,6 @@ function YSortedTileMap({
   node,
   model,
   sceneTiles,
-  children,
 }: { model: TileSetModel | null; sceneTiles: SceneTileDrawing } & NodeComponentProps) {
   const props = node.properties as TileMapProperties;
   const withLayers = useMemo(() => withLayerNodes(node, sceneTiles.instances), [node, sceneTiles.instances]);
@@ -76,7 +74,7 @@ function YSortedTileMap({
         )
       }
     >
-      <YSortDispatcher node={withLayers}>{children}</YSortDispatcher>
+      <YSortDispatcher node={withLayers} />
     </CanvasItem2D>
   );
 }

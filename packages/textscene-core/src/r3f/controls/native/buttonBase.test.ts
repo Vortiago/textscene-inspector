@@ -487,7 +487,7 @@ describe('layoutButtonContent: expand_icon under a clipped label', () => {
 describe('layoutButtonContent: expand_icon with no room left', () => {
   it('draws no icon but still takes its negative size off the text box (button.cpp:349-405)', () => {
     // 56x62, margins 10/8, text 36x30: w=36-(36+4)=-4, h=46-30=16; iw=16>w -> iw=ih=-4.
-    const { icon, iconReserve, drawableSize } = layoutButtonContent({
+    const { icon, drawableSize } = layoutButtonContent({
       ...BASE_INPUT,
       rectSize: { x: 56, y: 62 },
       styleMargin: { left: 10, top: 8, right: 10, bottom: 8 },
@@ -497,7 +497,6 @@ describe('layoutButtonContent: expand_icon with no room left', () => {
       verticalIconAlignment: VERTICAL_ALIGNMENT_TOP,
     });
     expect(icon).toBeNull();
-    expect(iconReserve).toEqual({ x: -4, y: -4 });
     expect(drawableSize).toEqual({ x: 36, y: 50 });
   });
 });
@@ -511,9 +510,9 @@ describe('layoutButtonContent: an icon with no area to draw', () => {
     iconAlignment: HORIZONTAL_ALIGNMENT_LEFT,
   };
 
-  it('draws no icon at exactly zero room, and reserves zero plus the separation (button.cpp:349-405)', () => {
+  it('draws no icon at exactly zero room, and the text box keeps zero width (button.cpp:349-405)', () => {
     // The box is 20 wide inside 10/10 margins and the text has no width, so w = 0 and iw = ih = 0.
-    const { icon, iconReserve, drawableSize } = layoutButtonContent({
+    const { icon, drawableSize } = layoutButtonContent({
       ...input,
       textNaturalSize: { x: 0, y: 30 },
       hasText: true,
@@ -523,18 +522,16 @@ describe('layoutButtonContent: an icon with no area to draw', () => {
       verticalIconAlignment: VERTICAL_ALIGNMENT_TOP,
       rectSize: { x: 20, y: 46 },
     });
-    expect(iconReserve?.x).toBe(0);
     expect(icon).toBeNull();
     expect(drawableSize.x).toBe(0);
   });
 
-  it('keeps a 1x0 icon (100x1 clamped by icon_max_width 1) and reserves its width and the separation', () => {
-    const { icon, iconReserve, drawableSize } = layoutButtonContent({
+  it('keeps a 1x0 icon (100x1 clamped by icon_max_width 1) and takes its width and the separation off the text box', () => {
+    const { icon, drawableSize } = layoutButtonContent({
       ...input,
       iconMaxWidth: 1,
       iconNaturalSize: { x: 100, y: 1 },
     });
-    expect(iconReserve).toEqual({ x: 1, y: 0 });
     expect(icon!.rect.w).toBe(1);
     expect(drawableSize.x).toBe(36 - 1 - 4);
   });

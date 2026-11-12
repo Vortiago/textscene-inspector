@@ -222,13 +222,20 @@ const SPLIT_CONTAINER_AUTOHIDE = true;
 /** The AcceptDialog panel margin before the theme scale, which `default_theme.cpp:693` applies twice. */
 const DIALOG_PANEL_MARGIN = 8;
 
-/** Written only by `nativeTheme`. One project setting gives one scale, so one entry is enough. */
-let lastTheme: { scale: number; theme: NativeTheme } | null = null;
+/**
+ * Written only by `nativeTheme`, never cleared. Keyed, not one entry: two open previews of
+ * projects with different scales would otherwise rebuild the theme and miss each per-theme memo.
+ */
+const themesByScale = new Map<number, NativeTheme>();
 
 /** `NativeTheme` at a project's `gui/theme/default_theme_scale`, built once per scale: a walker per scene tile asks for the same one. */
 export function nativeTheme(scale: number): NativeTheme {
-  if (lastTheme?.scale !== scale) lastTheme = { scale, theme: buildNativeTheme(scale) };
-  return lastTheme.theme;
+  let theme = themesByScale.get(scale);
+  if (!theme) {
+    theme = buildNativeTheme(scale);
+    themesByScale.set(scale, theme);
+  }
+  return theme;
 }
 
 function buildNativeTheme(scale: number): NativeTheme {

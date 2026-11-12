@@ -6,7 +6,7 @@
 import type * as THREE from 'three';
 import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
 import { canvasItemBlendState } from '../../resources/materials/canvasitemmaterial/build';
-import type { ProgramInjection } from '../materialProgramInputs';
+import { composeInjections, type ProgramInjection } from '../materialProgramInputs';
 import { editedProgram } from '../shaderPatch/chunkPatch';
 
 export interface ClipMask {
@@ -23,15 +23,15 @@ export interface ClipMask {
 }
 
 /**
- * The buffer sample comes after `colorspace_fragment`: the buffer holds the canvas's own numbers,
- * which the program would otherwise encode a second time. The alpha is the owner's before its
- * lighting, since Godot's clip shader replaces the owner's material (a LIGHT_ONLY one included).
+ * The buffer sample comes after `colorspace_fragment` and every edit anchored there, lighting
+ * included: the buffer holds the canvas's own numbers, and Godot's clip shader is unshaded
+ * (`renderer_canvas_render_rd.cpp:2104`). The alpha is the owner's before its lighting.
  */
-const MASK_GLSL = `#include <colorspace_fragment>
-if (uClipMasking > 0.5) {
+const MASK_GLSL = `if (uClipMasking > 0.5) {
   gl_FragColor.rgb = texelFetch(uClipBuffer, ivec2(gl_FragCoord.xy), 0).rgb;
   gl_FragColor.a = diffuseColor.a;
-}`;
+}
+#include <premultiplied_alpha_fragment>`;
 
 const UNIFORMS_GLSL = `uniform sampler2D uClipBuffer;
 uniform float uClipMasking;
@@ -88,7 +88,7 @@ export function createClipMask(): ClipMask {
           {
             fragment: [
               { three: 'void main() {', godot: UNIFORMS_GLSL },
-              { three: '#include <colorspace_fragment>', godot: MASK_GLSL },
+              { three: '#include <premultiplied_alpha_fragment>', godot: MASK_GLSL },
             ],
           },
           'clip children mask'
@@ -101,4 +101,9 @@ export function createClipMask(): ClipMask {
     startMasking: () => setMasking(true),
     stopMasking: () => setMasking(false),
   };
+}
+
+/** `injection` with `mask` composed in, or `injection` as it is with no mask. */
+export function maskedInjection(injection: ProgramInjection, mask: ClipMask | null): ProgramInjection {
+  return mask ? composeInjections([injection, mask.injection])! : injection;
 }

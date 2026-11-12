@@ -284,8 +284,10 @@ describe('nativeTheme', () => {
       expect(nativeTheme(2).scale).toBe(2);
     });
 
-    it('rebuilds for NaN, which never equals itself', () => {
-      expect(nativeTheme(Number.NaN)).not.toBe(nativeTheme(Number.NaN));
+    it('keeps the theme of a scale while another scale is asked for', () => {
+      const first = nativeTheme(1);
+      nativeTheme(2);
+      expect(nativeTheme(1)).toBe(first);
     });
   });
 

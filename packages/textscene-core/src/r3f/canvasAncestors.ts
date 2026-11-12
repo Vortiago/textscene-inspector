@@ -19,6 +19,7 @@ import {
   type AmbientTextureSampler,
 } from './canvasItemTextureSampler';
 import { node2DLocalTransform } from './node2dTransform';
+import { canvasItemFieldsOf } from './canvasItemFields';
 import type { SkippedCanvasItems } from './canvasItemState';
 
 /**
@@ -67,7 +68,7 @@ export function foldCanvasAncestor(
   link: TscnNode,
   scope: SceneScope
 ): CanvasAncestors {
-  const props = link.properties as Partial<Node2DProperties>;
+  const props = canvasItemFieldsOf(link);
   return {
     // The link's local transform first, then the chain above it, as `get_global_transform()` composes.
     transform: multiplyTransform2D(above.transform, node2DLocalTransform(props)),

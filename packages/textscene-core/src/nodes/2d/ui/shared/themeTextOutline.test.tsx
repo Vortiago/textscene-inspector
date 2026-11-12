@@ -36,14 +36,20 @@ interface RunProps {
   renderOrder?: number;
 }
 
-const scene = vi.hoisted(() => ({ runs: [] as RunProps[] }));
+/** The props of each mounted run, by mount: a second render of one run replaces its entry. */
+const scene = vi.hoisted(() => ({ runs: new Map<object, RunProps>() }));
 
-vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
-  TextRunMesh: (props: RunProps) => {
-    scene.runs.push(props);
-    return null;
-  },
-}));
+vi.mock('../../../../r3f/controls/native/text/TextRunMesh', async () => {
+  const { useLayoutEffect, useState } = await import('react');
+  return {
+    TextRunMesh: (props: RunProps) => {
+      const [key] = useState(() => ({}));
+      scene.runs.set(key, props);
+      useLayoutEffect(() => () => void scene.runs.delete(key), [key]);
+      return null;
+    },
+  };
+});
 
 // The bundled canvas face settles at once, with no font to decode.
 vi.mock('../../../../r3f/controls/native/text/sceneFontOutlines', async (importOriginal) => ({
@@ -84,17 +90,18 @@ async function render(
   solveNode: SolveNode,
   rect: Rect2 = RECT
 ) {
-  scene.runs = [];
+  scene.runs.clear();
   await ReactThreeTestRenderer.create(
     <Control {...painterEnv()} solveNode={solveNode} rect={rect} renderOrder={0} />
   );
 }
 
-/** One ring per layout: ItemList renders a row twice on mount, each time with the same layout. */
-const strokeRuns = () => [
-  ...new Map(scene.runs.filter((run) => run.strokeWidthPx).map((run) => [run.layout, run])).values(),
-];
-const fillRun = () => scene.runs.filter((run) => !run.strokeWidthPx).at(-1)!;
+const mountedRuns = () => [...scene.runs.values()];
+const strokeRuns = () => mountedRuns().filter((run) => run.strokeWidthPx);
+const fillRun = () =>
+  mountedRuns()
+    .filter((run) => !run.strokeWidthPx)
+    .at(-1)!;
 
 afterEach(() => {
   vi.restoreAllMocks();

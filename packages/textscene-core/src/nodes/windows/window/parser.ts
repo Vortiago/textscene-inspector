@@ -6,7 +6,6 @@
 import type { OverrideLayer } from '../../../core/NodeRegistry';
 import type { ParsedHeading } from '../../../parser/utils';
 import { unquoteString } from '../../../parser/utils';
-import type { Vector2 } from '../../../godot/math/vector';
 import { boolOr, floatOr, intOr, parseOptionalVector2i, vec2iOr } from '../../../parser/valueParsers';
 import {
   clampLimitSize,
@@ -16,6 +15,7 @@ import {
   isWindowSizeKey,
   replayWindowSize,
   windowClassDefaults,
+  type ForceNativeState,
   type WindowSizeWrite,
 } from '../../../godot/scene/window';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../../godot/scene/viewport';
@@ -27,23 +27,59 @@ import type { WindowProperties } from './types';
 /** Frozen: every parsed window shares it as a default, so no reader may write through it. */
 const ORIGIN = Object.freeze({ x: 0, y: 0 });
 
-/**
- * The size lines in file order, a malformed one skipped as the lenient parse skips any bad value.
- * A class that floors its size in its constructor writes `min_size` first.
- */
-function sizeWrites(
-  properties: Record<string, string>,
-  constructorMinSize: Vector2,
-  constructorSize: Vector2 | undefined
-): WindowSizeWrite[] {
-  const writes: WindowSizeWrite[] = [{ key: 'min_size', value: constructorMinSize }];
-  if (constructorSize) writes.push({ key: 'size', value: constructorSize });
-  for (const [key, raw] of Object.entries(properties)) {
+/** The size lines of `lines` in file order, a malformed one skipped as the lenient parse skips any bad value. */
+function sizeLineWrites(lines: Record<string, string>): WindowSizeWrite[] {
+  const writes: WindowSizeWrite[] = [];
+  for (const [key, raw] of Object.entries(lines)) {
     if (!isWindowSizeKey(key)) continue;
     const value = parseOptionalVector2i(raw);
     if (value) writes.push({ key, value });
   }
   return writes;
+}
+
+/**
+ * The lines a parse replays in file order, and the state they run over: an override's lines over
+ * what the instanced base left, or one file's lines over what the constructor left.
+ */
+interface WindowReplay {
+  /** Named `properties`: the grammar parity scan reads the keys a parser names on that bag. */
+  properties: Record<string, string>;
+  /** The background before the lines run, which either background key replaces. */
+  transparentBackground: boolean;
+  /** The size writes before the lines run. A class that floors its size in its constructor writes `min_size` first. */
+  size: WindowSizeWrite[];
+  forceNative: ForceNativeState;
+}
+
+function windowReplay(
+  type: string,
+  properties: Record<string, string>,
+  override: OverrideLayer<WindowProperties> | undefined
+): WindowReplay {
+  if (override) {
+    const { held } = override;
+    return {
+      properties: override.written,
+      transparentBackground: held.transparent_bg,
+      size: [
+        { key: 'min_size', value: held.min_size },
+        { key: 'max_size', value: held.max_size },
+        { key: 'size', value: held.size },
+      ],
+      forceNative: held,
+    };
+  }
+  const defaults = windowClassDefaults(type);
+  return {
+    properties,
+    transparentBackground: defaults.transparent,
+    size: [
+      { key: 'min_size', value: defaults.minSize },
+      ...(defaults.size ? [{ key: 'size' as const, value: defaults.size }] : []),
+    ],
+    forceNative: constructedForceNativeState(type),
+  };
 }
 
 /** The `content_scale_*` keys. A setter refuses a negative size or a factor at or below 0 (`window.cpp:1716,1774`). */
@@ -62,33 +98,18 @@ function parseContentScale(properties: Record<string, string>, context: string):
 
 /**
  * `transparent_bg` and the `transparent` flag both set the background (`window.cpp:548-549`), so the
- * line written last wins. Without either, the constructor's flag stands.
+ * line written last wins. Without either, `held` stands: the constructor's flag, or what an
+ * instanced base left under an override's lines.
  */
-function parseTransparentBackground(
-  properties: Record<string, string>,
-  classDefault: boolean,
+function replayTransparentBackground(
+  { properties, transparentBackground: held }: WindowReplay,
   context: string
 ): boolean {
-  const flag = boolOr(properties.transparent, classDefault, context);
+  const flag = boolOr(properties.transparent, held, context);
   if (properties.transparent_bg === undefined) return flag;
   const keys = Object.keys(properties);
   const isFlagLast = keys.indexOf('transparent') > keys.indexOf('transparent_bg');
-  return isFlagLast ? flag : boolOr(properties.transparent_bg, classDefault, context);
-}
-
-/**
- * `force_native` after the scene lines run: an override's lines over what the base left, or one
- * file's lines over what the constructor left.
- */
-function parseForceNative(
-  type: string,
-  properties: Record<string, string>,
-  override: OverrideLayer<WindowProperties> | undefined
-): boolean {
-  if (properties.force_native === undefined) return false;
-  return override
-    ? replayForceNative(override.held, override.written)
-    : replayForceNative(constructedForceNativeState(type), properties);
+  return isFlagLast ? flag : boolOr(properties.transparent_bg, held, context);
 }
 
 export function parseWindow(
@@ -100,13 +121,14 @@ export function parseWindow(
   const type = heading.attributes.type ?? 'Window';
   const defaults = windowClassDefaults(type);
   const context = viewportParseContext(heading, viewport.name);
+  const replay = windowReplay(type, properties, override);
   const visible = boolOr(properties.visible, defaults.visible, context);
 
   return {
     ...viewport,
     ...parseThemeOwnerFields(properties),
-    transparent_bg: parseTransparentBackground(properties, defaults.transparent, context),
-    size: replayWindowSize(sizeWrites(properties, defaults.minSize, defaults.size)),
+    transparent_bg: replayTransparentBackground(replay, context),
+    size: replayWindowSize([...replay.size, ...sizeLineWrites(replay.properties)]),
     size_2d_override: ORIGIN,
     size_2d_override_stretch: false,
     // `Window()` disables the update (`window.cpp:3578`), and the embedder sets
@@ -128,7 +150,8 @@ export function parseWindow(
     always_on_top: boolOr(properties.always_on_top, false, context),
     exclusive: boolOr(properties.exclusive, defaults.exclusive, context),
     wrap_controls: boolOr(properties.wrap_controls, defaults.wrapControls, context),
-    force_native: parseForceNative(type, properties, override),
+    force_native:
+      properties.force_native !== undefined && replayForceNative(replay.forceNative, replay.properties),
     min_size: clampLimitSize(vec2iOr(properties.min_size, defaults.minSize, context)),
     max_size: clampLimitSize(vec2iOr(properties.max_size, ORIGIN, context)),
     content_scale: parseContentScale(properties, context),

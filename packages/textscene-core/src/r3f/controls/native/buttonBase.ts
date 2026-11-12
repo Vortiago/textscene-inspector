@@ -303,11 +303,6 @@ export interface ButtonLabelBox {
 interface ButtonContentLayout {
   /** The icon to draw, `null` for no icon or an `expand_icon` one with no room left. */
   icon: ButtonIconLayout | null;
-  /**
-   * The icon's size as `button.cpp:349-405` takes it off the label's box, where there is text and the
-   * icon is not centred on that axis. It is negative when `expand_icon` leaves no room: `icon` is then `null`.
-   */
-  iconReserve: Vector2 | null;
   text: ButtonTextLayout | null;
   /** The label's paragraph box, `null` without text. `<ButtonLabel>` draws the label in it. */
   labelBox: ButtonLabelBox | null;
@@ -468,7 +463,6 @@ export function layoutButtonContent(input: ButtonContentInput): ButtonContentLay
   };
   return {
     icon: iconLayout,
-    iconReserve: iconSize,
     text: textLayout,
     labelBox,
     drawableSize: { x: drawableWidth, y: drawableHeight },
@@ -618,7 +612,7 @@ function buttonTextAlignShiftPx(
 }
 
 /** A label line cut to its paragraph box, with its x offset from `ButtonTextLayout.boxLeftPx`. */
-export interface ButtonDrawnLine {
+interface ButtonDrawnLine {
   line: TextLineLayout;
   offsetXPx: number;
 }
@@ -639,7 +633,7 @@ export function buttonDrawnLabel(
 }
 
 /** What {@link trimButtonLabel} trims with, beyond the layout and the box. */
-export interface ButtonLabelTrimOptions extends Omit<TextBufferTrimOptions, 'fontMetrics'> {
+interface ButtonLabelTrimOptions extends Omit<TextBufferTrimOptions, 'fontMetrics'> {
   /** The label wraps: Button hides no line, so `TextParagraph::_shape_lines` trims no row of it. */
   isWrapped: boolean;
 }

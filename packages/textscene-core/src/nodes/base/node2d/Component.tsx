@@ -1,13 +1,9 @@
-/**
- * <Node2D>: an invisible 2D transform container. With `y_sort_enabled`, <YSortDispatcher> renders
- * the children, sorted by effective-z bucket, then sort y, then collection order.
- */
+/** <Node2D>: an invisible 2D transform container. */
 
 import type { Node2DProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { invisibleBase } from '../../../r3f/invisibleBase';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
-import { YSortDispatcher } from '../../../r3f/YSortDispatcher.js';
 
 export function Node2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Node2DProperties;
@@ -17,7 +13,7 @@ export function Node2D({ node, children }: NodeComponentProps) {
   // keeps a Node2D container in step with whatever the ritual gains.
   return (
     <CanvasItem2D node={node} props={props}>
-      {props.y_sort_enabled ? <YSortDispatcher node={node}>{children}</YSortDispatcher> : children}
+      {children}
     </CanvasItem2D>
   );
 }

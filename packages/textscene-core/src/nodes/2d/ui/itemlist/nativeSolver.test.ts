@@ -30,7 +30,7 @@ import {
   itemListRowTextX,
   itemListLineTextWidthPx,
   itemListWrappedTextWidthPx,
-  itemListSeparation,
+  itemListSpacing,
   itemMinimumSize,
   itemTextColor,
   isItemListTextWrapped,
@@ -75,16 +75,28 @@ function topTextItem(textHeight: number) {
   };
 }
 
-describe('itemListSeparation / line_separation', () => {
-  it('is round(4*scale) / round(2*scale) at scale 1 (happy path)', () => {
-    expect(itemListSeparation(nativeTheme(1))).toBe(4);
-    // default_theme.cpp:949 sets line_separation to round(2 * scale).
-    expect(itemMinimumSize(topTextItem(20), nativeTheme(1)).y).toBe(20 + 2 + 4);
+describe('itemListSpacing', () => {
+  it('is round(4*scale) and round(2*scale) at scale 1 (default_theme.cpp:945-948)', () => {
+    expect(itemListSpacing({}, nativeTheme(1))).toEqual({
+      hSeparation: 4,
+      vSeparation: 4,
+      iconMargin: 4,
+      lineSeparation: 2,
+    });
   });
 
-  it('scales with the project theme scale (edge case)', () => {
-    expect(itemListSeparation(nativeTheme(2))).toBe(8);
-    expect(itemMinimumSize(topTextItem(20), nativeTheme(2)).y).toBe(20 + 4 + 8);
+  it('scales with the project theme scale', () => {
+    expect(itemMinimumSize(topTextItem(20), itemListSpacing({}, nativeTheme(2))).y).toBe(20 + 4 + 8);
+  });
+
+  it('takes each constant the node overrides', () => {
+    const constants = { h_separation: 10, v_separation: 6, icon_margin: 3, line_separation: 1 };
+    expect(itemListSpacing(constants, nativeTheme(1))).toEqual({
+      hSeparation: 10,
+      vSeparation: 6,
+      iconMargin: 3,
+      lineSeparation: 1,
+    });
   });
 });
 
@@ -488,7 +500,7 @@ describe('itemIconDraw with fixed_icon_size (_adjust_to_max_size, item_list.cpp:
 });
 
 describe('itemMinimumSize', () => {
-  const theme = nativeTheme(1);
+  const spacing = itemListSpacing({}, nativeTheme(1));
 
   it('LEFT icon mode: icon width + text width, max of the two heights (happy path)', () => {
     const min = itemMinimumSize(
@@ -501,7 +513,7 @@ describe('itemMinimumSize', () => {
         maxTextLines: 1,
         fixedColumnWidth: 0,
       },
-      theme
+      spacing
     );
     // x = 16(icon) + 4(icon_margin) + 40(text) = 60; y = max(16, 20) = 20; then h/v separation 4.
     expect(min).toEqual({ x: 60 + 4, y: 20 + 4 });
@@ -518,7 +530,7 @@ describe('itemMinimumSize', () => {
         maxTextLines: 2,
         fixedColumnWidth: 0,
       },
-      theme
+      spacing
     );
     // x = max(16, 40) = 40; y = 16(icon) + 4(icon_margin) + 20(text) + 2(line_separation)*2 = 44; then h/v separation 4.
     expect(min).toEqual({ x: 40 + 4, y: 44 + 4 });
@@ -535,7 +547,7 @@ describe('itemMinimumSize', () => {
         maxTextLines: 1,
         fixedColumnWidth: 96,
       },
-      theme
+      spacing
     );
     expect(min.x).toBe(96 + 4);
   });
@@ -551,7 +563,7 @@ describe('itemMinimumSize', () => {
         maxTextLines: 1,
         fixedColumnWidth: 0,
       },
-      theme
+      spacing
     );
     expect(min).toEqual({ x: 14, y: 14 });
   });
@@ -847,6 +859,17 @@ describe('itemListMinimumSize', () => {
     const result = itemListMinimumSize(n, ctx());
     expect(result.x).toBeGreaterThan(0);
     expect(result.y).toBe(0);
+  });
+
+  it('adds the h_separation and v_separation the node overrides (item_list.cpp:1789-1790)', () => {
+    const items = [{ text: 'Sword' }, { text: 'Shield' }];
+    const plain = node({ autoWidth: true, autoHeight: true, maxColumns: 1, items });
+    const spaced = { ...plain, constants: { h_separation: 20, v_separation: 12 } };
+    const before = itemListMinimumSize(plain, ctx());
+    const after = itemListMinimumSize(spaced, ctx());
+    // Default 4 each: one column grows by 20 - 4, two rows by 2 * (12 - 4).
+    expect(after.x - before.x).toBe(16);
+    expect(after.y - before.y).toBe(16);
   });
 
   it('contributes zero text size when no measurer is wired, never throwing (edge case)', () => {
