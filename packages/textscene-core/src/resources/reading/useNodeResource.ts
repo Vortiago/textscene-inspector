@@ -41,7 +41,13 @@ export function useNodeResource<T>(ref: string | undefined, kind: ResourceKind<T
 /** The read of `reference` on the component's snapshot, which moves when a file the read touched changes. */
 function useSnapshotRead<T>(reference: ScopedReference, kind: ResourceKind<T>): Read<T> {
   const loader = useResourceLoader();
-  const source = useMemo(() => (loader ? loaderSnapshots(loader) : NO_LOADER), [loader]);
+  // One source for each read: a source records every file its snapshot read, so a source kept
+  // across a new reference would go on pinning and reporting a file the reader no longer reads.
+  const source = useMemo(
+    () => (loader ? loaderSnapshots(loader) : NO_LOADER),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- a new read starts a new source.
+    [loader, reference, kind]
+  );
   const snapshot = useSyncExternalStore(source.subscribe, source.current, source.current);
   const read = useMemo(() => snapshot.read(reference, kind), [snapshot, reference, kind]);
   const files = useStableEntries(new Map(source.files()));

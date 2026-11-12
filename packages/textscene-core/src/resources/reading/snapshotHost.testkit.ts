@@ -96,6 +96,18 @@ export function describeSnapshotHost(
       expect(host.reported()).toEqual([A_FILE]);
     });
 
+    it('reports no Missing resource for a failed file the reader stopped reading', async () => {
+      const { loader } = servedLoader({});
+      const host = makeHost(loader);
+      host.run('ExtResource("1_a")', sceneTables(EXT_A), namedKind().kind);
+      await host.settle();
+
+      host.run('SubResource("r")', sceneTables('[sub_resource type="Resource" id="r"]'), namedKind().kind);
+      await host.settle();
+
+      expect(host.reported()).toEqual([]);
+    });
+
     it('requests the second file of a nested reference once the first arrives', async () => {
       const { loader, requested } = servedLoader({
         [A_FILE]: resourceFile(

@@ -19,6 +19,7 @@ import { useParentPath3DCurve } from '../../../r3f/contexts/Path3DCurveContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { loaderServing } from '../../../resources/testing/servingResourceLoader';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
+import { resourceFileText } from '../../../testing/subResource';
 
 // Straight 3-point path: (0,0,0) → (10,0,0) → (10,10,0), zero tangents.
 const CURVE: TscnInternalResource = {
@@ -124,9 +125,7 @@ describe('<Path3D>', () => {
 });
 
 /** `CURVE` as a `.tres` of its own, the curve a path names with `ExtResource("1")`. */
-const CURVE_FILE = `[gd_resource type="Curve3D" format=3]\n\n[resource]\n${Object.entries(CURVE.data)
-  .map(([key, value]) => `${key} = ${value}`)
-  .join('\n')}\n`;
+const CURVE_FILE = resourceFileText(CURVE);
 
 async function renderPathFromFile() {
   const loader = loaderServing({ 'res://curve.tres': CURVE_FILE });
