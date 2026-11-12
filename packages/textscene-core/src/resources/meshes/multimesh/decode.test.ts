@@ -231,7 +231,7 @@ describe('decodeMultiMesh: the drawn instances', () => {
         'PackedVector3Array(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 4, 5, 1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 7, 8)',
       color_array: 'PackedColorArray(0.1, 0.2, 0.3, 1, 0.4, 0.5, 0.6, 1)',
     };
-    expect(Array.from(drawn(properties).buffer)).toEqual([
+    expect(Array.from(drawn(properties).buffer!)).toEqual([
       ...translation3D(3, 4, 5),
       ...[0.1, 0.2, 0.3, 1].map(Math.fround),
       ...translation3D(6, 7, 8),
@@ -248,7 +248,7 @@ describe('decodeMultiMesh: the drawn instances', () => {
       mesh: MESH,
       custom_data_array: 'PackedColorArray(0.5, 0.25, 0.125, 1)',
     };
-    expect(Array.from(drawn(properties).buffer.subarray(16))).toEqual([0.5, 0.25, 0.125, 1]);
+    expect(Array.from(drawn(properties).buffer!.subarray(16))).toEqual([0.5, 0.25, 0.125, 1]);
   });
 
   it('keeps the 2D format when transform_format comes after instance_count', () => {
