@@ -30,14 +30,21 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { degToRadf } from '../../../godot/math/math';
 import { storedReal as f } from '../../../godot/math/real.js';
 import { EmissionShape } from '../../../godot/scene/particles3d';
 import type { ParticleEmission } from '../../../resources/materials/particleprocessmaterial/types';
 import type { ProcessSimulation } from '../../../resources/materials/particleprocessmaterial';
-import { rotateHueInto } from '../cpuparticles/process';
 import { randFromSeed, type SeedRef } from '../cpuparticles/godotRng';
 import { add, cross, hasLength, length, mix, mixVector, normalize, scale, type Float3 } from './float3';
-import { DEGREE_TO_RAD, SHADER_PI, drawParameters, seedOf, type DrawnParameters } from './parameters';
+import {
+  DEGREE_TO_RAD,
+  SHADER_PI,
+  drawParameters,
+  seedOf,
+  tintedColour,
+  type DrawnParameters,
+} from './parameters';
 import type { EmissionFrame, GpuParticle } from './particle';
 
 /** What a birth reads of the frame it happens in. */
@@ -73,18 +80,13 @@ export function birthParticle(particle: GpuParticle, index: number, context: Bir
   const seed = seedOf(number, context.randomSeed);
   const drawn = drawParameters(seed, simulation);
 
+  particle.drawn = drawn;
   particle.active = randFromSeed(seed) <= context.amountRatio;
   particle.custom = [0, 0, 0, drawn.lifetimeShare];
-  particle.color = startColour(simulation);
+  particle.color = tintedColour(simulation);
   particle.columns = [frame.columns[0], frame.columns[1], frame.columns[2]];
   particle.origin = framePoint(frame, shapePosition(emission, seed));
   particle.velocity = frameDirection(frame, startVelocity(simulation, drawn, seed));
-}
-
-/** `rotate_hue(color_value, 0.0)`, which tints even at an angle of 0. */
-function startColour({ color }: ProcessSimulation): [number, number, number, number] {
-  const rotated = rotateHueInto({ r: 0, g: 0, b: 0, a: 0 }, color, 0);
-  return [rotated.r, rotated.g, rotated.b, rotated.a];
 }
 
 function startVelocity(simulation: ProcessSimulation, drawn: DrawnParameters, seed: SeedRef): Float3 {
@@ -160,7 +162,7 @@ function sphereSurface(radius: number, seed: SeedRef): Float3 {
 function ringPosition(emission: ParticleEmission, seed: SeedRef): Float3 {
   const { ringAxis, ringHeight: height, ringInnerRadius: inner, ringConeAngle } = emission;
   const clamped = Math.max(0.001, emission.ringRadius);
-  const radiansOf90 = f(f(90 - ringConeAngle) * f(Math.PI / 180));
+  const radiansOf90 = degToRadf(f(90 - ringConeAngle));
   const topRadius = Math.max(f(clamped - f(f(Math.tan(radiansOf90)) * height)), 0);
   const heightDraw = randFromSeed(seed);
   const skew = Math.max(f(Math.min(clamped, topRadius) / Math.max(clamped, topRadius)), 0.5);

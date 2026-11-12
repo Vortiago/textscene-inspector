@@ -52,7 +52,7 @@ export const DEFAULT_PREVIEW_SEED = 0;
  * Ceiling on settle steps: `preprocess = 100000` would otherwise spin three
  * million iterations before the first paint. Real emitters need tens of steps.
  */
-const MAX_SETTLE_STEPS = 4096;
+export const MAX_SETTLE_STEPS = 4096;
 
 /** What the settle reads of an emitter. */
 export interface SettledEmitter {

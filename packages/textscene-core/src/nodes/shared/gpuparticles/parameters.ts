@@ -33,6 +33,7 @@
 
 import { storedReal as f } from '../../../godot/math/real.js';
 import type { ParamRange, ProcessSimulation } from '../../../resources/materials/particleprocessmaterial';
+import { rotateHueInto } from '../cpuparticles/process';
 import { idhash, randFromSeed, type SeedRef } from '../cpuparticles/godotRng';
 import { mix } from './float3';
 
@@ -41,6 +42,12 @@ export const SHADER_PI = f(3.14159);
 
 /** `degree_to_rad = pi / 180.0`. */
 export const DEGREE_TO_RAD = f(SHADER_PI / 180);
+
+/** `rotate_hue(color_value, 0.0)`, which tints even at an angle of 0. */
+export function tintedColour({ color }: ProcessSimulation): [number, number, number, number] {
+  const rotated = rotateHueInto({ r: 0, g: 0, b: 0, a: 0 }, color, 0);
+  return [rotated.r, rotated.g, rotated.b, rotated.a];
+}
 
 export interface DrawnParameters {
   /** The scale factor of every axis before the shader's sign and floor. */

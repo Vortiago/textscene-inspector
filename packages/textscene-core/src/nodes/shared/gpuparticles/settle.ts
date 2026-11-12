@@ -44,6 +44,7 @@ import {
   PARTICLE_COLOR_OFFSET,
   PARTICLE_CUSTOM_OFFSET,
   PARTICLE_FLOATS,
+  writeTransformRows,
 } from '../particles3d/particleBuffer';
 import { EmissionShape } from '../../../godot/scene/particles3d';
 import { birthParticle, type BirthContext } from './birth';
@@ -98,9 +99,7 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
   const step: StepContext = {
     simulation: material.simulation,
     frame,
-    amount: emitter.amount,
     lifetime: f(emitter.lifetime),
-    randomSeed,
   };
 
   if (drawsNothing(material)) return emptyPose(clock.phase);
@@ -114,7 +113,7 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
         birthParticle(particle, index, birth);
         localDelta = restart.localDelta;
       }
-      if (particle.active) stepParticle(particle, index, localDelta, step);
+      if (particle.active) stepParticle(particle, localDelta, step);
     });
   }
   return pose(particles, clock.phase, emitter.localCoords ? identityTransform3D() : emissionTransform);
@@ -141,27 +140,16 @@ function pose(particles: GpuParticle[], phase: number, emissionTransform: Transf
   const velocity = new Float32Array(live.length * 3);
   const toNode = affineInverseTransform3D(emissionTransform);
   live.forEach((particle, index) => {
-    writeRows(buffer, index * PARTICLE_FLOATS, particle, toNode);
+    writeTransformRows(
+      buffer,
+      index * PARTICLE_FLOATS,
+      multiplyTransform3D(toNode, columnsToTransform(particle))
+    );
     buffer.set(particle.color, index * PARTICLE_FLOATS + PARTICLE_COLOR_OFFSET);
     buffer.set(particle.custom, index * PARTICLE_FLOATS + PARTICLE_CUSTOM_OFFSET);
     velocity.set(particle.velocity, index * 3);
   });
   return { buffer, velocity, phase };
-}
-
-/** Writes the 3×4 rows of `toNode * particle`. */
-function writeRows(buffer: Float32Array, at: number, particle: GpuParticle, toNode: Transform3D): void {
-  const world = columnsToTransform(particle);
-  const node = multiplyTransform3D(toNode, world);
-  const rows = [node.basis_x, node.basis_y, node.basis_z];
-  rows.forEach((row, r) => {
-    buffer[at + r * 4] = row.x;
-    buffer[at + r * 4 + 1] = row.y;
-    buffer[at + r * 4 + 2] = row.z;
-  });
-  buffer[at + 3] = node.origin.x;
-  buffer[at + 7] = node.origin.y;
-  buffer[at + 11] = node.origin.z;
 }
 
 function columnsToTransform({ columns: [x, y, z], origin }: GpuParticle): Transform3D {

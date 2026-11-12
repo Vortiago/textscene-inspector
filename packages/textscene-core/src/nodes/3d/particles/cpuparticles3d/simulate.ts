@@ -107,6 +107,7 @@ import {
   PARTICLE_COLOR_OFFSET,
   PARTICLE_CUSTOM_OFFSET,
   PARTICLE_FLOATS,
+  writeTransformRows,
 } from '../../../shared/particles3d/particleBuffer';
 
 export interface ParticleSim3DInput {
@@ -861,23 +862,6 @@ function sortedIndices(count: number, less: (a: number, b: number) => boolean): 
   const order = Array.from({ length: count }, (_, index) => index);
   sortArray(order, less);
   return order;
-}
-
-/** A transform's three rows and origin as the buffer stores them: each row then its origin component. */
-function writeTransformRows(buffer: Float32Array, at: number, t: Transform3D): void {
-  const { basis_x: x, basis_y: y, basis_z: z, origin } = t;
-  buffer[at] = x.x;
-  buffer[at + 1] = x.y;
-  buffer[at + 2] = x.z;
-  buffer[at + 3] = origin.x;
-  buffer[at + 4] = y.x;
-  buffer[at + 5] = y.y;
-  buffer[at + 6] = y.z;
-  buffer[at + 7] = origin.y;
-  buffer[at + 8] = z.x;
-  buffer[at + 9] = z.y;
-  buffer[at + 10] = z.z;
-  buffer[at + 11] = origin.z;
 }
 
 function writeColor(buffer: Float32Array, at: number, { r, g, b, a }: Rgba): void {

@@ -33,34 +33,26 @@
 
 import { storedReal as f } from '../../../godot/math/real.js';
 import type { ProcessSimulation } from '../../../resources/materials/particleprocessmaterial';
-import { rotateHueInto } from '../cpuparticles/process';
 import { add, cross, hasLength, normalize, scale, sub, type Float3 } from './float3';
-import { drawParameters, seedOf } from './parameters';
+import { tintedColour } from './parameters';
 import type { EmissionFrame, GpuParticle } from './particle';
 
 /** What a step reads of the frame and of the emitter. */
 export interface StepContext {
   simulation: ProcessSimulation;
   frame: EmissionFrame;
-  amount: number;
   /** `params.lifetime`, a float. */
   lifetime: number;
-  randomSeed: number;
 }
 
 /** The smallest axis scale, so that a scale of 0 still draws (`:1138-1145`). */
 const SCALE_FLOOR = 0.001;
 
-/** Steps `particle`, number `index` of the emitter, by `delta` seconds. */
-export function stepParticle(
-  particle: GpuParticle,
-  index: number,
-  delta: number,
-  context: StepContext
-): void {
+/** Steps `particle` by `delta` seconds, with the draws of its birth. */
+export function stepParticle(particle: GpuParticle, delta: number, context: StepContext): void {
   const { simulation, frame } = context;
-  const number = (Math.imul(particle.cycle, context.amount) + index) >>> 0;
-  const drawn = drawParameters(seedOf(number, context.randomSeed), simulation);
+  const { drawn } = particle;
+  if (!drawn) return;
 
   const age = f(particle.custom[1] + f(delta / context.lifetime));
   particle.custom[1] = age;
@@ -79,14 +71,9 @@ export function stepParticle(
   particle.velocity = add(particle.velocity, scale(force, delta));
   particle.origin = add(particle.origin, scale(particle.velocity, delta));
 
-  particle.color = tinted(simulation);
+  particle.color = tintedColour(simulation);
   const [x, y, z] = particle.columns;
   particle.columns = [scaledAxis(x, drawn.scale), scaledAxis(y, drawn.scale), scaledAxis(z, drawn.scale)];
-}
-
-function tinted({ color }: ProcessSimulation): [number, number, number, number] {
-  const rotated = rotateHueInto({ r: 0, g: 0, b: 0, a: 0 }, color, 0);
-  return [rotated.r, rotated.g, rotated.b, rotated.a];
 }
 
 /** The axis as a unit vector times `sign(scale) * max(abs(scale), 0.001)`. */

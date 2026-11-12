@@ -1,6 +1,7 @@
 /** One GPU particle as `particles.glsl` holds it, and the frame of the emission transform it is born in. */
 
 import type { Float3 } from './float3';
+import type { DrawnParameters } from './parameters';
 
 export interface GpuParticle {
   active: boolean;
@@ -15,6 +16,8 @@ export interface GpuParticle {
   color: [number, number, number, number];
   /** `CUSTOM`: the angle, the age, the animation frame and the share of the lifetime it lives. */
   custom: [number, number, number, number];
+  /** The draws of the birth: the seed is fixed from the restart to the next one. Unset until the first birth. */
+  drawn?: DrawnParameters;
 }
 
 /** `EMISSION_TRANSFORM`: the columns of the basis and the origin. */
