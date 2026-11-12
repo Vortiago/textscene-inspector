@@ -2629,7 +2629,7 @@ describe('useBuildSolveTree — a themed icon slot while it loads or after it fa
     const loader = createFakeResourceLoader();
     seed(loader);
     const dialog = node('Dialog', 'FileDialog', {
-      properties: { name: 'Dialog', themeOverrideIcons: { back_folder: 'ExtResource("1")' } },
+      properties: { name: 'Dialog', filters: [], themeOverrideIcons: { back_folder: 'ExtResource("1")' } },
     });
     const { result } = renderHook(
       () => useBuildViewportTree(dialog, [{ id: '1', path: 'res://icon.png', type: 'Texture2D' }], [], []),

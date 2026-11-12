@@ -13,6 +13,7 @@
 import { parseNodeWithRegistry } from '../../../core/NodeRegistry';
 import {
   DisplayMode,
+  FileMode,
   firstFilterLabel,
   isOpenFileMode,
   FILE_DIALOG_ICON_SIZE,
@@ -26,7 +27,7 @@ import {
 import { SizeFlags } from '../../../godot/scene/control';
 import type { Vector2 } from '../../../godot/math/vector';
 import { FILE_DIALOG_ICON_URLS, FILE_DIALOG_LIST_ICON_URLS } from '../../../r3f/controls/native/themeIcons';
-import { ItemListIconMode } from '../../../godot/scene/gui';
+import { ItemListIconMode, ItemListSelectMode } from '../../../godot/scene/gui';
 import type { Rgba } from '../../../godot/math/math';
 import type { ItemListItem, ItemListProperties } from '../../2d/ui/itemlist/types';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
@@ -204,8 +205,13 @@ const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** The ItemList properties `update_file_list` sets for a display mode (`file_dialog.cpp:815-834`). */
 function fileListLayout({ props, listTheme }: Dialog): Partial<ItemListProperties> {
+  const selectMode =
+    props.file_mode === FileMode.OPEN_FILES
+      ? ItemListSelectMode.SELECT_MULTI
+      : ItemListSelectMode.SELECT_SINGLE;
   if (props.display_mode === DisplayMode.THUMBNAILS) {
     return {
+      selectMode,
       iconMode: ItemListIconMode.ICON_MODE_TOP,
       maxColumns: 0,
       maxTextLines: 2,
@@ -215,6 +221,7 @@ function fileListLayout({ props, listTheme }: Dialog): Partial<ItemListPropertie
     };
   }
   return {
+    selectMode,
     iconMode: ItemListIconMode.ICON_MODE_LEFT,
     maxColumns: 1,
     maxTextLines: 1,
@@ -240,6 +247,7 @@ function fileListItems({ props, listTheme }: Dialog): ItemListItem[] {
       iconModulate: row.isDirectory ? listTheme.folderIconColor : listTheme.fileIconColor,
       disabled: row.isDisabled,
       isSelected: index === props.selected_row,
+      isCurrent: index === props.selected_row,
     };
   });
 }

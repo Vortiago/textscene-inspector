@@ -60,7 +60,10 @@ import {
   itemListTextTheme,
   itemListWrappedTextWidthPx,
   itemMinimumSize,
+  itemListCursorRect,
+  itemListDrawsCursor,
   itemListSelectedFontColor,
+  pickItemListCursorStyleBox,
   itemListSelectedRect,
   itemTextColor,
   pickItemListSelectedStyleBox,
@@ -118,6 +121,8 @@ interface RowGeometry {
   textColor: Rgba;
   /** The background of a selected row, relative to the row's origin, or `null` for a row not selected. */
   selectedRect: Rect2 | null;
+  /** The `cursor` box of the current row of a multi-select list, relative to the row's origin, or `null`. */
+  cursorRect: Rect2 | null;
 }
 
 interface ItemListRowProps {
@@ -243,6 +248,8 @@ export function ItemList({
 
   const selectedFontColor = itemListSelectedFontColor(solveNode);
   const selectedBox = pickItemListSelectedStyleBox(solveNode.styleBoxes, theme);
+  const cursorBox = pickItemListCursorStyleBox(solveNode.styleBoxes, theme);
+  const drawsCursor = itemListDrawsCursor(props.selectMode ?? 0);
 
   const hSeparation = itemListSeparation(theme);
   const vSeparation = hSeparation;
@@ -495,6 +502,17 @@ export function ItemList({
               rtl,
             })
           : null,
+        cursorRect:
+          r.item.isCurrent && drawsCursor
+            ? itemListCursorRect({
+                rowRect: packedRect,
+                baseX: origin.x,
+                columnCount: packed.columnCount,
+                contentWidth,
+                controlWidth: rect.w,
+                rtl,
+              })
+            : null,
       };
     });
   }, [
@@ -511,6 +529,7 @@ export function ItemList({
     solveNode,
     baseFontColor,
     selectedFontColor,
+    drawsCursor,
     panelMargins.left,
     panelMargins.right,
     origin.x,
@@ -552,6 +571,22 @@ export function ItemList({
           icons={solveNode.icons}
         />
       ))}
+      {visibleRows.map(
+        (geometry) =>
+          geometry.cursorRect && (
+            <CanvasItemGroup
+              key={`cursor-${geometry.rect.x},${geometry.rect.y}`}
+              position={[origin.x + geometry.rect.x, -(origin.y + geometry.rect.y), 0]}
+            >
+              <StyleBoxQuad
+                styleBox={cursorBox}
+                color={tint.own}
+                rect={geometry.cursorRect}
+                renderOrder={renderOrder}
+              />
+            </CanvasItemGroup>
+          )
+      )}
       <ScrollHintChrome
         hint={scrollBars.bottomHint}
         color={hintColor}

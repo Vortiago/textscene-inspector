@@ -52,7 +52,7 @@ import { CONTROL_FONT_LOWER_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../.
 import { AutowrapMode, OverrunBehavior, TextDirection } from '../../../../godot/text/textServerEnums';
 import { isDrawnRtl, textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
-import { ItemListIconMode } from '../../../../godot/scene/gui';
+import { ItemListIconMode, ItemListSelectMode } from '../../../../godot/scene/gui';
 
 // --- Enum literals ------------------------------------------------------
 
@@ -711,8 +711,8 @@ export function itemTextDrawOffset(
 const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** `icon_modulate` is no `PropertyListHelper` leaf, so a scene row keeps its class default `Color(1,1,1,1)` (`item_list.h:68`). A dialog sets it. `disabled` halves the alpha (`item_list.cpp:1569-1571`). */
-export function itemIconColor(disabled: boolean, modulate: Rgba = WHITE): Rgba {
-  return disabled ? { ...modulate, a: modulate.a * 0.5 } : modulate;
+export function itemIconColor(disabled: boolean, tint: Rgba = WHITE): Rgba {
+  return disabled ? { ...tint, a: tint.a * 0.5 } : tint;
 }
 
 /** `font_selected_color` (`item_list.cpp:1610-1611`), else the default theme's `control_font_pressed_color` (`default_theme.cpp:957`). */
@@ -860,9 +860,14 @@ export function itemListWrappedTextWidthPx(
   return w;
 }
 
+/** A one-column row's background and cursor run to the right edge of the content (`item_list.cpp:1502-1504`). */
+function rowBackgroundWidth(input: { rowRect: Rect2; columnCount: number; contentWidth: number }): number {
+  return input.columnCount === 1 ? input.contentWidth - input.rowRect.x : input.rowRect.w;
+}
+
 /**
- * The rect a selected row's background fills, relative to the row's own origin (`item_list.cpp:1502-1517`): a
- * one-column row runs to the right edge of the content, and RTL mirrors it inside the control.
+ * The rect a selected row's background fills, relative to the row's own origin (`item_list.cpp:1502-1517`),
+ * mirrored inside the control under RTL.
  */
 export function itemListSelectedRect(input: {
   rowRect: Rect2;
@@ -875,8 +880,36 @@ export function itemListSelectedRect(input: {
   panelMarginRight: number;
   rtl: boolean;
 }): Rect2 {
-  const w = input.columnCount === 1 ? input.contentWidth - input.rowRect.x : input.rowRect.w;
+  const w = rowBackgroundWidth(input);
   const ltrX = input.baseX + input.rowRect.x;
   const x = input.rtl ? input.controlWidth - ltrX - w + input.panelMarginLeft - input.panelMarginRight : ltrX;
   return { x: x - ltrX, y: 0, w, h: input.rowRect.h };
+}
+
+/** Whether the list marks its current row with the `cursor` box: only one that selects several rows (`item_list.cpp:1693`). */
+export function itemListDrawsCursor(selectMode: number): boolean {
+  return selectMode === ItemListSelectMode.SELECT_MULTI || selectMode === ItemListSelectMode.SELECT_TOGGLE;
+}
+
+/** The rect of the `cursor` box, relative to the row's origin. RTL mirrors it without the panel margins (`item_list.cpp:1698-1705`). */
+export function itemListCursorRect(input: {
+  rowRect: Rect2;
+  baseX: number;
+  columnCount: number;
+  contentWidth: number;
+  controlWidth: number;
+  rtl: boolean;
+}): Rect2 {
+  const w = rowBackgroundWidth(input);
+  const ltrX = input.baseX + input.rowRect.x;
+  const x = input.rtl ? input.controlWidth - ltrX - w : ltrX;
+  return { x: x - ltrX, y: 0, w, h: input.rowRect.h };
+}
+
+/** The `cursor_unfocused` box (`item_list.cpp:2455`): the default theme binds it to its `focus` box (`default_theme.cpp:967`). */
+export function pickItemListCursorStyleBox(
+  styleBoxes: Readonly<Record<string, StyleBoxFlatData>>,
+  theme: Pick<NativeTheme, 'widgets'>
+): StyleBoxFlatData {
+  return styleBoxes.cursor_unfocused ?? theme.widgets.button.focus;
 }

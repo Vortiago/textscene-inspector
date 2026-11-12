@@ -23,6 +23,7 @@ import {
   itemListGuideLines,
   itemListMirrorX,
   itemListRowsInClip,
+  itemListCursorRect,
   itemListSelectedRect,
   itemListSeparatorsInClip,
   itemListMaxColumnWidth,
@@ -1011,5 +1012,24 @@ describe('itemListSelectedRect (item_list.cpp:1502-1517)', () => {
   it('mirrors inside the control under RTL', () => {
     const rowRect = { x: 10, y: 20, w: 50, h: 18 };
     expect(itemListSelectedRect({ ...input, rowRect, rtl: true })).toEqual({ x: -10, y: 0, w: 190, h: 18 });
+  });
+});
+
+describe('itemListCursorRect (item_list.cpp:1486-1495,1698-1705)', () => {
+  const input = {
+    rowRect: { x: 10, y: 20, w: 50, h: 18 },
+    baseX: 4,
+    columnCount: 1,
+    contentWidth: 200,
+    controlWidth: 208,
+    rtl: false,
+  };
+
+  it('runs a one-column row to the right edge of the content', () => {
+    expect(itemListCursorRect(input)).toEqual({ x: 0, y: 0, w: 190, h: 18 });
+  });
+
+  it('mirrors inside the control under RTL without the panel margins', () => {
+    expect(itemListCursorRect({ ...input, rtl: true })).toEqual({ x: -10, y: 0, w: 190, h: 18 });
   });
 });

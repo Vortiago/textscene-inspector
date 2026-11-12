@@ -29,8 +29,8 @@ scroll value. A visible vertical scrollbar narrows the guide lines and the label
 never shows, since it needs a scroll value above 1. `auto_width` and `auto_height` add the scrollbar size
 to the minimum size. The list draws only the rows that reach into its rect, also under `clip_contents = false`.
 
-No row is drawn selected, hovered or under a cursor highlight. `selected`, the current
-index and a live hover or focus state are never part of a `.tscn`.
+No row is drawn hovered. A row draws selected, and in a multi-select list under a cursor box, only when its owner marks it, as the FileDialog list does. A `.tscn` never carries `selected`, the current
+index or a live hover or focus state.
 
 ## Linting
 
@@ -93,9 +93,9 @@ left, as Godot's set-direction draw does (`text_server.cpp:1740-1935`).
 
 ## Known limitations
 
-- **Not drawn** The `focus` StyleBox and every selected, hovered or cursor row
-  background, since hover, focus, `selected` and the current index are not `.tscn`
-  properties.
+- **Not drawn** The `focus` StyleBox and every hovered row background, since hover and
+  focus are not `.tscn` properties.
+- **Needs runtime** A selected or cursor row draws only for an owner that marks it.
 - **Not drawn** `custom_bg_color`/`custom_fg_color`/`icon_modulate`/`icon_region`/
   `icon_transposed` are real `Item` members that a `.tscn` cannot author, since none is a
   `PropertyListHelper`-registered leaf.

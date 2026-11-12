@@ -137,7 +137,7 @@ function oracleBody(rows: readonly OracleRow[]): OracleRow[] {
   return rows.slice(start, end);
 }
 
-/** The oracle's res:// holds this file, which an unfiltered dialog puts in the File field. The previewer's file list is empty. */
+/** The oracle's res:// holds this file, which an unfiltered dialog puts in the File field. The previewer lists no file in that scene. */
 const ORACLE_LISTED_FILE = 'main.tscn';
 
 const rectOf = (rect: number[]) => ({ x: rect[0], y: rect[1], w: rect[2], h: rect[3] });
@@ -394,6 +394,16 @@ describe('FileDialog file list', () => {
       fixedColumnWidth: 96,
       fixedIconSize: { x: 64, y: 64 },
     });
+  });
+
+  it('selects several rows in the open-files mode only (file_dialog.cpp:1403-1407)', () => {
+    expect(listProps(fileList({ ...CASES.open_files! })).selectMode).toBe(1);
+    expect(listProps(fileList(CASES.open!)).selectMode).toBe(0);
+  });
+
+  it('makes the selected row the current row', () => {
+    const items = listProps(fileList(CASES.open!)).items;
+    expect(items.map(({ isCurrent }) => isCurrent === true)).toEqual([false, true, false]);
   });
 
   it('tints a folder with folder_icon_color and a file with file_icon_color', () => {

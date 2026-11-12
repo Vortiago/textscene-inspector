@@ -20,6 +20,7 @@ import { createClearCache } from '../resourceProcessorClear';
 import type { ArrayMeshResource } from '../processors/createArrayMeshProcessor';
 import type { FontResource } from '../fonts/font/types';
 import type { ThemeResource } from '../styles/theme/types';
+import type { DirectoryEntry } from '../projectListing';
 import { isGodotSceneRoot } from '../formats/glb/godotNodes';
 import { tagAsLoadedGlb } from '../formats/glb/testing/loadedGlbTags';
 import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
@@ -68,6 +69,7 @@ export interface FakeResourceLoader {
   readonly arrayMeshes: FakeProcessor<ArrayMeshResource>;
   readonly fonts: FakeProcessor<FontResource>;
   readonly themes: FakeProcessor<ThemeResource>;
+  readonly directories: FakeProcessor<DirectoryEntry[]>;
   /** A real runner with no worker, so jobs run in-thread with the real bytes. */
   readonly jobRunner: WorkerJobRunner;
   /** Every ExtResource passed to `loader.register`, in call order. */
@@ -159,6 +161,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
   const arrayMeshes = makeFakeProcessor<ArrayMeshResource>(eventBus, 'arraymesh');
   const fonts = makeFakeProcessor<FontResource>(eventBus, 'font');
   const themes = makeFakeProcessor<ThemeResource>(eventBus, 'theme');
+  const directories = makeFakeProcessor<DirectoryEntry[]>(eventBus, 'directory');
   const registerCalls: ExtResource[] = [];
 
   const byType: Record<ResourceType, FakeProcessor<unknown>> = {
@@ -171,6 +174,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     arraymesh: arrayMeshes,
     font: fonts,
     theme: themes,
+    directory: directories,
   };
 
   const byTypeMap = new Map(Object.entries(byType) as [ResourceType, FakeProcessor<unknown>][]);
@@ -190,6 +194,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     arrayMeshes,
     fonts,
     themes,
+    directories,
     // Mirrors ResourceLoader.register and records the call, so a test asserts
     // registration without a vitest spy.
     register(resource: ExtResource): void {
@@ -254,6 +259,7 @@ export function createFakeResourceLoader(): FakeResourceLoader {
     arrayMeshes,
     fonts,
     themes,
+    directories,
     jobRunner,
     registerCalls,
   };

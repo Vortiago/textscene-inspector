@@ -23,10 +23,10 @@ const EMPTY_CHILD_RECTS: NativeControlComponentProps['childRects'] = new Map();
 
 export function DialogChrome(props: NativeControlComponentProps) {
   const { solveNode, rect, theme, tint, renderOrder, slot, chromeSlot, measureText } = props;
-  const ctx = useMemo(() => createSolveContext(theme, measureText), [theme, measureText]);
+  // A context memoises minimum sizes by path, so each dialog node gets a fresh one: its text may differ from the last.
   const geometry = useMemo(
-    () => dialogGeometry(solveNode, { x: rect.w, y: rect.h }, ctx),
-    [solveNode, rect.w, rect.h, ctx]
+    () => dialogGeometry(solveNode, { x: rect.w, y: rect.h }, createSolveContext(theme, measureText)),
+    [solveNode, rect.w, rect.h, theme, measureText]
   );
   const label = useMemo(() => messageLabelNode(solveNode), [solveNode]);
   const buttons = useMemo(

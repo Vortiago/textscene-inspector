@@ -21,8 +21,10 @@ export interface ItemListItem {
   themedIcon?: { name: string; vendoredUrl: string };
   /** Set by a dialog only: the icon's `set_item_icon_modulate`. */
   iconModulate?: Rgba;
-  /** Set by a dialog only: the row `select` made current (`item_list.cpp:434-444`). */
+  /** Set by a dialog only: the row `select` selected (`item_list.cpp:434-444`). */
   isSelected?: boolean;
+  /** Set by a dialog only: the row `select` made `current`, which a multi-select list marks with the `cursor` box (`item_list.cpp:1693`). */
+  isCurrent?: boolean;
 }
 
 export interface ItemListProperties extends ControlProperties {

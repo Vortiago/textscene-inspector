@@ -7,7 +7,7 @@ renders_as: an embedded window with the file chooser's toolbar, lists, filter an
 
 # FileDialog
 
-A preset dialog for choosing files or directories. It builds on ConfirmationDialog and adds filters and options. The previewer draws a visible dialog as an embedded window. It shows the toolbar, the Favorites and Recent lists, the file list, the filter and the options over the button row. The file list is empty.
+A preset dialog for choosing files or directories. It builds on ConfirmationDialog and adds filters and options. The previewer draws a visible dialog as an embedded window. It shows the toolbar, the Favorites and Recent lists, the file list, the filter and the options over the button row. The file list shows the entries of the shown folder, folders first, as Godot lists them.
 
 ## Open File
 <!-- compare: image=unit-file-dialog-open-empty status=limitation fixture=file-dialog-open-empty/unit-file-dialog-open-empty.tscn -->
@@ -28,6 +28,26 @@ A CheckBox option and a value option draw in the options row and the option grid
 <!-- compare: image=unit-file-dialog-current-path status=limitation fixture=file-dialog-current-path/unit-file-dialog-current-path.tscn -->
 
 `current_path` puts the dialog in a folder and a file name in the File field. The name before its dot is selected, and the next-folder button is disabled, as in Godot.
+
+## File list
+<!-- compare: image=unit-file-dialog-listing status=limitation fixture=file-dialog-listing/unit-file-dialog-listing.tscn -->
+
+The list holds the folders of `res://`, then the files that match the first filter, each in natural order that ignores case. The first row is selected, and a folder row leaves the File field empty.
+
+## List display mode
+<!-- compare: image=unit-file-dialog-listing-list-mode status=limitation fixture=file-dialog-listing/unit-file-dialog-listing-list-mode.tscn -->
+
+`display_mode = 1` lists the entries in one column of 16 px icons.
+
+## Current file
+<!-- compare: image=unit-file-dialog-listing-current-file status=limitation fixture=file-dialog-listing/unit-file-dialog-listing-current-file.tscn -->
+
+`current_file` selects the row of that name and puts the name in the File field. The list draws the current row under a cursor box only in Open Files mode.
+
+## Missing root subfolder
+<!-- compare: image=unit-file-dialog-listing-missing-subfolder status=limitation fixture=file-dialog-listing/unit-file-dialog-listing-missing-subfolder.tscn -->
+
+A `root_subfolder` that names no folder is kept and ignored, so the dialog lists `res://`.
 
 ## Theme icon
 <!-- compare: image=unit-file-dialog-theme-icon status=limitation fixture=file-dialog-theme-icon/unit-file-dialog-theme-icon.tscn -->
@@ -76,6 +96,6 @@ The lenient parser replays `title`, `file_mode`, `mode_overrides_title` and the 
 
 ## Known limitations
 
-- **Not drawn** The file list always shows no entry, so a folder's files and directories do not appear, and the Favorites and Recent lists stay empty.
+- **Not drawn** The Favorites and Recent lists stay empty, since a scene does not carry them.
+- **Approximated** A `user://` or filesystem folder lists no entry, since the host holds no such folder for a scene.
 - **Approximated** `access = 2` opens the host's working directory and drive list (`file_dialog.cpp:1517,1620`), which a scene does not carry, so the path field is empty.
-- **Approximated** A folder that `root_subfolder` or `current_dir` names is taken as existing, though Godot refuses one that does not (`file_dialog.cpp:1334`).

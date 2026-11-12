@@ -7,18 +7,12 @@
 import type { AsymmetryEntry } from './types.js';
 
 export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
-  // FileDialog: each key below changes no pixel of a frozen frame. `show_hidden_files` only invalidates the list
-  // (`file_dialog.cpp:2213-2219`), and `filename_filter` shows its box only through `show_filename_filter` (`:1222-1224`).
+  // FileDialog: each key below changes no pixel of a frozen frame. `filename_filter` shows its box only through
+  // `show_filename_filter` (`file_dialog.cpp:1222-1224`).
   // The other linter-only keys gate a click or a pop-up. `current_*` are never saved (`PROPERTY_USAGE_NONE`,
   // `file_dialog.cpp:2136-2138`), so a linter has nothing to check, and the parser reads them as the loader would.
   FileDialog: {
-    linterOnly: [
-      'deleting_enabled',
-      'filename_filter',
-      'overwrite_warning_enabled',
-      'show_hidden_files',
-      'use_native_dialog',
-    ],
+    linterOnly: ['deleting_enabled', 'filename_filter', 'overwrite_warning_enabled', 'use_native_dialog'],
     parserOnly: ['current_dir', 'current_file', 'current_path'],
     reason:
       'No listed file exists to delete, filter or hide, and an overwrite is never asked. A system dialog replaces the drawn one only at run time. A key Godot never saves has no validator.',

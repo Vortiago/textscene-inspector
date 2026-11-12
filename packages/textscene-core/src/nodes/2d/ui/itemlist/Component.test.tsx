@@ -204,6 +204,34 @@ describe('<ItemList> — a theme icon and a selected row (a dialog sets both)', 
     expect(colourOf(plain!).toArray()).not.toEqual([1, 1, 1]);
   });
 
+  it('draws the cursor box over the current row of a multi-select list', async () => {
+    const items = [{ text: 'a.png', isSelected: true, isCurrent: true }];
+    const single = await ReactThreeTestRenderer.create(
+      <ItemList {...painterEnv()} solveNode={solveNode({ items })} rect={RECT} renderOrder={0} />
+    );
+    const multi = await ReactThreeTestRenderer.create(
+      <ItemList
+        {...painterEnv()}
+        solveNode={solveNode({ items, selectMode: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(findChromeMeshes(multi.scene).length).toBe(findChromeMeshes(single.scene).length + 1);
+  });
+
+  it('draws no cursor box over a row that is not current', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ItemList
+        {...painterEnv()}
+        solveNode={solveNode({ items: [{ text: 'a.png' }], selectMode: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(findChromeMeshes(renderer.scene).length).toBe(1);
+  });
+
   it('draws the icon of a row in its modulate colour', async () => {
     const renderer = await render([
       { text: 'a', themedIcon: VENDORED, iconModulate: { r: 1, g: 0, b: 0, a: 1 } },

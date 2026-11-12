@@ -694,6 +694,12 @@ function buildForest(
     };
   }
 
+  /** `node` settled with the folders its type lists, such as a FileDialog's. A window reaches here twice, as the embedder's entry and as the root of its own viewport. */
+  function withListedFolders(node: TscnNode): TscnNode {
+    const resolver = controlSolverRegistry.directoryResolver(node.type);
+    return resolver ? settleDirectories(node, resolver, directoryCache.getCached, pendingDirectories) : node;
+  }
+
   /**
    * A window as its embedder reads it: its theme items, by the class chain from its own type
    * (`Window::_update_theme_item_cache`). It draws in no canvas of this forest, so it carries no
@@ -711,12 +717,9 @@ function buildForest(
     const themeScope = themeResolutionScope(window.type, props.themeTypeVariation, themeChain, projectFonts);
     const items = themeItems(window, scope, themeScope);
     const texture = resolveTextureSize(window, path, scope, themeChain, items.icons);
-    const directoryResolver = controlSolverRegistry.directoryResolver(window.type);
     return {
       path,
-      node: directoryResolver
-        ? settleDirectories(window, directoryResolver, directoryCache.getCached, pendingDirectories)
-        : window,
+      node: withListedFolders(window),
       children: [],
       paintRange: WHOLE_CANVAS_RANGE,
       behindRanges: [],
@@ -906,7 +909,7 @@ function buildForest(
     );
     const solved: SolveNode = {
       path,
-      node: live,
+      node: withListedFolders(live),
       children: isBoundary ? [...children, ...childHoisted] : children,
       paintRange,
       behindRanges: behindRangesOf(inlineChildren, allocated.children),
