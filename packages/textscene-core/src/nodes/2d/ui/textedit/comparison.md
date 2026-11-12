@@ -136,9 +136,7 @@ always shapes at the class default of 4.
 
 - **Not drawn** The selection, IME composition, brace-match underline, word-highlight box and
   search-result box, which need state a `.tscn` cannot carry.
-- **Not drawn** The minimap's hover and drag alpha (:1153-1160), which need pointer state.
-- **Not drawn** The minimap's view rectangle offset and first line at a non-zero scroll (:1138-1147),
-  since scrolling is inert here.
+- **Not drawn** The minimap's hover and drag alpha (:1153-1160), which need pointer state a `.tscn` cannot carry.
 - **Approximated** The rows of an `indent_wrapped_lines` line in a narrow band break at other words than Godot's.
 - **Approximated** A wrapped row under a right-to-left layout sits about one space width too far right.
 - **Approximated** `self_modulate` tints the text, the caret and the minimap, which Godot draws on a child item that it does not reach.
