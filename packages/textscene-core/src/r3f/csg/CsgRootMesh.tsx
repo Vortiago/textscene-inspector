@@ -8,8 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { visualLayersUserData } from '../visualLayers';
 import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
-import { SurfaceMaterialSlots } from '../materials/SurfaceMaterialSlots';
-import { NextPassChain } from '../materials/nextPass';
+import { InstancePasses } from '../materials/InstancePasses';
 import { resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
 import { CsgSubtreeProvider, type CsgSubtreeStatus } from '../contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
@@ -126,16 +125,8 @@ export function CsgRootMesh({
           userData={visualLayersUserData(layers)}
           geometry={evaluation!.geometry as THREE.BufferGeometry}
         >
-          <SurfaceMaterialSlots sources={surfaces} />
-          <NextPassChain
-            meshRef={meshRef}
-            sources={surfaces}
-            drawsPoints={false}
-            godotLayers={layers}
-            // The result draws as the root's own instance: a chain link casts nothing
-            // and is posed by the root's hooks, which it shares here.
-            shadow={shadow}
-          />
+          {/* The result draws as the root's own instance, so the root's base hands it its passes. */}
+          <InstancePasses meshRef={meshRef} sources={surfaces} />
         </mesh>
       )}
       {/*

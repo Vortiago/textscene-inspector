@@ -24,6 +24,8 @@ import {
 import * as THREE from 'three';
 import { materialSourceKey, resolveNextPass, type MaterialSource } from './materialSource';
 import { NO_RAYCAST } from './materialOverlay';
+import { nextPassRenderOrder } from './passOrder';
+import { useExtraDrawRef } from './extraDraw';
 import { drawnTag } from '../meshes/meshContent';
 import { readyMaterial, useMaterial } from './useMaterial';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
@@ -41,17 +43,6 @@ import { parseStandardMaterial3DScalars } from '../../resources/materials/standa
  * @canonical The visited seed of a next_pass chain walk
  */
 export const NOTHING_DRAWN: ReadonlySet<string> = new Set();
-
-/**
- * The draw order of a next_pass chain draw: the surface's own draw is ordinal 0, each
- * resolved link takes its index, a stencil-skipped link leaves a numbered gap, and the
- * overlay mounts one past the greatest ordinal any chain reached.
- *
- * @canonical The draw order of a next_pass chain draw
- */
-export function nextPassRenderOrder(ordinal: number): number {
-  return ordinal;
-}
 
 /**
  * The element and bind props of a draw the base draws: `THREE.Points` for a points
@@ -126,10 +117,12 @@ function ChainDraw({
   surfaceCount: number;
 } & ChainDrawBase) {
   const startingMaterial = useOneSurfaceStartingMaterial(surfaceCount);
+  const drawRef = useExtraDrawRef();
   const { Drawn, skin } = drawnElementOf(drawsPoints, skeleton);
   return (
     <Drawn
       {...skin}
+      ref={drawRef}
       args={[geometry, startingMaterial]}
       geometry={geometry}
       renderOrder={nextPassRenderOrder(ordinal)}
@@ -288,8 +281,7 @@ export function visitedWith(
 /**
  * One part's next_pass chain across all of its draw groups, plus the part's overlay
  * mount through its own factory, whose draw lands one past the greatest ordinal any
- * chain reached — `MATERIAL_OVERLAY_RENDER_ORDER` for a part with no chain. Mounts
- * nothing extra for a part whose every group resolves to no chain.
+ * chain reached. Mounts nothing extra for a part whose every group resolves to no chain.
  */
 export function NextPassChain({
   meshRef,
@@ -308,8 +300,8 @@ export function NextPassChain({
   geometry?: THREE.BufferGeometry | null;
   /** The per-group starting materials, override applied. */
   sources: readonly (MaterialSource | undefined)[];
-  /** Renders the part's overlay draw, at the explicit order one past the surface chains. */
-  overlay?: (renderOrder: number) => ReactNode;
+  /** Renders the part's overlay draw, at the ordinal one past the surface chains. */
+  overlay?: (ordinal: number) => ReactNode;
   /** Renders each pass's own draw when the owner's object is instanced or placed. */
   draw?: ChainDrawFactory;
   /** The base draws points, so the chain draws do too. */
@@ -353,7 +345,7 @@ export function NextPassChain({
           shadow={shadow}
         />
       ))}
-      {geometry && overlay && overlay(nextPassRenderOrder(reached + 1))}
+      {geometry && overlay && overlay(reached + 1)}
     </>
   );
 }

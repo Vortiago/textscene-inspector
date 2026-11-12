@@ -51,3 +51,8 @@ export function drawnMeshes(scene: ReactThreeTestInstance): THREE.Mesh[] {
     .map((node) => instanceAs<THREE.Mesh>(node))
     .filter((mesh) => mesh.visible);
 }
+
+/** The albedo of the one material `mesh` draws, as six hex digits. */
+export function albedoOf(mesh: THREE.Mesh): string {
+  return (mesh.material as THREE.MeshStandardMaterial).color.getHexString();
+}

@@ -6,7 +6,13 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { atlasTextureLayout, atlasTextureOnSheet, decodeAtlasTexture } from './decode';
+import {
+  atlasCellRect,
+  atlasRegionInCell,
+  atlasTextureLayout,
+  atlasTextureOnSheet,
+  decodeAtlasTexture,
+} from './decode';
 
 describe('decodeAtlasTexture', () => {
   it('reads atlas, region, margin and filter_clip', () => {
@@ -148,5 +154,43 @@ describe('atlasTextureOnSheet', () => {
       { x: 32, y: 32, width: 32, height: 32 },
       { x: 2, y: 2, width: 4, height: 4 },
     ]);
+  });
+});
+
+describe('atlasCellRect', () => {
+  const SHEET = { width: 128, height: 64 };
+
+  it('is the region for an AtlasTexture with no margin', () => {
+    const layout = atlasTextureLayout(decodeAtlasTexture({ region: 'Rect2(64, 0, 64, 32)' }), SHEET)!;
+
+    expect(atlasCellRect(layout)).toEqual({ x: 64, y: 0, w: 64, h: 32 });
+  });
+
+  it('reaches past the region by the margin, so the region keeps its place inside the cell', () => {
+    const layout = atlasTextureLayout(
+      decodeAtlasTexture({ region: 'Rect2(64, 0, 64, 32)', margin: 'Rect2(4, 8, 10, 16)' }),
+      SHEET
+    )!;
+
+    expect(atlasCellRect(layout)).toEqual({ x: 60, y: -8, w: 74, h: 48 });
+  });
+});
+
+describe('atlasRegionInCell', () => {
+  const SHEET = { width: 128, height: 64 };
+
+  it('is the whole cell for an AtlasTexture with no margin', () => {
+    const layout = atlasTextureLayout(decodeAtlasTexture({ region: 'Rect2(64, 0, 64, 32)' }), SHEET)!;
+
+    expect(atlasRegionInCell(layout)).toEqual({ x: 0, y: 0, w: 64, h: 32 });
+  });
+
+  it('sits at the margin position, at the size of the region', () => {
+    const layout = atlasTextureLayout(
+      decodeAtlasTexture({ region: 'Rect2(64, 0, 64, 32)', margin: 'Rect2(4, 8, 10, 16)' }),
+      SHEET
+    )!;
+
+    expect(atlasRegionInCell(layout)).toEqual({ x: 4, y: 8, w: 64, h: 32 });
   });
 });

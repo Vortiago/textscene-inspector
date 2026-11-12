@@ -8,6 +8,7 @@ import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 import { parseOptionalRect2 } from '../../../parser/valueParsers';
 import { type AtlasRect, type AtlasTextureData, type AtlasTextureLayout } from './types';
 import type { ImageSize } from '../../formats/image/imagePixels.js';
+import type { Rect2 } from '../../../godot/math/rect2';
 
 const ZERO_RECT: AtlasRect = { x: 0, y: 0, width: 0, height: 0 };
 
@@ -92,6 +93,22 @@ export function atlasTextureLayout(
     // (:163); the rest of the box is empty.
     dest: { x: tex.margin.x, y: tex.margin.y },
   };
+}
+
+/**
+ * The rectangle of the atlas, in its pixels, that the box `layout` reports covers: the region,
+ * moved back and grown by the margin. It can reach past the atlas.
+ */
+export function atlasCellRect({ width, height, source, dest }: AtlasTextureLayout): Rect2 {
+  return { x: source.x - dest.x, y: source.y - dest.y, w: width, h: height };
+}
+
+/**
+ * The rectangle of the cell, in its pixels, that the region fills: the only part Godot draws
+ * (`get_rect_region` :193-219). The rest of the cell is margin.
+ */
+export function atlasRegionInCell({ source, dest }: AtlasTextureLayout): Rect2 {
+  return { x: dest.x, y: dest.y, w: source.width, h: source.height };
 }
 
 function rect(value: string | undefined, context: string): AtlasRect {

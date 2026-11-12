@@ -11,7 +11,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { visualLayersUserData } from '../../../visualLayers';
 import * as THREE from 'three';
 import {
@@ -19,7 +19,9 @@ import {
   type CanvasItemPixelMaterial,
 } from '../../../components/LitCanvasItemPixels';
 import {
+  canvasGlyphRects,
   computeCanvasTextCanvasLayout,
+  buildCanvasGlyphQuadArrays,
   buildCanvasTextQuadArrays,
   type CanvasTextQuadArrays,
   paintSceneFontCanvas,
@@ -54,6 +56,7 @@ import type { Rgba } from '../../../../godot/math/math';
 import { VECTOR2_ZERO } from '../../../../godot/math/vector';
 import { useDisposeOnRelease } from '../../../useDisposeOnRelease';
 import { useNearestAnisotropy } from '../../../nearestAnisotropy';
+import { vertexColourAttribute } from '../../../vertexColour';
 
 /** One rectangle of a hex-code box in local Godot px, +Y down, before the Y negation into three's space. */
 interface HexCodeBoxAbsoluteRect {
@@ -151,6 +154,46 @@ export interface TextRunProps {
    * auto-fit bounds past Godot's camera, which is placed before any text shapes.
    */
   frameExcluded?: boolean;
+  /**
+   * What the GeometryInstance3D the run draws for mounts inside the run's mesh (Label3D only):
+   * its passes, which decide whether `ownMaterial` draws. `glyphGeometry` is the mesh `glyphQuads`
+   * asks for. Omitted, the run mounts its own material.
+   */
+  instancePasses?: (
+    meshRef: RefObject<THREE.Mesh | null>,
+    ownMaterial: ReactNode,
+    glyphGeometry: THREE.BufferGeometry | undefined
+  ) => ReactNode;
+  /**
+   * Builds the mesh Godot's Label3D holds, one quad for each glyph with the tint as its vertex
+   * colour (`label_3d.cpp:417-437`), for a material that is not the run's own (Label3D only).
+   * `'base'` draws it in place of the run's geometry, as a `material_override` fills it.
+   * `'extraDraws'` hands it to `instancePasses` alone, as a `material_overlay` fills it over the run.
+   */
+  glyphQuads?: 'base' | 'extraDraws';
+  /** Whether the mesh receives shadows. By default a shaded run does. */
+  receiveShadow?: boolean;
+}
+
+/**
+ * The run's own material on its mesh. A run a GeometryInstance3D fades mounts its unfaded and
+ * alpha-pass pair through the swap, which the fade owns.
+ */
+function RunMaterials({
+  material,
+  alphaPassMaterial,
+}: {
+  material: THREE.Material;
+  alphaPassMaterial: THREE.Material | null;
+}) {
+  const swapped = useSwappedMaterials(undefined);
+  if (!swapped || !alphaPassMaterial) return <primitive object={material} attach="material" />;
+  return (
+    <>
+      <primitive object={material} attach={swapped.unfaded} />
+      <primitive object={alphaPassMaterial} attach={swapped.alphaPass} />
+    </>
+  );
 }
 
 /** The normal +Z on each of `vertexCount` vertices, which only a lit material reads. */
@@ -166,6 +209,11 @@ function quadFacingPlusZ(vertexCount: number): THREE.BufferAttribute {
  */
 interface BuiltTextRun {
   geometry: THREE.BufferGeometry;
+  /**
+   * Builds one quad for each glyph with the tint as its vertex colour, which the caller disposes.
+   * A BMFont run answers its `geometry`, which holds a quad for each glyph already.
+   */
+  buildGlyphGeometry: () => THREE.BufferGeometry;
   paint: (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) => THREE.Material;
   heldTexture: THREE.Texture;
 }
@@ -213,11 +261,15 @@ function rasterTexture(
   return texture;
 }
 
-/** The geometry of merged glyph quads. A lit run reads the normal, so a caller adds it. */
+/**
+ * The geometry of merged glyph quads, each facing +Z (`label_3d.cpp:422-423`). Every run holds the
+ * normal, which only a lit material reads, so toggling the shading rebuilds the material alone.
+ */
 function quadGeometry({ positions, uvs, indices }: CanvasTextQuadArrays): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  geometry.setAttribute('normal', quadFacingPlusZ(positions.length / 3));
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   return geometry;
 }
@@ -274,7 +326,6 @@ function buildBitmapRun(
   const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
   const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, { glyphDrawer, originPhasePx });
   const geometry = quadGeometry(quads);
-  geometry.setAttribute('normal', quadFacingPlusZ(quads.positions.length / 3));
   const { multipliesInLinear } = GLYPH_DRAWER_RULES[glyphDrawer];
   const texture = sheetTexture(sheet, sampling, multipliesInLinear);
   const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
@@ -291,7 +342,12 @@ function buildBitmapRun(
       shading,
       ...blend,
     });
-  return { geometry, paint, heldTexture: texture };
+  return {
+    geometry,
+    buildGlyphGeometry: () => withVertexColour(geometry, tint),
+    paint,
+    heldTexture: texture,
+  };
 }
 
 /**
@@ -309,10 +365,7 @@ function buildCanvasRun(
   const skew = layout.fontMetrics.skew ?? 0;
   const { strokeWidthPx, originPhasePx } = canvasPaint;
   const canvasLayout = computeCanvasTextCanvasLayout(layout, skew, strokeWidthPx, originPhasePx);
-  const quads = buildCanvasTextQuadArrays(canvasLayout, originPhasePx);
-  const geometry = quadGeometry(quads);
-  // On every run, so toggling the shading rebuilds the material alone, not the raster.
-  geometry.setAttribute('normal', quadFacingPlusZ(quads.positions.length / 3));
+  const geometry = quadGeometry(buildCanvasTextQuadArrays(canvasLayout, originPhasePx));
 
   const raster = paintSceneFontCanvas(layout, fontSizePx, tint, skew, canvasLayout, canvasPaint);
   const texture = rasterTexture(raster, canvasLayout);
@@ -336,7 +389,21 @@ function buildCanvasRun(
       shading,
       ...blend,
     });
-  return { geometry, paint, heldTexture: texture };
+  const buildGlyphGeometry = () => {
+    const glyphRects = canvasGlyphRects(layout, fontSizePx, skew, canvasLayout, canvasPaint);
+    const glyphQuads = buildCanvasGlyphQuadArrays(glyphRects, canvasLayout, originPhasePx);
+    return withVertexColour(quadGeometry(glyphQuads), tint);
+  };
+  return { geometry, buildGlyphGeometry, paint, heldTexture: texture };
+}
+
+/** `glyphGeometry` with `tint` as the vertex colour of its glyph quads (`label_3d.cpp:425-429`). */
+function withVertexColour(glyphGeometry: THREE.BufferGeometry, tint: Rgba): THREE.BufferGeometry {
+  glyphGeometry.setAttribute(
+    'color',
+    vertexColourAttribute(glyphGeometry.getAttribute('position').count, tint)
+  );
+  return glyphGeometry;
 }
 
 /**
@@ -376,6 +443,9 @@ export function TextRunMesh({
   layers,
   frameExcluded,
   shading,
+  instancePasses,
+  glyphQuads,
+  receiveShadow = shading !== undefined,
 }: TextRunProps) {
   const swapped = useSwappedMaterials(undefined);
   const pixelMaterial = useCanvasItemPixelMaterial();
@@ -421,23 +491,21 @@ export function TextRunMesh({
       mipmapped,
     ]
   );
+  // Apart from the run, so a label that gains or loses an instance material keeps its raster.
+  const buildsGlyphQuads = glyphQuads !== undefined;
+  const glyphGeometry = useMemo(
+    () => (buildsGlyphQuads ? run.buildGlyphGeometry() : undefined),
+    [run, buildsGlyphQuads]
+  );
   const material = usePaintedMaterial(run, blends?.unfaded, shading);
   const alphaPassMaterial = useAlphaPassMaterial(run, blends?.alphaPass, shading);
   const meshRef = useRef<THREE.Mesh | null>(null);
-  useLayoutEffect(() => {
-    const mesh = meshRef.current;
-    if (!swapped || !alphaPassMaterial || !mesh) return;
-    const detachUnfaded = swapped.unfaded(mesh, material);
-    const detachAlphaPass = swapped.alphaPass(mesh, alphaPassMaterial);
-    return () => {
-      detachAlphaPass();
-      detachUnfaded();
-    };
-  }, [swapped, material, alphaPassMaterial]);
+  const ownMaterial = <RunMaterials material={material} alphaPassMaterial={alphaPassMaterial} />;
 
   // R3F does not dispose a geometry or material passed as a prop, so both leak
   // on every rebuild without this, and a Label re-shapes on every rect or font change.
   useDisposeOnRelease(run.geometry);
+  useDisposeOnRelease(glyphGeometry);
   // A canvas raster is fresh per rebuild, and a BMFont sheet texture is shared by its runs.
   useDisposeOnRelease(run.heldTexture);
   useNearestAnisotropy(run.heldTexture);
@@ -466,18 +534,18 @@ export function TextRunMesh({
     <>
       <mesh
         ref={meshRef}
-        geometry={run.geometry}
-        // A faded run's materials go on through the swap alone, which the fade owns.
-        material={alphaPassMaterial ? undefined : material}
+        geometry={glyphQuads === 'base' ? glyphGeometry : run.geometry}
         renderOrder={renderOrder}
         userData={userData}
         castShadow={shadow?.castShadow}
-        receiveShadow={shading !== undefined}
+        receiveShadow={receiveShadow}
         onBeforeRender={shadow?.onBeforeRender}
         onAfterRender={shadow?.onAfterRender}
         onBeforeShadow={shadow?.onBeforeShadow}
         onAfterShadow={shadow?.onAfterShadow}
-      />
+      >
+        {instancePasses ? instancePasses(meshRef, ownMaterial, glyphGeometry) : ownMaterial}
+      </mesh>
       {hexBoxRects.map((r, i) => (
         <CanvasItemGroup key={i} position={[r.x, -r.y, 0]}>
           <ControlQuad

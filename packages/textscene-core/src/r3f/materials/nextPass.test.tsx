@@ -1,6 +1,5 @@
 /**
- * The pure helpers of the next_pass seam: the draw order, the drawn element, the
- * visited set. The chain walk and its owners carry the behaviour through their own
+ * The pure helpers of the next_pass seam: the drawn element and the visited set. The chain walk and its owners carry the behaviour through their own
  * tests (`Component.next-pass.test.tsx` beside every owner); these pin each helper's
  * contract in isolation.
  */
@@ -8,13 +7,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useRef } from 'react';
-import {
-  NOTHING_DRAWN,
-  drawnElementOf,
-  nextPassRenderOrder,
-  useDrawnGeometry,
-  visitedWith,
-} from './nextPass';
+import { NOTHING_DRAWN, drawnElementOf, useDrawnGeometry, visitedWith } from './nextPass';
 import { resolveMaterialSource } from './materialSource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
@@ -30,13 +23,6 @@ function sourceOf(
 ) {
   return resolveMaterialSource(reference, tables)!;
 }
-
-describe('nextPassRenderOrder', () => {
-  it('draws a pass at its own ordinal', () => {
-    expect(nextPassRenderOrder(0)).toBe(0);
-    expect(nextPassRenderOrder(2)).toBe(2);
-  });
-});
 
 describe('drawnElementOf', () => {
   const skeleton = new THREE.Skeleton([new THREE.Bone()]);

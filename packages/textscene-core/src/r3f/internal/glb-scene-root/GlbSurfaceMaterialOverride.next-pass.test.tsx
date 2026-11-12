@@ -13,7 +13,7 @@ import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
 import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
-import { nextPassRenderOrder } from '../../materials/nextPass';
+import { nextPassRenderOrder } from '../../materials/passOrder';
 import { setVisualLayers } from '../../visualLayers';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { tagImportMaterial } from '../../../resources/formats/glb/glbProcessing';

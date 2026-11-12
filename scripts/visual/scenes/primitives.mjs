@@ -114,4 +114,7 @@ export const PRIMITIVE_SCENES = [
   { name: 'csg-multi-material', file: 'unit-csg-multi-material.tscn' },
   // Transparency, the one measured confounder no other CSG scene covers.
   { name: 'csg-transparency', file: 'unit-csg-transparency.tscn' },
+  // The one variable: the `material_override` and `material_overlay` of a CSG root, which no other
+  // CSG scene sets.
+  { name: 'csg-instance-materials', file: 'unit-csg-instance-materials.tscn' },
 ];

@@ -1,0 +1,27 @@
+; The one variable: `outline_render_priority` against the fill's `render_priority` of 0. Left: -1,
+; the default, so the outline draws first and the fill covers its inside. Right: 0, where Godot
+; keeps the draws of one instance newest first (render_forward_clustered.cpp:4147-4148), so the
+; outline, surface 0, draws after the fill and covers its edges. Two labels with one fat yellow
+; fill mean the order of the surfaces at one priority is lost.
+[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="OutlineFirst" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 0)
+text = "Ag"
+font_size = 96
+pixel_size = 0.005
+outline_size = 12
+modulate = Color(1, 1, 0, 1)
+outline_modulate = Color(0.8, 0, 0.6, 1)
+
+[node name="OnePriority" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0, 0)
+text = "Ag"
+font_size = 96
+pixel_size = 0.005
+outline_size = 12
+outline_render_priority = 0
+modulate = Color(1, 1, 0, 1)
+outline_modulate = Color(0.8, 0, 0.6, 1)

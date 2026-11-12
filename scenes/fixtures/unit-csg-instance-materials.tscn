@@ -1,0 +1,39 @@
+; The one variable: which instance material a CSGBox3D sets. Left to right: neither,
+; `material_override`, `material_overlay`. Godot draws the override in place of the brush material
+; and the overlay as a second draw (render_forward_clustered.cpp:4206, :4228-4241), so the middle
+; box reads red and the right box a lighter green. Three green boxes mean the CSG root dropped
+; both. No other CSG scene sets either.
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_brush"]
+albedo_color = Color(0.1, 0.75, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_override"]
+albedo_color = Color(0.9, 0.1, 0.05, 1)
+metallic = 0.8
+roughness = 0.2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_overlay"]
+transparency = 1
+albedo_color = Color(1, 1, 1, 0.4)
+
+[node name="Root" type="Node3D"]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 3, 3)
+
+[node name="Neither" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+size = Vector3(1.4, 1.4, 1.4)
+material = SubResource("StandardMaterial3D_brush")
+
+[node name="Override" type="CSGBox3D" parent="."]
+size = Vector3(1.4, 1.4, 1.4)
+material = SubResource("StandardMaterial3D_brush")
+material_override = SubResource("StandardMaterial3D_override")
+
+[node name="Overlay" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+size = Vector3(1.4, 1.4, 1.4)
+material = SubResource("StandardMaterial3D_brush")
+material_overlay = SubResource("StandardMaterial3D_overlay")

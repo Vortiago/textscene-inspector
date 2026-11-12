@@ -12,7 +12,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import type { MeshInstance3DProperties } from './types';
-import { nextPassRenderOrder } from '../../../r3f/materials/nextPass';
+import { nextPassRenderOrder } from '../../../r3f/materials/passOrder';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import { DispatchedScene } from '../../../r3f/testing/DispatchedScene';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
@@ -191,15 +191,15 @@ describe('MeshInstance3D — next_pass', () => {
     expect(which(bySurface[1]!)).toBe('blue');
   });
 
-  it('draws an overlay chain after the surface, orders ascending', async () => {
-    // The overlay's own `next_pass` runs after the overlay draw itself,
-    // and the overlay draw runs after the surface's whole chain.
+  it("gives an overlay's own chain the ordinals after the overlay", async () => {
     const drawn = meshes(await render({ materialOverlay: 'SubResource("Mat_overlay")' }));
 
     expect(drawn).toHaveLength(3);
-    expect(drawn[1]!.renderOrder).toBeGreaterThan(drawn[0]!.renderOrder);
-    expect(drawn[2]!.renderOrder).toBeGreaterThan(drawn[1]!.renderOrder);
     expect(which(drawn[2]!)).toBe('blue');
+    // The overlay is in the alpha pass, where a later draw of the instance draws first
+    // (`passOrder.ts`). Its opaque link draws after the opaque surface.
+    expect(drawn[1]!.renderOrder).toBe(-nextPassRenderOrder(1));
+    expect(drawn[2]!.renderOrder).toBe(nextPassRenderOrder(2));
   });
 
   it('draws each material of a hand-written cyclic chain once', async () => {
@@ -237,7 +237,7 @@ describe('MeshInstance3D — next_pass', () => {
     return renderer;
   }
 
-  it("draws the overlay chain after the surface's whole chain, orders ascending", async () => {
+  it("numbers the overlay and its chain after the surface's whole chain", async () => {
     // The surface chains two links (0,1), the overlay draws one past them (2),
     // and the overlay's own link runs after it (3).
     const drawn = meshes(
@@ -254,7 +254,11 @@ describe('MeshInstance3D — next_pass', () => {
       'red',
       'blue',
     ]);
-    expect([drawn[1]!.renderOrder, drawn[2]!.renderOrder, drawn[3]!.renderOrder]).toEqual([1, 2, 3]);
+    expect([drawn[1]!.renderOrder, drawn[2]!.renderOrder, drawn[3]!.renderOrder]).toEqual([
+      nextPassRenderOrder(1),
+      -nextPassRenderOrder(2),
+      nextPassRenderOrder(3),
+    ]);
   });
 
   it('mounts a chain link from a file material when it lands, and shares the geometry', async () => {
