@@ -14,4 +14,5 @@ registerResourceSlice({
   busType: 'resource',
 });
 
+export { GRADIENT } from './decode';
 export type { Gradient, GradientColorStop, GradientTexture2D } from './types';

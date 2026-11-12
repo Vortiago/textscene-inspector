@@ -1,0 +1,38 @@
+[gd_scene load_steps=4 format=3]
+
+; unit-cpuparticles2d-curves.tscn with both Curves in a .tres: the one variable is where the curves are stored.
+; Every parameter slot is `lerp(min, max, random) * curve(age)`. `scale_amount` grows then collapses
+; and `angle` sweeps, both through a Curve, so the steady-state emitter shows each curve: one
+; particle per age.
+
+[ext_resource type="Texture2D" path="res://textures/pong-ball.png" id="1_ball"]
+[ext_resource type="Curve" path="res://unit-cpuparticles2d-curve-grow-shrink.tres" id="2_grow_shrink"]
+[ext_resource type="Curve" path="res://unit-cpuparticles2d-curve-ramp-up.tres" id="3_ramp_up"]
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+color = Color(0.08, 0.08, 0.1, 1)
+polygon = PackedVector2Array(320, 68, 832, 68, 832, 580, 320, 580)
+
+[node name="Curved" type="CPUParticles2D" parent="."]
+position = Vector2(420, 324)
+amount = 24
+texture = ExtResource("1_ball")
+lifetime = 2.0
+preprocess = 2.0
+use_fixed_seed = true
+seed = 99
+fixed_fps = 30
+local_coords = true
+direction = Vector2(1, 0)
+spread = 0.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 180.0
+initial_velocity_max = 180.0
+angle_min = 0.0
+angle_max = 360.0
+angle_curve = ExtResource("3_ramp_up")
+scale_amount_min = 5.0
+scale_amount_max = 5.0
+scale_amount_curve = ExtResource("2_grow_shrink")

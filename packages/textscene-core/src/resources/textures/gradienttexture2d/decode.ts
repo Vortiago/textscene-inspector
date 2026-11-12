@@ -7,9 +7,7 @@
 
 import { enumOr, settableIntOr, vec2Or, type SetterRange } from '../../../parser/valueParsers';
 import type { TscnInternalResource } from '../../../parser/types';
-import type { SceneResources } from '../../../r3f/SceneResourcesContext';
-import { resolveReferencedResource } from '../../resolveReference';
-import type { LoadedFile } from '../../scopedResource';
+import type { ResourceKind } from '../../reading';
 import {
   GRADIENT_TEXTURE_MAX_SIZE,
   GradientTexture2DFill,
@@ -40,7 +38,7 @@ function parseColorStops(value: string): Rgba[] {
  * stops evenly across 0..1, the default two-point spacing. Mismatched lengths
  * use the shorter of the two.
  */
-function decodeGradient(data: Record<string, string>): Gradient {
+function decodeGradient(data: Readonly<Record<string, string>>): Gradient {
   const colors = data.colors ? safeColors(data.colors) : [];
   const offsets = data.offsets ? safeOffsets(data.offsets) : null;
 
@@ -71,18 +69,12 @@ export function decodeGradientResource(resource: TscnInternalResource | null): G
   return resource?.type === 'Gradient' ? decodeGradient(resource.data) : null;
 }
 
-/**
- * The `Gradient` that `ref` names: a SubResource, or an ExtResource once its `.tres` has loaded.
- * Null for no reference, an unknown id, a file not loaded yet, or a resource of another type.
- * The one path every reader of a Gradient reference takes: a texture, a noise texture, a particle ramp.
- */
-export function resolveGradient(
-  ref: string | undefined,
-  pools: SceneResources,
-  loadedFile: LoadedFile
-): Gradient | null {
-  return decodeGradientResource(resolveReferencedResource(ref, pools, loadedFile));
-}
+/** A `Gradient` from any origin: the ramp of a particle emitter. Another class draws nothing. */
+export const GRADIENT: ResourceKind<Gradient> = {
+  name: 'Gradient',
+  accepts: (type) => type === 'Gradient',
+  decode: (held) => decodeGradient(held.properties),
+};
 
 /** `width = 64` and `height = 64` (`gradient_texture.h:92-93`). */
 const DEFAULT_TEXTURE_SIZE = 64;
