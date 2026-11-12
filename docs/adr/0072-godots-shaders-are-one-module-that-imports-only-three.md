@@ -1,7 +1,7 @@
 # Godot's shaders are one module that imports only three
 
-- Status: Proposed. The owner asked for the shape on 2026-11-12. The package name, the place of the
-  shader translator, the first publish and the three range wait for his answer.
+- Status: Proposed. The owner asked for the shape on 2026-11-12 and chose the package name. The
+  place of the shader translator, the first publish and the three range wait for his answer.
 - Amends: ADR-0055 (where the node lit surface lives).
 - Related: ADR-0038 (one owner for every program input), ADR-0039 (one material derivation, two
   adapters), ADR-0041 (an uncompiled shader draws Godot's default surface).
@@ -21,7 +21,7 @@ app: react, react-dom, react-three-fiber, drei and postprocessing are its peers.
 
 ## Decision
 
-**The node materials live in one directory of core, `shaders/`, and `@textscene/godot-shaders`
+**The node materials live in one directory of core, `shaders/`, and `@textscene/three-godot-shaders`
 publishes it.**
 
 - **The module imports three and `godot/`, and nothing else.** That is `three`, `three/tsl`,
@@ -32,11 +32,11 @@ publishes it.**
   the roughness limiter and the soft shadow kernel. A workspace package cannot import the private
   core, and core would import the package, which is a cycle. A directory bundles those facts as
   `@textscene/tscn` bundles the parser.
-- **`apps/textscene-godot-shaders` builds the bundle.** `three` is its only peer and it has no
+- **`apps/textscene-three-godot-shaders` builds the bundle.** `three` is its only peer and it has no
   dependency. The peer range is one three minor, because TSL and `WebGLNodesHandler` change between
   minors. The package stays at 0.x, and a three upgrade in this repository is a new minor.
 - **The renderer bundles the module too.** `@textscene/renderer` does not depend on
-  `@textscene/godot-shaders`, as it does not depend on `@textscene/tscn`. One release then never
+  `@textscene/three-godot-shaders`, as it does not depend on `@textscene/tscn`. One release then never
   waits for another.
 - **The module declares the types of its inputs.** A surface is the properties of Godot's
   `BaseMaterial3D` under Godot's names, with a `THREE.Texture` in each texture slot. A pipeline
