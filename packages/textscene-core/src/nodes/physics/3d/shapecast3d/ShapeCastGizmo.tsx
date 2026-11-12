@@ -5,9 +5,8 @@
  */
 
 import { useMemo } from 'react';
-import type { TscnInternalResource } from '../../../../parser/types';
+import type { Shape3DResource } from '../../../../resources/shapes/shape3d';
 import { GizmoLine } from '../../../../r3f/components/GizmoLine';
-import { warn } from '../../../../logger';
 import type { Rgba } from '../../../../godot/math/math.js';
 import type { Vector3 } from '../../../../godot/math/vector.js';
 import { castTargetLine } from '../../shared/castTarget';
@@ -18,8 +17,8 @@ import { useConvexDebugLines } from '../../shared/useConvexDebugLines';
 interface ShapeCastGizmoProps {
   /** The effective `target_position`, Godot's default when unauthored. */
   target: Vector3;
-  /** The resolved shape resource, or null while it is absent or still loading. */
-  shape: TscnInternalResource | null;
+  /** The shape resource, or null while it is absent, still loading, or no Shape3D. */
+  shape: Shape3DResource | null;
   /** The authored `debug_shape_custom_color`, undefined when unauthored. */
   customColor?: Rgba;
   /** Whether the sweep casts. Godot default true, per shape_cast_3d.h:41. */
@@ -38,7 +37,7 @@ export function ShapeCastGizmo({ target, shape, customColor, enabled }: ShapeCas
 }
 
 interface ShapeWireframeProps {
-  shape: TscnInternalResource;
+  shape: Shape3DResource;
   target: Vector3;
   look: CastGizmoLook;
 }
@@ -57,21 +56,14 @@ interface WireframeGizmoProps {
   look: CastGizmoLook;
 }
 
-/** The wireframe Godot's sync debug-line ports draw, or the unit box a type without a port falls back to. */
-function SyncWireframe({ shape, target, look }: WireframeGizmoProps & { shape: TscnInternalResource }) {
-  const wire = useMemo(() => {
-    const lines = shapeDebugLines(shape);
-    if (lines) return lines;
-    // Types without a port draw nothing here, as Godot's hull refuses a degenerate cloud; the
-    // sweep line still shows the cast.
-    warn(`[ShapeCast3D] Shape type "${shape.type}" has no wireframe port, drawing nothing for it.`);
-    return null;
-  }, [shape]);
+/** The wireframe Godot's sync debug-line ports draw. */
+function SyncWireframe({ shape, target, look }: WireframeGizmoProps & { shape: Shape3DResource }) {
+  const wire = useMemo(() => shapeDebugLines(shape), [shape]);
   return <Wireframe wire={wire} target={target} look={look} />;
 }
 
 /** The wireframe of a convex shape, which draws once the lazy hull builder loads. */
-function ConvexHullWireframe({ shape, target, look }: WireframeGizmoProps & { shape: TscnInternalResource }) {
+function ConvexHullWireframe({ shape, target, look }: WireframeGizmoProps & { shape: Shape3DResource }) {
   return <Wireframe wire={useConvexDebugLines(shape)} target={target} look={look} />;
 }
 

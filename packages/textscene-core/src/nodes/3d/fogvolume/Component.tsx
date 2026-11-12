@@ -9,9 +9,6 @@ import { useEffect, useMemo } from 'react';
 import type * as THREE from 'three';
 import { extend } from '@react-three/fiber';
 import { fogVolumeAabb, fogVolumeSize } from '../../../godot/rendering/environment/fogVolume';
-import { ShaderMode, shaderModeOf } from '../../../godot/rendering/shaderLanguage';
-import { holdsResource } from '../../../godot/scene/resourceLiteral';
-import { literalText, stringToInt } from '../../../godot/string/string';
 import * as logger from '../../../logger';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
 import { NodeAabb } from '../../../r3f/components/NodeAabb';
@@ -21,76 +18,41 @@ import {
   FogVolumeObject,
   type FogVolumeFill,
 } from '../../../r3f/fog/fogVolumeObject';
-import type { TscnInternalResource } from '../../../parser/types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { decodeFogMaterial } from '../../../resources/materials/fogmaterial/decode';
-import type { ScopedResource } from '../../../resources/scopedResource';
-import { useResourceResolution } from '../../../resources/useSubOrExtResource';
+import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext';
+import { FOG_VOLUME_MATERIAL, type FogVolumeMaterial } from '../../../resources/materials/fogmaterial';
+import { useNodeResource, type Read } from '../../../resources/reading';
 import { useTexture3D } from '../../../resources/useTexture3D';
 import { Node3D } from '../../base/node3d/Component';
 import { FogVolumeGizmo } from './Gizmo';
 import type { FogVolumeProperties } from './types';
 import type { Vector3 } from '../../../godot/math/vector';
-import { enumMember, type EnumValue } from '../../../godot/classdb/enumNames.js';
 
 /** An element, not a `<primitive>`: it carries no material, and R3F sets its fields as props. */
 const FogVolumeElement = extend(FogVolumeObject);
 
-/** The mode `shader` runs in, or null before it has loaded. */
-function shaderModeOfResource(shader: TscnInternalResource | null): EnumValue<typeof ShaderMode> | null {
-  if (!shader) return null;
-  // `VisualShader::set_mode` refuses an out-of-range mode (`visual_shader.cpp:1436`), so it keeps the default.
-  if (shader.type === 'VisualShader')
-    return enumMember(ShaderMode, stringToInt(shader.data['mode'] ?? '0')) ?? ShaderMode.SPATIAL;
-  return shaderModeOf(literalText(shader.data['code'] ?? ''));
-}
-
-/** Whether a ShaderMaterial's shader runs as a fog shader, and whether its shader has loaded. */
-interface FogShaderVerdict {
-  isFogShader: boolean;
-  isSettled: boolean;
-}
-
 /**
- * Whether the material `scoped` holds is a ShaderMaterial whose shader Godot runs as a fog shader.
- * A shader still loading counts as one until its code arrives. A null, missing or unreadable shader
- * leaves the material data invalid, which Godot fills with its default fog (`fog.cpp:674-684`).
+ * What fills a volume while its density texture loads. The previewer runs no fog shader, so a
+ * volume with one adds no fog. A material still loading counts as a fog shader until it arrives.
  */
-function useFogShaderVerdict(scoped: ScopedResource | null): FogShaderVerdict {
-  const material = scoped?.resource ?? null;
-  const shaderRef = material?.type === 'ShaderMaterial' ? material.data['shader'] : undefined;
-  const shader = useResourceResolution(shaderRef, scoped?.resources ?? NO_RESOURCES);
-  const mode = useMemo(() => shaderModeOfResource(shader.scoped?.resource ?? null), [shader.scoped]);
-  const isFogShader = holdsResource(shaderRef) && (shader.status === 'pending' || mode === ShaderMode.FOG);
-  const isSettled = shader.status !== 'pending';
-  return useMemo(() => ({ isFogShader, isSettled }), [isFogShader, isSettled]);
-}
-
-/**
- * What fills a volume with this material. Godot runs the default fog shader for anything but a
- * FogMaterial or a valid fog shader (`environment/fog.cpp:674-684`). The previewer runs no fog
- * shader, so a volume with one adds no fog.
- */
-function fillOf(material: TscnInternalResource | null, isFogShader: boolean): FogVolumeFill {
-  if (isFogShader) return { kind: 'shader' };
-  if (material?.type !== 'FogMaterial') return DEFAULT_FOG_VOLUME_FILL;
-  return { kind: 'material', material: decodeFogMaterial(material.data), densityTexture: null };
+function fillOf(material: Read<FogVolumeMaterial>): FogVolumeFill {
+  if (material.status === 'pending' || material.value?.kind === 'shader') return { kind: 'shader' };
+  if (material.value?.kind !== 'material') return DEFAULT_FOG_VOLUME_FILL;
+  return { kind: 'material', material: material.value.material, densityTexture: null };
 }
 
 /** Written only by useFogShaderNotRunLog. A WeakSet lets a dropped material be collected. */
-const loggedShaderMaterials = new WeakSet<TscnInternalResource>();
+const loggedFogShaders = new WeakSet<FogVolumeMaterial>();
 
 /** Logs once per material that the previewer adds no fog for its loaded fog shader. */
-function useFogShaderNotRunLog(material: TscnInternalResource | null, verdict: FogShaderVerdict): void {
+function useFogShaderNotRunLog(material: FogVolumeMaterial | null): void {
   useEffect(() => {
-    if (!material || !verdict.isFogShader || !verdict.isSettled) return;
-    if (loggedShaderMaterials.has(material)) return;
-    loggedShaderMaterials.add(material);
+    if (material?.kind !== 'shader' || loggedFogShaders.has(material)) return;
+    loggedFogShaders.add(material);
     logger.info(
-      `[FogVolume] Adds no fog for the fog shader ${material.data['shader']}, which the previewer does not run`
+      `[FogVolume] Adds no fog for the fog shader ${material.shader}, which the previewer does not run`
     );
-  }, [material, verdict]);
+  }, [material]);
 }
 
 /** `fill` with the FogMaterial's density texture, once built or loaded. */
@@ -99,15 +61,18 @@ function withDensityTexture(fill: FogVolumeFill, texture: THREE.Data3DTexture | 
   return { ...fill, densityTexture: texture };
 }
 
+/** The density texture of a FogMaterial, once built or loaded. It resolves in the tables of the FogMaterial. */
+function useDensityTexture(material: FogVolumeMaterial | null): THREE.Data3DTexture | null {
+  const reference = material?.kind === 'material' ? material.densityTexture : null;
+  return useTexture3D(reference?.ref, reference?.resources ?? NO_RESOURCES);
+}
+
 export function FogVolume({ node, children }: NodeComponentProps) {
   const properties = node.properties as FogVolumeProperties;
-  const { scoped } = useResourceResolution(properties.material, useSceneResources());
-  const material = scoped?.resource ?? null;
-  const fogShader = useFogShaderVerdict(scoped);
-  useFogShaderNotRunLog(material, fogShader);
-  const materialFill = useMemo(() => fillOf(material, fogShader.isFogShader), [material, fogShader]);
-  const densityTextureRef = materialFill.kind === 'material' ? materialFill.material.densityTexture : null;
-  const densityTexture = useTexture3D(densityTextureRef ?? undefined, scoped?.resources ?? NO_RESOURCES);
+  const material = useNodeResource(properties.material, FOG_VOLUME_MATERIAL);
+  useFogShaderNotRunLog(material.value);
+  const materialFill = useMemo(() => fillOf(material), [material]);
+  const densityTexture = useDensityTexture(material.value);
   const fill = useMemo(
     () => withDensityTexture(materialFill, densityTexture),
     [materialFill, densityTexture]

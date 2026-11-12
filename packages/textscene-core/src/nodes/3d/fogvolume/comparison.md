@@ -15,6 +15,8 @@ A `FogMaterial` `density_texture` shapes the density by its red channel. It can 
 
 A `ShaderMaterial` fills the volume with Godot's default fog, as Godot does, when its shader is absent, `null`, unreadable or of another `shader_type` than `fog`. The shader can be inline, a `.tres` or a `.gdshader` file.
 
+A `ShaderMaterial` saved as a `.tres` follows its shader in that file's own resource table.
+
 ## Gizmo
 
 A volume draws the gizmo of Godot's editor, faint while unselected, the 12 edges of its box in the fog colour. Godot's source is `fog_volume_gizmo_plugin.cpp:92-125`.

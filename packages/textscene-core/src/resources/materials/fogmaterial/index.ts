@@ -11,3 +11,6 @@ registerResourceSlice({
   typeNames: ['FogMaterial'],
   busType: 'resource',
 });
+
+export { FOG_VOLUME_MATERIAL } from './kind';
+export type { FogVolumeMaterial } from './types';
