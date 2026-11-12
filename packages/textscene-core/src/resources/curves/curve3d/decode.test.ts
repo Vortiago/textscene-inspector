@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
-import { resolveCurve3D, tessellateCurve3D } from './decode';
-import { resolveOnlySubResource } from '../../../testing/subResource';
+import { CURVE_3D, resolveCurve3D, tessellateCurve3D } from './decode';
+import { decodedCurve } from '../shared/curveKind.testkit';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
 
 /** The control points a Curve3D sub-resource with this body decodes to. */
 function decode(data: Record<string, string>) {
-  return resolveOnlySubResource('Curve3D', data, resolveCurve3D);
+  return decodedCurve(CURVE_3D, 'Curve3D', data);
 }
 
 /** A Curve3D body whose `_data` holds `points` as written and `tilts`, plus any other properties. */
@@ -28,7 +28,7 @@ const ORIGIN_POINT = {
   position: { x: 0, y: 0, z: 0 },
 };
 
-describe('the Curve3D body resolveCurve3D decodes', () => {
+describe('the Curve3D body CURVE_3D decodes', () => {
   it('reads a straight path (zero tangents, 9 floats/point: in/out/pos)', () => {
     // in.xyz, out.xyz, pos.xyz per point.
     const points = pointsOf('PackedVector3Array(0,0,0, 0,0,0, 0,0,0, 0,0,0, 0,0,0, 10,0,0)');

@@ -1,0 +1,40 @@
+/**
+ * A reference on its way to a read: the literal, the tables it resolves in, and how it has been
+ * held so far. Godot keeps two origin facts past the load, the file whose tables a nested
+ * reference resolves in and `resource_local_to_scene` along the chain of holders, and this value
+ * carries both. No THREE and no React.
+ */
+
+import type { SceneResources } from '../../r3f/SceneResourcesContext';
+import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
+
+export interface ScopedReference {
+  /** `SubResource("id")`, `ExtResource("id")` or a `res://` address. Undefined names nothing. */
+  readonly ref: string | undefined;
+  /** The tables `ref` resolves in. */
+  readonly resources: SceneResources;
+  /** The `res://` file the tables belong to. Undefined for the scene's own tables. */
+  readonly origin?: string;
+  /** False once a holder passed on the way is not local to scene. */
+  readonly isHeldLocally: boolean;
+}
+
+/**
+ * A node's own property, resolved in the tables of the file that wrote the node (ADR-0051).
+ * `make_local_resource` sets the property's own resource up (`packed_scene.cpp:701-704`), so the
+ * node holds it locally.
+ */
+export function nodeReference(ref: string | undefined, scope: SceneResources): ScopedReference {
+  return { ref, resources: scope, isHeldLocally: true };
+}
+
+/**
+ * The visited-set and memo key of a reference: the address of a file, or the origin and the id
+ * of a SubResource, so one id in two files gives two keys.
+ */
+export function referenceKey(reference: ScopedReference): string {
+  const { ref, origin = '' } = reference;
+  const parsed = ref === undefined ? null : parseResourceReference(ref);
+  if (parsed?.type === 'SubResource') return `${origin}::${parsed.id}`;
+  return resolveExtResourcePath(ref, reference.resources.externalResources) ?? `${origin}?${ref ?? ''}`;
+}

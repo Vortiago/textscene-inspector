@@ -10,8 +10,8 @@ import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../base/node3d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { PluginGizmo } from '../../../r3f/gizmo/PluginGizmo';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { resolveCurve3D, tessellateCurve3D, type Curve3DSampler } from '../../../resources/curves/curve3d';
+import { useNodeResource } from '../../../resources/reading';
+import { CURVE_3D, tessellateCurve3D, type Curve3DSampler } from '../../../resources/curves/curve3d';
 import { Path3DCurveProvider } from '../../../r3f/contexts/Path3DCurveContext';
 import type { Path3DProperties } from './types';
 
@@ -20,16 +20,15 @@ const PATH_COLOR = 0xffffff;
 
 export function Path3D({ node, children }: NodeComponentProps) {
   const props = node.properties as Path3DProperties;
-  const { internalResources } = useSceneResources();
+  const curve = useNodeResource(props.curve, CURVE_3D);
 
   // Godot 3D space is three.js space (right-handed Y-up), so curve points need no conjugation,
-  // unlike the 2D twin. A missing, ExtResource or unfound curve gives a null sampler:
-  // no gizmo, and children keep their authored transform.
-  const sampler = useMemo<Curve3DSampler | null>(() => {
-    const points = resolveCurve3D(props.curve, internalResources);
-    if (points.length < 2) return null;
-    return tessellateCurve3D(points);
-  }, [props.curve, internalResources]);
+  // unlike the 2D twin. A curve that is missing, still loading or unreadable gives a null
+  // sampler: no gizmo, and children keep their authored transform.
+  const sampler = useMemo<Curve3DSampler | null>(
+    () => (curve.value && curve.value.length >= 2 ? tessellateCurve3D(curve.value) : null),
+    [curve.value]
+  );
 
   return (
     <Node3D node={node}>

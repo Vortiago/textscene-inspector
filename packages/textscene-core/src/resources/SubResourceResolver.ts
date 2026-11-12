@@ -72,8 +72,12 @@ export function parsedResourcePath(
   externalResources: readonly TscnExternalResource[]
 ): string | null {
   const path = resolveExtResourcePath(ref, externalResources);
-  if (!path) return null;
-  return isResourceFilePath(path) || fileExtension(path) === GODOT_SHADER_EXTENSION ? path : null;
+  return path && loadsAsParsedResource(path) ? path : null;
+}
+
+/** Whether the file at `path` loads as a ParsedResource: a resource file or a `.gdshader`. */
+export function loadsAsParsedResource(path: string): boolean {
+  return isResourceFilePath(path) || fileExtension(path) === GODOT_SHADER_EXTENSION;
 }
 
 /**

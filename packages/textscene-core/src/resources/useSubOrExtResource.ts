@@ -42,9 +42,7 @@ const UNRESOLVED: ResourceResolution = {
   isNone: false,
 };
 
-/**
- * @canonical A resource property that names a SubResource or an ExtResource
- */
+/** The resource `ref` names in `pools`. A new reader uses `useNodeResource` (`resources/reading/`). */
 export function useResourceResolution(ref: string | undefined, pools: SceneResources): ResourceResolution {
   const inline = resolveSubResourceRef(ref, pools.internalResources);
   const fileResolution = usePathResolution(inline ? null : parsedResourcePath(ref, pools.externalResources));
