@@ -20,6 +20,7 @@ export function oneWayArrowColour(debugColour: Rgba, isDisabled: boolean): Rgba 
 
 const ARROW_LENGTH = 20;
 const ARROW_HEAD_SIZE = 8;
+const ARROW_LINE_WIDTH = 2;
 /** `Math::SQRT12` is the square root of one half (`math_defs.h`). */
 const HEAD_HALF_WIDTH = Math.SQRT1_2 * ARROW_HEAD_SIZE;
 
@@ -31,7 +32,7 @@ export const ONE_WAY_ARROW: ShapeDrawing = [
       { x: 0, y: 0 },
       { x: 0, y: ARROW_LENGTH },
     ],
-    width: 2,
+    width: ARROW_LINE_WIDTH,
     roles: ['shape', 'shape'],
   },
   {

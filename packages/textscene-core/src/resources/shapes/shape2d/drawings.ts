@@ -52,9 +52,12 @@ function line(from: Vector2, to: Vector2, width: number): ShapeCommand {
   return { kind: 'stroke', points: [from, to], width, roles: ['shape', 'shape'] };
 }
 
+const SEGMENT_LINE_WIDTH = 3;
+const CONCAVE_LINE_WIDTH = 2;
+
 /** `segment_shape_2d.cpp:74-76`. */
 export function segmentDrawing({ a, b }: SegmentShape2DProperties): ShapeDrawing {
-  return [line(a, b, 3)];
+  return [line(a, b, SEGMENT_LINE_WIDTH)];
 }
 
 /** `convex_polygon_shape_2d.cpp:104-118`. */
@@ -66,7 +69,7 @@ export function convexPolygonDrawing({ points }: ConvexPolygonShape2DProperties)
 export function concavePolygonDrawing({ segments }: ConcavePolygonShape2DProperties): ShapeDrawing {
   if (segments.length % 2 === 1) return [];
   return Array.from({ length: segments.length / 2 }, (_, i) =>
-    line(segments[i * 2]!, segments[i * 2 + 1]!, 2)
+    line(segments[i * 2]!, segments[i * 2 + 1]!, CONCAVE_LINE_WIDTH)
   );
 }
 

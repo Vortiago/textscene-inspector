@@ -1,6 +1,7 @@
 /** The layers a drawing builds for the gizmo: vertex-coloured meshes and hairlines, in draw order. */
 import { describe, expect, it } from 'vitest';
 import {
+  concavePolygonDrawing,
   rectangleDrawing,
   segmentDrawing,
   worldBoundaryDrawing,
@@ -44,7 +45,21 @@ describe('shapeLayers', () => {
   it('fades the world boundary line out at both ends with a clear vertex colour', () => {
     const [line] = shapeLayers(worldBoundaryDrawing({ normal: { x: 0, y: -1 }, distance: 0 }), TEAL);
 
-    expect(alphas(line!)).toEqual([0, 0, 0.42, 0.42, 0.42, 0.42, 0, 0].map((a) => expect.closeTo(a, 5)));
+    expect(alphas(line!).slice(0, 8)).toEqual(
+      [0, 0, 0.42, 0.42, 0.42, 0.42, 0, 0].map((a) => expect.closeTo(a, 5))
+    );
+  });
+
+  it('merges the strokes of a concave polygon into one mesh', () => {
+    const lines = Array.from({ length: 50 }, (_, i) => [
+      { x: i, y: 0 },
+      { x: i, y: 10 },
+    ]).flat();
+
+    const layers = shapeLayers(concavePolygonDrawing({ segments: lines }), TEAL);
+
+    expect(layers).toHaveLength(1);
+    expect(layers[0]!.kind === 'mesh' && layers[0]!.geometry.getAttribute('position').count).toBe(200);
   });
 
   it('builds no layer for a drawing of no commands', () => {

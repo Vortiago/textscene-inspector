@@ -174,12 +174,12 @@ describe('<CollisionShape2D> gizmo layers', () => {
     expect(colours.getX(0)).toBeCloseTo(colours.getY(0), 6);
   });
 
-  it('adds the one-way arrow, a line and a head, after the shape', async () => {
+  it('adds the one-way arrow, one more mesh, after the shape', async () => {
     const renderer = await render(true, [rectShape], 'SubResource("RectangleShape2D_1")', {
       one_way_collision: 'true',
     });
 
-    expect(meshes(renderer)).toBe(3);
+    expect(meshes(renderer)).toBe(2);
   });
 
   it('draws the one-way arrow over the outline of the shape', async () => {

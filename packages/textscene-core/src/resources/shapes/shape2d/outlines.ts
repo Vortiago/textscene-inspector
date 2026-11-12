@@ -4,7 +4,7 @@
  */
 
 import type { Vector2 } from '../../../godot/math/vector';
-import { TAU } from '../../../godot/math/math.js';
+import { TAU } from '../../../godot/math/math';
 
 /** `circle_shape_2d.cpp:80` and `capsule_shape_2d.cpp:25` both step the turn by `TAU / 24`. */
 const TURN_STEPS = 24;
