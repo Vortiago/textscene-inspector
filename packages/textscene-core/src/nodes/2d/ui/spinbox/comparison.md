@@ -21,6 +21,7 @@ locale, a prefix, a suffix or a minus sign lands on the side Godot gives it, eve
 (`line_edit.cpp:3103-3112`). The `spin-box-direction` golden shows a prefix, a prefixed negative value
 and a suffix.
 The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
+`self_modulate` tints the arrows and their boxes. The field and its number are a child LineEdit and draw without it (`spin_box.cpp:431`, `line_edit.cpp:726`).
 
 ## Linting
 

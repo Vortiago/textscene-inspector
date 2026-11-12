@@ -129,7 +129,9 @@ const AUTO_TEXT_DIRECTION = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, 
 
 export function ColorPicker({
   solveNode,
-  tint,
+  // The picker draws nothing itself: every part is an internal child (`color_picker.cpp:2072-2305`),
+  // so `self_modulate` stays off all of them and `tint` here is the child tint.
+  childTint: tint,
   rect,
   renderOrder,
   theme: defaultTheme,

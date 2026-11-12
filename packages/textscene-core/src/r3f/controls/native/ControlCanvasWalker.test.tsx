@@ -776,6 +776,22 @@ describe('<ControlCanvasWalker>', () => {
       );
     }
 
+    it('hands a painter the child tint without self_modulate, and tint with it', async () => {
+      const ChildTintProbe: NativeControlComponent = ({ tint, childTint }) => (
+        <group name={`tint:own=${tint.own.r},child=${childTint.own.r}`} />
+      );
+      controlComponentRegistry.register({ typeName: 'TintProbe', Component: ChildTintProbe });
+      const root = solveNode('Root', 'TintProbe', {
+        anchorsPreset: 15,
+        modulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
+        selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
+      });
+      const renderer = await ReactThreeTestRenderer.create(
+        <ControlCanvasWalker tree={[root]} generation={0} viewport={VIEWPORT} theme={THEME} measurer={null} />
+      );
+      expect(tintReading(renderer)).toBe('tint:own=0.25,child=0.5');
+    });
+
     it('defaults to opaque white when neither tint property is authored', async () => {
       expect(tintReading(await renderProbe({}))).toBe('tint:own=1,alpha=1,ambient=1');
     });

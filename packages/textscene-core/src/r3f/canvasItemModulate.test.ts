@@ -5,6 +5,7 @@ import {
   foldOwnPixelTint,
   multiplyModulate,
   OwnCanvasModulateProvider,
+  useCanvasItemTint,
   useItemLinearColor,
   useVertexColorTint,
   WHITE_MODULATE,
@@ -110,5 +111,29 @@ describe('useVertexColorTint', () => {
     expect(result.current.color.r).toBeCloseTo(0.21404, 5);
     expect(result.current.opacity).toBe(0.5);
     expect(result.current.defines).toBe(LINEAR_CANVAS.defines);
+  });
+});
+
+describe('useCanvasItemTint internalChild', () => {
+  const modulate = { r: 0.5, g: 1, b: 1, a: 1 };
+  const selfModulate = { r: 1, g: 0.5, b: 1, a: 0.5 };
+
+  it('folds the inherited modulate without self_modulate', () => {
+    const { result } = renderHook(() => useCanvasItemTint({ modulate, self_modulate: selfModulate }));
+    expect(result.current.internalChild.own).toEqual(modulate);
+    expect(result.current.own).toEqual({ r: 0.5, g: 0.5, b: 1, a: 0.5 });
+  });
+
+  it('equals the own tint when self_modulate is white', () => {
+    const { result } = renderHook(() => useCanvasItemTint({ modulate, self_modulate: WHITE_MODULATE }));
+    expect(result.current.internalChild.own).toEqual(result.current.own);
+  });
+
+  it('takes the canvas modulate multiplier like the own tint does', () => {
+    const canvasModulate = { r: 1, g: 1, b: 0.5, a: 1 };
+    const { result } = renderHook(() =>
+      useCanvasItemTint({ modulate, self_modulate: selfModulate }, canvasModulate)
+    );
+    expect(result.current.internalChild.own).toEqual({ r: 0.5, g: 1, b: 0.5, a: 1 });
   });
 });

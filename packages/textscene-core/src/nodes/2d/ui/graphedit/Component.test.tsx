@@ -16,6 +16,7 @@ import type { Vector2 } from '../../../../godot/math/vector';
 import type { GraphNodeSlot } from '../graphnode/types';
 import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
 import { GraphEdit } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { GraphEditConnection, GraphEditProperties } from './types';
 import { canvasSubOrders, wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { graphEditUnder } from './toolbarTheme.testkit';
@@ -620,5 +621,25 @@ describe('<GraphEdit> scroll bars before _update_scrollbars has run (graph_edit.
   it('draws the shortened bars where the solved size differs from the size out of the tree (:868)', async () => {
     const extents = await scrollBarExtents(graphEdit({ ...emptyProps, outOfTreeSize: { x: 0, y: 0 } }));
     expect(extents).toContainEqual({ w: 492, h: 8 });
+  });
+});
+
+describe('<GraphEdit> — self_modulate', () => {
+  it('tints the panel with tint and the bars, toolbar and minimap with childTint', async () => {
+    const own = await ReactThreeTestRenderer.create(
+      <GraphEdit {...painterEnv()} {...splitTints} solveNode={graphEdit()} rect={RECT} renderOrder={0} />
+    );
+    const withChrome = await ReactThreeTestRenderer.create(
+      <GraphEdit
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={graphEdit({ showMenu: true, minimapEnabled: true })}
+        rect={{ x: 0, y: 0, w: 500, h: 300 }}
+        renderOrder={0}
+      />
+    );
+    // The panel and the grid draw with `tint`; the scroll bars, the toolbar and the minimap with `childTint`.
+    expect(countTintSplit(own.scene).own).toBeGreaterThan(0);
+    expect(countTintSplit(withChrome.scene).child).toBeGreaterThan(countTintSplit(own.scene).child);
   });
 });

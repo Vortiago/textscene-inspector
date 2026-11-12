@@ -13,6 +13,7 @@ import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyl
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { GraphNode } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
@@ -207,5 +208,20 @@ describe('<GraphNode> chrome placement', () => {
     expect(worldY(renderer.scene, titlebar!)).toBe(0);
     expect(worldY(renderer.scene, body!)).toBe(-31);
     expect(meshHeight(titlebar!)).toBeGreaterThan(0);
+  });
+});
+
+describe('<GraphNode> — self_modulate', () => {
+  it('tints the panel and the title bar with tint and the title text with childTint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphNode
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={{ ...graphNode({ title: 'Hello' }), styleBoxes: { titlebar: drawnStyleBox() } }}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(countTintSplit(renderer.scene)).toEqual({ own: 2, child: 1 });
   });
 });

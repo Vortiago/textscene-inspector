@@ -330,6 +330,11 @@ export const CONTROL_WIDGET_SCENES = [
   // The same sort where no world y-sort draws the Control's parent: High (50) under Low (100) in a
   // Control-only SubViewport, and in the Control root of a scene tile.
   { name: 'control-y-sort-viewport', file: 'unit-control-y-sort-viewport.tscn', mode: '2d' },
+  // self_modulate on Controls with internal children: it tints only the item's own parts (a TextEdit box, SpinBox
+  // arrows), never the child Controls. Max 86, mean 0.174.
+  { name: 'control-self-modulate-internal', file: 'unit-control-self-modulate-internal.tscn', mode: '2d' },
+  // A connection of a tinted GraphEdit keeps its colour: it draws on a child Control. Max 115, mean 0.276.
+  { name: 'control-self-modulate-graph-connection', file: 'unit-control-self-modulate-graph-connection.tscn', mode: '2d' },
   { name: 'control-y-sort-viewport-mixed', file: 'unit-control-y-sort-viewport-mixed.tscn', mode: '2d' },
   // A Node2D child of the y-sorted Control in a viewport that holds 2D content sorts with the Control
   // children by y: High (50) under Sprite (75) under Low (100), though Sprite is listed last.

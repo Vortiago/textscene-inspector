@@ -39,6 +39,12 @@ export interface NativeControlComponentProps {
    */
   tint: OwnPixelTint;
   /**
+   * The tint of the parts Godot draws through an internal child Control or a child canvas item: the
+   * inherited modulate without this node's `self_modulate`. A painter draws such a part with this
+   * and its own parts with `tint`.
+   */
+  childTint: OwnPixelTint;
+  /**
    * Whether Controls in this viewport snap to whole pixels, as the walker resolved it. The project's
    * `gui/common/snap_controls_to_pixels` sets only the root window (`main/main.cpp`), and every other
    * Viewport keeps `true`. A painter needs it for sibling CanvasItems that snap on their own

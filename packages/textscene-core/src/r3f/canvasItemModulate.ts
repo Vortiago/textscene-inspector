@@ -90,6 +90,12 @@ export interface CanvasItemTint extends FoldedOwnPixelTint {
    * each decide whether the canvas tint reaches them, as a tile layer's do.
    */
   self: Rgba;
+  /**
+   * The own-pixel tint of a child canvas item whose `modulate` and `self_modulate` are white: the
+   * inherited product without this node's `self_modulate`, which Godot multiplies into the item's
+   * own commands only (`renderer_canvas_cull.cpp:268`). An internal child Control takes this one.
+   */
+  internalChild: FoldedOwnPixelTint;
 }
 
 /**
@@ -182,7 +188,12 @@ export function useCanvasItemTint(
   const linearModulate = useGodotLinearColor(ownMultiplier);
   // Memoised as a whole: a Control painter takes it as a prop and memoises on it.
   return useMemo(
-    () => ({ inherited, self, ...foldOwnPixelTint(self, ownMultiplier, space, linearModulate) }),
+    () => ({
+      inherited,
+      self,
+      ...foldOwnPixelTint(self, ownMultiplier, space, linearModulate),
+      internalChild: foldOwnPixelTint(inherited, ownMultiplier, space, linearModulate),
+    }),
     [inherited, self, ownMultiplier, space, linearModulate]
   );
 }

@@ -14,6 +14,7 @@ import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import { ColorPicker } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { canvasColorSpaceOf, CanvasColorSpaceProvider } from '../../../../r3f/canvasColorSpace';
 
 const LINEAR_CANVAS = canvasColorSpaceOf(true);
@@ -151,7 +152,7 @@ describe('<ColorPicker> (isolated painter contract)', () => {
       <ColorPicker
         {...painterEnv()}
         theme={THEME}
-        tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
+        childTint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
         solveNode={node({ color: 'Color(1, 0, 0, 1)', ...ONLY_SHAPE_AND_SAMPLE })}
         rect={{ x: 0, y: 0, w: 400, h: 400 }}
         renderOrder={0}
@@ -173,7 +174,7 @@ describe('<ColorPicker> (isolated painter contract)', () => {
         <ColorPicker
           {...painterEnv()}
           theme={THEME}
-          tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
+          childTint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 1 })}
           solveNode={node({ color: 'Color(1, 0, 0, 1)', ...ONLY_SHAPE_AND_SAMPLE })}
           rect={{ x: 0, y: 0, w: 400, h: 400 }}
           renderOrder={0}
@@ -400,5 +401,23 @@ describe('<ColorPicker> (isolated painter contract)', () => {
       presetsVisible: true,
     });
     expect(shown).toBeGreaterThan(hidden);
+  });
+});
+
+describe('<ColorPicker> — self_modulate', () => {
+  it('draws every part with childTint: the picker draws nothing of its own (color_picker.cpp:2072-2305)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ColorPicker
+        {...painterEnv()}
+        {...splitTints}
+        theme={THEME}
+        solveNode={node({ pickerShape: 5 })}
+        rect={{ x: 0, y: 0, w: 300, h: 500 }}
+        renderOrder={0}
+      />
+    );
+    const split = countTintSplit(renderer.scene);
+    expect(split.own).toBe(0);
+    expect(split.child).toBeGreaterThan(10);
   });
 });

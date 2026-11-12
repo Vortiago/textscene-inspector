@@ -135,6 +135,7 @@ const GRAPH_EDIT_TOP_LAYER = ['scrollBars', 'toolbar', 'minimap'] as const;
 export function GraphEdit({
   solveNode,
   tint,
+  childTint,
   rect,
   theme,
   renderOrder,
@@ -254,6 +255,7 @@ export function GraphEdit({
 
   return (
     <CanvasItemGroup ref={anchorRef}>
+      {/* The panel and the grid are the item's own pixels. The connections, the bars, the toolbar and the minimap are child Controls (`graph_edit.cpp:3183-3329`): no `self_modulate`. */}
       <ControlClipProvider value={clip}>
         <StyleBoxQuad
           styleBox={panelStyle}
@@ -290,7 +292,7 @@ export function GraphEdit({
               curvature={curvature}
               lineWidth={lineWidth}
               rimColor={rimColor}
-              tintOwn={tint.own}
+              tintOwn={childTint.own}
               renderOrder={layerSlot.key}
             />
           ))}
@@ -302,7 +304,7 @@ export function GraphEdit({
           bar={scrollBars.horizontal}
           track={theme.widgets.scrollBar.scrollHorizontal}
           grabber={theme.widgets.scrollBar.grabber}
-          color={tint.own}
+          color={childTint.own}
           chromeSlot={topLayer.scrollBars}
           snapToPixels={snapToPixels}
         />
@@ -310,7 +312,7 @@ export function GraphEdit({
           bar={scrollBars.vertical}
           track={theme.widgets.scrollBar.scrollVertical}
           grabber={theme.widgets.scrollBar.grabber}
-          color={tint.own}
+          color={childTint.own}
           chromeSlot={topLayer.scrollBars}
           snapToPixels={snapToPixels}
         />
@@ -321,7 +323,7 @@ export function GraphEdit({
             items={toolbarTheme}
             icons={solveNode.icons}
             theme={theme}
-            tint={tint}
+            tint={childTint}
             text={toolbarText}
             snappingArrows={graphEditSnappingArrowStates(snappingDistance)}
             shape={shape}
@@ -345,7 +347,7 @@ export function GraphEdit({
             connectionLinesAntialiased={props.connectionLinesAntialiased !== false}
             icons={solveNode.icons}
             theme={theme}
-            tint={tint}
+            tint={childTint}
             slot={topLayer.minimap}
           />
         )}

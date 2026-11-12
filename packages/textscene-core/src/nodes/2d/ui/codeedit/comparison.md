@@ -15,6 +15,7 @@ shifted right by this node's gutter band. It adds the line-numbers gutter, the f
 gutter's arrows and the `line_length_guidelines` rules. Its scroll bars are TextEdit's, with the gutter band
 counted in the widest row and in the wrap width. While `localize_numeral_system` is true, its default,
 each line number is padded first, then written in the digits of the project locale (`code_edit.cpp:1569-1572`).
+`self_modulate` tints the `normal` box and the focus box. The text, line numbers, fold icons, guidelines and both scroll bars draw without it, as in TextEdit (`text_edit.cpp:9284-9292`).
 
 ## Linting
 

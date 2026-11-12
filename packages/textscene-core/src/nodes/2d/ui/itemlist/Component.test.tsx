@@ -19,6 +19,7 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { ItemList } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
 import { ICON_MODE_LEFT, ITEM_LIST_THEME_FONT_KEY, shapeItemListText } from './nativeSolver';
 
@@ -482,5 +483,24 @@ describe('<ItemList> — scrollbars', () => {
     const withBar = await guideLineWidths({ items: sixRows });
     expect(withoutBar.length).toBeGreaterThan(0);
     expect(withBar[0]).toBe(withoutBar[0]! - 8);
+  });
+});
+
+describe('<ItemList> — self_modulate', () => {
+  it('tints the panel and the rows with tint and both scroll bars with childTint', async () => {
+    const items = Array.from({ length: 12 }, (_, i) => ({ text: `Item ${i}` }));
+    const renderer = await ReactThreeTestRenderer.create(
+      <ItemList
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={solveNode({ items })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const split = countTintSplit(renderer.scene);
+    expect(split.own).toBeGreaterThan(0);
+    // The vertical bar's track and grabber.
+    expect(split.child).toBe(2);
   });
 });

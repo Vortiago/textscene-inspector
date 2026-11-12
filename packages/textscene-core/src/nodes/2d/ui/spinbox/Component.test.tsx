@@ -14,6 +14,7 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { SpinBox } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { SpinBoxProperties } from './types';
 import {
   bundledRunMeshes,
@@ -277,5 +278,21 @@ describe('<SpinBox> — field text direction (line_edit.cpp:3103-3112)', () => {
   it('draws the prefix as the first glyph under a left-to-right locale and the last under a right-to-left one', async () => {
     expect((await drawnCharacters('en'))[0]).toBe('$');
     expect((await drawnCharacters('ar')).at(-1)).toBe('$');
+  });
+});
+
+describe('<SpinBox> — self_modulate', () => {
+  it('tints the arrows with tint and the field box and number with childTint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <SpinBox
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={solveNode({ value: 42 })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    // Two arrows draw with the own tint; the field box and the one run draw with the child tint.
+    expect(countTintSplit(renderer.scene)).toEqual({ own: 2, child: 2 });
   });
 });

@@ -51,7 +51,7 @@ import type { CodeEditProperties } from './types';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 export function CodeEdit(props: NativeControlComponentProps) {
-  const { solveNode, tint, rect, renderOrder, theme, measureText } = props;
+  const { solveNode, childTint, rect, renderOrder, theme, measureText } = props;
   const toItemLinear = useItemLinearColorOf();
   const codeEditProps = painterView<CodeEditProperties>(solveNode);
   const state = resolveTextEditStyleState(codeEditProps.editable);
@@ -69,8 +69,8 @@ export function CodeEdit(props: NativeControlComponentProps) {
   );
 
   const lineNumberColorTinted = useMemo(
-    () => multiplyModulate(tint.own, CODE_EDIT_LINE_NUMBER_COLOR),
-    [tint.own]
+    () => multiplyModulate(childTint.own, CODE_EDIT_LINE_NUMBER_COLOR),
+    [childTint.own]
   );
 
   // Line numbers draw once per buffer line, on its first wrapped row (text_edit.cpp:1410).
@@ -149,8 +149,8 @@ export function CodeEdit(props: NativeControlComponentProps) {
     ]
   );
   const guidelineColor = useMemo(
-    () => multiplyModulate(tint.own, CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR),
-    [tint.own]
+    () => multiplyModulate(childTint.own, CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR),
+    [childTint.own]
   );
 
   const foldContext = useMemo(
@@ -168,10 +168,13 @@ export function CodeEdit(props: NativeControlComponentProps) {
     band.mainWidthPx,
     band.lineNumberWidthPx
   );
-  const foldArrowColor = useMemo(() => multiplyModulate(tint.own, CODE_EDIT_CODE_FOLDING_COLOR), [tint.own]);
+  const foldArrowColor = useMemo(
+    () => multiplyModulate(childTint.own, CODE_EDIT_CODE_FOLDING_COLOR),
+    [childTint.own]
+  );
   const foldRegionColor = useMemo(
-    () => multiplyModulate(tint.own, CODE_EDIT_CODE_REGION_ICON_COLOR),
-    [tint.own]
+    () => multiplyModulate(childTint.own, CODE_EDIT_CODE_REGION_ICON_COLOR),
+    [childTint.own]
   );
   const canFoldIcon = useNodeIcon(
     solveNode.icons.can_fold,

@@ -24,7 +24,7 @@ import { splitOffsetsOf, type SplitContainerProperties } from '../shared/splitCo
 
 export function VSplitContainer({
   solveNode,
-  tint,
+  childTint,
   rect,
   theme,
   renderOrder,
@@ -80,8 +80,8 @@ export function VSplitContainer({
             key={i}
             rect={iconRect}
             texture={texture}
-            color={tint.color}
-            opacity={tint.opacity}
+            color={childTint.color}
+            opacity={childTint.opacity}
             renderOrder={renderOrder}
             canvasKey={renderOrder}
           />

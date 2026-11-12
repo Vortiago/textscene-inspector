@@ -1,7 +1,7 @@
 /**
  * `<SplitContainer>`: the native painter for the base `SplitContainer` type. It follows
  * `hsplitcontainer/Component.tsx`, sealed-boundary channel included, but reads `vertical` from the
- * node, not the type. `tint` is the walker's, `self_modulate` folded onto `modulate`.
+ * node, not the type. `childTint` is the walker's tint without `self_modulate`: the grabber icon is the dragger Control's (`split_container.cpp:1340`).
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
@@ -29,7 +29,7 @@ function verticalOf(props: SplitContainerProperties): boolean {
 
 export function SplitContainer({
   solveNode,
-  tint,
+  childTint,
   rect,
   theme,
   renderOrder,
@@ -87,8 +87,8 @@ export function SplitContainer({
             key={i}
             rect={iconRect}
             texture={texture}
-            color={tint.color}
-            opacity={tint.opacity}
+            color={childTint.color}
+            opacity={childTint.opacity}
             renderOrder={renderOrder}
             canvasKey={renderOrder}
           />

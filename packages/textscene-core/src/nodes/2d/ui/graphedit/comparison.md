@@ -85,6 +85,7 @@ are present in every GraphEdit, whatever the scene file says:
   other is every child at `position_offset` `(0, 0)`. The minimap's only draw then reads an
   empty connection cache (`graphEdit.md`).
 The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
+`self_modulate` tints the panel and the grid. The connections, the toolbar, the minimap and both scroll bars draw without it (`graph_edit.cpp:290,853-863,3183`).
 
 ## Linting
 

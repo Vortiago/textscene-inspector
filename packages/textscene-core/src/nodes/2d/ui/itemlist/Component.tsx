@@ -224,6 +224,7 @@ function ItemListRow({
 export function ItemList({
   solveNode,
   tint,
+  childTint,
   rect,
   renderOrder,
   slot,
@@ -396,7 +397,8 @@ export function ItemList({
       }),
     [rect.w, rect.h, panelMargins, packed, rtl, theme, props.scrollHintMode]
   );
-  const hintColor = useMemo(() => tint.color.clone().multiply(SCROLL_HINT_MODULATE), [tint.color]);
+  // Both scroll bars and the hint are child Controls: no `self_modulate` (`item_list.cpp:2472,2476`).
+  const hintColor = useMemo(() => childTint.color.clone().multiply(SCROLL_HINT_MODULATE), [childTint.color]);
   const guideColorSrgb = useMemo(
     () => tintColor(itemListGuideColor(solveNode), tint.own),
     [solveNode, tint.own]
@@ -589,14 +591,14 @@ export function ItemList({
       <ScrollHintChrome
         hint={scrollBars.bottomHint}
         color={hintColor}
-        opacity={tint.opacity}
+        opacity={childTint.opacity}
         chromeSlot={slot}
       />
       <ScrollBarChrome
         bar={scrollBars.horizontal}
         track={theme.widgets.scrollBar.scrollHorizontal}
         grabber={theme.widgets.scrollBar.grabber}
-        color={tint.own}
+        color={childTint.own}
         chromeSlot={slot}
         snapToPixels={snapToPixels}
       />
@@ -604,7 +606,7 @@ export function ItemList({
         bar={scrollBars.vertical}
         track={theme.widgets.scrollBar.scrollVertical}
         grabber={theme.widgets.scrollBar.grabber}
-        color={tint.own}
+        color={childTint.own}
         chromeSlot={slot}
         snapToPixels={snapToPixels}
       />

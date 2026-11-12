@@ -21,6 +21,7 @@ import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderCont
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nativeSolver';
 import { RichTextLabel } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
@@ -647,5 +648,24 @@ describe('<RichTextLabel> visible_characters (rich_text_label.cpp:943-947,668-67
     );
     const { tracks } = barMeshesOf(meshesOf(renderer));
     expect(tracks).toHaveLength(1);
+  });
+});
+
+describe('<RichTextLabel> — self_modulate', () => {
+  it('tints the text with tint and the scroll bar with childTint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <RichTextLabel
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={solveNode('RTL', { text: 'Wave rift over quiet stone and amber light' })}
+        rect={{ x: 0, y: 0, w: 160, h: 40 }}
+        renderOrder={5}
+        slot={NODE_SLOT}
+      />
+    );
+    const split = countTintSplit(renderer.scene);
+    expect(split.own).toBeGreaterThan(0);
+    // The track and the grabber.
+    expect(split.child).toBe(2);
   });
 });

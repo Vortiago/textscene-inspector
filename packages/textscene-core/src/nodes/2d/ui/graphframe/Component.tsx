@@ -57,7 +57,14 @@ function tintedPanel(base: ResolvedStyleBox, tintColor: Rgba, selected: boolean)
   };
 }
 
-export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
+export function GraphFrame({
+  solveNode,
+  tint,
+  childTint,
+  rect,
+  theme,
+  renderOrder,
+}: NativeControlComponentProps) {
   const props = painterView<GraphFrameProperties>(solveNode);
   // `<TextRun>` builds its own material, so it takes the ambient planes as a
   // prop rather than reading them (`nativeClipCoverage.test.tsx`'s own doc).
@@ -118,9 +125,10 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
     () => (titleLayout ? titlePlacements.map((p) => soloLineLayout(p.line, titleLayout)) : []),
     [titlePlacements, titleLayout]
   );
+  // The title is a Label child (`graph_node.cpp:1325-1330`, `graph_frame.cpp:351-357`): no `self_modulate`.
   const titleTintColor = useMemo(
-    () => multiplyModulate(tint.own, fontTheme.color),
-    [tint.own, fontTheme.color]
+    () => multiplyModulate(childTint.own, fontTheme.color),
+    [childTint.own, fontTheme.color]
   );
 
   // `resizable && !autoshrink_enabled` (graph_frame.cpp:133, and `get_cursor_shape` at `:84`):
@@ -153,7 +161,7 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
       <PositionedStyleBox
         box={fontTheme.box}
         rect={titlebarBand.contentRect}
-        tint={tint}
+        tint={childTint}
         renderOrder={renderOrder}
       />
       {titleLayout &&

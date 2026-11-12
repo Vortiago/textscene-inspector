@@ -11,6 +11,7 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { Tree } from './Component';
 import type { TreeProperties } from './types';
+import { countTintSplit, splitTints, whiteStyleBox } from '../../../../r3f/controls/native/testing/tintSplit';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -160,5 +161,23 @@ describe('<Tree> — RTL header row', () => {
 
   it('mirrors every header cell inside the Tree own width under RTL', async () => {
     expect(await headerXs(true)).toEqual([0, 5, 102, 199]);
+  });
+});
+
+describe('<Tree> — self_modulate', () => {
+  it('tints the panel and the header cells with tint: Tree::set_self_modulate passes it to both child items (tree.cpp:5236-5243)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <Tree
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={{
+          ...solveNode({ columnTitlesVisible: true, columns: 2 }),
+          styleBoxes: { title_button_normal: whiteStyleBox() },
+        }}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(countTintSplit(renderer.scene)).toEqual({ own: 3, child: 0 });
   });
 });

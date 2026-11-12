@@ -31,6 +31,7 @@ to the minimum size. The list draws only the rows that reach into its rect, also
 
 No row is drawn hovered. A row draws selected, and in a multi-select list under a cursor box, only when its owner marks it, as the FileDialog list does. A `.tscn` never carries `selected`, the current
 index or a live hover or focus state.
+`self_modulate` tints the panel, the items, the guides and the cursor. Both scroll bars draw without it (`item_list.cpp:2472,2476`).
 
 ## Linting
 
