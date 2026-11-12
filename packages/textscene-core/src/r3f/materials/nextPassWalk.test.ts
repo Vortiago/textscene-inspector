@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { resolveMaterialSource } from './materialSource';
-import { NOTHING_DRAWN, nextPassStep, visitedWith } from './nextPassWalk';
+import { NOTHING_DRAWN, loadedPassOf, nextPassStep } from './nextPassWalk';
 
 function sourceOf(
   reference: string,
@@ -32,7 +32,7 @@ describe('nextPassStep', () => {
     );
 
     expect(step.fate).toBe('drawn');
-    expect(step.next).toEqual({ source: B, ordinal: 2, visited: visitedWith(NOTHING_DRAWN, A) });
+    expect(step.next).toEqual({ source: B, ordinal: 2, visited: new Set(['inline:scene:A']) });
   });
 
   it('draws the last pass of a chain and stops', () => {
@@ -56,7 +56,7 @@ describe('nextPassStep', () => {
 
   it('ends at a pass whose material already drew, so a cycle draws each material once', () => {
     const step = nextPassStep(
-      { source: A, ordinal: 2, visited: visitedWith(NOTHING_DRAWN, A) },
+      { source: A, ordinal: 2, visited: new Set(['inline:scene:A']) },
       { readsStencil: false, nextSource: B }
     );
 
@@ -75,28 +75,14 @@ describe('nextPassStep', () => {
   });
 });
 
-describe('visitedWith', () => {
-  const declared = (reference: string) =>
-    sourceOf(reference, {
-      internalResources: [{ id: 'A', type: 'StandardMaterial3D', data: {} }],
-      externalResources: [],
-    });
-  const inline = declared('SubResource("A")');
+describe('the visited set of a walk', () => {
+  /** The set the pass after `source` walks with, from a pass that walks with `visited`. */
+  const after = (source: typeof A | undefined, visited: ReadonlySet<string> = NOTHING_DRAWN) =>
+    nextPassStep({ source, ordinal: 0, visited }, { readsStencil: false, nextSource: B }).next?.visited;
 
-  it('keeps the seed for a starting pass, which decides its own fate on recursion', () => {
-    expect(visitedWith(NOTHING_DRAWN, undefined)).toBe(NOTHING_DRAWN);
-  });
-
-  it('adds a pass that has not drawn, and never mutates the set it walks with', () => {
-    const added = visitedWith(NOTHING_DRAWN, inline);
-    expect(added).not.toBe(NOTHING_DRAWN);
-    expect(added.has('inline:scene:A')).toBe(true);
+  it('adds a pass that has not drawn, and never changes the set it walks with', () => {
+    expect(after(A)?.has('inline:scene:A')).toBe(true);
     expect(NOTHING_DRAWN.size).toBe(0);
-  });
-
-  it('keeps the same set for a pass whose material already drew: the cycle cuts here', () => {
-    const once = visitedWith(NOTHING_DRAWN, inline);
-    expect(visitedWith(once, inline)).toBe(once);
   });
 
   it('keys an inline material apart from a file material of the same name', () => {
@@ -104,7 +90,20 @@ describe('visitedWith', () => {
       internalResources: [],
       externalResources: [{ id: 'A', path: 'res://a.tres', type: 'StandardMaterial3D' }],
     });
-    const both = visitedWith(visitedWith(NOTHING_DRAWN, inline), file);
-    expect(both.size).toBe(2);
+    expect(after(file, after(A))?.size).toBe(2);
+  });
+});
+
+describe('loadedPassOf', () => {
+  const material = A.kind === 'inline' ? A.material : null;
+
+  it('reads none while the material or its scalars are not in', () => {
+    expect(loadedPassOf(null, { readsStencil: false, nextPass: undefined })).toBeNull();
+    expect(loadedPassOf(material, null)).toBeNull();
+  });
+
+  it('resolves the pass after it in the tables of the file that wrote the material', () => {
+    const loaded = loadedPassOf(material, { readsStencil: true, nextPass: 'SubResource("B")' });
+    expect(loaded).toEqual({ readsStencil: true, nextSource: B });
   });
 });

@@ -6,7 +6,6 @@
  */
 
 import { useThree } from '@react-three/fiber';
-import type * as THREE from 'three';
 import {
   createContext,
   useContext,
@@ -27,7 +26,7 @@ import { FadedSurfacesContext } from '../materials/swappedMaterials';
 import { resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
 import { useSceneResources } from '../SceneResourcesContext';
 import type { DrawnInstance } from '../surfaceDrawHooks';
-import { instanceLightmap } from '../lightmap/instanceLightmap';
+import { instanceLightmap, NO_INSTANCE_LIGHTMAP, type InstanceLightmap } from '../lightmap/instanceLightmap';
 import type { LightmapAssignment } from '../lightmap/sceneLightmaps';
 import { registerVisibilityInstance } from './visibilityScene';
 import { useVisibilityParent } from './VisibilityParentContext';
@@ -51,8 +50,8 @@ export interface InstanceDraw {
 /** The draw, with the instance as the base places it and the lightmap its surfaces read. */
 interface GeometryInstanceScope extends InstanceDraw {
   instance: CulledInstance;
-  /** Null while no LightmapGI names the instance. */
-  lightmap: LightmapAssignment | null;
+  /** One object while the instance keeps its path, so a LightmapGI that changes re-renders no drawer. */
+  lightmap: InstanceLightmap;
 }
 
 /** Null outside a GeometryInstance3D component, and inside the nodes it renders as its children. */
@@ -104,7 +103,11 @@ export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
       [properties.materialOverlay, pools]
     );
     const { layers } = properties;
-    const lightmap = useLightmapOf(scene, path);
+    const bakedMeshIndex = useContext(BakedMeshIndexContext);
+    const lightmap = useMemo(
+      () => instanceLightmap(scene, path, bakedMeshIndex),
+      [scene, path, bakedMeshIndex]
+    );
     const scope = useMemo(
       () => ({ shadow, override, overlay, layers, instance, lightmap }),
       [instance, shadow, override, overlay, layers, lightmap]
@@ -124,21 +127,13 @@ export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
   return GeometryInstanceComponent;
 }
 
-/** The lightmap of the instance at `path`, or of the baked mesh the base stands for, kept live. */
-function useLightmapOf(scene: THREE.Scene, path: string | null): LightmapAssignment | null {
-  const bakedMeshIndex = useContext(BakedMeshIndexContext);
-  const lightmap = useMemo(
-    () => instanceLightmap(scene, path, bakedMeshIndex),
-    [scene, path, bakedMeshIndex]
-  );
-  return useSyncExternalStore(lightmap.subscribe, lightmap.read);
-}
-
 /** The nodes a drawer renders as its children, outside its instance's scope and fade. */
 function OutsideInstance({ children }: { children: ReactNode }) {
   return (
     <GeometryInstanceContext.Provider value={null}>
-      <FadedSurfacesContext.Provider value={null}>{children}</FadedSurfacesContext.Provider>
+      <BakedMeshIndexContext.Provider value={LIGHTMAP_NODE_ITSELF}>
+        <FadedSurfacesContext.Provider value={null}>{children}</FadedSurfacesContext.Provider>
+      </BakedMeshIndexContext.Provider>
     </GeometryInstanceContext.Provider>
   );
 }
@@ -174,7 +169,8 @@ export function useInstanceDraw(): InstanceDraw {
  * (`lightmap_gi.cpp:1551-1552`).
  */
 export function useInstanceLightmap(): LightmapAssignment | null {
-  return useContext(GeometryInstanceContext)?.lightmap ?? null;
+  const lightmap = useContext(GeometryInstanceContext)?.lightmap ?? NO_INSTANCE_LIGHTMAP;
+  return useSyncExternalStore(lightmap.subscribe, lightmap.read);
 }
 
 /** What a drawer under no GeometryInstance3D owns of its draws: it holds no instance material. */

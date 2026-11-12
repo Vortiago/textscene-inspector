@@ -16,6 +16,9 @@ export interface InstanceLightmap {
   subscribe(onChange: () => void): () => void;
 }
 
+/** The lightmap of a surface under no instance: none, at any time. */
+export const NO_INSTANCE_LIGHTMAP: InstanceLightmap = { read: () => null, subscribe: () => () => {} };
+
 /**
  * The lightmap of the instance of the node at `path`, or of its baked mesh `subInstance`. A null
  * path is an instance no LightmapGI can name.

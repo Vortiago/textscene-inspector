@@ -21,8 +21,8 @@ import {
   type RefObject,
 } from 'react';
 import * as THREE from 'three';
-import { resolveNextPass, type MaterialSource } from './materialSource';
-import { NOTHING_DRAWN, nextPassStep, type LoadedPass } from './nextPassWalk';
+import type { MaterialSource } from './materialSource';
+import { NOTHING_DRAWN, loadedPassOf, nextPassStep } from './nextPassWalk';
 import { extraDrawProps, useExtraDrawRef } from './extraDraw';
 import { useDrawnGeometry } from './drawnGeometry';
 import { drawnTag } from '../meshes/meshContent';
@@ -163,18 +163,11 @@ function NextPassLink(props: PassProps) {
   const loaded = useMaterial(source);
   const material = readyMaterial(loaded);
   // Stable between loads: a re-render of an already-loaded link re-scans nothing.
-  const loadedPass = useMemo((): LoadedPass | null => {
-    if (!material) return null;
-    const scalars = parseStandardMaterial3DScalars(material.resource.data);
-    return {
-      readsStencil: scalars.readsStencil === true,
-      nextSource: resolveNextPass(scalars.nextPass, material),
-    };
-  }, [material]);
-  const step = useMemo(
-    () => nextPassStep({ source, ordinal, visited }, loadedPass),
-    [source, ordinal, visited, loadedPass]
+  const loadedPass = useMemo(
+    () => material && loadedPassOf(material, parseStandardMaterial3DScalars(material.resource.data)),
+    [material]
   );
+  const step = nextPassStep({ source, ordinal, visited }, loadedPass ?? null);
   // The pass's fate reported once it is known, in the layout pass: a resolved one
   // reached its position whether it drew or was skipped over, and a declined one ends
   // its chain there. A pass still loading waits, and the overlay's own order then
