@@ -13,19 +13,23 @@ import { useGeometryInstance } from '../../../r3f/visibilityRange/geometryInstan
 import { boxPlacement } from '../../../r3f/visibilityRange/placements';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { Node3D } from '../../base/node3d/Component';
-import { multiMeshInstances } from './multiMeshInstances';
-import { useMultiMeshAabb, useNodeMultiMesh } from './ownAabb';
+import { multiMeshInstanceArrays } from '../../../resources/meshes/multimesh';
+import { colouredInstances } from '../../../r3f/surfacedMeshDrawer/colouredInstances';
+import { useMultiMeshInstance3D } from './ownAabb';
 
 export function MultiMeshInstance3D({ node, children }: NodeComponentProps) {
   const nodeRef = useRef<THREE.Group | null>(null);
-  const { multiMesh, resources } = useNodeMultiMesh(node);
   // The instance culls by the box of the MultiMesh, as Godot does (`renderer_scene_cull.cpp:1996`).
-  const ownAabb = useMultiMeshAabb(node, multiMesh, resources);
+  const { multiMesh, resources, ownAabb } = useMultiMeshInstance3D(node);
   const placement = useMemo(() => boxPlacement(nodeRef, ownAabb), [ownAabb]);
   useGeometryInstance(placement);
 
   const content = useMeshContent(useResourceResolution(multiMesh?.mesh, resources));
-  const instances = useMemo(() => multiMesh && multiMeshInstances(multiMesh.drawn), [multiMesh]);
+  const instances = useMemo(
+    () =>
+      multiMesh && colouredInstances(multiMesh.drawn.count, () => multiMeshInstanceArrays(multiMesh.drawn)),
+    [multiMesh]
+  );
   return (
     <Node3D node={node} ref={nodeRef}>
       {ownAabb && <FrameAabb aabb={ownAabb} />}

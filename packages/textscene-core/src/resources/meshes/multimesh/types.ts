@@ -3,6 +3,29 @@ import type { Aabb } from '../../../godot/math/aabb.js';
 /** Floats in one bounded transform: three basis rows, each with its origin component. */
 export const TRANSFORM_FLOATS = 12;
 
+/** Floats in one 2D buffer transform: the x and y rows, each with its origin component. */
+export const TRANSFORM_2D_FLOATS = 8;
+
+/** Floats in an instance's colour and in its custom data. */
+export const VEC4_FLOATS = 4;
+
+/** Floats in one instance matrix of a draw. */
+export const MATRIX_FLOATS = 16;
+
+/** Where each part of an instance sits in its buffer row (`mesh_storage.cpp:1543-1598`). */
+export interface InstanceLayout {
+  stride: number;
+  colourOffset: number;
+  customOffset: number;
+}
+
+/** The row layout of a MultiMesh buffer: the transform, then the colour and the custom data when used. */
+export function instanceLayout(is3D: boolean, usesColors: boolean, usesCustomData: boolean): InstanceLayout {
+  const colourOffset = is3D ? TRANSFORM_FLOATS : TRANSFORM_2D_FLOATS;
+  const customOffset = colourOffset + (usesColors ? VEC4_FLOATS : 0);
+  return { stride: customOffset + (usesCustomData ? VEC4_FLOATS : 0), colourOffset, customOffset };
+}
+
 /** The instances a MultiMesh draws, as the rendering server holds them after the loader's setters. */
 export interface DrawnInstances {
   /** `MultiMeshTransformFormat`: 2D rows are 8 floats, 3D rows 12. */

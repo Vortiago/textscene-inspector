@@ -30,7 +30,7 @@ export interface MeshInstances {
    * then culls none of the draws, the framing reads no box, and the scene cull alone culls them.
    */
   readonly boundsOver: (source: THREE.BufferGeometry) => InstancesBounds | null;
-  /** The patch each material of a particle emitter's draw takes. Omitted for a plain instance. */
+  /** The patch each material takes to read the instance colour and custom data: a particle emitter's and a MultiMesh's draw. Omitted for a plain instance. */
   readonly particles?: ParticleProgram;
 }
 

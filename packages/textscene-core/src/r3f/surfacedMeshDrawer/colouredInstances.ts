@@ -1,28 +1,28 @@
 /**
  * Instances that each carry a colour and custom data of their own: the buffer of a particle emitter
  * and of a MultiMesh. The colour multiplies the vertex colour (`scene_forward_clustered.glsl:309,326`)
- * and the custom data is `INSTANCE_CUSTOM`.
+ * and the custom data is `INSTANCE_CUSTOM`. Both read the program of `withParticleDraw`, which is
+ * Godot's one StandardMaterial3D vertex code for every instance buffer.
  */
 
 import * as THREE from 'three';
 import type { InstanceArrays } from '../../resources/meshes/multimesh';
+import { VEC4_FLOATS } from '../../resources/meshes/multimesh/types';
 import { PARTICLE_COLOR_ATTRIBUTE } from '../materials/godotParticles';
 import { withParticleDraw } from '../materials/godotParticlesProgram';
 import { INSTANCE_CUSTOM_ATTRIBUTE, instanceMatrices, sharedInstances } from '../meshes/sharedInstances';
 import type { MeshInstances } from './meshInstances';
 
-/** Floats in a colour and in a custom data vector. */
-const VEC4_FLOATS = 4;
-
 /**
- * `arrays` as the instances the surfaced mesh drawer draws a mesh at. The program draws billboards
- * that the matrices do not hold, so the instances have no bounds and the scene cull's box culls them.
+ * `count` instances whose values `arraysOf` builds when a draw writes them, so a buffer nothing
+ * draws is never expanded and no intermediate outlives the write. The instances have no bounds: the
+ * node's own box culls them.
  */
-export function colouredInstances(arrays: InstanceArrays): MeshInstances {
+export function colouredInstances(count: number, arraysOf: () => InstanceArrays): MeshInstances {
   return {
-    count: arrays.count,
+    count,
     geometryOver: colouredGeometry,
-    write: (geometry) => writeArrays(geometry, arrays),
+    write: (geometry) => writeArrays(geometry, arraysOf()),
     boundsOver: unbounded,
     particles: withParticleDraw,
   };

@@ -16,10 +16,13 @@ import {
   parsePackedVector2Array,
   parsePackedVector3Array,
 } from '../../shapes/packedArray.js';
-import { TRANSFORM_FLOATS, type MultiMeshData } from './types.js';
-
-/** Floats in one 2D buffer transform: the x and y rows, each with its origin component. */
-const TRANSFORM_2D_FLOATS = 8;
+import {
+  instanceLayout,
+  TRANSFORM_FLOATS,
+  VEC4_FLOATS,
+  type InstanceLayout,
+  type MultiMeshData,
+} from './types.js';
 
 /** The server's MultiMesh state that its box depends on. */
 class MultiMeshState {
@@ -38,22 +41,17 @@ class MultiMeshState {
   isBoxDirty = false;
   boundedTransforms = new Float32Array(0);
 
-  get transformFloats(): number {
-    return this.format === MultiMeshTransformFormat.TRANSFORM_3D ? TRANSFORM_FLOATS : TRANSFORM_2D_FLOATS;
+  /** `multimesh_instance_set_color` and its custom data twin read these offsets (`mesh_storage.cpp:1976-2020`). */
+  get layout(): InstanceLayout {
+    return instanceLayout(
+      this.format === MultiMeshTransformFormat.TRANSFORM_3D,
+      this.usesColors,
+      this.usesCustomData
+    );
   }
 
   get stride(): number {
-    return this.transformFloats + (this.usesColors ? 4 : 0) + (this.usesCustomData ? 4 : 0);
-  }
-
-  /** Where an instance's colour starts, `multimesh_instance_set_color` (`mesh_storage.cpp:1976-1996`). */
-  get colourOffset(): number {
-    return this.transformFloats;
-  }
-
-  /** Where an instance's custom data starts, after the colour when there is one. */
-  get customOffset(): number {
-    return this.transformFloats + (this.usesColors ? 4 : 0);
+    return this.layout.stride;
   }
 
   /** The buffer the server ends with: the CPU copy, else the set buffer, else zeros. */
@@ -139,10 +137,10 @@ const SETTERS: Readonly<Record<string, Setter>> = {
   transform_array: setTransforms3D,
   transform_2d_array: setTransforms2D,
   color_array(state, value) {
-    if (state.usesColors) setPerInstanceVec4(state, value, state.colourOffset);
+    if (state.usesColors) setPerInstanceVec4(state, value, state.layout.colourOffset);
   },
   custom_data_array(state, value) {
-    if (state.usesCustomData) setPerInstanceVec4(state, value, state.customOffset);
+    if (state.usesCustomData) setPerInstanceVec4(state, value, state.layout.customOffset);
   },
 };
 
@@ -229,10 +227,11 @@ function setTransforms2D(state: MultiMeshState, value: string): void {
  */
 function setPerInstanceVec4(state: MultiMeshState, value: string, offset: number): void {
   const vectors = parsePackedColorArray(value);
-  if (vectors.length === 0 || vectors.length / 4 !== state.instances) return;
+  if (vectors.length === 0 || vectors.length / VEC4_FLOATS !== state.instances) return;
   const cache = state.makeLocal();
-  for (let i = 0; i < state.instances; i++)
-    cache.set(vectors.subarray(i * 4, i * 4 + 4), i * state.stride + offset);
+  for (let i = 0; i < state.instances; i++) {
+    cache.set(vectors.subarray(i * VEC4_FLOATS, (i + 1) * VEC4_FLOATS), i * state.stride + offset);
+  }
 }
 
 /**

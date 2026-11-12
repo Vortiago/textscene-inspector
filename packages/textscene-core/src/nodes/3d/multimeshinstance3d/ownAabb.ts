@@ -15,41 +15,31 @@ import { resourceContentKey } from '../../../resources/resourceContentKey';
 import type { ScopedResource } from '../../../resources/scopedResource';
 import { useContentMemo } from '../../../resources/useContentMemo';
 
-/** The MultiMesh a node holds, and the resources its mesh reference reads. */
+/** What a MultiMeshInstance3D reads of its MultiMesh. */
 export interface NodeMultiMesh {
   /** Null while the reference is unresolved, or when it names a MultiMesh this cannot read. */
   multiMesh: MultiMeshData | null;
+  /** The resources its mesh reference reads. */
   resources: ScopedResource['resources'];
+  /**
+   * The box in node space, `AABB()` for a node with no MultiMesh (`multimesh_instance_3d.cpp:100-102`),
+   * or null while the MultiMesh or the mesh box it needs is unknown.
+   */
+  ownAabb: Aabb | null;
 }
 
-/** The node's MultiMesh, read from a SubResource or a file. */
-export function useNodeMultiMesh(node: TscnNode): NodeMultiMesh {
+/** The node's MultiMesh, read from a SubResource or a file, and the box it gives the instance. */
+export function useMultiMeshInstance3D(node: TscnNode): NodeMultiMesh {
   const scoped = useSubOrExtResource(node.rawProperties['multimesh'], useSceneResources());
   const multiMesh = useContentMemo(scoped, ownContentKey, readMultiMesh);
-  return { multiMesh, resources: scoped?.resources ?? NO_RESOURCES };
-}
-
-/**
- * The box in node space, `AABB()` for a node with no MultiMesh (`multimesh_instance_3d.cpp:100-102`),
- * or null while the MultiMesh or the mesh box it needs is unknown.
- */
-export function useMultiMeshInstance3DAabb(node: TscnNode): Aabb | null {
-  const { multiMesh, resources } = useNodeMultiMesh(node);
-  return useMultiMeshAabb(node, multiMesh, resources);
-}
-
-/** `useMultiMeshInstance3DAabb` over a MultiMesh a caller has read already. */
-export function useMultiMeshAabb(
-  node: TscnNode,
-  multiMesh: MultiMeshData | null,
-  resources: NodeMultiMesh['resources']
-): Aabb | null {
+  const resources = scoped?.resources ?? NO_RESOURCES;
   const meshAabb = useMeshAabb(multiMesh?.mesh, resources);
   const hasMultiMesh = node.rawProperties['multimesh'] !== undefined;
-  return useMemo(() => {
+  const ownAabb = useMemo(() => {
     if (multiMesh) return multiMeshAabb(multiMesh, meshAabb);
     return hasMultiMesh ? null : EMPTY_AABB;
   }, [multiMesh, meshAabb, hasMultiMesh]);
+  return { multiMesh, resources, ownAabb };
 }
 
 /** A MultiMesh reads no file, so its own content is the whole key. */

@@ -4,25 +4,18 @@
  */
 
 import { MultiMeshTransformFormat } from '../../../godot/scene/multiMesh.js';
-import { TRANSFORM_FLOATS, type DrawnInstances } from './types.js';
-
-/** Floats in the buffer's 2D transform: the x row and the y row, each with its origin component. */
-const TRANSFORM_2D_FLOATS = 8;
-
-const MATRIX_FLOATS = 16;
-const VEC4_FLOATS = 4;
+import { instanceLayout, MATRIX_FLOATS, VEC4_FLOATS, type DrawnInstances } from './types.js';
 
 /** The colour of an instance of a MultiMesh with no `use_colors`: the vertex colour stays as it is. */
 const NO_COLOUR = [1, 1, 1, 1] as const;
 
 /** The values of `count` instances, as the attributes of a draw hold them. */
 export interface InstanceArrays {
-  count: number;
   /** `MATRIX_FLOATS` for each instance, in the order three reads a `Matrix4`. */
   matrices: Float32Array;
-  /** Four floats for each instance. */
+  /** `VEC4_FLOATS` for each instance. */
   colours: Float32Array;
-  /** Four floats for each instance: `INSTANCE_CUSTOM`. */
+  /** `VEC4_FLOATS` for each instance: `INSTANCE_CUSTOM`. */
   customs: Float32Array;
 }
 
@@ -33,33 +26,36 @@ export interface InstanceArrays {
 export function multiMeshInstanceArrays(drawn: DrawnInstances): InstanceArrays {
   const { count, buffer, usesColors, usesCustomData } = drawn;
   const is3D = drawn.transformFormat === MultiMeshTransformFormat.TRANSFORM_3D;
-  const transformFloats = is3D ? TRANSFORM_FLOATS : TRANSFORM_2D_FLOATS;
-  const colourFloats = usesColors ? VEC4_FLOATS : 0;
-  const stride = transformFloats + colourFloats + (usesCustomData ? VEC4_FLOATS : 0);
+  const { stride, colourOffset, customOffset } = instanceLayout(is3D, usesColors, usesCustomData);
   const matrices = new Float32Array(count * MATRIX_FLOATS);
   const colours = new Float32Array(count * VEC4_FLOATS);
   const customs = new Float32Array(count * VEC4_FLOATS);
   for (let i = 0; i < count; i++) {
     const at = i * stride;
-    writeMatrix(matrices.subarray(i * MATRIX_FLOATS, (i + 1) * MATRIX_FLOATS), buffer, at, is3D);
-    const colour = colours.subarray(i * VEC4_FLOATS, (i + 1) * VEC4_FLOATS);
-    if (usesColors) colour.set(buffer.subarray(at + transformFloats, at + transformFloats + VEC4_FLOATS));
-    else colour.set(NO_COLOUR);
-    if (usesCustomData) {
-      const from = at + transformFloats + colourFloats;
-      customs.set(buffer.subarray(from, from + VEC4_FLOATS), i * VEC4_FLOATS);
-    }
+    writeMatrix(matrices, i * MATRIX_FLOATS, buffer, at, is3D);
+    if (usesColors)
+      colours.set(buffer.subarray(at + colourOffset, at + colourOffset + VEC4_FLOATS), i * VEC4_FLOATS);
+    else colours.set(NO_COLOUR, i * VEC4_FLOATS);
+    if (usesCustomData)
+      customs.set(buffer.subarray(at + customOffset, at + customOffset + VEC4_FLOATS), i * VEC4_FLOATS);
   }
-  return { count, matrices, colours, customs };
+  return { matrices, colours, customs };
 }
 
 /** Row `r` of the transform at `at` becomes the matrix's row `r`: element (r, c) lands at `c * 4 + r`. */
-function writeMatrix(matrix: Float32Array, buffer: Float32Array, at: number, is3D: boolean): void {
+function writeMatrix(
+  matrices: Float32Array,
+  to: number,
+  buffer: Float32Array,
+  at: number,
+  is3D: boolean
+): void {
   const rows = is3D ? 3 : 2;
   for (let row = 0; row < rows; row++) {
-    for (let column = 0; column < 4; column++) matrix[column * 4 + row] = buffer[at + row * 4 + column]!;
+    for (let column = 0; column < 4; column++)
+      matrices[to + column * 4 + row] = buffer[at + row * 4 + column]!;
   }
   // The row a 2D transform lacks, and the bottom row of every matrix.
-  if (!is3D) matrix[10] = 1;
-  matrix[15] = 1;
+  if (!is3D) matrices[to + 10] = 1;
+  matrices[to + 15] = 1;
 }

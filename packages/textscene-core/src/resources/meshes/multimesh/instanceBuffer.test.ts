@@ -42,12 +42,13 @@ describe('multiMeshInstanceArrays: the transform', () => {
 
   it('draws the first `count` instances of the buffer', () => {
     const buffer = new Float32Array([...halfRows(1), ...halfRows(2), ...halfRows(3)]);
-    const arrays = multiMeshInstanceArrays(drawn({ buffer, count: 2 }));
-    expect([arrays.count, arrays.matrices.length]).toEqual([2, 32]);
+    expect(multiMeshInstanceArrays(drawn({ buffer, count: 2 })).matrices).toHaveLength(32);
   });
 
   it('draws nothing for a count of 0', () => {
-    expect(multiMeshInstanceArrays(drawn({ buffer: new Float32Array(12), count: 0 })).count).toBe(0);
+    expect(multiMeshInstanceArrays(drawn({ buffer: new Float32Array(12), count: 0 })).matrices).toHaveLength(
+      0
+    );
   });
 
   it('draws an all-zero instance as a degenerate matrix, not as a skipped one', () => {

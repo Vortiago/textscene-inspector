@@ -4,24 +4,11 @@
  * the scene shader fills with `(0, 0, 0, 1)` (`scene_forward_clustered.glsl:320`), so a never-born
  * particle's zero transform sits at the emitter's origin.
  */
-
-/**
- * A CPUParticles3D's buffer as three draws it: each particle an instance of the mesh, with its
- * transform, its colour and its custom data. The buffer holds Godot's 3×4 rows, whose bottom row
- * the scene shader fills with `(0, 0, 0, 1)` (`scene_forward_clustered.glsl:320`), so a never-born
- * particle's zero transform sits at the emitter's origin.
- */
-
 import * as THREE from 'three';
+import { MATRIX_FLOATS, VEC4_FLOATS } from '../../../../resources/meshes/multimesh/types';
 import { colouredInstances } from '../../../../r3f/surfacedMeshDrawer/colouredInstances';
 import type { MeshInstances } from '../../../../r3f/surfacedMeshDrawer/meshInstances';
 import { PARTICLE_COLOR_OFFSET, PARTICLE_CUSTOM_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
-
-/** Floats in a colour and in a custom data vector. */
-const VEC4_FLOATS = 4;
-
-/** The floats of one instance matrix. */
-const MATRIX_FLOATS = 16;
 
 /** The particle count of `buffer`. */
 function particleCount(buffer: Float32Array): number {
@@ -30,12 +17,11 @@ function particleCount(buffer: Float32Array): number {
 
 /** `buffer` as the instances the surfaced mesh drawer draws a mesh at. */
 export function particleInstances(buffer: Float32Array): MeshInstances {
-  return colouredInstances({
-    count: particleCount(buffer),
+  return colouredInstances(particleCount(buffer), () => ({
     matrices: particleMatrices(buffer),
     colours: particleSlices(buffer, PARTICLE_COLOR_OFFSET, VEC4_FLOATS),
     customs: particleSlices(buffer, PARTICLE_CUSTOM_OFFSET, VEC4_FLOATS),
-  });
+  }));
 }
 
 /** Scratch for one particle's matrix, overwritten by every write. */
