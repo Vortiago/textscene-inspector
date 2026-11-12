@@ -1,6 +1,6 @@
 /**
  * The outline of a 2D collision shape as a gizmo, drawn as a line loop like Godot's editor
- * collision overlay. Component.tsx mounts it only when `showCollisions` is on.
+ * collision overlay. Component.tsx and ShapeOverlay.tsx mount it only when `showCollisions` is on.
  */
 
 import { useMemo } from 'react';
