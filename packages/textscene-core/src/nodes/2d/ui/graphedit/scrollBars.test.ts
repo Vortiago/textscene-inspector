@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { graphEditScrollBars } from './scrollBars';
+import { graphEditConstructorScrollBars, graphEditScrollBars, hasUpdatedScrollBars } from './scrollBars';
 
 const theme = nativeTheme(1);
 // One 120x64 GraphNode at (40, 56), zoom 1, in a 400x320 GraphEdit: the same
@@ -62,5 +62,47 @@ describe('graphEditScrollBars', () => {
     );
     expect(degenerate.horizontal.visible).toBe(false);
     expect(degenerate.vertical.visible).toBe(false);
+  });
+});
+
+describe('hasUpdatedScrollBars (_update_scrollbars callers, graph_edit.cpp:414, :868, :1733, :2448)', () => {
+  const none = {
+    hasGraphElement: false,
+    queuedScrollOffsetUpdate: false,
+    outOfTreeSize: { x: 500, y: 280 },
+    solvedSize: { x: 500, y: 280 },
+  };
+
+  it('holds when the GraphEdit has a GraphElement child', () => {
+    expect(hasUpdatedScrollBars({ ...none, hasGraphElement: true })).toBe(true);
+  });
+
+  it('holds when a setter queued the update while the file loaded', () => {
+    expect(hasUpdatedScrollBars({ ...none, queuedScrollOffsetUpdate: true })).toBe(true);
+  });
+
+  it('holds when the solved size differs from the size out of the tree (NOTIFICATION_RESIZED)', () => {
+    expect(hasUpdatedScrollBars({ ...none, solvedSize: { x: 600, y: 300 } })).toBe(true);
+  });
+
+  it('does not hold when none of the three does', () => {
+    expect(hasUpdatedScrollBars(none)).toBe(false);
+  });
+});
+
+describe('graphEditConstructorScrollBars (graph_edit.cpp:3218-3222, :841-852)', () => {
+  const bars = graphEditConstructorScrollBars({ x: 500, y: 280 }, theme);
+
+  it('gives each bar the full length of its edge, and the bars overlap in the corner', () => {
+    expect(bars.horizontal.rect).toEqual({ x: 0, y: 272, w: 500, h: 8 });
+    expect(bars.vertical.rect).toEqual({ x: 492, y: 0, w: 8, h: 280 });
+    expect(bars.horizontal.visible).toBe(true);
+    expect(bars.vertical.visible).toBe(true);
+  });
+
+  it('puts each grabber at the middle of its bar: value 0 in -10000 to 10000, page 0', () => {
+    // The grabber is the 8 px minimum: area = 500 - 8 = 492, offset = 492 / 2 = 246.
+    expect(bars.horizontal.grabberRect).toEqual({ x: 246, y: 0, w: 8, h: 8 });
+    expect(bars.vertical.grabberRect).toEqual({ x: 0, y: 136, w: 8, h: 8 });
   });
 });

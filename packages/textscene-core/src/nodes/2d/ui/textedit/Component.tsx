@@ -14,6 +14,7 @@ import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
+import { ScrollBarChrome } from '../shared/ScrollChrome';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
@@ -35,8 +36,6 @@ import {
   textEditTextTheme,
   textEditDrawnLines,
   textEditRowHeightPx,
-  textEditWrapWidthPx,
-  shapeTextEditLines,
   layoutTextEditDrawBand,
   textEditCurrentLineXPx,
   textEditRowOriginXPx,
@@ -49,6 +48,8 @@ import {
   textEditTabStopsPx,
   TEXT_EDIT_THEME_FONT_KEY,
 } from './nativeSolver';
+import { useTextEditRows } from './useTextEditRows';
+import type { TextEditRows } from './rows';
 import { TEXT_EDIT_GLYPH_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import type { TextEditProperties } from './types';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
@@ -87,6 +88,8 @@ interface TextEditBodyProps extends NativeControlComponentProps {
   gutterBandWidthPx?: number;
   /** `CodeEdit.indent_size`, forwarded to `TextEdit::set_tab_size` (`code_edit.cpp:908-920`). Absent for a bare `TextEdit`, which has no `.tscn` property for it (`textEditTabStopsPx`). */
   tabSize?: number;
+  /** The rows a wrapping painter already solved, so the buffer shapes once. Absent: solved here. */
+  rows?: TextEditRows;
 }
 
 export function TextEditBody({
@@ -94,10 +97,13 @@ export function TextEditBody({
   tint,
   rect,
   renderOrder,
+  slot,
   theme,
+  snapToPixels,
   gutterBandWidthPx = 0,
   tabSize,
   underlay,
+  rows: solvedRows,
 }: TextEditBodyProps) {
   const props = painterView<TextEditProperties>(solveNode);
   const toItemLinear = useItemLinearColorOf();
@@ -121,8 +127,7 @@ export function TextEditBody({
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
 
   // `minimap_draw`/`minimap_width` narrow the text band as Godot's layout does, although the
-  // minimap is not painted. No scrollbar term applies: `h_scroll`/`v_scroll` are internal
-  // children, and a `ScrollBar` cannot appear in a `.tscn`.
+  // minimap is not painted. The scroll bars draw over the band and take no part of it (`:941-944`).
   const band = layoutTextEditDrawBand(
     rect.w,
     styleBox,
@@ -130,17 +135,6 @@ export function TextEditBody({
     props.minimapWidth ?? 80,
     props.minimapDraw,
     rowHeightPx
-  );
-  const wrapWidthPx = useMemo(
-    () =>
-      textEditWrapWidthPx(
-        rect.w,
-        styleBox.contentMargin.left + styleBox.contentMargin.right,
-        gutterBandWidthPx,
-        props.minimapWidth ?? 80,
-        props.minimapDraw
-      ),
-    [rect.w, styleBox, gutterBandWidthPx, props.minimapWidth, props.minimapDraw]
   );
 
   // The step-in reads line 0 of the buffer, which is empty while a placeholder draws (`:1480-1483`).
@@ -150,33 +144,32 @@ export function TextEditBody({
     [tabSize, fontMetrics, fontSizePx]
   );
   const bidi = useControlBidiOptions(props, solveNode);
-  const lineLayouts = useMemo(
-    () =>
-      shapeTextEditLines(lines, {
+  const { lineLayouts, wrapWidthPx, scrollBars } = useTextEditRows(
+    {
+      lines,
+      isPlaceholder,
+      size: { x: rect.w, y: rect.h },
+      margins: styleBox.contentMargin,
+      rowHeightPx,
+      gutterBandWidthPx,
+      minimapWidthPx: props.minimapWidth ?? 80,
+      drawMinimap: props.minimapDraw,
+      scrollPastEndOfFile: props.scrollPastEndOfFile === true,
+      fitContentHeight: props.fitContentHeight === true,
+      rtl: solveNode.rtl,
+      shape: {
         fontSizePx,
         fontMetrics,
         wrapMode: props.wrapMode,
         autowrapMode: props.autowrapMode,
-        wrapWidthPx,
         tabStopsPx,
         preserveControl: props.drawControlChars,
         indentWrappedLines: props.indentWrappedLines,
         bidi,
-        placeholder: isPlaceholder,
-      }),
-    [
-      lines,
-      fontSizePx,
-      props.wrapMode,
-      props.autowrapMode,
-      wrapWidthPx,
-      fontMetrics,
-      tabStopsPx,
-      props.drawControlChars,
-      props.indentWrappedLines,
-      bidi,
-      isPlaceholder,
-    ]
+      },
+      theme,
+    },
+    solvedRows
   );
 
   // `syntax_highlighter` resolves in this node's scope, never `useSceneResources()`. Only a
@@ -346,6 +339,22 @@ export function TextEditBody({
           );
         });
       })}
+      <ScrollBarChrome
+        bar={scrollBars.horizontal}
+        track={theme.widgets.scrollBar.scrollHorizontal}
+        grabber={theme.widgets.scrollBar.grabber}
+        color={tint.own}
+        chromeSlot={slot}
+        snapToPixels={snapToPixels}
+      />
+      <ScrollBarChrome
+        bar={scrollBars.vertical}
+        track={theme.widgets.scrollBar.scrollVertical}
+        grabber={theme.widgets.scrollBar.grabber}
+        color={tint.own}
+        chromeSlot={slot}
+        snapToPixels={snapToPixels}
+      />
     </CanvasItemGroup>
   );
 }

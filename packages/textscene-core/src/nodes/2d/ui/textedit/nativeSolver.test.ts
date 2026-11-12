@@ -94,13 +94,19 @@ describe('textEditRowHeightPx', () => {
 describe('textEditWrapWidthPx', () => {
   // text_edit.cpp:8536-8543.
   it('subtracts style margins, gutters and the bare wrap_offset(10)', () => {
-    expect(textEditWrapWidthPx(300, 8, 0, 80, false)).toBe(300 - 8 - 10);
+    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 0)).toBe(300 - 8 - 10);
   });
   it('additionally subtracts the minimap width when draw_minimap is true', () => {
-    expect(textEditWrapWidthPx(300, 8, 0, 80, true)).toBe(300 - 8 - 80 - 10);
+    expect(textEditWrapWidthPx(300, 8, 0, 80, true, 0)).toBe(300 - 8 - 80 - 10);
   });
   it('truncates a fractional result toward zero, matching the C++ int assignment', () => {
-    expect(textEditWrapWidthPx(300.7, 8, 0, 80, false)).toBe(Math.trunc(300.7 - 8 - 10));
+    expect(textEditWrapWidthPx(300.7, 8, 0, 80, false, 0)).toBe(Math.trunc(300.7 - 8 - 10));
+  });
+  it('subtracts the vertical scroll bar width when one is given (:8541-8543)', () => {
+    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 8)).toBe(300 - 8 - 8 - 10);
+  });
+  it('subtracts nothing for a bar width of 0', () => {
+    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 0)).toBe(300 - 8 - 10);
   });
 });
 

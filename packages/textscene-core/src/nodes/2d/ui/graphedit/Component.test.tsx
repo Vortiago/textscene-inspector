@@ -569,3 +569,56 @@ describe('<GraphEdit> disabled zoom buttons (graph_edit.cpp:2445-2446)', () => {
     expect(dimmedIcons(await render({ zoomMinusDisabled: true, showZoomButtons: false }))).toBe(0);
   });
 });
+
+describe('<GraphEdit> scroll bars before _update_scrollbars has run (graph_edit.cpp:464-528, :3218-3222)', () => {
+  const SIZE = { x: 500, y: 280 };
+  const graphNodeChild = graphNode('N', new Map(), [], { x: 40, y: 70 });
+  const graphNodeChildRect: ReadonlyMap<string, Rect2> = new Map([['N', { x: 0, y: 0, w: 160, h: 80 }]]);
+  const { scrollBars: SCROLL_BAR_SLOT } = canvasSubOrders(wholeKeySlot(9), TOP_LAYER_ORDER);
+
+  /** A chrome quad extends half a pixel past its rect on each side for antialiasing. */
+  const QUAD_FRINGE_PX = 1;
+
+  /** The rect size of each mesh in the scroll bar slot. */
+  async function scrollBarExtents(solveNode: SolveNode, childRects: ReadonlyMap<string, Rect2> = new Map()) {
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphEdit
+        {...painterEnv()}
+        childRects={childRects}
+        solveNode={solveNode}
+        rect={{ x: 0, y: 0, w: SIZE.x, h: SIZE.y }}
+        renderOrder={0}
+        chromeSlot={wholeKeySlot(9)}
+      />
+    );
+    return chromeMeshes(renderer.scene)
+      .filter((m) => m.renderOrder >= SCROLL_BAR_SLOT.key && m.renderOrder < SCROLL_BAR_SLOT.key + 1)
+      .map((m) => {
+        m.updateWorldMatrix(true, false);
+        const size = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
+        return { w: size.x - QUAD_FRINGE_PX, h: size.y - QUAD_FRINGE_PX };
+      });
+  }
+
+  const emptyProps = { showGrid: false, showMenu: false, minimapEnabled: false };
+
+  it('draws the full-length bars of the constructor on a GraphEdit with no child, placed by offsets', async () => {
+    const extents = await scrollBarExtents(graphEdit({ ...emptyProps, outOfTreeSize: SIZE }), new Map());
+    expect(extents).toContainEqual({ w: 500, h: 8 });
+    expect(extents).toContainEqual({ w: 8, h: 280 });
+  });
+
+  it('draws the shortened bars of _update_scrollbars once a GraphNode child exists (:296)', async () => {
+    const extents = await scrollBarExtents(
+      graphEdit({ ...emptyProps, outOfTreeSize: SIZE }, [graphNodeChild]),
+      graphNodeChildRect
+    );
+    expect(extents).toContainEqual({ w: 492, h: 8 });
+    expect(extents).toContainEqual({ w: 8, h: 272 });
+  });
+
+  it('draws the shortened bars where the solved size differs from the size out of the tree (:868)', async () => {
+    const extents = await scrollBarExtents(graphEdit({ ...emptyProps, outOfTreeSize: { x: 0, y: 0 } }));
+    expect(extents).toContainEqual({ w: 492, h: 8 });
+  });
+});

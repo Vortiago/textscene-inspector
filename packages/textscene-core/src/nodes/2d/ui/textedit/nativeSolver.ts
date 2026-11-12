@@ -139,13 +139,13 @@ export function textEditDrawnLines(
 }
 
 /** A single buffer line's already-shaped rows plus its own start row index within the whole TextEdit. */
-interface TextEditLineLayout {
+export interface TextEditLineLayout {
   layout: TextLayoutResult;
   startRow: number;
 }
 
 /** What each buffer line shapes with, beyond its text. */
-interface TextEditShapeOptions {
+export interface TextEditShapeOptions {
   fontSizePx: number;
   fontMetrics: FontMetrics;
   /** `LineWrappingMode`. Only `LINE_WRAPPING_BOUNDARY` (1) wraps. */
@@ -213,22 +213,40 @@ export function shapeTextEditLines(
 }
 
 /**
- * `_update_wrap_at_column` (`text_edit.cpp:8536-8543`) without the v-scrollbar term, since no
- * scrollbar draws: `width - style min width - gutters_width - gutter_padding`, less `minimap_width`
- * when drawn, less the bare 10 `wrap_offset`. `gutterBandWidthPx` is the gutter sum, never split at
- * a call site: 0 for TextEdit, `codeEditGutterBand`'s `totalWidthPx` for CodeEdit.
+ * `_update_wrap_at_column` (`text_edit.cpp:8536-8543`): `width - style min width - gutters_width -
+ * gutter_padding`, less `minimap_width` when drawn, less the vertical scroll bar's width when it
+ * shows, less the bare 10 `wrap_offset`. `gutterBandWidthPx` is the gutter sum, never split at a
+ * call site: 0 for TextEdit, `codeEditGutterBand`'s `totalWidthPx` for CodeEdit.
  */
 export function textEditWrapWidthPx(
   rectWidthPx: number,
   styleMinWidthPx: number,
   gutterBandWidthPx: number,
   minimapWidthPx: number,
-  drawMinimap: boolean | undefined
+  drawMinimap: boolean | undefined,
+  verticalBarWidthPx = 0
 ): number {
   let width = rectWidthPx - styleMinWidthPx - gutterBandWidthPx;
   if (drawMinimap) width -= minimapWidthPx;
+  width -= verticalBarWidthPx;
   width -= TEXT_EDIT_WRAP_OFFSET_PX;
   return Math.trunc(width);
+}
+
+/** Every shaped row counted, and the widest one: `text.get_max_width()` is its ceiled width. */
+export function textEditRowStats(lineLayouts: readonly TextEditLineLayout[]): {
+  totalRows: number;
+  widestRowPx: number;
+} {
+  let widestRowPx = 0;
+  let totalRows = 0;
+  for (const { layout } of lineLayouts) {
+    totalRows += layout.lines.length;
+    for (const line of layout.lines) {
+      widestRowPx = Math.max(widestRowPx, shapedTextSizeWidthPx(line.widthPx));
+    }
+  }
+  return { totalRows, widestRowPx };
 }
 
 /**
@@ -244,15 +262,8 @@ function textEditContentSize(
   minimapWidthPx: number,
   drawMinimap: boolean | undefined
 ): Vector2 {
-  let maxRowWidthPx = 0;
-  let totalRows = 0;
-  for (const { layout } of lineLayouts) {
-    totalRows += layout.lines.length;
-    for (const line of layout.lines) {
-      maxRowWidthPx = Math.max(maxRowWidthPx, shapedTextSizeWidthPx(line.widthPx));
-    }
-  }
-  let totalWidth = maxRowWidthPx + gutterBandWidthPx;
+  const { totalRows, widestRowPx } = textEditRowStats(lineLayouts);
+  let totalWidth = widestRowPx + gutterBandWidthPx;
   if (drawMinimap) totalWidth += minimapWidthPx;
   return {
     x: totalWidth + TEXT_EDIT_CONTENT_WIDTH_PAD_PX,

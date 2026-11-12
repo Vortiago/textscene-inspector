@@ -26,6 +26,7 @@ export function parseGraphEdit(
   result.zoomMinusDisabled = loadState.zoomMinusDisabled;
   result.zoomPlusDisabled = loadState.zoomPlusDisabled;
   result.queuedScrollOffsetUpdate = loadState.queuedScrollOffsetUpdate;
+  result.outOfTreeSize = loadState.outOfTreeSize;
   result.showGrid = parseOptionalBool(properties.show_grid);
   result.gridPattern = parseOptionalInt(properties.grid_pattern);
   result.snappingDistance = parseOptionalInt(properties.snapping_distance);

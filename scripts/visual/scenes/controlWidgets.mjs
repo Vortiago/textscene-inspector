@@ -157,6 +157,7 @@ export const CONTROL_WIDGET_SCENES = [
   // shows in each scene that does not hide it. Godot 4.6.3 `--mode 2d`: 0.413 and
   // 0.53-0.77 of 255, cross-rasterizer text antialiasing in the zoom label.
   { name: 'graph-edit', file: 'unit-graph-edit.tscn' },
+  { name: 'graph-edit-empty', file: 'unit-graph-edit-empty.tscn' },
   { name: 'graph-edit-menu-hidden', file: 'unit-graph-edit-menu-hidden.tscn' },
   { name: 'graph-edit-zoom-label', file: 'unit-graph-edit-zoom-label.tscn' },
   {

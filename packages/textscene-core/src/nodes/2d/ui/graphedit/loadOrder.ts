@@ -44,11 +44,15 @@ interface GraphEditLoadState {
   zoomPlusDisabled: boolean;
   /** Whether a setter queued `_update_scroll_offset` while the file applied (`:409`, `:524`). */
   queuedScrollOffsetUpdate: boolean;
+  /** `get_size()` as the file's last size-applying key left it, before the node is parented. */
+  outOfTreeSize: Vector2;
 }
 
 interface ReplayState {
   offsets: [number, number, number, number];
   customMinimum: Vector2;
+  /** `get_size()`: written only by a key that runs `_size_changed`, see `applySizeChanged`. */
+  size: Vector2;
   zoom: number;
   zoomMin: number;
   zoomMax: number;
@@ -62,12 +66,13 @@ interface ReplayState {
 }
 
 /**
- * `Control::get_size()` as `_size_changed` leaves it out of tree (`control.cpp:1765-1797`): the
- * parent rect is empty there (`:687-689`), so each `anchor_*` adds zero and the offsets span the
- * size, floored by `custom_minimum_size` (`:1744-1750`).
+ * `_size_changed` (`control.cpp:1765-1797`) out of tree: the parent rect is empty there
+ * (`:687-689`), so each `anchor_*` adds zero and the offsets span the size, floored by
+ * `custom_minimum_size` (`:1744-1750`). Only a key that runs it applies the floor: a later
+ * `custom_minimum_size` key leaves `size` as it was (`:1676-1679`).
  */
-function sizeOf(state: ReplayState): Vector2 {
-  return {
+function applySizeChanged(state: ReplayState): void {
+  state.size = {
     x: Math.max(state.offsets[2] - state.offsets[0], state.customMinimum.x),
     y: Math.max(state.offsets[3] - state.offsets[1], state.customMinimum.y),
   };
@@ -80,7 +85,7 @@ function sizeOf(state: ReplayState): Vector2 {
  */
 function installScrollBounds(state: ReplayState): void {
   state.queuedScrollOffsetUpdate = true;
-  const size = sizeOf(state);
+  const size = state.size;
   state.scrollMin = { x: -size.x, y: -size.y };
   state.scrollMax = { x: size.x, y: size.y };
 }
@@ -114,6 +119,7 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
   const state: ReplayState = {
     offsets: [0, 0, 0, 0],
     customMinimum: { x: 0, y: 0 },
+    size: { x: 0, y: 0 },
     zoom: DEFAULT_ZOOM,
     zoomMin: GRAPH_EDIT_DEFAULT_ZOOM_MIN,
     zoomMax: GRAPH_EDIT_DEFAULT_ZOOM_MAX,
@@ -130,10 +136,18 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
     const side = OFFSET_KEYS[key];
     if (side !== undefined) {
       const value = parseOptionalFloat(properties[key]!);
-      if (value !== undefined) state.offsets[side] = value;
+      if (value !== undefined) {
+        state.offsets[side] = value;
+        applySizeChanged(state);
+      }
       continue;
     }
     switch (key) {
+      case 'layout_mode': {
+        // Mode 0 (`LAYOUT_MODE_POSITION`) re-applies the offsets, which runs `_size_changed`.
+        if (parseOptionalFloat(properties.layout_mode) === 0) applySizeChanged(state);
+        break;
+      }
       case 'custom_minimum_size': {
         const value = parseOptionalVector2(properties.custom_minimum_size);
         if (value) state.customMinimum = value;
@@ -144,7 +158,7 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
         if (!value) break;
         // `p_offset.clamp(min_scroll_offset, max_scroll_offset - get_size())` (`:407`),
         // per component (`core/math/vector2.cpp:132-136`).
-        const size = sizeOf(state);
+        const size = state.size;
         state.scrollOffset = {
           x: clamp(value.x, state.scrollMin.x, state.scrollMax.x - size.x),
           y: clamp(value.y, state.scrollMin.y, state.scrollMax.y - size.y),
@@ -186,5 +200,6 @@ export function resolveGraphEditLoadState(properties: Record<string, string>): G
     zoomMinusDisabled: state.minusDisabled,
     zoomPlusDisabled: state.plusDisabled,
     queuedScrollOffsetUpdate: state.queuedScrollOffsetUpdate,
+    outOfTreeSize: state.size,
   };
 }

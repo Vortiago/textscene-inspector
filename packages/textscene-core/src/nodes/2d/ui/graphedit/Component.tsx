@@ -42,6 +42,7 @@ import { graphEditToolbar, zoomLabelText } from './toolbar';
 import { GraphEditToolbarChrome } from './ToolbarChrome';
 import { graphEditToolbarTheme } from './toolbarTheme';
 import {
+  CONSTRUCTOR_SCROLL_BOUNDS,
   graphEditElements,
   isMinimapEnabled,
   minimapOpacity,
@@ -50,7 +51,7 @@ import {
 } from './minimap';
 import { GraphEditMinimapChrome } from './MinimapChrome';
 import { minimapConnectionsOf } from './minimapConnections';
-import { graphEditScrollBars } from './scrollBars';
+import { graphEditConstructorScrollBars, graphEditScrollBars, hasUpdatedScrollBars } from './scrollBars';
 import { ScrollBarChrome } from '../shared/ScrollChrome';
 import { canvasSubOrders } from '../../../../r3f/canvasItemState';
 import type { GraphEditProperties } from './types';
@@ -258,14 +259,20 @@ export function GraphEdit({
 
   const minimapEnabled = isMinimapEnabled(props);
   const graphEditSize = rectSize;
-  const { bounds, hasPositionedChild, minimapElements } = graphEditElements(
-    solveNode,
-    childRects,
-    zoom,
-    graphEditSize,
-    theme
-  );
-  const scrollBars = graphEditScrollBars(graphEditSize, bounds, scrollOffset, theme);
+  const elements = graphEditElements(solveNode, childRects, zoom, graphEditSize, theme);
+  const { hasPositionedChild, minimapElements } = elements;
+  // Until `_update_scrollbars` runs, both bars keep the constructor range and the minimap reads
+  // zero bounds (`scrollBars.ts`).
+  const hasUpdatedBars = hasUpdatedScrollBars({
+    hasGraphElement: elements.hasGraphElement,
+    queuedScrollOffsetUpdate: props.queuedScrollOffsetUpdate === true,
+    outOfTreeSize: props.outOfTreeSize ?? graphEditSize,
+    solvedSize: graphEditSize,
+  });
+  const bounds = hasUpdatedBars ? elements.bounds : CONSTRUCTOR_SCROLL_BOUNDS;
+  const scrollBars = hasUpdatedBars
+    ? graphEditScrollBars(graphEditSize, bounds, scrollOffset, theme)
+    : graphEditConstructorScrollBars(graphEditSize, theme);
   const topLayer = canvasSubOrders(chromeSlot, GRAPH_EDIT_TOP_LAYER);
   const minimapPanelRect = minimapRect(graphEditSize, props);
   const minimapXform = minimapTransform({ x: minimapPanelRect.w, y: minimapPanelRect.h }, bounds);

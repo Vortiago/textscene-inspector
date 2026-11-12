@@ -66,10 +66,14 @@ are present in every GraphEdit, whatever the scene file says:
   Buttons and SpinBox read their own class's items through the GraphEdit's ancestor Theme chain
   (`graph_edit.cpp:3229-3300`). The boxes, the font and icon colours, and the minimum size of
   each widget follow a Theme that sets them.
-- The two **scrollbars**, anchored to the bottom and right edges. `_update_scrollbars`
-  grows the scroll range past the page in every GraphEdit with a non-zero rect, so both
-  are always visible. The size and offset of each grabber come from that range and
-  `scroll_offset`.
+- The two **scrollbars**, anchored to the bottom and right edges. Once `_update_scrollbars`
+  has run, its scroll range is past the page in every GraphEdit with a non-zero rect, so both
+  are visible. The size and offset of each grabber come from that range and `scroll_offset`.
+  It has run in three cases. The GraphEdit has a GraphElement child. A `scroll_offset` or a `zoom`
+  that moves was applied while the file loaded. The solved size differs from the size the offsets
+  gave out of the tree. Otherwise both bars keep the constructor state: full length, overlapping
+  in the corner, each grabber a dot at the middle. The minimap then reads zero bounds, and its
+  camera frame runs past the minimap panel (`graphEdit.md`).
 - The **minimap**, anchored bottom-right, inset 12px, at `minimap_size` (at least 50 per
   axis) and `minimap_opacity`, drawn only while `minimap_enabled`. Inside it are the
   panel, one rect per visible GraphFrame and then GraphNode in its panel colour, every
