@@ -24,11 +24,11 @@ export type ShapeLayer =
 
 const FLOATS_PER_COLOUR = 4;
 
-/** `[r, g, b, a]` of a Godot sRGB colour: the channels linear and the alpha as it is. */
-function vertexColour(role: ColourRole, colour: Rgba): number[] {
+/** The role's colour with its channels linear and its alpha as it is. */
+function linearRole(role: ColourRole, colour: Rgba): Rgba {
   const { a, ...channels } = roleColour(role, colour);
-  const linear = godotColorToLinear(channels);
-  return [linear.r, linear.g, linear.b, a];
+  const { r, g, b } = godotColorToLinear(channels);
+  return { r, g, b, a };
 }
 
 function meshOf(positions: number[], colours: number[], indices: number[]): ShapeLayer {
@@ -43,10 +43,10 @@ function meshOf(positions: number[], colours: number[], indices: number[]): Shap
 function fillLayer(points: readonly Vector2[], role: ColourRole, colour: Rgba): ShapeLayer | null {
   const indices = triangulatePolygon(points);
   if (indices.length === 0) return null;
-  const paint = vertexColour(role, colour);
+  const { r, g, b, a } = linearRole(role, colour);
   return meshOf(
     points.flatMap(({ x, y }) => [x, -y, 0]),
-    points.flatMap(() => paint),
+    points.flatMap(() => [r, g, b, a]),
     indices
   );
 }
@@ -57,8 +57,13 @@ function hairlineLayer(points: readonly Vector2[], role: ColourRole, colour: Rgb
     false
   );
   if (!positions) return null;
-  const { a, ...channels } = roleColour(role, colour);
-  return { kind: 'hairline', positions, colour: godotColorToLinear(channels), alpha: a };
+  const { a, ...linear } = linearRole(role, colour);
+  return {
+    kind: 'hairline',
+    positions,
+    colour: new THREE.Color().setRGB(linear.r, linear.g, linear.b),
+    alpha: a,
+  };
 }
 
 function strokeLayer(
@@ -67,10 +72,9 @@ function strokeLayer(
   roles: readonly ColourRole[],
   colour: Rgba
 ): ShapeLayer | null {
-  const paint = roles.map((role) => vertexColour(role, colour));
   const stroke = polylineStrokeGeometry(
     points,
-    paint.map(([r, g, b, a]) => ({ r: r!, g: g!, b: b!, a: a! })),
+    roles.map((role) => linearRole(role, colour)),
     width,
     false
   );

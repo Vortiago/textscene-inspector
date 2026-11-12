@@ -5,6 +5,7 @@
  * space with Y down. With a `texture_mode` it also gives the UVs, in the texture's own space (v 0 on top).
  */
 
+import { vector2Elements } from '../../../resources/shapes/packedArray';
 import { isZeroApprox, type Rgba } from '../../../godot/math/math';
 import { storedReal as f } from '../../../godot/math/real';
 import {
@@ -78,20 +79,13 @@ export interface LineStroke {
  * where the distance is read (`line_builder.cpp:115`).
  */
 export function buildLineStroke(options: LineStrokeOptions): LineStroke | null {
-  const points = toPoints(options.points);
+  const points = vector2Elements(options.points);
   if (points.length < 2 || options.width === 0 || options.tileAspect <= 0) return null;
 
   const walk = new StrokeWalk(options, points);
   if (walk.hasZeroLength) return null;
   walk.run();
   return walk.finish();
-}
-
-function toPoints(flat: Float32Array): Vector2[] {
-  return Array.from({ length: Math.floor(flat.length / 2) }, (_, i) => ({
-    x: flat[i * 2]!,
-    y: flat[i * 2 + 1]!,
-  }));
 }
 
 /**

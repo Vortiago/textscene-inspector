@@ -41,8 +41,10 @@ export function capsuleDrawing({ radius, height }: CapsuleShape2DProperties): Sh
   return filledWithOutline(capsulePoints(radius, height));
 }
 
+const ORIGIN: Vector2 = { x: 0, y: 0 };
+
 /** `Transform2D::rotate` about `origin`, at unit scale. */
-function rotation(angle: number, origin: Vector2 = { x: 0, y: 0 }) {
+function rotation(angle: number, origin: Vector2 = ORIGIN) {
   return transform2DFromParts(angle, { x: 1, y: 1 }, 0, origin);
 }
 
@@ -63,9 +65,9 @@ export function convexPolygonDrawing({ points }: ConvexPolygonShape2DProperties)
 /** `concave_polygon_shape_2d.cpp:64-75`: nothing for an odd count of points. */
 export function concavePolygonDrawing({ segments }: ConcavePolygonShape2DProperties): ShapeDrawing {
   if (segments.length % 2 === 1) return [];
-  const lines: ShapeCommand[] = [];
-  for (let i = 0; i < segments.length; i += 2) lines.push(line(segments[i]!, segments[i + 1]!, 2));
-  return lines;
+  return Array.from({ length: segments.length / 2 }, (_, i) =>
+    line(segments[i * 2]!, segments[i * 2 + 1]!, 2)
+  );
 }
 
 /** The half length of the boundary line that fades out past it (`world_boundary_shape_2d.cpp:95-98`). */
@@ -92,19 +94,20 @@ export function worldBoundaryDrawing({ normal, distance }: WorldBoundaryShape2DP
 
   const toWorld = rotation(Math.atan2(normal.y, normal.x));
   const arrowFrom = distance + BOUNDARY_LINE_WIDTH / 2;
+  const arrowPoints = [
+    { x: arrowFrom, y: -2.5 },
+    { x: distance + 20, y: -2.5 },
+    { x: distance + 20, y: -10 },
+    { x: distance + 40, y: 0 },
+    { x: distance + 20, y: 10 },
+    { x: distance + 20, y: 2.5 },
+    { x: arrowFrom, y: 2.5 },
+  ].map((p) => transform2DXform(toWorld, p));
   const arrow: ShapeCommand = {
     kind: 'stroke',
-    points: [
-      { x: arrowFrom, y: -2.5 },
-      { x: distance + 20, y: -2.5 },
-      { x: distance + 20, y: -10 },
-      { x: distance + 40, y: 0 },
-      { x: distance + 20, y: 10 },
-      { x: distance + 20, y: 2.5 },
-      { x: arrowFrom, y: 2.5 },
-    ].map((p) => transform2DXform(toWorld, p)),
+    points: arrowPoints,
     width: BOUNDARY_LINE_WIDTH / 2,
-    roles: Array<'inverted'>(7).fill('inverted'),
+    roles: arrowPoints.map(() => 'inverted'),
   };
   return [boundary, arrow];
 }
@@ -132,5 +135,5 @@ export function separationRayDrawing({ length }: SeparationRayShape2DProperties)
     role: 'shape',
   };
   if (!hasLine) return [head];
-  return [line({ x: 0, y: 0 }, { x: 0, y: Math.sign(length) * (reach - headSize) }, RAY_LINE_WIDTH), head];
+  return [line(ORIGIN, { x: 0, y: Math.sign(length) * (reach - headSize) }, RAY_LINE_WIDTH), head];
 }

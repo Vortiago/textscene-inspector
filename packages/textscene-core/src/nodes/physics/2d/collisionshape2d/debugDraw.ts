@@ -1,18 +1,13 @@
 /** What a CollisionShape2D draws around its shape (`collision_shape_2d.cpp:98-127`): grey when disabled, an arrow when one-way. */
 
-import { darkened } from '../../../../godot/math/color';
+import { colorValue, darkened } from '../../../../godot/math/color';
 import type { Rgba } from '../../../../godot/math/math';
 import { roleColour, type ShapeDrawing } from '../../../../resources/shapes/shape2d/drawing';
-
-/** `Color::get_v()` is the largest channel (`color.cpp:174-176`). */
-function value({ r, g, b }: Rgba): number {
-  return Math.max(r, g, b);
-}
 
 /** The colour the shape draws in: the debug colour, or its value as a grey at half the alpha when disabled. */
 export function drawColour(debugColour: Rgba, isDisabled: boolean): Rgba {
   if (!isDisabled) return debugColour;
-  const grey = value(debugColour);
+  const grey = colorValue(debugColour);
   return { r: grey, g: grey, b: grey, a: debugColour.a * 0.5 };
 }
 
