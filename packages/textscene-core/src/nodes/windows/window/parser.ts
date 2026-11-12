@@ -43,7 +43,8 @@ function sizeLineWrites(lines: Record<string, string>): WindowSizeWrite[] {
  * what the instanced base left, or one file's lines over what the constructor left.
  */
 interface WindowReplay {
-  lines: Record<string, string>;
+  /** Named `properties`: the grammar parity scan reads the keys a parser names on that bag. */
+  properties: Record<string, string>;
   /** The background before the lines run, which either background key replaces. */
   transparentBackground: boolean;
   /** The size writes before the lines run. A class that floors its size in its constructor writes `min_size` first. */
@@ -59,7 +60,7 @@ function windowReplay(
   if (override) {
     const { held } = override;
     return {
-      lines: override.written,
+      properties: override.written,
       transparentBackground: held.transparent_bg,
       size: [
         { key: 'min_size', value: held.min_size },
@@ -71,7 +72,7 @@ function windowReplay(
   }
   const defaults = windowClassDefaults(type);
   return {
-    lines: properties,
+    properties,
     transparentBackground: defaults.transparent,
     size: [
       { key: 'min_size', value: defaults.minSize },
@@ -101,14 +102,14 @@ function parseContentScale(properties: Record<string, string>, context: string):
  * instanced base left under an override's lines.
  */
 function replayTransparentBackground(
-  { lines, transparentBackground: held }: WindowReplay,
+  { properties, transparentBackground: held }: WindowReplay,
   context: string
 ): boolean {
-  const flag = boolOr(lines.transparent, held, context);
-  if (lines.transparent_bg === undefined) return flag;
-  const keys = Object.keys(lines);
+  const flag = boolOr(properties.transparent, held, context);
+  if (properties.transparent_bg === undefined) return flag;
+  const keys = Object.keys(properties);
   const isFlagLast = keys.indexOf('transparent') > keys.indexOf('transparent_bg');
-  return isFlagLast ? flag : boolOr(lines.transparent_bg, held, context);
+  return isFlagLast ? flag : boolOr(properties.transparent_bg, held, context);
 }
 
 export function parseWindow(
@@ -127,7 +128,7 @@ export function parseWindow(
     ...viewport,
     ...parseThemeOwnerFields(properties),
     transparent_bg: replayTransparentBackground(replay, context),
-    size: replayWindowSize([...replay.size, ...sizeLineWrites(replay.lines)]),
+    size: replayWindowSize([...replay.size, ...sizeLineWrites(replay.properties)]),
     size_2d_override: ORIGIN,
     size_2d_override_stretch: false,
     // `Window()` disables the update (`window.cpp:3578`), and the embedder sets
@@ -150,7 +151,7 @@ export function parseWindow(
     exclusive: boolOr(properties.exclusive, defaults.exclusive, context),
     wrap_controls: boolOr(properties.wrap_controls, defaults.wrapControls, context),
     force_native:
-      properties.force_native !== undefined && replayForceNative(replay.forceNative, replay.lines),
+      properties.force_native !== undefined && replayForceNative(replay.forceNative, replay.properties),
     min_size: clampLimitSize(vec2iOr(properties.min_size, defaults.minSize, context)),
     max_size: clampLimitSize(vec2iOr(properties.max_size, ORIGIN, context)),
     content_scale: parseContentScale(properties, context),
