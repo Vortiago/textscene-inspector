@@ -136,16 +136,13 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'draw_pass_2',
       'draw_pass_3',
       'draw_pass_4',
-      'draw_skin',
       'interp_to_end',
       'interpolate',
       'speed_scale',
       'sub_emitter',
-      'trail_enabled',
-      'trail_lifetime',
     ],
     reason:
-      'GPUParticles3D draws one simulated pose, so the keys of the draw passes, the trail and the sub-emitter are not read. Its parser reads the emitter keys, visibility_aabb and process_material. speed_scale is not read: the settle of the engine runs at a speed scale of 1 (particles_storage.cpp:1555-1563).',
+      'GPUParticles3D draws one simulated pose, so the keys of the draw passes (read through a table-driven lookup), the sub-emitter and interpolate are not read. Its parser reads the emitter keys, the draw order, the alignment, the trail, visibility_aabb and process_material. speed_scale is not read: the settle of the engine runs at a speed scale of 1 (particles_storage.cpp:1555-1563).',
   },
 
   // Lights: the shared validators and parseBaseLight* helpers are walked through
