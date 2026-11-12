@@ -130,6 +130,8 @@ export const CONTROL_WIDGET_SCENES = [
   // Godot 4.6.3 `--mode 2d`: mean 0.006 of 255 each, the 1/255 rounding floor.
   // The one variable: a Polygon2D below a Control with offsets. Godot probe: the square stands at (80, 40).
   { name: 'control-node2d-child', file: 'unit-node2d-below-control.tscn', mode: '2d' },
+  // The one variable: the y-sort lifts the Node2D out of a y-sorted Control below a y-sorted Node2D.
+  { name: 'control-node2d-child-y-sort', file: 'unit-node2d-below-ysorted-control.tscn', mode: '2d' },
   {
     name: 'control-anchor-parent-node2d',
     file: 'unit-control-anchor-parent-node2d.tscn',
