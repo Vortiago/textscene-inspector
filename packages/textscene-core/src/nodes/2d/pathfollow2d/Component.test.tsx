@@ -18,7 +18,7 @@ import { type CanvasItemTextureSampler } from '../../../r3f/canvasItemTextureSam
 
 // Straight horizontal curve (0,0) → (100,0), length 100.
 const STRAIGHT: Curve2DSampler = tessellateCurve2D(
-  decodedCurve(CURVE_2D, 'Curve2D', { _data: '{"points": PackedVector2Array(0,0,0,0,0,0, 0,0,0,0,100,0)}' })
+  decodedCurve(CURVE_2D, { _data: '{"points": PackedVector2Array(0,0,0,0,0,0, 0,0,0,0,100,0)}' })
 );
 
 function followNode(name = 'MyFollow', props: Record<string, string> = {}): TscnNode {

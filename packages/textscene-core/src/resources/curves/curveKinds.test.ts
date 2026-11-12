@@ -13,32 +13,30 @@ import { CURVE_3D } from './curve3d';
 
 interface CurveCase {
   readonly kind: ResourceKind<unknown>;
-  readonly type: string;
   readonly body: string;
 }
 
 const CURVES: readonly CurveCase[] = [
   {
     kind: CURVE_2D,
-    type: 'Curve2D',
     body: '_data = {\n"points": PackedVector2Array(0, 0, 0, 0, 0, 0, -10, 0, 10, 0, 100, 50)\n}\npoint_count = 2',
   },
   {
     kind: CURVE_3D,
-    type: 'Curve3D',
     body: '_data = {\n"points": PackedVector3Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, 0, 0, 1, 4, 0, 2),\n"tilts": PackedFloat32Array(0, 0)\n}\npoint_count = 2',
   },
 ];
 
 function readAt(curve: CurveCase, ref: string, scene: string, files: Record<string, string> = {}) {
   const read = staticSnapshot(files).read(nodeReference(ref, sceneTables(scene)), curve.kind);
-  if (read.status !== 'loaded') throw new Error(`expected the ${curve.type} to load, got ${read.status}`);
+  if (read.status !== 'loaded')
+    throw new Error(`expected the ${curve.kind.name} to load, got ${read.status}`);
   return read.value;
 }
 
-describe.each(CURVES)('the $type kind', (curve) => {
+describe.each(CURVES)('the $kind.name kind', (curve) => {
   const inScene = () =>
-    readAt(curve, 'SubResource("c")', `[sub_resource type="${curve.type}" id="c"]\n${curve.body}`);
+    readAt(curve, 'SubResource("c")', `[sub_resource type="${curve.kind.name}" id="c"]\n${curve.body}`);
 
   it('decodes control points from a sub-resource of the scene', () => {
     expect(inScene()).toHaveLength(2);
@@ -46,16 +44,16 @@ describe.each(CURVES)('the $type kind', (curve) => {
 
   it('decodes the same points from a .tres of its own', () => {
     const files = {
-      'res://curve.tres': `[gd_resource type="${curve.type}" format=3]\n\n[resource]\n${curve.body}\n`,
+      'res://curve.tres': `[gd_resource type="${curve.kind.name}" format=3]\n\n[resource]\n${curve.body}\n`,
     };
-    const scene = `[ext_resource type="${curve.type}" path="res://curve.tres" id="1_c"]`;
+    const scene = `[ext_resource type="${curve.kind.name}" path="res://curve.tres" id="1_c"]`;
 
     expect(readAt(curve, 'ExtResource("1_c")', scene, files)).toEqual(inScene());
   });
 
   it('decodes the same points from a sub-resource of another .tres', () => {
     const files = {
-      'res://holder.tres': `[gd_resource type="Resource" format=3]\n\n[sub_resource type="${curve.type}" id="c"]\n${curve.body}\n\n[resource]\n`,
+      'res://holder.tres': `[gd_resource type="Resource" format=3]\n\n[sub_resource type="${curve.kind.name}" id="c"]\n${curve.body}\n\n[resource]\n`,
     };
 
     expect(readAt(curve, 'res://holder.tres::c', '', files)).toEqual(inScene());

@@ -6,6 +6,7 @@
 
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useSceneResources } from '../../r3f/SceneResourcesContext';
+import { subscribeToNothing } from '../../utils/subscribeToNothing';
 import { hasUnsettledFile, useMissingFiles, useStableEntries } from '../useLoadedFiles';
 import { usePendingWhile } from '../usePendingWhile';
 import { useResourceLoader } from '../useResource';
@@ -16,11 +17,12 @@ import { nodeReference, type ScopedReference } from './scopedReference';
 
 /** With no loader, every file is missing, as `useResource` answers outside its provider. */
 const NO_LOADER_SNAPSHOT = snapshotOver({ getCached: () => null });
+const NO_FILES = new Map<string, never>();
 const NO_LOADER: SnapshotSource = {
   current: () => NO_LOADER_SNAPSHOT,
   request: () => {},
-  subscribe: () => () => {},
-  files: () => new Map(),
+  subscribe: subscribeToNothing,
+  files: () => NO_FILES,
 };
 
 /**

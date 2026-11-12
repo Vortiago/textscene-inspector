@@ -7,12 +7,13 @@
 
 import { warn } from '../../logger';
 import { perObject } from '../../utils/perObject';
+import { sameData } from '../../utils/sameData';
 import type { ParsedResource } from '../../parser/parsedResource';
 import type { CacheSource } from '../../r3f/cacheSources';
 import type { SceneResources } from '../../r3f/SceneResourcesContext';
 import { holdsResource } from '../../godot/scene/resourceLiteral';
-import { fileResources, findSectionResource } from '../resourceSection';
-import { resourceFilePath } from '../subResourcePath';
+import { scopedSection } from '../resourceSection';
+import { resourceFilePath, subResourcePath } from '../subResourcePath';
 import {
   findExtResource,
   findSubResource,
@@ -51,19 +52,13 @@ interface FollowedRead {
   readonly answer: Read<unknown>;
 }
 
-/** A reference a decode handed on, which the value holds. */
-interface HandedReference {
-  readonly ref: string | undefined;
-  readonly resources: SceneResources;
-}
-
 interface Decoded {
-  readonly type: string;
   readonly properties: Readonly<Record<string, string>>;
   readonly isBuiltIn: boolean;
   readonly isHeldLocally: boolean;
   readonly reads: readonly FollowedRead[];
-  readonly references: readonly HandedReference[];
+  /** The tables a reference the decode handed on resolves in, which the value holds. Null when it handed on none. */
+  readonly handedTables: SceneResources | null;
   readonly answer: Read<unknown>;
 }
 
@@ -98,7 +93,7 @@ function locate(files: CacheSource<ParsedResource>, reference: ScopedReference):
   if (parsed?.type === 'SubResource') {
     const section = findSubResource(resources.internalResources, parsed.id);
     if (!section) return UNAVAILABLE['unknown-id'];
-    const address = reference.origin === undefined ? null : `${reference.origin}::${parsed.id}`;
+    const address = reference.origin === undefined ? null : subResourcePath(reference.origin, parsed.id);
     return {
       held: heldOf(section.type, section.data, address, reference.isHeldLocally),
       key: referenceKey(reference),
@@ -112,18 +107,21 @@ function locate(files: CacheSource<ParsedResource>, reference: ScopedReference):
   }
   // The module reads resource files only. An image or a scene is no class a kind of this module accepts.
   const path = resolveExtResourcePath(ref, resources.externalResources);
-  if (!path || !loadsAsParsedResource(resourceFilePath(path))) return UNAVAILABLE['wrong-type'];
-  const file = files.getCached(resourceFilePath(path));
+  const filePath = path && resourceFilePath(path);
+  if (!path || !filePath || !loadsAsParsedResource(filePath)) return UNAVAILABLE['wrong-type'];
+  const file = files.getCached(filePath);
   if (file === undefined) return PENDING;
   if (file === null) return UNAVAILABLE['missing-file'];
-  const section = findSectionResource(file, path);
+  // Scoped per parse, so the tables keep their identity while the file holds.
+  const section = scopedSection(file, path);
   if (!section) return UNAVAILABLE['unknown-id'];
+  const { type, data } = section.resource;
   return {
-    held: heldOf(section.type, section.data, path, reference.isHeldLocally),
+    held: heldOf(type, data, path, reference.isHeldLocally),
     key: path,
     slot: path,
-    resources: fileResources(file),
-    origin: resourceFilePath(path),
+    resources: section.resources,
+    origin: filePath,
   };
 }
 
@@ -163,7 +161,7 @@ function decoded<T>(
   if (kept && stillHolds(kept, located, files, stack)) return kept.answer as Read<T>;
 
   const reads: FollowedRead[] = [];
-  const references: HandedReference[] = [];
+  let handedTables: SceneResources | null = null;
   let isWaiting = false;
   const follow: Follow = {
     read(innerKind, ref) {
@@ -173,7 +171,7 @@ function decoded<T>(
       return answer;
     },
     reference(ref) {
-      references.push({ ref, resources: located.resources });
+      handedTables = located.resources;
       return nestedReference(located, ref);
     },
   };
@@ -182,12 +180,11 @@ function decoded<T>(
   if (isWaiting) return PENDING;
   const answer: Read<T> = value === null ? UNAVAILABLE.undecodable : { status: 'loaded', value };
   slots.set(located.slot, {
-    type: located.held.type,
     properties: located.held.properties,
     isBuiltIn: located.held.address === null,
     isHeldLocally: located.held.isHeldLocally,
     reads,
-    references,
+    handedTables,
     answer,
   });
   return answer;
@@ -208,7 +205,7 @@ function decodeOnce<T>(kind: ResourceKind<T>, held: HeldResource, follow: Follow
 /**
  * Whether the kept decode still describes the resource. A built-in resource is confirmed by its
  * strings, since each parse of the scene allocates it anew. A file resource is confirmed by the
- * object its parse holds, so a reload gives a new value.
+ * object its parse holds, so a reload gives a new value. The slot already names the class.
  */
 function stillHolds(
   kept: Decoded,
@@ -217,23 +214,15 @@ function stillHolds(
   stack: readonly string[]
 ): boolean {
   const { held } = located;
-  if (kept.type !== held.type || kept.isHeldLocally !== held.isHeldLocally) return false;
+  if (kept.isHeldLocally !== held.isHeldLocally) return false;
   const sameProperties = kept.isBuiltIn
-    ? held.address === null && sameStrings(kept.properties, held.properties)
+    ? sameData(kept.properties, held.properties)
     : kept.properties === held.properties;
   return (
     sameProperties &&
+    (kept.handedTables === null || kept.handedTables === located.resources) &&
     kept.reads.every(
       ({ kind, ref, answer }) => readAt(files, nestedReference(located, ref), kind, stack) === answer
-    ) &&
-    kept.references.every(({ resources }) => resources === located.resources)
+    )
   );
-}
-
-/** A string compare, not a key from `JSON.stringify`: 0.2 ms against 5.6 ms on 2.5 MB of text. */
-function sameStrings(a: Readonly<Record<string, string>>, b: Readonly<Record<string, string>>): boolean {
-  if (a === b) return true;
-  const keys = Object.keys(a);
-  if (keys.length !== Object.keys(b).length) return false;
-  return keys.every((key) => a[key] === b[key]);
 }

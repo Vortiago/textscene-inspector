@@ -8,7 +8,7 @@ import { MAX_PADDED_POINTS } from '../shared/pointCount';
 
 /** The control points a Curve2D sub-resource with this body decodes to. */
 function decode(data: Record<string, string>) {
-  return decodedCurve(CURVE_2D, 'Curve2D', data);
+  return decodedCurve(CURVE_2D, data);
 }
 
 /** A Curve2D body whose `_data` holds `points` as written, plus any other properties. */

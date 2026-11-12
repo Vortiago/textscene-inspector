@@ -7,12 +7,10 @@
 import type { ParsedResource } from '../../parser/parsedResource';
 import { answeredOnce, recordingReads, type CacheSource } from '../../r3f/cacheSources';
 import type { ResourceProcessor } from '../createResourceProcessor';
+import type { CachedFile } from '../useLoadedFiles';
 import type { ResourceLoader } from '../ResourceLoader';
 import type { ResourceSnapshot } from './read';
 import { snapshotOver } from './snapshot';
-
-/** A file's answer: the parse, undefined while it loads, null once it failed. */
-export type FileAnswer = ParsedResource | null | undefined;
 
 export interface SnapshotSource {
   /** The same snapshot until a read it recorded would answer differently. */
@@ -22,14 +20,14 @@ export interface SnapshotSource {
   /** `onStale` hears a load, a failure or a reload of a file the current snapshot read. */
   subscribe(onStale: () => void): () => void;
   /** Each file the current snapshot read, with its answer, for the host's **Missing resource** report. */
-  files(): ReadonlyMap<string, FileAnswer>;
+  files(): ReadonlyMap<string, CachedFile<ParsedResource>>;
 }
 
 export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
   const cache = loader.resources;
   const settled = keptWhileReloading(cache);
   /** Written only by the snapshot's recording. A new snapshot starts it empty. */
-  let reads = new Map<string, FileAnswer>();
+  let reads = new Map<string, CachedFile<ParsedResource>>();
   /** Written only by `request` and the last unsubscribe: the files this source holds pinned. */
   const pinned = new Set<string>();
   let listeners = 0;
@@ -40,7 +38,10 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
     return snapshotOver(recordingReads(answeredOnce(settled), (path, answer) => recorded.set(path, answer)));
   };
   let snapshot = start();
-  const isStale = () => [...reads].some(([path, answer]) => settled.getCached(path) !== answer);
+  const isStale = () => {
+    for (const [path, answer] of reads) if (settled.getCached(path) !== answer) return true;
+    return false;
+  };
 
   return {
     current() {

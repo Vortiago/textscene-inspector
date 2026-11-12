@@ -198,6 +198,17 @@ describe('the identity of a decoded value', () => {
     expect(read()).toBe(read());
   });
 
+  it('is the same for two reads of a file resource whose decode hands on a reference', () => {
+    const files = {
+      [A_FILE]: resourceFile('later = SubResource("r")', '[sub_resource type="Resource" id="r"]'),
+    };
+    const snapshot = staticSnapshot(files);
+    const { kind } = namedKind();
+    const read = () => snapshot.read(nodeReference('ExtResource("1_a")', sceneTables(EXT_A)), kind).value;
+
+    expect(read()).toBe(read());
+  });
+
   it('is the same across a new parse of the scene with equal text', () => {
     const { kind } = namedKind();
     const read = () =>

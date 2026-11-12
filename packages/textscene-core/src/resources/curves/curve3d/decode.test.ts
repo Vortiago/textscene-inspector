@@ -6,7 +6,7 @@ import { MAX_PADDED_POINTS } from '../shared/pointCount';
 
 /** The control points a Curve3D sub-resource with this body decodes to. */
 function decode(data: Record<string, string>) {
-  return decodedCurve(CURVE_3D, 'Curve3D', data);
+  return decodedCurve(CURVE_3D, data);
 }
 
 /** A Curve3D body whose `_data` holds `points` as written and `tilts`, plus any other properties. */

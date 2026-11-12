@@ -7,6 +7,7 @@
 
 import type { SceneResources } from '../../r3f/SceneResourcesContext';
 import { parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
+import { subResourcePath } from '../subResourcePath';
 
 export interface ScopedReference {
   /** `SubResource("id")`, `ExtResource("id")` or a `res://` address. Undefined names nothing. */
@@ -35,6 +36,6 @@ export function nodeReference(ref: string | undefined, scope: SceneResources): S
 export function referenceKey(reference: ScopedReference): string {
   const { ref, origin = '' } = reference;
   const parsed = ref === undefined ? null : parseResourceReference(ref);
-  if (parsed?.type === 'SubResource') return `${origin}::${parsed.id}`;
+  if (parsed?.type === 'SubResource') return subResourcePath(origin, parsed.id);
   return resolveExtResourcePath(ref, reference.resources.externalResources) ?? `${origin}?${ref ?? ''}`;
 }
