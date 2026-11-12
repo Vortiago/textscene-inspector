@@ -4,7 +4,7 @@ import type { Aabb } from '../../../godot/math/aabb.js';
 export const TRANSFORM_FLOATS = 12;
 
 /** Floats in one 2D buffer transform: the x and y rows, each with its origin component. */
-export const TRANSFORM_2D_FLOATS = 8;
+const TRANSFORM_2D_FLOATS = 8;
 
 /** Floats in an instance's colour and in its custom data. */
 export const VEC4_FLOATS = 4;
