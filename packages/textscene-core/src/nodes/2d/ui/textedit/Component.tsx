@@ -50,6 +50,7 @@ import {
   textEditTabStopsPx,
   TEXT_EDIT_THEME_FONT_KEY,
   TEXT_EDIT_DEFAULT_TAB_SIZE,
+  TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
 } from './nativeSolver';
 import { useTextEditRows } from './useTextEditRows';
 import type { TextEditRows } from './rows';
@@ -135,7 +136,7 @@ export function TextEditBody({
     rect.w,
     styleBox,
     gutterBandWidthPx,
-    props.minimapWidth ?? 80,
+    props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
     props.minimapDraw,
     rowHeightPx
   );
@@ -155,7 +156,7 @@ export function TextEditBody({
       margins: styleBox.contentMargin,
       rowHeightPx,
       gutterBandWidthPx,
-      minimapWidthPx: props.minimapWidth ?? 80,
+      minimapWidthPx: props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
       drawMinimap: props.minimapDraw,
       scrollPastEndOfFile: props.scrollPastEndOfFile === true,
       fitContentHeight: props.fitContentHeight === true,
@@ -204,7 +205,7 @@ export function TextEditBody({
       ...textEditMinimapLines(lines, lineLayouts, lineColorSpans, isPlaceholder),
       sizeWidthPx: rect.w,
       xMarginEndPx: band.xMarginEndPx,
-      widthPx: props.minimapWidth ?? 80,
+      widthPx: props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
       rtl: solveNode.rtl,
       controlHeightPx: scrollBars.controlHeightPx,
       rowHeightPx,

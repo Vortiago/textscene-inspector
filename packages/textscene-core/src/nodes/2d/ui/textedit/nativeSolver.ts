@@ -277,6 +277,9 @@ function textEditContentSize(
  */
 export const TEXT_EDIT_DEFAULT_TAB_SIZE = 4;
 
+/** The default `minimap_width` (`text_edit.h:577`). */
+export const TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX = 80;
+
 /** `Text::invalidate_cache` (`text_edit.cpp:348-352`, and `invalidate_all_lines`, `:394-398`). */
 export function textEditTabStopsPx(
   tabSize: number | undefined,
@@ -318,7 +321,7 @@ export function textEditMinimumSizeWith(
           rectWidthPx,
           styleMin.x,
           gutterBandWidthPx,
-          props.minimapWidth ?? 80,
+          props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
           props.minimapDraw
         );
   const effectiveWrapMode = rectWidthPx === undefined ? 0 : props.wrapMode;
@@ -341,7 +344,7 @@ export function textEditMinimumSizeWith(
     lineLayouts,
     rowHeightPx,
     gutterBandWidthPx,
-    props.minimapWidth ?? 80,
+    props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
     props.minimapDraw
   );
 
