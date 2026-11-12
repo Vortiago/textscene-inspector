@@ -48,8 +48,8 @@ function decodeBezierCurve<P>(data: Readonly<Record<string, string>>, reader: Be
 
 /**
  * The control points of the curve a `SubResource("id")` value names: the first
- * resource of the reader's class under that id, the one the path linters check.
- * No points for any other value, or an id that names no such resource.
+ * resource under that id, when it is of the reader's class, as Godot loads it.
+ * No points for any other value, or an id whose first holder is another class.
  */
 export function resolveBezierCurve<P>(
   ref: string | undefined,
