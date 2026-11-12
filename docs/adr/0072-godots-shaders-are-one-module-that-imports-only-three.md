@@ -1,7 +1,7 @@
 # Godot's shaders are one module that imports only three
 
-- Status: Proposed. The owner asked for the shape on 2026-11-12 and chose the package name. The
-  place of the shader translator, the first publish and the three range wait for his answer.
+- Status: Proposed. The owner asked for the shape on 2026-11-12, chose the package name and put the
+  shader translator in the package. The first publish and the three range wait for his answer.
 - Amends: ADR-0055 (where the node lit surface lives).
 - Related: ADR-0038 (one owner for every program input), ADR-0039 (one material derivation, two
   adapters), ADR-0041 (an uncompiled shader draws Godot's default surface).
