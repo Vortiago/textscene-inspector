@@ -23,4 +23,4 @@ registerResourceSlice({
   busType: 'resource',
 });
 
-export { decodeModificationStack, modificationStackFiles } from './decode';
+export { MODIFICATION_STACK } from './decode';

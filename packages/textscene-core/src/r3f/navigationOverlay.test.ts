@@ -6,7 +6,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { vector2ToPositions } from './navigationOverlay';
-import { decodeNavigationPolygon } from '../resources/navigation/navigationpolygon';
+import { decodedResource } from '../resources/reading/decodedResource.testkit';
+import { NAVIGATION_POLYGON } from '../resources/navigation/navigationpolygon';
 
 describe('vector2ToPositions', () => {
   it('negates Y so Godot +Y-down becomes three.js +Y-up', () => {
@@ -31,8 +32,8 @@ describe('vector2ToPositions', () => {
   });
 
   it('is the only place the negation happens — the slice decode hands over raw Godot Y', () => {
-    // Negating inside decodeNavigationPolygon too would mirror the navmesh back.
-    const polygon = decodeNavigationPolygon({
+    // Negating inside the NavigationPolygon decode too would mirror the navmesh back.
+    const polygon = decodedResource(NAVIGATION_POLYGON, {
       vertices: 'PackedVector2Array(0, 0, 0, 128, 64, 128)',
       polygons: 'Array[PackedInt32Array]([PackedInt32Array(0, 1, 2)])',
     });

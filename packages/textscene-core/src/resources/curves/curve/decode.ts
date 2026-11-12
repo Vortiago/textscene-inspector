@@ -4,9 +4,7 @@
  */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import type { SceneResources } from '../../../r3f/SceneResourcesContext';
-import { resolveReferencedResource } from '../../resolveReference';
-import type { LoadedFile } from '../../scopedResource';
+import type { ResourceKind } from '../../reading';
 import { DEFAULT_BAKE_RESOLUTION, EMPTY_CURVE, type Curve, type CurvePoint } from './types';
 import { settableIntOr } from '../../../parser/valueParsers';
 import { storedReal } from '../../../godot/math/real.js';
@@ -28,7 +26,7 @@ const ELEMS_PER_POINT = 5;
  * no points, which `sampleCurve` answers 0 for: a caller that needs "no curve at
  * all" tests `points.length`, not the sampled value.
  */
-function decodeCurve(data: Record<string, string>): Curve {
+function decodeCurve(data: Readonly<Record<string, string>>): Curve {
   const limits = parseFloatArray(data._limits);
   const curve: Curve = {
     points: parsePoints(data._data),
@@ -59,17 +57,12 @@ export function decodeCurveResource(resource: TscnInternalResource | null): Curv
   return resource?.type === 'Curve' ? decodeCurve(resource.data) : null;
 }
 
-/**
- * The `Curve` that `ref` names: a SubResource, or an ExtResource once its `.tres` has loaded.
- * Null for no reference, an unknown id, a file not loaded yet, or a resource of another type.
- */
-export function resolveCurve(
-  ref: string | undefined,
-  pools: SceneResources,
-  loadedFile: LoadedFile
-): Curve | null {
-  return decodeCurveResource(resolveReferencedResource(ref, pools, loadedFile));
-}
+/** A `Curve` from any origin: the scalar curve of a parameter slot. Another class draws nothing. */
+export const CURVE: ResourceKind<Curve> = {
+  name: 'Curve',
+  accepts: (type) => type === 'Curve',
+  decode: (held) => decodeCurve(held.properties),
+};
 
 function parsePoints(value: string | undefined): CurvePoint[] {
   const entries = splitArrayLiteral(value);

@@ -1,4 +1,4 @@
-/** A `[sub_resource]` fixture for a test that builds a scene by hand. */
+/** Resource fixtures for a test that builds a scene or a `.tres` by hand. */
 
 import type { TscnInternalResource } from '../parser/types';
 
@@ -22,4 +22,10 @@ export function resolveOnlySubResource<T>(
   resolve: SubResourceResolver<T>
 ): T {
   return resolve('SubResource("only")', [subResource(type, 'only', data)]);
+}
+
+/** The text of a `.tres` whose `[resource]` is `resource`, for a test that serves it as a file. */
+export function resourceFileText(resource: TscnInternalResource): string {
+  const properties = Object.entries(resource.data).map(([key, value]) => `${key} = ${value}`);
+  return `[gd_resource type="${resource.type}" format=3]\n\n[resource]\n${properties.join('\n')}\n`;
 }

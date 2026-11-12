@@ -10,7 +10,7 @@ import {
   transform2DDecompose,
 } from '../../../godot/math/transform2d.js';
 import { storedTransform2D } from '../../../godot/math/real.js';
-import { decodeModificationStack } from '../../../resources/skeleton/skeletonmodificationstack2d/index.js';
+import { MODIFICATION_STACK } from '../../../resources/skeleton/skeletonmodificationstack2d/index.js';
 import { liveScenePassResults, type LiveScenePass } from '../../../r3f/liveScenePass.js';
 import type { TscnNode } from '../../../parser/types.js';
 import type { LiveLink, LiveTree } from '../../../r3f/liveSceneTree.js';
@@ -68,7 +68,7 @@ function solveSkeleton(
   const { modificationStack } = step.node.properties as Skeleton2DProperties;
   if (modificationStack === undefined) return;
   const rig = rigs.get(path);
-  const stack = decodeModificationStack(modificationStack, step.scope, (file) => tree.loadedResource(file));
+  const stack = tree.readResource(modificationStack, step.scope, MODIFICATION_STACK).value;
   if (!rig || !stack) return;
   const targets = stackTargets(stackNodePaths(stack), path, tree, rigs);
   const anchors = new Set(anchorPathsOf(targets.values()));

@@ -8,6 +8,7 @@
 import type { TscnInternalResource } from '../../../parser/types';
 import { slotInt } from '../../../godot/variant/intSlots.js';
 import { findSubResourceOfType, parseResourceReference } from '../../SubResourceResolver';
+import type { ResourceKind } from '../../reading';
 import { readBezierData, type BezierDataFormat } from './bezierData';
 import { resizeBezierPoints } from './pointCount';
 
@@ -23,6 +24,19 @@ export interface BezierCurveReader<P> {
 }
 
 /**
+ * The control points of the reader's class, from any origin. `set_curve` takes a `Ref` of that
+ * class, so a resource of another class draws nothing.
+ */
+export function bezierCurveKind<P>(reader: BezierCurveReader<P>): ResourceKind<P[]> {
+  const { className } = reader.format;
+  return {
+    name: className,
+    accepts: (type) => type === className,
+    decode: (held) => decodeBezierCurve(held.properties, reader),
+  };
+}
+
+/**
  * The control points of a Curve2D or Curve3D body. A `_data` that `_set_data` refuses,
  * or that does not parse, loads no points.
  */
@@ -34,8 +48,8 @@ function decodeBezierCurve<P>(data: Readonly<Record<string, string>>, reader: Be
 
 /**
  * The control points of the curve a `SubResource("id")` value names: the first
- * resource of the reader's class under that id, the one the path linters check.
- * No points for any other value, or an id that names no such resource.
+ * resource under that id, when it is of the reader's class, as Godot loads it.
+ * No points for any other value, or an id whose first holder is another class.
  */
 export function resolveBezierCurve<P>(
   ref: string | undefined,

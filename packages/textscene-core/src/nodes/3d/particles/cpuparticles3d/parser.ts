@@ -35,8 +35,6 @@ export function parseCPUParticles3D(
     ...parseGeometryInstance3D(heading, properties),
     visibilityAabb: parseNonEmptyAabb(properties.visibility_aabb, 'visibility_aabb'),
     mesh: heldResource(properties.mesh),
-    materialOverride: heldResource(properties.material_override),
-    materialOverlay: heldResource(properties.material_overlay),
     emission: readParticleEmission(properties),
     simulation: parseSimulation(properties, heading.attributes.name ?? 'CPUParticles3D'),
   };

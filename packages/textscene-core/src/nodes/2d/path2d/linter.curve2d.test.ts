@@ -96,9 +96,12 @@ curve = SubResource("Shared")
     const POINTLESS_CURVE2D = '[sub_resource type="Curve2D" id="Shared"]\n_data = {\n}';
     const SOUND_CURVE2D = `[sub_resource type="Curve2D" id="Shared"]\n_data = {\n${POINTS}\n}`;
 
-    it('checks the first Curve2D under the id when another type holds it first', () => {
-      const errors = curveErrors(lintSharedId('[sub_resource type="Curve" id="Shared"]', POINTLESS_CURVE2D));
-      expect(errors).toHaveLength(1);
+    // Godot keeps the first holder of a repeated id (`resource_format_text.cpp:597-603`), so
+    // `set_curve` gets no Curve2D and a later Curve2D under the id never loads.
+    it('checks no Curve2D when another type holds the id first', () => {
+      expect(curveErrors(lintSharedId('[sub_resource type="Curve" id="Shared"]', POINTLESS_CURVE2D))).toEqual(
+        []
+      );
     });
 
     it('checks only the first of two Curve2D declarations under the id', () => {

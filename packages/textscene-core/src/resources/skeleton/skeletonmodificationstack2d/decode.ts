@@ -11,11 +11,8 @@ import { stringToInt } from '../../../godot/string/string.js';
 import { SkeletonModification2DExecutionMode } from '../../../godot/scene/skeletonModification2d.js';
 import { slotCount } from '../../../godot/variant/intSlots.js';
 import { nodePathLiteral } from '../../../godot/variant/variantParser.js';
-import type { TscnInternalResource } from '../../../parser/types';
 import { boolOr, floatOr, intOr, realOr, realVec2Or } from '../../../parser/valueParsers';
-import type { SceneResources } from '../../../r3f/SceneResourcesContext';
-import { referencedFilePath, resolveReference } from '../../resolveReference';
-import type { LoadedFile, ScopedResource } from '../../scopedResource';
+import type { Follow, ResourceKind } from '../../reading';
 import type {
   AngleConstraint,
   BoneReference,
@@ -27,69 +24,45 @@ import type {
 
 const STACK_TYPE = 'SkeletonModificationStack2D';
 
-/** One walk of the resources a stack reaches. */
-interface StackWalk {
-  loadedFile: LoadedFile;
-  /** Each file a reference of the walk loads from, in the order the walk met it. */
-  files: string[];
-  /** The stacks the walk is inside, so a StackHolder that holds one of them holds nothing. */
-  open: Set<TscnInternalResource>;
-}
+const MODIFICATION_TYPES: ReadonlySet<string> = new Set([
+  'SkeletonModification2DLookAt',
+  'SkeletonModification2DTwoBoneIK',
+  'SkeletonModification2DCCDIK',
+  'SkeletonModification2DFABRIK',
+  'SkeletonModification2DStackHolder',
+  'SkeletonModification2DJiggle',
+  'SkeletonModification2DPhysicalBones',
+]);
 
 /**
- * The stack `ref` names in `pools`, with the modifications it holds. Null for no reference, a
- * resource of another type, or a file `loadedFile` does not have yet.
+ * A stack with the modifications it holds, from any origin. A modification this does not read
+ * leaves its slot null, and a StackHolder that holds a stack on the way to itself holds nothing.
  */
-export function decodeModificationStack(
-  ref: string | undefined,
-  pools: SceneResources,
-  loadedFile: LoadedFile
-): ModificationStack2D | null {
-  return stackOf(ref, pools, { loadedFile, files: [], open: new Set() });
-}
+export const MODIFICATION_STACK: ResourceKind<ModificationStack2D> = {
+  name: STACK_TYPE,
+  accepts: (type) => type === STACK_TYPE,
+  decode: ({ properties }, follow) => stackOf(properties, follow),
+};
 
-/**
- * The files the stack `ref` names loads from: its own, and each one a modification it holds loads
- * from once the file that names it is in `loadedFile`.
- */
-export function modificationStackFiles(
-  ref: string | undefined,
-  pools: SceneResources,
-  loadedFile: LoadedFile
-): string[] {
-  const walk: StackWalk = { loadedFile, files: [], open: new Set() };
-  stackOf(ref, pools, walk);
-  return walk.files;
-}
+/** One modification of a stack, as its `_set` reads the property bag. */
+const MODIFICATION: ResourceKind<Modification2D> = {
+  name: 'SkeletonModification2D',
+  accepts: (type) => MODIFICATION_TYPES.has(type),
+  decode: ({ type, properties }, follow) => modificationOf(type, properties, follow),
+};
 
-function followed(ref: string | undefined, pools: SceneResources, walk: StackWalk): ScopedResource | null {
-  const file = referencedFilePath(ref, pools);
-  if (file !== null) walk.files.push(file);
-  return resolveReference(ref, pools, walk.loadedFile);
-}
-
-function stackOf(
-  ref: string | undefined,
-  pools: SceneResources,
-  walk: StackWalk
-): ModificationStack2D | null {
-  const scoped = followed(ref, pools, walk);
-  if (scoped?.resource.type !== STACK_TYPE || walk.open.has(scoped.resource)) return null;
-  walk.open.add(scoped.resource);
-  const { data } = scoped.resource;
+function stackOf(data: Readonly<Record<string, string>>, follow: Follow): ModificationStack2D {
   // `set_modification_count` refuses a negative count (`skeleton_modification_stack_2d.cpp:198`),
   // and `set_modification` an index at or past it (`:183`).
   const stored = storedSlots(data);
   const slots = filledSlots(slotCount(data.modification_count) ?? 0, stored.keys());
-  const stack: ModificationStack2D = {
+  return {
     enabled: boolOr(data.enabled, false),
     strength: strengthOf(data.strength),
     modifications: slots.map((index) =>
-      index === null ? null : modificationOf(stored.get(index), scoped.resources, walk)
+      index === null ? null : follow.read(MODIFICATION, stored.get(index)).value
     ),
   };
-  walk.open.delete(scoped.resource);
-  return stack;
 }
 
 const SLOT_PREFIX = 'modifications/';
@@ -99,7 +72,7 @@ const SLOT_PREFIX = 'modifications/';
  * `get_slicec('/', 1).to_int()` (`skeleton_modification_stack_2d.cpp:47-49`). A later key of one
  * slot replaces an earlier one.
  */
-function storedSlots(data: Record<string, string>): Map<number, string> {
+function storedSlots(data: Readonly<Record<string, string>>): Map<number, string> {
   const stored = new Map<number, string>();
   for (const key of Object.keys(data)) {
     if (key.startsWith(SLOT_PREFIX)) stored.set(stringToInt(key.split('/')[1]!), data[key]!);
@@ -140,13 +113,10 @@ function strengthOf(raw: string | undefined): number {
 }
 
 function modificationOf(
-  ref: string | undefined,
-  pools: SceneResources,
-  walk: StackWalk
+  type: string,
+  data: Readonly<Record<string, string>>,
+  follow: Follow
 ): Modification2D | null {
-  const scoped = followed(ref, pools, walk);
-  if (!scoped) return null;
-  const { type, data } = scoped.resource;
   const base = {
     enabled: boolOr(data.enabled, true),
     executionMode: intOr(data.execution_mode, SkeletonModification2DExecutionMode.PROCESS),
@@ -188,7 +158,11 @@ function modificationOf(
         joints: jointsOf(data, 'fabrik_data_chain_length', FABRIK_LEAF, fabrikJointOf),
       };
     case 'SkeletonModification2DStackHolder':
-      return { ...base, type, heldStack: stackOf(data.held_modification_stack, scoped.resources, walk) };
+      return {
+        ...base,
+        type,
+        heldStack: follow.read(MODIFICATION_STACK, data.held_modification_stack).value,
+      };
     case 'SkeletonModification2DJiggle':
     case 'SkeletonModification2DPhysicalBones':
       return { ...base, type };
@@ -235,7 +209,7 @@ const FABRIK_LEAF = declaredLeafResolver([
  * as `_set` fails `ERR_FAIL_INDEX_V` for it, and a negative length leaves no joint.
  */
 function jointsOf<Joint>(
-  data: Record<string, string>,
+  data: Readonly<Record<string, string>>,
   lengthKey: string,
   leafResolver: ReturnType<typeof declaredLeafResolver>,
   jointOf: (leaves: Leaves) => Joint

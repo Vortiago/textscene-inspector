@@ -379,10 +379,15 @@ describe('findSubResourceOfType', () => {
     expect(findSubResourceOfType([], 'Path_1', 'Curve2D')).toBeUndefined();
   });
 
-  it('skips a first holder of another type, and takes the first of that type (edge case)', () => {
+  it('returns undefined when a resource of another type holds the id first, as Godot loads it', () => {
     const curve = { id: 'Shared', type: 'Curve', data: {} };
+    const later = { id: 'Shared', type: 'Curve2D', data: {} };
+    expect(findSubResourceOfType([curve, later], 'Shared', 'Curve2D')).toBeUndefined();
+  });
+
+  it('takes the first of two resources of that type under the id', () => {
     const first = { id: 'Shared', type: 'Curve2D', data: { _data: 'first' } };
     const second = { id: 'Shared', type: 'Curve2D', data: { _data: 'second' } };
-    expect(findSubResourceOfType([curve, first, second], 'Shared', 'Curve2D')).toBe(first);
+    expect(findSubResourceOfType([first, second], 'Shared', 'Curve2D')).toBe(first);
   });
 });

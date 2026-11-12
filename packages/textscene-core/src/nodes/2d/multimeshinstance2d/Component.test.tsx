@@ -40,7 +40,7 @@ function buffer(values: number[]): string {
 
 function multiMeshNode(raw: Record<string, string>): TscnNode {
   return {
-    rawProperties: {},
+    rawProperties: raw,
     name: 'M',
     type: 'MultiMeshInstance2D',
     children: [],

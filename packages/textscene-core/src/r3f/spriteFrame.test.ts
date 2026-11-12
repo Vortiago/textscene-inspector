@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { frameSizePx, frameUvWindow, spriteWrapMode, type SpriteFrameProps } from './spriteFrame';
+import {
+  frameRectPx,
+  frameSizePx,
+  frameUvWindow,
+  spriteWrapMode,
+  type SpriteFrameProps,
+} from './spriteFrame';
 
 function makeTexture(width = 100, height = 80): THREE.Texture {
   const texture = new THREE.Texture();
@@ -139,7 +145,7 @@ describe("spriteWrapMode — Godot's own texture_repeat derivation", () => {
    * v-window is symmetric under the test, so this reads the unflipped window.
    */
   it('clamps a plain full-image sprite — the common case', () => {
-    expect(spriteWrapMode(makeTexture(), baseProps())).toBe('clamp');
+    expect(spriteWrapMode(frameUvWindow(makeTexture(), baseProps()))).toBe('clamp');
   });
 
   it('clamps a region that stays inside the texture', () => {
@@ -147,7 +153,7 @@ describe("spriteWrapMode — Godot's own texture_repeat derivation", () => {
       region_enabled: true,
       region_rect: { x: 10, y: 20, width: 50, height: 40 },
     });
-    expect(spriteWrapMode(makeTexture(100, 80), props)).toBe('clamp');
+    expect(spriteWrapMode(frameUvWindow(makeTexture(100, 80), props))).toBe('clamp');
   });
 
   it('clamps a region covering the texture EXACTLY — the tests are strict', () => {
@@ -155,7 +161,7 @@ describe("spriteWrapMode — Godot's own texture_repeat derivation", () => {
       region_enabled: true,
       region_rect: { x: 0, y: 0, width: 100, height: 80 },
     });
-    expect(spriteWrapMode(makeTexture(100, 80), props)).toBe('clamp');
+    expect(spriteWrapMode(frameUvWindow(makeTexture(100, 80), props))).toBe('clamp');
   });
 
   it('repeats a region overrunning the far edge', () => {
@@ -163,7 +169,7 @@ describe("spriteWrapMode — Godot's own texture_repeat derivation", () => {
       region_enabled: true,
       region_rect: { x: 0, y: 0, width: 200, height: 40 },
     });
-    expect(spriteWrapMode(makeTexture(100, 80), props)).toBe('repeat');
+    expect(spriteWrapMode(frameUvWindow(makeTexture(100, 80), props))).toBe('repeat');
   });
 
   it('repeats a region starting before the texture origin', () => {
@@ -171,12 +177,12 @@ describe("spriteWrapMode — Godot's own texture_repeat derivation", () => {
       region_enabled: true,
       region_rect: { x: -10, y: 0, width: 50, height: 40 },
     });
-    expect(spriteWrapMode(makeTexture(100, 80), props)).toBe('repeat');
+    expect(spriteWrapMode(frameUvWindow(makeTexture(100, 80), props))).toBe('repeat');
   });
 
   it('clamps a sprite-sheet frame, which only ever subdivides the base rect', () => {
     const props = baseProps({ hframes: 3, vframes: 2, frame: 4 });
-    expect(spriteWrapMode(makeTexture(90, 80), props)).toBe('clamp');
+    expect(spriteWrapMode(frameUvWindow(makeTexture(90, 80), props))).toBe('clamp');
   });
 
   it('clamps before the image has loaded, where no window can be computed', () => {
@@ -184,8 +190,8 @@ describe("spriteWrapMode — Godot's own texture_repeat derivation", () => {
       region_enabled: true,
       region_rect: { x: 0, y: 0, width: 200, height: 40 },
     });
-    expect(spriteWrapMode(undefined, props)).toBe('clamp');
-    expect(spriteWrapMode(new THREE.Texture(), props)).toBe('clamp');
+    expect(spriteWrapMode(frameUvWindow(undefined, props))).toBe('clamp');
+    expect(spriteWrapMode(frameUvWindow(new THREE.Texture(), props))).toBe('clamp');
   });
 });
 
@@ -217,5 +223,33 @@ describe('frameSizePx', () => {
       })
     );
     expect(size).toEqual({ width: 20, height: 20 });
+  });
+});
+
+describe('frameRectPx', () => {
+  it('is the full image for a plain sprite', () => {
+    expect(frameRectPx({ width: 100, height: 80 }, baseProps())).toEqual({ x: 0, y: 0, w: 100, h: 80 });
+  });
+
+  it('is the region when region_enabled', () => {
+    const rect = frameRectPx(
+      { width: 100, height: 80 },
+      baseProps({ region_enabled: true, region_rect: { x: 10, y: 20, width: 50, height: 40 } })
+    );
+    expect(rect).toEqual({ x: 10, y: 20, w: 50, h: 40 });
+  });
+
+  it('is the cell of the frame grid over the region, rows counted from the top', () => {
+    const rect = frameRectPx(
+      { width: 100, height: 80 },
+      baseProps({
+        region_enabled: true,
+        region_rect: { x: 10, y: 20, width: 50, height: 40 },
+        hframes: 5,
+        vframes: 2,
+        frame: 7,
+      })
+    );
+    expect(rect).toEqual({ x: 30, y: 40, w: 10, h: 20 });
   });
 });

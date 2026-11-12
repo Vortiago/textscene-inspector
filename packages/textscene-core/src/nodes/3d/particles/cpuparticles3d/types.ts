@@ -21,10 +21,6 @@ export interface CPUParticles3DProperties extends GeometryInstance3DProperties {
   visibilityAabb: Aabb | null;
   /** The raw `mesh` reference each particle draws, or undefined for none. A null `mesh` is none. */
   mesh: string | undefined;
-  /** GeometryInstance3D's `material_override`, which draws every surface in place of its own material. */
-  materialOverride: string | undefined;
-  /** GeometryInstance3D's `material_overlay`, which draws every surface a second time. */
-  materialOverlay: string | undefined;
   /** The emission shape and its sizes, which the editor gizmo draws and the simulation emits from. */
   emission: ParticleEmission;
   simulation: CPUParticles3DSimulation;

@@ -1,8 +1,7 @@
 /**
- * A `surface_material_override/N` whose material carries a `next_pass` chain, on a mesh
- * inside a loaded GLB: the links build through the imperative adapter, each mounted as
- * a sibling `THREE.Mesh` beside the target with the target's geometry, and the tree is
- * restored when the override goes away.
+ * A `surface_material_override/N` whose material carries a `next_pass` chain, on a mesh inside a
+ * loaded GLB: the override hands the slots it covered to the surfaced mesh drawer's adapter for a
+ * cloned object, which mounts the links (`ClonedExtraDraws.test.tsx`).
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -13,8 +12,7 @@ import { SceneStack } from '../../testing/SceneStack';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { GLB_SCENE_ROOT_TYPE } from '../../../resources/glbSceneRoot';
 import { INSTANTIABLE_SCENE } from '../../../parser/sceneDefaults.testkit';
-import { nextPassRenderOrder } from '../../materials/nextPass';
-import { setVisualLayers } from '../../visualLayers';
+import { nextPassRenderOrder } from '../../materials/passOrder';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { tagImportMaterial } from '../../../resources/formats/glb/glbProcessing';
 
@@ -39,23 +37,6 @@ function makeFakeGlb(importPath?: string): THREE.Object3D {
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
   mesh.name = 'road';
   root.add(mesh);
-  return root;
-}
-
-/** The GLB's road as an InstancedMesh, whose instances the link must read: the gpu-instancing shape. */
-function makeInstancedFakeGlb(): THREE.Object3D {
-  const root = new THREE.Group();
-  root.name = 'Scene';
-  const material = new THREE.MeshStandardMaterial({ color: GLTF_COLOR });
-  const road = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), material, 2);
-  road.name = 'road';
-  road.setMatrixAt(0, new THREE.Matrix4().makeTranslation(1, 0, 0));
-  road.setMatrixAt(1, new THREE.Matrix4().makeTranslation(2, 0, 0));
-  setVisualLayers(road, 4);
-  road.frustumCulled = false;
-  const beforeRender = () => undefined;
-  road.onBeforeRender = beforeRender;
-  root.add(road);
   return root;
 }
 
@@ -153,12 +134,6 @@ describe("GlbSurfaceMaterialOverride — the override material's next_pass chain
     expect((material as THREE.MeshStandardMaterial).color.getHex()).toBe(0x0000ff);
   });
 
-  it('mounts nothing for a material with no chain (edge case)', async () => {
-    const renderer = (await render('SubResource("Mat_plain")')).renderer;
-    expect(roadOf(renderer).material).toBeInstanceOf(THREE.MeshStandardMaterial);
-    expect(chainOf(renderer)).toHaveLength(0);
-  });
-
   it('unmounts the chain when the override names nothing again', async () => {
     const { renderer, treeWith } = await render('SubResource("Mat_road")');
     expect(chainOf(renderer)).toHaveLength(1);
@@ -191,25 +166,6 @@ describe("GlbSurfaceMaterialOverride — the override material's next_pass chain
     expect(chain[0]!.geometry).toBe(road.geometry);
     const linkMaterial = Array.isArray(chain[0]!.material) ? chain[0]!.material[0]! : chain[0]!.material;
     expect((linkMaterial as THREE.MeshStandardMaterial).color.getHex()).toBe(0x0000ff);
-  });
-
-  it('mounts an instanced link that shares its holder’s instances and draw state', async () => {
-    // A glTF's gpu-instancing arrives as an InstancedMesh: the link draws the same
-    // instances through the holder's own attribute, with the holder's culling,
-    // visual layers and per-surface draw hooks, not one mesh at one transform.
-    const renderer = (await render('SubResource("Mat_road")', makeInstancedFakeGlb())).renderer;
-    const road = roadOf(renderer) as THREE.InstancedMesh;
-    const chain = chainOf(renderer);
-
-    expect(chain).toHaveLength(1);
-    const [link] = chain;
-    expect(link!).toBeInstanceOf(THREE.InstancedMesh);
-    const instanced = link! as THREE.InstancedMesh;
-    expect(instanced.count).toBe(road.count);
-    expect(instanced.instanceMatrix).toBe(road.instanceMatrix);
-    expect(instanced.frustumCulled).toBe(false);
-    expect((instanced.userData as { godotLayers: number }).godotLayers).toBe(4);
-    expect(instanced.onBeforeRender).toBe(road.onBeforeRender);
   });
 
   it('draws a link whose texture never lands as the magenta placeholder, and the chain continues', async () => {

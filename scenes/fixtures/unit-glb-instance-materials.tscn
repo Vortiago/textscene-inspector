@@ -1,0 +1,35 @@
+[gd_scene load_steps=4 format=3]
+
+; The one variable: which instance material an override node sets on a mesh inside an instanced
+; `.glb`. Left: `material_override`, which draws the cube orange in place of its glTF surface
+; (render_forward_clustered.cpp:4206). Right: `material_overlay`, which draws the cube again in
+; half-clear orange over its mid-grey default surface (:4228-4241). Two grey cubes mean the GLB
+; override dropped both. `glb-surface-material-override` sets only a surface override.
+
+[ext_resource type="PackedScene" uid="uid://ctscnglbmatovr0" path="res://meshes/unit-cube.glb" id="1_glb"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_override"]
+albedo_color = Color(0.95, 0.45, 0.05, 1)
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_overlay"]
+transparency = 1
+albedo_color = Color(0.95, 0.45, 0.05, 0.5)
+roughness = 0.4
+
+[node name="GlbInstanceMaterials" type="Node3D"]
+
+[node name="Overridden" parent="." instance=ExtResource("1_glb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 0, 0)
+
+[node name="Cube" parent="Overridden" index="0"]
+material_override = SubResource("StandardMaterial3D_override")
+
+[node name="Overlaid" parent="." instance=ExtResource("1_glb")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 0, 0)
+
+[node name="Cube" parent="Overlaid" index="0"]
+material_overlay = SubResource("StandardMaterial3D_overlay")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 3, 3)

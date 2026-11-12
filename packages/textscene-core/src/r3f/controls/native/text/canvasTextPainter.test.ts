@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import {
+  canvasGlyphRects,
   computeCanvasTextCanvasLayout,
+  buildCanvasGlyphQuadArrays,
   buildCanvasTextQuadArrays,
   createCanvasTextMaterial,
   originPhase,
@@ -15,7 +17,8 @@ import { patchedFragment } from '../../../testing/patchedFragment';
 import { mipmappedTexture } from '../../../testing/mipmapBiasUniform';
 import { litPixelMaterial } from '../../../lighting2d/testing/litPixelMaterial';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
-import { TRIANGLE_CONTOURS } from '../testing/triangleOutlines';
+import { TRIANGLE_CONTOURS, TRIANGLE_OUTLINES } from '../testing/triangleOutlines';
+import { placedGlyphBitmap } from './glyphCoverage';
 import type { SfntOutlines } from './sfntOutlines';
 import type { GlyphDrawer } from './glyphDrawer';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -818,6 +821,122 @@ describe('buildCanvasTextQuadArrays', () => {
     // BR uv
     expect(arrays.uvs[3 * 2]).toBe(1);
     expect(arrays.uvs[3 * 2 + 1]).toBe(0);
+  });
+});
+
+describe('canvasGlyphRects', () => {
+  /** `A B` in the triangle face: two glyphs with ink, 16 px apart, and a space between them. */
+  function rectsOf(strokeWidthPx: number) {
+    const layout = carrying(layoutFor('A B', 0), 0, TRIANGLE_OUTLINES);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, strokeWidthPx);
+    const rects = canvasGlyphRects(layout, 16, 0, canvasLayout, { strokeWidthPx, glyphDrawer: 'label3D' });
+    return { rects, canvasLayout, baselineY: canvasLayout.offsetYPx + layout.baselineOffsetPx };
+  }
+
+  it('gives each glyph with ink its bitmap grid widened by 1 px, and a space none', () => {
+    const { rects, canvasLayout, baselineY } = rectsOf(0);
+    // The triangle covers x 1 to 5 and y -6 to 0 from its origin (`rect_range = 1`, `text_server_adv.h:187`).
+    expect(rects).toEqual([
+      { x: canvasLayout.offsetXPx, y: baselineY - 7, w: 6, h: 8 },
+      { x: canvasLayout.offsetXPx + 16, y: baselineY - 7, w: 6, h: 8 },
+    ]);
+  });
+
+  it('moves the grid of a Label3D glyph with a pen between pixels, as Godot places the bitmap of the whole pen', () => {
+    const layout = carrying(layoutFor('A', 0), 0, TRIANGLE_OUTLINES);
+    const betweenPixels = {
+      ...layout,
+      lines: layout.lines.map((line) => ({
+        ...line,
+        glyphs: line.glyphs.map((glyph) => ({ ...glyph, x: glyph.x + 0.5 })),
+      })),
+    };
+    const canvasLayout = computeCanvasTextCanvasLayout(betweenPixels, 0);
+
+    const [rect] = canvasGlyphRects(betweenPixels, 16, 0, canvasLayout, { glyphDrawer: 'label3D' });
+
+    expect(rect).toMatchObject({ x: canvasLayout.offsetXPx + 0.5, w: 6 });
+  });
+
+  it('gives a canvas item glyph the grid of the bitmap at its pen', () => {
+    const layout = carrying(layoutFor('A', 0), 0, TRIANGLE_OUTLINES);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
+    const baselineY = canvasLayout.offsetYPx + layout.baselineOffsetPx;
+    const { grid } = placedGlyphBitmap(TRIANGLE_CONTOURS, canvasLayout.offsetXPx, baselineY, 0)!;
+
+    expect(canvasGlyphRects(layout, 16, 0, canvasLayout)).toEqual([
+      { x: grid.left - 1, y: grid.top - 1, w: grid.width + 2, h: grid.height + 2 },
+    ]);
+  });
+
+  it('gives the outline pass the grid of the stroked ring', () => {
+    const { rects, canvasLayout, baselineY } = rectsOf(4);
+    const { grid } = placedGlyphBitmap(TRIANGLE_CONTOURS, canvasLayout.offsetXPx, baselineY, 2)!;
+
+    expect(rects[0]).toEqual({ x: grid.left - 1, y: grid.top - 1, w: grid.width + 2, h: grid.height + 2 });
+    expect(rects[0]!.w).toBeGreaterThan(6);
+  });
+
+  it('gives a glyph the browser draws as text the box from its pen to its advance, over the line', () => {
+    const layout = layoutFor('A', 0);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0);
+
+    // The ascent 12.8 and the descent 3.2 each round up to a whole pixel: 13 and 4.
+    expect(canvasGlyphRects(layout, 16, 0, canvasLayout, { glyphDrawer: 'label3D' })).toEqual([
+      { x: canvasLayout.offsetXPx, y: canvasLayout.offsetYPx, w: 8, h: 17 },
+    ]);
+  });
+
+  it('grows the box of a glyph the browser strokes by the radius of its ring', () => {
+    const layout = layoutFor('A', 0);
+    const canvasLayout = computeCanvasTextCanvasLayout(layout, 0, 4);
+
+    expect(
+      canvasGlyphRects(layout, 16, 0, canvasLayout, { strokeWidthPx: 4, glyphDrawer: 'label3D' })
+    ).toEqual([{ x: canvasLayout.offsetXPx - 2, y: canvasLayout.offsetYPx - 2, w: 12, h: 21 }]);
+  });
+});
+
+describe('buildCanvasGlyphQuadArrays', () => {
+  const canvasLayout = { canvasWidthPx: 40, canvasHeightPx: 20, offsetXPx: 4, offsetYPx: 5 };
+  const rects = [
+    { x: 4, y: 5, w: 6, h: 8 },
+    { x: 20, y: 5, w: 6, h: 8 },
+  ];
+
+  it('builds no quad for no rectangle', () => {
+    const arrays = buildCanvasGlyphQuadArrays([], canvasLayout);
+
+    expect([arrays.positions.length, arrays.uvs.length, arrays.indices.length]).toEqual([0, 0, 0]);
+  });
+
+  it('builds one quad for each rectangle', () => {
+    const arrays = buildCanvasGlyphQuadArrays(rects, canvasLayout);
+
+    expect(arrays.positions.length).toBe(2 * 4 * 3);
+    expect(arrays.uvs.length).toBe(2 * 4 * 2);
+    expect(Array.from(arrays.indices)).toEqual([2, 3, 0, 3, 1, 0, 6, 7, 4, 7, 5, 4]);
+  });
+
+  it('places a rectangle in run space, where the raster content box starts at the origin', () => {
+    const { positions } = buildCanvasGlyphQuadArrays(rects, canvasLayout);
+
+    // Top-left, top-right, bottom-left, bottom-right, with Y negated to three's Y-up.
+    expect(Array.from(positions.slice(0, 12))).toEqual([0, -0, 0, 6, -0, 0, 0, -8, 0, 6, -8, 0]);
+  });
+
+  it('moves back by the origin phase, as the raster quad does', () => {
+    const { positions } = buildCanvasGlyphQuadArrays(rects, canvasLayout, { x: 0.25, y: 0.75 });
+
+    expect([positions[0], positions[1]]).toEqual([-0.25, 0.75]);
+  });
+
+  it('holds the place of each rectangle in the raster as its UVs, the top row at v = 1', () => {
+    const { uvs } = buildCanvasGlyphQuadArrays(rects, canvasLayout);
+
+    expect(Array.from(uvs.slice(0, 8))).toEqual(
+      [0.1, 0.75, 0.25, 0.75, 0.1, 0.35, 0.25, 0.35].map(Math.fround)
+    );
   });
 });
 

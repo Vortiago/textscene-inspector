@@ -32,6 +32,14 @@ import { perObject } from '../utils/perObject.js';
 import { NOTHING_CACHED, answeredOnce, keptWhileAnswered, type CacheSource } from './cacheSources.js';
 import type { ParsedResource } from '../parser/parsedResource.js';
 import type { ControlLocalTransforms } from './contexts/ControlYSortContext.js';
+import {
+  nodeReference,
+  snapshotOver,
+  type Read,
+  type ResourceKind,
+  type ResourceSnapshot,
+} from '../resources/reading';
+import type { SceneResources } from './SceneResourcesContext.js';
 
 /**
  * Read surface for the loader's PackedScene cache. `undefined` means never
@@ -600,6 +608,7 @@ export class LiveTree {
   /** Written only by `at`. A null marks a path the loaded tree does not contain. */
   private readonly links = new Map<string, LiveLink | null>();
   private readonly scenes: CachedSceneSource;
+  private readonly resourceSnapshot: ResourceSnapshot;
   private readonly sources: { scenes: CachedSceneSource; glbs: CachedGlbSource };
 
   constructor(
@@ -607,15 +616,19 @@ export class LiveTree {
     readonly ctx: LiveTreeContext
   ) {
     this.scenes = snapshotScenes(ctx);
+    this.resourceSnapshot = snapshotOver(ctx.resourceCache ?? NOTHING_CACHED);
     this.sources = { scenes: this.scenes, glbs: ctx.glbCache ?? NOTHING_CACHED };
     const scope = rootScope(ctx);
     this.seatedRoots = seatedFile(roots, scope, this.scenes, roots);
     this.rootGroups = [inlineGroup(this.seatedRoots, scope)];
   }
 
-  /** The parse of the loaded `.tres` file at `path`, or undefined while it loads and after it failed. */
-  loadedResource(path: string): ParsedResource | undefined {
-    return this.ctx.resourceCache?.getCached(path) ?? undefined;
+  /**
+   * The resource `ref` names, a property of a node written in `scope`, decoded as `kind` does, over
+   * the `.tres` files this tree's context has loaded.
+   */
+  readResource<T>(ref: string | undefined, scope: SceneResources, kind: ResourceKind<T>): Read<T> {
+    return this.resourceSnapshot.read(nodeReference(ref, scope), kind);
   }
 
   /** The root nodes of the loaded scene at `scenePath`, or undefined while it is not loaded. */

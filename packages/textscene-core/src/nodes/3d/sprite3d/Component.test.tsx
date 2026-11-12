@@ -19,6 +19,7 @@ import { Vector3Axis } from '../../../godot/math/vector3Axis';
 import { AlphaAntiAliasing } from '../../../godot/rendering/materials/alphaAntialiasing';
 import { alphaAntialiasingOf } from '../../../r3f/materials/godotAlphaAntialiasing';
 import { findMesh, instanceAs } from '../testing/reactThreeTestInstance';
+import { quadUvWindow } from './testing/quadUvWindow';
 import { DROPS_ALBEDO_ALPHA, patchedFragment } from '../../../r3f/testing/patchedFragment';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../geometryinstance3d/types';
 import { HALF_FADE_ALPHA } from '../../../r3f/testing/halfFadeAlpha';
@@ -284,12 +285,12 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
     const mesh = findMesh(renderer.scene);
-    const mat = mesh.material as THREE.MeshBasicMaterial;
-    expect(mat.map?.repeat.x).toBeCloseTo(0.5, 5);
-    expect(mat.map?.repeat.y).toBeCloseTo(0.5, 5);
+    const uv = quadUvWindow(mesh.geometry);
+    expect(uv.repeat.x).toBeCloseTo(0.5, 5);
+    expect(uv.repeat.y).toBeCloseTo(0.5, 5);
     // Y-flip: offset.y = 1 - (25 + 50) / 100 = 0.25
-    expect(mat.map?.offset.x).toBeCloseTo(0.25, 5);
-    expect(mat.map?.offset.y).toBeCloseTo(0.25, 5);
+    expect(uv.offset.x).toBeCloseTo(0.25, 5);
+    expect(uv.offset.y).toBeCloseTo(0.25, 5);
     const geom = mesh.geometry as unknown as { parameters: { width: number; height: number } };
     expect(geom.parameters.width).toBeCloseTo(0.5, 5);
     expect(geom.parameters.height).toBeCloseTo(0.5, 5);
@@ -307,12 +308,12 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    const uv = quadUvWindow(findMesh(renderer.scene).geometry);
     // repeat = (1/4, 1/2); offset for top-left = (0, 1 - 1/2) = (0, 0.5)
-    expect(mat.map?.repeat.x).toBeCloseTo(0.25, 5);
-    expect(mat.map?.repeat.y).toBeCloseTo(0.5, 5);
-    expect(mat.map?.offset.x).toBeCloseTo(0, 5);
-    expect(mat.map?.offset.y).toBeCloseTo(0.5, 5);
+    expect(uv.repeat.x).toBeCloseTo(0.25, 5);
+    expect(uv.repeat.y).toBeCloseTo(0.5, 5);
+    expect(uv.offset.x).toBeCloseTo(0, 5);
+    expect(uv.offset.y).toBeCloseTo(0.5, 5);
   });
 
   it('applies spritesheet UV: frame=5, hframes=4, vframes=2 → second row, second column', async () => {
@@ -327,11 +328,11 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    const uv = quadUvWindow(findMesh(renderer.scene).geometry);
     // frame=5 → col = 5%4 = 1, row = floor(5/4) = 1
     // offset = (1/4, 1 - (1+1)/2) = (0.25, 0)
-    expect(mat.map?.offset.x).toBeCloseTo(0.25, 5);
-    expect(mat.map?.offset.y).toBeCloseTo(0, 5);
+    expect(uv.offset.x).toBeCloseTo(0.25, 5);
+    expect(uv.offset.y).toBeCloseTo(0, 5);
   });
 
   it('frame_coords overrides the linear frame index', async () => {
@@ -347,10 +348,10 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
       externals: [extRef('1_tex', TEXTURE_PATH)],
       cached: [{ path: TEXTURE_PATH, texture: tex }],
     });
-    const mat = findMesh(renderer.scene).material as THREE.MeshBasicMaterial;
+    const uv = quadUvWindow(findMesh(renderer.scene).geometry);
     // col=2, row=0 → offset = (2/3, 1 - 1/1) = (0.6667, 0)
-    expect(mat.map?.offset.x).toBeCloseTo(2 / 3, 5);
-    expect(mat.map?.offset.y).toBeCloseTo(0, 5);
+    expect(uv.offset.x).toBeCloseTo(2 / 3, 5);
+    expect(uv.offset.y).toBeCloseTo(0, 5);
   });
 
   it('alpha_cut=DISCARD configures alphaTest threshold + depthWrite', async () => {
@@ -601,10 +602,9 @@ describe('<Sprite3D> (WI-R3F-13)', () => {
     expect(mesh.instance.position.z).toBe(-1);
   });
 
-  // The region/frame path CLONES the loaded texture so it can carry its own
-  // offset/repeat, and that clone belongs to this component. The source does
-  // not: it is the loader's cached entry, shared with every other node
-  // sampling the same file, so disposing it would blank them all.
+  // The sprite samples a clone that carries its own sampler state. The source is the loader's
+  // cached entry, shared with every other node that samples the file, so disposing it would
+  // blank them all.
   describe('texture ownership on unmount', () => {
     it('disposes the clone it made, and leaves the shared source alone', async () => {
       const tex = makeTexture(64, 64);

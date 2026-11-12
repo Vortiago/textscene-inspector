@@ -6,18 +6,26 @@
  */
 
 import { warn } from '../../../logger';
+import type { ResourceKind } from '../../reading';
 import { parsePackedInt32Arrays, parsePackedVector2Array } from '../../shapes/packedArray';
 import { drawableNavigationPolygons } from '../polygonIndices';
 import type { NavigationPolygonData } from './types';
 
 const FLOATS_PER_VERTEX = 2;
 
+/** The vertices and polygons of a NavigationPolygon, from any origin. */
+export const NAVIGATION_POLYGON: ResourceKind<NavigationPolygonData> = {
+  name: 'NavigationPolygon',
+  accepts: (type) => type === 'NavigationPolygon',
+  decode: (held) => decodeNavigationPolygon(held.properties),
+};
+
 /**
  * Decode a NavigationPolygon's properties, or null when it describes nothing
  * drawable: absent, empty, unreadable, or without one surviving polygon. Never
  * throws: a malformed value degrades to null so a render pass cannot fault on it.
  */
-export function decodeNavigationPolygon(properties: Record<string, string>): NavigationPolygonData | null {
+function decodeNavigationPolygon(properties: Readonly<Record<string, string>>): NavigationPolygonData | null {
   const verticesLiteral = properties['vertices'];
   const polygonsLiteral = properties['polygons'];
   if (!verticesLiteral || !polygonsLiteral) return null;

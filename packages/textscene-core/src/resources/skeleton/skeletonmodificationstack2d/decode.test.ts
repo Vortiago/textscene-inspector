@@ -4,11 +4,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import type { ParsedResource } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
 import type { SceneResources } from '../../../r3f/SceneResourcesContext';
 import { degToRadf } from '../../../godot/math/math.js';
-import { decodeModificationStack, modificationStackFiles } from './decode';
+import { nodeReference } from '../../reading';
+import { staticSnapshot } from '../../reading/staticSnapshot.testkit';
+import { MODIFICATION_STACK } from './decode';
 import type { Modification2D } from './types';
 
 const sub = (id: string, type: string, data: Record<string, string>): TscnInternalResource =>
@@ -18,7 +19,14 @@ function poolsOf(internalResources: TscnInternalResource[]): SceneResources {
   return { internalResources, externalResources: [] } as unknown as SceneResources;
 }
 
-const NO_FILES = () => undefined;
+/** The stack `ref` names in `pools`, with the `.tres` files of `files` loaded. */
+function decodeModificationStack(
+  ref: string | undefined,
+  pools: SceneResources,
+  files: Record<string, string> = {}
+) {
+  return staticSnapshot(files).read(nodeReference(ref, pools), MODIFICATION_STACK).value;
+}
 
 function decodeOne(type: string, data: Record<string, string>): Modification2D | null {
   const pools = poolsOf([
@@ -28,14 +36,14 @@ function decodeOne(type: string, data: Record<string, string>): Modification2D |
       'modifications/0': 'SubResource("mod")',
     }),
   ]);
-  return decodeModificationStack('SubResource("stack")', pools, NO_FILES)!.modifications[0]!;
+  return decodeModificationStack('SubResource("stack")', pools)!.modifications[0]!;
 }
 
 describe('decodeModificationStack', () => {
   it('reads a stack at its defaults: disabled, full strength, no modification', () => {
     const pools = poolsOf([sub('stack', 'SkeletonModificationStack2D', {})]);
 
-    expect(decodeModificationStack('SubResource("stack")', pools, NO_FILES)).toEqual({
+    expect(decodeModificationStack('SubResource("stack")', pools)).toEqual({
       enabled: false,
       strength: 1,
       modifications: [],
@@ -53,7 +61,7 @@ describe('decodeModificationStack', () => {
       sub('jiggle', 'SkeletonModification2DJiggle', {}),
     ]);
 
-    expect(decodeModificationStack('SubResource("stack")', pools, NO_FILES)).toEqual({
+    expect(decodeModificationStack('SubResource("stack")', pools)).toEqual({
       enabled: true,
       strength: 0.5,
       modifications: [null, { type: 'SkeletonModification2DJiggle', enabled: true, executionMode: 0 }],
@@ -64,7 +72,7 @@ describe('decodeModificationStack', () => {
   it.each(['1.5', '-0.25'])('keeps the default strength for the %s the setter refuses', (strength) => {
     const pools = poolsOf([sub('stack', 'SkeletonModificationStack2D', { strength })]);
 
-    expect(decodeModificationStack('SubResource("stack")', pools, NO_FILES)?.strength).toBe(1);
+    expect(decodeModificationStack('SubResource("stack")', pools)?.strength).toBe(1);
   });
 
   // A slot past the last stored one is empty, and one empty slot solves as any number of them do.
@@ -77,7 +85,7 @@ describe('decodeModificationStack', () => {
       sub('jiggle', 'SkeletonModification2DJiggle', {}),
     ]);
 
-    const stack = decodeModificationStack('SubResource("stack")', pools, NO_FILES)!;
+    const stack = decodeModificationStack('SubResource("stack")', pools)!;
 
     expect(stack.modifications.map((modification) => modification?.type ?? null)).toEqual([
       null,
@@ -95,7 +103,7 @@ describe('decodeModificationStack', () => {
       sub('jiggle', 'SkeletonModification2DJiggle', {}),
     ]);
 
-    const stack = decodeModificationStack('SubResource("stack")', pools, NO_FILES)!;
+    const stack = decodeModificationStack('SubResource("stack")', pools)!;
 
     expect(stack.modifications.map((modification) => modification?.type ?? null)).toEqual([
       null,
@@ -125,7 +133,7 @@ describe('decodeModificationStack', () => {
       sub('jiggle', 'SkeletonModification2DJiggle', {}),
     ]);
 
-    const stack = decodeModificationStack('SubResource("stack")', pools, NO_FILES)!;
+    const stack = decodeModificationStack('SubResource("stack")', pools)!;
 
     expect(stack.modifications.map((modification) => modification?.type ?? null)).toEqual([
       null,
@@ -136,8 +144,8 @@ describe('decodeModificationStack', () => {
   it('answers null for no stack and for a resource of another type', () => {
     const pools = poolsOf([sub('curve', 'Curve', {})]);
 
-    expect(decodeModificationStack(undefined, pools, NO_FILES)).toBeNull();
-    expect(decodeModificationStack('SubResource("curve")', pools, NO_FILES)).toBeNull();
+    expect(decodeModificationStack(undefined, pools)).toBeNull();
+    expect(decodeModificationStack('SubResource("curve")', pools)).toBeNull();
   });
 
   it('reads a LookAt with its constraint in radians', () => {
@@ -289,7 +297,7 @@ describe('decodeModificationStack', () => {
       }),
     ]);
 
-    expect(decodeModificationStack('SubResource("stack")', pools, NO_FILES)!.modifications[0]).toEqual({
+    expect(decodeModificationStack('SubResource("stack")', pools)!.modifications[0]).toEqual({
       type: 'SkeletonModification2DStackHolder',
       enabled: true,
       executionMode: 0,
@@ -306,7 +314,7 @@ describe('decodeModificationStack', () => {
       }),
     ]);
 
-    expect(decodeModificationStack('SubResource("stack")', pools, NO_FILES)!.modifications[0]).toMatchObject({
+    expect(decodeModificationStack('SubResource("stack")', pools)!.modifications[0]).toMatchObject({
       heldStack: null,
     });
   });
@@ -316,24 +324,32 @@ describe('decodeModificationStack', () => {
   });
 });
 
-describe('modificationStackFiles', () => {
-  const stackFile = {
-    resourceType: 'SkeletonModificationStack2D',
-    properties: { modification_count: '1', 'modifications/0': 'ExtResource("1")' },
-    extResources: [{ id: '1', type: 'Resource', path: 'res://look.tres' }],
-    subResources: [],
-  } as unknown as ParsedResource;
+describe('a stack in a file', () => {
   const pools = {
     internalResources: [],
     externalResources: [{ id: 's', type: 'Resource', path: 'res://stack.tres' }],
   } as unknown as SceneResources;
+  const stackFile = [
+    '[gd_resource type="SkeletonModificationStack2D" load_steps=2 format=3]',
+    '[ext_resource type="Resource" path="res://look.tres" id="1"]',
+    '[resource]',
+    'modification_count = 1',
+    'modifications/0 = ExtResource("1")',
+  ].join('\n');
+  const jiggleFile = ['[gd_resource type="SkeletonModification2DJiggle" format=3]', '[resource]'].join('\n');
 
-  it('names the file of an external stack, then the files its modifications load from', () => {
-    expect(modificationStackFiles('ExtResource("s")', pools, NO_FILES)).toEqual(['res://stack.tres']);
-    expect(
-      modificationStackFiles('ExtResource("s")', pools, (path) =>
-        path === 'res://stack.tres' ? stackFile : undefined
-      )
-    ).toEqual(['res://stack.tres', 'res://look.tres']);
+  it('reads nothing while the file of the stack has not loaded', () => {
+    expect(decodeModificationStack('ExtResource("s")', pools)).toBeNull();
+  });
+
+  it('reads a modification from the file the stack names it in', () => {
+    const stack = decodeModificationStack('ExtResource("s")', pools, {
+      'res://stack.tres': stackFile,
+      'res://look.tres': jiggleFile,
+    });
+
+    expect(stack?.modifications.map((modification) => modification?.type ?? null)).toEqual([
+      'SkeletonModification2DJiggle',
+    ]);
   });
 });

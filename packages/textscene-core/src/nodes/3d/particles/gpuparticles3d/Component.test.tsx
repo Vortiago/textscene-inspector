@@ -1,8 +1,7 @@
 /**
- * GPUParticles3D draws no particles, but it is still a Node3D: its transform,
- * its `visible` flag and its exclusion from the 2D canvas are lost to a bare
- * `GenericNodeFallback`. So the slice registers the GeometryInstance3D base under
- * `renderIntent: 'pending'`, and no golden covers this type.
+ * GPUParticles3D is a Node3D: its transform, its `visible` flag and its exclusion from the 2D
+ * canvas are lost to a bare `GenericNodeFallback`. The slice registers the component under
+ * `renderIntent: 'draws'` (`Component.draw.test.tsx` covers the particles).
  */
 
 import { describe, expect, it } from 'vitest';
@@ -66,9 +65,8 @@ describe('<Node3D> (gpuparticles3d component)', () => {
 });
 
 describe('GPUParticles3D render intent', () => {
-  it('reports the emitter as a gap, not as finished', () => {
-    // Godot draws particles here and we do not, so the tree badge must say so.
-    expect(rendersOwnVisual('GPUParticles3D')).toBe('not-implemented');
+  it('reports the emitter as drawn', () => {
+    expect(rendersOwnVisual('GPUParticles3D')).toBe('draws');
   });
 
   it('keeps the emitter and its 3D subtree out of the 2D world canvas', () => {

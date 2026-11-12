@@ -11,8 +11,7 @@ import type { Label3DProperties } from './types';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
-import { useBillboard } from '../../../r3f/hooks/useBillboard';
-import { useFixedSize } from '../../../r3f/hooks/useFixedSize';
+import { useOwnMaterialPose } from '../../../r3f/hooks/useOwnMaterialPose';
 import { FramePoint } from '../../../r3f/components/NodeAabb';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 
@@ -27,13 +26,7 @@ export function Label3D({ node, children }: NodeComponentProps) {
 
   const groupRef = useRef<THREE.Group | null>(null);
 
-  // `label_3d.cpp:396` hands the flag to the same cached shader the billboard
-  // mode does; both are per-frame effects on the label's own group. Fixed size first:
-  // the billboard freezes the world matrix, so a scale set after it lands a frame late.
-  useFixedSize(groupRef, properties.fixed_size, transform.scale);
-
-  // Shared with Sprite3D, so both implement Godot's billboard modes identically.
-  useBillboard(groupRef, properties.billboard);
+  const posedRef = useOwnMaterialPose(groupRef, properties, transform.scale);
 
   // On by default to match Godot (the ADR-0008 amendment). The Labels toggle
   // hides it, and a marker group still positions any children and stays selectable.
@@ -56,7 +49,7 @@ export function Label3D({ node, children }: NodeComponentProps) {
         <group scale={properties.pixel_size}>
           {/* `LabelGlyphs` holds its own pending load until the font loads. */}
           <PendingSuspense>
-            <LabelGlyphs nodeRef={groupRef} properties={properties} />
+            <LabelGlyphs nodeRef={groupRef} posedRef={posedRef} properties={properties} />
           </PendingSuspense>
         </group>
         {/* A point, not a text-sized box: Godot's `_place_camera` runs before Label3D shapes text,

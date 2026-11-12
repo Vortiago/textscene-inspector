@@ -42,6 +42,8 @@ Strict parsing format-checks these `ShapeCast3D` properties, plus 17 inherited f
 
 The lenient parser reads `enabled`, `shape`, `target_position` and `debug_shape_custom_color` on top of the Node3D transform. An unreadable `target_position` stays `undefined` with a warn in the log, not Godot's default, and the gizmo substitutes `Vector3(0, -1, 0)` where it draws. `collide_with_areas`, `collide_with_bodies`, `collision_mask`, `exclude_parent`, `margin` and `max_results` are never read, because they steer the sweep that only a running game runs.
 
+A `shape` reads the same from the scene, from a `.tres` and from a sub-resource of a `.tres`. A resource that is no Shape3D leaves the slot empty, so only the sweep line draws, as in Godot.
+
 ## Gizmo
 
 Every node draws the sweep: one line from the origin to `target_position` (`shape_cast_3d.cpp:512-514`), and, with a shape, its debug wireframe at the sweep's end (`shape_cast_3d.cpp:504-513`). The wireframe sits at the end because the editor pose's safe fraction of 1 offsets the shape by the whole target. The target comparison runs after the wireframe, so a target of `Vector3()` draws the wireframe alone. The colour is the node's `debug_shape_custom_color`, or the project collision colour when that is `Color(0, 0, 0)` (`shape_cast_3d.cpp:565-568`). Godot's gizmo source is `shape_cast_3d_gizmo_plugin.cpp:60-66`.

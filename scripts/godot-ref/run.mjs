@@ -988,7 +988,8 @@ func _disable_2d_cameras(node: Node) -> void:
 # for SoftBody3D, whose integration the pause covers but whose disabled
 # process_mode also pins it if a future Godot changes that, and whose
 # disable_mode REMOVE keeps it out of the physics space as the editor does.
-# GPUParticles are left alone: their preprocessed burst is the authored look, not running logic.
+# GPUParticles are left alone here: their preprocessed burst is the authored look, not running logic.
+# --particles asks for more of it through _advance_particles.
 #
 # Both halves — this walk and the pause — are gated on PREVIEWS together, so
 # "editor" and "runtime" stay two whole answers rather than a mixture. Stopping
@@ -1082,9 +1083,10 @@ func _hide_2d() -> void:
 # (cpu_particles_3d.cpp:1354), so _render_3d asks BEFORE add_child; the 2D arms
 # ask after, and the first draw spends it.
 #
-# CPUParticles only. GPUParticles2D/3D carry the same method, but the previewer
-# draws a GPUParticles node as a bare transform group (ADR-0008), so there is no
-# pose on our side for an advanced one to be measured against.
+# The CPU emitters and GPUParticles3D, whose pose the previewer draws. A GPU emitter
+# spends the request on its first update, on top of an authored pre_process_time
+# (particles_storage.cpp:1542-1544). GPUParticles2D carries the same method, but the
+# previewer draws no GPUParticles2D pose yet, so it stays out.
 func _advance_particles(node: Node) -> void:
 	if PARTICLES_PROCESS <= 0.0:
 		return
@@ -1092,6 +1094,8 @@ func _advance_particles(node: Node) -> void:
 		(node as CPUParticles2D).request_particles_process(PARTICLES_PROCESS)
 	elif node is CPUParticles3D:
 		(node as CPUParticles3D).request_particles_process(PARTICLES_PROCESS)
+	elif node is GPUParticles3D:
+		(node as GPUParticles3D).request_particles_process(PARTICLES_PROCESS)
 	for child in node.get_children():
 		_advance_particles(child)
 

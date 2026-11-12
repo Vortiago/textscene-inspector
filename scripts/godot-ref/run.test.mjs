@@ -959,11 +959,14 @@ describe('--particles advances the emitters by a named number of seconds', () =>
     expect(lines.some((l) => l.includes('request_particles_process(PARTICLES_PROCESS)'))).toBe(true);
   });
 
-  it('advances CPUParticles only, since a GPU emitter has no pose on our side', () => {
+  it('advances the CPU emitters and GPUParticles3D, whose pose the previewer draws', () => {
     const body = bootstrap({ particles: 0.5 });
     expect(body).toContain('node is CPUParticles2D');
     expect(body).toContain('node is CPUParticles3D');
-    expect(body).not.toContain('GPUParticles2D)');
-    expect(body).not.toContain('GPUParticles3D)');
+    expect(body).toContain('node is GPUParticles3D');
+  });
+
+  it('leaves GPUParticles2D alone until the previewer draws it', () => {
+    expect(bootstrap({ particles: 0.5 })).not.toContain('GPUParticles2D)');
   });
 });

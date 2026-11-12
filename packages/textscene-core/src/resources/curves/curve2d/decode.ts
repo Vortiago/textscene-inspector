@@ -5,12 +5,12 @@
  * stay in Godot 2D space (+Y down).
  */
 
-import type { TscnInternalResource } from '../../../parser/types';
 import { parsePackedVector2Array } from '../../shapes/packedArray';
 import { bezierInterpolatef } from '../../../godot/math/math.js';
 import { storedReal, storedVector2 } from '../../../godot/math/real.js';
 import { CURVE2D_DATA } from '../shared/bezierData';
-import { resolveBezierCurve, type BezierCurveReader } from '../shared/bezierCurve';
+import type { ResourceKind } from '../../reading';
+import { bezierCurveKind, type BezierCurveReader } from '../shared/bezierCurve';
 import type { Curve2DControlPoint, Curve2DSample, Curve2DSampler } from './types';
 
 const CURVE2D: BezierCurveReader<Curve2DControlPoint> = {
@@ -24,13 +24,8 @@ const CURVE2D: BezierCurveReader<Curve2DControlPoint> = {
   origin: () => ({ in: { x: 0, y: 0 }, out: { x: 0, y: 0 }, position: { x: 0, y: 0 } }),
 };
 
-/** The control points of the Curve2D a `SubResource("id")` value names, or none. */
-export function resolveCurve2D(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): Curve2DControlPoint[] {
-  return resolveBezierCurve(ref, internalResources, CURVE2D);
-}
+/** The control points of a Curve2D, from any origin (`Path2D::set_curve` takes a `Ref<Curve2D>`). */
+export const CURVE_2D: ResourceKind<Curve2DControlPoint[]> = bezierCurveKind(CURVE2D);
 
 /**
  * Tessellate control points into a polyline sampler. Straight spans (both

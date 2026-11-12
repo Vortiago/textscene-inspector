@@ -14,5 +14,5 @@ registerResourceSlice({
   busType: 'resource',
 });
 
-export { decodeNavigationMesh } from './decode';
+export { NAVIGATION_MESH } from './kind';
 export type { NavigationMeshData } from './types';

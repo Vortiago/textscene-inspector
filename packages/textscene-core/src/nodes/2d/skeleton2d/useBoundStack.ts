@@ -4,17 +4,12 @@
  * with its place in the rig of the skeleton.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { liveScenePassResults } from '../../../r3f/liveScenePass.js';
 import { liveTreeOf } from '../../../r3f/liveSceneTree.js';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useLiveTreeSelection, type SharedLiveTree } from '../../../r3f/useLiveSceneTree.js';
-import {
-  decodeModificationStack,
-  modificationStackFiles,
-} from '../../../resources/skeleton/skeletonmodificationstack2d/index.js';
-import type { LoadedFile } from '../../../resources/scopedResource';
-import { useLoadedFiles } from '../../../resources/useLoadedFiles';
+import { useNodeResource } from '../../../resources/reading';
+import { MODIFICATION_STACK } from '../../../resources/skeleton/skeletonmodificationstack2d/index.js';
 import { sameData } from '../../../utils/sameData.js';
 import { stackNodePaths } from './modificationStack/stackPaths.js';
 import type { BoundStack, StackTarget } from './skeletonPose.js';
@@ -32,13 +27,7 @@ function sameTargets(a: Targets, b: Targets): boolean {
  * Null for no stack, a stack still loading, or no path.
  */
 export function useBoundStack(ref: string | undefined, skeletonPath: string | null): BoundStack | null {
-  const pools = useSceneResources();
-  const plan = useCallback(
-    (loadedFile: LoadedFile) => modificationStackFiles(ref, pools, loadedFile),
-    [ref, pools]
-  );
-  const { loadedFile } = useLoadedFiles(plan);
-  const stack = useMemo(() => decodeModificationStack(ref, pools, loadedFile), [ref, pools, loadedFile]);
+  const stack = useNodeResource(ref, MODIFICATION_STACK).value;
   const select = useMemo(() => {
     if (!stack || skeletonPath === null) return null;
     const literals = stackNodePaths(stack);

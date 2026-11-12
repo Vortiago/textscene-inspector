@@ -188,3 +188,71 @@ describe('decodeMultiMesh: mesh and custom box', () => {
     expect(decodeMultiMesh({ custom_aabb: 'AABB(0, 0, 0, 0, 0, 0)' }).customAabb).toBeNull();
   });
 });
+
+describe('decodeMultiMesh: the drawn instances', () => {
+  function drawn(properties: Record<string, string>) {
+    return decodeMultiMesh(properties).drawn;
+  }
+
+  const FOUR = { transform_format: '1', instance_count: '4', mesh: MESH };
+
+  it.each([
+    ['all of them for -1', '-1', 4],
+    ['none for 0', '0', 0],
+    ['the first two for 2', '2', 2],
+    ['all of them for a count above instance_count, which Godot refuses', '9', 4],
+  ])('draws %s', (_name, visible, count) => {
+    expect(drawn({ ...FOUR, visible_instance_count: visible }).count).toBe(count);
+  });
+
+  it('holds the buffer property as the server ends with it', () => {
+    const transforms = [...translation3D(1, 0, 0), ...translation3D(2, 0, 0)];
+    const properties = { transform_format: '1', instance_count: '2', mesh: MESH, buffer: buffer(transforms) };
+    expect(drawn(properties)).toMatchObject({
+      transformFormat: 1,
+      usesColors: false,
+      usesCustomData: false,
+      buffer: new Float32Array(transforms),
+    });
+  });
+
+  it('holds no buffer, which reads as zeros, when nothing sets one', () => {
+    const properties = { use_colors: 'true', use_custom_data: 'true', ...FOUR };
+    expect(drawn(properties).buffer).toBeNull();
+  });
+
+  it('writes a transform_array and a color_array into one buffer', () => {
+    const properties = {
+      transform_format: '1',
+      use_colors: 'true',
+      instance_count: '2',
+      mesh: MESH,
+      transform_array:
+        'PackedVector3Array(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 4, 5, 1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 7, 8)',
+      color_array: 'PackedColorArray(0.1, 0.2, 0.3, 1, 0.4, 0.5, 0.6, 1)',
+    };
+    expect(Array.from(drawn(properties).buffer!)).toEqual([
+      ...translation3D(3, 4, 5),
+      ...[0.1, 0.2, 0.3, 1].map(Math.fround),
+      ...translation3D(6, 7, 8),
+      ...[0.4, 0.5, 0.6, 1].map(Math.fround),
+    ]);
+  });
+
+  it('writes a custom_data_array after the colour of each instance', () => {
+    const properties = {
+      transform_format: '1',
+      use_colors: 'true',
+      use_custom_data: 'true',
+      instance_count: '1',
+      mesh: MESH,
+      custom_data_array: 'PackedColorArray(0.5, 0.25, 0.125, 1)',
+    };
+    expect(Array.from(drawn(properties).buffer!.subarray(16))).toEqual([0.5, 0.25, 0.125, 1]);
+  });
+
+  it('keeps the 2D format when transform_format comes after instance_count', () => {
+    const properties = { instance_count: '1', transform_format: '1', mesh: MESH };
+    expect(drawn(properties)).toMatchObject({ transformFormat: 0, buffer: null });
+  });
+});

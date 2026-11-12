@@ -31,6 +31,11 @@ export const GEOMETRY_SCENES = [
   // A CPUParticles3D settled to a fixed seed: four boxes in a row, each an instance of the mesh
   // coloured through `vertex_color_use_as_albedo`.
   { name: 'cpuparticles3d-row', file: 'unit-cpuparticles3d-row.tscn' },
+  // GPUParticles3D settled to a fixed seed: a sphere, a sphere surface, a box and a ring of
+  // particles, each an unshaded dot coloured by the material.
+  { name: 'gpuparticles3d-shapes', file: 'unit-gpuparticles3d-shapes.tscn' },
+  // A MultiMeshInstance3D with a buffer: four boxes in a row, each coloured by its instance colour.
+  { name: 'multimeshinstance3d-instances', file: 'unit-multi-mesh-instance-3d-instances.tscn' },
   // A DIRECTED_POINTS CPUParticles3D: a column of boxes above its one point, turned into the point's
   // normal frame and coloured from `emission_colors`.
   { name: 'cpuparticles3d-directed-points', file: 'unit-cpuparticles3d-directed-points.tscn' },
@@ -182,6 +187,16 @@ export const GEOMETRY_SCENES = [
   // depth prepass cast, and a blended surface or one with no depth test casts nothing.
   { name: 'sprite3d-shadow', file: 'unit-sprite3d-shadow.tscn' },
   { name: 'label3d-shadow', file: 'unit-label3d-shadow.tscn' },
+  // The one variable: the `material_override` and `material_overlay` of a SpriteBase3D and of a
+  // Label3D, whose own materials every other scene of theirs draws. The sprite's override samples
+  // the frame and the flip the quad's UVs hold.
+  { name: 'sprite3d-instance-materials', file: 'unit-sprite3d-instance-materials.tscn' },
+  { name: 'label3d-instance-materials', file: 'unit-label3d-instance-materials.tscn' },
+  // The one variable: an AtlasTexture with a margin on a Sprite3D, under its own material and
+  // under a `material_override`. The quad covers the region alone, with the UVs of the atlas.
+  { name: 'sprite3d-atlas-instance-materials', file: 'unit-sprite3d-atlas-instance-materials.tscn' },
+  // The one variable: `outline_render_priority`, below the fill's priority and equal to it.
+  { name: 'label3d-outline-priority', file: 'unit-label3d-outline-priority.tscn' },
   // The one variable: `shaded`. An unshaded label, a shaded label and a shaded back face under one
   // coloured sun at N·L = 0.5.
   { name: 'label3d-shaded', file: 'unit-label3d-shaded.tscn', camera: 'Root/Camera3D' },

@@ -1,15 +1,15 @@
 ---
 type: GPUParticles3D
 category: 3D
-status: unimplemented
+status: unreviewed
 fixture: unit-gpuparticles3d.tscn
 image: unit-gpuparticles3d
-renders_as: nothing yet, Godot draws a particle cloud, the previewer does not
+renders_as: each draw pass at every particle, in a frozen pose
 ---
 
 # GPUParticles3D
 
-A GPU-simulated particle emitter. The previewer runs no simulation, so the emitter contributes no geometry and only its transform and `visible` flag take effect.
+GPUParticles3D is Godot's GPU-simulated emitter. The previewer steps a port of the engine's particle shader once, in the engine's frame loop. It draws each draw pass at every live particle. The start colour is in linear light, as the material's `source_color` makes it.
 
 ## Linting
 
@@ -63,9 +63,17 @@ Strict parsing format-checks these `GPUParticles3D` properties, plus 18 inherite
 |  | `geometryinstance3d-visibility-range-end-fade-without-margin` | warning |
 <!-- lint:end -->
 
-The lenient parser reads the GeometryInstance3D base, `visibility_aabb` and the `process_material` reference. `visibility_aabb` is the box the scene cull measures the emitter by, and the gizmo draws it. The emission shape keys come from a ParticleProcessMaterial that the parser reads from its resource. The parser never reads `amount`, `lifetime` or `draw_pass_1`, so an invalid or missing value has no lenient-side effect, and only strict reports it.
+The lenient parser reads the GeometryInstance3D base, `visibility_aabb`, the `process_material` reference, the emitter keys and the draw passes. `visibility_aabb` is the box the scene cull measures the emitter by, and the gizmo draws it. Where strict rejects a value, the lenient parser takes the node constructor's default. An `amount` below `1` reads as `8`, and a `lifetime` at or below `0` as `1.0`. The simulation keys come from a ParticleProcessMaterial that the parser reads from its resource, with the material constructor's defaults, for example `direction` is `(1, 0, 0)`.
 
 Strict parsing also checks all 96 properties of a ParticleProcessMaterial `[sub_resource]` or `.tres`, against `particle_process_material.cpp`. A setter assigns every value bare except `emission_shape`, so a value outside a property's range warns, and an `emission_shape` past the enum errors. The `particleprocessmaterial-param-min-above-max` rule warns on a `_min` above its `_max`, where one of the two loads as the other.
+
+## Particle draw
+
+The frozen pose sits at Godot's own `preprocess` moment, else at one `lifetime`, or half of it for a `one_shot`. The step is `1 / fixed_fps`, or `1 / 30` for `fixed_fps = 0`, and the last step overshoots, as the engine's loop does. `speed_scale` never moves the pose, because the engine's settle runs at a speed scale of 1 (`particles_storage.cpp:1555-1563`). `draw_passes` draws each pass up to four, with its own materials, and `material_override` and `material_overlay` draw on every instance. A particle past its lifetime, or above `amount_ratio`, draws nothing, and neither does an emitter that is not emitting.
+
+With `local_coords` false the particles sit in world space, so gravity acts along the world axes. With `local_coords` true they follow the node.
+
+The scene cull measures an emitter by `visibility_aabb`. The selection box and the editor framing leave the particles out, as Godot's `get_aabb` does.
 
 ## Gizmo
 
@@ -81,4 +89,13 @@ Godot's billboard icon marks the origin of every emitter, faint while it is not 
 
 ## Known limitations
 
-- **Not drawn** Godot draws the burst of orange emissive spheres mid-flight, but here only the sky and ground appear.
+- **Needs runtime** The emitter runs in Godot and freezes here, at the moment named above.
+- **Approximated** An emitter without `use_fixed_seed` takes a fixed constant seed, so its particles sit in plausible places where Godot randomises them on every run.
+- **Not drawn** An emitter with an emission shape of `POINTS` or `DIRECTED_POINTS` draws no particle, because the emission texture is not read.
+- **Missing** The process material's curves, ramps, hue variation, angle, orbit, damping, radial and directional velocity, turbulence and flags are not read.
+- **Missing** `draw_order`, `transform_align`, trails and sub-emitters are not read, so the particles draw in index order with their own basis.
+- **Missing** Attractors and collision nodes do not move the particles.
+- **Shader missing** A ShaderMaterial as the `process_material` is not translated, so the emitter draws no particle.
+- **Approximated** An `amount` times settle steps above 2,000,000 draws every nth particle, each where Godot puts it, so the main thread stays free.
+- **Approximated** A `preprocess` above 600 seconds, the top of its range, settles for 600 seconds.
+- **Approximated** An `amount` above `1000000`, the most Godot's own editor allows, draws `1000000` particles, where Godot draws them all.

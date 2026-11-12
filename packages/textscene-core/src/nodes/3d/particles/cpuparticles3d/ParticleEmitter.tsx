@@ -16,7 +16,7 @@ import { useGeometryInstance } from '../../../../r3f/visibilityRange/geometryIns
 import { useMeshAabb } from '../../meshinstance3d/meshAabb';
 import { useParticleResources } from '../../../shared/cpuparticles/useParticleResources';
 import { particlesAabb } from './ownAabb';
-import { ParticleMesh } from './ParticleMesh';
+import { ParticleMesh } from '../../../shared/particles3d/ParticleMesh';
 import { particleRows, particlesInDrawOrder, settleParticles } from './simulate';
 import type { CPUParticles3DProperties } from './types';
 
@@ -47,11 +47,11 @@ export function ParticleEmitter({ properties, nodeRef, emissionTransform }: Part
   const meshAabb = useMeshAabb(properties.mesh, pools);
   const ownAabb = useMemo(() => particlesAabb(properties, rows, meshAabb), [properties, rows, meshAabb]);
   const placement = useMemo(() => boxPlacement(nodeRef, ownAabb), [nodeRef, ownAabb]);
-  const shadow = useGeometryInstance(placement);
+  useGeometryInstance(placement);
 
   // Godot draws no instance while the emitter is off (`cpu_particles_3d.cpp:1338`).
   if (!settled.state) return null;
-  return <ParticleMesh properties={properties} buffer={buffer} shadow={shadow} />;
+  return <ParticleMesh mesh={properties.mesh} buffer={buffer} />;
 }
 
 /**

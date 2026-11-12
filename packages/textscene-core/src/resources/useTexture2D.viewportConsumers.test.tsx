@@ -22,6 +22,7 @@ import { parseTextureRect } from '../nodes/2d/ui/texturerect/parser';
 import { Sprite2D } from '../nodes/2d/sprite2d/Component';
 import { parseSprite2D } from '../nodes/2d/sprite2d/parser';
 import { parseSprite3D } from '../nodes/3d/sprite3d/parser';
+import { quadUvWindow } from '../nodes/3d/sprite3d/testing/quadUvWindow';
 import { SceneStack } from '../r3f/testing/SceneStack';
 import { ControlCanvasWalker } from '../r3f/controls/native/ControlCanvasWalker';
 import { controlComponentRegistry } from '../r3f/controls/ControlComponentRegistry';
@@ -159,13 +160,14 @@ describe('a ViewportTexture reaches every Texture2D slot', () => {
     expect(mapsIn(renderer)).toEqual(expect.arrayContaining(copiesFilledFrom(decodingTarget.texture)));
   });
 
-  it('Sprite3D mirrors its copy for flip_h', async () => {
+  it('Sprite3D mirrors its copy for flip_h in the quad UVs', async () => {
     const sprite = node(
       'Sprite3D',
       parseSprite3D(heading('Sprite3D'), { texture: VIEWPORT_REF, flip_h: 'true' })
     );
     const renderer = await provide(<Sprite3D node={sprite} />);
-    expect(mapsIn(renderer).map((map) => map.repeat.x)).toContain(-1);
+    const [quad] = renderer.scene.findAllByType('Mesh');
+    expect(quadUvWindow((quad!.instance as THREE.Mesh).geometry).repeat.x).toBe(-1);
   });
 
   it('TextureRect draws the live target when the Control walker paints it', async () => {

@@ -48,7 +48,7 @@ export function parseSubResourcePath(path: string): SubResourceAddress {
 }
 
 /** Address the `[sub_resource id="subResourceId"]` declared inside `filePath`. */
-function subResourcePath(filePath: string, subResourceId: string): string {
+export function subResourcePath(filePath: string, subResourceId: string): string {
   return `${filePath}${SEPARATOR}${subResourceId}`;
 }
 
