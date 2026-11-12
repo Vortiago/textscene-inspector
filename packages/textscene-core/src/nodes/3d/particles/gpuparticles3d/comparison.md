@@ -96,4 +96,5 @@ Godot's billboard icon marks the origin of every emitter, faint while it is not 
 - **Missing** `draw_order`, `transform_align`, trails and sub-emitters are not read, so the particles draw in index order with their own basis.
 - **Missing** Attractors and collision nodes do not move the particles.
 - **Shader missing** A ShaderMaterial as the `process_material` is not translated, so the emitter draws no particle.
-- **Approximated** An `amount` above `1000000`, the most Godot's own editor allows, draws `1000000` particles, where Godot draws them all. An emitter whose `amount` times its settle steps passes 2,000,000 draws every nth particle, at the exact place Godot puts it, so the main thread stays free.
+- **Approximated** An `amount` times settle steps above 2,000,000 draws every nth particle, each where Godot puts it, so the main thread stays free.
+- **Approximated** An `amount` above `1000000`, the most Godot's own editor allows, draws `1000000` particles, where Godot draws them all.
