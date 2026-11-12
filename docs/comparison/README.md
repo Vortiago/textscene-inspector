@@ -133,7 +133,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [Marker3D](../../packages/textscene-core/src/nodes/3d/marker3d/comparison.md): an axis-cross gizmo for every node
 - [MeshInstance3D](../../packages/textscene-core/src/nodes/3d/meshinstance3d/comparison.md): a THREE.Mesh
 - [ModifierBoneTarget3D](../../packages/textscene-core/src/nodes/3d/skeleton/modifierbonetarget3d/comparison.md): nothing yet, Godot mirrors its bone onto its transform, the previewer does not
-- [MultiMeshInstance3D](../../packages/textscene-core/src/nodes/3d/multimeshinstance3d/comparison.md): nothing yet, Godot draws a batch of mesh instances, the previewer does not
+- [MultiMeshInstance3D](../../packages/textscene-core/src/nodes/3d/multimeshinstance3d/comparison.md): a THREE.InstancedMesh of the MultiMesh's mesh
 - [NavigationAgent3D](../../packages/textscene-core/src/nodes/3d/navigationagent3d/comparison.md): nothing (non-visual navigation helper)
 - [NavigationLink3D](../../packages/textscene-core/src/nodes/3d/navigationlink3d/comparison.md): nothing (a transform-only group)
 - [NavigationObstacle3D](../../packages/textscene-core/src/nodes/3d/navigationobstacle3d/comparison.md): a transform-only group (no runtime visual)

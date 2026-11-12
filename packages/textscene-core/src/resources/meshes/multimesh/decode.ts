@@ -38,10 +38,27 @@ class MultiMeshState {
   isBoxDirty = false;
   boundedTransforms = new Float32Array(0);
 
+  get transformFloats(): number {
+    return this.format === MultiMeshTransformFormat.TRANSFORM_3D ? TRANSFORM_FLOATS : TRANSFORM_2D_FLOATS;
+  }
+
   get stride(): number {
-    const transform =
-      this.format === MultiMeshTransformFormat.TRANSFORM_3D ? TRANSFORM_FLOATS : TRANSFORM_2D_FLOATS;
-    return transform + (this.usesColors ? 4 : 0) + (this.usesCustomData ? 4 : 0);
+    return this.transformFloats + (this.usesColors ? 4 : 0) + (this.usesCustomData ? 4 : 0);
+  }
+
+  /** Where an instance's colour starts, `multimesh_instance_set_color` (`mesh_storage.cpp:1976-1996`). */
+  get colourOffset(): number {
+    return this.transformFloats;
+  }
+
+  /** Where an instance's custom data starts, after the colour when there is one. */
+  get customOffset(): number {
+    return this.transformFloats + (this.usesColors ? 4 : 0);
+  }
+
+  /** The buffer the server ends with: the CPU copy, else the set buffer, else zeros. */
+  get endBuffer(): Float32Array {
+    return this.dataCache ?? this.buffer ?? new Float32Array(this.instances * this.stride);
   }
 
   /** `multimesh_allocate_data` (`mesh_storage.cpp:1543-1598`). */
@@ -122,10 +139,10 @@ const SETTERS: Readonly<Record<string, Setter>> = {
   transform_array: setTransforms3D,
   transform_2d_array: setTransforms2D,
   color_array(state, value) {
-    if (state.usesColors) setPerInstanceColours(state, value);
+    if (state.usesColors) setPerInstanceVec4(state, value, state.colourOffset);
   },
   custom_data_array(state, value) {
-    if (state.usesCustomData) setPerInstanceColours(state, value);
+    if (state.usesCustomData) setPerInstanceVec4(state, value, state.customOffset);
   },
 };
 
@@ -207,13 +224,15 @@ function setTransforms2D(state: MultiMeshState, value: string): void {
 }
 
 /**
- * The 3.x `color_array` and `custom_data_array` (`multimesh.cpp:136-180`). Their values never reach
- * the box, but each setter makes the CPU copy that later writes go through.
+ * The 3.x `color_array` and `custom_data_array` (`multimesh.cpp:136-180`): four floats for each
+ * instance, written at `offset` of its row in the CPU copy. They never reach the box.
  */
-function setPerInstanceColours(state: MultiMeshState, value: string): void {
-  const colours = parsePackedColorArray(value);
-  if (colours.length === 0 || colours.length / 4 !== state.instances) return;
-  state.makeLocal();
+function setPerInstanceVec4(state: MultiMeshState, value: string, offset: number): void {
+  const vectors = parsePackedColorArray(value);
+  if (vectors.length === 0 || vectors.length / 4 !== state.instances) return;
+  const cache = state.makeLocal();
+  for (let i = 0; i < state.instances; i++)
+    cache.set(vectors.subarray(i * 4, i * 4 + 4), i * state.stride + offset);
 }
 
 /**
@@ -230,5 +249,12 @@ export function decodeMultiMesh(properties: Readonly<Record<string, string>>): M
     customAabb: state.customAabb,
     mesh: state.hasMesh ? properties['mesh'] : undefined,
     boundedTransforms: state.boundedTransforms,
+    drawn: {
+      transformFormat: state.format,
+      usesColors: state.usesColors,
+      usesCustomData: state.usesCustomData,
+      count: state.visibleInstances >= 0 ? state.visibleInstances : state.instances,
+      buffer: state.endBuffer,
+    },
   };
 }

@@ -5,43 +5,49 @@
  * particle's zero transform sits at the emitter's origin.
  */
 
+/**
+ * A CPUParticles3D's buffer as three draws it: each particle an instance of the mesh, with its
+ * transform, its colour and its custom data. The buffer holds Godot's 3×4 rows, whose bottom row
+ * the scene shader fills with `(0, 0, 0, 1)` (`scene_forward_clustered.glsl:320`), so a never-born
+ * particle's zero transform sits at the emitter's origin.
+ */
+
 import * as THREE from 'three';
-import {
-  INSTANCE_CUSTOM_ATTRIBUTE,
-  instanceMatrices,
-  sharedInstances,
-  writeInstanceMatrix,
-} from '../../../../r3f/meshes/sharedInstances';
-import { PARTICLE_COLOR_ATTRIBUTE } from '../../../../r3f/materials/godotParticles';
-import { withParticleDraw } from '../../../../r3f/materials/godotParticlesProgram';
+import { colouredInstances } from '../../../../r3f/surfacedMeshDrawer/colouredInstances';
 import type { MeshInstances } from '../../../../r3f/surfacedMeshDrawer/meshInstances';
 import { PARTICLE_COLOR_OFFSET, PARTICLE_CUSTOM_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
 
-/** Floats in a particle's colour and in its custom data. */
+/** Floats in a colour and in a custom data vector. */
 const VEC4_FLOATS = 4;
+
+/** The floats of one instance matrix. */
+const MATRIX_FLOATS = 16;
 
 /** The particle count of `buffer`. */
 function particleCount(buffer: Float32Array): number {
   return buffer.length / PARTICLE_FLOATS;
 }
 
-/**
- * `buffer` as the instances the surfaced mesh drawer draws a mesh at. The program draws billboards
- * that the matrices do not hold, so the buffer has no bounds and the scene cull's box culls it.
- */
+/** `buffer` as the instances the surfaced mesh drawer draws a mesh at. */
 export function particleInstances(buffer: Float32Array): MeshInstances {
-  return {
+  return colouredInstances({
     count: particleCount(buffer),
-    geometryOver: particleGeometry,
-    write: (geometry) => writeParticles(geometry, buffer),
-    boundsOver: unbounded,
-    particles: withParticleDraw,
-  };
+    matrices: particleMatrices(buffer),
+    colours: particleSlices(buffer, PARTICLE_COLOR_OFFSET, VEC4_FLOATS),
+    customs: particleSlices(buffer, PARTICLE_CUSTOM_OFFSET, VEC4_FLOATS),
+  });
 }
 
-/** One function for every buffer, so a new buffer leaves the draws of the last one as they are. */
-function unbounded(): null {
-  return null;
+/** Scratch for one particle's matrix, overwritten by every write. */
+const written = new THREE.Matrix4();
+
+/** Every particle's transform as a matrix. */
+function particleMatrices(buffer: Float32Array): Float32Array {
+  const matrices = new Float32Array(particleCount(buffer) * MATRIX_FLOATS);
+  for (let i = 0; i < particleCount(buffer); i++) {
+    particleMatrix(written, buffer, i).toArray(matrices, i * MATRIX_FLOATS);
+  }
+  return matrices;
 }
 
 /** Particle `i`'s transform as a matrix, written into `target`. */
@@ -70,58 +76,12 @@ function particleMatrix(target: THREE.Matrix4, buffer: Float32Array, i: number):
 /** Each particle's `width` floats at `offset`. */
 export function particleSlices(buffer: Float32Array, offset: number, width: number): Float32Array {
   const count = particleCount(buffer);
-  const out = new Float32Array(count * width);
-  writeSlicesInto(out, buffer, offset, width);
-  return out;
-}
-
-function writeSlicesInto(
-  target: THREE.TypedArray,
-  buffer: Float32Array,
-  offset: number,
-  width: number
-): void {
-  const count = particleCount(buffer);
+  const slices = new Float32Array(count * width);
   for (let i = 0; i < count; i++) {
-    const at = i * PARTICLE_FLOATS + offset;
-    for (let k = 0; k < width; k++) target[i * width + k] = buffer[at + k]!;
-  }
-}
-
-/**
- * `source` at `count` particles, each with a colour and custom data of its own. Its instance
- * matrices are an InstancedMesh's too, so one write places both a draw and its overlay.
- */
-function particleGeometry(source: THREE.BufferGeometry, count: number): THREE.InstancedBufferGeometry {
-  const geometry = sharedInstances(source, count);
-  for (const name of [PARTICLE_COLOR_ATTRIBUTE, INSTANCE_CUSTOM_ATTRIBUTE]) {
-    geometry.setAttribute(
-      name,
-      new THREE.InstancedBufferAttribute(new Float32Array(count * VEC4_FLOATS), VEC4_FLOATS)
+    slices.set(
+      buffer.subarray(i * PARTICLE_FLOATS + offset, i * PARTICLE_FLOATS + offset + width),
+      i * width
     );
   }
-  return geometry;
-}
-
-/** Scratch for one particle's matrix, overwritten by every write. */
-const written = new THREE.Matrix4();
-
-/** Writes `buffer`'s transforms, colours and custom data into `geometry`'s instance attributes. */
-function writeParticles(geometry: THREE.BufferGeometry, buffer: Float32Array): void {
-  const matrices = instanceMatrices(geometry);
-  for (let i = 0; i < particleCount(buffer); i++) {
-    writeInstanceMatrix(matrices, i, particleMatrix(written, buffer, i));
-  }
-  matrices.needsUpdate = true;
-  writeSlices(geometry.getAttribute(PARTICLE_COLOR_ATTRIBUTE), buffer, PARTICLE_COLOR_OFFSET);
-  writeSlices(geometry.getAttribute(INSTANCE_CUSTOM_ATTRIBUTE), buffer, PARTICLE_CUSTOM_OFFSET);
-}
-
-function writeSlices(
-  attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-  buffer: Float32Array,
-  offset: number
-): void {
-  writeSlicesInto(attribute.array, buffer, offset, VEC4_FLOATS);
-  (attribute as THREE.BufferAttribute).needsUpdate = true;
+  return slices;
 }

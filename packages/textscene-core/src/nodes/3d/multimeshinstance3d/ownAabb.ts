@@ -15,14 +15,36 @@ import { resourceContentKey } from '../../../resources/resourceContentKey';
 import type { ScopedResource } from '../../../resources/scopedResource';
 import { useContentMemo } from '../../../resources/useContentMemo';
 
+/** The MultiMesh a node holds, and the resources its mesh reference reads. */
+export interface NodeMultiMesh {
+  /** Null while the reference is unresolved, or when it names a MultiMesh this cannot read. */
+  multiMesh: MultiMeshData | null;
+  resources: ScopedResource['resources'];
+}
+
+/** The node's MultiMesh, read from a SubResource or a file. */
+export function useNodeMultiMesh(node: TscnNode): NodeMultiMesh {
+  const scoped = useSubOrExtResource(node.rawProperties['multimesh'], useSceneResources());
+  const multiMesh = useContentMemo(scoped, ownContentKey, readMultiMesh);
+  return { multiMesh, resources: scoped?.resources ?? NO_RESOURCES };
+}
+
 /**
  * The box in node space, `AABB()` for a node with no MultiMesh (`multimesh_instance_3d.cpp:100-102`),
  * or null while the MultiMesh or the mesh box it needs is unknown.
  */
 export function useMultiMeshInstance3DAabb(node: TscnNode): Aabb | null {
-  const scoped = useSubOrExtResource(node.rawProperties['multimesh'], useSceneResources());
-  const multiMesh = useContentMemo(scoped, ownContentKey, readMultiMesh);
-  const meshAabb = useMeshAabb(multiMesh?.mesh, scoped?.resources ?? NO_RESOURCES);
+  const { multiMesh, resources } = useNodeMultiMesh(node);
+  return useMultiMeshAabb(node, multiMesh, resources);
+}
+
+/** `useMultiMeshInstance3DAabb` over a MultiMesh a caller has read already. */
+export function useMultiMeshAabb(
+  node: TscnNode,
+  multiMesh: MultiMeshData | null,
+  resources: NodeMultiMesh['resources']
+): Aabb | null {
+  const meshAabb = useMeshAabb(multiMesh?.mesh, resources);
   const hasMultiMesh = node.rawProperties['multimesh'] !== undefined;
   return useMemo(() => {
     if (multiMesh) return multiMeshAabb(multiMesh, meshAabb);

@@ -2,8 +2,7 @@
  * MultiMeshInstance3D registration: parser.
  *
  * Reuses the GeometryInstance3D parse, and property knowledge lives in linterParser.ts.
- * Not rendered: index.r3f.ts registers the base under `renderIntent: 'pending'`,
- * so the tree still reports a gap while `visible` and the workspace split work.
+ * index.r3f.ts registers the component that draws it.
  */
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../core/NodeRegistry';
