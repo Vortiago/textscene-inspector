@@ -4,7 +4,12 @@
  * the elevation and azimuth are pinned to hand-computed values too.
  */
 import { describe, expect, it } from 'vitest';
-import { EDITOR_CAMERA_FOV, editorCameraDirection, editorCameraPosition } from './godotEditorCamera';
+import {
+  EDITOR_CAMERA_FOV,
+  editorCameraDirection,
+  editorCameraPosition,
+  editorCameraProjection,
+} from './godotEditorCamera';
 import { radToDeg } from '../godot/math/math.js';
 
 describe('editorCameraDirection', () => {
@@ -55,5 +60,12 @@ describe('EDITOR_CAMERA_FOV', () => {
     // editors/3d/default_fov is 70; three's PerspectiveCamera defaults to 50,
     // which is a visibly narrower view of the same scene.
     expect(EDITOR_CAMERA_FOV).toBe(70);
+  });
+});
+
+describe('editorCameraProjection', () => {
+  it('opens with the editor’s default field of view and clip planes', () => {
+    // `editors/3d/default_fov`, `default_z_near` and `default_z_far` (`editor_settings.cpp:930-932`).
+    expect(editorCameraProjection()).toEqual({ fov: 70, near: 0.05, far: 4000 });
   });
 });

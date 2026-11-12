@@ -2,6 +2,8 @@
  * Reads the viewport actions from inside a provider, for component tests. Test-only: the `testing/`
  * directories under `src` are excluded from the build.
  */
+import { useEffect } from 'react';
+import type { FreelookControl } from '../freelook';
 import {
   useOptionalViewportActions,
   type ViewportActionsContextValue,
@@ -30,4 +32,11 @@ export function viewportActionsProbe(): { Probe: () => null; actions: () => View
       return seen;
     },
   };
+}
+
+/** Stands in for the 3D canvas, which registers its freelook with the viewport actions on mount. */
+export function RegisteredFreelook({ control }: { control: FreelookControl }): null {
+  const { registerFreelook } = useViewportActions();
+  useEffect(() => registerFreelook(control), [registerFreelook, control]);
+  return null;
 }

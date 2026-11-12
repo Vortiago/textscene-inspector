@@ -26,7 +26,12 @@ In the dev edition, a link can open a scene:
 ## Move the camera
 
 The 3D viewport uses Godot's editor controls. Press <kbd>?</kbd> in the viewport for the full list, including trackpad and touch.
-If zoom stops before you are close enough, select the node and press <kbd>F</kbd>.
+If zoom stops before you are close enough, select the node and press <kbd>F</kbd>, or fly there with freelook.
+
+To fly, click **Freelook** over the viewport or press <kbd>Shift</kbd>+<kbd>F</kbd>.
+The pointer hides, the mouse looks around, and <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or the arrow keys move.
+<kbd>E</kbd> or <kbd>Space</kbd> goes up and <kbd>Q</kbd> goes down. <kbd>Shift</kbd> is faster, <kbd>Alt</kbd> is slower, and the wheel changes the speed.
+<kbd>Esc</kbd> leaves freelook. A held right mouse button does the same without the toggle.
 
 To look through a Camera3D, check **Preview** in its Inspector, or pick it in the **Cameras** tab.
 As in Godot, the viewport ignores navigation while it previews a camera, so neither camera moves.

@@ -6,7 +6,8 @@
 
 import type { Camera as R3FCamera } from '@react-three/fiber';
 import * as THREE from 'three';
-import { editorCameraPosition } from './godotEditorCamera.js';
+import { Freelook } from './freelook.js';
+import { editorCameraPosition, editorCameraProjection } from './godotEditorCamera.js';
 import {
   cursorCameraPosition,
   cursorFromCamera,
@@ -14,6 +15,7 @@ import {
   orthographicHeight,
   DEGENERATE_DISTANCE,
   type EditorCursor,
+  type Projection,
   type ZoomRange,
 } from './godotEditorCursor.js';
 
@@ -35,6 +37,9 @@ function isPerspectiveCamera(camera: R3FCamera): camera is THREE.PerspectiveCame
 export class EditorControlsHandle extends THREE.EventDispatcher {
   /** The orbit focus point. One persistent vector: `frameSceneBounds` copies into it. */
   readonly target = new THREE.Vector3();
+
+  /** Godot keeps freelook per viewport, so each canvas's handle holds its own. */
+  readonly freelook = new Freelook();
 
   /** Written only by the projection swap: one of the pair below. */
   private editorCamera: R3FCamera;
@@ -114,9 +119,16 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     this.camera.updateMatrixWorld();
   }
 
-  /** Back to the pose Godot's editor opens every scene at, in perspective. */
+  /**
+   * Back to the pose and the projection Godot's editor opens every scene at. A framing narrows
+   * the clip planes to its node, and the opening pose is not on that node.
+   */
   reset(): void {
     this.usePerspective();
+    const { near, far } = editorCameraProjection();
+    this.perspectiveCamera.near = near;
+    this.perspectiveCamera.far = far;
+    this.perspectiveCamera.updateProjectionMatrix();
     this.target.set(0, 0, 0);
     this.camera.position.set(...editorCameraPosition());
     this.update();
@@ -124,6 +136,18 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
 
   get isOrthographic(): boolean {
     return this.camera === this.orthographicCamera;
+  }
+
+  /**
+   * Godot has no freelook in a camera preview (`node_3d_editor_plugin.cpp:1826-1829`) or in
+   * orthographic view (`:2741-2742`).
+   */
+  canFreelook(rendered: R3FCamera): boolean {
+    return !this.isPreviewing(rendered) && !this.isOrthographic;
+  }
+
+  get projection(): Projection {
+    return this.isOrthographic ? 'orthographic' : 'perspective';
   }
 
   /** Numpad 5. */
@@ -136,6 +160,7 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     if (this.editorCamera === this.perspectiveCamera) return;
     const cursor = this.cursor();
     this.editorCamera = this.perspectiveCamera;
+    this.freelook.setAvailable(true);
     this.setActiveCamera(this.perspectiveCamera);
     this.applyCursor(cursor);
   }
@@ -154,6 +179,7 @@ export class EditorControlsHandle extends THREE.EventDispatcher {
     this.orthographicCamera.near = perspective.near;
     this.orthographicCamera.far = perspective.far;
     this.editorCamera = this.orthographicCamera;
+    this.freelook.setAvailable(false);
     this.setActiveCamera(this.orthographicCamera);
     this.applyCursor(cursor);
   }

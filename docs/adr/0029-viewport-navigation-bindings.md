@@ -53,7 +53,7 @@ This follows from the pinch decision.
 
 **Touch is designed for the device, and is outside the parity norm.** One-finger drag
 orbits, a one-finger tap selects, two fingers pan, pinch zooms, and there is no freelook
-(it needs a held button plus WASD). This is the 3D-viewer convention, because Godot does
+(it needs a mouse to look and a keyboard to move). This is the 3D-viewer convention, because Godot does
 nothing here.
 
 **The wheel zooms toward the pointer, not the focus point.** This is the one place the
@@ -170,3 +170,79 @@ authored Camera3D, so its next preview shows the pose the scene file gives it.
 
 Godot has no Reset Camera. The previewer's Reset Camera ends a preview and then poses the
 **Editor camera**, so the pose it sets is the one on screen.
+
+## Amendment: freelook has a toggle, and three keys of the previewer's own
+
+Godot's freelook has two ways in: the held right button, and the `Shift+F` toggle
+(`node_3d_editor_plugin.cpp:9962`, `2741-2746`). Both run one state, `r3f/freelook.ts`: whether it
+is on, the held flight keys and the speed. The rules are Godot's:
+
+- The wheel changes the flight speed while freelook is on, and does not zoom (`:1880-1888`). The
+  speed holds to the zoom range (`:3034-3041`) and lasts for the life of the canvas.
+- Shift flies 3 times faster and Alt 3 times slower (`:3122-3127`).
+- Freelook does not exist in orthographic view, where the right button pans (`:2375-2383`,
+  `:2741-2742`), or in a camera preview (`:1826-1829`).
+- Every key event is accepted while freelook is on (`:2768-2772`), so no other shortcut fires.
+- It ends on Escape, on `Shift+F` and when the window loses focus (`:2545-2546`, `:3579-3581`).
+
+**The toggle is the pointer lock.** Godot captures the mouse (`:2985`), and the browser's
+equivalent is Pointer Lock. "Freelook is toggled on" and "the canvas holds the lock" are one
+fact, read from `pointerlockchange`, so the two cannot disagree. The browser ends a lock on Escape
+by itself, so no page code can break the exit. A locked pointer has no position, so the canvas
+picks nothing while it is toggled.
+
+**The arrow keys and Space fly too. This departs from Godot.** The arrows fly as W A S D do, and
+Space flies up, as E does. Godot's viewport binds no arrow key, and its Space maximises the
+viewport, which the previewer cannot do. The keys sit in a table of their own in
+`editorKeyBindings.ts`, apart from Godot's.
+
+**No Ctrl key flies.** A held Ctrl turns each flight key into a chord, and Ctrl+W closes a browser
+tab, which no page can prevent. In VS Code the webview forwards the chord to the workbench, where
+Ctrl+W closes the preview and Ctrl+Shift+W closes the window. Down stays on Q, Godot's key.
+
+**The toolbar has a Freelook button**, for a user who does not know the shortcut. It reaches the
+canvas through `ViewportActionsContext`, as Reset Camera does, so `@textscene/renderer`, which
+ships no toolbar, gains no export: its canvas has the `Shift+F` toggle alone.
+
+### Considered options
+
+**A fly control from drei** (`FlyControls`, `PointerLockControls`). Rejected. Each owns the camera,
+and every gesture here edits the **Editor cursor**, so framing, zoom and orbit stay correct after
+a flight.
+
+**A toggle with no pointer lock**, where the mouse turns the camera only while a button is held.
+Rejected. The pointer stops at the screen edge, and so does the turn.
+
+**A flight speed that follows the scene's size.** Rejected. Godot has the setting,
+`freelook_speed_zoom_link`, and it is off by default (`editor_settings.cpp:963`). The wheel gives
+the control, with the speed on screen.
+
+### Consequences
+
+- `TscnCanvas` takes every key while freelook is on, through one capture-phase listener on
+  `window`. `Shift+F` starts the toggle on any page that embeds `@textscene/renderer`.
+- `useGlobalShortcut` reads Shift with a letter as a chord of its own, so `Shift+F` does not also
+  frame the selection, which is F's job.
+- Leaving freelook on Escape does not also clear the selection, in any event order. Chromium 153
+  ends the lock and sends the page no keydown, measured with a `window` listener in each phase.
+  For a browser that sends the keydown after `pointerlockchange`, freelook keeps an Escape that
+  arrives within 100 ms of the lock's end.
+- Reset Camera ends the toggle, and so does another scene. A reload of the same scene keeps it.
+- The toolbar button is disabled in orthographic view and during a camera preview, with the
+  reason in its title.
+- A flight key under Ctrl or Cmd does not fly and keeps its browser action. macOS sends no keyup
+  for a key released under Cmd.
+- The toggle moves keyboard focus to the canvas. Space would otherwise press the toolbar button
+  that started it.
+- The VS Code webview grants the lock. Measured on VS Code 1.145.3 under Xvfb: a click on the
+  button locks the canvas, the keys fly, a lone Alt does not focus the menu bar, and Escape ends
+  the lock and leaves the preview tab open.
+- The test DOM has no Pointer Lock. `r3f/testing/fakePointerLock.ts` stands in for the browser,
+  and `scripts/visual` cannot reach the lock, so no golden covers freelook.
+
+## Amendment: the Editor camera opens with Godot's clip planes
+
+The canvas sets `near = 0.05` and `far = 4000`, Godot's `editors/3d/default_z_near` and
+`default_z_far` (`editor_settings.cpp:931-932`). It used three's defaults, 0.1 and 1000, so the
+zoom floor of an unframed scene was 0.4 units where Godot's is 0.2. Reset Camera restores the two
+planes, since a framing narrows them to its node.
