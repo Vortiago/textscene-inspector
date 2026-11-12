@@ -11,11 +11,10 @@ import type { ParallaxViewFraming } from '../parallaxbackground/parallaxScroll';
 
 const VIEWPORT = { x: 1152, y: 648 };
 const NO_OFFSET = { x: 0, y: 0 };
-const UNIT_SCALE = { x: 1, y: 1 };
 
-function positionOf(properties: Record<string, string>, screenOffset = NO_OFFSET, nodeScale = UNIT_SCALE) {
+function positionOf(properties: Record<string, string>, screenOffset = NO_OFFSET) {
   const props = parseParallax2D(heading('Parallax2D', { name: 'P' }), properties);
-  return parallax2DPosition(props, screenOffset, VIEWPORT, nodeScale);
+  return parallax2DPosition(props, screenOffset, VIEWPORT);
 }
 
 describe('parallax2DPosition', () => {
@@ -67,9 +66,10 @@ describe('parallax2DPosition', () => {
   it('stretches the repeat interval by the node scale', () => {
     // Godot: scale (0.5, 1), scroll_offset (100, 0), repeat_size (200, 0): fposmod(-100, 100) = 0 -> 0
     expect(
-      positionOf({ scroll_offset: 'Vector2(100, 0)', repeat_size: 'Vector2(200, 0)' }, NO_OFFSET, {
-        x: 0.5,
-        y: 1,
+      positionOf({
+        scroll_offset: 'Vector2(100, 0)',
+        repeat_size: 'Vector2(200, 0)',
+        scale: 'Vector2(0.5, 1)',
       }).x
     ).toBe(0);
   });

@@ -53,7 +53,7 @@ export function ParallaxLayer({ node, children }: NodeComponentProps) {
     // every mesh below and so is the group three reads the key from.
     <group ref={groupRef}>
       <Node2D node={node}>
-        {mirrors.length === 0 ? children : <RepeatCopies offsets={mirrors}>{children}</RepeatCopies>}
+        <RepeatCopies offsets={mirrors}>{children}</RepeatCopies>
       </Node2D>
     </group>
   );

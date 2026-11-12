@@ -14,15 +14,10 @@ import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Rgba } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
-
 // `border_blend` and the AA rings use vertex colours, not a shader: a ring's inner
 // vertices take `border_color_inner` and its outer ones `border_color`, and three
 // interpolates across each triangle as Godot's flat triangle array does.
-interface GeometryBuffers {
-  positions: number[];
-  indices: number[];
-  colors: number[];
-}
+import type { GeometryBuffers } from '../../../godot/rendering/canvasPolyline';
 
 // --- Side/Corner index conventions, matching Godot's `Side`/`Corner` enums --
 

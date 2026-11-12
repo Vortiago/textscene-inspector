@@ -15,6 +15,7 @@ import {
   type Transform2DColumns,
 } from '../godot/math/transform2d.js';
 import { node2DLocalTransform } from './node2dTransform.js';
+import { canvasItemFieldsOf } from './canvasItemFields.js';
 import type { Node2DLocalTransform } from '../nodes/base/node2d/types.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
 import { NO_PATCHES, patchedNode, type NodePatches } from './nodePatch.js';
@@ -128,7 +129,6 @@ function itemSortKey(
   parent: YSortParent,
   controlTransform: Transform2DColumns | undefined
 ): YSortParent & { sortY: number } {
-  const props = child.properties as Record<string, unknown>;
   const toSortRoot = toSortRootOf(child, parent, controlTransform);
   // A scene tile sorts as its instance root, which sits inside the placement node that stands for it.
   const root = (child as LiveNode).ySortRoot;
@@ -138,10 +138,10 @@ function itemSortKey(
   // 143-148) and `_cull_canvas_item` (430-434) both run
   // `CLAMP(p_z + z_index, CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX)` under `z_relative`
   // and assign `z_index` unclamped otherwise. A second copy could drift from the lights.
+  const fields = canvasItemFieldsOf(child);
   const ownZ = accumulateCanvasItemZ(parent.effectiveZ, {
-    // A Control's properties are camelCase.
-    z_index: ((props.z_index ?? props.zIndex) as number | undefined) ?? 0,
-    z_as_relative: (props.z_as_relative ?? props.zAsRelative) as boolean | undefined,
+    z_index: fields.z_index ?? 0,
+    z_as_relative: fields.z_as_relative,
   });
   const effectiveZ = root
     ? accumulateCanvasItemZ(ownZ, { z_index: root.zIndex, z_as_relative: root.zAsRelative })

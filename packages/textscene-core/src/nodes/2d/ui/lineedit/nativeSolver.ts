@@ -309,30 +309,25 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
     width = Math.max(width, fullWidthPx + caretWidthPx);
   }
 
-  let height = fontHeightPx;
-  let iconMaxWidth = 0;
   // Both icons size against no control size: `get_minimum_size()` runs once, under a
   // `size_cache` of `(0, 0)` (`lineEditRightIconSize`).
   const iconExpandMode = props.iconExpandMode ?? EXPAND_MODE_ORIGINAL_SIZE;
   const rightIconScale = props.rightIconScale ?? 1;
+  const minimumIconSize = (naturalSize: Vector2) =>
+    lineEditRightIconSize(naturalSize, iconExpandMode, fontHeightPx, null, rightIconScale);
 
+  let height = fontHeightPx;
+  let iconMaxWidth = 0;
   const rightIconNaturalSize = n.textureSlots['right_icon'];
   if (rightIconNaturalSize) {
-    const size = lineEditRightIconSize(
-      rightIconNaturalSize,
-      iconExpandMode,
-      fontHeightPx,
-      null,
-      rightIconScale
-    );
+    const size = minimumIconSize(rightIconNaturalSize);
     height = Math.max(height, size.y);
     iconMaxWidth = size.x;
   }
   // `icon_max_width` is the max of the two icons, never their sum. The clear button counts even
   // without text: `get_minimum_size` has no `using_placeholder` gate, unlike the draw path.
   if (props.clearButtonEnabled) {
-    const clearNaturalSize = lineEditClearIconSize(n, ctx.theme.scale);
-    const size = lineEditRightIconSize(clearNaturalSize, iconExpandMode, fontHeightPx, null, rightIconScale);
+    const size = minimumIconSize(lineEditClearIconSize(n, ctx.theme.scale));
     height = Math.max(height, size.y);
     iconMaxWidth = Math.max(iconMaxWidth, size.x);
   }

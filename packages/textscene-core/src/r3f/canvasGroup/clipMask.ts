@@ -23,15 +23,15 @@ export interface ClipMask {
 }
 
 /**
- * The buffer sample comes after `colorspace_fragment`: the buffer holds the canvas's own numbers,
- * which the program would otherwise encode a second time. The alpha is the owner's before its
- * lighting, since Godot's clip shader replaces the owner's material (a LIGHT_ONLY one included).
+ * The buffer sample comes after `colorspace_fragment` and every edit anchored there, lighting
+ * included: the buffer holds the canvas's own numbers, and Godot's clip shader is unshaded
+ * (`renderer_canvas_render_rd.cpp:2104`). The alpha is the owner's before its lighting.
  */
-const MASK_GLSL = `#include <colorspace_fragment>
-if (uClipMasking > 0.5) {
+const MASK_GLSL = `if (uClipMasking > 0.5) {
   gl_FragColor.rgb = texelFetch(uClipBuffer, ivec2(gl_FragCoord.xy), 0).rgb;
   gl_FragColor.a = diffuseColor.a;
-}`;
+}
+#include <premultiplied_alpha_fragment>`;
 
 const UNIFORMS_GLSL = `uniform sampler2D uClipBuffer;
 uniform float uClipMasking;
@@ -88,7 +88,7 @@ export function createClipMask(): ClipMask {
           {
             fragment: [
               { three: 'void main() {', godot: UNIFORMS_GLSL },
-              { three: '#include <colorspace_fragment>', godot: MASK_GLSL },
+              { three: '#include <premultiplied_alpha_fragment>', godot: MASK_GLSL },
             ],
           },
           'clip children mask'
@@ -103,11 +103,7 @@ export function createClipMask(): ClipMask {
   };
 }
 
-/**
- * `injection` with `mask` composed in, or `injection` as it is with no mask. The mask edits first:
- * both insert after `colorspace_fragment`, so the edit made first runs last, and the mask replaces
- * the lit colour, as Godot's clip shader is unshaded (`renderer_canvas_render_rd.cpp:2104`).
- */
+/** `injection` with `mask` composed in, or `injection` as it is with no mask. */
 export function maskedInjection(injection: ProgramInjection, mask: ClipMask | null): ProgramInjection {
-  return mask ? composeInjections([mask.injection, injection])! : injection;
+  return mask ? composeInjections([injection, mask.injection])! : injection;
 }

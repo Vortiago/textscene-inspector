@@ -59,7 +59,7 @@ export function ViewportControls({
 }: ViewportControlsProps) {
   const { externalResources, internalResources } = useSceneResources();
   const { themeScale } = useProjectSettings();
-  const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
+  const theme = nativeTheme(themeScale);
   const isWindowForest = isEmbeddedWindow(viewport.type);
   const { tree, generation, windows } = useBuildViewportTree(
     viewport,
