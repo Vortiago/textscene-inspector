@@ -8,6 +8,7 @@ import { TscnParser } from '../../../parser/TscnParser';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
 import { contextOver } from '../../../r3f/liveSceneTree.testkit';
 import { transform2DFromParts, type Transform2DColumns } from '../../../godot/math/transform2d.js';
+import type { Node2DProperties } from '../../../nodes/base/node2d/types';
 import { applyRemoteTransforms } from './remoteTransforms';
 
 const relayBelow = (controlType: string, controlProperties: string) => `[gd_scene format=3]
@@ -27,7 +28,7 @@ remote_path = NodePath("../../Held")
 function heldPlacement(content: string, solved: ReadonlyMap<string, Transform2DColumns> | undefined) {
   const main = new TscnParser().parse(content);
   const tree = liveTreeOf(main.nodes, { ...contextOver(main, {}), controlTransforms: solved });
-  return applyRemoteTransforms(tree).placed.get('Root/Held');
+  return applyRemoteTransforms(tree).placed.get('Root/Held') as Node2DProperties | undefined;
 }
 
 describe('a relay below a Control the file does not place alone', () => {
