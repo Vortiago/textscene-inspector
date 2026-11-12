@@ -20,6 +20,7 @@ Button's inherited `icon` draws beside the label with `icon_alignment`, `vertica
 `icon_max_width`, ahead of the check. The minimum size and the wrap width include it. A themed StyleBox draws
 under the label as Button's does, and the check sits at the margin of the `normal` one. The theme colours
 `checkbox_checked_color` and `checkbox_unchecked_color` tint the check.
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
 ## Linting
 

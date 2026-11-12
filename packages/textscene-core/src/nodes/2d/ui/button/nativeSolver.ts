@@ -122,7 +122,7 @@ export interface ButtonClass {
    * The element the class draws over the Button: its size, and the side whose `_internal_margin`
    * reserves its width (`button.cpp:247-259`). Absent, the class reserves none.
    */
-  reservedElement?: (n: ShareNode) => ReservedElement;
+  reservedElement?: (n: ShareNode, theme: NativeTheme) => ReservedElement;
 }
 
 /** A class that draws an element over the Button. */
@@ -298,7 +298,7 @@ export function buttonContentFacts(
   rectSize: Vector2
 ): ButtonContentFacts {
   const props = n.node.properties as ButtonProperties;
-  const reserved = buttonClass.reservedElement?.(n);
+  const reserved = buttonClass.reservedElement?.(n, theme);
   return {
     rectSize,
     styleMargin: buttonStyle(n, theme).margin,
@@ -365,7 +365,7 @@ export const buttonMinimumSize: MinimumSizeFn = buttonMinimumSizeOf(BUTTON_CLASS
 export function reservingMinimumSizeOf(buttonClass: ReservingButtonClass): MinimumSizeFn {
   const buttonSize = buttonMinimumSizeOf(buttonClass);
   return (n, ctx) => {
-    const element = buttonClass.reservedElement(n).size;
+    const element = buttonClass.reservedElement(n, ctx.theme).size;
     const padding = sidesSize(buttonLargestMargin(n, ctx.theme));
     const minimumSize = buttonSize(n, ctx);
     const content = { x: minimumSize.x - padding.x, y: minimumSize.y - padding.y };

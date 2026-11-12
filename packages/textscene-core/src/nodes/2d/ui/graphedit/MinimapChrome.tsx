@@ -27,6 +27,7 @@ import {
   GRAPH_EDIT_ICON_SIZE,
   GRAPH_EDIT_MINIMAP_RESIZER_ICON,
 } from '../../../../r3f/controls/native/themeIcons';
+import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -179,6 +180,7 @@ export function GraphEditMinimapChrome({
 }: GraphEditMinimapProps) {
   const pieces = canvasSubOrders(slot, MINIMAP_PIECES);
   const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
+  const resizerPx = scaledIconSize(GRAPH_EDIT_ICON_SIZE, theme.scale);
   // `minimap->set_modulate(Color(1, 1, 1, minimap_opacity))` (`:3330`) multiplies every draw
   // inside the minimap, so it folds into each sRGB colour before the linear conversion.
   const modulated = useMemo(
@@ -255,8 +257,8 @@ export function GraphEditMinimapChrome({
       {resizerTexture && (
         <CanvasItemGroup renderOrder={pieces.resizer.key}>
           <ControlQuad
-            width={GRAPH_EDIT_ICON_SIZE}
-            height={GRAPH_EDIT_ICON_SIZE}
+            width={resizerPx}
+            height={resizerPx}
             color={resizerColor}
             opacity={resizerOpacity}
             map={resizerTexture}

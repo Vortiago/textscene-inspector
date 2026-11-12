@@ -55,7 +55,7 @@ export function SplitContainer({
     return null;
   }
 
-  const iconSize = splitGrabberIconSize(solveNode.node.type, vertical, solveNode.textureSlots);
+  const iconSize = splitGrabberIconSize(solveNode.node.type, vertical, solveNode.textureSlots, theme.scale);
   const separation = resolveSplitSeparation(props, solveNode.constants, {
     ...theme.widgets.splitContainer,
     grabberExtent: vertical ? iconSize.y : iconSize.x,

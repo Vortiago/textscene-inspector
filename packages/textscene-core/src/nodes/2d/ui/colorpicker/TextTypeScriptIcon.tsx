@@ -11,7 +11,8 @@ import { useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { iconOnlyButtonIconRectIn } from '../../../../r3f/controls/native/buttonBase';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { COLOR_PICKER_BUTTON_ICON_SIZE, COLOR_SCRIPT_ICON } from '../../../../r3f/controls/native/themeIcons';
+import { COLOR_SCRIPT_ICON } from '../../../../r3f/controls/native/themeIcons';
+import { colorPickerButtonIconSize } from './nativeSolver';
 import { buttonIconColor } from '../button/nativeSolver';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { iconModulate } from '../../../../r3f/controls/native/IconButton';
@@ -42,10 +43,11 @@ export function TextTypeScriptIcon({
   const toItemLinear = useItemLinearColorOf();
   const texture = useNodeIcon(solveNode.icons.color_script, COLOR_SCRIPT_ICON);
   if (!texture) return null;
+  const iconPx = colorPickerButtonIconSize(theme);
   const iconRect = iconOnlyButtonIconRectIn(
     rect,
     theme.widgets.button.disabled.contentMargin,
-    { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE },
+    { x: iconPx, y: iconPx },
     solveNode.rtl
   );
   if (!iconRect) return null;

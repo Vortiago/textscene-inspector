@@ -171,8 +171,15 @@ describe('checkButtonToggleRect (check_button.cpp:129-145)', () => {
   });
 
   it('scales the default margin with the theme: round(6 * scale) (default_theme.cpp:317)', () => {
-    // x = 150 - (32 + 9).
-    expect(checkButtonToggleRect(node({}), nativeTheme(1.5), 'unchecked', RECT_SIZE).x).toBe(109);
+    // x = 150 - (48 + 9): the toggle is rasterised at the theme scale too.
+    expect(checkButtonToggleRect(node({}), nativeTheme(1.5), 'unchecked', RECT_SIZE).x).toBe(93);
+  });
+
+  it('draws the vendored toggle at its authored size times the theme scale (default_theme.cpp:82-84)', () => {
+    expect(checkButtonToggleRect(node({}), nativeTheme(1.5), 'unchecked', RECT_SIZE)).toMatchObject({
+      w: 48,
+      h: 24,
+    });
   });
 
   it("reads the margin from the node's `normal` box, whatever the draw state", () => {
@@ -352,5 +359,16 @@ describe('checkButtonMinimumSize: autowrap_mode wraps the label at the tentative
 
   it('never wraps at AUTOWRAP_OFF, whatever the tentative width says', () => {
     expect(minSize({ text }, 100).y).toBe(8 + FONT_HEIGHT);
+  });
+});
+
+describe('checkButtonMinimumSize at a theme scale (check_button.cpp:68-83)', () => {
+  const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+
+  it('reserves the toggle at its scaled size: the same minimum as a themed 48x24 toggle', () => {
+    const themed = { ...node({}), textureSlots: { unchecked: { x: 48, y: 24 } } };
+
+    expect(checkButtonMinimumSize(node({}), at15)).toEqual(checkButtonMinimumSize(themed, at15));
+    expect(checkButtonMinimumSize(node({}), at15).x).toBeGreaterThan(48);
   });
 });

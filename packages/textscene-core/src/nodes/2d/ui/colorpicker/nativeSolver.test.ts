@@ -3,6 +3,8 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { spinBoxButtonsBlockWidth } from '../spinbox/nativeSolver';
+import { MODE_HSV, MODE_LINEAR, MODE_OKHSL, MODE_RGB } from './colorModes';
 import { pickerChildTheme } from './pickerChildTheme';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
@@ -17,6 +19,9 @@ import {
   textTypeLabel,
   sliderGridRowRects,
   colorPickerValueColumnWidth,
+  colorPickerButtonIconSize,
+  colorPickerSpinArrowStates,
+  colorPickerRowAllowsGreater,
   colorPickerLabelColumnWidth,
   modeButtonBox,
   colorPickerSliderBoxRect,
@@ -414,6 +419,15 @@ describe('colorPickerValueColumnWidth', () => {
     expect(colorPickerValueColumnWidth(THEME, 15.125)).toBe(86); // 8 + 60.5 + 18 = 86.5
   });
 
+  it('widens by the scaled buttons block at theme scale 2', () => {
+    // The 16x8 arrow icon doubles to 32x16 and the block follows its width (spin_box.cpp:82-86). The LineEdit margin doubles from 8 to 16 too.
+    const widthAt = (scale: number) => colorPickerValueColumnWidth(nativeTheme(scale), 0);
+    const lineEditMarginGrowth = 8;
+    expect(widthAt(2) - widthAt(1)).toBe(
+      spinBoxButtonsBlockWidth(32) - spinBoxButtonsBlockWidth(16) + lineEditMarginGrowth
+    );
+  });
+
   it('floors to the style margin + buttons block alone with no em width', () => {
     expect(colorPickerValueColumnWidth(THEME, 0)).toBe(26); // 8 + 0 + 18
   });
@@ -717,5 +731,54 @@ describe('textTypeLabel', () => {
     });
     expect(label.leftPx).toBe(box.x + THEME.widgets.button.normal.contentMargin.left);
     expect(label.alignment).toBe(1);
+  });
+});
+
+describe('colorPickerButtonIconSize', () => {
+  it('scales the 16px button icon by the theme scale', () => {
+    expect(colorPickerButtonIconSize(nativeTheme(1))).toBe(16);
+    expect(colorPickerButtonIconSize(nativeTheme(1.5))).toBe(24);
+  });
+});
+
+describe('colorPickerSpinArrowStates (spin_box.cpp:635-646, color_picker.cpp:725,2187)', () => {
+  it('disables the up arrow at the maximum of a range that allows nothing greater', () => {
+    expect(colorPickerSpinArrowStates({ value: 255, min: 0, max: 255, allowGreater: false })).toEqual({
+      up: 'disabled',
+      down: 'normal',
+    });
+  });
+
+  it('keeps the up arrow at the maximum of a range that allows greater values (RGB and Linear rows, intensity)', () => {
+    expect(colorPickerSpinArrowStates({ value: 255, min: 0, max: 255, allowGreater: true }).up).toBe(
+      'normal'
+    );
+  });
+
+  it('disables the down arrow at the minimum, which never allows lesser values', () => {
+    expect(colorPickerSpinArrowStates({ value: 0, min: 0, max: 255, allowGreater: true }).down).toBe(
+      'disabled'
+    );
+    expect(colorPickerSpinArrowStates({ value: -10, min: -10, max: 10, allowGreater: true }).down).toBe(
+      'disabled'
+    );
+  });
+
+  it('leaves both arrows enabled inside the range', () => {
+    expect(colorPickerSpinArrowStates({ value: 102, min: 0, max: 255, allowGreater: false })).toEqual({
+      up: 'normal',
+      down: 'normal',
+    });
+  });
+});
+
+describe('colorPickerRowAllowsGreater (color_mode.h:99,124)', () => {
+  it('is true for the RGB and Linear modes only', () => {
+    expect([MODE_RGB, MODE_HSV, MODE_LINEAR, MODE_OKHSL].map(colorPickerRowAllowsGreater)).toEqual([
+      true,
+      false,
+      true,
+      false,
+    ]);
   });
 });

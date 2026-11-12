@@ -25,6 +25,7 @@ import {
 } from '../../../../r3f/controls/native/buttonBase';
 import { WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
@@ -52,7 +53,7 @@ function selectedOptionItem(props: OptionButtonProperties): OptionItem | undefin
   return selectedIndex >= 0 && selectedIndex < items.length ? items[selectedIndex] : undefined;
 }
 
-/** `option_button_arrow.svg`'s authored size (`native/themeIcons.ts`), 12x12, never run through `_fit_icon_size`. */
+/** `option_button_arrow.svg`'s authored size (`native/themeIcons.ts`), 12x12. The default theme rasterises it at the theme scale. */
 const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vector2 = { x: 12, y: 12 };
 
 /** The slot of item `index`'s own icon, which `_refresh_size_cache` sizes the button by (`option_button.cpp:451`). */
@@ -63,10 +64,10 @@ function optionItemIconSlotKey(index: number): string {
 /**
  * `get_minimum_size` and `_notification` read `theme_cache.arrow_icon->get_size()` directly
  * (`option_button.cpp:62,131-133`), never through `_fit_icon_size` or `icon_max_width`, so a themed arrow
- * changes the reserved width and the draw position. The vendored size is the fallback.
+ * changes the reserved width and the draw position. The vendored size at the theme scale is the fallback.
  */
-function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 {
-  return n.textureSlots.arrow ?? OPTION_BUTTON_ARROW_NATURAL_SIZE;
+function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>, theme: NativeTheme): Vector2 {
+  return themedIconSize(n.textureSlots, 'arrow', OPTION_BUTTON_ARROW_NATURAL_SIZE, theme.scale);
 }
 
 /**
@@ -81,7 +82,7 @@ export const OPTION_BUTTON_CLASS: ReservingButtonClass = {
     const selected = selectedOptionItem(props);
     return { text: selected?.text ?? '', icon: selected?.icon };
   },
-  reservedElement: (n) => ({ side: n.rtl ? 'left' : 'right', size: optionButtonArrowSize(n) }),
+  reservedElement: (n, theme) => ({ side: n.rtl ? 'left' : 'right', size: optionButtonArrowSize(n, theme) }),
 };
 
 /**
@@ -165,7 +166,7 @@ export function isOptionButtonSizeDependent(n: SolveNode): boolean {
 export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const minimumSize = fitsToLongestItem(n) ? longestItemMinimumSize(n, ctx) : buttonMinimumSize(n, ctx);
   const padding = sidesSize(buttonLargestMargin(n, ctx.theme));
-  const arrow = optionButtonArrowSize(n);
+  const arrow = optionButtonArrowSize(n, ctx.theme);
   const hSeparation = Math.max(0, buttonHSeparation(n, ctx.theme));
   return {
     x: minimumSize.x + arrow.x + hSeparation,
@@ -179,7 +180,7 @@ export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
  * edge under RTL. `int()` truncates the vertical centring.
  */
 export function optionButtonArrowRect(n: ShareNode, theme: NativeTheme, rectSize: Vector2): Rect2 {
-  const arrowSize = optionButtonArrowSize(n);
+  const arrowSize = optionButtonArrowSize(n, theme);
   const arrowMargin = n.constants.arrow_margin ?? theme.separation;
   return {
     x: Math.floor(n.rtl ? arrowMargin : rectSize.x - arrowSize.x - arrowMargin),

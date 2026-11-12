@@ -30,7 +30,6 @@ import { parseColor } from '../../../../utils/colorParser';
 import { AlphaCheckerboardQuad } from '../shared/AlphaCheckerboardQuad';
 import {
   COLOR_PICKER_BAR_ARROW_ICON,
-  COLOR_PICKER_BUTTON_ICON_SIZE,
   COLOR_PICKER_MENU_ICON,
   COLOR_PICKER_OVERBRIGHT_ICON,
   COLOR_PICKER_PIPETTE_ICON,
@@ -39,7 +38,12 @@ import {
   SLIDER_GRABBER_ICONS,
 } from '../../../../r3f/controls/native/themeIcons';
 import { sliderTrackRect, sliderGrabberAreaRect, sliderGrabberRect } from '../shared/sliderSolver';
-import { spinBoxArrowPosition, spinBoxLayout, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
+import {
+  spinBoxArrowIconSize,
+  spinBoxArrowPosition,
+  spinBoxIconColor,
+  spinBoxLayout,
+} from '../spinbox/nativeSolver';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { TextDirection } from '../../../../godot/text/textServerEnums';
@@ -85,6 +89,10 @@ import {
   sliderGridRowRects,
   swatchesRowRects,
   type TextWidthMeasurer,
+  colorPickerButtonIconSize,
+  colorPickerOverbrightIconSize,
+  colorPickerRowAllowsGreater,
+  colorPickerSpinArrowStates,
 } from './nativeSolver';
 import { horizontalStripGeometry, linearizeStops } from './svGradient';
 import { ShapeRow } from './shapes/ShapeRow';
@@ -135,6 +143,8 @@ export function ColorPicker({
   const shapeColor = useMemo(() => pickerShapeColor(normalized), [normalized]);
   const clippingPlanes = useControlClipPlanes() as THREE.Plane[];
   const scale = theme.scale;
+  const buttonIconPx = colorPickerButtonIconSize(theme);
+  const arrowSize = spinBoxArrowIconSize(scale);
 
   const fontSizePx = theme.fontSize;
   // Read in the render body, not a `useMemo` (`Label`'s `Component.tsx` says why).
@@ -224,6 +234,7 @@ export function ColorPicker({
   const sampleColor = useItemLinearColor(sampleFill);
   const overbrightTexture = useNodeIcon(solveNode.icons.overbright_indicator, COLOR_PICKER_OVERBRIGHT_ICON);
   const overbright = isColorOverbright(fill);
+  const overbrightPx = colorPickerOverbrightIconSize(theme);
   const sampleCols = rows.sample
     ? sampleRowColumns(rows.sample, theme, props.pickerShape, solveNode.rtl)
     : null;
@@ -246,6 +257,11 @@ export function ColorPicker({
   const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
   // `up_icon_modulate` and `down_icon_modulate` default to `control_font_color` (`default_theme.cpp:634,638`).
   const spinArrowColor = useItemLinearColor(spinArrowGrey);
+  const spinArrowDisabledGrey = useMemo(
+    () => multiplyModulate(tint.own, spinBoxIconColor({}, 'up', 'disabled')),
+    [tint.own]
+  );
+  const spinArrowDisabledColor = useItemLinearColor(spinArrowDisabledGrey);
 
   const vertexTint = useVertexColorTint(tint.own);
   const baseTint = vertexTint.vertex;
@@ -308,6 +324,8 @@ export function ColorPicker({
     ratio: number;
     /** `GRADIENT_COLOR_SPACE_LINEAR_SRGB` (`color_mode.cpp:311`): only the R, G and B rows of `MODE_LINEAR`. */
     linearSpace?: boolean;
+    /** The value `SpinBox`'s arrows: each draws dimmed at its bound (`spin_box.cpp:635-646`). */
+    arrows: ReturnType<typeof colorPickerSpinArrowStates>;
   }
 
   // The tested source of the row order: each row below takes its label from here by index.
@@ -350,6 +368,12 @@ export function ColorPicker({
         underlay,
         ratio: c.max !== 0 ? c.value / c.max : 0,
         linearSpace: colorMode === MODE_LINEAR,
+        arrows: colorPickerSpinArrowStates({
+          value: c.value,
+          min: 0,
+          max: c.max,
+          allowGreater: colorPickerRowAllowsGreater(colorMode),
+        }),
       });
     }
     if (editIntensity) {
@@ -358,6 +382,13 @@ export function ColorPicker({
         valueText: formatValue(intensityChannel, true),
         stops: [],
         ratio: colorPickerIntensityRatio(intensityChannel.value),
+        // `intensity_slider` spans -10 to 10 and its value box allows greater (`color_picker.cpp:2184-2187`).
+        arrows: colorPickerSpinArrowStates({
+          value: intensityChannel.value,
+          min: -10,
+          max: 10,
+          allowGreater: true,
+        }),
       });
     }
     if (editAlpha) {
@@ -367,6 +398,12 @@ export function ColorPicker({
         stops: alphaChannelGradientStops(normalized),
         underlay: { kind: 'checkerboard' },
         ratio: alphaChannel.max !== 0 ? alphaChannel.value / alphaChannel.max : 0,
+        arrows: colorPickerSpinArrowStates({
+          value: alphaChannel.value,
+          min: 0,
+          max: alphaChannel.max,
+          allowGreater: false,
+        }),
       });
     }
     return out;
@@ -413,7 +450,7 @@ export function ColorPicker({
           <IconButton
             rect={sampleCols.pick}
             box={theme.widgets.button.normal}
-            size={COLOR_PICKER_BUTTON_ICON_SIZE}
+            size={buttonIconPx}
             texture={pickIconTexture}
             tint={tint}
             iconTint={iconTint}
@@ -425,7 +462,7 @@ export function ColorPicker({
             <IconButton
               rect={sampleCols.shape}
               box={theme.widgets.flatMenuButton.normal}
-              size={COLOR_PICKER_BUTTON_ICON_SIZE}
+              size={buttonIconPx}
               texture={shapeIconTexture}
               tint={tint}
               iconTint={iconTint}
@@ -455,8 +492,8 @@ export function ColorPicker({
             {overbright && (
               <CanvasItemGroup position={[sampleCols.sample.w * 0.5, 0, 0]}>
                 <ControlQuad
-                  width={16}
-                  height={16}
+                  width={overbrightPx}
+                  height={overbrightPx}
                   color={tint.color}
                   opacity={tint.opacity}
                   map={overbrightTexture}
@@ -503,7 +540,7 @@ export function ColorPicker({
           <IconButton
             rect={modeCols.dropdown}
             box={theme.widgets.flatMenuButton.normal}
-            size={COLOR_PICKER_BUTTON_ICON_SIZE}
+            size={buttonIconPx}
             texture={menuIconTexture}
             tint={tint}
             iconTint={iconTint}
@@ -525,7 +562,7 @@ export function ColorPicker({
           // Intensity keeps the stock `HSlider` track, fill and grabber.
           const isColorized = row.stops.length >= 2;
           const grabberIconSize = isColorized
-            ? { x: COLOR_PICKER_BUTTON_ICON_SIZE, y: COLOR_PICKER_BUTTON_ICON_SIZE }
+            ? { x: buttonIconPx, y: buttonIconPx }
             : { x: theme.sliderGrabberSize, y: theme.sliderGrabberSize };
           const sliderBox = colorPickerSliderBoxRect(col.slider, theme, grabberIconSize);
           const sliderBoxSize = { x: sliderBox.w, y: sliderBox.h };
@@ -651,7 +688,7 @@ export function ColorPicker({
                 // covers only `fieldRect`, and the up/down buttons block sits beside it.
                 const spinLayout = spinBoxLayout(
                   { x: col.value.w, y: col.value.h },
-                  SPIN_BOX_ARROW_ICON_SIZE.x,
+                  arrowSize.x,
                   solveNode.rtl
                 );
                 const fieldRect = {
@@ -672,8 +709,8 @@ export function ColorPicker({
                   w: spinLayout.downRect.w,
                   h: spinLayout.downRect.h,
                 };
-                const upIconPos = spinBoxArrowPosition(upRect, SPIN_BOX_ARROW_ICON_SIZE);
-                const downIconPos = spinBoxArrowPosition(downRect, SPIN_BOX_ARROW_ICON_SIZE);
+                const upIconPos = spinBoxArrowPosition(upRect, arrowSize);
+                const downIconPos = spinBoxArrowPosition(downRect, arrowSize);
                 return (
                   <>
                     <CanvasItemGroup position={[fieldRect.x, -fieldRect.y, 0]}>
@@ -697,9 +734,9 @@ export function ColorPicker({
                     />
                     <CanvasItemGroup position={[upIconPos.x, -upIconPos.y, 0]}>
                       <ControlQuad
-                        width={SPIN_BOX_ARROW_ICON_SIZE.x}
-                        height={SPIN_BOX_ARROW_ICON_SIZE.y}
-                        color={spinArrowColor}
+                        width={arrowSize.x}
+                        height={arrowSize.y}
+                        color={row.arrows.up === 'disabled' ? spinArrowDisabledColor : spinArrowColor}
                         opacity={tint.opacity}
                         map={spinUpTexture}
                         renderOrder={renderOrder}
@@ -707,9 +744,9 @@ export function ColorPicker({
                     </CanvasItemGroup>
                     <CanvasItemGroup position={[downIconPos.x, -downIconPos.y, 0]}>
                       <ControlQuad
-                        width={SPIN_BOX_ARROW_ICON_SIZE.x}
-                        height={SPIN_BOX_ARROW_ICON_SIZE.y}
-                        color={spinArrowColor}
+                        width={arrowSize.x}
+                        height={arrowSize.y}
+                        color={row.arrows.down === 'disabled' ? spinArrowDisabledColor : spinArrowColor}
                         opacity={tint.opacity}
                         map={spinDownTexture}
                         renderOrder={renderOrder}
@@ -798,7 +835,7 @@ export function ColorPicker({
           <IconButton
             rect={swatchesCols.menuButton}
             box={theme.widgets.flatMenuButton.normal}
-            size={COLOR_PICKER_BUTTON_ICON_SIZE}
+            size={buttonIconPx}
             texture={menuIconTexture}
             tint={tint}
             iconTint={iconTint}

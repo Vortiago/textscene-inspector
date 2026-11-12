@@ -44,7 +44,7 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   const props = painterView<SpinBoxProperties>(solveNode);
   const editable = props.editable !== false;
 
-  const widestIconWidth = spinBoxWidestButtonIconWidth(solveNode);
+  const widestIconWidth = spinBoxWidestButtonIconWidth(solveNode, theme.scale);
   const layout = useMemo(
     () => spinBoxLayout({ x: rect.w, y: rect.h }, widestIconWidth, solveNode.rtl),
     [rect.w, rect.h, widestIconWidth, solveNode.rtl]
@@ -106,8 +106,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   const downState = spinBoxDownButtonState(props, resolvedValue);
   const upIconTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
   const downIconTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
-  const upIconSize = spinBoxIconSize(solveNode, 'up');
-  const downIconSize = spinBoxIconSize(solveNode, 'down');
+  const upIconSize = spinBoxIconSize(solveNode, 'up', theme.scale);
+  const downIconSize = spinBoxIconSize(solveNode, 'down', theme.scale);
 
   const upIconColorSrgb = useMemo(
     () => tintColor(spinBoxIconColor(solveNode.colors, 'up', upState), tint.own),

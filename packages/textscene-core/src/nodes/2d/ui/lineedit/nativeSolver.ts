@@ -41,6 +41,7 @@ import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/contro
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { TscnNode } from '../../../../parser/types';
 import { lineEditDisplayText } from './displayText';
+import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -62,6 +63,11 @@ export const LINE_EDIT_THEME_FONT_KEY = 'font';
 
 /** `LineEdit::get_draw_mode`'s stylebox axis: the `theme_override_styles/*` key, and default-theme box, that the node's current `editable` selects. */
 type LineEditStyleState = 'normal' | 'read_only';
+
+/** The clear icon's size: the themed texture's, else the vendored icon at the theme scale. */
+export function lineEditClearIconSize(n: SolveNode, scale: number): Vector2 {
+  return themedIconSize(n.textureSlots, 'clear', LINE_EDIT_CLEAR_ICON_NATURAL_SIZE, scale);
+}
 
 /** `editable ?? true` (Godot's `LineEdit.editable` default) as the stylebox key it selects. */
 export function resolveLineEditStyleState(editable: boolean | undefined): LineEditStyleState {
@@ -325,7 +331,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   // `icon_max_width` is the max of the two icons, never their sum. The clear button counts even
   // without text: `get_minimum_size` has no `using_placeholder` gate, unlike the draw path.
   if (props.clearButtonEnabled) {
-    const clearNaturalSize = n.textureSlots['clear'] ?? LINE_EDIT_CLEAR_ICON_NATURAL_SIZE;
+    const clearNaturalSize = lineEditClearIconSize(n, ctx.theme.scale);
     const size = lineEditRightIconSize(
       clearNaturalSize,
       iconExpandMode,

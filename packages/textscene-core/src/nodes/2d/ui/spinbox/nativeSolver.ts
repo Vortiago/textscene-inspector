@@ -40,6 +40,7 @@ import {
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SpinBoxProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { scaledIconSizeOf, themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
 
@@ -53,12 +54,13 @@ const SPIN_BOX_STEP_DEFAULT = 1;
  */
 const SPIN_BOX_BUTTONS_WIDTH = 16;
 const SPIN_BOX_FIELD_BUTTONS_SEPARATION = 2;
-/**
- * `value_up.svg`/`value_down.svg` (`scene/theme/icons/`) declare `width="16" height="8"`.
- * Vendored icons are never rescaled by the project theme scale (`CHECKBOX_ICON_NATURAL_SIZE`
- * in `checkbox/nativeSolver.ts`).
- */
-export const SPIN_BOX_ARROW_ICON_SIZE: Vector2 = { x: 16, y: 8 };
+/** `value_up.svg`/`value_down.svg` (`scene/theme/icons/`) declare `width="16" height="8"`. */
+const SPIN_BOX_ARROW_ICON_SIZE: Vector2 = { x: 16, y: 8 };
+
+/** The vendored arrows' size at the theme scale. */
+export function spinBoxArrowIconSize(scale: number): Vector2 {
+  return scaledIconSizeOf(SPIN_BOX_ARROW_ICON_SIZE, scale);
+}
 
 /** An arrow's top-left in its button's rect: `Point2i` centring, integer division (`spin_box.cpp:475-476`, `:490-491`). */
 export function spinBoxArrowPosition(button: Rect2, iconSize: Vector2): Vector2 {
@@ -77,14 +79,18 @@ export const spinBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => 
   return themedSlotRequests(SPIN_BOX_ICON_NAMES, themedIcons);
 };
 
-/** This icon's resolved size: themed if `SolveNode.textureSlots` resolved it, else the vendored default. */
-export function spinBoxIconSize(n: Pick<SolveNode, 'textureSlots'>, name: SpinBoxIconName): Vector2 {
-  return n.textureSlots[name] ?? SPIN_BOX_ARROW_ICON_SIZE;
+/** This icon's resolved size: themed if `SolveNode.textureSlots` resolved it, else the vendored default at `scale`. */
+export function spinBoxIconSize(
+  n: Pick<SolveNode, 'textureSlots'>,
+  name: SpinBoxIconName,
+  scale: number
+): Vector2 {
+  return themedIconSize(n.textureSlots, name, SPIN_BOX_ARROW_ICON_SIZE, scale);
 }
 
 /** `SpinBox::_get_widest_button_icon_width` (`spin_box.cpp:411-424`) over `up`/`down`, the icons this codebase draws. */
-export function spinBoxWidestButtonIconWidth(n: Pick<SolveNode, 'textureSlots'>): number {
-  return Math.max(spinBoxIconSize(n, 'up').x, spinBoxIconSize(n, 'down').x);
+export function spinBoxWidestButtonIconWidth(n: Pick<SolveNode, 'textureSlots'>, scale: number): number {
+  return Math.max(spinBoxIconSize(n, 'up', scale).x, spinBoxIconSize(n, 'down', scale).x);
 }
 
 /**
@@ -199,7 +205,7 @@ export function spinBoxDisplayText(props: SpinBoxProperties, resolvedValue: numb
   return text;
 }
 
-type SpinBoxButtonState = 'normal' | 'disabled';
+export type SpinBoxButtonState = 'normal' | 'disabled';
 
 /** `is_fully_disabled = !is_editable()` (`spin_box.cpp:444`): gates both buttons whatever their own state. */
 function spinBoxFullyDisabled(props: SpinBoxProperties): boolean {
@@ -211,16 +217,23 @@ function spinBoxFullyDisabled(props: SpinBoxProperties): boolean {
  * `value == max && !allow_greater` disables the up button;
  * `value == min && !allow_lesser` disables the down button.
  */
+/** `_update_buttons_state_for_current_value` (`spin_box.cpp:635-646`): a button disables at its bound unless the range lets the value go past it. */
+export function spinBoxRangeButtonState(
+  value: number,
+  bound: number,
+  allowsBeyond: boolean
+): SpinBoxButtonState {
+  return value === bound && !allowsBeyond ? 'disabled' : 'normal';
+}
+
 export function spinBoxUpButtonState(props: SpinBoxProperties, resolvedValue: number): SpinBoxButtonState {
-  const max = props.maxValue ?? 100;
   if (spinBoxFullyDisabled(props)) return 'disabled';
-  return resolvedValue === max && !props.allowGreater ? 'disabled' : 'normal';
+  return spinBoxRangeButtonState(resolvedValue, props.maxValue ?? 100, props.allowGreater === true);
 }
 
 export function spinBoxDownButtonState(props: SpinBoxProperties, resolvedValue: number): SpinBoxButtonState {
-  const min = props.minValue ?? 0;
   if (spinBoxFullyDisabled(props)) return 'disabled';
-  return resolvedValue === min && !props.allowLesser ? 'disabled' : 'normal';
+  return spinBoxRangeButtonState(resolvedValue, props.minValue ?? 0, props.allowLesser === true);
 }
 
 /** `up_icon_modulate`/`up_disabled_icon_modulate` (`default_theme.cpp:634,637`). The icon asset is the same either way (`:616-619`), and only the modulate differs. */
@@ -330,5 +343,8 @@ export const spinBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
     y: styleMinSize.y + fontHeightPx,
   };
 
-  return { x: fieldMin.x + spinBoxButtonsBlockWidth(spinBoxWidestButtonIconWidth(n)), y: fieldMin.y };
+  return {
+    x: fieldMin.x + spinBoxButtonsBlockWidth(spinBoxWidestButtonIconWidth(n, ctx.theme.scale)),
+    y: fieldMin.y,
+  };
 };

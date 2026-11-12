@@ -33,6 +33,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/3d/decal/decalAtlasLayout.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_decal_atlas`: the cell sizes, the atlas size and each rectangle) |
 | `packages/textscene-core/src/r3f/areaLight/atlasMipmaps.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (the atlas's mip chain) and `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (the Gaussian blur) |
 | `packages/textscene-core/src/godot/rendering/lights/ltcTable.generated.ts` | `servers/rendering/storage/ltc/ltc_lut1.dds` and `ltc_lut2.dds` (Godot 4.7.2's LTC tables, which Eric Heitz fitted, baked by `scripts/godot-ltc/bake-ltc.mjs`) |
+| `packages/textscene-core/src/r3f/controls/native/themeIconRasters.generated.ts` | `scene/theme/icons/*.svg` rasterised by `modules/svg/image_loader_svg.cpp` (ThorVG) through `DPITexture::create_from_string`, baked by `scripts/godot-theme-icons/bake-theme-icons.mjs` |
 | `packages/textscene-core/src/resources/environment/godotToneMapping.ts` | `drivers/gles3/shaders/tonemap_inc.glsl` |
 | `packages/textscene-core/src/godot/rendering/environment/toneMapping.ts` | `servers/rendering/storage/environment_storage.cpp` (`environment_get_white` and the white of `environment_get_tonemap_parameters`) |
 | `packages/textscene-core/src/resources/environment/godotGlow.ts` | `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (`MODE_GLOW` bright pass under `FLAG_GLOW_FIRST_PASS`) and `.../effects/tonemap.glsl` (`gather_glow`, `apply_glow`, and `main()`'s pre/post-tonemap glow ordering) |
@@ -281,7 +282,9 @@ CheckButton, FoldableContainer, TextEdit/CodeEdit, TabBar and ColorPicker/
 ColorPickerButton painters need the same indicator glyphs Godot's editor bakes into its
 built-in dark theme. Rather than redraw approximations, `packages/textscene-core/src/r3f/controls/native/themeIcons.ts`
 embeds unmodified copies of the actual SVG files, base64-encoded as `data:` URLs, from
-Godot 4.6.3's `scene/theme/icons/`:
+Godot 4.6.3's `scene/theme/icons/`. At theme scale 1 the previewer draws Godot's own ThorVG
+raster of each icon instead: `packages/textscene-core/src/r3f/controls/native/themeIconRasters.generated.ts`
+holds those rasters as PNG `data:` URLs, baked by `scripts/godot-theme-icons/bake-theme-icons.mjs`.
 
 | File | Godot theme key (`scene/theme/default_theme.cpp`) |
 |---|---|

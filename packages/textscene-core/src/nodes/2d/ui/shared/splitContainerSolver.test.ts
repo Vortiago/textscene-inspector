@@ -464,16 +464,21 @@ describe('splitGrabberThemeKey (SplitContainer::_get_grabber_icon, split_contain
 
 describe('splitGrabberIconSize', () => {
   it('is the vendored (transposed) default when nothing themed the grabber', () => {
-    expect(splitGrabberIconSize('HSplitContainer', false, {})).toEqual({ x: 8, y: 48 });
-    expect(splitGrabberIconSize('VSplitContainer', true, {})).toEqual({ x: 48, y: 8 });
+    expect(splitGrabberIconSize('HSplitContainer', false, {}, 1)).toEqual({ x: 8, y: 48 });
+    expect(splitGrabberIconSize('VSplitContainer', true, {}, 1)).toEqual({ x: 48, y: 8 });
+  });
+
+  it('is the vendored default at the theme scale, each axis alone: 4x24 at 0.5, 12x72 at 1.5', () => {
+    expect(splitGrabberIconSize('HSplitContainer', false, {}, 0.5)).toEqual({ x: 4, y: 24 });
+    expect(splitGrabberIconSize('HSplitContainer', false, {}, 1.5)).toEqual({ x: 12, y: 72 });
   });
 
   it('is the themed size when the walker resolved the type-appropriate slot', () => {
-    expect(splitGrabberIconSize('HSplitContainer', false, { grabber: { x: 20, y: 60 } })).toEqual({
+    expect(splitGrabberIconSize('HSplitContainer', false, { grabber: { x: 20, y: 60 } }, 1.5)).toEqual({
       x: 20,
       y: 60,
     });
-    expect(splitGrabberIconSize('SplitContainer', true, { v_grabber: { x: 30, y: 10 } })).toEqual({
+    expect(splitGrabberIconSize('SplitContainer', true, { v_grabber: { x: 30, y: 10 } }, 1.5)).toEqual({
       x: 30,
       y: 10,
     });

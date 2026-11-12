@@ -21,14 +21,24 @@ import {
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
-import { spinBoxButtonsBlockWidth, SPIN_BOX_ARROW_ICON_SIZE } from '../spinbox/nativeSolver';
+import {
+  spinBoxArrowIconSize,
+  spinBoxButtonsBlockWidth,
+  spinBoxRangeButtonState,
+  type SpinBoxButtonState,
+} from '../spinbox/nativeSolver';
+import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
+import {
+  COLOR_PICKER_BUTTON_ICON_SIZE,
+  COLOR_PICKER_OVERBRIGHT_ICON_SIZE,
+} from '../../../../r3f/controls/native/themeIcons';
 import { SizeFlags } from '../../../../godot/scene/control';
 import { ContainerAlignment } from '../../../../godot/scene/container';
 import { resortBoxContainer } from '../shared/boxContainerSolver';
 import { pickerChildTheme } from './pickerChildTheme';
 import { shapeRowHeight, shapeRowMinWidth } from './shapes/shapeRowLayout';
 import { drawnShapeVariant } from './shapes/pickerShapes';
-import { MODE_RGB } from './colorModes';
+import { MODE_LINEAR, MODE_RGB } from './colorModes';
 import { gridCellMinimumExtent } from '../shared/gridCellMinimum';
 import { lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -48,12 +58,6 @@ export const COLOR_PICKER_THEME_FONT_KEY = 'font';
 /** Measures one run of text at the row's font size. The solver adapts `ctx.measureText` and the painter adapts `shapeButtonLabel`. */
 export type TextWidthMeasurer = (text: string) => Vector2;
 
-/**
- * The icon size of `btn_pick`, `btn_shape`, `btn_mode` and `menu_btn`:
- * `color_picker_pipette.svg`, the three `picker_shape_*.svg` and `tabs_menu_hl.svg`
- * are 16x16 (`scene/theme/icons/`).
- */
-const COLOR_PICKER_SAMPLE_ICON_SIZE = 16;
 /** The row-height fraction of `sample` (`color_picker.cpp:1397`). */
 export const COLOR_PICKER_SAMPLE_HEIGHT_FRACTION = 0.95;
 /** The fixed width of `btn_pick`, `btn_shape` and `btn_mode` (`color_picker.cpp:122-124`), at scale 1. */
@@ -73,9 +77,13 @@ const COLOR_PICKER_TEXT_TYPE_WIDTH = 28;
  * plus the buttons block, truncated as a `GridContainer` column (`gridCellMinimumExtent`).
  * `emWidthPx` is the unrounded advance of "W": `Font::get_char_size` does not ceil it.
  */
-export function colorPickerValueColumnWidth(theme: Pick<NativeTheme, 'widgets'>, emWidthPx: number): number {
+export function colorPickerValueColumnWidth(
+  theme: Pick<NativeTheme, 'widgets' | 'scale'>,
+  emWidthPx: number
+): number {
   return gridCellMinimumExtent(
-    colorPickerHexFieldMinWidth(theme, emWidthPx) + spinBoxButtonsBlockWidth(SPIN_BOX_ARROW_ICON_SIZE.x)
+    colorPickerHexFieldMinWidth(theme, emWidthPx) +
+      spinBoxButtonsBlockWidth(spinBoxArrowIconSize(theme.scale).x)
   );
 }
 
@@ -95,9 +103,14 @@ function colorPickerButtonIconVector(theme: Pick<NativeTheme, 'scale'>): Vector2
   return { x: side, y: side };
 }
 
-/** The side of the square `menu_option` and `folded_arrow` icons (`default_theme.cpp:1088`). */
-function colorPickerButtonIconSize(theme: Pick<NativeTheme, 'scale'>): number {
-  return Math.round(COLOR_PICKER_SAMPLE_ICON_SIZE * theme.scale);
+/** The side of the square `overbright_indicator` icon at the theme scale. */
+export function colorPickerOverbrightIconSize(theme: Pick<NativeTheme, 'scale'>): number {
+  return scaledIconSize(COLOR_PICKER_OVERBRIGHT_ICON_SIZE, theme.scale);
+}
+
+/** The side of the square `menu_option` and `folded_arrow` icons (`default_theme.cpp:1088`), and of the other button icons at the theme scale. */
+export function colorPickerButtonIconSize(theme: Pick<NativeTheme, 'scale'>): number {
+  return scaledIconSize(COLOR_PICKER_BUTTON_ICON_SIZE, theme.scale);
 }
 
 /**
@@ -361,7 +374,7 @@ function swatchesRowSize(
 export function colorPickerRows(
   width: number,
   theme: NativeTheme,
-  valueFieldTheme: Pick<NativeTheme, 'widgets'>,
+  valueFieldTheme: Pick<NativeTheme, 'widgets' | 'scale'>,
   props: Pick<
     ColorPickerProperties,
     | 'pickerShape'
@@ -442,7 +455,7 @@ export function colorPickerRows(
  */
 function contentMinWidth(
   theme: NativeTheme,
-  valueFieldTheme: Pick<NativeTheme, 'widgets'>,
+  valueFieldTheme: Pick<NativeTheme, 'widgets' | 'scale'>,
   props: ColorPickerProperties,
   rows: Pick<ColorPickerRows, 'modeMinWidth' | 'swatchesMinWidth'>,
   emWidthPx: number
@@ -793,4 +806,22 @@ export function colorPickerChannelGrabberRect(
  */
 export function colorPickerIntensityRatio(value: number): number {
   return (value - -10) / 20;
+}
+
+/** `values[i]->set_allow_greater(mode->get_allow_greater())` (`color_picker.cpp:725`): only the RGB and Linear modes (`color_mode.h:99,124`). */
+export function colorPickerRowAllowsGreater(mode: number): boolean {
+  return mode === MODE_RGB || mode === MODE_LINEAR;
+}
+
+/** The arrows of a value `SpinBox` that shares a slider's range. No row allows lesser values. */
+export function colorPickerSpinArrowStates(range: {
+  value: number;
+  min: number;
+  max: number;
+  allowGreater: boolean;
+}): { up: SpinBoxButtonState; down: SpinBoxButtonState } {
+  return {
+    up: spinBoxRangeButtonState(range.value, range.max, range.allowGreater),
+    down: spinBoxRangeButtonState(range.value, range.min, false),
+  };
 }

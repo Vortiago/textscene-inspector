@@ -29,6 +29,7 @@ import {
 } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { fitIconSize } from '../../../../r3f/controls/native/buttonBase';
 import type { TabBarProperties, TabBarTabProperties } from './types';
+import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -198,12 +199,15 @@ export function tabIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>, index: nu
   return n.textureSlots[String(index)] ?? null;
 }
 
-/** The vendored default's own size (`native/themeIcons.ts`'s `TAB_BAR_ICON_SIZE`, 16x16 square) for every close/increment/decrement icon alike. */
-const TAB_BAR_VENDORED_ICON_SIZE: Vector2 = { x: TAB_BAR_ICON_SIZE, y: TAB_BAR_ICON_SIZE };
-
-/** `close`/`increment`/`decrement`'s resolved size: themed if `SolveNode.textureSlots` resolved it, else the vendored default. */
-export function tabBarThemeIconSize(n: Pick<SolveNode, 'textureSlots'>, name: TabBarThemeIconName): Vector2 {
-  return n.textureSlots[name] ?? TAB_BAR_VENDORED_ICON_SIZE;
+/** `close`/`increment`/`decrement`'s resolved size: themed if `SolveNode.textureSlots` resolved it, else the vendored default (`native/themeIcons.ts`'s `TAB_BAR_ICON_SIZE`, a 16x16 square for all three) at `scale`. */
+export function tabBarThemeIconSize(
+  n: Pick<SolveNode, 'textureSlots'>,
+  name: TabBarThemeIconName,
+  scale: number
+): Vector2 {
+  if (n.textureSlots[name]) return n.textureSlots[name];
+  const side = scaledIconSize(TAB_BAR_ICON_SIZE, scale);
+  return { x: side, y: side };
 }
 
 /**
@@ -304,7 +308,7 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
 
   const fontMetrics = resolveNodeFontMetrics(n, TAB_BAR_THEME_FONT_KEY);
   const fontSizePx = tabBarFontSizePx(n, props, ctx.theme);
-  const closeIconSize = tabBarThemeIconSize(n, 'close');
+  const closeIconSize = tabBarThemeIconSize(n, 'close', ctx.theme.scale);
 
   let width = 0;
   let height = 0;
@@ -349,7 +353,10 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
   const clipTabs = props.clipTabs ?? true;
   if (clipTabs) {
     const scrollButtonsWidth =
-      tabs.length > 1 ? tabBarThemeIconSize(n, 'increment').x + tabBarThemeIconSize(n, 'decrement').x : 0;
+      tabs.length > 1
+        ? tabBarThemeIconSize(n, 'increment', ctx.theme.scale).x +
+          tabBarThemeIconSize(n, 'decrement', ctx.theme.scale).x
+        : 0;
     width = maxSingleTabWidth + scrollButtonsWidth;
   }
 

@@ -20,7 +20,7 @@ import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
 import type { TextOutlineTheme } from '../../../r3f/controls/native/textTheme';
 import type { TextLayoutResult } from '../../../r3f/controls/native/text/textLayout';
-import { checkIconKey, checkIconSize, type Gutter, gutterWidth, widestCheckIcon } from './menuItems';
+import { checkIconKey, type Gutter, gutterWidth, widestCheckIcon } from './menuItems';
 import { isRowInView, type MenuRow } from './menuLayout';
 import type { PopupMenuTheme } from './menuTheme';
 
@@ -32,7 +32,7 @@ interface SeparatorLine {
 export interface RowDrawing {
   separators: readonly SeparatorLine[];
   /** The check icon and its top-left. */
-  check: { key: CheckBoxIconKey; position: Vector2 } | null;
+  check: { key: CheckBoxIconKey; position: Vector2; size: Vector2 } | null;
   /** The rect the icon stretches over. */
   icon: { rect: Rect2 } | null;
   text: {
@@ -46,7 +46,7 @@ export interface RowDrawing {
 }
 
 /** The gutter as the draw reads it: separators skipped, the widest of all eight check icons (`popup_menu.cpp:870-896`). */
-function drawnGutter(rows: readonly MenuRow[], menu: PopupMenuTheme, n: SolveNode): Gutter {
+function drawnGutter(rows: readonly MenuRow[], menu: PopupMenuTheme): Gutter {
   let iconWidth = 0;
   let hasCheck = false;
   let hasCheckIcon = false;
@@ -59,7 +59,7 @@ function drawnGutter(rows: readonly MenuRow[], menu: PopupMenuTheme, n: SolveNod
   }
   return {
     iconWidth,
-    checkWidth: hasCheck ? widestCheckIcon(n) : 0,
+    checkWidth: hasCheck ? widestCheckIcon(menu) : 0,
     hasCheck,
     isCompact: menu.isGutterCompact && !hasCheckIcon,
   };
@@ -160,8 +160,8 @@ function itemRowDrawing(context: RowContext, row: MenuRow): RowDrawing {
   let check: RowDrawing['check'] = null;
   if (item.checkable !== ItemCheckableType.NONE) {
     const key = checkIconKey(item);
-    const size = checkIconSize(n, key);
-    check = { key, position: { x: fromStart(startX, size.x), y: centredY(y, height, size.y) } };
+    const size = menu.checkIconSizes[key];
+    check = { key, size, position: { x: fromStart(startX, size.x), y: centredY(y, height, size.y) } };
   }
 
   let icon: RowDrawing['icon'] = null;
@@ -207,7 +207,7 @@ export function popupMenuDrawing(
   width: number,
   viewHeight: number
 ): readonly RowDrawing[] {
-  const context = { n, menu, gutter: drawnGutter(rows, menu, n), width };
+  const context = { n, menu, gutter: drawnGutter(rows, menu), width };
   return rows
     .filter((row) => isRowInView(row, viewHeight))
     .map((row) =>

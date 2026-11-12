@@ -15,6 +15,13 @@ import { CONTROL_FONT_COLOR, scaledPx } from '../../../godot/scene/theme';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { styleBoxLineBox, type ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
+import { scaledIconSizeOf } from '../../../r3f/controls/native/scaledSvgIcon';
+import {
+  CHECKBOX_ICON_NATURAL_SIZE,
+  CHECK_BOX_ICON_THEME_NAME,
+  type CheckBoxIconKey,
+} from '../../2d/ui/checkbox/nativeSolver';
+import type { Vector2 } from '../../../godot/math/vector';
 import {
   resolveTextOutline,
   SEPARATOR_OUTLINE_NAMES,
@@ -45,6 +52,8 @@ export interface PopupMenuTheme {
   itemEndPadding: number;
   iconMaxWidth: number;
   isGutterCompact: boolean;
+  /** Each check icon's size: a theme's own, else the vendored default at the theme scale. */
+  checkIconSizes: Readonly<Record<CheckBoxIconKey, Vector2>>;
   font: MenuFont;
   separatorFont: MenuFont;
   fontColor: Rgba;
@@ -60,6 +69,15 @@ function menuFont(n: SolveNode, theme: NativeTheme, fontKey: string, sizeKey: st
     metrics: resolveNodeFontMetrics(n, fontKey),
     sizePx: resolveNodeFontSizePx(n, sizeKey, themeOverrideFontSizes?.[sizeKey], theme.fontSize),
   };
+}
+
+/** The eight check icons by key, each at the size `popup_menu.cpp:853-855` draws it. */
+function checkIconSizesOf(n: SolveNode, theme: NativeTheme): PopupMenuTheme['checkIconSizes'] {
+  const vendored = scaledIconSizeOf(CHECKBOX_ICON_NATURAL_SIZE, theme.scale);
+  const keys = Object.keys(CHECK_BOX_ICON_THEME_NAME) as CheckBoxIconKey[];
+  return Object.fromEntries(
+    keys.map((key) => [key, n.textureSlots[CHECK_BOX_ICON_THEME_NAME[key]] ?? vendored])
+  ) as PopupMenuTheme['checkIconSizes'];
 }
 
 export function popupMenuTheme(n: SolveNode, theme: NativeTheme): PopupMenuTheme {
@@ -80,6 +98,7 @@ export function popupMenuTheme(n: SolveNode, theme: NativeTheme): PopupMenuTheme
     itemEndPadding: n.constants.item_end_padding ?? scaledPx(defaults.itemEndPadding, theme.scale),
     iconMaxWidth: n.constants.icon_max_width ?? defaults.iconMaxWidth,
     isGutterCompact: (n.constants.gutter_compact ?? defaults.gutterCompact) !== 0,
+    checkIconSizes: checkIconSizesOf(n, theme),
     font: menuFont(n, theme, 'font', 'font_size'),
     separatorFont: menuFont(n, theme, 'font_separator', 'font_separator_size'),
     fontColor: n.colors.font_color ?? CONTROL_FONT_COLOR,

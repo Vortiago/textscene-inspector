@@ -13,6 +13,7 @@ import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/ope
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SpinBoxProperties } from './types';
+import { spinBoxRangeButtonState } from './nativeSolver';
 import {
   spinBoxButtonsBlockWidth,
   spinBoxLayout,
@@ -65,11 +66,15 @@ describe('spinBoxButtonsBlockWidth', () => {
 
 describe('spinBoxWidestButtonIconWidth (spin_box.cpp:411-424, restricted to up/down)', () => {
   it('is the vendored 16 when neither icon is themed', () => {
-    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} })).toBe(16);
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} }, 1)).toBe(16);
+  });
+
+  it('is the vendored width at the theme scale: 24 at 1.5', () => {
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} }, 1.5)).toBe(24);
   });
 
   it('widens to a themed icon wider than the vendored default', () => {
-    expect(spinBoxWidestButtonIconWidth({ textureSlots: { down: { x: 30, y: 8 } } })).toBe(30);
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: { down: { x: 30, y: 8 } } }, 1)).toBe(30);
   });
 });
 
@@ -218,6 +223,16 @@ describe('spinBoxFieldTextTheme', () => {
   });
 });
 
+describe('spinBoxMinimumSize at a theme scale (spin_box.cpp:382-397)', () => {
+  it('widens the buttons block to the scaled arrow: the same minimum as themed 24x12 arrows', () => {
+    const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+    const themed = { ...node(), textureSlots: { up: { x: 24, y: 12 }, down: { x: 24, y: 12 } } };
+
+    expect(spinBoxMinimumSize(node(), at15)).toEqual(spinBoxMinimumSize(themed, at15));
+    expect(spinBoxMinimumSize(node(), at15).x).toBeGreaterThan(spinBoxMinimumSize(node(), ctx()).x);
+  });
+});
+
 describe('spinBoxMinimumSize', () => {
   it("floors LineEdit's own minimum size plus the buttons block width (happy path)", () => {
     const result = spinBoxMinimumSize(node(), ctx());
@@ -324,5 +339,16 @@ describe('the inner LineEdit reads its items through the ancestor Theme chain', 
   it('ignores the colours of another class', () => {
     const themed = under({ colors: { Button: { font_color: RED } } });
     expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
+  });
+});
+
+describe('spinBoxRangeButtonState (spin_box.cpp:635-646)', () => {
+  it('disables a button at its bound unless the range allows going past it', () => {
+    expect(spinBoxRangeButtonState(100, 100, false)).toBe('disabled');
+    expect(spinBoxRangeButtonState(100, 100, true)).toBe('normal');
+  });
+
+  it('keeps a button enabled away from its bound', () => {
+    expect(spinBoxRangeButtonState(99, 100, false)).toBe('normal');
   });
 });

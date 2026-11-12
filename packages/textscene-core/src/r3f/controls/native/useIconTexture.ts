@@ -11,21 +11,27 @@ import { useCanvasItemViewSampler, useResolvedTextureSampler } from '../../canva
 import { useNearestAnisotropy } from '../../nearestAnisotropy';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease';
 import { useTexture2D } from '../../../resources/useTexture2D';
+import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
+import { themeIconSource } from './themeIconSource';
 import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
 import type { ThemedIconRef } from './solveTree';
 
 /**
- * Sampled with the owner's filter and repeat, memoised on the URL and sampler, and disposed on unmount
- * or change. `null` allocates nothing: hook order is fixed, so a conditionally drawn icon (the
- * SplitContainer grabber, hidden by the default `autohide`) would decode an image it never renders.
+ * A vendored icon's pixels come from `themeIconSource` at the project's theme scale, sampled with the
+ * owner's filter and repeat. `null` allocates nothing: hook order is fixed, so a conditionally drawn
+ * icon (the SplitContainer grabber, hidden by the default `autohide`) would decode an image it never draws.
  */
 export function useOptionalIconTexture(dataUrl: string | null): THREE.Texture | null {
   const viewSampler = useCanvasItemViewSampler(useResolvedTextureSampler());
+  const { themeScale } = useProjectSettings();
   const texture = useMemo(() => {
     if (dataUrl === null) return null;
     // The loader bypasses `res://`, so the canvas sampler and its colour space go on here.
-    return applyViewSampler(new THREE.TextureLoader().load(dataUrl), viewSampler);
-  }, [dataUrl, viewSampler]);
+    return applyViewSampler(
+      new THREE.TextureLoader().load(themeIconSource(dataUrl, themeScale)),
+      viewSampler
+    );
+  }, [dataUrl, themeScale, viewSampler]);
   useDisposeOnRelease(texture);
   useNearestAnisotropy(texture);
   return texture;

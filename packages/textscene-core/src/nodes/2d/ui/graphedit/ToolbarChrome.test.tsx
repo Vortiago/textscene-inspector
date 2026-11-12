@@ -31,6 +31,7 @@ async function boxMeshes(item: Pick<ToolbarItem, 'pressed' | 'disabled'>): Promi
       theme={THEME}
       tint={tint}
       text={{ zoomLabel: '100%', snappingDistance: '20' }}
+      snappingArrows={{ up: 'normal', down: 'normal' }}
       shape={() => {
         throw new Error('expected no text to shape, got a request');
       }}
