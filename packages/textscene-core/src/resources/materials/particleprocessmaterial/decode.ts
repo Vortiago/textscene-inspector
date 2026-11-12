@@ -19,7 +19,10 @@ export function decodeParticleProcessMaterial(
   };
 }
 
-/** A `ParticleProcessMaterial` from any origin. A ShaderMaterial draws no emission shape (`particles_3d_emission_shape_gizmo_plugin.cpp:88-89`). */
+/**
+ * A `ParticleProcessMaterial` from any origin. A ShaderMaterial draws no emission shape
+ * (`particles_3d_emission_shape_gizmo_plugin.cpp:88-89`).
+ */
 export const PARTICLE_PROCESS_MATERIAL: ResourceKind<ParticleEmission> = {
   name: 'ParticleProcessMaterial',
   accepts: (type) => type === 'ParticleProcessMaterial',
