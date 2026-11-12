@@ -10,8 +10,8 @@ import { Node2D } from '../../base/node2d/Component';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
 import { godotPolylineToSegments } from '../../../r3f/gizmo/godotPolylineToSegments';
 import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { resolveCurve2D, tessellateCurve2D, type Curve2DSampler } from '../../../resources/curves/curve2d';
+import { useNodeResource } from '../../../resources/reading';
+import { CURVE_2D, tessellateCurve2D, type Curve2DSampler } from '../../../resources/curves/curve2d';
 import { Path2DCurveProvider } from '../../../r3f/contexts/Path2DCurveContext';
 import type { Path2DProperties } from './types';
 
@@ -20,17 +20,16 @@ const PATH_COLOR = 0xffffff;
 
 export function Path2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Path2DProperties;
-  const { internalResources } = useSceneResources();
+  const curve = useNodeResource(props.curve, CURVE_2D);
   const drawsCurve = useGizmoDrawn('every-node');
 
-  const sampler = useMemo<Curve2DSampler | null>(() => {
-    // Only an embedded SubResource Curve2D resolves synchronously. Any other
-    // curve gives a null sampler: no gizmo, and children keep their authored
-    // transform. A script often sets the curve at runtime, so absence is normal.
-    const points = resolveCurve2D(props.curve, internalResources);
-    if (points.length < 2) return null;
-    return tessellateCurve2D(points);
-  }, [props.curve, internalResources]);
+  // A curve that is missing, still loading or unreadable gives a null sampler: no gizmo, and
+  // children keep their authored transform. A script often sets the curve at runtime, so absence
+  // is normal.
+  const sampler = useMemo<Curve2DSampler | null>(
+    () => (curve.value && curve.value.length >= 2 ? tessellateCurve2D(curve.value) : null),
+    [curve.value]
+  );
 
   return (
     <Node2D node={node}>

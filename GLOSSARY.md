@@ -225,6 +225,27 @@ The one parsed form every Godot resource serialisation normalises to: the header
 The slice's `decode.ts` owns what the values mean.
 _Avoid_: decoding values at parse time.
 
+**Scoped reference** (`ScopedReference`, `resources/reading/scopedReference.ts`):
+A reference on its way to a read: the `SubResource`, `ExtResource` or `res://` text, the tables it resolves in, the file those tables belong to, and whether every holder passed on the way is local to scene.
+A node's own property starts one with `nodeReference`, in the tables of the file that wrote the node (ADR-0051).
+_Avoid_: a bare reference string handed past the tables it belongs to.
+
+**Held resource** (`HeldResource`, `resources/reading/read.ts`):
+A resource as a decode receives it: its class, its raw property strings, its address, and how it is held. It exposes no table, so a decode reads a nested reference only through `Follow`.
+_Avoid_: "scoped resource" for this. A `ScopedResource` carries the tables.
+
+**Resource kind** (`ResourceKind`, `resources/reading/read.ts`):
+One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D` and `CURVE_3D` are kinds.
+_Avoid_: one decode for each origin.
+
+**Resource snapshot** (`ResourceSnapshot`, `resources/reading/read.ts`):
+One consistent view of what the loader holds. Each read on it answers `loaded`, `none`, `pending` or `unavailable`, and records each file it touched, a miss included.
+_Avoid_: reading the loader's cache directly in a reader.
+
+**Snapshot host** (`describeSnapshotHost`, `resources/reading/snapshotHost.testkit.ts`):
+Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads, and reports a failed file once as a **Missing resource**. The hook host is the one behind `useNodeResource`.
+_Avoid_: a reader that requests, pins or reports a file itself.
+
 **UID reference**:
 Godot 4's stable `uid://…` identifier, which the previewer ignores because every ExtResource here pairs it with an authoritative `res://` path.
 _Avoid_: "id".

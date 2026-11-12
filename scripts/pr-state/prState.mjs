@@ -35,6 +35,7 @@ export const EXEMPTION_TABLES = new Map([
   ['eslint.config.js', 'the lint rules and the files they skip'],
   ['scripts/vendor-prune.mjs', 'the importers whose sidecars the previewer reads'],
   ['scripts/import-sidecar-allowlist.test.mjs', 'the import parameters a vendored sidecar may set'],
+  ['scripts/resourceLookups.test.mjs', 'the readers not moved onto resources/reading yet'],
 ]);
 
 /**

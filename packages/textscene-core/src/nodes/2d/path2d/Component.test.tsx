@@ -11,6 +11,10 @@ import { parsePath2D } from './parser';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { GizmoScene, lineOpacities } from '../../../r3f/testing/GizmoScene';
 import { useParentPath2DCurve } from '../../../r3f/contexts/Path2DCurveContext';
+import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
+import { loaderServing } from '../../../resources/testing/servingResourceLoader';
+import { settleLoads } from '../../../r3f/testing/settleLoads';
+import { resourceFileText } from '../../../testing/subResource';
 
 // A simple 3-point open path: (0,0) → (100,0) → (100,100), zero tangents.
 const CURVE: TscnInternalResource = {
@@ -94,5 +98,37 @@ describe('<Path2D>', () => {
     const truncated: TscnInternalResource = { ...CURVE, data: { ...CURVE.data, point_count: '1' } };
     const renderer = await renderPath('MyPath', { curve: 'SubResource("Curve2D_1")' }, [truncated]);
     expect(renderer.scene.findAllByType('LineSegments')).toHaveLength(0);
+  });
+});
+
+/** `CURVE` as a `.tres` of its own, the curve a path names with `ExtResource("1")`. */
+const CURVE_FILE = resourceFileText(CURVE);
+
+async function renderPathFromFile() {
+  const loader = loaderServing({ 'res://curve.tres': CURVE_FILE });
+  const renderer = await ReactThreeTestRenderer.create(
+    <ResourceLoaderProvider loader={loader}>
+      <SceneResourcesProvider externalResources={[{ id: '1', type: 'Curve2D', path: 'res://curve.tres' }]}>
+        <GizmoScene nodePath="MyPath" selectedPath="MyPath" showGizmos>
+          <Path2D node={pathNode('MyPath', { curve: 'ExtResource("1")' })}>
+            <CurveReader />
+          </Path2D>
+        </GizmoScene>
+      </SceneResourcesProvider>
+    </ResourceLoaderProvider>
+  );
+  await settleLoads();
+  return renderer;
+}
+
+describe('<Path2D> with its curve in a file', () => {
+  it('provides the curve once the file loads', async () => {
+    const renderer = await renderPathFromFile();
+    expect(hasCurve(renderer)).toBe(true);
+  });
+
+  it('draws the curve once the file loads', async () => {
+    const renderer = await renderPathFromFile();
+    expect(lineOpacities(renderer)).toEqual([1]);
   });
 });

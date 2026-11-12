@@ -11,19 +11,14 @@ import { PathFollow2D } from './Component';
 import { samplerProbe } from '../../../r3f/testing/samplerProbe';
 import { parsePathFollow2D } from './parser';
 import { Path2DCurveProvider } from '../../../r3f/contexts/Path2DCurveContext';
-import { resolveCurve2D, tessellateCurve2D, type Curve2DSampler } from '../../../resources/curves/curve2d';
+import { CURVE_2D, tessellateCurve2D, type Curve2DSampler } from '../../../resources/curves/curve2d';
+import { decodedCurve } from '../../../resources/curves/shared/curveKind.testkit';
 import { GizmoScene } from '../../../r3f/testing/GizmoScene';
 import { type CanvasItemTextureSampler } from '../../../r3f/canvasItemTextureSampler';
 
 // Straight horizontal curve (0,0) → (100,0), length 100.
 const STRAIGHT: Curve2DSampler = tessellateCurve2D(
-  resolveCurve2D('SubResource("path")', [
-    {
-      id: 'path',
-      type: 'Curve2D',
-      data: { _data: '{"points": PackedVector2Array(0,0,0,0,0,0, 0,0,0,0,100,0)}' },
-    },
-  ])
+  decodedCurve(CURVE_2D, { _data: '{"points": PackedVector2Array(0,0,0,0,0,0, 0,0,0,0,100,0)}' })
 );
 
 function followNode(name = 'MyFollow', props: Record<string, string> = {}): TscnNode {

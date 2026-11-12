@@ -29,7 +29,7 @@ describe('curve2d slice registration', () => {
   });
 
   it('re-exports the decode surface', () => {
-    expect(typeof curve2dSlice.resolveCurve2D).toBe('function');
+    expect(curve2dSlice.CURVE_2D.accepts('Curve2D')).toBe(true);
     expect(typeof curve2dSlice.tessellateCurve2D).toBe('function');
   });
 });
