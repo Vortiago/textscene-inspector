@@ -5,7 +5,7 @@ import { BASE_MATERIAL, originOf, requestInput, settle } from './gpuparticles.te
 import { gpuSettleSeconds, settleGpuParticles } from './settle';
 import { settleFrameDeltas } from './settleLoop';
 
-/** Godot 4.6.3 `capture_aabb()` of one-particle emitters, to the 1e-5 the brief of #1157 gives. */
+/** Godot 4.6.3 `capture_aabb()` of one-particle emitters, to 1e-5. */
 function expectOrigin(actual: readonly number[], expected: readonly number[]): void {
   expected.forEach((value, axis) => expect(Math.abs(actual[axis]! - value)).toBeLessThan(1e-5));
 }

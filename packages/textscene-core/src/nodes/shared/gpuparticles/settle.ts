@@ -119,7 +119,7 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
   return pose(particles, clock.phase, emitter.localCoords ? identityTransform3D() : emissionTransform);
 }
 
-/** Points and directed points need the emission texture, which #1158 owns. */
+/** Points and directed points need the emission texture, which the previewer does not read yet. */
 function drawsNothing({ emission }: GpuMaterial): boolean {
   return emission.shape === EmissionShape.POINTS || emission.shape === EmissionShape.DIRECTED_POINTS;
 }
