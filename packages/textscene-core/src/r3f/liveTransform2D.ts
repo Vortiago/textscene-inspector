@@ -15,8 +15,11 @@ import {
   localTransform2D,
   resolveGlobalTransform2D,
   type Node2DPose,
+  NO_SOLVED,
+  type SolvedControls,
 } from '../nodes/canvasitem/shared/globalTransform2D.js';
 import { NO_PATCHES, type PatchLookup } from './nodePatch.js';
+import type { ControlLocalTransforms } from './contexts/ControlYSortContext.js';
 
 /** The nodes of `nodeByPath` that lie on `path`, root first. */
 function chainTo(path: string, nodeByPath: ReadonlyMap<string, TscnNode>): TscnNode[] {
@@ -33,37 +36,60 @@ export function chainParentOf(chain: readonly RawNode[]): (child: RawNode) => Pa
   return (child) => parentLookup(parents.get(child));
 }
 
+/** What `byPath` holds for each node of `chain`, which ends at the live path `path`, keyed by node. */
+function lookupAlong<T>(
+  chain: readonly RawNode[],
+  path: string,
+  byPath: { get(path: string): T | undefined }
+): Map<RawNode, T> {
+  const names = path.split('/');
+  const found = new Map<RawNode, T>();
+  let prefix = '';
+  chain.forEach((node, index) => {
+    prefix = index === 0 ? names[0]! : `${prefix}/${names[index]}`;
+    const value = byPath.get(prefix);
+    if (value) found.set(node, value);
+  });
+  return found;
+}
+
 /** The pose each node of `chain`, which ends at the live path `path`, takes from the patches in `placed`. */
 export function posesAlong(
   chain: readonly RawNode[],
   path: string,
   placed: PatchLookup
 ): Map<RawNode, Node2DPose> {
-  const names = path.split('/');
-  const poses = new Map<RawNode, Node2DPose>();
-  chain.forEach((node, index) => {
-    const patch = placed.get(names.slice(0, index + 1).join('/'));
-    if (patch) poses.set(node, patch as Node2DPose);
-  });
-  return poses;
+  return lookupAlong(chain, path, placed as { get(path: string): Node2DPose | undefined });
+}
+
+/** The solved transform of each node of `chain`, which ends at the live path `path`, that `controlTransforms` holds. */
+export function solvedControlsAlong(
+  chain: readonly RawNode[],
+  path: string,
+  controlTransforms: ControlLocalTransforms | undefined
+): SolvedControls {
+  if (!controlTransforms || controlTransforms.size === 0) return NO_SOLVED;
+  return lookupAlong(chain, path, controlTransforms);
 }
 
 /**
  * The transform of the node at `path` on the canvas, with the poses of `placed` in place of the
  * stored ones. `nodeByPath` holds the node at each prefix of `path`, as `nodesOnTheWayTo` makes it.
- * Null for a chain `resolveGlobalTransform2D` cannot decode: an opaque ancestor, or a Control whose
- * rect the file does not state alone.
+ * Null for a chain `resolveGlobalTransform2D` cannot decode: an opaque ancestor, or a Control that
+ * neither `controlTransforms` nor the offsets of the file place.
  */
 export function transform2DOnCanvas(
   path: string,
   nodeByPath: ReadonlyMap<string, TscnNode>,
-  placed: PatchLookup = NO_PATCHES
+  placed: PatchLookup = NO_PATCHES,
+  controlTransforms?: ControlLocalTransforms
 ): Transform2DColumns | null {
   const chain = chainTo(path, nodeByPath);
   const verdict = resolveGlobalTransform2D(
     chain[chain.length - 1]!,
     chainParentOf(chain),
-    posesAlong(chain, path, placed)
+    posesAlong(chain, path, placed),
+    solvedControlsAlong(chain, path, controlTransforms)
   );
   return verdict.kind === 'known' ? verdict.transform : null;
 }
@@ -76,9 +102,11 @@ export function transform2DOnCanvas(
 export function transform2DWithinPath(
   path: string,
   ancestorPath: string,
-  nodeByPath: ReadonlyMap<string, TscnNode>
+  nodeByPath: ReadonlyMap<string, TscnNode>,
+  controlTransforms?: ControlLocalTransforms
 ): Transform2DColumns {
   const chain = chainTo(path, nodeByPath);
+  const solved = solvedControlsAlong(chain, path, controlTransforms);
   const firstBelow = ancestorPath.split('/').length;
   return chain
     .slice(firstBelow)
@@ -86,7 +114,7 @@ export function transform2DWithinPath(
       (composed, node, index) =>
         multiplyTransform2D(
           composed,
-          localTransform2D(node, undefined, chain[firstBelow + index - 1]) ?? TRANSFORM2D_IDENTITY
+          localTransform2D(node, undefined, chain[firstBelow + index - 1], solved) ?? TRANSFORM2D_IDENTITY
         ),
       TRANSFORM2D_IDENTITY
     );

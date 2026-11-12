@@ -4,6 +4,7 @@
  * `<Canvas>` and no context provider: `<TscnCanvas>` and `<TscnPreviewShell>` own those.
  */
 
+import { ControlCanvasSpace } from './ControlCanvasSpace.js';
 import { Fragment, lazy, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { SceneScope, TscnNode } from '../parser/types.js';
@@ -366,31 +367,35 @@ function PlainNode({
                   merged instance, the sub-scene root's type. A y-sort reorder keeps it, since
                   every level it lifts past is a CanvasItem. */}
                 <ParentTypeProvider value={node.type}>
-                  <GuardedNodeComponent node={node}>
-                    {children.length > 0 ? (
-                      /* At every level, so a non-sprite parent overwrites with white:
+                  <ControlCanvasSpace node={node} path={path}>
+                    <GuardedNodeComponent node={node}>
+                      {children.length > 0 ? (
+                        /* At every level, so a non-sprite parent overwrites with white:
                        `sprite_3d.cpp:75` accumulates from the immediate parent only. */
-                      <SpriteBase3DChildAccum node={node}>
-                        {startsCanvas ? (
-                          <CanvasLayerScope node={node}>
-                            {/* `<CanvasLayerScope>` is shared with the Control walk's
+                        <SpriteBase3DChildAccum node={node}>
+                          {startsCanvas ? (
+                            <CanvasLayerScope node={node}>
+                              {/* `<CanvasLayerScope>` is shared with the Control walk's
                               `CanvasLayer` painter. A canvas root below draws on this
                               layer's canvas (`canvas_item.cpp:246-252`), so a node that
                               escapes inside it stays under the layer's own group. */}
-                            <WorldRoot>
-                              <CanvasRootRangesProvider value={canvasRoots}>
-                                {children}
-                              </CanvasRootRangesProvider>
-                            </WorldRoot>
-                          </CanvasLayerScope>
-                        ) : hostsCanvas ? (
-                          <CanvasRootRangesProvider value={canvasRoots}>{children}</CanvasRootRangesProvider>
-                        ) : (
-                          <>{children}</>
-                        )}
-                      </SpriteBase3DChildAccum>
-                    ) : null}
-                  </GuardedNodeComponent>
+                              <WorldRoot>
+                                <CanvasRootRangesProvider value={canvasRoots}>
+                                  {children}
+                                </CanvasRootRangesProvider>
+                              </WorldRoot>
+                            </CanvasLayerScope>
+                          ) : hostsCanvas ? (
+                            <CanvasRootRangesProvider value={canvasRoots}>
+                              {children}
+                            </CanvasRootRangesProvider>
+                          ) : (
+                            <>{children}</>
+                          )}
+                        </SpriteBase3DChildAccum>
+                      ) : null}
+                    </GuardedNodeComponent>
+                  </ControlCanvasSpace>
                 </ParentTypeProvider>
               </CanvasRootScope>
             </TopLevelScope>

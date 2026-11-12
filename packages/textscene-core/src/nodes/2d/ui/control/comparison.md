@@ -20,6 +20,8 @@ Visibility is the exception, since it follows the scene tree rather than the can
 parenting. A hidden ancestor still hides a `top_level` Control, while a
 non-canvas-item ancestor between them releases it again.
 
+A Node2D below a Control stands in the canvas space of the Control. The solved transform of the Control sits between the Node2D and the parent of the Control. A hidden Control hides the Node2D.
+
 A Control draws as a canvas item. A Light2D reaches it through `light_mask`, a CanvasModulate
 tints it, and a `CanvasItemMaterial` sets its `light_mode` and `blend_mode`. With
 `use_parent_material` it takes the material of its parent item: the Control above it, or the

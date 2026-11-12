@@ -24,6 +24,7 @@ import { useSceneResources } from './SceneResourcesContext.js';
 import { joinPath } from '../utils/nodePath.js';
 import { pathsAlong, useLiveDrawnChain } from './liveNodePatches.js';
 import { useCanvasItemVisible } from './canvasItemVisible.js';
+import { useControlTransform } from './contexts/ControlYSortContext.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 
 /**
@@ -110,7 +111,10 @@ function LiftedGroups({
   );
 }
 
-/** An ancestor's group: its transform, and its visibility as on the ordinary walk. */
+/**
+ * An ancestor's group: its transform, and its visibility as on the ordinary walk. A Control sits at
+ * the transform the Control walk solved for it, which its own properties do not state.
+ */
 function LiftedGroup({
   group,
   ancestor,
@@ -123,6 +127,16 @@ function LiftedGroup({
   children: ReactNode;
 }) {
   const visible = useCanvasItemVisible(path, (ancestor.properties as Partial<Node2DProperties>).visible);
+  const solved = useControlTransform(path);
+  const matrix = useMemo(() => solved && threeMatrixFromTransform2D(solved), [solved]);
+  if (matrix) {
+    return (
+      // paint-order-safe: as the group below, it wraps the item's own group.
+      <group matrix={matrix} matrixAutoUpdate={false} visible={visible}>
+        {children}
+      </group>
+    );
+  }
   return (
     // paint-order-safe: a lifted ancestor's restored transform, which wraps the
     // item's own group rather than sitting inside it.

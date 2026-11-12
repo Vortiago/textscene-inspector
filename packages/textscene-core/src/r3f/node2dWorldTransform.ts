@@ -9,7 +9,7 @@ import { liveNodeChain, type LiveTreeContext } from './liveSceneTree';
 import { NO_PATCHES, type PatchLookup } from './nodePatch';
 import { transform2DOrigin } from '../godot/math/transform2d.js';
 import { resolveGlobalTransform2D } from '../nodes/canvasitem/shared/globalTransform2D.js';
-import { chainParentOf, posesAlong } from './liveTransform2D.js';
+import { chainParentOf, posesAlong, solvedControlsAlong } from './liveTransform2D.js';
 
 /**
  * The node's world position in Godot pixel space, through Godot's canvas parent
@@ -29,7 +29,8 @@ export function node2dWorldPosition(
   const verdict = resolveGlobalTransform2D(
     chain[chain.length - 1]!,
     chainParentOf(chain),
-    posesAlong(chain, path, placed)
+    posesAlong(chain, path, placed),
+    solvedControlsAlong(chain, path, ctx.controlTransforms)
   );
   if (verdict.kind === 'unknowable') return null;
   return transform2DOrigin(verdict.transform);
