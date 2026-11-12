@@ -44,6 +44,11 @@ interface AtOnePlace {
   /** The skeleton that skins the first part's triangles, or null for an unskinned draw. */
   skeleton?: THREE.Skeleton | null;
   /**
+   * The instance has no bounds, so Godot places none of its surfaces. The body stays the object
+   * its first part draws as, so a mesh that gains its bounds back keeps its body mounted.
+   */
+  isUnplaced?: boolean;
+  /**
    * Mounts inside the body after the parts. A mesh with no part still mounts the body, so what a
    * caller mounts here stays mounted while its mesh loads.
    */
@@ -70,7 +75,13 @@ export function SurfacedMeshDrawer(props: SurfacedMeshDrawerProps) {
 /** The spread of a body with no transform of its own, which leaves the object's defaults alone. */
 const AT_PARENT = {};
 
-function BodyParts({ parts, body = {}, skeleton, children }: { parts: readonly MeshPart[] } & AtOnePlace) {
+function BodyParts({
+  parts,
+  body = {},
+  skeleton,
+  isUnplaced = false,
+  children,
+}: { parts: readonly MeshPart[] } & AtOnePlace) {
   const { shadow, layers } = useInstanceDraw();
   const ownRef = useRef<DrawnBody | null>(null);
   const bodyRef = body.ref ?? ownRef;
@@ -92,10 +103,8 @@ function BodyParts({ parts, body = {}, skeleton, children }: { parts: readonly M
       {...drawHookProps(shadow)}
       userData={visualLayersUserData(layers)}
     >
-      {first && <PartPasses part={first} drawRef={bodyRef} skeleton={skeleton} />}
-      {later.map((part, index) => (
-        <LaterPart key={index} part={part} />
-      ))}
+      {first && !isUnplaced && <PartPasses part={first} drawRef={bodyRef} skeleton={skeleton} />}
+      {!isUnplaced && later.map((part, index) => <LaterPart key={index} part={part} />)}
       {children}
     </Drawn>
   );

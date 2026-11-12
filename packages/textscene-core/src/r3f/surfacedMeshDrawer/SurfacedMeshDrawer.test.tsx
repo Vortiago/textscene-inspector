@@ -78,6 +78,20 @@ describe('<SurfacedMeshDrawer> at one place', () => {
     expect(body!.getObjectByName('Subtree')?.parent).toBe(body);
   });
 
+  it('keeps the body of an unplaced mesh the object its first part draws as, with no part drawn', async () => {
+    const dots = new THREE.BufferGeometry();
+    dots.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3));
+    dots.userData = { godotDrawsPoints: true };
+    function UnplacedDots() {
+      return <SurfacedMeshDrawer parts={useParts([boxOf(dots, 'Blue')])} isUnplaced />;
+    }
+    const renderer = await renderUnderInstance(<UnplacedDots />);
+
+    const [body] = drawn<THREE.Points>(renderer, 'Points');
+    expect(body!.geometry).not.toBe(dots);
+    expect(drawn(renderer)).toEqual([]);
+  });
+
   it("carries the instance's shadow hooks and layers on every part", async () => {
     const renderer = await renderUnderInstance(
       <AtOnePlace parts={[boxOf(BOX, 'Green'), boxOf(new THREE.SphereGeometry(1), 'Blue')]} />,

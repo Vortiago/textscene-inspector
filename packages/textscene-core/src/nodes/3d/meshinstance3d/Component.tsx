@@ -88,15 +88,20 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
     ) : (
       children
     );
-  // The skin leaves the instance without bounds, so Godot places none of its surfaces.
   const parts = useMemo(
-    () => (isOutgrown ? NO_PARTS : drawnParts.map((part) => overriddenPart(part, surfaceOverrides))),
-    [isOutgrown, drawnParts, surfaceOverrides]
+    () => drawnParts.map((part) => overriddenPart(part, surfaceOverrides)),
+    [drawnParts, surfaceOverrides]
   );
   // One drawer in every branch: the body keeps the node's descendants mounted while the mesh
   // loads, since they do not depend on the `.tres`.
   return (
-    <SurfacedMeshDrawer parts={parts} body={{ ref: meshRef, name: node.name, transform }} skeleton={skeleton}>
+    <SurfacedMeshDrawer
+      parts={parts}
+      body={{ ref: meshRef, name: node.name, transform }}
+      skeleton={skeleton}
+      // The skin leaves the instance without bounds.
+      isUnplaced={isOutgrown}
+    >
       {content.kind === 'unresolved' && UNRESOLVED_MESH}
       {/* A node with no mesh, and a mesh Godot builds no surface for, hold `AABB()`: a point to frame on. */}
       {(content.kind === 'none' || content.kind === 'empty') && <FramePoint />}
@@ -105,7 +110,6 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   );
 }
 
-const NO_PARTS: readonly MeshPart[] = [];
 const NO_SURFACED_PARTS: readonly SurfacedPart[] = [];
 
 /**
