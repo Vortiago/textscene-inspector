@@ -52,13 +52,13 @@ export interface BirthContext {
 }
 
 /** A transformed direction: `EMISSION_TRANSFORM * vec4(v, 0.0)`. */
-export function frameDirection(frame: EmissionFrame, v: Float3): Float3 {
+function frameDirection(frame: EmissionFrame, v: Float3): Float3 {
   const [x, y, z] = frame.columns;
   return add(add(scale(x, v[0]), scale(y, v[1])), scale(z, v[2]));
 }
 
 /** A transformed point: `EMISSION_TRANSFORM * vec4(v, 1.0)`. */
-export function framePoint(frame: EmissionFrame, v: Float3): Float3 {
+function framePoint(frame: EmissionFrame, v: Float3): Float3 {
   return add(frameDirection(frame, v), frame.origin);
 }
 

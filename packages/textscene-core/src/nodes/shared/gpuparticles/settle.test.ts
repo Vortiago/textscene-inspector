@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { transform3DOf } from '../../../godot/math/transform3d';
 import { PARTICLE_FLOATS } from '../particles3d/particleBuffer';
 import { BASE_MATERIAL, originOf, requestInput, settle } from './gpuparticles.testkit';
-import { gpuSettleSeconds, settleFor, settleFrameDeltas } from './settle';
+import { gpuSettleSeconds, settleGpuParticles } from './settle';
+import { settleFrameDeltas } from './settleLoop';
 
 /** Godot 4.6.3 `capture_aabb()` of one-particle emitters, to the 1e-5 the brief of #1157 gives. */
 function expectOrigin(actual: readonly number[], expected: readonly number[]): void {
@@ -148,7 +149,7 @@ describe('settleGpuParticles over the life of an emitter', () => {
   });
 
   it('puts the particle one step further on for the float seconds (request_particles_process)', () => {
-    const atFloat = originOf(settleFor(requestInput(), Math.fround(1.2)).buffer);
+    const atFloat = originOf(settleGpuParticles(requestInput(), Math.fround(1.2)).buffer);
     expectOrigin(atFloat, [1.496266, 0.665941, -0.101997]);
   });
 });

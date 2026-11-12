@@ -39,6 +39,7 @@ import {
   type Transform3D,
 } from '../../../godot/math/transform3d';
 import { DEFAULT_PREVIEW_SEED, settleFrameTime, settleSeconds } from '../cpuparticles/process';
+import { settleFrameDeltas } from './settleLoop';
 import {
   PARTICLE_COLOR_OFFSET,
   PARTICLE_CUSTOM_OFFSET,
@@ -68,9 +69,6 @@ export interface SettledGpuParticles {
   phase: number;
 }
 
-/** Ceiling on settle steps, as for the CPU settle: a huge `preprocess` would spin for minutes. */
-const MAX_SETTLE_STEPS = 4096;
-
 /**
  * The seconds of settle: the authored `preprocess` as the double the node holds, else the seconds
  * that stand for `--particles`, which reach the server as a `real_t`: 1.2 s as a float takes one
@@ -81,21 +79,8 @@ export function gpuSettleSeconds(emitter: GpuEmitter): number {
   return emitter.preprocess > 0 ? seconds : f(seconds);
 }
 
-/** The frame times the first frame steps: `while (todo >= 0)` overshoots the last step (`:1559-1563`). */
-export function settleFrameDeltas(seconds: number, frameTime: number): number[] {
-  const deltas: number[] = [];
-  for (let todo = seconds; todo >= 0 && deltas.length < MAX_SETTLE_STEPS; todo -= frameTime) {
-    deltas.push(frameTime);
-  }
-  return deltas;
-}
-
-export function settleGpuParticles(input: GpuSettleInput): SettledGpuParticles {
-  return settleFor(input, gpuSettleSeconds(input.emitter));
-}
-
-/** {@link settleGpuParticles} at an explicit number of seconds. */
-export function settleFor(input: GpuSettleInput, seconds: number): SettledGpuParticles {
+/** The pose after `seconds` of settle: {@link gpuSettleSeconds} for an emitter, or the seconds a request names. */
+export function settleGpuParticles(input: GpuSettleInput, seconds: number): SettledGpuParticles {
   const { emitter, material, emissionTransform } = input;
   const frame = emissionFrame(emitter.localCoords ? identityTransform3D() : emissionTransform);
   const randomSeed = emitter.useFixedSeed ? emitter.seed : DEFAULT_PREVIEW_SEED;

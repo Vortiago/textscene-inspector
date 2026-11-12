@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import type { Transform3D } from '../../../../godot/math/transform3d';
 import type { GpuMaterial } from '../../../shared/gpuparticles/emitter';
-import { settleGpuParticles } from '../../../shared/gpuparticles/settle';
+import { gpuSettleSeconds, settleGpuParticles } from '../../../shared/gpuparticles/settle';
 import { ParticleMesh } from '../../../shared/particles3d/ParticleMesh';
 import type { GPUParticles3DProperties } from './types';
 
@@ -19,7 +19,7 @@ interface ParticleEmitterProps {
 export function ParticleEmitter({ properties, material, emissionTransform }: ParticleEmitterProps) {
   const { emitter, drawPasses } = properties;
   const { buffer } = useMemo(
-    () => settleGpuParticles({ emitter, material, emissionTransform }),
+    () => settleGpuParticles({ emitter, material, emissionTransform }, gpuSettleSeconds(emitter)),
     [emitter, material, emissionTransform]
   );
   // No live particle draws no pass: Godot draws an instance for none.

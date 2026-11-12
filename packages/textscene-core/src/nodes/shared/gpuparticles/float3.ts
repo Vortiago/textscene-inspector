@@ -7,8 +7,6 @@ import { storedReal as f } from '../../../godot/math/real.js';
 
 export type Float3 = readonly [number, number, number];
 
-export const ZERO: Float3 = [0, 0, 0];
-
 export function add(a: Float3, b: Float3): Float3 {
   return [f(a[0] + b[0]), f(a[1] + b[1]), f(a[2] + b[2])];
 }

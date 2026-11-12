@@ -5,7 +5,7 @@ import { PARTICLE_FLOATS } from '../particles3d/particleBuffer';
 import { decodeParticleProcessMaterial } from '../../../resources/materials/particleprocessmaterial/decode';
 import { decodeProcessSimulation } from '../../../resources/materials/particleprocessmaterial/simulation';
 import type { GpuEmitter } from './emitter';
-import { settleGpuParticles } from './settle';
+import { gpuSettleSeconds, settleGpuParticles } from './settle';
 
 /** The constructor's values (`gpu_particles_3d.cpp:878-904`), with one particle so a test follows it. */
 const EMITTER: GpuEmitter = {
@@ -39,14 +39,18 @@ export function settle(
   material: Record<string, string> = BASE_MATERIAL,
   emissionTransform: Transform3D = identityTransform3D()
 ) {
-  return settleGpuParticles({
-    emitter: { ...EMITTER, ...emitter },
-    material: {
-      emission: decodeParticleProcessMaterial(material),
-      simulation: decodeProcessSimulation(material),
+  const settled = { ...EMITTER, ...emitter };
+  return settleGpuParticles(
+    {
+      emitter: settled,
+      material: {
+        emission: decodeParticleProcessMaterial(material),
+        simulation: decodeProcessSimulation(material),
+      },
+      emissionTransform,
     },
-    emissionTransform,
-  });
+    gpuSettleSeconds(settled)
+  );
 }
 
 /** Particle `index`'s origin in the buffer, row by row. */
