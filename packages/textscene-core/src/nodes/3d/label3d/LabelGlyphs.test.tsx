@@ -111,6 +111,11 @@ describe('<LabelGlyphs> — the glyph raster', () => {
   });
 });
 
+/** The render priority a surface sorts at: its order's whole part, as `passOrder.ts` keeps it. */
+function renderPriorityOf(mesh: THREE.Mesh): number {
+  return Math.round(mesh.renderOrder);
+}
+
 describe('<LabelGlyphs>', () => {
   it('renders a Mesh with a non-empty BufferGeometry for non-empty text', async () => {
     const renderer = await render(labelProperties({ text: 'Hi' }));
@@ -239,7 +244,7 @@ describe('<LabelGlyphs>', () => {
       );
       const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
       expect(meshes.length).toBe(2);
-      expect(meshes.map((m) => m.renderOrder)).toEqual([-1, 0]);
+      expect(meshes.map(renderPriorityOf)).toEqual([-1, 0]);
     });
 
     it('carries outline_modulate alpha on the outline surface and modulate alpha on the fill', async () => {
@@ -276,7 +281,7 @@ describe('<LabelGlyphs>', () => {
         labelProperties({ outline_size: 12, render_priority: 5, outline_render_priority: 3 })
       );
       const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-      expect(meshes.map((m) => m.renderOrder)).toEqual([3, 5]);
+      expect(meshes.map(renderPriorityOf)).toEqual([3, 5]);
     });
   });
 
@@ -327,17 +332,17 @@ describe('<LabelGlyphs>', () => {
     it('DISABLED (default) orders by priority and leaves every surface at z=0', async () => {
       const renderer = await render(labelProperties({ outline_size: 12 }));
       expect(surfaceZ(renderer)).toEqual([0, 0]);
-      expect(renderer.scene.findAllByType('Mesh').map((m) => (m.instance as THREE.Mesh).renderOrder)).toEqual(
-        [-1, 0]
-      );
+      expect(
+        renderer.scene.findAllByType('Mesh').map((m) => renderPriorityOf(m.instance as THREE.Mesh))
+      ).toEqual([-1, 0]);
     });
 
     it('DISCARD shifts each surface in Z by its own priority and stops ordering by it', async () => {
       const renderer = await render(labelProperties({ outline_size: 12, alpha_cut: AlphaCutMode.DISCARD }));
       expect(surfaceZ(renderer)).toEqual([-1, 0]);
-      expect(renderer.scene.findAllByType('Mesh').map((m) => (m.instance as THREE.Mesh).renderOrder)).toEqual(
-        [0, 0]
-      );
+      expect(
+        renderer.scene.findAllByType('Mesh').map((m) => renderPriorityOf(m.instance as THREE.Mesh))
+      ).toEqual([0, 0]);
     });
 
     it('shifts by the AUTHORED priorities, not the defaults', async () => {

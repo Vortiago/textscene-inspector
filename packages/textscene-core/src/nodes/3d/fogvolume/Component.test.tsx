@@ -267,9 +267,10 @@ describe('<FogVolume> with a shader it does not run', () => {
   }
 
   it('logs once that it adds no fog for a fog shader', async () => {
-    // A copy of the material, which the logger has not seen in an earlier test.
-    const resources = [{ ...FOG_SHADER_MATERIAL }, FOG_SHADER];
-    const props = { material: 'SubResource("ShaderMaterial_fog")' };
+    // An id no other test uses: the module keeps one decoded material for each id and text, and
+    // the logger has seen the material of an earlier test.
+    const resources = [shaderMaterial('ShaderMaterial_fog_logged', 'SubResource("Shader_fog")'), FOG_SHADER];
+    const props = { material: 'SubResource("ShaderMaterial_fog_logged")' };
     const messages = await fogVolumeInfoMessages(async () => {
       await mountedVolume(props, resources);
       await mountedVolume(props, resources);

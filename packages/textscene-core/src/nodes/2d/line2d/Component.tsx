@@ -21,14 +21,15 @@ import { bakedCurveSampler } from '../../../resources/curves/curve/bakedSample';
 import { buildLineStroke, type LineStroke } from './lineBuilder';
 import { strokeGradient } from './strokeResources';
 import type { Line2DProperties } from './types';
-import { useReferencedResources } from '../../../resources/useReferencedResources';
+import { useNodeResource } from '../../../resources/reading';
+import { CURVE } from '../../../resources/curves/curve';
+import { GRADIENT } from '../../../resources/textures/gradienttexture2d';
 import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 
 export function Line2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Line2DProperties;
-  const { curves, gradients } = useReferencedResources([props.widthCurve], [props.gradient]);
-  const widthCurve = curves[0] ?? null;
-  const gradient = gradients[0] ?? null;
+  const widthCurve = useNodeResource(props.widthCurve, CURVE).value;
+  const gradient = useNodeResource(props.gradient, GRADIENT).value;
 
   const { externalResources, internalResources } = useSceneResources();
   const {

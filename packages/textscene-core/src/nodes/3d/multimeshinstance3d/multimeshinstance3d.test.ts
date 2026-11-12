@@ -1,7 +1,5 @@
 /**
- * MultiMeshInstance3D registration: parsed and validated, not rendered. The
- * slice registers a base component under `renderIntent: 'pending'`, so the
- * badge reads a gap while `visible` and the workspace split still behave.
+ * MultiMeshInstance3D registration: parsed, validated and drawn.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -19,8 +17,8 @@ describe('MultiMeshInstance3D registration', () => {
     expect(registration!.parser).toBe(parseGeometryInstance3D);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('MultiMeshInstance3D')).toBe('pending');
-    expect(rendersOwnVisual('MultiMeshInstance3D')).toBe('not-implemented');
+  it('registers a component that draws', () => {
+    expect(nodeComponentRegistry.renderIntentOf('MultiMeshInstance3D')).toBe('draws');
+    expect(rendersOwnVisual('MultiMeshInstance3D')).toBe('draws');
   });
 });

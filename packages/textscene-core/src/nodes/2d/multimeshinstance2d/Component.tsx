@@ -9,17 +9,24 @@ import { MultiMeshTransformFormat } from '../../../godot/scene/multiMesh';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasMeshItem } from '../../../r3f/components/CanvasMeshItem';
 import { useMeshContent } from '../../../r3f/meshes/meshContent';
-import { useReferencedMultiMesh } from '../../../resources/meshes/multimesh/useMultiMeshData';
+import { useMemo } from 'react';
+import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext';
+import { useNodeResource } from '../../../resources/reading';
+import { MULTI_MESH, multiMeshInstances } from '../../../resources/meshes/multimesh';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import type { MultiMeshInstance2DProperties } from './types';
 
 export function MultiMeshInstance2D({ node, children }: NodeComponentProps) {
   const props = node.properties as MultiMeshInstance2DProperties;
-  const { multiMesh, resources } = useReferencedMultiMesh(props.multimesh);
-  const content = useMeshContent(useResourceResolution(multiMesh?.mesh, resources));
+  const { value: multiMesh } = useNodeResource(props.multimesh, MULTI_MESH);
+  const { ref: meshRef, resources } = multiMesh?.meshReference ?? { ref: undefined, resources: NO_RESOURCES };
+  const content = useMeshContent(useResourceResolution(meshRef, resources));
+  const instances = useMemo(() => multiMesh && multiMeshInstances(multiMesh.drawn), [multiMesh]);
   const draws =
-    multiMesh?.transformFormat === MultiMeshTransformFormat.TRANSFORM_2D &&
-    multiMesh.instances.length > 0 &&
+    multiMesh?.drawn.transformFormat === MultiMeshTransformFormat.TRANSFORM_2D &&
+    instances !== undefined &&
+    instances !== null &&
+    instances.length > 0 &&
     content.kind === 'surfaced';
 
   return (
@@ -27,7 +34,7 @@ export function MultiMeshInstance2D({ node, children }: NodeComponentProps) {
       node={node}
       props={props}
       mesh={draws ? content.mesh : null}
-      instances={multiMesh?.instances}
+      instances={instances ?? undefined}
     >
       {children}
     </CanvasMeshItem>

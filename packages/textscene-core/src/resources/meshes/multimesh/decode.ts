@@ -16,10 +16,13 @@ import {
   parsePackedVector2Array,
   parsePackedVector3Array,
 } from '../../shapes/packedArray.js';
-import { TRANSFORM_FLOATS, type DecodedMultiMesh, type MultiMeshInstance } from './types.js';
-
-/** Floats in one 2D buffer transform: the x and y rows, each with its origin component. */
-const TRANSFORM_2D_FLOATS = 8;
+import {
+  instanceLayout,
+  TRANSFORM_FLOATS,
+  VEC4_FLOATS,
+  type InstanceLayout,
+  type MultiMeshData,
+} from './types.js';
 
 /** The server's MultiMesh state that its box depends on. */
 class MultiMeshState {
@@ -38,23 +41,22 @@ class MultiMeshState {
   isBoxDirty = false;
   boundedTransforms = new Float32Array(0);
 
-  /** `color_offset_cache`, `mesh_storage.cpp:1578`. */
-  get colorOffset(): number {
-    return this.format === MultiMeshTransformFormat.TRANSFORM_3D ? TRANSFORM_FLOATS : TRANSFORM_2D_FLOATS;
-  }
-
-  /** `custom_data_offset_cache`, `mesh_storage.cpp:1580`. */
-  get customDataOffset(): number {
-    return this.colorOffset + (this.usesColors ? 4 : 0);
-  }
-
-  /** The instances the server draws and bounds: the visible count, or all for -1. */
-  get drawnCount(): number {
-    return this.visibleInstances >= 0 ? this.visibleInstances : this.instances;
+  /** `multimesh_instance_set_color` and its custom data twin read these offsets (`mesh_storage.cpp:1976-2020`). */
+  get layout(): InstanceLayout {
+    return instanceLayout(
+      this.format === MultiMeshTransformFormat.TRANSFORM_3D,
+      this.usesColors,
+      this.usesCustomData
+    );
   }
 
   get stride(): number {
-    return this.customDataOffset + (this.usesCustomData ? 4 : 0);
+    return this.layout.stride;
+  }
+
+  /** The buffer the server ends with: the CPU copy, else the set buffer, else null for zeros. */
+  get endBuffer(): Float32Array | null {
+    return this.dataCache ?? this.buffer;
   }
 
   /** `multimesh_allocate_data` (`mesh_storage.cpp:1543-1598`). */
@@ -86,30 +88,11 @@ class MultiMeshState {
     this.boundedTransforms = bounded;
   }
 
-  /**
-   * The instances to draw (`multimesh_get_instances_to_draw`, `mesh_storage.h:720-727`). An instance
-   * nothing wrote reads zero, as a buffer a setter never filled does.
-   */
-  drawnInstances(): MultiMeshInstance[] {
-    const count = this.drawnCount;
-    const data = this.dataCache ?? this.buffer ?? new Float32Array(this.instances * this.stride);
-    const instances: MultiMeshInstance[] = [];
-    for (let i = 0; i < count; i++) {
-      const at = i * this.stride;
-      instances.push({
-        transform: data.subarray(at, at + this.colorOffset),
-        color: this.usesColors ? data.subarray(at + this.colorOffset, at + this.customDataOffset) : null,
-        customData: this.usesCustomData ? data.subarray(at + this.customDataOffset, at + this.stride) : null,
-      });
-    }
-    return instances;
-  }
-
   /** `_update_dirty_multimeshes` (`mesh_storage.cpp:2253-2304`), which the box read runs first. */
   settle(): void {
     if (!this.dataCache || !this.isBoxDirty) return;
     this.isBoxDirty = false;
-    this.bound(this.dataCache, this.drawnCount);
+    this.bound(this.dataCache, this.visibleInstances >= 0 ? this.visibleInstances : this.instances);
   }
 }
 
@@ -154,10 +137,10 @@ const SETTERS: Readonly<Record<string, Setter>> = {
   transform_array: setTransforms3D,
   transform_2d_array: setTransforms2D,
   color_array(state, value) {
-    if (state.usesColors) setPerInstanceVectors(state, value, state.colorOffset);
+    if (state.usesColors) setPerInstanceVec4(state, value, state.layout.colourOffset);
   },
   custom_data_array(state, value) {
-    if (state.usesCustomData) setPerInstanceVectors(state, value, state.customDataOffset);
+    if (state.usesCustomData) setPerInstanceVec4(state, value, state.layout.customOffset);
   },
 };
 
@@ -239,37 +222,38 @@ function setTransforms2D(state: MultiMeshState, value: string): void {
 }
 
 /**
- * The 3.x `color_array` and `custom_data_array` (`multimesh.cpp:136-180`), through
- * `multimesh_instance_set_color` and `_set_custom_data` (`mesh_storage.cpp:1940-1982`). Their values
- * never reach the box, but each setter makes the CPU copy that later writes go through.
+ * The 3.x `color_array` and `custom_data_array` (`multimesh.cpp:136-180`): four floats for each
+ * instance, written at `offset` of its row in the CPU copy. They never reach the box.
  */
-function setPerInstanceVectors(state: MultiMeshState, value: string, offset: number): void {
+function setPerInstanceVec4(state: MultiMeshState, value: string, offset: number): void {
   const vectors = parsePackedColorArray(value);
-  if (vectors.length === 0 || vectors.length / 4 !== state.instances) return;
+  if (vectors.length === 0 || vectors.length / VEC4_FLOATS !== state.instances) return;
   const cache = state.makeLocal();
-  for (let i = 0; i < state.instances; i++)
-    cache.set(vectors.subarray(i * 4, i * 4 + 4), i * state.stride + offset);
+  for (let i = 0; i < state.instances; i++) {
+    cache.set(vectors.subarray(i * VEC4_FLOATS, (i + 1) * VEC4_FLOATS), i * state.stride + offset);
+  }
 }
 
 /**
- * The state a MultiMesh's box and instances read, from its properties in file order. Throws on a
- * packed array this cannot read, which the caller takes as a MultiMesh it does not know.
+ * The state a MultiMesh's box reads, from its properties in file order. Throws on a packed array
+ * this cannot read, which the caller takes as a box it does not know.
  */
-export function decodeMultiMesh(properties: Readonly<Record<string, string>>): DecodedMultiMesh {
+export function decodeMultiMesh(properties: Readonly<Record<string, string>>): MultiMeshData {
   const state = new MultiMeshState();
   for (const [key, value] of Object.entries(properties)) {
     if (Object.hasOwn(SETTERS, key)) SETTERS[key]!(state, value);
   }
   state.settle();
-  let instances: readonly MultiMeshInstance[] | undefined;
   return {
     customAabb: state.customAabb,
     mesh: state.hasMesh ? properties['mesh'] : undefined,
     boundedTransforms: state.boundedTransforms,
-    transformFormat: state.format,
-    // Built on first read: a box-only reader (MultiMeshInstance3D) never pays for the records.
-    get instances() {
-      return (instances ??= state.drawnInstances());
+    drawn: {
+      transformFormat: state.format,
+      usesColors: state.usesColors,
+      usesCustomData: state.usesCustomData,
+      count: state.visibleInstances >= 0 ? state.visibleInstances : state.instances,
+      buffer: state.endBuffer,
     },
   };
 }

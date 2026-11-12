@@ -31,7 +31,7 @@ export interface CachedFiles<T> {
 export type LoadedFiles = CachedFiles<ParsedResource>;
 
 /** A file's cache entry: undefined while it loads, null once it has failed. */
-type CachedFile<T> = T | null | undefined;
+export type CachedFile<T> = T | null | undefined;
 
 /** The cache and the bus events of one kind of file, which a hook of this module reads. */
 export interface FileKind<T extends object> {
@@ -114,7 +114,8 @@ export function useCachedFiles<T extends object>(
   return { loadedFile, isLoading };
 }
 
-function hasUnsettledFile(files: ReadonlyMap<string, CachedFile<object>>): boolean {
+/** Whether a file in `files` has neither loaded nor failed. */
+export function hasUnsettledFile(files: ReadonlyMap<string, CachedFile<object>>): boolean {
   for (const file of files.values()) if (file === undefined) return true;
   return false;
 }
@@ -123,7 +124,7 @@ function hasUnsettledFile(files: ReadonlyMap<string, CachedFile<object>>): boole
  * `files` under the identity of the last map with the same entries. `version` moves on every
  * resource load in the project, and a new map would rebuild the root's plan and its subtree.
  */
-function useStableEntries<T extends object>(
+export function useStableEntries<T extends object>(
   files: ReadonlyMap<string, CachedFile<T>>
 ): ReadonlyMap<string, CachedFile<T>> {
   const last = useRef(files);
@@ -154,7 +155,7 @@ function useRequestedFiles<T extends object>(
  * reported that loads later was uploaded, so its row stays, marked uploaded, as `useMissingReport`
  * keeps it for one file.
  */
-function useMissingFiles(files: ReadonlyMap<string, CachedFile<object>>): void {
+export function useMissingFiles(files: ReadonlyMap<string, CachedFile<object>>): void {
   const { report, clear, markUploaded } = useMissingResources();
   const failed = useStableList([...files].filter(([, file]) => file === null).map(([path]) => path));
   const reported = useRef<ReadonlySet<string>>(NO_PATHS);

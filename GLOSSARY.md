@@ -139,7 +139,7 @@ The second atlas a bake saves, one byte per texel: how much of a sun's light rea
 _Avoid_: "shadow map", which is the real-time depth map of a light.
 
 **Lightmap assignment** (`r3f/lightmap/sceneLightmaps.ts`):
-The LightmapGI a node takes its light from, with the node's entry in that bake: its UV scale and slice. It is the last LightmapGI in ready order whose data names the node (ADR-0054).
+The LightmapGI a node takes its light from, with the node's entry in that bake: its UV scale and slice. It is the last LightmapGI in ready order whose data names the node (ADR-0054). The instance holds it, not a surface: `instanceLightmap` (`r3f/lightmap/instanceLightmap.ts`) reads it for a GeometryInstance3D base and for a mesh of a GLB clone.
 
 **Project settings**:
 `project.godot` at a project's `res://` root, read under the names `ProjectSettings.get_setting()` uses.
@@ -232,6 +232,27 @@ _Avoid_: "the resource" or "the body" for a `[sub_resource]`.
 The one parsed form every Godot resource serialisation normalises to: the header type, the resource tables and the `[resource]` body as raw value strings.
 The slice's `decode.ts` owns what the values mean.
 _Avoid_: decoding values at parse time.
+
+**Scoped reference** (`ScopedReference`, `resources/reading/scopedReference.ts`):
+A reference on its way to a read: the `SubResource`, `ExtResource` or `res://` text, the tables it resolves in, the file those tables belong to, and whether every holder passed on the way is local to scene.
+A node's own property starts one with `nodeReference`, in the tables of the file that wrote the node (ADR-0051).
+_Avoid_: a bare reference string handed past the tables it belongs to.
+
+**Held resource** (`HeldResource`, `resources/reading/read.ts`):
+A resource as a decode receives it: its class, its raw property strings, its address, and how it is held. It exposes no table, so a decode reads a nested reference only through `Follow`.
+_Avoid_: "scoped resource" for this. A `ScopedResource` carries the tables.
+
+**Resource kind** (`ResourceKind`, `resources/reading/read.ts`):
+One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D`, `CURVE_3D`, `CURVE`, `GRADIENT`, `PARTICLE_PROCESS_MATERIAL`, `SHAPE_2D`, `OCCLUDER_POLYGON_2D` and `NAVIGATION_POLYGON` are kinds.
+_Avoid_: one decode for each origin.
+
+**Resource snapshot** (`ResourceSnapshot`, `resources/reading/read.ts`):
+One consistent view of what the loader holds. Each read on it answers `loaded`, `none`, `pending` or `unavailable`, and records each file it touched, a miss included.
+_Avoid_: reading the loader's cache directly in a reader.
+
+**Snapshot host** (`describeSnapshotHost`, `resources/reading/snapshotHost.testkit.ts`):
+Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads, and reports a failed file once as a **Missing resource**. The hook host is the one behind `useNodeResource`.
+_Avoid_: a reader that requests, pins or reports a file itself.
 
 **UID reference**:
 Godot 4's stable `uid://…` identifier, which the previewer ignores because every ExtResource here pairs it with an authoritative `res://` path.
@@ -842,6 +863,18 @@ _Avoid_: "instance alpha", "instance transparency".
 **Alpha pass**:
 Godot's sorted, blended draw of a surface after the opaque pass. A material's alpha mode, or a **fade alpha** below 0.999, sends a surface there.
 _Avoid_: "transparent pass".
+
+**Instance material** (`useInstanceDraw` in `r3f/visibilityRange/geometryInstance.tsx`):
+The `material_override` or the `material_overlay` of a **geometry instance**. The override draws every surface in place of that surface's own material. The overlay draws every surface one more time. The base resolves both and hands them to its leaf.
+_Avoid_: "node material", "global material".
+
+**Extra draw** (`r3f/materials/extraDraw.ts`, `passOrder.ts`):
+A draw of a surface beside its own: a `next_pass` link or the overlay **instance material**. It shares the surface's geometry, casts nothing, and in the **alpha pass** it draws before the surface it covers, as Godot sorts the two.
+_Avoid_: "second pass", "overlay pass".
+
+**Surfaced mesh drawer** (`r3f/surfacedMeshDrawer/`):
+The module that draws a decoded mesh with the material of each surface. It draws the mesh once as a body, or at every instance of a buffer of instances. It owns each draw's object, the surface slots, every **extra draw**, the shadow hooks, the layers and the instance buffer. MeshInstance3D, the CSG shapes, GridMap, MultiMeshInstance3D and the CPU particle draw call it. A mesh inside a cloned GLB takes its extra draws from the module's adapter for a cloned object.
+_Avoid_: "mesh renderer", "surface stack".
 
 **Resource event bus** / `useResource`:
 The async resource pipeline: a component calls `useResource(path, type)`, the host `ResourceLoader` fetches, and a `loaded` or `missing` event resolves the hook.

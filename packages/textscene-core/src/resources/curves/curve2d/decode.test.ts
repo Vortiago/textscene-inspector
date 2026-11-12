@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
-import { resolveCurve2D, tessellateCurve2D } from './decode';
-import { resolveOnlySubResource } from '../../../testing/subResource';
+import { CURVE_2D, tessellateCurve2D } from './decode';
+import { staticSnapshot } from '../../reading/staticSnapshot.testkit';
+import { nodeReference } from '../../reading/scopedReference';
+import { decodedCurve } from '../shared/curveKind.testkit';
 import { MAX_PADDED_POINTS } from '../shared/pointCount';
 
 /** The control points a Curve2D sub-resource with this body decodes to. */
 function decode(data: Record<string, string>) {
-  return resolveOnlySubResource('Curve2D', data, resolveCurve2D);
+  return decodedCurve(CURVE_2D, data);
 }
 
 /** A Curve2D body whose `_data` holds `points` as written, plus any other properties. */
@@ -20,7 +22,7 @@ function pointsOf(points: string) {
 
 const ORIGIN_POINT = { in: { x: 0, y: 0 }, out: { x: 0, y: 0 }, position: { x: 0, y: 0 } };
 
-describe('the Curve2D body resolveCurve2D decodes', () => {
+describe('the Curve2D body CURVE_2D decodes', () => {
   it('reads the dodge_the_creeps rectangle path (zero tangents, 6 floats/point)', () => {
     // in.x, in.y, out.x, out.y, pos.x, pos.y per point.
     const points = pointsOf('PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 480, 0)');
@@ -131,31 +133,32 @@ describe('the Curve2D body resolveCurve2D decodes', () => {
   });
 });
 
-describe('resolveCurve2D', () => {
+describe('the CURVE_2D kind', () => {
   const curve: TscnInternalResource = {
     id: 'Path_1',
     type: 'Curve2D',
     data: body('PackedVector2Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 480, 0)', { point_count: '2' }),
   };
+  const read = (ref: string | undefined, internalResources: TscnInternalResource[] = [curve]) =>
+    staticSnapshot({}).read(nodeReference(ref, { internalResources, externalResources: [] }), CURVE_2D);
 
   it('decodes the Curve2D a SubResource reference names', () => {
-    const points = resolveCurve2D('SubResource("Path_1")', [curve]);
-    expect(points.map((p) => p.position)).toEqual([
+    expect(read('SubResource("Path_1")').value?.map((p) => p.position)).toEqual([
       { x: 0, y: 0 },
       { x: 480, y: 0 },
     ]);
   });
 
-  it('resolves no points for an absent, ExtResource or unknown reference', () => {
-    expect(resolveCurve2D(undefined, [curve])).toEqual([]);
-    expect(resolveCurve2D('ExtResource("Path_1")', [curve])).toEqual([]);
-    expect(resolveCurve2D('SubResource("Missing")', [curve])).toEqual([]);
+  it('answers none for an absent reference and unknown-id for an unknown one', () => {
+    expect(read(undefined).status).toBe('none');
+    expect(read('ExtResource("Path_1")')).toMatchObject({ reason: 'unknown-id' });
+    expect(read('SubResource("Missing")')).toMatchObject({ reason: 'unknown-id' });
   });
 
-  // The path linter checks the first Curve2D under the id, so the preview draws that one.
-  it('skips a first holder of the id that is not a Curve2D (edge case)', () => {
+  // `Path2D::set_curve` takes a `Ref<Curve2D>`, and the first holder of an id is the one a reference names.
+  it('answers wrong-type when the first holder of the id is not a Curve2D (edge case)', () => {
     const other: TscnInternalResource = { id: 'Path_1', type: 'Curve', data: {} };
-    expect(resolveCurve2D('SubResource("Path_1")', [other, curve])).toHaveLength(2);
+    expect(read('SubResource("Path_1")', [other, curve])).toMatchObject({ reason: 'wrong-type' });
   });
 });
 

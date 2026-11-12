@@ -10,12 +10,6 @@ export interface MeshInstance3DProperties extends GeometryInstance3DProperties {
   /** Material overrides by surface index. */
   surfaceMaterialOverrides: Map<number, string>;
 
-  /** The material that overrides every surface material. */
-  materialOverride?: string;
-
-  /** The material drawn on top of the surface materials. */
-  materialOverlay?: string;
-
   /** The Skeleton3D node path for skeletal animation. */
   skeleton?: string;
 

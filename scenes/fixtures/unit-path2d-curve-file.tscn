@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+; unit-pathfollow2d.tscn with its Curve2D in a .tres: the one variable is where the curve is
+; stored. No other golden reads a Path2D curve from a file, so none shows a Path2D that drops it.
+
+[ext_resource type="Curve2D" path="res://unit-path2d-curve-file.tres" id="1_curve"]
+
+[node name="PathFollow2DRoot" type="Node2D"]
+
+[node name="TrackPath" type="Path2D" parent="."]
+position = Vector2(440, 240)
+curve = ExtResource("1_curve")
+
+[node name="Follower" type="PathFollow2D" parent="TrackPath"]
+progress = 320.0
+
+[node name="Marker" type="Polygon2D" parent="TrackPath/Follower"]
+color = Color(0.3, 0.8, 1, 1)
+polygon = PackedVector2Array(-10, -10, 10, -10, 10, 10, -10, 10)

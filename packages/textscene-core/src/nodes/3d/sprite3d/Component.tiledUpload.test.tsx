@@ -13,6 +13,7 @@ import {
 } from '../../../r3f/tiledUpload/tiledSheet.testkit';
 import './index.r3f';
 import { registeredComponent } from '../../../r3f/testing/registeredComponent';
+import { quadUvWindow } from './testing/quadUvWindow';
 
 const Sprite3D = registeredComponent('Sprite3D');
 
@@ -58,9 +59,9 @@ describe('Sprite3D over a sheet that uploads in bands', () => {
     await sprite.showFrame(2);
     await sprite.tick();
 
-    const map = sprite.drawnMap();
-    expect(map?.offset.x).toBeCloseTo(2 / HFRAMES, 6);
-    expect(map?.repeat.x).toBeCloseTo(1 / HFRAMES, 6);
+    const uv = quadUvWindow(sprite.drawnGeometry());
+    expect(uv.offset.x).toBeCloseTo(2 / HFRAMES, 6);
+    expect(uv.repeat.x).toBeCloseTo(1 / HFRAMES, 6);
     expect(sprite.gpu.rowsCopied()).toBe(SHEET_HEIGHT);
   });
 });

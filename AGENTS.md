@@ -79,8 +79,8 @@ and prints exact pixels. It is a tool, not a gate.
 - Every capture that measures against Godot launches through `launchGodotComparisonBrowser`, so a
   screenshot is the drawing buffer. Never launch one another way. It rasterises on lavapipe, as
   `pnpm ref:godot` does, and fails without `mesa-vulkan-drivers`.
-- `--particles <seconds>` advances every CPUParticles emitter, on top of its authored
-  `preprocess`. The harness never picks the instant. Pass it yourself. For a comparison sheet,
+- `--particles <seconds>` advances every CPUParticles emitter and every GPUParticles3D, on top of its
+  authored `preprocess`. The harness never picks the instant. Pass it yourself. For a comparison sheet,
   `SHEET-STANDARD.md` names it.
 - `--debug-collisions` runs the game with collision debugging, as the editor's "Visible Collision Shapes"
   does. A 2D joint then draws its marker and a collision shape its outline. Without it a game draws neither.

@@ -4,28 +4,28 @@
  * Godot's edge order, so compare its edges as a set.
  */
 
-import type { TscnInternalResource } from '../../../parser/types';
+import type { Shape3DClass, Shape3DResource } from '../../../resources/shapes/shape3d';
 import fixture from './godotDebugLines.fixture.json';
 
 export interface GodotDebugLinesCase {
   name: string;
-  shape: TscnInternalResource;
+  shape: Shape3DResource;
   /** Flat `x, y, z` vertices, two per segment, in Godot's order. */
   lines: number[];
 }
 
 interface FixtureEntry extends Omit<GodotDebugLinesCase, 'shape'> {
-  type: string;
+  type: Shape3DClass;
   data: Record<string, string>;
 }
 
 /** The measured cases of one shape type. */
-export function godotDebugLinesFor(type: string): GodotDebugLinesCase[] {
+export function godotDebugLinesFor(type: Shape3DClass): GodotDebugLinesCase[] {
   // The JSON import types `data` as a union of object shapes, which no string record accepts.
   const entries = fixture as unknown as FixtureEntry[];
   return entries
     .filter((entry) => entry.type === type)
-    .map(({ name, data, lines }) => ({ name, shape: { id: 'measured', type, data }, lines }));
+    .map(({ name, data, lines }) => ({ name, shape: { type, data }, lines }));
 }
 
 /** The segments of flat `lines` as a sorted list of undirected edges, so a test ignores the order. */

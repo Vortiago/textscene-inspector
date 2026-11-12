@@ -17,6 +17,18 @@ export function surfaceSources(
 }
 
 /**
+ * The sources an instance draws: `material_override` stands in front of every surface's own
+ * material (`render_forward_clustered.cpp:4206`).
+ */
+export function overriddenSources(
+  sources: readonly (MaterialSource | undefined)[],
+  override: MaterialSource | undefined
+): readonly (MaterialSource | undefined)[] {
+  const own = surfaceSources(sources);
+  return override ? own.map(() => override) : own;
+}
+
+/**
  * The attach key of draw group `index`. A mesh of one surface keeps the singular key, so
  * `mesh.material` stays one material rather than a length-1 array.
  */

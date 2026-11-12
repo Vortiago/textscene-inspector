@@ -8,7 +8,6 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { castsFrom, drawsColour } from '../../../r3f/testing/threePasses';
 import { patchedVertex } from '../../../r3f/testing/patchedFragment';
-import { isInstancedMesh } from '../../../r3f/testing/threeNarrow';
 import { drawnMaterials, renderGridMapTiles, renderInstancedTile } from './testing/gridMapCorpus';
 
 /** Cells (0, 0, 0) and (3, 0, 0): centred at (1, 1, 1) and (7, 1, 1) at the default 2 m cell. */
@@ -93,14 +92,16 @@ describe('<GridMap> tile material billboard_mode', () => {
     expect([castsFrom(tile), drawsColour(tile)]).toEqual([true, false]);
   });
 
-  it('draws each surface in its own instanced draw', async () => {
-    const tiles = await renderGridMapTiles(PLAIN_THEN_BILLBOARD);
-    expect(tiles.every(isInstancedMesh)).toBe(true);
-    expect(tiles.map((tile) => drawnMaterials(tile).map((m) => m.roughness))).toEqual([[0.5], [0.25]]);
+  it('draws a plain surface and a billboarded one in one instanced draw', async () => {
+    const tile = await renderInstancedTile(PLAIN_THEN_BILLBOARD);
+    expect(drawnMaterials(tile).map((m) => m.roughness)).toEqual([0.5, 0.25]);
   });
 
   it('billboards only the surface whose material asks', async () => {
-    const tiles = await renderGridMapTiles(PLAIN_THEN_BILLBOARD);
-    expect(tiles.map((tile) => vertexOf(tile).includes(POSES_INSTANCES))).toEqual([false, true]);
+    const tile = await renderInstancedTile(PLAIN_THEN_BILLBOARD);
+    expect(drawnMaterials(tile).map((m) => patchedVertex(m).includes(POSES_INSTANCES))).toEqual([
+      false,
+      true,
+    ]);
   });
 });

@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { PARTICLE_COLOR_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
+import { PARTICLE_COLOR_OFFSET, PARTICLE_FLOATS } from '../../../shared/particles3d/particleBuffer';
 import { settleParticles } from './simulate';
 import { drawnBuffer, ROW_OF_FOUR, simInput as input } from './cpuparticles3d.testkit';
 import {

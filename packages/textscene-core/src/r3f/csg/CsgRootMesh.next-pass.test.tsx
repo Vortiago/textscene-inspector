@@ -12,7 +12,7 @@ import '../nodes/index';
 import { NodeTree } from '../testing/NodeTree';
 import { settleCsgEvaluation } from './testing/settleCsgEvaluation';
 import { instanceAs } from '../../nodes/3d/testing/reactThreeTestInstance';
-import { nextPassRenderOrder } from '../materials/nextPass';
+import { nextPassRenderOrder } from '../materials/passOrder';
 
 function scene(body: string) {
   const parsed = new TscnParser().parse(`[gd_scene format=3]\n\n${body}\n`);

@@ -1,49 +1,31 @@
 /**
  * <GridMap> instances each MeshLibrary item's mesh, an ArrayMesh or a PrimitiveMesh, at its
- * populated cells. Each surface draws as one THREE.InstancedMesh, or as one THREE.Points or
- * THREE.LineSegments instanced at every cell for a points or lines surface. A billboarding material turns each cell about its own origin in its
- * program. A loading item draws nothing.
+ * populated cells, through the surfaced mesh drawer: one THREE.InstancedMesh, or one THREE.Points
+ * instanced at every cell for a PointMesh. A billboarding material turns each cell about its own
+ * origin in its program. A loading item draws nothing.
  * An item whose mesh or library this previewer cannot read draws cell-sized wireframe boxes in one
  * InstancedMesh.
  */
 
-import { useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { GODOT_DEFAULT_VISUAL_LAYERS } from '../../../godot/scene/visualLayers';
 import * as THREE from 'three';
 import { nodeComponentRegistry, type NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { parseNodeWithRegistry } from '../../../core/NodeRegistry';
 import type { TscnNode } from '../../../parser/types';
-import { LightmapSubInstanceProvider } from '../../../r3f/lightmap/useLightmapAssignment';
+import { BakedMeshInstance } from '../../../r3f/visibilityRange/geometryInstance';
 import { Node3D } from '../../base/node3d/Component';
 import { useMeshLibraryModel } from '../../../r3f/useMeshLibraryModel';
-import type { MaterialSource } from '../../../r3f/materials/materialSource';
-import { drawnTag, useMeshContent, type SurfacedPart } from '../../../r3f/meshes/meshContent';
-import { geometryPrimitive } from '../../../resources/meshes/godotSurface';
+import { useMeshContent } from '../../../r3f/meshes/meshContent';
+import { instancesAt } from '../../../r3f/surfacedMeshDrawer/meshInstances';
+import { SurfacedMeshDrawer } from '../../../r3f/surfacedMeshDrawer/SurfacedMeshDrawer';
+import { shadowCastingEffects } from '../../../r3f/shadowCasting';
 import { usePathResolution } from '../../../resources/useSubOrExtResource';
-import { SurfaceMaterialSlot } from '../../../r3f/materials/SurfaceMaterialSlot';
-import { surfaceAttach, surfaceSources } from '../../../r3f/materials/SurfaceMaterialSlots';
-import { useOneSurfaceStartingMaterial } from '../../../r3f/materials/useOneSurfaceStartingMaterial';
-import {
-  NextPassChain,
-  nextPassRenderOrder,
-  type ChainDrawFactory,
-  type ChainDrawSpec,
-} from '../../../r3f/materials/nextPass';
-import { NO_RAYCAST } from '../../../r3f/materials/materialOverlay';
 import type { MeshLibraryItem } from '../../../resources/meshlibrary/types';
 import type { Transform3D } from '../../../godot/math/transform3d';
 import type { GridMapProperties } from './types';
 import { decodeGridMapCells, ORTHO_BASES, type GridMapCell } from './cellData';
 import { wireGizmoProgram } from '../../../r3f/components/wireGizmoProgram';
-import {
-  instancesBounds,
-  listedSlot,
-  listedSlotOf,
-  raycastInstanced,
-  sharedInstancesAt,
-  useSharedInstances,
-} from '../../../r3f/meshes/sharedInstances';
-import { drawHookProps, shadowCastingEffects, type ShadowCastingEffects } from '../../../r3f/shadowCasting';
 import { transform3DToMatrix } from '../../../r3f/nodeTreeTransforms';
 import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 
@@ -158,9 +140,9 @@ function BakedMeshes({ refs }: { refs: readonly string[] }) {
   return (
     <>
       {nodes.map((meshNode, index) => (
-        <LightmapSubInstanceProvider key={index} value={index}>
+        <BakedMeshInstance key={index} value={index}>
           <MeshInstance3D node={meshNode} />
-        </LightmapSubInstanceProvider>
+        </BakedMeshInstance>
       ))}
     </>
   );
@@ -184,7 +166,7 @@ interface GridMapItemProps extends CellGrid {
 }
 
 /**
- * All cells sharing one MeshLibrary item, each surface as one instanced draw, which Godot
+ * All cells sharing one MeshLibrary item, each part of its mesh as one instanced draw, which Godot
  * billboards per instance in its shader (`scene_forward_clustered.glsl:338-342`).
  */
 function GridMapItem({ item, isMeshHeldLocally, cells, cellSize, cellCenter, cellScale }: GridMapItemProps) {
@@ -198,250 +180,20 @@ function GridMapItem({ item, isMeshHeldLocally, cells, cellSize, cellCenter, cel
     return cells.map((cell) => cellMatrix(cell, grid, item.meshTransform));
   }, [cells, cellSize, cellCenter, cellScale, item.meshTransform]);
 
-  // GridMap has no `cast_shadow` of its own. The setting is per tile, read off
-  // the library (`modules/gridmap/grid_map.cpp:799-800`).
-  const shadow = shadowCastingEffects(item.castShadow);
+  const instances = useMemo(() => instancesAt(matrices), [matrices]);
+  // GridMap is no GeometryInstance3D. Godot gives each tile an instance of its own, whose
+  // `cast_shadow` the library holds (`modules/gridmap/grid_map.cpp:799-800`).
+  const owner = useMemo(
+    () => ({ shadow: shadowCastingEffects(item.castShadow), layers: GODOT_DEFAULT_VISUAL_LAYERS }),
+    [item.castShadow]
+  );
 
   // Godot draws the mesh, so a mesh this previewer cannot read shows the placeholder.
   if (content.kind === 'unresolved') {
     return <PlaceholderTiles cells={cells} cellSize={cellSize} cellCenter={cellCenter} />;
   }
   if (content.kind !== 'surfaced') return null;
-  const { parts } = content.mesh;
-  return (
-    <>
-      {parts.map((part, partIndex) => (
-        <GridMapPart key={partIndex} part={part} shadow={shadow} matrices={matrices} />
-      ))}
-    </>
-  );
-}
-
-interface GridMapPartProps {
-  part: SurfacedPart;
-  shadow: ShadowCastingEffects;
-  matrices: THREE.Matrix4[];
-}
-
-/** One part of an item's mesh at every cell: the surfaces that share one primitive type. */
-function GridMapPart(props: GridMapPartProps) {
-  return geometryPrimitive(props.part.geometry) === 'triangles' ? (
-    <PartSurfaces {...props} />
-  ) : (
-    <ListedPart {...props} />
-  );
-}
-
-/**
- * A points or lines part at every cell as one instanced geometry over the item's own, shared by the part's
- * surfaces, new for each set of cells, with the box and sphere of every cell.
- */
-function ListedPart(props: GridMapPartProps) {
-  const { part, matrices } = props;
-  const cellInstances = useMemo<CellInstances>(
-    () => ({
-      geometry: sharedInstancesAt(part.geometry, matrices),
-      ...instancesBounds(part.geometry, matrices),
-    }),
-    [part.geometry, matrices]
-  );
-  useSharedInstances(cellInstances.geometry, part.geometry);
-  return <PartSurfaces {...props} cellInstances={cellInstances} />;
-}
-
-/** What a points or lines draw mounts as. */
-type ListedObject = THREE.Points | THREE.LineSegments;
-
-/** The points or lines of a part at every cell, and the box and sphere three frames and culls it by. */
-interface CellInstances extends ReturnType<typeof instancesBounds> {
-  geometry: THREE.InstancedBufferGeometry;
-}
-
-function PartSurfaces({
-  part,
-  cellInstances,
-  shadow,
-  matrices,
-}: GridMapPartProps & { cellInstances?: CellInstances }) {
-  const surfaces = surfaceSources(part.materials);
-  const { geometry } = part;
-  // A cell's chain draw is its own instanced batch of the cells, at its surface's
-  // ordinal, over the geometry the part draws, and at its surface's own draw group.
-  const chainDraw: ChainDrawFactory = (spec) =>
-    cellInstances ? (
-      <ChainInstancedCells spec={spec} cellInstances={cellInstances} />
-    ) : (
-      <ChainBatchedTiles spec={spec} matrices={matrices} />
-    );
-  return (
-    <>
-      {surfaces.map((source, surface) => (
-        <GridMapSurface
-          key={surface}
-          draw={{ geometry, cellInstances, source, surface, surfaceCount: surfaces.length, shadow }}
-          matrices={matrices}
-        />
-      ))}
-      <NextPassChain
-        sources={surfaces}
-        geometry={cellInstances?.geometry ?? geometry}
-        primitive={geometryPrimitive(geometry)}
-        godotLayers={GODOT_DEFAULT_VISUAL_LAYERS}
-        shadow={shadow}
-        draw={chainDraw}
-      />
-    </>
-  );
-}
-
-/** The chain link of a tile surface's material, as one more instanced batch of the cells. */
-function ChainBatchedTiles({ spec, matrices }: { spec: ChainDrawSpec; matrices: THREE.Matrix4[] }) {
-  const startingMaterial = useOneSurfaceStartingMaterial(spec.surfaceCount);
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  // Every arg is a dependency: a changed arg rebuilds the mesh with identity instance matrices.
-  useLayoutEffect(() => writeInstanceMatrices(meshRef.current, matrices), [matrices, spec.geometry]);
-  return (
-    <instancedMesh
-      key={matrices.length}
-      ref={meshRef}
-      args={[spec.geometry, startingMaterial, matrices.length]}
-      renderOrder={nextPassRenderOrder(spec.ordinal)}
-      // The surface's own batch is the grid's pickable body; a coincident second hit
-      // would report the same cells twice.
-      raycast={NO_RAYCAST}
-      receiveShadow
-      onBeforeRender={spec.shadow.onBeforeRender}
-      onAfterRender={spec.shadow.onAfterRender}
-    >
-      <SurfaceMaterialSlot source={spec.source} attach={spec.attach} {...listedSlotOf(spec.geometry)} />
-    </instancedMesh>
-  );
-}
-
-/** The chain link of a points or lines surface's material, as one more draw of the cells' primitives. */
-function ChainInstancedCells({ spec, cellInstances }: { spec: ChainDrawSpec; cellInstances: CellInstances }) {
-  return (
-    <CellsDrawn
-      cellInstances={cellInstances}
-      surfaceCount={spec.surfaceCount}
-      renderOrder={nextPassRenderOrder(spec.ordinal)}
-      raycast={NO_RAYCAST}
-      // The chain draw casts nothing of its own: the surface's own draw casts the
-      // geometry once, so only the colour pair mounts.
-      receiveShadow
-      onBeforeRender={spec.shadow.onBeforeRender}
-      onAfterRender={spec.shadow.onAfterRender}
-    >
-      <SurfaceMaterialSlot
-        source={spec.source}
-        attach={spec.attach}
-        {...listedSlot(geometryPrimitive(cellInstances.geometry), 'instances')}
-      />
-    </CellsDrawn>
-  );
-}
-
-/** One surface of an item's mesh, drawn on its own. */
-interface SurfaceDraw {
-  /** The geometry drawn: the item's own, or a points or lines surface's instances at every cell. */
-  geometry: THREE.BufferGeometry;
-  /** A points or lines surface's primitives at every cell. Undefined for triangles. */
-  cellInstances?: CellInstances;
-  /** Undefined for a surface that names no material: Godot's default surface. */
-  source: MaterialSource | undefined;
-  /** The draw group this draw owns. */
-  surface: number;
-  surfaceCount: number;
-  shadow: ShadowCastingEffects;
-}
-
-/**
- * Every cell of one surface as one instanced draw, a billboarding one too: its program billboards
- * each cell about its own origin, as Godot's multimesh does (`surfaceBillboard.ts`).
- */
-function GridMapSurface({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.Matrix4[] }) {
-  if (!draw.cellInstances) return <BatchedTiles draw={draw} matrices={matrices} />;
-  return <InstancedCells draw={draw} cellInstances={draw.cellInstances} />;
-}
-
-/**
- * Every cell as one InstancedMesh, keyed on the count: three sizes the instance buffer at
- * construction. `useMeshContent` owns the geometry, which R3F leaves alone since it arrives
- * through `args`. The shadow hooks carry DOUBLE_SIDED and SHADOWS_ONLY per draw
- * (`r3f/surfaceDrawHooks.ts`).
- */
-function BatchedTiles({ draw, matrices }: { draw: SurfaceDraw; matrices: THREE.Matrix4[] }) {
-  const { geometry, shadow } = draw;
-  const startingMaterial = useOneSurfaceStartingMaterial(draw.surfaceCount);
-  const meshRef = useRef<THREE.InstancedMesh>(null);
-  // Every arg is a dependency: a changed arg rebuilds the mesh with identity instance matrices.
-  useLayoutEffect(
-    () => writeInstanceMatrices(meshRef.current, matrices),
-    [matrices, geometry, startingMaterial]
-  );
-
-  return (
-    <instancedMesh
-      key={matrices.length}
-      ref={meshRef}
-      args={[geometry, startingMaterial, matrices.length]}
-      {...drawHookProps(shadow)}
-    >
-      <OwnedSurfaceSlot draw={draw} />
-    </instancedMesh>
-  );
-}
-
-/** A surface's points or lines at every cell, one instanced object picked at each cell. */
-function InstancedCells({ draw, cellInstances }: { draw: SurfaceDraw; cellInstances: CellInstances }) {
-  return (
-    <CellsDrawn
-      cellInstances={cellInstances}
-      surfaceCount={draw.surfaceCount}
-      raycast={raycastInstanced}
-      {...drawHookProps(draw.shadow)}
-    >
-      <OwnedSurfaceSlot draw={{ ...draw, geometry: cellInstances.geometry }} />
-    </CellsDrawn>
-  );
-}
-
-type CellsDrawnProps = Pick<
-  THREE.Points,
-  'renderOrder' | 'raycast' | 'castShadow' | 'receiveShadow' | 'onBeforeRender' | 'onAfterRender'
-> &
-  Partial<Pick<THREE.Light, 'onBeforeShadow' | 'onAfterShadow'>>;
-
-/** The points or lines object over the cells' instances, carrying the box three culls it by. */
-function CellsDrawn({
-  cellInstances: { geometry, boundingBox, boundingSphere },
-  surfaceCount,
-  children,
-  ...drawProps
-}: { cellInstances: CellInstances; surfaceCount: number; children: ReactNode } & Partial<CellsDrawnProps>) {
-  const startingMaterial = useOneSurfaceStartingMaterial(surfaceCount);
-  const drawnRef = useRef<ListedObject>(null);
-  const Drawn = drawnTag(geometryPrimitive(geometry));
-  // Typed props hold no box on these objects, which three and the framing read off the object.
-  useLayoutEffect(() => {
-    if (drawnRef.current) Object.assign(drawnRef.current, { boundingBox, boundingSphere });
-  }, [boundingBox, boundingSphere]);
-  return (
-    <Drawn ref={drawnRef} args={[geometry, startingMaterial]} {...drawProps}>
-      {children}
-    </Drawn>
-  );
-}
-
-/** The material of the one draw group a surface draw owns. */
-function OwnedSurfaceSlot({ draw }: { draw: SurfaceDraw }) {
-  return (
-    <SurfaceMaterialSlot
-      source={draw.source}
-      attach={surfaceAttach(draw.surface, draw.surfaceCount)}
-      {...listedSlotOf(draw.geometry)}
-    />
-  );
+  return <SurfacedMeshDrawer parts={content.mesh.parts} instances={instances} owner={owner} />;
 }
 
 /**

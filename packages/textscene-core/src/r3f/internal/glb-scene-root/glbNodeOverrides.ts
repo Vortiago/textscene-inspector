@@ -2,7 +2,7 @@
  * Applies an instancing scene's overrides, such as `[node name="plafoniera" parent="."]`, to
  * nodes inside the GLB it instances: transform, `layers` and `visible`. A Skeleton3D or
  * BoneAttachment3D takes its own properties (`glbFrameOverrides.ts`). A GLB with no override
- * keeps its baked offsets. `surface_material_override/0` needs an async load, so
+ * keeps its baked offsets. `surface_material_override/N` needs an async load, so
  * `GlbSurfaceMaterialOverride` applies it. The scene cull applies the GeometryInstance3D state
  * (`glbGeometryInstances.ts`).
  */
@@ -177,7 +177,7 @@ function applyToNode(root: THREE.Object3D, entries: readonly GlbObjectEntry[], o
   const visible = override.rawProperties.visible;
   const transform = (override.properties as Node3DProperties).transform;
   // Nothing to write means nothing to resolve: an override with only
-  // `surface_material_override/0` skips the path match.
+  // `surface_material_override/N` skips the path match.
   if (layers === undefined && visible === undefined && !transform) return false;
 
   const target = resolveGlbOverrideTarget(root, entries, override);

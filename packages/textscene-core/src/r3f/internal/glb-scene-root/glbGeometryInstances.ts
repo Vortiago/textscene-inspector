@@ -25,7 +25,8 @@ import type { InstancePlacement } from '../../visibilityRange/placements';
 import { visibleInTree } from '../../visibleInTree';
 import type { NodePlace } from '../../visibilityRange/visibilityScene';
 import { childOrders, useTreeOrder, type TreeOrder } from '../../contexts/TreeOrderContext';
-import { lightmapsOf, type LightmapAssignment } from '../../lightmap/sceneLightmaps';
+import { instanceLightmap } from '../../lightmap/instanceLightmap';
+import type { LightmapAssignment } from '../../lightmap/sceneLightmaps';
 import { glbObjectName, type GlbObjectEntry } from './glbHierarchy';
 import type { GlbNodeLink } from './glbNodeLinks';
 import type { GlbRoot } from './GlbInstanceContext';
@@ -104,16 +105,16 @@ export function useGlbGeometryInstances(
     }
   }, [scene, object, instances]);
   useLayoutEffect(() => {
-    const lightmaps = lightmapsOf(scene);
-    const assignLightmaps = () => {
-      for (const { object: meshObject, place } of instances) {
-        const path = readsNoLightmap(meshObject) ? null : place.path;
-        culled.current.get(meshObject)?.setLightmap(path === null ? null : lightmaps.assignmentFor(path));
-      }
-      invalidate();
-    };
-    assignLightmaps();
-    return lightmaps.subscribe(assignLightmaps);
+    const releases = instances.map(({ object: meshObject, place }) => {
+      const lightmap = instanceLightmap(scene, readsNoLightmap(meshObject) ? null : place.path);
+      const assign = () => {
+        culled.current.get(meshObject)?.setLightmap(lightmap.read());
+        invalidate();
+      };
+      assign();
+      return lightmap.subscribe(assign);
+    });
+    return () => releases.forEach((release) => release());
   }, [scene, instances, invalidate]);
 }
 

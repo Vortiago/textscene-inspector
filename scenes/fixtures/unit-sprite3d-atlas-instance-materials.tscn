@@ -1,0 +1,50 @@
+; The one variable: an AtlasTexture with a margin as the texture of a Sprite3D that sets an
+; instance material. Left: the sprite's own material. Right: a `material_override` with a red to
+; blue texture. Godot's quad covers the region alone and holds the UVs of the atlas
+; (sprite_3d.cpp:100-150), so the left sprite shows the right half of its sheet and the right one
+; the blue half of the override's texture, at the same size. Every other AtlasTexture scene draws in
+; 2D, or sets no instance material.
+[gd_scene format=3]
+
+[sub_resource type="Gradient" id="Gradient_sprite"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.9, 0.8, 0.1, 1, 0.1, 0.8, 0.9, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_sprite"]
+gradient = SubResource("Gradient_sprite")
+width = 128
+height = 64
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_cell"]
+atlas = SubResource("GradientTexture2D_sprite")
+region = Rect2(64, 0, 64, 64)
+margin = Rect2(8, 4, 16, 8)
+
+[sub_resource type="Gradient" id="Gradient_override"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_override"]
+gradient = SubResource("Gradient_override")
+width = 128
+height = 64
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_override"]
+albedo_texture = SubResource("GradientTexture2D_override")
+cull_mode = 2
+
+[node name="Root" type="Node3D"]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 3, 3)
+
+[node name="OwnMaterial" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0, 0)
+texture = SubResource("AtlasTexture_cell")
+pixel_size = 0.016
+
+[node name="Override" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.9, 0, 0)
+texture = SubResource("AtlasTexture_cell")
+pixel_size = 0.016
+material_override = SubResource("StandardMaterial3D_override")

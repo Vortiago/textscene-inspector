@@ -58,6 +58,8 @@ describe('Godot-resource parsing stays in the loading layer', () => {
     'resources/testing/sectionLoaderServing.ts',
     // The `.tres` text of a live-tree test, parsed as the loader's cache holds it.
     'r3f/liveSceneTree.testkit.ts',
+    // The second adapter of the reading seam: a fixed map of file text, parsed as the loader would.
+    'resources/reading/staticSnapshot.testkit.ts',
   ]);
   const VALUE_IMPORT_RE =
     /import\s+(?!type\b)[^;]*?from\s+'[^']*parsedResource(?:\.js)?'|import\(\s*'[^']*parsedResource(?:\.js)?'\s*\)/;

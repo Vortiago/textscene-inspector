@@ -1,9 +1,11 @@
-/** The curves and colour ramps an emitter's simulation reads, resolved and loaded as a hook. */
+/** The curves and colour ramps an emitter's simulation reads, read as a hook. */
 
-import { useMemo } from 'react';
+import { useCallback } from 'react';
+import { CURVE } from '../../../resources/curves/curve';
 import type { Curve } from '../../../resources/curves/curve/types';
+import { useSnapshotRead } from '../../../resources/reading';
+import { GRADIENT } from '../../../resources/textures/gradienttexture2d';
 import type { Gradient } from '../../../resources/textures/gradienttexture2d/types';
-import { useReferencedResources } from '../../../resources/useReferencedResources';
 import { CPU_PARTICLES_PARAM_COUNT, type ParticleParam } from './params';
 
 /** The raw references an emitter names for its curves and ramps. */
@@ -24,29 +26,26 @@ export interface ParticleResources {
   colorInitialRamp: Gradient | null;
 }
 
-/** The `curve` reference of each parameter slot, always `CPU_PARTICLES_PARAM_COUNT` long. */
-function paramCurveReferences(params: readonly ParticleParam[]): Array<string | undefined> {
-  return Array.from({ length: CPU_PARTICLES_PARAM_COUNT }, (_, slot) => params[slot]?.curve);
-}
-
-/** The resources `references` name in the scene, which re-resolve as each `.tres` loads. */
+/** The resources `references` name in the scene, which read again as each `.tres` loads. */
 export function useParticleResources(references: ParticleResourceReferences): ParticleResources {
-  const { params, colorRamp, colorInitialRamp, scaleCurves } = references;
-  const { curves, gradients } = useReferencedResources(
-    [...paramCurveReferences(params), scaleCurves?.x, scaleCurves?.y, scaleCurves?.z],
-    [colorRamp, colorInitialRamp]
-  );
-  return useMemo(
-    () => ({
-      curves: curves.slice(0, CPU_PARTICLES_PARAM_COUNT),
-      scaleCurves: {
-        x: curves[CPU_PARTICLES_PARAM_COUNT]!,
-        y: curves[CPU_PARTICLES_PARAM_COUNT + 1]!,
-        z: curves[CPU_PARTICLES_PARAM_COUNT + 2]!,
+  const { params, colorRamp, colorInitialRamp } = references;
+  // The strings, not the `scaleCurves` object: a caller builds that object on each render.
+  const scaleX = references.scaleCurves?.x;
+  const scaleY = references.scaleCurves?.y;
+  const scaleZ = references.scaleCurves?.z;
+  return useSnapshotRead(
+    useCallback(
+      (read) => {
+        const curve = (ref: string | undefined) => read(ref, CURVE).value;
+        const gradient = (ref: string | undefined) => read(ref, GRADIENT).value;
+        return {
+          curves: Array.from({ length: CPU_PARTICLES_PARAM_COUNT }, (_, slot) => curve(params[slot]?.curve)),
+          scaleCurves: { x: curve(scaleX), y: curve(scaleY), z: curve(scaleZ) },
+          colorRamp: gradient(colorRamp),
+          colorInitialRamp: gradient(colorInitialRamp),
+        };
       },
-      colorRamp: gradients[0]!,
-      colorInitialRamp: gradients[1]!,
-    }),
-    [curves, gradients]
+      [params, scaleX, scaleY, scaleZ, colorRamp, colorInitialRamp]
+    )
   );
 }
