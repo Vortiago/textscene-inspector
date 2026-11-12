@@ -10,64 +10,39 @@ import type * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { GizmoLine } from '../../../r3f/components/GizmoLine';
-import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
+import { useNodeResource } from '../../../resources/reading';
+import { OCCLUDER_POLYGON_2D } from '../../../resources/shapes/occluderpolygon2d';
 import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
-import { warn } from '../../../logger';
-import { parsePackedVector2Array } from '../../../resources/shapes/packedArray';
 import { useShadowCaster } from '../../../r3f/lighting2d/shadowCasterRegistry';
-import { OccluderPolygon2DCullMode } from '../../../godot/scene/lightOccluder2d';
 import type { LightOccluder2DProperties } from './types';
-import { parseOccluderCullMode } from './polygonShapes';
 import { godotPolylineToSegments } from '../../../r3f/gizmo/godotPolylineToSegments';
-import { boolSlotValue } from '../../../godot/variant/variantBool.js';
 
 export function LightOccluder2D({ node, children }: NodeComponentProps) {
   const properties = node.properties as LightOccluder2DProperties;
-  const sceneResources = useSceneResources();
   const drawsOutline = useGizmoDrawn('every-node');
   // A callback ref, not useRef, so the caster re-registers once the anchor exists:
   // an effect reading a ref would see null on the mount pass.
   const [anchor, setAnchor] = useState<THREE.Group | null>(null);
 
-  const occluderResource = useSubOrExtResource(properties.occluder, sceneResources)?.resource;
+  const { value: occluder } = useNodeResource(properties.occluder, OCCLUDER_POLYGON_2D);
 
-  const positions = useMemo(() => {
-    if (!occluderResource) return null;
-    const data = occluderResource.data;
-    if (!data.polygon) return null;
-    // Flat `[x0,y0,x1,y1,...]`, which godotPolylineToSegments pairs and Y-negates. A
-    // malformed literal is the linter's to report, not a throw through render.
-    let raw: Float32Array;
-    try {
-      raw = parsePackedVector2Array(data.polygon);
-    } catch {
-      warn(`[LightOccluder2D] unreadable occluder polygon: ${data.polygon}`);
-      return null;
-    }
-    const closed = boolSlotValue(data.closed) !== false;
-    return godotPolylineToSegments(raw, closed);
-  }, [occluderResource]);
-
-  const cullMode = useMemo(
-    () =>
-      occluderResource
-        ? parseOccluderCullMode(occluderResource.data.cull_mode)
-        : OccluderPolygon2DCullMode.DISABLED,
-    [occluderResource]
+  // Flat `[x0,y0,x1,y1,...]`, which godotPolylineToSegments pairs and Y-negates.
+  const positions = useMemo(
+    () => (occluder ? godotPolylineToSegments(occluder.polygon, occluder.isClosed) : null),
+    [occluder]
   );
 
   const caster = useMemo(
     () =>
-      anchor && positions
+      anchor && occluder && positions
         ? {
             segments: positions,
-            cullMode,
+            cullMode: occluder.cullMode,
             occluderLightMask: properties.occluder_light_mask,
             object: anchor as THREE.Object3D,
           }
         : null,
-    [anchor, positions, cullMode, properties.occluder_light_mask]
+    [anchor, positions, occluder, properties.occluder_light_mask]
   );
   useShadowCaster(caster);
 

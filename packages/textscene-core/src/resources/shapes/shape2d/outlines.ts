@@ -3,8 +3,8 @@
  * The loop closes implicitly: the last point joins the first.
  */
 
-import type { Vector2 } from '../../../../godot/math/vector';
-import { TAU } from '../../../../godot/math/math.js';
+import type { Vector2 } from '../../../godot/math/vector';
+import { TAU } from '../../../godot/math/math.js';
 
 const CIRCLE_SEGMENTS = 32;
 const CAPSULE_CAP_SEGMENTS = 16;

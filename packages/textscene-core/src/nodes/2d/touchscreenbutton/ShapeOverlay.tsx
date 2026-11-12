@@ -8,7 +8,8 @@ import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useGodotLinearColor } from '../../../r3f/godotColor';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useSubOrExtResource } from '../../../resources/useSubOrExtResource';
+import { useNodeResource } from '../../../resources/reading';
+import { SHAPE_2D } from '../../../resources/shapes/shape2d';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { CollisionGizmo2D } from '../../physics/2d/collisionshape2d/CollisionGizmo2D';
 import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../physics/shared/debugColor';
@@ -17,7 +18,7 @@ import type { TouchScreenButtonProperties } from './types';
 export function ShapeOverlay({ props }: { props: TouchScreenButtonProperties }) {
   const sceneResources = useSceneResources();
   const { showCollisions } = useViewportMode();
-  const shape = useSubOrExtResource(props.shape, sceneResources)?.resource;
+  const shape = useNodeResource(props.shape, SHAPE_2D);
   const { texture } = useTexture2D(
     props.texture_normal,
     sceneResources.externalResources,
@@ -25,14 +26,14 @@ export function ShapeOverlay({ props }: { props: TouchScreenButtonProperties }) 
   );
   const color = useGodotLinearColor(DEFAULT_COLLISION_DEBUG_COLOR);
 
-  if (!showCollisions || !props.shape_visible || !shape) return null;
+  if (!showCollisions || !props.shape_visible || !shape.value) return null;
 
   // The centre is the texture's own half size, and only a valid `texture_normal` has one (cpp:158-160).
   const image = texture?.image as { width: number; height: number } | undefined;
   const centre = props.shape_centered && image ? { x: image.width / 2, y: image.height / 2 } : { x: 0, y: 0 };
   return (
     <CanvasItemGroup position={[centre.x, -centre.y, 0]}>
-      <CollisionGizmo2D shape={shape} color={color} />
+      <CollisionGizmo2D outline={shape.value} color={color} />
     </CanvasItemGroup>
   );
 }

@@ -34,9 +34,6 @@ const LAYER = new Set([
  * Where several issues lower the count of one file, the entry names the last of them.
  */
 const UNMOVED = new Map([
-  ['nodes/2d/lightoccluder2d/Component.tsx', { calls: 1, issue: 1693 }],
-  ['nodes/2d/navigationregion2d/Component.tsx', { calls: 1, issue: 1693 }],
-  ['nodes/2d/touchscreenbutton/ShapeOverlay.tsx', { calls: 1, issue: 1693 }],
   ['nodes/2d/ui/textedit/Component.tsx', { calls: 1, issue: 1697 }],
   ['nodes/3d/csg/csgmesh3d/csgGeometry.ts', { calls: 5, issue: 1685 }],
   ['nodes/3d/csg/csgmesh3d/meshSurfaces.ts', { calls: 2, issue: 1685 }],
@@ -53,7 +50,6 @@ const UNMOVED = new Map([
   ['nodes/3d/worldenvironment/useResolvedEnvironment.ts', { calls: 3, issue: 1517 }],
   ['nodes/animation/animationplayer/animationResolver.ts', { calls: 5, issue: 1682 }],
   ['nodes/animation/animationtree/treeResources.ts', { calls: 1, issue: 1682 }],
-  ['nodes/physics/2d/collisionshape2d/Component.tsx', { calls: 1, issue: 1693 }],
   ['nodes/physics/3d/collisionshape3d/Component.tsx', { calls: 1, issue: 1694 }],
   ['nodes/physics/3d/shapecast3d/Component.tsx', { calls: 1, issue: 1694 }],
   ['nodes/shared/cpuparticles/sceneResources.ts', { calls: 2, issue: 1695 }],
