@@ -71,6 +71,8 @@ Strict parsing also checks all 96 properties of a ParticleProcessMaterial `[sub_
 
 The frozen pose sits at Godot's own `preprocess` moment, else at one `lifetime`, or half of it for a `one_shot`. The step is `1 / fixed_fps`, or `1 / 30` for `fixed_fps = 0`, and the last step overshoots, as the engine's loop does. `speed_scale` never moves the pose, because the engine's settle runs at a speed scale of 1 (`particles_storage.cpp:1555-1563`). `draw_passes` draws each pass up to four, with its own materials, and `material_override` and `material_overlay` draw on every instance. A particle past its lifetime, or above `amount_ratio`, draws nothing, and neither does an emitter that is not emitting.
 
+`draw_order` draws the particles by index or by lifetime from the system phase. REVERSE_LIFETIME draws the newest first, and VIEW_DEPTH draws far to near along the camera. `transform_align` turns each particle's basis to face the camera, to follow its velocity, or both. The copy reads the camera that renders, so a moved camera copies the instances again. A `transform_align` of 4 (LOCAL_BILLBOARD) keeps DISABLED, because Godot 4.6.3 refuses it.
+
 With `local_coords` false the particles sit in world space, so gravity acts along the world axes. With `local_coords` true they follow the node.
 
 The scene cull measures an emitter by `visibility_aabb`. The selection box and the editor framing leave the particles out, as Godot's `get_aabb` does.
@@ -93,7 +95,8 @@ Godot's billboard icon marks the origin of every emitter, faint while it is not 
 - **Approximated** An emitter without `use_fixed_seed` takes a fixed constant seed, so its particles sit in plausible places where Godot randomises them on every run.
 - **Not drawn** An emitter with an emission shape of `POINTS` or `DIRECTED_POINTS` draws no particle, because the emission texture is not read.
 - **Missing** The process material's curves, ramps, hue variation, angle, orbit, damping, radial and directional velocity, turbulence and flags are not read.
-- **Missing** `draw_order`, `transform_align`, trails and sub-emitters are not read, so the particles draw in index order with their own basis.
+- **Missing** Trails and sub-emitters are not read, so each particle draws once, with no history.
+- **Needs runtime** `interpolate` moves each particle by the frame remainder of a running game, which no still frame holds.
 - **Missing** Attractors and collision nodes do not move the particles.
 - **Shader missing** A ShaderMaterial as the `process_material` is not translated, so the emitter draws no particle.
 - **Approximated** An `amount` times settle steps above 2,000,000 draws every nth particle, each where Godot puts it, so the main thread stays free.

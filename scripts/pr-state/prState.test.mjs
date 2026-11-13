@@ -4,9 +4,10 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parsePullRequest, prStateReport } from './prState.mjs';
+import { parseCheckRuns, parsePullRequest, prStateReport, unownedLimitLines } from './prState.mjs';
 
 const HEAD = { sha: '55a649fd0000000000000000000000000000beef', branch: 'claude/y-sort' };
+const SHEET = 'packages/textscene-core/src/nodes/control/comparison.md';
 const BASE = { ref: 'origin/main', sha: '97c833d0000000000000000000000000000cafe' };
 
 /** A report over `change`, with a head and a base that no case reads unless it names them. */
@@ -19,6 +20,20 @@ function reportOf(change) {
     unkeptTestOnlyExports: [],
     ...change,
   });
+}
+
+/** A pull request at the local head and on the local base, so no case reads a warning unless it names another. */
+function pullRequestWith(fields = {}) {
+  return {
+    number: 7,
+    draft: true,
+    mergeableState: 'clean',
+    headSha: HEAD.sha,
+    baseBranch: 'main',
+    body: '',
+    checks: [],
+    ...fields,
+  };
 }
 
 /** A `git diff -U0` section that adds `lines` to `path` from `firstLine` on. */
@@ -209,34 +224,199 @@ describe('prStateReport', () => {
   });
 
   it('gives the pull request state, and says when its head is not the local head (error path)', () => {
-    const pullRequest = { number: 1448, draft: true, mergeableState: 'unstable', headSha: 'fc7d2f5a' };
-    const report = reportOf({ pullRequest });
+    const report = reportOf({
+      pullRequest: pullRequestWith({ number: 1448, mergeableState: 'unstable', headSha: 'fc7d2f5a' }),
+    });
     expect(report).toContain('- Pull request #1448: draft, mergeable state `unstable`');
     expect(report).toContain('Its head is `fc7d2f5a`, not the local head. Push or pull first.');
   });
 
   it('leaves the head warning out when the pull request is at the local head', () => {
-    const report = reportOf({
-      pullRequest: { number: 7, draft: false, mergeableState: 'clean', headSha: HEAD.sha },
-    });
+    const report = reportOf({ pullRequest: pullRequestWith({ draft: false }) });
     expect(report).toContain('- Pull request #7: ready, mergeable state `clean`');
     expect(report).not.toContain('not the local head');
+  });
+
+  it('says when the pull request has another base than the report (error path)', () => {
+    const report = reportOf({ pullRequest: pullRequestWith({ baseBranch: 'feature/tsl' }) });
+    expect(report).toContain(
+      '- Its base is `feature/tsl`, not `origin/main`. Pass `--base origin/feature/tsl`.'
+    );
+    expect(reportOf({ pullRequest: pullRequestWith() })).not.toContain('Its base is');
+  });
+
+  it('counts the checks of the pull request head by result, and lists each that has not passed', () => {
+    const checks = [
+      { name: 'CI passed', result: 'in_progress' },
+      { name: 'Unit tests (1/4)', result: 'success' },
+      { name: 'Unit tests (2/4)', result: 'failure' },
+      { name: 'Unit tests (3/4)', result: 'success' },
+      { name: 'Visual regression (1/12)', result: 'skipped' },
+    ];
+    const report = reportOf({ pullRequest: pullRequestWith({ checks }) });
+    expect(report).toContain('- Checks on its head: 1 in_progress, 2 success, 1 failure, 1 skipped');
+    expect(report).toContain(
+      ['## Checks not passed (2)', '', '- `CI passed`: in_progress', '- `Unit tests (2/4)`: failure'].join(
+        '\n'
+      )
+    );
+  });
+
+  it('says when the pull request head has no check (edge case)', () => {
+    const report = reportOf({ pullRequest: pullRequestWith() });
+    expect(report).toContain('- Checks on its head: none');
+    expect(report).toContain('## Checks not passed (0)\n\nNone.');
+  });
+
+  it('lists a limit line whose file the pull request body gives no owner (error path)', () => {
+    const report = reportOf({
+      diff: additions(SHEET, 12, ['- Known limitation: a Control-only viewport stays in scene order.']),
+      pullRequest: pullRequestWith({ body: 'Sorts Controls by y.' }),
+    });
+    expect(report).toContain(
+      [
+        '## Limit lines with no owner in the pull request body (1)',
+        '',
+        '- `packages/textscene-core/src/nodes/control/comparison.md:12` - Known limitation: a Control-only viewport stays in scene order.',
+      ].join('\n')
+    );
+  });
+
+  it('leaves the owner sections out of a report with no pull request', () => {
+    const report = reportOf({ diff: additions(SHEET, 12, ['- Approximated: the shadow penumbra.']) });
+    expect(report).not.toContain('Limit lines with no owner');
+    expect(report).not.toContain('Checks');
+  });
+});
+
+describe('unownedLimitLines', () => {
+  const diff = additions(SHEET, 12, ['- Approximated: the shadow penumbra.', '- The Label draws its text.']);
+  const unownedWith = (body) => unownedLimitLines({ diff, pullRequest: pullRequestWith({ body }) });
+
+  it('gives each added limit line when the body names no file', () => {
+    expect(unownedWith('Sorts Controls by y.')).toEqual([
+      { path: SHEET, line: 12, text: '- Approximated: the shadow penumbra.' },
+    ]);
+  });
+
+  it('takes an issue number beside the file name as the owner', () => {
+    expect(unownedWith('- `control/comparison.md`: the penumbra is approximated. Owner #1444.')).toEqual([]);
+  });
+
+  it('takes the words "no issue" beside the file name as the reason for no owner', () => {
+    expect(unownedWith('- `control/comparison.md`: glyph edge polish, no issue.')).toEqual([]);
+  });
+
+  it('takes no owner from a line that names the file alone (edge case)', () => {
+    expect(unownedWith('- `control/comparison.md`: the penumbra is approximated.')).toHaveLength(1);
+  });
+
+  it('takes no owner from a line that names another sheet (edge case)', () => {
+    expect(unownedWith('- `label/comparison.md`: glyph edges. Owner #1442.')).toHaveLength(1);
+  });
+
+  it('takes no owner from a sheet whose directory name ends on the directory of the file (edge case)', () => {
+    expect(unownedWith('- `rangecontrol/comparison.md`: the grabber. Owner #1442.')).toHaveLength(1);
+  });
+
+  it('takes the whole path of the file as its name', () => {
+    expect(unownedWith(`- ${SHEET}: the penumbra is approximated. Owner #1444.`)).toEqual([]);
+  });
+
+  it('takes the file name that ends a sentence', () => {
+    expect(unownedWith('Owner #1444 has the penumbra of control/comparison.md.')).toEqual([]);
+  });
+
+  it('takes the link of an issue beside the file name as the owner', () => {
+    const body = '- `control/comparison.md`: https://github.com/godot/sheets/issues/1444';
+    expect(unownedWith(body)).toEqual([]);
+  });
+
+  it('takes no owner for a file at the root from a file of that name in a directory (edge case)', () => {
+    const rootDiff = additions('REVIEW.md', 3, ['Not supported: a review of a binary file.']);
+    const body = '`docs/REVIEW.md`: the workflow fetches no binary patch, no issue.';
+    expect(unownedLimitLines({ diff: rootDiff, pullRequest: pullRequestWith({ body }) })).toHaveLength(1);
+  });
+
+  it('takes the file name alone for a file at the root', () => {
+    const rootDiff = additions('REVIEW.md', 3, ['Not supported: a review of a binary file.']);
+    const body = '`REVIEW.md`: the workflow fetches no binary patch, no issue.';
+    expect(unownedLimitLines({ diff: rootDiff, pullRequest: pullRequestWith({ body }) })).toEqual([]);
+  });
+
+  it('gives a comment that records a limit, and no code that holds the same words (edge case)', () => {
+    const codeDiff = additions('a.ts', 1, [
+      '// Not supported: a nested sort.',
+      "throw new Error('unsupported format');",
+    ]);
+    expect(unownedLimitLines({ diff: codeDiff, pullRequest: pullRequestWith() })).toEqual([
+      { path: 'a.ts', line: 1, text: '// Not supported: a nested sort.' },
+    ]);
+  });
+
+  it('gives no line that only defers work (edge case)', () => {
+    const todoDiff = additions('a.ts', 1, ['// TODO: merge the nested sort']);
+    expect(unownedLimitLines({ diff: todoDiff, pullRequest: pullRequestWith() })).toEqual([]);
   });
 });
 
 describe('parsePullRequest', () => {
-  it('reads the draft state, the merge state and the head of a GitHub pull request', () => {
+  it('reads the draft state, the merge state, the head and the body of a GitHub pull request', () => {
     const json = JSON.stringify({
       number: 1448,
       draft: true,
       mergeable_state: 'unstable',
       head: { sha: 'fc7d2f5a' },
+      base: { ref: 'main' },
+      body: 'Sorts Controls by y.',
     });
     expect(parsePullRequest(json)).toEqual({
       number: 1448,
       draft: true,
       mergeableState: 'unstable',
       headSha: 'fc7d2f5a',
+      baseBranch: 'main',
+      body: 'Sorts Controls by y.',
     });
+  });
+
+  it('reads the body GitHub gives as null as an empty body (edge case)', () => {
+    const json = JSON.stringify({
+      number: 7,
+      draft: false,
+      mergeable_state: 'clean',
+      head: { sha: 'a' },
+      base: { ref: 'main' },
+      body: null,
+    });
+    expect(parsePullRequest(json).body).toBe('');
+  });
+});
+
+describe('parseCheckRuns', () => {
+  it('reads the name and the result of each check, one tab-separated line for each run', () => {
+    const tsv =
+      'CI passed\tsuccess\t2026-11-13T01:20:00Z\nUnit tests (2/4)\tin_progress\t2026-11-13T01:21:00Z\n';
+    expect(parseCheckRuns(tsv)).toEqual([
+      { name: 'CI passed', result: 'success' },
+      { name: 'Unit tests (2/4)', result: 'in_progress' },
+    ]);
+  });
+
+  it('keeps the latest run of a check that ran more than once', () => {
+    const tsv = [
+      'Review\tsuccess\t2026-11-13T01:25:00Z',
+      'Review\tskipped\t2026-11-13T01:20:00Z',
+      'Unit tests (1/4)\tfailure\t2026-11-13T01:20:00Z',
+      'Unit tests (1/4)\tsuccess\t2026-11-13T01:40:00Z',
+    ].join('\n');
+    expect(parseCheckRuns(tsv)).toEqual([
+      { name: 'Review', result: 'success' },
+      { name: 'Unit tests (1/4)', result: 'success' },
+    ]);
+  });
+
+  it('reads no check from an empty answer (edge case)', () => {
+    expect(parseCheckRuns('')).toEqual([]);
   });
 });

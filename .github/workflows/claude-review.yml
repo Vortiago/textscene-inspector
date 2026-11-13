@@ -6,6 +6,10 @@ name: Claude review
 #
 # A review spends the repository owner's usage, so only the owner starts one:
 # - The owner's own pull request gets one review when it is ready, not one per push.
+# - The `claude-review` label starts a review of the owner's draft, so that ready means reviewed.
+#   A pull request that carries the label gets no review when it opens, reopens or turns ready,
+#   whoever added the label: the event does not say. Remove the label and add it again for
+#   another review.
 # - The owner comments `/claude-review` on any pull request, a fork's included, to ask for a
 #   review or for another one.
 #
@@ -17,7 +21,7 @@ name: Claude review
 # Dependabot updates the pin and its version comment together.
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [opened, reopened, ready_for_review, labeled]
   issue_comment:
     types: [created]
 
@@ -29,10 +33,18 @@ jobs:
     name: Review
     # A fork's pull_request run gets no secrets, and a comment run reads this file from the
     # default branch, so a pull request cannot start a review by editing this condition.
+    # Only the `claude-review` label starts a review among the labels, and only when the owner
+    # adds it: the labeler workflow adds an area label to every pull request.
     if: >-
       (github.event_name == 'pull_request' &&
-       !github.event.pull_request.draft &&
-       github.event.pull_request.user.login == github.repository_owner) ||
+       github.event.pull_request.user.login == github.repository_owner &&
+       ((github.event.action == 'labeled' &&
+         github.event.pull_request.state == 'open' &&
+         github.event.label.name == 'claude-review' &&
+         github.event.sender.login == github.repository_owner) ||
+        (github.event.action != 'labeled' &&
+         !github.event.pull_request.draft &&
+         !contains(github.event.pull_request.labels.*.name, 'claude-review')))) ||
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request &&
        github.event.comment.user.login == github.repository_owner &&
@@ -109,7 +121,7 @@ jobs:
           socat -V > /dev/null
 
       - id: claude
-        uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe # v1.0.269
+        uses: anthropics/claude-code-action@9eb012b6d0900c2b9eede65ee1758cec4d2973e9 # v1.0.270
         env:
           # Strips every credential from a subprocess. Claude runs none, so this guards a
           # later change that hands it a command.

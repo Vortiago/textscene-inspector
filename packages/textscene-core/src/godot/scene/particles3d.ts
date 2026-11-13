@@ -20,7 +20,7 @@ export const CPUParticles3DDrawOrder = {
 export const CPU_PARTICLES_3D_DRAW_ORDER_NAMES = enumNamesByValue(CPUParticles3DDrawOrder);
 
 /** `GPUParticles3D::DrawOrder` (`scene/3d/gpu_particles_3d.h:41-46`). */
-const GpuDrawOrder = {
+export const GpuDrawOrder = {
   INDEX: 0,
   LIFETIME: 1,
   REVERSE_LIFETIME: 2,
@@ -79,7 +79,7 @@ export const PARTICLE_COLLISION_MODE_NAMES = enumNamesByValue(CollisionMode);
  * and refuses the rest with `ERR_FAIL_INDEX(uint32_t(p_align), 4)` (`gpu_particles_3d.cpp:630`);
  * 4.7.2 assigns bare, so a scene that stores `LOCAL_BILLBOARD` loads.
  */
-const GpuTransformAlign = {
+export const GpuTransformAlign = {
   DISABLED: 0,
   Z_BILLBOARD: 1,
   Y_TO_VELOCITY: 2,
