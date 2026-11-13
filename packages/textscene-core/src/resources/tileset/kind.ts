@@ -14,7 +14,7 @@ import { decodeSceneCollectionSource } from './sceneCollection';
 import type { AtlasSourceModel, SceneCollectionSourceModel, TileSetModel } from './types';
 
 /** A TileSet source, by its class. */
-export type TileSetSource =
+type TileSetSource =
   | { readonly form: 'atlas'; readonly atlas: AtlasSourceModel }
   | { readonly form: 'scenes'; readonly scenes: SceneCollectionSourceModel };
 
@@ -32,7 +32,7 @@ const SOURCES: Readonly<Record<string, SourceDecode>> = {
 };
 
 /** A TileSetAtlasSource or a TileSetScenesCollectionSource. Another class answers `wrong-type`. */
-export const TILE_SET_SOURCE: ResourceKind<TileSetSource> = {
+const TILE_SET_SOURCE: ResourceKind<TileSetSource> = {
   name: 'TileSetSource',
   accepts: (type) => Object.hasOwn(SOURCES, type),
   decode: (held, follow) => SOURCES[held.type]!(held, follow),
