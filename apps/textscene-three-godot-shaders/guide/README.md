@@ -11,6 +11,7 @@ Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20
 ## Chapters
 
 - [Float and vector arithmetic](float-arithmetic.md): Float literals, `+` (OP_ADD), `-` (OP_SUB), `*` (OP_MUL), `/` (OP_DIV), Negation `-a` (OP_NEGATE), Vector constructors, Swizzles.
+- [How the tests check the transpiler against Godot](testing.md): every operator rule, random programs and a corpus of real shaders.
 
 ## Coverage by family
 

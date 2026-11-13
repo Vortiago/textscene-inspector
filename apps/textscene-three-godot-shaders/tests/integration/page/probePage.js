@@ -20,14 +20,22 @@ const scene = new THREE.Scene();
 scene.add(quad);
 
 /**
+ * The first value of each uniform array, before the inputs. three's upload takes an array whose
+ * first value is NaN for an array of vectors (`flatten`, three 0.187 `three.module.js:4815`) and
+ * throws, so an input row that starts with NaN needs a number before it.
+ */
+const LEADING_PAD = 0;
+
+/**
  * The argument node of a parameter, read from a uniform array of the floats of its `bits`. Floats,
  * not uints: three writes every uniform buffer through a `Float32Array`, so a uint over 2^24
  * reaches the GPU rounded, while a float keeps its bits, -0 and NaN included.
  */
 function argument(type, bits, row) {
-  const values = uniformArray(Array.from(new Float32Array(new Uint32Array(bits).buffer)), 'float');
+  const floats = Array.from(new Float32Array(new Uint32Array(bits).buffer));
+  const values = uniformArray([LEADING_PAD, ...floats], 'float');
   const size = LANES[type];
-  const lanes = Array.from({ length: size }, (_, lane) => values.element(row.mul(size).add(lane)));
+  const lanes = Array.from({ length: size }, (_, lane) => values.element(row.mul(size).add(lane + 1)));
   return size === 1 ? lanes[0] : CONSTRUCT[type](...lanes);
 }
 

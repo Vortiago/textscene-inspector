@@ -9,6 +9,7 @@ import { godotShader } from '../../apps/textscene-three-godot-shaders/tests/e2e/
 import { floatOfBits } from '../../apps/textscene-three-godot-shaders/tests/probes/inputs.mjs';
 import { LANE_COUNT, probeSignature } from '../godot-probes/probeShader.mjs';
 import { owningIssue } from './renderTable.mjs';
+import { TESTING_FILE } from './renderTestingGuide.mjs';
 
 /** The most input rows a section shows of a probe, so a table stays short. */
 const SAMPLE_ROWS = 8;
@@ -250,6 +251,7 @@ ${driversNote(record)}
 ## Chapters
 
 ${chapterLines.join('\n')}
+- [How the tests check the transpiler against Godot](${TESTING_FILE}): every operator rule, random programs and a corpus of real shaders.
 
 ## Coverage by family
 
