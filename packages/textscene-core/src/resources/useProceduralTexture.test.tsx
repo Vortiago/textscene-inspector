@@ -15,7 +15,7 @@ import { createFakeResourceLoader, withJobRunner } from './testing/createFakeRes
 import { resetProceduralTextures, type JobRunner } from './textures/proceduralBuilds';
 import { textureWork } from './textures/textureWork';
 import { proceduralTexture2D, proceduralTexture3D } from './textures/resolveProceduralTexture';
-import { TEXTURE_2D } from './textures/texture2d/kind';
+import { texture2DSourceAt } from './textures/texture2d/texture2DSource.testkit';
 import { TEXTURE_3D } from './textures/texture3d/kind';
 import { useProceduralTexture, useProceduralTexturePins, type ProceduralSlot } from './useProceduralTexture';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds';
@@ -55,10 +55,7 @@ height = 4
 
 /** The lookup of the Texture2D `ref` names in tables written as `sceneText`, freshly decoded. */
 function lookupOf(ref: string, sceneText = SCENE): ProceduralTextureLookup | null {
-  const texture = loadedValue(TEXTURE_2D, ref, sceneText);
-  if (texture.form === 'canvas' || texture.form === 'atlas')
-    throw new Error(`expected a source, got ${texture.form}`);
-  return proceduralTexture2D(texture);
+  return proceduralTexture2D(texture2DSourceAt(ref, sceneText));
 }
 
 function strict({ children }: { children: ReactNode }) {

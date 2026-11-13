@@ -48,8 +48,8 @@ arrived) or `unavailable` with a reason.
   a scene and from a file.
 - A decode that hands on a reference with `Follow.reference` gets a new value when the holder's
   tables are a new object, because the reference holds them.
-- An image file the loader imports reads as a held resource of the class `IMPORTED_FILE`, with
-  the file as its address. `TEXTURE_2D` and `TEXTURE_3D` decode it to the path, and the texture
-  hook loads the pixels. So a resource file is legal at every position of a Texture2D chain.
+- A file the loader imports, not parses, reads as a held resource of the class `IMPORTED_FILE`,
+  with the file as its address. `TEXTURE_2D` and `TEXTURE_3D` decode an image file to its path,
+  and the texture hook loads the pixels. So a resource file is legal at every position of a Texture2D chain.
 - A read of a value that a loader processor builds (a font, an ArrayMesh, pixels) is not part of
   the module yet. It lands with its first kind.

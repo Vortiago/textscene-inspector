@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Read } from '../../reading';
-import { sceneTables } from '../../reading/reading.testkit';
+import { loadedValue, sceneTables } from '../../reading/reading.testkit';
 import { nodeReference, referenceHeldBy } from '../../reading/scopedReference';
 import { staticSnapshot } from '../../reading/staticSnapshot.testkit';
 import { TEXTURE_2D } from './kind';
@@ -61,7 +61,7 @@ function inline(chain: readonly ChainResource[]): Texture2D {
   );
   const outer = chain.at(-1)!;
   const ref = isImported(outer) ? `ExtResource("${outer.id}")` : `SubResource("${outer.id}")`;
-  return loaded(`${[...extLines, ...sections].join('\n\n')}\n`, ref, {});
+  return loadedValue(TEXTURE_2D, ref, `${[...extLines, ...sections].join('\n\n')}\n`, {});
 }
 
 /** The value the chain's last resource decodes to, every resource in a `.tres` of its own. */
@@ -74,13 +74,7 @@ function eachInItsOwnFile(chain: readonly ChainResource[]): Texture2D {
     )}\n\n[resource]\n${bodyWith(resource, chain, () => true)}\n`;
   }
   const outer = chain.at(-1)!;
-  return loaded(extResourceLine(outer), `ExtResource("${outer.id}")`, files);
-}
-
-function loaded(scene: string, ref: string, files: Record<string, string>): Texture2D {
-  const read = staticSnapshot(files).read(nodeReference(ref, sceneTables(scene)), TEXTURE_2D);
-  if (read.status !== 'loaded') throw new Error(`expected the Texture2D to load, got ${read.status}`);
-  return read.value;
+  return loadedValue(TEXTURE_2D, `ExtResource("${outer.id}")`, extResourceLine(outer), files);
 }
 
 /**
@@ -228,6 +222,15 @@ describe('TEXTURE_2D of a texture that draws nothing', () => {
     ],
   ])('cannot decode %s', (_name, scene) => {
     expect(readOf(scene, 'SubResource("t")')).toMatchObject({ status: 'unavailable', reason: 'undecodable' });
+  });
+
+  it('cannot decode an imported file that is no image', () => {
+    const scene = '[ext_resource type="PackedScene" path="res://mesh.glb" id="1_mesh"]\n';
+
+    expect(readOf(scene, 'ExtResource("1_mesh")')).toMatchObject({
+      status: 'unavailable',
+      reason: 'undecodable',
+    });
   });
 
   it('refuses a resource that is no Texture2D', () => {

@@ -16,8 +16,6 @@ export interface PeeledTexture2D {
   readonly canvasTexture: CanvasTextureMaps | null;
   /** The first CanvasTexture between the AtlasTexture and its source. */
   readonly sheetCanvasTexture: CanvasTextureMaps | null;
-  /** Whether a CanvasTexture sits anywhere on the way. */
-  readonly namesCanvasTexture: boolean;
 }
 
 /**
@@ -35,7 +33,6 @@ export function peelTexture2D(read: Read<Texture2D>): PeeledTexture2D {
     atlas,
     canvasTexture,
     sheetCanvasTexture,
-    namesCanvasTexture: canvasTexture !== null || sheetCanvasTexture !== null,
   });
   while (current.status === 'loaded') {
     const layer = current.value;

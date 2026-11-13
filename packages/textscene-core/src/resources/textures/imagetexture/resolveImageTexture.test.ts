@@ -5,14 +5,12 @@ import { applyTextureFilterState, godotTextureFilterState } from '../godotTextur
 import { resetProceduralTextures } from '../proceduralBuilds';
 import type { TextureLevel } from '../texelTexture';
 import type { SavedImage } from '../image/kind';
+import { savedImage } from '../image/savedImage.testkit';
 import { imageTexture } from './resolveImageTexture';
 
 /** An `Image` that saves its levels. */
-function mipmappedImage(format: string, size: number[], bytes: number[]): SavedImage {
-  const [width, height] = size;
-  return {
-    dictionary: `{\n"data": PackedByteArray(${bytes.join(', ')}),\n"format": "${format}",\n"height": ${height},\n"mipmaps": true,\n"width": ${width}\n}`,
-  };
+function mipmappedImage(format: string, [width, height]: number[], bytes: number[]): SavedImage {
+  return savedImage(format, width!, height!, bytes.join(', '), true);
 }
 
 /** 4 x 4 over 2 x 2 over 1 x 1 of Red8, counting up from 0 so each texel names its place in the bytes. */
@@ -23,16 +21,15 @@ const COUNTED = mipmappedImage(
 );
 
 /** A 1x2 RGB8 image: a red top row over a blue bottom row. */
-const RED_OVER_BLUE: SavedImage = {
-  dictionary:
-    '{\n"data": PackedByteArray(255, 0, 0, 0, 0, 255),\n"format": "RGB8",\n"height": 2,\n"mipmaps": false,\n"width": 1\n}',
-};
+const RED_OVER_BLUE = savedImage('RGB8', 1, 2, '255, 0, 0, 0, 0, 255');
 
 /** One 1x1 DXT5 block: alpha endpoints 40 and 200 with index 0 at the texel, over white. */
-const DXT5: SavedImage = {
-  dictionary:
-    '{\n"data": PackedByteArray(40, 200, 136, 198, 250, 136, 198, 250, 255, 255, 0, 0, 0, 0, 0, 0),\n"format": "DXT5 RGBA8",\n"height": 1,\n"mipmaps": false,\n"width": 1\n}',
-};
+const DXT5 = savedImage(
+  'DXT5 RGBA8',
+  1,
+  1,
+  '40, 200, 136, 198, 250, 136, 198, 250, 255, 255, 0, 0, 0, 0, 0, 0'
+);
 
 afterEach(() => {
   resetProceduralTextures();

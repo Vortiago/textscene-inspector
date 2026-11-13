@@ -240,7 +240,7 @@ _Avoid_: a bare reference string handed past the tables it belongs to.
 
 **Held resource** (`HeldResource`, `resources/reading/read.ts`):
 A resource as a decode receives it: its class, its raw property strings, its address, and how it is held. It exposes no table, so a decode reads a nested reference only through `Follow`.
-An image file the loader imports is held as the class `IMPORTED_FILE`, with no properties and the file as its address.
+A file the loader imports, not parses (an image, a mesh), is held as the class `IMPORTED_FILE`, with no properties and the file as its address.
 _Avoid_: "scoped resource" for this. A `ScopedResource` carries the tables.
 
 **Resource kind** (`ResourceKind`, `resources/reading/read.ts`):

@@ -6,11 +6,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../logger';
 import type * as THREE from 'three';
-import { loadedValue } from '../reading/reading.testkit';
 import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import { resetProceduralTextures } from './proceduralBuilds';
 import { proceduralTexture2D } from './resolveProceduralTexture';
-import { TEXTURE_2D } from './texture2d/kind';
+import { texture2DSourceAt } from './texture2d/texture2DSource.testkit';
 
 /** What each mocked rasteriser throws, or null to run the real one. */
 const failure = vi.hoisted(() => ({ error: null as Error | null }));
@@ -68,10 +67,7 @@ height = 8
  * call rasterises. The noise cache keys on content, so `afterEach` clears it.
  */
 function lookupOf(ref: string, sceneText: string) {
-  const texture = loadedValue(TEXTURE_2D, ref, sceneText);
-  if (texture.form === 'canvas' || texture.form === 'atlas')
-    throw new Error(`expected a source, got ${texture.form}`);
-  return proceduralTexture2D(texture);
+  return proceduralTexture2D(texture2DSourceAt(ref, sceneText));
 }
 
 describe('GradientTexture2D allocation', () => {

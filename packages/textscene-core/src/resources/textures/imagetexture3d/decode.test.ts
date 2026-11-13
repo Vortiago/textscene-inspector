@@ -1,14 +1,10 @@
 /** An ImageTexture3D's saved slices, decoded to the volume's texels. */
 import { describe, expect, it } from 'vitest';
-import type { SavedImage } from '../image/kind';
+import { savedImage } from '../image/savedImage.testkit';
 import { decodeImageTexture3D, imageReferences } from './decode';
 
 /** A 1 x 1 Image of `format` that saves `bytes`. */
-function image(format: string, bytes: string): SavedImage {
-  return {
-    dictionary: `{\n"data": PackedByteArray(${bytes}),\n"format": "${format}",\n"height": 1,\n"mipmaps": false,\n"width": 1\n}`,
-  };
-}
+const image = (format: string, bytes: string) => savedImage(format, 1, 1, bytes);
 
 const DARK = image('Lum8', '63');
 const LIGHT = image('Lum8', '127');

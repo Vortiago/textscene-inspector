@@ -2,15 +2,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { resetProceduralTextures } from '../proceduralBuilds';
-import type { SavedImage } from '../image/kind';
+import { savedImage } from '../image/savedImage.testkit';
 import { imageTexture3D } from './resolveImageTexture3D';
 
 /** A 2 x 1 Image of `format` that saves `bytes`. */
-function image(format: string, bytes: string): SavedImage {
-  return {
-    dictionary: `{\n"data": PackedByteArray(${bytes}),\n"format": "${format}",\n"height": 1,\n"mipmaps": false,\n"width": 2\n}`,
-  };
-}
+const image = (format: string, bytes: string) => savedImage(format, 2, 1, bytes);
 
 const VOLUME = { form: 'image', images: [image('Lum8', '63, 63'), image('Lum8', '127, 127')] } as const;
 const HALF = { form: 'image', images: [image('RHalf', '0, 64, 0, 60')] } as const;

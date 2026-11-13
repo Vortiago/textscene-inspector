@@ -5,6 +5,7 @@
  */
 
 import { resolveViewportTexturePath } from '../../../r3f/viewportTexturePath';
+import { isTexturePath } from '../../formats/image/textureProcessing';
 import { IMPORTED_FILE, type Follow, type HeldResource, type ResourceKind } from '../../reading';
 import { decodeAtlasTexture } from '../atlastexture/decode';
 import { ATLAS_TEXTURE_TYPE } from '../atlastexture/types';
@@ -65,5 +66,7 @@ const LAYERS: Readonly<Record<string, LayerDecode>> = {
     viewportPath: resolveViewportTexturePath(held.properties.viewport_path),
     isSetUp: held.isHeldLocally && held.isLocalToScene,
   }),
-  [IMPORTED_FILE]: ({ address }) => (address === null ? null : { form: 'file', path: address }),
+  // Another imported file, a scene or a mesh, draws nothing here.
+  [IMPORTED_FILE]: ({ address }) =>
+    address && isTexturePath(address) ? { form: 'file', path: address } : null,
 };

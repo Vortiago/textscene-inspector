@@ -105,7 +105,7 @@ function shownTexture(
 }
 
 /**
- * Counts texture work while `isWorking`. A landed build leaves `builds` in the commit that
+ * Counts texture work while `isWorking`. A landed build stops being worked on in the commit that
  * shows its texture, where a draw site's upload starts, so the two effects run in one flush
  * and the count never reads zero between them.
  */
@@ -119,8 +119,7 @@ interface Landed {
 }
 
 /**
- * Holds every key resident while the caller is mounted, for a consumer with several procedural
- * slots. Keyed on the joined keys, not the array: an unpin and pin per render would flush the
+ * Holds every key resident while the caller is mounted. Keyed on the joined keys, not the array: an unpin and pin per render would flush the
  * disposals a pinned replace deferred. A key is `identity:typeName` or a content key, whose
  * JSON escapes every newline, so it holds none.
  */

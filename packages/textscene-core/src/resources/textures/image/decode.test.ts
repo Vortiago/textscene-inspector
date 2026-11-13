@@ -6,18 +6,7 @@ import * as logger from '../../../logger';
 import { parseTresFile } from '../../../parser/parsedResource';
 import { decodeImage, decodeMipmappedImage, savedImageSize } from './decode';
 import type { SavedImage } from './kind';
-
-function savedImage(
-  format: string,
-  width: number,
-  height: number,
-  bytes: string,
-  mipmaps: boolean | number
-): SavedImage {
-  return {
-    dictionary: `{\n"data": PackedByteArray(${bytes}),\n"format": "${format}",\n"height": ${height},\n"mipmaps": ${mipmaps},\n"width": ${width}\n}`,
-  };
-}
+import { savedImage } from './savedImage.testkit';
 
 function image(format: string, width: number, height: number, bytes: string): SavedImage {
   return savedImage(format, width, height, bytes, false);

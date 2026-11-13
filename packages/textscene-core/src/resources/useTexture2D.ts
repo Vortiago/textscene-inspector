@@ -3,7 +3,8 @@
  * `GradientTexture2D`, `NoiseTexture2D` or `ImageTexture`, each inline or saved as its own resource
  * file at any position of the chain, or a `ViewportTexture`'s live target. The `TEXTURE_2D` kind
  * reads the chain, and this builds the GPU texture from the decoded value. The texture's size is
- * Godot's size for the slot. `inlineTexture2DSize` sizes a slot outside React by the same rule.
+ * Godot's size for the slot. `inlineTexture2DSize` sizes a slot outside React from the scene's own
+ * tables only.
  */
 
 import { useMemo } from 'react';
@@ -235,7 +236,8 @@ function useTexture2DSlot(reference: ScopedReference | null, view: ViewportTextu
     () => peeled.canvasTexture ?? atlasCanvasTexture(peeled.sheetCanvasTexture, atlas, sheetSize),
     [peeled, atlas, sheetSize]
   );
-  const slot = { atlas, source, namesCanvasTexture: peeled.namesCanvasTexture, canvasTexture };
+  const namesCanvasTexture = peeled.canvasTexture !== null || peeled.sheetCanvasTexture !== null;
+  const slot = { atlas, source, namesCanvasTexture, canvasTexture };
 
   if (peeled.status !== 'loaded') {
     const result = {

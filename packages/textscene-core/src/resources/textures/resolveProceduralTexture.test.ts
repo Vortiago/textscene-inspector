@@ -3,12 +3,10 @@
  * paths use one walk, so a slice reaches every consumer.
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { loadedValue } from '../reading/reading.testkit';
 import { WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import { resetProceduralTextures } from './proceduralBuilds';
 import { proceduralTexture2D } from './resolveProceduralTexture';
-import { TEXTURE_2D } from './texture2d/kind';
-import type { Texture2DSource } from './texture2d/types';
+import { texture2DSourceAt } from './texture2d/texture2DSource.testkit';
 
 const SCENE = `[sub_resource type="Gradient" id="Gradient_a"]
 colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
@@ -30,13 +28,7 @@ noise = SubResource("FastNoiseLite_a")
 viewport_path = NodePath("SubViewport")
 `;
 
-/** The source of the pixels `ref` names in the scene. */
-function sourceAt(ref: string): Texture2DSource {
-  const texture = loadedValue(TEXTURE_2D, ref, SCENE);
-  if (texture.form === 'canvas' || texture.form === 'atlas')
-    throw new Error(`expected a source, got ${texture.form}`);
-  return texture;
-}
+const sourceAt = (ref: string) => texture2DSourceAt(ref, SCENE);
 
 const GRADIENT = sourceAt('SubResource("GradientTexture2D_a")');
 const NOISE = sourceAt('SubResource("NoiseTexture2D_a")');
