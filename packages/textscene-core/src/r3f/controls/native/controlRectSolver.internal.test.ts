@@ -9,7 +9,10 @@ import { heading } from '../../../parser/testing/parserKit';
 import { parseDialog } from '../../../nodes/windows/acceptdialog/parser';
 import { parseConfirmationDialog } from '../../../nodes/windows/confirmationdialog/parser';
 import { wrappedWindowSize } from '../../../nodes/windows/window/wrapControls';
+import { controlProps } from '../../../nodes/2d/ui/control/testing/controlProps';
 import { createSolveContext, solveControlTree } from './controlRectSolver';
+import { controlSolverRegistry } from './solverRegistry';
+import type { SolveNode } from './solveTree';
 import { nativeTheme } from './nativeTheme';
 import { measureText } from './text/measurer';
 import { solveNode, withThemeItems } from './testing/solveNode';
@@ -66,5 +69,38 @@ describe('the solve of a ConfirmationDialog', () => {
     expect(rectOf('@ButtonsHBox/@Spacer1')).toEqual(rect(93, 0, 26, 31));
     expect(rectOf('@ButtonsHBox/@OkButton')).toEqual(rect(123, 0, 31, 31));
     expect(rectOf('@ButtonsHBox/@Spacer2')).toEqual(rect(158, 0, 26, 31));
+  });
+});
+
+/** Calls of the probe's minimum size. A solve context computes each minimum once, so this counts passes. */
+let probeMinimumCalls = 0;
+controlSolverRegistry.registerMinimumSize('PassCountProbe', () => {
+  probeMinimumCalls += 1;
+  return { x: 0, y: 0 };
+});
+
+function passesOverDialog(lines: Record<string, string>): number {
+  const properties = parseDialog(heading('AcceptDialog', { name: 'Dialog' }), lines);
+  const node = { name: 'Dialog', type: 'AcceptDialog', children: [], properties } as unknown as TscnNode;
+  const probeNode = {
+    name: 'Probe',
+    type: 'PassCountProbe',
+    children: [],
+    properties: controlProps({ name: 'Probe' }),
+  };
+  const probe = { ...solveNode(), path: 'Dialog/Probe', node: probeNode as unknown as TscnNode } as SolveNode;
+  const dialog = withThemeItems({ ...solveNode(), path: 'Dialog', node, children: [probe] });
+  probeMinimumCalls = 0;
+  solveControlTree([dialog], rect(0, 0, 320, 200), createSolveContext(THEME, measureText));
+  return probeMinimumCalls;
+}
+
+describe('the passes of a dialog solve', () => {
+  it('solves a dialog whose message does not wrap in one pass', () => {
+    expect(passesOverDialog({ dialog_text: '"Delete?"' })).toBe(1);
+  });
+
+  it('solves a dialog whose message wraps in a second pass, at the width the first gave', () => {
+    expect(passesOverDialog({ dialog_text: '"Delete?"', dialog_autowrap: 'true' })).toBe(2);
   });
 });
