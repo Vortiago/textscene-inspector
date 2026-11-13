@@ -13,6 +13,12 @@ import { godotSpawnPlan } from '../godot-ref/run.mjs';
 /** The only Godot release the probes and showcases compare with: the transpiler follows its source. */
 const GODOT_VERSION = '4.6.3';
 
+/**
+ * The most output a run may print. Node's default of 1 MiB stops a run that reads the verdict on
+ * twenty thousand shaders, each refusal about 600 bytes of standard error.
+ */
+const OUTPUT_BYTES_AT_MOST = 256 * 1024 * 1024;
+
 /** Frames a main script draws before it reads its viewports: the first frames compile the pipelines. */
 export const FRAMES_BEFORE_READ = 4;
 
@@ -35,12 +41,6 @@ script = ExtResource("1")
 `;
 
 /**
- * Room for Godot's output: each probe prints its viewport's pixels as hex, and several hundred
- * probes pass the 1 MiB that `spawnSync` allows by default.
- */
-const MAX_OUTPUT_BYTES = 256 * 1024 * 1024;
-
-/**
  * Godot's standard output for a project whose one scene runs `mainScript`, beside `files` keyed
  * by their names in the project.
  * @canonical A scratch Godot project run once, its standard output read
@@ -60,7 +60,7 @@ export function runGodotScript(mainScript, files) {
       encoding: 'utf8',
       env: plan.env,
       timeout: plan.timeoutMs,
-      maxBuffer: MAX_OUTPUT_BYTES,
+      maxBuffer: OUTPUT_BYTES_AT_MOST,
     });
     if (result.error) throw new Error(`run godot: ${result.error.message}`);
     if (result.status !== 0) throw new Error(`godot exited with ${result.status}:\n${result.stderr}`);

@@ -5,7 +5,11 @@
  * place: Godot and the page render on the same lavapipe driver.
  */
 
+import { PROBE_TYPES, probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { hex } from '../../../../scripts/godot-probes/record.mjs';
+
+/** Whether `probe` returns floats, whose NaN lanes match whatever their payload. */
+export const isFloatResult = (probe) => PROBE_TYPES[probeSignature(probe.source).returns].scalar === 'float';
 
 /** The distance in units in the last place between two floats' bits, or Infinity across signs. */
 export function ulpDistance(a, b) {
