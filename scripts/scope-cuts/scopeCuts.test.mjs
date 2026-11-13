@@ -128,6 +128,21 @@ describe('unownedScopeCuts', () => {
     expect(unownedScopeCuts(doc)).toEqual([]);
   });
 
+  it('reads no cut from a quote: a rule that names the words of a cut puts no work off', () => {
+    const rule = lines(
+      '- A line that cuts scope names the open issue that owns it: "out of scope", "later", "follow-up",',
+      '  "not filed" or "host input".'
+    );
+
+    expect(unownedScopeCuts(rule)).toEqual([]);
+  });
+
+  it('reads a cut beside a quote: the words outside the quote still put work off', () => {
+    const doc = 'The "sky bake" pass is deferred.';
+
+    expect(unownedScopeCuts(doc)).toEqual([{ line: 1, text: doc }]);
+  });
+
   it('reads a `~~~` line inside a block of three backticks as code (edge case)', () => {
     const doc = lines('```', '~~~', 'The sky bake is deferred.', '```', '', 'The fog is deferred.');
 
@@ -161,9 +176,10 @@ describe('isScopeCutDocument', () => {
   it.each([
     'packages/textscene-core/src/nodes/2d/ui/label/comparison.md',
     'docs/comparison/sheets/complex-2d-gui.md',
+    'GLOSSARY.md',
     'apps/textscene-web/README.md',
     'docs/adr/template.txt',
-  ])('leaves a sheet, a document of a package and another file type out: %s', (path) => {
+  ])('leaves a sheet, the glossary, a document of a package and another file type out: %s', (path) => {
     expect(isScopeCutDocument(path)).toBe(false);
   });
 });

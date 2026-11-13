@@ -39,16 +39,6 @@ export const KNOWN_UNOWNED_CUTS = [
     reason: 'done since: each CSG type it names has a slice under `nodes/3d/csg/`',
   },
   {
-    path: 'docs/adr/0006-viewport-mode-seam.md',
-    startsWith: 'Out of scope: viewport picking inside the 2D world canvas.',
-    reason: NO_OWNER_FOUND_YET,
-  },
-  {
-    path: 'docs/adr/0008-invisible-render-intent.md',
-    startsWith: '- The 3D view does not signal an unsupported node type.',
-    reason: NO_OWNER_FOUND_YET,
-  },
-  {
     path: 'docs/adr/0011-animationplayer-drives-siblings-via-mixer.md',
     startsWith: '- The slice supports `value` tracks',
     reason: NO_OWNER_FOUND_YET,
@@ -74,18 +64,8 @@ export const KNOWN_UNOWNED_CUTS = [
     reason: NO_OWNER_FOUND_YET,
   },
   {
-    path: 'docs/adr/0019-animationtree-drives-via-driver-registry.md',
-    startsWith: '- **Full per-bone Blend2 `filter`s',
-    reason: NO_OWNER_FOUND_YET,
-  },
-  {
     path: 'docs/adr/0020-web-source-pane.md',
     startsWith: '4. **Linter surfaced as a gutter and popover.**',
-    reason: NO_OWNER_FOUND_YET,
-  },
-  {
-    path: 'docs/adr/0035-control-setter-order-gets-a-warning-not-yet-a-parser-fix.md',
-    startsWith: "`nodes/2d/ui/shared/range.ts`'s `resolveRangeValue` does the same",
     reason: NO_OWNER_FOUND_YET,
   },
   {

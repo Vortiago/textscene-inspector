@@ -22,18 +22,20 @@ const OPENS_CUT_LIST = /^(?:#{1,6}\s+)?\**out of scope\b[^:*]*:?\**:?$/i;
 
 const FENCE = /^\s*(```|~~~)/;
 const CODE_SPAN = /`[^`]*`/g;
+const QUOTE = /"[^"]*"/g;
 const HEADING = /^#{1,6}\s/;
 const LIST_ITEM = /^(\s*)(?:[-*+]|\d+\.)\s+/;
 const TABLE_ROW = /^\s*\|/;
 
 /**
  * Whether the scope cut rule reads the file at `path`: a Markdown document of the repository root
- * or under `docs/`. A comparison sheet is left out, because the limit lines of a sheet take their
- * owner from the pull request body.
+ * or under `docs/`. A comparison sheet and the glossary are left out: they carry no issue number,
+ * so the pull request body names the owner of their lines (ADR-0075).
  */
 export function isScopeCutDocument(path) {
   const isAtRootOrUnderDocs = !path.includes('/') || path.startsWith('docs/');
-  return path.endsWith('.md') && isAtRootOrUnderDocs && !isSheetPath(path);
+  const takesOwnerFromPullRequest = isSheetPath(path) || path === 'GLOSSARY.md';
+  return path.endsWith('.md') && isAtRootOrUnderDocs && !takesOwnerFromPullRequest;
 }
 
 /** The test for the line that ends the block `text` opens, or null when `text` opens no block. */
@@ -125,8 +127,8 @@ export function unownedScopeCuts(markdown) {
   let isInCutList = false;
   for (const block of blocksOf(markdown)) {
     const text = block.lines.join(' ');
-    // A code span holds a name, not a plan, so the words of a cut are read outside it. An owner counts inside it too.
-    const prose = text.replace(CODE_SPAN, '');
+    // A code span holds a name and a quote holds the words of another text, not a plan. An owner counts inside them too.
+    const prose = text.replace(CODE_SPAN, '').replace(QUOTE, '');
     if (opensCutList(block, prose)) {
       isInCutList = true;
       continue;
