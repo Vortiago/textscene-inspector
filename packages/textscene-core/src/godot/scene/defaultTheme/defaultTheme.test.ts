@@ -24,23 +24,50 @@ interface MeasuredTheme {
 
 /** The types the table holds. A type joins this list when its Controls read the table (ADR-0073). */
 const MIGRATED_TYPES = [
+  'BoxContainer',
   'Button',
   'CheckBox',
   'CheckButton',
   'ColorPickerButton',
   'FlatButton',
   'FlatMenuButton',
+  'FlowContainer',
+  'FoldableContainer',
   'GraphFrameTitleLabel',
   'GraphNodeTitleLabel',
+  'GridContainer',
+  'HBoxContainer',
+  'HFlowContainer',
+  'HScrollBar',
+  'HSeparator',
+  'HSlider',
+  'HSplitContainer',
   'HeaderLarge',
   'HeaderMedium',
   'HeaderSmall',
   'Label',
   'LinkButton',
+  'MarginContainer',
   'MenuBar',
   'MenuButton',
   'OptionButton',
+  'Panel',
+  'PanelContainer',
+  'PopupPanel',
+  'ProgressBar',
+  'ScrollContainer',
+  'SpinBox',
+  'SplitContainer',
+  'TabBar',
+  'TabContainer',
   'TooltipLabel',
+  'TooltipPanel',
+  'VBoxContainer',
+  'VFlowContainer',
+  'VScrollBar',
+  'VSeparator',
+  'VSlider',
+  'VSplitContainer',
 ];
 
 /** A 32-bit float colour channel holds about seven digits. */
@@ -55,11 +82,22 @@ const close = (tuple: Tuple) => tuple.map((channel) => expect.closeTo(channel, C
 /** A table box in the shape `dump.gd` writes. */
 function capturedShape(box: DefaultStyleBox): Record<string, unknown> {
   if (box.kind === 'empty') return { kind: 'empty', contentMargin: sides(box.contentMargin) };
+  if (box.kind === 'line')
+    return {
+      kind: 'line',
+      color: close(rgba(box.color)),
+      contentMargin: sides(box.contentMargin),
+      thickness: box.thickness,
+      vertical: box.vertical,
+      growBegin: box.growBegin,
+      growEnd: box.growEnd,
+    };
+  const { topLeft, topRight, bottomRight, bottomLeft } = box.cornerRadius;
   return {
     kind: 'flat',
     bgColor: close(rgba(box.bgColor)),
     contentMargin: sides(box.contentMargin),
-    cornerRadius: [box.cornerRadius, box.cornerRadius, box.cornerRadius, box.cornerRadius],
+    cornerRadius: [topLeft, topRight, bottomRight, bottomLeft],
     cornerDetail: box.cornerDetail,
     borderWidth: sides(box.borderWidth),
     borderColor: close(rgba(box.borderColor)),
