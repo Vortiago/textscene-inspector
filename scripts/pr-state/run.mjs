@@ -3,23 +3,27 @@
  * `pnpm pr:state [--base <ref>] [--pr <number>] [--out <file>]`: prints the state of the checked-out
  * branch for a report of its pull request, and with `--out` writes it to a file too. It reads git, the
  * test-only export scan and, with `--pr`, GitHub. It fails when the body of that pull request gives
- * an added limit line no owner.
+ * an added limit line no owner, and when a scope cut of the body, of an added document line or of an
+ * issue the pull request closes names no owner.
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import process from 'node:process';
 import { parseArgs } from 'node:util';
 import { git } from '../githooks/changes.mjs';
+import { changedEntries } from '../gitNameStatus.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { coreTestOnlyExports, KEPT_TEST_ONLY_EXPORTS } from '../testOnlyExports.core.mjs';
 import {
+  closedIssueNumbers,
   EXEMPTION_TABLES,
   parseCheckRuns,
   parsePullRequest,
   prStateReport,
   unownedLimitLines,
+  unownedScopeCutsOf,
 } from './prState.mjs';
 
 /** A pull request into a feature branch passes that branch as `--base`. */
@@ -45,7 +49,23 @@ function readPullRequest(number) {
   return {
     ...pullRequest,
     checks: parseCheckRuns(readGitHub(checkRuns, '--paginate', '--jq', CHECK_RUN_LINES)),
+    closedIssues: closedIssueNumbers(pullRequest.body).map(readIssue),
   };
+}
+
+function readIssue(number) {
+  return { number, body: readGitHub(`repos/{owner}/{repo}/issues/${number}`, '--jq', '.body // ""') };
+}
+
+/** A sheet takes the owner of a limit line from the pull request body, not from the line. */
+const isDocument = ({ change, path }) =>
+  change !== 'removed' && path.endsWith('.md') && !path.endsWith('comparison.md');
+
+/** Each document the change adds or edits, read from the working tree. */
+function readChangedDocuments(nameStatus) {
+  return changedEntries(nameStatus)
+    .filter(isDocument)
+    .map(({ path }) => ({ path, text: readFileSync(resolve(REPO_ROOT, path), 'utf8') }));
 }
 
 function writeReport(report, file) {
@@ -69,10 +89,12 @@ const PLAIN_DIFF = ['--no-color', '--no-ext-diff', '--src-prefix=a/', '--dst-pre
 function readBranchChange(baseRef) {
   const headSha = git('rev-parse', 'HEAD');
   const baseSha = git('merge-base', headSha, baseRef);
+  const nameStatus = git('diff', '--name-status', '--no-renames', baseSha, headSha);
   return {
     head: { sha: headSha, branch: git('rev-parse', '--abbrev-ref', 'HEAD') },
     base: { ref: baseRef, sha: baseSha },
-    nameStatus: git('diff', '--name-status', '--no-renames', baseSha, headSha),
+    nameStatus,
+    documents: readChangedDocuments(nameStatus),
     diff: git('diff', '-U0', ...PLAIN_DIFF, baseSha, headSha),
     hasUncommittedChanges: git('status', '--porcelain') !== '',
   };
@@ -100,5 +122,11 @@ process.stdout.write(report);
 if (values.out !== undefined) writeReport(report, values.out);
 if (change.pullRequest && unownedLimitLines(change).length > 0) {
   console.error('A limit line has no owner: name its file beside an issue number or "no issue" in the body.');
+  process.exitCode = 1;
+}
+if (change.pullRequest && unownedScopeCutsOf(change).length > 0) {
+  console.error(
+    'A scope cut has no owner: write an issue number, or "no issue:" with the reason, in its line.'
+  );
   process.exitCode = 1;
 }

@@ -4,7 +4,14 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseCheckRuns, parsePullRequest, prStateReport, unownedLimitLines } from './prState.mjs';
+import {
+  closedIssueNumbers,
+  parseCheckRuns,
+  parsePullRequest,
+  prStateReport,
+  unownedLimitLines,
+  unownedScopeCutsOf,
+} from './prState.mjs';
 
 const HEAD = { sha: '55a649fd0000000000000000000000000000beef', branch: 'claude/y-sort' };
 const SHEET = 'packages/textscene-core/src/nodes/control/comparison.md';
@@ -17,6 +24,7 @@ function reportOf(change) {
     base: BASE,
     nameStatus: '',
     diff: '',
+    documents: [],
     unkeptTestOnlyExports: [],
     ...change,
   });
@@ -32,6 +40,7 @@ function pullRequestWith(fields = {}) {
     baseBranch: 'main',
     body: '',
     checks: [],
+    closedIssues: [],
     ...fields,
   };
 }
@@ -282,6 +291,14 @@ describe('prStateReport', () => {
     );
   });
 
+  it('lists a scope cut of the pull request body that names no owner (error path)', () => {
+    const pullRequest = pullRequestWith({ body: 'The sky bake is a follow-up.' });
+
+    expect(reportOf({ pullRequest })).toContain(
+      '## Scope cuts with no owner (1)\n\n- `the pull request body:1` The sky bake is a follow-up.\n'
+    );
+  });
+
   it('leaves the owner sections out of a report with no pull request', () => {
     const report = reportOf({ diff: additions(SHEET, 12, ['- Approximated: the shadow penumbra.']) });
     expect(report).not.toContain('Limit lines with no owner');
@@ -357,6 +374,76 @@ describe('unownedLimitLines', () => {
   it('gives no line that only defers work (edge case)', () => {
     const todoDiff = additions('a.ts', 1, ['// TODO: merge the nested sort']);
     expect(unownedLimitLines({ diff: todoDiff, pullRequest: pullRequestWith() })).toEqual([]);
+  });
+});
+
+describe('unownedScopeCutsOf', () => {
+  const ADR = 'docs/adr/0072-shaders.md';
+  const ADR_TEXT = [
+    '# Shaders',
+    '',
+    '## Out of scope',
+    '',
+    '- The sky bake (#1775).',
+    '- The fog passes.',
+  ].join('\n');
+  const cutsWith = (change) =>
+    unownedScopeCutsOf({ diff: '', documents: [], pullRequest: pullRequestWith(), ...change });
+
+  it('gives a cut of the body that names no issue', () => {
+    const pullRequest = pullRequestWith({
+      body: '## Out of scope\n\n- The fog passes.\n- The sky bake (#1775).',
+    });
+
+    expect(cutsWith({ pullRequest })).toEqual([
+      { where: 'the pull request body', line: 3, text: '- The fog passes.' },
+    ]);
+  });
+
+  it('gives a cut that the change adds to a document, read with the list it stands in', () => {
+    const change = {
+      diff: additions(ADR, 6, ['- The fog passes.']),
+      documents: [{ path: ADR, text: ADR_TEXT }],
+    };
+
+    expect(cutsWith(change)).toEqual([{ where: ADR, line: 6, text: '- The fog passes.' }]);
+  });
+
+  it('gives no cut of a document that the change did not add (edge case)', () => {
+    const change = { diff: additions(ADR, 1, ['# Shaders']), documents: [{ path: ADR, text: ADR_TEXT }] };
+
+    expect(cutsWith(change)).toEqual([]);
+  });
+
+  it('gives a cut of an issue the pull request closes, since the issue ends with the cut still open', () => {
+    const closedIssues = [
+      { number: 1457, body: '**Out of scope:**\n- The prepass: it is a whole program and stays.' },
+    ];
+
+    expect(cutsWith({ pullRequest: pullRequestWith({ closedIssues }) })).toEqual([
+      { where: 'issue #1457', line: 2, text: '- The prepass: it is a whole program and stays.' },
+    ]);
+  });
+
+  it('gives no cut for a body, a document and an issue that name each owner', () => {
+    const pullRequest = pullRequestWith({
+      body: 'The sky bake is a follow-up (#1775).',
+      closedIssues: [{ number: 1457, body: '**Out of scope:**\n- The prepass (#1782).' }],
+    });
+
+    expect(cutsWith({ pullRequest })).toEqual([]);
+  });
+});
+
+describe('closedIssueNumbers', () => {
+  it('reads each issue a body closes, once, in any of the words GitHub takes', () => {
+    const body = 'Closes #1511. Fixes #1515 and resolves #1516.\n\nPart of #1436. closes #1511';
+
+    expect(closedIssueNumbers(body)).toEqual([1511, 1515, 1516]);
+  });
+
+  it('reads no issue from a body that closes none (edge case)', () => {
+    expect(closedIssueNumbers('Part of #1436. See #1511.')).toEqual([]);
   });
 });
 
