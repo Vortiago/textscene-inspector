@@ -1,6 +1,6 @@
 /**
- * An error in a shader's text, or a construct the translator does not translate yet. The message
- * is Godot's own where Godot refuses the text, and names the owning issue where the translator
+ * An error in a shader's text, or a construct the transpiler does not transpile yet. The message
+ * is Godot's own where Godot refuses the text, and names the owning issue where the transpiler
  * does not reach yet, so nothing is dropped in silence.
  */
 export class ShadingLanguageError extends Error {

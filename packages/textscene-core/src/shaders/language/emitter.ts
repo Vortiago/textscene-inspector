@@ -5,11 +5,11 @@
 
 import { float, vec2, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { operatorOfRow, type TranslatedOperator } from './operators.js';
+import { operatorOfRow, type TranspiledOperator } from './operators.js';
 import type { Expression, FunctionDefinition, Parameter, ValueType } from './shaderTree.js';
 
 /** A function of the shader as TSL: `call` builds its result from one node per parameter. */
-export interface TranslatedFunction {
+export interface TranspiledFunction {
   readonly name: string;
   readonly returnType: ValueType;
   readonly parameters: readonly Parameter[];
@@ -35,7 +35,7 @@ const CONSTRUCTORS: Readonly<Record<string, Constructor>> = {
 
 const LANE_LETTERS = 'xyzw';
 
-export function emitFunction(definition: FunctionDefinition): TranslatedFunction {
+export function emitFunction(definition: FunctionDefinition): TranspiledFunction {
   return {
     name: definition.name,
     returnType: definition.returnType,
@@ -73,7 +73,7 @@ function emit(expression: Expression, args: readonly Node[]): Node {
 }
 
 /** The TSL operation of each operator, by Godot's enumerator. */
-const OPERATIONS: Readonly<Record<TranslatedOperator, (first: ArithmeticNode, second: Node) => Node>> = {
+const OPERATIONS: Readonly<Record<TranspiledOperator, (first: ArithmeticNode, second: Node) => Node>> = {
   OP_ADD: (first, second) => first.add(second),
   OP_SUB: (first, second) => first.sub(second),
   OP_MUL: (first, second) => first.mul(second),

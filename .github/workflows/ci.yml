@@ -18,7 +18,9 @@ jobs:
   # A pull request that changes no file a golden scene renders through skips the golden run. A push
   # or pull request whose rendering files already passed it skips it too (renderInputsKey.mjs). A
   # manual run always runs it. A pull request that changes no file the real-Godot tests read skips
-  # them (godotRefScope.mjs).
+  # them (godotRefScope.mjs). A pull request into the shader port's branch that changes only
+  # transpiler files runs the shader package's own pipeline and skips the previewer's jobs
+  # (shaderScope.mjs).
   changes:
     name: Changed files
     runs-on: ubuntu-latest
@@ -27,6 +29,7 @@ jobs:
       visual: ${{ steps.passed.outputs.cache-hit == 'true' && 'false' || steps.scope.outputs.visual }}
       visual-key: ${{ steps.inputs.outputs.key }}
       godot-ref: ${{ steps.godot-ref.outputs.godot-ref }}
+      shader-only: ${{ steps.shader-only.outputs.shader-only }}
     steps:
       # A pull request checks out its merge commit, whose first parent is the base branch.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,6 +65,16 @@ jobs:
             exit 0
           fi
           git diff --name-only HEAD^1 HEAD | node scripts/ci/godotRefScope.mjs >> "$GITHUB_OUTPUT"
+      - id: shader-only
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "shader-only=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --name-only HEAD^1 HEAD | node scripts/ci/shaderScope.mjs >> "$GITHUB_OUTPUT"
 
   # Names the image the browser jobs run in (.github/ci-image), and builds and publishes it when no
   # run has yet. The tag is a hash of the image's inputs, so a commit that changes none of them
@@ -165,7 +178,7 @@ jobs:
     name: Real-Godot reference tests
     runs-on: ubuntu-latest
     needs: [image, changes]
-    if: needs.changes.outputs.godot-ref == 'true'
+    if: needs.changes.outputs.godot-ref == 'true' && needs.changes.outputs.shader-only != 'true'
     # Chromium keeps its shared memory in /dev/shm, which Docker limits to 64 MB, so every job in
     # the image shares the runner's.
     container: &ci-image
@@ -242,6 +255,8 @@ jobs:
   web-previewer:
     name: Build the web previewer
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.shader-only != 'true'
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -325,7 +340,8 @@ jobs:
   renderer-consumer:
     name: Renderer in a plain Vite app
     runs-on: ubuntu-latest
-    needs: image
+    needs: [image, changes]
+    if: needs.changes.outputs.shader-only != 'true'
     container: *ci-image
     timeout-minutes: 20
     steps:
@@ -336,6 +352,8 @@ jobs:
   integration:
     name: Integration tests (${{ matrix.os }}, VS Code ${{ matrix.vscode }})
     runs-on: ${{ matrix.os }}
+    needs: changes
+    if: needs.changes.outputs.shader-only != 'true'
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -381,7 +399,8 @@ jobs:
   vsix:
     name: VSIX contents
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, changes]
+    if: needs.changes.outputs.shader-only != 'true'
     timeout-minutes: 5
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -412,7 +431,8 @@ jobs:
   installed:
     name: Installed package (VS Code ${{ matrix.vscode }})
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, changes]
+    if: needs.changes.outputs.shader-only != 'true'
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -438,7 +458,8 @@ jobs:
   web:
     name: VS Code for the Web
     runs-on: ubuntu-latest
-    needs: image
+    needs: [image, changes]
+    if: needs.changes.outputs.shader-only != 'true'
     container: *ci-image
     timeout-minutes: 20
     steps:
@@ -458,9 +479,9 @@ jobs:
           path: scripts/vscode/output/web-preview-gate/
 
   # The one check that branch protection requires, so a new or renamed job needs no settings change.
-  # Every job it needs must succeed. The allowed skips are the golden run and the real-Godot tests,
-  # each only when the changes job ruled it out. This job checks that itself, so the gate costs no
-  # queued job of its own.
+  # Every job it needs must succeed. The allowed skips are the golden run and the real-Godot tests
+  # when the changes job ruled them out, and the previewer's jobs on a shader-only pull request.
+  # This job checks that itself, so the gate costs no queued job of its own.
   ci-ok:
     name: CI passed
     if: always()
@@ -489,10 +510,14 @@ jobs:
           NEEDS: ${{ toJSON(needs) }}
         run: |
           # A job may skip only when the changes job put it out of scope.
-          failed=$(jq -r '{"visual-regression": .changes.outputs.visual,
-              "godot-ref": .changes.outputs["godot-ref"]} as $scopes | to_entries
+          failed=$(jq -r '(.changes.outputs["shader-only"] == "true") as $shaderOnly
+            | {"visual-regression": (.changes.outputs.visual == "false" or $shaderOnly),
+              "godot-ref": (.changes.outputs["godot-ref"] == "false" or $shaderOnly),
+              "web-previewer": $shaderOnly, "e2e-web": $shaderOnly, "renderer-consumer": $shaderOnly,
+              "integration": $shaderOnly, "vsix": $shaderOnly, "installed": $shaderOnly,
+              "web": $shaderOnly} as $skippable | to_entries
             | map(select(.value.result != "success"
-                and (.value.result != "skipped" or $scopes[.key] != "false")))
+                and (.value.result != "skipped" or ($skippable[.key] | not))))
             | map("\(.key) (\(.value.result))") | join(", ")' <<< "$NEEDS")
           if [ -n "$failed" ]; then
             echo "::error::these jobs did not pass: $failed"

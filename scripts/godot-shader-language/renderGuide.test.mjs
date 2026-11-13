@@ -1,4 +1,4 @@
-/** The user guide: its values come from the record, and a translated row with no section fails. */
+/** The user guide: its values come from the record, and a transpiled row with no section fails. */
 
 import { describe, expect, it } from 'vitest';
 import { floatText, renderGuide } from './renderGuide.mjs';
@@ -36,7 +36,7 @@ describe('renderGuide', () => {
     expect(chapter[1]).toContain('| `1.0` | `2.0` | `3.0` |');
   });
 
-  it('counts the translated rows in the index', () => {
+  it('counts the transpiled rows in the index', () => {
     const [index] = renderGuide({
       chapters: chaptersWith([SECTION]),
       rows: ROWS,
@@ -46,7 +46,7 @@ describe('renderGuide', () => {
     expect(index[1]).toContain('| operator | 1 of 2 | #1823 |');
   });
 
-  it('fails for a translated row that no section explains', () => {
+  it('fails for a transpiled row that no section explains', () => {
     expect(() =>
       renderGuide({ chapters: chaptersWith([]), rows: ROWS, probes: [PROBE], record: RECORD })
     ).toThrow(/found none for OP_ADD\(float,float\)/);

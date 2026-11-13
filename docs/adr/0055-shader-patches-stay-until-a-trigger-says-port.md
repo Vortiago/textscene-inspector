@@ -33,7 +33,7 @@ Keep the splices while the port runs, and make a missed anchor fail loudly.
 The port is TSL node materials. They draw on `WebGLRenderer` through three's `WebGLNodesHandler`,
 and the same nodes draw on `WebGPURenderer` later. A `ShaderMaterial` does not run on the WebGPU
 backend. [`docs/webgpu-tsl-spike.md`](../webgpu-tsl-spike.md) holds the measurements. ADR-0076
-records how the port is built: Godot's shading language through one translator, Godot's own
+records how the port is built: Godot's shading language through one transpiler, Godot's own
 shaders and a user's shaders alike.
 
 While the port runs:

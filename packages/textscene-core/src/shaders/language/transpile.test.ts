@@ -1,24 +1,24 @@
-/** The translator end to end: a shader text to the GLSL three generates for its TSL nodes. */
+/** The transpiler end to end: a shader text to the GLSL three generates for its TSL nodes. */
 
 import { describe, expect, it } from 'vitest';
 import { uniform, vec2, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { generatedFragmentShader } from '../generatedShader.testkit.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
-import { translateShadingLanguage } from './translate.js';
+import { transpileShadingLanguage } from './transpile.js';
 
 /** `vec4` of a node of any float type, which three's overloads do not list for an untyped node. */
 const colourOf = vec4 as unknown as (node: Node) => Node;
 
 /** The GLSL of function `probe` of `source` over `args`, written as a colour. */
 function glslOf(source: string, args: Node[] = []): string {
-  const probe = translateShadingLanguage(source).functions.get('probe')!;
+  const probe = transpileShadingLanguage(source).functions.get('probe')!;
   return generatedFragmentShader(colourOf(probe.call(args)));
 }
 
-describe('translateShadingLanguage', () => {
+describe('transpileShadingLanguage', () => {
   it('names each function with its head', () => {
-    const probe = translateShadingLanguage('vec2 probe(vec2 a, float b) { return a; }').functions.get(
+    const probe = transpileShadingLanguage('vec2 probe(vec2 a, float b) { return a; }').functions.get(
       'probe'
     );
     expect([probe?.returnType, probe?.parameters.map((parameter) => parameter.type)]).toEqual([
@@ -55,13 +55,13 @@ describe('translateShadingLanguage', () => {
   });
 
   it('refuses a text Godot refuses', () => {
-    expect(() => translateShadingLanguage('vec3 probe(vec3 a) { return a.q; }')).toThrow(
+    expect(() => transpileShadingLanguage('vec3 probe(vec3 a) { return a.q; }')).toThrow(
       ShadingLanguageError
     );
   });
 
-  it('refuses the wrong count of arguments to a translated function', () => {
-    const probe = translateShadingLanguage('float probe(float a) { return a; }').functions.get('probe')!;
+  it('refuses the wrong count of arguments to a transpiled function', () => {
+    const probe = transpileShadingLanguage('float probe(float a) { return a; }').functions.get('probe')!;
     expect(() => probe.call([])).toThrow('expected 1 arguments for probe, got 0');
   });
 });

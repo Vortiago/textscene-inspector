@@ -1,5 +1,5 @@
 /**
- * The operators the translator reads: Godot's enumerator, its token, its text in Godot's messages
+ * The operators the transpiler reads: Godot's enumerator, its token, its text in Godot's messages
  * (`get_operator_text`, `shader_language.cpp:44`) and its binding level. The parser builds its
  * levels from this table, and the emitter keys its TSL calls by the same enumerators.
  */
@@ -14,7 +14,7 @@ export const BINARY_OPERATORS = {
 export type BinaryOperator = keyof typeof BINARY_OPERATORS;
 
 /** Every operator the emitter builds: the binary ones and negation. */
-export type TranslatedOperator = BinaryOperator | 'OP_NEGATE';
+export type TranspiledOperator = BinaryOperator | 'OP_NEGATE';
 
 const ENTRIES = Object.entries(BINARY_OPERATORS) as [
   BinaryOperator,
@@ -30,11 +30,11 @@ export const BINARY_BY_TOKEN: ReadonlyMap<string, BinaryOperator> = new Map(
 export const BINARY_LEVEL_COUNT = Math.max(...ENTRIES.map(([, { level }]) => level)) + 1;
 
 /** Godot's text of an operator in a message: `-` for negation. */
-export function operatorText(op: TranslatedOperator): string {
+export function operatorText(op: TranspiledOperator): string {
   return op === 'OP_NEGATE' ? '-' : BINARY_OPERATORS[op].text;
 }
 
 /** The enumerator of an operator row id, `OP_ADD` for `OP_ADD(vec3,float)`. */
-export function operatorOfRow(rowId: string): TranslatedOperator {
-  return rowId.slice(0, rowId.indexOf('(')) as TranslatedOperator;
+export function operatorOfRow(rowId: string): TranspiledOperator {
+  return rowId.slice(0, rowId.indexOf('(')) as TranspiledOperator;
 }

@@ -1,6 +1,6 @@
 /**
  * The parser of Godot's shading language: tokens to the typed tree, with Godot's type rules read
- * from the instruction table. It reads what the translator translates (functions that return one
+ * from the instruction table. It reads what the transpiler transpiles (functions that return one
  * expression of float arithmetic) and refuses the rest, naming the row and the issue that owns it.
  */
 
@@ -10,7 +10,7 @@ import {
   firstInstruction,
   instruction,
   keywordInstruction,
-  notTranslated,
+  notTranspiled,
   signatureInstruction,
 } from './instructions.js';
 import {
@@ -18,7 +18,7 @@ import {
   BINARY_LEVEL_COUNT,
   BINARY_OPERATORS,
   operatorText,
-  type TranslatedOperator,
+  type TranspiledOperator,
 } from './operators.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
@@ -26,8 +26,8 @@ import type { Expression, FunctionDefinition, Parameter, ShaderTree, ValueType }
 import type { Token } from './tokenizer.js';
 import { godotLiteralFloat } from './godotNumber.js';
 
-/** The types the translator reads. Each other type is refused with the row that names it. */
-const TRANSLATED_TYPES: ReadonlySet<ValueType> = new Set(['float', 'vec2', 'vec3', 'vec4']);
+/** The types the transpiler reads. Each other type is refused with the row that names it. */
+const TRANSPILED_TYPES: ReadonlySet<ValueType> = new Set(['float', 'vec2', 'vec3', 'vec4']);
 
 /** Godot's operator enumerator of an operator token: `TK_OP_ADD` is `OP_ADD`, `?` is `OP_SELECT_IF`. */
 const operatorOf = (token: string) => (token === 'TK_QUESTION' ? 'OP_SELECT_IF' : token.replace(/^TK_/, ''));
@@ -85,7 +85,7 @@ class Parser {
   /**
    * Records function `name` with the parameters just read. Godot refuses a second function of the
    * same parameter types (`shader_language.cpp:10954`). It accepts an overload, which the
-   * translator refuses: it keys the functions it gives by name.
+   * transpiler refuses: it keys the functions it gives by name.
    */
   private declareFunction(name: string, token: Token): void {
     const signature = this.parameters.map((parameter) => parameter.type).join(',');
@@ -93,7 +93,7 @@ class Parser {
     if (declared === signature) this.fail(`Redefinition of '${name}'.`, token);
     if (declared !== undefined) {
       const owner = instruction('OP_CALL')!.owner;
-      throw new ShadingLanguageError(`An overload of '${name}' is not translated yet (${owner})`, token.line);
+      throw new ShadingLanguageError(`An overload of '${name}' is not transpiled yet (${owner})`, token.line);
     }
     this.functionSignatures.set(name, signature);
   }
@@ -114,13 +114,13 @@ class Parser {
     const declaration = token.type.startsWith('TK_TYPE_')
       ? 'NODE_TYPE_VARIABLE_DECLARATION'
       : 'NODE_TYPE_BLOCK';
-    throw notTranslated(row ?? instruction(declaration)!, token.line);
+    throw notTranspiled(row ?? instruction(declaration)!, token.line);
   }
 
-  /** A type keyword the translator reads, or the refusal of the keyword's row. */
+  /** A type keyword the transpiler reads, or the refusal of the keyword's row. */
   private type(): ValueType {
     const token = this.next();
-    return this.translatedType(token, `Expected a type, found: '${token.text ?? token.type}'.`);
+    return this.transpiledType(token, `Expected a type, found: '${token.text ?? token.type}'.`);
   }
 
   private expression(): Expression {
@@ -158,19 +158,19 @@ class Parser {
   }
 
   /** The operator node of `op` over `operands`, typed by its row, or Godot's refusal. */
-  private operator(op: TranslatedOperator, operands: Expression[], token: Token): Expression {
+  private operator(op: TranspiledOperator, operands: Expression[], token: Token): Expression {
     const types = typesOf(operands);
     const row = signatureInstruction(op, types);
     if (!row) this.fail(`Invalid arguments to operator '${operatorText(op)}': '${types.join(', ')}'.`, token);
-    if (!TRANSLATED_TYPES.has(row.returns!)) throw notTranslated(row, token.line);
+    if (!TRANSPILED_TYPES.has(row.returns!)) throw notTranspiled(row, token.line);
     return { kind: 'operator', type: row.returns!, row, operands };
   }
 
-  /** An operator the translator does not read: its exact row, or the operator's name. */
+  /** An operator the transpiler does not read: its exact row, or the operator's name. */
   private refuseOperator(op: string, operands: Expression[], token: Token): never {
     const row = signatureInstruction(op, typesOf(operands));
-    if (row) throw notTranslated(row, token.line);
-    throw notTranslated(instruction(op) ?? firstInstruction(`${op}(`)!, token.line, op);
+    if (row) throw notTranspiled(row, token.line);
+    throw notTranspiled(instruction(op) ?? firstInstruction(`${op}(`)!, token.line, op);
   }
 
   private postfix(base: Expression): Expression {
@@ -180,9 +180,9 @@ class Parser {
       if (token.type === 'TK_PERIOD') {
         this.next();
         node = this.swizzle(node, this.identifier('Expected an identifier as a member.'), token);
-      } else if (token.type === 'TK_BRACKET_OPEN') throw notTranslated(instruction('OP_INDEX')!, token.line);
+      } else if (token.type === 'TK_BRACKET_OPEN') throw notTranspiled(instruction('OP_INDEX')!, token.line);
       else if (token.type === 'TK_OP_INCREMENT' || token.type === 'TK_OP_DECREMENT') {
-        throw notTranslated(firstInstruction(`OP_POST_${token.type.slice(6)}(`)!, token.line);
+        throw notTranspiled(firstInstruction(`OP_POST_${token.type.slice(6)}(`)!, token.line);
       } else return node;
     }
   }
@@ -193,9 +193,9 @@ class Parser {
       case 'TK_FLOAT_CONSTANT':
         return { kind: 'float literal', type: 'float', value: this.literalFloat(token) };
       case 'TK_INT_CONSTANT':
-        throw notTranslated(instruction('int literal')!, token.line);
+        throw notTranspiled(instruction('int literal')!, token.line);
       case 'TK_UINT_CONSTANT':
-        throw notTranslated(instruction('uint literal')!, token.line);
+        throw notTranspiled(instruction('uint literal')!, token.line);
       case 'TK_PARENTHESIS_OPEN': {
         const inner = this.expression();
         this.expect('TK_PARENTHESIS_CLOSE', "Expected ')' in expression.");
@@ -210,7 +210,7 @@ class Parser {
 
   /** A constructor, after its type keyword, or the refusal of the keyword's row. */
   private keywordExpression(token: Token): Expression {
-    const type = this.translatedType(token, `Expected expression, found: '${token.text ?? token.type}'.`);
+    const type = this.transpiledType(token, `Expected expression, found: '${token.text ?? token.type}'.`);
     this.expect('TK_PARENTHESIS_OPEN', "Expected '(' after the type name.");
     const args = this.argumentList();
     const overload = signatureInstruction(type, typesOf(args));
@@ -218,11 +218,11 @@ class Parser {
     return { kind: 'constructor', type, row: overload, args };
   }
 
-  /** The type of a type keyword the translator reads, the refusal of its row, or Godot's `message`. */
-  private translatedType(token: Token, message: string): ValueType {
+  /** The type of a type keyword the transpiler reads, the refusal of its row, or Godot's `message`. */
+  private transpiledType(token: Token, message: string): ValueType {
     const row = keywordInstruction(token.type);
     if (!row) this.fail(message, token);
-    if (row.family !== 'data type' || !TRANSLATED_TYPES.has(row.id)) throw notTranslated(row, token.line);
+    if (row.family !== 'data type' || !TRANSPILED_TYPES.has(row.id)) throw notTranspiled(row, token.line);
     return row.id;
   }
 
@@ -235,17 +235,17 @@ class Parser {
     const index = this.parameters.findIndex((parameter) => parameter.name === name);
     if (index >= 0) return { kind: 'parameter', type: this.parameters[index]!.type, index };
     const builtIn = builtInInstruction(name);
-    if (builtIn) throw notTranslated(builtIn, token.line, name);
+    if (builtIn) throw notTranspiled(builtIn, token.line, name);
     this.fail(`Unknown identifier in expression: '${name}'.`, token);
   }
 
   /** A call: a built-in function's overload row, or `OP_CALL` for a function of the shader. */
   private refuseCall(name: string, args: readonly Expression[], token: Token): ShadingLanguageError {
     const overload = signatureInstruction(name, typesOf(args));
-    if (overload) return notTranslated(overload, token.line);
+    if (overload) return notTranspiled(overload, token.line);
     const anyOverload = firstInstruction(`${name}(`);
-    if (anyOverload) return notTranslated(anyOverload, token.line, name);
-    if (this.functionSignatures.has(name)) return notTranslated(instruction('OP_CALL')!, token.line);
+    if (anyOverload) return notTranspiled(anyOverload, token.line, name);
+    if (this.functionSignatures.has(name)) return notTranspiled(instruction('OP_CALL')!, token.line);
     return new ShadingLanguageError(`Unknown identifier in expression: '${name}'.`, token.line);
   }
 

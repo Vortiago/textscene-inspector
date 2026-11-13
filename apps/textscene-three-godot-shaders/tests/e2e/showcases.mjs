@@ -1,7 +1,7 @@
 /**
  * The end to end showcases: each one a function of Godot's shading language that maps a pixel's
  * UV to a colour. Godot draws it in a canvas_item shader, a plain three.js page draws its
- * translation, and the run compares the two images. The guide shows both images.
+ * transpilation, and the run compares the two images. The guide shows both images.
  */
 
 export const SHOWCASES = [

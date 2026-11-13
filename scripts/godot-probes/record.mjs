@@ -1,7 +1,7 @@
 /**
  * The record of Godot's answers to the probes: for each probe its source, the bits of its inputs
  * and the bits of each result lane, or the fact that Godot rejects it. The real-GL test compares
- * the translation with this checked-in record, so it runs without Godot.
+ * the transpilation with this checked-in record, so it runs without Godot.
  */
 
 import { LANE_COUNT, SENTINEL_BITS, parameterBits, probeSignature, probeWidth } from './probeShader.mjs';

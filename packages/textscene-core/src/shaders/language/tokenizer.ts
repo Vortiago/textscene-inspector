@@ -131,7 +131,7 @@ function readToken(source: string, cursor: Cursor, char: string): Token {
   if (char === '"') return readString(source, cursor);
   if (char === '@') {
     throw new ShadingLanguageError(
-      'An include marker comes from the preprocessor, which is not translated yet (#1828)',
+      'An include marker comes from the preprocessor, which is not transpiled yet (#1828)',
       line
     );
   }

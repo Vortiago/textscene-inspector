@@ -1,12 +1,12 @@
 /**
- * The showcase page: a plain three.js page that draws a translated function of UV to colour on a
+ * The showcase page: a plain three.js page that draws a transpiled function of UV to colour on a
  * full-frame quad, and answers the RGBA8 pixels, top row first, as Godot's image holds them.
  */
 
 import * as THREE from 'three';
 import { NodeMaterial } from 'three/webgpu';
 import { screenCoordinate, screenSize, vec4 } from 'three/tsl';
-import { installNodesHandler, translateShadingLanguage } from '@textscene/three-godot-shaders';
+import { installNodesHandler, transpileShadingLanguage } from '@textscene/three-godot-shaders';
 
 const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
 installNodesHandler(renderer, 'linear');
@@ -21,12 +21,12 @@ scene.add(quad);
  */
 const uv = screenCoordinate.div(screenSize);
 
-/** The pixels of `showcase`'s function, or `{ error }` when the translation refuses it. */
+/** The pixels of `showcase`'s function, or `{ error }` when the transpilation refuses it. */
 function drawShowcase(showcase) {
   let pattern;
   try {
-    pattern = translateShadingLanguage(showcase.source).functions.get('pattern');
-    if (!pattern) return { error: 'the translation has no function pattern' };
+    pattern = transpileShadingLanguage(showcase.source).functions.get('pattern');
+    if (!pattern) return { error: 'the transpilation has no function pattern' };
   } catch (error) {
     return { error: String(error.message ?? error) };
   }
