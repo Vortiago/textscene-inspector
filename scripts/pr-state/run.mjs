@@ -34,8 +34,8 @@ function readGitHub(...args) {
   }
 }
 
-/** One `<name>\t<result>` line for each check: the conclusion, or the status of a check still in progress. */
-const CHECK_RUN_LINES = '.check_runs[] | [.name, .conclusion // .status] | @tsv';
+/** One `<name>\t<result>\t<start time>` line for each run: the conclusion, or the status of a run in progress. */
+const CHECK_RUN_LINES = '.check_runs[] | [.name, .conclusion // .status, .started_at] | @tsv';
 
 /** Pull request `number` with the checks of its head, read through the `gh` CLI. */
 function readPullRequest(number) {

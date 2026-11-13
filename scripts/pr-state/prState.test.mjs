@@ -22,13 +22,14 @@ function reportOf(change) {
   });
 }
 
-/** A pull request at the local head, so no case reads a head warning unless it names another head. */
+/** A pull request at the local head and on the local base, so no case reads a warning unless it names another. */
 function pullRequestWith(fields = {}) {
   return {
     number: 7,
     draft: true,
     mergeableState: 'clean',
     headSha: HEAD.sha,
+    baseBranch: 'main',
     body: '',
     checks: [],
     ...fields,
@@ -236,6 +237,14 @@ describe('prStateReport', () => {
     expect(report).not.toContain('not the local head');
   });
 
+  it('says when the pull request has another base than the report (error path)', () => {
+    const report = reportOf({ pullRequest: pullRequestWith({ baseBranch: 'feature/tsl' }) });
+    expect(report).toContain(
+      '- Its base is `feature/tsl`, not `origin/main`. Pass `--base origin/feature/tsl`.'
+    );
+    expect(reportOf({ pullRequest: pullRequestWith() })).not.toContain('Its base is');
+  });
+
   it('counts the checks of the pull request head by result, and lists each that has not passed', () => {
     const checks = [
       { name: 'CI passed', result: 'in_progress' },
@@ -306,10 +315,43 @@ describe('unownedLimitLines', () => {
     expect(unownedWith('- `label/comparison.md`: glyph edges. Owner #1442.')).toHaveLength(1);
   });
 
+  it('takes no owner from a sheet whose directory name ends on the directory of the file (edge case)', () => {
+    expect(unownedWith('- `rangecontrol/comparison.md`: the grabber. Owner #1442.')).toHaveLength(1);
+  });
+
+  it('takes the whole path of the file as its name', () => {
+    expect(unownedWith(`- ${SHEET}: the penumbra is approximated. Owner #1444.`)).toEqual([]);
+  });
+
+  it('takes the file name that ends a sentence', () => {
+    expect(unownedWith('Owner #1444 has the penumbra of control/comparison.md.')).toEqual([]);
+  });
+
+  it('takes the link of an issue beside the file name as the owner', () => {
+    const body = '- `control/comparison.md`: https://github.com/godot/sheets/issues/1444';
+    expect(unownedWith(body)).toEqual([]);
+  });
+
+  it('takes no owner for a file at the root from a file of that name in a directory (edge case)', () => {
+    const rootDiff = additions('REVIEW.md', 3, ['Not supported: a review of a binary file.']);
+    const body = '`docs/REVIEW.md`: the workflow fetches no binary patch, no issue.';
+    expect(unownedLimitLines({ diff: rootDiff, pullRequest: pullRequestWith({ body }) })).toHaveLength(1);
+  });
+
   it('takes the file name alone for a file at the root', () => {
     const rootDiff = additions('REVIEW.md', 3, ['Not supported: a review of a binary file.']);
     const body = '`REVIEW.md`: the workflow fetches no binary patch, no issue.';
     expect(unownedLimitLines({ diff: rootDiff, pullRequest: pullRequestWith({ body }) })).toEqual([]);
+  });
+
+  it('gives a comment that records a limit, and no code that holds the same words (edge case)', () => {
+    const codeDiff = additions('a.ts', 1, [
+      '// Not supported: a nested sort.',
+      "throw new Error('unsupported format');",
+    ]);
+    expect(unownedLimitLines({ diff: codeDiff, pullRequest: pullRequestWith() })).toEqual([
+      { path: 'a.ts', line: 1, text: '// Not supported: a nested sort.' },
+    ]);
   });
 
   it('gives no line that only defers work (edge case)', () => {
@@ -325,6 +367,7 @@ describe('parsePullRequest', () => {
       draft: true,
       mergeable_state: 'unstable',
       head: { sha: 'fc7d2f5a' },
+      base: { ref: 'main' },
       body: 'Sorts Controls by y.',
     });
     expect(parsePullRequest(json)).toEqual({
@@ -332,6 +375,7 @@ describe('parsePullRequest', () => {
       draft: true,
       mergeableState: 'unstable',
       headSha: 'fc7d2f5a',
+      baseBranch: 'main',
       body: 'Sorts Controls by y.',
     });
   });
@@ -342,6 +386,7 @@ describe('parsePullRequest', () => {
       draft: false,
       mergeable_state: 'clean',
       head: { sha: 'a' },
+      base: { ref: 'main' },
       body: null,
     });
     expect(parsePullRequest(json).body).toBe('');
@@ -349,10 +394,25 @@ describe('parsePullRequest', () => {
 });
 
 describe('parseCheckRuns', () => {
-  it('reads the name and the result of each check, one tab-separated line each', () => {
-    expect(parseCheckRuns('CI passed\tsuccess\nUnit tests (2/4)\tin_progress\n')).toEqual([
+  it('reads the name and the result of each check, one tab-separated line for each run', () => {
+    const tsv =
+      'CI passed\tsuccess\t2026-11-13T01:20:00Z\nUnit tests (2/4)\tin_progress\t2026-11-13T01:21:00Z\n';
+    expect(parseCheckRuns(tsv)).toEqual([
       { name: 'CI passed', result: 'success' },
       { name: 'Unit tests (2/4)', result: 'in_progress' },
+    ]);
+  });
+
+  it('keeps the latest run of a check that ran more than once', () => {
+    const tsv = [
+      'Review\tsuccess\t2026-11-13T01:25:00Z',
+      'Review\tskipped\t2026-11-13T01:20:00Z',
+      'Unit tests (1/4)\tfailure\t2026-11-13T01:20:00Z',
+      'Unit tests (1/4)\tsuccess\t2026-11-13T01:40:00Z',
+    ].join('\n');
+    expect(parseCheckRuns(tsv)).toEqual([
+      { name: 'Review', result: 'success' },
+      { name: 'Unit tests (1/4)', result: 'success' },
     ]);
   });
 

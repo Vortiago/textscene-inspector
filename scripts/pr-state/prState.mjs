@@ -11,8 +11,13 @@ import { goldenNameOf } from '../visual/baselinePath.mjs';
 /** A line that puts work off or switches a test off: a reviewer asks for the reason of each. */
 const DEFERS_WORK = /\b(TODO|FIXME|HACK)\b|\b(it|test|describe)\.(skip|todo|only)\b/;
 
-/** A comment that names a fallback. Code is left out: core uses the word in over 500 lines of it. */
-const FALLBACK_COMMENT = /(\/\/|\/\*|^\s*\*|#\s|<!--).*\bfallback\b/i;
+/** The start of a comment in the languages of the repository, with the text that follows it. */
+const COMMENT = /(?:\/\/|\/\*|^\s*\*|#\s|<!--)(.*)/;
+
+const commentOf = (text) => COMMENT.exec(text)?.[1] ?? '';
+
+/** A word that names a fallback. Only a comment counts: core uses the word in over 500 lines of code. */
+const FALLBACK = /\bfallback\b/i;
 
 /** A line that records a gap of a feature, in the words the comparison sheets use. */
 const RECORDS_LIMIT = /known limitation|approximated|not supported|unsupported/i;
@@ -20,20 +25,43 @@ const RECORDS_LIMIT = /known limitation|approximated|not supported|unsupported/i
 /** The words that record a gap only in a document. Code and its comments use them for other things. */
 const RECORDS_LIMIT_IN_DOCUMENT = /\bfallback\b|\bstays in\b/i;
 
-/** A limit line: REVIEW.md accepts one only when the pull request body names its owner. */
 function recordsLimit({ path, text }) {
   return RECORDS_LIMIT.test(text) || (path.endsWith('.md') && RECORDS_LIMIT_IN_DOCUMENT.test(text));
 }
 
 function isFlagged(line) {
-  return DEFERS_WORK.test(line.text) || FALLBACK_COMMENT.test(line.text) || recordsLimit(line);
+  return DEFERS_WORK.test(line.text) || FALLBACK.test(commentOf(line.text)) || recordsLimit(line);
 }
 
-/** An issue number, or the words that say a limit line has no issue and why. */
-const NAMES_OWNER = /#\d+|\bno issue\b/i;
+/**
+ * A limit line, as REVIEW.md has it: a line of a document or a comment that records a limit. It
+ * needs an owner in the pull request body. Code that holds the same words needs none.
+ */
+function isLimitLine({ path, text }) {
+  return path.endsWith('.md') ? recordsLimit({ path, text }) : RECORDS_LIMIT.test(commentOf(text));
+}
+
+/** An issue number, the link of an issue, or the words that say a limit line has no issue and why. */
+const NAMES_OWNER = /#\d+|\/issues\/\d+|\bno issue\b/i;
 
 /** The directory and the name of a file, which is how a body names a sheet: `textedit/comparison.md`. */
 const shortPathOf = (path) => path.split('/').slice(-2).join('/');
+
+/** A run of path characters. A sentence can end on one, so `namedPaths` drops the full stops after it. */
+const PATH_LIKE = /[\w./-]+/g;
+
+const namedPaths = (bodyLine) => (bodyLine.match(PATH_LIKE) ?? []).map((name) => name.replace(/\.+$/, ''));
+
+const endsOnSegments = (path, tail) => path === tail || path.endsWith(`/${tail}`);
+
+/**
+ * Whole segments, not a substring: `label/comparison.md` is the end of `richtextlabel/comparison.md`
+ * too, so a substring gives the owner of one sheet to the other.
+ */
+function namesFile(bodyLine, path) {
+  const shortPath = shortPathOf(path);
+  return namedPaths(bodyLine).some((name) => endsOnSegments(path, name) && endsOnSegments(name, shortPath));
+}
 
 /** The results a check ends on with nothing for its pull request to fix. */
 const PASSED_RESULTS = new Set(['success', 'skipped', 'neutral']);
@@ -66,6 +94,7 @@ export const EXEMPTION_TABLES = new Map([
  * @property {boolean} draft
  * @property {string} mergeableState
  * @property {string} headSha
+ * @property {string} baseBranch
  * @property {string} body
  * @property {Check[]} checks - the latest run of each check on `headSha`.
  */
@@ -76,22 +105,30 @@ export const EXEMPTION_TABLES = new Map([
  * @property {string} result - GitHub's conclusion, or its status for a check with no conclusion yet.
  */
 
-/** The draft state, the merge state, the head and the body of a pull request, from GitHub's JSON for it. */
+/** The states, the head, the base and the body of a pull request, from GitHub's JSON for it. */
 export function parsePullRequest(json) {
-  const { number, draft, mergeable_state: mergeableState, head, body } = JSON.parse(json);
+  const { number, draft, mergeable_state: mergeableState, head, base, body } = JSON.parse(json);
   // GitHub gives null, not an empty string, for a pull request with no body.
-  return { number, draft, mergeableState, headSha: head.sha, body: body ?? '' };
+  return { number, draft, mergeableState, headSha: head.sha, baseBranch: base.ref, body: body ?? '' };
 }
 
-/** @returns {Check[]} each check of `tsv`, which holds one `<name>\t<result>` line for each. */
+/**
+ * The latest run of each check of `tsv`, which holds one `<name>\t<result>\t<start time>` line for
+ * each run. A commit holds a run of a job for each event that started its workflow, so a name repeats.
+ *
+ * @returns {Check[]}
+ */
 export function parseCheckRuns(tsv) {
-  return tsv
-    .split('\n')
-    .filter((line) => line !== '')
-    .map((line) => {
-      const [name, result] = line.split('\t');
-      return { name, result };
-    });
+  const latestRunOf = new Map();
+  for (const line of tsv.split('\n')) {
+    if (line === '') continue;
+    const [name, result, startedAt] = line.split('\t');
+    // ISO 8601 times in UTC sort as text.
+    if (!latestRunOf.has(name) || startedAt >= latestRunOf.get(name).startedAt) {
+      latestRunOf.set(name, { result, startedAt });
+    }
+  }
+  return [...latestRunOf].map(([name, { result }]) => ({ name, result }));
 }
 
 /**
@@ -102,8 +139,8 @@ export function parseCheckRuns(tsv) {
  */
 export function unownedLimitLines({ diff, pullRequest }) {
   const ownerLines = pullRequest.body.split('\n').filter((line) => NAMES_OWNER.test(line));
-  const hasOwner = ({ path }) => ownerLines.some((line) => line.includes(shortPathOf(path)));
-  return addedLines(diff).filter((line) => recordsLimit(line) && !hasOwner(line));
+  const hasOwner = ({ path }) => ownerLines.some((line) => namesFile(line, path));
+  return addedLines(diff).filter((line) => isLimitLine(line) && !hasOwner(line));
 }
 
 /**
@@ -149,7 +186,7 @@ function headLines({ head, base, pullRequest, hasUncommittedChanges }) {
     `- Head: \`${head.sha}\` on \`${head.branch}\``,
     `- Base: \`${base.ref}\` at \`${base.sha}\``,
   ];
-  if (pullRequest) lines.push(pullRequestLine(pullRequest, head.sha), checksLine(pullRequest.checks));
+  if (pullRequest) lines.push(...pullRequestLines(pullRequest, { head, base }));
   if (hasUncommittedChanges) lines.push(UNCOMMITTED_CHANGES_LINE);
   return lines;
 }
@@ -158,18 +195,30 @@ function headLines({ head, base, pullRequest, hasUncommittedChanges }) {
 const UNCOMMITTED_CHANGES_LINE =
   '- The working tree has uncommitted changes. The test-only exports describe it, not the head. Commit or stash first.';
 
-/** A pull request behind or ahead of the local head makes every section below describe another commit. */
-function pullRequestLine({ number, draft, mergeableState, headSha }, localSha) {
-  const state = `- Pull request #${number}: ${draft ? 'draft' : 'ready'}, mergeable state \`${mergeableState}\``;
-  return headSha === localSha
-    ? state
-    : `${state}. Its head is \`${headSha}\`, not the local head. Push or pull first.`;
+/**
+ * The state of the pull request and of its checks. A pull request with another head or another base
+ * than the report makes every section below describe another change, so each gets its warning.
+ */
+function pullRequestLines({ number, draft, mergeableState, headSha, baseBranch, checks }, { head, base }) {
+  const lines = [
+    `- Pull request #${number}: ${draft ? 'draft' : 'ready'}, mergeable state \`${mergeableState}\``,
+  ];
+  if (headSha !== head.sha) {
+    lines[0] += `. Its head is \`${headSha}\`, not the local head. Push or pull first.`;
+  }
+  if (!isRefOfBranch(base.ref, baseBranch)) {
+    lines.push(`- Its base is \`${baseBranch}\`, not \`${base.ref}\`. Pass \`--base origin/${baseBranch}\`.`);
+  }
+  return [...lines, checksLine(checks)];
 }
+
+/** Whether `ref` names `branch`, as the local branch or as the branch of a remote. */
+const isRefOfBranch = (ref, branch) => ref === branch || ref.endsWith(`/${branch}`);
 
 /** The count of checks for each result, in the order the results first appear. */
 function checksLine(checks) {
-  const countOf = Map.groupBy(checks, ({ result }) => result);
-  const counts = [...countOf].map(([result, { length }]) => `${length} ${result}`);
+  const checksOfResult = Map.groupBy(checks, ({ result }) => result);
+  const counts = [...checksOfResult].map(([result, { length }]) => `${length} ${result}`);
   return `- Checks on its head: ${counts.join(', ') || 'none'}`;
 }
 
