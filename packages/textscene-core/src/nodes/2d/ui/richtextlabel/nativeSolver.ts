@@ -904,7 +904,7 @@ function lineMetricsOf(
 interface RichTextUnderlineMetrics {
   /** Downward offset from the line's baseline to the stroke's CENTRE, px (`shaped_text_get_underline_position`). */
   positionPx: number;
-  /** The font's stroke thickness, px, unfloored (`shaped_text_get_underline_thickness`): `underlineRectPx` applies `MAX(1.0, uth)`. */
+  /** The font's stroke thickness, px, unfloored (`shaped_text_get_underline_thickness`): `underlineRectPx` applies `MAX(1.0, uth * base_scale)`. */
   thicknessPx: number;
 }
 
@@ -1234,26 +1234,28 @@ interface UnderlineRectPx {
   x1: number;
   /** Top edge: the first pixel row Godot's quad covers. */
   topPx: number;
-  /** Whole rows the quad covers: 1 for a stroke at its `MAX(1.0, uth)` floor. */
+  /** Whole rows the quad covers: 1 for a stroke at its 1 px floor. */
   heightPx: number;
 }
 
 /**
  * A `[u]` run's stroke rect, snapped to the pixels Godot's quad covers, or `null`
  * with no glyphs. The stroke centres `upos` below the baseline (`rich_text_label.cpp:1055`,
- * `:1242-1244`), at least 1px thick (`:1243`, with `base_scale` 1 here).
+ * `:1242-1244`), `MAX(1.0, uth * base_scale)` thick (`:1243`). `baseScale` is the theme's default
+ * base scale, the theme scale for the default theme (`default_theme.cpp:98`).
  */
 export function underlineRectPx(
   glyphs: readonly GlyphPlacement[],
   lineAscentPx: number,
-  metrics: RichTextUnderlineMetrics
+  metrics: RichTextUnderlineMetrics,
+  baseScale: number
 ): UnderlineRectPx | null {
   if (glyphs.length === 0) return null;
 
   const first = glyphs[0]!;
   const last = glyphs[glyphs.length - 1]!;
   const centerY = lineAscentPx + metrics.positionPx;
-  const widthPx = Math.max(1, metrics.thicknessPx);
+  const widthPx = Math.max(1, metrics.thicknessPx * baseScale);
 
   // Godot's un-antialiased quad on a canvas without MSAA covers whole rows, where
   // this multisampled canvas would feather two. The snap holds because the origin

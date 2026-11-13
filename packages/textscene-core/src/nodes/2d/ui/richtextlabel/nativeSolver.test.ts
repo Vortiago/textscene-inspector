@@ -1453,7 +1453,7 @@ describe('underlineRectPx', () => {
       'quad spans 18.4765625..19.4765625 (rich_text_label.cpp:1243-1244: MAX(1.0, uth) floors ' +
       '0.390625 to a 1px width, centred on the segment), which contains exactly one pixel centre, 18.5.',
     () => {
-      const rect = underlineRectPx(GLYPHS, 18, METRICS_16);
+      const rect = underlineRectPx(GLYPHS, 18, METRICS_16, 1);
       expect(rect).not.toBeNull();
       expect(rect!.topPx).toBe(18);
       expect(rect!.heightPx).toBe(1);
@@ -1461,19 +1461,25 @@ describe('underlineRectPx', () => {
   );
 
   it('is one row LOWER at 18px, where the same quad spans 18.5986..19.5986 and the only centre inside it is 19.5 — the half-a-stroke rebase (sfobjs.c:1424-1425) is what decides which of the two rows, so dropping it moves the rule visibly', () => {
-    const rect = underlineRectPx(GLYPHS, 18, METRICS_18);
+    const rect = underlineRectPx(GLYPHS, 18, METRICS_18, 1);
     expect(rect!.topPx).toBe(19);
     expect(rect!.heightPx).toBe(1);
   });
 
   it("tracks the line's own baseline exactly — the same offset from it at every line ascent, the invariant a fractional line origin would break", () => {
     for (const ascentPx of [17, 18, 20, 26]) {
-      expect(underlineRectPx(GLYPHS, ascentPx, METRICS_16)!.topPx).toBe(ascentPx);
+      expect(underlineRectPx(GLYPHS, ascentPx, METRICS_16, 1)!.topPx).toBe(ascentPx);
     }
   });
 
+  it('scales the stroke by the theme base scale before the 1 px floor (rich_text_label.cpp:1243): at scale 2 and 32 px, 0.78125 grows to 1.5625 and covers two rows', () => {
+    const rect = underlineRectPx(GLYPHS, 35, { positionPx: 1.953125, thicknessPx: 0.78125 }, 2);
+    expect(rect!.topPx).toBe(36);
+    expect(rect!.heightPx).toBe(2);
+  });
+
   it('snaps a genuinely thick rule to every row its quad covers, never to a fixed 1: a 3px stroke centred at 18.9765625 spans 17.4765625..20.4765625, whose covered centres are 17.5, 18.5 and 19.5 (20.5 falls outside)', () => {
-    const rect = underlineRectPx(GLYPHS, 18, { positionPx: 0.9765625, thicknessPx: 3 });
+    const rect = underlineRectPx(GLYPHS, 18, { positionPx: 0.9765625, thicknessPx: 3 }, 1);
     expect(rect!.topPx).toBe(17);
     expect(rect!.heightPx).toBe(3);
   });
@@ -1491,7 +1497,8 @@ describe('underlineRectPx', () => {
         { char: 'l', x: 15.2, advance: 8, fontMetrics: OPEN_SANS_FONT_METRICS, fontSizePx: 16 },
       ],
       18,
-      METRICS_16
+      METRICS_16,
+      1
     );
     // ceil(10.4-0.5)=10 .. ceil(23.2-0.5)-1=22: columns 10..22 inclusive.
     expect(rect!.x0).toBe(10);
@@ -1499,7 +1506,7 @@ describe('underlineRectPx', () => {
   });
 
   it('returns null for an empty glyph list (nothing to underline)', () => {
-    expect(underlineRectPx([], 18, METRICS_16)).toBeNull();
+    expect(underlineRectPx([], 18, METRICS_16, 1)).toBeNull();
   });
 });
 

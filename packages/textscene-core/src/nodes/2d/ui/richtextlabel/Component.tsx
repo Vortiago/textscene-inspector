@@ -278,6 +278,7 @@ function RichTextBody({
   slot,
   snapToPixels,
   clippingPlanes,
+  theme,
 }: RichTextBodyProps) {
   const props = painterView<RichTextLabelProperties>(solveNode);
   const toItemLinear = useItemLinearColorOf();
@@ -360,7 +361,8 @@ function RichTextBody({
             ? underlineRectPx(
                 placement.layout.lines[0]!.glyphs,
                 placement.layout.baselineOffsetPx,
-                placement.underline
+                placement.underline,
+                theme.scale
               )
             : null;
           return (
