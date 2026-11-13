@@ -17,6 +17,7 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import {
   clampAutowrapMode,
   shapeText,
@@ -706,11 +707,12 @@ export function shapeRichText(
 }
 
 /**
- * `default_theme.cpp:1231`: `theme->set_constant("underline_alpha", "RichTextLabel", 50)`.
- * Without `[u=color]`, which this subset lacks, `rich_text_label.cpp:1237`
+ * `underline_alpha`, a percentage. Without `[u=color]`, which this subset lacks, `rich_text_label.cpp:1237`
  * draws the run's font colour with `.a *= underline_alpha / 100.0`.
  */
-export const RICH_TEXT_LABEL_UNDERLINE_ALPHA = 0.5;
+export function richTextLabelUnderlineAlpha(n: SolveNode): number {
+  return requiredThemeItem(n.constants, 'underline_alpha') / 100;
+}
 
 /** An `[img]`'s draw geometry in its line: `_draw_line`'s `ITEM_IMAGE` arm (`rich_text_label.cpp:1090-1102`). */
 export interface RichTextImagePlacement {

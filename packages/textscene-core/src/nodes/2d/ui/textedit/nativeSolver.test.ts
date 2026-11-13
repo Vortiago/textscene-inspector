@@ -29,7 +29,6 @@ import {
   textEditCapSpanAlpha,
 } from './nativeSolver';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
-import { lineEditBoxes } from '../lineedit/nativeSolver';
 import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
@@ -42,7 +41,7 @@ import { visualChars } from '../../../../r3f/controls/native/text/textLayout.tes
 
 const THEME = nativeTheme(1);
 /** TextEdit's `normal` and `read_only`, the same boxes as LineEdit's (`default_theme.cpp:453-455`). */
-const LINE_EDIT_BOXES = lineEditBoxes(defaultStyleBoxesOf(defaultThemeAt(1)).TextEdit!);
+const TEXT_EDIT_BOXES = defaultStyleBoxesOf(defaultThemeAt(1)).TextEdit!;
 
 function ctx(): SolveContext {
   return {
@@ -83,19 +82,19 @@ describe('textEditRowHeightPx', () => {
 describe('textEditWrapWidthPx', () => {
   // text_edit.cpp:8536-8543.
   it('subtracts style margins, gutters and the bare wrap_offset(10)', () => {
-    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 0)).toBe(300 - 8 - 10);
+    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 10, 0)).toBe(300 - 8 - 10);
   });
   it('additionally subtracts the minimap width when draw_minimap is true', () => {
-    expect(textEditWrapWidthPx(300, 8, 0, 80, true, 0)).toBe(300 - 8 - 80 - 10);
+    expect(textEditWrapWidthPx(300, 8, 0, 80, true, 10, 0)).toBe(300 - 8 - 80 - 10);
   });
   it('truncates a fractional result toward zero, matching the C++ int assignment', () => {
-    expect(textEditWrapWidthPx(300.7, 8, 0, 80, false, 0)).toBe(Math.trunc(300.7 - 8 - 10));
+    expect(textEditWrapWidthPx(300.7, 8, 0, 80, false, 10, 0)).toBe(Math.trunc(300.7 - 8 - 10));
   });
   it('subtracts the vertical scroll bar width when one is given (:8541-8543)', () => {
-    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 8)).toBe(300 - 8 - 8 - 10);
+    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 10, 8)).toBe(300 - 8 - 8 - 10);
   });
   it('subtracts nothing for a bar width of 0', () => {
-    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 0)).toBe(300 - 8 - 10);
+    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 10, 0)).toBe(300 - 8 - 10);
   });
 });
 
@@ -147,7 +146,7 @@ describe('shapeTextEditLines', () => {
 });
 
 describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () => {
-  const STYLE_MIN = LINE_EDIT_BOXES.normal.contentMargin;
+  const STYLE_MIN = TEXT_EDIT_BOXES.normal!.contentMargin;
   const STYLE_MIN_X = STYLE_MIN.left + STYLE_MIN.right;
   const STYLE_MIN_Y = STYLE_MIN.top + STYLE_MIN.bottom;
   const ROW_HEIGHT_PX = textEditRowHeightPx(OPEN_SANS_FONT_METRICS, 16, THEME.separation);
@@ -179,7 +178,7 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
       text: 'a',
       fitContentWidth: true,
     });
-    const box = LINE_EDIT_BOXES.normal;
+    const box = TEXT_EDIT_BOXES.normal!;
     const withoutGutter = textEditMinimumSizeWith(node(props), ctx(), props, box, 0).x;
     expect(textEditMinimumSizeWith(node(props), ctx(), props, box, 5).x).toBe(withoutGutter + 5);
   });
@@ -261,19 +260,19 @@ describe('textEditMinimumSize', () => {
   it('is exactly the active stylebox minimum size when neither fit_content flag is set', () => {
     const n = node({ text: 'hello world this is a long line' });
     const v = textEditMinimumSize(n, ctx());
-    const styleMin = LINE_EDIT_BOXES.normal.contentMargin;
+    const styleMin = TEXT_EDIT_BOXES.normal!.contentMargin;
     expect(v).toEqual({ x: styleMin.left + styleMin.right, y: styleMin.top + styleMin.bottom });
   });
   it('grows with fit_content_height on the first pass (no tentativeRect) using the unwrapped height', () => {
     const n = node({ text: 'a\nb\nc', fitContentHeight: true });
     const v = textEditMinimumSize(n, ctx());
-    const styleMin = LINE_EDIT_BOXES.normal.contentMargin;
+    const styleMin = TEXT_EDIT_BOXES.normal!.contentMargin;
     expect(v.y).toBeGreaterThan(styleMin.top + styleMin.bottom);
   });
   it('floors the read_only stylebox, not the normal one, when editable is false', () => {
     const n = node({ editable: false });
     const v = textEditMinimumSize(n, ctx());
-    const styleMin = LINE_EDIT_BOXES.readOnly.contentMargin;
+    const styleMin = TEXT_EDIT_BOXES.read_only!.contentMargin;
     expect(v).toEqual({ x: styleMin.left + styleMin.right, y: styleMin.top + styleMin.bottom });
   });
 });
@@ -281,13 +280,13 @@ describe('textEditMinimumSize', () => {
 describe('layoutTextEditDrawBand', () => {
   // text_edit.cpp:938,941-944.
   it('begins after the left content margin plus the gutter band, ends before the right margin', () => {
-    const box = LINE_EDIT_BOXES.normal;
+    const box = TEXT_EDIT_BOXES.normal!;
     const band = layoutTextEditDrawBand(300, box, 22, 80, false, 24);
     expect(band.xMarginBeginPx).toBe(Math.ceil(box.contentMargin.left) + 22);
     expect(band.xMarginEndPx).toBe(300 - Math.floor(box.contentMargin.right));
   });
   it('narrows the right edge further when draw_minimap is true', () => {
-    const box = LINE_EDIT_BOXES.normal;
+    const box = TEXT_EDIT_BOXES.normal!;
     const withoutMinimap = layoutTextEditDrawBand(300, box, 0, 80, false, 24).xMarginEndPx;
     const withMinimap = layoutTextEditDrawBand(300, box, 0, 80, true, 24).xMarginEndPx;
     expect(withMinimap).toBe(withoutMinimap - 80);

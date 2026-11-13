@@ -4,9 +4,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { spinBoxButtonsBlockWidth } from '../spinbox/nativeSolver';
-import { lineEditBoxes } from '../lineedit/nativeSolver';
-import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
-import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
+import { defaultLineEditField } from '../shared/testing/lineEditField';
 import { MODE_HSV, MODE_LINEAR, MODE_OKHSL, MODE_RGB } from './colorModes';
 import { pickerChildTheme } from './pickerChildTheme';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -430,12 +428,7 @@ describe('colorPickerValueColumnWidth', () => {
 
   it('widens by the scaled buttons block at theme scale 2', () => {
     // The 16x8 arrow icon doubles to 32x16 and the block follows its width (spin_box.cpp:82-86). The LineEdit margin doubles from 8 to 16 too.
-    const widthAt = (scale: number) =>
-      colorPickerValueColumnWidth(
-        lineEditBoxes(defaultStyleBoxesOf(defaultThemeAt(scale)).LineEdit!),
-        scale,
-        0
-      );
+    const widthAt = (scale: number) => colorPickerValueColumnWidth(defaultLineEditField(scale), scale, 0);
     const lineEditMarginGrowth = 8;
     expect(widthAt(2) - widthAt(1)).toBe(
       spinBoxButtonsBlockWidth(32) - spinBoxButtonsBlockWidth(16) + lineEditMarginGrowth

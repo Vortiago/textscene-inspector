@@ -709,7 +709,7 @@ describe('the default theme font size of a Label type variation (default_theme.c
       ...NO_PROJECT_FONTS,
       projectTheme: null,
     });
-    expect(resolveThemeFontSizeIn(scope, 'font_size', undefined)).toBe(20);
+    expect(resolveThemeFontSizeIn(scope, 'font_size')).toBe(20);
   });
 
   it('keeps the default size for a variation the default theme lacks', () => {

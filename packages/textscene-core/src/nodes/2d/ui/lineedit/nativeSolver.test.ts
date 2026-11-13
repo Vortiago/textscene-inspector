@@ -164,7 +164,10 @@ describe('lineEditMinimumSize: expand_to_text_length (line_edit.cpp:2454-2457)',
   });
 
   it('a caret_width theme override changes the added margin', () => {
-    const n = { ...node({ text: 'WWWWWW', expandToTextLength: true }), constants: { caret_width: 3 } };
+    const n = {
+      ...node({ text: 'WWWWWW', expandToTextLength: true }),
+      constants: { ...node({}).constants, caret_width: 3 },
+    };
     const result = lineEditMinimumSize(n, ctx());
     expect(result.x).toBe(8 + SIX_W_WIDTH + 3);
   });

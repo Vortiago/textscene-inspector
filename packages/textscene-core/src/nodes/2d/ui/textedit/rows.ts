@@ -25,6 +25,7 @@ interface TextEditRowsInput {
   gutterBandWidthPx: number;
   minimapWidthPx: number;
   drawMinimap: boolean | undefined;
+  wrapOffsetPx: number;
   scrollPastEndOfFile: boolean;
   fitContentHeight: boolean;
   rtl: boolean;
@@ -48,6 +49,7 @@ export function solveTextEditRows(input: TextEditRowsInput): TextEditRows {
       input.gutterBandWidthPx,
       input.minimapWidthPx,
       input.drawMinimap,
+      input.wrapOffsetPx,
       verticalBarWidthPx
     );
   const shapeAt = (wrapWidthPx: number) =>

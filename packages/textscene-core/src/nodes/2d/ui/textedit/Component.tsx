@@ -51,6 +51,8 @@ import {
   TEXT_EDIT_DEFAULT_TAB_SIZE,
   TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
   textEditCapSpanAlpha,
+  textEditLineSpacingPx,
+  textEditWrapOffsetPx,
 } from './nativeSolver';
 import { useTextEditRows } from './useTextEditRows';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
@@ -63,20 +65,8 @@ import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 /** `text_edit_tab.svg`/`text_edit_space.svg`'s authored size. The default theme rasterises both at the theme scale. */
 const GLYPH_ICON_AUTHORED_SIZE_PX = 8;
 
-/** `default_theme.cpp:472` (TextEdit) / `:518` (CodeEdit): the same literal for both. */
-const CURRENT_LINE_COLOR = { r: 0.25, g: 0.25, b: 0.26, a: 0.8 };
-
 /** The stand-in row for a buffer line with no shaped rows: an empty line measures no indent. */
 const EMPTY_ROW = { text: '', glyphs: [], widthPx: 0, paragraphIndex: 0 };
-
-/** `default_theme.cpp:481` (TextEdit) / `:527` (CodeEdit): `caret_width`, the same literal for both. Unscaled, like every constant here. */
-const CARET_WIDTH_PX = 1;
-
-/**
- * `caret_color`, the same for both types (`default_theme.cpp:473`, `:526`). Not
- * the state-dependent font colour: a read-only TextEdit paints its text at
- * `font_readonly_color` and its caret at this.
- */
 
 interface TextEditBodyProps extends NativeControlComponentProps {
   /**
@@ -131,7 +121,8 @@ export function TextEditBody({
   const fontMetrics = resolveNodeFontMetrics(solveNode, TEXT_EDIT_THEME_FONT_KEY);
   // The highlighter's plain colour is the theme `font_color` whatever `editable` says (`syntax_highlighter.cpp:421`).
   const highlighterFontColor = textEditTextTheme(solveNode, props, 'normal').color;
-  const lineSpacingPx = theme.separation; // nativeSolver.ts says why.
+  const lineSpacingPx = textEditLineSpacingPx(solveNode);
+  const currentLineColor = requiredThemeItem(solveNode.colors, 'current_line_color');
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
 
   // `minimap_draw`/`minimap_width` narrow the text band, and the minimap draws in the strip they
@@ -163,6 +154,7 @@ export function TextEditBody({
       gutterBandWidthPx,
       minimapWidthPx: props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
       drawMinimap: props.minimapDraw,
+      wrapOffsetPx: textEditWrapOffsetPx(solveNode),
       scrollPastEndOfFile: props.scrollPastEndOfFile === true,
       fitContentHeight: props.fitContentHeight === true,
       rtl: solveNode.rtl,
@@ -227,7 +219,7 @@ export function TextEditBody({
       // The buffer's colour, not the placeholder's (`:1194`).
       fontColor: textEditTextTheme(solveNode, props, state).color,
       caretColor: requiredThemeItem(solveNode.colors, 'caret_color'),
-      currentLineColor: CURRENT_LINE_COLOR,
+      currentLineColor,
     };
   }, [
     props,
@@ -243,14 +235,15 @@ export function TextEditBody({
     rowHeightPx,
     wrapWidthPx,
     tabSize,
+    currentLineColor,
   ]);
 
   // `tint.own` (raw sRGB, `self_modulate` folded onto `modulate`) tints the box alone
   // (`text_edit.cpp:915,949`). Everything else is drawn on the child item `text_ci` or by a child
   // scroll bar (`:9284-9292`), so it takes `childTint`, before its one sRGB-to-linear conversion.
   const tintedCurrentLineColor = useMemo(
-    () => multiplyModulate(childTint.own, CURRENT_LINE_COLOR),
-    [childTint.own]
+    () => multiplyModulate(childTint.own, currentLineColor),
+    [childTint.own, currentLineColor]
   );
   const caretColor = requiredThemeItem(solveNode.colors, 'caret_color');
   const tintedCaretColor = useMemo(
@@ -273,7 +266,7 @@ export function TextEditBody({
     rowBandTopPx(0),
     rowHeightPx,
     textHeightPx,
-    CARET_WIDTH_PX
+    requiredThemeItem(solveNode.constants, 'caret_width')
   );
 
   // `text_ci` clips to the whole node rect (`:932-936`), not the content rect as LineEdit does.

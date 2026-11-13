@@ -269,11 +269,7 @@ export function fontForNode(
  * @param override Wins only when `> 0` (`if (font_size && (*font_size) > 0)`,
  *   `control.cpp:3114-3117`). A `0` falls through like an unauthored one.
  */
-export function resolveThemeFontSizeIn(
-  scope: ThemeResolutionScope,
-  name: string,
-  override: number | undefined
-): number {
+export function resolveThemeFontSizeIn(scope: ThemeResolutionScope, name: string, override?: number): number {
   if (override !== undefined && override > 0) return override;
 
   for (const theme of scope.searchOrder) {

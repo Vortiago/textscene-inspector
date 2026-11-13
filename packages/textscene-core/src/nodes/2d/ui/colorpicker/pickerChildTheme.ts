@@ -14,7 +14,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { perObject } from '../../../../utils/perObject';
 import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
-import { lineEditBoxes, type LineEditBoxes } from '../lineedit/nativeSolver';
+import { lineEditField, type LineEditField } from '../lineedit/nativeSolver';
 
 /**
  * `mode_button_normal` and `mode_button_pressed`: `BIND_THEME_ITEM_EXT` binds them to `tab_unselected`
@@ -30,7 +30,7 @@ export interface ModeButtonBoxes {
 export interface PickerTheme extends NativeTheme {
   modeButtons: ModeButtonBoxes;
   /** The hex field's boxes, a plain `LineEdit`. */
-  lineEdit: LineEditBoxes;
+  lineEdit: LineEditField;
   /** The boxes of the internal channel `HSlider`s. */
   channelSlider: SliderBoxes;
 }
@@ -39,7 +39,7 @@ export interface PickerChildTheme {
   /** `theme` with the Button, FlatMenuButton, TabContainer, HSlider and LineEdit styleboxes of the Theme chain. */
   theme: PickerTheme;
   /** The `SpinBox` inner LineEdit's boxes, for the slider value fields. */
-  valueField: LineEditBoxes;
+  valueField: LineEditField;
   valueFieldColor: Rgba;
   labelColor: Rgba;
   buttonColor: Rgba;
@@ -91,11 +91,11 @@ function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildThe
       pressed: pickTabStyleBox(tabs.styleBoxes, 'selected'),
     },
     channelSlider: sliderBoxes(slider.styleBoxes),
-    lineEdit: lineEditBoxes(lineEdit.styleBoxes),
+    lineEdit: lineEditField(lineEdit),
   };
   const result: PickerChildTheme = {
     theme: withBoxes,
-    valueField: lineEditBoxes(valueField.styleBoxes),
+    valueField: lineEditField(valueField),
     valueFieldColor: requiredThemeItem(valueField.colors, 'font_color'),
     labelColor: requiredThemeItem(label.colors, 'font_color'),
     buttonColor: requiredThemeItem(button.colors, 'font_color'),

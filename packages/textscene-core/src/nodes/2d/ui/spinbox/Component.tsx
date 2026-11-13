@@ -15,6 +15,7 @@ import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
+import { PositionedStyleBox } from '../../../../r3f/controls/native/PositionedStyleBox';
 import {
   resolveLineEditStyleState,
   layoutLineEditContent,
@@ -159,37 +160,14 @@ export function SpinBox({
           </CanvasItemGroup>
         )}
       </CanvasItemGroup>
-      <CanvasItemGroup
-        position={[layout.fieldAndButtonsSeparatorRect.x, -layout.fieldAndButtonsSeparatorRect.y, 0]}
-      >
-        <StyleBoxQuad
-          styleBox={fieldSeparatorBox}
-          color={tint.own}
-          rect={{
-            x: 0,
-            y: 0,
-            w: layout.fieldAndButtonsSeparatorRect.w,
-            h: layout.fieldAndButtonsSeparatorRect.h,
-          }}
-          renderOrder={renderOrder}
-        />
-      </CanvasItemGroup>
-      <CanvasItemGroup position={[layout.upRect.x, -layout.upRect.y, 0]}>
-        <StyleBoxQuad
-          styleBox={upBox}
-          color={tint.own}
-          rect={{ x: 0, y: 0, w: layout.upRect.w, h: layout.upRect.h }}
-          renderOrder={renderOrder}
-        />
-      </CanvasItemGroup>
-      <CanvasItemGroup position={[layout.downRect.x, -layout.downRect.y, 0]}>
-        <StyleBoxQuad
-          styleBox={downBox}
-          color={tint.own}
-          rect={{ x: 0, y: 0, w: layout.downRect.w, h: layout.downRect.h }}
-          renderOrder={renderOrder}
-        />
-      </CanvasItemGroup>
+      <PositionedStyleBox
+        box={fieldSeparatorBox}
+        rect={layout.fieldAndButtonsSeparatorRect}
+        tint={tint}
+        renderOrder={renderOrder}
+      />
+      <PositionedStyleBox box={upBox} rect={layout.upRect} tint={tint} renderOrder={renderOrder} />
+      <PositionedStyleBox box={downBox} rect={layout.downRect} tint={tint} renderOrder={renderOrder} />
       <PositionedIcon
         rect={{ x: upIconPos.x, y: upIconPos.y, w: upIconSize.x, h: upIconSize.y }}
         texture={upIconTexture}

@@ -40,7 +40,7 @@ import { shapeRowHeight, shapeRowMinWidth } from './shapes/shapeRowLayout';
 import { drawnShapeVariant } from './shapes/pickerShapes';
 import { MODE_LINEAR, MODE_RGB } from './colorModes';
 import { gridCellMinimumExtent } from '../shared/gridCellMinimum';
-import { lineEditStyleMinSize, lineEditTextMinimumWidth, type LineEditBoxes } from '../lineedit/nativeSolver';
+import { lineEditStyleMinSize, lineEditTextMinimumWidth, type LineEditField } from '../lineedit/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { sliderMinimumSize } from '../shared/sliderSolver';
 import type { ColorPickerProperties } from './types';
@@ -78,7 +78,7 @@ const COLOR_PICKER_TEXT_TYPE_WIDTH = 28;
  * `emWidthPx` is the unrounded advance of "W": `Font::get_char_size` does not ceil it.
  */
 export function colorPickerValueColumnWidth(
-  valueField: LineEditBoxes,
+  valueField: LineEditField,
   scale: number,
   emWidthPx: number
 ): number {
@@ -93,8 +93,8 @@ export function colorPickerValueColumnWidth(
  * block. `c_text` (`color_picker.cpp:2215`) fills what `hexRowColumns` leaves, so only the
  * minimum size reads its own; the `SpinBox` value column adds its block to this.
  */
-function colorPickerHexFieldMinWidth(boxes: LineEditBoxes, emWidthPx: number): number {
-  return lineEditStyleMinSize(boxes).x + lineEditTextMinimumWidth(emWidthPx);
+function colorPickerHexFieldMinWidth(boxes: LineEditField, emWidthPx: number): number {
+  return lineEditStyleMinSize(boxes).x + lineEditTextMinimumWidth(boxes, emWidthPx);
 }
 
 /** The square `menu_option` and `folded_arrow` icons as a size. */
@@ -374,7 +374,7 @@ function swatchesRowSize(
 export function colorPickerRows(
   width: number,
   theme: PickerTheme,
-  valueField: LineEditBoxes,
+  valueField: LineEditField,
   props: Pick<
     ColorPickerProperties,
     | 'pickerShape'
@@ -455,7 +455,7 @@ export function colorPickerRows(
  */
 function contentMinWidth(
   theme: PickerTheme,
-  valueField: LineEditBoxes,
+  valueField: LineEditField,
   props: ColorPickerProperties,
   rows: Pick<ColorPickerRows, 'modeMinWidth' | 'swatchesMinWidth'>,
   emWidthPx: number

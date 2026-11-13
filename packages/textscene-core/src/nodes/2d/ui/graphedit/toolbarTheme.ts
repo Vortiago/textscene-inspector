@@ -11,7 +11,7 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import { lineEditBoxes, type LineEditBoxes } from '../lineedit/nativeSolver';
+import { lineEditField, type LineEditField } from '../lineedit/nativeSolver';
 import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
 
 /** `zoom_minus_button->set_theme_type_variation(SceneStringName(FlatButton))` (`graph_edit.cpp:3250`). */
@@ -26,7 +26,7 @@ export interface GraphEditToolbarTheme {
   labelBox: StyleBoxFlatData;
   labelColor: Rgba;
   /** `snapping_distance_spinbox`'s field, a `SpinBoxInnerLineEdit`. */
-  fieldBoxes: LineEditBoxes;
+  field: LineEditField;
   fieldColor: Rgba;
   /** The SpinBox's own colours, which hold `up_icon_modulate` and `down_icon_modulate`. */
   spinBoxColors: SolveNode['colors'];
@@ -53,7 +53,7 @@ function buildToolbarTheme(n: SolveNode, theme: NativeTheme): GraphEditToolbarTh
     buttonColors: button.colors,
     labelBox: requiredThemeItem(label.styleBoxes, 'normal'),
     labelColor: requiredThemeItem(label.colors, 'font_color'),
-    fieldBoxes: lineEditBoxes(field.styleBoxes),
+    field: lineEditField(field),
     fieldColor: requiredThemeItem(field.colors, 'font_color'),
     spinBoxColors: internalChildThemeItems(n, 'SpinBox').colors,
   };

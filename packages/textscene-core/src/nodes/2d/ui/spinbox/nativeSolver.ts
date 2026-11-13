@@ -26,7 +26,7 @@ import {
   themeResolutionScope,
   type ThemeResolutionScope,
 } from '../../../../resources/styles/theme/lookup';
-import { lineEditBoxes, lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
+import { lineEditField, lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SpinBoxProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -275,16 +275,14 @@ interface SpinBoxFieldTextTheme {
 /** The field's font (face + size) and colour, ancestor-walked, for `editable` state. */
 export function spinBoxFieldTextTheme(n: SolveNode, editable: boolean): SpinBoxFieldTextTheme {
   const scope = spinBoxFieldThemeScope(n);
-  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined);
+  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size');
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
   const { colors } = spinBoxFieldThemeItems(n);
   return {
     fontSizePx,
     fontMetrics,
-    color: editable
-      ? requiredThemeItem(colors, 'font_color')
-      : requiredThemeItem(colors, 'font_uneditable_color'),
+    color: requiredThemeItem(colors, editable ? 'font_color' : 'font_uneditable_color'),
   };
 }
 
@@ -315,14 +313,14 @@ export const spinBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   // The field is `add_child`ed at construction (`spin_box.cpp:724-731`), so the SpinBox's own
   // `theme_override_styles/*` never reach it. It reads the Theme chain's LineEdit boxes only.
-  const { styleBoxes } = spinBoxFieldThemeItems(n);
-  const styleMinSize = lineEditStyleMinSize(lineEditBoxes(styleBoxes));
+  const field = lineEditField(spinBoxFieldThemeItems(n));
+  const styleMinSize = lineEditStyleMinSize(field);
 
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
 
   const fieldMin = {
-    x: styleMinSize.x + lineEditTextMinimumWidth(emSpaceSize),
+    x: styleMinSize.x + lineEditTextMinimumWidth(field, emSpaceSize),
     y: styleMinSize.y + fontHeightPx,
   };
 

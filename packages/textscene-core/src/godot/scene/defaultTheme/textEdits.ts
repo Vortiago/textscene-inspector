@@ -22,7 +22,7 @@ import {
 } from '../theme.js';
 import { focusStyleBox } from './button.js';
 import type { DefaultFlatStyleBox, DefaultStyleBox, DefaultThemeTypes } from './defaultTheme.js';
-import { allSides, makeFlatStyleBox } from './styleBoxes.js';
+import { allSides, makeFlatStyleBox, withBorder } from './styleBoxes.js';
 import { BLACK, CLEAR, typeItems } from './typeItems.js';
 
 /** `control_selection_color` (`default_theme.cpp:109`). */
@@ -33,12 +33,11 @@ const CONTROL_SELECTION_COLOR: Rgba = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
  * set after `make_flat_stylebox`, so the theme scale never reaches it.
  */
 function fieldBox(scale: number, fill: Rgba, line: Rgba): DefaultFlatStyleBox {
-  const box = makeFlatStyleBox(scale, fill);
-  return {
-    ...box,
-    borderWidth: { ...allSides(0), bottom: LINE_EDIT_BORDER_BOTTOM_WIDTH },
-    borderColor: line,
-  };
+  return withBorder(
+    makeFlatStyleBox(scale, fill),
+    { ...allSides(0), bottom: LINE_EDIT_BORDER_BOTTOM_WIDTH },
+    line
+  );
 }
 
 /** The `normal`, `focus` and `read_only` boxes all three types set (`:409-417`, `:453-455`, `:486-488`). */
@@ -102,7 +101,7 @@ export function textEditTypes(scale: number): DefaultThemeTypes {
       styles: { ...boxes, completion: makeFlatStyleBox(scale, STYLE_FILL.normal, { margin: allSides(0) }) },
       colors: {
         ...TEXT_EDIT_COLORS,
-        font_readonly_color: { ...CONTROL_FONT_COLOR, a: 0.5 },
+        font_readonly_color: CONTROL_FONT_DISABLED_COLOR,
         word_highlighted_color: { r: 0.8, g: 0.9, b: 0.9, a: 0.15 },
         completion_background_color: { r: 0.17, g: 0.16, b: 0.2, a: 1 },
         completion_selected_color: { r: 0.26, g: 0.26, b: 0.27, a: 1 },

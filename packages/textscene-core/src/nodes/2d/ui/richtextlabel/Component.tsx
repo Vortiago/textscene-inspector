@@ -26,7 +26,7 @@ import { clampAutowrapMode } from '../../../../r3f/controls/native/text/textLayo
 import { OutlinedTextRun } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { ScrollBarChrome } from '../shared/ScrollChrome';
 import {
-  RICH_TEXT_LABEL_UNDERLINE_ALPHA,
+  richTextLabelUnderlineAlpha,
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
   layoutRichTextRuns,
   richTextLabelTextTheme,
@@ -282,6 +282,7 @@ function RichTextBody({
   const props = painterView<RichTextLabelProperties>(solveNode);
   const toItemLinear = useItemLinearColorOf();
   const textTheme = useMemo(() => richTextLabelTextTheme(solveNode, props), [solveNode, props]);
+  const underlineAlpha = richTextLabelUnderlineAlpha(solveNode);
 
   const {
     runs,
@@ -378,7 +379,7 @@ function RichTextBody({
                     width={underline.x1 - underline.x0}
                     height={underline.heightPx}
                     color={toItemLinear(runTint)}
-                    opacity={runTint.a * RICH_TEXT_LABEL_UNDERLINE_ALPHA}
+                    opacity={runTint.a * underlineAlpha}
                     renderOrder={renderOrder}
                   />
                 </CanvasItemGroup>

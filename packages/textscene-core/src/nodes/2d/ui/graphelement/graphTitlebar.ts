@@ -52,7 +52,7 @@ interface TitlebarFontTheme {
  */
 export function resolveTitleFontTheme(n: SolveNode, typeVariation: string): TitlebarFontTheme {
   const scope = themeResolutionScope(TITLE_LABEL_NATIVE_TYPE, typeVariation, n.themeChain, n.projectFonts);
-  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined);
+  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size');
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
   const items = internalChildThemeItems(n, TITLE_LABEL_NATIVE_TYPE, typeVariation);

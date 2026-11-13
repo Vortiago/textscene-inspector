@@ -17,6 +17,7 @@ import {
   textEditRowHeightPx,
   textEditMinimumSizeWith,
   TEXT_EDIT_THEME_FONT_KEY,
+  textEditLineSpacingPx,
 } from '../textedit/nativeSolver';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
@@ -24,9 +25,6 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { CodeEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-
-/** `default_theme.cpp:526`: `Color(0.67, 0.67, 0.67, 0.4)`, distinct from `font_color`. */
-export const CODE_EDIT_LINE_NUMBER_COLOR: Rgba = { r: 0.67, g: 0.67, b: 0.67, a: 0.4 };
 
 /** `line_numbers_min_digits`'s own default (`code_edit.h:114`). */
 const CODE_EDIT_LINE_NUMBERS_MIN_DIGITS_DEFAULT = 3;
@@ -127,7 +125,7 @@ function codeEditFontMetrics(
   const state = resolveTextEditStyleState(props.editable);
   const { fontSizePx } = textEditTextTheme(n, props, state);
   const fontMetrics = resolveNodeFontMetrics(n, TEXT_EDIT_THEME_FONT_KEY);
-  const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, ctx.theme.separation);
+  const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, textEditLineSpacingPx(n));
   const charWidth0Px = ctx.measureText ? ctx.measureText('0', fontSizePx, 0, fontMetrics).x : 0;
   return { rowHeightPx, charWidth0Px };
 }
@@ -190,9 +188,6 @@ export const codeEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const band = codeEditGutterBand(props, rowHeightPx, charWidth0Px, lineCount);
   return textEditMinimumSizeWith(n, ctx, props, styleBox, band.totalWidthPx, props.indentSize);
 };
-
-/** `code_folding_color` = `Color(0.8, 0.8, 0.8, 0.8)` (`default_theme.cpp:524`), the fold arrow's modulate. */
-export const CODE_EDIT_CODE_FOLDING_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 0.8 };
 
 /** `folded_code_region_color` = `Color(0.68, 0.46, 0.77, 0.2)` (`default_theme.cpp:525`), with the alpha floored at 0.4 the way `_fold_gutter_draw_callback` floors it (`code_edit.cpp:1636-1637`). */
 export const CODE_EDIT_CODE_REGION_ICON_COLOR: Rgba = { r: 0.68, g: 0.46, b: 0.77, a: 0.4 };

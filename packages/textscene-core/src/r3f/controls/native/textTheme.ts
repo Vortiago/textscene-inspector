@@ -28,8 +28,8 @@ export interface ResolvedTextTheme {
  * Resolves size and colour independently, so one can be overridden while the other defaults. Size
  * walks `Control::get_theme_font_size` (`scene/gui/control.cpp:3107-3129`): an override of `0` falls
  * through (`:3114-3117`), and a theme's `default_font_size` answers when no entry matches
- * (`scene/resources/theme.cpp:658-666`). `defaultColor` is the colour of a type the default theme
- * table does not hold yet: Label's is opaque white (`default_theme.cpp:383`).
+ * (`scene/resources/theme.cpp:658-666`). `defaultColor` answers a colour that no theme sets, such
+ * as LinkButton's `font_disabled_color`, or one of a type the default theme table does not hold yet.
  */
 export function resolveTextTheme(
   n: ShareNode,

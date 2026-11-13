@@ -46,6 +46,16 @@ import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 /** `SceneStringName(font)` = `"font"`: `default_theme.cpp:460` (TextEdit), `:501` (CodeEdit). */
 export const TEXT_EDIT_THEME_FONT_KEY = 'font';
 
+/** `line_spacing`, the gap each row adds under its text (`text_edit.cpp:4104`). */
+export function textEditLineSpacingPx(n: SolveNode): number {
+  return requiredThemeItem(n.constants, 'line_spacing');
+}
+
+/** `wrap_offset`, the width `_update_wrap_at_column` keeps clear at the end of a row (`text_edit.cpp:8545`). */
+export function textEditWrapOffsetPx(n: SolveNode): number {
+  return requiredThemeItem(n.constants, 'wrap_offset');
+}
+
 /** `text_edit.cpp:4103`: `MAX(text.get_line_height() + theme_cache.line_spacing, 1)`. `Text::get_line_height()` (`:136-147`) is the max of every visible line's own `l.height`, which reduces to the font's own ascent+descent (no spacing) since every line in this codebase shapes at one uniform font/size. */
 export function textEditRowHeightPx(
   fontMetrics: Parameters<typeof getFontLinePitchPx>[0],
@@ -54,9 +64,6 @@ export function textEditRowHeightPx(
 ): number {
   return Math.max(getFontLinePitchPx(fontMetrics, fontSizePx, 0) + themeLineSpacingPx, 1);
 }
-
-/** `default_theme.cpp:482`: `theme->set_constant("wrap_offset", "TextEdit", 10)`, a bare `10`, not `Math.round(10 * scale)` like its neighbours. `_update_wrap_at_column` (`:8536-8543`) subtracts it unscaled. */
-const TEXT_EDIT_WRAP_OFFSET_PX = 10;
 
 /** `text_edit.cpp:8614`: `content_size_cache = Vector2i(total_width + 10, ...)`, a second bare, unscaled `10`. */
 const TEXT_EDIT_CONTENT_WIDTH_PAD_PX = 10;
@@ -176,7 +183,7 @@ export function shapeTextEditLines(
 /**
  * `_update_wrap_at_column` (`text_edit.cpp:8536-8543`): `width - style min width - gutters_width -
  * gutter_padding`, less `minimap_width` when drawn, less the vertical scroll bar's width when it
- * shows, less the bare 10 `wrap_offset`. `gutterBandWidthPx` is the gutter sum, never split at a
+ * shows, less `wrap_offset`. `gutterBandWidthPx` is the gutter sum, never split at a
  * call site: 0 for TextEdit, `codeEditGutterBand`'s `totalWidthPx` for CodeEdit.
  */
 export function textEditWrapWidthPx(
@@ -185,12 +192,13 @@ export function textEditWrapWidthPx(
   gutterBandWidthPx: number,
   minimapWidthPx: number,
   drawMinimap: boolean | undefined,
+  wrapOffsetPx: number,
   verticalBarWidthPx = 0
 ): number {
   let width = rectWidthPx - styleMinWidthPx - gutterBandWidthPx;
   if (drawMinimap) width -= minimapWidthPx;
   width -= verticalBarWidthPx;
-  width -= TEXT_EDIT_WRAP_OFFSET_PX;
+  width -= wrapOffsetPx;
   return Math.trunc(width);
 }
 
@@ -268,9 +276,7 @@ export function textEditMinimumSizeWith(
   const state = resolveTextEditStyleState(props.editable);
   const { fontSizePx } = textEditTextTheme(n, props, state);
   const fontMetrics = resolveNodeFontMetrics(n, TEXT_EDIT_THEME_FONT_KEY);
-  // TextEdit's `line_spacing` (`default_theme.cpp:479`) and BoxContainer's `DEFAULT_SEPARATION`
-  // are both `Math.round(4 * scale)`, which `theme.separation` holds.
-  const lineSpacingPx = ctx.theme.separation;
+  const lineSpacingPx = textEditLineSpacingPx(n);
 
   if (!props.fitContentWidth && !props.fitContentHeight) return styleMin;
 
@@ -283,7 +289,8 @@ export function textEditMinimumSizeWith(
           styleMin.x,
           gutterBandWidthPx,
           props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
-          props.minimapDraw
+          props.minimapDraw,
+          textEditWrapOffsetPx(n)
         );
   const effectiveWrapMode = rectWidthPx === undefined ? 0 : props.wrapMode;
 

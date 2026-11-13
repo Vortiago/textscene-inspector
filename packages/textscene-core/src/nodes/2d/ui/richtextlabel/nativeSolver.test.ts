@@ -25,7 +25,6 @@ import {
   underlineRectPx,
   richTextLabelTextureSlots,
   shapeRichText,
-  RICH_TEXT_LABEL_UNDERLINE_ALPHA,
   richTextContentHeightPx,
 } from './nativeSolver';
 import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment, type ParsedImgTag } from './bbcode';
@@ -1045,12 +1044,6 @@ describe('shapeRichText — faces and sizes by character', () => {
 
   it('shapes nothing for an empty run list', () => {
     expect(shapeRuns([]).lines[0]!.glyphs).toEqual([]);
-  });
-});
-
-describe('RICH_TEXT_LABEL_UNDERLINE_ALPHA', () => {
-  it("matches default_theme.cpp:1231's underline_alpha constant (50, i.e. 50%) exactly — rich_text_label.cpp:1237 multiplies it into the stroke's own alpha, on top of the run's font colour", () => {
-    expect(RICH_TEXT_LABEL_UNDERLINE_ALPHA).toBe(0.5);
   });
 });
 
