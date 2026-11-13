@@ -42,6 +42,7 @@ import {
 import type { SceneResources } from './SceneResourcesContext.js';
 import { TILE_SET } from '../resources/tileset/kind.js';
 import { isCanvasItem } from './canvasItemClass.js';
+import { tileMapLayerChildren } from './liveTileMapLayers.js';
 import type { SceneTileCell } from '../resources/tileset/sceneTileCells.js';
 import {
   placedSceneTileRoot,
@@ -362,10 +363,10 @@ export function rootScope(ctx: LiveTreeContext): SceneScope {
 
 /**
  * One group of live children. `origin` is the React key namespace. `merged`
- * children resolve in the sub-scene's scope, `inline`, `glb` and `tiles` children in the outer scope.
+ * children resolve in the sub-scene's scope, `front`, `inline`, `glb` and `tiles` children in the outer scope.
  */
 export interface LiveChildGroup {
-  origin: 'merged' | 'inline' | 'glb' | 'tiles';
+  origin: 'front' | 'merged' | 'inline' | 'glb' | 'tiles';
   children: readonly LiveNode[];
   /** Both pools this group's children resolve their own refs against, as a {@link SceneScope}. */
   scope: SceneScope;
@@ -505,7 +506,7 @@ function liveStep(node: LiveNode, groupScope: SceneScope, sources: TreeSources):
   const lookup = lookupInstance(node, own, sceneCache);
   const instanced = loadedInstance(lookup, own, sceneCache);
   const merged = collapseInstance(node, own, instanced, sceneCache);
-  return withSceneTiles(
+  return withInternalChildren(
     merged === node
       ? {
           node,
@@ -549,6 +550,18 @@ function mergedStep(
  * `step` with the scene tiles of its tile layer as a `tiles` group after the others, as
  * `add_child` appends them (`tile_map_layer.cpp:1646-1651`). A TileSet still loading adds none yet.
  */
+function withInternalChildren(step: LiveStep, sources: TreeSources): LiveStep {
+  return withSceneTiles(withTileMapLayers(step), sources);
+}
+
+/** `step` with the layers of its TileMap as a `front` group before the others (`tile_map.cpp:277-279`). */
+function withTileMapLayers(step: LiveStep): LiveStep {
+  const layers = tileMapLayerChildren(step.node);
+  if (!layers?.length) return step;
+  const group: LiveChildGroup = { origin: 'front', children: layers, scope: step.scope };
+  return { ...step, groups: [group, ...step.groups] };
+}
+
 function withSceneTiles(step: LiveStep, sources: TreeSources): LiveStep {
   const cells = sceneTileLayerCells(step.node);
   if (!cells?.length) return step;

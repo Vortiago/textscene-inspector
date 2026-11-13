@@ -214,7 +214,7 @@ layer_0/tile_data = PackedInt32Array(65538, 0, 65536)
     SCENES
   );
 
-  it('are children of the TileMap, after its authored children', () => {
-    expect(childPaths(tree, 'Map')).toEqual(['Map/Authored', 'Map/@SceneTile@2_1']);
+  it('are children of the TileMap, after its layers and its authored children', () => {
+    expect(childPaths(tree, 'Map')).toEqual(['Map/@TileMapLayer@0', 'Map/Authored', 'Map/@SceneTile@2_1']);
   });
 });

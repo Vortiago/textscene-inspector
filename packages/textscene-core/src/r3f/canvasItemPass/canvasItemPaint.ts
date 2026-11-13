@@ -6,7 +6,7 @@
  */
 
 import type { TscnNode } from '../../parser/types';
-import { isInjected, type LiveTree } from '../liveSceneTree';
+import { isInjected, type LiveChildGroup, type LiveTree } from '../liveSceneTree';
 import { liveScenePassResults, type LiveScenePass } from '../liveScenePass';
 import { liveNodePatches } from '../liveNodePatches';
 import { patchedNode } from '../nodePatch';
@@ -102,8 +102,11 @@ function paintOf(tree: LiveTree, start: PaintRange): ReadonlyMap<string, CanvasI
     const range = above.canvasRoots.get(raw) ?? above.ranges.get(raw) ?? WHOLE_CANVAS_RANGE;
     // A sub-viewport is a canvas of its own, whose runs start at the beginning.
     const basis = isViewportBoundary(node.type) ? WHOLE_CANVAS_RANGE : range;
-    const inline = step.groups.filter((group) => !isInjected(group)).flatMap((group) => group.children);
+    const inline = step.groups.filter(isAuthored).flatMap((group) => group.children);
     const allocated = allocatePaintRange(basis, inline, paintLayoutOf(node, inline));
+    // Internal front children draw in the front room, before every authored child (`node.h:585-600`).
+    const front = step.groups.filter((group) => group.origin === 'front').flatMap((group) => group.children);
+    const frontRanges = allocatePaintRange(allocated.front, front).children;
     // Injected content draws after the authored children, in the room `reservesRoom` holds back.
     const injected = step.groups.filter(isInjected).flatMap((group) => group.children);
     const injectedRanges = allocatePaintRange(allocated.tail, injected).children;
@@ -117,12 +120,21 @@ function paintOf(tree: LiveTree, start: PaintRange): ReadonlyMap<string, CanvasI
       behind: behindRangesOf(inline, allocated.children),
     });
     descend({
-      ranges: new Map([...rangesOf(inline, allocated.children), ...rangesOf(injected, injectedRanges)]),
+      ranges: new Map([
+        ...rangesOf(front, frontRanges),
+        ...rangesOf(inline, allocated.children),
+        ...rangesOf(injected, injectedRanges),
+      ]),
       // A CanvasLayer or a sub-viewport indexes the roots below it by its own counter (`canvas_layer.cpp:261-267`).
       canvasRoots: hostsOwnCanvas(node) ? canvasRootRanges(inline, allocated.children) : above.canvasRoots,
     });
   });
   return results;
+}
+
+/** Whether `group` holds children the scene lists, or the merged ones of an instance. */
+function isAuthored(group: LiveChildGroup): boolean {
+  return group.origin !== 'front' && !isInjected(group);
 }
 
 function rangesOf(children: readonly TscnNode[], ranges: readonly PaintRange[]): Map<TscnNode, PaintRange> {
