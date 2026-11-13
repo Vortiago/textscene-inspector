@@ -1,7 +1,6 @@
 /**
  * Both walks draw each node at the sequence the paint pass gives it: the world walk reads it through
- * `useNodePaint`, and the Control walk fills each `SolveNode`'s `paintSequence`, `backSequence` and
- * `layerSequence` from it. Every 2D node the pass holds is read by one walk, so a walk that
+ * `useNodePaint`, and the Control walk fills each `SolveNode`'s `paint` from it. Every 2D node the pass holds is read by one walk, so a walk that
  * allocates its own sequence fails here. A y-sorted parent re-packs its children's runs, so the
  * world walk below one is compared only for its runs.
  */

@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Sorter" type="Polygon2D" parent="."]
+position = Vector2(300, 100)
+y_sort_enabled = true
+
+[node name="A" type="Polygon2D" parent="Sorter"]
+position = Vector2(0, 200)
+color = Color(0.9, 0.3, 0.1, 1)
+polygon = PackedVector2Array(0, -150, 200, -150, 200, 50, 0, 50)
+
+[node name="B" type="Polygon2D" parent="Sorter"]
+position = Vector2(50, 100)
+color = Color(0.1, 0.8, 0.1, 1)
+polygon = PackedVector2Array(0, -50, 200, -50, 200, 150, 0, 150)
