@@ -17,16 +17,16 @@ import '../controls/index';
 
 const NODES_DIR = join(import.meta.dirname, '../../nodes');
 
-/** The types each `registerChildVisibility` call in the node slices names. */
+/** The types whose node registration declares `writesChildVisibility`. */
 function typesThatWriteVisibility(): string[] {
   const files = readdirSync(NODES_DIR, { recursive: true, encoding: 'utf8' }).filter(
     (file) => file.endsWith('.ts') && !file.includes('.test.')
   );
-  return files.flatMap((file) =>
-    [...readFileSync(join(NODES_DIR, file), 'utf8').matchAll(/registerChildVisibility\('(\w+)'/g)].map(
-      (match) => match[1]!
-    )
-  );
+  return files.flatMap((file) => {
+    const source = readFileSync(join(NODES_DIR, file), 'utf8');
+    if (!source.includes('writesChildVisibility:')) return [];
+    return [...source.matchAll(/typeName: '(\w+)'/g)].map((match) => match[1]!);
+  });
 }
 
 /** The lines that make each container hide at least one of two pages. */

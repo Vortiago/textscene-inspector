@@ -4,6 +4,7 @@
  * current tab draws last at the same `renderOrder`, so it overlaps its neighbours as in the
  * source's two-pass draw.
  */
+import { isTabUnselectable, resolveTabBarCurrentTab } from './currentTab';
 import { useMemo } from 'react';
 import type { Plane } from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -36,8 +37,6 @@ import {
   layoutTabContent,
   pickTabStyleBox,
   resolveTabDrawState,
-  isTabUnselectable,
-  resolveTabBarCurrentTab,
   shapeTabLabel,
   tabBarFontColor,
   tabBarFontSizePx,

@@ -6,7 +6,7 @@
 
 import type { TscnNode } from '../../parser/types';
 import type { LiveStep, LiveTree } from '../liveSceneTree';
-import { controlSolverRegistry } from '../controls/native/solverRegistry';
+import { nodeRegistry } from '../../core/NodeRegistry';
 import { TWO_D_UI_TYPES } from '../controls/has2DUIContent';
 import { isTopLevelItem } from '../canvasPaintOrder';
 import { isCanvasLayerType } from '../canvasItemClass';
@@ -20,7 +20,7 @@ export const NOTHING_WRITTEN: ReadonlyMap<TscnNode, boolean> = new Map();
  * `get_child(i)` loop (`tab_container.cpp:469-481`), so the count spans every group below it.
  */
 export function writtenChildVisibility(tree: LiveTree, step: LiveStep): ReadonlyMap<TscnNode, boolean> {
-  const write = controlSolverRegistry.childVisibility(step.node.type);
+  const write = nodeRegistry.childVisibility(step.node.type);
   if (!write) return NOTHING_WRITTEN;
   const sortable = step.groups.flatMap((group) =>
     group.children.flatMap((raw) => {

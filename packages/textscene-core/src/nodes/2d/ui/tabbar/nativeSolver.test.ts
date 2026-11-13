@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isTabUnselectable, resolveTabBarCurrentTab } from './currentTab';
 import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import {
@@ -13,8 +14,6 @@ import {
   layoutTabContent,
   pickTabStyleBox,
   resolveTabDrawState,
-  isTabUnselectable,
-  resolveTabBarCurrentTab,
   tabBarMinimumSize,
   tabBarThemeIconSize,
   tabBarFontSizePx,

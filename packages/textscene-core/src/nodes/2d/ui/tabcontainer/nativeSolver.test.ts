@@ -9,6 +9,7 @@ import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls
 import { TAB_ALIGNMENT_CENTER, TAB_ALIGNMENT_LEFT, TAB_ALIGNMENT_RIGHT } from '../tabbar/nativeSolver';
 import type { ControlProperties } from '../control/types';
 import type { TabContainerProperties } from './types';
+import { tabContainerChildVisibility } from './childVisibility';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
   TABS_POSITION_TOP,
@@ -180,12 +181,13 @@ describe('tabContentBand', () => {
 });
 
 describe('the page a TabContainer shows', () => {
-  const childVisibility = controlSolverRegistry.childVisibility('TabContainer')!;
   const pages = [page('A'), page('B'), page('C')];
 
   function visiblePages(props: Partial<TabContainerProperties>): string[] {
     const container = tabContainer('T', props, pages).node;
-    return pages.filter((p, i) => childVisibility(container, p.node, i, pages.length)).map((p) => p.path);
+    return pages
+      .filter((p, i) => tabContainerChildVisibility(container, p.node, i, pages.length))
+      .map((p) => p.path);
   }
 
   it('is the first page when no current_tab is authored (the first add_tab selects it, tab_bar.cpp:1324-1331)', () => {
