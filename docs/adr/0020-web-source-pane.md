@@ -53,7 +53,7 @@ that wraps `<TscnPreviewShell>`. The specifics and the rejected options:
    render as a line gutter with error and warning dots and a hover popover that explains
    the issues on that line. The toggle carries a problem-count badge, so a collapsed pane
    still signals problems. *Deferred, not rejected:* inline wavy underlines under the
-   offending span. A `<textarea>` cannot style its own text per range. The dependency-free
+   offending span (#1838). A `<textarea>` cannot style its own text per range. The dependency-free
    **highlight-overlay** pattern (an `aria-hidden` mirror `<div>` of spans behind a
    `color: transparent` textarea, scroll-synced and metric-matched) achieves it without
    CodeMirror. It is alignment-sensitive, and monospace makes it tractable.
