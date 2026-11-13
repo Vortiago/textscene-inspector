@@ -10,7 +10,7 @@ import { solveNode, withThemeItems } from '../../../r3f/controls/native/testing/
 import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
 import { internalControlsOf } from '../../../r3f/controls/native/internalControls';
-import { buttonRowNode, dialogButtonName } from './dialogParts';
+import { buttonRowNode } from './dialogParts';
 import { solvedDialog } from './testing/solvedDialog';
 import { parseConfirmationDialog } from '../confirmationdialog/parser';
 import { parseDialog } from './parser';
@@ -41,7 +41,7 @@ function dialog(themeChain: readonly ThemeResource[]): SolveNode {
 }
 
 function okButton(window: SolveNode): SolveNode {
-  return buttonRowNode(window, THEME).children.find((child) => child.node.name === dialogButtonName('ok'))!;
+  return buttonRowNode(window, THEME).children.find((child) => child.node.name === 'OkButton')!;
 }
 
 function messageLabel(window: SolveNode): SolveNode {

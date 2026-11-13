@@ -37,7 +37,7 @@ import type { DialogProperties } from './parser';
 export type DialogButtonRole = 'ok' | 'cancel';
 
 /** The dialog's buttons, left to right as the row lays them out. Only a ConfirmationDialog has Cancel. */
-export function dialogButtonRoles(dialogType: string): readonly DialogButtonRole[] {
+function dialogButtonRoles(dialogType: string): readonly DialogButtonRole[] {
   return descendsFromClass(dialogType, 'ConfirmationDialog') ? ['cancel', 'ok'] : ['ok'];
 }
 
@@ -109,7 +109,7 @@ export function cachedMessageLabelNode(dialog: SolveNode): SolveNode {
 }
 
 /** The name a button of `role` carries in the row, and so in its path. */
-export function dialogButtonName(role: DialogButtonRole): string {
+function dialogButtonName(role: DialogButtonRole): string {
   return role === 'ok' ? 'OkButton' : 'CancelButton';
 }
 

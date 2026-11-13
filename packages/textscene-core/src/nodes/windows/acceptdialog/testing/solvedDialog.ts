@@ -6,13 +6,7 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { internalControlsOf } from '../../../../r3f/controls/native/internalControls';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import {
-  buttonRowNode,
-  dialogBodyNodes,
-  dialogButtonName,
-  dialogButtonRoles,
-  type DialogButtonRole,
-} from '../dialogParts';
+import { buttonRowNode, dialogBodyNodes, type DialogButtonRole } from '../dialogParts';
 
 interface PlacedControl {
   control: SolveNode;
@@ -42,6 +36,11 @@ function placeVisible(
 }
 
 /** Solves `dialog` at `size` with a fresh context, since a context memoises minimum sizes by path. */
+/** The built OK and Cancel buttons, in row order. The spacers between them are plain Controls. */
+function isButton(child: SolveNode): boolean {
+  return child.node.type === 'Button';
+}
+
 export function solvedDialog(dialog: SolveNode, size: Vector2, theme: NativeTheme): SolvedDialog {
   const solved = solveControlTree(
     [dialog],
@@ -51,8 +50,8 @@ export function solvedDialog(dialog: SolveNode, size: Vector2, theme: NativeThem
   const label = internalControlsOf(dialog, theme)[0]!.node;
   const row = buttonRowNode(dialog, theme);
   const rowRect = solved.get(row.path)!.rect;
-  const buttons = dialogButtonRoles(dialog.node.type).map((role) => {
-    const button = row.children.find((child) => child.node.name === dialogButtonName(role))!;
+  const buttons = row.children.filter(isButton).map((button) => {
+    const role: DialogButtonRole = button.node.name === 'OkButton' ? 'ok' : 'cancel';
     const rect = solved.get(button.path)!.rect;
     return {
       role,
