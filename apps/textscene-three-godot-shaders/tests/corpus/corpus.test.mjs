@@ -1,6 +1,6 @@
 /**
  * The transpiler on a corpus of real shaders, with Godot's recorded verdict on each. Every shader
- * ends in one of three states: translated, refused as Godot refuses, or not translated yet with
+ * ends in one of three states: transpiled, refused as Godot refuses, or not transpiled yet with
  * the owner of the open row. `states.json` holds each state: a shader that leaves a settled state
  * fails, and a forward move is written with `vitest -u`. The count goes to the CI summary.
  */
@@ -25,7 +25,7 @@ const OUTCOMES = CORPUS.map((shader) => {
   return { shader, godot, outcome: judge(godot, transpilerVerdict(shader.text)) };
 });
 
-/** A state as `states.json` holds it: the owner beside a shader not translated yet. */
+/** A state as `states.json` holds it: the owner beside a shader not transpiled yet. */
 const stateText = ({ state, owner }) => (owner ? `${state} (${owner})` : state);
 
 const STATES = Object.fromEntries(OUTCOMES.map(({ shader, outcome }) => [shader.id, stateText(outcome)]));
@@ -72,9 +72,9 @@ describe('the corpus of real shaders', () => {
     expect(stale.map(([id]) => `${id}: ${STATES[id] ?? 'not in the corpus'}`)).toEqual([]);
   });
 
-  // So the shaders not translated yet only grow fewer.
-  it('moves no shader back from translated or from refused as Godot refuses', () => {
-    const settled = new Set(['translated', 'refused as Godot refuses']);
+  // So the shaders not transpiled yet only grow fewer.
+  it('moves no shader back from transpiled or from refused as Godot refuses', () => {
+    const settled = new Set(['transpiled', 'refused as Godot refuses']);
     const back = Object.entries(COMMITTED_STATES).filter(
       ([id, state]) => settled.has(state) && STATES[id] !== state
     );
@@ -88,9 +88,9 @@ describe('the corpus of real shaders', () => {
 
 afterAll(() => {
   const accepted = OUTCOMES.filter(({ godot }) => godot.accepted);
-  const translated = accepted.filter(({ outcome }) => outcome.state === 'translated').length;
+  const transpiled = accepted.filter(({ outcome }) => outcome.state === 'transpiled').length;
   const refused = OUTCOMES.filter(({ outcome }) => outcome.state === 'refused as Godot refuses').length;
-  const line = `${translated} of ${accepted.length} real shaders translate. ${refused} of ${OUTCOMES.length - accepted.length} that Godot rejects are refused as Godot refuses them.`;
+  const line = `${transpiled} of ${accepted.length} real shaders transpile. ${refused} of ${OUTCOMES.length - accepted.length} that Godot rejects are refused as Godot refuses them.`;
   console.log(`[shader-corpus] ${line}`);
   writeJobSummary(`## Shader corpus against Godot\n\n${line}\n`);
 });

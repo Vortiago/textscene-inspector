@@ -1,6 +1,6 @@
 /**
  * The random program generator: functions that are correct by type, built from the signatures
- * of the instruction table's translated rows, so the set grows with each slice and needs no list
+ * of the instruction table's transpiled rows, so the set grows with each slice and needs no list
  * of its own. A seed fixes the programs. A program is a probe: `pnpm godot:probes` records
  * Godot's answers to it, and the real-GL test compares the transpiler's bits with them.
  */
@@ -13,9 +13,9 @@ import { PROBES } from '../probes/probes.mjs';
 import { programSource, rowsOf } from './programTree.mjs';
 import { seededRandom } from './seededRandom.mjs';
 
-/** The rows a probe names, each once: the translated rows, as the coverage test counts them. */
+/** The rows a probe names, each once: the transpiled rows, as the coverage test counts them. */
 const PROBED_IDS = new Set(PROBES.flatMap((probe) => probe.rows));
-export const TRANSLATED_ROWS = INSTRUCTION_TABLE.filter((row) => PROBED_IDS.has(row.id));
+export const TRANSPILED_ROWS = INSTRUCTION_TABLE.filter((row) => PROBED_IDS.has(row.id));
 
 /** The types the probe harness passes in and reads out. */
 const HARNESS_TYPES = Object.keys(LANE_COUNT);
@@ -75,7 +75,7 @@ function floatLiteralText(random) {
 }
 
 /**
- * The producers of each type: one entry per translated row that gives it, and per swizzle row
+ * The producers of each type: one entry per transpiled row that gives it, and per swizzle row
  * and lane count. A swizzle row names a base type and a letter set, and reads one to four lanes.
  */
 function producersByType(rows) {
@@ -107,13 +107,13 @@ function producersByType(rows) {
 /** How each family of rows with operands is written. */
 const PRODUCER_KINDS = { operator: 'operator', constructor: 'call', function: 'call' };
 
-/** A fresh random program generator over the translated rows. */
+/** A fresh random program generator over the transpiled rows. */
 class ProgramWriter {
   constructor(random) {
     this.random = random;
-    this.producers = producersByType(TRANSLATED_ROWS);
+    this.producers = producersByType(TRANSPILED_ROWS);
     this.literals = new Map(
-      TRANSLATED_ROWS.filter((row) => row.id in LITERALS).map((row) => [LITERALS[row.id].type, row])
+      TRANSPILED_ROWS.filter((row) => row.id in LITERALS).map((row) => [LITERALS[row.id].type, row])
     );
     this.minDepth = this.leastDepths();
   }
@@ -159,7 +159,7 @@ class ProgramWriter {
     };
   }
 
-  /** The harness types the translated rows can give. */
+  /** The harness types the transpiled rows can give. */
   readableTypes() {
     return HARNESS_TYPES.filter((type) => this.minDepth.has(type));
   }
@@ -198,7 +198,7 @@ class ProgramWriter {
     const fitting = (this.producers.get(type) ?? []).filter((producer) => this.fits(producer, depth));
     if (fitting.length === 0) {
       if (leaf) return leaf;
-      throw new Error(`expected a translated row that gives ${type} within depth ${depth}, found none`);
+      throw new Error(`expected a transpiled row that gives ${type} within depth ${depth}, found none`);
     }
     const node = this.applied(this.random.pick(fitting), depth);
     return this.random.chance(SPARE_BRACKET_CHANCE) ? { ...node, bracketed: true } : node;
@@ -274,13 +274,13 @@ class ProgramWriter {
 }
 
 /**
- * The programs of `seed`: one rooted at each translated row, so every row is in the set, then
+ * The programs of `seed`: one rooted at each transpiled row, so every row is in the set, then
  * `count` with random roots.
  */
 export function generatePrograms({ seed, count }) {
   const writer = new ProgramWriter(seededRandom(seed));
   const name = (index) => `random-${seed}-${index}`;
-  const rooted = TRANSLATED_ROWS.map((row, index) => writer.program(name(index), row));
+  const rooted = TRANSPILED_ROWS.map((row, index) => writer.program(name(index), row));
   const random = Array.from({ length: count }, (_, index) => writer.program(name(rooted.length + index)));
   return [...rooted, ...random];
 }

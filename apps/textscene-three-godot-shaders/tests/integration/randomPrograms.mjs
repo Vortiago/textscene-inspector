@@ -1,5 +1,5 @@
 /**
- * The real-GL half of the random program test: each program's translation on the probe page
+ * The real-GL half of the random program test: each program's transpiled text on the probe page
  * against Godot's answers, bit for bit as for a probe. A program that differs is reduced against
  * a live Godot run to a small program that still differs, printed with its seed.
  */
@@ -14,7 +14,7 @@ import { runOnPage } from './pageRun.mjs';
 /**
  * The verdict of each of `programs` against `entries`, Godot's answers by program name, with a
  * reduced program for each that differs in its bits and is not a known difference. A refusal by
- * the transpiler is a failure here: the generator uses translated rows only.
+ * the transpiler is a failure here: the generator uses transpiled rows only.
  */
 export async function compareRandomPrograms(page, programs, entries) {
   const results = [];

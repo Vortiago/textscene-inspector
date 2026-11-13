@@ -1,5 +1,5 @@
 /**
- * One probe on the probe page: its translated function's result bits on a real GL context, or
+ * One probe on the probe page: its transpiled function's result bits on a real GL context, or
  * the transpiler's refusal. A random program is a probe too, so both runs call this.
  */
 

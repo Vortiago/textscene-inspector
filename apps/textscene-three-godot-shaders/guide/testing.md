@@ -6,37 +6,37 @@ A probe checks one instruction on a table of inputs. Three more tests check what
 
 One one-line shader for each of Godot's typed operators and each tuple of the value types `bool` to `mat4`: 17,461 shaders. Godot 4.6.3 accepts 582 of them. The instruction table has 582 operator rows, read from `_validate_operator` by an interpreter of its C++ (`scripts/godot-shader-language/operatorRules.mjs`), and the test fails when one case has a row and Godot refuses it, or the reverse.
 
-The same cases go through the transpiler's front end. On each one, it accepts what Godot accepts, refuses with Godot's message, or names the issue that translates the operator. Any other answer fails the test.
+The same cases go through the transpiler's front end. On each one, it accepts what Godot accepts, refuses with Godot's message, or names the issue that transpiles the operator. Any other answer fails the test.
 
 ## Random programs against Godot
 
-A generator writes random functions that are correct by type, from the signatures of the translated rows only, so each slice that translates rows gets random programs over them with no change to the generator. Operators take only the brackets Godot's priorities need, so a program tests the order of evaluation as a user's shader does.
+A generator writes random functions that are correct by type, from the signatures of the transpiled rows only, so each slice that transpiles rows gets random programs over them with no change to the generator. Operators take only the brackets Godot's priorities need, so a program tests the order of evaluation as a user's shader does.
 
-The fixed set has seed 1847: 268 programs, one rooted at each of the 68 translated rows, and the rest with random roots. Godot accepts every one. `pnpm godot:probes` records Godot's result bits, and `pnpm test:shaders:gpu` runs the translation of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN.
+The fixed set has seed 1847: 268 programs, one rooted at each of the 68 transpiled rows, and the rest with random roots. Godot accepts every one. `pnpm godot:probes` records Godot's result bits, and `pnpm test:shaders:gpu` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN.
 
 **255 of 268 random programs bit-equal with Godot.** A program that differs is reduced against a live Godot to a small program that still differs. The 13 that differ now are listed below with their owner. The list only shrinks: a program that differs and is not listed fails the run, and a listed program that equals Godot fails it too.
 
 | Program | Reduced program | First lane that differs | Cause | Owner |
 | --- | --- | --- | --- | --- |
-| `random-1847-2` | `vec2 probe(vec3 a0, vec4 a1, float a2) { return -(-vec2(a2, .499)); }` | lane 0: Godot 473d7043, translation c73d7043 | Godot writes `-(-a)` as `-a`: its compiler drops a minus before a minus (shader_compiler.cpp:1141) | #1823 |
-| `random-1847-32` | `vec3 probe(float a0, float a1) { return (vec4(41.779e+1, 2.450e+3, 96.675, a1) * vec3(.917, 55.526, a1).yyyz).aar * vec4(71.250f).aar; }` | lane 3: Godot cfec57a9, translation cfec57a8 | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
-| `random-1847-55` | `vec4 probe(vec2 a0, vec2 a1) { return vec4(.332, .332, vec3(19.549f, 94.347, 99.476).ptsp.bg * ((a1 * a0).rr)); }` | lane 14: Godot c939aa70, translation c939aa71 | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
-| `random-1847-58` | `vec4 probe(vec4 a0, vec3 a1) { return vec4(-(-a1.sp), vec2(20.26f)); }` | lane 0: Godot 41eb8092, translation c1eb8092 | Godot writes `-(-a)` as `-a`: its compiler drops a minus before a minus (shader_compiler.cpp:1141) | #1823 |
-| `random-1847-61` | `float probe(vec4 a0) { return ((68.452 * vec3(79.708e1) + ((vec2(51.97f)).t)).zx).t; }` | lane 0: Godot 475555b2, translation 475555b1 | glslang folds arithmetic of constants in double precision and rounds once, the transpiler in 32-bit floats | #1823 |
-| `random-1847-78` | `vec4 probe(float a0) { return vec3(58.656).bggr + 74.377f; }` | lane 0: Godot 3f274db7, translation 3f274db8 | glslang folds arithmetic of constants in double precision and rounds once, the transpiler in 32-bit floats | #1823 |
-| `random-1847-87` | `vec4 probe(float a0, vec3 a1, float a2) { return a0 - a2 - vec4(.875, a2, a0, 76.391e+3); }` | lane 0: Godot c2b6397a, translation c2b6397b | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
-| `random-1847-106` | `vec4 probe(vec3 a0, float a1, vec3 a2) { return vec4(a1, a1, vec2(43.56f)) / (vec4(a0 + -a0, a1)); }` | lane 1: Godot 7f800000, translation 00000000 | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
-| `random-1847-120` | `vec2 probe(float a0) { return (-vec4(a0, 94.450, a0, 95.584e+1)).y - ((vec2(a0)) + (vec2(73.200, .452)) - 94.450); }` | lane 1: Godot 3ffe8dff, translation 3ffe8e1f | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
-| `random-1847-143` | `float probe(float a0) { return (vec3(83.626e-3, 51.335, 4.699f) * (28.107f - vec3(1.341e2)) * (57.445e-2 - vec3(82.749e-2))).s; }` | lane 0: Godot 44c4d666, translation 44c4d667 | glslang folds arithmetic of constants in double precision and rounds once, the transpiler in 32-bit floats | #1823 |
-| `random-1847-155` | `vec3 probe(vec3 a0, vec2 a1, float a2) { return (-(-a2)) + a0; }` | lane 0: Godot c6ebca66, translation c6ebad9a | Godot writes `-(-a)` as `-a`: its compiler drops a minus before a minus (shader_compiler.cpp:1141) | #1823 |
-| `random-1847-179` | `vec2 probe(vec2 a0, float a1) { return ((71.543f + 54.854f) / a0.rgg).ts; }` | lane 6: Godot c3a9cb22, translation c3a9cb23 | glslang folds arithmetic of constants in double precision and rounds once, the transpiler in 32-bit floats | #1823 |
-| `random-1847-204` | `vec4 probe(vec2 a0) { return (33.135 - .886) / vec4(69.143f, 32.672f, 63.833, .959); }` | lane 0: Godot 398e65e3, translation 398e65e2 | glslang folds arithmetic of constants in double precision and rounds once, the transpiler in 32-bit floats | #1823 |
+| `random-1847-2` | `vec2 probe(vec3 a0, vec4 a1, float a2) { return -(-vec2(a2, .499)); }` | lane 0: Godot 473d7043, transpilation c73d7043 | Godot writes `-(-a)` as `-a`: its compiler drops a minus before a minus (shader_compiler.cpp:1141) | #1823 |
+| `random-1847-32` | `vec3 probe(float a0, float a1) { return (vec4(41.779e+1, 2.450e+3, 96.675, a1) * vec3(.917, 55.526, a1).yyyz).aar * vec4(71.250f).aar; }` | lane 3: Godot cfec57a9, transpilation cfec57a8 | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
+| `random-1847-55` | `vec4 probe(vec2 a0, vec2 a1) { return vec4(.332, .332, vec3(19.549f, 94.347, 99.476).ptsp.bg * ((a1 * a0).rr)); }` | lane 14: Godot c939aa70, transpilation c939aa71 | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
+| `random-1847-58` | `vec4 probe(vec4 a0, vec3 a1) { return vec4(-(-a1.sp), vec2(20.26f)); }` | lane 0: Godot 41eb8092, transpilation c1eb8092 | Godot writes `-(-a)` as `-a`: its compiler drops a minus before a minus (shader_compiler.cpp:1141) | #1823 |
+| `random-1847-61` | `float probe(vec4 a0) { return ((68.452 * vec3(79.708e1) + ((vec2(51.97f)).t)).zx).t; }` | lane 0: Godot 475555b2, transpilation 475555b1 | glslang folds arithmetic of constants in double precision and rounds once, the transpiler in 32-bit floats | #1823 |
+| `random-1847-78` | `vec4 probe(float a0) { return vec3(58.656).bggr + 74.377f; }` | lane 0: Godot 3f274db7, transpilation 3f274db8 | glslang folds arithmetic of constants in double precision and rounds once, the transpiler in 32-bit floats | #1823 |
+| `random-1847-87` | `vec4 probe(float a0, vec3 a1, float a2) { return a0 - a2 - vec4(.875, a2, a0, 76.391e+3); }` | lane 0: Godot c2b6397a, transpilation c2b6397b | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
+| `random-1847-106` | `vec4 probe(vec3 a0, float a1, vec3 a2) { return vec4(a1, a1, vec2(43.56f)) / (vec4(a0 + -a0, a1)); }` | lane 1: Godot 7f800000, transpilation 00000000 | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
+| `random-1847-120` | `vec2 probe(float a0) { return (-vec4(a0, 94.450, a0, 95.584e+1)).y - ((vec2(a0)) + (vec2(73.200, .452)) - 94.450); }` | lane 1: Godot 3ffe8dff, transpilation 3ffe8e1f | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
+| `random-1847-143` | `float probe(float a0) { return (vec3(83.626e-3, 51.335, 4.699f) * (28.107f - vec3(1.341e2)) * (57.445e-2 - vec3(82.749e-2))).s; }` | lane 0: Godot 44c4d666, transpilation 44c4d667 | glslang folds arithmetic of constants in double precision and rounds once, the transpiler in 32-bit floats | #1823 |
+| `random-1847-155` | `vec3 probe(vec3 a0, vec2 a1, float a2) { return (-(-a2)) + a0; }` | lane 0: Godot c6ebca66, transpilation c6ebad9a | Godot writes `-(-a)` as `-a`: its compiler drops a minus before a minus (shader_compiler.cpp:1141) | #1823 |
+| `random-1847-179` | `vec2 probe(vec2 a0, float a1) { return ((71.543f + 54.854f) / a0.rgg).ts; }` | lane 6: Godot c3a9cb22, transpilation c3a9cb23 | glslang folds arithmetic of constants in double precision and rounds once, the transpiler in 32-bit floats | #1823 |
+| `random-1847-204` | `vec4 probe(vec2 a0) { return (33.135 - .886) / vec4(69.143f, 32.672f, 63.833, .959); }` | lane 0: Godot 398e65e3, transpilation 398e65e2 | glslang folds arithmetic of constants in double precision and rounds once, the transpiler in 32-bit floats | #1823 |
 
 `pnpm test:shaders:random --seed <n> --count <n>` runs more programs with another seed against a live Godot, for a developer. No pipeline runs it.
 
 ## A corpus of real shaders against Godot
 
-The instruction count says how much of the language is translated, not how many real shaders translate: one open row stops a whole shader. The corpus holds whole shaders of all five types, each with its source and licence (`tests/corpus/corpus.json`, `tests/corpus/NOTICE.md`): the text Godot's material generators write over a sweep of their flags, the shaders of Godot's demo projects and documentation, this repository's fixtures, and one shader made by one change to each of them. `pnpm shaders:corpus` collects them, and `pnpm godot:probes` records Godot's verdict on each: accepted, or Godot's message and line.
+The instruction count says how much of the language is transpiled, not how many real shaders transpile: one open row stops a whole shader. The corpus holds whole shaders of all five types, each with its source and licence (`tests/corpus/corpus.json`, `tests/corpus/NOTICE.md`): the text Godot's material generators write over a sweep of their flags, the shaders of Godot's demo projects and documentation, this repository's fixtures, and one shader made by one change to each of them. `pnpm shaders:corpus` collects them, and `pnpm godot:probes` records Godot's verdict on each: accepted, or Godot's message and line.
 
 | Source | Shaders | Made by one change | Types |
 | --- | --- | --- | --- |
@@ -45,11 +45,11 @@ The instruction count says how much of the language is translated, not how many 
 | docs | 37 | 37 | spatial, canvas_item, sky |
 | scenes | 2 | 2 | spatial, sky |
 
-**0 of 176 real shaders translate.** Godot rejects the other 192. Each shader ends in one of three states: translated, refused as Godot refuses with the same message and line, or not translated yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from translated or from refused as Godot refuses, so the shaders not translated yet only grow fewer.
+**0 of 176 real shaders transpile.** Godot rejects the other 192. Each shader ends in one of three states: transpiled, refused as Godot refuses with the same message and line, or not transpiled yet, where the transpiler names the open row and its owner. Any other outcome fails the test. A shader never moves back from transpiled or from refused as Godot refuses, so the shaders not transpiled yet only grow fewer.
 
 | State | Shaders |
 | --- | --- |
-| not translated yet (#1794) | 360 |
+| not transpiled yet (#1794) | 360 |
 | mismatch | 8 |
 
 The mismatches below are known, each with its owner. The list only shrinks, as for the random programs.
@@ -65,7 +65,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13` | the tokenizer refuses `#` with Godot's message for an unknown character, before any row can name the preprocessor's owner (#1828) | #1823 |
 | `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18` | the tokenizer refuses `#` with Godot's message for an unknown character, before any row can name the preprocessor's owner (#1828) | #1823 |
 
-<details><summary>The 360 shaders not translated yet, with their owners</summary>
+<details><summary>The 360 shaders not transpiled yet, with their owners</summary>
 
 | Shader | Owner |
 | --- | --- |

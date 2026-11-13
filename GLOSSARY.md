@@ -1025,11 +1025,11 @@ A **Shading language** function that applies one **Instruction** to a table of i
 _Avoid_: "golden" for a probe: a probe holds values, not an image.
 
 **Random program** (`apps/textscene-three-godot-shaders/tests/random/`):
-A **Probe** function that a seeded generator writes from the signatures of the translated **Instruction** rows, correct by type. The fixed-seed set runs on each pull request, and a program that differs from Godot is reduced to a small one that still differs.
+A **Probe** function that a seeded generator writes from the signatures of the transpiled **Instruction** rows, correct by type. The fixed-seed set runs on each pull request, and a program that differs from Godot is reduced to a small one that still differs.
 _Avoid_: "fuzz case": the programs are correct by type, and Godot accepts each one.
 
 **Corpus shader** (`apps/textscene-three-godot-shaders/tests/corpus/`):
-A whole shader from Godot's generators, demo projects or documentation, or one made from such a shader by one change, with its source, its licence and Godot's verdict. The transpiler's answer puts it in one of three states: translated, refused as Godot refuses, or not translated yet with the owner of the open row.
+A whole shader from Godot's generators, demo projects or documentation, or one made from such a shader by one change, with its source, its licence and Godot's verdict. The transpiler's answer puts it in one of three states: transpiled, refused as Godot refuses, or not transpiled yet with the owner of the open row.
 
 **Known difference** (`tests/random/knownDifferences.mjs`, `tests/corpus/knownMismatches.mjs`):
 A **Random program** or **Corpus shader** on which the transpiler disagrees with Godot now, listed with its owner. The list only shrinks: an unlisted disagreement fails the test, and so does a listed one that agrees.

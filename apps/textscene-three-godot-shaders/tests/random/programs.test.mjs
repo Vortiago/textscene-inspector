@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { transpilerVerdict } from '../verdicts/judge.mjs';
-import { generatePrograms, TRANSLATED_ROWS } from './programs.mjs';
+import { generatePrograms, TRANSPILED_ROWS } from './programs.mjs';
 
 const SET = generatePrograms({ seed: 7, count: 40 });
 
@@ -18,14 +18,14 @@ describe('the random program generator', () => {
     expect(other).not.toEqual(SET.map((program) => program.source));
   });
 
-  it('uses every translated row in a set', () => {
+  it('uses every transpiled row in a set', () => {
     const used = new Set(SET.flatMap((program) => program.rows));
-    expect(TRANSLATED_ROWS.map((row) => row.id).filter((id) => !used.has(id))).toEqual([]);
+    expect(TRANSPILED_ROWS.map((row) => row.id).filter((id) => !used.has(id))).toEqual([]);
   });
 
-  it('uses only translated rows', () => {
-    const translated = new Set(TRANSLATED_ROWS.map((row) => row.id));
-    expect(SET.flatMap((program) => program.rows).filter((id) => !translated.has(id))).toEqual([]);
+  it('uses only transpiled rows', () => {
+    const transpiled = new Set(TRANSPILED_ROWS.map((row) => row.id));
+    expect(SET.flatMap((program) => program.rows).filter((id) => !transpiled.has(id))).toEqual([]);
   });
 
   it('writes programs the transpiler reads', () => {

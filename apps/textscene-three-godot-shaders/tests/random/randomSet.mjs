@@ -8,7 +8,7 @@ import { generatePrograms } from './programs.mjs';
 export const FIXED_SEED = 1847;
 
 /**
- * The programs with random roots, beside one rooted at each translated row. The set runs in
+ * The programs with random roots, beside one rooted at each transpiled row. The set runs in
  * one Godot run and one page run of about a second each, inside the job's budget.
  */
 const RANDOM_ROOTS = 200;

@@ -23,7 +23,7 @@ import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/co
 import { KNOWN_MISMATCHES } from '../../apps/textscene-three-godot-shaders/tests/corpus/knownMismatches.mjs';
 import { OPERATOR_CASES } from '../../apps/textscene-three-godot-shaders/tests/operators/operatorCases.mjs';
 import { KNOWN_DIFFERENCES } from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
-import { TRANSLATED_ROWS } from '../../apps/textscene-three-godot-shaders/tests/random/programs.mjs';
+import { TRANSPILED_ROWS } from '../../apps/textscene-three-godot-shaders/tests/random/programs.mjs';
 import {
   FIXED_SEED,
   RANDOM_PROGRAMS,
@@ -50,7 +50,7 @@ function testingChapter() {
     random: {
       programs: RANDOM_PROGRAMS,
       seed: FIXED_SEED,
-      translatedRows: TRANSLATED_ROWS.length,
+      transpiledRows: TRANSPILED_ROWS.length,
       knownDifferences: KNOWN_DIFFERENCES,
     },
     corpus: {

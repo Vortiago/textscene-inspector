@@ -15,7 +15,7 @@ const GUIDE = renderTestingGuide({
     cases: [{ id: 'OP_ADD(float,float)', row: {} }],
     record: { godot: '4.6.3-stable', cases: { 'OP_ADD(float,float)': 'accepted' } },
   },
-  random: { programs: [{}, {}, {}], seed: 1, translatedRows: 2, knownDifferences: KNOWN },
+  random: { programs: [{}, {}, {}], seed: 1, transpiledRows: 2, knownDifferences: KNOWN },
   corpus: {
     corpus: [
       { id: 'demos/a.gdshader', shaderType: 'spatial' },
@@ -23,8 +23,8 @@ const GUIDE = renderTestingGuide({
     ],
     corpusRecord: { cases: { 'demos/a.gdshader': 'accepted', 'rejected/demos/a.gdshader': 'line 1: x' } },
     states: {
-      'demos/a.gdshader': 'not translated yet (#1794)',
-      'rejected/demos/a.gdshader': 'not translated yet (#1794)',
+      'demos/a.gdshader': 'not transpiled yet (#1794)',
+      'rejected/demos/a.gdshader': 'not transpiled yet (#1794)',
     },
     knownMismatches: {},
   },
@@ -35,11 +35,11 @@ describe('the chapter on the tests against Godot', () => {
     expect(GUIDE).toContain('**2 of 3 random programs bit-equal with Godot.**');
   });
 
-  it('counts the real shaders that translate, of those Godot accepts', () => {
-    expect(GUIDE).toContain('**0 of 1 real shaders translate.** Godot rejects the other 1.');
+  it('counts the real shaders that transpile, of those Godot accepts', () => {
+    expect(GUIDE).toContain('**0 of 1 real shaders transpile.** Godot rejects the other 1.');
   });
 
-  it('lists each shader not translated yet with its owner', () => {
+  it('lists each shader not transpiled yet with its owner', () => {
     expect(GUIDE).toContain('| `demos/a.gdshader` | #1794 |');
   });
 });
@@ -51,7 +51,7 @@ describe('the table of known differences', () => {
       random: {
         programs: [{}],
         seed: 1,
-        translatedRows: 1,
+        transpiledRows: 1,
         knownDifferences: {
           'random-1-0': {
             reduced: 'bool probe(bool a0) { return a0 || a0; }',
