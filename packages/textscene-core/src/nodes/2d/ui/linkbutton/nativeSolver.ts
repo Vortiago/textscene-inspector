@@ -62,8 +62,8 @@ export function linkButtonTextTheme(
   props: LinkButtonProperties,
   state: LinkButtonDrawState
 ): ResolvedTextTheme {
-  // The default theme table answers `font_color` and `font_pressed_color`. No theme sets LinkButton a
-  // `font_disabled_color` (the table's `LinkButton` colours), so the fallback theme answers it.
+  // The default theme table answers `font_color` and `font_pressed_color`. The table's `LinkButton`
+  // colours hold no `font_disabled_color`, so `FALLBACK_THEME_COLOR` answers it.
   const defaultColor = state === 'disabled' ? FALLBACK_THEME_COLOR : undefined;
   return resolveTextTheme(n, props, LINKBUTTON_THEME_KEYS[state], defaultColor);
 }
