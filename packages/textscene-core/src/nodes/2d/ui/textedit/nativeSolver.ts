@@ -32,7 +32,6 @@ import {
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -41,11 +40,6 @@ import type { CodeHighlighterColorSpan } from '../../../../resources/styles/code
 import type { TextEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import {
-  CONTROL_FONT_COLOR,
-  CONTROL_FONT_DISABLED_COLOR,
-  CONTROL_FONT_PLACEHOLDER_COLOR,
-} from '../../../../godot/scene/theme';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `SceneStringName(font)` = `"font"`: `default_theme.cpp:460` (TextEdit), `:501` (CodeEdit). */
@@ -88,15 +82,6 @@ export function pickTextEditStyleBox(
   return overrides[state] ?? lineEditDefaults[key];
 }
 
-/** The `font_color` default of TextEdit and CodeEdit (`default_theme.cpp:466`, `:514`). */
-const TEXT_EDIT_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-
-/** TextEdit's `font_readonly_color` default (`default_theme.cpp:468`). CodeEdit computes the same value inline (`:516`). */
-const TEXT_EDIT_DEFAULT_READONLY_COLOR = CONTROL_FONT_DISABLED_COLOR;
-
-/** TextEdit's `font_placeholder_color` default (`default_theme.cpp:469`). CodeEdit's is the same (`:517`). */
-const TEXT_EDIT_DEFAULT_PLACEHOLDER_COLOR = CONTROL_FONT_PLACEHOLDER_COLOR;
-
 /** The text states `NOTIFICATION_DRAW` picks a colour for: the placeholder wins over `editable` (`text_edit.cpp:1346-1352`). */
 type TextEditTextState = TextEditStyleState | 'placeholder';
 
@@ -106,24 +91,13 @@ const TEXT_EDIT_THEME_KEYS: Record<TextEditTextState, TextThemeKeys> = {
   placeholder: { sizeKey: 'font_size', colorKey: 'font_placeholder_color' },
 };
 
-const TEXT_EDIT_DEFAULT_COLORS: Record<TextEditTextState, Rgba> = {
-  normal: TEXT_EDIT_DEFAULT_FONT_COLOR,
-  read_only: TEXT_EDIT_DEFAULT_READONLY_COLOR,
-  placeholder: TEXT_EDIT_DEFAULT_PLACEHOLDER_COLOR,
-};
-
-/** Resolves this node's theme font size and colour for `state` (overrides, else the ancestor Theme chain, theme default or TextEdit's literal). CodeEdit shares it, since its defaults are the same. */
+/** This node's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the default theme table. CodeEdit shares it. */
 export function textEditTextTheme(
   n: SolveNode,
   props: TextEditProperties,
-  state: TextEditTextState,
-  ctx: Pick<SolveContext, 'theme'>
+  state: TextEditTextState
 ): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color: TEXT_EDIT_DEFAULT_COLORS[state],
-  };
-  return resolveTextTheme(n, props, TEXT_EDIT_THEME_KEYS[state], defaults);
+  return resolveTextTheme(n, props, TEXT_EDIT_THEME_KEYS[state]);
 }
 
 /**
@@ -305,7 +279,7 @@ export function textEditMinimumSizeWith(
 ): Vector2 {
   const styleMin = contentMarginSize(styleBox);
   const state = resolveTextEditStyleState(props.editable);
-  const { fontSizePx } = textEditTextTheme(n, props, state, ctx);
+  const { fontSizePx } = textEditTextTheme(n, props, state);
   const fontMetrics = resolveNodeFontMetrics(n, TEXT_EDIT_THEME_FONT_KEY);
   // TextEdit's `line_spacing` (`default_theme.cpp:479`) and BoxContainer's `DEFAULT_SEPARATION`
   // are both `Math.round(4 * scale)`, which `theme.separation` holds.

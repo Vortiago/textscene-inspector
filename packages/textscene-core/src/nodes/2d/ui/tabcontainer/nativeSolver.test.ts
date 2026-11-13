@@ -519,14 +519,14 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
   }
 
   function barFontSize(n: SolveNode): number | undefined {
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
     return (bar.node.properties as TabBarProperties).themeOverrideFontSizes?.font_size;
   }
 
   it('hands the bar the current page and leaves scroll_to_selected at the bar default, so the strip scrolls to it', () => {
     const n = container({ currentTab: 3 });
     const tabs = ['A', 'B', 'C', 'D'].map((title) => ({ title, tooltip: '', disabled: false }));
-    const bar = buildInternalTabBarNode(n, tabs, n.node.properties as TabContainerProperties, THEME);
+    const bar = buildInternalTabBarNode(n, tabs, n.node.properties as TabContainerProperties);
     const props = bar.node.properties as TabBarProperties;
     expect(props.currentTab).toBe(3);
     expect(props.scrollToSelected).toBeUndefined();
@@ -535,7 +535,7 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
   it("resolves the bar's own theme items the container does not push, such as TabBar/icons/close", () => {
     const projectTheme = themeResource({ icons: { TabBar: { close: 'ExtResource("1")' } } });
     const n = container({}, projectTheme);
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
     expect(bar.icons.close?.ref).toBe('ExtResource("1")');
   });
 
@@ -544,7 +544,7 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
       colors: { TabBar: { font_selected_color: { r: 1, g: 0, b: 0, a: 1 } } },
     });
     const n = container({}, projectTheme);
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
     expect(bar.colors.font_selected_color).toEqual(n.colors.font_selected_color);
     expect(bar.colors.font_selected_color).not.toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
@@ -552,7 +552,7 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
   it("keeps the bar's own close button box over a container override of that name (tab_container.cpp:312-318)", () => {
     const containerBox = { ...TABLE_PANEL, contentMargin: TABBAR_MARGIN };
     const n = tabContainer('Tabs', {}, [], { button_highlight: containerBox });
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
     expect(bar.styleBoxes.button_highlight).toEqual(
       defaultStyleBoxesOf(defaultThemeAt(1)).TabBar!.button_highlight
     );
@@ -592,7 +592,7 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
       fonts: { TabContainer: { font: containerFont }, TabBar: { font: barFont } },
     });
     const n = container({}, projectTheme);
-    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties);
     expect(bar.fontOverrides.font).toBe(containerFont);
   });
 });

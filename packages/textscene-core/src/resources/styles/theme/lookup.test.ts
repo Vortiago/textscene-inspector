@@ -429,8 +429,7 @@ describe('resolveThemeFontSizeIn', () => {
       resolveThemeFontSizeIn(
         themeResolutionScope('Label', undefined, [ancestor], NO_PROJECT_FONTS),
         'font_size',
-        24,
-        16
+        24
       )
     ).toBe(24);
   });
@@ -441,8 +440,7 @@ describe('resolveThemeFontSizeIn', () => {
       resolveThemeFontSizeIn(
         themeResolutionScope('Label', undefined, [ancestor], NO_PROJECT_FONTS),
         'font_size',
-        0,
-        16
+        0
       )
     ).toBe(30);
   });
@@ -453,13 +451,39 @@ describe('resolveThemeFontSizeIn', () => {
       resolveThemeFontSizeIn(
         themeResolutionScope('Label', undefined, [ancestor], NO_PROJECT_FONTS),
         'font_size',
-        undefined,
-        16
+        undefined
       )
     ).toBe(22);
   });
 
-  it('falls back to the built-in default size when nothing anywhere defines it', () => {
+  it("answers the default theme's default_font_size when no Theme sets one, 32 at scale 2 (default_theme.cpp:97)", () => {
+    const projectFonts = { ...NO_PROJECT_FONTS, defaultTheme: defaultThemeAt(2) };
+    expect(
+      resolveThemeFontSizeIn(
+        themeResolutionScope('Label', undefined, [], projectFonts),
+        'font_size',
+        undefined
+      )
+    ).toBe(32);
+  });
+
+  it.each([
+    ['HeaderSmall', 20],
+    ['HeaderMedium', 24],
+    ['HeaderLarge', 28],
+    ['GraphFrameTitleLabel', 22],
+  ])('gives %s %d at scale 2, the size its line sets', (variation, size) => {
+    const projectFonts = { ...NO_PROJECT_FONTS, defaultTheme: defaultThemeAt(2) };
+    expect(
+      resolveThemeFontSizeIn(
+        themeResolutionScope('Label', variation, [], projectFonts),
+        'font_size',
+        undefined
+      )
+    ).toBe(size);
+  });
+
+  it('falls back to the default theme size when nothing anywhere defines it', () => {
     expect(
       resolveThemeFontSizeIn(
         themeResolutionScope('Label', undefined, [theme()], {
@@ -468,8 +492,7 @@ describe('resolveThemeFontSizeIn', () => {
           projectDefaultFont: null,
         }),
         'font_size',
-        undefined,
-        16
+        undefined
       )
     ).toBe(16);
   });
@@ -479,8 +502,7 @@ describe('resolveThemeFontSizeIn', () => {
       resolveThemeFontSizeIn(
         themeResolutionScope('Label', 'constructor', [theme()], NO_PROJECT_FONTS),
         'font_size',
-        undefined,
-        16
+        undefined
       )
     ).toBe(16);
   });
@@ -492,8 +514,7 @@ describe('resolveThemeFontSizeIn', () => {
       resolveThemeFontSizeIn(
         themeResolutionScope('Label', undefined, [nearest, farther], NO_PROJECT_FONTS),
         'font_size',
-        undefined,
-        16
+        undefined
       )
     ).toBe(20);
   });
@@ -672,8 +693,7 @@ describe('the default theme font size of a Label type variation (default_theme.c
     resolveThemeFontSizeIn(
       themeResolutionScope('Label', variation, themes, { ...NO_PROJECT_FONTS, projectTheme: null }),
       'font_size',
-      undefined,
-      16
+      undefined
     );
 
   it.each([
@@ -689,10 +709,10 @@ describe('the default theme font size of a Label type variation (default_theme.c
       ...NO_PROJECT_FONTS,
       projectTheme: null,
     });
-    expect(resolveThemeFontSizeIn(scope, 'font_size', undefined, 32)).toBe(20);
+    expect(resolveThemeFontSizeIn(scope, 'font_size', undefined)).toBe(20);
   });
 
-  it('keeps the built-in size for a variation the default theme lacks', () => {
+  it('keeps the default size for a variation the default theme lacks', () => {
     expect(sizeOf('Unknown')).toBe(16);
     expect(sizeOf(undefined)).toBe(16);
   });

@@ -11,7 +11,6 @@
  */
 import type {
   MinimumSizeFn,
-  SolveContext,
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
@@ -33,7 +32,6 @@ import {
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
@@ -51,7 +49,6 @@ import {
   CONTROL_FONT_COLOR,
   CONTROL_FONT_DISABLED_COLOR,
   CONTROL_FONT_HOVER_COLOR,
-  CONTROL_FONT_PLACEHOLDER_COLOR,
 } from '../../../../godot/scene/theme';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
@@ -113,33 +110,19 @@ export const LINE_EDIT_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 /** LineEdit's `font_uneditable_color` default (`default_theme.cpp:424`). */
 export const LINE_EDIT_DEFAULT_UNEDITABLE_COLOR = CONTROL_FONT_DISABLED_COLOR;
 
-/** LineEdit's `font_placeholder_color` default (`default_theme.cpp:425`). */
-const LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR = CONTROL_FONT_PLACEHOLDER_COLOR;
-
 /** LineEdit's `clear_button_color` default (`default_theme.cpp:429`). */
 export const LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR = CONTROL_FONT_COLOR;
 
 /** LineEdit's `caret_color` default (`default_theme.cpp:427`). */
 export const LINE_EDIT_DEFAULT_CARET_COLOR = CONTROL_FONT_HOVER_COLOR;
 
-const LINE_EDIT_DEFAULT_COLORS: Record<LineEditTextState, Rgba> = {
-  normal: LINE_EDIT_DEFAULT_FONT_COLOR,
-  read_only: LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
-  placeholder: LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR,
-};
-
-/** This LineEdit's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else LineEdit's literal (`resolveTextTheme`). */
+/** This LineEdit's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the default theme table. */
 export function lineEditTextTheme(
   n: SolveNode,
   props: LineEditProperties,
-  state: LineEditTextState,
-  ctx: Pick<SolveContext, 'theme'>
+  state: LineEditTextState
 ): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color: LINE_EDIT_DEFAULT_COLORS[state],
-  };
-  return resolveTextTheme(n, props, LINE_EDIT_THEME_KEYS[state], defaults);
+  return resolveTextTheme(n, props, LINE_EDIT_THEME_KEYS[state]);
 }
 
 /** LineEdit's `selection_color` (`default_theme.cpp:428`). */
@@ -279,7 +262,7 @@ export function lineEditTextMinimumWidth(emWidthPx: number): number {
  */
 export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LineEditProperties;
-  const { fontSizePx } = lineEditTextTheme(n, props, 'normal', ctx);
+  const { fontSizePx } = lineEditTextTheme(n, props, 'normal');
 
   // The draw pass reads only the active box. A wider read-only override floors an editable field too.
   const styleMinSize = lineEditStyleMinSize(

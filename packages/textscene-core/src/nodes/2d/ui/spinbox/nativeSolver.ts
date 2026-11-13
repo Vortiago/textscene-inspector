@@ -9,11 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { formatControlNumber } from '../../../../godot/text/numberFormat';
-import type {
-  MinimumSizeFn,
-  SolveContext,
-  TextureSlotsFn,
-} from '../../../../r3f/controls/native/solverRegistry';
+import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import { internalChildThemeItems } from '../../../../r3f/controls/native/themeItems';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -283,13 +279,9 @@ interface SpinBoxFieldTextTheme {
 }
 
 /** The field's font (face + size) and colour, ancestor-walked, for `editable` state. */
-export function spinBoxFieldTextTheme(
-  n: SolveNode,
-  ctx: Pick<SolveContext, 'theme'>,
-  editable: boolean
-): SpinBoxFieldTextTheme {
+export function spinBoxFieldTextTheme(n: SolveNode, editable: boolean): SpinBoxFieldTextTheme {
   const scope = spinBoxFieldThemeScope(n);
-  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined, ctx.theme.fontSize);
+  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined);
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
   const { colors } = spinBoxFieldThemeItems(n);
@@ -325,7 +317,7 @@ export function shapeSpinBoxFieldText(
 export const spinBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as SpinBoxProperties;
   const editable = props.editable !== false;
-  const { fontSizePx, fontMetrics } = spinBoxFieldTextTheme(n, ctx, editable);
+  const { fontSizePx, fontMetrics } = spinBoxFieldTextTheme(n, editable);
 
   // The field is `add_child`ed at construction (`spin_box.cpp:724-731`), so the SpinBox's own
   // `theme_override_styles/*` never reach it. It reads the Theme chain's LineEdit boxes only.

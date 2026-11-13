@@ -66,7 +66,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const { text, isPlaceholder } = lineEditDisplayText(props);
   const hasText = text.length > 0;
   const textState = resolveLineEditTextState(editable, isPlaceholder);
-  const { fontSizePx, color: baseFontColor } = lineEditTextTheme(solveNode, props, textState, { theme });
+  const { fontSizePx, color: baseFontColor } = lineEditTextTheme(solveNode, props, textState);
   // `tint.own` is `self_modulate` folded onto the inherited `modulate`, raw sRGB. The chrome takes it as
   // `<StyleBoxQuad>`'s `color`, and each font, icon and caret colour multiplies it before its one
   // sRGB-to-linear conversion, as `Button` does.

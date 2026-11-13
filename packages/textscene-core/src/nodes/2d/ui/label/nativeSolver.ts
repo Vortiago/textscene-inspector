@@ -77,12 +77,8 @@ const LABEL_PARAGRAPH_SPACING_PX = FALLBACK_THEME_CONSTANT;
 export const LABEL_PARAGRAPH_SEPARATOR = '\n';
 
 /** This Label's theme font size and colour (`resolveTextTheme`). */
-export function labelTextTheme(
-  n: ShareNode,
-  props: TextThemeProps,
-  ctx: Pick<SolveContext, 'theme'>
-): ResolvedTextTheme {
-  return resolveTextTheme(n, props, LABEL_THEME_KEYS, { fontSizePx: ctx.theme.fontSize });
+export function labelTextTheme(n: ShareNode, props: TextThemeProps): ResolvedTextTheme {
+  return resolveTextTheme(n, props, LABEL_THEME_KEYS);
 }
 
 interface LabelSpacing {
@@ -272,12 +268,12 @@ export function labelPreShapeText(
  * pure in `(n, theme)`: with it on, this pass can still move the width, so each side shapes at its own.
  * It is windowed to `lines_skipped` and `max_lines_visible`, so never window it again.
  */
-export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n, theme) => {
+export const labelUnwrappedShape = defineShare<TextLayoutResult | null>((n) => {
   const props = n.node.properties as LabelProperties;
   const text = labelPreShapeText(props.text ?? '', props.visibleCharacters, props.visibleCharactersBehavior);
   if (text.length === 0) return null;
   const { fontSizePx, lineSpacingPx, paragraphSpacingPx } = labelEffectiveTextTheme(
-    labelTextTheme(n, props, { theme }),
+    labelTextTheme(n, props),
     n.labelSettings,
     n.constants
   );
@@ -331,7 +327,7 @@ export const labelMinimumSize: MinimumSizeFn = (n, ctx) => {
 /** The minimum size of the text alone, before the `normal` box adds its own (`label.cpp:983-996`). */
 function labelTextMinimumSize(n: SolveNode, ctx: SolveContext, margin: LabelMargin): Vector2 {
   const props = n.node.properties as LabelProperties;
-  const themeResolved = labelTextTheme(n, props, ctx);
+  const themeResolved = labelTextTheme(n, props);
   const spacing = labelEffectiveTextTheme(themeResolved, n.labelSettings, n.constants);
   const { fontSizePx } = spacing;
   const fontMetrics = labelFontState(n).metrics;

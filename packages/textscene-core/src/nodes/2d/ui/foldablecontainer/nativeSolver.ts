@@ -142,9 +142,7 @@ function foldableContainerTitleMetrics(
   const arrow = titleArrow(folded, titlePosition, n.rtl);
 
   const stateKey = folded ? 'folded' : 'expanded';
-  const { fontSizePx, color } = resolveTextTheme(n, props, FOLDABLE_CONTAINER_TITLE_THEME_KEYS[stateKey], {
-    fontSizePx: ctx.theme.fontSize,
-  });
+  const { fontSizePx, color } = resolveTextTheme(n, props, FOLDABLE_CONTAINER_TITLE_THEME_KEYS[stateKey]);
 
   const title = props.title ?? '';
   const hasTitle = title.length > 0;

@@ -29,7 +29,7 @@ import {
   richTextContentHeightPx,
 } from './nativeSolver';
 import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment, type ParsedImgTag } from './bbcode';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { resolveRichTextFaces } from './styleFaces';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { RichTextReveal } from './visibleCharacters';
@@ -90,12 +90,12 @@ function textRun(fields: Pick<StyledTextRun, 'text' | 'fontSizePx'> & Partial<St
 }
 
 function node(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: 'RTL',
     node: controlNode('RTL', 'RichTextLabel', { name: 'RTL', ...props }),
     ...overrides,
-  };
+  });
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -361,7 +361,7 @@ describe('richTextLabelTextTheme', () => {
       themeOverrideFontSizes: { normal_font_size: 20 },
     });
     const n = node({}, { colors: { default_color: red } });
-    expect(richTextLabelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
+    expect(richTextLabelTextTheme(n, props)).toEqual({
       fontSizePx: 20,
       color: red,
     });
@@ -374,7 +374,7 @@ describe('richTextLabelTextTheme', () => {
       themeOverrideFontSizes: { font_size: 20 },
     });
     const n = node({}, { colors: { font_color: { r: 1, g: 0, b: 0, a: 1 } } });
-    expect(richTextLabelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
+    expect(richTextLabelTextTheme(n, props)).toEqual({
       fontSizePx: 16,
       color: { r: 1, g: 1, b: 1, a: 1 },
     });
@@ -382,9 +382,7 @@ describe('richTextLabelTextTheme', () => {
 
   it("resolves the theme's own default font size and RichTextLabel's opaque white absent an override", () => {
     // default_theme.cpp:1205 sets RichTextLabel's default_color to Color(1, 1, 1).
-    const resolved = richTextLabelTextTheme(node({}), { name: 'RTL' } as RichTextLabelProperties, {
-      theme: nativeTheme(1),
-    });
+    const resolved = richTextLabelTextTheme(node({}), { name: 'RTL' } as RichTextLabelProperties);
     expect(resolved).toEqual({ fontSizePx: 16, color: { r: 1, g: 1, b: 1, a: 1 } });
   });
 
@@ -397,11 +395,9 @@ describe('richTextLabelTextTheme', () => {
       typeVariations: {},
       properties: {},
     };
-    const resolved = richTextLabelTextTheme(
-      node({}, { themeChain: [theme] }),
-      { name: 'RTL' } as RichTextLabelProperties,
-      { theme: nativeTheme(1) }
-    );
+    const resolved = richTextLabelTextTheme(node({}, { themeChain: [theme] }), {
+      name: 'RTL',
+    } as RichTextLabelProperties);
     expect(resolved.fontSizePx).toBe(30);
   });
 });
@@ -414,23 +410,15 @@ describe('styledTextRuns', () => {
 
   it('bbcode disabled: one literal run, no styling, at normalFontSizePx, even if it contains bracket characters', () => {
     expect(
-      styledTextRuns(
-        node({}),
-        parsedProps({ text: '[b]x[/b]', bbcodeEnabled: false }),
-        WHITE,
-        NORMAL,
-        FALLBACK
-      )
+      styledTextRuns(node({}), parsedProps({ text: '[b]x[/b]', bbcodeEnabled: false }), WHITE, NORMAL)
     ).toEqual([textRun({ text: '[b]x[/b]', fontSizePx: NORMAL })]);
   });
 
   it('bbcode disabled + empty text: no runs', () => {
-    expect(
-      styledTextRuns(node({}), parsedProps({ text: '', bbcodeEnabled: false }), WHITE, NORMAL, FALLBACK)
-    ).toEqual([]);
-    expect(styledTextRuns(node({}), parsedProps({ bbcodeEnabled: false }), WHITE, NORMAL, FALLBACK)).toEqual(
+    expect(styledTextRuns(node({}), parsedProps({ text: '', bbcodeEnabled: false }), WHITE, NORMAL)).toEqual(
       []
     );
+    expect(styledTextRuns(node({}), parsedProps({ bbcodeEnabled: false }), WHITE, NORMAL)).toEqual([]);
   });
 
   it('bbcode enabled: [b] and [i] set independent flags, plain runs default to the passed color and normalFontSizePx', () => {
@@ -438,8 +426,7 @@ describe('styledTextRuns', () => {
       node({}),
       parsedProps({ text: 'plain [b]bold[/b] [i]italic[/i]', bbcodeEnabled: true }),
       WHITE,
-      NORMAL,
-      FALLBACK
+      NORMAL
     );
     expect(runs).toEqual([
       textRun({ text: 'plain ', fontSizePx: NORMAL }),
@@ -454,8 +441,7 @@ describe('styledTextRuns', () => {
       node({}),
       parsedProps({ text: '[b][i]x[/i][/b]', bbcodeEnabled: true }),
       WHITE,
-      NORMAL,
-      FALLBACK
+      NORMAL
     );
     expect(runs).toEqual([textRun({ text: 'x', bold: true, italic: true, fontSizePx: FALLBACK })]);
   });
@@ -465,8 +451,7 @@ describe('styledTextRuns', () => {
       node({}),
       parsedProps({ text: 'plain [u]underlined[/u] [b][u]bold and underlined[/u][/b]', bbcodeEnabled: true }),
       WHITE,
-      NORMAL,
-      FALLBACK
+      NORMAL
     );
     expect(runs).toEqual([
       textRun({ text: 'plain ', fontSizePx: NORMAL }),
@@ -481,8 +466,7 @@ describe('styledTextRuns', () => {
       node({}),
       parsedProps({ text: '[color=#e0a030]x[/color]', bbcodeEnabled: true }),
       WHITE,
-      NORMAL,
-      FALLBACK
+      NORMAL
     );
     expect(runs).toEqual([
       textRun({
@@ -499,8 +483,7 @@ describe('styledTextRuns', () => {
       node({}),
       parsedProps({ text: '[color=not-a-color]x[/color]', bbcodeEnabled: true }),
       fallback,
-      NORMAL,
-      FALLBACK
+      NORMAL
     );
     expect(runs[0]!.color).toEqual(fallback);
   });
@@ -510,8 +493,7 @@ describe('styledTextRuns', () => {
       node({}),
       parsedProps({ text: '[b][/b][i]x[/i]', bbcodeEnabled: true }),
       WHITE,
-      NORMAL,
-      FALLBACK
+      NORMAL
     );
     expect(runs).toEqual([textRun({ text: 'x', italic: true, fontSizePx: FALLBACK })]);
   });
@@ -522,8 +504,7 @@ describe('styledTextRuns', () => {
         node({}),
         parsedProps({ text: '[b]x[/b]', bbcodeEnabled: true }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs[0]!.fontSizePx).toBe(FALLBACK);
       expect(runs[0]!.fontSizePx).not.toBe(NORMAL);
@@ -534,8 +515,7 @@ describe('styledTextRuns', () => {
         node({}),
         parsedProps({ text: '[i]x[/i]', bbcodeEnabled: true }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs[0]!.fontSizePx).toBe(FALLBACK);
     });
@@ -551,8 +531,7 @@ describe('styledTextRuns', () => {
           themeOverrideFontSizes: { bold_font_size: 24 },
         }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs[0]!.fontSizePx).toBe(24);
     });
@@ -568,8 +547,7 @@ describe('styledTextRuns', () => {
           themeOverrideFontSizes: { bold_font_size: NORMAL },
         }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs[0]!.fontSizePx).toBe(NORMAL);
     });
@@ -585,8 +563,7 @@ describe('styledTextRuns', () => {
           themeOverrideFontSizes: { italics_font_size: 20 },
         }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs[0]!.fontSizePx).toBe(FALLBACK); // [b], no bold_font_size override.
       expect(runs[1]!.fontSizePx).toBe(20); // [i], honours italics_font_size.
@@ -603,8 +580,7 @@ describe('styledTextRuns', () => {
           themeOverrideFontSizes: { bold_font_size: 20, italics_font_size: 22, bold_italics_font_size: 30 },
         }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs[0]!.fontSizePx).toBe(30);
     });
@@ -622,8 +598,7 @@ describe('styledTextRuns', () => {
         node({}, { themeChain: [theme] }),
         parsedProps({ text: '[b]x[/b]', bbcodeEnabled: true }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs[0]!.fontSizePx).toBe(30);
     });
@@ -641,8 +616,7 @@ describe('styledTextRuns', () => {
         node({}, { themeChain: [theme] }),
         parsedProps({ text: '[b]x[/b]', bbcodeEnabled: true }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs[0]!.fontSizePx).toBe(40);
     });
@@ -666,8 +640,7 @@ describe('styledTextRuns', () => {
           themeOverrideFontSizes: { bold_font_size: 24 },
         }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs[0]!.fontSizePx).toBe(24);
     });
@@ -692,11 +665,10 @@ describe('styledTextRuns', () => {
           justificationFlags: PARSED_DEFAULTS.justificationFlags,
         } as RichTextLabelProperties,
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(sizeSpy).toHaveBeenCalledTimes(1);
-      expect(sizeSpy).toHaveBeenCalledWith(expect.anything(), 'bold_font_size', undefined, FALLBACK);
+      expect(sizeSpy).toHaveBeenCalledWith(expect.anything(), 'bold_font_size', undefined);
     });
 
     it('bold/italic/bold+italic spans, each repeated, walk their own key ONCE each — 3 calls total, not 6', () => {
@@ -709,8 +681,7 @@ describe('styledTextRuns', () => {
           justificationFlags: PARSED_DEFAULTS.justificationFlags,
         } as RichTextLabelProperties,
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       // The memo changes nothing: still 6 runs, each resolved.
       expect(runs).toHaveLength(6);
@@ -726,8 +697,7 @@ describe('styledTextRuns', () => {
         node({}),
         parsedProps({ text: '[img]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs).toEqual([]);
     });
@@ -738,8 +708,7 @@ describe('styledTextRuns', () => {
         n,
         parsedProps({ text: '[img]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs).toHaveLength(1);
       expect(runs[0]!.image).toEqual({
@@ -753,8 +722,7 @@ describe('styledTextRuns', () => {
         node({}),
         parsedProps({ text: '[img=40x20]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs).toHaveLength(1);
       expect(runs[0]!.text).toBe(IMAGE_OBJECT_CHAR);
@@ -771,7 +739,6 @@ describe('styledTextRuns', () => {
         parsedProps({ text: '[img=50%x25%]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
-        FALLBACK,
         200
       );
       expect(runs[0]!.image!.sizePx).toEqual({ x: 100, y: 50 });
@@ -783,7 +750,6 @@ describe('styledTextRuns', () => {
         parsedProps({ text: '[img=33%x7%]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
         NORMAL,
-        FALLBACK,
         260
       );
       expect(runs[0]!.image!.sizePx).toEqual({ x: 85, y: 18 });
@@ -794,8 +760,7 @@ describe('styledTextRuns', () => {
         node({}),
         parsedProps({ text: '[img=50%]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs).toEqual([]); // width resolves to 0, with no height and no region: unsizable.
     });
@@ -805,8 +770,7 @@ describe('styledTextRuns', () => {
         node({}),
         parsedProps({ text: '[img=10x10 color=#ff0000]a.png[/img]', bbcodeEnabled: true }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs[0]).toMatchObject({
         bold: false,
@@ -821,8 +785,7 @@ describe('styledTextRuns', () => {
         node({}),
         parsedProps({ text: 'hi[img=10x10]a.png[/img]bye', bbcodeEnabled: true }),
         WHITE,
-        NORMAL,
-        FALLBACK
+        NORMAL
       );
       expect(runs.map((r) => r.text)).toEqual(['hi', IMAGE_OBJECT_CHAR, 'bye']);
       expect(runs[1]!.image).toBeDefined();
@@ -837,7 +800,7 @@ describe('styledTextRuns [img] size (rich_text_label.cpp:4120-4155 _get_image_si
   function imageRunSize(options: string, naturalSize?: Vector2): Vector2 | null {
     const n = node({}, naturalSize ? { textureSlots: { 'a.png': naturalSize } } : {});
     const props = { text: `[img${options}]a.png[/img]`, bbcodeEnabled: true } as RichTextLabelProperties;
-    return styledTextRuns(n, props, WHITE, 16, 16)[0]?.image?.sizePx ?? null;
+    return styledTextRuns(n, props, WHITE, 16)[0]?.image?.sizePx ?? null;
   }
 
   it('both dimensions given: returned verbatim', () => {
@@ -958,14 +921,12 @@ function bareImageRun(widthPx: number) {
 
 describe('styledTextRuns [hr]', () => {
   const NORMAL = 18;
-  const FALLBACK = 16;
   const ruleOf = (text: string, boxWidthPx?: number, defaultColor = WHITE) =>
     styledTextRuns(
       node({}),
       parsedProps({ text, bbcodeEnabled: true }),
       defaultColor,
       NORMAL,
-      FALLBACK,
       boxWidthPx
     ).find((run) => run.image?.spec.solid)!;
 
@@ -1000,8 +961,7 @@ describe('styledTextRuns [hr]', () => {
       node({}),
       parsedProps({ text: 'a[hr width=50]b', bbcodeEnabled: true }),
       WHITE,
-      NORMAL,
-      FALLBACK
+      NORMAL
     );
     expect(runs.map((run) => run.text)).toEqual(['a\n', IMAGE_OBJECT_CHAR, 'b']);
     expect(runs[1]!.fontSizePx).toBe(50);
@@ -1584,7 +1544,7 @@ describe('RichTextLabel paragraph alignment', () => {
     function alignmentOf(text: string, horizontalAlignment: number | undefined): number {
       const props = { text, bbcodeEnabled: true, horizontalAlignment } as RichTextLabelProperties;
       // A nested paragraph tag ends the line its outer tag opened, so the text is the last run.
-      return styledTextRuns(node({}), props, WHITE, 16, 16).at(-1)!.alignment;
+      return styledTextRuns(node({}), props, WHITE, 16).at(-1)!.alignment;
     }
 
     it('falls back to the node property when no paragraph tag is open', () => {
@@ -1971,7 +1931,7 @@ describe('RichTextLabel paragraph direction', () => {
 
   function runsOf(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}) {
     const all = { ...controlProps({ name: 'RTL', ...PARSED_DEFAULTS, bbcodeEnabled: true }), ...props };
-    return styledTextRuns(node(all, overrides), all, WHITE, FONT_SIZE, FONT_SIZE);
+    return styledTextRuns(node(all, overrides), all, WHITE, FONT_SIZE);
   }
 
   function visualLines(runs: Parameters<typeof shapeRichText>[0]): string[] {
@@ -2088,8 +2048,7 @@ describe('styledTextRuns: [font_size], [outline_size] and [outline_color]', () =
       node({}, overrides),
       parsedProps({ text, bbcodeEnabled: true, ...props }),
       WHITE,
-      NORMAL,
-      FALLBACK
+      NORMAL
     );
   }
 
@@ -2184,7 +2143,7 @@ describe('RichTextLabel lists and indents', () => {
     reveal?: RichTextReveal
   ) {
     const label = { text, bbcodeEnabled: true, ...props } as RichTextLabelProperties;
-    const runs = styledTextRuns(node(label), label, WHITE, FONT_SIZE, FONT_SIZE, BOX_WIDTH_PX);
+    const runs = styledTextRuns(node(label), label, WHITE, FONT_SIZE, BOX_WIDTH_PX);
     const layout = shapeRichText(runs, resolveRichTextFaces(node(label), runs), {
       fontSizePx: FONT_SIZE,
       boxWidthPx: BOX_WIDTH_PX,

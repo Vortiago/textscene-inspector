@@ -55,8 +55,8 @@ export function TabContainer({
     [solveNode, props.tabOverrides]
   );
   const syntheticBar = useMemo(
-    () => buildInternalTabBarNode(solveNode, derivedTabs, props, theme),
-    [solveNode, derivedTabs, props, theme]
+    () => buildInternalTabBarNode(solveNode, derivedTabs, props),
+    [solveNode, derivedTabs, props]
   );
 
   const barCtx: Pick<SolveContext, 'theme' | 'measureText'> = { theme, measureText };

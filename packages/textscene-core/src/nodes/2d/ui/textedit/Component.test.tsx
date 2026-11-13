@@ -14,7 +14,11 @@ import { TextEdit } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { TextEditProperties } from './types';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunOf,
   bundledRunMeshes,
@@ -38,12 +42,12 @@ function solveNode(
   internalResources: readonly TscnInternalResource[] = []
 ): SolveNode {
   const node: TscnNode = controlNode('MyTextEdit', 'TextEdit', { name: 'MyTextEdit', ...properties });
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'MyTextEdit',
     node,
     resources: { externalResources: [], internalResources },
-  };
+  });
 }
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute; text/icon quads do not. */
@@ -335,12 +339,12 @@ describe('<TextEdit> — syntax_highlighter', () => {
       const renderer = await ReactThreeTestRenderer.create(
         <TextEdit
           {...painterEnv()}
-          solveNode={{
+          solveNode={withThemeItems({
             ...solveNode({ text: 'if x', editable, syntaxHighlighter: 'SubResource("CH")' }, [
               CODE_HIGHLIGHTER,
             ]),
             colors: { font_readonly_color: { r: 0, g: 0, b: 1, a: 1 } },
-          }}
+          })}
           rect={RECT}
           renderOrder={0}
         />

@@ -127,13 +127,12 @@ export function TextEditBody({
   const { fontSizePx, color: baseFontColor } = textEditTextTheme(
     solveNode,
     props,
-    isPlaceholder ? 'placeholder' : state,
-    { theme }
+    isPlaceholder ? 'placeholder' : state
   );
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, TEXT_EDIT_THEME_FONT_KEY);
   // The highlighter's plain colour is the theme `font_color` whatever `editable` says (`syntax_highlighter.cpp:421`).
-  const highlighterFontColor = textEditTextTheme(solveNode, props, 'normal', { theme }).color;
+  const highlighterFontColor = textEditTextTheme(solveNode, props, 'normal').color;
   const lineSpacingPx = theme.separation; // nativeSolver.ts says why.
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
 
@@ -228,14 +227,13 @@ export function TextEditBody({
       highlightCurrentLine: props.highlightCurrentLine === true,
       editable: props.editable !== false,
       // The buffer's colour, not the placeholder's (`:1194`).
-      fontColor: textEditTextTheme(solveNode, props, state, { theme }).color,
+      fontColor: textEditTextTheme(solveNode, props, state).color,
       caretColor: solveNode.colors.caret_color ?? CARET_COLOR,
       currentLineColor: CURRENT_LINE_COLOR,
     };
   }, [
     props,
     solveNode,
-    theme,
     state,
     lines,
     lineLayouts,

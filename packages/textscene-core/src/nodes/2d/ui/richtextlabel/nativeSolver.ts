@@ -13,7 +13,6 @@ import type { TscnNode } from '../../../../parser/types';
 import { perObject } from '../../../../utils/perObject';
 import type {
   MinimumSizeFn,
-  SolveContext,
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
@@ -36,7 +35,6 @@ import {
   resolveTextTheme,
   type ResolvedTextTheme,
   type TextOutlineTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import {
@@ -95,23 +93,12 @@ const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
   colorKey: 'default_color',
 };
 
-/** `default_theme.cpp:1205`: `theme->set_color("default_color", "RichTextLabel", Color(1, 1, 1))`, a call separate from Label's. */
-const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
 /** `rich_text_label.h:557`: `TextServer::AutowrapMode autowrap_mode = TextServer::AUTOWRAP_WORD_SMART;`, unlike Label's OFF (`label.h`). */
 export const RICH_TEXT_LABEL_DEFAULT_AUTOWRAP = AutowrapMode.AUTOWRAP_WORD_SMART;
 
-/** Resolves this node's font size and colour: overrides, then the ancestor Theme chain, then RichTextLabel's white. */
-export function richTextLabelTextTheme(
-  n: SolveNode,
-  props: RichTextLabelProperties,
-  ctx: Pick<SolveContext, 'theme'>
-): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color: RICH_TEXT_LABEL_DEFAULT_FONT_COLOR,
-  };
-  return resolveTextTheme(n, props, RICH_TEXT_LABEL_THEME_KEYS, defaults);
+/** This node's font size and colour: its overrides, else the ancestor Theme chain, else the default theme table. */
+export function richTextLabelTextTheme(n: SolveNode, props: RichTextLabelProperties): ResolvedTextTheme {
+  return resolveTextTheme(n, props, RICH_TEXT_LABEL_THEME_KEYS);
 }
 
 // ── [img]: its size, and its width through the shared shaper ──
@@ -347,8 +334,8 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // Read whatever the autowrap: a `%`-form `[img]` resolves against the
   // paragraph width, `undefined` on the first pass.
   const availableWidthPx = ctx.tentativeRect?.(n)?.w;
-  const { fontSizePx, color } = richTextLabelTextTheme(n, props, ctx);
-  const runs = styledTextRuns(n, props, color, fontSizePx, ctx.theme.fontSize, availableWidthPx);
+  const { fontSizePx, color } = richTextLabelTextTheme(n, props);
+  const runs = styledTextRuns(n, props, color, fontSizePx, availableWidthPx);
   const text = plainTextOf(runs);
 
   if (text.length === 0) {
@@ -435,7 +422,7 @@ const RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS = {
 /**
  * A styled run's font size before any `[font_size]`: `normalFontSizePx` for a plain run, else its
  * style key through the ancestor-Theme walk (`resolveNodeFontSizePx`,
- * `scene/resources/theme.cpp:658-666`) down to `builtInDefaultPx`. `cache` holds one answer per
+ * `scene/resources/theme.cpp:658-666`) down to the default theme's size. `cache` holds one answer per
  * key for one `styledTextRuns` call.
  */
 function resolveRunFontSizePx(
@@ -444,7 +431,6 @@ function resolveRunFontSizePx(
   props: RichTextLabelProperties,
   normalFontSizePx: number,
   n: SolveNode,
-  builtInDefaultPx: number,
   cache: Map<string, number>
 ): number {
   if (!bold && !italic) return normalFontSizePx;
@@ -456,7 +442,7 @@ function resolveRunFontSizePx(
         : RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.italic;
   const cached = cache.get(key);
   if (cached !== undefined) return cached;
-  const resolved = resolveNodeFontSizePx(n, key, props.themeOverrideFontSizes?.[key], builtInDefaultPx);
+  const resolved = resolveNodeFontSizePx(n, key, props.themeOverrideFontSizes?.[key]);
   cache.set(key, resolved);
   return resolved;
 }
@@ -484,7 +470,6 @@ export function styledTextRuns(
   props: RichTextLabelProperties,
   defaultColor: Rgba,
   normalFontSizePx: number,
-  builtInDefaultPx: number,
   boxWidthPx?: number
 ): StyledTextRun[] {
   const raw = props.text ?? '';
@@ -511,7 +496,7 @@ export function styledTextRuns(
   // One Theme walk per style key, however many spans the paragraph has.
   const runFontSizeCache = new Map<string, number>();
   const fontSizePxOf = (bold: boolean, italic: boolean): number =>
-    resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, builtInDefaultPx, runFontSizeCache);
+    resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, runFontSizeCache);
   const styled: StyledTextRun[] = [];
   for (const run of parseBBCodeRuns(raw)) {
     const listing = runListing({

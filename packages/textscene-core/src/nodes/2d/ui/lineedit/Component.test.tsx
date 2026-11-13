@@ -24,7 +24,11 @@ import { lineEditMinimumSize } from './nativeSolver';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunOf,
   bundledRunMeshes,
@@ -51,7 +55,7 @@ function solveNode(
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
   const node: TscnNode = controlNode('MyLineEdit', 'LineEdit', { name: 'MyLineEdit', ...properties });
-  return { ...emptySolveNode(), path: 'MyLineEdit', node, styleBoxes };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyLineEdit', node, styleBoxes });
 }
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
@@ -464,13 +468,13 @@ describe('<LineEdit> — right_icon', () => {
       rightIcon: 'ExtResource("1")',
       ...raw,
     });
-    const n: SolveNode = {
+    const n: SolveNode = withThemeItems({
       ...emptySolveNode(),
       path: 'MyLineEdit',
       node,
       resources: ICON_SCOPE,
       textureSlots: { right_icon: iconSize },
-    };
+    });
     return ReactThreeTestRenderer.create(
       <ResourceLoaderProvider loader={fake.loader}>
         <SceneResourcesProvider internalResources={[]} externalResources={ICON_SCOPE.externalResources}>

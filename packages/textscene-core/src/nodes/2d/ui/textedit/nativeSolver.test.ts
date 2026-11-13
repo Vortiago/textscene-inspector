@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   resolveTextEditStyleState,
@@ -49,11 +49,11 @@ function ctx(): SolveContext {
 }
 
 function node(props: Partial<TextEditProperties>): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: 'T',
     node: controlNode('T', 'TextEdit', { name: 'T', ...props }),
-  };
+  });
 }
 
 describe('resolveTextEditStyleState', () => {

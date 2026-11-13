@@ -223,41 +223,41 @@ describe('resolveNodeFontMetricsOr — a last rung of its own for a key no theme
 
 describe('resolveNodeFontSizePx — the font-SIZE counterpart join (resolveThemeFontSizeIn, walking the SAME SolveNode fields resolveNodeFontMetrics does)', () => {
   it('returns the built-in default when nothing anywhere defines this size key', () => {
-    expect(resolveNodeFontSizePx(labelNode(), 'font_size', undefined, 16)).toBe(16);
+    expect(resolveNodeFontSizePx(labelNode(), 'font_size', undefined)).toBe(16);
   });
 
   it("(happy) a positive node-local override wins outright, bypassing THIS node's own node.type entirely", () => {
-    expect(resolveNodeFontSizePx(labelNode(), 'font_size', 24, 16)).toBe(24);
+    expect(resolveNodeFontSizePx(labelNode(), 'font_size', 24)).toBe(24);
   });
 
   it('an override of 0 does NOT win — falls through to the ancestor walk like an absent one (control.cpp:3114-3117)', () => {
     const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Label: { font_size: 30 } } };
     const n = labelNode({ themeChain: [theme] });
-    expect(resolveNodeFontSizePx(n, 'font_size', 0, 16)).toBe(30);
+    expect(resolveNodeFontSizePx(n, 'font_size', 0)).toBe(30);
   });
 
   it("(happy) an ancestor theme's <nativeType>/font_sizes/<key> entry is found via THIS node's own node.type", () => {
     const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Label: { font_size: 30 } } };
     const n = labelNode({ themeChain: [theme] });
-    expect(resolveNodeFontSizePx(n, 'font_size', undefined, 16)).toBe(30);
+    expect(resolveNodeFontSizePx(n, 'font_size', undefined)).toBe(30);
   });
 
   it("an ancestor theme entry registered under a DIFFERENT native type is not found for this node's own type", () => {
     const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Button: { font_size: 30 } } };
     const n = labelNode({ themeChain: [theme] });
-    expect(resolveNodeFontSizePx(n, 'font_size', undefined, 16)).toBe(16);
+    expect(resolveNodeFontSizePx(n, 'font_size', undefined)).toBe(16);
   });
 
   it("(edge) falls through to the ancestor theme's OWN default_font_size when no specific <Type>/font_sizes/<key> entry matches", () => {
     const theme: ThemeResource = { ...emptyTheme(), defaultFontSize: 22 };
     const n = labelNode({ themeChain: [theme] });
-    expect(resolveNodeFontSizePx(n, 'font_size', undefined, 16)).toBe(22);
+    expect(resolveNodeFontSizePx(n, 'font_size', undefined)).toBe(22);
   });
 
   it('(edge) falls back to the project theme when no ancestor theme in the chain resolves the key', () => {
     const theme: ThemeResource = { ...emptyTheme(), fontSizes: { Label: { font_size: 20 } } };
     const n = labelNode({ themeChain: [], projectFonts: { ...NO_PROJECT_FONTS, projectTheme: theme } });
-    expect(resolveNodeFontSizePx(n, 'font_size', undefined, 16)).toBe(20);
+    expect(resolveNodeFontSizePx(n, 'font_size', undefined)).toBe(20);
   });
 });
 
@@ -275,16 +275,16 @@ describe('the ancestor-Theme walk is cached PER SolveNode OBJECT, not merely per
   it('resolving font AND font-size for the SAME node object builds the type-dependency chain ONCE, not twice', () => {
     const n = labelNode();
     resolveNodeFontMetrics(n, 'font');
-    resolveNodeFontSizePx(n, 'font_size', undefined, 16);
+    resolveNodeFontSizePx(n, 'font_size', undefined);
     expect(scopeSpy).toHaveBeenCalledTimes(1);
   });
 
   it('repeated lookups against the SAME node object — the solve pass then the paint pass calling this join twice each, four calls total — still build the chain ONCE', () => {
     const n = labelNode();
     resolveNodeFontMetrics(n, 'font');
-    resolveNodeFontSizePx(n, 'font_size', undefined, 16);
+    resolveNodeFontSizePx(n, 'font_size', undefined);
     resolveNodeFontMetrics(n, 'font');
-    resolveNodeFontSizePx(n, 'font_size', undefined, 16);
+    resolveNodeFontSizePx(n, 'font_size', undefined);
     expect(scopeSpy).toHaveBeenCalledTimes(1);
   });
 

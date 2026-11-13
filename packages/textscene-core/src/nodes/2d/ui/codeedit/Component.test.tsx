@@ -12,7 +12,11 @@ import { CodeEdit } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { CodeEditProperties } from './types';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunOf,
   bundledRunMeshes,
@@ -30,7 +34,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<CodeEditProperties> = {}): SolveNode {
   const node: TscnNode = controlNode('MyCodeEdit', 'CodeEdit', { name: 'MyCodeEdit', ...properties });
-  return { ...emptySolveNode(), path: 'MyCodeEdit', node };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyCodeEdit', node });
 }
 
 /** The chrome `<TextEditBody>` draws: a `<StyleBoxQuad>` mesh with a `color` vertex attribute. */

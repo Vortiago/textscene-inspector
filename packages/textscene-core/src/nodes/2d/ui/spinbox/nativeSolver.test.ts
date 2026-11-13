@@ -208,13 +208,13 @@ describe('spinBoxIconColor', () => {
 
 describe('spinBoxFieldTextTheme', () => {
   it('falls back to the built-in default font size/colour absent any theme (happy path)', () => {
-    const result = spinBoxFieldTextTheme(node(), ctx(), true);
+    const result = spinBoxFieldTextTheme(node(), true);
     expect(result.fontSizePx).toBe(16);
     expect(result.color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
   });
 
   it('reads the uneditable colour when not editable (edge case)', () => {
-    expect(spinBoxFieldTextTheme(node(), ctx(), false).color).toEqual({
+    expect(spinBoxFieldTextTheme(node(), false).color).toEqual({
       r: 0.875,
       g: 0.875,
       b: 0.875,
@@ -324,8 +324,8 @@ describe('the inner LineEdit reads its items through the ancestor Theme chain', 
 
   it('draws the font_color of LineEdit, and font_uneditable_color when not editable', () => {
     const themed = under({ colors: { LineEdit: { font_color: RED, font_uneditable_color: BLUE } } });
-    expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual(RED);
-    expect(spinBoxFieldTextTheme(themed, ctx(), false).color).toEqual(BLUE);
+    expect(spinBoxFieldTextTheme(themed, true).color).toEqual(RED);
+    expect(spinBoxFieldTextTheme(themed, false).color).toEqual(BLUE);
   });
 
   it('prefers the SpinBoxInnerLineEdit variation over LineEdit', () => {
@@ -333,12 +333,12 @@ describe('the inner LineEdit reads its items through the ancestor Theme chain', 
       colors: { LineEdit: { font_color: RED }, SpinBoxInnerLineEdit: { font_color: BLUE } },
       typeVariations: { SpinBoxInnerLineEdit: 'LineEdit' },
     });
-    expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual(BLUE);
+    expect(spinBoxFieldTextTheme(themed, true).color).toEqual(BLUE);
   });
 
   it('ignores the colours of another class', () => {
     const themed = under({ colors: { Button: { font_color: RED } } });
-    expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
+    expect(spinBoxFieldTextTheme(themed, true).color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
   });
 });
 

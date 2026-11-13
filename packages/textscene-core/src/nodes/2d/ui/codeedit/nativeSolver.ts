@@ -125,7 +125,7 @@ function codeEditFontMetrics(
   props: CodeEditProperties
 ): { rowHeightPx: number; charWidth0Px: number } {
   const state = resolveTextEditStyleState(props.editable);
-  const { fontSizePx } = textEditTextTheme(n, props, state, ctx);
+  const { fontSizePx } = textEditTextTheme(n, props, state);
   const fontMetrics = resolveNodeFontMetrics(n, TEXT_EDIT_THEME_FONT_KEY);
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, ctx.theme.separation);
   const charWidth0Px = ctx.measureText ? ctx.measureText('0', fontSizePx, 0, fontMetrics).x : 0;

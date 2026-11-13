@@ -58,7 +58,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
   const state = resolveTextEditStyleState(codeEditProps.editable);
   const styleBox = pickTextEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, state);
 
-  const { fontSizePx } = textEditTextTheme(solveNode, codeEditProps, state, { theme });
+  const { fontSizePx } = textEditTextTheme(solveNode, codeEditProps, state);
   const fontMetrics = resolveNodeFontMetrics(solveNode, TEXT_EDIT_THEME_FONT_KEY);
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, theme.separation);
 

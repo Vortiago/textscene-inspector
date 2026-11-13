@@ -263,16 +263,16 @@ export function fontForNode(
  * The font-size counterpart of `resolveThemeFontIn` (`Control::get_theme_font_size`,
  * `control.cpp:3107-3129`). Always returns a positive size.
  *
+ * The default theme answers last, with its own size for `name` or its `default_font_size`
+ * (`Theme::has_theme_item`, `theme.cpp:1009-1030`), so the fallback size of `ThemeDB` is never read.
+ *
  * @param override Wins only when `> 0` (`if (font_size && (*font_size) > 0)`,
  *   `control.cpp:3114-3117`). A `0` falls through like an unauthored one.
- * @param builtInDefaultPx Stands in for `ThemeDB::get_fallback_font_size()`:
- *   `DEFAULT_FONT_SIZE` (`godot/scene/theme.ts`), scaled.
  */
 export function resolveThemeFontSizeIn(
   scope: ThemeResolutionScope,
   name: string,
-  override: number | undefined,
-  builtInDefaultPx: number
+  override: number | undefined
 ): number {
   if (override !== undefined && override > 0) return override;
 
@@ -282,7 +282,7 @@ export function resolveThemeFontSizeIn(
       if (found !== undefined) return found;
     }
   }
-  return explicitDefaultFontSize(scope, name) ?? builtInDefaultPx;
+  return explicitDefaultFontSize(scope, name) ?? scope.defaultTheme.defaultFontSize;
 }
 
 /**

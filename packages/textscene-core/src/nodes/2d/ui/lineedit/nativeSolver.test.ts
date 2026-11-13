@@ -31,7 +31,7 @@ import {
   EXPAND_MODE_ORIGINAL_SIZE,
 } from './nativeSolver';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 
@@ -46,7 +46,7 @@ function node(
   props: Partial<LineEditProperties>,
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: 'L',
     node: controlNode('L', 'LineEdit', { name: 'L', ...props }),
@@ -54,7 +54,7 @@ function node(
     // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
     // fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
-  };
+  });
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -444,7 +444,7 @@ describe('resolveLineEditTextState: which theme_override_colors key/default this
 
 describe('lineEditTextTheme: font_color / font_uneditable_color / font_placeholder_color key mapping', () => {
   it('resolves control_font_color (0.875, opaque) for the normal state', () => {
-    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'normal', ctx())).toEqual({
+    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'normal')).toEqual({
       fontSizePx: 16,
       color: LINE_EDIT_DEFAULT_FONT_COLOR,
     });
@@ -452,7 +452,7 @@ describe('lineEditTextTheme: font_color / font_uneditable_color / font_placehold
   });
 
   it('resolves control_font_disabled_color (alpha 0.5) for font_uneditable_color, the read_only state', () => {
-    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'read_only', ctx()).color).toEqual(
+    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'read_only').color).toEqual(
       LINE_EDIT_DEFAULT_UNEDITABLE_COLOR
     );
     expect(LINE_EDIT_DEFAULT_UNEDITABLE_COLOR).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.5 });
@@ -460,7 +460,7 @@ describe('lineEditTextTheme: font_color / font_uneditable_color / font_placehold
 
   it('resolves control_font_placeholder_color (alpha 0.6) for the placeholder state', () => {
     // default_theme.cpp:107,425: control_font_placeholder_color.
-    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'placeholder', ctx()).color).toEqual({
+    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'placeholder').color).toEqual({
       r: 0.875,
       g: 0.875,
       b: 0.875,
@@ -472,7 +472,7 @@ describe('lineEditTextTheme: font_color / font_uneditable_color / font_placehold
     const props = {
       themeOverrideColors: { font_placeholder_color: { r: 1, g: 0, b: 0, a: 1 } },
     } as unknown as LineEditProperties;
-    expect(lineEditTextTheme(node(props), props, 'placeholder', ctx()).color).toEqual({
+    expect(lineEditTextTheme(node(props), props, 'placeholder').color).toEqual({
       r: 1,
       g: 0,
       b: 0,
@@ -482,9 +482,9 @@ describe('lineEditTextTheme: font_color / font_uneditable_color / font_placehold
 
   it('theme_override_font_sizes/font_size overrides the theme default for EVERY state', () => {
     const props = { themeOverrideFontSizes: { font_size: 24 } } as unknown as LineEditProperties;
-    expect(lineEditTextTheme(node(props), props, 'normal', ctx()).fontSizePx).toBe(24);
-    expect(lineEditTextTheme(node(props), props, 'read_only', ctx()).fontSizePx).toBe(24);
-    expect(lineEditTextTheme(node(props), props, 'placeholder', ctx()).fontSizePx).toBe(24);
+    expect(lineEditTextTheme(node(props), props, 'normal').fontSizePx).toBe(24);
+    expect(lineEditTextTheme(node(props), props, 'read_only').fontSizePx).toBe(24);
+    expect(lineEditTextTheme(node(props), props, 'placeholder').fontSizePx).toBe(24);
   });
 });
 

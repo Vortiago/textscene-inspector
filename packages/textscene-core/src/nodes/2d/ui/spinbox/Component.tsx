@@ -68,11 +68,7 @@ export function SpinBox({
   const resolvedValue = resolveRangeValue(props, orderedKeys);
   const text = spinBoxDisplayText(props, resolvedValue, solveNode.locale);
 
-  const {
-    fontSizePx,
-    fontMetrics,
-    color: baseFontColor,
-  } = spinBoxFieldTextTheme(solveNode, { theme }, editable);
+  const { fontSizePx, fontMetrics, color: baseFontColor } = spinBoxFieldTextTheme(solveNode, editable);
   // `tint.own` is raw sRGB, `self_modulate` folded onto `modulate`: it feeds the arrows and their boxes.
   // The field is the internal LineEdit (`spin_box.cpp:431`, `line_edit.cpp:726`), so its box and its
   // text take `childTint`, which has no `self_modulate`. Each multiplies in before one sRGB-to-linear conversion.

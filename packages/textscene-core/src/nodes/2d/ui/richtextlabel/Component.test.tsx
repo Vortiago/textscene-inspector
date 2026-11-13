@@ -23,7 +23,11 @@ import { RICH_TEXT_LABEL_UNDERLINE_ALPHA, richTextLabelMinimumSize } from './nat
 import { RichTextLabel } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { wholeKeySlot } from '../../../../r3f/canvasItemState';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunOf,
   bundledRuns,
@@ -54,7 +58,7 @@ function solveNode(
     scrollFollowingVisibleCharacters: false,
   };
   const tscnNode: TscnNode = controlNode(name, 'RichTextLabel', { name, ...parsedDefaults, ...properties });
-  return { ...emptySolveNode(), path, node: tscnNode, ...overrides };
+  return withThemeItems({ ...emptySolveNode(), path, node: tscnNode, ...overrides });
 }
 
 function expectedLinear(r: number, g: number, b: number): THREE.Color {
