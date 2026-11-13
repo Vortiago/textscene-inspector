@@ -31,6 +31,8 @@ interface PlacedItem {
  * What the canvas items from below `above` down to `itemParent` hand an item, outermost first.
  * `above` null means from the chain start. An `itemParent` that is no canvas item, or is `above`,
  * gives the empty chain.
+ *
+ * @canonical The CanvasItem state a chain of the live tree hands an item drawn away from it
  */
 export function canvasStateBetween(
   results: ReadonlyMap<string, CanvasItemPassResult>,
@@ -63,6 +65,8 @@ function canvasStateAlong(chain: readonly CanvasItemLink[], start: CanvasAncesto
  * `scope`, and the outermost deferring to the item above the chain. It reads the nodes, not the
  * canvas item pass: a scene tile's instance draws nodes the live tree does not hold. A node that is
  * no canvas item adds nothing.
+ *
+ * @canonical The CanvasItem state a chain of drawn nodes hands the item below it
  */
 export function canvasStateOfDrawn(chain: readonly TscnNode[], scope: SceneScope): CanvasAncestors {
   const links = chain.flatMap((node) => {

@@ -6,8 +6,7 @@
  */
 
 import type { SceneScope } from '../../parser/types';
-import type { LiveScenePass } from '../liveScenePass';
-import { liveScenePassResults } from '../liveScenePass';
+import { liveScenePassResults, type LiveScenePass } from '../liveScenePass';
 import { liveNodePatches } from '../liveNodePatches';
 import { patchedNode } from '../nodePatch';
 import { multiplyModulate, WHITE_MODULATE } from '../canvasItemModulate';

@@ -1,8 +1,8 @@
 /**
  * The CanvasItem state a chain of skipped ancestors hands an item drawn away from its tree parent:
- * the y-sort lift and the Control walker each draw an item without the groups of the canvas items
- * above it, so each puts back what those items hand down. Visibility stays out: an animation and
- * the editor's eye toggle change it per node at runtime.
+ * the y-sort lift, the Control walker and a Control's space in the world walk each draw an item
+ * without the groups of the canvas items above it, so each puts back what those items hand down.
+ * Visibility stays out: an animation and the editor's eye toggle change it per node at runtime.
  */
 
 import type { SceneScope } from '../../parser/types';

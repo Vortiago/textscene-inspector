@@ -30,7 +30,11 @@ export interface CanvasItemNodeFields {
   readonly isTopLevel: boolean;
 }
 
-/** Null for a node that is no CanvasItem. */
+/**
+ * Null for a node that is no CanvasItem.
+ *
+ * @canonical The CanvasItem fields a node states of itself, whichever parse produced it
+ */
 export function canvasItemFieldsOf(node: TscnNode): CanvasItemNodeFields | null {
   if (isControlType(node.type)) return controlFieldsOf(node.properties as Partial<ControlProperties>);
   if (!isCanvasItem(node)) return null;

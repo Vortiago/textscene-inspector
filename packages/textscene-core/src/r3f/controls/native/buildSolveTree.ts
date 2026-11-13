@@ -385,22 +385,25 @@ function buildForest(
   const embedsWindows = embedsSubwindows(tree, viewport);
 
   /**
-   * What the skipped canvas items of `chain` hand a Control below them. The canvas item pass runs
-   * only for a Control below such an item, so a scene of Controls alone never runs it.
+   * Written only by `skippedAncestorsOf`, for this walk only: the tree does not change within one.
+   * Keyed by the chain's parent alone, since the walk sets one `above` for each parent.
+   */
+  const foldedChains = new Map<string, CanvasAncestors>();
+
+  /**
+   * What the skipped canvas items of `chain` hand a Control below them, one fold for the sibling
+   * Controls below one chain. The canvas item pass runs only for a Control below such an item, so a
+   * scene of Controls alone never runs it.
    */
   function skippedAncestorsOf({ above, parent }: SkippedChain): CanvasAncestors | null {
     if (parent === null) return null;
-    // Keyed by both ends, so sibling Controls below one chain share one fold.
-    const key = `${above ?? ''}\u0000${parent}`;
-    let folded = foldedChains.get(key);
+    let folded = foldedChains.get(parent);
     if (!folded) {
       folded = canvasStateBetween(liveScenePassResults(canvasItemPass, tree), above, parent);
-      foldedChains.set(key, folded);
+      foldedChains.set(parent, folded);
     }
     return folded;
   }
-  /** Written only by `skippedAncestorsOf`, for this walk only: the tree does not change within one. */
-  const foldedChains = new Map<string, CanvasAncestors>();
   const textureCache = loader ? recordingReads(loader.textures, recordRead) : NOTHING_CACHED;
   const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const themeCache = loader ? recordingReads(loader.themes, recordRead) : NOTHING_CACHED;

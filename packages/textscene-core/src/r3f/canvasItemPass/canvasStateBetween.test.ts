@@ -9,7 +9,7 @@ import type { TscnScene } from '../../parser/types';
 import { liveTreeOf } from '../liveSceneTree';
 import { contextOver } from '../liveSceneTree.testkit';
 import { canvasItemPass } from './canvasItemPass';
-import { canvasStateBetween } from './canvasStateBetween';
+import { canvasStateBetween, canvasStateOfDrawn } from './canvasStateBetween';
 import '../nodes/index';
 
 const MATERIALS = `[sub_resource type="CanvasItemMaterial" id="add"]
@@ -155,5 +155,37 @@ use_parent_material = true
       z: [],
       material: { kind: 'inherit' },
     });
+  });
+});
+
+describe('canvasStateOfDrawn', () => {
+  it('folds each drawn node, its material resolving in the scope given', () => {
+    const scene = chainUnderRoot(
+      'modulate = Color(0.5, 1, 1, 1)\nz_index = 3',
+      'material = SubResource("add")'
+    );
+    const [root] = scene.nodes;
+    const outer = root!.children[0]!;
+    const folded = canvasStateOfDrawn([outer, outer.children[0]!], scene);
+    expect(folded.modulate).toEqual({ r: 0.5, g: 1, b: 1, a: 1 });
+    expect(folded.z).toEqual([
+      { zIndex: 3, zAsRelative: true },
+      { zIndex: 0, zAsRelative: true },
+    ]);
+    expect(folded.material).toEqual({ kind: 'own', ref: 'SubResource("add")', resources: scene });
+  });
+
+  it('adds nothing for a node that is no canvas item', () => {
+    const scene = sceneOf(`[node name="Group" type="Node"]
+modulate = Color(0, 0, 0, 1)
+`);
+    expect(canvasStateOfDrawn(scene.nodes, scene)).toMatchObject({
+      modulate: { r: 1, g: 1, b: 1, a: 1 },
+      z: [],
+    });
+  });
+
+  it('defers to the item above the chain for an empty chain', () => {
+    expect(canvasStateOfDrawn([], sceneOf('')).material).toEqual({ kind: 'inherit' });
   });
 });
