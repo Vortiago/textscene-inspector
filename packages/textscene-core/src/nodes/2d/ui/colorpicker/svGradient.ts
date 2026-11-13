@@ -117,7 +117,7 @@ export function linearizeStops(stops: readonly Rgba[]): Rgba[] {
 const COLOR_HUE_STOP_COUNT = 7;
 
 /**
- * The 7 stops of the `color_hue` `GradientTexture2D` (`default_theme.cpp:1104-1128`),
+ * The 7 stops of the `color_hue` `GradientTexture2D`, the default theme's `ColorPicker/color_hue` icon,
  * `Color::from_hsv(i / 6, 1, 1)`, in order. A hue sweep is piecewise linear in RGB
  * between multiples of 60 degrees, so a GPU lerp between the stops is exact.
  */

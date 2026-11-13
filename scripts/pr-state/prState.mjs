@@ -2,10 +2,12 @@
  * The report of a branch's state that `pnpm pr:state` prints, for a thread to paste into its
  * report of a pull request: the head, the changed baselines and scenes, the added lines that defer
  * work, the exemption tables it edits and the exports only tests import. For a pull request it adds
- * the checks of its head and the limit lines its body gives no owner. It reads text only.
+ * the checks of its head, the limit lines its body gives no owner and the scope cuts that name no
+ * owner. It reads text only.
  */
 
 import { changedEntries } from '../gitNameStatus.mjs';
+import { isScopeCutDocument, unownedScopeCuts } from '../scope-cuts/scopeCuts.mjs';
 import { goldenNameOf } from '../visual/baselinePath.mjs';
 
 /** A line that puts work off or switches a test off: a reviewer asks for the reason of each. */
@@ -41,8 +43,8 @@ function isLimitLine({ path, text }) {
   return path.endsWith('.md') ? recordsLimit({ path, text }) : RECORDS_LIMIT.test(commentOf(text));
 }
 
-/** An issue number, the link of an issue, or the words that say a limit line has no issue and why. */
-const NAMES_OWNER = /#\d+|\/issues\/\d+|\bno issue\b/i;
+/** The owner of a limit line: an issue number, the link of an issue, or the words "no issue" beside the reason. */
+const NAMES_LIMIT_OWNER = /#\d+|\/issues\/\d+|\bno issue\b/i;
 
 /** The directory and the name of a file, which is how a body names a sheet: `textedit/comparison.md`. */
 const shortPathOf = (path) => path.split('/').slice(-2).join('/');
@@ -75,6 +77,7 @@ export const EXEMPTION_TABLES = new Map([
   ['scripts/vendor-prune.mjs', 'the importers whose sidecars the previewer reads'],
   ['scripts/import-sidecar-allowlist.test.mjs', 'the import parameters a vendored sidecar may set'],
   ['scripts/resourceLookups.test.mjs', 'the readers not moved onto resources/reading yet'],
+  ['scripts/scope-cuts/knownUnownedCuts.mjs', 'the scope cuts of a document that name no owner'],
 ]);
 
 /**
@@ -83,9 +86,16 @@ export const EXEMPTION_TABLES = new Map([
  * @property {{ ref: string, sha: string }} base - the ref the branch left, and the commit where it left.
  * @property {string} nameStatus - `git diff --name-status --no-renames <base.sha> <head.sha>` output.
  * @property {string} diff - `git diff -U0 <base.sha> <head.sha>` output, uncoloured, with the `a/` and `b/` prefixes.
+ * @property {Document[]} documents - each Markdown file the change adds or edits.
  * @property {boolean} [hasUncommittedChanges] - whether the working tree differs from the head.
  * @property {string[]} unkeptTestOnlyExports - each `file#name` only tests import, the kept ones left out.
  * @property {PullRequest} [pullRequest]
+ */
+
+/**
+ * @typedef {object} Document
+ * @property {string} path
+ * @property {string} text - the whole file at the head: a cut takes its meaning from the list it stands in.
  */
 
 /**
@@ -97,6 +107,7 @@ export const EXEMPTION_TABLES = new Map([
  * @property {string} baseBranch
  * @property {string} body
  * @property {Check[]} checks - the latest run of each check on `headSha`.
+ * @property {{ number: number, body: string }[]} closedIssues - each issue the body closes.
  */
 
 /**
@@ -138,9 +149,38 @@ export function parseCheckRuns(tsv) {
  * @param {Pick<BranchChange, 'diff'> & { pullRequest: Pick<PullRequest, 'body'> }} change
  */
 export function unownedLimitLines({ diff, pullRequest }) {
-  const ownerLines = pullRequest.body.split('\n').filter((line) => NAMES_OWNER.test(line));
+  const ownerLines = pullRequest.body.split('\n').filter((line) => NAMES_LIMIT_OWNER.test(line));
   const hasOwner = ({ path }) => ownerLines.some((line) => namesFile(line, path));
   return addedLines(diff).filter((line) => isLimitLine(line) && !hasOwner(line));
+}
+
+/** The words with which a body closes an issue on merge, as GitHub reads them. */
+const CLOSES_ISSUE = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/gi;
+
+/** The number of each issue `body` closes, once each, in the order the body names them. */
+export function closedIssueNumbers(body) {
+  return [...new Set([...body.matchAll(CLOSES_ISSUE)].map(([, digits]) => Number(digits)))];
+}
+
+/**
+ * The scope cuts that name no owner: in the pull request body, in a line the change adds to a
+ * document of `isScopeCutDocument`, and in each issue the pull request closes. A cut of
+ * `KNOWN_UNOWNED_CUTS` counts too once the change rewrites its first line.
+ *
+ * @param {Pick<BranchChange, 'diff' | 'documents'> & { pullRequest: Pick<PullRequest, 'body' | 'closedIssues'> }} change
+ * @returns {{ where: string, line: number, text: string }[]}
+ */
+export function unownedScopeCutsOf({ diff, documents, pullRequest }) {
+  const added = addedLines(diff);
+  const isAdded = (path, line) => added.some((addition) => addition.path === path && addition.line === line);
+  const cutsOf = (where, markdown) => unownedScopeCuts(markdown).map((cut) => ({ where, ...cut }));
+  return [
+    ...cutsOf('the pull request body', pullRequest.body),
+    ...documents
+      .filter(({ path }) => isScopeCutDocument(path))
+      .flatMap(({ path, text }) => cutsOf(path, text).filter(({ line }) => isAdded(path, line))),
+    ...pullRequest.closedIssues.flatMap(({ number, body }) => cutsOf(`issue #${number}`, body)),
+  ];
 }
 
 /**
@@ -174,6 +214,7 @@ function pullRequestSections(change) {
   return [
     section('Checks not passed', change.pullRequest.checks.filter(hasNotPassed).map(checkEntry)),
     section('Limit lines with no owner in the pull request body', unownedLimitLines(change).map(quoted)),
+    section('Scope cuts with no owner', unownedScopeCutsOf(change).map(cutEntry)),
   ];
 }
 
@@ -245,6 +286,8 @@ function exemptionEntry({ path }) {
   const exempts = EXEMPTION_TABLES.get(path);
   return exempts ? [`\`${path}\`: ${exempts}`] : [];
 }
+
+const cutEntry = ({ where, line, text }) => `\`${where}:${line}\` ${text}`;
 
 const quoted = ({ path, line, text }) => `\`${path}:${line}\` ${text.trim()}`;
 

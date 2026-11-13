@@ -9,6 +9,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { formatControlNumber } from '../../../../godot/text/numberFormat';
+import { defaultConstant } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
@@ -36,13 +37,9 @@ import type { Rgba } from '../../../../godot/math/math';
 /** `Range`'s default `step` (`scene/gui/range.h:42`). SpinBox's constructor never calls `set_step` (`spin_box.cpp:723-740`), so this is what an unauthored `step` resolves to. */
 const SPIN_BOX_STEP_DEFAULT = 1;
 
-/**
- * `default_theme.cpp:647-648` sets `buttons_width`/`field_and_buttons_separation` as bare
- * literals, unlike the scaled ItemList neighbours at `default_theme.cpp:946-949`, so Godot
- * never multiplies either by `default_theme_scale`.
- */
-const SPIN_BOX_BUTTONS_WIDTH = 16;
-const SPIN_BOX_FIELD_BUTTONS_SEPARATION = 2;
+/** Godot never scales `buttons_width` or `field_and_buttons_separation`. */
+const SPIN_BOX_BUTTONS_WIDTH = defaultConstant('SpinBox', 'buttons_width');
+const SPIN_BOX_FIELD_BUTTONS_SEPARATION = defaultConstant('SpinBox', 'field_and_buttons_separation');
 /** `value_up.svg`/`value_down.svg` (`scene/theme/icons/`) declare `width="16" height="8"`. */
 const SPIN_BOX_ARROW_ICON_SIZE: Vector2 = { x: 16, y: 8 };
 
@@ -88,14 +85,11 @@ export function spinBoxWidestButtonIconWidth(n: Pick<SolveNode, 'textureSlots'>,
  * not modelled. `widestIconWidth` is `spinBoxWidestButtonIconWidth`'s.
  */
 export function spinBoxButtonsBlockWidth(widestIconWidth: number): number {
-  const separation = SPIN_BOX_FIELD_BUTTONS_SEPARATION;
-  const wanted = SPIN_BOX_BUTTONS_WIDTH + separation;
-  const iconEnforced = widestIconWidth + separation;
-  return Math.max(wanted, iconEnforced);
+  return Math.max(SPIN_BOX_BUTTONS_WIDTH, widestIconWidth) + SPIN_BOX_FIELD_BUTTONS_SEPARATION;
 }
 
-/** `buttons_vertical_separation`: `default_theme.cpp:646` sets it to 0, and no per-node theme-constant override is modelled. */
-const SPIN_BOX_BUTTONS_VERTICAL_SEPARATION = 0;
+/** The table's `SpinBox/buttons_vertical_separation`. No per-node theme-constant override is modelled. */
+const SPIN_BOX_BUTTONS_VERTICAL_SEPARATION = defaultConstant('SpinBox', 'buttons_vertical_separation');
 
 interface SpinBoxLayout {
   /** The internal field's rect: `line_edit`'s full-rect preset with a right offset of `-buttons_block_width` (`spin_box.cpp:394-395`). */

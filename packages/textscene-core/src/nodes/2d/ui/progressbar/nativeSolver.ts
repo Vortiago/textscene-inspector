@@ -29,10 +29,10 @@ import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { formatControlPercent, type Numerals } from '../../../../godot/text/numberFormat';
 import { ProgressBarFillMode } from '../../../../godot/scene/gui';
 
-/** ProgressBar reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color` (`default_theme.cpp:283,285`). */
+/** ProgressBar reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const PROGRESS_BAR_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 
-/** `SceneStringName(font)` = `"font"` (`default_theme.cpp:283`: `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT, ProgressBar, font)`). */
+/** `SceneStringName(font)` = `"font"`, which the default theme registers under ProgressBar. */
 export const PROGRESS_BAR_THEME_FONT_KEY = 'font';
 
 /** Resolves the percent label's font size and colour: the override, else the ancestor Theme chain, else the default theme table. */

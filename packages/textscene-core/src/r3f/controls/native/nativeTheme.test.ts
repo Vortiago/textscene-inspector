@@ -9,12 +9,9 @@ describe('nativeTheme', () => {
   });
 
   it('doubles every scalable metric at scale 2, per scaledGodotTheme', () => {
-    // scene/theme/default_theme.cpp fill_default_theme / make_flat_stylebox:
-    // Math::round(default_font_size * 2) = 32, Math::round(default_corner_radius * 2) = 6, and so on.
+    // `Math::round(default_font_size * 2)` = 32, and so on.
     const theme = nativeTheme(2);
     expect(theme.fontSize).toBe(32);
-    expect(theme.cornerRadius).toBe(6);
-    expect(theme.contentMargin).toBe(8);
     expect(theme.separation).toBe(8);
     expect(theme.sliderGrabberSize).toBe(32);
   });

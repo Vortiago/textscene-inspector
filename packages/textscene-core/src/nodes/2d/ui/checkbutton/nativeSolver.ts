@@ -1,7 +1,7 @@
 /**
  * What CheckButton adds to Button (`scene/gui/check_button.cpp`): the toggle icon it reserves as Button's
  * `_internal_margin` (`:95-103`) and draws over it (`:107-147`), its minimum size (`:68-84`) and its theme
- * defaults (`scene/theme/default_theme.cpp:316-353`).
+ * defaults (the table's `CheckButton` type).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -66,7 +66,7 @@ const CHECK_BUTTON_ICON_THEME_NAMES = Object.values(CHECK_BUTTON_ICON_THEME_NAME
 
 /**
  * The colour `CheckButton::_notification` draws the toggle in (`check_button.cpp:142-145`):
- * `button_checked_color` or `button_unchecked_color`, both white (`default_theme.cpp:352-353`). The
+ * `button_checked_color` or `button_unchecked_color`, both white in the table's `CheckButton` type. The
  * `_disabled` icons carry their own dimming.
  */
 export function checkButtonIconColor(props: CheckButtonProperties, colors: SolveNode['colors']): Rgba {
@@ -92,7 +92,7 @@ function checkButtonFittedIconSize(
 }
 
 /**
- * CheckButton as a Button: its font colours equal Button's (`default_theme.cpp:340-345`), its constructor
+ * CheckButton as a Button: its font colours equal Button's (the table's `CheckButton/font_*_color`), its constructor
  * aligns the text LEFT (`check_button.cpp:173`), and the toggle is the internal margin of the trailing
  * side (`:95-103`).
  */

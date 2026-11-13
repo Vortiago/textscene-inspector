@@ -1,7 +1,7 @@
 /**
  * FoldableContainer's native rect solver: `get_minimum_size` (`scene/gui/foldable_container.cpp:36-51`),
  * `_update_title_min_size` (`:441-478`) and `NOTIFICATION_SORT_CHILDREN` (`:329-386`), with the
- * "FoldableContainer" entries of `scene/theme/default_theme.cpp:1302-1336`. No `.tscn` sets hover or
+ * table's `FoldableContainer` type. No `.tscn` sets hover or
  * focus, so `folded` alone picks the title style and icon.
  *
  * Portions ported from Godot Engine (MIT).

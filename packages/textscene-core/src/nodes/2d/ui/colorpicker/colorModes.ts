@@ -235,7 +235,7 @@ export function okhslLightnessGradientStops(normalized: Rgba): [Rgba, Rgba, Rgba
 
 /**
  * `ColorModeOKHSL::slider_draw`'s H channel (`color_mode.cpp:428-457`): 7 stops
- * like the `color_hue` of `default_theme.cpp`, sampled at the current saturation
+ * like the default theme's `ColorPicker/color_hue`, sampled at the current saturation
  * and lightness, `from_ok_hsl(h, slider_sat, okhsl_l)`, and drawn opaque.
  */
 export function okhslHueChannelStops(normalized: Rgba): Rgba[] {

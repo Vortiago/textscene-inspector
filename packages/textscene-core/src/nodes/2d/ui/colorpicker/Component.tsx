@@ -259,7 +259,7 @@ export function ColorPicker({
     ? { w: sampleCols.sample.w, h: sampleCols.sample.h * COLOR_PICKER_SAMPLE_HEIGHT_FRACTION }
     : null;
   // `btn_shape`, `btn_mode` and `menu_btn` use `FlatMenuButton`, whose boxes are `StyleBoxEmpty`
-  // (`default_theme.cpp:360,372-375`). Only `btn_pick`, a plain `Button` (`default_theme.cpp:138-141`), draws one.
+  // (the table's `FlatMenuButton`). Only `btn_pick`, a plain `Button` (the table's `Button/normal`), draws one.
   const pickIconTexture = useNodeIcon(solveNode.icons.screen_picker, COLOR_PICKER_PIPETTE_ICON);
   const variant = drawnShapeVariant(props.pickerShape);
   const shapeIcon = variant?.icon ?? null;

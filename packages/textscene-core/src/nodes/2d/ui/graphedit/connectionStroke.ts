@@ -24,6 +24,17 @@ const RIM_BAND_PX = 1.5;
  */
 const RINGS_PER_POINT = 6;
 
+/** The 4 px that `_get_shader_line_width` adds to every stroke (`graph_edit.cpp:2633`). */
+const SHADER_LINE_PADDING_PX = 4;
+
+/**
+ * `_get_shader_line_width` (`graph_edit.cpp:2632-2634`): `lines_thickness * base_scale + 4.0`.
+ * `baseScale` is the theme's default base scale, unrounded.
+ */
+export function shaderLineWidth(thickness: number, baseScale: number): number {
+  return thickness * baseScale + SHADER_LINE_PADDING_PX;
+}
+
 /**
  * `points` in Godot px (+Y down), in the destination space. The Y flip into three space
  * happens here, as in `buildLineGeometry` of `Line2D`. `lineWidth` is `_get_shader_line_width()`

@@ -1,7 +1,7 @@
 /**
  * What CheckBox adds to Button (`scene/gui/check_box.cpp`): the check or radio icon it reserves as Button's
  * `_internal_margin` (`:96-101`) and draws over it (`:107-142`), its minimum size (`:64-79`) and its theme
- * defaults (`scene/theme/default_theme.cpp:274-313`).
+ * defaults (the table's `CheckBox` type).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -78,7 +78,7 @@ export function checkIconSlotRequests(themedIcons: Parameters<typeof themedSlotR
 
 /**
  * `CheckBox::get_icon_size` (`check_box.cpp:35-62`): the largest of all 8 icons, whichever is showing,
- * fitted to `icon_max_width`. The default theme registers all 8 (`default_theme.cpp:288-295`).
+ * fitted to `icon_max_width`. The default theme registers all 8 (`CHECK_BOX_ICONS` in `themeIcons.ts`).
  */
 function checkBoxFittedIconSize(
   n: Pick<SolveNode, 'textureSlots' | 'constants'>,
@@ -92,7 +92,7 @@ function checkBoxFittedIconSize(
 }
 
 /**
- * CheckBox as a Button: its font colours equal Button's (`default_theme.cpp:300-305`), its constructor
+ * CheckBox as a Button: its font colours equal Button's (the table's `CheckBox/font_*_color`), its constructor
  * aligns the text LEFT (`check_box.cpp:174`), and the check is the internal margin of the leading side
  * (`:96-101`).
  */
@@ -139,7 +139,7 @@ export function checkBoxCheckRect(
 
 /**
  * The colour `CheckBox::_notification` draws the icon in (`check_box.cpp:139-142`): `checkbox_checked_color`
- * or `checkbox_unchecked_color`, both white (`default_theme.cpp:312-313`). The disabled icons carry their own dimming.
+ * or `checkbox_unchecked_color`, both white in the table's `CheckBox` type. The disabled icons carry their own dimming.
  */
 export function checkBoxCheckColor(props: CheckBoxProperties, colors: SolveNode['colors']): Rgba {
   const key = props.buttonPressed ? 'checkbox_checked_color' : 'checkbox_unchecked_color';

@@ -36,7 +36,7 @@ import { SizeFlags } from '../../../../godot/scene/control';
 import { ScrollContainerScrollHintMode, ScrollMode } from '../../../../godot/scene/gui';
 import { clampRangeValue } from '../shared/range';
 
-/** `scrollbar_h_separation`/`scrollbar_v_separation` default to 0 (`scroll_container.h:104-105`), and `default_theme.cpp` overrides them only for `Tree`. */
+/** `scrollbar_h_separation`/`scrollbar_v_separation` default to 0 (`scroll_container.h:104-105`), and the table sets them only for `Tree`. */
 const SCROLLBAR_SEPARATION = 0;
 
 /** The four content insets `_get_margins` returns, spelled by side rather than as Godot's `Rect2(left, top, right, bottom)` packing. */

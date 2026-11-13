@@ -242,7 +242,7 @@ export function ItemList({
 
   // `font_selected_color` (`item_list.cpp:1610-1611`).
   const selectedFontColor = requiredThemeItem(solveNode.colors, 'font_selected_color');
-  // `selected_focus` is the same box in the default theme (`default_theme.cpp:964-965`).
+  // `selected_focus` is the same box as `selected` in the table's `ItemList` type.
   const selectedBox = requiredThemeItem(solveNode.styleBoxes, 'selected');
   // `cursor_unfocused` (`item_list.cpp:2455`).
   const cursorBox = requiredThemeItem(solveNode.styleBoxes, 'cursor_unfocused');

@@ -106,7 +106,7 @@ export function colorPickerOverbrightIconSize(theme: Pick<NativeTheme, 'scale'>)
   return scaledIconSize(COLOR_PICKER_OVERBRIGHT_ICON_SIZE, theme.scale);
 }
 
-/** The side of the square `menu_option` and `folded_arrow` icons (`default_theme.cpp:1088`), and of the other button icons at the theme scale. */
+/** The side of the square `menu_option` and `folded_arrow` icons (`themeIcons.ts`), and of the other button icons at the theme scale. */
 export function colorPickerButtonIconSize(theme: Pick<NativeTheme, 'scale'>): number {
   return scaledIconSize(COLOR_PICKER_BUTTON_ICON_SIZE, theme.scale);
 }
@@ -114,8 +114,8 @@ export function colorPickerButtonIconSize(theme: Pick<NativeTheme, 'scale'>): nu
 /**
  * The natural size of `menu_btn`, an icon-only `FlatMenuButton` with no custom
  * minimum (`color_picker.cpp:2253-2261`): `Button::get_minimum_size_for_text_and_icon` (`button.cpp:
- * 481-523`) with the 16x16 `menu_option` icon (`default_theme.cpp:1088`) plus the margin of
- * `button_normal` (`default_theme.cpp:359-363`). `btn_mode` has this size, with its width floored to 28.
+ * 481-523`) with the 16x16 `menu_option` icon (`themeIcons.ts`) plus the margin of
+ * `button_normal` (the table's `FlatMenuButton/normal`). `btn_mode` has this size, with its width floored to 28.
  */
 function colorPickerMenuButtonSize(theme: Pick<PickerTheme, 'button' | 'flatMenuButton' | 'scale'>): Vector2 {
   return iconButtonSize(theme, theme.flatMenuButton.normal);
@@ -279,7 +279,7 @@ function colorPickerButtonContent(
   const layout = layoutButtonContent({
     rectSize: { x: box.w, y: box.h },
     styleMargin: look.styleMargin,
-    // Button's `h_separation` (`default_theme.cpp:171`) is another theme key, with the value of `separation`.
+    // Button's `h_separation` (the table's `Button/h_separation`) is another theme key, with the value of `separation`.
     hSeparation: theme.separation,
     iconMaxWidth: 0,
     textAlignment: look.textAlignment,
