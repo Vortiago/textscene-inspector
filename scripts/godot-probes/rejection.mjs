@@ -31,8 +31,12 @@ export function parseRejection(output) {
   throw new Error(`expected Godot's shader error in its output, got:\n${output.slice(0, 2000)}`);
 }
 
-/** Godot's reason for `probe`, from a run of that probe alone, which may end Godot. */
+/**
+ * Godot's reason for `probe`, from a run of that probe alone. A run may end Godot, which prints
+ * its crash report on standard output. Any other failed run throws.
+ */
 export function godotRejection(probe) {
-  const { stdout, stderr } = runGodotScriptToExit(MAIN_SCRIPT, probeProjectFiles([probe]));
-  return parseRejection(`${stderr}\n${stdout}`);
+  const { status, stdout, stderr } = runGodotScriptToExit(MAIN_SCRIPT, probeProjectFiles([probe]));
+  if (status !== 0 && !CRASH.test(stdout)) throw new Error(`godot exited with ${status}:\n${stderr}`);
+  return parseRejection(stdout);
 }

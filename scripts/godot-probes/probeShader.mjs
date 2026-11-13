@@ -73,7 +73,12 @@ export function parameterBits(probe) {
  */
 export function inputRowsOfBits(source, bits) {
   const { parameters } = probeSignature(source);
-  const rows = parameters.length === 0 ? 1 : bits[0].length / LANE_COUNT[parameters[0]];
+  if (bits.length !== parameters.length)
+    throw new Error(`expected the bits of ${parameters.length} parameters for ${source}, got ${bits.length}`);
+  const rowCounts = parameters.map((type, index) => bits[index].length / LANE_COUNT[type]);
+  const rows = rowCounts[0] ?? 1;
+  if (!rowCounts.every((count) => count === rows && Number.isInteger(count)))
+    throw new Error(`expected whole rows of the same count for ${source}, got ${rowCounts.join(', ')}`);
   return Array.from({ length: rows }, (_, row) =>
     parameters.map((type, index) => {
       const size = LANE_COUNT[type];

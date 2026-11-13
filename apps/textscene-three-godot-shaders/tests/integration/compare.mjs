@@ -40,7 +40,7 @@ const ABORT_REFUSAL = /aborts on this expression/;
 export function compareProbe(entry, actual, isFloatResult = true) {
   if (entry === undefined) return failed('no record from Godot');
   if (entry.rejected?.stage === 'Godot') {
-    return ABORT_REFUSAL.test(actual.error ?? '')
+    return actual.isRefusal && ABORT_REFUSAL.test(actual.error)
       ? { ...failed(`Godot ends, the transpiler refuses: ${actual.error}`), passed: true }
       : failed(`Godot ends on the shader, the transpiler does not say so: ${actual.error ?? 'it draws'}`);
   }

@@ -34,7 +34,7 @@ const GUIDE = renderTestingGuide({
 describe('the chapter on the tests against Godot', () => {
   it('counts the random programs bit-equal with Godot, less those a case names, and the fixed cases', () => {
     expect(GUIDE).toContain(
-      '**2 of 3 random programs bit-equal with Godot, and 1 fixed known-difference cases.**'
+      '**2 of 3 random programs bit-equal with Godot, and 1 fixed known-difference case.**'
     );
   });
 

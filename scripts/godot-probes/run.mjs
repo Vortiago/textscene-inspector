@@ -13,7 +13,10 @@ import { pathToFileURL } from 'node:url';
 import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
 import { OPERATOR_CASES } from '../../apps/textscene-three-godot-shaders/tests/operators/operatorCases.mjs';
 import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
-import { KNOWN_DIFFERENCE_CASES } from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
+import {
+  KNOWN_DIFFERENCE_CASES,
+  recordedRandomProbes,
+} from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
 import { RANDOM_PROGRAMS } from '../../apps/textscene-three-godot-shaders/tests/random/randomSet.mjs';
 import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
@@ -65,7 +68,7 @@ function endingRejection(probe) {
 }
 
 function main() {
-  const randomProbes = [...RANDOM_PROGRAMS, ...KNOWN_DIFFERENCE_CASES];
+  const randomProbes = recordedRandomProbes(RANDOM_PROGRAMS);
   const probes = [...PROBES, ...randomProbes];
   const output = runProbesInGodot(probes.filter((probe) => !probe.endsGodot));
   const reasons = rejections(probes, output);

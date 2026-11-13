@@ -41,7 +41,7 @@ A generator writes random functions that are correct by type, from the signature
 
 The fixed set has seed ${seed}: ${programs.length} programs, one rooted at each of the ${transpiledRows} transpiled rows, and the rest with random roots. Godot accepts every one. \`pnpm godot:probes\` records Godot's result bits, and \`pnpm test:shaders:gpu\` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN.
 
-**${programs.length - known} of ${programs.length} random programs bit-equal with Godot, and ${cases} fixed known-difference cases.** A program that differs is reduced against a live Godot to a small program that still differs. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
+**${programs.length - known} of ${programs.length} random programs bit-equal with Godot, and ${cases} fixed known-difference ${cases === 1 ? 'case' : 'cases'}.** A program that differs is reduced against a live Godot to a small program that still differs. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
 
 | Case | Reduced program | Program of the set | First lane that differs | Cause | Owner |
 | --- | --- | --- | --- | --- | --- |

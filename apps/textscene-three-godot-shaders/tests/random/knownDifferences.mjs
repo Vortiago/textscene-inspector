@@ -174,13 +174,16 @@ const caseName = (name) => `known-${name}`;
 /** Each case as a probe that `pnpm godot:probes` records and the page compares. */
 export const KNOWN_DIFFERENCE_CASES = Object.entries(KNOWN_DIFFERENCES).map(([name, known]) => ({
   name: caseName(name),
-  known: name,
+  difference: name,
   source: known.source,
   inputs: inputRowsOfBits(
     known.source,
     known.inputs.map((lanes) => lanes.split(' '))
   ),
 }));
+
+/** The random probes Godot's record holds: the programs of a set, then every fixed case. */
+export const recordedRandomProbes = (programs) => [...programs, ...KNOWN_DIFFERENCE_CASES];
 
 /** The programs of the fixed set that a case names as showing its fault now. */
 export const KNOWN_PROGRAMS = new Set(

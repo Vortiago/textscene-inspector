@@ -99,9 +99,10 @@ export function staleKnownPrograms(results) {
 /** The verdict of each fixed case of `cases` against `entries`, Godot's answers by case name. */
 export async function compareKnownCases(page, cases, entries) {
   const results = [];
-  for (const known of cases) {
-    const actual = await runOnPage(page, known);
-    results.push({ known, verdict: compareProbe(entries[known.name], actual, isFloatResult(known)) });
+  for (const knownCase of cases) {
+    const actual = await runOnPage(page, knownCase);
+    const verdict = compareProbe(entries[knownCase.name], actual, isFloatResult(knownCase));
+    results.push({ knownCase, verdict });
   }
   return results;
 }
@@ -117,9 +118,9 @@ export const knownCaseSummary = (results) =>
 export function settledKnownCases(results) {
   return results
     .filter(({ verdict }) => !differsInBits(verdict))
-    .map(({ known, verdict }) =>
+    .map(({ knownCase, verdict }) =>
       verdict.passed
-        ? `known difference ${known.known} equals Godot now: remove it from knownDifferences.mjs`
-        : `known difference ${known.known} no longer differs in its bits: ${verdict.detail}`
+        ? `known difference ${knownCase.difference} equals Godot now: remove it from knownDifferences.mjs`
+        : `known difference ${knownCase.difference} no longer differs in its bits: ${verdict.detail}`
     );
 }

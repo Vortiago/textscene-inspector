@@ -9,12 +9,12 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { hex } from '../../../../scripts/godot-probes/record.mjs';
 import { parameterBits } from '../../../../scripts/godot-probes/probeShader.mjs';
-import { KNOWN_DIFFERENCE_CASES, KNOWN_DIFFERENCES } from './knownDifferences.mjs';
+import { KNOWN_DIFFERENCE_CASES, KNOWN_DIFFERENCES, recordedRandomProbes } from './knownDifferences.mjs';
 import { generatePrograms } from './programs.mjs';
 import { FIXED_SEED, RANDOM_PROGRAMS } from './randomSet.mjs';
 
 /** The programs and the fixed cases, as Godot's record holds them. */
-const RECORDED = [...RANDOM_PROGRAMS, ...KNOWN_DIFFERENCE_CASES];
+const RECORDED = recordedRandomProbes(RANDOM_PROGRAMS);
 
 const RECORD = JSON.parse(readFileSync(join(import.meta.dirname, 'godot-record.json'), 'utf8'));
 
@@ -51,11 +51,11 @@ describe("Godot's record of the random programs", () => {
 
   it('keeps the inputs of each fixed case bit for bit', () => {
     const changed = KNOWN_DIFFERENCE_CASES.filter(
-      (known) =>
-        JSON.stringify(parameterBits(known).map((bits) => bits.map(hex).join(' '))) !==
-        JSON.stringify(KNOWN_DIFFERENCES[known.known].inputs)
+      (knownCase) =>
+        JSON.stringify(parameterBits(knownCase).map((bits) => bits.map(hex).join(' '))) !==
+        JSON.stringify(KNOWN_DIFFERENCES[knownCase.difference].inputs)
     );
-    expect(changed.map((known) => known.name)).toEqual([]);
+    expect(changed.map((knownCase) => knownCase.name)).toEqual([]);
   });
 });
 
@@ -64,10 +64,11 @@ describe('the fixed known-difference cases', () => {
     const small = generatePrograms({ seed: FIXED_SEED, count: 0 });
     const large = generatePrograms({ seed: FIXED_SEED, count: 400 });
     expect(small.length).not.toBe(large.length);
-    // The cases are built from the list alone, so a set of any size runs every one of them.
+    // `pnpm godot:probes` records the probes of `recordedRandomProbes`, whatever the set holds.
+    const caseNames = KNOWN_DIFFERENCE_CASES.map((knownCase) => knownCase.name);
     for (const programs of [small, large]) {
-      const run = [...programs, ...KNOWN_DIFFERENCE_CASES].map((program) => program.name);
-      for (const name of Object.keys(KNOWN_DIFFERENCES)) expect(run).toContain(`known-${name}`);
+      const recorded = recordedRandomProbes(programs).map((program) => program.name);
+      expect(caseNames.filter((name) => !recorded.includes(name))).toEqual([]);
     }
   });
 
@@ -75,6 +76,6 @@ describe('the fixed known-difference cases', () => {
     const generated = new Set(
       generatePrograms({ seed: FIXED_SEED, count: 400 }).map((program) => program.name)
     );
-    expect(KNOWN_DIFFERENCE_CASES.filter((known) => generated.has(known.name))).toEqual([]);
+    expect(KNOWN_DIFFERENCE_CASES.filter((knownCase) => generated.has(knownCase.name))).toEqual([]);
   });
 });
