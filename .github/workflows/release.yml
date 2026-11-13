@@ -191,13 +191,17 @@ jobs:
 
       # npm authenticates through the package's trusted publisher (OIDC) and attaches provenance.
       # `npm view` prints nothing, and exits 0, for a version the registry does not hold.
-      - name: Publish @textscene/${{ needs.validate.outputs.package }}
+      # The name comes from the tarball, since a tag prefix is not always the package name:
+      # `shaders` releases `@textscene/three-godot-shaders`.
+      - name: Publish the ${{ needs.validate.outputs.package }} tarball
         run: |
-          if [ -n "$(npm view "@textscene/$PACKAGE@$VERSION" version 2>/dev/null)" ]; then
-            echo "@textscene/$PACKAGE@$VERSION is already on npm: skipping"
+          tarball=$(ls ./*.tgz)
+          name=$(tar -xzOf "$tarball" package/package.json | node -p 'JSON.parse(require("fs").readFileSync(0, "utf8")).name')
+          if [ -n "$(npm view "$name@$VERSION" version 2>/dev/null)" ]; then
+            echo "$name@$VERSION is already on npm: skipping"
             exit 0
           fi
-          npm publish "textscene-$PACKAGE-$VERSION.tgz"
+          npm publish "$tarball"
 
   vscode-marketplace:
     name: Publish the extension to the VS Code Marketplace

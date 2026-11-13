@@ -13,8 +13,8 @@ function litSurfaceFormOf(search: string): LitSurfaceForm {
 }
 
 /**
- * Read once, when the module loads, because the web host rewrites the query when it opens a scene
- * (`useFixtureSelection`). Outside a browser there is no query, so the form is `patched`.
+ * Read once, when the module loads, so every reader on the page sees one form for the page's
+ * life. Outside a browser there is no query, so the form is `patched`.
  */
 const LOADED_FORM: LitSurfaceForm =
   typeof window === 'undefined' ? 'patched' : litSurfaceFormOf(window.location.search);

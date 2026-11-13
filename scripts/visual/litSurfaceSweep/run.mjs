@@ -10,7 +10,7 @@
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { compareImages } from '../imageDelta.mjs';
-import { previewPort, withPreviewBrowser } from '../previewServer.mjs';
+import { isUniformImage, previewPort, withPreviewBrowser } from '../previewServer.mjs';
 import { baselineFile } from '../run/baselines.mjs';
 import { openPagePool } from '../run/pagePool.mjs';
 import { captureScene } from '../run/sceneCapture.mjs';
@@ -41,6 +41,8 @@ function readRows(out) {
 function deltaOf(scene, buffer) {
   const file = baselineFile(scene);
   if (!existsSync(file)) return { failed: `no baseline at ${file}` };
+  // A lost context settles on one colour: that is a failed capture, not a moved golden.
+  if (isUniformImage(buffer)) return { failed: 'the capture is one colour' };
   const { sizeMismatch, changedPixels, maxChannelDelta, meanChannelError } = compareImages(
     readFileSync(file),
     buffer

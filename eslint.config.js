@@ -284,6 +284,8 @@ export default [
                 `**/${directory}`,
                 `**/${directory}/**`,
               ]),
+              // A three.js path such as `three/addons/utils/*` ends in a core directory's name.
+              '!three/**',
             ],
             message:
               'The shader module imports only three.js, godot/ and its own files (ADR-0072). Read a value of the renderer through a pipeline input instead.',

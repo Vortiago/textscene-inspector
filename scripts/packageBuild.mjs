@@ -32,7 +32,7 @@ export function packageLayout(buildScriptUrl) {
  * extension. The package installs esbuild, so the build reads it from the package's own
  * node_modules, not the repo root's.
  *
- * @canonical The esbuild build of a published package's Node bundles
+ * @canonical The esbuild build of a published package's bundles
  *   A clean dist, so no file of an earlier build reaches the tarball. The shared metafile is
  *   named `build.meta.json` and is not published; the declarations and notices go beside the
  *   library bundle.
@@ -43,7 +43,7 @@ export function packageLayout(buildScriptUrl) {
  *   `neutral` for a bundle that runs in a browser as well as in Node.
  * @returns {Promise<{ inputs: Record<string, unknown> }>} the bundles' shared esbuild metafile.
  */
-export async function buildNodeBundles(layout, { entries, external = [], platform = 'node' }) {
+export async function buildBundles(layout, { entries, external = [], platform = 'node' }) {
   const { build } = createRequire(resolve(layout.packageDir, 'package.json'))('esbuild');
   rmSync(layout.outDir, { recursive: true, force: true });
   const { metafile } = await build({

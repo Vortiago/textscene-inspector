@@ -31,9 +31,9 @@ describe('litSurfaceForm', () => {
     expect(await formOnPageAt('/?litSurface=other')).toBe('patched');
   });
 
-  it('keeps the form it loaded with after the host rewrites the query', async () => {
+  it('keeps the form it loaded with for the life of the page', async () => {
     await formOnPageAt('/?litSurface=nodes');
-    window.history.replaceState(null, '', '/?fixture=b.tscn');
+    window.history.replaceState(null, '', '/?litSurface=patched');
     const { litSurfaceForm } = await import('./litSurfaceForm');
 
     expect(litSurfaceForm()).toBe('nodes');

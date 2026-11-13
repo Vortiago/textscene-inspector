@@ -10,6 +10,7 @@
     "build:lsp": "pnpm --filter @textscene/lsp build",
     "build:tscn": "pnpm --filter @textscene/tscn build",
     "build:renderer": "pnpm --filter @textscene/renderer build",
+    "build:shaders": "pnpm --filter @textscene/three-godot-shaders build",
     "dev:web": "pnpm --filter @textscene/web-previewer dev",
     "dev:vscode": "pnpm --filter textscene-inspector dev",
     "test": "vitest run",

@@ -7,12 +7,12 @@
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { buildNodeBundles, packageLayout, writeBesideBundle } from '../../../scripts/packageBuild.mjs';
+import { buildBundles, packageLayout, writeBesideBundle } from '../../../scripts/packageBuild.mjs';
 
 const layout = packageLayout(import.meta.url);
 const manifest = JSON.parse(readFileSync(resolve(layout.packageDir, 'package.json'), 'utf8'));
 
-const metafile = await buildNodeBundles(layout, {
+const metafile = await buildBundles(layout, {
   entries: [{ in: layout.entry, out: 'index' }],
   external: Object.keys(manifest.peerDependencies),
   platform: 'neutral',

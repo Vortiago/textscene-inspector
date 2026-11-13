@@ -31,9 +31,9 @@ const withHandler = new WeakSet<THREE.WebGLRenderer>();
  */
 export function installNodesHandler(renderer: THREE.WebGLRenderer, output: NodeOutput = 'display'): void {
   if (withHandler.has(renderer)) return;
-  withHandler.add(renderer);
   const handler = new WebGLNodesHandler();
   if (output === 'linear')
     (handler as unknown as OutputEncoding).getOutputCallback = (outputNode) => outputNode;
   renderer.setNodesHandler(handler);
+  withHandler.add(renderer);
 }
