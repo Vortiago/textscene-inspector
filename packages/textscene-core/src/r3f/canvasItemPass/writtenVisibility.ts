@@ -16,7 +16,8 @@ export const NOTHING_WRITTEN: ReadonlyMap<TscnNode, boolean> = new Map();
 
 /**
  * The `visible` the node of `step` writes onto each of its sortable children, keyed by the child as
- * its group holds it. Empty for a node that writes none.
+ * its group holds it. Empty for a node that writes none. The container numbers them in one
+ * `get_child(i)` loop (`tab_container.cpp:469-481`), so the count spans every group below it.
  */
 export function writtenChildVisibility(tree: LiveTree, step: LiveStep): ReadonlyMap<TscnNode, boolean> {
   const write = controlSolverRegistry.childVisibility(step.node.type);

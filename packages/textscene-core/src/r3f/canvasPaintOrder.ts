@@ -18,8 +18,6 @@ import { clampCanvasItemZ, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPla
 import { canvasItemFieldsOf, type CanvasItemNodeFields } from './canvasItemPass/canvasItemFields';
 import { isCanvasItem, isCanvasLayerType, isControlType } from './canvasItemClass';
 
-export { isCanvasItem, isCanvasLayerType, isControlType } from './canvasItemClass';
-
 /** How many distinct `z_final` buckets one canvas has. */
 const Z_BUCKET_COUNT = CANVAS_ITEM_Z_MAX - CANVAS_ITEM_Z_MIN + 1;
 
@@ -339,7 +337,7 @@ interface AllocatedPaintRange {
   tail: PaintRange;
 }
 
-/** `show_behind_parent`, under either casing the two parsers produce. */
+/** `show_behind_parent`, as the CanvasItem fields read it for a Control and a Node2D alike. */
 function drawsBehindParent(node: TscnNode): boolean {
   return canvasItemFieldsOf(node)?.showsBehindParent === true;
 }

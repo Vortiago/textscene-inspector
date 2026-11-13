@@ -8,7 +8,7 @@
  */
 import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types';
-import { isControlType } from './canvasPaintOrder.js';
+import { isControlType } from './canvasItemClass.js';
 import type { ControlProperties } from '../nodes/2d/ui/control/types.js';
 import { useCanvasItemVisible } from './canvasItemVisible.js';
 import { useControlTransform } from './contexts/ControlYSortContext.js';

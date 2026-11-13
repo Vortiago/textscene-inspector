@@ -14,12 +14,12 @@ import {
   allocateNodePaintRange,
   allocatePaintRange,
   canvasRootRanges,
-  isCanvasLayerType,
   canvasLayerRanks,
   hostsOwnCanvas,
   WHOLE_CANVAS_RANGE,
   ysortsChildren,
 } from './canvasPaintOrder.js';
+import { isCanvasLayerType } from './canvasItemClass.js';
 import { YSortDispatcher } from './YSortDispatcher.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import {

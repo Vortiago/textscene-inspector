@@ -82,7 +82,7 @@ import type { WindowProperties } from '../../../nodes/windows/window/types';
 import { NO_OWNERS, type ThemeOwner } from '../../../nodes/windows/window/themeOwners';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type BuiltIconsFn, type TextureSlotRequest } from './solverRegistry';
-import { canvasItemPass } from '../../canvasItemPass/canvasItemPass';
+import { canvasItemPass, type CanvasItemPassResult } from '../../canvasItemPass/canvasItemPass';
 import { canvasStateBetween } from '../../canvasItemPass/canvasStateBetween';
 import type { CanvasAncestors } from '../../canvasItemPass/canvasAncestors';
 import {
@@ -101,11 +101,11 @@ import {
   internalBackRoom,
   listedChildOrder,
   internalFrontRoom,
-  isCanvasLayerType,
   isTopLevelItem,
   WHOLE_CANVAS_RANGE,
   type PaintRange,
 } from '../../canvasPaintOrder';
+import { isCanvasLayerType } from '../../canvasItemClass';
 import {
   builtControlIcons,
   resolveStyleBoxes,
@@ -307,7 +307,6 @@ function descendForWindows(
   return NOTHING_WALKED;
 }
 
-/** The SolveNode forest for one nodes and resource-scope pair. Not a hook: `useBuildSolveTree` is. */
 /**
  * `node` with the `visible` its container writes, as a property write as Godot's is, so every reader
  * of `visible` honours it. The node itself where nothing writes it.
@@ -317,6 +316,7 @@ function withWrittenVisible(node: TscnNode, visible: boolean | undefined): TscnN
   return { ...node, properties: { ...node.properties, visible } };
 }
 
+/** The SolveNode forest for one nodes and resource-scope pair. Not a hook: `useBuildSolveTree` is. */
 function buildForest(
   nodes: readonly TscnNode[],
   externalResources: readonly TscnExternalResource[],
@@ -357,23 +357,17 @@ function buildForest(
   const foldedChains = new Map<string, CanvasAncestors>();
 
   /**
-   * The `parent_visible_in_tree` of the node at `path`. A CanvasLayer or a window root is no
-   * CanvasItem: nothing above it hides it, so it sees true.
+   * What the canvas item pass binds at `path`. Undefined for a CanvasLayer or a window root, which
+   * is no CanvasItem: nothing above it hides it, and no container writes its `visible`.
    */
-  function parentVisibleInTreeOf(path: string): boolean {
-    return liveScenePassResults(canvasItemPass, tree).get(path)?.parentVisibleInTree ?? true;
-  }
-
-  /** The `visible` the container of the item at `path` writes onto it, or undefined. */
-  function writtenVisibleOf(path: string): boolean | undefined {
-    return liveScenePassResults(canvasItemPass, tree).get(path)?.writtenVisible;
+  function canvasItemAt(path: string): CanvasItemPassResult | undefined {
+    return liveScenePassResults(canvasItemPass, tree).get(path);
   }
 
   /**
    * What the skipped canvas items of `chain` hand a Control below them, one fold for the sibling
    * Controls below one chain.
    */
-
   function skippedAncestorsOf({ above, parent }: SkippedChain): CanvasAncestors | null {
     if (parent === null) return null;
     let folded = foldedChains.get(parent);
@@ -793,8 +787,6 @@ function buildForest(
     const childCanvasChainBroken = isControl
       ? false
       : !isCanvasItem(collapsed) || topLevel || canvasChainBroken;
-    // The embedder applies a window's `visible`, so its own Controls always draw.
-    const live = withWrittenVisible(collapsed, isContentRoot ? true : writtenVisibleOf(path));
     // A CanvasLayer is a canvas of its own, so its roots are indexed by its
     // own counter (`canvas_layer.cpp:261-267`) over its own children.
     const childCanvasRoots = isCanvasLayerType(collapsed.type)
@@ -822,6 +814,10 @@ function buildForest(
 
     // Not a Control: no SolveNode, and its Control descendants promote up.
     if (!isControl) return { nodes: children, hoisted: childHoisted };
+
+    const canvasItem = canvasItemAt(path);
+    // The embedder applies a window's `visible`, so its own Controls always draw.
+    const live = withWrittenVisible(collapsed, isContentRoot ? true : canvasItem?.writtenVisible);
 
     const themeScope = themeResolutionScope(
       collapsed.type,
@@ -856,7 +852,7 @@ function buildForest(
       // Unconditional, unlike `skippedAncestors` beside it: `top_level` and
       // a broken chain both reset the canvas facets and neither resets
       // this one (`SolveNode.parentVisibleInTree`).
-      parentVisibleInTree: parentVisibleInTreeOf(path),
+      parentVisibleInTree: canvasItem?.parentVisibleInTree ?? true,
       rtl: rtl ?? layoutDirectionEnv.rootRtl,
       locale: layoutDirectionEnv.applicationLocale,
       hidden,
