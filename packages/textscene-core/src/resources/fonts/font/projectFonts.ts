@@ -1,15 +1,18 @@
 /**
- * The project font context: the project theme (`gui/theme/custom`) and the project default font
- * (`gui/theme/custom_font`). A font lookup reaches them after the font of the node itself. Godot
- * loads both once, in `ThemeDB::initialize_theme` (`scene/theme/theme_db.cpp:53-80`): the theme joins the
- * default theme context, and the font becomes the fallback font and the default theme's `default_font`.
+ * The project font context: the project theme (`gui/theme/custom`), the project default font
+ * (`gui/theme/custom_font`) and the default theme at the project's scale. A theme lookup reaches them
+ * after the node and its ancestors. Godot loads the theme and the font once, in
+ * `ThemeDB::initialize_theme` (`scene/theme/theme_db.cpp:53-80`): the theme joins the default theme
+ * context, and the font becomes the fallback font and the default theme's `default_font`.
  */
 import { warnOnce } from '../../../utils/warnOnce';
 import {
   projectFontPath,
   projectThemePath,
+  projectThemeScale,
   type ProjectSettings,
 } from '../../../parser/projectSettingsParser';
+import { defaultThemeAt, type DefaultTheme } from '../../../godot/scene/defaultTheme/defaultTheme';
 import type { CacheSource } from '../../../r3f/cacheSources';
 import type { ThemeResource } from '../../styles/theme/types';
 import type { FontResource } from './types';
@@ -20,9 +23,18 @@ export interface ProjectFonts {
   readonly projectTheme: ThemeResource | null;
   /** Null draws the bundled font. */
   readonly projectDefaultFont: FontResource | null;
+  /**
+   * The default theme at `gui/theme/default_theme_scale`, which `ThemeDB::initialize_theme` builds where
+   * it loads the project theme and font (`theme_db.cpp:50-86`).
+   */
+  readonly defaultTheme: DefaultTheme;
 }
 
-export const NO_PROJECT_FONTS: ProjectFonts = { projectTheme: null, projectDefaultFont: null };
+export const NO_PROJECT_FONTS: ProjectFonts = {
+  projectTheme: null,
+  projectDefaultFont: null,
+  defaultTheme: defaultThemeAt(1),
+};
 
 export interface ProjectFontCaches {
   themes: CacheSource<ThemeResource>;
@@ -92,6 +104,7 @@ export function resolveProjectFonts(
   return {
     projectTheme: themePath ? projectThemeOf(cachedOrPending(themePath, themes, pending?.themes)) : null,
     projectDefaultFont: fontPath ? resolveDefaultFont(fontPath, fonts, pending?.fonts) : null,
+    defaultTheme: defaultThemeAt(projectThemeScale(settings)),
   };
 }
 

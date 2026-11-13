@@ -139,7 +139,9 @@ describe('resolveNodeFont — the project default font as the last rung', () => 
   it("a gui/theme/custom theme's default_font wins over it", () => {
     const themeFont = unresolvableFont();
     const project: ThemeResource = { ...emptyTheme(), defaultFont: themeFont };
-    const n = labelNode({ projectFonts: { projectTheme: project, projectDefaultFont: projectFont } });
+    const n = labelNode({
+      projectFonts: { ...NO_PROJECT_FONTS, projectTheme: project, projectDefaultFont: projectFont },
+    });
     expect(resolveNodeFont(n, 'font')).toBe(themeFont);
   });
 

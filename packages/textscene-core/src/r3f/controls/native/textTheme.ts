@@ -5,6 +5,7 @@
  */
 import type { ShareNode } from './solveTree';
 import { resolveNodeFontSizePx } from './text/resolveNodeFontMetrics';
+import { requiredThemeItem } from './themeItems';
 import type { Rgba } from '../../../godot/math/math';
 
 export interface TextThemeKeys {
@@ -21,8 +22,11 @@ export interface TextThemeProps {
 export interface TextThemeDefaults {
   /** The built-in default font size, px, scaled by `default_theme_scale`: the last rung when no override or theme resolves `sizeKey`. */
   fontSizePx: number;
-  /** The type's default theme font colour, not always `control_font_color`: Label's is opaque white (`set_color(font_color, "Label", Color(1,1,1))` in `default_theme.cpp`). */
-  color: Rgba;
+  /**
+   * The type's default theme font colour, not always `control_font_color`: Label's is opaque white
+   * (`default_theme.cpp:383`). Absent for a type the default theme table holds, which answers it.
+   */
+  color?: Rgba;
 }
 
 export interface ResolvedTextTheme {
@@ -49,7 +53,7 @@ export function resolveTextTheme(
       props.themeOverrideFontSizes?.[keys.sizeKey],
       defaults.fontSizePx
     ),
-    color: n.colors[keys.colorKey] ?? defaults.color,
+    color: n.colors[keys.colorKey] ?? defaults.color ?? requiredThemeItem(n.colors, keys.colorKey),
   };
 }
 

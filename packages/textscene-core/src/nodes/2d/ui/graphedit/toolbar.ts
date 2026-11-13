@@ -13,12 +13,8 @@
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import {
-  contentMarginSize,
-  contentRect,
-  flatCornerDetail,
-  flatStyleBox,
-} from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize, contentRect, flatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
 import { resolveToggleDrawState, type ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import {
   boxContainerMinimumSize,

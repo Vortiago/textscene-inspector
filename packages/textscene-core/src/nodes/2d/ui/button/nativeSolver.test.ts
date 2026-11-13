@@ -4,6 +4,7 @@
  * and the default margin of 4 a side. At 16px a Button floors on the font height 18 + 5 = 23,
  * not a line pitch, since it sets no `line_spacing`. Measured: a `content_margin` 6 button is 35.
  */
+import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -20,12 +21,11 @@ import {
   buttonTextTheme,
   buttonIconColor,
   BUTTON_CLASS,
-  BUTTON_DEFAULT_FONT_COLOR,
   buttonLabelShape,
   buttonTextureSlots,
 } from './nativeSolver';
 import { resolveToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { controlProps } from '../control/testing/controlProps';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
@@ -44,7 +44,7 @@ function node(
   styleBoxes: Record<string, StyleBoxFlatData> = {},
   textureSize: { x: number; y: number } | null = null
 ): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: 'B',
     node: controlNode('B', 'Button', { name: 'B', ...props }),
@@ -54,7 +54,7 @@ function node(
     // `n.colors`, which the walker folds in, not through props.
     colors: props.themeOverrideColors ?? {},
     constants: props.themeOverrideConstants ?? {},
-  };
+  });
 }
 
 function styleBoxWithMargin(contentMargin: StyleBoxFlatData['contentMargin']): StyleBoxFlatData {
@@ -301,7 +301,7 @@ describe('buttonTextTheme: font_color / font_disabled_color key mapping', () => 
   it('resolves the theme default control_font_color for the normal state', () => {
     expect(buttonTextTheme(node({}), {} as ButtonProperties, 'normal', ctx())).toEqual({
       fontSizePx: 16,
-      color: BUTTON_DEFAULT_FONT_COLOR,
+      color: CONTROL_FONT_COLOR,
     });
   });
 
@@ -336,12 +336,14 @@ describe('buttonTextTheme: font_color / font_disabled_color key mapping', () => 
 });
 
 describe('buttonIconColor: icon_normal_color / icon_disabled_color (default_theme.cpp:164,169)', () => {
+  const defaultColors = node({}).colors;
+
   it('is opaque white for the normal state (icon_normal_color = Color(1,1,1,1))', () => {
-    expect(buttonIconColor({}, 'normal')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(buttonIconColor(defaultColors, 'normal')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 
   it('is white at 0.4 alpha for the disabled state (icon_disabled_color = Color(1,1,1,0.4))', () => {
-    expect(buttonIconColor({}, 'disabled')).toEqual({ r: 1, g: 1, b: 1, a: 0.4 });
+    expect(buttonIconColor(defaultColors, 'disabled')).toEqual({ r: 1, g: 1, b: 1, a: 0.4 });
   });
 
   it('a theme_override_colors/icon_disabled_color override (already folded into n.colors) wins over the default', () => {
@@ -546,7 +548,7 @@ describe('a pressed toggle Button (base_button.cpp:326-352, button.cpp:303-312)'
   it('takes the icon_pressed_color override over the white default', () => {
     const red = { r: 1, g: 0, b: 0, a: 1 };
     expect(buttonIconColor({ icon_pressed_color: red }, 'pressed')).toEqual(red);
-    expect(buttonIconColor({}, 'pressed')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(buttonIconColor(node({}).colors, 'pressed')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
 });
 
@@ -587,7 +589,7 @@ describe('a Button on a default-theme type variation (default_theme.cpp:357-383)
 
   it("takes the Button's own font_color on FlatButton", () => {
     expect(buttonTextTheme(node(FLAT), FLAT as ButtonProperties, 'normal', ctx()).color).toEqual(
-      BUTTON_DEFAULT_FONT_COLOR
+      CONTROL_FONT_COLOR
     );
   });
 });

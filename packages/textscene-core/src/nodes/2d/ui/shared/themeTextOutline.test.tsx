@@ -15,7 +15,11 @@ import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import { TRIANGLE_OUTLINES } from '../../../../r3f/controls/native/testing/triangleOutlines';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
@@ -82,7 +86,7 @@ function outlined(
   // OptionButton and ItemList draw their items' text, FoldableContainer its title.
   const textProperties = { name: 'N', text, title: text, items: [{ text }], selected: 0 };
   const node: TscnNode = controlNode('N', type, { ...textProperties, ...properties });
-  return { ...emptySolveNode(), path: 'N', node, colors, constants };
+  return withThemeItems({ ...emptySolveNode(), path: 'N', node, colors, constants });
 }
 
 async function render(

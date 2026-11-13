@@ -14,7 +14,8 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
-import { flatCornerDetail, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
 import {
   controlSolverRegistry,
   type ContainerLayoutFn,

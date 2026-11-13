@@ -19,7 +19,7 @@ import {
   optionButtonTextureSlots,
 } from './nativeSolver';
 import { BUTTON_THEME_FONT_KEY } from '../button/nativeSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 
 const A_ADVANCE = 1354 * (16 / 2048); // 10.578125
@@ -30,8 +30,9 @@ const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
 const FONT_HEIGHT = 23;
 
-function node(props: Partial<OptionButtonProperties>): SolveNode {
-  return {
+/** `fields` stand in for what the tree build gives the node before the default theme fills it. */
+function node(props: Partial<OptionButtonProperties>, fields: Partial<SolveNode> = {}): SolveNode {
+  return withThemeItems({
     ...solveNode(),
     path: 'O',
     node: controlNode('O', 'OptionButton', { name: 'O', ...props }),
@@ -39,7 +40,8 @@ function node(props: Partial<OptionButtonProperties>): SolveNode {
     // which the walker fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
     constants: props.themeOverrideConstants ?? {},
-  };
+    ...fields,
+  });
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -92,20 +94,6 @@ describe("optionButtonTextureSlots: items' icons (option_button.cpp:424,451)", (
 
   it("requests Button's icon slot with no reference for a selected item without an icon", () => {
     expect(slots({ items, selected: 2 }).map(({ key, ref }) => [key, ref])[0]).toEqual(['icon', '']);
-  });
-});
-
-describe('theme.widgets.optionButton', () => {
-  it('uses 8px horizontal / 4px vertical content margins (2*default_margin / default_margin), identical for normal+disabled', () => {
-    const boxes = nativeTheme(1).widgets.optionButton;
-    expect(boxes.normal.contentMargin).toEqual({ left: 8, top: 4, right: 8, bottom: 4 });
-    expect(boxes.disabled.contentMargin).toEqual({ left: 8, top: 4, right: 8, bottom: 4 });
-  });
-
-  it('normal fill is style_normal_color (0.1,0.1,0.1,0.6); disabled is style_disabled_color (0.1,0.1,0.1,0.3)', () => {
-    const boxes = nativeTheme(1).widgets.optionButton;
-    expect(boxes.normal.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
-    expect(boxes.disabled.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.3 });
   });
 });
 
@@ -431,7 +419,7 @@ describe('optionButtonMinimumSize: the boxes of the draw states (option_button.c
   it("floors the longest item at the `normal` box's minimum size", () => {
     const normal = drawnStyleBox({ content_margin_left: '30', content_margin_right: '30' });
     // No item: `_cached_size` is the normal box's 60 px, and the arrow and its separation add 16.
-    expect(optionButtonMinimumSize({ ...node({}), styleBoxes: { normal } }, ctx()).x).toBe(60 + 16);
+    expect(optionButtonMinimumSize(node({}, { styleBoxes: { normal } }), ctx()).x).toBe(60 + 16);
   });
 
   it('pads an RTL button by the default `normal_mirrored` box, not by a plain `normal` (default_theme.cpp:230)', () => {
@@ -441,7 +429,7 @@ describe('optionButtonMinimumSize: the boxes of the draw states (option_button.c
       content_margin_right: '40',
       content_margin_bottom: '40',
     });
-    const n = { ...node({}), styleBoxes: { normal }, rtl: true };
+    const n = node({}, { styleBoxes: { normal }, rtl: true });
     // Measured in Godot 4.6.3: `_cached_size` is the plain box's 80, the padding is the mirrored box's
     // (16, 8), and the arrow and its separation add 16 across.
     expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 96, y: 80 });

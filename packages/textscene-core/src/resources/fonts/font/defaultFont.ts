@@ -24,8 +24,6 @@ export interface DefaultFonts {
   readonly system: readonly (FontResource | null)[];
 }
 
-export const NO_DEFAULT_FONTS: DefaultFonts = { variation: [null], system: [null] };
-
 /**
  * One `Resolution` per defaults, so a font answers one object per `DefaultFonts` wherever a walk
  * reaches it, and a metrics cache keyed on it keeps its hits. The theme lookup builds one
@@ -99,9 +97,8 @@ function replaceDefaultsOnce(font: FontResource, resolution: Resolution, depth: 
  * face is left as it is where its default is the bundled font, and draws that.
  */
 export function withDefaultFonts(font: FontResource | null, defaults: DefaultFonts): FontResource | null {
-  // No default changes a font, so the cache would answer `font` itself.
-  if (!font || defaults === NO_DEFAULT_FONTS || (hasOwnGlyphs(font) && font.fallbacks.length === 0))
-    return font;
+  // No default changes a font with its own face and no fallbacks, so the cache would answer `font` itself.
+  if (!font || (hasOwnGlyphs(font) && font.fallbacks.length === 0)) return font;
   return replaceDefaults(font, resolutionOver(defaults), 0);
 }
 

@@ -12,7 +12,11 @@ import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { CheckButton } from './Component';
 import type { CheckButtonProperties } from './types';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   findIconMeshes,
   OWN_ICON_REF,
@@ -46,7 +50,7 @@ function solveNode(properties: Partial<CheckButtonProperties> = {}): SolveNode {
     name: 'MyCheckButton',
     ...properties,
   });
-  return { ...emptySolveNode(), path: 'MyCheckButton', node };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyCheckButton', node });
 }
 
 /** The StyleBox quads: only `<StyleBoxQuad>` builds a geometry with vertex colours. */

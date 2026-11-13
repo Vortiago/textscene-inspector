@@ -17,15 +17,21 @@ import {
   checkButtonIconColor,
   checkButtonTextureSlots,
 } from './nativeSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  projectFontsAt,
+  solveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
 const FONT_HEIGHT = 23;
 
-function node(props: Partial<CheckButtonProperties>): SolveNode {
-  return {
+/** `fields` stand in for what the tree build gives the node before the default theme fills it. */
+function node(props: Partial<CheckButtonProperties>, fields: Partial<SolveNode> = {}): SolveNode {
+  return withThemeItems({
     ...solveNode(),
     path: 'CB',
     node: controlNode('CB', 'CheckButton', { name: 'CB', ...props }),
@@ -33,7 +39,8 @@ function node(props: Partial<CheckButtonProperties>): SolveNode {
     // `n.colors`, which the walker folds in, not through props.
     colors: props.themeOverrideColors ?? {},
     constants: props.themeOverrideConstants ?? {},
-  };
+    ...fields,
+  });
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -70,11 +77,16 @@ describe('resolveCheckButtonIconKey (check_button.cpp:105-127)', () => {
 
 describe('checkButtonIconColor (default_theme.cpp:352-353)', () => {
   it('is opaque white when unchecked', () => {
-    expect(checkButtonIconColor({} as CheckButtonProperties, {})).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(checkButtonIconColor({} as CheckButtonProperties, node({}).colors)).toEqual({
+      r: 1,
+      g: 1,
+      b: 1,
+      a: 1,
+    });
   });
 
   it('is opaque white when checked (a DIFFERENT theme key, same default literal)', () => {
-    expect(checkButtonIconColor({ buttonPressed: true } as CheckButtonProperties, {})).toEqual({
+    expect(checkButtonIconColor({ buttonPressed: true } as CheckButtonProperties, node({}).colors)).toEqual({
       r: 1,
       g: 1,
       b: 1,
@@ -172,7 +184,14 @@ describe('checkButtonToggleRect (check_button.cpp:129-145)', () => {
 
   it('scales the default margin with the theme: round(6 * scale) (default_theme.cpp:317)', () => {
     // x = 150 - (48 + 9): the toggle is rasterised at the theme scale too.
-    expect(checkButtonToggleRect(node({}), nativeTheme(1.5), 'unchecked', RECT_SIZE).x).toBe(93);
+    expect(
+      checkButtonToggleRect(
+        node({}, { projectFonts: projectFontsAt(1.5) }),
+        nativeTheme(1.5),
+        'unchecked',
+        RECT_SIZE
+      ).x
+    ).toBe(93);
   });
 
   it('draws the vendored toggle at its authored size times the theme scale (default_theme.cpp:82-84)', () => {
@@ -185,7 +204,7 @@ describe('checkButtonToggleRect (check_button.cpp:129-145)', () => {
   it("reads the margin from the node's `normal` box, whatever the draw state", () => {
     const normal = drawnStyleBox({ content_margin_left: '20', content_margin_right: '30' });
     const pressed = drawnStyleBox({ content_margin_left: '1', content_margin_right: '1' });
-    const n = { ...node({ buttonPressed: true }), styleBoxes: { normal, pressed } };
+    const n = node({ buttonPressed: true }, { styleBoxes: { normal, pressed } });
     expect(checkButtonToggleRect(n, THEME, 'checked', RECT_SIZE).x).toBe(150 - (32 + 30));
     expect(checkButtonToggleRect({ ...n, rtl: true }, THEME, 'checkedMirrored', RECT_SIZE).x).toBe(20);
   });
@@ -207,7 +226,7 @@ describe('checkButtonMinimumSize: the boxes of the draw states (check_button.cpp
     const none = drawnStyleBox({});
     const styleBoxes = { normal: none, pressed: none, hover: none, disabled: none };
     // Measured in Godot 4.6.3: the content is max(0 - 8, 16) inside the padding 8, and 0 - 12 + 32 across.
-    expect(checkButtonMinimumSize({ ...node({}), styleBoxes }, ctx())).toEqual({ x: 32, y: 24 });
+    expect(checkButtonMinimumSize(node({}, { styleBoxes }), ctx())).toEqual({ x: 32, y: 24 });
   });
 });
 

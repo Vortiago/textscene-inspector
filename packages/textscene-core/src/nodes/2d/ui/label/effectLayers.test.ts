@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Rgba } from '../../../../godot/math/math';
 import type { LabelSettingsResource } from '../../../../resources/styles/labelsettings/types';
@@ -31,12 +35,12 @@ function settings(overrides: Partial<LabelSettingsResource>): LabelSettingsResou
 }
 
 function labelWith(overrides: Partial<SolveNode>): SolveNode {
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'L',
     node: controlNode('L', 'Label', { name: 'L' }),
     ...overrides,
-  };
+  });
 }
 
 function withSettings(overrides: Partial<LabelSettingsResource>): SolveNode {

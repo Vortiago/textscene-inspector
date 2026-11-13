@@ -33,16 +33,14 @@ import {
   resolveTextOutline,
   resolveTextTheme,
   type ResolvedTextTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
   type TextThemeProps,
 } from '../../../../r3f/controls/native/textTheme';
 import type { LabelProperties } from './types';
 import { sliceCodePoints } from '../../../../godot/string/codePoints.js';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { LABEL_FONT_COLOR } from '../../../../godot/scene/theme';
 import type { Rgba } from '../../../../godot/math/math';
-import { defaultLabelFontColorOf, LABEL_NORMAL_BOX } from '../../../../r3f/controls/native/defaultThemeItems';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { sidesSize, ZERO_SIDES, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
@@ -51,6 +49,7 @@ import {
   DEFAULT_JUSTIFICATION_FLAGS,
 } from '../../../../godot/text/textServerEnums';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { FALLBACK_THEME_CONSTANT } from '../../../../godot/scene/theme';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -62,15 +61,13 @@ const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_
 const LABEL_THEME_FONT_KEY = 'font';
 
 /**
- * `scene/theme/default_theme.cpp:392` sets Label's `line_spacing` to `Math::round(3 * scale)`,
- * 3 at UI scale 1.0. The Button family and LineEdit read no such key, RichTextLabel has its own
- * `line_separation` (0), and Label3D uses the authored value. The solve pass and `Component.tsx` shape
- * against this one constant, so they agree on the line pitch.
+ * Label's `line_spacing` at theme scale 1 (`scene/theme/default_theme.cpp:392`): the spacing
+ * `layoutLabelLines` assumes when its caller passes none. A Label reads its own from `n.constants`.
  */
-export const LABEL_LINE_SPACING_PX = 3;
+const LABEL_LINE_SPACING_PX = 3;
 
-/** Label's `paragraph_spacing` theme constant: the default theme sets none, so it is 0. */
-const LABEL_PARAGRAPH_SPACING_PX = 0;
+/** Label's `paragraph_spacing`: the default theme sets none, so a lookup ends at the fallback theme. */
+const LABEL_PARAGRAPH_SPACING_PX = FALLBACK_THEME_CONSTANT;
 
 /**
  * `Label.paragraph_separator`'s default (`label.cpp:158`, `c_unescape`'d). Label splits on it
@@ -79,17 +76,13 @@ const LABEL_PARAGRAPH_SPACING_PX = 0;
  */
 export const LABEL_PARAGRAPH_SEPARATOR = '\n';
 
-/** This Label's theme font size and colour: its overrides, else the ancestor Theme chain, else the theme default, else Label's white (`resolveTextTheme`). */
+/** This Label's theme font size and colour (`resolveTextTheme`). */
 export function labelTextTheme(
   n: ShareNode,
   props: TextThemeProps,
   ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color: defaultLabelFontColorOf(n) ?? LABEL_FONT_COLOR,
-  };
-  return resolveTextTheme(n, props, LABEL_THEME_KEYS, defaults);
+  return resolveTextTheme(n, props, LABEL_THEME_KEYS, { fontSizePx: ctx.theme.fontSize });
 }
 
 interface LabelSpacing {
@@ -137,7 +130,7 @@ export function labelEffectiveTextTheme(
     return {
       fontSizePx: themeResolved.fontSizePx,
       color: themeResolved.color,
-      lineSpacingPx: constants['line_spacing'] ?? LABEL_LINE_SPACING_PX,
+      lineSpacingPx: requiredThemeItem(constants, 'line_spacing'),
       paragraphSpacingPx: constants['paragraph_spacing'] ?? LABEL_PARAGRAPH_SPACING_PX,
     };
   }
@@ -148,15 +141,6 @@ export function labelEffectiveTextTheme(
     paragraphSpacingPx: Math.trunc(settings.paragraphSpacing),
   };
 }
-
-/** `default_theme.cpp:385`: Label's `font_shadow_color` defaults to transparent, so a Label draws no shadow until a scene sets it. */
-const LABEL_DEFAULT_SHADOW_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0 };
-/**
- * `default_theme.cpp:388-391` sets `shadow_offset_x`, `shadow_offset_y` and `shadow_outline_size`
- * to `Math::round(1 * scale)`. Label's constants here are unscaled, as `LABEL_LINE_SPACING_PX` is.
- */
-const LABEL_DEFAULT_SHADOW_OUTLINE_SIZE = 1;
-const LABEL_DEFAULT_SHADOW_OFFSET = 1;
 
 interface LabelOutlineTheme {
   size: number;
@@ -184,11 +168,11 @@ export function labelShadowTheme(n: SolveNode): LabelShadowTheme {
   if (settings)
     return { size: settings.shadowSize, color: settings.shadowColor, offset: settings.shadowOffset };
   return {
-    size: n.constants['shadow_outline_size'] ?? LABEL_DEFAULT_SHADOW_OUTLINE_SIZE,
-    color: n.colors['font_shadow_color'] ?? LABEL_DEFAULT_SHADOW_COLOR,
+    size: requiredThemeItem(n.constants, 'shadow_outline_size'),
+    color: requiredThemeItem(n.colors, 'font_shadow_color'),
     offset: {
-      x: n.constants['shadow_offset_x'] ?? LABEL_DEFAULT_SHADOW_OFFSET,
-      y: n.constants['shadow_offset_y'] ?? LABEL_DEFAULT_SHADOW_OFFSET,
+      x: requiredThemeItem(n.constants, 'shadow_offset_x'),
+      y: requiredThemeItem(n.constants, 'shadow_offset_y'),
     },
   };
 }
@@ -196,9 +180,9 @@ export function labelShadowTheme(n: SolveNode): LabelShadowTheme {
 /** The content margin of the `normal` StyleBox a Label reads (`theme_cache.normal_style`). */
 export type LabelMargin = StyleBoxFlatData['contentMargin'];
 
-/** `theme_cache.normal_style` (`label.cpp:1460`): the Theme's `normal`, else the default theme's empty box. */
+/** `theme_cache.normal_style` (`label.cpp:1460`). */
 export function labelStyleBox(n: SolveNode): ResolvedStyleBox {
-  return n.styleBoxes.normal ?? LABEL_NORMAL_BOX;
+  return requiredThemeItem(n.styleBoxes, 'normal');
 }
 
 /**

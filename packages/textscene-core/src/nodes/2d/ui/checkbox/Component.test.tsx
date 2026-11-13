@@ -15,7 +15,11 @@ import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { CheckBox } from './Component';
 import type { CheckBoxProperties } from './types';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   findIconMeshes,
   OWN_ICON_REF,
@@ -42,9 +46,10 @@ const RECT: Rect2 = { x: 0, y: 0, w: 150, h: 28 };
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
-function solveNode(properties: Partial<CheckBoxProperties> = {}): SolveNode {
+/** `fields` stand in for what the tree build gives the node before the default theme fills it. */
+function solveNode(properties: Partial<CheckBoxProperties> = {}, fields: Partial<SolveNode> = {}): SolveNode {
   const node: TscnNode = controlNode('MyCheckBox', 'CheckBox', { name: 'MyCheckBox', ...properties });
-  return { ...emptySolveNode(), path: 'MyCheckBox', node };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyCheckBox', node, ...fields });
 }
 
 /** The icon `ControlQuad` is a `PlaneGeometry`, identified by its own `.parameters.width` (survives a duplicate-three.js test environment). */
@@ -177,11 +182,10 @@ describe('<CheckBox> (isolated painter contract)', () => {
   });
 
   it('draws a fitted icon at its fractional size, unrounded (check_box.cpp:140-142)', async () => {
-    const fitted: SolveNode = {
-      ...solveNode({}),
-      textureSlots: { unchecked: { x: 20, y: 15 } },
-      constants: { icon_max_width: 10 },
-    };
+    const fitted = solveNode(
+      {},
+      { textureSlots: { unchecked: { x: 20, y: 15 } }, constants: { icon_max_width: 10 } }
+    );
     const renderer = await ReactThreeTestRenderer.create(
       <CheckBox {...painterEnv()} solveNode={fitted} rect={RECT} renderOrder={0} />
     );

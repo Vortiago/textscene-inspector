@@ -12,10 +12,10 @@
 import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
 import {
   contentMarginSize,
-  flatCornerDetail,
   ZERO_SIDES,
   type StyleBoxFlatData,
 } from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';

@@ -27,7 +27,6 @@ import {
   labelMinimumSize,
   labelShapingWidthPx,
   labelUnwrappedShape,
-  LABEL_LINE_SPACING_PX,
   LABEL_PARAGRAPH_SEPARATOR,
   labelTextTheme,
   layoutLabelLines,
@@ -40,7 +39,12 @@ import {
   labelFontState,
 } from './nativeSolver';
 import { applyVisibleCharsReveal } from '../shared/visibleChars';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  projectFontsAt,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { resolveLabelSettings } from '../../../../resources/styles/labelsettings/decode';
 import * as logger from '../../../../logger';
@@ -62,12 +66,12 @@ import {
 const minSize = labelMinimumSize;
 
 function node(props: Partial<LabelProperties>, overrides: Partial<SolveNode> = {}): SolveNode {
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'L',
     node: controlNode('L', 'Label', { name: 'L', ...props }),
     ...overrides,
-  };
+  });
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -241,11 +245,12 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
     heading: Partial<LabelProperties>,
     body: Partial<LabelProperties>
   ): SolveNode {
-    const label = (name: string, props: Partial<LabelProperties>): SolveNode => ({
-      ...emptySolveNode(),
-      path: `Card/Column/${name}`,
-      node: controlNode(name, 'Label', { name, ...props }),
-    });
+    const label = (name: string, props: Partial<LabelProperties>): SolveNode =>
+      withThemeItems({
+        ...emptySolveNode(),
+        path: `Card/Column/${name}`,
+        node: controlNode(name, 'Label', { name, ...props }),
+      });
     const column: SolveNode = {
       ...emptySolveNode(),
       path: 'Card/Column',
@@ -258,7 +263,7 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
       // walker fills unconditionally, not through props.
       constants: { separation },
     };
-    return {
+    return withThemeItems({
       ...emptySolveNode(),
       path: 'Card',
       node: controlNode('Card', 'PanelContainer', { name: 'Card', layoutMode: 3, anchorsPreset: 15 }),
@@ -282,7 +287,7 @@ describe('labelMinimumSize wired through the registry + full solve — the wrapp
           shadowOffset: { x: 0, y: 0 },
         },
       },
-    };
+    });
   }
 
   function solve(root: SolveNode, viewport: Rect2) {
@@ -1056,14 +1061,25 @@ describe('applyVisibleCharsReveal (draw_text, label.cpp:778-883)', () => {
 
 describe('labelEffectiveTextTheme', () => {
   const themeResolved = { fontSizePx: 40, color: { r: 1, g: 0, b: 0, a: 1 } };
+  const labelConstantsAt = (scale: number) =>
+    withThemeItems({
+      ...emptySolveNode(),
+      path: 'L',
+      node: controlNode('L', 'Label', { name: 'L' }),
+      projectFonts: projectFontsAt(scale),
+    }).constants;
 
-  it('falls back to the theme-resolved values absent label_settings (happy path)', () => {
-    expect(labelEffectiveTextTheme(themeResolved, null, {})).toEqual({
+  it('falls back to the theme-resolved values absent label_settings, line_spacing 3 at scale 1 (default_theme.cpp:392)', () => {
+    expect(labelEffectiveTextTheme(themeResolved, null, labelConstantsAt(1))).toEqual({
       fontSizePx: 40,
       color: { r: 1, g: 0, b: 0, a: 1 },
-      lineSpacingPx: LABEL_LINE_SPACING_PX,
+      lineSpacingPx: 3,
       paragraphSpacingPx: 0,
     });
+  });
+
+  it('spaces lines by the default theme at its scale: Math::round(3 * 1.5) = 5 (default_theme.cpp:392)', () => {
+    expect(labelEffectiveTextTheme(themeResolved, null, labelConstantsAt(1.5)).lineSpacingPx).toBe(5);
   });
 
   it('a valid label_settings wins OUTRIGHT, even at its own class defaults, over a node-local theme override (error path)', () => {

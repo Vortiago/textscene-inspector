@@ -1,0 +1,132 @@
+; The Controls of unit-default-theme-gallery.tscn at `gui/theme/default_theme_scale` 1.5, the one
+; variable. Each margin, corner and spacing of the default theme rounds from the scaled value. The
+; other two theme-scale scenes hold no Button, MenuButton, MenuBar, LinkButton or ColorPickerButton,
+; so neither draws the flat boxes that move at this scale.
+
+[gd_scene format=3 uid="uid://unitdefthemegallery15"]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="Rows" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+
+[node name="Buttons" type="HBoxContainer" parent="Rows"]
+layout_mode = 2
+
+[node name="Plain" type="Button" parent="Rows/Buttons"]
+layout_mode = 2
+text = "Plain"
+
+[node name="Pressed" type="Button" parent="Rows/Buttons"]
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+text = "Pressed"
+
+[node name="Disabled" type="Button" parent="Rows/Buttons"]
+layout_mode = 2
+disabled = true
+text = "Disabled"
+
+[node name="Flat" type="Button" parent="Rows/Buttons"]
+layout_mode = 2
+theme_type_variation = &"FlatButton"
+toggle_mode = true
+button_pressed = true
+text = "Flat"
+
+[node name="OnHeader" type="Button" parent="Rows/Buttons"]
+layout_mode = 2
+theme_type_variation = &"HeaderSmall"
+text = "Header"
+
+[node name="Checks" type="HBoxContainer" parent="Rows"]
+layout_mode = 2
+
+[node name="CheckBox" type="CheckBox" parent="Rows/Checks"]
+layout_mode = 2
+button_pressed = true
+text = "Box"
+
+[node name="CheckButton" type="CheckButton" parent="Rows/Checks"]
+layout_mode = 2
+button_pressed = true
+text = "Toggle"
+
+[node name="Option" type="OptionButton" parent="Rows/Checks"]
+layout_mode = 2
+selected = 0
+item_count = 2
+popup/item_0/text = "First"
+popup/item_0/id = 0
+popup/item_1/text = "Second"
+popup/item_1/id = 1
+
+[node name="Menu" type="MenuButton" parent="Rows/Checks"]
+layout_mode = 2
+text = "Menu"
+
+[node name="FlatMenu" type="MenuButton" parent="Rows/Checks"]
+layout_mode = 2
+theme_type_variation = &"FlatMenuButton"
+text = "Flat menu"
+
+[node name="Others" type="HBoxContainer" parent="Rows"]
+layout_mode = 2
+
+[node name="Link" type="LinkButton" parent="Rows/Others"]
+layout_mode = 2
+text = "Link"
+
+[node name="Color" type="ColorPickerButton" parent="Rows/Others"]
+custom_minimum_size = Vector2(40, 24)
+layout_mode = 2
+color = Color(0.9, 0.4, 0.1, 1)
+
+[node name="MenuBar" type="MenuBar" parent="Rows/Others"]
+layout_mode = 2
+
+[node name="File" type="PopupMenu" parent="Rows/Others/MenuBar"]
+
+[node name="Edit" type="PopupMenu" parent="Rows/Others/MenuBar"]
+
+[node name="Labels" type="HBoxContainer" parent="Rows"]
+layout_mode = 2
+
+[node name="TwoLines" type="Label" parent="Rows/Labels"]
+layout_mode = 2
+text = "Line one
+Line two"
+
+[node name="Large" type="Label" parent="Rows/Labels"]
+layout_mode = 2
+theme_type_variation = &"HeaderLarge"
+text = "Large"
+
+[node name="Shadow" type="Label" parent="Rows/Labels"]
+layout_mode = 2
+theme_override_colors/font_shadow_color = Color(1, 0, 0, 1)
+text = "Shadow"
+
+[node name="Tooltip" type="Label" parent="Rows/Labels"]
+layout_mode = 2
+theme_type_variation = &"TooltipLabel"
+text = "Tip"
+
+[node name="Title" type="Label" parent="Rows/Labels"]
+layout_mode = 2
+theme_type_variation = &"GraphFrameTitleLabel"
+text = "Frame"

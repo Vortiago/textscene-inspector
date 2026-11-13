@@ -6,11 +6,8 @@
 import type { Rgba } from '../../../godot/math/math';
 import { CONTROL_FONT_COLOR, DEFAULT_CORNER_RADIUS, scaledPx } from '../../../godot/scene/theme';
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
-import {
-  flatCornerDetail,
-  flatStyleBox,
-  type StyleBoxFlatData,
-} from '../../../r3f/controls/native/styleBoxFlat';
+import { flatStyleBox, type StyleBoxFlatData } from '../../../r3f/controls/native/styleBoxFlat';
+import { flatCornerDetail } from '../../../godot/scene/defaultTheme/styleBoxes';
 
 export interface WindowThemeDefaults {
   /** `embedded_border`: the focused window's frame. */

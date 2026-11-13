@@ -16,7 +16,11 @@ import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { OptionButton } from './Component';
 import type { OptionButtonProperties } from './types';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   findIconMeshes,
   findTextMesh,
@@ -48,7 +52,7 @@ function solveNode(properties: Partial<OptionButtonProperties> = {}): SolveNode 
     name: 'MyOptionButton',
     ...properties,
   });
-  return { ...emptySolveNode(), path: 'MyOptionButton', node };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyOptionButton', node });
 }
 
 const ITEMS = [

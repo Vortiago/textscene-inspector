@@ -36,24 +36,17 @@ import {
 } from '../../../../r3f/controls/native/buttonBase';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { sidesSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { buttonBoxesOf, defaultFontColorOf } from '../../../../r3f/controls/native/defaultThemeItems';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { ButtonProperties } from './types';
-import {
-  CONTROL_FONT_COLOR,
-  CONTROL_FONT_DISABLED_COLOR,
-  CONTROL_FONT_FOCUS_COLOR,
-  CONTROL_FONT_PRESSED_COLOR,
-} from '../../../../godot/scene/theme';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 
 /**
@@ -63,41 +56,17 @@ import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBid
  */
 export const BUTTON_THEME_FONT_KEY = 'font';
 
-/** Button's own `font_color` default (`default_theme.cpp:156`). */
-export const BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-
-/** Button's `font_disabled_color` default (`default_theme.cpp:161`). */
-const BUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
-
-/** Button's font colour default for each draw state (`default_theme.cpp:156-161`). */
-export const BUTTON_DEFAULT_FONT_COLORS: Readonly<Record<ToggleDrawState, Rgba>> = {
-  normal: BUTTON_DEFAULT_FONT_COLOR,
-  pressed: CONTROL_FONT_PRESSED_COLOR,
-  disabled: BUTTON_DEFAULT_DISABLED_FONT_COLOR,
-};
-
-/** `icon_normal_color` / `icon_disabled_color` theme_override_colors keys (`default_theme.cpp:164,169`). */
+/** The icon colour item of each draw state (`button.cpp:290-330`). */
 const BUTTON_ICON_COLOR_KEYS: Record<ToggleDrawState, string> = {
   normal: 'icon_normal_color',
   disabled: 'icon_disabled_color',
   pressed: 'icon_pressed_color',
 };
 
-/**
- * The default-theme icon modulate per draw state: `icon_normal_color` and `icon_pressed_color` are
- * `Color(1, 1, 1, 1)` (`default_theme.cpp:164-165`), `icon_disabled_color` is `Color(1, 1, 1, 0.4)` (`:169`).
- * No other builtin widget sets these keys.
- */
-const BUTTON_ICON_MODULATE: Record<ToggleDrawState, Rgba> = {
-  normal: { r: 1, g: 1, b: 1, a: 1 },
-  pressed: { r: 1, g: 1, b: 1, a: 1 },
-  disabled: { r: 1, g: 1, b: 1, a: 0.4 },
-};
-
-/** `font_focus_color` and its default (`default_theme.cpp:159`): the text of a focused, enabled Button (`button.cpp:284-285`). */
+/** `font_focus_color`: the text of a focused, enabled Button (`button.cpp:284-285`). */
 const BUTTON_FOCUS_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_focus_color' };
 
-/** `icon_focus_color` (`button.cpp:286-288`): applied only where a theme sets it. */
+/** `icon_focus_color` (`button.cpp:286-288`). */
 const BUTTON_ICON_FOCUS_COLOR_KEY = 'icon_focus_color';
 
 /** The text and icon a Button holds and draws. */
@@ -112,8 +81,6 @@ interface ButtonShown {
  * read one of these, so a Button behaviour is written once for the whole family.
  */
 export interface ButtonClass {
-  /** The font colour the default theme gives the class in each draw state. */
-  fontColors: Readonly<Record<ToggleDrawState, Rgba>>;
   /** The text alignment the constructor sets: CENTER for a Button (`button.h`). */
   textAlignment: number;
   /** The text and icon Button holds where they are not its `text` and `icon` properties: OptionButton's selected item. */
@@ -136,7 +103,6 @@ export interface ReservedElement {
 
 /** Button itself, and a subclass that changes nothing: ColorPickerButton. */
 export const BUTTON_CLASS: ButtonClass = {
-  fontColors: BUTTON_DEFAULT_FONT_COLORS,
   textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
 };
 
@@ -167,44 +133,35 @@ function isButtonFocusStyled(props: Pick<ButtonProperties, 'hasFocus'>, state: T
 }
 
 /**
- * A Button's icon modulate in `state` (`button.cpp:280-330`): `n.colors` (a local override or the ancestor
- * Theme chain) wins, else the default-theme literal. A focused Button in the normal draw mode reads
- * `icon_focus_color`, else white, never `icon_normal_color` (`:286-288`).
+ * A Button's icon modulate in `state` (`button.cpp:280-330`). A focused Button in the normal draw mode
+ * reads `icon_focus_color`, never `icon_normal_color` (`:286-288`).
  */
 export function buttonIconColor(
   colors: SolveNode['colors'],
   state: ToggleDrawState,
   props: Pick<ButtonProperties, 'hasFocus'> = {}
 ): Rgba {
-  if (isButtonFocusStyled(props, state)) {
-    return colors[BUTTON_ICON_FOCUS_COLOR_KEY] ?? BUTTON_ICON_MODULATE.normal;
-  }
-  return colors[BUTTON_ICON_COLOR_KEYS[state]] ?? BUTTON_ICON_MODULATE[state];
+  const key = isButtonFocusStyled(props, state) ? BUTTON_ICON_FOCUS_COLOR_KEY : BUTTON_ICON_COLOR_KEYS[state];
+  return requiredThemeItem(colors, key);
 }
 
 /**
- * The theme font size and colour of a Button of `buttonClass` in `state`: overrides, else the ancestor
- * Theme chain, the theme default or the class's own literal. A focused Button in the normal draw mode
- * reads `font_focus_color` (`button.cpp:282-285`).
+ * The theme font size and colour of a Button in `state`. A focused Button in the normal draw mode reads
+ * `font_focus_color` (`button.cpp:282-285`).
  */
 export function buttonTextTheme(
   n: ShareNode,
   props: ButtonProperties,
   state: ToggleDrawState,
-  ctx: Pick<SolveContext, 'theme'>,
-  buttonClass: ButtonClass = BUTTON_CLASS
+  ctx: Pick<SolveContext, 'theme'>
 ): ResolvedTextTheme {
-  const isFocusStyled = isButtonFocusStyled(props, state);
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color: isFocusStyled ? CONTROL_FONT_FOCUS_COLOR : defaultFontColorOf(n, buttonClass.fontColors, state),
-  };
-  return resolveTextTheme(n, props, isFocusStyled ? BUTTON_FOCUS_KEYS : BUTTON_THEME_KEYS[state], defaults);
+  const keys = isButtonFocusStyled(props, state) ? BUTTON_FOCUS_KEYS : BUTTON_THEME_KEYS[state];
+  return resolveTextTheme(n, props, keys, { fontSizePx: ctx.theme.fontSize });
 }
 
-/** `align_to_largest_stylebox`, which the default theme turns off (`default_theme.cpp:174`). */
+/** `align_to_largest_stylebox` (`button.cpp:233-236`). */
 function alignsToLargestStyleBox(constants: SolveNode['constants']): boolean {
-  return (constants.align_to_largest_stylebox ?? 0) !== 0;
+  return requiredThemeItem(constants, 'align_to_largest_stylebox') !== 0;
 }
 
 /** The boxes a Button reads in one draw state. */
@@ -217,18 +174,18 @@ interface ButtonStyle {
 }
 
 /** `_get_largest_stylebox_size` (`button.cpp:97-99`) by side: the padding a subclass keeps around what it reserves. */
-export function buttonLargestMargin(n: ShareNode, theme: NativeTheme): StyleBoxFlatData['contentMargin'] {
-  return largestStyleBoxMargins(n.styleBoxes, buttonBoxesOf(n, theme), n.rtl);
+export function buttonLargestMargin(n: ShareNode): StyleBoxFlatData['contentMargin'] {
+  return largestStyleBoxMargins(n.styleBoxes, n.rtl);
 }
 
 /** `theme_cache.normal_style`, the box a subclass places its element by in every draw state (`check_box.cpp:133-135`). */
-export function buttonNormalBox(n: ShareNode, theme: NativeTheme): StyleBoxFlatData {
-  return pickButtonStyleBox(n.styleBoxes, buttonBoxesOf(n, theme), 'normal');
+export function buttonNormalBox(n: ShareNode): StyleBoxFlatData {
+  return pickButtonStyleBox(n.styleBoxes, 'normal');
 }
 
-/** `icon_max_width`, which only Button registers: `0`, unclamped (`default_theme.cpp:172`). */
+/** `icon_max_width`, unclamped at 0 (`button.cpp:469-479`). */
 function buttonIconMaxWidth(constants: SolveNode['constants']): number {
-  return constants.icon_max_width ?? 0;
+  return requiredThemeItem(constants, 'icon_max_width');
 }
 
 /**
@@ -245,11 +202,11 @@ export function fittedThemedIconSize(
 }
 
 /** The boxes of `n` by its own class and `theme_type_variation`, for the draw state its properties give. */
-export function buttonStyle(n: ShareNode, theme: NativeTheme): ButtonStyle {
+export function buttonStyle(n: ShareNode): ButtonStyle {
   const props = n.node.properties as ButtonProperties;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
-  const box = pickButtonStyleBox(n.styleBoxes, buttonBoxesOf(n, theme), state, n.rtl);
-  const margin = alignsToLargestStyleBox(n.constants) ? buttonLargestMargin(n, theme) : box.contentMargin;
+  const box = pickButtonStyleBox(n.styleBoxes, state, n.rtl);
+  const margin = alignsToLargestStyleBox(n.constants) ? buttonLargestMargin(n) : box.contentMargin;
   return { state, box, margin };
 }
 
@@ -271,7 +228,7 @@ export function buttonLabelShape(
   const fontMetrics = resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY);
   if (text.length === 0) return null;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
-  const { fontSizePx } = buttonTextTheme(n, props, state, { theme }, buttonClass);
+  const { fontSizePx } = buttonTextTheme(n, props, state, { theme });
   // Not `ctx.measureText`: its `Vector2` drops the layout the painter needs, and its readiness
   // gate belongs to the solver. The painter shapes unconditionally.
   return shapeWrappedButtonLabel(text, props, {
@@ -282,9 +239,9 @@ export function buttonLabelShape(
   });
 }
 
-/** `h_separation` of `n`: every class of the family registers `round(4 * scale)` (`default_theme.cpp:171,248,271,308,348`). */
-export function buttonHSeparation(n: Pick<SolveNode, 'constants'>, theme: NativeTheme): number {
-  return n.constants.h_separation ?? theme.separation;
+/** `h_separation` of `n` (`button.cpp:394`). */
+export function buttonHSeparation(n: Pick<SolveNode, 'constants'>): number {
+  return requiredThemeItem(n.constants, 'h_separation');
 }
 
 /**
@@ -301,8 +258,8 @@ export function buttonContentFacts(
   const reserved = buttonClass.reservedElement?.(n, theme);
   return {
     rectSize,
-    styleMargin: buttonStyle(n, theme).margin,
-    hSeparation: buttonHSeparation(n, theme),
+    styleMargin: buttonStyle(n).margin,
+    hSeparation: buttonHSeparation(n),
     iconMaxWidth: buttonIconMaxWidth(n.constants),
     // Aligned against the ceiled text width (`scene/gui/button.cpp:343,349`).
     textAlignment: props.alignment ?? buttonClass.textAlignment,
@@ -366,10 +323,10 @@ export function reservingMinimumSizeOf(buttonClass: ReservingButtonClass): Minim
   const buttonSize = buttonMinimumSizeOf(buttonClass);
   return (n, ctx) => {
     const element = buttonClass.reservedElement(n, ctx.theme).size;
-    const padding = sidesSize(buttonLargestMargin(n, ctx.theme));
+    const padding = sidesSize(buttonLargestMargin(n));
     const minimumSize = buttonSize(n, ctx);
     const content = { x: minimumSize.x - padding.x, y: minimumSize.y - padding.y };
-    const hSeparation = Math.max(0, buttonHSeparation(n, ctx.theme));
+    const hSeparation = Math.max(0, buttonHSeparation(n));
     const reserved = withReservedElementSize(content, element, hSeparation);
     return { x: reserved.x + padding.x, y: reserved.y + padding.y };
   };

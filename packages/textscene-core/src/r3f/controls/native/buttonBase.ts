@@ -14,6 +14,7 @@ import { multiplyModulate } from '../../canvasItemModulate';
 import type { SolveNode, ThemedIconRef } from './solveTree';
 import { themedSlotRequest, type TextureSlotRequest } from './solverRegistry';
 import type { TextThemeKeys } from './textTheme';
+import { requiredThemeItem } from './themeItems';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { FontMetrics } from './text/fontMetrics';
 import { drawnLinesInBox, textParagraphLineShiftPx } from './text/lineDrawClip';
@@ -56,35 +57,21 @@ export function resolveToggleDrawState(
 }
 
 /**
- * The boxes the default theme gives a type by name: one for each `State`, and a `hover_pressed` or a
- * `<state>_mirrored` only where it registers one (`default_theme.cpp:230-233,285,324`).
+ * The box of `state` among `boxes`, a Control's resolved StyleBoxes. Under `rtl`, `<state>_mirrored`
+ * comes first wherever a theme sets it (`button.cpp:101-148`). The default theme sets one for each
+ * OptionButton state (`default_theme.cpp:230-233`), so an RTL OptionButton never reads a plain override.
  */
-type DefaultBoxes<State extends string> = Readonly<Record<State, StyleBoxFlatData>> &
-  Readonly<Partial<Record<string, StyleBoxFlatData>>>;
-
-/**
- * A `theme_override_styles/<state>` wins over the default. Under `rtl`, `<state>_mirrored` comes first
- * wherever any theme sets it (`button.cpp:101-148`). The default theme sets one for each OptionButton
- * state (`default_theme.cpp:230-233`), so an RTL OptionButton never reads a plain override.
- */
-export function pickButtonStyleBox<State extends string>(
-  overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  defaults: DefaultBoxes<State>,
-  state: State,
+export function pickButtonStyleBox(
+  boxes: Readonly<Record<string, StyleBoxFlatData>>,
+  state: string,
   rtl = false
 ): StyleBoxFlatData {
-  if (rtl) {
-    const registered: Readonly<Partial<Record<string, StyleBoxFlatData>>> = defaults;
-    const mirrored = overrides[`${state}_mirrored`] ?? registered[`${state}_mirrored`];
-    if (mirrored) return mirrored;
-  }
-  return overrides[state] ?? defaults[state];
+  const mirrored = rtl ? boxes[`${state}_mirrored`] : undefined;
+  return mirrored ?? requiredThemeItem(boxes, state);
 }
 
 /** The boxes `Button::_update_theme_item_cache` always measures (`button.cpp:67-93`). `hover_pressed` joins only where a theme sets it. */
 const MEASURED_BOX_NAMES = ['normal', 'pressed', 'hover', 'disabled'] as const;
-
-type MeasuredBoxName = (typeof MEASURED_BOX_NAMES)[number];
 
 /**
  * `Button::_update_theme_item_cache` (`button.cpp:55-95`): the largest content margin of each side over the
@@ -92,19 +79,14 @@ type MeasuredBoxName = (typeof MEASURED_BOX_NAMES)[number];
  * their sum as the padding around what it reserves (`_get_largest_stylebox_size`, `check_box.cpp:68`).
  */
 export function largestStyleBoxMargins(
-  overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  defaults: DefaultBoxes<MeasuredBoxName>,
+  boxes: Readonly<Record<string, StyleBoxFlatData>>,
   rtl: boolean
 ): StyleBoxFlatData['contentMargin'] {
-  const boxes = MEASURED_BOX_NAMES.map((name) => pickButtonStyleBox(overrides, defaults, name, rtl));
+  const measured = MEASURED_BOX_NAMES.map((name) => pickButtonStyleBox(boxes, name, rtl));
   // Gated on the plain name: a `hover_pressed_mirrored` alone is never read (`button.cpp:72-78`).
-  const hoverPressed = overrides.hover_pressed ?? defaults.hover_pressed;
-  if (hoverPressed) {
-    const mirrored = rtl ? (overrides.hover_pressed_mirrored ?? defaults.hover_pressed_mirrored) : undefined;
-    boxes.push(mirrored ?? hoverPressed);
-  }
+  if (boxes.hover_pressed) measured.push(pickButtonStyleBox(boxes, 'hover_pressed', rtl));
   const largest = { left: 0, top: 0, right: 0, bottom: 0 };
-  for (const { contentMargin } of boxes) {
+  for (const { contentMargin } of measured) {
     largest.left = Math.max(largest.left, contentMargin.left);
     largest.top = Math.max(largest.top, contentMargin.top);
     largest.right = Math.max(largest.right, contentMargin.right);

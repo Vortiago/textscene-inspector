@@ -71,57 +71,31 @@ describe('resolveToggleDrawState', () => {
 });
 
 describe('pickButtonStyleBox', () => {
-  const defaults = {
-    normal: styleBox({ bgColor: { r: 1, g: 0, b: 0, a: 1 } }),
-    disabled: styleBox({ bgColor: { r: 0, g: 1, b: 0, a: 1 } }),
-  };
+  const normal = styleBox({ bgColor: { r: 1, g: 0, b: 0, a: 1 } });
+  const disabled = styleBox({ bgColor: { r: 0, g: 1, b: 0, a: 1 } });
+  const mirrored = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
 
-  it('prefers a resolved theme_override_styles entry over the default-theme struct', () => {
-    const override = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
-    expect(pickButtonStyleBox({ normal: override }, defaults, 'normal')).toBe(override);
-  });
-
-  it('falls back to the default-theme struct for the current state when no override resolves', () => {
-    expect(pickButtonStyleBox({}, defaults, 'disabled')).toBe(defaults.disabled);
+  it('reads the box of the draw state', () => {
+    expect(pickButtonStyleBox({ normal, disabled }, 'disabled')).toBe(disabled);
   });
 
   // `Button::_get_current_stylebox` (`scene/gui/button.cpp:100-148`): every
   // draw-state arm reads `rtl && has_theme_stylebox("<state>_mirrored")`
   // before its plain key.
   it('prefers the <state>_mirrored key under RTL', () => {
-    const mirrored = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
-    const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
-    expect(pickButtonStyleBox({ normal: plain, normal_mirrored: mirrored }, defaults, 'normal', true)).toBe(
-      mirrored
-    );
-    expect(pickButtonStyleBox({ disabled_mirrored: mirrored }, defaults, 'disabled', true)).toBe(mirrored);
+    expect(pickButtonStyleBox({ normal, normal_mirrored: mirrored }, 'normal', true)).toBe(mirrored);
   });
 
   it('ignores the <state>_mirrored key under LTR', () => {
-    const mirrored = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
-    const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
-    expect(pickButtonStyleBox({ normal: plain, normal_mirrored: mirrored }, defaults, 'normal', false)).toBe(
-      plain
-    );
-    expect(pickButtonStyleBox({ normal_mirrored: mirrored }, defaults, 'normal', false)).toBe(
-      defaults.normal
-    );
+    expect(pickButtonStyleBox({ normal, normal_mirrored: mirrored }, 'normal', false)).toBe(normal);
   });
 
-  it('falls through to the plain key under RTL when nothing resolved a mirrored one', () => {
-    const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
-    expect(pickButtonStyleBox({ normal: plain }, defaults, 'normal', true)).toBe(plain);
-    expect(pickButtonStyleBox({}, defaults, 'normal', true)).toBe(defaults.normal);
+  it('falls through to the plain key under RTL when no theme sets a mirrored one', () => {
+    expect(pickButtonStyleBox({ normal }, 'normal', true)).toBe(normal);
   });
 
-  // `has_theme_stylebox("normal_mirrored")` holds for an OptionButton through the default theme alone
-  // (`default_theme.cpp:230`), so the plain override is never read.
-  it('takes the default <state>_mirrored box over a plain override under RTL', () => {
-    const plain = styleBox({ bgColor: { r: 1, g: 1, b: 0, a: 1 } });
-    const mirrored = styleBox({ bgColor: { r: 0, g: 0, b: 1, a: 1 } });
-    const withMirrored = { ...defaults, normal_mirrored: mirrored };
-    expect(pickButtonStyleBox({ normal: plain }, withMirrored, 'normal', true)).toBe(mirrored);
-    expect(pickButtonStyleBox({ normal: plain }, withMirrored, 'normal', false)).toBe(plain);
+  it('names the missing item when no theme sets the box of the state', () => {
+    expect(() => pickButtonStyleBox({ normal }, 'disabled')).toThrow(/"disabled"/);
   });
 });
 
@@ -129,36 +103,30 @@ describe('largestStyleBoxMargins (button.cpp:55-95)', () => {
   const sides = (left: number, top: number, right: number, bottom: number) => ({ left, top, right, bottom });
   const box = (contentMargin: StyleBoxFlatData['contentMargin']) => styleBox({ contentMargin });
   const small = box(sides(1, 1, 1, 1));
-  const defaults = { normal: small, pressed: small, hover: small, disabled: small };
+  const states = { normal: small, pressed: small, hover: small, disabled: small };
 
   it('takes the largest margin of each side over the four state boxes', () => {
-    const overrides = { normal: box(sides(9, 2, 3, 4)), disabled: box(sides(5, 8, 7, 6)) };
-    expect(largestStyleBoxMargins(overrides, defaults, false)).toEqual(sides(9, 8, 7, 6));
+    const boxes = { ...states, normal: box(sides(9, 2, 3, 4)), disabled: box(sides(5, 8, 7, 6)) };
+    expect(largestStyleBoxMargins(boxes, false)).toEqual(sides(9, 8, 7, 6));
   });
 
-  it('is the default margins without an override', () => {
-    expect(largestStyleBoxMargins({}, defaults, false)).toEqual(sides(1, 1, 1, 1));
-  });
-
-  it('measures a hover_pressed box a theme or the default theme sets (button.cpp:72-78)', () => {
-    const hoverPressed = box(sides(6, 6, 6, 6));
-    expect(largestStyleBoxMargins({ hover_pressed: hoverPressed }, defaults, false).left).toBe(6);
-    expect(largestStyleBoxMargins({}, { ...defaults, hover_pressed: hoverPressed }, false).left).toBe(6);
+  it('measures a hover_pressed box where a theme sets one (button.cpp:72-78)', () => {
+    expect(largestStyleBoxMargins({ ...states, hover_pressed: box(sides(6, 6, 6, 6)) }, false).left).toBe(6);
   });
 
   it('reads hover_pressed_mirrored under RTL only where hover_pressed is set too (button.cpp:72-73)', () => {
     const mirrored = box(sides(7, 7, 7, 7));
     const plain = box(sides(6, 6, 6, 6));
-    expect(largestStyleBoxMargins({ hover_pressed_mirrored: mirrored }, defaults, true).left).toBe(1);
-    const both = { hover_pressed: plain, hover_pressed_mirrored: mirrored };
-    expect(largestStyleBoxMargins(both, defaults, true).left).toBe(7);
-    expect(largestStyleBoxMargins(both, defaults, false).left).toBe(6);
+    expect(largestStyleBoxMargins({ ...states, hover_pressed_mirrored: mirrored }, true).left).toBe(1);
+    const both = { ...states, hover_pressed: plain, hover_pressed_mirrored: mirrored };
+    expect(largestStyleBoxMargins(both, true).left).toBe(7);
+    expect(largestStyleBoxMargins(both, false).left).toBe(6);
   });
 
   it('measures the <state>_mirrored boxes under RTL', () => {
-    const overrides = { normal: box(sides(9, 9, 9, 9)), normal_mirrored: box(sides(4, 4, 4, 4)) };
-    expect(largestStyleBoxMargins(overrides, defaults, true).left).toBe(4);
-    expect(largestStyleBoxMargins(overrides, defaults, false).left).toBe(9);
+    const boxes = { ...states, normal: box(sides(9, 9, 9, 9)), normal_mirrored: box(sides(4, 4, 4, 4)) };
+    expect(largestStyleBoxMargins(boxes, true).left).toBe(4);
+    expect(largestStyleBoxMargins(boxes, false).left).toBe(9);
   });
 });
 

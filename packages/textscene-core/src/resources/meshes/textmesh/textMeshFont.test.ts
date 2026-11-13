@@ -153,6 +153,7 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
 
   it('draws the font of the TextMesh over every project font', async () => {
     const projectFonts = {
+      ...NO_PROJECT_FONTS,
       projectTheme: themeWith({ defaultFont: themeFont }),
       projectDefaultFont: projectFont,
     };
@@ -163,6 +164,7 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
 
   it("draws the project theme's TextMesh font when the TextMesh has none", async () => {
     const projectFonts = {
+      ...NO_PROJECT_FONTS,
       projectTheme: themeWith({ fonts: { TextMesh: { font: themeFont } } }),
       projectDefaultFont: projectFont,
     };
@@ -172,6 +174,7 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
 
   it("draws the project theme's default font before the project default font", async () => {
     const projectFonts = {
+      ...NO_PROJECT_FONTS,
       projectTheme: themeWith({ defaultFont: themeFont }),
       projectDefaultFont: projectFont,
     };
@@ -181,6 +184,7 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
 
   it("draws the project theme's font for a base type of TextMesh, such as PrimitiveMesh", async () => {
     const projectFonts = {
+      ...NO_PROJECT_FONTS,
       projectTheme: themeWith({ fonts: { PrimitiveMesh: { font: themeFont } } }),
       projectDefaultFont: projectFont,
     };
@@ -189,7 +193,11 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
   });
 
   it('draws the project default font when no theme names one', async () => {
-    const projectFonts = { projectTheme: themeWith({}), projectDefaultFont: projectFont };
+    const projectFonts = {
+      ...NO_PROJECT_FONTS,
+      projectTheme: themeWith({}),
+      projectDefaultFont: projectFont,
+    };
 
     expect((await readyFace(withoutFont(projectFonts))).outlines).toBe(await outlinesOf(projectFont));
   });
@@ -218,6 +226,7 @@ describe('the font chain of a TextMesh (`TextMesh::_get_font_or_default`)', () =
 
   it("draws a SystemFont as the project theme's SystemFont font, not its TextMesh font", async () => {
     const projectFonts = {
+      ...NO_PROJECT_FONTS,
       projectTheme: themeWith({ fonts: { SystemFont: { font: themeFont }, TextMesh: { font: ownFont } } }),
       projectDefaultFont: projectFont,
     };
