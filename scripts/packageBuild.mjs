@@ -27,7 +27,7 @@ export function packageLayout(buildScriptUrl) {
 }
 
 /**
- * Builds the package's Node bundles, one per entry, into a clean `outDir`, with one metafile for
+ * Builds the package's bundles, one per entry, into a clean `outDir`, with one metafile for
  * all of them. Each entry is `{ in, out }`: the bundle's source and its file name without
  * extension. The package installs esbuild, so the build reads it from the package's own
  * node_modules, not the repo root's.
@@ -38,11 +38,12 @@ export function packageLayout(buildScriptUrl) {
  *   library bundle.
  *
  * @param {ReturnType<typeof packageLayout>} layout - the package's files.
- * @param {{ entries: { in: string, out: string }[], external?: string[] }} options - the bundles
- *   to build and the packages they read from the host's node_modules at run time.
+ * @param {{ entries: { in: string, out: string }[], external?: string[], platform?: 'node' | 'neutral' }} options -
+ *   the bundles to build, the packages they read from the host's node_modules at run time, and
+ *   `neutral` for a bundle that runs in a browser as well as in Node.
  * @returns {Promise<{ inputs: Record<string, unknown> }>} the bundles' shared esbuild metafile.
  */
-export async function buildNodeBundles(layout, { entries, external = [] }) {
+export async function buildNodeBundles(layout, { entries, external = [], platform = 'node' }) {
   const { build } = createRequire(resolve(layout.packageDir, 'package.json'))('esbuild');
   rmSync(layout.outDir, { recursive: true, force: true });
   const { metafile } = await build({
@@ -50,7 +51,7 @@ export async function buildNodeBundles(layout, { entries, external = [] }) {
     entryPoints: entries,
     outdir: layout.outDir,
     bundle: true,
-    platform: 'node',
+    platform,
     format: 'esm',
     target: 'es2022',
     legalComments: 'inline',

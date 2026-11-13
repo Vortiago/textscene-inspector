@@ -21,12 +21,12 @@ const bundleKey = 'dist/index.js';
 const PUBLIC_VALUE_EXPORTS = ['installNodesHandler'];
 const PUBLIC_TYPE_EXPORTS = ['NodeOutput'];
 
-/** A renderer with no GL context: the install only hands it the handler. */
+/** The entry's value names, and the handler it gives a renderer with no GL context. */
 const CONSUMER_SCRIPT = `
-import { installNodesHandler } from '@textscene/three-godot-shaders';
+import * as entry from '@textscene/three-godot-shaders';
 let handler = null;
-installNodesHandler({ setNodesHandler: (given) => { handler = given; } });
-console.log(JSON.stringify({ handler: handler?.constructor.name }));
+entry.installNodesHandler({ setNodesHandler: (given) => { handler = given; } });
+console.log(JSON.stringify({ exports: Object.keys(entry).sort(), handler: handler?.constructor.name }));
 `;
 
 const CONSUMER_TYPES = `
@@ -67,6 +67,7 @@ type Metafile = {
 
 let metafile: Metafile;
 let consumerDir: string;
+let consumerRun: { exports: string[]; handler: string };
 
 beforeAll(() => {
   run('pnpm', ['--filter', '@textscene/three-godot-shaders', 'build'], repoRoot);
@@ -79,6 +80,7 @@ beforeAll(() => {
   writeFileSync(join(consumerDir, 'use.mjs'), CONSUMER_SCRIPT);
   writeFileSync(join(consumerDir, 'types.mts'), CONSUMER_TYPES);
   writeFileSync(join(consumerDir, 'tsconfig.json'), JSON.stringify(CONSUMER_TSCONFIG));
+  consumerRun = JSON.parse(run('node', ['use.mjs'], consumerDir));
   rmSync(tarballDir, { recursive: true });
 }, 180_000);
 
@@ -98,20 +100,20 @@ describe('@textscene/three-godot-shaders bundle', () => {
     expect(imports.filter((path) => !/^three(\/|$)/.test(path))).toEqual([]);
   });
 
-  it('holds no module of three.js, which the consumer supplies', () => {
+  // Stricter than findForbiddenHostInputs: the package has no dependency, so no installed module
+  // of any kind belongs in the bundle.
+  it('holds no installed module, since three.js comes from the consumer', () => {
     expect(Object.keys(metafile.inputs).filter((input) => input.includes('node_modules'))).toEqual([]);
   });
 });
 
 describe('@textscene/three-godot-shaders tarball beside three.js alone', () => {
-  it('imports the entry and installs a nodes handler', () => {
-    const output = run('node', ['use.mjs'], consumerDir);
-    expect(JSON.parse(output)).toEqual({ handler: 'WebGLNodesHandler' });
+  it('imports the entry, which exports exactly the public values', () => {
+    expect(consumerRun.exports).toEqual(PUBLIC_VALUE_EXPORTS);
   });
 
-  it('exports exactly the public values', async () => {
-    const output = run('node', ['--input-type=module', '-e', EXPORT_NAMES], consumerDir);
-    expect(JSON.parse(output)).toEqual(PUBLIC_VALUE_EXPORTS);
+  it('installs a nodes handler', () => {
+    expect(consumerRun.handler).toBe('WebGLNodesHandler');
   });
 
   it('ships the licence and the notices, and no metafile', () => {
@@ -125,9 +127,3 @@ describe('@textscene/three-godot-shaders tarball beside three.js alone', () => {
     expect(() => typeCheck(consumerDir)).not.toThrow();
   });
 });
-
-/** The value names the installed entry exports, sorted. */
-const EXPORT_NAMES = `
-const entry = await import('@textscene/three-godot-shaders');
-console.log(JSON.stringify(Object.keys(entry).sort()));
-`;

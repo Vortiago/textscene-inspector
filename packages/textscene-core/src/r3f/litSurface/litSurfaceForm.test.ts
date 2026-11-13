@@ -2,6 +2,7 @@
 
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { repoRoot } from '../../parser/testing/parserKit';
 import { isProductionSource, walkSources } from '../testing/sourceScan';
 
 /** The form a fresh load of the module reads, on a page at `url`. */
@@ -48,9 +49,7 @@ describe('litSurfaceForm', () => {
 });
 
 /** The production sources a reader of the switch can sit in. */
-const SOURCE_ROOTS = ['../../../../../packages', '../../../../../apps'].map((root) =>
-  join(import.meta.dirname, root)
-);
+const SOURCE_ROOTS = ['packages', 'apps'].map((root) => join(repoRoot(), root));
 
 describe('the switch has one reader', () => {
   it('is imported by at most one production file', () => {

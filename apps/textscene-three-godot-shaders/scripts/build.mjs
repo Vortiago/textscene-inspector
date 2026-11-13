@@ -5,26 +5,16 @@
  * has one copy of it.
  */
 
-import { readFileSync, rmSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { build } from 'esbuild';
-import { packageLayout, writeBesideBundle } from '../../../scripts/packageBuild.mjs';
+import { buildNodeBundles, packageLayout, writeBesideBundle } from '../../../scripts/packageBuild.mjs';
 
 const layout = packageLayout(import.meta.url);
 const manifest = JSON.parse(readFileSync(resolve(layout.packageDir, 'package.json'), 'utf8'));
 
-// A clean dist, so no file of an earlier build reaches the tarball.
-rmSync(layout.outDir, { recursive: true, force: true });
-const { metafile } = await build({
-  absWorkingDir: layout.packageDir,
-  entryPoints: [layout.entry],
-  outfile: resolve(layout.outDir, 'index.js'),
-  bundle: true,
-  platform: 'neutral',
-  format: 'esm',
-  target: 'es2022',
-  legalComments: 'inline',
-  metafile: true,
+const metafile = await buildNodeBundles(layout, {
+  entries: [{ in: layout.entry, out: 'index' }],
   external: Object.keys(manifest.peerDependencies),
+  platform: 'neutral',
 });
 writeBesideBundle(layout, metafile);

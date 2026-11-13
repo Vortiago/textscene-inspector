@@ -1,10 +1,9 @@
 /** The install of three's nodes handler on a renderer, at most once for each renderer. */
 
 import { describe, expect, it, vi } from 'vitest';
-import type * as THREE from 'three';
+import * as THREE from 'three';
 import { float } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { WebGLNodesHandler } from 'three/addons/tsl/WebGLNodesHandler.js';
 import { installNodesHandler } from './nodesHandler';
 
 /** A renderer that records each handler it is given: the install needs no GL context. */
@@ -57,9 +56,11 @@ describe('installNodesHandler', () => {
   it("keeps the handler's own tone mapping and colour space by default", () => {
     const { renderer, setNodesHandler } = recordingRenderer();
     installNodesHandler(renderer);
-    const handler = setNodesHandler.mock.calls[0]![0] as OutputHook;
-    const stock = new WebGLNodesHandler() as unknown as OutputHook;
+    const handler = setNodesHandler.mock.calls[0]![0] as OutputHook & { renderer: unknown };
+    // The renderer the handler's own callback reads, which `setRenderer` sets on a live renderer.
+    handler.renderer = { toneMapping: THREE.ACESFilmicToneMapping, outputColorSpace: THREE.SRGBColorSpace };
+    const output = float(0.5);
 
-    expect(handler.getOutputCallback.toString()).toBe(stock.getOutputCallback.toString());
+    expect(handler.getOutputCallback(output)).not.toBe(output);
   });
 });

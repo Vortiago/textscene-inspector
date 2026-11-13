@@ -9,9 +9,9 @@
 
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { baselinePath } from '../baselinePath.mjs';
 import { compareImages } from '../imageDelta.mjs';
-import { previewPort, REPO_ROOT, withPreviewBrowser } from '../previewServer.mjs';
+import { previewPort, withPreviewBrowser } from '../previewServer.mjs';
+import { baselineFile } from '../run/baselines.mjs';
 import { openPagePool } from '../run/pagePool.mjs';
 import { captureScene } from '../run/sceneCapture.mjs';
 import { GOLDEN_SCENES } from '../scenes.mjs';
@@ -37,21 +37,27 @@ function readRows(out) {
     .map((row) => JSON.parse(row));
 }
 
+/** The scene's move from its baseline, or why there is none to measure. */
 function deltaOf(scene, buffer) {
-  const baseline = readFileSync(resolve(REPO_ROOT, baselinePath(scene.name)));
-  const { sizeMismatch, changedPixels, maxChannelDelta, meanChannelError } = compareImages(baseline, buffer);
+  const file = baselineFile(scene);
+  if (!existsSync(file)) return { failed: `no baseline at ${file}` };
+  const { sizeMismatch, changedPixels, maxChannelDelta, meanChannelError } = compareImages(
+    readFileSync(file),
+    buffer
+  );
   return sizeMismatch ? { sizeMismatch } : { changedPixels, maxChannelDelta, meanChannelError };
 }
 
-/** The 3D goldens `match` names that `out` holds no row for, each with the switch on. */
-function scenesToSweep(out, match) {
-  const swept = new Set(readRows(out).map((row) => row.name));
+/** The 3D goldens `match` names that `rows` hold no row for, each with the switch on. */
+function scenesToSweep(rows, match) {
+  const swept = new Set(rows.map((row) => row.name));
   return GOLDEN_SCENES.filter((scene) => scene.mode !== '2d' && scene.name.includes(match))
     .filter((scene) => !swept.has(scene.name))
     .map((scene) => ({ ...scene, litSurface: 'nodes' }));
 }
 
-async function sweep(out, scenes) {
+/** Captures each scene, and appends its row to `out` and to `rows`. */
+async function sweep(out, scenes, rows) {
   await withPreviewBrowser(previewPort('visual'), async (browser, baseUrl) => {
     const pool = await openPagePool(browser, scenes);
     for (const scene of pool.scenes) {
@@ -66,15 +72,17 @@ async function sweep(out, scenes) {
       });
       row.seconds = (Date.now() - startedAt) / 1000;
       appendFileSync(out, `${JSON.stringify(row)}\n`);
+      rows.push(row);
     }
   });
 }
 
 async function main() {
   const { out, match } = parseArgs(process.argv.slice(2));
-  const scenes = scenesToSweep(out, match);
-  if (scenes.length > 0) await sweep(out, scenes);
-  const { identical, withinOneStep, aboveOneStep, failed } = sweepCounts(readRows(out));
+  const rows = readRows(out);
+  const scenes = scenesToSweep(rows, match);
+  if (scenes.length > 0) await sweep(out, scenes, rows);
+  const { identical, withinOneStep, aboveOneStep, failed } = sweepCounts(rows);
   console.log(
     `[lit-surface] identical ${identical}, within 1/255 ${withinOneStep}, above 1/255 ${aboveOneStep}, failed ${failed}`
   );
