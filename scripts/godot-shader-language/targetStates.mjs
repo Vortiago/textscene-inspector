@@ -13,11 +13,15 @@ const isVector = (type) => /^[biu]?vec\d$/.test(type);
 const OPERATOR_OF_ASSIGNMENT = /^OP_ASSIGN_(\w+)$/;
 const STEPS = /^OP_(POST_)?(INCREMENT|DECREMENT)$/;
 
+/** The operators the emitter applies column by column between a matrix and a scalar (`columnwise`). */
+const COLUMNWISE = /^OP_(ADD|SUB|MUL|DIV)$/;
+
 /** The lowering of the operator `op` over `args`, or nothing for a native one. */
 function operatorLowering(op, args) {
   const [first, second] = args;
-  if (op === 'OP_SUB' && isMatrix(first) && second === 'float') return 'column by column';
   if (op === 'OP_DIV' && isMatrix(first) && second === 'float') return 'product with the reciprocal';
+  const isMatrixByScalar = (isMatrix(first) && second === 'float') || (first === 'float' && isMatrix(second));
+  if (COLUMNWISE.test(op) && isMatrixByScalar) return 'column by column';
   if (op === 'OP_EQUAL' || op === 'OP_NOT_EQUAL') {
     if (isMatrix(first)) return 'column by column';
     if (isVector(first)) return op === 'OP_EQUAL' ? 'all(equal(a, b))' : 'any(notEqual(a, b))';

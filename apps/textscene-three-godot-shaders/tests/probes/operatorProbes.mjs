@@ -5,7 +5,7 @@
  */
 
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
-import { PROBE_TYPES } from '../../../../scripts/godot-probes/probeShader.mjs';
+import { PROBE_TYPES, VECTOR_PREFIX } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { argumentRows } from './inputs.mjs';
 
 /** The shading language token of each operator. A unary operator stands before its operand. */
@@ -109,8 +109,6 @@ function constructorProbes(rows) {
       return { ...probe, rows: [row.id, 'OP_CONSTRUCT'] };
     });
 }
-
-const VECTOR_PREFIX = { bool: 'bvec', int: 'ivec', uint: 'uvec', float: 'vec' };
 
 /**
  * Each swizzle set, read with one swizzle of each length that reorders and repeats, each lane of

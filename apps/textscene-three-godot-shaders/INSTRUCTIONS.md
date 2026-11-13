@@ -247,20 +247,20 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_ADD(float,vec2)` | transpiled (`add-float-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(float,vec3)` | transpiled (`add-float-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(float,vec4)` | transpiled (`add-float-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,mat2)` | transpiled (`add-float-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,mat3)` | transpiled (`add-float-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,mat4)` | transpiled (`add-float-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,mat2)` | transpiled (`add-float-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,mat3)` | transpiled (`add-float-mat3`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,mat4)` | transpiled (`add-float-mat4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(vec2,float)` | transpiled (`add-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(vec2,vec2)` | transpiled (`add-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(vec3,float)` | transpiled (`add-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(vec3,vec3)` | transpiled (`add-vec3-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(vec4,float)` | transpiled (`add-vec4-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(vec4,vec4)` | transpiled (`add-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(mat2,float)` | transpiled (`add-mat2-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(mat2,float)` | transpiled (`add-mat2-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(mat2,mat2)` | transpiled (`add-mat2-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(mat3,float)` | transpiled (`add-mat3-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(mat3,float)` | transpiled (`add-mat3-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(mat3,mat3)` | transpiled (`add-mat3-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(mat4,float)` | transpiled (`add-mat4-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(mat4,float)` | transpiled (`add-mat4-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(mat4,mat4)` | transpiled (`add-mat4-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(int,int)` | transpiled (`sub-int-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(int,ivec2)` | transpiled (`sub-int-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
@@ -286,9 +286,9 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_SUB(float,vec2)` | transpiled (`sub-float-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(float,vec3)` | transpiled (`sub-float-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(float,vec4)` | transpiled (`sub-float-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,mat2)` | transpiled (`sub-float-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,mat3)` | transpiled (`sub-float-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,mat4)` | transpiled (`sub-float-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,mat2)` | transpiled (`sub-float-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,mat3)` | transpiled (`sub-float-mat3`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,mat4)` | transpiled (`sub-float-mat4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(vec2,float)` | transpiled (`sub-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(vec2,vec2)` | transpiled (`sub-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(vec3,float)` | transpiled (`sub-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
@@ -325,9 +325,9 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_MUL(float,vec2)` | transpiled (`mul-float-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(float,vec3)` | transpiled (`mul-float-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(float,vec4)` | transpiled (`mul-float-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,mat2)` | transpiled (`mul-float-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,mat3)` | transpiled (`mul-float-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,mat4)` | transpiled (`mul-float-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,mat2)` | transpiled (`mul-float-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,mat3)` | transpiled (`mul-float-mat3`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,mat4)` | transpiled (`mul-float-mat4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(vec2,float)` | transpiled (`mul-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(vec2,vec2)` | transpiled (`mul-vec2-vec2`, `unbracketed-operator-before`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(vec2,mat2)` | transpiled (`mul-vec2-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
@@ -337,13 +337,13 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_MUL(vec4,float)` | transpiled (`mul-vec4-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(vec4,vec4)` | transpiled (`mul-vec4-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(vec4,mat4)` | transpiled (`mul-vec4-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat2,float)` | transpiled (`mul-mat2-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat2,float)` | transpiled (`mul-mat2-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat2,vec2)` | transpiled (`mul-mat2-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat2,mat2)` | transpiled (`mul-mat2-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat3,float)` | transpiled (`mul-mat3-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat3,float)` | transpiled (`mul-mat3-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat3,vec3)` | transpiled (`folding-matrix-times-vector`, `mul-mat3-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat3,mat3)` | transpiled (`mul-mat3-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat4,float)` | transpiled (`mul-mat4-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat4,float)` | transpiled (`mul-mat4-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat4,vec4)` | transpiled (`mul-mat4-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat4,mat4)` | transpiled (`mul-mat4-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(int,int)` | transpiled (`div-int-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
@@ -370,9 +370,9 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_DIV(float,vec2)` | transpiled (`div-float-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(float,vec3)` | transpiled (`div-float-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(float,vec4)` | transpiled (`div-float-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,mat2)` | transpiled (`div-float-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,mat3)` | transpiled (`div-float-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,mat4)` | transpiled (`div-float-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,mat2)` | transpiled (`div-float-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,mat3)` | transpiled (`div-float-mat3`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,mat4)` | transpiled (`div-float-mat4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(vec2,float)` | transpiled (`div-vec2-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(vec2,vec2)` | transpiled (`div-vec2-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(vec3,float)` | transpiled (`div-vec3-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
@@ -467,11 +467,11 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_ASSIGN_ADD(vec3,vec3)` | transpiled (`assign-add-vec3-vec3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_ADD(vec4,float)` | transpiled (`assign-add-vec4-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_ADD(vec4,vec4)` | transpiled (`assign-add-vec4-vec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(mat2,float)` | transpiled (`assign-add-mat2-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(mat2,float)` | transpiled (`assign-add-mat2-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_ADD(mat2,mat2)` | transpiled (`assign-add-mat2-mat2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(mat3,float)` | transpiled (`assign-add-mat3-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(mat3,float)` | transpiled (`assign-add-mat3-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_ADD(mat3,mat3)` | transpiled (`assign-add-mat3-mat3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_ADD(mat4,float)` | transpiled (`assign-add-mat4-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_ADD(mat4,float)` | transpiled (`assign-add-mat4-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_ADD(mat4,mat4)` | transpiled (`assign-add-mat4-mat4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_SUB(int,int)` | transpiled (`assign-sub-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_SUB(ivec2,int)` | transpiled (`assign-sub-ivec2-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
@@ -524,11 +524,11 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_ASSIGN_MUL(vec4,float)` | transpiled (`assign-mul-vec4-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_MUL(vec4,vec4)` | transpiled (`assign-mul-vec4-vec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_MUL(vec4,mat4)` | transpiled (`assign-mul-vec4-mat4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(mat2,float)` | transpiled (`assign-mul-mat2-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(mat2,float)` | transpiled (`assign-mul-mat2-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_MUL(mat2,mat2)` | transpiled (`assign-mul-mat2-mat2`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(mat3,float)` | transpiled (`assign-mul-mat3-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(mat3,float)` | transpiled (`assign-mul-mat3-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_MUL(mat3,mat3)` | transpiled (`assign-mul-mat3-mat3`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
-| `OP_ASSIGN_MUL(mat4,float)` | transpiled (`assign-mul-mat4-float`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
+| `OP_ASSIGN_MUL(mat4,float)` | transpiled (`assign-mul-mat4-float`) | lowered: written to the argument value, column by column | lowered: written to the argument value, column by column | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_MUL(mat4,mat4)` | transpiled (`assign-mul-mat4-mat4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_DIV(int,int)` | transpiled (`assign-div-int-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
 | `OP_ASSIGN_DIV(ivec2,int)` | transpiled (`assign-div-ivec2-int`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1833` |
@@ -744,7 +744,7 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_CALL` | open, #1825 | | | `servers/rendering/shader_language.cpp:1558` |
 | `OP_CONSTRUCT` | transpiled (`construct-bvec2-bool`, `construct-bvec2-bool-bool`, `construct-bvec3-bool`, `construct-bvec3-bool-bool-bool`, `construct-bvec3-bvec2-bool`, `construct-bvec3-bool-bvec2`, `construct-bvec4-bool`, `construct-bvec4-bool-bool-bool-bool`, `construct-bvec4-bool-bvec2-bool`, `construct-bvec4-bvec2-bool-bool`, `construct-bvec4-bool-bool-bvec2`, `construct-bvec4-bool-bvec3`, `construct-bvec4-bvec3-bool`, `construct-bvec4-bvec2-bvec2`, `construct-ivec2-int`, `construct-ivec2-int-int`, `construct-ivec3-int`, `construct-ivec3-int-int-int`, `construct-ivec3-ivec2-int`, `construct-ivec3-int-ivec2`, `construct-ivec4-int`, `construct-ivec4-int-int-int-int`, `construct-ivec4-int-ivec2-int`, `construct-ivec4-ivec2-int-int`, `construct-ivec4-int-int-ivec2`, `construct-ivec4-int-ivec3`, `construct-ivec4-ivec3-int`, `construct-ivec4-ivec2-ivec2`, `construct-uvec2-uint`, `construct-uvec2-uint-uint`, `construct-uvec3-uint`, `construct-uvec3-uint-uint-uint`, `construct-uvec3-uvec2-uint`, `construct-uvec3-uint-uvec2`, `construct-uvec4-uint`, `construct-uvec4-uint-uint-uint-uint`, `construct-uvec4-uint-uvec2-uint`, `construct-uvec4-uvec2-uint-uint`, `construct-uvec4-uint-uint-uvec2`, `construct-uvec4-uint-uvec3`, `construct-uvec4-uvec3-uint`, `construct-uvec4-uvec2-uvec2`, `construct-mat2-vec2-vec2`, `construct-mat3-vec3-vec3-vec3`, `construct-mat4-vec4-vec4-vec4-vec4`, `construct-mat2-float`, `construct-mat3-float`, `construct-mat4-float`, `construct-int-bool`, `construct-int-int`, `construct-int-uint`, `construct-int-float`, `construct-float-bool`, `construct-float-int`, `construct-float-uint`, `construct-float-float`, `construct-uint-bool`, `construct-uint-int`, `construct-uint-uint`, `construct-uint-float`, `construct-bool-bool`, `construct-bool-int`, `construct-bool-uint`, `construct-bool-float`) | native | native | `servers/rendering/shader_language.cpp:1558` |
 | `OP_STRUCT` | open, #1824 | | | `servers/rendering/shader_language.cpp:1558` |
-| `OP_INDEX` | transpiled (`index-vector-read`, `index-vector-constant`, `index-uint-index`, `index-matrix-column`, `index-matrix-lane`, `index-vector-write`, `index-matrix-write`, `index-lane-write`, `index-member-write`) | native | native | `servers/rendering/shader_language.cpp:1558` |
+| `OP_INDEX` | transpiled (`index-vector-read`, `index-vector-constant`, `index-uint-index`, `index-matrix-column`, `index-matrix-lane`, `index-vector-write`, `index-matrix-write`, `index-lane-write`, `index-member-write`, `index-folded-read`, `index-folded-write`, `index-folded-past-end`, `index-folded-write-past-end`) | native | native | `servers/rendering/shader_language.cpp:1558` |
 | `OP_EMPTY` | transpiled (`statement-empty`) | native | native | `servers/rendering/shader_language.cpp:1558` |
 
 ## statement

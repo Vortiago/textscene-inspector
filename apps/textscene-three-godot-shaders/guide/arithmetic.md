@@ -35,7 +35,16 @@ void fragment() {
 
 The transpiler emits `a.add(b)`. Rows: `OP_ADD(int,int)`, `OP_ADD(int,ivec2)`, `OP_ADD(int,ivec3)`, `OP_ADD(int,ivec4)`, `OP_ADD(ivec2,int)`, `OP_ADD(ivec2,ivec2)`, `OP_ADD(ivec3,int)`, `OP_ADD(ivec3,ivec3)`, `OP_ADD(ivec4,int)`, `OP_ADD(ivec4,ivec4)`, `OP_ADD(uint,uint)`, `OP_ADD(uint,uvec2)`, `OP_ADD(uint,uvec3)`, `OP_ADD(uint,uvec4)`, `OP_ADD(uvec2,uint)`, `OP_ADD(uvec2,uvec2)`, `OP_ADD(uvec3,uint)`, `OP_ADD(uvec3,uvec3)`, `OP_ADD(uvec4,uint)`, `OP_ADD(uvec4,uvec4)`, `OP_ADD(float,float)`, `OP_ADD(float,vec2)`, `OP_ADD(float,vec3)`, `OP_ADD(float,vec4)`, `OP_ADD(float,mat2)`, `OP_ADD(float,mat3)`, `OP_ADD(float,mat4)`, `OP_ADD(vec2,float)`, `OP_ADD(vec2,vec2)`, `OP_ADD(vec3,float)`, `OP_ADD(vec3,vec3)`, `OP_ADD(vec4,float)`, `OP_ADD(vec4,vec4)`, `OP_ADD(mat2,float)`, `OP_ADD(mat2,mat2)`, `OP_ADD(mat3,float)`, `OP_ADD(mat3,mat3)`, `OP_ADD(mat4,float)`, `OP_ADD(mat4,mat4)`. Godot source: `servers/rendering/shader_language.cpp:1627`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Lowered rows:
+
+- `OP_ADD(float,mat2)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_ADD(float,mat3)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_ADD(float,mat4)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_ADD(mat2,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_ADD(mat3,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_ADD(mat4,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+
+The other rows are native on WebGL 2 and on WebGPURenderer.
 
 ### Probe `add-float-float`, 256 input rows
 
@@ -661,6 +670,9 @@ The transpiler emits `a.sub(b)`. Rows: `OP_SUB(int,int)`, `OP_SUB(int,ivec2)`, `
 
 Lowered rows:
 
+- `OP_SUB(float,mat2)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_SUB(float,mat3)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_SUB(float,mat4)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
 - `OP_SUB(mat2,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
 - `OP_SUB(mat3,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
 - `OP_SUB(mat4,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
@@ -1265,7 +1277,16 @@ mat4 probe(mat4 a, mat4 b) { return a - b; }
 
 The transpiler emits `a.mul(b)`. Rows: `OP_MUL(int,int)`, `OP_MUL(int,ivec2)`, `OP_MUL(int,ivec3)`, `OP_MUL(int,ivec4)`, `OP_MUL(ivec2,int)`, `OP_MUL(ivec2,ivec2)`, `OP_MUL(ivec3,int)`, `OP_MUL(ivec3,ivec3)`, `OP_MUL(ivec4,int)`, `OP_MUL(ivec4,ivec4)`, `OP_MUL(uint,uint)`, `OP_MUL(uint,uvec2)`, `OP_MUL(uint,uvec3)`, `OP_MUL(uint,uvec4)`, `OP_MUL(uvec2,uint)`, `OP_MUL(uvec2,uvec2)`, `OP_MUL(uvec3,uint)`, `OP_MUL(uvec3,uvec3)`, `OP_MUL(uvec4,uint)`, `OP_MUL(uvec4,uvec4)`, `OP_MUL(float,float)`, `OP_MUL(float,vec2)`, `OP_MUL(float,vec3)`, `OP_MUL(float,vec4)`, `OP_MUL(float,mat2)`, `OP_MUL(float,mat3)`, `OP_MUL(float,mat4)`, `OP_MUL(vec2,float)`, `OP_MUL(vec2,vec2)`, `OP_MUL(vec2,mat2)`, `OP_MUL(vec3,float)`, `OP_MUL(vec3,vec3)`, `OP_MUL(vec3,mat3)`, `OP_MUL(vec4,float)`, `OP_MUL(vec4,vec4)`, `OP_MUL(vec4,mat4)`, `OP_MUL(mat2,float)`, `OP_MUL(mat2,vec2)`, `OP_MUL(mat2,mat2)`, `OP_MUL(mat3,float)`, `OP_MUL(mat3,vec3)`, `OP_MUL(mat3,mat3)`, `OP_MUL(mat4,float)`, `OP_MUL(mat4,vec4)`, `OP_MUL(mat4,mat4)`. Godot source: `servers/rendering/shader_language.cpp:1627`.
 
-Every row is native on WebGL 2 and on WebGPURenderer.
+Lowered rows:
+
+- `OP_MUL(float,mat2)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_MUL(float,mat3)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_MUL(float,mat4)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_MUL(mat2,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_MUL(mat3,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_MUL(mat4,float)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+
+The other rows are native on WebGL 2 and on WebGPURenderer.
 
 ### Probe `mul-float-float`, 256 input rows
 
@@ -1995,6 +2016,9 @@ The transpiler emits `a.div(b)`. Rows: `OP_DIV(int,int)`, `OP_DIV(int,ivec2)`, `
 
 Lowered rows:
 
+- `OP_DIV(float,mat2)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_DIV(float,mat3)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
+- `OP_DIV(float,mat4)`: WebGL 2 lowered: column by column, WebGPURenderer lowered: column by column.
 - `OP_DIV(mat2,float)`: WebGL 2 lowered: product with the reciprocal, WebGPURenderer lowered: product with the reciprocal.
 - `OP_DIV(mat3,float)`: WebGL 2 lowered: product with the reciprocal, WebGPURenderer lowered: product with the reciprocal.
 - `OP_DIV(mat4,float)`: WebGL 2 lowered: product with the reciprocal, WebGPURenderer lowered: product with the reciprocal.

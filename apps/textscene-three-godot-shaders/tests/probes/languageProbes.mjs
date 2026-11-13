@@ -8,7 +8,7 @@ import { PROBE_TYPES, probeSignature } from '../../../../scripts/godot-probes/pr
 import { argumentRows } from './inputs.mjs';
 
 /** A probe of `source` over rows of its parameters' types. */
-function probeOf(name, rows, source) {
+export function probeOf(name, rows, source) {
   const { parameters } = probeSignature(source);
   return { name, rows, source, inputs: argumentRows(parameters.map((type) => PROBE_TYPES[type])) };
 }
@@ -47,6 +47,10 @@ function indexProbes() {
     ['matrix-write', 'mat2 probe(mat2 m, vec2 c, int i) { m[i & 1] = c; return m; }'],
     ['lane-write', 'mat3 probe(mat3 m, float b) { m[2][1] += b; return m; }'],
     ['member-write', 'mat2 probe(mat2 m, float b) { m[1].y = b; return m; }'],
+    ['folded-read', 'float probe(vec2 a) { return a[2 - 1]; }'],
+    ['folded-write', 'vec3 probe(vec3 a, float b) { a[1 + 1] = b; return a; }'],
+    ['folded-past-end', 'float probe(vec2 a) { return a[1 + 5]; }'],
+    ['folded-write-past-end', 'vec2 probe(vec2 a, float b) { a[1 + 5] = b; return a; }'],
   ];
   return cases.map(([word, source]) => probeOf(`index-${word}`, ['OP_INDEX'], source));
 }

@@ -684,3 +684,53 @@ mat2 probe(mat2 m, float b) { m[1].y = b; return m; }
 | `(1e-40, -0.0, 0.33333334, -3e+38)` | `-1.0` | `(1e-40, -0.0, 0.33333334, -1.0)` |
 | `(-0.0, 0.33333334, -3e+38, 0.0)` | `1e-40` | `(-0.0, 0.33333334, -3e+38, 1e-40)` |
 | `(1.0, 1e-7, 1e-40, -0.0)` | `inf` | `(1.0, 1e-7, 1e-40, inf)` |
+
+### Probe `index-folded-read`, 16 input rows
+
+```glsl
+float probe(vec2 a) { return a[2 - 1]; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `-2.75` |
+| `(1.0, 1e-7)` | `1e-7` |
+| `(1e-7, 1e-40)` | `1e-40` |
+| `(123456.79, inf)` | `inf` |
+| `(16777216.0, -inf)` | `-inf` |
+| `(3e+38, NaN)` | `NaN` |
+| `(-3e+38, 0.0)` | `0.0` |
+| `(1e-40, -0.0)` | `-0.0` |
+
+### Probe `index-folded-write`, 32 input rows
+
+```glsl
+vec3 probe(vec3 a, float b) { a[1 + 1] = b; return a; }
+```
+
+| `a` | `b` | Godot gives |
+| --- | --- | --- |
+| `(0.0, -2.75, 3e+38)` | `1e-7` | `(0.0, -2.75, 1e-7)` |
+| `(0.33333334, -3e+38, 0.0)` | `inf` | `(0.33333334, -3e+38, inf)` |
+| `(1e-7, 1e-40, -0.0)` | `-inf` | `(1e-7, 1e-40, -inf)` |
+| `(123456.79, inf, 1.0)` | `NaN` | `(123456.79, inf, NaN)` |
+| `(16777216.0, -inf, -1.0)` | `0.0` | `(16777216.0, -inf, 0.0)` |
+| `(3e+38, NaN, 0.5)` | `-0.0` | `(3e+38, NaN, -0.0)` |
+| `(1e-40, -0.0, 0.33333334)` | `-1.0` | `(1e-40, -0.0, -1.0)` |
+| `(-0.0, 0.33333334, -3e+38)` | `1e-40` | `(-0.0, 0.33333334, 1e-40)` |
+
+### Probe `index-folded-past-end`, 0 input rows
+
+```glsl
+float probe(vec2 a) { return a[1 + 5]; }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'[' :  vector index out of range '6'`. The transpiler refuses it too.
+
+### Probe `index-folded-write-past-end`, 0 input rows
+
+```glsl
+vec2 probe(vec2 a, float b) { a[1 + 5] = b; return a; }
+```
+
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'[' :  vector index out of range '6'`. The transpiler refuses it too.

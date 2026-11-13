@@ -216,20 +216,20 @@ OP_ADD(float,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		f
 OP_ADD(float,vec2)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(float,vec2)	native	native
 OP_ADD(float,vec3)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec3	(float,vec3)	native	native
 OP_ADD(float,vec4)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec4	(float,vec4)	native	native
-OP_ADD(float,mat2)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(float,mat2)	native	native
-OP_ADD(float,mat3)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(float,mat3)	native	native
-OP_ADD(float,mat4)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(float,mat4)	native	native
+OP_ADD(float,mat2)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(float,mat2)	lowered: column by column	lowered: column by column
+OP_ADD(float,mat3)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(float,mat3)	lowered: column by column	lowered: column by column
+OP_ADD(float,mat4)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(float,mat4)	lowered: column by column	lowered: column by column
 OP_ADD(vec2,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(vec2,float)	native	native
 OP_ADD(vec2,vec2)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(vec2,vec2)	native	native
 OP_ADD(vec3,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec3	(vec3,float)	native	native
 OP_ADD(vec3,vec3)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec3	(vec3,vec3)	native	native
 OP_ADD(vec4,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec4	(vec4,float)	native	native
 OP_ADD(vec4,vec4)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec4	(vec4,vec4)	native	native
-OP_ADD(mat2,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(mat2,float)	native	native
+OP_ADD(mat2,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(mat2,float)	lowered: column by column	lowered: column by column
 OP_ADD(mat2,mat2)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(mat2,mat2)	native	native
-OP_ADD(mat3,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(mat3,float)	native	native
+OP_ADD(mat3,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(mat3,float)	lowered: column by column	lowered: column by column
 OP_ADD(mat3,mat3)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(mat3,mat3)	native	native
-OP_ADD(mat4,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(mat4,float)	native	native
+OP_ADD(mat4,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(mat4,float)	lowered: column by column	lowered: column by column
 OP_ADD(mat4,mat4)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(mat4,mat4)	native	native
 OP_SUB(int,int)	operator	servers/rendering/shader_language.cpp:1627	#1823		int	(int,int)	native	native
 OP_SUB(int,ivec2)	operator	servers/rendering/shader_language.cpp:1627	#1823		ivec2	(int,ivec2)	native	native
@@ -255,9 +255,9 @@ OP_SUB(float,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		f
 OP_SUB(float,vec2)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(float,vec2)	native	native
 OP_SUB(float,vec3)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec3	(float,vec3)	native	native
 OP_SUB(float,vec4)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec4	(float,vec4)	native	native
-OP_SUB(float,mat2)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(float,mat2)	native	native
-OP_SUB(float,mat3)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(float,mat3)	native	native
-OP_SUB(float,mat4)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(float,mat4)	native	native
+OP_SUB(float,mat2)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(float,mat2)	lowered: column by column	lowered: column by column
+OP_SUB(float,mat3)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(float,mat3)	lowered: column by column	lowered: column by column
+OP_SUB(float,mat4)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(float,mat4)	lowered: column by column	lowered: column by column
 OP_SUB(vec2,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(vec2,float)	native	native
 OP_SUB(vec2,vec2)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(vec2,vec2)	native	native
 OP_SUB(vec3,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec3	(vec3,float)	native	native
@@ -294,9 +294,9 @@ OP_MUL(float,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		f
 OP_MUL(float,vec2)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(float,vec2)	native	native
 OP_MUL(float,vec3)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec3	(float,vec3)	native	native
 OP_MUL(float,vec4)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec4	(float,vec4)	native	native
-OP_MUL(float,mat2)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(float,mat2)	native	native
-OP_MUL(float,mat3)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(float,mat3)	native	native
-OP_MUL(float,mat4)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(float,mat4)	native	native
+OP_MUL(float,mat2)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(float,mat2)	lowered: column by column	lowered: column by column
+OP_MUL(float,mat3)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(float,mat3)	lowered: column by column	lowered: column by column
+OP_MUL(float,mat4)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(float,mat4)	lowered: column by column	lowered: column by column
 OP_MUL(vec2,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(vec2,float)	native	native
 OP_MUL(vec2,vec2)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(vec2,vec2)	native	native
 OP_MUL(vec2,mat2)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(vec2,mat2)	native	native
@@ -306,13 +306,13 @@ OP_MUL(vec3,mat3)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec
 OP_MUL(vec4,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec4	(vec4,float)	native	native
 OP_MUL(vec4,vec4)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec4	(vec4,vec4)	native	native
 OP_MUL(vec4,mat4)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec4	(vec4,mat4)	native	native
-OP_MUL(mat2,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(mat2,float)	native	native
+OP_MUL(mat2,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(mat2,float)	lowered: column by column	lowered: column by column
 OP_MUL(mat2,vec2)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(mat2,vec2)	native	native
 OP_MUL(mat2,mat2)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(mat2,mat2)	native	native
-OP_MUL(mat3,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(mat3,float)	native	native
+OP_MUL(mat3,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(mat3,float)	lowered: column by column	lowered: column by column
 OP_MUL(mat3,vec3)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec3	(mat3,vec3)	native	native
 OP_MUL(mat3,mat3)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(mat3,mat3)	native	native
-OP_MUL(mat4,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(mat4,float)	native	native
+OP_MUL(mat4,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(mat4,float)	lowered: column by column	lowered: column by column
 OP_MUL(mat4,vec4)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec4	(mat4,vec4)	native	native
 OP_MUL(mat4,mat4)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(mat4,mat4)	native	native
 OP_DIV(int,int)	operator	servers/rendering/shader_language.cpp:1627	#1823		int	(int,int)	native	native
@@ -339,9 +339,9 @@ OP_DIV(float,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		f
 OP_DIV(float,vec2)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(float,vec2)	native	native
 OP_DIV(float,vec3)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec3	(float,vec3)	native	native
 OP_DIV(float,vec4)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec4	(float,vec4)	native	native
-OP_DIV(float,mat2)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(float,mat2)	native	native
-OP_DIV(float,mat3)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(float,mat3)	native	native
-OP_DIV(float,mat4)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(float,mat4)	native	native
+OP_DIV(float,mat2)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat2	(float,mat2)	lowered: column by column	lowered: column by column
+OP_DIV(float,mat3)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat3	(float,mat3)	lowered: column by column	lowered: column by column
+OP_DIV(float,mat4)	operator	servers/rendering/shader_language.cpp:1627	#1823		mat4	(float,mat4)	lowered: column by column	lowered: column by column
 OP_DIV(vec2,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(vec2,float)	native	native
 OP_DIV(vec2,vec2)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec2	(vec2,vec2)	native	native
 OP_DIV(vec3,float)	operator	servers/rendering/shader_language.cpp:1627	#1823		vec3	(vec3,float)	native	native
@@ -436,11 +436,11 @@ OP_ASSIGN_ADD(vec3,float)	operator	servers/rendering/shader_language.cpp:1833	#1
 OP_ASSIGN_ADD(vec3,vec3)	operator	servers/rendering/shader_language.cpp:1833	#1823		vec3	(vec3,vec3)	lowered: written to the argument value	lowered: written to the argument value
 OP_ASSIGN_ADD(vec4,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		vec4	(vec4,float)	lowered: written to the argument value	lowered: written to the argument value
 OP_ASSIGN_ADD(vec4,vec4)	operator	servers/rendering/shader_language.cpp:1833	#1823		vec4	(vec4,vec4)	lowered: written to the argument value	lowered: written to the argument value
-OP_ASSIGN_ADD(mat2,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat2	(mat2,float)	lowered: written to the argument value	lowered: written to the argument value
+OP_ASSIGN_ADD(mat2,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat2	(mat2,float)	lowered: written to the argument value, column by column	lowered: written to the argument value, column by column
 OP_ASSIGN_ADD(mat2,mat2)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat2	(mat2,mat2)	lowered: written to the argument value	lowered: written to the argument value
-OP_ASSIGN_ADD(mat3,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat3	(mat3,float)	lowered: written to the argument value	lowered: written to the argument value
+OP_ASSIGN_ADD(mat3,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat3	(mat3,float)	lowered: written to the argument value, column by column	lowered: written to the argument value, column by column
 OP_ASSIGN_ADD(mat3,mat3)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat3	(mat3,mat3)	lowered: written to the argument value	lowered: written to the argument value
-OP_ASSIGN_ADD(mat4,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat4	(mat4,float)	lowered: written to the argument value	lowered: written to the argument value
+OP_ASSIGN_ADD(mat4,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat4	(mat4,float)	lowered: written to the argument value, column by column	lowered: written to the argument value, column by column
 OP_ASSIGN_ADD(mat4,mat4)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat4	(mat4,mat4)	lowered: written to the argument value	lowered: written to the argument value
 OP_ASSIGN_SUB(int,int)	operator	servers/rendering/shader_language.cpp:1833	#1823		int	(int,int)	lowered: written to the argument value	lowered: written to the argument value
 OP_ASSIGN_SUB(ivec2,int)	operator	servers/rendering/shader_language.cpp:1833	#1823		ivec2	(ivec2,int)	lowered: written to the argument value	lowered: written to the argument value
@@ -493,11 +493,11 @@ OP_ASSIGN_MUL(vec3,mat3)	operator	servers/rendering/shader_language.cpp:1833	#18
 OP_ASSIGN_MUL(vec4,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		vec4	(vec4,float)	lowered: written to the argument value	lowered: written to the argument value
 OP_ASSIGN_MUL(vec4,vec4)	operator	servers/rendering/shader_language.cpp:1833	#1823		vec4	(vec4,vec4)	lowered: written to the argument value	lowered: written to the argument value
 OP_ASSIGN_MUL(vec4,mat4)	operator	servers/rendering/shader_language.cpp:1833	#1823		vec4	(vec4,mat4)	lowered: written to the argument value	lowered: written to the argument value
-OP_ASSIGN_MUL(mat2,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat2	(mat2,float)	lowered: written to the argument value	lowered: written to the argument value
+OP_ASSIGN_MUL(mat2,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat2	(mat2,float)	lowered: written to the argument value, column by column	lowered: written to the argument value, column by column
 OP_ASSIGN_MUL(mat2,mat2)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat2	(mat2,mat2)	lowered: written to the argument value	lowered: written to the argument value
-OP_ASSIGN_MUL(mat3,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat3	(mat3,float)	lowered: written to the argument value	lowered: written to the argument value
+OP_ASSIGN_MUL(mat3,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat3	(mat3,float)	lowered: written to the argument value, column by column	lowered: written to the argument value, column by column
 OP_ASSIGN_MUL(mat3,mat3)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat3	(mat3,mat3)	lowered: written to the argument value	lowered: written to the argument value
-OP_ASSIGN_MUL(mat4,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat4	(mat4,float)	lowered: written to the argument value	lowered: written to the argument value
+OP_ASSIGN_MUL(mat4,float)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat4	(mat4,float)	lowered: written to the argument value, column by column	lowered: written to the argument value, column by column
 OP_ASSIGN_MUL(mat4,mat4)	operator	servers/rendering/shader_language.cpp:1833	#1823		mat4	(mat4,mat4)	lowered: written to the argument value	lowered: written to the argument value
 OP_ASSIGN_DIV(int,int)	operator	servers/rendering/shader_language.cpp:1833	#1823		int	(int,int)	lowered: written to the argument value	lowered: written to the argument value
 OP_ASSIGN_DIV(ivec2,int)	operator	servers/rendering/shader_language.cpp:1833	#1823		ivec2	(ivec2,int)	lowered: written to the argument value	lowered: written to the argument value

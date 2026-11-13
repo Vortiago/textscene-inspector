@@ -376,11 +376,11 @@ Lowered rows:
 - `OP_ASSIGN_ADD(vec3,vec3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
 - `OP_ASSIGN_ADD(vec4,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
 - `OP_ASSIGN_ADD(vec4,vec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(mat2,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
+- `OP_ASSIGN_ADD(mat2,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
 - `OP_ASSIGN_ADD(mat2,mat2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(mat3,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
+- `OP_ASSIGN_ADD(mat3,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
 - `OP_ASSIGN_ADD(mat3,mat3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_ADD(mat4,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
+- `OP_ASSIGN_ADD(mat4,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
 - `OP_ASSIGN_ADD(mat4,mat4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
 - `OP_ASSIGN_SUB(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
 - `OP_ASSIGN_SUB(ivec2,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
@@ -433,11 +433,11 @@ Lowered rows:
 - `OP_ASSIGN_MUL(vec4,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
 - `OP_ASSIGN_MUL(vec4,vec4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
 - `OP_ASSIGN_MUL(vec4,mat4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(mat2,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
+- `OP_ASSIGN_MUL(mat2,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
 - `OP_ASSIGN_MUL(mat2,mat2)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(mat3,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
+- `OP_ASSIGN_MUL(mat3,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
 - `OP_ASSIGN_MUL(mat3,mat3)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
-- `OP_ASSIGN_MUL(mat4,float)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
+- `OP_ASSIGN_MUL(mat4,float)`: WebGL 2 lowered: written to the argument value, column by column, WebGPURenderer lowered: written to the argument value, column by column.
 - `OP_ASSIGN_MUL(mat4,mat4)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
 - `OP_ASSIGN_DIV(int,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.
 - `OP_ASSIGN_DIV(ivec2,int)`: WebGL 2 lowered: written to the argument value, WebGPURenderer lowered: written to the argument value.

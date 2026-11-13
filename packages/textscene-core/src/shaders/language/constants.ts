@@ -35,8 +35,8 @@ export function reduced(expression: Expression): Expression {
 }
 
 function reducedConstruction(construction: OperatorNode): Expression {
-  const operands = construction.operands.map(reduced);
-  const node = { ...construction, operands };
+  const node = withOperands(construction, construction.operands.map(reduced));
+  const { operands } = node;
   if (!operands.every((operand): operand is ConstantNode => operand.kind === 'constant')) return node;
   const shape = shapeOf(construction.type)!;
   const values: Scalar[] = [];
@@ -56,7 +56,7 @@ function reducedConstruction(construction: OperatorNode): Expression {
 
 function reducedNegation(negation: OperatorNode): Expression {
   const operand = reduced(negation.operands[0]!);
-  if (operand.kind !== 'constant') return { ...negation, operands: [operand] };
+  if (operand.kind !== 'constant') return withOperands(negation, [operand]);
   return {
     ...operand,
     values: operand.values.map((value) => negatedScalar(value, shapeOf(operand.type)!.scalar)),
@@ -66,6 +66,14 @@ function reducedNegation(negation: OperatorNode): Expression {
 /** Godot's negation of one lane: `!` for a bool, and an `int` or `uint` wraps as GLSL does (line 7920). */
 function negatedScalar(value: Scalar, scalar: ScalarKind): Scalar {
   return scalar === 'bool' ? !value : unaryLane('OP_NEGATE', scalar, value)!;
+}
+
+/**
+ * `node` over `operands`, or `node` itself when no operand changed. A tree the parser has reduced
+ * once then keeps its nodes, and with them each node's evaluation.
+ */
+function withOperands(node: OperatorNode, operands: readonly Expression[]): OperatorNode {
+  return operands.every((operand, index) => operand === node.operands[index]) ? node : { ...node, operands };
 }
 
 const constantOf = (node: OperatorNode, values: Scalar[]): ConstantNode => ({

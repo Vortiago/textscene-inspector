@@ -32,7 +32,11 @@ import {
   vec3,
   vec4,
 } from 'three/tsl';
-import { installNodesHandler, transpileShadingLanguage } from '@textscene/three-godot-shaders';
+import {
+  installNodesHandler,
+  ShadingLanguageError,
+  transpileShadingLanguage,
+} from '@textscene/three-godot-shaders';
 
 const CONSTRUCT = {
   bvec2,
@@ -133,16 +137,17 @@ function colourOf(bits) {
 }
 
 /**
- * The bits of each result lane of `spec`'s probe over its rows, or `{ error }` when the
- * transpilation refuses the source or the GL context refuses the program.
+ * The bits of each result lane of `spec`'s probe over its rows, or `{ error, isRefusal }` when it
+ * draws nothing. `isRefusal` holds only when the transpiler refuses the source: a program the GL
+ * context refuses is a fault of the transpilation, not a refusal.
  */
 function runProbe(spec) {
   try {
     const probe = transpileShadingLanguage(spec.source).functions.get('probe');
-    if (!probe) return { error: 'the transpilation has no function probe' };
+    if (!probe) return { error: 'the transpilation has no function probe', isRefusal: false };
     return { bits: resultBits(probe, spec) };
   } catch (error) {
-    return { error: String(error.message ?? error) };
+    return { error: String(error.message ?? error), isRefusal: error instanceof ShadingLanguageError };
   }
 }
 

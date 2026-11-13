@@ -16,6 +16,9 @@ describe('targetStates', () => {
   it.each([
     ['OP_DIV(mat3,float)', ['mat3', 'float'], 'lowered: product with the reciprocal'],
     ['OP_SUB(mat2,float)', ['mat2', 'float'], 'lowered: column by column'],
+    ['OP_ADD(float,mat3)', ['float', 'mat3'], 'lowered: column by column'],
+    ['OP_MUL(mat4,float)', ['mat4', 'float'], 'lowered: column by column'],
+    ['OP_DIV(float,mat2)', ['float', 'mat2'], 'lowered: column by column'],
     ['OP_EQUAL(ivec2,ivec2)', ['ivec2', 'ivec2'], 'lowered: all(equal(a, b))'],
     [
       'OP_ASSIGN_DIV(mat4,float)',

@@ -5,10 +5,10 @@
  * shading language, so it runs in Godot unchanged.
  */
 
-import { LANE_COUNT, PROBE_TYPES, probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
-import { argumentRows, pairedVectors, pairs, scalars, vectors } from './inputs.mjs';
+import { LANE_COUNT, probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
+import { pairedVectors, pairs, scalars, vectors } from './inputs.mjs';
 import { generatedProbes } from './operatorProbes.mjs';
-import { LANGUAGE_PROBES } from './languageProbes.mjs';
+import { LANGUAGE_PROBES, probeOf } from './languageProbes.mjs';
 
 /** The float vector types of this slice. */
 const VECTORS = ['vec2', 'vec3', 'vec4'];
@@ -297,13 +297,8 @@ function ternaryProbes() {
     ['nested', 'float probe(bool c, float a) { return c ? !c ? a : -a : a * 2.0; }'],
   ];
   return cases.map(([word, source]) => {
-    const { returns, parameters } = probeSignature(source);
-    return {
-      name: `ternary-${word}`,
-      rows: [`OP_SELECT_IF(bool,${returns},${returns})`, 'OP_SELECT_ELSE'],
-      source,
-      inputs: argumentRows(parameters.map((type) => PROBE_TYPES[type])),
-    };
+    const { returns } = probeSignature(source);
+    return probeOf(`ternary-${word}`, [`OP_SELECT_IF(bool,${returns},${returns})`, 'OP_SELECT_ELSE'], source);
   });
 }
 

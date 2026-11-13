@@ -28,16 +28,17 @@ function isNaNBits(bits) {
 }
 
 /**
- * The verdict of `actual` (the page's answer: `{ bits }` per lane, or `{ error }`) against the
- * record `entry`: `{ passed, lanes, mismatches, maxUlp, detail }`. Two NaN lanes match only where
- * the result is a float: an int or a bool lane matches bit for bit.
+ * The verdict of `actual` (the page's answer: `{ bits }` per lane, or `{ error, isRefusal }`)
+ * against the record `entry`: `{ passed, lanes, mismatches, maxUlp, detail }`. A shader Godot
+ * rejects passes only when the transpiler refuses it. Two NaN lanes match only where the result
+ * is a float: an int or a bool lane matches bit for bit.
  */
 export function compareProbe(entry, actual, isFloatResult = true) {
   if (entry === undefined) return failed('no record from Godot');
   if (entry.rejected) {
-    return actual.error
+    return actual.isRefusal
       ? { ...failed(`both reject: ${actual.error}`), passed: true }
-      : failed('Godot rejects the shader, the transpilation does not');
+      : failed(`Godot rejects the shader, the transpiler does not: ${actual.error ?? 'it draws'}`);
   }
   if (actual.error) return failed(actual.error);
   const expected = entry.results.flat().map((text) => Number.parseInt(text, 16));

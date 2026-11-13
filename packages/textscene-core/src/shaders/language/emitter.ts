@@ -8,6 +8,7 @@ import { select } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { CONSTRUCTORS, constantNode } from './emitConstant.js';
 import { assignedOperator, columnOf, constructed, element, OPERATIONS } from './emitOperation.js';
+import { refuseFoldedIndexOutOfRange } from './foldedIndex.js';
 import { GlslangFolding } from './glslangFolding.js';
 import { glslExpression } from './godotText.js';
 import { isAssignOperator } from './operators.js';
@@ -27,6 +28,7 @@ export interface TranspiledFunction {
 export function emitFunction(definition: FunctionNode): TranspiledFunction {
   const folding = new GlslangFolding();
   const statements = definition.body.statements.map(glslStatement);
+  for (const statement of statements) refuseFoldedIndexOutOfRange(statement, folding);
   return {
     name: definition.name,
     returnType: definition.returnType,

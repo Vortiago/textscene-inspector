@@ -79,6 +79,14 @@ describe('transpileShadingLanguage', () => {
     );
   });
 
+  it.each([
+    ['a read', 'float probe(vec2 a) { return a[1 + 5]; }', 6],
+    ['a write', 'vec2 probe(vec2 a, float b) { a[1 + 5] = b; return a; }', 6],
+    ['a uint that wraps', 'vec3 probe(mat3 m) { return m[0u - 1u]; }', -1],
+  ])('refuses %s at an index glslang folds out of range, as the GPU compiler does', (_, source, index) => {
+    expect(() => transpileShadingLanguage(source)).toThrow(`glslang folds the index to ${index}`);
+  });
+
   it('refuses the wrong count of arguments to a transpiled function', () => {
     const probe = transpileShadingLanguage('float probe(float a) { return a; }').functions.get('probe')!;
     expect(() => probe.call([])).toThrow('expected 1 arguments for probe, got 0');

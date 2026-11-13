@@ -7,7 +7,8 @@
 
 import { laneBits, lanesOf } from '../../apps/textscene-three-godot-shaders/tests/probes/inputs.mjs';
 
-const VECTOR_PREFIX = { bool: 'bvec', int: 'ivec', uint: 'uvec', float: 'vec' };
+/** The prefix of a vector type of each scalar kind, `ivec` for `int`. */
+export const VECTOR_PREFIX = { bool: 'bvec', int: 'ivec', uint: 'uvec', float: 'vec' };
 
 /** Each type a probe passes or returns: its scalar kind, its lane count and a matrix's column count. */
 export const PROBE_TYPES = Object.fromEntries([

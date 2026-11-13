@@ -30,8 +30,8 @@ export const isDrawn = (probe, viewportPixels) => drawnPixels(probe, viewportPix
  */
 export function recordEntry(probe, viewportPixels, rejection = NO_REASON) {
   const entry = { source: probe.source, inputs: parameterBits(probe).map((bits) => bits.map(hex)) };
+  if (!isDrawn(probe, viewportPixels)) return { ...entry, rejected: rejection };
   const pixels = drawnPixels(probe, viewportPixels);
-  if (pixels.at(-1) !== SENTINEL_BITS) return { ...entry, rejected: rejection };
   const size = LANE_COUNT[probeSignature(probe.source).returns];
   const results = probe.inputs.map((_, row) => pixels.slice(row * size, (row + 1) * size).map(hex));
   return { ...entry, results };
