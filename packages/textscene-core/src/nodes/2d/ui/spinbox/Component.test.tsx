@@ -12,7 +12,11 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { SpinBox } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { SpinBoxProperties } from './types';
@@ -54,7 +58,7 @@ function solveNode(
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
   const node: TscnNode = controlNode('MySpinBox', 'SpinBox', { name: 'MySpinBox', ...properties });
-  return { ...emptySolveNode(), path: 'MySpinBox', node, styleBoxes };
+  return withThemeItems({ ...emptySolveNode(), path: 'MySpinBox', node, styleBoxes });
 }
 
 /** A `<StyleBoxQuad>` mesh, the only kind carrying a `color` vertex attribute. */

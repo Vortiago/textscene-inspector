@@ -242,7 +242,7 @@ export function ItemList({
   const panelBox = pickItemListPanelStyleBox(solveNode.styleBoxes, theme);
   const panelMargin = contentMarginSize(panelBox);
 
-  const { fontSizePx, color: baseFontColor } = itemListTextTheme(solveNode, props, { theme });
+  const { fontSizePx, color: baseFontColor } = itemListTextTheme(solveNode, props);
   const fontMetrics = resolveNodeFontMetrics(solveNode, ITEM_LIST_THEME_FONT_KEY);
 
   const selectedFontColor = itemListSelectedFontColor(solveNode);

@@ -19,7 +19,6 @@ import type {
 import { controlSolverRegistry, themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
@@ -118,14 +117,12 @@ const TAB_BAR_FONT_DEFAULTS: Record<TabDrawState, Rgba> = {
  */
 export function tabBarFontSizePx(
   n: SolveNode,
-  props: Pick<TabBarProperties, 'themeOverrideFontSizes'>,
-  theme: Pick<NativeTheme, 'fontSize'>
+  props: Pick<TabBarProperties, 'themeOverrideFontSizes'>
 ): number {
   return resolveNodeFontSizePx(
     n,
     TAB_BAR_THEME_FONT_SIZE_KEY,
-    props.themeOverrideFontSizes?.[TAB_BAR_THEME_FONT_SIZE_KEY],
-    theme.fontSize
+    props.themeOverrideFontSizes?.[TAB_BAR_THEME_FONT_SIZE_KEY]
   );
 }
 
@@ -274,7 +271,7 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
   );
 
   const fontMetrics = resolveNodeFontMetrics(n, TAB_BAR_THEME_FONT_KEY);
-  const fontSizePx = tabBarFontSizePx(n, props, ctx.theme);
+  const fontSizePx = tabBarFontSizePx(n, props);
   const closeIconSize = tabBarThemeIconSize(n, 'close', ctx.theme.scale);
 
   let width = 0;

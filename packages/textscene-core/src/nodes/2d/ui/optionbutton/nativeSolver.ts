@@ -110,7 +110,7 @@ const buttonMinimumSize = buttonMinimumSizeOf(OPTION_BUTTON_CLASS);
 function longestItemMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
   const props = n.node.properties as OptionButtonProperties;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
-  const { fontSizePx } = buttonTextTheme(n, props, state, ctx);
+  const { fontSizePx } = buttonTextTheme(n, props, state);
   const fontMetrics = resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY);
 
   // The facts only an item's text and icon change, and equal texts measure alike.
@@ -193,9 +193,9 @@ export function optionButtonArrowRect(n: ShareNode, theme: NativeTheme, rectSize
  * The arrow's modulate (`option_button.cpp:98-118`): white, or the label's font colour of the draw state
  * where the theme sets `modulate_arrow`, which the default theme leaves off (`default_theme.cpp:251`).
  */
-export function optionButtonArrowColor(n: ShareNode, theme: NativeTheme): Rgba {
+export function optionButtonArrowColor(n: ShareNode): Rgba {
   if (!requiredThemeItem(n.constants, 'modulate_arrow')) return WHITE_MODULATE;
   const props = n.node.properties as OptionButtonProperties;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
-  return buttonTextTheme(n, props, state, { theme }).color;
+  return buttonTextTheme(n, props, state).color;
 }

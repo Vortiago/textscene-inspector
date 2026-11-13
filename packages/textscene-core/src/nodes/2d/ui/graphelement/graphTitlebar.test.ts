@@ -17,25 +17,23 @@ function underTheme(colors: Record<string, Record<string, typeof RED>>) {
 
 describe('resolveTitleFontTheme colour', () => {
   it('keeps the default theme colour without a Theme: control_font_color for a node, white for a frame', () => {
-    expect(resolveTitleFontTheme(underTheme({}), 'GraphNodeTitleLabel', 16).color).toEqual(
-      CONTROL_FONT_COLOR
-    );
-    expect(resolveTitleFontTheme(underTheme({}), 'GraphFrameTitleLabel', 16).color).toEqual(WHITE);
+    expect(resolveTitleFontTheme(underTheme({}), 'GraphNodeTitleLabel').color).toEqual(CONTROL_FONT_COLOR);
+    expect(resolveTitleFontTheme(underTheme({}), 'GraphFrameTitleLabel').color).toEqual(WHITE);
   });
 
   it('reads font_color of Label from an ancestor Theme, since the variation is a Label', () => {
     const n = underTheme({ Label: { font_color: RED } });
-    expect(resolveTitleFontTheme(n, 'GraphNodeTitleLabel', 16).color).toEqual(RED);
+    expect(resolveTitleFontTheme(n, 'GraphNodeTitleLabel').color).toEqual(RED);
   });
 
   it('prefers font_color of the title variation to the one of Label', () => {
     const n = underTheme({ Label: { font_color: RED }, GraphNodeTitleLabel: { font_color: GREEN } });
-    expect(resolveTitleFontTheme(n, 'GraphNodeTitleLabel', 16).color).toEqual(GREEN);
+    expect(resolveTitleFontTheme(n, 'GraphNodeTitleLabel').color).toEqual(GREEN);
   });
 
   it('does not read the colour of another class', () => {
     const n = underTheme({ Button: { font_color: RED } });
-    expect(resolveTitleFontTheme(n, 'GraphFrameTitleLabel', 16).color).toEqual(WHITE);
+    expect(resolveTitleFontTheme(n, 'GraphFrameTitleLabel').color).toEqual(WHITE);
   });
 });
 
@@ -60,17 +58,14 @@ describe('the title Label with a Theme normal box (label.cpp:983-996)', () => {
   };
 
   it('takes the margins of the box into its minimum size', () => {
-    const plain = titleTextMinimumSize(
-      'AB',
-      resolveTitleFontTheme(underTheme({}), 'GraphNodeTitleLabel', 16)
-    );
-    const themed = titleTextMinimumSize('AB', resolveTitleFontTheme(boxed(), 'GraphNodeTitleLabel', 16));
+    const plain = titleTextMinimumSize('AB', resolveTitleFontTheme(underTheme({}), 'GraphNodeTitleLabel'));
+    const themed = titleTextMinimumSize('AB', resolveTitleFontTheme(boxed(), 'GraphNodeTitleLabel'));
     expect(themed).toEqual({ x: plain.x + 24, y: plain.y + 10 });
   });
 
   it('takes the margins of the box into the minimum size of an empty title', () => {
-    const plain = titleTextMinimumSize('', resolveTitleFontTheme(underTheme({}), 'GraphNodeTitleLabel', 16));
-    const themed = titleTextMinimumSize('', resolveTitleFontTheme(boxed(), 'GraphNodeTitleLabel', 16));
+    const plain = titleTextMinimumSize('', resolveTitleFontTheme(underTheme({}), 'GraphNodeTitleLabel'));
+    const themed = titleTextMinimumSize('', resolveTitleFontTheme(boxed(), 'GraphNodeTitleLabel'));
     expect(themed).toEqual({ x: plain.x + 24, y: plain.y + 10 });
   });
 });

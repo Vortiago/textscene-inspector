@@ -8,7 +8,11 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rgba } from '../../../../godot/math/math';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import { TRIANGLE_OUTLINES } from '../../../../r3f/controls/native/testing/triangleOutlines';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
@@ -43,7 +47,7 @@ const OUTLINE_SIZE = 8;
 
 function outlined(colors: SolveNode['colors'], constants: SolveNode['constants'], text = 'Edit'): SolveNode {
   const node: TscnNode = controlNode('N', 'LineEdit', { name: 'N', text });
-  return { ...emptySolveNode(), path: 'N', node, colors, constants };
+  return withThemeItems({ ...emptySolveNode(), path: 'N', node, colors, constants });
 }
 
 async function render(solveNode: SolveNode) {

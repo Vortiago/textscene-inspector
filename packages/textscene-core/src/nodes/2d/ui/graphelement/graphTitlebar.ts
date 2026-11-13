@@ -48,16 +48,11 @@ interface TitlebarFontTheme {
  * `n`: its parent `titlebar_hbox` carries no `theme`, so `n.themeChain` is
  * `title_label`'s chain. `theme_override_fonts/*` is local to `n` and never
  * inherited, so `title_label`, which can author no override, passes `undefined`.
- * @param defaultSizePx The font size when neither a Theme nor the default theme's variation sets one.
- *   The colour falls back to the variation's own (`default_theme.cpp:819,849`).
+ * The colour falls back to the variation's own (`default_theme.cpp:819,849`).
  */
-export function resolveTitleFontTheme(
-  n: SolveNode,
-  typeVariation: string,
-  defaultSizePx: number
-): TitlebarFontTheme {
+export function resolveTitleFontTheme(n: SolveNode, typeVariation: string): TitlebarFontTheme {
   const scope = themeResolutionScope(TITLE_LABEL_NATIVE_TYPE, typeVariation, n.themeChain, n.projectFonts);
-  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined, defaultSizePx);
+  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size');
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
   const items = internalChildThemeItems(n, TITLE_LABEL_NATIVE_TYPE, typeVariation);

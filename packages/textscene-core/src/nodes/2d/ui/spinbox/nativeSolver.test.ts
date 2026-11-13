@@ -11,7 +11,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SpinBoxProperties } from './types';
 import { spinBoxRangeButtonState } from './nativeSolver';
 import {
@@ -194,27 +194,38 @@ describe('spinBoxUpButtonState / spinBoxDownButtonState', () => {
 });
 
 describe('spinBoxIconColor', () => {
-  it('defaults to control_font_color / control_font_disabled_color (happy path)', () => {
-    expect(spinBoxIconColor({}, 'up', 'normal')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
-    expect(spinBoxIconColor({}, 'down', 'disabled')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.5 });
+  const defaultColors = withThemeItems(node()).colors;
+
+  it('reads control_font_color and control_font_disabled_color from the default theme', () => {
+    expect(spinBoxIconColor(defaultColors, 'up', 'normal')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
+    expect(spinBoxIconColor(defaultColors, 'down', 'disabled')).toEqual({
+      r: 0.875,
+      g: 0.875,
+      b: 0.875,
+      a: 0.5,
+    });
   });
 
-  it('a theme_override_colors entry (already folded into n.colors) wins (error path — malformed keys are absent, not applied)', () => {
-    const colors = { up_icon_modulate: { r: 1, g: 0, b: 0, a: 1 } };
+  it('reads a theme_override_colors entry folded into n.colors for its own direction only', () => {
+    const colors = { ...defaultColors, up_icon_modulate: { r: 1, g: 0, b: 0, a: 1 } };
     expect(spinBoxIconColor(colors, 'up', 'normal')).toEqual({ r: 1, g: 0, b: 0, a: 1 });
     expect(spinBoxIconColor(colors, 'down', 'normal')).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
+  });
+
+  it('throws on a colour record without the item', () => {
+    expect(() => spinBoxIconColor({}, 'up', 'normal')).toThrow(/up_icon_modulate/);
   });
 });
 
 describe('spinBoxFieldTextTheme', () => {
   it('falls back to the built-in default font size/colour absent any theme (happy path)', () => {
-    const result = spinBoxFieldTextTheme(node(), ctx(), true);
+    const result = spinBoxFieldTextTheme(node(), true);
     expect(result.fontSizePx).toBe(16);
     expect(result.color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
   });
 
   it('reads the uneditable colour when not editable (edge case)', () => {
-    expect(spinBoxFieldTextTheme(node(), ctx(), false).color).toEqual({
+    expect(spinBoxFieldTextTheme(node(), false).color).toEqual({
       r: 0.875,
       g: 0.875,
       b: 0.875,
@@ -324,8 +335,8 @@ describe('the inner LineEdit reads its items through the ancestor Theme chain', 
 
   it('draws the font_color of LineEdit, and font_uneditable_color when not editable', () => {
     const themed = under({ colors: { LineEdit: { font_color: RED, font_uneditable_color: BLUE } } });
-    expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual(RED);
-    expect(spinBoxFieldTextTheme(themed, ctx(), false).color).toEqual(BLUE);
+    expect(spinBoxFieldTextTheme(themed, true).color).toEqual(RED);
+    expect(spinBoxFieldTextTheme(themed, false).color).toEqual(BLUE);
   });
 
   it('prefers the SpinBoxInnerLineEdit variation over LineEdit', () => {
@@ -333,12 +344,12 @@ describe('the inner LineEdit reads its items through the ancestor Theme chain', 
       colors: { LineEdit: { font_color: RED }, SpinBoxInnerLineEdit: { font_color: BLUE } },
       typeVariations: { SpinBoxInnerLineEdit: 'LineEdit' },
     });
-    expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual(BLUE);
+    expect(spinBoxFieldTextTheme(themed, true).color).toEqual(BLUE);
   });
 
   it('ignores the colours of another class', () => {
     const themed = under({ colors: { Button: { font_color: RED } } });
-    expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
+    expect(spinBoxFieldTextTheme(themed, true).color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
   });
 });
 

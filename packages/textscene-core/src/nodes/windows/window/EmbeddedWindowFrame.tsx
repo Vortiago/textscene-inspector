@@ -193,7 +193,6 @@ function WindowDecoration({
         border={border}
         closeHOffset={offsets.closeHOffset}
         defaults={defaults}
-        theme={theme}
         slot={titleSlot}
       />
       {closeTexture ? (

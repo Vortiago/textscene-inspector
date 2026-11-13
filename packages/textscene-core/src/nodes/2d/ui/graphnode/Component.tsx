@@ -120,7 +120,7 @@ export function GraphNode({
   const panelStyle = selected ? styles.panelSelected : styles.panel;
   const titlebarStyle = selected ? styles.titlebarSelected : styles.titlebar;
 
-  const textMin = graphNodeTitleTextMin(solveNode, theme);
+  const textMin = graphNodeTitleTextMin(solveNode);
   const titlebarBand = useMemo(
     () => titlebarGeometry(rect.w, textMin.y, styles.titlebar),
     [rect.w, textMin.y, styles.titlebar]
@@ -133,10 +133,7 @@ export function GraphNode({
   };
 
   const title = props.title ?? '';
-  const fontTheme = useMemo(
-    () => resolveTitleFontTheme(solveNode, GRAPH_NODE_TITLE_VARIATION, theme.fontSize),
-    [solveNode, theme.fontSize]
-  );
+  const fontTheme = useMemo(() => resolveTitleFontTheme(solveNode, GRAPH_NODE_TITLE_VARIATION), [solveNode]);
   const titleLayout = useMemo(
     () => (title.length > 0 ? shapeTitleText(title, fontTheme) : null),
     [title, fontTheme]

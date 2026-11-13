@@ -97,12 +97,10 @@ function menuBarTitles(
  * are Windows and never enter the solve tree. `_get_menu_item_rect` and `get_minimum_size` measure
  * `theme_cache.normal` (`menu_bar.cpp:412,869`), so this picks the unmirrored box.
  */
-export const menuBarTitleShapes = defineShare<MenuBarTitle[]>((n, theme) => {
+export const menuBarTitleShapes = defineShare<MenuBarTitle[]>((n) => {
   const props = n.node.properties as MenuBarProperties;
   const marginSize = contentMarginSize(pickButtonStyleBox(n.styleBoxes, 'normal'));
-  const { fontSizePx } = resolveTextTheme(n, props, MENU_BAR_TEXT_THEME_KEYS, {
-    fontSizePx: theme.fontSize,
-  });
+  const { fontSizePx } = resolveTextTheme(n, props, MENU_BAR_TEXT_THEME_KEYS);
   return menuBarTitles(n, fontSizePx, resolveNodeFontMetrics(n, MENU_BAR_THEME_FONT_KEY), marginSize);
 });
 

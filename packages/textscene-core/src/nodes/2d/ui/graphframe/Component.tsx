@@ -82,7 +82,7 @@ export function GraphFrame({
   const drawsPanel = tinted || !isStyleBoxTexture(panelStyle);
   const titlebarStyle = styles.titlebar;
 
-  const textMin = graphFrameTitleTextMin(solveNode, theme);
+  const textMin = graphFrameTitleTextMin(solveNode);
   const titlebarBand = useMemo(
     () => titlebarGeometry(rect.w, textMin.y, styles.titlebar),
     [rect.w, textMin.y, styles.titlebar]
@@ -95,10 +95,7 @@ export function GraphFrame({
   };
 
   const title = props.title ?? '';
-  const fontTheme = useMemo(
-    () => resolveTitleFontTheme(solveNode, GRAPH_FRAME_TITLE_VARIATION, theme.fontSize),
-    [solveNode, theme.fontSize]
-  );
+  const fontTheme = useMemo(() => resolveTitleFontTheme(solveNode, GRAPH_FRAME_TITLE_VARIATION), [solveNode]);
   const titleLayout = useMemo(
     () => (title.length > 0 ? shapeTitleText(title, fontTheme) : null),
     [title, fontTheme]

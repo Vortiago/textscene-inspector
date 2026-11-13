@@ -1,8 +1,7 @@
 /**
  * LineEdit's native rect solver, `LineEdit::get_minimum_size` (`scene/gui/line_edit.cpp:2443-2477`),
- * plus the theme keys and default colours LineEdit reads. Pure per-node math: `Component.tsx` paints,
- * with the `normal` or `read_only` StyleBox this module picks by draw state from `nativeTheme.ts`'s
- * `widgets.lineEdit`, which no other widget reads.
+ * plus the theme keys LineEdit reads. Pure per-node math: `Component.tsx` paints with the `normal` or
+ * `read_only` StyleBox of the draw state.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -11,7 +10,6 @@
  */
 import type {
   MinimumSizeFn,
-  SolveContext,
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
@@ -33,10 +31,8 @@ import {
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
-import { LINE_EDIT_MINIMUM_CHARACTER_WIDTH } from '../../../../godot/scene/theme';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { TscnNode } from '../../../../parser/types';
@@ -45,15 +41,9 @@ import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import {
-  CONTROL_FONT_COLOR,
-  CONTROL_FONT_DISABLED_COLOR,
-  CONTROL_FONT_HOVER_COLOR,
-  CONTROL_FONT_PLACEHOLDER_COLOR,
-} from '../../../../godot/scene/theme';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 /**
  * LineEdit's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:419`). This
@@ -74,14 +64,20 @@ export function resolveLineEditStyleState(editable: boolean | undefined): LineEd
   return editable === false ? 'read_only' : 'normal';
 }
 
-/** A resolved `theme_override_styles/<state>` wins, else the default-theme box for that state. */
-export function pickLineEditStyleBox(
-  overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  defaults: Readonly<Record<'normal' | 'readOnly', StyleBoxFlatData>>,
-  state: LineEditStyleState
-): StyleBoxFlatData {
-  const key = state === 'read_only' ? 'readOnly' : 'normal';
-  return overrides[state] ?? defaults[key];
+/** The theme items `LineEdit::get_minimum_size` reads, of a LineEdit or of the LineEdit inside another Control. */
+export interface LineEditField {
+  normal: StyleBoxFlatData;
+  readOnly: StyleBoxFlatData;
+  /** `minimum_character_width`, in em widths of 'W'. */
+  minimumCharacterWidth: number;
+}
+
+export function lineEditField(items: Pick<SolveNode, 'styleBoxes' | 'constants'>): LineEditField {
+  return {
+    normal: requiredThemeItem(items.styleBoxes, 'normal'),
+    readOnly: requiredThemeItem(items.styleBoxes, 'read_only'),
+    minimumCharacterWidth: requiredThemeItem(items.constants, 'minimum_character_width'),
+  };
 }
 
 /**
@@ -107,45 +103,14 @@ const LINE_EDIT_THEME_KEYS: Record<LineEditTextState, TextThemeKeys> = {
   placeholder: { sizeKey: 'font_size', colorKey: 'font_placeholder_color' },
 };
 
-/** LineEdit's own `font_color` default (`default_theme.cpp:422`). */
-export const LINE_EDIT_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-
-/** LineEdit's `font_uneditable_color` default (`default_theme.cpp:424`). */
-export const LINE_EDIT_DEFAULT_UNEDITABLE_COLOR = CONTROL_FONT_DISABLED_COLOR;
-
-/** LineEdit's `font_placeholder_color` default (`default_theme.cpp:425`). */
-const LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR = CONTROL_FONT_PLACEHOLDER_COLOR;
-
-/** LineEdit's `clear_button_color` default (`default_theme.cpp:429`). */
-export const LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR = CONTROL_FONT_COLOR;
-
-/** LineEdit's `caret_color` default (`default_theme.cpp:427`). */
-export const LINE_EDIT_DEFAULT_CARET_COLOR = CONTROL_FONT_HOVER_COLOR;
-
-const LINE_EDIT_DEFAULT_COLORS: Record<LineEditTextState, Rgba> = {
-  normal: LINE_EDIT_DEFAULT_FONT_COLOR,
-  read_only: LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
-  placeholder: LINE_EDIT_DEFAULT_PLACEHOLDER_COLOR,
-};
-
-/** This LineEdit's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else LineEdit's literal (`resolveTextTheme`). */
+/** This LineEdit's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the default theme table. */
 export function lineEditTextTheme(
   n: SolveNode,
   props: LineEditProperties,
-  state: LineEditTextState,
-  ctx: Pick<SolveContext, 'theme'>
+  state: LineEditTextState
 ): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color: LINE_EDIT_DEFAULT_COLORS[state],
-  };
-  return resolveTextTheme(n, props, LINE_EDIT_THEME_KEYS[state], defaults);
+  return resolveTextTheme(n, props, LINE_EDIT_THEME_KEYS[state]);
 }
-
-/** LineEdit's `selection_color` (`default_theme.cpp:428`). */
-export const LINE_EDIT_DEFAULT_SELECTION_COLOR: Rgba = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
-/** LineEdit's `font_selected_color` (`default_theme.cpp:423`). */
-export const LINE_EDIT_DEFAULT_SELECTED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /**
  * The selection `NOTIFICATION_DRAW` paints (`line_edit.cpp:1491-1506,1534`): a rect from the first selected glyph
@@ -179,9 +144,6 @@ export function lineEditSelection(
 export const EXPAND_MODE_ORIGINAL_SIZE = 0;
 const EXPAND_MODE_FIT_TO_TEXT = 1;
 const EXPAND_MODE_FIT_TO_LINE_EDIT = 2;
-
-/** `caret_width` theme constant default (`default_theme.cpp:434`). */
-const DEFAULT_CARET_WIDTH = 1;
 
 /**
  * `LineEdit::_get_right_icon_size` (`line_edit.cpp:373-406`), for `right_icon` and the clear icon
@@ -260,15 +222,15 @@ export function shapeLineEditText(
  * `style_min_size` of `LineEdit::get_minimum_size` (`line_edit.cpp:2475`): the larger of the `normal` and
  * `read_only` minimum sizes, whatever `editable` says. Each caller passes the boxes it resolved.
  */
-export function lineEditStyleMinSize(normal: StyleBoxFlatData, readOnly: StyleBoxFlatData): Vector2 {
+export function lineEditStyleMinSize({ normal, readOnly }: LineEditField): Vector2 {
   const normalMargin = contentMarginSize(normal);
   const readOnlyMargin = contentMarginSize(readOnly);
   return { x: Math.max(normalMargin.x, readOnlyMargin.x), y: Math.max(normalMargin.y, readOnlyMargin.y) };
 }
 
 /** The text part of `LineEdit::get_minimum_size`'s width (`:2447-2451`): `minimum_character_width` ems of "W". */
-export function lineEditTextMinimumWidth(emWidthPx: number): number {
-  return LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emWidthPx;
+export function lineEditTextMinimumWidth(field: LineEditField, emWidthPx: number): number {
+  return field.minimumCharacterWidth * emWidthPx;
 }
 
 /**
@@ -279,13 +241,11 @@ export function lineEditTextMinimumWidth(emWidthPx: number): number {
  */
 export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LineEditProperties;
-  const { fontSizePx } = lineEditTextTheme(n, props, 'normal', ctx);
+  const { fontSizePx } = lineEditTextTheme(n, props, 'normal');
 
   // The draw pass reads only the active box. A wider read-only override floors an editable field too.
-  const styleMinSize = lineEditStyleMinSize(
-    pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'normal'),
-    pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'read_only')
-  );
+  const field = lineEditField(n);
+  const styleMinSize = lineEditStyleMinSize(field);
 
   const fontMetrics = resolveNodeFontMetrics(n, LINE_EDIT_THEME_FONT_KEY);
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
@@ -293,7 +253,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   // LineEdit sets no `line_spacing`, so a spacing of 0 gives ascent and descent, each ceiled, summed.
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
 
-  let width = lineEditTextMinimumWidth(emSpaceSize);
+  let width = lineEditTextMinimumWidth(field, emSpaceSize);
 
   if (props.expandToTextLength && ctx.measureText) {
     // `full_width` (`:2456`, set at the end of `_shape()`) is the ceiled width of the string
@@ -305,7 +265,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
             .widthPx
         )
       : 0;
-    const caretWidthPx = n.constants['caret_width'] ?? DEFAULT_CARET_WIDTH;
+    const caretWidthPx = requiredThemeItem(n.constants, 'caret_width');
     width = Math.max(width, fullWidthPx + caretWidthPx);
   }
 

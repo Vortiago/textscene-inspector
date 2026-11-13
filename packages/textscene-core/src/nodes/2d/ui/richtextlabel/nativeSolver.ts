@@ -13,11 +13,11 @@ import type { TscnNode } from '../../../../parser/types';
 import { perObject } from '../../../../utils/perObject';
 import type {
   MinimumSizeFn,
-  SolveContext,
   TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import {
   clampAutowrapMode,
   shapeText,
@@ -36,7 +36,6 @@ import {
   resolveTextTheme,
   type ResolvedTextTheme,
   type TextOutlineTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import {
@@ -95,23 +94,12 @@ const RICH_TEXT_LABEL_THEME_KEYS: TextThemeKeys = {
   colorKey: 'default_color',
 };
 
-/** `default_theme.cpp:1205`: `theme->set_color("default_color", "RichTextLabel", Color(1, 1, 1))`, a call separate from Label's. */
-const RICH_TEXT_LABEL_DEFAULT_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
 /** `rich_text_label.h:557`: `TextServer::AutowrapMode autowrap_mode = TextServer::AUTOWRAP_WORD_SMART;`, unlike Label's OFF (`label.h`). */
 export const RICH_TEXT_LABEL_DEFAULT_AUTOWRAP = AutowrapMode.AUTOWRAP_WORD_SMART;
 
-/** Resolves this node's font size and colour: overrides, then the ancestor Theme chain, then RichTextLabel's white. */
-export function richTextLabelTextTheme(
-  n: SolveNode,
-  props: RichTextLabelProperties,
-  ctx: Pick<SolveContext, 'theme'>
-): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color: RICH_TEXT_LABEL_DEFAULT_FONT_COLOR,
-  };
-  return resolveTextTheme(n, props, RICH_TEXT_LABEL_THEME_KEYS, defaults);
+/** This node's font size and colour: its overrides, else the ancestor Theme chain, else the default theme table. */
+export function richTextLabelTextTheme(n: SolveNode, props: RichTextLabelProperties): ResolvedTextTheme {
+  return resolveTextTheme(n, props, RICH_TEXT_LABEL_THEME_KEYS);
 }
 
 // ── [img]: its size, and its width through the shared shaper ──
@@ -347,8 +335,8 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // Read whatever the autowrap: a `%`-form `[img]` resolves against the
   // paragraph width, `undefined` on the first pass.
   const availableWidthPx = ctx.tentativeRect?.(n)?.w;
-  const { fontSizePx, color } = richTextLabelTextTheme(n, props, ctx);
-  const runs = styledTextRuns(n, props, color, fontSizePx, ctx.theme.fontSize, availableWidthPx);
+  const { fontSizePx, color } = richTextLabelTextTheme(n, props);
+  const runs = styledTextRuns(n, props, color, fontSizePx, availableWidthPx);
   const text = plainTextOf(runs);
 
   if (text.length === 0) {
@@ -435,7 +423,7 @@ const RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS = {
 /**
  * A styled run's font size before any `[font_size]`: `normalFontSizePx` for a plain run, else its
  * style key through the ancestor-Theme walk (`resolveNodeFontSizePx`,
- * `scene/resources/theme.cpp:658-666`) down to `builtInDefaultPx`. `cache` holds one answer per
+ * `scene/resources/theme.cpp:658-666`) down to the default theme's size. `cache` holds one answer per
  * key for one `styledTextRuns` call.
  */
 function resolveRunFontSizePx(
@@ -444,7 +432,6 @@ function resolveRunFontSizePx(
   props: RichTextLabelProperties,
   normalFontSizePx: number,
   n: SolveNode,
-  builtInDefaultPx: number,
   cache: Map<string, number>
 ): number {
   if (!bold && !italic) return normalFontSizePx;
@@ -456,7 +443,7 @@ function resolveRunFontSizePx(
         : RICH_TEXT_LABEL_STYLE_FONT_SIZE_KEYS.italic;
   const cached = cache.get(key);
   if (cached !== undefined) return cached;
-  const resolved = resolveNodeFontSizePx(n, key, props.themeOverrideFontSizes?.[key], builtInDefaultPx);
+  const resolved = resolveNodeFontSizePx(n, key, props.themeOverrideFontSizes?.[key]);
   cache.set(key, resolved);
   return resolved;
 }
@@ -484,7 +471,6 @@ export function styledTextRuns(
   props: RichTextLabelProperties,
   defaultColor: Rgba,
   normalFontSizePx: number,
-  builtInDefaultPx: number,
   boxWidthPx?: number
 ): StyledTextRun[] {
   const raw = props.text ?? '';
@@ -511,7 +497,7 @@ export function styledTextRuns(
   // One Theme walk per style key, however many spans the paragraph has.
   const runFontSizeCache = new Map<string, number>();
   const fontSizePxOf = (bold: boolean, italic: boolean): number =>
-    resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, builtInDefaultPx, runFontSizeCache);
+    resolveRunFontSizePx(bold, italic, props, normalFontSizePx, n, runFontSizeCache);
   const styled: StyledTextRun[] = [];
   for (const run of parseBBCodeRuns(raw)) {
     const listing = runListing({
@@ -721,11 +707,12 @@ export function shapeRichText(
 }
 
 /**
- * `default_theme.cpp:1231`: `theme->set_constant("underline_alpha", "RichTextLabel", 50)`.
- * Without `[u=color]`, which this subset lacks, `rich_text_label.cpp:1237`
+ * `underline_alpha`, a percentage. Without `[u=color]`, which this subset lacks, `rich_text_label.cpp:1237`
  * draws the run's font colour with `.a *= underline_alpha / 100.0`.
  */
-export const RICH_TEXT_LABEL_UNDERLINE_ALPHA = 0.5;
+export function richTextLabelUnderlineAlpha(n: SolveNode): number {
+  return requiredThemeItem(n.constants, 'underline_alpha') / 100;
+}
 
 /** An `[img]`'s draw geometry in its line: `_draw_line`'s `ITEM_IMAGE` arm (`rich_text_label.cpp:1090-1102`). */
 export interface RichTextImagePlacement {
@@ -917,7 +904,7 @@ function lineMetricsOf(
 interface RichTextUnderlineMetrics {
   /** Downward offset from the line's baseline to the stroke's CENTRE, px (`shaped_text_get_underline_position`). */
   positionPx: number;
-  /** The font's stroke thickness, px, unfloored (`shaped_text_get_underline_thickness`): `underlineRectPx` applies `MAX(1.0, uth)`. */
+  /** The font's stroke thickness, px, unfloored (`shaped_text_get_underline_thickness`): `underlineRectPx` applies `MAX(1.0, uth * base_scale)`. */
   thicknessPx: number;
 }
 
@@ -1247,26 +1234,28 @@ interface UnderlineRectPx {
   x1: number;
   /** Top edge: the first pixel row Godot's quad covers. */
   topPx: number;
-  /** Whole rows the quad covers: 1 for a stroke at its `MAX(1.0, uth)` floor. */
+  /** Whole rows the quad covers: 1 for a stroke at its 1 px floor. */
   heightPx: number;
 }
 
 /**
  * A `[u]` run's stroke rect, snapped to the pixels Godot's quad covers, or `null`
  * with no glyphs. The stroke centres `upos` below the baseline (`rich_text_label.cpp:1055`,
- * `:1242-1244`), at least 1px thick (`:1243`, with `base_scale` 1 here).
+ * `:1242-1244`), `MAX(1.0, uth * base_scale)` thick (`:1243`). `baseScale` is the theme's default
+ * base scale, the theme scale for the default theme (`default_theme.cpp:98`).
  */
 export function underlineRectPx(
   glyphs: readonly GlyphPlacement[],
   lineAscentPx: number,
-  metrics: RichTextUnderlineMetrics
+  metrics: RichTextUnderlineMetrics,
+  baseScale: number
 ): UnderlineRectPx | null {
   if (glyphs.length === 0) return null;
 
   const first = glyphs[0]!;
   const last = glyphs[glyphs.length - 1]!;
   const centerY = lineAscentPx + metrics.positionPx;
-  const widthPx = Math.max(1, metrics.thicknessPx);
+  const widthPx = Math.max(1, metrics.thicknessPx * baseScale);
 
   // Godot's un-antialiased quad on a canvas without MSAA covers whole rows, where
   // this multisampled canvas would feather two. The snap holds because the origin

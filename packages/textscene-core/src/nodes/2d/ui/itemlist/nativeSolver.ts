@@ -13,7 +13,6 @@ import type { TscnNode } from '../../../../parser/types';
 import {
   controlSolverRegistry,
   type MinimumSizeFn,
-  type SolveContext,
   type TextureSlotRequest,
   type TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
@@ -30,7 +29,6 @@ import { perObject } from '../../../../utils/perObject';
 import {
   resolveTextTheme,
   type ResolvedTextTheme,
-  type TextThemeDefaults,
   type TextThemeKeys,
 } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
@@ -74,13 +72,8 @@ const ITEM_LIST_DEFAULT_FONT_COLOR = CONTROL_FONT_LOWER_COLOR;
 const ITEM_LIST_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
 
 /** Resolves ItemList's own theme font size/colour (overrides, else the ancestor Theme chain / theme default). */
-export function itemListTextTheme(
-  n: SolveNode,
-  props: ItemListRuntimeProperties,
-  ctx: Pick<SolveContext, 'theme'>
-): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = { fontSizePx: ctx.theme.fontSize, color: ITEM_LIST_DEFAULT_FONT_COLOR };
-  return resolveTextTheme(n, props, ITEM_LIST_THEME_KEYS, defaults);
+export function itemListTextTheme(n: SolveNode, props: ItemListRuntimeProperties): ResolvedTextTheme {
+  return resolveTextTheme(n, props, ITEM_LIST_THEME_KEYS, ITEM_LIST_DEFAULT_FONT_COLOR);
 }
 
 // --- Texture slots: one per item icon ------------------------------------
@@ -542,7 +535,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   const minSize = { x: 0, y: 0 };
   if (!props.autoWidth && !props.autoHeight) return minSize;
 
-  const { fontSizePx } = itemListTextTheme(n, props, ctx);
+  const { fontSizePx } = itemListTextTheme(n, props);
   const fontMetrics = resolveNodeFontMetrics(n, ITEM_LIST_THEME_FONT_KEY);
   const iconMode = props.iconMode ?? ICON_MODE_LEFT;
   const maxTextLines = props.maxTextLines ?? 1;

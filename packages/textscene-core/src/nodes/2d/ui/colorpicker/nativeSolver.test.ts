@@ -4,6 +4,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { spinBoxButtonsBlockWidth } from '../spinbox/nativeSolver';
+import { defaultLineEditField } from '../shared/testing/lineEditField';
 import { MODE_HSV, MODE_LINEAR, MODE_OKHSL, MODE_RGB } from './colorModes';
 import { pickerChildTheme } from './pickerChildTheme';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -66,14 +67,14 @@ const measureText: SolveContext['measureText'] = (text) => measure(text);
 
 describe('colorPickerRows', () => {
   it('sizes the shape row from sv_width/sv_height/h_width at scale 1: default_theme.cpp:1077-1079, no other row present', () => {
-    const rows = colorPickerRows(400, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
+    const rows = colorPickerRows(400, THEME, THEME.lineEdit, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
     expect(rows.shape).toEqual({ x: 0, y: 0, w: 400, h: 256 });
     expect(rows.sample).toBeNull();
     expect(rows.totalHeight).toBe(256);
   });
 
   it('floors the shape row at its own minimum when the solved width is narrower', () => {
-    const rows = colorPickerRows(50, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
+    const rows = colorPickerRows(50, THEME, THEME.lineEdit, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, null);
     expect(rows.shape!.w).toBe(290); // 256 + 4 + 30
   });
 
@@ -82,7 +83,7 @@ describe('colorPickerRows', () => {
       const rows = colorPickerRows(
         400,
         THEME,
-        THEME,
+        THEME.lineEdit,
         { ...ALL_ROWS_HIDDEN, pickerShape, samplerVisible: true },
         null
       );
@@ -92,21 +93,23 @@ describe('colorPickerRows', () => {
   });
 
   it('floors the wheel row at sv_width alone', () => {
-    const rows = colorPickerRows(50, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 1 }, null);
+    const rows = colorPickerRows(50, THEME, THEME.lineEdit, { ...ALL_ROWS_HIDDEN, pickerShape: 1 }, null);
     expect(rows.shape!.w).toBe(256);
   });
 
   it('draws the HSV rectangle row for a picker_shape set_picker_shape refuses (color_picker.cpp:854)', () => {
-    const rows = colorPickerRows(50, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 7 }, null);
+    const rows = colorPickerRows(50, THEME, THEME.lineEdit, { ...ALL_ROWS_HIDDEN, pickerShape: 7 }, null);
     expect(rows.shape).toEqual({ x: 0, y: 0, w: 290, h: 256 });
   });
 
   it('draws no shape row for SHAPE_NONE (4): matches Godot exactly, not a gap', () => {
-    expect(colorPickerRows(400, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 4 }, null).shape).toBeNull();
+    expect(
+      colorPickerRows(400, THEME, THEME.lineEdit, { ...ALL_ROWS_HIDDEN, pickerShape: 4 }, null).shape
+    ).toBeNull();
   });
 
   it('drops every hidden row AND its separation gap: color_picker.cpp:1906-1956', () => {
-    const rows = colorPickerRows(400, THEME, THEME, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, measure);
+    const rows = colorPickerRows(400, THEME, THEME.lineEdit, { ...ALL_ROWS_HIDDEN, pickerShape: 0 }, measure);
     expect(rows.mode).toBeNull();
     expect(rows.sliders).toBeNull();
     expect(rows.hex).toBeNull();
@@ -117,7 +120,7 @@ describe('colorPickerRows', () => {
   });
 
   it('sizes every row when all are visible, with a deterministic 10px/char measurer', () => {
-    const rows = colorPickerRows(400, THEME, THEME, { pickerShape: 0 }, measure);
+    const rows = colorPickerRows(400, THEME, THEME.lineEdit, { pickerShape: 0 }, measure);
     // mode: 3 buttons ("RGB"=30,"HSV"=30,"Linear"=60) + dropdown(28) + 3*sep(4) = 160.
     // height: max(tab stylebox margin(8), btn_mode nat(16+8=24), text(20)+tab margin(8)=28) = 28.
     expect(rows.mode).toEqual({ x: 0, y: 288, w: 400, h: 28 });
@@ -133,13 +136,19 @@ describe('colorPickerRows', () => {
   });
 
   it('edit_alpha=false drops one slider row and its own trailing space', () => {
-    const rows = colorPickerRows(400, THEME, THEME, { pickerShape: 0, editAlpha: false }, measure);
+    const rows = colorPickerRows(400, THEME, THEME.lineEdit, { pickerShape: 0, editAlpha: false }, measure);
     expect(rows.sliderRowCount).toBe(4);
     expect(rows.sliders!.h).toBe(4 * 28 + 3 * 4); // 124
   });
 
   it('edit_intensity=false drops one slider row', () => {
-    const rows = colorPickerRows(400, THEME, THEME, { pickerShape: 0, editIntensity: false }, measure);
+    const rows = colorPickerRows(
+      400,
+      THEME,
+      THEME.lineEdit,
+      { pickerShape: 0, editIntensity: false },
+      measure
+    );
     expect(rows.sliderRowCount).toBe(4);
   });
 
@@ -148,7 +157,7 @@ describe('colorPickerRows', () => {
     const rows = colorPickerRows(
       400,
       THEME,
-      THEME,
+      THEME.lineEdit,
       { ...ALL_ROWS_HIDDEN, pickerShape: 4, presetsVisible: true },
       null
     );
@@ -258,13 +267,13 @@ const WIDE_PRESSED_THEME: typeof THEME = {
 describe('the slider rows with a SpinBox inner LineEdit box', () => {
   it('take their height from the value field theme, and the hex row from the plain LineEdit box', () => {
     const tall = {
-      ...THEME.widgets.lineEdit.normal,
+      ...THEME.lineEdit.normal,
       contentMargin: { left: 4, top: 10, right: 4, bottom: 10 },
     };
     const rows = colorPickerRows(
       400,
       THEME,
-      themeWithWidgets({ lineEdit: { ...THEME.widgets.lineEdit, normal: tall } }),
+      { ...THEME.lineEdit, normal: tall },
       { ...ALL_ROWS_HIDDEN, slidersVisible: true, hexVisible: true, editAlpha: false, editIntensity: false },
       measure
     );
@@ -287,7 +296,7 @@ describe('the pressed mode button with wider margins than the others', () => {
       colorPickerRows(
         400,
         WIDE_PRESSED_THEME,
-        WIDE_PRESSED_THEME,
+        WIDE_PRESSED_THEME.lineEdit,
         { ...ALL_ROWS_HIDDEN, colorModesVisible: true, colorMode },
         measure
       );
@@ -328,7 +337,7 @@ describe('the FlatMenuButton box of the Theme chain', () => {
       colorPickerRows(
         400,
         WIDE_FLAT_THEME,
-        WIDE_FLAT_THEME,
+        WIDE_FLAT_THEME.lineEdit,
         { ...ALL_ROWS_HIDDEN, samplerVisible: true, pickerShape },
         null
       ).sample!.h;
@@ -410,16 +419,16 @@ describe('swatchesRowRects', () => {
 describe('colorPickerValueColumnWidth', () => {
   // spin_box.cpp:82-86: line_edit->get_combined_minimum_size() + buttons_block_width.
   it('is the LineEdit style margin(8) + 4*em("W")(10) + the SpinBox buttons block(18)', () => {
-    expect(colorPickerValueColumnWidth(THEME, 10)).toBe(66); // 8 + 40 + 18
+    expect(colorPickerValueColumnWidth(THEME.lineEdit, THEME.scale, 10)).toBe(66); // 8 + 40 + 18
   });
 
   it('truncates the fractional minimum as GridContainer does: Godot measures 86.5 as an 86px column', () => {
-    expect(colorPickerValueColumnWidth(THEME, 15.125)).toBe(86); // 8 + 60.5 + 18 = 86.5
+    expect(colorPickerValueColumnWidth(THEME.lineEdit, THEME.scale, 15.125)).toBe(86); // 8 + 60.5 + 18 = 86.5
   });
 
   it('widens by the scaled buttons block at theme scale 2', () => {
     // The 16x8 arrow icon doubles to 32x16 and the block follows its width (spin_box.cpp:82-86). The LineEdit margin doubles from 8 to 16 too.
-    const widthAt = (scale: number) => colorPickerValueColumnWidth(nativeTheme(scale), 0);
+    const widthAt = (scale: number) => colorPickerValueColumnWidth(defaultLineEditField(scale), scale, 0);
     const lineEditMarginGrowth = 8;
     expect(widthAt(2) - widthAt(1)).toBe(
       spinBoxButtonsBlockWidth(32) - spinBoxButtonsBlockWidth(16) + lineEditMarginGrowth
@@ -427,7 +436,7 @@ describe('colorPickerValueColumnWidth', () => {
   });
 
   it('floors to the style margin + buttons block alone with no em width', () => {
-    expect(colorPickerValueColumnWidth(THEME, 0)).toBe(26); // 8 + 0 + 18
+    expect(colorPickerValueColumnWidth(THEME.lineEdit, THEME.scale, 0)).toBe(26); // 8 + 0 + 18
   });
 
   it("ends a 300px picker's band at x=210 and starts its value field at x=214, as pnpm ref:godot measures", () => {
@@ -436,7 +445,7 @@ describe('colorPickerValueColumnWidth', () => {
       1,
       THEME,
       13,
-      colorPickerValueColumnWidth(THEME, 15.125)
+      colorPickerValueColumnWidth(THEME.lineEdit, THEME.scale, 15.125)
     );
     expect(row!.slider.x + row!.slider.w).toBe(210);
     expect(row!.value.x).toBe(214);

@@ -429,19 +429,19 @@ describe('tabBarFontSizePx', () => {
     });
 
   it('answers the theme default when the node overrides nothing', () => {
-    expect(tabBarFontSizePx(bar(), {}, THEME)).toBe(THEME.fontSize);
+    expect(tabBarFontSizePx(bar(), {})).toBe(THEME.fontSize);
   });
 
   it('a positive theme_override_font_sizes/font_size wins', () => {
-    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { font_size: 28 } }, THEME)).toBe(28);
+    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { font_size: 28 } })).toBe(28);
   });
 
   it('an override of 0 falls through (control.cpp:3115 requires > 0)', () => {
-    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { font_size: 0 } }, THEME)).toBe(THEME.fontSize);
+    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { font_size: 0 } })).toBe(THEME.fontSize);
   });
 
   it('ignores a DIFFERENT size key', () => {
-    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { normal_font_size: 28 } }, THEME)).toBe(
+    expect(tabBarFontSizePx(bar(), { themeOverrideFontSizes: { normal_font_size: 28 } })).toBe(
       THEME.fontSize
     );
   });
@@ -501,7 +501,7 @@ describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_siz
     for (const fontSize of [8, 16, 28, 32]) {
       const n = node({ themeOverrideFontSizes: { font_size: fontSize } });
       const props = n.node.properties as TabBarProperties;
-      const layout = shapeTabLabel('Map', n, { fontSizePx: tabBarFontSizePx(n, props, nativeTheme(1)) });
+      const layout = shapeTabLabel('Map', n, { fontSizePx: tabBarFontSizePx(n, props) });
       const content = layoutTabContent({
         barHeightPx: sizeOf(n).y,
         style,

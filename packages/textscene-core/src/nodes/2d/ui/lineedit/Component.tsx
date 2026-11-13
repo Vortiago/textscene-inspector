@@ -4,6 +4,7 @@
  * the active icon, and the caret while `caret_force_displayed`, since a static preview never focuses and
  * `_validate_caret_can_draw()`'s other branch never fires. It draws the selection a dialog sets in `syntheticDraw`, and no IME. `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
+import { caretDrawWidthPx } from '../shared/caretWidth';
 import { useMemo } from 'react';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -31,14 +32,9 @@ import {
   lineEditCaretRect,
   lineEditDrawnLayout,
   lineEditRightIconSize,
-  pickLineEditStyleBox,
   resolveLineEditStyleState,
   resolveLineEditTextState,
   LINE_EDIT_THEME_FONT_KEY,
-  LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR,
-  LINE_EDIT_DEFAULT_CARET_COLOR,
-  LINE_EDIT_DEFAULT_SELECTED_FONT_COLOR,
-  LINE_EDIT_DEFAULT_SELECTION_COLOR,
   lineEditSelection,
   EXPAND_MODE_ORIGINAL_SIZE,
   shapeLineEditText,
@@ -47,8 +43,7 @@ import {
 import type { LineEditProperties } from './types';
 import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-
-const DEFAULT_CARET_WIDTH_PX = 1;
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 /** `Color(1, 1, 1, !is_editable() ? .5*.9 : .9)`: `right_icon`'s draw-time tint (`line_edit.cpp:1443`), never the clear button's. */
 function rightIconLocalColor(editable: boolean): Rgba {
@@ -60,13 +55,13 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const editable = props.editable ?? true;
 
   const styleState = resolveLineEditStyleState(editable);
-  const baseStyleBox = pickLineEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, styleState);
+  const baseStyleBox = requiredThemeItem(solveNode.styleBoxes, styleState);
 
   // Text: which string, which theme colour, shaped
   const { text, isPlaceholder } = lineEditDisplayText(props);
   const hasText = text.length > 0;
   const textState = resolveLineEditTextState(editable, isPlaceholder);
-  const { fontSizePx, color: baseFontColor } = lineEditTextTheme(solveNode, props, textState, { theme });
+  const { fontSizePx, color: baseFontColor } = lineEditTextTheme(solveNode, props, textState);
   // `tint.own` is `self_modulate` folded onto the inherited `modulate`, raw sRGB. The chrome takes it as
   // `<StyleBoxQuad>`'s `color`, and each font, icon and caret colour multiplies it before its one
   // sRGB-to-linear conversion, as `Button` does.
@@ -159,10 +154,10 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       unselected: lineEditDrawnLayout(unselected, content.textOffset.x, content.ofsMaxPx),
     };
   }, [layout, fieldSelection, content.textOffset.x, content.ofsMaxPx]);
-  const selectionColor = solveNode.colors['selection_color'] ?? LINE_EDIT_DEFAULT_SELECTION_COLOR;
+  const selectionColor = requiredThemeItem(solveNode.colors, 'selection_color');
   const tintedSelectionColor = useMemo(() => tintColor(selectionColor, tint.own), [selectionColor, tint.own]);
   const selectionLinearColor = useItemLinearColor(tintedSelectionColor);
-  const selectedFontColor = solveNode.colors['font_selected_color'] ?? LINE_EDIT_DEFAULT_SELECTED_FONT_COLOR;
+  const selectedFontColor = requiredThemeItem(solveNode.colors, 'font_selected_color');
   const tintedSelectedFontColor = useMemo(
     () => tintColor(selectedFontColor, tint.own),
     [selectedFontColor, tint.own]
@@ -180,7 +175,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
 
   const iconLocalColor: Rgba =
     activeIcon === 'clear'
-      ? (solveNode.colors['clear_button_color'] ?? LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR)
+      ? requiredThemeItem(solveNode.colors, 'clear_button_color')
       : rightIconLocalColor(editable);
   const tintedIconColor = useMemo(() => tintColor(iconLocalColor, tint.own), [iconLocalColor, tint.own]);
   const iconLinearColor = useItemLinearColor(tintedIconColor);
@@ -194,8 +189,8 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   };
 
   // Caret: only while caret_force_displayed
-  const caretWidthPx = solveNode.constants['caret_width'] ?? DEFAULT_CARET_WIDTH_PX;
-  const caretColor = solveNode.colors['caret_color'] ?? LINE_EDIT_DEFAULT_CARET_COLOR;
+  const caretWidthPx = caretDrawWidthPx(solveNode.constants, theme.scale);
+  const caretColor = requiredThemeItem(solveNode.colors, 'caret_color');
   const tintedCaretColor = useMemo(() => tintColor(caretColor, tint.own), [caretColor, tint.own]);
   const caretLinearColor = useItemLinearColor(tintedCaretColor);
   const caretRect = useMemo(

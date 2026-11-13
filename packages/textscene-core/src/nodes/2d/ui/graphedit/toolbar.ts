@@ -135,15 +135,15 @@ function toolbarButtonMinSize(
  * (`line_edit.cpp:2443-2477`).
  */
 function toolbarSpinBoxMinSize(
-  fieldBoxes: GraphEditToolbarTheme['fieldBoxes'],
+  field: GraphEditToolbarTheme['field'],
   metrics: ToolbarTextMetrics,
   scale: number
 ): Vector2 {
-  const styleMin = lineEditStyleMinSize(fieldBoxes.normal, fieldBoxes.readOnly);
+  const styleMin = lineEditStyleMinSize(field);
   return {
     x:
       styleMin.x +
-      lineEditTextMinimumWidth(metrics.emSpaceWidthPx) +
+      lineEditTextMinimumWidth(field, metrics.emSpaceWidthPx) +
       spinBoxButtonsBlockWidth(spinBoxArrowIconSize(scale).x),
     y: styleMin.y + metrics.fontHeightPx,
   };
@@ -234,7 +234,7 @@ export function graphEditToolbar(
       pressed: false,
       disabled: false,
       box: {
-        minSize: toolbarSpinBoxMinSize(items.fieldBoxes, metrics, theme.scale),
+        minSize: toolbarSpinBoxMinSize(items.field, metrics, theme.scale),
         hSizeFlags: SizeFlags.FILL,
         vSizeFlags: SizeFlags.FILL,
         stretchRatio: 1,
