@@ -11,7 +11,7 @@ import type { Vector2 } from '../../../godot/math/vector';
 import type { LiveNode } from '../../../resources/liveNode';
 import type { SolvedControl } from './controlRectSolver';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
-import { usePaintRange } from '../../contexts/PaintOrderContext';
+import { useNodePaint } from '../../canvasItemPass/nodePaint';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { useBuildSolveTree } from './buildSolveTree';
 import { ZERO_RECT } from '../../../godot/math/rect2';
@@ -29,7 +29,8 @@ export default function UnownedNodeControls({ node }: { node: LiveNode }) {
     externalResources,
     internalResources,
     null,
-    usePaintRange()
+    // An unowned node is outside the shared live tree, so it reads the run its frame gives it.
+    useNodePaint(node, null).range
   );
   // The placement's position is the one the tile sets on a Control root before the snap.
   const placement = (node.properties as { position?: Vector2 }).position;

@@ -6,7 +6,7 @@
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../parser/types';
 import { TscnParser } from '../../parser/TscnParser';
@@ -33,16 +33,14 @@ import '../controls/index';
 const worldSequences = new Map<string, number>();
 const controlNodes = new Map<string, SolveNode>();
 
-vi.mock('../contexts/PaintOrderContext', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../contexts/PaintOrderContext')>();
-  const { useNodePath } = await import('../contexts/NodePathContext');
+vi.mock('./nodePaint', async (importOriginal) => {
+  const original = await importOriginal<typeof import('./nodePaint')>();
   return {
     ...original,
-    useNodePaintSequence: (node: TscnNode): number => {
-      const sequence = original.useNodePaintSequence(node);
-      const path = useNodePath();
-      if (path !== null) worldSequences.set(path, sequence);
-      return sequence;
+    useNodePaint: (node: TscnNode, path: string | null) => {
+      const paint = original.useNodePaint(node, path);
+      if (path !== null) worldSequences.set(path, paint.own);
+      return paint;
     },
   };
 });
@@ -98,6 +96,14 @@ function subScenesOf(text: string, seen = new Map<string, string>()): Map<string
   return seen;
 }
 
+/** Written only by `mounted`, and unmounted after each test, so no earlier scene writes the maps. */
+let renderer: Awaited<ReturnType<typeof ReactThreeTestRenderer.create>> | null = null;
+
+afterEach(async () => {
+  await renderer?.unmount();
+  renderer = null;
+});
+
 /** Mounts `name` with both walks and returns the live tree they draw. */
 async function mounted(name: string): Promise<LiveTree> {
   worldSequences.clear();
@@ -112,7 +118,7 @@ async function mounted(name: string): Promise<LiveTree> {
   const capture = (found: LiveTree): void => {
     tree = found;
   };
-  await ReactThreeTestRenderer.create(
+  renderer = await ReactThreeTestRenderer.create(
     <DispatchedScene
       sceneGraph={sceneGraph}
       workspace="2d"

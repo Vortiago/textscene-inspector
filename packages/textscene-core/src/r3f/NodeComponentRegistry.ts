@@ -90,7 +90,7 @@ interface YSortGroupRegistration {
   describe: (node: TscnNode) => YSortGroupDescription;
   /** The node as its own rows draw it when it roots a sort: a child canvas item of the group it placed. */
   asRootRows: (node: TscnNode) => TscnNode;
-  /** Draws one row at the draw sequence of the `PaintRangeProvider` above it, at the row's node path. */
+  /** Draws one row at the draw sequence of the `PaintFrameProvider` above it, at the row's node path. */
   Renderer: React.ComponentType<{ item: YSortItem; node: TscnNode }>;
 }
 
