@@ -12,9 +12,9 @@ The same cases go through the transpiler's front end. On each one, it accepts wh
 
 A generator writes random functions that are correct by type, from the signatures of the transpiled rows only, so each slice that transpiles rows gets random programs over them with no change to the generator. Operators take only the brackets Godot's priorities need, so a program tests the order of evaluation as a user's shader does.
 
-The fixed set has seed 1847: 268 programs, one rooted at each of the 68 transpiled rows, and the rest with random roots. Godot accepts every one. `pnpm godot:probes` records Godot's result bits, and `pnpm test:shaders:gpu` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN.
+The fixed set has seed 1847: 901 programs, one rooted at each of the 733 transpiled rows, and the rest with random roots. Godot accepts every one. `pnpm godot:probes` records Godot's result bits, and `pnpm test:shaders:gpu` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN.
 
-**263 of 268 random programs bit-equal with Godot.** A program that differs is reduced against a live Godot to a small program that still differs. The 5 that differ now are listed below with their owner. The list only shrinks: a program that differs and is not listed fails the run, and a listed program that equals Godot fails it too.
+**896 of 901 random programs bit-equal with Godot.** A program that differs is reduced against a live Godot to a small program that still differs. The 5 that differ now are listed below with their owner. The list only shrinks: a program that differs and is not listed fails the run, and a listed program that equals Godot fails it too.
 
 | Program | Reduced program | First lane that differs | Cause | Owner |
 | --- | --- | --- | --- | --- |

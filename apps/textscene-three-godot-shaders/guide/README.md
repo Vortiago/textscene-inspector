@@ -20,6 +20,7 @@ Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20
 - [Swizzles and indexes](swizzles-and-indexes.md): Swizzles, Indexes `a[i]`.
 - [Assignments](assignments.md): `=` (OP_ASSIGN), Compound assignments.
 - [Functions and statements](statements.md): `return`, Expression statements and `;`, Tree nodes.
+- [How the tests check the transpiler against Godot](testing.md): every operator rule, random programs and a corpus of real shaders.
 
 ## Coverage by family
 

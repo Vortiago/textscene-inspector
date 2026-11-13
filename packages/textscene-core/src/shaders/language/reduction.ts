@@ -5,6 +5,7 @@
  */
 
 import { assignmentRefusal } from './assignment.js';
+import { evaluationRefusal } from './evaluation.js';
 import { signatureInstruction } from './instructions.js';
 import { OPERATOR_RULES, isAssignOperator, operatorText } from './operators.js';
 import type { SourcePosition } from './shadingLanguageError.js';
@@ -58,6 +59,7 @@ function reduceUnary(entries: Entry[], next: number, fail: Fail): void {
     if (op === 'OP_INCREMENT' || op === 'OP_DECREMENT') failOnRefusal(assignmentRefusal(operand), fail);
     const node = operatorNode(op, [operand], positionOf(entry));
     if (!node) fail(`Invalid arguments to unary operator '${operatorText(op)}': ${typeList([operand])}.`);
+    failOnRefusal(evaluationRefusal(node), fail);
     entries.splice(index, 2, { isOperator: false, node });
   }
 }
@@ -85,6 +87,7 @@ function reduceBinary(entries: Entry[], next: number, fail: Fail): void {
   const right = nodeOf(entries[next + 1]!, fail);
   const node = operatorNode(op, [left, right], left.position);
   if (!node) fail(`Invalid arguments to operator '${operatorText(op)}': '${typeList([left, right])}'.`);
+  failOnRefusal(evaluationRefusal(node), fail);
   entries.splice(next - 1, 3, { isOperator: false, node });
 }
 

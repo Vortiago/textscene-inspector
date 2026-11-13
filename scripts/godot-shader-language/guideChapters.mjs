@@ -84,9 +84,9 @@ const MATRIX_NOTES = {
   OP_SUB:
     'A matrix less a float subtracts lane by lane. three 0.187 writes `matrix - float` as `float - matrix`, so the transpiler subtracts column by column.',
   OP_MUL:
-    'A matrix times a matrix or a vector is the linear algebra product: `m * v` treats `v` as a column, `v * m` as a row. A matrix times a float scales each lane.',
+    'A matrix times a matrix or a vector is the linear algebra product: `m * v` treats `v` as a column, `v * m` as a row. A matrix times a float scales each lane. Godot 4.6.3 ends its process on `mat4 * vec4` where it knows both values, `mat4(2.0) * vec4(1.0)`: its fold reads past the vector (`shader_language.cpp:2401`). The transpiler refuses that expression with a message of its own.',
   OP_DIV:
-    'A matrix divides by a matrix lane by lane. glslang writes `matrix / float` as the matrix times the reciprocal of the float, so a lane can land one unit off a true division. The transpiler does the same.',
+    'A matrix divides by a matrix lane by lane. glslang writes `matrix / float` as the matrix times the reciprocal of the float, so a lane can land one unit off a true division. The transpiler does the same. Godot computes an operator of constants as it reads it (`shader_language.cpp:2065`), and refuses an `int` or `ivec` division by a zero it knows, `5 / (1 - 1)`, with "Division by zero error.". It does not check a `uvec` divisor, and a divisor in brackets folds, so `5 / (-0)` is refused and `5 / -0` is not. The least `int` divided by -1, both known, ends the Godot process: the transpiler refuses that expression with a message of its own.',
 };
 
 function arithmeticSection([op, token, method, verb]) {
@@ -111,7 +111,7 @@ What to expect: a transpiled function gives Godot's result, bit for bit, except 
     {
       heading: '`%` (OP_MOD)',
       rows: operatorRows('OP_MOD'),
-      what: '`a % b` is the remainder of an `int` or `uint` division, lane by lane. A float has no `%` in the shading language: `mod()` is a function.',
+      what: '`a % b` is the remainder of an `int` or `uint` division, lane by lane. A float has no `%` in the shading language: `mod()` is a function. Godot refuses a remainder by a zero it knows, of every integer type, with "Modulo by zero error.".',
       tsl: 'a.mod(b)',
     },
     {

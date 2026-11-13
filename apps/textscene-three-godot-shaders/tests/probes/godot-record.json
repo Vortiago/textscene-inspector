@@ -22355,7 +22355,11 @@
   "literal-overflow": {
    "source": "float probe() { return 1e39; }",
    "inputs": [],
-   "rejected": "Godot rejects the shader: it draws nothing, not even the sentinel"
+   "rejected": {
+    "stage": "GLSL",
+    "message": "'inf' : undeclared identifier",
+    "line": 322
+   }
   },
   "negate-nested-vector": {
    "source": "vec2 probe(vec2 a) { return -(-a); }",
@@ -37061,7 +37065,11 @@
      "7fc00000"
     ]
    ],
-   "rejected": "Godot rejects the shader: it draws nothing, not even the sentinel"
+   "rejected": {
+    "stage": "GLSL",
+    "message": "'' :  syntax error, unexpected EQUAL, expecting RIGHT_PAREN or COMMA",
+    "line": 323
+   }
   },
   "unbracketed-negated": {
    "source": "float probe(float a, float b) { return -(a = b); }",
@@ -37135,7 +37143,11 @@
      "7f61b1e6"
     ]
    ],
-   "rejected": "Godot rejects the shader: it draws nothing, not even the sentinel"
+   "rejected": {
+    "stage": "GLSL",
+    "message": "'assign' :  l-value required",
+    "line": 323
+   }
   },
   "negation-text-decrement": {
    "source": "int probe(int a) { return -(--a); }",

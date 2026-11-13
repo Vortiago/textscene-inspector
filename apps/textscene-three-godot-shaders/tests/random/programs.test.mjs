@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { transpilerVerdict } from '../verdicts/judge.mjs';
-import { generatePrograms, TRANSPILED_ROWS } from './programs.mjs';
+import { generatePrograms, ROOT_ROWS, TRANSPILED_ROWS } from './programs.mjs';
 
 const SET = generatePrograms({ seed: 7, count: 40 });
 
@@ -18,9 +18,9 @@ describe('the random program generator', () => {
     expect(other).not.toEqual(SET.map((program) => program.source));
   });
 
-  it('uses every transpiled row in a set', () => {
+  it('uses every row a root can stand on in a set', () => {
     const used = new Set(SET.flatMap((program) => program.rows));
-    expect(TRANSPILED_ROWS.map((row) => row.id).filter((id) => !used.has(id))).toEqual([]);
+    expect(ROOT_ROWS.map((row) => row.id).filter((id) => !used.has(id))).toEqual([]);
   });
 
   it('uses only transpiled rows', () => {

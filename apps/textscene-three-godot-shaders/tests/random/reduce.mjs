@@ -1,9 +1,11 @@
 /**
  * The reduction of a random program that differs from Godot: a greedy search for a smaller
  * program that still differs, so a failure prints a program of a few nodes. A step replaces one
- * node with one of its children of the same type, or with a parameter or a literal of its type.
+ * node with one of its children of the same type, or with a parameter or a literal of its type,
+ * or returns one subtree in place of the whole tree.
  */
 
+import { isAnswerable } from './answerable.mjs';
 import { childrenOf, programSource, rowsOf, treeNodes, withChild } from './programTree.mjs';
 
 /**
@@ -26,14 +28,23 @@ export async function reduceProgram(program, stillDiffers) {
 /** Every program one step smaller than `program`, the smallest first. */
 function smallerPrograms(program) {
   const literals = literalsByType(program.tree);
-  return replacements(program.tree, program.parameters, literals)
-    .map((tree) => ({ tree, size: treeNodes(tree).length }))
+  const sameReturn = replacements(program.tree, program.parameters, literals).map((tree) => ({
+    returns: program.returns,
+    tree,
+  }));
+  const subtrees = treeNodes(program.tree)
+    .slice(1)
+    .map((tree) => ({ returns: tree.type, tree: withoutSpareBrackets(tree) }));
+  return [...sameReturn, ...subtrees]
+    .filter((candidate) => isAnswerable(candidate.tree))
+    .map((candidate) => ({ ...candidate, size: treeNodes(candidate.tree).length }))
     .sort((a, b) => a.size - b.size)
-    .map(({ tree }) => ({
+    .map(({ returns, tree }) => ({
       ...program,
+      returns,
       tree,
       rows: rowsOf(tree),
-      source: programSource({ ...program, tree }),
+      source: programSource({ ...program, returns, tree }),
     }));
 }
 
