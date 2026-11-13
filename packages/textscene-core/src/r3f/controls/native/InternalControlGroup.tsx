@@ -14,7 +14,7 @@ import type { SolvedControl } from './controlRectSolver';
 import { controlProps, type SolveNode } from './solveTree';
 
 /** What every internal Control's painter takes from its parent's. */
-export type InternalPainterEnv = Pick<
+type InternalPainterEnv = Pick<
   NativeControlComponentProps,
   'theme' | 'measureText' | 'snapToPixels' | 'tint' | 'childTint'
 >;

@@ -19,8 +19,8 @@ import type { TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry
 import {
   builtButtonIconRequests,
   internalControlNode,
-  internalControlNamed,
   internalControlsOf,
+  type InternalControl,
   type InternalControlEntry,
   type InternalControlSpec,
   type InternalControlsFn,
@@ -168,18 +168,19 @@ export const dialogInternalControls: InternalControlsFn = (dialog, theme) => {
   return entries;
 };
 
+/** The button row, the one internal Control a dialog builds in back mode. */
 export function buttonRowNode(dialog: SolveNode, theme: NativeTheme): SolveNode {
-  return internalControlNamed(dialog, theme, BUTTON_ROW)!;
+  return internalControlsOf(dialog, theme).find(({ mode }) => mode === 'back')!.node;
 }
 
-/** Whether an internal Control takes the content rect (`dialogs.cpp:248-259`): all but the button row do. */
-export function takesContentRect(n: SolveNode): boolean {
-  return n.node.name !== BUTTON_ROW;
+/** Whether an internal Control takes the content rect (`dialogs.cpp:248-259`): all but the button row, built in back mode, do. */
+export function takesContentRect({ mode }: InternalControl): boolean {
+  return mode === 'front';
 }
 
 /** The internal Controls whose minimum the contents minimum reads as it reads an authored one's: all but the row and the message. */
 export function dialogBodyNodes(dialog: SolveNode, theme: NativeTheme): readonly SolveNode[] {
   return internalControlsOf(dialog, theme)
-    .map(({ node }) => node)
-    .filter((node) => takesContentRect(node) && !isMessageLabel(node));
+    .filter((internal) => takesContentRect(internal) && !isMessageLabel(internal.node))
+    .map(({ node }) => node);
 }

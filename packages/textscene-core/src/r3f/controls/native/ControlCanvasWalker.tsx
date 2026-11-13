@@ -13,9 +13,9 @@ import { threeMatrixFromTransform2D } from '../../node2dTransform';
 import type { NativeTheme } from './nativeTheme';
 import type { TextMeasurer } from './solverRegistry';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
-import { controlComponentRegistry } from '../ControlComponentRegistry';
+import { controlComponentRegistry, type NativeControlComponentProps } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
-import { internalControlsOf } from './internalControls';
+import { internalControlsOf, type InternalControl } from './internalControls';
 import { InternalControlGroup, internalControlSlots } from './InternalControlGroup';
 import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useTextureSamplerOver } from '../../canvasItemTextureSampler';
@@ -55,6 +55,7 @@ import {
   ownAndBackSlots,
   wholeKeySlot,
   type CanvasItemState,
+  type CanvasSlot,
 } from '../../canvasItemState';
 
 interface ControlCanvasWalkerProps {
@@ -271,6 +272,30 @@ function ControlNodeGroup(props: ControlNodeGroupProps) {
   );
 }
 
+interface InternalControlsProps {
+  internals: readonly InternalControl[];
+  solved: ReadonlyMap<string, SolvedControl>;
+  slot: CanvasSlot;
+  chromeSlot: CanvasSlot;
+  env: Pick<NativeControlComponentProps, 'theme' | 'measureText' | 'snapToPixels' | 'tint' | 'childTint'>;
+}
+
+/** The internal Controls of one Control, mounted only for a class that builds some. */
+function InternalControls({ internals, solved, slot, chromeSlot, env }: InternalControlsProps) {
+  const { theme, measureText, snapToPixels, tint, childTint } = env;
+  const slots = useMemo(
+    () => internalControlSlots(internals, slot, chromeSlot),
+    [internals, slot, chromeSlot]
+  );
+  const painterEnv = useMemo(
+    () => ({ theme, measureText, snapToPixels, tint, childTint }),
+    [theme, measureText, snapToPixels, tint, childTint]
+  );
+  return internals.map(({ node }) => (
+    <InternalControlGroup key={node.path} node={node} solved={solved} slots={slots} env={painterEnv} />
+  ));
+}
+
 function ControlItemGroup({
   solveNode,
   solved,
@@ -336,24 +361,6 @@ function ControlItemGroup({
   }, [solveNode.children, solved]);
 
   const internals = internalControlsOf(solveNode, theme);
-  const internalSlots = useMemo(
-    () => internalControlSlots(internals, slot, chromeSlot),
-    [internals, slot, chromeSlot]
-  );
-  // The parent's tint, which #1486 replaces with what a child item inherits.
-  const internalEnv = useMemo(
-    () => ({ theme, measureText, snapToPixels, tint, childTint: tint.internalChild }),
-    [theme, measureText, snapToPixels, tint]
-  );
-  const internalElements = internals.map(({ node }) => (
-    <InternalControlGroup
-      key={node.path}
-      node={node}
-      solved={solved}
-      slots={internalSlots}
-      env={internalEnv}
-    />
-  ));
 
   // A canvas boundary such as `CanvasLayer` wraps its descendants in fresh
   // context, so they must be its React children. The registration declares it,
@@ -380,7 +387,16 @@ function ControlItemGroup({
       >
         {wrapsChildren ? <ClipMaskProvider value={null}>{childElements}</ClipMaskProvider> : undefined}
       </Painter>
-      {internalElements}
+      {internals.length > 0 && (
+        <InternalControls
+          internals={internals}
+          solved={solved}
+          slot={slot}
+          chromeSlot={chromeSlot}
+          // The parent's tint, which #1486 replaces with what a child item inherits.
+          env={{ theme, measureText, snapToPixels, tint, childTint: tint.internalChild }}
+        />
+      )}
     </NodePathProvider>
   );
   // The leaf meshes of a painter read the lit pixel material through context. A CanvasLayer is no

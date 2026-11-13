@@ -93,6 +93,7 @@ export function registerInternalControls(
 }
 
 const NONE: readonly InternalControl[] = Object.freeze([]);
+const NO_PLACEMENTS: readonly { node: SolveNode; rect: Rect2 }[] = Object.freeze([]);
 
 /**
  * Written only by `internalControlsOf`. By node, then by theme: a scene change replaces the parent
@@ -102,9 +103,14 @@ const builtByParent = perObject(
   (_parent: SolveNode) => new WeakMap<NativeTheme, readonly InternalControl[]>()
 );
 
+/** What `parent`'s class registers, or `undefined` when it registers no internal Controls. */
+function registrationOf(parent: SolveNode) {
+  return registrations.get(parent.node.type);
+}
+
 /** The internal Controls of `parent`, built once for each (parent, theme). Empty for a class that registers none. */
 export function internalControlsOf(parent: SolveNode, theme: NativeTheme): readonly InternalControl[] {
-  const registration = registrations.get(parent.node.type);
+  const registration = registrationOf(parent);
   if (!registration) return NONE;
   const byTheme = builtByParent(parent);
   const known = byTheme.get(theme);
@@ -117,29 +123,21 @@ export function internalControlsOf(parent: SolveNode, theme: NativeTheme): reado
   return built;
 }
 
-/** The top-level internal Control of `parent` named `name`, or `undefined` when its class builds none. */
-export function internalControlNamed(
-  parent: SolveNode,
-  theme: NativeTheme,
-  name: string
-): SolveNode | undefined {
-  return internalControlsOf(parent, theme).find(({ node }) => node.node.name === name)?.node;
-}
-
 /** Each top-level internal Control of `parent` with the rect its class's layout gives it. */
 export function placeInternalControls(
   parent: SolveNode,
   rect: Rect2,
   ctx: SolveContext
 ): readonly { node: SolveNode; rect: Rect2 }[] {
+  const registration = registrationOf(parent);
+  if (!registration) return NO_PLACEMENTS;
   const internals = internalControlsOf(parent, ctx.theme);
-  if (internals.length === 0) return [];
-  const rects = registrations.get(parent.node.type)!.layout(parent, internals, rect, ctx);
+  const rects = registration.layout(parent, internals, rect, ctx);
   return internals.map(({ node }) => ({ node, rect: rects.get(node.path) ?? ZERO_RECT }));
 }
 
 /** The path an internal Control gets: its parent's, then its own name. A container lays its children out by this link. */
-export function syntheticPath(parentPath: string, name: string): string {
+function syntheticPath(parentPath: string, name: string): string {
   return `${parentPath}/@${name}`;
 }
 

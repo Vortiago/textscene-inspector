@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { nativeTheme } from './nativeTheme';
 import { controlNode, solveNode } from './testing/solveNode';
 import type { SolveNode } from './solveTree';
-import { internalControlsOf, registerInternalControls, syntheticPath } from './internalControls';
+import { internalControlsOf, registerInternalControls } from './internalControls';
 
 const THEME = nativeTheme(1);
 
@@ -48,6 +48,5 @@ describe('internalControlsOf', () => {
     const [, row] = internalControlsOf(host('HostWithInternals'), THEME);
     expect(row!.node.path).toBe('Root/Host/@Row');
     expect(row!.node.children.map((child) => child.path)).toEqual(['Root/Host/@Row/@Ok']);
-    expect(syntheticPath('Root/Host', 'Row')).toBe('Root/Host/@Row');
   });
 });

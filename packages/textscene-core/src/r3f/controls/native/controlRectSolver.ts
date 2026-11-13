@@ -241,8 +241,9 @@ function hasSizeDependentMinimum(roots: readonly SolveNode[], theme: NativeTheme
   for (const node of roots) {
     if (controlSolverRegistry.readsTentativeRect(node)) return true;
     if (hasSizeDependentMinimum(node.children, theme)) return true;
-    const internals = internalControlsOf(node, theme).map((internal) => internal.node);
-    if (hasSizeDependentMinimum(internals, theme)) return true;
+    for (const internal of internalControlsOf(node, theme)) {
+      if (hasSizeDependentMinimum([internal.node], theme)) return true;
+    }
   }
   return false;
 }

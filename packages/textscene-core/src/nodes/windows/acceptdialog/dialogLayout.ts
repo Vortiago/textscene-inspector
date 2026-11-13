@@ -80,7 +80,9 @@ export const dialogInternalLayout: InternalLayoutFn = (dialog, internals, rect, 
   const size = { x: rect.w, y: rect.h };
   const content = dialogContentRect(dialog, size, ctx);
   const row = buttonRowRect(dialog, size, ctx);
-  return new Map(internals.map(({ node }) => [node.path, takesContentRect(node) ? content : row]));
+  return new Map(
+    internals.map((internal) => [internal.node.path, takesContentRect(internal) ? content : row])
+  );
 };
 
 /**
