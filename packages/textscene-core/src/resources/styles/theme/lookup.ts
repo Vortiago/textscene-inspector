@@ -189,7 +189,7 @@ export function themeResolutionScope(
 /**
  * The font a theme or an override defines for `name`, or `undefined` where none does. A caller
  * with its own last rung uses this: RichTextLabel's `bold_font` ends at a bold built over the
- * default font, not at the default font itself (`default_theme.cpp:1195`).
+ * default font, not at the default font itself, as the default theme registers it.
  *
  * @param override The node's own `theme_override_fonts/<name>`, which wins once
  *   declared with no validity check (`control.cpp:3089-3093`). `undefined` means
@@ -228,8 +228,8 @@ export function resolveThemeFontIn(
   override: FontResource | null | undefined
 ): FontResource | null {
   const found = findThemeFontIn(scope, name, override);
-  // The default theme's `default_font`, which the project font replaces
-  // (`default_theme.cpp:1371-1373`), is the last rung (`theme_owner.cpp:227-254`).
+  // The default theme's `default_font`, which the project font replaces in
+  // `make_default_theme`, is the last rung (`theme_owner.cpp:227-254`).
   return found === undefined ? scope.projectDefaultFont : found;
 }
 

@@ -1,7 +1,7 @@
 /**
  * The native (WebGL canvas) painter for `PanelContainer`. `panel_container.cpp`
- * draws the same chrome as `<Panel>`: `default_theme.cpp:134` and `:1274` build
- * the same fallback with `make_flat_stylebox(style_normal_color, 0, 0, 0, 0)`.
+ * draws the same chrome as `<Panel>`: the table's `Panel/panel` and `PanelContainer/panel`
+ * are the same `make_flat_stylebox(style_normal_color, 0, 0, 0, 0)`.
  */
 import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';

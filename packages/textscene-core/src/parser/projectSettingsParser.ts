@@ -108,7 +108,7 @@ export const DEFAULT_THEME_SCALE = 1.0;
 /**
  * `gui/theme/default_theme_scale`, the multiplier on every default-theme metric
  * (`ThemeDB::initialize_theme()` in `scene/theme/theme_db.cpp`, default 1.0). Clamped
- * here to 0.5-8 as `make_default_theme` does (`scene/theme/default_theme.cpp:1369`).
+ * here to 0.5-8 as Godot's `make_default_theme` does.
  * Each metric rounds after multiplying ({@link scaledGodotTheme}).
  */
 export function projectThemeScale(settings: ProjectSettings | null): number {

@@ -1,6 +1,6 @@
 /**
  * `<HSplitContainer>`, the native (WebGL canvas) painter: it draws only the
- * grabber icon. `split_bar_background` (`default_theme.cpp:1275-1277`) is empty,
+ * grabber icon. The table's `HSplitContainer/split_bar_background` is empty,
  * and `shared/splitContainerSolver.ts`'s `ContainerLayoutFn` places the children.
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';

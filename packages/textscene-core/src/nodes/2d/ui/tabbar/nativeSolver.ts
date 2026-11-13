@@ -33,11 +33,6 @@ import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { TAB_BAR_ICON_SIZE } from '../../../../r3f/controls/native/themeIcons';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import {
-  CONTROL_FONT_DISABLED_COLOR,
-  CONTROL_FONT_HOVER_COLOR,
-  CONTROL_FONT_LOW_COLOR,
-} from '../../../../godot/scene/theme';
 import { AutowrapMode, TextDirection } from '../../../../godot/text/textServerEnums';
 import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
@@ -86,27 +81,14 @@ export function tabWidthStyleMinWidth(styleBoxes: SolveNode['styleBoxes'], state
 
 export const TAB_BAR_THEME_FONT_KEY = 'font';
 
-/** `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT_SIZE, TabBar, font_size)` (`tab_bar.cpp:2179`): one size item for every state, `default_theme.cpp:1041`. */
+/** `BIND_THEME_ITEM(Theme::DATA_TYPE_FONT_SIZE, TabBar, font_size)` (`tab_bar.cpp:2179`): one size item for every state. */
 export const TAB_BAR_THEME_FONT_SIZE_KEY = 'font_size';
 
-/** `default_theme.cpp:1044-1047`: one colour key per state, unlike the single size key. */
+/** One colour key per state, unlike the single size key. */
 const TAB_BAR_FONT_COLOR_KEYS: Record<TabDrawState, string> = {
   selected: 'font_selected_color',
   unselected: 'font_unselected_color',
   disabled: 'font_disabled_color',
-};
-
-/** TabBar's `font_selected_color` default (`default_theme.cpp:1044`). */
-const TAB_BAR_SELECTED_FONT_COLOR = CONTROL_FONT_HOVER_COLOR;
-/** TabBar's `font_unselected_color` default (`default_theme.cpp:1046`). */
-const TAB_BAR_UNSELECTED_FONT_COLOR = CONTROL_FONT_LOW_COLOR;
-/** TabBar's `font_disabled_color` default (`default_theme.cpp:1047`). */
-const TAB_BAR_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
-
-const TAB_BAR_FONT_DEFAULTS: Record<TabDrawState, Rgba> = {
-  selected: TAB_BAR_SELECTED_FONT_COLOR,
-  unselected: TAB_BAR_UNSELECTED_FONT_COLOR,
-  disabled: TAB_BAR_DISABLED_FONT_COLOR,
 };
 
 /**
@@ -126,9 +108,9 @@ export function tabBarFontSizePx(
   );
 }
 
-/** This tab state's font colour: the resolved `font_<state>_color` (`n.colors`), else the default theme's literal. */
+/** This tab state's font colour: the resolved `font_<state>_color` (`n.colors`). */
 export function tabBarFontColor(colors: SolveNode['colors'], state: TabDrawState): Rgba {
-  return colors[TAB_BAR_FONT_COLOR_KEYS[state]] ?? TAB_BAR_FONT_DEFAULTS[state];
+  return requiredThemeItem(colors, TAB_BAR_FONT_COLOR_KEYS[state]);
 }
 
 const TAB_BAR_ICON_COLOR_KEYS: Record<TabDrawState, string> = {
@@ -137,11 +119,9 @@ const TAB_BAR_ICON_COLOR_KEYS: Record<TabDrawState, string> = {
   disabled: 'icon_disabled_color',
 };
 
-/** `default_theme.cpp:1051-1054`: all four icon-colour states default to `Color(1, 1, 1, 1)`, so no state dims the icon. */
-const TAB_BAR_DEFAULT_ICON_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
+/** The table's four `TabBar/icon_*_color` are opaque white, so no state dims the icon by default. */
 export function tabBarIconColor(colors: SolveNode['colors'], state: TabDrawState): Rgba {
-  return colors[TAB_BAR_ICON_COLOR_KEYS[state]] ?? TAB_BAR_DEFAULT_ICON_COLOR;
+  return requiredThemeItem(colors, TAB_BAR_ICON_COLOR_KEYS[state]);
 }
 
 /** TabBar's themeable icons: `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, TabBar, <field>, "<name>")` (`tab_bar.cpp:2160-2182`). */

@@ -2,7 +2,7 @@
  * Joins theme resolution (`resolveThemeFontIn`, `resolveThemeFontSizeIn`) to each Control's solver
  * and painter. Both pass the same `themeKey`, so a widget's floored box and its glyphs share one
  * font and size. It is Godot's own `set_font` key: `"font"` for Label, Button, CheckBox,
- * OptionButton and LineEdit, `"normal_font"` for RichTextLabel (`default_theme.cpp:1194`).
+ * OptionButton and LineEdit, `"normal_font"` for RichTextLabel, as the default theme registers them.
  */
 
 import { controlProps, type ShareNode } from '../solveTree';
@@ -39,7 +39,7 @@ export function resolveNodeFontMetrics(n: ShareNode, themeKey: string): FontMetr
 /**
  * `resolveNodeFontMetrics` for a key whose last rung is a face of its own, not the default font:
  * RichTextLabel's `bold_font` ends at a `FontVariation` over the default font
- * (`default_theme.cpp:1195`). `lastRung` gets the metrics of the default font and answers only
+ * in the default theme. `lastRung` gets the metrics of the default font and answers only
  * where no override, no ancestor theme and no project theme defines `themeKey`.
  */
 export function resolveNodeFontMetricsOr(
