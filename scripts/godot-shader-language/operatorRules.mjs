@@ -2,7 +2,7 @@
  * Godot's operator type rules, read by running `_validate_operator` (`shader_language.cpp:1557`)
  * over every operand type. A small interpreter runs the function's C++ cases: the rules stay
  * Godot's text, and a statement it does not know throws, so no rule is dropped in silence.
- * Operands are never arrays here: an array operand is a type rule of its own family (#1824).
+ * Operands are never arrays here: an array operand is a type rule of the statements family.
  */
 
 import { enumMembers, lineAt } from './cppText.mjs';

@@ -19,7 +19,7 @@ const isDigit = (char: string | undefined) => char !== undefined && char >= '0' 
  * The double `built_in_strtod` (`core/string/ustring.cpp:2365`) reads from `text`, step for step:
  * it is not correctly rounded, and the shader draws with what it gives.
  */
-export function godotStrtod(text: string): number {
+function godotStrtod(text: string): number {
   let position = 0;
   let sign = false;
   if (text[position] === '-') {
@@ -96,7 +96,7 @@ const MAX_DECIMALS = 32;
  * decimals less one for each power of ten over 10, the zeros after the first decimal trimmed, and
  * `.0` added to a text with no point.
  */
-export function godotFloatText(value: number): string {
+function godotFloatText(value: number): string {
   if (Number.isNaN(value)) return withPoint('nan');
   if (!Number.isFinite(value)) return withPoint(value < 0 ? '-inf' : 'inf');
   let decimals = DEFAULT_DECIMALS;
@@ -157,7 +157,7 @@ function exactRatio(value: number): { numerator: bigint; denominator: bigint } {
  * GPU's compiler reads it again. Throws for a value whose text no compiler reads: Godot's
  * shader then fails to compile.
  */
-export function godotConstantFloat(value: number): number {
+function godotConstantFloat(value: number): number {
   const text = godotFloatText(Math.fround(value));
   if (/inf|nan/.test(text))
     throw new Error(`Godot writes this constant as "${text}", which no GLSL compiler reads`);

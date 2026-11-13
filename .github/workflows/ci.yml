@@ -180,6 +180,23 @@ jobs:
       # The image holds all three.
       - run: pnpm test:godot-ref
 
+  # The shader package's own layers, in the image, which holds Godot's binary and source. The
+  # instruction table and the probe record are checked against both, the probes run on a real GL
+  # context, and the showcases compare a plain three.js page with a live Godot render.
+  shaders:
+    name: Shader package
+    runs-on: ubuntu-latest
+    needs: image
+    container: *ci-image
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: pnpm godot:shader-language --check
+      - run: pnpm godot:probes --check
+      - run: pnpm test:shaders:gpu
+      - run: pnpm test:shaders:e2e
+
   build:
     name: Build and package
     runs-on: ubuntu-latest
@@ -454,6 +471,7 @@ jobs:
         static,
         unit,
         godot-ref,
+        shaders,
         build,
         web-previewer,
         visual-regression,

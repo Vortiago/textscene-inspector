@@ -65,7 +65,7 @@ function fieldText(value) {
 }
 
 /**
- * The issue that owns an open row: the slice of the translator's plan (#1451) that translates
+ * The issue that owns an open row: the slice of the translator's plan that translates
  * its family. A row this cannot place throws, so no open row is left without an owner.
  */
 export function owningIssue(row) {
@@ -113,7 +113,7 @@ function treeNodeOwner(row) {
   return '#1824';
 }
 
-/** Texture functions are #1829's, integer, bit, pack and derivative ones #1827's, the rest #1826's. */
+/** Texture functions belong to the uniforms slice, integer, bit, pack and derivative ones to their own, the rest to the functions slice. */
 function functionOwner(row) {
   const name = row.id.slice(0, row.id.indexOf('('));
   if (/^(int|float|uint|bool)$/.test(name)) return '#1823';

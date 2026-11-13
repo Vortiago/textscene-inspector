@@ -7,10 +7,13 @@ import { generatedFragmentShader } from '../generatedShader.testkit.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 import { translateShadingLanguage } from './translate.js';
 
+/** `vec4` of a node of any float type, which three's overloads do not list for an untyped node. */
+const colourOf = vec4 as unknown as (node: Node) => Node;
+
 /** The GLSL of function `probe` of `source` over `args`, written as a colour. */
 function glslOf(source: string, args: Node[] = []): string {
   const probe = translateShadingLanguage(source).functions.get('probe')!;
-  return generatedFragmentShader(vec4(probe.call(args)));
+  return generatedFragmentShader(colourOf(probe.call(args)));
 }
 
 describe('translateShadingLanguage', () => {
