@@ -3,31 +3,36 @@
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { isProductionSource, walkSources } from '../testing/sourceScan';
-import { litSurfaceFormOf } from './litSurfaceForm';
 
-describe('litSurfaceFormOf', () => {
-  it('reads nodes from ?litSurface=nodes', () => {
-    expect(litSurfaceFormOf('?fixture=a.tscn&litSurface=nodes')).toBe('nodes');
-  });
-
-  it('reads patched with no parameter', () => {
-    expect(litSurfaceFormOf('?fixture=a.tscn')).toBe('patched');
-  });
-
-  it('reads patched for a value that names no form', () => {
-    expect(litSurfaceFormOf('?litSurface=other')).toBe('patched');
-  });
-});
+/** The form a fresh load of the module reads, on a page at `url`. */
+async function formOnPageAt(url: string) {
+  window.history.replaceState(null, '', url);
+  vi.resetModules();
+  const { litSurfaceForm } = await import('./litSurfaceForm');
+  return litSurfaceForm();
+}
 
 describe('litSurfaceForm', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
-    vi.resetModules();
+    window.history.replaceState(null, '', '/');
   });
 
-  it('answers the form of the page it loaded on', async () => {
-    window.history.replaceState(null, '', '/?litSurface=nodes');
-    vi.resetModules();
+  it('answers nodes on a page opened with ?litSurface=nodes', async () => {
+    expect(await formOnPageAt('/?fixture=a.tscn&litSurface=nodes')).toBe('nodes');
+  });
+
+  it('answers patched on a page with no parameter', async () => {
+    expect(await formOnPageAt('/?fixture=a.tscn')).toBe('patched');
+  });
+
+  it('answers patched for a value that names no form', async () => {
+    expect(await formOnPageAt('/?litSurface=other')).toBe('patched');
+  });
+
+  it('keeps the form it loaded with after the host rewrites the query', async () => {
+    await formOnPageAt('/?litSurface=nodes');
+    window.history.replaceState(null, '', '/?fixture=b.tscn');
     const { litSurfaceForm } = await import('./litSurfaceForm');
 
     expect(litSurfaceForm()).toBe('nodes');

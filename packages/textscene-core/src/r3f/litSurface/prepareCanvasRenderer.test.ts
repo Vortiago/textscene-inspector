@@ -2,7 +2,8 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import type { RootState } from '@react-three/fiber';
-import { float, type Node } from 'three/tsl';
+import { float } from 'three/tsl';
+import type { Node } from 'three/webgpu';
 import { prepareCanvasRenderer } from './prepareCanvasRenderer';
 
 /** The hook three's types leave out of the handler. */

@@ -2,7 +2,8 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import type * as THREE from 'three';
-import { float, type Node } from 'three/tsl';
+import { float } from 'three/tsl';
+import type { Node } from 'three/webgpu';
 import { WebGLNodesHandler } from 'three/addons/tsl/WebGLNodesHandler.js';
 import { installNodesHandler } from './nodesHandler';
 

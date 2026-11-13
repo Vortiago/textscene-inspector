@@ -8,7 +8,7 @@
 export type LitSurfaceForm = 'patched' | 'nodes';
 
 /** The form a page's query names. Every value but `nodes`, and no parameter, is `patched`. */
-export function litSurfaceFormOf(search: string): LitSurfaceForm {
+function litSurfaceFormOf(search: string): LitSurfaceForm {
   return new URLSearchParams(search).get('litSurface') === 'nodes' ? 'nodes' : 'patched';
 }
 
