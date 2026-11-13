@@ -12,6 +12,7 @@ import type { SolveNode, ThemedIconRef } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import type { FontMetrics } from './text/fontMetrics';
 import type { SealedHandoff } from './solveHandoff';
+import type { SolvedControl } from './controlRectSolver';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { ParsedResource } from '../../../parser/parsedResource';
 import type { DirectoryListings } from '../../../resources/directoryListing';
@@ -195,6 +196,18 @@ export interface DirectoryResolver {
   resolve(node: TscnNode, listings: DirectoryListings): TscnNode;
 }
 
+/** An `INTERNAL_MODE_BACK` child a Control draws itself: its node name and its origin in the Control. */
+export interface InternalBackPiece {
+  readonly name: string;
+  readonly origin: Vector2;
+}
+
+/**
+ * The visible `INTERNAL_MODE_BACK` children of one solved Control, in the order Godot adds them. A
+ * y-sort collects each as an entry of its own (`renderer_canvas_cull.cpp:110-160`).
+ */
+export type InternalBackPiecesFn = (solved: SolvedControl) => readonly InternalBackPiece[];
+
 class ControlSolverRegistry {
   private readonly minimumSizeFns = createTypeRegistry<MinimumSizeFn>('controlSolverRegistry.minimumSize');
   private readonly containerLayoutFns = createTypeRegistry<ContainerLayoutFn>(
@@ -206,6 +219,9 @@ class ControlSolverRegistry {
   );
   private readonly directoryResolvers = createTypeRegistry<DirectoryResolver>(
     'controlSolverRegistry.directoryResolver'
+  );
+  private readonly internalBackPiecesFns = createTypeRegistry<InternalBackPiecesFn>(
+    'controlSolverRegistry.internalBackPieces'
   );
   private readonly canvasBoundaryTypes = new Set<string>();
   private readonly sizeDependentMinimumTypes = new Map<string, SizeDependentPredicate>();
@@ -263,6 +279,15 @@ class ControlSolverRegistry {
     this.directoryResolvers.register(typeName, resolver);
   }
 
+  registerInternalBackPieces(typeName: string, fn: InternalBackPiecesFn): void {
+    this.internalBackPiecesFns.register(typeName, fn);
+  }
+
+  /** This type's `InternalBackPiecesFn`, or `undefined` for a type that draws no such child itself. */
+  internalBackPieces(typeName: string): InternalBackPiecesFn | undefined {
+    return this.internalBackPiecesFns.get(typeName);
+  }
+
   /** This type's `DirectoryResolver`, or `undefined` for a type that lists no folder. */
   directoryResolver(typeName: string): DirectoryResolver | undefined {
     return this.directoryResolvers.get(typeName);
@@ -288,6 +313,7 @@ class ControlSolverRegistry {
     this.loadedMinimumSizeFns.clear();
     this.textureSlotFns.clear();
     this.directoryResolvers.clear();
+    this.internalBackPiecesFns.clear();
     this.canvasBoundaryTypes.clear();
     this.sizeDependentMinimumTypes.clear();
   }

@@ -204,15 +204,7 @@ function ySortRootOf(
 ): YSortRootAt {
   if (root === 'control')
     return controlYSortRootAt(rootNode.properties as ControlProperties, snapToPixels, solvedRect);
-  const { z_index: zIndex = 0, z_as_relative: zAsRelative = true } = rootNode.properties as {
-    z_index?: number;
-    z_as_relative?: boolean;
-  };
-  const sortRoot = {
-    pose: node2DLocalTransform(rootNode.properties as Partial<Node2DLocalTransform>),
-    zIndex,
-    zAsRelative,
-  };
+  const sortRoot = { pose: node2DLocalTransform(rootNode.properties as Partial<Node2DLocalTransform>) };
   return () => sortRoot;
 }
 
@@ -234,13 +226,11 @@ function controlYSortRootAt(
     h: offsetBottom - offsetTop,
   };
   const transform = controlDrawTransformOf(control, rect);
-  const zIndex = control.zIndex ?? 0;
-  const zAsRelative = control.zAsRelative ?? true;
   const rootAt: YSortRootAt = (placement) => {
     // The placement node adds its own position back.
     const origin = controlItemOriginUnder(rect, placement, transform, snapToPixels);
     const pose = { ...TRANSFORM2D_IDENTITY, tx: origin.x, ty: origin.y };
-    return { pose, zIndex, zAsRelative };
+    return { pose };
   };
   // Without the snap the placement cancels, so every tile of the scene shares one root.
   if (snapToPixels) return rootAt;

@@ -19,7 +19,7 @@ import {
   type SolvedControls,
 } from '../nodes/canvasitem/shared/globalTransform2D.js';
 import { NO_PATCHES, type PatchLookup } from './nodePatch.js';
-import type { ControlLocalTransforms } from './contexts/ControlYSortContext.js';
+import type { ControlLocalTransforms } from './contexts/YSortContext.js';
 
 /** The nodes of `nodeByPath` that lie on `path`, root first. */
 function chainTo(path: string, nodeByPath: ReadonlyMap<string, TscnNode>): TscnNode[] {

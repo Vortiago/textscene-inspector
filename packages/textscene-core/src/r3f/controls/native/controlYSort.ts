@@ -1,19 +1,30 @@
 /**
  * What a y-sort needs from the Control walk and gives back to it. A Control sorts on the origin of
  * its canvas item (`control.cpp:719-736`), which only the rect solve knows, so
- * {@link controlTransformsOf} reads it off the solve, and {@link applyYSortShifts} moves the
- * draw-sequence runs `buildSolveTree` gave in scene order to where the sort put them.
+ * {@link controlTransformsOf} reads it off the solve, and {@link forestInCanvasSort} moves the paint
+ * `buildSolveTree` gave in tree order to the runs the sort gave.
  * Pure data: no React, no THREE.
  */
 
 import { VECTOR2_ZERO } from '../../../godot/math/vector';
 import { transform2DFromParts } from '../../../godot/math/transform2d';
-import { joinPath, parentPathOf, relativeTo } from '../../../utils/nodePath';
-import type { PaintRange } from '../../canvasPaintOrder';
-import type { ControlTransforms, YSortShift, YSortShifts } from '../../contexts/ControlYSortContext';
+import { joinPath } from '../../../utils/nodePath';
+import { ysortsChildren, type PaintRange } from '../../canvasPaintOrder';
+import type { ControlTransforms, SortedRunsValue } from '../../contexts/YSortContext';
+import type { CanvasItemPaint } from '../../canvasItemPass/canvasItemPaint';
+import {
+  mergedSorters,
+  NO_SORT_INPUTS,
+  sortedPaintOf,
+  ySortedPaint,
+  type ExtraSortItem,
+  type ExtraSortItems,
+  type SortItem,
+} from '../../canvasItemPass/ySort';
 import type { SolvedControl } from './controlRectSolver';
 import { controlDrawTransformOf, controlItemOriginUnder } from './controlPixelSnap';
-import { controlProps, isPromotedControl, type SolveNode } from './solveTree';
+import { controlProps, type SolveNode } from './solveTree';
+import { controlSolverRegistry } from './solverRegistry';
 
 /** The rotation, scale and pivot `solved` leaves a Control, as the walker draws it. */
 export function solvedDrawTransformOf(
@@ -38,16 +49,13 @@ export function controlTransformsOf(
   snapToPixels: boolean
 ): ControlTransforms {
   const transforms = new Map<string, ReturnType<typeof transform2DFromParts>>();
-  const visit = (node: SolveNode): void => {
+  eachSolveNode(tree, (node) => {
     const entry = solved.get(node.path);
-    if (entry) {
-      const draw = solvedDrawTransformOf(node, entry);
-      const origin = controlItemOriginUnder(entry.rect, VECTOR2_ZERO, draw, snapToPixels);
-      transforms.set(node.path, transform2DFromParts(draw.rotation, draw.scale, 0, origin));
-    }
-    node.children.forEach(visit);
-  };
-  tree.forEach(visit);
+    if (!entry) return;
+    const draw = solvedDrawTransformOf(node, entry);
+    const origin = controlItemOriginUnder(entry.rect, VECTOR2_ZERO, draw, snapToPixels);
+    transforms.set(node.path, transform2DFromParts(draw.rotation, draw.scale, 0, origin));
+  });
   return transforms;
 }
 
@@ -60,74 +68,163 @@ export function transformsAtLivePaths(livePath: string, transforms: ControlTrans
   return new Map([...transforms].map(([path, transform]) => [joinPath(livePath, path), transform]));
 }
 
-/** The shifts the world sort gave the nodes below `livePath`, keyed by the forest's own paths. */
-export function shiftsOfForest(livePath: string, shifts: YSortShifts): YSortShifts {
-  if (livePath === '') return shifts;
-  const own = new Map<string, YSortShift>();
-  for (const [path, shift] of shifts) {
-    const relative = relativeTo(livePath, path);
-    if (relative) own.set(relative, shift);
-  }
-  return own;
+/**
+ * The `INTERNAL_MODE_BACK` children each y-sorting Control draws itself, which its sort collects
+ * after its authored children (`renderer_canvas_cull.cpp:110-160`). Each id is the Control's path
+ * and the piece's name, joined by {@link pieceIdOf}.
+ */
+export function forestBackPiecesOf(
+  tree: readonly SolveNode[],
+  solved: ReadonlyMap<string, SolvedControl>
+): ExtraSortItems {
+  const pieces = new Map<string, ExtraSortItem[]>();
+  eachSolveNode(tree, (node) => {
+    const piecesOf = controlSolverRegistry.internalBackPieces(node.node.type);
+    const entry = solved.get(node.path);
+    if (!piecesOf || !entry || !ysortsChildren(node.node)) return;
+    const items = piecesOf(entry).map(({ name, origin }) => ({
+      id: pieceIdOf(node.path, name),
+      origin,
+      size: 1,
+      followsChildren: true,
+    }));
+    if (items.length > 0) pieces.set(node.path, items);
+  });
+  return pieces;
 }
 
-/**
- * `node` over `children`, with every draw sequence of its own moved by `delta`. It mirrors each
- * sequence field of `SolveNode`, which `controlYSort.conformance.test.ts` guards.
- */
-function withShiftedRuns(node: SolveNode, delta: number, children: readonly SolveNode[]): SolveNode {
-  const shift = (range: PaintRange): PaintRange => ({ base: range.base + delta, size: range.size });
+/** The id a sort gives the piece `name` of the Control at `path`. */
+function pieceIdOf(path: string, name: string): string {
+  return `${path}#${name}`;
+}
+
+/** `pieces` keyed and named by live path, as `transformsAtLivePaths` keys transforms. */
+export function piecesAtLivePaths(livePath: string, pieces: ExtraSortItems): ExtraSortItems {
+  if (livePath === '') return pieces;
+  return new Map(
+    [...pieces].map(([path, items]) => [
+      joinPath(livePath, path),
+      items.map((item) => ({ ...item, id: joinPath(livePath, item.id) })),
+    ])
+  );
+}
+
+/** How the walk draws a forest after the y-sort of its canvas, by the forest's own paths. */
+export interface ForestSort {
+  /** Each Control's paint as the walk draws it. */
+  readonly paints: ReadonlyMap<string, CanvasItemPaint>;
+  /** The run of each internal back piece the sort placed, by the Control's path, then the piece's name. */
+  readonly pieceRuns: ReadonlyMap<string, ReadonlyMap<string, PaintRange>>;
+  /** The Controls that hand their children the clip they took (`mergedSorters`). */
+  readonly mergedSorters: ReadonlySet<string>;
+}
+
+/** The forest drawn at the runs of the one sort of its canvas, which the shared live tree gives by live path. */
+export function forestInCanvasSort(
+  tree: readonly SolveNode[],
+  livePath: string,
+  canvas: SortedRunsValue,
+  pieces: ExtraSortItems
+): ForestSort {
+  const drawn = new Map<string, CanvasItemPaint>();
+  const merged = new Set<string>();
+  // By live path, so a Control inside the run of a Node2D entry the sort moved moves with it.
+  for (const [path, paint] of forestPaintsOf(tree)) {
+    const live = joinPath(livePath, path);
+    drawn.set(path, sortedPaintOf(live, canvas.paints.get(live) ?? paint, canvas.runs, canvas.paints));
+    if (canvas.mergedSorters.has(live)) merged.add(path);
+  }
   return {
-    ...node,
-    children,
-    paintRange: shift(node.paintRange),
-    behindRanges: node.behindRanges.map(shift),
-    paintSequence: node.paintSequence + delta,
-    backSequence: node.backSequence + delta,
-    layerSequence: node.layerSequence + delta,
+    paints: drawn,
+    pieceRuns: pieceRunsOf(pieces, (id) => canvas.runs.get(joinPath(livePath, id))),
+    mergedSorters: merged,
   };
 }
 
-/** The shift of the nearest node above `path` that the sort moved, or undefined. */
-function shiftAbove(path: string, shifts: YSortShifts) {
-  for (let up = parentPathOf(path); up !== null; up = parentPathOf(up)) {
-    const shift = shifts.get(up);
-    if (shift) return shift;
-  }
-  return undefined;
-}
-
 /**
- * `tree` with each subtree the y-sort moved drawn at its new run, or `tree` itself when it moved
- * none. A Control the sort lists as an item takes the run it gave. A Control that parents at a
- * non-Control, a walk root or one promoted past a Node2D, moves with the nearest Node2D above it the
- * sort moved, since that item's run holds the Control's.
+ * The forest drawn at the runs of its own sort, for a forest the shared live tree does not hold: a
+ * Control-only viewport or an unowned scene-tile root. The one sort runs over the forest's Controls,
+ * on the origins the solve gave them.
  */
-export function applyYSortShifts(tree: readonly SolveNode[], shifts: YSortShifts): readonly SolveNode[] {
-  if (shifts.size === 0) return tree;
-  return placeAll(tree, shifts, true, 0);
+export function forestInOwnSort(
+  tree: readonly SolveNode[],
+  origins: ControlTransforms,
+  pieces: ExtraSortItems
+): ForestSort {
+  const items = forestSortItemsOf(tree);
+  const paints = forestPaintsOf(tree);
+  const runs = ySortedPaint(items, paints, { ...NO_SORT_INPUTS, origins, extras: pieces });
+  return {
+    paints: drawnPaints(paints, runs),
+    pieceRuns: pieceRunsOf(pieces, (id) => runs.get(id)),
+    mergedSorters: mergedSorters(items),
+  };
 }
 
-/** `nodes` placed, each by the shift of the nearest ancestor that moved, `inherited` unless it moved itself. */
-function placeAll(
-  nodes: readonly SolveNode[],
-  shifts: YSortShifts,
-  areRoots: boolean,
-  inherited: number
-): readonly SolveNode[] {
-  const placed = nodes.map((node) => placeNode(node, shifts, areRoots, inherited));
-  return placed.every((node, i) => node === nodes[i]) ? nodes : placed;
+function pieceRunsOf(
+  pieces: ExtraSortItems,
+  runOf: (id: string) => PaintRange | undefined
+): ReadonlyMap<string, ReadonlyMap<string, PaintRange>> {
+  const runs = new Map<string, Map<string, PaintRange>>();
+  for (const [path, items] of pieces) {
+    const named = new Map<string, PaintRange>();
+    for (const { id } of items) {
+      const run = runOf(id);
+      if (run) named.set(id.slice(pieceIdOf(path, '').length), run);
+    }
+    if (named.size > 0) runs.set(path, named);
+  }
+  return runs;
 }
 
-function placeNode(node: SolveNode, shifts: YSortShifts, isRoot: boolean, inherited: number): SolveNode {
-  const own = shifts.get(node.path);
-  const above = !own && (isRoot || isPromotedControl(node)) ? shiftAbove(node.path, shifts) : undefined;
-  const delta = own ? own.run.base - node.paintRange.base : above ? above.run.base - above.from : inherited;
-  return placeChildren(node, shifts, delta);
+function drawnPaints(
+  paints: ReadonlyMap<string, CanvasItemPaint>,
+  runs: ReadonlyMap<string, PaintRange>
+): ReadonlyMap<string, CanvasItemPaint> {
+  const drawn = new Map<string, CanvasItemPaint>();
+  for (const [path, paint] of paints) drawn.set(path, sortedPaintOf(path, paint, runs, paints));
+  return drawn;
 }
 
-/** `node` moved by `delta`, its children placed under that delta. */
-function placeChildren(node: SolveNode, shifts: YSortShifts, delta: number): SolveNode {
-  const children = placeAll(node.children, shifts, false, delta);
-  return delta === 0 && children === node.children ? node : withShiftedRuns(node, delta, children);
+/** What the sort reads of each Control of the forest, its parent the Control above it. */
+function forestSortItemsOf(tree: readonly SolveNode[]): ReadonlyMap<string, SortItem> {
+  const items = new Map<string, SortItem>();
+  eachSolveNode(tree, (node, parent) => {
+    const props = controlProps(node);
+    items.set(node.path, {
+      parent: parent?.path ?? null,
+      isVisible: !node.hidden && props.visible !== false,
+      fields: { ySortEnabled: ysortsChildren(node.node), local: null },
+    });
+  });
+  return items;
+}
+
+/** Whether the shared live tree holds the forest's nodes, so the canvas's one sort covers them. */
+export function isInSharedTree(
+  tree: readonly SolveNode[],
+  livePath: string,
+  paints: ReadonlyMap<string, CanvasItemPaint>
+): boolean {
+  const root = tree[0];
+  return root !== undefined && paints.has(joinPath(livePath, root.path));
+}
+
+/** The tree-order paint of every node of the forest, by its path. */
+function forestPaintsOf(tree: readonly SolveNode[]): ReadonlyMap<string, CanvasItemPaint> {
+  const paints = new Map<string, CanvasItemPaint>();
+  eachSolveNode(tree, (node) => paints.set(node.path, node.paint));
+  return paints;
+}
+
+/** Visits every node of the forest in tree order, with the node above it, null for a root. */
+function eachSolveNode(
+  tree: readonly SolveNode[],
+  visit: (node: SolveNode, parent: SolveNode | null) => void
+): void {
+  const walk = (node: SolveNode, parent: SolveNode | null): void => {
+    visit(node, parent);
+    for (const child of node.children) walk(child, node);
+  };
+  for (const root of tree) walk(root, null);
 }

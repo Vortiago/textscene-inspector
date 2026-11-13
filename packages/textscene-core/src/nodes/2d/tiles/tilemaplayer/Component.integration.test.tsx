@@ -14,9 +14,8 @@ import { TscnParser } from '../../../../parser/TscnParser';
 import { parseTresFile } from '../../../../parser/parsedResource';
 import { tileSetFromFile } from '../../../../resources/tileset/decode';
 import { mapToLocalPx } from '../../../../resources/tileset/tilePlacement';
-import { TileMapLayer } from './Component';
-import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
+import { NodeDispatcher } from '../../../../r3f/NodeDispatcher';
+import { SceneStack } from '../../../../r3f/testing/SceneStack';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { findByType } from './findByType.testkit';
 import { quadrantCanvasItems } from '../../../../resources/tileset/tileCanvasItems';
@@ -81,7 +80,7 @@ describe('isometric dungeon integration', () => {
     expect(mapToLocalPx(model, { x: 12, y: -14 })).toEqual({ x: 1728, y: -32 });
   });
 
-  /** Mounts `layer` against the real tileset, lit by a pass that spies on its capped items. */
+  /** Mounts `layer` through the dispatcher, which mounts the sort of a y-sorted layer, against the real tileset, lit by a pass that spies on its capped items. */
   async function renderLayer(layer: (typeof layers)[number]) {
     const fake = createFakeResourceLoader();
     fake.resources.seed('res://tileset/tileset.tres', parseTresFile(tilesetContent));
@@ -94,16 +93,11 @@ describe('isometric dungeon integration', () => {
     const registerCappedItem = vi.fn((_item: CappedItem) => () => {});
 
     const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider
-          internalResources={scene.internalResources}
-          externalResources={scene.externalResources}
-        >
-          <CanvasLighting2DContext.Provider value={{ ...INERT_CANVAS_LIGHTING, registerCappedItem }}>
-            <TileMapLayer node={layer} />
-          </CanvasLighting2DContext.Provider>
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
+      <SceneStack workspace="2d" loader={fake.loader} scene={scene}>
+        <CanvasLighting2DContext.Provider value={{ ...INERT_CANVAS_LIGHTING, registerCappedItem }}>
+          <NodeDispatcher nodes={[layer]} />
+        </CanvasLighting2DContext.Provider>
+      </SceneStack>
     );
     await settleLoads();
     return { renderer, registerCappedItem };

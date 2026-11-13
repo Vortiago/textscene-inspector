@@ -144,8 +144,12 @@ describe('paintRangeSize', () => {
   });
 
   it("counts one more value for a Control's back pieces", () => {
+    expect(paintRangeSize(node('Box', 'Control', [node('Body', 'ColorRect')]))).toBe(1 + 1 + 1 + 1);
+  });
+
+  it("counts one value for each of a ScrollContainer's hints and bars, which a y-sort places apart", () => {
     expect(paintRangeSize(node('Scroll', 'ScrollContainer', [node('Body', 'ColorRect')]))).toBe(
-      1 + 1 + 1 + 1
+      1 + 1 + 4 + 1
     );
   });
 
