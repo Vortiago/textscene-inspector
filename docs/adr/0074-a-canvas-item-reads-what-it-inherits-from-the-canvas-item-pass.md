@@ -31,7 +31,7 @@ drawn item reads it from the pass, through `useInheritedCanvasState(path)`.
   re-renders no item.
 
 The context per facet, `CanvasItemChildScope` and `SkippedCanvasItemsScope` are gone.
-`SolveNode.skippedAncestors` keeps only the transform, which the walk composes as a whole matrix.
+`SolveNode.skippedTransform` holds the transform, which the walk composes as a whole matrix.
 
 ## Measurement
 
