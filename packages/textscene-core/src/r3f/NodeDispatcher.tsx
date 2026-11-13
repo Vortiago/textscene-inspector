@@ -5,7 +5,7 @@
  */
 
 import { ControlCanvasSpace } from './ControlCanvasSpace.js';
-import { Fragment, lazy, useEffect, useMemo } from 'react';
+import { Fragment, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import type { LiveNode } from '../resources/liveNode.js';
@@ -39,7 +39,6 @@ import { UnownedSubtree } from './contexts/UnownedSubtreeContext.js';
 import { useLiveStepOf } from './useLiveSceneTree.js';
 import { useLiveDrawnNode } from './liveNodePatches.js';
 import { useResourceLoader } from '../resources/useResource.js';
-import { PendingSuspense } from '../resources/PendingSuspense.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
@@ -67,9 +66,6 @@ import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
-
-// Lazy, as the 2D stage's own Control layer is: a canvas with no unowned Control loads none.
-const UnownedNodeControls = lazy(() => import('./controls/native/UnownedNodeControls.js'));
 
 /** Does this subtree contain anything that needs boolean evaluation? */
 function containsCsgShape(node: TscnNode): boolean {
@@ -163,17 +159,7 @@ export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
     dispatched
   );
   if (!node.isUnowned) return scoped;
-  return (
-    <UnownedSubtree>
-      {scoped}
-      {/* The world walk draws no Control, and the scene's own Control forest never sees this node. */}
-      {node.hasControlRoot && (
-        <PendingSuspense>
-          <UnownedNodeControls node={node} />
-        </PendingSuspense>
-      )}
-    </UnownedSubtree>
-  );
+  return <UnownedSubtree>{scoped}</UnownedSubtree>;
 }
 
 /**

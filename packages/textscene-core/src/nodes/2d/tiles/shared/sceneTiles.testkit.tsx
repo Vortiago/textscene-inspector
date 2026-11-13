@@ -258,7 +258,7 @@ tile_size = Vector2i(64, 64)
 sources/0 = SubResource("scenes")
 `;
 
-const TILE_SCENES: Record<string, string> = {
+export const TILE_SCENES: Record<string, string> = {
   'res://polygon.tscn': POLYGON_SCENE,
   'res://offset.tscn': OFFSET_SCENE,
   'res://control.tscn': CONTROL_SCENE,
@@ -305,12 +305,8 @@ export interface RenderSceneTilesOptions {
   prepare?: (scene: TscnScene) => void;
 }
 
-/**
- * Renders `tscn` in the 2D canvas with the tile scenes loaded. The Controls of a scene tile
- * load lazily, so their module loads first and the first settle mounts them.
- */
+/** Renders `tscn` in the 2D canvas with the tile scenes loaded. */
 export async function renderSceneTiles(tscn: string, options: RenderSceneTilesOptions = {}) {
-  await import('../../../../r3f/controls/native/UnownedNodeControls');
   const fake = createFakeResourceLoader();
   const fail = (path: string) => fake.scenes._fail(path, `cannot load ${path}`);
   const failedScenes = options.failedScenes ?? [];
@@ -332,6 +328,7 @@ export async function renderSceneTiles(tscn: string, options: RenderSceneTilesOp
         sceneGraph={createSceneGraphFromTscnScene(scene)}
         loader={fake.loader}
         workspace="2d"
+        drawsControls
         showGizmos={options.showGizmos}
         selectedPath={options.selectedPath}
         around={(nodes) => <Probe probe={probe}>{nodes}</Probe>}

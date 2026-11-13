@@ -4,8 +4,8 @@
  * linter reads never carries it.
  */
 import type { SceneScope, TscnNode } from '../parser/types.js';
-import type { Rect2 } from '../godot/math/rect2.js';
-import type { Transform2DColumns } from '../godot/math/transform2d.js';
+import type { SceneTilePlacement } from './tileset/sceneTilePlacement.js';
+import type { Vector2 } from '../godot/math/vector.js';
 import type { HandOffDecision } from '../parser/nodeOwner.js';
 import type { UniqueNameTable } from './instanceNameTable.js';
 import { resolveInstancePath } from './SubResourceResolver.js';
@@ -71,23 +71,10 @@ export interface LiveNode extends TscnNode {
    * what it holds, so a click on it selects no node of its own.
    */
   readonly isUnowned?: boolean;
-  /** An unowned node whose instance root is a Control, which the world walk does not draw. */
-  readonly hasControlRoot?: boolean;
-  /**
-   * Set on an unowned placement node: its instance root inside it. Godot sorts the root, a child
-   * canvas item of the layer, so the y-sort pass reads the placement and the root's pose and z.
-   */
-  readonly ySortRoot?: YSortRoot;
-  /**
-   * Set on an unowned placement node whose root is a Control: receives the rect the Control walk
-   * solved for that root, which the tile layer sorts the node on.
-   */
-  readonly reportRootRect?: (rect: Rect2) => void;
-}
-
-/** The instance root a placement node stands for, as the y-sort reads it. */
-export interface YSortRoot {
-  pose: Transform2DColumns;
+  /** Set on the instance a tile layer adds for a scene tile: where its merged root is placed. */
+  readonly sceneTile?: SceneTilePlacement;
+  /** Set on a scene tile's merged Control root: the `map_to_local` its layer moves it by (`tile_map_layer.cpp:1636`). */
+  readonly controlPositionShift?: Vector2;
 }
 
 /** The host child `node` stands for: itself, or the child it is the re-anchored copy of. */

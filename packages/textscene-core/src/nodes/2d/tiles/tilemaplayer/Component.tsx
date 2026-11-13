@@ -17,16 +17,13 @@ import { YSortExtraChildrenProvider } from '../../../../r3f/ySortExtraChildren';
 import { useNodePath } from '../../../../r3f/contexts/NodePathContext';
 import { SceneTileInstances } from '../shared/SceneTileInstances';
 import { ScenePlaceholders } from '../shared/ScenePlaceholders';
-import { useSceneTileNodes, type SceneTileDrawing } from '../shared/useSceneTileNodes';
+import { useSceneTiles, type SceneTileDrawing } from '../shared/useSceneTiles';
 import type { TileMapLayerProperties } from './types';
 
 export function TileMapLayer({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapLayerProperties;
   const { model, status } = useTileSetModel(props.tile_set);
-  const sceneTiles = useSceneTileNodes(
-    model,
-    props.enabled && props.drawsSceneTiles !== false ? props.cells : null
-  );
+  const sceneTiles = useSceneTiles(node);
   const path = useNodePath() ?? node.name;
   if (!props.y_sort_enabled) {
     return (

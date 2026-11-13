@@ -18,7 +18,6 @@ import { NO_PATCHES, patchedNode, type NodePatches } from './nodePatch.js';
 import { joinPath } from '../utils/nodePath.js';
 import { perObject } from '../utils/perObject.js';
 import { isControlType } from './canvasItemClass.js';
-import type { LiveNode } from '../resources/liveNode.js';
 import type { ControlTransforms } from './contexts/YSortContext.js';
 
 /** What `_collect_ysort_children` threads down to the children of one y-sorted item. */
@@ -113,10 +112,7 @@ function itemSortKey(
 ): YSortParent & { sortY: number } {
   const fields = canvasItemFieldsOf(child);
   const toSortRoot = toSortRootOf(fields, parent, controlTransform);
-  // A scene tile sorts as its instance root, which sits inside the placement node that stands for it.
-  const root = (child as LiveNode).ySortRoot;
-  const sortY = root ? multiplyTransform2D(toSortRoot, root.pose).ty : toSortRoot.ty;
-  return { toSortRoot, sortY };
+  return { toSortRoot, sortY: toSortRoot.ty };
 }
 
 /** The y-sort group of a y_sort_enabled canvas item that draws per tile row, or undefined. */

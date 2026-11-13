@@ -13,6 +13,13 @@ import {
 import { mapToLocalPx } from './tilePlacement';
 import type { TileGrid } from './types';
 
+/** Where a layer puts the root of a scene tile's instance: the cell, by the grid of its TileSet. */
+export interface SceneTilePlacement {
+  readonly grid: TileGrid;
+  readonly coords: Vector2;
+  readonly alternativeId: number;
+}
+
 /** The two roots Godot places: a Control and a Node2D (`tile_map_layer.cpp:1630-1636`). */
 export type SceneRootKind = 'node2d' | 'control';
 
