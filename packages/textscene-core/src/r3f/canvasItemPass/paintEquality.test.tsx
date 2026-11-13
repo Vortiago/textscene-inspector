@@ -1,8 +1,9 @@
 /**
- * The paint pass gives each node the sequence the two walks give it today: the world walk's
- * `useNodePaintSequence` for each drawn item, and the Control walk's `paintSequence`,
- * `backSequence` and `layerSequence` for each `SolveNode`, on every fixture of the value list.
- * A y-sorted parent re-packs its children's runs, so the world walk below one is not compared.
+ * Both walks draw each node at the sequence the paint pass gives it: the world walk reads it through
+ * `useNodePaint`, and the Control walk fills each `SolveNode`'s `paintSequence`, `backSequence` and
+ * `layerSequence` from it. Every 2D node the pass holds is read by one walk, so a walk that
+ * allocates its own sequence fails here. A y-sorted parent re-packs its children's runs, so the
+ * world walk below one is compared only for its runs.
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -21,6 +22,7 @@ import { useLiveTreeSelection } from '../useLiveSceneTree';
 import { ControlCanvasLayer } from '../controls/native/ControlCanvasLayer';
 import type { SolveNode } from '../controls/native/solveTree';
 import { ysortsChildren } from '../canvasPaintOrder';
+import { descendsFromClass } from '../../godot/classdb/classBaseTypes';
 import { canvasPaintPass, type CanvasItemPaint } from './canvasItemPaint';
 
 import '../nodes/index';
@@ -159,11 +161,22 @@ function sortedPaths(tree: LiveTree): Set<string> {
   return sorted;
 }
 
-describe('the paint pass gives the sequences the two walks give', () => {
+/** The live paths of 3D nodes, which no 2D walk draws. */
+function spatialPaths(tree: LiveTree): Set<string> {
+  const spatial = new Set<string>();
+  tree.fold<void, void>(undefined, ({ step, path }, _, descend) => {
+    if (descendsFromClass(step.node.type, 'Node3D')) spatial.add(path);
+    descend();
+  });
+  return spatial;
+}
+
+describe('both walks read the paint pass for every node they draw', () => {
   it.each(FIXTURES)('%s', async (name) => {
     const tree = await mounted(name);
     const paint = liveScenePassResults(canvasPaintPass, tree);
     const sorted = sortedPaths(tree);
+    const spatial = spatialPaths(tree);
 
     const world = [...worldPaints]
       .filter(([path]) => paint.has(path) && !sorted.has(path))
@@ -184,6 +197,10 @@ describe('the paint pass gives the sequences the two walks give', () => {
     });
     expect(controlFound).toEqual(controlPass);
     expect(world.length + controls.length).toBeGreaterThan(0);
+    const unread = [...paint.keys()].filter(
+      (path) => !worldPaints.has(path) && !controlNodes.has(path) && !spatial.has(path)
+    );
+    expect(unread).toEqual([]);
   });
 });
 
