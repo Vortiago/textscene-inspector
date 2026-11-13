@@ -204,7 +204,7 @@ describe('canvasRootRanges', () => {
     // so it parents at the canvas and takes the canvas's sort counter
     // (`_top_level_raise_self`, canvas_item.cpp:222-232): the tail of the root it
     // hangs under, as a broken CanvasItem chain gives.
-    const detached = node('Detached', 'ColorRect', [], { top_level: true });
+    const detached = node('Detached', 'ColorRect', [], { topLevel: true });
     const root = node('Root', 'Node2D', [detached, node('Later', 'Sprite2D')]);
     const ranges = allocatePaintRange(WHOLE_CANVAS_RANGE, [root]).children;
     const roots = canvasRootRanges([root], ranges);
@@ -280,7 +280,7 @@ describe('allocatePaintRange', () => {
 
   it.each([
     ['a Node2D', 'Polygon2D', { clip_children: 1 }],
-    ['a Control', 'ColorRect', { clip_children: 2 }],
+    ['a Control', 'ColorRect', { clipChildren: 2 }],
   ])('draws %s with clip_children after every child, as a CanvasGroup', (_, type, properties) => {
     // A clipping item groups its children as a CanvasGroup does, so it culls them before itself.
     const clipping = node(

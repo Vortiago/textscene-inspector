@@ -16,6 +16,7 @@ export interface OverrideLayer<Properties> {
  * optional formatter for `<NodeDetailsPanel>`. Rendering lives in `r3f/NodeComponentRegistry.ts`.
  */
 
+import type { ChildVisibilityFn } from './childVisibility';
 import { isPropertyOverrideHeading, type ParsedHeading } from '../parser/utils';
 import { headingIndexField } from '../parser/rawNode';
 import { INSTANCE_PLACEHOLDER_TYPE } from '../godot/scene/packedScene';
@@ -54,6 +55,9 @@ export interface NodeTypeRegistration {
 
   /** Optional property formatter for custom details panel display */
   propertyFormatter?: PropertyFormatter;
+
+  /** The `visible` the node writes onto its children, for a container that writes one. */
+  writesChildVisibility?: ChildVisibilityFn;
 }
 
 class NodeRegistry {
@@ -81,6 +85,11 @@ class NodeRegistry {
 
   getRegistration(typeName: string): NodeTypeRegistration | null {
     return this.registrations.get(typeName) ?? null;
+  }
+
+  /** The `visible` a node of `typeName` writes onto its children, or undefined for one that writes none. */
+  childVisibility(typeName: string): ChildVisibilityFn | undefined {
+    return this.registrations.get(typeName)?.writesChildVisibility;
   }
 
   getAllTypeNames(): string[] {

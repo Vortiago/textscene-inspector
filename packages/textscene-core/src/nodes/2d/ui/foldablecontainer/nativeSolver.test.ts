@@ -12,8 +12,8 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { FoldableContainerProperties } from './types';
+import { foldableContainerChildVisibility } from './childVisibility';
 import {
-  foldableContainerChildVisibility,
   foldableContainerMinimumSize,
   foldableContainerLayout,
   foldableContainerHSeparation,

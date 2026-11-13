@@ -138,6 +138,10 @@ export const CONTROL_WIDGET_SCENES = [
   { name: 'control-lifted-link-y-sort', file: 'unit-control-lifted-link-y-sort.tscn', mode: '2d' },
   // The one variable: a top_level Node2D starts the chain of the Control below it. Godot 4.6.3 `--mode 2d`: 1/255.
   { name: 'control-below-top-level-node2d', file: 'unit-control-below-top-level-node2d.tscn', mode: '2d' },
+  // The one variable: the current tab, which shows the Node2D on its page only. Godot 4.6.3 `--mode 2d`: 2/255, 0 px over 2/255.
+  { name: 'control-tab-pages-node2d', file: 'unit-node2d-on-tab-pages.tscn', mode: '2d' },
+  // The one variable: a folded FoldableContainer, which hides the Node2D in its child. Godot 4.6.3 `--mode 2d`: 1/255.
+  { name: 'control-folded-node2d', file: 'unit-node2d-in-folded-container.tscn', mode: '2d' },
   {
     name: 'control-anchor-parent-node2d',
     file: 'unit-control-anchor-parent-node2d.tscn',

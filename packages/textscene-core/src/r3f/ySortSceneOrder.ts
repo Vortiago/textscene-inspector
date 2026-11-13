@@ -7,12 +7,8 @@
 import type { TscnNode } from '../parser/types.js';
 import { joinPath } from '../utils/nodePath.js';
 import { perObject } from '../utils/perObject.js';
-import {
-  allocateNodePaintRange,
-  isControlType,
-  ysortsChildren,
-  type PaintRange,
-} from './canvasPaintOrder.js';
+import { allocateNodePaintRange, ysortsChildren, type PaintRange } from './canvasPaintOrder.js';
+import { isControlType } from './canvasItemClass.js';
 
 /**
  * The base of the run scene order gives each node below `node`, by path: its children, and the

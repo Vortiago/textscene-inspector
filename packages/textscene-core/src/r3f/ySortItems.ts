@@ -137,7 +137,7 @@ function itemSortKey(
 
 /** The y-sort group of a y_sort_enabled canvas item that draws per tile row, or undefined. */
 function ySortTileGroup(node: TscnNode) {
-  if ((node.properties as Record<string, unknown>).y_sort_enabled !== true) return undefined;
+  if (!ysortsChildren(node)) return undefined;
   const group = nodeComponentRegistry.getYSortGroup(node.type);
   return group && nodeComponentRegistry.isCanvasItem(node.type) ? group : undefined;
 }

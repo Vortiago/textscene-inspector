@@ -187,22 +187,6 @@ export type TextureSlotsFn = (
 export type BuiltIconsFn = (type: string, variation?: string) => Readonly<Record<string, ThemedIconRef>>;
 
 /**
- * The `visible` a container writes onto one direct sortable Control child
- * while sorting. `undefined` leaves the authored flag alone. `index` and
- * `count` number the sortable children only (`tab_container.cpp:469-481`).
- */
-// Per child: `FoldableContainer` writes `c->set_visible(!folded)` to every child
-// (`scene/gui/foldable_container.cpp:376-386`), while `TabContainer` shows only the
-// current page (`scene/gui/tab_container.cpp:377-399`, and the same split at `:290-293`).
-// A promoted or `top_level` Control fails the sortable cast (`container.cpp:143-146`).
-export type ChildVisibilityFn = (
-  container: TscnNode,
-  child: TscnNode,
-  index: number,
-  count: number
-) => boolean | undefined;
-
-/**
  * How a type settles from the `res://` folders a host lists, such as a FileDialog's file list. `folders` names the folders to
  * ask for given the answers so far, since one answer can lead to the next. `resolve` gives the node with every answer in.
  */
@@ -217,9 +201,6 @@ class ControlSolverRegistry {
     'controlSolverRegistry.containerLayout'
   );
   private readonly textureSlotFns = createTypeRegistry<TextureSlotsFn>('controlSolverRegistry.textureSlots');
-  private readonly childVisibilityFns = createTypeRegistry<ChildVisibilityFn>(
-    'controlSolverRegistry.childVisibility'
-  );
   private readonly loadedMinimumSizeFns = createTypeRegistry<LoadedMinimumSizeFn>(
     'controlSolverRegistry.loadedMinimumSize'
   );
@@ -287,19 +268,6 @@ class ControlSolverRegistry {
     return this.directoryResolvers.get(typeName);
   }
 
-  /** Declares a container that writes its children's `visible` (see `ChildVisibilityFn`). */
-  registerChildVisibility(typeName: string, fn: ChildVisibilityFn): void {
-    this.childVisibilityFns.register(typeName, fn);
-  }
-
-  /**
-   * This type's `ChildVisibilityFn`, or `undefined`. Returned, not invoked: the
-   * caller enumerates the sortable children first, and only for a registered type.
-   */
-  childVisibility(typeName: string): ChildVisibilityFn | undefined {
-    return this.childVisibilityFns.get(typeName);
-  }
-
   /** This type's `TextureSlotsFn`, or `undefined` for a type that keeps the single-slot fallback. */
   textureSlots(typeName: string): TextureSlotsFn | undefined {
     return this.textureSlotFns.get(typeName);
@@ -320,7 +288,6 @@ class ControlSolverRegistry {
     this.loadedMinimumSizeFns.clear();
     this.textureSlotFns.clear();
     this.directoryResolvers.clear();
-    this.childVisibilityFns.clear();
     this.canvasBoundaryTypes.clear();
     this.sizeDependentMinimumTypes.clear();
   }

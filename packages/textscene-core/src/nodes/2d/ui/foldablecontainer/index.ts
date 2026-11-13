@@ -6,10 +6,12 @@
 
 import { nodeRegistry, type NodeTypeRegistration } from '../../../../core/NodeRegistry';
 import { parseFoldableContainer } from './parser';
+import { foldableContainerChildVisibility } from './childVisibility';
 
 const foldableContainerRegistration: NodeTypeRegistration = {
   typeName: 'FoldableContainer',
   parser: parseFoldableContainer,
+  writesChildVisibility: foldableContainerChildVisibility,
 };
 
 nodeRegistry.register(foldableContainerRegistration);
