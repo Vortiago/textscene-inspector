@@ -11,7 +11,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import { ScrollBarChrome } from '../shared/ScrollChrome';
@@ -56,7 +56,7 @@ import {
 } from './nativeSolver';
 import { useTextEditRows } from './useTextEditRows';
 import { canvasSubOrder } from '../../../../r3f/canvasItemState';
-import { caretDrawWidthPx } from '../lineedit/nativeSolver';
+import { caretDrawWidthPx } from '../shared/caretWidth';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import type { TextEditRows } from './rows';
 import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
@@ -276,7 +276,7 @@ export function TextEditBody({
   // Local, not `rect`: `useWorldClipPlanes` composes it with the anchor's world matrix, so a
   // rect carrying the control's offset clips the text at twice that offset.
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
-  const { anchorRef, clippingPlanes } = useWorldClipPlanes(ownRect);
+  const { anchorRef, clippingPlanes, clip } = useWorldClipPlanes(ownRect);
 
   // Godot's `yofs`/`xofs` (`text_edit.cpp:1711-1718`) use a `line_ascent` the row model does
   // not carry, so each icon centres in its row band. A tab icon sits at its pen x and a space
@@ -287,116 +287,120 @@ export function TextEditBody({
   return (
     <CanvasItemGroup ref={anchorRef}>
       <StyleBoxQuad styleBox={styleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
-      {minimapInput && (
-        <TextEditMinimap input={minimapInput} tint={childTint.own} renderOrder={renderOrder} />
-      )}
-      {underlay}
-      {props.highlightCurrentLine && (
-        <CanvasItemGroup
-          position={[textEditCurrentLineXPx(band.xMarginEndPx, rect.w, solveNode.rtl), -rowBandTopPx(0), 0]}
-        >
-          <ControlQuad
-            width={band.xMarginEndPx}
-            height={rowHeightPx}
-            color={toItemLinear(tintedCurrentLineColor)}
-            opacity={tintedCurrentLineColor.a}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
-      )}
-      {lineLayouts.map(({ layout, startRow }, lineIndex) => {
-        const lineText = lines[lineIndex] ?? '';
-        const spans = lineColorSpans?.[lineIndex];
-        // Computed whenever the wrap indent or the highlighter's spans need it.
-        const rowStartIndices =
-          spans || indentsWrappedRows ? textEditRowStartIndices(lineText, layout.lines) : undefined;
-        const wrapIndentPx = indentsWrappedRows
-          ? textEditWrapIndentPx(layout.lines[0] ?? EMPTY_ROW, lineText, wrapWidthPx)
-          : 0;
-        const firstIndentRow = indentsWrappedRows
-          ? textEditFirstIndentRow(lineText, rowStartIndices ?? [0])
-          : 0;
-        return layout.lines.map((line, rowInLine) => {
-          const row = startRow + rowInLine;
-          const rowTopPx = textEditRowTextTopPx(rowBandTopPx(row), rowHeightPx, textHeightPx);
-          const rowStartIndex = rowStartIndices?.[rowInLine] ?? 0;
-          const rowOriginXPx = textEditRowOriginXPx(
-            band.xMarginBeginPx,
-            rect.w,
-            line.widthPx,
-            solveNode.rtl,
-            rowInLine > firstIndentRow ? wrapIndentPx : 0
-          );
-          // Godot drops each glyph that crosses a margin and stops walking at the end one (`:1724-1738`).
-          const drawn = textEditDrawnGlyphs(
-            line.glyphs,
-            rowOriginXPx,
-            band.xMarginBeginPx,
-            band.xMarginEndPx
-          );
-          const runs = textEditRowColorRuns(line.glyphs, rowStartIndex, spans, baseFontColor, drawn);
-          return (
-            <CanvasItemGroup key={`${lineIndex}-${rowInLine}`} position={[rowOriginXPx, -rowTopPx, 0]}>
-              {runs.map((run, runIndex) => (
-                <TextRun
-                  key={runIndex}
-                  layout={soloLineLayout(textEditColorRunLine(run), layout)}
-                  fontSizePx={fontSizePx}
-                  tint={multiplyModulate(childTint.own, run.color)}
-                  clippingPlanes={clippingPlanes}
-                  renderOrder={renderOrder}
-                />
-              ))}
-              {(props.drawTabs || props.drawSpaces) &&
-                line.glyphs.map((glyph, glyphIndex) => {
-                  // The icons draw before the margin test, but only for a glyph the walk reaches.
-                  if (glyphIndex >= drawn.length) return null;
-                  const isTabIcon = props.drawTabs && glyph.char === '\t';
-                  if (!isTabIcon && !(props.drawSpaces && glyph.char === ' ')) return null;
-                  // The per-glyph highlighted colour tints its icon, not a
-                  // fixed font_color (text_edit.cpp:1674,1714).
-                  const iconColor = multiplyModulate(
-                    childTint.own,
-                    textEditGlyphColorAt(
-                      spans,
-                      textEditGlyphLineIndex(glyph, rowStartIndex, glyphIndex),
-                      baseFontColor
-                    )
-                  );
-                  const iconXPx = isTabIcon ? glyph.x : glyph.x + (glyph.advance - glyphIconPx) / 2;
-                  return (
-                    <CanvasItemGroup
-                      key={glyphIndex}
-                      position={[iconXPx, -((rowHeightPx - glyphIconPx) / 2), 0]}
-                    >
-                      <ControlQuad
-                        width={glyphIconPx}
-                        height={glyphIconPx}
-                        color={toItemLinear(iconColor)}
-                        opacity={iconColor.a}
-                        map={isTabIcon ? tabIcon : spaceIcon}
-                        renderOrder={renderOrder}
-                      />
-                    </CanvasItemGroup>
-                  );
-                })}
-            </CanvasItemGroup>
-          );
-        });
-      })}
-      {/* The caret draws after its row's glyphs (`text_edit.cpp:1764`). A text run tied on one key
+      {/* Everything between the box and the scroll bars draws on `text_ci`, which clips to the node
+          rect (`text_edit.cpp:932-936`). The box draws on the node's own item, and the bars are children. */}
+      <ControlClipProvider value={clip}>
+        {minimapInput && (
+          <TextEditMinimap input={minimapInput} tint={childTint.own} renderOrder={renderOrder} />
+        )}
+        {underlay}
+        {props.highlightCurrentLine && (
+          <CanvasItemGroup
+            position={[textEditCurrentLineXPx(band.xMarginEndPx, rect.w, solveNode.rtl), -rowBandTopPx(0), 0]}
+          >
+            <ControlQuad
+              width={band.xMarginEndPx}
+              height={rowHeightPx}
+              color={toItemLinear(tintedCurrentLineColor)}
+              opacity={tintedCurrentLineColor.a}
+              renderOrder={renderOrder}
+            />
+          </CanvasItemGroup>
+        )}
+        {lineLayouts.map(({ layout, startRow }, lineIndex) => {
+          const lineText = lines[lineIndex] ?? '';
+          const spans = lineColorSpans?.[lineIndex];
+          // Computed whenever the wrap indent or the highlighter's spans need it.
+          const rowStartIndices =
+            spans || indentsWrappedRows ? textEditRowStartIndices(lineText, layout.lines) : undefined;
+          const wrapIndentPx = indentsWrappedRows
+            ? textEditWrapIndentPx(layout.lines[0] ?? EMPTY_ROW, lineText, wrapWidthPx)
+            : 0;
+          const firstIndentRow = indentsWrappedRows
+            ? textEditFirstIndentRow(lineText, rowStartIndices ?? [0])
+            : 0;
+          return layout.lines.map((line, rowInLine) => {
+            const row = startRow + rowInLine;
+            const rowTopPx = textEditRowTextTopPx(rowBandTopPx(row), rowHeightPx, textHeightPx);
+            const rowStartIndex = rowStartIndices?.[rowInLine] ?? 0;
+            const rowOriginXPx = textEditRowOriginXPx(
+              band.xMarginBeginPx,
+              rect.w,
+              line.widthPx,
+              solveNode.rtl,
+              rowInLine > firstIndentRow ? wrapIndentPx : 0
+            );
+            // Godot drops each glyph that crosses a margin and stops walking at the end one (`:1724-1738`).
+            const drawn = textEditDrawnGlyphs(
+              line.glyphs,
+              rowOriginXPx,
+              band.xMarginBeginPx,
+              band.xMarginEndPx
+            );
+            const runs = textEditRowColorRuns(line.glyphs, rowStartIndex, spans, baseFontColor, drawn);
+            return (
+              <CanvasItemGroup key={`${lineIndex}-${rowInLine}`} position={[rowOriginXPx, -rowTopPx, 0]}>
+                {runs.map((run, runIndex) => (
+                  <TextRun
+                    key={runIndex}
+                    layout={soloLineLayout(textEditColorRunLine(run), layout)}
+                    fontSizePx={fontSizePx}
+                    tint={multiplyModulate(childTint.own, run.color)}
+                    clippingPlanes={clippingPlanes}
+                    renderOrder={renderOrder}
+                  />
+                ))}
+                {(props.drawTabs || props.drawSpaces) &&
+                  line.glyphs.map((glyph, glyphIndex) => {
+                    // The icons draw before the margin test, but only for a glyph the walk reaches.
+                    if (glyphIndex >= drawn.length) return null;
+                    const isTabIcon = props.drawTabs && glyph.char === '\t';
+                    if (!isTabIcon && !(props.drawSpaces && glyph.char === ' ')) return null;
+                    // The per-glyph highlighted colour tints its icon, not a
+                    // fixed font_color (text_edit.cpp:1674,1714).
+                    const iconColor = multiplyModulate(
+                      childTint.own,
+                      textEditGlyphColorAt(
+                        spans,
+                        textEditGlyphLineIndex(glyph, rowStartIndex, glyphIndex),
+                        baseFontColor
+                      )
+                    );
+                    const iconXPx = isTabIcon ? glyph.x : glyph.x + (glyph.advance - glyphIconPx) / 2;
+                    return (
+                      <CanvasItemGroup
+                        key={glyphIndex}
+                        position={[iconXPx, -((rowHeightPx - glyphIconPx) / 2), 0]}
+                      >
+                        <ControlQuad
+                          width={glyphIconPx}
+                          height={glyphIconPx}
+                          color={toItemLinear(iconColor)}
+                          opacity={iconColor.a}
+                          map={isTabIcon ? tabIcon : spaceIcon}
+                          renderOrder={renderOrder}
+                        />
+                      </CanvasItemGroup>
+                    );
+                  })}
+              </CanvasItemGroup>
+            );
+          });
+        })}
+        {/* The caret draws after its row's glyphs (`text_edit.cpp:1764`). A text run tied on one key
           can sort after it, so the caret takes a piece of the slot, below the scroll bars. */}
-      {caretRect && (
-        <CanvasItemGroup position={[caretRect.x, -caretRect.y, 0]}>
-          <ControlQuad
-            width={caretRect.w}
-            height={caretRect.h}
-            color={toItemLinear(tintedCaretColor)}
-            opacity={tintedCaretColor.a}
-            renderOrder={canvasSubOrder(slot).key}
-          />
-        </CanvasItemGroup>
-      )}
+        {caretRect && (
+          <CanvasItemGroup position={[caretRect.x, -caretRect.y, 0]}>
+            <ControlQuad
+              width={caretRect.w}
+              height={caretRect.h}
+              color={toItemLinear(tintedCaretColor)}
+              opacity={tintedCaretColor.a}
+              renderOrder={canvasSubOrder(slot).key}
+            />
+          </CanvasItemGroup>
+        )}
+      </ControlClipProvider>
       <ScrollBarChrome
         bar={scrollBars.horizontal}
         boxes={scrollBarBoxes.horizontal}

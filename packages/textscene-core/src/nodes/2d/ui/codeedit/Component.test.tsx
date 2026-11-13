@@ -28,11 +28,15 @@ vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
   default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
 }));
 
-// A fold icon is a loaded texture. A stand-in texture lets the painter draw the arrows.
-vi.mock('../../../../r3f/controls/native/useIconTexture', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  useNodeIcon: (_override: unknown, fallback: unknown) => (fallback === null ? null : new THREE.Texture()),
-}));
+// A fold icon is a loaded texture. One stand-in texture lets the painter draw the arrows.
+vi.mock('../../../../r3f/controls/native/useIconTexture', async (importOriginal) => {
+  const { Texture } = await import('three');
+  const standIn = new Texture();
+  return {
+    ...(await importOriginal<object>()),
+    useNodeIcon: (_override: unknown, fallback: unknown) => (fallback === null ? null : standIn),
+  };
+});
 
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 100 };
 
@@ -258,6 +262,8 @@ describe('<CodeEdit> — fold gutter', () => {
       .map((m) => m.instance as THREE.Mesh)
       .filter((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.Texture);
     expect(arrows).toHaveLength(1);
-    expect((arrows[0]!.material as THREE.Material).clippingPlanes?.length).toBeGreaterThanOrEqual(4);
+    const planes = (arrows[0]!.material as THREE.Material).clippingPlanes ?? [];
+    const belowTheNode = new THREE.Vector3(10, -(RECT.h + 5), 0);
+    expect(planes.some((plane) => plane.distanceToPoint(belowTheNode) < 0)).toBe(true);
   });
 });

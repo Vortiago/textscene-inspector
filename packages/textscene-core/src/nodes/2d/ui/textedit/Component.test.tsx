@@ -632,26 +632,33 @@ describe('<TextEdit> — self_modulate', () => {
 });
 
 describe('<TextEdit> — caret', () => {
-  async function renderCaret(caretWidth: number, scale: number) {
+  async function renderCaret(caretWidth: number, scale: number, drawnWidthPx: number, rect: Rect2 = RECT) {
     const base = solveNode({ text: 'hello', caretDrawWhenEditableDisabled: true, editable: false });
     const node = { ...base, constants: { ...base.constants, caret_width: caretWidth } };
     const renderer = await ReactThreeTestRenderer.create(
-      <TextEdit {...painterEnv()} theme={nativeTheme(scale)} solveNode={node} rect={RECT} renderOrder={0} />
+      <TextEdit {...painterEnv()} theme={nativeTheme(scale)} solveNode={node} rect={rect} renderOrder={0} />
     );
-    const meshes = renderer.scene.findAllByType('Mesh').map((found) => found.instance as THREE.Mesh);
-    const caretIndex = meshes.findIndex(
-      (mesh) => (mesh.geometry as THREE.PlaneGeometry).parameters?.width === caretWidth * Math.max(1, scale)
-    );
-    return { caret: meshes[caretIndex], run: bundledRunMeshes(renderer.scene)[0] };
+    const caret = renderer.scene
+      .findAllByType('Mesh')
+      .map((found) => found.instance as THREE.Mesh)
+      .find((mesh) => (mesh.geometry as THREE.PlaneGeometry).parameters?.width === drawnWidthPx);
+    return { caret, run: bundledRunMeshes(renderer.scene)[0] };
   }
 
   it('sorts the caret after the row text, over its first glyph (text_edit.cpp:1764)', async () => {
-    const { caret, run } = await renderCaret(4, 1);
+    const { caret, run } = await renderCaret(4, 1, 4);
     expect(caret!.renderOrder).toBeGreaterThan(run!.renderOrder);
   });
 
-  it('scales caret_width by the theme scale (text_edit.cpp:1766)', async () => {
-    const { caret } = await renderCaret(3, 2);
+  it('scales caret_width by the theme scale (text_edit.cpp:1766): 3 at scale 2 draws 6 px', async () => {
+    const { caret } = await renderCaret(3, 2, 6);
     expect(caret).toBeDefined();
+  });
+
+  it('clips the caret to the node rect, as `text_ci` clips it (text_edit.cpp:932-936)', async () => {
+    const { caret } = await renderCaret(4, 1, 4, { x: 0, y: 0, w: 200, h: 10 });
+    const planes = (caret!.material as THREE.Material).clippingPlanes ?? [];
+    const belowTheNode = new THREE.Vector3(10, -15, 0);
+    expect(planes.some((plane) => plane.distanceToPoint(belowTheNode) < 0)).toBe(true);
   });
 });
