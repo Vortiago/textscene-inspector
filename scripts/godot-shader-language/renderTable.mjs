@@ -76,7 +76,7 @@ export function owningIssue(row) {
     case 'constructor':
       return '#1823';
     case 'operator':
-      return /^OP_(SELECT_ELSE|CALL|CONSTRUCT|STRUCT|INDEX|EMPTY)$/.test(row.id) ? '#1824' : '#1823';
+      return operatorOwner(row);
     case 'statement':
     case 'statement keyword':
       return '#1824';
@@ -107,6 +107,15 @@ export function owningIssue(row) {
 }
 
 /** The shader and function nodes are the head's, structs and members the types', the rest the statements'. */
+/**
+ * `OP_CALL` is a call of a function: of a built-in, whose overload row owns it, or of the shader's
+ * own function, whose parameters and their `in`, `out` and `inout` qualifiers its slice translates.
+ */
+function operatorOwner(row) {
+  if (row.id === 'OP_CALL') return '#1825';
+  return /^OP_(SELECT_ELSE|CONSTRUCT|STRUCT|INDEX|EMPTY)$/.test(row.id) ? '#1824' : '#1823';
+}
+
 function treeNodeOwner(row) {
   if (/^NODE_TYPE_(SHADER|FUNCTION)$/.test(row.id)) return '#1794';
   if (/^NODE_TYPE_(VARIABLE|CONSTANT|OPERATOR|MEMBER|STRUCT)$/.test(row.id)) return '#1823';

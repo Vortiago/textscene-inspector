@@ -112,7 +112,7 @@ describe('parse', () => {
 
   it('refuses an overload, which a map of functions by name cannot hold', () => {
     expect(refusal('float f(float a) { return a; }\nvec2 f(vec2 a) { return a; }')).toThrow(
-      "An overload of 'f' is not translated yet (#1824)"
+      "An overload of 'f' is not translated yet (#1825)"
     );
   });
 
@@ -138,7 +138,7 @@ describe('parse', () => {
     ['float f(float a) { return sin(a); }', "'sin(float)' is not translated yet (#1826)"],
     ['float f(float a) { return a % a; }', "'OP_MOD' is not translated yet (#1823)"],
     ['float f(float a) { return a < a ? a : a; }', "'OP_LESS(float,float)' is not translated yet (#1823)"],
-    ['float f(float a) { return f(a); }', "'OP_CALL' is not translated yet (#1824)"],
+    ['float f(float a) { return f(a); }', "'OP_CALL' is not translated yet (#1825)"],
     ['float f() { return TIME; }', "'TIME' is not translated yet (#1794)"],
   ])('names the issue that owns %s', (source, message) => {
     expect(refusal(source)).toThrow(message);
