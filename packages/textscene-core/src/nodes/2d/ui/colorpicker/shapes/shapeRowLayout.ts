@@ -11,17 +11,15 @@
 import type { Rect2 } from '../../../../../godot/math/rect2';
 import { ContainerAlignment } from '../../../../../godot/scene/container';
 import { SizeFlags } from '../../../../../godot/scene/control';
-import type { NativeTheme } from '../../../../../r3f/controls/native/nativeTheme';
+import type { PickerTheme } from '../pickerChildTheme';
 import { resortBoxContainer, type BoxChildInput } from '../../shared/boxContainerSolver';
 
-/** `sv_width` and `sv_height` (`default_theme.cpp:1077-1078`), at scale 1. */
-const SV_SIZE = 256;
-/** `h_width` (`default_theme.cpp:1079`), at scale 1. */
-const SLIDER_WIDTH = 30;
+/** The picker theme a shape row reads: its own sizes and the row's `separation`. */
+type RowTheme = Pick<PickerTheme, 'separation' | 'sizes'>;
 
 /** The row of a picker that draws a shape: `sv_height` tall. */
-export function shapeRowHeight(theme: Pick<NativeTheme, 'scale'>): number {
-  return Math.round(SV_SIZE * theme.scale);
+export function shapeRowHeight(theme: Pick<PickerTheme, 'sizes'>): number {
+  return theme.sizes.svHeight;
 }
 
 /** The controls a shape puts in `shape_container`, as its `_initialize_controls` adds them. */
@@ -55,16 +53,16 @@ export const WHEEL_LAYOUT: AreaRowLayout = { hasSlider: false, areaExpands: fals
  * The children of `shape_container`, as each shape's `update_theme` sizes them: the area at
  * `sv_width × sv_height`, then the value slider at `h_width`.
  */
-function shapeRowChildren(theme: Pick<NativeTheme, 'scale'>, layout: ShapeRowLayout): BoxChildInput[] {
+function shapeRowChildren(theme: Pick<PickerTheme, 'sizes'>, layout: ShapeRowLayout): BoxChildInput[] {
   const area: BoxChildInput = {
-    minSize: { x: Math.round(SV_SIZE * theme.scale), y: 0 },
+    minSize: { x: theme.sizes.svWidth, y: 0 },
     hSizeFlags: layout.areaExpands ? SizeFlags.FILL | SizeFlags.EXPAND : SizeFlags.FILL,
     vSizeFlags: SizeFlags.FILL,
     stretchRatio: 1,
   };
   if (!layout.hasSlider) return [area];
   const slider: BoxChildInput = {
-    minSize: { x: Math.round(SLIDER_WIDTH * theme.scale), y: 0 },
+    minSize: { x: theme.sizes.hWidth, y: 0 },
     hSizeFlags: SizeFlags.FILL,
     vSizeFlags: SizeFlags.FILL,
     stretchRatio: 1,
@@ -73,10 +71,7 @@ function shapeRowChildren(theme: Pick<NativeTheme, 'scale'>, layout: ShapeRowLay
 }
 
 /** The minimum width of `shape_container`: its children and the `separation` between them. */
-export function shapeRowMinWidth(
-  theme: Pick<NativeTheme, 'separation' | 'scale'>,
-  layout: ShapeRowLayout
-): number {
+export function shapeRowMinWidth(theme: RowTheme, layout: ShapeRowLayout): number {
   const children = shapeRowChildren(theme, layout);
   const widths = children.reduce((sum, child) => sum + child.minSize.x, 0);
   return widths + Math.max(0, children.length - 1) * theme.separation;
@@ -93,7 +88,7 @@ export interface ShapeRowSplit<L extends ShapeRowLayout = ShapeRowLayout> {
 /** Places a shape's controls in `row`, as `BoxContainer::_resort` does (`box_container.cpp:47-192`). */
 export function shapeRowSplit<L extends ShapeRowLayout>(
   row: Rect2,
-  theme: Pick<NativeTheme, 'separation' | 'scale'>,
+  theme: RowTheme,
   layout: L,
   rtl: boolean
 ): ShapeRowSplit<L> {

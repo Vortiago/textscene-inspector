@@ -5,7 +5,7 @@
 import type { TscnNode } from '../../../../parser/types';
 import { heading } from '../../../../parser/testing/parserKit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { parsePopupMenu } from '../parser';
 
 export interface ItemLines {
@@ -45,7 +45,13 @@ export function menu(
     children: [],
     properties: parsePopupMenu(heading('PopupMenu', { name: 'Menu' }), lines),
   };
-  return { ...solveNode(), path: 'Menu', node: node as unknown as TscnNode, textureSlots, rtl };
+  return withThemeItems({
+    ...solveNode(),
+    path: 'Menu',
+    node: node as unknown as TscnNode,
+    textureSlots,
+    rtl,
+  });
 }
 
 export const text = (...labels: string[]): ItemLines[] => labels.map((label) => ({ text: label }));

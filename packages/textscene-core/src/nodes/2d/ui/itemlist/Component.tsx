@@ -12,6 +12,7 @@ import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useNodeReference } from '../../../../resources/reading';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
@@ -45,7 +46,6 @@ import {
   itemIconColor,
   itemIconDraw,
   itemIconPackedSize,
-  itemListGuideColor,
   itemListDrawClip,
   itemListGuideLines,
   itemListIconSlotKey,
@@ -62,15 +62,11 @@ import {
   itemMinimumSize,
   itemListCursorRect,
   itemListDrawsCursor,
-  itemListSelectedFontColor,
-  pickItemListCursorStyleBox,
   itemListSelectedRect,
   itemTextColor,
-  pickItemListSelectedStyleBox,
   itemTextDrawOffset,
   isItemListTextWrapped,
   packItemListRows,
-  pickItemListPanelStyleBox,
   shapeItemListText,
 } from './nativeSolver';
 import { ScrollBarChrome, ScrollHintChrome, SCROLL_HINT_MODULATE } from '../shared/ScrollChrome';
@@ -226,7 +222,6 @@ export function ItemList({
   rect,
   renderOrder,
   slot,
-  theme,
   snapToPixels,
   children,
 }: NativeControlComponentProps) {
@@ -239,18 +234,21 @@ export function ItemList({
   const iconScale = props.iconScale ?? 1;
   const fixedIconSizeSet = !!(props.fixedIconSize && props.fixedIconSize.x > 0 && props.fixedIconSize.y > 0);
 
-  const panelBox = pickItemListPanelStyleBox(solveNode.styleBoxes, theme);
+  const panelBox = requiredThemeItem(solveNode.styleBoxes, 'panel');
   const panelMargin = contentMarginSize(panelBox);
 
   const { fontSizePx, color: baseFontColor } = itemListTextTheme(solveNode, props);
   const fontMetrics = resolveNodeFontMetrics(solveNode, ITEM_LIST_THEME_FONT_KEY);
 
-  const selectedFontColor = itemListSelectedFontColor(solveNode);
-  const selectedBox = pickItemListSelectedStyleBox(solveNode.styleBoxes, theme);
-  const cursorBox = pickItemListCursorStyleBox(solveNode.styleBoxes, theme);
+  // `font_selected_color` (`item_list.cpp:1610-1611`).
+  const selectedFontColor = requiredThemeItem(solveNode.colors, 'font_selected_color');
+  // `selected_focus` is the same box in the default theme (`default_theme.cpp:964-965`).
+  const selectedBox = requiredThemeItem(solveNode.styleBoxes, 'selected');
+  // `cursor_unfocused` (`item_list.cpp:2455`).
+  const cursorBox = requiredThemeItem(solveNode.styleBoxes, 'cursor_unfocused');
   const drawsCursor = itemListDrawsCursor(props.selectMode ?? 0);
 
-  const spacing = useMemo(() => itemListSpacing(solveNode.constants, theme), [solveNode.constants, theme]);
+  const spacing = useMemo(() => itemListSpacing(solveNode.constants), [solveNode.constants]);
   const { hSeparation, vSeparation, iconMargin } = spacing;
   const wraparoundItems = props.wraparoundItems !== false;
   // Under RTL the panel and guide lines stay, and only each row's icon and label
@@ -398,7 +396,7 @@ export function ItemList({
   // Both scroll bars and the hint are child Controls: no `self_modulate` (`item_list.cpp:2472,2476`).
   const hintColor = useMemo(() => childTint.color.clone().multiply(SCROLL_HINT_MODULATE), [childTint.color]);
   const guideColorSrgb = useMemo(
-    () => tintColor(itemListGuideColor(solveNode), tint.own),
+    () => tintColor(requiredThemeItem(solveNode.colors, 'guide_color'), tint.own),
     [solveNode, tint.own]
   );
   const guideColorLinear = useItemLinearColor(guideColorSrgb);

@@ -7,7 +7,7 @@ import { createSolveContext } from '../../../r3f/controls/native/controlRectSolv
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { measureText } from '../../../r3f/controls/native/text/measurer';
-import { solveNode } from '../../../r3f/controls/native/testing/solveNode';
+import { solveNode, withThemeItems } from '../../../r3f/controls/native/testing/solveNode';
 import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
 import { dialogButtonNode, messageLabelNode } from './dialogParts';
@@ -37,7 +37,7 @@ function dialog(themeChain: readonly ThemeResource[]): SolveNode {
     dialog_text: '"one\\ntwo\\nthree"',
   });
   const node = { name: 'Dialog', type: 'AcceptDialog', children: [], properties } as unknown as TscnNode;
-  return { ...solveNode(), path: 'Dialog', node, themeChain };
+  return withThemeItems({ ...solveNode(), path: 'Dialog', node, themeChain });
 }
 
 describe('a dialog under a Theme', () => {

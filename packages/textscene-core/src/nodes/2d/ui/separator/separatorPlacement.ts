@@ -11,7 +11,7 @@
 
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { SeparatorOrientation } from './styleBoxLine';
+import type { SeparatorOrientation } from './orientation';
 
 /** C++ `int / 2` truncates toward zero; `Math.floor` would not for a negative dividend. */
 function truncHalf(n: number): number {

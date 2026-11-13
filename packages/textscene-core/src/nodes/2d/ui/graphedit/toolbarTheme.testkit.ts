@@ -1,8 +1,8 @@
-/** A `GraphEdit` solve node under one Theme, for tests of the toolbar's theme items. */
+/** A `GraphEdit` solve node under one Theme, with the default theme's GraphEdit items, for tests of the toolbar's theme items. */
 import type { TscnInternalResource } from '../../../../parser/types';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { themeResource } from '../../../../r3f/controls/native/testing/themeResource';
 
 function boxOfMargin(id: string, margin: number): TscnInternalResource {
@@ -41,5 +41,10 @@ export function graphEditUnder(
     colors,
     resources: { externalResources: [], internalResources: resources },
   };
-  return { ...solveNode(), path: 'G', node: controlNode('G', 'GraphEdit'), themeChain: [theme] };
+  return withThemeItems({
+    ...solveNode(),
+    path: 'G',
+    node: controlNode('G', 'GraphEdit'),
+    themeChain: [theme],
+  });
 }

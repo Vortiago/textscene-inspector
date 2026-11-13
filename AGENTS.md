@@ -26,9 +26,18 @@ strategy.
 - Do one issue at a time. The user picks it.
 - Never start the next issue on your own.
 - Reference the issue from the PR with `Closes #<n>`.
+- Reply to each comment of the Claude review on your pull request with the fix commit, the owning
+  issue or the reason you decline it. Resolve the conversation after the reply.
 
 ## Policies
 
+- The renderer's subject is any Godot project a user opens, a user's own shaders included, not the
+  scenes and features the previewer draws today (ADR-0075). Port Godot's mechanism: the language,
+  the format or the whole node family, never a list of the features seen so far.
+- A line that cuts scope names the open issue that owns it: "out of scope", "later", "follow-up",
+  "not filed" or "host input". For a line in a sheet, `GLOSSARY.md` or a code comment, the pull
+  request body names it.
+- When a plan covers less than the request, show the missing part with the plan.
 - Do the full scope at full quality. Never trim, skip tests or defer for time, token or
   context pressure, and never mention such limits.
 - Implement completely: no stubs, placeholders or TODOs. Do every numbered item.
@@ -72,6 +81,9 @@ CI job fails, fix the cause.
 and prints exact pixels. It is a tool, not a gate.
 
 - Measure, never derive. Put a measurement in the pull request, never in a comparison sheet.
+- A report on a rendering change leads with the measurement against Godot: `pnpm ref:diff` on scenes
+  with several values for each feature the change touches, before and after. A refactor reports it
+  too. An unmoved golden shows only that nothing regressed, so it comes second.
 - `pnpm test:godot-ref` runs the tests that render through real Godot
   (`scripts/godot-ref/*.engine.test.mjs`). It takes about 6 minutes, and `pnpm test:unit` never
   runs it. Run it after a change to a file the tests read: a module they import, a file of

@@ -28,9 +28,9 @@ import { useViewportTargetSlot } from '../../../resources/textures/viewporttextu
 import { InitialPosition, centredWindowPosition } from '../../../godot/scene/window';
 import { imageSize } from '../../../resources/formats/image/imagePixels';
 import { closeIconOrigin } from './decoration';
+import { requiredThemeItem } from '../../../r3f/controls/native/themeItems';
 import { windowContentScale } from './contentScale';
 import { WindowTitle } from './WindowTitle';
-import { windowThemeDefaults, type WindowThemeDefaults } from './theme';
 import type { WindowProperties } from './types';
 
 interface EmbeddedWindowFrameProps {
@@ -74,7 +74,6 @@ export function EmbeddedWindowFrame({
 }: EmbeddedWindowFrameProps) {
   const props = solveNode.node.properties as WindowProperties;
   const rect = useWindowRect(solveNode, path, embedderSize);
-  const defaults = useMemo(() => windowThemeDefaults(theme), [theme]);
   // The subwindow canvas item: no modulate, z 0, and the draw index as its sequence.
   const { key } = useCanvasItemState({
     modulate: WHITE_MODULATE,
@@ -109,7 +108,6 @@ export function EmbeddedWindowFrame({
             solveNode={solveNode}
             size={{ x: rect.w, y: rect.h }}
             isFocused={isFocused}
-            defaults={defaults}
             theme={theme}
             borderKey={key}
             titleSlot={slots.title}
@@ -146,7 +144,6 @@ interface WindowDecorationProps {
   solveNode: SolveNode;
   size: Vector2;
   isFocused: boolean;
-  defaults: WindowThemeDefaults;
   theme: NativeTheme;
   borderKey: number;
   titleSlot: CanvasSlot;
@@ -164,19 +161,16 @@ function WindowDecoration({
   solveNode,
   size,
   isFocused,
-  defaults,
   theme,
   borderKey,
   titleSlot,
   closeKey,
 }: WindowDecorationProps) {
   const { styleBoxes, constants } = solveNode;
-  const border = isFocused
-    ? (styleBoxes.embedded_border ?? defaults.embeddedBorder)
-    : (styleBoxes.embedded_unfocused_border ?? defaults.embeddedUnfocusedBorder);
+  const border = requiredThemeItem(styleBoxes, isFocused ? 'embedded_border' : 'embedded_unfocused_border');
   const offsets = {
-    closeHOffset: constants.close_h_offset ?? defaults.closeHOffset,
-    closeVOffset: constants.close_v_offset ?? defaults.closeVOffset,
+    closeHOffset: requiredThemeItem(constants, 'close_h_offset'),
+    closeVOffset: requiredThemeItem(constants, 'close_v_offset'),
   };
   // `close` and the TabBar's `close` are one default icon, `icons["close"]` (`default_theme.cpp:685,1039`).
   const closeTexture = useNodeIcon(solveNode.icons.close, TAB_BAR_ICONS.close);
@@ -192,7 +186,6 @@ function WindowDecoration({
         width={size.x}
         border={border}
         closeHOffset={offsets.closeHOffset}
-        defaults={defaults}
         slot={titleSlot}
       />
       {closeTexture ? (

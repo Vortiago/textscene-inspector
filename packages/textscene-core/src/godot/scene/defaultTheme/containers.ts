@@ -1,6 +1,6 @@
 /**
  * The default theme's containers, panels and separators (`scene/theme/default_theme.cpp:133-134`,
- * `:653-670`, `:726`, `:734-740`, `:1066-1069`, `:1165-1168`, `:1236-1323`).
+ * `:653-670`, `:734-740`, `:1066-1069`, `:1165-1168`, `:1236-1323`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -33,16 +33,13 @@ import {
   withCornerRadius,
   withExpandMargin,
 } from './styleBoxes.js';
-import { BLACK, typeItems, WHITE } from './typeItems.js';
+import { BLACK, typeItems, WHITE, whiteAt } from './typeItems.js';
 
 /** `style_separator_color` (`default_theme.cpp:124`). */
 const SEPARATOR_COLOR: Rgba = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
 
 /** TooltipPanel's fill (`default_theme.cpp:1169`). */
 const TOOLTIP_FILL: Rgba = { r: 0, g: 0, b: 0, a: 0.5 };
-
-/** `Color(1, 1, 1, a)`: SplitContainer's touch dragger in each state (`default_theme.cpp:1238-1240`). */
-const whiteAt = (a: number): Rgba => ({ r: 1, g: 1, b: 1, a });
 
 /**
  * `make_flat_stylebox(style_normal_color, 0, 0, 0, 0)`: the `panel` of Panel, PanelContainer and
@@ -58,13 +55,13 @@ function panelOf(scale: number): DefaultThemeType {
 
 /**
  * `separator_horizontal` and its vertical twin (`default_theme.cpp:734-740`): `set_content_margin_individual`
- * takes `default_margin` unscaled, and only the thickness scales.
+ * takes `default_margin` unscaled, and only the thickness scales. HSeparator, VSeparator and PopupMenu share it.
  */
-function separator(scale: number, vertical: boolean): DefaultThemeType {
+export function separatorLine(scale: number, vertical: boolean): DefaultLineStyleBox {
   const along = vertical
     ? { left: 0, top: 4, right: 0, bottom: 4 }
     : { left: 4, top: 0, right: 4, bottom: 0 };
-  const line: DefaultLineStyleBox = {
+  return {
     kind: 'line',
     color: SEPARATOR_COLOR,
     thickness: scaledPx(1, scale),
@@ -73,7 +70,13 @@ function separator(scale: number, vertical: boolean): DefaultThemeType {
     growEnd: 1,
     contentMargin: along,
   };
-  return typeItems({ styles: { separator: line }, constants: { separation: scaledPx(4, scale) } });
+}
+
+function separator(scale: number, vertical: boolean): DefaultThemeType {
+  return typeItems({
+    styles: { separator: separatorLine(scale, vertical) },
+    constants: { separation: scaledPx(4, scale) },
+  });
 }
 
 /** One type with these constants and no other item. */
@@ -143,7 +146,6 @@ export function containerTypes(scale: number): DefaultThemeTypes {
   return {
     Panel: panelOf(scale),
     PanelContainer: panelOf(scale),
-    PopupPanel: typeItems({ styles: { panel: makeFlatStyleBox(scale, STYLE_FILL.normal) } }),
     TooltipPanel: typeItems({
       styles: {
         panel: makeFlatStyleBox(scale, TOOLTIP_FILL, { margin: { left: 8, top: 2, right: 8, bottom: 2 } }),

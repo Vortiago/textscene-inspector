@@ -25,10 +25,7 @@ import type {
   DefaultThemeTypes,
 } from './defaultTheme.js';
 import { allSides, makeEmptyStyleBox, makeFlatStyleBox, withBorder } from './styleBoxes.js';
-import { BLACK, typeItems, WHITE } from './typeItems.js';
-
-/** `style_popup_border_color` (`default_theme.cpp:119`): the edge between two unselected tabs. */
-const POPUP_BORDER_COLOR: Rgba = { r: 0.175, g: 0.175, b: 0.175, a: 1 };
+import { BLACK, POPUP_BORDER_COLOR, typeItems, WHITE } from './typeItems.js';
 
 /** `style_tab_hovered`'s fill (`default_theme.cpp:985`). */
 const TAB_HOVERED_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.3 };

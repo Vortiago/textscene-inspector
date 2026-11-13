@@ -42,9 +42,9 @@ export function isStyleBoxLine(box: ResolvedStyleBox): box is StyleBoxLineBox {
 }
 
 /**
- * Wraps a `StyleBoxLineData` that is not an override, such as
- * `defaultSeparatorStyleBoxLine`, in the shape a resolved override has, so
- * `<StyleBoxQuad>` and `separatorPlacementRect` take either.
+ * Wraps a `StyleBoxLineData` that is not an override, such as a default theme
+ * separator, in the shape a resolved override has, so `<StyleBoxQuad>` and
+ * `separatorPlacementRect` take either.
  */
 export function styleBoxLineBox(line: StyleBoxLineData): StyleBoxLineBox {
   return { ...neutralStyleBox(line.margin), styleBoxKind: 'line', line };

@@ -414,7 +414,7 @@ step 5, or when group 3 lands first and the port follows.
 
 ## Decisions
 
-The owner decided these on 2026-11-11. ADR-0055 still needs its own change for the first.
+The owner decided these on 2026-11-11. ADR-0055 records the first.
 
 | Question | Decision |
 | --- | --- |
@@ -424,3 +424,7 @@ The owner decided these on 2026-11-11. ADR-0055 still needs its own change for t
 | A golden that moves at the switch | It may move by at most 1/255, and its comparison with Godot must not get worse |
 | The order | The port runs first, with group 7 beside it. Group 3 waits for the node lit surface |
 | The prototype | It stays on the branch `spike/tsl-lit-surface` |
+
+On 2026-11-13 the owner widened the port from the lit surface to all of Godot's shaders, with the
+passes in the package and a translator of Godot's shading language first. ADR-0055, ADR-0072 and
+ADR-0075 record it.
