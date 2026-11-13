@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -192,7 +192,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
 
   // Local, not `rect`: `../textedit/Component.tsx`'s `ownRect` doc gives the reason.
   const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
-  const { anchorRef, clippingPlanes } = useWorldClipPlanes(ownRect);
+  const { anchorRef, clippingPlanes, clip } = useWorldClipPlanes(ownRect);
 
   // `ControlCanvasWalker` owns `visible`, the children and the transform.
   return (
@@ -214,32 +214,35 @@ export function CodeEdit(props: NativeControlComponentProps) {
           </CanvasItemGroup>
         ))}
       />
-      {band.foldDrawn &&
-        canFoldIcon &&
-        canFoldRegionIcon &&
-        lineStartRows.map((startRow, lineIndex) => {
-          if (!canFoldLine(foldContext, lineIndex, codeEditProps.lineFolding === true)) return null;
-          const region = isLineCodeRegionStart(foldContext, lineIndex);
-          const icon = codeEditFoldIconRect({
-            x: foldGutterXPx,
-            y: textEditRowBandTopPx(startRow, rowHeightPx, styleBox.contentMargin.top, lineSpacingPx),
-            w: band.foldWidthPx,
-            h: rowHeightPx,
-          });
-          const color = region ? foldRegionColor : foldArrowColor;
-          return (
-            <CanvasItemGroup key={`fold-${lineIndex}`} position={[icon.x, -icon.y, 0]}>
-              <FoldQuad
-                renderOrder={renderOrder}
-                width={icon.w}
-                height={icon.h}
-                color={toItemLinear(color)}
-                opacity={color.a}
-                map={region ? canFoldRegionIcon : canFoldIcon}
-              />
-            </CanvasItemGroup>
-          );
-        })}
+      {/* `text_ci` clips every gutter icon to the node rect (`text_edit.cpp:934`), so a row past the bottom edge shows no arrow. */}
+      <ControlClipProvider value={clip}>
+        {band.foldDrawn &&
+          canFoldIcon &&
+          canFoldRegionIcon &&
+          lineStartRows.map((startRow, lineIndex) => {
+            if (!canFoldLine(foldContext, lineIndex, codeEditProps.lineFolding === true)) return null;
+            const region = isLineCodeRegionStart(foldContext, lineIndex);
+            const icon = codeEditFoldIconRect({
+              x: foldGutterXPx,
+              y: textEditRowBandTopPx(startRow, rowHeightPx, styleBox.contentMargin.top, lineSpacingPx),
+              w: band.foldWidthPx,
+              h: rowHeightPx,
+            });
+            const color = region ? foldRegionColor : foldArrowColor;
+            return (
+              <CanvasItemGroup key={`fold-${lineIndex}`} position={[icon.x, -icon.y, 0]}>
+                <FoldQuad
+                  renderOrder={renderOrder}
+                  width={icon.w}
+                  height={icon.h}
+                  color={toItemLinear(color)}
+                  opacity={color.a}
+                  map={region ? canFoldRegionIcon : canFoldIcon}
+                />
+              </CanvasItemGroup>
+            );
+          })}
+      </ControlClipProvider>
       {band.lineNumbersDrawn &&
         lineStartRows.map((startRow, lineIndex) => {
           const text = codeEditLineNumberText(

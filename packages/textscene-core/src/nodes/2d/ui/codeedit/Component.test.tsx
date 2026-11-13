@@ -28,6 +28,12 @@ vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
   default: (await import('../../../../r3f/controls/native/testing/bundledRunStub')).BundledRunStub,
 }));
 
+// A fold icon is a loaded texture. A stand-in texture lets the painter draw the arrows.
+vi.mock('../../../../r3f/controls/native/useIconTexture', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useNodeIcon: (_override: unknown, fallback: unknown) => (fallback === null ? null : new THREE.Texture()),
+}));
+
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 100 };
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
@@ -230,5 +236,28 @@ describe('<CodeEdit> — self_modulate', () => {
       />
     );
     expect(countTintSplit(renderer.scene)).toEqual({ own: 1, child: 2 });
+  });
+});
+
+describe('<CodeEdit> — fold gutter', () => {
+  it('clips the fold arrows to the node rect, as `text_ci` clips every gutter (text_edit.cpp:934)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        solveNode={solveNode({
+          text: 'if a:\n\tb',
+          gutterDrawFoldGutter: true,
+          lineFolding: true,
+        })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const arrows = renderer.scene
+      .findAllByType('Mesh')
+      .map((m) => m.instance as THREE.Mesh)
+      .filter((m) => (m.material as THREE.MeshBasicMaterial).map instanceof THREE.Texture);
+    expect(arrows).toHaveLength(1);
+    expect((arrows[0]!.material as THREE.Material).clippingPlanes?.length).toBeGreaterThanOrEqual(4);
   });
 });
