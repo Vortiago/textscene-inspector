@@ -19,7 +19,7 @@ import {
 } from './canvasAncestors';
 
 /** What one link of a skipped chain contributes: its own fields, and the scope its material resolves in. */
-export type CanvasItemLink = Pick<CanvasItemPassResult, 'fields' | 'resources'>;
+type CanvasItemLink = Pick<CanvasItemPassResult, 'fields' | 'resources'>;
 
 /** A canvas item of the pass with its live path. */
 interface PlacedItem {
@@ -48,10 +48,7 @@ export function canvasStateBetween(
  * What `chain`, outermost first, hands the item below it. `start` is what a `use_parent_material`
  * outermost link takes. A Control link adds no transform: the caller composes its solved rect.
  */
-export function canvasStateAlong(
-  chain: readonly CanvasItemLink[],
-  start: CanvasAncestorMaterial
-): CanvasAncestors {
+function canvasStateAlong(chain: readonly CanvasItemLink[], start: CanvasAncestorMaterial): CanvasAncestors {
   return chain.reduce(foldLink, {
     transform: TRANSFORM2D_IDENTITY,
     modulate: WHITE_MODULATE,
