@@ -9,7 +9,7 @@ import { useRef, type ReactNode, type RefObject } from 'react';
 import type * as THREE from 'three';
 import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import { InstancePasses } from '../materials/InstancePasses';
-import type { MaterialSource } from '../materials/materialSource';
+import type { ScopedReference } from '../../resources/reading';
 import { drawnElementOf } from '../materials/nextPass';
 import { drawnTag } from '../meshes/meshContent';
 import { node3dGroupSpread, type NodeTransform } from '../nodeTransform';
@@ -23,7 +23,7 @@ import type { MeshInstances } from './meshInstances';
 export interface MeshPart {
   geometry: THREE.BufferGeometry;
   /** The material of each draw group, before `material_override`. Undefined is Godot's default surface. */
-  materials: readonly (MaterialSource | undefined)[];
+  materials: readonly (ScopedReference | undefined)[];
 }
 
 /** What a mesh at one place draws its triangles or its points as. */

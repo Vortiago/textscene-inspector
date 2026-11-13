@@ -24,7 +24,9 @@ import type { ArrayMeshResource } from '../../resources/processors/createArrayMe
 import { useResource } from '../../resources/useResource';
 import type { ResourceResolution } from '../../resources/useSubOrExtResource';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
-import { fileMaterialSources, resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
+import type { ScopedReference } from '../../resources/reading';
+import { heldMaterial } from '../materials/materialSource';
+import { NO_RESOURCES } from '../SceneResourcesContext';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useUndrawnMeshReport } from '../contexts/UndrawnMeshesContext';
 import { primitiveMeshGeometry } from './primitiveMeshGeometry';
@@ -42,7 +44,7 @@ export interface SurfacedPart {
   /** Per draw group, Godot's surface index, which `surface_material_override/N` names. */
   surfaceIndices: readonly number[];
   /** Per draw group, the material the surface names, or undefined for Godot's default surface. */
-  materials: readonly (MaterialSource | undefined)[];
+  materials: readonly (ScopedReference | undefined)[];
 }
 
 /**
@@ -139,7 +141,8 @@ function withFileMaterials(mesh: ArrayMeshResource, isHeldLocally: boolean): Sur
     mesh.parts.map(({ geometry, surfaceIndices, materialPaths }) => ({
       geometry,
       surfaceIndices,
-      materials: fileMaterialSources(materialPaths, isHeldLocally),
+      // A path is a `res://` address, which needs no tables. A null path is Godot's default surface.
+      materials: materialPaths.map((path) => heldMaterial(path, NO_RESOURCES, isHeldLocally)),
     }))
   );
   return parts && { parts };
@@ -154,11 +157,7 @@ function usePrimitiveMesh(source: MeshSource | null, isHeldLocally: boolean): Su
   const material = useMemo(
     () =>
       source
-        ? resolveMaterialSource(
-            primitiveMaterialAddress(source, source.path),
-            source.resources,
-            isHeldLocally
-          )
+        ? heldMaterial(primitiveMaterialAddress(source, source.path), source.resources, isHeldLocally)
         : undefined,
     [source, isHeldLocally]
   );
@@ -194,7 +193,7 @@ function useSceneArrayMesh(mesh: ScopedResource | null, isHeldLocally: boolean):
       decoded.parts.map(({ geometry, surfaceIndices, materialRefs }) => ({
         geometry,
         surfaceIndices,
-        materials: materialRefs.map((ref) => resolveMaterialSource(ref, resources, isHeldLocally)),
+        materials: materialRefs.map((ref) => heldMaterial(ref, resources, isHeldLocally)),
       }))
     );
     return parts && { parts };

@@ -11,12 +11,12 @@ import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmate
 import { drawnBag, materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
 import { pointDrawOf, type ListedSurface } from './godotPoint';
 import { particleDrawOf, type ParticleProgram } from './godotParticles';
-import type { MaterialSource } from './materialSource';
+import type { ScopedReference } from '../../resources/reading';
 import { useSurfaceMaterial } from './useSurfaceMaterial';
 
 interface SurfaceMaterialSlotProps {
   /** The material this surface renders with; undefined = the renderer's default. */
-  source: MaterialSource | undefined;
+  source: ScopedReference | undefined;
   /** R3F attach key: `material` for a single surface, `material-N` for many (`surfaceAttach`). */
   attach?: string;
   /**

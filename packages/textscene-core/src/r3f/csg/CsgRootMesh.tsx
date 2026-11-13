@@ -8,7 +8,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
 import { SurfacedMeshDrawer } from '../surfacedMeshDrawer/SurfacedMeshDrawer';
-import { resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
+import { nodeMaterial } from '../materials/materialSource';
+import type { ScopedReference } from '../../resources/reading';
 import { CsgSubtreeProvider, type CsgSubtreeStatus } from '../contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
 import type { CsgPlan } from './csgPlan';
@@ -99,8 +100,8 @@ export function CsgRootMesh({
   // slot's `useResource` calls one set per component, so rules of hooks holds for any
   // surface count.
   const surfaces = useMemo(
-    (): Array<MaterialSource | undefined> =>
-      evaluation?.materials.map((address) => resolveMaterialSource(address, context)) ?? [],
+    (): Array<ScopedReference | undefined> =>
+      evaluation?.materials.map((address) => nodeMaterial(address, context)) ?? [],
     [evaluation, context]
   );
 

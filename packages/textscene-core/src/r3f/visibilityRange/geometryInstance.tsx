@@ -24,7 +24,8 @@ import type { NodeComponent, NodeComponentProps } from '../NodeComponentRegistry
 import { useParentType } from '../parentSpaceScope';
 import { rangedShadowCastingEffects, type ShadowCastingEffects } from '../shadowCasting';
 import { FadedSurfacesContext } from '../materials/swappedMaterials';
-import { resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
+import { nodeMaterial } from '../materials/materialSource';
+import type { ScopedReference } from '../../resources/reading';
 import { useSceneResources } from '../SceneResourcesContext';
 import type { DrawnInstance } from '../surfaceDrawHooks';
 import { instanceLightmap, NO_INSTANCE_LIGHTMAP, type InstanceLightmap } from '../lightmap/instanceLightmap';
@@ -39,9 +40,9 @@ export interface InstanceDraw {
   /** `cast_shadow`, with the draw hooks that skip its colour and sun-shadow draws while culled. */
   shadow: ShadowCastingEffects;
   /** `material_override`: in place of every surface's material. Undefined for none. */
-  override: MaterialSource | undefined;
+  override: ScopedReference | undefined;
   /** `material_overlay`: every surface drawn a second time. Undefined for none. */
-  overlay: MaterialSource | undefined;
+  overlay: ScopedReference | undefined;
   /** `layers`: the render mask a Decal's and a ReflectionProbe's masks test. */
   layers: number;
   /** The instance as the draw hooks read it: its cull state and the node's own pose. */
@@ -96,11 +97,11 @@ export function withGeometryInstance(Drawer: NodeComponent): NodeComponent {
     );
     const pools = useSceneResources();
     const override = useMemo(
-      () => resolveMaterialSource(properties.materialOverride, pools),
+      () => nodeMaterial(properties.materialOverride, pools),
       [properties.materialOverride, pools]
     );
     const overlay = useMemo(
-      () => resolveMaterialSource(properties.materialOverlay, pools),
+      () => nodeMaterial(properties.materialOverlay, pools),
       [properties.materialOverlay, pools]
     );
     const { layers } = properties;

@@ -41,8 +41,9 @@ import { useAnimationDriverMount } from '../../animation/useAnimationDriverMount
 import { joinPath } from '../../../utils/nodePath';
 import type { ReactNode } from 'react';
 import type { LiveNode } from '../../../resources/liveNode';
-import { useSceneResources } from '../../SceneResourcesContext';
-import { resolveMaterialSource } from '../../materials/materialSource';
+import { NO_RESOURCES, useSceneResources } from '../../SceneResourcesContext';
+import { nodeReference } from '../../../resources/reading';
+import { nodeMaterial } from '../../materials/materialSource';
 import { GlbMaterialOverlay, GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
 import { heldResource } from '../../../godot/scene/resourceLiteral';
 import { parseSurfaceMaterialOverrides } from '../../../nodes/3d/meshinstance3d/parser';
@@ -244,11 +245,12 @@ function useGlbImportMaterials(object: THREE.Object3D | undefined): ReactNode {
     if (paths.size === 0) return null;
     return (
       <>
+        {/* The importer sets the remap on the imported node, which holds it as its own property. */}
         {[...paths].map((path) => (
           <GlbSurfaceMaterialOverride
             key={`import:${path}`}
             target={object}
-            source={{ kind: 'file', path }}
+            source={nodeReference(path, NO_RESOURCES)}
             replaces={(material) => importMaterialPath(material) === path}
           />
         ))}
@@ -293,12 +295,12 @@ function useGlbMaterialOverrides(
       // renders under, and its scope carries both pools.
       const scope = override.scope ?? pools;
       const key = joinPath(override.instanceSubPath ?? '', override.name);
-      const instanceSource = resolveMaterialSource(instanceOverride, scope);
+      const instanceSource = nodeMaterial(instanceOverride, scope);
       if (instanceSource) {
         slots.push(<GlbSurfaceMaterialOverride key={key} target={target} source={instanceSource} />);
       }
       for (const [surfaceIndex, reference] of surfaceOverrides) {
-        const source = resolveMaterialSource(reference, scope);
+        const source = nodeMaterial(reference, scope);
         if (!source) continue;
         slots.push(
           <GlbSurfaceMaterialOverride
@@ -309,7 +311,7 @@ function useGlbMaterialOverrides(
           />
         );
       }
-      const overlaySource = resolveMaterialSource(overlay, scope);
+      const overlaySource = nodeMaterial(overlay, scope);
       if (overlaySource) {
         slots.push(<GlbMaterialOverlay key={`${key}:overlay`} target={target} source={overlaySource} />);
       }

@@ -8,7 +8,7 @@
 import { useEffect, useLayoutEffect, useMemo, type ReactNode, type RefObject } from 'react';
 import type * as THREE from 'three';
 import { useInstanceDraw } from '../visibilityRange/geometryInstance';
-import type { MaterialSource } from './materialSource';
+import type { ScopedReference } from '../../resources/reading';
 import { NextPassChain } from './nextPass';
 import { ExtraDrawSiteContext } from './extraDraw';
 import { orderByPass } from './passOrder';
@@ -43,7 +43,7 @@ interface BaseDraw {
 
 interface InstancePassesProps extends BaseDraw {
   /** The material of each draw group, before `material_override`. A leaf that builds its own omits it. */
-  sources?: readonly (MaterialSource | undefined)[];
+  sources?: readonly (ScopedReference | undefined)[];
   /** The material a leaf builds itself, as an element to mount while no `material_override` stands. */
   ownMaterial?: ReactNode;
 }
@@ -52,7 +52,7 @@ interface InstancePassesProps extends BaseDraw {
 const ONE_SURFACE: readonly undefined[] = [undefined];
 
 /** A material the leaf builds itself holds no `next_pass`. */
-const NO_CHAIN: readonly MaterialSource[] = [];
+const NO_CHAIN: readonly ScopedReference[] = [];
 
 /** Mounts inside the base draw: the material slot of each draw group, each slot's chain, and the overlay. */
 export function InstancePasses(props: InstancePassesProps) {

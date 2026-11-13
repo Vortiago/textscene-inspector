@@ -23,7 +23,8 @@ const SIDE: Readonly<Record<EnumValue<typeof CullMode>, THREE.Side>> = {
   [CullMode.DISABLED]: THREE.DoubleSide,
 };
 
-function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMaterial3DScalars {
+/** The renderer's view of a decoded StandardMaterial3D. */
+export function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMaterial3DScalars {
   return {
     ...godotBlendState(data.blendMode),
     color: data.albedo,
@@ -81,8 +82,6 @@ function standardMaterial3DScalars(data: StandardMaterial3DData): StandardMateri
     anisotropy: data.anisotropy,
     transmission: data.transmission,
     refractionThickness: data.refractionThickness,
-    textureSlots: data.textureSlots,
-    nextPass: data.nextPass,
     grows: data.grows,
     growAmount: data.growAmount,
     readsStencil: data.readsStencil,

@@ -11,7 +11,7 @@ import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../../godot/rendering/materials/defaultMaterial';
-import type { MaterialSource } from './materialSource';
+import type { ScopedReference } from '../../resources/reading';
 import { inlineSource } from './surfaceMaterial.testkit';
 import { SurfaceMaterialSlots, surfaceAttach, surfaceSources } from './SurfaceMaterialSlots';
 
@@ -20,14 +20,14 @@ const SCENE: TscnInternalResource[] = [
   { id: 'Mat_blue', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 0, 1, 1)' } },
 ];
 
-function inline(resource: TscnInternalResource): MaterialSource {
+function inline(resource: TscnInternalResource): ScopedReference {
   return inlineSource(resource, SCENE);
 }
 
 const RED = inline(SCENE[0]!);
 const BLUE = inline(SCENE[1]!);
 
-async function renderedMaterial(sources: readonly (MaterialSource | undefined)[]) {
+async function renderedMaterial(sources: readonly (ScopedReference | undefined)[]) {
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>

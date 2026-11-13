@@ -11,6 +11,7 @@ import { GODOT_DEFAULT_ALBEDO } from './godotDefaultMaterial';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
+import { fileMaterial } from './surfaceMaterial.testkit';
 import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
 
@@ -64,7 +65,7 @@ describe('<SurfaceMaterialSlot> fallback', () => {
 
   it('renders Godot’s default material while a .tres has not resolved', async () => {
     expectGodotDefault(
-      await renderSlot(<SurfaceMaterialSlot source={{ kind: 'file', path: 'res://not_yet_loaded.tres' }} />)
+      await renderSlot(<SurfaceMaterialSlot source={fileMaterial('res://not_yet_loaded.tres')} />)
     );
   });
 });

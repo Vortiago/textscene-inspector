@@ -11,7 +11,7 @@ import {
   type GeometryInstance3DProperties,
 } from '../../../nodes/3d/geometryinstance3d/types';
 import { instanceAs } from '../../../nodes/3d/testing/reactThreeTestInstance';
-import { resolveMaterialSource } from '../../materials/materialSource';
+import { nodeMaterial } from '../../materials/materialSource';
 import { SceneResourcesProvider, useSceneResources } from '../../SceneResourcesContext';
 import { withGeometryInstance } from '../../visibilityRange/geometryInstance';
 import type { MeshPart } from '../SurfacedMeshDrawer';
@@ -107,7 +107,7 @@ export function useParts(parts: readonly UnresolvedPart[]): MeshPart[] {
   const pools = useSceneResources();
   return parts.map(({ geometry, materialIds }) => ({
     geometry,
-    materials: materialIds.map((id) => resolveMaterialSource(`SubResource("${id}")`, pools)),
+    materials: materialIds.map((id) => nodeMaterial(`SubResource("${id}")`, pools)),
   }));
 }
 

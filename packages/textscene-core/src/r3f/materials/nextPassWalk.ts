@@ -4,13 +4,8 @@
  * (`render_forward_clustered.cpp:4183-4226`).
  */
 
-import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
-import {
-  materialSourceKey,
-  resolveNextPass,
-  type MaterialResource,
-  type MaterialSource,
-} from './materialSource';
+import type { StandardMaterial } from '../../resources/materials/material/types';
+import { referenceKey, type ScopedReference } from '../../resources/reading';
 
 /**
  * The visited seed every chain's walk starts from: nothing has drawn yet, so no key is
@@ -26,9 +21,9 @@ export const NOTHING_DRAWN: ReadonlySet<string> = new Set();
  * walk over a cloned object shares it, so a hand-written cycle draws each material once on
  * both.
  */
-function visitedWith(visited: ReadonlySet<string>, source: MaterialSource | undefined): ReadonlySet<string> {
+function visitedWith(visited: ReadonlySet<string>, source: ScopedReference | undefined): ReadonlySet<string> {
   if (!source) return visited;
-  const own = materialSourceKey(source);
+  const own = referenceKey(source);
   if (visited.has(own)) return visited;
   return new Set([...visited, own]);
 }
@@ -36,7 +31,7 @@ function visitedWith(visited: ReadonlySet<string>, source: MaterialSource | unde
 /** One pass as the walk reaches it. */
 export interface WalkedPass {
   /** Undefined for a surface that holds no material, which starts no chain. */
-  source: MaterialSource | undefined;
+  source: ScopedReference | undefined;
   /** The draw position: the surface's own draw is 0, each link its index. */
   ordinal: number;
   /** Every source key from the starting material up to this pass, without its own. */
@@ -44,13 +39,13 @@ export interface WalkedPass {
 }
 
 /** A pass that holds a material: every pass after the starting one. */
-export type LinkPass = WalkedPass & { source: MaterialSource };
+export type LinkPass = WalkedPass & { source: ScopedReference };
 
 /** What the load of a pass gave its adapter. */
 export interface LoadedPass {
   readsStencil: boolean;
   /** The pass after it, resolved in the tables of the file that wrote it. Undefined for none. */
-  nextSource: MaterialSource | undefined;
+  nextSource: ScopedReference | undefined;
 }
 
 /**
@@ -66,17 +61,15 @@ interface PassStep {
 }
 
 /**
- * What the walk reads of a pass whose material and scalars are in, or null while either is not.
- * The pass after it resolves in the tables of the file that wrote the material.
+ * What the walk reads of a pass whose material is in, or null while it is not. The pass after it
+ * resolves in the tables of the file that wrote the material.
  *
  * @canonical What a next_pass chain walk reads of a loaded pass
  */
-export function loadedPassOf(
-  material: MaterialResource | null | undefined,
-  scalars: Pick<StandardMaterial3DScalars, 'readsStencil' | 'nextPass'> | null | undefined
-): LoadedPass | null {
-  if (!material || !scalars) return null;
-  return { readsStencil: scalars.readsStencil, nextSource: resolveNextPass(scalars.nextPass, material) };
+export function loadedPassOf(material: StandardMaterial | null): LoadedPass | null {
+  if (!material) return null;
+  const { data, nextPass } = material;
+  return { readsStencil: data.readsStencil, nextSource: nextPass.ref === undefined ? undefined : nextPass };
 }
 
 const ENDS: PassStep = { fate: 'ends', next: null };
@@ -90,7 +83,7 @@ const WAITS: PassStep = { fate: 'waits', next: null };
  */
 export function nextPassStep(pass: WalkedPass, loaded: LoadedPass | null): PassStep {
   const { source, ordinal, visited } = pass;
-  if (!source || visited.has(materialSourceKey(source))) return ENDS;
+  if (!source || visited.has(referenceKey(source))) return ENDS;
   if (!loaded) return WAITS;
   const next = loaded.nextSource
     ? { source: loaded.nextSource, ordinal: ordinal + 1, visited: visitedWith(visited, source) }
