@@ -18,6 +18,8 @@ import {
   paintRangeSize,
   WHOLE_CANVAS_RANGE,
 } from './canvasPaintOrder';
+// Side effect: the parser slices register the paint room each type holds.
+import '../parser/TscnParser';
 
 function node(name: string, type: string, children: TscnNode[] = [], properties = {}): TscnNode {
   // The raw text of each property, as the parser keeps it beside the parsed value.
