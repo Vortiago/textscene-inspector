@@ -16,6 +16,7 @@ const MARKER = 'servers/rendering/shader_language.cpp';
 /**
  * The source directory for `argv`: the value after `--godot-source`, or the CI image's. Throws,
  * naming how to get the source, when the directory holds no Godot tree.
+ * @canonical Where a generator finds Godot's source
  */
 export function godotSourceDir(argv) {
   const flag = argv.indexOf('--godot-source');

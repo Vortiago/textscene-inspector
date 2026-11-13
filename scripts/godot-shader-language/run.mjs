@@ -13,6 +13,7 @@ import { pathToFileURL } from 'node:url';
 import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { godotSourceDir } from '../godotSource.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
+import { SHOWCASES } from '../../apps/textscene-three-godot-shaders/tests/e2e/showcases.mjs';
 import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
 import { GUIDE_CHAPTERS } from './guideChapters.mjs';
 import { instructionRows, SOURCE_FILES } from './readSource.mjs';
@@ -40,7 +41,13 @@ function readSources(sourceDir) {
 function main() {
   const rows = instructionRows(readSources(godotSourceDir(process.argv)));
   const record = JSON.parse(readFileSync(RECORD, 'utf8'));
-  const guide = renderGuide({ chapters: GUIDE_CHAPTERS, rows, probes: PROBES, record });
+  const guide = renderGuide({
+    chapters: GUIDE_CHAPTERS,
+    rows,
+    probes: PROBES,
+    record,
+    showcases: SHOWCASES,
+  });
   const outputs = [
     [TABLE_MODULE, renderTableModule(rows)],
     [READABLE_TABLE, renderReadableTable(rows, PROBES)],

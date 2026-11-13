@@ -3,17 +3,13 @@
  * Runs every probe in Godot 4.6.3 and writes Godot's answers to the checked-in record:
  * `pnpm godot:probes [--check]`. `--check` writes nothing and exits 1 when a new run differs from
  * the record. It needs `godot` on the path and `xvfb-run`, and renders on lavapipe as
- * `pnpm ref:godot` does. CI does not run it: the record is the oracle there.
+ * `pnpm ref:godot` does. The CI image has both, so the "Shader package" job runs `--check`.
  */
 
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
 import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
-import { godotSpawnPlan } from '../godot-ref/run.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import {
   MAIN_SCENE,
@@ -23,6 +19,7 @@ import {
   probeData,
   probeShaderFiles,
 } from './godotProject.mjs';
+import { runGodotProject } from './godotRun.mjs';
 import { renderRecord } from './record.mjs';
 
 const RECORD = join(REPO_ROOT, 'apps/textscene-three-godot-shaders/tests/probes/godot-record.json');
@@ -30,46 +27,25 @@ const RECORD = join(REPO_ROOT, 'apps/textscene-three-godot-shaders/tests/probes/
 /** The only Godot release the record may come from: the translator follows its source. */
 const GODOT_VERSION = '4.6.3';
 
-function writeProject(directory) {
-  const files = {
+function projectFiles() {
+  return {
     'project.godot': PROJECT_GODOT,
     'main.tscn': MAIN_SCENE,
     'main.gd': MAIN_SCRIPT,
     'probes.json': JSON.stringify(probeData(PROBES)),
     ...probeShaderFiles(PROBES),
   };
-  for (const [name, text] of Object.entries(files)) writeFileSync(join(directory, name), text);
-}
-
-/** Godot's standard output for one run of the project in `directory`. */
-function runGodot(directory) {
-  const plan = godotSpawnPlan(['--path', directory], { display: true });
-  const result = spawnSync(plan.command, plan.argv, {
-    encoding: 'utf8',
-    env: plan.env,
-    timeout: plan.timeoutMs,
-  });
-  if (result.error) throw new Error(`run godot: ${result.error.message}`);
-  if (result.status !== 0) throw new Error(`godot exited with ${result.status}:\n${result.stderr}`);
-  return result.stdout;
 }
 
 function main() {
-  const directory = mkdtempSync(join(tmpdir(), 'godot-probes-'));
-  try {
-    writeProject(directory);
-    const output = parseProbeOutput(runGodot(directory));
-    if (!output.godot.startsWith(`${GODOT_VERSION}-stable`)) {
-      throw new Error(`expected Godot ${GODOT_VERSION}, got ${output.godot}`);
-    }
-    const outputs = [[RECORD, renderRecord(output, PROBES)]];
-    const options = { tool: 'godot-probes', summary: `${PROBES.length} probes` };
-    if (process.argv.includes('--check'))
-      checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });
-    else writeGenerated(outputs, options);
-  } finally {
-    rmSync(directory, { recursive: true, force: true });
+  const output = parseProbeOutput(runGodotProject(projectFiles()));
+  if (!output.godot.startsWith(`${GODOT_VERSION}-stable`)) {
+    throw new Error(`expected Godot ${GODOT_VERSION}, got ${output.godot}`);
   }
+  const outputs = [[RECORD, renderRecord(output, PROBES)]];
+  const options = { tool: 'godot-probes', summary: `${PROBES.length} probes` };
+  if (process.argv.includes('--check')) checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });
+  else writeGenerated(outputs, options);
 }
 
 // `pathToFileURL`, not a `file://` template: on Windows `process.argv[1]` is a `C:\...` path.
