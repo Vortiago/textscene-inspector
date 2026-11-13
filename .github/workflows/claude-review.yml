@@ -1,8 +1,9 @@
 name: Claude review
 
 # Claude reviews a pull request against REVIEW.md and reports only findings that clear its bar.
-# It authenticates with a Claude subscription token from `claude setup-token`, not an API key,
-# so a review spends subscription usage and no API credit.
+# It authenticates with the `ANTHROPIC_API_KEY` secret, so a review spends API credit, not
+# subscription usage. While that secret is unset, it falls back to the subscription token in
+# `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token`.
 #
 # A review spends the repository owner's usage, so only the owner starts one:
 # - The owner's own pull request gets one review when it is ready, not one per push.
@@ -127,7 +128,10 @@ jobs:
           # later change that hands it a command.
           CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: '1'
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The job passes the subscription token only while the API key is unset, so the
+          # action gets one credential and its choice between two never matters.
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.ANTHROPIC_API_KEY == '' && secrets.CLAUDE_CODE_OAUTH_TOKEN || '' }}
           prompt: |
             You review pull request ${{ env.PR_NUMBER }} in ${{ github.repository }}.
 
