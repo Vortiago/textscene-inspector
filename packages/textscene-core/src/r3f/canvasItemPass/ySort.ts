@@ -27,21 +27,28 @@ export interface ExtraSortItem {
   readonly origin: Vector2;
   readonly size: number;
   /**
-   * An `INTERNAL_MODE_BACK` child, such as a ScrollContainer's bar, which Godot collects after the
-   * authored children (`node.h:585-600`). Every other piece comes before them.
+   * Whether Godot collects it after the node's authored children: an `INTERNAL_MODE_BACK` child such
+   * as a ScrollContainer's bar (`node.h:585-600`), or a scene tile the layer appends. Every other
+   * piece comes before them.
    */
-  readonly isInternalBack: boolean;
+  readonly followsChildren: boolean;
 }
 
 /** The extra pieces of each node, by live path, in collection order. */
 export type ExtraSortItems = ReadonlyMap<string, readonly ExtraSortItem[]>;
 
+/** The sort y a mixer pose gives an entry now, in the space of the node at live path `space`. */
+export interface LiveSortY {
+  readonly y: number;
+  readonly space: string;
+}
+
 /** What the tree does not hold that places a sorted entry. */
 export interface SortInputs {
   readonly origins: SortOrigins;
   readonly extras: ExtraSortItems;
-  /** The sort y a mixer pose gives an entry now, by live path or extra id, over the y the tree gives. */
-  readonly liveYs: ReadonlyMap<string, number>;
+  /** The live y of an entry, by live path or extra id, over the y the tree gives. */
+  readonly liveYs: ReadonlyMap<string, LiveSortY>;
 }
 
 export const NO_SORT_INPUTS: SortInputs = { origins: new Map(), extras: new Map(), liveYs: new Map() };
@@ -145,6 +152,8 @@ function isSortRoot(result: SortItem, results: ReadonlyMap<string, SortItem>): b
 class SortTree {
   private readonly childItems = new Map<string, string[]>();
   private readonly childNodes = new Map<string, string[]>();
+  /** Written only by `collect`: each collected node's transform in the space of the root being collected. */
+  private readonly toRootOf = new Map<string, Transform2DColumns>();
 
   constructor(
     private readonly results: ReadonlyMap<string, SortItem>,
@@ -163,6 +172,7 @@ class SortTree {
   /** The root as entry 0 at an identity transform, then its flattened subtree (`renderer_canvas_cull.cpp:446-452`). */
   entriesOf(root: string): SortEntry[] {
     const entries: SortEntry[] = [{ id: root, sortY: 0, size: this.bodySize(root) }];
+    this.toRootOf.clear();
     this.collect(root, TRANSFORM2D_IDENTITY, entries);
     return entries;
   }
@@ -172,18 +182,26 @@ class SortTree {
    * authored children, then its internal back pieces.
    */
   private collect(path: string, toRoot: Transform2DColumns, entries: SortEntry[]): void {
+    this.toRootOf.set(path, toRoot);
     const extras = this.inputs.extras.get(path) ?? [];
     this.collectExtras(
-      extras.filter((extra) => !extra.isInternalBack),
+      extras.filter((extra) => !extra.followsChildren),
       toRoot,
       entries
     );
     this.collectChildren(path, toRoot, entries);
     this.collectExtras(
-      extras.filter((extra) => extra.isInternalBack),
+      extras.filter((extra) => extra.followsChildren),
       toRoot,
       entries
     );
+  }
+
+  /** The y of `id` in the root's space: its live y where a pose gives one, else `placed`. */
+  private sortYOf(id: string, placed: number): number {
+    const live = this.inputs.liveYs.get(id);
+    const toRoot = live && this.toRootOf.get(live.space);
+    return toRoot ? transform2DXform(toRoot, { x: 0, y: live.y }).y : placed;
   }
 
   private collectExtras(
@@ -192,7 +210,7 @@ class SortTree {
     entries: SortEntry[]
   ): void {
     for (const extra of extras) {
-      const sortY = this.inputs.liveYs.get(extra.id) ?? transform2DXform(toRoot, extra.origin).y;
+      const sortY = this.sortYOf(extra.id, transform2DXform(toRoot, extra.origin).y);
       entries.push({ id: extra.id, sortY, size: extra.size });
     }
   }
@@ -204,7 +222,7 @@ class SortTree {
       const xform = multiplyTransform2D(toRoot, this.localOf(child, result));
       const sortsChildren = result.fields.ySortEnabled;
       const size = sortsChildren ? this.bodySize(child) : (this.paints.get(child)?.range.size ?? 0);
-      entries.push({ id: child, sortY: this.inputs.liveYs.get(child) ?? xform.ty, size });
+      entries.push({ id: child, sortY: this.sortYOf(child, xform.ty), size });
       if (sortsChildren) this.collect(child, xform, entries);
     }
   }
@@ -249,8 +267,14 @@ function bodyAt(paint: CanvasItemPaint, run: PaintRange): CanvasItemPaint {
   const shift = run.base - paint.range.base;
   const childrenStart = paint.front.base + paint.front.size;
   const childrenSize = paint.range.size - run.size;
-  const at = (value: number): number => value + shift - (value >= childrenStart ? childrenSize : 0);
-  const move = (range: PaintRange): PaintRange => ({ base: at(range.base), size: range.size });
+  // The pieces that take runs of their own leave their room too, so a value past them stays in the run.
+  const last = run.base + run.size - 1;
+  const at = (value: number): number =>
+    Math.max(run.base, Math.min(last, value + shift - (value >= childrenStart ? childrenSize : 0)));
+  const move = (range: PaintRange): PaintRange => {
+    const base = at(range.base);
+    return { base, size: Math.min(range.size, run.base + run.size - base) };
+  };
   return {
     range: run,
     own: at(paint.own),

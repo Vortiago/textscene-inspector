@@ -86,7 +86,7 @@ export function forestBackPiecesOf(
       id: pieceIdOf(node.path, name),
       origin,
       size: 1,
-      isInternalBack: true,
+      followsChildren: true,
     }));
     if (items.length > 0) pieces.set(node.path, items);
   });

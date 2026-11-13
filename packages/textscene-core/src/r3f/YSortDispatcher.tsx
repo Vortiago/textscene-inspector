@@ -31,10 +31,12 @@ import {
   runFrame,
   useChildPaintFrames,
   useNodePaint,
+  type ChildPaintFrames,
   type PaintFrame,
 } from './canvasItemPass/nodePaint.js';
 import { canvasPaintPass, type CanvasItemPaint } from './canvasItemPass/canvasItemPaint.js';
-import type { ExtraSortItem } from './canvasItemPass/ySort.js';
+import type { ExtraSortItem, LiveSortY } from './canvasItemPass/ySort.js';
+import type { Vector2 } from '../godot/math/vector.js';
 import { useLiveScenePassSelection } from './liveScenePass.js';
 import { joinPath } from '../utils/nodePath.js';
 import { sameData } from '../utils/sameData.js';
@@ -115,8 +117,9 @@ const SortedChildren = memo(function SortedChildren({
   // Items sort on the poses drawn now, so a child a mixer moves re-sorts among the rows.
   const liveItems = useLiveYSort(items, basePath);
   const pieces = useSortPieces(items, basePath);
-  usePublishSortInputs(items, liveItems, pieces, basePath);
-  const frames = usePieceFrames(items, liveItems, pieces, paint, childFrames !== null);
+  const isOutsideTree = childFrames !== null;
+  usePublishSortInputs(items, liveItems, pieces, basePath, isOutsideTree);
+  const frames = usePieceFrames(items, liveItems, pieces, paint, childFrames);
 
   // The items render in collection order, not sorted: a moved child makes R3F apply its authored
   // props again, which undoes the pose a mixer has just written (`ySortAnimatedChild.test.tsx`,
@@ -154,50 +157,63 @@ function useSortPieces(items: readonly YSortItem[], basePath: string): ReadonlyM
     [paths]
   );
   const held = useLiveScenePassSelection(canvasPaintPass, select, sameData);
-  return useMemo(
-    () =>
-      new Map(
-        items.map((item, i): [YSortItem, SortPiece] =>
-          item.kind === 'node' && held?.[i]
-            ? [item, { kind: 'node', id: paths[i]! }]
-            : [item, { kind: 'extra', id: `${basePath}#${ySortItemId(item)}` }]
-        )
-      ),
-    [items, paths, held, basePath]
-  );
+  return useMemo(() => {
+    const isNode = items.map((item, i) => item.kind === 'node' && held?.[i] === true);
+    const lastNode = isNode.lastIndexOf(true);
+    return new Map(
+      items.map((item, i): [YSortItem, SortPiece] => {
+        if (isNode[i]) return [item, { kind: 'node', id: paths[i]! }];
+        const id = `${basePath}#${ySortItemId(item)}`;
+        // A row of a layer the pass holds joins that layer's list, in the layer's space.
+        if (isLayerRow(item) && held?.[i] && item.tileData?.rowOrigin) {
+          const origin = { x: 0, y: item.tileData.rowOrigin.ty };
+          return [item, { kind: 'extra', id, owner: paths[i]!, origin, followsChildren: false }];
+        }
+        const origin = { x: 0, y: item.sortY };
+        return [item, { kind: 'extra', id, owner: basePath, origin, followsChildren: i > lastNode }];
+      })
+    );
+  }, [items, paths, held, basePath]);
 }
 
 /**
- * Publishes the pieces the pass does not list as extras of this node, and the ys a mixer pose gives
- * the items, so the one sort places them. A layout effect, so the sort settles before the first paint.
+ * Publishes the pieces the pass does not list as extras of the node whose list they join, and the
+ * ys a mixer pose gives the items, in this node's space, so the one sort places them. A layout
+ * effect, so the sort settles before the first paint. A subtree outside the shared tree publishes
+ * nothing, since no sort reads its paths.
  */
 function usePublishSortInputs(
   items: readonly YSortItem[],
   liveItems: readonly YSortItem[],
   pieces: ReadonlyMap<YSortItem, SortPiece>,
-  basePath: string
+  basePath: string,
+  isOutsideTree: boolean
 ): void {
-  const publishExtras = usePublishSortExtras();
-  const publishLiveYs = usePublishLiveSortYs();
+  const publishToSort = usePublishSortExtras();
+  const publishYsToSort = usePublishLiveSortYs();
+  const publishExtras = isOutsideTree ? null : publishToSort;
+  const publishLiveYs = isOutsideTree ? null : publishYsToSort;
   const owner = useId();
   useLayoutEffect(() => {
-    // The sort y of an item is in this node's space, where an extra's origin sits.
-    const extras = items.flatMap((item): ExtraSortItem[] => {
+    const extras = new Map<string, ExtraSortItem[]>();
+    for (const item of items) {
       const piece = pieces.get(item)!;
-      if (piece.kind !== 'extra' || !item.node) return [];
-      return [
-        { id: piece.id, origin: { x: 0, y: item.sortY }, size: pieceSize(item), isInternalBack: false },
-      ];
-    });
-    publishExtras?.(owner, new Map([[basePath, extras]]));
-  }, [items, pieces, basePath, publishExtras, owner]);
+      if (piece.kind !== 'extra' || !item.node) continue;
+      const { id, origin, followsChildren } = piece;
+      const entry: ExtraSortItem = { id, origin, size: pieceSize(item), followsChildren };
+      const listed = extras.get(piece.owner);
+      if (listed) listed.push(entry);
+      else extras.set(piece.owner, [entry]);
+    }
+    publishExtras?.(owner, extras.size > 0 ? extras : null);
+  }, [items, pieces, publishExtras, owner]);
   useLayoutEffect(() => {
-    const ys = new Map<string, number>();
+    const ys = new Map<string, LiveSortY>();
     liveItems.forEach((live, i) => {
-      if (live !== items[i]) ys.set(pieces.get(items[i]!)!.id, live.sortY);
+      if (live !== items[i]) ys.set(pieces.get(items[i]!)!.id, { y: live.sortY, space: basePath });
     });
-    publishLiveYs?.(owner, ys);
-  }, [items, liveItems, pieces, publishLiveYs, owner]);
+    publishLiveYs?.(owner, ys.size > 0 ? ys : null);
+  }, [items, liveItems, pieces, basePath, publishLiveYs, owner]);
   useLayoutEffect(
     () => () => {
       publishExtras?.(owner, null);
@@ -217,11 +233,11 @@ function usePieceFrames(
   liveItems: readonly YSortItem[],
   pieces: ReadonlyMap<YSortItem, SortPiece>,
   paint: CanvasItemPaint,
-  isOutsideTree: boolean
+  childFrames: ChildPaintFrames | null
 ): ReadonlyMap<YSortItem, PaintFrame> {
   const sortedRuns = useSortedRunsAndPaints().runs;
   return useMemo(() => {
-    if (isOutsideTree) return localSortFrames(liveItems, paint);
+    if (childFrames) return localSortFrames(liveItems, paint, childFrames.tail);
     return new Map(
       liveItems.map((live, i): [YSortItem, PaintFrame] => {
         const piece = pieces.get(items[i]!)!;
@@ -229,14 +245,22 @@ function usePieceFrames(
         return [live, runFrame(sortedRuns.get(piece.id) ?? paint.tail)];
       })
     );
-  }, [items, liveItems, pieces, paint, isOutsideTree, sortedRuns]);
+  }, [items, liveItems, pieces, paint, childFrames, sortedRuns]);
 }
 
-/** The runs of `items` packed in sort order after the node's own sequence, as one flat sort orders them. */
-function localSortFrames(items: readonly YSortItem[], paint: CanvasItemPaint): Map<YSortItem, PaintFrame> {
+/**
+ * The runs of `items` packed in sort order after the node's own sequence, as one flat sort orders
+ * them, each keeping the canvas roots of the run `tail` the node draws in.
+ */
+function localSortFrames(
+  items: readonly YSortItem[],
+  paint: CanvasItemPaint,
+  tail: PaintFrame
+): Map<YSortItem, PaintFrame> {
   const sorted = inSortOrder(items, (item) => item.sortY);
   const ranges = packPaintRanges(paint.range, sorted.map(pieceSize), paint.own + 1);
-  return new Map(sorted.map((item, i) => [item, runFrame(ranges[i]!)]));
+  const canvasRoots = tail.kind === 'run' ? tail.canvasRoots : undefined;
+  return new Map(sorted.map((item, i) => [item, runFrame(ranges[i]!, canvasRoots)]));
 }
 
 /** The values an item draws: one for a row, which is one group with no subtree, or its whole subtree's run. */
@@ -249,10 +273,16 @@ function itemPath(item: YSortItem, basePath: string): string {
 }
 
 /** Where the sort of the canvas item pass finds an item: a node by live path, or an extra by id. */
-interface SortPiece {
-  readonly kind: 'node' | 'extra';
-  readonly id: string;
-}
+type SortPiece =
+  | { readonly kind: 'node'; readonly id: string }
+  | {
+      readonly kind: 'extra';
+      readonly id: string;
+      /** The live path of the node whose list it joins, in whose space `origin` sits. */
+      readonly owner: string;
+      readonly origin: Vector2;
+      readonly followsChildren: boolean;
+    };
 
 /**
  * The rows of a y-sorted TileMapLayer item, each a child canvas item of the layer at `(0, row y)`

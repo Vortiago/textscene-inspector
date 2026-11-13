@@ -61,6 +61,12 @@ export function useNodePaint(node: TscnNode, path: string | null): CanvasItemPai
   return useSortedPaint(fromPass ? path : null, paint);
 }
 
+/** The frame of each child of a node outside the shared tree, and of the pieces it draws after them. */
+export interface ChildPaintFrames {
+  readonly children: readonly PaintFrame[];
+  readonly tail: PaintFrame;
+}
+
 /**
  * The frame each child of the node drawing `node` at `path` takes, by index, and the one its
  * injected content takes, or null where they read the pass themselves. A node the pass does not
@@ -70,7 +76,7 @@ export function useChildPaintFrames(
   node: TscnNode,
   path: string | null,
   paint: CanvasItemPaint
-): { children: readonly PaintFrame[]; tail: PaintFrame } | null {
+): ChildPaintFrames | null {
   const frame = useContext(PaintFrameContext);
   const isPassNode = useLiveScenePass(canvasPaintPass, frame.kind === 'tree' ? path : null) !== undefined;
   return useMemo(() => {
@@ -109,12 +115,15 @@ export function useRootPaintFrames(roots: readonly TscnNode[]): readonly PaintFr
 
 /** The frames of `content`, drawn one after another from `run`, as scene tiles draw after the layer's children. */
 export function contentFrames(run: PaintRange, content: readonly TscnNode[]): PaintFrame[] {
-  return allocatePaintRange(run, content).children.map(runFrame);
+  return allocatePaintRange(run, content).children.map((range) => runFrame(range));
 }
 
-/** The frame of a subtree outside the shared live tree whose root owns `range`, with no canvas roots above. */
-export function runFrame(range: PaintRange): PaintFrame {
-  return { kind: 'run', range, canvasRoots: NO_CANVAS_ROOTS };
+/** The frame of a subtree outside the shared live tree whose root owns `range`, where `canvasRoots` take theirs. */
+export function runFrame(
+  range: PaintRange,
+  canvasRoots: ReadonlyMap<TscnNode, PaintRange> = NO_CANVAS_ROOTS
+): PaintFrame {
+  return { kind: 'run', range, canvasRoots };
 }
 
 /** The paint of `node` owning `range` outside the shared tree, and the run each child owns. */

@@ -33,7 +33,7 @@ export type ControlLocalTransforms = ControlTransforms;
 
 const NO_TRANSFORMS: ControlTransforms = new Map();
 const NO_EXTRAS: ExtraSortItems = new Map();
-const NO_YS: ReadonlyMap<string, number> = new Map();
+const NO_YS: SortInputs['liveYs'] = new Map();
 const NO_RUNS: ReadonlyMap<string, PaintRange> = new Map();
 const NO_PAINTS: ReadonlyMap<string, CanvasItemPaint> = new Map();
 
@@ -44,7 +44,7 @@ interface Publishers {
   publishTransforms: Publish<ControlTransforms>;
   publishLocalTransforms: Publish<ControlLocalTransforms>;
   publishExtras: Publish<ExtraSortItems>;
-  publishLiveYs: Publish<ReadonlyMap<string, number>>;
+  publishLiveYs: Publish<SortInputs['liveYs']>;
 }
 
 const TransformsContext = createContext<ControlTransforms>(NO_TRANSFORMS);
@@ -96,7 +96,7 @@ export function YSortProvider({ children }: { children: ReactNode }) {
   const [transforms, publishTransforms] = useOwnedEntries(NO_TRANSFORMS, equalTransform2D);
   const [localTransforms, publishLocalTransforms] = useOwnedEntries(NO_TRANSFORMS, equalTransform2D);
   const [extras, publishExtras] = useOwnedEntries(NO_EXTRAS, sameData);
-  const [liveYs, publishLiveYs] = useOwnedEntries(NO_YS, Object.is);
+  const [liveYs, publishLiveYs] = useOwnedEntries(NO_YS, sameData);
   const publishers = useMemo(
     () => ({ publishTransforms, publishLocalTransforms, publishExtras, publishLiveYs }),
     [publishTransforms, publishLocalTransforms, publishExtras, publishLiveYs]
@@ -202,6 +202,6 @@ export function usePublishSortExtras(): Publish<ExtraSortItems> | null {
 }
 
 /** The publisher of the ys mixer poses give, or null where there is no provider. */
-export function usePublishLiveSortYs(): Publish<ReadonlyMap<string, number>> | null {
+export function usePublishLiveSortYs(): Publish<SortInputs['liveYs']> | null {
   return useContext(PublishersContext)?.publishLiveYs ?? null;
 }
