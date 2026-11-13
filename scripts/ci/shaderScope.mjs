@@ -32,8 +32,15 @@ export function isShaderOnly(changedPaths, baseRef) {
 /** Whether `path` is one of the transpiler's own files. */
 export const isTranspilerPath = (path) => TRANSPILER_PATHS.test(path);
 
+/** The paths in `git diff --name-only` output. Blank lines, and so a failed diff, give none. */
+export const changedPathsOf = (diffOutput) =>
+  diffOutput
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
 function main() {
-  const changedPaths = readFileSync(0, 'utf8').split('\n').filter(Boolean);
+  const changedPaths = changedPathsOf(readFileSync(0, 'utf8'));
   const shaderOnly = isShaderOnly(changedPaths, process.env.BASE_REF ?? '');
   console.error(`[shaderScope] ${changedPaths.length} changed file(s): shader-only=${shaderOnly}`);
   console.log(`shader-only=${shaderOnly}`);

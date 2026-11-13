@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, normalize } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { REPO_ROOT } from '../repoRoot.mjs';
-import { isShaderOnly, isTranspilerPath, SHADER_BRANCH } from './shaderScope.mjs';
+import { changedPathsOf, isShaderOnly, isTranspilerPath, SHADER_BRANCH } from './shaderScope.mjs';
 
 const LANGUAGE = 'packages/textscene-core/src/shaders/language/';
 const SHADERS_ENTRY = 'packages/textscene-core/src/shaders/index.ts';
@@ -26,15 +26,49 @@ describe('isShaderOnly', () => {
 
   it('is false when one file is outside the transpiler', () => {
     expect(isShaderOnly([`${LANGUAGE}parse.ts`, SHADERS_ENTRY], SHADER_BRANCH)).toBe(false);
-    expect(isShaderOnly([`${LANGUAGE}parse.ts`, '.github/workflows/ci.yml'], SHADER_BRANCH)).toBe(false);
   });
 
-  it('is false for a pull request into any other branch', () => {
+  it.each([
+    '.github/workflows/ci.yml',
+    '.github/ci-image/Dockerfile',
+    'package.json',
+    'pnpm-lock.yaml',
+    'pnpm-workspace.yaml',
+    'tsconfig.base.json',
+    'vitest.shared.ts',
+    'eslint.config.js',
+  ])('is false when the pull request changes the shared input %s', (sharedInput) => {
+    expect(isShaderOnly([`${LANGUAGE}parse.ts`, sharedInput], SHADER_BRANCH)).toBe(false);
+  });
+
+  it("is false for the port branch's own pull request into main", () => {
     expect(isShaderOnly([`${LANGUAGE}parse.ts`], 'main')).toBe(false);
   });
 
+  it.each(['feature/other', 'feature/shader-translator-old', ''])(
+    'is false for a pull request into the base %j',
+    (baseRef) => {
+      expect(isShaderOnly([`${LANGUAGE}parse.ts`], baseRef)).toBe(false);
+    }
+  );
+
   it('is false for an empty diff, which is more likely a broken checkout (edge case)', () => {
     expect(isShaderOnly([], SHADER_BRANCH)).toBe(false);
+  });
+});
+
+describe('changedPathsOf', () => {
+  it('reads one path per line of the diff', () => {
+    expect(changedPathsOf(`${LANGUAGE}parse.ts\nscripts/godot-probes/run.mjs\n`)).toEqual([
+      `${LANGUAGE}parse.ts`,
+      'scripts/godot-probes/run.mjs',
+    ]);
+  });
+
+  it('gives no path for blank output, so a failed diff runs every job', () => {
+    expect(changedPathsOf('')).toEqual([]);
+    expect(changedPathsOf('\n  \n')).toEqual([]);
+    expect(isShaderOnly(changedPathsOf('\n'), SHADER_BRANCH)).toBe(false);
   });
 });
 
