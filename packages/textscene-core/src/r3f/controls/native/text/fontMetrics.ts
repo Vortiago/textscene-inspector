@@ -55,10 +55,10 @@ export interface FontMetrics {
    */
   readonly markOffsets?: SizedClusterOffsets;
   /**
-   * The `GPOS` kerning of a pair of shaped glyphs at the default instance, design units. Absent for a
-   * face with no `GPOS` to read.
+   * The `GPOS` kerning of a pair of glyphs at the face's instance. Absent for a face with no `GPOS`
+   * to read.
    */
-  readonly getGlyphKerningUnits?: GlyphKerningReader;
+  readonly getGlyphKerning?: GlyphKerningReader;
   /**
    * A character's own advance at the default instance, design units, or `null` for no glyph (a shaper
    * then takes `averageAdvanceUnits`). FreeType takes the advance of a font with no `HVAR` from its
@@ -107,11 +107,26 @@ export interface FontMetrics {
   readonly outlines?: SfntOutlines | null;
 }
 
-/** The kerning of a pair of glyphs, design units. Null, not zero, where the kerning of their characters stands. */
-export type GlyphKerningReader = (left: LookupGlyph, right: LookupGlyph) => number | null;
+/** The kerning of a pair of glyphs. Null, not no kerning, where the kerning of their characters stands. */
+export type GlyphKerningReader = (left: LookupGlyph, right: LookupGlyph) => PairKerning | null;
+
+/**
+ * The x advance one `GPOS` value record adds to a pair: its own in design units, and the delta of
+ * its variation device table. HarfBuzz scales and rounds each apart (`ValueFormat.hh:108,140`).
+ */
+export interface KerningValue {
+  readonly units: number;
+  readonly deltaUnits: number;
+}
+
+/** The value records that kern a pair of glyphs, in the order HarfBuzz applies them. */
+export type PairKerning = readonly KerningValue[];
+
+/** A pair that no value record kerns. */
+export const NO_KERNING: PairKerning = Object.freeze([]);
 
 /** The fields of a face whose glyphs this previewer reads from its font file (`sfntFaceGlyphs.ts`). */
-export type FaceGlyphs = Pick<FontMetrics, 'shaping' | 'markOffsets' | 'getGlyphKerningUnits'>;
+export type FaceGlyphs = Pick<FontMetrics, 'shaping' | 'markOffsets' | 'getGlyphKerning'>;
 
 /**
  * `units` scaled to `fontSizePx` as `units * (fontSizePx / unitsPerEm)`, which `units * fontSizePx
@@ -448,17 +463,12 @@ function instanceReaders(
   opentype: OpentypeCoordinates
 ): PropertyDescriptorMap {
   const glyphAt = (codePoint: number) => outlines.glyphIndex(codePoint, opentype);
-  const kerningAt = (left: LookupGlyph, right: LookupGlyph) =>
-    outlines.kerningAtInstance?.(left, right, opentype) ?? null;
   return {
-    getKerningAdjustmentUnits: {
-      value: (a: string, b: string): number =>
-        kerningAt(lookupGlyphOf({ char: a }, glyphAt), lookupGlyphOf({ char: b }, glyphAt)) ??
-        unvaried.getKerningAdjustmentUnits(a, b),
-    },
-    getGlyphKerningUnits: {
-      value: (left: LookupGlyph, right: LookupGlyph): number | null =>
-        kerningAt(left, right) ?? unvaried.getGlyphKerningUnits?.(left, right) ?? null,
+    getGlyphKerning: {
+      value: (left: LookupGlyph, right: LookupGlyph): PairKerning | null =>
+        outlines.kerningAtInstance?.(left, right, opentype) ??
+        unvaried.getGlyphKerning?.(left, right) ??
+        null,
     },
     getInstanceAdvance26_6: {
       value: (glyph: KernGlyph, fontSizePx: number): number | null => {
@@ -472,8 +482,7 @@ function instanceReaders(
 /** The readers of a wrapper at the default instance: those of `unvaried`, so none of an instance below passes through. */
 function defaultReaders(unvaried: FontMetrics): PropertyDescriptorMap {
   return {
-    getKerningAdjustmentUnits: { get: () => unvaried.getKerningAdjustmentUnits },
-    getGlyphKerningUnits: { get: () => unvaried.getGlyphKerningUnits },
+    getGlyphKerning: { get: () => unvaried.getGlyphKerning },
     getInstanceAdvance26_6: { value: undefined },
   };
 }
@@ -644,7 +653,10 @@ export function getFontKerningAdjustmentPx(
   b: KernGlyph,
   fontSizePx: number
 ): number {
-  const units = glyphKerningUnits(metrics, a, b) ?? metrics.getKerningAdjustmentUnits(a.char, b.char);
+  const kerning = glyphKerning(metrics, a, b);
+  if (kerning && !metrics.pxPerUnit)
+    return pairKerning26_6(kerning, metrics.unitsPerEm, fontSizePx) / FIXED_26_6_ONE;
+  const units = kerning ? kerningUnitsOf(kerning) : metrics.getKerningAdjustmentUnits(a.char, b.char);
   if (units === 0) return 0;
   return Math.round(unitsToPx(units, metrics, fontSizePx) * FIXED_26_6_ONE) / FIXED_26_6_ONE;
 }
@@ -652,19 +664,63 @@ export function getFontKerningAdjustmentPx(
 /**
  * The `GPOS` kerning of a pair of glyphs, or null where the face has no glyph kerning: the kerning of
  * the characters stands. At the default instance both glyphs come from the run shaping. At an
- * instance a pair with one shaped glyph takes the glyph of the other's character there.
+ * instance a glyph the shaping did not read is the glyph of its character there.
  */
-function glyphKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): number | null {
-  const kerningOf = metrics.getGlyphKerningUnits;
-  if (!kerningOf || (a.glyph === undefined && b.glyph === undefined)) return null;
-  if (a.glyph !== undefined && b.glyph !== undefined) {
-    return kerningOf(
-      { glyph: a.glyph, codePoint: a.char.codePointAt(0)! },
-      { glyph: b.glyph, codePoint: b.char.codePointAt(0)! }
-    );
-  }
+function glyphKerning(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): PairKerning | null {
+  const kerningOf = metrics.getGlyphKerning;
+  if (!kerningOf) return null;
   const { outlines, drawnOpentype } = metrics;
-  if (!outlines || !drawnOpentype) return null;
-  const glyphAt = (codePoint: number) => outlines.glyphIndex(codePoint, drawnOpentype);
-  return kerningOf(lookupGlyphOf(a, glyphAt), lookupGlyphOf(b, glyphAt));
+  if (outlines && drawnOpentype) {
+    const glyphAt = (codePoint: number) => outlines.glyphIndex(codePoint, drawnOpentype);
+    const left = lookupGlyphOf(a, glyphAt);
+    const right = lookupGlyphOf(b, glyphAt);
+    return left.glyph === 0 || right.glyph === 0 ? null : kerningOf(left, right);
+  }
+  if (a.glyph === undefined || b.glyph === undefined) return null;
+  return kerningOf(
+    { glyph: a.glyph, codePoint: a.char.codePointAt(0)! },
+    { glyph: b.glyph, codePoint: b.char.codePointAt(0)! }
+  );
+}
+
+/**
+ * `kerning` in 26.6 at `fontSizePx`, as HarfBuzz adds it to a glyph's advance: each value record's own
+ * advance through `em_mult`, and its delta through `em_multf`, each rounded apart
+ * (`OT/Layout/GPOS/ValueFormat.hh:108,140`, `hb-font.hh:1145-1148,1164-1166`).
+ */
+function pairKerning26_6(kerning: PairKerning, unitsPerEm: number, fontSizePx: number): number {
+  const { xMult, xMultf } = harfBuzzScale(unitsPerEm, fontSizePx);
+  let kerning26_6 = 0;
+  for (const { units, deltaUnits } of kerning) {
+    kerning26_6 += Math.floor((units * xMult + 32768) / FIXED_16_16_ONE);
+    if (deltaUnits !== 0) kerning26_6 += roundHalfAwayFromZero(Math.fround(Math.fround(deltaUnits) * xMultf));
+  }
+  return kerning26_6;
+}
+
+/**
+ * The 16.16 and the float multipliers of `hb_font_t` for Godot's FreeType size: `hb_ft_font_create`
+ * sets the scale from FreeType's `x_scale` (`hb-ft.cc:1361-1363`), and `changed` derives both
+ * (`hb-font.hh:1145-1148`).
+ */
+function harfBuzzScale(unitsPerEm: number, fontSizePx: number): { xMult: number; xMultf: number } {
+  const xScale = Math.floor(
+    (getFontOutlineScale(unitsPerEm, fontSizePx) * unitsPerEm + 32768) / FIXED_16_16_ONE
+  );
+  return {
+    xMult: Math.trunc((xScale * FIXED_16_16_ONE) / unitsPerEm),
+    xMultf: Math.fround(xScale / unitsPerEm),
+  };
+}
+
+/** C's `roundf`: to the nearest whole number, a half away from zero. */
+function roundHalfAwayFromZero(value: number): number {
+  return Math.sign(value) * Math.round(Math.abs(value));
+}
+
+/** The design units of `kerning` with its deltas, for a face that scales by its own `pxPerUnit`. */
+function kerningUnitsOf(kerning: PairKerning): number {
+  let units = 0;
+  for (const value of kerning) units += value.units + value.deltaUnits;
+  return units;
 }

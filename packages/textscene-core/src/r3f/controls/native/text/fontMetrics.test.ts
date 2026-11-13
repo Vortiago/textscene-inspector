@@ -20,6 +20,7 @@ import {
   withFallbacks,
   withOutlines,
   type OpentypeCoordinates,
+  type PairKerning,
   withVariation,
   type FontMetrics,
 } from './fontMetrics';
@@ -142,14 +143,57 @@ describe('getFontKerningAdjustmentPx', () => {
   });
 
   it('takes the glyph kerning of a pair of shaped glyphs', () => {
-    const face: FontMetrics = { ...METRICS, getGlyphKerningUnits: () => -128 };
+    const face: FontMetrics = { ...METRICS, getGlyphKerning: () => [{ units: -128, deltaUnits: 0 }] };
     expect(getFontKerningAdjustmentPx(face, { char: 'A', glyph: 36 }, { char: 'V', glyph: 57 }, 16)).toBe(-1);
   });
 
   // HarfBuzz applies the legacy `kern` table to a font whose `GPOS` has no pair kerning.
   it('keeps the kerning of the characters where the face reads no glyph kerning', () => {
-    const face: FontMetrics = { ...METRICS, getGlyphKerningUnits: () => null };
+    const face: FontMetrics = { ...METRICS, getGlyphKerning: () => null };
     expect(getFontKerningAdjustmentPx(face, { char: 'A', glyph: 36 }, { char: 'V', glyph: 57 }, 16)).toBe(-2);
+  });
+});
+
+describe('getFontKerningAdjustmentPx of a GPOS kerning', () => {
+  const kernedPx = (kerning: PairKerning) =>
+    getFontKerningAdjustmentPx(
+      { ...METRICS, unitsPerEm: 1000, getGlyphKerning: () => kerning },
+      { char: 'L', glyph: 1 },
+      { char: 'T', glyph: 2 },
+      16
+    ) * 64;
+
+  // At 16 px and 1000 units per em: x_scale 1024, x_mult (1024 << 16) / 1000 = 67108, x_multf 1.024.
+  it('rounds the own advance and the delta of a value record apart, as HarfBuzz adds them', () => {
+    // em_mult(-110) = (-110 * 67108 + 32768) >> 16 = -113, and roundf(55 * 1.024) = 56: -57, where
+    // the sum -55 rounds once to -56.
+    expect(kernedPx([{ units: -110, deltaUnits: 55 }])).toBe(-57);
+  });
+
+  it('rounds each value record apart', () => {
+    // em_mult(1) = (67108 + 32768) >> 16 = 1 for each record.
+    expect(
+      kernedPx([
+        { units: 1, deltaUnits: 0 },
+        { units: 1, deltaUnits: 0 },
+      ])
+    ).toBe(2);
+    // roundf(0.5 * 1.024) = 1 for each record, where the sum 1 rounds to 1.
+    expect(
+      kernedPx([
+        { units: 0, deltaUnits: 0.5 },
+        { units: 0, deltaUnits: 0.5 },
+      ])
+    ).toBe(2);
+  });
+
+  it('rounds a negative delta half away from zero, as roundf does', () => {
+    // -0.48828125 * 1.024 = -0.5 lands on -1, where Math.round gives -0.
+    expect(kernedPx([{ units: 0, deltaUnits: -0.48828125 }])).toBe(-1);
+  });
+
+  it('gives no kerning for no value record', () => {
+    expect(kernedPx([])).toBe(0);
   });
 });
 
@@ -217,7 +261,7 @@ describe('withVariation at a variable-font instance', () => {
     kerningAtInstance: (left: LookupGlyph, right: LookupGlyph, opentype: OpentypeCoordinates) =>
       !drawsInstance(opentype) || left.glyph === 0 || right.glyph === 0
         ? null
-        : left.glyph * 10 + right.glyph,
+        : [{ units: left.glyph * 10 + right.glyph, deltaUnits: 0 }],
     advanceAtInstance: (glyph: number, fontSizePx: number, opentype: OpentypeCoordinates) =>
       drawsInstance(opentype) ? glyph * 64 + fontSizePx : null,
   };
@@ -262,16 +306,14 @@ describe('withVariation at a variable-font instance', () => {
     expect(face.drawnOpentype).toBe(BOLD);
   });
 
-  it('answers the kerning of the instance from its own readers', () => {
+  it('answers the glyph kerning of the instance from its own reader', () => {
     const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
-    expect(face.getKerningAdjustmentUnits('A', 'V')).toBe(12);
-    expect(face.getGlyphKerningUnits?.(SHAPED_A, SHAPED_V)).toBe(12);
+    expect(face.getGlyphKerning?.(SHAPED_A, SHAPED_V)).toEqual([{ units: 12, deltaUnits: 0 }]);
   });
 
-  it('answers the kerning of the face from its own readers where the instance kerns nothing', () => {
+  it('answers no glyph kerning where the instance kerns nothing and the face reads none', () => {
     const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
-    expect(face.getKerningAdjustmentUnits('A', 'x')).toBe(0);
-    expect(face.getGlyphKerningUnits?.(SHAPED_A, { glyph: 0, codePoint: 0x78 })).toBeNull();
+    expect(face.getGlyphKerning?.(SHAPED_A, { glyph: 0, codePoint: 0x78 })).toBeNull();
   });
 
   it('answers the advance of the instance for a character and for a shaped glyph', () => {
@@ -294,8 +336,8 @@ describe('withVariation at a variable-font instance', () => {
   it('answers for the default instance under a wrapper with outlines and no axis value', () => {
     const atInstance = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
     const plain = withVariation(atInstance, {});
-    expect(plain.getKerningAdjustmentUnits('A', 'V')).toBe(-256);
-    expect(plain.getGlyphKerningUnits).toBeUndefined();
+    expect(kerningPx(plain, 'A', 'V')).toBe(-256);
+    expect(plain.getGlyphKerning).toBeUndefined();
     expect(plain.getInstanceAdvance26_6).toBeUndefined();
   });
 
@@ -303,7 +345,8 @@ describe('withVariation at a variable-font instance', () => {
   it('answers for the default instance under a variation of a fallback wrapper of an instance', () => {
     const atInstance = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
     const bold = withVariation(withFallbacks(atInstance, [{ ...METRICS }]), { embolden: 1.2 });
-    expect(bold.getKerningAdjustmentUnits('A', 'V')).toBe(-256);
+    expect(kerningPx(bold, 'A', 'V')).toBe(-256);
+    expect(bold.getGlyphKerning).toBeUndefined();
     expect(bold.getInstanceAdvance26_6).toBeUndefined();
   });
 });

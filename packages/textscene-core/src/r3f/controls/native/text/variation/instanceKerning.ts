@@ -25,15 +25,15 @@ import {
   type Subtable,
 } from '../autofit/openTypeLayout';
 import { gdefOf, glyphPropsReader, lookupMatcher, type LookupGlyph } from '../autofit/openTypeGdef';
-import { FIXED_16_16_ONE } from '../fontMetrics';
+import { FIXED_16_16_ONE, NO_KERNING, type KerningValue, type PairKerning } from '../fontMetrics';
 import type { SfntFile } from '../sfntTables';
 import { featureLookupsAt } from '../autofit/openTypeFeatures';
 import { featureSubstitutionOfInstance } from './instanceRecord';
 import { fvarAxesOf } from './fvar';
 import { itemDeltaFixed, readItemVariationStore, type ItemVariationStore } from './itemVariationStore';
 
-/** The kerning of a pair of glyphs in design units, with the fraction of its deltas. */
-export type PairKerningReader = (left: LookupGlyph, right: LookupGlyph) => number;
+/** The kerning of a pair of glyphs: the x advance of each value record that moves it. */
+export type PairKerningReader = (left: LookupGlyph, right: LookupGlyph) => PairKerning;
 
 const VARIATION_INDEX_FORMAT = 0x8000;
 /** `GDEF` 1.3 keeps the offset of its item variation store at this byte. */
@@ -83,24 +83,36 @@ function pairLookupsOf(table: LayoutTable, substitution: FeatureSubstitution | u
 }
 
 /**
- * The x advance a value record adds, in design units: its own, and the delta of its device table at
- * `normalized` when that table is a `VariationIndex`. A hinting device adds nothing: `hb-ft` sets no
- * ppem (`hb-ft.cc:1365-1368`), and `HintingDevice::get_delta` gives 0 at a ppem of 0 (`hb-ot-layout-common.hh:4840-4849`).
+ * The x advance a value record adds: its own, and the delta of its device table at `normalized` when
+ * that table is a `VariationIndex`. A hinting device adds nothing: `hb-ft` sets no ppem
+ * (`hb-ft.cc:1365-1368`), and `HintingDevice::get_delta` gives 0 at a ppem of 0 (`hb-ot-layout-common.hh:4840-4849`).
  */
-function xAdvanceUnits(
+function xAdvanceOf(
   dv: DataView,
   { at, base, format }: PairValueRecord,
   store: ItemVariationStore | null,
   normalized: Int32Array
+): KerningValue {
+  const units =
+    format & ValueFormat.X_ADVANCE ? i16(dv, at + valueFieldOffset(format, ValueFormat.X_ADVANCE)) : 0;
+  return { units, deltaUnits: store ? deviceDeltaUnits(dv, at, base, format, store, normalized) : 0 };
+}
+
+/** The delta in design units of the `VariationIndex` device table of a value record's x advance, else 0. */
+function deviceDeltaUnits(
+  dv: DataView,
+  at: number,
+  base: number,
+  format: number,
+  store: ItemVariationStore,
+  normalized: Int32Array
 ): number {
-  let units = 0;
-  if (format & ValueFormat.X_ADVANCE) units += i16(dv, at + valueFieldOffset(format, ValueFormat.X_ADVANCE));
-  if (!(format & ValueFormat.X_ADVANCE_DEVICE) || !store) return units;
+  if (!(format & ValueFormat.X_ADVANCE_DEVICE)) return 0;
   const deviceOffset = u16(dv, at + valueFieldOffset(format, ValueFormat.X_ADVANCE_DEVICE));
-  if (deviceOffset === 0) return units;
+  if (deviceOffset === 0) return 0;
   const device = base + deviceOffset;
-  if (u16(dv, device + 4) !== VARIATION_INDEX_FORMAT) return units;
-  return units + itemDeltaFixed(store, u16(dv, device), u16(dv, device + 2), normalized) / FIXED_16_16_ONE;
+  if (u16(dv, device + 4) !== VARIATION_INDEX_FORMAT) return 0;
+  return itemDeltaFixed(store, u16(dv, device), u16(dv, device + 2), normalized) / FIXED_16_16_ONE;
 }
 
 /**
@@ -133,20 +145,21 @@ export function instanceKerningReader(
     return (left, right) => {
       const leftProps = propsOf(left);
       const rightProps = propsOf(right);
-      let units = 0;
+      const values: KerningValue[] = [];
       for (const { props, subtables } of pairLookups) {
         // A lookup kerns neither glyph that its flag skips: it skips the left one, and pairs the left one past the right one.
         if (!matches(left.glyph, leftProps, props) || !matches(right.glyph, rightProps, props)) continue;
         for (const { offset } of subtables) {
           const records = pairValueRecords(dv, offset, left.glyph, right.glyph);
           if (!records) continue;
-          let pairUnits = 0;
-          for (const record of records) pairUnits += xAdvanceUnits(dv, record, store, normalized);
-          units += pairUnits;
+          for (const record of records) {
+            const value = xAdvanceOf(dv, record, store, normalized);
+            if (value.units !== 0 || value.deltaUnits !== 0) values.push(value);
+          }
           break;
         }
       }
-      return units;
+      return values.length > 0 ? values : NO_KERNING;
     };
   };
 }
