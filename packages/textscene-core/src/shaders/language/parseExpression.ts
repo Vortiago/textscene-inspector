@@ -31,6 +31,13 @@ import { swizzled } from './swizzle.js';
 import type { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
 import { elementType, shapeOf } from './types.js';
+import {
+  DEPTH_MESSAGE,
+  expressionDepth,
+  LENGTH_MESSAGE,
+  MAX_EXPRESSION_DEPTH,
+  MAX_LIST_ENTRIES,
+} from './expressionLimits.js';
 
 /** What an identifier names where the expression stands. */
 export interface ExpressionScope {
@@ -53,14 +60,28 @@ export class ExpressionParser {
     private readonly scope: ExpressionScope
   ) {}
 
+  /** How many lists `unreducedExpression` reads at once: brackets, arguments and ternary parts. */
+  private nesting = 0;
+
   /** `_parse_and_reduce_expression` (`shader_language.cpp:7949`). */
   expression(): Expression {
     return reduced(this.unreducedExpression());
   }
 
   private unreducedExpression(part?: TernaryPart): Expression {
+    if (this.nesting >= MAX_EXPRESSION_DEPTH) this.tokens.fail(DEPTH_MESSAGE);
+    this.nesting += 1;
+    try {
+      return this.unreducedList(part);
+    } finally {
+      this.nesting -= 1;
+    }
+  }
+
+  private unreducedList(part: TernaryPart | undefined): Expression {
     const entries: Entry[] = [];
     for (;;) {
+      if (entries.length > MAX_LIST_ENTRIES) this.tokens.fail(LENGTH_MESSAGE);
       const operand = this.operand(entries);
       if (operand === undefined) continue;
       entries.push({ isOperator: false, node: this.postfix(operand) });
@@ -80,6 +101,7 @@ export class ExpressionParser {
       }
     }
     const node = reducedEntries(entries, (message) => this.tokens.fail(message));
+    if (expressionDepth(node) > MAX_EXPRESSION_DEPTH) this.tokens.fail(DEPTH_MESSAGE);
     part?.entries.push({ isOperator: false, node: ternaryOperand(node) });
     return node;
   }
