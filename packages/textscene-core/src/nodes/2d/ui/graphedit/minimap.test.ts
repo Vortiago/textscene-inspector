@@ -5,8 +5,11 @@
  * worked by hand, never read back off this module.
  */
 import { describe, expect, it } from 'vitest';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
@@ -20,6 +23,8 @@ import {
   minimapTransform,
 } from './minimap';
 import type { GraphEditProperties } from './types';
+import { flatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { StyleBoxTextureBox } from '../../../../r3f/controls/native/parseStyleBox';
 
 function props(p: Partial<GraphEditProperties> = {}): GraphEditProperties {
   return { name: 'G', connections: [], ...p } as GraphEditProperties;
@@ -143,14 +148,12 @@ describe('minimapCameraRect with the constructor bounds', () => {
 });
 
 describe('graphEditElements', () => {
-  const theme = nativeTheme(1);
-
   function element(name: string, type: string, props: Record<string, unknown>): SolveNode {
-    return {
+    return withThemeItems({
       ...emptySolveNode(),
       path: name,
       node: controlNode(name, type, { name, ...props }),
-    };
+    });
   }
 
   function graphEdit(children: SolveNode[]): SolveNode {
@@ -177,8 +180,7 @@ describe('graphEditElements', () => {
       ]),
       rects,
       1,
-      { x: 400, y: 320 },
-      theme
+      { x: 400, y: 320 }
     );
     expect(view.minimapElements.map((e) => e.key)).toEqual(['Frame', 'B', 'A']);
   });
@@ -193,8 +195,7 @@ describe('graphEditElements', () => {
       ]),
       rects,
       1,
-      { x: 400, y: 320 },
-      theme
+      { x: 400, y: 320 }
     );
     expect(view.minimapElements.map((e) => e.key)).toEqual(['A']);
     // Rect2().merge(A) is (0,0,120,64) merged with B at (500,0,120,64) -> width 620.
@@ -202,16 +203,53 @@ describe('graphEditElements', () => {
   });
 });
 
+describe('graphEditElements minimap fill (graph_edit.cpp:1834-1840,1860-1864)', () => {
+  const RED = { r: 1, g: 0, b: 0, a: 1 };
+  const GREEN = { r: 0, g: 1, b: 0, a: 1 };
+  const rects: ReadonlyMap<string, Rect2> = new Map([['A', { x: 0, y: 0, w: 120, h: 64 }]]);
+
+  function graphNodeWithPanels(selected: boolean, panel: SolveNode['styleBoxes'][string]): SolveNode {
+    const themed = withThemeItems({
+      ...emptySolveNode(),
+      path: 'A',
+      node: controlNode('A', 'GraphNode', { name: 'A', positionOffset: { x: 0, y: 0 }, selected }),
+    });
+    const node = {
+      ...themed,
+      styleBoxes: { ...themed.styleBoxes, panel, panel_selected: flatStyleBox(GREEN) },
+    };
+    return {
+      ...emptySolveNode(),
+      path: 'G',
+      node: controlNode('G', 'GraphEdit', { name: 'G', connections: [] }),
+      children: [node],
+    };
+  }
+
+  function fillOf(graphEdit: SolveNode) {
+    return graphEditElements(graphEdit, rects, 1, { x: 400, y: 320 }).minimapElements[0]!.bgColor;
+  }
+
+  it("fills a selected node with panel_selected's bg_color, not panel's", () => {
+    expect(fillOf(graphNodeWithPanels(true, flatStyleBox(RED)))).toEqual(GREEN);
+    expect(fillOf(graphNodeWithPanels(false, flatStyleBox(RED)))).toEqual(RED);
+  });
+
+  it("keeps the minimap's own node fill under a panel that is not a StyleBoxFlat", () => {
+    const texture = { ...flatStyleBox(RED), styleBoxKind: 'texture' } as StyleBoxTextureBox;
+    expect(fillOf(graphNodeWithPanels(false, texture))).toBeNull();
+  });
+});
+
 describe('graphEditElements scroll bounds (graph_edit.cpp:472-493)', () => {
-  const theme = nativeTheme(1);
   const SIZE = { x: 400, y: 320 };
 
   function graphEditWithNode(): SolveNode {
-    const node: SolveNode = {
+    const node: SolveNode = withThemeItems({
       ...emptySolveNode(),
       path: 'A',
       node: controlNode('A', 'GraphNode', { name: 'A', positionOffset: { x: 40, y: 56 } }),
-    };
+    });
     return {
       ...emptySolveNode(),
       path: 'G',
@@ -225,21 +263,21 @@ describe('graphEditElements scroll bounds (graph_edit.cpp:472-493)', () => {
   it('merges each element rect into a DEFAULT Rect2, so the graph origin is always inside', () => {
     // Rect2().merge(Rect2(40,56,120,64)) = Rect2(0,0,160,120) (rect2.h:165-180),
     // then position -= size, size += size*2 with size = (400,320).
-    const { bounds } = graphEditElements(graphEditWithNode(), rects, 1, SIZE, theme);
+    const { bounds } = graphEditElements(graphEditWithNode(), rects, 1, SIZE);
     expect(bounds.min).toEqual({ x: -400, y: -320 });
     expect(bounds.max).toEqual({ x: 560, y: 440 });
   });
 
   it('scales each element rect by zoom before merging', () => {
     // Rect2(80,112,240,128) at zoom 2 -> merged (0,0,320,240); ±size (400,320).
-    const { bounds } = graphEditElements(graphEditWithNode(), rects, 2, SIZE, theme);
+    const { bounds } = graphEditElements(graphEditWithNode(), rects, 2, SIZE);
     expect(bounds.min).toEqual({ x: -400, y: -320 });
     expect(bounds.max).toEqual({ x: 720, y: 560 });
   });
 
   it('still spans ±size with no elements at all (edge case)', () => {
     const empty = { ...graphEditWithNode(), children: [] };
-    const { bounds } = graphEditElements(empty, rects, 1, SIZE, theme);
+    const { bounds } = graphEditElements(empty, rects, 1, SIZE);
     expect(bounds.min).toEqual({ x: -400, y: -320 });
     expect(bounds.max).toEqual({ x: 400, y: 320 });
   });

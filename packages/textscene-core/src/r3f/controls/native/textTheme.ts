@@ -29,8 +29,7 @@ export interface ResolvedTextTheme {
  * walks `Control::get_theme_font_size` (`scene/gui/control.cpp:3107-3129`): an override of `0` falls
  * through (`:3114-3117`), and a theme's `default_font_size` answers when no entry matches
  * (`scene/resources/theme.cpp:658-666`). `defaultColor` answers a colour that no theme sets, such
- * as LinkButton's `font_disabled_color`. ItemList and the Window title pass their own too, since the
- * default theme table does not hold those types.
+ * as LinkButton's `font_disabled_color`.
  */
 export function resolveTextTheme(
   n: ShareNode,

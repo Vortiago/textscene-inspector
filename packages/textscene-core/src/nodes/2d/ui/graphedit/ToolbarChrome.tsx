@@ -41,12 +41,7 @@ import {
 import { resolveToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
-import {
-  graphEditMenuPanelStyleBox,
-  graphEditSnappingArrowStates,
-  zoomLabelTextRect,
-  type GraphEditToolbar,
-} from './toolbar';
+import { graphEditSnappingArrowStates, zoomLabelTextRect, type GraphEditToolbar } from './toolbar';
 import type { GraphEditToolbarTheme } from './toolbarTheme';
 import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemState';
 
@@ -103,7 +98,6 @@ export function GraphEditToolbarChrome({
   slot,
 }: GraphEditToolbarProps) {
   const pieces = canvasSubOrders(slot, TOOLBAR_ITEM_PIECES);
-  const panelStyle = useMemo(() => graphEditMenuPanelStyleBox(theme), [theme]);
   const labelColor = useMemo(
     () => multiplyModulate(tint.own, toolbarTheme.labelColor),
     [tint.own, toolbarTheme]
@@ -145,7 +139,7 @@ export function GraphEditToolbarChrome({
   return (
     <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]} renderOrder={slot.key}>
       <StyleBoxQuad
-        styleBox={panelStyle}
+        styleBox={toolbarTheme.menuPanel}
         color={tint.own}
         rect={{ x: 0, y: 0, w: panelRect.w, h: panelRect.h }}
         renderOrder={slot.key}

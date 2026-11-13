@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { GraphNodeSlot } from '../graphnode/types';
 import '../graphnode/nativeSolver.js'; // registers GraphNode's MinimumSizeFn/ContainerLayoutFn
 import { graphNodePorts } from './connectionPorts';
@@ -31,12 +31,12 @@ function leaf(name: string, minHeight: number): SolveNode {
 }
 
 function graphNode(name: string, slots: Map<number, GraphNodeSlot>, children: SolveNode[]): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'GraphNode', { name, title: '', slots }),
     children,
-  };
+  });
 }
 
 describe('graphNodePorts (graph_node.cpp:1027-1059 _port_pos_update, via a re-solved subtree)', () => {
@@ -77,12 +77,10 @@ describe('graphNodePorts (graph_node.cpp:1027-1059 _port_pos_update, via a re-so
   });
 
   it('a left port sits at x = port_h_offset (theme_override_constants/port_h_offset)', () => {
-    const node: SolveNode = {
-      ...graphNode('Sink', new Map([[0, slot({ leftEnabled: true, leftColor: BLUE })]]), [
-        leaf('Result', 20),
-      ]),
-      constants: { port_h_offset: 6 },
-    };
+    const sink = graphNode('Sink', new Map([[0, slot({ leftEnabled: true, leftColor: BLUE })]]), [
+      leaf('Result', 20),
+    ]);
+    const node: SolveNode = { ...sink, constants: { ...sink.constants, port_h_offset: 6 } };
 
     const ports = graphNodePorts(node, { x: 120, y: 80 }, nativeTheme(1), null);
 

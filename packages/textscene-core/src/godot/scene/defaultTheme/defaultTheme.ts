@@ -7,12 +7,16 @@
 import type { Rgba } from '../../math/math.js';
 import { scaledPx, DEFAULT_FONT_SIZE } from '../theme.js';
 import { buttonTypes } from './button.js';
+import { colorPickerTypes } from './colorPicker.js';
 import { containerTypes } from './containers.js';
+import { graphTypes } from './graphs.js';
 import { labelTypes } from './label.js';
+import { listTypes } from './lists.js';
 import { rangeTypes } from './ranges.js';
 import { richTextLabelTypes } from './richTextLabel.js';
 import { tabTypes } from './tabs.js';
 import { textEditTypes } from './textEdits.js';
+import { windowTypes } from './windows.js';
 
 export interface Sides {
   readonly left: number;
@@ -102,6 +106,10 @@ function buildDefaultTheme(scale: number): DefaultTheme {
       ...tabTypes(scale),
       ...textEditTypes(scale),
       ...richTextLabelTypes(scale),
+      ...listTypes(scale),
+      ...graphTypes(scale),
+      ...windowTypes(scale),
+      ...colorPickerTypes(scale),
     },
   };
 }

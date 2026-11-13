@@ -7,7 +7,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 import type { TscnNode } from '../../../parser/types';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
-import { solveNode } from '../../../r3f/controls/native/testing/solveNode';
+import { solveNode, withThemeItems } from '../../../r3f/controls/native/testing/solveNode';
 import { quadsSampling } from '../../../r3f/controls/native/testing/quadsSampling';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { ViewportTextureProvider } from '../../../r3f/contexts/ViewportTextureContext';
@@ -22,7 +22,7 @@ const EMBEDDER = { x: 1152, y: 648 };
 function windowNode(path: string, type: string, properties: Record<string, string>): SolveNode {
   const name = path.split('/').pop()!;
   const node = { name, type, children: [], properties: parseWindow(heading(type, { name }), properties) };
-  return { ...solveNode(), path, node: node as unknown as TscnNode };
+  return withThemeItems({ ...solveNode(), path, node: node as unknown as TscnNode });
 }
 
 async function draw(windows: SolveNode[], published: string[], forestPath = '') {

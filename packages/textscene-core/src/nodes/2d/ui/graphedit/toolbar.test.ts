@@ -10,7 +10,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { graphEditSnappingArrowStates, graphEditToolbar, zoomLabelText, zoomLabelTextRect } from './toolbar';
 import { graphEditToolbarTheme } from './toolbarTheme';
 import { graphEditUnder } from './toolbarTheme.testkit';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { ToolbarTextMetrics } from './toolbar';
 import type { GraphEditProperties } from './types';
 
@@ -30,7 +30,7 @@ const metrics: ToolbarTextMetrics = {
 
 const theme = nativeTheme(1);
 const items = graphEditToolbarTheme(
-  { ...solveNode(), path: 'G', node: controlNode('G', 'GraphEdit') },
+  withThemeItems({ ...solveNode(), path: 'G', node: controlNode('G', 'GraphEdit') }),
   theme
 );
 

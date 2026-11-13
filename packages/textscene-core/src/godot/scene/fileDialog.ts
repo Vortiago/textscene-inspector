@@ -118,9 +118,6 @@ export const FILE_DIALOG_LIST_ICONS = ['folder', 'file', 'folder_thumbnail', 'fi
 
 export type FileDialogListIcon = (typeof FILE_DIALOG_LIST_ICONS)[number];
 
-/** `thumbnail_size`, the edge of a thumbnail before the theme scale (`default_theme.cpp:697`, `file_dialog.cpp:820`). */
-export const FILE_DIALOG_THUMBNAIL_SIZE = 64;
-
 /** The size of every FileDialog icon (`scene/theme/icons/`, 16x16). */
 export const FILE_DIALOG_ICON_SIZE: Readonly<{ x: number; y: number }> = { x: 16, y: 16 };
 

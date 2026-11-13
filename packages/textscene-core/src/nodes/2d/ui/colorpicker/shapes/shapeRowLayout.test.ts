@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../../r3f/controls/native/nativeTheme';
 import {
+  controlNode,
+  projectFontsAt,
+  solveNode,
+  withThemeItems,
+} from '../../../../../r3f/controls/native/testing/solveNode';
+import { pickerChildTheme } from '../pickerChildTheme';
+import {
   CIRCLE_LAYOUT,
   RECTANGLE_LAYOUT,
   WHEEL_LAYOUT,
@@ -8,7 +15,19 @@ import {
   shapeRowSplit,
 } from './shapeRowLayout';
 
-const THEME = nativeTheme(1);
+/** The theme of a ColorPicker at `scale`, with `constants` over the default theme's. */
+function pickerThemeAt(scale: number, constants: Record<string, number> = {}) {
+  const picker = withThemeItems({
+    ...solveNode(),
+    path: 'P',
+    node: controlNode('P', 'ColorPicker'),
+    projectFonts: projectFontsAt(scale),
+    constants,
+  });
+  return pickerChildTheme(picker, nativeTheme(scale)).theme;
+}
+
+const THEME = pickerThemeAt(1);
 /** The `shape_container` of a 300 px picker: 300 less `internal_margin`'s 4 px on each side. */
 const ROW = { x: 0, y: 0, w: 292, h: 256 };
 
@@ -23,7 +42,12 @@ describe('shapeRowMinWidth', () => {
   });
 
   it('scales sv_width, h_width and separation with the theme scale (default_theme.cpp:1077-1079)', () => {
-    expect(shapeRowMinWidth(nativeTheme(1.5), CIRCLE_LAYOUT)).toBe(384 + 6 + 45); // `separation` is round(4 * 1.5) too.
+    expect(shapeRowMinWidth(pickerThemeAt(1.5), CIRCLE_LAYOUT)).toBe(384 + 6 + 45); // `separation` is round(4 * 1.5) too.
+  });
+
+  it('takes the sv_width and h_width a theme override sets (color_picker_shape.cpp:905-906)', () => {
+    const theme = pickerThemeAt(1, { sv_width: 100, h_width: 0 });
+    expect(shapeRowMinWidth(theme, CIRCLE_LAYOUT)).toBe(100 + 4 + 0);
   });
 });
 

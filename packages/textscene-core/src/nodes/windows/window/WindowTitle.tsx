@@ -14,10 +14,10 @@ import { TEXT_LINE_DEFAULT_OVERRUN, trimSoloLine } from '../../../r3f/controls/n
 import { resolveNodeFont } from '../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { peekSceneFontMetrics } from '../../../r3f/controls/native/text/sceneFontLoader';
 import { resolveTextTheme } from '../../../r3f/controls/native/textTheme';
+import { requiredThemeItem } from '../../../r3f/controls/native/themeItems';
 import { contentMarginSize } from '../../../r3f/controls/native/styleBoxFlat';
 import type { CanvasSlot } from '../../../r3f/canvasItemState';
 import { shapeTitle, titleOrigin, titleSpace } from './decoration';
-import type { WindowThemeDefaults } from './theme';
 import type { WindowProperties } from './types';
 
 interface WindowTitleProps {
@@ -27,25 +27,22 @@ interface WindowTitleProps {
   /** The border drawn this frame, whose minimum width the title space leaves out. */
   border: ResolvedStyleBox;
   closeHOffset: number;
-  defaults: WindowThemeDefaults;
   /** The title's slot: the outline and the text draw as layers from its key. */
   slot: CanvasSlot;
 }
 
-export function WindowTitle({ solveNode, width, border, closeHOffset, defaults, slot }: WindowTitleProps) {
+export function WindowTitle({ solveNode, width, border, closeHOffset, slot }: WindowTitleProps) {
   const props = solveNode.node.properties as WindowProperties;
   const { colors, constants } = solveNode;
-  const { fontSizePx, color } = resolveTextTheme(
-    solveNode,
-    props,
-    { sizeKey: 'title_font_size', colorKey: 'title_color' },
-    defaults.titleColor
-  );
+  const { fontSizePx, color } = resolveTextTheme(solveNode, props, {
+    sizeKey: 'title_font_size',
+    colorKey: 'title_color',
+  });
   const font = resolveNodeFont(solveNode, 'title_font');
   const fontMetrics = peekSceneFontMetrics(font, solveNode.path);
-  const titleHeight = constants.title_height ?? defaults.titleHeight;
-  const outlineSize = constants.title_outline_size ?? defaults.titleOutlineSize;
-  const outlineColor = colors.title_outline_modulate ?? defaults.titleOutlineModulate;
+  const titleHeight = requiredThemeItem(constants, 'title_height');
+  const outlineSize = requiredThemeItem(constants, 'title_outline_size');
+  const outlineColor = requiredThemeItem(colors, 'title_outline_modulate');
   const space = titleSpace(width, { borderMinimumWidth: contentMarginSize(border).x, closeHOffset });
 
   const layout = useMemo(() => {

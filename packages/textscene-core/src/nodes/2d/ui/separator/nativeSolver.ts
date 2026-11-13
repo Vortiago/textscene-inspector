@@ -5,7 +5,7 @@
 
 import type { MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import type { SeparatorOrientation } from './styleBoxLine';
+import type { SeparatorOrientation } from './orientation';
 import type { Vector2 } from '../../../../godot/math/vector';
 
 /**

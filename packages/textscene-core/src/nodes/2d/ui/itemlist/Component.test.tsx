@@ -11,7 +11,11 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
@@ -51,7 +55,14 @@ function solveNode(properties: Partial<ItemListRuntimeProperties>, rtl = false, 
     items: [],
     ...properties,
   });
-  return { ...emptySolveNode(), path: 'MyItemList', node, resources: SCOPE, rtl, textureSlots: iconSlots };
+  return withThemeItems({
+    ...emptySolveNode(),
+    path: 'MyItemList',
+    node,
+    resources: SCOPE,
+    rtl,
+    textureSlots: iconSlots,
+  });
 }
 
 /** A `<StyleBoxQuad>` mesh: the only kind carrying a `color` vertex attribute. */

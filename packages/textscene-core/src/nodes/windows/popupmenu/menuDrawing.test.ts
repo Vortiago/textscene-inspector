@@ -17,6 +17,11 @@ const EMBEDDER = { x: 1152, y: 648 };
 const CHECK_SIZE = 16;
 const ROW_HEIGHT = 23;
 
+/** `window` with `constants` over the ones it already holds, as a theme override sets them. */
+function withConstants(window: SolveNode, constants: Record<string, number>): SolveNode {
+  return { ...window, constants: { ...window.constants, ...constants } };
+}
+
 function drawingOf(window: SolveNode) {
   const size = wrappedWindowSize(window, THEME, measureText, EMBEDDER);
   const model = menuModel(window, { theme: THEME, measureText });
@@ -40,7 +45,7 @@ describe('the text start', () => {
 
   it('follows the icon column and then the check column in a split gutter', () => {
     const items = [{ text: 'Open', icon: { x: 12, y: 12 } }, ...checkItems.slice(1)];
-    const { rows } = drawingOf({ ...menu(items), constants: { gutter_compact: 0 } });
+    const { rows } = drawingOf(withConstants(menu(items), { gutter_compact: 0 }));
     expect(rows[0]!.text!.position.x).toBe(2 + 12 + 4 + CHECK_SIZE + 4);
   });
 });
@@ -109,8 +114,8 @@ describe('the text outline', () => {
   const GREEN = { r: 0, g: 1, b: 0, a: 1 };
   const themed = (window: SolveNode): SolveNode => ({
     ...window,
-    constants: { outline_size: 4, separator_outline_size: 3 },
-    colors: { font_outline_color: RED, font_separator_outline_color: GREEN },
+    constants: { ...window.constants, outline_size: 4, separator_outline_size: 3 },
+    colors: { ...window.colors, font_outline_color: RED, font_separator_outline_color: GREEN },
   });
 
   it('draws no ring by default: the default theme sets the outline size to 0', () => {
