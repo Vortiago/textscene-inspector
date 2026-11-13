@@ -5,7 +5,7 @@ import type { PlacedCell } from '../../nodes/2d/tiles/shared/tileData';
 import type { SceneTileModel } from './types';
 
 const SCENE_TILE: SceneTileModel = {
-  scene: { ref: 'ExtResource("5")', externalResources: [], internalResources: [] },
+  scene: { path: 'res://tile.tscn' },
   displayPlaceholder: false,
 };
 

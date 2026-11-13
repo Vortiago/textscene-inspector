@@ -1,10 +1,10 @@
 /**
- * The decode of a `TileSetScenesCollectionSource`: each scene id with its PackedScene reference
- * and `display_placeholder`, in a scene's SubResource and in an external TileSet file.
+ * The decode of a `TileSetScenesCollectionSource`: each scene id with its scene file and
+ * `display_placeholder`, in a scene's SubResource and in an external TileSet file.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as logger from '../../logger';
-import { tileSetFromFile, tileSetFromScene } from './decode';
+import { tileSetInFile, tileSetInScene } from './testing/readTileSet';
 import { parseTresFile } from '../../parser/parsedResource';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 
@@ -26,14 +26,14 @@ function tileSetWith(sceneSource: Record<string, string>) {
     { id: 'scenes', type: 'TileSetScenesCollectionSource', data: sceneSource },
     { id: 'ts', type: 'TileSet', data: { 'sources/2': 'SubResource("scenes")' } },
   ];
-  return { internals, model: tileSetFromScene('SubResource("ts")', internals, externals)! };
+  return { internals, model: tileSetInScene('SubResource("ts")', internals, externals)! };
 }
 
 describe('a TileSetScenesCollectionSource in a scene', () => {
-  it('decodes each scene id with its scene reference and the tables the reference resolves in', () => {
-    const { internals, model } = tileSetWith({ 'scenes/1/scene': 'ExtResource("5")' });
+  it('decodes each scene id with the scene file its reference names', () => {
+    const { model } = tileSetWith({ 'scenes/1/scene': 'ExtResource("5")' });
     expect(model.sceneSources.get(2)!.scenes.get(1)).toEqual({
-      scene: { ref: 'ExtResource("5")', externalResources: externals, internalResources: internals },
+      scene: { path: 'res://tile.tscn' },
       displayPlaceholder: false,
     });
   });
@@ -105,7 +105,7 @@ describe('a TileSetScenesCollectionSource in a scene', () => {
       { id: 'odd', type: 'TileSetMysterySource', data: {} },
       { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("odd")' } },
     ];
-    tileSetFromScene('SubResource("ts")', internals, externals);
+    tileSetInScene('SubResource("ts")', internals, externals);
     expect(
       warnSpy.mock.calls.some((call: unknown[]) => String(call[0]).includes('unsupported source type'))
     ).toBe(true);
@@ -124,8 +124,7 @@ scenes/1/scene = ExtResource("1_abc")
 [resource]
 sources/0 = SubResource("TileSetScenesCollectionSource_a")
 `);
-    const scene = tileSetFromFile(parsed, 'res://tileset.tres')!.sceneSources.get(0)!.scenes.get(1)!.scene!;
-    expect(scene.ref).toBe('ExtResource("1_abc")');
-    expect(scene.externalResources.map((resource) => resource.path)).toEqual(['res://from_tres.tscn']);
+    const scene = tileSetInFile(parsed, 'res://tileset.tres')!.sceneSources.get(0)!.scenes.get(1)!.scene!;
+    expect(scene).toEqual({ path: 'res://from_tres.tscn' });
   });
 });

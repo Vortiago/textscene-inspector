@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://unittilesetsourcefile"]
+
+; The one variable: the TileSet's atlas source is saved in its own .tres
+; (sources/0 = ExtResource). Godot loads it as it loads a source built into the scene.
+
+[ext_resource type="TileSetAtlasSource" path="res://unit-tileset-source-file-atlas.tres" id="1_source"]
+
+[sub_resource type="TileSet" id="TileSet_file"]
+tile_size = Vector2i(96, 96)
+sources/0 = ExtResource("1_source")
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+position = Vector2(200, 150)
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+tile_set = SubResource("TileSet_file")
