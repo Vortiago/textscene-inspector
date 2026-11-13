@@ -24,6 +24,14 @@ installNodesHandler(renderer);
 on it. By default a node material writes the renderer's tone mapping and `outputColorSpace`. Pass
 `'linear'` when your app tone maps and encodes the frame itself.
 
+## The port
+
+The package translates Godot's shading language to TSL node objects, instruction by instruction,
+and Godot's own shaders and a user's shader run through the same translator
+([#1451](https://github.com/Vortiago/textscene-inspector/issues/1451)). Each slice of the port
+probes its instructions against Godot's own answers, and adds them to the user guide in `guide/`
+with the values Godot gave.
+
 ## Licence
 
 MIT. The package ships `LICENSE` and `THIRD-PARTY-NOTICES.md`. The build writes the notices from the
