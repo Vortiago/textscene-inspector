@@ -30,6 +30,30 @@ export function nodeReference(ref: string | undefined, scope: SceneResources): S
 }
 
 /**
+ * A reference that a reader not moved onto this module yet holds with the tables of its holder: a
+ * material slot, a StyleBoxTexture, a TileSet source, a SpriteFrames frame. `isHeldLocally` is
+ * false when a holder on the way is not local to scene, which `nodeReference` would lose.
+ */
+export function referenceHeldBy(
+  ref: string | undefined,
+  resources: SceneResources,
+  isHeldLocally: boolean
+): ScopedReference {
+  return { ref, resources, isHeldLocally };
+}
+
+/** Whether two references name the same resource, held the same way. */
+export function sameReference(a: ScopedReference | null, b: ScopedReference | null): boolean {
+  if (a === null || b === null) return a === b;
+  return (
+    a.ref === b.ref &&
+    a.resources === b.resources &&
+    a.origin === b.origin &&
+    a.isHeldLocally === b.isHeldLocally
+  );
+}
+
+/**
  * The visited-set and memo key of a reference: the address of a file, or the origin and the id
  * of a SubResource, so one id in two files gives two keys.
  */

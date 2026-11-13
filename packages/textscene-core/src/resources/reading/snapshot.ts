@@ -23,6 +23,7 @@ import {
 } from '../SubResourceResolver';
 import { isLocalToScene } from '../textures/viewporttexture/localToScene';
 import {
+  IMPORTED_FILE,
   NONE,
   PENDING,
   UNAVAILABLE,
@@ -105,10 +106,11 @@ function locate(files: CacheSource<ParsedResource>, reference: ScopedReference):
   if (parsed?.type === 'ExtResource' && !findExtResource(resources.externalResources, parsed.id)) {
     return UNAVAILABLE['unknown-id'];
   }
-  // The module reads resource files only. An image or a scene is no class a kind of this module accepts.
   const path = resolveExtResourcePath(ref, resources.externalResources);
   const filePath = path && resourceFilePath(path);
-  if (!path || !filePath || !loadsAsParsedResource(filePath)) return UNAVAILABLE['wrong-type'];
+  if (!path || !filePath) return UNAVAILABLE['wrong-type'];
+  // The module reads no file it does not parse: an image is held with no properties, for its reader to load.
+  if (!loadsAsParsedResource(filePath)) return importedFile(path, reference);
   const file = files.getCached(filePath);
   if (file === undefined) return PENDING;
   if (file === null) return UNAVAILABLE['missing-file'];
@@ -122,6 +124,24 @@ function locate(files: CacheSource<ParsedResource>, reference: ScopedReference):
     slot: path,
     resources: section.resources,
     origin: filePath,
+  };
+}
+
+const NO_PROPERTIES: Readonly<Record<string, string>> = Object.freeze({});
+
+function importedFile(path: string, reference: ScopedReference): Located {
+  return {
+    held: {
+      type: IMPORTED_FILE,
+      properties: NO_PROPERTIES,
+      address: path,
+      isLocalToScene: false,
+      isHeldLocally: reference.isHeldLocally,
+    },
+    key: path,
+    slot: path,
+    resources: reference.resources,
+    origin: undefined,
   };
 }
 

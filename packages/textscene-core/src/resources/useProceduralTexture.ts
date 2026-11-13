@@ -6,17 +6,14 @@
  * had until the new one lands, as Godot keeps the old image while `noise_thread` runs.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import type { SceneResources } from '../r3f/SceneResourcesContext.js';
 import { inThreadJobRunner } from '../workers/WorkerJobRunner.js';
-import type { LoadedFile } from './scopedResource.js';
 import { usePendingWhile } from './usePendingWhile.js';
 import { textureWork } from './textures/textureWork.js';
 import { useResourceLoader } from './useResource.js';
 import { withKey } from '../utils/keySet.js';
 import type { ProceduralTextureLookup } from './textures/proceduralBuilds.js';
-import { resolveProceduralTexture, resolveProceduralTexture3D } from './textures/resolveProceduralTexture.js';
 import {
   pinProceduralTexture,
   releaseProceduralTextures,
@@ -43,112 +40,68 @@ interface Shown {
 }
 
 /**
- * The procedural texture a `SubResource` ref names, held resident while the caller is mounted.
- * Unclaimed for every other form, which the caller's async path handles. `resolveProceduralTexture`
- * decides which types count. A Texture2D slot reads through here or `useTexture2D`, since a
- * path resolver finds no path for a procedural texture.
+ * The texture `lookup` gives, held resident while the caller is mounted, and its build started
+ * when it is pending. Unclaimed for no lookup, which the caller's other paths handle. The caller
+ * keeps `lookup` in a memo on the decoded value it came from.
  */
-export function useProceduralTexture(
-  ref: string | undefined,
-  pools: SceneResources,
-  loadedFile: LoadedFile
-): ProceduralSlot {
-  return useProceduralSlots([ref], pools, loadedFile, resolveProceduralTexture)[0]!;
-}
-
-/** {@link useProceduralTexture} for a Texture3D slot, which `useTexture3D` reads through. */
-export function useProceduralTexture3D(
-  ref: string | undefined,
-  pools: SceneResources,
-  loadedFile: LoadedFile
-): ProceduralSlot {
-  return useProceduralSlots([ref], pools, loadedFile, resolveProceduralTexture3D)[0]!;
-}
-
-/** Resolves a ref to the procedural texture of one kind of slot. Module-level, so a memo holds it. */
-type ProceduralResolver = (
-  ref: string | undefined,
-  pools: SceneResources,
-  loadedFile: LoadedFile
-) => ProceduralTextureLookup | null;
-
-function useProceduralSlots(
-  refs: readonly (string | undefined)[],
-  pools: SceneResources,
-  loadedFile: LoadedFile,
-  resolve: ProceduralResolver
-): ProceduralSlot[] {
-  // Keyed on the refs' text: callers rebuild the array every render.
-  const refsText = JSON.stringify(refs);
-  const lookups = useMemo(
-    () =>
-      (JSON.parse(refsText) as (string | null)[]).map((ref) => resolve(ref ?? undefined, pools, loadedFile)),
-    [refsText, pools, loadedFile, resolve]
-  );
-  // Builds that finished after `lookups` read the cache. Scoped to those lookups: a new
-  // read of the cache answers for itself, and an entry evicted since is never shown.
-  const [landed, setLanded] = useState<Landed>(NOTHING_LANDED);
-  const landedTextures = landed.lookups === lookups ? landed.textures : NOTHING_LANDED.textures;
+export function useProceduralTexture(lookup: ProceduralTextureLookup | null): ProceduralSlot {
+  // A build that finished after `lookup` read the cache. Scoped to that lookup: a new read of
+  // the cache answers for itself, and an entry evicted since is never shown.
+  const [landed, setLanded] = useState<Landed | null>(null);
+  const landedTexture = landed?.lookup === lookup ? landed.texture : null;
   const [failedKeys, setFailedKeys] = useState<ReadonlySet<string>>(() => new Set());
   const [buildError, setBuildError] = useState<{ error: unknown } | null>(null);
   if (buildError) throw buildError.error;
 
-  const builds = useMemo(
-    () =>
-      lookups
-        .filter(isPendingBuild)
-        .filter((lookup) => !failedKeys.has(lookup.key) && !landedTextures.has(lookup.key)),
-    [lookups, failedKeys, landedTextures]
-  );
+  const hasFailed = lookup !== null && failedKeys.has(lookup.key);
+  const build = lookup?.status === 'pending' && !hasFailed && !landedTexture ? lookup : null;
 
-  /** Written after each commit: the textures the slots showed, kept while a new build runs. */
-  const lastShown = useRef<readonly (Shown | null)[]>([]);
-  const shown = lookups.map((lookup, slot): Shown | null => {
-    if (lookup === null || failedKeys.has(lookup.key)) return null;
-    if (lookup.status === 'ready') return { texture: lookup.texture, key: lookup.key };
-    const built = landedTextures.get(lookup.key);
-    return built ? { texture: built, key: lookup.key } : (lastShown.current[slot] ?? null);
-  });
+  /** Written after each commit: the texture the slot showed, kept while a new build runs. */
+  const lastShown = useRef<Shown | null>(null);
+  const shown = shownTexture(lookup, hasFailed, landedTexture, lastShown.current);
   useEffect(() => {
     lastShown.current = shown;
   });
 
   const runner = useResourceLoader()?.jobRunner ?? inThreadJobRunner;
   useEffect(() => {
+    if (!build) return undefined;
     let current = true;
-    const handles = builds.map((build) => {
-      const handle = build.start(runner);
-      handle.settled.then(
-        (texture) => {
-          if (!current) return;
-          // Null while this effect still holds the build means it could not be allocated.
-          if (texture) setLanded((prev) => landOne(prev, lookups, build.key, texture));
-          else setFailedKeys((keys) => withKey(keys, build.key));
-        },
-        (error: unknown) => {
-          if (current) setBuildError({ error });
-        }
-      );
-      return handle;
-    });
+    const handle = build.start(runner);
+    handle.settled.then(
+      (texture) => {
+        if (!current) return;
+        // Null while this effect still holds the build means it could not be allocated.
+        if (texture) setLanded({ lookup: build, texture });
+        else setFailedKeys((keys) => withKey(keys, build.key));
+      },
+      (error: unknown) => {
+        if (current) setBuildError({ error });
+      }
+    );
     return () => {
       current = false;
-      handles.forEach((handle) => handle.release());
+      handle.release();
     };
-  }, [builds, lookups, runner]);
+  }, [build, runner]);
 
-  usePendingWhile(builds.length > 0);
-  useTextureWorkWhile(builds.length > 0);
-  useProceduralTexturePins([
-    ...shown.flatMap((entry) => (entry ? [entry.key] : [])),
-    ...builds.map((build) => build.key),
-  ]);
+  usePendingWhile(build !== null);
+  useTextureWorkWhile(build !== null);
+  useProceduralTexturePins([...(shown ? [shown.key] : []), ...(build ? [build.key] : [])]);
 
-  return lookups.map((lookup, slot) => ({
-    texture: shown[slot]?.texture ?? null,
-    claimed: lookup !== null,
-    building: lookup !== null && builds.some((build) => build.key === lookup.key),
-  }));
+  return { texture: shown?.texture ?? null, claimed: lookup !== null, building: build !== null };
+}
+
+/** The texture the slot shows: the ready one, the landed build, or while a build runs, the last one. */
+function shownTexture(
+  lookup: ProceduralTextureLookup | null,
+  hasFailed: boolean,
+  landedTexture: THREE.Texture | null,
+  lastShown: Shown | null
+): Shown | null {
+  if (lookup === null || hasFailed) return null;
+  if (lookup.status === 'ready') return { texture: lookup.texture, key: lookup.key };
+  return landedTexture ? { texture: landedTexture, key: lookup.key } : lastShown;
 }
 
 /**
@@ -161,33 +114,14 @@ function useTextureWorkWhile(isWorking: boolean): void {
 }
 
 interface Landed {
-  lookups: readonly (ProceduralTextureLookup | null)[] | null;
-  textures: ReadonlyMap<string, THREE.Texture>;
-}
-
-const NOTHING_LANDED: Landed = { lookups: null, textures: new Map() };
-
-/** `prev` with one more landed texture, restarted when it answered other lookups. */
-function landOne(
-  prev: Landed,
-  lookups: readonly (ProceduralTextureLookup | null)[],
-  key: string,
-  texture: THREE.Texture
-): Landed {
-  const textures = new Map(prev.lookups === lookups ? prev.textures : []);
-  return { lookups, textures: textures.set(key, texture) };
-}
-
-function isPendingBuild(
-  lookup: ProceduralTextureLookup | null
-): lookup is Extract<ProceduralTextureLookup, { status: 'pending' }> {
-  return lookup?.status === 'pending';
+  lookup: ProceduralTextureLookup;
+  texture: THREE.Texture;
 }
 
 /**
  * Holds every key resident while the caller is mounted, for a consumer with several procedural
  * slots. Keyed on the joined keys, not the array: an unpin and pin per render would flush the
- * disposals a pinned replace deferred. A key is `token:subResourceId` or a content key, whose
+ * disposals a pinned replace deferred. A key is `identity:typeName` or a content key, whose
  * JSON escapes every newline, so it holds none.
  */
 export function useProceduralTexturePins(keys: readonly string[]): void {

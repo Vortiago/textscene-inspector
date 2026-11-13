@@ -12,6 +12,7 @@ import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import { resetProceduralTextures } from './textures/proceduralBuilds';
 import { useTexture2D } from './useTexture2D';
+import { referenceIn } from './reading/scopedReference.testkit';
 
 const RED_TO_BLUE = 'PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)';
 
@@ -100,7 +101,9 @@ function pixelsOf(texture: THREE.Texture | null) {
 }
 
 function drawn(ref: string) {
-  const { result } = renderHook(() => useTexture2D(ref, EXTERNAL, SCENE), { wrapper: withFiles() });
+  const { result } = renderHook(() => useTexture2D(referenceIn(ref, EXTERNAL, SCENE)), {
+    wrapper: withFiles(),
+  });
   return { pixels: pixelsOf(result.current.texture), missing: result.current.missing };
 }
 

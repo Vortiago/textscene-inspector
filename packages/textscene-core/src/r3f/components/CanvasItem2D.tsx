@@ -134,7 +134,7 @@ export function CanvasItem2D({
             {ownItems?.(state)}
           </ClipChildrenScope>
         </OwnCanvasModulateProvider>
-        {canvasTexture?.slot.texture.normalTexture && (
+        {canvasTexture?.slot.normalTexture && (
           <CanvasItemSurfaceSource
             slot={canvasTexture.slot}
             sampler={canvasTexture.sampler}

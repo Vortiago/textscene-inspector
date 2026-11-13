@@ -13,7 +13,6 @@ import { resourceFilePath } from '../../resources/subResourcePath';
 import { useResourceLoad, type ResourceStatus } from '../../resources/useResource';
 import { useMissingReport } from '../contexts/MissingResourcesContext';
 import { held, type MaterialResource, type MaterialSource } from './materialSource';
-import { NODE_PROPERTY } from '../../resources/useTexture2D';
 
 /** What a material source loads to. */
 type LoadedMaterial =
@@ -47,7 +46,7 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
   const inlineResource = inline?.resource;
   const inlineInternal = inline?.internalResources;
   const inlineExternal = inline?.externalResources;
-  const isHeldLocally = source?.isHeldLocally ?? NODE_PROPERTY;
+  const isHeldLocally = source?.isHeldLocally ?? true;
   const loaded = useMemo((): LoadedMaterial => {
     const holding = held(isHeldLocally);
     if (inlineResource && inlineInternal && inlineExternal) {

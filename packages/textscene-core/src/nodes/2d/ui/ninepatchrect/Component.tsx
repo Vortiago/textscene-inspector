@@ -11,6 +11,7 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { canvasMapProps } from '../../../../r3f/canvas2DTextureDecode';
 import { canvasItemFilterState, useInheritedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { useNodeReference } from '../../../../resources/reading';
 import { useCanvasItemMerge } from '../../../../r3f/components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../../../r3f/materialProgramInputs';
 import { useTexture2D } from '../../../../resources/useTexture2D';
@@ -45,8 +46,8 @@ export function NinePatchRect({ solveNode, tint, rect, renderOrder }: NativeCont
 
   // The node's own scope, not the ambient provider's: a NinePatchRect from an instanced sub-scene
   // names ids from that scene.
-  const { externalResources, internalResources } = solveNode.resources;
-  const { texture: rawTexture } = useTexture2D(props.texture, externalResources, internalResources);
+  const scope = solveNode.resources;
+  const { texture: rawTexture } = useTexture2D(useNodeReference(props.texture, scope));
 
   const geometry = useMemo(() => {
     const image = rawTexture?.image as ImageLike | undefined;

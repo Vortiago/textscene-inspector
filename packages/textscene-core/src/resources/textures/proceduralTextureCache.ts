@@ -1,12 +1,11 @@
 /**
- * One rasterised texture per scene and sub-resource, or per content for a
+ * One rasterised texture per decoded resource, or per content for a
  * texture built off the main thread, shared, bounded and disposed. Many nodes share one gradient, and each raster costs
  * `width x height x 4` bytes and an upload. The cache owns the lifetime through
  * an `LRUCache`: consumers borrow and never dispose.
  */
 
 import type * as THREE from 'three';
-import type { TscnInternalResource } from '../../parser/types.js';
 import { identityKey } from '../../utils/identityKey.js';
 import { LRUCache } from '../LRUCache.js';
 
@@ -19,16 +18,16 @@ const MAX_ENTRIES = 64;
 const cache = new LRUCache<THREE.Texture>(MAX_ENTRIES, (_key, texture) => texture.dispose());
 
 /**
- * The shared texture for `subResourceId` in this scene, rasterised on first
- * request. Null, uncached, when `rasterize` declines. The texture is borrowed:
- * the cache disposes it, callers never do.
+ * The shared texture `id` names for `owner`, rasterised on first request. `owner` is the decoded
+ * value the texture is built from, which keeps its identity while the resource holds. Null,
+ * uncached, when `rasterize` declines. The texture is borrowed: the cache disposes it, callers never do.
  */
 export function proceduralTexture(
-  internalResources: readonly TscnInternalResource[],
-  subResourceId: string,
+  owner: object,
+  id: string,
   rasterize: () => THREE.Texture | null
 ): THREE.Texture | null {
-  const key = proceduralTextureKey(internalResources, subResourceId);
+  const key = proceduralTextureKey(owner, id);
   const cached = cache.get(key);
   if (cached) return cached;
 
@@ -43,14 +42,11 @@ export function proceduralTexture(
  * the 65th gradient disposes the least-recently-used one while a mounted slot
  * still samples it, and nothing re-rasterises: its memo deps have not changed.
  */
-export function proceduralTextureKey(
-  internalResources: readonly TscnInternalResource[],
-  subResourceId: string
-): string {
-  return `${identityKey(internalResources)}:${subResourceId}`;
+export function proceduralTextureKey(owner: object, id: string): string {
+  return `${identityKey(owner)}:${id}`;
 }
 
-/** The texture cached under `key`, for a build keyed on its content rather than its scene. */
+/** The texture cached under `key`, for a build keyed on its content rather than its owner. */
 export function cachedProceduralTexture(key: string): THREE.Texture | undefined {
   return cache.get(key);
 }

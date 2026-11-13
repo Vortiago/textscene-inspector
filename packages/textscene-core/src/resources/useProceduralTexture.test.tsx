@@ -1,27 +1,24 @@
 /**
  * The borrow half of the procedural texture cache: what a mounted consumer pins, and what it must
- * not pin. `LRUCache.pin` tolerates an absent key, so a pin for a non-procedural reference is
+ * not pin. `LRUCache.pin` tolerates an absent key, so a pin for a non-procedural texture is
  * silent. These tests hold resolution and pinning to one operation. A noise texture is a build:
  * the consumer starts it, keeps the texture it had until the new one lands, and drops it on unmount.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { NO_FILES, poolsOf } from './testing/loadedFiles';
 import * as THREE from 'three';
 import { Component, StrictMode, useLayoutEffect, type ReactNode } from 'react';
 import { act, render, renderHook } from '@testing-library/react';
-import type { TscnInternalResource } from '../parser/types';
+import { loadedValue } from './reading/reading.testkit';
 import { fakeJobRunner } from '../workers/fakeJobRunner.testkit';
 import { ResourceLoaderProvider } from './ResourceLoaderContext';
 import { createFakeResourceLoader, withJobRunner } from './testing/createFakeResourceLoader';
 import { resetProceduralTextures, type JobRunner } from './textures/proceduralBuilds';
 import { textureWork } from './textures/textureWork';
-import {
-  useProceduralTexture,
-  useProceduralTexture3D,
-  useProceduralTexturePins,
-  type ProceduralSlot,
-} from './useProceduralTexture';
-import { proceduralTextureKey } from './textures/proceduralTextureCache';
+import { proceduralTexture2D, proceduralTexture3D } from './textures/resolveProceduralTexture';
+import { TEXTURE_2D } from './textures/texture2d/kind';
+import { TEXTURE_3D } from './textures/texture3d/kind';
+import { useProceduralTexture, useProceduralTexturePins, type ProceduralSlot } from './useProceduralTexture';
+import type { ProceduralTextureLookup } from './textures/proceduralBuilds';
 
 /** The cache exposes no pin counter, so the two entry points are wrapped, calling through. */
 const traffic = vi.hoisted(() => ({ pinned: [] as string[], unpinned: [] as string[] }));
@@ -41,26 +38,27 @@ vi.mock('./textures/proceduralTextureCache', async (importOriginal) => {
   };
 });
 
-/** Two gradients plus a texture sub-resource that is not procedural, which must mint no key. */
-function scene(): TscnInternalResource[] {
-  return [
-    {
-      id: 'Gradient_a',
-      type: 'Gradient',
-      data: { colors: 'PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)' },
-    },
-    {
-      id: 'GradientTexture2D_a',
-      type: 'GradientTexture2D',
-      data: { gradient: 'SubResource("Gradient_a")', width: '8', height: '8' },
-    },
-    {
-      id: 'GradientTexture2D_b',
-      type: 'GradientTexture2D',
-      data: { gradient: 'SubResource("Gradient_a")', width: '4', height: '4' },
-    },
-    { id: 'ImageTexture_x', type: 'ImageTexture', data: {} },
-  ];
+/** Two gradients over one Gradient. */
+const SCENE = `[sub_resource type="Gradient" id="Gradient_a"]
+colors = PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_a"]
+gradient = SubResource("Gradient_a")
+width = 8
+height = 8
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_b"]
+gradient = SubResource("Gradient_a")
+width = 4
+height = 4
+`;
+
+/** The lookup of the Texture2D `ref` names in tables written as `sceneText`, freshly decoded. */
+function lookupOf(ref: string, sceneText = SCENE): ProceduralTextureLookup | null {
+  const texture = loadedValue(TEXTURE_2D, ref, sceneText);
+  if (texture.form === 'canvas' || texture.form === 'atlas')
+    throw new Error(`expected a source, got ${texture.form}`);
+  return proceduralTexture2D(texture);
 }
 
 function strict({ children }: { children: ReactNode }) {
@@ -78,11 +76,9 @@ afterEach(() => {
 });
 
 describe('useProceduralTexture', () => {
-  it('rasterises the gradient a SubResource reference names', () => {
-    const resources = scene();
-    const { result } = renderHook(() =>
-      useProceduralTexture('SubResource("GradientTexture2D_a")', poolsOf(resources), NO_FILES)
-    );
+  it('rasterises the gradient the lookup gives', () => {
+    const lookup = lookupOf('SubResource("GradientTexture2D_a")');
+    const { result } = renderHook(() => useProceduralTexture(lookup));
 
     expect(result.current).toMatchObject({ claimed: true });
     expect(result.current.texture).toBeInstanceOf(THREE.DataTexture);
@@ -90,11 +86,9 @@ describe('useProceduralTexture', () => {
   });
 
   it('pins the texture while mounted and releases it on unmount', () => {
-    const resources = scene();
-    const key = proceduralTextureKey(resources, 'GradientTexture2D_a');
-    const { unmount } = renderHook(() =>
-      useProceduralTexture('SubResource("GradientTexture2D_a")', poolsOf(resources), NO_FILES)
-    );
+    const lookup = lookupOf('SubResource("GradientTexture2D_a")');
+    const key = lookup!.key;
+    const { unmount } = renderHook(() => useProceduralTexture(lookup));
 
     expect(traffic.pinned).toEqual([key]);
     expect(traffic.unpinned).toEqual([]);
@@ -103,31 +97,18 @@ describe('useProceduralTexture', () => {
     expect(traffic.unpinned).toEqual([key]);
   });
 
-  it('pins nothing for a reference that resolves to no procedural texture', () => {
-    const resources = scene();
-    for (const ref of [
-      undefined,
-      'ExtResource("3")',
-      'res://cookie.png',
-      // A SubResource, but not a procedural texture: pinning its key would
-      // hold a cache entry that does not exist.
-      'SubResource("ImageTexture_x")',
-      'SubResource("Nothing_here")',
-    ]) {
-      const { result, unmount } = renderHook(() => useProceduralTexture(ref, poolsOf(resources), NO_FILES));
-      expect(result.current, `ref: ${ref}`).toEqual({ texture: null, claimed: false, building: false });
-      unmount();
-    }
+  it('leaves the slot unclaimed and pins nothing with no lookup', () => {
+    const { result, unmount } = renderHook(() => useProceduralTexture(null));
+    expect(result.current).toEqual({ texture: null, claimed: false, building: false });
+    unmount();
 
     expect(traffic.pinned).toEqual([]);
     expect(traffic.unpinned).toEqual([]);
   });
 
-  it('holds one pin across re-renders of the same reference', () => {
-    const resources = scene();
-    const { rerender } = renderHook(() =>
-      useProceduralTexture('SubResource("GradientTexture2D_a")', poolsOf(resources), NO_FILES)
-    );
+  it('holds one pin across re-renders of the same lookup', () => {
+    const lookup = lookupOf('SubResource("GradientTexture2D_a")');
+    const { rerender } = renderHook(() => useProceduralTexture(lookup));
 
     rerender();
     rerender();
@@ -138,29 +119,24 @@ describe('useProceduralTexture', () => {
     expect(traffic.unpinned).toEqual([]);
   });
 
-  it('moves the pin when the reference changes', () => {
-    const resources = scene();
-    const keyA = proceduralTextureKey(resources, 'GradientTexture2D_a');
-    const keyB = proceduralTextureKey(resources, 'GradientTexture2D_b');
+  it('moves the pin when the lookup changes', () => {
+    const a = lookupOf('SubResource("GradientTexture2D_a")');
+    const b = lookupOf('SubResource("GradientTexture2D_b")');
+    const [keyA, keyB] = [a!.key, b!.key];
     const { rerender } = renderHook(
-      ({ ref }: { ref: string }) => useProceduralTexture(ref, poolsOf(resources), NO_FILES),
-      {
-        initialProps: { ref: 'SubResource("GradientTexture2D_a")' },
-      }
+      ({ lookup }: { lookup: ProceduralTextureLookup | null }) => useProceduralTexture(lookup),
+      { initialProps: { lookup: a } }
     );
 
-    rerender({ ref: 'SubResource("GradientTexture2D_b")' });
+    rerender({ lookup: b });
 
     expect(traffic.pinned).toEqual([keyA, keyB]);
     expect(traffic.unpinned).toEqual([keyA]);
   });
 
   it('leaves no pin behind after a StrictMode mount/unmount cycle', () => {
-    const resources = scene();
-    const { unmount } = renderHook(
-      () => useProceduralTexture('SubResource("GradientTexture2D_a")', poolsOf(resources), NO_FILES),
-      { wrapper: strict }
-    );
+    const lookup = lookupOf('SubResource("GradientTexture2D_a")');
+    const { unmount } = renderHook(() => useProceduralTexture(lookup), { wrapper: strict });
     unmount();
 
     // StrictMode's extra mount doubles the traffic; what matters is that every
@@ -213,26 +189,33 @@ describe('useProceduralTexturePins', () => {
   });
 });
 
-/** A 4x4 NoiseTexture2D whose FastNoiseLite seed is its whole content. */
-function noiseScene(seed: number): TscnInternalResource[] {
-  return [
-    { id: 'FastNoiseLite_a', type: 'FastNoiseLite', data: { seed: String(seed), frequency: '0.05' } },
-    {
-      id: 'NoiseTexture2D_a',
-      type: 'NoiseTexture2D',
-      data: { noise: 'SubResource("FastNoiseLite_a")', width: '4', height: '4' },
-    },
-    { id: 'Gradient_a', type: 'Gradient', data: { colors: 'PackedColorArray(1, 1, 1, 1, 0, 0, 0, 1)' } },
-    {
-      id: 'GradientTexture2D_a',
-      type: 'GradientTexture2D',
-      data: { gradient: 'SubResource("Gradient_a")', width: '8', height: '8' },
-    },
-  ];
+/** A 4x4 NoiseTexture2D whose FastNoiseLite seed is its whole content, beside a gradient. */
+function noiseScene(seed: number): string {
+  return `[sub_resource type="FastNoiseLite" id="FastNoiseLite_a"]
+seed = ${seed}
+frequency = 0.05
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_a"]
+noise = SubResource("FastNoiseLite_a")
+width = 4
+height = 4
+
+[sub_resource type="NoiseTexture3D" id="NoiseTexture3D_a"]
+noise = SubResource("FastNoiseLite_a")
+width = 4
+height = 3
+depth = 2
+
+${SCENE}`;
 }
 
 const NOISE = 'SubResource("NoiseTexture2D_a")';
 const GRADIENT = 'SubResource("GradientTexture2D_a")';
+
+/** The noise and the gradient lookups of a scene, each decoded once, as a slot's memo keeps them. */
+function lookupsOf(sceneText: string) {
+  return [lookupOf(NOISE, sceneText), lookupOf(GRADIENT, sceneText)] as const;
+}
 
 /** Lets microtasks, promise callbacks and the resulting renders run. */
 async function flush(): Promise<void> {
@@ -252,16 +235,16 @@ function withRunner(runner: JobRunner, strictMode = false) {
   return { loader, wrapper };
 }
 
-function renderSlots(runner: JobRunner, resources: TscnInternalResource[], strictMode = false) {
+function renderSlots(runner: JobRunner, sceneText: string, strictMode = false) {
   const { loader, wrapper } = withRunner(runner, strictMode);
   const hook = renderHook(
-    ({ scene }: { scene: TscnInternalResource[] }) => [
-      useProceduralTexture(NOISE, poolsOf(scene), NO_FILES),
-      useProceduralTexture(GRADIENT, poolsOf(scene), NO_FILES),
+    ({ lookups }: { lookups: ReturnType<typeof lookupsOf> }) => [
+      useProceduralTexture(lookups[0]),
+      useProceduralTexture(lookups[1]),
     ],
-    { initialProps: { scene: resources }, wrapper }
+    { initialProps: { lookups: lookupsOf(sceneText) }, wrapper }
   );
-  return { ...hook, loader };
+  return { ...hook, loader, rerender: (next: string) => hook.rerender({ lookups: lookupsOf(next) }) };
 }
 
 describe('useProceduralTexture with a NoiseTexture2D', () => {
@@ -298,9 +281,10 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
     const { wrapper } = withRunner(runner);
     // Marked at commit, in a layout effect: `result.current` updates later, in a passive effect.
     let isShown = false;
+    const lookup = lookupOf(NOISE, noiseScene(1));
     renderHook(
       () => {
-        const slots = [useProceduralTexture(NOISE, poolsOf(noiseScene(1)), NO_FILES)];
+        const slots = [useProceduralTexture(lookup)];
         useLayoutEffect(() => {
           isShown = slots[0]?.texture instanceof THREE.DataTexture;
         });
@@ -331,7 +315,7 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
     const before = result.current[0]?.texture;
     const pinnedBefore = [...traffic.pinned];
 
-    rerender({ scene: noiseScene(2) });
+    rerender(noiseScene(2));
     await flush();
     expect(result.current[0]).toEqual({ texture: before, claimed: true, building: true });
 
@@ -342,7 +326,7 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
     expect(traffic.unpinned).toContain(oldKey);
   });
 
-  it('reuses the texture across a re-parse that leaves the noise unchanged', async () => {
+  it('reuses the texture across a new decode that leaves the noise unchanged', async () => {
     const { runner, runs } = fakeJobRunner();
     const { result, rerender } = renderSlots(runner, noiseScene(1));
     await flush();
@@ -350,7 +334,7 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
     await flush();
     const built = result.current[0]?.texture;
 
-    rerender({ scene: noiseScene(1) });
+    rerender(noiseScene(1));
     expect(result.current[0]).toEqual({ texture: built, claimed: true, building: false });
     expect(runs).toHaveLength(1);
   });
@@ -359,7 +343,7 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
     const { runner, runs } = fakeJobRunner();
     const { result, rerender } = renderSlots(runner, noiseScene(1));
     await flush();
-    rerender({ scene: noiseScene(2) });
+    rerender(noiseScene(2));
     await flush();
 
     expect(runs[0]?.signal?.aborted).toBe(true);
@@ -409,8 +393,9 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
     const { wrapper } = withRunner(runner);
     const caught: unknown[] = [];
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const lookup = lookupOf(NOISE, noiseScene(1));
     function Consumer(): null {
-      useProceduralTexture(NOISE, poolsOf(noiseScene(1)), NO_FILES);
+      useProceduralTexture(lookup);
       return null;
     }
     render(
@@ -428,7 +413,8 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
   });
 
   it('builds in-thread outside a loader provider', async () => {
-    const { result } = renderHook(() => [useProceduralTexture(NOISE, poolsOf(noiseScene(1)), NO_FILES)]);
+    const lookup = lookupOf(NOISE, noiseScene(1));
+    const { result } = renderHook(() => [useProceduralTexture(lookup)]);
     await flush();
 
     const [slot] = result.current as ProceduralSlot[];
@@ -436,40 +422,15 @@ describe('useProceduralTexture with a NoiseTexture2D', () => {
   });
 });
 
-/** A 4x3x2 NoiseTexture3D, and a NoiseTexture2D a Texture3D slot must not claim. */
-function noiseVolumeScene(): TscnInternalResource[] {
-  return [
-    ...noiseScene(1),
-    {
-      id: 'NoiseTexture3D_a',
-      type: 'NoiseTexture3D',
-      data: { noise: 'SubResource("FastNoiseLite_a")', width: '4', height: '3', depth: '2' },
-    },
-  ];
-}
-
-describe('useProceduralTexture3D', () => {
-  it('builds the NoiseTexture3D a SubResource reference names', async () => {
-    const { result } = renderHook(() =>
-      useProceduralTexture3D('SubResource("NoiseTexture3D_a")', poolsOf(noiseVolumeScene()), NO_FILES)
+describe('useProceduralTexture with a NoiseTexture3D', () => {
+  it('builds the volume', async () => {
+    const lookup = proceduralTexture3D(
+      loadedValue(TEXTURE_3D, 'SubResource("NoiseTexture3D_a")', noiseScene(1))
     );
+    const { result } = renderHook(() => useProceduralTexture(lookup));
     await flush();
 
     expect(result.current.texture).toBeInstanceOf(THREE.Data3DTexture);
-  });
-
-  it('leaves a NoiseTexture2D unclaimed, since a Texture3D slot cannot draw it', () => {
-    const { result } = renderHook(() => useProceduralTexture3D(NOISE, poolsOf(noiseVolumeScene()), NO_FILES));
-
-    expect(result.current).toEqual({ texture: null, claimed: false, building: false });
-  });
-
-  it('leaves a missing reference unclaimed (edge case)', () => {
-    const { result } = renderHook(() =>
-      useProceduralTexture3D(undefined, poolsOf(noiseVolumeScene()), NO_FILES)
-    );
-
-    expect(result.current.claimed).toBe(false);
   });
 });
 

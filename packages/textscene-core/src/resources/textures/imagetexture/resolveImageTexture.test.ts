@@ -1,86 +1,59 @@
 /** An ImageTexture whose pixels sit in an inline `Image`, as Godot saves one in a scene or `.tres`. */
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import type { TscnInternalResource } from '../../../parser/types';
 import { applyTextureFilterState, godotTextureFilterState } from '../godotTextureFilter';
 import { resetProceduralTextures } from '../proceduralBuilds';
 import type { TextureLevel } from '../texelTexture';
-import { resolveImageTexture } from './resolveImageTexture';
+import type { SavedImage } from '../image/kind';
+import { imageTexture } from './resolveImageTexture';
 
-/** An `Image` that saves its levels, with the ImageTexture around it. Ids are `Image_<name>` and `ImageTexture_<name>`. */
-function mipmappedImageTexture(
-  name: string,
-  format: string,
-  size: number[],
-  bytes: number[]
-): TscnInternalResource[] {
+/** An `Image` that saves its levels. */
+function mipmappedImage(format: string, size: number[], bytes: number[]): SavedImage {
   const [width, height] = size;
-  return [
-    {
-      id: `Image_${name}`,
-      type: 'Image',
-      data: {
-        data: `{\n"data": PackedByteArray(${bytes.join(', ')}),\n"format": "${format}",\n"height": ${height},\n"mipmaps": true,\n"width": ${width}\n}`,
-      },
-    },
-    { id: `ImageTexture_${name}`, type: 'ImageTexture', data: { image: `SubResource("Image_${name}")` } },
-  ];
+  return {
+    dictionary: `{\n"data": PackedByteArray(${bytes.join(', ')}),\n"format": "${format}",\n"height": ${height},\n"mipmaps": true,\n"width": ${width}\n}`,
+  };
 }
 
 /** 4 x 4 over 2 x 2 over 1 x 1 of Red8, counting up from 0 so each texel names its place in the bytes. */
-const COUNTED = mipmappedImageTexture(
-  'counted',
+const COUNTED = mipmappedImage(
   'Red8',
   [4, 4],
   Array.from({ length: 21 }, (_, i) => i)
 );
 
 /** A 1x2 RGB8 image: a red top row over a blue bottom row. */
-const RESOURCES: TscnInternalResource[] = [
-  {
-    id: 'Image_a',
-    type: 'Image',
-    data: {
-      data: '{\n"data": PackedByteArray(255, 0, 0, 0, 0, 255),\n"format": "RGB8",\n"height": 2,\n"mipmaps": false,\n"width": 1\n}',
-    },
-  },
-  { id: 'ImageTexture_a', type: 'ImageTexture', data: { image: 'SubResource("Image_a")' } },
-  {
-    // One 1x1 DXT5 block: alpha endpoints 40 and 200 with index 0 at the texel, over white.
-    id: 'Image_dxt5',
-    type: 'Image',
-    data: {
-      data: '{\n"data": PackedByteArray(40, 200, 136, 198, 250, 136, 198, 250, 255, 255, 0, 0, 0, 0, 0, 0),\n"format": "DXT5 RGBA8",\n"height": 1,\n"mipmaps": false,\n"width": 1\n}',
-    },
-  },
-  { id: 'ImageTexture_dxt5', type: 'ImageTexture', data: { image: 'SubResource("Image_dxt5")' } },
-  { id: 'ImageTexture_empty', type: 'ImageTexture', data: {} },
-];
+const RED_OVER_BLUE: SavedImage = {
+  dictionary:
+    '{\n"data": PackedByteArray(255, 0, 0, 0, 0, 255),\n"format": "RGB8",\n"height": 2,\n"mipmaps": false,\n"width": 1\n}',
+};
+
+/** One 1x1 DXT5 block: alpha endpoints 40 and 200 with index 0 at the texel, over white. */
+const DXT5: SavedImage = {
+  dictionary:
+    '{\n"data": PackedByteArray(40, 200, 136, 198, 250, 136, 198, 250, 255, 255, 0, 0, 0, 0, 0, 0),\n"format": "DXT5 RGBA8",\n"height": 1,\n"mipmaps": false,\n"width": 1\n}',
+};
 
 afterEach(() => {
   resetProceduralTextures();
 });
 
-describe('resolveImageTexture', () => {
+describe('imageTexture', () => {
   it('builds an sRGB texture of the saved pixels', () => {
-    const resolved = resolveImageTexture('SubResource("ImageTexture_a")', RESOURCES);
+    const resolved = imageTexture(RED_OVER_BLUE);
     expect(resolved?.texture).toBeInstanceOf(THREE.DataTexture);
     expect(resolved!.texture.image).toMatchObject({ width: 1, height: 2 });
     expect(resolved!.texture.colorSpace).toBe(THREE.SRGBColorSpace);
   });
 
   it("puts Godot's top row last, as every typed-array texture here runs bottom-up", () => {
-    const { data } = resolveImageTexture('SubResource("ImageTexture_a")', RESOURCES)!.texture.image;
+    const { data } = imageTexture(RED_OVER_BLUE)!.texture.image;
     expect([...(data as Uint8Array)]).toEqual([0, 0, 255, 255, 255, 0, 0, 255]);
   });
 
   it('builds a texture of a block-compressed image, decoded to RGBA8', () => {
-    const { data } = resolveImageTexture('SubResource("ImageTexture_dxt5")', RESOURCES)!.texture.image;
+    const { data } = imageTexture(DXT5)!.texture.image;
     expect([...(data as Uint8Array)]).toEqual([255, 255, 255, 40]);
-  });
-
-  it('builds nothing for an ImageTexture with no image (edge case)', () => {
-    expect(resolveImageTexture('SubResource("ImageTexture_empty")', RESOURCES)).toBeNull();
   });
 });
 
@@ -89,9 +62,9 @@ function levelsOf(texture: THREE.DataTexture): TextureLevel[] {
   return texture.mipmaps as TextureLevel[];
 }
 
-describe('resolveImageTexture on an image with mipmaps', () => {
+describe('imageTexture on an image with mipmaps', () => {
   function counted() {
-    return resolveImageTexture('SubResource("ImageTexture_counted")', COUNTED)!.texture;
+    return imageTexture(COUNTED)!.texture;
   }
 
   it('uploads the stored levels as they are, bottom-up like the top level', () => {
@@ -133,8 +106,7 @@ describe('resolveImageTexture on an image with mipmaps', () => {
 
   it('uploads the levels of a float format as half floats, as its top level (edge case)', () => {
     // RHalf 2 x 1 over 1 x 1: 1.0, 2.0, then 0.5.
-    const half = mipmappedImageTexture('half', 'RHalf', [2, 1], [0, 60, 0, 64, 0, 56]);
-    const texture = resolveImageTexture('SubResource("ImageTexture_half")', half)!.texture;
+    const texture = imageTexture(mipmappedImage('RHalf', [2, 1], [0, 60, 0, 64, 0, 56]))!.texture;
     expect(texture.type).toBe(THREE.HalfFloatType);
     expect(levelsOf(texture).map((level) => level.data)).toEqual([
       texture.image.data,
@@ -143,14 +115,13 @@ describe('resolveImageTexture on an image with mipmaps', () => {
   });
 
   it('carries no levels for a 1 x 1 image, which has none (edge case)', () => {
-    const one = mipmappedImageTexture('one', 'Red8', [1, 1], [7]);
-    const texture = resolveImageTexture('SubResource("ImageTexture_one")', one)!.texture;
+    const texture = imageTexture(mipmappedImage('Red8', [1, 1], [7]))!.texture;
     expect(texture.mipmaps).toHaveLength(0);
     expect(texture.minFilter).toBe(THREE.LinearFilter);
   });
 
   it('carries no levels for an image saved without mipmaps (edge case)', () => {
-    const texture = resolveImageTexture('SubResource("ImageTexture_a")', RESOURCES)!.texture;
+    const texture = imageTexture(RED_OVER_BLUE)!.texture;
     expect(texture.mipmaps).toHaveLength(0);
     expect(texture.minFilter).toBe(THREE.LinearFilter);
   });

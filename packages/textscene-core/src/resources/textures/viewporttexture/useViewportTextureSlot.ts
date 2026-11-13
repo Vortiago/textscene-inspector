@@ -1,35 +1,20 @@
 /**
  * `[sub_resource type="ViewportTexture"] viewport_path = NodePath("…")`: a texture
  * slot filled by a `<SubViewport>`'s offscreen render. It names a node, not a
- * file, so it comes through the reactive `ViewportTextureRegistry`, not
- * `resolveTexture2DPath`, whose `string | null` cannot carry it.
+ * file, so it comes through the reactive `ViewportTextureRegistry`, not the loader.
  */
 
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import type * as THREE from 'three';
 
 import * as logger from '../../../logger.js';
-import type { TscnInternalResource } from '../../../parser/types';
-import { resolveSubResourceRef } from '../../SubResourceResolver.js';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext.js';
 import { useViewportPassCycle } from '../../../r3f/contexts/ViewportPassRegistryContext.js';
 import { useViewportTexture } from '../../../r3f/contexts/ViewportTextureContext.js';
 import { useLocalScene } from '../../../r3f/useUniqueNames.js';
-import { resolveViewportTexturePath, viewportTextureRegistryKey } from '../../../r3f/viewportTexturePath.js';
+import { viewportTextureRegistryKey } from '../../../r3f/viewportTexturePath.js';
 import { unclaimedUniqueNames } from '../../../godot/string/nodePath.js';
 import { warn } from '../../../logger.js';
-import { VIEWPORT_TEXTURE_TYPE } from './types.js';
-
-/**
- * Whether a texture reference names a ViewportTexture: the guard that skips the
- * file-loading path, which would draw a missing-resource placeholder instead.
- */
-export function isViewportTextureRef(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[]
-): boolean {
-  return resolveSubResourceRef(ref, internalResources)?.type === VIEWPORT_TEXTURE_TYPE;
-}
 
 /**
  * Which of a target's two views a consumer samples, as Godot's consumer picks it: a canvas item
@@ -94,20 +79,16 @@ export function useViewportTargetSlot(
 }
 
 /**
- * The `view` of the live target a `ViewportTexture` slot's `ref` names, rebased onto the
- * registry key (`viewportTextureRegistryKey`). `texture: null` with `cyclic: false`
- * is not an error: a target arrives after first paint. Call it unconditionally,
- * so the hook count stays static.
+ * The `view` of the live target a set-up `ViewportTexture`'s `viewportPath` names, rebased onto
+ * the registry key (`viewportTextureRegistryKey`). `texture: null` with `cyclic: false` is not an
+ * error: a target arrives after first paint. Call it unconditionally, so the hook count stays
+ * static, with a null path for a slot that is no set-up ViewportTexture.
  */
 export function useViewportTextureSlot(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[],
+  viewportPath: string | null,
   view: ViewportTextureView
 ): ViewportTextureSlotResult {
   const consumerPath = useNodePath();
-  const resource = resolveSubResourceRef(ref, internalResources);
-  const viewportPath =
-    resource?.type === VIEWPORT_TEXTURE_TYPE ? resolveViewportTexturePath(resource.data.viewport_path) : null;
   // `viewport_path` counts from the local scene root: `_setup_local_to_scene` calls
   // `p_loc_scene->get_node_or_null(path)`, `PROPERTY_USAGE_NODE_PATH_FROM_SCENE_ROOT`.
   // The constructor calls `set_local_to_scene(true)`, so a `.tscn` need not write

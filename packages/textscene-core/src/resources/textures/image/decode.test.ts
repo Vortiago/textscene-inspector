@@ -1,11 +1,11 @@
-/** An `Image` sub-resource as Godot 4.6.3 writes it, decoded to RGBA8. */
+/** An `Image` resource as Godot 4.6.3 writes it, decoded to RGBA8. */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as logger from '../../../logger';
 import { parseTresFile } from '../../../parser/parsedResource';
-import type { TscnInternalResource } from '../../../parser/types';
-import { decodeImageRef, decodeMipmappedImageRef, imageRefSize } from './decode';
+import { decodeImage, decodeMipmappedImage, savedImageSize } from './decode';
+import type { SavedImage } from './kind';
 
 function savedImage(
   format: string,
@@ -13,21 +13,17 @@ function savedImage(
   height: number,
   bytes: string,
   mipmaps: boolean | number
-): TscnInternalResource {
+): SavedImage {
   return {
-    id: 'Image_a',
-    type: 'Image',
-    data: {
-      data: `{\n"data": PackedByteArray(${bytes}),\n"format": "${format}",\n"height": ${height},\n"mipmaps": ${mipmaps},\n"width": ${width}\n}`,
-    },
+    dictionary: `{\n"data": PackedByteArray(${bytes}),\n"format": "${format}",\n"height": ${height},\n"mipmaps": ${mipmaps},\n"width": ${width}\n}`,
   };
 }
 
-function image(format: string, width: number, height: number, bytes: string): TscnInternalResource {
+function image(format: string, width: number, height: number, bytes: string): SavedImage {
   return savedImage(format, width, height, bytes, false);
 }
 
-function mipmappedImage(format: string, width: number, height: number, bytes: string): TscnInternalResource {
+function mipmappedImage(format: string, width: number, height: number, bytes: string): SavedImage {
   return savedImage(format, width, height, bytes, true);
 }
 
@@ -40,15 +36,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function decodeImage(resource: TscnInternalResource) {
-  return decodeImageRef('SubResource("Image_a")', [resource]);
-}
-
-function decodeWithLevels(resource: TscnInternalResource) {
-  return decodeMipmappedImageRef('SubResource("Image_a")', [resource]);
-}
-
-describe('decodeImageRef', () => {
+describe('decodeImage', () => {
   it('spreads a Lum8 image to grey, opaque RGBA8', () => {
     expect(decodeImage(image('Lum8', 2, 1, '63, 127'))).toEqual({
       data: new Uint8Array([63, 63, 63, 255, 127, 127, 127, 255]),
@@ -102,21 +90,17 @@ describe('decodeImageRef', () => {
     expect(decodeImage(image('DXT1 RGB8', 8, 4, '0, 0, 0, 0, 0, 0, 0, 0'))).toBeNull();
   });
 
-  it('decodes nothing for a reference to another type', () => {
-    expect(decodeImage({ ...image('RGB8', 1, 1, '1, 2, 3'), type: 'ImageTexture' })).toBeNull();
-  });
-
   it('draws nothing for fewer bytes than the size needs, which Godot refuses (edge case)', () => {
     expect(decodeImage(image('RGB8', 2, 1, '1, 2, 3'))).toBeNull();
     expect(decodeImage(image('RHalf', 2, 1, '0, 60'))).toBeNull();
-    expect(decodeImage({ id: 'Image_a', type: 'Image', data: {} })).toBeNull();
+    expect(decodeImage({ dictionary: '' })).toBeNull();
   });
 });
 
-describe('decodeMipmappedImageRef', () => {
+describe('decodeMipmappedImage', () => {
   it('decodes each stored level of an RGBA8 image, down to 1 x 1', () => {
     // 4 x 2 over 2 x 1 over 1 x 1: 32, 8 and 4 bytes, one after the other.
-    const decoded = decodeWithLevels(mipmappedImage('RGBA8', 4, 2, counting(0, 44)))!;
+    const decoded = decodeMipmappedImage(mipmappedImage('RGBA8', 4, 2, counting(0, 44)))!;
     expect(decoded.data).toEqual(Uint8Array.from({ length: 32 }, (_, i) => i));
     expect(decoded.levels).toEqual([
       { data: Uint8Array.from({ length: 8 }, (_, i) => 32 + i), width: 2, height: 1 },
@@ -126,7 +110,7 @@ describe('decodeMipmappedImageRef', () => {
 
   it('halves a side that is not a power of two down, and a side at 1 stays 1 (edge case)', () => {
     // 6 x 3 over 3 x 1 over 1 x 1 of Red8: 18, 3 and 1 bytes.
-    const { levels } = decodeWithLevels(mipmappedImage('Red8', 6, 3, counting(0, 22)))!;
+    const { levels } = decodeMipmappedImage(mipmappedImage('Red8', 6, 3, counting(0, 22)))!;
     expect(levels.map(({ width, height }) => [width, height])).toEqual([
       [3, 1],
       [1, 1],
@@ -140,7 +124,9 @@ describe('decodeMipmappedImageRef', () => {
     const red = '0, 248, 0, 248, 0, 0, 0, 0';
     const green = '224, 7, 224, 7, 0, 0, 0, 0';
     const blue = '31, 0, 31, 0, 0, 0, 0, 0';
-    const decoded = decodeWithLevels(mipmappedImage('DXT1 RGB8', 6, 3, [red, red, green, blue].join(', ')))!;
+    const decoded = decodeMipmappedImage(
+      mipmappedImage('DXT1 RGB8', 6, 3, [red, red, green, blue].join(', '))
+    )!;
     expect(decoded.levels.map(({ width, height }) => [width, height])).toEqual([
       [3, 1],
       [1, 1],
@@ -152,37 +138,38 @@ describe('decodeMipmappedImageRef', () => {
   it('decodes the levels of a float format to raw floats (edge case)', () => {
     // RGHalf 2 x 1 over 1 x 1: 1.0 and 2.0 in red, then 0.5 and 0.25.
     const bytes = '0, 60, 0, 0, 0, 64, 0, 0, 0, 56, 0, 52';
-    const { levels } = decodeWithLevels(mipmappedImage('RGHalf', 2, 1, bytes))!;
+    const { levels } = decodeMipmappedImage(mipmappedImage('RGHalf', 2, 1, bytes))!;
     expect(levels).toEqual([{ data: new Float32Array([0.5, 0.25, 0, 1]), width: 1, height: 1 }]);
   });
 
   it('reads a flag saved as an int, as the Dictionary converts it to a bool (edge case)', () => {
-    const decoded = decodeWithLevels(savedImage('Red8', 2, 1, counting(0, 3), 1));
+    const decoded = decodeMipmappedImage(savedImage('Red8', 2, 1, counting(0, 3), 1));
     expect(decoded!.levels).toHaveLength(1);
   });
 
   it('gives a 1 x 1 image no lower level (edge case)', () => {
-    expect(decodeWithLevels(mipmappedImage('Red8', 1, 1, '7'))!.levels).toEqual([]);
+    expect(decodeMipmappedImage(mipmappedImage('Red8', 1, 1, '7'))!.levels).toEqual([]);
   });
 
   it('keeps the top level of an image short of its levels, which this does not refuse (error path)', () => {
-    const decoded = decodeWithLevels(mipmappedImage('RGBA8', 2, 1, counting(0, 8)))!;
+    const decoded = decodeMipmappedImage(mipmappedImage('RGBA8', 2, 1, counting(0, 8)))!;
     expect([...decoded.data]).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
     expect(decoded.levels).toEqual([]);
   });
 
   it('reads no level with the flag off, whatever bytes follow (edge case)', () => {
-    expect(decodeWithLevels(image('RGBA8', 2, 1, counting(0, 12)))!.levels).toEqual([]);
+    expect(decodeMipmappedImage(image('RGBA8', 2, 1, counting(0, 12)))!.levels).toEqual([]);
   });
 });
 
 /** An ImageTexture `save_block_images.gd` wrote, its `Image` decoded with the levels it stores. */
 function decodeGodotSaved(name: string) {
   const saved = parseTresFile(readFileSync(join(import.meta.dirname, 'godotSaved', `${name}.tres`), 'utf8'));
-  return decodeMipmappedImageRef(saved.properties.image, saved.subResources);
+  const image = saved.subResources.find(({ id }) => saved.properties.image === `SubResource("${id}")`);
+  return decodeMipmappedImage({ dictionary: image?.data.data ?? '' });
 }
 
-describe('decodeImageRef on a block-compressed image', () => {
+describe('decodeImage on a block-compressed image', () => {
   it.each([
     // The first block of the DXT1 image is in its three-colour mode, whose index 3 reads opaque black.
     ['DXT1', 'DXT1 RGB8'],
@@ -215,25 +202,22 @@ describe('decodeImageRef on a block-compressed image', () => {
   });
 });
 
-describe('imageRefSize', () => {
+describe('savedImageSize', () => {
   it("reads an image's size", () => {
-    expect(imageRefSize('SubResource("Image_a")', [image('RGBA8', 3, 2, '')])).toEqual({
+    expect(savedImageSize(image('RGBA8', 3, 2, ''))).toEqual({
       width: 3,
       height: 2,
     });
   });
 
   it('sizes an image in a format this does not decode, as Godot does (edge case)', () => {
-    expect(imageRefSize('SubResource("Image_a")', [image('DXT1 RGB8', 4, 4, '')])).toEqual({
+    expect(savedImageSize(image('DXT1 RGB8', 4, 4, ''))).toEqual({
       width: 4,
       height: 4,
     });
   });
 
-  it('gives nothing for a reference to another type or an image without its keys (error path)', () => {
-    expect(
-      imageRefSize('SubResource("Image_a")', [{ ...image('RGB8', 1, 1, ''), type: 'Gradient' }])
-    ).toBeNull();
-    expect(imageRefSize('SubResource("Image_a")', [{ id: 'Image_a', type: 'Image', data: {} }])).toBeNull();
+  it('gives nothing for an image without its keys (error path)', () => {
+    expect(savedImageSize({ dictionary: '' })).toBeNull();
   });
 });
