@@ -11,7 +11,7 @@ import { isCommentLine, isProductionSource, reportOffenders, walkSources } from 
 
 const SRC_ROOT = join(import.meta.dirname, '../../..');
 
-/** The Control folders whose types the table holds. A later slice of #1436 adds its folders here. */
+/** The Control folders whose types the table holds. A folder joins this list with its types (ADR-0073). */
 const MIGRATED_FOLDERS = [
   'button',
   'checkbox',

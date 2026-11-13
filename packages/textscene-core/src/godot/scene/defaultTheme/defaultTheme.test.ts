@@ -22,7 +22,7 @@ interface MeasuredTheme {
   types: Record<string, MeasuredType>;
 }
 
-/** The types the table holds. A later slice of #1436 adds its types here. */
+/** The types the table holds. A type joins this list when its Controls read the table (ADR-0073). */
 const MIGRATED_TYPES = [
   'Button',
   'CheckBox',

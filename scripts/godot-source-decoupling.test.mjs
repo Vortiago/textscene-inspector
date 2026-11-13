@@ -22,11 +22,12 @@ const REPO_ROOT = resolve(import.meta.dirname, '..');
 const PATH_ENGINE_DIRS = 'core|doc|modules|servers|main|platform|editor';
 const ENGINE_DIRS = `scene|${PATH_ENGINE_DIRS}`;
 /**
- * `scene` alone also names core's own `godot/scene/` group, so a checkout path through it ends the
- * string there, or has a further engine directory or an engine source file after it.
+ * `scene` alone also names core's own `godot/scene/` group, which has folders of its own. So a
+ * checkout path through it ends the string there, or has one of Godot 4's `scene/` directories or an
+ * engine source file after it.
  */
-const CHECKOUT_SCENE =
-  'scene(?=[\'"]|[\\\\/](?:\\w+[\\\\/]|\\w+(?:\\.\\w+)*\\.(?:cpp|h|inc|glsl)\\b|SCsub\\b))';
+const ENGINE_SCENE_DIRS = '2d|3d|animation|audio|debugger|gui|main|resources|theme';
+const CHECKOUT_SCENE = `scene(?=['"]|[\\\\/](?:(?:${ENGINE_SCENE_DIRS})[\\\\/]|\\w+(?:\\.\\w+)*\\.(?:cpp|h|inc|glsl)\\b|SCsub\\b))`;
 const CHECKOUT_RE = new RegExp(
   [
     'godot-4\\.\\d+(\\.\\d+)?(-stable)?\\b',
