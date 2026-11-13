@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://unittilesetsourcefile"]
 
 ; The one variable: the TileSet's atlas source is saved in its own .tres
-; (sources/0 = ExtResource). Godot loads it as it loads a source built into the scene.
+; (sources/0 = ExtResource). Godot loads it as it loads a source built into the scene. No other
+; golden saves a TileSet source in a file of its own, so none shows a regression in this.
 
 [ext_resource type="TileSetAtlasSource" path="res://unit-tileset-source-file-atlas.tres" id="1_source"]
 
