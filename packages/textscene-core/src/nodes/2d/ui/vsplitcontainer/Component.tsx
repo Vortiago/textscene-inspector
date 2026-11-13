@@ -36,8 +36,7 @@ export function VSplitContainer({
   // `autohide` defaults true, so the grabber is invisible in the common scene, and loading it
   // would decode an image and hold a GPU texture for a quad that never draws.
   const sortable = solveNode.children.filter(isSortableControl);
-  const drawsGrabber =
-    sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
+  const drawsGrabber = sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants);
   const themeKey = splitGrabberThemeKey(solveNode.node.type, true);
   const texture = useNodeIcon(
     drawsGrabber ? solveNode.icons[themeKey] : undefined,
@@ -49,10 +48,7 @@ export function VSplitContainer({
   }
 
   const iconSize = splitGrabberIconSize(solveNode.node.type, true, solveNode.textureSlots, theme.scale);
-  const separation = resolveSplitSeparation(props, solveNode.constants, {
-    ...theme.widgets.splitContainer,
-    grabberExtent: iconSize.y,
-  });
+  const separation = resolveSplitSeparation(props, solveNode.constants, iconSize.y);
   const cached = splitContainerBoundaryChannel.open(meta)?.draggerPositions;
   const draggerPositions =
     cached ??

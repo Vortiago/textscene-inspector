@@ -11,7 +11,11 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { HSplitContainer } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 
 function solveNode(
   name: string,
@@ -23,13 +27,13 @@ function solveNode(
   // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
   const constants =
     (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: name,
     node: controlNode(name, type, { name, ...properties }) as TscnNode,
     children,
     constants,
-  };
+  });
 }
 
 const EXPAND_FILL = 3;

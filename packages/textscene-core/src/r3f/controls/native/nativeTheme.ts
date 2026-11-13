@@ -121,36 +121,12 @@ interface NativeThemeWidgets {
     normal: StyleBoxFlatData;
     readOnly: StyleBoxFlatData;
   };
-  /**
-   * SplitContainer's theme entries (`default_theme.cpp:1258-1266`) hold no
-   * stylebox: the grabber is an icon (`native/themeIcons.ts`'s
-   * `SPLIT_CONTAINER_ICONS`), and `split_bar_background` (`:1275-1277`) is empty.
-   */
-  splitContainer: {
-    // No `minimum_grab_thickness` (`:1261-1263`): it only enlarges the mouse drag
-    // hitbox (`split_container.cpp:764-778`), and dragging is not modelled.
-    /** `separation` (`default_theme.cpp:1258-1260`), floored by the grabber icon's extent at the call site (`shared/splitContainerSolver.ts`'s `separationOf`, mirroring `SplitContainer::_get_separation`, `split_container.cpp:305-316`). */
-    separation: number;
-    /** The grabber icon's extent along the split axis (`native/themeIcons.ts`). It scales with the theme, since `generate_icon` rasterises through the same scale. */
-    grabberExtent: number;
-    /** `autohide` (`default_theme.cpp:1264-1266`): a 0/1 theme constant, not scaled. True hides the grabber icon without a hover or drag state (`shared/splitContainerSolver.ts`'s `isSplitGrabberVisible`). */
-    autohide: boolean;
-  };
 }
 
 export interface NativeTheme extends ScaledGodotTheme {
   styleFill: NativeThemeStyleFill;
   widgets: NativeThemeWidgets;
 }
-
-/** SplitContainer's own `separation` (`default_theme.cpp:1258-1260` pass `12`, not BoxContainer's `4`). */
-const SPLIT_CONTAINER_SEPARATION = 12;
-
-/** `hsplitter.svg`/`vsplitter.svg`'s short dimension (`scene/theme/icons/`): 8px along the split axis, 48px across it. */
-const SPLIT_CONTAINER_GRABBER_EXTENT = 8;
-
-/** `autohide` (`default_theme.cpp:1264-1266`). */
-const SPLIT_CONTAINER_AUTOHIDE = true;
 
 // A widget reuses `contentMargin`/`cornerRadius` where its `default_theme.cpp` call passes
 // `default_margin` (4) or `default_corner_radius` (3). A call passing another
@@ -253,11 +229,6 @@ function buildNativeTheme(scale: number): NativeTheme {
           scaled.cornerRadius,
           defaultDetail
         ),
-      },
-      splitContainer: {
-        separation: Math.round(SPLIT_CONTAINER_SEPARATION * scale),
-        grabberExtent: Math.round(SPLIT_CONTAINER_GRABBER_EXTENT * scale),
-        autohide: SPLIT_CONTAINER_AUTOHIDE,
       },
     },
   };

@@ -7,6 +7,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultConstantsOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import type { TscnNode } from '../../../../parser/types';
 import { TscnParser } from '../../../../parser/TscnParser';
 import { fixturesDir } from '../../../../parser/testing/parserKit';
@@ -32,7 +34,11 @@ import {
   type SplitChildInput,
 } from './splitContainerSolver';
 import type { SplitContainerProperties } from './splitContainer';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { SizeFlags } from '../../../../godot/scene/control';
 import { controlProps } from '../control/testing/controlProps';
 import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
@@ -316,29 +322,40 @@ describe('makeSplitContainerMinimumSize', () => {
   });
 });
 
+/** HSplitContainer's constants in the default theme table at scale 1 (`default_theme.cpp:1258-1266`). */
+const TABLE_CONSTANTS = defaultConstantsOf(defaultThemeAt(1)).HSplitContainer!;
+
 describe('resolveSplitSeparation', () => {
-  const THEME = { separation: 12, grabberExtent: 8 };
+  const GRABBER_EXTENT = 8;
 
   function separationProps(overrides: Partial<SplitContainerProperties> = {}): SplitContainerProperties {
     return controlProps({ name: 'Split', ...overrides });
   }
 
-  it('uses the theme default (12) when nothing overrides it', () => {
-    expect(resolveSplitSeparation(separationProps(), {}, THEME)).toBe(12);
+  it('uses the default theme table separation (12) when nothing overrides it', () => {
+    expect(resolveSplitSeparation(separationProps(), TABLE_CONSTANTS, GRABBER_EXTENT)).toBe(12);
   });
 
   it('floors an undersized theme_override_constants/separation (already folded into n.constants) at the grabber extent (8)', () => {
-    expect(resolveSplitSeparation(separationProps(), { separation: 0 }, THEME)).toBe(8);
+    expect(
+      resolveSplitSeparation(separationProps(), { ...TABLE_CONSTANTS, separation: 0 }, GRABBER_EXTENT)
+    ).toBe(8);
   });
 
   it('honours an oversized override', () => {
-    expect(resolveSplitSeparation(separationProps(), { separation: 30 }, THEME)).toBe(30);
+    expect(
+      resolveSplitSeparation(separationProps(), { ...TABLE_CONSTANTS, separation: 30 }, GRABBER_EXTENT)
+    ).toBe(30);
   });
 
   it('forces 0 for DRAGGER_HIDDEN_COLLAPSED regardless of theme/override', () => {
-    expect(resolveSplitSeparation(separationProps({ draggerVisibility: 2 }), { separation: 99 }, THEME)).toBe(
-      0
-    );
+    expect(
+      resolveSplitSeparation(
+        separationProps({ draggerVisibility: 2 }),
+        { ...TABLE_CONSTANTS, separation: 99 },
+        GRABBER_EXTENT
+      )
+    ).toBe(0);
   });
 });
 
@@ -347,22 +364,22 @@ function props(overrides: Partial<SplitContainerProperties> = {}): SplitContaine
 }
 
 describe('isSplitGrabberVisible', () => {
-  it('hidden by DEFAULT: autohide theme default (true) with no mouse/drag state a static render ever has', () => {
-    expect(isSplitGrabberVisible(props(), {}, { autohide: true })).toBe(false);
+  it('hidden by DEFAULT: the default theme table autohide (1) with no mouse/drag state a static render ever has', () => {
+    expect(isSplitGrabberVisible(props(), TABLE_CONSTANTS)).toBe(false);
   });
 
   it('visible when a scene overrides autohide to 0 (already folded into n.constants)', () => {
-    expect(isSplitGrabberVisible(props(), { autohide: 0 }, { autohide: true })).toBe(true);
+    expect(isSplitGrabberVisible(props(), { ...TABLE_CONSTANTS, autohide: 0 })).toBe(true);
   });
 
   it('still hidden with autohide overridden false if dragger_visibility is not VISIBLE', () => {
-    expect(isSplitGrabberVisible(props({ draggerVisibility: 2 }), { autohide: 0 }, { autohide: true })).toBe(
+    expect(isSplitGrabberVisible(props({ draggerVisibility: 2 }), { ...TABLE_CONSTANTS, autohide: 0 })).toBe(
       false
     );
   });
 
   it('still hidden with autohide overridden false while collapsed', () => {
-    expect(isSplitGrabberVisible(props({ collapsed: true }), { autohide: 0 }, { autohide: true })).toBe(
+    expect(isSplitGrabberVisible(props({ collapsed: true }), { ...TABLE_CONSTANTS, autohide: 0 })).toBe(
       false
     );
   });
@@ -393,7 +410,7 @@ function solveNode(
   // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
   const constants =
     (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
-  return { ...emptySolveNode(), path, node: tscnNode, children, constants };
+  return withThemeItems({ ...emptySolveNode(), path, node: tscnNode, children, constants });
 }
 
 /**
@@ -662,7 +679,13 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
         // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
         const constants =
           (n.properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
-        return { ...emptySolveNode(), path, node: n, children: toSolveTree(n.children, path), constants };
+        return withThemeItems({
+          ...emptySolveNode(),
+          path,
+          node: n,
+          children: toSolveTree(n.children, path),
+          constants,
+        });
       });
     }
 
@@ -707,7 +730,13 @@ describe('makeSplitContainerLayout / makeSplitContainerMinimumSize — registere
         // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
         const constants =
           (n.properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
-        return { ...emptySolveNode(), path, node: n, children: toSolveTree(n.children, path), constants };
+        return withThemeItems({
+          ...emptySolveNode(),
+          path,
+          node: n,
+          children: toSolveTree(n.children, path),
+          constants,
+        });
       });
     }
 

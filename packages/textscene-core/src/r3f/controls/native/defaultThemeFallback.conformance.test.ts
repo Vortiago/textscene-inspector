@@ -19,6 +19,7 @@ const MIGRATED_FOLDERS = [
   'colorpickerbutton',
   'hscrollbar',
   'hslider',
+  'hsplitcontainer',
   'label',
   'linkbutton',
   'menubar',
@@ -26,8 +27,10 @@ const MIGRATED_FOLDERS = [
   'optionbutton',
   'panel',
   'panelcontainer',
+  'splitcontainer',
   'vscrollbar',
   'vslider',
+  'vsplitcontainer',
 ].map((folder) => join(SRC_ROOT, 'nodes/2d/ui', folder));
 
 const BUTTON_BASE = join(SRC_ROOT, 'r3f/controls/native/buttonBase.ts');
