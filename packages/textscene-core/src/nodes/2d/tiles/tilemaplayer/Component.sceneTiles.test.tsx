@@ -4,6 +4,7 @@
  * (`pnpm ref:godot --mode 2d`) for the same TileSet, in Godot's y-down pixels.
  */
 import { describe, it, expect } from 'vitest';
+import type * as THREE from 'three';
 import { resolvePathFromObject } from '../../../../r3f/hooks/resolvePathFromObject';
 import {
   TILE_TRANSFORM_FLIP_H,
@@ -78,6 +79,14 @@ describe('TileMapLayer scene tiles', () => {
     ['a source the TileSet lacks', cell(0, 0, 1, { sourceId: 5 })],
   ])('draws no instance for %s', async (_name, placed) => {
     expect(drawnBoxes(await render([placed]))).toEqual([]);
+  });
+
+  it.each([
+    ['a Node2D root', cell(0, 0, 1)],
+    ['a Control root', cell(0, 1, 2)],
+  ])('tints %s by the modulate of the layer it sits in', async (_name, placed) => {
+    const renderer = await render([placed], 'modulate = Color(1, 1, 1, 0.5)');
+    expect((onlyMesh(renderer).material as THREE.MeshBasicMaterial).opacity).toBeCloseTo(0.5, 6);
   });
 
   it('draws no instance for a scene whose loaded root is a plain Node', async () => {

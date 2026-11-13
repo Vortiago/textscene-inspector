@@ -14,8 +14,9 @@ import { useGizmoDrawn } from '../../../r3f/hooks/useGizmoState';
 import { useParentPath2DCurve } from '../../../r3f/contexts/Path2DCurveContext';
 import { node2dGroupProps, node2dGroupSpread } from '../../../r3f/node2dTransform';
 import { node2dZStep, useCanvasKeyOfNode } from '../../../r3f/canvasItemState';
-import { Modulate2DContext, multiplyModulate, useParentModulate } from '../../../r3f/canvasItemModulate';
-import { TextureSampler2DContext, useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { CanvasParentProvider, useDrawnCanvasItem } from '../../../r3f/canvasItemPass/inheritedCanvasState';
+import { useNodePath } from '../../../r3f/contexts/NodePathContext';
+import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import type { Curve2DSampler } from '../../../resources/curves/curve2d';
 import type { PathFollow2DProperties } from './types';
 
@@ -32,13 +33,8 @@ export function PathFollow2D({ node, children }: NodeComponentProps) {
   const sampler = useParentPath2DCurve();
   const gizmoVisible = useGizmoDrawn('selected-only');
 
-  const parentModulate = useParentModulate();
-  const modulate = useMemo(
-    () => multiplyModulate(parentModulate, props.modulate),
-    [parentModulate, props.modulate]
-  );
-
-  const textureSampler = useNode2DTextureSampler(props);
+  const path = useNodePath();
+  const { handedDown } = useDrawnCanvasItem(node, path, useSceneResources());
 
   const followTransform = useMemo(() => computeFollowTransform(sampler, props), [sampler, props]);
 
@@ -61,9 +57,7 @@ export function PathFollow2D({ node, children }: NodeComponentProps) {
     // nearest enclosing group, and a bare one sinks the dot behind the canvas.
     <group name={node.name} {...followTransform} visible={props.visible !== false} renderOrder={renderOrder}>
       {dot}
-      <Modulate2DContext.Provider value={modulate}>
-        <TextureSampler2DContext.Provider value={textureSampler}>{children}</TextureSampler2DContext.Provider>
-      </Modulate2DContext.Provider>
+      <CanvasParentProvider value={handedDown}>{children}</CanvasParentProvider>
     </group>
   );
 }

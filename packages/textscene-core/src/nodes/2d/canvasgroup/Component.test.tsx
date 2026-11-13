@@ -10,7 +10,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { CanvasGroup } from './Component';
 import { parseCanvasGroup } from './parser';
-import { useParentModulate } from '../../../r3f/canvasItemModulate';
+import { useEnclosingCanvasState } from '../../../r3f/canvasItemPass/inheritedCanvasState';
 import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../../../r3f/canvasPaintOrder';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
@@ -62,7 +62,7 @@ function ChildSquare({ keyed = CHILD_KEY, x = 0 }: { keyed?: number; x?: number 
 
 /** Parks the modulate the children inherit on a mesh's `userData`. */
 function ModulateReader() {
-  return <object3D name="modulate-reader" userData={{ modulate: useParentModulate() }} />;
+  return <object3D name="modulate-reader" userData={{ modulate: useEnclosingCanvasState().modulate }} />;
 }
 
 const MATERIAL: TscnInternalResource = { id: 'Add', type: 'CanvasItemMaterial', data: { blend_mode: '1' } };

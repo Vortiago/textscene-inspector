@@ -1,7 +1,7 @@
 /**
- * Where a canvas item sits for Godot's light cull test: its accumulated `z_final` and the layer of
- * its canvas. Neither is a property of the node alone, so both come down the tree as contexts,
- * which only the light pass reads.
+ * Where a canvas item sits for Godot's light cull test: its accumulated `z_final`, which the canvas
+ * item pass folds with `accumulateCanvasItemZ`, and the layer of its canvas, which comes down the
+ * tree as a context.
  */
 /*
  * Portions ported from Godot Engine (MIT).
@@ -33,22 +33,6 @@ export function accumulateCanvasItemZ(
 /** A z held inside the canvas z window, as `_cull_canvas_item` clamps a relative sum. */
 export function clampCanvasItemZ(z: number): number {
   return clamp(z, CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX);
-}
-
-const EffectiveZContext = createContext<number>(0);
-EffectiveZContext.displayName = 'EffectiveZContext';
-
-/**
- * The accumulated `z_final` of the enclosing canvas item. 0 outside a 2D stage,
- * which is both the world canvas's starting value and what every 3D consumer
- * and bare test mount reads.
- */
-export function useEffectiveZ(): number {
-  return useContext(EffectiveZContext);
-}
-
-export function EffectiveZProvider({ value, children }: { value: number; children: ReactNode }) {
-  return <EffectiveZContext.Provider value={value}>{children}</EffectiveZContext.Provider>;
 }
 
 const CanvasLayerIndexContext = createContext<number>(WORLD_CANVAS_LAYER);

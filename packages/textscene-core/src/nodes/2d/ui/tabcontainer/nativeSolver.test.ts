@@ -24,7 +24,6 @@ import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import type { TabBarProperties } from '../tabbar/types';
 import type { FontResource } from '../../../../resources/fonts/font/types';
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
-import { ROOT_TEXTURE_SAMPLER } from '../../../../r3f/canvasItemTextureSampler';
 import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
 /** Panel's `panel` box in the default theme table at scale 1 (`default_theme.cpp:134`). */
@@ -114,13 +113,7 @@ describe('deriveTabContainerTabs', () => {
     const promoted: SolveNode = {
       ...page('Promoted'),
       path: 'Holder/Promoted',
-      skippedAncestors: {
-        transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-        modulate: { r: 1, g: 1, b: 1, a: 1 },
-        z: [],
-        sampler: ROOT_TEXTURE_SAMPLER,
-        material: { kind: 'none' },
-      },
+      skippedTransform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
     };
     const tabs = deriveTabContainerTabs(
       { children: [page('General'), promoted, page('Advanced')] },

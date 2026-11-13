@@ -2,7 +2,7 @@
  * `SpriteBase3D::_get_color_accum()` (`sprite_3d.cpp:36-52`): a sprite's drawn
  * colour is its parent's accumulated colour × its own modulate, all four channels,
  * used as the vertex colour at `:124`. `parent_sprite` is the immediate parent only
- * (`sprite_3d.cpp:75`), so this is not the cascading `Modulate2DContext` shape.
+ * (`sprite_3d.cpp:75`), so this is not the cascading modulate of the canvas item chain.
  */
 
 import { createContext, useContext, useMemo } from 'react';
