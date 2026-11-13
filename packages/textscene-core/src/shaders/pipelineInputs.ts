@@ -28,8 +28,9 @@ export interface SunShadowInputs {
   colour: THREE.Texture;
   /**
    * Whether `WebGLRenderer` drew the atlas, so its rows count from the bottom. three's node builder
-   * turns the rows of every render target it reads (r187 `TextureNode.js:412-432`), which suits a
-   * target its own WebGL 2 backend draws, so the lookup turns them back.
+   * turns the rows of every texture marked as a render target's (r187 `TextureNode.js:412-436`),
+   * which suits a target its own WebGL 2 backend draws, so the lookup turns the depth's back. The
+   * colour copy is unmarked, so three turns none of its rows.
    */
   rowsFromBottom: boolean;
 }
