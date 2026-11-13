@@ -1,6 +1,6 @@
 /**
- * The instruction table as the parser asks it: a row by id, and the error for a row the translator
- * does not translate yet, which names the issue that owns the row.
+ * The instruction table as the parser asks it: a row by id, and the error for a row the transpiler
+ * does not transpile yet, which names the issue that owns the row.
  */
 
 import { INSTRUCTION_TABLE, type InstructionRow } from './instructionTable.generated.js';
@@ -50,6 +50,6 @@ export const KEYWORD_TOKENS: ReadonlyMap<string, string> = new Map(
 );
 
 /** The refusal of `row`, named `name` when the text names less than one row, as `sin` for `sin(float)`. */
-export function notTranslated(row: InstructionRow, line: number, name = row.id): ShadingLanguageError {
-  return new ShadingLanguageError(`'${name}' is not translated yet (${row.owner})`, line);
+export function notTranspiled(row: InstructionRow, line: number, name = row.id): ShadingLanguageError {
+  return new ShadingLanguageError(`'${name}' is not transpiled yet (${row.owner})`, line);
 }

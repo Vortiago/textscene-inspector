@@ -2,7 +2,7 @@
 /**
  * Writes the instruction table of Godot 4.6.3's shading language from Godot's source
  * (scripts/godotSource.mjs): `pnpm godot:shader-language [--check] [--godot-source <dir>]`. It
- * writes the committed rows the translator reads, the readable table with each row's state, and
+ * writes the committed rows the transpiler reads, the readable table with each row's state, and
  * the user guide, whose values come from Godot's probe record. `--check` writes nothing and exits
  * 1 on a stale file.
  */

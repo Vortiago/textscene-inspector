@@ -9,7 +9,7 @@ export interface InstructionRow {
   readonly family: string;
   /** Godot's `file:line` that defines it. */
   readonly source: string;
-  /** The issue that translates it, which an error for an open row names. */
+  /** The issue that transpiles it, which an error for an open row names. */
   readonly owner: string;
   /** Godot's token for a keyword. */
   readonly token?: string;

@@ -1,13 +1,13 @@
 # Instruction table
 
-The shader package translates Godot 4.6.3's shading language instruction by instruction. This
+The shader package transpiles Godot 4.6.3's shading language instruction by instruction. This
 table lists every instruction, read from Godot's source by `pnpm godot:shader-language`. Do
 not edit it by hand.
 
-A row is translated when a probe names it. The probe's record holds Godot's own answers, and the
-real-GL test checks the translation against them. An open row names the issue that translates it.
+A row is transpiled when a probe names it. The probe's record holds Godot's own answers, and the
+real-GL test checks the transpilation against them. An open row names the issue that transpiles it.
 
-68 of 1889 instructions translated.
+68 of 1889 instructions transpiled.
 
 ## data type
 
@@ -51,7 +51,7 @@ real-GL test checks the translation against them. An open row names the issue th
 
 | Instruction | State | Godot source |
 | --- | --- | --- |
-| `float literal` | translated (`literal-0`, `literal-1`, `literal-2`, `literal-3`, `literal-4`, `literal-5`, `literal-unfolded`, `literal-overflow`) | `servers/rendering/shader_language.h:59` |
+| `float literal` | transpiled (`literal-0`, `literal-1`, `literal-2`, `literal-3`, `literal-4`, `literal-5`, `literal-unfolded`, `literal-overflow`) | `servers/rendering/shader_language.h:59` |
 | `int literal` | open, #1823 | `servers/rendering/shader_language.h:60` |
 | `uint literal` | open, #1823 | `servers/rendering/shader_language.h:61` |
 | `true` | open, #1823 | `servers/rendering/shader_language.cpp:284` |
@@ -214,10 +214,10 @@ real-GL test checks the translation against them. An open row names the issue th
 | `OP_NEGATE(uvec2)` | open, #1823 | `servers/rendering/shader_language.cpp:1614` |
 | `OP_NEGATE(uvec3)` | open, #1823 | `servers/rendering/shader_language.cpp:1614` |
 | `OP_NEGATE(uvec4)` | open, #1823 | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(float)` | translated (`negate-float`) | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(vec2)` | translated (`negate-vec2`) | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(vec3)` | translated (`negate-vec3`) | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(vec4)` | translated (`negate-vec4`) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(float)` | transpiled (`negate-float`) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(vec2)` | transpiled (`negate-vec2`) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(vec3)` | transpiled (`negate-vec3`) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(vec4)` | transpiled (`negate-vec4`) | `servers/rendering/shader_language.cpp:1614` |
 | `OP_ADD(int,int)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(int,ivec2)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(int,ivec3)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
@@ -238,19 +238,19 @@ real-GL test checks the translation against them. An open row names the issue th
 | `OP_ADD(uvec3,uvec3)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(uvec4,uint)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(uvec4,uvec4)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,float)` | translated (`add-float-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,vec2)` | translated (`add-float-vec2`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,vec3)` | translated (`add-float-vec3`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,vec4)` | translated (`add-float-vec4`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,float)` | transpiled (`add-float-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,vec2)` | transpiled (`add-float-vec2`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,vec3)` | transpiled (`add-float-vec3`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,vec4)` | transpiled (`add-float-vec4`) | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(float,mat2)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(float,mat3)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(float,mat4)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(vec2,float)` | translated (`add-vec2-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(vec2,vec2)` | translated (`add-vec2-vec2`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(vec3,float)` | translated (`add-vec3-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(vec3,vec3)` | translated (`add-vec3-vec3`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(vec4,float)` | translated (`add-vec4-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(vec4,vec4)` | translated (`add-vec4-vec4`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(vec2,float)` | transpiled (`add-vec2-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(vec2,vec2)` | transpiled (`add-vec2-vec2`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(vec3,float)` | transpiled (`add-vec3-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(vec3,vec3)` | transpiled (`add-vec3-vec3`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(vec4,float)` | transpiled (`add-vec4-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(vec4,vec4)` | transpiled (`add-vec4-vec4`) | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(mat2,float)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(mat2,mat2)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(mat3,float)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
@@ -277,19 +277,19 @@ real-GL test checks the translation against them. An open row names the issue th
 | `OP_SUB(uvec3,uvec3)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(uvec4,uint)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(uvec4,uvec4)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,float)` | translated (`sub-float-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,vec2)` | translated (`sub-float-vec2`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,vec3)` | translated (`sub-float-vec3`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(float,vec4)` | translated (`sub-float-vec4`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,float)` | transpiled (`sub-float-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,vec2)` | transpiled (`sub-float-vec2`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,vec3)` | transpiled (`sub-float-vec3`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(float,vec4)` | transpiled (`sub-float-vec4`) | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(float,mat2)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(float,mat3)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(float,mat4)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(vec2,float)` | translated (`sub-vec2-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(vec2,vec2)` | translated (`sub-vec2-vec2`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(vec3,float)` | translated (`sub-vec3-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(vec3,vec3)` | translated (`sub-vec3-vec3`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(vec4,float)` | translated (`sub-vec4-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_SUB(vec4,vec4)` | translated (`sub-vec4-vec4`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(vec2,float)` | transpiled (`sub-vec2-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(vec2,vec2)` | transpiled (`sub-vec2-vec2`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(vec3,float)` | transpiled (`sub-vec3-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(vec3,vec3)` | transpiled (`sub-vec3-vec3`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(vec4,float)` | transpiled (`sub-vec4-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_SUB(vec4,vec4)` | transpiled (`sub-vec4-vec4`) | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(mat2,float)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(mat2,mat2)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_SUB(mat3,float)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
@@ -316,21 +316,21 @@ real-GL test checks the translation against them. An open row names the issue th
 | `OP_MUL(uvec3,uvec3)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(uvec4,uint)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(uvec4,uvec4)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,float)` | translated (`mul-float-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,vec2)` | translated (`mul-float-vec2`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,vec3)` | translated (`mul-float-vec3`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(float,vec4)` | translated (`mul-float-vec4`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,float)` | transpiled (`mul-float-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,vec2)` | transpiled (`mul-float-vec2`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,vec3)` | transpiled (`mul-float-vec3`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(float,vec4)` | transpiled (`mul-float-vec4`) | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(float,mat2)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(float,mat3)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(float,mat4)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec2,float)` | translated (`mul-vec2-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec2,vec2)` | translated (`mul-vec2-vec2`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec2,float)` | transpiled (`mul-vec2-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec2,vec2)` | transpiled (`mul-vec2-vec2`) | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(vec2,mat2)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec3,float)` | translated (`mul-vec3-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec3,vec3)` | translated (`mul-vec3-vec3`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec3,float)` | transpiled (`mul-vec3-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec3,vec3)` | transpiled (`mul-vec3-vec3`) | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(vec3,mat3)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec4,float)` | translated (`mul-vec4-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(vec4,vec4)` | translated (`mul-vec4-vec4`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec4,float)` | transpiled (`mul-vec4-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(vec4,vec4)` | transpiled (`mul-vec4-vec4`) | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(vec4,mat4)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat2,float)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat2,vec2)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
@@ -361,19 +361,19 @@ real-GL test checks the translation against them. An open row names the issue th
 | `OP_DIV(uvec3,uvec3)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(uvec4,uint)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(uvec4,uvec4)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,float)` | translated (`div-float-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,vec2)` | translated (`div-float-vec2`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,vec3)` | translated (`div-float-vec3`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(float,vec4)` | translated (`div-float-vec4`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,float)` | transpiled (`div-float-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,vec2)` | transpiled (`div-float-vec2`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,vec3)` | transpiled (`div-float-vec3`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(float,vec4)` | transpiled (`div-float-vec4`) | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(float,mat2)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(float,mat3)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(float,mat4)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(vec2,float)` | translated (`div-vec2-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(vec2,vec2)` | translated (`div-vec2-vec2`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(vec3,float)` | translated (`div-vec3-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(vec3,vec3)` | translated (`div-vec3-vec3`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(vec4,float)` | translated (`div-vec4-float`) | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(vec4,vec4)` | translated (`div-vec4-vec4`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(vec2,float)` | transpiled (`div-vec2-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(vec2,vec2)` | transpiled (`div-vec2-vec2`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(vec3,float)` | transpiled (`div-vec3-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(vec3,vec3)` | transpiled (`div-vec3-vec3`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(vec4,float)` | transpiled (`div-vec4-float`) | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(vec4,vec4)` | transpiled (`div-vec4-vec4`) | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(mat2,float)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(mat2,mat2)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(mat3,float)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |
@@ -793,20 +793,20 @@ real-GL test checks the translation against them. An open row names the issue th
 | `bvec4(bool,bvec3)` | open, #1823 | `servers/rendering/shader_language.cpp:2433` |
 | `bvec4(bvec3,bool)` | open, #1823 | `servers/rendering/shader_language.cpp:2434` |
 | `bvec4(bvec2,bvec2)` | open, #1823 | `servers/rendering/shader_language.cpp:2435` |
-| `vec2(float)` | translated (`construct-vec2-float`) | `servers/rendering/shader_language.cpp:2437` |
-| `vec2(float,float)` | translated (`construct-vec2-float-float`) | `servers/rendering/shader_language.cpp:2438` |
-| `vec3(float)` | translated (`construct-vec3-float`) | `servers/rendering/shader_language.cpp:2439` |
-| `vec3(float,float,float)` | translated (`construct-vec3-float-float-float`) | `servers/rendering/shader_language.cpp:2440` |
-| `vec3(vec2,float)` | translated (`construct-vec3-vec2-float`) | `servers/rendering/shader_language.cpp:2441` |
-| `vec3(float,vec2)` | translated (`construct-vec3-float-vec2`) | `servers/rendering/shader_language.cpp:2442` |
-| `vec4(float)` | translated (`construct-vec4-float`) | `servers/rendering/shader_language.cpp:2443` |
-| `vec4(float,float,float,float)` | translated (`construct-vec4-float-float-float-float`) | `servers/rendering/shader_language.cpp:2444` |
-| `vec4(float,vec2,float)` | translated (`construct-vec4-float-vec2-float`) | `servers/rendering/shader_language.cpp:2445` |
-| `vec4(vec2,float,float)` | translated (`construct-vec4-vec2-float-float`) | `servers/rendering/shader_language.cpp:2446` |
-| `vec4(float,float,vec2)` | translated (`construct-vec4-float-float-vec2`) | `servers/rendering/shader_language.cpp:2447` |
-| `vec4(float,vec3)` | translated (`construct-vec4-float-vec3`) | `servers/rendering/shader_language.cpp:2448` |
-| `vec4(vec3,float)` | translated (`construct-vec4-vec3-float`) | `servers/rendering/shader_language.cpp:2449` |
-| `vec4(vec2,vec2)` | translated (`construct-vec4-vec2-vec2`) | `servers/rendering/shader_language.cpp:2450` |
+| `vec2(float)` | transpiled (`construct-vec2-float`) | `servers/rendering/shader_language.cpp:2437` |
+| `vec2(float,float)` | transpiled (`construct-vec2-float-float`) | `servers/rendering/shader_language.cpp:2438` |
+| `vec3(float)` | transpiled (`construct-vec3-float`) | `servers/rendering/shader_language.cpp:2439` |
+| `vec3(float,float,float)` | transpiled (`construct-vec3-float-float-float`) | `servers/rendering/shader_language.cpp:2440` |
+| `vec3(vec2,float)` | transpiled (`construct-vec3-vec2-float`) | `servers/rendering/shader_language.cpp:2441` |
+| `vec3(float,vec2)` | transpiled (`construct-vec3-float-vec2`) | `servers/rendering/shader_language.cpp:2442` |
+| `vec4(float)` | transpiled (`construct-vec4-float`) | `servers/rendering/shader_language.cpp:2443` |
+| `vec4(float,float,float,float)` | transpiled (`construct-vec4-float-float-float-float`) | `servers/rendering/shader_language.cpp:2444` |
+| `vec4(float,vec2,float)` | transpiled (`construct-vec4-float-vec2-float`) | `servers/rendering/shader_language.cpp:2445` |
+| `vec4(vec2,float,float)` | transpiled (`construct-vec4-vec2-float-float`) | `servers/rendering/shader_language.cpp:2446` |
+| `vec4(float,float,vec2)` | transpiled (`construct-vec4-float-float-vec2`) | `servers/rendering/shader_language.cpp:2447` |
+| `vec4(float,vec3)` | transpiled (`construct-vec4-float-vec3`) | `servers/rendering/shader_language.cpp:2448` |
+| `vec4(vec3,float)` | transpiled (`construct-vec4-vec3-float`) | `servers/rendering/shader_language.cpp:2449` |
+| `vec4(vec2,vec2)` | transpiled (`construct-vec4-vec2-vec2`) | `servers/rendering/shader_language.cpp:2450` |
 | `ivec2(int)` | open, #1823 | `servers/rendering/shader_language.cpp:2452` |
 | `ivec2(int,int)` | open, #1823 | `servers/rendering/shader_language.cpp:2453` |
 | `ivec3(int)` | open, #1823 | `servers/rendering/shader_language.cpp:2454` |
@@ -1554,9 +1554,9 @@ real-GL test checks the translation against them. An open row names the issue th
 | `uvec2.xy` | open, #1823 | `servers/rendering/shader_language.cpp:6877` |
 | `uvec2.rg` | open, #1823 | `servers/rendering/shader_language.cpp:6877` |
 | `uvec2.st` | open, #1823 | `servers/rendering/shader_language.cpp:6877` |
-| `vec2.xy` | translated (`swizzle-vec2-xy`) | `servers/rendering/shader_language.cpp:6877` |
-| `vec2.rg` | translated (`swizzle-vec2-rg`) | `servers/rendering/shader_language.cpp:6877` |
-| `vec2.st` | translated (`swizzle-vec2-st`) | `servers/rendering/shader_language.cpp:6877` |
+| `vec2.xy` | transpiled (`swizzle-vec2-xy`) | `servers/rendering/shader_language.cpp:6877` |
+| `vec2.rg` | transpiled (`swizzle-vec2-rg`) | `servers/rendering/shader_language.cpp:6877` |
+| `vec2.st` | transpiled (`swizzle-vec2-st`) | `servers/rendering/shader_language.cpp:6877` |
 | `bvec3.xyz` | open, #1823 | `servers/rendering/shader_language.cpp:6941` |
 | `bvec3.rgb` | open, #1823 | `servers/rendering/shader_language.cpp:6941` |
 | `bvec3.stp` | open, #1823 | `servers/rendering/shader_language.cpp:6941` |
@@ -1566,9 +1566,9 @@ real-GL test checks the translation against them. An open row names the issue th
 | `uvec3.xyz` | open, #1823 | `servers/rendering/shader_language.cpp:6941` |
 | `uvec3.rgb` | open, #1823 | `servers/rendering/shader_language.cpp:6941` |
 | `uvec3.stp` | open, #1823 | `servers/rendering/shader_language.cpp:6941` |
-| `vec3.xyz` | translated (`swizzle-vec3-xyz`) | `servers/rendering/shader_language.cpp:6941` |
-| `vec3.rgb` | translated (`swizzle-vec3-rgb`) | `servers/rendering/shader_language.cpp:6941` |
-| `vec3.stp` | translated (`swizzle-vec3-stp`) | `servers/rendering/shader_language.cpp:6941` |
+| `vec3.xyz` | transpiled (`swizzle-vec3-xyz`) | `servers/rendering/shader_language.cpp:6941` |
+| `vec3.rgb` | transpiled (`swizzle-vec3-rgb`) | `servers/rendering/shader_language.cpp:6941` |
+| `vec3.stp` | transpiled (`swizzle-vec3-stp`) | `servers/rendering/shader_language.cpp:6941` |
 | `bvec4.xyzw` | open, #1823 | `servers/rendering/shader_language.cpp:7008` |
 | `bvec4.rgba` | open, #1823 | `servers/rendering/shader_language.cpp:7008` |
 | `bvec4.stpq` | open, #1823 | `servers/rendering/shader_language.cpp:7008` |
@@ -1578,9 +1578,9 @@ real-GL test checks the translation against them. An open row names the issue th
 | `uvec4.xyzw` | open, #1823 | `servers/rendering/shader_language.cpp:7008` |
 | `uvec4.rgba` | open, #1823 | `servers/rendering/shader_language.cpp:7008` |
 | `uvec4.stpq` | open, #1823 | `servers/rendering/shader_language.cpp:7008` |
-| `vec4.xyzw` | translated (`swizzle-vec4-xyzw`) | `servers/rendering/shader_language.cpp:7008` |
-| `vec4.rgba` | translated (`swizzle-vec4-rgba`) | `servers/rendering/shader_language.cpp:7008` |
-| `vec4.stpq` | translated (`swizzle-vec4-stpq`) | `servers/rendering/shader_language.cpp:7008` |
+| `vec4.xyzw` | transpiled (`swizzle-vec4-xyzw`) | `servers/rendering/shader_language.cpp:7008` |
+| `vec4.rgba` | transpiled (`swizzle-vec4-rgba`) | `servers/rendering/shader_language.cpp:7008` |
+| `vec4.stpq` | transpiled (`swizzle-vec4-stpq`) | `servers/rendering/shader_language.cpp:7008` |
 
 ## built-in (read only)
 

@@ -1,5 +1,5 @@
 /**
- * The shader module (ADR-0072, ADR-0076): Godot's shading language translated to TSL nodes for a
+ * The shader module (ADR-0072, ADR-0076): Godot's shading language transpiled to TSL nodes for a
  * three.js `WebGLRenderer`, with no React. `@textscene/three-godot-shaders` publishes this entry, and the
  * renderer bundles it.
  *
@@ -15,11 +15,11 @@
  * - The registration of a light node is page-wide, because three keeps the node class on the light
  *   class (r187 `src/lights/Light.js:18-22`). It happens in an install call, never on import.
  * - The lighting model reads only the surface outputs, the values Godot's `fragment()` writes.
- * - The translator drops nothing: a text with an instruction it does not translate yet throws
+ * - The transpiler drops nothing: a text with an instruction it does not transpile yet throws
  *   `ShadingLanguageError`, which names the row and the issue that owns it.
  */
 
 export { installNodesHandler, type NodeOutput } from './nodesHandler.js';
 export { ShadingLanguageError } from './language/shadingLanguageError.js';
-export { translateShadingLanguage, type TranslatedShader } from './language/translate.js';
-export type { TranslatedFunction } from './language/emitter.js';
+export { transpileShadingLanguage, type TranspiledShader } from './language/transpile.js';
+export type { TranspiledFunction } from './language/emitter.js';

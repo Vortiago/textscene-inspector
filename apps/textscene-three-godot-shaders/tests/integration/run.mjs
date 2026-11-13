@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * The integration layer of the shader package: `pnpm test:shaders:gpu`. Each probe's translated
+ * The integration layer of the shader package: `pnpm test:shaders:gpu`. Each probe's transpiled
  * function runs on a real GL context in the browser that measures against Godot, from the packed
  * tarball and three.js alone, and its result bits are compared with Godot's record. The run
- * fails when a translated row has no record or a probe of it fails, and it prints the count of
- * translated instructions.
+ * fails when a transpiled row has no record or a probe of it fails, and it prints the count of
+ * transpiled instructions.
  */
 
 import { readFileSync } from 'node:fs';
@@ -48,9 +48,9 @@ async function main() {
       return results;
     }
   );
-  const translated = new Set(PROBES.flatMap((probe) => probe.rows));
+  const transpiled = new Set(PROBES.flatMap((probe) => probe.rows));
   const failures = coverageFailures(PROBES, verdicts);
-  const count = `${translated.size} of ${INSTRUCTION_TABLE.length} instructions translated`;
+  const count = `${transpiled.size} of ${INSTRUCTION_TABLE.length} instructions transpiled`;
   const table = verdictTable(verdicts);
   console.log(table);
   console.log(

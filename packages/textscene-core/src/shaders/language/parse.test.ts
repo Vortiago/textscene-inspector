@@ -112,7 +112,7 @@ describe('parse', () => {
 
   it('refuses an overload, which a map of functions by name cannot hold', () => {
     expect(refusal('float f(float a) { return a; }\nvec2 f(vec2 a) { return a; }')).toThrow(
-      "An overload of 'f' is not translated yet (#1825)"
+      "An overload of 'f' is not transpiled yet (#1825)"
     );
   });
 
@@ -125,21 +125,21 @@ describe('parse', () => {
   });
 
   it.each([
-    ['shader_type canvas_item;', "'shader_type' is not translated yet (#1794)"],
-    ['uniform float u;', "'uniform' is not translated yet (#1829)"],
-    ['int f() { return 1; }', "'int' is not translated yet (#1823)"],
-    ['float f() { return 1; }', "'int literal' is not translated yet (#1823)"],
-    ['float f(float a) { if (a) {} return a; }', "'if' is not translated yet (#1824)"],
+    ['shader_type canvas_item;', "'shader_type' is not transpiled yet (#1794)"],
+    ['uniform float u;', "'uniform' is not transpiled yet (#1829)"],
+    ['int f() { return 1; }', "'int' is not transpiled yet (#1823)"],
+    ['float f() { return 1; }', "'int literal' is not transpiled yet (#1823)"],
+    ['float f(float a) { if (a) {} return a; }', "'if' is not transpiled yet (#1824)"],
     [
       'float f(float a) { float b = a; return b; }',
-      "'NODE_TYPE_VARIABLE_DECLARATION' is not translated yet (#1824)",
+      "'NODE_TYPE_VARIABLE_DECLARATION' is not transpiled yet (#1824)",
     ],
-    ['float f(out float a) { return a; }', "'out' is not translated yet (#1825)"],
-    ['float f(float a) { return sin(a); }', "'sin(float)' is not translated yet (#1826)"],
-    ['float f(float a) { return a % a; }', "'OP_MOD' is not translated yet (#1823)"],
-    ['float f(float a) { return a < a ? a : a; }', "'OP_LESS(float,float)' is not translated yet (#1823)"],
-    ['float f(float a) { return f(a); }', "'OP_CALL' is not translated yet (#1825)"],
-    ['float f() { return TIME; }', "'TIME' is not translated yet (#1794)"],
+    ['float f(out float a) { return a; }', "'out' is not transpiled yet (#1825)"],
+    ['float f(float a) { return sin(a); }', "'sin(float)' is not transpiled yet (#1826)"],
+    ['float f(float a) { return a % a; }', "'OP_MOD' is not transpiled yet (#1823)"],
+    ['float f(float a) { return a < a ? a : a; }', "'OP_LESS(float,float)' is not transpiled yet (#1823)"],
+    ['float f(float a) { return f(a); }', "'OP_CALL' is not transpiled yet (#1825)"],
+    ['float f() { return TIME; }', "'TIME' is not transpiled yet (#1794)"],
   ])('names the issue that owns %s', (source, message) => {
     expect(refusal(source)).toThrow(message);
   });
