@@ -47,11 +47,14 @@ function writePng(path, { width, height }, pixels) {
   writeFileSync(path, PNG.sync.write(png));
 }
 
-/** The guide image's staleness against a render: nothing when it matches within the tolerance. */
+/**
+ * The guide image's staleness against a render: nothing when every byte matches. A guide image is
+ * a baseline, so it takes no tolerance. The 2/255 tolerance is for Godot against the translation.
+ */
 function staleImage(path, pixels) {
   if (!existsSync(path)) return `${path} is missing`;
-  const { overTolerance } = compareImages(PNG.sync.read(readFileSync(path)).data, pixels);
-  return overTolerance === 0 ? undefined : `${path} differs from the render in ${overTolerance} pixels`;
+  const { maxSteps } = compareImages(PNG.sync.read(readFileSync(path)).data, pixels);
+  return maxSteps === 0 ? undefined : `${path} differs from the render by up to ${maxSteps}/255`;
 }
 
 function resultTable(results) {
