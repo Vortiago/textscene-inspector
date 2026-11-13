@@ -2,7 +2,7 @@
  * The particles of a GPUParticles3D: the pose the GPU steps reach (`settle.ts`), copied into the
  * draw order and the alignment of the node (`instanceCopy.ts`), drawn once for each draw pass,
  * under the node, as the server draws the passes over one particle buffer. With `trail_enabled` and
- * bind poses, each particle draws one section for each pose (`TrailMesh.tsx`).
+ * bind poses, each particle draws one section for each pose (`ParticleMesh.tsx`).
  */
 
 import { useMemo } from 'react';
@@ -11,7 +11,6 @@ import type { GpuMaterial } from '../../../shared/gpuparticles/emitter';
 import { copyInstances, readsCamera } from '../../../shared/gpuparticles/instanceCopy';
 import { gpuSettleSeconds, settleGpuParticles } from '../../../shared/gpuparticles/settle';
 import { ParticleMesh } from '../../../shared/particles3d/ParticleMesh';
-import { TrailMesh } from '../../../shared/particles3d/TrailMesh';
 import { useCameraAxes } from '../../../shared/particles3d/useCameraAxes';
 import type { GPUParticles3DProperties } from './types';
 import { useTrailBindPoses } from './useTrailBindPoses';
@@ -60,13 +59,9 @@ export function ParticleEmitter({ properties, material, emissionTransform }: Par
   if (buffer.length === 0) return null;
   return (
     <>
-      {drawPasses.map((mesh, pass) =>
-        sections === undefined ? (
-          <ParticleMesh key={pass} mesh={mesh} buffer={buffer} />
-        ) : (
-          <TrailMesh key={pass} mesh={mesh} buffer={buffer} sections={sections} />
-        )
-      )}
+      {drawPasses.map((mesh, pass) => (
+        <ParticleMesh key={pass} mesh={mesh} buffer={buffer} sections={sections} />
+      ))}
     </>
   );
 }
