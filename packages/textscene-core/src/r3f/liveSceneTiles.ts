@@ -117,7 +117,7 @@ interface JudgedScene extends JudgedRoot {
 }
 
 /** The root kind of a merged instance root, or null for one that is no CanvasItem. */
-export function sceneRootKindOf(rootType: string): SceneRootKind | null {
+function sceneRootKindOf(rootType: string): SceneRootKind | null {
   if (isControlType(rootType)) return 'control';
   if (descendsFromClass(rootType, 'Node2D')) return 'node2d';
   return null;
