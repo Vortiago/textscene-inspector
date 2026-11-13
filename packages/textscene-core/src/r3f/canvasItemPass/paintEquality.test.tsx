@@ -187,9 +187,9 @@ describe('both walks read the paint pass for every node they draw', () => {
     const controls = [...controlNodes.values()].filter((node) => paint.has(node.path));
     const controlFound = controls.map((node) => [
       node.path,
-      node.paintSequence,
-      node.backSequence,
-      node.layerSequence,
+      node.paint.own,
+      node.paint.back.base,
+      node.paint.layer,
     ]);
     const controlPass = controls.map((node) => {
       const own = paint.get(node.path)!;

@@ -98,7 +98,7 @@ import {
 } from './solveTree';
 import { liveScenePassResults } from '../../liveScenePass';
 import { isTopLevelItem, WHOLE_CANVAS_RANGE, type PaintRange } from '../../canvasPaintOrder';
-import { canvasPaintPassFrom } from '../../canvasItemPass/canvasItemPaint';
+import { canvasPaintPassFrom, WHOLE_CANVAS_PAINT } from '../../canvasItemPass/canvasItemPaint';
 import {
   builtControlIcons,
   resolveStyleBoxes,
@@ -676,11 +676,8 @@ function buildForest(
       path,
       node: withListedFolders(window),
       children: [],
-      paintRange: WHOLE_CANVAS_RANGE,
-      behindRanges: [],
-      paintSequence: WHOLE_CANVAS_RANGE.base,
-      backSequence: WHOLE_CANVAS_RANGE.base,
-      layerSequence: WHOLE_CANVAS_RANGE.base,
+      // A Window draws its chrome on its own canvas, under its content.
+      paint: { ...WHOLE_CANVAS_PAINT, back: { base: WHOLE_CANVAS_RANGE.base, size: 0 } },
       skippedTransform: null,
       parentVisibleInTree: true,
       // A Window is no CanvasItem, so its content starts a chain.
@@ -811,11 +808,7 @@ function buildForest(
       path,
       node: withListedFolders(live),
       children: isBoundary ? [...children, ...childHoisted] : children,
-      paintRange: paint.range,
-      behindRanges: paint.behind,
-      paintSequence: paint.own,
-      backSequence: paint.back.base,
-      layerSequence: paint.layer,
+      paint,
       // A CanvasLayer draws on its own canvas (`canvas_item.cpp:263-267`), and a
       // top_level Control's item parents at the canvas (`canvas_item.cpp:565-571`),
       // so no skipped ancestor composes onto either. A merely hoisted Control's

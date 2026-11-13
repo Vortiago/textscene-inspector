@@ -7,10 +7,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
-import { NodeDispatcher } from '../../../r3f/NodeDispatcher';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
-import { SceneStack } from '../../../r3f/testing/SceneStack';
 import { settleLoads } from '../../../r3f/testing/settleLoads';
 import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { compareKeys, paintKey } from '../../../r3f/testing/paintOrder';
@@ -18,6 +16,8 @@ import { ViewportPassStack } from './viewportPasses.testkit';
 
 import '../../../r3f/nodes/index';
 import '../../../r3f/controls/index';
+import { DispatchedScene } from '../../../r3f/testing/DispatchedScene';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 
 const PORTAL_SCENE = 'View::offscreen';
 
@@ -27,11 +27,12 @@ async function portalSceneOf(tscn: string): Promise<THREE.Object3D> {
   const fake = createFakeResourceLoader();
   const captured: { current: THREE.WebGLRenderer | null } = { current: null };
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <ViewportPassStack captured={captured}>
-        <NodeDispatcher nodes={parsed.nodes} />
-      </ViewportPassStack>
-    </SceneStack>
+    <DispatchedScene
+      sceneGraph={createSceneGraphFromTscnScene(parsed)}
+      workspace="2d"
+      loader={fake.loader}
+      around={(nodes) => <ViewportPassStack captured={captured}>{nodes}</ViewportPassStack>}
+    />
   );
   await settleLoads();
   let portal: THREE.Object3D | undefined;

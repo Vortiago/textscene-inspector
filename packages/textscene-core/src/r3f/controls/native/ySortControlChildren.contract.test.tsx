@@ -7,8 +7,6 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ControlCanvasLayer } from './ControlCanvasLayer';
-import { NodeDispatcher } from '../../NodeDispatcher';
-import { ControlYSortProvider } from '../../contexts/ControlYSortContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../../../parser/TscnParser';
 import { compareKeys, paintKey } from '../../testing/paintOrder';
@@ -16,6 +14,8 @@ import { SceneStack } from '../../testing/SceneStack';
 
 import '../../nodes/index';
 import '../index';
+import { DispatchedScene } from '../../testing/DispatchedScene';
+import { createSceneGraphFromTscnScene } from '../../../core/SceneGraph.testkit';
 
 /** A 40 px square ColorRect whose top edge sits at `top`. */
 function rect(name: string, top: number, extra = ''): string {
@@ -31,16 +31,23 @@ async function paintKeysOf(tscn: string, names: readonly string[], hasWorldSort 
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      {hasWorldSort ? (
-        <ControlYSortProvider>
-          <NodeDispatcher nodes={parsed.nodes} />
-          <ControlCanvasLayer nodes={parsed.nodes} />
-        </ControlYSortProvider>
-      ) : (
+    hasWorldSort ? (
+      <DispatchedScene
+        sceneGraph={createSceneGraphFromTscnScene(parsed)}
+        workspace="2d"
+        loader={fake.loader}
+        around={(nodes) => (
+          <>
+            {nodes}
+            <ControlCanvasLayer nodes={parsed.nodes} />
+          </>
+        )}
+      />
+    ) : (
+      <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
         <ControlCanvasLayer nodes={parsed.nodes} />
-      )}
-    </SceneStack>
+      </SceneStack>
+    )
   );
   // No settle: the first committed frame already has the order. The test renderer flushes passive
   // effects too, so this does not prove the layout-effect timing.

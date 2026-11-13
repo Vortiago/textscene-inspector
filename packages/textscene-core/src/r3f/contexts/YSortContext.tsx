@@ -1,13 +1,22 @@
 /**
- * The link between the world walk's y-sort and the Control walk beside it. The Control walk knows
- * where each Control's canvas item sits once it has solved, and the y-sort packs the draw order of
- * every item below a `y_sort_enabled` node. Each publishes what the other reads: the transforms to
- * the sort, and the shifts the sort gives the Control subtrees back to the walk. Without a
- * provider both are empty: a Control sorts at the origin and draws in the order it was authored.
+ * The one y-sort of a canvas that both walks read (`canvasItemPass/ySort.ts`). The Control walk
+ * publishes where each Control's canvas item sits once it has solved, a y-sorted tile layer its rows,
+ * and a sort root the ys a mixer pose gives its entries. The provider sorts the shared live tree with
+ * them, and every drawn item reads its run by live path. Without a provider nothing sorts here.
  */
 import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { equalTransform2D, type Transform2DColumns } from '../../godot/math/transform2d.js';
 import type { PaintRange } from '../canvasPaintOrder.js';
+import { canvasItemPass } from '../canvasItemPass/canvasItemPass.js';
+import { canvasPaintPass, type CanvasItemPaint } from '../canvasItemPass/canvasItemPaint.js';
+import {
+  sortedPaintOf,
+  ySortedPaint,
+  type ExtraSortItems,
+  type ExtraSortItem,
+  type SortInputs,
+} from '../canvasItemPass/ySort.js';
+import { useLiveScenePassSelection } from '../liveScenePass.js';
 
 /** Control paths to the transform of their canvas item in their parent, written only by the Control walk. */
 export type ControlTransforms = ReadonlyMap<string, Transform2DColumns>;
@@ -19,19 +28,11 @@ export type ControlTransforms = ReadonlyMap<string, Transform2DColumns>;
  */
 export type ControlLocalTransforms = ControlTransforms;
 
-/** Where the y-sort moved a node's draw-sequence run, written only by `YSortDispatcher`. */
-export interface YSortShift {
-  /** The run the sort gave the node's subtree. */
-  run: PaintRange;
-  /** Where the scene order put that run, which `buildSolveTree` allocated the Control subtrees from. */
-  from: number;
-}
-
-/** Node paths to their shift. */
-export type YSortShifts = ReadonlyMap<string, YSortShift>;
-
 const NO_TRANSFORMS: ControlTransforms = new Map();
-const NO_SHIFTS: YSortShifts = new Map();
+const NO_EXTRAS: ReadonlyMap<string, readonly ExtraSortItem[]> = new Map();
+const NO_YS: ReadonlyMap<string, number> = new Map();
+const NO_RUNS: ReadonlyMap<string, PaintRange> = new Map();
+const NO_PAINTS: ReadonlyMap<string, CanvasItemPaint> = new Map();
 
 /** Replaces the entries `owner` gave, or removes them when `entries` is null. */
 type Publish<Entries> = (owner: string, entries: Entries | null) => void;
@@ -39,16 +40,22 @@ type Publish<Entries> = (owner: string, entries: Entries | null) => void;
 interface Publishers {
   publishTransforms: Publish<ControlTransforms>;
   publishLocalTransforms: Publish<ControlLocalTransforms>;
-  publishShifts: Publish<YSortShifts>;
+  publishExtras: Publish<ExtraSortItems>;
+  publishLiveYs: Publish<ReadonlyMap<string, number>>;
 }
 
 const TransformsContext = createContext<ControlTransforms>(NO_TRANSFORMS);
 const LocalTransformsContext = createContext<ControlLocalTransforms>(NO_TRANSFORMS);
-const ShiftsContext = createContext<YSortShifts>(NO_SHIFTS);
+/** The sorted runs and the tree-order paint they move, for {@link sortedPaintOf}. */
+interface SortedRunsValue {
+  readonly runs: ReadonlyMap<string, PaintRange>;
+  readonly paints: ReadonlyMap<string, CanvasItemPaint>;
+}
+const SortedRunsContext = createContext<SortedRunsValue>({ runs: NO_RUNS, paints: NO_PAINTS });
 const PublishersContext = createContext<Publishers | null>(null);
 TransformsContext.displayName = 'ControlTransformsContext';
 LocalTransformsContext.displayName = 'ControlLocalTransformsContext';
-ShiftsContext.displayName = 'YSortShiftsContext';
+SortedRunsContext.displayName = 'YSortRunsContext';
 PublishersContext.displayName = 'ControlYSortPublishers';
 
 function sameEntries<T>(
@@ -64,8 +71,16 @@ function sameEntries<T>(
   return true;
 }
 
-const sameShift = (a: YSortShift, b: YSortShift) =>
-  a.from === b.from && a.run.base === b.run.base && a.run.size === b.run.size;
+const sameRun = (a: PaintRange, b: PaintRange) => a.base === b.base && a.size === b.size;
+const sameExtras = (a: readonly ExtraSortItem[], b: readonly ExtraSortItem[]) =>
+  a.length === b.length &&
+  a.every(
+    (x, i) =>
+      x.id === b[i]!.id &&
+      x.size === b[i]!.size &&
+      x.origin.x === b[i]!.origin.x &&
+      x.origin.y === b[i]!.origin.y
+  );
 
 /**
  * The entries of every owner, merged, with the publisher that sets one owner's share. A publish
@@ -88,24 +103,68 @@ function useOwnedEntries<T>(none: ReadonlyMap<string, T>, equal: (x: T, y: T) =>
   return [merged, publish] as const;
 }
 
-export function ControlYSortProvider({ children }: { children: ReactNode }) {
+export function YSortProvider({ children }: { children: ReactNode }) {
   const [transforms, publishTransforms] = useOwnedEntries(NO_TRANSFORMS, equalTransform2D);
   const [localTransforms, publishLocalTransforms] = useOwnedEntries(NO_TRANSFORMS, equalTransform2D);
-  const [shifts, publishShifts] = useOwnedEntries(NO_SHIFTS, sameShift);
+  const [extras, publishExtras] = useOwnedEntries(NO_EXTRAS, sameExtras);
+  const [liveYs, publishLiveYs] = useOwnedEntries(NO_YS, Object.is);
   const publishers = useMemo(
-    () => ({ publishTransforms, publishLocalTransforms, publishShifts }),
-    [publishTransforms, publishLocalTransforms, publishShifts]
+    () => ({ publishTransforms, publishLocalTransforms, publishExtras, publishLiveYs }),
+    [publishTransforms, publishLocalTransforms, publishExtras, publishLiveYs]
   );
 
   return (
     <PublishersContext.Provider value={publishers}>
       <TransformsContext.Provider value={transforms}>
         <LocalTransformsContext.Provider value={localTransforms}>
-          <ShiftsContext.Provider value={shifts}>{children}</ShiftsContext.Provider>
+          <SortedRuns inputs={{ origins: transforms, extras, liveYs }}>{children}</SortedRuns>
         </LocalTransformsContext.Provider>
       </TransformsContext.Provider>
     </PublishersContext.Provider>
   );
+}
+
+/**
+ * The sort of the shared live tree over `inputs`. A component of its own below the local transforms,
+ * so it reads the tree every drawn node reads, which composes through those transforms.
+ */
+function SortedRuns({ inputs, children }: { inputs: SortInputs; children: ReactNode }) {
+  const { origins, extras, liveYs } = inputs;
+  const results = useLiveScenePassSelection(canvasItemPass, wholeResults, Object.is);
+  const paints = useLiveScenePassSelection(canvasPaintPass, wholeResults, Object.is);
+  const held = useRef<SortedRunsValue>({ runs: NO_RUNS, paints: NO_PAINTS });
+  const sorted = useMemo(() => {
+    if (!results || !paints) return held.current;
+    const runs = ySortedPaint(results, paints, { origins, extras, liveYs });
+    // An unchanged sort keeps its identity, so a pose that moves no entry past another re-renders no item.
+    if (held.current.paints === paints && sameEntries(held.current.runs, runs, sameRun)) return held.current;
+    held.current = { runs, paints };
+    return held.current;
+  }, [results, paints, origins, extras, liveYs]);
+  return <SortedRunsContext.Provider value={sorted}>{children}</SortedRunsContext.Provider>;
+}
+
+function wholeResults<Result>(results: ReadonlyMap<string, Result>): ReadonlyMap<string, Result> {
+  return results;
+}
+
+/** The paint of the item at `path` after the sorts, from the paint the pass gives it in tree order. */
+export function useSortedPaint(path: string | null, paint: CanvasItemPaint): CanvasItemPaint {
+  const { runs, paints } = useContext(SortedRunsContext);
+  return useMemo(
+    () => (path === null ? paint : sortedPaintOf(path, paint, runs, paints)),
+    [path, paint, runs, paints]
+  );
+}
+
+/** The run of each sorted entry, by live path or extra id, empty where there is no provider. */
+export function useSortedRuns(): ReadonlyMap<string, PaintRange> {
+  return useContext(SortedRunsContext).runs;
+}
+
+/** The sorted runs with the tree-order paint they move, for a walk that places its own nodes. */
+export function useSortedRunsAndPaints(): SortedRunsValue {
+  return useContext(SortedRunsContext);
 }
 
 /**
@@ -137,11 +196,6 @@ export function useControlLocalTransforms(): ControlLocalTransforms {
   return useContext(LocalTransformsContext);
 }
 
-/** The shifts the y-sorts published. */
-export function useYSortShifts(): YSortShifts {
-  return useContext(ShiftsContext);
-}
-
 /** The publisher of the Control walk's transforms, or null where there is no provider. */
 export function usePublishControlTransforms(): Publish<ControlTransforms> | null {
   return useContext(PublishersContext)?.publishTransforms ?? null;
@@ -152,7 +206,12 @@ export function usePublishControlLocalTransforms(): Publish<ControlLocalTransfor
   return useContext(PublishersContext)?.publishLocalTransforms ?? null;
 }
 
-/** The publisher of the y-sort's shifts, or null where there is no provider. */
-export function usePublishYSortShifts(): Publish<YSortShifts> | null {
-  return useContext(PublishersContext)?.publishShifts ?? null;
+/** The publisher of the extra pieces a node sorts, or null where there is no provider. */
+export function usePublishSortExtras(): Publish<ExtraSortItems> | null {
+  return useContext(PublishersContext)?.publishExtras ?? null;
+}
+
+/** The publisher of the ys mixer poses give, or null where there is no provider. */
+export function usePublishLiveSortYs(): Publish<ReadonlyMap<string, number>> | null {
+  return useContext(PublishersContext)?.publishLiveYs ?? null;
 }

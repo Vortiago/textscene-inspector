@@ -6,16 +6,15 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { NodeDispatcher } from './NodeDispatcher';
 import { ControlCanvasLayer } from './controls/native/ControlCanvasLayer';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { TscnParser } from '../parser/TscnParser';
 import { compareKeys, paintKey } from './testing/paintOrder';
-import { ControlYSortProvider } from './contexts/ControlYSortContext';
-import { SceneStack } from './testing/SceneStack';
 
 import './nodes/index';
 import './controls/index';
+import { DispatchedScene } from './testing/DispatchedScene';
+import { createSceneGraphFromTscnScene } from './../core/SceneGraph.testkit';
 
 const FLOOR = `[gd_scene format=3]
 
@@ -46,12 +45,17 @@ async function paintKeysOf<const Name extends string = 'Tile' | 'Low'>(
   const parsed = new TscnParser().parse(tscn);
   const fake = createFakeResourceLoader();
   const renderer = await ReactThreeTestRenderer.create(
-    <SceneStack workspace="2d" loader={fake.loader} scene={parsed}>
-      <ControlYSortProvider>
-        <NodeDispatcher nodes={parsed.nodes} />
-        <ControlCanvasLayer nodes={parsed.nodes} />
-      </ControlYSortProvider>
-    </SceneStack>
+    <DispatchedScene
+      sceneGraph={createSceneGraphFromTscnScene(parsed)}
+      workspace="2d"
+      loader={fake.loader}
+      around={(nodes) => (
+        <>
+          {nodes}
+          <ControlCanvasLayer nodes={parsed.nodes} />
+        </>
+      )}
+    />
   );
   // No settle: the first committed frame already has the order. The test renderer flushes passive
   // effects too, so this does not prove the layout-effect timing.

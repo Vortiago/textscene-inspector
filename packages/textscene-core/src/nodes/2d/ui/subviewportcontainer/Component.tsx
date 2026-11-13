@@ -18,7 +18,7 @@ import { isSubViewport } from '../../../viewport/subviewport/viewportBoundary.js
 import type { SubViewportProperties } from '../../../viewport/subviewport/types.js';
 import { viewportSize } from '../../../viewport/subviewport/targetSize.js';
 import type { SubViewportContainerProperties } from './types.js';
-import { lastPaintSequence, WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPaintOrder.js';
+import { WHOLE_CANVAS_PAINT } from '../../../../r3f/canvasItemPass/canvasItemPaint.js';
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts.js';
 import { canvasPieceSlot, type CanvasSlot } from '../../../../r3f/canvasItemState';
 import { useCanvasColorSpace } from '../../../../r3f/canvasColorSpace';
@@ -117,11 +117,7 @@ function ViewportSurfaceNative({
       inheritance: CHAIN_START_INHERITANCE,
       // A SubViewport draws into its own target, so this root orders nothing
       // against the enclosing canvas: it starts a fresh range.
-      paintRange: WHOLE_CANVAS_RANGE,
-      behindRanges: [],
-      paintSequence: WHOLE_CANVAS_RANGE.base,
-      backSequence: lastPaintSequence(WHOLE_CANVAS_RANGE),
-      layerSequence: WHOLE_CANVAS_RANGE.base,
+      paint: WHOLE_CANVAS_PAINT,
       // The SubViewport itself, not a scene node the outliner can hide.
       hidden: false,
       // A Viewport is neither a CanvasItem nor a CanvasLayer, so the `parent_visible_in_tree` climb

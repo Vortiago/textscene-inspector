@@ -9,7 +9,7 @@ import { useOnMixerPose } from './contexts/AnimatedValueContext.js';
 import { useOptionalSelection } from './contexts/SelectionContext.js';
 import { trackTargetFinder } from './animation/trackTargets.js';
 import { liveGroupChain, liveRootPose, sortYOfChain, type GroupAt } from './ySortLiveItems.js';
-import { compareYSortItems } from './ySortOrder.js';
+import { compareSortY } from './ySortOrder.js';
 import { ySortItemId, type YSortItem } from './ySortItems.js';
 
 type LiveYs = ReadonlyMap<string, number>;
@@ -26,9 +26,12 @@ function newLiveRead(items: readonly YSortItem[]): LiveRead {
   return { items, chains: new Map(), ys: new Map(), order: null };
 }
 
-/** The ids of `items` in draw order, with `ys` laid over their authored sort y. */
+/** The ids of `items` in sort order, with `ys` laid over their authored sort y: y, then collection order. */
 function drawOrder(items: readonly YSortItem[], ys: LiveYs): string[] {
-  return withLiveYs(items, ys).sort(compareYSortItems).map(ySortItemId);
+  return withLiveYs(items, ys)
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => compareSortY(a.item.sortY, b.item.sortY) || a.index - b.index)
+    .map(({ item }) => ySortItemId(item));
 }
 
 function isSameOrder(a: readonly string[], b: readonly string[]): boolean {

@@ -1,11 +1,11 @@
 /**
- * Sorts the children of a y_sort_enabled node by z bucket, then sort Y, items with an equal Y
- * keeping their collection order, and re-packs its draw-sequence run in that order
- * (`canvasPaintOrder.ts`). A y-sorted TileMapLayer splits into one item per tile row
- * (`ySortRows`), each interleaving with sibling CanvasItems.
+ * Draws the children of a y_sort_enabled node at the runs the one sort of its canvas gives them
+ * (`canvasItemPass/ySort.ts`). A y-sorted TileMapLayer splits into one item per tile row
+ * (`ySortRows`), and the dispatcher hands the sort each row, scene tile and TileMap layer the pass
+ * does not list, with the ys a mixer pose gives its items.
  */
 
-import { memo, useId, useLayoutEffect, useMemo, type ReactNode } from 'react';
+import { memo, useId, useLayoutEffect, useMemo } from 'react';
 import type { TscnNode } from '../parser/types.js';
 import type { TileSetModel } from '../resources/tileset/types.js';
 import { ySortRows } from '../resources/tileset/tileYSort.js';
@@ -13,6 +13,7 @@ import { drawableCells } from '../resources/tileset/drawableCell.js';
 import {
   collectSortRootRows,
   collectYSortedItems,
+  hasControl,
   ySortItemId,
   Y_SORT_ROOT,
   type YSortItem,
@@ -20,17 +21,21 @@ import {
 import { TileSetModels, tileSetRefsOf } from './ySortTileSetModels.js';
 import { LiftedAncestors, liftedPath } from './LiftedAncestors.js';
 import { YSortLayerGroup } from './YSortLayerGroup.js';
-import { compareYSortItems } from './ySortOrder.js';
+import { compareSortY } from './ySortOrder.js';
 import { useLiveYSort } from './useLiveYSort.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
-import { type PaintRange, isTopLevelItem, packPaintRanges, paintRangeSize } from './canvasPaintOrder.js';
+import { isTopLevelItem, packPaintRanges, paintRangeSize } from './canvasPaintOrder.js';
 import {
   IN_TREE_ORDER,
   PaintFrameProvider,
+  runFrame,
   useChildPaintFrames,
   useNodePaint,
-  useRepackedFrame,
+  type PaintFrame,
 } from './canvasItemPass/nodePaint.js';
+import { canvasPaintPass, type CanvasItemPaint } from './canvasItemPass/canvasItemPaint.js';
+import type { ExtraSortItem } from './canvasItemPass/ySort.js';
+import { useLiveScenePassSelection } from './liveScenePass.js';
 import { joinPath } from '../utils/nodePath.js';
 import { TRANSFORM2D_IDENTITY, transform2DXform } from '../godot/math/transform2d.js';
 // Sorted children go back through the one dispatcher, so instances, selection,
@@ -38,17 +43,19 @@ import { TRANSFORM2D_IDENTITY, transform2DXform } from '../godot/math/transform2
 // edge resolves through `nodeComponentRegistry` at runtime, so there is no cycle.
 import { DispatchedNode } from './NodeDispatcher.js';
 import { NodePathProvider, useNodePath } from './contexts/NodePathContext.js';
-import { hasControl, sceneOrderBasesBelow } from './ySortSceneOrder.js';
 import { useLiveDrawnPatchesBelow } from './liveNodePatches.js';
+import { useWithExtraChildren } from './ySortExtraChildren.js';
 import {
   useControlTransformsUnder,
-  usePublishYSortShifts,
-  type YSortShift,
-} from './contexts/ControlYSortContext.js';
+  usePublishLiveSortYs,
+  usePublishSortExtras,
+  useSortedRuns,
+} from './contexts/YSortContext.js';
 
 /** Performs the y-sort pass on the children of a y_sort_enabled CanvasItem, and a TileMapLayer's rows. */
-export function YSortDispatcher({ node }: { node: TscnNode }) {
-  const path = useNodePath() ?? node.name;
+export function YSortDispatcher({ node: authored }: { node: TscnNode }) {
+  const path = useNodePath() ?? authored.name;
+  const node = useWithExtraChildren(authored, path);
   const patches = useLiveDrawnPatchesBelow(path);
   // A sort reads the Controls below it only, so a Control moving under another sort leaves its memo alone.
   const controlTransforms = useControlTransformsUnder(hasControl(node) ? path : null);
@@ -88,10 +95,7 @@ const SortedChildren = memo(function SortedChildren({
   // in the tree, so their selection paths have to be rebuilt from this node's
   // own path (the dispatcher provided it when it rendered this node).
   const basePath = useNodePath() ?? node.name;
-  // The sorted items draw after this node's own sequence, as Godot appends the
-  // y-sorted node before descending (`_collect_ysort_children`).
   const paint = useNodePaint(node, basePath);
-  const { own: ownSequence, range: paintRange } = paint;
   // A top_level child is no `child_item` of this node, so the sort skipped it
   // (`ySortItems.ts`) and it draws here, by the same predicate, at the run the
   // canvas root index gives it, which no sort moves.
@@ -109,50 +113,18 @@ const SortedChildren = memo(function SortedChildren({
   );
   // Items sort on the poses drawn now, so a child a mixer moves re-sorts among the rows.
   const liveItems = useLiveYSort(items, basePath);
-  const sorted = useMemo(() => [...liveItems].sort(compareYSortItems), [liveItems]);
+  const pieces = useSortPieces(items, basePath);
+  usePublishSortInputs(items, liveItems, pieces, basePath);
+  const frames = usePieceFrames(items, liveItems, pieces, paint, childFrames !== null);
 
-  // Re-packs this subtree's run in sorted order. Nothing outside can land in the
-  // run, and each item keeps a run as wide as its subtree, so its descendants draw
-  // between it and the next-ranked item. The items render in collection order, not
-  // sorted: a moved child makes R3F apply its authored props again, which undoes the
-  // pose a mixer has just written (`ySortAnimatedChild.test.tsx`, "keeps the pose").
-  const packed = useMemo(() => {
-    // A tile-group item is one group with no subtree, drawn from its layer's
-    // reserve. Sized by the layer node, each row would claim a new reserve.
-    // `packPaintRanges` keeps rows beyond the reserve out of the next sibling's range.
-    const sizes = sorted.map((item) =>
-      item.kind === 'tileGroup' || !item.node ? 1 : paintRangeSize(item.node)
-    );
-    const ranges = packPaintRanges(paintRange, sizes, ownSequence + 1);
-    const rangeOf = new Map(sorted.map((item, i) => [ySortItemId(item), ranges[i]!]));
-    return inCollectionRuns(liveItems.map((item) => ({ item, range: rangeOf.get(ySortItemId(item))! })));
-  }, [sorted, liveItems, ownSequence, paintRange]);
-
-  // The Control walk draws the Control subtrees, so it takes the runs this sort gave them. A layout
-  // effect, so the walk and the sort settle before the first paint.
-  const publishShifts = usePublishYSortShifts();
-  const owner = useId();
-  useLayoutEffect(() => {
-    if (!publishShifts) return;
-    // A node that no longer holds a Control withdraws the shifts it gave, which the unmount cleanup alone would keep.
-    if (!hasControl(node)) {
-      publishShifts(owner, null);
-      return;
-    }
-    const sceneOrderBases = sceneOrderBasesBelow(node, paintRange, basePath);
-    const shifts = new Map<string, YSortShift>();
-    for (const { item, range } of packed.flatMap(entriesOf)) {
-      if (!item.node || !hasControl(item.node)) continue;
-      const path = liftedPath(basePath, item.liftedPast, item.node.name);
-      shifts.set(path, { run: range, from: sceneOrderBases.get(path) ?? range.base });
-    }
-    publishShifts(owner, shifts);
-  }, [packed, node, paintRange, basePath, publishShifts, owner]);
-  useLayoutEffect(() => () => publishShifts?.(owner, null), [publishShifts, owner]);
+  // The items render in collection order, not sorted: a moved child makes R3F apply its authored
+  // props again, which undoes the pose a mixer has just written (`ySortAnimatedChild.test.tsx`,
+  // "keeps the pose"). Each one reads where the sort put it.
+  const runs = useMemo(() => inCollectionRuns(liveItems, frames), [liveItems, frames]);
 
   return (
     <>
-      {packed.map((run) =>
+      {runs.map((run) =>
         run.kind === 'layerRows' ? (
           <LayerRows key={`lr-${run.entries[0]!.item.treeOrder}`} entries={run.entries} basePath={basePath} />
         ) : run.kind === 'rootRows' ? (
@@ -169,6 +141,122 @@ const SortedChildren = memo(function SortedChildren({
     </>
   );
 });
+
+/**
+ * Each item's id in the sort of the canvas item pass: its live path for a node the pass holds, or an
+ * extra id for a piece the pass does not list, such as a tile row, a TileMap's layer or a scene tile.
+ */
+function useSortPieces(items: readonly YSortItem[], basePath: string): ReadonlyMap<YSortItem, SortPiece> {
+  const paths = useMemo(() => items.map((item) => itemPath(item, basePath)), [items, basePath]);
+  const select = useMemo(
+    () => (paints: ReadonlyMap<string, CanvasItemPaint>) => paths.map((path) => paints.has(path)),
+    [paths]
+  );
+  const held = useLiveScenePassSelection(canvasPaintPass, select, sameFlags);
+  return useMemo(
+    () =>
+      new Map(
+        items.map((item, i): [YSortItem, SortPiece] =>
+          item.kind === 'node' && held?.[i]
+            ? [item, { kind: 'node', id: paths[i]! }]
+            : [item, { kind: 'extra', id: `${basePath}#${ySortItemId(item)}` }]
+        )
+      ),
+    [items, paths, held, basePath]
+  );
+}
+
+/**
+ * Publishes the pieces the pass does not list as extras of this node, and the ys a mixer pose gives
+ * the items, so the one sort places them. A layout effect, so the sort settles before the first paint.
+ */
+function usePublishSortInputs(
+  items: readonly YSortItem[],
+  liveItems: readonly YSortItem[],
+  pieces: ReadonlyMap<YSortItem, SortPiece>,
+  basePath: string
+): void {
+  const publishExtras = usePublishSortExtras();
+  const publishLiveYs = usePublishLiveSortYs();
+  const owner = useId();
+  useLayoutEffect(() => {
+    // The sort y of an item is in this node's space, where an extra's origin sits.
+    const extras = items.flatMap((item): ExtraSortItem[] => {
+      const piece = pieces.get(item)!;
+      if (piece.kind !== 'extra' || !item.node) return [];
+      return [{ id: piece.id, origin: { x: 0, y: item.sortY }, size: pieceSize(item) }];
+    });
+    publishExtras?.(owner, new Map([[basePath, extras]]));
+  }, [items, pieces, basePath, publishExtras, owner]);
+  useLayoutEffect(() => {
+    const ys = new Map<string, number>();
+    liveItems.forEach((live, i) => {
+      if (live !== items[i]) ys.set(pieces.get(items[i]!)!.id, live.sortY);
+    });
+    publishLiveYs?.(owner, ys);
+  }, [items, liveItems, pieces, publishLiveYs, owner]);
+  useLayoutEffect(
+    () => () => {
+      publishExtras?.(owner, null);
+      publishLiveYs?.(owner, null);
+    },
+    [publishExtras, publishLiveYs, owner]
+  );
+}
+
+/**
+ * The frame each item draws in. Inside the shared live tree, a node reads its sorted paint by path
+ * and an extra takes the run the sort gave its id. A subtree outside that tree, such as a scene
+ * tile's instance, has no pass to sort, so it packs its own run here in the same order.
+ */
+function usePieceFrames(
+  items: readonly YSortItem[],
+  liveItems: readonly YSortItem[],
+  pieces: ReadonlyMap<YSortItem, SortPiece>,
+  paint: CanvasItemPaint,
+  isOutsideTree: boolean
+): ReadonlyMap<YSortItem, PaintFrame> {
+  const sortedRuns = useSortedRuns();
+  return useMemo(() => {
+    if (isOutsideTree) return localSortFrames(liveItems, paint);
+    return new Map(
+      liveItems.map((live, i): [YSortItem, PaintFrame] => {
+        const piece = pieces.get(items[i]!)!;
+        if (piece.kind === 'node') return [live, IN_TREE_ORDER];
+        return [live, runFrame(sortedRuns.get(piece.id) ?? paint.tail)];
+      })
+    );
+  }, [items, liveItems, pieces, paint, isOutsideTree, sortedRuns]);
+}
+
+/** The runs of `items` packed in sort order after the node's own sequence, as one flat sort orders them. */
+function localSortFrames(items: readonly YSortItem[], paint: CanvasItemPaint): Map<YSortItem, PaintFrame> {
+  const sorted = items
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => compareSortY(a.item.sortY, b.item.sortY) || a.index - b.index)
+    .map(({ item }) => item);
+  const ranges = packPaintRanges(paint.range, sorted.map(pieceSize), paint.own + 1);
+  return new Map(sorted.map((item, i) => [item, runFrame(ranges[i]!)]));
+}
+
+/** The values an item draws: one for a row, which is one group with no subtree, or its whole subtree's run. */
+function pieceSize(item: YSortItem): number {
+  return item.kind === 'tileGroup' || !item.node ? 1 : paintRangeSize(item.node);
+}
+
+function itemPath(item: YSortItem, basePath: string): string {
+  return item.node ? liftedPath(basePath, item.liftedPast, item.node.name) : basePath;
+}
+
+function sameFlags(a: readonly boolean[], b: readonly boolean[]): boolean {
+  return a.length === b.length && a.every((flag, i) => flag === b[i]);
+}
+
+/** Where the sort of the canvas item pass finds an item: a node by live path, or an extra by id. */
+interface SortPiece {
+  readonly kind: 'node' | 'extra';
+  readonly id: string;
+}
 
 /**
  * The rows of a y-sorted TileMapLayer item, each a child canvas item of the layer at `(0, row y)`
@@ -190,19 +278,15 @@ function rowItemsOf(item: YSortItem, models: ReadonlyMap<string, TileSetModel>):
   }));
 }
 
-interface PackedItem {
+interface FramedItem {
   item: YSortItem;
-  range: PaintRange;
+  frame: PaintFrame;
 }
 
 type CollectionRun =
-  | { kind: 'layerRows'; entries: PackedItem[] }
-  | { kind: 'rootRows'; entry: PackedItem }
-  | { kind: 'node'; entry: PackedItem };
-
-function entriesOf(run: CollectionRun): PackedItem[] {
-  return run.kind === 'layerRows' ? run.entries : [run.entry];
-}
+  | { kind: 'layerRows'; entries: FramedItem[] }
+  | { kind: 'rootRows'; entry: FramedItem }
+  | { kind: 'node'; entry: FramedItem };
 
 /** Whether `item` is a row of a y-sorted layer, which a registered renderer draws. */
 function isLayerRow(item: YSortItem): boolean {
@@ -210,20 +294,24 @@ function isLayerRow(item: YSortItem): boolean {
 }
 
 /**
- * The entries in collection order, with the rows of one layer gathered into a run. A layer's rows
- * are adjacent in that order (`rowItemsOf`), and the run keeps them below one group.
+ * The items in collection order with their frames, the rows of one layer gathered into a run. A
+ * layer's rows are adjacent in that order (`rowItemsOf`), and the run keeps them below one group.
  * Items without a node draw nothing and are left out.
  */
-function inCollectionRuns(packed: readonly PackedItem[]): CollectionRun[] {
+function inCollectionRuns(
+  items: readonly YSortItem[],
+  frames: ReadonlyMap<YSortItem, PaintFrame>
+): CollectionRun[] {
   const runs: CollectionRun[] = [];
-  for (const entry of packed) {
-    if (!entry.item.node) continue;
+  for (const item of items) {
+    if (!item.node) continue;
+    const entry = { item, frame: frames.get(item)! };
     const last = runs.at(-1);
-    if (!isLayerRow(entry.item)) {
+    if (!isLayerRow(item)) {
       runs.push({ kind: 'node', entry });
-    } else if (entry.item.tileData?.rootsSort) {
+    } else if (item.tileData?.rootsSort) {
       runs.push({ kind: 'rootRows', entry });
-    } else if (last?.kind === 'layerRows' && last.entries[0]!.item.treeOrder === entry.item.treeOrder) {
+    } else if (last?.kind === 'layerRows' && last.entries[0]!.item.treeOrder === item.treeOrder) {
       last.entries.push(entry);
     } else {
       runs.push({ kind: 'layerRows', entries: [entry] });
@@ -232,16 +320,16 @@ function inCollectionRuns(packed: readonly PackedItem[]): CollectionRun[] {
   return runs;
 }
 
-/** One sorted node, dispatched back through the one dispatcher at the sequence the sort gave it. */
-function NodeItem({ entry: { item, range }, basePath }: { entry: PackedItem; basePath: string }) {
+/** One sorted node, dispatched back through the one dispatcher in the frame the sort gave it. */
+function NodeItem({ entry: { item, frame }, basePath }: { entry: FramedItem; basePath: string }) {
   const node = item.node!;
   const path = liftedPath(basePath, item.liftedPast, node.name);
   return (
-    <RepackedFrame path={path} range={range}>
+    <PaintFrameProvider value={frame}>
       <LiftedAncestors liftedPast={item.liftedPast} basePath={basePath}>
         <DispatchedNode node={node} path={path} />
       </LiftedAncestors>
-    </RepackedFrame>
+    </PaintFrameProvider>
   );
 }
 
@@ -249,43 +337,38 @@ function NodeItem({ entry: { item, range }, basePath }: { entry: PackedItem; bas
  * The rows of the layer that is the sort root. The layer's own component holds its group, so the
  * rows draw below it.
  */
-function RootRows({ entry: { item, range }, basePath }: { entry: PackedItem; basePath: string }) {
+function RootRows({ entry: { item, frame }, basePath }: { entry: FramedItem; basePath: string }) {
   const Renderer = nodeComponentRegistry.getYSortGroup(item.node!.type)!.Renderer;
   const path = liftedPath(basePath, item.liftedPast, item.node!.name);
   return (
-    <RepackedFrame path={path} range={range}>
+    <PaintFrameProvider value={frame}>
       <LiftedAncestors liftedPast={item.liftedPast} basePath={basePath}>
         <NodePathProvider path={path}>
           <Renderer item={item} node={item.node!} />
         </NodePathProvider>
       </LiftedAncestors>
-    </RepackedFrame>
+    </PaintFrameProvider>
   );
 }
 
 /** The rows of one layer below the layer's group, each at the draw sequence the sort gave it. */
-function LayerRows({ entries, basePath }: { entries: readonly PackedItem[]; basePath: string }) {
+function LayerRows({ entries, basePath }: { entries: readonly FramedItem[]; basePath: string }) {
   const { liftedPast, node } = entries[0]!.item;
   const path = liftedPath(basePath, liftedPast, node!.name);
   const Renderer = nodeComponentRegistry.getYSortGroup(node!.type)!.Renderer;
   return (
     <LiftedAncestors liftedPast={liftedPast} basePath={basePath}>
       <YSortLayerGroup node={node!} path={path}>
-        {entries.map(({ item, range }) => (
+        {entries.map(({ item, frame }) => (
           // The row's whole draw position rides its group as one paint sequence. Its meshes order
           // within it by their own `renderOrder`, a batching artifact, not a draw position.
-          <RepackedFrame key={ySortItemId(item)} path={path} range={range}>
+          <PaintFrameProvider key={ySortItemId(item)} value={frame}>
             <NodePathProvider path={path}>
               <Renderer item={item} node={item.node!} />
             </NodePathProvider>
-          </RepackedFrame>
+          </PaintFrameProvider>
         ))}
       </YSortLayerGroup>
     </LiftedAncestors>
   );
-}
-
-/** `children` at the run `range` the sort gave the item at `path`. */
-function RepackedFrame({ path, range, children }: { path: string; range: PaintRange; children: ReactNode }) {
-  return <PaintFrameProvider value={useRepackedFrame(path, range)}>{children}</PaintFrameProvider>;
 }

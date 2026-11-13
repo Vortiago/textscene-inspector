@@ -1,19 +1,21 @@
 /**
  * What a y-sort needs from the Control walk and gives back to it. A Control sorts on the origin of
  * its canvas item (`control.cpp:719-736`), which only the rect solve knows, so
- * {@link controlTransformsOf} reads it off the solve, and {@link applyYSortShifts} moves the
- * draw-sequence runs `buildSolveTree` gave in scene order to where the sort put them.
+ * {@link controlTransformsOf} reads it off the solve, and {@link drawnPaintsOf} moves the paint
+ * `buildSolveTree` gave in tree order to the runs the sort gave.
  * Pure data: no React, no THREE.
  */
 
 import { VECTOR2_ZERO } from '../../../godot/math/vector';
 import { transform2DFromParts } from '../../../godot/math/transform2d';
-import { joinPath, parentPathOf, relativeTo } from '../../../utils/nodePath';
-import type { PaintRange } from '../../canvasPaintOrder';
-import type { ControlTransforms, YSortShift, YSortShifts } from '../../contexts/ControlYSortContext';
+import { joinPath, relativeTo } from '../../../utils/nodePath';
+import { ysortsChildren, type PaintRange } from '../../canvasPaintOrder';
+import type { ControlTransforms } from '../../contexts/YSortContext';
+import type { CanvasItemPaint } from '../../canvasItemPass/canvasItemPaint';
+import { NO_SORT_INPUTS, sortedPaintOf, ySortedPaint, type SortItem } from '../../canvasItemPass/ySort';
 import type { SolvedControl } from './controlRectSolver';
 import { controlDrawTransformOf, controlItemOriginUnder } from './controlPixelSnap';
-import { controlProps, isPromotedControl, type SolveNode } from './solveTree';
+import { controlProps, type SolveNode } from './solveTree';
 
 /** The rotation, scale and pivot `solved` leaves a Control, as the walker draws it. */
 export function solvedDrawTransformOf(
@@ -60,74 +62,77 @@ export function transformsAtLivePaths(livePath: string, transforms: ControlTrans
   return new Map([...transforms].map(([path, transform]) => [joinPath(livePath, path), transform]));
 }
 
-/** The shifts the world sort gave the nodes below `livePath`, keyed by the forest's own paths. */
-export function shiftsOfForest(livePath: string, shifts: YSortShifts): YSortShifts {
-  if (livePath === '') return shifts;
-  const own = new Map<string, YSortShift>();
-  for (const [path, shift] of shifts) {
+/**
+ * Each Control's paint as the walk draws it, by the forest's own path. `runs` holds the run of each
+ * sorted entry by live path: the one sort of the canvas, which holds the forest's nodes once they are
+ * in the shared live tree.
+ */
+export function drawnPaintsOf(
+  tree: readonly SolveNode[],
+  livePath: string,
+  runs: ReadonlyMap<string, PaintRange>
+): ReadonlyMap<string, CanvasItemPaint> {
+  const paints = forestPaintsOf(tree);
+  const own = runsOfForest(livePath, runs, paints);
+  const drawn = new Map<string, CanvasItemPaint>();
+  for (const [path, paint] of paints) drawn.set(path, sortedPaintOf(path, paint, own, paints));
+  return drawn;
+}
+
+/**
+ * The y-sort of a forest the shared live tree does not hold, a Control-only viewport or an unowned
+ * scene-tile root: the one sort over the forest's own Controls, on the origins the solve gave them.
+ */
+export function forestSortedRuns(
+  tree: readonly SolveNode[],
+  origins: ControlTransforms
+): ReadonlyMap<string, PaintRange> {
+  const items = new Map<string, SortItem>();
+  const visit = (node: SolveNode, parent: string | null): void => {
+    const props = controlProps(node);
+    items.set(node.path, {
+      parent,
+      isVisible: !node.hidden && props.visible !== false,
+      fields: { ySortEnabled: ysortsChildren(node.node), local: null },
+    });
+    node.children.forEach((child) => visit(child, node.path));
+  };
+  tree.forEach((root) => visit(root, null));
+  return ySortedPaint(items, forestPaintsOf(tree), { ...NO_SORT_INPUTS, origins });
+}
+
+/** Whether the shared live tree holds the forest's nodes, so the canvas's one sort covers them. */
+export function isInSharedTree(
+  tree: readonly SolveNode[],
+  livePath: string,
+  paints: ReadonlyMap<string, CanvasItemPaint>
+): boolean {
+  const root = tree[0];
+  return root !== undefined && paints.has(livePath === '' ? root.path : joinPath(livePath, root.path));
+}
+
+/** The tree-order paint of every node of the forest, by its path. */
+function forestPaintsOf(tree: readonly SolveNode[]): ReadonlyMap<string, CanvasItemPaint> {
+  const paints = new Map<string, CanvasItemPaint>();
+  const visit = (node: SolveNode): void => {
+    paints.set(node.path, node.paint);
+    node.children.forEach(visit);
+  };
+  tree.forEach(visit);
+  return paints;
+}
+
+/** The runs of the forest's nodes, keyed by the forest's own paths. */
+function runsOfForest(
+  livePath: string,
+  runs: ReadonlyMap<string, PaintRange>,
+  paints: ReadonlyMap<string, CanvasItemPaint>
+): ReadonlyMap<string, PaintRange> {
+  if (livePath === '') return runs;
+  const own = new Map<string, PaintRange>();
+  for (const [path, run] of runs) {
     const relative = relativeTo(livePath, path);
-    if (relative) own.set(relative, shift);
+    if (relative && paints.has(relative)) own.set(relative, run);
   }
   return own;
-}
-
-/**
- * `node` over `children`, with every draw sequence of its own moved by `delta`. It mirrors each
- * sequence field of `SolveNode`, which `controlYSort.conformance.test.ts` guards.
- */
-function withShiftedRuns(node: SolveNode, delta: number, children: readonly SolveNode[]): SolveNode {
-  const shift = (range: PaintRange): PaintRange => ({ base: range.base + delta, size: range.size });
-  return {
-    ...node,
-    children,
-    paintRange: shift(node.paintRange),
-    behindRanges: node.behindRanges.map(shift),
-    paintSequence: node.paintSequence + delta,
-    backSequence: node.backSequence + delta,
-    layerSequence: node.layerSequence + delta,
-  };
-}
-
-/** The shift of the nearest node above `path` that the sort moved, or undefined. */
-function shiftAbove(path: string, shifts: YSortShifts) {
-  for (let up = parentPathOf(path); up !== null; up = parentPathOf(up)) {
-    const shift = shifts.get(up);
-    if (shift) return shift;
-  }
-  return undefined;
-}
-
-/**
- * `tree` with each subtree the y-sort moved drawn at its new run, or `tree` itself when it moved
- * none. A Control the sort lists as an item takes the run it gave. A Control that parents at a
- * non-Control, a walk root or one promoted past a Node2D, moves with the nearest Node2D above it the
- * sort moved, since that item's run holds the Control's.
- */
-export function applyYSortShifts(tree: readonly SolveNode[], shifts: YSortShifts): readonly SolveNode[] {
-  if (shifts.size === 0) return tree;
-  return placeAll(tree, shifts, true, 0);
-}
-
-/** `nodes` placed, each by the shift of the nearest ancestor that moved, `inherited` unless it moved itself. */
-function placeAll(
-  nodes: readonly SolveNode[],
-  shifts: YSortShifts,
-  areRoots: boolean,
-  inherited: number
-): readonly SolveNode[] {
-  const placed = nodes.map((node) => placeNode(node, shifts, areRoots, inherited));
-  return placed.every((node, i) => node === nodes[i]) ? nodes : placed;
-}
-
-function placeNode(node: SolveNode, shifts: YSortShifts, isRoot: boolean, inherited: number): SolveNode {
-  const own = shifts.get(node.path);
-  const above = !own && (isRoot || isPromotedControl(node)) ? shiftAbove(node.path, shifts) : undefined;
-  const delta = own ? own.run.base - node.paintRange.base : above ? above.run.base - above.from : inherited;
-  return placeChildren(node, shifts, delta);
-}
-
-/** `node` moved by `delta`, its children placed under that delta. */
-function placeChildren(node: SolveNode, shifts: YSortShifts, delta: number): SolveNode {
-  const children = placeAll(node.children, shifts, false, delta);
-  return delta === 0 && children === node.children ? node : withShiftedRuns(node, delta, children);
 }

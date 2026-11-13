@@ -12,7 +12,7 @@ import type { ProjectFonts } from '../../../resources/fonts/font/projectFonts';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
-import type { PaintRange } from '../../canvasPaintOrder';
+import type { CanvasItemPaint } from '../../canvasItemPass/canvasItemPaint';
 import type { Transform2DColumns } from '../../../godot/math/transform2d';
 import type { CanvasInheritance } from '../../canvasItemPass/inheritedCanvasState';
 import type { StyleBoxFlatData } from './styleBoxFlat';
@@ -63,28 +63,11 @@ export interface SolveNode {
    */
   children: readonly SolveNode[];
   /**
-   * The run of canvas draw-sequence values this node's subtree owns
-   * (`canvasPaintOrder.ts`), from its place among all live siblings, Node2Ds
-   * included, so a `ColorRect` authored first draws under the sprites after it.
+   * Where this node and its subtree draw in tree order (`canvasItemPaint.ts`), from its place among
+   * all live siblings, Node2Ds included, so a `ColorRect` authored first draws under the sprites
+   * after it. The walker draws it at the run the y-sort of its canvas gives.
    */
-  paintRange: PaintRange;
-  /** The ranges of the children that draw behind this node, in child order, as the walk allocated them. */
-  behindRanges: readonly PaintRange[];
-  /**
-   * The draw-sequence value of this node's own pixels: after any
-   * `show_behind_parent` children and before the rest.
-   */
-  paintSequence: number;
-  /**
-   * The draw-sequence value of this node's back pieces, such as a ScrollContainer's bars: after
-   * its whole subtree, which Godot's `INTERNAL_MODE_BACK` children follow (`internalBackRoom`).
-   */
-  backSequence: number;
-  /**
-   * The draw-sequence value of the listed layer this node adds itself, GraphEdit's connections
-   * (`listedChildOrder`), or `paintSequence` with none.
-   */
-  layerSequence: number;
+  paint: CanvasItemPaint;
   /**
    * The composed `Transform2D` of the non-Control `CanvasItem` ancestors this node promoted past,
    * outermost first (`transform_2d.cpp:198-218`), or `null` for none. Never decomposed: composed

@@ -21,10 +21,10 @@ import {
   allocateNodePaintRange,
   behindRangesOf,
   allocatePaintRange,
-  lastPaintSequence,
   WHOLE_CANVAS_RANGE,
   type PaintRange,
 } from '../../../canvasPaintOrder';
+import { WHOLE_CANVAS_PAINT } from '../../../canvasItemPass/canvasItemPaint';
 
 /**
  * Frozen because every node this factory builds shares them, and `readonly` is
@@ -67,11 +67,7 @@ export function solveNode(): Pick<
   | 'constants'
   | 'icons'
   | 'resources'
-  | 'paintRange'
-  | 'behindRanges'
-  | 'paintSequence'
-  | 'backSequence'
-  | 'layerSequence'
+  | 'paint'
   | 'skippedTransform'
   | 'inheritance'
   | 'rtl'
@@ -97,11 +93,7 @@ export function solveNode(): Pick<
     resources: NO_RESOURCES,
     // The whole canvas, which a lone Control owns. These defaults tie rather than
     // invent an order. A test asserting draw order uses `withPaintRanges`.
-    paintRange: WHOLE_CANVAS_RANGE,
-    behindRanges: [],
-    paintSequence: WHOLE_CANVAS_RANGE.base,
-    backSequence: lastPaintSequence(WHOLE_CANVAS_RANGE),
-    layerSequence: WHOLE_CANVAS_RANGE.base,
+    paint: WHOLE_CANVAS_PAINT,
     // No skipped Node2D ancestor, the common case a hand-built tree states.
     skippedTransform: null,
     inheritance: WALK_ROOT,
@@ -179,11 +171,15 @@ function assignRange(node: SolveNode, own: PaintRange): SolveNode {
   const allocated = allocateNodePaintRange(own, shadow);
   return {
     ...node,
-    paintRange: own,
-    behindRanges: behindRangesOf(shadow.children, allocated.children),
-    paintSequence: allocated.self,
-    backSequence: allocated.back.base,
-    layerSequence: allocated.layer,
+    paint: {
+      range: own,
+      own: allocated.self,
+      front: allocated.front,
+      layer: allocated.layer,
+      back: allocated.back,
+      tail: allocated.tail,
+      behind: behindRangesOf(shadow.children, allocated.children),
+    },
     children: node.children.map((child, i) => assignRange(child, allocated.children[i]!)),
   };
 }

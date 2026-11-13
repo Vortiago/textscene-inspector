@@ -19,15 +19,15 @@ import {
 } from '../canvasPaintOrder';
 import { isViewportBoundary } from '../../nodes/viewport/subviewport/viewportBoundary';
 import { canvasPaintPass, type CanvasItemPaint } from './canvasItemPaint';
+import { useSortedPaint } from '../contexts/YSortContext';
 
 /**
- * How a subtree finds its paint. `tree`: each node reads the pass at its live path, moved by
- * `shift`, the distance a y-sort moved the pass's run `moved`. A canvas root below keeps its run
- * outside `moved`, so no sort moves it. `run`: the subtree is outside the shared live tree, and its
+ * How a subtree finds its paint. `tree`: each node reads the pass at its live path, moved by the
+ * y-sort of its canvas (`YSortContext`). `run`: the subtree is outside the shared live tree, and its
  * root owns `range`, where the roots of `canvasRoots` take theirs.
  */
 export type PaintFrame =
-  | { readonly kind: 'tree'; readonly shift: number; readonly moved: PaintRange }
+  | { readonly kind: 'tree' }
   | {
       readonly kind: 'run';
       readonly range: PaintRange;
@@ -35,28 +35,30 @@ export type PaintFrame =
     };
 
 /** The frame of a node that reads the pass at its live path, as the pass's tree order places it. */
-export const IN_TREE_ORDER: PaintFrame = { kind: 'tree', shift: 0, moved: WHOLE_CANVAS_RANGE };
+export const IN_TREE_ORDER: PaintFrame = { kind: 'tree' };
 const NO_CANVAS_ROOTS: ReadonlyMap<TscnNode, PaintRange> = new Map();
 
 const PaintFrameContext = createContext<PaintFrame>(IN_TREE_ORDER);
 PaintFrameContext.displayName = 'PaintFrameContext';
 
-/** Written where a subtree leaves the pass's tree order: a y-sort, a scene tile, a tile row. */
+/** Written where a subtree leaves the shared live tree: a scene tile, a tile row. */
 export function PaintFrameProvider({ value, children }: { value: PaintFrame; children: ReactNode }) {
   return <PaintFrameContext.Provider value={value}>{children}</PaintFrameContext.Provider>;
 }
 
 /**
- * Where the node drawing `node` at live path `path` paints. A `run` frame, or a path the pass does
- * not hold, allocates from the frame's run, which is the whole canvas with no stage above.
+ * Where the node drawing `node` at live path `path` paints: the pass's paint after the sort of its
+ * canvas. A `run` frame, or a path the pass does not hold, allocates from the frame's run, which is
+ * the whole canvas with no stage above.
  */
 export function useNodePaint(node: TscnNode, path: string | null): CanvasItemPaint {
   const frame = useContext(PaintFrameContext);
   const fromPass = useLiveScenePass(canvasPaintPass, frame.kind === 'tree' ? path : null);
-  return useMemo(() => {
-    if (frame.kind === 'tree' && fromPass) return shifted(fromPass, shiftOf(frame, fromPass.range));
-    return localPaint(frame.kind === 'run' ? frame.range : WHOLE_CANVAS_RANGE, node).paint;
-  }, [frame, fromPass, node]);
+  const paint = useMemo(
+    () => fromPass ?? localPaint(frame.kind === 'run' ? frame.range : WHOLE_CANVAS_RANGE, node).paint,
+    [frame, fromPass, node]
+  );
+  return useSortedPaint(fromPass ? path : null, paint);
 }
 
 /**
@@ -107,49 +109,12 @@ export function useRootPaintFrames(roots: readonly TscnNode[]): readonly PaintFr
 
 /** The frames of `content`, drawn one after another from `run`, as scene tiles draw after the layer's children. */
 export function contentFrames(run: PaintRange, content: readonly TscnNode[]): PaintFrame[] {
-  return allocatePaintRange(run, content).children.map(runFrameAt);
+  return allocatePaintRange(run, content).children.map(runFrame);
 }
 
 /** The frame of a subtree outside the shared live tree whose root owns `range`, with no canvas roots above. */
-function runFrameAt(range: PaintRange): PaintFrame {
+export function runFrame(range: PaintRange): PaintFrame {
   return { kind: 'run', range, canvasRoots: NO_CANVAS_ROOTS };
-}
-
-/**
- * The frame of the item at `path` that a y-sort re-packed into `range`: the pass's own paint moved
- * to `range` when the sort packed its whole subtree. A y-sorted item's body, whose children sort as
- * items of their own, and a row take `range` itself, as does an item outside the shared tree.
- */
-export function useRepackedFrame(path: string, range: PaintRange): PaintFrame {
-  const frame = useContext(PaintFrameContext);
-  const fromPass = useLiveScenePass(canvasPaintPass, frame.kind === 'tree' ? path : null);
-  return useMemo(() => {
-    if (frame.kind === 'tree' && fromPass?.range.size === range.size) {
-      return { kind: 'tree', shift: range.base - fromPass.range.base, moved: fromPass.range };
-    }
-    return { kind: 'run', range, canvasRoots: frame.kind === 'run' ? frame.canvasRoots : NO_CANVAS_ROOTS };
-  }, [frame, fromPass, range]);
-}
-
-/** The shift of a `tree` frame for a node owning `range`: none for a run outside the moved one. */
-function shiftOf(frame: { shift: number; moved: PaintRange }, range: PaintRange): number {
-  const { moved } = frame;
-  const isInside = range.base >= moved.base && range.base + range.size <= moved.base + moved.size;
-  return isInside ? frame.shift : 0;
-}
-
-function shifted(paint: CanvasItemPaint, shift: number): CanvasItemPaint {
-  if (shift === 0) return paint;
-  const move = (range: PaintRange): PaintRange => ({ base: range.base + shift, size: range.size });
-  return {
-    range: move(paint.range),
-    own: paint.own + shift,
-    front: move(paint.front),
-    layer: paint.layer + shift,
-    back: move(paint.back),
-    tail: move(paint.tail),
-    behind: paint.behind.map(move),
-  };
 }
 
 /** The paint of `node` owning `range` outside the shared tree, and the run each child owns. */

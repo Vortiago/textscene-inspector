@@ -31,6 +31,23 @@ export interface ExtraSortItem {
 /** The extra pieces of each node, by live path, in collection order. */
 export type ExtraSortItems = ReadonlyMap<string, readonly ExtraSortItem[]>;
 
+/** What the tree does not hold that places a sorted entry. */
+export interface SortInputs {
+  readonly origins: SortOrigins;
+  readonly extras: ExtraSortItems;
+  /** The sort y a mixer pose gives an entry now, by live path or extra id, over the y the tree gives. */
+  readonly liveYs: ReadonlyMap<string, number>;
+}
+
+export const NO_SORT_INPUTS: SortInputs = { origins: new Map(), extras: new Map(), liveYs: new Map() };
+
+/** What the sort reads of a canvas item: its parent item, whether it is visible, and its fields. */
+export interface SortItem {
+  readonly parent: string | null;
+  readonly isVisible: boolean;
+  readonly fields: Pick<CanvasItemPassResult['fields'], 'ySortEnabled' | 'local'>;
+}
+
 /** One entry of a sort root's list, before the sort. */
 interface SortEntry {
   readonly id: string;
@@ -44,31 +61,65 @@ interface SortEntry {
  * children draws only its body, since those children are entries of their own.
  */
 export function ySortedPaint(
-  results: ReadonlyMap<string, CanvasItemPassResult>,
+  results: ReadonlyMap<string, SortItem>,
   paints: ReadonlyMap<string, CanvasItemPaint>,
-  origins: SortOrigins,
-  extras: ExtraSortItems
+  inputs: SortInputs
 ): ReadonlyMap<string, PaintRange> {
-  const tree = new SortTree(results, paints, origins, extras);
+  const tree = new SortTree(results, paints, inputs);
   const runs = new Map<string, PaintRange>();
+  // The results are in tree order, so an outer sort has placed the entry a nested root sits in.
   for (const [path, result] of results) {
-    if (!tree.isSortRoot(path, result)) continue;
+    if (!tree.isSortRoot(result)) continue;
     const paint = paints.get(path);
     if (!paint) continue;
-    const entries = tree.entriesOf(path);
-    // `SortArray` with `ItemYSort` is unstable, but `ysort_index` breaks every tie in collection order.
-    const sorted = entries
-      .map((entry, index) => ({ entry, index }))
-      .sort((a, b) => compareSortY(a.entry.sortY, b.entry.sortY) || a.index - b.index)
-      .map(({ entry }) => entry);
+    const range = movedRange(path, paint.range, runs, paints);
+    const sorted = sortedEntries(tree.entriesOf(path));
     const packed = packPaintRanges(
-      paint.range,
+      range,
       sorted.map((entry) => entry.size),
-      paint.range.base
+      range.base
     );
     sorted.forEach((entry, index) => runs.set(entry.id, packed[index]!));
   }
   return runs;
+}
+
+/** `SortArray` with `ItemYSort` is unstable, but `ysort_index` breaks every tie in collection order. */
+function sortedEntries(entries: readonly SortEntry[]): SortEntry[] {
+  return entries
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => compareSortY(a.entry.sortY, b.entry.sortY) || a.index - b.index)
+    .map(({ entry }) => entry);
+}
+
+/** `range` of the node at `path`, moved with the nearest entry above it that a sort has placed. */
+function movedRange(
+  path: string,
+  range: PaintRange,
+  runs: ReadonlyMap<string, PaintRange>,
+  paints: ReadonlyMap<string, CanvasItemPaint>
+): PaintRange {
+  const shift = shiftAbove(path, range, runs, paints);
+  return shift === 0 ? range : { base: range.base + shift, size: range.size };
+}
+
+/**
+ * How far the nearest entry above `path` moved: the distance from the run tree order gave it to the
+ * run its sort gave. None where that run does not hold `range`, as a canvas root keeps its own.
+ */
+function shiftAbove(
+  path: string,
+  range: PaintRange,
+  runs: ReadonlyMap<string, PaintRange>,
+  paints: ReadonlyMap<string, CanvasItemPaint>
+): number {
+  for (let above = parentPathOf(path); above !== null; above = parentPathOf(above)) {
+    const run = runs.get(above);
+    if (!run) continue;
+    const moved = paints.get(above)?.range;
+    return moved && isInside(range, moved) ? run.base - moved.base : 0;
+  }
+  return 0;
 }
 
 /** The pass's results read as Godot's `child_items` lists. */
@@ -77,10 +128,9 @@ class SortTree {
   private readonly childNodes = new Map<string, string[]>();
 
   constructor(
-    private readonly results: ReadonlyMap<string, CanvasItemPassResult>,
+    private readonly results: ReadonlyMap<string, SortItem>,
     private readonly paints: ReadonlyMap<string, CanvasItemPaint>,
-    private readonly origins: SortOrigins,
-    private readonly extras: ExtraSortItems
+    private readonly inputs: SortInputs
   ) {
     for (const [path, result] of results) {
       if (result.parent !== null) listUnder(this.childItems, result.parent, path);
@@ -92,7 +142,7 @@ class SortTree {
   }
 
   /** A `sort_y` item that no outer sort flattens: its parent item does not sort, or it has none. */
-  isSortRoot(path: string, result: CanvasItemPassResult): boolean {
+  isSortRoot(result: SortItem): boolean {
     if (!result.fields.ySortEnabled || !result.isVisible) return false;
     const parent = result.parent === null ? undefined : this.results.get(result.parent);
     return !parent?.fields.ySortEnabled;
@@ -107,8 +157,9 @@ class SortTree {
 
   /** `_collect_ysort_children` (`renderer_canvas_cull.cpp:110-160`), with the node's extra pieces first. */
   private collect(path: string, toRoot: Transform2DColumns, entries: SortEntry[]): void {
-    for (const extra of this.extras.get(path) ?? []) {
-      entries.push({ id: extra.id, sortY: transform2DXform(toRoot, extra.origin).y, size: extra.size });
+    for (const extra of this.inputs.extras.get(path) ?? []) {
+      const sortY = this.inputs.liveYs.get(extra.id) ?? transform2DXform(toRoot, extra.origin).y;
+      entries.push({ id: extra.id, sortY, size: extra.size });
     }
     for (const child of this.childItems.get(path) ?? []) {
       const result = this.results.get(child)!;
@@ -116,21 +167,80 @@ class SortTree {
       const xform = multiplyTransform2D(toRoot, this.localOf(child, result));
       const sortsChildren = result.fields.ySortEnabled;
       const size = sortsChildren ? this.bodySize(child) : (this.paints.get(child)?.range.size ?? 0);
-      entries.push({ id: child, sortY: xform.ty, size });
+      entries.push({ id: child, sortY: this.inputs.liveYs.get(child) ?? xform.ty, size });
       if (sortsChildren) this.collect(child, xform, entries);
     }
   }
 
-  private localOf(path: string, result: CanvasItemPassResult): Transform2DColumns {
-    return this.origins.get(path) ?? result.fields.local ?? TRANSFORM2D_IDENTITY;
+  private localOf(path: string, result: SortItem): Transform2DColumns {
+    return this.inputs.origins.get(path) ?? result.fields.local ?? TRANSFORM2D_IDENTITY;
   }
 
-  /** The values an item draws itself, without the runs its child nodes own. */
+  /**
+   * The values an item draws itself, without the runs its child nodes own and its extra pieces
+   * take. The pieces draw from the room the item reserves, and the body keeps at least one value.
+   */
   private bodySize(path: string): number {
     const range = this.paints.get(path)?.range.size ?? 0;
     const children = this.childNodes.get(path) ?? [];
-    return range - children.reduce((sum, child) => sum + (this.paints.get(child)?.range.size ?? 0), 0);
+    const childSizes = children.reduce((sum, child) => sum + (this.paints.get(child)?.range.size ?? 0), 0);
+    const extraSizes = (this.inputs.extras.get(path) ?? []).reduce((sum, extra) => sum + extra.size, 0);
+    return Math.max(1, range - childSizes - extraSizes);
   }
+}
+
+/**
+ * The paint of the node at `path` after the sorts: moved into its own entry's run, or into the run of
+ * the entry its subtree draws in. An entry that sorts its own children keeps only its body's pieces,
+ * closed up where its children's runs were. A canvas root below an entry keeps its run.
+ */
+export function sortedPaintOf(
+  path: string,
+  paint: CanvasItemPaint,
+  runs: ReadonlyMap<string, PaintRange>,
+  paints: ReadonlyMap<string, CanvasItemPaint>
+): CanvasItemPaint {
+  if (runs.size === 0) return paint;
+  const own = runs.get(path);
+  if (own)
+    return own.size === paint.range.size ? shifted(paint, own.base - paint.range.base) : bodyAt(paint, own);
+  return shifted(paint, shiftAbove(path, paint.range, runs, paints));
+}
+
+/** The body pieces of `paint` packed into `run`: the pieces after its children move up by their runs. */
+function bodyAt(paint: CanvasItemPaint, run: PaintRange): CanvasItemPaint {
+  const shift = run.base - paint.range.base;
+  const childrenStart = paint.front.base + paint.front.size;
+  const childrenSize = paint.range.size - run.size;
+  const at = (value: number): number => value + shift - (value >= childrenStart ? childrenSize : 0);
+  const move = (range: PaintRange): PaintRange => ({ base: at(range.base), size: range.size });
+  return {
+    range: run,
+    own: at(paint.own),
+    front: move(paint.front),
+    layer: at(paint.layer),
+    back: move(paint.back),
+    tail: move(paint.tail),
+    behind: [],
+  };
+}
+
+function shifted(paint: CanvasItemPaint, shift: number): CanvasItemPaint {
+  if (shift === 0) return paint;
+  const move = (range: PaintRange): PaintRange => ({ base: range.base + shift, size: range.size });
+  return {
+    range: move(paint.range),
+    own: paint.own + shift,
+    front: move(paint.front),
+    layer: paint.layer + shift,
+    back: move(paint.back),
+    tail: move(paint.tail),
+    behind: paint.behind.map(move),
+  };
+}
+
+function isInside(range: PaintRange, outer: PaintRange): boolean {
+  return range.base >= outer.base && range.base + range.size <= outer.base + outer.size;
 }
 
 function listUnder(lists: Map<string, string[]>, parent: string, path: string): void {

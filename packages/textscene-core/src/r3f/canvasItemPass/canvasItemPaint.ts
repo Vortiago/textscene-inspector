@@ -15,6 +15,7 @@ import {
   behindRangesOf,
   canvasRootRanges,
   hostsOwnCanvas,
+  lastPaintSequence,
   paintLayoutOf,
   WHOLE_CANVAS_RANGE,
   type PaintRange,
@@ -38,6 +39,20 @@ export interface CanvasItemPaint {
   /** The ranges of the children that draw behind it, in child order. */
   readonly behind: readonly PaintRange[];
 }
+
+/**
+ * The paint of a node that starts a canvas of its own and owns all of it: its pixels first, its
+ * back pieces last, and no room for anything else.
+ */
+export const WHOLE_CANVAS_PAINT: CanvasItemPaint = {
+  range: WHOLE_CANVAS_RANGE,
+  own: WHOLE_CANVAS_RANGE.base,
+  front: { base: WHOLE_CANVAS_RANGE.base, size: 0 },
+  layer: WHOLE_CANVAS_RANGE.base,
+  back: { base: lastPaintSequence(WHOLE_CANVAS_RANGE), size: 0 },
+  tail: { base: lastPaintSequence(WHOLE_CANVAS_RANGE), size: 0 },
+  behind: [],
+};
 
 /** What a visited node hands the nodes below it. */
 interface Above {

@@ -17,8 +17,10 @@ import {
 import { canvasItemFieldsOf, type CanvasItemNodeFields } from './canvasItemPass/canvasItemFields.js';
 import { NO_PATCHES, patchedNode, type NodePatches } from './nodePatch.js';
 import { joinPath } from '../utils/nodePath.js';
+import { perObject } from '../utils/perObject.js';
+import { isControlType } from './canvasItemClass.js';
 import type { LiveNode } from '../resources/liveNode.js';
-import type { ControlTransforms } from './contexts/ControlYSortContext.js';
+import type { ControlTransforms } from './contexts/YSortContext.js';
 
 /** What `_collect_ysort_children` threads down to the children of one y-sorted item. */
 export interface YSortParent {
@@ -232,3 +234,8 @@ export function collectYSortedItems(
   }
   return items;
 }
+
+/** Whether `node` or a node below it is a Control, so a Control subtree moves with it. */
+export const hasControl: (node: TscnNode) => boolean = perObject(
+  (node) => isControlType(node.type) || node.children.some(hasControl)
+);

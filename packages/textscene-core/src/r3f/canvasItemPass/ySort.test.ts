@@ -10,7 +10,8 @@ import { contextOver } from '../liveSceneTree.testkit';
 import { liveScenePassResults } from '../liveScenePass';
 import { canvasItemPass } from './canvasItemPass';
 import { canvasPaintPass } from './canvasItemPaint';
-import { ySortedPaint, type ExtraSortItems, type SortOrigins } from './ySort';
+import type { PaintRange } from '../canvasPaintOrder';
+import { NO_SORT_INPUTS, ySortedPaint, type ExtraSortItems, type SortOrigins } from './ySort';
 import '../nodes/index';
 import '../controls/index';
 
@@ -18,20 +19,23 @@ function parsed(body: string): TscnScene {
   return new TscnParser().parse(`[gd_scene format=3]\n\n${body}`);
 }
 
-const NO_ORIGINS: SortOrigins = new Map();
-const NO_EXTRAS: ExtraSortItems = new Map();
+const NO_ORIGINS: SortOrigins = NO_SORT_INPUTS.origins;
+const NO_EXTRAS: ExtraSortItems = NO_SORT_INPUTS.extras;
+
+/** Each sorted entry's run, by path or extra id. */
+function sortedRuns(body: string, origins = NO_ORIGINS, extras = NO_EXTRAS): ReadonlyMap<string, PaintRange> {
+  const scene = parsed(body);
+  const tree = liveTreeOf(scene.nodes, contextOver(scene, {}));
+  return ySortedPaint(
+    liveScenePassResults(canvasItemPass, tree),
+    liveScenePassResults(canvasPaintPass, tree),
+    { origins, extras, liveYs: NO_SORT_INPUTS.liveYs }
+  );
+}
 
 /** The sorted paths and extra ids in the order their runs draw. */
 function sortedOrder(body: string, origins = NO_ORIGINS, extras = NO_EXTRAS): string[] {
-  const scene = parsed(body);
-  const tree = liveTreeOf(scene.nodes, contextOver(scene, {}));
-  const runs = ySortedPaint(
-    liveScenePassResults(canvasItemPass, tree),
-    liveScenePassResults(canvasPaintPass, tree),
-    origins,
-    extras
-  );
-  return [...runs].sort((a, b) => a[1].base - b[1].base).map(([id]) => id);
+  return [...sortedRuns(body, origins, extras)].sort((a, b) => a[1].base - b[1].base).map(([id]) => id);
 }
 
 /** A sort root of `type` at (300, 100) holding `A` at y 200 and then `B` at y 100. */
@@ -193,5 +197,51 @@ position = Vector2(0, 50)
         extras
       )
     ).toEqual(['Root', 'row 50', 'Root/Tie']);
+  });
+
+  it("draws a node's extra pieces from the room its run reserves, so each child keeps its whole run", () => {
+    const extras: ExtraSortItems = new Map([
+      ['Root', [1, 2, 3].map((y) => ({ id: `row ${y}`, origin: { x: 0, y }, size: 1 }))],
+    ]);
+    const runs = sortedRuns(
+      `[node name="Root" type="TileMapLayer"]
+y_sort_enabled = true
+
+[node name="Group" type="Node2D" parent="."]
+position = Vector2(0, 10)
+
+[node name="Deep" type="Polygon2D" parent="Group"]
+`,
+      NO_ORIGINS,
+      extras
+    );
+    expect(runs.get('Root/Group')?.size).toBe(2);
+  });
+
+  it('packs a sort root below a moved entry inside the run the outer sort moved it to', () => {
+    const runs = sortedRuns(`[node name="Root" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Moved" type="Node2D" parent="."]
+position = Vector2(0, 100)
+
+[node name="Inner" type="Node2D" parent="Moved"]
+y_sort_enabled = true
+
+[node name="Leaf" type="Polygon2D" parent="Moved/Inner"]
+
+[node name="Up" type="Node2D" parent="."]
+position = Vector2(0, 50)
+
+[node name="Up1" type="Polygon2D" parent="Up"]
+
+[node name="Up2" type="Polygon2D" parent="Up"]
+
+[node name="Up3" type="Polygon2D" parent="Up"]
+`);
+    const moved = runs.get('Root/Moved')!;
+    const leaf = runs.get('Root/Moved/Inner/Leaf')!;
+    expect(leaf.base).toBeGreaterThanOrEqual(moved.base);
+    expect(leaf.base + leaf.size).toBeLessThanOrEqual(moved.base + moved.size);
   });
 });
