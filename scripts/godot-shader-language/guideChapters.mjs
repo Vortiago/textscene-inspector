@@ -54,7 +54,7 @@ const TYPES_AND_LITERALS = {
       rows: (row) => row.id === 'float literal',
       what: `A literal such as \`2.5\`, \`.5\`, \`1e-3\` or \`2.5f\`. Godot reads the text with its own decimal reader, keeps a 32-bit float, and writes the float back into the GLSL it compiles with 14 decimals (\`shader_compiler.cpp:180\`). So a value under \`1e-14\` draws as \`0.0\`, a value with more digits draws with fewer, and a literal past the float range, such as \`1e39\`, fails to compile. The transpiler gives each literal the float that this chain gives.
 
-Arithmetic of literals alone, such as \`58.656 + 74.377\`, never reaches the GPU as arithmetic. Godot's GLSL compiler, glslang, reads each number of Godot's text as a double, folds the arithmetic in double precision and rounds the result once. The transpiler folds the same arithmetic the same way, so the result can differ by one unit from the same sum in 32-bit floats. Godot also folds a constructor of literals, and a negated literal at the top of an expression, into one constant (\`shader_language.cpp:7840\`).`,
+Arithmetic of literals alone, such as \`58.656 + 74.377\`, never reaches the GPU as arithmetic. Godot's GLSL compiler, glslang, folds every operator of constants on the CPU (\`Constant.cpp\`): it reads each number of Godot's text as a double, folds float arithmetic in double precision and rounds the result once. It folds integers, conversions, comparisons, swizzles, elements, matrix products and \`?:\` too, as the x86-64 build of Godot computes them. The transpiler folds the same subtrees the same way and writes the constant. So a float result can differ by one unit from the same sum in 32-bit floats, and \`9u << 85u\` is \`9u << 21u\`, where the GPU gives 0. Godot also folds a constructor of literals, and a negated literal at the top of an expression, into one constant (\`shader_language.cpp:7840\`).`,
       tsl: 'float(value)',
     },
     {
@@ -86,7 +86,7 @@ const MATRIX_NOTES = {
   OP_MUL:
     'A matrix times a matrix or a vector is the linear algebra product: `m * v` treats `v` as a column, `v * m` as a row. A matrix times a float scales each lane. Godot 4.6.3 ends its process on `mat4 * vec4` where it knows both values, `mat4(2.0) * vec4(1.0)`: its fold reads past the vector (`shader_language.cpp:2401`). The transpiler refuses that expression with a message of its own.',
   OP_DIV:
-    'A matrix divides by a matrix lane by lane. glslang writes `matrix / float` as the matrix times the reciprocal of the float, so a lane can land one unit off a true division. The transpiler does the same. Godot computes an operator of constants as it reads it (`shader_language.cpp:2065`), and refuses an `int` or `ivec` division by a zero it knows, `5 / (1 - 1)`, with "Division by zero error.". It does not check a `uvec` divisor, and a divisor in brackets folds, so `5 / (-0)` is refused and `5 / -0` is not. The least `int` divided by -1, both known, ends the Godot process: the transpiler refuses that expression with a message of its own.',
+    'A matrix divides by a matrix lane by lane. glslang writes `matrix / float` as the matrix times the reciprocal of the float, so a lane can land one unit off a true division. The transpiler does the same. Godot computes an operator of constants as it reads it (`shader_language.cpp:2065`), and refuses an `int` or `ivec` division by a zero it knows, `5 / (1 - 1)`, with "Division by zero error.". It does not check a `uvec` divisor: glslang folds a `uvec` division by a zero constant to the largest `uint`. A divisor in brackets folds, so `5 / (-0)` is refused and `5 / -0` is not. The least `int` divided by -1, both known, ends the Godot process: the transpiler refuses that expression with a message of its own.',
 };
 
 function arithmeticSection([op, token, method, verb]) {
@@ -149,7 +149,7 @@ const BITS_CHAPTER = {
     {
       heading: '`<<` and `>>` (OP_SHIFT_LEFT, OP_SHIFT_RIGHT)',
       rows: anyOperatorRows(['OP_SHIFT_LEFT', 'OP_SHIFT_RIGHT']),
-      what: '`a << b` moves the bits of each lane left by `b`, and `a >> b` right. `>>` keeps the sign of an `int` and fills a `uint` with zeros. A shift by 32 or more, or by a negative amount, has no result GLSL defines.',
+      what: '`a << b` moves the bits of each lane left by `b`, and `a >> b` right. `>>` keeps the sign of an `int` and fills a `uint` with zeros. A shift by 32 or more, or by a negative amount, has no result GLSL defines. A shift of constants folds in glslang with the count taken modulo 32, and the transpiler writes that constant.',
       tsl: 'a.shiftLeft(b), a.shiftRight(b)',
     },
   ],

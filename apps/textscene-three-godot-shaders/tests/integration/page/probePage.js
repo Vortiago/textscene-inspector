@@ -82,7 +82,10 @@ renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
     .trim();
 };
 
-/** A lane of each scalar kind from its 32 bits, and the 32 bits of a lane. */
+/**
+ * A lane of each scalar kind from its 32 bits, and the 32 bits of a lane. An int lane goes through
+ * a variable: three writes `uint` of a negative int constant as `0u` (`ConstNode.generate`).
+ */
 const LANE_OF_BITS = {
   float: (bits) => uintBitsToFloat(bits),
   int: (bits) => int(bits),
@@ -91,7 +94,7 @@ const LANE_OF_BITS = {
 };
 const BITS_OF = {
   float: (lane) => floatBitsToUint(lane),
-  int: (lane) => uint(lane),
+  int: (lane) => uint(lane.toVar()),
   uint: (lane) => lane,
   bool: (lane) => select(lane, uint(1), uint(0)),
 };

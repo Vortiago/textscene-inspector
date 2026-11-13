@@ -1,7 +1,7 @@
 /** The transpiler end to end: a shader text to the GLSL three generates for its TSL nodes. */
 
 import { describe, expect, it } from 'vitest';
-import { uniform, vec2, vec4 } from 'three/tsl';
+import { mat2, uniform, vec2, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { generatedFragmentShader } from '../generatedShader.testkit.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
@@ -59,6 +59,19 @@ describe('transpileShadingLanguage', () => {
       glslOf('vec3 probe(vec2 a, float b) { return vec3(b, a); }', [uniform(vec2(1, 2)), uniform(3)])
     ).toMatch(/vec3\( \w+, \w+ \)/);
   });
+
+  it.each(['+', '-', '*', '/'])(
+    'writes a scalar %s matrix column by column, which three writes unbracketed',
+    (op) => {
+      const glsl = glslOf(`mat2 probe(mat2 a, float b) { return b * (b ${op} a); }`, [
+        uniform(mat2(1, 2, 3, 4)),
+        uniform(2),
+      ]);
+      expect(glsl).toContain(
+        `mat2( ( vec2( nodeUniform0 ) ${op} nodeUniform1[ 0 ] ), ( vec2( nodeUniform0 ) ${op} nodeUniform1[ 1 ] ) )`
+      );
+    }
+  );
 
   it('refuses a text Godot refuses', () => {
     expect(() => transpileShadingLanguage('vec3 probe(vec3 a) { return a.q; }')).toThrow(

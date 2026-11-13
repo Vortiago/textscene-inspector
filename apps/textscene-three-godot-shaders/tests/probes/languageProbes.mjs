@@ -129,6 +129,51 @@ function negationTextProbes() {
   return cases.map(([word, row, source]) => probeOf(`negation-text-${word}`, [row], source));
 }
 
+/**
+ * glslang folds an operator of constants on the CPU, where the GPU's own arithmetic differs: a
+ * shift count past 31, a division by zero, a conversion of a negative lane, an equality sized by
+ * its left operand, and sums in double precision. The page reads the constant the transpiler writes.
+ */
+function foldingProbes() {
+  const cases = [
+    ['shift-past-31', 'OP_SHIFT_LEFT(uint,uint)', 'uint probe(uint a) { return (9u << 85u) ^ a; }'],
+    [
+      'shift-negative',
+      'OP_SHIFT_RIGHT(ivec2,int)',
+      'ivec2 probe(ivec2 a) { return (ivec2(-80, 80) >> -3) ^ a; }',
+    ],
+    [
+      'uint-division-by-zero',
+      'OP_DIV(uvec2,uvec2)',
+      'uvec2 probe(uvec2 a) { return (uvec2(7u, 8u) / uvec2(0u, 2u)) ^ a; }',
+    ],
+    ['negative-int-to-uint', 'uint', 'uint probe(uint a) { return uint(-65) ^ a; }'],
+    [
+      'bool-to-float',
+      'OP_ADD(float,float)',
+      'float probe(float a) { return 98.608 + float(true) * 45.630e1 + a * 0.0; }',
+    ],
+    ['double-equality', 'OP_EQUAL(float,float)', 'bool probe(bool a) { return (0.1 + 0.2 == 0.3) != a; }'],
+    [
+      'matrix-equality',
+      'OP_EQUAL(mat2,mat2)',
+      'bool probe(bool a) { return (mat2(4.0) == mat2(vec2(4.0, 0.0), vec2(0.0, 4.0))) != a; }',
+    ],
+    [
+      'matrix-times-vector',
+      'OP_MUL(mat3,vec3)',
+      'vec3 probe(vec3 a) { return mat3(vec3(0.1), vec3(0.2), vec3(0.7)) * vec3(0.3, 0.6, 0.9) + a * 0.0; }',
+    ],
+    [
+      'equality-of-equalities',
+      'OP_EQUAL(bool,bool)',
+      'bvec2 probe(bool a) { return bvec2((vec3(76.934) == vec3(43.498)) == (1 == 2) != a, (1 == 2) == (3 == 4) != a); }',
+    ],
+    ['select', 'OP_SELECT_IF(bool,int,int)', 'int probe(int a) { return (1 > 2 ? 4 << 40 : 5 << 40) ^ a; }'],
+  ];
+  return cases.map(([word, row, source]) => probeOf(`folding-${word}`, [row], source));
+}
+
 export const LANGUAGE_PROBES = [
   ...typeProbes(),
   ...precisionProbes(),
@@ -138,4 +183,5 @@ export const LANGUAGE_PROBES = [
   ...branchProbes(),
   ...unbracketedProbes(),
   ...negationTextProbes(),
+  ...foldingProbes(),
 ];

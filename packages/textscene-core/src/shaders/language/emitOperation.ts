@@ -44,17 +44,24 @@ const binary =
     tsl(operator)(first!, second!);
 
 /**
- * GLSL's `-`. three writes `matrix - scalar` as `scalar - matrix` (`OperatorNode.generate` of
- * three 0.187), so that subtracts column by column.
+ * A binary operator over its operands, column by column where one operand is a matrix and the
+ * other a scalar. three 0.187 writes `scalar op matrix` with no brackets and `matrix op scalar`
+ * with the operands swapped (`OperatorNode.generate`), which `-` and `/` and any parent misread.
  */
-function difference(operands: readonly Node[], types: readonly ValueType[]): Node {
-  const [first, second] = operands as [Node, Node];
-  if (!isMatrixByScalar(types)) return tsl(sub)(first, second);
-  const columns = shapeOf(types[0]!)!.columns!;
-  return CONSTRUCTORS[types[0]!]!(
-    ...Array.from({ length: columns }, (_, column) => tsl(sub)(columnOf(first, column), second))
-  );
-}
+const columnwise =
+  (operator: unknown): Operation =>
+  (operands, types) => {
+    const matrix = types.findIndex((type) => shapeOf(type)!.columns !== undefined);
+    const isByScalar = matrix !== -1 && types.some((type) => shapeOf(type)!.lanes === 1);
+    if (!isByScalar) return tsl(operator)(operands[0]!, operands[1]!);
+    const columnAt = (operand: number, column: number) =>
+      operand === matrix ? columnOf(operands[operand]!, column) : operands[operand]!;
+    return CONSTRUCTORS[types[matrix]!]!(
+      ...Array.from({ length: shapeOf(types[matrix]!)!.columns! }, (_, column) =>
+        tsl(operator)(columnAt(0, column), columnAt(1, column))
+      )
+    );
+  };
 
 const isMatrixByScalar = (types: readonly ValueType[]) =>
   shapeOf(types[0]!)!.columns !== undefined && shapeOf(types[1]!)!.lanes === 1;
@@ -64,8 +71,8 @@ const isMatrixByScalar = (types: readonly ValueType[]) =>
  * rounds twice, so a lane can land one unit off a true division, or flush to zero.
  */
 function quotient(operands: readonly Node[], types: readonly ValueType[]): Node {
-  if (!isMatrixByScalar(types)) return tsl(div)(operands[0]!, operands[1]!);
-  return tsl(mul)(operands[0]!, tsl(div)(floatNode(1), operands[1]!));
+  if (!isMatrixByScalar(types)) return columnwise(div)(operands, types);
+  return columnwise(mul)([operands[0]!, tsl(div)(floatNode(1), operands[1]!)], types);
 }
 
 const unary =
@@ -103,9 +110,9 @@ export const columnOf = (matrix: Node, column: number): Node =>
 
 /** The operation of each operator that writes nothing, by Godot's enumerator. */
 export const OPERATIONS: Readonly<Record<string, Operation>> = {
-  OP_ADD: binary(add),
-  OP_SUB: difference,
-  OP_MUL: binary(mul),
+  OP_ADD: columnwise(add),
+  OP_SUB: columnwise(sub),
+  OP_MUL: columnwise(mul),
   OP_DIV: quotient,
   OP_MOD: binary(mod),
   OP_SHIFT_LEFT: binary(shiftLeft),

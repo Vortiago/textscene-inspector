@@ -40,9 +40,6 @@ const SHAPES = shapes();
 /** The shape of a type that holds values, or nothing for `void`, a sampler or a struct. */
 export const shapeOf = (type: ValueType): TypeShape | undefined => SHAPES.get(type);
 
-/** The value types: the scalars, their vectors and the matrices. */
-export const VALUE_TYPES: readonly ValueType[] = [...SHAPES.keys()];
-
 /** The type of `lanes` lanes of `scalar`: `float` for one, `vec3` for three. */
 export function vectorType(scalar: ScalarKind, lanes: number): ValueType {
   return lanes === 1 ? scalar : `${VECTOR_PREFIX[scalar]}${lanes}`;

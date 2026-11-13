@@ -465,11 +465,35 @@ uvec4 probe(uvec4 a) { return ~a; }
 
 ## `<<` and `>>` (OP_SHIFT_LEFT, OP_SHIFT_RIGHT)
 
-`a << b` moves the bits of each lane left by `b`, and `a >> b` right. `>>` keeps the sign of an `int` and fills a `uint` with zeros. A shift by 32 or more, or by a negative amount, has no result GLSL defines.
+`a << b` moves the bits of each lane left by `b`, and `a >> b` right. `>>` keeps the sign of an `int` and fills a `uint` with zeros. A shift by 32 or more, or by a negative amount, has no result GLSL defines. A shift of constants folds in glslang with the count taken modulo 32, and the transpiler writes that constant.
 
 The transpiler emits `a.shiftLeft(b), a.shiftRight(b)`. Rows: `OP_SHIFT_LEFT(int,int)`, `OP_SHIFT_LEFT(ivec2,int)`, `OP_SHIFT_LEFT(ivec2,ivec2)`, `OP_SHIFT_LEFT(ivec3,int)`, `OP_SHIFT_LEFT(ivec3,ivec3)`, `OP_SHIFT_LEFT(ivec4,int)`, `OP_SHIFT_LEFT(ivec4,ivec4)`, `OP_SHIFT_LEFT(uint,uint)`, `OP_SHIFT_LEFT(uvec2,uint)`, `OP_SHIFT_LEFT(uvec2,uvec2)`, `OP_SHIFT_LEFT(uvec3,uint)`, `OP_SHIFT_LEFT(uvec3,uvec3)`, `OP_SHIFT_LEFT(uvec4,uint)`, `OP_SHIFT_LEFT(uvec4,uvec4)`, `OP_SHIFT_RIGHT(int,int)`, `OP_SHIFT_RIGHT(ivec2,int)`, `OP_SHIFT_RIGHT(ivec2,ivec2)`, `OP_SHIFT_RIGHT(ivec3,int)`, `OP_SHIFT_RIGHT(ivec3,ivec3)`, `OP_SHIFT_RIGHT(ivec4,int)`, `OP_SHIFT_RIGHT(ivec4,ivec4)`, `OP_SHIFT_RIGHT(uint,uint)`, `OP_SHIFT_RIGHT(uvec2,uint)`, `OP_SHIFT_RIGHT(uvec2,uvec2)`, `OP_SHIFT_RIGHT(uvec3,uint)`, `OP_SHIFT_RIGHT(uvec3,uvec3)`, `OP_SHIFT_RIGHT(uvec4,uint)`, `OP_SHIFT_RIGHT(uvec4,uvec4)`. Godot source: `servers/rendering/shader_language.cpp:1755`.
 
 Every row is native on WebGL 2 and on WebGPURenderer.
+
+### Probe `folding-shift-past-31`, 16 input rows
+
+```glsl
+uint probe(uint a) { return (9u << 85u) ^ a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0u` | `18874368u` |
+| `1u` | `18874369u` |
+
+### Probe `folding-shift-negative`, 16 input rows
+
+```glsl
+ivec2 probe(ivec2 a) { return (ivec2(-80, 80) >> -3) ^ a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0, 7)` | `(-1, 7)` |
+| `(1, 31)` | `(-2, 31)` |
+| `(-1, 32)` | `(0, 32)` |
+| `(1000003, 0)` | `(-1000004, 0)` |
 
 ### Probe `shift-left-int-int`, 32 input rows
 

@@ -27,7 +27,7 @@ canvases draw on WebGPURenderer (#1788).
 | `ivec2` | transpiled (`type-ivec2`) | native | native | `servers/rendering/shader_language.h:216` |
 | `ivec3` | transpiled (`type-ivec3`) | native | native | `servers/rendering/shader_language.h:217` |
 | `ivec4` | transpiled (`type-ivec4`) | native | native | `servers/rendering/shader_language.h:218` |
-| `uint` | transpiled (`type-uint`) | native | native | `servers/rendering/shader_language.h:219` |
+| `uint` | transpiled (`type-uint`, `folding-negative-int-to-uint`) | native | native | `servers/rendering/shader_language.h:219` |
 | `uvec2` | transpiled (`type-uvec2`) | native | native | `servers/rendering/shader_language.h:220` |
 | `uvec3` | transpiled (`type-uvec3`) | native | native | `servers/rendering/shader_language.h:221` |
 | `uvec4` | transpiled (`type-uvec4`) | native | native | `servers/rendering/shader_language.h:222` |
@@ -158,7 +158,7 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `OP_EQUAL(bool,bool)` | transpiled (`equal-bool-bool`) | native | native | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(bool,bool)` | transpiled (`folding-equality-of-equalities`, `equal-bool-bool`) | native | native | `servers/rendering/shader_language.cpp:1565` |
 | `OP_EQUAL(bvec2,bvec2)` | transpiled (`equal-bvec2-bvec2`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
 | `OP_EQUAL(bvec3,bvec3)` | transpiled (`equal-bvec3-bvec3`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
 | `OP_EQUAL(bvec4,bvec4)` | transpiled (`equal-bvec4-bvec4`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
@@ -170,11 +170,11 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_EQUAL(uvec2,uvec2)` | transpiled (`equal-uvec2-uvec2`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
 | `OP_EQUAL(uvec3,uvec3)` | transpiled (`equal-uvec3-uvec3`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
 | `OP_EQUAL(uvec4,uvec4)` | transpiled (`equal-uvec4-uvec4`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(float,float)` | transpiled (`equal-float-float`) | native | native | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(float,float)` | transpiled (`folding-double-equality`, `equal-float-float`) | native | native | `servers/rendering/shader_language.cpp:1565` |
 | `OP_EQUAL(vec2,vec2)` | transpiled (`equal-vec2-vec2`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
 | `OP_EQUAL(vec3,vec3)` | transpiled (`equal-vec3-vec3`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
 | `OP_EQUAL(vec4,vec4)` | transpiled (`equal-vec4-vec4`) | lowered: all(equal(a, b)) | lowered: all(equal(a, b)) | `servers/rendering/shader_language.cpp:1565` |
-| `OP_EQUAL(mat2,mat2)` | transpiled (`equal-mat2-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1565` |
+| `OP_EQUAL(mat2,mat2)` | transpiled (`folding-matrix-equality`, `equal-mat2-mat2`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1565` |
 | `OP_EQUAL(mat3,mat3)` | transpiled (`equal-mat3-mat3`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1565` |
 | `OP_EQUAL(mat4,mat4)` | transpiled (`equal-mat4-mat4`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1565` |
 | `OP_NOT_EQUAL(bool,bool)` | transpiled (`not-equal-bool-bool`) | native | native | `servers/rendering/shader_language.cpp:1565` |
@@ -243,7 +243,7 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_ADD(uvec3,uvec3)` | transpiled (`add-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(uvec4,uint)` | transpiled (`add-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(uvec4,uvec4)` | transpiled (`add-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_ADD(float,float)` | transpiled (`add-float-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_ADD(float,float)` | transpiled (`add-float-float`, `folding-bool-to-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(float,vec2)` | transpiled (`add-float-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(float,vec3)` | transpiled (`add-float-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_ADD(float,vec4)` | transpiled (`add-float-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
@@ -341,7 +341,7 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_MUL(mat2,vec2)` | transpiled (`mul-mat2-vec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat2,mat2)` | transpiled (`mul-mat2-mat2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat3,float)` | transpiled (`mul-mat3-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat3,vec3)` | transpiled (`mul-mat3-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat3,vec3)` | transpiled (`folding-matrix-times-vector`, `mul-mat3-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat3,mat3)` | transpiled (`mul-mat3-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat4,float)` | transpiled (`mul-mat4-float`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat4,vec4)` | transpiled (`mul-mat4-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
@@ -361,7 +361,7 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_DIV(uint,uvec3)` | transpiled (`div-uint-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(uint,uvec4)` | transpiled (`div-uint-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(uvec2,uint)` | transpiled (`div-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(uvec2,uvec2)` | transpiled (`div-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(uvec2,uvec2)` | transpiled (`folding-uint-division-by-zero`, `div-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(uvec3,uint)` | transpiled (`div-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(uvec3,uvec3)` | transpiled (`div-uvec3-uvec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(uvec4,uint)` | transpiled (`div-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:1627` |
@@ -406,7 +406,7 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_SHIFT_LEFT(ivec3,ivec3)` | transpiled (`shift-left-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1755` |
 | `OP_SHIFT_LEFT(ivec4,int)` | transpiled (`shift-left-ivec4-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
 | `OP_SHIFT_LEFT(ivec4,ivec4)` | transpiled (`shift-left-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_LEFT(uint,uint)` | transpiled (`shift-left-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_LEFT(uint,uint)` | transpiled (`folding-shift-past-31`, `shift-left-uint-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
 | `OP_SHIFT_LEFT(uvec2,uint)` | transpiled (`shift-left-uvec2-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
 | `OP_SHIFT_LEFT(uvec2,uvec2)` | transpiled (`shift-left-uvec2-uvec2`) | native | native | `servers/rendering/shader_language.cpp:1755` |
 | `OP_SHIFT_LEFT(uvec3,uint)` | transpiled (`shift-left-uvec3-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
@@ -414,7 +414,7 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_SHIFT_LEFT(uvec4,uint)` | transpiled (`shift-left-uvec4-uint`) | native | native | `servers/rendering/shader_language.cpp:1755` |
 | `OP_SHIFT_LEFT(uvec4,uvec4)` | transpiled (`shift-left-uvec4-uvec4`) | native | native | `servers/rendering/shader_language.cpp:1755` |
 | `OP_SHIFT_RIGHT(int,int)` | transpiled (`shift-right-int-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
-| `OP_SHIFT_RIGHT(ivec2,int)` | transpiled (`shift-right-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
+| `OP_SHIFT_RIGHT(ivec2,int)` | transpiled (`folding-shift-negative`, `shift-right-ivec2-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
 | `OP_SHIFT_RIGHT(ivec2,ivec2)` | transpiled (`shift-right-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1755` |
 | `OP_SHIFT_RIGHT(ivec3,int)` | transpiled (`shift-right-ivec3-int`) | native | native | `servers/rendering/shader_language.cpp:1755` |
 | `OP_SHIFT_RIGHT(ivec3,ivec3)` | transpiled (`shift-right-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1755` |
@@ -701,7 +701,7 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_SELECT_IF(bool,bvec2,bvec2)` | transpiled (`select-if-bool-bvec2-bvec2`) | native | native | `servers/rendering/shader_language.cpp:1990` |
 | `OP_SELECT_IF(bool,bvec3,bvec3)` | transpiled (`select-if-bool-bvec3-bvec3`) | native | native | `servers/rendering/shader_language.cpp:1990` |
 | `OP_SELECT_IF(bool,bvec4,bvec4)` | transpiled (`select-if-bool-bvec4-bvec4`) | native | native | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_IF(bool,int,int)` | transpiled (`branch-select`, `select-if-bool-int-int`) | native | native | `servers/rendering/shader_language.cpp:1990` |
+| `OP_SELECT_IF(bool,int,int)` | transpiled (`branch-select`, `folding-select`, `select-if-bool-int-int`) | native | native | `servers/rendering/shader_language.cpp:1990` |
 | `OP_SELECT_IF(bool,ivec2,ivec2)` | transpiled (`ternary-negated-int`, `select-if-bool-ivec2-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1990` |
 | `OP_SELECT_IF(bool,ivec3,ivec3)` | transpiled (`select-if-bool-ivec3-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1990` |
 | `OP_SELECT_IF(bool,ivec4,ivec4)` | transpiled (`select-if-bool-ivec4-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1990` |

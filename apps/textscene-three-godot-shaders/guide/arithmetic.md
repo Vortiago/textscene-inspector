@@ -206,6 +206,22 @@ vec4 probe(vec4 a, float b) { return a + b; }
 | `(1.0, 1e-7, 1e-40, -0.0)` | `inf` | `(inf, inf, inf, inf)` |
 | `(0.33333334, -3e+38, 0.0, -2.75)` | `-0.0` | `(0.33333334, -3e+38, 0.0, -2.75)` |
 
+### Probe `folding-bool-to-float`, 16 input rows
+
+```glsl
+float probe(float a) { return 98.608 + float(true) * 45.630e1 + a * 0.0; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `554.908` |
+| `-0.0` | `554.908` |
+| `1.0` | `554.908` |
+| `1e-40` | `554.908` |
+| `inf` | `554.908` |
+| `-inf` | `554.908` |
+| `NaN` | `554.908` |
+
 ### Probe `add-int-int`, 32 input rows
 
 ```glsl
@@ -1245,7 +1261,7 @@ mat4 probe(mat4 a, mat4 b) { return a - b; }
 
 ## `*` (OP_MUL)
 
-`a * b` multiplies lane by lane, on `int`, `uint` and `float` scalars and vectors. Two vectors must have the same size and scalar type. A scalar on either side applies to every lane of the vector on the other side. An `int` or a `uint` wraps at 32 bits. A matrix times a matrix or a vector is the linear algebra product: `m * v` treats `v` as a column, `v * m` as a row. A matrix times a float scales each lane.
+`a * b` multiplies lane by lane, on `int`, `uint` and `float` scalars and vectors. Two vectors must have the same size and scalar type. A scalar on either side applies to every lane of the vector on the other side. An `int` or a `uint` wraps at 32 bits. A matrix times a matrix or a vector is the linear algebra product: `m * v` treats `v` as a column, `v * m` as a row. A matrix times a float scales each lane. Godot 4.6.3 ends its process on `mat4 * vec4` where it knows both values, `mat4(2.0) * vec4(1.0)`: its fold reads past the vector (`shader_language.cpp:2401`). The transpiler refuses that expression with a message of its own.
 
 The transpiler emits `a.mul(b)`. Rows: `OP_MUL(int,int)`, `OP_MUL(int,ivec2)`, `OP_MUL(int,ivec3)`, `OP_MUL(int,ivec4)`, `OP_MUL(ivec2,int)`, `OP_MUL(ivec2,ivec2)`, `OP_MUL(ivec3,int)`, `OP_MUL(ivec3,ivec3)`, `OP_MUL(ivec4,int)`, `OP_MUL(ivec4,ivec4)`, `OP_MUL(uint,uint)`, `OP_MUL(uint,uvec2)`, `OP_MUL(uint,uvec3)`, `OP_MUL(uint,uvec4)`, `OP_MUL(uvec2,uint)`, `OP_MUL(uvec2,uvec2)`, `OP_MUL(uvec3,uint)`, `OP_MUL(uvec3,uvec3)`, `OP_MUL(uvec4,uint)`, `OP_MUL(uvec4,uvec4)`, `OP_MUL(float,float)`, `OP_MUL(float,vec2)`, `OP_MUL(float,vec3)`, `OP_MUL(float,vec4)`, `OP_MUL(float,mat2)`, `OP_MUL(float,mat3)`, `OP_MUL(float,mat4)`, `OP_MUL(vec2,float)`, `OP_MUL(vec2,vec2)`, `OP_MUL(vec2,mat2)`, `OP_MUL(vec3,float)`, `OP_MUL(vec3,vec3)`, `OP_MUL(vec3,mat3)`, `OP_MUL(vec4,float)`, `OP_MUL(vec4,vec4)`, `OP_MUL(vec4,mat4)`, `OP_MUL(mat2,float)`, `OP_MUL(mat2,vec2)`, `OP_MUL(mat2,mat2)`, `OP_MUL(mat3,float)`, `OP_MUL(mat3,vec3)`, `OP_MUL(mat3,mat3)`, `OP_MUL(mat4,float)`, `OP_MUL(mat4,vec4)`, `OP_MUL(mat4,mat4)`. Godot source: `servers/rendering/shader_language.cpp:1627`.
 
@@ -1427,7 +1443,24 @@ vec4 probe(vec4 a, float b) { return a * b; }
 vec2 probe(vec2 a, vec2 b) { return b * (a = b); }
 ```
 
-Godot does not compile this shader: it draws nothing. The transpiler refuses it too.
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL at line 325, `'' :  syntax error, unexpected EQUAL, expecting RIGHT_PAREN or COMMA`. The transpiler refuses it too.
+
+### Probe `folding-matrix-times-vector`, 16 input rows
+
+```glsl
+vec3 probe(vec3 a) { return mat3(vec3(0.1), vec3(0.2), vec3(0.7)) * vec3(0.3, 0.6, 0.9) + a * 0.0; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75, 3e+38)` | `(0.78, 0.78, 0.78)` |
+| `(-0.0, 0.33333334, -3e+38)` | `(0.78, 0.78, 0.78)` |
+| `(1.0, 1e-7, 1e-40)` | `(0.78, 0.78, 0.78)` |
+| `(-1.0, 123456.79, inf)` | `(0.78, 0.78, 0.78)` |
+| `(0.5, 16777216.0, -inf)` | `(0.78, 0.78, 0.78)` |
+| `(-2.75, 3e+38, NaN)` | `(0.78, 0.78, 0.78)` |
+| `(1e-7, 1e-40, -0.0)` | `(0.78, 0.78, 0.78)` |
+| `(1e-40, -0.0, 0.33333334)` | `(0.78, 0.78, 0.78)` |
 
 ### Probe `mul-int-int`, 32 input rows
 
@@ -1956,7 +1989,7 @@ mat4 probe(mat4 a, mat4 b) { return a * b; }
 
 ## `/` (OP_DIV)
 
-`a / b` divides lane by lane, on `int`, `uint` and `float` scalars and vectors. Two vectors must have the same size and scalar type. A scalar on either side applies to every lane of the vector on the other side. An `int` or a `uint` wraps at 32 bits. A matrix divides by a matrix lane by lane. glslang writes `matrix / float` as the matrix times the reciprocal of the float, so a lane can land one unit off a true division. The transpiler does the same.
+`a / b` divides lane by lane, on `int`, `uint` and `float` scalars and vectors. Two vectors must have the same size and scalar type. A scalar on either side applies to every lane of the vector on the other side. An `int` or a `uint` wraps at 32 bits. A matrix divides by a matrix lane by lane. glslang writes `matrix / float` as the matrix times the reciprocal of the float, so a lane can land one unit off a true division. The transpiler does the same. Godot computes an operator of constants as it reads it (`shader_language.cpp:2065`), and refuses an `int` or `ivec` division by a zero it knows, `5 / (1 - 1)`, with "Division by zero error.". It does not check a `uvec` divisor: glslang folds a `uvec` division by a zero constant to the largest `uint`. A divisor in brackets folds, so `5 / (-0)` is refused and `5 / -0` is not. The least `int` divided by -1, both known, ends the Godot process: the transpiler refuses that expression with a message of its own.
 
 The transpiler emits `a.div(b)`. Rows: `OP_DIV(int,int)`, `OP_DIV(int,ivec2)`, `OP_DIV(int,ivec3)`, `OP_DIV(int,ivec4)`, `OP_DIV(ivec2,int)`, `OP_DIV(ivec2,ivec2)`, `OP_DIV(ivec3,int)`, `OP_DIV(ivec3,ivec3)`, `OP_DIV(ivec4,int)`, `OP_DIV(ivec4,ivec4)`, `OP_DIV(uint,uint)`, `OP_DIV(uint,uvec2)`, `OP_DIV(uint,uvec3)`, `OP_DIV(uint,uvec4)`, `OP_DIV(uvec2,uint)`, `OP_DIV(uvec2,uvec2)`, `OP_DIV(uvec3,uint)`, `OP_DIV(uvec3,uvec3)`, `OP_DIV(uvec4,uint)`, `OP_DIV(uvec4,uvec4)`, `OP_DIV(float,float)`, `OP_DIV(float,vec2)`, `OP_DIV(float,vec3)`, `OP_DIV(float,vec4)`, `OP_DIV(float,mat2)`, `OP_DIV(float,mat3)`, `OP_DIV(float,mat4)`, `OP_DIV(vec2,float)`, `OP_DIV(vec2,vec2)`, `OP_DIV(vec3,float)`, `OP_DIV(vec3,vec3)`, `OP_DIV(vec4,float)`, `OP_DIV(vec4,vec4)`, `OP_DIV(mat2,float)`, `OP_DIV(mat2,mat2)`, `OP_DIV(mat3,float)`, `OP_DIV(mat3,mat3)`, `OP_DIV(mat4,float)`, `OP_DIV(mat4,mat4)`. Godot source: `servers/rendering/shader_language.cpp:1627`.
 
@@ -2137,6 +2170,19 @@ vec4 probe(vec4 a, float b) { return a / b; }
 | `(1.0, 1e-7, 1e-40, -0.0)` | `inf` | `(0.0, 0.0, 0.0, -0.0)` |
 | `(3e+38, NaN, 0.5, 16777216.0)` | `-2.75` | `(-1.0909091e+38, NaN, -0.18181819, -6100806.0)` |
 | `(NaN, 0.5, 16777216.0, -inf)` | `3e+38` | `(NaN, 0.0, 5.5924056e-32, -inf)` |
+
+### Probe `folding-uint-division-by-zero`, 16 input rows
+
+```glsl
+uvec2 probe(uvec2 a) { return (uvec2(7u, 8u) / uvec2(0u, 2u)) ^ a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0u, 31u)` | `(4294967295u, 27u)` |
+| `(1u, 32u)` | `(4294967294u, 36u)` |
+| `(1000003u, 0u)` | `(4293967292u, 4u)` |
+| `(4294967295u, 7u)` | `(0u, 3u)` |
 
 ### Probe `div-int-int`, 32 input rows
 
@@ -2567,7 +2613,7 @@ mat4 probe(mat4 a, mat4 b) { return a / b; }
 
 ## `%` (OP_MOD)
 
-`a % b` is the remainder of an `int` or `uint` division, lane by lane. A float has no `%` in the shading language: `mod()` is a function.
+`a % b` is the remainder of an `int` or `uint` division, lane by lane. A float has no `%` in the shading language: `mod()` is a function. Godot refuses a remainder by a zero it knows, of every integer type, with "Modulo by zero error.".
 
 The transpiler emits `a.mod(b)`. Rows: `OP_MOD(int,int)`, `OP_MOD(ivec2,int)`, `OP_MOD(ivec2,ivec2)`, `OP_MOD(ivec3,int)`, `OP_MOD(ivec3,ivec3)`, `OP_MOD(ivec4,int)`, `OP_MOD(ivec4,ivec4)`, `OP_MOD(uint,uint)`, `OP_MOD(uvec2,uint)`, `OP_MOD(uvec2,uvec2)`, `OP_MOD(uvec3,uint)`, `OP_MOD(uvec3,uvec3)`, `OP_MOD(uvec4,uint)`, `OP_MOD(uvec4,uvec4)`. Godot source: `servers/rendering/shader_language.cpp:1693`.
 
@@ -2980,7 +3026,7 @@ vec2 probe(float a) { return -(-vec2(1.5, 0.25)) * a; }
 float probe(float a, float b) { return -(a = b); }
 ```
 
-Godot does not compile this shader: it draws nothing. The transpiler refuses it too.
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL at line 325, `'assign' :  l-value required`. The transpiler refuses it too.
 
 ### Probe `negation-text-decrement`, 16 input rows
 

@@ -275,6 +275,17 @@ mat4 probe(mat4 a) { return a; }
 | `(0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0)` | `(0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0, 1e-7, 1e-40, -0.0)` |
 | `(1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0)` | `(1e-7, 1e-40, -0.0, 0.33333334, -3e+38, 0.0, -2.75, 3e+38, NaN, 0.5, 16777216.0, -inf, -1.0, 123456.79, inf, 1.0)` |
 
+### Probe `folding-negative-int-to-uint`, 16 input rows
+
+```glsl
+uint probe(uint a) { return uint(-65) ^ a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0u` | `4294967231u` |
+| `1u` | `4294967230u` |
+
 ## Precision words
 
 `lowp`, `mediump` and `highp` stand before a type. Godot refuses one on a `bool` type. Godot writes the word into its GLSL, and the probe GPU computes every precision in 32 bits, so the result equals `highp`. The transpiler keeps every value in 32 bits.
@@ -342,7 +353,7 @@ highp vec2 probe(highp vec2 a, highp vec2 b) { return a * b + a; }
 
 A literal such as `2.5`, `.5`, `1e-3` or `2.5f`. Godot reads the text with its own decimal reader, keeps a 32-bit float, and writes the float back into the GLSL it compiles with 14 decimals (`shader_compiler.cpp:180`). So a value under `1e-14` draws as `0.0`, a value with more digits draws with fewer, and a literal past the float range, such as `1e39`, fails to compile. The transpiler gives each literal the float that this chain gives.
 
-Arithmetic of literals alone, such as `58.656 + 74.377`, never reaches the GPU as arithmetic. Godot's GLSL compiler, glslang, reads each number of Godot's text as a double, folds the arithmetic in double precision and rounds the result once. The transpiler folds the same arithmetic the same way, so the result can differ by one unit from the same sum in 32-bit floats. Godot also folds a constructor of literals, and a negated literal at the top of an expression, into one constant (`shader_language.cpp:7840`).
+Arithmetic of literals alone, such as `58.656 + 74.377`, never reaches the GPU as arithmetic. Godot's GLSL compiler, glslang, folds every operator of constants on the CPU (`Constant.cpp`): it reads each number of Godot's text as a double, folds float arithmetic in double precision and rounds the result once. It folds integers, conversions, comparisons, swizzles, elements, matrix products and `?:` too, as the x86-64 build of Godot computes them. The transpiler folds the same subtrees the same way and writes the constant. So a float result can differ by one unit from the same sum in 32-bit floats, and `9u << 85u` is `9u << 21u`, where the GPU gives 0. Godot also folds a constructor of literals, and a negated literal at the top of an expression, into one constant (`shader_language.cpp:7840`).
 
 The transpiler emits `float(value)`. Rows: `float literal`. Godot source: `servers/rendering/shader_language.h:59`.
 
@@ -448,7 +459,7 @@ float probe(float a) { return a * 0.1 + 1e-20 + 3.4028234e38 * 0.0; }
 float probe() { return 1e39; }
 ```
 
-Godot does not compile this shader: it draws nothing. The transpiler refuses it too.
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL at line 322, `'inf' : undeclared identifier`. The transpiler refuses it too.
 
 ### Probe `fold-sum`, 16 input rows
 

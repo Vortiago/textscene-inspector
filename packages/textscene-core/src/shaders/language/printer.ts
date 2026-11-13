@@ -78,7 +78,7 @@ const POSTFIX_TEXT: Readonly<Record<string, string>> = {
  * The text of `expression`. A prefix operator stands without brackets, because the parser reduces
  * the text in brackets, which would fold `-vec2(1.0)` into a constant.
  */
-export function printExpression(expression: Expression): string {
+function printExpression(expression: Expression): string {
   switch (expression.kind) {
     case 'constant':
       return printConstant(expression);

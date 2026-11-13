@@ -322,7 +322,7 @@ const emptyExpression = (token: Token): OperatorNode => ({
 });
 
 /** `get_token_text` (`shader_language.cpp:237`): the token's name, and a number's value or an identifier. */
-export function tokenText(token: Token): string {
+function tokenText(token: Token): string {
   const name = token.type.replace(/^TK_/, '');
   switch (token.type) {
     case 'TK_FLOAT_CONSTANT':

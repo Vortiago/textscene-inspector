@@ -210,6 +210,39 @@ Lowered rows:
 
 The other rows are native on WebGL 2 and on WebGPURenderer.
 
+### Probe `folding-double-equality`, 2 input rows
+
+```glsl
+bool probe(bool a) { return (0.1 + 0.2 == 0.3) != a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `false` | `false` |
+| `true` | `true` |
+
+### Probe `folding-matrix-equality`, 2 input rows
+
+```glsl
+bool probe(bool a) { return (mat2(4.0) == mat2(vec2(4.0, 0.0), vec2(0.0, 4.0))) != a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `false` | `true` |
+| `true` | `false` |
+
+### Probe `folding-equality-of-equalities`, 2 input rows
+
+```glsl
+bvec2 probe(bool a) { return bvec2((vec3(76.934) == vec3(43.498)) == (1 == 2) != a, (1 == 2) == (3 == 4) != a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `false` | `(false, true)` |
+| `true` | `(true, false)` |
+
 ### Probe `equal-bool-bool`, 4 input rows
 
 ```glsl
@@ -908,6 +941,17 @@ ivec2 probe(bool c, int a, int b) { return ivec2(c ? a++ : b--, a + b); }
 | `false` | `32` | `-2147483648` | `(-2147483648, -2147483617)` |
 | `true` | `-256` | `0` | `(-256, -255)` |
 | `true` | `0` | `32` | `(0, 33)` |
+
+### Probe `folding-select`, 16 input rows
+
+```glsl
+int probe(int a) { return (1 > 2 ? 4 << 40 : 5 << 40) ^ a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0` | `1280` |
+| `1` | `1281` |
 
 ### Probe `select-if-bool-bool-bool`, 8 input rows
 

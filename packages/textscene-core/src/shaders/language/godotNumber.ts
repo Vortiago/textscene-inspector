@@ -202,10 +202,10 @@ export function godotIntScalar(constant: number): number {
 
 /**
  * The `uint` lane of a `uint` literal (`shader_language.cpp:6010`): x86-64 truncates the double to
- * 64 bits and keeps the low 32, so a value past 2^32 wraps.
+ * 64 bits and keeps the low 32, so a value past 2^32 wraps, and NaN or a value past 2^63 gives 0.
  */
 export function godotUintScalar(constant: number): number {
   const truncated = Math.trunc(constant);
-  if (Math.abs(truncated) >= INT64_LIMIT) return 0;
+  if (!(Math.abs(truncated) < INT64_LIMIT)) return 0;
   return Number(BigInt(truncated) & 0xffffffffn);
 }
