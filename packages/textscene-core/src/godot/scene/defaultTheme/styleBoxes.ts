@@ -8,7 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rgba } from '../../math/math.js';
+import { clamp, round, type Rgba } from '../../math/math.js';
 import { DEFAULT_CONTENT_MARGIN, DEFAULT_CORNER_RADIUS } from '../theme.js';
 import type { DefaultEmptyStyleBox, DefaultFlatStyleBox, Sides } from './defaultTheme.js';
 
@@ -30,17 +30,13 @@ export function allSides(value: number): Sides {
   return { left: value, top: value, right: value, bottom: value };
 }
 
-/** `Math::round`, which rounds a half away from zero: -1.5 is -2, where `Math.round` gives -1. */
-function godotRound(value: number): number {
-  return Math.sign(value) * Math.round(Math.abs(value));
-}
-
+/** Each side times `scale`, rounded as `Math::round` rounds: a half away from zero. */
 function scaledSides(sides: Sides, scale: number): Sides {
   return {
-    left: godotRound(sides.left * scale),
-    top: godotRound(sides.top * scale),
-    right: godotRound(sides.right * scale),
-    bottom: godotRound(sides.bottom * scale),
+    left: round(sides.left * scale),
+    top: round(sides.top * scale),
+    right: round(sides.right * scale),
+    bottom: round(sides.bottom * scale),
   };
 }
 
@@ -51,7 +47,7 @@ function scaledSides(sides: Sides, scale: number): Sides {
  */
 export function flatCornerDetail(radius: number, scale: number): number {
   const detail = Math.trunc(Math.min(Math.ceil(1.5 * radius), MAX_UNSCALED_CORNER_DETAIL) * scale);
-  return Math.min(Math.max(detail, CORNER_DETAIL_MIN), CORNER_DETAIL_MAX);
+  return clamp(detail, CORNER_DETAIL_MIN, CORNER_DETAIL_MAX);
 }
 
 /** The arguments of `make_flat_stylebox` after its colour, unscaled, with Godot's defaults. */
@@ -81,9 +77,9 @@ export function makeFlatStyleBox(
     kind: 'flat',
     bgColor,
     contentMargin: scaledSides(margin, scale),
-    cornerRadius: godotRound(cornerRadius * scale),
+    cornerRadius: round(cornerRadius * scale),
     cornerDetail: flatCornerDetail(cornerRadius, scale),
-    borderWidth: allSides(godotRound(borderWidth * scale)),
+    borderWidth: allSides(round(borderWidth * scale)),
     borderColor: FLAT_BORDER_COLOR,
     expandMargin: allSides(0),
     drawCenter,

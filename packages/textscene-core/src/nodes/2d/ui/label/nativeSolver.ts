@@ -49,6 +49,7 @@ import {
   DEFAULT_JUSTIFICATION_FLAGS,
 } from '../../../../godot/text/textServerEnums';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { FALLBACK_THEME_CONSTANT } from '../../../../godot/scene/theme';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -67,8 +68,8 @@ const LABEL_THEME_FONT_KEY = 'font';
  */
 export const LABEL_LINE_SPACING_PX = 3;
 
-/** Label's `paragraph_spacing`: the default theme sets none, so a lookup ends at the fallback theme's 0. */
-const LABEL_PARAGRAPH_SPACING_PX = 0;
+/** Label's `paragraph_spacing`: the default theme sets none, so a lookup ends at the fallback theme. */
+const LABEL_PARAGRAPH_SPACING_PX = FALLBACK_THEME_CONSTANT;
 
 /**
  * `Label.paragraph_separator`'s default (`label.cpp:158`, `c_unescape`'d). Label splits on it

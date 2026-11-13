@@ -5,6 +5,13 @@
 
 import type { Rgba } from '../math/math.js';
 
+/**
+ * What the fallback theme answers for an item no theme holds, the last step of every lookup
+ * (`theme_owner.cpp:258-259`): a default `Color()`, opaque black, and a constant of 0.
+ */
+export const FALLBACK_THEME_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
+export const FALLBACK_THEME_CONSTANT = 0;
+
 /** `control_font_color` (`default_theme.cpp:101`), the `font_color` default of most Controls. */
 export const CONTROL_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 
@@ -143,14 +150,11 @@ export function scaledPx(base: number, scale: number): number {
 export function scaledGodotTheme(scale: number): ScaledGodotTheme {
   // JS and Godot rounding differ only on negative halves, which the
   // [0.5, 8] clamp in `projectThemeScale` rules out.
-  const contentMargin = scaledPx(DEFAULT_CONTENT_MARGIN, scale);
   return {
     scale,
     fontSize: scaledPx(DEFAULT_FONT_SIZE, scale),
     cornerRadius: scaledPx(DEFAULT_CORNER_RADIUS, scale),
-    contentMargin,
-    // The OptionButton styleboxes take `2 * default_margin` across and `default_margin`
-    // down (`default_theme.cpp:215`).
+    contentMargin: scaledPx(DEFAULT_CONTENT_MARGIN, scale),
     // `Math::round(4 * scale)`, default_theme.cpp:1249-1251.
     separation: scaledPx(DEFAULT_SEPARATION, scale),
     // Twice a rounded margin, not the rounding of twice the margin: the two

@@ -25,26 +25,29 @@ import type {
   DefaultStyleBox,
   DefaultThemeType,
   DefaultThemeTypes,
+  Sides,
 } from './defaultTheme.js';
 import { allSides, emptyStyleBox, makeFlatStyleBox, withExpandMargin } from './styleBoxes.js';
-
-const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-const BLACK: Rgba = { r: 0, g: 0, b: 0, a: 1 };
+import { BLACK, typeItems, WHITE } from './typeItems.js';
 
 /** `flat_button_pressed` (`default_theme.cpp:363-364`): `style_pressed_color * Color(1, 1, 1, 0.85)`. */
 const FLAT_BUTTON_PRESSED_ALPHA = 0.85;
 
-type StateBoxes = Readonly<Record<'normal' | 'hover' | 'pressed' | 'disabled', DefaultStyleBox>>;
+type StateBoxes<B extends DefaultStyleBox = DefaultStyleBox> = Readonly<
+  Record<'normal' | 'hover' | 'pressed' | 'disabled', B>
+>;
 
-/** `button_normal`, `button_hover`, `button_pressed` and `button_disabled` (`default_theme.cpp:138-141`). */
-function buttonBoxes(
-  scale: number
-): Readonly<Record<'normal' | 'hover' | 'pressed' | 'disabled', DefaultFlatStyleBox>> {
+/**
+ * `button_normal`, `button_hover`, `button_pressed` and `button_disabled` (`default_theme.cpp:138-141`),
+ * or OptionButton's twins of them with its own `margin` (`:212-215`).
+ */
+function buttonBoxes(scale: number, margin?: Sides): StateBoxes<DefaultFlatStyleBox> {
+  const box = (color: Rgba) => makeFlatStyleBox(scale, color, { margin });
   return {
-    normal: makeFlatStyleBox(scale, STYLE_FILL.normal),
-    hover: makeFlatStyleBox(scale, STYLE_FILL.hover),
-    pressed: makeFlatStyleBox(scale, STYLE_FILL.pressed),
-    disabled: makeFlatStyleBox(scale, STYLE_FILL.disabled),
+    normal: box(STYLE_FILL.normal),
+    hover: box(STYLE_FILL.hover),
+    pressed: box(STYLE_FILL.pressed),
+    disabled: box(STYLE_FILL.disabled),
   };
 }
 
@@ -67,10 +70,6 @@ const FONT_COLORS: Readonly<Record<string, Rgba>> = {
   font_disabled_color: CONTROL_FONT_DISABLED_COLOR,
   font_outline_color: BLACK,
 };
-
-function typeItems(items: Partial<DefaultThemeType>): DefaultThemeType {
-  return { colors: {}, constants: {}, fontSizes: {}, styles: {}, ...items };
-}
 
 function button(scale: number, boxes: StateBoxes, focus: DefaultStyleBox): DefaultThemeType {
   return typeItems({
@@ -120,13 +119,7 @@ function optionButton(scale: number, focus: DefaultStyleBox): DefaultThemeType {
     right: 2 * DEFAULT_CONTENT_MARGIN,
     bottom: DEFAULT_CONTENT_MARGIN,
   };
-  const box = (color: Rgba) => makeFlatStyleBox(scale, color, { margin });
-  const boxes = {
-    normal: box(STYLE_FILL.normal),
-    hover: box(STYLE_FILL.hover),
-    pressed: box(STYLE_FILL.pressed),
-    disabled: box(STYLE_FILL.disabled),
-  };
+  const boxes = buttonBoxes(scale, margin);
   return typeItems({
     styles: {
       focus,

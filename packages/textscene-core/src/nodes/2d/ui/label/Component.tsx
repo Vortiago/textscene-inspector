@@ -7,7 +7,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { mayDrawStyleBox, StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import {
   clampAutowrapMode,
@@ -265,7 +265,10 @@ export function Label({ solveNode, tint, rect, renderOrder, theme }: NativeContr
   const lineLayouts = useSoloLineLayouts(revealedPlacements, layout);
 
   // `Label::_notification` draws the box before any text, so a loading font leaves it drawn.
-  const box = <StyleBoxQuad styleBox={style} color={tint.own} rect={ownRect} renderOrder={renderOrder} />;
+  // The default `normal` box is empty: mounting no quad for it spares every Label its hooks.
+  const box = mayDrawStyleBox(style) ? (
+    <StyleBoxQuad styleBox={style} color={tint.own} rect={ownRect} renderOrder={renderOrder} />
+  ) : null;
 
   // A settings font that is still loading draws nothing, never the theme font (ADR-0059).
   if (isFontLoading) return <CanvasItemGroup ref={anchorRef}>{box}</CanvasItemGroup>;

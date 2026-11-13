@@ -9,29 +9,15 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { godotBinary, rounded } from '../../../testing/measureKit.mjs';
 import prettier from 'prettier';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUTPUT = resolve(HERE, '../../defaultTheme.godot.json');
 const SCALES = ['1', '1.5', '2'];
-const SIGNIFICANT_DIGITS = 7;
-
-function godotBinary() {
-  const flag = process.argv.indexOf('--godot');
-  return flag === -1 ? 'godot' : process.argv[flag + 1];
-}
-
 /** A colour channel is a 32-bit float: seven digits read back as the same float. */
-function rounded(value) {
-  if (Array.isArray(value)) return value.map(rounded);
-  if (typeof value === 'number') return Number(value.toPrecision(SIGNIFICANT_DIGITS));
-  if (value !== null && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, rounded(entry)]));
-  }
-  return value;
-}
+const SIGNIFICANT_DIGITS = 7;
 
 /** The default theme Godot builds in a project at `scale`. */
 function captureAt(scale) {
@@ -45,7 +31,10 @@ function captureAt(scale) {
     const stdout = execFileSync(godotBinary(), ['--headless', '--path', project, '--script', 'dump.gd'], {
       encoding: 'utf8',
     });
-    return rounded(JSON.parse(stdout.slice(stdout.indexOf('THEME\n') + 'THEME\n'.length)));
+    return rounded(
+      JSON.parse(stdout.slice(stdout.indexOf('THEME\n') + 'THEME\n'.length)),
+      SIGNIFICANT_DIGITS
+    );
   } finally {
     rmSync(project, { recursive: true, force: true });
   }

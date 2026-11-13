@@ -23,13 +23,13 @@ import {
   linkButtonTextPlacement,
   linkButtonTextTheme,
   linkButtonUnderlineGeometry,
-  linkButtonUnderlineSpacing,
   resolveLinkButtonDrawState,
   shouldUnderline,
   LINKBUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { LinkButtonProperties } from './types';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LinkButtonProperties>(solveNode);
@@ -77,12 +77,12 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
     // The ascent of the font the text draws in: a `theme_override_fonts/font` scene font shapes at its
     // own ascent, and the underline sits relative to it, not to Open Sans's.
     const ascentPx = getFontAscentPx(fontMetrics, fontSizePx);
-    const spacingConstant = linkButtonUnderlineSpacing(solveNode.constants, { theme });
+    const spacingConstant = requiredThemeItem(solveNode.constants, 'underline_spacing');
     // The stroke's position and thickness stay Open Sans's `post`-table values whatever `fontMetrics`
     // is: no scene font this engine loads carries underline metrics.
     const { y, thickness } = linkButtonUnderlineGeometry(fontSizePx, spacingConstant, ascentPx);
     return { top: y - thickness / 2, thickness, width: placement.lineWidthPx };
-  }, [layout, state, props, theme, fontSizePx, fontMetrics, solveNode.constants, placement]);
+  }, [layout, state, props, fontSizePx, fontMetrics, solveNode.constants, placement]);
 
   return (
     <>

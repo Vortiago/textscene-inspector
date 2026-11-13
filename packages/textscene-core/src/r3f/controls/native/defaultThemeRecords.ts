@@ -12,7 +12,7 @@ import type {
 import type { Rgba } from '../../../godot/math/math';
 import { neutralStyleBox } from '../../../resources/styles/stylebox/decode';
 import { perObject } from '../../../utils/perObject';
-import { flatStyleBox, freezeStyleBox, type StyleBoxFlatData } from './styleBoxFlat';
+import { flatStyleBox, freezeStyleBox, ZERO_SIDES, type StyleBoxFlatData } from './styleBoxFlat';
 
 /**
  * `StyleBox::get_margin` (`style_box.cpp:78-86`) for each side: a negative (unset) margin reads
@@ -27,11 +27,10 @@ function effectiveMargin(margin: Sides, styleMargin: Sides): Sides {
   };
 }
 
-const NO_MARGIN: Sides = { left: 0, top: 0, right: 0, bottom: 0 };
-
-function drawnBox(box: DefaultStyleBox): StyleBoxFlatData {
+/** One drawn box for each table box, so a box two types share stays one object. */
+const drawnBox = perObject((box: DefaultStyleBox): StyleBoxFlatData => {
   if (box.kind === 'empty')
-    return freezeStyleBox(neutralStyleBox(effectiveMargin(box.contentMargin, NO_MARGIN)));
+    return freezeStyleBox(neutralStyleBox(effectiveMargin(box.contentMargin, ZERO_SIDES)));
   return freezeStyleBox(
     flatStyleBox(box.bgColor, {
       contentMargin: effectiveMargin(box.contentMargin, box.borderWidth),
@@ -43,27 +42,17 @@ function drawnBox(box: DefaultStyleBox): StyleBoxFlatData {
       drawCenter: box.drawCenter,
     })
   );
-}
+});
 
-/** Every StyleBox of `theme`, by type, then by item name. A box two types share stays one object. */
+/** Every StyleBox of `theme`, by type, then by item name. */
 export const defaultStyleBoxesOf = perObject(
-  (theme: DefaultTheme): Readonly<Record<string, Readonly<Record<string, StyleBoxFlatData>>>> => {
-    const drawn = new Map<DefaultStyleBox, StyleBoxFlatData>();
-    const drawnOnce = (box: DefaultStyleBox): StyleBoxFlatData => {
-      let found = drawn.get(box);
-      if (!found) {
-        found = drawnBox(box);
-        drawn.set(box, found);
-      }
-      return found;
-    };
-    return Object.fromEntries(
+  (theme: DefaultTheme): Readonly<Record<string, Readonly<Record<string, StyleBoxFlatData>>>> =>
+    Object.fromEntries(
       Object.entries(theme.types).map(([type, { styles }]) => [
         type,
-        Object.fromEntries(Object.entries(styles).map(([name, box]) => [name, drawnOnce(box)])),
+        Object.fromEntries(Object.entries(styles).map(([name, box]) => [name, drawnBox(box)])),
       ])
-    );
-  }
+    )
 );
 
 function itemsByType<K extends 'colors' | 'constants'>(

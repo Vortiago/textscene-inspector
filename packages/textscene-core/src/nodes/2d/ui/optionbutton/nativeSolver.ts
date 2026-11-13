@@ -194,7 +194,7 @@ export function optionButtonArrowRect(n: ShareNode, theme: NativeTheme, rectSize
  * where the theme sets `modulate_arrow`, which the default theme leaves off (`default_theme.cpp:251`).
  */
 export function optionButtonArrowColor(n: ShareNode, theme: NativeTheme): Rgba {
-  if (!n.constants.modulate_arrow) return WHITE_MODULATE;
+  if (!requiredThemeItem(n.constants, 'modulate_arrow')) return WHITE_MODULATE;
   const props = n.node.properties as OptionButtonProperties;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
   return buttonTextTheme(n, props, state, { theme }).color;
