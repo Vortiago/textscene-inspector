@@ -435,3 +435,14 @@ describe('<ColorPicker> — value field arrows', () => {
     expect(redQuads).toHaveLength(5);
   });
 });
+
+describe('<ColorPicker> — value field arrow alpha', () => {
+  it('draws a disabled arrow at the alpha of its modulate (spin_box.cpp:449): the A row at 255 has its up arrow at 0.5', async () => {
+    const renderer = await renderPicker({ ...ONLY_SLIDERS, colorMode: 0 });
+    const halfOpaque = renderer.scene
+      .findAllByType('Mesh')
+      .map((mesh) => (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+      .filter((material) => material.opacity === 0.5);
+    expect(halfOpaque).toHaveLength(1);
+  });
+});

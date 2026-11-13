@@ -125,7 +125,7 @@ import type { ColorPickerProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 
-/** A value field arrow's modulate, under the picker's own tint, in the item's linear space. */
+/** A value field arrow's modulate under the picker's own tint: its colour in the item's linear space and its alpha. */
 function useSpinArrowColor(
   colors: SolveNode['colors'],
   direction: 'up' | 'down',
@@ -136,7 +136,7 @@ function useSpinArrowColor(
     () => multiplyModulate(tintOwn, spinBoxIconColor(colors, direction, state)),
     [tintOwn, colors, direction, state]
   );
-  return useItemLinearColor(modulate);
+  return { color: useItemLinearColor(modulate), opacity: modulate.a };
 }
 
 /** The picker's child Buttons keep the `text_direction` and `language` defaults. */
@@ -272,10 +272,10 @@ export function ColorPicker({
   const spinUpTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
   const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
   // Each arrow takes its own direction's modulate (`spin_box.cpp:441-460`).
-  const spinUpColor = useSpinArrowColor(child.spinBoxColors, 'up', 'normal', tint.own);
-  const spinUpDisabledColor = useSpinArrowColor(child.spinBoxColors, 'up', 'disabled', tint.own);
-  const spinDownColor = useSpinArrowColor(child.spinBoxColors, 'down', 'normal', tint.own);
-  const spinDownDisabledColor = useSpinArrowColor(child.spinBoxColors, 'down', 'disabled', tint.own);
+  const spinUp = useSpinArrowColor(child.spinBoxColors, 'up', 'normal', tint.own);
+  const spinUpDisabled = useSpinArrowColor(child.spinBoxColors, 'up', 'disabled', tint.own);
+  const spinDown = useSpinArrowColor(child.spinBoxColors, 'down', 'normal', tint.own);
+  const spinDownDisabled = useSpinArrowColor(child.spinBoxColors, 'down', 'disabled', tint.own);
 
   const vertexTint = useVertexColorTint(tint.own);
   const baseTint = vertexTint.vertex;
@@ -750,8 +750,8 @@ export function ColorPicker({
                       <ControlQuad
                         width={arrowSize.x}
                         height={arrowSize.y}
-                        color={row.arrows.up === 'disabled' ? spinUpDisabledColor : spinUpColor}
-                        opacity={tint.opacity}
+                        color={(row.arrows.up === 'disabled' ? spinUpDisabled : spinUp).color}
+                        opacity={(row.arrows.up === 'disabled' ? spinUpDisabled : spinUp).opacity}
                         map={spinUpTexture}
                         renderOrder={renderOrder}
                       />
@@ -760,8 +760,8 @@ export function ColorPicker({
                       <ControlQuad
                         width={arrowSize.x}
                         height={arrowSize.y}
-                        color={row.arrows.down === 'disabled' ? spinDownDisabledColor : spinDownColor}
-                        opacity={tint.opacity}
+                        color={(row.arrows.down === 'disabled' ? spinDownDisabled : spinDown).color}
+                        opacity={(row.arrows.down === 'disabled' ? spinDownDisabled : spinDown).opacity}
                         map={spinDownTexture}
                         renderOrder={renderOrder}
                       />
