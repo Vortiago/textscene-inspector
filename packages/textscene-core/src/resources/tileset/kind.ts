@@ -8,7 +8,7 @@
 import { indexedKeyRegex } from '../../godot/classdb/indexedKey.js';
 import { stringToInt } from '../../godot/string/string.js';
 import { warn } from '../../logger';
-import type { Follow, HeldResource, ResourceKind } from '../reading';
+import type { Follow, HeldResource, ResourceKind, UnavailableReason } from '../reading';
 import { decodeAtlasSource, decodeTileGrid } from './decode';
 import { decodeSceneCollectionSource } from './sceneCollection';
 import type { AtlasSourceModel, SceneCollectionSourceModel, TileSetModel } from './types';
@@ -75,19 +75,31 @@ function decodeSources(
   for (const { key, id, ref } of writtenSources(properties)) {
     const read = follow.read(TILE_SET_SOURCE, ref);
     if (read.status === 'loaded') add(id, read.value);
-    else if (read.status === 'unavailable') {
-      const why = read.reason === 'wrong-type' ? 'unsupported source type' : 'unresolvable reference';
-      warn(`[TileSet] source ${key}: ${why} "${ref}", skipped`);
-    }
+    else if (read.status === 'unavailable')
+      warn(`[TileSet] source ${key}: ${UNREAD_REASONS[read.reason]} "${ref}", skipped`);
   }
   return { sources, sceneSources };
 }
 
+/** Why a source did not load, as a warning names it. */
+const UNREAD_REASONS: Readonly<Record<UnavailableReason, string>> = {
+  'wrong-type': 'unsupported source type',
+  'unknown-id': 'unresolvable reference',
+  'missing-file': 'missing file',
+  cycle: 'cyclic reference',
+  undecodable: 'undecodable source',
+};
+
+/** One `sources/<n>` as written: its key, the id it adds and the reference it names. */
+interface WrittenSource {
+  key: string;
+  id: number;
+  ref: string;
+}
+
 /** Each `sources/<n>` of a TileSet with the id it adds, in the order `_set` adds them. */
-function writtenSources(
-  properties: Readonly<Record<string, string>>
-): { key: string; id: number; ref: string }[] {
-  const sources: { key: string; id: number; ref: string }[] = [];
+function writtenSources(properties: Readonly<Record<string, string>>): WrittenSource[] {
+  const sources: WrittenSource[] = [];
   for (const [key, ref] of Object.entries(properties)) {
     const match = SOURCE_KEY_RE.exec(key);
     if (!match) continue;

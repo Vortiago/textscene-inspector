@@ -1,10 +1,11 @@
 /**
  * The `PACKED_SCENE` kind: a property that takes a PackedScene, as the address of the scene file.
- * A text or binary scene is no resource file the reading module parses, so it arrives as an
+ * A text, binary or glTF scene is no resource file the reading module parses, so it arrives as an
  * imported file. A PackedScene saved as a `.res` is a resource file, which records its class.
  * No THREE.
  */
 
+import { isGltfPath } from '../../../godot/import/gltf';
 import { isBinaryScenePath } from '../../../godot/project/binaryResourceFormat';
 import { fileExtension } from '../../fileExtension';
 import { IMPORTED_FILE, type ResourceKind } from '../../reading';
@@ -21,6 +22,7 @@ export const PACKED_SCENE: ResourceKind<SceneFile> = {
   decode: ({ type, address }) => (address && isScenePath(address, type) ? { path: address } : null),
 };
 
+/** Godot imports a glTF as a PackedScene (`editor_scene_importer_gltf.cpp:36-38`). */
 function isScenePath(path: string, type: string): boolean {
-  return fileExtension(path) === '.tscn' || isBinaryScenePath(path, type);
+  return fileExtension(path) === '.tscn' || isGltfPath(path) || isBinaryScenePath(path, type);
 }

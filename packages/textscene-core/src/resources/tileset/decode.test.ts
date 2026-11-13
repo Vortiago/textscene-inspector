@@ -577,6 +577,28 @@ describe('a tile material outside the TileSet file', () => {
     expect(material?.properties?.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
   });
 
+  it('warns once for a material that names nothing, however many tiles name it', () => {
+    tileSetInScene(
+      'SubResource("ts")',
+      [
+        {
+          id: 'atlas',
+          type: 'TileSetAtlasSource',
+          data: {
+            '0:0/0': '0',
+            '0:0/0/material': 'SubResource("gone")',
+            '1:0/0': '0',
+            '1:0/0/material': 'SubResource("gone")',
+          },
+        },
+        { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("atlas")' } },
+      ],
+      externals
+    );
+    const materialWarns = warnSpy.mock.calls.filter((c: unknown[]) => String(c[0]).includes('names nothing'));
+    expect(materialWarns).toHaveLength(1);
+  });
+
   it('draws a material file it cannot load with plain blending', () => {
     const model = tileSetInScene(
       'SubResource("ts")',

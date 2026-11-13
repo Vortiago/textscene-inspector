@@ -12,7 +12,7 @@ import { stringToInt } from '../../godot/string/string.js';
 import { intOr, vec2iOr } from '../../parser/valueParsers';
 import { parseColorOrUndefined } from '../../utils/colorParser';
 import { CANVAS_ITEM_MATERIAL } from '../materials/canvasitemmaterial/kind';
-import type { Follow, Read } from '../reading';
+import { optionalReference, type Follow, type Read } from '../reading';
 import { TEXTURE_2D } from '../textures/texture2d/kind';
 import { texture2DSizeAtLoad } from '../textures/texture2d/sizeAtLoad';
 import { defaultTileData } from './types';
@@ -61,12 +61,18 @@ type TileMaterialResolver = (ref: string) => TileMaterial | null;
 const PLAIN_MATERIAL: TileMaterial = { properties: null };
 
 /**
- * The material a tile's `material` names. The reading module keeps one answer for each resource, so
- * tiles that name one resource share one object, as Godot's loader hands both one `Ref`
- * (`resource_format_text.cpp:113-114`, `:142-144`). A reference that names nothing loads as null.
+ * The material a tile's `material` names. One read for each reference, so tiles that name one
+ * resource share one object, as Godot's loader hands both one `Ref` (`resource_format_text.cpp:113-114`,
+ * `:142-144`), and the source records and warns once per material, not once per tile. A reference
+ * that names nothing loads as null.
  */
 function tileMaterialResolver(follow: Follow): TileMaterialResolver {
-  return (ref) => materialOf(follow.read(CANVAS_ITEM_MATERIAL, ref), ref);
+  const materialByRef = new Map<string, TileMaterial | null>();
+  return (ref) => {
+    if (!materialByRef.has(ref))
+      materialByRef.set(ref, materialOf(follow.read(CANVAS_ITEM_MATERIAL, ref), ref));
+    return materialByRef.get(ref)!;
+  };
 }
 
 function materialOf(read: Read<TileMaterial>, ref: string): TileMaterial | null {
@@ -86,7 +92,7 @@ export function decodeAtlasSource(
 ): AtlasSourceModel {
   const hasRoom = hasRoomAtLoad(properties.texture, follow);
   return {
-    texture: properties.texture ? follow.reference(properties.texture) : null,
+    texture: optionalReference(follow, properties.texture),
     margins: tileSetVec2i(properties.margins, { x: 0, y: 0 }, 'margins'),
     separation: tileSetVec2i(properties.separation, { x: 0, y: 0 }, 'separation'),
     textureRegionSize: tileSetVec2i(properties.texture_region_size, { x: 16, y: 16 }, 'texture_region_size'),
@@ -137,11 +143,11 @@ interface WrittenTile {
 }
 
 function resolveTiles(
-  props: Readonly<Record<string, string>>,
+  properties: Readonly<Record<string, string>>,
   tileMaterial: TileMaterialResolver
 ): Map<string, AtlasTileModel> {
   const tiles = new Map<string, AtlasTileModel>();
-  for (const [coords, written] of writtenTiles(props)) {
+  for (const [coords, written] of writtenTiles(properties)) {
     const alternatives = new Map<number, AlternativeTileModel>();
     for (const [altId, data] of written.alternatives) {
       alternatives.set(altId, decodeTileData(data, altId, tileMaterial));
@@ -158,7 +164,7 @@ function resolveTiles(
 }
 
 /** The per-tile keys of an atlas source, by tile, the last spelling of a key winning as in `_set`. */
-function writtenTiles(props: Readonly<Record<string, string>>): Map<string, WrittenTile> {
+function writtenTiles(properties: Readonly<Record<string, string>>): Map<string, WrittenTile> {
   const tiles = new Map<string, WrittenTile>();
   const tileAt = (x: string, y: string): WrittenTile => {
     // `Vector2i(coords_split[0].to_int(), coords_split[1].to_int())` (tile_set.cpp:4755) takes
@@ -173,7 +179,7 @@ function writtenTiles(props: Readonly<Record<string, string>>): Map<string, Writ
     return tile;
   };
 
-  for (const [key, value] of Object.entries(props)) {
+  for (const [key, value] of Object.entries(properties)) {
     const m = TILE_KEY_RE.exec(key);
     if (!m) continue;
     const tile = tileAt(m[1]!, m[2]!);

@@ -19,6 +19,7 @@ afterEach(() => {
 const externals: TscnExternalResource[] = [
   { id: '5', type: 'PackedScene', path: 'res://tile.tscn' },
   { id: '6', type: 'Texture2D', path: 'res://icon.png' },
+  { id: '7', type: 'PackedScene', path: 'res://rock.glb' },
 ];
 
 function tileSetWith(sceneSource: Record<string, string>) {
@@ -36,6 +37,11 @@ describe('a TileSetScenesCollectionSource in a scene', () => {
       scene: { path: 'res://tile.tscn' },
       displayPlaceholder: false,
     });
+  });
+
+  it('takes a glTF file as a scene, as Godot imports it', () => {
+    const { model } = tileSetWith({ 'scenes/1/scene': 'ExtResource("7")' });
+    expect(model.sceneSources.get(2)!.scenes.get(1)!.scene).toEqual({ path: 'res://rock.glb' });
   });
 
   it('gives the tiles that name one scene the same scene object', () => {

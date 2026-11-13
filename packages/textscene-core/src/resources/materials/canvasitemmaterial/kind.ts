@@ -17,5 +17,5 @@ export interface CanvasItemMaterialSlot {
 export const CANVAS_ITEM_MATERIAL: ResourceKind<CanvasItemMaterialSlot> = {
   name: 'CanvasItemMaterial',
   accepts: (type) => descendsFromClass(type, 'Material'),
-  decode: ({ type, properties }) => ({ properties: canvasItemMaterialOf({ type, data: { ...properties } }) }),
+  decode: ({ type, properties }) => ({ properties: canvasItemMaterialOf({ type, data: properties }) }),
 };
