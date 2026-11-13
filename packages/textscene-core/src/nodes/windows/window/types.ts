@@ -31,6 +31,18 @@ export interface WindowProperties extends SubViewportProperties, ThemeOwnerField
   /** An exclusive window under an always-on-top window rises with it (`viewport.cpp:279-281`). */
   exclusive: boolean;
   wrap_controls: boolean;
+  /**
+   * Where the first size write that clamped the window to its contents minimum before it entered the
+   * tree ran: one that ran while `wrap_controls` was on (`window.cpp:1183-1190,2244-2251`). It is the
+   * line's index among the lines the parse replays, {@link BEFORE_THE_LINES} for the constructor or
+   * an instanced base, and null when no write clamped.
+   */
+  load_clamp_line: number | null;
+  /**
+   * Whether the size the lines leave still holds a load clamp: a `size` write while `wrap_controls`
+   * is off replaces the clamped size, and a later wrapping write clamps it again.
+   */
+  keeps_load_clamp: boolean;
   /** A native window draws outside the game frame, so the embedder draws nothing for it. */
   force_native: boolean;
   min_size: Vector2;
@@ -38,3 +50,6 @@ export interface WindowProperties extends SubViewportProperties, ThemeOwnerField
   /** The `content_scale_*` keys (`contentScale.ts`). */
   content_scale: ContentScale;
 }
+
+/** A {@link WindowProperties.load_clamp_line} before every line: the constructor's write, or an instanced base's. */
+export const BEFORE_THE_LINES = -1;

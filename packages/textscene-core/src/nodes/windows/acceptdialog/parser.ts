@@ -8,7 +8,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { unquoteString } from '../../../parser/utils';
 import { boolOr } from '../../../parser/valueParsers';
 import type { Vector2 } from '../../../godot/math/vector';
-import { windowClassDefaults } from '../../../godot/scene/window';
+import { constructorWritesSize, windowClassDefaults } from '../../../godot/scene/window';
 import { viewportParseContext } from '../../viewport/shared/parser';
 import { parseWindow } from '../window/parser';
 import type { WindowProperties } from '../window/types';
@@ -31,10 +31,25 @@ export interface DialogProperties extends WindowProperties {
    */
   has_unwrapped_message_minimum: boolean;
   /**
+   * The texts the internal Controls held when they first computed their minimums, which a size
+   * write while `wrap_controls` is on reads at load. Null when no size write clamped the dialog.
+   */
+  controls_at_load: DialogControlsAtLoad | null;
+  /**
    * The OK button is disabled. Not a scene property: only a dialog that decides it from a state a scene
    * lacks sets it, as FileDialog does (`_is_open_should_be_disabled`, `file_dialog.cpp:549-566`).
    */
   ok_button_disabled?: boolean;
+}
+
+/**
+ * The texts of the internal Controls. Outside the tree a Control keeps the first minimum it
+ * computes (`Control::update_minimum_size`), so a later text line does not change it.
+ */
+export interface DialogControlsAtLoad {
+  dialog_text: string;
+  ok_button_text: string;
+  dialog_autowrap: boolean;
 }
 
 /**
@@ -50,15 +65,6 @@ const LINES_THAT_CACHE_THE_MINIMUM_EARLY: ReadonlySet<string> = new Set([
 
 function isZero({ x, y }: Vector2): boolean {
   return x === 0 && y === 0;
-}
-
-/**
- * A constructor that writes a size computes the minimum before any line: ConfirmationDialog's
- * `set_min_size` (`dialogs.cpp:531`) and FileDialog's `set_size` (`file_dialog.cpp:2284`).
- */
-function constructorCachesTheMinimum(type: string): boolean {
-  const { minSize, size } = windowClassDefaults(type);
-  return !isZero(minSize) || size !== undefined;
 }
 
 /**
@@ -80,7 +86,7 @@ function readsTextUnwrappedWhileVisible(
   properties: Record<string, string>,
   limits: Pick<WindowProperties, 'min_size' | 'max_size'>
 ): boolean {
-  if (constructorCachesTheMinimum(type)) return false;
+  if (constructorWritesSize(type)) return false;
   if (properties.visible === undefined || !boolOr(properties.visible, false)) return false;
   const keys = Object.keys(properties);
   const textAt = keys.indexOf('dialog_text');
@@ -93,26 +99,95 @@ export function textOr(raw: string | undefined, fallback: string): string {
   return raw === undefined ? fallback : unquoteString(raw);
 }
 
+/** `_update_ok_text` (`dialogs.cpp:262-275`): an empty OK text shows the default. */
+function okTextOr(raw: string | undefined, fallback: string): string {
+  const text = textOr(raw, fallback);
+  return text === '' ? DEFAULT_OK_TEXT : text;
+}
+
+/**
+ * The number of lines up to the first `dialog_text` line that changes the text of a visible dialog.
+ * That line lays the Controls out with its text, so it computes their minimums (`dialogs.cpp:168-179`).
+ * Infinity for none.
+ */
+function linesThroughVisibleText(type: string, lines: Record<string, string>): number {
+  let visible = windowClassDefaults(type).visible;
+  let text = '';
+  for (const [line, [key, raw]] of Object.entries(lines).entries()) {
+    if (key === 'visible') visible = boolOr(raw, visible);
+    if (key !== 'dialog_text') continue;
+    const changes = textOr(raw, text) !== text;
+    text = textOr(raw, text);
+    if (changes && visible) return line + 1;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+/**
+ * The lines that ran before the internal Controls first computed their minimums: before the first
+ * size write that clamped the dialog, or an earlier visible text line. Null when no write clamped it.
+ */
+function linesBeforeTheControlsCache(
+  type: string,
+  lines: Record<string, string>,
+  { load_clamp_line }: WindowProperties
+): Record<string, string> | null {
+  if (load_clamp_line === null) return null;
+  const count = Math.max(0, Math.min(load_clamp_line, linesThroughVisibleText(type, lines)));
+  return Object.fromEntries(Object.entries(lines).slice(0, count));
+}
+
+function dialogControlsAtLoad(
+  type: string,
+  lines: Record<string, string>,
+  window: WindowProperties,
+  held: DialogControlsAtLoad
+): DialogControlsAtLoad | null {
+  const before = linesBeforeTheControlsCache(type, lines, window);
+  if (!before) return null;
+  return {
+    dialog_text: textOr(before.dialog_text, held.dialog_text),
+    ok_button_text: okTextOr(before.ok_button_text, held.ok_button_text),
+    dialog_autowrap: boolOr(before.dialog_autowrap, held.dialog_autowrap),
+  };
+}
+
+const CONSTRUCTED_CONTROLS: DialogControlsAtLoad = {
+  dialog_text: '',
+  ok_button_text: DEFAULT_OK_TEXT,
+  dialog_autowrap: false,
+};
+
+/** An instanced base's cache stands, since its Controls keep it. Otherwise the lines write it over what they hold. */
+function controlsAtLoad(
+  type: string,
+  properties: Record<string, string>,
+  window: WindowProperties,
+  override: OverrideLayer<DialogProperties> | undefined
+): DialogControlsAtLoad | null {
+  if (!override) return dialogControlsAtLoad(type, properties, window, CONSTRUCTED_CONTROLS);
+  return (
+    override.held.controls_at_load ?? dialogControlsAtLoad(type, override.written, window, override.held)
+  );
+}
+
 export function parseDialog(
   heading: ParsedHeading,
   properties: Record<string, string>,
   override?: OverrideLayer<DialogProperties>
 ): DialogProperties {
-  const okText = textOr(properties.ok_button_text, '');
+  const type = heading.attributes.type ?? '';
   const windowProperties = parseWindow(heading, properties, override);
   return {
     ...windowProperties,
     dialog_text: textOr(properties.dialog_text, ''),
-    ok_button_text: okText === '' ? DEFAULT_OK_TEXT : okText,
+    ok_button_text: okTextOr(properties.ok_button_text, ''),
     dialog_autowrap: boolOr(
       properties.dialog_autowrap,
       false,
       `${viewportParseContext(heading, windowProperties.name)}.dialog_autowrap`
     ),
-    has_unwrapped_message_minimum: readsTextUnwrappedWhileVisible(
-      heading.attributes.type ?? '',
-      properties,
-      windowProperties
-    ),
+    has_unwrapped_message_minimum: readsTextUnwrappedWhileVisible(type, properties, windowProperties),
+    controls_at_load: controlsAtLoad(type, properties, windowProperties, override),
   };
 }

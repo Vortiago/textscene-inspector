@@ -117,6 +117,15 @@ export function windowClassDefaults(type: string): WindowClassDefaults {
   return findInClassChain(type, (className) => CLASS_DEFAULTS[className]) ?? WINDOW_DEFAULTS;
 }
 
+/**
+ * Whether the constructor of `type` writes a size, which asks for the contents minimum before any
+ * line: ConfirmationDialog's `set_min_size` (`dialogs.cpp:531`) and FileDialog's `set_size` (`file_dialog.cpp:2284`).
+ */
+export function constructorWritesSize(type: string): boolean {
+  const { minSize, size } = windowClassDefaults(type);
+  return minSize.x !== 0 || minSize.y !== 0 || size !== undefined;
+}
+
 /** The two properties `set_force_native` reads and writes. */
 export type ForceNativeState = { visible: boolean; force_native: boolean };
 

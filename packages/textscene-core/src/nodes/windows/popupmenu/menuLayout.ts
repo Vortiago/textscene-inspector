@@ -82,12 +82,22 @@ function itemsTotalHeight(items: readonly MenuItem[], menu: PopupMenuTheme): num
   return items.reduce((sum, { height }) => sum + height + menu.vSeparation, 0);
 }
 
+/** What the menu's minimum reads beside its items: the height limit and the scroll bar's width. */
+interface MinimumReading {
+  heightLimit: number;
+  scrollBarWidth: number;
+}
+
 /**
  * `PopupMenu::_get_contents_minimum_size` (`popup_menu.cpp:228-289`). The check column is always
  * reserved in a compact gutter, and a checkable item with an icon turns the compact gutter off
  * (`:246-250,268-277`). The height is limited to the embedder's and ceiled (`:280-286`).
  */
-function contentsMinimumSize(n: SolveNode, model: MenuModel, limit: number): Vector2 {
+function contentsMinimumSize(
+  n: SolveNode,
+  model: MenuModel,
+  { heightLimit, scrollBarWidth }: MinimumReading
+): Vector2 {
   const { menu, items } = model;
   const margins = contentMarginSize(menu.panel);
   const shadow = insetSize(shadowInsets(menu.panel, n.rtl));
@@ -106,26 +116,29 @@ function contentsMinimumSize(n: SolveNode, model: MenuModel, limit: number): Vec
   );
 
   const width =
-    margins.x +
-    scrollBarWidth(menu) +
-    shadow.x +
-    menu.itemStartPadding +
-    bodyWidth +
-    menu.itemEndPadding +
-    gutter;
+    margins.x + scrollBarWidth + shadow.x + menu.itemStartPadding + bodyWidth + menu.itemEndPadding + gutter;
   const height = margins.y + shadow.y + itemsTotalHeight(items, menu);
-  return { x: width, y: Math.ceil(Math.min(height, limit)) };
+  return { x: width, y: Math.ceil(Math.min(height, heightLimit)) };
 }
 
-export const popupMenuContentsMinimumSize: MinimumSizeFn = (n, ctx) =>
-  contentsMinimumSize(n, menuModel(n, ctx), ctx.embedderSize?.y ?? Number.POSITIVE_INFINITY);
+/** The bar reads its own width (`popup_menu.cpp:230`), which the scroll container gives it in the tree. */
+export const popupMenuContentsMinimumSize: MinimumSizeFn = (n, ctx) => {
+  const model = menuModel(n, ctx);
+  return contentsMinimumSize(n, model, {
+    heightLimit: ctx.embedderSize?.y ?? Number.POSITIVE_INFINITY,
+    scrollBarWidth: scrollBarWidth(model.menu),
+  });
+};
 
-/** The minimum of the items set when the `size` line is applied: the menu is not in the tree, so nothing limits its height. */
+/**
+ * The minimum of the items set when the `size` line is applied. The menu is not in the tree, so
+ * nothing limits its height, and no layout has sized its scroll bar, which reads 0 wide.
+ */
 export const popupMenuLoadedMinimumSize: LoadedMinimumSizeFn = (n, ctx) => {
   const { items, itemsAtSize } = n.node.properties as PopupMenuProperties;
   if (!itemsAtSize) return null;
   const model = itemsAtSize === items ? menuModel(n, ctx) : buildMenuModel(n, ctx, itemsAtSize);
-  return contentsMinimumSize(n, model, Number.POSITIVE_INFINITY);
+  return contentsMinimumSize(n, model, { heightLimit: Number.POSITIVE_INFINITY, scrollBarWidth: 0 });
 };
 
 export interface MenuRow {

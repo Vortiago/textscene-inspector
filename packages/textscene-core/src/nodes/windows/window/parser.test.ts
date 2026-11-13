@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../../godot/scene/viewport';
 import { parseWindow } from './parser';
+import { BEFORE_THE_LINES } from './types';
 
 describe('parseWindow', () => {
   it('reads the title, position and size of a Window', () => {
@@ -171,5 +172,47 @@ describe('parseWindow', () => {
     expect(Object.isFrozen(result.position)).toBe(true);
     expect(Object.isFrozen(result.size_2d_override)).toBe(true);
     expect(Object.isFrozen(result.content_scale.size)).toBe(true);
+  });
+});
+
+describe('the load clamp line', () => {
+  const clampLine = (type: string, properties: Record<string, string>) =>
+    parseWindow(heading(type, { name: 'W' }), properties).load_clamp_line;
+
+  it('is the first size line a wrapping window reads', () => {
+    expect(clampLine('Popup', { visible: 'true', size: 'Vector2i(50, 50)', wrap_controls: 'false' })).toBe(1);
+  });
+
+  it('is null when wrap_controls = false comes before the size line', () => {
+    expect(clampLine('Popup', { wrap_controls: 'false', size: 'Vector2i(50, 50)' })).toBeNull();
+  });
+
+  it('is null for a Window, which does not wrap by default', () => {
+    expect(clampLine('Window', { size: 'Vector2i(50, 50)' })).toBeNull();
+  });
+
+  it('skips a min_size line that leaves the limit at zero', () => {
+    expect(clampLine('Popup', { min_size: 'Vector2i(0, 0)', size: 'Vector2i(50, 50)' })).toBe(1);
+  });
+
+  it('is the constructor for a class whose constructor writes a size', () => {
+    expect(clampLine('ConfirmationDialog', { size: 'Vector2i(50, 50)' })).toBe(BEFORE_THE_LINES);
+  });
+});
+
+describe('whether the loaded size keeps its clamp', () => {
+  const keeps = (type: string, properties: Record<string, string>) =>
+    parseWindow(heading(type, { name: 'W' }), properties).keeps_load_clamp;
+
+  it('drops it at a size line written while the window does not wrap', () => {
+    expect(keeps('ConfirmationDialog', { wrap_controls: 'false', size: 'Vector2i(50, 50)' })).toBe(false);
+  });
+
+  it('keeps it through a min_size line written while the window does not wrap', () => {
+    expect(keeps('ConfirmationDialog', { wrap_controls: 'false', min_size: 'Vector2i(10, 10)' })).toBe(true);
+  });
+
+  it('keeps it when wrap_controls = false follows the size line', () => {
+    expect(keeps('Popup', { size: 'Vector2i(50, 50)', wrap_controls: 'false' })).toBe(true);
   });
 });
