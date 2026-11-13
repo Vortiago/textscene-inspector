@@ -3,10 +3,14 @@
  * this puts back what the Control hands its children. The Control walk solves where the Control's
  * canvas item sits and publishes that transform (`ControlYSortContext`), and this group applies it,
  * as `get_global_transform()` composes (`control.cpp:719-737`, `canvas_item.cpp:176-186`). A hidden
- * Control hides them too (`canvas_item.cpp:62-64`). Its modulate, z, material and sampler reach them
+ * Control hides them too (`canvas_item.cpp:62-64`), with the `visible` its container writes onto it
+ * (`tab_container.cpp:377-399`, `foldable_container.cpp:376-386`). Its modulate, z, material and sampler reach them
  * as any parent item's do (`renderer_canvas_cull.cpp:319-326`, `:430-434`).
  */
 import { useMemo, type ReactNode } from 'react';
+import type { CanvasItemPassResult } from './canvasItemPass/canvasItemPass.js';
+import { canvasItemPass } from './canvasItemPass/canvasItemPass.js';
+import { useLiveScenePassSelection } from './liveScenePass.js';
 import type { TscnNode } from '../parser/types';
 import { isControlType } from './canvasItemClass.js';
 import type { ControlProperties } from '../nodes/2d/ui/control/types.js';
@@ -27,7 +31,10 @@ interface ControlCanvasSpaceProps {
 function SolvedControlSpace({ node, path, children }: ControlCanvasSpaceProps) {
   const transform = useControlTransform(path);
   const matrix = useMemo(() => transform && threeMatrixFromTransform2D(transform), [transform]);
-  const isVisible = useCanvasItemVisible(path, (node.properties as ControlProperties).visible);
+  const isVisible = useCanvasItemVisible(
+    path,
+    useWrittenVisible(path) ?? (node.properties as ControlProperties).visible
+  );
   const scope = useSceneResources();
   const handedDown = useMemo(() => canvasStateOfDrawn([node], scope), [node, scope]);
   // paint-order-safe: outside every keyed item group, it only moves and hides the Node2D items below.
@@ -36,6 +43,15 @@ function SolvedControlSpace({ node, path, children }: ControlCanvasSpaceProps) {
       <CanvasAncestorsScope chain={handedDown}>{children}</CanvasAncestorsScope>
     </group>
   );
+}
+
+/** The `visible` the container of the Control at `path` writes onto it, or undefined. */
+function useWrittenVisible(path: string): boolean | undefined {
+  const select = useMemo(
+    () => (results: ReadonlyMap<string, CanvasItemPassResult>) => results.get(path)?.writtenVisible,
+    [path]
+  );
+  return useLiveScenePassSelection(canvasItemPass, select, Object.is);
 }
 
 /** `children` as they are for a node that is no Control, which has no such space. */
