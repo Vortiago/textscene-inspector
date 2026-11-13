@@ -9,7 +9,7 @@
  * each screenshot's limit where one frame outlasts Playwright's default. `pnpm recapture` takes the
  * same limit for the sheet image of the scene's fixture. `animationTime: <seconds>` seeks the
  * AnimationPlayer that `select` names to that time before the shot. `litSurface: 'nodes'` captures
- * a branch only the node lit surface draws, with the switch on (#1452).
+ * a branch only the node lit surface draws, with the switch on.
  */
 
 import { GEOMETRY_SCENES } from './scenes/geometry.mjs';

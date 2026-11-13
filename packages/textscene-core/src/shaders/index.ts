@@ -3,7 +3,7 @@
  * `WebGLRenderer`, with no React. `@textscene/three-godot-shaders` publishes this entry, and the
  * renderer bundles it.
  *
- * The rules every file here keeps, for the slices of #1451 that add nodes:
+ * The rules every file here keeps, as the port adds nodes:
  * - A file imports `three`, `three/tsl`, `three/webgpu`, `three/addons/*`, a file of `godot/` or a
  *   file of its own. `importRule.test.ts` walks the imports.
  * - A node is built once. It reads each value in its update callback, from the pipeline inputs of

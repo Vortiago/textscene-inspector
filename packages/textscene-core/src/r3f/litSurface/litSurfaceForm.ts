@@ -2,7 +2,7 @@
  * The one switch that names the form of the lit surface (ADR-0055): `patched` draws through the
  * classic materials and their shader patches, `nodes` through the node materials of `shaders/`.
  * A page picks `nodes` with `?litSurface=nodes`. The VS Code webview has no such parameter, so it
- * draws `patched` until the port makes `nodes` the default (#1459).
+ * draws `patched` until the port makes `nodes` the default.
  */
 
 export type LitSurfaceForm = 'patched' | 'nodes';

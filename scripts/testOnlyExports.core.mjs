@@ -21,7 +21,7 @@ export const KEPT_TEST_ONLY_EXPORTS = [
   // No runtime code lists the vendored icons, and the icon test checks each one against its raster.
   'r3f/controls/native/themeIcons.ts#vendoredIconSvgUrls',
   // The switch of the TSL port ships before its one reader, the pick of a lit surface's material,
-  // which #1453 adds.
+  // which the next slice of the port adds.
   'r3f/litSurface/litSurfaceForm.ts#litSurfaceForm',
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
