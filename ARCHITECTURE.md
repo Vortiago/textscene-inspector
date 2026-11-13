@@ -36,7 +36,7 @@ Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vit
 | `nodes/` | One vertical slice per Godot node type |
 | `resources/` | The resource loader, and one slice per resource type |
 | `r3f/` | The renderer, the 2D canvas, the Control canvas, the preview shell |
-| `shaders/` | Godot's scene shader as TSL node materials for a three.js renderer, with no React (ADR-0072) |
+| `shaders/` | The **Shader module**: Godot's shaders for a three.js renderer, with no React (ADR-0072) |
 
 `godot/` groups its files by the engine area they port, named for that area's directory in Godot's
 source, and a file's cites name its area. A file whose facts port from two areas splits into one
