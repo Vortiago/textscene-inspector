@@ -3,7 +3,7 @@ import { identityTransform3D, transform3DOf } from '../../../godot/math/transfor
 import { GpuDrawOrder, GpuTransformAlign } from '../../../godot/scene/particles3d';
 import { PARTICLE_FLOATS } from '../particles3d/particleBuffer';
 import { copyInstances, type InstanceCopy } from './instanceCopy';
-import type { SettledGpuParticles } from './settle';
+import type { SettledGpuParticles, TrailLayout } from './settle';
 
 interface HandParticle {
   origin?: [number, number, number];
@@ -13,7 +13,13 @@ interface HandParticle {
 }
 
 /** Settled particles with the given index, in the order given. Particle `n` is born at `origin` and numbered `n` in its custom angle. */
-function settled(particles: HandParticle[], phase = 0, indices?: number[]): SettledGpuParticles {
+function settled(
+  particles: HandParticle[],
+  phase = 0,
+  indices?: number[],
+  trail: TrailLayout | null = null
+): SettledGpuParticles {
+  const sections = trail?.sections ?? 1;
   const buffer = new Float32Array(particles.length * PARTICLE_FLOATS);
   const velocity = new Float32Array(particles.length * 3);
   particles.forEach(({ origin = [0, 0, 0], columns, velocity: v = [0, 0, 0] }, row) => {
@@ -26,10 +32,17 @@ function settled(particles: HandParticle[], phase = 0, indices?: number[]): Sett
     buffer.set([x![0]!, y![0]!, z![0]!, origin[0]], at);
     buffer.set([x![1]!, y![1]!, z![1]!, origin[1]], at + 4);
     buffer.set([x![2]!, y![2]!, z![2]!, origin[2]], at + 8);
-    buffer[at + 16] = indices ? indices[row]! : row;
+    buffer[at + 16] = indices ? indices[Math.floor(row / sections)]! : Math.floor(row / sections);
     velocity.set(v, row * 3);
   });
-  return { buffer, velocity, indices: Int32Array.from(indices ?? particles.map((_, row) => row)), phase };
+  const count = particles.length / sections;
+  return {
+    buffer,
+    velocity,
+    trail,
+    indices: Int32Array.from(indices ?? Array.from({ length: count }, (_, particle) => particle)),
+    phase,
+  };
 }
 
 const FRONT_VIEW = { axis: { x: 0, y: 0, z: 1 }, up: { x: 0, y: 1, z: 0 } };
@@ -247,5 +260,90 @@ describe('copyInstances with nothing to copy', () => {
   it('hands back the settled buffer for INDEX and DISABLED', () => {
     const particles = settled(EIGHT);
     expect(copyInstances(particles, request({}))).toBe(particles.buffer);
+  });
+});
+
+describe('copyInstances of a trail', () => {
+  const SIX_SECTIONS = { sections: 6, depth: 9, frameDelta: 1 / 30 };
+  /** Six sections of a particle at height 2 flying up at 2 units a second, then the next particle. */
+  const section = (z: number, y = 2): HandParticle => ({ origin: [0, y, z], velocity: [0, 2, 0] });
+  const column = (buffer: Float32Array, row: number) => [
+    buffer[row * PARTICLE_FLOATS + 3]!,
+    buffer[row * PARTICLE_FLOATS + 7]!,
+    buffer[row * PARTICLE_FLOATS + 11]!,
+  ];
+  /** `translation` along Y from the mesh's bind pose `i`. */
+  const bindPoses = Array.from({ length: 6 }, (_, i) =>
+    transform3DOf([1, 0, 0, 0, 1, 0, 0, 0, 1], { x: 0, y: -0.5 + 0.2 * i, z: 0 })
+  );
+
+  it('moves a section back by its velocity times the fraction of its step', () => {
+    const particles = settled(
+      Array.from({ length: 6 }, () => section(0)),
+      0,
+      undefined,
+      SIX_SECTIONS
+    );
+    const copied = copyInstances(particles, request({ amount: 1 }));
+    // k * H / S is 0, 1.5, 3, 4.5 and 7.5 for sections 0, 1, 2, 3 and 5: half a step of 1/30 s at 2 units a second.
+    expect(column(copied, 0)[1]).toBeCloseTo(2, 5);
+    expect(column(copied, 1)[1]).toBeCloseTo(2 - 0.5 * (1 / 30) * 2, 5);
+    expect(column(copied, 3)[1]).toBeCloseTo(2 - 0.5 * (1 / 30) * 2, 5);
+    expect(column(copied, 5)[1]).toBeCloseTo(2 - 0.5 * (1 / 30) * 2, 5);
+  });
+
+  it('multiplies each section by its bind pose', () => {
+    const particles = settled(
+      Array.from({ length: 6 }, () => ({ origin: [0, 2, 0] as [number, number, number] })),
+      0,
+      undefined,
+      SIX_SECTIONS
+    );
+    const copied = copyInstances(particles, request({ amount: 1, bindPoses }));
+    [0, 1, 2, 3, 4, 5].forEach((row) => expect(column(copied, row)[1]).toBeCloseTo(2 - 0.5 + 0.2 * row, 5));
+  });
+
+  it('keeps the bind pose inside the turned basis of a section', () => {
+    const turned: [number, number, number][] = [
+      [0, 1, 0],
+      [-1, 0, 0],
+      [0, 0, 1],
+    ];
+    const particles = settled(
+      Array.from({ length: 6 }, () => ({ columns: turned })),
+      0,
+      undefined,
+      SIX_SECTIONS
+    );
+    const copied = copyInstances(particles, request({ amount: 1, bindPoses }));
+    // The basis maps the bind pose's +Y translation onto -X.
+    expect(column(copied, 5)[0]).toBeCloseTo(-0.5, 5);
+  });
+
+  it('orders whole particles, keeping the sections of each together', () => {
+    const rows = [
+      ...Array.from({ length: 6 }, () => section(0)),
+      ...Array.from({ length: 6 }, () => section(5)),
+    ];
+    const copied = copyInstances(
+      settled(rows, 0, undefined, SIX_SECTIONS),
+      request({ amount: 2, drawOrder: GpuDrawOrder.VIEW_DEPTH })
+    );
+    // Particle 1 is nearer the camera (+Z), so it draws last: the far one first.
+    expect(column(copied, 0)[2]).toBeCloseTo(0, 5);
+    expect(column(copied, 6)[2]).toBeCloseTo(5, 5);
+  });
+
+  it('sorts a trail by its middle section', () => {
+    const rows = [
+      ...Array.from({ length: 6 }, (_, k) => section(k === 3 ? 9 : 0)),
+      ...Array.from({ length: 6 }, (_, k) => section(k === 3 ? 1 : 5)),
+    ];
+    const copied = copyInstances(
+      settled(rows, 0, undefined, SIX_SECTIONS),
+      request({ amount: 2, drawOrder: GpuDrawOrder.VIEW_DEPTH })
+    );
+    // Section 3 of particle 0 is at z 9 and of particle 1 at z 1, whatever the other sections say.
+    expect(column(copied, 3)[2]).toBeCloseTo(1, 5);
   });
 });
