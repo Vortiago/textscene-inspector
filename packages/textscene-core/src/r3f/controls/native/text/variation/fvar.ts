@@ -36,7 +36,7 @@ export function tagString(tag: number): string {
  * table, a version other than 1.0, axes or named instances that the table does not hold.
  * An axis whose default lies outside its range is fixed to the default.
  */
-export function readFvarAxes(sfnt: SfntFile): readonly FvarAxis[] | null {
+function readFvarAxes(sfnt: SfntFile): readonly FvarAxis[] | null {
   const { dv } = sfnt;
   const fvar = sfnt.tables.get('fvar');
   if (!fvar || !tableFits(dv, fvar, FVAR_HEADER_SIZE)) return null;

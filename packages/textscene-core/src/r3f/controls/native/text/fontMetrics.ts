@@ -60,10 +60,9 @@ export interface FontMetrics {
    */
   readonly getGlyphKerningUnits?: GlyphKerningReader;
   /**
-   * A character's own advance width at the default instance, design units, or `null` if this font
-   * has no glyph for it (a shaper falls back to `averageAdvanceUnits`). FreeType takes the advance of
-   * a font with no `HVAR` from its phantom points at a size, so an instance has no advance in design
-   * units: `getInstanceAdvance26_6` gives it.
+   * A character's own advance at the default instance, design units, or `null` for no glyph (a shaper
+   * then takes `averageAdvanceUnits`). FreeType takes the advance of a font with no `HVAR` from its
+   * phantom points at a size, so an instance has none in design units: `getInstanceAdvance26_6`.
    */
   getGlyphAdvanceUnits(ch: string): number | null;
   /**
@@ -463,7 +462,7 @@ function instanceReaders(
     },
     getInstanceAdvance26_6: {
       value: (glyph: KernGlyph, fontSizePx: number): number | null => {
-        const index = lookupGlyphOf(glyph, glyphAt).glyph;
+        const index = glyph.glyph ?? glyphAt(glyph.char.codePointAt(0)!);
         return index === 0 ? null : (outlines.advanceAtInstance?.(index, fontSizePx, opentype) ?? null);
       },
     },
@@ -480,14 +479,10 @@ function defaultReaders(unvaried: FontMetrics): PropertyDescriptorMap {
 }
 
 /**
- * `metrics` with a `FontVariation`'s `embolden`, `skew` and `opentype` set, and the `outlines` its text follows.
- * The wrapper reads every other field through the face, so a live getter stays live. With no variation
- * and no outlines, it is the face itself. Two fonts that share a face and a variation keep
- * their own outlines, each on its own wrapper. The wrapper is the only writer of the readers at an
- * instance: its advances and kerning follow the instance that the axis values name, and its glyphs
- * draw it where `drawnOpentype` gives them. A variation of a wrapper replaces its variation and
- * keeps its outlines, as a `FontVariation` over another finds its face at its own values alone
- * (`font.cpp:3120-3131`).
+ * `metrics` with a `FontVariation`'s `embolden`, `skew` and `opentype`, and the `outlines` its text
+ * follows, read through the face for every other field. With neither, it is the face itself. The
+ * wrapper is the only writer of the instance readers. A variation of a wrapper replaces its
+ * variation and keeps its outlines, as a `FontVariation` over another does (`font.cpp:3120-3131`).
  */
 export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
@@ -627,8 +622,8 @@ function lookupGlyphOf({ char, glyph }: KernGlyph, cmapGlyph: (codePoint: number
 
 /**
  * The kerning of `a` and `b` scaled to `fontSizePx`: the `GPOS` kerning of a pair of glyphs, else
- * `metrics.getKerningAdjustmentUnits` of their characters. HarfBuzz positions a glyph in the 26.6 units of the FreeType
- * size Godot's `hb_font` takes (`text_server_adv.cpp:1513`), so the kerning lands on a 1/64 pixel.
+ * `metrics.getKerningAdjustmentUnits` of their characters. HarfBuzz positions a glyph in the 26.6
+ * units of the size Godot's `hb_font` takes (`text_server_adv.cpp:1513`): a 1/64 pixel.
  */
 export function getFontKerningAdjustmentPx(
   metrics: FontMetrics,
@@ -649,10 +644,14 @@ export function getFontKerningAdjustmentPx(
 function glyphKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): number | null {
   const kerningOf = metrics.getGlyphKerningUnits;
   if (!kerningOf || (a.glyph === undefined && b.glyph === undefined)) return null;
+  if (a.glyph !== undefined && b.glyph !== undefined) {
+    return kerningOf(
+      { glyph: a.glyph, codePoint: a.char.codePointAt(0)! },
+      { glyph: b.glyph, codePoint: b.char.codePointAt(0)! }
+    );
+  }
   const glyphAt = instanceGlyphIndexOf(metrics);
-  if (!glyphAt && (a.glyph === undefined || b.glyph === undefined)) return null;
-  const cmapGlyph = glyphAt ?? (() => 0);
-  return kerningOf(lookupGlyphOf(a, cmapGlyph), lookupGlyphOf(b, cmapGlyph));
+  return glyphAt && kerningOf(lookupGlyphOf(a, glyphAt), lookupGlyphOf(b, glyphAt));
 }
 
 /** The glyph of a code point at the face's instance, or null for a face at its default instance. */
