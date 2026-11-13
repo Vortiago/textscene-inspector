@@ -81,7 +81,7 @@ rects for nodes that draw nothing, which pixel probes cannot.
 ### The painter view: a narrowed type, not an import boundary
 
 A painter must never re-apply its own node's `modulate`. `ControlCanvasWalker` folds it
-into the ambient `Modulate2DContext` it wraps the painter in, so a second application
+into the modulate product the Control hands down around the painter, so a second application
 squares it: invisible at Godot's opaque-white default, a four-fold error at 0.5. A test
 that sets only an ambient context plus `self_modulate`, and never the node's own
 `modulate`, passes a painter that carries this defect.

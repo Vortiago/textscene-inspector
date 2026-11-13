@@ -89,7 +89,7 @@ function wideTintLines(source: string): number[] {
 /**
  * Naming `modulate` in code at all. Case-sensitive and word-bounded, so
  * `selfModulate`, `self_modulate`, `multiplyModulate`, `canvasModulate`,
- * `Modulate2DContext` and `WHITE_MODULATE` all pass.
+ * `CanvasModulateContext` and `WHITE_MODULATE` all pass.
  */
 function launderedModulateLines(source: string): number[] {
   return offendingLines(source, /\bmodulate\b/);
@@ -153,7 +153,7 @@ describe('Control painter view conformance', () => {
     expect(launderedModulateLines('  const { modulate } = props;')).toEqual([1]);
     expect(launderedModulateLines('  return props.selfModulate;')).toEqual([]);
     expect(launderedModulateLines('  multiplyModulate(a, b);')).toEqual([]);
-    expect(launderedModulateLines('  <Modulate2DContext.Provider value={WHITE_MODULATE}>')).toEqual([]);
+    expect(launderedModulateLines('  <CanvasModulateContext.Provider value={WHITE_MODULATE}>')).toEqual([]);
     expect(launderedModulateLines('  const canvasModulate = useCanvasModulateColor(n.children);')).toEqual(
       []
     );
