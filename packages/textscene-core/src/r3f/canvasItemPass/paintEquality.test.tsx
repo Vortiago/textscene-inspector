@@ -60,7 +60,7 @@ vi.mock('../controls/native/ControlCanvasWalker', async (importOriginal) => {
   };
 });
 
-/** The fixtures of the value list in `#1533`. */
+/** The 2D fixtures whose order a y-sort, a tile layer, a CanvasGroup, a clip, a Control or an instance decides. */
 const FIXTURES = [
   ...readdirSync(fixturesDir()).filter((name) =>
     /^unit-(control-y-sort|tile-map-layer|canvas-group|clip-children)/.test(name)
