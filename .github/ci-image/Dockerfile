@@ -1,6 +1,7 @@
 # The image that the browser jobs and the real-Godot job of CI run in. It holds what a job would
 # otherwise install from the Ubuntu archive or download in each run: the system libraries of
-# Chromium, lavapipe, the locked Chromium, and the Godot binary with xvfb for `pnpm ref:godot`.
+# Chromium, lavapipe, the locked Chromium, the Godot binary with xvfb for `pnpm ref:godot`, and
+# Godot's source for the generators that read it (scripts/godotSource.mjs).
 # scripts/ci/ciImage.mjs names the image by a hash of this file and the Playwright version.
 
 # Only `playwright install` below runs on this Node. None of it stays in the image.
@@ -18,12 +19,13 @@ RUN getent hosts archive.ubuntu.com > /dev/null \
   || sed -i 's|^URIs: .*|URIs: http://mirrors.edge.kernel.org/ubuntu/|' /etc/apt/sources.list.d/ubuntu.sources
 
 # What the actions of a job need: git for actions/checkout and the vendor step of `pnpm install`,
-# libatomic1 for pnpm, and zstd for the entries of actions/cache. curl and unzip fetch Godot below.
+# libatomic1 for pnpm, and zstd for the entries of actions/cache. curl, unzip and xz-utils fetch
+# Godot below.
 # mesa-vulkan-drivers is lavapipe, the driver of `pnpm test:gpu` and of Godot. xvfb and xauth give
 # `xvfb-run`, the display of Godot, which opens none without libXcursor and loads libXinerama too.
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
-    ca-certificates curl git libatomic1 unzip zstd \
+    ca-certificates curl git libatomic1 unzip xz-utils zstd \
     mesa-vulkan-drivers xvfb xauth libxcursor1 libxinerama1 \
   && rm -rf /var/lib/apt/lists/*
 
@@ -44,6 +46,18 @@ RUN binary="Godot_v${ENGINE_VERSION}_linux.x86_64" \
   && install -m 755 "/tmp/godot/${binary}" /usr/local/bin/godot \
   && rm -r /tmp/godot.zip /tmp/godot \
   && godot --headless --version
+
+# Godot's source at the binary's tag, at /opt/godot-source, where scripts/godotSource.mjs reads it.
+# Not thirdparty/: 126 MB of libraries that no generator reads. The rest is 212 MB.
+ARG SOURCE_SHA512=b3e4c63eae7b7e0c47da07ae64d49dca5bf033912ea0a0da5440fcee48b4eb16c75e446374e7916c4ca2c6ff39ed7f3833e4cc2761df73765a660f715770f803
+RUN curl -fsSL -o /tmp/godot-source.tar.xz \
+    "https://github.com/godotengine/godot/releases/download/${ENGINE_VERSION}/godot-${ENGINE_VERSION}.tar.xz" \
+  && echo "${SOURCE_SHA512}  /tmp/godot-source.tar.xz" | sha512sum --check \
+  && mkdir /opt/godot-source \
+  && tar -xJf /tmp/godot-source.tar.xz -C /opt/godot-source --strip-components=1 \
+    --exclude="godot-${ENGINE_VERSION}/thirdparty" \
+  && rm /tmp/godot-source.tar.xz \
+  && test -f /opt/godot-source/servers/rendering/shader_language.cpp
 
 # Where Playwright looks for its browsers, at build time and in a job.
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright

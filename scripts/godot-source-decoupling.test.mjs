@@ -3,6 +3,8 @@
  * source line cited beside it, never read from `doc/classes/<Type>.xml` at test time, since that
  * makes a multi-gigabyte clone a build requirement. Deleting the checkout leaves `pnpm validate`
  * unchanged. A cite (`scene/3d/camera_3d.cpp:682`, `doc/classes/Range.xml`) is not a violation.
+ * The one way in is `scripts/godotSource.mjs`: the CI image's source, for the generators named in
+ * GODOT_SOURCE_READERS, which run in CI and not in `pnpm validate`.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -38,6 +40,14 @@ const CHECKOUT_RE = new RegExp(
 );
 const URL_RE = /https?:\/\//;
 const CHECKOUT_ALLOWED = new Set(['REFERENCES.md', 'scripts/godot-source-decoupling.controls.mjs']);
+
+/** The CI image's source path, which only the module that resolves it and the image name. */
+const IMAGE_SOURCE_RE = /\/opt\/godot-source\b/;
+const IMAGE_SOURCE_ALLOWED = new Set(['scripts/godotSource.mjs', '.github/ci-image/Dockerfile']);
+
+/** The generators that read Godot's source through `godotSource.mjs`. */
+const GODOT_SOURCE_READERS = new Set(['scripts/godot-shader-language/run.mjs']);
+const SOURCE_IMPORT_RE = /from\s+['"][./]*(?:scripts\/)?godotSource\.mjs['"]/;
 
 /**
  * A `GODOT_*` read from the environment can only locate the checkout, except `GODOT_BIN`, a path
@@ -149,6 +159,16 @@ describe('Godot source stays a reading aid, not a dependency', () => {
 
   it('no code file locates the engine source through the environment', () => {
     expect(format(ALL_ENV_HITS.filter((h) => !ENV_ALLOWED.has(h.file)))).toEqual([]);
+  });
+
+  it('names the image source path only where it is resolved and built', () => {
+    const hits = offenders(IMAGE_SOURCE_RE, IMAGE_SOURCE_ALLOWED).filter((h) => extname(h.file) !== '.md');
+    expect(format(hits)).toEqual([]);
+  });
+
+  it('lets only the named generators read the source', () => {
+    const readers = hitFiles(offenders(SOURCE_IMPORT_RE, new Set()));
+    expect(readers).toEqual([...GODOT_SOURCE_READERS]);
   });
 
   it('scans a meaningful share of the repo, so a broken glob cannot pass it', () => {

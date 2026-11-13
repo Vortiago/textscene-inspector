@@ -4,5 +4,5 @@
  * become a promise to every consumer.
  */
 
-export { installNodesHandler } from '@textscene/core/shaders';
-export type { NodeOutput } from '@textscene/core/shaders';
+export { installNodesHandler, ShadingLanguageError, translateShadingLanguage } from '@textscene/core/shaders';
+export type { NodeOutput, TranslatedFunction, TranslatedShader } from '@textscene/core/shaders';
