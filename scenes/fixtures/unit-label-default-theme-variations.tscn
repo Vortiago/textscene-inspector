@@ -1,0 +1,68 @@
+[gd_scene load_steps=1 format=3 uid="uid://unitlabeldeftheme"]
+
+; Labels and a PanelContainer that name a type variation the default theme defines (default_theme.cpp:394-401, :814-856,
+; :1165-1180). HeaderSmall, HeaderMedium and HeaderLarge step the font size by 4, 8 and 12. GraphNodeTitleLabel and
+; TooltipLabel set control_font_color and GraphFrameTitleLabel sets white and size 22. TooltipPanel is a
+; PopupPanel variation that gives a PanelContainer a half-transparent black panel. Each variation is the one variable.
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.4, 0.4, 0.4, 1)
+
+[node name="Rows" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 300.0
+offset_bottom = 300.0
+
+[node name="Plain" type="Label" parent="Rows"]
+layout_mode = 2
+text = "Plain label"
+
+[node name="Small" type="Label" parent="Rows"]
+layout_mode = 2
+theme_type_variation = &"HeaderSmall"
+text = "Header small"
+
+[node name="Medium" type="Label" parent="Rows"]
+layout_mode = 2
+theme_type_variation = &"HeaderMedium"
+text = "Header medium"
+
+[node name="Large" type="Label" parent="Rows"]
+layout_mode = 2
+theme_type_variation = &"HeaderLarge"
+text = "Header large"
+
+[node name="GraphNodeTitle" type="Label" parent="Rows"]
+layout_mode = 2
+theme_type_variation = &"GraphNodeTitleLabel"
+text = "Graph node title"
+
+[node name="GraphFrameTitle" type="Label" parent="Rows"]
+layout_mode = 2
+theme_type_variation = &"GraphFrameTitleLabel"
+text = "Graph frame title"
+
+[node name="Tooltip" type="Label" parent="Rows"]
+layout_mode = 2
+theme_type_variation = &"TooltipLabel"
+text = "Tooltip label"
+
+[node name="TooltipPanel" type="PanelContainer" parent="Rows"]
+layout_mode = 2
+theme_type_variation = &"TooltipPanel"
+
+[node name="Inside" type="Label" parent="Rows/TooltipPanel"]
+layout_mode = 2
+text = "Tooltip panel"

@@ -16,7 +16,12 @@ import {
   SEED_RENDER_ORDER,
   directionalRenderOrder,
 } from '../../../r3f/lighting2d/lightPassLayers';
-import { itemUniforms, ownerName, recordLightPass } from '../../../r3f/lighting2d/testing/lightPassProbe';
+import {
+  drawInto,
+  itemUniforms,
+  ownerName,
+  recordLightPass,
+} from '../../../r3f/lighting2d/testing/lightPassProbe';
 import { SHADOW_MAP_FAR } from '../../../r3f/lighting2d/shadowPolarMap';
 import { DispatchedScene } from '../../../r3f/testing/DispatchedScene';
 import { underWhiteCanvasLighting } from '../../../r3f/lighting2d/testing/whiteCanvasLighting';
@@ -212,7 +217,7 @@ ${sun('', 'Sun', 'View')}`)
       scene(sun('shadow_enabled = true\nshadow_color = Color(0, 0, 1, 0.5)') + CASTER + panel('P'))
     );
     const tintBuffer = itemUniforms(renderer, 'P').uShadowTint!.value as THREE.Texture;
-    const draw = (await recordLightPass(renderer)).find((recorded) => recorded.texture === tintBuffer);
+    const draw = drawInto(await recordLightPass(renderer), tintBuffer);
     const tint = draw!.drawn.filter((mesh) => !uniformsOf(mesh).uSeed);
     expect(tint).toHaveLength(1);
     const color = uniformsOf(tint[0]!).uShadowColor!.value as THREE.Vector4;
@@ -225,7 +230,7 @@ ${sun('', 'Sun', 'View')}`)
 
     async function tintDrawsOf(renderer: Rendered, owner: string): Promise<THREE.Mesh[]> {
       const tintBuffer = itemUniforms(renderer, 'P').uShadowTint!.value as THREE.Texture;
-      const draw = (await recordLightPass(renderer)).find((recorded) => recorded.texture === tintBuffer);
+      const draw = drawInto(await recordLightPass(renderer), tintBuffer);
       return draw!.drawn.filter((mesh) => ownerName(mesh) === owner);
     }
 
@@ -241,7 +246,7 @@ ${sun('', 'Sun', 'View')}`)
       expect(uniformsOf(fade!).uAlpha!.value).toBe(0.5);
     });
 
-    it('scales it through its own tint quad when the MIX light casts, untinted', async () => {
+    it('scales it through the one quad of the MIX light when it casts, untinted', async () => {
       const renderer = await render(
         scene(TINTING + sun('blend_mode = 2\nshadow_enabled = true') + CASTER + panel('P'))
       );
@@ -250,9 +255,12 @@ ${sun('', 'Sun', 'View')}`)
       expect(uniformsOf(drawn[0]!).uShadowMap).toBeDefined();
     });
 
-    it('draws no quad of an ADD light into the tint buffer', async () => {
+    it('writes a zero tint for an ADD light, which adds nothing to the buffer', async () => {
       const renderer = await render(scene(TINTING + sun() + CASTER + panel('P')));
-      expect(await tintDrawsOf(renderer, 'Sun')).toHaveLength(0);
+      const [quad] = await tintDrawsOf(renderer, 'Sun');
+      expect((quad!.material as THREE.ShaderMaterial).fragmentShader).toContain(
+        'vec4(0.0, 0.0, 0.0, uAlpha)'
+      );
     });
   });
 });

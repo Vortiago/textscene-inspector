@@ -34,6 +34,10 @@ once the nodes leave the view, and the clock would then pick the frame. The wait
 transform of every Node3D and CanvasItem in the viewport, so such a scene runs the whole wait and
 the frame it is captured at does not depend on the host.
 
+A Skeleton2D with a modification stack keeps processing through the pause, as the editor runs the
+stack on the bones (`skeleton_2d.cpp:630-639`). Its children stay paused. A stack that never
+settles runs the whole wait too.
+
 **Anything else.** Any other change shows in the picture, which must repeat the one before it.
 
 ## The time scale

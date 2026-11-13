@@ -1,0 +1,14 @@
+; A res:// root of its own, because `display/window/subwindows/embed_subwindows` is a PROJECT
+; setting and no .tscn can carry one.
+
+config_version=5
+
+[application]
+
+config/name="Windows under a root that embeds none"
+run/main_scene="res://unit-popup-menu-embed-off.tscn"
+config/features=PackedStringArray("4.6")
+
+[display]
+
+window/subwindows/embed_subwindows=false

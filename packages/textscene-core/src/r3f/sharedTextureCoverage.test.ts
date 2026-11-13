@@ -245,7 +245,7 @@ describe('module-held textures', () => {
         'r3f/materials/defaultWhiteTexture.ts',
         'r3f/areaLight/ltcTextures.ts',
         'r3f/godotIndirectSpecular.ts',
-        'r3f/lighting2d/useCanvasItemLighting.ts',
+        'r3f/lighting2d/useLitItem.ts',
       ])
     );
   });

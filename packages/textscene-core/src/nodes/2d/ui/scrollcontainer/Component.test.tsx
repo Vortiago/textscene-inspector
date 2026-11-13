@@ -14,7 +14,9 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { ControlClipProvider, useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import type { ScrollContainerProperties } from './types';
 import { ScrollContainer } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
+import { wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
 // Only `gui/common/snap_controls_to_pixels` comes from the project settings,
@@ -133,19 +135,20 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     expect(box.min.y).toBeCloseTo(-476.66, 1);
   });
 
-  it('draws both bars off subtreeChromeRenderOrder — track +0.25, grabber +0.5 — strictly above every descendant and strictly below the next sibling', async () => {
-    // `scene/gui/scroll_container.cpp:919,924` adds the bars as `INTERNAL_MODE_BACK`,
-    // after the whole subtree. The next sibling starts one past
-    // `subtreeChromeRenderOrder` (`canvasPaintOrder.ts`), so the bars sit in that gap.
+  it('draws both bars inside chromeSlot, grabber over track, strictly above every descendant and strictly below the next sibling', async () => {
+    // `scene/gui/scroll_container.cpp:919,924` adds the bars as `INTERNAL_MODE_BACK`, after the
+    // whole subtree. The back slot holds the key after the subtree's last (`internalBackRoom`), and
+    // the next sibling starts one past it, so the bars sit in that slot.
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 399, y: 800 } });
-    const deepestDescendantOrder = 12; // stands in for the end of this node's draw-sequence run.
+    const deepestDescendantOrder = 11;
+    const backKey = 12;
     const renderer = await ReactThreeTestRenderer.create(
       <ScrollContainer
         {...painterEnv()}
         solveNode={scrollNode({}, [content])}
         rect={FIXTURE_RECT}
         renderOrder={10}
-        subtreeChromeRenderOrder={deepestDescendantOrder}
+        chromeSlot={wholeKeySlot(backKey)}
       >
         <mesh name="deepest-descendant" renderOrder={deepestDescendantOrder}>
           <boxGeometry args={[1, 1, 1]} />
@@ -158,11 +161,11 @@ describe('<ScrollContainer> — vertical scrollbar geometry (real-fixture number
     const bars = allMeshes.filter((m) => m.name !== 'deepest-descendant');
     // Read as three does: from each bar's nearest enclosing group (`canvasPaintOrder.ts`).
     const orders = bars.map(nearestGroupOrder).sort((a, b) => a - b);
-    expect(orders).toEqual([deepestDescendantOrder + 0.25, deepestDescendantOrder + 0.5]);
+    expect(new Set(orders).size).toBe(2);
     // Strictly above every descendant this node ever draws...
     expect(orders[0]!).toBeGreaterThan(nearestGroupOrder(descendant));
     // ...and strictly below the next sibling's own paint slot.
-    expect(orders[1]!).toBeLessThan(deepestDescendantOrder + 1);
+    expect(orders[1]!).toBeLessThan(backKey + 1);
   });
 
   it('offsets the grabber toward the bottom when scrolled (scroll_vertical authored)', async () => {
@@ -219,9 +222,17 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
     });
   }
 
-  /** The two tracks (renderOrder +0.25), left-to-right: horizontal bar first, vertical second. */
-  function tracks(meshes: { renderOrder: number; position: THREE.Vector3 }[]) {
-    return meshes.filter((m) => m.renderOrder === 0.25).sort((a, b) => a.position.x - b.position.x);
+  type DrawnMesh = { renderOrder: number; position: THREE.Vector3 };
+
+  /** The meshes at the `rank`-th lowest key, left-to-right: the tracks draw first, the grabbers next. */
+  function atKeyRank(meshes: DrawnMesh[], rank: number): DrawnMesh[] {
+    const keys = [...new Set(meshes.map((m) => m.renderOrder))].sort((a, b) => a - b);
+    return meshes.filter((m) => m.renderOrder === keys[rank]).sort((a, b) => a.position.x - b.position.x);
+  }
+
+  /** The two tracks, left-to-right: horizontal bar first, vertical second. */
+  function tracks(meshes: DrawnMesh[]) {
+    return atKeyRank(meshes, 0);
   }
 
   // `scenes/fixtures/unit-scroll-container-bar-snap.tscn` at `--mode 2d`, origin
@@ -250,7 +261,7 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
     const meshes = await drawnMeshes(overflowing({ scrollHorizontal: 100 }), FRACTIONAL_RECT);
     // Left-to-right: the horizontal bar's grabber sits at its own 73.7 offset,
     // the vertical bar's at the vertical bar's own snapped 893.
-    const grabbers = meshes.filter((m) => m.renderOrder === 0.5).sort((a, b) => a.position.x - b.position.x);
+    const grabbers = atKeyRank(meshes, 1);
     const horizontal = grabbers[0]!;
     expect(horizontal.position.x).toBeCloseTo(73.7083333, 5);
     expect(horizontal.position.y).toBeCloseTo(-593, 6);
@@ -266,23 +277,18 @@ describe('<ScrollContainer> — per-bar whole-pixel snap', () => {
 });
 
 describe('<ScrollContainer> — tint', () => {
-  it('composes self_modulate onto the track fill, in sRGB, with a single linear conversion', async () => {
+  it('draws both bars with childTint and none with tint: the bars are child Controls (scroll_container.cpp:909-924)', async () => {
     const content = leaf('Scroll/Content', { customMinimumSize: { x: 399, y: 800 } });
     const renderer = await ReactThreeTestRenderer.create(
       <ScrollContainer
         {...painterEnv()}
-        solveNode={scrollNode({ selfModulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 } }, [content])}
+        {...splitTints}
+        solveNode={scrollNode({}, [content])}
         rect={FIXTURE_RECT}
         renderOrder={0}
       />
     );
-    const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
-    for (const mesh of meshes) {
-      const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
-      // Default-theme fills are never black, so a halved sRGB channel is a
-      // smaller number: the tint reached both meshes.
-      expect(color.getX(0)).toBeGreaterThan(0);
-    }
+    expect(countTintSplit(renderer.scene)).toEqual({ own: 0, child: 2 });
   });
 
   it('applies the walker-composed tint to the track fill exactly once', async () => {
@@ -292,7 +298,7 @@ describe('<ScrollContainer> — tint', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <ScrollContainer
         {...painterEnv()}
-        tint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
+        childTint={painterTint({ r: 0.25, g: 0.25, b: 0.25, a: 1 })}
         solveNode={scrollNode({}, [content])}
         rect={{ x: 0, y: 0, w: 300, h: 200 }}
         renderOrder={0}

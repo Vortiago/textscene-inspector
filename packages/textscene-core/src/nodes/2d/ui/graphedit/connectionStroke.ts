@@ -12,12 +12,7 @@
 
 import { lerpColor, type Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
-
-export interface GeometryBuffers {
-  positions: number[];
-  indices: number[];
-  colors: number[];
-}
+import type { GeometryBuffers } from '../../../../godot/rendering/canvasPolyline.js';
 
 /** The numerator `1.5` of `fake_aa_width` and `rim_width` (`graph_edit.cpp:232-233`). */
 const FADE_BAND_PX = 1.5;

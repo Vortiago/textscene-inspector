@@ -1,0 +1,102 @@
+; Three read-only CodeEdit boxes of 300x120, each with its own CodeHighlighter. The one variable of each is
+; font_readonly_color: Default leaves it; Faint sets alpha 0.3; Yellow sets an opaque yellow. A read-only node
+; draws the highlighter's plain colour from font_color (syntax_highlighter.cpp:421) and caps every highlighted
+; alpha at font_readonly_color's (text_edit.cpp:1666-1668). unit-code-edit-syntax-highlighter shows an editable
+; node, so none of its pixels depends on either rule.
+
+[gd_scene load_steps=4 format=3 uid="uid://unitcodeeditreadonlyhl"]
+
+[sub_resource type="CodeHighlighter" id="CodeHighlighter_a"]
+number_color = Color(0.639216, 0.858824, 0.933333, 1)
+symbol_color = Color(0.780392, 0.780392, 0.780392, 1)
+function_color = Color(0.34902, 0.701961, 0.882353, 1)
+member_variable_color = Color(0.702, 0.882, 1, 1)
+keyword_colors = {
+"if": Color(1, 0.44, 0.52, 1),
+"var": Color(1, 0.44, 0.52, 1)
+}
+color_regions = {
+"#": Color(0.5, 0.6, 0.5, 1),
+"\" \"": Color(0.909804, 0.831373, 0.329412, 1)
+}
+
+[sub_resource type="CodeHighlighter" id="CodeHighlighter_b"]
+number_color = Color(0.639216, 0.858824, 0.933333, 1)
+symbol_color = Color(0.780392, 0.780392, 0.780392, 1)
+function_color = Color(0.34902, 0.701961, 0.882353, 1)
+member_variable_color = Color(0.702, 0.882, 1, 1)
+keyword_colors = {
+"if": Color(1, 0.44, 0.52, 1),
+"var": Color(1, 0.44, 0.52, 1)
+}
+color_regions = {
+"#": Color(0.5, 0.6, 0.5, 1),
+"\" \"": Color(0.909804, 0.831373, 0.329412, 1)
+}
+
+[sub_resource type="CodeHighlighter" id="CodeHighlighter_c"]
+number_color = Color(0.639216, 0.858824, 0.933333, 1)
+symbol_color = Color(0.780392, 0.780392, 0.780392, 1)
+function_color = Color(0.34902, 0.701961, 0.882353, 1)
+member_variable_color = Color(0.702, 0.882, 1, 1)
+keyword_colors = {
+"if": Color(1, 0.44, 0.52, 1),
+"var": Color(1, 0.44, 0.52, 1)
+}
+color_regions = {
+"#": Color(0.5, 0.6, 0.5, 1),
+"\" \"": Color(0.909804, 0.831373, 0.329412, 1)
+}
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Default" type="CodeEdit" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 320.0
+offset_bottom = 140.0
+text = "var x = 12 # note
+if x > 3:
+	var s = \"a b c\"
+	print(s)"
+editable = false
+syntax_highlighter = SubResource("CodeHighlighter_a")
+
+[node name="Faint" type="CodeEdit" parent="."]
+layout_mode = 0
+offset_left = 340.0
+offset_top = 20.0
+offset_right = 640.0
+offset_bottom = 140.0
+theme_override_colors/font_readonly_color = Color(1, 1, 1, 0.3)
+text = "var x = 12 # note
+if x > 3:
+	var s = \"a b c\"
+	print(s)"
+editable = false
+syntax_highlighter = SubResource("CodeHighlighter_b")
+
+[node name="Yellow" type="CodeEdit" parent="."]
+layout_mode = 0
+offset_left = 660.0
+offset_top = 20.0
+offset_right = 960.0
+offset_bottom = 140.0
+theme_override_colors/font_readonly_color = Color(1, 0.8, 0.2, 1)
+text = "var x = 12 # note
+if x > 3:
+	var s = \"a b c\"
+	print(s)"
+editable = false
+syntax_highlighter = SubResource("CodeHighlighter_c")

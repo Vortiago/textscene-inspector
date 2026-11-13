@@ -6,7 +6,7 @@
 
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
 import * as THREE from 'three';
-import type { OccluderCullMode, Quad2, ShadowCasterEdges } from './shadowVolumes';
+import type { OccluderCullMode, Quad2, ShadowCasterEdges } from './shadowCasterEdges';
 import { visibleInTree } from '../visibleInTree';
 
 export interface ShadowCaster {
@@ -107,7 +107,7 @@ export interface WorldShadowCaster extends ShadowCasterEdges {
 }
 
 /**
- * The visible casters in world-space `[ax,ay, bx,by, …]` for `buildShadowVolumes`. Omit the mask to
+ * The visible casters in world-space `[ax,ay, bx,by, …]` for `buildShadowPolarMap`. Omit the mask to
  * flatten once per frame and filter per light, since the flatten is the expensive half. World
  * matrices are refreshed: a `useFrame` pass runs before the renderer's `updateMatrixWorld`.
  */

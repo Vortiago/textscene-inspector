@@ -13,6 +13,7 @@ import {
   multiplyColorInto,
   radToDeg,
   radToDegf,
+  lerpAngle,
   lerpColor,
   lerpf,
   remapf,
@@ -326,5 +327,16 @@ describe('multiplyColorInto', () => {
 
     multiplyColorInto(color, color, { r: 2, g: 4, b: 0.5, a: 0.5 });
     expect(color).toEqual({ r: 1, g: 1, b: 1, a: 0.5 });
+  });
+});
+
+// `lerp_angle(0.4, -2.0, 0.25)` and `lerp_angle(3.0, -3.0, 0.5)` on Godot 4.6.3.
+describe('lerpAngle', () => {
+  it('turns the short way', () => {
+    expect(lerpAngle(0.4, -2, 0.25)).toBeCloseTo(-0.2, 6);
+  });
+
+  it('crosses the half turn where that is shorter', () => {
+    expect(lerpAngle(3, -3, 0.5)).toBeCloseTo(Math.PI, 6);
   });
 });

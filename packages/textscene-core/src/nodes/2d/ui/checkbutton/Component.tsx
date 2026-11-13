@@ -1,136 +1,45 @@
 /**
- * `<CheckButton>`, the native (WebGL canvas) painter: a toggle-switch icon, always drawn, at the
- * content margin on the side opposite CheckBox's glyph, beside the label. No chrome: every
- * StyleBox is the same `StyleBoxEmpty`. `ControlCanvasWalker` owns `visible`, the children and
- * the transform.
+ * `<CheckButton>`, the native (WebGL canvas) painter: what Button draws, then a toggle-switch icon over
+ * it, always drawn, on the side opposite CheckBox's check. The default boxes are one `StyleBoxEmpty`, so
+ * no chrome shows until a theme gives one.
  */
 import { useMemo } from 'react';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
-import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { ButtonOverlayIcon, ButtonPainter } from '../button/Component';
+import { useCheckButtonIcon } from './useCheckButtonIcon';
 import {
-  infersRtl,
-  shapedTextSizeWidthPx,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
-import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { CHECK_BUTTON_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import {
-  checkButtonCheckVOffset,
-  checkButtonHSeparation,
+  CHECK_BUTTON_CLASS,
   checkButtonIconColor,
-  checkButtonDrawnIconSize,
-  checkButtonIconMaxWidth,
-  checkButtonIconNaturalSize,
-  checkButtonMarginX,
-  checkButtonMarginY,
-  checkButtonTextTheme,
-  fitIconSize,
-  layoutCheckButtonContent,
-  resolveCheckButtonDrawState,
+  checkButtonToggleRect,
   resolveCheckButtonIconKey,
-  tintColor,
-  CHECK_BUTTON_ICON_THEME_NAME,
-  CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT,
-  CHECKBUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { CheckButtonProperties } from './types';
 
-export function CheckButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+/** The icon `CheckButton::_notification` draws after Button's own draw (`check_button.cpp:107-147`). */
+function CheckButtonToggle({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<CheckButtonProperties>(solveNode);
-  const state = resolveCheckButtonDrawState(props);
-
-  // `renderOrder` reaches both meshes. `<TextRun>` builds its own material, so it takes
-  // the clip planes explicitly, while the icon quad reads them itself.
-  const clippingPlanes = useControlClipPlanes();
-
   const iconKey = resolveCheckButtonIconKey(props, solveNode.rtl);
-  const iconTexture = useNodeIcon(
-    solveNode.icons[CHECK_BUTTON_ICON_THEME_NAME[iconKey]],
-    CHECK_BUTTON_ICONS[iconKey]
+  const toggleRect = useMemo(
+    () => checkButtonToggleRect(solveNode, theme, iconKey, { x: rect.w, y: rect.h }),
+    [solveNode, theme, iconKey, rect.w, rect.h]
   );
-  const iconSize = useMemo(
-    () =>
-      fitIconSize(
-        checkButtonIconNaturalSize(solveNode, props.disabled === true, solveNode.rtl),
-        checkButtonIconMaxWidth(solveNode.constants)
-      ),
-    [solveNode, props.disabled]
+  return (
+    <ButtonOverlayIcon
+      rect={toggleRect}
+      texture={useCheckButtonIcon(solveNode, iconKey)}
+      color={checkButtonIconColor(props, solveNode.colors)}
+      tint={tint.own}
+      renderOrder={renderOrder}
+    />
   );
-  const drawnIconSize = useMemo(() => checkButtonDrawnIconSize(solveNode, iconKey), [solveNode, iconKey]);
+}
 
-  // Unlike CheckBox's fixed white, the icon colour is a theme key a scene can override, so it
-  // takes the tint before its one sRGB-to-linear conversion, as Button's icon does.
-  const baseIconColor = checkButtonIconColor(props, solveNode.colors);
-  const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
-  const iconLinearColor = useGodotLinearColor(tintedIconColorSrgb);
-
-  const text = props.text ?? '';
-  const hasText = text.length > 0;
-  const { fontSizePx, color: baseFontColor } = checkButtonTextTheme(solveNode, props, state, { theme });
-  const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
-  const textOutline = useTintedTextOutline(solveNode, tint.own);
-
-  // Read inside the render body, not the `useMemo` below: Label's Component.tsx
-  // gives the reason.
-  const fontMetrics = resolveNodeFontMetrics(solveNode, CHECKBUTTON_THEME_FONT_KEY);
-  const bidi = useControlBidiOptions(props, solveNode);
-  const layout: TextLayoutResult | null = useMemo(
-    () => (hasText ? shapeButtonLabel(text, { fontSizePx, fontMetrics, bidi }) : null),
-    [hasText, text, fontSizePx, fontMetrics, bidi]
-  );
-
-  const content = useMemo(
-    () =>
-      layoutCheckButtonContent({
-        rectSize: { x: rect.w, y: rect.h },
-        marginX: checkButtonMarginX({ theme }),
-        marginY: checkButtonMarginY({ theme }),
-        iconSize,
-        checkVOffset: checkButtonCheckVOffset(solveNode.constants),
-        hSeparation: checkButtonHSeparation(solveNode.constants, { theme }),
-        hasText,
-        textAlignment: props.alignment ?? CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT,
-        rtl: solveNode.rtl,
-        textNaturalSize: layout
-          ? { x: shapedTextSizeWidthPx(layout.widthPx), y: layout.heightPx }
-          : { x: 0, y: 0 },
-        isTextRtl: infersRtl(layout),
-      }),
-    [rect.w, rect.h, theme, iconSize, solveNode.constants, hasText, layout, props.alignment, solveNode.rtl]
-  );
-
+export function CheckButton(props: NativeControlComponentProps) {
   return (
     <>
-      <CanvasItemGroup position={[content.iconPosition.x, -content.iconPosition.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={drawnIconSize.x}
-          height={drawnIconSize.y}
-          color={iconLinearColor}
-          opacity={tintedIconColorSrgb.a}
-          map={iconTexture}
-        />
-      </CanvasItemGroup>
-      {content.textOffset && layout && (
-        <CanvasItemGroup position={[content.textOffset.x, -content.textOffset.y, 0]}>
-          <OutlinedTextRun
-            layout={layout}
-            fontSizePx={fontSizePx}
-            tint={tintedFontColor}
-            outline={textOutline}
-            clippingPlanes={clippingPlanes}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
-      )}
+      <ButtonPainter {...props} buttonClass={CHECK_BUTTON_CLASS} />
+      <CheckButtonToggle {...props} />
     </>
   );
 }

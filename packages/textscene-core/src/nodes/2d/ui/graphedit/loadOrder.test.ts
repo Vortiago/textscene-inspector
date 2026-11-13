@@ -30,9 +30,10 @@ describe('resolveGraphEditLoadState — scroll_offset', () => {
     expect(state.scrollOffset).toEqual({ x: 0, y: 0 });
   });
 
-  it('floors that size against the custom_minimum_size seen so far', () => {
+  it('floors that size against the custom_minimum_size seen so far, where a key applied it', () => {
     const state = resolveGraphEditLoadState({
       custom_minimum_size: 'Vector2(500, 400)',
+      layout_mode: '0',
       scroll_offset: 'Vector2(32, 16)',
     });
     expect(state.scrollOffset).toEqual({ x: -500, y: -400 });
@@ -188,5 +189,55 @@ describe('resolveGraphEditLoadState: queuedScrollOffsetUpdate', () => {
 
   it('is true when a new zoom_min drags zoom with it', () => {
     expect(resolveGraphEditLoadState({ zoom_min: '2.0' }).queuedScrollOffsetUpdate).toBe(true);
+  });
+});
+
+/** Offsets for a 500x280 box, as `Control::_size_changed` reads them (`control.cpp:1765-1797`). */
+const BOX_500_280 = {
+  offset_left: '0.0',
+  offset_top: '0.0',
+  offset_right: '500.0',
+  offset_bottom: '280.0',
+};
+
+describe('resolveGraphEditLoadState — outOfTreeSize', () => {
+  it('is the offsets span after the offset keys', () => {
+    expect(resolveGraphEditLoadState(BOX_500_280).outOfTreeSize).toEqual({ x: 500, y: 280 });
+  });
+
+  it('is zero where no key ran _size_changed, so a custom_minimum_size alone leaves it unapplied (control.cpp:1676-1679)', () => {
+    expect(resolveGraphEditLoadState({ custom_minimum_size: 'Vector2(500, 280)' }).outOfTreeSize).toEqual({
+      x: 0,
+      y: 0,
+    });
+  });
+
+  it('applies a custom_minimum_size written before the offsets', () => {
+    const state = resolveGraphEditLoadState({
+      custom_minimum_size: 'Vector2(600, 300)',
+      layout_mode: '0',
+      ...BOX_500_280,
+    });
+    expect(state.outOfTreeSize).toEqual({ x: 600, y: 300 });
+  });
+
+  it('applies a custom_minimum_size at the layout_mode key that follows it', () => {
+    const state = resolveGraphEditLoadState({ custom_minimum_size: 'Vector2(500, 280)', layout_mode: '0' });
+    expect(state.outOfTreeSize).toEqual({ x: 500, y: 280 });
+  });
+
+  it('ignores a custom_minimum_size written after the last offset', () => {
+    const smaller = resolveGraphEditLoadState({
+      layout_mode: '0',
+      ...BOX_500_280,
+      custom_minimum_size: 'Vector2(100, 100)',
+    });
+    const larger = resolveGraphEditLoadState({
+      layout_mode: '0',
+      ...BOX_500_280,
+      custom_minimum_size: 'Vector2(600, 300)',
+    });
+    expect(smaller.outOfTreeSize).toEqual({ x: 500, y: 280 });
+    expect(larger.outOfTreeSize).toEqual({ x: 500, y: 280 });
   });
 });

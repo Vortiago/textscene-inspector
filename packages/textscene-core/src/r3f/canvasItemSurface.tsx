@@ -14,7 +14,7 @@ import type { AtlasTextureReference } from '../resources/textures/atlastexture/r
 import { imageSize } from '../resources/formats/image/imagePixels';
 import { canvasTextureSpecular } from '../resources/textures/canvastexture/decode';
 import type { TscnInternalResource } from '../parser/types';
-import { useCanvas2DTexture } from './canvas2DTextureDecode';
+import { useRawCanvas2DTexture } from './canvas2DTextureDecode';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import type { CanvasItemSurface } from './lighting2d/normalMappedLighting';
 
@@ -45,14 +45,24 @@ function useCanvasItemSurface(
   sampler: CanvasItemTextureSampler
 ): CanvasItemSurface | null {
   const { texture, externalResources, internalResources } = slot;
-  const normal = useTexture2D(texture.normalTexture ?? undefined, externalResources, internalResources);
-  const specular = useTexture2D(texture.specularTexture ?? undefined, externalResources, internalResources);
+  // Raw in either colour space: the canvas binds a normal and a specular map's own view
+  // (`texture_storage.cpp:767,780`).
+  const normal = useTexture2D(
+    texture.normalTexture ?? undefined,
+    externalResources,
+    internalResources,
+    'plain'
+  );
+  const specular = useTexture2D(
+    texture.specularTexture ?? undefined,
+    externalResources,
+    internalResources,
+    'plain'
+  );
   const normalCell = useMapCell(unnested(normal), slot.atlas, internalResources);
   const specularCell = useMapCell(unnested(specular), slot.atlas, internalResources);
-  // `useCanvas2DTexture` tags the view NoColorSpace: Godot reads both maps' raw texels
-  // (`texture_storage.cpp:766,774`).
-  const normalMap = useCanvas2DTexture(normalCell, sampler);
-  const specularMap = useCanvas2DTexture(specularCell, sampler);
+  const normalMap = useRawCanvas2DTexture(normalCell, sampler);
+  const specularMap = useRawCanvas2DTexture(specularCell, sampler);
   return useMemo(
     () => (normalMap ? { normalMap, specularMap, specular: canvasTextureSpecular(texture) } : null),
     [normalMap, specularMap, texture]

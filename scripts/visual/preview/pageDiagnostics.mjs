@@ -45,3 +45,15 @@ export function describeFailedRequests(failedRequests) {
   const more = failedRequests.length - MAX_LISTED_FAILED_REQUESTS;
   return more > 0 ? `${listed} and ${more} more` : listed;
 }
+
+/**
+ * The logged errors for a failure message, each labelled with its source, then each failed
+ * request with its URL. A `TypeError: Failed to fetch` names no URL itself.
+ */
+export function errorReport({ consoleErrors, pageErrors, failedRequests }) {
+  return [
+    ...consoleErrors.map((error) => `console error: ${error}`),
+    ...pageErrors.map((error) => `page error: ${error}`),
+    ...failedRequests.map(({ url, failure }) => `failed request: ${url} (${failure ?? 'no error text'})`),
+  ].join(' | ');
+}

@@ -9,7 +9,7 @@ import { mkdirSync, renameSync, statSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { REPO_ROOT } from '../repoRoot.mjs';
 import { fixtureUrl } from '../visual/preview/fixtureUrl.mjs';
-import { attachDiagnostics, loggedErrors } from '../visual/previewServer.mjs';
+import { attachDiagnostics, FIT_QUIESCENCE_MS, loggedErrors } from '../visual/previewServer.mjs';
 import {
   ACTION_TIMEOUT_MS,
   cameraNodePaths,
@@ -56,7 +56,7 @@ export async function recordShowcase(browser, baseUrl, { name, file, run: scenar
   const url = file ? fixtureUrl(baseUrl, file) : baseUrl;
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForSelector('canvas', { timeout: 30000 });
-  await page.waitForTimeout(1500); // Scene parse, load and CameraFit settle.
+  await page.waitForTimeout(FIT_QUIESCENCE_MS);
 
   const helpers = {
     orbit,

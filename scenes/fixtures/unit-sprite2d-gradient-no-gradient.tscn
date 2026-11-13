@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+; One variable: a GradientTexture2D that sets no gradient, read by two non-light consumers. The
+; texture never gets an image (`gradient_texture.cpp:229-233`), so each draws Godot's 4 by 4 magenta
+; and black placeholder stretched over the texture's own width and height, 200 by 120 here.
+
+[sub_resource type="GradientTexture2D" id="T"]
+width = 200
+height = 120
+fill = 1
+
+[node name="Root" type="Node2D"]
+
+[node name="Floor" type="Polygon2D" parent="."]
+color = Color(0.5, 0.5, 0.5, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Sprite" type="Sprite2D" parent="."]
+position = Vector2(300, 300)
+texture = SubResource("T")
+
+[node name="Rect" type="TextureRect" parent="."]
+offset_left = 600.0
+offset_top = 240.0
+offset_right = 800.0
+offset_bottom = 360.0
+texture = SubResource("T")

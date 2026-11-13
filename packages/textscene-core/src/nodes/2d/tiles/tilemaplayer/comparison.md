@@ -12,7 +12,7 @@ of tile material or `z_index`. The quadrant's cells draw
 in Godot's order, x then y (`tile_map_layer.cpp:306-311`), with each run of cells from one atlas
 source batched into one quad mesh. Under `use_texture_padding` (the default), a tile samples
 only its own texels and repeats its edge texels outward, as Godot's padded atlas copy does.
-A filtered tile then shows no seam from its neighbour. Godot builds that copy once, from the texture's image at load (`tile_set.cpp:5622-5654`). So a padded `ViewportTexture` source draws its target as it stands before its first render: black when opaque and clear when transparent. One that Godot never sets up draws the placeholder. Tiles sample with the layer's inherited `texture_filter` and `texture_repeat`.
+A filtered tile then shows no seam from its neighbour. Godot builds that copy once, from the texture's image at load (`tile_set.cpp:5622-5654`). So a padded `ViewportTexture` source draws its target as it stands before its first render: black when opaque and clear when transparent. One that Godot never sets up draws the placeholder. Tiles sample with the layer's inherited `texture_filter` and `texture_repeat`, or with those of the atlas source's CanvasTexture where it sets them.
 A cell whose atlas source has no texture draws nothing (`tile_map_layer.cpp:724`). A texture that is set but fails to load draws a placeholder.
 
 ## Tile grid
@@ -22,6 +22,30 @@ A cell whose atlas source has no texture draws nothing (`tile_map_layer.cpp:724`
 A rendering quadrant is a `rendering_quadrant_size` square of cells, or one tile row of a
 y-sorted layer. Each quadrant takes its own lights, so a large layer is not held to 15
 positional lights in total.
+
+## Y-sorted layer with a transform
+
+<!-- compare: image=unit-tile-map-layer-y-sort-transform status=done fixture=unit-tile-map-layer-y-sort-transform.tscn -->
+
+This y-sorted layer turns 30 degrees and scales by 1.5 in its parent. It draws each tile row through its whole transform. A row sorts by the y of its origin in the parent's space (`renderer_canvas_cull.cpp:131`). The two white bars hide under the rows that sort below them. Rows that a rotation lays on one y keep their order within `is_equal_approx`. The previewer matches Godot 4.6.3 at rotations 0, 30 and -90 degrees, scales 0.5, 2, (-1, -1) and (1, -1), and skew 0.3.
+
+## Child nodes of a y-sorted layer
+
+<!-- compare: image=unit-tile-map-layer-y-sort-children status=done fixture=unit-tile-map-layer-y-sort-children.tscn -->
+
+A y-sorted layer sorts its tile rows with its child nodes by y (`renderer_canvas_cull.cpp:110-170`). A child draws over the rows above its y and under the rows below it. The left layer roots a sort and the right layer sits in a y-sorted Node2D. The cyan and yellow children each cover row 0 and sit under row 1. A child that ties a row in y draws over it, and a y-sorted child merges its own children into the sort. A y-sorted TileMap with a y-sorted layer sorts the same way. A child that an AnimationPlayer moves across a row re-sorts on the frame the mixer moves it. The previewer matches Godot 4.6.3 in each case, and at 0.5 s of the `unit-tile-map-layer-y-sort-animated-child` clip. A track on the transform of a y-sorted layer in a y-sorted Node2D moves every row of the layer. The layer's path names the group the rows share. The rows re-sort against the layer's siblings on the frame the mixer moves the layer. At 0.5 s of `unit-tile-map-layer-y-sort-animated-layer` the rows sort at y 132, 196 and 260. The white bar (240) draws over rows 0 and 1 and under row 2. The previewer matches Godot 4.6.3 at that pose, as a static scene with the layer at y 100.
+
+## Scene tiles
+
+<!-- compare: image=unit-tile-map-layer-scene-tiles status=done fixture=unit-tile-map-layer-scene-tiles.tscn -->
+
+A cell that names a scene tile of a `TileSetScenesCollectionSource` instantiates that scene at the cell (`tile_map_layer.cpp:1569-1659`). The instances come after the layer's authored children, in the order of `tile_map_data`. The instance is an ordinary instanced scene, so a later instance draws over an earlier one and over an authored child. A Node2D root takes the cell's flip and transpose bits and a Control root ignores them (`:1706-1723`). A scene id the source lacks, atlas coords other than (0, 0) and a missing source draw nothing. A root that is no CanvasItem is refused. A scene that fails to load, or that is no PackedScene, leaves the tile with no scene. A scene Godot refuses to instantiate draws nothing. A disabled layer draws no instance. An instance has no row in the Scene tree, and a click on it selects the layer. On a y-sorted layer an instance sorts with the rows and the child nodes. It sorts on the origin of its root and in the z bucket of its root. A Control root draws at the cell centre plus its position, rounded to whole pixels (`:1636`). An odd tile size shows this. A `top_level` Control root ignores the layer's transform and draws in the canvas at that sum (`canvas_item.cpp:565-571`). The previewer matches Godot 4.6.3 in each case.
+
+## Scene tile placeholder
+
+<!-- compare: image=unit-tile-map-layer-scene-tile-placeholders status=done fixture=unit-tile-map-layer-scene-tile-placeholders.tscn -->
+
+The editor marks a scene tile with a translucent disc when the tile has no scene or sets `display_placeholder` (`tile_map_layer.cpp:1661-1700`). A scene that failed to load, or whose root is no CanvasItem, leaves the tile with no scene. The disc has a quarter of the shorter tile side as radius, and its colour comes from the tile's ids. The previewer draws the disc while the Gizmos toggle is on, tinted by the layer's modulate, and a capture keeps the toggle off. A running game draws no disc, so Godot's reference render shows none.
 
 ## Padded atlas from a ViewportTexture
 
@@ -34,6 +58,18 @@ Two padded layers draw tiles from an AtlasTexture over one ViewportTexture. Only
 <!-- compare: image=unit-tile-atlas-viewport-texture-file status=done fixture=unit-tile-atlas-viewport-texture-file.tscn -->
 
 Two layers name a ViewportTexture as their atlas texture, one inline and one from a `.tres`. A ViewportTexture reports no area while the scene loads, so `create_tile` finds room for no tile and neither layer draws (`tile_set.cpp:4985`). The previewer loads the texture's file before it creates any tile.
+
+## Normal map
+
+<!-- compare: image=unit-tilemaplayer-normal-map status=done fixture=unit-tilemaplayer-normal-map.tscn -->
+
+An atlas source whose texture is a CanvasTexture lights its tiles through the `normal_texture` and
+`specular_texture` under PointLight2D and DirectionalLight2D. Each run of cells from one source
+binds the maps of that source. A source with no normal map keeps the plain accumulation. A cell's
+flips negate the matching normal component, and its transpose swaps the two and negates both first. The tile's own
+flips compose as they do for the drawn cell (`canvas.glsl:655-661`). A padded source samples its maps
+where it samples its diffuse. The layer's rotation and scale turn the normal after that
+(`canvas.glsl:708-710`). A TileMap lights its layers the same way.
 
 ## Linting
 
@@ -71,7 +107,4 @@ the raw reference string, so a dangling reference draws no tiles. Malformed
 
 ## Known limitations
 
-- **Approximated** Y-sort is computed once for the static scene, so a Y change driven by
-  an AnimationPlayer is not re-sorted.
-- **Resource gap** Scene-collection sources are skipped with a warning, and animated tiles
-  show their first frame.
+- **Resource gap** Animated tiles show their first frame.

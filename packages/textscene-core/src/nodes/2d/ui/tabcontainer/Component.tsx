@@ -1,8 +1,9 @@
 /**
  * `<TabContainer>`: the native (WebGL canvas) painter for `TabContainer::_notification(NOTIFICATION_DRAW)`
  * (`tab_container.cpp:247` to `:277`). It draws `panel` behind the content band, `tabbar_background`
- * across the full-width header band (`:262`, empty by default), and the strip through `<TabBar>`
- * on the synthetic node from `buildInternalTabBarNode`. No popup menu (`get_popup()`) is modelled.
+ * across the full-width header band (`:262`, empty by default), and the strip through `<TabBarStrip>`
+ * on the synthetic node from `buildInternalTabBarNode`, at the offset `resolveTabContainerStrip` finds.
+ * No popup menu (`get_popup()`) is modelled.
  */
 
 import { useMemo } from 'react';
@@ -12,8 +13,9 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { TAB_ALIGNMENT_LEFT, reconstructThemeScale, tabBarMinimumSize } from '../tabbar/nativeSolver';
-import { TabBar } from '../tabbar/Component';
+import { TAB_ALIGNMENT_LEFT, tabBarMinimumSize } from '../tabbar/nativeSolver';
+import { TabBarStrip, useTabBarModel } from '../tabbar/Component';
+import { resolveTabContainerStrip } from './loadStrip';
 import type { TabContainerProperties } from './types';
 import {
   TABS_POSITION_TOP,
@@ -25,6 +27,7 @@ import {
   tabHeaderHeight,
   tabbarStyleMargins,
 } from './nativeSolver';
+import { canvasSubOrder } from '../../../../r3f/canvasItemState';
 
 /** `default_theme.cpp:1223`: `theme->set_constant("side_margin", "TabContainer", round(8 * scale))`, the literal `nativeSolver.ts` uses for the minimum size. */
 const SIDE_MARGIN_LITERAL = 8;
@@ -34,13 +37,14 @@ const EMPTY_CHILD_RECTS: NativeControlComponentProps['childRects'] = new Map();
 export function TabContainer({
   solveNode,
   tint,
+  childTint,
   rect,
   theme,
   renderOrder,
-  subtreeChromeRenderOrder,
+  slot,
+  chromeSlot,
   measureText,
   snapToPixels,
-  effectiveZ,
 }: NativeControlComponentProps) {
   const props = painterView<TabContainerProperties>(solveNode);
   const tabsVisible = props.tabsVisible ?? true;
@@ -64,9 +68,21 @@ export function TabContainer({
   const showsStrip = tabsVisible && derivedTabs.length > 0;
   const headerHeight = showsStrip ? tabHeaderHeight(barMinHeight, tabbarMargin) : 0;
 
-  const sideMargin = Math.round(SIDE_MARGIN_LITERAL * reconstructThemeScale(theme));
+  const barModel = useTabBarModel(syntheticBar, theme);
+  const { drawInputs, layoutInput } = barModel;
+  const strip = useMemo(
+    () =>
+      resolveTabContainerStrip(drawInputs, layoutInput, {
+        containerWidthPx: rect.w,
+        leftMarginPx: solveNode.rtl ? tabbarMargin.right : tabbarMargin.left,
+        rightMarginPx: solveNode.rtl ? tabbarMargin.left : tabbarMargin.right,
+        sideMarginPx: Math.round(SIDE_MARGIN_LITERAL * theme.scale),
+        rtl: solveNode.rtl,
+      }),
+    [drawInputs, layoutInput, rect.w, solveNode.rtl, tabbarMargin, theme.scale]
+  );
   const barRect = showsStrip
-    ? tabBarRect(rect, barMinHeight, tabsPosition, alignment, sideMargin, tabbarMargin, solveNode.rtl)
+    ? tabBarRect(rect, barMinHeight, tabsPosition, alignment, strip.sideMarginPx, tabbarMargin, solveNode.rtl)
     : null;
   const contentBand = tabContentBand(rect, headerHeight, tabsPosition);
 
@@ -74,9 +90,9 @@ export function TabContainer({
   const headerBand = tabHeaderBand(rect, headerHeight, tabsPosition);
 
   // Godot's default (`all_tabs_in_front === false`, `INTERNAL_MODE_BACK`) draws the strip
-  // after every page, on top. This painter draws before its children, which is the `true`
-  // case (`INTERNAL_MODE_FRONT`), so the default takes the subtree-chrome slot.
-  const stripRenderOrder = allTabsInFront ? renderOrder : subtreeChromeRenderOrder + 0.5;
+  // after every page, on top, from the chrome slot. With `true` (`INTERNAL_MODE_FRONT`) it draws
+  // after the container's own pixels and before the pages, from a piece of its own key.
+  const stripSlot = canvasSubOrder(allTabsInFront ? slot : chromeSlot);
 
   return (
     <>
@@ -102,15 +118,19 @@ export function TabContainer({
       )}
       {barRect && (
         // The strip's own group key: three sorts by the nearest group's order first.
-        <CanvasItemGroup position={[barRect.x, -barRect.y, 0]} renderOrder={stripRenderOrder}>
-          <TabBar
+        <CanvasItemGroup position={[barRect.x, -barRect.y, 0]} renderOrder={stripSlot.key}>
+          <TabBarStrip
             solveNode={syntheticBar}
-            tint={tint}
+            model={barModel}
+            offset={strip.offset}
+            // The strip is a TabBar child Control (`tab_container.cpp:247`): no `self_modulate`.
+            tint={childTint}
             rect={{ x: 0, y: 0, w: barRect.w, h: barRect.h }}
             theme={theme}
-            renderOrder={stripRenderOrder}
-            subtreeChromeRenderOrder={stripRenderOrder}
-            effectiveZ={effectiveZ}
+            renderOrder={stripSlot.key}
+            slot={stripSlot}
+            chromeSlot={stripSlot}
+            layerSlot={stripSlot}
             measureText={measureText}
             snapToPixels={snapToPixels}
             childRects={EMPTY_CHILD_RECTS}

@@ -11,14 +11,15 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
+import { SHADOW_MAP_FAR } from './shadowPolarMap';
+import { coveredPixelRange } from '../../utils/coveredPixelRange';
 import {
   convexBoundsTest,
   edgeNormals,
   type OccluderCullMode,
   type Quad2,
   type ShadowCasterEdges,
-} from './shadowVolumes';
+} from './shadowCasterEdges';
 import { normalizedVector2, type Vector2 } from '../../godot/math/vector.js';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 
@@ -39,10 +40,12 @@ export interface DirectionalShadowView {
    * zoom changes the diagonal the map spans and the distance `maxDistance` reaches.
    */
   readonly scale: Vector2;
+  /** Texels in the map: `rendering/2d/shadow_atlas/size`. */
+  readonly bins: number;
 }
 
 interface DirectionalShadowMap {
-  /** `SHADOW_MAP_BINS` depths over `z_far`, `SHADOW_MAP_FAR` where nothing casts. */
+  /** `view.bins` depths over `z_far`, `SHADOW_MAP_FAR` where nothing casts. */
   readonly bins: Float32Array;
   /**
    * World to `(u, depth)`: `u` addresses `bins`, and `depth` is what a fragment compares against
@@ -163,7 +166,7 @@ function sweptViewTest(view: DirectionalShadowView): (bounds: Quad2) => boolean 
 
 /**
  * The map for one light over the viewport. `casters` are world-space occluders already narrowed by
- * `shadow_item_cull_mask`. Each casting edge is rasterised at bin centres, keeping the nearest
+ * `shadow_item_cull_mask`. Each casting edge covers the bins `coveredPixelRange` names, keeping the nearest
  * depth (`canvas_occlusion.glsl`'s `depth / z_far`) and clipping what falls outside `[0, z_far]`.
  */
 export function buildDirectionalShadowMap(
@@ -172,7 +175,7 @@ export function buildDirectionalShadowMap(
 ): DirectionalShadowMap {
   const worldToShadow = directionalShadowTransform(view);
   const casterInSweptView = sweptViewTest(view);
-  const bins = new Float32Array(SHADOW_MAP_BINS).fill(SHADOW_MAP_FAR);
+  const bins = new Float32Array(view.bins).fill(SHADOW_MAP_FAR);
   const [m00, m01, m02, m10, m11, m12] = worldToShadow;
 
   for (const { segments, cullMode, bounds } of casters) {
@@ -184,15 +187,18 @@ export function buildDirectionalShadowMap(
       const by = segments[i + 3]!;
       if (!edgeCastsDirectionalShadow(view.direction, bx - ax, by - ay, cullMode)) continue;
 
-      const uA = (m00 * ax + m01 * ay + m02) * SHADOW_MAP_BINS;
-      const uB = (m00 * bx + m01 * by + m02) * SHADOW_MAP_BINS;
+      const uA = (m00 * ax + m01 * ay + m02) * view.bins;
+      const uB = (m00 * bx + m01 * by + m02) * view.bins;
       const depthA = m10 * ax + m11 * ay + m12;
       const depthB = m10 * bx + m11 * by + m12;
-      const first = Math.max(0, Math.ceil(Math.min(uA, uB) - 0.5));
-      const last = Math.min(SHADOW_MAP_BINS - 1, Math.floor(Math.max(uA, uB) - 0.5));
+      const covered = coveredPixelRange(Math.min(uA, uB), Math.max(uA, uB));
+      const first = Math.max(0, covered.first);
+      const last = Math.min(view.bins - 1, covered.last);
 
       for (let bin = first; bin <= last; bin += 1) {
-        const t = (bin + 0.5 - uA) / (uB - uA);
+        // Clamped: a bin past an end by less than the snap reads that end's depth, as the
+        // rasteriser interpolates between the snapped ends.
+        const t = Math.min(1, Math.max(0, (bin + 0.5 - uA) / (uB - uA)));
         const depth = depthA + (depthB - depthA) * t;
         if (!(depth >= 0) || !(depth <= SHADOW_MAP_FAR)) continue;
         if (depth < bins[bin]!) bins[bin] = depth;

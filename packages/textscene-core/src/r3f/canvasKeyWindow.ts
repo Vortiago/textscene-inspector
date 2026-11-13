@@ -12,10 +12,11 @@ const DEFAULT_CAMERA_LAYER = 0;
 export const OVER_EVERY_LAYER = 'overEveryLayer';
 
 /**
- * The key of `object` as three takes it: the `renderOrder` of the nearest Group above it. A subtree
- * marked {@link OVER_EVERY_LAYER} keeps an infinite key all the way down.
+ * The key of `object` as three takes it: the `renderOrder` of the nearest Group above it, given
+ * `inherited`, its parent's. A subtree marked {@link OVER_EVERY_LAYER} keeps an infinite key all
+ * the way down.
  */
-function keyOf(object: THREE.Object3D, inherited: number): number {
+export function canvasKeyOf(object: THREE.Object3D, inherited: number): number {
   if (inherited === Number.POSITIVE_INFINITY || object.userData[OVER_EVERY_LAYER]) {
     return Number.POSITIVE_INFINITY;
   }
@@ -33,14 +34,78 @@ export function drawCanvasKeys<T>(
 ): T {
   const rejected: THREE.Object3D[] = [];
   const visit = (object: THREE.Object3D, inherited: number): void => {
-    const key = keyOf(object, inherited);
-    if (!inWindow(key) && object.layers.isEnabled(DEFAULT_CAMERA_LAYER)) {
-      object.layers.disable(DEFAULT_CAMERA_LAYER);
-      rejected.push(object);
-    }
+    const key = canvasKeyOf(object, inherited);
+    rejectOutside(object, key, inWindow, rejected);
     for (const child of object.children) visit(child, key);
   };
   visit(scene, 0);
+  return drawThenRestore(rejected, draw);
+}
+
+/** The objects of a scene in walk order, each with its key and the keys its subtree holds. */
+export interface KeyedObjects {
+  objects: readonly THREE.Object3D[];
+  keys: readonly number[];
+  /** The index after the last descendant of each object. */
+  ends: readonly number[];
+  /** The lowest and the highest key in each object's subtree, itself included. */
+  minKeys: readonly number[];
+  maxKeys: readonly number[];
+}
+
+/** Whether `key` is below `to`; a span that ends at infinity holds the infinite key of OVER_EVERY_LAYER. */
+function isBefore(key: number, to: number): boolean {
+  return key < to || to === Number.POSITIVE_INFINITY;
+}
+
+/**
+ * {@link drawCanvasKeys} over objects already keyed, for the keys `[from, to)` that `admits` lets
+ * through. A subtree with no key in the span is hidden, so the render skips it whole: a frame with
+ * a span for each clipping group would walk the scene once for each otherwise. `range` limits the
+ * walk to a subtree that `draw` alone draws.
+ */
+export function drawKeyedObjects<T>(
+  { objects, keys, ends, minKeys, maxKeys }: KeyedObjects,
+  { from, to, admits }: { from: number; to: number; admits: (key: number) => boolean },
+  draw: () => T,
+  { start = 0, end = objects.length } = {}
+): T {
+  const rejected: THREE.Object3D[] = [];
+  const hidden: THREE.Object3D[] = [];
+  const inSpan = (key: number) => key >= from && isBefore(key, to) && admits(key);
+  for (let i = start; i < end;) {
+    const object = objects[i]!;
+    if (maxKeys[i]! < from || !isBefore(minKeys[i]!, to)) {
+      if (object.visible) {
+        object.visible = false;
+        hidden.push(object);
+      }
+      i = ends[i]!;
+      continue;
+    }
+    rejectOutside(object, keys[i]!, inSpan, rejected);
+    i++;
+  }
+  try {
+    return draw();
+  } finally {
+    for (const object of rejected) object.layers.enable(DEFAULT_CAMERA_LAYER);
+    for (const object of hidden) object.visible = true;
+  }
+}
+
+function rejectOutside(
+  object: THREE.Object3D,
+  key: number,
+  inWindow: (key: number) => boolean,
+  rejected: THREE.Object3D[]
+): void {
+  if (inWindow(key) || !object.layers.isEnabled(DEFAULT_CAMERA_LAYER)) return;
+  object.layers.disable(DEFAULT_CAMERA_LAYER);
+  rejected.push(object);
+}
+
+function drawThenRestore<T>(rejected: readonly THREE.Object3D[], draw: () => T): T {
   try {
     return draw();
   } finally {

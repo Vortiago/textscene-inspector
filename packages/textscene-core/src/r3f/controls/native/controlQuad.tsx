@@ -13,6 +13,7 @@ import { useCanvasItemMerge } from '../../components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../materialProgramInputs';
 import type { MaterialAttach } from '../../materials/swappedMaterials';
 import { FadedMaterials } from '../../materials/FadedMaterials';
+import { useCanvasColorSpace } from '../../canvasColorSpace';
 
 interface ControlQuadProps {
   width: number;
@@ -44,6 +45,7 @@ export function ControlQuad({
 }: ControlQuadProps) {
   const clippingPlanes = useControlClipPlanes();
   const canvasItemMerge = useCanvasItemMerge();
+  const canvasSpace = useCanvasColorSpace();
   // A `map` is often null on the first render and a texture later, while the quad
   // draws throughout, so the material is replaced, not mutated
   // (`materialProgramInputs.ts`).
@@ -51,9 +53,9 @@ export function ControlQuad({
     const program = materialProgramInputs({
       props: {
         attach,
-        // A `NoColorSpace`-retagged canvas texture and a canvas-content SubViewport
-        // target get the sRGB multiply. A 3D-content target does not.
-        ...canvasMapProps(map),
+        // In an sRGB canvas, a `NoColorSpace`-retagged canvas texture and a canvas-content
+        // SubViewport target get the sRGB multiply. A 3D-content target does not.
+        ...canvasMapProps(map, canvasSpace),
         color,
         opacity,
         transparent: true,

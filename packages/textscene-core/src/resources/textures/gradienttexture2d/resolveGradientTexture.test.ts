@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { NO_FILES, poolsOf } from '../../testing/loadedFiles';
-import { resolveGradientTexture2D } from './resolveGradientTexture';
+import { gradientTextureSizeWithoutGradient, resolveGradientTexture2D } from './resolveGradientTexture';
 import { proceduralTextureKey } from '../proceduralTextureCache';
 import { parseTresFile } from '../../../parser/parsedResource';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -100,6 +100,38 @@ describe('resolveGradientTexture2D', () => {
   it('returns null for undefined / malformed references', () => {
     expect(resolveGradientTexture2D(undefined, poolsOf(coinResources), NO_FILES)).toBeNull();
     expect(resolveGradientTexture2D('res://foo.png', poolsOf(coinResources), NO_FILES)).toBeNull();
+  });
+});
+
+describe('gradientTextureSizeWithoutGradient', () => {
+  const textureWith = (data: Record<string, string>): TscnInternalResource[] => [
+    { id: 'T', type: 'GradientTexture2D', data },
+  ];
+
+  it('is the width and height of a texture that sets no gradient or sets null', () => {
+    expect(
+      gradientTextureSizeWithoutGradient('SubResource("T")', textureWith({ width: '32', height: '16' }))
+    ).toEqual({ width: 32, height: 16 });
+    expect(gradientTextureSizeWithoutGradient('SubResource("T")', textureWith({ gradient: 'null' }))).toEqual(
+      { width: 64, height: 64 }
+    );
+  });
+
+  it('is null once a gradient is named, even one that does not resolve', () => {
+    expect(
+      gradientTextureSizeWithoutGradient(
+        'SubResource("T")',
+        textureWith({ gradient: 'SubResource("Missing")' })
+      )
+    ).toBeNull();
+  });
+
+  it('is null for another reference form or resource type', () => {
+    expect(gradientTextureSizeWithoutGradient(undefined, textureWith({}))).toBeNull();
+    expect(gradientTextureSizeWithoutGradient('ExtResource("1")', textureWith({}))).toBeNull();
+    expect(
+      gradientTextureSizeWithoutGradient('SubResource("C")', [{ id: 'C', type: 'CanvasTexture', data: {} }])
+    ).toBeNull();
   });
 });
 

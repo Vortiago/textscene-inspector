@@ -15,6 +15,6 @@ export function litPixelMaterial(): CanvasItemPixelMaterial {
   return {
     ...canvasItemFacing(),
     ...canvasItemBlendState(CanvasItemMaterialBlendMode.ADD),
-    ...canvasItemLightingProps(lightUniforms()),
+    ...canvasItemLightingProps(lightUniforms(), false),
   };
 }

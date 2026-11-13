@@ -1,0 +1,17 @@
+[gd_scene format=3]
+; One variable: a closed BEVEL Line2D whose width_curve is 0 at its start. Godot's 1 / 0 weight makes
+; the first pair NaN (line_builder.cpp:316), so the closing segment draws nothing and the left side of
+; the square stays open. No other scene closes a line whose width curve starts at 0.
+
+[sub_resource type="Curve" id="Curve_ramp"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[node name="Root" type="Node2D"]
+
+[node name="Closed" type="Line2D" parent="."]
+points = PackedVector2Array(100, 100, 400, 100, 400, 400, 100, 400)
+closed = true
+width = 60.0
+width_curve = SubResource("Curve_ramp")
+joint_mode = 1

@@ -41,10 +41,11 @@ import { createCanvasTarget, createSceneTarget } from '../../../viewport/subview
 import { quadsSampling } from '../../../../r3f/controls/native/testing/quadsSampling';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 // Side-effect: the Control painters and the node registrations
-// `viewportContentKind` classifies against.
+// `viewportContent.ts` classifies against.
 import '../../../../r3f/controls/index';
 import '../../../../r3f/nodes/index';
 import { ViewportTexturePublisher, viewportEntry } from '../../../../r3f/testing/ViewportTexturePublisher';
+import { canvasColorSpaceOf } from '../../../../r3f/canvasColorSpace';
 
 function node(name: string, type: string, properties: object, children: TscnNode[] = []): TscnNode {
   return { name, type, children, properties: { name, ...properties } } as TscnNode;
@@ -330,13 +331,13 @@ describe('<SubViewportContainer> — the colour of the surface', () => {
   }
 
   it('multiplies a canvas target in sRGB', async () => {
-    const target = createCanvasTarget(200, 150, 'View');
+    const target = createCanvasTarget(200, 150, 'View', canvasColorSpaceOf(false));
     expect((await surfaceMaterial(target.texture)).defines).toEqual({ CANVAS_SRGB_MULTIPLY: '' });
     target.dispose();
   });
 
   it('keeps the linear multiply for a 3D-content target (edge case)', async () => {
-    const target = createSceneTarget(200, 150, 'View');
+    const target = createSceneTarget(200, 150, 'View', canvasColorSpaceOf(false));
     expect((await surfaceMaterial(target.texture)).defines?.CANVAS_SRGB_MULTIPLY).toBeUndefined();
     target.dispose();
   });

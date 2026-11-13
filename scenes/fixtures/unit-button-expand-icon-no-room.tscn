@@ -1,0 +1,41 @@
+; The one variable: `expand_icon = true` on a Button whose box leaves the icon no room (the icon's width
+; is negative), at `vertical_icon_alignment` TOP. The icon draws nothing but its negative size still
+; leaves the text box (button.cpp:349-405), so the text sits two pixels higher. unit-button-icon-gradienttexture
+; draws an icon that fits, where the reservation is positive.
+
+[gd_scene load_steps=4 format=3 uid="uid://unitbuttonexpandiconnoroom"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
+bg_color = Color(0.2, 0.5, 0.35, 1)
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+
+[sub_resource type="Gradient" id="Gradient_icon"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0.85, 0.2, 1, 0.8, 0.1, 0.1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_icon"]
+gradient = SubResource("Gradient_icon")
+width = 24
+height = 24
+fill_from = Vector2(0, 0)
+fill_to = Vector2(1, 0)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Button" type="Button" parent="."]
+offset_left = 24.0
+offset_top = 32.0
+offset_right = 24.0
+offset_bottom = 32.0
+text = "Save"
+icon_alignment = 0
+vertical_icon_alignment = 0
+expand_icon = true
+icon = SubResource("GradientTexture2D_icon")
+theme_override_styles/normal = SubResource("StyleBoxFlat_button")

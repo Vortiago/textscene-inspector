@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { ResourceEventBus } from '../ResourceEventBus';
-import { geometryDrawsPoints } from '../meshes/godotSurface';
+import { geometryPrimitive } from '../meshes/godotSurface';
 import { createArrayMeshProcessor, type ArrayMeshResource } from './createArrayMeshProcessor';
 import { truncatedSurface, wallQuadSurfaces } from '../testing/arrayMeshSurfaces';
 import { sectionLoaderServing } from '../testing/sectionLoaderServing';
@@ -111,9 +111,9 @@ describe('createArrayMeshProcessor', () => {
     processor.request('res://dots.tres');
 
     const { parts } = await loaded;
-    expect(parts.map((part) => [geometryDrawsPoints(part.geometry), part.surfaceIndices])).toEqual([
-      [false, [0]],
-      [true, [1]],
+    expect(parts.map((part) => [geometryPrimitive(part.geometry), part.surfaceIndices])).toEqual([
+      ['triangles', [0]],
+      ['points', [1]],
     ]);
   });
 

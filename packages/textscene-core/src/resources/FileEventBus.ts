@@ -5,6 +5,7 @@
 
 import type { ResourceProvider } from './ResourceProvider.js';
 import * as logger from '../logger.js';
+import { resourceSliceRegistry } from './sliceRegistration.js';
 
 export type FileData = ArrayBuffer | string;
 export type FileLoadedHandler = (path: string, data: FileData) => void;
@@ -58,13 +59,18 @@ export class FileEventBus {
     this.loadAsync(path);
   }
 
+  /** The provider's read of `path`, capped to the leading bytes the claiming slice needs. */
+  private readFile(path: string): Promise<FileData | null> {
+    return this.provider.loadResource(path, undefined, resourceSliceRegistry.byPath(path)?.headBytes);
+  }
+
   private async loadAsync(path: string): Promise<void> {
     const flight = Symbol(path);
     this.inflight.set(path, flight);
     const startTime = performance.now();
 
     try {
-      const data = await this.provider.loadResource(path);
+      const data = await this.readFile(path);
 
       if (this.inflight.get(path) !== flight) {
         // A cleared fetch touches no cache, handler or inflight entry, which a

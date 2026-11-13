@@ -8,6 +8,7 @@
     "edge-int-wrap-position.tscn",
     "edge-invalid-cast-shadow.tscn",
     "edge-invalid-transform.tscn",
-    "edge-malformed-bracket.tscn"
+    "edge-malformed-bracket.tscn",
+    "edge-window-force-native-visible.tscn"
   ]
 }

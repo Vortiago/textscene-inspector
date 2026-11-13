@@ -1,0 +1,85 @@
+; One variable: a stretched SubViewport with render_target_clear_mode ONCE. The container forces the
+; viewport's size before the first render, so the one clear lands on the shown target
+; (`subviewport_container.cpp:94`, `renderer_viewport.cpp:375`). No other scene clears with ONCE under stretch.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Empty" type="SubViewportContainer" parent="."]
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 240.0
+offset_bottom = 160.0
+stretch = true
+stretch_shrink = 2
+
+[node name="Viewport" type="SubViewport" parent="Empty"]
+render_target_clear_mode = 2
+size = Vector2i(2, 2)
+
+[node name="Shrink3" type="SubViewportContainer" parent="."]
+offset_left = 280.0
+offset_top = 40.0
+offset_right = 480.0
+offset_bottom = 160.0
+stretch = true
+stretch_shrink = 3
+
+[node name="Viewport" type="SubViewport" parent="Shrink3"]
+render_target_clear_mode = 2
+size = Vector2i(2, 2)
+
+[node name="Control" type="SubViewportContainer" parent="."]
+offset_left = 520.0
+offset_top = 40.0
+offset_right = 720.0
+offset_bottom = 160.0
+stretch = true
+stretch_shrink = 2
+
+[node name="Viewport" type="SubViewport" parent="Control"]
+render_target_clear_mode = 2
+size = Vector2i(2, 2)
+
+[node name="Fill" type="ColorRect" parent="Control/Viewport"]
+offset_right = 60.0
+offset_bottom = 40.0
+color = Color(1, 0.5, 0, 1)
+
+[node name="Polygon" type="SubViewportContainer" parent="."]
+offset_left = 760.0
+offset_top = 40.0
+offset_right = 960.0
+offset_bottom = 160.0
+stretch = true
+stretch_shrink = 2
+
+[node name="Viewport" type="SubViewport" parent="Polygon"]
+render_target_clear_mode = 2
+size = Vector2i(2, 2)
+
+[node name="Fill" type="Polygon2D" parent="Polygon/Viewport"]
+color = Color(1, 0.5, 0, 1)
+polygon = PackedVector2Array(0, 0, 60, 0, 60, 40, 0, 40)
+
+[node name="Unshrunk" type="SubViewportContainer" parent="."]
+offset_left = 40.0
+offset_top = 200.0
+offset_right = 240.0
+offset_bottom = 320.0
+stretch = true
+stretch_shrink = 1
+
+[node name="Viewport" type="SubViewport" parent="Unshrunk"]
+render_target_clear_mode = 2
+size = Vector2i(2, 2)

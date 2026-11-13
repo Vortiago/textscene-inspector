@@ -82,22 +82,16 @@ export interface NodeComponentRegistration {
 
 export interface YSortGroupDescription {
   tileSetRef: string;
-  /** The layer's own `position.y`, added to the accumulated world Y. */
-  positionY: number;
   ySortOrigin: number;
   cells: readonly PlacedCell[] | null;
 }
 
 interface YSortGroupRegistration {
   describe: (node: TscnNode) => YSortGroupDescription;
-  Renderer: React.ComponentType<{
-    item: YSortItem;
-    /** The canvas this row draws on, as a rank (`canvasPaintOrder.ts`). */
-    layerRank: number;
-    /** The row's own draw sequence within its parent's run. */
-    sequence: number;
-    node: TscnNode;
-  }>;
+  /** The node as its own rows draw it when it roots a sort: a child canvas item of the group it placed. */
+  asRootRows: (node: TscnNode) => TscnNode;
+  /** Draws one row at the draw sequence of the `PaintRangeProvider` above it, at the row's node path. */
+  Renderer: React.ComponentType<{ item: YSortItem; node: TscnNode }>;
 }
 
 /**

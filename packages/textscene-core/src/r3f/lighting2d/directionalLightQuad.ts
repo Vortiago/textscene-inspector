@@ -11,11 +11,11 @@
  */
 
 import * as THREE from 'three';
-import { accumulationState } from './lightQuad.js';
-import { FULL_SCREEN_VERTEX } from '../fullScreenPass.js';
-import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap.js';
-import { shadowPixelSize } from './shadowSampling.js';
-import { glslFloat } from '../../utils/glslLiterals.js';
+import { accumulationState, shadowColorUniform } from './lightQuad.js';
+import { FULL_SCREEN_VERTEX, multipleTargetPass } from '../fullScreenPass.js';
+import { SHADOW_MAP_FAR } from './shadowPolarMap.js';
+import { LIGHT_OUTPUTS } from './lightQuadShaders.js';
+import { SHADOW_BINS, SHADOW_TAPS, shadowMapUniforms } from './shadowTaps.js';
 import type { Rgba } from '../../godot/math/math.js';
 import type { Light2DShadowFilter } from '../../godot/scene/light2d.js';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
@@ -48,58 +48,46 @@ void main() {
 `;
 
 /**
- * `light_shadow_compute`'s kernels (`canvas.glsl:498-540`) over `texture_shadow` (`:392-399`). The
- * map is one row of nearest texels, so a texel is read at its centre. `SHADOW_FILTER` 0 is
- * NEAREST's single texel, 1 and 2 the PCF5 and PCF13 taps.
+ * The light's taps (`shadowTaps.ts`) over its map, one row of nearest texels read at their centres.
+ * The map clamps at its ends.
  */
 const SHADOW_SAMPLE = /* glsl */ `
 uniform sampler2D uShadowMap;
-uniform float uShadowPixelSize;
 varying vec2 vShadow;
-
+${SHADOW_BINS}
 // An empty bin never shadows. The camera can show past the viewport's far edge, where depth
 // exceeds SHADOW_MAP_FAR, and a bin left at SHADOW_MAP_FAR would shadow all of it.
 float shadowTexel(float texel) {
-  float binDepth = texture2D(uShadowMap, vec2((clamp(texel, 0.0, ${glslFloat(SHADOW_MAP_BINS - 1)}) + 0.5) / ${glslFloat(SHADOW_MAP_BINS)}, 0.5)).r;
+  float binDepth = texture2D(uShadowMap, vec2((clamp(texel, 0.0, shadowBins() - 1.0) + 0.5) / shadowBins(), 0.5)).r;
   return binDepth >= float(${SHADOW_MAP_FAR}) ? ${EMPTY_BIN_DEPTH} : binDepth;
 }
-
-float textureShadow(float u, float depth) {
-  float scaled = u * ${glslFloat(SHADOW_MAP_BINS)};
-  float texel = floor(scaled);
-  return mix(step(shadowTexel(texel - 1.0), depth), step(shadowTexel(texel), depth), scaled - texel);
-}
-
+${SHADOW_TAPS}
 float shadowFraction() {
-  float u = vShadow.x;
-  float depth = vShadow.y;
-#if SHADOW_FILTER == 0
-  return step(shadowTexel(floor(u * ${glslFloat(SHADOW_MAP_BINS)})), depth);
-#elif SHADOW_FILTER == 2
-  float shadow = 0.0;
-  for (int tap = -6; tap <= 6; tap++) shadow += textureShadow(u + uShadowPixelSize * float(tap), depth);
-  return shadow / 13.0;
-#else
-  float shadow = 0.0;
-  for (int tap = -2; tap <= 2; tap++) shadow += textureShadow(u + uShadowPixelSize * float(tap), depth);
-  return shadow / 5.0;
-#endif
+  return shadowTaps(vShadow.x, vShadow.y);
 }
 `;
 
+/**
+ * Writes the three outputs of `LIGHT_OUTPUTS`. With no shadow, the `shadow_color` term is the alpha
+ * alone.
+ */
 const FRAGMENT = /* glsl */ `
+${LIGHT_OUTPUTS}
 uniform vec3 uColor;
 uniform float uAlpha;
 void main() {
-  gl_FragColor = vec4(uColor, uAlpha);
+  writeLight(vec4(uColor, uAlpha), vec4(0.0, 0.0, 0.0, uAlpha));
 }
 `;
 
 /**
  * `mix(light_color, shadow_color, s)` with `shadow_color.a *= light_color.a` (`canvas.glsl:543-547`),
- * split as a PointLight2D's is (`lightQuadShaders.ts`): this quad carries the albedo-scaled half.
+ * split as a PointLight2D's is (`lightQuadShaders.ts`): the light term carries the albedo-scaled
+ * half, the `shadow_color` term the other under the light's whole alpha, so a MIX blend scales both
+ * buffers alike. One evaluation of the taps serves both.
  */
 const SHADOWED_FRAGMENT = /* glsl */ `
+${LIGHT_OUTPUTS}
 uniform vec3 uColor;
 uniform float uAlpha;
 uniform vec4 uShadowColor;
@@ -107,29 +95,10 @@ ${SHADOW_SAMPLE}
 void main() {
   float s = shadowFraction();
   float lit = 1.0 - s;
-  gl_FragColor = vec4(uColor * lit, uAlpha * (lit + s * uShadowColor.a));
-}
-`;
-
-/**
- * The other half: `shadow_color`, never albedo-scaled, so it draws in the tint pass. It carries the
- * light's whole alpha, so a MIX blend scales the tint buffer as it scales the light buffer.
- */
-const SHADOWED_TINT_FRAGMENT = /* glsl */ `
-uniform float uAlpha;
-uniform vec4 uShadowColor;
-${SHADOW_SAMPLE}
-void main() {
-  float s = shadowFraction();
-  gl_FragColor = vec4(uShadowColor.rgb * s, uAlpha * ((1.0 - s) + s * uShadowColor.a));
-}
-`;
-
-/** The tint-pass quad of a light that casts no shadow: its alpha alone. */
-const FADE_FRAGMENT = /* glsl */ `
-uniform float uAlpha;
-void main() {
-  gl_FragColor = vec4(0.0, 0.0, 0.0, uAlpha);
+  float alpha = uAlpha * (lit + s * uShadowColor.a);
+  vec4 light = vec4(uColor * lit, alpha);
+  vec4 tint = vec4(uShadowColor.rgb * s, alpha);
+  writeLight(light, tint);
 }
 `;
 
@@ -144,50 +113,34 @@ interface DirectionalLightQuadOptions {
 }
 
 function shadowUniforms(shadow: DirectionalShadowSampling): Record<string, THREE.IUniform> {
-  const { r, g, b, a } = shadow.shadowColor;
   return {
-    uShadowMap: { value: shadow.map },
-    uShadowPixelSize: { value: shadowPixelSize(shadow.smooth) },
+    ...shadowMapUniforms(shadow.map),
+    uShadowSmooth: { value: shadow.smooth },
     uNdcToShadow: { value: shadow.ndcToShadow },
-    uShadowColor: { value: new THREE.Vector4(r, g, b, a) },
+    uShadowColor: { value: shadowColorUniform(shadow.shadowColor) },
   };
 }
 
-function accumulationQuad(
-  options: DirectionalLightQuadOptions,
-  fragmentShader: string,
-  uniforms: Record<string, THREE.IUniform>
-): THREE.ShaderMaterial {
-  const { color, energy, blendMode, shadow } = options;
-  return new THREE.ShaderMaterial({
-    ...(shadow ? { defines: { SHADOW_FILTER: shadow.filter } } : {}),
-    vertexShader: shadow ? SHADOW_VERTEX : FULL_SCREEN_VERTEX,
-    fragmentShader,
-    uniforms: {
-      uAlpha: { value: color.a * energy },
-      ...(shadow ? shadowUniforms(shadow) : {}),
-      ...uniforms,
-    },
-    ...accumulationState(blendMode),
-  });
-}
-
-/** The albedo-multiplied term: the light's colour, withheld where its shadow falls. */
-export function createDirectionalLightMaterial(options: DirectionalLightQuadOptions): THREE.ShaderMaterial {
-  const { r, g, b } = options.color;
-  return accumulationQuad(options, options.shadow ? SHADOWED_FRAGMENT : FRAGMENT, {
-    uColor: { value: new THREE.Vector3(r, g, b) },
-  });
-}
-
-/**
- * The tint-pass quad: the albedo-free `shadow_color` term under the light's alpha. A light that
- * casts no shadow has no term, and its quad carries only the alpha a MIX blend scales by.
- */
-export function createDirectionalShadowColorMaterial(
-  options: DirectionalLightQuadOptions
-): THREE.ShaderMaterial {
-  return accumulationQuad(options, options.shadow ? SHADOWED_TINT_FRAGMENT : FADE_FRAGMENT, {});
+/** The light's quad: one draw fills the light, `shadow_color` and Light Only buffers of a list. */
+export function createDirectionalLightMaterial({
+  color,
+  energy,
+  blendMode,
+  shadow,
+}: DirectionalLightQuadOptions): THREE.ShaderMaterial {
+  return multipleTargetPass(
+    new THREE.ShaderMaterial({
+      ...(shadow ? { defines: { SHADOW_FILTER: shadow.filter } } : {}),
+      vertexShader: shadow ? SHADOW_VERTEX : FULL_SCREEN_VERTEX,
+      fragmentShader: shadow ? SHADOWED_FRAGMENT : FRAGMENT,
+      uniforms: {
+        uAlpha: { value: color.a * energy },
+        uColor: { value: new THREE.Vector3(color.r, color.g, color.b) },
+        ...(shadow ? shadowUniforms(shadow) : {}),
+      },
+      ...accumulationState(blendMode),
+    })
+  );
 }
 
 /**
@@ -195,14 +148,8 @@ export function createDirectionalShadowColorMaterial(
  * texel and a half float rounds a depth near 1 by 1/2048 of `z_far`, 5 px at the default
  * `max_distance`. `writeDirectionalShadowMap` fills it.
  */
-export function createDirectionalShadowTexture(): THREE.DataTexture {
-  const texture = new THREE.DataTexture(
-    new Float32Array(SHADOW_MAP_BINS),
-    SHADOW_MAP_BINS,
-    1,
-    THREE.RedFormat,
-    THREE.FloatType
-  );
+export function createDirectionalShadowTexture(bins: number): THREE.DataTexture {
+  const texture = new THREE.DataTexture(new Float32Array(bins), bins, 1, THREE.RedFormat, THREE.FloatType);
   texture.minFilter = THREE.NearestFilter;
   texture.magFilter = THREE.NearestFilter;
   texture.wrapS = THREE.ClampToEdgeWrapping;
@@ -212,7 +159,7 @@ export function createDirectionalShadowTexture(): THREE.DataTexture {
   return texture;
 }
 
-/** Uploads `bins`, `SHADOW_MAP_BINS` long, into a texture from `createDirectionalShadowTexture`. */
+/** Uploads `bins`, as many as the texture holds, into a texture from `createDirectionalShadowTexture`. */
 export function writeDirectionalShadowMap(texture: THREE.DataTexture, bins: Float32Array): void {
   const data = texture.image.data as Float32Array;
   // `set` accepts a shorter source and keeps the old bins past its end.

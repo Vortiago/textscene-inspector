@@ -5,14 +5,25 @@
  * rather than setting a CSS `rgba(...)` background.
  */
 
-import { flatStyleBox as makeFlatStyleBox } from './styleBoxFlat';
 import {
+  flatCornerDetail,
+  flatStyleBox as makeFlatStyleBox,
+  freezeStyleBox,
+  ZERO_SIDES,
+} from './styleBoxFlat';
+import { POPUP_MENU_DEFAULTS } from '../../../godot/scene/popupMenu';
+import {
+  DEFAULT_CONTENT_MARGIN,
+  DEFAULT_CORNER_RADIUS,
   LINE_EDIT_BORDER_BOTTOM_WIDTH,
+  SLIDER_CORNER_RADIUS,
   scaledGodotTheme,
+  scaledPx,
   STYLE_FILL,
   type ScaledGodotTheme,
 } from '../../../godot/scene/theme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
+import { tabBarStyleBoxes, type TabBarStyleBoxes } from './tabStyleBoxes';
 import type { Rgba } from '../../../godot/math/math';
 
 /**
@@ -31,11 +42,13 @@ interface NativeThemeStyleFill {
   disabled: Rgba;
   /** `style_popup_color` = `Color(0.25, 0.25, 0.25, 1)`. */
   popup: Rgba;
+  /** `style_popup_hover_color` = `Color(0.4, 0.4, 0.4, 1)`. */
+  popupHover: Rgba;
   /** `style_progress_color` = `Color(1, 1, 1, 0.4)`, the sliders' filled `grabber_area`. */
   progress: Rgba;
 }
 
-const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
+const TRANSPARENT: Rgba = { r: 0, g: 0, b: 0, a: 0 };
 
 /**
  * `make_flat_stylebox` (`default_theme.cpp:57-70`) for the fields
@@ -46,9 +59,10 @@ const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 function flatStyleBox(
   bgColor: Rgba,
   contentMargin: { left: number; top: number; right: number; bottom: number },
-  cornerRadius: number
+  cornerRadius: number,
+  cornerDetail: number
 ): StyleBoxFlatData {
-  return makeFlatStyleBox(bgColor, { contentMargin, cornerRadius });
+  return freezeStyleBox(makeFlatStyleBox(bgColor, { contentMargin, cornerRadius, cornerDetail }));
 }
 
 /**
@@ -61,12 +75,39 @@ function lineEditStyleBox(
   bgColor: Rgba,
   borderColor: Rgba,
   contentMargin: { left: number; top: number; right: number; bottom: number },
-  cornerRadius: number
+  cornerRadius: number,
+  cornerDetail: number
 ): StyleBoxFlatData {
-  return {
-    ...flatStyleBox(bgColor, contentMargin, cornerRadius),
+  return freezeStyleBox({
+    ...flatStyleBox(bgColor, contentMargin, cornerRadius, cornerDetail),
     borderColor,
     borderWidth: { left: 0, top: 0, right: 0, bottom: LINE_EDIT_BORDER_BOTTOM_WIDTH },
+  });
+}
+
+/** The focus outline's border width and expand margin before the theme scale (`default_theme.cpp:142-144`). */
+const FOCUS_BORDER_WIDTH = 2;
+
+/**
+ * `make_flat_stylebox(style_focus_color, 4, 4, 4, 4, 3, false, 2)` expanded by 2 (`default_theme.cpp:142-144`):
+ * an uncentred ring that sits flush outside the button it marks. The colour only fills the centre,
+ * so the ring keeps `StyleBoxFlat`'s default border colour. `width` is already scaled and rounded.
+ */
+function focusStyleBox(
+  contentMargin: { left: number; top: number; right: number; bottom: number },
+  cornerRadius: number,
+  cornerDetail: number,
+  width: number
+): StyleBoxFlatData {
+  return {
+    ...makeFlatStyleBox(STYLE_FILL.focus, {
+      contentMargin,
+      cornerRadius,
+      cornerDetail,
+      borderWidth: width,
+      expandMargin: { left: width, top: width, right: width, bottom: width },
+    }),
+    drawCenter: false,
   };
 }
 
@@ -82,24 +123,46 @@ const LINE_EDIT_READ_ONLY_BORDER_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0.3 };
  */
 interface NativeThemeWidgets {
   panel: StyleBoxFlatData;
+  /** PopupPanel's `panel`, `make_flat_stylebox(style_normal_color)` (`default_theme.cpp:726`). */
+  popupPanel: StyleBoxFlatData;
+  /** `TooltipPanel`'s `panel`: black at half alpha with margins `2 * default_margin` across and `0.5 * default_margin` down (`default_theme.cpp:1167-1168`). */
+  tooltipPanel: StyleBoxFlatData;
+  /** PopupMenu's `panel`: `make_flat_stylebox(style_popup_color)` with a 2 px border (`default_theme.cpp:743-745`). */
+  popupMenuPanel: StyleBoxFlatData;
+  /** AcceptDialog's `panel`: a flush, square box in `style_popup_color` with an 8 px margin (`default_theme.cpp:693`). */
+  dialogPanel: StyleBoxFlatData;
   button: {
     normal: StyleBoxFlatData;
     hover: StyleBoxFlatData;
     pressed: StyleBoxFlatData;
     disabled: StyleBoxFlatData;
+    /** `focus` (`default_theme.cpp:142-150`): an outline drawn around a focused Button, flush with it. */
+    focus: StyleBoxFlatData;
   };
+  /**
+   * `FlatMenuButton`'s `normal` and `disabled` (`default_theme.cpp:360-375`): a `StyleBoxEmpty`
+   * with the margins of `button_normal`, so it draws nothing and takes the same room.
+   */
+  flatMenuButton: {
+    normal: StyleBoxFlatData;
+    disabled: StyleBoxFlatData;
+  };
+  /** `TabContainer` and `TabBar` `tab_selected`, `tab_unselected`, `tab_disabled` and `tab_hovered` (`default_theme.cpp:974-985`). */
+  tabContainer: TabBarStyleBoxes;
   /** LineEdit's `normal`/`read_only` styleboxes, `default_theme.cpp:405-417`. */
   lineEdit: {
     normal: StyleBoxFlatData;
     readOnly: StyleBoxFlatData;
   };
   /**
-   * `sb_optbutton_normal`/`sb_optbutton_disabled` (`default_theme.cpp:212-215`):
+   * `sb_optbutton_normal`/`_hover`/`_pressed`/`_disabled` (`default_theme.cpp:212-216`):
    * the shared corner radius with OptionButton's own asymmetric X and Y margins.
-   * A static preview has no pointer, so hover and pressed never arise.
+   * A static preview has no pointer, so `hover` never draws: only its margins are read (`button.cpp:84-88`).
    */
   optionButton: {
     normal: StyleBoxFlatData;
+    hover: StyleBoxFlatData;
+    pressed: StyleBoxFlatData;
     disabled: StyleBoxFlatData;
   };
   /**
@@ -156,8 +219,26 @@ const SPLIT_CONTAINER_AUTOHIDE = true;
 // A widget reuses `contentMargin`/`cornerRadius` where its `default_theme.cpp` call passes
 // `default_margin` (4) or `default_corner_radius` (3). A call passing another
 // literal, such as ScrollBar's 10, gets its own scaled constant.
-/** `NativeTheme` at a project's `gui/theme/default_theme_scale`. */
+/** The AcceptDialog panel margin before the theme scale, which `default_theme.cpp:693` applies twice. */
+const DIALOG_PANEL_MARGIN = 8;
+
+/**
+ * Written only by `nativeTheme`, never cleared. Keyed, not one entry: two open previews of
+ * projects with different scales would otherwise rebuild the theme and miss each per-theme memo.
+ */
+const themesByScale = new Map<number, NativeTheme>();
+
+/** `NativeTheme` at a project's `gui/theme/default_theme_scale`, built once per scale: a walker per scene tile asks for the same one. */
 export function nativeTheme(scale: number): NativeTheme {
+  let theme = themesByScale.get(scale);
+  if (!theme) {
+    theme = buildNativeTheme(scale);
+    themesByScale.set(scale, theme);
+  }
+  return theme;
+}
+
+function buildNativeTheme(scale: number): NativeTheme {
   const scaled = scaledGodotTheme(scale);
   const buttonMargin = {
     left: scaled.contentMargin,
@@ -165,67 +246,116 @@ export function nativeTheme(scale: number): NativeTheme {
     right: scaled.contentMargin,
     bottom: scaled.contentMargin,
   };
+  // default_theme.cpp TooltipPanel margins: 2 and 0.5 times the default content margin.
+  const tooltipAcross = scaledPx(2 * DEFAULT_CONTENT_MARGIN, scale);
+  const tooltipDown = scaledPx(0.5 * DEFAULT_CONTENT_MARGIN, scale);
+  const flatMenuButtonBox = flatStyleBox(TRANSPARENT, buttonMargin, 0, flatCornerDetail(0, scale));
   const optionButtonMargin = {
     left: scaled.optionButtonMarginX,
     top: scaled.optionButtonMarginY,
     right: scaled.optionButtonMarginX,
     bottom: scaled.optionButtonMarginY,
   };
+  // The call passes `Math::round(8 * scale)`, and `make_flat_stylebox` scales that margin again.
+  const dialogMargin = scaledPx(scaledPx(DIALOG_PANEL_MARGIN, scale), scale);
+  const dialogPanelMargin = {
+    left: dialogMargin,
+    top: dialogMargin,
+    right: dialogMargin,
+    bottom: dialogMargin,
+  };
   const scrollBarCornerRadius = Math.round(SCROLL_BAR_CORNER_RADIUS * scale);
+  const defaultDetail = flatCornerDetail(DEFAULT_CORNER_RADIUS, scale);
+  const sliderDetail = flatCornerDetail(SLIDER_CORNER_RADIUS, scale);
+  const scrollBarDetail = flatCornerDetail(SCROLL_BAR_CORNER_RADIUS, scale);
 
   return {
     ...scaled,
     styleFill: STYLE_FILL,
     widgets: {
       // default_theme.cpp:134: make_flat_stylebox(style_normal_color, 0, 0, 0, 0).
-      panel: flatStyleBox(STYLE_FILL.normal, ZERO_SIDES, scaled.cornerRadius),
+      panel: flatStyleBox(STYLE_FILL.normal, ZERO_SIDES, scaled.cornerRadius, defaultDetail),
+      popupPanel: flatStyleBox(STYLE_FILL.normal, buttonMargin, scaled.cornerRadius, defaultDetail),
+      tooltipPanel: flatStyleBox(
+        { r: 0, g: 0, b: 0, a: 0.5 },
+        { left: tooltipAcross, top: tooltipDown, right: tooltipAcross, bottom: tooltipDown },
+        scaled.cornerRadius,
+        defaultDetail
+      ),
+      popupMenuPanel: {
+        ...makeFlatStyleBox(STYLE_FILL.popup, {
+          contentMargin: buttonMargin,
+          cornerRadius: scaled.cornerRadius,
+          cornerDetail: defaultDetail,
+          borderWidth: POPUP_MENU_DEFAULTS.panelBorderWidth,
+          borderColor: POPUP_MENU_DEFAULTS.panelBorderColor,
+        }),
+      },
+      dialogPanel: makeFlatStyleBox(STYLE_FILL.popup, {
+        contentMargin: dialogPanelMargin,
+        cornerDetail: flatCornerDetail(0, scale),
+      }),
       button: {
         // default_theme.cpp:138-141: make_flat_stylebox(color), every default arg.
-        normal: flatStyleBox(STYLE_FILL.normal, buttonMargin, scaled.cornerRadius),
-        hover: flatStyleBox(STYLE_FILL.hover, buttonMargin, scaled.cornerRadius),
-        pressed: flatStyleBox(STYLE_FILL.pressed, buttonMargin, scaled.cornerRadius),
-        disabled: flatStyleBox(STYLE_FILL.disabled, buttonMargin, scaled.cornerRadius),
+        normal: flatStyleBox(STYLE_FILL.normal, buttonMargin, scaled.cornerRadius, defaultDetail),
+        hover: flatStyleBox(STYLE_FILL.hover, buttonMargin, scaled.cornerRadius, defaultDetail),
+        pressed: flatStyleBox(STYLE_FILL.pressed, buttonMargin, scaled.cornerRadius, defaultDetail),
+        disabled: flatStyleBox(STYLE_FILL.disabled, buttonMargin, scaled.cornerRadius, defaultDetail),
+        focus: focusStyleBox(
+          buttonMargin,
+          scaled.cornerRadius,
+          defaultDetail,
+          Math.round(FOCUS_BORDER_WIDTH * scale)
+        ),
       },
+      flatMenuButton: { normal: flatMenuButtonBox, disabled: flatMenuButtonBox },
+      tabContainer: tabBarStyleBoxes(scale),
       lineEdit: {
         // default_theme.cpp:405-409: make_flat_stylebox(style_normal_color) + border.
         normal: lineEditStyleBox(
           STYLE_FILL.normal,
           LINE_EDIT_NORMAL_BORDER_COLOR,
           buttonMargin,
-          scaled.cornerRadius
+          scaled.cornerRadius,
+          defaultDetail
         ),
         // default_theme.cpp:413-417: make_flat_stylebox(style_disabled_color) + border.
         readOnly: lineEditStyleBox(
           STYLE_FILL.disabled,
           LINE_EDIT_READ_ONLY_BORDER_COLOR,
           buttonMargin,
-          scaled.cornerRadius
+          scaled.cornerRadius,
+          defaultDetail
         ),
       },
       optionButton: {
         // default_theme.cpp:212-215: make_flat_stylebox(color, 2*default_margin,
         // default_margin, 2*default_margin, default_margin): X and Y differ.
-        normal: flatStyleBox(STYLE_FILL.normal, optionButtonMargin, scaled.cornerRadius),
-        disabled: flatStyleBox(STYLE_FILL.disabled, optionButtonMargin, scaled.cornerRadius),
+        normal: flatStyleBox(STYLE_FILL.normal, optionButtonMargin, scaled.cornerRadius, defaultDetail),
+        hover: flatStyleBox(STYLE_FILL.hover, optionButtonMargin, scaled.cornerRadius, defaultDetail),
+        pressed: flatStyleBox(STYLE_FILL.pressed, optionButtonMargin, scaled.cornerRadius, defaultDetail),
+        disabled: flatStyleBox(STYLE_FILL.disabled, optionButtonMargin, scaled.cornerRadius, defaultDetail),
       },
       slider: {
         // default_theme.cpp:579-580: make_flat_stylebox(color, 4, 4, 4, 4, 4) for
         // both `slider` and `grabber_area`; margins are never read back off these.
-        track: flatStyleBox(STYLE_FILL.normal, ZERO_SIDES, scaled.sliderCornerRadius),
-        fill: flatStyleBox(STYLE_FILL.progress, ZERO_SIDES, scaled.sliderCornerRadius),
+        track: flatStyleBox(STYLE_FILL.normal, ZERO_SIDES, scaled.sliderCornerRadius, sliderDetail),
+        fill: flatStyleBox(STYLE_FILL.progress, ZERO_SIDES, scaled.sliderCornerRadius, sliderDetail),
       },
       scrollBar: {
         scrollHorizontal: flatStyleBox(
           STYLE_FILL.normal,
           { left: 0, top: scaled.contentMargin, right: 0, bottom: scaled.contentMargin },
-          scrollBarCornerRadius
+          scrollBarCornerRadius,
+          scrollBarDetail
         ),
         scrollVertical: flatStyleBox(
           STYLE_FILL.normal,
           { left: scaled.contentMargin, top: 0, right: scaled.contentMargin, bottom: 0 },
-          scrollBarCornerRadius
+          scrollBarCornerRadius,
+          scrollBarDetail
         ),
-        grabber: flatStyleBox(STYLE_FILL.progress, buttonMargin, scrollBarCornerRadius),
+        grabber: flatStyleBox(STYLE_FILL.progress, buttonMargin, scrollBarCornerRadius, scrollBarDetail),
       },
       splitContainer: {
         separation: Math.round(SPLIT_CONTAINER_SEPARATION * scale),

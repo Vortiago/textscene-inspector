@@ -93,6 +93,16 @@ describe('the type chain themeResolutionScope builds', () => {
     expect(typeChain('Label', 'HeaderLabel', [theme()], null)).toEqual(['Label', ...CONTROL_ANCESTRY]);
   });
 
+  it('walks a variation the default theme registers when no theme does: FlatMenuButton is a MenuButton (default_theme.cpp:357-358)', () => {
+    expect(typeChain('MenuButton', 'FlatMenuButton', [theme()], null)).toEqual([
+      'FlatMenuButton',
+      'MenuButton',
+      'Button',
+      'BaseButton',
+      ...CONTROL_ANCESTRY,
+    ]);
+  });
+
   it('uses the FIRST theme (nearest ancestor before project) that registers the variation', () => {
     const nearest = theme({ typeVariations: { title_panel: 'Panel' } });
     const project = theme({ typeVariations: { title_panel: 'Control' } });
@@ -442,6 +452,17 @@ describe('resolveThemeFontSizeIn', () => {
     ).toBe(16);
   });
 
+  it('ignores a type variation named for an Object.prototype member', () => {
+    expect(
+      resolveThemeFontSizeIn(
+        themeResolutionScope('Label', 'constructor', [theme()], NO_PROJECT_FONTS),
+        'font_size',
+        undefined,
+        16
+      )
+    ).toBe(16);
+  });
+
   it('the nearest ancestor wins over a farther one', () => {
     const nearest = theme({ fontSizes: { Label: { font_size: 20 } } });
     const farther = theme({ fontSizes: { Label: { font_size: 30 } } });
@@ -550,5 +571,46 @@ describe('fontForNode', () => {
         projectFonts: NO_PROJECT_FONTS,
       })
     ).toBeNull();
+  });
+});
+
+describe('the default theme font size of a Label type variation (default_theme.cpp:394-401)', () => {
+  const sizeOf = (variation: string | undefined, themes: readonly ThemeResource[] = []) =>
+    resolveThemeFontSizeIn(
+      themeResolutionScope('Label', variation, themes, { ...NO_PROJECT_FONTS, projectTheme: null }),
+      'font_size',
+      undefined,
+      16
+    );
+
+  it.each([
+    ['HeaderSmall', 20],
+    ['HeaderMedium', 24],
+    ['HeaderLarge', 28],
+  ])('gives %s %d', (variation, size) => {
+    expect(sizeOf(variation)).toBe(size);
+  });
+
+  it('does not scale with the theme: the step adds to the unscaled default_font_size (default_theme.cpp:50,395)', () => {
+    const scope = themeResolutionScope('Label', 'HeaderSmall', [], {
+      ...NO_PROJECT_FONTS,
+      projectTheme: null,
+    });
+    expect(resolveThemeFontSizeIn(scope, 'font_size', undefined, 32)).toBe(20);
+  });
+
+  it('keeps the built-in size for a variation the default theme lacks', () => {
+    expect(sizeOf('Unknown')).toBe(16);
+    expect(sizeOf(undefined)).toBe(16);
+  });
+
+  it('yields to a Theme that sets the size for the type', () => {
+    const own = theme({ fontSizes: { Label: { font_size: 40 } } });
+    expect(sizeOf('HeaderSmall', [own])).toBe(40);
+  });
+
+  it('reaches a default theme variation through the base a scene Theme registers', () => {
+    const own = theme({ typeVariations: { MyHeader: 'HeaderLarge' } });
+    expect(sizeOf('MyHeader', [own])).toBe(28);
   });
 });

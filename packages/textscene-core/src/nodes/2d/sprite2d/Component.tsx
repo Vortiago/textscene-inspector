@@ -5,22 +5,20 @@
  * flips the texture too, as in Godot, where 3D negates the UV.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { frameSizePx, frameUvWindow } from '../../../r3f/spriteFrame';
-import { useCanvasTextureSampler, useNode2DTextureSampler } from '../../../r3f/canvasItemTextureSampler';
-import { CanvasItemSurfaceSource } from '../../../r3f/canvasItemSurface';
-import type { CanvasItemSurface } from '../../../r3f/lighting2d/normalMappedLighting';
+import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
 import { canvasMapProps, useWindowedCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { useAnimatedValue } from '../../../r3f/contexts/AnimatedValueContext';
-import { useTexture2D } from '../../../resources/useTexture2D';
 import { MissingResourcePlaceholder } from '../../../r3f/components/MissingResourcePlaceholder';
 import type { Sprite2DProperties } from './types';
+import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 
 export function Sprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Sprite2DProperties;
@@ -30,60 +28,55 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
   // means none does. The registry carries a numeric tuple (ADR-0017), here a 1-tuple.
   const animatedFrame = useAnimatedValue('frame', (v) => v[0] ?? null);
 
+  // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
+  // where Sprite3D tiles.
   const {
     texture: sourceTexture,
     size: reportedSize,
     missing: textureMissing,
+    hasNoImage,
+    sampler,
     canvasTexture,
-  } = useTexture2D(props.texture, externalResources, internalResources);
+  } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
 
-  // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
-  // where Sprite3D tiles. A CanvasTexture's own filter and repeat win over the item's.
-  const sampler = useCanvasTextureSampler(useNode2DTextureSampler(props), canvasTexture?.texture);
-  const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
   // A driven `frame` overrides the authored `frame` and any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.
   const frameWindow = useMemo(() => {
     const frameProps =
       animatedFrame !== null ? { ...props, frame: animatedFrame, frame_coords: undefined } : props;
-    return frameUvWindow(sourceTexture ?? undefined, frameProps);
-  }, [sourceTexture, props, animatedFrame]);
+    return frameUvWindow(sourceTexture ?? undefined, frameProps, hasNoImage ? reportedSize : undefined);
+  }, [sourceTexture, props, animatedFrame, hasNoImage, reportedSize]);
   const drawnTexture = useWindowedCanvas2DTexture(sourceTexture, sampler, frameWindow);
 
   // Quad size in pixels (1 px = 1 world unit in the 2D canvas).
   const { width, height } = useMemo(() => frameSizePx(reportedSize, props), [reportedSize, props]);
 
-  // A fragment either way, so the item keeps its place when the source mounts.
   return (
-    <>
-      <CanvasItem2D
-        node={node}
-        props={props}
-        surface={surface}
-        body={({ color, opacity }, _material, pixelMaterial) =>
-          // No texture draws nothing, as Godot's draw returns early (`sprite_2d.cpp:159`). The
-          // placeholder is for a texture that is set but never draws.
-          textureMissing ? (
-            <MissingResourcePlaceholder shape="plane" name={node.name} />
-          ) : drawnTexture ? (
-            <QuadMesh
-              texture={drawnTexture}
-              color={color}
-              opacity={opacity}
-              width={width}
-              height={height}
-              props={props}
-              pixelMaterial={pixelMaterial}
-            />
-          ) : null
-        }
-      >
-        {children}
-      </CanvasItem2D>
-      {canvasTexture?.texture.normalTexture && (
-        <CanvasItemSurfaceSource slot={canvasTexture} sampler={sampler} onSurface={setSurface} />
-      )}
-    </>
+    <CanvasItem2D
+      node={node}
+      props={props}
+      canvasTexture={canvasTexture}
+      isDrawn={!textureMissing && drawnTexture !== null}
+      body={({ color, opacity }, _material, pixelMaterial) =>
+        // No texture draws nothing, as Godot's draw returns early (`sprite_2d.cpp:159`). The
+        // placeholder is for a texture that is set but never draws.
+        textureMissing ? (
+          <MissingResourcePlaceholder shape="plane" name={node.name} />
+        ) : drawnTexture ? (
+          <QuadMesh
+            texture={drawnTexture}
+            color={color}
+            opacity={opacity}
+            width={width}
+            height={height}
+            props={props}
+            pixelMaterial={pixelMaterial}
+          />
+        ) : null
+      }
+    >
+      {children}
+    </CanvasItem2D>
   );
 }
 
@@ -110,12 +103,13 @@ function QuadMesh({
   const cgy = props.offset.y + (props.centered ? 0 : height / 2);
   const meshScale: [number, number, number] = [props.flip_h ? -1 : 1, props.flip_v ? -1 : 1, 1];
 
-  // The map is here at the first compile, but the define can change: a 3D-content
+  // The map is here at the first compile, but the define can change: in an sRGB canvas a 3D-content
   // ViewportTexture multiplies linearly where a canvas-content one and a `res://` file
   // multiply in sRGB, and a swap changes the program (`materialProgramInputs.ts`).
+  const canvasSpace = useCanvasColorSpace();
   const program = materialProgramInputs({
     props: {
-      ...canvasMapProps(texture),
+      ...canvasMapProps(texture, canvasSpace),
       color,
       opacity,
       transparent: true,

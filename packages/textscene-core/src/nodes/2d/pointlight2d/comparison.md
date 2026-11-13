@@ -17,6 +17,10 @@ canvas item's default repeat to the viewport's disabled default (`viewport.h:419
 `viewport.cpp:4009`, `renderer_canvas_render_rd.cpp:2344`), and the light tap uses that
 item sampler (`canvas.glsl:774-782`). A light with no `texture` lights nothing and draws no
 placeholder, as `pnpm ref:godot` measures. A `texture` that is set but fails to load draws a placeholder.
+A `GradientTexture2D` with no `gradient` holds no image, so the light draws Godot's 4 by 4 magenta and
+black placeholder at its own size (`gradient_texture.cpp:229-233`, `texture_storage.cpp:588-595`).
+In a `use_hdr_2d` canvas the light adds to the linear albedo with no clamp, and its colour and cookie
+stay as authored (`canvas.glsl:715-760`). The SubViewport sheet shows it.
 
 ## Blend modes
 
@@ -80,7 +84,50 @@ HUD panel.
 
 `shadow_filter = PCF5` or `PCF13` averages taps offset in angle across Godot's polar
 shadow map, so the boundary is a stepped ramp that widens with distance. The previewer
-builds the same map and taps it in the light's fragment shader (ADR-0030).
+builds the same map and taps it in the light's fragment shader, as Godot's Vulkan renderer
+does (ADR-0066).
+
+## An unfiltered shadow edge far from its light
+
+<!-- compare: image=unit-pointlight2d-shadow-none-bins status=done fixture=unit-pointlight2d-shadow-none-bins.tscn -->
+
+`shadow_filter = NONE` reads one polar bin per pixel (`canvas.glsl:507-510`), so the edge of
+the shadow is a staircase of bins. Each bin spans more pixels further from the light, so the
+steps grow along the edge.
+
+## One PCF5 tap per bin, far from its light
+
+<!-- compare: image=unit-pointlight2d-shadow-pcf5-bins status=done fixture=unit-pointlight2d-shadow-pcf5-bins.tscn -->
+
+At `shadow_filter_smooth = 0` the five PCF5 taps are one bin apart. Each tap mixes two
+neighbouring bins by how far past the first one it lands (`canvas.glsl:392-399`), which
+shifts the edge by half a bin.
+
+## An occluder end on a bin centre
+
+<!-- compare: image=unit-pointlight2d-shadow-end-on-bin status=done fixture=unit-pointlight2d-shadow-end-on-bin.tscn -->
+
+Godot draws each occluder edge as a quad into the map's row, so a bin is shadowed when the
+rasteriser covers its pixel centre. The top-left rule counts a centre exactly on an end only from
+the left of that end. The previewer builds its map by the same rule. Here the end sits on a centre
+at the right of the occluder, so the penumbra starts one bin later.
+
+## The shadow atlas size
+
+<!-- compare: image=unit-pointlight2d-shadow-atlas-size status=done fixture=shadow-atlas-size/unit-pointlight2d-shadow-atlas-size.tscn -->
+
+`rendering/2d/shadow_atlas/size` sets the bins in each light's polar map, 2048 by default
+(`renderer_canvas_render_rd.cpp:2060`). A smaller size makes each bin and each PCF tap wider, so
+the penumbra widens and its staircase coarsens. The previewer reads the setting and builds the map to
+that size. Below 512, Godot reads the map of the wrong light when two lights cast shadows
+(`canvas.glsl:394`), and the previewer does not.
+
+## A GradientTexture2D with no gradient
+
+<!-- compare: image=unit-pointlight2d-gradient-no-gradient status=done fixture=unit-pointlight2d-gradient-no-gradient.tscn -->
+
+The texture never gets an image. The light draws the placeholder at its own 4 by 4 size times
+`texture_scale`, not at the texture's `width` and `height`. At scale 1 that is 8 magenta texels.
 
 ## Shadow receivers: shadow_item_cull_mask
 
@@ -151,9 +198,10 @@ not listed. Here 100 directional lights leave room for the first 156 positional 
 
 <!-- compare: image=unit-pointlight2d-normal-map-height status=done fixture=unit-pointlight2d-normal-map-height.tscn -->
 
-A Sprite2D whose CanvasTexture has a `normal_texture` takes each light at an angle, so `height`
-counts. Both sprites carry the same normal map, which tilts to +x. The light at height 0 lights only
-the side that faces it. The light at height 50 also reaches the side that faces away and the top.
+A Sprite2D, Polygon2D, Line2D, AnimatedSprite2D, CPUParticles2D, MeshInstance2D, TileMapLayer or
+TileMap whose CanvasTexture has a `normal_texture` takes each light at an angle, so `height`
+counts. Here two Sprite2Ds carry the same normal map, which tilts to +x. The light at height 0
+lights only the side that faces it. The light at height 50 also reaches the side that faces away and the top.
 The previewer keeps each light that reaches a normal-mapped item in a buffer of its own. The item
 shades each one by its normal, then blends them in Godot's order.
 
@@ -191,8 +239,3 @@ The linter warns (`resource-type-excluded-by-hint`) when `texture` holds a class
 `enabled` falls back to `true`, `energy` and `texture_scale` to `1.0`, `height` to `0`,
 `offset` to `(0, 0)` and `blend_mode` to `0` (ADD), each with a warning. `color` falls back to opaque
 white silently. `texture` is stored with no reference check.
-
-## Known limitations
-
-- **Approximated** Under a `shadow_filter`, a step of the penumbra can sit one polar bin
-  from Godot's, so its stepped edge shifts slightly in places.

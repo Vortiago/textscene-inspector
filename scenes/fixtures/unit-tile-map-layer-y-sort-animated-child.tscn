@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+; Moves one variable: the y of a child of a y-sorted TileMapLayer, which an AnimationPlayer slides
+; from 20 to 200 in one second. At 0.5 s the child sits at y 110, between row 1 (sort y 96) and
+; row 2 (160): it draws over row 1 and under row 2. No other scene moves a y-sort child, so none
+; shows the order flip. The golden seeks to 0.5 s.
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_atlas"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_quadrants"]
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(64, 64)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_quadrants"]
+tile_size = Vector2i(64, 64)
+sources/0 = SubResource("TileSetAtlasSource_quadrants")
+
+[sub_resource type="Animation" id="Animation_slide"]
+resource_name = "slide"
+length = 1.0
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Layer/Child:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 1),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector2(96, 20), Vector2(96, 200)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_slide"]
+_data = {
+&"slide": SubResource("Animation_slide")
+}
+
+[node name="World" type="Node2D"]
+
+[node name="Layer" type="TileMapLayer" parent="."]
+position = Vector2(400, 100)
+y_sort_enabled = true
+tile_map_data = PackedByteArray(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+tile_set = SubResource("TileSet_quadrants")
+
+[node name="Child" type="Polygon2D" parent="Layer"]
+position = Vector2(96, 20)
+color = Color(0, 1, 1, 1)
+polygon = PackedVector2Array(-80, -70, -20, -70, -20, 30, -80, 30)
+
+[node name="Player" type="AnimationPlayer" parent="."]
+libraries = {
+&"": SubResource("AnimationLibrary_slide")
+}

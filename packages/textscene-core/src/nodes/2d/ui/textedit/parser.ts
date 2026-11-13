@@ -37,6 +37,7 @@ export function parseTextEdit(
     indentWrappedLines: parseOptionalBool(properties.indent_wrapped_lines),
     fitContentWidth: parseOptionalBool(properties.scroll_fit_content_width),
     fitContentHeight: parseOptionalBool(properties.scroll_fit_content_height),
+    scrollPastEndOfFile: parseOptionalBool(properties.scroll_past_end_of_file),
     minimapDraw: parseOptionalBool(properties.minimap_draw),
     minimapWidth: parseOptionalInt(properties.minimap_width),
     syntaxHighlighter: properties.syntax_highlighter,

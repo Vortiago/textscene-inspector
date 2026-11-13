@@ -14,12 +14,13 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
 const aspectRatioContainerLayout = controlSolverRegistry.containerLayout('AspectRatioContainer')!;
 const aspectRatioContainerMinimumSize = controlSolverRegistry.minimumSize('AspectRatioContainer')!;
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
-  return 'rects' in result ? result.rects : result;
+  return normalizeContainerLayoutResult(result).rects;
 }
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {

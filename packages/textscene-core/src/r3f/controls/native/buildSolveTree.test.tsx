@@ -22,7 +22,7 @@ import { SelectionProvider } from '../../contexts/SelectionContext';
 import { HiddenSeeder } from '../../testing/HiddenSeeder';
 import type { FontResource } from '../../../resources/fonts/font/types';
 import { peekSceneFontMetrics } from './text/sceneFontLoader';
-import { useBuildSolveTree } from './buildSolveTree';
+import { useBuildSolveTree, useBuildViewportTree } from './buildSolveTree';
 import { TscnParser } from '../../../parser/TscnParser';
 import { parsedNode } from '../../../parser/testing/parserKit';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver';
@@ -1041,6 +1041,32 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
     expect(later.path).toBe('Root/Later');
     expect(hoisted!.paintSequence).toBeGreaterThan(later.paintSequence);
     expect(hoisted!.paintSequence).toBeGreaterThanOrEqual(root!.paintRange.base + root!.paintRange.size);
+  });
+
+  it('draws the children of a clip_children Control before it, as the world walk does', () => {
+    const clipping = node('Clip', 'ColorRect', {
+      properties: { name: 'Clip' },
+      rawProperties: { clip_children: '1' },
+      children: [label('Child')],
+    });
+
+    const { result } = renderHook(() => useBuildSolveTree([clipping], [], []));
+    const [owner] = result.current.tree;
+    expect(owner!.children[0]!.paintSequence).toBeLessThan(owner!.paintSequence);
+  });
+
+  it('hands a clip_children Control the ranges of its show_behind_parent children', () => {
+    const behind = node('Behind', 'ColorRect', { properties: { name: 'Behind', showBehindParent: true } });
+    const clipping = node('Clip', 'ColorRect', {
+      properties: { name: 'Clip' },
+      rawProperties: { clip_children: '1' },
+      children: [label('Front'), behind],
+    });
+
+    const { result } = renderHook(() => useBuildSolveTree([clipping], [], []));
+    const [owner] = result.current.tree;
+    const solvedBehind = owner!.children.find((child) => child.path === 'Clip/Behind');
+    expect(owner!.behindRanges).toEqual([solvedBehind!.paintRange]);
   });
 
   it('orders a Control hoisted to a CanvasLayer against THAT layer’s own roots', () => {
@@ -2595,5 +2621,33 @@ remote_path = NodePath("../../HolderA")
     });
 
     expect(result.current.tree[0]!.skippedAncestors!.transform.tx).toBeCloseTo(29930, 3);
+  });
+});
+
+describe('useBuildSolveTree — a themed icon slot while it loads or after it fails', () => {
+  const slotOf = (seed: (loader: ReturnType<typeof createFakeResourceLoader>) => void) => {
+    const loader = createFakeResourceLoader();
+    seed(loader);
+    const dialog = node('Dialog', 'FileDialog', {
+      properties: { name: 'Dialog', filters: [], themeOverrideIcons: { back_folder: 'ExtResource("1")' } },
+    });
+    const { result } = renderHook(
+      () => useBuildViewportTree(dialog, [{ id: '1', path: 'res://icon.png', type: 'Texture2D' }], [], []),
+      { wrapper: wrapperFor(loader.loader) }
+    );
+    return result.current.tree[0]?.textureSlots.back_folder;
+  };
+
+  it('takes the texture size once it loads', () => {
+    const texture = { image: { width: 32, height: 32 } } as unknown as THREE.Texture;
+    expect(slotOf((loader) => loader.textures.seed('res://icon.png', texture))).toEqual({ x: 32, y: 32 });
+  });
+
+  it('has no size after the texture fails, so a consumer reads its default icon size (theme.cpp:306)', () => {
+    expect(slotOf((loader) => loader.textures.seed('res://icon.png', null))).toBeNull();
+  });
+
+  it('has no size while the texture still loads', () => {
+    expect(slotOf(() => {})).toBeNull();
   });
 });

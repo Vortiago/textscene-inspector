@@ -1,0 +1,26 @@
+; One variable: `texture_mode`. At the default `texture_repeat` TILE clamps past the first tile, and NONE
+; reads the texture's top-left texel at every vertex.
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="Gradient" id="Gradient_halves"]
+interpolation_mode = 1
+offsets = PackedFloat32Array(0, 0.5)
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_halves"]
+gradient = SubResource("Gradient_halves")
+width = 32
+height = 16
+
+[node name="Line2DTextureClamp" type="Node2D"]
+
+[node name="Tile" type="Line2D" parent="."]
+points = PackedVector2Array(50, 50, 178, 50)
+width = 16.0
+texture = SubResource("GradientTexture2D_halves")
+texture_mode = 1
+
+[node name="None" type="Line2D" parent="."]
+points = PackedVector2Array(50, 100, 178, 100)
+width = 16.0
+texture = SubResource("GradientTexture2D_halves")

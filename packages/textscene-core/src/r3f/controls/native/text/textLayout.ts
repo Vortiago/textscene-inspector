@@ -137,6 +137,11 @@ export interface ShapeTextOptions {
    */
   terminateLastParagraph?: boolean;
   /**
+   * Whether each paragraph ends with a zero-advance space glyph the break loop measures. Default true.
+   * A `TextParagraph` shapes none: a last glyph wider than the box would otherwise gain a blank row.
+   */
+  hasEndGlyph?: boolean;
+  /**
    * `Label.tab_stops` and `TextParagraph.tab_stops`, px, applied twice as `Label::_shape` does
    * (`label.cpp:196-198,228-230`): over the paragraph before line breaking, so the aligned advance
    * decides the wrap, then per line from its own pen origin. Undefined or empty is a no-op.
@@ -155,6 +160,12 @@ export interface ShapeTextOptions {
    */
   autowrapTrimFlags?: number;
   /**
+   * `BREAK_MANDATORY`: a hard break starts a new line. It defaults to true, as every `Label` sets it.
+   * `ItemList` leaves it off for a single-line label (`BREAK_NONE`, `item_list.cpp:48`), so a newline
+   * stays inside its one line at zero width.
+   */
+  breakMandatory?: boolean;
+  /**
    * `TextServer::shaped_text_set_preserve_control`: keeps a control character as a hex-code box glyph
    * (`text/hexCodeBox.ts`) instead of dropping it at zero width. Only the `draw_control_chars` property
    * of `LineEdit` and `TextEdit` sets it.
@@ -164,7 +175,7 @@ export interface ShapeTextOptions {
 
 /** `TextServer::LineBreakFlag` subset this module reads (`servers/text/text_server.h:113-120`). */
 const BREAK_TRIM_START_EDGE_SPACES = 1 << 6;
-const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
+export const BREAK_TRIM_END_EDGE_SPACES = 1 << 7;
 
 /** One glyph's placement within its line, in target-font-size px. */
 export interface GlyphPlacement {
@@ -205,6 +216,8 @@ export interface GlyphPlacement {
   fontSizePx: number;
   /** The face of the **Fallback chain** this glyph draws in. */
   fontMetrics: FontMetrics;
+  /** An ellipsis glyph the overrun trim appended: `shaped_text_draw` draws it after the kept glyphs, with no clip (`text_server.cpp:1811-1822`). */
+  isEllipsis?: boolean;
 }
 
 export interface TextLineLayout {
@@ -326,13 +339,15 @@ interface BreakFlags {
    * WORD overflows.
    */
   adaptive: boolean;
+  /** BREAK_MANDATORY: a hard-break glyph ends the line. */
+  mandatory: boolean;
 }
 
 /**
  * `Label::_shape()`'s mode-to-flags map (`scene/gui/label.cpp` ~209-225), each mode with
  * `BREAK_MANDATORY` too. OFF sets no soft flag, so only hard breaks start a line.
  */
-function breakFlagsForAutowrap(mode: EnumValue<typeof AutowrapMode>): BreakFlags {
+function breakFlagsForAutowrap(mode: EnumValue<typeof AutowrapMode>): Omit<BreakFlags, 'mandatory'> {
   switch (mode) {
     case AutowrapMode.AUTOWRAP_ARBITRARY:
       return { wordBound: false, graphemeBound: true, adaptive: false };
@@ -745,13 +760,19 @@ function pushRunGlyphs(
  * zero-advance whitespace terminator Label appends (`label.cpp:164`). `chars` are the characters
  * the glyphs draw, mirrored where the level is odd, and `style` sets the size, face and level of each.
  */
-function toBreakGlyphs(chars: ArrayLike<string>, style: RunStyle, preserveControl = false): BreakGlyph[] {
+function toBreakGlyphs(
+  chars: ArrayLike<string>,
+  style: RunStyle,
+  preserveControl = false,
+  hasEndGlyph = true
+): BreakGlyph[] {
   const glyphs: BreakGlyph[] = [];
   for (const range of runRanges(style, chars.length))
     pushRunGlyphs(glyphs, chars, range, style, preserveControl);
   kernGlyphs(glyphs, chars, style);
   placeMarks(glyphs, style);
   roundAdvancesToWholePixels(glyphs, chars, style);
+  if (!hasEndGlyph) return glyphs;
   glyphs.push({
     start: chars.length,
     end: chars.length + 1,
@@ -1088,8 +1109,7 @@ function shapedTextGetLineBreaks(
       continue;
     }
 
-    // BREAK_MANDATORY is always on, whatever the autowrap mode.
-    if (g.isHardBreak) {
+    if (flags.mandatory && g.isHardBreak) {
       const curSafeBrk = i;
       let startPos = prevSafeBreak;
       let endPos = i;
@@ -1221,16 +1241,18 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
     autowrapTrimFlags,
     trimIndent = false,
     preserveControl = false,
+    breakMandatory = true,
+    hasEndGlyph = true,
   } = options;
   // Uppercase before indices are assigned, so a `fontSizePxAt` keyed on the transformed text lines up.
   const transformed = uppercase ? upperCaseFor(text, language) : text;
-  const flags = breakFlagsForAutowrap(autowrapMode);
+  const flags = { ...breakFlagsForAutowrap(autowrapMode), mandatory: breakMandatory };
   const trim = {
     start: autowrapTrimFlags === undefined ? true : (autowrapTrimFlags & BREAK_TRIM_START_EDGE_SPACES) !== 0,
     end: autowrapTrimFlags === undefined ? true : (autowrapTrimFlags & BREAK_TRIM_END_EDGE_SPACES) !== 0,
   };
   // AUTOWRAP_OFF never soft-wraps: force an unconstrained width regardless of
-  // what the caller passed, so only the always-on hard-break branch can
+  // what the caller passed, so only the hard-break branch can
   // start a new line (mirrors Label::_shape() never OR-ing a wrap flag in).
   const effectiveWidth = autowrapMode === AutowrapMode.AUTOWRAP_OFF ? 0 : boxWidthPx;
 
@@ -1275,7 +1297,7 @@ export function shapeText(text: string, options: ShapeTextOptions): TextLayoutRe
       spans: spanAt ? Int32Array.from({ length: paraText.length }, (_v, i) => spanAt(sourceIndex(i))) : null,
       hasUndrawnGlyph: !spansDraw,
     };
-    const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl);
+    const breakGlyphs = toBreakGlyphs(chars, runStyle, preserveControl, hasEndGlyph);
     // First tab pass: the aligned advance must be in place before line breaking measures it.
     if (hasTabStops) {
       // One entry per UTF-16 unit, as `breakGlyphs` holds them: a code-point walk shifts every

@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Polygon2D } from './Component';
+import { canvasColorSpaceOf, CanvasColorSpaceProvider } from '../../../r3f/canvasColorSpace';
 import { parsePolygon2D } from './parser';
 import type { ParsedHeading } from '../../../parser/utils';
 import type { TscnNode } from '../../../parser/types';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 function node(rawProps: Record<string, string>, name = 'Poly'): TscnNode {
   const heading: ParsedHeading = { type: 'node', attributes: { name, type: 'Polygon2D' } };
@@ -86,6 +89,40 @@ describe('<Polygon2D>', () => {
     expect(mat.color.r).toBeLessThan(1);
   });
 
+  describe('in a linear canvas', () => {
+    /** A Polygon2D draws a mesh, whose stored colour converts apart from the modulate (`canvas.glsl:176-178`). */
+    const hot = node({
+      polygon: 'PackedVector2Array(0, 0, 10, 0, 10, 10)',
+      color: 'Color(0.5, 0.25, 0.1, 1)',
+      modulate: 'Color(4, 4, 4, 1)',
+    });
+    const linearMaterial = async (n: TscnNode) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <CanvasColorSpaceProvider value={LINEAR_CANVAS}>
+          <Polygon2D node={n} />
+        </CanvasColorSpaceProvider>
+      );
+      return (renderer.scene.findByType('Mesh').instance as THREE.Mesh).material as THREE.MeshBasicMaterial;
+    };
+
+    it('multiplies the linear stored byte by the linear modulate, keeping a value above 1', async () => {
+      const mat = await linearMaterial(hot);
+      // The byte 25 for 0.1, then sRGBChannelToLinear(25 / 255) × sRGBChannelToLinear(4).
+      expect(mat.color.b).toBeCloseTo(0.2461, 4);
+      expect(mat.color.r).toBeGreaterThan(1);
+    });
+
+    it('decodes the vertex colours of a vertex-coloured polygon on their own', async () => {
+      const mat = await linearMaterial(
+        node({
+          polygon: 'PackedVector2Array(0, 0, 10, 0, 10, 10)',
+          vertex_colors: 'PackedColorArray(1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1)',
+        })
+      );
+      expect(mat.defines).toEqual(LINEAR_CANVAS.defines);
+    });
+  });
+
   it('renders no mesh for a degenerate (< 3 vertex) polygon but keeps the group', async () => {
     const renderer = await render(node({ polygon: 'PackedVector2Array(0, 0, 10, 0)' }));
     expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
@@ -100,5 +137,19 @@ describe('<Polygon2D>', () => {
     geom.computeBoundingBox();
     expect(geom.boundingBox!.min.x).toBeCloseTo(5, 5);
     expect(geom.boundingBox!.max.x).toBeCloseTo(15, 5);
+  });
+
+  it("draws nothing for a polygon whose edges cross, as Godot's triangulation fails", async () => {
+    const renderer = await render(node({ polygon: 'PackedVector2Array(0, 0, 10, 10, 10, 0, 0, 10)' }));
+    expect(renderer.scene.findAllByType('Mesh')).toHaveLength(0);
+  });
+
+  it("triangulates by Godot's ear clipping, which a skeleton bends", async () => {
+    const renderer = await render(
+      node({ polygon: 'PackedVector2Array(0, -20, 100, -20, 200, -20, 200, 20, 100, 20, 0, 20)' })
+    );
+    const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
+    // `Triangulate::triangulate` clips these ears, so no diagonal spans the middle pair.
+    expect(Array.from(geom.getIndex()!.array)).toEqual([5, 0, 1, 1, 2, 3, 4, 5, 1, 1, 3, 4]);
   });
 });

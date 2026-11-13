@@ -26,9 +26,12 @@ export interface MockPanel {
   title: string;
   /** The panel's column, as a real `WebviewPanel` reports it. Unset, the panel is in none. */
   viewColumn?: number;
+  /** Whether the panel's tab shows, as a real `WebviewPanel` reports it. */
+  visible: boolean;
   reveal: ReturnType<typeof vi.fn>;
   dispose: ReturnType<typeof vi.fn>;
   onDidDispose: ReturnType<typeof vi.fn>;
+  onDidChangeViewState: ReturnType<typeof vi.fn>;
 }
 
 export interface MockPanelHarness {
@@ -38,6 +41,8 @@ export interface MockPanelHarness {
   triggerMessage: (msg: unknown) => void;
   /** Invoke the panel's real `onDidDispose` handler (VS Code closing the tab). */
   fireDidDispose: () => void;
+  /** Sets `panel.visible` and fires the panel's real `onDidChangeViewState` handler, as VS Code does. */
+  setVisible: (visible: boolean) => void;
   /** The subscription `onDidReceiveMessage` returned, so teardown is observable. */
   messageSubscription: MockSubscription;
   /** The subscription `onDidDispose` returned. */
@@ -53,6 +58,7 @@ export interface MockPanelHarness {
 export function setupMockPanel(): MockPanelHarness {
   let messageHandler: ((message: unknown) => void) | null = null;
   let didDisposeHandler: (() => void) | null = null;
+  let viewStateHandler: ((event: { webviewPanel: MockPanel }) => void) | null = null;
 
   const messageSubscription: MockSubscription = { dispose: vi.fn() };
   const didDisposeSubscription: MockSubscription = { dispose: vi.fn() };
@@ -77,6 +83,7 @@ export function setupMockPanel(): MockPanelHarness {
   const panel: MockPanel = {
     webview,
     title: '',
+    visible: true,
     reveal: vi.fn(),
     dispose: vi.fn(),
     onDidDispose: vi.fn((handler: () => void, thisArgs?: unknown, disposables?: MockSubscription[]) => {
@@ -84,6 +91,12 @@ export function setupMockPanel(): MockPanelHarness {
       disposables?.push(didDisposeSubscription);
       return didDisposeSubscription;
     }),
+    onDidChangeViewState: vi.fn(
+      (handler: (event: { webviewPanel: MockPanel }) => void, thisArgs?: unknown) => {
+        viewStateHandler = thisArgs == null ? handler : handler.bind(thisArgs);
+        return { dispose: vi.fn() };
+      }
+    ),
   };
 
   (mockWindow.createWebviewPanel as ReturnType<typeof vi.fn>).mockReturnValue(panel);
@@ -102,10 +115,16 @@ export function setupMockPanel(): MockPanelHarness {
     didDisposeHandler();
   }
 
+  function setVisible(visible: boolean): void {
+    panel.visible = visible;
+    viewStateHandler?.({ webviewPanel: panel });
+  }
+
   return {
     panel,
     webview,
     triggerMessage,
+    setVisible,
     fireDidDispose,
     messageSubscription,
     didDisposeSubscription,

@@ -1,6 +1,6 @@
 /**
  * React hooks over the pure **live scene tree** (`liveSceneTree.ts`). They supply the
- * loader's scene and GLB cache snapshots, and re-render when the tree grows because an
+ * loader's scene, GLB and `.tres` cache snapshots, and re-render when the tree grows because an
  * instance sub-scene or GLB finishes loading after the parsed SceneGraph was built.
  */
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
@@ -26,8 +26,8 @@ import { sameElements } from '../utils/sameElements.js';
 import { subscribeToNothing } from '../utils/subscribeToNothing.js';
 import { NOTHING_CACHED } from './cacheSources.js';
 import { useProjectSettings } from './contexts/ProjectSettingsContext.js';
-import { projectPhysicsClock } from '../parser/projectSettingsParser.js';
-import type { PhysicsClock } from '../godot/scene/physicsTicks.js';
+import { projectTreeSettings, type ProjectTreeSettings } from '../parser/projectSettingsParser.js';
+import { useControlLocalTransforms, type ControlLocalTransforms } from './contexts/ControlYSortContext.js';
 
 /** The live-tree roots and the snapshot of the loader's caches they are walked over. */
 export interface SharedLiveTree {
@@ -37,17 +37,21 @@ export interface SharedLiveTree {
 
 /** The caches of `loader` that a live-tree context reads. With no loader, every path reads as never requested. */
 function loaderCaches(loader: ResourceLoader | null | undefined) {
-  return { sceneCache: loader?.scenes ?? NOTHING_CACHED, glbCache: loader?.glbMeshes };
+  return {
+    sceneCache: loader?.scenes ?? NOTHING_CACHED,
+    glbCache: loader?.glbMeshes,
+    resourceCache: loader?.resources,
+  };
 }
 
 /**
  * Build the live-tree roots and context from the parsed SceneGraph, the loader
- * cache snapshots and the project's physics clock. `null` while the root scene is not available.
+ * cache snapshots and the project's tree settings. `null` while the root scene is not available.
  */
 function liveTreeContext(
   sceneGraph: SceneGraph | null | undefined,
   loader: ResourceLoader | null | undefined,
-  physicsClock: PhysicsClock
+  project: ProjectTreeSettings
 ): SharedLiveTree | null {
   // `scenes` is optional-chained too: readers outside the canvas (the toolbar)
   // see whatever the host put in HierarchyContext, which is not always a fully
@@ -60,12 +64,13 @@ function liveTreeContext(
       externalResources: root.externalResources,
       internalResources: root.internalResources,
       ...loaderCaches(loader),
-      physicsClock,
+      project,
     },
   };
 }
 
-const LIVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'glb'];
+/** `resource` so a pass that reads a `.tres` file, such as a Skeleton2D stack, runs again when the file loads. */
+const LIVE_TREE_BUSES: readonly ResourceType[] = ['scene', 'glb', 'resource'];
 
 /** What {@link useLiveTreeVersion} reads of one loader. */
 interface LoadTicks {
@@ -117,7 +122,7 @@ function loadTicksOf(loader: ResourceLoader | null | undefined): LoadTicks {
 }
 
 /**
- * A counter that moves whenever a scene or GLB loads or fails, so a deleted
+ * A counter that moves whenever a scene, GLB or `.tres` file loads or fails, so a deleted
  * instance leaves the tree. A reader of the whole tree re-derives on it; {@link useLiveTreeSelection}
  * re-renders only where its value changed. The scenes and
  * GLBs it reads are `useResource` consumers' keys, which they request again. It is one
@@ -152,46 +157,78 @@ function valueAtLoadTick<T>(
 }
 
 /**
- * The one tree every reader of a scene graph and physics clock over a loader shares for a load
- * tick. `projectPhysicsClock` hands back one clock for each pair of values, so the key holds.
+ * The one tree every reader of a scene graph and a project's tree settings over a loader shares for
+ * a load tick. `projectTreeSettings` hands back one object for equal values, so the key holds.
  */
 const sharedTreesOf = perObject((sceneGraph: SceneGraph) =>
-  perObject((physicsClock: PhysicsClock) =>
-    valueAtLoadTick((loader) => liveTreeContext(sceneGraph, loader, physicsClock))
+  perObject((project: ProjectTreeSettings) =>
+    valueAtLoadTick((loader) => liveTreeContext(sceneGraph, loader, project))
   )
 );
 
-/** The shared tree of what {@link useLiveTreeInputs} read, at the load tick `version`. */
+/** The node types whose pass composes through a Control: a relay and a Skeleton2D. */
+const CONTROL_TRANSFORM_READERS: ReadonlySet<string> = new Set(['RemoteTransform2D', 'Skeleton2D']);
+
+/** Whether a pass over `shared` composes through the transform of a Control. */
+const readsControlTransforms = perObject((shared: SharedLiveTree): boolean => {
+  let reads = false;
+  liveTreeOf(shared.roots, shared.ctx).fold(undefined, ({ step }, _inherited, descend) => {
+    reads ||= CONTROL_TRANSFORM_READERS.has(step.node.type);
+    descend(undefined);
+  });
+  return reads;
+});
+
+/**
+ * `shared` over the transforms the Control walk solved. Written only here, one tree for each pair,
+ * so a publish that changes nothing keeps the tree and every pass result over it.
+ */
+const treesOverControlTransforms = perObject((shared: SharedLiveTree) =>
+  perObject((controlTransforms: ControlLocalTransforms): SharedLiveTree => ({
+    roots: shared.roots,
+    ctx: { ...shared.ctx, controlTransforms },
+  }))
+);
+
+/**
+ * The shared tree of what {@link useLiveTreeInputs} read, at the load tick `version`. A tree with no
+ * relay or Skeleton2D reads no solved Control, so a solve never gives it a new tree.
+ */
 function sharedTreeAt(
-  { sceneGraph, loader, physicsClock }: LiveTreeInputs & { sceneGraph: SceneGraph },
+  { sceneGraph, loader, project, controlTransforms }: LiveTreeInputs & { sceneGraph: SceneGraph },
   version: number
 ): SharedLiveTree | null {
-  return sharedTreesOf(sceneGraph)(physicsClock)(loader, version);
+  const shared = sharedTreesOf(sceneGraph)(project)(loader, version);
+  if (!shared || controlTransforms.size === 0 || !readsControlTransforms(shared)) return shared;
+  return treesOverControlTransforms(shared)(controlTransforms);
 }
 
 /** What a shared live tree is built from. */
 interface LiveTreeInputs {
   sceneGraph: SceneGraph | null;
   loader: ResourceLoader | null;
-  physicsClock: PhysicsClock;
+  project: ProjectTreeSettings;
+  /** What the Control walk solved. Empty outside the canvas and before the walk has run. */
+  controlTransforms: ControlLocalTransforms;
 }
 
 /**
- * The project's physics clock, Godot's defaults without a project. Every live tree reads it
- * (`LiveTreeContext.physicsClock`), and one settings object hands back one clock.
+ * The project's tree settings, Godot's defaults without a project. Every live tree is made with
+ * them (`LiveTreeContext.project`), so a question about the project is asked of the tree.
  */
-export function useProjectPhysicsClock(): PhysicsClock {
-  return projectPhysicsClock(useProjectSettings().settings);
+export function useProjectTreeSettings(): ProjectTreeSettings {
+  return projectTreeSettings(useProjectSettings().settings);
 }
 
-/** The scene graph in context, or null with none, the loader and the project's physics clock. */
+/** The scene graph in context, or null with none, the loader and the project's tree settings. */
 function useLiveTreeInputs(): LiveTreeInputs {
   // Optional so viewport-level readers (the preview lighting) work in the
   // empty-canvas and test-renderer cases, where no scene is mounted at all.
   const sceneGraph = useOptionalHierarchy()?.sceneGraph ?? null;
   const loader = useResourceLoader();
-  const physicsClock = useProjectPhysicsClock();
-  return { sceneGraph, loader, physicsClock };
+  const project = useProjectTreeSettings();
+  const controlTransforms = useControlLocalTransforms();
+  return { sceneGraph, loader, project, controlTransforms };
 }
 
 /**
@@ -199,11 +236,11 @@ function useLiveTreeInputs(): LiveTreeInputs {
  * the one the graph, loader and load tick give, so a node collapses once however many ask.
  */
 export function useSharedLiveTree(): SharedLiveTree | null {
-  const { sceneGraph, loader, physicsClock } = useLiveTreeInputs();
+  const { sceneGraph, loader, project, controlTransforms } = useLiveTreeInputs();
   const version = useLiveTreeVersion(loader);
   return useMemo(
-    () => (sceneGraph ? sharedTreeAt({ sceneGraph, loader, physicsClock }, version) : null),
-    [sceneGraph, physicsClock, loader, version]
+    () => (sceneGraph ? sharedTreeAt({ sceneGraph, loader, project, controlTransforms }, version) : null),
+    [sceneGraph, project, loader, controlTransforms, version]
   );
 }
 
@@ -249,14 +286,14 @@ export function useLiveTreeSelection<T>(
   select: ((tree: SharedLiveTree) => T | undefined) | null,
   isSame: (a: T, b: T) => boolean
 ): T | undefined {
-  const { sceneGraph, loader, physicsClock } = useLiveTreeInputs();
+  const { sceneGraph, loader, project, controlTransforms } = useLiveTreeInputs();
   const readAt = useCallback(
     (version: number) => {
       if (!sceneGraph || !select) return undefined;
-      const tree = sharedTreeAt({ sceneGraph, loader, physicsClock }, version);
+      const tree = sharedTreeAt({ sceneGraph, loader, project, controlTransforms }, version);
       return tree ? select(tree) : undefined;
     },
-    [sceneGraph, physicsClock, loader, select]
+    [sceneGraph, project, loader, controlTransforms, select]
   );
   const isSameSelection = useCallback(
     (a: T | undefined, b: T | undefined) => sameSelection(a, b, isSame),
@@ -283,16 +320,16 @@ export function useSeatedRoots(): readonly TscnNode[] | undefined {
 const NO_ROOTS: readonly TscnNode[] = [];
 
 /**
- * The tree over the caches of a loader, with no roots, for each physics clock: a question about one
- * node needs only the caches. Every step question of a load tick shares it.
+ * The tree over the caches of a loader, with no roots, for each project's tree settings: a question
+ * about one node needs only the caches. Every step question of a load tick shares it.
  */
-const loaderTreesOf = perObject((physicsClock: PhysicsClock) =>
+const loaderTreesOf = perObject((project: ProjectTreeSettings) =>
   valueAtLoadTick((loader) =>
     liveTreeOf(NO_ROOTS, {
       externalResources: [],
       internalResources: [],
       ...loaderCaches(loader),
-      physicsClock,
+      project,
     })
   )
 );
@@ -306,14 +343,33 @@ const loaderTreesOf = perObject((physicsClock: PhysicsClock) =>
  */
 export function useLiveStepOf(node: LiveNode, scope: SceneScope): LiveStep {
   const loader = useResourceLoader();
-  const physicsClock = useProjectPhysicsClock();
+  const project = useProjectTreeSettings();
   const readsCaches = liveInstancePath(node, scope) !== null || glbPathOf(node) !== undefined;
   const watched = readsCaches ? loader : null;
   const readAt = useCallback(
-    (version: number) => loaderTreesOf(physicsClock)(watched, version).stepOf(node, scope),
-    [physicsClock, watched, node, scope]
+    (version: number) => loaderTreesOf(project)(watched, version).stepOf(node, scope),
+    [project, watched, node, scope]
   );
   return useReadAtLoadTick(watched, readAt, Object.is);
+}
+
+/**
+ * {@link useLiveStepOf} for several nodes of one scope, read together at each load tick: a reader
+ * with a list of instances calls one hook, not one per item. `nodes` and `scope` must be stable.
+ */
+export function useLiveStepsOf(nodes: readonly LiveNode[], scope: SceneScope): readonly LiveStep[] {
+  const loader = useResourceLoader();
+  const project = useProjectTreeSettings();
+  // No nodes read no cache, so such a reader watches no load, as `useLiveStepOf` does for a plain node.
+  const watched = nodes.length > 0 ? loader : null;
+  const readAt = useCallback(
+    (version: number) => {
+      const tree = loaderTreesOf(project)(watched, version);
+      return nodes.map((node) => tree.stepOf(node, scope));
+    },
+    [project, watched, nodes, scope]
+  );
+  return useReadAtLoadTick(watched, readAt, sameElements);
 }
 
 /** The live nodes matching `predicate`. Pass a stable `predicate` (module-level or memoised), or the memo recomputes every render. */

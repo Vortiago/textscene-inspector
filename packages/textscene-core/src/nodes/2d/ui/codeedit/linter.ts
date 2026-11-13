@@ -9,7 +9,7 @@ import type { LintRule, Diagnostic, RuleContext } from '../../../../linter/types
 import { ruleRegistry } from '../../../../linter/RuleRegistry.js';
 import { armEmits, reportArm, type RuleArms } from '../../../../linter/ruleArms.js';
 import { descendsFromClass } from '../../../../godot/classdb/classBaseTypes.js';
-import { parsePackedStringArray } from './arrayForms.js';
+import { parsePackedStringArray } from '../../../../parser/utils.js';
 import { passesDelimiterGuards, splitDelimiterEntry } from './delimiterEntry.js';
 
 const arms = {

@@ -56,6 +56,14 @@ describe('VSCodeResourceProvider', () => {
       expect(vscode.workspace.fs.readFile).toHaveBeenCalled();
     });
 
+    it('sends only the first maxBytes bytes of a binary file', async () => {
+      vscode.workspace.fs.readFile.mockResolvedValueOnce(new Uint8Array([1, 2, 3, 4, 5, 6]));
+
+      const result = await provider.loadResource('res://video/clip.ogv', undefined, 4);
+
+      expect(new Uint8Array(result as ArrayBuffer)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    });
+
     it('should resolve nested directory paths correctly', async () => {
       const content = 'texture data';
       const mockData = createMockFileData(content);
@@ -102,6 +110,10 @@ describe('VSCodeResourceProvider', () => {
         /Failed to load resource/
       );
       expect(readPaths()).toEqual(['/workspace/icon.png']);
+    });
+
+    it('lists a res:// folder that climbs out of the root as no folder, not as an error', async () => {
+      await expect(provider.listDirectory('res://../../../etc')).resolves.toBeNull();
     });
 
     it('should prevent path traversal attacks', async () => {

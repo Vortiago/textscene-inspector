@@ -11,7 +11,9 @@ renders_as: a StyleBox quad with a centred text run
 
 Button is Godot's clickable text control. The previewer paints the StyleBox its state
 calls for and centres the label on it, wrapping it to the box where `autowrap_mode`
-asks for it.
+asks for it. `TextParagraph::draw` cuts each label line to the paragraph box. The previewer
+does the same, so a word wider than the box stays inside it. The theme constant
+`align_to_largest_stylebox` lays the content inside the largest margins of any state.
 
 ## Linting
 
@@ -49,6 +51,12 @@ Button's own keys, `text`, `disabled`, `flat`, `alignment`, `icon`, `icon_alignm
 `flat` and `expand_icon` become `false` for any value that does not read as `true`, with
 no warning. The three alignments go through `parseOptionalInt`, so a malformed value
 becomes `undefined` and the render default applies.
+
+A `theme_type_variation` the default theme defines draws that variation's items
+(`default_theme.cpp:357-401`). `FlatButton` and `FlatMenuButton` draw no box in the normal, hover and
+disabled states and keep the margins of Button's box. A Label variation such as `HeaderSmall` takes
+Label's empty `normal` box with no margin and Label's white `font_color`, and Button's boxes for the other
+states. A Theme that sets an item wins over the default theme's.
 
 Button draws the theme text outline, `font_outline_color` and `outline_size`, as Godot
 does (`button.cpp:458-462`). A ring of `outline_size / 4` px sits under the fill. No ring

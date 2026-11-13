@@ -1,4 +1,4 @@
-/** CollisionShape2D parser: the Node2D transform plus the shape, disabled and debug colour. */
+/** CollisionShape2D parser: the Node2D transform plus the shape, disabled, one-way flag and debug colour. */
 
 import type { ParsedHeading } from '../../../../parser/utils';
 import type { CollisionShape2DProperties } from './types';
@@ -20,6 +20,9 @@ export function parseCollisionShape2D(
   }
   if (properties.disabled !== undefined) {
     result.disabled = boolSlotValue(properties.disabled) === true;
+  }
+  if (properties.one_way_collision !== undefined) {
+    result.oneWayCollision = boolSlotValue(properties.one_way_collision) === true;
   }
   return result;
 }

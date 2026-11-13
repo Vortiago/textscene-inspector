@@ -9,7 +9,13 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
+import {
+  contentMarginSize,
+  flatCornerDetail,
+  ZERO_SIDES,
+  type StyleBoxFlatData,
+} from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
@@ -18,13 +24,10 @@ import type { Rgba } from '../../../../godot/math/math';
 const TREE_PANEL_FILL: Rgba = { r: 0.1, g: 0.1, b: 0.1, a: 0.6 };
 
 const DEFAULT_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
-const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /**
  * `default_theme.cpp:860`: `make_flat_stylebox(style_normal_color, 4, 4, 4, 5)`, whose bottom
- * margin (5) differs from `default_margin` (4). `NativeTheme` has no raw `scale` for
- * `Math.round(5 * scale)`, so the bottom is `Math.round(theme.contentMargin * 1.25)`, which is 5
- * at the default scale.
+ * margin (5) differs from `default_margin` (4), so the bottom is `Math.round(5 * scale)`.
  */
 function treePanelStyleBox(theme: NativeTheme): StyleBoxFlatData {
   const m = theme.contentMargin;
@@ -39,12 +42,12 @@ function treePanelStyleBox(theme: NativeTheme): StyleBoxFlatData {
       bottomLeft: theme.cornerRadius,
     },
     expandMargin: ZERO_SIDES,
-    contentMargin: { left: m, top: m, right: m, bottom: Math.round(m * 1.25) },
+    contentMargin: { left: m, top: m, right: m, bottom: Math.round(5 * theme.scale) },
     drawCenter: true,
     borderBlend: false,
     antiAliased: true,
     aaSize: 1,
-    cornerDetail: 8,
+    cornerDetail: flatCornerDetail(DEFAULT_CORNER_RADIUS, theme.scale),
     skew: { x: 0, y: 0 },
     shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
     shadowSize: 0,

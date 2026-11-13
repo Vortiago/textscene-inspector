@@ -5,8 +5,38 @@
  * (`default_theme_icons_builders.py`). Licence: Godot Engine, MIT, see THIRD-PARTY-NOTICES.md.
  */
 
+import type { FileDialogListIcon, FileDialogThemeIcon } from '../../../godot/scene/fileDialog';
+
 export function svgDataUrl(base64: string): string {
   return `data:image/svg+xml;base64,${base64}`;
+}
+
+/** Written only by `vendoredIcon`, at module load. Never cleared: the icons live as long as the page. */
+const svgUrlByKey = new Map<string, string>();
+const keyBySvgUrl = new Map<string, string>();
+
+/**
+ * The `data:` SVG URL of the Godot icon `scene/theme/icons/<key>.svg`, recorded so the bake can
+ * rasterise it and `themeIconSource` can find its raster. A key names one SVG.
+ */
+export function vendoredIcon(key: string, base64: string): string {
+  const url = svgDataUrl(base64);
+  const known = svgUrlByKey.get(key);
+  if (known !== undefined && known !== url)
+    throw new Error(`expected one SVG for the icon key ${key}, got two`);
+  svgUrlByKey.set(key, url);
+  keyBySvgUrl.set(url, key);
+  return url;
+}
+
+/** Each vendored icon's key and SVG URL, in the order the modules registered them. */
+export function vendoredIconSvgUrls(): ReadonlyMap<string, string> {
+  return svgUrlByKey;
+}
+
+/** The key of a vendored icon's SVG URL, or undefined for any other URL. */
+export function vendoredIconKey(svgUrl: string): string | undefined {
+  return keyBySvgUrl.get(svgUrl);
 }
 
 /** `scene/theme/icons/checked.svg` (16x16). */
@@ -58,14 +88,14 @@ export interface CheckBoxIcons {
 }
 
 export const CHECK_BOX_ICONS: CheckBoxIcons = {
-  checked: svgDataUrl(CHECKED_B64),
-  checkedDisabled: svgDataUrl(CHECKED_DISABLED_B64),
-  unchecked: svgDataUrl(UNCHECKED_B64),
-  uncheckedDisabled: svgDataUrl(UNCHECKED_DISABLED_B64),
-  radioChecked: svgDataUrl(RADIO_CHECKED_B64),
-  radioCheckedDisabled: svgDataUrl(RADIO_CHECKED_DISABLED_B64),
-  radioUnchecked: svgDataUrl(RADIO_UNCHECKED_B64),
-  radioUncheckedDisabled: svgDataUrl(RADIO_UNCHECKED_DISABLED_B64),
+  checked: vendoredIcon('checked', CHECKED_B64),
+  checkedDisabled: vendoredIcon('checked_disabled', CHECKED_DISABLED_B64),
+  unchecked: vendoredIcon('unchecked', UNCHECKED_B64),
+  uncheckedDisabled: vendoredIcon('unchecked_disabled', UNCHECKED_DISABLED_B64),
+  radioChecked: vendoredIcon('radio_checked', RADIO_CHECKED_B64),
+  radioCheckedDisabled: vendoredIcon('radio_checked_disabled', RADIO_CHECKED_DISABLED_B64),
+  radioUnchecked: vendoredIcon('radio_unchecked', RADIO_UNCHECKED_B64),
+  radioUncheckedDisabled: vendoredIcon('radio_unchecked_disabled', RADIO_UNCHECKED_DISABLED_B64),
 };
 
 /** OptionButton's single icon: `default_theme.cpp:235`. */
@@ -74,7 +104,7 @@ interface OptionButtonIcons {
 }
 
 export const OPTION_BUTTON_ICONS: OptionButtonIcons = {
-  arrow: svgDataUrl(OPTION_BUTTON_ARROW_B64),
+  arrow: vendoredIcon('option_button_arrow', OPTION_BUTTON_ARROW_B64),
 };
 
 /** `scene/theme/icons/hsplitter.svg` (8×48): HSplitContainer's grabber. */
@@ -92,8 +122,8 @@ interface SplitContainerIcons {
 }
 
 export const SPLIT_CONTAINER_ICONS: SplitContainerIcons = {
-  hsplitter: svgDataUrl(HSPLITTER_B64),
-  vsplitter: svgDataUrl(VSPLITTER_B64),
+  hsplitter: vendoredIcon('hsplitter', HSPLITTER_B64),
+  vsplitter: vendoredIcon('vsplitter', VSPLITTER_B64),
 };
 
 /** `scene/theme/icons/slider_grabber.svg` (16x16): HSlider/VSlider's `grabber` icon. */
@@ -123,8 +153,8 @@ interface SliderGrabberIcons {
 }
 
 export const SLIDER_GRABBER_ICONS: SliderGrabberIcons = {
-  grabber: svgDataUrl(SLIDER_GRABBER_B64),
-  grabberDisabled: svgDataUrl(SLIDER_GRABBER_DISABLED_B64),
+  grabber: vendoredIcon('slider_grabber', SLIDER_GRABBER_B64),
+  grabberDisabled: vendoredIcon('slider_grabber_disabled', SLIDER_GRABBER_DISABLED_B64),
 };
 
 /** HSlider/VSlider's single `tick` icon, per axis (`default_theme.cpp:592,607`). */
@@ -134,8 +164,8 @@ interface SliderTickIcons {
 }
 
 export const SLIDER_TICK_ICONS: SliderTickIcons = {
-  hslider: svgDataUrl(HSLIDER_TICK_B64),
-  vslider: svgDataUrl(VSLIDER_TICK_B64),
+  hslider: vendoredIcon('hslider_tick', HSLIDER_TICK_B64),
+  vslider: vendoredIcon('vslider_tick', VSLIDER_TICK_B64),
 };
 
 /** `scene/theme/icons/toggle_on.svg` (32x16): CheckButton's `checked`. */
@@ -187,14 +217,14 @@ export interface CheckButtonIcons {
 }
 
 export const CHECK_BUTTON_ICONS: CheckButtonIcons = {
-  checked: svgDataUrl(TOGGLE_ON_B64),
-  checkedDisabled: svgDataUrl(TOGGLE_ON_DISABLED_B64),
-  unchecked: svgDataUrl(TOGGLE_OFF_B64),
-  uncheckedDisabled: svgDataUrl(TOGGLE_OFF_DISABLED_B64),
-  checkedMirrored: svgDataUrl(TOGGLE_ON_MIRRORED_B64),
-  checkedDisabledMirrored: svgDataUrl(TOGGLE_ON_DISABLED_MIRRORED_B64),
-  uncheckedMirrored: svgDataUrl(TOGGLE_OFF_MIRRORED_B64),
-  uncheckedDisabledMirrored: svgDataUrl(TOGGLE_OFF_DISABLED_MIRRORED_B64),
+  checked: vendoredIcon('toggle_on', TOGGLE_ON_B64),
+  checkedDisabled: vendoredIcon('toggle_on_disabled', TOGGLE_ON_DISABLED_B64),
+  unchecked: vendoredIcon('toggle_off', TOGGLE_OFF_B64),
+  uncheckedDisabled: vendoredIcon('toggle_off_disabled', TOGGLE_OFF_DISABLED_B64),
+  checkedMirrored: vendoredIcon('toggle_on_mirrored', TOGGLE_ON_MIRRORED_B64),
+  checkedDisabledMirrored: vendoredIcon('toggle_on_disabled_mirrored', TOGGLE_ON_DISABLED_MIRRORED_B64),
+  uncheckedMirrored: vendoredIcon('toggle_off_mirrored', TOGGLE_OFF_MIRRORED_B64),
+  uncheckedDisabledMirrored: vendoredIcon('toggle_off_disabled_mirrored', TOGGLE_OFF_DISABLED_MIRRORED_B64),
 };
 
 /** Every vendored CheckButton icon shares this authored size (`toggle_on.svg` et al, 32x16). */
@@ -208,11 +238,11 @@ const ARROW_DOWN_B64 =
 const ARROW_UP_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTExLjAxMTA2MyA5Ljk3NzYyNDYtMy4wMjIyMDk0LTIuOTc3NjI0Ni0yLjk3NzYyNDcgMy4wMjIyMSIvPjwvc3ZnPgo=';
 
-/** `scene/theme/icons/arrow_right.svg` (16x16): FoldableContainer's `folded_arrow`. */
+/** `scene/theme/icons/arrow_right.svg` (16x16): FoldableContainer's `folded_arrow` and FileDialog's `forward_folder`. */
 const ARROW_RIGHT_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTYgMTEgMy0zLTMtMyIvPjwvc3ZnPgo=';
 
-/** `scene/theme/icons/arrow_left.svg` (16x16): FoldableContainer's `folded_arrow_mirrored` (RTL only, never selected here). */
+/** `scene/theme/icons/arrow_left.svg` (16x16): FoldableContainer's `folded_arrow_mirrored` (RTL only) and FileDialog's `back_folder`. */
 const ARROW_LEFT_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS1vcGFjaXR5PSIuNDUiIHN0cm9rZS13aWR0aD0iMiIgZD0ibTkgMTEtMy0zIDMtMyIvPjwvc3ZnPgo=';
 
@@ -229,10 +259,10 @@ interface FoldableContainerIcons {
 }
 
 export const FOLDABLE_CONTAINER_ICONS: FoldableContainerIcons = {
-  expandedArrow: svgDataUrl(ARROW_DOWN_B64),
-  expandedArrowMirrored: svgDataUrl(ARROW_UP_B64),
-  foldedArrow: svgDataUrl(ARROW_RIGHT_B64),
-  foldedArrowMirrored: svgDataUrl(ARROW_LEFT_B64),
+  expandedArrow: vendoredIcon('arrow_down', ARROW_DOWN_B64),
+  expandedArrowMirrored: vendoredIcon('arrow_up', ARROW_UP_B64),
+  foldedArrow: vendoredIcon('arrow_right', ARROW_RIGHT_B64),
+  foldedArrowMirrored: vendoredIcon('arrow_left', ARROW_LEFT_B64),
 };
 
 /** `scene/theme/icons/region_unfolded.svg` (12x12): CodeEdit's `can_fold_code_region`. */
@@ -250,8 +280,8 @@ interface CodeEditFoldIcons {
 }
 
 export const CODE_EDIT_FOLD_ICONS: CodeEditFoldIcons = {
-  canFold: svgDataUrl(ARROW_DOWN_B64),
-  canFoldCodeRegion: svgDataUrl(REGION_UNFOLDED_B64),
+  canFold: vendoredIcon('arrow_down', ARROW_DOWN_B64),
+  canFoldCodeRegion: vendoredIcon('region_unfolded', REGION_UNFOLDED_B64),
 };
 
 /** `scene/theme/icons/text_edit_tab.svg` (8x8): TextEdit/CodeEdit's `tab`. */
@@ -269,8 +299,8 @@ interface TextEditGlyphIcons {
 }
 
 export const TEXT_EDIT_GLYPH_ICONS: TextEditGlyphIcons = {
-  tab: svgDataUrl(TEXT_EDIT_TAB_B64),
-  space: svgDataUrl(TEXT_EDIT_SPACE_B64),
+  tab: vendoredIcon('text_edit_tab', TEXT_EDIT_TAB_B64),
+  space: vendoredIcon('text_edit_space', TEXT_EDIT_SPACE_B64),
 };
 
 /** `scene/theme/icons/scroll_hint_vertical.svg` (32x24): ScrollContainer's `scroll_hint_vertical`, a white gradient from alpha 0.3 at the top edge to 0 at the bottom, uniform across its width. */
@@ -288,8 +318,8 @@ interface ScrollHintIcons {
 }
 
 export const SCROLL_HINT_ICONS: ScrollHintIcons = {
-  vertical: svgDataUrl(SCROLL_HINT_VERTICAL_B64),
-  horizontal: svgDataUrl(SCROLL_HINT_HORIZONTAL_B64),
+  vertical: vendoredIcon('scroll_hint_vertical', SCROLL_HINT_VERTICAL_B64),
+  horizontal: vendoredIcon('scroll_hint_horizontal', SCROLL_HINT_HORIZONTAL_B64),
 };
 
 /** `scene/theme/icons/close.svg` (16x16): TabBar's `close`. */
@@ -316,12 +346,12 @@ interface TabBarIcons {
 }
 
 export const TAB_BAR_ICONS: TabBarIcons = {
-  close: svgDataUrl(TAB_BAR_CLOSE_B64),
-  incrementScroll: svgDataUrl(TAB_BAR_SCROLL_RIGHT_B64),
-  decrementScroll: svgDataUrl(TAB_BAR_SCROLL_LEFT_B64),
+  close: vendoredIcon('close', TAB_BAR_CLOSE_B64),
+  incrementScroll: vendoredIcon('scroll_button_right', TAB_BAR_SCROLL_RIGHT_B64),
+  decrementScroll: vendoredIcon('scroll_button_left', TAB_BAR_SCROLL_LEFT_B64),
 };
 
-/** Every vendored TabBar icon shares this authored size (16x16): never rescaled by the project theme scale, same limitation as `SPIN_BOX_ARROW_ICON_SIZE`. */
+/** Every vendored TabBar icon's authored size (16x16). Every read scales it by the theme scale. */
 export const TAB_BAR_ICON_SIZE = 16;
 
 /** `scene/theme/icons/mini_checkerboard.svg` (16x16): the alpha-preview tile, `ColorPicker`'s `sample_bg` and `ColorPickerButton`'s `bg`. */
@@ -340,11 +370,22 @@ const COLOR_PICKER_CURSOR_B64 =
 const COLOR_PICKER_CURSOR_BG_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMiIgaGVpZ2h0PSIxMiI+PGNpcmNsZSBjeD0iNiIgY3k9IjYiIHI9IjQiIGZpbGw9IiNmZmYiLz48L3N2Zz4K';
 
+/** `scene/theme/icons/script.svg` (16x16): `ColorPicker`'s `color_script`, the icon of `text_type` for an expression (`default_theme.cpp:1102`). */
+const COLOR_SCRIPT_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0iTTYgMWEyIDIgMCAwIDAtMiAydjdIMXYzYTIgMiAwIDAgMCAyIDJoN2EyIDIgMCAwIDAgMi0yVjVoM1YzYTIgMiAwIDAgMC0yLTJ6Ii8+PHBhdGggZmlsbC1vcGFjaXR5PSIuMiIgZD0iTTYgMWEyIDIgMCAwIDAtMiAydjdIMXYzYTIgMiAwIDEgMCA0IDBWM2ExIDEgMCAwIDEgMiAwdjNoNVY1SDhWM2EyIDIgMCAwIDAtMi0yek0yIDExaDJ2MmExIDEgMCAwIDEtMiAweiIvPjwvc3ZnPgo=';
+
 /** ColorPicker's/ColorPickerButton's checkerboard, overbright and cursor icons: `default_theme.cpp:1096,1098,1100-1101,1133`. */
-export const MINI_CHECKERBOARD_ICON = svgDataUrl(MINI_CHECKERBOARD_B64);
-export const COLOR_PICKER_OVERBRIGHT_ICON = svgDataUrl(COLOR_PICKER_OVERBRIGHT_B64);
-export const COLOR_PICKER_CURSOR_ICON = svgDataUrl(COLOR_PICKER_CURSOR_B64);
-export const COLOR_PICKER_CURSOR_BG_ICON = svgDataUrl(COLOR_PICKER_CURSOR_BG_B64);
+export const MINI_CHECKERBOARD_ICON = vendoredIcon('mini_checkerboard', MINI_CHECKERBOARD_B64);
+export const COLOR_PICKER_OVERBRIGHT_ICON = vendoredIcon(
+  'color_picker_overbright',
+  COLOR_PICKER_OVERBRIGHT_B64
+);
+
+/** `color_picker_overbright.svg`'s authored size, 16x16. */
+export const COLOR_PICKER_OVERBRIGHT_ICON_SIZE = 16;
+export const COLOR_SCRIPT_ICON = vendoredIcon('script', COLOR_SCRIPT_B64);
+export const COLOR_PICKER_CURSOR_ICON = vendoredIcon('color_picker_cursor', COLOR_PICKER_CURSOR_B64);
+export const COLOR_PICKER_CURSOR_BG_ICON = vendoredIcon('color_picker_cursor_bg', COLOR_PICKER_CURSOR_BG_B64);
 
 /** The checkerboard tile's own natural size: 16x16. */
 export const MINI_CHECKERBOARD_SIZE = 16;
@@ -357,9 +398,17 @@ const COLOR_PICKER_MENU_B64 =
 const COLOR_PICKER_PIPETTE_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTEwIDNhMSAxIDAgMCAwLTQgMHYySDV2MmgxdjVjMCAuNzEyLjM2IDEuMzcyIDEgMS43M1YxNWgydi0xLjI3Yy42MTgtLjM2IDEtMSAxLTEuNzNWN2gxVjVoLTFWM3pNNyA3aDJ2NWExIDEgMCAwIDEtMiAweiIvPjwvc3ZnPgo=';
 
-/** `scene/theme/icons/picker_shape_rectangle.svg` (16x16): `ColorPicker`'s `shape_rect`, `btn_shape`'s own icon at `picker_shape = SHAPE_HSV_RECTANGLE` (`default_theme.cpp:1093`). */
+/** `scene/theme/icons/picker_shape_rectangle.svg` (16x16): `ColorPicker`'s `shape_rect`, `btn_shape`'s icon at the HSV and both OK rectangles (`default_theme.cpp:1093`). */
 const COLOR_PICKER_SHAPE_RECT_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2VhZWFlYSIgZD0iTS41IDIuNWgxMXYxMUguNXptMTIgMGgydjExaC0yeiIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/picker_shape_rectangle_wheel.svg` (16x16): `ColorPicker`'s `shape_rect_wheel`, `btn_shape`'s icon at `SHAPE_HSV_WHEEL` (`default_theme.cpp:1094`). */
+const COLOR_PICKER_SHAPE_RECT_WHEEL_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjUuMjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2VhZWFlYSIgc3Ryb2tlLXdpZHRoPSIxLjc1Ii8+PHBhdGggZmlsbD0iI2VhZWFlYSIgZD0iTTQuOSA0LjloNi4ydjYuMkg0Ljl6Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/picker_shape_circle.svg` (16x16): `ColorPicker`'s `shape_circle`, `btn_shape`'s icon at both circles (`default_theme.cpp:1092`). */
+const COLOR_PICKER_SHAPE_CIRCLE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2VhZWFlYSIgZD0iTTYuNSAyLjVhNS41IDUuNSAwIDAgMCAwIDExIDUuNSA1LjUgMCAwIDAgMC0xMW02LjUgMGgydjExaC0yeiIvPjwvc3ZnPgo=';
 
 /**
  * `scene/theme/icons/color_picker_bar_arrow.svg` (16x16, `viewBox="0 0 16 20"`): `ColorPicker`'s
@@ -369,13 +418,18 @@ const COLOR_PICKER_SHAPE_RECT_B64 =
 const COLOR_PICKER_BAR_ARROW_B64 =
   'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDIwIj48cGF0aCBmaWxsPSIjYjJiMmIyIiBzdHJva2U9IiNiMmIyYjIiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Im0zLjU2NCAxNS4yMThoOC44NzJsLTQuNDM2LTQuNDM2eiIvPjwvc3ZnPgo=';
 
-/** ColorPicker's button and bar icons (`default_theme.cpp:1088-1101`). `shape_circle` and `shape_rect_wheel` are not vended, since the previewer draws only `SHAPE_HSV_RECTANGLE`. */
-export const COLOR_PICKER_MENU_ICON = svgDataUrl(COLOR_PICKER_MENU_B64);
-export const COLOR_PICKER_PIPETTE_ICON = svgDataUrl(COLOR_PICKER_PIPETTE_B64);
-export const COLOR_PICKER_SHAPE_RECT_ICON = svgDataUrl(COLOR_PICKER_SHAPE_RECT_B64);
-export const COLOR_PICKER_BAR_ARROW_ICON = svgDataUrl(COLOR_PICKER_BAR_ARROW_B64);
+/** ColorPicker's button and bar icons (`default_theme.cpp:1088-1101`). */
+export const COLOR_PICKER_MENU_ICON = vendoredIcon('tabs_menu_hl', COLOR_PICKER_MENU_B64);
+export const COLOR_PICKER_PIPETTE_ICON = vendoredIcon('color_picker_pipette', COLOR_PICKER_PIPETTE_B64);
+/** The `btn_shape` icons, by their theme item names. */
+export const COLOR_PICKER_SHAPE_ICONS = {
+  shape_rect: vendoredIcon('picker_shape_rectangle', COLOR_PICKER_SHAPE_RECT_B64),
+  shape_rect_wheel: vendoredIcon('picker_shape_rectangle_wheel', COLOR_PICKER_SHAPE_RECT_WHEEL_B64),
+  shape_circle: vendoredIcon('picker_shape_circle', COLOR_PICKER_SHAPE_CIRCLE_B64),
+} as const;
+export const COLOR_PICKER_BAR_ARROW_ICON = vendoredIcon('color_picker_bar_arrow', COLOR_PICKER_BAR_ARROW_B64);
 
-/** Every one of the four icons just above shares this authored size: 16x16, never rescaled by the project theme scale (same limitation as `SPIN_BOX_ARROW_ICON_SIZE`). */
+/** Every one of the six icons just above shares this authored size: 16x16, scaled by the project theme scale at each read (`scaledIconSize`). */
 export const COLOR_PICKER_BUTTON_ICON_SIZE = 16;
 
 /** The cursor icons' own natural size: both 12x12. */
@@ -425,17 +479,102 @@ interface GraphEditIcons {
 }
 
 export const GRAPH_EDIT_ICONS: GraphEditIcons = {
-  zoomOut: svgDataUrl(GRAPH_EDIT_ZOOM_OUT_B64),
-  zoomIn: svgDataUrl(GRAPH_EDIT_ZOOM_IN_B64),
-  zoomReset: svgDataUrl(GRAPH_EDIT_ZOOM_RESET_B64),
-  gridToggle: svgDataUrl(GRAPH_EDIT_GRID_TOGGLE_B64),
-  minimapToggle: svgDataUrl(GRAPH_EDIT_MINIMAP_TOGGLE_B64),
-  snappingToggle: svgDataUrl(GRAPH_EDIT_SNAPPING_TOGGLE_B64),
-  layout: svgDataUrl(GRAPH_EDIT_LAYOUT_B64),
+  zoomOut: vendoredIcon('zoom_less', GRAPH_EDIT_ZOOM_OUT_B64),
+  zoomIn: vendoredIcon('zoom_more', GRAPH_EDIT_ZOOM_IN_B64),
+  zoomReset: vendoredIcon('zoom_reset', GRAPH_EDIT_ZOOM_RESET_B64),
+  gridToggle: vendoredIcon('grid_toggle', GRAPH_EDIT_GRID_TOGGLE_B64),
+  minimapToggle: vendoredIcon('grid_minimap', GRAPH_EDIT_MINIMAP_TOGGLE_B64),
+  snappingToggle: vendoredIcon('grid_snap', GRAPH_EDIT_SNAPPING_TOGGLE_B64),
+  layout: vendoredIcon('grid_layout', GRAPH_EDIT_LAYOUT_B64),
 };
 
 /** GraphEditMinimap's own single icon: `default_theme.cpp:1349`. */
-export const GRAPH_EDIT_MINIMAP_RESIZER_ICON = svgDataUrl(GRAPH_EDIT_MINIMAP_RESIZER_B64);
+export const GRAPH_EDIT_MINIMAP_RESIZER_ICON = vendoredIcon('resizer_nw', GRAPH_EDIT_MINIMAP_RESIZER_B64);
 
-/** Every GraphEdit/GraphEditMinimap icon above shares this authored size: 16x16, never rescaled by the project theme scale (same limitation as `SPIN_BOX_ARROW_ICON_SIZE`). */
+/** Every GraphEdit/GraphEditMinimap icon above shares this authored size: 16x16, scaled by the project theme scale at each read (`scaledIconSize`). */
 export const GRAPH_EDIT_ICON_SIZE = 16;
+
+/** `scene/theme/icons/folder_up.svg` (16x16), bound as `FileDialog/parent_folder` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_PARENT_FOLDER_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjYjJiMmIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTggMTFWNG00IDRMOCA0IDQgOCIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/reload.svg` (16x16), bound as `FileDialog/reload` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_RELOAD_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTUgOGE0IDQgMCAxIDEgNCA0djJhNiA2IDAgMSAwLTYtNkgxbDMgNCAzLTR6Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/favorite.svg` (16x16), bound as `FileDialog/favorite` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_FAVORITE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0iTTggMS43IDUuNjI2IDUuNzk3IDEgNi44OTVsMy4yMzYgMy40MDgtLjM1OSA0LjY3MyA0LjE0LTEuOTc3IDQuMTU3IDEuOTQyLS4zOTYtNC42NTNMMTUgNi44OTVsLTQuNjI2LTEuMDk4eiIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/folder_create.svg` (16x16), bound as `FileDialog/create_folder` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_CREATE_FOLDER_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTIgM2ExIDEgMCAwIDAtMSAxdjEwYTEgMSAwIDAgMCAxIDFoOHYtMUg4di00aDJWOGg0djJoMVY3YTEgMSAwIDAgMC0xLTFoLTRhMSAxIDAgMCAxLTEtMVY0YTEgMSAwIDAgMC0xLTFaIi8+PHBhdGggZmlsbD0iI2ZlZmZmZSIgZD0iTTEzIDEzaDJ2LTJoLTJWOWgtMnYySDl2MmgydjJoMnoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/visibility_visible.svg` (16x16), bound as `FileDialog/toggle_hidden` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_TOGGLE_HIDDEN_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTggMkM1LjQ0MyAyIDIuMjA5IDMuOTQ4IDEuMDQ1IDcuNzA1YTEgMSAwIDAgMCAwIC41NUMyLjE2MyAxMi4yMTEgNS41IDE0IDggMTRzNS44MzYtMS43ODkgNi45NjEtNS43MjVhMSAxIDAgMCAwIDAtLjU1QzEzLjg2MSAzLjkzNSAxMC41NTQgMiA4IDJ6bTAgMmE0IDQgMCAwIDEgMCA4IDQgNCAwIDAgMSAwLTh6bTAgMmEyIDIgMCAwIDAgMCA0IDIgMiAwIDAgMCAwLTR6Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/file_mode_thumbnail.svg` (16x16), bound as `FileDialog/thumbnail_mode` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_THUMBNAIL_MODE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0ibTIgMnY1aDV2LTV6bTcgMHY1aDV2LTV6bS03IDd2NWg1di01em03IDB2NWg1di01eiIvPjwvc3ZnPgo=';
+
+/** `scene/theme/icons/file_mode_list.svg` (16x16), bound as `FileDialog/list_mode` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_LIST_MODE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0ibTIgMnYyaDJ2LTJ6bTQgMHYyaDh2LTJ6bS00IDV2Mmgydi0yem00IDB2Mmg4di0yem0tNCA1djJoMnYtMnptNCAwdjJoOHYtMnoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/toggle_filename_filter.svg` (16x16), bound as `FileDialog/toggle_filename_filter` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_TOGGLE_FILENAME_FILTER_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PGcgZmlsbD0iI2UwZTBlMCI+PHBhdGggZD0ibTEzLjI5Ny43MTRoLTEzLjAxM2EuNDU0LjQ1NCAwIDAgMCAtLjMxOC43NzlsNC42MTUgNC41MDd2Ny4wODZhLjQ1LjQ1IDAgMCAwIC43MzguMzU0bDMuNTExLTIuODEyYS40NTQuNDU0IDAgMCAwIC4xNy0uMzU0di00LjI3NGw0LjYxNC00LjUwNmEuNDU0LjQ1NCAwIDAgMCAtLjMxNy0uNzc5eiIvPjxwYXRoIGQ9Im0xMS4wODU4MzIgMTQuMTgxOTZjMy4zOTk0NDMgMS45NzQ1NyA2Ljg1NTkyNS0yLjQ0MTA5NCA0LjA3NDEwMi01LjE4MTUxNjQtMi43ODE4MjUtMi43NDA0MjE3LTcuMjY0MjAwOC42NjQ2MTc0LTUuMjU5Nzk5NCA0LjAxMzQ2NTRsLTEuOTAwMTM0NiAxLjg3MTg1NCAxLjE4NTY5NzMgMS4xNjgwNTF6bTEuNjk5NzIzLTQuNDk0NTk4MWMyLjIzNjEwOSAwIDIuMjM2MTA5IDMuMzA0MjQ0MSAwIDMuMzA0MjQ0MS0yLjIzNjEwOCAwLTIuMjM2MTA4LTMuMzA0MjQ0MSAwLTMuMzA0MjQ0MXoiLz48L2c+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/sort.svg` (16x16), bound as `FileDialog/sort` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_SORT_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0iTTkgMXYyaDZWMXpNNCAxYTEgMSAwIDAgMC0uNjkxLjI5MWwtMiAyYTEgMSAwIDAgMCAxLjQxNCAxLjQxNGwuMjkzLS4yOTN2Ny4xNzJsLS4yOTMtLjI5M2ExIDEgMCAwIDAtMS40MTQgMS40MTRsMiAyYTEgMSAwIDAgMCAxLjQxNCAwbDItMmExIDEgMCAwIDAtMS40MTQtMS40MTRsLS4yOTMuMjkzVjQuNDEybC4yOTMuMjkzYTEgMSAwIDAgMCAxLjQxNC0xLjQxNGwtMi0yQTEgMSAwIDAgMCA0IDF6bTUgNnYyaDRWN3ptMCA2djJoMnYtMnoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/move_up.svg` (16x16), bound as `FileDialog/favorite_up` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_FAVORITE_UP_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTBlMGUwIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTYgMTRoNG0tMi00VjJtNCA1TDggMiA0IDciLz48L3N2Zz4K';
+
+/** `scene/theme/icons/move_down.svg` (16x16), bound as `FileDialog/favorite_down` (`default_theme.cpp:702-716`). */
+const FILE_DIALOG_FAVORITE_DOWN_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZTBlMGUwIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iMiIgZD0iTTEwIDJINm0yIDR2OE00IDlsNCA1IDQtNSIvPjwvc3ZnPgo=';
+
+/** The vendored default of each `FileDialog` theme icon the toolbar buttons show (`default_theme.cpp:702-716`). `back_folder` and `forward_folder` are `arrow_left.svg` and `arrow_right.svg`. */
+export const FILE_DIALOG_ICON_URLS: Readonly<Record<FileDialogThemeIcon, string>> = {
+  back_folder: vendoredIcon('arrow_left', ARROW_LEFT_B64),
+  forward_folder: vendoredIcon('arrow_right', ARROW_RIGHT_B64),
+  parent_folder: vendoredIcon('folder_up', FILE_DIALOG_PARENT_FOLDER_B64),
+  reload: vendoredIcon('reload', FILE_DIALOG_RELOAD_B64),
+  favorite: vendoredIcon('favorite', FILE_DIALOG_FAVORITE_B64),
+  create_folder: vendoredIcon('folder_create', FILE_DIALOG_CREATE_FOLDER_B64),
+  toggle_hidden: vendoredIcon('visibility_visible', FILE_DIALOG_TOGGLE_HIDDEN_B64),
+  thumbnail_mode: vendoredIcon('file_mode_thumbnail', FILE_DIALOG_THUMBNAIL_MODE_B64),
+  list_mode: vendoredIcon('file_mode_list', FILE_DIALOG_LIST_MODE_B64),
+  toggle_filename_filter: vendoredIcon('toggle_filename_filter', FILE_DIALOG_TOGGLE_FILENAME_FILTER_B64),
+  sort: vendoredIcon('sort', FILE_DIALOG_SORT_B64),
+  favorite_up: vendoredIcon('move_up', FILE_DIALOG_FAVORITE_UP_B64),
+  favorite_down: vendoredIcon('move_down', FILE_DIALOG_FAVORITE_DOWN_B64),
+};
+
+/** `scene/theme/icons/folder.svg` (16x16), bound as `FileDialog/folder` (`default_theme.cpp:709`). */
+const FILE_DIALOG_FOLDER_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTIgMmExIDEgMCAwIDAtMSAxdjEwYTEgMSAwIDAgMCAxIDFoMTJhMSAxIDAgMCAwIDEtMVY2YTEgMSAwIDAgMC0xLTFoLTRhMSAxIDAgMCAxLTEtMVYzYTEgMSAwIDAgMC0xLTF6Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/file.svg` (16x16), bound as `FileDialog/file` (`default_theme.cpp:710`). */
+const FILE_DIALOG_FILE_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZmlsbD0iI2IyYjJiMiIgZD0iTTIgMXYxNGgxMlY2SDlWMXptOCAwdjRoNHoiLz48L3N2Zz4K';
+
+/** `scene/theme/icons/folder_thumbnail.svg` (64x64), bound as `FileDialog/folder_thumbnail` (`default_theme.cpp:718`). */
+const FILE_DIALOG_FOLDER_THUMBNAIL_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHBhdGggZmlsbD0iI2UwZTBlMCIgZD0iTTEyIDEwYTQgNCAwIDAgMC00IDR2MzZhNCA0IDAgMCAwIDQgNGg0MGE0IDQgMCAwIDAgNC00VjIyYTQgNCAwIDAgMC00LTRIMzZsLTItNGMtMS0yLTItNC00LTR6Ii8+PC9zdmc+Cg==';
+
+/** `scene/theme/icons/file_thumbnail.svg` (64x64), bound as `FileDialog/file_thumbnail` (`default_theme.cpp:717`). */
+const FILE_DIALOG_FILE_THUMBNAIL_B64 =
+  'PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHBhdGggZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIuNiIgZD0iTTE0IDVhNCA0IDAgMCAwLTQgNHY0NmE0IDQgMCAwIDAgNCA0aDM2YTQgNCAwIDAgMCA0LTRWMjJhMSAxIDAgMCAwLS4yOS0uNzA3bC0xNi0xNmExIDEgMCAwIDAtLjcwNy0uMjlWNUgxNHptMCAyaDIydjEyYTQgNCAwIDAgMCA0IDRoMTJ2MzJhMiAyIDAgMCAxLTIgMkgxNGEyIDIgMCAwIDEtMi0yVjlhMiAyIDAgMCAxIDItMnoiLz48L3N2Zz4K';
+
+/** The vendored default of each icon the file list draws for a folder or a file (`file_dialog.cpp:933-940,1016-1040`). */
+export const FILE_DIALOG_LIST_ICON_URLS: Readonly<Record<FileDialogListIcon, string>> = {
+  folder: vendoredIcon('folder', FILE_DIALOG_FOLDER_B64),
+  file: vendoredIcon('file', FILE_DIALOG_FILE_B64),
+  folder_thumbnail: vendoredIcon('folder_thumbnail', FILE_DIALOG_FOLDER_THUMBNAIL_B64),
+  file_thumbnail: vendoredIcon('file_thumbnail', FILE_DIALOG_FILE_THUMBNAIL_B64),
+};

@@ -7,13 +7,32 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { linearChannelToSRGB, sRGBChannelToLinear } from '../../../../utils/colorSpace';
+import { linearChannelToSRGBF32, sRGBChannelToLinearF32 } from '../../../../utils/colorSpace';
 import { isColorOverbright } from '../shared/colorOverbright';
 import { formatGodotNumber } from '../spinbox/nativeSolver';
-import { extractHsv } from './nativeSolver';
-import { hsvToRgb } from '../../../../godot/math/color';
+import { colorHue, colorSaturation, hsvToRgb } from '../../../../godot/math/color';
 import { okhslToSrgb, srgbToOkhsl } from './okhsl';
+import { COLOR_HUE_STOPS } from './svGradient';
 import type { Rgba } from '../../../../godot/math/math';
+
+interface HsvColor {
+  h: number;
+  s: number;
+  v: number;
+}
+
+/**
+ * The HSV of `_set_pick_color` (`color_picker.cpp:324-345`): `_copy_normalized_to_hsv_okhsl`
+ * (`:552-565`) reads `color_normalized`, which the caller passes, with `Color::get_h/get_s/get_v`
+ * (`core/math/color.cpp:136-180`).
+ */
+export function extractHsv(normalized: Rgba): HsvColor {
+  return {
+    h: colorHue(normalized),
+    s: colorSaturation(normalized),
+    v: Math.max(normalized.r, normalized.g, normalized.b),
+  };
+}
 
 /** `ColorModeType` (`color_picker.h`). `MODE_RAW` is a deprecated alias with the value of `MODE_LINEAR` (`:105-107`). */
 export const MODE_RGB = 0;
@@ -21,36 +40,41 @@ export const MODE_HSV = 1;
 export const MODE_LINEAR = 2;
 export const MODE_OKHSL = 3;
 
+/** `Color::srgb_to_linear` of the rgb, in Godot's float steps; alpha stays. */
+function srgbToLinearF32(color: Rgba): Rgba {
+  return {
+    r: sRGBChannelToLinearF32(color.r),
+    g: sRGBChannelToLinearF32(color.g),
+    b: sRGBChannelToLinearF32(color.b),
+    a: color.a,
+  };
+}
+
+/** The divisor of `_copy_color_to_normalized_and_intensity` (`color_picker.cpp:593-602`): 1 unless a linear channel exceeds 1. */
+function intensityMultiplier(linear: Rgba): number {
+  return Math.max(1, linear.r, linear.g, linear.b);
+}
+
 /**
- * `_copy_color_to_normalized_and_intensity` (`color_picker.cpp:593-602`):
- * every slider value and gradient stop reads `color_normalized`, not the raw
- * `color`. Only rgb is normalised: `ColorMode::get_alpha_slider_value` reads
- * `get_pick_color()`, so alpha passes through unchanged.
+ * `_copy_color_to_normalized_and_intensity` (`color_picker.cpp:593-602`): every slider value and
+ * gradient stop reads `color_normalized`, not the raw `color`. Only rgb is normalised:
+ * `ColorMode::get_alpha_slider_value` reads `get_pick_color()`, so alpha passes through unchanged.
+ * The round trip runs in Godot's float steps, since a grey's OKHSL hue is the noise it leaves.
  */
 export function colorNormalized(color: Rgba): Rgba {
-  const linear = {
-    r: sRGBChannelToLinear(color.r),
-    g: sRGBChannelToLinear(color.g),
-    b: sRGBChannelToLinear(color.b),
-  };
-  const multiplier = Math.max(1, linear.r, linear.g, linear.b);
+  const linear = srgbToLinearF32(color);
+  const multiplier = intensityMultiplier(linear);
   return {
-    r: linearChannelToSRGB(linear.r / multiplier),
-    g: linearChannelToSRGB(linear.g / multiplier),
-    b: linearChannelToSRGB(linear.b / multiplier),
+    r: linearChannelToSRGBF32(linear.r / multiplier),
+    g: linearChannelToSRGBF32(linear.g / multiplier),
+    b: linearChannelToSRGBF32(linear.b / multiplier),
     a: color.a,
   };
 }
 
 /** `intensity = Math::log2(multiplier)` (`color_picker.cpp:594,601`): the intensity slider's value in every `color_mode`. */
 function colorIntensity(color: Rgba): number {
-  const linear = {
-    r: sRGBChannelToLinear(color.r),
-    g: sRGBChannelToLinear(color.g),
-    b: sRGBChannelToLinear(color.b),
-  };
-  const multiplier = Math.max(1, linear.r, linear.g, linear.b);
-  return Math.log2(multiplier);
+  return Math.log2(intensityMultiplier(srgbToLinearF32(color)));
 }
 
 /** `ColorMode::labels` per mode (`color_mode.h:67,91,114,142`). */
@@ -101,11 +125,7 @@ export function colorModeChannels(
       ];
     }
     case MODE_LINEAR: {
-      const linear = {
-        r: sRGBChannelToLinear(normalized.r),
-        g: sRGBChannelToLinear(normalized.g),
-        b: sRGBChannelToLinear(normalized.b),
-      };
+      const linear = srgbToLinearF32(normalized);
       return [
         { label: 'R', value: linear.r, max: 1, decimals: 3 },
         { label: 'G', value: linear.g, max: 1, decimals: 3 },
@@ -182,18 +202,16 @@ export function hsvChannelGradientStops(channel: 1 | 2, normalized: Rgba): [Rgba
 }
 
 /**
- * `ColorModeHSV::slider_draw`'s H channel (`color_mode.cpp:218-221`): a flat
- * grey base at `color.get_v()`, then the 7-stop `color_hue` rainbow over it with
- * a `Color::from_hsv(0, 0, v, s)` modulate. This is the base, and the overlay
- * alpha is `hsvHueChannelOverlayAlpha`.
+ * `ColorModeHSV::slider_draw`'s H channel (`color_mode.cpp:218-221`): a flat grey `base` at
+ * `color.get_v()`, then the 7-stop `color_hue` rainbow over it with a `Color::from_hsv(0, 0, v, s)`
+ * modulate. At `s` = 0 the rainbow vanishes. One extraction serves both.
  */
-export function hsvHueChannelBase(normalized: Rgba): Rgba {
-  const { v } = extractHsv(normalized);
-  return { r: v, g: v, b: v, a: 1 };
-}
-
-export function hsvHueChannelOverlayAlpha(normalized: Rgba): number {
-  return extractHsv(normalized).s;
+export function hsvHueChannelLayers(normalized: Rgba): { base: Rgba; stops: Rgba[] } {
+  const { s, v } = extractHsv(normalized);
+  return {
+    base: { r: v, g: v, b: v, a: 1 },
+    stops: COLOR_HUE_STOPS.map((c) => ({ r: c.r * v, g: c.g * v, b: c.b * v, a: s })),
+  };
 }
 
 /**

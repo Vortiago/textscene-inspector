@@ -32,6 +32,13 @@ describe('parseOptionButton', () => {
     expect(parseOptionButton(h({ name: 'O' }), {}).flat).toBe(false);
   });
 
+  it('parses `fit_to_longest_item` off, and leaves it unset at its true default (option_button.h:43)', () => {
+    expect(parseOptionButton(h({ name: 'O' }), { fit_to_longest_item: 'false' }).fitToLongestItem).toBe(
+      false
+    );
+    expect(parseOptionButton(h({ name: 'O' }), {}).fitToLongestItem).toBeUndefined();
+  });
+
   it('defaults to no items and not-disabled when absent', () => {
     const p = parseOptionButton(h({ name: 'Empty', type: 'OptionButton' }), {});
     expect(p.items ?? []).toEqual([]);
@@ -94,5 +101,29 @@ describe('a Variant int Godot reads differently from `parseInt`', () => {
       'popup/item_00/text': '"Play"',
     });
     expect(result.items?.[0]?.text).toBe('Play');
+  });
+});
+
+describe('parseOptionButton button_pressed', () => {
+  const parse = (properties: Record<string, string>) =>
+    parseOptionButton(h({ name: 'O', type: 'OptionButton' }), properties).buttonPressed;
+
+  it('is on without toggle_mode: the constructor sets it (option_button.cpp:652)', () => {
+    expect(parse({ button_pressed: 'true' })).toBe(true);
+  });
+
+  it('is off once toggle_mode is false', () => {
+    expect(parse({ toggle_mode: 'false', button_pressed: 'true' })).toBe(false);
+  });
+
+  it("keeps an item's icon reference, and no icon key for an item without one (option_button.cpp:424)", () => {
+    const p = parseOptionButton(h({ name: 'Difficulty', type: 'OptionButton' }), {
+      item_count: '2',
+      'popup/item_0/text': '"Easy"',
+      'popup/item_0/icon': 'ExtResource("1")',
+      'popup/item_1/text': '"Hard"',
+    });
+    expect(p.items?.[0]).toEqual({ text: 'Easy', id: 0, icon: 'ExtResource("1")' });
+    expect(p.items?.[1]).not.toHaveProperty('icon');
   });
 });

@@ -1,7 +1,7 @@
 /**
  * `<TextEdit>`: the native (WebGL canvas) painter, a still frame of `_notification(NOTIFICATION_DRAW)`
  * (`text_edit.cpp:904-1942`) from line 0, column 0 (scrolling is inert, see nativeSolver.ts), with no
- * selection, brace match, word highlight, search box, IME or minimap. `<CodeEdit>` renders
+ * selection, brace match, word highlight, search box or IME. The minimap draws at scroll 0. `<CodeEdit>` renders
  * `<TextEditBody>` with its gutters. Visibility, children and transform are the walker's job.
  */
 
@@ -13,8 +13,10 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { godotColorToLinear } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
+import { ScrollBarChrome } from '../shared/ScrollChrome';
+import { TextEditMinimap } from './TextEditMinimap';
+import { textEditMinimapLines } from './minimap';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
@@ -36,8 +38,6 @@ import {
   textEditTextTheme,
   textEditDrawnLines,
   textEditRowHeightPx,
-  textEditWrapWidthPx,
-  shapeTextEditLines,
   layoutTextEditDrawBand,
   textEditCurrentLineXPx,
   textEditRowOriginXPx,
@@ -49,13 +49,19 @@ import {
   textEditGlyphLineIndex,
   textEditTabStopsPx,
   TEXT_EDIT_THEME_FONT_KEY,
+  TEXT_EDIT_DEFAULT_TAB_SIZE,
+  TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
+  textEditCapSpanAlpha,
 } from './nativeSolver';
+import { useTextEditRows } from './useTextEditRows';
+import type { TextEditRows } from './rows';
+import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { TEXT_EDIT_GLYPH_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import type { TextEditProperties } from './types';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
-/** `text_edit_tab.svg`/`text_edit_space.svg`'s authored size, unscaled: no raw theme scale reaches this slice, unlike Godot's `generate_icon`. */
-const GLYPH_ICON_SIZE_PX = 8;
+/** `text_edit_tab.svg`/`text_edit_space.svg`'s authored size. The default theme rasterises both at the theme scale. */
+const GLYPH_ICON_AUTHORED_SIZE_PX = 8;
 
 /** `default_theme.cpp:472` (TextEdit) / `:518` (CodeEdit): the same literal for both. */
 const CURRENT_LINE_COLOR = { r: 0.25, g: 0.25, b: 0.26, a: 0.8 };
@@ -88,19 +94,27 @@ interface TextEditBodyProps extends NativeControlComponentProps {
   gutterBandWidthPx?: number;
   /** `CodeEdit.indent_size`, forwarded to `TextEdit::set_tab_size` (`code_edit.cpp:908-920`). Absent for a bare `TextEdit`, which has no `.tscn` property for it (`textEditTabStopsPx`). */
   tabSize?: number;
+  /** The rows a wrapping painter already solved, so the buffer shapes once. Absent: solved here. */
+  rows?: TextEditRows;
 }
 
 export function TextEditBody({
   solveNode,
   tint,
+  childTint,
   rect,
   renderOrder,
+  slot,
   theme,
+  snapToPixels,
   gutterBandWidthPx = 0,
   tabSize,
   underlay,
+  rows: solvedRows,
 }: TextEditBodyProps) {
   const props = painterView<TextEditProperties>(solveNode);
+  const toItemLinear = useItemLinearColorOf();
+  const glyphIconPx = scaledIconSize(GLYPH_ICON_AUTHORED_SIZE_PX, theme.scale);
   const state = resolveTextEditStyleState(props.editable);
   const styleBox = pickTextEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, state);
 
@@ -117,30 +131,20 @@ export function TextEditBody({
   );
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, TEXT_EDIT_THEME_FONT_KEY);
+  // The highlighter's plain colour is the theme `font_color` whatever `editable` says (`syntax_highlighter.cpp:421`).
+  const highlighterFontColor = textEditTextTheme(solveNode, props, 'normal', { theme }).color;
   const lineSpacingPx = theme.separation; // nativeSolver.ts says why.
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
 
-  // `minimap_draw`/`minimap_width` narrow the text band as Godot's layout does, although the
-  // minimap is not painted. No scrollbar term applies: `h_scroll`/`v_scroll` are internal
-  // children, and a `ScrollBar` cannot appear in a `.tscn`.
+  // `minimap_draw`/`minimap_width` narrow the text band, and the minimap draws in the strip they
+  // free. The scroll bars draw over the band and take no part of it (`:941-944`).
   const band = layoutTextEditDrawBand(
     rect.w,
     styleBox,
     gutterBandWidthPx,
-    props.minimapWidth ?? 80,
+    props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
     props.minimapDraw,
     rowHeightPx
-  );
-  const wrapWidthPx = useMemo(
-    () =>
-      textEditWrapWidthPx(
-        rect.w,
-        styleBox.contentMargin.left + styleBox.contentMargin.right,
-        gutterBandWidthPx,
-        props.minimapWidth ?? 80,
-        props.minimapDraw
-      ),
-    [rect.w, styleBox, gutterBandWidthPx, props.minimapWidth, props.minimapDraw]
   );
 
   // The step-in reads line 0 of the buffer, which is empty while a placeholder draws (`:1480-1483`).
@@ -150,33 +154,32 @@ export function TextEditBody({
     [tabSize, fontMetrics, fontSizePx]
   );
   const bidi = useControlBidiOptions(props, solveNode);
-  const lineLayouts = useMemo(
-    () =>
-      shapeTextEditLines(lines, {
+  const { lineLayouts, wrapWidthPx, scrollBars } = useTextEditRows(
+    {
+      lines,
+      isPlaceholder,
+      size: { x: rect.w, y: rect.h },
+      margins: styleBox.contentMargin,
+      rowHeightPx,
+      gutterBandWidthPx,
+      minimapWidthPx: props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
+      drawMinimap: props.minimapDraw,
+      scrollPastEndOfFile: props.scrollPastEndOfFile === true,
+      fitContentHeight: props.fitContentHeight === true,
+      rtl: solveNode.rtl,
+      shape: {
         fontSizePx,
         fontMetrics,
         wrapMode: props.wrapMode,
         autowrapMode: props.autowrapMode,
-        wrapWidthPx,
         tabStopsPx,
         preserveControl: props.drawControlChars,
         indentWrappedLines: props.indentWrappedLines,
         bidi,
-        placeholder: isPlaceholder,
-      }),
-    [
-      lines,
-      fontSizePx,
-      props.wrapMode,
-      props.autowrapMode,
-      wrapWidthPx,
-      fontMetrics,
-      tabStopsPx,
-      props.drawControlChars,
-      props.indentWrappedLines,
-      bidi,
-      isPlaceholder,
-    ]
+      },
+      theme,
+    },
+    solvedRows
   );
 
   // `syntax_highlighter` resolves in this node's scope, never `useSceneResources()`. Only a
@@ -196,17 +199,66 @@ export function TextEditBody({
     if (!highlighter || isPlaceholder) return null;
     let region = -1;
     return lines.map((lineText) => {
-      const { spans, regionAtLineEnd } = resolveLineColors(lineText, highlighter, baseFontColor, region);
+      const { spans, regionAtLineEnd } = resolveLineColors(
+        lineText,
+        highlighter,
+        highlighterFontColor,
+        region
+      );
       region = regionAtLineEnd;
-      return spans;
+      return props.editable === false ? textEditCapSpanAlpha(spans, baseFontColor.a) : spans;
     });
-  }, [highlighter, isPlaceholder, lines, baseFontColor]);
+  }, [highlighter, isPlaceholder, lines, highlighterFontColor, baseFontColor.a, props.editable]);
 
-  // `tint.own` (raw sRGB, `self_modulate` folded onto `modulate`) tints the StyleBoxQuad and every
-  // font, highlight and icon colour before its one sRGB-to-linear conversion, as in LineEdit.
-  const tintedCurrentLineColor = useMemo(() => multiplyModulate(tint.own, CURRENT_LINE_COLOR), [tint.own]);
+  const minimapInput = useMemo(() => {
+    if (!props.minimapDraw) return null;
+    return {
+      ...textEditMinimapLines(lines, lineLayouts, lineColorSpans, isPlaceholder),
+      sizeWidthPx: rect.w,
+      xMarginEndPx: band.xMarginEndPx,
+      widthPx: props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
+      rtl: solveNode.rtl,
+      controlHeightPx: scrollBars.controlHeightPx,
+      rowHeightPx,
+      wrapWidthPx,
+      tabSize: tabSize ?? TEXT_EDIT_DEFAULT_TAB_SIZE,
+      indentWrappedLines: props.indentWrappedLines === true,
+      highlightCurrentLine: props.highlightCurrentLine === true,
+      editable: props.editable !== false,
+      // The buffer's colour, not the placeholder's (`:1194`).
+      fontColor: textEditTextTheme(solveNode, props, state, { theme }).color,
+      caretColor: solveNode.colors.caret_color ?? CARET_COLOR,
+      currentLineColor: CURRENT_LINE_COLOR,
+    };
+  }, [
+    props,
+    solveNode,
+    theme,
+    state,
+    lines,
+    lineLayouts,
+    lineColorSpans,
+    isPlaceholder,
+    rect.w,
+    band.xMarginEndPx,
+    scrollBars.controlHeightPx,
+    rowHeightPx,
+    wrapWidthPx,
+    tabSize,
+  ]);
+
+  // `tint.own` (raw sRGB, `self_modulate` folded onto `modulate`) tints the box alone
+  // (`text_edit.cpp:915,949`). Everything else is drawn on the child item `text_ci` or by a child
+  // scroll bar (`:9284-9292`), so it takes `childTint`, before its one sRGB-to-linear conversion.
+  const tintedCurrentLineColor = useMemo(
+    () => multiplyModulate(childTint.own, CURRENT_LINE_COLOR),
+    [childTint.own]
+  );
   const caretColor = solveNode.colors.caret_color ?? CARET_COLOR;
-  const tintedCaretColor = useMemo(() => multiplyModulate(tint.own, caretColor), [tint.own, caretColor]);
+  const tintedCaretColor = useMemo(
+    () => multiplyModulate(childTint.own, caretColor),
+    [childTint.own, caretColor]
+  );
 
   // `text_edit.cpp:1376-1378,1626`: every row starts below the stylebox's top
   // margin, and its text centres in the band that follows.
@@ -241,6 +293,9 @@ export function TextEditBody({
   return (
     <CanvasItemGroup ref={anchorRef}>
       <StyleBoxQuad styleBox={styleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      {minimapInput && (
+        <TextEditMinimap input={minimapInput} tint={childTint.own} renderOrder={renderOrder} />
+      )}
       {underlay}
       {props.highlightCurrentLine && (
         <CanvasItemGroup
@@ -249,7 +304,7 @@ export function TextEditBody({
           <ControlQuad
             width={band.xMarginEndPx}
             height={rowHeightPx}
-            color={godotColorToLinear(tintedCurrentLineColor)}
+            color={toItemLinear(tintedCurrentLineColor)}
             opacity={tintedCurrentLineColor.a}
             renderOrder={renderOrder}
           />
@@ -260,7 +315,7 @@ export function TextEditBody({
           <ControlQuad
             width={caretRect.w}
             height={caretRect.h}
-            color={godotColorToLinear(tintedCaretColor)}
+            color={toItemLinear(tintedCaretColor)}
             opacity={tintedCaretColor.a}
             renderOrder={renderOrder}
           />
@@ -304,7 +359,7 @@ export function TextEditBody({
                   key={runIndex}
                   layout={soloLineLayout(textEditColorRunLine(run), layout)}
                   fontSizePx={fontSizePx}
-                  tint={multiplyModulate(tint.own, run.color)}
+                  tint={multiplyModulate(childTint.own, run.color)}
                   clippingPlanes={clippingPlanes}
                   renderOrder={renderOrder}
                 />
@@ -318,23 +373,23 @@ export function TextEditBody({
                   // The per-glyph highlighted colour tints its icon, not a
                   // fixed font_color (text_edit.cpp:1674,1714).
                   const iconColor = multiplyModulate(
-                    tint.own,
+                    childTint.own,
                     textEditGlyphColorAt(
                       spans,
                       textEditGlyphLineIndex(glyph, rowStartIndex, glyphIndex),
                       baseFontColor
                     )
                   );
-                  const iconXPx = isTabIcon ? glyph.x : glyph.x + (glyph.advance - GLYPH_ICON_SIZE_PX) / 2;
+                  const iconXPx = isTabIcon ? glyph.x : glyph.x + (glyph.advance - glyphIconPx) / 2;
                   return (
                     <CanvasItemGroup
                       key={glyphIndex}
-                      position={[iconXPx, -((rowHeightPx - GLYPH_ICON_SIZE_PX) / 2), 0]}
+                      position={[iconXPx, -((rowHeightPx - glyphIconPx) / 2), 0]}
                     >
                       <ControlQuad
-                        width={GLYPH_ICON_SIZE_PX}
-                        height={GLYPH_ICON_SIZE_PX}
-                        color={godotColorToLinear(iconColor)}
+                        width={glyphIconPx}
+                        height={glyphIconPx}
+                        color={toItemLinear(iconColor)}
                         opacity={iconColor.a}
                         map={isTabIcon ? tabIcon : spaceIcon}
                         renderOrder={renderOrder}
@@ -346,6 +401,22 @@ export function TextEditBody({
           );
         });
       })}
+      <ScrollBarChrome
+        bar={scrollBars.horizontal}
+        track={theme.widgets.scrollBar.scrollHorizontal}
+        grabber={theme.widgets.scrollBar.grabber}
+        color={childTint.own}
+        chromeSlot={slot}
+        snapToPixels={snapToPixels}
+      />
+      <ScrollBarChrome
+        bar={scrollBars.vertical}
+        track={theme.widgets.scrollBar.scrollVertical}
+        grabber={theme.widgets.scrollBar.grabber}
+        color={childTint.own}
+        chromeSlot={slot}
+        snapToPixels={snapToPixels}
+      />
     </CanvasItemGroup>
   );
 }

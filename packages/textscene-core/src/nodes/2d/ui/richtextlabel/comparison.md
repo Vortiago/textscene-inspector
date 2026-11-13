@@ -79,6 +79,7 @@ the axes on FreeType and HarfBuzz (`text_server_adv.cpp:1915-1950`). The glyphs 
 at the instance. They follow the `fvar`, `avar`, `gvar` and `cvar` tables. Each advance follows `HVAR`, or the
 phantom points that `gvar` moves in a font without `HVAR`. The pair kerning follows the `GPOS` `kern` feature
 with its deltas at the instance. A `FontVariation` over another takes its own axis values alone (`font.cpp:3120-3131`).
+`self_modulate` tints the text, the images and the rules. The scroll bar draws without it (`rich_text_label.cpp:8208`).
 
 ## Linting
 

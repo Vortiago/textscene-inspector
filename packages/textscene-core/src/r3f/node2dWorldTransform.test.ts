@@ -42,6 +42,18 @@ describe('node2dWorldPosition', () => {
     expect(node2dWorldPosition(roots, emptyCtx, 'A/B', placed)).toEqual({ x: 310, y: 20 });
   });
 
+  it('places a node where a pass skewed its parent', () => {
+    const roots = [tnode('A', at(0, 0), [tnode('B', at(0, 10))])];
+    const placed = new Map([
+      ['A', { position: { x: 0, y: 0 }, rotation: 0, scale: { x: 1, y: 1 }, skew: Math.PI / 4 }],
+    ]);
+
+    // Skew turns the y axis of A by 45 degrees (`node_2d.cpp:127-133`): (0, 10) lands at (-7.07, 7.07).
+    const p = node2dWorldPosition(roots, emptyCtx, 'A/B', placed)!;
+    expect(p.x).toBeCloseTo(-7.0711, 3);
+    expect(p.y).toBeCloseTo(7.0711, 3);
+  });
+
   it('applies an ancestor rotation to the child offset (Godot +Y-down, CW-positive)', () => {
     // Parent rotated 90° CW: child local +X maps to world +Y.
     const roots = [tnode('A', { ...at(100, 0), rotation: String(Math.PI / 2) }, [tnode('B', at(10, 0))])];

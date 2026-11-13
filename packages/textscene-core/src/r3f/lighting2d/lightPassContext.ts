@@ -59,7 +59,7 @@ export type ApartPlacer = (place: THREE.Vector3) => void;
 export interface CanvasLightSlot {
   /**
    * The light's index on the canvas: dense and reused on withdrawal. It names the light in every
-   * list, and its stencil ref keeps its shadow stamps apart from every other light's.
+   * list.
    */
   readonly ordinal: number;
   /** Withdraws the light and frees the ordinal. Idempotent. */
@@ -91,7 +91,7 @@ export interface CanvasLighting2D {
    * while a normal-mapped item reads the light.
    */
   registerApartPlacer(ordinal: number, placer: ApartPlacer): () => void;
-  /** Hands the pass one of light `ordinal`'s meshes, which it shows only in the passes `role` draws in. */
+  /** Hands the pass one of light `ordinal`'s meshes, which it shows only over the lists `role` draws in. */
   registerPassMesh(mesh: THREE.Object3D, ordinal: number, role: PassMeshRole): () => void;
   /**
    * Hands the pass a step to run now and ahead of the draws of every frame, once the host has framed

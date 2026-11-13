@@ -1,7 +1,7 @@
 /**
  * Decodes an ArrayMesh's `_surfaces`, from a `.tres` or a binary file, into per-surface typed arrays:
- * the surface loop and its material resolution. Only triangle and points surfaces decode, and a
- * mesh with both keeps its triangles. Blend shapes, LODs and skins are ignored. The byte layout lives in
+ * the surface loop and its material resolution. Triangle, points and line surfaces decode, each flagged
+ * as its primitive. Blend shapes, LODs and skins are ignored. The byte layout lives in
  * `surfaceFormat.ts`, `surfaceVersion.ts`, `vertexBuffers.ts` and `surfaceFields.ts`.
  */
 
@@ -20,6 +20,8 @@ import {
   readUvScale,
 } from './surfaceFields.js';
 import {
+  PRIMITIVE_LINES,
+  PRIMITIVE_LINE_STRIP,
   PRIMITIVE_POINTS,
   PRIMITIVE_TRIANGLES,
   PRIMITIVE_TRIANGLE_STRIP,
@@ -27,7 +29,13 @@ import {
 } from './surfaceFormat.js';
 import { currentVertexData } from './surfaceVersion.js';
 import type { ArrayMeshData, ArrayMeshSurface } from './types.js';
-import { decodeIndices, decodeNormalFrame, decodePositions, decodeUVs } from './vertexBuffers.js';
+import {
+  decodeColors,
+  decodeIndices,
+  decodeNormalFrame,
+  decodePositions,
+  decodeUVs,
+} from './vertexBuffers.js';
 
 /** The type names this slice claims: Godot's ArrayMesh class alone, whose `_surfaces` this decodes. */
 export const ARRAY_MESH_TYPES: ReadonlySet<string> = new Set(['ArrayMesh']);
@@ -100,6 +108,40 @@ function stripToTriangles(strip: Uint32Array): Uint32Array {
 }
 
 /**
+ * A line strip as line segments: slot `j` makes the segment `(j-1, j)`. Fewer than two indices
+ * make no segment.
+ */
+function stripToSegments(strip: Uint32Array): Uint32Array {
+  const segmentCount = Math.max(strip.length - 1, 0);
+  const segments = new Uint32Array(segmentCount * 2);
+  for (let j = 1; j < strip.length; j++) {
+    segments[(j - 1) * 2] = strip[j - 1]!;
+    segments[(j - 1) * 2 + 1] = strip[j]!;
+  }
+  return segments;
+}
+
+/**
+ * A LINES surface's indices, or none when their count is odd: `ref:godot` draws no segment for a
+ * list of 3, 5 or 7 indices, and every segment of one of 4 or 6.
+ */
+function wholeSegments(stored: Uint32Array): Uint32Array {
+  return stored.length % 2 === 0 ? stored : new Uint32Array(0);
+}
+
+/** What a surface of each primitive Godot defines draws, and how its stored indices become a list. */
+const DRAWN_PRIMITIVES = new Map<
+  number,
+  { primitive?: 'points' | 'lines'; listIndices: (stored: Uint32Array) => Uint32Array }
+>([
+  [PRIMITIVE_POINTS, { primitive: 'points', listIndices: (stored) => stored }],
+  [PRIMITIVE_LINES, { primitive: 'lines', listIndices: wholeSegments }],
+  [PRIMITIVE_LINE_STRIP, { primitive: 'lines', listIndices: stripToSegments }],
+  [PRIMITIVE_TRIANGLES, { listIndices: (stored) => stored }],
+  [PRIMITIVE_TRIANGLE_STRIP, { listIndices: stripToTriangles }],
+]);
+
+/**
  * The shared surface loop. `label` names the mesh in diagnostics and errors.
  * `readMaterial` is the one thing that differs between a mesh read out of a
  * `.tres` and one inlined in a scene.
@@ -111,26 +153,22 @@ function decodeSurfaces(
 ): ArrayMeshData {
   const surfaces: ArrayMeshSurface[] = [];
   let declared = 0;
-  let nonTriangle = 0;
+  let undefinedPrimitive = 0;
   for (const [surfaceIndex, block] of [...iterateSurfaceBlocks(surfacesRaw)].entries()) {
     declared++;
     const format = readInt(block, 'format');
     const vertexCount = readInt(block, 'vertex_count');
     const indexCount = readInt(block, 'index_count');
 
-    // A LINES or LINE_STRIP surface read as triangles fabricates faces. `readInt` defaults an
-    // absent key to 0, and Godot always writes `primitive` for a saved surface, so only a declared
-    // value other than triangles, a triangle strip or points skips it.
+    // Godot always writes `primitive` for a saved surface, so an absent key is a triangle surface.
     const primitive = block.includes('"primitive"') ? readInt(block, 'primitive') : PRIMITIVE_TRIANGLES;
-    const isPoints = primitive === PRIMITIVE_POINTS;
-    const isStrip = primitive === PRIMITIVE_TRIANGLE_STRIP;
-    if (primitive !== PRIMITIVE_TRIANGLES && !isPoints && !isStrip) {
-      nonTriangle++;
+    const drawn = DRAWN_PRIMITIVES.get(primitive);
+    if (!drawn) {
+      undefinedPrimitive++;
       const name = readName(block);
       warn(
         `[ArrayMesh] surface ${surfaceIndex}${name ? ` "${name}"` : ''} is primitive ` +
-          `${primitive}, not triangles (3), a triangle strip (4) or points (0) — skipping it; this ` +
-          `decoder builds triangle and points geometry only`
+          `${primitive}, which Godot's Mesh.PrimitiveType does not define — skipping it`
       );
       continue;
     }
@@ -149,16 +187,13 @@ function decodeSurfaces(
       continue;
     }
     const { normals, tangents } = decodeNormalFrame(vertexData, vertexCount, layout);
-    const { uvs, uv2s } = decodeUVs(
-      readPackedBytes(block, 'attribute_data'),
-      vertexCount,
-      layout,
-      readUvScale(block),
-      (actualStride) =>
-        warn(
-          `[ArrayMesh] surface ${surfaceIndex}'s attribute_data is ${actualStride} B/vertex, ` +
-            `not the ${layout.attributeStride} B format ${format} implies — dropping its UVs`
-        )
+    const attributeData = readPackedBytes(block, 'attribute_data');
+    const colors = decodeColors(attributeData, vertexCount, layout);
+    const { uvs, uv2s } = decodeUVs(attributeData, vertexCount, layout, readUvScale(block), (actualStride) =>
+      warn(
+        `[ArrayMesh] surface ${surfaceIndex}'s attribute_data is ${actualStride} B/vertex, ` +
+          `not the ${layout.attributeStride} B format ${format} implies — dropping its UVs`
+      )
     );
     const indexData = readPackedBytes(block, 'index_data');
     const stored = indexCount === 0 ? drawOrderIndices(vertexCount) : decodeIndices(indexData, indexCount);
@@ -169,7 +204,7 @@ function decodeSurfaces(
       );
       continue;
     }
-    const indices = isStrip ? stripToTriangles(stored) : stored;
+    const indices = drawn.listIndices(stored);
 
     surfaces.push({
       surfaceIndex,
@@ -177,13 +212,14 @@ function decodeSurfaces(
       vertexCount,
       indexCount: indices.length,
       positions,
+      colors,
       uvs,
       uv2s,
       normals,
       tangents,
       indices,
-      ...(isPoints && { isPoints }),
-      ...(isStrip && { isTriangleStrip: true }),
+      ...(drawn.primitive && { primitive: drawn.primitive }),
+      ...(primitive === PRIMITIVE_TRIANGLE_STRIP && { isTriangleStrip: true }),
       ...readMaterial(block),
     });
   }
@@ -191,9 +227,8 @@ function decodeSurfaces(
   // Dropping some surfaces keeps the mesh. Dropping all of them fails, rather
   // than cache an empty geometry that renders invisibly with no placeholder.
   if (declared > 0 && surfaces.length === 0) {
-    // Naming the non-triangle count keeps a LINES-only mesh from reading as a
-    // byte defect: nothing was corrupt, the geometry just is not triangles.
-    const reason = nonTriangle > 0 ? ` (${nonTriangle} skipped as non-triangle)` : '';
+    // Naming the skipped count keeps an undefined primitive from reading as a byte defect.
+    const reason = undefinedPrimitive > 0 ? ` (${undefinedPrimitive} skipped as an undefined primitive)` : '';
     throw new Error(`ArrayMesh ${label}: none of its ${declared} surface(s) could be decoded${reason}`);
   }
   return { surfaces };

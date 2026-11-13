@@ -1,0 +1,44 @@
+; One variable: a CanvasItemMaterial blend that lowers the canvas alpha. SUB writes
+; `dst.a - src.a * src.a` and MUL `dst.a * src.a`, so a translucent item leaves alpha under 1.
+; Godot reads an opaque viewport's alpha as 1 (`swizzle_a = ONE`, `texture_storage.cpp:3641-3642`),
+; so nothing behind the canvas shows through. A ColorRect and a Polygon2D carry each mode.
+
+[gd_scene format=3]
+
+[sub_resource type="CanvasItemMaterial" id="Sub"]
+blend_mode = 2
+
+[sub_resource type="CanvasItemMaterial" id="Mul"]
+blend_mode = 3
+
+[node name="Root" type="Node2D"]
+
+[node name="Back" type="Polygon2D" parent="."]
+color = Color(0.3, 0.35, 0.4, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="SubRect" type="ColorRect" parent="."]
+material = SubResource("Sub")
+offset_left = 120.0
+offset_top = 80.0
+offset_right = 420.0
+offset_bottom = 280.0
+color = Color(0.1, 0.05, 0.2, 0.8)
+
+[node name="SubPoly" type="Polygon2D" parent="."]
+material = SubResource("Sub")
+color = Color(0.1, 0.05, 0.2, 0.8)
+polygon = PackedVector2Array(560, 80, 860, 80, 860, 280, 560, 280)
+
+[node name="MulRect" type="ColorRect" parent="."]
+material = SubResource("Mul")
+offset_left = 120.0
+offset_top = 360.0
+offset_right = 420.0
+offset_bottom = 560.0
+color = Color(0.7, 0.5, 0.3, 0.6)
+
+[node name="MulPoly" type="Polygon2D" parent="."]
+material = SubResource("Mul")
+color = Color(0.7, 0.5, 0.3, 0.6)
+polygon = PackedVector2Array(560, 360, 860, 360, 860, 560, 560, 560)

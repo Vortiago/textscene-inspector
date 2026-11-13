@@ -25,6 +25,7 @@ const SQUARE: TileSetModel = {
       },
     ],
   ]),
+  sceneSources: new Map(),
 };
 
 function placed(x: number, y: number, sourceId = 0): PlacedCell {

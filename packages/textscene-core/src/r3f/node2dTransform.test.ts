@@ -6,6 +6,7 @@ import {
   node2dGroupSpread,
   threeMatrixFromTransform2D,
   transform2DFromThreeMatrix,
+  transform2DWithin,
   writeGodotPointAsThree,
 } from './node2dTransform';
 import { TRANSFORM2D_IDENTITY, transform2DFromParts } from '../godot/math/transform2d.js';
@@ -206,6 +207,37 @@ describe('transform2DFromThreeMatrix', () => {
   it('inverts threeMatrixFromTransform2D exactly', () => {
     const t = transform2DFromParts(0.7, { x: 2, y: -0.5 }, 0.3, { x: 5, y: -6 });
     expect(transform2DFromThreeMatrix(threeMatrixFromTransform2D(t, 0.4))).toEqual(t);
+  });
+});
+
+describe('transform2DWithin', () => {
+  /** A drawn Node2D at a Godot position and rotation, under `parent`, with its matrices made. */
+  function drawn(parent: THREE.Object3D | null, x: number, y: number, rotation = 0): THREE.Object3D {
+    const object = new THREE.Object3D();
+    object.position.set(x, 0 - y, 0);
+    object.rotation.z = 0 - rotation;
+    parent?.add(object);
+    object.updateMatrix();
+    return object;
+  }
+
+  it('gives the transform of a node within an ancestor two levels up', () => {
+    const top = drawn(null, 400, 100, 0.3);
+    const wrapper = drawn(top, 30, 0);
+    const leaf = drawn(wrapper, 0, 20);
+    expect(transform2DWithin(leaf, top)).toEqual({ ...TRANSFORM2D_IDENTITY, tx: 30, ty: 20 });
+  });
+
+  it('gives null for an ancestor that is not above the node', () => {
+    const leaf = drawn(drawn(null, 0, 0), 30, 0);
+    expect(transform2DWithin(leaf, drawn(null, 0, 0))).toBeNull();
+  });
+
+  // The world matrices of both, through an inverse, give 0.99999994 and an origin off by 0.00002.
+  it('keeps an identity basis and a whole origin under a turned ancestor, which an inverse loses', () => {
+    const turned = drawn(drawn(null, 432, 122), 30, 0, 0.3);
+    const child = drawn(turned, 30, 0);
+    expect(transform2DWithin(child, turned)).toEqual({ ...TRANSFORM2D_IDENTITY, tx: 30, ty: 0 });
   });
 });
 

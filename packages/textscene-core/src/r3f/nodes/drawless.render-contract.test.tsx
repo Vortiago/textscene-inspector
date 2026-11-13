@@ -1,7 +1,7 @@
 /**
  * A type that draws nothing of its own (`transform-only` or `pending`) renders its subtree as its
  * nearest Godot base does: Node3D, Node2D or Node. Godot draws none of these types at runtime, so a
- * Bone2D or an AudioListener3D places and hides its children exactly as that base would.
+ * Timer or an AudioListener3D places and hides its children exactly as that base would.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
@@ -115,8 +115,9 @@ async function renderedKid(subject: TscnNode, workspace: CanvasWorkspace) {
 
 describe('drawless types render their subtree as their Godot base does', () => {
   it('derives a non-trivial set, so an empty filter cannot vacuously pass', () => {
-    expect(DRAWLESS_TYPES.length).toBeGreaterThan(100);
-    expect(DRAWLESS_TYPES).toEqual(expect.arrayContaining(['Bone2D', 'AudioListener3D', 'Timer']));
+    // The floor catches a filter that drops a type. A type that starts to draw lowers the count.
+    expect(DRAWLESS_TYPES.length).toBeGreaterThanOrEqual(95);
+    expect(DRAWLESS_TYPES).toEqual(expect.arrayContaining(['AudioListener3D', 'Timer']));
   });
 
   it.each(DRAWLESS_TYPES)('%s places and hides its child as its base does', async (type) => {

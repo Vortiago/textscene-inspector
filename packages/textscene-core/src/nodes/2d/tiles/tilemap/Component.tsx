@@ -1,7 +1,8 @@
 /**
  * Draws a TileMap, the deprecated multi-layer node: each layer's rendering quadrants, each a lit
  * canvas item of one batched mesh per source run. An unresolvable TileSet or undecodable layer
- * data leaves the transform-only group with its children (ADR-0008).
+ * data leaves the transform-only group with its children (ADR-0008). A y-sorted TileMap hands its
+ * layers to <YSortDispatcher> as child TileMapLayers, which sort with its child nodes.
  */
 
 import { useMemo } from 'react';
@@ -10,30 +11,112 @@ import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../../r3f/canvasItemModulate';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { allocateNodePaintRange, canvasRenderOrder, packPaintRanges } from '../../../../r3f/canvasPaintOrder';
-import { useLayerRank, usePaintRange } from '../../../../r3f/contexts/PaintOrderContext';
-import {
-  accumulateCanvasItemZ,
-  useCanvasLayerIndex,
-  useEffectiveZ,
-} from '../../../../r3f/lighting2d/canvasItemPlacement';
+import { allocateNodePaintRange, packPaintRanges } from '../../../../r3f/canvasPaintOrder';
+import { usePaintRange } from '../../../../r3f/contexts/PaintOrderContext';
+import { childCanvasPlace } from '../../../../r3f/canvasItemState';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
-import { useTileSetModel } from '../../../../r3f/useTileSetModel';
-import { useNode2DTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { useTileSetModel, type TileSetStatus } from '../../../../r3f/useTileSetModel';
+import { YSortDispatcher } from '../../../../r3f/YSortDispatcher';
+import type { TscnNode } from '../../../../parser/types';
+import type { TileMapLayerProperties } from '../tilemaplayer/types';
+import type { TileSetModel } from '../../../../resources/tileset/types';
+import { SceneTileInstances } from '../shared/SceneTileInstances';
+import { LayerPlaceholders } from './LayerPlaceholders';
+import { useSceneTileNodes, type SceneTileDrawing } from '../shared/useSceneTileNodes';
+import type { PlacedCell } from '../shared/tileData';
+import { childCanvasItemProperties } from '../shared/childCanvasItem';
 import type { TileMapLayerData, TileMapProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 
 export function TileMap({ node, children }: NodeComponentProps) {
   const props = node.properties as TileMapProperties;
   const { model, status } = useTileSetModel(props.tile_set);
-  const sampler = useNode2DTextureSampler(props);
+  // The TileMap, not a layer, holds the instances of every layer (`tile_map_layer.cpp:1645-1652`).
+  const enabledCells = useMemo(() => enabledLayerCells(props.layers), [props.layers]);
+  const sceneTiles = useSceneTileNodes(model, enabledCells);
+  if (!props.y_sort_enabled) {
+    return (
+      <LayeredTileMap node={node} model={model} status={status} sceneTiles={sceneTiles}>
+        {children}
+      </LayeredTileMap>
+    );
+  }
+  return (
+    // The sort of the world walk in `children` is left out: this one sorts the layers with the children.
+    <YSortedTileMap node={node} model={model} sceneTiles={sceneTiles} />
+  );
+}
 
-  // Godot's TileMap `add_child`s a TileMapLayer CanvasItem per layer and forwards
-  // `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so each layer takes
-  // its own canvas key. Read outside `ownItems`, where the ambient z is still the
-  // parent's, which this node's own `z_final` accumulates on.
-  const layerRank = useLayerRank(useCanvasLayerIndex());
-  const ownZFinal = accumulateCanvasItemZ(useEffectiveZ(), props);
+/** The cells of the layers that are enabled, layer by layer: the order the TileMap adds their instances in. */
+function enabledLayerCells(layers: readonly TileMapLayerData[]): PlacedCell[] {
+  return layers.flatMap((layer) => (layer.enabled ? (layer.cells ?? []) : []));
+}
+
+function YSortedTileMap({
+  node,
+  model,
+  sceneTiles,
+}: { model: TileSetModel | null; sceneTiles: SceneTileDrawing } & NodeComponentProps) {
+  const props = node.properties as TileMapProperties;
+  const withLayers = useMemo(() => withLayerNodes(node, sceneTiles.instances), [node, sceneTiles.instances]);
+  return (
+    <CanvasItem2D
+      node={node}
+      props={props}
+      ownItems={(state) =>
+        model && (
+          <LayerPlaceholders
+            grid={model}
+            layers={props.layers}
+            tiles={sceneTiles.placeholderTiles}
+            modulate={state.tint.inherited}
+          />
+        )
+      }
+    >
+      <YSortDispatcher node={withLayers} />
+    </CanvasItem2D>
+  );
+}
+
+/**
+ * The TileMap with its layers in front of its child nodes, as Godot's internal front children are.
+ * A layer node is named `@TileMapLayer@<index>`, as Godot names a generated node, so no authored
+ * child shares its path. The scene tile instances come last, as `add_child` appends them, and the
+ * layers leave them to the TileMap.
+ */
+function withLayerNodes(map: TscnNode, sceneTiles: readonly TscnNode[]): TscnNode {
+  const { layers, ...props } = map.properties as TileMapProperties;
+  const layerNodes = layers.map((layer, index): TscnNode => ({
+    name: `@TileMapLayer@${index}`,
+    type: 'TileMapLayer',
+    parent: '.',
+    properties: {
+      ...childCanvasItemProperties(props),
+      tile_set: props.tile_set,
+      enabled: layer.enabled,
+      rendering_quadrant_size: props.rendering_quadrant_size,
+      cells: layer.cells,
+      drawsSceneTiles: false,
+      y_sort_enabled: layer.ySortEnabled,
+      y_sort_origin: layer.ySortOrigin,
+      z_index: layer.zIndex,
+      ...(layer.modulate && { modulate: layer.modulate }),
+    } satisfies TileMapLayerProperties,
+    rawProperties: {},
+    children: [],
+  }));
+  return { ...map, children: [...layerNodes, ...map.children, ...sceneTiles] };
+}
+
+interface LayeredTileMapProps extends NodeComponentProps {
+  model: TileSetModel | null;
+  status: TileSetStatus;
+  sceneTiles: SceneTileDrawing;
+}
+
+function LayeredTileMap({ node, model, status, sceneTiles, children }: LayeredTileMapProps) {
+  const props = node.properties as TileMapProperties;
   const paintRange = usePaintRange();
   // The layers are internal front children in Godot, in no `.tscn` child list,
   // so they draw from the `front` run, between this node and its authored
@@ -62,44 +145,52 @@ export function TileMap({ node, children }: NodeComponentProps) {
     });
   }, [model, props.layers, props.rendering_quadrant_size]);
 
-  const layerGroups = useMemo(
-    () =>
-      layerQuadrantSets?.map((set) => {
-        // A layer is a child CanvasItem with `z_as_relative` at its default, so
-        // its `z_index` accumulates onto the TileMap's own `z_final`.
-        const zFinal = accumulateCanvasItemZ(ownZFinal, { z_index: set.layer.zIndex });
-        const sequence = layerSequences[set.layerIndex]!;
-        return { ...set, zFinal, renderOrder: canvasRenderOrder({ layerRank, zFinal, sequence }) };
-      }) ?? null,
-    [layerQuadrantSets, layerRank, ownZFinal, layerSequences]
-  );
-
   return (
     <CanvasItem2D
       node={node}
       props={props}
-      ownItems={(tint, material) =>
-        status === 'loaded' && model && layerGroups
-          ? layerGroups.map((group) => (
-              // Each layer draws at its own place in the canvas, so its key rides
-              // its group: three reads the nearest enclosing group first.
-              <CanvasItemGroup key={group.layerIndex} renderOrder={group.renderOrder}>
-                <TileQuadrants
-                  quadrants={group.quadrants}
-                  model={model}
-                  selfTint={layerTint(tint, group.layer)}
-                  material={material}
-                  lightMask={props.light_mask}
-                  zFinal={group.zFinal}
-                  name={node.name}
-                  sampler={sampler}
-                />
-              </CanvasItemGroup>
-            ))
-          : null
-      }
+      ownItems={(state) => (
+        <>
+          {status === 'loaded' && model && layerQuadrantSets
+            ? layerQuadrantSets.map((set) => {
+                // Godot's TileMap adds a TileMapLayer CanvasItem per layer and forwards
+                // `set_z_index` to it (`scene/2d/tile_map.cpp:279,376`), so each layer
+                // takes a key of its own at its own sequence.
+                const place = childCanvasPlace(
+                  { key: state.keyAt(layerSequences[set.layerIndex]!), zFinal: state.zFinal },
+                  set.layer.zIndex
+                );
+                return (
+                  // Each layer draws at its own place in the canvas, so its key rides
+                  // its group: three reads the nearest enclosing group first.
+                  <CanvasItemGroup key={set.layerIndex} renderOrder={place.key}>
+                    <TileQuadrants
+                      quadrants={set.quadrants}
+                      model={model}
+                      selfTint={layerTint(state.tint, set.layer)}
+                      material={state.material}
+                      lightMask={state.lightMask}
+                      zFinal={place.zFinal}
+                      name={node.name}
+                      sampler={state.sampler}
+                    />
+                  </CanvasItemGroup>
+                );
+              })
+            : null}
+          {model && (
+            <LayerPlaceholders
+              grid={model}
+              layers={props.layers}
+              tiles={sceneTiles.placeholderTiles}
+              modulate={state.tint.inherited}
+            />
+          )}
+        </>
+      )}
     >
       {children}
+      <SceneTileInstances node={node} instances={sceneTiles.instances} />
     </CanvasItem2D>
   );
 }

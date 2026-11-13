@@ -116,6 +116,31 @@ polygon = ${TRI}
     expect(mats.get('Child')!.blendDst).toBe(THREE.OneFactor);
   });
 
+  it('gives a y-sort-lifted `use_parent_material` item its tree parent’s material, not the sort root’s', async () => {
+    // `_collect_ysort_children` hands each child its own material owner (`renderer_canvas_cull.cpp:132`).
+    const mats = await materialsByNodeName(`[gd_scene format=3]
+
+[sub_resource type="CanvasItemMaterial" id="mul"]
+blend_mode = 3
+
+[sub_resource type="CanvasItemMaterial" id="add"]
+blend_mode = 1
+
+[node name="Root" type="Node2D"]
+y_sort_enabled = true
+material = SubResource("mul")
+
+[node name="Parent" type="Node2D" parent="."]
+y_sort_enabled = true
+material = SubResource("add")
+
+[node name="Child" type="Polygon2D" parent="Parent"]
+use_parent_material = true
+polygon = ${TRI}
+`);
+    expect(mats.get('Child')!.blendDst).toBe(THREE.OneFactor);
+  });
+
   it('does NOT inherit without use_parent_material — Godot requires the opt-in', async () => {
     const mats = await materialsByNodeName(`[gd_scene format=3]
 

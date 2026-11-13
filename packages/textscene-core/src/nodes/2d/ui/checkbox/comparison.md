@@ -10,7 +10,17 @@ renders_as: a theme icon followed by a text run
 # CheckBox
 
 CheckBox is a toggle button with a check indicator to the left of its label. The
-previewer draws the theme's indicator icon and the label beside it.
+previewer draws the theme's indicator icon and the label beside it. `clip_text` zeroes the
+label's width in the minimum size, and `TextParagraph::draw` cuts the label to its paragraph
+box. The previewer does both, so a box narrower than the label shows only the glyphs that fit.
+A trimming `text_overrun_behavior` zeroes the width the same way. The previewer trims the label
+to the box, with an ellipsis where Godot adds one, as Button does. `autowrap_mode` wraps the label at
+its paragraph box and `autowrap_trim_flags` trims its edge spaces. The box grows to the wrapped height.
+Button's inherited `icon` draws beside the label with `icon_alignment`, `vertical_icon_alignment`, `expand_icon` and
+`icon_max_width`, ahead of the check. The minimum size and the wrap width include it. A themed StyleBox draws
+under the label as Button's does, and the check sits at the margin of the `normal` one. The theme colours
+`checkbox_checked_color` and `checkbox_unchecked_color` tint the check.
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
 ## Linting
 
@@ -39,6 +49,3 @@ bundled font too (ADR-0069).
 
 A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
 outline ring (ADR-0064).
-
-## Known limitations
-

@@ -21,6 +21,8 @@ interface GizmoLineProps {
   color?: THREE.ColorRepresentation;
   /** The opacity of the lines, from 0 to 1: the alpha of the colour a Godot gizmo material has. */
   opacity?: number;
+  /** Added to the gizmo render order, so a line draws after another at a lesser value. Keep it below 1. */
+  order?: number;
 }
 
 const FLOATS_PER_SEGMENT = 6;
@@ -61,6 +63,7 @@ export function GizmoLine({
   colors: allColors,
   color: ownColor,
   opacity: ownOpacity = 1,
+  order = 0,
 }: GizmoLineProps) {
   const { color, opacity } = useGizmoLook(ownColor ?? 0xffffff, ownOpacity);
   const { positions, colors } = useMemo(
@@ -95,7 +98,7 @@ export function GizmoLine({
 
   return (
     <GizmoGroup>
-      <lineSegments renderOrder={GIZMO_RENDER_ORDER}>
+      <lineSegments renderOrder={GIZMO_RENDER_ORDER + order}>
         <primitive object={geometry} attach="geometry" />
         <lineBasicMaterial key={program.key} {...program.props} />
       </lineSegments>

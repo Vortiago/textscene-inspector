@@ -58,3 +58,16 @@ export interface MultiMeshData {
 
 /** What a MultiMesh's box reads of it. */
 export type MultiMeshBox = Pick<MultiMeshData, 'customAabb' | 'boundedTransforms'>;
+
+/** One instance a MultiMesh draws: views into the drawn buffer, not copies. */
+export interface MultiMeshInstance {
+  /**
+   * The transform floats of the buffer row, `[xx, xy, 0, ox, yx, yy, 0, oy]` for a 2D format
+   * (`mesh_storage.cpp:1927-1934`) or the 12 of a 3D one: each basis row followed by its origin.
+   */
+  transform: Float32Array;
+  /** The RGBA colour, or null when the MultiMesh does not `use_colors`. */
+  color: Float32Array | null;
+  /** The custom vector `INSTANCE_CUSTOM` reads, or null when the MultiMesh does not `use_custom_data`. */
+  customData: Float32Array | null;
+}

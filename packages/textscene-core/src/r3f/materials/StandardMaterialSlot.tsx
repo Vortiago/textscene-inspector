@@ -10,7 +10,7 @@ import { composeInjections, materialProgramInputs } from '../materialProgramInpu
 import type { MaterialAttach } from './swappedMaterials';
 import { FadedMaterials } from './FadedMaterials';
 import { bindHeightmap } from './godotParallax';
-import { withPointDraw, type PointDraw } from './godotPoint';
+import { withLineDraw, withPointDraw, type ListedPlacement, type PointDraw } from './godotPoint';
 import type { ParticleDraw, ParticleProgram } from './godotParticles';
 import type { FadeVariants } from './fadeVariants';
 import { bindLightmap, LIGHTMAP_PROGRAM, readsLightmap } from '../lightmap/lightmapProgram';
@@ -29,6 +29,8 @@ interface StandardMaterialSlotProps {
 export interface SurfaceDraws {
   /** How it draws the points of a surface that draws `THREE.Points`. */
   pointDraw?: PointDraw;
+  /** Where the segments sit when the surface draws `THREE.LineSegments`. */
+  linePlacement?: ListedPlacement;
   /** How it draws a particle emitter's instances, and the patch that draws them so. */
   particles?: { draw: ParticleDraw; program: ParticleProgram };
 }
@@ -47,9 +49,9 @@ export function StandardMaterialSlot({ bags, attach, draws = {} }: StandardMater
 /** `bag` as a material for the surface `draws` describes. */
 export function drawnBag(
   bag: StandardMaterialBag,
-  { pointDraw, particles }: SurfaceDraws
+  { pointDraw, linePlacement, particles }: SurfaceDraws
 ): StandardMaterialBag {
-  const drawn = withPointDraw(bag, pointDraw);
+  const drawn = withLineDraw(withPointDraw(bag, pointDraw), linePlacement);
   return particles ? particles.program(drawn, particles.draw) : drawn;
 }
 

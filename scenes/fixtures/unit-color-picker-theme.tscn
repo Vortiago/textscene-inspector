@@ -1,0 +1,33 @@
+; The one variable: an ancestor Theme that sets Label font_color, Button font_color and font_pressed_color
+; and LineEdit font_color. ColorPicker's internal labels, buttons and fields read their own class's
+; items through the Theme chain (control.cpp:3078). No other ColorPicker scene sets a Theme.
+
+[gd_scene format=3]
+
+[sub_resource type="Theme" id="Theme_picker"]
+Label/colors/font_color = Color(1, 0.2, 0.2, 1)
+Button/colors/font_color = Color(0.2, 1, 0.2, 1)
+Button/colors/font_pressed_color = Color(1, 1, 0.2, 1)
+LineEdit/colors/font_color = Color(0.2, 0.6, 1, 1)
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_picker")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="ThemedColorPicker" type="ColorPicker" parent="."]
+layout_mode = 1
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 404.0
+offset_bottom = 404.0
+color = Color(0.2, 0.4, 0.6, 0.8)
+picker_shape = 4
+sampler_visible = false

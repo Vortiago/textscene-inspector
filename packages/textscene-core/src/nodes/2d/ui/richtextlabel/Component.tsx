@@ -10,8 +10,7 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { godotColorToLinear } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import {
   ControlClipProvider,
   useControlClipPlanes,
@@ -24,11 +23,7 @@ import { WHOLE_FRAME, frameUvWindow } from '../../../../r3f/spriteFrame';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { clampAutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
 import { OutlinedTextRun } from '../../../../r3f/controls/native/text/OutlinedTextRun';
-import {
-  ScrollBarChrome,
-  SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET,
-  SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET,
-} from '../shared/ScrollBarChrome';
+import { ScrollBarChrome } from '../shared/ScrollChrome';
 import {
   RICH_TEXT_LABEL_UNDERLINE_ALPHA,
   RICH_TEXT_LABEL_DEFAULT_AUTOWRAP,
@@ -50,6 +45,7 @@ import { VisibleCharactersBehavior } from '../../../../godot/text/textServerEnum
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { ResolvedTextTheme, TextOutlineTheme } from '../../../../r3f/controls/native/textTheme';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 
 interface ImageLike {
   width?: number;
@@ -73,6 +69,7 @@ function RichTextImage({
   renderOrder: number;
 }) {
   const { spec, widthPx, heightPx } = placement;
+  const toItemLinear = useItemLinearColorOf();
   const { externalResources, internalResources } = resources;
   const { texture: rawTexture } = useTexture2D(spec.path, externalResources, internalResources);
 
@@ -112,16 +109,14 @@ function RichTextImage({
   const imageTint = multiplyModulate(tint, spec.color);
 
   return (
-    <CanvasItemGroup position={[offsetXPx, -offsetYPx, 0]}>
-      <ControlQuad
-        renderOrder={renderOrder}
-        width={drawWidthPx}
-        height={drawHeightPx}
-        color={godotColorToLinear(imageTint)}
-        opacity={imageTint.a}
-        map={drawnTexture}
-      />
-    </CanvasItemGroup>
+    <PositionedIcon
+      rect={{ x: offsetXPx, y: offsetYPx, w: drawWidthPx, h: drawHeightPx }}
+      texture={drawnTexture}
+      color={toItemLinear(imageTint)}
+      opacity={imageTint.a}
+      renderOrder={renderOrder}
+      canvasKey={renderOrder}
+    />
   );
 }
 
@@ -135,13 +130,14 @@ function RichTextRule({
   tint: Rgba;
   renderOrder: number;
 }) {
+  const toItemLinear = useItemLinearColorOf();
   const imageTint = multiplyModulate(tint, placement.spec.color);
   return (
     <ControlQuad
       renderOrder={renderOrder}
       width={placement.widthPx}
       height={placement.heightPx}
-      color={godotColorToLinear(imageTint)}
+      color={toItemLinear(imageTint)}
       opacity={imageTint.a}
     />
   );
@@ -276,13 +272,16 @@ function useShapedRichText(
 function RichTextBody({
   solveNode,
   tint,
+  childTint,
   rect,
   renderOrder,
+  slot,
   theme,
   snapToPixels,
   clippingPlanes,
 }: RichTextBodyProps) {
   const props = painterView<RichTextLabelProperties>(solveNode);
+  const toItemLinear = useItemLinearColorOf();
   const textTheme = useMemo(
     () => richTextLabelTextTheme(solveNode, props, { theme }),
     [solveNode, props, theme]
@@ -382,7 +381,7 @@ function RichTextBody({
                   <ControlQuad
                     width={underline.x1 - underline.x0}
                     height={underline.heightPx}
-                    color={godotColorToLinear(runTint)}
+                    color={toItemLinear(runTint)}
                     opacity={runTint.a * RICH_TEXT_LABEL_UNDERLINE_ALPHA}
                     renderOrder={renderOrder}
                   />
@@ -399,9 +398,8 @@ function RichTextBody({
           bar={scrollBar}
           track={theme.widgets.scrollBar.scrollVertical}
           grabber={theme.widgets.scrollBar.grabber}
-          color={tint.own}
-          renderOrder={renderOrder + SCROLL_BAR_TRACK_RENDER_ORDER_OFFSET}
-          grabberRenderOrder={renderOrder + SCROLL_BAR_GRABBER_RENDER_ORDER_OFFSET}
+          color={childTint.own}
+          chromeSlot={slot}
           snapToPixels={snapToPixels}
         />
       )}

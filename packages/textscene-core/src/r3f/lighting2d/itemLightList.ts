@@ -188,8 +188,44 @@ export interface LightListPlan {
   readonly reads: ReadonlySet<LitItemRead>;
   /** Whether a light that tints its shadow shadows the list, so it needs the `shadow_color` buffer. */
   readonly tintsShadow: boolean;
+  /** The buffers an ordinary or Light Only item reads, or null while only normal-mapped items read the list. */
+  readonly attachments: ListAttachments | null;
   /** The lights kept apart, while a normal-mapped item reads the list. Null otherwise. */
   readonly lightsApart: ApartLightPlan | null;
+}
+
+/**
+ * Which attachment of a list's one target holds each buffer an item of the list reads, or -1 for a
+ * buffer it holds none of. A light quad writes its outputs to locations 0 (light), 1
+ * (`shadow_color`) and 2 (Light Only), and an output with no attachment is dropped, so a list takes
+ * only the buffers it reads. A list no ordinary item reads keeps its Light Only buffer at 0, which
+ * the quad writes the same term to.
+ */
+export interface ListAttachments {
+  readonly plain: number;
+  readonly shadowTint: number;
+  readonly lightOnly: number;
+  /** How many attachments the target needs. */
+  readonly count: number;
+}
+
+/** The attachments of a layered target that keeps the lights of a list apart: the light, then the `shadow_color`. */
+export const APART_ATTACHMENTS = { light: 0, shadowTint: 1 } as const;
+
+/** The attachments a list needs for what its items `reads`, or null while none reads a summed buffer. */
+function listAttachments(reads: ReadonlySet<LitItemRead>, tintsShadow: boolean): ListAttachments | null {
+  const plain = reads.has('plain');
+  const lightOnly = reads.has('lightOnly');
+  if (!plain && !lightOnly) return null;
+  // Beside an ordinary buffer the Light Only one comes last, after the `shadow_color` slot. A list
+  // that reads both without a tint leaves that slot unread: one buffer more, in place of a second
+  // pass over every light.
+  return {
+    plain: plain ? 0 : -1,
+    shadowTint: tintsShadow ? 1 : -1,
+    lightOnly: lightOnly ? (plain ? 2 : 0) : -1,
+    count: plain && lightOnly ? 3 : tintsShadow ? 2 : 1,
+  };
 }
 
 /** The lights of a list a normal-mapped item reads, each accumulated alone into a layer. */
@@ -197,12 +233,13 @@ export interface ApartLightPlan {
   /** The entries in layer order, which is the order Godot applies them. */
   readonly entries: readonly LightListEntry[];
   /**
-   * Each entry's layer in a `shadow_color` buffer that holds only the lights that add one, or -1 for
-   * a light that adds none.
+   * Each entry's layer in the `shadow_color` attachment, or -1 for a light that adds none. The
+   * attachment sits beside the light's in one layered target, which binds one layer on both, so a
+   * light's tint layer is its own.
    */
   readonly tintLayers: readonly number[];
-  /** How many lights add a `shadow_color`, the layers of that buffer. */
-  readonly tintLayerCount: number;
+  /** Whether any light adds a `shadow_color`, so the target needs the attachment. */
+  readonly tintsShadow: boolean;
 }
 
 /** Whether `entry`'s light adds a `shadow_color` on its list: it tints, and shadows the list. */
@@ -232,9 +269,8 @@ function apartLightPlan(
   entries: readonly LightListEntry[]
 ): ApartLightPlan {
   const ordered = applicationOrder(lights, entries);
-  let tintLayerCount = 0;
-  const tintLayers = ordered.map((entry) => (entryTintsShadow(lights, entry) ? tintLayerCount++ : -1));
-  return { entries: ordered, tintLayers, tintLayerCount };
+  const tintLayers = ordered.map((entry, layer) => (entryTintsShadow(lights, entry) ? layer : -1));
+  return { entries: ordered, tintLayers, tintsShadow: tintLayers.some((layer) => layer >= 0) };
 }
 
 /** The lists the canvas's lit placements take, one plan per distinct list, empty lists left out. */
@@ -255,42 +291,28 @@ export function planLightLists(
     for (const read of reads) list.reads.add(read);
     lists.set(listId, list);
   }
-  return [...lists].map(([id, { entries, placementIds, reads }]) => ({
-    id,
-    entries,
-    placementIds,
-    reads,
-    tintsShadow: entries.some((entry) => entryTintsShadow(lights, entry)),
-    lightsApart: reads.has('apart') ? apartLightPlan(lights, entries) : null,
-  }));
+  return [...lists].map(([id, { entries, placementIds, reads }]) => {
+    const tintsShadow = entries.some((entry) => entryTintsShadow(lights, entry));
+    return {
+      id,
+      entries,
+      placementIds,
+      reads,
+      tintsShadow,
+      attachments: listAttachments(reads, tintsShadow),
+      lightsApart: reads.has('apart') ? apartLightPlan(lights, entries) : null,
+    };
+  });
 }
 
 /**
- * What a light mesh is to the pass. A light's `volume` stencil and `lit` quad draw its authored
- * shadow, `tint` adds its `shadow_color`, and `unshadowed` is its quad without the shadow. Each
- * light writes both buffers over its whole reach with one alpha, so a MIX light scales both: `shade`
- * carries the tint's alpha into the light pass, and `fade` and `unshadowedFade` the lit alpha into
- * the tint pass.
+ * What a light mesh is to the pass. A light's `lit` quad draws its authored shadow, and `unshadowed`
+ * is its quad without the shadow. Either writes the light, `shadow_color` and Light Only terms of
+ * every buffer in one draw, with one alpha, so a MIX light scales all of them.
  */
-export type PassMeshRole = 'volume' | 'lit' | 'shade' | 'tint' | 'fade' | 'unshadowed' | 'unshadowedFade';
+export type PassMeshRole = 'lit' | 'unshadowed';
 
-/** `light` accumulates `S`, from either seed. `tint` accumulates the albedo-free `shadow_color`. */
-export type PassKind = 'light' | 'tint';
-
-/** The entry a role draws for, by its `unshadowed` flag, and the passes it draws in. */
-const ROLE_PASSES: Readonly<Record<PassMeshRole, { unshadowed: boolean; kinds: readonly PassKind[] }>> = {
-  volume: { unshadowed: false, kinds: ['light', 'tint'] },
-  lit: { unshadowed: false, kinds: ['light'] },
-  shade: { unshadowed: false, kinds: ['light'] },
-  tint: { unshadowed: false, kinds: ['tint'] },
-  fade: { unshadowed: false, kinds: ['tint'] },
-  unshadowed: { unshadowed: true, kinds: ['light'] },
-  unshadowedFade: { unshadowed: true, kinds: ['tint'] },
-};
-
-/** Whether a light's mesh of `role` draws in a `kind` pass over a list holding `entry`. */
-export function drawsInPass(entry: LightListEntry | undefined, role: PassMeshRole, kind: PassKind): boolean {
-  if (entry === undefined) return false;
-  const passes = ROLE_PASSES[role];
-  return passes.unshadowed === entry.unshadowed && passes.kinds.includes(kind);
+/** Whether a light's mesh of `role` draws over a list holding `entry`: the entry's shadow state picks the quad. */
+export function drawsInPass(entry: LightListEntry | undefined, role: PassMeshRole): boolean {
+  return entry !== undefined && (role === 'unshadowed') === entry.unshadowed;
 }

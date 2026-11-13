@@ -133,6 +133,7 @@ const NO_CAMERA_SCENE = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Inside" type="MeshInstance3D" parent="Viewport"]
 mesh = SubResource("1")
@@ -146,6 +147,7 @@ const scene3D = (viewportProps = '') => `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(320, 240)
 ${viewportProps}
 
@@ -163,6 +165,7 @@ const scene2DWorkspace = `[gd_scene format=3]
 [node name="Stage" type="Node2D"]
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(300, 300)
 
 [node name="Inside" type="MeshInstance3D" parent="Viewport"]
@@ -177,6 +180,7 @@ const scene2DContent = `[gd_scene format=3]
 [node name="Stage" type="Node2D"]
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(64, 64)
 
 [node name="Fill" type="Polygon2D" parent="Viewport"]
@@ -341,6 +345,7 @@ shadow_enabled = true
 [node name="Root" type="Node3D"]
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(300, 300)
 
 [node name="Inside" type="Sprite2D" parent="Viewport"]
@@ -360,6 +365,7 @@ size = Vector2i(300, 300)
 [node name="Root" type="Node3D"]
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Panel" type="ColorRect" parent="Viewport"]
 `);
@@ -386,6 +392,7 @@ size = Vector2i(300, 300)
 [node name="Root" type="Node3D"]
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 `);
     expect(published()).toBeNull();
   });
@@ -432,6 +439,7 @@ size = Vector2i(300, 300)
 [node name="Root" type="Node2D"]
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Inside" type="Polygon2D" parent="Viewport"]
 polygon = PackedVector2Array(0, 0, 10, 0, 10, 10)

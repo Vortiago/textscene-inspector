@@ -70,6 +70,7 @@ const UNMOVED = new Map([
   ['resources/textures/textureSourceFiles.ts', { calls: 3, issue: 1518 }],
   ['resources/textures/viewporttexture/useViewportTextureSlot.ts', { calls: 2, issue: 1518 }],
   ['resources/tileset/decode.ts', { calls: 7, issue: 1680 }],
+  ['resources/tileset/sceneCollection.ts', { calls: 1, issue: 1680 }],
   ['resources/useLoadedFilesAndFonts.ts', { calls: 2, issue: 1696 }],
   ['resources/useProjectFonts.ts', { calls: 2, issue: 1696 }],
   ['resources/useTexture2D.ts', { calls: 4, issue: 1518 }],

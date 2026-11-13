@@ -100,15 +100,6 @@ export interface LayoutDirectionEnv {
   applicationLocale: string;
 }
 
-/** Godot's own defaults: force off, root direction 0, a left-to-right locale. */
-export const LTR_LAYOUT_ENV: LayoutDirectionEnv = {
-  forceRtl: false,
-  rootRtl: false,
-  applicationLocaleRtl: false,
-  systemLocaleRtl: false,
-  applicationLocale: '',
-};
-
 /**
  * `Control::is_layout_rtl()` (`control.cpp:3551-3620`) after the ancestor climb: `inherited` is the
  * nearest ancestor Control or Window's answer (`control.cpp:3586-3593`), or `null` off the top. The

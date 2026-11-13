@@ -9,15 +9,11 @@ import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
-import { shapedTextSizeWidthPx, soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
-import {
-  overrunFlagsForBehavior,
-  trimTextBufferLineToWidth,
-} from '../../../../r3f/controls/native/text/textOverrun';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
+import { overrunFlagsForBehavior, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -30,8 +26,8 @@ import {
   type FoldableContainerArrow,
 } from './nativeSolver';
 import { FOLDABLE_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { TITLE_POSITION_TOP, type FoldableContainerProperties } from './types';
-import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 const ARROW_ICON_URL: Record<FoldableContainerArrow, string> = {
   expanded: FOLDABLE_CONTAINER_ICONS.expandedArrow,
@@ -102,22 +98,16 @@ export function FoldableContainer({
   // `text_buf->set_width(title_text_width)` (`foldable_container.cpp:307`) sets the trim
   // `TextParagraph::draw` applies, so the drawn title is the trimmed shape.
   const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.titleTextOverrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
+    () => overrunFlagsForBehavior(props.titleTextOverrunBehavior),
     [props.titleTextOverrunBehavior]
   );
   const trimmedLayout = useMemo(() => {
-    if (!title.layout || !overrunFlags.trim) return title.layout;
-    const trimmedLine = trimTextBufferLineToWidth(
-      title.layout.lines[0]!,
-      Math.max(1, titleTextWidth),
-      overrunFlags,
-      {
-        fontMetrics: title.layout.fontMetrics,
-        fontSizePx: title.fontSizePx,
-        isDrawnRtl: title.isDrawnRtl,
-      }
-    );
-    return soloLineLayout(trimmedLine, title.layout);
+    if (!title.layout) return null;
+    return trimSoloLine(title.layout, overrunFlags, Math.max(1, titleTextWidth), {
+      fontMetrics: title.layout.fontMetrics,
+      fontSizePx: title.fontSizePx,
+      isDrawnRtl: title.isDrawnRtl,
+    });
   }, [title.layout, overrunFlags, titleTextWidth, title.fontSizePx, title.isDrawnRtl]);
 
   // `TextLine::set_horizontal_alignment(_get_actual_alignment())` shifts the
@@ -161,16 +151,14 @@ export function FoldableContainer({
           renderOrder={renderOrder}
         />
       </CanvasItemGroup>
-      <CanvasItemGroup position={[titleRect.x + iconPos.x, -(titleRect.y + iconPos.y), 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={arrowSize.x}
-          height={arrowSize.y}
-          color={tint.color}
-          opacity={tint.opacity}
-          map={iconTexture}
-        />
-      </CanvasItemGroup>
+      <PositionedIcon
+        rect={{ x: titleRect.x + iconPos.x, y: titleRect.y + iconPos.y, w: arrowSize.x, h: arrowSize.y }}
+        texture={iconTexture}
+        color={tint.color}
+        opacity={tint.opacity}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
       {trimmedLayout && titleTextWidth > 0 && (
         <CanvasItemGroup position={[titleRect.x + textPos.x, -(titleRect.y + textPos.y), 0]}>
           <OutlinedTextRun

@@ -5,6 +5,7 @@
  * Every 2D canvas material skips depth writes, so this comparator decides what covers what.
  */
 import * as THREE from 'three';
+import { isMesh } from './threeNarrow';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../canvasPaintOrder';
 import { WORLD_CANVAS_LAYER } from '../lighting2d/canvasItemPlacement';
 
@@ -53,4 +54,26 @@ export function worldCanvasKey(zFinal: number, sequence: number): number {
 /** Whether the packed `key` lies in the world canvas's `zFinal` bucket, at any sequence. */
 export function isInZBucket(key: number, zFinal: number): boolean {
   return key >= worldCanvasKey(zFinal, 0) && key < worldCanvasKey(zFinal + 1, 0);
+}
+
+/** The first mesh drawn under `group`, which three orders by its nearest group's key. */
+function firstMeshUnder(group: THREE.Object3D): THREE.Object3D {
+  let mesh: THREE.Object3D | undefined;
+  group.traverse((o) => {
+    if (!mesh && isMesh(o)) mesh = o;
+  });
+  if (!mesh) throw new Error(`expected a mesh under ${group.name}, found none`);
+  return mesh;
+}
+
+/** The names of the objects under `root` that `isDrawn` accepts, in the order three paints them. */
+export function namesInPaintOrder(
+  root: THREE.Object3D,
+  isDrawn: (object: THREE.Object3D) => boolean
+): string[] {
+  const drawn: Array<{ name: string; key: [number, number, number] }> = [];
+  root.traverse((o) => {
+    if (isDrawn(o)) drawn.push({ name: o.name, key: paintKey(firstMeshUnder(o)) });
+  });
+  return drawn.sort((a, b) => compareKeys(a.key, b.key)).map((d) => d.name);
 }

@@ -9,6 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -32,7 +33,6 @@ import {
 import type { LinkButtonProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
-import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 import { LinkButtonUnderlineMode } from '../../../../godot/scene/gui';
 
 /** `SceneStringName(font)`, registered for "LinkButton" at `default_theme.cpp:200`. */
@@ -186,11 +186,7 @@ export const linkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LinkButtonProperties;
   const layout: TextLayoutResult | null = ctx.measureText ? linkButtonLabelShape(n, ctx.theme) : null;
 
-  const width =
-    layout &&
-    (props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING) === OverrunBehavior.OVERRUN_NO_TRIMMING
-      ? shapedTextSizeWidthPx(layout.widthPx)
-      : 0;
+  const width = layout && !isTextWidthClipped(props) ? shapedTextSizeWidthPx(layout.widthPx) : 0;
   const height = layout ? layout.heightPx : 0;
 
   return { x: width, y: height };

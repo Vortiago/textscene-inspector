@@ -5,8 +5,7 @@
  */
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { SPLIT_CONTAINER_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { isSortableControl } from '../shared/fitChildInRect';
@@ -24,7 +23,7 @@ import { splitOffsetsOf, type SplitContainerProperties } from '../shared/splitCo
 
 export function HSplitContainer({
   solveNode,
-  tint,
+  childTint,
   rect,
   theme,
   renderOrder,
@@ -49,7 +48,7 @@ export function HSplitContainer({
     return null;
   }
 
-  const iconSize = splitGrabberIconSize(solveNode.node.type, false, solveNode.textureSlots);
+  const iconSize = splitGrabberIconSize(solveNode.node.type, false, solveNode.textureSlots, theme.scale);
   // `grabberExtent` takes the icon's width, as `separationOf` in
   // `shared/splitContainerSolver.ts` does, so the icon lands on the solved boundary.
   const separation = resolveSplitSeparation(props, solveNode.constants, {
@@ -83,16 +82,15 @@ export function HSplitContainer({
           iconSize
         );
         return (
-          <CanvasItemGroup key={i} position={[iconRect.x, -iconRect.y, 0]} renderOrder={renderOrder}>
-            <ControlQuad
-              renderOrder={renderOrder}
-              width={iconRect.w}
-              height={iconRect.h}
-              color={tint.color}
-              opacity={tint.opacity}
-              map={texture}
-            />
-          </CanvasItemGroup>
+          <PositionedIcon
+            key={i}
+            rect={iconRect}
+            texture={texture}
+            color={childTint.color}
+            opacity={childTint.opacity}
+            renderOrder={renderOrder}
+            canvasKey={renderOrder}
+          />
         );
       })}
     </>

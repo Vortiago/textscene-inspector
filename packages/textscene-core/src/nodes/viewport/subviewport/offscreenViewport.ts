@@ -9,6 +9,8 @@ import { camera2DView, type Camera2DTag } from '../../2d/camera2d/cameraView';
 import { takeOutputLikeDrawingBuffer } from '../../../r3f/outputTarget';
 import { markSrgbBytes } from '../../../r3f/srgbByteTextures';
 import { pinColorSpace } from '../../../resources/textures/textureView';
+import { BLACK } from '../renderGate';
+import { canvasColorSpaceOf, type CanvasColorSpace } from '../../../r3f/canvasColorSpace';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
 import type { Rect2 } from '../../../godot/math/rect2';
@@ -18,9 +20,16 @@ import type { Rect2 } from '../../../godot/math/rect2';
  * own buffer (`r3f/environment/offscreenToneMap.ts`). Godot tonemaps each viewport into its own
  * target as sRGB-encoded 8-bit texels (`tonemap.glsl` `linear_to_srgb`), so the storage is SRGB8_ALPHA8, which
  * encodes on write and decodes on sample in hardware. The LINEAR tag keeps the shader from encoding
- * too: an sRGB tag would stack a shader encode on the hardware encode.
+ * too: an sRGB tag would stack a shader encode on the hardware encode. A viewport that uses HDR
+ * skips the encode and stores linear half floats (`renderer_scene_render_rd.cpp:744`), as its canvas does.
  */
-export function createSceneTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
+export function createSceneTarget(
+  width: number,
+  height: number,
+  name: string,
+  space: CanvasColorSpace
+): THREE.WebGLRenderTarget {
+  if (space.isLinear) return createLinearCanvasTarget(width, height, name);
   const target = createTarget(width, height, name);
   // Pinned: R3F stamps `SRGBColorSpace` on a target bound to an albedo `map`, and three reads
   // this pass's output space from the tag, so the stamp would add an sRGB OETF (1.5-6.5x too bright).
@@ -35,11 +44,31 @@ export function createSceneTarget(width: number, height: number, name: string): 
  * straight into an `R8G8B8A8_UNORM` target (`renderer_canvas_render_rd.cpp:671,729`,
  * `texture_storage.cpp:3568-3569`). So three encodes into RGBA8, as into the drawing buffer, and
  * blends and filters the encoded bytes. An sRGB tag alone would allocate SRGB8_ALPHA8. It holds no
- * depth: a 2D pass draws into a `CanvasFrame`, which does.
+ * depth: a 2D pass draws into a `CanvasFrame`, which does. A linear canvas writes its linear values
+ * into an `R16G16B16A16_SFLOAT` target instead (`texture_storage.cpp:4541-4547`).
  */
-export function createCanvasTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
+export function createCanvasTarget(
+  width: number,
+  height: number,
+  name: string,
+  space: CanvasColorSpace
+): THREE.WebGLRenderTarget {
+  if (space.isLinear) return createLinearCanvasTarget(width, height, name);
   const target = createTarget(width, height, name);
   storeSrgbBytes(target.texture);
+  return target;
+}
+
+/**
+ * Linear half floats, whose sRGB view is the same format (`texture_storage.cpp:3569,3645-3647`), so
+ * every consumer reads the stored values: a 3D one as linear, and a non-HDR canvas as if they were
+ * its sRGB bytes, which the mark tells it.
+ */
+function createLinearCanvasTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
+  const target = createTarget(width, height, name, THREE.HalfFloatType);
+  pinColorSpace(target.texture, THREE.LinearSRGBColorSpace);
+  target.texture.internalFormat = 'RGBA16F';
+  markSrgbBytes(target.texture);
   return target;
 }
 
@@ -57,14 +86,43 @@ export function storeSrgbBytes(texture: THREE.Texture): void {
  * rule. Not the SubViewport's `canvas_item_default_texture_filter`: Godot passes that to the items
  * drawn into the viewport (`renderer_viewport.cpp:688`), not to sampling its texture.
  */
-function createTarget(width: number, height: number, name: string): THREE.WebGLRenderTarget {
-  const target = new THREE.WebGLRenderTarget(width, height, { depthBuffer: false, stencilBuffer: false });
+function createTarget(
+  width: number,
+  height: number,
+  name: string,
+  type: THREE.TextureDataType = THREE.UnsignedByteType
+): THREE.WebGLRenderTarget {
+  const target = new THREE.WebGLRenderTarget(width, height, {
+    depthBuffer: false,
+    stencilBuffer: false,
+    type,
+  });
   target.texture.name = `${name}::target`;
   target.texture.minFilter = THREE.LinearFilter;
   target.texture.magFilter = THREE.LinearFilter;
   target.texture.generateMipmaps = false;
   takeOutputLikeDrawingBuffer(target);
   return target;
+}
+
+/**
+ * The colour space of a sub-viewport's canvas: linear under `use_hdr_2d`. A canvas drawn over a 3D
+ * world follows it, since that world's tonemap pass writes the same HDR target.
+ */
+export function viewportCanvasColorSpace(
+  properties: Pick<SubViewportProperties, 'use_hdr_2d'>
+): CanvasColorSpace {
+  return canvasColorSpaceOf(properties.use_hdr_2d);
+}
+
+/**
+ * Whether the tonemap pass dithers its output: it does when `use_debanding` asks and the target is
+ * 8-bit. An HDR target holds half floats, so Godot clears the flag (`renderer_scene_render_rd.cpp:941`).
+ */
+export function viewportUsesDebanding(
+  properties: Pick<SubViewportProperties, 'use_debanding' | 'use_hdr_2d'>
+): boolean {
+  return properties.use_debanding && !properties.use_hdr_2d;
 }
 
 /**
@@ -88,8 +146,9 @@ const PREVIOUS_CLEAR_COLOR = new THREE.Color();
 
 /**
  * Bind `target`, set the clear colour, run `draw`, and restore the render target, clear colour,
- * alpha and colour auto-clear. `draw` clears whatever it needs cleared. three draws no tone curve
- * into a target (r187 `WebGLPrograms.js:183`).
+ * alpha and colour auto-clear. `draw` clears whatever it needs cleared, and writes alpha 1 into an
+ * opaque target (`viewportTransfer`, the tonemap). three draws no tone curve into a target (r187
+ * `WebGLPrograms.js:183`).
  */
 export function renderToOffscreenTarget(
   gl: THREE.WebGLRenderer,
@@ -260,4 +319,36 @@ export function orthoFrameForSize(size: Vector2): OrthoFrame {
     bottom: -height / 2,
     position: [width / 2, -height / 2, 1000],
   };
+}
+
+/**
+ * `frame`, framed for `layoutSize`, grown about its top-left corner to show `viewSize`. A window's
+ * canvas draws scaled by its content scale factor from the same origin (`window.cpp:1366`), so its
+ * target shows its pixels over the factor in canvas units, whatever rect a Camera2D centres in.
+ */
+export function frameOverView(frame: OrthoFrame, layoutSize: Vector2, viewSize: Vector2): OrthoFrame {
+  if (layoutSize.x === viewSize.x && layoutSize.y === viewSize.y) return frame;
+  return {
+    ...frame,
+    right: frame.left + ((frame.right - frame.left) * viewSize.x) / layoutSize.x,
+    bottom: frame.top - ((frame.top - frame.bottom) * viewSize.y) / layoutSize.y,
+  };
+}
+
+/**
+ * Sets every texel of `target` to what a Godot target holds before its first render: (0, 0, 0, 0),
+ * which a consumer of an opaque target samples as black (`transparentBg` false). The target takes
+ * opaque black there, which draws the same.
+ */
+export function clearTarget(
+  gl: THREE.WebGLRenderer,
+  target: THREE.WebGLRenderTarget,
+  transparentBg: boolean
+): void {
+  renderToOffscreenTarget(gl, {
+    target,
+    clearColor: BLACK,
+    transparentBg,
+    draw: () => gl.clear(true, true, true),
+  });
 }

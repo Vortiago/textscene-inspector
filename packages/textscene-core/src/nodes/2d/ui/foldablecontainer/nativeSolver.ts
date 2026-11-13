@@ -9,8 +9,12 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
+import {
+  flatCornerDetail,
+  flatStyleBox as makeFlatStyleBox,
+} from '../../../../r3f/controls/native/styleBoxFlat';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
@@ -18,13 +22,17 @@ import type {
   ContainerLayoutFn,
   MinimumSizeFn,
   SolveContext,
-  TextureSlotRequest,
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
-import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { STYLE_FILL } from '../../../../godot/scene/theme';
+import {
+  DEFAULT_CONTENT_MARGIN,
+  DEFAULT_CORNER_RADIUS,
+  DEFAULT_FONT_SIZE,
+  STYLE_FILL,
+} from '../../../../godot/scene/theme';
 import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
@@ -56,6 +64,9 @@ function foldableContainerArrowSize(theme: NativeTheme): Vector2 {
   return { x: size, y: size };
 }
 
+/** The default `font_size` of FoldableContainer: the bare `default_font_size`, not the scaled default theme size (`default_theme.cpp:1322`). */
+const FOLDABLE_CONTAINER_DEFAULT_FONT_SIZE = DEFAULT_FONT_SIZE;
+
 /** The default `font_color` of FoldableContainer (`default_theme.cpp:1324`). */
 const FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
 /** The default `collapsed_font_color` of FoldableContainer (`default_theme.cpp:1326`). */
@@ -76,9 +87,10 @@ type CornerRadius = StyleBoxFlatData['cornerRadius'];
 function flatStyleBox(
   bgColor: Rgba,
   contentMargin: { left: number; top: number; right: number; bottom: number },
-  cornerRadius: CornerRadius
+  cornerRadius: CornerRadius,
+  cornerDetail: number
 ): StyleBoxFlatData {
-  return makeFlatStyleBox(bgColor, { contentMargin, cornerRadius });
+  return makeFlatStyleBox(bgColor, { contentMargin, cornerRadius, cornerDetail });
 }
 
 /**
@@ -112,18 +124,25 @@ function defaultTitleStyle(theme: NativeTheme, folded: boolean, titlePosition: n
   return flatStyleBox(
     STYLE_FILL.pressed,
     margin,
-    titleStyleCornerRadius(theme.cornerRadius, folded, titlePosition)
+    titleStyleCornerRadius(theme.cornerRadius, folded, titlePosition),
+    flatCornerDetail(DEFAULT_CORNER_RADIUS, theme.scale)
   );
 }
 
+/** The content panel resets its margins to the bare `default_margin`, so they do not scale (`default_theme.cpp:1314`). */
 function defaultPanelStyle(theme: NativeTheme, titlePosition: number): StyleBoxFlatData {
   const margin = {
-    left: theme.contentMargin,
-    top: theme.contentMargin,
-    right: theme.contentMargin,
-    bottom: theme.contentMargin,
+    left: DEFAULT_CONTENT_MARGIN,
+    top: DEFAULT_CONTENT_MARGIN,
+    right: DEFAULT_CONTENT_MARGIN,
+    bottom: DEFAULT_CONTENT_MARGIN,
   };
-  return flatStyleBox(STYLE_FILL.normal, margin, panelCornerRadius(theme.cornerRadius, titlePosition));
+  return flatStyleBox(
+    STYLE_FILL.normal,
+    margin,
+    panelCornerRadius(theme.cornerRadius, titlePosition),
+    flatCornerDetail(DEFAULT_CORNER_RADIUS, theme.scale)
+  );
 }
 
 export type FoldableContainerArrow = 'expanded' | 'expandedMirrored' | 'folded' | 'foldedMirrored';
@@ -149,12 +168,7 @@ export const FOLDABLE_CONTAINER_ARROW_THEME_NAME: Record<FoldableContainerArrow,
 
 /** The arrow slots that have a themed answer, for `controlSolverRegistry.registerTextureSlots`. */
 export const foldableContainerTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
-  const requests: TextureSlotRequest[] = [];
-  for (const name of Object.values(FOLDABLE_CONTAINER_ARROW_THEME_NAME)) {
-    const themed = themedIcons[name];
-    if (themed) requests.push(themedSlotRequest(name, themed));
-  }
-  return requests;
+  return themedSlotRequests(Object.values(FOLDABLE_CONTAINER_ARROW_THEME_NAME), themedIcons);
 };
 
 /** The arrow's size: themed when `SolveNode.textureSlots` resolved it, else the scaled vendored default. */
@@ -207,7 +221,6 @@ function foldableContainerTitleMetrics(
 ): FoldableContainerTitleMetrics {
   const folded = props.folded === true;
   const titlePosition = props.titlePosition ?? TITLE_POSITION_TOP;
-  const overrunBehavior = props.titleTextOverrunBehavior ?? 0; // OVERRUN_NO_TRIMMING
 
   const titleStyle = folded
     ? (n.styleBoxes.title_collapsed_panel ?? defaultTitleStyle(ctx.theme, true, titlePosition))
@@ -217,7 +230,7 @@ function foldableContainerTitleMetrics(
 
   const stateKey = folded ? 'folded' : 'expanded';
   const { fontSizePx, color } = resolveTextTheme(n, props, FOLDABLE_CONTAINER_TITLE_THEME_KEYS[stateKey], {
-    fontSizePx: ctx.theme.fontSize,
+    fontSizePx: FOLDABLE_CONTAINER_DEFAULT_FONT_SIZE,
     color: folded ? FOLDABLE_CONTAINER_DEFAULT_COLLAPSED_FONT_COLOR : FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR,
   });
 
@@ -246,9 +259,9 @@ function foldableContainerTitleMetrics(
     width += foldableContainerHSeparation(ctx.theme);
     const textHeight = layout ? layout.heightPx : 0;
     height += Math.max(textHeight, arrowSize.y);
-    // foldable_container.cpp:455: only OVERRUN_NO_TRIMMING (0) adds the text width.
+    // foldable_container.cpp:455: only OVERRUN_NO_TRIMMING adds the text width.
     // A trimming mode sizes the title bar to the arrow alone.
-    if (overrunBehavior === 0 && layout) {
+    if (!isTextWidthClipped({ overrunBehavior: props.titleTextOverrunBehavior }) && layout) {
       width += shapedTextSizeWidthPx(layout.widthPx);
     }
   } else {

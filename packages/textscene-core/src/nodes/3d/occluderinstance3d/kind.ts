@@ -11,19 +11,13 @@ import {
   NO_FLOATS,
   parsePackedVector2Array,
   parsePackedVector3Array,
+  vector2Elements,
 } from '../../../resources/shapes/packedArray';
 
 /** The defaults of the class members (`occluder_instance_3d.h:89, 107, 127`). */
 const DEFAULT_SIZE_2D: Vector2 = { x: 1, y: 1 };
 const DEFAULT_SIZE_3D: Vector3 = { x: 1, y: 1, z: 1 };
 const DEFAULT_RADIUS = 1;
-
-function pairs(components: Float32Array): Vector2[] {
-  return Array.from({ length: Math.floor(components.length / 2) }, (_, i) => ({
-    x: components[i * 2]!,
-    y: components[i * 2 + 1]!,
-  }));
-}
 
 type Properties = Readonly<Record<string, string>>;
 
@@ -39,7 +33,9 @@ const DECODERS: Readonly<Record<string, (data: Properties) => OccluderShape>> = 
   }),
   PolygonOccluder3D: (data) => ({
     kind: 'polygon',
-    polygon: pairs(packedOr(data.polygon, parsePackedVector2Array, NO_FLOATS, 'PolygonOccluder3D polygon')),
+    polygon: vector2Elements(
+      packedOr(data.polygon, parsePackedVector2Array, NO_FLOATS, 'PolygonOccluder3D polygon')
+    ),
   }),
   ArrayOccluder3D: (data) => ({
     kind: 'array',

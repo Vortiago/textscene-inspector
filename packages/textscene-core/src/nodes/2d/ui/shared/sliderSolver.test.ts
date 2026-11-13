@@ -237,8 +237,8 @@ describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_B
     });
   });
 
-  it('keeps the 8px cross axis unscaled by default_theme_scale, like every vendored icon (edge case)', () => {
-    expect(sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme2x, grabberOf(theme2x))[0]!.h).toBe(8);
+  it('scales the 8px cross axis by default_theme_scale, like every vendored icon', () => {
+    expect(sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme2x, grabberOf(theme2x))[0]!.h).toBe(16);
   });
 
   it('spaces interior ticks across the travel for a HORIZONTAL slider (slider.cpp:342-347)', () => {

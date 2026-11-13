@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { sameShadowLight, sampleShadowLight } from './shadowLightSample';
+import { sameShadowLight, sampleShadowLight, type ShadowLightPose } from './shadowLightSample';
 
 /** A cookie quad of `size` at `offset`, under a CanvasItem group at `at`. */
 function quadUnder(
@@ -26,11 +26,16 @@ function quadUnder(
   return mesh;
 }
 
+/** Where the pose's light-local frame puts world point (x, y). The shadow origin maps to (0, 0). */
+function localOf(pose: ShadowLightPose, x: number, y: number): [number, number] {
+  const [m00, m01, m02, m10, m11, m12] = pose.worldToLocal;
+  return [m00 * x + m01 * y + m02, m10 * x + m11 * y + m12];
+}
+
 describe('sampleShadowLight', () => {
   it('takes the shadow origin from the light node, not the cookie centre', () => {
     const pose = sampleShadowLight(quadUnder({ x: 400, y: -324 }), false)!;
-    expect(pose.x).toBe(400);
-    expect(pose.y).toBe(-324);
+    expect(localOf(pose, 400, -324)).toEqual([0, 0]);
   });
 
   it('bounds the rect by the cookie, which is what Godot culls occluders against', () => {
@@ -40,7 +45,7 @@ describe('sampleShadowLight', () => {
 
   it('moves the rect with offset but leaves the origin where the node is', () => {
     const pose = sampleShadowLight(quadUnder({ x: 0, y: 0 }, { x: 50, y: -20 }, 200), false)!;
-    expect([pose.x, pose.y]).toEqual([0, 0]);
+    expect(localOf(pose, 0, 0)).toEqual([0, 0]);
     expect(pose.rect).toEqual({ minX: -50, minY: -120, maxX: 150, maxY: 80 });
   });
 
@@ -102,7 +107,7 @@ describe('sampleShadowLight', () => {
     const mesh = quadUnder({ x: 100, y: -50 });
     (mesh.parent!.parent as THREE.Group).position.set(300, -90, 0);
     const pose = sampleShadowLight(mesh, false)!;
-    expect([pose.x, pose.y]).toEqual([400, -140]);
+    expect(localOf(pose, 400, -140)).toEqual([0, 0]);
   });
 
   it('is null for a quad that is not in a tree yet', () => {
@@ -121,8 +126,8 @@ describe('sampleShadowLight', () => {
     mesh.updateWorldMatrix(true, false);
     mesh.parent!.position.set(500, 0, 0);
 
-    expect(sampleShadowLight(mesh, true)!.x).toBe(0);
-    expect(sampleShadowLight(mesh, false)!.x).toBe(500);
+    expect(localOf(sampleShadowLight(mesh, true)!, 0, 0)).toEqual([0, 0]);
+    expect(localOf(sampleShadowLight(mesh, false)!, 500, 0)).toEqual([0, 0]);
   });
 });
 

@@ -226,6 +226,11 @@ export function lightened<C extends ColorChannels>(color: C, amount: number): C 
   return { ...color, r: r + (1 - r) * amount, g: g + (1 - g) * amount, b: b + (1 - b) * amount };
 }
 
+/** `Color::inverted` (`core/math/color.h`): each colour channel flips, and alpha stays. */
+export function inverted<C extends ColorChannels>(color: C): C {
+  return { ...color, r: 1 - color.r, g: 1 - color.g, b: 1 - color.b };
+}
+
 /**
  * `Color::get_h` (`core/math/color.cpp:136-163`): the hue as a fraction of the circle, 0 for a grey.
  *
@@ -243,6 +248,15 @@ export function colorHue({ r, g, b }: ColorChannels): number {
 
   hue /= 6;
   return hue < 0 ? hue + 1 : hue;
+}
+
+/**
+ * `Color::get_v` (`core/math/color.cpp:176-180`): the brightest channel.
+ *
+ * @canonical A colour's hue, saturation and conversion from HSV
+ */
+export function colorValue({ r, g, b }: ColorChannels): number {
+  return Math.max(r, g, b);
 }
 
 /**

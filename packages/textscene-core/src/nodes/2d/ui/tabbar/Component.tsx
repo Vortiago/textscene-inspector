@@ -10,12 +10,10 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { useTexture2D } from '../../../../resources/useTexture2D';
-import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import type { TabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
+import { useIconModulate, useIconRefTexture } from '../../../../r3f/controls/native/useButtonIcon';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
@@ -23,8 +21,11 @@ import type { TextLayoutResult } from '../../../../r3f/controls/native/text/text
 import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
+import { TEXT_LINE_DEFAULT_OVERRUN, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
+import type { FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import type { TabBarProperties, TabBarTabProperties } from './types';
 import { TAB_BAR_ICONS } from '../../../../r3f/controls/native/themeIcons';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   TAB_ALIGNMENT_LEFT,
   TAB_BAR_THEME_FONT_KEY,
@@ -34,7 +35,6 @@ import {
   layoutScrollArrows,
   layoutTabContent,
   pickTabStyleBox,
-  reconstructThemeScale,
   resolveTabDrawState,
   isTabUnselectable,
   resolveTabBarCurrentTab,
@@ -42,7 +42,6 @@ import {
   tabBarFontColor,
   tabBarFontSizePx,
   tabBarIconColor,
-  tabBarStyleBoxes,
   tabBarThemeIconSize,
   tabContentWidth,
   tabDrawX,
@@ -52,6 +51,7 @@ import {
   type TabLayoutInput,
   type TabLayoutItem,
 } from './nativeSolver';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 /** A stable identity for "no tabs", so a Control with none never invalidates a memo depending on it every render. */
 const EMPTY_TABS: readonly TabBarTabProperties[] = [];
@@ -63,12 +63,8 @@ interface ComputedTab {
   layout: TextLayoutResult;
 }
 
-/**
- * No pointer exists, so `tab_hovered`, `tab_focus`, the close and right buttons' hover background
- * and the drag drop-mark never draw (`buttonBase.ts`). `right_button` is dead code (`nativeSolver.ts`),
- * and only TabContainer consumes `all_tabs_in_front`'s front ordering.
- */
-export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
+/** Everything about a TabBar's tabs that does not depend on its width: the TabContainer reads it to size the bar before it draws. */
+export function useTabBarModel(solveNode: SolveNode, theme: NativeControlComponentProps['theme']) {
   const props = painterView<TabBarProperties>(solveNode);
   const tabs = props.tabs ?? EMPTY_TABS;
   const currentTab = resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabs.length, (i) =>
@@ -77,18 +73,18 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
   const alignment = props.tabAlignment ?? TAB_ALIGNMENT_LEFT;
   const clipTabs = props.clipTabs ?? true;
   const maxTabWidth = props.maxTabWidth ?? 0;
+  const scrollToSelected = props.scrollToSelected ?? true;
   const closeDisplayPolicy = props.tabCloseDisplayPolicy ?? 0;
   const hSeparation = solveNode.constants.h_separation ?? theme.separation;
   const tabSeparation = solveNode.constants.tab_separation ?? 0;
   const iconMaxWidth = solveNode.constants.icon_max_width ?? 0;
 
-  const scale = reconstructThemeScale(theme);
-  const defaults = useMemo(() => tabBarStyleBoxes(scale), [scale]);
+  const defaults = theme.widgets.tabContainer;
   const overrides = solveNode.styleBoxes;
   const closeButtonMargin = theme.widgets.button.normal.contentMargin;
-  const closeIconSize = tabBarThemeIconSize(solveNode, 'close');
-  const incrementIconSize = tabBarThemeIconSize(solveNode, 'increment');
-  const decrementIconSize = tabBarThemeIconSize(solveNode, 'decrement');
+  const closeIconSize = tabBarThemeIconSize(solveNode, 'close', theme.scale);
+  const incrementIconSize = tabBarThemeIconSize(solveNode, 'increment', theme.scale);
+  const decrementIconSize = tabBarThemeIconSize(solveNode, 'decrement', theme.scale);
 
   const fontMetrics = resolveNodeFontMetrics(solveNode, TAB_BAR_THEME_FONT_KEY);
   // Shaped here rather than carried over from the solver, so the internal bar
@@ -139,28 +135,86 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
     ]
   );
 
-  const drawLayout = useMemo(
-    () =>
-      computeTabBarDrawLayout(
-        drawInputs,
-        rect.w,
-        alignment,
-        clipTabs,
-        maxTabWidth,
-        tabSeparation,
-        incrementIconSize.x,
-        decrementIconSize.x
-      ),
+  const layoutInput = useMemo(
+    () => ({
+      alignment,
+      clipTabs,
+      maxTabWidthPx: maxTabWidth,
+      tabSeparation,
+      incrementIconWidth: incrementIconSize.x,
+      decrementIconWidth: decrementIconSize.x,
+      currentTab,
+      scrollToSelected,
+    }),
     [
-      drawInputs,
-      rect.w,
       alignment,
       clipTabs,
       maxTabWidth,
       tabSeparation,
       incrementIconSize.x,
       decrementIconSize.x,
+      currentTab,
+      scrollToSelected,
     ]
+  );
+
+  return {
+    computed,
+    drawInputs,
+    layoutInput,
+    currentTab,
+    closeDisplayPolicy,
+    hSeparation,
+    overrides,
+    defaults,
+    closeButtonMargin,
+    closeIconSize,
+    incrementIconSize,
+    decrementIconSize,
+    fontSizePx,
+    fontMetrics,
+  };
+}
+
+export type TabBarModel = ReturnType<typeof useTabBarModel>;
+
+/**
+ * No pointer exists, so `tab_hovered`, `tab_focus`, the close and right buttons' hover background
+ * and the drag drop-mark never draw (`buttonBase.ts`). `right_button` is dead code (`nativeSolver.ts`),
+ * and only TabContainer consumes `all_tabs_in_front`'s front ordering.
+ */
+export function TabBar(props: NativeControlComponentProps) {
+  const model = useTabBarModel(props.solveNode, props.theme);
+  return <TabBarStrip {...props} model={model} />;
+}
+
+interface TabBarStripProps extends Omit<NativeControlComponentProps, 'childTint'> {
+  model: TabBarModel;
+  /** The first drawn tab, when the caller resolved it. Unset, the strip scrolls to the current tab once. */
+  offset?: number;
+}
+
+/** The painter for one resolved width: it draws `model` in `rect`. */
+export function TabBarStrip({ solveNode, tint, rect, renderOrder, model, offset }: TabBarStripProps) {
+  const {
+    computed,
+    drawInputs,
+    layoutInput,
+    currentTab,
+    closeDisplayPolicy,
+    hSeparation,
+    overrides,
+    defaults,
+    closeButtonMargin,
+    closeIconSize,
+    incrementIconSize,
+    decrementIconSize,
+    fontSizePx,
+    fontMetrics,
+  } = model;
+  const drawLayout = useMemo(
+    () => computeTabBarDrawLayout(drawInputs, { ...layoutInput, barWidthPx: rect.w, offset }),
+    [drawInputs, layoutInput, rect.w, offset]
   );
 
   const closeIconTexture = useNodeIcon(solveNode.icons.close, TAB_BAR_ICONS.close);
@@ -186,6 +240,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
     closeIconTexture,
     closeIconSize,
     fontSizePx,
+    fontMetrics,
     clippingPlanes,
   };
 
@@ -213,6 +268,7 @@ export function TabBar({ solveNode, tint, rect, theme, renderOrder }: NativeCont
           rect={rect}
           rtl={solveNode.rtl}
           missingRight={drawLayout.missingRight}
+          canScrollBack={drawLayout.offset > 0}
           incrementIconTexture={incrementIconTexture}
           decrementIconTexture={decrementIconTexture}
           incrementIconSize={incrementIconSize}
@@ -231,7 +287,7 @@ interface TabBarTabChromeProps {
   currentTab: number;
   solveNode: SolveNode;
   overrides: Readonly<Record<string, StyleBoxFlatData>>;
-  defaults: ReturnType<typeof tabBarStyleBoxes>;
+  defaults: TabBarStyleBoxes;
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;
   barHeight: number;
@@ -242,11 +298,12 @@ interface TabBarTabChromeProps {
   closeIconTexture: ReturnType<typeof useNodeIcon>;
   closeIconSize: { x: number; y: number };
   fontSizePx: number;
+  fontMetrics: FontMetrics | undefined;
   clippingPlanes: readonly Plane[];
   closeDisplayPolicy: number;
 }
 
-/** One tab's own chrome: its StyleBox, icon, title, and close icon. A dedicated component so its icon's `useTexture2D` call is safe across a variable-length tab list (one hook per mounted instance, not a loop of hook calls). */
+/** One tab's own chrome: its StyleBox, icon, title, and close icon. A dedicated component so its icon's texture hook is safe across a variable-length tab list (one hook per mounted instance, not a loop of hook calls). */
 function TabBarTabChrome({
   item,
   entry,
@@ -264,25 +321,33 @@ function TabBarTabChrome({
   closeIconTexture,
   closeIconSize,
   fontSizePx,
+  fontMetrics,
   clippingPlanes,
   closeDisplayPolicy,
 }: TabBarTabChromeProps) {
-  const { tab, state, iconSize, layout } = entry;
+  const { tab, state, iconSize } = entry;
+  const layout = useMemo(
+    () =>
+      item.truncated && fontMetrics
+        ? trimSoloLine(entry.layout, TEXT_LINE_DEFAULT_OVERRUN, item.textBudgetPx, {
+            fontMetrics,
+            fontSizePx,
+            isDrawnRtl: rtl,
+          })
+        : entry.layout,
+    [item.truncated, item.textBudgetPx, entry.layout, fontMetrics, fontSizePx, rtl]
+  );
   const style = pickTabStyleBox(overrides, defaults, state);
   const closeVisible = isCloseButtonVisible(closeDisplayPolicy, item.index, currentTab);
 
-  const { externalResources, internalResources } = solveNode.resources;
-  const { texture: iconSource } = useTexture2D(tab.icon, externalResources, internalResources);
-  const iconTexture = useOwnerCanvas2DTexture(iconSource);
+  const iconTexture = useIconRefTexture(solveNode, tab.icon);
 
   const fontColor = tabBarFontColor(solveNode.colors, state);
   // `tint`, `self_modulate` folded onto `modulate`, composes into every colour before its
   // sRGB-to-linear conversion, as in `PanelChrome.tsx`.
   const tintedFontColor = tintColor(fontColor, tint.own);
-  const baseIconColor = tabBarIconColor(solveNode.colors, state);
-  const tintedIconColor = tintColor(baseIconColor, tint.own);
-  const iconLinearColor = useGodotLinearColor(tintedIconColor);
-  const closeLinearColor = useGodotLinearColor(tint.own);
+  const iconModulate = useIconModulate(tabBarIconColor(solveNode.colors, state), tint.own);
+  const closeLinearColor = useItemLinearColor(tint.own);
 
   const content = layoutTabContent({
     barHeightPx: barHeight,
@@ -308,16 +373,14 @@ function TabBarTabChrome({
         renderOrder={renderOrder}
       />
       {content.icon && iconTexture && (
-        <CanvasItemGroup position={[content.icon.rect.x, -content.icon.rect.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={content.icon.rect.w}
-            height={content.icon.rect.h}
-            color={iconLinearColor}
-            opacity={tintedIconColor.a}
-            map={iconTexture}
-          />
-        </CanvasItemGroup>
+        <PositionedIcon
+          rect={content.icon.rect}
+          texture={iconTexture}
+          color={iconModulate.color}
+          opacity={iconModulate.opacity}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
       )}
       {tab.title.length > 0 && content.text && (
         <CanvasItemGroup position={[content.text.offset.x, -content.text.offset.y, 0]}>
@@ -331,16 +394,19 @@ function TabBarTabChrome({
         </CanvasItemGroup>
       )}
       {content.close && (
-        <CanvasItemGroup position={[content.close.iconOffset.x, -content.close.iconOffset.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={closeIconSize.x}
-            height={closeIconSize.y}
-            color={closeLinearColor}
-            opacity={tint.own.a}
-            map={closeIconTexture}
-          />
-        </CanvasItemGroup>
+        <PositionedIcon
+          rect={{
+            x: content.close.iconOffset.x,
+            y: content.close.iconOffset.y,
+            w: closeIconSize.x,
+            h: closeIconSize.y,
+          }}
+          texture={closeIconTexture}
+          color={closeLinearColor}
+          opacity={tint.own.a}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
       )}
     </CanvasItemGroup>
   );
@@ -350,6 +416,7 @@ interface ScrollArrowsProps {
   rect: NativeControlComponentProps['rect'];
   rtl: boolean;
   missingRight: boolean;
+  canScrollBack: boolean;
   incrementIconTexture: ReturnType<typeof useNodeIcon>;
   decrementIconTexture: ReturnType<typeof useNodeIcon>;
   incrementIconSize: { x: number; y: number };
@@ -358,11 +425,12 @@ interface ScrollArrowsProps {
   renderOrder: number;
 }
 
-/** `tab_bar.cpp:564-592` through `layoutScrollArrows`: which edge the pair sits against, and which of the two `missing_right` lights up, both follow the layout direction. */
+/** `tab_bar.cpp:564-592` through `layoutScrollArrows`: which edge the pair sits against, and which arrow `offset > 0` and `missing_right` light, both follow the layout direction. */
 function ScrollArrows({
   rect,
   rtl,
   missingRight,
+  canScrollBack,
   incrementIconTexture,
   decrementIconTexture,
   incrementIconSize,
@@ -376,33 +444,40 @@ function ScrollArrows({
     incrementIconSize,
     decrementIconSize,
     missingRight,
+    canScrollBack,
     rtl,
   });
-  const white = useGodotLinearColor({ r: 1, g: 1, b: 1 });
+  const white = useItemLinearColor({ r: 1, g: 1, b: 1 });
   const alpha = (dim: boolean) => (dim ? 0.5 : 1) * tint.own.a;
 
   return (
     <>
-      <CanvasItemGroup position={[arrows.decrement.x, -arrows.decrement.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={decrementIconSize.x}
-          height={decrementIconSize.y}
-          color={white}
-          opacity={alpha(arrows.decrement.dim)}
-          map={decrementIconTexture}
-        />
-      </CanvasItemGroup>
-      <CanvasItemGroup position={[arrows.increment.x, -arrows.increment.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={incrementIconSize.x}
-          height={incrementIconSize.y}
-          color={white}
-          opacity={alpha(arrows.increment.dim)}
-          map={incrementIconTexture}
-        />
-      </CanvasItemGroup>
+      <PositionedIcon
+        rect={{
+          x: arrows.decrement.x,
+          y: arrows.decrement.y,
+          w: decrementIconSize.x,
+          h: decrementIconSize.y,
+        }}
+        texture={decrementIconTexture}
+        color={white}
+        opacity={alpha(arrows.decrement.dim)}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
+      <PositionedIcon
+        rect={{
+          x: arrows.increment.x,
+          y: arrows.increment.y,
+          w: incrementIconSize.x,
+          h: incrementIconSize.y,
+        }}
+        texture={incrementIconTexture}
+        color={white}
+        opacity={alpha(arrows.increment.dim)}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
     </>
   );
 }

@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import './index.r3f';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { FlowContainer } from './Component';
 
 describe('FlowContainer index.r3f self-registration', () => {
@@ -19,7 +20,9 @@ describe('FlowContainer index.r3f self-registration', () => {
       const shared = controlSolverRegistry.minimumSize('FlowContainer');
       expect(shared).toBeTypeOf('function');
       expect(controlSolverRegistry.minimumSize(typeName)).toBe(shared);
-      expect(controlSolverRegistry.isSizeDependentMinimum(typeName)).toBe(true);
+      expect(
+        controlSolverRegistry.readsTentativeRect({ node: { type: typeName } } as unknown as SolveNode)
+      ).toBe(true);
     }
   );
 

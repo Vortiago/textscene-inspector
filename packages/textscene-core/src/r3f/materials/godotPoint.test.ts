@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { pointDrawOf, withPointDraw, type PointDraw } from './godotPoint';
+import { pointDrawOf, withLineDraw, withPointDraw, type PointDraw } from './godotPoint';
 import type { ProgramShader } from '../materialProgramInputs';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
@@ -170,5 +170,29 @@ describe('withPointDraw', () => {
   it("keeps the bag's own userData", () => {
     const sized = withPointDraw({ ...BAG, props: { userData: { own: 1 } } }, SIZE_6);
     expect(sized.props.userData).toMatchObject({ own: 1 });
+  });
+});
+
+describe('a lines material', () => {
+  it('is the bag itself for lines in the mesh, which draw as any surface does', () => {
+    expect(withLineDraw(BAG, 'mesh')).toBe(BAG);
+    expect(withLineDraw(BAG, undefined)).toBe(BAG);
+  });
+
+  it('declares the instance matrix for lines at instances, in both passes', () => {
+    const lines = withLineDraw(BAG, 'instances');
+    const shader: ProgramShader = {
+      vertexShader: THREE.ShaderLib.basic.vertexShader,
+      fragmentShader: THREE.ShaderLib.basic.fragmentShader,
+      uniforms: {},
+    };
+    lines.injection!.onBeforeCompile.call(new THREE.MeshStandardMaterial(), shader);
+
+    expect(shader.vertexShader).toContain('attribute mat4 instanceMatrix;');
+    expect(lines.props.userData).not.toBe(BAG.props.userData);
+  });
+
+  it('gives one form to one bag, so a render does not compile again', () => {
+    expect(withLineDraw(BAG, 'instances')).toBe(withLineDraw(BAG, 'instances'));
   });
 });

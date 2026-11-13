@@ -2,19 +2,24 @@ import { describe, it, expect } from 'vitest';
 import {
   CONTROL_FONT_COLOR,
   CONTROL_FONT_DISABLED_COLOR,
+  CONTROL_FONT_FOCUS_COLOR,
   CONTROL_FONT_HOVER_COLOR,
   CONTROL_FONT_LOW_COLOR,
   CONTROL_FONT_LOWER_COLOR,
   CONTROL_FONT_PLACEHOLDER_COLOR,
   CONTROL_FONT_PRESSED_COLOR,
   DEFAULT_CONTENT_MARGIN,
-  DEFAULT_FONT_SIZE,
   STYLE_FILL,
   scaledGodotTheme,
 } from './theme.js';
 
 /** `fill_default_theme` (`scene/theme/default_theme.cpp:101-108`). */
 describe('default theme font colours', () => {
+  it('draws a focused Button in the hover colour, as its own object', () => {
+    expect(CONTROL_FONT_FOCUS_COLOR).toEqual({ r: 0.95, g: 0.95, b: 0.95, a: 1 });
+    expect(CONTROL_FONT_FOCUS_COLOR).not.toBe(CONTROL_FONT_HOVER_COLOR);
+  });
+
   it('draws Control text in a light grey', () => {
     expect(CONTROL_FONT_COLOR).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
   });
@@ -46,7 +51,7 @@ describe('default theme font colours', () => {
 
 describe('default theme metrics', () => {
   it('pins default_font_size = 16 (default_theme.cpp:50)', () => {
-    expect(DEFAULT_FONT_SIZE).toBe(16);
+    expect(scaledGodotTheme(1).fontSize).toBe(16);
   });
 
   it('pins default_margin = 4 (default_theme.cpp:54)', () => {
@@ -59,8 +64,11 @@ describe('default theme metrics', () => {
       hover: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 },
       pressed: { r: 0, g: 0, b: 0, a: 0.6 },
       disabled: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 },
+      focus: { r: 1, g: 1, b: 1, a: 0.75 },
       popup: { r: 0.25, g: 0.25, b: 0.25, a: 1 },
+      popupHover: { r: 0.4, g: 0.4, b: 0.4, a: 1 },
       progress: { r: 1, g: 1, b: 1, a: 0.4 },
+      selected: { r: 1, g: 1, b: 1, a: 0.3 },
     });
   });
 });
@@ -83,9 +91,7 @@ describe('scaledGodotTheme', () => {
       sliderTrackThickness: 8, // two margins of make_flat_stylebox(…, 4, 4, 4, 4, 4), default_theme.cpp:579
       sliderCornerRadius: 4, // the corner radius of that call, default_theme.cpp:579
       sliderGrabberSize: 16, // the slider_grabber icon's 16x16 box
-      sliderGrabberRadius: 7, // its circle's r="7"
       sliderTickBox: 4, // the 4x8 canvas of hslider_tick.svg
-      sliderTickThickness: 2, // the 2px bar `pnpm ref:godot` measures
     });
   });
 
@@ -105,9 +111,7 @@ describe('scaledGodotTheme', () => {
       sliderTrackThickness: 16,
       sliderCornerRadius: 8,
       sliderGrabberSize: 32,
-      sliderGrabberRadius: 14,
       sliderTickBox: 8,
-      sliderTickThickness: 4,
     });
   });
 
@@ -139,9 +143,7 @@ describe('scaledGodotTheme', () => {
       sliderTrackThickness: 4,
       sliderCornerRadius: 2,
       sliderGrabberSize: 8,
-      sliderGrabberRadius: 4,
       sliderTickBox: 2,
-      sliderTickThickness: 1,
     });
   });
 });

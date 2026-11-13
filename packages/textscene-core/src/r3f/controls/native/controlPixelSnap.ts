@@ -85,3 +85,78 @@ export function snappedControlOrigin(
     y: Math.floor(position.y + internal.y + 0.5) - internal.y,
   };
 }
+
+/**
+ * Where the canvas item of a Control sits in its parent: `_update_canvas_item_transform`'s origin
+ * (`control.cpp:727-737`), the position plus the internal translation, whole pixels when it snaps.
+ * A y-sorted parent sorts the Control on this origin's y.
+ */
+function controlItemOrigin(
+  position: Vector2,
+  transform: ControlDrawTransform,
+  snapEnabled: boolean
+): Vector2 {
+  const outer = snappedControlOrigin(position, transform, snapEnabled);
+  const internal = internalTransformTranslation(transform);
+  return { x: outer.x + internal.x, y: outer.y + internal.y };
+}
+
+/** Subtracts `offset` from the snapped sum `position + offset`. The parent that holds `offset` adds it back. */
+function snapSumLess(position: Vector2, offset: Vector2, snap: (sum: Vector2) => Vector2): Vector2 {
+  const snapped = snap({ x: position.x + offset.x, y: position.y + offset.y });
+  return { x: snapped.x - offset.x, y: snapped.y - offset.y };
+}
+
+/** `snappedControlOrigin` of `position + offset`, less `offset`. */
+export function snappedControlOriginUnder(
+  position: Vector2,
+  offset: Vector2,
+  transform: ControlDrawTransform,
+  snapEnabled: boolean
+): Vector2 {
+  return snapSumLess(position, offset, (sum) => snappedControlOrigin(sum, transform, snapEnabled));
+}
+
+/** `controlItemOrigin` of `position + offset`, less `offset`. */
+export function controlItemOriginUnder(
+  position: Vector2,
+  offset: Vector2,
+  transform: ControlDrawTransform,
+  snapEnabled: boolean
+): Vector2 {
+  return snapSumLess(position, offset, (sum) => controlItemOrigin(sum, transform, snapEnabled));
+}
+
+/** The scale of a node with none authored, and of a container child `fit_child_in_rect` reset. */
+const UNIT_SCALE: Readonly<Vector2> = Object.freeze({ x: 1, y: 1 });
+/** A Control that no container fitted. */
+const NO_FIT = Object.freeze({ resets: false });
+
+/**
+ * The rotation, scale and pivot a Control draws with. `Container::fit_child_in_rect` resets a
+ * container child to rotation 0 and scale 1, and the solve may hold a scale of its own for it,
+ * which wins over both the authored scale and the reset.
+ */
+export function controlDrawTransformOf(
+  control: { rotation?: number; scale?: Vector2; pivotOffset?: Vector2; pivotOffsetRatio?: Vector2 },
+  rect: { w: number; h: number },
+  fit: { resets: boolean; solvedScale?: Vector2 } = NO_FIT
+): ControlDrawTransform {
+  const { resets, solvedScale } = fit;
+  return {
+    rotation: resets ? 0 : (control.rotation ?? 0),
+    scale: solvedScale ?? (resets ? UNIT_SCALE : (control.scale ?? UNIT_SCALE)),
+    pivot: combinedPivotOffset(control, rect),
+  };
+}
+
+/** `Control::get_combined_pivot_offset()`: the pivot offset plus the ratio of the rect size. */
+function combinedPivotOffset(
+  control: { pivotOffset?: Vector2; pivotOffsetRatio?: Vector2 },
+  size: { w: number; h: number }
+): Vector2 {
+  return {
+    x: (control.pivotOffset?.x ?? 0) + (control.pivotOffsetRatio?.x ?? 0) * size.w,
+    y: (control.pivotOffset?.y ?? 0) + (control.pivotOffsetRatio?.y ?? 0) * size.h,
+  };
+}

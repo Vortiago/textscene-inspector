@@ -1,12 +1,13 @@
 /**
- * A mesh at every instance of a buffer: each part one instanced draw, an InstancedMesh or a
- * THREE.Points, with one more instanced draw for each `next_pass` link and for the overlay. Every
+ * A mesh at every instance of a buffer: each part one instanced draw, an InstancedMesh, a
+ * THREE.Points or a THREE.LineSegments, with one more instanced draw for each `next_pass` link and for the overlay. Every
  * draw of a part reads one instanced geometry, so one write places them all.
  */
 
 import { useLayoutEffect, useMemo, type ReactNode } from 'react';
 import type * as THREE from 'three';
-import { geometryDrawsPoints } from '../../resources/meshes/godotSurface';
+import { geometryPrimitive } from '../../resources/meshes/godotSurface';
+import { drawnTag } from '../meshes/meshContent';
 import { perObject } from '../../utils/perObject';
 import { boxlessUserData } from '../bounds';
 import { extraDrawProps } from '../materials/extraDraw';
@@ -18,8 +19,8 @@ import { SurfaceMaterialSlots, overriddenSources } from '../materials/SurfaceMat
 import { useOneSurfaceStartingMaterial } from '../materials/useOneSurfaceStartingMaterial';
 import {
   instanceMatrices,
-  pointPlacementOf,
-  raycastInstancedPoints,
+  listedSlotOf,
+  raycastInstanced,
   useSharedInstances,
 } from '../meshes/sharedInstances';
 import { drawHookProps, type ShadowCastingEffects } from '../shadowCasting';
@@ -68,7 +69,7 @@ function InstancedPart({ part, instances, owner }: { part: MeshPart } & Omit<Ins
   }, [geometry, bounds, layers, particles]);
 
   const sources = overriddenSources(part.materials, override);
-  const drawsPoints = geometryDrawsPoints(source);
+  const primitive = geometryPrimitive(source);
   const drawExtra: ChainDrawFactory = (spec) => <ExtraInstancedDraw spec={spec} placed={placed} />;
   return (
     <>
@@ -76,7 +77,7 @@ function InstancedPart({ part, instances, owner }: { part: MeshPart } & Omit<Ins
       <NextPassChain
         sources={sources}
         geometry={geometry}
-        drawsPoints={drawsPoints}
+        primitive={primitive}
         godotLayers={layers}
         shadow={shadow}
         draw={drawExtra}
@@ -97,15 +98,15 @@ function OwnInstancedDraw({
   shadow: ShadowCastingEffects;
 }) {
   const { geometry, particles } = placed;
-  // `THREE.Points` tests the source positions alone, so each instance is picked by itself.
-  const raycast = geometryDrawsPoints(geometry) ? raycastInstancedPoints : undefined;
+  // Points and line segments test the source positions alone, so each instance is picked by itself.
+  const raycast = geometryPrimitive(geometry) === 'triangles' ? undefined : raycastInstanced;
   return (
     <InstancedDraw
       placed={placed}
       surfaceCount={sources.length}
       settings={{ ...drawHookProps(shadow), raycast }}
     >
-      <SurfaceMaterialSlots sources={sources} points={pointPlacementOf(geometry)} particles={particles} />
+      <SurfaceMaterialSlots sources={sources} {...listedSlotOf(geometry)} particles={particles} />
     </InstancedDraw>
   );
 }
@@ -126,7 +127,7 @@ function ExtraInstancedDraw({ spec, placed }: { spec: ChainDrawSpec; placed: Par
       <SurfaceMaterialSlot
         source={spec.source}
         attach={spec.attach}
-        points={pointPlacementOf(placed.geometry)}
+        {...listedSlotOf(placed.geometry)}
         particles={placed.particles}
       />
     </InstancedDraw>
@@ -140,7 +141,7 @@ function ExtraInstancedDraw({ spec, placed }: { spec: ChainDrawSpec; placed: Par
 type InstancedDrawSettings = Partial<ReturnType<typeof drawHookProps> & ReturnType<typeof extraDrawProps>>;
 
 /**
- * One instanced draw of a part: an InstancedMesh, or a `THREE.Points` for a part that draws points.
+ * One instanced draw of a part: an InstancedMesh, or a `THREE.Points` or `THREE.LineSegments` for a part that draws them.
  * Each setting is a named prop, so the element spreads nothing that could hold a material slot.
  */
 function InstancedDraw({
@@ -160,9 +161,11 @@ function InstancedDraw({
   const { geometry, bounds, userData } = placed;
   const startingMaterial = useOneSurfaceStartingMaterial(surfaceCount);
   const mounted = useMemo(() => mountsAtInstances(placed, onMount), [placed, onMount]);
-  if (geometryDrawsPoints(geometry)) {
+  const primitive = geometryPrimitive(geometry);
+  if (primitive !== 'triangles') {
+    const Drawn = drawnTag(primitive);
     return (
-      <points
+      <Drawn
         ref={mounted}
         args={[geometry, startingMaterial]}
         frustumCulled={bounds !== null}
@@ -177,7 +180,7 @@ function InstancedDraw({
         userData={userData}
       >
         {children}
-      </points>
+      </Drawn>
     );
   }
   return (
@@ -207,7 +210,7 @@ function InstancedDraw({
  */
 const NO_OWN_MATRICES = 0;
 
-type InstancedObject = THREE.InstancedMesh | THREE.Points;
+type InstancedObject = THREE.InstancedMesh | THREE.Points | THREE.LineSegments;
 
 /**
  * The matrices each InstancedMesh built for itself, read on its first mount. r3f runs a ref more

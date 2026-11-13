@@ -1,6 +1,6 @@
 /**
- * ScriptCreateDialog registration: parsed and validated, not yet rendered. The pending
- * registration makes the badge read a gap.
+ * ScriptCreateDialog registration: parsed and validated, drawing nothing. A game cannot
+ * create it, so the registration declares a transform-only group.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -18,8 +18,8 @@ describe('ScriptCreateDialog registration', () => {
     expect(registration!.parser).toBe(parseNode);
   });
 
-  it('registers a base component as a declared gap, so it still reads as not implemented', () => {
-    expect(nodeComponentRegistry.renderIntentOf('ScriptCreateDialog')).toBe('pending');
-    expect(rendersOwnVisual('ScriptCreateDialog')).toBe('not-implemented');
+  it('declares drawing nothing, so the sheet may claim linter-only', () => {
+    expect(nodeComponentRegistry.renderIntentOf('ScriptCreateDialog')).toBe('transform-only');
+    expect(rendersOwnVisual('ScriptCreateDialog')).toBe('transform-only');
   });
 });

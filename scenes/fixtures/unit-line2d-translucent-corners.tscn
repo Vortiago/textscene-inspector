@@ -1,0 +1,23 @@
+; One variable: `joint_mode`, on a half-alpha line. Where two quads overlap on the inside of a
+; corner the stroke blends twice, so a stroke built as Godot builds it is one value throughout.
+[gd_scene format=3]
+
+[node name="Line2DTranslucentCorners" type="Node2D"]
+
+[node name="Sharp" type="Line2D" parent="."]
+points = PackedVector2Array(50, 200, 130, 60, 210, 200)
+width = 30.0
+default_color = Color(1, 1, 1, 0.5)
+joint_mode = 0
+
+[node name="Bevel" type="Line2D" parent="."]
+points = PackedVector2Array(290, 200, 370, 60, 450, 200)
+width = 30.0
+default_color = Color(1, 1, 1, 0.5)
+joint_mode = 1
+
+[node name="Round" type="Line2D" parent="."]
+points = PackedVector2Array(530, 200, 610, 60, 690, 200)
+width = 30.0
+default_color = Color(1, 1, 1, 0.5)
+joint_mode = 2

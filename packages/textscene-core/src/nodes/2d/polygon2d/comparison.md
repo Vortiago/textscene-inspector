@@ -1,7 +1,6 @@
 ---
 type: Polygon2D
 category: 2D
-status: limitation
 fixture: unit-polygon2d.tscn
 image: unit-polygon2d
 renders_as: a filled, optionally textured mesh
@@ -9,9 +8,25 @@ renders_as: a filled, optionally textured mesh
 
 # Polygon2D
 
-Polygon2D fills an outline on the canvas. The previewer triangulates it into an unlit
-mesh with one vertex per point and tints it with `color`. `texture` is sampled through
-the per-vertex `uv` with Godot's own UV formula.
+Polygon2D fills an outline on the canvas. The previewer triangulates it with Godot's ear
+clipping into an unlit mesh with one vertex per point and tints it with `color`. `texture` is
+sampled through the per-vertex `uv` with Godot's own UV formula. With `skeleton` and `bones`,
+each vertex moves with its four heaviest bones of the Skeleton2D. An AnimationPlayer or the
+modification stack of the skeleton poses those bones.
+
+The skin follows the Forward+ and Mobile renderers. They weight the corner of each bone matrix too
+(`servers/rendering/renderer_rd/shaders/skeleton.glsl:172-180`), so a vertex with no weight lands on
+the polygon's origin. The Compatibility renderer adds a corner of 1 after it weights
+(`drivers/gles3/shaders/skeleton.glsl:179`), so there that vertex lands on the skeleton's origin.
+
+## Normal map
+<!-- compare: image=unit-polygon2d-normal-map-rotation status=done fixture=unit-polygon2d-normal-map-rotation.tscn -->
+
+A CanvasTexture's `normal_texture` and `specular_texture` shade the polygon under PointLight2D and
+DirectionalLight2D, and its own `texture_filter` and `texture_repeat` win over the polygon's. The
+polygon's rotation and scale turn the normal (`canvas.glsl:708`). `texture_rotation`, `texture_offset`
+and `texture_scale` move only the UV, so they do not. Turned, rotated a quarter turn, is lit from
+below, as in Godot.
 
 ## Linting
 
@@ -48,8 +63,5 @@ A non-numeric `internal_vertex_count` falls back to `0` and `invert_border` to `
 each with a warning. So do `invert_enabled` to `false`, `offset` and `texture_offset` to
 `(0, 0)` and `texture_scale` to `(1, 1)`. A malformed `color` falls back to white
 silently. Malformed `polygon`, `polygons`, `uv` or `vertex_colors` warn and degrade to
-empty, which is Godot's own size-mismatch branch.
-
-## Known limitations
-
-- **Approximated** `antialiased` is ignored, so edges are marginally harder.
+empty, which is Godot's own size-mismatch branch. A `bones` array with an odd count warns
+and deforms nothing. Weights that are not a PackedFloat32Array skip their bone.
