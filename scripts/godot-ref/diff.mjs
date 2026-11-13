@@ -24,12 +24,14 @@ const OUT_DIR = join(import.meta.dirname, 'output');
  * So each result counts the pixels past it, which decide whether a difference is residue.
  */
 const RESIDUE_MAX_DELTA = 2;
+/** The one lit surface form beside the default that the previewer opens with `?litSurface=`. */
+const LIT_SURFACE_NODES = 'nodes';
 /** The trees the catalog lists from their own `res://` root, so a name drops the prefix. */
 const FLATTENED_ROOTS = ['fixtures', ...FLATTENED_CORPUS_ROOTS].map((root) => `${root}/`);
 
 function usage() {
   console.error(
-    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--table <file.md>]\n' +
+    'Usage: pnpm ref:diff <fixture.tscn> [more.tscn ...] [--max-mean <n>] [--frame] [--keep] [--collisions] [--lit-surface nodes] [--table <file.md>]\n' +
       '\n' +
       '  <fixture.tscn>   fixture filename as listed in apps/textscene-web/src/fixtures.ts,\n' +
       '                   or a path to a .tscn under scenes/\n' +
@@ -38,12 +40,21 @@ function usage() {
       '  --frame          fit-the-bounds camera on BOTH sides instead of the editor orbit\n' +
       '  --keep           keep the per-side PNGs, not just the diff\n' +
       '  --collisions     show collision shapes on both sides (Visible Collision Shapes)\n' +
+      '  --lit-surface nodes  open our side with the node lit surface (?litSurface=nodes)\n' +
       '  --table <file>   also write the results as a Markdown table, one row per scene'
   );
 }
 
 export function parseArgs(argv) {
-  const args = { fixtures: [], maxMean: null, frame: false, keep: false, collisions: false, table: null };
+  const args = {
+    fixtures: [],
+    maxMean: null,
+    frame: false,
+    keep: false,
+    collisions: false,
+    litSurface: null,
+    table: null,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--max-mean') {
@@ -55,6 +66,11 @@ export function parseArgs(argv) {
       args.table = argv[++i];
       if (!args.table || args.table.startsWith('--')) {
         throw new Error(`--table needs a file path, got "${argv[i]}"`);
+      }
+    } else if (arg === '--lit-surface') {
+      args.litSurface = argv[++i];
+      if (args.litSurface !== LIT_SURFACE_NODES) {
+        throw new Error(`--lit-surface takes "${LIT_SURFACE_NODES}", got "${argv[i]}"`);
       }
     } else if (arg === '--frame') args.frame = true;
     else if (arg === '--keep') args.keep = true;
@@ -130,7 +146,7 @@ export function comparePngs(godotBuffer, oursBuffer) {
  */
 export async function diffOne(
   { scenePath, fixtureName, label },
-  { frame, keep, collisions = false },
+  { frame, keep, collisions = false, litSurface = null },
   { render = renderReference, capture = captureOurs, outDir = OUT_DIR } = {}
 ) {
   const renderAs = async (renderMode) =>
@@ -159,6 +175,7 @@ export async function diffOne(
     canvas2D,
     canvas2DFrame: canvas2D ? { width: reference.width, height: reference.height } : null,
     showCollisions: collisions,
+    litSurface,
   });
   if (keep) await writeFile(join(outDir, `${label}.ours.png`), oursBuffer);
 
