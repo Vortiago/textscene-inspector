@@ -2,7 +2,7 @@
 
 ; y_sort_enabled on a Polygon2D sort root: orange A is listed first at y 200 and green B second at
 ; y 100, so A draws over B where they overlap at (400, 250). The other y-sort goldens sort a Node2D,
-; Sprite2D or Control root, whose sort the old walk already ran, so none of them showed this root.
+; Sprite2D or Control root, so none of them covers a root that draws pixels of its own type.
 
 [node name="Root" type="Node2D"]
 
