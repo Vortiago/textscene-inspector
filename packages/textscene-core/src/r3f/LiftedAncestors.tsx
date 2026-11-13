@@ -4,30 +4,20 @@
  * containers' CanvasItem state and path segments are rebuilt around it.
  */
 
-import { useContext, useMemo, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
-import { TextureSampler2DContext, inheritTextureSampler } from './canvasItemTextureSampler.js';
-import { SkippedCanvasItemsScope } from './canvasItemState.js';
-import { foldCanvasAncestors, INHERIT_PARENT_MATERIAL } from './canvasAncestors.js';
-import {
-  CanvasItemMaterialProvider,
-  useCanvasAncestorMaterial,
-} from './components/canvasItemMaterialContext.js';
-import {
-  node2DLocalTransform,
-  node2dGroupPropsOf,
-  node2dGroupSpread,
-  threeMatrixFromTransform2D,
-  type Node2DGroupProps,
-} from './node2dTransform.js';
-import { canvasItemFieldsOf } from './canvasItemFields.js';
+import { canvasStateOfDrawn } from './canvasItemPass/canvasStateBetween.js';
+import { CanvasAncestorsScope } from './canvasItemPass/CanvasAncestorsScope.js';
+import { useSceneResources } from './SceneResourcesContext.js';
+import { node2dGroupPropsOf, node2dGroupSpread, threeMatrixFromTransform2D } from './node2dTransform.js';
+import type { Node2DLocalTransform } from '../nodes/base/node2d/types.js';
+import { canvasItemFieldsOf } from './canvasItemPass/canvasItemFields.js';
 import {
   multiplyTransform2D,
   TRANSFORM2D_IDENTITY,
   type Transform2DColumns,
 } from '../godot/math/transform2d.js';
 import { CanvasSpaceProvider, useCanvasSpace } from './canvasRootScope.js';
-import { useSceneResources } from './SceneResourcesContext.js';
 import { joinPath } from '../utils/nodePath.js';
 import { pathsAlong, useLiveDrawnChain } from './liveNodePatches.js';
 import { useCanvasItemVisible } from './canvasItemVisible.js';
@@ -36,7 +26,6 @@ import {
   useControlTransformsUnder,
   type ControlTransforms,
 } from './contexts/ControlYSortContext.js';
-import type { Node2DProperties } from '../nodes/base/node2d/types.js';
 
 /**
  * Puts back around `children` the CanvasItem state of the y_sort_enabled ancestors they were
@@ -55,18 +44,11 @@ export function LiftedAncestors({
 }) {
   // The properties the live scene passes bind, such as the pose a RemoteTransform2D pushes.
   const liftedPast = useLiveDrawnChain(authoredLiftedPast, basePath);
+  const paths = useMemo(() => pathsAlong(liftedPast, basePath), [liftedPast, basePath]);
   const scope = useSceneResources();
   // The sort root is the parent item of the outermost lifted ancestor, so a chain that
   // defers all the way takes the root's material.
-  const lifted = useMemo(
-    () => foldCanvasAncestors(liftedPast, scope, INHERIT_PARENT_MATERIAL),
-    [liftedPast, scope]
-  );
-  const groups = useMemo(
-    () => liftedPast.map((ancestor) => node2dGroupPropsOf(ancestor.properties as Partial<Node2DProperties>)),
-    [liftedPast]
-  );
-  const paths = useMemo(() => pathsAlong(liftedPast, basePath), [liftedPast, basePath]);
+  const lifted = useMemo(() => canvasStateOfDrawn(liftedPast, scope), [liftedPast, scope]);
   const solved = useControlTransformsUnder(basePath);
   // The restored groups are real transforms in the rendered tree, so a canvas root
   // below them has to cancel them too (`canvasRootScope.tsx`).
@@ -75,25 +57,15 @@ export function LiftedAncestors({
     const own = threeMatrixFromTransform2D(liftedTransform(liftedPast, paths, solved));
     return ambient ? ambient.clone().multiply(own) : own;
   }, [liftedPast, paths, solved, ambient]);
-  const parentSampler = useContext(TextureSampler2DContext);
-  const sampler = useMemo(
-    () => inheritTextureSampler(lifted.sampler, parentSampler),
-    [lifted.sampler, parentSampler]
-  );
-  const material = useCanvasAncestorMaterial(lifted.material);
 
   return (
-    <SkippedCanvasItemsScope skipped={lifted}>
-      <CanvasItemMaterialProvider value={material}>
-        <TextureSampler2DContext.Provider value={sampler}>
-          <CanvasSpaceProvider value={liftedSpace}>
-            <LiftedGroups chain={liftedPast} groups={groups} paths={paths}>
-              {children}
-            </LiftedGroups>
-          </CanvasSpaceProvider>
-        </TextureSampler2DContext.Provider>
-      </CanvasItemMaterialProvider>
-    </SkippedCanvasItemsScope>
+    <CanvasAncestorsScope chain={lifted}>
+      <CanvasSpaceProvider value={liftedSpace}>
+        <LiftedGroups chain={liftedPast} paths={paths}>
+          {children}
+        </LiftedGroups>
+      </CanvasSpaceProvider>
+    </CanvasAncestorsScope>
   );
 }
 
@@ -108,7 +80,10 @@ function liftedTransform(
 ): Transform2DColumns {
   return chain.reduce(
     (above, link, index) =>
-      multiplyTransform2D(above, solved.get(paths[index]!) ?? node2DLocalTransform(canvasItemFieldsOf(link))),
+      multiplyTransform2D(
+        above,
+        solved.get(paths[index]!) ?? canvasItemFieldsOf(link)?.local ?? TRANSFORM2D_IDENTITY
+      ),
     TRANSFORM2D_IDENTITY
   );
 }
@@ -120,18 +95,16 @@ function liftedTransform(
  */
 function LiftedGroups({
   chain,
-  groups,
   paths,
   children,
 }: {
   chain: readonly TscnNode[];
-  groups: readonly Node2DGroupProps[];
   paths: readonly string[];
   children: ReactNode;
 }) {
   return chain.reduceRight<ReactNode>(
     (inner, ancestor, index) => (
-      <LiftedGroup group={groups[index]!} ancestor={ancestor} path={paths[index]!}>
+      <LiftedGroup ancestor={ancestor} path={paths[index]!}>
         {inner}
       </LiftedGroup>
     ),
@@ -144,19 +117,22 @@ function LiftedGroups({
  * the transform the Control walk solved for it, which its own properties do not state.
  */
 function LiftedGroup({
-  group,
   ancestor,
   path,
   children,
 }: {
-  group: Node2DGroupProps;
   ancestor: TscnNode;
   path: string;
   children: ReactNode;
 }) {
-  const visible = useCanvasItemVisible(path, (ancestor.properties as Partial<Node2DProperties>).visible);
+  // Both parses hold `visible` under one name.
+  const visible = useCanvasItemVisible(path, (ancestor.properties as { visible?: boolean }).visible);
   const solved = useControlTransform(path);
   const matrix = useMemo(() => solved && threeMatrixFromTransform2D(solved), [solved]);
+  const group = useMemo(
+    () => node2dGroupPropsOf(ancestor.properties as Partial<Node2DLocalTransform>),
+    [ancestor]
+  );
   if (matrix) {
     return (
       // paint-order-safe: as the group below, it wraps the item's own group.

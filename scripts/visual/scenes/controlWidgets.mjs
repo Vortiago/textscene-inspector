@@ -132,6 +132,12 @@ export const CONTROL_WIDGET_SCENES = [
   { name: 'control-node2d-child', file: 'unit-node2d-below-control.tscn', mode: '2d' },
   // The one variable: the y-sort lifts the Node2D out of a y-sorted Control below a y-sorted Node2D.
   { name: 'control-node2d-child-y-sort', file: 'unit-node2d-below-ysorted-control.tscn', mode: '2d' },
+  // The one variable: a Control hands its modulate and z to the Node2D below it. Godot 4.6.3 `--mode 2d`: 1/255.
+  { name: 'node2d-below-tinted-control', file: 'unit-node2d-below-tinted-control.tscn', mode: '2d' },
+  // The one variable: a Control with modulate and z_index as a lifted link of a y-sort. Godot 4.6.3 `--mode 2d`: 1/255.
+  { name: 'control-lifted-link-y-sort', file: 'unit-control-lifted-link-y-sort.tscn', mode: '2d' },
+  // The one variable: a top_level Node2D starts the chain of the Control below it. Godot 4.6.3 `--mode 2d`: 1/255.
+  { name: 'control-below-top-level-node2d', file: 'unit-control-below-top-level-node2d.tscn', mode: '2d' },
   {
     name: 'control-anchor-parent-node2d',
     file: 'unit-control-anchor-parent-node2d.tscn',

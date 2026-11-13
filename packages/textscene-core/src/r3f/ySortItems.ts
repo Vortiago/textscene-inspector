@@ -5,7 +5,7 @@
  */
 
 import type { TscnNode } from '../parser/types.js';
-import { isControlType, isTopLevelItem, ysortsChildren } from './canvasPaintOrder.js';
+import { isTopLevelItem, ysortsChildren } from './canvasPaintOrder.js';
 import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { DrawableCell } from '../resources/tileset/drawableCell.js';
@@ -14,10 +14,7 @@ import {
   TRANSFORM2D_IDENTITY,
   type Transform2DColumns,
 } from '../godot/math/transform2d.js';
-import { node2DLocalTransform } from './node2dTransform.js';
-import { canvasItemFieldsOf } from './canvasItemFields.js';
-import type { Node2DLocalTransform } from '../nodes/base/node2d/types.js';
-import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
+import { canvasItemFieldsOf, type CanvasItemNodeFields } from './canvasItemPass/canvasItemFields.js';
 import { NO_PATCHES, patchedNode, type NodePatches } from './nodePatch.js';
 import { joinPath } from '../utils/nodePath.js';
 import type { LiveNode } from '../resources/liveNode.js';
@@ -100,23 +97,17 @@ function ownBodyOf(node: TscnNode): TscnNode {
 
 /**
  * A child's transform in the sort root's space, `ysort_xform` (`renderer_canvas_cull.cpp:131`).
- * A Node3D child has no 2D transform: its Vector3 `rotation` would make every sort y NaN. A Control
- * child has no `position` either: its canvas item sits at `controlTransform`, which the Control
- * walk publishes after its solve, and at the parent's origin until then.
+ * A node that is no CanvasItem, such as a Node3D, has no 2D transform and sits at its parent's. A
+ * Control's canvas item sits at `controlTransform`, which the Control walk publishes after its
+ * solve, and at the parent's origin until then.
  */
 function toSortRootOf(
-  child: TscnNode,
+  fields: CanvasItemNodeFields | null,
   parent: YSortParent,
   controlTransform: Transform2DColumns | undefined
 ): Transform2DColumns {
-  if (descendsFromClass(child.type, 'Node3D')) return parent.toSortRoot;
-  if (isControlType(child.type)) {
-    return controlTransform ? multiplyTransform2D(parent.toSortRoot, controlTransform) : parent.toSortRoot;
-  }
-  return multiplyTransform2D(
-    parent.toSortRoot,
-    node2DLocalTransform(child.properties as Partial<Node2DLocalTransform>)
-  );
+  const local = fields ? (fields.local ?? controlTransform) : undefined;
+  return local ? multiplyTransform2D(parent.toSortRoot, local) : parent.toSortRoot;
 }
 
 /**
@@ -129,7 +120,8 @@ function itemSortKey(
   parent: YSortParent,
   controlTransform: Transform2DColumns | undefined
 ): YSortParent & { sortY: number } {
-  const toSortRoot = toSortRootOf(child, parent, controlTransform);
+  const fields = canvasItemFieldsOf(child);
+  const toSortRoot = toSortRootOf(fields, parent, controlTransform);
   // A scene tile sorts as its instance root, which sits inside the placement node that stands for it.
   const root = (child as LiveNode).ySortRoot;
   const sortY = root ? multiplyTransform2D(toSortRoot, root.pose).ty : toSortRoot.ty;
@@ -138,10 +130,9 @@ function itemSortKey(
   // 143-148) and `_cull_canvas_item` (430-434) both run
   // `CLAMP(p_z + z_index, CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX)` under `z_relative`
   // and assign `z_index` unclamped otherwise. A second copy could drift from the lights.
-  const fields = canvasItemFieldsOf(child);
   const ownZ = accumulateCanvasItemZ(parent.effectiveZ, {
-    z_index: fields.z_index ?? 0,
-    z_as_relative: fields.z_as_relative,
+    z_index: fields?.zIndex ?? 0,
+    z_as_relative: fields?.zAsRelative,
   });
   const effectiveZ = root
     ? accumulateCanvasItemZ(ownZ, { z_index: root.zIndex, z_as_relative: root.zAsRelative })

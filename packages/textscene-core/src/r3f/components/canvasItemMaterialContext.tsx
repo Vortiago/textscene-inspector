@@ -17,7 +17,7 @@ import {
 import { useResource } from '../../resources/useResource';
 import { useSceneResources } from '../SceneResourcesContext';
 import type { SceneScope } from '../../parser/types';
-import type { CanvasAncestorMaterial } from '../canvasAncestors';
+import type { CanvasAncestorMaterial } from '../canvasItemPass/canvasAncestors';
 
 const CanvasItemMaterialContext = createContext<CanvasItemMaterialProperties | null>(null);
 CanvasItemMaterialContext.displayName = 'CanvasItemMaterialContext';

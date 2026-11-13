@@ -88,22 +88,16 @@ import {
   type ChildVisibilityFn,
   type TextureSlotRequest,
 } from './solverRegistry';
-import {
-  INHERIT_PARENT_MATERIAL,
-  NO_PARENT_MATERIAL,
-  foldCanvasAncestor,
-  foldCanvasAncestors,
-  type CanvasAncestors,
-} from '../../canvasAncestors';
+import { canvasItemPass } from '../../canvasItemPass/canvasItemPass';
+import { canvasStateBetween } from '../../canvasItemPass/canvasStateBetween';
+import type { CanvasAncestors } from '../../canvasItemPass/canvasAncestors';
 import {
   LABEL_SETTINGS_FONT_LOADING,
   type LabelSettingsFont,
   type SolveNode,
   type ThemedIconRef,
 } from './solveTree';
-import { liveNodePatches } from '../../liveNodePatches';
 import { liveScenePassResults } from '../../liveScenePass';
-import { patchedNode } from '../../nodePatch';
 import {
   allocatePaintRange,
   behindRangesOf,
@@ -188,8 +182,8 @@ interface Ancestry {
   themeChain: readonly ThemeResource[];
   /** Where each child draws, by the child as authored. */
   paintRanges: ReadonlyMap<TscnNode, PaintRange>;
-  /** What every skipped Node2D ancestor since the last real Control or root contributes. */
-  skippedAncestors: CanvasAncestors | null;
+  /** The skipped canvas items above the children, which a Control child puts back. */
+  skippedChain: SkippedChain;
   /**
    * Whether a non-`CanvasItem` link sits between here and the nearest Control,
    * so the climb ends with `has_parent_control == false` (`control.cpp:3874-3890`).
@@ -282,25 +276,16 @@ function isSortableChild(live: TscnNode): boolean {
 }
 
 /**
- * What a promoted Control's descendants inherit through the non-Control `placed`, a collapsed
- * node with what the live scene passes bind.
- * `get_parent_item()` casts only the direct parent (`scene/main/canvas_item.cpp:565-571`),
- * so Node2D chains compose, and a non-`CanvasItem` link reparents at the nearest
- * canvas (`canvas_item.cpp:246-267`): `null`, so nothing above it leaks through. A chain that
- * starts on the Control above defers its material to that Control. A `top_level` or canvas-root
- * link has no parent item, so it defers to nothing.
+ * The live paths that bound the skipped canvas items above a node: from below `above`, the nearest
+ * Control or the forest's top, down to `parent`. A null `parent` is a parent that is a Control or no
+ * canvas item, so nothing is skipped.
  */
-function nextSkippedAncestors(
-  placed: TscnNode,
-  scope: SceneScope,
-  previous: CanvasAncestors | null,
-  canvasChainBroken: boolean
-): CanvasAncestors | null {
-  if (!isCanvasItem(placed)) return null;
-  if (previous) return foldCanvasAncestor(previous, placed, scope);
-  const start = canvasChainBroken || isTopLevelItem(placed) ? NO_PARENT_MATERIAL : INHERIT_PARENT_MATERIAL;
-  return foldCanvasAncestors([placed], scope, start);
+interface SkippedChain {
+  above: string | null;
+  parent: string | null;
 }
+
+const NOTHING_SKIPPED: SkippedChain = { above: null, parent: null };
 
 /**
  * The `parent_visible_in_tree` a node's children inherit, by the three arms of
@@ -398,6 +383,15 @@ function buildForest(
   };
   const tree = liveTreeOf(nodes, ctx);
   const embedsWindows = embedsSubwindows(tree, viewport);
+
+  /**
+   * What the skipped canvas items of `chain` hand a Control below them. The canvas item pass runs
+   * only for a Control below such an item, so a scene of Controls alone never runs it.
+   */
+  function skippedAncestorsOf(chain: SkippedChain): CanvasAncestors | null {
+    if (chain.parent === null) return null;
+    return canvasStateBetween(liveScenePassResults(canvasItemPass, tree), chain.above, chain.parent);
+  }
   const textureCache = loader ? recordingReads(loader.textures, recordRead) : NOTHING_CACHED;
   const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const themeCache = loader ? recordingReads(loader.themes, recordRead) : NOTHING_CACHED;
@@ -756,7 +750,7 @@ function buildForest(
     const { raw: node, step, path, group } = link;
     const {
       themeChain,
-      skippedAncestors,
+      skippedChain,
       canvasChainBroken,
       ancestorHidden,
       parentVisibleInTree,
@@ -829,17 +823,10 @@ function buildForest(
     const injectedChildren = groups.filter(isInjected).flatMap((g) => g.children);
     const injectedRanges = allocatePaintRange(allocated.tail, injectedChildren).children;
 
-    // A Node2D above a Control is placed by what the live scene passes bind, such as a RemoteTransform2D.
-    // The passes run for the first such Node2D only, so a scene of Controls alone never runs them.
-    const placed =
-      !isControl && isCanvasItem(collapsed)
-        ? patchedNode(collapsed, liveScenePassResults(liveNodePatches, tree).get(path))
-        : collapsed;
-    // A real Control's descendants start a fresh accumulation. A skipped node
-    // folds its own CanvasItem transform into what they inherit.
-    const childSkippedAncestors = isControl
-      ? null
-      : nextSkippedAncestors(placed, ownScope, skippedAncestors, canvasChainBroken);
+    // A real Control's descendants start a fresh chain. A skipped canvas item joins the chain.
+    const childSkippedChain: SkippedChain = isControl
+      ? { above: path, parent: null }
+      : { above: skippedChain.above, parent: isCanvasItem(collapsed) ? path : null };
     // The climb is `while (!node->is_set_as_top_level())` (`control.cpp:3876`),
     // so the flag ends it on the Control itself or on any CanvasItem above.
     const topLevel = isTopLevelItem(collapsed);
@@ -880,7 +867,7 @@ function buildForest(
               [inlineChildren, allocated.children],
               [injectedChildren, injectedRanges]
             ),
-            skippedAncestors: childSkippedAncestors,
+            skippedChain: childSkippedChain,
             canvasChainBroken: childCanvasChainBroken,
             ancestorHidden: hidden,
             parentVisibleInTree: childParentVisible,
@@ -925,7 +912,7 @@ function buildForest(
       // top_level Control's item parents at the canvas (`canvas_item.cpp:565-571`),
       // so no skipped ancestor composes onto either. A merely hoisted Control's
       // item still hangs under the CanvasItem above it.
-      skippedAncestors: isBoundary || topLevel ? null : skippedAncestors,
+      skippedAncestors: isBoundary || topLevel ? null : skippedAncestorsOf(skippedChain),
       // Unconditional, unlike `skippedAncestors` beside it: `top_level` and
       // a broken chain both reset the canvas facets and neither resets
       // this one (`SolveNode.parentVisibleInTree`).
@@ -955,7 +942,7 @@ function buildForest(
       {
         themeChain: ownerThemeChain,
         paintRanges: paintRangesOf([nodes, rootRanges]),
-        skippedAncestors: null,
+        skippedChain: NOTHING_SKIPPED,
         canvasChainBroken: false,
         ancestorHidden: false,
         parentVisibleInTree: true,
