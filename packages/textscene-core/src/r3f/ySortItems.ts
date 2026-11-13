@@ -130,13 +130,8 @@ function itemSortKey(
   // 143-148) and `_cull_canvas_item` (430-434) both run
   // `CLAMP(p_z + z_index, CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX)` under `z_relative`
   // and assign `z_index` unclamped otherwise. A second copy could drift from the lights.
-  const ownZ = accumulateCanvasItemZ(parent.effectiveZ, {
-    z_index: fields?.zIndex ?? 0,
-    z_as_relative: fields?.zAsRelative,
-  });
-  const effectiveZ = root
-    ? accumulateCanvasItemZ(ownZ, { z_index: root.zIndex, z_as_relative: root.zAsRelative })
-    : ownZ;
+  const ownZ = accumulateCanvasItemZ(parent.effectiveZ, fields ?? { zIndex: 0 });
+  const effectiveZ = root ? accumulateCanvasItemZ(ownZ, root) : ownZ;
   return { toSortRoot, sortY, effectiveZ };
 }
 

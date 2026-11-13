@@ -40,8 +40,6 @@ export interface CanvasItemPassResult {
   /** The scope the item's material reference resolves in. */
   readonly resources: SceneScope;
   readonly inherited: InheritedCanvasItemState;
-  /** The item's place in the draw sequence, which slice 4 of #1438 fills. */
-  readonly paint: null;
 }
 
 /** What a chain start inherits: white, z 0, the root sampler and no material. */
@@ -80,7 +78,6 @@ export const canvasItemPass: LiveScenePass<CanvasItemPassResult> = (tree) => {
       fields,
       resources: step.scope,
       inherited,
-      paint: null,
     });
     descend({ path, inherited });
   });
@@ -94,14 +91,22 @@ function inheritedState(
   above: InheritedCanvasItemState
 ): InheritedCanvasItemState {
   return {
+    ...linkState(fields, scope, above),
+    // `renderer_canvas_cull.cpp:430-434`.
+    zFinal: accumulateCanvasItemZ(above.zFinal, fields),
+  };
+}
+
+/** The state one link hands down apart from z and transform, which each fold keeps its own way. */
+export type LinkState = Pick<InheritedCanvasItemState, 'modulate' | 'material' | 'sampler'>;
+
+/** What an item with `fields` hands down of `LinkState`, below a link that hands it `above`. */
+export function linkState(fields: CanvasItemNodeFields, scope: SceneScope, above: LinkState): LinkState {
+  return {
     // `renderer_canvas_cull.cpp:326`. `self_modulate` stays on the item's own pixels (`:268`).
     modulate: multiplyModulate(above.modulate, fields.modulate),
-    // `renderer_canvas_cull.cpp:430-434`.
-    zFinal: accumulateCanvasItemZ(above.zFinal, {
-      z_index: fields.zIndex,
-      z_as_relative: fields.zAsRelative,
-    }),
     material: materialFor(fields, scope, above.material),
+    // Own over above, each property on its own: a PARENT_NODE link takes its parent's.
     sampler: inheritTextureSampler(
       { filter: fields.textureFilter, repeat: fields.textureRepeat },
       above.sampler
@@ -113,7 +118,7 @@ function inheritedState(
  * The material a `use_parent_material` child takes: the item's own, or with `use_parent_material`
  * the one above it (`renderer_canvas_cull.cpp:319-323`).
  */
-export function materialFor(
+function materialFor(
   fields: CanvasItemNodeFields,
   scope: SceneScope,
   above: CanvasAncestorMaterial

@@ -5,12 +5,12 @@ import {
   TRANSFORM2D_IDENTITY,
   type Transform2DColumns,
 } from '../../godot/math/transform2d';
-import { multiplyModulate, WHITE_MODULATE } from '../canvasItemModulate';
-import { inheritTextureSampler, ROOT_TEXTURE_SAMPLER } from '../canvasItemTextureSampler';
+import { WHITE_MODULATE } from '../canvasItemModulate';
+import { ROOT_TEXTURE_SAMPLER } from '../canvasItemTextureSampler';
 import { parentPathOf } from '../../utils/nodePath';
 import type { SceneScope, TscnNode } from '../../parser/types';
 import { canvasItemFieldsOf } from './canvasItemFields';
-import { materialFor, type CanvasItemPassResult } from './canvasItemPass';
+import { linkState, type CanvasItemPassResult } from './canvasItemPass';
 import {
   INHERIT_PARENT_MATERIAL,
   NO_PARENT_MATERIAL,
@@ -78,15 +78,15 @@ function chainBetween(
   above: string | null,
   itemParent: string
 ): PlacedItem[] {
-  const chain: PlacedItem[] = [];
+  const innermostFirst: PlacedItem[] = [];
   let path: string | null = itemParent;
   while (path !== null && path !== above) {
     const item = results.get(path);
     if (!item) break;
-    chain.unshift({ path, item });
+    innermostFirst.push({ path, item });
     path = item.parent;
   }
-  return chain;
+  return innermostFirst.reverse();
 }
 
 /**
@@ -103,19 +103,12 @@ function startMaterial(outermost: PlacedItem | undefined): CanvasAncestorMateria
 /** `chain` with one more link below it. */
 function foldLink(chain: CanvasAncestors, { fields, resources }: CanvasItemLink): CanvasAncestors {
   return {
+    ...linkState(fields, resources, chain),
     // The link's local transform first, then the chain above it, as `get_global_transform()` composes.
     transform: composedTransform(chain.transform, fields.local),
-    // `renderer_canvas_cull.cpp:326`. `self_modulate` stays on the item's own pixels.
-    modulate: multiplyModulate(chain.modulate, fields.modulate),
     // Appended, not summed: `p_z` clamps at every step and a `z_relative == false` item
     // restarts (`renderer_canvas_cull.cpp:430-434`), so only the ambient z can fold it.
     z: [...chain.z, { zIndex: fields.zIndex, zAsRelative: fields.zAsRelative }],
-    // Own over above, each property on its own: a PARENT_NODE link takes its parent's.
-    sampler: inheritTextureSampler(
-      { filter: fields.textureFilter, repeat: fields.textureRepeat },
-      chain.sampler
-    ),
-    material: materialFor(fields, resources, chain.material),
   };
 }
 

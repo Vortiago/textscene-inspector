@@ -23,9 +23,8 @@ import { canvasItemPass } from './canvasItemPass';
 import { INHERIT_PARENT_MATERIAL } from './canvasAncestors';
 import '../nodes/index';
 
-/** What one probe read: the drawn tree's state beside the pass's, for the parent at `parent`. */
+/** What one probe read: the drawn tree's state beside the pass's. */
 interface Reading {
-  parent: string;
   drawn: unknown;
   pass: unknown;
 }
@@ -37,7 +36,7 @@ function withViewportDefaults({ filter, repeat }: AmbientTextureSampler): Ambien
   return { filter: filter ?? VIEWPORT_DEFAULTS.filter, repeat: repeat ?? VIEWPORT_DEFAULTS.repeat };
 }
 
-/** Written only by `AgreementProbe`, and cleared by `readingsOf` before each mount. */
+/** By the probed parent's live path. Written only by `AgreementProbe`, and cleared by `readingsOf` before each mount. */
 const readings = new Map<string, Reading>();
 
 function AgreementProbe() {
@@ -56,7 +55,7 @@ function AgreementProbe() {
       inherited && { ...inherited, sampler: withViewportDefaults(inherited.sampler), material: passMaterial },
     [inherited, passMaterial]
   );
-  readings.set(path, { parent, drawn, pass });
+  readings.set(parent, { drawn, pass });
   return null;
 }
 
@@ -82,13 +81,10 @@ async function readingsOf(
 
 /** Each probe's drawn state, with the pass's beside it, for one `expect`. */
 function bothSides(found: ReadonlyMap<string, Reading>, probed: readonly string[]) {
-  const sides = probed.map((parent) => {
-    const reading = [...found.values()].find((r) => r.parent === `Root${parent === '.' ? '' : `/${parent}`}`);
-    return { parent, drawn: reading?.drawn, pass: reading?.pass };
-  });
+  const readingOf = (parent: string) => found.get(`Root${parent === '.' ? '' : `/${parent}`}`);
   return {
-    drawn: sides.map(({ parent, drawn }) => ({ parent, state: drawn })),
-    pass: sides.map(({ parent, pass }) => ({ parent, state: pass })),
+    drawn: probed.map((parent) => ({ parent, state: readingOf(parent)?.drawn })),
+    pass: probed.map((parent) => ({ parent, state: readingOf(parent)?.pass })),
   };
 }
 

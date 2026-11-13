@@ -388,10 +388,19 @@ function buildForest(
    * What the skipped canvas items of `chain` hand a Control below them. The canvas item pass runs
    * only for a Control below such an item, so a scene of Controls alone never runs it.
    */
-  function skippedAncestorsOf(chain: SkippedChain): CanvasAncestors | null {
-    if (chain.parent === null) return null;
-    return canvasStateBetween(liveScenePassResults(canvasItemPass, tree), chain.above, chain.parent);
+  function skippedAncestorsOf({ above, parent }: SkippedChain): CanvasAncestors | null {
+    if (parent === null) return null;
+    // Keyed by both ends, so sibling Controls below one chain share one fold.
+    const key = `${above ?? ''}\u0000${parent}`;
+    let folded = foldedChains.get(key);
+    if (!folded) {
+      folded = canvasStateBetween(liveScenePassResults(canvasItemPass, tree), above, parent);
+      foldedChains.set(key, folded);
+    }
+    return folded;
   }
+  /** Written only by `skippedAncestorsOf`, for this walk only: the tree does not change within one. */
+  const foldedChains = new Map<string, CanvasAncestors>();
   const textureCache = loader ? recordingReads(loader.textures, recordRead) : NOTHING_CACHED;
   const resourceCache = loader ? recordingReads(loader.resources, recordRead) : NOTHING_CACHED;
   const themeCache = loader ? recordingReads(loader.themes, recordRead) : NOTHING_CACHED;

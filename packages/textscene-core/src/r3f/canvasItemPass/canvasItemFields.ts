@@ -8,9 +8,8 @@ import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import type { ControlProperties } from '../../nodes/2d/ui/control/types';
 import type { Rgba } from '../../godot/math/math';
 import type { Transform2DColumns } from '../../godot/math/transform2d';
-import { descendsFromClass } from '../../godot/classdb/classBaseTypes';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../godot/scene/canvasItem';
-import { isControlType } from '../canvasPaintOrder';
+import { isCanvasItem, isControlType } from '../canvasPaintOrder';
 import { WHITE_MODULATE } from '../canvasItemModulate';
 import { node2DLocalTransform } from '../node2dTransform';
 
@@ -34,7 +33,7 @@ export interface CanvasItemNodeFields {
 /** Null for a node that is no CanvasItem. */
 export function canvasItemFieldsOf(node: TscnNode): CanvasItemNodeFields | null {
   if (isControlType(node.type)) return controlFieldsOf(node.properties as Partial<ControlProperties>);
-  if (!descendsFromClass(node.type, 'CanvasItem')) return null;
+  if (!isCanvasItem(node)) return null;
   return node2DFieldsOf(node.properties as Partial<Node2DProperties>);
 }
 

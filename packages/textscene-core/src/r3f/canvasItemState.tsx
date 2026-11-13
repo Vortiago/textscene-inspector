@@ -181,7 +181,7 @@ function useZFinal(own: CanvasItemZStep): number {
 
 /** `p_z` after one step (`renderer_canvas_cull.cpp:430-434`). */
 function stepZ(parentZ: number, step: CanvasItemZStep): number {
-  return accumulateCanvasItemZ(parentZ, { z_index: step.zIndex, z_as_relative: step.zAsRelative });
+  return accumulateCanvasItemZ(parentZ, step);
 }
 
 /** The item's tint properties in the names `useCanvasItemTint` reads. */

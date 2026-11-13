@@ -244,7 +244,7 @@ export function paintRangeSize(node: TscnNode): number {
  * applies it to the direct parent (`canvas_item.cpp:565-571`) to decide whether
  * an item nests under it or parents at the canvas.
  */
-function isCanvasItem(node: TscnNode): boolean {
+export function isCanvasItem(node: TscnNode): boolean {
   return descendsFromClass(node.type, 'CanvasItem');
 }
 
