@@ -10,7 +10,9 @@ import { buttonTypes } from './button.js';
 import { containerTypes } from './containers.js';
 import { labelTypes } from './label.js';
 import { rangeTypes } from './ranges.js';
+import { richTextLabelTypes } from './richTextLabel.js';
 import { tabTypes } from './tabs.js';
+import { textEditTypes } from './textEdits.js';
 
 export interface Sides {
   readonly left: number;
@@ -98,6 +100,8 @@ function buildDefaultTheme(scale: number): DefaultTheme {
       ...rangeTypes(scale),
       ...containerTypes(scale),
       ...tabTypes(scale),
+      ...textEditTypes(scale),
+      ...richTextLabelTypes(scale),
     },
   };
 }
