@@ -9,8 +9,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
-import { recordEntry } from '../../../../scripts/godot-probes/record.mjs';
-import { parameterBits } from '../../../../scripts/godot-probes/probeShader.mjs';
+import { hex, recordEntry } from '../../../../scripts/godot-probes/record.mjs';
+import { parameterBits, SENTINEL_BITS } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { PROBES } from './probes.mjs';
 
 const RECORD = JSON.parse(readFileSync(join(import.meta.dirname, 'godot-record.json'), 'utf8'));
@@ -42,9 +42,7 @@ describe('the instruction table coverage', () => {
   it('records the source and inputs each probe has now', () => {
     const stale = PROBES.filter((probe) => {
       const entry = RECORD.probes[probe.name];
-      const inputs = parameterBits(probe).map((bits) =>
-        bits.map((value) => value.toString(16).padStart(8, '0'))
-      );
+      const inputs = parameterBits(probe).map((bits) => bits.map(hex));
       return entry.source !== probe.source || JSON.stringify(entry.inputs) !== JSON.stringify(inputs);
     });
     expect(stale.map((probe) => probe.name)).toEqual([]);
@@ -66,8 +64,7 @@ describe('recordEntry', () => {
   const probe = { name: 'p', rows: [], source: 'float probe(float a) { return a; }', inputs: [[1], [2]] };
 
   it('reads one lane per row and drops the second viewport row', () => {
-    const sentinel = 0xc0ffee01;
-    const entry = recordEntry(probe, [0x3f800000, 0x40000000, sentinel, 0, 0, 0]);
+    const entry = recordEntry(probe, [0x3f800000, 0x40000000, SENTINEL_BITS, 0, 0, 0]);
     expect(entry.results).toEqual([['3f800000'], ['40000000']]);
   });
 

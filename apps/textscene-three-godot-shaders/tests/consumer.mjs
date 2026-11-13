@@ -100,17 +100,30 @@ export async function serveDirectory(directory, harness) {
  */
 export async function withConsumerPage({ pageDir, module, harness }, work) {
   const directory = installConsumer(pageDir);
-  writeFileSync(join(directory, 'index.html'), pageHtml(module));
-  const { server, url } = await serveDirectory(directory, harness);
+  try {
+    writeFileSync(join(directory, 'index.html'), pageHtml(module));
+    const { server, url } = await serveDirectory(directory, harness);
+    try {
+      return await withBrowserPage(`${url}/index.html`, work);
+    } finally {
+      await new Promise((resolveClose) => server.close(resolveClose));
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+/** Runs `work(page)` on `pageUrl` once the page is ready. An error the page reports fails the run. */
+async function withBrowserPage(pageUrl, work) {
   const browser = await launchGodotComparisonBrowser();
-  const errors = [];
   try {
     const page = await browser.newPage();
+    const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => {
       if (message.type() === 'error') errors.push(message.text());
     });
-    await page.goto(`${url}/index.html`);
+    await page.goto(pageUrl);
     try {
       await page.waitForFunction(() => globalThis.pageReady === true, null, {
         timeout: PAGE_START_TIMEOUT_MS,
@@ -118,11 +131,11 @@ export async function withConsumerPage({ pageDir, module, harness }, work) {
     } catch (error) {
       throw new Error(`the page did not start: ${errors.join('; ') || error.message}`, { cause: error });
     }
-    return await work(page, errors);
+    const result = await work(page);
+    if (errors.length > 0) throw new Error(`expected no page errors, got: ${errors.join('; ')}`);
+    return result;
   } finally {
     await browser.close();
-    await new Promise((resolveClose) => server.close(resolveClose));
-    rmSync(directory, { recursive: true, force: true });
   }
 }
 

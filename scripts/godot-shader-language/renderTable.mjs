@@ -8,8 +8,8 @@ const ROW_FIELDS = ['id', 'family', 'source', 'owner', 'token', 'returns', 'args
 
 /**
  * The generated module: one row per line, so a diff names the rows that changed. The rows are
- * text that the module splits once: an array literal of 1,877 objects is past what TypeScript
- * types (TS2590).
+ * text that the module splits once: an array literal of every row, near 1,900 objects, is past
+ * what TypeScript types (TS2590).
  */
 export function renderTableModule(rows) {
   const lines = rows.map((row) =>

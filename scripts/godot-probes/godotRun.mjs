@@ -63,6 +63,23 @@ export function runGodotScript(mainScript, files) {
   }
 }
 
+/** The text after the first `prefix` line of Godot's `stdout`. Throws when Godot printed none. */
+export function printedField(stdout, prefix) {
+  const line = stdout.split('\n').find((text) => text.startsWith(prefix));
+  if (!line) throw new Error(`expected a "${prefix}" line in Godot's output, found none`);
+  return line.slice(prefix.length).trim();
+}
+
+/** The RGBA8 bytes of each `<prefix><name> <hex>` line of Godot's `stdout`, keyed by name. */
+export function printedImages(stdout, prefix) {
+  const images = new Map();
+  for (const line of stdout.split('\n').filter((text) => text.startsWith(prefix))) {
+    const [name, hex = ''] = line.slice(prefix.length).trim().split(' ');
+    images.set(name, Uint8Array.from(Buffer.from(hex, 'hex')));
+  }
+  return images;
+}
+
 /** Refuses an answer from any Godot but the pinned release. */
 export function requireGodotVersion(version) {
   if (!version.startsWith(`${GODOT_VERSION}-stable`)) {

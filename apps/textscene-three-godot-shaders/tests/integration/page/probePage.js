@@ -33,8 +33,8 @@ function argument(type, bits, row) {
 
 /** Lane `lane` of `result`, a float node for a float result. */
 function laneOf(result, size, lane) {
-  const components = ['x', 'y', 'z', 'w'].slice(0, size).map((name) => result[name]);
   if (size === 1) return result;
+  const components = ['x', 'y', 'z', 'w'].slice(0, size).map((name) => result[name]);
   return components
     .slice(1)
     .reduce((picked, component, index) => select(lane.equal(index + 1), component, picked), components[0]);

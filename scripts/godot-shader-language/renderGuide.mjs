@@ -6,18 +6,14 @@
  */
 
 import { godotShader } from '../../apps/textscene-three-godot-shaders/tests/e2e/showcases.mjs';
+import { floatOfBits } from '../../apps/textscene-three-godot-shaders/tests/probes/inputs.mjs';
+import { LANE_COUNT, probeSignature } from '../godot-probes/probeShader.mjs';
 import { owningIssue } from './renderTable.mjs';
 
 /** The most input rows a section shows of a probe: one per kind of value, so a table stays short. */
 const SAMPLE_ROWS = 8;
 
-const float32 = new Float32Array(1);
-const bits32 = new Uint32Array(float32.buffer);
-
-function floatOfHex(text) {
-  bits32[0] = Number.parseInt(text, 16);
-  return float32[0];
-}
+const floatOfHex = (text) => floatOfBits(Number.parseInt(text, 16));
 
 /** The shortest decimal text that reads back as this 32-bit float. */
 export function floatText(value) {
@@ -79,18 +75,6 @@ function sampleRows(entry, sizes) {
   return picked.sort((left, right) => all.indexOf(left) - all.indexOf(right));
 }
 
-const LANES = { float: 1, vec2: 2, vec3: 3, vec4: 4 };
-
-/** The parameter sizes of a probe source, read from its head. */
-function parameterSizes(source) {
-  const head = source.slice(source.indexOf('(') + 1, source.indexOf(')'));
-  return head
-    .split(',')
-    .map((parameter) => parameter.trim().split(/\s+/)[0])
-    .filter(Boolean)
-    .map((type) => LANES[type]);
-}
-
 function probeValues(probe, entry) {
   if (entry.rejected)
     return 'Godot does not compile this shader: it draws nothing. The translator refuses it too.';
@@ -105,7 +89,7 @@ function probeValues(probe, entry) {
     );
     return ['| Literal | Godot draws | Bits |', '| --- | --- | --- |', ...lines].join('\n');
   }
-  const sizes = parameterSizes(probe.source);
+  const sizes = probeSignature(probe.source).parameters.map((type) => LANE_COUNT[type]);
   const names = probe.source
     .match(/\(([^)]*)\)/)[1]
     .split(',')
@@ -150,7 +134,10 @@ ${sectionProbes.map((probe) => renderProbe(probe, record)).join('\n')}`;
 /** The rows a probe names, which are the translated rows. */
 const translatedIds = (probes) => new Set(probes.flatMap((probe) => probe.rows));
 
-/** A chapter's sections, each with its translated rows. Throws for a translated row no section holds. */
+/**
+ * A chapter's sections, each with its translated rows. Throws for a translated row no section
+ * holds, and for a section that holds no translated row.
+ */
 function chapterSections(chapters, rows, probes) {
   const translated = translatedIds(probes);
   const translatedRows = rows.filter((row) => translated.has(row.id));
@@ -165,6 +152,13 @@ function chapterSections(chapters, rows, probes) {
   if (missing.length > 0) {
     throw new Error(
       `expected a guide section in guideChapters.mjs for each translated row, found none for ${missing.join(', ')}`
+    );
+  }
+  // A section cites the Godot source of its first row, so a section with no row has nothing to cite.
+  const empty = placed.flatMap(({ sections }) => sections.filter(({ rows: held }) => held.length === 0));
+  if (empty.length > 0) {
+    throw new Error(
+      `expected a translated row in each guide section, found none in ${empty.map(({ section }) => section.heading).join(', ')}`
     );
   }
   return placed;

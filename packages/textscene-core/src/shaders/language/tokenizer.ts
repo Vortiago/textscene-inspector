@@ -160,8 +160,9 @@ function readIdentifier(source: string, cursor: Cursor): Token {
   const text = source.slice(start, cursor.index);
   const keyword = KEYWORD_TOKENS.get(text);
   if (keyword) return { type: keyword, line: cursor.line };
-  // `shader_language.cpp:960`: Godot renames this prefix, which its compiler gives its own names.
-  return { type: 'TK_IDENTIFIER', text: text.replace('dus_', '_'), line: cursor.line };
+  // `shader_language.cpp:923`: Godot renames every `dus_` in the name, which its compiler gives its
+  // own names. `String::replace` replaces each one, so `replace` alone would keep the second.
+  return { type: 'TK_IDENTIFIER', text: text.replaceAll('dus_', '_'), line: cursor.line };
 }
 
 /** `"..."` with `\"` and `\\` as its only escapes (`shader_language.cpp:520`). */

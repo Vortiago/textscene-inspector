@@ -70,6 +70,10 @@ describe('tokenize', () => {
     expect(tokenize('dus_x')[0]?.text).toBe('_x');
   });
 
+  it('renames every dus_ of an identifier, as Godot does', () => {
+    expect(tokenize('a_dus_b_dus_c')[0]?.text).toBe('a__b__c');
+  });
+
   it('refuses a character outside the language', () => {
     expect(() => tokenize('a $ b')).toThrow(/Unknown character/);
   });

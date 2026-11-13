@@ -4,7 +4,11 @@
  * output is split from the run, so its test needs no engine.
  */
 
-import { FRAMES_BEFORE_READ } from '../../../../scripts/godot-probes/godotRun.mjs';
+import {
+  FRAMES_BEFORE_READ,
+  printedField,
+  printedImages,
+} from '../../../../scripts/godot-probes/godotRun.mjs';
 import { godotShader } from './showcases.mjs';
 
 const LINE_PREFIX = 'SHOWCASE ';
@@ -54,13 +58,5 @@ export function showcaseProjectFiles(showcases) {
 
 /** Each showcase's RGBA8 bytes in `stdout`, top row first, keyed by name, with Godot's version. */
 export function parseShowcaseOutput(stdout) {
-  const lines = stdout.split('\n');
-  const version = lines.find((line) => line.startsWith('GODOT '));
-  if (!version) throw new Error('expected a "GODOT " line in Godot\'s output, found none');
-  const images = new Map();
-  for (const line of lines.filter((text) => text.startsWith(LINE_PREFIX))) {
-    const [name, hex = ''] = line.slice(LINE_PREFIX.length).trim().split(' ');
-    images.set(name, Uint8Array.from(Buffer.from(hex, 'hex')));
-  }
-  return { godot: version.slice('GODOT '.length).trim(), images };
+  return { godot: printedField(stdout, 'GODOT '), images: printedImages(stdout, LINE_PREFIX) };
 }

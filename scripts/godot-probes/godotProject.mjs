@@ -4,7 +4,7 @@
  * the run, so its test needs no engine.
  */
 
-import { FRAMES_BEFORE_READ } from './godotRun.mjs';
+import { FRAMES_BEFORE_READ, printedField, printedImages } from './godotRun.mjs';
 import { parameterBits, probeShader, probeWidth } from './probeShader.mjs';
 
 /** The prefix of each output line that carries a probe's pixels. */
@@ -67,29 +67,13 @@ func _ready() -> void:
  * adapter. A pixel's four bytes are little-endian, as the shader wrote them.
  */
 export function parseProbeOutput(stdout) {
-  const lines = stdout.split('\n');
-  const field = (prefix) => {
-    const line = lines.find((text) => text.startsWith(prefix));
-    if (!line) throw new Error(`expected a "${prefix}" line in Godot's output, found none`);
-    return line.slice(prefix.length).trim();
-  };
   const pixels = new Map();
-  for (const line of lines.filter((text) => text.startsWith(LINE_PREFIX))) {
-    const [name, hex] = line.slice(LINE_PREFIX.length).trim().split(' ');
-    pixels.set(name, pixelBits(hex ?? ''));
-  }
-  return { godot: field('GODOT '), adapter: field('ADAPTER '), pixels };
+  for (const [name, bytes] of printedImages(stdout, LINE_PREFIX)) pixels.set(name, pixelBits(bytes));
+  return { godot: printedField(stdout, 'GODOT '), adapter: printedField(stdout, 'ADAPTER '), pixels };
 }
 
-function pixelBits(hex) {
-  if (hex.length % 8 !== 0) throw new Error(`expected whole RGBA8 pixels, got ${hex.length} hex digits`);
-  const bits = [];
-  for (let offset = 0; offset < hex.length; offset += 8) {
-    const bytes = hex
-      .slice(offset, offset + 8)
-      .match(/../g)
-      .map((byte) => Number.parseInt(byte, 16));
-    bits.push((bytes[0] | (bytes[1] << 8) | (bytes[2] << 16) | (bytes[3] << 24)) >>> 0);
-  }
-  return bits;
+function pixelBits(bytes) {
+  if (bytes.length % 4 !== 0) throw new Error(`expected whole RGBA8 pixels, got ${bytes.length} bytes`);
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.length);
+  return Array.from({ length: bytes.length / 4 }, (_, pixel) => view.getUint32(pixel * 4, true));
 }

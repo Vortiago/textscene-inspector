@@ -104,6 +104,22 @@ describe('parse', () => {
     expect(refusal('float f() { return b; }')).toThrow("Unknown identifier in expression: 'b'.");
   });
 
+  it('refuses a second function of one signature, with Godot message', () => {
+    expect(refusal('float f(float a) { return a; }\nfloat f(float b) { return b; }')).toThrow(
+      "line 2: Redefinition of 'f'."
+    );
+  });
+
+  it('refuses an overload, which a map of functions by name cannot hold', () => {
+    expect(refusal('float f(float a) { return a; }\nvec2 f(vec2 a) { return a; }')).toThrow(
+      "An overload of 'f' is not translated yet (#1824)"
+    );
+  });
+
+  it('refuses a parameter name read twice, with Godot message', () => {
+    expect(refusal('float f(float a, float a) { return a; }')).toThrow("Redefinition of 'a'.");
+  });
+
   it('names the line of a refusal', () => {
     expect(refusal('float f()\n{\n  return b;\n}')).toThrow(/^line 3: /);
   });

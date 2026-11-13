@@ -42,7 +42,8 @@ export function parse(tokens: readonly Token[]): ShaderTree {
 class Parser {
   private position = 0;
   private parameters: readonly Parameter[] = [];
-  private readonly functionNames = new Set<string>();
+  /** The parameter types of each function read so far, by name. */
+  private readonly functionSignatures = new Map<string, string>();
 
   constructor(private readonly tokens: readonly Token[]) {}
 
@@ -54,10 +55,11 @@ class Parser {
 
   private functionDefinition(): FunctionDefinition {
     const returnType = this.type();
+    const nameToken = this.peek();
     const name = this.identifier('Expected a function name after type.');
-    this.functionNames.add(name);
     this.expect('TK_PARENTHESIS_OPEN', "Expected '(' after function identifier.");
     this.parameters = this.parameterList();
+    this.declareFunction(name, nameToken);
     this.expect('TK_CURLY_BRACKET_OPEN', "Expected '{' to begin function.");
     const result = this.returnStatement(returnType);
     if (!this.accept('TK_CURLY_BRACKET_CLOSE')) this.refuseStatement();
@@ -69,10 +71,31 @@ class Parser {
     if (this.accept('TK_PARENTHESIS_CLOSE')) return parameters;
     do {
       const type = this.type();
-      parameters.push({ type, name: this.identifier('Expected an identifier for argument name.') });
+      const nameToken = this.peek();
+      const name = this.identifier('Expected an identifier for argument name.');
+      if (parameters.some((parameter) => parameter.name === name)) {
+        this.fail(`Redefinition of '${name}'.`, nameToken);
+      }
+      parameters.push({ type, name });
     } while (this.accept('TK_COMMA'));
     this.expect('TK_PARENTHESIS_CLOSE', "Expected ',' or ')' after argument.");
     return parameters;
+  }
+
+  /**
+   * Records function `name` with the parameters just read. Godot refuses a second function of the
+   * same parameter types (`shader_language.cpp:10954`). It accepts an overload, which the
+   * translator refuses: it keys the functions it gives by name.
+   */
+  private declareFunction(name: string, token: Token): void {
+    const signature = this.parameters.map((parameter) => parameter.type).join(',');
+    const declared = this.functionSignatures.get(name);
+    if (declared === signature) this.fail(`Redefinition of '${name}'.`, token);
+    if (declared !== undefined) {
+      const owner = instruction('OP_CALL')!.owner;
+      throw new ShadingLanguageError(`An overload of '${name}' is not translated yet (${owner})`, token.line);
+    }
+    this.functionSignatures.set(name, signature);
   }
 
   private returnStatement(returnType: ValueType): Expression {
@@ -222,7 +245,7 @@ class Parser {
     if (overload) return notTranslated(overload, token.line);
     const anyOverload = firstInstruction(`${name}(`);
     if (anyOverload) return notTranslated(anyOverload, token.line, name);
-    if (this.functionNames.has(name)) return notTranslated(instruction('OP_CALL')!, token.line);
+    if (this.functionSignatures.has(name)) return notTranslated(instruction('OP_CALL')!, token.line);
     return new ShadingLanguageError(`Unknown identifier in expression: '${name}'.`, token.line);
   }
 
