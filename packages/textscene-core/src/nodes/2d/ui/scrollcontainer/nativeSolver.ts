@@ -30,6 +30,7 @@ import {
   type ScrollHintPlacement,
 } from '../shared/scrollBarSolver';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { ScrollContainerProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
@@ -53,17 +54,10 @@ interface ScrollContainerMargins {
  * (`:474-475`), but these margins are unconditional: `get_minimum_size` (`:74-75`), `_update_scrollbars`
  * (`:583-585`), `_update_scrollbar_position` (`:289-306`) and `_reposition_children` (`:344-348`) read them.
  */
-function scrollContainerMargins(n: SolveNode, theme: SolveContext['theme']): ScrollContainerMargins {
-  // The default `panel` is a `StyleBoxEmpty` (`default_theme.cpp:655-657`), so every side is 0. It
-  // is never drawn: `default_theme.cpp:657` registers it `empty`, unlike Panel's grey fill. A
-  // node's `theme_override_styles/panel` or `/focus` wins over either default.
-  const panel = n.styleBoxes.panel?.contentMargin ?? { left: 0, top: 0, right: 0, bottom: 0 };
+function scrollContainerMargins(n: SolveNode): ScrollContainerMargins {
+  const panel = requiredThemeItem(n.styleBoxes, 'panel').contentMargin;
   if (props(n).drawFocusBorder !== true) return { ...panel };
-  // The default `focus` is `make_flat_stylebox(style_focus_color)` (`:659`), whose
-  // `set_content_margin_individual(Math::round(4 * scale) …)` (`:60`, `default_margin = 4` at
-  // `:54`) is `theme.contentMargin`.
-  const m = theme.contentMargin;
-  const focus = n.styleBoxes.focus?.contentMargin ?? { left: m, top: m, right: m, bottom: m };
+  const focus = requiredThemeItem(n.styleBoxes, 'focus').contentMargin;
   return {
     left: Math.max(panel.left, focus.left),
     top: Math.max(panel.top, focus.top),
@@ -132,7 +126,7 @@ export const scrollContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   // `min_size += margins.position + margins.size` (`scroll_container.cpp:74-75`) sits outside
   // both DISABLED branches, so it applies whatever the scroll modes say.
-  const margins = scrollContainerMargins(n, ctx.theme);
+  const margins = scrollContainerMargins(n);
   return { x: x + margins.left + margins.right, y: y + margins.top + margins.bottom };
 };
 
@@ -275,7 +269,7 @@ export function scrollContainerScrollBars(
 
   // `size -= margins.position + margins.size` (scroll_container.cpp:583-585):
   // every test and page below reads the margin-reduced extent, never the raw rect.
-  const margins = scrollContainerMargins(n, ctx.theme);
+  const margins = scrollContainerMargins(n);
   const innerW = rect.w - margins.left - margins.right;
   const innerH = rect.h - margins.top - margins.bottom;
 
@@ -367,7 +361,7 @@ export const scrollContainerLayout: ContainerLayoutFn = (n, children, rect, ctx)
   // if (rtl) ofs.x += width; }` (`:357-363`): the reserved strip leads under RTL. `set_rect`'s
   // `_compute_offsets` un-mirrors what `_size_changed` mirrors (`control.cpp:906-909`), so this is
   // the whole RTL move for a content child.
-  const margins = scrollContainerMargins(n, ctx.theme);
+  const margins = scrollContainerMargins(n);
   const ofsX = margins.left + (n.rtl ? rect.w - margins.left - margins.right - contentSize.x : 0);
   const ofsY = margins.top;
 

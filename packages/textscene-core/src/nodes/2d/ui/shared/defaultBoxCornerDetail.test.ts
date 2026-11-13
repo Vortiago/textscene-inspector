@@ -4,7 +4,12 @@
  */
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  projectFontsAt,
+  solveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { windowThemeDefaults } from '../../../windows/window/theme';
 import { foldableContainerTitleShape } from '../foldablecontainer/nativeSolver';
@@ -48,7 +53,11 @@ describe.each([
   });
 
   it('gives the FoldableContainer title and panel the detail of radius 3', () => {
-    const { titleStyle, panelStyle } = foldableContainerTitleShape(plainNode('FoldableContainer'), theme);
+    const foldable = withThemeItems({
+      ...plainNode('FoldableContainer'),
+      projectFonts: projectFontsAt(scale),
+    });
+    const { titleStyle, panelStyle } = foldableContainerTitleShape(foldable, theme);
     expect([titleStyle.cornerDetail, panelStyle.cornerDetail]).toEqual([radius3Detail, radius3Detail]);
   });
 
