@@ -28,6 +28,7 @@ export function ParticleEmitter({ properties, material, emissionTransform }: Par
   const poses = useTrailBindPoses(drawSkin, drawPasses);
   // A trail needs more than one bind pose, as `particles_storage.cpp:645-647` counts sections.
   const bindPoses = trailEnabled && poses && poses.length > 1 ? poses : undefined;
+  const sections = bindPoses?.length;
   const settled = useMemo(
     () =>
       settleGpuParticles(
@@ -35,11 +36,11 @@ export function ParticleEmitter({ properties, material, emissionTransform }: Par
           emitter,
           material,
           emissionTransform,
-          trail: bindPoses && { sections: bindPoses.length, lifetime: trailLifetime },
+          trail: sections === undefined ? undefined : { sections, lifetime: trailLifetime },
         },
         gpuSettleSeconds(emitter)
       ),
-    [emitter, material, emissionTransform, bindPoses, trailLifetime]
+    [emitter, material, emissionTransform, sections, trailLifetime]
   );
   const view = useCameraAxes(readsCamera(drawOrder, transformAlign));
   const buffer = useMemo(
@@ -60,10 +61,10 @@ export function ParticleEmitter({ properties, material, emissionTransform }: Par
   return (
     <>
       {drawPasses.map((mesh, pass) =>
-        bindPoses ? (
-          <TrailMesh key={pass} mesh={mesh} buffer={buffer} sections={bindPoses.length} />
-        ) : (
+        sections === undefined ? (
           <ParticleMesh key={pass} mesh={mesh} buffer={buffer} />
+        ) : (
+          <TrailMesh key={pass} mesh={mesh} buffer={buffer} sections={sections} />
         )
       )}
     </>

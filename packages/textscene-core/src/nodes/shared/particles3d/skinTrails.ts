@@ -28,25 +28,20 @@ export function skinTrailGeometry(
   const particles = copies.length / (sections * PARTICLE_FLOATS);
   const skin = skinOf(source);
   const vertexCount = skin.positions.count;
-  const merged = new THREE.BufferGeometry();
-
   const positions = new Float32Array(particles * vertexCount * 3);
   const normals = skin.normals ? new Float32Array(particles * vertexCount * 3) : null;
   const colours = new Float32Array(particles * vertexCount * 4);
-  const point = new THREE.Vector3();
   for (let particle = 0; particle < particles; particle++) {
-    const firstRow = particle * sections;
     for (let vertex = 0; vertex < vertexCount; vertex++) {
-      const out = particle * vertexCount + vertex;
-      skinVertex(skin, vertex, copies, firstRow, point);
-      positions.set([point.x, point.y, point.z], out * 3);
-      if (normals) {
-        skinNormal(skin, vertex, copies, firstRow, point);
-        normals.set([point.x, point.y, point.z], out * 3);
-      }
-      skinColour(skin, vertex, copies, firstRow, colours, out * 4);
+      skinVertex(skin, vertex, copies, particle * sections, particle * vertexCount + vertex, {
+        positions,
+        normals,
+        colours,
+      });
     }
   }
+
+  const merged = new THREE.BufferGeometry();
   merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   if (normals) merged.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   merged.setAttribute('color', new THREE.BufferAttribute(colours, 4));
@@ -66,6 +61,13 @@ interface Skin {
   weights: THREE.BufferAttribute;
 }
 
+/** What the skin writes: three arrays of `vertexCount * particles` entries. */
+interface Skinned {
+  positions: Float32Array;
+  normals: Float32Array | null;
+  colours: Float32Array;
+}
+
 function skinOf(source: THREE.BufferGeometry): Skin {
   const indices = source.getAttribute('skinIndex') as THREE.BufferAttribute | undefined;
   const weights = source.getAttribute('skinWeight') as THREE.BufferAttribute | undefined;
@@ -79,80 +81,59 @@ function skinOf(source: THREE.BufferGeometry): Skin {
   };
 }
 
-/** The slots that count for a vertex: their section row and their weight. */
-function forEachBone(
-  skin: Skin,
-  vertex: number,
-  firstRow: number,
-  visit: (row: number, weight: number) => void
-): void {
-  for (let slot = 0; slot < 4; slot++) {
-    const weight = skin.weights.getComponent(vertex, slot);
-    if (slot > 0 && weight <= MIN_BONE_WEIGHT) continue;
-    visit(firstRow + skin.indices.getComponent(vertex, slot), weight);
-  }
-}
-
-/** `Σ weight * (M * position)` over the bones of the vertex. */
+/**
+ * One vertex of one particle, written at `out`: `Σ weight * (M * position)`, `normalize(Σ weight *
+ * (mat3(M) * normal))` and the vertex colour times `Σ weight * colour[bone]`, over the bone slots
+ * that count.
+ */
 function skinVertex(
   skin: Skin,
   vertex: number,
   copies: Float32Array,
   firstRow: number,
-  into: THREE.Vector3
+  out: number,
+  skinned: Skinned
 ): void {
+  const { positions, normals, colours } = skinned;
   const x = skin.positions.getX(vertex);
   const y = skin.positions.getY(vertex);
   const z = skin.positions.getZ(vertex);
-  into.set(0, 0, 0);
-  forEachBone(skin, vertex, firstRow, (row, weight) => {
-    const at = row * PARTICLE_FLOATS;
-    into.x += weight * (copies[at]! * x + copies[at + 1]! * y + copies[at + 2]! * z + copies[at + 3]!);
-    into.y += weight * (copies[at + 4]! * x + copies[at + 5]! * y + copies[at + 6]! * z + copies[at + 7]!);
-    into.z += weight * (copies[at + 8]! * x + copies[at + 9]! * y + copies[at + 10]! * z + copies[at + 11]!);
-  });
-}
-
-/** `normalize(Σ weight * (mat3(M) * normal))`. */
-function skinNormal(
-  skin: Skin,
-  vertex: number,
-  copies: Float32Array,
-  firstRow: number,
-  into: THREE.Vector3
-): void {
-  const x = skin.normals!.getX(vertex);
-  const y = skin.normals!.getY(vertex);
-  const z = skin.normals!.getZ(vertex);
-  into.set(0, 0, 0);
-  forEachBone(skin, vertex, firstRow, (row, weight) => {
-    const at = row * PARTICLE_FLOATS;
-    into.x += weight * (copies[at]! * x + copies[at + 1]! * y + copies[at + 2]! * z);
-    into.y += weight * (copies[at + 4]! * x + copies[at + 5]! * y + copies[at + 6]! * z);
-    into.z += weight * (copies[at + 8]! * x + copies[at + 9]! * y + copies[at + 10]! * z);
-  });
-  into.normalize();
-}
-
-/** The vertex colour times `Σ weight * colour[bone]`. */
-function skinColour(
-  skin: Skin,
-  vertex: number,
-  copies: Float32Array,
-  firstRow: number,
-  into: Float32Array,
-  at: number
-): void {
-  const trail = [0, 0, 0, 0];
-  forEachBone(skin, vertex, firstRow, (row, weight) => {
+  const nx = skin.normals ? skin.normals.getX(vertex) : 0;
+  const ny = skin.normals ? skin.normals.getY(vertex) : 0;
+  const nz = skin.normals ? skin.normals.getZ(vertex) : 0;
+  let px = 0;
+  let py = 0;
+  let pz = 0;
+  let qx = 0;
+  let qy = 0;
+  let qz = 0;
+  for (let slot = 0; slot < 4; slot++) {
+    const weight = skin.weights.getComponent(vertex, slot);
+    if (slot > 0 && weight <= MIN_BONE_WEIGHT) continue;
+    const at = (firstRow + skin.indices.getComponent(vertex, slot)) * PARTICLE_FLOATS;
+    px += weight * (copies[at]! * x + copies[at + 1]! * y + copies[at + 2]! * z + copies[at + 3]!);
+    py += weight * (copies[at + 4]! * x + copies[at + 5]! * y + copies[at + 6]! * z + copies[at + 7]!);
+    pz += weight * (copies[at + 8]! * x + copies[at + 9]! * y + copies[at + 10]! * z + copies[at + 11]!);
+    qx += weight * (copies[at]! * nx + copies[at + 1]! * ny + copies[at + 2]! * nz);
+    qy += weight * (copies[at + 4]! * nx + copies[at + 5]! * ny + copies[at + 6]! * nz);
+    qz += weight * (copies[at + 8]! * nx + copies[at + 9]! * ny + copies[at + 10]! * nz);
     for (let channel = 0; channel < 4; channel++) {
-      trail[channel]! += weight * copies[row * PARTICLE_FLOATS + PARTICLE_COLOR_OFFSET + channel]!;
+      colours[out * 4 + channel]! += weight * copies[at + PARTICLE_COLOR_OFFSET + channel]!;
     }
-  });
+  }
+  positions[out * 3] = px;
+  positions[out * 3 + 1] = py;
+  positions[out * 3 + 2] = pz;
+  if (normals) {
+    const length = Math.hypot(qx, qy, qz) || 1;
+    normals[out * 3] = qx / length;
+    normals[out * 3 + 1] = qy / length;
+    normals[out * 3 + 2] = qz / length;
+  }
   for (let channel = 0; channel < 4; channel++) {
     const own =
       skin.colours && channel < skin.colours.itemSize ? skin.colours.getComponent(vertex, channel) : 1;
-    into[at + channel] = own * trail[channel]!;
+    colours[out * 4 + channel]! *= own;
   }
 }
 
@@ -164,9 +145,18 @@ function repeated(attribute: THREE.BufferAttribute, times: number): THREE.Buffer
   return new THREE.BufferAttribute(array, attribute.itemSize, attribute.normalized);
 }
 
-function repeatedIndex(index: THREE.BufferAttribute | null, vertexCount: number, times: number): number[] {
-  const source = index ? Array.from(index.array) : Array.from({ length: vertexCount }, (_, i) => i);
-  const merged: number[] = [];
-  for (let time = 0; time < times; time++) for (const i of source) merged.push(i + time * vertexCount);
-  return merged;
+/** The index of `times` copies, a typed array wide enough for every merged vertex. */
+function repeatedIndex(
+  index: THREE.BufferAttribute | null,
+  vertexCount: number,
+  times: number
+): THREE.BufferAttribute {
+  const length = index ? index.count : vertexCount;
+  const merged = new (times * vertexCount > 65535 ? Uint32Array : Uint16Array)(times * length);
+  for (let time = 0; time < times; time++) {
+    for (let i = 0; i < length; i++) {
+      merged[time * length + i] = (index ? index.getX(i) : i) + time * vertexCount;
+    }
+  }
+  return new THREE.BufferAttribute(merged, 1);
 }

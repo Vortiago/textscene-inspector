@@ -8,6 +8,10 @@ import type { GpuParticle } from './particle';
 
 /** Floats of one state: the three basis columns, the origin, the velocity, the colour and the custom data. */
 const STATE_FLOATS = 23;
+const ORIGIN_AT = 9;
+const VELOCITY_AT = 12;
+const COLOR_AT = 15;
+const CUSTOM_AT = 19;
 
 /** The steps a section `k` of `sections` runs behind its particle: `floor(k * H / S)` for a history of `H` steps. */
 function sectionDelay(section: number, historyDepth: number, sections: number): number {
@@ -44,10 +48,10 @@ export function recordStep(history: TrailHistory, slot: number, particle: GpuPar
   const { states } = history;
   const { columns, origin, velocity, color, custom } = particle;
   for (let column = 0; column < 3; column++) states.set(columns[column]!, at + column * 3);
-  states.set(origin, at + 9);
-  states.set(velocity, at + 12);
-  states.set(color, at + 15);
-  states.set(custom, at + 19);
+  states.set(origin, at + ORIGIN_AT);
+  states.set(velocity, at + VELOCITY_AT);
+  states.set(color, at + COLOR_AT);
+  states.set(custom, at + CUSTOM_AT);
 }
 
 /**
@@ -68,12 +72,12 @@ export function readSection(
     for (let axis = 0; axis < 3; axis++) target.columns[column]![axis] = states[at + column * 3 + axis]!;
   }
   for (let axis = 0; axis < 3; axis++) {
-    target.origin[axis] = states[at + 9 + axis]!;
-    target.velocity[axis] = states[at + 12 + axis]!;
+    target.origin[axis] = states[at + ORIGIN_AT + axis]!;
+    target.velocity[axis] = states[at + VELOCITY_AT + axis]!;
   }
   for (let axis = 0; axis < 4; axis++) {
-    target.color[axis] = states[at + 15 + axis]!;
-    target.custom[axis] = states[at + 19 + axis]!;
+    target.color[axis] = states[at + COLOR_AT + axis]!;
+    target.custom[axis] = states[at + CUSTOM_AT + axis]!;
   }
 }
 

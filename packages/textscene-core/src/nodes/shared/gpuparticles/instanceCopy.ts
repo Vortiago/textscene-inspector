@@ -92,6 +92,8 @@ export function copyInstances(settled: SettledGpuParticles, request: InstanceCop
   return copied;
 }
 
+const ORIGIN_COLUMN = 3;
+
 /**
  * The half-step of a section: its origin goes back by `velocity * fract((k / S) * H) * (1 / fps)`,
  * because the history steps do not fit the sections exactly (`particles_copy.glsl:149-155`).
@@ -119,8 +121,6 @@ function shiftBack(
 function applyBindPose(copied: Float32Array, at: number, bind: Transform3D): void {
   writeTransformRows(copied, at, multiplyTransform3D(readTransformRows(copied, at), bind));
 }
-
-const ORIGIN_COLUMN = 3;
 
 /** Y_TO_VELOCITY reads the velocity alone; the other turns read the camera. */
 function turnsBasis(transformAlign: number, view: AlignView | null): boolean {
