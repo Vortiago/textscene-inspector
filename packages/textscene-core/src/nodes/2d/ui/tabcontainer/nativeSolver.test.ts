@@ -230,6 +230,17 @@ describe('tabContainerMinimumSize', () => {
     expect(size.y).toBeGreaterThan(10);
   });
 
+  it('widens a LEFT-aligned bar by the theme side_margin, an override included (tab_container.cpp:1039-1042)', () => {
+    const p = page('Only');
+    const props = { tabsVisible: true, tabAlignment: TAB_ALIGNMENT_LEFT };
+    const centered = tabContainerMinimumSize(
+      tabContainer('T', { tabsVisible: true, tabAlignment: TAB_ALIGNMENT_CENTER }, [p]),
+      ctx()
+    );
+    const overridden = withThemeItems({ ...tabContainer('T', props, [p]), constants: { side_margin: 30 } });
+    expect(tabContainerMinimumSize(overridden, ctx()).x - centered.x).toBe(30);
+  });
+
   it('never widens for tab_alignment CENTER (side_margin only applies to LEFT/RIGHT, tab_container.cpp:1039)', () => {
     const p = page('Only');
     const centered = tabContainerMinimumSize(

@@ -46,7 +46,6 @@ import {
   itemIconDraw,
   itemIconPackedSize,
   itemListGuideColor,
-  itemListBarMinimums,
   itemListDrawClip,
   itemListGuideLines,
   itemListIconSlotKey,
@@ -77,6 +76,7 @@ import {
 import { ScrollBarChrome, ScrollHintChrome, SCROLL_HINT_MODULATE } from '../shared/ScrollChrome';
 import { itemListScrollBars } from './scrollBars';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
+import { scrollBarThicknesses } from '../shared/scrollBarSolver';
 import { itemListDrawnLabel, isItemListLabelFillDrawn } from './labelDraw';
 import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -318,7 +318,7 @@ export function ItemList({
   const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
   const pageWidth = rect.w - panelMargin.x;
   const scrollBarBoxes = internalScrollBarBoxes(solveNode);
-  const verticalBarMinWidth = itemListBarMinimums(scrollBarBoxes).verticalWidth;
+  const verticalBarMinWidth = scrollBarThicknesses(scrollBarBoxes).verticalWidth;
 
   const packed = useMemo(
     () =>

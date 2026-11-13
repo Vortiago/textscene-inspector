@@ -18,8 +18,8 @@ import {
   sliderGrabberRect,
   sliderTickRects,
   sliderTrackRect,
+  sliderBoxes,
 } from '../shared/sliderSolver';
-import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { SLIDER_DEFAULT_EDITABLE, sliderTickIndices } from '../shared/slider';
 import type { HSliderProperties } from './types';
 
@@ -31,8 +31,7 @@ export function HSlider({ solveNode, tint, rect, theme, renderOrder }: NativeCon
   const size = { x: rect.w, y: rect.h };
   const ratio = resolveSliderRatio(props, controlLayoutOrder(solveNode));
 
-  const trackBase = requiredThemeItem(solveNode.styleBoxes, 'slider');
-  const fillBase = requiredThemeItem(solveNode.styleBoxes, 'grabber_area');
+  const { slider: trackBase, grabberArea: fillBase } = sliderBoxes(solveNode.styleBoxes);
 
   const grabberIconSize = sliderGrabberIconSize(theme, solveNode.textureSlots);
   const trackRect = sliderTrackRect(false, size, trackBase);

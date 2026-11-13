@@ -58,7 +58,7 @@ export function resolveTextTheme(
 }
 
 export interface TextOutlineTheme {
-  /** `font_outline_color`, sRGB. Godot's default is opaque black for most types (`default_theme.cpp:162` for Button) and white for FoldableContainer (`:1327`). */
+  /** `font_outline_color`, sRGB. Godot's default is opaque black for most types (`default_theme.cpp:162` for Button). */
   color: Rgba;
   /** `outline_size`, px. The default theme sets 0 for every type, so no outline draws until a scene sets it. */
   sizePx: number;

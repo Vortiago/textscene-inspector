@@ -281,10 +281,8 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
   const closeDisplayPolicy = props.tabCloseDisplayPolicy ?? 0;
   const hSeparation = requiredThemeItem(n.constants, 'h_separation');
   const iconMaxWidth = requiredThemeItem(n.constants, 'icon_max_width');
-  // `button_highlight` and `button_pressed` are flat boxes of `style_normal_color` and
-  // `style_pressed_color` (`default_theme.cpp:138-139`), the same as Button's `normal` and `pressed`
-  // (`:239,241`), so `theme.widgets.button` stands in for them.
-  const closeButtonMarginLeft = ctx.theme.widgets.button.normal.contentMargin.left;
+  // `_get_tab_width` pads the close button by `button_hl_style`'s margins (`tab_bar.cpp:89-100`).
+  const closeButtonMarginLeft = requiredThemeItem(n.styleBoxes, 'button_highlight').contentMargin.left;
 
   if (tabs.length === 0) return { x: 0, y: 0 };
 

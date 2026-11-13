@@ -47,7 +47,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import { rect2Intersects, type Rect2 } from '../../../../godot/math/rect2';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
-import { scrollBarMinimumSize, type ScrollBarPairBoxes } from '../shared/scrollBarSolver';
+import { scrollBarThicknesses } from '../shared/scrollBarSolver';
 import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -524,17 +524,6 @@ export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
   }
 }
 
-/** The two scrollbars' minimum sizes, each read once per solve or draw: width of the vertical bar, height of the horizontal one. */
-export function itemListBarMinimums(boxes: ScrollBarPairBoxes): {
-  verticalWidth: number;
-  horizontalHeight: number;
-} {
-  return {
-    verticalWidth: scrollBarMinimumSize(true, boxes.vertical).x,
-    horizontalHeight: scrollBarMinimumSize(false, boxes.horizontal).y,
-  };
-}
-
 // --- Minimum size: ItemList::get_minimum_size (item_list.cpp:2136-2146) ----
 
 /** Godot's own class default (`item_list.h:142`): callers pass this, not `?? 0`, when `maxColumns` is unset. */
@@ -597,7 +586,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
   const panelMin = contentMarginSize(pickItemListPanelStyleBox(n.styleBoxes, ctx.theme));
   const tentative = ctx.tentativeRect?.(n);
-  const barMinimums = itemListBarMinimums(internalScrollBarBoxes(n));
+  const barMinimums = scrollBarThicknesses(internalScrollBarBoxes(n));
   const packed = packItemListRows({
     itemSizes,
     maxColumnWidth,

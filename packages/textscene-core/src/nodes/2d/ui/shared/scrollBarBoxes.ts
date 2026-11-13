@@ -5,20 +5,20 @@
  */
 import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { perObject } from '../../../../utils/perObject';
 import type { ScrollBarBoxes, ScrollBarPairBoxes } from './scrollBarSolver';
 
-/** The `scroll` and `grabber` boxes of one bar's resolved StyleBoxes. */
-export function scrollBarBoxes(styleBoxes: SolveNode['styleBoxes']): ScrollBarBoxes {
-  return {
-    scroll: requiredThemeItem(styleBoxes, 'scroll'),
-    grabber: requiredThemeItem(styleBoxes, 'grabber'),
-  };
-}
+/**
+ * The `scroll` and `grabber` boxes of one bar's resolved StyleBoxes. Cached per record, so a memo
+ * that lists the boxes as a dependency keeps them across renders.
+ */
+export const scrollBarBoxes = perObject((styleBoxes: SolveNode['styleBoxes']): ScrollBarBoxes => ({
+  scroll: requiredThemeItem(styleBoxes, 'scroll'),
+  grabber: requiredThemeItem(styleBoxes, 'grabber'),
+}));
 
-/** The boxes of the HScrollBar and VScrollBar that `host` creates inside itself. */
-export function internalScrollBarBoxes(host: SolveNode): ScrollBarPairBoxes {
-  return {
-    horizontal: scrollBarBoxes(internalChildThemeItems(host, 'HScrollBar').styleBoxes),
-    vertical: scrollBarBoxes(internalChildThemeItems(host, 'VScrollBar').styleBoxes),
-  };
-}
+/** The boxes of the HScrollBar and VScrollBar that `host` creates inside itself, cached per host. */
+export const internalScrollBarBoxes = perObject((host: SolveNode): ScrollBarPairBoxes => ({
+  horizontal: scrollBarBoxes(internalChildThemeItems(host, 'HScrollBar').styleBoxes),
+  vertical: scrollBarBoxes(internalChildThemeItems(host, 'VScrollBar').styleBoxes),
+}));

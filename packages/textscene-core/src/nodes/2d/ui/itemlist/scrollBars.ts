@@ -20,8 +20,9 @@ import {
   type ScrollBarPairBoxes,
   type ScrollBarPlacement,
   type ScrollHintPlacement,
+  scrollBarThicknesses,
 } from '../shared/scrollBarSolver';
-import { itemListBarMinimums, itemListMirrorX, type ItemListScrollRange } from './nativeSolver';
+import { itemListMirrorX, type ItemListScrollRange } from './nativeSolver';
 
 interface ItemListScrollBarsInput {
   /** The control's `get_size()`. */
@@ -96,7 +97,7 @@ function bottomHintPlacement(
 
 export function itemListScrollBars(input: ItemListScrollBarsInput): ItemListScrollBars {
   const { size, margins, rtl, boxes } = input;
-  const minimums = itemListBarMinimums(boxes);
+  const minimums = scrollBarThicknesses(boxes);
   const verticalWidth = input.vertical.visible ? minimums.verticalWidth : 0;
   const horizontalHeight = input.horizontal.visible ? minimums.horizontalHeight : 0;
 

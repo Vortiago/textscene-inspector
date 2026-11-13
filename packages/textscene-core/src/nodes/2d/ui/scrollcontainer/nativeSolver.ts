@@ -24,8 +24,7 @@ import {
   SCROLL_HINT_HORIZONTAL_WIDTH,
   SCROLL_HINT_VERTICAL_HEIGHT,
   scrollBarPlacement,
-  scrollBarMinimumSize,
-  type ScrollBarPairBoxes,
+  scrollBarThicknesses,
   type ScrollBarPlacement,
   type ScrollHintPlacement,
 } from '../shared/scrollBarSolver';
@@ -70,18 +69,6 @@ function props(n: SolveNode): ScrollContainerProperties {
   return n.node.properties as ScrollContainerProperties;
 }
 
-/**
- * The cross-axis thickness `_update_scrollbar_position` reserves for each embedded bar
- * (`h_scroll->get_combined_minimum_size().height` / `v_scroll->get_combined_minimum_size().width`,
- * `scroll_container.cpp:291-292`): `scrollBarMinimumSize`, the geometry a standalone bar uses.
- */
-function hScrollThickness(boxes: ScrollBarPairBoxes): number {
-  return scrollBarMinimumSize(false, boxes.horizontal).y;
-}
-function vScrollThickness(boxes: ScrollBarPairBoxes): number {
-  return scrollBarMinimumSize(true, boxes.vertical).x;
-}
-
 /** `ScrollContainer::get_minimum_size`'s own child loop (`scroll_container.cpp:44-52`):
  * the componentwise max of every visible child's combined minimum size. */
 function largestChildMinSize(n: SolveNode, ctx: SolveContext): Vector2 {
@@ -114,13 +101,13 @@ export const scrollContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (hMode === ScrollMode.DISABLED) {
     x = largest.x;
     if (vMode === ScrollMode.SHOW_ALWAYS || vMode === ScrollMode.RESERVE) {
-      x += vScrollThickness(internalScrollBarBoxes(n)) + SCROLLBAR_SEPARATION;
+      x += scrollBarThicknesses(internalScrollBarBoxes(n)).verticalWidth + SCROLLBAR_SEPARATION;
     }
   }
   if (vMode === ScrollMode.DISABLED) {
     y = largest.y;
     if (hMode === ScrollMode.SHOW_ALWAYS || hMode === ScrollMode.RESERVE) {
-      y += hScrollThickness(internalScrollBarBoxes(n)) + SCROLLBAR_SEPARATION;
+      y += scrollBarThicknesses(internalScrollBarBoxes(n)).horizontalHeight + SCROLLBAR_SEPARATION;
     }
   }
 
@@ -264,8 +251,8 @@ export function scrollContainerScrollBars(
   const vMode = p.verticalScrollMode ?? ScrollMode.AUTO;
   const largest = largestChildMinSize(n, ctx);
   const boxes = internalScrollBarBoxes(n);
-  const hThickness = hScrollThickness(boxes);
-  const vThickness = vScrollThickness(boxes);
+  // `_update_scrollbar_position` reserves each bar's combined minimum size (`scroll_container.cpp:291-292`).
+  const { horizontalHeight: hThickness, verticalWidth: vThickness } = scrollBarThicknesses(boxes);
 
   // `size -= margins.position + margins.size` (scroll_container.cpp:583-585):
   // every test and page below reads the margin-reduced extent, never the raw rect.

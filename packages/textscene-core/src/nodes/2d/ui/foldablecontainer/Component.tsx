@@ -141,10 +141,10 @@ export function FoldableContainer({
   return (
     <>
       <FlippableStyleBox
-        styleBox={title.titleStyle}
+        box={title.titleStyle}
         rect={titleRect}
         isFlipped={!isTitleAtTop}
-        color={tint.own}
+        tint={tint}
         renderOrder={renderOrder}
       />
       <PositionedIcon
@@ -169,10 +169,10 @@ export function FoldableContainer({
       )}
       {!title.folded && (
         <FlippableStyleBox
-          styleBox={title.panelStyle}
+          box={title.panelStyle}
           rect={panelRect}
           isFlipped={!isTitleAtTop}
-          color={tint.own}
+          tint={tint}
           renderOrder={renderOrder}
         />
       )}

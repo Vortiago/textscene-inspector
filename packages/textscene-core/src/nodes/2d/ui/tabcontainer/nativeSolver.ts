@@ -73,9 +73,6 @@ const tabContainerChildVisibility: ChildVisibilityFn = (container, _child, index
 export const TABS_POSITION_TOP = 0;
 const TABS_POSITION_BOTTOM = 1;
 
-/** `default_theme.cpp:1223`: `theme->set_constant("side_margin", "TabContainer", round(8 * scale))`. */
-const SIDE_MARGIN_LITERAL = 8;
-
 /**
  * Every direct child is a tab page: `TabContainer::_get_tab_controls` (`:469-481`) uses
  * `SortableVisibilityMode::IGNORE`, so a page with `visible = false` is still a page, which the
@@ -180,6 +177,12 @@ export function buildInternalTabBarNode(
     // The container pushes every other item the bar reads (`tab_container.cpp:306-343`), so a bar
     // theme entry for one never applies. Only the close icon comes from the bar's own lookup.
     icons: { ...tabBarOwnIcons(barItems), ...n.icons },
+    // The container pushes only the `tab_*` boxes (`:312-318`): the close button's boxes are the bar's own.
+    styleBoxes: {
+      button_highlight: requiredThemeItem(barItems.styleBoxes, 'button_highlight'),
+      button_pressed: requiredThemeItem(barItems.styleBoxes, 'button_pressed'),
+      ...n.styleBoxes,
+    },
     constants: internalTabBarThemeConstants(n.constants),
     // `tab_bar->add_theme_font_override(font, theme_cache.tab_font)` (`:338`),
     // the font twin of the size push above.
@@ -283,7 +286,7 @@ const tabContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     // `side_margin` widens the minimum only for LEFT or RIGHT alignment. No popup is
     // modelled, so the RIGHT branch's popup exception never applies (`tab_container.cpp:1039-1042`).
     if (alignment !== TAB_ALIGNMENT_CENTER) {
-      width += Math.round(SIDE_MARGIN_LITERAL * ctx.theme.scale);
+      width += requiredThemeItem(n.constants, 'side_margin');
     }
   }
 

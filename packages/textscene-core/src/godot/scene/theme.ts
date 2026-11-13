@@ -75,7 +75,7 @@ export const DEFAULT_CORNER_RADIUS = 3;
 /** `default_margin` = 4 (px): the Button "normal" stylebox content margin (all sides). */
 export const DEFAULT_CONTENT_MARGIN = 4;
 
-/** BoxContainer `separation` and GridContainer `h_/v_separation` = 4 (px). */
+/** The 4 px spacing of the default theme's containers, before the theme scale. */
 const DEFAULT_SEPARATION = 4;
 
 /**
@@ -116,7 +116,7 @@ export interface ScaledGodotTheme {
   cornerRadius: number;
   /** The Button "normal" stylebox content margin (all sides), in px. */
   contentMargin: number;
-  /** BoxContainer `separation` / GridContainer `h_/v_separation`, in px. */
+  /** The containers' scaled 4 px spacing: a stand-in where a Control spaces its own internal rows (ItemList, TextEdit, ColorPicker, GraphEdit). */
   separation: number;
   /** The `slider_grabber` icon's box, in px. */
   sliderGrabberSize: number;

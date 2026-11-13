@@ -40,10 +40,6 @@ function columnsOf(n: SolveNode): number {
   return Math.max(1, (n.node.properties as GridContainerProperties).columns ?? 1);
 }
 
-function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation'): number {
-  return requiredThemeItem(n.constants, key);
-}
-
 // --- get_minimum_size ---------------------------------------------------------
 
 /**
@@ -80,8 +76,8 @@ const gridContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   let height = 0;
   for (const h of rowMinH.values()) height += h;
 
-  width += separationOf(n, 'h_separation') * maxColIndex;
-  height += separationOf(n, 'v_separation') * maxRowIndex;
+  width += requiredThemeItem(n.constants, 'h_separation') * maxColIndex;
+  height += requiredThemeItem(n.constants, 'v_separation') * maxRowIndex;
 
   return { x: width, y: height };
 };
@@ -149,8 +145,8 @@ function remainingPixelIndex(
 const gridContainerLayout: ContainerLayoutFn = (n, children, contentRect) => {
   const columns = columnsOf(n);
   const rtl = n.rtl;
-  const hSep = separationOf(n, 'h_separation');
-  const vSep = separationOf(n, 'v_separation');
+  const hSep = requiredThemeItem(n.constants, 'h_separation');
+  const vSep = requiredThemeItem(n.constants, 'v_separation');
 
   const sortable = children.filter(({ node }) => isSortableControl(node));
   const validCount = sortable.length;

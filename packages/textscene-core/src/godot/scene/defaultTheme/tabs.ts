@@ -17,6 +17,7 @@ import {
   STYLE_FILL,
 } from '../theme.js';
 import { buttonBoxes, focusStyleBox } from './button.js';
+import { flatPanelStyleBox } from './containers.js';
 import type {
   DefaultFlatStyleBox,
   DefaultStyleBox,
@@ -75,7 +76,7 @@ export function tabTypes(scale: number): DefaultThemeTypes {
   const tabContainer: DefaultThemeType = typeItems({
     styles: {
       ...tabs,
-      panel: makeFlatStyleBox(scale, STYLE_FILL.normal, { margin: allSides(0) }),
+      panel: flatPanelStyleBox(scale),
       tabbar_background: makeEmptyStyleBox(scale, allSides(0)),
     },
     colors: TAB_COLORS,

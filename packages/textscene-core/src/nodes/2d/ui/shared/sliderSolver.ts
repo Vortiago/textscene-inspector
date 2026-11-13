@@ -15,6 +15,21 @@ import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { rangeRatio, type RangeProperties, type RangeValueOrder } from './range';
 import type { Vector2 } from '../../../../godot/math/vector';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+
+/** A slider's two boxes: the track (`slider`) and the filled part before the grabber (`grabber_area`). */
+export interface SliderBoxes {
+  slider: StyleBoxFlatData;
+  grabberArea: StyleBoxFlatData;
+}
+
+export function sliderBoxes(styleBoxes: SolveNode['styleBoxes']): SliderBoxes {
+  return {
+    slider: requiredThemeItem(styleBoxes, 'slider'),
+    grabberArea: requiredThemeItem(styleBoxes, 'grabber_area'),
+  };
+}
 
 /**
  * `tick.svg`'s cross-axis extent. `pnpm ref:godot` paints an 8px band at `default_theme_scale = 1`,
@@ -24,10 +39,12 @@ import type { Vector2 } from '../../../../godot/math/vector';
  */
 const SLIDER_TICK_CROSS_AXIS = 8;
 
+/** `Size2i`'s cast: each axis truncated toward zero. */
+const size2i = (size: Vector2): Vector2 => ({ x: Math.trunc(size.x), y: Math.trunc(size.y) });
+
 /** `Size2i ss = slider_style->get_minimum_size()` (`slider.cpp:36`): the `slider` box's margins, each axis summed, then truncated. */
 function sliderStyleSize(slider: StyleBoxFlatData): Vector2 {
-  const { x, y } = contentMarginSize(slider);
-  return { x: Math.trunc(x), y: Math.trunc(y) };
+  return size2i(contentMarginSize(slider));
 }
 
 /**
@@ -72,9 +89,6 @@ export function resolveSliderRatio(props: RangeProperties, orderedKeys?: RangeVa
   const ratio = rangeRatio(props, orderedKeys);
   return Number.isNaN(ratio) ? 0 : ratio;
 }
-
-/** `Size2i size = get_size()`: every draw formula reads the narrowed size. */
-const size2i = (size: Vector2): Vector2 => ({ x: Math.trunc(size.x), y: Math.trunc(size.y) });
 
 /**
  * The `slider` StyleBox draw rect (`slider.cpp:333` horizontal, `slider.cpp:301` vertical), centred

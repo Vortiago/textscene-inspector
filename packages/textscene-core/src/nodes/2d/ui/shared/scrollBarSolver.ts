@@ -53,6 +53,17 @@ export function scrollBarMinimumSize(vertical: boolean, boxes: ScrollBarBoxes): 
   return { x: track.x + grabber, y: Math.max(0, track.y) };
 }
 
+/** The width of the vertical bar and the height of the horizontal one: the room a host reserves for each. */
+export function scrollBarThicknesses(boxes: ScrollBarPairBoxes): {
+  verticalWidth: number;
+  horizontalHeight: number;
+} {
+  return {
+    verticalWidth: scrollBarMinimumSize(true, boxes.vertical).x,
+    horizontalHeight: scrollBarMinimumSize(false, boxes.horizontal).y,
+  };
+}
+
 /** `ScrollBar::get_area_size` (`scroll_bar.cpp:491-513`): the grabber's travel along the bar. */
 function scrollBarAreaSize(vertical: boolean, barLength: number, boxes: ScrollBarBoxes): number {
   const track = contentMarginSize(boxes.scroll);

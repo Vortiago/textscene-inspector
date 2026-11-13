@@ -40,7 +40,7 @@ interface NativeThemeStyleFill {
   popup: Rgba;
   /** `style_popup_hover_color` = `Color(0.4, 0.4, 0.4, 1)`. */
   popupHover: Rgba;
-  /** `style_progress_color` = `Color(1, 1, 1, 0.4)`, the sliders' filled `grabber_area`. */
+  /** `style_progress_color` = `Color(1, 1, 1, 0.4)`, ProgressBar's `fill`. */
   progress: Rgba;
 }
 
@@ -120,8 +120,7 @@ export interface NativeTheme extends ScaledGodotTheme {
 }
 
 // A widget reuses `contentMargin`/`cornerRadius` where its `default_theme.cpp` call passes
-// `default_margin` (4) or `default_corner_radius` (3). A call passing another
-// literal, such as ScrollBar's 10, gets its own scaled constant.
+// `default_margin` (4) or `default_corner_radius` (3).
 /** The AcceptDialog panel margin before the theme scale, which `default_theme.cpp:693` applies twice. */
 const DIALOG_PANEL_MARGIN = 8;
 

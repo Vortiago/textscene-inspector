@@ -18,7 +18,12 @@ import {
   scaledPx,
   STYLE_FILL,
 } from '../theme.js';
-import type { DefaultLineStyleBox, DefaultThemeType, DefaultThemeTypes } from './defaultTheme.js';
+import type {
+  DefaultFlatStyleBox,
+  DefaultLineStyleBox,
+  DefaultThemeType,
+  DefaultThemeTypes,
+} from './defaultTheme.js';
 import {
   allSides,
   emptyStyleBox,
@@ -39,10 +44,16 @@ const TOOLTIP_FILL: Rgba = { r: 0, g: 0, b: 0, a: 0.5 };
 /** `Color(1, 1, 1, a)`: SplitContainer's touch dragger in each state (`default_theme.cpp:1238-1240`). */
 const whiteAt = (a: number): Rgba => ({ r: 1, g: 1, b: 1, a });
 
+/**
+ * `make_flat_stylebox(style_normal_color, 0, 0, 0, 0)`: the `panel` of Panel, PanelContainer and
+ * TabContainer (`default_theme.cpp:134,993,1274`).
+ */
+export function flatPanelStyleBox(scale: number): DefaultFlatStyleBox {
+  return makeFlatStyleBox(scale, STYLE_FILL.normal, { margin: allSides(0) });
+}
+
 function panelOf(scale: number): DefaultThemeType {
-  return typeItems({
-    styles: { panel: makeFlatStyleBox(scale, STYLE_FILL.normal, { margin: allSides(0) }) },
-  });
+  return typeItems({ styles: { panel: flatPanelStyleBox(scale) } });
 }
 
 /**

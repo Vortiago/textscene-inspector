@@ -3,6 +3,8 @@
  * inside the ColorPicker, so each reads its own class's items through the ancestor Theme chain
  * (`Control::get_theme_stylebox`, `control.cpp:3078`), not the ColorPicker's own.
  */
+import { sliderBoxes, type SliderBoxes } from '../shared/sliderSolver';
+import { pickTabStyleBox } from '../tabbar/nativeSolver';
 import type { Rgba } from '../../../../godot/math/math';
 import { DEFAULT_THEME_VARIATION_BASES } from '../../../../godot/scene/defaultTheme/variations';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
@@ -28,16 +30,11 @@ export interface ModeButtonBoxes {
   pressed: StyleBoxFlatData;
 }
 
-/** The `slider` and `grabber_area` styleboxes of the internal channel `HSlider`s. */
-export interface ChannelSliderBoxes {
-  slider: StyleBoxFlatData;
-  grabberArea: StyleBoxFlatData;
-}
-
 /** The picker's theme, with the boxes of its internal TabContainer binds and HSliders. */
 export interface PickerTheme extends NativeTheme {
   modeButtons: ModeButtonBoxes;
-  channelSlider: ChannelSliderBoxes;
+  /** The boxes of the internal channel `HSlider`s. */
+  channelSlider: SliderBoxes;
 }
 
 export interface PickerChildTheme {
@@ -106,13 +103,10 @@ function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildThe
       },
     },
     modeButtons: {
-      normal: requiredThemeItem(tabs.styleBoxes, 'tab_unselected'),
-      pressed: requiredThemeItem(tabs.styleBoxes, 'tab_selected'),
+      normal: pickTabStyleBox(tabs.styleBoxes, 'unselected'),
+      pressed: pickTabStyleBox(tabs.styleBoxes, 'selected'),
     },
-    channelSlider: {
-      slider: requiredThemeItem(slider.styleBoxes, 'slider'),
-      grabberArea: requiredThemeItem(slider.styleBoxes, 'grabber_area'),
-    },
+    channelSlider: sliderBoxes(slider.styleBoxes),
   };
   const result: PickerChildTheme = {
     theme: withLineEditBoxes(withBoxes, lineEdit),

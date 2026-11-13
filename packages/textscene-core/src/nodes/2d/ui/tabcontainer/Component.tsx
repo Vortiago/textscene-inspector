@@ -30,9 +30,6 @@ import {
 } from './nativeSolver';
 import { canvasSubOrder } from '../../../../r3f/canvasItemState';
 
-/** `default_theme.cpp:1223`: `theme->set_constant("side_margin", "TabContainer", round(8 * scale))`, the literal `nativeSolver.ts` uses for the minimum size. */
-const SIDE_MARGIN_LITERAL = 8;
-
 const EMPTY_CHILD_RECTS: NativeControlComponentProps['childRects'] = new Map();
 
 export function TabContainer({
@@ -77,10 +74,10 @@ export function TabContainer({
         containerWidthPx: rect.w,
         leftMarginPx: solveNode.rtl ? tabbarMargin.right : tabbarMargin.left,
         rightMarginPx: solveNode.rtl ? tabbarMargin.left : tabbarMargin.right,
-        sideMarginPx: Math.round(SIDE_MARGIN_LITERAL * theme.scale),
+        sideMarginPx: requiredThemeItem(solveNode.constants, 'side_margin'),
         rtl: solveNode.rtl,
       }),
-    [drawInputs, layoutInput, rect.w, solveNode.rtl, tabbarMargin, theme.scale]
+    [drawInputs, layoutInput, rect.w, solveNode.rtl, solveNode.constants, tabbarMargin]
   );
   const barRect = showsStrip
     ? tabBarRect(rect, barMinHeight, tabsPosition, alignment, strip.sideMarginPx, tabbarMargin, solveNode.rtl)

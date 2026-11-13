@@ -80,7 +80,7 @@ export function useTabBarModel(solveNode: SolveNode, theme: NativeControlCompone
   const iconMaxWidth = requiredThemeItem(solveNode.constants, 'icon_max_width');
 
   const styleBoxes = solveNode.styleBoxes;
-  const closeButtonMargin = theme.widgets.button.normal.contentMargin;
+  const closeButtonMargin = requiredThemeItem(solveNode.styleBoxes, 'button_highlight').contentMargin;
   const closeIconSize = tabBarThemeIconSize(solveNode, 'close', theme.scale);
   const incrementIconSize = tabBarThemeIconSize(solveNode, 'increment', theme.scale);
   const decrementIconSize = tabBarThemeIconSize(solveNode, 'decrement', theme.scale);

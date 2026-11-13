@@ -61,10 +61,6 @@ function orientationOf(n: SolveNode): boolean {
   return props(n).vertical === true;
 }
 
-function separationOf(n: SolveNode, key: 'h_separation' | 'v_separation'): number {
-  return requiredThemeItem(n.constants, key);
-}
-
 // The shared line-wrap pass (flow_container.cpp:65-129).
 
 interface ChildMsc {
@@ -184,8 +180,8 @@ const flowContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const sortable = n.children.filter(isSortableControl);
   if (sortable.length === 0) return { x: 0, y: 0 };
 
-  const hSep = separationOf(n, 'h_separation');
-  const vSep = separationOf(n, 'v_separation');
+  const hSep = requiredThemeItem(n.constants, 'h_separation');
+  const vSep = requiredThemeItem(n.constants, 'v_separation');
 
   let mainAxisMax = 0;
   const childMscs: ChildMsc[] = [];
@@ -280,8 +276,8 @@ function alignmentOffset(
  */
 const flowContainerLayout: ContainerLayoutFn = (n, children, contentRect) => {
   const vertical = orientationOf(n);
-  const hSep = separationOf(n, 'h_separation');
-  const vSep = separationOf(n, 'v_separation');
+  const hSep = requiredThemeItem(n.constants, 'h_separation');
+  const vSep = requiredThemeItem(n.constants, 'v_separation');
   const alignment = props(n).alignment ?? ContainerAlignment.ALIGNMENT_BEGIN;
   const lastWrapAlignment = props(n).lastWrapAlignment ?? LAST_WRAP_ALIGNMENT_INHERIT;
   const reverseFill = props(n).reverseFill === true;

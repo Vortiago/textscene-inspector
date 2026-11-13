@@ -398,6 +398,18 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
     expect(tabBarMinimumSize(node(), at15)).toEqual(tabBarMinimumSize(themed, at15));
   });
 
+  it("pads the close button by the button_highlight box's left margin (tab_bar.cpp:89-100)", () => {
+    const highlight = {
+      ...TABLE_BOXES.button_highlight!,
+      contentMargin: { left: 20, top: 0, right: 0, bottom: 0 },
+    };
+    const padded = node({ styleBoxes: { button_highlight: highlight } });
+    const tableLeft = TABLE_BOXES.button_highlight!.contentMargin.left;
+    expect(tabBarMinimumSize(withThemeItems(padded), ctx()).x - tabBarMinimumSize(node(), ctx()).x).toBe(
+      20 - tableLeft
+    );
+  });
+
   it('widens on a themed "close" icon bigger than the vendored default', () => {
     const untetheredSize = tabBarMinimumSize(node(), ctx());
     const themedSize = tabBarMinimumSize(node({ textureSlots: { close: { x: 40, y: 32 } } }), ctx());
