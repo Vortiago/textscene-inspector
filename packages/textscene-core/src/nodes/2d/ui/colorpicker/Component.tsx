@@ -132,11 +132,11 @@ function useSpinArrowColor(
   state: SpinBoxButtonState,
   tintOwn: Rgba
 ) {
-  const modulate = useMemo(
+  const tinted = useMemo(
     () => multiplyModulate(tintOwn, spinBoxIconColor(colors, direction, state)),
     [tintOwn, colors, direction, state]
   );
-  return { color: useItemLinearColor(modulate), opacity: modulate.a };
+  return { color: useItemLinearColor(tinted), opacity: tinted.a };
 }
 
 /** The picker's child Buttons keep the `text_direction` and `language` defaults. */
