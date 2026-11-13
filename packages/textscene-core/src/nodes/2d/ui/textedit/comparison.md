@@ -141,8 +141,12 @@ always shapes at the class default of 4.
 - **Approximated** The rows of an `indent_wrapped_lines` line in a narrow band break at other words than Godot's.
 - **Approximated** A wrapped row under a right-to-left layout sits about one space width too far right.
 - **Approximated** `draw_tabs`/`draw_spaces` overlay the `tab`/`space` theme icons
-  at an unscaled size and a row-centred vertical offset, not Godot's own
-  ascent-relative one (`Component.tsx`'s own doc).
+  at a row-centred vertical offset, not Godot's own ascent-relative one
+  (`Component.tsx`'s own doc).
+- **Approximated** Above a font size of 20 px, a tab stop is 1 px wider than Godot's per
+  space, since the space advance does not round to a whole pixel (`text_server_adv.cpp:3282-3283`).
+- **Approximated** At `gui/theme/default_theme_scale` 2, a line whose wrapping shows the vertical
+  scroll bar wraps beside the bar, where the Godot capture wraps it at the width without the bar.
 - **Not drawn** The right-to-left mouse mirror (text_edit.cpp:2241,2516,4956), hit tests
   (:5024,8213-8215), empty-line caret (:1781) and end-of-line selection rect (:1517),
   which need pointer, caret or selection state.
