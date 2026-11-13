@@ -12,14 +12,13 @@ import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
 import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { resolveNodeFont } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { peekSceneFontMetrics } from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { rangeRatio } from '../shared/range';
 import {
-  progressBarDefaultBackground,
-  progressBarDefaultFill,
   progressBarFillRect,
   progressBarIndeterminateFillRect,
   progressBarPercentRatio,
@@ -34,8 +33,8 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
   const props = painterView<ProgressBarProperties>(solveNode);
   const clippingPlanes = useControlClipPlanes();
 
-  const backgroundBox = solveNode.styleBoxes.background ?? progressBarDefaultBackground(theme);
-  const fillBox = solveNode.styleBoxes.fill ?? progressBarDefaultFill(theme);
+  const backgroundBox = requiredThemeItem(solveNode.styleBoxes, 'background');
+  const fillBox = requiredThemeItem(solveNode.styleBoxes, 'fill');
 
   const size = { x: rect.w, y: rect.h };
   const indeterminate = props.indeterminate === true;

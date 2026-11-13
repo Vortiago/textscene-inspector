@@ -7,7 +7,11 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
@@ -24,12 +28,12 @@ function node(
   props: Partial<ProgressBarProperties>,
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'P',
     node: controlNode('P', 'ProgressBar', { name: 'P', ...props }),
     styleBoxes,
-  };
+  });
 }
 
 function ctx(): SolveContext {

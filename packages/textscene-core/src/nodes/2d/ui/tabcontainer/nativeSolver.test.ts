@@ -549,6 +549,15 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
     expect(bar.colors.font_selected_color).not.toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
+  it("keeps the bar's own close button box over a container override of that name (tab_container.cpp:312-318)", () => {
+    const containerBox = { ...TABLE_PANEL, contentMargin: TABBAR_MARGIN };
+    const n = tabContainer('Tabs', {}, [], { button_highlight: containerBox });
+    const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
+    expect(bar.styleBoxes.button_highlight).toEqual(
+      defaultStyleBoxesOf(defaultThemeAt(1)).TabBar!.button_highlight
+    );
+  });
+
   it("pushes the container's own theme_override_font_sizes/font_size", () => {
     expect(barFontSize(container({ themeOverrideFontSizes: { font_size: 28 } }))).toBe(28);
   });

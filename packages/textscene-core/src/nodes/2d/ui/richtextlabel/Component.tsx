@@ -227,7 +227,7 @@ function useShapedRichText(
     ]
   );
 
-  const scrollBarBoxes = internalScrollBarBoxes(solveNode).vertical;
+  const verticalBarBoxes = internalScrollBarBoxes(solveNode).vertical;
   const shaped = useMemo(
     () =>
       shapeBesideScrollBar(
@@ -236,9 +236,9 @@ function useShapedRichText(
           return { runs, layout: shapeAtWidth(runs, wrapWidthPx) };
         },
         box,
-        scrollBarBoxes
+        verticalBarBoxes
       ),
-    [runsAt, runsAtRectWidth, rect.w, shapeAtWidth, box, scrollBarBoxes]
+    [runsAt, runsAtRectWidth, rect.w, shapeAtWidth, box, verticalBarBoxes]
   );
 
   const { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior } = props;

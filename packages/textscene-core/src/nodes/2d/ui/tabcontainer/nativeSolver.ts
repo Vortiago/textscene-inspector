@@ -120,9 +120,9 @@ const TAB_CONTAINER_FONT_SIZE_KEY = 'font_size';
 
 /**
  * The internal TabBar's theme constants, per `_on_theme_changed` (`tab_container.cpp:341-343`):
- * `h_separation` comes from TabContainer's `icon_separation` (`default_theme.cpp:1225`, also 4).
- * `tab_separation` and `icon_max_width` forward unchanged: both default to 0, and
- * default_theme.cpp sets neither for TabContainer.
+ * `h_separation` comes from TabContainer's `icon_separation` (`default_theme.cpp:1020`), and
+ * `icon_max_width` forwards from the table (`:1021`). The table sets no `tab_separation` for
+ * TabContainer, so it falls back to 0.
  */
 function internalTabBarThemeConstants(constants: SolveNode['constants']): SolveNode['constants'] {
   return {
@@ -179,9 +179,9 @@ export function buildInternalTabBarNode(
     icons: { ...tabBarOwnIcons(barItems), ...n.icons },
     // The container pushes only the `tab_*` boxes (`:312-318`): the close button's boxes are the bar's own.
     styleBoxes: {
+      ...n.styleBoxes,
       button_highlight: requiredThemeItem(barItems.styleBoxes, 'button_highlight'),
       button_pressed: requiredThemeItem(barItems.styleBoxes, 'button_pressed'),
-      ...n.styleBoxes,
     },
     constants: internalTabBarThemeConstants(n.constants),
     // `tab_bar->add_theme_font_override(font, theme_cache.tab_font)` (`:338`),

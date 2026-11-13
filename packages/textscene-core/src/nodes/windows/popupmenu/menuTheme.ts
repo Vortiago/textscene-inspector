@@ -110,6 +110,6 @@ export function popupMenuTheme(n: SolveNode, theme: NativeTheme): PopupMenuTheme
     fontDisabledColor: n.colors.font_disabled_color ?? defaults.fontDisabledColor,
     fontSeparatorColor: n.colors.font_separator_color ?? CONTROL_FONT_COLOR,
     outline: resolveTextOutline(n),
-    separatorOutline: resolveTextOutline(n, undefined, SEPARATOR_OUTLINE_NAMES),
+    separatorOutline: resolveTextOutline(n, SEPARATOR_OUTLINE_NAMES),
   };
 }

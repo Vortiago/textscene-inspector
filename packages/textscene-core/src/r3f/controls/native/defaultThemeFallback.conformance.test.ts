@@ -33,6 +33,7 @@ const MIGRATED_FOLDERS = [
   'menubar',
   'menubutton',
   'optionbutton',
+  'progressbar',
   'panel',
   'panelcontainer',
   'scrollbar',

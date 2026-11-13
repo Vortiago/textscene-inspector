@@ -11,6 +11,7 @@ import {
   withThemeItems,
 } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { windowThemeDefaults } from '../../../windows/window/theme';
 import { foldableContainerTitleShape } from '../foldablecontainer/nativeSolver';
 import { graphEditMenuPanelStyleBox } from '../graphedit/toolbar';
@@ -18,7 +19,6 @@ import { graphEditDefaultPanel } from '../graphedit/defaultPanel';
 import { graphFrameStyles } from '../graphframe/nativeSolver';
 import { graphNodeStyles } from '../graphnode/nativeSolver';
 import { pickItemListPanelStyleBox, pickItemListSelectedStyleBox } from '../itemlist/nativeSolver';
-import { progressBarDefaultBackground, progressBarDefaultFill } from '../progressbar/nativeSolver';
 import { pickTreePanelStyleBox } from '../tree/nativeSolver';
 
 function plainNode(type: string): SolveNode {
@@ -70,9 +70,8 @@ describe.each([
   });
 
   it('gives the ProgressBar boxes the detail of radius 6', () => {
-    expect([
-      progressBarDefaultBackground(theme).cornerDetail,
-      progressBarDefaultFill(theme).cornerDetail,
-    ]).toEqual([radius6Detail, radius6Detail]);
+    const progressBar = withThemeItems({ ...plainNode('ProgressBar'), projectFonts: projectFontsAt(scale) });
+    const boxes = ['background', 'fill'].map((name) => requiredThemeItem(progressBar.styleBoxes, name));
+    expect(boxes.map((box) => box.cornerDetail)).toEqual([radius6Detail, radius6Detail]);
   });
 });

@@ -10,7 +10,11 @@ import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { ProgressBar } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
 vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
@@ -18,11 +22,11 @@ vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
 }));
 
 function solveNode(properties: Record<string, unknown>): SolveNode {
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'P',
     node: controlNode('P', 'ProgressBar', { name: 'P', ...properties }) as TscnNode,
-  };
+  });
 }
 
 const RECT = { x: 0, y: 0, w: 100, h: 20 };
