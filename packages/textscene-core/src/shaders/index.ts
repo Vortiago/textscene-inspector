@@ -20,6 +20,7 @@
  */
 
 export { installNodesHandler, type NodeOutput } from './nodesHandler.js';
+export { GODOT_VERSION } from './language/instructionTable.generated.js';
 export { ShadingLanguageError } from './language/shadingLanguageError.js';
 export { transpileShadingLanguage, type TranspiledShader } from './language/transpile.js';
 export type { TranspiledFunction } from './language/emitter.js';

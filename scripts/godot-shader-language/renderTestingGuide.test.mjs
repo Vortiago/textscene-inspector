@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { renderTestingGuide } from './renderTestingGuide.mjs';
 
 const KNOWN = {
-  'random-1-1': {
-    reduced: 'float probe(float a0) { return -(-a0); }',
+  'double-negation': {
+    program: 'random-1-1',
+    source: 'float probe(float a0) { return -(-a0); }',
     lane: 'lane 0',
     cause: 'c',
     owner: '#1',
@@ -31,8 +32,10 @@ const GUIDE = renderTestingGuide({
 });
 
 describe('the chapter on the tests against Godot', () => {
-  it('counts the random programs bit-equal with Godot, less the known differences', () => {
-    expect(GUIDE).toContain('**2 of 3 random programs bit-equal with Godot.**');
+  it('counts the random programs bit-equal with Godot, less those a case names, and the fixed cases', () => {
+    expect(GUIDE).toContain(
+      '**2 of 3 random programs bit-equal with Godot, and 1 fixed known-difference case.**'
+    );
   });
 
   it('counts the real shaders that transpile, of those Godot accepts', () => {
@@ -54,7 +57,7 @@ describe('the table of known differences', () => {
         transpiledRows: 1,
         knownDifferences: {
           'random-1-0': {
-            reduced: 'bool probe(bool a0) { return a0 || a0; }',
+            source: 'bool probe(bool a0) { return a0 || a0; }',
             lane: 'l',
             cause: 'c',
             owner: '#1',

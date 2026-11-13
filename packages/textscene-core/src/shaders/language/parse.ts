@@ -1,362 +1,230 @@
 /**
- * The parser of Godot's shading language: tokens to the typed tree, with Godot's type rules read
- * from the instruction table. It reads what the transpiler transpiles (functions that return one
- * expression of float arithmetic) and refuses the rest, naming the row and the issue that owns it.
+ * The parser of Godot's shading language: tokens to the typed tree, as Godot's `_parse_shader`
+ * reads functions (`shader_language.cpp:10258`) and `_parse_block` reads their statements
+ * (`shader_language.cpp:7960`). A form the transpiler does not read yet is refused with the row
+ * that names it and the issue that owns it.
  */
 
-import {
-  builtInInstruction,
-  familyInstructions,
-  firstInstruction,
-  instruction,
-  keywordInstruction,
-  notTranspiled,
-  signatureInstruction,
-} from './instructions.js';
-import {
-  BINARY_BY_TOKEN,
-  BINARY_LEVEL_COUNT,
-  BINARY_OPERATORS,
-  operatorOfRow,
-  operatorText,
-  type TranspiledOperator,
-} from './operators.js';
-import type { InstructionRow } from './instructionTable.generated.js';
+import { builtInInstruction, instruction, keywordInstruction, notTranspiled } from './instructions.js';
+import { ExpressionParser, type ExpressionScope } from './parseExpression.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 import type {
-  Constant,
-  Expression,
-  FunctionDefinition,
-  Parameter,
-  ShaderTree,
-  ValueType,
+  Argument,
+  BlockNode,
+  ControlFlowNode,
+  FunctionNode,
+  ShaderNode,
+  Statement,
 } from './shaderTree.js';
+import { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
-import { godotLiteralScalar } from './godotNumber.js';
-
-/** The types the transpiler reads. Each other type is refused with the row that names it. */
-const TRANSPILED_TYPES: ReadonlySet<ValueType> = new Set(['float', 'vec2', 'vec3', 'vec4']);
-
-/** Godot's operator enumerator of an operator token: `TK_OP_ADD` is `OP_ADD`, `?` is `OP_SELECT_IF`. */
-const operatorOf = (token: string) => (token === 'TK_QUESTION' ? 'OP_SELECT_IF' : token.replace(/^TK_/, ''));
-
-const isOperatorToken = (token: string) => token.startsWith('TK_OP_') || token === 'TK_QUESTION';
+import { shapeOf } from './types.js';
 
 /** The tree of the tokens of a shader text. */
-export function parse(tokens: readonly Token[]): ShaderTree {
-  return new Parser(tokens).shader();
+export function parse(tokens: readonly Token[]): ShaderNode {
+  return new ShaderParser(new TokenCursor(tokens)).shader();
 }
 
-class Parser {
-  private position = 0;
-  private parameters: readonly Parameter[] = [];
-  /** The parameter types of each function read so far, by name. */
-  private readonly functionSignatures = new Map<string, string>();
+class ShaderParser implements ExpressionScope {
+  private readonly functions: FunctionNode[] = [];
+  /** The argument types of each function declared so far, its own included while its body is read. */
+  private readonly signatures: { readonly name: string; readonly types: string }[] = [];
+  private arguments: readonly Argument[] = [];
+  private returnType = 'void';
+  private readonly expressions: ExpressionParser;
 
-  constructor(private readonly tokens: readonly Token[]) {}
-
-  shader(): ShaderTree {
-    const functions: FunctionDefinition[] = [];
-    while (this.peek().type !== 'TK_EOF') functions.push(this.functionDefinition());
-    return { functions };
+  constructor(private readonly tokens: TokenCursor) {
+    this.expressions = new ExpressionParser(tokens, this);
   }
 
-  private functionDefinition(): FunctionDefinition {
-    const returnType = this.type();
-    const nameToken = this.peek();
-    const name = this.identifier('Expected a function name after type.');
-    this.expect('TK_PARENTHESIS_OPEN', "Expected '(' after function identifier.");
-    this.parameters = this.parameterList();
-    this.declareFunction(name, nameToken);
-    this.expect('TK_CURLY_BRACKET_OPEN', "Expected '{' to begin function.");
-    const result = this.returnStatement(returnType);
-    if (!this.accept('TK_CURLY_BRACKET_CLOSE')) this.refuseStatement();
-    return { name, returnType, parameters: this.parameters, result };
+  argument(name: string): Argument | undefined {
+    return this.arguments.find((argument) => argument.name === name);
   }
 
-  private parameterList(): Parameter[] {
-    const parameters: Parameter[] = [];
-    if (this.accept('TK_PARENTHESIS_CLOSE')) return parameters;
-    do {
-      const type = this.type();
-      const nameToken = this.peek();
-      const name = this.identifier('Expected an identifier for argument name.');
-      if (parameters.some((parameter) => parameter.name === name)) {
-        this.fail(`Redefinition of '${name}'.`, nameToken);
-      }
-      parameters.push({ type, name });
-    } while (this.accept('TK_COMMA'));
-    this.expect('TK_PARENTHESIS_CLOSE', "Expected ',' or ')' after argument.");
-    return parameters;
+  isFunction(name: string): boolean {
+    return this.signatures.some((declared) => declared.name === name);
+  }
+
+  shader(): ShaderNode {
+    for (;;) {
+      const token = this.tokens.next();
+      if (token.type === 'TK_EOF') return { kind: 'shader', functions: this.functions };
+      this.functions.push(this.functionDefinition(token));
+    }
+  }
+
+  /** A function, from its return type (`shader_language.cpp:10258`). */
+  private functionDefinition(first: Token): FunctionNode {
+    const typeToken = this.precededType(first, () => this.refuseGlobal(first));
+    if (keywordInstruction(typeToken.type)?.family !== 'data type') this.refuseGlobal(typeToken);
+    const returnType = this.dataType(typeToken);
+    if (shapeOf(returnType) === undefined && returnType !== 'void') {
+      this.tokens.fail('Invalid function type (samplers are not allowed).');
+    }
+    if (this.tokens.peek().type === 'TK_BRACKET_OPEN')
+      throw notTranspiled(instruction('NODE_TYPE_ARRAY')!, this.tokens.peek().position);
+    const nameToken = this.tokens.next();
+    if (nameToken.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected a function name after type.');
+    const name = nameToken.text!;
+    if (builtInInstruction(name)) this.tokens.fail(`Redefinition of '${name}'.`);
+    if (this.tokens.next().type !== 'TK_PARENTHESIS_OPEN') {
+      if (returnType === 'void') this.tokens.fail("Expected '(' after function identifier.");
+      throw notTranspiled(keywordInstruction('TK_CONST')!, nameToken.position);
+    }
+    this.arguments = this.argumentList();
+    this.returnType = returnType;
+    this.declare(name, nameToken);
+    this.tokens.expect('TK_CURLY_BRACKET_OPEN', "Expected a '{' to begin function.");
+    const body = this.block(this.tokens.lastPosition());
+    if (returnType !== 'void' && !body.statements.some(isReturn)) {
+      this.tokens.fail("Expected at least one 'return' statement in a non-void function.");
+    }
+    return { kind: 'function', name, returnType, arguments: this.arguments, body, position: first.position };
   }
 
   /**
-   * Records function `name` with the parameters just read. Godot refuses a second function of the
-   * same parameter types (`shader_language.cpp:10954`). It accepts an overload, which the
-   * transpiler refuses: it keys the functions it gives by name.
+   * The type token after an optional precision, which Godot checks against the type
+   * (`_validate_precision`, `shader_language.cpp:9117`). `refuse` handles a `const` first.
    */
-  private declareFunction(name: string, token: Token): void {
-    const signature = this.parameters.map((parameter) => parameter.type).join(',');
-    const declared = this.functionSignatures.get(name);
-    if (declared === signature) this.fail(`Redefinition of '${name}'.`, token);
-    if (declared !== undefined) {
-      const owner = instruction('OP_CALL')!.owner;
-      throw new ShadingLanguageError(`An overload of '${name}' is not transpiled yet (${owner})`, token.line);
-    }
-    this.functionSignatures.set(name, signature);
+  private precededType(first: Token, refuse: () => never): Token {
+    if (first.type === 'TK_CONST') refuse();
+    if (!isPrecisionToken(first.type)) return first;
+    const typeToken = this.tokens.next();
+    const shape = shapeOf(keywordInstruction(typeToken.type)?.id ?? '');
+    if (shape?.scalar === 'bool') this.tokens.fail('The precision modifier cannot be used on boolean types.');
+    return typeToken;
   }
 
-  private returnStatement(returnType: ValueType): Expression {
-    if (!this.accept('TK_CF_RETURN')) this.refuseStatement();
-    const result = this.expression();
-    if (result.type !== returnType) this.fail(`Expected return with an expression of type '${returnType}'.`);
-    this.expect('TK_SEMICOLON', "Expected ';' after return expression.");
-    return result;
-  }
-
-  /** A statement other than the one `return`: Godot's tree node or keyword row for it. */
-  private refuseStatement(): never {
-    const token = this.peek();
-    const keyword = keywordInstruction(token.type);
-    const row = keyword?.family === 'statement keyword' ? keyword : undefined;
-    const declaration = token.type.startsWith('TK_TYPE_')
-      ? 'NODE_TYPE_VARIABLE_DECLARATION'
-      : 'NODE_TYPE_BLOCK';
-    throw notTranspiled(row ?? instruction(declaration)!, token.line);
-  }
-
-  /** A type keyword the transpiler reads, or the refusal of the keyword's row. */
-  private type(): ValueType {
-    const token = this.next();
-    return this.transpiledType(token, `Expected a type, found: '${token.text ?? token.type}'.`);
-  }
-
-  /** A whole expression, reduced as `_parse_and_reduce_expression` reduces it (`shader_language.cpp:7949`). */
-  private expression(): Expression {
-    return reduced(this.binary(BINARY_LEVEL_COUNT - 1));
-  }
-
-  /** Left to right at each level, as Godot's priority loop reduces (`shader_language.cpp:7600`). */
-  private binary(level: number): Expression {
-    const operand = () => (level === 0 ? this.unary() : this.binary(level - 1));
-    let left = operand();
-    for (;;) {
-      const token = this.peek();
-      const op = BINARY_BY_TOKEN.get(token.type);
-      if (op && BINARY_OPERATORS[op].level === level) {
-        this.next();
-        left = this.operator(op, [left, operand()], token);
-      } else if (!op && isOperatorToken(token.type)) {
-        this.next();
-        this.refuseOperator(operatorOf(token.type), [left, this.unary()], token);
-      } else return left;
-    }
-  }
-
-  private unary(): Expression {
-    const token = this.peek();
-    if (token.type === 'TK_OP_SUB') {
-      this.next();
-      return this.operator('OP_NEGATE', [this.unary()], token);
-    }
-    if (isOperatorToken(token.type)) {
-      this.next();
-      this.refuseOperator(operatorOf(token.type), [this.unary()], token);
-    }
-    return this.postfix(this.primary());
-  }
-
-  /** The operator node of `op` over `operands`, typed by its row, or Godot's refusal. */
-  private operator(op: TranspiledOperator, operands: Expression[], token: Token): Expression {
-    const types = typesOf(operands);
-    const row = signatureInstruction(op, types);
-    if (!row) this.fail(`Invalid arguments to operator '${operatorText(op)}': '${types.join(', ')}'.`, token);
-    if (!TRANSPILED_TYPES.has(row.returns!)) throw notTranspiled(row, token.line);
-    return { kind: 'operator', type: row.returns!, row, operands };
-  }
-
-  /** An operator the transpiler does not read: its exact row, or the operator's name. */
-  private refuseOperator(op: string, operands: Expression[], token: Token): never {
-    const row = signatureInstruction(op, typesOf(operands));
-    if (row) throw notTranspiled(row, token.line);
-    throw notTranspiled(instruction(op) ?? firstInstruction(`${op}(`)!, token.line, op);
-  }
-
-  private postfix(base: Expression): Expression {
-    let node = base;
-    for (;;) {
-      const token = this.peek();
-      if (token.type === 'TK_PERIOD') {
-        this.next();
-        node = this.swizzle(node, this.identifier('Expected an identifier as a member.'), token);
-      } else if (token.type === 'TK_BRACKET_OPEN') throw notTranspiled(instruction('OP_INDEX')!, token.line);
-      else if (token.type === 'TK_OP_INCREMENT' || token.type === 'TK_OP_DECREMENT') {
-        throw notTranspiled(firstInstruction(`OP_POST_${token.type.slice(6)}(`)!, token.line);
-      } else return node;
-    }
-  }
-
-  private primary(): Expression {
-    const token = this.next();
-    switch (token.type) {
-      case 'TK_FLOAT_CONSTANT':
-        return { kind: 'constant', type: 'float', values: [this.literalFloat(token)] };
-      case 'TK_INT_CONSTANT':
-        throw notTranspiled(instruction('int literal')!, token.line);
-      case 'TK_UINT_CONSTANT':
-        throw notTranspiled(instruction('uint literal')!, token.line);
-      case 'TK_PARENTHESIS_OPEN': {
-        const inner = this.expression();
-        this.expect('TK_PARENTHESIS_CLOSE', "Expected ')' in expression.");
-        return inner;
-      }
-      case 'TK_IDENTIFIER':
-        return this.identifierExpression(token);
-      default:
-        return this.keywordExpression(token);
-    }
-  }
-
-  /** A constructor, after its type keyword, or the refusal of the keyword's row. */
-  private keywordExpression(token: Token): Expression {
-    const type = this.transpiledType(token, `Expected expression, found: '${token.text ?? token.type}'.`);
-    this.expect('TK_PARENTHESIS_OPEN', "Expected '(' after the type name.");
-    const args = this.argumentList();
-    const overload = signatureInstruction(type, typesOf(args));
-    if (!overload) this.fail(`No matching constructor found for: '${type}'.`, token);
-    return constructedConstant(type, args) ?? { kind: 'constructor', type, row: overload, args };
-  }
-
-  /** The type of a type keyword the transpiler reads, the refusal of its row, or Godot's `message`. */
-  private transpiledType(token: Token, message: string): ValueType {
+  /** A global that is not a function: the row of its keyword, or Godot's message. */
+  private refuseGlobal(token: Token): never {
     const row = keywordInstruction(token.type);
-    if (!row) this.fail(message, token);
-    if (row.family !== 'data type' || !TRANSPILED_TYPES.has(row.id)) throw notTranspiled(row, token.line);
-    return row.id;
+    if (row && row.family !== 'data type') throw notTranspiled(row, token.position);
+    this.tokens.fail('Expected constant, function, uniform or varying.');
   }
 
-  private identifierExpression(token: Token): Expression {
-    const name = token.text!;
-    if (this.peek().type === 'TK_PARENTHESIS_OPEN') {
-      this.next();
-      throw this.refuseCall(name, this.argumentList(), token);
+  private dataType(token: Token): string {
+    return keywordInstruction(token.type)!.id;
+  }
+
+  /** The arguments after `(`, up to `)`; Godot accepts a `,` before the `)` (`shader_language.cpp:10704`). */
+  private argumentList(): Argument[] {
+    const args: Argument[] = [];
+    let token = this.tokens.next();
+    while (token.type !== 'TK_PARENTHESIS_CLOSE') {
+      args.push(this.argumentDeclaration(token, args));
+      token = this.tokens.next();
+      if (token.type === 'TK_COMMA') token = this.tokens.next();
+      else if (token.type !== 'TK_PARENTHESIS_CLOSE') this.tokens.fail("Expected a ',' or ')'.");
     }
-    const index = this.parameters.findIndex((parameter) => parameter.name === name);
-    if (index >= 0) return { kind: 'parameter', type: this.parameters[index]!.type, index };
-    const builtIn = builtInInstruction(name);
-    if (builtIn) throw notTranspiled(builtIn, token.line, name);
-    this.fail(`Unknown identifier in expression: '${name}'.`, token);
-  }
-
-  /** A call: a built-in function's overload row, or `OP_CALL` for a function of the shader. */
-  private refuseCall(name: string, args: readonly Expression[], token: Token): ShadingLanguageError {
-    const overload = signatureInstruction(name, typesOf(args));
-    if (overload) return notTranspiled(overload, token.line);
-    const anyOverload = firstInstruction(`${name}(`);
-    if (anyOverload) return notTranspiled(anyOverload, token.line, name);
-    if (this.functionSignatures.has(name)) return notTranspiled(instruction('OP_CALL')!, token.line);
-    return new ShadingLanguageError(`Unknown identifier in expression: '${name}'.`, token.line);
-  }
-
-  private argumentList(): Expression[] {
-    const args: Expression[] = [];
-    if (this.accept('TK_PARENTHESIS_CLOSE')) return args;
-    do args.push(this.expression());
-    while (this.accept('TK_COMMA'));
-    this.expect('TK_PARENTHESIS_CLOSE', "Expected ',' or ')' after argument.");
     return args;
   }
 
-  /** Godot's swizzle rules (`shader_language.cpp:6890-7090`), with each type's letter sets from its rows. */
-  private swizzle(base: Expression, letters: string, token: Token): Expression {
-    const sets = swizzleRows(base.type);
-    const invalid = `Invalid member for '${base.type}' expression: '.${letters}'.`;
-    if (sets.length === 0 || letters.length > 4) this.fail(invalid, token);
-    const setOf = (letter: string) => sets.find((row) => setLetters(row).includes(letter));
-    const known = [...letters].map(setOf).filter((row) => row !== undefined);
-    if (new Set(known).size > 1) {
-      this.fail(`Cannot combine symbols from different sets in expression '.${letters}'.`, token);
+  private argumentDeclaration(first: Token, declared: readonly Argument[]): Argument {
+    const qualifier = keywordInstruction(first.type);
+    if (first.type === 'TK_CONST' || (qualifier?.family === 'qualifier' && !isPrecisionToken(first.type))) {
+      throw notTranspiled(qualifier!, first.position);
     }
-    const row = known[0];
-    if (!row || known.length !== letters.length) this.fail(invalid, token);
-    const lanes = [...letters].map((letter) => setLetters(row).indexOf(letter));
-    const type = lanes.length === 1 ? 'float' : `vec${lanes.length}`;
-    return { kind: 'swizzle', type, row, base, lanes };
+    const typeToken = this.precededType(first, () =>
+      this.tokens.fail('Expected a valid data type for argument.')
+    );
+    if (keywordInstruction(typeToken.type)?.family !== 'data type' || typeToken.type === 'TK_STRUCT') {
+      this.tokens.fail('Expected a valid data type for argument.');
+    }
+    const type = this.dataType(typeToken);
+    if (type === 'void') this.tokens.fail('Void type not allowed as argument.');
+    const nameToken = this.tokens.next();
+    if (nameToken.type === 'TK_BRACKET_OPEN')
+      throw notTranspiled(instruction('NODE_TYPE_ARRAY')!, nameToken.position);
+    if (nameToken.type !== 'TK_IDENTIFIER') this.tokens.fail('Expected an identifier for argument name.');
+    const name = nameToken.text!;
+    if (declared.some((argument) => argument.name === name) || builtInInstruction(name)) {
+      this.tokens.fail(`Redefinition of '${name}'.`);
+    }
+    if (this.tokens.peek().type === 'TK_BRACKET_OPEN')
+      throw notTranspiled(instruction('NODE_TYPE_ARRAY')!, this.tokens.peek().position);
+    return { name, type, position: nameToken.position };
   }
 
-  /** The float Godot holds for a literal, or the refusal of one whose text no GLSL compiler reads. */
-  private literalFloat(token: Token): number {
-    try {
-      return godotLiteralScalar(token.text!);
-    } catch (error) {
-      this.fail(`float literal '${token.text}': ${(error as Error).message}`, token);
+  /**
+   * Records function `name` with the arguments just read. Godot refuses a second function of the
+   * same argument types (`shader_language.cpp:10921`). It accepts an overload, which the transpiler
+   * refuses: it keys the functions it gives by name.
+   */
+  private declare(name: string, token: Token): void {
+    const types = this.arguments.map((argument) => argument.type).join(',');
+    const overloads = this.signatures.filter((declared) => declared.name === name);
+    if (overloads.some((declared) => declared.types === types))
+      this.tokens.fail(`Redefinition of '${name}'.`);
+    if (overloads.length > 0) {
+      const owner = instruction('OP_CALL')!.owner;
+      throw new ShadingLanguageError(
+        `An overload of '${name}' is not transpiled yet (${owner})`,
+        token.position,
+        owner
+      );
+    }
+    this.signatures.push({ name, types });
+  }
+
+  /** The statements up to `}` (`_parse_block`). */
+  private block(position: Token['position']): BlockNode {
+    const statements: Statement[] = [];
+    for (;;) {
+      const mark = this.tokens.mark();
+      const token = this.tokens.next();
+      if (token.type === 'TK_CURLY_BRACKET_CLOSE') return { kind: 'block', statements, position };
+      if (token.type === 'TK_CF_RETURN') statements.push(this.returnStatement(token));
+      else {
+        this.refuseStatement(token);
+        this.tokens.reset(mark);
+        statements.push(this.expressionStatement());
+      }
     }
   }
 
-  private peek(): Token {
-    return this.tokens[this.position]!;
+  /** A declaration, a nested block or a flow keyword: the row that names it. */
+  private refuseStatement(token: Token): void {
+    const row = keywordInstruction(token.type);
+    if (
+      token.type === 'TK_CONST' ||
+      isPrecisionToken(token.type) ||
+      (row?.family === 'data type' && token.type !== 'TK_TYPE_VOID')
+    ) {
+      throw notTranspiled(instruction('NODE_TYPE_VARIABLE_DECLARATION')!, token.position);
+    }
+    if (token.type === 'TK_CURLY_BRACKET_OPEN')
+      throw notTranspiled(instruction('NODE_TYPE_BLOCK')!, token.position);
+    if (row?.family === 'statement keyword') throw notTranspiled(row, token.position);
   }
 
-  private next(): Token {
-    const token = this.peek();
-    if (token.type !== 'TK_EOF') this.position += 1;
-    return token;
+  /** `return`, with an expression of the function's type (`shader_language.cpp:8852`). */
+  private returnStatement(token: Token): ControlFlowNode {
+    const returnType = this.returnType;
+    const flow = { kind: 'control flow', flow: 'FLOW_OP_RETURN', position: token.position } as const;
+    const mark = this.tokens.mark();
+    if (this.tokens.next().type === 'TK_SEMICOLON') {
+      if (returnType !== 'void')
+        this.tokens.fail(`Expected 'return' with an expression of type '${returnType}'.`);
+      return { ...flow, expressions: [] };
+    }
+    if (returnType === 'void') this.tokens.fail("'void' function cannot return a value.");
+    this.tokens.reset(mark);
+    const expression = this.expressions.expression();
+    if (expression.type !== returnType)
+      this.tokens.fail(`Expected return with an expression of type '${returnType}'.`);
+    this.tokens.expect('TK_SEMICOLON', "Expected a ';' after 'return'.");
+    return { ...flow, expressions: [expression] };
   }
 
-  private accept(type: string): boolean {
-    if (this.peek().type !== type) return false;
-    this.next();
-    return true;
-  }
-
-  /** The next token, which must be `type`; otherwise Godot's `message` is thrown. */
-  private expect(type: string, message: string): void {
-    if (!this.accept(type)) this.fail(message);
-  }
-
-  private identifier(message: string): string {
-    const token = this.next();
-    if (token.type !== 'TK_IDENTIFIER') this.fail(message, token);
-    return token.text!;
-  }
-
-  private fail(message: string, token: Token = this.peek()): never {
-    throw new ShadingLanguageError(message, token.line);
+  /** An expression and its `;` (`shader_language.cpp:9016`). */
+  private expressionStatement(): Statement {
+    const expression = this.expressions.expression();
+    this.tokens.expect('TK_SEMICOLON', "Expected a ';'.");
+    return expression;
   }
 }
 
-const typesOf = (expressions: readonly Expression[]) => expressions.map((expression) => expression.type);
+const isPrecisionToken = (type: string) => type.startsWith('TK_PRECISION_');
 
-/**
- * `_reduce_expression` (`shader_language.cpp:7909`): a negation of a constant becomes the negated
- * constant, through a chain of negations. It reaches no deeper, so `-(-1.5) + a` keeps both. A
- * constructor of constants is folded where it is read.
- */
-function reduced(expression: Expression): Expression {
-  if (expression.kind !== 'operator' || operatorOfRow(expression.row.id) !== 'OP_NEGATE') return expression;
-  const operand = reduced(expression.operands[0]!);
-  if (operand.kind !== 'constant') return { ...expression, operands: [operand] };
-  return { ...operand, values: operand.values.map((value) => -value) };
-}
-
-/**
- * Godot's fold of a constructor whose arguments are all constants (`shader_language.cpp:7848`, read at line 6103):
- * their lanes in order, and one lane repeated for a single scalar.
- */
-function constructedConstant(type: ValueType, args: readonly Expression[]): Constant | undefined {
-  if (!args.every((arg): arg is Constant => arg.kind === 'constant')) return undefined;
-  const values = args.flatMap((arg) => arg.values);
-  const laneCount = LANE_COUNT[type]!;
-  return { kind: 'constant', type, values: values.length === 1 ? Array(laneCount).fill(values[0]) : values };
-}
-
-const LANE_COUNT: Readonly<Record<ValueType, number>> = { float: 1, vec2: 2, vec3: 3, vec4: 4 };
-
-const SWIZZLE_ROWS = familyInstructions('swizzle');
-
-/** The swizzle rows of `type`, one per letter set: `vec3.xyz`, `vec3.rgb`, `vec3.stp`. */
-function swizzleRows(type: ValueType): InstructionRow[] {
-  return SWIZZLE_ROWS.filter((row) => row.id.startsWith(`${type}.`));
-}
-
-const setLetters = (row: InstructionRow) => row.id.slice(row.id.indexOf('.') + 1);
+const isReturn = (statement: Statement) =>
+  statement.kind === 'control flow' && statement.flow === 'FLOW_OP_RETURN';

@@ -12,17 +12,25 @@ The same cases go through the transpiler's front end. On each one, it accepts wh
 
 A generator writes random functions that are correct by type, from the signatures of the transpiled rows only, so each slice that transpiles rows gets random programs over them with no change to the generator. Operators take only the brackets Godot's priorities need, so a program tests the order of evaluation as a user's shader does.
 
-The fixed set has seed 1847: 268 programs, one rooted at each of the 68 transpiled rows, and the rest with random roots. Godot accepts every one. `pnpm godot:probes` records Godot's result bits, and `pnpm test:shaders:gpu` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN.
+The fixed set has seed 1847: 901 programs, one rooted at each of the 733 transpiled rows, and the rest with random roots. Godot accepts every one. `pnpm godot:probes` records Godot's result bits, and `pnpm test:shaders:gpu` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN.
 
-**263 of 268 random programs bit-equal with Godot.** A program that differs is reduced against a live Godot to a small program that still differs. The 5 that differ now are listed below with their owner. The list only shrinks: a program that differs and is not listed fails the run, and a listed program that equals Godot fails it too.
+**893 of 901 random programs bit-equal with Godot, and 13 fixed known-difference cases.** A program that differs is reduced against a live Godot to a small program that still differs. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
 
-| Program | Reduced program | First lane that differs | Cause | Owner |
-| --- | --- | --- | --- | --- |
-| `random-1847-32` | `vec3 probe(float a0, float a1) { return (vec4(41.779e+1, 2.450e+3, 96.675, a1) * vec3(.917, 55.526, a1).yyyz).aar * vec4(71.250f).aar; }` | lane 3: Godot cfec57a9, transpilation cfec57a8 | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
-| `random-1847-55` | `vec4 probe(vec2 a0, vec2 a1) { return vec4(.332, .332, vec3(19.549f, 94.347, 99.476).ptsp.bg * ((a1 * a0).rr)); }` | lane 14: Godot c939aa70, transpilation c939aa71 | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
-| `random-1847-87` | `vec4 probe(float a0, vec3 a1, float a2) { return a0 - a2 - vec4(.875, a2, a0, 76.391e+3); }` | lane 0: Godot c2b6397a, transpilation c2b6397b | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
-| `random-1847-106` | `vec4 probe(vec3 a0, float a1, vec3 a2) { return vec4(a1, a1, vec2(43.56f)) / (vec4(a0 + -a0, a1)); }` | lane 1: Godot 7f800000, transpilation 00000000 | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
-| `random-1847-120` | `vec2 probe(float a0) { return (-vec4(a0, 94.450, a0, 95.584e+1)).y - ((vec2(a0)) + (vec2(73.200, .452)) - 94.450); }` | lane 1: Godot 3ffe8dff, transpilation 3ffe8e1f | driver rewrite (Mesa lavapipe), decision with Atle: the scalar forms are bit-equal, only the vector forms differ | #1823 |
+| Case | Reduced program | Program of the set | First lane that differs | Cause | Owner |
+| --- | --- | --- | --- | --- | --- |
+| `mat4-difference-product` | `mat4 probe(float a0, ivec3 a1) { return ((mat4(a0)) - a0) * mat4(vec4(a0, .98, a0, 11.744f), vec4(a0, .467, 61.588e+2, 13.97), vec4(a0), (vec4(3.910f, 56.755, a0, a0))) - .98; }` | `random-1847-107` | lane 32: Godot c31f9469, transpilation c31f9468 | driver rewrite (Mesa lavapipe) on one side only, decision with Atle | #1823 |
+| `vec4-sum-swizzle-difference` | `vec2 probe(float a0) { return (vec4(a0, vec2(.463, 55.562e3), 0.679e+1) + vec4(a0)).ss - .463; }` | `random-1847-136` | lane 0: Godot 488d8493, transpilation 488d8494 | driver rewrite (Mesa lavapipe) on one side only, decision with Atle | #1823 |
+| `mat2-double-sum` | `mat2 probe(mat2 a0, uint a1, uint a2) { return a0 + a0 + 98.400; }` | `random-1847-143` | lane 2: Godot 45eee9ef, transpilation 45eee9f1 | driver rewrite (Mesa lavapipe) on one side only, decision with Atle | #1823 |
+| `vec4-sum-lane-difference` | `float probe(float a0, bvec4 a1) { return (a0 + vec4(a0, 97.874e2, 50.459f, a0)).r - 75.440f; }` | `random-1847-175` | lane 0: Godot 45bf5bf9, transpilation 45bf5bf7 | driver rewrite (Mesa lavapipe) on one side only, decision with Atle | #1823 |
+| `vec4-product-of-matrix-product` | `vec4 probe(float a0, uint a1) { return vec4(a0, .530, vec2(.530)) * vec4(vec2(a0, a0), (vec2(6.650f, a0) * mat2(a0))).p; }` | `random-1847-181` | lane 13: Godot c51f3e50, transpilation c51f3e4f | driver rewrite (Mesa lavapipe) on one side only, decision with Atle | #1823 |
+| `scalar-plus-mat2-sum` | `mat2 probe(mat2 a0) { return 56.407 + (a0 + a0); }` | `random-1847-217` | lane 2: Godot c362cf09, transpilation c362cf08 | driver rewrite (Mesa lavapipe) on one side only, decision with Atle | #1823 |
+| `shift-right-by-minus-six` | `ivec4 probe(ivec4 a0, vec4 a1, uint a2) { return a0 >>= (-6); }` | `random-1847-437` | lane 1: Godot ffffffff, transpilation fffff546 | shift count out of range at runtime, which GLSL leaves undefined: the drivers differ | #1823 |
+| `shift-left-by-not-eighteen` | `int probe(int a0, bvec4 a1) { return a0 << ~18; }` | `random-1847-622` | lane 0: Godot 00000000, transpilation ffffffac | shift count out of range at runtime, which GLSL leaves undefined: the drivers differ | #1823 |
+| `swizzle-product` | `vec3 probe(float a0, float a1) { return (vec4(41.779e+1, 2.450e+3, 96.675, a1) * vec3(.917, 55.526, a1).yyyz).aar * vec4(71.250f).aar; }` | none | lane 9: Godot 2b488d09, transpilation 2b488d0a | driver rewrite (Mesa lavapipe) on one side only, decision with Atle | #1823 |
+| `product-in-constructor` | `vec4 probe(vec2 a0, vec2 a1) { return vec4(.332, .332, vec3(19.549f, 94.347, 99.476).ptsp.bg * ((a1 * a0).rr)); }` | none | lane 14: Godot c939aa70, transpilation c939aa71 | driver rewrite (Mesa lavapipe) on one side only, decision with Atle | #1823 |
+| `difference-chain` | `vec4 probe(float a0, vec3 a1, float a2) { return a0 - a2 - vec4(.875, a2, a0, 76.391e+3); }` | none | lane 23: Godot c7939fbe, transpilation c7939fbd | driver rewrite (Mesa lavapipe) on one side only, decision with Atle | #1823 |
+| `quotient-by-cancelling-sum` | `vec4 probe(vec3 a0, float a1, vec3 a2) { return vec4(a1, a1, vec2(43.56f)) / (vec4(a0 + -a0, a1)); }` | none | lane 0: Godot 7f800000, transpilation 00000000 | driver rewrite (Mesa lavapipe) on one side only, decision with Atle | #1823 |
+| `negated-swizzle-difference` | `vec2 probe(float a0) { return (-vec4(a0, 94.450, a0, 95.584e+1)).y - ((vec2(a0)) + (vec2(73.200, .452)) - 94.450); }` | none | lane 1: Godot c07a4a8c, transpilation c07a4a9b | driver rewrite (Mesa lavapipe) on one side only, decision with Atle | #1823 |
 
 `pnpm test:shaders:random --seed <n> --count <n>` runs more programs with another seed against a live Godot, for a developer. No pipeline runs it.
 
@@ -42,22 +50,15 @@ The instruction count says how much of the language is transpiled, not how many 
 | State | Shaders |
 | --- | --- |
 | not transpiled yet (#1794) | 360 |
-| mismatch | 8 |
+| not transpiled yet (#1828) | 8 |
 
 The mismatches below are known, each with its owner. The list only shrinks, as for the random programs.
 
 | Shader | Cause | Owner |
 | --- | --- | --- |
-| `demos/xr/openxr_spectator_view/shaders/eye_output.gdshader` | the tokenizer refuses `#` with Godot's message for an unknown character, before any row can name the preprocessor's owner (#1828) | #1823 |
-| `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1` | the tokenizer refuses `#` with Godot's message for an unknown character, before any row can name the preprocessor's owner (#1828) | #1823 |
-| `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13` | the tokenizer refuses `#` with Godot's message for an unknown character, before any row can name the preprocessor's owner (#1828) | #1823 |
-| `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18` | the tokenizer refuses `#` with Godot's message for an unknown character, before any row can name the preprocessor's owner (#1828) | #1823 |
-| `rejected/demos/xr/openxr_spectator_view/shaders/eye_output.gdshader` | the tokenizer refuses `#` with Godot's message for an unknown character, before any row can name the preprocessor's owner (#1828) | #1823 |
-| `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1` | the tokenizer refuses `#` with Godot's message for an unknown character, before any row can name the preprocessor's owner (#1828) | #1823 |
-| `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13` | the tokenizer refuses `#` with Godot's message for an unknown character, before any row can name the preprocessor's owner (#1828) | #1823 |
-| `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18` | the tokenizer refuses `#` with Godot's message for an unknown character, before any row can name the preprocessor's owner (#1828) | #1823 |
 
-<details><summary>The 360 shaders not transpiled yet, with their owners</summary>
+
+<details><summary>The 368 shaders not transpiled yet, with their owners</summary>
 
 | Shader | Owner |
 | --- | --- |
@@ -198,6 +199,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `demos/xr/openxr_passthrough/holepunch.gdshader` | #1794 |
 | `demos/xr/openxr_spectator_view/shaders/color.gdshader` | #1794 |
 | `demos/xr/openxr_spectator_view/shaders/color_unshaded.gdshader` | #1794 |
+| `demos/xr/openxr_spectator_view/shaders/eye_output.gdshader` | #1828 |
 | `demos/xr/openxr_spectator_view/shaders/textured.gdshader` | #1794 |
 | `demos/xr/openxr_spectator_view/shaders/textured_unshaded.gdshader` | #1794 |
 | `demos/2d/platformer/level/props/wind_sway.tres#0` | #1794 |
@@ -217,6 +219,9 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `docs/tutorials/shaders/screen-reading_shaders.rst#0` | #1794 |
 | `docs/tutorials/shaders/screen-reading_shaders.rst#1` | #1794 |
 | `docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0` | #1794 |
+| `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1` | #1828 |
+| `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13` | #1828 |
+| `docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18` | #1828 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#14` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#18` | #1794 |
 | `docs/tutorials/shaders/shader_reference/shading_language.rst#24` | #1794 |
@@ -378,6 +383,7 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `rejected/demos/xr/openxr_passthrough/holepunch.gdshader` | #1794 |
 | `rejected/demos/xr/openxr_spectator_view/shaders/color.gdshader` | #1794 |
 | `rejected/demos/xr/openxr_spectator_view/shaders/color_unshaded.gdshader` | #1794 |
+| `rejected/demos/xr/openxr_spectator_view/shaders/eye_output.gdshader` | #1828 |
 | `rejected/demos/xr/openxr_spectator_view/shaders/textured.gdshader` | #1794 |
 | `rejected/demos/xr/openxr_spectator_view/shaders/textured_unshaded.gdshader` | #1794 |
 | `rejected/demos/2d/platformer/level/props/wind_sway.tres#0` | #1794 |
@@ -397,6 +403,9 @@ The mismatches below are known, each with its owner. The list only shrinks, as f
 | `rejected/docs/tutorials/shaders/screen-reading_shaders.rst#0` | #1794 |
 | `rejected/docs/tutorials/shaders/screen-reading_shaders.rst#1` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/canvas_item_shader.rst#0` | #1794 |
+| `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#1` | #1828 |
+| `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#13` | #1828 |
+| `rejected/docs/tutorials/shaders/shader_reference/shader_preprocessor.rst#18` | #1828 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#14` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#18` | #1794 |
 | `rejected/docs/tutorials/shaders/shader_reference/shading_language.rst#24` | #1794 |

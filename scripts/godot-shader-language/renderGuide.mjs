@@ -7,14 +7,29 @@
 
 import { godotShader } from '../../apps/textscene-three-godot-shaders/tests/e2e/showcases.mjs';
 import { floatOfBits } from '../../apps/textscene-three-godot-shaders/tests/probes/inputs.mjs';
-import { LANE_COUNT, probeSignature } from '../godot-probes/probeShader.mjs';
-import { owningIssue } from './renderTable.mjs';
+import { PROBE_TYPES, probeSignature } from '../godot-probes/probeShader.mjs';
+import { owningIssue, transpiledIds } from './renderTable.mjs';
+import { targetStates } from './targetStates.mjs';
 import { TESTING_FILE } from './renderTestingGuide.mjs';
 
 /** The most input rows a section shows of a probe, so a table stays short. */
 const SAMPLE_ROWS = 8;
 
 const floatOfHex = (text) => floatOfBits(Number.parseInt(text, 16));
+
+/** A lane of each scalar kind from the hex text of its bits, as the record holds it. */
+const LANE_OF_HEX = {
+  float: floatOfHex,
+  int: (text) => Number.parseInt(text, 16) | 0,
+  uint: (text) => Number.parseInt(text, 16) >>> 0,
+  bool: (text) => Number.parseInt(text, 16) !== 0,
+};
+
+/** A lane's text, as the shading language writes a literal of its kind. */
+function laneText(value, scalar) {
+  if (scalar === 'float') return floatText(value);
+  return scalar === 'uint' ? `${value}u` : String(value);
+}
 
 /** The shortest decimal text that reads back as this 32-bit float. */
 export function floatText(value) {
@@ -30,6 +45,7 @@ export function floatText(value) {
 
 /** The kind of a float for the choice of sample rows: the signed zeros, subnormal, normal, infinite, NaN. */
 function kindOf(value) {
+  if (typeof value === 'boolean') return String(value);
   if (Number.isNaN(value)) return 'nan';
   if (Object.is(value, -0)) return '-0';
   if (value === 0) return '0';
@@ -37,13 +53,16 @@ function kindOf(value) {
   return Math.abs(value) < 2 ** -126 ? 'subnormal' : 'normal';
 }
 
-/** The lanes of row `row` of parameter `values`, flat in the record, `size` lanes a row. */
-function rowLanes(values, row, size) {
-  return values.slice(row * size, (row + 1) * size).map(floatOfHex);
+/** The lanes of row `row` of parameter `values`, flat in the record, of type `type`. */
+function rowLanes(values, row, type) {
+  const { lanes, scalar } = PROBE_TYPES[type];
+  return values.slice(row * lanes, (row + 1) * lanes).map(LANE_OF_HEX[scalar]);
 }
 
-const vectorText = (lanes) =>
-  lanes.length === 1 ? floatText(lanes[0]) : `(${lanes.map(floatText).join(', ')})`;
+function vectorText(lanes, type) {
+  const texts = lanes.map((lane) => laneText(lane, PROBE_TYPES[type].scalar));
+  return texts.length === 1 ? texts[0] : `(${texts.join(', ')})`;
+}
 
 /** The kinds a row shows: each lane's kind at its place, for inputs and result. */
 function rowKinds({ inputs, outputs }) {
@@ -55,10 +74,10 @@ function rowKinds({ inputs, outputs }) {
  * The sample rows of a probe: first a row of normal values, then, row by row, the one that shows
  * the most kinds of value at a place no row before it shows.
  */
-function sampleRows(entry, sizes) {
+function sampleRows(entry, parameters, returns) {
   const all = entry.results.map((result, row) => ({
-    inputs: entry.inputs.map((values, index) => rowLanes(values, row, sizes[index])),
-    outputs: result.map(floatOfHex),
+    inputs: entry.inputs.map((values, index) => rowLanes(values, row, parameters[index])),
+    outputs: rowLanes(result, 0, returns),
   }));
   const normal = all.find((row) =>
     [...row.inputs.flat(), ...row.outputs].every((value) => kindOf(value) === 'normal')
@@ -77,25 +96,34 @@ function sampleRows(entry, sizes) {
   return picked.sort((left, right) => all.indexOf(left) - all.indexOf(right));
 }
 
+/** Godot's reason for a probe it does not compile, and that the transpiler refuses it too. */
+function rejectionText({ stage, message, line }) {
+  if (stage === 'Godot')
+    return `Godot ends as it compiles this shader: ${message}. The transpiler refuses it with a message that says so.`;
+  const where =
+    stage === 'GLSL' ? "the GPU compiler refuses Godot's GLSL" : `Godot refuses it at line ${line}`;
+  return `Godot does not compile this shader: ${where}, \`${message}\`. The transpiler refuses it too.`;
+}
+
 function probeValues(probe, entry) {
-  if (entry.rejected)
-    return 'Godot does not compile this shader: it draws nothing. The transpiler refuses it too.';
+  if (entry.rejected) return rejectionText(entry.rejected);
+  const { parameters, names, returns } = probeSignature(probe.source);
   if (entry.inputs.length === 0) {
     const literals =
       probe.source
-        .match(/vec4\((.*)\);/)?.[1]
+        .match(/return \w+\((.*)\);/)?.[1]
         ?.split(',')
         .map((text) => text.trim()) ?? [];
+    const scalar = PROBE_TYPES[returns].scalar;
     const lines = entry.results[0].map(
-      (bits, lane) => `| \`${literals[lane] ?? lane}\` | \`${floatText(floatOfHex(bits))}\` | \`${bits}\` |`
+      (bits, lane) =>
+        `| \`${literals[lane] ?? lane}\` | \`${laneText(LANE_OF_HEX[scalar](bits), scalar)}\` | \`${bits}\` |`
     );
     return ['| Literal | Godot draws | Bits |', '| --- | --- | --- |', ...lines].join('\n');
   }
-  const { parameters, names } = probeSignature(probe.source);
-  const sizes = parameters.map((type) => LANE_COUNT[type]);
-  const lines = sampleRows(entry, sizes).map(
+  const lines = sampleRows(entry, parameters, returns).map(
     ({ inputs, outputs }) =>
-      `| ${inputs.map((lanes) => `\`${vectorText(lanes)}\``).join(' | ')} | \`${vectorText(outputs)}\` |`
+      `| ${inputs.map((lanes, index) => `\`${vectorText(lanes, parameters[index])}\``).join(' | ')} | \`${vectorText(outputs, returns)}\` |`
   );
   const header = `| ${names.map((name) => `\`${name}\``).join(' | ')} | Godot gives |`;
   const rule = `| ${names.map(() => '---').join(' | ')} | --- |`;
@@ -118,6 +146,23 @@ ${probeValues(probe, entry)}
 `;
 }
 
+/**
+ * The state of a section's rows on each target: one line when every row is native on both, and
+ * each lowered row by name otherwise.
+ */
+function statesText(rows) {
+  const lowered = rows
+    .map((row) => ({ row, states: targetStates(row) }))
+    .filter(({ states }) => states.webgl2 !== 'native' || states.webgpu !== 'native');
+  const native = 'native on WebGL 2 and on WebGPURenderer';
+  if (lowered.length === 0) return `Every row is ${native}.`;
+  const lines = lowered.map(
+    ({ row, states }) => `- \`${row.id}\`: WebGL 2 ${states.webgl2}, WebGPURenderer ${states.webgpu}.`
+  );
+  const rest = lowered.length === rows.length ? '' : ` The other rows are ${native}.`;
+  return `Lowered rows:\n\n${lines.join('\n')}\n\n${rest.trim()}`.trim();
+}
+
 function renderSection(section, rows, probes, record) {
   const ids = new Set(rows.map((row) => row.id));
   const sectionProbes = probes.filter((probe) => probe.rows.some((id) => ids.has(id)));
@@ -128,11 +173,10 @@ ${section.what}
 
 The transpiler emits \`${section.tsl}\`. Rows: ${rowList}. Godot source: \`${rows[0].source}\`.
 
+${statesText(rows)}
+
 ${sectionProbes.map((probe) => renderProbe(probe, record)).join('\n')}`;
 }
-
-/** The rows a probe names, which are the transpiled rows. */
-const transpiledIds = (probes) => new Set(probes.flatMap((probe) => probe.rows));
 
 /**
  * A chapter's sections, each with its transpiled rows. Throws for a transpiled row no section
@@ -225,7 +269,7 @@ function driversNote(record) {
   );
 }
 
-function renderIndex(placed, rows, probes, record) {
+function renderIndex(placed, rows, probes, record, version) {
   const transpiled = transpiledIds(probes);
   const families = [...new Set(rows.map((row) => row.family))];
   const familyLines = families.map((family) => {
@@ -240,7 +284,9 @@ function renderIndex(placed, rows, probes, record) {
   );
   return `# The shading language transpiler
 
-\`@textscene/three-godot-shaders\` transpiles Godot 4.6.3's shading language to three.js TSL nodes, instruction by instruction. This guide explains each instruction the transpiler reads, with the values Godot gave for it. A text that uses an instruction not transpiled yet fails with an error that names the instruction and the issue that transpiles it.
+\`@textscene/three-godot-shaders\` transpiles Godot ${version}'s shading language to three.js TSL nodes, instruction by instruction. This guide explains each instruction the transpiler reads, with the values Godot gave for it. A text that uses an instruction not transpiled yet fails with an error that names the instruction and the issue that transpiles it.
+
+One Godot version: the previewer draws every project as Godot ${version} draws it. The transpiler reads every shader with the rules of Godot ${version}, not of the version a project's \`project.godot\` names.
 
 ${transpiled.size} of ${rows.length} instructions transpiled. [INSTRUCTIONS.md](../INSTRUCTIONS.md) lists every row with its state. Generated by \`pnpm godot:shader-language\`: do not edit by hand.
 
@@ -262,10 +308,10 @@ ${familyLines.join('\n')}
 }
 
 /** The guide's files: `[name, text]` for the index and each chapter. */
-export function renderGuide({ chapters, rows, probes, record, showcases = [] }) {
+export function renderGuide({ chapters, rows, probes, record, version, showcases = [] }) {
   const placed = chapterSections(chapters, rows, probes);
   return [
-    ['README.md', renderIndex(placed, rows, probes, record)],
+    ['README.md', renderIndex(placed, rows, probes, record, version)],
     ...placed.map((entry) => [entry.chapter.file, renderChapter(entry, probes, record, showcases)]),
   ];
 }

@@ -73,7 +73,8 @@ describe('recordEntry', () => {
     expect(entry.results).toEqual([['3f800000'], ['40000000']]);
   });
 
-  it('records a rejection when the sentinel is missing', () => {
-    expect(recordEntry(probe, [0, 0, 0, 0, 0, 0]).rejected).toMatch(/rejects/);
+  it("records Godot's reason when the sentinel is missing", () => {
+    const reason = { stage: 'GLSL', message: "'inf' : undeclared identifier", line: 322 };
+    expect(recordEntry(probe, [0, 0, 0, 0, 0, 0], reason).rejected).toEqual(reason);
   });
 });

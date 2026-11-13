@@ -7,7 +7,7 @@
 export const SHOWCASES = [
   {
     name: 'float-arithmetic',
-    chapter: 'float-arithmetic.md',
+    chapter: 'arithmetic.md',
     width: 64,
     height: 64,
     source: `vec3 pattern(vec2 uv) {

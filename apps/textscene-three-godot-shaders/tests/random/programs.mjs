@@ -9,6 +9,7 @@ import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shade
 import { LANE_COUNT } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { WRITES_OPERAND, operatorOf } from '../operators/operatorText.mjs';
 import { FLOAT_VALUES } from '../probes/inputs.mjs';
+import { isAnswerable } from './answerable.mjs';
 import { PROBES } from '../probes/probes.mjs';
 import { programSource, rowsOf } from './programTree.mjs';
 import { seededRandom } from './seededRandom.mjs';
@@ -31,6 +32,9 @@ const SPARE_BRACKET_CHANCE = 0.15;
 
 /** The input rows of a program: enough to vary each lane, few enough to keep the record small. */
 const INPUT_ROWS = 12;
+
+/** The draws of a tree before the generator gives up: most trees Godot answers, so a few suffice. */
+const ATTEMPTS_AT_MOST = 100;
 
 /** The chance that an input lane is one of the probes' edge values: zeros, a subnormal, NaN. */
 const EDGE_VALUE_CHANCE = 0.2;
@@ -107,13 +111,27 @@ function producersByType(rows) {
 /** How each family of rows with operands is written. */
 const PRODUCER_KINDS = { operator: 'operator', constructor: 'call', function: 'call' };
 
+/** Whether `row` is an operator that writes its first operand, which must be a parameter. */
+const writesOperand = (row) => row.family === 'operator' && WRITES_OPERAND.has(operatorOf(row));
+
+const PRODUCERS = producersByType(TRANSPILED_ROWS);
+const PRODUCED_ROWS = new Set([...PRODUCERS.values()].flat().map((producer) => producer.row));
+
+/**
+ * The transpiled rows a program can stand on at its root: a literal, a swizzle or a row with
+ * operands. A type, a qualifier, a statement or a tree node row is in every program as its frame.
+ */
+export const ROOT_ROWS = TRANSPILED_ROWS.filter((row) => row.id in LITERALS || PRODUCED_ROWS.has(row));
+
 /** A fresh random program generator over the transpiled rows. */
 class ProgramWriter {
   constructor(random) {
     this.random = random;
-    this.producers = producersByType(TRANSPILED_ROWS);
-    this.literals = new Map(
-      TRANSPILED_ROWS.filter((row) => row.id in LITERALS).map((row) => [LITERALS[row.id].type, row])
+    this.producers = PRODUCERS;
+    /** The literal rows of each type: `true` and `false` both give a `bool`. */
+    this.literals = Map.groupBy(
+      TRANSPILED_ROWS.filter((row) => row.id in LITERALS),
+      (row) => LITERALS[row.id].type
     );
     this.minDepth = this.leastDepths();
   }
@@ -147,8 +165,13 @@ class ProgramWriter {
     const parameters = Array.from({ length: 1 + this.random.below(3) }, () =>
       this.random.pick(this.readableTypes())
     );
+    // The first parameter feeds the root: the operand it writes, or the last, so a divisor or a
+    // vector can be a parameter that Godot gives values for.
+    if (rootRow?.args?.length) parameters[0] = writesOperand(rootRow) ? rootRow.args[0] : rootRow.args.at(-1);
     this.parameters = parameters;
-    const tree = rootRow ? this.rooted(rootRow, returns) : this.expression(returns, DEPTH_AT_MOST);
+    const tree = this.answerableTree(() =>
+      rootRow ? this.rooted(rootRow, returns) : this.expression(returns, DEPTH_AT_MOST)
+    );
     const program = { returns, parameters, tree };
     return {
       name,
@@ -157,6 +180,15 @@ class ProgramWriter {
       inputs: this.inputs(parameters),
       ...program,
     };
+  }
+
+  /** A tree from `write` that Godot gives values for, drawn again until one is. */
+  answerableTree(write) {
+    for (let attempt = 0; attempt < ATTEMPTS_AT_MOST; attempt += 1) {
+      const tree = write();
+      if (isAnswerable(tree)) return tree;
+    }
+    throw new Error(`expected a tree Godot gives values for within ${ATTEMPTS_AT_MOST} attempts, found none`);
   }
 
   /** The harness types the transpiled rows can give. */
@@ -181,7 +213,7 @@ class ProgramWriter {
 
   /** An expression of `type` whose root applies `row`. */
   rooted(row, type) {
-    if (row.id in LITERALS) return this.literal(type);
+    if (row.id in LITERALS) return this.literal(type, row);
     const producer = this.producers.get(type)?.find((each) => each.row === row);
     if (!producer) {
       throw new Error(
@@ -204,10 +236,14 @@ class ProgramWriter {
     return this.random.chance(SPARE_BRACKET_CHANCE) ? { ...node, bracketed: true } : node;
   }
 
-  /** Whether `producer`'s inputs can be built in `depth - 1`, and its operand can be written. */
+  /**
+   * Whether `producer`'s inputs can be built in `depth - 1`, and its operand can be written. A
+   * row that writes its operand stands only at the root: Godot writes an assignment or a step
+   * without brackets, which the GPU compiler reads another way inside a larger expression.
+   */
   fits(producer, depth) {
-    if (producer.kind === 'operator' && WRITES_OPERAND.has(operatorOf(producer.row))) {
-      if (!this.parameters.includes(producer.args[0])) return false;
+    if (writesOperand(producer.row)) {
+      if (depth < DEPTH_AT_MOST || !this.parameters.includes(producer.args[0])) return false;
     }
     return producer.inputs.every(
       (input) => (this.minDepth.get(input) ?? Infinity) <= depth - 1 || this.leaf(input)
@@ -251,8 +287,8 @@ class ProgramWriter {
     return { kind: 'parameter', type, index: this.random.pick(indices) };
   }
 
-  literal(type) {
-    const row = this.literals.get(type);
+  /** A literal of `type`: of `row`, or of a random literal row of the type. */
+  literal(type, row = this.random.pick(this.literals.get(type))) {
     return { kind: 'literal', type, row, text: LITERALS[row.id].text(this.random) };
   }
 
@@ -274,13 +310,13 @@ class ProgramWriter {
 }
 
 /**
- * The programs of `seed`: one rooted at each transpiled row, so every row is in the set, then
- * `count` with random roots.
+ * The programs of `seed`: one rooted at each row of `ROOT_ROWS`, so every such row is in the set,
+ * then `count` with random roots.
  */
 export function generatePrograms({ seed, count }) {
   const writer = new ProgramWriter(seededRandom(seed));
   const name = (index) => `random-${seed}-${index}`;
-  const rooted = TRANSPILED_ROWS.map((row, index) => writer.program(name(index), row));
+  const rooted = ROOT_ROWS.map((row, index) => writer.program(name(index), row));
   const random = Array.from({ length: count }, (_, index) => writer.program(name(rooted.length + index)));
   return [...rooted, ...random];
 }

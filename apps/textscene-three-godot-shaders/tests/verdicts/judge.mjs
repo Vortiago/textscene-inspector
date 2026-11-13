@@ -8,13 +8,6 @@ import { ShadingLanguageError } from '../../../../packages/textscene-core/src/sh
 import { transpileShadingLanguage } from '../../../../packages/textscene-core/src/shaders/language/transpile.ts';
 
 /**
- * The owner in a refusal of a construct not transpiled yet, as `notTranspiled` and the overload
- * refusal write it (`shaders/language/instructions.ts`): the issue number in brackets after
- * `is not transpiled yet`.
- */
-const NOT_TRANSPILED = /is not transpiled yet \((#\d+)\)/;
-
-/**
  * The transpiler's verdict on `text`: `{ accepted: true }`, `{ accepted: false, message, line }`,
  * or the open row's `owner` with the refusal. Any other throw is a crash, kept as its text.
  */
@@ -24,9 +17,8 @@ export function transpilerVerdict(text) {
     return { accepted: true };
   } catch (error) {
     if (!(error instanceof ShadingLanguageError)) return { crashed: String(error?.stack ?? error) };
-    const message = error.message.replace(/^line \d+: /, '');
-    const owner = NOT_TRANSPILED.exec(message)?.[1];
-    return { accepted: false, message, line: error.line, ...(owner && { owner }) };
+    const { reason: message, line, owner } = error;
+    return { accepted: false, message, line, ...(owner && { owner }) };
   }
 }
 

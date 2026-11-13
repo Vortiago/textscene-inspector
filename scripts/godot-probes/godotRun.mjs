@@ -42,10 +42,20 @@ script = ExtResource("1")
 
 /**
  * Godot's standard output for a project whose one scene runs `mainScript`, beside `files` keyed
- * by their names in the project.
+ * by their names in the project. Throws when Godot exits with an error.
  * @canonical A scratch Godot project run once, its standard output read
  */
 export function runGodotScript(mainScript, files) {
+  const { status, stdout, stderr } = runGodotScriptToExit(mainScript, files);
+  if (status !== 0) throw new Error(`godot exited with ${status}:\n${stderr}`);
+  return stdout;
+}
+
+/**
+ * The exit status and both outputs of a run of `mainScript`, for a run that may end Godot: Godot
+ * prints its crash report on standard output and exits with 134.
+ */
+export function runGodotScriptToExit(mainScript, files) {
   const directory = mkdtempSync(join(tmpdir(), 'godot-project-'));
   try {
     const project = {
@@ -63,8 +73,7 @@ export function runGodotScript(mainScript, files) {
       maxBuffer: OUTPUT_BYTES_AT_MOST,
     });
     if (result.error) throw new Error(`run godot: ${result.error.message}`);
-    if (result.status !== 0) throw new Error(`godot exited with ${result.status}:\n${result.stderr}`);
-    return result.stdout;
+    return { status: result.status, stdout: result.stdout, stderr: result.stderr };
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

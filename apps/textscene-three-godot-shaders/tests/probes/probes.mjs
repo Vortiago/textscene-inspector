@@ -5,8 +5,10 @@
  * shading language, so it runs in Godot unchanged.
  */
 
-import { LANE_COUNT } from '../../../../scripts/godot-probes/probeShader.mjs';
+import { LANE_COUNT, probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { pairedVectors, pairs, scalars, vectors } from './inputs.mjs';
+import { generatedProbes } from './operatorProbes.mjs';
+import { LANGUAGE_PROBES, probeOf } from './languageProbes.mjs';
 
 /** The float vector types of this slice. */
 const VECTORS = ['vec2', 'vec3', 'vec4'];
@@ -259,13 +261,63 @@ function combinedProbe() {
   };
 }
 
-export const PROBES = [
+/**
+ * Integer and boolean literals, folded into constants as Godot folds them. A literal past the int
+ * range is -2^31 in Godot, and a uint literal past 32 bits wraps.
+ */
+function integerLiteralProbes() {
+  const cases = [
+    ['int', 'ivec4 probe() { return ivec4(0, -1, 2147483647, -2147483648); }', 'int literal'],
+    [
+      'int-overflow',
+      'ivec4 probe() { return ivec4(2147483648, 99999999999, 0xffffffff, 0x7fffffff); }',
+      'int literal',
+    ],
+    ['int-unfolded', 'int probe(int a) { return a * 3 + 2147483647; }', 'int literal'],
+    ['uint', 'uvec4 probe() { return uvec4(0u, 1u, 4294967295u, 0x80000000u); }', 'uint literal'],
+    ['uint-overflow', 'uvec2 probe() { return uvec2(4294967296u, 4294967297u); }', 'uint literal'],
+    ['uint-negated', 'uvec2 probe() { return uvec2(-1u, -0x80000000u); }', 'uint literal'],
+    ['bool', 'bvec2 probe() { return bvec2(true, false); }', 'true'],
+    ['bool-false', 'bool probe(bool a) { return a == false; }', 'false'],
+  ];
+  return cases.map(([word, source, row]) => ({ name: `literal-${word}`, rows: [row], source, inputs: [[]] }));
+}
+
+/**
+ * A ternary part keeps the node Godot reads before it folds the part, and the fold negates a
+ * constant in place, so a negated constant there draws with the opposite sign
+ * (`shader_language.cpp:7832`).
+ */
+function ternaryProbes() {
+  const cases = [
+    ['negated-vector', 'vec2 probe(bool c) { return c ? -vec2(1.0, 2.0) : vec2(3.0); }'],
+    ['negated-else', 'vec2 probe(bool c) { return c ? vec2(3.0) : -vec2(1.0, 2.0); }'],
+    ['double-negation', 'float probe(bool c) { return c ? -(-1.0) : 3.0; }'],
+    ['negated-int', 'ivec2 probe(bool c) { return c ? -ivec2(1, 2) : ivec2(3); }'],
+    ['nested', 'float probe(bool c, float a) { return c ? !c ? a : -a : a * 2.0; }'],
+  ];
+  return cases.map(([word, source]) => {
+    const { returns } = probeSignature(source);
+    return probeOf(`ternary-${word}`, [`OP_SELECT_IF(bool,${returns},${returns})`, 'OP_SELECT_ELSE'], source);
+  });
+}
+
+/** The float probes of one row each, which the generated probes do not repeat. */
+const FLOAT_ROW_PROBES = [
   ...arithmeticProbes(),
   ...negateProbes(),
   ...constructorProbes(),
   ...swizzleProbes(),
+];
+
+export const PROBES = [
+  ...FLOAT_ROW_PROBES,
   ...literalProbes(),
   ...nestedNegationProbes(),
   ...constantFoldingProbes(),
+  ...integerLiteralProbes(),
+  ...ternaryProbes(),
   combinedProbe(),
+  ...LANGUAGE_PROBES,
+  ...generatedProbes(FLOAT_ROW_PROBES),
 ];

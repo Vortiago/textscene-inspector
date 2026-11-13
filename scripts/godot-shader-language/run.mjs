@@ -16,7 +16,7 @@ import { REPO_ROOT } from '../repoRoot.mjs';
 import { SHOWCASES } from '../../apps/textscene-three-godot-shaders/tests/e2e/showcases.mjs';
 import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
 import { GUIDE_CHAPTERS } from './guideChapters.mjs';
-import { instructionRows, SOURCE_FILES } from './readSource.mjs';
+import { godotVersion, instructionRows, SOURCE_FILES } from './readSource.mjs';
 import { renderGuide } from './renderGuide.mjs';
 import { renderTestingGuide, TESTING_FILE } from './renderTestingGuide.mjs';
 import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
@@ -69,22 +69,25 @@ function readSources(sourceDir) {
     language: read(SOURCE_FILES.language),
     types: read(SOURCE_FILES.types),
     preprocessor: read(SOURCE_FILES.preprocessor),
+    version: godotVersion(read(SOURCE_FILES.version)),
   };
 }
 
 function main() {
-  const rows = instructionRows(readSources(godotSourceDir(process.argv)));
+  const sources = readSources(godotSourceDir(process.argv));
+  const rows = instructionRows(sources);
   const record = JSON.parse(readFileSync(RECORD, 'utf8'));
   const guide = renderGuide({
     chapters: GUIDE_CHAPTERS,
     rows,
     probes: PROBES,
     record,
+    version: sources.version,
     showcases: SHOWCASES,
   });
   const outputs = [
-    [TABLE_MODULE, renderTableModule(rows)],
-    [READABLE_TABLE, renderReadableTable(rows, PROBES)],
+    [TABLE_MODULE, renderTableModule(rows, PROBES, sources.version)],
+    [READABLE_TABLE, renderReadableTable(rows, PROBES, sources.version)],
     ...guide.map(([file, text]) => [join(GUIDE_DIR, file), text]),
     [join(GUIDE_DIR, TESTING_FILE), testingChapter()],
   ];

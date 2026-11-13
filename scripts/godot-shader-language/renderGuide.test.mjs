@@ -46,6 +46,48 @@ describe('renderGuide', () => {
     expect(index[1]).toContain('| operator | 1 of 2 | #1823 |');
   });
 
+  it('states the one Godot version every project draws as', () => {
+    const [index] = renderGuide({
+      chapters: chaptersWith([SECTION]),
+      rows: ROWS,
+      probes: [PROBE],
+      record: RECORD,
+      version: '4.6.3',
+    });
+    expect(index[1]).toContain('the previewer draws every project as Godot 4.6.3 draws it');
+  });
+
+  it("writes an int probe's lanes as ints", () => {
+    const intProbe = {
+      name: 'add',
+      rows: ['OP_ADD(float,float)'],
+      source: 'int probe(int a, int b) { return a + b; }',
+    };
+    const record = {
+      ...RECORD,
+      probes: {
+        add: { source: intProbe.source, inputs: [['ffffffff'], ['00000002']], results: [['00000001']] },
+      },
+    };
+    const [, chapter] = renderGuide({
+      chapters: chaptersWith([SECTION]),
+      rows: ROWS,
+      probes: [intProbe],
+      record,
+    });
+    expect(chapter[1]).toContain('| `-1` | `2` | `1` |');
+  });
+
+  it("states each row's target state", () => {
+    const [, chapter] = renderGuide({
+      chapters: chaptersWith([SECTION]),
+      rows: ROWS,
+      probes: [PROBE],
+      record: RECORD,
+    });
+    expect(chapter[1]).toContain('Every row is native on WebGL 2 and on WebGPURenderer.');
+  });
+
   it('fails for a transpiled row that no section explains', () => {
     expect(() =>
       renderGuide({ chapters: chaptersWith([]), rows: ROWS, probes: [PROBE], record: RECORD })

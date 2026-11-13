@@ -1,7 +1,7 @@
 /** The readers of Godot's sources, each on an excerpt of the file it reads. */
 
 import { describe, expect, it } from 'vitest';
-import { keywordList, shaderTypes } from './readSource.mjs';
+import { godotVersion, keywordList, shaderTypes } from './readSource.mjs';
 
 describe('keywordList', () => {
   const cpp = [
@@ -33,5 +33,17 @@ describe('shaderTypes', () => {
       ['spatial', 1],
       ['canvas_item', 2],
     ]);
+  });
+});
+
+describe('godotVersion', () => {
+  it('reads the major, minor and patch numbers of version.py', () => {
+    expect(godotVersion('short_name = "godot"\nmajor = 4\nminor = 6\npatch = 3\nstatus = "stable"\n')).toBe(
+      '4.6.3'
+    );
+  });
+
+  it('fails on a version.py with no patch number', () => {
+    expect(() => godotVersion('major = 4\nminor = 6\n')).toThrow(/patch = <number>/);
   });
 });

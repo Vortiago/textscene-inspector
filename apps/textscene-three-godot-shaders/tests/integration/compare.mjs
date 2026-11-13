@@ -5,7 +5,11 @@
  * place: Godot and the page render on the same lavapipe driver.
  */
 
+import { PROBE_TYPES, probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { hex } from '../../../../scripts/godot-probes/record.mjs';
+
+/** Whether `probe` returns floats, whose NaN lanes match whatever their payload. */
+export const isFloatResult = (probe) => PROBE_TYPES[probeSignature(probe.source).returns].scalar === 'float';
 
 /** The distance in units in the last place between two floats' bits, or Infinity across signs. */
 export function ulpDistance(a, b) {
@@ -23,16 +27,27 @@ function isNaNBits(bits) {
   return (bits & 0x7f800000) === 0x7f800000 && (bits & 0x7fffff) !== 0;
 }
 
+/** The transpiler's refusal of an expression that ends Godot as Godot evaluates it. */
+const ABORT_REFUSAL = /aborts on this expression/;
+
 /**
- * The verdict of `actual` (the page's answer: `{ bits }` per lane, or `{ error }`) against the
- * record `entry`: `{ passed, lanes, mismatches, maxUlp, detail }`.
+ * The verdict of `actual` (the page's answer: `{ bits }` per lane, or `{ error, isRefusal }`)
+ * against the record `entry`: `{ passed, lanes, mismatches, maxUlp, detail }`. A shader Godot
+ * rejects passes only when the transpiler refuses it, and one that ends Godot only when the
+ * refusal says so. Two NaN lanes match only where the result
+ * is a float: an int or a bool lane matches bit for bit.
  */
-export function compareProbe(entry, actual) {
+export function compareProbe(entry, actual, isFloatResult = true) {
   if (entry === undefined) return failed('no record from Godot');
+  if (entry.rejected?.stage === 'Godot') {
+    return actual.isRefusal && ABORT_REFUSAL.test(actual.error)
+      ? { ...failed(`Godot ends, the transpiler refuses: ${actual.error}`), passed: true }
+      : failed(`Godot ends on the shader, the transpiler does not say so: ${actual.error ?? 'it draws'}`);
+  }
   if (entry.rejected) {
-    return actual.error
+    return actual.isRefusal
       ? { ...failed(`both reject: ${actual.error}`), passed: true }
-      : failed('Godot rejects the shader, the transpilation does not');
+      : failed(`Godot rejects the shader, the transpiler does not: ${actual.error ?? 'it draws'}`);
   }
   if (actual.error) return failed(actual.error);
   const expected = entry.results.flat().map((text) => Number.parseInt(text, 16));
@@ -44,7 +59,7 @@ export function compareProbe(entry, actual) {
   let first = '';
   expected.forEach((want, index) => {
     const got = actual.bits[index];
-    if (want === got || (isNaNBits(want) && isNaNBits(got))) return;
+    if (want === got || (isFloatResult && isNaNBits(want) && isNaNBits(got))) return;
     mismatches += 1;
     maxUlp = Math.max(maxUlp, ulpDistance(want, got));
     if (!first) first = `lane ${index}: Godot ${hex(want)}, transpilation ${hex(got)}`;

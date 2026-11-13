@@ -239,7 +239,18 @@ export const SOURCE_FILES = {
   language: 'servers/rendering/shader_language.cpp',
   types: 'servers/rendering/shader_types.cpp',
   preprocessor: 'servers/rendering/shader_preprocessor.cpp',
+  version: 'version.py',
 };
+
+/** The version `version.py` names, `4.6.3`. */
+export function godotVersion(versionPy) {
+  const part = (name) => {
+    const match = new RegExp(`^${name} = (\\d+)$`, 'm').exec(versionPy);
+    if (!match) throw new Error(`expected "${name} = <number>" in version.py, found none`);
+    return match[1];
+  };
+  return `${part('major')}.${part('minor')}.${part('patch')}`;
+}
 
 function cite(file, line) {
   return `${file}:${line}`;

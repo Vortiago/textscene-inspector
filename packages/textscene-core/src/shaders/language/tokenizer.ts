@@ -5,15 +5,15 @@
  * Godot's message.
  */
 
-import { KEYWORD_TOKENS } from './instructions.js';
-import { ShadingLanguageError } from './shadingLanguageError.js';
+import { instruction, KEYWORD_TOKENS, notTranspiled } from './instructions.js';
+import { ShadingLanguageError, type SourcePosition } from './shadingLanguageError.js';
 
 export interface Token {
   /** Godot's token name, `TK_FLOAT_CONSTANT` and the rest. */
   readonly type: string;
   /** The identifier, the number as Godot reads it (lower case, suffix stripped), or the string. */
   readonly text?: string;
-  readonly line: number;
+  readonly position: SourcePosition;
 }
 
 /**
@@ -70,10 +70,10 @@ const isDigit = (char: string) => char >= '0' && char <= '9';
 const isHexDigit = (char: string) => isDigit(char) || (char >= 'a' && char <= 'f');
 const isIdentifierChar = (char: string) => /^[A-Za-z0-9_]$/.test(char);
 
-/** Every token of `source`, ending with `TK_EOF`. */
-export function tokenize(source: string): Token[] {
+/** Every token of `source`, ending with `TK_EOF`. `file` names the shader in each position. */
+export function tokenize(source: string, file = ''): Token[] {
   const tokens: Token[] = [];
-  const cursor = { index: 0, line: 1 };
+  const cursor = { file, index: 0, line: 1, lineStart: 0 };
   for (;;) {
     const token = nextToken(source, cursor);
     tokens.push(token);
@@ -82,17 +82,32 @@ export function tokenize(source: string): Token[] {
 }
 
 interface Cursor {
+  readonly file: string;
   index: number;
   line: number;
+  /** The index of the first character of the cursor's line. */
+  lineStart: number;
+}
+
+const positionOf = (cursor: Cursor): SourcePosition => ({
+  file: cursor.file,
+  line: cursor.line,
+  column: cursor.index - cursor.lineStart + 1,
+});
+
+/** Moves the cursor past the line break at its index. */
+function startNextLine(cursor: Cursor): void {
+  cursor.index += 1;
+  cursor.line += 1;
+  cursor.lineStart = cursor.index;
 }
 
 function nextToken(source: string, cursor: Cursor): Token {
   for (;;) {
     const char = source[cursor.index];
-    if (char === undefined) return { type: 'TK_EOF', line: cursor.line };
+    if (char === undefined) return { type: 'TK_EOF', position: positionOf(cursor) };
     if (char === '\n') {
-      cursor.line += 1;
-      cursor.index += 1;
+      startNextLine(cursor);
       continue;
     }
     if (char === ' ' || char === '\t' || char === '\r') {
@@ -100,7 +115,7 @@ function nextToken(source: string, cursor: Cursor): Token {
       continue;
     }
     if (source.startsWith('//', cursor.index) || source.startsWith('/*', cursor.index)) {
-      if (!skipComment(source, cursor)) return { type: 'TK_EOF', line: cursor.line };
+      if (!skipComment(source, cursor)) return { type: 'TK_EOF', position: positionOf(cursor) };
       continue;
     }
     return readToken(source, cursor, char);
@@ -118,65 +133,82 @@ function skipComment(source: string, cursor: Cursor): boolean {
       cursor.index += 2;
       return true;
     }
-    cursor.index += 1;
-    if (char === '\n') {
-      cursor.line += 1;
-      if (!block) return true;
+    if (char !== '\n') {
+      cursor.index += 1;
+      continue;
     }
+    startNextLine(cursor);
+    if (!block) return true;
   }
 }
 
 function readToken(source: string, cursor: Cursor, char: string): Token {
-  const line = cursor.line;
+  const position = positionOf(cursor);
   if (char === '"') return readString(source, cursor);
+  if (char === '#') throw directiveRefusal(source, cursor, position);
   if (char === '@') {
+    const owner = instruction('#include')!.owner;
     throw new ShadingLanguageError(
-      'An include marker comes from the preprocessor, which is not transpiled yet (#1828)',
-      line
+      `An include marker comes from the preprocessor, which is not transpiled yet (${owner})`,
+      position,
+      owner
     );
   }
   if (isDigit(char) || (char === '.' && isDigit(source[cursor.index + 1] ?? '')))
     return readNumber(source, cursor);
   if (char === '.') {
     cursor.index += 1;
-    return { type: 'TK_PERIOD', line };
+    return { type: 'TK_PERIOD', position };
   }
   if (isIdentifierChar(char)) return readIdentifier(source, cursor);
   const symbol = SYMBOLS.find(([text]) => source.startsWith(text, cursor.index));
   if (symbol) {
     cursor.index += symbol[0].length;
-    return { type: symbol[1], line };
+    return { type: symbol[1], position };
   }
   const code = char.codePointAt(0)!;
   throw new ShadingLanguageError(
     code > 32 ? `Tokenizer: Unknown character #${code}: '${char}'` : `Tokenizer: Unknown character #${code}`,
-    line
+    position
   );
 }
 
+/**
+ * The refusal of a preprocessor directive: Godot's preprocessor reads every `#` line before the
+ * shader is parsed (`process_directive`, `shader_preprocessor.cpp:377`), and it is not transpiled yet.
+ */
+function directiveRefusal(source: string, cursor: Cursor, position: SourcePosition): ShadingLanguageError {
+  const name = /^#[ \t]*(\w*)/.exec(source.slice(cursor.index))![1];
+  const row = instruction(`#${name}`);
+  if (!row) return new ShadingLanguageError('Unknown directive.', position);
+  return notTranspiled(row, position);
+}
+
 function readIdentifier(source: string, cursor: Cursor): Token {
+  const position = positionOf(cursor);
   const start = cursor.index;
   while (isIdentifierChar(source[cursor.index] ?? '')) cursor.index += 1;
   const text = source.slice(start, cursor.index);
   const keyword = KEYWORD_TOKENS.get(text);
-  if (keyword) return { type: keyword, line: cursor.line };
+  if (keyword) return { type: keyword, position };
   // `shader_language.cpp:923`: Godot renames every `dus_` in the name, which its compiler gives its
   // own names. `String::replace` replaces each one, so `replace` alone would keep the second.
-  return { type: 'TK_IDENTIFIER', text: text.replaceAll('dus_', '_'), line: cursor.line };
+  return { type: 'TK_IDENTIFIER', text: text.replaceAll('dus_', '_'), position };
 }
 
 /** `"..."` with `\"` and `\\` as its only escapes (`shader_language.cpp:520`). */
 function readString(source: string, cursor: Cursor): Token {
-  const line = cursor.line;
+  const position = positionOf(cursor);
   let content = '';
   let backslash = false;
   for (cursor.index += 1; ; cursor.index += 1) {
     const char = source[cursor.index];
-    if (char === undefined) throw new ShadingLanguageError('EOF reached before string termination.', line);
-    if (char === '\n') throw new ShadingLanguageError('Unexpected end of string.', line);
+    if (char === undefined)
+      throw new ShadingLanguageError('EOF reached before string termination.', position);
+    if (char === '\n') throw new ShadingLanguageError('Unexpected end of string.', position);
     if (char === '"' && !backslash) {
       cursor.index += 1;
-      return { type: 'TK_STRING_CONSTANT', text: content, line };
+      return { type: 'TK_STRING_CONSTANT', text: content, position };
     }
     if (char === '\\') {
       if (backslash) content += '\\';
@@ -185,7 +217,7 @@ function readString(source: string, cursor: Cursor): Token {
     }
     if (char === '"') content += '"';
     else if (backslash)
-      throw new ShadingLanguageError('Only \\" and \\\\ escape characters supported.', line);
+      throw new ShadingLanguageError('Only \\" and \\\\ escape characters supported.', position);
     else content += char;
     backslash = false;
   }
@@ -212,7 +244,7 @@ interface NumberShape {
 
 /** The number at the cursor, read as `_get_token` reads it (`shader_language.cpp:711-882`). */
 function readNumber(source: string, cursor: Cursor): Token {
-  const line = cursor.line;
+  const position = positionOf(cursor);
   const shape: NumberShape = {
     hex: false,
     period: false,
@@ -257,11 +289,15 @@ function readNumber(source: string, cursor: Cursor): Token {
       if (symbol !== '' && isIdentifierChar(symbol)) error = true;
       else break;
     }
-    if (error) throw new ShadingLanguageError(numberError(shape), line);
+    if (error) throw new ShadingLanguageError(numberError(shape), position);
     text += symbol;
   }
   cursor.index += text.length;
-  return { type: numberType(shape), text: validNumberText(text, shape, digitAfterExponent, line), line };
+  return {
+    type: numberType(shape),
+    text: validNumberText(text, shape, digitAfterExponent, position),
+    position,
+  };
 }
 
 function numberType(shape: NumberShape): string {
@@ -281,10 +317,10 @@ function validNumberText(
   text: string,
   shape: NumberShape,
   digitAfterExponent: boolean,
-  line: number
+  position: SourcePosition
 ): string {
   const fail = () => {
-    throw new ShadingLanguageError(numberError(shape), line);
+    throw new ShadingLanguageError(numberError(shape), position);
   };
   const last = text[text.length - 1] ?? '';
   const stripped = shape.floatSuffix || shape.uintSuffix ? text.slice(0, -1) : text;
