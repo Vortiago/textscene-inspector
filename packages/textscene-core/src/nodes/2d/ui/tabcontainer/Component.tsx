@@ -9,6 +9,7 @@
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -86,7 +87,7 @@ export function TabContainer({
     : null;
   const contentBand = tabContentBand(rect, headerHeight, tabsPosition);
 
-  const tabbarBackground = solveNode.styleBoxes.tabbar_background;
+  const tabbarBackground = requiredThemeItem(solveNode.styleBoxes, 'tabbar_background');
   const headerBand = tabHeaderBand(rect, headerHeight, tabsPosition);
 
   // Godot's default (`all_tabs_in_front === false`, `INTERNAL_MODE_BACK`) draws the strip
@@ -105,7 +106,7 @@ export function TabContainer({
           renderOrder={renderOrder}
         />
       </CanvasItemGroup>
-      {tabbarBackground && headerHeight > 0 && (
+      {headerHeight > 0 && (
         <CanvasItemGroup position={[headerBand.x, -headerBand.y, 0]}>
           <StyleBoxQuad
             styleBox={tabbarBackground}

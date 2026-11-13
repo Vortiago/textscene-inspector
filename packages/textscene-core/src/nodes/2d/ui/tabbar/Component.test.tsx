@@ -12,7 +12,11 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { TabBarProperties } from './types';
 import { TabBar } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { bundledRunMeshes, bundledRuns } from '../../../../r3f/controls/native/testing/bundledRunStub';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
@@ -27,7 +31,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<TabBarProperties> = {}): SolveNode {
   const node: TscnNode = controlNode('Tabs', 'TabBar', { name: 'Tabs', ...properties });
-  return { ...emptySolveNode(), path: 'Tabs', node };
+  return withThemeItems({ ...emptySolveNode(), path: 'Tabs', node });
 }
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute; `<TextRun>`/`<ControlQuad>` do not. */

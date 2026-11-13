@@ -232,8 +232,6 @@ describe('nativeTheme', () => {
         lineEdit: widgets.lineEdit.normal.cornerDetail,
         dialogPanel: widgets.dialogPanel.cornerDetail,
         flatMenuButton: widgets.flatMenuButton.normal.cornerDetail,
-        tabSelected: widgets.tabContainer.selected.cornerDetail,
-        tabHovered: widgets.tabContainer.hovered.cornerDetail,
       }).toEqual({
         panel: defaultRadius,
         popupPanel: defaultRadius,
@@ -244,8 +242,6 @@ describe('nativeTheme', () => {
         lineEdit: defaultRadius,
         dialogPanel: none,
         flatMenuButton: none,
-        tabSelected: none,
-        tabHovered: none,
       });
     });
   });
@@ -257,13 +253,9 @@ describe('nativeTheme', () => {
       expect(widgets.flatMenuButton.normal.bgColor.a).toBe(0);
     });
 
-    it('freezes the shared tab, FlatMenuButton and Button boxes, so an in-place margin edit throws', () => {
+    it('freezes the shared FlatMenuButton and Button boxes, so an in-place margin edit throws', () => {
       const { widgets } = nativeTheme(1);
-      for (const box of [
-        widgets.tabContainer.unselected,
-        widgets.flatMenuButton.normal,
-        widgets.button.normal,
-      ]) {
+      for (const box of [widgets.flatMenuButton.normal, widgets.button.normal]) {
         const margin = box.contentMargin as { left: number };
         expect(() => {
           margin.left += 1;

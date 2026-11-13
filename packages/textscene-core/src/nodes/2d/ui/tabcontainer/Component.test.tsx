@@ -42,7 +42,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function page(name: string, properties: Partial<ControlProperties> = {}): SolveNode {
   const node: TscnNode = controlNode(name, 'Control', { name, ...properties });
-  return { ...emptySolveNode(), path: name, node };
+  return withThemeItems({ ...emptySolveNode(), path: name, node });
 }
 
 function solveNode(properties: Partial<TabContainerProperties> = {}, children: SolveNode[] = []): SolveNode {
@@ -194,10 +194,10 @@ describe('<TabContainer> panel band', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TabContainer
         {...painterEnv()}
-        solveNode={{
+        solveNode={withThemeItems({
           ...solveNode({ currentTab: 0, ...properties }, [page('Only')]),
           styleBoxes: STYLE_BOXES,
-        }}
+        })}
         rect={RECT}
         theme={THEME}
         renderOrder={0}

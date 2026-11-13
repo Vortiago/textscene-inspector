@@ -28,6 +28,8 @@ const MIGRATED_FOLDERS = [
   'panel',
   'panelcontainer',
   'splitcontainer',
+  'tabbar',
+  'tabcontainer',
   'vscrollbar',
   'vslider',
   'vsplitcontainer',

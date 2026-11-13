@@ -19,7 +19,12 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { isTopLevelItem } from '../../../../r3f/canvasPaintOrder';
-import { internalChildThemeItems, type InternalThemeItems } from '../../../../r3f/controls/native/themeItems';
+import {
+  internalChildThemeItems,
+  requiredThemeItem,
+  type InternalThemeItems,
+} from '../../../../r3f/controls/native/themeItems';
+import { FALLBACK_THEME_CONSTANT } from '../../../../godot/scene/theme';
 import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -122,14 +127,11 @@ const TAB_CONTAINER_FONT_SIZE_KEY = 'font_size';
  * `tab_separation` and `icon_max_width` forward unchanged: both default to 0, and
  * default_theme.cpp sets neither for TabContainer.
  */
-function internalTabBarThemeConstants(
-  constants: SolveNode['constants'],
-  theme: NativeTheme
-): SolveNode['constants'] {
+function internalTabBarThemeConstants(constants: SolveNode['constants']): SolveNode['constants'] {
   return {
-    h_separation: constants.icon_separation ?? theme.separation,
-    tab_separation: constants.tab_separation ?? 0,
-    icon_max_width: constants.icon_max_width ?? 0,
+    h_separation: requiredThemeItem(constants, 'icon_separation'),
+    tab_separation: constants.tab_separation ?? FALLBACK_THEME_CONSTANT,
+    icon_max_width: requiredThemeItem(constants, 'icon_max_width'),
   };
 }
 
@@ -178,7 +180,7 @@ export function buildInternalTabBarNode(
     // The container pushes every other item the bar reads (`tab_container.cpp:306-343`), so a bar
     // theme entry for one never applies. Only the close icon comes from the bar's own lookup.
     icons: { ...tabBarOwnIcons(barItems), ...n.icons },
-    constants: internalTabBarThemeConstants(n.constants, theme),
+    constants: internalTabBarThemeConstants(n.constants),
     // `tab_bar->add_theme_font_override(font, theme_cache.tab_font)` (`:338`),
     // the font twin of the size push above.
     fontOverrides: {
@@ -199,11 +201,9 @@ interface StyleMargins {
   bottom: number;
 }
 
-const NO_STYLE_MARGINS: StyleMargins = { left: 0, top: 0, right: 0, bottom: 0 };
-
-/** `theme_cache.tabbar_style->get_margin(...)`: an authored `theme_override_styles/tabbar_background`, else the default theme's empty box (`default_theme.cpp:994`). */
+/** `theme_cache.tabbar_style->get_margin(...)` (`default_theme.cpp:994`). */
 export function tabbarStyleMargins(styleBoxes: SolveNode['styleBoxes']): StyleMargins {
-  return styleBoxes.tabbar_background?.contentMargin ?? NO_STYLE_MARGINS;
+  return requiredThemeItem(styleBoxes, 'tabbar_background').contentMargin;
 }
 
 /** `TabContainer::_get_tab_height` (`:51-58`): the strip's minimum height plus the tabbar style's top and bottom margin. The caller answers 0 where the header is hidden or there are no tabs. */
@@ -298,7 +298,7 @@ const tabContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   }
   height += largestChildHeight;
 
-  const panelStyle = n.styleBoxes.panel ?? ctx.theme.widgets.panel;
+  const panelStyle = requiredThemeItem(n.styleBoxes, 'panel');
   const panelMinWidth = panelStyle.contentMargin.left + panelStyle.contentMargin.right;
   const panelMinHeight = panelStyle.contentMargin.top + panelStyle.contentMargin.bottom;
 
@@ -328,7 +328,7 @@ const tabContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) =>
   }
 
   const band = tabContentBand(contentRect, headerHeight, tabsPosition);
-  const panelStyle = n.styleBoxes.panel ?? ctx.theme.widgets.panel;
+  const panelStyle = requiredThemeItem(n.styleBoxes, 'panel');
   const pageRect: Rect2 = {
     // `_repaint` sets the page's offsets directly (`:389-392`), so
     // `_size_changed`'s RTL mirror (`control.cpp:1785-1787`) lands the

@@ -17,9 +17,9 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import { controlSolverRegistry, themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { TabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { shapeText, shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
@@ -86,13 +86,12 @@ export function resolveTabDrawState(
   return 'unselected';
 }
 
-/** `overrides['tab_<state>']` (`theme_override_styles/tab_<state>`) wins over the default-theme box for that state. */
+/** The `tab_<state>` box the tab draws. */
 export function pickTabStyleBox(
-  overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  defaults: TabBarStyleBoxes,
-  state: TabDrawState
+  styleBoxes: SolveNode['styleBoxes'],
+  state: TabDrawState | 'hovered'
 ): StyleBoxFlatData {
-  return overrides[`tab_${state}`] ?? defaults[state];
+  return requiredThemeItem(styleBoxes, `tab_${state}`);
 }
 
 /**
@@ -101,16 +100,12 @@ export function pickTabStyleBox(
  * `tab_hovered` and `tab_unselected` "to avoid an infinite loop when switching tabs
  * with the mouse" (Godot's comment). Only `_update_cache` reads it.
  */
-export function tabWidthStyleMinWidth(
-  overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  defaults: TabBarStyleBoxes,
-  state: TabDrawState
-): number {
+export function tabWidthStyleMinWidth(styleBoxes: SolveNode['styleBoxes'], state: TabDrawState): number {
   const minWidth = (box: StyleBoxFlatData) => box.contentMargin.left + box.contentMargin.right;
-  if (state !== 'unselected') return minWidth(pickTabStyleBox(overrides, defaults, state));
+  if (state !== 'unselected') return minWidth(pickTabStyleBox(styleBoxes, state));
   return Math.max(
-    minWidth(pickTabStyleBox(overrides, defaults, 'unselected')),
-    minWidth(overrides.tab_hovered ?? defaults.hovered)
+    minWidth(pickTabStyleBox(styleBoxes, 'unselected')),
+    minWidth(pickTabStyleBox(styleBoxes, 'hovered'))
   );
 }
 
@@ -284,8 +279,8 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
     isTabUnselectable(tabs[i]!)
   );
   const closeDisplayPolicy = props.tabCloseDisplayPolicy ?? 0;
-  const hSeparation = n.constants.h_separation ?? ctx.theme.separation;
-  const iconMaxWidth = n.constants.icon_max_width ?? 0;
+  const hSeparation = requiredThemeItem(n.constants, 'h_separation');
+  const iconMaxWidth = requiredThemeItem(n.constants, 'icon_max_width');
   // `button_highlight` and `button_pressed` are flat boxes of `style_normal_color` and
   // `style_pressed_color` (`default_theme.cpp:138-139`), the same as Button's `normal` and `pressed`
   // (`:239,241`), so `theme.widgets.button` stands in for them.
@@ -293,12 +288,10 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
 
   if (tabs.length === 0) return { x: 0, y: 0 };
 
-  const defaults = ctx.theme.widgets.tabContainer;
-  const overrides = n.styleBoxes;
-  const unselectedBox = pickTabStyleBox(overrides, defaults, 'unselected');
-  const selectedBox = pickTabStyleBox(overrides, defaults, 'selected');
-  const disabledBox = pickTabStyleBox(overrides, defaults, 'disabled');
-  const hoveredBox = overrides.tab_hovered ?? defaults.hovered;
+  const unselectedBox = pickTabStyleBox(n.styleBoxes, 'unselected');
+  const selectedBox = pickTabStyleBox(n.styleBoxes, 'selected');
+  const disabledBox = pickTabStyleBox(n.styleBoxes, 'disabled');
+  const hoveredBox = pickTabStyleBox(n.styleBoxes, 'hovered');
   const yMargin = Math.max(
     unselectedBox.contentMargin.top + unselectedBox.contentMargin.bottom,
     selectedBox.contentMargin.top + selectedBox.contentMargin.bottom,
@@ -317,7 +310,7 @@ export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
   tabs.forEach((tab, i) => {
     if (tab.hidden) return;
     const state = resolveTabDrawState(tab, i, currentTab);
-    const style = pickTabStyleBox(overrides, defaults, state);
+    const style = pickTabStyleBox(n.styleBoxes, state);
     const styleMinWidth = style.contentMargin.left + style.contentMargin.right;
 
     const iconNatural = tabIconNaturalSize(n, i);

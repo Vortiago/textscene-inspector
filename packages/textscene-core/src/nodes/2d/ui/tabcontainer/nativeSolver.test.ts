@@ -3,7 +3,7 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { TAB_ALIGNMENT_CENTER, TAB_ALIGNMENT_LEFT, TAB_ALIGNMENT_RIGHT } from '../tabbar/nativeSolver';
 import type { ControlProperties } from '../control/types';
 import type { TabContainerProperties } from './types';
@@ -40,11 +40,11 @@ function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): Read
 }
 
 function page(name: string, props: Partial<ControlProperties> = {}): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'Control', { name, ...props }),
-  };
+  });
 }
 
 /** A `theme_override_styles/tabbar_background` carrying `TABBAR_MARGIN`, everything else the default-theme panel's. */
@@ -58,13 +58,13 @@ function tabContainer(
   children: SolveNode[],
   styleBoxes?: SolveNode['styleBoxes']
 ): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     ...(styleBoxes ? { styleBoxes } : {}),
     path: name,
     node: controlNode(name, 'TabContainer', { name, ...props }),
     children,
-  };
+  });
 }
 
 function ctx(): SolveContext {
@@ -494,12 +494,12 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
     props: Partial<TabContainerProperties>,
     projectTheme: ThemeResource | null = null
   ): SolveNode {
-    return {
+    return withThemeItems({
       ...solveNode(),
       path: 'Tabs',
       node: controlNode('Tabs', 'TabContainer', { name: 'Tabs', ...props }),
       projectFonts: { ...NO_PROJECT_FONTS, projectTheme },
-    };
+    });
   }
 
   function barFontSize(n: SolveNode): number | undefined {
@@ -529,7 +529,8 @@ describe('buildInternalTabBarNode — the theme items TabContainer pushes onto i
     });
     const n = container({}, projectTheme);
     const bar = buildInternalTabBarNode(n, [], n.node.properties as TabContainerProperties, THEME);
-    expect(bar.colors.font_selected_color).toBeUndefined();
+    expect(bar.colors.font_selected_color).toEqual(n.colors.font_selected_color);
+    expect(bar.colors.font_selected_color).not.toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
   it("pushes the container's own theme_override_font_sizes/font_size", () => {

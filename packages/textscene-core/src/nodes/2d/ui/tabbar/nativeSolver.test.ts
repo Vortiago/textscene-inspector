@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { tabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import {
   computeTabBarDrawLayout,
   ensureNoOverOffset,
@@ -25,7 +26,7 @@ import {
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { TabBarProperties } from './types';
 import { controlProps } from '../control/testing/controlProps';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
@@ -93,58 +94,28 @@ describe('resolveTabBarCurrentTab', () => {
   });
 });
 
-describe('tabBarStyleBoxes', () => {
-  // default_theme.cpp:974-985, scale 1.
-  it('builds tab_selected: style_normal_color fill, 10/4 margins, a round(2)px white top border', () => {
-    const { selected } = tabBarStyleBoxes(1);
-    expect(selected.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
-    expect(selected.contentMargin).toEqual({ left: 10, top: 4, right: 10, bottom: 4 });
-    expect(selected.borderWidth).toEqual({ left: 0, top: 2, right: 0, bottom: 0 });
-    expect(selected.borderColor).toEqual({ r: 1, g: 1, b: 1, a: 0.75 });
-  });
-
-  it('builds tab_unselected: style_pressed_color fill, a round(1)px popup-border-colour side border', () => {
-    const { unselected } = tabBarStyleBoxes(1);
-    expect(unselected.bgColor).toEqual({ r: 0, g: 0, b: 0, a: 0.6 });
-    expect(unselected.borderWidth).toEqual({ left: 1, top: 0, right: 1, bottom: 0 });
-    expect(unselected.borderColor).toEqual({ r: 0.175, g: 0.175, b: 0.175, a: 1 });
-  });
-
-  it('duplicates tab_disabled/tab_hovered from tab_unselected, overriding only bg_color (default_theme.cpp:982-985)', () => {
-    const { unselected, disabled, hovered } = tabBarStyleBoxes(1);
-    expect(disabled.contentMargin).toEqual(unselected.contentMargin);
-    expect(disabled.borderWidth).toEqual(unselected.borderWidth);
-    expect(disabled.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.3 });
-    expect(hovered.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.3 });
-  });
-
-  it('scales every margin/border width independently, rounding each (scale 1.5)', () => {
-    const { selected } = tabBarStyleBoxes(1.5);
-    // round(10*1.5)=15, round(4*1.5)=6, round(2*1.5)=3.
-    expect(selected.contentMargin).toEqual({ left: 15, top: 6, right: 15, bottom: 6 });
-    expect(selected.borderWidth.top).toBe(3);
-  });
-});
+/** TabBar's boxes in the default theme table at scale 1 (`default_theme.cpp:974-985`). */
+const TABLE_BOXES = defaultStyleBoxesOf(defaultThemeAt(1)).TabBar!;
 
 describe('pickTabStyleBox / tabWidthStyleMinWidth', () => {
-  it('an override wins over the default for the matching state', () => {
-    const defaults = tabBarStyleBoxes(1);
-    const override = { ...defaults.selected, contentMargin: { left: 1, top: 1, right: 1, bottom: 1 } };
-    const picked = pickTabStyleBox({ tab_selected: override }, defaults, 'selected');
-    expect(picked.contentMargin).toEqual({ left: 1, top: 1, right: 1, bottom: 1 });
+  it('picks the tab_<state> box', () => {
+    expect(pickTabStyleBox(TABLE_BOXES, 'selected')).toBe(TABLE_BOXES.tab_selected);
   });
 
   it('unselected width measurement takes the WIDER of unselected/hovered (tab_bar.cpp:1764)', () => {
-    const defaults = tabBarStyleBoxes(1);
-    const widerHovered = { ...defaults.hovered, contentMargin: { left: 50, top: 4, right: 50, bottom: 4 } };
-    const width = tabWidthStyleMinWidth({ tab_hovered: widerHovered }, defaults, 'unselected');
-    expect(width).toBe(100);
+    const widerHovered = {
+      ...TABLE_BOXES.tab_hovered!,
+      contentMargin: { left: 50, top: 4, right: 50, bottom: 4 },
+    };
+    expect(tabWidthStyleMinWidth({ ...TABLE_BOXES, tab_hovered: widerHovered }, 'unselected')).toBe(100);
   });
 
   it('selected/disabled width never consults tab_hovered', () => {
-    const defaults = tabBarStyleBoxes(1);
-    const widerHovered = { ...defaults.hovered, contentMargin: { left: 999, top: 4, right: 999, bottom: 4 } };
-    expect(tabWidthStyleMinWidth({ tab_hovered: widerHovered }, defaults, 'selected')).toBe(20);
+    const widerHovered = {
+      ...TABLE_BOXES.tab_hovered!,
+      contentMargin: { left: 999, top: 4, right: 999, bottom: 4 },
+    };
+    expect(tabWidthStyleMinWidth({ ...TABLE_BOXES, tab_hovered: widerHovered }, 'selected')).toBe(20);
   });
 });
 
@@ -405,12 +376,12 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
       tabs: [{ title: '', tooltip: '', disabled: false }],
       tabCloseDisplayPolicy: 2, // ALWAYS
     });
-    return {
+    return withThemeItems({
       ...solveNode(),
       path: 'T',
       node: controlNode('T', 'TabBar', props),
       ...overrides,
-    };
+    });
   }
 
   it('floors on the vendored 16x16 close icon when untethered', () => {
@@ -439,11 +410,12 @@ describe('tabBarFontSizePx', () => {
   // `theme_cache.font_size` (`tab_bar.cpp:365`) is a bound theme item (`tab_bar.cpp:2179`),
   // so a node-local override wins, but only while it is positive (`control.cpp:3113-3117`).
   const THEME = nativeTheme(1);
-  const bar = (): SolveNode => ({
-    ...solveNode(),
-    path: 'T',
-    node: controlNode('T', 'TabBar', { name: 'T' }),
-  });
+  const bar = (): SolveNode =>
+    withThemeItems({
+      ...solveNode(),
+      path: 'T',
+      node: controlNode('T', 'TabBar', { name: 'T' }),
+    });
 
   it('answers the theme default when the node overrides nothing', () => {
     expect(tabBarFontSizePx(bar(), {}, THEME)).toBe(THEME.fontSize);
@@ -481,11 +453,11 @@ describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_siz
       tabs: [{ title: 'Map', tooltip: '', disabled: false }],
       ...props,
     });
-    return {
+    return withThemeItems({
       ...solveNode(),
       path: 'T',
       node: controlNode('T', 'TabBar', properties),
-    };
+    });
   }
 
   function sizeOf(n: SolveNode) {
@@ -514,7 +486,7 @@ describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_siz
   // text_buf->get_size().y) / 2` (tab_bar.cpp:677) in the rect floored at `text_buf->get_size().y
   // + y_margin` (tab_bar.cpp:82). One buffer feeds both, so the term cannot go negative.
   it('the bar the solver sizes contains the buffer the painter shapes, at any font size', () => {
-    const style = pickTabStyleBox({}, tabBarStyleBoxes(1), 'unselected');
+    const style = pickTabStyleBox(TABLE_BOXES, 'unselected');
     for (const fontSize of [8, 16, 28, 32]) {
       const n = node({ themeOverrideFontSizes: { font_size: fontSize } });
       const props = n.node.properties as TabBarProperties;
@@ -554,7 +526,7 @@ describe('tabDrawX', () => {
 
 describe('layoutTabContent under RTL', () => {
   const style = {
-    ...tabBarStyleBoxes(1).selected,
+    ...TABLE_BOXES.tab_selected!,
     contentMargin: { left: 20, top: 4, right: 6, bottom: 4 },
   };
   const base = {

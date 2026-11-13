@@ -18,7 +18,6 @@ import {
   type ScaledGodotTheme,
 } from '../../../godot/scene/theme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
-import { tabBarStyleBoxes, type TabBarStyleBoxes } from './tabStyleBoxes';
 import type { Rgba } from '../../../godot/math/math';
 import { defaultThemeAt } from '../../../godot/scene/defaultTheme/defaultTheme';
 import { defaultStyleBoxesOf } from './defaultThemeRecords';
@@ -114,8 +113,6 @@ interface NativeThemeWidgets {
     normal: StyleBoxFlatData;
     disabled: StyleBoxFlatData;
   };
-  /** `TabContainer` and `TabBar` `tab_selected`, `tab_unselected`, `tab_disabled` and `tab_hovered` (`default_theme.cpp:974-985`). */
-  tabContainer: TabBarStyleBoxes;
   /** LineEdit's `normal`/`read_only` styleboxes, `default_theme.cpp:405-417`. */
   lineEdit: {
     normal: StyleBoxFlatData;
@@ -211,7 +208,6 @@ function buildNativeTheme(scale: number): NativeTheme {
         normal: requiredThemeItem(flatMenuButtonBoxes, 'normal'),
         disabled: requiredThemeItem(flatMenuButtonBoxes, 'disabled'),
       },
-      tabContainer: tabBarStyleBoxes(scale),
       lineEdit: {
         // default_theme.cpp:405-409: make_flat_stylebox(style_normal_color) + border.
         normal: lineEditStyleBox(
