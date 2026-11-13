@@ -1,7 +1,7 @@
 /**
  * The scope a `CanvasLayer` subtree draws in: its own canvas. It takes the node,
  * not derived values, so the Node2D walk (`NodeDispatcher`) and the Control walk's
- * `CanvasLayer` painter publish the same four facts and the same canvas transform.
+ * `CanvasLayer` painter publish the same chain start and the same canvas transform.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useThree } from '@react-three/fiber';
@@ -11,9 +11,8 @@ import type { CanvasLayerProperties } from '../nodes/2d/ui/canvaslayer/types.js'
 import { threeMatrixFromTransform2D } from './node2dTransform.js';
 import { canvasLayerOf } from './canvasPaintOrder.js';
 import { useCanvasModulateColor, CanvasModulateContext } from './canvasModulate.js';
-import { Modulate2DContext, WHITE_MODULATE } from './canvasItemModulate.js';
-import { ROOT_TEXTURE_SAMPLER, TextureSampler2DContext } from './canvasItemTextureSampler.js';
-import { CanvasLayerIndexProvider, EffectiveZProvider } from './lighting2d/canvasItemPlacement.js';
+import { CHAIN_START_PARENT, CanvasParentProvider } from './canvasItemPass/inheritedCanvasState.js';
+import { CanvasLayerIndexProvider } from './lighting2d/canvasItemPlacement.js';
 import { isViewportPass, observeSceneCamera } from './sceneRenderCamera.js';
 import { viewportLayerMatrix, type ViewportLayerFollow } from './viewportLayerAnchor.js';
 import { CanvasFrameContext, markCanvasFrame } from './canvasFrame.js';
@@ -64,26 +63,22 @@ export function CanvasLayerScope({ node, children }: { node: TscnNode; children:
   }, []);
   useViewportLayerAnchor(anchor, { enabled: follow_viewport_enabled, scale: follow_viewport_scale });
 
-  // The layer index picks the 2D lights: a light reaches a canvas whose layer is
-  // in its `range_layer_min/max`, default 0..0, where a layer defaults to 1. z
-  // restarts at 0, since `_cull_canvas_item` walks each canvas from 0.
+  // The layer index picks the 2D lights: a light reaches a canvas whose layer is in its
+  // `range_layer_min/max`, default 0..0, where a layer defaults to 1. A chain starts at z 0, since
+  // `_cull_canvas_item` walks each canvas from 0.
   return (
     <CanvasModulateContext.Provider value={modulate}>
-      <Modulate2DContext.Provider value={WHITE_MODULATE}>
-        <TextureSampler2DContext.Provider value={ROOT_TEXTURE_SAMPLER}>
-          <CanvasLayerIndexProvider value={canvasLayerOf(node)}>
-            <EffectiveZProvider value={0}>
-              {/* Object3Ds, not Groups: three takes `groupOrder` from the nearest Group, so these
-                  reset no canvas key. */}
-              <object3D ref={anchor} matrixAutoUpdate={false}>
-                <object3D ref={mountFrame} matrix={matrix} matrixAutoUpdate={false}>
-                  <CanvasFrameContext.Provider value={frame}>{children}</CanvasFrameContext.Provider>
-                </object3D>
-              </object3D>
-            </EffectiveZProvider>
-          </CanvasLayerIndexProvider>
-        </TextureSampler2DContext.Provider>
-      </Modulate2DContext.Provider>
+      <CanvasParentProvider value={CHAIN_START_PARENT}>
+        <CanvasLayerIndexProvider value={canvasLayerOf(node)}>
+          {/* Object3Ds, not Groups: three takes `groupOrder` from the nearest Group, so these
+              reset no canvas key. */}
+          <object3D ref={anchor} matrixAutoUpdate={false}>
+            <object3D ref={mountFrame} matrix={matrix} matrixAutoUpdate={false}>
+              <CanvasFrameContext.Provider value={frame}>{children}</CanvasFrameContext.Provider>
+            </object3D>
+          </object3D>
+        </CanvasLayerIndexProvider>
+      </CanvasParentProvider>
     </CanvasModulateContext.Provider>
   );
 }

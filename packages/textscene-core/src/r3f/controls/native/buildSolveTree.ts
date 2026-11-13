@@ -83,8 +83,14 @@ import { NO_OWNERS, type ThemeOwner } from '../../../nodes/windows/window/themeO
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
 import { controlSolverRegistry, type BuiltIconsFn, type TextureSlotRequest } from './solverRegistry';
 import { canvasItemPass, type CanvasItemPassResult } from '../../canvasItemPass/canvasItemPass';
-import { canvasStateBetween } from '../../canvasItemPass/canvasStateBetween';
-import type { CanvasAncestors } from '../../canvasItemPass/canvasAncestors';
+import {
+  CHAIN_START_INHERITANCE,
+  type CanvasInheritance,
+  type CanvasItemLink,
+} from '../../canvasItemPass/inheritedCanvasState';
+import { canvasTransformBetween } from '../../canvasItemPass/canvasTransformBetween';
+import { parentPathOf } from '../../../utils/nodePath';
+import type { Transform2DColumns } from '../../../godot/math/transform2d';
 import {
   LABEL_SETTINGS_FONT_LOADING,
   type LabelSettingsFont,
@@ -351,10 +357,10 @@ function buildForest(
   const embedsWindows = embedsSubwindows(tree, viewport);
 
   /**
-   * Written only by `skippedAncestorsOf`, for this walk only: the tree does not change within one.
+   * Written only by `skippedTransformOf`, for this walk only: the tree does not change within one.
    * Keyed by the chain's parent alone, since the walk sets one `above` for each parent.
    */
-  const foldedChains = new Map<string, CanvasAncestors>();
+  const foldedChains = new Map<string, Transform2DColumns>();
 
   /**
    * What the canvas item pass binds at `path`. Undefined for a CanvasLayer or a window root, which
@@ -365,14 +371,31 @@ function buildForest(
   }
 
   /**
-   * What the skipped canvas items of `chain` hand a Control below them, one fold for the sibling
-   * Controls below one chain.
+   * The items above the Control at `path` in this walk's tree. A chain that reaches a root of the
+   * tree hangs below the drawn item the walk sits in. One below a node that is no canvas item, or
+   * at a `top_level` item, starts a chain (`canvas_item.cpp:235-253`, `:565-571`).
    */
-  function skippedAncestorsOf({ above, parent }: SkippedChain): CanvasAncestors | null {
+  function inheritanceOf(path: string, item: CanvasItemPassResult | undefined): CanvasInheritance {
+    if (!item) return CHAIN_START_INHERITANCE;
+    const innermostFirst: CanvasItemLink[] = [];
+    let outermost = { path, item };
+    for (let at = item.parent; at !== null;) {
+      const link = canvasItemAt(at);
+      if (!link) break;
+      innermostFirst.push({ fields: link.fields, resources: link.resources, path: at });
+      outermost = { path: at, item: link };
+      at = link.parent;
+    }
+    const hangsBelowWalk = parentPathOf(outermost.path) === null && !outermost.item.fields.isTopLevel;
+    return { links: innermostFirst.reverse(), startsChain: !hangsBelowWalk };
+  }
+
+  /** The transform the skipped canvas items of `chain` put back, one fold for the sibling Controls below it. */
+  function skippedTransformOf({ above, parent }: SkippedChain): Transform2DColumns | null {
     if (parent === null) return null;
     let folded = foldedChains.get(parent);
     if (!folded) {
-      folded = canvasStateBetween(liveScenePassResults(canvasItemPass, tree), above, parent);
+      folded = canvasTransformBetween(liveScenePassResults(canvasItemPass, tree), above, parent);
       foldedChains.set(parent, folded);
     }
     return folded;
@@ -685,8 +708,10 @@ function buildForest(
       paintSequence: WHOLE_CANVAS_RANGE.base,
       backSequence: WHOLE_CANVAS_RANGE.base,
       layerSequence: WHOLE_CANVAS_RANGE.base,
-      skippedAncestors: null,
+      skippedTransform: null,
       parentVisibleInTree: true,
+      // A Window is no CanvasItem, so its content starts a chain.
+      inheritance: CHAIN_START_INHERITANCE,
       rtl: inheritedRtl ?? layoutDirectionEnv.rootRtl,
       locale: layoutDirectionEnv.applicationLocale,
       hidden,
@@ -848,11 +873,12 @@ function buildForest(
       // top_level Control's item parents at the canvas (`canvas_item.cpp:565-571`),
       // so no skipped ancestor composes onto either. A merely hoisted Control's
       // item still hangs under the CanvasItem above it.
-      skippedAncestors: isBoundary || topLevel ? null : skippedAncestorsOf(skippedChain),
-      // Unconditional, unlike `skippedAncestors` beside it: `top_level` and
+      skippedTransform: isBoundary || topLevel ? null : skippedTransformOf(skippedChain),
+      // Unconditional, unlike `skippedTransform` beside it: `top_level` and
       // a broken chain both reset the canvas facets and neither resets
       // this one (`SolveNode.parentVisibleInTree`).
       parentVisibleInTree: canvasItem?.parentVisibleInTree ?? true,
+      inheritance: inheritanceOf(path, canvasItem),
       rtl: rtl ?? layoutDirectionEnv.rootRtl,
       locale: layoutDirectionEnv.applicationLocale,
       hidden,

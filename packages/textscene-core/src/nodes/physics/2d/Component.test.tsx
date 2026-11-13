@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { Node2D } from '../../base/node2d/Component';
 import { parseNode2D } from '../../base/node2d/parser';
-import { useParentModulate } from '../../../r3f/canvasItemModulate';
+import { useEnclosingCanvasState } from '../../../r3f/canvasItemPass/inheritedCanvasState';
 import type { TscnNode } from '../../../parser/types';
 
 const bodyHeading = (attributes: Record<string, string> = {}) => ({
@@ -50,9 +50,9 @@ describe('<Node2D> (2D physics body)', () => {
     expect(renderer.scene.findByProps({ name: 'kid' })).toBeDefined();
   });
 
-  it("cascades a StaticBody2D's modulate down to a nested child (Modulate2DContext)", async () => {
+  it("cascades a StaticBody2D's modulate down to a nested child", async () => {
     function ModulateReader() {
-      const modulate = useParentModulate();
+      const { modulate } = useEnclosingCanvasState();
       return <mesh name="modulate-reader" userData={{ modulate }} />;
     }
     const body = makeBody({ name: 'TintedStaticBody2D', modulate: 'Color(0.5, 0.25, 1, 0.8)' });

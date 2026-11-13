@@ -6,8 +6,7 @@
 
 import { useMemo, type ReactNode } from 'react';
 import type { TscnNode } from '../parser/types.js';
-import { canvasStateOfDrawn } from './canvasItemPass/canvasStateBetween.js';
-import { CanvasAncestorsScope } from './canvasItemPass/CanvasAncestorsScope.js';
+import { CanvasParentProvider, useHandedDownAlong } from './canvasItemPass/inheritedCanvasState.js';
 import { useSceneResources } from './SceneResourcesContext.js';
 import { node2dGroupPropsOf, node2dGroupSpread, threeMatrixFromTransform2D } from './node2dTransform.js';
 import type { Node2DLocalTransform } from '../nodes/base/node2d/types.js';
@@ -28,9 +27,9 @@ import {
 } from './contexts/ControlYSortContext.js';
 
 /**
- * Puts back around `children` the CanvasItem state of the y_sort_enabled ancestors they were
- * lifted past, outermost first: their composed transform, modulate, z, sampler, the material a
- * `use_parent_material` item takes, and each one's visibility.
+ * Puts back around `children` what the y_sort_enabled ancestors they were lifted past hand down,
+ * outermost first: their composed transform and each one's visibility. A lifted item of the live
+ * tree reads the rest from the canvas item pass, and any other one from the chain folded here.
  */
 export function LiftedAncestors({
   liftedPast: authoredLiftedPast,
@@ -45,10 +44,8 @@ export function LiftedAncestors({
   // The properties the live scene passes bind, such as the pose a RemoteTransform2D pushes.
   const liftedPast = useLiveDrawnChain(authoredLiftedPast, basePath);
   const paths = useMemo(() => pathsAlong(liftedPast, basePath), [liftedPast, basePath]);
-  const scope = useSceneResources();
-  // The sort root is the parent item of the outermost lifted ancestor, so a chain that
-  // defers all the way takes the root's material.
-  const lifted = useMemo(() => canvasStateOfDrawn(liftedPast, scope), [liftedPast, scope]);
+  // The sort root is the parent item of the outermost lifted ancestor.
+  const handedDown = useHandedDownAlong(liftedPast, paths, useSceneResources());
   const solved = useControlTransformsUnder(basePath);
   // The restored groups are real transforms in the rendered tree, so a canvas root
   // below them has to cancel them too (`canvasRootScope.tsx`).
@@ -59,13 +56,13 @@ export function LiftedAncestors({
   }, [liftedPast, paths, solved, ambient]);
 
   return (
-    <CanvasAncestorsScope chain={lifted}>
+    <CanvasParentProvider value={handedDown}>
       <CanvasSpaceProvider value={liftedSpace}>
         <LiftedGroups chain={liftedPast} paths={paths}>
           {children}
         </LiftedGroups>
       </CanvasSpaceProvider>
-    </CanvasAncestorsScope>
+    </CanvasParentProvider>
   );
 }
 

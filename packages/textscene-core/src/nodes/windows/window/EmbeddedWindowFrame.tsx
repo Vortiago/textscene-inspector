@@ -22,7 +22,8 @@ import {
   type CanvasSlot,
 } from '../../../r3f/canvasItemState';
 import { WHITE_MODULATE } from '../../../r3f/canvasItemModulate';
-import { useInheritedTextureSampler } from '../../../r3f/canvasItemTextureSampler';
+import { useTextureSamplerOver } from '../../../r3f/canvasItemTextureSampler';
+import { CHAIN_START } from '../../../r3f/canvasItemPass/canvasItemPass';
 import { useViewportRect } from '../../../r3f/contexts/ViewportRectContext';
 import { useViewportTargetSlot } from '../../../resources/textures/viewporttexture/useViewportTextureSlot';
 import { InitialPosition, centredWindowPosition } from '../../../godot/scene/window';
@@ -74,15 +75,16 @@ export function EmbeddedWindowFrame({
 }: EmbeddedWindowFrameProps) {
   const props = solveNode.node.properties as WindowProperties;
   const rect = useWindowRect(solveNode, path, embedderSize);
-  // The subwindow canvas item: no modulate, z 0, and the draw index as its sequence.
+  // The subwindow canvas item starts a chain: no modulate, z 0, and the draw index as its sequence.
   const { key } = useCanvasItemState({
+    inherited: CHAIN_START,
     modulate: WHITE_MODULATE,
     selfModulate: WHITE_MODULATE,
     zIndex: 0,
     zAsRelative: true,
     material: null,
     // The viewport's default filter and repeat: the subwindow canvas item names neither.
-    sampler: useInheritedTextureSampler(undefined, undefined),
+    sampler: useTextureSamplerOver(undefined, undefined, CHAIN_START.sampler),
     lightMask: undefined,
     sequence: drawIndex,
   });

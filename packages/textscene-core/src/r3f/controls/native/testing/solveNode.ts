@@ -10,6 +10,11 @@ import type { ControlProperties } from '../../../../nodes/2d/ui/control/types';
 import { NO_PROJECT_FONTS, type ProjectFonts } from '../../../../resources/fonts/font/projectFonts';
 import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import type { SolveNode } from '../solveTree';
+import { canvasItemFieldsOf } from '../../../canvasItemPass/canvasItemFields';
+import {
+  CHAIN_START_INHERITANCE,
+  type CanvasInheritance,
+} from '../../../canvasItemPass/inheritedCanvasState';
 import { mergeThemedRecord, themeResolutionScope } from '../../../../resources/styles/theme/lookup';
 import { defaultColorsOf, defaultConstantsOf, defaultStyleBoxesOf } from '../defaultThemeRecords';
 import {
@@ -38,6 +43,9 @@ const NO_RESOURCES: SolveNode['resources'] = Object.freeze({
   internalResources: Object.freeze([]),
 });
 
+/** A root of the walk's tree, which hangs below the drawn item the walk sits in. */
+const WALK_ROOT: CanvasInheritance = { links: [], startsChain: false };
+
 /**
  * Every field but `path` and `node`, which have no meaningful default. Spread
  * this into a literal, then supply both.
@@ -64,7 +72,8 @@ export function solveNode(): Pick<
   | 'paintSequence'
   | 'backSequence'
   | 'layerSequence'
-  | 'skippedAncestors'
+  | 'skippedTransform'
+  | 'inheritance'
   | 'rtl'
   | 'locale'
 > {
@@ -94,7 +103,8 @@ export function solveNode(): Pick<
     backSequence: lastPaintSequence(WHOLE_CANVAS_RANGE),
     layerSequence: WHOLE_CANVAS_RANGE.base,
     // No skipped Node2D ancestor, the common case a hand-built tree states.
-    skippedAncestors: null,
+    skippedTransform: null,
+    inheritance: WALK_ROOT,
     // `LAYOUT_DIRECTION_INHERITED` all the way to a left-to-right root.
     rtl: false,
     // No `internationalization/locale/test`.
@@ -176,4 +186,19 @@ function assignRange(node: SolveNode, own: PaintRange): SolveNode {
     layerSequence: allocated.layer,
     children: node.children.map((child, i) => assignRange(child, allocated.children[i]!)),
   };
+}
+
+/**
+ * `node` and its subtree with the inheritance the solve gives them: each Control's links run from
+ * the walk's root down, and a CanvasLayer's children start a chain.
+ */
+export function linkedTree(node: SolveNode, inheritance: CanvasInheritance = WALK_ROOT): SolveNode {
+  const fields = canvasItemFieldsOf(node.node);
+  const below = fields
+    ? {
+        ...inheritance,
+        links: [...inheritance.links, { fields, resources: node.resources, path: node.path }],
+      }
+    : CHAIN_START_INHERITANCE;
+  return { ...node, inheritance, children: node.children.map((child) => linkedTree(child, below)) };
 }

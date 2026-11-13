@@ -28,6 +28,10 @@ import { parsedNode } from '../../../parser/testing/parserKit';
 import { resolveInstancePath } from '../../../resources/SubResourceResolver';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
 import { LABEL_SETTINGS_FONT_LOADING, type SolveNode } from './solveTree';
+import { CHAIN_START, type InheritedCanvasItemState } from '../../canvasItemPass/canvasItemPass';
+import { inheritedState } from '../../testing/inheritedFrom';
+import { WHITE_MODULATE } from '../../canvasItemModulate';
+import { inheritedAlong } from '../../canvasItemPass/inheritedCanvasState';
 import { nativeTheme } from './nativeTheme';
 import { themeResource } from './testing/themeResource';
 import { CAPTION_PATH, HOST_LEAF_PATH, hostScene, scenesByPath } from '../../testing/graftedScopeFixture';
@@ -78,6 +82,22 @@ function wrapperFor(loader: ReturnType<typeof createFakeResourceLoader>['loader'
   return ({ children }: { children: ReactNode }) => (
     <ResourceLoaderProvider loader={loader}>{children}</ResourceLoaderProvider>
   );
+}
+
+/** A drawn item above the walk that hands down a tint, a z and a material. */
+const TINTED_ENCLOSING = inheritedState({
+  modulate: { r: 0.5, g: 0.5, b: 0.5, a: 1 },
+  zFinal: 7,
+  material: {
+    kind: 'own',
+    ref: 'SubResource("ambient")',
+    resources: { externalResources: [], internalResources: [] },
+  },
+});
+
+/** What `node` inherits with nothing drawn above the walk. */
+function inheritedAtRoot(node: SolveNode): InheritedCanvasItemState {
+  return inheritedAlong(node.inheritance, CHAIN_START);
 }
 
 describe('useBuildSolveTree — instanced sub-scenes', () => {
@@ -546,7 +566,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     // core/math/transform_2d.h:249-254, rotation=0 scale=(1,1): a=1,b=0,c=0,d=1.
     const nodes = [node2D('N', { position: { x: 100, y: 50 } }, { children: [label('L')] })];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.transform).toEqual({
+    expect(result.current.tree[0]!.skippedTransform!).toEqual({
       a: 1,
       b: 0,
       c: 0,
@@ -561,7 +581,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     // a=cos(PI/2)=0, b=sin(PI/2)=1, c=-sin(PI/2)=-1, d=cos(PI/2)=0.
     const nodes = [node2D('N', { rotation: Math.PI / 2 }, { children: [label('L')] })];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    const t = result.current.tree[0]!.skippedAncestors!.transform;
+    const t = result.current.tree[0]!.skippedTransform!;
     expect(t.a).toBeCloseTo(0, 5);
     expect(t.b).toBeCloseTo(1, 5);
     expect(t.c).toBeCloseTo(-1, 5);
@@ -574,7 +594,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     // core/math/transform_2d.h:249-254 at rot=0, skew=0: a=scale.x, d=scale.y.
     const nodes = [node2D('N', { scale: { x: 2, y: 3 } }, { children: [label('L')] })];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.transform).toEqual({
+    expect(result.current.tree[0]!.skippedTransform!).toEqual({
       a: 2,
       b: 0,
       c: 0,
@@ -595,7 +615,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
       ),
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    const t = result.current.tree[0]!.skippedAncestors!.transform;
+    const t = result.current.tree[0]!.skippedTransform!;
     expect(t.a).toBeCloseTo(0, 5);
     expect(t.b).toBeCloseTo(2, 5);
     expect(t.c).toBeCloseTo(-3, 5);
@@ -615,7 +635,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
       }
     );
     const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
-    const t = result.current.tree[0]!.skippedAncestors!.transform;
+    const t = result.current.tree[0]!.skippedTransform!;
     expect(t.a).toBeCloseTo(0, 5);
     expect(t.b).toBeCloseTo(1, 5);
     expect(t.c).toBeCloseTo(-1, 5);
@@ -639,7 +659,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
       ),
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors).toBeNull();
+    expect(result.current.tree[0]!.skippedTransform).toBeNull();
   });
 
   it('starts the chain at a `top_level` Node2D, dropping the tinted Node2D above it', async () => {
@@ -663,10 +683,12 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
       ),
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    const chain = result.current.tree[0]!.skippedAncestors!;
-    expect(chain.transform).toEqual({ a: 1, b: 0, c: 0, d: 1, tx: 50, ty: 60 });
-    expect(chain.modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 });
-    expect(chain.z).toEqual([{ zIndex: 0, zAsRelative: true }]);
+    const [l] = result.current.tree;
+    expect(l!.skippedTransform!).toEqual({ a: 1, b: 0, c: 0, d: 1, tx: 50, ty: 60 });
+    expect(inheritedAlong(l!.inheritance, TINTED_ENCLOSING)).toMatchObject({
+      modulate: WHITE_MODULATE,
+      zFinal: 0,
+    });
   });
 
   it('a CanvasLayer under a rotated Node2D gets no ancestor transform, and neither do ITS children', async () => {
@@ -684,8 +706,8 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
     const layer = result.current.tree[0]!;
     expect(layer.node.type).toBe('CanvasLayer');
-    expect(layer.skippedAncestors).toBeNull();
-    expect(layer.children[0]!.skippedAncestors).toBeNull();
+    expect(layer.skippedTransform).toBeNull();
+    expect(layer.children[0]!.skippedTransform).toBeNull();
   });
 
   it("carries only the Node2D ancestor's transform, never folding in the Control's OWN `rotation` — that is ControlCanvasWalker's job", async () => {
@@ -699,7 +721,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
       ),
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    const t = result.current.tree[0]!.skippedAncestors!.transform;
+    const t = result.current.tree[0]!.skippedTransform!;
     expect(t.a).toBeCloseTo(0, 5);
     expect(t.b).toBeCloseTo(1, 5);
     expect(t.c).toBeCloseTo(-1, 5);
@@ -727,7 +749,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
       }
     );
     const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.modulate).toEqual({ r: 0.25, g: 0.25, b: 1, a: 0.5 });
+    expect(inheritedAtRoot(result.current.tree[0]!).modulate).toEqual({ r: 0.25, g: 0.25, b: 1, a: 0.5 });
   });
 
   it("never propagates a skipped ancestor's `self_modulate` — own pixels only, and the Node2D paints none", async () => {
@@ -742,10 +764,10 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
       ),
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(inheritedAtRoot(result.current.tree[0]!).modulate).toEqual(WHITE_MODULATE);
   });
 
-  it("collects each skipped ancestor's z STEP, outermost first — `p_z` clamps per item (renderer_canvas_cull.cpp:430-434)", async () => {
+  it("folds each skipped ancestor's z step, so an absolute one restarts `p_z` (renderer_canvas_cull.cpp:430-434)", async () => {
     const outer = node2D(
       'Outer',
       {},
@@ -757,16 +779,13 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
       }
     );
     const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.z).toEqual([
-      { zIndex: 5, zAsRelative: true },
-      { zIndex: 3, zAsRelative: false },
-    ]);
+    expect(inheritedAtRoot(result.current.tree[0]!).zFinal).toBe(3);
   });
 
-  it('records a step for an ancestor that authored no z at all, so the chain length matches the walk', async () => {
+  it('lists an ancestor that authors nothing, so the fold matches the walk', async () => {
     const nodes = [node2D('N', { position: { x: 5, y: 5 } }, { children: [label('L')] })];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.z).toEqual([{ zIndex: 0, zAsRelative: true }]);
+    expect(result.current.tree[0]!.inheritance.links.map((link) => link.path)).toEqual(['N']);
   });
 
   it("folds each skipped ancestor's texture_filter and texture_repeat, the innermost naming one winning (canvas_item.cpp:1625-1699)", async () => {
@@ -789,7 +808,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     );
     const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
     // Inner names a filter, so it wins. Its PARENT_NODE repeat defers to Outer's.
-    expect(result.current.tree[0]!.skippedAncestors!.sampler).toEqual({
+    expect(inheritedAtRoot(result.current.tree[0]!).sampler).toEqual({
       filter: LINEAR,
       repeat: REPEAT_ENABLED,
     });
@@ -798,7 +817,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
   it('leaves the sampler unnamed where no skipped ancestor names a filter or repeat', async () => {
     const nodes = [node2D('N', {}, { children: [label('L')] })];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.sampler).toEqual({
+    expect(inheritedAtRoot(result.current.tree[0]!).sampler).toEqual({
       filter: undefined,
       repeat: undefined,
     });
@@ -820,7 +839,7 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
       }
     );
     const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.material).toMatchObject({
+    expect(inheritedAtRoot(result.current.tree[0]!).material).toMatchObject({
       kind: 'own',
       ref: 'SubResource("inner")',
     });
@@ -838,27 +857,29 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
       }
     );
     const { result } = renderHook(() => useBuildSolveTree([outer], [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.material).toMatchObject({
+    expect(inheritedAtRoot(result.current.tree[0]!).material).toMatchObject({
       kind: 'own',
       ref: 'SubResource("outer")',
     });
   });
 
-  it('leaves the material to the Control above a skipped ancestor that uses its parent material', async () => {
+  it('leaves the material to the drawn item above the walk for a root ancestor that uses its parent material', async () => {
     const nodes = [node2D('N', {}, { properties: { use_parent_material: true }, children: [label('L')] })];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.material).toEqual({ kind: 'inherit' });
+    expect(inheritedAlong(result.current.tree[0]!.inheritance, TINTED_ENCLOSING).material).toBe(
+      TINTED_ENCLOSING.material
+    );
   });
 
   it('gives no material where no skipped ancestor sets one', async () => {
     const nodes = [node2D('N', {}, { children: [label('L')] })];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
-    expect(result.current.tree[0]!.skippedAncestors!.material).toEqual({ kind: 'none' });
+    expect(inheritedAtRoot(result.current.tree[0]!).material).toEqual({ kind: 'none' });
   });
 
   it('a Control that is never promoted (no skipped ancestor) carries no ancestor transform', async () => {
     const { result } = renderHook(() => useBuildSolveTree([control('C')], [], []));
-    expect(result.current.tree[0]!.skippedAncestors).toBeNull();
+    expect(result.current.tree[0]!.skippedTransform).toBeNull();
   });
 });
 
@@ -912,7 +933,7 @@ describe('useBuildSolveTree — `parent_visible_in_tree` follows the SCENE tree,
     ];
     const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
     const floating = result.current.tree.find((n) => n.path === 'Root/N/Floating')!;
-    expect(floating.skippedAncestors).toBeNull();
+    expect(floating.skippedTransform).toBeNull();
     expect(floating.parentVisibleInTree).toBe(false);
   });
 
@@ -1011,7 +1032,7 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
 
     const { result } = renderHook(() => useBuildSolveTree([root], [], []));
     expect(result.current.tree.map((n) => n.path)).toEqual(['Root', 'Root/Anchor/Floating']);
-    expect(result.current.tree[1]!.skippedAncestors).toBeNull();
+    expect(result.current.tree[1]!.skippedTransform).toBeNull();
   });
 
   it('stops the hoist at the enclosing CanvasLayer, whose canvas the item actually parents to', () => {
@@ -1042,7 +1063,7 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
 
     const { result } = renderHook(() => useBuildSolveTree([root], [], []));
     expect(result.current.tree.map((n) => n.path)).toEqual(['Root', 'Root/Holder/Anchor/Promoted']);
-    expect(result.current.tree[1]!.skippedAncestors!.transform).toEqual({
+    expect(result.current.tree[1]!.skippedTransform!).toEqual({
       a: 1,
       b: 0,
       c: 0,
@@ -2662,7 +2683,7 @@ remote_path = NodePath("../../HolderA")
       await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
-    expect(result.current.tree[0]!.skippedAncestors!.transform.tx).toBeCloseTo(29930, 3);
+    expect(result.current.tree[0]!.skippedTransform!.tx).toBeCloseTo(29930, 3);
   });
 });
 

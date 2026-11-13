@@ -15,10 +15,9 @@ import {
   inheritTextureSampler,
   ROOT_TEXTURE_SAMPLER,
   type AmbientTextureSampler,
-} from '../canvasItemTextureSampler';
+} from '../textureSamplerInheritance';
 import { accumulateCanvasItemZ } from '../lighting2d/canvasItemPlacement';
 import { canvasItemFieldsOf, type CanvasItemNodeFields } from './canvasItemFields';
-import { NO_PARENT_MATERIAL, type CanvasAncestorMaterial } from './canvasAncestors';
 import { NOTHING_WRITTEN, writtenChildVisibility } from './writtenVisibility';
 import { clipsChildren } from '../canvasPaintOrder';
 import { isCanvasLayerType } from '../canvasItemClass';
@@ -57,8 +56,16 @@ export interface CanvasItemPassResult {
   readonly inherited: InheritedCanvasItemState;
 }
 
+/**
+ * The material a `use_parent_material` child takes: one an item names, in the scope of the node
+ * that names it, or none.
+ */
+export type CanvasAncestorMaterial = { kind: 'own'; ref: string; resources: SceneScope } | { kind: 'none' };
+
+const NO_PARENT_MATERIAL: CanvasAncestorMaterial = { kind: 'none' };
+
 /** What a chain start inherits: white, z 0, the root sampler, no material and no clip owner. */
-const CHAIN_START: InheritedCanvasItemState = {
+export const CHAIN_START: InheritedCanvasItemState = {
   modulate: WHITE_MODULATE,
   zFinal: 0,
   material: NO_PARENT_MATERIAL,
@@ -106,7 +113,7 @@ export const canvasItemPass: LiveScenePass<CanvasItemPassResult> = (tree) => {
     }
     // `get_parent_item` returns null for a `top_level` item (`canvas_item.cpp:565-571`).
     const parent = fields.isTopLevel ? null : above.item;
-    const inherited = inheritedState(fields, step.scope, path, parent?.inherited ?? CHAIN_START);
+    const inherited = handedDownState(fields, step.scope, path, parent?.inherited ?? CHAIN_START);
     results.set(path, {
       parent: parent?.path ?? null,
       fields,
@@ -138,7 +145,7 @@ function visibilityHandedDown(
 }
 
 /** What the item at `path` with `fields` hands its children down the chain, below one that hands it `above`. */
-function inheritedState(
+export function handedDownState(
   fields: CanvasItemNodeFields,
   scope: SceneScope,
   path: string,
@@ -154,10 +161,10 @@ function inheritedState(
 }
 
 /** The state one link hands down apart from z and transform, which each fold keeps its own way. */
-export type LinkState = Pick<InheritedCanvasItemState, 'modulate' | 'material' | 'sampler'>;
+type LinkState = Pick<InheritedCanvasItemState, 'modulate' | 'material' | 'sampler'>;
 
 /** What an item with `fields` hands down of `LinkState`, below a link that hands it `above`. */
-export function linkState(fields: CanvasItemNodeFields, scope: SceneScope, above: LinkState): LinkState {
+function linkState(fields: CanvasItemNodeFields, scope: SceneScope, above: LinkState): LinkState {
   return {
     // `renderer_canvas_cull.cpp:326`. `self_modulate` stays on the item's own pixels (`:268`).
     modulate: multiplyModulate(above.modulate, fields.modulate),
