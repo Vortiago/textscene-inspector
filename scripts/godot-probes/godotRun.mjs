@@ -13,6 +13,12 @@ import { godotSpawnPlan } from '../godot-ref/run.mjs';
 /** The only Godot release the probes and showcases compare with: the translator follows its source. */
 const GODOT_VERSION = '4.6.3';
 
+/**
+ * The most output a run may print. Node's default of 1 MiB stops a run that reads the verdict on
+ * twenty thousand shaders, each refusal about 600 bytes of standard error.
+ */
+const OUTPUT_BYTES_AT_MOST = 256 * 1024 * 1024;
+
 /** Frames a main script draws before it reads its viewports: the first frames compile the pipelines. */
 export const FRAMES_BEFORE_READ = 4;
 
@@ -54,6 +60,7 @@ export function runGodotScript(mainScript, files) {
       encoding: 'utf8',
       env: plan.env,
       timeout: plan.timeoutMs,
+      maxBuffer: OUTPUT_BYTES_AT_MOST,
     });
     if (result.error) throw new Error(`run godot: ${result.error.message}`);
     if (result.status !== 0) throw new Error(`godot exited with ${result.status}:\n${result.stderr}`);

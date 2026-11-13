@@ -11,6 +11,7 @@ scripts/compare-docs/vendor/
 # Generated: each generator's `--check` compares its output byte for byte.
 *.generated.ts
 apps/textscene-three-godot-shaders/tests/probes/godot-record.json
+apps/textscene-three-godot-shaders/tests/operators/godot-verdicts.json
 packages/textscene-core/src/r3f/controls/native/text/openSans*.ts
 scripts/compare-docs/*.json
 pnpm-lock.yaml
