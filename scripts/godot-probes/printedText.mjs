@@ -1,0 +1,90 @@
+/**
+ * Godot's check of the printer: each probe the transpiler parses is printed back to shading
+ * language text, and Godot must answer the printed text as it answers the original, with the same
+ * verdict and the same result bits. A rewrite step that prints its tree is then checked by Godot
+ * itself.
+ */
+
+import { createServer } from 'vite';
+import { REPO_ROOT } from '../repoRoot.mjs';
+import { recordEntry } from './record.mjs';
+import { godotRejection } from './rejection.mjs';
+
+const LANGUAGE = '/packages/textscene-core/src/shaders/language/';
+
+/**
+ * The transpiler's printer as a function from text to printed text, or nothing for a text the
+ * front end refuses. Vite compiles the TypeScript sources, since this script runs in plain Node.
+ */
+export async function loadPrinter() {
+  const server = await createServer({
+    root: REPO_ROOT,
+    appType: 'custom',
+    logLevel: 'error',
+    server: { middlewareMode: true, hmr: false },
+    optimizeDeps: { noDiscovery: true, include: [] },
+  });
+  try {
+    const load = (file) => server.ssrLoadModule(`${LANGUAGE}${file}`);
+    const [{ tokenize }, { parse }, { printShader }, { ShadingLanguageError }] = await Promise.all(
+      ['tokenizer.ts', 'parse.ts', 'printer.ts', 'shadingLanguageError.ts'].map(load)
+    );
+    return (source) => {
+      try {
+        return printShader(parse(tokenize(source)));
+      } catch (error) {
+        if (error instanceof ShadingLanguageError) return undefined;
+        throw error;
+      }
+    };
+  } finally {
+    await server.close();
+  }
+}
+
+/**
+ * The printed form of each probe the front end parses, under its own name and with its `original`.
+ * A probe that ends Godot has no tree, since the front end refuses it, so it has no printed form.
+ */
+export function printedProbes(probes, print) {
+  return probes.flatMap((original) => {
+    const printed = original.endsGodot ? undefined : print(original.source);
+    if (printed === undefined) return [];
+    return [{ ...original, name: `printed-${original.name}`, source: printed, original }];
+  });
+}
+
+/**
+ * Each probe whose printed form Godot answers otherwise than the original: another verdict, other
+ * result bits, or another refusal. Both forms have the same inputs, so they answer as many rows. A refusal is compared without its line, since the printed text
+ * puts each statement on a line of its own. `pixels` holds both forms' pixels and `rejections`
+ * both forms' reasons, by name.
+ */
+export function printedTextFaults(printedForms, { pixels }, rejections) {
+  const answer = (probe) => {
+    const { results, rejected } = recordEntry(probe, pixels.get(probe.name), rejections.get(probe.name));
+    return (results ?? [{ stage: rejected.stage, message: rejected.message }]).map((row) =>
+      JSON.stringify(row)
+    );
+  };
+  return printedForms.flatMap((printed) => {
+    const [actual, expected] = [answer(printed), answer(printed.original)];
+    const row = actual.findIndex((text, index) => text !== expected[index]);
+    if (row === -1) return [];
+    return [
+      `${printed.original.name}: Godot answers ${actual[row]} to the printed text and ${expected[row]} to the original, input row ${row}\n  printed: ${printed.source}`,
+    ];
+  });
+}
+
+/**
+ * Godot's reason for a printed text it draws nothing for. Godot may draw nothing and name no
+ * error, as for `b * a = b`: that is the printer's fault, so the run reports it beside the others.
+ */
+export function printedRejection(printed) {
+  try {
+    return godotRejection(printed);
+  } catch (error) {
+    return { stage: 'no reason', message: error.message.split('\n')[0] };
+  }
+}

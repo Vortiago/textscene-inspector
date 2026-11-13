@@ -32,6 +32,10 @@ function knownDifferenceRows(knownDifferences) {
   );
 }
 
+const PRINTER_SECTION = `## The printer against Godot
+
+The printer writes a parsed tree back as shading language text. \`pnpm godot:probes\` prints the tree of each probe, random program and known-difference case that the transpiler parses, and runs each printed text in Godot beside its original. Godot must give the same verdict and the same result bits to both, or the same refusal at any line. A rewrite step that prints its tree is then checked by Godot itself. A probe the front end refuses has no tree, and a probe that ends Godot is refused by the front end.`;
+
 function runnerDependentRows(runnerDependent) {
   return runnerDependent.map(
     (result) =>
@@ -132,6 +136,8 @@ ${operatorSection(operators.cases, operators.record)}
 ${randomSection(random)}
 
 ${runnerSection(random.runnerDependent)}
+
+${PRINTER_SECTION}
 
 ${corpusSection(corpus)}
 `;

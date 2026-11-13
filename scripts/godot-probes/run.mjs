@@ -5,7 +5,9 @@
  * nothing for, and Godot's verdict on each operator case and corpus shader:
  * `pnpm godot:probes [--check]`. `--check` writes nothing and exits 1 when a new run differs from
  * a record. It needs `godot` on the path and `xvfb-run`, and renders on lavapipe as
- * `pnpm ref:godot` does. The CI image has both, so the "Shader package" job runs `--check`.
+ * `pnpm ref:godot` does. The CI image has both, so the "Shader package" job runs `--check`. Each
+ * probe the transpiler parses also runs as its printed text, and the run fails when Godot answers
+ * that text otherwise than the original (`printedText.mjs`).
  * `--keep-stale <dir>` with `--check` copies each stale record and this run's text for it into
  * `<dir>/recorded` and `<dir>/this-run`, so a job can keep both value sets.
  */
@@ -26,6 +28,7 @@ import { REPO_ROOT } from '../repoRoot.mjs';
 import { runProbesInGodot } from './godotProject.mjs';
 import { requireGodotVersion } from './godotRun.mjs';
 import { isDrawn, renderRecord } from './record.mjs';
+import { loadPrinter, printedProbes, printedRejection, printedTextFaults } from './printedText.mjs';
 import { godotRejection } from './rejection.mjs';
 import { godotVerdicts, renderVerdictRecord } from './shaderVerdicts.mjs';
 
@@ -57,7 +60,9 @@ function verdictRecords(...sets) {
  */
 function rejections(probes, { pixels }) {
   const rejected = probes.filter((probe) => probe.endsGodot || !isDrawn(probe, pixels.get(probe.name)));
-  return new Map(rejected.map((probe) => [probe.name, endingRejection(probe)]));
+  return new Map(
+    rejected.map((probe) => [probe.name, probe.original ? printedRejection(probe) : endingRejection(probe)])
+  );
 }
 
 /** Godot's reason for `probe`, which must be a crash exactly when the probe says it ends Godot. */
@@ -70,9 +75,10 @@ function endingRejection(probe) {
   return rejection;
 }
 
-function main() {
+async function main() {
   const randomProbes = recordedRandomProbes(RANDOM_PROGRAMS);
-  const probes = [...PROBES, ...randomProbes];
+  const printed = printedProbes([...PROBES, ...randomProbes], await loadPrinter());
+  const probes = [...PROBES, ...randomProbes, ...printed];
   const output = runProbesInGodot(probes.filter((probe) => !probe.endsGodot));
   const reasons = rejections(probes, output);
   const [operatorRecord, corpusRecord] = verdictRecords(
@@ -85,12 +91,23 @@ function main() {
     [OPERATOR_RECORD, operatorRecord],
     [CORPUS_RECORD, corpusRecord],
   ];
-  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders`;
+  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders, ${printed.length} printed texts`;
   const options = { tool: 'godot-probes', summary };
-  if (!process.argv.includes('--check')) return writeGenerated(outputs, options);
+  if (process.argv.includes('--check')) check(outputs, options);
+  else writeGenerated(outputs, options);
+  failOnPrintedText(printedTextFaults(printed, output, reasons));
+}
+
+function check(outputs, options) {
   checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });
   const keepDir = optionValue('--keep-stale');
   if (keepDir) keepStaleRecords(outputs, keepDir);
+}
+
+/** Fails the run on each probe whose printed text Godot answers otherwise than the original. */
+function failOnPrintedText(faults) {
+  for (const fault of faults) console.error(`[godot-probes] ${fault}`);
+  if (faults.length > 0) process.exitCode = 1;
 }
 
 /** The value after `name` on the command line, or nothing. */
@@ -120,5 +137,5 @@ function writeInto(path, text) {
 
 // `pathToFileURL`, not a `file://` template: on Windows `process.argv[1]` is a `C:\...` path.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  main();
+  await main();
 }

@@ -42,6 +42,10 @@ lavapipe compiles each shader for the CPU it runs on. The probe job prints the C
 | --- | --- | --- | --- |
 | `mul-mat3-mat3`, `random-1847-186` | [the job](https://github.com/Vortiago/textscene-inspector/actions/runs/43521363803/job/132217524982) | Godot gave other bits on one runner (3.5 minutes against about 1). The rerun on another runner and 3 local runs equal the record. | #1823, decision with Atle |
 
+## The printer against Godot
+
+The printer writes a parsed tree back as shading language text. `pnpm godot:probes` prints the tree of each probe, random program and known-difference case that the transpiler parses, and runs each printed text in Godot beside its original. Godot must give the same verdict and the same result bits to both, or the same refusal at any line. A rewrite step that prints its tree is then checked by Godot itself. A probe the front end refuses has no tree, and a probe that ends Godot is refused by the front end.
+
 ## A corpus of real shaders against Godot
 
 The instruction count says how much of the language is transpiled, not how many real shaders transpile: one open row stops a whole shader. The corpus holds whole shaders of all five types, each with its source and licence (`tests/corpus/corpus.json`, `tests/corpus/NOTICE.md`): the text Godot's material generators write over a sweep of their flags, the shaders of Godot's demo projects and documentation, this repository's fixtures, and one shader made by one change to each of them. `pnpm shaders:corpus` collects them, and `pnpm godot:probes` records Godot's verdict on each: accepted, or Godot's message and line.
