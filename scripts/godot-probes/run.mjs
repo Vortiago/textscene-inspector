@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
  * Runs every probe and the fixed-seed random programs in Godot 4.6.3 and writes Godot's answers
- * to the checked-in records, with Godot's verdict on each operator case: `pnpm godot:probes
+ * to the checked-in records, with Godot's verdict on each operator case and corpus shader: `pnpm godot:probes
  * [--check]`. `--check` writes nothing and exits 1 when a new run differs from a record. It needs `godot` on the path and `xvfb-run`, and renders on lavapipe as
  * `pnpm ref:godot` does. The CI image has both, so the "Shader package" job runs `--check`.
  */
 
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
 import { OPERATOR_CASES } from '../../apps/textscene-three-godot-shaders/tests/operators/operatorCases.mjs';
 import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
 import { RANDOM_PROGRAMS } from '../../apps/textscene-three-godot-shaders/tests/random/randomSet.mjs';
@@ -22,13 +23,15 @@ const TESTS = join(REPO_ROOT, 'apps/textscene-three-godot-shaders/tests');
 const RECORD = join(TESTS, 'probes/godot-record.json');
 const OPERATOR_RECORD = join(TESTS, 'operators/godot-verdicts.json');
 const RANDOM_RECORD = join(TESTS, 'random/godot-record.json');
+const CORPUS_RECORD = join(TESTS, 'corpus/godot-verdicts.json');
 
-function operatorRecord() {
-  const { godot, verdicts } = godotVerdicts(OPERATOR_CASES.map((test) => test.godotText));
+/** The record of Godot's verdict on each of `cases`, `{ id, text }`. */
+function verdictRecord(cases) {
+  const { godot, verdicts } = godotVerdicts(cases.map((each) => each.text));
   requireGodotVersion(godot);
   return renderVerdictRecord(
     godot,
-    OPERATOR_CASES.map((test) => test.id),
+    cases.map((each) => each.id),
     verdicts
   );
 }
@@ -38,9 +41,10 @@ function main() {
   const outputs = [
     [RECORD, renderRecord(output, PROBES)],
     [RANDOM_RECORD, renderRecord(output, RANDOM_PROGRAMS)],
-    [OPERATOR_RECORD, operatorRecord()],
+    [OPERATOR_RECORD, verdictRecord(OPERATOR_CASES.map(({ id, godotText }) => ({ id, text: godotText })))],
+    [CORPUS_RECORD, verdictRecord(CORPUS)],
   ];
-  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${OPERATOR_CASES.length} operator cases`;
+  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders`;
   const options = { tool: 'godot-probes', summary };
   if (process.argv.includes('--check')) checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });
   else writeGenerated(outputs, options);

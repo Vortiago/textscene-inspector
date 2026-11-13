@@ -73,6 +73,7 @@
     "test:renderer-consumer": "node scripts/renderer-consumer/run.mjs",
     "test:shaders:gpu": "node apps/textscene-three-godot-shaders/tests/integration/run.mjs",
     "test:shaders:e2e": "node apps/textscene-three-godot-shaders/tests/e2e/run.mjs",
+    "shaders:corpus": "node apps/textscene-three-godot-shaders/tests/corpus/collect/collect.mjs",
     "test:shaders:random": "node apps/textscene-three-godot-shaders/tests/random/run.mjs",
     "test:gpu": "node scripts/sky-layers-gpu/skyLayersGate.mjs && node scripts/sky-coords-gpu/skyCoordsGate.mjs && node scripts/decal-gpu/decalGate.mjs && node scripts/showcase/rasteriserGate.mjs",
     "clean": "pnpm -r clean && rimraf node_modules",
