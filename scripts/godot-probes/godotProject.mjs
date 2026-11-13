@@ -4,7 +4,13 @@
  * the run, so its test needs no engine.
  */
 
-import { FRAMES_BEFORE_READ, printedField, printedImages } from './godotRun.mjs';
+import {
+  FRAMES_BEFORE_READ,
+  printedField,
+  printedImages,
+  requireGodotVersion,
+  runGodotScript,
+} from './godotRun.mjs';
 import { parameterBits, probeShader, probeWidth } from './probeShader.mjs';
 
 /** The prefix of each output line that carries a probe's pixels. */
@@ -76,4 +82,11 @@ function pixelBits(bytes) {
   if (bytes.length % 4 !== 0) throw new Error(`expected whole RGBA8 pixels, got ${bytes.length} bytes`);
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.length);
   return Array.from({ length: bytes.length / 4 }, (_, pixel) => view.getUint32(pixel * 4, true));
+}
+
+/** Godot's answers to `probes` from one run of the pinned release: its version, adapter and pixels. */
+export function runProbesInGodot(probes) {
+  const output = parseProbeOutput(runGodotScript(MAIN_SCRIPT, probeProjectFiles(probes)));
+  requireGodotVersion(output.godot);
+  return output;
 }
