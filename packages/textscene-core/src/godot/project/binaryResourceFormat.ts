@@ -12,7 +12,7 @@ export const COMPRESSED_BINARY_RESOURCE_MAGIC = 'RSCC';
 const BINARY_RESOURCE_EXTENSION = '.res';
 
 /** A PackedScene's own binary extension (`packed_scene.h:246`). */
-export const BINARY_SCENE_EXTENSION = '.scn';
+const BINARY_SCENE_EXTENSION = '.scn';
 
 /**
  * The extensions a binary resource takes, dotted: `.res`, and each class's own

@@ -1,7 +1,8 @@
 /** Builds the `texture` slot of a test atlas source. */
 
 import type { TscnInternalResource } from '../../../parser/types';
-import { referenceHeldBy, type ScopedReference } from '../../reading';
+import type { ScopedReference } from '../../reading';
+import { referenceIn } from '../../reading/scopedReference.testkit';
 
 /** A source's `texture` slot naming `ref` in a scene with `internalResources` and no external table. */
 export function tileTextureAt(
@@ -9,5 +10,5 @@ export function tileTextureAt(
   internalResources: readonly TscnInternalResource[] = [],
   isHeldLocally = true
 ): ScopedReference {
-  return referenceHeldBy(ref, { externalResources: [], internalResources }, isHeldLocally);
+  return referenceIn(ref, [], internalResources, isHeldLocally);
 }

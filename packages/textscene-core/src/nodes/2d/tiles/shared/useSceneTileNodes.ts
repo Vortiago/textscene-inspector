@@ -168,8 +168,8 @@ const instanceNodesOf = perObject((scope: SceneScope) =>
   perObject((scene: SceneFile) => instanceNode(scene, scope))
 );
 
-/** The instance of the scene file the tile names, which the reading module resolved in the file that holds its source. */
-function instanceNode(scene: SceneFile, ambient: SceneScope): LiveNode {
+/** The instance of the scene file a tile names. The reading module resolved the file. */
+function instanceNode(scene: SceneFile, scope: SceneScope): LiveNode {
   return {
     name: INSTANCE_NAME,
     type: 'Node',
@@ -178,7 +178,7 @@ function instanceNode(scene: SceneFile, ambient: SceneScope): LiveNode {
     properties: { name: INSTANCE_NAME, parent: '.', instance: scene.path },
     rawProperties: {},
     instance: scene.path,
-    scope: ambient,
+    scope,
   };
 }
 

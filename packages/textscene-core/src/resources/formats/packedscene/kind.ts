@@ -1,10 +1,11 @@
 /**
  * The `PACKED_SCENE` kind: a property that takes a PackedScene, as the address of the scene file.
- * A scene file is no resource file the reading module parses, so it arrives as an imported file,
- * and a file of another format is no PackedScene. No THREE.
+ * A text or binary scene is no resource file the reading module parses, so it arrives as an
+ * imported file. A PackedScene saved as a `.res` is a resource file, which records its class.
+ * No THREE.
  */
 
-import { BINARY_SCENE_EXTENSION } from '../../../godot/project/binaryResourceFormat';
+import { isBinaryScenePath } from '../../../godot/project/binaryResourceFormat';
 import { fileExtension } from '../../fileExtension';
 import { IMPORTED_FILE, type ResourceKind } from '../../reading';
 
@@ -14,11 +15,12 @@ export interface SceneFile {
   readonly path: string;
 }
 
-const SCENE_EXTENSIONS: ReadonlySet<string | null> = new Set(['.tscn', BINARY_SCENE_EXTENSION]);
-
 export const PACKED_SCENE: ResourceKind<SceneFile> = {
   name: 'PackedScene',
-  accepts: (type) => type === IMPORTED_FILE,
-  decode: ({ address }) =>
-    address && SCENE_EXTENSIONS.has(fileExtension(address)) ? { path: address } : null,
+  accepts: (type) => type === IMPORTED_FILE || type === 'PackedScene',
+  decode: ({ type, address }) => (address && isScenePath(address, type) ? { path: address } : null),
 };
+
+function isScenePath(path: string, type: string): boolean {
+  return fileExtension(path) === '.tscn' || isBinaryScenePath(path, type);
+}

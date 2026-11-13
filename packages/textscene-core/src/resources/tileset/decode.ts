@@ -22,34 +22,6 @@ import type { Rgba } from '../../godot/math/math.js';
 import type { Vector2 } from '../../godot/math/vector.js';
 import type { EnumValue } from '../../godot/classdb/enumNames.js';
 
-/**
- * `TileSet::_set` gates the source id on `components[1].is_valid_int()`
- * (tile_set.cpp:3961), which skips ONE leading sign (ustring.cpp:4752), so
- * `sources/+3` is source 3. The id is `to_int()` stored in an `int` (:3963).
- */
-const SOURCE_KEY_RE = indexedKeyRegex('^sources/(#)$', 'is_valid_int');
-
-/** Each `sources/<n>` of a TileSet with the id it adds, in the order `_set` adds them. */
-export function writtenSources(
-  properties: Readonly<Record<string, string>>
-): { key: string; id: number; ref: string }[] {
-  const sources: { key: string; id: number; ref: string }[] = [];
-  for (const [key, ref] of Object.entries(properties)) {
-    const match = SOURCE_KEY_RE.exec(key);
-    if (!match) continue;
-    const id = stringToInt(match[1]!);
-    // `add_source` re-seats -1 at the auto-assigned `next_source_id` (tile_set.cpp:481)
-    // and refuses anything below (:479). The landing id depends on every other
-    // source, so the source is dropped, not misplaced.
-    if (id < 0) {
-      warn(`[TileSet] source ${key}: Godot re-assigns a negative source id, skipped`);
-      continue;
-    }
-    sources.push({ key, id, ref });
-  }
-  return sources;
-}
-
 /** The grid of a TileSet from its properties. */
 export function decodeTileGrid(properties: Readonly<Record<string, string>>): TileGrid {
   const shape = intEnumOr(properties.tile_shape, TileShape.TILE_SHAPE_SQUARE, 'tile_shape');
@@ -89,16 +61,12 @@ type TileMaterialResolver = (ref: string) => TileMaterial | null;
 const PLAIN_MATERIAL: TileMaterial = { properties: null };
 
 /**
- * One `TileMaterial` per resource the source names, so two tiles share a material exactly when
- * Godot's loader hands both one `Ref` (`resource_format_text.cpp:113-114` for a SubResource, `:142-144`
- * through the resource cache for an ExtResource). A reference that names nothing loads as null.
+ * The material a tile's `material` names. The reading module keeps one answer for each resource, so
+ * tiles that name one resource share one object, as Godot's loader hands both one `Ref`
+ * (`resource_format_text.cpp:113-114`, `:142-144`). A reference that names nothing loads as null.
  */
 function tileMaterialResolver(follow: Follow): TileMaterialResolver {
-  const byReference = new Map<string, TileMaterial | null>();
-  return (ref) => {
-    if (!byReference.has(ref)) byReference.set(ref, materialOf(follow.read(CANVAS_ITEM_MATERIAL, ref), ref));
-    return byReference.get(ref)!;
-  };
+  return (ref) => materialOf(follow.read(CANVAS_ITEM_MATERIAL, ref), ref);
 }
 
 function materialOf(read: Read<TileMaterial>, ref: string): TileMaterial | null {
@@ -116,7 +84,7 @@ export function decodeAtlasSource(
   properties: Readonly<Record<string, string>>,
   follow: Follow
 ): AtlasSourceModel {
-  const tiles = resolveTiles(properties, tileMaterialResolver(follow));
+  const hasRoom = hasRoomAtLoad(properties.texture, follow);
   return {
     texture: properties.texture ? follow.reference(properties.texture) : null,
     margins: tileSetVec2i(properties.margins, { x: 0, y: 0 }, 'margins'),
@@ -124,7 +92,7 @@ export function decodeAtlasSource(
     textureRegionSize: tileSetVec2i(properties.texture_region_size, { x: 16, y: 16 }, 'texture_region_size'),
     // On unless the file says `false` (`tile_set.h:673`).
     usesTexturePadding: boolSlotValue(properties.use_texture_padding) !== false,
-    tiles: hasRoomAtLoad(properties.texture, follow) ? tiles : new Map(),
+    tiles: hasRoom ? resolveTiles(properties, tileMaterialResolver(follow)) : new Map(),
   };
 }
 
