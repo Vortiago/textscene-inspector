@@ -1,6 +1,7 @@
 ; Every Control whose items the default theme table holds, at theme scale 1: Button states and
 ; variations, the check family, OptionButton, MenuButton, LinkButton, ColorPickerButton, MenuBar and
-; the Label variations.
+; the Label variations. The one variable is the type: each Control reads its boxes, colours and
+; constants from the table alone. Other Control scenes set Theme items or draw one type each.
 
 [gd_scene format=3 uid="uid://unitdefthemegallery"]
 

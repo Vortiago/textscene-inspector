@@ -1,5 +1,7 @@
-; The Controls of unit-default-theme-gallery.tscn at theme scale 1.5, where each margin, corner and
-; spacing of the default theme rounds from the scaled value.
+; The Controls of unit-default-theme-gallery.tscn at `gui/theme/default_theme_scale` 1.5, the one
+; variable. Each margin, corner and spacing of the default theme rounds from the scaled value. The
+; other two theme-scale scenes hold no Button, MenuButton, MenuBar, LinkButton or ColorPickerButton,
+; so neither draws the flat boxes that move at this scale.
 
 [gd_scene format=3 uid="uid://unitdefthemegallery15"]
 

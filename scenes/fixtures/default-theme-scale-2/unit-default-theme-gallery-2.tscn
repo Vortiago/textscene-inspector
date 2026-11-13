@@ -1,4 +1,7 @@
-; The Controls of unit-default-theme-gallery.tscn at theme scale 2.
+; The Controls of unit-default-theme-gallery.tscn at `gui/theme/default_theme_scale` 2, the one
+; variable. A whole scale doubles each length, where 1.5 rounds it. The other two theme-scale scenes
+; hold no Button, MenuButton, MenuBar, LinkButton or ColorPickerButton, so neither draws the flat
+; boxes that move at this scale.
 
 [gd_scene format=3 uid="uid://unitdefthemegallery2"]
 
