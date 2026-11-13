@@ -6,20 +6,11 @@
  */
 
 import * as THREE from 'three';
-import {
-  diffuseColor,
-  float,
-  materialClearcoat,
-  materialClearcoatRoughness,
-  materialEmissive,
-  materialMetalness,
-  materialReference,
-  materialRoughness,
-} from 'three/tsl';
+import { diffuseColor, float, materialReference } from 'three/tsl';
 import { NodeMaterial, type Node } from 'three/webgpu';
 import { GodotLightingModel } from './lightingModel.js';
 import type { LitPipeline } from './litPipeline.js';
-import type { FloatNode } from './nodeTypes.js';
+import type { FloatNode, Vec3Node } from './nodeTypes.js';
 import type { GodotSkyLightingNode } from './skyLightingNode.js';
 import type { SurfaceOutputs } from './surfaceOutputs.js';
 
@@ -68,7 +59,23 @@ export class GodotLitNodeMaterial extends NodeMaterial {
     this.lights = true;
     // Godot's fog is a node of a later slice of the port, and three's fog is not Godot's.
     this.fog = false;
-    this.emissiveNode = materialEmissive.mul(litPipeline.emissionExposure);
+    this.colorNode = this.colourField('color');
+    this.emissiveNode = this.colourField('emissive')
+      .mul(this.floatField('emissiveIntensity'))
+      .mul(litPipeline.emissionExposure);
+  }
+
+  /**
+   * The uniform of this material's float field `name`. three's shared material nodes read the
+   * material it draws at the time, which gives each surface of a mesh with several the same values.
+   */
+  private floatField(name: string): FloatNode {
+    return materialReference(name, 'float', this) as unknown as FloatNode;
+  }
+
+  /** The uniform of this material's colour field `name`, as `floatField` reads a float. */
+  private colourField(name: string): Vec3Node {
+    return materialReference(name, 'color', this) as unknown as Vec3Node;
   }
 
   override customProgramCacheKey(): string {
@@ -88,15 +95,15 @@ export class GodotLitNodeMaterial extends NodeMaterial {
     const { diffuseMode, specularMode, hasClearcoat } = this.program;
     return {
       albedo: diffuseColor.rgb,
-      metallic: materialMetalness,
-      roughness: materialRoughness,
-      specular: materialReference('specular', 'float') as unknown as FloatNode,
+      metallic: this.floatField('metalness'),
+      roughness: this.floatField('roughness'),
+      specular: this.floatField('specular'),
       ao: float(1),
       aoLightAffect: float(0),
       diffuseMode,
       specularMode,
       clearcoat: hasClearcoat
-        ? { amount: materialClearcoat, roughness: materialClearcoatRoughness }
+        ? { amount: this.floatField('clearcoat'), roughness: this.floatField('clearcoatRoughness') }
         : undefined,
     };
   }

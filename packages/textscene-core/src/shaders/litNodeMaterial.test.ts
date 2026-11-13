@@ -156,6 +156,13 @@ describe('GodotLitNodeMaterial', () => {
     expect(litShader(DEFAULT_PROGRAM, sun)).not.toMatch(coatLobe);
   });
 
+  it('reads its colour from itself, so each surface of a mesh with several draws its own', () => {
+    const material = shading().surfaceMaterial(DEFAULT_PROGRAM);
+    const colour = (material as unknown as { colorNode: { material: unknown } }).colorNode;
+
+    expect(colour.material).toBe(material);
+  });
+
   it('gives each light mode a program of its own', () => {
     const material = shading().surfaceMaterial(DEFAULT_PROGRAM);
     const toon = shading().surfaceMaterial({ ...DEFAULT_PROGRAM, diffuseMode: DiffuseMode.DIFFUSE_TOON });
