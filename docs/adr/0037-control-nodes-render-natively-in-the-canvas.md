@@ -236,7 +236,7 @@ rendering technologies cannot share one tree-order draw, whatever the heuristic.
   `ViewportTexture` consumers do not change (ADR-0033's seam holds).
 - The linter bundle is untouched: `index.linter.ts` never imports `Component.tsx`
   (ADR-0001), so this swap is invisible to `apps/textscene-linter`.
-- Non-goals: interactivity (hover/pressed/focus states, click-element→tree selection)
-  stays deferred, as under ADR-0003. bbcode support stays a subset.
+- Non-goals: interactivity stays deferred, as under ADR-0003: the hover, pressed and focus
+  states (#1839) and click-element→tree selection (#1819). bbcode support stays a subset (#1840).
 - The DOM-versus-native choice is hard to reverse (a whole parallel dispatcher, registry
   and rect-solve engine).
