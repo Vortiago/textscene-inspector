@@ -58,4 +58,10 @@ describe('SunShadow', () => {
     expect(shader).toMatch(lookupTurn);
     expect(shadowShader(false)).not.toMatch(lookupTurn);
   });
+
+  it('loads the blocker depth at the rows WebGLRenderer wrote, as the patch reads them', () => {
+    // three turns a load only from a marked texture, in a branch on its flip uniform, so a turn of
+    // the lookup's own would read the colour copy upside down: the soft shadow then found no blocker.
+    expect(shader).not.toMatch(/\( \w+\.y - 1\.0 \) - \w+\.y/);
+  });
 });

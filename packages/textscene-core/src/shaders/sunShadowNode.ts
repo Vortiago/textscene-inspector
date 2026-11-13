@@ -133,15 +133,13 @@ export class SunShadow {
     return texture(this.atlas.depth, this.sampled(uv)).compare(depth) as unknown as FloatNode;
   }
 
-  /** The raw depth of texel `texel`, a whole texel position, from the two bytes the atlas's colour holds it in. */
-  private rawDepthAt(texel: Vec2Node, size: Vec2Node): FloatNode {
-    // The texture node turns the row of a render target it loads, so the row is turned first.
-    const row = this.atlas.rowsFromBottom ? size.y.sub(1).sub(texel.y) : texel.y;
-    const bytes = floor(
-      textureLoad(this.atlas.colour, ivec2(vec2(texel.x, row)))
-        .rg.mul(255)
-        .add(0.5)
-    );
+  /**
+   * The raw depth of texel `texel`, a whole texel position, from the two bytes the atlas's colour
+   * holds it in. The rows stay as WebGLRenderer wrote them: three turns a load only from a texture
+   * marked as a render target's (r187 `TextureNode.js:412-436`), and the colour copy is unmarked.
+   */
+  private rawDepthAt(texel: Vec2Node): FloatNode {
+    const bytes = floor(textureLoad(this.atlas.colour, ivec2(texel)).rg.mul(255).add(0.5));
     return bytes.dot(vec2(256, 1)).div(65535);
   }
 
@@ -157,8 +155,7 @@ export class SunShadow {
     const position = uv.clamp(0, 1).mul(size).sub(0.5).toVar();
     const corner = floor(position).toVar();
     const weight = fract(position).toVar();
-    const texel = (x: number, y: number) =>
-      this.rawDepthAt(corner.add(vec2(x, y)).clamp(vec2(0), last), size);
+    const texel = (x: number, y: number) => this.rawDepthAt(corner.add(vec2(x, y)).clamp(vec2(0), last));
     const bottom = mix(texel(0, 0), texel(1, 0), weight.x);
     const top = mix(texel(0, 1), texel(1, 1), weight.x);
     return mix(bottom, top, weight.y);
