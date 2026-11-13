@@ -898,7 +898,8 @@ function lineMetricsOf(
     }
 
     const metrics = { topPx, ascentPx, descentPx, textAscentPx, textDescentPx };
-    topPx += ascentPx + descentPx + RICH_TEXT_LABEL_LINE_SEPARATION;
+    // `shapeText` carries `line_separation` in its own pitch, so these tops are a bare sum.
+    topPx += ascentPx + descentPx;
     return metrics;
   });
 }

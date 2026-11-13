@@ -3,7 +3,7 @@
  * outside `godot/` that cites `default_theme.cpp` restates a value the table holds, so it names the table
  * entry by type and item instead. The scan reads text: a cite split over two lines escapes it.
  */
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { isProductionSource, walkSources } from '../../../r3f/testing/sourceScan';
 
@@ -31,8 +31,8 @@ function citeLines(source: string): number[] {
 
 const SOURCES = walkSources(
   [SRC_ROOT],
-  (name, path) => isProductionSource(name, path) && !path.startsWith(GODOT_ROOT + '/')
-).map(({ file, source }) => ({ path: relative(SRC_ROOT, file), source }));
+  (name, path) => isProductionSource(name, path) && !path.startsWith(GODOT_ROOT + sep)
+).map(({ file, source }) => ({ path: relative(SRC_ROOT, file).split(sep).join('/'), source }));
 
 describe('default theme cite conformance', () => {
   it('cites default_theme.cpp only inside godot/ and in the allowed files', () => {

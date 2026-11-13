@@ -96,11 +96,19 @@ export function defaultThemeAt(scale: number): DefaultTheme {
 
 /**
  * The table's `<type>/<name>` constant at theme scale 1, for a solver with no node in scope.
+ * Read only a constant Godot never scales: a scaled one is wrong at any other scale.
  * @canonical A default theme constant read outside a solve
  */
 export function defaultConstant(type: string, name: string): number {
-  const value = defaultThemeAt(1).types[type]?.constants[name];
-  if (value === undefined) throw new Error(`expected the default theme to hold the constant ${type}/${name}`);
+  const constants = defaultThemeAt(1).types[type]?.constants;
+  if (constants === undefined)
+    throw new Error(`expected the default theme to hold the type ${type}, found none`);
+  const value = constants[name];
+  if (value === undefined) {
+    throw new Error(
+      `expected ${type} to hold the constant ${name}, found ${Object.keys(constants).join(', ')}`
+    );
+  }
   return value;
 }
 

@@ -130,11 +130,13 @@ describe('defaultConstant', () => {
 
   it('names the type and the constant it misses', () => {
     expect(() => defaultConstant('SpinBox', 'no_such_constant')).toThrow(
-      'expected the default theme to hold the constant SpinBox/no_such_constant'
+      'expected SpinBox to hold the constant no_such_constant, found '
     );
   });
 
   it('throws for a type the table leaves out', () => {
-    expect(() => defaultConstant('Icons', 'anything')).toThrow('Icons/anything');
+    expect(() => defaultConstant('Icons', 'anything')).toThrow(
+      'expected the default theme to hold the type Icons'
+    );
   });
 });
