@@ -47,7 +47,7 @@ import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBid
 
 /**
  * The theme font key of Button and of every class that extends it, `SceneStringName(font)`: each registers
- * it under its own type (`scene/theme/default_theme.cpp:152,237,261,297,337`), and the lookup starts at
+ * it under its own type in the default theme (Button, OptionButton, MenuButton, CheckBox, CheckButton), and the lookup starts at
  * the node's class.
  */
 export const BUTTON_THEME_FONT_KEY = 'font';

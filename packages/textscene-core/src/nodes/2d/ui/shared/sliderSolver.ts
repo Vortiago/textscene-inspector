@@ -146,7 +146,7 @@ export function sliderGrabberAreaRect(
 /**
  * The `grabber` icon box (`slider.cpp:332,363` horizontal, `slider.cpp:299,326` vertical): the
  * top-left where `Texture2D::draw` puts the texture at its natural size. `center_grabber`,
- * `grabber_offset` and `tick_offset` are 0 on both sliders (`default_theme.cpp:594-596,609-611`),
+ * `grabber_offset` and `tick_offset` are 0 on both sliders in the table,
  * so no formula carries them.
  */
 export function sliderGrabberRect(

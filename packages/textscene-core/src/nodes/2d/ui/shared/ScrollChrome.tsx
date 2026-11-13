@@ -20,7 +20,7 @@ import type { ScrollBarBoxes, ScrollBarPlacement, ScrollHintPlacement } from './
 
 /**
  * `scroll_hint_vertical_color` and `scroll_hint_horizontal_color`: `Color(0, 0, 0)`
- * (`default_theme.cpp:669-670`), set as the hint's `modulate`
+ * in the table, set as the hint's `modulate`
  * (`scroll_container.cpp:622,631,640,650`). Only the texture's alpha ramp shows.
  */
 export const SCROLL_HINT_MODULATE = new THREE.Color(0, 0, 0);

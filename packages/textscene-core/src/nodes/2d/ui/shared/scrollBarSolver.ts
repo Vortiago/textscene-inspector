@@ -40,7 +40,7 @@ function grabberMinAlong(vertical: boolean, boxes: ScrollBarBoxes): number {
 /**
  * `ScrollBar::get_minimum_size` (`scroll_bar.cpp:519-548`) with every icon and padding term at 0.
  * The default theme sets all six `increment`/`decrement` icons to an empty `ImageTexture` on both
- * bars (`default_theme.cpp:557-562,572-577`), so `native/themeIcons.ts` vendors none.
+ * bars, so `native/themeIcons.ts` vendors none.
  */
 export function scrollBarMinimumSize(vertical: boolean, boxes: ScrollBarBoxes): Vector2 {
   const track = contentMarginSize(boxes.scroll);
@@ -157,8 +157,8 @@ export function scrollBarTrackRect(size: Vector2): Rect2 {
 
 /**
  * The `grabber` StyleBox rect (`scroll_bar.cpp:326-344`). `padding_*` is 0 (`scroll_bar.h`'s `ThemeCache`,
- * no `default_theme.cpp` override, per-node override not modelled), and `style_h_scrollbar`/
- * `style_v_scrollbar` pad only the cross axis (`default_theme.cpp:543-544`), so the grabber starts
+ * not in the table, per-node override not modelled), and the table's `scroll`
+ * StyleBoxes pad only the cross axis, so the grabber starts
  * at its offset and spans the bar across.
  */
 export function scrollBarGrabberRect(

@@ -22,70 +22,8 @@ interface MeasuredTheme {
   types: Record<string, MeasuredType>;
 }
 
-/** The types the table holds. A type joins this list when its Controls read the table (ADR-0073). */
-const MIGRATED_TYPES = [
-  'AcceptDialog',
-  'BoxContainer',
-  'Button',
-  'CheckBox',
-  'CheckButton',
-  'CodeEdit',
-  'ColorPicker',
-  'ColorPickerButton',
-  'ColorPresetButton',
-  'FileDialog',
-  'FlatButton',
-  'FlatMenuButton',
-  'FlowContainer',
-  'FoldableContainer',
-  'GraphEdit',
-  'GraphEditMinimap',
-  'GraphFrame',
-  'GraphFrameTitleLabel',
-  'GraphNode',
-  'GraphNodeTitleLabel',
-  'GridContainer',
-  'HBoxContainer',
-  'HFlowContainer',
-  'HScrollBar',
-  'HSeparator',
-  'HSlider',
-  'HSplitContainer',
-  'HeaderLarge',
-  'HeaderMedium',
-  'HeaderSmall',
-  'ItemList',
-  'Label',
-  'LineEdit',
-  'LinkButton',
-  'MarginContainer',
-  'MenuBar',
-  'MenuButton',
-  'OptionButton',
-  'Panel',
-  'PanelContainer',
-  'PopupDialog',
-  'PopupMenu',
-  'PopupPanel',
-  'ProgressBar',
-  'RichTextLabel',
-  'ScrollContainer',
-  'SpinBox',
-  'SplitContainer',
-  'TabBar',
-  'TabContainer',
-  'TextEdit',
-  'TooltipLabel',
-  'TooltipPanel',
-  'Tree',
-  'VBoxContainer',
-  'VFlowContainer',
-  'VScrollBar',
-  'VSeparator',
-  'VSlider',
-  'VSplitContainer',
-  'Window',
-];
+/** A type the table leaves out, such as `Icons`, holds only icons, which the table does not hold. */
+const ICONS_ONLY: DefaultThemeType = { colors: {}, constants: {}, fontSizes: {}, styles: {} };
 
 /** A 32-bit float colour channel holds about seven digits. */
 const COLOUR_DIGITS = 6;
@@ -137,13 +75,12 @@ function expectSameItems(table: DefaultThemeType, godot: MeasuredType): void {
 describe.each(themes)('defaultThemeAt(%s)', (_scale, godot) => {
   const table = defaultThemeAt(godot.scale);
 
-  it.each(MIGRATED_TYPES)('holds every item of %s as Godot does', (type) => {
-    expect(table.types[type]).toBeDefined();
-    expectSameItems(table.types[type]!, godot.types[type]!);
+  it.each(Object.keys(godot.types))('holds every item of %s as Godot does', (type) => {
+    expectSameItems(table.types[type] ?? ICONS_ONLY, godot.types[type]!);
   });
 
-  it('holds no type that the list of migrated types lacks', () => {
-    expect(Object.keys(table.types).sort()).toEqual([...MIGRATED_TYPES].sort());
+  it('holds no type that the capture lacks', () => {
+    expect(Object.keys(table.types).filter((type) => !(type in godot.types))).toEqual([]);
   });
 
   it('scales default_font_size as Godot does', () => {

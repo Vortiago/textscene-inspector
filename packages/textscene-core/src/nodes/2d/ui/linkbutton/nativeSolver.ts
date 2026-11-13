@@ -1,7 +1,7 @@
 /**
  * LinkButton's native rect solver, draw state and underline math: `LinkButton::get_minimum_size` and
- * `_notification` (`scene/gui/link_button.cpp`), with the defaults `scene/theme/default_theme.cpp:196-210`
- * registers for "LinkButton". It has no StyleBox but `focus`, which a static preview never draws, so
+ * `_notification` (`scene/gui/link_button.cpp`), with the table's `LinkButton`
+ * items as defaults. It has no StyleBox but `focus`, which a static preview never draws, so
  * `Component.tsx` draws only text and an underline stroke.
  *
  * Portions ported from Godot Engine (MIT).
@@ -32,7 +32,7 @@ import type { LinkButtonProperties } from './types';
 import { LinkButtonUnderlineMode } from '../../../../godot/scene/gui';
 import { FALLBACK_THEME_COLOR } from '../../../../godot/scene/theme';
 
-/** `SceneStringName(font)`, registered for "LinkButton" at `default_theme.cpp:200`. */
+/** `SceneStringName(font)`, which the default theme registers under LinkButton. */
 export const LINKBUTTON_THEME_FONT_KEY = 'font';
 
 // Draw state
@@ -63,7 +63,7 @@ export function linkButtonTextTheme(
   state: LinkButtonDrawState
 ): ResolvedTextTheme {
   // The default theme table answers `font_color` and `font_pressed_color`. No theme sets LinkButton a
-  // `font_disabled_color` (`default_theme.cpp:196-210`), so the fallback theme answers it.
+  // `font_disabled_color` (the table's `LinkButton` colours), so the fallback theme answers it.
   const defaultColor = state === 'disabled' ? FALLBACK_THEME_COLOR : undefined;
   return resolveTextTheme(n, props, LINKBUTTON_THEME_KEYS[state], defaultColor);
 }

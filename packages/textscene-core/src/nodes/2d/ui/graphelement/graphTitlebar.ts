@@ -39,7 +39,7 @@ interface TitlebarFontTheme {
   fontMetrics: FontMetrics;
   /** `title_label`'s `normal` box: the Theme chain's, else Label's empty one. */
   box: ResolvedStyleBox;
-  /** `title_label`'s `line_spacing`, which each title variation scales its own way (`default_theme.cpp:822-826,852-856`). */
+  /** `title_label`'s `line_spacing`, which each title variation scales its own way (the table's `GraphNodeTitleLabel` and `GraphFrameTitleLabel`). */
   lineSpacingPx: number;
 }
 
@@ -48,7 +48,7 @@ interface TitlebarFontTheme {
  * `n`: its parent `titlebar_hbox` carries no `theme`, so `n.themeChain` is
  * `title_label`'s chain. `theme_override_fonts/*` is local to `n` and never
  * inherited, so `title_label`, which can author no override, passes `undefined`.
- * The colour falls back to the variation's own (`default_theme.cpp:819,849`).
+ * The colour falls back to the variation's own `font_color` in the table.
  */
 export function resolveTitleFontTheme(n: SolveNode, typeVariation: string): TitlebarFontTheme {
   const scope = themeResolutionScope(TITLE_LABEL_NATIVE_TYPE, typeVariation, n.themeChain, n.projectFonts);

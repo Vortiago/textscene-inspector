@@ -43,7 +43,7 @@ import type { Rgba } from '../../../../godot/math/math';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
-/** `SceneStringName(font)` = `"font"`: `default_theme.cpp:460` (TextEdit), `:501` (CodeEdit). */
+/** `SceneStringName(font)` = `"font"`, which the default theme registers under TextEdit and CodeEdit. */
 export const TEXT_EDIT_THEME_FONT_KEY = 'font';
 
 /** `line_spacing`, the gap each row adds under its text (`text_edit.cpp:4104`). */

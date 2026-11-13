@@ -94,8 +94,8 @@ const TAB_CONTAINER_FONT_SIZE_KEY = 'font_size';
 
 /**
  * The internal TabBar's theme constants, per `_on_theme_changed` (`tab_container.cpp:341-343`):
- * `h_separation` comes from TabContainer's `icon_separation` (`default_theme.cpp:1020`), and
- * `icon_max_width` forwards from the table (`:1021`). The table sets no `tab_separation` for
+ * `h_separation` comes from TabContainer's `icon_separation`, and
+ * `icon_max_width` forwards from the table. The table sets no `tab_separation` for
  * TabContainer, so it falls back to 0.
  */
 function internalTabBarThemeConstants(constants: SolveNode['constants']): SolveNode['constants'] {
@@ -176,7 +176,7 @@ interface StyleMargins {
   bottom: number;
 }
 
-/** `theme_cache.tabbar_style->get_margin(...)` (`default_theme.cpp:994`). */
+/** `theme_cache.tabbar_style->get_margin(...)`, the table's `TabContainer/tabbar_background`. */
 export function tabbarStyleMargins(styleBoxes: SolveNode['styleBoxes']): StyleMargins {
   return requiredThemeItem(styleBoxes, 'tabbar_background').contentMargin;
 }

@@ -328,7 +328,7 @@ export function resolveSplitSeparation(
 /**
  * `SplitContainer::_get_grabber_icon` (`split_container.cpp:281-292`): the `is_fixed` types
  * (HSplitContainer, VSplitContainer) register `"grabber"`, and the base `SplitContainer` only
- * `"h_grabber"`/`"v_grabber"` (`default_theme.cpp:1240-1247`). `nativeType` is the live node's
+ * `"h_grabber"`/`"v_grabber"` in the default theme. `nativeType` is the live node's
  * class, the key the walker's theme-chain lookup used for `SolveNode.icons`/`textureSlots`.
  */
 export function splitGrabberThemeKey(nativeType: string, vertical: boolean): string {
@@ -469,11 +469,11 @@ export function isSplitGrabberVisible(
   constants: SolveNode['constants']
 ): boolean {
   const draggerVisibility = props.draggerVisibility ?? DRAGGER_VISIBLE;
-  // `autohide` is 1 on all three split types (`default_theme.cpp:1264-1266`), so an unthemed
+  // The table's `autohide` is 1 on all three split types, so an unthemed
   // grabber is invisible. `pnpm ref:godot` reads the backdrop colour in the gap, never the grabber's grey.
   const autohide = requiredThemeItem(constants, 'autohide') !== 0;
   // A collapsed container hides the dragger (`dragger->set_visible(!collapsed)`, `:726`), so no
-  // draw runs. `split_bar_background` is an empty stylebox (`default_theme.cpp:1275-1277`).
+  // draw runs. The table's `split_bar_background` is an empty StyleBox.
   return props.collapsed !== true && draggerVisibility === DRAGGER_VISIBLE && !autohide;
 }
 
