@@ -1,7 +1,7 @@
 /**
  * What a y-sort needs from the Control walk and gives back to it. A Control sorts on the origin of
  * its canvas item (`control.cpp:719-736`), which only the rect solve knows, so
- * {@link controlTransformsOf} reads it off the solve, and {@link drawnPaintsOf} moves the paint
+ * {@link controlTransformsOf} reads it off the solve, and {@link forestInCanvasSort} moves the paint
  * `buildSolveTree` gave in tree order to the runs the sort gave.
  * Pure data: no React, no THREE.
  */
@@ -10,9 +10,15 @@ import { VECTOR2_ZERO } from '../../../godot/math/vector';
 import { transform2DFromParts } from '../../../godot/math/transform2d';
 import { joinPath, relativeTo } from '../../../utils/nodePath';
 import { ysortsChildren, type PaintRange } from '../../canvasPaintOrder';
-import type { ControlTransforms } from '../../contexts/YSortContext';
+import type { ControlTransforms, SortedRunsValue } from '../../contexts/YSortContext';
 import type { CanvasItemPaint } from '../../canvasItemPass/canvasItemPaint';
-import { NO_SORT_INPUTS, sortedPaintOf, ySortedPaint, type SortItem } from '../../canvasItemPass/ySort';
+import {
+  mergedSorters,
+  NO_SORT_INPUTS,
+  sortedPaintOf,
+  ySortedPaint,
+  type SortItem,
+} from '../../canvasItemPass/ySort';
 import type { SolvedControl } from './controlRectSolver';
 import { controlDrawTransformOf, controlItemOriginUnder } from './controlPixelSnap';
 import { controlProps, type SolveNode } from './solveTree';
@@ -62,31 +68,58 @@ export function transformsAtLivePaths(livePath: string, transforms: ControlTrans
   return new Map([...transforms].map(([path, transform]) => [joinPath(livePath, path), transform]));
 }
 
-/**
- * Each Control's paint as the walk draws it, by the forest's own path. `runs` holds the run of each
- * sorted entry by live path: the one sort of the canvas, which holds the forest's nodes once they are
- * in the shared live tree.
- */
-export function drawnPaintsOf(
+/** How the walk draws a forest after the y-sort of its canvas, by the forest's own paths. */
+export interface ForestSort {
+  /** Each Control's paint as the walk draws it. */
+  readonly paints: ReadonlyMap<string, CanvasItemPaint>;
+  /** The Controls that hand their children the clip they took (`mergedSorters`). */
+  readonly mergedSorters: ReadonlySet<string>;
+}
+
+/** The forest drawn at the runs of the one sort of its canvas, which the shared live tree gives by live path. */
+export function forestInCanvasSort(
   tree: readonly SolveNode[],
   livePath: string,
-  runs: ReadonlyMap<string, PaintRange>
-): ReadonlyMap<string, CanvasItemPaint> {
+  canvas: Pick<SortedRunsValue, 'runs' | 'mergedSorters'>
+): ForestSort {
   const paints = forestPaintsOf(tree);
-  const own = runsOfForest(livePath, runs, paints);
-  const drawn = new Map<string, CanvasItemPaint>();
-  for (const [path, paint] of paints) drawn.set(path, sortedPaintOf(path, paint, own, paints));
-  return drawn;
+  const runs = new Map<string, PaintRange>();
+  for (const [path, run] of canvas.runs) {
+    const own = forestPathOf(livePath, path, paints);
+    if (own !== null) runs.set(own, run);
+  }
+  const merged = [...canvas.mergedSorters].map((path) => forestPathOf(livePath, path, paints));
+  return {
+    paints: drawnPaints(paints, runs),
+    mergedSorters: new Set(merged.filter((path) => path !== null)),
+  };
 }
 
 /**
- * The y-sort of a forest the shared live tree does not hold, a Control-only viewport or an unowned
- * scene-tile root: the one sort over the forest's own Controls, on the origins the solve gave them.
+ * The forest drawn at the runs of its own sort, for a forest the shared live tree does not hold: a
+ * Control-only viewport or an unowned scene-tile root. The one sort runs over the forest's Controls,
+ * on the origins the solve gave them.
  */
-export function forestSortedRuns(
-  tree: readonly SolveNode[],
-  origins: ControlTransforms
-): ReadonlyMap<string, PaintRange> {
+export function forestInOwnSort(tree: readonly SolveNode[], origins: ControlTransforms): ForestSort {
+  const items = forestSortItemsOf(tree);
+  const paints = forestPaintsOf(tree);
+  return {
+    paints: drawnPaints(paints, ySortedPaint(items, paints, { ...NO_SORT_INPUTS, origins })),
+    mergedSorters: mergedSorters(items),
+  };
+}
+
+function drawnPaints(
+  paints: ReadonlyMap<string, CanvasItemPaint>,
+  runs: ReadonlyMap<string, PaintRange>
+): ReadonlyMap<string, CanvasItemPaint> {
+  const drawn = new Map<string, CanvasItemPaint>();
+  for (const [path, paint] of paints) drawn.set(path, sortedPaintOf(path, paint, runs, paints));
+  return drawn;
+}
+
+/** What the sort reads of each Control of the forest, its parent the Control above it. */
+function forestSortItemsOf(tree: readonly SolveNode[]): ReadonlyMap<string, SortItem> {
   const items = new Map<string, SortItem>();
   const visit = (node: SolveNode, parent: string | null): void => {
     const props = controlProps(node);
@@ -98,7 +131,7 @@ export function forestSortedRuns(
     node.children.forEach((child) => visit(child, node.path));
   };
   tree.forEach((root) => visit(root, null));
-  return ySortedPaint(items, forestPaintsOf(tree), { ...NO_SORT_INPUTS, origins });
+  return items;
 }
 
 /** Whether the shared live tree holds the forest's nodes, so the canvas's one sort covers them. */
@@ -122,17 +155,12 @@ function forestPaintsOf(tree: readonly SolveNode[]): ReadonlyMap<string, CanvasI
   return paints;
 }
 
-/** The runs of the forest's nodes, keyed by the forest's own paths. */
-function runsOfForest(
+/** The forest's own path of the node at live path `path`, or null for a node outside the forest. */
+function forestPathOf(
   livePath: string,
-  runs: ReadonlyMap<string, PaintRange>,
+  path: string,
   paints: ReadonlyMap<string, CanvasItemPaint>
-): ReadonlyMap<string, PaintRange> {
-  if (livePath === '') return runs;
-  const own = new Map<string, PaintRange>();
-  for (const [path, run] of runs) {
-    const relative = relativeTo(livePath, path);
-    if (relative && paints.has(relative)) own.set(relative, run);
-  }
-  return own;
+): string | null {
+  const own = livePath === '' ? path : relativeTo(livePath, path);
+  return own && paints.has(own) ? own : null;
 }

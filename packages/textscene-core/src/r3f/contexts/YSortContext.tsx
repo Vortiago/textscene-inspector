@@ -10,6 +10,7 @@ import type { PaintRange } from '../canvasPaintOrder.js';
 import { canvasItemPass } from '../canvasItemPass/canvasItemPass.js';
 import { canvasPaintPass, type CanvasItemPaint } from '../canvasItemPass/canvasItemPaint.js';
 import {
+  mergedSorters,
   sortedPaintOf,
   ySortedPaint,
   type ExtraSortItems,
@@ -47,11 +48,18 @@ interface Publishers {
 const TransformsContext = createContext<ControlTransforms>(NO_TRANSFORMS);
 const LocalTransformsContext = createContext<ControlLocalTransforms>(NO_TRANSFORMS);
 /** The sorted runs and the tree-order paint they move, for {@link sortedPaintOf}. */
-interface SortedRunsValue {
+export interface SortedRunsValue {
   readonly runs: ReadonlyMap<string, PaintRange>;
   readonly paints: ReadonlyMap<string, CanvasItemPaint>;
+  /** The items whose children are entries of an outer sort (`mergedSorters`), by live path. */
+  readonly mergedSorters: ReadonlySet<string>;
 }
-const SortedRunsContext = createContext<SortedRunsValue>({ runs: NO_RUNS, paints: NO_PAINTS });
+const NO_PATHS: ReadonlySet<string> = new Set();
+const SortedRunsContext = createContext<SortedRunsValue>({
+  runs: NO_RUNS,
+  paints: NO_PAINTS,
+  mergedSorters: NO_PATHS,
+});
 const PublishersContext = createContext<Publishers | null>(null);
 TransformsContext.displayName = 'ControlTransformsContext';
 LocalTransformsContext.displayName = 'ControlLocalTransformsContext';
@@ -71,6 +79,8 @@ function sameEntries<T>(
   return true;
 }
 
+const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>) =>
+  a.size === b.size && [...a].every((path) => b.has(path));
 const sameRun = (a: PaintRange, b: PaintRange) => a.base === b.base && a.size === b.size;
 const sameExtras = (a: readonly ExtraSortItem[], b: readonly ExtraSortItem[]) =>
   a.length === b.length &&
@@ -132,13 +142,18 @@ function SortedRuns({ inputs, children }: { inputs: SortInputs; children: ReactN
   const { origins, extras, liveYs } = inputs;
   const results = useLiveScenePassSelection(canvasItemPass, wholeResults, Object.is);
   const paints = useLiveScenePassSelection(canvasPaintPass, wholeResults, Object.is);
-  const held = useRef<SortedRunsValue>({ runs: NO_RUNS, paints: NO_PAINTS });
+  const held = useRef<SortedRunsValue>({ runs: NO_RUNS, paints: NO_PAINTS, mergedSorters: NO_PATHS });
   const sorted = useMemo(() => {
     if (!results || !paints) return held.current;
     const runs = ySortedPaint(results, paints, { origins, extras, liveYs });
     // An unchanged sort keeps its identity, so a pose that moves no entry past another re-renders no item.
-    if (held.current.paints === paints && sameEntries(held.current.runs, runs, sameRun)) return held.current;
-    held.current = { runs, paints };
+    const merged = mergedSorters(results);
+    const isUnchanged =
+      held.current.paints === paints &&
+      sameEntries(held.current.runs, runs, sameRun) &&
+      sameSet(held.current.mergedSorters, merged);
+    if (isUnchanged) return held.current;
+    held.current = { runs, paints, mergedSorters: merged };
     return held.current;
   }, [results, paints, origins, extras, liveYs]);
   return <SortedRunsContext.Provider value={sorted}>{children}</SortedRunsContext.Provider>;

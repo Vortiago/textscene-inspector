@@ -84,6 +84,20 @@ export function ySortedPaint(
   return runs;
 }
 
+/**
+ * The items that sort their children inside an outer sort, whose children are entries of that sort.
+ * Godot culls each entry with the clip of the sort root (`p_canvas_clip`, `renderer_canvas_cull.cpp:458`),
+ * so such an item hands its children the clip it took, never a clip of its own.
+ */
+export function mergedSorters(results: ReadonlyMap<string, SortItem>): ReadonlySet<string> {
+  const merged = new Set<string>();
+  for (const [path, result] of results) {
+    const parent = result.parent === null ? undefined : results.get(result.parent);
+    if (result.fields.ySortEnabled && parent?.fields.ySortEnabled) merged.add(path);
+  }
+  return merged;
+}
+
 /** `SortArray` with `ItemYSort` is unstable, but `ysort_index` breaks every tie in collection order. */
 function sortedEntries(entries: readonly SortEntry[]): SortEntry[] {
   return entries
