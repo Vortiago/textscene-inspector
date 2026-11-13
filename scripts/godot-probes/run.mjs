@@ -6,9 +6,12 @@
  * `pnpm godot:probes [--check]`. `--check` writes nothing and exits 1 when a new run differs from
  * a record. It needs `godot` on the path and `xvfb-run`, and renders on lavapipe as
  * `pnpm ref:godot` does. The CI image has both, so the "Shader package" job runs `--check`.
+ * `--keep-stale <dir>` with `--check` copies each stale record and this run's text for it into
+ * `<dir>/recorded` and `<dir>/this-run`, so a job can keep both value sets.
  */
 
-import { join } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
 import { OPERATOR_CASES } from '../../apps/textscene-three-godot-shaders/tests/operators/operatorCases.mjs';
@@ -84,8 +87,35 @@ function main() {
   ];
   const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders`;
   const options = { tool: 'godot-probes', summary };
-  if (process.argv.includes('--check')) checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });
-  else writeGenerated(outputs, options);
+  if (!process.argv.includes('--check')) return writeGenerated(outputs, options);
+  checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });
+  const keepDir = optionValue('--keep-stale');
+  if (keepDir) keepStaleRecords(outputs, keepDir);
+}
+
+/** The value after `name` on the command line, or nothing. */
+function optionValue(name) {
+  const index = process.argv.indexOf(name);
+  return index === -1 ? undefined : process.argv[index + 1];
+}
+
+/**
+ * Copies each record this run disagrees with, and this run's text for it, under `dir`. A record
+ * that went stale on one runner only is lost with the runner unless a job keeps both.
+ */
+function keepStaleRecords(outputs, dir) {
+  for (const [path, text] of outputs) {
+    const recorded = readFileSync(path, 'utf8');
+    if (recorded === text) continue;
+    const inRepo = relative(REPO_ROOT, path);
+    writeInto(join(dir, 'recorded', inRepo), recorded);
+    writeInto(join(dir, 'this-run', inRepo), text);
+  }
+}
+
+function writeInto(path, text) {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, text);
 }
 
 // `pathToFileURL`, not a `file://` template: on Windows `process.argv[1]` is a `C:\...` path.

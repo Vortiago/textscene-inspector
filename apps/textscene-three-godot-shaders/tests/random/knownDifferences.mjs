@@ -191,3 +191,18 @@ export const KNOWN_PROGRAMS = new Set(
     .map((known) => known.program)
     .filter((program) => program !== undefined)
 );
+
+/**
+ * Records that went stale on one CI runner only, each with the run that showed it. Godot's bits
+ * changed and the transpilation was not compared, so these are no fixed cases: the "Shader
+ * package" job prints the CPU and the driver on every run and keeps both value sets on a stale
+ * record, and an entry stays until a second driver or a second runner answers its cause.
+ */
+export const RUNNER_DEPENDENT_RESULTS = [
+  {
+    probes: ['mul-mat3-mat3', 'random-1847-186'],
+    run: 'https://github.com/Vortiago/textscene-inspector/actions/runs/43521363803/job/132217524982',
+    seen: 'Godot gave other bits on one runner (3.5 minutes against about 1). The rerun on another runner and 3 local runs equal the record.',
+    owner: '#1823, decision with Atle',
+  },
+];

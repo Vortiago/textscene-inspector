@@ -34,6 +34,14 @@ The fixed set has seed 1847: 901 programs, one rooted at each of the 733 transpi
 
 `pnpm test:shaders:random --seed <n> --count <n>` runs more programs with another seed against a live Godot, for a developer. No pipeline runs it.
 
+## Results that depend on the runner
+
+lavapipe compiles each shader for the CPU it runs on. The probe job prints the CPU model, its vector flags and the Mesa and LLVM packages on every run. When `pnpm godot:probes --check` finds a stale record, the job keeps the recorded and the new values as the `stale-probe-values` artifact.
+
+| Probes | Run | What changed | Owner |
+| --- | --- | --- | --- |
+| `mul-mat3-mat3`, `random-1847-186` | [the job](https://github.com/Vortiago/textscene-inspector/actions/runs/43521363803/job/132217524982) | Godot gave other bits on one runner (3.5 minutes against about 1). The rerun on another runner and 3 local runs equal the record. | #1823, decision with Atle |
+
 ## A corpus of real shaders against Godot
 
 The instruction count says how much of the language is transpiled, not how many real shaders transpile: one open row stops a whole shader. The corpus holds whole shaders of all five types, each with its source and licence (`tests/corpus/corpus.json`, `tests/corpus/NOTICE.md`): the text Godot's material generators write over a sweep of their flags, the shaders of Godot's demo projects and documentation, this repository's fixtures, and one shader made by one change to each of them. `pnpm shaders:corpus` collects them, and `pnpm godot:probes` records Godot's verdict on each: accepted, or Godot's message and line.

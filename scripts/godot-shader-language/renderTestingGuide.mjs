@@ -32,6 +32,23 @@ function knownDifferenceRows(knownDifferences) {
   );
 }
 
+function runnerDependentRows(runnerDependent) {
+  return runnerDependent.map(
+    (result) =>
+      `| ${result.probes.map((name) => `\`${name}\``).join(', ')} | [the job](${result.run}) | ${cell(result.seen)} | ${result.owner} |`
+  );
+}
+
+function runnerSection(runnerDependent) {
+  return `## Results that depend on the runner
+
+lavapipe compiles each shader for the CPU it runs on. The probe job prints the CPU model, its vector flags and the Mesa and LLVM packages on every run. When \`pnpm godot:probes --check\` finds a stale record, the job keeps the recorded and the new values as the \`stale-probe-values\` artifact.
+
+| Probes | Run | What changed | Owner |
+| --- | --- | --- | --- |
+${runnerDependentRows(runnerDependent).join('\n')}`;
+}
+
 function randomSection({ programs, seed, transpiledRows, knownDifferences }) {
   const cases = Object.keys(knownDifferences).length;
   const known = Object.values(knownDifferences).filter((each) => each.program !== undefined).length;
@@ -113,6 +130,8 @@ A probe checks one instruction on a table of inputs. Three more tests check what
 ${operatorSection(operators.cases, operators.record)}
 
 ${randomSection(random)}
+
+${runnerSection(random.runnerDependent)}
 
 ${corpusSection(corpus)}
 `;

@@ -206,7 +206,21 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - run: pnpm godot:shader-language --check
-      - run: pnpm godot:probes --check
+      # lavapipe compiles each shader for the runner's CPU. One runner once gave other Godot bits
+      # for two probes, so every run prints the CPU, its vector flags and the driver's packages.
+      - name: Print the CPU and the driver
+        run: |
+          grep -m1 'model name' /proc/cpuinfo
+          grep -m1 '^flags' /proc/cpuinfo | grep -o -w 'avx512f\|avx2\|fma\|sse4_2' | sort -u | tr '\n' ' '
+          echo
+          dpkg-query -W mesa-vulkan-drivers mesa-libgallium 'libllvm*'
+      - run: pnpm godot:probes --check --keep-stale probe-values
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: stale-probe-values
+          path: probe-values/
+          if-no-files-found: ignore
       - run: pnpm test:shaders:gpu
       - run: pnpm test:shaders:e2e
 
