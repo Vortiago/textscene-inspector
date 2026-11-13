@@ -6,11 +6,8 @@
 
 import { atlasTextureSize } from '../atlastexture/decode';
 import { savedImageSize } from '../image/decode';
-import type { Texture2DSize } from '../../texture2DSize';
+import { NO_AREA, type Texture2DSize } from '../../texture2DSize';
 import type { Texture2D } from './types';
-
-/** `ViewportTexture::get_size` while no viewport is set (`viewport.cpp:150-166`). */
-const NO_AREA: Texture2DSize = { x: 0, y: 0 };
 
 /** Null for a texture only its image file sizes, which the loader imports. */
 export function texture2DSizeAtLoad(texture: Texture2D): Texture2DSize | null {

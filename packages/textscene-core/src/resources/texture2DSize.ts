@@ -34,7 +34,7 @@ export interface ViewportTextureSizing {
 const BEFORE_SETUP: ViewportTextureSizing = { isHeldLocally: false, viewportSize: () => null };
 
 /** `ViewportTexture::get_size` while no viewport is set (`viewport.cpp:150-166`). */
-const NO_AREA: Texture2DSize = { x: 0, y: 0 };
+export const NO_AREA: Texture2DSize = { x: 0, y: 0 };
 
 /**
  * The pixel size of a Texture2D slot that the scene states. Null for a form only the loader can
