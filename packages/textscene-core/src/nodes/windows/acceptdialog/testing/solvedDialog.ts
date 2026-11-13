@@ -35,12 +35,12 @@ function placeVisible(
   return [{ control: root, rect }, ...root.children.flatMap((child) => placeVisible(child, solved, rect))];
 }
 
-/** Solves `dialog` at `size` with a fresh context, since a context memoises minimum sizes by path. */
-/** The built OK and Cancel buttons, in row order. The spacers between them are plain Controls. */
+/** Whether a child of the button row is a built OK or Cancel button. The spacers are plain Controls. */
 function isButton(child: SolveNode): boolean {
   return child.node.type === 'Button';
 }
 
+/** Solves `dialog` at `size` with a fresh context, since a context memoises minimum sizes by path. */
 export function solvedDialog(dialog: SolveNode, size: Vector2, theme: NativeTheme): SolvedDialog {
   const solved = solveControlTree(
     [dialog],
