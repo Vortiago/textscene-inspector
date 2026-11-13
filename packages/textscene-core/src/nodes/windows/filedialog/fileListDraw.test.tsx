@@ -1,19 +1,23 @@
-/** The dialog's painter draws a row for each entry the file list holds, with its label, in the list the dialog solves. */
+/** The walker draws a row for each entry the file list holds, with its label, in the list the dialog solves. */
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { heading } from '../../../parser/testing/parserKit';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
-import { painterEnv } from '../../../r3f/controls/native/testing/painterProps';
+import { ControlCanvasWalker } from '../../../r3f/controls/native/ControlCanvasWalker';
 import { solveNode, withThemeItems } from '../../../r3f/controls/native/testing/solveNode';
 import { bundledRuns } from '../../../r3f/controls/native/testing/bundledRunStub';
 import { measureText } from '../../../r3f/controls/native/text/measurer';
 import '../../../parser/TscnParser';
 import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
-import { DialogChrome } from '../acceptdialog/DialogChrome';
 import { parseFileDialog } from './parser';
 import { resolveFileDialog } from './resolve';
+
+// The walker reads `gui/common/snap_controls_to_pixels` off the project settings.
+vi.mock('../../../r3f/contexts/ProjectSettingsContext', () => ({
+  useProjectSettings: () => ({ settings: null, viewportSize: { width: 1152, height: 648 }, themeScale: 1 }),
+}));
 
 // A run of the bundled face is a stub that carries its props, so no test decodes the font.
 vi.mock('../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
@@ -42,12 +46,12 @@ async function labelCount(entries: typeof ENTRIES) {
   const window = withThemeItems({ ...solveNode(), path: 'Dialog', node });
   const size = wrappedWindowSize(window, THEME, measureText, EMBEDDER);
   const renderer = await ReactThreeTestRenderer.create(
-    <DialogChrome
-      {...painterEnv()}
-      measureText={measureText}
-      solveNode={window}
-      rect={{ x: 0, y: 0, w: size.x, h: size.y }}
-      renderOrder={0}
+    <ControlCanvasWalker
+      tree={[window]}
+      generation={0}
+      viewport={{ x: 0, y: 0, w: size.x, h: size.y }}
+      theme={THEME}
+      measurer={measureText}
     />
   );
   return bundledRuns(renderer.scene).length;

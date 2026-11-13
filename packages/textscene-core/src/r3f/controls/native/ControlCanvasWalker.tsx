@@ -15,6 +15,8 @@ import type { TextMeasurer } from './solverRegistry';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
 import { controlComponentRegistry } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
+import { internalControlsOf } from './internalControls';
+import { InternalControlGroup, internalControlSlots } from './InternalControlGroup';
 import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useTextureSamplerOver } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
@@ -333,6 +335,26 @@ function ControlItemGroup({
     return out;
   }, [solveNode.children, solved]);
 
+  const internals = internalControlsOf(solveNode, theme);
+  const internalSlots = useMemo(
+    () => internalControlSlots(internals, slot, chromeSlot),
+    [internals, slot, chromeSlot]
+  );
+  // The parent's tint, which #1486 replaces with what a child item inherits.
+  const internalEnv = useMemo(
+    () => ({ theme, measureText, snapToPixels, tint, childTint: tint.internalChild }),
+    [theme, measureText, snapToPixels, tint]
+  );
+  const internalElements = internals.map(({ node }) => (
+    <InternalControlGroup
+      key={node.path}
+      node={node}
+      solved={solved}
+      slots={internalSlots}
+      env={internalEnv}
+    />
+  ));
+
   // A canvas boundary such as `CanvasLayer` wraps its descendants in fresh
   // context, so they must be its React children. The registration declares it,
   // so a second such type adds no branch here.
@@ -358,6 +380,7 @@ function ControlItemGroup({
       >
         {wrapsChildren ? <ClipMaskProvider value={null}>{childElements}</ClipMaskProvider> : undefined}
       </Painter>
+      {internalElements}
     </NodePathProvider>
   );
   // The leaf meshes of a painter read the lit pixel material through context. A CanvasLayer is no

@@ -588,8 +588,12 @@ _Avoid_: "viewport container" for the concept. "render target" for the surface.
 A visible Window, Popup or PopupPanel that a viewport draws on its own canvas instead of the system's. The window's Controls draw into its target as a **sub-viewport**'s do, rooted at the window itself (ADR-0033).
 _Avoid_: "dialog" for the base case. "native window", which Godot draws through the system.
 
+**Internal Control** (`r3f/controls/native/internalControls.ts`):
+A Control a class's constructor `memnew`s and adds with `INTERNAL_MODE_FRONT` or `INTERNAL_MODE_BACK`, which no scene serialises, such as a dialog's message label and button row. The class declares a spec tree once. The one rect solve places it and **ControlCanvasWalker** paints it. Its path is `parent/@Name`, and it has no live node.
+_Avoid_: "synthetic Control", "fake node". A second solve or walker in a painter.
+
 **Dialog body** (`nodes/windows/filedialog/body.ts`):
-The Controls a dialog's constructor `memnew`s above its button row, which no scene serialises, such as a FileDialog's `main_vbox`. They are synthetic `SolveNode`s in the dialog's scope, solved by the Control solver and painted by `DialogChrome`.
+The **Internal Control** a dialog class builds in the content rect beside its message label, such as a FileDialog's `main_vbox`.
 _Avoid_: "dialog content", which is the rect that authored children fill.
 
 **Embedder**:

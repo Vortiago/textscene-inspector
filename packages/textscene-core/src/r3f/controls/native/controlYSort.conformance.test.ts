@@ -28,7 +28,6 @@ const FIELD_KINDS: Record<keyof SolveNode, FieldKind> = {
   locale: 'other',
   styleBoxes: 'other',
   textureSize: 'other',
-  syntheticDraw: 'other',
   textureSlots: 'other',
   hidden: 'other',
   fontOverrides: 'other',
