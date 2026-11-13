@@ -29,6 +29,14 @@ describe('treeFault', () => {
     expect(treeFault(tree)).toMatch(/return of vec3 in a function of vec2/);
   });
 
+  it('finds a node with no line and column of its text', () => {
+    const tree = withReturn(treeOf('float f(float a) { return a; }'), (value) => ({
+      ...value,
+      position: { file: '', line: 0, column: 0 },
+    }));
+    expect(treeFault(tree)).toMatch(/a variable at no line and column/);
+  });
+
   it('finds a name that is no argument', () => {
     const tree = withReturn(
       treeOf('float f(float a) { return a; }'),

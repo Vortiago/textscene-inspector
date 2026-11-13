@@ -1,7 +1,7 @@
 /**
  * The tree check: the facts every tree the parser gives must hold, so a parser change that breaks
- * one fails a test. Every node has a value type, every row fits its operand types, every name is
- * an argument of its function, and every constant lane fits its type.
+ * one fails a test. Every node has a value type and a line and column, every row fits its operand
+ * types, every name is an argument of its function, and every constant lane fits its type.
  */
 
 import { assignmentRefusal } from './assignment.js';
@@ -48,6 +48,8 @@ function statementFault(statement: Statement, definition: FunctionNode): string 
 
 function expressionFault(expression: Expression, args: readonly Argument[]): string | undefined {
   if (shapeOf(expression.type) === undefined) return `a ${expression.kind} of type ${expression.type}`;
+  const { line, column } = expression.position;
+  if (!(line >= 1 && column >= 1)) return `a ${expression.kind} at no line and column`;
   switch (expression.kind) {
     case 'constant':
       return constantFault(expression);
