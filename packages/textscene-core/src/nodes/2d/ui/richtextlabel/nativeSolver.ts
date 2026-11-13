@@ -18,7 +18,7 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultConstant } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import {
   clampAutowrapMode,
   shapeText,
@@ -180,10 +180,7 @@ function resolveImageDimension(amount: number, inPercent: boolean, boxWidthPx: n
 const RULE_TEXTURE_SIZE_PX: Vector2 = { x: 2, y: 2 };
 
 /** The table's `RichTextLabel/line_separation`, which the layout reads in place of Label's `line_spacing`. */
-const RICH_TEXT_LABEL_LINE_SEPARATION = requiredThemeItem(
-  defaultThemeAt(1).types.RichTextLabel!.constants,
-  'line_separation'
-);
+const RICH_TEXT_LABEL_LINE_SEPARATION = defaultConstant('RichTextLabel', 'line_separation');
 
 /** `add_hr` makes an `ItemImage` of the `horizontal_rule` icon, centred on the text (`:4180-4184`). */
 const RULE_ALIGNMENT: ParsedImageAlignment = { imagePoint: 'center', textPoint: 'center' };
@@ -901,8 +898,7 @@ function lineMetricsOf(
     }
 
     const metrics = { topPx, ascentPx, descentPx, textAscentPx, textDescentPx };
-    // The table's `RichTextLabel/line_separation` is 0, so tops are a bare sum.
-    topPx += ascentPx + descentPx;
+    topPx += ascentPx + descentPx + RICH_TEXT_LABEL_LINE_SEPARATION;
     return metrics;
   });
 }

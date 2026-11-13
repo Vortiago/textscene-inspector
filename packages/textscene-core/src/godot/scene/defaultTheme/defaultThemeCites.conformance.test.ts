@@ -29,9 +29,10 @@ function citeLines(source: string): number[] {
   return source.split('\n').flatMap((line, index) => (line.includes(CITE) ? [index + 1] : []));
 }
 
-const SOURCES = walkSources([SRC_ROOT], isProductionSource)
-  .map(({ file, source }) => ({ path: relative(SRC_ROOT, file), source }))
-  .filter(({ path }) => !join(SRC_ROOT, path).startsWith(GODOT_ROOT + '/'));
+const SOURCES = walkSources(
+  [SRC_ROOT],
+  (name, path) => isProductionSource(name, path) && !path.startsWith(GODOT_ROOT + '/')
+).map(({ file, source }) => ({ path: relative(SRC_ROOT, file), source }));
 
 describe('default theme cite conformance', () => {
   it('cites default_theme.cpp only inside godot/ and in the allowed files', () => {

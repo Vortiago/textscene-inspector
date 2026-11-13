@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import measured from '../defaultTheme.godot.json';
 import type { Rgba } from '../../math/math.js';
-import { defaultThemeAt, type DefaultStyleBox, type DefaultThemeType, type Sides } from './defaultTheme.js';
+import {
+  defaultConstant,
+  defaultThemeAt,
+  type DefaultStyleBox,
+  type DefaultThemeType,
+  type Sides,
+} from './defaultTheme.js';
+import { typeItems } from './typeItems.js';
 import { DEFAULT_THEME_VARIATION_BASES } from './variations.js';
 
 /**
@@ -23,7 +30,7 @@ interface MeasuredTheme {
 }
 
 /** A type the table leaves out, such as `Icons`, holds only icons, which the table does not hold. */
-const ICONS_ONLY: DefaultThemeType = { colors: {}, constants: {}, fontSizes: {}, styles: {} };
+const ICONS_ONLY = typeItems({});
 
 /** A 32-bit float colour channel holds about seven digits. */
 const COLOUR_DIGITS = 6;
@@ -113,5 +120,21 @@ describe('defaultThemeAt', () => {
     expect(() => {
       margin.left = 0;
     }).toThrow(TypeError);
+  });
+});
+
+describe('defaultConstant', () => {
+  it('reads a constant of the table at scale 1', () => {
+    expect(defaultConstant('SpinBox', 'buttons_width')).toBe(16);
+  });
+
+  it('names the type and the constant it misses', () => {
+    expect(() => defaultConstant('SpinBox', 'no_such_constant')).toThrow(
+      'expected the default theme to hold the constant SpinBox/no_such_constant'
+    );
+  });
+
+  it('throws for a type the table leaves out', () => {
+    expect(() => defaultConstant('Icons', 'anything')).toThrow('Icons/anything');
   });
 });

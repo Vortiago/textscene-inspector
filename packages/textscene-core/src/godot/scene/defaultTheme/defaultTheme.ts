@@ -94,6 +94,16 @@ export function defaultThemeAt(scale: number): DefaultTheme {
   return theme;
 }
 
+/**
+ * The table's `<type>/<name>` constant at theme scale 1, for a solver with no node in scope.
+ * @canonical A default theme constant read outside a solve
+ */
+export function defaultConstant(type: string, name: string): number {
+  const value = defaultThemeAt(1).types[type]?.constants[name];
+  if (value === undefined) throw new Error(`expected the default theme to hold the constant ${type}/${name}`);
+  return value;
+}
+
 function buildDefaultTheme(scale: number): DefaultTheme {
   return {
     scale,

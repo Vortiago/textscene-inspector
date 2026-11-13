@@ -29,15 +29,15 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
 }
 
 function container(name: string, props: Partial<ControlProperties>, children: SolveNode[]): SolveNode {
-  const themed = withThemeItems({
+  // A local theme_override_constants/* reaches `marginsOf` through `n.constants`, merged over the
+  // default theme's items as the walker merges them.
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'MarginContainer', { name, ...props }),
     children,
+    constants: props.themeOverrideConstants ?? {},
   });
-  // A local theme_override_constants/* reaches `marginsOf` through `n.constants`, over the default
-  // theme's items, as the walker merges them.
-  return { ...themed, constants: { ...themed.constants, ...props.themeOverrideConstants } };
 }
 
 /** No registered per-type minimum size in these tests: only `custom_minimum_size` floors. */

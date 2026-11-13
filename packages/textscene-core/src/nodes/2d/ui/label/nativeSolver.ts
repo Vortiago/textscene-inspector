@@ -50,7 +50,7 @@ import {
 } from '../../../../godot/text/textServerEnums';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { FALLBACK_THEME_CONSTANT } from '../../../../godot/scene/theme';
-import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultConstant } from '../../../../godot/scene/defaultTheme/defaultTheme';
 
 /** Label reads `theme_override_font_sizes/font_size` and `theme_override_colors/font_color`. */
 const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };
@@ -65,7 +65,7 @@ const LABEL_THEME_FONT_KEY = 'font';
  * The table's `Label/line_spacing` at theme scale 1: the spacing `layoutLabelLines` assumes when its
  * caller passes none. A Label reads its own from `n.constants`.
  */
-const LABEL_LINE_SPACING_PX = requiredThemeItem(defaultThemeAt(1).types.Label!.constants, 'line_spacing');
+const LABEL_LINE_SPACING_PX = defaultConstant('Label', 'line_spacing');
 
 /** Label's `paragraph_spacing`: the default theme sets none, so a lookup ends at the fallback theme. */
 const LABEL_PARAGRAPH_SPACING_PX = FALLBACK_THEME_CONSTANT;
