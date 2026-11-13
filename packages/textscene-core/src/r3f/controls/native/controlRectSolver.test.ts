@@ -9,7 +9,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { parseControl } from '../../../nodes/2d/ui/control/parser';
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { SolveNode } from './solveTree';
-import type { CanvasAncestors } from '../../canvasAncestors';
+import type { CanvasAncestors } from '../../canvasItemPass/canvasAncestors';
 import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn, type SolveContext } from './solverRegistry';
 import { combinedMinimumSize, createSolveContext, solveControlTree } from './controlRectSolver';

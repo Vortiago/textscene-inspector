@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+; Moves one variable: a Polygon2D below a Node2D below a Control with modulate and z_index. The Control
+; hands its modulate and z to the Node2D, so Godot draws the polygon tinted, over the absolute z 1 green
+; polygon: pixel (150, 150) is (128, 128, 255) and pixel (250, 250) is the tinted polygon too.
+
+[node name="Root" type="Control"]
+modulate = Color(0.5, 1, 1, 1)
+z_index = 2
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Mid" type="Node2D" parent="."]
+position = Vector2(100, 100)
+z_index = 1
+modulate = Color(1, 0.5, 1, 1)
+
+[node name="Poly" type="Polygon2D" parent="Mid"]
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 200, 0, 200)
+
+[node name="Over" type="Polygon2D" parent="."]
+position = Vector2(200, 200)
+z_index = 1
+z_as_relative = false
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 200, 0, 200)

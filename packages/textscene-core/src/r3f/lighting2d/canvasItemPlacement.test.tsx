@@ -21,32 +21,32 @@ describe('accumulateCanvasItemZ', () => {
     // Godot 4.6.3, light at range_z_max = 4 over a Node2D at z_index 2: a z_index-1 child
     // (effective 3) is lit, rgb(141, 122, 138), and a z_index-3 child (effective 5) is not,
     // rgb(55, 62, 106).
-    expect(accumulateCanvasItemZ(2, { z_index: 3, z_as_relative: true })).toBe(5);
-    expect(accumulateCanvasItemZ(0, { z_index: 0, z_as_relative: true })).toBe(0);
-    expect(accumulateCanvasItemZ(-4, { z_index: 1, z_as_relative: true })).toBe(-3);
+    expect(accumulateCanvasItemZ(2, { zIndex: 3, zAsRelative: true })).toBe(5);
+    expect(accumulateCanvasItemZ(0, { zIndex: 0, zAsRelative: true })).toBe(0);
+    expect(accumulateCanvasItemZ(-4, { zIndex: 1, zAsRelative: true })).toBe(-3);
   });
 
   it("treats a missing z_as_relative as Godot's default of true", () => {
-    expect(accumulateCanvasItemZ(2, { z_index: 3 })).toBe(5);
+    expect(accumulateCanvasItemZ(2, { zIndex: 3 })).toBe(5);
   });
 
   it('resets to the absolute z_index when z_as_relative is false', () => {
     // On Godot 4.6.3 that z_index-3 child is lit at absolute 3, rgb(138, 120, 137).
-    expect(accumulateCanvasItemZ(2, { z_index: 3, z_as_relative: false })).toBe(3);
-    expect(accumulateCanvasItemZ(4000, { z_index: -2, z_as_relative: false })).toBe(-2);
+    expect(accumulateCanvasItemZ(2, { zIndex: 3, zAsRelative: false })).toBe(3);
+    expect(accumulateCanvasItemZ(4000, { zIndex: -2, zAsRelative: false })).toBe(-2);
   });
 
   it("clamps the accumulation to Godot's canvas-item z range", () => {
     expect(CANVAS_ITEM_Z_MIN).toBe(-4096);
     expect(CANVAS_ITEM_Z_MAX).toBe(4096);
-    expect(accumulateCanvasItemZ(4096, { z_index: 1, z_as_relative: true })).toBe(4096);
-    expect(accumulateCanvasItemZ(-4096, { z_index: -1, z_as_relative: true })).toBe(-4096);
+    expect(accumulateCanvasItemZ(4096, { zIndex: 1, zAsRelative: true })).toBe(4096);
+    expect(accumulateCanvasItemZ(-4096, { zIndex: -1, zAsRelative: true })).toBe(-4096);
   });
 
   it("does NOT clamp an absolute z_index, matching the engine's own asymmetry", () => {
     // Godot clamps only the accumulating branch, and the else branch assigns `ci->z_index`
     // unchanged, in both `_cull_canvas_item` (816-820) and `_collect_ysort_children` (160-166).
-    expect(accumulateCanvasItemZ(0, { z_index: 9000, z_as_relative: false })).toBe(9000);
+    expect(accumulateCanvasItemZ(0, { zIndex: 9000, zAsRelative: false })).toBe(9000);
   });
 });
 
@@ -72,8 +72,8 @@ describe('the y-sort pass and the light cull agree on z', () => {
 
     const items = collectYSortedItems(node, { ...Y_SORT_ROOT, effectiveZ: 2 }, 0);
     expect(items.map((item) => item.effectiveZ)).toEqual([
-      accumulateCanvasItemZ(2, { z_index: 3, z_as_relative: true }),
-      accumulateCanvasItemZ(2, { z_index: 3, z_as_relative: false }),
+      accumulateCanvasItemZ(2, { zIndex: 3, zAsRelative: true }),
+      accumulateCanvasItemZ(2, { zIndex: 3, zAsRelative: false }),
     ]);
     expect(items.map((item) => item.effectiveZ)).toEqual([5, 3]);
   });

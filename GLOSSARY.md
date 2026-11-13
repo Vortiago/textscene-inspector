@@ -492,6 +492,11 @@ What one canvas item draws with and passes down, whatever its node type: its tin
 A Node2D-family item and a Control resolve it the same way, because Godot culls both in one walk.
 _Avoid_: "Control tint", "item context".
 
+**Canvas item pass** (`canvasItemPass`, `r3f/canvasItemPass/`):
+The **Live scene pass** that gives each canvas item its parent item and the **CanvasItem state** it hands its children, by live path, as `_cull_canvas_item` folds it in one walk.
+A chain starts where the parent is no CanvasItem, at a `top_level` item and below a CanvasLayer. The pass holds no solved Control rect: a caller composes it.
+_Avoid_: folding a chain of ancestors by hand. Reading a CanvasItem field outside `canvasItemFieldsOf`.
+
 **Sub-order**:
 A key between a canvas item's key and the next one, for a piece the item draws as an internal child item that the scene tree does not list, such as a scrollbar or a toolbar.
 Each piece owns a slot inside its parent's, so a piece can hand out sub-orders of its own.

@@ -642,6 +642,33 @@ describe('useBuildSolveTree — a promoted Control accumulates its skipped Node2
     expect(result.current.tree[0]!.skippedAncestors).toBeNull();
   });
 
+  it('starts the chain at a `top_level` Node2D, dropping the tinted Node2D above it', async () => {
+    // `get_parent_item()` returns null for a `top_level` item (scene/main/canvas_item.cpp:565-571),
+    // so `_cull_canvas_item` reaches it from the canvas with white and z 0. Godot draws the label
+    // at (50, 60), untinted: zz-prep-1438-control-under-toplevel.tscn, pixel (100, 110).
+    const nodes = [
+      node2D(
+        'Tinted',
+        { position: { x: 300, y: 200 } },
+        {
+          properties: { modulate: { r: 0.2, g: 0.4, b: 0.9, a: 1 }, z_index: 5 },
+          children: [
+            node2D(
+              'Top',
+              { position: { x: 50, y: 60 } },
+              { properties: { top_level: true }, children: [label('L')] }
+            ),
+          ],
+        }
+      ),
+    ];
+    const { result } = renderHook(() => useBuildSolveTree(nodes, [], []));
+    const chain = result.current.tree[0]!.skippedAncestors!;
+    expect(chain.transform).toEqual({ a: 1, b: 0, c: 0, d: 1, tx: 50, ty: 60 });
+    expect(chain.modulate).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+    expect(chain.z).toEqual([{ zIndex: 0, zAsRelative: true }]);
+  });
+
   it('a CanvasLayer under a rotated Node2D gets no ancestor transform, and neither do ITS children', async () => {
     // CanvasLayer derives from Node, so `get_parent_item()` never climbs it: its
     // children parent at `canvas_layer->get_canvas()` (canvas_item.cpp:263-267).
