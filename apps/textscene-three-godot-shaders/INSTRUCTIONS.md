@@ -7,7 +7,7 @@ not edit it by hand.
 A row is translated when a probe names it. The probe's record holds Godot's own answers, and the
 real-GL test checks the translation against them. An open row names the issue that translates it.
 
-68 of 1877 instructions translated.
+68 of 1889 instructions translated.
 
 ## data type
 
@@ -74,8 +74,8 @@ real-GL test checks the translation against them. An open row names the issue th
 
 | Instruction | State | Godot source |
 | --- | --- | --- |
-| `uniform` | open, #1794 | `servers/rendering/shader_language.cpp:335` |
-| `group_uniforms` | open, #1794 | `servers/rendering/shader_language.cpp:336` |
+| `uniform` | open, #1829 | `servers/rendering/shader_language.cpp:335` |
+| `group_uniforms` | open, #1829 | `servers/rendering/shader_language.cpp:336` |
 | `varying` | open, #1794 | `servers/rendering/shader_language.cpp:337` |
 | `const` | open, #1794 | `servers/rendering/shader_language.cpp:338` |
 | `struct` | open, #1794 | `servers/rendering/shader_language.cpp:339` |
@@ -757,6 +757,23 @@ real-GL test checks the translation against them. An open row names the issue th
 | `FLOW_OP_DEFAULT` | open, #1824 | `servers/rendering/shader_language.h:315` |
 | `FLOW_OP_CONTINUE` | open, #1824 | `servers/rendering/shader_language.h:316` |
 | `FLOW_OP_DISCARD` | open, #1824 | `servers/rendering/shader_language.h:317` |
+
+## tree node
+
+| Instruction | State | Godot source |
+| --- | --- | --- |
+| `NODE_TYPE_SHADER` | open, #1794 | `servers/rendering/shader_language.h:373` |
+| `NODE_TYPE_FUNCTION` | open, #1794 | `servers/rendering/shader_language.h:374` |
+| `NODE_TYPE_BLOCK` | open, #1824 | `servers/rendering/shader_language.h:375` |
+| `NODE_TYPE_VARIABLE` | open, #1823 | `servers/rendering/shader_language.h:376` |
+| `NODE_TYPE_VARIABLE_DECLARATION` | open, #1824 | `servers/rendering/shader_language.h:377` |
+| `NODE_TYPE_CONSTANT` | open, #1823 | `servers/rendering/shader_language.h:378` |
+| `NODE_TYPE_OPERATOR` | open, #1823 | `servers/rendering/shader_language.h:379` |
+| `NODE_TYPE_CONTROL_FLOW` | open, #1824 | `servers/rendering/shader_language.h:380` |
+| `NODE_TYPE_MEMBER` | open, #1823 | `servers/rendering/shader_language.h:381` |
+| `NODE_TYPE_ARRAY` | open, #1824 | `servers/rendering/shader_language.h:382` |
+| `NODE_TYPE_ARRAY_CONSTRUCT` | open, #1824 | `servers/rendering/shader_language.h:383` |
+| `NODE_TYPE_STRUCT` | open, #1823 | `servers/rendering/shader_language.h:384` |
 
 ## constructor
 

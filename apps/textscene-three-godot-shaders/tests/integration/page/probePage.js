@@ -6,17 +6,7 @@
 
 import * as THREE from 'three';
 import { NodeMaterial } from 'three/webgpu';
-import {
-  float,
-  int,
-  screenCoordinate,
-  select,
-  uintBitsToFloat,
-  uniformArray,
-  vec2,
-  vec3,
-  vec4,
-} from 'three/tsl';
+import { float, int, screenCoordinate, select, uniformArray, vec2, vec3, vec4 } from 'three/tsl';
 import { installNodesHandler, translateShadingLanguage } from '@textscene/three-godot-shaders';
 
 const LANES = { float: 1, vec2: 2, vec3: 3, vec4: 4 };
@@ -29,13 +19,15 @@ const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
 const scene = new THREE.Scene();
 scene.add(quad);
 
-/** The argument node of parameter `index`, read from its uniform array of bits. */
+/**
+ * The argument node of a parameter, read from a uniform array of the floats of its `bits`. Floats,
+ * not uints: three writes every uniform buffer through a `Float32Array`, so a uint over 2^24
+ * reaches the GPU rounded, while a float keeps its bits, -0 and NaN included.
+ */
 function argument(type, bits, row) {
-  const values = uniformArray(bits, 'uint');
+  const values = uniformArray(Array.from(new Float32Array(new Uint32Array(bits).buffer)), 'float');
   const size = LANES[type];
-  const lanes = Array.from({ length: size }, (_, lane) =>
-    uintBitsToFloat(values.element(row.mul(size).add(lane)))
-  );
+  const lanes = Array.from({ length: size }, (_, lane) => values.element(row.mul(size).add(lane)));
   return size === 1 ? lanes[0] : CONSTRUCT[type](...lanes);
 }
 

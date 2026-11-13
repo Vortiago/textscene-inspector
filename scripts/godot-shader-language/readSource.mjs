@@ -292,6 +292,13 @@ export function instructionRows(sources) {
       family: 'statement',
       source: cite(SOURCE_FILES.header, line),
     })),
+    // The kinds of node of Godot's tree, so a declaration or a block, which no keyword or operator
+    // names, is a row too.
+    ...enumMembers(header, 'Type').map(({ name, line }) => ({
+      id: name,
+      family: 'tree node',
+      source: cite(SOURCE_FILES.header, line),
+    })),
     ...builtinFunctions(language).map((row) => ({
       id: `${row.name}${row.tag === 'TAG_ARRAY' ? '[array]' : ''}(${row.args.map(nameOf).join(',')})`,
       family:

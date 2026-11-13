@@ -4,7 +4,7 @@
  */
 
 /** The fields of a row, in the order each line of the module holds them, tab-separated. */
-const ROW_FIELDS = ['id', 'family', 'source', 'token', 'returns', 'args'];
+const ROW_FIELDS = ['id', 'family', 'source', 'owner', 'token', 'returns', 'args'];
 
 /**
  * The generated module: one row per line, so a diff names the rows that changed. The rows are
@@ -12,7 +12,9 @@ const ROW_FIELDS = ['id', 'family', 'source', 'token', 'returns', 'args'];
  * types (TS2590).
  */
 export function renderTableModule(rows) {
-  const lines = rows.map((row) => ROW_FIELDS.map((field) => fieldText(row[field])).join('\t'));
+  const lines = rows.map((row) =>
+    ROW_FIELDS.map((field) => fieldText(field === 'owner' ? owningIssue(row) : row[field])).join('\t')
+  );
   return `/**
  * The instruction table of Godot 4.6.3's shading language, read from Godot's source.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm godot:shader-language
@@ -24,6 +26,8 @@ export interface InstructionRow {
   readonly family: string;
   /** Godot's \`file:line\` that defines it. */
   readonly source: string;
+  /** The issue that translates it, which an error for an open row names. */
+  readonly owner: string;
   /** Godot's token for a keyword. */
   readonly token?: string;
   readonly returns?: string;
@@ -39,11 +43,12 @@ ${lines.join('\n')}
 \`;
 
 function readRow(line: string): InstructionRow {
-  const [id = '', family = '', source = '', token, returns, args] = line.split('\\t');
+  const [id = '', family = '', source = '', owner = '', token, returns, args] = line.split('\\t');
   return {
     id,
     family,
     source,
+    owner,
     ...(token ? { token } : {}),
     ...(returns ? { returns } : {}),
     ...(args ? { args: args === '()' ? [] : args.slice(1, -1).split(',') } : {}),
@@ -75,6 +80,8 @@ export function owningIssue(row) {
     case 'statement':
     case 'statement keyword':
       return '#1824';
+    case 'tree node':
+      return treeNodeOwner(row);
     case 'qualifier':
       return /^(in|out|inout)$/.test(row.id) ? '#1825' : '#1794';
     case 'function':
@@ -85,6 +92,7 @@ export function owningIssue(row) {
     case 'sampler setting':
       return '#1829';
     case 'shader head':
+      return /^(uniform|group_uniforms)$/.test(row.id) ? '#1829' : '#1794';
     case 'built-in':
     case 'built-in (read only)':
     case 'stage function':
@@ -96,6 +104,13 @@ export function owningIssue(row) {
     default:
       throw new Error(`expected a family with an owning issue, got ${row.family}`);
   }
+}
+
+/** The shader and function nodes are the head's, structs and members the types', the rest the statements'. */
+function treeNodeOwner(row) {
+  if (/^NODE_TYPE_(SHADER|FUNCTION)$/.test(row.id)) return '#1794';
+  if (/^NODE_TYPE_(VARIABLE|CONSTANT|OPERATOR|MEMBER|STRUCT)$/.test(row.id)) return '#1823';
+  return '#1824';
 }
 
 /** Texture functions are #1829's, integer, bit, pack and derivative ones #1827's, the rest #1826's. */

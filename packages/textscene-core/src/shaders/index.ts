@@ -1,6 +1,6 @@
 /**
- * The shader module (ADR-0072): Godot's scene shader as TSL node materials for a three.js
- * `WebGLRenderer`, with no React. `@textscene/three-godot-shaders` publishes this entry, and the
+ * The shader module (ADR-0072, ADR-0076): Godot's shading language translated to TSL nodes for a
+ * three.js `WebGLRenderer`, with no React. `@textscene/three-godot-shaders` publishes this entry, and the
  * renderer bundles it.
  *
  * The rules every file here keeps, as the port adds nodes:
@@ -18,3 +18,6 @@
  */
 
 export { installNodesHandler, type NodeOutput } from './nodesHandler.js';
+export { ShadingLanguageError } from './language/shadingLanguageError.js';
+export { translateShadingLanguage, type TranslatedShader } from './language/translate.js';
+export type { TranslatedFunction } from './language/emitter.js';
