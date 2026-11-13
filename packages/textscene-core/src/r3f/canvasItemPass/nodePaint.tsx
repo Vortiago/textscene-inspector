@@ -113,11 +113,6 @@ export function useRootPaintFrames(roots: readonly TscnNode[]): readonly PaintFr
   }, [hasTree, roots]);
 }
 
-/** The frames of `content`, drawn one after another from `run`, as scene tiles draw after the layer's children. */
-export function contentFrames(run: PaintRange, content: readonly TscnNode[]): PaintFrame[] {
-  return allocatePaintRange(run, content).children.map((range) => runFrame(range));
-}
-
 /** The frame of a subtree outside the shared live tree whose root owns `range`, where `canvasRoots` take theirs. */
 export function runFrame(
   range: PaintRange,

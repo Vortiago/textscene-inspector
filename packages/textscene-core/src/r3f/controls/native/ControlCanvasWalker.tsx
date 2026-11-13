@@ -40,13 +40,12 @@ import {
   controlTransformsOf,
   forestInCanvasSort,
   forestBackPiecesOf,
-  forestInOwnSort,
   isInSharedTree,
   piecesAtLivePaths,
   solvedDrawTransformOf,
   transformsAtLivePaths,
   type ForestSort,
-} from './controlYSort';
+} from './forestSort';
 import {
   usePublishControlLocalTransforms,
   usePublishControlTransforms,
@@ -146,11 +145,8 @@ export function ControlCanvasWalker({
   }, [publishLocalTransforms, owner, tree, solved, livePath]);
   useLayoutEffect(() => () => publishLocalTransforms?.(owner, null), [publishLocalTransforms, owner]);
   const sort = useMemo(
-    () =>
-      isSortedByCanvas
-        ? forestInCanvasSort(tree, livePath, canvasSort, pieces)
-        : forestInOwnSort(tree, controlTransformsOf(tree, solved, snapEnabled), pieces),
-    [isSortedByCanvas, canvasSort, tree, solved, snapEnabled, livePath, pieces]
+    () => forestInCanvasSort(tree, livePath, canvasSort, pieces),
+    [canvasSort, tree, livePath, pieces]
   );
 
   return (

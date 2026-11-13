@@ -12,15 +12,7 @@ import { joinPath } from '../../../utils/nodePath';
 import { ysortsChildren, type PaintRange } from '../../canvasPaintOrder';
 import type { ControlTransforms, SortedRunsValue } from '../../contexts/YSortContext';
 import type { CanvasItemPaint } from '../../canvasItemPass/canvasItemPaint';
-import {
-  mergedSorters,
-  NO_SORT_INPUTS,
-  sortedPaintOf,
-  ySortedPaint,
-  type ExtraSortItem,
-  type ExtraSortItems,
-  type SortItem,
-} from '../../canvasItemPass/ySort';
+import { sortedPaintOf, type ExtraSortItem, type ExtraSortItems } from '../../canvasItemPass/ySort';
 import type { SolvedControl } from './controlRectSolver';
 import { controlDrawTransformOf, controlItemOriginUnder } from './controlPixelSnap';
 import { controlProps, type SolveNode } from './solveTree';
@@ -141,26 +133,6 @@ export function forestInCanvasSort(
   };
 }
 
-/**
- * The forest drawn at the runs of its own sort, for a forest the shared live tree does not hold: a
- * Control-only viewport or an unowned scene-tile root. The one sort runs over the forest's Controls,
- * on the origins the solve gave them.
- */
-export function forestInOwnSort(
-  tree: readonly SolveNode[],
-  origins: ControlTransforms,
-  pieces: ExtraSortItems
-): ForestSort {
-  const items = forestSortItemsOf(tree);
-  const paints = forestPaintsOf(tree);
-  const runs = ySortedPaint(items, paints, { ...NO_SORT_INPUTS, origins, extras: pieces });
-  return {
-    paints: drawnPaints(paints, runs),
-    pieceRuns: pieceRunsOf(pieces, (id) => runs.get(id)),
-    mergedSorters: mergedSorters(items),
-  };
-}
-
 function pieceRunsOf(
   pieces: ExtraSortItems,
   runOf: (id: string) => PaintRange | undefined
@@ -175,29 +147,6 @@ function pieceRunsOf(
     if (named.size > 0) runs.set(path, named);
   }
   return runs;
-}
-
-function drawnPaints(
-  paints: ReadonlyMap<string, CanvasItemPaint>,
-  runs: ReadonlyMap<string, PaintRange>
-): ReadonlyMap<string, CanvasItemPaint> {
-  const drawn = new Map<string, CanvasItemPaint>();
-  for (const [path, paint] of paints) drawn.set(path, sortedPaintOf(path, paint, runs, paints));
-  return drawn;
-}
-
-/** What the sort reads of each Control of the forest, its parent the Control above it. */
-function forestSortItemsOf(tree: readonly SolveNode[]): ReadonlyMap<string, SortItem> {
-  const items = new Map<string, SortItem>();
-  eachSolveNode(tree, (node, parent) => {
-    const props = controlProps(node);
-    items.set(node.path, {
-      parent: parent?.path ?? null,
-      isVisible: !node.hidden && props.visible !== false,
-      fields: { ySortEnabled: ysortsChildren(node.node), local: null },
-    });
-  });
-  return items;
 }
 
 /** Whether the shared live tree holds the forest's nodes, so the canvas's one sort covers them. */

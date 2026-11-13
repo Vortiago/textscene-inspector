@@ -51,8 +51,6 @@ export interface SortInputs {
   readonly liveYs: ReadonlyMap<string, LiveSortY>;
 }
 
-export const NO_SORT_INPUTS: SortInputs = { origins: new Map(), extras: new Map(), liveYs: new Map() };
-
 /** What the sort reads of a canvas item: its parent item, whether it is visible, and its fields. */
 export interface SortItem {
   readonly parent: string | null;
