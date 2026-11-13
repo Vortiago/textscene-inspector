@@ -29,7 +29,7 @@ import {
 } from '../../../r3f/screenSpaceEffects/unshadedRoughness';
 import { standardMaterial } from './testing/standardMaterial';
 import { BillboardMode } from '../../../godot/rendering/materials/billboardMode';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 import type { ResolvedTextures } from './types';
 import {
   DRAWS_LAMBERT_DIFFUSE,

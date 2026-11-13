@@ -218,6 +218,8 @@ export interface StandardMaterial3DData {
   rimTint: number;
   /** Height mapping, null when `heightmap_enabled` is off or triplanar mapping overrides it. */
   heightmap: Heightmap | null;
+  /** `use_particle_trails` (default false): the shader skins each trail section to its particle. */
+  usesParticleTrails: boolean;
   /** `use_point_size` (default false): the shader writes `point_size` as POINT_SIZE and samples albedo at POINT_COORD. */
   usesPointSize: boolean;
   /** `point_size` in pixels (default 1). The setter checks no range, as the inspector's 0.1-128 is only a hint. */
@@ -247,8 +249,8 @@ export interface StandardMaterial3DData {
   textureSlots: TextureSlotReferences;
   /**
    * `next_pass` as authored: a reference into the file's own tables, undefined when
-   * absent. Decode stops at the string, as `textureSlots` does; the renderer's
-   * `resolveNextPass` walks it.
+   * absent. Decode stops at the string, as `textureSlots` does, and the `MATERIAL` kind
+   * hands it on as a reference in the material's own file.
    */
   nextPass: string | undefined;
   /**
@@ -344,10 +346,6 @@ export interface StandardMaterial3DScalars extends EmissionScalars, MaterialBlen
   anisotropy: number;
   transmission: number;
   refractionThickness: number;
-  /** Slot → raw reference string, carried through for the loader's resolution. */
-  textureSlots: TextureSlotReferences;
-  /** The raw `next_pass` reference, undefined when absent. */
-  nextPass: string | undefined;
   /** `grow` on: the link's vertices move along their normals. */
   grows: boolean;
   /** `grow_amount`, model-space metres, unclamped. */

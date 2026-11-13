@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import { pointDrawOf, withLineDraw, withPointDraw, type PointDraw } from './godotPoint';
 import type { ProgramShader } from '../materialProgramInputs';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
+import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars.testkit';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag';
 
 const BAG: StandardMaterialBag = { materialClass: 'standard', props: { color: 'red' } };

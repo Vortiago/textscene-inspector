@@ -13,7 +13,8 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { useMeshContent, type SurfacedMesh, type SurfacedPart } from '../../../r3f/meshes/meshContent';
-import { resolveMaterialSource, type MaterialSource } from '../../../r3f/materials/materialSource';
+import { nodeMaterial } from '../../../r3f/materials/materialReference';
+import type { ScopedReference } from '../../../resources/reading';
 import { SurfacedMeshDrawer, type MeshPart } from '../../../r3f/surfacedMeshDrawer/SurfacedMeshDrawer';
 import { isOutgrownBySkin, useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
@@ -147,15 +148,15 @@ function overriddenPart(part: SurfacedPart, overrides: SurfaceOverrides): MeshPa
 }
 
 /** `surface_material_override/N`, resolved against the scene and keyed by Godot's original surface index. */
-type SurfaceOverrides = ReadonlyMap<number, MaterialSource>;
+type SurfaceOverrides = ReadonlyMap<number, ScopedReference>;
 
 function resolveSurfaceOverrides(
   refs: MeshInstance3DProperties['surfaceMaterialOverrides'],
   scene: SceneResources
 ): SurfaceOverrides {
-  const overrides = new Map<number, MaterialSource>();
+  const overrides = new Map<number, ScopedReference>();
   for (const [index, ref] of refs) {
-    const source = resolveMaterialSource(ref, scene);
+    const source = nodeMaterial(ref, scene);
     if (source) overrides.set(index, source);
   }
   return overrides;

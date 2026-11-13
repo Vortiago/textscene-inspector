@@ -40,8 +40,8 @@ that schema finds none of the keys it reads and produces the white one. Both pat
 therefore decline the resource, do not decode it, and render the derivation's `null`
 input.
 
-`buildStandardMaterial` accepts that `null`. An adapter narrower than its own derivation
-(`standardMaterialBags`) forces callers to reinvent the case it drops, which is what an
+`standardMaterialBags` accepts that `null`, and `materialFromBag` builds the bag it gives.
+An adapter narrower than its own derivation (`standardMaterialBags`) forces callers to reinvent the case it drops, which is what an
 invented surface is.
 
 ## Consequences

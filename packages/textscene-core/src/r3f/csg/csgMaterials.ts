@@ -6,7 +6,7 @@
 
 /**
  * A reference in the scene's tables, or the `res://` path of a material a mesh `.tres` holds, as
- * `resolveRefToResourcePath` writes it, which `resolveMaterialSource` reads either way. Undefined is a
+ * `resolveRefToResourcePath` writes it, which `nodeMaterial` reads either way. Undefined is a
  * face with no material.
  */
 export type CsgMaterialAddress = string | undefined;

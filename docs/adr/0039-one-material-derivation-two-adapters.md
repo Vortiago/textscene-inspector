@@ -14,7 +14,7 @@ A decoded `StandardMaterial3D` must become two different things, because two con
 need two shapes of the same material:
 
 - the **resource pipeline** wants a plain `THREE.Material` object it can cache, pass to
-  `<primitive>` and dispose: `buildStandardMaterial`
+  `<primitive>` and dispose: `materialFromBag`
   (`resources/materials/standardmaterial3d/build.ts`);
 - **R3F** wants a JSX element, because prop-diffing a mounted material across re-renders
   is the only thing that makes a re-parse visible: `<StandardMaterialSlot>`

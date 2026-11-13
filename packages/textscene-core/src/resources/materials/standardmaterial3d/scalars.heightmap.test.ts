@@ -4,7 +4,7 @@
  * passes unclamped.
  */
 import { describe, expect, it } from 'vitest';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 
 const heightmapOf = (properties: Record<string, string>) =>
   parseStandardMaterial3DScalars(properties).heightmap;

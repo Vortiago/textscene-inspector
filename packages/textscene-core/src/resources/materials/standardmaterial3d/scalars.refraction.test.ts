@@ -5,7 +5,7 @@
  * `refraction_texture` has another channel meaning than `transmissionMap`, so it is unwired.
  */
 import { describe, expect, it } from 'vitest';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 
 describe('parseStandardMaterial3DScalars — refraction flag (WI-69)', () => {
   it('parses transmission + thickness when refraction_enabled is true', () => {

@@ -6,7 +6,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { buildMaterial } from './buildMaterial.testkit';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { decodeStandardMaterial3D } from './decode';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 import type { ResolvedTextures } from './types';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
 import { heightmapSampledBy, patchedFragment, patchedUniforms } from '../../../r3f/testing/patchedFragment';
@@ -370,8 +371,9 @@ describe('the imperative adapter — texture slots', () => {
     // enumeration (`decode.test.ts`), so an unflagged slot never reaches here.
     // Re-gating here would split this adapter from the reactive one.
     const texture = loadedTexture();
-    const scalars = parseStandardMaterial3DScalars({ normal_texture: 'ExtResource("1")' });
-    expect(scalars.textureSlots).toEqual({});
+    const properties = { normal_texture: 'ExtResource("1")' };
+    const scalars = parseStandardMaterial3DScalars(properties);
+    expect(decodeStandardMaterial3D(properties).textureSlots).toEqual({});
     expectBoundRaw(
       (
         buildMaterial(scalars, {
