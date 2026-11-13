@@ -243,7 +243,7 @@ describe('buttonMinimumSize: icon contribution (!expand_icon && icon present)', 
 
 describe('buttonLabelShape: the one shaping the solver and the painter share', () => {
   const shape = (props: Partial<ButtonProperties>): TextLayoutResult | null =>
-    buttonLabelShape(node(props), ctx().theme, BUTTON_CLASS);
+    buttonLabelShape(node(props), BUTTON_CLASS);
 
   it('shapes the label', () => {
     const layout = shape({ text: 'AB' })!;
@@ -267,14 +267,14 @@ describe('buttonLabelShape: the one shaping the solver and the painter share', (
 
   it('ignores the readiness gate: that lives in the solver, and the painter shapes unconditionally', () => {
     expect(minSize(node({ text: 'AB' }), ctx(false))).toEqual(minSize(node({}), ctx(false)));
-    expect(buttonLabelShape(node({ text: 'AB' }), ctx(false).theme, BUTTON_CLASS)).not.toBeNull();
+    expect(buttonLabelShape(node({ text: 'AB' }), BUTTON_CLASS)).not.toBeNull();
   });
 });
 
 describe('buttonLabelShape: direction and language (button.cpp:564-569)', () => {
   /** The shaped line's glyph characters, left to right. */
   function visual(props: Partial<ButtonProperties>, overrides: Partial<SolveNode> = {}): string {
-    const layout = buttonLabelShape({ ...node(props), ...overrides }, ctx().theme, BUTTON_CLASS)!;
+    const layout = buttonLabelShape({ ...node(props), ...overrides }, BUTTON_CLASS)!;
     return visualChars(layout.lines[0]!);
   }
 
@@ -299,7 +299,7 @@ describe('buttonLabelShape: direction and language (button.cpp:564-569)', () => 
 
 describe('buttonTextTheme: font_color / font_disabled_color key mapping', () => {
   it('resolves the theme default control_font_color for the normal state', () => {
-    expect(buttonTextTheme(node({}), {} as ButtonProperties, 'normal', ctx())).toEqual({
+    expect(buttonTextTheme(node({}), {} as ButtonProperties, 'normal')).toEqual({
       fontSizePx: 16,
       color: CONTROL_FONT_COLOR,
     });
@@ -307,7 +307,7 @@ describe('buttonTextTheme: font_color / font_disabled_color key mapping', () => 
 
   it('resolves control_font_disabled_color (control_font_color * Color(1,1,1,0.5)) for the disabled state', () => {
     // default_theme.cpp:106,161: control_font_disabled_color, control_font_color at alpha 0.5.
-    expect(buttonTextTheme(node({}), {} as ButtonProperties, 'disabled', ctx())).toEqual({
+    expect(buttonTextTheme(node({}), {} as ButtonProperties, 'disabled')).toEqual({
       fontSizePx: 16,
       color: { r: 0.875, g: 0.875, b: 0.875, a: 0.5 },
     });
@@ -320,7 +320,7 @@ describe('buttonTextTheme: font_color / font_disabled_color key mapping', () => 
       language: '',
       themeOverrideColors: { font_disabled_color: { r: 1, g: 0, b: 0, a: 1 } },
     });
-    expect(buttonTextTheme(node(props), props, 'disabled', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
+    expect(buttonTextTheme(node(props), props, 'disabled').color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
   it('theme_override_font_sizes/font_size overrides the theme default for BOTH states', () => {
@@ -330,8 +330,8 @@ describe('buttonTextTheme: font_color / font_disabled_color key mapping', () => 
       language: '',
       themeOverrideFontSizes: { font_size: 24 },
     });
-    expect(buttonTextTheme(node(props), props, 'normal', ctx()).fontSizePx).toBe(24);
-    expect(buttonTextTheme(node(props), props, 'disabled', ctx()).fontSizePx).toBe(24);
+    expect(buttonTextTheme(node(props), props, 'normal').fontSizePx).toBe(24);
+    expect(buttonTextTheme(node(props), props, 'disabled').fontSizePx).toBe(24);
   });
 });
 
@@ -452,7 +452,7 @@ describe('Button.autowrap_mode (button.cpp:493,546-561)', () => {
 
 describe('buttonLabelShape at AUTOWRAP_OFF keeps one row per hard-break line (no end glyph)', () => {
   const rows = (text: string) =>
-    (buttonLabelShape(node({ text }), nativeTheme(1), BUTTON_CLASS)?.lines ?? []).map((l) => l.text);
+    (buttonLabelShape(node({ text }), BUTTON_CLASS)?.lines ?? []).map((l) => l.text);
 
   it('keeps a trailing space on its row', () => {
     expect(rows('ab ')).toEqual(['ab ']);
@@ -472,7 +472,7 @@ describe('Button.expand_icon under autowrap shapes at the drawn width (button.cp
     const iconWidth = Math.round(rect.h - marginY);
     const wrapWidth = Math.ceil(Math.max(1, rect.w - marginX - iconWidth - theme.separation));
     const props = { text: 'alpha bravo charlie delta', autowrapMode: 2, expandIcon: true };
-    const expected = buttonLabelShape(node(props), theme, BUTTON_CLASS, wrapWidth)!.heightPx;
+    const expected = buttonLabelShape(node(props), BUTTON_CLASS, wrapWidth)!.heightPx;
 
     const size = buttonMinimumSize(node(props, {}, { x: 16, y: 16 }), {
       ...ctx(),
@@ -485,9 +485,7 @@ describe('Button.expand_icon under autowrap shapes at the drawn width (button.cp
 
 describe('buttonLabelShape: the wrap width and trim flags reach the shaper (button.cpp:428-432,546-561)', () => {
   function rows(props: Partial<ButtonProperties>, boxWidthPx: number): string[] {
-    return (buttonLabelShape(node(props), nativeTheme(1), BUTTON_CLASS, boxWidthPx)?.lines ?? []).map(
-      (l) => l.text
-    );
+    return (buttonLabelShape(node(props), BUTTON_CLASS, boxWidthPx)?.lines ?? []).map((l) => l.text);
   }
 
   it('keeps one row at AUTOWRAP_OFF however narrow the box', () => {
@@ -537,7 +535,7 @@ describe('a pressed toggle Button (base_button.cpp:326-352, button.cpp:303-312)'
   });
 
   it('takes the pressed font colour: control_font_pressed_color, white (default_theme.cpp:108,155)', () => {
-    expect(buttonTextTheme(node({}), {} as ButtonProperties, 'pressed', ctx()).color).toEqual({
+    expect(buttonTextTheme(node({}), {} as ButtonProperties, 'pressed').color).toEqual({
       r: 1,
       g: 1,
       b: 1,
@@ -578,8 +576,8 @@ describe('a Button on a default-theme type variation (default_theme.cpp:357-383)
 
   it("takes Label's white font_color on a Label variation, in the normal state only (:383)", () => {
     const white = { r: 1, g: 1, b: 1, a: 1 };
-    expect(buttonTextTheme(node(HEADER), HEADER as ButtonProperties, 'normal', ctx()).color).toEqual(white);
-    expect(buttonTextTheme(node(HEADER), HEADER as ButtonProperties, 'disabled', ctx()).color).toEqual({
+    expect(buttonTextTheme(node(HEADER), HEADER as ButtonProperties, 'normal').color).toEqual(white);
+    expect(buttonTextTheme(node(HEADER), HEADER as ButtonProperties, 'disabled').color).toEqual({
       r: 0.875,
       g: 0.875,
       b: 0.875,
@@ -588,9 +586,7 @@ describe('a Button on a default-theme type variation (default_theme.cpp:357-383)
   });
 
   it("takes the Button's own font_color on FlatButton", () => {
-    expect(buttonTextTheme(node(FLAT), FLAT as ButtonProperties, 'normal', ctx()).color).toEqual(
-      CONTROL_FONT_COLOR
-    );
+    expect(buttonTextTheme(node(FLAT), FLAT as ButtonProperties, 'normal').color).toEqual(CONTROL_FONT_COLOR);
   });
 });
 

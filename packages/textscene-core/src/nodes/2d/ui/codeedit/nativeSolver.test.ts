@@ -10,6 +10,7 @@ import {
   codeEditGutterCellTextTopPx,
   codeEditGutterBand,
   codeEditGuidelines,
+  codeEditRegionIconColor,
 } from './nativeSolver';
 import type { CodeEditProperties } from './types';
 
@@ -227,5 +228,26 @@ describe('codeEditGuidelines (code_edit.cpp:288-313)', () => {
 
   it('draws nothing for an empty array (code_edit.cpp:289-291)', () => {
     expect(codeEditGuidelines([], width, 26, 300, 320, false)).toEqual([]);
+  });
+});
+
+describe('codeEditRegionIconColor (code_edit.cpp:1636-1637)', () => {
+  it("floors the default theme's 0.2 alpha at 0.4", () => {
+    expect(
+      codeEditRegionIconColor({ folded_code_region_color: { r: 0.68, g: 0.46, b: 0.77, a: 0.2 } })
+    ).toEqual({
+      r: 0.68,
+      g: 0.46,
+      b: 0.77,
+      a: 0.4,
+    });
+  });
+
+  it('keeps an alpha above the floor', () => {
+    expect(codeEditRegionIconColor({ folded_code_region_color: { r: 1, g: 0, b: 0, a: 0.7 } }).a).toBe(0.7);
+  });
+
+  it('throws on a colour record without the item', () => {
+    expect(() => codeEditRegionIconColor({})).toThrow(/folded_code_region_color/);
   });
 });

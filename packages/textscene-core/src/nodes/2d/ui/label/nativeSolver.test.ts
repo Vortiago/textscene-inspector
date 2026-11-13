@@ -402,22 +402,20 @@ describe('labelTextTheme', () => {
   it('reads the font_size and font_color overrides', () => {
     const red = { r: 1, g: 0, b: 0, a: 1 };
     const props = { themeOverrideFontSizes: { font_size: 20 } };
-    const resolved = labelTextTheme(node({}, { colors: { font_color: red } }), props, {
-      theme: nativeTheme(1),
-    });
+    const resolved = labelTextTheme(node({}, { colors: { font_color: red } }), props);
     expect(resolved).toEqual({ fontSizePx: 20, color: red });
   });
 
   it("resolves the theme's own default font size and Label's opaque white absent an override", () => {
     // default_theme.cpp sets Label's font_color to Color(1, 1, 1), not the gray control_font_color.
-    const resolved = labelTextTheme(node({}), {}, { theme: nativeTheme(1) });
+    const resolved = labelTextTheme(node({}), {});
     expect(resolved).toEqual({ fontSizePx: 16, color: { r: 1, g: 1, b: 1, a: 1 } });
   });
 
   it("ignores RichTextLabel's normal_font_size and default_color keys (edge case)", () => {
     const props = { themeOverrideFontSizes: { normal_font_size: 20 } };
     const n = node({}, { colors: { default_color: { r: 1, g: 0, b: 0, a: 1 } } });
-    expect(labelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
+    expect(labelTextTheme(n, props)).toEqual({
       fontSizePx: 16,
       color: { r: 1, g: 1, b: 1, a: 1 },
     });
@@ -1466,11 +1464,7 @@ describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344
   /** The Label painter's path: shape, window to the visible lines, then place. */
   function placeLines(n: SolveNode, boxWidthPx: number, boxHeightPx: number): number[] {
     const props = n.node.properties as LabelProperties;
-    const theme = labelEffectiveTextTheme(
-      labelTextTheme(n, props, { theme: nativeTheme(1) }),
-      n.labelSettings,
-      n.constants
-    );
+    const theme = labelEffectiveTextTheme(labelTextTheme(n, props), n.labelSettings, n.constants);
     const shaped = shapeText(props.text ?? '', {
       fontSizePx: theme.fontSizePx,
       boxWidthPx: labelShapingWidthPx(boxWidthPx, ZERO_SIDES),
@@ -1541,7 +1535,7 @@ describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344
   it('theme_override_constants line_spacing and paragraph_spacing apply without label_settings', () => {
     const n = spacedNode({ text: 'I\nI' }, { constants: { line_spacing: 10, paragraph_spacing: 5 } });
     const props = n.node.properties as LabelProperties;
-    const themeResolved = labelTextTheme(n, props, { theme: nativeTheme(1) });
+    const themeResolved = labelTextTheme(n, props);
     expect(labelEffectiveTextTheme(themeResolved, null, n.constants)).toMatchObject({
       lineSpacingPx: 10,
       paragraphSpacingPx: 5,

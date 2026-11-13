@@ -116,8 +116,8 @@ describe('pickerChildTheme', () => {
         themed({ LineEdit: { normal: 'SubResource("box")', read_only: 'SubResource("box")' } }),
         THEME
       );
-      expect(child.theme.widgets.lineEdit.normal.contentMargin.left).toBe(10);
-      expect(child.theme.widgets.lineEdit.readOnly.contentMargin.left).toBe(10);
+      expect(child.theme.lineEdit.normal.contentMargin.left).toBe(10);
+      expect(child.theme.lineEdit.readOnly.contentMargin.left).toBe(10);
     });
 
     it('gives the shape, mode and menu buttons the normal and disabled styleboxes of FlatMenuButton', () => {

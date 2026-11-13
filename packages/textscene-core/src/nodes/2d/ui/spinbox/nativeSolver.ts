@@ -9,13 +9,9 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { formatControlNumber } from '../../../../godot/text/numberFormat';
-import type {
-  MinimumSizeFn,
-  SolveContext,
-  TextureSlotsFn,
-} from '../../../../r3f/controls/native/solverRegistry';
+import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
-import { internalChildThemeItems } from '../../../../r3f/controls/native/themeItems';
+import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { shapeLineEditText } from '../lineedit/nativeSolver';
 import { textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
@@ -30,19 +26,12 @@ import {
   themeResolutionScope,
   type ThemeResolutionScope,
 } from '../../../../resources/styles/theme/lookup';
-import {
-  pickLineEditStyleBox,
-  lineEditStyleMinSize,
-  lineEditTextMinimumWidth,
-  LINE_EDIT_DEFAULT_FONT_COLOR,
-  LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
-} from '../lineedit/nativeSolver';
+import { lineEditField, lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SpinBoxProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { scaledIconSizeOf, themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
 
 /** `Range`'s default `step` (`scene/gui/range.h:42`). SpinBox's constructor never calls `set_step` (`spin_box.cpp:723-740`), so this is what an unauthored `step` resolves to. */
 const SPIN_BOX_STEP_DEFAULT = 1;
@@ -236,28 +225,18 @@ export function spinBoxDownButtonState(props: SpinBoxProperties, resolvedValue: 
   return spinBoxRangeButtonState(resolvedValue, props.minValue ?? 0, props.allowLesser === true);
 }
 
-/** `up_icon_modulate`/`up_disabled_icon_modulate` (`default_theme.cpp:634,637`). The icon asset is the same either way (`:616-619`), and only the modulate differs. */
-const SPIN_BOX_UP_ICON_COLOR: Record<SpinBoxButtonState, Rgba> = {
-  normal: CONTROL_FONT_COLOR,
-  disabled: CONTROL_FONT_DISABLED_COLOR,
-};
-/** `down_icon_modulate`/`down_disabled_icon_modulate` (`default_theme.cpp:638,641`): the same colours as the up pair. */
-const SPIN_BOX_DOWN_ICON_COLOR = SPIN_BOX_UP_ICON_COLOR;
-
 const SPIN_BOX_ICON_COLOR_KEYS: Record<'up' | 'down', Record<SpinBoxButtonState, string>> = {
   up: { normal: 'up_icon_modulate', disabled: 'up_disabled_icon_modulate' },
   down: { normal: 'down_icon_modulate', disabled: 'down_disabled_icon_modulate' },
 };
 
-/** A `theme_override_colors/<key>` override (already folded into `n.colors`) wins; else the default-theme literal for `direction`/`state`. */
+/** The arrow's modulate for `direction` and `state`. The icon is the same either way, and only the modulate differs. */
 export function spinBoxIconColor(
   colors: SolveNode['colors'],
   direction: 'up' | 'down',
   state: SpinBoxButtonState
 ): Rgba {
-  const key = SPIN_BOX_ICON_COLOR_KEYS[direction][state];
-  const defaults = direction === 'up' ? SPIN_BOX_UP_ICON_COLOR : SPIN_BOX_DOWN_ICON_COLOR;
-  return colors[key] ?? defaults[state];
+  return requiredThemeItem(colors, SPIN_BOX_ICON_COLOR_KEYS[direction][state]);
 }
 
 /**
@@ -283,22 +262,16 @@ interface SpinBoxFieldTextTheme {
 }
 
 /** The field's font (face + size) and colour, ancestor-walked, for `editable` state. */
-export function spinBoxFieldTextTheme(
-  n: SolveNode,
-  ctx: Pick<SolveContext, 'theme'>,
-  editable: boolean
-): SpinBoxFieldTextTheme {
+export function spinBoxFieldTextTheme(n: SolveNode, editable: boolean): SpinBoxFieldTextTheme {
   const scope = spinBoxFieldThemeScope(n);
-  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined, ctx.theme.fontSize);
+  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size');
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
   const { colors } = spinBoxFieldThemeItems(n);
   return {
     fontSizePx,
     fontMetrics,
-    color: editable
-      ? (colors.font_color ?? LINE_EDIT_DEFAULT_FONT_COLOR)
-      : (colors.font_uneditable_color ?? LINE_EDIT_DEFAULT_UNEDITABLE_COLOR),
+    color: requiredThemeItem(colors, editable ? 'font_color' : 'font_uneditable_color'),
   };
 }
 
@@ -325,21 +298,18 @@ export function shapeSpinBoxFieldText(
 export const spinBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as SpinBoxProperties;
   const editable = props.editable !== false;
-  const { fontSizePx, fontMetrics } = spinBoxFieldTextTheme(n, ctx, editable);
+  const { fontSizePx, fontMetrics } = spinBoxFieldTextTheme(n, editable);
 
   // The field is `add_child`ed at construction (`spin_box.cpp:724-731`), so the SpinBox's own
   // `theme_override_styles/*` never reach it. It reads the Theme chain's LineEdit boxes only.
-  const { styleBoxes } = spinBoxFieldThemeItems(n);
-  const styleMinSize = lineEditStyleMinSize(
-    pickLineEditStyleBox(styleBoxes, ctx.theme.widgets.lineEdit, 'normal'),
-    pickLineEditStyleBox(styleBoxes, ctx.theme.widgets.lineEdit, 'read_only')
-  );
+  const field = lineEditField(spinBoxFieldThemeItems(n));
+  const styleMinSize = lineEditStyleMinSize(field);
 
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
 
   const fieldMin = {
-    x: styleMinSize.x + lineEditTextMinimumWidth(emSpaceSize),
+    x: styleMinSize.x + lineEditTextMinimumWidth(field, emSpaceSize),
     y: styleMinSize.y + fontHeightPx,
   };
 

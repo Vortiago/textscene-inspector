@@ -25,6 +25,7 @@ function solve(
     gutterBandWidthPx: 0,
     minimapWidthPx: 0,
     drawMinimap: false,
+    wrapOffsetPx: 10,
     scrollPastEndOfFile: false,
     fitContentHeight: false,
     rtl: false,

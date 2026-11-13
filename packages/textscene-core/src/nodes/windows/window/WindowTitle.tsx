@@ -6,7 +6,6 @@
  */
 import { useMemo } from 'react';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
-import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { OutlinedTextRun } from '../../../r3f/controls/native/text/OutlinedTextRun';
@@ -29,27 +28,18 @@ interface WindowTitleProps {
   border: ResolvedStyleBox;
   closeHOffset: number;
   defaults: WindowThemeDefaults;
-  theme: NativeTheme;
   /** The title's slot: the outline and the text draw as layers from its key. */
   slot: CanvasSlot;
 }
 
-export function WindowTitle({
-  solveNode,
-  width,
-  border,
-  closeHOffset,
-  defaults,
-  theme,
-  slot,
-}: WindowTitleProps) {
+export function WindowTitle({ solveNode, width, border, closeHOffset, defaults, slot }: WindowTitleProps) {
   const props = solveNode.node.properties as WindowProperties;
   const { colors, constants } = solveNode;
   const { fontSizePx, color } = resolveTextTheme(
     solveNode,
     props,
     { sizeKey: 'title_font_size', colorKey: 'title_color' },
-    { fontSizePx: theme.fontSize, color: defaults.titleColor }
+    defaults.titleColor
   );
   const font = resolveNodeFont(solveNode, 'title_font');
   const fontMetrics = peekSceneFontMetrics(font, solveNode.path);

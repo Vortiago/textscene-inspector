@@ -140,9 +140,9 @@ function vFlagsOf(n: SolveNode): number {
   return (n.node.properties as GraphFrameProperties).sizeFlagsVertical ?? DEFAULT_SIZE_FLAGS;
 }
 
-export function graphFrameTitleTextMin(n: SolveNode, theme: NativeTheme): Vector2 {
+export function graphFrameTitleTextMin(n: SolveNode): Vector2 {
   const props = n.node.properties as GraphFrameProperties;
-  const fontTheme = resolveTitleFontTheme(n, GRAPH_FRAME_TITLE_VARIATION, theme.fontSize);
+  const fontTheme = resolveTitleFontTheme(n, GRAPH_FRAME_TITLE_VARIATION);
   return titleTextMinimumSize(props.title ?? '', fontTheme);
 }
 
@@ -150,7 +150,7 @@ export function graphFrameTitleTextMin(n: SolveNode, theme: NativeTheme): Vector
 
 const graphFrameMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { panel, titlebar } = graphFrameStyles(n, ctx.theme);
-  const textMin = graphFrameTitleTextMin(n, ctx.theme);
+  const textMin = graphFrameTitleTextMin(n);
 
   let width = textMin.x + titlebar.contentMargin.left + titlebar.contentMargin.right;
   let height = textMin.y + titlebar.contentMargin.top + titlebar.contentMargin.bottom;
@@ -175,7 +175,7 @@ controlSolverRegistry.registerMinimumSize('GraphFrame', graphFrameMinimumSize);
 
 const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const { panel, titlebar } = graphFrameStyles(n, ctx.theme);
-  const textMin = graphFrameTitleTextMin(n, ctx.theme);
+  const textMin = graphFrameTitleTextMin(n);
   const titlebarBand = titlebarGeometry(contentRect.w, textMin.y, titlebar);
 
   const offset = { x: panel.contentMargin.left, y: panel.contentMargin.top + titlebarBand.rect.h };

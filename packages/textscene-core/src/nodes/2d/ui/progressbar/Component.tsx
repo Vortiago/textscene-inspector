@@ -29,7 +29,7 @@ import {
 import type { ProgressBarProperties } from './types';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
-export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
+export function ProgressBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<ProgressBarProperties>(solveNode);
   const clippingPlanes = useControlClipPlanes();
 
@@ -54,7 +54,7 @@ export function ProgressBar({ solveNode, tint, rect, theme, renderOrder }: Nativ
   // percentage block, whatever `show_percentage` says.
   const showPercentage = !indeterminate && (props.showPercentage ?? true);
 
-  const { fontSizePx, color: fontColorSrgb } = progressBarTextTheme(solveNode, props, { theme });
+  const { fontSizePx, color: fontColorSrgb } = progressBarTextTheme(solveNode, props);
   const font = resolveNodeFont(solveNode, PROGRESS_BAR_THEME_FONT_KEY);
   const fontMetrics = peekSceneFontMetrics(font, solveNode.path);
 

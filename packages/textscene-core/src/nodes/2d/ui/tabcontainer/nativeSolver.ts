@@ -26,7 +26,6 @@ import {
 } from '../../../../r3f/controls/native/themeItems';
 import { FALLBACK_THEME_CONSTANT } from '../../../../godot/scene/theme';
 import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   TAB_ALIGNMENT_CENTER,
@@ -146,8 +145,7 @@ function tabBarOwnIcons(barItems: InternalThemeItems): SolveNode['icons'] {
 export function buildInternalTabBarNode(
   n: SolveNode,
   derivedTabs: TabBarTabProperties[],
-  props: TabContainerProperties,
-  theme: NativeTheme
+  props: TabContainerProperties
 ): SolveNode {
   const barProps: TabBarProperties = {
     name: n.node.name,
@@ -164,8 +162,7 @@ export function buildInternalTabBarNode(
       [TAB_BAR_THEME_FONT_SIZE_KEY]: resolveNodeFontSizePx(
         n,
         TAB_CONTAINER_FONT_SIZE_KEY,
-        props.themeOverrideFontSizes?.[TAB_CONTAINER_FONT_SIZE_KEY],
-        theme.fontSize
+        props.themeOverrideFontSizes?.[TAB_CONTAINER_FONT_SIZE_KEY]
       ),
     },
   };
@@ -277,7 +274,7 @@ const tabContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   if (tabsVisible) {
     const derivedTabs = deriveTabContainerTabs(n, props.tabOverrides);
-    const synthetic = buildInternalTabBarNode(n, derivedTabs, props, ctx.theme);
+    const synthetic = buildInternalTabBarNode(n, derivedTabs, props);
     const barSize = tabBarMinimumSize(synthetic, ctx);
     const tabbarMargin = tabbarStyleMargins(n.styleBoxes);
     width += barSize.x + tabbarMargin.left + tabbarMargin.right;
@@ -326,7 +323,7 @@ const tabContainerLayout: ContainerLayoutFn = (n, children, contentRect, ctx) =>
   const derivedTabs = deriveTabContainerTabs(n, props.tabOverrides);
   let headerHeight = 0;
   if (tabsVisible && derivedTabs.length > 0) {
-    const synthetic = buildInternalTabBarNode(n, derivedTabs, props, ctx.theme);
+    const synthetic = buildInternalTabBarNode(n, derivedTabs, props);
     headerHeight = tabHeaderHeight(tabBarHeight(synthetic, ctx), tabbarStyleMargins(n.styleBoxes));
   }
 

@@ -127,9 +127,9 @@ function graphNodeEffectiveSlot(slots: Map<number, GraphNodeSlot>, rawIndex: num
   return slots.get(rawIndex) ?? defaultGraphNodeSlot();
 }
 
-export function graphNodeTitleTextMin(n: SolveNode, theme: NativeTheme): Vector2 {
+export function graphNodeTitleTextMin(n: SolveNode): Vector2 {
   const props = n.node.properties as GraphNodeProperties;
-  const fontTheme = resolveTitleFontTheme(n, GRAPH_NODE_TITLE_VARIATION, theme.fontSize);
+  const fontTheme = resolveTitleFontTheme(n, GRAPH_NODE_TITLE_VARIATION);
   return titleTextMinimumSize(props.title ?? '', fontTheme);
 }
 
@@ -138,7 +138,7 @@ export function graphNodeTitleTextMin(n: SolveNode, theme: NativeTheme): Vector2
 const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
   const { panel, titlebar, slot } = graphNodeStyles(n, ctx.theme);
-  const textMin = graphNodeTitleTextMin(n, ctx.theme);
+  const textMin = graphNodeTitleTextMin(n);
 
   let width = textMin.x + titlebar.contentMargin.left + titlebar.contentMargin.right;
   let height = textMin.y + titlebar.contentMargin.top + titlebar.contentMargin.bottom;
@@ -184,7 +184,7 @@ const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
   const { panel, titlebar, slot } = graphNodeStyles(n, ctx.theme);
   const separation = separationOf(n, ctx.theme);
-  const textMin = graphNodeTitleTextMin(n, ctx.theme);
+  const textMin = graphNodeTitleTextMin(n);
   const titlebarBand = titlebarGeometry(contentRect.w, textMin.y, titlebar);
   const titlebarBandHeight = titlebarBand.rect.h;
 

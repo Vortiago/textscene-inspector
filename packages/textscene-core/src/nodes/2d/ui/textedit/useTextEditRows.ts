@@ -10,6 +10,7 @@ type TextEditRowsInput = Parameters<typeof solveTextEditRows>[0];
  */
 export function useTextEditRows(input: TextEditRowsInput, solved?: TextEditRows): TextEditRows {
   const { lines, isPlaceholder, rowHeightPx, gutterBandWidthPx, minimapWidthPx, drawMinimap } = input;
+  const { wrapOffsetPx } = input;
   const { scrollPastEndOfFile, fitContentHeight, rtl, scrollBarBoxes } = input;
   const { x: width, y: height } = input.size;
   const { left, top, right, bottom } = input.margins;
@@ -27,6 +28,7 @@ export function useTextEditRows(input: TextEditRowsInput, solved?: TextEditRows)
         gutterBandWidthPx,
         minimapWidthPx,
         drawMinimap,
+        wrapOffsetPx,
         scrollPastEndOfFile,
         fitContentHeight,
         rtl,
@@ -55,6 +57,7 @@ export function useTextEditRows(input: TextEditRowsInput, solved?: TextEditRows)
       gutterBandWidthPx,
       minimapWidthPx,
       drawMinimap,
+      wrapOffsetPx,
       scrollPastEndOfFile,
       fitContentHeight,
       rtl,

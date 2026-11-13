@@ -140,7 +140,7 @@ export function GraphEditToolbarChrome({
   const { panelRect } = toolbar;
   const iconPx = scaledIconSize(GRAPH_EDIT_ICON_SIZE, theme.scale);
   const arrowSize = spinBoxArrowIconSize(theme.scale);
-  const fieldBox = toolbarTheme.fieldBoxes.normal;
+  const fieldBox = toolbarTheme.field.normal;
 
   return (
     <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]} renderOrder={slot.key}>

@@ -25,6 +25,7 @@ interface TextEditRowsInput {
   gutterBandWidthPx: number;
   minimapWidthPx: number;
   drawMinimap: boolean | undefined;
+  wrapOffsetPx: number;
   scrollPastEndOfFile: boolean;
   fitContentHeight: boolean;
   rtl: boolean;
@@ -42,14 +43,14 @@ export interface TextEditRows {
 
 export function solveTextEditRows(input: TextEditRowsInput): TextEditRows {
   const wrapWidthFor = (verticalBarWidthPx: number) =>
-    textEditWrapWidthPx(
-      input.size.x,
-      input.margins.left + input.margins.right,
-      input.gutterBandWidthPx,
-      input.minimapWidthPx,
-      input.drawMinimap,
-      verticalBarWidthPx
-    );
+    textEditWrapWidthPx(input.size.x, {
+      styleMinWidthPx: input.margins.left + input.margins.right,
+      gutterBandWidthPx: input.gutterBandWidthPx,
+      minimapWidthPx: input.minimapWidthPx,
+      drawMinimap: input.drawMinimap,
+      wrapOffsetPx: input.wrapOffsetPx,
+      verticalBarWidthPx,
+    });
   const shapeAt = (wrapWidthPx: number) =>
     shapeTextEditLines(input.lines, { ...input.shape, wrapWidthPx, placeholder: input.isPlaceholder });
   const rowsAt = (wrapWidthPx: number, lineLayouts: TextEditLineLayout[]) => {

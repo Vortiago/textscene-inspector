@@ -30,7 +30,7 @@ function shapingOf(text: string) {
   };
   return (wrapWidthPx: number) => {
     const props = label.node.properties as RichTextLabelProperties;
-    const runs = styledTextRuns(label, props, WHITE, FONT_SIZE_PX, FONT_SIZE_PX, wrapWidthPx);
+    const runs = styledTextRuns(label, props, WHITE, FONT_SIZE_PX, wrapWidthPx);
     const layout = shapeRichText(runs, resolveRichTextFaces(label, runs), {
       fontSizePx: FONT_SIZE_PX,
       boxWidthPx: wrapWidthPx,

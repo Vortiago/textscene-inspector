@@ -1,0 +1,58 @@
+; The text Controls at `gui/theme/default_theme_scale` 1.5, the one variable: Label, a HeaderLarge
+; Label, LineEdit, a read-only LineEdit, SpinBox, TextEdit and RichTextLabel. Each font size, margin
+; and border of their default boxes scales from the table.
+
+[gd_scene format=3 uid="uid://unitdefthemetext15"]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="Rows" type="VBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 408.0
+
+[node name="Label" type="Label" parent="Rows"]
+layout_mode = 2
+text = "Label text"
+
+[node name="Header" type="Label" parent="Rows"]
+layout_mode = 2
+theme_type_variation = &"HeaderLarge"
+text = "Header"
+
+[node name="LineEdit" type="LineEdit" parent="Rows"]
+layout_mode = 2
+text = "Line edit"
+
+[node name="ReadOnly" type="LineEdit" parent="Rows"]
+layout_mode = 2
+text = "Read only"
+editable = false
+
+[node name="SpinBox" type="SpinBox" parent="Rows"]
+layout_mode = 2
+value = 42.0
+
+[node name="TextEdit" type="TextEdit" parent="Rows"]
+custom_minimum_size = Vector2(0, 90)
+layout_mode = 2
+text = "First line
+Second line"
+
+[node name="RichText" type="RichTextLabel" parent="Rows"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+bbcode_enabled = true
+text = "Rich [b]bold[/b] text"

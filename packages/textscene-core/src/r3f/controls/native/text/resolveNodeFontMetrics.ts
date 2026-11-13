@@ -66,13 +66,7 @@ export function resolveNodeFont(n: ShareNode, themeKey: string): FontResource | 
  * The font size `sizeKey` resolves to on `n` (`scene/gui/control.cpp:3107-3129`): the font key plus
  * `_size`, as each `nativeSolver.ts` cites. `overridePx` is the widget's
  * `theme_override_font_sizes/<sizeKey>`, read from `props.themeOverrideFontSizes`.
- * `builtInDefaultPx` stands in for `ThemeDB::get_fallback_font_size()`.
  */
-export function resolveNodeFontSizePx(
-  n: ShareNode,
-  sizeKey: string,
-  overridePx: number | undefined,
-  builtInDefaultPx: number
-): number {
-  return resolveThemeFontSizeIn(scopeFor(n), sizeKey, overridePx, builtInDefaultPx);
+export function resolveNodeFontSizePx(n: ShareNode, sizeKey: string, overridePx?: number): number {
+  return resolveThemeFontSizeIn(scopeFor(n), sizeKey, overridePx);
 }

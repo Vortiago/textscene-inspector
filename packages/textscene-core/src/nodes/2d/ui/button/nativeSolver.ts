@@ -9,11 +9,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type {
-  MinimumSizeFn,
-  SolveContext,
-  TextureSlotsFn,
-} from '../../../../r3f/controls/native/solverRegistry';
+import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -152,11 +148,10 @@ export function buttonIconColor(
 export function buttonTextTheme(
   n: ShareNode,
   props: ButtonProperties,
-  state: ToggleDrawState,
-  ctx: Pick<SolveContext, 'theme'>
+  state: ToggleDrawState
 ): ResolvedTextTheme {
   const keys = isButtonFocusStyled(props, state) ? BUTTON_FOCUS_KEYS : BUTTON_THEME_KEYS[state];
-  return resolveTextTheme(n, props, keys, { fontSizePx: ctx.theme.fontSize });
+  return resolveTextTheme(n, props, keys);
 }
 
 /** `align_to_largest_stylebox` (`button.cpp:233-236`). */
@@ -218,7 +213,6 @@ export function buttonStyle(n: ShareNode): ButtonStyle {
  */
 export function buttonLabelShape(
   n: ShareNode,
-  theme: SolveContext['theme'],
   buttonClass: ButtonClass,
   boxWidthPx = 0
 ): TextLayoutResult | null {
@@ -228,7 +222,7 @@ export function buttonLabelShape(
   const fontMetrics = resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY);
   if (text.length === 0) return null;
   const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
-  const { fontSizePx } = buttonTextTheme(n, props, state, { theme });
+  const { fontSizePx } = buttonTextTheme(n, props, state);
   // Not `ctx.measureText`: its `Vector2` drops the layout the painter needs, and its readiness
   // gate belongs to the solver. The painter shapes unconditionally.
   return shapeWrappedButtonLabel(text, props, {
@@ -293,12 +287,12 @@ export function buttonMinimumSizeOf(buttonClass: ButtonClass): MinimumSizeFn {
       props,
       ctx.measureText ? ctx.tentativeRect?.(n) : undefined,
       factsAt,
-      () => (ctx.measureText ? buttonLabelShape(n, ctx.theme, buttonClass) : null)
+      () => (ctx.measureText ? buttonLabelShape(n, buttonClass) : null)
     );
     // An absent `ctx.measureText` means the text contributes nothing, while the margin and
     // the icon still count (`solverRegistry.ts`'s contract).
     const layout: TextLayoutResult | null = ctx.measureText
-      ? buttonLabelShape(n, ctx.theme, buttonClass, wrapWidthPx)
+      ? buttonLabelShape(n, buttonClass, wrapWidthPx)
       : null;
     // `minsize` starts from `paragraph->get_size()` (`button.cpp:492`), a max
     // over `TS->shaped_text_get_size(lines_rid[i])` (`text_paragraph.cpp:601-608`):

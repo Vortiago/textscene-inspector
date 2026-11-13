@@ -67,11 +67,11 @@ export interface PopupMenuTheme {
   separatorOutline: TextOutlineTheme;
 }
 
-function menuFont(n: SolveNode, theme: NativeTheme, fontKey: string, sizeKey: string): MenuFont {
+function menuFont(n: SolveNode, fontKey: string, sizeKey: string): MenuFont {
   const { themeOverrideFontSizes } = n.node.properties as WindowProperties;
   return {
     metrics: resolveNodeFontMetrics(n, fontKey),
-    sizePx: resolveNodeFontSizePx(n, sizeKey, themeOverrideFontSizes?.[sizeKey], theme.fontSize),
+    sizePx: resolveNodeFontSizePx(n, sizeKey, themeOverrideFontSizes?.[sizeKey]),
   };
 }
 
@@ -104,8 +104,8 @@ export function popupMenuTheme(n: SolveNode, theme: NativeTheme): PopupMenuTheme
     isGutterCompact: (n.constants.gutter_compact ?? defaults.gutterCompact) !== 0,
     scrollBar: internalScrollBarBoxes(n).vertical,
     checkIconSizes: checkIconSizesOf(n, theme),
-    font: menuFont(n, theme, 'font', 'font_size'),
-    separatorFont: menuFont(n, theme, 'font_separator', 'font_separator_size'),
+    font: menuFont(n, 'font', 'font_size'),
+    separatorFont: menuFont(n, 'font_separator', 'font_separator_size'),
     fontColor: n.colors.font_color ?? CONTROL_FONT_COLOR,
     fontDisabledColor: n.colors.font_disabled_color ?? defaults.fontDisabledColor,
     fontSeparatorColor: n.colors.font_separator_color ?? CONTROL_FONT_COLOR,

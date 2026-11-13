@@ -23,9 +23,7 @@ export function MenuBar({ solveNode, tint, rect, theme, renderOrder }: NativeCon
   // defines one (`menu_bar.cpp:437-500`).
   const style = pickButtonStyleBox(solveNode.styleBoxes, 'normal', solveNode.rtl);
 
-  const { fontSizePx, color: baseFontColor } = resolveTextTheme(solveNode, props, MENU_BAR_TEXT_THEME_KEYS, {
-    fontSizePx: theme.fontSize,
-  });
+  const { fontSizePx, color: baseFontColor } = resolveTextTheme(solveNode, props, MENU_BAR_TEXT_THEME_KEYS);
   // `tint.own` goes raw to `<StyleBoxQuad>`'s `color` and multiplies the font colour before its one
   // sRGB-to-linear conversion, as in `Button`.
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
