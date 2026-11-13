@@ -232,7 +232,8 @@ interface GraphEditElementView {
 /**
  * The fill `_minimap_draw` gives an element (`graph_edit.cpp:1834-1840,1860-1864`): the `bg_color` of
  * `panel_selected` or `panel`, or a frame's enabled tint. `null` keeps the `node` box's fill under a panel
- * that is not a StyleBoxFlat. A resolved StyleBoxEmpty is a clear StyleBoxFlat here, so it sets a clear fill.
+ * that is not a StyleBoxFlat. A resolved StyleBoxEmpty reads as a clear StyleBoxFlat, so it sets a clear
+ * fill where Godot keeps the node box's (#1776).
  */
 function minimapElementColor(element: SolveNode): Rgba | null {
   const props = element.node.properties as GraphFrameProperties;
