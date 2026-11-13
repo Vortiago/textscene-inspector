@@ -18,7 +18,11 @@ import { countTintSplit, splitTints } from '../../../../r3f/controls/native/test
 import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { wholeKeySlot } from '../../../../r3f/canvasItemState';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunMeshes,
   bundledRunOf,
@@ -49,7 +53,7 @@ function solveNode(properties: Partial<TabContainerProperties> = {}, children: S
     children: children.map((c) => c.node),
     properties: { name: 'Tabs', ...properties } as TabContainerProperties,
   };
-  return { ...emptySolveNode(), path: 'Tabs', node, children };
+  return withThemeItems({ ...emptySolveNode(), path: 'Tabs', node, children });
 }
 
 function findChromeMeshes(scene: Rendered['scene']) {

@@ -101,7 +101,6 @@ export function TabContainer({
         <PanelChrome
           solveNode={solveNode}
           rect={{ x: 0, y: 0, w: contentBand.w, h: contentBand.h }}
-          theme={theme}
           tint={tint}
           renderOrder={renderOrder}
         />

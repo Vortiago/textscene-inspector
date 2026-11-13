@@ -17,7 +17,7 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { ContainerLayoutFn, MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
-import { panelBoxOf } from '../../../../r3f/controls/native/defaultThemeItems';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { fitChildInRect, isSortableControl } from '../shared/fitChildInRect';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
@@ -37,7 +37,7 @@ export const panelContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     y = Math.max(y, childMin.y);
   }
 
-  const styleMin = contentMarginSize(panelBoxOf(n, ctx.theme));
+  const styleMin = contentMarginSize(requiredThemeItem(n.styleBoxes, 'panel'));
   return { x: x + styleMin.x, y: y + styleMin.y };
 };
 
@@ -63,8 +63,8 @@ function fitChild(child: SolveNode, minSize: Vector2, rect: Rect2, rtl: boolean)
  * `rect` arrives un-inset, so each child rect is relative to the container's
  * top-left, not the content rect's.
  */
-export const panelContainerLayout: ContainerLayoutFn = (n, children, rect, ctx) => {
-  const style = panelBoxOf(n, ctx.theme);
+export const panelContainerLayout: ContainerLayoutFn = (n, children, rect) => {
+  const style = requiredThemeItem(n.styleBoxes, 'panel');
   // `contentMargin` is already the effective margin: `native/parseStyleBox.ts`
   // resolves Godot's `-1` "ask the border width" sentinel.
   const { left, top, right, bottom } = style.contentMargin;

@@ -11,6 +11,8 @@ import { controlNode } from './testing/solveNode';
 import { themeResource } from './testing/themeResource';
 import { isDrawn } from './styleBoxFlat';
 import { resolveStyleBoxes, resolveThemedColors } from './themeItems';
+import { defaultStyleBoxesOf } from './defaultThemeRecords';
+import { defaultThemeAt } from '../../../godot/scene/defaultTheme/defaultTheme';
 
 const NO_SCOPE = { externalResources: [], internalResources: [] };
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
@@ -70,5 +72,28 @@ describe('a scene Theme over the default theme table', () => {
     expect(buttonItems('FlatButton', [theme]).styleBoxes.normal).toBe(
       buttonItems('FlatButton').styleBoxes.normal
     );
+  });
+});
+
+describe('the panel of a PanelContainer under a variation', () => {
+  const tableBoxes = defaultStyleBoxesOf(defaultThemeAt(1));
+
+  function panelOf(variation?: string, themes: readonly ThemeResource[] = []) {
+    const node = controlNode('P', 'PanelContainer', { name: 'P', themeTypeVariation: variation });
+    const scope = themeResolutionScope('PanelContainer', variation, themes, NO_PROJECT_FONTS);
+    return resolveStyleBoxes(node, NO_SCOPE, scope).panel;
+  }
+
+  it("reads TooltipPanel's box for that variation (default_theme.cpp:1167-1169)", () => {
+    expect(panelOf('TooltipPanel')).toBe(tableBoxes.TooltipPanel!.panel);
+  });
+
+  it("reads PopupPanel's box for a scene variation based on PopupPanel (default_theme.cpp:726)", () => {
+    const theme = themeResource({ typeVariations: { MyPopup: 'PopupPanel' } });
+    expect(panelOf('MyPopup', [theme])).toBe(tableBoxes.PopupPanel!.panel);
+  });
+
+  it("reads PanelContainer's own box with no variation (default_theme.cpp:1264)", () => {
+    expect(panelOf()).toBe(tableBoxes.PanelContainer!.panel);
   });
 });

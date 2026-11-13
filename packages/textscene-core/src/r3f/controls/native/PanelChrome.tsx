@@ -5,25 +5,22 @@
  * before `styleBoxFlatGeometry` converts to linear.
  */
 
-import { panelBoxOf } from './defaultThemeItems';
 import { StyleBoxQuad } from './StyleBoxQuad';
+import { requiredThemeItem } from './themeItems';
 import type { NativeControlComponentProps } from '../ControlComponentRegistry';
-import type { NativeTheme } from './nativeTheme';
 import type { SolveNode } from './solveTree';
 import type { Rect2 } from '../../../godot/math/rect2';
 
 interface PanelChromeProps {
   solveNode: SolveNode;
   rect: Rect2;
-  /** The walker's theme, passed down so this chrome and the solve that sized it read the same metrics. */
-  theme: NativeTheme;
   /** The painter's own-pixel tint, with `self_modulate` folded in: this chrome is not a Control of its own. */
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;
 }
 
-export function PanelChrome({ solveNode, rect, theme, tint, renderOrder }: PanelChromeProps) {
-  const baseStyleBox = panelBoxOf(solveNode, theme);
+export function PanelChrome({ solveNode, rect, tint, renderOrder }: PanelChromeProps) {
+  const panel = requiredThemeItem(solveNode.styleBoxes, 'panel');
 
-  return <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />;
+  return <StyleBoxQuad styleBox={panel} color={tint.own} rect={rect} renderOrder={renderOrder} />;
 }
