@@ -13,8 +13,9 @@ import { ENTRY, WEBVIEW_DIR, WEBVIEW_METAFILE, formatKb } from './paths.mjs';
 // path, not deliberate growth: every instantiable Godot node type bundles a parser (its linter
 // half stays out), so a tighter ceiling fails on the next slice, not on a regression. The report
 // reads growth against MEASURED_GZ, since growth inside the headroom is invisible in a PASS line.
-const MEASURED_GZ = 812_774; // the closure as last measured
-const BUDGET_GZ = 1_000_000; // absolute ceiling, gzipped
+const MEASURED_GZ = 1_073_890; // the closure as last measured
+// ADR-0055: the ceiling while both the classic materials and the node lit surface ship.
+const BUDGET_GZ = 1_150_000; // absolute ceiling, gzipped
 
 // Dead-weight chunks that must never ship in the VSIX. Importing the `@react-three/drei` barrel
 // instead of `@react-three/drei/core/<Module>` bundles drei's video and face modules, whose

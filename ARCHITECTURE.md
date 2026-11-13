@@ -21,6 +21,7 @@ completion. A host supplies files and a place to draw or edit.
 | `apps/textscene-linter` | `tscn-lint` CLI | esbuild |
 | `apps/textscene-tscn` | `@textscene/tscn`: core's parser as one npm bundle | esbuild |
 | `apps/textscene-renderer` | `@textscene/renderer`: core's renderer as one npm bundle, with React and three.js as peers | esbuild |
+| `apps/textscene-three-godot-shaders` | `@textscene/three-godot-shaders`: core's shader module as one npm bundle, with three.js as its only peer | esbuild |
 
 Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vitest. The
 `pnpm-workspace.yaml` catalog holds every shared dependency version.
@@ -35,6 +36,7 @@ Stack: TypeScript (strict), React, react-three-fiber and drei over three.js, Vit
 | `nodes/` | One vertical slice per Godot node type |
 | `resources/` | The resource loader, and one slice per resource type |
 | `r3f/` | The renderer, the 2D canvas, the Control canvas, the preview shell |
+| `shaders/` | Godot's scene shader as TSL node materials for a three.js renderer, with no React (ADR-0072) |
 
 `godot/` groups its files by the engine area they port, named for that area's directory in Godot's
 source, and a file's cites name its area. A file whose facts port from two areas splits into one
@@ -269,6 +271,7 @@ A test or a script fails when one of these rules breaks.
 | The linter and the lenient parser import no React or three.js | `linter/reactFree.test.ts`, an ESLint `no-restricted-imports` rule |
 | The language-feature engine and the `tscn-lsp` server import no React or three.js | `languageFeatures/reactFree.test.ts`, an ESLint `no-restricted-imports` rule, `apps/textscene-lsp/src/reactFree.test.ts` |
 | `godot/` imports nothing | `noDependencies.test.ts` |
+| `shaders/` imports only three.js, `godot/` and its own files | `shaders/importRule.test.ts`, an ESLint `no-restricted-imports` rule |
 | No module outside `godot/` re-exports a `godot/` name, no group has a barrel, and no enum outside `godot/` copies a `godot/` enum | `engineFactRoutes.test.ts` |
 | Every slice is wired into its barrels | `barrelCompleteness`, `parserBarrelCompleteness` |
 | Core imports each engine fact from its file, and `godot/index.ts` and the root `index.ts` re-export only what a package outside core imports | `packageExports.test.ts` |

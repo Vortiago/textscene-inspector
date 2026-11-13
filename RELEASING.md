@@ -2,7 +2,11 @@
 
 A tag `<package>-v<major>.<minor>.<patch>` on `main` releases one package through
 `.github/workflows/release.yml`. `RELEASE_TARGETS` in `scripts/ci/releaseVersion.mjs` lists the
-packages: `vscode`, `linter`, `lsp`, `tscn` and `renderer`.
+packages: `vscode`, `linter`, `lsp`, `tscn`, `renderer` and `shaders`.
+
+`shaders` is `@textscene/three-godot-shaders`. It stays at 0.0.0 with no tag until the port of
+Godot's lit surface ends (#1451). Its peer range is one three.js minor, and each three.js upgrade is
+a new minor of the package (ADR-0072).
 
 ## Tag a release
 

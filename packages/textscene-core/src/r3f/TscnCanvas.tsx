@@ -22,7 +22,7 @@ import { editorCameraPosition, editorCameraProjection } from './godotEditorCamer
 import { usePreviewFrameloop } from './contexts/PreviewVisibilityContext.js';
 import { ViewportPassOrchestrator } from './contexts/ViewportPassRegistryContext.js';
 import { ControlRasterLayer } from '../nodes/viewport/subviewport/ControlRasterLayer.js';
-import { installShaderPatches } from './shaderPatch/installShaderPatches.js';
+import { prepareCanvasRenderer } from './litSurface/prepareCanvasRenderer.js';
 import { SceneShadowFitter } from './SceneShadowFitter.js';
 import { SceneMipmapBias } from './materials/SceneMipmapBias.js';
 import { SceneDepthPrepass } from './depthPrepass/SceneDepthPrepass.js';
@@ -145,7 +145,7 @@ export function TscnCanvas() {
         gl={{ localClippingEnabled: true, antialias: false }}
         flat
         frameloop={frameloop}
-        onCreated={installShaderPatches}
+        onCreated={prepareCanvasRenderer}
       >
         <CanvasServices />
         <SceneCamerasProvider>

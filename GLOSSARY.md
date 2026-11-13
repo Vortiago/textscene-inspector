@@ -969,6 +969,22 @@ _Avoid_: wrapping set in the loader. A shared cache entry's wrapping changed in 
 A render-only component with no parser and no linter (`GenericNodeFallback`, `GLBSceneRoot`), kept in `r3f/internal/`.
 _Avoid_: "default node".
 
+**Shader module** (`shaders/`, ADR-0072):
+Godot's scene shader as TSL node materials for a three.js `WebGLRenderer`, with no React. It imports only three.js, `godot/` and its own files, and `@textscene/three-godot-shaders` publishes it.
+_Avoid_: "TSL spike", "node materials folder". A node file under `r3f/`.
+
+**Lit surface form** (`LitSurfaceForm`, `r3f/litSurface/litSurfaceForm.ts`):
+Which materials draw a lit surface: `patched`, the classic materials with their shader patches, or `nodes`, the **Shader module**. One switch picks it, the page's `?litSurface=` parameter, read once.
+_Avoid_: "renderer mode", "TSL mode". A prop or a context that carries the form.
+
+**Surface outputs** (ADR-0072):
+The values Godot's `fragment()` writes, such as `ALBEDO`, `ROUGHNESS` and `NORMAL`. The lighting model of the **Shader module** reads only them, whatever surface fills them.
+_Avoid_: "material inputs" for these.
+
+**Pipeline input** (ADR-0072):
+A value a pass of the caller makes and a node of the **Shader module** reads, such as the shadow atlas or the sky radiance. Each one is optional: without it, the surface draws what Godot draws without that feature.
+_Avoid_: a node that imports the owner of a value.
+
 ### Shell & editing
 
 **Source pane**:

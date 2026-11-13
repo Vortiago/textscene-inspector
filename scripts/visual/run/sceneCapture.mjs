@@ -25,6 +25,11 @@ function withFailedRequests(reason, { failedRequests }) {
   return `${reason}; failed requests: ${describeFailedRequests(failedRequests)}`;
 }
 
+/** The query parameters a scene opens the previewer with, beside its fixture. */
+export function sceneQuery(scene) {
+  return { camera: scene.camera, litSurface: scene.litSurface };
+}
+
 /**
  * Navigates to a scene and captures its target after two byte-identical screenshots. Returns the
  * PNG buffer, or null with a reason when the scene never settles or logs a console error.
@@ -38,7 +43,7 @@ export async function captureScene(pageState, baseUrl, scene) {
   // A silent stalled resource chain would become a baseline, so it is logged.
   const { target: canvas, reason: canvasReason } = await openScene(page, baseUrl, scene.file, {
     canvas2D,
-    camera: scene.camera,
+    ...sceneQuery(scene),
     onSlow: (ms) => console.log(`[visual]   ${scene.name}: no network idle within ${ms}ms`),
   });
   if (!canvas) return { buffer: null, reason: withFailedRequests(canvasReason, diagnostics) };

@@ -14,7 +14,8 @@ import { isUniformImage } from '../previewServer.mjs';
 
 const OUTPUT_DIR = join(REPO_ROOT, 'scripts/visual/output');
 
-function baselineFile(scene) {
+/** The committed baseline of `scene`, as an absolute path. */
+export function baselineFile(scene) {
   return join(REPO_ROOT, baselinePath(scene.name));
 }
 
