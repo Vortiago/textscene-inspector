@@ -174,6 +174,13 @@ describe('withVariation', () => {
     expect(varied.unitsPerEm).toBe(METRICS.unitsPerEm);
   });
 
+  // The face of a RichTextLabel `[img]` drops the embolden of a project font without outlines.
+  it('drops the embolden and the skew of a face without outlines under an empty variation', () => {
+    const varied = withVariation(METRICS, { embolden: 1.2, skew: 0.2 });
+    const plain = withVariation(varied, {});
+    expect([plain.embolden, plain.skew]).toEqual([0, 0]);
+  });
+
   it('keeps an embolden and a skew apart: a skew alone leaves the embolden at 0', () => {
     expect(withVariation(METRICS, { skew: 0.2 }).embolden).toBe(0);
   });

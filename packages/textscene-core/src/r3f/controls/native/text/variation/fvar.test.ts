@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { fixtureSfnt } from '../sfntOutlines.testkit';
 import { defaultKerningReader, instanceKerningReader } from './instanceKerning';
 import { fontInstanceOf } from './fontInstance';
-import { opentypeOf } from '../glyphVariation.testkit';
+
+/** The `wght` axis tag. */
+const WGHT = 2003265652;
 
 describe('the fvar axes of a font', () => {
   it('are read once for two kerning readers and an instance', () => {
@@ -13,7 +15,7 @@ describe('the fvar axes of a font', () => {
 
     instanceKerningReader(sfnt);
     defaultKerningReader(sfnt);
-    fontInstanceOf(sfnt, opentypeOf({ 2003265652: 700 }));
+    fontInstanceOf(sfnt, new Map([[WGHT, 700]]));
 
     expect(readTable.mock.calls.filter(([tag]) => tag === 'fvar')).toHaveLength(1);
   });

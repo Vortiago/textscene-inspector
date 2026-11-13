@@ -68,7 +68,7 @@ export interface FontMetrics {
   /**
    * The advance in 26.6 of a glyph at `fontSizePx`, at the face's instance: the shaped glyph, else
    * the glyph of its character there. Null for no glyph, and where the glyph keeps the default
-   * advance. Present exactly where the face is at an instance other than its default.
+   * advance. Present exactly where the face has `drawnOpentype`.
    */
   readonly getInstanceAdvance26_6?: (glyph: KernGlyph, fontSizePx: number) => number | null;
   /**
@@ -480,9 +480,9 @@ function defaultReaders(unvaried: FontMetrics): PropertyDescriptorMap {
 
 /**
  * `metrics` with a `FontVariation`'s `embolden`, `skew` and `opentype`, and the `outlines` its text
- * follows, read through the face for every other field. With neither, it is the face itself. The
- * wrapper is the only writer of the instance readers. A variation of a wrapper replaces its
- * variation and keeps its outlines, as a `FontVariation` over another does (`font.cpp:3120-3131`).
+ * follows, read through the face for every other field: the face itself where neither changes it.
+ * It is the only writer of the instance readers. A variation of a wrapper replaces its variation
+ * and keeps its outlines, as a `FontVariation` over another does (`font.cpp:3120-3131`).
  */
 export function withVariation<Metrics extends FontMetrics>(
   metrics: Metrics,
@@ -493,24 +493,37 @@ export function withVariation<Metrics extends FontMetrics>(
     outlines = metrics.outlines,
   }: GlyphVariation & Pick<FontMetrics, 'outlines'>
 ): Metrics {
-  if (!outlines && !isGlyphVaried({ embolden, skew, opentype })) return metrics;
+  if (!outlines && !isGlyphVaried({ embolden, skew, opentype }) && !isGlyphVaried(metrics)) return metrics;
   const byOutlines = variationsOf(metrics)(variationKey({ embolden, skew, opentype }), newWrappersByOutlines);
   let wrapped = byOutlines.get(outlines);
   if (!wrapped) {
     const unvaried = unvariedFaceOf(metrics);
-    const isAtInstance = !!outlines && isInstanced(opentype);
+    const drawnOpentype = outlines ? drawnInstanceOf(outlines, opentype) : undefined;
     wrapped = Object.create(metrics, {
       embolden: { value: embolden },
       skew: { value: skew },
       opentype: { value: opentype },
-      drawnOpentype: { value: isAtInstance && outlines.drawsInstance?.(opentype) ? opentype : undefined },
+      drawnOpentype: { value: drawnOpentype },
       ...(outlines !== undefined && { outlines: { value: outlines } }),
-      ...(isAtInstance ? instanceReaders(unvaried, outlines, opentype) : defaultReaders(unvaried)),
+      ...(outlines && drawnOpentype
+        ? instanceReaders(unvaried, outlines, drawnOpentype)
+        : defaultReaders(unvaried)),
     }) as FontMetrics;
     unvariedFaces.set(wrapped, unvaried);
     byOutlines.set(outlines, wrapped);
   }
   return wrapped as Metrics;
+}
+
+/**
+ * `opentype` where `outlines` draw it as an instance other than the default, else undefined. Every
+ * instance reader of `outlines` answers null elsewhere, so the default readers stand there.
+ */
+function drawnInstanceOf(
+  outlines: SfntOutlines,
+  opentype: OpentypeCoordinates | undefined
+): OpentypeCoordinates | undefined {
+  return isInstanced(opentype) && outlines.drawsInstance?.(opentype) ? opentype : undefined;
 }
 
 /** `metrics` carrying `outlines`, keeping its own variation. */
@@ -650,17 +663,8 @@ function glyphKerningUnits(metrics: FontMetrics, a: KernGlyph, b: KernGlyph): nu
       { glyph: b.glyph, codePoint: b.char.codePointAt(0)! }
     );
   }
-  const glyphAt = instanceGlyphIndexOf(metrics);
-  return glyphAt && kerningOf(lookupGlyphOf(a, glyphAt), lookupGlyphOf(b, glyphAt));
-}
-
-/** The glyph of a code point at the face's instance, or null for a face at its default instance. */
-function instanceGlyphIndexOf({
-  getInstanceAdvance26_6,
-  outlines,
-  opentype,
-}: FontMetrics): ((codePoint: number) => number) | null {
-  return getInstanceAdvance26_6 && outlines
-    ? (codePoint: number) => outlines.glyphIndex(codePoint, opentype)
-    : null;
+  const { outlines, drawnOpentype } = metrics;
+  if (!outlines || !drawnOpentype) return null;
+  const glyphAt = (codePoint: number) => outlines.glyphIndex(codePoint, drawnOpentype);
+  return kerningOf(lookupGlyphOf(a, glyphAt), lookupGlyphOf(b, glyphAt));
 }
