@@ -2,7 +2,6 @@
  * The programs of the fixed-seed set that differ from Godot now, each with the issue that owns
  * the fault. The list only shrinks: a program that differs and is not here fails the run, and a
  * program here that equals Godot fails it too, so the pull request that fixes it removes it.
- * The owner is slice T2 (#1823), whose thread owns the rows T1 translated.
  */
 
 const DOUBLE_NEGATION = {

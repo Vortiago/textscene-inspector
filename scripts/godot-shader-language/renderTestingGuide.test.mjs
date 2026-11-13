@@ -43,3 +43,26 @@ describe('the chapter on the tests against Godot', () => {
     expect(GUIDE).toContain('| `demos/a.gdshader` | #1794 |');
   });
 });
+
+describe('the table of known differences', () => {
+  it('escapes a pipe in a reduced program, so the cell holds the whole program', () => {
+    const guide = renderTestingGuide({
+      operators: { cases: [], record: { godot: '4.6.3-stable', cases: {} } },
+      random: {
+        programs: [{}],
+        seed: 1,
+        translatedRows: 1,
+        knownDifferences: {
+          'random-1-0': {
+            reduced: 'bool probe(bool a0) { return a0 || a0; }',
+            lane: 'l',
+            cause: 'c',
+            owner: '#1',
+          },
+        },
+      },
+      corpus: { corpus: [], corpusRecord: { cases: {} }, states: {}, knownMismatches: {} },
+    });
+    expect(guide).toContain('`bool probe(bool a0) { return a0 \\|\\| a0; }`');
+  });
+});

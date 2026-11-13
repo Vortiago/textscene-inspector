@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * Runs every probe and the fixed-seed random programs in Godot 4.6.3 and writes Godot's answers
- * to the checked-in records, with Godot's verdict on each operator case and corpus shader: `pnpm godot:probes
- * [--check]`. `--check` writes nothing and exits 1 when a new run differs from a record. It needs `godot` on the path and `xvfb-run`, and renders on lavapipe as
+ * to the checked-in records, with Godot's verdict on each operator case and corpus shader:
+ * `pnpm godot:probes [--check]`. `--check` writes nothing and exits 1 when a new run differs from
+ * a record. It needs `godot` on the path and `xvfb-run`, and renders on lavapipe as
  * `pnpm ref:godot` does. The CI image has both, so the "Shader package" job runs `--check`.
  */
 

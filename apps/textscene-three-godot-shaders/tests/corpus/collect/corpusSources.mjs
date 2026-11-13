@@ -57,5 +57,6 @@ export function oneChange(text, kind) {
     };
   }
   const last = text.lastIndexOf(';');
+  if (last === -1) throw new Error(`expected a shader with a semicolon to drop, got:\n${text}`);
   return { change: 'drops the last semicolon', text: text.slice(0, last) + text.slice(last + 1) };
 }

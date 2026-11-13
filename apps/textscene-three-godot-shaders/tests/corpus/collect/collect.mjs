@@ -128,8 +128,14 @@ function main() {
     return { ...shader, id: `rejected/${shader.id}`, text, changedFrom: shader.id, change };
   });
   rmSync(SHADERS_DIR, { recursive: true, force: true });
+  const idOfFile = new Map();
   const entries = [...typed, ...rejected].map(({ text, ...shader }) => {
     const file = fileOf(shader.id);
+    // `fileOf` maps `a.tscn#0` and `a.tres#0` to one file: the second would overwrite the first.
+    if (idOfFile.has(file)) {
+      throw new Error(`expected one shader per file, got ${idOfFile.get(file)} and ${shader.id} in ${file}`);
+    }
+    idOfFile.set(file, shader.id);
     mkdirSync(dirname(join(SHADERS_DIR, file)), { recursive: true });
     writeFileSync(join(SHADERS_DIR, file), text);
     return { ...shader, file };

@@ -40,7 +40,10 @@ const TESTS = join(REPO_ROOT, 'apps/textscene-three-godot-shaders/tests');
 const RECORD = join(TESTS, 'probes/godot-record.json');
 const readJson = (path) => JSON.parse(readFileSync(join(TESTS, path), 'utf8'));
 
-/** The chapter on the tests, from the operator and corpus records and the corpus states that vitest writes. */
+/**
+ * The chapter on the tests, from the operator and corpus records and the corpus states that
+ * vitest writes.
+ */
 function testingChapter() {
   return renderTestingGuide({
     operators: { cases: OPERATOR_CASES, record: readJson('operators/godot-verdicts.json') },

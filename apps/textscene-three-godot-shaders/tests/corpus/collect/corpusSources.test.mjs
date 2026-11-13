@@ -53,4 +53,8 @@ describe('a rejected shader made by one change', () => {
   it('calls a function the shader does not define for the third kind', () => {
     expect(oneChange(text, 2).text).toContain('void fragment() {\n\tnot_defined();');
   });
+
+  it('throws for a text with no change it can apply', () => {
+    expect(() => oneChange('// no statement here\n', 0)).toThrow(/semicolon/);
+  });
 });

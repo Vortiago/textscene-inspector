@@ -13,19 +13,26 @@ import { runOnPage } from './pageRun.mjs';
 
 /**
  * The verdict of each of `programs` against `entries`, Godot's answers by program name, with a
- * reduced program for each that differs and is not a known difference. A refusal by the transpiler is a failure here: the
- * generator uses translated rows only.
+ * reduced program for each that differs in its bits and is not a known difference. A refusal by
+ * the transpiler is a failure here: the generator uses translated rows only.
  */
 export async function compareRandomPrograms(page, programs, entries) {
   const results = [];
   for (const program of programs) {
-    const verdict = compareProbe(entries[program.name], await runOnPage(page, program));
-    const isNew = !verdict.passed && !(program.name in KNOWN_DIFFERENCES);
+    const actual = await runOnPage(page, program);
+    const verdict = compareProbe(entries[program.name], actual);
+    const isNew = differsInBits(verdict) && !(program.name in KNOWN_DIFFERENCES);
     const reduced = isNew ? await reduceAgainstGodot(page, program) : undefined;
-    results.push({ program, verdict, reduced });
+    results.push({ program, verdict, isRefused: actual.error !== undefined, reduced });
   }
   return results;
 }
+
+/**
+ * Whether a comparison found lanes whose bits differ. A refusal or a missing record compares no
+ * lane, so a reduction that kept it would end on another fault than the one it started from.
+ */
+const differsInBits = (verdict) => !verdict.passed && verdict.lanes > 0;
 
 /** The reduction of `program` with a live Godot run per round, or nothing when Godot cannot run. */
 async function reduceAgainstGodot(page, program) {
@@ -37,7 +44,7 @@ async function reduceAgainstGodot(page, program) {
       const differs = [];
       for (const candidate of named) {
         const entry = recordEntry(candidate, pixels.get(candidate.name));
-        differs.push(!compareProbe(entry, await runOnPage(page, candidate)).passed);
+        differs.push(differsInBits(compareProbe(entry, await runOnPage(page, candidate))));
       }
       return differs;
     });
@@ -53,8 +60,8 @@ async function reduceAgainstGodot(page, program) {
  * how many of the differences are known with an owner.
  */
 export function randomSummary(results) {
-  const refused = results.filter(({ verdict }) => verdict.lanes === 0 && !verdict.passed).length;
-  const differ = results.filter(({ verdict }) => verdict.lanes > 0 && !verdict.passed);
+  const refused = results.filter(({ verdict, isRefused }) => isRefused && !verdict.passed).length;
+  const differ = results.filter(({ verdict, isRefused }) => !isRefused && !verdict.passed);
   const known = differ.filter(({ program }) => program.name in KNOWN_DIFFERENCES).length;
   const equal = results.length - refused - differ.length;
   const maxUlp = Math.max(0, ...differ.map(({ verdict }) => verdict.maxUlp));

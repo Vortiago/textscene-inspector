@@ -182,7 +182,12 @@ class ProgramWriter {
   /** An expression of `type` whose root applies `row`. */
   rooted(row, type) {
     if (row.id in LITERALS) return this.literal(type);
-    const producer = this.producers.get(type).find((each) => each.row === row);
+    const producer = this.producers.get(type)?.find((each) => each.row === row);
+    if (!producer) {
+      throw new Error(
+        `expected row ${row.id} to be a literal, operator, call or swizzle the generator writes, got family ${row.family}`
+      );
+    }
     return this.applied(producer, DEPTH_AT_MOST);
   }
 

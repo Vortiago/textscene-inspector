@@ -9,6 +9,9 @@ export const TESTING_FILE = 'testing.md';
 
 const count = (items, test) => items.filter(test).length;
 
+/** A table cell's text: a pipe, `||` in a program included, would end the cell (GFM tables). */
+const cell = (text) => String(text).replaceAll('|', '\\|');
+
 /** The source a corpus shader comes from: the first part of its id, the `rejected/` prefix left out. */
 const sourceOf = (shader) => shader.id.replace(/^rejected\//, '').split('/')[0];
 
@@ -25,7 +28,7 @@ The same cases go through the transpiler's front end. On each one, it accepts wh
 function knownDifferenceRows(knownDifferences) {
   return Object.entries(knownDifferences).map(
     ([name, known]) =>
-      `| \`${name}\` | \`${known.reduced}\` | ${known.lane} | ${known.cause} | ${known.owner} |`
+      `| \`${name}\` | \`${cell(known.reduced)}\` | ${cell(known.lane)} | ${cell(known.cause)} | ${known.owner} |`
   );
 }
 
@@ -69,7 +72,7 @@ function corpusSection({ corpus, corpusRecord, states, knownMismatches }) {
       (shader) => `| \`${shader.id}\` | ${states[shader.id].replace(/^not translated yet \((.*)\)$/, '$1')} |`
     );
   const mismatchLines = Object.entries(knownMismatches).map(
-    ([id, known]) => `| \`${id}\` | ${known.cause} | ${known.owner} |`
+    ([id, known]) => `| \`${id}\` | ${cell(known.cause)} | ${known.owner} |`
   );
   return `## A corpus of real shaders against Godot
 

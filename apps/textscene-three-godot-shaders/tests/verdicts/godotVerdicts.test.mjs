@@ -30,6 +30,11 @@ describe("Godot's verdict on a shader text", () => {
     expect(parseVerdictOutput(OUTPUT, 2)[1]).toEqual({ accepted: true });
   });
 
+  it('throws on a shader error whose line it cannot read, not reading it as accepted', () => {
+    const output = 'VERDICT 0\nSHADER ERROR: Unknown error.\n   at: compile (shader.cpp:10)\nVERDICTS DONE\n';
+    expect(() => parseVerdictOutput(output, 1)).toThrow(/at: \(null\)/);
+  });
+
   it('throws when the run stopped before the last shader', () => {
     expect(() => parseVerdictOutput('VERDICT 0\n', 1)).toThrow(/VERDICTS DONE/);
   });
