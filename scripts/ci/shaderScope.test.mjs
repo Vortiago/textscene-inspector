@@ -20,6 +20,10 @@ describe('isShaderOnly', () => {
     expect(isShaderOnly(paths, SHADER_BRANCH)).toBe(true);
   });
 
+  it('names the branch the port lands on, which keeps its first name', () => {
+    expect(SHADER_BRANCH).toBe('feature/shader-translator');
+  });
+
   it('is false when one file is outside the transpiler', () => {
     expect(isShaderOnly([`${LANGUAGE}parse.ts`, SHADERS_ENTRY], SHADER_BRANCH)).toBe(false);
     expect(isShaderOnly([`${LANGUAGE}parse.ts`, '.github/workflows/ci.yml'], SHADER_BRANCH)).toBe(false);
