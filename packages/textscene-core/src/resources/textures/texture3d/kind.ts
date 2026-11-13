@@ -21,13 +21,9 @@ export const TEXTURE_3D: ResourceKind<Texture3D> = {
 
 /** Each Image `_images` names. Null when any element names no Image. */
 function savedImages(value: string | undefined, follow: Follow): SavedImage[] | null {
-  const images: SavedImage[] = [];
-  for (const ref of imageReferences(value) ?? []) {
-    const image = follow.read(IMAGE, ref).value;
-    if (!image) return null;
-    images.push(image);
-  }
-  return images;
+  // Every slice is read before any answer counts, so the files of all slices load at once.
+  const images = (imageReferences(value) ?? []).map((ref) => follow.read(IMAGE, ref).value);
+  return images.every((image) => image !== null) ? images : null;
 }
 
 const SOURCES: Readonly<Record<string, SourceDecode>> = {

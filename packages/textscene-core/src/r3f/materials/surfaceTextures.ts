@@ -118,8 +118,7 @@ function useSlotTexture(
 ): Texture2DResult {
   const view = slotReadsSourceColor(slot) ? 'decoding' : 'plain';
   const ref = textureSlotReference(references, slot);
-  const reference = useMemo(() => referenceHeldBy(ref, tables, isHeldLocally), [ref, tables, isHeldLocally]);
-  const result = useTexture2DRid(reference, view);
+  const result = useTexture2DRid(referenceHeldBy(ref, tables, isHeldLocally), view);
   return result.namesTexture ? result : { ...result, texture: defaultWhiteTexture() };
 }
 

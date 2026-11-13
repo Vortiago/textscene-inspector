@@ -55,11 +55,9 @@ export function useNodeIcon(
   themed: ThemedIconRef | undefined,
   vendoredUrl: string | null
 ): THREE.Texture | null {
-  const reference = useMemo(
-    () => themed && referenceHeldBy(themed.ref, themed.resources, themed.isHeldLocally),
-    [themed]
+  const themedResult = useTexture2D(
+    themed ? referenceHeldBy(themed.ref, themed.resources, themed.isHeldLocally) : null
   );
-  const themedResult = useTexture2D(reference ?? null);
   const themedTexture = useOwnerCanvas2DTexture(themed ? themedResult.texture : null);
   const themedWins = themed !== undefined && !themedResult.missing;
   const vendoredTexture = useOptionalIconTexture(themedWins ? null : vendoredUrl);

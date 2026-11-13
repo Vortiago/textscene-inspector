@@ -10,6 +10,7 @@ import { peelCanvasTextures, resolveSubResourceRef, unwrapCanvasTextureRef } fro
 import { atlasTextureSize, decodeAtlasTexture } from './textures/atlastexture/decode.js';
 import { decodeGradientTexture2D } from './textures/gradienttexture2d/decode.js';
 import { savedImageSize } from './textures/image/decode.js';
+import { savedImageOf } from './textures/image/kind.js';
 import { decodeNoiseTexture2D } from './textures/noisetexture2d/decode.js';
 import { parsedResourceTexture } from './textures/parsedResourceTexture.js';
 import { isLocalToScene } from './textures/viewporttexture/localToScene.js';
@@ -86,7 +87,7 @@ function sheetSize(
   // An ImageTexture's size is its image's (`scene/resources/image_texture.cpp:74-75`, `:122-128`).
   if (resource.type !== 'ImageTexture') return null;
   const image = resolveSubResourceRef(resource.data.image, internalResources);
-  const size = image?.type === 'Image' ? savedImageSize({ dictionary: image.data.data ?? '' }) : null;
+  const size = image?.type === 'Image' ? savedImageSize(savedImageOf(image.data)) : null;
   return size && { x: size.width, y: size.height };
 }
 

@@ -29,11 +29,7 @@ export function usePanorama(
 ): THREE.Texture | null {
   const ref = sky?.material.kind === 'panorama' ? sky.material.panorama : undefined;
   const resources = material?.resources ?? NO_RESOURCES;
-  const reference = useMemo(
-    () => referenceHeldBy(ref, resources, isHeldLocally),
-    [ref, resources, isHeldLocally]
-  );
-  return useTexture2D(reference, 'decoding').texture;
+  return useTexture2D(referenceHeldBy(ref, resources, isHeldLocally), 'decoding').texture;
 }
 
 /**
@@ -49,14 +45,7 @@ export function useGlowMap(
     const glow = settings && glowParamsFor(settings);
     return glow && samplesGlowMap(glow) ? glow.map : undefined;
   }, [settings]);
-  const reference = useMemo(
-    () =>
-      referenceHeldBy(
-        ref,
-        environment?.resources ?? NO_RESOURCES,
-        !!environment && isLocalToScene(environment.resource)
-      ),
-    [ref, environment]
-  );
+  const isHeldLocally = !!environment && isLocalToScene(environment.resource);
+  const reference = referenceHeldBy(ref, environment?.resources ?? NO_RESOURCES, isHeldLocally);
   return useTexture2D(reference, 'plain').texture;
 }

@@ -204,11 +204,9 @@ interface ImageLike {
 function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes }: StyleBoxTextureMeshProps) {
   const canvasItemMerge = useCanvasItemMerge();
   const canvasSpace = useCanvasColorSpace();
-  const reference = useMemo(
-    () => referenceHeldBy(texture.texture, texture.resources, texture.isHeldLocally),
-    [texture]
+  const { texture: rawTexture } = useTexture2D(
+    referenceHeldBy(texture.texture, texture.resources, texture.isHeldLocally)
   );
-  const { texture: rawTexture } = useTexture2D(reference);
 
   const geometry = useMemo(() => {
     const image = rawTexture?.image as ImageLike | undefined;

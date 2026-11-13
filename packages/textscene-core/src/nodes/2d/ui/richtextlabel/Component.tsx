@@ -71,8 +71,7 @@ function RichTextImage({
 }) {
   const { spec, widthPx, heightPx } = placement;
   const toItemLinear = useItemLinearColorOf();
-  const scope = resources;
-  const { texture: rawTexture } = useTexture2D(useNodeReference(spec.path, scope));
+  const { texture: rawTexture } = useTexture2D(useNodeReference(spec.path, resources));
 
   const regionWindow = useMemo(
     () =>

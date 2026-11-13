@@ -14,5 +14,10 @@ export interface SavedImage {
 export const IMAGE: ResourceKind<SavedImage> = {
   name: 'Image',
   accepts: (type) => type === 'Image',
-  decode: (held) => ({ dictionary: held.properties.data ?? '' }),
+  decode: (held) => savedImageOf(held.properties),
 };
+
+/** The Image that an `Image` resource's properties save. */
+export function savedImageOf(properties: Readonly<Record<string, string>>): SavedImage {
+  return { dictionary: properties.data ?? '' };
+}
