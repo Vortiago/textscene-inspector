@@ -779,25 +779,32 @@ export function colorPickerSliderBoxRect(
  */
 export const COLOR_PICKER_SLIDER_GRABBER_OFFSET = 8;
 
+/** The `bar_arrow` grabber that `_reset_sliders_theme` and `NOTIFICATION_THEME_CHANGED` give a channel slider. */
+export interface ChannelGrabber {
+  size: Vector2;
+  /** `grabber_offset`, already scaled to pixels. */
+  offsetPx: number;
+  /** `center_grabber`, from the ColorPicker's `center_slider_grabbers` (`color_picker.cpp:146-149`). */
+  isCentred: boolean;
+}
+
 /**
- * The rect of the overridden grabber with `center_grabber = true` (`slider.cpp:322-334,363`):
- * `areasize` is the full width, and `grabber_shift = -grabber->get_width() / 2`
- * centres the icon on the ratio point. `Point2i` truncates each whole expression
- * once, and `grabber_offset` is a separate int addition.
+ * The rect of the overridden grabber (`slider.cpp:328-329,363`). A centred grabber spans the full
+ * width with `grabber_shift = -grabber->get_width() / 2`. Otherwise `areasize` loses the grabber
+ * width and the shift is 0. `Point2i` truncates each whole expression once.
  */
 export function colorPickerChannelGrabberRect(
   sliderBoxSize: Vector2,
   ratio: number,
-  grabber: Vector2,
-  grabberOffsetPx: number,
+  grabber: ChannelGrabber,
   rtl = false
 ): Rect2 {
   const size = { x: Math.trunc(sliderBoxSize.x), y: Math.trunc(sliderBoxSize.y) };
-  const areasize = size.x;
-  const grabberShift = -Math.trunc(grabber.x / 2);
+  const areasize = grabber.isCentred ? size.x : size.x - grabber.size.x;
+  const grabberShift = grabber.isCentred ? -Math.trunc(grabber.size.x / 2) : 0;
   const x = Math.trunc((rtl ? 1 - ratio : ratio) * areasize + grabberShift);
-  const y = Math.trunc(size.y / 2) - Math.trunc(grabber.y / 2) + grabberOffsetPx;
-  return { x, y, w: grabber.x, h: grabber.y };
+  const y = Math.trunc(size.y / 2) - Math.trunc(grabber.size.y / 2) + grabber.offsetPx;
+  return { x, y, w: grabber.size.x, h: grabber.size.y };
 }
 
 /**

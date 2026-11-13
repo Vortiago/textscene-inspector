@@ -16,8 +16,8 @@ import { sortableView } from '../../../../r3f/controls/native/solveTree';
 import type { ControlProperties } from '../control/types';
 import type { GraphElementProperties } from '../graphelement/types';
 import type { GraphFrameProperties } from '../graphframe/types';
-import { graphNodeStyles } from '../graphnode/nativeSolver';
-import { graphElementStyles } from '../graphelement/graphElementStyles';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import { isStyleBoxLine, isStyleBoxTexture } from '../../../../r3f/controls/native/parseStyleBox';
 import type { GraphEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -209,10 +209,11 @@ export function minimapCameraRect(
   };
 }
 
-/** One GraphFrame/GraphNode as `_minimap_draw` reads it (`:1821-1866`): its box, plus the bg colour its own `panel` stylebox carries. */
+/** One GraphFrame/GraphNode as `_minimap_draw` reads it (`:1821-1866`): its box and its fill. */
 export interface MinimapElement extends GraphElementBox {
   key: string;
-  bgColor: Rgba;
+  /** `null` keeps the `node` box's own fill. */
+  bgColor: Rgba | null;
 }
 
 /** `GraphFrame::tint_color`'s own default (`graph_frame.h:61`). */
@@ -226,6 +227,21 @@ interface GraphEditElementView {
   hasPositionedChild: boolean;
   /** Frames first, then nodes, each from the last child backwards: `_minimap_draw`'s own two loops (`:1821,1844`), so a frame never covers a node. */
   minimapElements: MinimapElement[];
+}
+
+/**
+ * The fill `_minimap_draw` gives an element (`graph_edit.cpp:1834-1840,1860-1864`): the `bg_color` of
+ * `panel_selected` or `panel`, or a frame's enabled tint. `null` keeps the `node` box's fill under a panel
+ * that is not a StyleBoxFlat. A resolved StyleBoxEmpty is a clear StyleBoxFlat here, so it sets a clear fill.
+ */
+function minimapElementColor(element: SolveNode): Rgba | null {
+  const props = element.node.properties as GraphFrameProperties;
+  const panel = requiredThemeItem(element.styleBoxes, props.selected === true ? 'panel_selected' : 'panel');
+  if (isStyleBoxTexture(panel) || isStyleBoxLine(panel)) return null;
+  if (element.node.type === 'GraphFrame' && props.tintColorEnabled) {
+    return props.tintColor ?? GRAPH_FRAME_DEFAULT_TINT;
+  }
+  return panel.bgColor;
 }
 
 /**
@@ -267,14 +283,7 @@ export function graphEditElements(
     for (let i = boxes.length - 1; i >= 0; i--) {
       const e = boxes[i]!;
       if (e.type !== wanted || !e.visible) continue;
-      // `sb_frame->get_bg_color()`, or the frame's own tint where it is enabled (`:1834-1840`).
-      const frameProps = e.node.node.properties as GraphFrameProperties;
-      const bgColor =
-        wanted === 'GraphFrame'
-          ? frameProps.tintColorEnabled
-            ? (frameProps.tintColor ?? GRAPH_FRAME_DEFAULT_TINT)
-            : graphElementStyles(e.node).panel.bgColor
-          : graphNodeStyles(e.node).panel.bgColor;
+      const bgColor = minimapElementColor(e.node);
       minimapElements.push({ key: e.key, ...e.box, bgColor });
     }
   }

@@ -124,6 +124,7 @@ import {
 import type { ColorPickerProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 /** A value field arrow's modulate under the picker's own tint: its colour in the item's linear space and its alpha. */
 function useSpinArrowColor(
@@ -675,12 +676,14 @@ export function ColorPicker({
                 )}
                 {isColorized &&
                   (() => {
-                    const offsetPx = Math.round(COLOR_PICKER_SLIDER_GRABBER_OFFSET * scale);
                     const gr = colorPickerChannelGrabberRect(
                       sliderBoxSize,
                       row.ratio,
-                      grabberIconSize,
-                      offsetPx,
+                      {
+                        size: grabberIconSize,
+                        offsetPx: Math.round(COLOR_PICKER_SLIDER_GRABBER_OFFSET * scale),
+                        isCentred: requiredThemeItem(solveNode.constants, 'center_slider_grabbers') !== 0,
+                      },
                       solveNode.rtl
                     );
                     return (

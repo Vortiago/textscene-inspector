@@ -23,6 +23,8 @@ import {
   minimapTransform,
 } from './minimap';
 import type { GraphEditProperties } from './types';
+import { flatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { StyleBoxTextureBox } from '../../../../r3f/controls/native/parseStyleBox';
 
 function props(p: Partial<GraphEditProperties> = {}): GraphEditProperties {
   return { name: 'G', connections: [], ...p } as GraphEditProperties;
@@ -198,6 +200,44 @@ describe('graphEditElements', () => {
     expect(view.minimapElements.map((e) => e.key)).toEqual(['A']);
     // Rect2().merge(A) is (0,0,120,64) merged with B at (500,0,120,64) -> width 620.
     expect(view.bounds.max.x).toBe(620 + 400);
+  });
+});
+
+describe('graphEditElements minimap fill (graph_edit.cpp:1834-1840,1860-1864)', () => {
+  const RED = { r: 1, g: 0, b: 0, a: 1 };
+  const GREEN = { r: 0, g: 1, b: 0, a: 1 };
+  const rects: ReadonlyMap<string, Rect2> = new Map([['A', { x: 0, y: 0, w: 120, h: 64 }]]);
+
+  function graphNodeWithPanels(selected: boolean, panel: SolveNode['styleBoxes'][string]): SolveNode {
+    const themed = withThemeItems({
+      ...emptySolveNode(),
+      path: 'A',
+      node: controlNode('A', 'GraphNode', { name: 'A', positionOffset: { x: 0, y: 0 }, selected }),
+    });
+    const node = {
+      ...themed,
+      styleBoxes: { ...themed.styleBoxes, panel, panel_selected: flatStyleBox(GREEN) },
+    };
+    return {
+      ...emptySolveNode(),
+      path: 'G',
+      node: controlNode('G', 'GraphEdit', { name: 'G', connections: [] }),
+      children: [node],
+    };
+  }
+
+  function fillOf(graphEdit: SolveNode) {
+    return graphEditElements(graphEdit, rects, 1, { x: 400, y: 320 }).minimapElements[0]!.bgColor;
+  }
+
+  it("fills a selected node with panel_selected's bg_color, not panel's", () => {
+    expect(fillOf(graphNodeWithPanels(true, flatStyleBox(RED)))).toEqual(GREEN);
+    expect(fillOf(graphNodeWithPanels(false, flatStyleBox(RED)))).toEqual(RED);
+  });
+
+  it("keeps the minimap's own node fill under a panel that is not a StyleBoxFlat", () => {
+    const texture = { ...flatStyleBox(RED), styleBoxKind: 'texture' } as StyleBoxTextureBox;
+    expect(fillOf(graphNodeWithPanels(false, texture))).toBeNull();
   });
 });
 

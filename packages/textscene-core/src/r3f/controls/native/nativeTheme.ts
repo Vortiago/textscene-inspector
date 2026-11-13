@@ -15,12 +15,8 @@ const themesByScale = new Map<number, NativeTheme>();
 export function nativeTheme(scale: number): NativeTheme {
   let theme = themesByScale.get(scale);
   if (!theme) {
-    theme = buildNativeTheme(scale);
+    theme = scaledGodotTheme(scale);
     themesByScale.set(scale, theme);
   }
   return theme;
-}
-
-function buildNativeTheme(scale: number): NativeTheme {
-  return scaledGodotTheme(scale);
 }

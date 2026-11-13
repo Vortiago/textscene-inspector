@@ -11,6 +11,7 @@ import { isDrawn } from '../../../../r3f/controls/native/styleBoxFlat';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { graphEditToolbarTheme } from './toolbarTheme';
 import { graphEditUnder } from './toolbarTheme.testkit';
+import { themeResource } from '../../../../r3f/controls/native/testing/themeResource';
 import { defaultLineEditField } from '../shared/testing/lineEditField';
 
 const THEME = nativeTheme(1);
@@ -42,6 +43,10 @@ describe('graphEditToolbarTheme', () => {
     it('draws the zoom label and the field in their own default colours', () => {
       expect(items.labelColor).toEqual(WHITE);
       expect(items.fieldColor).toEqual(CONTROL_FONT_COLOR);
+    });
+
+    it("spaces the row by HBoxContainer's separation of 4 (default_theme.cpp:1250)", () => {
+      expect(items.separation).toBe(4);
     });
 
     it("leaves the label's box empty and the field's boxes at LineEdit's", () => {
@@ -104,6 +109,15 @@ describe('graphEditToolbarTheme', () => {
       );
       expect(items.fieldColor).toEqual(BLUE);
       expect(items.spinBoxColors.up_icon_modulate).toEqual(GREEN);
+    });
+
+    it("spaces the row by the Theme's HBoxContainer separation, not the GraphEdit's own", () => {
+      const graphEdit = graphEditUnder();
+      const themed = {
+        ...graphEdit,
+        themeChain: [themeResource({ constants: { HBoxContainer: { separation: 12 } } })],
+      };
+      expect(graphEditToolbarTheme(themed, THEME).separation).toBe(12);
     });
 
     it("gives the field LineEdit's boxes", () => {

@@ -91,6 +91,17 @@ describe('<GraphNode> (isolated painter contract)', () => {
     expect(iconMeshes(renderer.scene)).toHaveLength(1);
   });
 
+  it("tints the resizer icon with the node's resizer_color (graph_node.cpp:699)", async () => {
+    const themed = graphNode({ resizable: true });
+    const red = { r: 1, g: 0, b: 0, a: 1 };
+    const solveNode = { ...themed, colors: { ...themed.colors, resizer_color: red } };
+    const renderer = await ReactThreeTestRenderer.create(
+      <GraphNode {...painterEnv()} solveNode={solveNode} rect={RECT} renderOrder={0} />
+    );
+    const [resizer] = iconMeshes(renderer.scene);
+    expect((resizer!.material as THREE.MeshBasicMaterial).color.getHex()).toBe(0xff0000);
+  });
+
   it('draws one port icon per enabled side of a declared slot', async () => {
     const child: SolveNode = {
       ...emptySolveNode(),

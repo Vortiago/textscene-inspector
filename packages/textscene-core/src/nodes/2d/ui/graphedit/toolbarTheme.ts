@@ -1,6 +1,6 @@
 /**
  * The theme items of the Controls `GraphEdit`'s constructor `memnew`s for its toolbar
- * (`scene/gui/graph_edit.cpp:3229-3300`): a `Label`, `Button`s with the `FlatButton` variation and a `SpinBox`.
+ * (`scene/gui/graph_edit.cpp:3229-3300`): an `HBoxContainer`, a `Label`, `Button`s with the `FlatButton` variation and a `SpinBox`.
  * Each reads its own class's items through the GraphEdit's ancestor Theme chain
  * (`Control::get_theme_stylebox`, `control.cpp:3078`), not the GraphEdit's own.
  */
@@ -32,6 +32,8 @@ export interface GraphEditToolbarTheme {
   fieldColor: Rgba;
   /** The SpinBox's own colours, which hold `up_icon_modulate` and `down_icon_modulate`. */
   spinBoxColors: SolveNode['colors'];
+  /** `menu_hbox`'s `separation`, an `HBoxContainer` item (`graph_edit.cpp:3234`). */
+  separation: number;
 }
 
 /** Written only by `graphEditToolbarTheme`. A node is replaced when the scene changes. */
@@ -59,6 +61,7 @@ function buildToolbarTheme(n: SolveNode, theme: NativeTheme): GraphEditToolbarTh
     field: lineEditField(field),
     fieldColor: requiredThemeItem(field.colors, 'font_color'),
     spinBoxColors: internalChildThemeItems(n, 'SpinBox').colors,
+    separation: requiredThemeItem(internalChildThemeItems(n, 'HBoxContainer').constants, 'separation'),
   };
   toolbarThemesOf(n).set(theme, result);
   return result;

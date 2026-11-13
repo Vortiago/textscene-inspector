@@ -79,8 +79,7 @@ describe('<Panel> (isolated painter contract)', () => {
     const geom = (renderer.scene.findByType('Mesh').instance as THREE.Mesh).geometry as THREE.BufferGeometry;
     const color = geom.attributes.color as THREE.BufferAttribute;
     // Default-theme `panel` stylebox fill is `style_normal_color` =
-    // Color(0.1, 0.1, 0.1, 0.6) (default_theme.cpp:134, nativeTheme.ts's
-    // STYLE_FILL.normal), read raw sRGB.
+    // Color(0.1, 0.1, 0.1, 0.6) (default_theme.cpp:134), read raw sRGB.
     expect(color.getX(0)).toBeCloseTo(0.1, 5);
     expect(color.getW(0)).toBeCloseTo(0.6, 5);
   });

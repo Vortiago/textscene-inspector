@@ -223,7 +223,7 @@ export function graphEditToolbar(
 
   const hboxMin = boxContainerMinimumSize(
     false,
-    theme.separation,
+    items.separation,
     entries.map((e) => e.box.minSize)
   );
   const panelStyle = items.menuPanel;
@@ -245,7 +245,7 @@ export function graphEditToolbar(
   const laid = resortBoxContainer(
     false,
     { width: contentRect.w, height: contentRect.h },
-    theme.separation,
+    items.separation,
     0,
     false,
     entries.map((e) => e.box)

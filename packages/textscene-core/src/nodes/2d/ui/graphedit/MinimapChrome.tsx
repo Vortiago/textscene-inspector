@@ -202,7 +202,7 @@ export function GraphEditMinimapChrome({
       {elements.map((element) => {
         const nodeRect = minimapNodeRect(transform, bounds, element, zoom);
         // `_minimap_draw` duplicates the `node` box and sets each element's colour on it (`graph_edit.cpp:1832-1840`).
-        const style = { ...nodeStyle, bgColor: element.bgColor };
+        const style = element.bgColor ? { ...nodeStyle, bgColor: element.bgColor } : nodeStyle;
         return (
           <CanvasItemGroup key={element.key} position={[nodeRect.x, -nodeRect.y, 0]}>
             <StyleBoxQuad
