@@ -153,6 +153,50 @@ function literalProbes() {
   return [...group, plain, overflow];
 }
 
+/**
+ * Negation of an operand whose text Godot already starts with `-`: Godot writes the operand alone
+ * (`shader_compiler.cpp:1141`), so `-(-a)` draws as `-a`. A negated constant is folded first
+ * (`shader_language.cpp:7840`), so `-(-1.5)` draws as 1.5.
+ */
+function nestedNegationProbes() {
+  const cases = [
+    ['vector', 'vec2 probe(vec2 a) { return -(-a); }', vectors(2)],
+    ['scalar', 'float probe(float a) { return -(-a); }', scalars()],
+    ['triple', 'float probe(float a) { return -(-(-a)); }', scalars()],
+    ['constructor', 'vec2 probe(float a) { return -(-vec2(a, 0.499)); }', scalars()],
+    ['swizzle', 'float probe(vec2 a) { return -((-a).y); }', vectors(2)],
+    ['sum', 'float probe(float a, float b) { return -(-(a + b)); }', pairs()],
+    ['constant', 'float probe(float a) { return -(-1.5) + a; }', scalars()],
+    ['constant-vector', 'vec2 probe(float a) { return -(-vec2(1.5, 0.25)) * a; }', scalars()],
+  ];
+  return cases.map(([word, source, inputs]) => ({
+    name: `negate-nested-${word}`,
+    rows: [],
+    source,
+    inputs,
+  }));
+}
+
+/**
+ * Arithmetic of constants alone, which Godot's GLSL compiler folds in double precision from the
+ * text Godot writes, and rounds once. A fold in 32-bit floats lands one unit off on these values.
+ */
+function constantFoldingProbes() {
+  const cases = [
+    ['sum', 'float probe(float a) { return 58.656 + 74.377 + a; }'],
+    ['chain', 'float probe(float a) { return 0.1 + 0.2 + 0.3 + a; }'],
+    ['difference-quotient', 'float probe(float a) { return (33.135 - 0.886) / 69.143 * a; }'],
+    ['vector-scalar', 'vec4 probe(float a) { return vec3(58.656).bggr + 74.377 + a; }'],
+    ['quotient-vector', 'vec2 probe(float a) { return (71.543 + 54.854) / vec2(a, 0.5); }'],
+    ['swizzle', 'float probe(float a) { return ((68.452 * vec3(797.08) + vec2(51.97).t).zx).t + a; }'],
+    ['negated-sum', 'float probe(float a) { return -(0.1 + 0.2) + a; }'],
+    ['overflow', 'vec2 probe(float a) { return vec2(3e38 * 10.0, -(3e38 * 10.0)) + a; }'],
+    ['negative-zero', 'vec2 probe(float a) { return vec2(-0.0 * 1.0, a); }'],
+    ['division-by-zero', 'vec3 probe(float a) { return vec3(1.0 / 0.0, -1.0 / 0.0, a); }'],
+  ];
+  return cases.map(([word, source]) => ({ name: `fold-${word}`, rows: [], source, inputs: scalars() }));
+}
+
 /** A function of the whole family together: Godot's evaluation order and every form at once. */
 function combinedProbe() {
   return {
@@ -170,5 +214,7 @@ export const PROBES = [
   ...constructorProbes(),
   ...swizzleProbes(),
   ...literalProbes(),
+  ...nestedNegationProbes(),
+  ...constantFoldingProbes(),
   combinedProbe(),
 ];

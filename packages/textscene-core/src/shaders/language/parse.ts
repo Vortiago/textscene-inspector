@@ -17,14 +17,22 @@ import {
   BINARY_BY_TOKEN,
   BINARY_LEVEL_COUNT,
   BINARY_OPERATORS,
+  operatorOfRow,
   operatorText,
   type TranspiledOperator,
 } from './operators.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
-import type { Expression, FunctionDefinition, Parameter, ShaderTree, ValueType } from './shaderTree.js';
+import type {
+  Constant,
+  Expression,
+  FunctionDefinition,
+  Parameter,
+  ShaderTree,
+  ValueType,
+} from './shaderTree.js';
 import type { Token } from './tokenizer.js';
-import { godotLiteralFloat } from './godotNumber.js';
+import { godotLiteralScalar } from './godotNumber.js';
 
 /** The types the transpiler reads. Each other type is refused with the row that names it. */
 const TRANSPILED_TYPES: ReadonlySet<ValueType> = new Set(['float', 'vec2', 'vec3', 'vec4']);
@@ -123,8 +131,9 @@ class Parser {
     return this.transpiledType(token, `Expected a type, found: '${token.text ?? token.type}'.`);
   }
 
+  /** A whole expression, reduced as `_parse_and_reduce_expression` reduces it (`shader_language.cpp:7949`). */
   private expression(): Expression {
-    return this.binary(BINARY_LEVEL_COUNT - 1);
+    return reduced(this.binary(BINARY_LEVEL_COUNT - 1));
   }
 
   /** Left to right at each level, as Godot's priority loop reduces (`shader_language.cpp:7600`). */
@@ -191,7 +200,7 @@ class Parser {
     const token = this.next();
     switch (token.type) {
       case 'TK_FLOAT_CONSTANT':
-        return { kind: 'float literal', type: 'float', value: this.literalFloat(token) };
+        return { kind: 'constant', type: 'float', values: [this.literalFloat(token)] };
       case 'TK_INT_CONSTANT':
         throw notTranspiled(instruction('int literal')!, token.line);
       case 'TK_UINT_CONSTANT':
@@ -215,7 +224,7 @@ class Parser {
     const args = this.argumentList();
     const overload = signatureInstruction(type, typesOf(args));
     if (!overload) this.fail(`No matching constructor found for: '${type}'.`, token);
-    return { kind: 'constructor', type, row: overload, args };
+    return constructedConstant(type, args) ?? { kind: 'constructor', type, row: overload, args };
   }
 
   /** The type of a type keyword the transpiler reads, the refusal of its row, or Godot's `message`. */
@@ -275,10 +284,10 @@ class Parser {
     return { kind: 'swizzle', type, row, base, lanes };
   }
 
-  /** The float a literal draws with, or the refusal of one whose text no GLSL compiler reads. */
+  /** The float Godot holds for a literal, or the refusal of one whose text no GLSL compiler reads. */
   private literalFloat(token: Token): number {
     try {
-      return godotLiteralFloat(token.text!);
+      return godotLiteralScalar(token.text!);
     } catch (error) {
       this.fail(`float literal '${token.text}': ${(error as Error).message}`, token);
     }
@@ -317,6 +326,31 @@ class Parser {
 }
 
 const typesOf = (expressions: readonly Expression[]) => expressions.map((expression) => expression.type);
+
+/**
+ * `_reduce_expression` (`shader_language.cpp:7840`): a negation of a constant becomes the negated
+ * constant, through a chain of negations. It reaches no deeper, so `-(-1.5) + a` keeps both. A
+ * constructor of constants is folded where it is read.
+ */
+function reduced(expression: Expression): Expression {
+  if (expression.kind !== 'operator' || operatorOfRow(expression.row.id) !== 'OP_NEGATE') return expression;
+  const operand = reduced(expression.operands[0]!);
+  if (operand.kind !== 'constant') return { ...expression, operands: [operand] };
+  return { ...operand, values: operand.values.map((value) => -value) };
+}
+
+/**
+ * Godot's fold of a constructor whose arguments are all constants (`shader_language.cpp:7850`):
+ * their lanes in order, and one lane repeated for a single scalar.
+ */
+function constructedConstant(type: ValueType, args: readonly Expression[]): Constant | undefined {
+  if (!args.every((arg): arg is Constant => arg.kind === 'constant')) return undefined;
+  const values = args.flatMap((arg) => arg.values);
+  const laneCount = LANE_COUNT[type]!;
+  return { kind: 'constant', type, values: values.length === 1 ? Array(laneCount).fill(values[0]) : values };
+}
+
+const LANE_COUNT: Readonly<Record<ValueType, number>> = { float: 1, vec2: 2, vec3: 3, vec4: 4 };
 
 const SWIZZLE_ROWS = familyInstructions('swizzle');
 

@@ -1,7 +1,8 @@
 /**
  * Godot's float literal chain, which decides the value a shader's literal draws with. Godot reads
  * the text with its own decimal reader, keeps a 32-bit float, and writes the float back as text
- * with 14 decimals for the GPU's compiler (`shader_compiler.cpp:180`). So `1e-20` draws as 0.
+ * with 14 decimals for the GPU's compiler (`shader_compiler.cpp:180`), which reads it as a
+ * double. So `1e-20` draws as 0.
  */
 
 /** `powersOf10` of `built_in_strtod` (`core/string/ustring.cpp:2388`): 10^(2^i). */
@@ -153,18 +154,22 @@ function exactRatio(value: number): { numerator: bigint; denominator: bigint } {
 }
 
 /**
- * The 32-bit float a shader draws with for a constant whose value Godot holds: its text, as the
- * GPU's compiler reads it again. Throws for a value whose text no compiler reads: Godot's
- * shader then fails to compile.
+ * The 32-bit float Godot holds for a float literal (`Scalar::real`), from its own reader. Throws
+ * for a value whose text no GLSL compiler reads, so Godot's shader fails to compile.
  */
-function godotConstantFloat(value: number): number {
-  const text = godotFloatText(Math.fround(value));
-  if (/inf|nan/.test(text))
-    throw new Error(`Godot writes this constant as "${text}", which no GLSL compiler reads`);
-  return Math.fround(Number(text));
+export function godotLiteralScalar(literal: string): number {
+  const scalar = Math.fround(godotStrtod(literal));
+  godotConstantDouble(scalar);
+  return scalar;
 }
 
-/** The float a float literal of a shader draws with: Godot's reader, then its constant text. */
-export function godotLiteralFloat(literal: string): number {
-  return godotConstantFloat(godotStrtod(literal));
+/**
+ * The double the GPU's compiler reads from the text Godot writes for the 32-bit float `scalar`.
+ * glslang folds constants in this precision and rounds once, when it writes the SPIR-V constant.
+ */
+export function godotConstantDouble(scalar: number): number {
+  const text = godotFloatText(scalar);
+  if (/inf|nan/.test(text))
+    throw new Error(`Godot writes this constant as "${text}", which no GLSL compiler reads`);
+  return Number(text);
 }

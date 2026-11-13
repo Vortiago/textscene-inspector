@@ -83,11 +83,28 @@ describe('parse', () => {
     expect(refusal('float f(vec2 a) { return a.z; }')).toThrow("Invalid member for 'vec2' expression: '.z'.");
   });
 
-  it('keeps the float a literal draws with', () => {
+  it('keeps the 32-bit float Godot holds for a literal, before its text loses digits', () => {
     const result = resultOf('float f() { return 1.5e-14; }');
-    const bits =
-      result.kind === 'float literal' && new Uint32Array(new Float32Array([result.value]).buffer)[0];
-    expect(bits).toBe(0x283424dc);
+    const bits = result.kind === 'constant' && new Uint32Array(new Float32Array(result.values).buffer)[0];
+    expect(bits).toBe(0x28871ba5);
+  });
+
+  it('folds a negated constant and a constructor of constants into one constant, as Godot does', () => {
+    expect(resultOf('vec2 f() { return -vec2(1.5, -0.25); }')).toEqual({
+      kind: 'constant',
+      type: 'vec2',
+      values: [-1.5, 0.25],
+    });
+  });
+
+  it('keeps a negation that is not the top of a whole expression, as Godot does', () => {
+    expect(resultOf('float f(float a) { return -(-1.5) + a; }')).toMatchObject({
+      kind: 'operator',
+      operands: [
+        { kind: 'operator', operands: [{ kind: 'constant', values: [-1.5] }] },
+        { kind: 'parameter' },
+      ],
+    });
   });
 
   it('refuses a literal that Godot writes as text no GLSL compiler reads', () => {

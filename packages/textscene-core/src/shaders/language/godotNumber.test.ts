@@ -4,12 +4,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { godotLiteralFloat } from './godotNumber.js';
+import { godotConstantDouble, godotLiteralScalar } from './godotNumber.js';
+
+/** The float a literal draws with when nothing folds it: its double, rounded once. */
+const godotLiteralFloat = (literal: string) => Math.fround(godotConstantDouble(godotLiteralScalar(literal)));
 
 const bitsOf = (value: number) =>
   new Uint32Array(new Float32Array([value]).buffer)[0]!.toString(16).padStart(8, '0');
 
-describe('godotLiteralFloat', () => {
+describe('a float literal', () => {
   it.each([
     ['0.0', '00000000'],
     ['1.0', '3f800000'],
@@ -40,6 +43,11 @@ describe('godotLiteralFloat', () => {
   });
 
   it('refuses a literal past the float range, as Godot fails to compile it', () => {
-    expect(() => godotLiteralFloat('1e39')).toThrow(/inf/);
+    expect(() => godotLiteralScalar('1e39')).toThrow(/inf/);
+  });
+
+  it('keeps the 32-bit float Godot holds apart from the double its text gives', () => {
+    expect(bitsOf(godotLiteralScalar('58.656'))).toBe('426a9fbe');
+    expect(godotConstantDouble(godotLiteralScalar('58.656'))).toBe(58.6559982299805);
   });
 });

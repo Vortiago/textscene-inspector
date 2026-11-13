@@ -3,8 +3,9 @@
  * the same GLSL operation, so the GPU computes what Godot's GLSL computes.
  */
 
-import { float, vec2, vec3, vec4 } from 'three/tsl';
+import { float, uint, uintBitsToFloat, vec2, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
+import { dropsNegation, GlslangFolding } from './godotGlsl.js';
 import { operatorOfRow, type TranspiledOperator } from './operators.js';
 import type { Expression, FunctionDefinition, Parameter, ValueType } from './shaderTree.js';
 
@@ -36,6 +37,7 @@ const CONSTRUCTORS: Readonly<Record<string, Constructor>> = {
 const LANE_LETTERS = 'xyzw';
 
 export function emitFunction(definition: FunctionDefinition): TranspiledFunction {
+  const folding = new GlslangFolding();
   return {
     name: definition.name,
     returnType: definition.returnType,
@@ -46,30 +48,53 @@ export function emitFunction(definition: FunctionDefinition): TranspiledFunction
           `expected ${definition.parameters.length} arguments for ${definition.name}, got ${args.length}`
         );
       }
-      return emit(definition.result, args);
+      return emit(definition.result, { args, folding });
     },
   };
 }
 
-function emit(expression: Expression, args: readonly Node[]): Node {
+/** What emitting one call of a function reads: its argument nodes and its tree's folded constants. */
+interface EmitContext {
+  readonly args: readonly Node[];
+  readonly folding: GlslangFolding;
+}
+
+function emit(expression: Expression, context: EmitContext): Node {
+  const folded = context.folding.lanesOf(expression);
+  if (folded) return constantNode(expression.type, folded);
   switch (expression.kind) {
-    // A literal is never negative: `-0.0` is OP_NEGATE of 0.0, so three's text, which writes
-    // `String(-0)` as `0`, never meets a negative zero.
-    case 'float literal':
-      return float(expression.value);
+    case 'constant':
+      throw new Error(`expected glslang to fold the constant ${expression.values.join(', ')}`);
     case 'parameter':
-      return args[expression.index]!;
+      return context.args[expression.index]!;
     case 'operator': {
-      const [first, second] = expression.operands.map((operand) => emit(operand, args));
-      return OPERATIONS[operatorOfRow(expression.row.id)](first as Node & ArithmeticNode, second!);
+      const op = operatorOfRow(expression.row.id);
+      if (op === 'OP_NEGATE' && dropsNegation(expression)) return emit(expression.operands[0]!, context);
+      const [first, second] = expression.operands.map((operand) => emit(operand, context));
+      return OPERATIONS[op](first as Node & ArithmeticNode, second!);
     }
     case 'constructor':
-      return CONSTRUCTORS[expression.type]!(...expression.args.map((arg) => emit(arg, args)));
+      return CONSTRUCTORS[expression.type]!(...expression.args.map((arg) => emit(arg, context)));
     case 'swizzle': {
       const letters = expression.lanes.map((lane) => LANE_LETTERS[lane]).join('');
-      return (emit(expression.base, args) as unknown as Record<string, Node>)[letters]!;
+      return (emit(expression.base, context) as unknown as Record<string, Node>)[letters]!;
     }
   }
+}
+
+/** The constant of `type` with glslang's folded `lanes`, each rounded once to a 32-bit float. */
+function constantNode(type: ValueType, lanes: readonly number[]): Node {
+  const components = lanes.map((lane) => floatNode(Math.fround(lane)));
+  return type === 'float' ? components[0]! : CONSTRUCTORS[type]!(...components);
+}
+
+/**
+ * The float `value`. three writes -0 as `0.0` and infinity as `Infinity.0` (`_toFloat` of its
+ * node builder), so those, and NaN, are written as their bits.
+ */
+function floatNode(value: number): Node {
+  if (Number.isFinite(value) && !Object.is(value, -0)) return float(value);
+  return uintBitsToFloat(uint(new Uint32Array(new Float32Array([value]).buffer)[0]!)) as unknown as Node;
 }
 
 /** The TSL operation of each operator, by Godot's enumerator. */
