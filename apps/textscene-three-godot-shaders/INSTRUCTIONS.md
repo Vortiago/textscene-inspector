@@ -13,7 +13,7 @@ real-GL test checks the transpilation against them. An open row names the issue 
 
 | Instruction | State | Godot source |
 | --- | --- | --- |
-| `void` | open, #1823 | `servers/rendering/shader_language.h:210` |
+| `void` | open, #1824 | `servers/rendering/shader_language.h:210` |
 | `bool` | open, #1823 | `servers/rendering/shader_language.h:211` |
 | `bvec2` | open, #1823 | `servers/rendering/shader_language.h:212` |
 | `bvec3` | open, #1823 | `servers/rendering/shader_language.h:213` |
@@ -33,19 +33,19 @@ real-GL test checks the transpilation against them. An open row names the issue 
 | `mat2` | open, #1823 | `servers/rendering/shader_language.h:227` |
 | `mat3` | open, #1823 | `servers/rendering/shader_language.h:228` |
 | `mat4` | open, #1823 | `servers/rendering/shader_language.h:229` |
-| `sampler2D` | open, #1823 | `servers/rendering/shader_language.h:230` |
-| `isampler2D` | open, #1823 | `servers/rendering/shader_language.h:231` |
-| `usampler2D` | open, #1823 | `servers/rendering/shader_language.h:232` |
-| `sampler2DArray` | open, #1823 | `servers/rendering/shader_language.h:233` |
-| `isampler2DArray` | open, #1823 | `servers/rendering/shader_language.h:234` |
-| `usampler2DArray` | open, #1823 | `servers/rendering/shader_language.h:235` |
-| `sampler3D` | open, #1823 | `servers/rendering/shader_language.h:236` |
-| `isampler3D` | open, #1823 | `servers/rendering/shader_language.h:237` |
-| `usampler3D` | open, #1823 | `servers/rendering/shader_language.h:238` |
-| `samplerCube` | open, #1823 | `servers/rendering/shader_language.h:239` |
-| `samplerCubeArray` | open, #1823 | `servers/rendering/shader_language.h:240` |
-| `samplerExternalOES` | open, #1823 | `servers/rendering/shader_language.h:241` |
-| `struct type` | open, #1823 | `servers/rendering/shader_language.h:242` |
+| `sampler2D` | open, #1829 | `servers/rendering/shader_language.h:230` |
+| `isampler2D` | open, #1829 | `servers/rendering/shader_language.h:231` |
+| `usampler2D` | open, #1829 | `servers/rendering/shader_language.h:232` |
+| `sampler2DArray` | open, #1829 | `servers/rendering/shader_language.h:233` |
+| `isampler2DArray` | open, #1829 | `servers/rendering/shader_language.h:234` |
+| `usampler2DArray` | open, #1829 | `servers/rendering/shader_language.h:235` |
+| `sampler3D` | open, #1829 | `servers/rendering/shader_language.h:236` |
+| `isampler3D` | open, #1829 | `servers/rendering/shader_language.h:237` |
+| `usampler3D` | open, #1829 | `servers/rendering/shader_language.h:238` |
+| `samplerCube` | open, #1829 | `servers/rendering/shader_language.h:239` |
+| `samplerCubeArray` | open, #1829 | `servers/rendering/shader_language.h:240` |
+| `samplerExternalOES` | open, #1829 | `servers/rendering/shader_language.h:241` |
+| `struct type` | open, #1824 | `servers/rendering/shader_language.h:242` |
 
 ## literal
 
@@ -63,9 +63,9 @@ real-GL test checks the transpilation against them. An open row names the issue 
 | --- | --- | --- |
 | `flat` | open, #1794 | `servers/rendering/shader_language.cpp:324` |
 | `smooth` | open, #1794 | `servers/rendering/shader_language.cpp:325` |
-| `lowp` | open, #1794 | `servers/rendering/shader_language.cpp:329` |
-| `mediump` | open, #1794 | `servers/rendering/shader_language.cpp:330` |
-| `highp` | open, #1794 | `servers/rendering/shader_language.cpp:331` |
+| `lowp` | open, #1823 | `servers/rendering/shader_language.cpp:329` |
+| `mediump` | open, #1823 | `servers/rendering/shader_language.cpp:330` |
+| `highp` | open, #1823 | `servers/rendering/shader_language.cpp:331` |
 | `in` | open, #1825 | `servers/rendering/shader_language.cpp:366` |
 | `out` | open, #1825 | `servers/rendering/shader_language.cpp:367` |
 | `inout` | open, #1825 | `servers/rendering/shader_language.cpp:368` |
@@ -109,7 +109,7 @@ real-GL test checks the transpilation against them. An open row names the issue 
 | `default` | open, #1824 | `servers/rendering/shader_language.cpp:358` |
 | `break` | open, #1824 | `servers/rendering/shader_language.cpp:359` |
 | `continue` | open, #1824 | `servers/rendering/shader_language.cpp:360` |
-| `return` | open, #1824 | `servers/rendering/shader_language.cpp:361` |
+| `return` | open, #1823 | `servers/rendering/shader_language.cpp:361` |
 | `discard` | open, #1824 | `servers/rendering/shader_language.cpp:362` |
 
 ## uniform hint
@@ -711,7 +711,7 @@ real-GL test checks the transpilation against them. An open row names the issue 
 | `OP_SELECT_IF(bool,mat2,mat2)` | open, #1823 | `servers/rendering/shader_language.cpp:1990` |
 | `OP_SELECT_IF(bool,mat3,mat3)` | open, #1823 | `servers/rendering/shader_language.cpp:1990` |
 | `OP_SELECT_IF(bool,mat4,mat4)` | open, #1823 | `servers/rendering/shader_language.cpp:1990` |
-| `OP_SELECT_ELSE` | open, #1824 | `servers/rendering/shader_language.cpp:1558` |
+| `OP_SELECT_ELSE` | open, #1823 | `servers/rendering/shader_language.cpp:1558` |
 | `OP_POST_INCREMENT(int)` | open, #1823 | `servers/rendering/shader_language.cpp:1614` |
 | `OP_POST_INCREMENT(ivec2)` | open, #1823 | `servers/rendering/shader_language.cpp:1614` |
 | `OP_POST_INCREMENT(ivec3)` | open, #1823 | `servers/rendering/shader_language.cpp:1614` |
@@ -737,17 +737,17 @@ real-GL test checks the transpilation against them. An open row names the issue 
 | `OP_POST_DECREMENT(vec3)` | open, #1823 | `servers/rendering/shader_language.cpp:1614` |
 | `OP_POST_DECREMENT(vec4)` | open, #1823 | `servers/rendering/shader_language.cpp:1614` |
 | `OP_CALL` | open, #1825 | `servers/rendering/shader_language.cpp:1558` |
-| `OP_CONSTRUCT` | open, #1824 | `servers/rendering/shader_language.cpp:1558` |
+| `OP_CONSTRUCT` | open, #1823 | `servers/rendering/shader_language.cpp:1558` |
 | `OP_STRUCT` | open, #1824 | `servers/rendering/shader_language.cpp:1558` |
-| `OP_INDEX` | open, #1824 | `servers/rendering/shader_language.cpp:1558` |
-| `OP_EMPTY` | open, #1824 | `servers/rendering/shader_language.cpp:1558` |
+| `OP_INDEX` | open, #1823 | `servers/rendering/shader_language.cpp:1558` |
+| `OP_EMPTY` | open, #1823 | `servers/rendering/shader_language.cpp:1558` |
 
 ## statement
 
 | Instruction | State | Godot source |
 | --- | --- | --- |
 | `FLOW_OP_IF` | open, #1824 | `servers/rendering/shader_language.h:307` |
-| `FLOW_OP_RETURN` | open, #1824 | `servers/rendering/shader_language.h:308` |
+| `FLOW_OP_RETURN` | open, #1823 | `servers/rendering/shader_language.h:308` |
 | `FLOW_OP_FOR` | open, #1824 | `servers/rendering/shader_language.h:309` |
 | `FLOW_OP_WHILE` | open, #1824 | `servers/rendering/shader_language.h:310` |
 | `FLOW_OP_DO` | open, #1824 | `servers/rendering/shader_language.h:311` |
@@ -773,7 +773,7 @@ real-GL test checks the transpilation against them. An open row names the issue 
 | `NODE_TYPE_MEMBER` | open, #1823 | `servers/rendering/shader_language.h:381` |
 | `NODE_TYPE_ARRAY` | open, #1824 | `servers/rendering/shader_language.h:382` |
 | `NODE_TYPE_ARRAY_CONSTRUCT` | open, #1824 | `servers/rendering/shader_language.h:383` |
-| `NODE_TYPE_STRUCT` | open, #1823 | `servers/rendering/shader_language.h:384` |
+| `NODE_TYPE_STRUCT` | open, #1824 | `servers/rendering/shader_language.h:384` |
 
 ## constructor
 

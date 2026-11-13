@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
-import { parameterBits } from '../../../../scripts/godot-probes/probeShader.mjs';
+import { PROBE_TYPES, parameterBits, probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { withConsumerPage, writeJobSummary } from '../consumer.mjs';
 import { PROBES } from '../probes/probes.mjs';
 import { compareProbe, coverageFailures } from './compare.mjs';
@@ -43,7 +43,8 @@ async function main() {
       const results = new Map();
       for (const probe of PROBES) {
         const actual = await page.evaluate((spec) => globalThis.runProbe(spec), pageSpec(probe));
-        results.set(probe.name, compareProbe(RECORD.probes[probe.name], actual));
+        const isFloatResult = PROBE_TYPES[probeSignature(probe.source).returns].scalar === 'float';
+        results.set(probe.name, compareProbe(RECORD.probes[probe.name], actual, isFloatResult));
       }
       return results;
     }

@@ -25,9 +25,10 @@ function isNaNBits(bits) {
 
 /**
  * The verdict of `actual` (the page's answer: `{ bits }` per lane, or `{ error }`) against the
- * record `entry`: `{ passed, lanes, mismatches, maxUlp, detail }`.
+ * record `entry`: `{ passed, lanes, mismatches, maxUlp, detail }`. Two NaN lanes match only where
+ * the result is a float: an int or a bool lane matches bit for bit.
  */
-export function compareProbe(entry, actual) {
+export function compareProbe(entry, actual, isFloatResult = true) {
   if (entry === undefined) return failed('no record from Godot');
   if (entry.rejected) {
     return actual.error
@@ -44,7 +45,7 @@ export function compareProbe(entry, actual) {
   let first = '';
   expected.forEach((want, index) => {
     const got = actual.bits[index];
-    if (want === got || (isNaNBits(want) && isNaNBits(got))) return;
+    if (want === got || (isFloatResult && isNaNBits(want) && isNaNBits(got))) return;
     mismatches += 1;
     maxUlp = Math.max(maxUlp, ulpDistance(want, got));
     if (!first) first = `lane ${index}: Godot ${hex(want)}, transpilation ${hex(got)}`;

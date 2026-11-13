@@ -71,6 +71,7 @@ function fieldText(value) {
 export function owningIssue(row) {
   switch (row.family) {
     case 'data type':
+      return dataTypeOwner(row);
     case 'literal':
     case 'swizzle':
     case 'constructor':
@@ -79,11 +80,11 @@ export function owningIssue(row) {
       return operatorOwner(row);
     case 'statement':
     case 'statement keyword':
-      return '#1824';
+      return /^(return|FLOW_OP_RETURN)$/.test(row.id) ? '#1823' : '#1824';
     case 'tree node':
       return treeNodeOwner(row);
     case 'qualifier':
-      return /^(in|out|inout)$/.test(row.id) ? '#1825' : '#1794';
+      return qualifierOwner(row);
     case 'function':
     case 'function (high_end)':
       return functionOwner(row);
@@ -106,19 +107,34 @@ export function owningIssue(row) {
   }
 }
 
+/** Samplers are the uniforms slice's, a struct type and `void` the statements', the value types this slice's. */
+function dataTypeOwner(row) {
+  if (/^[iu]?sampler|^samplerExternalOES$/.test(row.id)) return '#1829';
+  if (/^(struct type|void)$/.test(row.id)) return '#1824';
+  return '#1823';
+}
+
+/** `in`, `out` and `inout` are the functions slice's, the precision qualifiers this slice's, the rest the head's. */
+function qualifierOwner(row) {
+  if (/^(in|out|inout)$/.test(row.id)) return '#1825';
+  if (/^(lowp|mediump|highp)$/.test(row.id)) return '#1823';
+  return '#1794';
+}
+
 /**
  * `OP_CALL` is a call of a function: of a built-in, whose overload row owns it, or of the shader's
  * own function, whose parameters and their `in`, `out` and `inout` qualifiers its slice transpiles.
+ * `OP_STRUCT` builds a struct, which the statements slice declares. Each other operator is this slice's.
  */
 function operatorOwner(row) {
   if (row.id === 'OP_CALL') return '#1825';
-  return /^OP_(SELECT_ELSE|CONSTRUCT|STRUCT|INDEX|EMPTY)$/.test(row.id) ? '#1824' : '#1823';
+  return row.id === 'OP_STRUCT' ? '#1824' : '#1823';
 }
 
-/** The shader and function nodes are the head's, structs and members the types', the rest the statements'. */
+/** The shader and function nodes are the head's, the nodes of expressions this slice's, the rest the statements'. */
 function treeNodeOwner(row) {
   if (/^NODE_TYPE_(SHADER|FUNCTION)$/.test(row.id)) return '#1794';
-  if (/^NODE_TYPE_(VARIABLE|CONSTANT|OPERATOR|MEMBER|STRUCT)$/.test(row.id)) return '#1823';
+  if (/^NODE_TYPE_(VARIABLE|CONSTANT|OPERATOR|MEMBER)$/.test(row.id)) return '#1823';
   return '#1824';
 }
 

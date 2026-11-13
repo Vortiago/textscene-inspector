@@ -16,16 +16,16 @@ Godot draws the probes and showcases on Vulkan over lavapipe (`llvmpipe (LLVM 20
 
 | Family | Transpiled | Open rows owned by |
 | --- | --- | --- |
-| data type | 0 of 33 | #1823 |
+| data type | 0 of 33 | #1824, #1823, #1829 |
 | literal | 1 of 5 | #1823 |
-| qualifier | 0 of 8 | #1794, #1825 |
+| qualifier | 0 of 8 | #1794, #1823, #1825 |
 | shader head | 0 of 13 | #1829, #1794 |
 | uniform | 0 of 2 | #1829 |
-| statement keyword | 0 of 12 | #1824 |
+| statement keyword | 0 of 12 | #1824, #1823 |
 | uniform hint | 0 of 19 | #1829 |
 | sampler setting | 0 of 8 | #1829 |
-| operator | 44 of 588 | #1823, #1824, #1825 |
-| statement | 0 of 11 | #1824 |
+| operator | 44 of 588 | #1823, #1825, #1824 |
+| statement | 0 of 11 | #1824, #1823 |
 | tree node | 0 of 12 | #1794, #1824, #1823 |
 | constructor | 14 of 62 | #1823 |
 | function | 0 of 569 | #1823, #1826, #1827, #1829, #1824 |

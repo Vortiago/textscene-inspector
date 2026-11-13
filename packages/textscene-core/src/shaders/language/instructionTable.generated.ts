@@ -22,7 +22,7 @@ export interface InstructionRow {
  * args are a bracketed list, so a function of no arguments has `()`.
  */
 const ROWS = `
-void	data type	servers/rendering/shader_language.h:210	#1823	TK_TYPE_VOID		
+void	data type	servers/rendering/shader_language.h:210	#1824	TK_TYPE_VOID		
 bool	data type	servers/rendering/shader_language.h:211	#1823	TK_TYPE_BOOL		
 bvec2	data type	servers/rendering/shader_language.h:212	#1823	TK_TYPE_BVEC2		
 bvec3	data type	servers/rendering/shader_language.h:213	#1823	TK_TYPE_BVEC3		
@@ -42,19 +42,19 @@ vec4	data type	servers/rendering/shader_language.h:226	#1823	TK_TYPE_VEC4
 mat2	data type	servers/rendering/shader_language.h:227	#1823	TK_TYPE_MAT2		
 mat3	data type	servers/rendering/shader_language.h:228	#1823	TK_TYPE_MAT3		
 mat4	data type	servers/rendering/shader_language.h:229	#1823	TK_TYPE_MAT4		
-sampler2D	data type	servers/rendering/shader_language.h:230	#1823	TK_TYPE_SAMPLER2D		
-isampler2D	data type	servers/rendering/shader_language.h:231	#1823	TK_TYPE_ISAMPLER2D		
-usampler2D	data type	servers/rendering/shader_language.h:232	#1823	TK_TYPE_USAMPLER2D		
-sampler2DArray	data type	servers/rendering/shader_language.h:233	#1823	TK_TYPE_SAMPLER2DARRAY		
-isampler2DArray	data type	servers/rendering/shader_language.h:234	#1823	TK_TYPE_ISAMPLER2DARRAY		
-usampler2DArray	data type	servers/rendering/shader_language.h:235	#1823	TK_TYPE_USAMPLER2DARRAY		
-sampler3D	data type	servers/rendering/shader_language.h:236	#1823	TK_TYPE_SAMPLER3D		
-isampler3D	data type	servers/rendering/shader_language.h:237	#1823	TK_TYPE_ISAMPLER3D		
-usampler3D	data type	servers/rendering/shader_language.h:238	#1823	TK_TYPE_USAMPLER3D		
-samplerCube	data type	servers/rendering/shader_language.h:239	#1823	TK_TYPE_SAMPLERCUBE		
-samplerCubeArray	data type	servers/rendering/shader_language.h:240	#1823	TK_TYPE_SAMPLERCUBEARRAY		
-samplerExternalOES	data type	servers/rendering/shader_language.h:241	#1823	TK_TYPE_SAMPLEREXT		
-struct type	data type	servers/rendering/shader_language.h:242	#1823			
+sampler2D	data type	servers/rendering/shader_language.h:230	#1829	TK_TYPE_SAMPLER2D		
+isampler2D	data type	servers/rendering/shader_language.h:231	#1829	TK_TYPE_ISAMPLER2D		
+usampler2D	data type	servers/rendering/shader_language.h:232	#1829	TK_TYPE_USAMPLER2D		
+sampler2DArray	data type	servers/rendering/shader_language.h:233	#1829	TK_TYPE_SAMPLER2DARRAY		
+isampler2DArray	data type	servers/rendering/shader_language.h:234	#1829	TK_TYPE_ISAMPLER2DARRAY		
+usampler2DArray	data type	servers/rendering/shader_language.h:235	#1829	TK_TYPE_USAMPLER2DARRAY		
+sampler3D	data type	servers/rendering/shader_language.h:236	#1829	TK_TYPE_SAMPLER3D		
+isampler3D	data type	servers/rendering/shader_language.h:237	#1829	TK_TYPE_ISAMPLER3D		
+usampler3D	data type	servers/rendering/shader_language.h:238	#1829	TK_TYPE_USAMPLER3D		
+samplerCube	data type	servers/rendering/shader_language.h:239	#1829	TK_TYPE_SAMPLERCUBE		
+samplerCubeArray	data type	servers/rendering/shader_language.h:240	#1829	TK_TYPE_SAMPLERCUBEARRAY		
+samplerExternalOES	data type	servers/rendering/shader_language.h:241	#1829	TK_TYPE_SAMPLEREXT		
+struct type	data type	servers/rendering/shader_language.h:242	#1824			
 float literal	literal	servers/rendering/shader_language.h:59	#1823			
 int literal	literal	servers/rendering/shader_language.h:60	#1823			
 uint literal	literal	servers/rendering/shader_language.h:61	#1823			
@@ -62,9 +62,9 @@ true	literal	servers/rendering/shader_language.cpp:284	#1823	TK_TRUE
 false	literal	servers/rendering/shader_language.cpp:285	#1823	TK_FALSE		
 flat	qualifier	servers/rendering/shader_language.cpp:324	#1794	TK_INTERPOLATION_FLAT		
 smooth	qualifier	servers/rendering/shader_language.cpp:325	#1794	TK_INTERPOLATION_SMOOTH		
-lowp	qualifier	servers/rendering/shader_language.cpp:329	#1794	TK_PRECISION_LOW		
-mediump	qualifier	servers/rendering/shader_language.cpp:330	#1794	TK_PRECISION_MID		
-highp	qualifier	servers/rendering/shader_language.cpp:331	#1794	TK_PRECISION_HIGH		
+lowp	qualifier	servers/rendering/shader_language.cpp:329	#1823	TK_PRECISION_LOW		
+mediump	qualifier	servers/rendering/shader_language.cpp:330	#1823	TK_PRECISION_MID		
+highp	qualifier	servers/rendering/shader_language.cpp:331	#1823	TK_PRECISION_HIGH		
 uniform	shader head	servers/rendering/shader_language.cpp:335	#1829	TK_UNIFORM		
 group_uniforms	shader head	servers/rendering/shader_language.cpp:336	#1829	TK_UNIFORM_GROUP		
 varying	shader head	servers/rendering/shader_language.cpp:337	#1794	TK_VARYING		
@@ -85,7 +85,7 @@ case	statement keyword	servers/rendering/shader_language.cpp:357	#1824	TK_CF_CAS
 default	statement keyword	servers/rendering/shader_language.cpp:358	#1824	TK_CF_DEFAULT		
 break	statement keyword	servers/rendering/shader_language.cpp:359	#1824	TK_CF_BREAK		
 continue	statement keyword	servers/rendering/shader_language.cpp:360	#1824	TK_CF_CONTINUE		
-return	statement keyword	servers/rendering/shader_language.cpp:361	#1824	TK_CF_RETURN		
+return	statement keyword	servers/rendering/shader_language.cpp:361	#1823	TK_CF_RETURN		
 discard	statement keyword	servers/rendering/shader_language.cpp:362	#1824	TK_CF_DISCARD		
 in	qualifier	servers/rendering/shader_language.cpp:366	#1825	TK_ARG_IN		
 out	qualifier	servers/rendering/shader_language.cpp:367	#1825	TK_ARG_OUT		
@@ -675,7 +675,7 @@ OP_SELECT_IF(bool,vec4,vec4)	operator	servers/rendering/shader_language.cpp:1990
 OP_SELECT_IF(bool,mat2,mat2)	operator	servers/rendering/shader_language.cpp:1990	#1823		mat2	(bool,mat2,mat2)
 OP_SELECT_IF(bool,mat3,mat3)	operator	servers/rendering/shader_language.cpp:1990	#1823		mat3	(bool,mat3,mat3)
 OP_SELECT_IF(bool,mat4,mat4)	operator	servers/rendering/shader_language.cpp:1990	#1823		mat4	(bool,mat4,mat4)
-OP_SELECT_ELSE	operator	servers/rendering/shader_language.cpp:1558	#1824			
+OP_SELECT_ELSE	operator	servers/rendering/shader_language.cpp:1558	#1823			
 OP_POST_INCREMENT(int)	operator	servers/rendering/shader_language.cpp:1614	#1823		int	(int)
 OP_POST_INCREMENT(ivec2)	operator	servers/rendering/shader_language.cpp:1614	#1823		ivec2	(ivec2)
 OP_POST_INCREMENT(ivec3)	operator	servers/rendering/shader_language.cpp:1614	#1823		ivec3	(ivec3)
@@ -701,12 +701,12 @@ OP_POST_DECREMENT(vec2)	operator	servers/rendering/shader_language.cpp:1614	#182
 OP_POST_DECREMENT(vec3)	operator	servers/rendering/shader_language.cpp:1614	#1823		vec3	(vec3)
 OP_POST_DECREMENT(vec4)	operator	servers/rendering/shader_language.cpp:1614	#1823		vec4	(vec4)
 OP_CALL	operator	servers/rendering/shader_language.cpp:1558	#1825			
-OP_CONSTRUCT	operator	servers/rendering/shader_language.cpp:1558	#1824			
+OP_CONSTRUCT	operator	servers/rendering/shader_language.cpp:1558	#1823			
 OP_STRUCT	operator	servers/rendering/shader_language.cpp:1558	#1824			
-OP_INDEX	operator	servers/rendering/shader_language.cpp:1558	#1824			
-OP_EMPTY	operator	servers/rendering/shader_language.cpp:1558	#1824			
+OP_INDEX	operator	servers/rendering/shader_language.cpp:1558	#1823			
+OP_EMPTY	operator	servers/rendering/shader_language.cpp:1558	#1823			
 FLOW_OP_IF	statement	servers/rendering/shader_language.h:307	#1824			
-FLOW_OP_RETURN	statement	servers/rendering/shader_language.h:308	#1824			
+FLOW_OP_RETURN	statement	servers/rendering/shader_language.h:308	#1823			
 FLOW_OP_FOR	statement	servers/rendering/shader_language.h:309	#1824			
 FLOW_OP_WHILE	statement	servers/rendering/shader_language.h:310	#1824			
 FLOW_OP_DO	statement	servers/rendering/shader_language.h:311	#1824			
@@ -727,7 +727,7 @@ NODE_TYPE_CONTROL_FLOW	tree node	servers/rendering/shader_language.h:380	#1824
 NODE_TYPE_MEMBER	tree node	servers/rendering/shader_language.h:381	#1823			
 NODE_TYPE_ARRAY	tree node	servers/rendering/shader_language.h:382	#1824			
 NODE_TYPE_ARRAY_CONSTRUCT	tree node	servers/rendering/shader_language.h:383	#1824			
-NODE_TYPE_STRUCT	tree node	servers/rendering/shader_language.h:384	#1823			
+NODE_TYPE_STRUCT	tree node	servers/rendering/shader_language.h:384	#1824			
 bvec2(bool)	constructor	servers/rendering/shader_language.cpp:2422	#1823		bvec2	(bool)
 bvec2(bool,bool)	constructor	servers/rendering/shader_language.cpp:2423	#1823		bvec2	(bool,bool)
 bvec3(bool)	constructor	servers/rendering/shader_language.cpp:2424	#1823		bvec3	(bool)
