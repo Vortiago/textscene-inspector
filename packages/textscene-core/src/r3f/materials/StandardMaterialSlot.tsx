@@ -17,7 +17,7 @@ import { bindLightmap, LIGHTMAP_PROGRAM, readsLightmap } from '../lightmap/light
 import type { LightmapAssignment } from '../lightmap/sceneLightmaps';
 import { useInstanceLightmap } from '../visibilityRange/geometryInstance';
 import { LitNodeMaterial } from '../litSurface/LitNodeMaterial';
-import { litSurfaceMaterial } from '../litSurface/litSurfaceMaterial';
+import { litMountKey, litSurfaceMaterial } from '../litSurface/litSurfaceMaterial';
 
 interface StandardMaterialSlotProps {
   /** The surface's derived bags, textures bound. */
@@ -80,7 +80,7 @@ export function materialBagElement(
   };
   // A surface that reads a lightmap keeps the classic material: the port draws no lightmap yet.
   const lit = readLightmap ? null : litSurfaceMaterial(bag);
-  if (lit) return <LitNodeMaterial key={lit.key} lit={lit} attach={attach} />;
+  if (lit) return <LitNodeMaterial key={litMountKey(lit.key, attach)} lit={lit} attach={attach} />;
   const injection = composeInjections([bag.injection, readLightmap ? LIGHTMAP_PROGRAM : undefined]);
   // `attach` and the ref first: they are the mount's own props and must never shadow a derived
   // one. The key comes from the same merged bag it travels with (ADR-0038): a program input

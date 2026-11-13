@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { vec4 } from 'three/tsl';
 import type { NodeFrame } from 'three/webgpu';
 import { generatedFragmentShader } from './generatedShader.testkit.js';
@@ -15,7 +15,7 @@ function sceneLight(): THREE.Light {
 
 const noWrite = () => {};
 
-/** Runs the array's render update, as the handler does once per render. */
+/** Runs the array's update, as the handler does once per render. */
 function renderUpdate(rows: LightRows): void {
   rows.update({} as NodeFrame);
 }
@@ -52,7 +52,31 @@ describe('LightRows', () => {
     expect(rows.slotFor(sceneLight(), noWrite)).toBe(0);
   });
 
-  it('writes each slot’s rows through its light’s writer on the render update', () => {
+  it('hands the slot of a light whose group left its scene to the next light (edge case)', () => {
+    const rows = new LightRows(ROWS, 1);
+    const group = new THREE.Group();
+    const removed = new THREE.DirectionalLight();
+    group.add(removed);
+    new THREE.Scene().add(group);
+    rows.slotFor(removed, noWrite);
+    group.removeFromParent();
+
+    expect(rows.slotFor(sceneLight(), noWrite)).toBe(0);
+  });
+
+  it('writes no rows for a light that left its scene', () => {
+    const rows = new LightRows(ROWS, 1);
+    const removed = sceneLight();
+    const writer = vi.fn();
+    rows.slotFor(removed, writer);
+    removed.removeFromParent();
+
+    renderUpdate(rows);
+
+    expect(writer).not.toHaveBeenCalled();
+  });
+
+  it('writes each slot’s rows through its light’s writer on the update', () => {
     const rows = new LightRows(ROWS, 2);
     rows.slotFor(sceneLight(), noWrite);
     rows.slotFor(sceneLight(), (write) => write(2, 1, 2, 3, 4));

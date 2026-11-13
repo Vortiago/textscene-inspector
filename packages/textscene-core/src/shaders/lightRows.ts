@@ -23,8 +23,15 @@ interface Slot {
   writer: RowsWriter;
 }
 
+/** Whether `object` hangs under a scene, through its parent or any ancestor. */
+function isInScene(object: THREE.Object3D): boolean {
+  let top = object;
+  while (top.parent) top = top.parent;
+  return (top as THREE.Scene).isScene === true;
+}
+
 export class LightRows {
-  /** The rows the array uploads. Written only by the writers, on the array's render update. */
+  /** The rows the array uploads. Written only by the writers, on the array's update once per render. */
   readonly values: THREE.Vector4[];
   private readonly array;
   /** Each slot's light, or null for a free slot. */
@@ -62,12 +69,12 @@ export class LightRows {
   }
 
   /**
-   * Runs every slot's writer. The array calls it on its render update, before it uploads the
-   * rows, so a light's rows are current for every draw of the render.
+   * Runs the writer of every slot whose light is in a scene. The array calls it once per render,
+   * before it uploads the rows, so a light's rows are current for every draw of the render.
    */
   update(frame: NodeFrame): void {
     this.slots.forEach((slot, index) => {
-      if (!slot) return;
+      if (!slot || !isInScene(slot.light)) return;
       const first = index * this.rowsPerLight;
       slot.writer((field, x, y, z, w) => this.values[first + field]!.set(x, y, z, w), frame);
     });
@@ -75,7 +82,7 @@ export class LightRows {
 
   /** A slot no light holds, or the slot of a light that left its scene. */
   private freeSlot(): number | null {
-    const free = this.slots.findIndex((slot) => slot === null || slot.light.parent === null);
+    const free = this.slots.findIndex((slot) => slot === null || !isInScene(slot.light));
     return free >= 0 ? free : null;
   }
 }

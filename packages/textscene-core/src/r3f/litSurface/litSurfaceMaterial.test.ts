@@ -5,7 +5,10 @@ import * as THREE from 'three';
 import type { RootState } from '@react-three/fiber';
 import { DiffuseMode } from '../../godot/rendering/materials/diffuseMode';
 import { SpecularMode } from '../../godot/rendering/materials/specularMode';
-import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
+import {
+  MISSING_TEXTURE_MATERIAL,
+  standardMaterialBags,
+} from '../../resources/materials/standardmaterial3d/materialBag';
 import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars.testkit';
 import type { ResolvedTextures } from '../../resources/materials/standardmaterial3d/types';
 
@@ -81,6 +84,19 @@ describe('litSurfaceMaterial', () => {
     const material = litSurfaceMaterial(bag({ roughness: '0.3', metallic: '0.7' }))!.create();
 
     expect([material.roughness, material.metalness]).toEqual([0.3, 0.7]);
+  });
+
+  it('keys a mount by its attach target too, which fiber applies only at mount', async () => {
+    const { litMountKey } = await import('./litSurfaceMaterial');
+
+    expect(litMountKey('lit:0:0:false', 'material-0')).not.toBe(litMountKey('lit:0:0:false', 'material-1'));
+  });
+
+  it('makes the missing texture surface magenta, from its colour name', async () => {
+    const litSurfaceMaterial = await litSurfaceMaterialAt(NODES_PAGE);
+    const material = litSurfaceMaterial(MISSING_TEXTURE_MATERIAL)!.create();
+
+    expect(material.color.getHex()).toBe(0xff00ff);
   });
 
   it.each([

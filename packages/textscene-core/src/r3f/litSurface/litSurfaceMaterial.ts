@@ -16,11 +16,11 @@ import { litSurfaceForm } from './litSurfaceForm.js';
 
 /** The fields of the lit material a bag sets. */
 export interface LitFields {
-  color?: THREE.Color;
+  color?: THREE.ColorRepresentation;
   roughness?: number;
   metalness?: number;
   specular: number;
-  emissive?: THREE.Color;
+  emissive?: THREE.ColorRepresentation;
   emissiveIntensity?: number;
   clearcoat?: number;
   clearcoatRoughness?: number;
@@ -118,12 +118,20 @@ function fieldsOf(props: THREE.MeshPhysicalMaterialParameters): LitFields {
   return { ...Object.fromEntries(picked), specular };
 }
 
-/** Sets `fields` on `material`, copying each colour, as R3F's prop diff does. */
+/** Sets `fields` on `material`, setting each colour from a colour or its name, as R3F's prop diff does. */
 function applyFields(material: GodotLitNodeMaterial, fields: LitFields): GodotLitNodeMaterial {
   const { color, emissive, ...values } = fields;
-  if (color) material.color.copy(color);
-  if (emissive) material.emissive.copy(emissive);
+  if (color) material.color.set(color);
+  if (emissive) material.emissive.set(emissive);
   return Object.assign(material, values);
+}
+
+/**
+ * The React key of a lit material mounted at `attach`. Fiber applies `attach` only at mount
+ * (`RESERVED_PROPS` in `@react-three/fiber` 9.8.0), so a moved target remounts, as `materialProgramInputs` keys it.
+ */
+export function litMountKey(key: string, attach: unknown): string {
+  return typeof attach === 'string' ? `${key}:attach:${attach}` : key;
 }
 
 /**
