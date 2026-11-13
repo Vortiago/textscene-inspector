@@ -26,6 +26,7 @@ import {
   richTextLabelTextureSlots,
   shapeRichText,
   richTextContentHeightPx,
+  richTextLabelUnderlineAlpha,
 } from './nativeSolver';
 import { IMAGE_OBJECT_CHAR, type ParsedImageAlignment, type ParsedImgTag } from './bbcode';
 import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
@@ -2425,5 +2426,25 @@ describe('richTextLabelMinimumSize with a list', () => {
     const props = { text: '[ul]a[/ul]', bbcodeEnabled: true, fitContent: true, autowrapMode: 0 };
     // 16 margin + 11 marker + 'a' ceiled to 10, as `get_content_width` truncates the sum into an int.
     expect(richTextLabelMinimumSize(node(props), ctx()).x).toBe(37);
+  });
+});
+
+describe('richTextLabelUnderlineAlpha', () => {
+  it("reads the default theme's underline_alpha of 50 as half opacity", () => {
+    expect(richTextLabelUnderlineAlpha(node({}))).toBe(0.5);
+  });
+
+  it('reads a theme override folded into n.constants as a percentage', () => {
+    const base = node({});
+    expect(
+      richTextLabelUnderlineAlpha({ ...base, constants: { ...base.constants, underline_alpha: 80 } })
+    ).toBe(0.8);
+  });
+
+  it('reads 0 as an invisible stroke', () => {
+    const base = node({});
+    expect(
+      richTextLabelUnderlineAlpha({ ...base, constants: { ...base.constants, underline_alpha: 0 } })
+    ).toBe(0);
   });
 });

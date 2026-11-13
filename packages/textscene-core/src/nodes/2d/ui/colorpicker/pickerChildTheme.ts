@@ -41,6 +41,8 @@ export interface PickerChildTheme {
   /** The `SpinBox` inner LineEdit's boxes, for the slider value fields. */
   valueField: LineEditField;
   valueFieldColor: Rgba;
+  /** The `SpinBox` items' colours, for the value fields' arrow modulates. */
+  spinBoxColors: SolveNode['colors'];
   labelColor: Rgba;
   buttonColor: Rgba;
   /** The Button items' colours, for the icon modulates (`icon_disabled_color`). */
@@ -97,6 +99,7 @@ function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildThe
     theme: withBoxes,
     valueField: lineEditField(valueField),
     valueFieldColor: requiredThemeItem(valueField.colors, 'font_color'),
+    spinBoxColors: internalChildThemeItems(n, 'SpinBox').colors,
     labelColor: requiredThemeItem(label.colors, 'font_color'),
     buttonColor: requiredThemeItem(button.colors, 'font_color'),
     buttonPressedColor: requiredThemeItem(button.colors, 'font_pressed_color'),

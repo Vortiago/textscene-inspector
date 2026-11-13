@@ -189,8 +189,11 @@ export const codeEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   return textEditMinimumSizeWith(n, ctx, props, styleBox, band.totalWidthPx, props.indentSize);
 };
 
-/** `folded_code_region_color` = `Color(0.68, 0.46, 0.77, 0.2)` (`default_theme.cpp:525`), with the alpha floored at 0.4 the way `_fold_gutter_draw_callback` floors it (`code_edit.cpp:1636-1637`). */
-export const CODE_EDIT_CODE_REGION_ICON_COLOR: Rgba = { r: 0.68, g: 0.46, b: 0.77, a: 0.4 };
+/** `folded_code_region_color` with its alpha floored at 0.4, as `_fold_gutter_draw_callback` floors it (`code_edit.cpp:1636-1637`). */
+export function codeEditRegionIconColor(colors: SolveNode['colors']): Rgba {
+  const color = requiredThemeItem(colors, 'folded_code_region_color');
+  return { ...color, a: Math.max(color.a, 0.4) };
+}
 
 /**
  * The icon rect inside one fold-gutter cell, after `_fold_gutter_draw_callback`'s padding
@@ -206,9 +209,6 @@ export function codeEditFoldIconRect(cell: Rect2): Rect2 {
     h: cell.h - vertical * 2,
   };
 }
-
-/** `line_length_guideline_color` = `Color(0.3, 0.5, 0.8, 0.1)` (`default_theme.cpp:531`). */
-export const CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR: Rgba = { r: 0.3, g: 0.5, b: 0.8, a: 0.1 };
 
 /** One drawn `line_length_guidelines` rule. */
 interface CodeEditGuideline {

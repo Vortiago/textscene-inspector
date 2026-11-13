@@ -122,7 +122,6 @@ import {
 } from './colorModes';
 import type { ColorPickerProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
 /** The picker's child Buttons keep the `text_direction` and `language` defaults. */
 const AUTO_TEXT_DIRECTION = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
@@ -224,7 +223,10 @@ export function ColorPicker({
     [tint, child, toItemLinear]
   );
   const lineEditFontColor = useMemo(() => multiplyModulate(tint.own, child.lineEditColor), [tint.own, child]);
-  const spinArrowGrey = useMemo(() => multiplyModulate(tint.own, CONTROL_FONT_COLOR), [tint.own]);
+  const spinArrowGrey = useMemo(
+    () => multiplyModulate(tint.own, spinBoxIconColor(child.spinBoxColors, 'up', 'normal')),
+    [tint.own, child]
+  );
   const valueFieldFontColor = useMemo(
     () => multiplyModulate(tint.own, child.valueFieldColor),
     [tint.own, child]
@@ -257,11 +259,10 @@ export function ColorPicker({
   const defaultGrabberTexture = useNodeIcon(solveNode.icons.grabber, SLIDER_GRABBER_ICONS.grabber);
   const spinUpTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
   const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
-  // `up_icon_modulate` and `down_icon_modulate` default to `control_font_color` (`default_theme.cpp:634,638`).
   const spinArrowColor = useItemLinearColor(spinArrowGrey);
   const spinArrowDisabledGrey = useMemo(
-    () => multiplyModulate(tint.own, spinBoxIconColor({}, 'up', 'disabled')),
-    [tint.own]
+    () => multiplyModulate(tint.own, spinBoxIconColor(child.spinBoxColors, 'up', 'disabled')),
+    [tint.own, child]
   );
   const spinArrowDisabledColor = useItemLinearColor(spinArrowDisabledGrey);
 

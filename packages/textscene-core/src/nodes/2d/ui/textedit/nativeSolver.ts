@@ -186,15 +186,18 @@ export function shapeTextEditLines(
  * shows, less `wrap_offset`. `gutterBandWidthPx` is the gutter sum, never split at a
  * call site: 0 for TextEdit, `codeEditGutterBand`'s `totalWidthPx` for CodeEdit.
  */
-export function textEditWrapWidthPx(
-  rectWidthPx: number,
-  styleMinWidthPx: number,
-  gutterBandWidthPx: number,
-  minimapWidthPx: number,
-  drawMinimap: boolean | undefined,
-  wrapOffsetPx: number,
-  verticalBarWidthPx = 0
-): number {
+export interface TextEditWrapInsets {
+  styleMinWidthPx: number;
+  gutterBandWidthPx: number;
+  minimapWidthPx: number;
+  drawMinimap: boolean | undefined;
+  wrapOffsetPx: number;
+  verticalBarWidthPx?: number;
+}
+
+export function textEditWrapWidthPx(rectWidthPx: number, insets: TextEditWrapInsets): number {
+  const { styleMinWidthPx, gutterBandWidthPx, minimapWidthPx, drawMinimap, wrapOffsetPx } = insets;
+  const verticalBarWidthPx = insets.verticalBarWidthPx ?? 0;
   let width = rectWidthPx - styleMinWidthPx - gutterBandWidthPx;
   if (drawMinimap) width -= minimapWidthPx;
   width -= verticalBarWidthPx;
@@ -284,14 +287,13 @@ export function textEditMinimumSizeWith(
   const wrapWidthPx =
     rectWidthPx === undefined
       ? 0
-      : textEditWrapWidthPx(
-          rectWidthPx,
-          styleMin.x,
+      : textEditWrapWidthPx(rectWidthPx, {
+          styleMinWidthPx: styleMin.x,
           gutterBandWidthPx,
-          props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
-          props.minimapDraw,
-          textEditWrapOffsetPx(n)
-        );
+          minimapWidthPx: props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
+          drawMinimap: props.minimapDraw,
+          wrapOffsetPx: textEditWrapOffsetPx(n),
+        });
   const effectiveWrapMode = rectWidthPx === undefined ? 0 : props.wrapMode;
 
   const { lines, isPlaceholder } = textEditDrawnLines(props.text, props.placeholderText);

@@ -55,6 +55,7 @@ const TEXT_EDIT_COLORS: Readonly<Record<string, Rgba>> = {
   background_color: CLEAR,
   font_color: CONTROL_FONT_COLOR,
   font_selected_color: CLEAR,
+  font_readonly_color: CONTROL_FONT_DISABLED_COLOR,
   font_placeholder_color: CONTROL_FONT_PLACEHOLDER_COLOR,
   font_outline_color: BLACK,
   selection_color: CONTROL_SELECTION_COLOR,
@@ -92,7 +93,6 @@ export function textEditTypes(scale: number): DefaultThemeTypes {
       styles: boxes,
       colors: {
         ...TEXT_EDIT_COLORS,
-        font_readonly_color: CONTROL_FONT_DISABLED_COLOR,
         word_highlighted_color: { r: 0.5, g: 0.5, b: 0.5, a: 0.25 },
       },
       constants: { line_spacing: lineSpacing, outline_size: 0, caret_width: 1, wrap_offset: 10 },
@@ -101,7 +101,6 @@ export function textEditTypes(scale: number): DefaultThemeTypes {
       styles: { ...boxes, completion: makeFlatStyleBox(scale, STYLE_FILL.normal, { margin: allSides(0) }) },
       colors: {
         ...TEXT_EDIT_COLORS,
-        font_readonly_color: CONTROL_FONT_DISABLED_COLOR,
         word_highlighted_color: { r: 0.8, g: 0.9, b: 0.9, a: 0.15 },
         completion_background_color: { r: 0.17, g: 0.16, b: 0.2, a: 1 },
         completion_selected_color: { r: 0.26, g: 0.26, b: 0.27, a: 1 },

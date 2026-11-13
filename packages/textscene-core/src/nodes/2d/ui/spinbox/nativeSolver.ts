@@ -32,7 +32,6 @@ import type { SpinBoxProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { scaledIconSizeOf, themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
 
 /** `Range`'s default `step` (`scene/gui/range.h:42`). SpinBox's constructor never calls `set_step` (`spin_box.cpp:723-740`), so this is what an unauthored `step` resolves to. */
 const SPIN_BOX_STEP_DEFAULT = 1;
@@ -226,28 +225,18 @@ export function spinBoxDownButtonState(props: SpinBoxProperties, resolvedValue: 
   return spinBoxRangeButtonState(resolvedValue, props.minValue ?? 0, props.allowLesser === true);
 }
 
-/** `up_icon_modulate`/`up_disabled_icon_modulate` (`default_theme.cpp:634,637`). The icon asset is the same either way (`:616-619`), and only the modulate differs. */
-const SPIN_BOX_UP_ICON_COLOR: Record<SpinBoxButtonState, Rgba> = {
-  normal: CONTROL_FONT_COLOR,
-  disabled: CONTROL_FONT_DISABLED_COLOR,
-};
-/** `down_icon_modulate`/`down_disabled_icon_modulate` (`default_theme.cpp:638,641`): the same colours as the up pair. */
-const SPIN_BOX_DOWN_ICON_COLOR = SPIN_BOX_UP_ICON_COLOR;
-
 const SPIN_BOX_ICON_COLOR_KEYS: Record<'up' | 'down', Record<SpinBoxButtonState, string>> = {
   up: { normal: 'up_icon_modulate', disabled: 'up_disabled_icon_modulate' },
   down: { normal: 'down_icon_modulate', disabled: 'down_disabled_icon_modulate' },
 };
 
-/** A `theme_override_colors/<key>` override (already folded into `n.colors`) wins; else the default-theme literal for `direction`/`state`. */
+/** The arrow's modulate for `direction` and `state`. The icon is the same either way, and only the modulate differs. */
 export function spinBoxIconColor(
   colors: SolveNode['colors'],
   direction: 'up' | 'down',
   state: SpinBoxButtonState
 ): Rgba {
-  const key = SPIN_BOX_ICON_COLOR_KEYS[direction][state];
-  const defaults = direction === 'up' ? SPIN_BOX_UP_ICON_COLOR : SPIN_BOX_DOWN_ICON_COLOR;
-  return colors[key] ?? defaults[state];
+  return requiredThemeItem(colors, SPIN_BOX_ICON_COLOR_KEYS[direction][state]);
 }
 
 /**

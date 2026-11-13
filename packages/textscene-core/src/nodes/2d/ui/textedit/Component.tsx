@@ -123,6 +123,7 @@ export function TextEditBody({
   const highlighterFontColor = textEditTextTheme(solveNode, props, 'normal').color;
   const lineSpacingPx = textEditLineSpacingPx(solveNode);
   const currentLineColor = requiredThemeItem(solveNode.colors, 'current_line_color');
+  const caretColor = requiredThemeItem(solveNode.colors, 'caret_color');
   const rowHeightPx = textEditRowHeightPx(fontMetrics, fontSizePx, lineSpacingPx);
 
   // `minimap_draw`/`minimap_width` narrow the text band, and the minimap draws in the strip they
@@ -218,7 +219,7 @@ export function TextEditBody({
       editable: props.editable !== false,
       // The buffer's colour, not the placeholder's (`:1194`).
       fontColor: textEditTextTheme(solveNode, props, state).color,
-      caretColor: requiredThemeItem(solveNode.colors, 'caret_color'),
+      caretColor,
       currentLineColor,
     };
   }, [
@@ -236,6 +237,7 @@ export function TextEditBody({
     wrapWidthPx,
     tabSize,
     currentLineColor,
+    caretColor,
   ]);
 
   // `tint.own` (raw sRGB, `self_modulate` folded onto `modulate`) tints the box alone
@@ -245,7 +247,6 @@ export function TextEditBody({
     () => multiplyModulate(childTint.own, currentLineColor),
     [childTint.own, currentLineColor]
   );
-  const caretColor = requiredThemeItem(solveNode.colors, 'caret_color');
   const tintedCaretColor = useMemo(
     () => multiplyModulate(childTint.own, caretColor),
     [childTint.own, caretColor]

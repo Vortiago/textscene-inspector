@@ -27,6 +27,8 @@ import {
   textEditDrawnGlyphs,
   textEditRowColorRuns,
   textEditCapSpanAlpha,
+  textEditLineSpacingPx,
+  textEditWrapOffsetPx,
 } from './nativeSolver';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
@@ -59,6 +61,24 @@ function node(props: Partial<TextEditProperties>): SolveNode {
   });
 }
 
+describe('textEditLineSpacingPx and textEditWrapOffsetPx', () => {
+  it('read the default theme: line_spacing 4 and wrap_offset 10 at scale 1', () => {
+    expect(textEditLineSpacingPx(node({}))).toBe(4);
+    expect(textEditWrapOffsetPx(node({}))).toBe(10);
+  });
+
+  it('read a theme override folded into n.constants', () => {
+    const base = node({});
+    const n = { ...base, constants: { ...base.constants, line_spacing: 9, wrap_offset: 3 } };
+    expect(textEditLineSpacingPx(n)).toBe(9);
+    expect(textEditWrapOffsetPx(n)).toBe(3);
+  });
+
+  it('throw on a node without the items', () => {
+    expect(() => textEditLineSpacingPx({ ...node({}), constants: {} })).toThrow(/line_spacing/);
+  });
+});
+
 describe('resolveTextEditStyleState', () => {
   it('defaults to normal (editable defaults true)', () => {
     expect(resolveTextEditStyleState(undefined)).toBe('normal');
@@ -80,21 +100,38 @@ describe('textEditRowHeightPx', () => {
 });
 
 describe('textEditWrapWidthPx', () => {
+  const INSETS = {
+    styleMinWidthPx: 8,
+    gutterBandWidthPx: 0,
+    minimapWidthPx: 80,
+    drawMinimap: false,
+    wrapOffsetPx: 10,
+  };
   // text_edit.cpp:8536-8543.
-  it('subtracts style margins, gutters and the bare wrap_offset(10)', () => {
-    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 10, 0)).toBe(300 - 8 - 10);
+  it('subtracts style margins, gutters and wrap_offset', () => {
+    expect(textEditWrapWidthPx(300, { ...INSETS, drawMinimap: false, verticalBarWidthPx: 0 })).toBe(
+      300 - 8 - 10
+    );
   });
   it('additionally subtracts the minimap width when draw_minimap is true', () => {
-    expect(textEditWrapWidthPx(300, 8, 0, 80, true, 10, 0)).toBe(300 - 8 - 80 - 10);
+    expect(textEditWrapWidthPx(300, { ...INSETS, drawMinimap: true, verticalBarWidthPx: 0 })).toBe(
+      300 - 8 - 80 - 10
+    );
   });
   it('truncates a fractional result toward zero, matching the C++ int assignment', () => {
-    expect(textEditWrapWidthPx(300.7, 8, 0, 80, false, 10, 0)).toBe(Math.trunc(300.7 - 8 - 10));
+    expect(textEditWrapWidthPx(300.7, { ...INSETS, drawMinimap: false, verticalBarWidthPx: 0 })).toBe(
+      Math.trunc(300.7 - 8 - 10)
+    );
   });
   it('subtracts the vertical scroll bar width when one is given (:8541-8543)', () => {
-    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 10, 8)).toBe(300 - 8 - 8 - 10);
+    expect(textEditWrapWidthPx(300, { ...INSETS, drawMinimap: false, verticalBarWidthPx: 8 })).toBe(
+      300 - 8 - 8 - 10
+    );
   });
   it('subtracts nothing for a bar width of 0', () => {
-    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 10, 0)).toBe(300 - 8 - 10);
+    expect(textEditWrapWidthPx(300, { ...INSETS, drawMinimap: false, verticalBarWidthPx: 0 })).toBe(
+      300 - 8 - 10
+    );
   });
 });
 

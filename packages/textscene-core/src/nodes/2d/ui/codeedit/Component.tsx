@@ -39,13 +39,12 @@ import {
   codeEditGutterBand,
   codeEditFoldGutterXPx,
   codeEditFoldIconRect,
-  CODE_EDIT_CODE_REGION_ICON_COLOR,
+  codeEditRegionIconColor,
   codeEditLineNumberText,
   codeEditLineNumberGutterXPx,
   codeEditLineNumberTextXPx,
   codeEditGutterCellTextTopPx,
   codeEditGuidelines,
-  CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR,
 } from './nativeSolver';
 import type { CodeEditProperties } from './types';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
@@ -152,9 +151,10 @@ export function CodeEdit(props: NativeControlComponentProps) {
       solveNode.rtl,
     ]
   );
+  const baseGuidelineColor = requiredThemeItem(solveNode.colors, 'line_length_guideline_color');
   const guidelineColor = useMemo(
-    () => multiplyModulate(childTint.own, CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR),
-    [childTint.own]
+    () => multiplyModulate(childTint.own, baseGuidelineColor),
+    [childTint.own, baseGuidelineColor]
   );
 
   const foldContext = useMemo(
@@ -178,8 +178,8 @@ export function CodeEdit(props: NativeControlComponentProps) {
     [childTint.own, foldingColor]
   );
   const foldRegionColor = useMemo(
-    () => multiplyModulate(childTint.own, CODE_EDIT_CODE_REGION_ICON_COLOR),
-    [childTint.own]
+    () => multiplyModulate(childTint.own, codeEditRegionIconColor(solveNode.colors)),
+    [childTint.own, solveNode.colors]
   );
   const canFoldIcon = useNodeIcon(
     solveNode.icons.can_fold,
