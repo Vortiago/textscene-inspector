@@ -11,7 +11,7 @@
 import { formatControlNumber } from '../../../../godot/text/numberFormat';
 import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
-import { internalChildThemeItems } from '../../../../r3f/controls/native/themeItems';
+import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { shapeLineEditText } from '../lineedit/nativeSolver';
 import { textBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
@@ -26,13 +26,7 @@ import {
   themeResolutionScope,
   type ThemeResolutionScope,
 } from '../../../../resources/styles/theme/lookup';
-import {
-  pickLineEditStyleBox,
-  lineEditStyleMinSize,
-  lineEditTextMinimumWidth,
-  LINE_EDIT_DEFAULT_FONT_COLOR,
-  LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
-} from '../lineedit/nativeSolver';
+import { lineEditBoxes, lineEditStyleMinSize, lineEditTextMinimumWidth } from '../lineedit/nativeSolver';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SpinBoxProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -289,8 +283,8 @@ export function spinBoxFieldTextTheme(n: SolveNode, editable: boolean): SpinBoxF
     fontSizePx,
     fontMetrics,
     color: editable
-      ? (colors.font_color ?? LINE_EDIT_DEFAULT_FONT_COLOR)
-      : (colors.font_uneditable_color ?? LINE_EDIT_DEFAULT_UNEDITABLE_COLOR),
+      ? requiredThemeItem(colors, 'font_color')
+      : requiredThemeItem(colors, 'font_uneditable_color'),
   };
 }
 
@@ -322,10 +316,7 @@ export const spinBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
   // The field is `add_child`ed at construction (`spin_box.cpp:724-731`), so the SpinBox's own
   // `theme_override_styles/*` never reach it. It reads the Theme chain's LineEdit boxes only.
   const { styleBoxes } = spinBoxFieldThemeItems(n);
-  const styleMinSize = lineEditStyleMinSize(
-    pickLineEditStyleBox(styleBoxes, ctx.theme.widgets.lineEdit, 'normal'),
-    pickLineEditStyleBox(styleBoxes, ctx.theme.widgets.lineEdit, 'read_only')
-  );
+  const styleMinSize = lineEditStyleMinSize(lineEditBoxes(styleBoxes));
 
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);

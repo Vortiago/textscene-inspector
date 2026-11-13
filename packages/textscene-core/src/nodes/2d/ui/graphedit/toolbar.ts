@@ -139,7 +139,7 @@ function toolbarSpinBoxMinSize(
   metrics: ToolbarTextMetrics,
   scale: number
 ): Vector2 {
-  const styleMin = lineEditStyleMinSize(fieldBoxes.normal, fieldBoxes.readOnly);
+  const styleMin = lineEditStyleMinSize(fieldBoxes);
   return {
     x:
       styleMin.x +

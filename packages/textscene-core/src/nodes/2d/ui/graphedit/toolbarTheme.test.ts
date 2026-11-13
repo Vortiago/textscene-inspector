@@ -9,6 +9,9 @@ import { isDrawn } from '../../../../r3f/controls/native/styleBoxFlat';
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { graphEditToolbarTheme } from './toolbarTheme';
 import { graphEditUnder } from './toolbarTheme.testkit';
+import { lineEditBoxes } from '../lineedit/nativeSolver';
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 
 const THEME = nativeTheme(1);
 const RED = { r: 1, g: 0, b: 0, a: 1 };
@@ -41,7 +44,7 @@ describe('graphEditToolbarTheme', () => {
 
     it("leaves the label's box empty and the field's boxes at LineEdit's", () => {
       expect(isDrawn(items.labelBox)).toBe(false);
-      expect(items.fieldBoxes).toEqual(THEME.widgets.lineEdit);
+      expect(items.fieldBoxes).toEqual(lineEditBoxes(defaultStyleBoxesOf(defaultThemeAt(1)).LineEdit!));
     });
   });
 

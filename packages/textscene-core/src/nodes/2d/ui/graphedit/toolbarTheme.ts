@@ -11,7 +11,7 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import { LINE_EDIT_DEFAULT_FONT_COLOR, pickLineEditStyleBox } from '../lineedit/nativeSolver';
+import { lineEditBoxes, type LineEditBoxes } from '../lineedit/nativeSolver';
 import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
 
 /** `zoom_minus_button->set_theme_type_variation(SceneStringName(FlatButton))` (`graph_edit.cpp:3250`). */
@@ -26,7 +26,7 @@ export interface GraphEditToolbarTheme {
   labelBox: StyleBoxFlatData;
   labelColor: Rgba;
   /** `snapping_distance_spinbox`'s field, a `SpinBoxInnerLineEdit`. */
-  fieldBoxes: Readonly<Record<'normal' | 'readOnly', StyleBoxFlatData>>;
+  fieldBoxes: LineEditBoxes;
   fieldColor: Rgba;
   /** The SpinBox's own colours, which hold `up_icon_modulate` and `down_icon_modulate`. */
   spinBoxColors: SolveNode['colors'];
@@ -44,7 +44,6 @@ function buildToolbarTheme(n: SolveNode, theme: NativeTheme): GraphEditToolbarTh
   const label = internalChildThemeItems(n, 'Label');
   const field = spinBoxFieldThemeItems(n);
   const buttonBox = (state: ToggleDrawState) => pickButtonStyleBox(button.styleBoxes, state, n.rtl);
-  const { lineEdit } = theme.widgets;
   const result: GraphEditToolbarTheme = {
     buttonBoxes: {
       normal: buttonBox('normal'),
@@ -54,11 +53,8 @@ function buildToolbarTheme(n: SolveNode, theme: NativeTheme): GraphEditToolbarTh
     buttonColors: button.colors,
     labelBox: requiredThemeItem(label.styleBoxes, 'normal'),
     labelColor: requiredThemeItem(label.colors, 'font_color'),
-    fieldBoxes: {
-      normal: pickLineEditStyleBox(field.styleBoxes, lineEdit, 'normal'),
-      readOnly: pickLineEditStyleBox(field.styleBoxes, lineEdit, 'read_only'),
-    },
-    fieldColor: field.colors.font_color ?? LINE_EDIT_DEFAULT_FONT_COLOR,
+    fieldBoxes: lineEditBoxes(field.styleBoxes),
+    fieldColor: requiredThemeItem(field.colors, 'font_color'),
     spinBoxColors: internalChildThemeItems(n, 'SpinBox').colors,
   };
   toolbarThemesOf(n).set(theme, result);

@@ -22,7 +22,6 @@ import { TextEditBody } from '../textedit/Component';
 import { useTextEditRows } from '../textedit/useTextEditRows';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import {
-  pickTextEditStyleBox,
   resolveTextEditStyleState,
   textEditTextTheme,
   textEditRowHeightPx,
@@ -50,13 +49,14 @@ import {
 } from './nativeSolver';
 import type { CodeEditProperties } from './types';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 export function CodeEdit(props: NativeControlComponentProps) {
   const { solveNode, childTint, rect, renderOrder, theme, measureText } = props;
   const toItemLinear = useItemLinearColorOf();
   const codeEditProps = painterView<CodeEditProperties>(solveNode);
   const state = resolveTextEditStyleState(codeEditProps.editable);
-  const styleBox = pickTextEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, state);
+  const styleBox = requiredThemeItem(solveNode.styleBoxes, state);
 
   const { fontSizePx } = textEditTextTheme(solveNode, codeEditProps, state);
   const fontMetrics = resolveNodeFontMetrics(solveNode, TEXT_EDIT_THEME_FONT_KEY);

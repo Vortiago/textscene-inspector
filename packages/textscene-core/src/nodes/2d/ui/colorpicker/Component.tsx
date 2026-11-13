@@ -190,12 +190,12 @@ export function ColorPicker({
 
   const contentWidth = Math.max(0, rect.w - 2 * theme.contentMargin);
   const rows = useMemo(
-    () => colorPickerRows(contentWidth, theme, child.valueFieldTheme, props, measure),
+    () => colorPickerRows(contentWidth, theme, child.valueField, props, measure),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       contentWidth,
       theme,
-      child.valueFieldTheme,
+      child.valueField,
       props.pickerShape,
       props.samplerVisible,
       props.colorModesVisible,
@@ -229,8 +229,8 @@ export function ColorPicker({
     () => multiplyModulate(tint.own, child.valueFieldColor),
     [tint.own, child]
   );
-  const lineEditInsetX = theme.widgets.lineEdit.normal.contentMargin.left;
-  const valueFieldInsetX = child.valueFieldTheme.widgets.lineEdit.normal.contentMargin.left;
+  const lineEditInsetX = theme.lineEdit.normal.contentMargin.left;
+  const valueFieldInsetX = child.valueField.normal.contentMargin.left;
 
   const sampleFill = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
   const sampleColor = useItemLinearColor(sampleFill);
@@ -297,7 +297,7 @@ export function ColorPicker({
   );
   // The unceiled advance: `Font::get_char_size` does not ceil it, where `measure` does.
   const emWidthPx = colorPickerEmWidthPx((text) => shape(text).widthPx);
-  const sliderValueWidth = colorPickerValueColumnWidth(child.valueFieldTheme, emWidthPx);
+  const sliderValueWidth = colorPickerValueColumnWidth(child.valueField, theme.scale, emWidthPx);
   const sliderCols = useMemo(
     () =>
       rows.sliders
@@ -717,7 +717,7 @@ export function ColorPicker({
                   <>
                     <CanvasItemGroup position={[fieldRect.x, -fieldRect.y, 0]}>
                       <StyleBoxQuad
-                        styleBox={child.valueFieldTheme.widgets.lineEdit.normal}
+                        styleBox={child.valueField.normal}
                         rect={{ x: 0, y: 0, w: fieldRect.w, h: fieldRect.h }}
                         color={tint.own}
                         renderOrder={renderOrder}
@@ -792,7 +792,7 @@ export function ColorPicker({
           )}
           <CanvasItemGroup position={[hexCols.field.x, -hexCols.field.y, 0]}>
             <StyleBoxQuad
-              styleBox={theme.widgets.lineEdit.normal}
+              styleBox={theme.lineEdit.normal}
               rect={{ x: 0, y: 0, w: hexCols.field.w, h: hexCols.field.h }}
               color={tint.own}
               renderOrder={renderOrder}

@@ -33,7 +33,6 @@ import {
   textEditFirstIndentRow,
   textEditRowBandTopPx,
   textEditRowTextTopPx,
-  pickTextEditStyleBox,
   resolveTextEditStyleState,
   textEditTextTheme,
   textEditDrawnLines,
@@ -59,7 +58,7 @@ import type { TextEditRows } from './rows';
 import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { TEXT_EDIT_GLYPH_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import type { TextEditProperties } from './types';
-import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 /** `text_edit_tab.svg`/`text_edit_space.svg`'s authored size. The default theme rasterises both at the theme scale. */
 const GLYPH_ICON_AUTHORED_SIZE_PX = 8;
@@ -78,7 +77,6 @@ const CARET_WIDTH_PX = 1;
  * the state-dependent font colour: a read-only TextEdit paints its text at
  * `font_readonly_color` and its caret at this.
  */
-const CARET_COLOR = CONTROL_FONT_COLOR;
 
 interface TextEditBodyProps extends NativeControlComponentProps {
   /**
@@ -117,7 +115,7 @@ export function TextEditBody({
   const toItemLinear = useItemLinearColorOf();
   const glyphIconPx = scaledIconSize(GLYPH_ICON_AUTHORED_SIZE_PX, theme.scale);
   const state = resolveTextEditStyleState(props.editable);
-  const styleBox = pickTextEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, state);
+  const styleBox = requiredThemeItem(solveNode.styleBoxes, state);
 
   // `_using_placeholder` swaps the buffer for `placeholder_text` and its colour whatever `editable` says (`:1350-1352`).
   const { lines, isPlaceholder } = useMemo(
@@ -228,7 +226,7 @@ export function TextEditBody({
       editable: props.editable !== false,
       // The buffer's colour, not the placeholder's (`:1194`).
       fontColor: textEditTextTheme(solveNode, props, state).color,
-      caretColor: solveNode.colors.caret_color ?? CARET_COLOR,
+      caretColor: requiredThemeItem(solveNode.colors, 'caret_color'),
       currentLineColor: CURRENT_LINE_COLOR,
     };
   }, [
@@ -254,7 +252,7 @@ export function TextEditBody({
     () => multiplyModulate(childTint.own, CURRENT_LINE_COLOR),
     [childTint.own]
   );
-  const caretColor = solveNode.colors.caret_color ?? CARET_COLOR;
+  const caretColor = requiredThemeItem(solveNode.colors, 'caret_color');
   const tintedCaretColor = useMemo(
     () => multiplyModulate(childTint.own, caretColor),
     [childTint.own, caretColor]

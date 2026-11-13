@@ -1,8 +1,7 @@
 /**
  * LineEdit's native rect solver, `LineEdit::get_minimum_size` (`scene/gui/line_edit.cpp:2443-2477`),
- * plus the theme keys and default colours LineEdit reads. Pure per-node math: `Component.tsx` paints,
- * with the `normal` or `read_only` StyleBox this module picks by draw state from `nativeTheme.ts`'s
- * `widgets.lineEdit`, which no other widget reads.
+ * plus the theme keys LineEdit reads. Pure per-node math: `Component.tsx` paints with the `normal` or
+ * `read_only` StyleBox of the draw state.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -43,14 +42,9 @@ import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { type Rgba } from '../../../../godot/math/math';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
-import {
-  CONTROL_FONT_COLOR,
-  CONTROL_FONT_DISABLED_COLOR,
-  CONTROL_FONT_HOVER_COLOR,
-} from '../../../../godot/scene/theme';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 /**
  * LineEdit's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:419`). This
@@ -71,14 +65,17 @@ export function resolveLineEditStyleState(editable: boolean | undefined): LineEd
   return editable === false ? 'read_only' : 'normal';
 }
 
-/** A resolved `theme_override_styles/<state>` wins, else the default-theme box for that state. */
-export function pickLineEditStyleBox(
-  overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  defaults: Readonly<Record<'normal' | 'readOnly', StyleBoxFlatData>>,
-  state: LineEditStyleState
-): StyleBoxFlatData {
-  const key = state === 'read_only' ? 'readOnly' : 'normal';
-  return overrides[state] ?? defaults[key];
+/** The `normal` and `read_only` boxes of a LineEdit, or of the LineEdit inside another Control. */
+export interface LineEditBoxes {
+  normal: StyleBoxFlatData;
+  readOnly: StyleBoxFlatData;
+}
+
+export function lineEditBoxes(styleBoxes: Readonly<Record<string, StyleBoxFlatData>>): LineEditBoxes {
+  return {
+    normal: requiredThemeItem(styleBoxes, 'normal'),
+    readOnly: requiredThemeItem(styleBoxes, 'read_only'),
+  };
 }
 
 /**
@@ -104,18 +101,6 @@ const LINE_EDIT_THEME_KEYS: Record<LineEditTextState, TextThemeKeys> = {
   placeholder: { sizeKey: 'font_size', colorKey: 'font_placeholder_color' },
 };
 
-/** LineEdit's own `font_color` default (`default_theme.cpp:422`). */
-export const LINE_EDIT_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-
-/** LineEdit's `font_uneditable_color` default (`default_theme.cpp:424`). */
-export const LINE_EDIT_DEFAULT_UNEDITABLE_COLOR = CONTROL_FONT_DISABLED_COLOR;
-
-/** LineEdit's `clear_button_color` default (`default_theme.cpp:429`). */
-export const LINE_EDIT_DEFAULT_CLEAR_BUTTON_COLOR = CONTROL_FONT_COLOR;
-
-/** LineEdit's `caret_color` default (`default_theme.cpp:427`). */
-export const LINE_EDIT_DEFAULT_CARET_COLOR = CONTROL_FONT_HOVER_COLOR;
-
 /** This LineEdit's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the default theme table. */
 export function lineEditTextTheme(
   n: SolveNode,
@@ -124,11 +109,6 @@ export function lineEditTextTheme(
 ): ResolvedTextTheme {
   return resolveTextTheme(n, props, LINE_EDIT_THEME_KEYS[state]);
 }
-
-/** LineEdit's `selection_color` (`default_theme.cpp:428`). */
-export const LINE_EDIT_DEFAULT_SELECTION_COLOR: Rgba = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
-/** LineEdit's `font_selected_color` (`default_theme.cpp:423`). */
-export const LINE_EDIT_DEFAULT_SELECTED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /**
  * The selection `NOTIFICATION_DRAW` paints (`line_edit.cpp:1491-1506,1534`): a rect from the first selected glyph
@@ -162,9 +142,6 @@ export function lineEditSelection(
 export const EXPAND_MODE_ORIGINAL_SIZE = 0;
 const EXPAND_MODE_FIT_TO_TEXT = 1;
 const EXPAND_MODE_FIT_TO_LINE_EDIT = 2;
-
-/** `caret_width` theme constant default (`default_theme.cpp:434`). */
-const DEFAULT_CARET_WIDTH = 1;
 
 /**
  * `LineEdit::_get_right_icon_size` (`line_edit.cpp:373-406`), for `right_icon` and the clear icon
@@ -243,7 +220,7 @@ export function shapeLineEditText(
  * `style_min_size` of `LineEdit::get_minimum_size` (`line_edit.cpp:2475`): the larger of the `normal` and
  * `read_only` minimum sizes, whatever `editable` says. Each caller passes the boxes it resolved.
  */
-export function lineEditStyleMinSize(normal: StyleBoxFlatData, readOnly: StyleBoxFlatData): Vector2 {
+export function lineEditStyleMinSize({ normal, readOnly }: LineEditBoxes): Vector2 {
   const normalMargin = contentMarginSize(normal);
   const readOnlyMargin = contentMarginSize(readOnly);
   return { x: Math.max(normalMargin.x, readOnlyMargin.x), y: Math.max(normalMargin.y, readOnlyMargin.y) };
@@ -265,10 +242,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const { fontSizePx } = lineEditTextTheme(n, props, 'normal');
 
   // The draw pass reads only the active box. A wider read-only override floors an editable field too.
-  const styleMinSize = lineEditStyleMinSize(
-    pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'normal'),
-    pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'read_only')
-  );
+  const styleMinSize = lineEditStyleMinSize(lineEditBoxes(n.styleBoxes));
 
   const fontMetrics = resolveNodeFontMetrics(n, LINE_EDIT_THEME_FONT_KEY);
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
@@ -288,7 +262,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
             .widthPx
         )
       : 0;
-    const caretWidthPx = n.constants['caret_width'] ?? DEFAULT_CARET_WIDTH;
+    const caretWidthPx = requiredThemeItem(n.constants, 'caret_width');
     width = Math.max(width, fullWidthPx + caretWidthPx);
   }
 

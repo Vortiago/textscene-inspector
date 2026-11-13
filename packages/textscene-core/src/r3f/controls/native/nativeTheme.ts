@@ -5,12 +5,11 @@
  * rather than setting a CSS `rgba(...)` background.
  */
 
-import { flatStyleBox as makeFlatStyleBox, freezeStyleBox } from './styleBoxFlat';
+import { flatStyleBox as makeFlatStyleBox } from './styleBoxFlat';
 import { flatCornerDetail } from '../../../godot/scene/defaultTheme/styleBoxes';
 import { POPUP_MENU_DEFAULTS } from '../../../godot/scene/popupMenu';
 import {
   DEFAULT_CORNER_RADIUS,
-  LINE_EDIT_BORDER_BOTTOM_WIDTH,
   scaledGodotTheme,
   scaledPx,
   STYLE_FILL,
@@ -45,47 +44,6 @@ interface NativeThemeStyleFill {
 }
 
 /**
- * `make_flat_stylebox` (`default_theme.cpp:57-70`) for the fields
- * `StyleBoxFlatData` models. Every input is already scaled and rounded, so this
- * never scales. The fields `make_flat_stylebox` leaves alone keep `StyleBoxFlat`'s
- * defaults, and no widget here overrides `draw_center` (only a focus style does).
- */
-function flatStyleBox(
-  bgColor: Rgba,
-  contentMargin: { left: number; top: number; right: number; bottom: number },
-  cornerRadius: number,
-  cornerDetail: number
-): StyleBoxFlatData {
-  return freezeStyleBox(makeFlatStyleBox(bgColor, { contentMargin, cornerRadius, cornerDetail }));
-}
-
-/**
- * LineEdit's `normal`/`read_only` styleboxes (`default_theme.cpp:405-417`):
- * `make_flat_stylebox(fill)` plus a bottom border set directly with
- * `set_border_width(SIDE_BOTTOM, 2)`. The border bypasses `make_flat_stylebox`,
- * so its width is a bare `2`, never `Math.round(2 * scale)`.
- */
-function lineEditStyleBox(
-  bgColor: Rgba,
-  borderColor: Rgba,
-  contentMargin: { left: number; top: number; right: number; bottom: number },
-  cornerRadius: number,
-  cornerDetail: number
-): StyleBoxFlatData {
-  return freezeStyleBox({
-    ...flatStyleBox(bgColor, contentMargin, cornerRadius, cornerDetail),
-    borderColor,
-    borderWidth: { left: 0, top: 0, right: 0, bottom: LINE_EDIT_BORDER_BOTTOM_WIDTH },
-  });
-}
-
-/** `style_pressed_color` (`default_theme.cpp:115`): LineEdit `normal`'s bottom-border colour (`:408`). */
-const LINE_EDIT_NORMAL_BORDER_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0.6 };
-
-/** `style_pressed_color * Color(1, 1, 1, 0.5)` (`default_theme.cpp:416`): `read_only`'s bottom-border colour. */
-const LINE_EDIT_READ_ONLY_BORDER_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0.3 };
-
-/**
  * The default-theme StyleBoxFlat structs the Controls that do not yet read the default theme table
  * compose from.
  */
@@ -106,11 +64,6 @@ interface NativeThemeWidgets {
   flatMenuButton: {
     normal: StyleBoxFlatData;
     disabled: StyleBoxFlatData;
-  };
-  /** LineEdit's `normal`/`read_only` styleboxes, `default_theme.cpp:405-417`. */
-  lineEdit: {
-    normal: StyleBoxFlatData;
-    readOnly: StyleBoxFlatData;
   };
 }
 
@@ -188,24 +141,6 @@ function buildNativeTheme(scale: number): NativeTheme {
       flatMenuButton: {
         normal: requiredThemeItem(flatMenuButtonBoxes, 'normal'),
         disabled: requiredThemeItem(flatMenuButtonBoxes, 'disabled'),
-      },
-      lineEdit: {
-        // default_theme.cpp:405-409: make_flat_stylebox(style_normal_color) + border.
-        normal: lineEditStyleBox(
-          STYLE_FILL.normal,
-          LINE_EDIT_NORMAL_BORDER_COLOR,
-          buttonMargin,
-          scaled.cornerRadius,
-          defaultDetail
-        ),
-        // default_theme.cpp:413-417: make_flat_stylebox(style_disabled_color) + border.
-        readOnly: lineEditStyleBox(
-          STYLE_FILL.disabled,
-          LINE_EDIT_READ_ONLY_BORDER_COLOR,
-          buttonMargin,
-          scaled.cornerRadius,
-          defaultDetail
-        ),
       },
     },
   };

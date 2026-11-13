@@ -41,6 +41,7 @@ import type { TextEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 /** `SceneStringName(font)` = `"font"`: `default_theme.cpp:460` (TextEdit), `:501` (CodeEdit). */
 export const TEXT_EDIT_THEME_FONT_KEY = 'font';
@@ -60,26 +61,12 @@ const TEXT_EDIT_WRAP_OFFSET_PX = 10;
 /** `text_edit.cpp:8614`: `content_size_cache = Vector2i(total_width + 10, ...)`, a second bare, unscaled `10`. */
 const TEXT_EDIT_CONTENT_WIDTH_PAD_PX = 10;
 
-/**
- * `TextEdit::get_draw_mode`'s stylebox axis. TextEdit's `normal`/`read_only` are the same
- * `Ref<StyleBoxFlat>` objects as LineEdit's (`default_theme.cpp:453,455`), as are CodeEdit's
- * (`:486,488`), so `theme.widgets.lineEdit` is this type's own default.
- */
+/** `TextEdit::get_draw_mode`'s stylebox axis: the theme item name of the box. */
 type TextEditStyleState = 'normal' | 'read_only';
 
 /** `editable ?? true` (TextEdit's own default, `text_edit.h`), collapsed to which stylebox key it selects. */
 export function resolveTextEditStyleState(editable: boolean | undefined): TextEditStyleState {
   return editable === false ? 'read_only' : 'normal';
-}
-
-/** `overrides[state]` (a resolved `theme_override_styles/<state>`) wins over the default-theme box for that state, which is LineEdit's (`TextEditStyleState`). */
-export function pickTextEditStyleBox(
-  overrides: Readonly<Record<string, StyleBoxFlatData>>,
-  lineEditDefaults: Readonly<Record<'normal' | 'readOnly', StyleBoxFlatData>>,
-  state: TextEditStyleState
-): StyleBoxFlatData {
-  const key = state === 'read_only' ? 'readOnly' : 'normal';
-  return overrides[state] ?? lineEditDefaults[key];
 }
 
 /** The text states `NOTIFICATION_DRAW` picks a colour for: the placeholder wins over `editable` (`text_edit.cpp:1346-1352`). */
@@ -331,7 +318,7 @@ export function textEditMinimumSizeWith(
 export const textEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as TextEditProperties;
   const state = resolveTextEditStyleState(props.editable);
-  const styleBox = pickTextEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, state);
+  const styleBox = requiredThemeItem(n.styleBoxes, state);
   return textEditMinimumSizeWith(n, ctx, props, styleBox, 0);
 };
 

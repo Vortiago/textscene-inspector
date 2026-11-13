@@ -25,8 +25,6 @@ import {
   lineEditRightIconSize,
   lineEditCaretRect,
   lineEditTextureSlots,
-  LINE_EDIT_DEFAULT_FONT_COLOR,
-  LINE_EDIT_DEFAULT_UNEDITABLE_COLOR,
   LINE_EDIT_THEME_FONT_KEY,
   EXPAND_MODE_ORIGINAL_SIZE,
 } from './nativeSolver';
@@ -446,16 +444,17 @@ describe('lineEditTextTheme: font_color / font_uneditable_color / font_placehold
   it('resolves control_font_color (0.875, opaque) for the normal state', () => {
     expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'normal')).toEqual({
       fontSizePx: 16,
-      color: LINE_EDIT_DEFAULT_FONT_COLOR,
+      color: { r: 0.875, g: 0.875, b: 0.875, a: 1 },
     });
-    expect(LINE_EDIT_DEFAULT_FONT_COLOR).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
   });
 
   it('resolves control_font_disabled_color (alpha 0.5) for font_uneditable_color, the read_only state', () => {
-    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'read_only').color).toEqual(
-      LINE_EDIT_DEFAULT_UNEDITABLE_COLOR
-    );
-    expect(LINE_EDIT_DEFAULT_UNEDITABLE_COLOR).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 0.5 });
+    expect(lineEditTextTheme(node({}), {} as LineEditProperties, 'read_only').color).toEqual({
+      r: 0.875,
+      g: 0.875,
+      b: 0.875,
+      a: 0.5,
+    });
   });
 
   it('resolves control_font_placeholder_color (alpha 0.6) for the placeholder state', () => {

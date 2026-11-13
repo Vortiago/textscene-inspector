@@ -16,7 +16,6 @@ import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
-  pickLineEditStyleBox,
   resolveLineEditStyleState,
   layoutLineEditContent,
   lineEditDrawnLayout,
@@ -39,6 +38,7 @@ import {
 import type { SpinBoxProperties } from './types';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 export function SpinBox({
   solveNode,
@@ -58,11 +58,7 @@ export function SpinBox({
   );
 
   const styleState = resolveLineEditStyleState(props.editable);
-  const fieldBox = pickLineEditStyleBox(
-    spinBoxFieldThemeItems(solveNode).styleBoxes,
-    theme.widgets.lineEdit,
-    styleState
-  );
+  const fieldBox = requiredThemeItem(spinBoxFieldThemeItems(solveNode).styleBoxes, styleState);
 
   const orderedKeys = controlLayoutOrder(solveNode);
   const resolvedValue = resolveRangeValue(props, orderedKeys);
@@ -130,12 +126,17 @@ export function SpinBox({
   const upIconPos = spinBoxArrowPosition(layout.upRect, upIconSize);
   const downIconPos = spinBoxArrowPosition(layout.downRect, downIconSize);
 
-  // SpinBox's own `theme_override_styles/*` items, empty in the default theme, so each draws only
-  // under an override. `up_down_buttons_separator` has zero height (`SpinBoxLayout`) and never draws.
-  const upBox = solveNode.styleBoxes[upState === 'disabled' ? 'up_background_disabled' : 'up_background'];
-  const downBox =
-    solveNode.styleBoxes[downState === 'disabled' ? 'down_background_disabled' : 'down_background'];
-  const fieldSeparatorBox = solveNode.styleBoxes['field_and_buttons_separator'];
+  // StyleBoxEmpty in the default theme (`default_theme.cpp:625-641`), so each draws only under an
+  // override. `up_down_buttons_separator` has zero height (`SpinBoxLayout`) and never draws.
+  const upBox = requiredThemeItem(
+    solveNode.styleBoxes,
+    upState === 'disabled' ? 'up_background_disabled' : 'up_background'
+  );
+  const downBox = requiredThemeItem(
+    solveNode.styleBoxes,
+    downState === 'disabled' ? 'down_background_disabled' : 'down_background'
+  );
+  const fieldSeparatorBox = requiredThemeItem(solveNode.styleBoxes, 'field_and_buttons_separator');
 
   return (
     <CanvasItemGroup>
@@ -158,43 +159,37 @@ export function SpinBox({
           </CanvasItemGroup>
         )}
       </CanvasItemGroup>
-      {fieldSeparatorBox && (
-        <CanvasItemGroup
-          position={[layout.fieldAndButtonsSeparatorRect.x, -layout.fieldAndButtonsSeparatorRect.y, 0]}
-        >
-          <StyleBoxQuad
-            styleBox={fieldSeparatorBox}
-            color={tint.own}
-            rect={{
-              x: 0,
-              y: 0,
-              w: layout.fieldAndButtonsSeparatorRect.w,
-              h: layout.fieldAndButtonsSeparatorRect.h,
-            }}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
-      )}
-      {upBox && (
-        <CanvasItemGroup position={[layout.upRect.x, -layout.upRect.y, 0]}>
-          <StyleBoxQuad
-            styleBox={upBox}
-            color={tint.own}
-            rect={{ x: 0, y: 0, w: layout.upRect.w, h: layout.upRect.h }}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
-      )}
-      {downBox && (
-        <CanvasItemGroup position={[layout.downRect.x, -layout.downRect.y, 0]}>
-          <StyleBoxQuad
-            styleBox={downBox}
-            color={tint.own}
-            rect={{ x: 0, y: 0, w: layout.downRect.w, h: layout.downRect.h }}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
-      )}
+      <CanvasItemGroup
+        position={[layout.fieldAndButtonsSeparatorRect.x, -layout.fieldAndButtonsSeparatorRect.y, 0]}
+      >
+        <StyleBoxQuad
+          styleBox={fieldSeparatorBox}
+          color={tint.own}
+          rect={{
+            x: 0,
+            y: 0,
+            w: layout.fieldAndButtonsSeparatorRect.w,
+            h: layout.fieldAndButtonsSeparatorRect.h,
+          }}
+          renderOrder={renderOrder}
+        />
+      </CanvasItemGroup>
+      <CanvasItemGroup position={[layout.upRect.x, -layout.upRect.y, 0]}>
+        <StyleBoxQuad
+          styleBox={upBox}
+          color={tint.own}
+          rect={{ x: 0, y: 0, w: layout.upRect.w, h: layout.upRect.h }}
+          renderOrder={renderOrder}
+        />
+      </CanvasItemGroup>
+      <CanvasItemGroup position={[layout.downRect.x, -layout.downRect.y, 0]}>
+        <StyleBoxQuad
+          styleBox={downBox}
+          color={tint.own}
+          rect={{ x: 0, y: 0, w: layout.downRect.w, h: layout.downRect.h }}
+          renderOrder={renderOrder}
+        />
+      </CanvasItemGroup>
       <PositionedIcon
         rect={{ x: upIconPos.x, y: upIconPos.y, w: upIconSize.x, h: upIconSize.y }}
         texture={upIconTexture}

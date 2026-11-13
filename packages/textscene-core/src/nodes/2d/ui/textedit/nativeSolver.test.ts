@@ -9,7 +9,6 @@ import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
   resolveTextEditStyleState,
-  pickTextEditStyleBox,
   textEditRowHeightPx,
   textEditWrapWidthPx,
   shapeTextEditLines,
@@ -30,6 +29,9 @@ import {
   textEditCapSpanAlpha,
 } from './nativeSolver';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
+import { lineEditBoxes } from '../lineedit/nativeSolver';
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { TextEditProperties } from './types';
 import { controlProps } from '../control/testing/controlProps';
@@ -39,6 +41,8 @@ import type { GlyphPlacement } from '../../../../r3f/controls/native/text/textLa
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const THEME = nativeTheme(1);
+/** TextEdit's `normal` and `read_only`, the same boxes as LineEdit's (`default_theme.cpp:453-455`). */
+const LINE_EDIT_BOXES = lineEditBoxes(defaultStyleBoxesOf(defaultThemeAt(1)).TextEdit!);
 
 function ctx(): SolveContext {
   return {
@@ -62,22 +66,6 @@ describe('resolveTextEditStyleState', () => {
   });
   it('reads read_only when editable is explicitly false', () => {
     expect(resolveTextEditStyleState(false)).toBe('read_only');
-  });
-});
-
-describe('pickTextEditStyleBox', () => {
-  it('falls back to LineEdit-reused defaults (default_theme.cpp:453,455 reuse the same Refs)', () => {
-    expect(pickTextEditStyleBox({}, THEME.widgets.lineEdit, 'normal')).toBe(THEME.widgets.lineEdit.normal);
-    expect(pickTextEditStyleBox({}, THEME.widgets.lineEdit, 'read_only')).toBe(
-      THEME.widgets.lineEdit.readOnly
-    );
-  });
-  it('prefers a theme_override_styles override over the default', () => {
-    const override = {
-      ...THEME.widgets.lineEdit.normal,
-      cornerRadius: { topLeft: 99, topRight: 99, bottomRight: 99, bottomLeft: 99 },
-    };
-    expect(pickTextEditStyleBox({ normal: override }, THEME.widgets.lineEdit, 'normal')).toBe(override);
   });
 });
 
@@ -159,7 +147,7 @@ describe('shapeTextEditLines', () => {
 });
 
 describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () => {
-  const STYLE_MIN = THEME.widgets.lineEdit.normal.contentMargin;
+  const STYLE_MIN = LINE_EDIT_BOXES.normal.contentMargin;
   const STYLE_MIN_X = STYLE_MIN.left + STYLE_MIN.right;
   const STYLE_MIN_Y = STYLE_MIN.top + STYLE_MIN.bottom;
   const ROW_HEIGHT_PX = textEditRowHeightPx(OPEN_SANS_FONT_METRICS, 16, THEME.separation);
@@ -191,7 +179,7 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
       text: 'a',
       fitContentWidth: true,
     });
-    const box = THEME.widgets.lineEdit.normal;
+    const box = LINE_EDIT_BOXES.normal;
     const withoutGutter = textEditMinimumSizeWith(node(props), ctx(), props, box, 0).x;
     expect(textEditMinimumSizeWith(node(props), ctx(), props, box, 5).x).toBe(withoutGutter + 5);
   });
@@ -273,19 +261,19 @@ describe('textEditMinimumSize', () => {
   it('is exactly the active stylebox minimum size when neither fit_content flag is set', () => {
     const n = node({ text: 'hello world this is a long line' });
     const v = textEditMinimumSize(n, ctx());
-    const styleMin = THEME.widgets.lineEdit.normal.contentMargin;
+    const styleMin = LINE_EDIT_BOXES.normal.contentMargin;
     expect(v).toEqual({ x: styleMin.left + styleMin.right, y: styleMin.top + styleMin.bottom });
   });
   it('grows with fit_content_height on the first pass (no tentativeRect) using the unwrapped height', () => {
     const n = node({ text: 'a\nb\nc', fitContentHeight: true });
     const v = textEditMinimumSize(n, ctx());
-    const styleMin = THEME.widgets.lineEdit.normal.contentMargin;
+    const styleMin = LINE_EDIT_BOXES.normal.contentMargin;
     expect(v.y).toBeGreaterThan(styleMin.top + styleMin.bottom);
   });
   it('floors the read_only stylebox, not the normal one, when editable is false', () => {
     const n = node({ editable: false });
     const v = textEditMinimumSize(n, ctx());
-    const styleMin = THEME.widgets.lineEdit.readOnly.contentMargin;
+    const styleMin = LINE_EDIT_BOXES.readOnly.contentMargin;
     expect(v).toEqual({ x: styleMin.left + styleMin.right, y: styleMin.top + styleMin.bottom });
   });
 });
@@ -293,13 +281,13 @@ describe('textEditMinimumSize', () => {
 describe('layoutTextEditDrawBand', () => {
   // text_edit.cpp:938,941-944.
   it('begins after the left content margin plus the gutter band, ends before the right margin', () => {
-    const box = THEME.widgets.lineEdit.normal;
+    const box = LINE_EDIT_BOXES.normal;
     const band = layoutTextEditDrawBand(300, box, 22, 80, false, 24);
     expect(band.xMarginBeginPx).toBe(Math.ceil(box.contentMargin.left) + 22);
     expect(band.xMarginEndPx).toBe(300 - Math.floor(box.contentMargin.right));
   });
   it('narrows the right edge further when draw_minimap is true', () => {
-    const box = THEME.widgets.lineEdit.normal;
+    const box = LINE_EDIT_BOXES.normal;
     const withoutMinimap = layoutTextEditDrawBand(300, box, 0, 80, false, 24).xMarginEndPx;
     const withMinimap = layoutTextEditDrawBand(300, box, 0, 80, true, 24).xMarginEndPx;
     expect(withMinimap).toBe(withoutMinimap - 80);

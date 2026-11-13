@@ -12,7 +12,6 @@ import { formatControlNumber, type Numerals } from '../../../../godot/text/numbe
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import {
-  pickTextEditStyleBox,
   resolveTextEditStyleState,
   textEditTextTheme,
   textEditRowHeightPx,
@@ -24,6 +23,7 @@ import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/text
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { CodeEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 /** `default_theme.cpp:526`: `Color(0.67, 0.67, 0.67, 0.4)`, distinct from `font_color`. */
 export const CODE_EDIT_LINE_NUMBER_COLOR: Rgba = { r: 0.67, g: 0.67, b: 0.67, a: 0.4 };
@@ -184,7 +184,7 @@ export function codeEditGutterCellTextTopPx(
 export const codeEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as CodeEditProperties;
   const state = resolveTextEditStyleState(props.editable);
-  const styleBox = pickTextEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, state);
+  const styleBox = requiredThemeItem(n.styleBoxes, state);
   const { rowHeightPx, charWidth0Px } = codeEditFontMetrics(n, ctx, props);
   const lineCount = Math.max(1, (props.text ?? '').split('\n').length);
   const band = codeEditGutterBand(props, rowHeightPx, charWidth0Px, lineCount);
