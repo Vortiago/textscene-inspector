@@ -41,6 +41,7 @@ import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/contro
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { TscnNode } from '../../../../parser/types';
 import { lineEditDisplayText } from './displayText';
+import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { LINE_EDIT_CLEAR_ICON_NATURAL_SIZE } from './icons';
 import type { LineEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -62,6 +63,11 @@ export const LINE_EDIT_THEME_FONT_KEY = 'font';
 
 /** `LineEdit::get_draw_mode`'s stylebox axis: the `theme_override_styles/*` key, and default-theme box, that the node's current `editable` selects. */
 type LineEditStyleState = 'normal' | 'read_only';
+
+/** The clear icon's size: the themed texture's, else the vendored icon at the theme scale. */
+export function lineEditClearIconSize(n: SolveNode, scale: number): Vector2 {
+  return themedIconSize(n.textureSlots, 'clear', LINE_EDIT_CLEAR_ICON_NATURAL_SIZE, scale);
+}
 
 /** `editable ?? true` (Godot's `LineEdit.editable` default) as the stylebox key it selects. */
 export function resolveLineEditStyleState(editable: boolean | undefined): LineEditStyleState {
@@ -134,6 +140,39 @@ export function lineEditTextTheme(
     color: LINE_EDIT_DEFAULT_COLORS[state],
   };
   return resolveTextTheme(n, props, LINE_EDIT_THEME_KEYS[state], defaults);
+}
+
+/** LineEdit's `selection_color` (`default_theme.cpp:428`). */
+export const LINE_EDIT_DEFAULT_SELECTION_COLOR: Rgba = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+/** LineEdit's `font_selected_color` (`default_theme.cpp:423`). */
+export const LINE_EDIT_DEFAULT_SELECTED_FONT_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
+
+/**
+ * The selection `NOTIFICATION_DRAW` paints (`line_edit.cpp:1491-1506,1534`): a rect from the first selected glyph
+ * to the end of the last, clipped to `x_ofs..ofs_max`, and the glyphs it covers drawn in `font_selected_color`.
+ * `selected` and `unselected` split `layout`'s glyphs, each keeping its own pen x.
+ */
+export function lineEditSelection(
+  layout: TextLayoutResult,
+  selection: { begin: number; end: number },
+  penXPx: number,
+  ofsMaxPx: number
+): { rect: { x: number; w: number } | null; selected: TextLayoutResult; unselected: TextLayoutResult } {
+  const isSelected = (glyph: GlyphPlacement) =>
+    glyph.sourceIndex !== undefined &&
+    glyph.sourceIndex >= selection.begin &&
+    glyph.sourceIndex + glyph.char.length <= selection.end;
+  const withGlyphs = (glyphsOf: (line: TextLineLayout) => GlyphPlacement[]): TextLayoutResult => ({
+    ...layout,
+    lines: layout.lines.map((line) => ({ ...line, glyphs: glyphsOf(line) })),
+  });
+  const selected = withGlyphs((line) => line.glyphs.filter(isSelected));
+  const unselected = withGlyphs((line) => line.glyphs.filter((glyph) => !isSelected(glyph)));
+  const covered = selected.lines.flatMap((line) => line.glyphs);
+  if (covered.length === 0) return { rect: null, selected, unselected };
+  const left = penXPx + Math.min(...covered.map((glyph) => glyph.x));
+  const right = Math.min(penXPx + Math.max(...covered.map((glyph) => glyph.x + glyph.advance)), ofsMaxPx);
+  return { rect: right > left ? { x: left, w: right - left } : null, selected, unselected };
 }
 
 /** `LineEdit::ExpandMode` (line_edit.cpp:3527 hint; `BIND_ENUM_CONSTANT` line_edit.cpp:3479-3481). */
@@ -218,6 +257,21 @@ export function shapeLineEditText(
 }
 
 /**
+ * `style_min_size` of `LineEdit::get_minimum_size` (`line_edit.cpp:2475`): the larger of the `normal` and
+ * `read_only` minimum sizes, whatever `editable` says. Each caller passes the boxes it resolved.
+ */
+export function lineEditStyleMinSize(normal: StyleBoxFlatData, readOnly: StyleBoxFlatData): Vector2 {
+  const normalMargin = contentMarginSize(normal);
+  const readOnlyMargin = contentMarginSize(readOnly);
+  return { x: Math.max(normalMargin.x, readOnlyMargin.x), y: Math.max(normalMargin.y, readOnlyMargin.y) };
+}
+
+/** The text part of `LineEdit::get_minimum_size`'s width (`:2447-2451`): `minimum_character_width` ems of "W". */
+export function lineEditTextMinimumWidth(emWidthPx: number): number {
+  return LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emWidthPx;
+}
+
+/**
  * `LineEdit::get_minimum_size` (`line_edit.cpp:2443-2477`): `minimum_character_width` em widths of
  * 'W', widened to `full_width + caret_width` with `expand_to_text_length`, plus the widest icon, by
  * `min_size.height = MAX(shaped height, font->get_height(font_size))`, plus the larger of the `normal`
@@ -227,16 +281,11 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as LineEditProperties;
   const { fontSizePx } = lineEditTextTheme(n, props, 'normal', ctx);
 
-  // `style_min_size` floors against both `normal` and `read_only`, whatever `editable` says, while the
-  // draw pass reads only the active box. A wider read-only override floors an editable field too.
-  const normalBox = pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'normal');
-  const readOnlyBox = pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'read_only');
-  const normalMargin = contentMarginSize(normalBox);
-  const readOnlyMargin = contentMarginSize(readOnlyBox);
-  const styleMinSize = {
-    x: Math.max(normalMargin.x, readOnlyMargin.x),
-    y: Math.max(normalMargin.y, readOnlyMargin.y),
-  };
+  // The draw pass reads only the active box. A wider read-only override floors an editable field too.
+  const styleMinSize = lineEditStyleMinSize(
+    pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'normal'),
+    pickLineEditStyleBox(n.styleBoxes, ctx.theme.widgets.lineEdit, 'read_only')
+  );
 
   const fontMetrics = resolveNodeFontMetrics(n, LINE_EDIT_THEME_FONT_KEY);
   const emSpaceSize = ctx.measureText ? ctx.measureText('W', fontSizePx, 0, fontMetrics).x : 0;
@@ -244,7 +293,7 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
   // LineEdit sets no `line_spacing`, so a spacing of 0 gives ascent and descent, each ceiled, summed.
   const fontHeightPx = getFontLinePitchPx(fontMetrics, fontSizePx, 0);
 
-  let width = LINE_EDIT_MINIMUM_CHARACTER_WIDTH * emSpaceSize;
+  let width = lineEditTextMinimumWidth(emSpaceSize);
 
   if (props.expandToTextLength && ctx.measureText) {
     // `full_width` (`:2456`, set at the end of `_shape()`) is the ceiled width of the string
@@ -260,36 +309,25 @@ export const lineEditMinimumSize: MinimumSizeFn = (n, ctx) => {
     width = Math.max(width, fullWidthPx + caretWidthPx);
   }
 
-  let height = fontHeightPx;
-  let iconMaxWidth = 0;
-  const tentative = ctx.tentativeRect?.(n);
-  const controlSize: Vector2 | null = tentative ? { x: tentative.w, y: tentative.h } : null;
+  // Both icons size against no control size: `get_minimum_size()` runs once, under a
+  // `size_cache` of `(0, 0)` (`lineEditRightIconSize`).
   const iconExpandMode = props.iconExpandMode ?? EXPAND_MODE_ORIGINAL_SIZE;
   const rightIconScale = props.rightIconScale ?? 1;
+  const minimumIconSize = (naturalSize: Vector2) =>
+    lineEditRightIconSize(naturalSize, iconExpandMode, fontHeightPx, null, rightIconScale);
 
+  let height = fontHeightPx;
+  let iconMaxWidth = 0;
   const rightIconNaturalSize = n.textureSlots['right_icon'];
   if (rightIconNaturalSize) {
-    const size = lineEditRightIconSize(
-      rightIconNaturalSize,
-      iconExpandMode,
-      fontHeightPx,
-      controlSize,
-      rightIconScale
-    );
+    const size = minimumIconSize(rightIconNaturalSize);
     height = Math.max(height, size.y);
     iconMaxWidth = size.x;
   }
   // `icon_max_width` is the max of the two icons, never their sum. The clear button counts even
   // without text: `get_minimum_size` has no `using_placeholder` gate, unlike the draw path.
   if (props.clearButtonEnabled) {
-    const clearNaturalSize = n.textureSlots['clear'] ?? LINE_EDIT_CLEAR_ICON_NATURAL_SIZE;
-    const size = lineEditRightIconSize(
-      clearNaturalSize,
-      iconExpandMode,
-      fontHeightPx,
-      controlSize,
-      rightIconScale
-    );
+    const size = minimumIconSize(lineEditClearIconSize(n, ctx.theme.scale));
     height = Math.max(height, size.y);
     iconMaxWidth = Math.max(iconMaxWidth, size.x);
   }

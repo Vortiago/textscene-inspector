@@ -1,0 +1,166 @@
+; One variable per window: the content scale. A factor of 2 halves the canvas the Controls lay
+; out in and draws it at twice the size; canvas-items and viewport modes fit a 120x60 design size
+; into the window with bars or by expanding (`window.cpp:1232-1370`).
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Factor" type="Window" parent="."]
+title = "Factor"
+position = Vector2i(40, 60)
+size = Vector2i(240, 160)
+content_scale_factor = 2.0
+
+[node name="Full" type="ColorRect" parent="Factor"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+color = Color(0.2, 0.6, 0.3, 1)
+
+[node name="Mark" type="ColorRect" parent="Factor"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 50.0
+offset_bottom = 30.0
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Canvas" type="Window" parent="."]
+title = "Canvas"
+position = Vector2i(320, 60)
+size = Vector2i(240, 160)
+content_scale_size = Vector2i(120, 60)
+content_scale_mode = 1
+content_scale_aspect = 1
+
+[node name="Full" type="ColorRect" parent="Canvas"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+color = Color(0.2, 0.6, 0.3, 1)
+
+[node name="Mark" type="ColorRect" parent="Canvas"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 50.0
+offset_bottom = 30.0
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Pixels" type="Window" parent="."]
+title = "Pixels"
+position = Vector2i(600, 60)
+size = Vector2i(240, 160)
+content_scale_size = Vector2i(120, 60)
+content_scale_mode = 2
+content_scale_aspect = 1
+
+[node name="Full" type="ColorRect" parent="Pixels"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+color = Color(0.2, 0.6, 0.3, 1)
+
+[node name="Mark" type="ColorRect" parent="Pixels"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 50.0
+offset_bottom = 30.0
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Expand" type="Window" parent="."]
+title = "Expand"
+position = Vector2i(880, 60)
+size = Vector2i(240, 160)
+content_scale_size = Vector2i(120, 60)
+content_scale_mode = 1
+content_scale_aspect = 4
+
+[node name="Full" type="ColorRect" parent="Expand"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+color = Color(0.2, 0.6, 0.3, 1)
+
+[node name="Mark" type="ColorRect" parent="Expand"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 50.0
+offset_bottom = 30.0
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Integer" type="Window" parent="."]
+title = "Integer"
+position = Vector2i(40, 340)
+size = Vector2i(240, 160)
+content_scale_size = Vector2i(100, 60)
+content_scale_mode = 1
+content_scale_aspect = 1
+content_scale_stretch = 1
+
+[node name="Full" type="ColorRect" parent="Integer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+color = Color(0.2, 0.6, 0.3, 1)
+
+[node name="Mark" type="ColorRect" parent="Integer"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 50.0
+offset_bottom = 30.0
+color = Color(0.9, 0.2, 0.2, 1)
+
+[node name="Height" type="Window" parent="."]
+title = "Height"
+position = Vector2i(320, 340)
+size = Vector2i(240, 160)
+content_scale_size = Vector2i(120, 60)
+content_scale_mode = 2
+content_scale_aspect = 3
+content_scale_factor = 1.5
+
+[node name="Full" type="ColorRect" parent="Height"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 4.0
+offset_right = -4.0
+offset_bottom = -4.0
+color = Color(0.2, 0.6, 0.3, 1)
+
+[node name="Mark" type="ColorRect" parent="Height"]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 50.0
+offset_bottom = 30.0
+color = Color(0.9, 0.2, 0.2, 1)

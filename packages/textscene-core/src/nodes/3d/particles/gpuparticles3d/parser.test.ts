@@ -41,4 +41,100 @@ describe('parseGPUParticles3D', () => {
   it('has no process material for an emitter that authors none', () => {
     expect(parse({}).processMaterial).toBeUndefined();
   });
+
+  it('reads the emitter as the node constructor sets it (`gpu_particles_3d.cpp:878-904`)', () => {
+    expect(parse({}).emitter).toEqual({
+      emitting: true,
+      amount: 8,
+      amountRatio: 1,
+      lifetime: 1,
+      oneShot: false,
+      preprocess: 0,
+      explosiveness: 0,
+      randomness: 0,
+      fixedFps: 30,
+      fractDelta: true,
+      localCoords: false,
+      useFixedSeed: false,
+      seed: 0,
+    });
+  });
+
+  it('reads the emitter keys', () => {
+    expect(
+      parse({
+        emitting: 'false',
+        amount: '3',
+        amount_ratio: '0.5',
+        lifetime: '2.5',
+        one_shot: 'true',
+        preprocess: '1.2',
+        explosiveness: '1',
+        randomness: '0.25',
+        fixed_fps: '24',
+        fract_delta: 'false',
+        local_coords: 'true',
+        use_fixed_seed: 'true',
+        seed: '12345',
+        speed_scale: '2',
+      }).emitter
+    ).toEqual({
+      emitting: false,
+      amount: 3,
+      amountRatio: 0.5,
+      lifetime: 2.5,
+      oneShot: true,
+      preprocess: 1.2,
+      explosiveness: 1,
+      randomness: 0.25,
+      fixedFps: 24,
+      fractDelta: false,
+      localCoords: true,
+      useFixedSeed: true,
+      seed: 12345,
+    });
+  });
+
+  it('keeps the default for an amount or a lifetime the setter refuses (error case)', () => {
+    const { emitter } = parse({ amount: '0', lifetime: '0' });
+    expect(emitter).toMatchObject({ amount: 8, lifetime: 1 });
+  });
+
+  it('reads the seed as the uint32 the setter takes (edge case)', () => {
+    expect(parse({ seed: '4294967295' }).emitter.seed).toBe(4294967295);
+  });
+
+  it('draws one pass by default, and the passes up to draw_passes', () => {
+    expect(parse({ draw_pass_1: 'SubResource("m")' }).drawPasses).toEqual(['SubResource("m")']);
+    expect(
+      parse({
+        draw_passes: '3',
+        draw_pass_1: 'SubResource("a")',
+        draw_pass_3: 'SubResource("c")',
+        draw_pass_4: 'SubResource("d")',
+      }).drawPasses
+    ).toEqual(['SubResource("a")', undefined, 'SubResource("c")']);
+  });
+
+  it('keeps at most the four passes the node declares (edge case)', () => {
+    expect(parse({ draw_passes: '9' }).drawPasses).toHaveLength(4);
+  });
+
+  it('draws in index order and aligns nothing by default', () => {
+    const { drawOrder, transformAlign } = parse({});
+    expect([drawOrder, transformAlign]).toEqual([0, 0]);
+  });
+
+  it('reads draw_order and transform_align', () => {
+    const { drawOrder, transformAlign } = parse({ draw_order: '3', transform_align: '2' });
+    expect([drawOrder, transformAlign]).toEqual([3, 2]);
+  });
+
+  it('keeps a draw_order no order names, which the copy shader draws in index order (edge case)', () => {
+    expect(parse({ draw_order: '7' }).drawOrder).toBe(7);
+  });
+
+  it('keeps DISABLED for the LOCAL_BILLBOARD that 4.6.3 refuses (edge case)', () => {
+    expect(parse({ transform_align: '4' }).transformAlign).toBe(0);
+  });
 });

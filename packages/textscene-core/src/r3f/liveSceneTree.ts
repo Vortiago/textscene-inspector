@@ -16,7 +16,7 @@ import { liveInstancePath, scopeOf, withFallbackScope, type LiveNode } from '../
 import { mergeInstanceRoot } from '../resources/mergeInstanceRoot.js';
 import { followTrailIn } from '../resources/sceneTrail.js';
 import type { TrailWalk } from '../godot/scene/packedScene.js';
-import type { PhysicsClock } from '../godot/scene/physicsTicks.js';
+import type { ProjectTreeSettings } from '../parser/projectSettingsParser.js';
 import { mayHandBack, seatInFile, type CollapseInstance } from '../resources/seatEscaped.js';
 import { withRootFallbacksDecided } from '../resources/ownerHandOff.js';
 import { cachedUniqueNamesBelowRoot } from '../utils/uniqueNames.js';
@@ -29,7 +29,17 @@ import { joinPath } from '../utils/nodePath.js';
 import { nodePathNames } from '../godot/string/nodePath.js';
 import { sameElements } from '../utils/sameElements.js';
 import { perObject } from '../utils/perObject.js';
-import { NOTHING_CACHED, answeredOnce, keptWhileAnswered } from './cacheSources.js';
+import { NOTHING_CACHED, answeredOnce, keptWhileAnswered, type CacheSource } from './cacheSources.js';
+import type { ParsedResource } from '../parser/parsedResource.js';
+import type { ControlLocalTransforms } from './contexts/ControlYSortContext.js';
+import {
+  nodeReference,
+  snapshotOver,
+  type Read,
+  type ResourceKind,
+  type ResourceSnapshot,
+} from '../resources/reading';
+import type { SceneResources } from './SceneResourcesContext.js';
 
 /**
  * Read surface for the loader's PackedScene cache. `undefined` means never
@@ -62,15 +72,24 @@ export interface LiveTreeContext {
   internalResources: readonly TscnInternalResource[];
   sceneCache: CachedSceneSource;
   glbCache?: CachedGlbSource;
+  /** The `.tres` files the loader holds, which a pass that reads a resource file takes from the tree. */
+  resourceCache?: CacheSource<ParsedResource>;
   /**
-   * The project's physics clock, which paces a relay cycle (`remoteTransforms.ts`). Required, so
-   * every builder of a context reads it from the project and no tree falls back to a default.
+   * `Control::get_transform()` of each Control the Control walk has solved, by live path. Absent
+   * before the walk has run, and where no walk exists: a pass then composes a Control from its
+   * offsets alone (`globalTransform2D.ts`).
    */
-  physicsClock: PhysicsClock;
+  controlTransforms?: ControlLocalTransforms;
+  /**
+   * What the tree reads of its project: the physics clock that paces a relay cycle
+   * (`remoteTransforms.ts`), and whether the root window embeds its windows (`windowEmbedder.ts`).
+   * Required, so every builder of a context reads the project and no tree takes a default.
+   */
+  project: ProjectTreeSettings;
 }
 
-/** What a builder of a context reads beside the root scene's pools: the scene cache and the project's physics clock. */
-export type LiveTreeSources = Pick<LiveTreeContext, 'sceneCache' | 'physicsClock'>;
+/** What a builder of a context reads beside the root scene's pools. */
+export type LiveTreeSources = Pick<LiveTreeContext, 'sceneCache' | 'project'>;
 
 /** The scene cache of `ctx` as the walks over it read it: each path asked of the loader once. */
 const snapshotScenes = perObject((ctx: LiveTreeContext): CachedSceneSource => answeredOnce(ctx.sceneCache));
@@ -95,7 +114,12 @@ export interface LiveTreeEntry {
  */
 function collapseLiveNode(node: LiveNode, scope: SceneScope, sceneCache: CachedSceneSource): LiveNode {
   const own = scopeOf(node, scope);
-  return collapseInstance(node, own, loadedInstance(node, own, sceneCache), sceneCache);
+  return collapseInstance(
+    node,
+    own,
+    loadedInstance(lookupInstance(node, own, sceneCache), own, sceneCache),
+    sceneCache
+  );
 }
 
 /** The collapse of `node` over the scene it instances, unchanged where there is none or Godot refuses it. */
@@ -128,19 +152,24 @@ interface LoadedInstance {
   isRefused: boolean;
 }
 
-/**
- * The loaded scene `node` instances where its scope is `own`, or null where it instances none,
- * a scene that already encloses it, or one the cache has not loaded.
- */
+/** What the cache answers for the scene `node` instances: null is a failed load, undefined is no answer yet. */
+interface InstanceLookup {
+  scenePath: string | null;
+  cached: CachedScene | null | undefined;
+}
+
+function lookupInstance(node: LiveNode, own: SceneScope, sceneCache: CachedSceneSource): InstanceLookup {
+  const scenePath = loadableScenePath(node, own);
+  return { scenePath, cached: scenePath ? sceneCache.getCached(scenePath) : undefined };
+}
+
+/** The loaded scene a lookup found, or null where `node` instances none, an enclosing scene, or one not loaded. */
 function loadedInstance(
-  node: LiveNode,
+  { scenePath, cached }: InstanceLookup,
   own: SceneScope,
   sceneCache: CachedSceneSource
 ): LoadedInstance | null {
-  const scenePath = loadableScenePath(node, own);
-  if (!scenePath) return null;
-  const cached = sceneCache.getCached(scenePath);
-  if (!cached) return null;
+  if (!scenePath || !cached) return null;
   return { scenePath, cached, isRefused: isRefusedScene(cached, scenePath, own, sceneCache) };
 }
 
@@ -170,9 +199,13 @@ function holdsRefusedInstance(
   scenes: CachedSceneSource
 ): boolean {
   const content = contentScopeOf(cached, chain);
-  const isRefusedAt = (node: TscnNode): boolean =>
-    (loadedInstance(node, scopeOf(node, content), scenes)?.isRefused ?? false) ||
-    node.children.some(isRefusedAt);
+  const isRefusedAt = (node: TscnNode): boolean => {
+    const own = scopeOf(node, content);
+    return (
+      (loadedInstance(lookupInstance(node, own, scenes), own, scenes)?.isRefused ?? false) ||
+      node.children.some(isRefusedAt)
+    );
+  };
   return cached.nodes.some(isRefusedAt);
 }
 
@@ -442,6 +475,8 @@ export interface LiveStep {
   readonly scope: SceneScope;
   /** Whether the node instances a scene that Godot refuses to instantiate, which draws as a failed load. */
   readonly isRefusedInstance: boolean;
+  /** Whether the loader failed to load the scene the node instances, as opposed to not having loaded it yet. */
+  readonly isFailedInstance: boolean;
   /** What is below the node, in the order the tree shows it. */
   readonly groups: readonly LiveChildGroup[];
 }
@@ -459,7 +494,8 @@ function liveStep(
 ): LiveStep {
   const instancePath = liveInstancePath(node, groupScope);
   const own = scopeOf(node, groupScope);
-  const instanced = loadedInstance(node, own, sceneCache);
+  const lookup = lookupInstance(node, own, sceneCache);
+  const instanced = loadedInstance(lookup, own, sceneCache);
   const merged = collapseInstance(node, own, instanced, sceneCache);
   if (merged === node) {
     const groups = liveChildGroups(node, own, instanced, glbCache);
@@ -469,6 +505,7 @@ function liveStep(
       instancePath,
       scope: own,
       isRefusedInstance: instanced?.isRefused ?? false,
+      isFailedInstance: lookup.scenePath !== null && lookup.cached === null,
       groups,
     };
   }
@@ -479,6 +516,7 @@ function liveStep(
     instancePath,
     scope: groups[0]!.scope,
     isRefusedInstance: false,
+    isFailedInstance: false,
     groups,
   };
 }
@@ -570,6 +608,7 @@ export class LiveTree {
   /** Written only by `at`. A null marks a path the loaded tree does not contain. */
   private readonly links = new Map<string, LiveLink | null>();
   private readonly scenes: CachedSceneSource;
+  private readonly resourceSnapshot: ResourceSnapshot;
   private readonly sources: { scenes: CachedSceneSource; glbs: CachedGlbSource };
 
   constructor(
@@ -577,10 +616,19 @@ export class LiveTree {
     readonly ctx: LiveTreeContext
   ) {
     this.scenes = snapshotScenes(ctx);
+    this.resourceSnapshot = snapshotOver(ctx.resourceCache ?? NOTHING_CACHED);
     this.sources = { scenes: this.scenes, glbs: ctx.glbCache ?? NOTHING_CACHED };
     const scope = rootScope(ctx);
     this.seatedRoots = seatedFile(roots, scope, this.scenes, roots);
     this.rootGroups = [inlineGroup(this.seatedRoots, scope)];
+  }
+
+  /**
+   * The resource `ref` names, a property of a node written in `scope`, decoded as `kind` does, over
+   * the `.tres` files this tree's context has loaded.
+   */
+  readResource<T>(ref: string | undefined, scope: SceneResources, kind: ResourceKind<T>): Read<T> {
+    return this.resourceSnapshot.read(nodeReference(ref, scope), kind);
   }
 
   /** The root nodes of the loaded scene at `scenePath`, or undefined while it is not loaded. */

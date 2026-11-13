@@ -339,7 +339,10 @@ function groupByCategory(items) {
   return { categories, sorted: categories.flatMap((cat) => items.filter((f) => f.category === cat)) };
 }
 
-const { categories, sorted: sortedFixtures } = groupByCategory(fixtures);
+const { categories, sorted: groupedFixtures } = groupByCategory(fixtures);
+// Every entry states `root`. Two entry shapes make TypeScript reduce a union of about 1,450 literal
+// types, which overflows at 1,453 entries (TS2590); one shape stays a single type.
+const sortedFixtures = groupedFixtures.map((fixture) => ({ ...fixture, root: fixture.root ?? '' }));
 
 const output = `/**
  * Scene manifest for the web previewer.

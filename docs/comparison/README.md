@@ -113,7 +113,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [FogVolume](../../packages/textscene-core/src/nodes/3d/fogvolume/comparison.md): density, scattering and emission added to the volumetric fog
 - [Generic6DOFJoint3D](../../packages/textscene-core/src/nodes/physics/3d/generic6dofjoint3d/comparison.md): a transform group with the travel of each axis and a circle per axis for each body for every node
 - [GeometryInstance3D](../../packages/textscene-core/src/nodes/3d/geometryinstance3d/comparison.md): a transform-only group
-- [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md): nothing yet, Godot draws a particle cloud, the previewer does not
+- [GPUParticles3D](../../packages/textscene-core/src/nodes/3d/particles/gpuparticles3d/comparison.md): each draw pass at every particle, in a frozen pose
 - [GPUParticlesAttractorBox3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorbox3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesAttractorSphere3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorsphere3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesAttractorVectorField3D](../../packages/textscene-core/src/nodes/3d/particles/attractors/gpuparticlesattractorvectorfield3d/comparison.md): nothing yet, not implemented
@@ -121,7 +121,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [GPUParticlesCollisionHeightField3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionheightfield3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesCollisionSDF3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsdf3d/comparison.md): nothing yet, not implemented
 - [GPUParticlesCollisionSphere3D](../../packages/textscene-core/src/nodes/3d/particles/collisions/gpuparticlescollisionsphere3d/comparison.md): nothing yet, not implemented
-- [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md): a THREE.InstancedMesh per MeshLibrary item surface, one THREE.Points per points surface
+- [GridMap](../../packages/textscene-core/src/nodes/3d/gridmap/comparison.md): a THREE.InstancedMesh per MeshLibrary item surface, one THREE.Points per points surface, one THREE.LineSegments per lines surface
 - [HingeJoint3D](../../packages/textscene-core/src/nodes/physics/3d/hingejoint3d/comparison.md): a transform group with the hinge axis and a circle for each body for every node
 - [ImporterMeshInstance3D](../../packages/textscene-core/src/nodes/3d/importermeshinstance3d/comparison.md): nothing (a transform-only group)
 - [JacobianIK3D](../../packages/textscene-core/src/nodes/3d/skeleton/jacobianik3d/comparison.md): nothing yet, Godot converges its chain onto the target each frame, the previewer does not
@@ -133,7 +133,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [Marker3D](../../packages/textscene-core/src/nodes/3d/marker3d/comparison.md): an axis-cross gizmo for every node
 - [MeshInstance3D](../../packages/textscene-core/src/nodes/3d/meshinstance3d/comparison.md): a THREE.Mesh
 - [ModifierBoneTarget3D](../../packages/textscene-core/src/nodes/3d/skeleton/modifierbonetarget3d/comparison.md): nothing yet, Godot mirrors its bone onto its transform, the previewer does not
-- [MultiMeshInstance3D](../../packages/textscene-core/src/nodes/3d/multimeshinstance3d/comparison.md): nothing yet, Godot draws a batch of mesh instances, the previewer does not
+- [MultiMeshInstance3D](../../packages/textscene-core/src/nodes/3d/multimeshinstance3d/comparison.md): a THREE.InstancedMesh of the MultiMesh's mesh
 - [NavigationAgent3D](../../packages/textscene-core/src/nodes/3d/navigationagent3d/comparison.md): nothing (non-visual navigation helper)
 - [NavigationLink3D](../../packages/textscene-core/src/nodes/3d/navigationlink3d/comparison.md): nothing (a transform-only group)
 - [NavigationObstacle3D](../../packages/textscene-core/src/nodes/3d/navigationobstacle3d/comparison.md): a transform-only group (no runtime visual)
@@ -203,11 +203,11 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [AudioStreamPlayer2D](../../packages/textscene-core/src/nodes/audio/audiostreamplayer2d/comparison.md): an invisible Node2D transform group
 - [BackBufferCopy](../../packages/textscene-core/src/nodes/2d/backbuffercopy/comparison.md): nothing (a transform-only group)
 - [BaseButton](../../packages/textscene-core/src/nodes/2d/ui/basebutton/comparison.md): nothing of its own
-- [Bone2D](../../packages/textscene-core/src/nodes/2d/bone2d/comparison.md): nothing (a transform-only group, the bone gizmo is editor-only)
+- [Bone2D](../../packages/textscene-core/src/nodes/2d/bone2d/comparison.md): a kite gizmo for every bone
 - [BoxContainer](../../packages/textscene-core/src/nodes/2d/ui/boxcontainer/comparison.md): children laid out along its own `vertical`-chosen axis
 - [Button](../../packages/textscene-core/src/nodes/2d/ui/button/comparison.md): a StyleBox quad with a centred text run
 - [Camera2D](../../packages/textscene-core/src/nodes/2d/camera2d/comparison.md): a 2D view frame with no drawn geometry
-- [CanvasGroup](../../packages/textscene-core/src/nodes/2d/canvasgroup/comparison.md): nothing yet, Godot composites its children into one offscreen buffer, the previewer does not
+- [CanvasGroup](../../packages/textscene-core/src/nodes/2d/canvasgroup/comparison.md): its children drawn into one buffer, composited by one rect
 - [CanvasLayer](../../packages/textscene-core/src/nodes/2d/ui/canvaslayer/comparison.md): a full-rect passthrough layer hosting Control children
 - [CanvasModulate](../../packages/textscene-core/src/nodes/2d/canvasmodulate/comparison.md): a colour multiply applied to the whole canvas
 - [CenterContainer](../../packages/textscene-core/src/nodes/2d/ui/centercontainer/comparison.md): a rect centred inside its own
@@ -216,24 +216,24 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [CheckButton](../../packages/textscene-core/src/nodes/2d/ui/checkbutton/comparison.md): a toggle-switch icon followed by a text run
 - [CodeEdit](../../packages/textscene-core/src/nodes/2d/ui/codeedit/comparison.md): a TextEdit with a line-number gutter
 - [CollisionPolygon2D](../../packages/textscene-core/src/nodes/physics/2d/collisionpolygon2d/comparison.md): nothing (a transform-only group)
-- [CollisionShape2D](../../packages/textscene-core/src/nodes/physics/2d/collisionshape2d/comparison.md): a toggle-gated collision outline
-- [ColorPicker](../../packages/textscene-core/src/nodes/2d/ui/colorpicker/comparison.md): the sample row, the RGB/HSV/Linear mode row, the channel slider grid, the hex field, the swatches rows and, at the default picker_shape, an SV square + hue slider
+- [CollisionShape2D](../../packages/textscene-core/src/nodes/physics/2d/collisionshape2d/comparison.md): a toggle-gated collision shape
+- [ColorPicker](../../packages/textscene-core/src/nodes/2d/ui/colorpicker/comparison.md): the shape row, the sample row, the RGB/HSV/Linear mode row, the channel slider grid, the hex field and the swatches rows
 - [ColorPickerButton](../../packages/textscene-core/src/nodes/2d/ui/colorpickerbutton/comparison.md): a Button with a checkerboard + colour swatch over its face
 - [ColorRect](../../packages/textscene-core/src/nodes/2d/ui/colorrect/comparison.md): a flat-filled quad
 - [Container](../../packages/textscene-core/src/nodes/2d/ui/container/comparison.md): nothing of its own; children stay at their own free/anchored rects
 - [Control](../../packages/textscene-core/src/nodes/2d/ui/control/comparison.md): a full-rect layout region
 - [CPUParticles2D](../../packages/textscene-core/src/nodes/2d/cpuparticles2d/comparison.md): one merged quad mesh holding a frozen particle pose
-- [DampedSpringJoint2D](../../packages/textscene-core/src/nodes/physics/2d/dampedspringjoint2d/comparison.md): nothing (a transform-only group)
+- [DampedSpringJoint2D](../../packages/textscene-core/src/nodes/physics/2d/dampedspringjoint2d/comparison.md): a transform group with an editor marker for every node
 - [DirectionalLight2D](../../packages/textscene-core/src/nodes/2d/directionallight2d/comparison.md): one term over the whole light buffer that every lit CanvasItem multiplies in
 - [FlowContainer](../../packages/textscene-core/src/nodes/2d/ui/flowcontainer/comparison.md): children flowed along one axis and wrapped into lines
 - [FoldableContainer](../../packages/textscene-core/src/nodes/2d/ui/foldablecontainer/comparison.md): a collapsible titled panel (accordion)
 - [GPUParticles2D](../../packages/textscene-core/src/nodes/2d/particles/gpuparticles2d/comparison.md): nothing yet, Godot draws a particle cloud, the previewer does not
-- [GraphEdit](../../packages/textscene-core/src/nodes/2d/ui/graphedit/comparison.md): a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset and the whole rect clipped
+- [GraphEdit](../../packages/textscene-core/src/nodes/2d/ui/graphedit/comparison.md): a background panel, grid, toolbar, scrollbars and minimap, with GraphElement children placed by position_offset, scaled by zoom and the whole rect clipped
 - [GraphElement](../../packages/textscene-core/src/nodes/2d/ui/graphelement/comparison.md): an invisible container that fits its children into its own rect
 - [GraphFrame](../../packages/textscene-core/src/nodes/2d/ui/graphframe/comparison.md): a titled frame around its own content rect
 - [GraphNode](../../packages/textscene-core/src/nodes/2d/ui/graphnode/comparison.md): a titled panel with slot rows and left/right port icons
 - [GridContainer](../../packages/textscene-core/src/nodes/2d/ui/gridcontainer/comparison.md): children packed into a fixed column count
-- [GrooveJoint2D](../../packages/textscene-core/src/nodes/physics/2d/groovejoint2d/comparison.md): nothing (a transform-only group, the groove is an editor gizmo)
+- [GrooveJoint2D](../../packages/textscene-core/src/nodes/physics/2d/groovejoint2d/comparison.md): a transform group with an editor marker for every node
 - [HBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/hboxcontainer/comparison.md): children laid out along a row
 - [HFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/hflowcontainer/comparison.md): children flowed left to right, wrapping to a new row
 - [HScrollBar](../../packages/textscene-core/src/nodes/2d/ui/hscrollbar/comparison.md): a horizontal track with a rectangular grabber
@@ -250,8 +250,8 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [Marker2D](../../packages/textscene-core/src/nodes/2d/marker2d/comparison.md): a cross gizmo for every node
 - [MenuBar](../../packages/textscene-core/src/nodes/2d/ui/menubar/comparison.md): one StyleBox + text run per PopupMenu-child title
 - [MenuButton](../../packages/textscene-core/src/nodes/2d/ui/menubutton/comparison.md): a StyleBox quad with a centred text run and optional icon
-- [MeshInstance2D](../../packages/textscene-core/src/nodes/2d/meshinstance2d/comparison.md): nothing yet, Godot draws a textured mesh, the previewer does not
-- [MultiMeshInstance2D](../../packages/textscene-core/src/nodes/2d/multimeshinstance2d/comparison.md): nothing yet, Godot draws a batch of textured mesh instances, the previewer does not
+- [MeshInstance2D](../../packages/textscene-core/src/nodes/2d/meshinstance2d/comparison.md): a THREE.Mesh, THREE.Points or THREE.LineSegments per surface kind
+- [MultiMeshInstance2D](../../packages/textscene-core/src/nodes/2d/multimeshinstance2d/comparison.md): a THREE.Mesh, THREE.Points or THREE.LineSegments per surface kind, with every instance merged
 - [NavigationAgent2D](../../packages/textscene-core/src/nodes/2d/navigationagent2d/comparison.md): nothing (a transform-only group)
 - [NavigationLink2D](../../packages/textscene-core/src/nodes/2d/navigationlink2d/comparison.md): nothing (a transform-only group)
 - [NavigationObstacle2D](../../packages/textscene-core/src/nodes/2d/navigationobstacle2d/comparison.md): nothing (a transform-only group)
@@ -263,15 +263,18 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [OptionButton](../../packages/textscene-core/src/nodes/2d/ui/optionbutton/comparison.md): a collapsed dropdown box
 - [Panel](../../packages/textscene-core/src/nodes/2d/ui/panel/comparison.md): a StyleBox quad
 - [PanelContainer](../../packages/textscene-core/src/nodes/2d/ui/panelcontainer/comparison.md): a StyleBox panel around its child
-- [Parallax2D](../../packages/textscene-core/src/nodes/2d/parallax2d/comparison.md): nothing yet, Godot repeats and scroll-offsets its children, the previewer does not
+- [Parallax2D](../../packages/textscene-core/src/nodes/2d/parallax2d/comparison.md): a Node2D scrolled by the camera, repeated over repeat_size
 - [ParallaxBackground](../../packages/textscene-core/src/nodes/2d/parallaxbackground/comparison.md): a viewport-anchored group holding its ParallaxLayer children
 - [ParallaxLayer](../../packages/textscene-core/src/nodes/2d/parallaxlayer/comparison.md): a Node2D transform group, repeated once per mirrored axis
 - [Path2D](../../packages/textscene-core/src/nodes/2d/path2d/comparison.md): nothing at runtime, a curve gizmo for every node
 - [PathFollow2D](../../packages/textscene-core/src/nodes/2d/pathfollow2d/comparison.md): a transform-only follower with a dot for the selected node
 - [PhysicalBone2D](../../packages/textscene-core/src/nodes/physics/2d/physicalbone2d/comparison.md): a transform-only Node2D group
-- [PinJoint2D](../../packages/textscene-core/src/nodes/physics/2d/pinjoint2d/comparison.md): nothing (a transform-only group)
+- [PinJoint2D](../../packages/textscene-core/src/nodes/physics/2d/pinjoint2d/comparison.md): a transform group with an editor marker for every node
 - [PointLight2D](../../packages/textscene-core/src/nodes/2d/pointlight2d/comparison.md): the light's cookie multiplied into every CanvasItem beneath it
 - [Polygon2D](../../packages/textscene-core/src/nodes/2d/polygon2d/comparison.md): a filled, optionally textured mesh
+- [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md): its viewport's target, drawn by its embedder with no frame
+- [PopupMenu](../../packages/textscene-core/src/nodes/windows/popupmenu/comparison.md): its items in a bordered panel, drawn by its embedder with no frame
+- [PopupPanel](../../packages/textscene-core/src/nodes/windows/popuppanel/comparison.md): a panel StyleBox under its Controls, drawn by its embedder with no frame
 - [ProgressBar](../../packages/textscene-core/src/nodes/2d/ui/progressbar/comparison.md): a background and ratio-filled StyleBox pair, with a percentage label
 - [Range](../../packages/textscene-core/src/nodes/2d/ui/range/comparison.md): nothing of its own
 - [RayCast2D](../../packages/textscene-core/src/nodes/physics/2d/raycast2d/comparison.md): nothing (a transform-only group)
@@ -281,7 +284,7 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [RigidBody2D](../../packages/textscene-core/src/nodes/physics/2d/rigidbody2d/comparison.md): a transform-only group
 - [ScrollContainer](../../packages/textscene-core/src/nodes/2d/ui/scrollcontainer/comparison.md): a clipped content rect with themed scrollbars
 - [ShapeCast2D](../../packages/textscene-core/src/nodes/physics/2d/shapecast2d/comparison.md): nothing (a transform-only group)
-- [Skeleton2D](../../packages/textscene-core/src/nodes/2d/skeleton2d/comparison.md): nothing yet, Godot runs its modification stack on the bones each frame, the previewer does not
+- [Skeleton2D](../../packages/textscene-core/src/nodes/2d/skeleton2d/comparison.md): nothing itself, its modification stack poses its bones and its bones deform the Polygon2Ds bound to it
 - [SpinBox](../../packages/textscene-core/src/nodes/2d/ui/spinbox/comparison.md): a LineEdit-style field plus two arrow stepper icons
 - [SplitContainer](../../packages/textscene-core/src/nodes/2d/ui/splitcontainer/comparison.md): two children split at a computed offset, along the `vertical`-chosen axis
 - [Sprite2D](../../packages/textscene-core/src/nodes/2d/sprite2d/comparison.md): an unlit textured quad
@@ -299,30 +302,27 @@ The previewer asks the browser's driver for the same maximum. A comparison captu
 - [Tree](../../packages/textscene-core/src/nodes/2d/ui/tree/comparison.md): an empty panel, with a blank header row when column_titles_visible
 - [VBoxContainer](../../packages/textscene-core/src/nodes/2d/ui/vboxcontainer/comparison.md): children laid out down a column
 - [VFlowContainer](../../packages/textscene-core/src/nodes/2d/ui/vflowcontainer/comparison.md): children flowed down a column, wrapping to a new column
-- [VideoStreamPlayer](../../packages/textscene-core/src/nodes/2d/ui/videostreamplayer/comparison.md): nothing (no decoded frame ever reaches it)
+- [VideoStreamPlayer](../../packages/textscene-core/src/nodes/2d/ui/videostreamplayer/comparison.md): a transparent rect at the Ogg Theora picture size, as in the Godot editor
 - [VisibleOnScreenEnabler2D](../../packages/textscene-core/src/nodes/2d/visibleonscreenenabler2d/comparison.md): nothing (a transform-only group)
 - [VisibleOnScreenNotifier2D](../../packages/textscene-core/src/nodes/2d/visibleonscreennotifier2d/comparison.md): nothing (a transform-only group)
 - [VScrollBar](../../packages/textscene-core/src/nodes/2d/ui/vscrollbar/comparison.md): a vertical track with a rectangular grabber
 - [VSeparator](../../packages/textscene-core/src/nodes/2d/ui/vseparator/comparison.md): a thin vertical quad
 - [VSlider](../../packages/textscene-core/src/nodes/2d/ui/vslider/comparison.md): a vertical track with a round grabber
 - [VSplitContainer](../../packages/textscene-core/src/nodes/2d/ui/vsplitcontainer/comparison.md): two children stacked, split at a computed offset
+- [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md): its viewport's target in a themed frame, drawn by its embedder
 
 ## Other
 
-- [AcceptDialog](../../packages/textscene-core/src/nodes/windows/acceptdialog/comparison.md): nothing yet, not implemented
+- [AcceptDialog](../../packages/textscene-core/src/nodes/windows/acceptdialog/comparison.md): an embedded window with a panel, a message and buttons
 - [AudioStreamPlayer](../../packages/textscene-core/src/nodes/audio/audiostreamplayer/comparison.md): nothing (a non-spatial audio node)
-- [ConfirmationDialog](../../packages/textscene-core/src/nodes/windows/confirmationdialog/comparison.md): nothing yet, not implemented
-- [FileDialog](../../packages/textscene-core/src/nodes/windows/filedialog/comparison.md): nothing yet, not implemented
+- [ConfirmationDialog](../../packages/textscene-core/src/nodes/windows/confirmationdialog/comparison.md): an embedded window with a panel, a message and buttons
+- [FileDialog](../../packages/textscene-core/src/nodes/windows/filedialog/comparison.md): an embedded window with the file chooser's toolbar, lists, filter and options
 - [HTTPRequest](../../packages/textscene-core/src/nodes/networking/httprequest/comparison.md): nothing (a transform-only group)
 - [MultiplayerSpawner](../../packages/textscene-core/src/nodes/networking/multiplayerspawner/comparison.md): nothing (a transform-only group)
 - [MultiplayerSynchronizer](../../packages/textscene-core/src/nodes/networking/multiplayersynchronizer/comparison.md): nothing (a transform-only group)
 - [Node](../../packages/textscene-core/src/nodes/node/comparison.md): nothing, a non-spatial base node
-- [Popup](../../packages/textscene-core/src/nodes/windows/popup/comparison.md): nothing yet, not implemented
-- [PopupMenu](../../packages/textscene-core/src/nodes/windows/popupmenu/comparison.md): nothing yet, not implemented
-- [PopupPanel](../../packages/textscene-core/src/nodes/windows/popuppanel/comparison.md): nothing yet, not implemented
 - [ResourcePreloader](../../packages/textscene-core/src/nodes/resources/resourcepreloader/comparison.md): nothing (a transform-only group)
-- [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md): nothing yet, not implemented
+- [ScriptCreateDialog](../../packages/textscene-core/src/nodes/windows/scriptcreatedialog/comparison.md): nothing (a transform-only group)
 - [ShaderGlobalsOverride](../../packages/textscene-core/src/nodes/rendering/shaderglobalsoverride/comparison.md): nothing yet, Godot re-shades every material that reads the overridden globals, the previewer does not
 - [StatusIndicator](../../packages/textscene-core/src/nodes/os/statusindicator/comparison.md): nothing (a transform-only group)
 - [Timer](../../packages/textscene-core/src/nodes/timers/timer/comparison.md): nothing (a countdown timer node)
-- [Window](../../packages/textscene-core/src/nodes/windows/window/comparison.md): nothing yet, not implemented

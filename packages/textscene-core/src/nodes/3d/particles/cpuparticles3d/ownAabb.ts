@@ -8,7 +8,7 @@
 import { EMPTY_AABB, type Aabb } from '../../../../godot/math/aabb';
 import { multiMeshAabb } from '../../../../resources/meshes/multimesh/aabb';
 import { TRANSFORM_FLOATS } from '../../../../resources/meshes/multimesh/types';
-import { particleSlices } from './particleInstances';
+import { particleSlices } from '../../../shared/particles3d/particleInstances';
 import type { CPUParticles3DProperties } from './types';
 
 /**
@@ -23,7 +23,7 @@ export function particlesAabb(
   if (visibilityAabb) return visibilityAabb;
   if (mesh === undefined) return EMPTY_AABB;
   return multiMeshAabb(
-    { customAabb: null, mesh, boundedTransforms: particleSlices(rows, 0, TRANSFORM_FLOATS) },
+    { customAabb: null, boundedTransforms: particleSlices(rows, 0, TRANSFORM_FLOATS) },
     meshAabb
   );
 }

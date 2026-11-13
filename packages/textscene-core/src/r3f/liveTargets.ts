@@ -157,6 +157,18 @@ export function hasLiveCopies(texture: THREE.Texture): boolean {
 }
 
 /**
+ * Whether a reader holds a copy of `texture`, at any depth: a reader that is mounted samples it,
+ * as Godot marks a target used when a consumer samples it (`texture_storage.cpp:728`). A copy no
+ * reader holds comes from a render React discarded, and samples nothing.
+ */
+export function hasHeldCopies(texture: THREE.Texture): boolean {
+  for (const copy of liveTargetOf(texture).copies) {
+    if (isHeld(copy.texture) || hasHeldCopies(copy.texture)) return true;
+  }
+  return false;
+}
+
+/**
  * Refills every copy of `texture` that a reader holds, then the copies of each copy. The target's
  * pass calls it after each render, inside its own offscreen draw. A copy no reader holds comes from
  * a render React discarded, or from a reader that has not committed yet and holds it before the next

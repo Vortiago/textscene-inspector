@@ -16,11 +16,19 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 import { parseCPUParticles2D } from './parser';
 import { CPUParticles2D } from './Component';
+import {
+  canvasColorSpaceOf,
+  CanvasColorSpaceProvider,
+  type CanvasColorSpace,
+} from '../../../r3f/canvasColorSpace';
+import { CANVAS_SRGB_DEFINES } from '../../../r3f/canvasSrgbMultiply';
 import { CanvasWorkspaceProvider } from '../../../r3f/contexts/CanvasWorkspaceContext';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
 import type { TscnNode, TscnInternalResource } from '../../../parser/types';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 const TEX = 'res://ball.png';
 const nodeHeading = { type: 'node' as const, attributes: { type: 'CPUParticles2D', name: 'Fx' } };
@@ -50,7 +58,12 @@ function node(raw: Record<string, string> = {}, children: TscnNode[] = []): Tscn
 
 async function render(
   rootNode: TscnNode,
-  options: { seedTexture?: boolean; texture?: THREE.Texture; internalResources?: TscnInternalResource[] } = {}
+  options: {
+    seedTexture?: boolean;
+    texture?: THREE.Texture;
+    internalResources?: TscnInternalResource[];
+    space?: CanvasColorSpace;
+  } = {}
 ) {
   const fake = createFakeResourceLoader();
   if (options.texture) {
@@ -73,7 +86,9 @@ async function render(
           internalResources={options.internalResources ?? []}
           externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
         >
-          <CPUParticles2D node={rootNode} />
+          <CanvasColorSpaceProvider value={options.space ?? canvasColorSpaceOf(false)}>
+            <CPUParticles2D node={rootNode} />
+          </CanvasColorSpaceProvider>
         </SceneResourcesProvider>
       </ResourceLoaderProvider>
     </CanvasWorkspaceProvider>
@@ -143,6 +158,17 @@ describe('<CPUParticles2D>', () => {
     expect(material.transparent).toBe(true);
     expect(material.depthWrite).toBe(false);
     expect(material.map).not.toBeNull();
+  });
+
+  it('multiplies the particle colours as sRGB numbers in an sRGB canvas', async () => {
+    const material = particleMesh(await render(node()))!.material as THREE.MeshBasicMaterial;
+    expect(material.defines).toEqual(CANVAS_SRGB_DEFINES);
+  });
+
+  it('multiplies the particle colours raw in a linear canvas, as Godot multiplies instance colours', async () => {
+    const material = particleMesh(await render(node(), { space: LINEAR_CANVAS }))!
+      .material as THREE.MeshBasicMaterial;
+    expect(material.defines ?? {}).toEqual({});
   });
 
   it('renders NO mesh when `emitting = false` (error path for the six dormant emitters)', async () => {
@@ -233,9 +259,9 @@ describe('<CPUParticles2D>', () => {
   });
 
   it('cancels the node’s own scale under Godot’s default global coords', async () => {
-    // `local_coords = false` spawns in canvas space and draws the item with an
-    // identity transform, so the 8px quad stays 8px on screen however the node
-    // is scaled. Inside the scaled group that means a 8/3 local quad.
+    // `local_coords = false` spawns in canvas space and draws the item at the
+    // canvas transform, so the 8px quad stays 8px on screen however the node
+    // is scaled.
     const renderer = await render(
       node({
         scale: 'Vector2(3, 3)',
@@ -245,9 +271,10 @@ describe('<CPUParticles2D>', () => {
         gravity: 'Vector2(0, 0)',
       })
     );
-    const geometry = particleMesh(renderer)!.geometry;
-    geometry.computeBoundingBox();
-    expect(geometry.boundingBox!.max.x - geometry.boundingBox!.min.x).toBeCloseTo(8 / 3, 3);
+    const mesh = particleMesh(renderer)!;
+    renderer.scene.instance.updateMatrixWorld();
+    const onScreen = new THREE.Box3().setFromObject(mesh);
+    expect(onScreen.max.x - onScreen.min.x).toBeCloseTo(8, 3);
   });
 
   it('lets the node’s scale reach the quads under `local_coords`', async () => {

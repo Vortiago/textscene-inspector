@@ -74,6 +74,10 @@ export const CANVAS_2D_SCENES = [
     name: 'sprite2d-gradienttexture',
     file: 'unit-sprite2d-gradienttexture.tscn',
   },
+  // A GradientTexture2D with no gradient holds no image, so a Sprite2D and a TextureRect draw
+  // Godot's placeholder over the texture's width and height. The header states why no other golden
+  // shows it.
+  { name: 'sprite2d-gradient-no-gradient', file: 'unit-sprite2d-gradient-no-gradient.tscn' },
   // A GradientTexture2D whose `gradient` is a saved Gradient (.tres). The header states why no
   // other golden shows it.
   { name: 'sprite2d-gradienttexture-tres', file: 'unit-sprite2d-gradienttexture-tres.tscn' },
@@ -338,4 +342,316 @@ export const CANVAS_2D_SCENES = [
   { name: 'numeral-locale', file: 'numeral-locale/unit-numeral-locale.tscn' },
   // A Polygon2D below a plain Node below a hidden Node2D: its visibility comes from the Window.
   { name: 'canvas-root-visibility', file: 'unit-canvas-root-visibility.tscn' },
+  // Two strips skinned to posed Skeleton2Ds. Godot probes: blue (51,153,255) at (200,190) on the bent
+  // lower half and orange (255,127,51) at (330,160). Undeformed, each strip would cover (240,100) and
+  // (390,120) instead, which read the background.
+  { name: 'polygon2d-skeleton', file: 'unit-polygon2d-skeleton.tscn', mode: '2d' },
+  // A LookAt modification turns the bone at the red target below it. Godot probes: orange
+  // (242,140,38) at (294,250) and blue (51,153,242) at (264,250). Unsolved, the bars lie flat and
+  // both points read the background.
+  { name: 'skeleton2d-lookat', file: 'unit-skeleton2d-lookat.tscn', mode: '2d' },
+  // The LookAt scene under a CanvasGroup, whose buffer draws the solved pose too. Godot probes as
+  // for skeleton2d-lookat: orange at (294,250) and blue at (264,250).
+  { name: 'skeleton2d-canvas-group', file: 'unit-skeleton2d-canvas-group.tscn', mode: '2d' },
+  // The same scene with the stack not enabled: the bones keep the scene's pose. Godot probes:
+  // orange at (304,150) and blue at (304,180), and background at (294,250).
+  { name: 'skeleton2d-stack-disabled', file: 'unit-skeleton2d-stack-disabled.tscn', mode: '2d' },
+  // TwoBoneIK bends two bones so that the second ends on the red target at (450,350). Godot probes:
+  // orange at (362,174), blue at (442,272) and the skinned strip, green (76,204,102), at (421,236).
+  { name: 'skeleton2d-twoboneik', file: 'unit-skeleton2d-twoboneik.tscn', mode: '2d' },
+  // The same solve at a stack strength of 0.5: each bone turns half way. Godot probes: orange at
+  // (375,162) and blue at (497,227), which the full solve leaves as background.
+  { name: 'skeleton2d-stack-strength', file: 'unit-skeleton2d-stack-strength.tscn', mode: '2d' },
+  // CCDIK curls three bones until the Tip node meets the red target at (400,380). Godot probes:
+  // orange at (298,168), blue at (355,236) and purple (153,102,229) at (386,329).
+  { name: 'skeleton2d-ccdik', file: 'unit-skeleton2d-ccdik.tscn', mode: '2d' },
+  // CCDIK on four equal bones, whose first pass folds the last bone onto its parent: the chain then
+  // bends to the side the last bit of each bone transform picks. Godot probes: orange at (441,137),
+  // blue at (452,163), green (76,204,102) at (468,170) and purple at (477,176).
+  { name: 'skeleton2d-ccdik-fold', file: 'unit-skeleton2d-ccdik-fold.tscn', mode: '2d' },
+  // FABRIK reaches the same target with three bones. Godot probes: orange at (290,173), blue at
+  // (365,238) and purple at (397,327).
+  { name: 'skeleton2d-fabrik', file: 'unit-skeleton2d-fabrik.tscn', mode: '2d' },
+  // A FABRIK chain on the skeleton Near whose joints name the bones of the skeleton Far: Far reaches
+  // the red target at (330,500), and Near takes the same pose. Godot probes: orange at (237,134) and
+  // (237,344), blue at (300,179) and (300,389). Unsolved, all four read the background.
+  { name: 'skeleton2d-fabrik-foreign', file: 'unit-skeleton2d-fabrik-foreign.tscn', mode: '2d' },
+  // A RemoteTransform2D below the arm of the LookAt scene pushes the pose the stack solved onto the
+  // green square. Godot probes: green (76,204,102) at (300,350), the end of the turned arm, and the
+  // background at (500,150), where the arm ends in the file.
+  { name: 'skeleton2d-remote-transform', file: 'unit-skeleton2d-remote-transform.tscn', mode: '2d' },
+  // The same scene with the stack in a .tres file: the green square stands at the same place once the
+  // file has loaded. Godot probes: green (76,204,102) at (300,350), background (76,76,76) at (500,150).
+  { name: 'skeleton2d-remote-transform-tres', file: 'unit-skeleton2d-remote-transform-tres.tscn', mode: '2d' },
+  // clip_children CLIP_ONLY: the red child shows only over the green parent, in its own colour. Godot
+  // probes: (125,125) background, the parent alone; (175,175) red; (425,125) green, the unclipped twin.
+  { name: 'clip-children-only', file: 'unit-clip-children-only.tscn', mode: '2d' },
+  // CLIP_AND_DRAW draws the parent too, and the half-alpha child blends over it: (125,125) green and
+  // (175,175) (127,128,0). Outside the parent the canvas shows through: (220,220) background.
+  { name: 'clip-children-and-draw', file: 'unit-clip-children-and-draw.tscn', mode: '2d' },
+  // A soft mask: the radial alpha of the Sprite2D scales the child. Godot probes: (175,175) (193,27,27)
+  // and (220,220) (203,22,22); the corner (125,125) is background.
+  { name: 'clip-children-soft-mask', file: 'unit-clip-children-soft-mask.tscn', mode: '2d' },
+  // An owner with no commands has no group: the behind-parent blue draws first and the red shows over it.
+  // Godot probe: (175,175) is (185,7,61).
+  { name: 'clip-children-no-commands', file: 'unit-clip-children-no-commands.tscn', mode: '2d' },
+  // Nested inert owners draw the behind child once: the red square blends once, so (110,110) is (165,38,38), not doubled.
+  { name: 'clip-children-nested-inert', file: 'unit-clip-children-nested-inert.tscn', mode: '2d' },
+  // A nested inert owner's behind child draws before its regular child: (150,150) is green over red, (110,110) red.
+  { name: 'clip-children-nested-behind-order', file: 'unit-clip-children-nested-behind-order.tscn', mode: '2d' },
+  // A clip group in an inert owner's behind span draws first, masked: (180,180) is blue over the red mask, (110,110) green.
+  { name: 'clip-children-behind-owner', file: 'unit-clip-children-behind-owner.tscn', mode: '2d' },
+  // A group between an inert owner and the inert owner it draws behind keeps the nested order: green over red at (150,150).
+  { name: 'clip-children-nested-boundary', file: 'unit-clip-children-nested-boundary.tscn', mode: '2d' },
+  // Two clip groups after a plain item in a behind span each copy what is drawn so far: (125,125) is orange, (220,130) green.
+  { name: 'clip-children-behind-groups', file: 'unit-clip-children-behind-groups.tscn', mode: '2d' },
+  // A y-sorted owner groups nothing: the red child shows whole, so (175,175) is red and (125,125) stays red over green.
+  { name: 'clip-children-ysort', file: 'unit-clip-children-ysort.tscn', mode: '2d' },
+  // The owner's ADD material does not reach the masked draw: (125,125) is (76,139,76), (175,175) (165,38,38).
+  { name: 'clip-children-material', file: 'unit-clip-children-material.tscn', mode: '2d' },
+  // A Button clips a ColorRect: (160,130) is (183,30,30) and (300,130) background.
+  { name: 'clip-children-control', file: 'unit-clip-children-control.tscn', mode: '2d' },
+  // Line2D as Godot's LineBuilder builds it. Caps: NONE is background at (45,50), BOX white at (45,100)
+  // and (159,100), ROUND white at (41,150) and background at (42,142). A closed line ignores its caps.
+  { name: 'line-2d-caps', file: 'unit-line2d-caps.tscn', mode: '2d' },
+  // A half-alpha line is 166 on the whole stroke, inner corner included, for each joint mode. Quads
+  // that overlap there blend twice and read 211.
+  { name: 'line-2d-translucent-corners', file: 'unit-line2d-translucent-corners.tscn', mode: '2d' },
+  // A gradient colours each point: (253,0,2) at (51,50), (127,0,128) at (150,50) and 2 and 3 stops alike
+  // on two points, (126,129,0) at (100,150) and (0,254,1) at (150,150) on three. default_color is ignored.
+  { name: 'line-2d-gradient', file: 'unit-line2d-gradient.tscn', mode: '2d' },
+  // A width curve scales the width at each point. The ramp is 10 px lit at x=51 and 40 at x=249, and
+  // the bump on two points is 10 px throughout. A box cap takes its own end's factor.
+  { name: 'line-2d-width-curve', file: 'unit-line2d-width-curve.tscn', mode: '2d' },
+  // A TILE texture is 16 px of red then 16 of blue per tile (32 x 16, tile_aspect 2, width 16), repeated
+  // where texture_repeat is Enabled: x=50..65 red and 66..81 blue. A round cap's square starts the strip
+  // at u 0.25, so the cap line reads red 16, blue 16 from x=292 to x=435, ending on red.
+  { name: 'line-2d-texture-tile', file: 'unit-line2d-texture-tile.tscn', mode: '2d' },
+  // At the default texture_repeat TILE clamps: red 16 then blue 112. NONE reads the top-left texel, red for 128 px.
+  { name: 'line-2d-texture-clamp', file: 'unit-line2d-texture-clamp.tscn', mode: '2d' },
+  // STRETCH is red 63 px, a 2 px blend and blue 63. A (0.5, 1, 1) default_color gives (128,0,0) and (0,0,255).
+  { name: 'line-2d-texture-stretch', file: 'unit-line2d-texture-stretch.tscn', mode: '2d' },
+  // A closed BEVEL Line2D whose width curve is 0 at its start: Godot 4.6.3 `--mode 2d` draws no
+  // closing segment, so (100,250) on the left side is the background, rgb(76).
+  { name: 'line2d-closed-width-curve-zero', file: 'unit-line2d-closed-width-curve-zero.tscn', mode: '2d' },
+  // A ScriptCreateDialog is an editor class: a game loads a placeholder, and its children still draw.
+  { name: 'script-create-dialog-placeholder', file: 'unit-script-create-dialog-placeholder.tscn', mode: '2d' },
+  // The polygon's rotation turns its normal. Godot 4.6.3 `--mode 2d`: Upright rgb(226) at (100,324) and
+  // rgb(128) at (300,324). Turned rgb(161) at (852,324) and rgb(226) at (952,224).
+  { name: 'polygon2d-normal-map-rotation', file: 'unit-polygon2d-normal-map-rotation.tscn', mode: '2d' },
+  // flip_h flips the frame's normal. Godot 4.6.3 `--mode 2d`: Plain rgb(226) at (100,324), Flipped
+  // rgb(128) at (852,324) and rgb(244) at (976,324).
+  { name: 'animatedsprite2d-normal-map-flip', file: 'unit-animatedsprite2d-normal-map-flip.tscn', mode: '2d' },
+  // A cell's flips and transpose turn its tile's normal. Godot 4.6.3 `--mode 2d`, at the light's x, 100 left
+  // of it, 24 left, 24 right, 100 right, 100 above and 100 below: Plain rgb(226, 244, 168, 128, 160, 161),
+  // FlippedH rgb(128, 170, 244, 225, 161, 161) and Transposed rgb(160, 206, 205, 161, 226, 128).
+  { name: 'tilemaplayer-normal-map', file: 'unit-tilemaplayer-normal-map.tscn', mode: '2d' },
+  // The same tiles over a padded CanvasTexture whose diffuse windows a SubViewport. Godot 4.6.3
+  // `--mode 2d`: rgb(0) at (192,324), (576,324) and (960,224), the unrendered target, unlit.
+  {
+    name: 'tilemaplayer-normal-map-padded-viewport',
+    file: 'unit-tilemaplayer-normal-map-padded-viewport.tscn',
+    mode: '2d',
+  },
+  // A Line2D whose CanvasTexture carries a normal map; only the item's rotation turns the normal. Godot
+  // 4.6.3 `--mode 2d`: Vertical rgb(226) at (100,324), rgb(160) at (200,224) and rgb(161) at (200,424).
+  // Turned rgb(161) at (852,324), rgb(226) at (952,224) and rgb(128) at (952,424).
+  { name: 'line2d-normal-map', file: 'unit-line2d-normal-map.tscn', mode: '2d' },
+  // `repeat_size` with `repeat_times = 3` on the main stage. Godot 4.6.3 draws the square at x 0, 200,
+  // 400 and 600 (y 100), copies on both sides of the node.
+  { name: 'parallax-2d-repeat', file: 'unit-parallax-2d-repeat.tscn', mode: '2d' },
+  // A sub-viewport Camera2D writes `screen_offset`. Godot 4.6.3 draws Bar at screen x 120, 220 and 320
+  // (y 100) and Marker at (110, 230); a camera-less scroll puts Bar at y 200 and hides Marker.
+  { name: 'parallax-2d-camera-scroll', file: 'unit-parallax-2d-camera-scroll.tscn', mode: '2d' },
+  // VideoStreamPlayer takes its Theora picture size as its minimum size with `expand` off. Each
+  // player has a 1 x 1 authored rect and a full-rect ColorRect child. Godot 4.6.3 `--mode 2d`:
+  // x 8-71 y 8-55 (autoplay, stopped, paused or not), x 100-227 y 8-103 (expand), 1 x 1 for a
+  // Vorbis-only file, and x 100-169 y 230-259 for a 70 x 30 picture in an 80 x 32 frame.
+  {
+    name: 'video-stream-player-picture-size',
+    file: 'unit-video-stream-player-picture-size.tscn',
+    mode: '2d',
+  },
+  // SUB and MUL blends that lower the canvas alpha. Godot 4.6.3 `--mode 2d`: (200,150) rgb(55,79,61)
+  // Sub, (200,450) rgb(53,45,30) Mul, both opaque. Mean 0.027/255 against it.
+  { name: 'canvas-item-sub-mul-alpha', file: 'unit-canvas-item-sub-mul-alpha.tscn', mode: '2d' },
+  // A CanvasGroup composites its squares through one buffer. Godot 4.6.3 `--mode 2d`, red-only, overlap
+  // and blue-only: the group at (125,125) rgb(166,38,38), (175,175) rgb(38,38,166), (225,225)
+  // rgb(38,38,166); the plain Node2D at (475,175) rgb(83,19,147).
+  { name: 'canvas-group-self-modulate', file: 'unit-canvas-group-self-modulate.tscn', mode: '2d' },
+  // The group's modulate applies twice. Godot 4.6.3 `--mode 2d`: (125,125) rgb(121,57,57), (175,175)
+  // rgb(79,47,111), (225,225) rgb(57,57,121); the plain Node2D at (475,175) rgb(83,19,147).
+  { name: 'canvas-group-modulate', file: 'unit-canvas-group-modulate.tscn', mode: '2d' },
+  // A child at another z escapes the group. Godot 4.6.3 `--mode 2d`: (125,125) rgb(166,38,38), (175,175)
+  // and (225,225) rgb(0,0,255).
+  { name: 'canvas-group-z-escape', file: 'unit-canvas-group-z-escape.tscn', mode: '2d' },
+  // A CanvasItemMaterial ADD on the group. Godot 4.6.3 `--mode 2d`: rgb(204,204,204) at (95,95) and
+  // (240,110), over x 90..259 and y 90..259.
+  { name: 'canvas-group-material', file: 'unit-canvas-group-material.tscn', mode: '2d' },
+  // A group in a group. Godot 4.6.3 `--mode 2d`: (125,125) rgb(166,102,102), (175,175) rgb(102,102,166),
+  // and (240,110) rgb(121,121,121) inside the inner rect.
+  { name: 'canvas-group-nested', file: 'unit-canvas-group-nested.tscn', mode: '2d' },
+  // A y-sorted group groups nothing. Godot 4.6.3 `--mode 2d`: (125,125) rgb(255,0,0), (175,175)
+  // rgb(0,0,255); the group under a y-sorted parent at (425,125) rgb(166,38,38), (475,175) rgb(38,38,166).
+  { name: 'canvas-group-y-sort', file: 'unit-canvas-group-y-sort.tscn', mode: '2d' },
+  // Each SubViewport update mode, sampled by a 100x100 TextureRect. Godot 4.6.3 `--mode 2d`:
+  // (45,70) rgb(0,0,0) DISABLED, (165,70), (285,70), (405,70) and (525,70) rgb(255,0,0) ONCE,
+  // WHEN_VISIBLE, WHEN_PARENT_VISIBLE and ALWAYS. (45,190) rgb(0,0,0) a WHEN_PARENT_VISIBLE child
+  // under a DISABLED parent, (165,190) and (285,190) rgb(255,0,0) its WHEN_VISIBLE and ALWAYS
+  // siblings. (45,310) rgb(0,0,0) a ONCE parent that samples a WHEN_VISIBLE child, (165,310)
+  // rgb(255,0,0) one that samples an ALWAYS child. (525,190) rgb(0,0,0) a hidden container's child,
+  // (645,190) rgb(255,0,0) a visible container's child.
+  { name: 'sub-viewport-update-mode', file: 'unit-sub-viewport-update-mode.tscn', mode: '2d' },
+  // Each SubViewport clear mode with a red 0.25 alpha veil over the left half. Godot 4.6.3
+  // `--mode 2d`, canvas on an opaque target: (45,70) rgb(121,57,57) ALWAYS, (165,70) rgb(253,0,0)
+  // NEVER over (215,70) rgb(0,0,0), (285,70) rgb(253,1,1) ONCE. On a transparent target over white:
+  // (45,190) rgb(207,191,191), (165,190) and (285,190) rgb(253,2,2). 3D on an opaque target:
+  // (45,310) rgb(150,66,66) ALWAYS, (165,310) rgb(137,0,0) NEVER over (215,310) rgb(0,0,0), (285,310)
+  // rgb(150,66,66) ONCE.
+  { name: 'sub-viewport-clear-mode', file: 'unit-sub-viewport-clear-mode.tscn', mode: '2d' },
+  // `use_hdr_2d` draws the canvas linear into a half-float target, which the container shows as
+  // stored. Godot 4.6.3 `--mode 2d`: (150,150) rgb(54,54,54) grey, (250,150) rgb(127,128,0) the linear
+  // blend, (350,150) rgb(255,255,63) a value above 1, and (350,350) rgb(255,160,31) the same at modulate 0.5.
+  { name: 'sub-viewport-hdr-2d', file: 'unit-sub-viewport-hdr-2d.tscn', mode: '2d' },
+  // Each lit pair with `use_hdr_2d` on and off. Godot 4.6.3 through `pnpm ref:diff`: torch (200,150)
+  // rgb(135,84,33) on, (600,150) rgb(204,153,102) off; sun (200,450) rgb(73,94,114) on, (600,450)
+  // rgb(197,244,255) off; hot (900,150) rgb(146,88,42) on, (900,450) rgb(128,128,112) off. Mean 0.002/255.
+  { name: 'sub-viewport-hdr-2d-light', file: 'unit-sub-viewport-hdr-2d-light.tscn', mode: '2d' },
+  // SUB and MUL items in an opaque SubViewport over yellow. Godot 4.6.3 `--mode 2d`: the container
+  // shows the viewport opaque, with no yellow through it. Mean 0.000/255 against it.
+  { name: 'subviewport-opaque-alpha', file: 'unit-subviewport-opaque-alpha.tscn', mode: '2d' },
+  // A SubViewport with no content, in a container, a transparent one, a Timer-only one, a stretched one and
+  // a ViewportTexture: each shows the clear colour, as Godot 4.6.3 `--mode 2d` does.
+  { name: 'subviewport-empty', file: 'unit-subviewport-empty.tscn', mode: '2d' },
+  // A stretched SubViewport with clear mode ONCE, empty and with Control and Polygon2D content, at
+  // stretch_shrink 1 to 3. Godot 4.6.3 `--mode 2d` clears the shown target once.
+  { name: 'subviewport-stretch-clear-once', file: 'unit-subviewport-stretch-clear-once.tscn', mode: '2d' },
+  // An OptionButton and a MenuButton with button_pressed set and no toggle_mode.
+  { name: 'option-menu-button-pressed', file: 'unit-option-menu-button-pressed.tscn', mode: '2d' },
+  // A MenuButton label wrapped by autowrap_mode and trimmed by text_overrun_behavior.
+  { name: 'menu-button-wrap-trim', file: 'unit-menu-button-wrap-trim.tscn', mode: '2d' },
+  // Embedded windows, as the root viewport draws them over its canvas. Godot 4.6.3 `--mode 2d` diffs
+  // differ only in the title glyphs (max 70 to 155 of 255), as a plain Label at the title's place does.
+  // A Label with the title's font, size and centre: max 92, mean 0.338, as the window title's max 92.
+  { name: 'window-title-label', file: 'unit-window-title-label.tscn', mode: '2d' },
+  // A decorated Window: frame, title, close icon and target. Mean 0.367.
+  { name: 'window-embedded', file: 'unit-window-embedded.tscn', mode: '2d' },
+  // The stack: the last focusable window is focused and draws the focused frame. Mean 0.514.
+  { name: 'window-focus-order', file: 'unit-window-focus-order.tscn', mode: '2d' },
+  // A title wider than its space ends in an ellipsis. Mean 0.352.
+  { name: 'window-title-trim', file: 'unit-window-title-trim.tscn', mode: '2d' },
+  // A newline stays inside the title's one line at zero width. Max 92, mean 0.414.
+  { name: 'window-title-newline', file: 'unit-window-title-newline.tscn', mode: '2d' },
+  // A transparent window shows the embedder through its target. Mean 0.331.
+  { name: 'window-transparent', file: 'unit-window-transparent.tscn', mode: '2d' },
+  // A Popup is borderless: its target alone. Mean 0.364.
+  { name: 'popup-embedded', file: 'unit-popup-embedded.tscn', mode: '2d' },
+  // wrap_controls grows a centred 200x100 window to 420x310 at (476,274). Mean 0.284.
+  { name: 'window-wrap', file: 'unit-window-wrap.tscn', mode: '2d' },
+  // A PopupPanel's panel, with its child inset by the default 4 px margins. Max 1, mean 0.308.
+  { name: 'popuppanel-embedded', file: 'unit-popuppanel-embedded.tscn', mode: '2d' },
+  // A shadowed panel insets by (6,5,10,11), and its shadow fills the window. Max 1, mean 0.309.
+  { name: 'popuppanel-shadow', file: 'unit-popuppanel-shadow.tscn', mode: '2d' },
+  // A PopupMenu draws its panel, rows, check and radio marks, separator and disabled item. Max 33 at the check icon rim, mean 0.327.
+  { name: 'popup-menu', file: 'unit-popup-menu-embedded.tscn', mode: '2d' },
+  // Under a right-to-left parent the marks, icons and text mirror. Max 33 at the check icon rim, mean 0.327.
+  { name: 'popup-menu-rtl', file: 'unit-popup-menu-rtl.tscn', mode: '2d' },
+  // Thirty items are cut to the frame height and show the bar. Max 3 at the grabber corners, mean 0.305.
+  { name: 'popup-menu-scroll', file: 'unit-popup-menu-scroll.tscn', mode: '2d' },
+  // The theme outline: a ring under each item label, and the separator's own ring. Max 17 at the check icon rim, mean 0.327.
+  { name: 'popup-menu-outline', file: 'unit-popup-menu-outline.tscn', mode: '2d' },
+  // A `size` line below the items keeps the unlimited item height instead of the embedder's. Max 1, mean 0.249.
+  { name: 'popup-menu-size-after-items', file: 'unit-popup-menu-size-after-items.tscn', mode: '2d' },
+  // A menu under a Window embeds in the root, not in the window. Max 6 at the window's close icon and corners, mean 0.410.
+  { name: 'popup-menu-in-window', file: 'unit-popup-menu-in-window.tscn', mode: '2d' },
+  // A project that embeds no windows lets a Window keep its own embedding: the menu draws inside it. Max 7 at the close icon, mean 0.972.
+  { name: 'popup-menu-embed-off', file: 'window-embed-off/unit-popup-menu-embed-off.tscn', mode: '2d' },
+  // Theme overrides: the frame, the title colour, size and outline ring. Mean 0.426.
+  { name: 'window-theme', file: 'unit-window-theme.tscn', mode: '2d' },
+  // Under a right-to-left parent the title trims from its start and the close icon stays right. Max 70, mean 0.407.
+  { name: 'window-rtl', file: 'unit-window-rtl.tscn', mode: '2d' },
+  // Theme scale 1.5: a 24 px close icon and a 21 px title. Max 155, mean 0.390.
+  { name: 'window-theme-scale', file: 'window-theme-scale/unit-window-theme-scale.tscn', mode: '2d' },
+  // The same title as a Label at theme scale 1.5: max 155, mean 0.346.
+  { name: 'window-theme-scale-label', file: 'window-theme-scale/unit-window-theme-scale-label.tscn', mode: '2d' },
+  // Every default-theme icon at theme scale 1, drawn from Godot's own raster. Max 86, mean 0.080.
+  { name: 'default-theme-icons', file: 'unit-default-theme-icons.tscn', mode: '2d' },
+  // The same Controls at theme scale 1.5: icons and minimum sizes scale. Max 128, mean 0.113.
+  { name: 'default-icons-theme-scale', file: 'default-icons-theme-scale/unit-default-icons-theme-scale.tscn', mode: '2d' },
+  // A window under a SubViewport that never updates draws in the root, which does. Max 92, mean 0.383.
+  { name: 'window-under-disabled-viewport', file: 'unit-window-under-disabled-viewport.tscn', mode: '2d' },
+  // A window that authors gui_embed_subwindows leaves the window below it to the embedding root.
+  // Max 7 at the close icons, mean 0.475.
+  { name: 'window-in-window', file: 'unit-window-in-window.tscn', mode: '2d' },
+  // force_native on a visible window is refused, so the window stays embedded. Max 7, mean 0.475.
+  { name: 'window-force-native-visible', file: 'edge-window-force-native-visible.tscn', mode: '2d' },
+  // content_scale_*: factor, canvas items, viewport, expand, integer and keep-height, with black bars.
+  // Max 92, mean 0.385.
+  { name: 'window-content-scale', file: 'unit-window-content-scale.tscn', mode: '2d' },
+  // A content_scale_mode outside the enum leaves the target empty: black content. Max 92, mean 0.318.
+  { name: 'window-content-scale-unknown', file: 'unit-window-content-scale-unknown.tscn', mode: '2d' },
+  // A visible AcceptDialog: panel, message and a focused OK button, sized to its content. Max 7, mean 0.32.
+  { name: 'accept-dialog-embedded', file: 'unit-accept-dialog-embedded.tscn', mode: '2d' },
+  // A visible ConfirmationDialog adds Cancel before OK, with custom button texts. Max 7, mean 0.32.
+  { name: 'confirmation-dialog-embedded', file: 'unit-confirmation-dialog-embedded.tscn', mode: '2d' },
+  // A Theme on the dialog restyles its Button and Label: a red normal box, yellow focus text, green message. Max 7, mean 0.33.
+  { name: 'accept-dialog-theme', file: 'unit-accept-dialog-theme.tscn', mode: '2d' },
+  // A Theme icon on Button draws on the buttons an AcceptDialog and a ConfirmationDialog build, and widens them. Max 7, mean 0.31.
+  { name: 'accept-dialog-theme-icon', file: 'unit-accept-dialog-theme-icon.tscn', mode: '2d' },
+  // A visible FileDialog in Open File mode with an empty file list: toolbar, side lists, filter and a disabled OK. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-open-empty', file: 'file-dialog-open-empty/unit-file-dialog-open-empty.tscn', mode: '2d' },
+  // The Button theme icon draws on the Cancel and OK buttons, and the OptionButton one on the filter; the toolbar keeps its icons. Max 26, mean 0.19 (SVG icon edges).
+  { name: 'file-dialog-theme-icon', file: 'file-dialog-theme-icon/unit-file-dialog-theme-icon.tscn', mode: '2d' },
+  // Save File mode adds the create-folder button, the title "Save a File" and an enabled Save. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-save-empty', file: 'file-dialog-save-empty/unit-file-dialog-save-empty.tscn', mode: '2d' },
+  // A CheckBox option and a value option draw the options row and the option grid. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-options', file: 'file-dialog-options/unit-file-dialog-options.tscn', mode: '2d' },
+  // current_path puts the dialog in a sub folder and a file name in the File field, its name before the dot selected. Max 26, mean 0.22 (SVG icon edges).
+  { name: 'file-dialog-current-path', file: 'file-dialog-current-path/unit-file-dialog-current-path.tscn', mode: '2d' },
+  // The dialog lists res:// in thumbnail mode: three folders, then the PNG files in natural order, the first folder selected. Max 34, mean 0.23 (SVG icon edges).
+  { name: 'file-dialog-listing', file: 'file-dialog-listing/unit-file-dialog-listing.tscn', mode: '2d' },
+  // display_mode = 1 lists res:// in one column of 16 px icons. Max 26, mean 0.22 (SVG icon edges).
+  {
+    name: 'file-dialog-listing-list-mode',
+    file: 'file-dialog-listing/unit-file-dialog-listing-list-mode.tscn',
+    mode: '2d',
+  },
+  // current_file names a file, which the list selects instead of the first row. Max 34, mean 0.23 (SVG icon edges).
+  {
+    name: 'file-dialog-listing-current-file',
+    file: 'file-dialog-listing/unit-file-dialog-listing-current-file.tscn',
+    mode: '2d',
+  },
+  // A root_subfolder that does not exist is kept as a string and ignored: the dialog lists res://. Max 34, mean 0.23 (SVG icon edges).
+  {
+    name: 'file-dialog-listing-missing-subfolder',
+    file: 'file-dialog-listing/unit-file-dialog-listing-missing-subfolder.tscn',
+    mode: '2d',
+  },
+  // MeshInstance2D draws a mesh through the canvas. Godot 4.6.3 `--mode 2d` probes: the textured QuadMesh
+  // shows its texture upside down, (75,75) blue and (75,125) red, and the PlaneMesh at (100,300) draws
+  // nothing. The ArrayMesh quad with colours reads (241,0,14) at (355,55) and (126,0,129) at its centre.
+  { name: 'mesh-instance-2d', file: 'unit-mesh-instance-2d-meshes.tscn', mode: '2d' },
+  // The normal map is read at the mesh's UV and never flipped: the mesh at (400,200) reads (245) at the
+  // top and (160) at the bottom, where the Sprite2D with the same texture reads the reverse.
+  { name: 'mesh-instance-2d-normal-map', file: 'unit-mesh-instance-2d-normal-map.tscn', mode: '2d' },
+  // Points, lines and a line strip are one pixel wide. A point at (60,60) lands on pixel (59,59), and
+  // the line of 100 px at (250,59)..(349,59) is white. A point or a line reads its texture at the UV.
+  { name: 'mesh-instance-2d-primitives', file: 'unit-mesh-instance-2d-primitives.tscn', mode: '2d' },
+  // MultiMeshInstance2D draws a mesh once for each instance, under its transform and colour. Godot 4.6.3
+  // `--mode 2d` probes: the identity instance reads (51,102,204) at (40,40) and the quarter turn reads
+  // (204,0,0) at (140,40) and (230,0,0) at (160,60). The half-alpha scaled instance reads (64,89,140) at
+  // (280,60). `visible_instance_count = 2` hides the last two, and a 3D transform format draws nothing.
+  { name: 'multi-mesh-instance-2d', file: 'unit-multi-mesh-instance-2d-instances.tscn', mode: '2d' },
+  // A particles_animation material cuts each instance to one cell of a 2x1 sheet at the cell's width: z 0
+  // reads (51,102,204) at (90,90), and z 0.5 reads (230,204,51) at (240,90). A MeshInstance2D under the
+  // same material shows cell 0 at that width, (51,102,204) at (440,90).
+  { name: 'multi-mesh-instance-2d-flipbook', file: 'unit-multi-mesh-instance-2d-flipbook.tscn', mode: '2d' },
+  // Two Add items under one textured PointLight2D, over an opaque backdrop. Godot probes: (450,230)
+  // rgb(255,102,69) the first item alone, (520,300) rgb(255,255,115) both, (590,370) rgb(98,151,96) the second.
+  { name: 'canvas-item-additive-lit', file: 'unit-canvas-item-additive-lit.tscn', mode: '2d' },
+  // Visible Collision Shapes in 2D draws every Shape2D class as Godot's `draw()` does: a polygon shape
+  // filled in its debug colour with an opaque outline, a segment, concave soup, world boundary and
+  // separation ray as strokes. A disabled shape is grey at half the alpha, a one-way shape adds an arrow.
+  { name: 'collision-shapes-2d', file: 'unit-collision-shapes-2d.tscn', collisions: true },
 ];

@@ -27,6 +27,7 @@ import {
   VOLUMETRIC_FOG_DEFAULTS,
   type VolumetricFogProjectSettings,
 } from '../godot/rendering/environment/volumetricFog.js';
+import { canvasShadowAtlasSize } from '../godot/rendering/canvasShadowAtlas.js';
 import { MSAA_DISABLED } from '../godot/rendering/msaa.js';
 import {
   SSAO_PROJECT_DEFAULTS,
@@ -198,6 +199,14 @@ const canvasTextureDefaultsOf = perObject((settings: ProjectSettings): CanvasIte
  */
 export function projectCanvasTextureDefaults(settings: ProjectSettings | null): CanvasItemTextureDefaults {
   return settings ? canvasTextureDefaultsOf(settings) : VIEWPORT_CANVAS_TEXTURE_DEFAULTS;
+}
+
+/**
+ * `rendering/2d/shadow_atlas/size`, the texels in one 2D light's shadow map
+ * (`renderer_canvas_render_rd.cpp:2060`).
+ */
+export function projectShadowAtlasSize(settings: ProjectSettings | null): number {
+  return canvasShadowAtlasSize(parseOptionalInt(settings?.['rendering/2d/shadow_atlas/size']));
 }
 
 /** `rendering/lightmapping/primitive_meshes/texel_size`, the world size of a texel in a PrimitiveMesh's UV2. */
@@ -395,6 +404,14 @@ export function projectTracesHalfSizeReflections(settings: ProjectSettings | nul
 }
 
 /**
+ * `display/window/subwindows/embed_subwindows`, which `main/main.cpp` hands the root window: whether
+ * it embeds its windows. It does by default (`project_settings.cpp:1756`).
+ */
+function projectEmbedsSubwindows(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['display/window/subwindows/embed_subwindows']) ?? true;
+}
+
+/**
  * `rendering/driver/depth_prepass/enable`. Without the prepass Godot runs no screen-space ambient
  * occlusion (`render_forward_clustered.cpp:2081-2086`).
  */
@@ -409,6 +426,14 @@ export function projectDrawsDepthPrepass(settings: ProjectSettings | null): bool
  */
 export function projectTransparentBackground(settings: ProjectSettings | null): boolean {
   return boolSlotValue(settings?.['rendering/viewport/transparent_background']) === true;
+}
+
+/**
+ * `rendering/viewport/hdr_2d`, which the root viewport takes (`scene/main/scene_tree.cpp:2088-2089`).
+ * Off by default (`rendering_server.cpp:3771`).
+ */
+export function projectUsesHdr2D(settings: ProjectSettings | null): boolean {
+  return boolSlotValue(settings?.['rendering/viewport/hdr_2d']) === true;
 }
 
 /**
@@ -525,6 +550,34 @@ const physicsClockOf = perObject((settings: ProjectSettings): PhysicsClock => {
  * `physics/common/physics_ticks_per_second` and `physics_jitter_fix`, which pace the physics ticks
  * and so the transform flushes a scene runs by a frame (`main.cpp:4801-4806`).
  */
-export function projectPhysicsClock(settings: ProjectSettings | null): PhysicsClock {
+function projectPhysicsClock(settings: ProjectSettings | null): PhysicsClock {
   return settings ? physicsClockOf(settings) : DEFAULT_PHYSICS_CLOCK;
+}
+
+/** What a scene tree reads of the project it runs in. */
+export interface ProjectTreeSettings {
+  /** The clock that paces the physics ticks, and so the transform flushes of a frame. */
+  physicsClock: PhysicsClock;
+  /**
+   * Whether the root window embeds its windows. A window below an embedding root embeds only when
+   * `force_native` (`window.cpp:1534-1537`), so every answer to "who embeds this window" reads it.
+   */
+  rootEmbedsSubwindows: boolean;
+}
+
+/**
+ * Written only by {@link projectTreeSettings}: one object for each clock and each answer of the
+ * root window, so a cache keyed on the tree settings holds while both stay as they are.
+ */
+const treeSettingsOfClock = perObject(
+  (physicsClock: PhysicsClock): Record<'embedding' | 'native', ProjectTreeSettings> => ({
+    embedding: { physicsClock, rootEmbedsSubwindows: true },
+    native: { physicsClock, rootEmbedsSubwindows: false },
+  })
+);
+
+/** The tree settings of a project, Godot's defaults with no project: one object for equal values. */
+export function projectTreeSettings(settings: ProjectSettings | null): ProjectTreeSettings {
+  const ofClock = treeSettingsOfClock(projectPhysicsClock(settings));
+  return projectEmbedsSubwindows(settings) ? ofClock.embedding : ofClock.native;
 }

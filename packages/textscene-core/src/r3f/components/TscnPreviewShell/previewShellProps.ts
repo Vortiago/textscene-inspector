@@ -49,6 +49,11 @@ export interface TscnPreviewShellProps {
    * The shell reports `pending` as it unmounts.
    */
   onCaptureStateChange?: (state: PreviewCaptureState) => void;
+  /**
+   * Whether the host shows the preview. While `false` the canvas renders no frame and runs no frame
+   * callback, and a capture still returns the picture. Without it the preview shows.
+   */
+  isVisible?: boolean;
   /** Fired with the node path the Inspector copies, for the host to put on the clipboard. Without it the row has no copy button. */
   onCopyNodePath?: (nodePath: string) => void;
 }

@@ -95,6 +95,36 @@ export function scrollBarGrabberGeometry(
   return { size, offset };
 }
 
+/** One bar whose `Range` is `min` to `max` with the given `page`, its grabber at `ratio` of the range. */
+export function scrollBarRangePlacement(
+  vertical: boolean,
+  rect: Rect2,
+  theme: NativeTheme,
+  range: { min: number; max: number; page: number },
+  ratio: number,
+  visible: boolean
+): ScrollBarPlacement {
+  const length = vertical ? rect.h : rect.w;
+  const grabber = scrollBarGrabberGeometry(vertical, length, theme, range.min, range.max, range.page, ratio);
+  return { visible, rect, grabberRect: scrollBarGrabberRect(vertical, { x: rect.w, y: rect.h }, grabber) };
+}
+
+/**
+ * One bar of a scrolled content `range`: its `rect` and its grabber when the bar sits at `ratio` of
+ * the range, a page long as the bar itself (`ScrollContainer` sets each bar's page to its length).
+ */
+export function scrollBarPlacement(
+  vertical: boolean,
+  rect: Rect2,
+  theme: NativeTheme,
+  range: number,
+  ratio: number,
+  visible: boolean
+): ScrollBarPlacement {
+  const length = vertical ? rect.h : rect.w;
+  return scrollBarRangePlacement(vertical, rect, theme, { min: 0, max: range, page: length }, ratio, visible);
+}
+
 /**
  * The `scroll`/`scroll_focus` track rect, `Rect2(ofs, area)` (`scroll_bar.cpp:295-317`): with both
  * icon terms 0 it is the whole bar. `scene/gui/scroll_bar.cpp` never calls `is_layout_rtl()`, so
@@ -120,4 +150,22 @@ export function scrollBarGrabberRect(
     return { x: 0, y: grabber.offset, w: size.x, h: grabber.size };
   }
   return { x: grabber.offset, y: 0, w: grabber.size, h: size.y };
+}
+
+/**
+ * `scroll_hint_vertical.svg`/`scroll_hint_horizontal.svg` (`scene/theme/icons/`) are 32x24 and
+ * 24x32 at scale 1. Only the extent across each fade is read (`get_height()` at
+ * `scroll_container.cpp:627,636`, `get_width()` at `:643,652`): the other axis is anchored.
+ */
+export const SCROLL_HINT_VERTICAL_HEIGHT = 24;
+export const SCROLL_HINT_HORIZONTAL_WIDTH = 24;
+
+/** One `scroll_hint_*` TextureRect that `_update_scroll_hints` left visible. */
+export interface ScrollHintPlacement {
+  /** This hint's rect relative to the ScrollContainer's own top-left, as the anchors compute it. A vertical hint is twice the container wide (`scroll_container.cpp:625`), cut back by the clip. */
+  rect: Rect2;
+  /** `true` for the `scroll_hint_vertical` icon (the fade runs down the rect), `false` for `scroll_hint_horizontal`. */
+  vertical: boolean;
+  flipH: boolean;
+  flipV: boolean;
 }

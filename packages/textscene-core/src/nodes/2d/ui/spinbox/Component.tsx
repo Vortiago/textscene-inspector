@@ -8,14 +8,13 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native/solveTree';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   pickLineEditStyleBox,
   resolveLineEditStyleState,
@@ -30,6 +29,7 @@ import {
   spinBoxDisplayText,
   shapeSpinBoxFieldText,
   spinBoxFieldTextTheme,
+  spinBoxFieldThemeItems,
   spinBoxUpButtonState,
   spinBoxDownButtonState,
   spinBoxIconColor,
@@ -38,19 +38,31 @@ import {
 } from './nativeSolver';
 import type { SpinBoxProperties } from './types';
 import { HorizontalAlignment } from '../../../../godot/math/alignment';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
-export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+export function SpinBox({
+  solveNode,
+  tint,
+  childTint,
+  rect,
+  renderOrder,
+  theme,
+}: NativeControlComponentProps) {
   const props = painterView<SpinBoxProperties>(solveNode);
   const editable = props.editable !== false;
 
-  const widestIconWidth = spinBoxWidestButtonIconWidth(solveNode);
+  const widestIconWidth = spinBoxWidestButtonIconWidth(solveNode, theme.scale);
   const layout = useMemo(
     () => spinBoxLayout({ x: rect.w, y: rect.h }, widestIconWidth, solveNode.rtl),
     [rect.w, rect.h, widestIconWidth, solveNode.rtl]
   );
 
   const styleState = resolveLineEditStyleState(props.editable);
-  const fieldBox = pickLineEditStyleBox({}, theme.widgets.lineEdit, styleState);
+  const fieldBox = pickLineEditStyleBox(
+    spinBoxFieldThemeItems(solveNode).styleBoxes,
+    theme.widgets.lineEdit,
+    styleState
+  );
 
   const orderedKeys = controlLayoutOrder(solveNode);
   const resolvedValue = resolveRangeValue(props, orderedKeys);
@@ -61,9 +73,13 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
     fontMetrics,
     color: baseFontColor,
   } = spinBoxFieldTextTheme(solveNode, { theme }, editable);
-  // `tint.own` is raw sRGB, `self_modulate` folded onto `modulate`: it feeds each `<StyleBoxQuad>`
-  // and multiplies into the font and arrow colours before their one sRGB-to-linear conversion.
-  const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
+  // `tint.own` is raw sRGB, `self_modulate` folded onto `modulate`: it feeds the arrows and their boxes.
+  // The field is the internal LineEdit (`spin_box.cpp:431`, `line_edit.cpp:726`), so its box and its
+  // text take `childTint`, which has no `self_modulate`. Each multiplies in before one sRGB-to-linear conversion.
+  const tintedFontColor = useMemo(
+    () => tintColor(baseFontColor, childTint.own),
+    [baseFontColor, childTint.own]
+  );
 
   const textLayout: TextLayoutResult = useMemo(
     () => shapeSpinBoxFieldText(text, { fontSizePx, fontMetrics }, solveNode.locale),
@@ -101,8 +117,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
   const downState = spinBoxDownButtonState(props, resolvedValue);
   const upIconTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
   const downIconTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
-  const upIconSize = spinBoxIconSize(solveNode, 'up');
-  const downIconSize = spinBoxIconSize(solveNode, 'down');
+  const upIconSize = spinBoxIconSize(solveNode, 'up', theme.scale);
+  const downIconSize = spinBoxIconSize(solveNode, 'down', theme.scale);
 
   const upIconColorSrgb = useMemo(
     () => tintColor(spinBoxIconColor(solveNode.colors, 'up', upState), tint.own),
@@ -112,8 +128,8 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
     () => tintColor(spinBoxIconColor(solveNode.colors, 'down', downState), tint.own),
     [solveNode.colors, downState, tint.own]
   );
-  const upIconLinear = useGodotLinearColor(upIconColorSrgb);
-  const downIconLinear = useGodotLinearColor(downIconColorSrgb);
+  const upIconLinear = useItemLinearColor(upIconColorSrgb);
+  const downIconLinear = useItemLinearColor(downIconColorSrgb);
 
   const upIconPos = spinBoxArrowPosition(layout.upRect, upIconSize);
   const downIconPos = spinBoxArrowPosition(layout.downRect, downIconSize);
@@ -130,7 +146,7 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
       <CanvasItemGroup position={[layout.fieldRect.x, -layout.fieldRect.y, 0]}>
         <StyleBoxQuad
           styleBox={fieldBox}
-          color={tint.own}
+          color={childTint.own}
           rect={{ x: 0, y: 0, w: layout.fieldRect.w, h: layout.fieldRect.h }}
           renderOrder={renderOrder}
         />
@@ -183,26 +199,22 @@ export function SpinBox({ solveNode, tint, rect, renderOrder, theme }: NativeCon
           />
         </CanvasItemGroup>
       )}
-      <CanvasItemGroup position={[upIconPos.x, -upIconPos.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={upIconSize.x}
-          height={upIconSize.y}
-          color={upIconLinear}
-          opacity={upIconColorSrgb.a}
-          map={upIconTexture}
-        />
-      </CanvasItemGroup>
-      <CanvasItemGroup position={[downIconPos.x, -downIconPos.y, 0]}>
-        <ControlQuad
-          renderOrder={renderOrder}
-          width={downIconSize.x}
-          height={downIconSize.y}
-          color={downIconLinear}
-          opacity={downIconColorSrgb.a}
-          map={downIconTexture}
-        />
-      </CanvasItemGroup>
+      <PositionedIcon
+        rect={{ x: upIconPos.x, y: upIconPos.y, w: upIconSize.x, h: upIconSize.y }}
+        texture={upIconTexture}
+        color={upIconLinear}
+        opacity={upIconColorSrgb.a}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
+      <PositionedIcon
+        rect={{ x: downIconPos.x, y: downIconPos.y, w: downIconSize.x, h: downIconSize.y }}
+        texture={downIconTexture}
+        color={downIconLinear}
+        opacity={downIconColorSrgb.a}
+        renderOrder={renderOrder}
+        canvasKey={renderOrder}
+      />
     </CanvasItemGroup>
   );
 }

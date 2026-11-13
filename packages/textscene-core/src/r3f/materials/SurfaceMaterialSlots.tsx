@@ -4,7 +4,7 @@
  */
 import type { MaterialSource } from './materialSource';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
-import type { PointPlacement } from './godotPoint';
+import type { ListedSurface } from './godotPoint';
 import type { ParticleProgram } from './godotParticles';
 
 const DEFAULT_SURFACE: readonly (MaterialSource | undefined)[] = [undefined];
@@ -14,6 +14,18 @@ export function surfaceSources(
   sources: readonly (MaterialSource | undefined)[]
 ): readonly (MaterialSource | undefined)[] {
   return sources.length === 0 ? DEFAULT_SURFACE : sources;
+}
+
+/**
+ * The sources an instance draws: `material_override` stands in front of every surface's own
+ * material (`render_forward_clustered.cpp:4206`).
+ */
+export function overriddenSources(
+  sources: readonly (MaterialSource | undefined)[],
+  override: MaterialSource | undefined
+): readonly (MaterialSource | undefined)[] {
+  const own = surfaceSources(sources);
+  return override ? own.map(() => override) : own;
 }
 
 /**
@@ -27,13 +39,13 @@ export function surfaceAttach(index: number, surfaceCount: number): string {
 interface SurfaceMaterialSlotsProps {
   /** `sources[i]` is the material of draw group `i`. */
   sources: readonly (MaterialSource | undefined)[];
-  /** Where the points sit when the mesh draws `THREE.Points`, so each material also sizes them. */
-  points?: PointPlacement;
+  /** The mesh draws points or line segments, placed so, and each material also sizes the points. */
+  listed?: ListedSurface;
   /** The mesh draws a particle emitter's instances: the patch that colours them and cuts the flipbook frame. */
   particles?: ParticleProgram;
 }
 
-export function SurfaceMaterialSlots({ sources, points, particles }: SurfaceMaterialSlotsProps) {
+export function SurfaceMaterialSlots({ sources, listed, particles }: SurfaceMaterialSlotsProps) {
   const slotSources = surfaceSources(sources);
   return (
     <>
@@ -42,7 +54,7 @@ export function SurfaceMaterialSlots({ sources, points, particles }: SurfaceMate
           key={i}
           source={source}
           attach={surfaceAttach(i, slotSources.length)}
-          points={points}
+          listed={listed}
           particles={particles}
         />
       ))}

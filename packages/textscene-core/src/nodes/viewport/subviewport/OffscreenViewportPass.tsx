@@ -16,6 +16,7 @@ import {
   WorldEnvironmentScope,
 } from '../../../r3f/environment/WorldEnvironmentScope';
 import { drawWith } from '../../../r3f/environment/sceneEnvironment';
+import type { CanvasColorSpace } from '../../../r3f/canvasColorSpace';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
 import { WorldRootProvider } from '../../../r3f/parentSpaceScope';
 import * as THREE from 'three';
@@ -35,6 +36,7 @@ import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLighting
 import { CanvasLightPass } from '../../../r3f/lighting2d/CanvasLightPass';
 import { createViewportLightPassHost } from './viewportLightPassHost';
 import type { LightPassHost } from '../../../r3f/lighting2d/lightPassHost';
+import { viewportTransfer } from '../../../r3f/texelCopy';
 import type { Rgba } from '../../../godot/math/math';
 import {
   applyOrthoFrame,
@@ -42,11 +44,14 @@ import {
   createSceneTarget,
   godotCanvasPosition,
   renderToOffscreenTarget,
+  frameOverView,
   orthoFrameForCamera2D,
   orthoFrameForSize,
   cameraAtPath,
   selectViewportCamera2D,
   viewportAspect,
+  viewportCanvasColorSpace,
+  viewportUsesDebanding,
   viewportMsaaMode,
 } from './offscreenViewport';
 import { OffscreenToneMapStage, type OffscreenToneMap } from '../../../r3f/environment/offscreenToneMap';
@@ -55,6 +60,7 @@ import type { Camera2DTag } from '../../2d/camera2d/cameraView';
 import { fitToAspect, fittedAspect } from '../../3d/camera3d/projectionFit';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 import { usePublishViewportPass } from './usePublishViewportPass';
+import { useGatedViewport } from './useGatedViewport';
 import { useCanvasPass } from './useCanvasPass';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
@@ -77,8 +83,10 @@ const CanvasOverWorld = lazy(() =>
 export interface OffscreenViewportPassProps extends NodeComponentProps {
   path: string;
   size: Vector2;
-  /** The viewport's `size`, which lays Controls out and frames the camera. `size` is the capped target. */
+  /** The viewport's visible rect, which a Camera2D centres in. `size` is the capped target. */
   layoutSize: Vector2;
+  /** The canvas units the target shows, which frame the canvas: `layoutSize` unless a window scales its content. */
+  viewSize: Vector2;
   kind: '2d' | '3d';
   rendersInline: boolean;
   /** The tint of this viewport's own canvas, where its light accumulation starts. */
@@ -99,6 +107,7 @@ export function OffscreenViewportPass({
   path,
   size,
   layoutSize,
+  viewSize,
   kind,
   rendersInline,
   canvasModulate,
@@ -125,12 +134,17 @@ export function OffscreenViewportPass({
     [rendersInline, mainScene, drawnCanvasWorld, node.name]
   );
 
+  const canvasSpace = viewportCanvasColorSpace(properties);
   // One sample: a 3D pass multisamples its world buffer, and a 2D pass its canvas frame.
   const target = useMemo(
-    () => (kind === '3d' ? createSceneTarget : createCanvasTarget)(width, height, node.name),
-    [kind, width, height, node.name]
+    () =>
+      kind === '3d'
+        ? createSceneTarget(width, height, node.name, canvasSpace)
+        : createCanvasTarget(width, height, node.name, canvasSpace),
+    [kind, width, height, node.name, canvasSpace]
   );
   useDisposeOnRelease(target);
+  const { gate, clearMode, renderState } = useGatedViewport(path, properties);
   const drawsCanvasOverWorld = canvasOverWorld !== null;
   const msaaMode = viewportMsaaMode(properties, kind);
   // Written only by the stage below while it is mounted.
@@ -149,7 +163,7 @@ export function OffscreenViewportPass({
             width={width}
             height={height}
             transparentBackground={transparentBg}
-            usesDebanding={properties.use_debanding}
+            usesDebanding={viewportUsesDebanding(properties)}
             name={node.name}
           />
         </ViewportPassEnvironment>
@@ -168,11 +182,12 @@ export function OffscreenViewportPass({
   // Both canvas draws take the viewport's `msaa_2d`: the 2D world's and the Controls'.
   const canvasMsaaMode = viewportMsaaMode(properties, '2d');
   const { camera: orthoCamera, frame } = useCanvasPass(
-    layoutSize.x,
-    layoutSize.y,
-    kind === '2d' || drawsCanvasOverWorld ? canvasMsaaMode : 0
+    viewSize.x,
+    viewSize.y,
+    kind === '2d' || drawsCanvasOverWorld ? canvasMsaaMode : 0,
+    canvasSpace
   );
-  const backdropTarget = useBackdropTarget(width, height, node.name);
+  const backdropTarget = useBackdropTarget(width, height, node.name, canvasSpace);
   const canvasLayers = useMemo(() => canvasLayerRanks(node.children), [node]);
   // The scene the canvas of a 3D pass draws into, apart from the world's.
   const canvasScene = useMemo(
@@ -189,8 +204,10 @@ export function OffscreenViewportPass({
   );
   useLayoutEffect(() => lightHost?.resize(size), [lightHost, size]);
 
-  // The canvas items of a viewport draw after its 3D render, into the same target. The frame's bytes
-  // return to the SRGB8_ALPHA8 storage decoded, which the hardware encodes back to the same bytes.
+  // The canvas items of a viewport draw after its 3D render, into the same target. In sRGB, the frame's
+  // bytes return to the SRGB8_ALPHA8 storage decoded, which the hardware encodes back to the same
+  // bytes. A linear frame returns to the half-float storage as it is.
+  const canvasFrameTransfer = canvasSpace.isLinear ? 'none' : 'decode';
   // `inWindow` null draws every layer, which no BG_CANVAS split asks for.
   const renderCanvas = useCallback(
     (into: THREE.WebGLRenderTarget, inWindow: ((key: number) => boolean) | null) =>
@@ -199,12 +216,13 @@ export function OffscreenViewportPass({
         clearColor,
         transparentBg,
         draw: () => {
-          const drawCanvas = () => frame.render(gl, canvasScene!, orthoCamera, 'decode');
+          const drawCanvas = () =>
+            frame.render(gl, canvasScene!, orthoCamera, viewportTransfer(canvasFrameTransfer, transparentBg));
           if (inWindow) drawCanvasKeys(canvasScene!, inWindow, drawCanvas);
           else drawCanvas();
         },
       }),
-    [gl, clearColor, transparentBg, frame, canvasScene, orthoCamera]
+    [gl, clearColor, transparentBg, frame, canvasScene, orthoCamera, canvasFrameTransfer]
   );
 
   // Godot draws a viewport's canvas through its canvas transform, the identity until a Camera2D in
@@ -213,9 +231,9 @@ export function OffscreenViewportPass({
   const anchorBackdrop = useCallback(() => {
     const anchor = backdropAnchor.current;
     if (!anchor) return;
-    viewAnchorMatrix(orthoCamera, layoutSize, anchor.matrix);
+    viewAnchorMatrix(orthoCamera, viewSize, anchor.matrix);
     anchor.matrixWorldNeedsUpdate = true;
-  }, [orthoCamera, layoutSize]);
+  }, [orthoCamera, viewSize]);
   const frameCanvas = useCallback(
     (canvas: THREE.Scene) => {
       // The camera's world matrix is what carries an instanced sub-scene's
@@ -224,16 +242,15 @@ export function OffscreenViewportPass({
       canvas.updateMatrixWorld(true);
       const camera2d = selectViewportCamera2D(canvas);
       const tag = camera2d?.userData.camera2d as Camera2DTag | undefined;
-      applyOrthoFrame(
-        orthoCamera,
+      const framed =
         camera2d && tag
           ? orthoFrameForCamera2D(tag, godotCanvasPosition(camera2d), layoutSize)
-          : orthoFrameForSize(layoutSize)
-      );
+          : orthoFrameForSize(layoutSize);
+      applyOrthoFrame(orthoCamera, frameOverView(framed, layoutSize, viewSize));
       anchorBackdrop();
       lightHost?.run.current?.();
     },
-    [orthoCamera, layoutSize, lightHost, anchorBackdrop]
+    [orthoCamera, layoutSize, viewSize, lightHost, anchorBackdrop]
   );
 
   const renderPass = useCallback(() => {
@@ -242,6 +259,7 @@ export function OffscreenViewportPass({
     // A 3D pass waits for its stage, which mounts before the frame that first publishes the target.
     const toneMap = kind === '3d' ? toneMapStage.current : null;
     if (kind === '3d' && !toneMap) return;
+    const clear = renderState.takeRender(clearMode, clearColor);
     const camera = toneMap ? cameraAtPath(passScene, toneMap.cameraPath) : orthoCamera;
     const exposure = toneMap?.exposure ?? null;
     if (canvasScene) frameCanvas(canvasScene);
@@ -253,14 +271,14 @@ export function OffscreenViewportPass({
 
     // A `<Camera3D>` camera mounts at the canvas aspect, and inside the viewport it frames the
     // target rect. Only a camera the canvas also renders through gets its fit back after the pass.
-    const aspect = viewportAspect(layoutSize);
+    const aspect = viewportAspect(viewSize);
     const restoreAspect = camera === canvasCamera ? fittedAspect(camera) : null;
     if (camera && fittedAspect(camera) !== aspect) fitToAspect(camera, aspect);
 
     try {
       renderToOffscreenTarget(gl, {
         target: toneMap ? toneMap.worldBuffer : target,
-        clearColor,
+        clearColor: clear.color,
         transparentBg,
         keepsColor,
         // No camera is not an error: Godot renders the clear colour and nothing else.
@@ -276,7 +294,7 @@ export function OffscreenViewportPass({
             renderWithMipmapBias(mipmapBias, () =>
               renderWithShadowAtlas(shadowAtlas, () =>
                 kind === '2d'
-                  ? frame.render(gl, passScene, camera)
+                  ? frame.draw(gl, passScene, camera, clear.clears, viewportTransfer('none', transparentBg))
                   : drawWith(passScene, toneMap!.environment, exposure, () =>
                       backdrop
                         ? drawOverBackground(passScene, backdrop.texture, () => gl.render(passScene, camera))
@@ -306,12 +324,14 @@ export function OffscreenViewportPass({
     mipmapBias,
     clearColor,
     transparentBg,
-    layoutSize,
+    viewSize,
     canvasScene,
     frameCanvas,
     renderCanvas,
     backdropTarget,
     canvasLayers,
+    renderState,
+    clearMode,
   ]);
 
   // Consumers sample the texture directly. The ordered driver runs every
@@ -324,13 +344,15 @@ export function OffscreenViewportPass({
     width,
     height,
     isTransparent: transparentBg,
+    gate,
+    renderState,
     render: renderPass,
   });
 
   const canvasBackdropAndItems = canvasOverWorld ? (
     <>
       <PendingSuspense>
-        <CanvasOverWorld world={target.texture} size={layoutSize} anchor={backdropAnchor} />
+        <CanvasOverWorld world={target.texture} size={viewSize} anchor={backdropAnchor} />
       </PendingSuspense>
       <CanvasOverWorldScopeProvider>{canvasOverWorld}</CanvasOverWorldScopeProvider>
     </>
@@ -341,7 +363,7 @@ export function OffscreenViewportPass({
       <CanvasWorkspaceProvider workspace="2d">
         <WorldRootProvider value={canvasScene}>
           <CanvasSpaceProvider value={null}>
-            <LitCanvas host={lightHost} canvasModulate={canvasModulate}>
+            <LitCanvas host={lightHost} canvasModulate={canvasModulate} space={canvasSpace}>
               {canvasBackdropAndItems}
             </LitCanvas>
           </CanvasSpaceProvider>
@@ -374,7 +396,11 @@ export function OffscreenViewportPass({
           <WorldScope>
             {stage}
             <CanvasSpaceProvider value={null}>
-              <LitCanvas host={kind === '2d' ? lightHost : null} canvasModulate={canvasModulate}>
+              <LitCanvas
+                host={kind === '2d' ? lightHost : null}
+                canvasModulate={canvasModulate}
+                space={canvasSpace}
+              >
                 {children}
               </LitCanvas>
             </CanvasSpaceProvider>
@@ -392,22 +418,30 @@ export function OffscreenViewportPass({
   );
 }
 
-/** A canvas lit by its viewport's 2D light pass, or one that no light reaches where `host` is null. */
+/**
+ * A canvas lit by its viewport's 2D light pass, or one that no light reaches where `host` is null.
+ * Either scope provides the canvas `space` with its modulate, so the lights seed in the space the
+ * items shade in.
+ */
 function LitCanvas({
   host,
   canvasModulate,
+  space,
   children,
 }: {
   host: LightPassHost | null;
   canvasModulate: Rgba;
+  space: CanvasColorSpace;
   children: ReactNode;
 }) {
   return host ? (
-    <CanvasLightPass host={host} canvasModulate={canvasModulate}>
+    <CanvasLightPass host={host} canvasModulate={canvasModulate} space={space}>
       {children}
     </CanvasLightPass>
   ) : (
-    <World2DLightingBoundary canvasModulate={canvasModulate}>{children}</World2DLightingBoundary>
+    <World2DLightingBoundary canvasModulate={canvasModulate} space={space}>
+      {children}
+    </World2DLightingBoundary>
   );
 }
 

@@ -11,7 +11,7 @@
  */
 
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { sidesSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { getFontLinePitchPx, type FontMetrics } from '../../../../r3f/controls/native/text/fontMetrics';
 import {
   resolveThemeFontIn,
@@ -24,8 +24,14 @@ import {
   shapedTextSizeWidthPx,
   type TextLayoutResult,
 } from '../../../../r3f/controls/native/text/textLayout';
+import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
+import { internalChildThemeItems } from '../../../../r3f/controls/native/themeItems';
 import { layoutLabelLines, LABEL_LINE_SPACING_PX, LABEL_PARAGRAPH_SEPARATOR } from '../label/nativeSolver';
 import type { Rgba } from '../../../../godot/math/math';
+import {
+  defaultLabelFontColorInChain,
+  LABEL_NORMAL_BOX,
+} from '../../../../r3f/controls/native/defaultThemeItems';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 /** `title_label`'s real Godot class: both variations are declared `set_type_variation("Label")`. */
@@ -35,6 +41,8 @@ interface TitlebarFontTheme {
   fontSizePx: number;
   color: Rgba;
   fontMetrics: FontMetrics;
+  /** `title_label`'s `normal` box: the Theme chain's, else Label's empty one. */
+  box: ResolvedStyleBox;
 }
 
 /**
@@ -42,21 +50,26 @@ interface TitlebarFontTheme {
  * `n`: its parent `titlebar_hbox` carries no `theme`, so `n.themeChain` is
  * `title_label`'s chain. `theme_override_fonts/*` is local to `n` and never
  * inherited, so `title_label`, which can author no override, passes `undefined`.
- * @param defaultColor The whole colour answer, since no `Theme` colour is decoded
- *   (`textTheme.ts`): `control_font_color` for `GraphNodeTitleLabel`
- *   (`default_theme.cpp:819`), opaque white for `GraphFrameTitleLabel` (`:849`).
+ * @param defaultSizePx The font size when neither a Theme nor the default theme's variation sets one.
+ *   The colour falls back to the variation's own (`default_theme.cpp:819,849`).
  */
 export function resolveTitleFontTheme(
   n: SolveNode,
   typeVariation: string,
-  builtInDefaultSizePx: number,
-  defaultColor: Rgba
+  defaultSizePx: number
 ): TitlebarFontTheme {
   const scope = themeResolutionScope(TITLE_LABEL_NATIVE_TYPE, typeVariation, n.themeChain, n.projectFonts);
-  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined, builtInDefaultSizePx);
+  const fontSizePx = resolveThemeFontSizeIn(scope, 'font_size', undefined, defaultSizePx);
   const fontResource = resolveThemeFontIn(scope, 'font', undefined);
   const fontMetrics = peekSceneFontMetrics(fontResource, n.path);
-  return { fontSizePx, color: defaultColor, fontMetrics };
+  const items = internalChildThemeItems(n, TITLE_LABEL_NATIVE_TYPE, typeVariation);
+  // The title's chain always reaches Label, so the walk always finds a colour.
+  return {
+    fontSizePx,
+    color: items.colors.font_color ?? defaultLabelFontColorInChain(scope.typeChain)!,
+    fontMetrics,
+    box: items.styleBoxes.normal ?? LABEL_NORMAL_BOX,
+  };
 }
 
 /**
@@ -75,8 +88,14 @@ export function shapeTitleText(text: string, fontTheme: TitlebarFontTheme): Text
   });
 }
 
-/** The shaped title's own minimum size: `Label::get_minimum_size`'s OFF branch (`label.cpp:992-996`), empty-text short-circuit included. */
+/** The shaped title's own minimum size: `Label::get_minimum_size`'s OFF branch (`label.cpp:983-996`), the `normal` box margins and the empty-text short-circuit included. */
 export function titleTextMinimumSize(text: string, fontTheme: TitlebarFontTheme): { x: number; y: number } {
+  const textSize = shapedTitleTextSize(text, fontTheme);
+  const boxSize = sidesSize(fontTheme.box.contentMargin);
+  return { x: textSize.x + boxSize.x, y: textSize.y + boxSize.y };
+}
+
+function shapedTitleTextSize(text: string, fontTheme: TitlebarFontTheme): { x: number; y: number } {
   if (text.length === 0) {
     // `label.cpp:239-241`: `Size2(1, get_line_height())`: `get_line_height()`
     // with no shaped lines returns `font->get_height(font_size)`, no

@@ -9,10 +9,17 @@ import { readFileSync } from 'node:fs';
 import {
   TRANSFORM2D_IDENTITY,
   affineInverseTransform2D,
+  affineInverseTransform2DInto,
   multiplyTransform2D,
+  multiplyTransform2DInto,
+  mutableTransform2D,
   transform2DDecompose,
   transform2DFromParts,
+  transform2DGetRotation,
   transform2DGetScale,
+  transform2DInterpolateWith,
+  transform2DLookingAt,
+  transform2DSetRotation,
   transform2DHasZeroSkew,
   transform2DBasisXform,
   transform2DBasisXformInto,
@@ -299,8 +306,7 @@ describe('transform2DHasZeroSkew', () => {
   });
 });
 
-// The expected numbers are Godot 4.6.3's own float `Transform2D`, from
-// /mnt/project-files/cpuparticles2d-995/transform-oracle.gd.
+// The expected numbers are what Godot 4.6.3's own float `Transform2D` prints for these inputs.
 describe('the Transform2D of Godot 4.6.3 in real_t float', () => {
   const parent = storedTransform2D({ a: 0.7, b: 0.3, c: -1.1, d: 0.9, tx: 13.3, ty: -7.1 });
   const local = storedTransform2D({ a: 1.7, b: -0.6, c: 0.45, d: 2.3, tx: -3.9, ty: 5.7 });
@@ -420,5 +426,91 @@ describe('transform2DBasisXformInto', () => {
 
     transform2DBasisXformInto(v, { a: 0, b: 1, c: -1, d: 0, tx: 0, ty: 0 }, v);
     expect(v).toEqual({ x: 2.5, y: 1.5 });
+  });
+});
+
+describe('multiplyTransform2DInto', () => {
+  const parent = { a: 0.3, b: 1.7, c: -2.1, d: 0.9, tx: 12.5, ty: -3.25 };
+  const local = { a: 1.1, b: -0.4, c: 0.6, d: 2.3, tx: -7.75, ty: 4.5 };
+
+  it('writes the same bits as multiplyTransform2D into the transform it is given', () => {
+    const out = mutableTransform2D();
+
+    expect(multiplyTransform2DInto(out, parent, local)).toBe(out);
+    expect(out).toEqual(multiplyTransform2D(parent, local));
+  });
+
+  it('reads both factors before it writes, so out may be either factor (edge case)', () => {
+    const intoParent = { ...parent };
+    const intoLocal = { ...local };
+
+    multiplyTransform2DInto(intoParent, intoParent, local);
+    multiplyTransform2DInto(intoLocal, parent, intoLocal);
+    expect(intoParent).toEqual(multiplyTransform2D(parent, local));
+    expect(intoLocal).toEqual(multiplyTransform2D(parent, local));
+  });
+});
+
+describe('affineInverseTransform2DInto', () => {
+  const t = { a: 0.3, b: 1.7, c: -2.1, d: 0.9, tx: 12.5, ty: -3.25 };
+
+  it('writes the same bits as affineInverseTransform2D, even when out is the input', () => {
+    const inPlace = { ...t };
+
+    expect(affineInverseTransform2DInto(inPlace, inPlace)).toBe(inPlace);
+    expect(inPlace).toEqual(affineInverseTransform2D(t));
+  });
+
+  it('keeps the sign of a zero origin, as basis_xform adds no origin (edge case)', () => {
+    const out = affineInverseTransform2DInto(mutableTransform2D(), TRANSFORM2D_IDENTITY);
+
+    expect(Object.is(out.tx, -0)).toBe(Object.is(affineInverseTransform2D(TRANSFORM2D_IDENTITY).tx, -0));
+  });
+
+  it('writes the identity for a singular transform (edge case)', () => {
+    const out = affineInverseTransform2DInto({ ...t }, { a: 0, b: 0, c: 0, d: 0, tx: 5, ty: 5 });
+
+    expect(out).toEqual(TRANSFORM2D_IDENTITY);
+  });
+});
+
+// Godot 4.6.3: `Transform2D(0.4, Vector2(2, -1.5), 0.3, Vector2(10, 20))` and
+// `Transform2D(-2.0, Vector2(1, 3), -0.2, Vector2(-5, 40))`, printed by a headless script.
+describe('the rotation methods of a Transform2D against Godot 4.6.3', () => {
+  const a = transform2DFromParts(0.4, { x: 2, y: -1.5 }, 0.3, { x: 10, y: 20 });
+  const b = transform2DFromParts(-2, { x: 1, y: 3 }, -0.2, { x: -5, y: 40 });
+  const columnsOf = (t: Transform2DColumns) => [t.a, t.b, t.c, t.d, t.tx, t.ty];
+  const expectColumns = (t: Transform2DColumns, expected: number[]) =>
+    columnsOf(t).forEach((value, i) => expect(value).toBeCloseTo(expected[i]!, 5));
+
+  it('reads the rotation of the x axis', () => {
+    expect(transform2DGetRotation(a)).toBeCloseTo(0.4, 6);
+  });
+
+  it('sets a rotation with the scale kept and the skew dropped', () => {
+    const turned = transform2DSetRotation(a, 1.1);
+
+    expectColumns(turned, [
+      2 * Math.cos(1.1),
+      2 * Math.sin(1.1),
+      1.5 * Math.sin(1.1),
+      -1.5 * Math.cos(1.1),
+      10,
+      20,
+    ]);
+  });
+
+  it('looks at a point with unit scale', () => {
+    expectColumns(
+      transform2DLookingAt(a, { x: 50, y: -30 }),
+      [0.3651234805584, -0.93095910549164, 0.93095910549164, 0.3651234805584, 10, 20]
+    );
+  });
+
+  it('interpolates rotation, scale, skew and origin apart', () => {
+    expectColumns(
+      transform2DInterpolateWith(a, b, 0.25),
+      [1.71511650085449, -0.34767135977745, -0.00937402620912, -0.37488281726837, 6.25, 25]
+    );
   });
 });

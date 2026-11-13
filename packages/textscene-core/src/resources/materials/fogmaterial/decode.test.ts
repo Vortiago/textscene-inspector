@@ -10,7 +10,6 @@ describe('decodeFogMaterial', () => {
       emission: { r: 0, g: 0, b: 0, a: 1 },
       heightFalloff: 0,
       edgeFade: 0.1,
-      densityTexture: null,
     });
   });
 
@@ -23,12 +22,6 @@ describe('decodeFogMaterial', () => {
       heightFalloff: 0,
       edgeFade: 0,
     });
-  });
-
-  it('keeps the density texture reference raw', () => {
-    expect(decodeFogMaterial({ density_texture: 'SubResource("NoiseTexture3D_1")' }).densityTexture).toBe(
-      'SubResource("NoiseTexture3D_1")'
-    );
   });
 
   it('falls back to the default for a malformed albedo (error case)', () => {

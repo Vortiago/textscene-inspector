@@ -16,7 +16,21 @@ import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFont
 import { CheckBox } from './Component';
 import type { CheckBoxProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { bundledRunMeshes, bundledRuns } from '../../../../r3f/controls/native/testing/bundledRunStub';
+import {
+  findIconMeshes,
+  OWN_ICON_REF,
+  OWN_ICON_SCOPE,
+  renderUnloaded,
+  renderWithOwnIcon,
+  findTextMesh,
+  worldPosition,
+} from '../../../../r3f/controls/native/testing/ownIcon';
+import {
+  bundledRunMeshes,
+  bundledRuns,
+  inkedGlyphCount,
+  inkedGlyphCounts,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
 import { findCanvasTextMesh } from '../../../../r3f/controls/native/testing/canvasTextMesh';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
@@ -153,13 +167,13 @@ describe('<CheckBox> (isolated painter contract)', () => {
     expect(textTint.r).toBeCloseTo(0.21875, 5);
   });
 
-  it('forwards renderOrder to every mesh (icon + text)', async () => {
+  it('keeps every mesh inside its own unit of render order (icon and text)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={7} />
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     expect(meshes.length).toBeGreaterThan(0);
-    for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
+    for (const mesh of meshes) expect(Math.floor(mesh.renderOrder)).toBe(7);
   });
 
   it('draws a fitted icon at its fractional size, unrounded (check_box.cpp:140-142)', async () => {
@@ -214,7 +228,7 @@ describe('<CheckBox> (isolated painter contract)', () => {
  * The scene-font (canvas-kind `FontMetrics`) path. Text placement (`check_box.cpp:126-133`) has
  * nothing font-kind-specific in it.
  */
-describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => {
+describe('<CheckBox>: scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     controlSolverRegistry.clear();
@@ -271,5 +285,117 @@ describe('<CheckBox> — scene-font (canvas-kind FontMetrics) text path', () => 
     };
     expect(await iconX(false)).toBe(4);
     expect(await iconX(true)).toBe(130);
+  });
+});
+
+describe('<CheckBox>: text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
+  const inkedCount = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
+
+  async function render(properties: Partial<CheckBoxProperties>) {
+    return ReactThreeTestRenderer.create(
+      <CheckBox
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'AAAA BBBB CCCC', ...properties })}
+        rect={{ x: 0, y: 0, w: 108, h: 28 }}
+        renderOrder={0}
+      />
+    );
+  }
+
+  it('draws only the whole words that fit under OVERRUN_TRIM_WORD', async () => {
+    // 'AAAA BBBB' is 88.6 px, wider than the 80 px box: the word trim keeps the 4 glyphs of 'AAAA',
+    // where the paragraph cut alone keeps the glyphs of 'BBB' too.
+    const trimmed = await render({ overrunBehavior: 2 });
+    const cut = await render({ overrunBehavior: 0 });
+    expect(inkedCount(trimmed)).toBe(4);
+    expect(inkedCount(cut)).toBeGreaterThan(4);
+  });
+});
+
+describe('<CheckBox>: autowrap_mode wraps the label at its paragraph box (button.cpp:428-432)', () => {
+  async function render(properties: Partial<CheckBoxProperties>) {
+    return ReactThreeTestRenderer.create(
+      <CheckBox
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'alpha bravo charlie', ...properties })}
+        rect={{ x: 0, y: 0, w: 80, h: 77 }}
+        renderOrder={0}
+      />
+    );
+  }
+
+  it('draws three lines, and cuts the last at the box: "charli", not "charlie"', async () => {
+    const wrapped = await render({ autowrapMode: 2 });
+    expect(inkedGlyphCounts(wrapped.scene)).toEqual([5, 5, 6]);
+  });
+
+  it('draws one line at AUTOWRAP_OFF', async () => {
+    const unwrapped = await render({});
+    expect(inkedGlyphCounts(unwrapped.scene)).toHaveLength(1);
+  });
+});
+
+describe("<CheckBox>: Button's inherited icon (button.cpp:333-405)", () => {
+  async function render(properties: Partial<CheckBoxProperties>, rtl = false) {
+    const node: SolveNode = {
+      ...solveNode({ icon: OWN_ICON_REF, ...properties }),
+      resources: OWN_ICON_SCOPE,
+      textureSize: { x: 12, y: 12 },
+      textureSlots: { icon: { x: 12, y: 12 } },
+      rtl,
+    };
+    return renderWithOwnIcon(<CheckBox {...painterEnv()} solveNode={node} rect={RECT} renderOrder={0} />, {
+      w: 12,
+      h: 12,
+    });
+  }
+  const groupOf = (mesh: THREE.Mesh) => mesh.parent!.position;
+
+  it('draws no second quad without an icon', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CheckBox {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
+    );
+    expect(findIconMeshes(renderer.scene)).toHaveLength(1);
+  });
+
+  it('draws the icon beside the check, past it and its separation, 12 px square', async () => {
+    const [icon, check] = findIconMeshes((await render({ text: 'Hi' })).scene);
+    // The check keeps its left margin 4. The icon starts at 4 + (16 + 4) and floors y: 4 + (20 - 12) / 2.
+    expect([groupOf(check!).x, groupOf(check!).y]).toEqual([4, -6]);
+    expect([groupOf(icon!).x, groupOf(icon!).y]).toEqual([24, -8]);
+    const { parameters } = icon!.geometry as THREE.PlaneGeometry;
+    expect([parameters.width, parameters.height]).toEqual([12, 12]);
+  });
+
+  it('draws a RIGHT icon at the right margin', async () => {
+    const [icon] = findIconMeshes((await render({ text: 'Hi', iconAlignment: 2 })).scene);
+    expect(groupOf(icon!).x).toBe(134);
+  });
+
+  it('draws a LEFT icon at the right edge, short of the check, under RTL', async () => {
+    const [icon, check] = findIconMeshes((await render({ text: 'Hi' }, true)).scene);
+    expect(groupOf(check!).x).toBe(130);
+    expect(groupOf(icon!).x).toBe(114);
+  });
+
+  it('dims the icon to icon_disabled_color alpha 0.4 and leaves the check to its own tint', async () => {
+    const [icon, check] = findIconMeshes((await render({ disabled: true })).scene);
+    expect((icon!.material as THREE.MeshBasicMaterial).opacity).toBeCloseTo(0.4, 5);
+    expect((check!.material as THREE.MeshBasicMaterial).opacity).toBeCloseTo(1, 5);
+  });
+
+  it("lays the label out for the solver's icon size before the texture loads", async () => {
+    const node: SolveNode = {
+      ...solveNode({ icon: OWN_ICON_REF, text: 'Hi' }),
+      resources: OWN_ICON_SCOPE,
+      textureSize: { x: 12, y: 12 },
+      textureSlots: { icon: { x: 12, y: 12 } },
+    };
+    const painter = <CheckBox {...painterEnv()} solveNode={node} rect={RECT} renderOrder={0} />;
+    const unloaded = await renderUnloaded(painter);
+    const loaded = await renderWithOwnIcon(painter, { w: 12, h: 12 });
+    // Only the check draws until the icon loads, yet the label is already where the solver sized it.
+    expect(findIconMeshes(unloaded.scene)).toHaveLength(1);
+    expect(worldPosition(findTextMesh(unloaded.scene)!).x).toBe(worldPosition(findTextMesh(loaded.scene)!).x);
   });
 });

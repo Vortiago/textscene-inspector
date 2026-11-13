@@ -1,7 +1,6 @@
 ---
 type: Sprite3D
 category: 3D
-status: limitation
 fixture: unit-sprite3d.tscn
 image: unit-sprite3d
 renders_as: a textured THREE.Mesh quad
@@ -15,7 +14,19 @@ The quad lies on the plane its `axis` faces, the XY plane by default. A centred 
 
 The quad casts a shadow when Godot files its surface in the shadow pass (`render_forward_clustered.cpp:4079-4089`). That pass takes a cut or opaque surface, or an `OPAQUE_PREPASS` one, with its depth test on. An `OPAQUE_PREPASS` surface blends uncut, writes its depth in a depth prepass cut at 0.99, and cuts its shadow at 0.1 (`render_forward_clustered.cpp:1791,2770`). A blended sprite, the default, casts nothing. A hashed sprite hashes its shadow too. The quad receives shadows as every GeometryInstance3D does. The `sprite3d-shadow` golden pins this.
 
+The quad's UVs hold the frame, the region and the flip, and its vertex colour holds the accumulated `modulate`, as Godot's sprite mesh does (`sprite_3d.cpp:146-161`, `:223-228`). A `material_override` or a `material_overlay` therefore samples the same frame, and reads the modulate only where it takes its albedo from the vertex colour. The `sprite3d-instance-materials` golden pins the frame under an override.
+
+An AtlasTexture draws its region alone: the quad leaves the margin out, samples the atlas and holds the UVs of the atlas (`sprite_3d.cpp:100-150`). The `sprite3d-atlas-instance-materials` golden pins this.
+
 The `texture_filter` rows follow `BaseMaterial3D`. three skips anisotropy under a nearest magnification filter, so the draw site writes it onto the GPU texture for Nearest with Mipmaps and Anisotropic (`nearestAnisotropy.ts`). The `sprite3d-texture-filter-anisotropic` golden shows the four mipmap filters at a grazing angle.
+
+## A GradientTexture2D with no gradient
+
+<!-- compare: image=unit-sprite3d-gradient-no-gradient status=done fixture=unit-sprite3d-gradient-no-gradient.tscn -->
+
+The texture never gets an image, so the sprite draws Godot's 4 by 4 magenta and black placeholder
+(`gradient_texture.cpp:229-233`). The quad takes the texture's `width` and `height`. Unlike Sprite2D,
+the placeholder fills the quad whole.
 
 ## Linting
 

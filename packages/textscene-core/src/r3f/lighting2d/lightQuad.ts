@@ -12,15 +12,8 @@
 
 import * as THREE from 'three';
 import { canvasItemFacing } from '../canvasItemFacing.js';
-import {
-  FRAGMENT,
-  SHADOW_FRAGMENT,
-  SHADOW_SAMPLE,
-  SHADOW_VERTEX,
-  SHADOWED_FRAGMENT,
-  SHADOWED_TINT_FRAGMENT,
-  VERTEX,
-} from './lightQuadShaders.js';
+import { FRAGMENT, SHADOW_SAMPLE, SHADOW_VERTEX, SHADOWED_FRAGMENT, VERTEX } from './lightQuadShaders.js';
+import { multipleTargetPass } from '../fullScreenPass.js';
 import { shadowSamplingParameters, type ShadowSampling } from './shadowSampling.js';
 import type { Rgba } from '../../godot/math/math.js';
 import { Light2DBlendMode, Light2DShadowFilter } from '../../godot/scene/light2d.js';
@@ -51,12 +44,6 @@ export function accumulationState(blendMode: number): Partial<THREE.ShaderMateri
 }
 
 /**
- * Stencil state for a light quad, spread verbatim onto the material.
- * `litQuadStencilProps` for a shadowed light, empty for one that casts nothing.
- */
-type LightQuadStencil = Partial<THREE.ShaderMaterialParameters>;
-
-/**
  * Whether a `shadow_color` puts anything into the accumulator. Its term is `S.rgb · s` under the
  * alpha `(1 − s) + S.a · s`. A binary shadow leaves only `S.a` in front, so a transparent colour
  * adds nothing, and Godot's default (`light_2d.h:58`) is exactly that. A filtered penumbra keeps
@@ -69,61 +56,9 @@ export function shadowColorContributes(shadowColor: Rgba, filter: number): boole
   );
 }
 
-/** The colour with its rgb zeroed: a quad of it carries only its alpha, the factor MIX scales by. */
-export function alphaOnly(color: Rgba): Rgba {
-  return { r: 0, g: 0, b: 0, a: color.a };
-}
-
-/**
- * The `shadow_color` quad: one light's albedo-free term. A filtered light's colour rides its
- * `ShadowSampling`, which the cookie quad reads too, so both quads provably use one value. An
- * unfiltered light has no sampling and names the colour directly.
- */
-type ShadowColorQuadOptions = {
-  readonly cookie: THREE.Texture;
-  readonly blendMode: number;
-} & (
-  | {
-      readonly shadow: ShadowSampling;
-      readonly shadowColor?: never;
-      readonly stencil?: never;
-    }
-  | {
-      readonly shadow?: undefined;
-      /** `Light2D.shadow_color`: this quad's entire output. */
-      readonly shadowColor: Rgba;
-      /** The stencil test that confines it to where the volumes stamped. */
-      readonly stencil?: LightQuadStencil;
-    }
-);
-
-/**
- * `canvas.glsl` replaces the term: `light_color = mix(light_color, shadow_color, shadow)`, after
- * `shadow_color.a *= light_color.a`. The default transparent colour makes withholding the lit quad
- * the whole shadow. An authored colour draws this quad through the complementary stencil test, so
- * the pair covers the rect once. It is skipped unless `shadowColorContributes`.
- */
-export function createShadowColorQuadMaterial(options: ShadowColorQuadOptions): THREE.ShaderMaterial {
-  const { cookie, blendMode, shadow } = options;
-  const shadowColor = shadow ? shadow.shadowColor : options.shadowColor;
-  const stencil = shadow ? undefined : options.stencil;
-  const sampling = shadow ? shadowSamplingParameters(shadow) : null;
-  return new THREE.ShaderMaterial({
-    ...(sampling ? { defines: sampling.defines } : {}),
-    vertexShader: sampling ? SHADOW_VERTEX : VERTEX,
-    fragmentShader: sampling ? SHADOW_SAMPLE + SHADOWED_TINT_FRAGMENT : SHADOW_FRAGMENT,
-    uniforms: {
-      uCookie: { value: cookie },
-      uCookieEdgeFade: { value: edgeFade(cookie) },
-      uShadowColor: {
-        value: new THREE.Vector4(shadowColor.r, shadowColor.g, shadowColor.b, shadowColor.a),
-      },
-      ...sampling?.uniforms,
-    },
-    ...canvasItemFacing(),
-    ...accumulationState(blendMode),
-    ...stencil,
-  });
+/** `Light2D.shadow_color` as the `uShadowColor` every shadowed light quad reads. */
+export function shadowColorUniform({ r, g, b, a }: Rgba): THREE.Vector4 {
+  return new THREE.Vector4(r, g, b, a);
 }
 
 /** 1 for a linear cookie tap, which blends toward the transparent atlas border; 0 for a nearest tap. */
@@ -131,7 +66,6 @@ function edgeFade(cookie: THREE.Texture): number {
   return cookie.magFilter === THREE.NearestFilter ? 0 : 1;
 }
 
-/** The cookie quad: one light's albedo-multiplied term. */
 interface LightQuadOptions {
   readonly cookie: THREE.Texture;
   /** `Light2D.color`. */
@@ -139,56 +73,45 @@ interface LightQuadOptions {
   /** `Light2D.energy`. */
   readonly energy: number;
   readonly blendMode: number;
-  /** The stencil test that withholds it where the volumes stamped. */
-  readonly stencil?: LightQuadStencil;
   /**
-   * Set for a PCF5/PCF13 light: its shadow is a fraction with no in or out to stencil, so both quads
-   * sample the polar map (`shadowPolarMap.ts`) over the whole rect, each emitting its share of
-   * `canvas.glsl:502`.
+   * Set for a shadowed light, whose quad samples the polar map (`shadowPolarMap.ts`) over the whole
+   * rect and writes both halves of `canvas.glsl:547`, the albedo-multiplied light term and the
+   * `shadow_color` term, from one evaluation of the taps.
    */
   readonly shadow?: ShadowSampling;
 }
 
+/**
+ * One light's quad: it writes the light term, the `shadow_color` term and the Light Only term to the
+ * three outputs of `LIGHT_OUTPUTS`, so one draw fills every buffer of a list.
+ */
 export function createLightQuadMaterial({
   cookie,
   color,
   energy,
   blendMode,
-  stencil,
   shadow,
 }: LightQuadOptions): THREE.ShaderMaterial {
   const sampling = shadow ? shadowSamplingParameters(shadow) : null;
-  return new THREE.ShaderMaterial({
-    ...(sampling ? { defines: sampling.defines } : {}),
-    vertexShader: sampling ? SHADOW_VERTEX : VERTEX,
-    fragmentShader: sampling ? SHADOW_SAMPLE + SHADOWED_FRAGMENT : FRAGMENT,
-    uniforms: {
-      uCookie: { value: cookie },
-      uCookieEdgeFade: { value: edgeFade(cookie) },
-      uColor: { value: new THREE.Vector3(color.r, color.g, color.b) },
-      // Applied to the raw sRGB texels, Godot's canvas space: scaling a linear colour raises it
-      // only by `energy^(1/2.2)` once re-encoded.
-      uEnergy: { value: energy },
-      // Only `.a` is read on this side: the shadowed half of the alpha the accumulator sums for
-      // `light_only_alpha`.
-      ...(shadow
-        ? {
-            uShadowColor: {
-              value: new THREE.Vector4(
-                shadow.shadowColor.r,
-                shadow.shadowColor.g,
-                shadow.shadowColor.b,
-                shadow.shadowColor.a
-              ),
-            },
-          }
-        : {}),
-      ...sampling?.uniforms,
-    },
-    // One pass, since `accumulationState` sums into the accumulator (`blendDst: OneFactor` for
-    // ADD/SUB), so a fragment both facing passes covered would count this light twice.
-    ...canvasItemFacing(),
-    ...accumulationState(blendMode),
-    ...stencil,
-  });
+  return multipleTargetPass(
+    new THREE.ShaderMaterial({
+      ...(sampling ? { defines: sampling.defines } : {}),
+      vertexShader: sampling ? SHADOW_VERTEX : VERTEX,
+      fragmentShader: sampling ? SHADOW_SAMPLE + SHADOWED_FRAGMENT : FRAGMENT,
+      uniforms: {
+        uCookie: { value: cookie },
+        uCookieEdgeFade: { value: edgeFade(cookie) },
+        uColor: { value: new THREE.Vector3(color.r, color.g, color.b) },
+        // Applied to the raw sRGB texels, Godot's canvas space: scaling a linear colour raises it
+        // only by `energy^(1/2.2)` once re-encoded.
+        uEnergy: { value: energy },
+        ...(shadow ? { uShadowColor: { value: shadowColorUniform(shadow.shadowColor) } } : {}),
+        ...sampling?.uniforms,
+      },
+      // One pass, since `accumulationState` sums into the accumulator (`blendDst: OneFactor` for
+      // ADD/SUB), so a fragment both facing passes covered would count this light twice.
+      ...canvasItemFacing(),
+      ...accumulationState(blendMode),
+    })
+  );
 }

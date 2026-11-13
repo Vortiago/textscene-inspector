@@ -1,6 +1,6 @@
 /**
- * Godot's Y-sort for TileMapLayer cells. `groupBySortY` buckets drawable cells by sort Y, from low
- * (back) to high (front), for the y-sort collector's y-sorted TileMapLayer children.
+ * The rows of a y-sorted TileMapLayer: `ySortRows` buckets drawable cells by the y of their
+ * rendering quadrant, which the y-sort pass and the layer's own draw both read.
  */
 
 import type { TileGrid } from './types';
@@ -8,52 +8,35 @@ import { compareCells } from './cellOrder';
 import type { DrawableCell } from './drawableCell';
 import { mapToLocalPx } from './tilePlacement';
 
-export interface YSortGroup {
-  /** The sort Y value shared by all cells in this group. */
-  sortY: number;
-  /** Cells that draw at this sort Y, in the order Godot draws a quadrant's cells (`compareCells`). */
+/** One rendering quadrant of a y-sorted layer: the cells whose canvas items share an origin. */
+export interface YSortRow {
+  /**
+   * The y of the row's canvas items in the layer's local space, at x 0: the local pixel Y plus the
+   * layer's and the tile's own `y_sort_origin` (`tile_map_layer.cpp:547`).
+   */
+  y: number;
+  /** Cells that draw in this row, in the order Godot draws a quadrant's cells (`compareCells`). */
   cells: readonly DrawableCell[];
-  /** The row's place in sort-Y order, for stable tie-breaking. */
-  treeOrder: number;
 }
 
 /**
- * Group cells by their sort Y: layer world Y + local pixel Y + the layer's and the tile's own
- * `y_sort_origin` (`tile_map_layer.cpp:547`).
- * Returns groups sorted by sortY ascending (low-Y drawn first = far back).
- * Cells with equal sortY are grouped together. Each row is one rendering quadrant
- * (`tile_map_layer.cpp:546-548`), so its cells sort as a quadrant's do.
+ * The rows of a y-sorted layer's cells, lowest `y` first, the order Godot gives the quadrants'
+ * draw indices (`tile_map_layer.cpp:410-433`). Cells with an equal `y` share a row.
  */
-export function groupBySortY(
+export function ySortRows(
   cells: readonly DrawableCell[],
   grid: TileGrid,
-  layerYSortOrigin: number,
-  layerWorldY: number
-): YSortGroup[] {
-  // Map each cell to its sort Y.
-  const keyed: Array<{ sortY: number; cells: DrawableCell[]; treeOrder: number }> = [];
+  layerYSortOrigin: number
+): YSortRow[] {
   const bucket = new Map<number, DrawableCell[]>();
-
-  for (let i = 0; i < cells.length; i++) {
-    const cell = cells[i]!;
-    const localPx = mapToLocalPx(grid, cell.coords);
-    const sortY = layerWorldY + localPx.y + layerYSortOrigin + cell.tileData.ySortOrigin;
-    // Use exact float equality (Godot uses exact comparison).
-    const existing = bucket.get(sortY);
-    if (existing) {
-      existing.push(cell);
-    } else {
-      bucket.set(sortY, [cell]);
-    }
+  for (const cell of cells) {
+    const y = mapToLocalPx(grid, cell.coords).y + layerYSortOrigin + cell.tileData.ySortOrigin;
+    // Exact float equality, as the quadrant map keys on the position.
+    const row = bucket.get(y);
+    if (row) row.push(cell);
+    else bucket.set(y, [cell]);
   }
-
-  // Build groups sorted by sortY ascending (low-Y = far back).
-  const sortKeys = [...bucket.keys()].sort((a, b) => a - b);
-  for (let i = 0; i < sortKeys.length; i++) {
-    const sortY = sortKeys[i]!;
-    const groupCells = bucket.get(sortY)!.sort(compareCells);
-    keyed.push({ sortY, cells: groupCells, treeOrder: i });
-  }
-
-  return keyed;
+  return [...bucket.keys()]
+    .sort((a, b) => a - b)
+    .map((y) => ({ y, cells: bucket.get(y)!.sort(compareCells) }));
 }

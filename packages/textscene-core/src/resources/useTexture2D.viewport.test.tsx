@@ -17,7 +17,8 @@ import { ViewportTexturePublisher, viewportEntry } from '../r3f/testing/Viewport
 import { copiesFilledFrom } from '../r3f/liveTargets.testkit';
 import { publishLiveTargets } from '../r3f/liveTargets';
 import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
-import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfiguredViewportTexture';
+import { texture2DPlaceholder } from './textures/texture2DPlaceholder';
+import { canvasColorSpaceOf } from '../r3f/canvasColorSpace';
 
 const RESOURCES: TscnInternalResource[] = [
   { id: 'ViewportTexture_1', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
@@ -54,8 +55,8 @@ const RESOURCES: TscnInternalResource[] = [
 
 const VIEWPORT_REF = 'SubResource("ViewportTexture_1")';
 
-const plain = createCanvasTarget(32, 32, 'plain view').texture;
-const decoding = createCanvasTarget(32, 32, 'decoding view').texture;
+const plain = createCanvasTarget(32, 32, 'plain view', canvasColorSpaceOf(false)).texture;
+const decoding = createCanvasTarget(32, 32, 'decoding view', canvasColorSpaceOf(false)).texture;
 
 const ENTRY = viewportEntry(
   plain,
@@ -164,7 +165,7 @@ describe('a ViewportTexture Godot never sets up for the scene', () => {
     const { result } = renderHook(() => useTexture2D('SubResource("SharedCanvasTexture")', [], RESOURCES), {
       wrapper: wrapper(),
     });
-    expect(result.current.texture).toBe(unconfiguredViewportTexture());
+    expect(result.current.texture).toBe(texture2DPlaceholder());
   });
 
   it('gives the placeholder as the sheet of an AtlasTexture that is not local to scene', () => {
@@ -172,21 +173,21 @@ describe('a ViewportTexture Godot never sets up for the scene', () => {
       () => useTexture2DRid('SubResource("SharedAtlasTexture")', [], RESOURCES, 'plain', NODE_PROPERTY),
       { wrapper: wrapper() }
     );
-    expect(result.current.texture).toBe(unconfiguredViewportTexture());
+    expect(result.current.texture).toBe(texture2DPlaceholder());
   });
 
   it('draws the placeholder for a ViewportTexture authored as not local to scene', () => {
     const { result } = renderHook(() => useTexture2D('SubResource("SharedViewportTexture")', [], RESOURCES), {
       wrapper: wrapper(),
     });
-    expect(result.current.texture).toBe(unconfiguredViewportTexture());
+    expect(result.current.texture).toBe(texture2DPlaceholder());
   });
 
   it('draws the placeholder for a holder the caller names as not local to scene', () => {
     const { result } = renderHook(() => useTexture2DRid(VIEWPORT_REF, [], RESOURCES, 'plain', false), {
       wrapper: wrapper(),
     });
-    expect(result.current.texture).toBe(unconfiguredViewportTexture());
+    expect(result.current.texture).toBe(texture2DPlaceholder());
   });
 
   it('reports no image for an AtlasTexture that windows it, as `get_image()` gives none', () => {
@@ -213,13 +214,13 @@ describe('a ViewportTexture Godot never sets up for the scene', () => {
   });
 
   it('keeps its placeholder four texels square', () => {
-    const { image } = unconfiguredViewportTexture();
+    const { image } = texture2DPlaceholder();
     expect([image.width, image.height]).toEqual([4, 4]);
   });
 
   /** Godot's `Image` row 0 is the top row (`drivers/gles3/storage/texture_storage.cpp:264-267`). */
   it("puts magenta in Godot's top-left texel and black beside it, in the bottom-up DataTexture's last row", () => {
-    const { image } = unconfiguredViewportTexture();
+    const { image } = texture2DPlaceholder();
     const topRow = image.data!.subarray(3 * 4 * 4, 3 * 4 * 4 + 8);
     expect([...topRow]).toEqual([255, 0, 255, 255, 0, 0, 0, 255]);
     expect([...image.data!.subarray(0, 4)]).toEqual([0, 0, 0, 255]);

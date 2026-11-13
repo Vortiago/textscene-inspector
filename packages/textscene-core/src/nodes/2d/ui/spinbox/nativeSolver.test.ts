@@ -13,6 +13,7 @@ import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/ope
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SpinBoxProperties } from './types';
+import { spinBoxRangeButtonState } from './nativeSolver';
 import {
   spinBoxButtonsBlockWidth,
   spinBoxLayout,
@@ -27,6 +28,9 @@ import {
   spinBoxWidestButtonIconWidth,
   shapeSpinBoxFieldText,
 } from './nativeSolver';
+import { controlProps } from '../control/testing/controlProps';
+import type { ThemeResource } from '../../../../resources/styles/theme/types';
+import type { TscnInternalResource } from '../../../../parser/types';
 
 // At font size 16 with no theme in the chain: 'W' advances 1936*(16/2048) = 15.125
 // (`openSansMetrics.ts`'s hmtx), and the line is ceil(2189*16/2048) + ceil(600*16/2048) = 23 with
@@ -62,11 +66,15 @@ describe('spinBoxButtonsBlockWidth', () => {
 
 describe('spinBoxWidestButtonIconWidth (spin_box.cpp:411-424, restricted to up/down)', () => {
   it('is the vendored 16 when neither icon is themed', () => {
-    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} })).toBe(16);
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} }, 1)).toBe(16);
+  });
+
+  it('is the vendored width at the theme scale: 24 at 1.5', () => {
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: {} }, 1.5)).toBe(24);
   });
 
   it('widens to a themed icon wider than the vendored default', () => {
-    expect(spinBoxWidestButtonIconWidth({ textureSlots: { down: { x: 30, y: 8 } } })).toBe(30);
+    expect(spinBoxWidestButtonIconWidth({ textureSlots: { down: { x: 30, y: 8 } } }, 1)).toBe(30);
   });
 });
 
@@ -143,29 +151,29 @@ describe('formatGodotNumber', () => {
 
 describe('spinBoxDisplayText', () => {
   it('wraps the formatted value in prefix/suffix, space-separated (happy path)', () => {
-    expect(spinBoxDisplayText({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }, 5.5, '')).toBe(
-      '$ 5.5 kg'
-    );
+    expect(
+      spinBoxDisplayText(controlProps({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }), 5.5, '')
+    ).toBe('$ 5.5 kg');
   });
 
   it('omits an absent prefix/suffix entirely, not as an empty wrap (error path)', () => {
-    expect(spinBoxDisplayText({ name: 'S' }, 5, '')).toBe('5');
+    expect(spinBoxDisplayText(controlProps({ name: 'S' }), 5, '')).toBe('5');
   });
 
   it('falls back to step=1 (Range default) when unset (edge case)', () => {
-    expect(spinBoxDisplayText({ name: 'S' }, 5.5, '')).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
+    expect(spinBoxDisplayText(controlProps({ name: 'S' }), 5.5, '')).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
   });
 });
 
 describe('spinBoxUpButtonState / spinBoxDownButtonState', () => {
   it('disables both buttons together when not editable (happy path)', () => {
-    const props: SpinBoxProperties = { name: 'S', editable: false, minValue: 0, maxValue: 10 };
+    const props: SpinBoxProperties = controlProps({ name: 'S', editable: false, minValue: 0, maxValue: 10 });
     expect(spinBoxUpButtonState(props, 5)).toBe('disabled');
     expect(spinBoxDownButtonState(props, 5)).toBe('disabled');
   });
 
   it('disables only the button whose bound the value has reached (error path)', () => {
-    const props: SpinBoxProperties = { name: 'S', minValue: 0, maxValue: 10 };
+    const props: SpinBoxProperties = controlProps({ name: 'S', minValue: 0, maxValue: 10 });
     expect(spinBoxUpButtonState(props, 10)).toBe('disabled');
     expect(spinBoxDownButtonState(props, 10)).toBe('normal');
     expect(spinBoxUpButtonState(props, 0)).toBe('normal');
@@ -173,13 +181,13 @@ describe('spinBoxUpButtonState / spinBoxDownButtonState', () => {
   });
 
   it('stays enabled at the bound when allow_greater/allow_lesser lifts it (edge case)', () => {
-    const props: SpinBoxProperties = {
+    const props: SpinBoxProperties = controlProps({
       name: 'S',
       minValue: 0,
       maxValue: 10,
       allowGreater: true,
       allowLesser: true,
-    };
+    });
     expect(spinBoxUpButtonState(props, 10)).toBe('normal');
     expect(spinBoxDownButtonState(props, 0)).toBe('normal');
   });
@@ -215,6 +223,16 @@ describe('spinBoxFieldTextTheme', () => {
   });
 });
 
+describe('spinBoxMinimumSize at a theme scale (spin_box.cpp:382-397)', () => {
+  it('widens the buttons block to the scaled arrow: the same minimum as themed 24x12 arrows', () => {
+    const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+    const themed = { ...node(), textureSlots: { up: { x: 24, y: 12 }, down: { x: 24, y: 12 } } };
+
+    expect(spinBoxMinimumSize(node(), at15)).toEqual(spinBoxMinimumSize(themed, at15));
+    expect(spinBoxMinimumSize(node(), at15).x).toBeGreaterThan(spinBoxMinimumSize(node(), ctx()).x);
+  });
+});
+
 describe('spinBoxMinimumSize', () => {
   it("floors LineEdit's own minimum size plus the buttons block width (happy path)", () => {
     const result = spinBoxMinimumSize(node(), ctx());
@@ -237,13 +255,15 @@ describe('spinBoxMinimumSize', () => {
 
 describe('spinBoxDisplayText with a locale (spin_box.cpp:91-93)', () => {
   it('writes the value in the digits of the locale, and keeps the prefix and suffix as they are', () => {
-    expect(spinBoxDisplayText({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }, 5.5, 'ar')).toBe(
-      '$ ٥٫٥ kg'
-    );
+    expect(
+      spinBoxDisplayText(controlProps({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }), 5.5, 'ar')
+    ).toBe('$ ٥٫٥ kg');
   });
 
   it('writes ASCII digits while localize_numeral_system is off', () => {
-    expect(spinBoxDisplayText({ name: 'S', localizeNumeralSystem: false }, 5.5, 'ar')).toBe('6');
+    expect(spinBoxDisplayText(controlProps({ name: 'S', localizeNumeralSystem: false }), 5.5, 'ar')).toBe(
+      '6'
+    );
   });
 });
 
@@ -264,5 +284,71 @@ describe('shapeSpinBoxFieldText', () => {
 
   it('keeps the typed order under a left-to-right locale', () => {
     expect(visual('$ -12.5', 'en')).toBe('$ -12.5');
+  });
+});
+
+describe('the inner LineEdit reads its items through the ancestor Theme chain', () => {
+  const RED = { r: 1, g: 0, b: 0, a: 1 };
+  const BLUE = { r: 0, g: 0, b: 1, a: 1 };
+  const box: TscnInternalResource = {
+    id: 'box',
+    type: 'StyleBoxFlat',
+    data: {
+      content_margin_left: '10.0',
+      content_margin_top: '9.0',
+      content_margin_right: '10.0',
+      content_margin_bottom: '9.0',
+    },
+  };
+
+  function under(overrides: Partial<ThemeResource>): SolveNode {
+    const themeResource: ThemeResource = {
+      defaultFont: null,
+      defaultFontSize: undefined,
+      fonts: {},
+      fontSizes: {},
+      typeVariations: {},
+      properties: {},
+      resources: { externalResources: [], internalResources: [box] },
+      ...overrides,
+    };
+    return { ...node(), themeChain: [themeResource] };
+  }
+
+  it('sizes the field from the LineEdit normal stylebox of the Theme', () => {
+    const themed = under({ styles: { LineEdit: { normal: 'SubResource("box")' } } });
+    const result = spinBoxMinimumSize(themed, ctx(false));
+    expect(result.x).toBe(20 + 18);
+    expect(result.y).toBe(18 + FONT_HEIGHT);
+  });
+
+  it('draws the font_color of LineEdit, and font_uneditable_color when not editable', () => {
+    const themed = under({ colors: { LineEdit: { font_color: RED, font_uneditable_color: BLUE } } });
+    expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual(RED);
+    expect(spinBoxFieldTextTheme(themed, ctx(), false).color).toEqual(BLUE);
+  });
+
+  it('prefers the SpinBoxInnerLineEdit variation over LineEdit', () => {
+    const themed = under({
+      colors: { LineEdit: { font_color: RED }, SpinBoxInnerLineEdit: { font_color: BLUE } },
+      typeVariations: { SpinBoxInnerLineEdit: 'LineEdit' },
+    });
+    expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual(BLUE);
+  });
+
+  it('ignores the colours of another class', () => {
+    const themed = under({ colors: { Button: { font_color: RED } } });
+    expect(spinBoxFieldTextTheme(themed, ctx(), true).color).toEqual({ r: 0.875, g: 0.875, b: 0.875, a: 1 });
+  });
+});
+
+describe('spinBoxRangeButtonState (spin_box.cpp:635-646)', () => {
+  it('disables a button at its bound unless the range allows going past it', () => {
+    expect(spinBoxRangeButtonState(100, 100, false)).toBe('disabled');
+    expect(spinBoxRangeButtonState(100, 100, true)).toBe('normal');
+  });
+
+  it('keeps a button enabled away from its bound', () => {
+    expect(spinBoxRangeButtonState(99, 100, false)).toBe('normal');
   });
 });

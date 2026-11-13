@@ -14,5 +14,5 @@ registerResourceSlice({
   busType: 'resource',
 });
 
-export { decodeNavigationPolygon } from './decode';
+export { NAVIGATION_POLYGON } from './decode';
 export type { NavigationPolygonData } from './types';

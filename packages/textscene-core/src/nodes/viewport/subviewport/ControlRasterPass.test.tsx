@@ -3,6 +3,7 @@
  * Control-only sub-viewport, publishing a texture consumers sample directly.
  */
 import { describe, expect, it, vi } from 'vitest';
+import { LTR_LAYOUT_ENV } from '../../../testing/ltrLayoutEnv';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
 
@@ -43,6 +44,7 @@ const GUI_SCENE = `[gd_scene format=3]
 [node name="Root" type="Node3D"]
 
 [node name="SubViewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(320, 240)
 
 [node name="Panel" type="Panel" parent="SubViewport"]
@@ -56,10 +58,12 @@ function parse(source: string): TscnScene {
 }
 
 function walk(scene: TscnScene) {
-  return collectControlRasterViewports(scene.nodes, sourcesOver(), {
-    internalResources: scene.internalResources,
-    externalResources: scene.externalResources,
-  });
+  return collectControlRasterViewports(
+    scene.nodes,
+    sourcesOver(),
+    { internalResources: scene.internalResources, externalResources: scene.externalResources },
+    LTR_LAYOUT_ENV
+  );
 }
 
 /** Reports every entry the registry resolves at `path`, in order. */
@@ -147,6 +151,7 @@ describe('<ControlRasterPasses>', () => {
 [node name="Root" type="Node3D"]
 
 [node name="SubViewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(320, 240)
 
 [node name="Bar" type="ColorRect" parent="SubViewport"]
@@ -258,5 +263,51 @@ offset_bottom = 100.5
       </ViewportTextureProvider>
     );
     expect(seen.at(-1)).toBeNull();
+  });
+
+  /** A WHEN_PARENT_VISIBLE viewport follows the pass of the viewport around it, so that pass registers. */
+  describe('a Control-only viewport inside another', () => {
+    const nested = (outerMode: number) => `[gd_scene format=3]
+
+[node name="Root" type="Node3D"]
+
+[node name="Outer" type="SubViewport" parent="."]
+render_target_update_mode = ${outerMode}
+size = Vector2i(64, 64)
+
+[node name="Panel" type="Panel" parent="Outer"]
+anchors_preset = 0
+offset_right = 64.0
+offset_bottom = 64.0
+
+[node name="Inner" type="SubViewport" parent="Outer"]
+render_target_update_mode = 3
+size = Vector2i(32, 32)
+
+[node name="InnerPanel" type="Panel" parent="Outer/Inner"]
+anchors_preset = 0
+offset_right = 32.0
+offset_bottom = 32.0
+`;
+
+    /** Whether a frame draws into the inner viewport's target. */
+    async function innerDraws(outerMode: number): Promise<boolean> {
+      const seen: (ViewportTextureEntry | null)[] = [];
+      const { renderer, gl } = await mount(parse(nested(outerMode)), seen, 'Root/Outer/Inner');
+      const inner = seen.at(-1)!.plain.texture;
+      let drew = false;
+      await advanceFrameWithStubbedGl(renderer, gl, (target) => {
+        if (target?.texture === inner) drew = true;
+      });
+      return drew;
+    }
+
+    it('renders with an ALWAYS outer viewport', async () => {
+      expect(await innerDraws(4)).toBe(true);
+    });
+
+    it('never renders under a DISABLED outer viewport', async () => {
+      expect(await innerDraws(0)).toBe(false);
+    });
   });
 });

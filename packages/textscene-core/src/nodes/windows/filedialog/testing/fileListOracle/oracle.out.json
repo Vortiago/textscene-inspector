@@ -1,0 +1,3760 @@
+{
+  "current_dir": {
+    "columns": 0,
+    "current_dir": "res://beta",
+    "file": "inner.png",
+    "fixed_column_width": 96,
+    "ok_disabled": false,
+    "ok_text": "Open",
+    "path_text": "res://beta",
+    "rows": [
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "inner.png"
+      }
+    ]
+  },
+  "current_file": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "B.png",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "current_file_folder_first": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "current_file_missing": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "current_file_save": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "B.png",
+    "fixed_column_width": 96,
+    "ok_disabled": false,
+    "ok_text": "Save",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "current_path_dir": {
+    "columns": 0,
+    "current_dir": "res://beta",
+    "file": "inner.png",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://beta",
+    "rows": [
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "inner.png"
+      }
+    ]
+  },
+  "current_path_missing_dir": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "default": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": false,
+    "ok_text": "Save",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "filename_filter": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "hidden": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": ".hidden-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": ".secret.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "list_mode": {
+    "columns": 1,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 0,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "missing_current_dir": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "missing_root_subfolder": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "nested_root_subfolder": {
+    "columns": 0,
+    "current_dir": "res://beta",
+    "file": "inner.png",
+    "fixed_column_width": 96,
+    "ok_disabled": false,
+    "ok_text": "Open",
+    "path_text": "",
+    "rows": [
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "inner.png"
+      }
+    ]
+  },
+  "open_any": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": false,
+    "ok_text": "Select This Folder",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "open_dir": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": false,
+    "ok_text": "Select Current Folder",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": true,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "open_files_png": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      }
+    ]
+  },
+  "open_png": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      }
+    ]
+  },
+  "root_subfolder": {
+    "columns": 0,
+    "current_dir": "res://Alpha",
+    "file": "inner.png",
+    "fixed_column_width": 96,
+    "ok_disabled": false,
+    "ok_text": "Open",
+    "path_text": "",
+    "rows": [
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "inner.png"
+      }
+    ]
+  },
+  "save": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": false,
+    "ok_text": "Save",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "subfolder_missing_then_dir": {
+    "columns": 0,
+    "current_dir": "res://beta",
+    "file": "inner.png",
+    "fixed_column_width": 96,
+    "ok_disabled": false,
+    "ok_text": "Open",
+    "path_text": "res://beta",
+    "rows": [
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "inner.png"
+      }
+    ]
+  },
+  "subfolder_then_missing_dir": {
+    "columns": 0,
+    "current_dir": "res://Alpha",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "subfolder_then_relative_dir": {
+    "columns": 0,
+    "current_dir": "res://d1",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "main.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "notes.tscn"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.gd"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "oracle.out.json"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "project.godot"
+      }
+    ]
+  },
+  "two_filters": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "_under.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "A very long file name that the list trims with an ellipsis.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "a.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "archive.zip"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "B.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "c.txt"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "D1.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-10.png"
+      }
+    ]
+  },
+  "userdata": {
+    "columns": 0,
+    "current_dir": "user://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "user://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "logs"
+      }
+    ]
+  },
+  "wildcard_filter": {
+    "columns": 0,
+    "current_dir": "res://",
+    "file": "",
+    "fixed_column_width": 96,
+    "ok_disabled": true,
+    "ok_text": "Open",
+    "path_text": "res://",
+    "rows": [
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": true,
+        "text": "_underscore-dir"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Alpha"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "beta"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d1"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d2"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "d10"
+      },
+      {
+        "dir": true,
+        "disabled": false,
+        "icon": "folder_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "Gamma folder"
+      },
+      {
+        "dir": false,
+        "disabled": false,
+        "icon": "file_thumbnail",
+        "modulate": "ffffffff",
+        "selected": false,
+        "text": "file-2.png"
+      }
+    ]
+  }
+}

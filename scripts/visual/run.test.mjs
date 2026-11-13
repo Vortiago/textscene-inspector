@@ -12,7 +12,7 @@ vi.mock('./previewServer.mjs', async (importOriginal) => {
   return {
     ...actual,
     openScene: vi.fn(),
-    setDisplayToggle: vi.fn(),
+    showDisplayOverlay: vi.fn(),
     settleCanvas: vi.fn(),
   };
 });
@@ -135,6 +135,41 @@ describe('captureScene console-error gate', () => {
 
     expect(result.buffer).toBeNull();
     expect(result.reason).toMatch(/something\.broke is not a function/);
+  });
+
+  /** A capture that settles while `log` fills the page's lists, as page events would. */
+  async function captureLogging(log) {
+    openScene.mockResolvedValue({ target: { screenshot: vi.fn() }, reason: null });
+    const pageState = { page: {}, diagnostics: emptyDiagnostics() };
+    settleCanvas.mockImplementation(async () => {
+      log(pageState.diagnostics);
+      return { buffer: Buffer.from('captured'), reason: null };
+    });
+    return captureScene(pageState, 'http://localhost:1', { name: 'fetching-scene', file: 'unit-fetch.tscn' });
+  }
+
+  it('names each failed request with its URL and network error (#1302)', async () => {
+    const result = await captureLogging((diagnostics) => {
+      diagnostics.pageErrors.push('TypeError: Failed to fetch');
+      diagnostics.failedRequests.push({
+        url: 'http://localhost:1/fixtures/a.png',
+        failure: 'net::ERR_CONNECTION_RESET',
+      });
+    });
+
+    expect(result.reason).toContain(
+      'failed request: http://localhost:1/fixtures/a.png (net::ERR_CONNECTION_RESET)'
+    );
+  });
+
+  it('labels each error as a console error or an uncaught page error (#1302)', async () => {
+    const result = await captureLogging((diagnostics) => {
+      diagnostics.consoleErrors.push('logged by the app');
+      diagnostics.pageErrors.push('TypeError: Failed to fetch');
+    });
+
+    expect(result.reason).toContain('console error: logged by the app');
+    expect(result.reason).toContain('page error: TypeError: Failed to fetch');
   });
 
   it('passes a scene whose capture logged no console errors', async () => {

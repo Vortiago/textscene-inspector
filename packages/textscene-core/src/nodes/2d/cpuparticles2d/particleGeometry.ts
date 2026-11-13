@@ -6,6 +6,7 @@
  */
 
 import * as THREE from 'three';
+import { flipbookCell, type ParticlesFlipbook } from '../../../r3f/particlesFlipbook';
 import type { RenderedParticle } from './simulate';
 
 /**
@@ -19,14 +20,6 @@ const CORNERS: ReadonlyArray<{ cx: number; cy: number; u: number; v: number }> =
   { cx: -0.5, cy: 0.5, u: 0, v: 1 },
 ];
 
-/** `CanvasItemMaterial`'s particle flipbook, when the emitter's material has one. */
-export interface ParticleFlipbook {
-  hFrames: number;
-  vFrames: number;
-  /** `particles_anim_loop`: wrap past the last cell instead of holding on it. */
-  loop: boolean;
-}
-
 /**
  * The merged quad geometry, or null for an empty pose, which renders no mesh.
  * `width`/`height` are the texture's pixel size, 1×1 with no texture as in Godot.
@@ -37,17 +30,9 @@ export function buildParticleGeometry(
   pose: readonly RenderedParticle[],
   width: number,
   height: number,
-  flipbook: ParticleFlipbook | null = null
+  flipbook: ParticlesFlipbook | null = null
 ): THREE.BufferGeometry | null {
   if (pose.length === 0) return null;
-
-  const hFrames = flipbook ? Math.max(1, Math.floor(flipbook.hFrames)) : 1;
-  const vFrames = flipbook ? Math.max(1, Math.floor(flipbook.vFrames)) : 1;
-  const totalFrames = hFrames * vFrames;
-  // A flipbook shrinks the quad as well as windowing the UVs: Godot's vertex
-  // shader divides `VERTEX.xy` by the frame counts before the particle transform.
-  const cellWidth = width / hFrames;
-  const cellHeight = height / vFrames;
 
   const count = pose.length;
   const positions = new Float32Array(count * 4 * 3);
@@ -57,9 +42,11 @@ export function buildParticleGeometry(
 
   for (let i = 0; i < count; i++) {
     const { transform, color, anim } = pose[i]!;
-    const frame = flipbookFrame(anim, totalFrames, flipbook?.loop ?? false);
-    const uOffset = (frame % hFrames) / hFrames;
-    const vOffset = Math.floor((frame + 0.5) / hFrames) / vFrames;
+    const { hFrames, vFrames, uOffset, vOffset } = flipbookCell(flipbook, anim);
+    // A flipbook shrinks the quad as well as windowing the UVs: Godot's vertex
+    // shader divides `VERTEX.xy` by the frame counts before the particle transform.
+    const cellWidth = width / hFrames;
+    const cellHeight = height / vFrames;
 
     for (let c = 0; c < 4; c++) {
       const corner = CORNERS[c]!;
@@ -106,21 +93,4 @@ export function buildParticleGeometry(
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   geometry.computeBoundingSphere();
   return geometry;
-}
-
-/**
- * The flipbook cell a particle's `custom[2]` selects, mirroring the vertex
- * shader `CanvasItemMaterial` generates for `particles_animation`:
- *
- *   particle_frame = floor(INSTANCE_CUSTOM.z * particle_total_frames)
- *   !loop ? clamp(frame, 0, total - 1) : mod(frame, total)
- */
-function flipbookFrame(anim: number, totalFrames: number, loop: boolean): number {
-  const frame = Math.floor(anim * totalFrames);
-  // A non-finite anim would poison every UV in the quad. The first cell is the
-  // one reading a broken value should fall back to.
-  if (!Number.isFinite(frame)) return 0;
-  if (!loop) return Math.min(totalFrames - 1, Math.max(0, frame));
-  // GLSL `mod` follows the sign of the divisor, so a negative anim wraps up.
-  return ((frame % totalFrames) + totalFrames) % totalFrames;
 }

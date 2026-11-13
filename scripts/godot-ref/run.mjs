@@ -388,6 +388,7 @@ export function parseArgs(argv) {
     particles: PARTICLES_PROCESS_DEFAULT,
     // Null lets the engine pick, so the default reference is not pinned to one rasteriser.
     renderingDriver: null,
+    debugCollisions: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -458,6 +459,11 @@ export function parseArgs(argv) {
         // `preprocess` (`cpu_particles_2d.cpp:727-731`): `2` on `preprocess = 1.5` settles at 3.5 s.
         // Record the value in the fixture header and the sheet.
         args.particles = nonNegativeNumber('--particles', argv[++i]);
+        break;
+      case '--debug-collisions':
+        // The editor's "Visible Collision Shapes" run flag: a 2D joint draws its marker in a game too
+        // (`pin_joint_2d.cpp:42-50`).
+        args.debugCollisions = true;
         break;
       case '--rendering-driver':
         args.renderingDriver = oneOf('--rendering-driver', DRIVER_NAMES, argv[++i]);
@@ -819,7 +825,33 @@ func _render_3d(target: Node) -> void:
 	_write_bounds(target)
 
 func _save_capture(source: Viewport) -> void:
-	source.get_texture().get_image().save_png(OUT)
+	_viewport_image(source).save_png(OUT)
+
+# An HDR viewport stores linear half floats, which no screen shows as they are: the blit to the
+# screen converts them to sRGB (renderer_compositor_rd.cpp:98). Converted as floats, since
+# Image.linear_to_srgb only reads 8-bit images and would round before it converts.
+func _viewport_image(source: Viewport) -> Image:
+	var image := source.get_texture().get_image()
+	if source.use_hdr_2d:
+		_linear_to_srgb_in_place(image)
+	return image
+
+func _linear_to_srgb_in_place(image: Image) -> void:
+	image.convert(Image.FORMAT_RGBAF)
+	var values := image.get_data().to_float32_array()
+	for index in values.size():
+		if index % 4 != 3:
+			values[index] = _linear_to_srgb_value(values[index])
+	image.set_data(image.get_width(), image.get_height(), false, Image.FORMAT_RGBAF, values.to_byte_array())
+	image.convert(Image.FORMAT_RGBA8)
+
+# Color.linear_to_srgb for one channel, clamped at 0 as the 8-bit store clamps. Returned on the
+# centre of its 8-bit step, because Image.convert truncates (image.cpp:2584) where the screen blit
+# stores the nearest step (UNORM), so a bare value would read one step low half the time.
+func _linear_to_srgb_value(value: float) -> float:
+	value = maxf(value, 0.0)
+	var srgb := 12.92 * value if value < 0.0031308 else 1.055 * pow(value, 1.0 / 2.4) - 0.055
+	return (roundf(srgb * 255.0) + 0.5) / 255.0
 
 # A 2D scene has nothing to point a camera at: Godot draws it through the
 # canvas transform into the PROJECT VIEWPORT rectangle, and a Control resolves
@@ -833,6 +865,9 @@ func _render_2d(target: Node) -> void:
 	var vp := SubViewport.new()
 	vp.size = CANVAS_2D_SIZE
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	# The root embeds subwindows and a SubViewport does not, so without this a Window
+	# in the scene embeds in the root, outside the capture (window.cpp:1400-1420).
+	vp.gui_embed_subwindows = true
 	add_child(vp)
 	_report_root_only_drift(vp)
 	if not SCENE_CAMERA:
@@ -953,7 +988,8 @@ func _disable_2d_cameras(node: Node) -> void:
 # for SoftBody3D, whose integration the pause covers but whose disabled
 # process_mode also pins it if a future Godot changes that, and whose
 # disable_mode REMOVE keeps it out of the physics space as the editor does.
-# GPUParticles are left alone: their preprocessed burst is the authored look, not running logic.
+# GPUParticles are left alone here: their preprocessed burst is the authored look, not running logic.
+# --particles asks for more of it through _advance_particles.
 #
 # Both halves — this walk and the pause — are gated on PREVIEWS together, so
 # "editor" and "runtime" stay two whole answers rather than a mixture. Stopping
@@ -995,8 +1031,20 @@ func _freeze_game_logic(node: Node) -> void:
 		# rewrites its normals each frame, which the editor never does (soft_body_3d.cpp:459-478).
 		(node as SoftBody3D).disable_mode = SoftBody3D.DISABLE_MODE_REMOVE
 		(node as SoftBody3D).process_mode = Node.PROCESS_MODE_DISABLED
+	if node is Skeleton2D:
+		_keep_stack_running(node as Skeleton2D)
 	for child in node.get_children():
 		_freeze_game_logic(child)
+
+# The editor runs a modification stack on the bones (skeleton_2d.cpp:630-639 has no editor guard),
+# and the pause would stop it. A child that inherits the mode stays paused.
+func _keep_stack_running(skeleton: Skeleton2D) -> void:
+	if skeleton.get_modification_stack() == null:
+		return
+	for child in skeleton.get_children():
+		if child.process_mode == Node.PROCESS_MODE_INHERIT and not child.can_process():
+			child.process_mode = Node.PROCESS_MODE_PAUSABLE
+	skeleton.process_mode = Node.PROCESS_MODE_ALWAYS
 
 # The editor keeps the edited scene under the 2D editor's viewport, which draws
 # no 3D (editor_node.cpp:8648-8652). Every CanvasItem and CanvasLayer draws on
@@ -1035,9 +1083,10 @@ func _hide_2d() -> void:
 # (cpu_particles_3d.cpp:1354), so _render_3d asks BEFORE add_child; the 2D arms
 # ask after, and the first draw spends it.
 #
-# CPUParticles only. GPUParticles2D/3D carry the same method, but the previewer
-# draws a GPUParticles node as a bare transform group (ADR-0008), so there is no
-# pose on our side for an advanced one to be measured against.
+# The CPU emitters and GPUParticles3D, whose pose the previewer draws. A GPU emitter
+# spends the request on its first update, on top of an authored pre_process_time
+# (particles_storage.cpp:1542-1544). GPUParticles2D carries the same method, but the
+# previewer draws no GPUParticles2D pose yet, so it stays out.
 func _advance_particles(node: Node) -> void:
 	if PARTICLES_PROCESS <= 0.0:
 		return
@@ -1045,6 +1094,8 @@ func _advance_particles(node: Node) -> void:
 		(node as CPUParticles2D).request_particles_process(PARTICLES_PROCESS)
 	elif node is CPUParticles3D:
 		(node as CPUParticles3D).request_particles_process(PARTICLES_PROCESS)
+	elif node is GPUParticles3D:
+		(node as GPUParticles3D).request_particles_process(PARTICLES_PROCESS)
 	for child in node.get_children():
 		_advance_particles(child)
 
@@ -1093,6 +1144,7 @@ func _await_rendered(source: Viewport) -> void:
 	var quiet_since := Time.get_ticks_msec()
 	while Engine.get_process_frames() < NEVER_SETTLES_CAPTURE_FRAME:
 		await RenderingServer.frame_post_draw
+		# Raw texels: equal pictures stay equal after the HDR conversion, which would cost a pass per frame.
 		var picture := source.get_texture().get_image().get_data()
 		var now_pending := _pending_work()
 		var now_transforms := _global_transforms(movers)
@@ -1355,7 +1407,7 @@ script = ExtResource("1")
  * wall clock: `CPUParticles2D::_update_internal` then jumps a whole `1/fixed_fps` step on a slow
  * host, only sometimes, and the reference still renders.
  */
-export function renderArgv(work, { renderingDriver = null } = {}) {
+export function renderArgv(work, { renderingDriver = null, debugCollisions = false } = {}) {
   const argv = [
     '--path',
     work,
@@ -1364,6 +1416,7 @@ export function renderArgv(work, { renderingDriver = null } = {}) {
     '--quit-after',
     String(RENDER_QUIT_AFTER_FRAMES),
   ];
+  if (debugCollisions) argv.push('--debug-collisions');
   // main.cpp:2582 aborts on a driver its method does not offer, so the driver alone would abort
   // under the default `forward_plus`.
   if (renderingDriver) {
@@ -1490,6 +1543,7 @@ export async function renderReference({
   fovExplicit = false,
   particles = PARTICLES_PROCESS_DEFAULT,
   renderingDriver = null,
+  debugCollisions = false,
   keepWork = false,
 }) {
   const scenePath = resolve(scene);
@@ -1522,6 +1576,7 @@ export async function renderReference({
       fovExplicit,
       particles,
       renderingDriver,
+      debugCollisions,
     });
   } finally {
     // Each run copies the whole res:// root, which on a tmpfs /tmp stays in RAM.
@@ -1549,6 +1604,7 @@ async function renderInto(
     fovExplicit,
     particles,
     renderingDriver,
+    debugCollisions,
   }
 ) {
   // Inside the scratch project, not beside the image: the mode and the drift report are read once,
@@ -1614,7 +1670,7 @@ async function renderInto(
     restage: stage,
   });
 
-  const render = runGodot(renderArgv(work, { renderingDriver }), {
+  const render = runGodot(renderArgv(work, { renderingDriver, debugCollisions }), {
     display: true,
     screen: rootWindow ? canvas2DSize : null,
   });
@@ -1674,6 +1730,9 @@ async function main() {
     console.error('usage: pnpm ref:godot <scene.tscn> [--out png] [--camera x,y,z]');
     console.error(
       '       [--look-at x,y,z] [--probe x,y] [--patch n] [--no-previews] [--width n] [--height n]'
+    );
+    console.error(
+      '       [--debug-collisions]  (a 2D joint draws its marker, and a collision shape its outline)'
     );
     console.error(
       `       [--mode ${RENDER_MODES.join('|')}]  (2d renders the project viewport, ` +

@@ -139,13 +139,13 @@ export function textEditDrawnLines(
 }
 
 /** A single buffer line's already-shaped rows plus its own start row index within the whole TextEdit. */
-interface TextEditLineLayout {
+export interface TextEditLineLayout {
   layout: TextLayoutResult;
   startRow: number;
 }
 
 /** What each buffer line shapes with, beyond its text. */
-interface TextEditShapeOptions {
+export interface TextEditShapeOptions {
   fontSizePx: number;
   fontMetrics: FontMetrics;
   /** `LineWrappingMode`. Only `LINE_WRAPPING_BOUNDARY` (1) wraps. */
@@ -213,22 +213,40 @@ export function shapeTextEditLines(
 }
 
 /**
- * `_update_wrap_at_column` (`text_edit.cpp:8536-8543`) without the v-scrollbar term, since no
- * scrollbar draws: `width - style min width - gutters_width - gutter_padding`, less `minimap_width`
- * when drawn, less the bare 10 `wrap_offset`. `gutterBandWidthPx` is the gutter sum, never split at
- * a call site: 0 for TextEdit, `codeEditGutterBand`'s `totalWidthPx` for CodeEdit.
+ * `_update_wrap_at_column` (`text_edit.cpp:8536-8543`): `width - style min width - gutters_width -
+ * gutter_padding`, less `minimap_width` when drawn, less the vertical scroll bar's width when it
+ * shows, less the bare 10 `wrap_offset`. `gutterBandWidthPx` is the gutter sum, never split at a
+ * call site: 0 for TextEdit, `codeEditGutterBand`'s `totalWidthPx` for CodeEdit.
  */
 export function textEditWrapWidthPx(
   rectWidthPx: number,
   styleMinWidthPx: number,
   gutterBandWidthPx: number,
   minimapWidthPx: number,
-  drawMinimap: boolean | undefined
+  drawMinimap: boolean | undefined,
+  verticalBarWidthPx = 0
 ): number {
   let width = rectWidthPx - styleMinWidthPx - gutterBandWidthPx;
   if (drawMinimap) width -= minimapWidthPx;
+  width -= verticalBarWidthPx;
   width -= TEXT_EDIT_WRAP_OFFSET_PX;
   return Math.trunc(width);
+}
+
+/** Every shaped row counted, and the widest one: `text.get_max_width()` is its ceiled width. */
+export function textEditRowStats(lineLayouts: readonly TextEditLineLayout[]): {
+  totalRows: number;
+  widestRowPx: number;
+} {
+  let widestRowPx = 0;
+  let totalRows = 0;
+  for (const { layout } of lineLayouts) {
+    totalRows += layout.lines.length;
+    for (const line of layout.lines) {
+      widestRowPx = Math.max(widestRowPx, shapedTextSizeWidthPx(line.widthPx));
+    }
+  }
+  return { totalRows, widestRowPx };
 }
 
 /**
@@ -244,15 +262,8 @@ function textEditContentSize(
   minimapWidthPx: number,
   drawMinimap: boolean | undefined
 ): Vector2 {
-  let maxRowWidthPx = 0;
-  let totalRows = 0;
-  for (const { layout } of lineLayouts) {
-    totalRows += layout.lines.length;
-    for (const line of layout.lines) {
-      maxRowWidthPx = Math.max(maxRowWidthPx, shapedTextSizeWidthPx(line.widthPx));
-    }
-  }
-  let totalWidth = maxRowWidthPx + gutterBandWidthPx;
+  const { totalRows, widestRowPx } = textEditRowStats(lineLayouts);
+  let totalWidth = widestRowPx + gutterBandWidthPx;
   if (drawMinimap) totalWidth += minimapWidthPx;
   return {
     x: totalWidth + TEXT_EDIT_CONTENT_WIDTH_PAD_PX,
@@ -265,6 +276,9 @@ function textEditContentSize(
  * only `CodeEdit.indent_size` forwards to it (`code_edit.cpp:908-920`).
  */
 export const TEXT_EDIT_DEFAULT_TAB_SIZE = 4;
+
+/** The default `minimap_width` (`text_edit.h:577`). */
+export const TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX = 80;
 
 /** `Text::invalidate_cache` (`text_edit.cpp:348-352`, and `invalidate_all_lines`, `:394-398`). */
 export function textEditTabStopsPx(
@@ -294,7 +308,7 @@ export function textEditMinimumSizeWith(
   const { fontSizePx } = textEditTextTheme(n, props, state, ctx);
   const fontMetrics = resolveNodeFontMetrics(n, TEXT_EDIT_THEME_FONT_KEY);
   // TextEdit's `line_spacing` (`default_theme.cpp:479`) and BoxContainer's `DEFAULT_SEPARATION`
-  // are both `Math.round(4 * scale)`, and `nativeTheme.ts` exposes no raw `scale` to derive it.
+  // are both `Math.round(4 * scale)`, which `theme.separation` holds.
   const lineSpacingPx = ctx.theme.separation;
 
   if (!props.fitContentWidth && !props.fitContentHeight) return styleMin;
@@ -307,7 +321,7 @@ export function textEditMinimumSizeWith(
           rectWidthPx,
           styleMin.x,
           gutterBandWidthPx,
-          props.minimapWidth ?? 80,
+          props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
           props.minimapDraw
         );
   const effectiveWrapMode = rectWidthPx === undefined ? 0 : props.wrapMode;
@@ -330,7 +344,7 @@ export function textEditMinimumSizeWith(
     lineLayouts,
     rowHeightPx,
     gutterBandWidthPx,
-    props.minimapWidth ?? 80,
+    props.minimapWidth ?? TEXT_EDIT_DEFAULT_MINIMAP_WIDTH_PX,
     props.minimapDraw
   );
 
@@ -498,6 +512,17 @@ export function textEditRowStartIndices(lineText: string, rows: readonly TextLin
     searchFrom = start + row.text.length;
   }
   return starts;
+}
+
+/**
+ * A read-only TextEdit caps each highlighted colour's alpha at `font_readonly_color`'s
+ * (`text_edit.cpp:1666-1668`): a colour already fainter keeps its alpha.
+ */
+export function textEditCapSpanAlpha(
+  spans: readonly CodeHighlighterColorSpan[],
+  maxAlpha: number
+): CodeHighlighterColorSpan[] {
+  return spans.map((span) => ({ ...span, color: { ...span.color, a: Math.min(span.color.a, maxAlpha) } }));
 }
 
 function colorAt(spans: readonly CodeHighlighterColorSpan[], index: number, fallback: Rgba): Rgba {

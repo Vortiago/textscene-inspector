@@ -11,6 +11,7 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { TextEdit } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { TextEditProperties } from './types';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -194,6 +195,36 @@ describe('<TextEdit> — highlight_current_line', () => {
   });
 });
 
+describe('<TextEdit> — minimap_draw', () => {
+  const RECT_240X84: Rect2 = { x: 0, y: 0, w: 240, h: 84 };
+
+  function minimapQuads(properties: Partial<TextEditProperties>) {
+    return ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={solveNode(properties)} rect={RECT_240X84} renderOrder={0} />
+    ).then((renderer) => findPlainQuads(renderer.scene));
+  }
+
+  it('draws no quad without minimap_draw', async () => {
+    expect(await minimapQuads({ text: 'one\ntwo' })).toHaveLength(0);
+  });
+
+  it('draws the view rectangle and one bar per word, 2 px high, at the strip', async () => {
+    const quads = await minimapQuads({ text: 'one\ntwo', minimapDraw: true });
+    const sizes = quads.map((quad) => {
+      const { width, height } = (quad.geometry as THREE.PlaneGeometry).parameters as {
+        width: number;
+        height: number;
+      };
+      return [width, height];
+    });
+    expect(sizes).toEqual([
+      [80, 9],
+      [3, 2],
+      [3, 2],
+    ]);
+  });
+});
+
 describe('<TextEdit> — draw_tabs / draw_spaces', () => {
   it('draws one icon quad per tab character when draw_tabs is set', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -279,6 +310,46 @@ describe('<TextEdit> — syntax_highlighter', () => {
     const runs = bundledRuns(renderer.scene);
     expect(runs).toHaveLength(3);
     expect(runs[0]!.tint.r).not.toBeCloseTo(runs[2]!.tint.r, 2);
+  });
+
+  it('caps a highlighted colour at the read-only colour alpha while !editable (text_edit.cpp:1666-1668)', async () => {
+    const draw = async (editable: boolean) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <TextEdit
+          {...painterEnv()}
+          solveNode={solveNode({ text: 'if x', editable, syntaxHighlighter: 'SubResource("CH")' }, [
+            CODE_HIGHLIGHTER,
+          ])}
+          rect={RECT}
+          renderOrder={0}
+        />
+      );
+      return bundledRuns(renderer.scene)[0]!.tint.a;
+    };
+    expect(await draw(true)).toBe(1);
+    expect(await draw(false)).toBeCloseTo(0.5, 4);
+  });
+
+  it('colours an unhighlighted run with font_color, not font_readonly_color, as the highlighter reads it (syntax_highlighter.cpp:421)', async () => {
+    const draw = async (editable: boolean) => {
+      const renderer = await ReactThreeTestRenderer.create(
+        <TextEdit
+          {...painterEnv()}
+          solveNode={{
+            ...solveNode({ text: 'if x', editable, syntaxHighlighter: 'SubResource("CH")' }, [
+              CODE_HIGHLIGHTER,
+            ]),
+            colors: { font_readonly_color: { r: 0, g: 0, b: 1, a: 1 } },
+          }}
+          rect={RECT}
+          renderOrder={0}
+        />
+      );
+      return bundledRuns(renderer.scene)[2]!.tint;
+    };
+    const readOnly = await draw(false);
+    const editable = await draw(true);
+    expect([readOnly.r, readOnly.g, readOnly.b]).toEqual([editable.r, editable.g, editable.b]);
   });
 
   it('paints one plain-font_color run per row when no syntax_highlighter is set', async () => {
@@ -492,5 +563,65 @@ describe('<TextEdit> — glyphs past the end margin', () => {
       />
     );
     expect(findPlainQuads(renderer.scene)).toHaveLength(0);
+  });
+});
+
+/** Every `<StyleBoxQuad>` mesh: the panel, and a track and a grabber for each scroll bar. */
+function chromeMeshCount(scene: Rendered['scene']) {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined).length;
+}
+
+const PANEL_MESHES = 1;
+const BAR_MESHES = 2;
+const SIX_LINES = 'one\ntwo\nthree\nfour\nfive\nsix';
+
+describe('<TextEdit> — scroll bars (text_edit.cpp:8587-8656)', () => {
+  it('draws one vertical bar, a track and a grabber, for six rows in 100 px', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={solveNode({ text: SIX_LINES })} rect={RECT} renderOrder={0} />
+    );
+    expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES + BAR_MESHES);
+  });
+
+  it('draws no bar for two rows', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} solveNode={solveNode({ text: 'one\ntwo' })} rect={RECT} renderOrder={0} />
+    );
+    expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES);
+  });
+
+  it('draws no bar under scroll_fit_content_height', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: SIX_LINES, fitContentHeight: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES);
+  });
+});
+
+describe('<TextEdit> — self_modulate', () => {
+  it('tints the box with tint and the text, caret and current line with childTint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={solveNode({
+          text: 'hello',
+          highlightCurrentLine: true,
+          caretDrawWhenEditableDisabled: true,
+          editable: false,
+        })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(countTintSplit(renderer.scene)).toEqual({ own: 1, child: 3 });
   });
 });

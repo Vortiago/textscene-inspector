@@ -11,6 +11,7 @@ renders_as: two children stacked, split at a computed offset
 
 VSplitContainer stacks its children, split where each entry of `split_offsets` puts that
 boundary, with the dragger's band between them.
+`self_modulate` does not tint the grabber icon, which the dragger Control draws (`split_container.cpp:1340`).
 
 ## Linting
 

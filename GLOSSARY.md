@@ -86,6 +86,10 @@ The `.import` file Godot writes beside a source asset to record its importer and
 No scene references it, so a missing one is an ordinary outcome and not a **Missing resource**.
 _Avoid_: "import file" for the asset itself.
 
+**Picture size** (`resources/formats/theoravideo/pictureSize.ts`):
+The width and height an Ogg Theora file's identification header states for its visible picture, inside the larger coded frame. A `VideoStreamPlayer` takes it as its texture size, and as its minimum size while `expand` is off.
+_Avoid_: "video size" and "frame size", which suggest the coded frame.
+
 **Imported mip chain** (`resources/processing/mipChain.ts`):
 The levels Godot's texture importer builds on the CPU for an image whose **Import sidecar** sets `mipmaps/generate`: each level averages the bytes of the one above, renormalised for a normal map.
 The texture carries them as its own levels, so the GPU builds no chain over them.
@@ -135,7 +139,7 @@ The second atlas a bake saves, one byte per texel: how much of a sun's light rea
 _Avoid_: "shadow map", which is the real-time depth map of a light.
 
 **Lightmap assignment** (`r3f/lightmap/sceneLightmaps.ts`):
-The LightmapGI a node takes its light from, with the node's entry in that bake: its UV scale and slice. It is the last LightmapGI in ready order whose data names the node (ADR-0054).
+The LightmapGI a node takes its light from, with the node's entry in that bake: its UV scale and slice. It is the last LightmapGI in ready order whose data names the node (ADR-0054). The instance holds it, not a surface: `instanceLightmap` (`r3f/lightmap/instanceLightmap.ts`) reads it for a GeometryInstance3D base and for a mesh of a GLB clone.
 
 **Project settings**:
 `project.godot` at a project's `res://` root, read under the names `ProjectSettings.get_setting()` uses.
@@ -169,6 +173,10 @@ _Avoid_: "composed glyph", which names one step of it.
 **Project fonts** (`resources/fonts/font/projectFonts.ts`):
 The two files the **Project settings** name for every font lookup: the project theme (`gui/theme/custom`) and the **Project default font**. The Control solve tree, TextMesh and Label3D each resolve them from one source.
 _Avoid_: "theme context", which Godot's `ThemeContext` also names.
+
+**Default-theme variation** (`DEFAULT_THEME_VARIATIONS` in `godot/scene/theme.ts`):
+A `theme_type_variation` that Godot's default theme registers, such as `FlatButton` or `HeaderSmall`, with its base type. A Control that names one reads its items under the variation and its base before its own class, after every scene and project Theme. The table holds the base, the font size and the font colour. `r3f/controls/native/defaultThemeItems.ts` holds the boxes.
+_Avoid_: "style variant". "scene variation" for one a scene Theme registers, which `ThemeResource.typeVariations` holds.
 
 **Style face** (`nodes/2d/ui/richtextlabel/styleFaces.ts`):
 The font a RichTextLabel draws a `[b]`, `[i]` or `[b][i]` span in: the theme's `bold_font`, `italics_font` or `bold_italics_font`. Where no theme sets the key, it is a `FontVariation` over the **Project default font** with embolden 1.2, skew 0.2, or both.
@@ -224,6 +232,27 @@ _Avoid_: "the resource" or "the body" for a `[sub_resource]`.
 The one parsed form every Godot resource serialisation normalises to: the header type, the resource tables and the `[resource]` body as raw value strings.
 The slice's `decode.ts` owns what the values mean.
 _Avoid_: decoding values at parse time.
+
+**Scoped reference** (`ScopedReference`, `resources/reading/scopedReference.ts`):
+A reference on its way to a read: the `SubResource`, `ExtResource` or `res://` text, the tables it resolves in, the file those tables belong to, and whether every holder passed on the way is local to scene.
+A node's own property starts one with `nodeReference`, in the tables of the file that wrote the node (ADR-0051).
+_Avoid_: a bare reference string handed past the tables it belongs to.
+
+**Held resource** (`HeldResource`, `resources/reading/read.ts`):
+A resource as a decode receives it: its class, its raw property strings, its address, and how it is held. It exposes no table, so a decode reads a nested reference only through `Follow`.
+_Avoid_: "scoped resource" for this. A `ScopedResource` carries the tables.
+
+**Resource kind** (`ResourceKind`, `resources/reading/read.ts`):
+One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D`, `CURVE_3D`, `CURVE`, `GRADIENT`, `PARTICLE_PROCESS_MATERIAL`, `SHAPE_2D`, `OCCLUDER_POLYGON_2D` and `NAVIGATION_POLYGON` are kinds.
+_Avoid_: one decode for each origin.
+
+**Resource snapshot** (`ResourceSnapshot`, `resources/reading/read.ts`):
+One consistent view of what the loader holds. Each read on it answers `loaded`, `none`, `pending` or `unavailable`, and records each file it touched, a miss included.
+_Avoid_: reading the loader's cache directly in a reader.
+
+**Snapshot host** (`describeSnapshotHost`, `resources/reading/snapshotHost.testkit.ts`):
+Code that owns snapshots for a reader: it requests and pins each file the reader's reads touched, runs the reader again when one of them loads, fails or reloads, and reports a failed file once as a **Missing resource**. The hook host is the one behind `useNodeResource`.
+_Avoid_: a reader that requests, pins or reports a file itself.
 
 **UID reference**:
 Godot 4's stable `uid://…` identifier, which the previewer ignores because every ExtResource here pairs it with an authoritative `res://` path.
@@ -357,6 +386,12 @@ A tool the VS Code extension registers through `vscode.lm` for a coding agent in
 The agent tools lint a scene, read its node tree, open or capture its preview, and list its missing resources.
 _Avoid_: "action" for an agent tool.
 
+**Preview visibility** (`r3f/contexts/PreviewVisibilityContext.tsx`):
+Whether the host shows the preview: the VS Code panel's `visible`, or the web page's `document.visibilityState`.
+A hidden preview renders no frame and runs no frame callback, except while its scene still loads.
+A capture of a hidden preview renders one frame with no time passed.
+_Avoid_: "active" for a VS Code panel, which means it has focus. A panel in an unfocused window is still visible.
+
 ### Code organisation
 
 **Vertical slice**:
@@ -447,9 +482,40 @@ _Avoid_: "z order", "z offset".
 An item's position in Godot's single pre-order walk of the canvas, the third and weakest term of **canvas paint order**.
 _Avoid_: "paint index".
 
+**CanvasItem state** (`r3f/canvasItemState.tsx`):
+What one canvas item draws with and passes down, whatever its node type: its tint, `z_final`, draw-order key, material, texture sampler and light mask.
+A Node2D-family item and a Control resolve it the same way, because Godot culls both in one walk.
+_Avoid_: "Control tint", "item context".
+
+**Sub-order**:
+A key between a canvas item's key and the next one, for a piece the item draws as an internal child item that the scene tree does not list, such as a scrollbar or a toolbar.
+Each piece owns a slot inside its parent's, so a piece can hand out sub-orders of its own.
+_Avoid_: "render-order offset", "fraction".
+
+**Canvas colour space** (`r3f/canvasColorSpace.ts`):
+Whether a canvas multiplies sRGB numbers into an 8-bit target, or linear values into a half-float one. A viewport with `use_hdr_2d` draws a linear canvas: a SubViewport, the canvas over its 3D world, and the root under `rendering/viewport/hdr_2d`. Its target, texture views, material defines and tint all follow this one value.
+_Avoid_: "HDR mode", "linear mode".
+
+**Flipbook cell** (`r3f/particlesFlipbook.ts`):
+The one cell of a `particles_animation` sheet that a canvas item draws. The item shrinks to the cell and windows its UV to it, and `INSTANCE_CUSTOM.z` picks it.
+A CPUParticles2D particle, a MultiMeshInstance2D instance and a MeshInstance2D (which has no custom data, so cell 0) share it.
+_Avoid_: "frame", which is a Sprite2D's `frame` of `hframes`.
+
+**Drawn instance** (`resources/meshes/multimesh/types.ts`):
+One of the instances a MultiMesh draws: the first `visible_instance_count`, or all of them for -1, each with its transform, its colour when `use_colors` and its custom data when `use_custom_data`.
+_Avoid_: "visible instance" for the record, which names only the count.
+
 **Canvas frame** (`Canvas2DStage/canvasFrame.ts`):
-The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057).
+The render target a 2D canvas draws into, the root's or a SubViewport's. It is y-down like Godot's, and it copies to the target bound before it with its rows reversed. It has one sample, or the `msaa_2d` count (ADR-0057). It stores sRGB numbers, or linear half floats in a linear canvas colour space, which the root's copy to the drawing buffer converts to sRGB. Under `render_target_clear_mode` NEVER it takes the bytes of the target first and draws over them.
 _Avoid_: "MSAA frame".
+
+**Group window** (`r3f/canvasGroup/canvasGroupPass.ts`):
+The draw-order keys a CanvasGroup collects into its buffer: its run at its own `z_final`, without its own key, where its composite rect draws. A child at another `z_final` falls outside the window and draws on the canvas.
+_Avoid_: "group range", "group layer".
+
+**Clip group** (`r3f/canvasGroup/canvasGroupPass.ts`):
+The canvas group of a `clip_children` owner. The pass copies the canvas drawn so far into a buffer. It draws the owner's group window there, with the owner first in CLIP_AND_DRAW. It then draws the owner over the frame, with the pixels of the buffer under the owner's own alpha. An owner that draws nothing has no clip group.
+_Avoid_: "clip mask", "stencil".
 
 **Frame AABB** (`r3f/components/FrameAabb.tsx`):
 The `get_aabb()` of a GeometryInstance3D, in node space, that the camera frames the scene on (`r3f/frameSceneBounds.ts`). An empty one still frames, as the point at the node origin that `AABB()` is. The selection and hover boxes do not read it.
@@ -466,6 +532,14 @@ _Avoid_: "quadrant" for this, "sub-quadrant".
 **Drawable cell** (`resources/tileset/drawableCell.ts`):
 A placed tile cell whose atlas source, tile and alternative tile all exist, so Godot draws it (`tile_map_layer.cpp:527-531`).
 _Avoid_: "valid cell".
+
+**Scene tile** (`resources/tileset/sceneTileCells.ts`):
+A cell that names a tile of a `TileSetScenesCollectionSource`. Its layer instantiates the tile's scene as a child at the cell (`tile_map_layer.cpp:1569-1659`).
+_Avoid_: "scene cell", "instance tile".
+
+**Unowned node** (`LiveNode.isUnowned`):
+A node that a layer adds to the live tree and the edited scene does not own. The Scene dock lists no row for it, and a click on it selects its owner (`scene_tree_editor.cpp:278-290`).
+_Avoid_: "internal node" for this, "hidden node".
 
 **Viewport mode**:
 The single `'2D' | '3D'` display state of the centre viewport: `3D` mounts the R3F canvas, and `2D` mounts the pannable 2D stage.
@@ -500,6 +574,22 @@ _Avoid_: "background canvas".
 What displays a **sub-viewport**'s render target (a `SubViewportContainer` or a `ViewportTexture` consumer), and the one place its canvas subtree is dispatched.
 _Avoid_: "viewport container" for the concept. "render target" for the surface.
 
+**Embedded window** (`nodes/windows/window/`):
+A visible Window, Popup or PopupPanel that a viewport draws on its own canvas instead of the system's. The window's Controls draw into its target as a **sub-viewport**'s do, rooted at the window itself (ADR-0033).
+_Avoid_: "dialog" for the base case. "native window", which Godot draws through the system.
+
+**Dialog body** (`nodes/windows/filedialog/body.ts`):
+The Controls a dialog's constructor `memnew`s above its button row, which no scene serialises, such as a FileDialog's `main_vbox`. They are synthetic `SolveNode`s in the dialog's scope, solved by the Control solver and painted by `DialogChrome`.
+_Avoid_: "dialog content", which is the rect that authored children fill.
+
+**Embedder**:
+The viewport that draws an **Embedded window**: the nearest viewport above it with `gui_embed_subwindows`, the root through `display/window/subwindows/embed_subwindows`. A window below an embedding root embeds only when `force_native` (`window.cpp:1534-1537`), whatever it authors. The embedder draws each window's frame, title, close icon and target on its subwindow canvas, layer 1024, in stack order (`viewport.cpp:342-401`). The **Live scene tree** holds the root's answer (`LiveTreeContext.project`), and `windowEmbedder.ts` answers each reader from the tree.
+_Avoid_: "parent viewport", which may not embed.
+
+**Pass gate** (`PassGate` in `r3f/contexts/ViewportPassRegistryContext.tsx`, `nodes/viewport/renderGate.ts`):
+What decides whether a **sub-viewport**'s pass renders in a frame: its effective `render_target_update_mode` (a `SubViewportContainer` parent replaces the authored mode), the viewport it sits in, and whether a mounted consumer sampled its target. The same gate decides what a render clears, from `render_target_clear_mode` and the renders the viewport has had.
+_Avoid_: "visibility cull". "throttle".
+
 **ViewportTextureRegistry**:
 The `nodePath → { texture, size }` lookup that a **sub-viewport** publishes its render target into and every **viewport surface** resolves against.
 
@@ -516,6 +606,10 @@ The scene, camera, buffer size and clip rect that one `CanvasLightPass` accumula
 **Light kept apart** (`r3f/lighting2d/apartLight.ts`):
 A light on a list that a normal-mapped canvas item reads, drawn alone into its own layer instead of the list's accumulation buffer, with where it sits and its height, so the item shades it by its own normal term (ADR-0062).
 _Avoid_: "per-light buffer" for the light itself. The layer is its buffer.
+
+**List attachments** (`ListAttachments` in `r3f/lighting2d/itemLightList.ts`):
+Which attachment of a light list's one render target holds each buffer its items read: the light, the `shadow_color` and the Light Only buffer, at attachments 0, 1 and 2. A light quad writes all three outputs in one draw, and an output with no attachment is dropped (ADR-0067).
+_Avoid_: "tint pass", which no longer exists. The `shadow_color` buffer is an attachment.
 
 **ViewportPassRegistry**:
 The pass-ordering half of the same seam (`ViewportPassRegistryContext.tsx`): one `<ViewportPassOrchestrator>` per canvas runs every registered sub-viewport pass in dependency order each frame.
@@ -554,6 +648,10 @@ _Avoid_: "collision mesh".
 **Collision gizmo**:
 An optional wireframe of a CollisionShape3D's collision-shape resource in the 3D viewport, off by default and driven by `showCollisions`.
 _Avoid_: "debug shape".
+
+**Shape drawing** (`resources/shapes/shape2d/drawing.ts`):
+The commands that a Shape2D class's `draw()` puts on the canvas item, in draw order: fills, one pixel lines and strokes. Each colour is a role against the colour the CollisionShape2D draws the shape in, so the drawing holds no colour. The 2D collision gizmo draws it while `showCollisions` is on.
+_Avoid_: "outline", because a polygon shape draws a fill as well.
 
 **Node icon** (`r3f/nodeIcon/`):
 Godot's billboard icon at the origin of a node, at a fixed size on screen. A node type declares it through `editorIcon` in its registration. It follows the Gizmos toggle and is faint while the node is unselected (ADR-0056).
@@ -770,6 +868,18 @@ _Avoid_: "instance alpha", "instance transparency".
 Godot's sorted, blended draw of a surface after the opaque pass. A material's alpha mode, or a **fade alpha** below 0.999, sends a surface there.
 _Avoid_: "transparent pass".
 
+**Instance material** (`useInstanceDraw` in `r3f/visibilityRange/geometryInstance.tsx`):
+The `material_override` or the `material_overlay` of a **geometry instance**. The override draws every surface in place of that surface's own material. The overlay draws every surface one more time. The base resolves both and hands them to its leaf.
+_Avoid_: "node material", "global material".
+
+**Extra draw** (`r3f/materials/extraDraw.ts`, `passOrder.ts`):
+A draw of a surface beside its own: a `next_pass` link or the overlay **instance material**. It shares the surface's geometry, casts nothing, and in the **alpha pass** it draws before the surface it covers, as Godot sorts the two.
+_Avoid_: "second pass", "overlay pass".
+
+**Surfaced mesh drawer** (`r3f/surfacedMeshDrawer/`):
+The module that draws a decoded mesh with the material of each surface. It draws the mesh once as a body, or at every instance of a buffer of instances. It owns each draw's object, the surface slots, every **extra draw**, the shadow hooks, the layers and the instance buffer. MeshInstance3D, the CSG shapes, GridMap, MultiMeshInstance3D and the CPU particle draw call it. A mesh inside a cloned GLB takes its extra draws from the module's adapter for a cloned object.
+_Avoid_: "mesh renderer", "surface stack".
+
 **Resource event bus** / `useResource`:
 The async resource pipeline: a component calls `useResource(path, type)`, the host `ResourceLoader` fetches, and a `loaded` or `missing` event resolves the hook.
 _Avoid_: "asset loader".
@@ -811,6 +921,26 @@ _Avoid_: A write to the bone table. A modifier that draws.
 **Bone pose** (`BonePose`, `AnimatedPose`, `nodes/3d/skeleton3d/skeletonPose.ts`):
 The position, rotation and scale of one bone, each part optional. An AnimationPlayer writes the poses its bone tracks sample, and the Skeleton3D pass lays them over the file pose before the **Pose modifier** edits run (`animation_mixer.cpp:1878-1891`). A part no track keys keeps the file pose.
 _Avoid_: A write to the bone table. A pose kept in three bones.
+
+**Polygon skin** (`skinnedPoints`, `nodes/2d/polygon2d/polygonSkin.ts`):
+A Polygon2D that a Skeleton2D deforms. Each vertex keeps its four heaviest `bones` weights, and moves by `T * (sum of weight * bone matrix) * T^-1`, with `T` the polygon's global inverse times the skeleton's (`skeleton.glsl:157-182`). A bone's matrix is its pose in skeleton space times the inverse of its rest there. The **Live scene pass** in `skeletonBinding.ts` hands the polygon its weights by bone index. Each render then reads the **Skeleton2D pose** and writes the vertices again where it moved, as Godot's skeleton pass writes a vertex buffer before the canvas draws.
+_Avoid_: A pose read from the file alone, which an AnimationPlayer never moves. A skin that derives the bone matrices itself.
+
+**Skeleton2D rig** (`bindSkeleton2DRigs`, `nodes/2d/skeleton2d/skeletonRig.ts`):
+The bones of one Skeleton2D in Godot's order, each with its parent, the inverse of its rest in skeleton space and its reach (`skeleton_2d.cpp:519-548`). A **Live scene pass** builds one for each skeleton from the scene tree. The polygon skin, the bone kites and the modification stack name a bone by its index in the rig.
+_Avoid_: A second walk of the Bone2D chain. A bone named by its node path at draw time.
+
+**Skeleton2D pose** (`Skeleton2DPose`, `nodes/2d/skeleton2d/skeletonPose.ts`):
+The drawn pose of the bones of one Skeleton2D, which the skeleton owns. Before each render it reads the transforms the scene and an AnimationPlayer gave the bones, runs the **Modification stack** on them, and writes the solved transforms onto the bone objects. After the render it puts the bone transforms back, as Godot keeps the cache transform of a bone beside its override (`skeleton_2d.cpp:786-805`). The **Polygon skin** and the bone kites read this one pose.
+_Avoid_: A pose each reader derives. A solved transform left on a bone after the render.
+
+**Solved bones** (`solveSkeleton2DBones`, `nodes/2d/skeleton2d/solvedBones.ts`):
+The Bone2Ds that a **Modification stack** moves. The pass solves them on the **Live scene tree** from the transforms the scene file stores, and gives a **Node patch** for each moved bone. The RemoteTransform pass reads them, so a relay below a bone pushes the pose Godot's skeleton gives the bone (`skeleton_2d.cpp:786-796`). The Cameras panel reads them for a Camera2D below a bone. A stack in the scene file solves, and so does one in a `.tres` file once the loader holds it. No AnimationPlayer pose reaches the solve. The inspector shows the stored transform, as Godot saves it (`skeleton_2d.cpp:181-187`).
+_Avoid_: A solved transform in the patches the inspector reads. A second builder of the solve scene: `buildStackScene` serves this pass and the **Skeleton2D pose**.
+
+**Modification stack** (`solveStack`, `nodes/2d/skeleton2d/modificationStack/stackRun.ts`):
+The SkeletonModificationStack2D of a Skeleton2D: LookAt, TwoBoneIK, CCDIK, FABRIK and StackHolder modifications that pose the bones (`skeleton_2d.cpp:769-815`). Godot runs it each frame on the pose the frame before left, so the solve steps through frames until the pose repeats or the frame of the Harness capture comes. Jiggle, PhysicalBones and a modification in the physics mode need simulated time and move no bone.
+_Avoid_: One pass of each modification. A solve that starts from the solved pose of the last render.
 
 **Override re-homing** (`rehomeOverride`, carried as `LiveNode.scope`):
 The copy of each resource an override names into the scope of the node it reaches, under a fresh id where that id is taken, so each property resolves in the file that wrote it (ADR-0051).

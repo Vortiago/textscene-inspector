@@ -21,6 +21,7 @@ import {
   linkButtonLabelShape,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlProps } from '../control/testing/controlProps';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 function node(props: Partial<LinkButtonProperties>): SolveNode {
@@ -90,14 +91,14 @@ describe('linkButtonTextTheme', () => {
   });
 
   it('a theme_override_colors/font_color override wins over the default', () => {
-    const props: LinkButtonProperties = {
+    const props: LinkButtonProperties = controlProps({
       name: 'L',
       textDirection: 0,
       language: '',
       structuredTextBidiOverride: 0,
       structuredTextBidiOverrideOptions: [],
       themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
-    };
+    });
     expect(linkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
       r: 1,
       g: 0,

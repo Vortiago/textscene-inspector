@@ -22,4 +22,17 @@ describe('parseMenuButton', () => {
     const p = parseMenuButton(h({ name: 'M', type: 'MenuButton' }), { flat: 'true' });
     expect(p.flat).toBe(true);
   });
+
+  it('is pressed for button_pressed without toggle_mode: the constructor sets it (menu_button.cpp:240)', () => {
+    const p = parseMenuButton(h({ name: 'M', type: 'MenuButton' }), { button_pressed: 'true' });
+    expect(p.buttonPressed).toBe(true);
+  });
+
+  it('is not pressed once toggle_mode is false', () => {
+    const p = parseMenuButton(h({ name: 'M', type: 'MenuButton' }), {
+      toggle_mode: 'false',
+      button_pressed: 'true',
+    });
+    expect(p.buttonPressed).toBe(false);
+  });
 });

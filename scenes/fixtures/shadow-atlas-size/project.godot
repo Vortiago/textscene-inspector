@@ -1,0 +1,15 @@
+; A res:// root of its own, because `rendering/2d/shadow_atlas/size` is a PROJECT setting and no
+; .tscn can carry one. Kept in a subdirectory rather than at scenes/fixtures: a project.godot there
+; would apply to every other fixture.
+
+config_version=5
+
+[application]
+
+config/name="Shadow atlas size"
+run/main_scene="res://unit-pointlight2d-shadow-atlas-size.tscn"
+config/features=PackedStringArray("4.6")
+
+[rendering]
+
+2d/shadow_atlas/size=512

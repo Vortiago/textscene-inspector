@@ -16,6 +16,7 @@ import {
 } from './fontMetrics';
 import {
   isWhitespace,
+  soloLineLayout,
   widestLineWidthPx,
   type GlyphPlacement,
   type TextLayoutResult,
@@ -25,15 +26,22 @@ import { fitTrimmedGlyphsToWidth } from './textJustify';
 import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
 /**
- * The `TextServer::TextOverrunFlag` bits an `OverrunBehavior` reaches (`text_server.cpp:2399-2432`),
- * without `OVERRUN_SHORT_STRING_ELLIPSIS`, which that mapping never sets, and without
- * `OVERRUN_JUSTIFICATION_AWARE`, which only Label's autowrap-off FILL re-trim sets (`label.cpp:323`).
+ * The `TextServer::TextOverrunFlag` bits an `OverrunBehavior` reaches (`text_server.cpp:2399-2432`).
+ * The two FORCE behaviours set `OVERRUN_SHORT_STRING_ELLIPSIS`, never `OVERRUN_ENFORCE_ELLIPSIS`: a line
+ * that fits stays whole, and a short string that overflows still gets its ellipsis. A caller sets
+ * `enforceEllipsis` for the lines `TextParagraph` hides (`text_paragraph.cpp:231`).
  */
 export interface OverrunTrimFlags {
   trim: boolean;
   trimWordOnly: boolean;
   addEllipsis: boolean;
   enforceEllipsis: boolean;
+  shortStringEllipsis: boolean;
+}
+
+/** `enforce_ellipsis || short_string_ellipsis`, which every test after the entry gate reads (`text_server_adv.cpp:5986-6123`). */
+function isEllipsisAlways(flags: OverrunTrimFlags): boolean {
+  return flags.enforceEllipsis || flags.shortStringEllipsis;
 }
 
 const NO_TRIM_FLAGS: OverrunTrimFlags = {
@@ -41,24 +49,41 @@ const NO_TRIM_FLAGS: OverrunTrimFlags = {
   trimWordOnly: false,
   addEllipsis: false,
   enforceEllipsis: false,
+  shortStringEllipsis: false,
 };
 
+/** The properties that make a narrower box cut or trim the text instead of growing (`button.cpp:493-495`, `label.cpp:993-995`). */
+export interface TextClipProperties {
+  clipText?: boolean;
+  overrunBehavior?: number;
+}
+
+/** `clip_text` or a trimming overrun behaviour: the text's width no longer sets the minimum size. */
+export function isTextWidthClipped(props: TextClipProperties): boolean {
+  return (
+    props.clipText === true ||
+    (props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING) !== OverrunBehavior.OVERRUN_NO_TRIMMING
+  );
+}
+
 /** `TextServer::get_overrun_flags_from_behavior` (`text_server.cpp:2399-2432`). */
-export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
+export function overrunFlagsForBehavior(behavior: number | undefined): OverrunTrimFlags {
   switch (behavior) {
     case OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS_FORCE:
       return {
         trim: true,
         trimWordOnly: true,
         addEllipsis: true,
-        enforceEllipsis: true,
+        enforceEllipsis: false,
+        shortStringEllipsis: true,
       };
     case OverrunBehavior.OVERRUN_TRIM_ELLIPSIS_FORCE:
       return {
         trim: true,
         trimWordOnly: false,
         addEllipsis: true,
-        enforceEllipsis: true,
+        enforceEllipsis: false,
+        shortStringEllipsis: true,
       };
     case OverrunBehavior.OVERRUN_TRIM_WORD_ELLIPSIS:
       return {
@@ -66,6 +91,7 @@ export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
         trimWordOnly: true,
         addEllipsis: true,
         enforceEllipsis: false,
+        shortStringEllipsis: false,
       };
     case OverrunBehavior.OVERRUN_TRIM_ELLIPSIS:
       return {
@@ -73,6 +99,7 @@ export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
         trimWordOnly: false,
         addEllipsis: true,
         enforceEllipsis: false,
+        shortStringEllipsis: false,
       };
     case OverrunBehavior.OVERRUN_TRIM_WORD:
       return {
@@ -80,6 +107,7 @@ export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
         trimWordOnly: true,
         addEllipsis: false,
         enforceEllipsis: false,
+        shortStringEllipsis: false,
       };
     case OverrunBehavior.OVERRUN_TRIM_CHAR:
       return {
@@ -87,6 +115,7 @@ export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
         trimWordOnly: false,
         addEllipsis: false,
         enforceEllipsis: false,
+        shortStringEllipsis: false,
       };
     case OverrunBehavior.OVERRUN_NO_TRIMMING:
     default:
@@ -94,13 +123,16 @@ export function overrunFlagsForBehavior(behavior: number): OverrunTrimFlags {
   }
 }
 
+/** `TextLine::overrun_behavior`'s default (`text_line.h:50`), which a control's own `text_buf` keeps. */
+export const TEXT_LINE_DEFAULT_OVERRUN = overrunFlagsForBehavior(OverrunBehavior.OVERRUN_TRIM_ELLIPSIS);
+
 /** The default ellipsis every caller falls back to, `String::chr(0x2026)` (`label.cpp:294` et al.'s `(el_char.length() > 0) ? el_char[0] : 0x2026`). */
 const DEFAULT_ELLIPSIS_CHAR = '…';
 
 /** `ell_min_characters` (`text_server_adv.cpp:6049`): below this many kept characters, a plain cut replaces the ellipsis. */
 const ELL_MIN_CHARACTERS = 6;
 
-interface OverrunTrimOptions {
+export interface OverrunTrimOptions {
   fontMetrics: FontMetrics;
   /** The font size of the last glyph, which Godot reads (`text_server_adv.cpp:5981`): the line size, or its trailing run size. */
   fontSizePx: number;
@@ -108,7 +140,7 @@ interface OverrunTrimOptions {
   ellipsisChar?: string;
 }
 
-interface TextBufferTrimOptions extends OverrunTrimOptions {
+export interface TextBufferTrimOptions extends OverrunTrimOptions {
   /**
    * The set direction is RTL: `shaped_text_draw` reads `shaped_text_get_direction`
    * (`text_server.cpp:1744`), so only an RTL line of AUTO direction draws its fill left to right.
@@ -234,7 +266,7 @@ function findOverrunTrim(
   const { fontMetrics, fontSizePx, ellipsisChar = DEFAULT_ELLIPSIS_CHAR } = options;
   const glyphs = line.glyphs;
 
-  // :5958
+  // :5958: only `enforceEllipsis` passes a line that fits, never the short-string flag.
   if (
     !flags.trim ||
     glyphs.length === 0 ||
@@ -246,7 +278,7 @@ function findOverrunTrim(
 
   // :5985-6046
   const lastFace = glyphs.at(-1)!.fontMetrics;
-  const wantsEllipsis = flags.addEllipsis || flags.enforceEllipsis;
+  const wantsEllipsis = flags.addEllipsis || isEllipsisAlways(flags);
   const elFace = wantsEllipsis ? faceWithGlyph(lastFace, fontMetrics, ellipsisChar) : lastFace;
   const foundElChar = elFace !== null;
   const dotChar = foundElChar ? ellipsisChar : '.';
@@ -266,19 +298,20 @@ function findOverrunTrim(
   const cut = findCut(glyphs, line.widthPx, budget, line.isRtl === true);
 
   // :6122
-  if (!((cut.trimPos >= 0 && line.widthPx > widthPx) || flags.enforceEllipsis)) {
+  if (!((cut.trimPos >= 0 && line.widthPx > widthPx) || isEllipsisAlways(flags))) {
     return null;
   }
 
   // :6123-6149: the space a word cut adds, then the dots, in logical order.
   const ellipsis: Array<Omit<GlyphPlacement, 'x'>> = [];
-  if (flags.addEllipsis && (cut.ellipsisPos > 0 || flags.enforceEllipsis)) {
+  if (flags.addEllipsis && (cut.ellipsisPos > 0 || isEllipsisAlways(flags))) {
     if (flags.trimWordOnly && cut.ellipsisPos > 0) {
       ellipsis.push({
         char: ' ',
         advance: whitespaceAdvancePx,
         fontSizePx,
         fontMetrics: whitespaceFace,
+        isEllipsis: true,
       });
     }
     for (let r = 0; r < dotRepeat; r++) {
@@ -288,6 +321,7 @@ function findOverrunTrim(
         emboldenGrowthPx,
         fontSizePx,
         fontMetrics: dotFace,
+        isEllipsis: true,
       });
     }
   }
@@ -346,6 +380,23 @@ function trimmedLine(line: TextLineLayout, trim: OverrunTrim, glyphs: GlyphPlace
 }
 
 /**
+ * A one-line paragraph trimmed to `widthPx` by {@link trimTextBufferLineToWidth}, as `TextLine::draw`
+ * or a one-row `TextParagraph::draw` trims it. Returns `layout` itself when nothing is cut, so a memo
+ * downstream holds.
+ */
+export function trimSoloLine(
+  layout: TextLayoutResult,
+  flags: OverrunTrimFlags,
+  widthPx: number,
+  options: TextBufferTrimOptions
+): TextLayoutResult {
+  if (!flags.trim) return layout;
+  const line = layout.lines[0]!;
+  const trimmedLine = trimTextBufferLineToWidth(line, widthPx, flags, options);
+  return trimmedLine === line && layout.lines.length === 1 ? layout : soloLineLayout(trimmedLine, layout);
+}
+
+/**
  * Each row of `layout` trimmed by {@link trimTextBufferLineToWidth}, as `TextParagraph::_shape_lines`
  * trims an unwrapped buffer (`text_paragraph.cpp:282-293`). Its width is the widest trimmed row.
  */
@@ -356,6 +407,8 @@ export function trimLayoutToWidth(
   options: TextBufferTrimOptions
 ): TextLayoutResult {
   const lines = layout.lines.map((line) => trimTextBufferLineToWidth(line, widthPx, flags, options));
+  // `layout` itself when no row is cut, so a memo downstream holds.
+  if (lines.every((line, index) => line === layout.lines[index])) return layout;
   return { ...layout, lines, widthPx: widestLineWidthPx(lines) };
 }
 
@@ -394,7 +447,7 @@ function isCutAllowed(
 /** The ellipsis width the cut must leave room for at a glyph on either side of the minimum. */
 function ellipsisBudgetPx(budget: TrimBudget, isAboveMinCharThreshold: boolean): number {
   const { flags, ellipsisWidthPx } = budget;
-  return (isAboveMinCharThreshold && flags.addEllipsis) || flags.enforceEllipsis ? ellipsisWidthPx : 0;
+  return (isAboveMinCharThreshold && flags.addEllipsis) || isEllipsisAlways(flags) ? ellipsisWidthPx : 0;
 }
 
 /**
@@ -410,12 +463,12 @@ function findCut(
 ): TrimCut {
   const { widthPx, flags, ellipsisWidthPx } = budget;
   const length = glyphs.length;
-  if (flags.enforceEllipsis && lineWidthPx + ellipsisWidthPx <= widthPx) {
+  if (isEllipsisAlways(flags) && lineWidthPx + ellipsisWidthPx <= widthPx) {
     return { trimPos: -1, ellipsisPos: isParagraphRtl ? 0 : length, keptWidthPx: lineWidthPx };
   }
   let width = lineWidthPx;
   let trimPos = isParagraphRtl ? length : 0;
-  let ellipsisPos = flags.enforceEllipsis ? 0 : -1;
+  let ellipsisPos = isEllipsisAlways(flags) ? 0 : -1;
   // `last_valid_cut_witout_el` and its width: the last position that fit without the ellipsis
   // budget, for the min-characters fallback.
   let lastValidCutWithoutEl = -1;
@@ -437,14 +490,14 @@ function findCut(
         break;
       }
       const isAllowed = isCutAllowed(glyph, flags, isAboveMinCharThreshold);
-      if (!flags.enforceEllipsis && width <= widthPx && lastValidCutWithoutEl === -1 && isAllowed) {
+      if (!isEllipsisAlways(flags) && width <= widthPx && lastValidCutWithoutEl === -1 && isAllowed) {
         lastValidCutWithoutEl = i;
         widthWithoutElPx = width;
       }
       if (width + ellipsisBudgetPx(budget, isAboveMinCharThreshold) <= widthPx && isAllowed) {
         const fitsEllipsis =
           flags.addEllipsis &&
-          (isAboveMinCharThreshold || flags.enforceEllipsis) &&
+          (isAboveMinCharThreshold || isEllipsisAlways(flags)) &&
           width - ellipsisWidthPx <= widthPx;
         trimPos = i;
         if (fitsEllipsis) ellipsisPos = i;
@@ -464,5 +517,5 @@ function startsCluster(glyphs: readonly GlyphPlacement[], i: number): boolean {
 
 /** `:6118-6120`: an enforced ellipsis on a line cut to nothing still draws. */
 function withEnforcedEllipsisAtStart(cut: TrimCut, flags: OverrunTrimFlags): TrimCut {
-  return cut.trimPos === 0 && flags.enforceEllipsis && flags.addEllipsis ? { ...cut, ellipsisPos: 0 } : cut;
+  return cut.trimPos === 0 && isEllipsisAlways(flags) && flags.addEllipsis ? { ...cut, ellipsisPos: 0 } : cut;
 }

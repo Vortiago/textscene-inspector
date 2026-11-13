@@ -5,12 +5,11 @@
  */
 
 import { useMemo, useRef } from 'react';
-import { visualLayersUserData } from '../../../r3f/visualLayers';
 import type * as THREE from 'three';
 import type { ReactNode } from 'react';
 import type { TscnNode } from '../../../parser/types';
 import { node3dGroupSpread, transformFromNode3DProperties } from '../../../r3f/nodeTransform';
-import { SurfaceMaterialSlots } from '../../../r3f/materials/SurfaceMaterialSlots';
+import { SurfacedMeshDrawer } from '../../../r3f/surfacedMeshDrawer/SurfacedMeshDrawer';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { useUndrawnMeshReport } from '../../../r3f/contexts/UndrawnMeshesContext';
 import { EmptyShapeBranch, useReportEmptyShape } from '../../../r3f/contexts/EmptyShapesContext';
@@ -114,8 +113,14 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   // A CSG `material` is as often an ExtResource `.tres` as an inline sub-resource, and a CSG
   // primitive keeps only a `Ref<Material>` (`modules/csg/csg_shape.h:276,290`), so both arrive at
   // the same slot, which renders either, textures included.
-  const materialSources = useMemo(
-    () => ownSolid?.materials.map((address) => resolveMaterialSource(address, ctx)) ?? [],
+  const ownParts = useMemo(
+    () =>
+      ownSolid && [
+        {
+          geometry: ownSolid.geometry,
+          materials: ownSolid.materials.map((address) => resolveMaterialSource(address, ctx)),
+        },
+      ],
     [ownSolid, ctx]
   );
 
@@ -167,7 +172,7 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
   const nodeRef = useRef<THREE.Group | null>(null);
   const drawnRef = useRef<THREE.Mesh | null>(null);
   const placement = useMemo(() => livePlacement(nodeRef, drawnRef), []);
-  const shadow = useGeometryInstance(placement);
+  useGeometryInstance(placement);
 
   const transform = { ref: nodeRef, name: node.name, ...node3dGroupSpread(nodeTransform) } as const;
 
@@ -187,35 +192,14 @@ export function CsgPrimitive({ node, properties, children }: CsgPrimitiveProps) 
 
   // The node drawing its own solid: what a lone root is, and what a combining root falls back to
   // while the library loads or after it failed.
-  const ownMesh = geometry && (
-    <mesh
-      ref={drawnRef}
-      castShadow={shadow.castShadow}
-      onBeforeRender={shadow.onBeforeRender}
-      onAfterRender={shadow.onAfterRender}
-      onBeforeShadow={shadow.onBeforeShadow}
-      onAfterShadow={shadow.onAfterShadow}
-      receiveShadow
-      userData={visualLayersUserData(properties.layers)}
-    >
-      {geometry}
-      <SurfaceMaterialSlots sources={materialSources} />
-    </mesh>
-  );
+  const ownMesh = ownParts && <SurfacedMeshDrawer parts={ownParts} body={{ ref: drawnRef }} />;
 
   // C. Combining root: two or more contributions. It draws the evaluated result and tells its
   // subtree, through CsgSubtreeContext, that their solids are spoken for.
   if (combining) {
     return (
       <group {...transform}>
-        <CsgRootMesh
-          plan={plan}
-          setup={setup}
-          shadow={shadow}
-          layers={properties.layers}
-          meshRef={drawnRef}
-          fallback={ownMesh}
-        >
+        <CsgRootMesh plan={plan} setup={setup} meshRef={drawnRef} fallback={ownMesh}>
           {shapeChildren}
         </CsgRootMesh>
       </group>

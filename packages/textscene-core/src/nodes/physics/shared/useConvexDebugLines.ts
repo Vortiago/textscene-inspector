@@ -5,7 +5,7 @@
  */
 
 import { useMemo } from 'react';
-import type { TscnInternalResource } from '../../../parser/types';
+import type { Shape3DResource } from '../../../resources/shapes/shape3d';
 import { decodeConvexPolygonShape3D } from '../../../resources/shapes/convexpolygonshape3d';
 import { memoisedImport } from '../../../resources/memoisedImport';
 import { useLazyModule } from '../../../resources/useLazyModule';
@@ -19,7 +19,7 @@ const loadConvexGeometry = memoisedImport(() => import('three/addons/geometries/
  *
  * @canonical A ConvexPolygonShape3D's debug lines, loaded lazily
  */
-export function useConvexDebugLines(shape: TscnInternalResource): Float32Array | null {
+export function useConvexDebugLines(shape: Shape3DResource): Float32Array | null {
   const hullModule = useLazyModule(loadConvexGeometry);
   return useMemo(() => {
     if (!hullModule) return null;

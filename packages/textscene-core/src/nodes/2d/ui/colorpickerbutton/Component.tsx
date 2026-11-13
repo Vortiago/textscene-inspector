@@ -11,10 +11,11 @@ import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import { pickButtonStyleBox } from '../../../../r3f/controls/native/buttonBase';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { contentRect } from '../../../../r3f/controls/native/styleBoxFlat';
+import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { parseColor } from '../../../../utils/colorParser';
 import { Button } from '../button/Component';
+import { colorPickerOverbrightIconSize } from '../colorpicker/nativeSolver';
 import { AlphaCheckerboardQuad } from '../shared/AlphaCheckerboardQuad';
 import { COLOR_PICKER_OVERBRIGHT_ICON } from '../../../../r3f/controls/native/themeIcons';
 import { isColorOverbright } from '../shared/colorOverbright';
@@ -26,23 +27,19 @@ export function ColorPickerButton(props: NativeControlComponentProps) {
 
   const fill = useMemo(() => parseColor(buttonProps.color), [buttonProps.color]);
   const filled = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
-  const swatchColor = useGodotLinearColor(filled);
+  const swatchColor = useItemLinearColor(filled);
 
   // `Rect2(normal_style->get_offset(), get_size() - normal_style->get_minimum_size())`: the
   // margins of "normal" in every draw state. `normal_style` binds Button's "normal" (`default_theme.cpp:1134`).
   const normalStyle = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, 'normal');
-  const swatch = {
-    x: normalStyle.contentMargin.left,
-    y: normalStyle.contentMargin.top,
-    w: rect.w - normalStyle.contentMargin.left - normalStyle.contentMargin.right,
-    h: rect.h - normalStyle.contentMargin.top - normalStyle.contentMargin.bottom,
-  };
+  const swatch = contentRect({ x: 0, y: 0, w: rect.w, h: rect.h }, normalStyle);
 
   // `BIND_THEME_ITEM_EXT` looks `overbright_indicator` up under "ColorPicker" (`color_picker.cpp:2546`),
   // so even a local override on this node is skipped. `SolveNode.icons` walks the node's own
   // type chain, so the vendored icon stands in.
   const overbrightTexture = useIconTexture(COLOR_PICKER_OVERBRIGHT_ICON);
   const overbright = isColorOverbright(fill);
+  const overbrightPx = colorPickerOverbrightIconSize(theme);
 
   // The checkerboard has no alpha gate (`color_picker.cpp:2428`), unlike the `preset_color.a < 1`
   // check of `ColorPresetButton`: an opaque swatch covers it.
@@ -71,8 +68,8 @@ export function ColorPickerButton(props: NativeControlComponentProps) {
       {overbright && (
         <CanvasItemGroup position={[normalStyle.contentMargin.left, -normalStyle.contentMargin.top, 0]}>
           <ControlQuad
-            width={16}
-            height={16}
+            width={overbrightPx}
+            height={overbrightPx}
             color={tint.color}
             opacity={tint.opacity}
             map={overbrightTexture}

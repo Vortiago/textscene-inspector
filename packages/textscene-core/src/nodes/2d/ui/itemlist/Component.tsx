@@ -1,22 +1,27 @@
 /**
  * `<ItemList>`, the native (WebGL canvas) painter for `NOTIFICATION_DRAW`
- * (`scene/gui/item_list.cpp:1367-1729`): the panel, the guide lines, then each
- * row's icon and label, limited to what a `.tscn` can show (`nativeSolver.ts`).
+ * (`scene/gui/item_list.cpp:1367-1729`): the panel, the guide lines, each
+ * row's icon and label, the scroll hint, then the scrollbars, limited to what a `.tscn` can show (`nativeSolver.ts`).
  * `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
 import { useMemo } from 'react';
-import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
+import {
+  ControlClipProvider,
+  useControlClipPlanes,
+  useWorldClipPlanes,
+} from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
-import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   OutlinedTextRun,
   TextOutlineRing,
@@ -32,73 +37,92 @@ import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/res
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SceneScope } from '../../../../parser/types';
 import {
-  isItemTextFillDrawn,
-  isItemTextWrapped,
+  ICON_MODE_LEFT,
   ITEM_LIST_DEFAULT_MAX_COLUMNS,
   ITEM_LIST_THEME_FONT_KEY,
+  itemHasIcon,
   itemIconColor,
   itemIconDraw,
   itemIconPackedSize,
   itemListGuideColor,
+  itemListBarMinimums,
+  itemListDrawClip,
   itemListGuideLines,
   itemListIconSlotKey,
   itemListLineTextWidthPx,
+  itemListMaxColumnWidth,
+  itemListMinimumShapeWidthPx,
   itemListMirrorX,
-  itemListRightAlignOffsetPx,
+  itemListRowsInClip,
   itemListRowTextX,
-  itemListSeparation,
+  itemListSeparatorsInClip,
+  itemListSpacing,
   itemListTextTheme,
   itemListWrappedTextWidthPx,
   itemMinimumSize,
+  itemListCursorRect,
+  itemListDrawsCursor,
+  itemListSelectedFontColor,
+  pickItemListCursorStyleBox,
+  itemListSelectedRect,
   itemTextColor,
+  pickItemListSelectedStyleBox,
   itemTextDrawOffset,
-  itemTextLineCenterOffset,
+  isItemListTextWrapped,
   packItemListRows,
   pickItemListPanelStyleBox,
-  shapeItemText,
-  trimItemListText,
+  shapeItemListText,
 } from './nativeSolver';
-import { ItemListIconMode } from '../../../../godot/scene/gui';
-import type { ItemListItem, ItemListProperties } from './types';
+import { ScrollBarChrome, ScrollHintChrome, SCROLL_HINT_MODULATE } from '../shared/ScrollChrome';
+import { itemListScrollBars } from './scrollBars';
+import { itemListDrawnLabel, isItemListLabelFillDrawn } from './labelDraw';
+import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
-/** Pass 1: this row's own icon/text size contribution: what `packItemListRows` needs, before rects exist. */
+/**
+ * Pass 1: this row's own icon/text size contribution: what `packItemListRows` needs, before rects
+ * exist. `minimumLayout` is the label shaped at the minimum-size width (`item_list.cpp:1763-1766`).
+ */
 interface RowContent {
-  item: ItemListItem;
+  item: ItemListRuntimeItem;
   disabled: boolean;
   hasIcon: boolean;
   iconSize: Vector2;
-  hasText: boolean;
   textSize: Vector2;
-  /** Untrimmed: the draw pass trims it at its own width (`trimItemListText`). */
-  shapedText: TextLayoutResult | null;
+  minimumLayout: TextLayoutResult | null;
+}
+
+/** One drawn line of a row's label: its own layout, and the alignment shift `TextParagraph::draw` gave it. */
+interface DrawnLabelLine {
+  lineLayout: TextLayoutResult;
+  shiftPx: number;
 }
 
 /** Pass 2: this row's fully-resolved, plain-data geometry: everything but the async icon load. */
 interface RowGeometry {
-  item: ItemListItem;
+  /** The row's place in the list: its React key, which a repack that moves the row leaves unchanged. */
+  index: number;
+  item: ItemListRuntimeItem;
   disabled: boolean;
   hasIcon: boolean;
-  iconNaturalSize: Vector2 | null;
-  fixedIconSizeSet: boolean;
   iconDraw: ReturnType<typeof itemIconDraw>;
-  textLayout: TextLayoutResult | null;
+  /** The label shaped again at its draw width (`item_list.cpp:1625-1661`), or `null` for an item with no text. */
+  label: { linePitchPx: number; lines: DrawnLabelLine[] } | null;
   /** Row-relative pen x, already through the RTL branch of `item_list.cpp:1639-1670`. */
   textX: number;
   textY: number;
   /** Row-relative icon x, already mirrored (`item_list.cpp:1582-1584`). */
   iconX: number;
-  /** The width `text_buf->set_width()` gets, and the box CENTER/RIGHT alignment works inside. */
-  textWidthPx: number;
-  /** One layout per line of wrapped `textLayout`, so each line keeps its meshes across renders. Empty for a single line. */
-  lineLayouts: TextLayoutResult[];
-  /** Read for a single line only: false where the row hides its fill and draws the outline alone (`item_list.cpp:1672-1688`). */
+  /** False where the row hides its fill and draws the outline alone (`item_list.cpp:1672-1688`). */
   isTextFillDrawn: boolean;
-  /** `isItemTextWrapped`: a centred paragraph, drawn line by line, or one line. */
-  isTextWrapped: boolean;
   rect: Rect2;
   textColor: Rgba;
+  /** The background of a selected row, relative to the row's origin, or `null` for a row not selected. */
+  selectedRect: Rect2 | null;
+  /** The `cursor` box of the current row of a multi-select list, relative to the row's origin, or `null`. */
+  cursorRect: Rect2 | null;
 }
 
 interface ItemListRowProps {
@@ -108,9 +132,11 @@ interface ItemListRowProps {
   /** Tinted by the list, not by the item: `draw_outline` takes the theme colour (`item_list.cpp:1643`). */
   outline: TextOutlineTheme;
   renderOrder: number;
-  clippingPlanes: readonly THREE.Plane[];
   fontSizePx: number;
   resources: SceneScope;
+  /** The list's `selected` StyleBox, drawn behind a selected row. */
+  selectedBox: StyleBoxFlatData;
+  icons: SolveNode['icons'];
 }
 
 /**
@@ -124,25 +150,24 @@ function ItemListRow({
   tint,
   outline,
   renderOrder,
-  clippingPlanes,
   fontSizePx,
   resources,
+  selectedBox,
+  icons,
 }: ItemListRowProps) {
   const {
     item,
     disabled,
     hasIcon,
     iconDraw,
-    textLayout,
+    label,
     textX,
     textY,
     iconX,
-    textWidthPx,
-    lineLayouts,
     isTextFillDrawn,
-    isTextWrapped,
     rect,
     textColor,
+    selectedRect,
   } = geometry;
 
   const { texture: iconSource } = useTexture2D(
@@ -150,64 +175,67 @@ function ItemListRow({
     resources.externalResources,
     resources.internalResources
   );
-  const iconTexture = useOwnerCanvas2DTexture(iconSource);
+  const ownIconTexture = useOwnerCanvas2DTexture(iconSource);
+  const themedTexture = useNodeIcon(
+    item.themedIcon && icons[item.themedIcon.name],
+    item.themedIcon?.vendoredUrl ?? null
+  );
+  const iconTexture = item.themedIcon ? themedTexture : ownIconTexture;
+  // Inside the list's own `ControlClipProvider`, so a row clips to the list rect.
+  const clippingPlanes = useControlClipPlanes();
 
-  const iconColorSrgb = useMemo(() => tintColor(itemIconColor(disabled), tint), [disabled, tint]);
-  const iconColorLinear = useGodotLinearColor(iconColorSrgb);
+  const iconColorSrgb = useMemo(
+    () => tintColor(itemIconColor(disabled, item.iconModulate), tint),
+    [disabled, item.iconModulate, tint]
+  );
+  const iconColorLinear = useItemLinearColor(iconColorSrgb);
   const tintedTextColor = useMemo(() => tintColor(textColor, tint), [textColor, tint]);
   const run = { fontSizePx, outline, clippingPlanes, renderOrder };
 
   return (
     <CanvasItemGroup position={[origin.x + rect.x, -(origin.y + rect.y), 0]}>
-      {hasIcon && iconDraw.rect && iconTexture && (
-        <CanvasItemGroup position={[iconX, -iconDraw.rect.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={iconDraw.rect.w}
-            height={iconDraw.rect.h}
-            color={iconColorLinear}
-            opacity={iconColorSrgb.a}
-            map={iconTexture}
-          />
-        </CanvasItemGroup>
+      {selectedRect && (
+        <StyleBoxQuad styleBox={selectedBox} color={tint} rect={selectedRect} renderOrder={renderOrder} />
       )}
-      {textLayout &&
-        (!isTextWrapped ? (
-          <CanvasItemGroup position={[textX, -textY, 0]}>
+      {hasIcon && iconDraw.rect && iconTexture && (
+        <PositionedIcon
+          rect={{ ...iconDraw.rect, x: iconX }}
+          texture={iconTexture}
+          color={iconColorLinear}
+          opacity={iconColorSrgb.a}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
+      )}
+      {label &&
+        label.lines.map(({ lineLayout, shiftPx }, index) => (
+          <CanvasItemGroup key={index} position={[textX + shiftPx, -(textY + index * label.linePitchPx), 0]}>
             {isTextFillDrawn ? (
-              <OutlinedTextRun {...run} layout={textLayout} tint={tintedTextColor} />
+              <OutlinedTextRun {...run} layout={lineLayout} tint={tintedTextColor} />
             ) : (
-              <TextOutlineRing {...run} layout={textLayout} />
+              <TextOutlineRing {...run} layout={lineLayout} />
             )}
           </CanvasItemGroup>
-        ) : (
-          textLayout.lines.map((line, index) => (
-            <CanvasItemGroup
-              key={index}
-              position={[
-                textX +
-                  itemTextLineCenterOffset(
-                    textWidthPx,
-                    shapedTextSizeWidthPx(line.widthPx),
-                    line.isRtl === true
-                  ),
-                -(textY + index * textLayout.linePitchPx),
-                0,
-              ]}
-            >
-              <OutlinedTextRun {...run} layout={lineLayouts[index]!} tint={tintedTextColor} />
-            </CanvasItemGroup>
-          ))
         ))}
     </CanvasItemGroup>
   );
 }
 
-export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
-  const props = painterView<ItemListProperties>(solveNode);
+export function ItemList({
+  solveNode,
+  tint,
+  childTint,
+  rect,
+  renderOrder,
+  slot,
+  theme,
+  snapToPixels,
+  children,
+}: NativeControlComponentProps) {
+  const props = painterView<ItemListRuntimeProperties>(solveNode);
   const items = props.items;
 
-  const iconMode = props.iconMode ?? ItemListIconMode.ICON_MODE_LEFT;
+  const iconMode = props.iconMode ?? ICON_MODE_LEFT;
   const maxTextLines = props.maxTextLines ?? 1;
   const fixedColumnWidth = props.fixedColumnWidth ?? 0;
   const iconScale = props.iconScale ?? 1;
@@ -219,51 +247,56 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   const { fontSizePx, color: baseFontColor } = itemListTextTheme(solveNode, props, { theme });
   const fontMetrics = resolveNodeFontMetrics(solveNode, ITEM_LIST_THEME_FONT_KEY);
 
-  const hSeparation = itemListSeparation(theme);
-  const vSeparation = hSeparation;
-  const iconMargin = hSeparation;
+  const selectedFontColor = itemListSelectedFontColor(solveNode);
+  const selectedBox = pickItemListSelectedStyleBox(solveNode.styleBoxes, theme);
+  const cursorBox = pickItemListCursorStyleBox(solveNode.styleBoxes, theme);
+  const drawsCursor = itemListDrawsCursor(props.selectMode ?? 0);
+
+  const spacing = useMemo(() => itemListSpacing(solveNode.constants, theme), [solveNode.constants, theme]);
+  const { hSeparation, vSeparation, iconMargin } = spacing;
   const wraparoundItems = props.wraparoundItems !== false;
   // Under RTL the panel and guide lines stay, and only each row's icon and label
   // move (`item_list.cpp:1582-1584,1639-1641,1664-1668`).
   const rtl = solveNode.rtl;
 
-  const clippingPlanes = useControlClipPlanes();
+  // `set_clip_contents(true)` (`item_list.cpp:2482`) clips to the list rect, scrollbars aside.
+  const ownRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
+  const { anchorRef, clip } = useWorldClipPlanes(ownRect);
+  const clipsContents = props.clipContents !== false;
   const textOutline = useTintedTextOutline(solveNode, tint.own);
+
+  const textShape = useMemo(
+    () => ({
+      fontSizePx,
+      fontMetrics,
+      iconMode,
+      maxTextLines,
+      overrunBehavior: props.textOverrunBehavior,
+      locale: solveNode.locale,
+    }),
+    [fontSizePx, fontMetrics, iconMode, maxTextLines, props.textOverrunBehavior, solveNode.locale]
+  );
 
   const rows: RowContent[] = useMemo(() => {
     return items.map((item, index) => {
       const disabled = item.disabled === true;
-      const hasIcon = item.icon !== undefined;
+      const hasIcon = itemHasIcon(item);
       const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
       const iconSize = itemIconPackedSize(hasIcon, naturalSize, props.fixedIconSize, iconScale);
 
       const text = item.text ?? '';
-      const hasText = text.length > 0;
-      const { shaped: shapedText, minimumSize: textSize } = shapeItemText({
+      const minimumLayout = shapeItemListText({
+        ...textShape,
         text,
-        fontSizePx,
-        fontMetrics,
-        iconMode,
-        maxTextLines,
-        fixedColumnWidth,
-        overrunBehavior: props.textOverrunBehavior,
-        locale: solveNode.locale,
+        widthPx: itemListMinimumShapeWidthPx(fixedColumnWidth),
       });
+      const textSize = minimumLayout
+        ? { x: shapedTextSizeWidthPx(minimumLayout.widthPx), y: minimumLayout.heightPx }
+        : { x: 0, y: 0 };
 
-      return { item, disabled, hasIcon, iconSize, hasText, textSize, shapedText };
+      return { item, disabled, hasIcon, iconSize, textSize, minimumLayout };
     });
-  }, [
-    items,
-    fontSizePx,
-    fontMetrics,
-    iconMode,
-    maxTextLines,
-    fixedColumnWidth,
-    iconScale,
-    props.fixedIconSize,
-    props.textOverrunBehavior,
-    solveNode,
-  ]);
+  }, [items, textShape, fixedColumnWidth, iconScale, props.fixedIconSize, solveNode]);
 
   const itemSizes = useMemo(
     () =>
@@ -272,20 +305,21 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           {
             hasIcon: r.hasIcon,
             iconSize: r.iconSize,
-            hasText: r.hasText,
+            hasText: r.minimumLayout !== null,
             textSize: r.textSize,
             iconMode,
             maxTextLines,
             fixedColumnWidth,
           },
-          theme
+          spacing
         )
       ),
-    [rows, iconMode, maxTextLines, fixedColumnWidth, theme]
+    [rows, iconMode, maxTextLines, fixedColumnWidth, spacing]
   );
 
-  const maxColumnWidth = itemSizes.reduce((max, s) => Math.max(max, s.x), 0);
-  const contentWidth = rect.w - panelMargin.x;
+  const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
+  const pageWidth = rect.w - panelMargin.x;
+  const verticalBarMinWidth = useMemo(() => itemListBarMinimums(theme).verticalWidth, [theme]);
 
   const packed = useMemo(
     () =>
@@ -294,7 +328,9 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
         maxColumnWidth,
         sameColumnWidth: props.sameColumnWidth === true,
         maxColumns: props.maxColumns ?? ITEM_LIST_DEFAULT_MAX_COLUMNS,
-        fitSize: contentWidth,
+        fitSize: pageWidth,
+        verticalBarMinWidth,
+        rtl,
         wraparoundItems,
         autoWidth: props.autoWidth === true,
         hSeparation,
@@ -305,7 +341,9 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
       maxColumnWidth,
       props.sameColumnWidth,
       props.maxColumns,
-      contentWidth,
+      pageWidth,
+      verticalBarMinWidth,
+      rtl,
       rect.h,
       panelMargin.y,
       wraparoundItems,
@@ -314,137 +352,202 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
     ]
   );
 
-  const guideLines = useMemo(
-    () => itemListGuideLines(iconMode, packed.separators, contentWidth),
-    [iconMode, packed.separators, contentWidth]
+  // `base_ofs = theme_cache.panel_style->get_offset()` (`item_list.cpp:1429`):
+  // `StyleBox::get_offset()` is `Point2(get_margin(LEFT), get_margin(TOP))`
+  // (`style_box.cpp:87-89`), never `contentMarginSize`'s summed pair.
+  const panelMargins = panelBox.contentMargin;
+  const origin: Vector2 = { x: panelMargins.left, y: panelMargins.top };
+
+  // The draw `width` (`item_list.cpp:1385-1389`): a visible vertical bar takes its width off.
+  const barWidth = packed.vertical.visible ? verticalBarMinWidth : 0;
+  const contentWidth = pageWidth - barWidth;
+
+  // Only what reaches into the list is drawn, which `clip_contents = false` makes visible.
+  const drawClip = useMemo(
+    () =>
+      itemListDrawClip(
+        { x: rect.w, y: rect.h },
+        { x: origin.x, y: origin.y },
+        packed.horizontal,
+        wraparoundItems
+      ),
+    [rect.w, rect.h, origin.x, origin.y, packed.horizontal, wraparoundItems]
   );
+  const guideLines = useMemo(
+    () =>
+      itemListGuideLines(
+        iconMode,
+        itemListSeparatorsInClip(packed.separators, drawClip),
+        contentWidth,
+        rtl ? barWidth : 0
+      ),
+    [iconMode, packed.separators, drawClip, contentWidth, rtl, barWidth]
+  );
+  const scrollBars = useMemo(
+    () =>
+      itemListScrollBars({
+        size: { x: rect.w, y: rect.h },
+        margins: panelMargins,
+        vertical: packed.vertical,
+        horizontal: packed.horizontal,
+        rtl,
+        theme,
+        scrollHintMode: props.scrollHintMode ?? 0,
+      }),
+    [rect.w, rect.h, panelMargins, packed, rtl, theme, props.scrollHintMode]
+  );
+  // Both scroll bars and the hint are child Controls: no `self_modulate` (`item_list.cpp:2472,2476`).
+  const hintColor = useMemo(() => childTint.color.clone().multiply(SCROLL_HINT_MODULATE), [childTint.color]);
   const guideColorSrgb = useMemo(
     () => tintColor(itemListGuideColor(solveNode), tint.own),
     [solveNode, tint.own]
   );
-  const guideColorLinear = useGodotLinearColor(guideColorSrgb);
+  const guideColorLinear = useItemLinearColor(guideColorSrgb);
 
-  // `base_ofs = theme_cache.panel_style->get_offset()` (`item_list.cpp:1429`):
-  // `StyleBox::get_offset()` is `Point2(get_margin(LEFT), get_margin(TOP))`
-  // (`style_box.cpp:87-89`), never `contentMarginSize`'s summed pair.
-  const origin: Vector2 = { x: panelBox.contentMargin.left, y: panelBox.contentMargin.top };
+  const rowGeometries: RowGeometry[] = useMemo(() => {
+    const minimumShapeWidthPx = itemListMinimumShapeWidthPx(fixedColumnWidth);
+    // The minimum-size pass already shaped the label at this width, so it is not shaped twice.
+    const shapeLabelAt = (r: RowContent, widthPx: number) =>
+      widthPx === minimumShapeWidthPx
+        ? r.minimumLayout
+        : shapeItemListText({ ...textShape, text: r.item.text ?? '', widthPx });
+    return rows.map((r, index) => {
+      const packedRect = packed.items[index]!.rect;
+      // Both centring passes read `rect_cache.SIZE` (`item_list.cpp:1553,1556,1649`),
+      // never its position, and a `Rect2` satisfies `Vector2` structurally.
+      const packedSize: Vector2 = { x: packedRect.w, y: packedRect.h };
+      const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
+      const iconDraw = itemIconDraw(
+        r.hasIcon,
+        iconMode,
+        r.iconSize,
+        naturalSize,
+        fixedIconSizeSet,
+        packedSize,
+        hSeparation,
+        vSeparation,
+        iconMargin
+      );
+      const wrapped = isItemListTextWrapped(iconMode, maxTextLines);
+      const textOffset = itemTextDrawOffset(
+        wrapped,
+        iconDraw.textOffsetContribution,
+        packedSize,
+        r.minimumLayout?.heightPx ?? 0,
+        hSeparation,
+        vSeparation
+      );
+      // Every RTL branch works in control coordinates; the row group keeps
+      // its LTR origin, so each piece comes back relative to it.
+      const rowOriginX = origin.x + packedRect.x;
+      const textWidthPx = wrapped
+        ? itemListWrappedTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems)
+        : itemListLineTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems);
+      const textBoxX = wrapped
+        ? itemListMirrorX(rowOriginX + textOffset.x, textWidthPx, rect.w, rtl)
+        : itemListRowTextX(
+            {
+              ltrX: rowOriginX + textOffset.x,
+              itemRectWidthPx: packedRect.w,
+              iconWidthPx: r.iconSize.x,
+              controlWidthPx: rect.w,
+              contentWidthPx: contentWidth,
+              wraparoundItems,
+              hSeparation,
+            },
+            rtl
+          );
+      const isTextFillDrawn = isItemListLabelFillDrawn({
+        wrapped,
+        fixedColumnWidth,
+        itemRectWidthPx: packedRect.w,
+        iconWidthPx: r.iconSize.x,
+        contentWidthPx: contentWidth,
+        wraparoundItems,
+        hSeparation,
+      });
+      const layout = shapeLabelAt(r, textWidthPx);
+      const label = layout && {
+        linePitchPx: layout.linePitchPx,
+        // One layout object per line, made here, so a line keeps its meshes across renders.
+        lines: itemListDrawnLabel(layout, textWidthPx, wrapped, rtl).map(({ line, shiftPx }) => ({
+          lineLayout: soloLineLayout(line, layout),
+          shiftPx,
+        })),
+      };
+      return {
+        index,
+        item: r.item,
+        disabled: r.disabled,
+        hasIcon: r.hasIcon,
+        iconDraw,
+        label,
+        isTextFillDrawn,
+        textX: textBoxX - rowOriginX,
+        textY: textOffset.y,
+        iconX: iconDraw.rect
+          ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX
+          : 0,
+        rect: packedRect,
+        textColor: itemTextColor(r.item.isSelected ? selectedFontColor : baseFontColor, r.disabled),
+        selectedRect: r.item.isSelected
+          ? itemListSelectedRect({
+              rowRect: packedRect,
+              baseX: origin.x,
+              columnCount: packed.columnCount,
+              contentWidth,
+              controlWidth: rect.w,
+              panelMarginLeft: panelMargins.left,
+              panelMarginRight: panelMargins.right,
+              rtl,
+            })
+          : null,
+        cursorRect:
+          r.item.isCurrent && drawsCursor
+            ? itemListCursorRect({
+                rowRect: packedRect,
+                baseX: origin.x,
+                columnCount: packed.columnCount,
+                contentWidth,
+                controlWidth: rect.w,
+                rtl,
+              })
+            : null,
+      };
+    });
+  }, [
+    rows,
+    packed,
+    iconMode,
+    maxTextLines,
+    fixedColumnWidth,
+    textShape,
+    fixedIconSizeSet,
+    hSeparation,
+    vSeparation,
+    iconMargin,
+    solveNode,
+    baseFontColor,
+    selectedFontColor,
+    drawsCursor,
+    panelMargins.left,
+    panelMargins.right,
+    origin.x,
+    rect.w,
+    contentWidth,
+    wraparoundItems,
+    rtl,
+  ]);
 
-  const rowGeometries: RowGeometry[] = useMemo(
-    () =>
-      rows.map((r, index) => {
-        const packedRect = packed.items[index]!.rect;
-        // Both centring passes read `rect_cache.SIZE` (`item_list.cpp:1553,1556,1649`),
-        // never its position, and a `Rect2` satisfies `Vector2` structurally.
-        const packedSize: Vector2 = { x: packedRect.w, y: packedRect.h };
-        const naturalSize = solveNode.textureSlots[itemListIconSlotKey(index)] ?? null;
-        const iconDraw = itemIconDraw(
-          r.hasIcon,
-          iconMode,
-          r.iconSize,
-          naturalSize,
-          fixedIconSizeSet,
-          packedSize,
-          hSeparation,
-          vSeparation,
-          iconMargin
-        );
-        const wrapped = isItemTextWrapped(iconMode, maxTextLines);
-        const textOffset = itemTextDrawOffset(
-          wrapped,
-          iconDraw.textOffsetContribution,
-          packedSize,
-          r.shapedText?.heightPx ?? 0,
-          hSeparation,
-          vSeparation
-        );
-        // Every RTL branch works in control coordinates; the row group keeps
-        // its LTR origin, so each piece comes back relative to it.
-        const rowOriginX = origin.x + packedRect.x;
-        const textWidthPx = wrapped
-          ? itemListWrappedTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems)
-          : itemListLineTextWidthPx(packedRect.w, textOffset.x, contentWidth, wraparoundItems);
-        const textBoxX = wrapped
-          ? itemListMirrorX(rowOriginX + textOffset.x, textWidthPx, rect.w, rtl)
-          : itemListRowTextX(
-              {
-                ltrX: rowOriginX + textOffset.x,
-                itemRectWidthPx: packedRect.w,
-                iconWidthPx: r.iconSize.x,
-                controlWidthPx: rect.w,
-                contentWidthPx: contentWidth,
-                wraparoundItems,
-                hSeparation,
-              },
-              rtl
-            );
-        const textLayout =
-          r.shapedText &&
-          trimItemListText(r.shapedText, textWidthPx, {
-            fontSizePx,
-            overrunBehavior: props.textOverrunBehavior,
-            iconMode,
-            maxTextLines,
-          });
-        // A non-wrapped item is a single line (`BREAK_NONE`), so the paragraph's
-        // own width is that line's (`item_list.cpp:1668`, alignment RIGHT).
-        const rightAlign =
-          !wrapped && rtl ? itemListRightAlignOffsetPx(textWidthPx, textLayout?.widthPx ?? 0) : 0;
-        return {
-          item: r.item,
-          disabled: r.disabled,
-          hasIcon: r.hasIcon,
-          iconNaturalSize: naturalSize,
-          fixedIconSizeSet,
-          iconDraw,
-          textLayout,
-          textX: textBoxX + rightAlign - rowOriginX,
-          textY: textOffset.y,
-          iconX: iconDraw.rect
-            ? itemListMirrorX(rowOriginX + iconDraw.rect.x, iconDraw.rect.w, rect.w, rtl) - rowOriginX
-            : 0,
-          textWidthPx,
-          lineLayouts:
-            wrapped && textLayout ? textLayout.lines.map((line) => soloLineLayout(line, textLayout)) : [],
-          isTextFillDrawn: isItemTextFillDrawn({
-            fixedColumnWidth,
-            wraparoundItems,
-            rowWidthPx: packedRect.w,
-            contentWidthPx: contentWidth,
-            iconWidthPx: r.iconSize.x,
-            hSeparation,
-          }),
-          isTextWrapped: wrapped,
-          rect: packedRect,
-          textColor: itemTextColor(baseFontColor, r.disabled),
-        };
-      }),
-    [
-      rows,
-      packed,
-      iconMode,
-      fixedIconSizeSet,
-      hSeparation,
-      vSeparation,
-      iconMargin,
-      solveNode,
-      baseFontColor,
-      origin.x,
-      rect.w,
-      contentWidth,
-      wraparoundItems,
-      fixedColumnWidth,
-      maxTextLines,
-      fontSizePx,
-      props.textOverrunBehavior,
-      rtl,
-    ]
-  );
+  const visibleRows = useMemo(() => itemListRowsInClip(rowGeometries, drawClip), [rowGeometries, drawClip]);
 
-  return (
+  const rowsAndChildren = (
     <>
-      <StyleBoxQuad styleBox={panelBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
       {guideLines.map((line, index) => (
-        <CanvasItemGroup key={`guide-${index}`} position={[origin.x, -(origin.y + line.y), 0]}>
+        <CanvasItemGroup
+          key={`guide-${index}`}
+          position={[origin.x + line.x, -hairlineQuadStartPx(origin.y + line.y), 0]}
+        >
           <ControlQuad
             renderOrder={renderOrder}
             width={line.width}
@@ -454,19 +557,70 @@ export function ItemList({ solveNode, tint, rect, renderOrder, theme }: NativeCo
           />
         </CanvasItemGroup>
       ))}
-      {rowGeometries.map((geometry, index) => (
+      {visibleRows.map((geometry) => (
         <ItemListRow
-          key={index}
+          key={geometry.index}
           geometry={geometry}
           origin={origin}
           tint={tint.own}
           outline={textOutline}
           renderOrder={renderOrder}
-          clippingPlanes={clippingPlanes}
           fontSizePx={fontSizePx}
           resources={solveNode.resources}
+          selectedBox={selectedBox}
+          icons={solveNode.icons}
         />
       ))}
+      {visibleRows.map(
+        (geometry) =>
+          geometry.cursorRect && (
+            <CanvasItemGroup
+              key={`cursor-${geometry.index}`}
+              position={[origin.x + geometry.rect.x, -(origin.y + geometry.rect.y), 0]}
+            >
+              <StyleBoxQuad
+                styleBox={cursorBox}
+                color={tint.own}
+                rect={geometry.cursorRect}
+                renderOrder={renderOrder}
+              />
+            </CanvasItemGroup>
+          )
+      )}
+      <ScrollHintChrome
+        hint={scrollBars.bottomHint}
+        color={hintColor}
+        opacity={childTint.opacity}
+        chromeSlot={slot}
+      />
+      <ScrollBarChrome
+        bar={scrollBars.horizontal}
+        track={theme.widgets.scrollBar.scrollHorizontal}
+        grabber={theme.widgets.scrollBar.grabber}
+        color={childTint.own}
+        chromeSlot={slot}
+        snapToPixels={snapToPixels}
+      />
+      <ScrollBarChrome
+        bar={scrollBars.vertical}
+        track={theme.widgets.scrollBar.scrollVertical}
+        grabber={theme.widgets.scrollBar.grabber}
+        color={childTint.own}
+        chromeSlot={slot}
+        snapToPixels={snapToPixels}
+      />
+      {children}
     </>
+  );
+
+  return (
+    <CanvasItemGroup ref={anchorRef}>
+      <StyleBoxQuad styleBox={panelBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      {clipsContents ? (
+        <ControlClipProvider value={clip}>{rowsAndChildren}</ControlClipProvider>
+      ) : (
+        rowsAndChildren
+      )}
+    </CanvasItemGroup>
   );
 }

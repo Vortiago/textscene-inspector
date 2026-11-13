@@ -1,0 +1,38 @@
+; One variable against unit-canvas-group-self-modulate.tscn: `y_sort_enabled` on the group. A
+; y-sorted CanvasGroup groups nothing, so the squares draw opaque and its `self_modulate` changes
+; nothing. Beside it a group under a y-sorted parent composites as usual. No other scene y-sorts a
+; CanvasGroup.
+
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Group" type="CanvasGroup" parent="."]
+position = Vector2(100, 100)
+self_modulate = Color(1, 1, 1, 0.5)
+y_sort_enabled = true
+
+[node name="Red" type="Polygon2D" parent="Group"]
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Blue" type="Polygon2D" parent="Group"]
+position = Vector2(50, 50)
+color = Color(0, 0, 1, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Sorted" type="Node2D" parent="."]
+position = Vector2(400, 100)
+y_sort_enabled = true
+
+[node name="Group" type="CanvasGroup" parent="Sorted"]
+self_modulate = Color(1, 1, 1, 0.5)
+
+[node name="Red" type="Polygon2D" parent="Sorted/Group"]
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Blue" type="Polygon2D" parent="Sorted/Group"]
+position = Vector2(50, 50)
+color = Color(0, 0, 1, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)

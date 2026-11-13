@@ -9,18 +9,18 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import { resolveButtonDrawState } from '../../../../r3f/controls/native/buttonBase';
 import * as logger from '../../../../logger';
 import type { OptionButtonProperties } from './types';
 import {
+  OPTION_BUTTON_CLASS,
+  optionButtonArrowColor,
+  optionButtonArrowRect,
   optionButtonMinimumSize,
-  optionButtonTextTheme,
-  resolveOptionButtonSelectedText,
-  layoutOptionButtonContent,
-  optionButtonArrowSize,
-  OPTION_BUTTON_THEME_FONT_KEY,
+  optionButtonTextureSlots,
 } from './nativeSolver';
+import { BUTTON_THEME_FONT_KEY } from '../button/nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 
 const A_ADVANCE = 1354 * (16 / 2048); // 10.578125
 // 'B' is 1350 design units, not 'A''s 1354.
@@ -50,17 +50,48 @@ function ctx(withMeasurer = true): SolveContext {
   };
 }
 
-describe('optionButtonArrowSize', () => {
-  it("is option_button_arrow.svg's own authored 12x12 when no arrow is themed", () => {
-    expect(optionButtonArrowSize({ textureSlots: {} })).toEqual({ x: 12, y: 12 });
+describe('optionButtonTextureSlots', () => {
+  const themed = { ref: 'ExtResource("1")', resources: solveNode().resources, isHeldLocally: true };
+
+  it("requests Button's icon slot first, then a themed arrow, so `textureSize` is never the arrow", () => {
+    const requests = optionButtonTextureSlots(controlNode('Opt', 'OptionButton'), { arrow: themed });
+    expect(requests.map(({ key }) => key)).toEqual(['icon', 'arrow']);
   });
 
-  it('is a themed arrow at its own size, never clamped by icon_max_width', () => {
-    expect(optionButtonArrowSize({ textureSlots: { arrow: { x: 40, y: 30 } } })).toEqual({ x: 40, y: 30 });
+  it('requests no arrow when none is themed', () => {
+    const requests = optionButtonTextureSlots(controlNode('Opt', 'OptionButton'), {});
+    expect(requests.map(({ key }) => key)).toEqual(['icon']);
+  });
+});
+
+describe("optionButtonTextureSlots: items' icons (option_button.cpp:424,451)", () => {
+  const items = [
+    { text: 'A', id: 0, icon: 'ExtResource("1")' },
+    { text: 'B', id: 1, icon: 'ExtResource("2")' },
+    { text: 'C', id: 2 },
+  ];
+  const slots = (props: Partial<OptionButtonProperties>) =>
+    optionButtonTextureSlots(controlNode('Opt', 'OptionButton', { name: 'Opt', ...props }), {});
+
+  it("requests the selected item's icon as Button's icon, first, and every item's own icon after it", () => {
+    const requests = slots({ items, selected: 1 });
+    expect(requests.map(({ key, ref }) => [key, ref])).toEqual([
+      ['icon', 'ExtResource("2")'],
+      ['popup/item_0/icon', 'ExtResource("1")'],
+      ['popup/item_1/icon', 'ExtResource("2")'],
+    ]);
   });
 
-  it('ignores a themed texture in another slot (edge case)', () => {
-    expect(optionButtonArrowSize({ textureSlots: { icon: { x: 40, y: 30 } } })).toEqual({ x: 12, y: 12 });
+  it("requests Button's icon slot with no reference when nothing is selected, and each item's icon after it", () => {
+    expect(slots({ items }).map(({ key, ref }) => [key, ref])).toEqual([
+      ['icon', ''],
+      ['popup/item_0/icon', 'ExtResource("1")'],
+      ['popup/item_1/icon', 'ExtResource("2")'],
+    ]);
+  });
+
+  it("requests Button's icon slot with no reference for a selected item without an icon", () => {
+    expect(slots({ items, selected: 2 }).map(({ key, ref }) => [key, ref])[0]).toEqual(['icon', '']);
   });
 });
 
@@ -78,24 +109,25 @@ describe('theme.widgets.optionButton', () => {
   });
 });
 
-describe("resolveOptionButtonSelectedText (parity with Component.tsx's own bounds-guarded lookup)", () => {
-  it('resolves items[selected].text when selected is a valid index', () => {
-    const items = [
-      { text: 'Easy', id: 0 },
-      { text: 'Normal', id: 1 },
-      { text: 'Hard', id: 2 },
-    ];
-    expect(resolveOptionButtonSelectedText({ items, selected: 1 } as OptionButtonProperties)).toBe('Normal');
+describe('the item OPTION_BUTTON_CLASS shows as Button text (option_button.cpp:423-424)', () => {
+  const shownText = (props: Partial<OptionButtonProperties>) =>
+    OPTION_BUTTON_CLASS.shown!(props as OptionButtonProperties).text;
+  const items = [
+    { text: 'Easy', id: 0 },
+    { text: 'Normal', id: 1 },
+  ];
+
+  it('is the text of items[selected]', () => {
+    expect(shownText({ items, selected: 1 })).toBe('Normal');
   });
 
-  it('is empty string when selected is out of range', () => {
-    const items = [{ text: 'Easy', id: 0 }];
-    expect(resolveOptionButtonSelectedText({ items, selected: 5 } as OptionButtonProperties)).toBe('');
+  it('is empty when selected is out of range', () => {
+    expect(shownText({ items, selected: 5 })).toBe('');
   });
 
-  it('is empty string when selected is absent or items is absent', () => {
-    expect(resolveOptionButtonSelectedText({} as OptionButtonProperties)).toBe('');
-    expect(resolveOptionButtonSelectedText({ selected: 0 } as OptionButtonProperties)).toBe('');
+  it('is empty when selected or items is absent', () => {
+    expect(shownText({})).toBe('');
+    expect(shownText({ selected: 0 })).toBe('');
   });
 });
 
@@ -148,136 +180,70 @@ describe('optionButtonMinimumSize (option_button.cpp:50-68, fit_to_longest_item=
   });
 });
 
-describe('optionButtonTextTheme', () => {
-  it('resolves control_font_color for the normal state', () => {
-    // default_theme.cpp:101,240: control_font_color.
-    expect(optionButtonTextTheme(node({}), {} as OptionButtonProperties, 'normal', ctx())).toEqual({
-      fontSizePx: 16,
-      color: { r: 0.875, g: 0.875, b: 0.875, a: 1 },
-    });
+describe("optionButtonMinimumSize: each item's icon (option_button.cpp:451, button.cpp:481-526)", () => {
+  const withIcons = (
+    props: Partial<OptionButtonProperties>,
+    icons: Record<number, { x: number; y: number }>
+  ) => ({
+    ...node(props),
+    textureSlots: Object.fromEntries(
+      Object.entries(icons).map(([i, size]) => [`popup/item_${i}/icon`, size])
+    ),
   });
 
-  it('resolves control_font_disabled_color for the disabled state', () => {
-    // default_theme.cpp:106,245: control_font_disabled_color.
-    expect(optionButtonTextTheme(node({}), {} as OptionButtonProperties, 'disabled', ctx()).color).toEqual({
-      r: 0.875,
-      g: 0.875,
-      b: 0.875,
-      a: 0.5,
-    });
+  it("adds the icon's width and h_separation beside the text, and takes the taller of the two", () => {
+    const n = withIcons(
+      { items: [{ text: 'AB', id: 0, icon: 'ExtResource("1")' }] },
+      { 0: { x: 20, y: 30 } }
+    );
+    // text 22 + 20 + 4 (h_separation) = 46; height max(23, 30) = 30; plus the arrow 12 + 4 and margins 16 by 8.
+    expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 16 + 46 + 12 + 4, y: 8 + 30 });
   });
 
-  it('a theme_override_colors/font_color override wins over the default', () => {
-    const props: OptionButtonProperties = {
-      name: 'O',
-      textDirection: 0,
-      language: '',
-      themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
-    };
-    expect(optionButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
-      r: 1,
-      g: 0,
-      b: 0,
-      a: 1,
-    });
-  });
-});
-
-describe('resolveButtonDrawState reused for OptionButton (no CheckBox-style pressed complication)', () => {
-  it('the popup being closed means OptionButton never draws DRAW_PRESSED regardless of `selected`', () => {
-    expect(resolveButtonDrawState(false)).toBe('normal');
-    expect(resolveButtonDrawState(true)).toBe('disabled');
-  });
-});
-
-describe('layoutOptionButtonContent (option_button.cpp:95-135 + button.cpp:247-260,444-456)', () => {
-  const BASE = {
-    rectSize: { x: 150, y: 32 },
-    styleMargin: { left: 8, top: 4, right: 8, bottom: 4 },
-    arrowSize: { x: 12, y: 12 },
-    arrowMargin: 4,
-    hSeparation: 4,
-    textNaturalSize: { x: 60, y: 26 },
-    rtl: false,
-  };
-
-  it('the arrow sits at (rect.w - arrowSize.w - arrowMargin), NOT the content-margin edge', () => {
-    const { arrowRect } = layoutOptionButtonContent(BASE);
-    // Content margins are 8 by 4 (default_theme.cpp:212-215), but
-    // `arrow_margin` (`:249`, round(4*scale)) counts from the full rect edge: `pnpm ref:godot
-    // scenes/fixtures/unit-optionbutton.tscn --mode 2d` puts the chevron at 150 - 12 - 4 = 134, not 150 - 12 - 8.
-    // Probe: fill at (649,y) = 46 and background at (651,y) = 76, so the box ends flush; chevron ink at (641,y).
-    expect(arrowRect.x).toBe(134);
+  it('counts an icon-only item by its icon alone, with no separation', () => {
+    const n = withIcons({ items: [{ text: '', id: 0, icon: 'ExtResource("1")' }] }, { 0: { x: 20, y: 30 } });
+    expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 16 + 20 + 12 + 4, y: 8 + 30 });
   });
 
-  it('the arrow is vertically centred within the FULL rect height (not the content box)', () => {
-    const { arrowRect } = layoutOptionButtonContent(BASE);
-    // floor(abs((32-12)/2)) = 10.
-    expect(arrowRect.y).toBe(10);
+  it("measures an empty item text as the button's own selected text (button.cpp:485-486, 515)", () => {
+    const n = withIcons(
+      {
+        selected: 0,
+        items: [
+          { text: 'AB', id: 0 },
+          { text: '', id: 1, icon: 'ExtResource("1")' },
+        ],
+      },
+      { 1: { x: 20, y: 30 } }
+    );
+    // item 1 reuses `text_buf` ("AB", 22) beside its icon: 22 + 20 + 4 = 46, height max(23, 30).
+    expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 16 + 46 + 12 + 4, y: 8 + 30 });
   });
 
-  it('text starts flush at the LEFT content margin (OptionButton sets text_alignment LEFT)', () => {
-    const { textOffset } = layoutOptionButtonContent(BASE);
-    expect(textOffset.x).toBe(8);
+  it('takes the widest item over text and icon together', () => {
+    const n = withIcons(
+      {
+        items: [
+          { text: 'AB', id: 0 },
+          { text: 'A', id: 1, icon: 'ExtResource("1")' },
+        ],
+      },
+      { 1: { x: 40, y: 10 } }
+    );
+    // item 1: ceil(10.58) = 11 + 40 + 4 = 55 beats item 0's 22.
+    expect(optionButtonMinimumSize(n, ctx()).x).toBe(16 + 55 + 12 + 4);
   });
 
-  it('text is vertically centred within the content box (margins symmetric here)', () => {
-    const { textOffset } = layoutOptionButtonContent(BASE);
-    // customElementHeight = 32-8=24; y = (24-26)/2 + 4 = -1+4 = 3.
-    expect(textOffset.y).toBeCloseTo(3, 10);
-  });
-
-  it("floors a half-pixel centring remainder DOWN, matching Button's own text_ofs.y (never floored in the source itself, only per-glyph — text_server_adv.cpp:4083) — the ACTUAL 'Normal' item at font size 16 (ascent 18 + descent 5 = 23)", () => {
-    // customElementHeight = 32-8=24; (24-23)/2=0.5; +styleMargin.top(4)=4.5 -> floor 4.
-    const { textOffset } = layoutOptionButtonContent({ ...BASE, textNaturalSize: { x: 60, y: 23 } });
-    expect(textOffset.y).toBe(4);
+  it('leaves the icon out under expand_icon, which sizes it from the box', () => {
+    const n = withIcons(
+      { expandIcon: true, items: [{ text: 'AB', id: 0, icon: 'ExtResource("1")' }] },
+      { 0: { x: 20, y: 30 } }
+    );
+    expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 16 + 22 + 12 + 4, y: 8 + 23 });
   });
 });
 
-/**
- * `OptionButton::_notification`'s RTL arms: the arrow moves to
- * `ofs = Point2(theme_cache.arrow_margin, int(Math::abs((size.height - arrow_icon->get_height()) / 2)))`
- * (option_button.cpp:126), the internal margin reserves SIDE_LEFT instead of SIDE_RIGHT (`:141-143`), and
- * the constructor's `HORIZONTAL_ALIGNMENT_LEFT` (`:654`) becomes RIGHT through Button's swap (`button.cpp:271-275`).
- */
-describe('layoutOptionButtonContent — RTL puts the arrow on the left', () => {
-  const BASE = {
-    rectSize: { x: 150, y: 32 },
-    styleMargin: { left: 8, top: 4, right: 8, bottom: 4 },
-    arrowSize: { x: 12, y: 12 },
-    arrowMargin: 4,
-    hSeparation: 4,
-    textNaturalSize: { x: 60, y: 26 },
-    rtl: false,
-  };
-  const RTL = { ...BASE, rtl: true };
-
-  it('draws the arrow at arrow_margin from the LEFT edge, vertically unchanged', () => {
-    const { arrowRect } = layoutOptionButtonContent(RTL);
-    expect(arrowRect).toEqual({ x: 4, y: 10, w: 12, h: 12 });
-  });
-
-  it('lays the selected item out against the right content margin', () => {
-    const { textOffset } = layoutOptionButtonContent(RTL);
-    // reserved = 12+4 = 16 on the LEFT; drawable = 150-8-8-16 = 118;
-    // text_ofs.x = 8 + 16, RIGHT shift = 118-60 = 58 -> 82.
-    expect(textOffset.x).toBe(82);
-    expect(textOffset.y).toBeCloseTo(3, 10);
-  });
-
-  it('hugs the CEILED paragraph width, not the raw drawable (button.cpp:437)', () => {
-    // rect 150.5 -> drawable 118.5 -> text_buf_width 119; 119 - 60 = 59; + 8 + 16.
-    const { textOffset } = layoutOptionButtonContent({ ...RTL, rectSize: { x: 150.5, y: 32 } });
-    expect(textOffset.x).toBeCloseTo(83, 10);
-  });
-
-  it('moves the label with h_separation, which the LTR arm never feels', () => {
-    expect(layoutOptionButtonContent({ ...RTL, hSeparation: 10 }).textOffset.x).toBe(82);
-    expect(layoutOptionButtonContent({ ...BASE, hSeparation: 10 }).textOffset.x).toBe(8);
-  });
-});
-
-describe(`optionButtonMinimumSize — resolves this OptionButton's own theme font key ("${OPTION_BUTTON_THEME_FONT_KEY}", default_theme.cpp:237)`, () => {
+describe(`optionButtonMinimumSize: resolves this OptionButton's own theme font key ("${BUTTON_THEME_FONT_KEY}", default_theme.cpp:237)`, () => {
   // An unresolvable font's warn is the observable proof here (`resolveNodeFontMetrics.test.ts`).
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
@@ -289,7 +255,7 @@ describe(`optionButtonMinimumSize — resolves this OptionButton's own theme fon
 
   it('a theme_override_fonts/font local override is fed to the text engine (resolved unconditionally, before the per-item measurement loop)', () => {
     const unresolvableFont = fontFile(undefined);
-    const n: SolveNode = { ...node({}), fontOverrides: { [OPTION_BUTTON_THEME_FONT_KEY]: unresolvableFont } };
+    const n: SolveNode = { ...node({}), fontOverrides: { [BUTTON_THEME_FONT_KEY]: unresolvableFont } };
     optionButtonMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
   });
@@ -308,7 +274,7 @@ describe(`optionButtonMinimumSize — resolves this OptionButton's own theme fon
  * (`text_paragraph.cpp:601-608`, `text_server_adv.cpp:7524-7537`). Godot 4.6.3 on `complex-2d-gui.tscn`:
  * SystemsGrid/Difficulty, items "Recon"/"Standard"/"Blackout", min = (103, 31).
  */
-describe('optionButtonMinimumSize — the shaped item extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
+describe('optionButtonMinimumSize: the shaped item extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
   it("reaches Godot's own whole-pixel minimum width 103 for the Recon/Standard/Blackout item set", () => {
     const n = node({
       items: [
@@ -318,5 +284,166 @@ describe('optionButtonMinimumSize — the shaped item extent is ceiled (text_ser
       ],
     });
     expect(optionButtonMinimumSize(n, ctx()).x).toBe(103);
+  });
+});
+
+describe('optionButtonMinimumSize: clip_text zeroes each item text width (button.cpp:493-495)', () => {
+  const items = [{ text: 'AB', id: 0 }];
+
+  it('keeps the margins, the arrow and the text height, and drops the text width', () => {
+    const result = optionButtonMinimumSize(node({ items, selected: 0, clipText: true }), ctx());
+    expect(result).toEqual({ x: 16 + 12 + 4, y: 8 + FONT_HEIGHT });
+  });
+
+  it('keeps the widest item text width without clip_text', () => {
+    const result = optionButtonMinimumSize(node({ items, selected: 0, clipText: false }), ctx());
+    expect(result.x).toBe(16 + AB_SHAPED_WIDTH + 12 + 4);
+  });
+});
+
+describe('optionButtonMinimumSize: a trimming text_overrun_behavior zeroes each item text width (button.cpp:493-495)', () => {
+  const items = [{ text: 'AB', id: 0 }];
+
+  it('drops the text width under OVERRUN_TRIM_ELLIPSIS', () => {
+    const result = optionButtonMinimumSize(node({ items, selected: 0, overrunBehavior: 3 }), ctx());
+    expect(result).toEqual({ x: 16 + 12 + 4, y: 8 + FONT_HEIGHT });
+  });
+
+  it('keeps the widest item text width under OVERRUN_NO_TRIMMING', () => {
+    const result = optionButtonMinimumSize(node({ items, selected: 0, overrunBehavior: 0 }), ctx());
+    expect(result.x).toBe(16 + AB_SHAPED_WIDTH + 12 + 4);
+  });
+});
+
+describe('optionButtonMinimumSize: autowrap_mode zeroes each item text width and never wraps it (button.cpp:484-489,493-495)', () => {
+  const items = [{ text: 'alpha bravo charlie', id: 0 }];
+
+  it('drops the text width', () => {
+    const result = optionButtonMinimumSize(node({ items, selected: 0, autowrapMode: 2 }), ctx());
+    expect(result.x).toBe(16 + 12 + 4);
+  });
+
+  it('keeps one line of height, though a tentative width would wrap the drawn label', () => {
+    const context: SolveContext = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 80, h: 40 }) };
+    const result = optionButtonMinimumSize(node({ items, selected: 0, autowrapMode: 2 }), context);
+    expect(result.y).toBe(8 + FONT_HEIGHT);
+  });
+});
+
+const RECT_SIZE = { x: 150, y: 32 };
+const THEME = nativeTheme(1);
+
+describe('the OptionButton arrow at a theme scale (option_button.cpp:62,131-133)', () => {
+  it('draws the vendored arrow at 18x18 at scale 1.5', () => {
+    expect(optionButtonArrowRect(node({}), nativeTheme(1.5), RECT_SIZE)).toMatchObject({ w: 18, h: 18 });
+  });
+
+  it('reserves it in the minimum size: the same as a themed 18x18 arrow', () => {
+    const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+    const themed = { ...node({}), textureSlots: { arrow: { x: 18, y: 18 } } };
+
+    expect(optionButtonMinimumSize(node({}), at15)).toEqual(optionButtonMinimumSize(themed, at15));
+  });
+});
+
+describe('optionButtonArrowRect (option_button.cpp:122-131)', () => {
+  it('puts the arrow arrow_margin from the right edge of the whole control, not of the content', () => {
+    // Content margins are 8 by 4 (default_theme.cpp:212-215), but `arrow_margin` (`:249`, round(4*scale))
+    // counts from the full rect edge: `pnpm ref:godot scenes/fixtures/unit-optionbutton.tscn --mode 2d`
+    // puts the chevron at 150 - 12 - 4 = 134. y = int(abs((32 - 12) / 2)).
+    expect(optionButtonArrowRect(node({}), THEME, RECT_SIZE)).toEqual({ x: 134, y: 10, w: 12, h: 12 });
+  });
+
+  it('puts the arrow arrow_margin from the left edge under RTL', () => {
+    expect(optionButtonArrowRect({ ...node({}), rtl: true }, THEME, RECT_SIZE)).toMatchObject({
+      x: 4,
+      y: 10,
+    });
+  });
+
+  it('draws a themed arrow at its own size, never clamped by icon_max_width (option_button.cpp:131-133)', () => {
+    const n = {
+      ...node({ themeOverrideConstants: { icon_max_width: 8 } }),
+      textureSlots: { arrow: { x: 40, y: 30 } },
+    };
+    expect(optionButtonArrowRect(n, THEME, RECT_SIZE)).toMatchObject({ w: 40, h: 30 });
+  });
+
+  it('keeps the 12x12 default while a themed arrow loads or after it fails (theme.cpp:306)', () => {
+    const n = { ...node({}), textureSlots: { arrow: null } };
+    expect(optionButtonArrowRect(n, THEME, RECT_SIZE)).toMatchObject({ w: 12, h: 12 });
+  });
+
+  it('reads a themed arrow_margin', () => {
+    const n = node({ themeOverrideConstants: { arrow_margin: 20 } });
+    expect(optionButtonArrowRect(n, THEME, RECT_SIZE).x).toBe(150 - 12 - 20);
+  });
+});
+
+describe('optionButtonArrowColor (option_button.cpp:98-118)', () => {
+  const RED = { r: 1, g: 0, b: 0, a: 1 };
+  const GREEN = { r: 0, g: 1, b: 0, a: 1 };
+  const BLUE = { r: 0, g: 0, b: 1, a: 1 };
+  const WHITE = { r: 1, g: 1, b: 1, a: 1 };
+  const themeOverrideColors = { font_color: RED, font_disabled_color: GREEN, font_focus_color: BLUE };
+  const modulated = (props: Partial<OptionButtonProperties>) =>
+    node({ ...props, themeOverrideColors, themeOverrideConstants: { modulate_arrow: 1 } });
+
+  it('is white while modulate_arrow is off, the default (default_theme.cpp:251)', () => {
+    expect(optionButtonArrowColor(node({ themeOverrideColors }), THEME)).toEqual(WHITE);
+  });
+
+  it("is the label's font colour of the draw state under modulate_arrow", () => {
+    expect(optionButtonArrowColor(modulated({}), THEME)).toEqual(RED);
+    expect(optionButtonArrowColor(modulated({ disabled: true }), THEME)).toEqual(GREEN);
+  });
+
+  it('is font_focus_color for a focused button in the normal draw mode (option_button.cpp:112-116)', () => {
+    expect(optionButtonArrowColor(modulated({ hasFocus: true }), THEME)).toEqual(BLUE);
+    expect(optionButtonArrowColor(modulated({ hasFocus: true, disabled: true }), THEME)).toEqual(GREEN);
+  });
+});
+
+describe('optionButtonMinimumSize: fit_to_longest_item off (option_button.cpp:52-56)', () => {
+  const items = [
+    { text: 'AB', id: 0 },
+    { text: 'ABABABAB', id: 1 },
+  ];
+
+  it('sizes to the selected item alone, where the default sizes to the longest', () => {
+    const selected = optionButtonMinimumSize(node({ items, selected: 0, fitToLongestItem: false }), ctx());
+    // 16 (margins) + 'AB' + arrow 12 + h_separation 4.
+    expect(selected.x).toBe(16 + AB_SHAPED_WIDTH + 12 + 4);
+    const longest = optionButtonMinimumSize(node({ items, selected: 0 }), ctx());
+    expect(longest.x).toBeGreaterThan(selected.x);
+  });
+
+  it('wraps the selected label at the tentative width, which an item never does', () => {
+    const context: SolveContext = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 80, h: 40 }) };
+    const wrapping = [{ text: 'alpha bravo charlie', id: 0 }];
+    const props = { items: wrapping, selected: 0, autowrapMode: 2, fitToLongestItem: false };
+    // 80 - 16 (margins) - 16 (arrow and separation) = 48 px: three rows.
+    expect(optionButtonMinimumSize(node(props), context).y).toBe(8 + 3 * FONT_HEIGHT);
+  });
+});
+
+describe('optionButtonMinimumSize: the boxes of the draw states (option_button.cpp:58-65,447)', () => {
+  it("floors the longest item at the `normal` box's minimum size", () => {
+    const normal = drawnStyleBox({ content_margin_left: '30', content_margin_right: '30' });
+    // No item: `_cached_size` is the normal box's 60 px, and the arrow and its separation add 16.
+    expect(optionButtonMinimumSize({ ...node({}), styleBoxes: { normal } }, ctx()).x).toBe(60 + 16);
+  });
+
+  it('pads an RTL button by the default `normal_mirrored` box, not by a plain `normal` (default_theme.cpp:230)', () => {
+    const normal = drawnStyleBox({
+      content_margin_left: '40',
+      content_margin_top: '40',
+      content_margin_right: '40',
+      content_margin_bottom: '40',
+    });
+    const n = { ...node({}), styleBoxes: { normal }, rtl: true };
+    // Measured in Godot 4.6.3: `_cached_size` is the plain box's 80, the padding is the mirrored box's
+    // (16, 8), and the arrow and its separation add 16 across.
+    expect(optionButtonMinimumSize(n, ctx())).toEqual({ x: 96, y: 80 });
   });
 });

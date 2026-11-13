@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { decodeNavigationPolygon } from './decode';
+import { decodedResource } from '../../reading/decodedResource.testkit';
+import { NAVIGATION_POLYGON } from './decode';
+
+const decodeNavigationPolygon = (data: Record<string, string>) => decodedResource(NAVIGATION_POLYGON, data);
 
 describe('decodeNavigationPolygon', () => {
   it('decodes the vertices + polygons of a square region (happy path)', () => {

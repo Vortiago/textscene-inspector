@@ -1,0 +1,36 @@
+[gd_scene format=3]
+
+; Moves one variable: where the occluder's end falls. The end (239.5, 316) is (179.5, 256) from
+; the light, the centre of column 76 of the +Y frustum at the 2048 default. The rasteriser's
+; top-left rule leaves a centre on the right side of the occluder uncovered, so the penumbra starts
+; one bin later. No other scene puts an end on a bin centre.
+
+[sub_resource type="Gradient" id="Gradient_flat"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_flat"]
+gradient = SubResource("Gradient_flat")
+width = 64
+height = 64
+
+[sub_resource type="OccluderPolygon2D" id="OccluderPolygon2D_edge"]
+closed = false
+polygon = PackedVector2Array(300, 150, 239.5, 316)
+
+[node name="Root" type="Node2D"]
+
+[node name="Surface" type="Polygon2D" parent="."]
+color = Color(0.25, 0.25, 0.25, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Lamp" type="PointLight2D" parent="."]
+position = Vector2(60, 60)
+texture = SubResource("GradientTexture2D_flat")
+texture_scale = 40.0
+energy = 0.5
+shadow_enabled = true
+shadow_filter = 1
+shadow_filter_smooth = 2.0
+
+[node name="Caster" type="LightOccluder2D" parent="."]
+occluder = SubResource("OccluderPolygon2D_edge")

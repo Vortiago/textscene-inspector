@@ -43,11 +43,13 @@ attributes = SubResource("Viewed")
 [node name="Lamp" type="OmniLight3D" parent="."]
 
 [node name="Bright" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Bright"]
 attributes = SubResource("Bright")
 
 [node name="Plain" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Plain"]
 `;
@@ -67,11 +69,13 @@ attributes = SubResource("Viewed")
 [node name="Lamp" type="OmniLight3D" parent="."]
 
 [node name="Outer" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Outer"]
 attributes = SubResource("Outer")
 
 [node name="Inner" type="SubViewport" parent="Outer"]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Outer/Inner"]
 attributes = SubResource("Inner")
@@ -85,6 +89,7 @@ ${ATTRIBUTES('Dim', 0.5)}
 [node name="Root" type="Node2D"]
 
 [node name="Bright" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Lamp" type="OmniLight3D" parent="Bright"]
 
@@ -92,6 +97,7 @@ ${ATTRIBUTES('Dim', 0.5)}
 attributes = SubResource("Bright")
 
 [node name="Dim" type="SubViewport" parent="."]
+render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Dim"]
 attributes = SubResource("Dim")

@@ -128,6 +128,10 @@ export const CONTROL_WIDGET_SCENES = [
   // per branch of `Control::get_parent_anchorable_rect`, both picked by the same
   // threading. The Panel is not full-rect, so a wrong anchor moves the box.
   // Godot 4.6.3 `--mode 2d`: mean 0.006 of 255 each, the 1/255 rounding floor.
+  // The one variable: a Polygon2D below a Control with offsets. Godot probe: the square stands at (80, 40).
+  { name: 'control-node2d-child', file: 'unit-node2d-below-control.tscn', mode: '2d' },
+  // The one variable: the y-sort lifts the Node2D out of a y-sorted Control below a y-sorted Node2D.
+  { name: 'control-node2d-child-y-sort', file: 'unit-node2d-below-ysorted-control.tscn', mode: '2d' },
   {
     name: 'control-anchor-parent-node2d',
     file: 'unit-control-anchor-parent-node2d.tscn',
@@ -157,6 +161,7 @@ export const CONTROL_WIDGET_SCENES = [
   // shows in each scene that does not hide it. Godot 4.6.3 `--mode 2d`: 0.413 and
   // 0.53-0.77 of 255, cross-rasterizer text antialiasing in the zoom label.
   { name: 'graph-edit', file: 'unit-graph-edit.tscn' },
+  { name: 'graph-edit-empty', file: 'unit-graph-edit-empty.tscn' },
   { name: 'graph-edit-menu-hidden', file: 'unit-graph-edit-menu-hidden.tscn' },
   { name: 'graph-edit-zoom-label', file: 'unit-graph-edit-zoom-label.tscn' },
   {
@@ -225,6 +230,23 @@ export const CONTROL_WIDGET_SCENES = [
   { name: 'checkbox-rtl', file: 'unit-checkbox-rtl.tscn' },
   { name: 'check-button-rtl', file: 'unit-check-button-rtl.tscn' },
   { name: 'spin-box-rtl', file: 'unit-spin-box-rtl.tscn' },
+  // The icon Button draws beside the label in CheckBox and CheckButton, ahead of the check
+  // (check_box.cpp:96-101): its alignment, and the wrap and minimum size it takes from the label.
+  { name: 'check-family-button-icon-alignment', file: 'unit-check-family-button-icon-alignment.tscn' },
+  { name: 'check-family-button-icon-wrap', file: 'unit-check-family-button-icon-wrap.tscn' },
+  // OptionButton shows the selected item's icon as Button's `icon` (option_button.cpp:424) and sizes by every item's.
+  { name: 'button-option-icon-alignment', file: 'unit-option-button-icon-alignment.tscn' },
+  { name: 'button-option-icon-minimum-size', file: 'unit-option-button-icon-minimum-size.tscn' },
+  { name: 'button-menu-icon-alignment', file: 'unit-menu-button-icon-alignment.tscn' },
+  // What every Button subclass takes from `Button::_notification` and `get_minimum_size`: the state StyleBox
+  // under a check, the largest-box alignment and the theme icon. Then what each subclass reads of its own:
+  // the check colours, `modulate_arrow` and `fit_to_longest_item`.
+  { name: 'check-family-stylebox', file: 'unit-check-family-stylebox.tscn' },
+  { name: 'button-family-align-largest-stylebox', file: 'unit-button-family-align-largest-stylebox.tscn' },
+  { name: 'button-family-theme-icon', file: 'unit-button-family-theme-icon.tscn' },
+  { name: 'check-family-check-color', file: 'unit-check-family-check-color.tscn' },
+  { name: 'button-option-modulate-arrow', file: 'unit-option-button-modulate-arrow.tscn' },
+  { name: 'button-option-fit-longest-item', file: 'unit-option-button-fit-longest-item.tscn' },
   // Each text Control's own paragraph direction, language and structured override, as the label-bidi
   // scenes hold them for a Label: the button family, the editors, RichTextLabel paragraphs, the
   // TabBar, MenuBar and FoldableContainer titles, and ItemList items.
@@ -253,4 +275,77 @@ export const CONTROL_WIDGET_SCENES = [
   { name: 'split-container-offsets', file: 'unit-split-container-offsets.tscn' },
   // A Button label that wraps.
   { name: 'button-autowrap', file: 'unit-button-autowrap.tscn' },
+  // `z_as_relative = false` on a Control. Godot 4.6.3 `--mode 2d`: the amber ColorRect draws under
+  // the teal one (z 1 against 3), and its Panel parent (z 5) over both. Mean 0.805/255 against it,
+  // all from the default clear 0.3 at the half step 76.5 (Godot 76, ours 77). Item pixels match.
+  { name: 'control-z-as-relative', file: 'unit-control-z-as-relative.tscn', mode: '2d' },
+  { name: 'graph-edit-frame-order', file: 'unit-graph-edit-frame-order.tscn', mode: '2d' },
+  { name: 'graph-edit-zoom-out', file: 'unit-graph-edit-zoom-out.tscn', mode: '2d' },
+  { name: 'graph-edit-zoom-in', file: 'unit-graph-edit-zoom-in.tscn', mode: '2d' },
+  { name: 'button-expand-icon-no-room', file: 'unit-button-expand-icon-no-room.tscn', mode: '2d' },
+  { name: 'button-icon-zero-size', file: 'unit-button-icon-zero-size.tscn', mode: '2d' },
+  { name: 'item-list-wrap-trim', file: 'unit-item-list-wrap-trim.tscn', mode: '2d' },
+  { name: 'item-list-scroll', file: 'unit-item-list-scroll.tscn', mode: '2d' },
+  // The one variable is `color_mode = 1` (HSV rainbow row) and, in the second scene, an HDR `color`
+  // (the `script` icon of `text_type`).
+  { name: 'color-picker-hsv-rows', file: 'unit-color-picker-hsv-rows.tscn', mode: '2d' },
+  // The SpinBox arrows draw dimmed at a bound of the range: ColorPicker rows and the GraphEdit snapping box. Max 73, mean 0.705.
+  { name: 'color-picker-spin-arrows', file: 'unit-color-picker-spin-arrows.tscn', mode: '2d' },
+  { name: 'color-picker-hdr-hex', file: 'unit-color-picker-hdr-hex.tscn', mode: '2d' },
+  // The one variable is `picker_shape`: the wheel, the circles and the OK rectangles.
+  { name: 'color-picker-shapes', file: 'unit-color-picker-shapes.tscn', mode: '2d' },
+  // The one variable is `color` under the wheel, the circles and the OK HL rectangle.
+  { name: 'color-picker-shapes-colour', file: 'unit-color-picker-shapes-colour.tscn', mode: '2d' },
+  // The one variable is an ancestor Theme that sets the font colours of Label, Button and LineEdit.
+  { name: 'color-picker-theme', file: 'unit-color-picker-theme.tscn', mode: '2d' },
+  // The one variable is a FlatMenuButton box that the shape, mode and menu buttons draw and size by.
+  { name: 'color-picker-flat-menu-button', file: 'unit-color-picker-flat-menu-button.tscn', mode: '2d' },
+  // The one variable is a TabContainer tab_selected box that the pressed mode button reads.
+  { name: 'color-picker-mode-button-margins', file: 'unit-color-picker-mode-button-margins.tscn', mode: '2d' },
+  // A Button label line wider than its paragraph box.
+  { name: 'button-clip-text', file: 'unit-button-clip-text.tscn', mode: '2d' },
+  // A CheckBox, CheckButton, OptionButton and MenuButton label wider than its paragraph box.
+  { name: 'button-family-clip-text', file: 'unit-button-family-clip-text.tscn', mode: '2d' },
+  // A Button, CheckBox, CheckButton, OptionButton and MenuButton label trimmed by text_overrun_behavior.
+  { name: 'button-family-text-overrun', file: 'unit-button-family-text-overrun.tscn', mode: '2d' },
+  // A Button, CheckBox, CheckButton, OptionButton and MenuButton label wrapped by autowrap_mode.
+  { name: 'button-family-autowrap', file: 'unit-button-family-autowrap.tscn', mode: '2d' },
+  // A Button and a MenuButton with expand_icon and a label wrapped by autowrap_mode.
+  { name: 'button-expand-icon-wrap', file: 'unit-button-expand-icon-wrap.tscn', mode: '2d' },
+  // The one variable: the theme type variation of a Button, FlatButton and HeaderSmall beside a plain one.
+  // FlatButton and a Label variation draw no normal box, and HeaderSmall takes Label's white text (Godot 4.6.3
+  // `--mode 2d`: max 2 of 255 over the grid).
+  { name: 'button-default-theme-variations', file: 'unit-button-default-theme-variations.tscn', mode: '2d' },
+  // The one variable: the Theme `font_color` of Label on a GraphNode and a GraphFrame title (Godot 4.6.3 `--mode 2d`: max 2 of 255).
+  { name: 'graph-title-theme-colour', file: 'unit-graph-title-theme-colour.tscn', mode: '2d' },
+  // The one variable: the Theme `normal` StyleBox of Label on a GraphNode and a GraphFrame title (Godot 4.6.3 `--mode 2d`: max 2 of 255).
+  { name: 'graph-title-theme-normal-box', file: 'unit-graph-title-theme-normal-box.tscn', mode: '2d' },
+  // The one variable: an ancestor Theme that sets the toolbar's Label, FlatButton, LineEdit and SpinBox items.
+  { name: 'graph-edit-toolbar-theme', file: 'unit-graph-edit-toolbar-theme.tscn', mode: '2d' },
+  { name: 'tab-bar-scroll-to-current', file: 'unit-tab-bar-scroll-to-current.tscn', mode: '2d' },
+  { name: 'tab-bar-scroll-options', file: 'unit-tab-bar-scroll-options.tscn', mode: '2d' },
+  { name: 'tab-container-hidden-pages', file: 'unit-tab-container-hidden-pages.tscn', mode: '2d' },
+  // A y-sorted Control draws its Control children in y order: Red (offset_top 80) over Blue (40) over
+  // Green (0), though listed Red, Green, Blue.
+  { name: 'control-y-sort', file: 'unit-control-y-sort.tscn', mode: '2d' },
+  // A Control child of a y-sorted Node2D sorts on its canvas item origin: Low (80) over the Polygon2D
+  // Tile (68), High (10) under it.
+  { name: 'control-y-sort-sibling', file: 'unit-control-y-sort-sibling.tscn', mode: '2d' },
+  // The same sort where no world y-sort draws the Control's parent: High (50) under Low (100) in a
+  // Control-only SubViewport, and in the Control root of a scene tile.
+  { name: 'control-y-sort-viewport', file: 'unit-control-y-sort-viewport.tscn', mode: '2d' },
+  { name: 'control-y-sort-viewport-mixed', file: 'unit-control-y-sort-viewport-mixed.tscn', mode: '2d' },
+  // A Node2D child of the y-sorted Control in a viewport that holds 2D content sorts with the Control
+  // children by y: High (50) under Sprite (75) under Low (100), though Sprite is listed last.
+  {
+    name: 'control-y-sort-viewport-node2d-child',
+    file: 'unit-control-y-sort-viewport-node2d-child.tscn',
+    mode: '2d',
+  },
+  { name: 'control-y-sort-scene-tile', file: 'unit-control-y-sort-scene-tile.tscn', mode: '2d' },
+  // self_modulate on Controls with internal children: it tints only the item's own parts (a TextEdit box, SpinBox
+  // arrows), never the child Controls. Max 86, mean 0.174.
+  { name: 'control-self-modulate-internal', file: 'unit-control-self-modulate-internal.tscn', mode: '2d' },
+  // A connection of a tinted GraphEdit keeps its colour: it draws on a child Control. Max 115, mean 0.276.
+  { name: 'control-self-modulate-graph-connection', file: 'unit-control-self-modulate-graph-connection.tscn', mode: '2d' },
 ];

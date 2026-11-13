@@ -13,6 +13,7 @@ TabContainer arranges its children into a tabbed view, showing only the active t
 child. The previewer draws the `panel` StyleBox behind the content band and positions the
 current page below (or above) the strip. It draws the strip through the same painter
 TabBar uses.
+`self_modulate` tints the panel and the header band. The tab strip is a child TabBar and draws without it (`tab_container.cpp:247`, `tab_bar.cpp:1282`).
 
 ## Linting
 
@@ -49,9 +50,3 @@ The lenient parser reads the scalars above plus a sparse
 names. TabContainer's own `array_length_getter` is its live child count, which is unknown
 at parse time. So, unlike TabBar's `tab_count`-sized walk, this one builds no dense array
 and applies no walk ceiling.
-
-## Known limitations
-
-- **Approximated** `tab_alignment = Right` never reclaims the strip's `side_margin`
-  gutter when its own tabs overflow and scroll, a narrow case Godot's own
-  `_update_margins` special-cases.

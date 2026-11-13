@@ -17,6 +17,7 @@ import {
   createCaptureContext,
   openScene,
   previewPort,
+  showDisplayOverlay,
   settleCanvas,
   withPreviewBrowser,
 } from '../visual/previewServer.mjs';
@@ -32,6 +33,7 @@ export function parseArgs(argv) {
     camera: null,
     lookAt: null,
     sceneCamera: null,
+    showCollisions: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -49,6 +51,10 @@ export function parseArgs(argv) {
       // fails instead of capturing the other frame.
       case '--2d':
         args.canvas2D = true;
+        break;
+      // As `ref:godot --debug-collisions`: Visible Collision Shapes.
+      case '--collisions':
+        args.showCollisions = true;
         break;
       // As `ref:godot` takes them: the camera replaces the editor orbit on both sides.
       case '--camera':
@@ -90,6 +96,7 @@ export function captureOurs({
   camera = null,
   lookAt = null,
   sceneCamera = null,
+  showCollisions = false,
 }) {
   return withPreviewBrowser(
     { ...previewPort('parity'), launchBrowser: launchGodotComparisonBrowser },
@@ -106,6 +113,8 @@ export function captureOurs({
         onSlow: (ms) => console.log(`[ours] no network idle within ${ms}ms`),
       });
       if (!target) throw new Error(targetReason);
+      const collisionsReason = showCollisions ? await showDisplayOverlay(page, 'Collisions') : null;
+      if (collisionsReason) throw new Error(collisionsReason);
       const { buffer, reason } = await settleCanvas(page, target);
       if (!buffer) throw new Error(reason);
       return buffer;
@@ -146,7 +155,9 @@ async function main() {
   } catch (error) {
     console.error(error.message);
     console.error('Usage: pnpm ref:ours <fixture.tscn> [--out file.png]');
-    console.error('       [--probe x,y] [--patch n] [--frame] [--2d] [--camera x,y,z] [--look-at x,y,z]');
+    console.error(
+      '       [--probe x,y] [--patch n] [--frame] [--2d] [--collisions] [--camera x,y,z] [--look-at x,y,z]'
+    );
     console.error('       [--scene-camera [path]]');
     process.exit(2);
   }

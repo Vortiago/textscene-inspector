@@ -1,7 +1,7 @@
 /**
- * <Line2D> draws a stroked polyline as mesh quads: each segment becomes one quad,
- * offset by width/2 on each side, with butt caps and Z = 0. `lineJoints.ts` fills
- * each interior corner.
+ * <Line2D> draws a stroked polyline as `buildLineStroke` builds it: Godot's `LineBuilder` strip, with
+ * caps, joints, a per-point `gradient`, a `width_curve` and the UVs of a `texture`. The strip is
+ * Y-negated into three's frame at Z = 0.
  */
 
 import { useMemo } from 'react';
@@ -9,39 +9,99 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
-import { multiplyModulate, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
-import { godotColorToLinear } from '../../../r3f/godotColor';
+import { useArrayColorOf, WHITE_MODULATE, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
+import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
+import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
+import { useSceneResources } from '../../../r3f/SceneResourcesContext';
+import { bottomUpV } from '../../../godot/math/uv';
+import { storedReal } from '../../../godot/math/real';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
-import type { Line2DProperties } from './types';
-import { jointWedge, type JointOptions } from './lineJoints';
-import { LineJointMode } from '../../../godot/scene/line2d.js';
 import { useDisposeOnRelease } from '../../../r3f/useDisposeOnRelease';
+import { bakedCurveSampler } from '../../../resources/curves/curve/bakedSample';
+import { buildLineStroke, type LineStroke } from './lineBuilder';
+import { strokeGradient } from './strokeResources';
+import type { Line2DProperties } from './types';
+import { useNodeResource } from '../../../resources/reading';
+import { CURVE } from '../../../resources/curves/curve';
+import { GRADIENT } from '../../../resources/textures/gradienttexture2d';
+import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 
 export function Line2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Line2DProperties;
+  const widthCurve = useNodeResource(props.widthCurve, CURVE).value;
+  const gradient = useNodeResource(props.gradient, GRADIENT).value;
 
-  // Geometry depends on the outline, its width, and the corner style.
-  const geometry = useMemo(
-    () =>
-      buildLineGeometry(props.points, props.width, props.closed, {
-        jointMode: props.jointMode,
-        sharpLimit: props.sharpLimit,
-        roundPrecision: props.roundPrecision,
-      }),
-    [props.points, props.width, props.closed, props.jointMode, props.sharpLimit, props.roundPrecision]
-  );
+  const { externalResources, internalResources } = useSceneResources();
+  const {
+    texture: resolvedTexture,
+    size,
+    sampler,
+    canvasTexture,
+  } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
+  const texture = useCanvas2DTexture(resolvedTexture, sampler);
+  // `Size2::aspect` of the texture, and 1 without one (`line_builder.h:51`).
+  const hasTexture = texture !== null;
+  const tileAspect = size ? storedReal(size.width / size.height) : 1;
+
+  const strokeColors = useMemo(() => gradient && strokeGradient(gradient), [gradient]);
+  // Baked once per curve, not per rebuild: the bake samples the curve `bake_resolution` times.
+  const widthFactorAt = useMemo(() => widthCurve && bakedCurveSampler(widthCurve), [widthCurve]);
+  const {
+    points,
+    width,
+    closed,
+    jointMode,
+    sharpLimit,
+    roundPrecision,
+    beginCapMode,
+    endCapMode,
+    textureMode,
+  } = props;
+  const geometry = useMemo(() => {
+    const stroke = buildLineStroke({
+      points,
+      width,
+      closed,
+      jointMode,
+      sharpLimit,
+      roundPrecision,
+      beginCapMode,
+      endCapMode,
+      gradient: strokeColors,
+      widthFactorAt,
+      textureMode,
+      tileAspect,
+    });
+    return stroke && toGeometry(stroke, hasTexture);
+  }, [
+    points,
+    width,
+    closed,
+    jointMode,
+    sharpLimit,
+    roundPrecision,
+    beginCapMode,
+    endCapMode,
+    strokeColors,
+    widthFactorAt,
+    textureMode,
+    tileAspect,
+    hasTexture,
+  ]);
   useDisposeOnRelease(geometry);
 
   return (
     <CanvasItem2D
       node={node}
       props={props}
+      canvasTexture={canvasTexture}
       body={(tint, _material, pixelMaterial) =>
         geometry ? (
           <LineMesh
             geometry={geometry}
             tint={tint}
             color={props.defaultColor}
+            texture={texture}
             pixelMaterial={pixelMaterial}
           />
         ) : null
@@ -56,27 +116,40 @@ function LineMesh({
   geometry,
   tint,
   color,
+  texture,
   pixelMaterial,
 }: {
   geometry: THREE.BufferGeometry;
   tint: CanvasItemTint;
   color: Line2DProperties['defaultColor'];
+  texture: THREE.Texture | null;
   pixelMaterial: CanvasItemPixelMaterial;
 }) {
+  const vertexColors = geometry.hasAttribute('color');
+  const canvasSpace = useCanvasColorSpace();
+  const toArrayLinear = useArrayColorOf();
+  // With a gradient `default_color` is ignored: the vertices carry the colour and the node's tint
+  // multiplies on top (`line_builder.cpp:120-124`). Without one, `default_color` is the one array
+  // colour (`line_2d.cpp:306-310`).
   const { fill, opacity } = useMemo(() => {
-    const composed = multiplyModulate(tint.own, color);
-    return {
-      fill: godotColorToLinear(composed),
-      opacity: composed.a,
-    };
-  }, [tint.own, color]);
+    const arrayColor = vertexColors ? WHITE_MODULATE : color;
+    return { fill: toArrayLinear(tint.own, arrayColor), opacity: tint.own.a * arrayColor.a };
+  }, [tint.own, color, vertexColors, toArrayLinear]);
 
   const program = materialProgramInputs({
-    props: { color: fill, opacity, transparent: true, depthWrite: false },
-    // `lineJoints.ts` picks a corner's outward normal from the sign of the turn,
-    // so left and right wedges wind opposite ways while the quads all wind alike.
-    // The canvas-item facing draws them in one pass. A split by facing would draw the
-    // wedges apart from their quads, hidden only by the one flat colour.
+    props: {
+      color: fill,
+      opacity,
+      vertexColors,
+      map: texture,
+      transparent: true,
+      depthWrite: false,
+      // An sRGB canvas multiplies the vertex colours and the texels as the sRGB numbers they are
+      // (`canvas.glsl:631`), and a linear one decodes the vertex colours.
+      defines: vertexColors || texture ? canvasSpace.defines : undefined,
+    },
+    // The strip is one uniform colour or a smooth gradient, and it draws no area twice, so one pass
+    // of the canvas-item facing draws it whatever its winding.
     merge: [pixelMaterial],
   });
 
@@ -88,145 +161,36 @@ function LineMesh({
   );
 }
 
-/**
- * A poly-stroke `BufferGeometry` from the flat `[x0,y0,…]` outline: one quad per
- * segment and a joint wedge at every interior corner. Godot has no "no joint"
- * mode, so the wedge always fills the pie-slice gap between butt-capped quads.
- */
-function buildLineGeometry(
-  points: Float32Array,
-  width: number,
-  closed: boolean,
-  joints: JointOptions = DEFAULT_JOINTS
-): THREE.BufferGeometry | null {
-  const n = Math.floor(points.length / 2);
-  if (n < 2) return null;
-
-  const segs = n - 1;
-  // One quad per segment + optional closing quad.
-  const totalQuads = closed ? segs + 1 : segs;
-  const positions = new Float32Array(totalQuads * 4 * 3);
-  // Two triangles per quad (0,1,2 + 0,2,3). Without an index a 4-vertex quad
-  // renders as one triangle, half the ribbon, so the stroke is indexed.
-  const indices: number[] = [];
-
-  for (let q = 0; q < totalQuads; q++) {
-    const closing = closed && q === segs; // the wrap-around segment: last point → first
-    appendQuad(positions, points, closing ? (n - 1) * 2 : q * 2, width, closing, q * 12);
-    const b = q * 4;
-    indices.push(b, b + 1, b + 2, b, b + 2, b + 3);
+/** Godot's downward Y is negated here, as for every canvas item. */
+function toGeometry(
+  { vertices, colors, uvs, indices }: LineStroke,
+  hasTexture: boolean
+): THREE.BufferGeometry {
+  const positions = new Float32Array((vertices.length / 2) * 3);
+  for (let i = 0; i < vertices.length / 2; i++) {
+    positions[i * 3] = vertices[i * 2]!;
+    positions[i * 3 + 1] = -vertices[i * 2 + 1]!;
   }
-
-  // Wedges are self-contained triangles appended after the quads, so they carry
-  // their own vertices and indices rather than sharing the quads'.
-  const wedges = jointWedges(points, width * 0.5, closed, joints);
-  const vertices = new Float32Array(positions.length + wedges.length);
-  vertices.set(positions, 0);
-  vertices.set(wedges, positions.length);
-  const wedgeBase = totalQuads * 4;
-  for (let i = 0; i < wedges.length / 3; i++) indices.push(wedgeBase + i);
-
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-  geo.setIndex(indices);
-  return geo;
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  // Four wide, so three defines `USE_COLOR_ALPHA` and an authored alpha draws.
+  if (colors) geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+  if (uvs || hasTexture) {
+    geometry.setAttribute('uv', new THREE.BufferAttribute(threeUvs(uvs, vertices.length / 2), 2));
+  }
+  geometry.setIndex(indices);
+  return geometry;
 }
 
-/** Godot's own joint defaults, for callers that do not carry the properties. */
-const DEFAULT_JOINTS: JointOptions = {
-  jointMode: LineJointMode.SHARP,
-  sharpLimit: 2,
-  roundPrecision: 8,
-};
-
-/** Every interior corner's wedge, flattened. Godot's Y is negated here too. */
-function jointWedges(
-  points: Float32Array,
-  halfWidth: number,
-  closed: boolean,
-  joints: JointOptions
-): number[] {
-  const n = Math.floor(points.length / 2);
-  if (n < 3) return [];
-  const at = (i: number) => ({ x: points[i * 2]!, y: -points[i * 2 + 1]! });
-
-  const out: number[] = [];
-  // Interior corners. A closed line also turns at its first and last points.
-  const first = closed ? 0 : 1;
-  const last = closed ? n - 1 : n - 2;
-  for (let i = first; i <= last; i++) {
-    const prev = at((i - 1 + n) % n);
-    const next = at((i + 1) % n);
-    out.push(...jointWedge(prev, at(i), next, halfWidth, joints));
+/**
+ * Godot's texel space runs +Y down from the top-left, and three samples a texture with v = 1 at the
+ * top row. Without UVs Godot's vertices all read UV (0, 0), the top-left texel (`texture_mode` NONE).
+ */
+function threeUvs(uvs: Float32Array | null, vertexCount: number): Float32Array {
+  const out = new Float32Array(vertexCount * 2);
+  for (let i = 0; i < vertexCount; i++) {
+    out[i * 2] = uvs ? uvs[i * 2]! : 0;
+    out[i * 2 + 1] = bottomUpV(uvs ? uvs[i * 2 + 1]! : 0);
   }
   return out;
-}
-
-/** Write one quad around segment p_{pairStart/2} → p_{(pairStart+2)/2}. */
-function appendQuad(
-  positions: Float32Array,
-  points: Float32Array,
-  pairStart: number,
-  width: number,
-  fromLastToFirst: boolean,
-  offset: number
-): void {
-  let x0: number, y0: number;
-  let x1: number, y1: number;
-
-  if (fromLastToFirst) {
-    // Closing segment: last point → first point.
-    const len = points.length;
-    x0 = points[len - 2]!;
-    y0 = points[len - 1]!;
-    x1 = points[0]!;
-    y1 = points[1]!;
-  } else {
-    x0 = points[pairStart]!;
-    y0 = points[pairStart + 1]!;
-    x1 = points[pairStart + 2]!;
-    y1 = points[pairStart + 3]!;
-  }
-
-  // Convert to three-space: negate Godot's downward Y (three Y+ goes up).
-  const gt_x0 = x0;
-  const gt_y0 = -y0;
-  const gt_x1 = x1;
-  const gt_y1 = -y1;
-
-  // Segment direction in three-space.
-  const dx = gt_x1 - gt_x0;
-  const dy = gt_y1 - gt_y0;
-  const lenSq = dx * dx + dy * dy;
-
-  let perpX = 0;
-  let perpY = 0;
-
-  if (lenSq >= 0.0001) {
-    const len = Math.sqrt(lenSq);
-    // Perpendicular to segment direction (counter-clockwise 90°).
-    perpX = -dy / len;
-    perpY = dx / len;
-  }
-
-  // Half-width offsets.
-  const ohx = perpX * width * 0.5;
-  const ohy = perpY * width * 0.5;
-
-  // Vertices: (p₀−n·hw), (p₀+n·hw), (p₁+n·hw), (p₁−n·hw)
-  positions[offset] = gt_x0 - ohx;
-  positions[offset + 1] = gt_y0 - ohy;
-  positions[offset + 2] = 0;
-
-  positions[offset + 3] = gt_x0 + ohx;
-  positions[offset + 4] = gt_y0 + ohy;
-  positions[offset + 5] = 0;
-
-  positions[offset + 6] = gt_x1 + ohx;
-  positions[offset + 7] = gt_y1 + ohy;
-  positions[offset + 8] = 0;
-
-  positions[offset + 9] = gt_x1 - ohx;
-  positions[offset + 10] = gt_y1 - ohy;
-  positions[offset + 11] = 0;
 }

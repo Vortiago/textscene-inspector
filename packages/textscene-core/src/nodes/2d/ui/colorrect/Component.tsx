@@ -5,8 +5,7 @@
  */
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { parseColor } from '../../../../utils/colorParser';
@@ -17,7 +16,7 @@ export function ColorRect({ solveNode, tint, rect, renderOrder }: NativeControlC
   const fill = useMemo(() => parseColor(props.color), [props.color]);
 
   const filled = useMemo(() => multiplyModulate(tint.own, fill), [tint.own, fill]);
-  const color = useGodotLinearColor(filled);
+  const color = useItemLinearColor(filled);
 
   return (
     <ControlQuad width={rect.w} height={rect.h} color={color} opacity={filled.a} renderOrder={renderOrder} />

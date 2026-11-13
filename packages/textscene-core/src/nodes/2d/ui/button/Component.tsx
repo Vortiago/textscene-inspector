@@ -1,52 +1,59 @@
 /**
- * `<Button>`, the native (WebGL canvas) painter for `Button`: StyleBox chrome unless
- * `flat`, an aligned label and an optional icon, laid out by `buttonBase.ts`. Draw state
- * comes only from `disabled`: a static viewer has no hover, pressed or focus.
- * `ControlCanvasWalker` owns `visible`, the children and the transform.
+ * `<ButtonPainter>`, the native (WebGL canvas) painter of `Button` and of every class that extends it:
+ * what `Button::_notification` draws (`button.cpp:203-460`), laid out by `buttonBase.ts`. A subclass draws
+ * its own element over it with `<ButtonOverlayIcon>`. A static viewer has no hover draw state.
  */
 import { useMemo } from 'react';
-import { sizeWithArea } from '../../../../resources/textures/textureSize';
-import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
+import type * as THREE from 'three';
+import type { Rect2 } from '../../../../godot/math/rect2';
+import type { Rgba } from '../../../../godot/math/math';
+import { canvasPieceSlot, wholeKeySlot } from '../../../../r3f/canvasItemState';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
-import { useTexture2D } from '../../../../resources/useTexture2D';
-import { useOwnerCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
+import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
+import { useIconModulate, useIconRefTexture } from '../../../../r3f/controls/native/useButtonIcon';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
-import { OutlinedTextRun, useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
-import {
-  clampAutowrapMode,
-  infersRtl,
-  shapedTextSizeWidthPx,
-  soloLineLayout,
-  type TextLayoutResult,
-} from '../../../../r3f/controls/native/text/textLayout';
-import { overrunFlagsForBehavior, trimLayoutToWidth } from '../../../../r3f/controls/native/text/textOverrun';
-import { isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
+import { ButtonLabel } from '../../../../r3f/controls/native/ButtonLabel';
+import { useTintedTextOutline } from '../../../../r3f/controls/native/text/OutlinedTextRun';
+import { infersRtl } from '../../../../r3f/controls/native/text/textLayout';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
-  resolveButtonDrawState,
-  pickButtonStyleBox,
   tintColor,
   layoutButtonContent,
-  buttonTextAlignShiftPx,
-  buttonTextBufWidthPx,
-  swapAlignmentSide,
+  isButtonAutowrapped,
+  labelNaturalSize,
+  wrappedLabelWidthPx,
 } from '../../../../r3f/controls/native/buttonBase';
-import { HorizontalAlignment, VerticalAlignment } from '../../../../godot/math/alignment';
-import { BUTTON_THEME_FONT_KEY, buttonLabelShape, buttonTextTheme, buttonIconColor } from './nativeSolver';
+import {
+  BUTTON_CLASS,
+  buttonContentFacts,
+  buttonIconColor,
+  buttonLabelShape,
+  buttonShown,
+  buttonStyle,
+  buttonTextTheme,
+  type ButtonClass,
+} from './nativeSolver';
 import type { ButtonProperties } from './types';
-import type { Vector2 } from '../../../../godot/math/vector';
-import { AutowrapMode, OverrunBehavior } from '../../../../godot/text/textServerEnums';
 
-export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+interface ButtonPainterProps extends NativeControlComponentProps {
+  /** What the node's class changes of Button. */
+  buttonClass: ButtonClass;
+}
+
+/** Draws what `Button::_notification` draws, for a Button of any class. */
+export function ButtonPainter({
+  solveNode,
+  tint,
+  rect,
+  renderOrder,
+  theme,
+  buttonClass,
+}: ButtonPainterProps) {
   const props = painterView<ButtonProperties>(solveNode);
-  const state = resolveButtonDrawState(props.disabled);
-
-  const baseStyleBox = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, state, solveNode.rtl);
+  const { state, box } = buttonStyle(solveNode, theme);
 
   // `renderOrder` and the clip planes reach every mesh. `<TextRun>` builds its own
   // ShaderMaterial, so it takes the planes explicitly, or the label escapes an
@@ -55,200 +62,131 @@ export function Button({ solveNode, tint, rect, renderOrder, theme }: NativeCont
 
   // `tint.own` is raw sRGB. It goes to the chrome as is, and multiplies into the font
   // and icon colours before each one's single sRGB-to-linear conversion.
-  const text = props.text ?? '';
-  const hasText = text.length > 0;
-  const { fontSizePx, color: baseFontColor } = buttonTextTheme(solveNode, props, state, { theme });
+  const { fontSizePx, color: baseFontColor } = buttonTextTheme(
+    solveNode,
+    props,
+    state,
+    { theme },
+    buttonClass
+  );
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
-  const fontMetrics = resolveNodeFontMetrics(solveNode, BUTTON_THEME_FONT_KEY);
-  // Pass 1, unwrapped: what the icon's own reservation is measured against. It is the
-  // **solve handoff** the minimum-size solver calls too, so one shaping sizes both.
-  const unwrapped: TextLayoutResult | null = buttonLabelShape(solveNode, theme);
-
-  // The node's own scope, not the ambient provider's: a Button that arrived
-  // through an instanced sub-scene names ids from that scene.
-  const { externalResources, internalResources } = solveNode.resources;
-  // `useTexture2D`, not the path-only resolver: an icon may be an inline
-  // procedural texture, which has no path to load from.
-  const { texture: iconSource, size: iconSize } = useTexture2D(
-    props.icon,
-    externalResources,
-    internalResources
-  );
-  // NoColorSpace: the 2D canvas's hardware filter blends undecoded sRGB
-  // bytes (`canvas2DTextureDecode.ts`). `ControlQuad` decodes the
-  // already-filtered sample once it sees this tag.
-  const iconTexture = useOwnerCanvas2DTexture(iconSource);
-
-  const iconNaturalSize = useMemo(
-    () => (props.icon && iconTexture ? sizeWithArea(iconSize) : null),
-    [props.icon, iconTexture, iconSize]
+  // Pass 1, unwrapped: the **solve handoff** the minimum-size solver calls too, so one shaping sizes
+  // both. The node is rebuilt when a font settles (`solveHandoff.ts`), so its identity keys the shape.
+  // A wrapping label reads it only for an expanded icon's height, as `tentativeWrapWidthPx` does.
+  const wraps = isButtonAutowrapped(props);
+  const needsUnwrapped = !wraps || props.expandIcon === true;
+  const unwrapped = useMemo(
+    () => (needsUnwrapped ? buttonLabelShape(solveNode, theme, buttonClass) : null),
+    [needsUnwrapped, solveNode, theme, buttonClass]
   );
 
-  const baseIconColor = buttonIconColor(solveNode.colors, state);
-  const tintedIconColorSrgb = useMemo(() => tintColor(baseIconColor, tint.own), [baseIconColor, tint.own]);
-  const iconLinearColor = useGodotLinearColor(tintedIconColorSrgb);
+  const ownIcon = buttonShown(buttonClass, props).icon;
+  const ownIconTexture = useIconRefTexture(solveNode, ownIcon);
+  // A theme icon the Control gave this Button: the vendored default is a 16x16 SVG whose size
+  // `textureSize` already holds, since the loader returns a blank texture before the decode.
+  const givenIcon = solveNode.syntheticDraw?.themedIcon;
+  // Without either, the theme icon `icon` stands in for the property (`button.cpp:224-227`).
+  const themedIconName = givenIcon?.name ?? (ownIcon ? undefined : 'icon');
+  const themedIconTexture = useNodeIcon(
+    themedIconName === undefined ? undefined : solveNode.icons[themedIconName],
+    givenIcon?.vendoredUrl ?? null
+  );
+  const iconTexture = themedIconName === undefined ? ownIconTexture : themedIconTexture;
+  const iconModulate = useIconModulate(buttonIconColor(solveNode.colors, state, props), tint.own);
 
-  const contentInput = useMemo(
-    () => ({
-      rectSize: { x: rect.w, y: rect.h },
-      styleMargin: baseStyleBox.contentMargin,
-      hSeparation: solveNode.constants.h_separation ?? theme.separation,
-      iconMaxWidth: solveNode.constants.icon_max_width ?? 0,
-      // Aligned against the ceiled text width (`scene/gui/button.cpp:343,349`).
-      textAlignment: props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER,
-      iconAlignment: props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
-      verticalIconAlignment: props.verticalIconAlignment ?? VerticalAlignment.VERTICAL_ALIGNMENT_CENTER,
-      expandIcon: props.expandIcon === true,
-      iconNaturalSize,
-      hasText,
-      rtl: solveNode.rtl,
-    }),
-    [
-      rect.w,
-      rect.h,
-      baseStyleBox.contentMargin,
-      solveNode.constants,
-      props.alignment,
-      props.iconAlignment,
-      props.verticalIconAlignment,
-      props.expandIcon,
-      iconNaturalSize,
-      hasText,
-      theme.separation,
-      solveNode.rtl,
-    ]
+  const facts = useMemo(
+    () => buttonContentFacts(solveNode, theme, buttonClass, { x: rect.w, y: rect.h }),
+    [solveNode, theme, buttonClass, rect.w, rect.h]
   );
 
-  /**
-   * The ceiled shaped width, not the raw pen advance: Godot's draw path (`button.cpp:343,349`)
-   * reads the same `text_buf->get_size()` as the minimum size. The height needs no ceil: the
-   * line pitch sums independently ceiled ascent and descent and an integral theme spacing.
-   */
-  const naturalSize = (l: TextLayoutResult | null): Vector2 =>
-    l ? { x: shapedTextSizeWidthPx(l.widthPx), y: l.heightPx } : { x: 0, y: 0 };
-
-  // `button.cpp:262-276`: the same RTL side swap `layoutButtonContent` makes internally.
-  const textAlignment = solveNode.rtl
-    ? swapAlignmentSide(props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER)
-    : (props.alignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER);
   // `button.cpp:428-432` re-shapes a wrapping label at the width the unwrapped pass measured:
   // `is_clipped` is true under autowrap (`:332`), so the icon's reservation does not move
   // with the text. Godot reaches the same state over two frames.
-  const wraps =
-    clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF) !== AutowrapMode.AUTOWRAP_OFF;
-  const drawableWidthPx = layoutButtonContent({
-    ...contentInput,
-    textNaturalSize: naturalSize(unwrapped),
-    isTextRtl: infersRtl(unwrapped),
-  }).drawableSize.x;
-  const layout: TextLayoutResult | null = wraps
-    ? buttonLabelShape(solveNode, theme, buttonTextBufWidthPx(drawableWidthPx))
-    : unwrapped;
+  const wrapWidthPx = wraps ? wrappedLabelWidthPx(facts, unwrapped) : 0;
+  const layout = useMemo(
+    () => (wraps ? buttonLabelShape(solveNode, theme, buttonClass, wrapWidthPx) : unwrapped),
+    [wraps, solveNode, theme, buttonClass, wrapWidthPx, unwrapped]
+  );
   const content = useMemo(
     () =>
       layoutButtonContent({
-        ...contentInput,
-        textNaturalSize: naturalSize(layout),
+        ...facts,
+        textNaturalSize: labelNaturalSize(layout),
         isTextRtl: infersRtl(layout),
       }),
-    [contentInput, layout]
+    [facts, layout]
   );
 
-  const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
-    [props.overrunBehavior]
-  );
-  const isLineDrawnRtl = isDrawnRtl(useControlBidiOptions(props, solveNode));
-  const trimWidthPx = useMemo(() => {
-    const customElementWidth = rect.w - baseStyleBox.contentMargin.left - baseStyleBox.contentMargin.right;
-    const iconReserve =
-      content.icon &&
-      (props.iconAlignment ?? HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT) !==
-        HorizontalAlignment.HORIZONTAL_ALIGNMENT_CENTER
-        ? content.icon.rect.w + (solveNode.constants.h_separation ?? theme.separation)
-        : 0;
-    // button.cpp:424 `text_buf_width = ceil(MAX(1, drawable_size_remained.width))`. The icon's
-    // computed reservation, `content.icon.rect.w`, keeps this in step with `layoutButtonContent`.
-    return buttonTextBufWidthPx(customElementWidth - iconReserve);
-  }, [
-    rect.w,
-    baseStyleBox.contentMargin,
-    content.icon,
-    props.iconAlignment,
-    solveNode.constants,
-    theme.separation,
-  ]);
-  // `TextParagraph::_shape_lines` trims each row of an unwrapped buffer, and no row of a wrapped
-  // one, since Button hides no line (`text_paragraph.cpp:228-262,282-293`).
-  const trimmedLayout = useMemo(() => {
-    if (!layout || !overrunFlags.trim || wraps) return layout;
-    return trimLayoutToWidth(layout, trimWidthPx, overrunFlags, {
-      fontMetrics,
-      fontSizePx,
-      isDrawnRtl: isLineDrawnRtl,
-    });
-  }, [layout, overrunFlags, wraps, trimWidthPx, fontMetrics, fontSizePx, isLineDrawnRtl]);
-
-  // One layout object per row, so a row's runs keep their meshes across renders.
-  const lineLayouts = useMemo(
-    () => trimmedLayout?.lines.map((line) => soloLineLayout(line, trimmedLayout)) ?? [],
-    [trimmedLayout]
-  );
-  // `content.text.offset.x` holds this shift of the untrimmed `layout`; each row backs it out.
-  const untrimmedShiftPx = content.text
-    ? buttonTextAlignShiftPx(naturalSize(layout).x, content.drawableSize.x, textAlignment, infersRtl(layout))
-    : 0;
+  const bidi = useControlBidiOptions(props, solveNode);
 
   return (
     <>
-      {!props.flat && (
-        <StyleBoxQuad styleBox={baseStyleBox} color={tint.own} rect={rect} renderOrder={renderOrder} />
+      {!props.flat && <StyleBoxQuad styleBox={box} color={tint.own} rect={rect} renderOrder={renderOrder} />}
+      {props.hasFocus && (
+        <StyleBoxQuad
+          styleBox={solveNode.styleBoxes.focus ?? theme.widgets.button.focus}
+          color={tint.own}
+          rect={rect}
+          renderOrder={renderOrder}
+        />
       )}
-      {content.icon && iconTexture && (
-        <CanvasItemGroup position={[content.icon.rect.x, -content.icon.rect.y, 0]}>
-          <ControlQuad
-            renderOrder={renderOrder}
-            width={content.icon.rect.w}
-            height={content.icon.rect.h}
-            color={iconLinearColor}
-            opacity={tintedIconColorSrgb.a}
-            map={iconTexture}
-          />
-        </CanvasItemGroup>
+      {content.icon && (
+        <PositionedIcon
+          rect={content.icon.rect}
+          texture={iconTexture}
+          color={iconModulate.color}
+          opacity={iconModulate.opacity}
+          renderOrder={renderOrder}
+        />
       )}
-      {content.text !== null &&
-        trimmedLayout &&
-        trimmedLayout.lines.map((line, i) => (
-          // `TextParagraph::draw` aligns each line on its own (`text_paragraph.cpp:887-922`),
-          // so shorter rows re-centre. `content.text.offset.x` carries the shift of the untrimmed
-          // `layout`, so that shift is backed out and each row's own put in its place.
-          <CanvasItemGroup
-            key={i}
-            position={[
-              content.text!.offset.x -
-                untrimmedShiftPx +
-                buttonTextAlignShiftPx(
-                  shapedTextSizeWidthPx(line.widthPx),
-                  content.drawableSize.x,
-                  textAlignment,
-                  line.isRtl === true
-                ),
-              -(content.text!.offset.y + i * trimmedLayout.linePitchPx),
-              0,
-            ]}
-          >
-            <OutlinedTextRun
-              layout={lineLayouts[i]!}
-              fontSizePx={fontSizePx}
-              tint={tintedFontColor}
-              outline={textOutline}
-              clippingPlanes={clippingPlanes}
-              renderOrder={renderOrder}
-            />
-          </CanvasItemGroup>
-        ))}
+      {content.labelBox && layout && (
+        <ButtonLabel
+          layout={layout}
+          overrunBehavior={props.overrunBehavior}
+          bidi={bidi}
+          isWrapped={wraps}
+          box={content.labelBox}
+          fontSizePx={fontSizePx}
+          tint={tintedFontColor}
+          outline={textOutline}
+          clippingPlanes={clippingPlanes}
+          renderOrder={renderOrder}
+        />
+      )}
     </>
   );
+}
+
+interface ButtonOverlayIconProps {
+  /** The icon's rect in the Button's top-left coordinates. */
+  rect: Rect2;
+  texture: THREE.Texture | null;
+  /** The theme colour the subclass draws the icon in, before the item's tint. */
+  color: Rgba;
+  tint: Rgba;
+  renderOrder: number;
+}
+
+/**
+ * The icon a subclass draws after `Button::_notification`, over the label. Its draw-order key is the
+ * second of two pieces of the Control's unit: the label's outline and fill sit at `renderOrder` and half
+ * a unit above it (`textLayerRenderOrder`), and the next Control starts a whole unit above.
+ */
+export function ButtonOverlayIcon({ rect, texture, color, tint, renderOrder }: ButtonOverlayIconProps) {
+  const drawn = useIconModulate(color, tint);
+  return (
+    <PositionedIcon
+      rect={rect}
+      texture={texture}
+      color={drawn.color}
+      opacity={drawn.opacity}
+      renderOrder={canvasPieceSlot(wholeKeySlot(renderOrder), 1, 2).key}
+    />
+  );
+}
+
+export function Button(props: NativeControlComponentProps) {
+  return <ButtonPainter {...props} buttonClass={BUTTON_CLASS} />;
 }

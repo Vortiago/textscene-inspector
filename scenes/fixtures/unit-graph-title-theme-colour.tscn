@@ -1,0 +1,72 @@
+[gd_scene load_steps=4 format=3 uid="uid://unitgraphtitlethm"]
+
+; The title Label of a GraphNode or GraphFrame is a Label on the GraphNodeTitleLabel or GraphFrameTitleLabel variation,
+; so it reads font_color through the Theme chain (graph_node.cpp, graph_frame.cpp). A Theme that sets Label colours
+; the title. A GraphNodeTitleLabel entry beats the Label entry. A Button entry does not reach it. The Theme on each
+; node is the one variable.
+
+[sub_resource type="Theme" id="Theme_label"]
+Label/colors/font_color = Color(1, 0.2, 0.2, 1)
+
+[sub_resource type="Theme" id="Theme_variation"]
+Label/colors/font_color = Color(1, 0.2, 0.2, 1)
+GraphNodeTitleLabel/colors/font_color = Color(0.2, 1, 0.2, 1)
+
+[sub_resource type="Theme" id="Theme_frame"]
+Label/colors/font_color = Color(0.3, 0.5, 1, 1)
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="PlainNode" type="GraphNode" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 168.0
+offset_bottom = 88.0
+title = "Plain"
+
+[node name="LabelColourNode" type="GraphNode" parent="."]
+layout_mode = 0
+offset_left = 176.0
+offset_top = 8.0
+offset_right = 336.0
+offset_bottom = 88.0
+theme = SubResource("Theme_label")
+title = "Label red"
+
+[node name="VariationColourNode" type="GraphNode" parent="."]
+layout_mode = 0
+offset_left = 344.0
+offset_top = 8.0
+offset_right = 504.0
+offset_bottom = 88.0
+theme = SubResource("Theme_variation")
+title = "Variation green"
+
+[node name="PlainFrame" type="GraphFrame" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 104.0
+offset_right = 168.0
+offset_bottom = 184.0
+title = "Plain frame"
+
+[node name="LabelColourFrame" type="GraphFrame" parent="."]
+layout_mode = 0
+offset_left = 176.0
+offset_top = 104.0
+offset_right = 336.0
+offset_bottom = 184.0
+theme = SubResource("Theme_frame")
+title = "Label blue"

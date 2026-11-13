@@ -1,15 +1,15 @@
 ---
 type: MultiMeshInstance3D
 category: 3D
-status: unimplemented
-fixture: unit-multi-mesh-instance-3d.tscn
-# image: unit-multi-mesh-instance-3d
-renders_as: nothing yet, Godot draws a batch of mesh instances, the previewer does not
+status: unreviewed
+fixture: unit-multi-mesh-instance-3d-instances.tscn
+image: unit-multi-mesh-instance-3d-instances
+renders_as: a THREE.InstancedMesh of the MultiMesh's mesh
 ---
 
 # MultiMeshInstance3D
 
-Instances a `MultiMesh` resource, drawing many copies of one mesh in a single call. The previewer does not draw the batch yet, so the node draws nothing and its children still show.
+Instances a `MultiMesh` resource, drawing many copies of one mesh in a single call. The previewer draws the mesh once for each visible instance, with the instance transform and colour.
 
 ## Linting
 
@@ -35,4 +35,5 @@ The lenient parser never runs `multimesh`'s validator. Given `multimesh = "res:/
 
 ## Known limitations
 
-- **Not drawn** Godot draws every instance in the `multimesh`, but here none appears.
+- **Shader missing** A ShaderMaterial is not translated, so a custom shader never reads `INSTANCE_CUSTOM`, which a StandardMaterial3D flipbook does.
+- **Needs runtime** `physics_interpolation_quality` and the previous-frame buffer need a running game, so the previewer draws the buffer as saved.

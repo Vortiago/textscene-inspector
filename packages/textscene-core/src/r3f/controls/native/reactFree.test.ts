@@ -1,10 +1,10 @@
 /**
  * The Control rect solver is pure TS: no React, no THREE, anywhere in
- * `native/{solveTree,nativeTheme,solverRegistry,controlRectSolver,solveHandoff}.ts`.
+ * `native/{solveTree,nativeTheme,solverRegistry,controlRectSolver,solveHandoff,themeItems}.ts`.
  */
-// Five separate entries: most references between them are `import type`, which
+// Six separate entries: most references between them are `import type`, which
 // the walker skips, so a closure rooted at one file never reaches `nativeTheme.ts`.
-// The union of the five closures is what ships.
+// The union of the six closures is what ships.
 import { describe, expect, it } from 'vitest';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +18,7 @@ const entries = [
   'solverRegistry.ts',
   'controlRectSolver.ts',
   'solveHandoff.ts',
+  'themeItems.ts',
 ];
 
 const closures = entries.map((f) => walkImportClosure(resolve(here, f), { relativeTo: here }));

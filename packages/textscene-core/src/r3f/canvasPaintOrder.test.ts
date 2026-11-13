@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types';
 import {
   allocateNodePaintRange,
+  behindParentRanges,
   allocatePaintRange,
   canvasKeyAtZ,
   canvasRenderOrder,
@@ -19,7 +20,11 @@ import {
 } from './canvasPaintOrder';
 
 function node(name: string, type: string, children: TscnNode[] = [], properties = {}): TscnNode {
-  return { name, type, properties, children } as unknown as TscnNode;
+  // The raw text of each property, as the parser keeps it beside the parsed value.
+  const rawProperties = Object.fromEntries(
+    Object.entries(properties).map(([key, value]) => [key, String(value)])
+  );
+  return { name, type, properties, rawProperties, children } as unknown as TscnNode;
 }
 
 /** A parsed TileMap holding `layerCount` layers, as `parseTileMap` shapes it. */
@@ -131,9 +136,15 @@ describe('paintRangeSize', () => {
   it('counts the node and every descendant, so a subtree owns a contiguous run', () => {
     const tree = node('Root', 'Node2D', [
       node('A', 'Sprite2D', [node('A1', 'Sprite2D')]),
-      node('B', 'ColorRect'),
+      node('B', 'Marker2D'),
     ]);
     expect(paintRangeSize(tree)).toBe(4);
+  });
+
+  it("counts one more value for a Control's back pieces", () => {
+    expect(paintRangeSize(node('Scroll', 'ScrollContainer', [node('Body', 'ColorRect')]))).toBe(
+      1 + 1 + 1 + 1
+    );
   });
 
   it('reserves room in a tile layer for the rows a y-sort pass expands it into', () => {
@@ -146,7 +157,8 @@ describe('paintRangeSize', () => {
     // Each layer is an internal child CanvasItem (`tile_map.cpp:279`), so it
     // needs a value of its own. A fixed reserve runs out past its size.
     const children = [node('Marker', 'Sprite2D')];
-    expect(paintRangeSize(tileMap(5000, children))).toBe(1 + 5000 + 1);
+    // A TileMap also holds back a reserve of 4096 values for its scene tile instances, after its children.
+    expect(paintRangeSize(tileMap(5000, children))).toBe(1 + 5000 + 4096);
   });
 });
 
@@ -219,7 +231,7 @@ describe('canvasRootRanges', () => {
     // The reserve is what a nested root draws from; a canvas whose items all
     // nest under a CanvasItem parent has none, and must keep the numbers the
     // plain pre-order allocation gives it.
-    const root = node('Root', 'Control', [node('A', 'ColorRect'), node('B', 'ColorRect')]);
+    const root = node('Root', 'Node2D', [node('A', 'Sprite2D'), node('B', 'Sprite2D')]);
     const ranges = allocatePaintRange(WHOLE_CANVAS_RANGE, [root]).children;
 
     expect(paintRangeSize(root)).toBe(3);
@@ -252,6 +264,60 @@ describe('allocatePaintRange', () => {
 
     expect(allocated.children[0]!.base).toBeLessThan(allocated.self);
     expect(allocated.self).toBeLessThan(allocated.children[1]!.base);
+  });
+
+  it('draws a CanvasGroup after every child, in index order whatever show_behind_parent says', () => {
+    // A CanvasGroup culls all its children, then attaches itself (lines 471-484).
+    const group = node('Group', 'CanvasGroup', [
+      node('Front', 'Sprite2D'),
+      node('Behind', 'Sprite2D', [], { show_behind_parent: true }),
+    ]);
+    const allocated = allocateNodePaintRange({ base: 0, size: paintRangeSize(group) }, group);
+
+    expect(allocated.children[0]!.base).toBeLessThan(allocated.children[1]!.base);
+    expect(allocated.children[1]!.base).toBeLessThan(allocated.self);
+  });
+
+  it.each([
+    ['a Node2D', 'Polygon2D', { clip_children: 1 }],
+    ['a Control', 'ColorRect', { clip_children: 2 }],
+  ])('draws %s with clip_children after every child, as a CanvasGroup', (_, type, properties) => {
+    // A clipping item groups its children as a CanvasGroup does, so it culls them before itself.
+    const clipping = node(
+      'Clip',
+      type,
+      [node('Front', 'Sprite2D'), node('Behind', 'Sprite2D', [], { show_behind_parent: true })],
+      properties
+    );
+    const allocated = allocateNodePaintRange({ base: 0, size: paintRangeSize(clipping) }, clipping);
+
+    expect(allocated.children[0]!.base).toBeLessThan(allocated.children[1]!.base);
+    expect(allocated.children[1]!.base).toBeLessThan(allocated.self);
+  });
+
+  it('draws an item whose clip_children is negative in the order of its children, as the parser reads it', () => {
+    const plain = node('Plain', 'Polygon2D', [node('Behind', 'Sprite2D', [], { show_behind_parent: true })], {
+      clip_children: -1,
+    });
+    const allocated = allocateNodePaintRange({ base: 0, size: paintRangeSize(plain) }, plain);
+
+    expect(allocated.children[0]!.base).toBeLessThan(allocated.self);
+  });
+
+  it('draws an item whose clip_children is DISABLED in the order of its children', () => {
+    const plain = node('Plain', 'Polygon2D', [node('Behind', 'Sprite2D', [], { show_behind_parent: true })], {
+      clip_children: 0,
+    });
+    const allocated = allocateNodePaintRange({ base: 0, size: paintRangeSize(plain) }, plain);
+
+    expect(allocated.children[0]!.base).toBeLessThan(allocated.self);
+  });
+
+  it('draws a y-sorted CanvasGroup first, as any y-sorting parent, since it groups nothing', () => {
+    const group = node('Group', 'CanvasGroup', [node('Child', 'Sprite2D')], { y_sort_enabled: true });
+    const allocated = allocateNodePaintRange({ base: 0, size: paintRangeSize(group) }, group);
+
+    expect(allocated.self).toBe(0);
   });
 
   it('puts a y-sorting parent at the FRONT of its range, ignoring show_behind_parent', () => {
@@ -360,5 +426,74 @@ describe('allocatePaintRange', () => {
       expect(child.base).toBeGreaterThanOrEqual(range.base);
       expect(child.base + child.size).toBeLessThanOrEqual(range.base + range.size);
     }
+  });
+});
+
+describe("a Control's back slot", () => {
+  // Godot adds a Control's chrome, such as a ScrollContainer's bars, as INTERNAL_MODE_BACK
+  // children (`scroll_container.cpp:919,924`), which draw after every authored child.
+  const scroll = node('Outer', 'ScrollContainer', [
+    node('Inner', 'ScrollContainer', [node('Body', 'ColorRect')]),
+  ]);
+
+  it("lies after the whole run of the Control's last child", () => {
+    const outer = allocateNodePaintRange({ base: 0, size: paintRangeSize(scroll) }, scroll);
+    const inner = outer.children[0]!;
+    expect(outer.back.base).toBe(inner.base + inner.size);
+  });
+
+  it("is its own value, so a nested Control's back slot never ties with it", () => {
+    const outer = allocateNodePaintRange({ base: 0, size: paintRangeSize(scroll) }, scroll);
+    const inner = allocateNodePaintRange(outer.children[0]!, scroll.children[0]!);
+    expect(inner.back.base).toBeLessThan(outer.back.base);
+  });
+});
+
+describe('a node with no back room', () => {
+  it("keeps its back slot on its own run's last value, below the next sibling", () => {
+    const layer = node('Layer', 'CanvasLayer', [node('Body', 'ColorRect')]);
+    const range = { base: 10, size: paintRangeSize(layer) };
+    expect(allocateNodePaintRange(range, layer).back.base).toBe(range.base + range.size - 1);
+  });
+});
+
+describe("GraphEdit's listed children", () => {
+  // `add_child_notify` moves each GraphFrame to index 0 and `connections_layer` to the index after the
+  // frames (`graph_edit.cpp:714-717`). GraphNodes keep their scene order after it.
+  const children = [
+    node('Source', 'GraphNode'),
+    node('FrameA', 'GraphFrame'),
+    node('Sink', 'GraphNode'),
+    node('FrameB', 'GraphFrame'),
+  ];
+  const graphEdit = node('Graph', 'GraphEdit', children);
+
+  it('holds one value for the connection layer', () => {
+    const emptyGraph = node('Graph', 'GraphEdit');
+    const emptyPanel = node('Panel', 'Panel');
+    expect(paintRangeSize(emptyGraph) - paintRangeSize(emptyPanel)).toBe(1);
+  });
+
+  it('draws the frames in reverse scene order, then the connection layer, then the GraphNodes', () => {
+    const allocated = allocateNodePaintRange(WHOLE_CANVAS_RANGE, graphEdit);
+    const [source, frameA, sink, frameB] = allocated.children.map((range) => range.base);
+    expect(allocated.self < frameB! && frameB! < frameA!).toBe(true);
+    expect(frameA! < allocated.layer && allocated.layer < source! && source! < sink!).toBe(true);
+  });
+
+  it('gives a parent with no connection layer its own sequence as the layer', () => {
+    expect(allocateNodePaintRange(WHOLE_CANVAS_RANGE, node('Panel', 'Panel')).layer).toBe(0);
+  });
+});
+
+describe('behindParentRanges', () => {
+  it('lists the show_behind_parent children in child order, whatever the parent type', () => {
+    const parent = node('Clip', 'Node2D', [
+      node('Front', 'Sprite2D'),
+      node('Behind', 'Sprite2D', [], { show_behind_parent: true }),
+    ]);
+    const range = { base: 0, size: paintRangeSize(parent) };
+
+    expect(behindParentRanges(range, parent)).toEqual([allocateNodePaintRange(range, parent).children[1]]);
   });
 });

@@ -38,6 +38,16 @@ CanvasItem descendants, 2D world and Control UI, draw nowhere in the parent. Its
 descendants draw as through a plain `Node` unless `own_world_3d`. A **viewport surface**
 displays its target: a `SubViewportContainer`, or a `ViewportTexture` consumer.
 
+**The update mode and the clear mode gate the pass.** The orchestrator renders a pass by
+`render_target_update_mode` as `RendererViewport::draw_viewports` does (`renderer_viewport.cpp:769-813`),
+and a render clears by `render_target_clear_mode` (`:373-378`). A `SubViewportContainer` replaces the
+mode of its child, while it is visible in the tree by the authored `visible` or the one an
+AnimationPlayer drives. A ONCE update mode and a ONCE clear mode belong to the viewport, not to its
+target: a resize leaves them spent (`renderer_viewport.cpp:920`, `:375`), and setting the mode again
+arms them (`viewport.cpp:5475-5478`). Every viewport registers a pass (a gate-only one when it holds
+nothing), so the viewport around a WHEN_PARENT_VISIBLE pass is always known. The inline draw of a
+shared-world 3D subtree in the parent view is no pass, so no mode touches it.
+
 **The registration carries the rule, not new dispatcher branches.** `SubViewport`
 registers with neither `canvasItem` nor `container`, so `PlainNode`'s workspace rules pass
 it through in the 3D workspace and drop its subtree in the 2D one. That is the measured
@@ -93,6 +103,14 @@ when its target appears. The entry carries Godot's two views of the target: `tex
 the plain view, and `decoding`, the sRGB view. Each consumer picks the view Godot's
 consumer would, so it does not learn which kind of content produced the target, and the
 Control-rasterisation path and the FBO path are interchangeable behind it.
+
+**An embedded window is a viewport boundary too.** A Window, Popup or PopupPanel owns a
+viewport, so its Controls draw into its own target through the same passes, rooted at the
+window, which lays them out against its whole rect and owns a theme as a Control does. The
+**embedder** is no surface in the tree: it draws each visible window's frame, title, close
+icon and target on its subwindow canvas (`SUBWINDOW_CANVAS_LAYER`, `viewport.cpp:315-317`),
+in the stack order of `_sub_window_update_order`. With `wrap_controls`, the window publishes
+the size its Controls need through `ViewportRectContext`, as a stretching container does.
 
 ## Considered options
 
@@ -160,8 +178,6 @@ which display real content.
     and no corpus scene does it. `gui_in_3d` only looks like one: its `TextureRect`
     carries `ExtResource("2")` = `res://icon.webp`, while the quad's material carries
     `SubResource("2")` = the ViewportTexture. Same number, two id namespaces.
-  - `render_target_update_mode` does not gate rendering. The previewer derives the target
-    from the scene, so there is no per-frame update to skip.
   - The resolved tree decides which rasteriser owns a target, so an `instance=` child
     that has not loaded is classified provisionally and re-classified when its sub-scene
     lands. A cyclic sub-scene reference stops the resolver at 32 levels.

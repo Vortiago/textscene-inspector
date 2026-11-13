@@ -179,6 +179,20 @@ describe('bootstrapScript — the random generator is seeded', () => {
   });
 });
 
+describe('bootstrapScript — the 2D capture embeds a Window', () => {
+  /**
+   * A Window embeds in the nearest viewport that embeds subwindows (`window.cpp:1400-1420`). A
+   * SubViewport does not by default, so without the flag a Window draws in the root window,
+   * outside the capture.
+   */
+  it('lets the capture viewport embed subwindows before the scene enters it', () => {
+    const gd = bootstrap({ previews: true });
+    const render2d = gd.slice(gd.indexOf('func _render_2d('));
+    expect(render2d).toMatch(/\n\tvp\.gui_embed_subwindows = true\n/);
+    expect(render2d.indexOf('gui_embed_subwindows')).toBeLessThan(render2d.indexOf('vp.add_child(target)'));
+  });
+});
+
 describe('bootstrapScript — a non-tool script never runs under previews', () => {
   /**
    * Like the editor, the default pauses the tree first, stops AnimationPlayers, never steps
@@ -491,6 +505,16 @@ describe('--mode 2d-root renders the scene as the root window', () => {
   });
 });
 
+describe('bootstrapScript — the capture of an HDR viewport', () => {
+  it('converts the float image to sRGB before it saves, and the settle comparison reads the raw texels', () => {
+    const script = bootstrap();
+    expect(script).toContain('_viewport_image(source).save_png(OUT)');
+    expect(script).toContain('if source.use_hdr_2d:');
+    expect(script).toContain('image.convert(Image.FORMAT_RGBAF)');
+    expect(script).toContain('var picture := source.get_texture().get_image().get_data()');
+  });
+});
+
 describe('probePixels', () => {
   it('reads back the exact colour at each requested coordinate', async () => {
     const png = new PNG({ width: 4, height: 4 });
@@ -537,6 +561,17 @@ describe('physics pause follows the previews flag', () => {
     const freeze = editor.findIndex((l) => l.trim() === '_freeze_game_logic(target)');
     expect(freeze).toBeGreaterThan(-1);
     expect(editor[freeze - 1].trim()).toBe('if PREVIEWS:');
+  });
+
+  it('keeps a Skeleton2D with a stack processing in the paused tree, and its children paused', () => {
+    // The editor runs the stack too (`skeleton_2d.cpp:630-639` has no editor guard), so the pose
+    // it solves is the pose the editor shows.
+    const lines = script(true).split('\n');
+    const skeleton = lines.findIndex((l) => l.trim() === 'if node is Skeleton2D:');
+    expect(skeleton).toBeGreaterThan(lines.findIndex((l) => l.startsWith('func _freeze_game_logic')));
+    expect(lines[skeleton + 1].trim()).toBe('_keep_stack_running(node as Skeleton2D)');
+    expect(script(true)).toContain('skeleton.process_mode = Node.PROCESS_MODE_ALWAYS');
+    expect(script(true)).toContain('child.process_mode = Node.PROCESS_MODE_PAUSABLE');
   });
 
   it('still emits the pause behind the PREVIEWS gate rather than hard-coding it', () => {
@@ -702,6 +737,16 @@ describe('harnessWarnings', () => {
     expect(harnessWarnings(stderr)).toEqual([
       'godot-ref: the picture did not settle, so it is captured as it stands',
     ]);
+  });
+});
+
+describe('the reference shows the collision hints on request', () => {
+  // The editor runs a game with `--debug-collisions` (`editor/run/editor_run.cpp:80`), which sets
+  // `SceneTree::debug_collisions_hint` (`scene_tree.cpp:942`). The 2D joints read it to draw their
+  // marker in a game (`pin_joint_2d.cpp:42-50`).
+  it('passes --debug-collisions to the render pass only when asked', () => {
+    expect(renderArgv('/tmp/work')).not.toContain('--debug-collisions');
+    expect(renderArgv('/tmp/work', { debugCollisions: true })).toContain('--debug-collisions');
   });
 });
 
@@ -914,11 +959,14 @@ describe('--particles advances the emitters by a named number of seconds', () =>
     expect(lines.some((l) => l.includes('request_particles_process(PARTICLES_PROCESS)'))).toBe(true);
   });
 
-  it('advances CPUParticles only, since a GPU emitter has no pose on our side', () => {
+  it('advances the CPU emitters and GPUParticles3D, whose pose the previewer draws', () => {
     const body = bootstrap({ particles: 0.5 });
     expect(body).toContain('node is CPUParticles2D');
     expect(body).toContain('node is CPUParticles3D');
-    expect(body).not.toContain('GPUParticles2D)');
-    expect(body).not.toContain('GPUParticles3D)');
+    expect(body).toContain('node is GPUParticles3D');
+  });
+
+  it('leaves GPUParticles2D alone until the previewer draws it', () => {
+    expect(bootstrap({ particles: 0.5 })).not.toContain('GPUParticles2D)');
   });
 });

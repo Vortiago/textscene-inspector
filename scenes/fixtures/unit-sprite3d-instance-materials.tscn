@@ -1,0 +1,76 @@
+; The one variable: which instance material a Sprite3D sets. Left to right: neither,
+; `material_override`, `material_overlay` on a blended sprite, `material_overlay` on an opaque one.
+; Every sprite shows frame 1 of two, flipped, so the override's own red to blue texture must show
+; its right half mirrored: the quad's UVs hold the frame and the flip (sprite_3d.cpp:146-161).
+; Godot's alpha pass draws an instance's later draw first (render_forward_clustered.cpp:4147-4148,
+; render_forward_clustered.h:713-717), so the blended sprite hides its overlay and only the opaque
+; sprite reads blue. No other Sprite3D scene sets either material.
+[gd_scene format=3]
+
+[sub_resource type="Gradient" id="Gradient_sprite"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(0.9, 0.8, 0.1, 1, 0.1, 0.8, 0.9, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_sprite"]
+gradient = SubResource("Gradient_sprite")
+width = 128
+height = 64
+
+[sub_resource type="Gradient" id="Gradient_override"]
+offsets = PackedFloat32Array(0, 1)
+colors = PackedColorArray(1, 0, 0, 1, 0, 0, 1, 1)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_override"]
+gradient = SubResource("Gradient_override")
+width = 128
+height = 64
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_override"]
+albedo_texture = SubResource("GradientTexture2D_override")
+cull_mode = 2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_overlay"]
+transparency = 1
+albedo_color = Color(0.1, 0.2, 0.9, 0.5)
+cull_mode = 2
+
+[node name="Root" type="Node3D"]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, -0.75, 0.433013, 0, 3, 3)
+
+[node name="Neither" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.8, 0, 0)
+texture = SubResource("GradientTexture2D_sprite")
+pixel_size = 0.016
+hframes = 2
+frame = 1
+flip_h = true
+
+[node name="Override" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0, 0)
+texture = SubResource("GradientTexture2D_sprite")
+pixel_size = 0.016
+hframes = 2
+frame = 1
+flip_h = true
+material_override = SubResource("StandardMaterial3D_override")
+
+[node name="OverlayOnBlended" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0, 0)
+texture = SubResource("GradientTexture2D_sprite")
+pixel_size = 0.016
+hframes = 2
+frame = 1
+flip_h = true
+material_overlay = SubResource("StandardMaterial3D_overlay")
+
+[node name="OverlayOnOpaque" type="Sprite3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.8, 0, 0)
+texture = SubResource("GradientTexture2D_sprite")
+pixel_size = 0.016
+hframes = 2
+frame = 1
+flip_h = true
+transparent = false
+material_overlay = SubResource("StandardMaterial3D_overlay")

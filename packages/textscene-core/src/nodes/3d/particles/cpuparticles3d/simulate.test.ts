@@ -1,11 +1,11 @@
 /**
  * The CPUParticles3D frozen pose against Godot 4.6.3's own `particle_data`. Each expected buffer is
  * what `RenderingServer.multimesh_get_buffer` returned for the emitter after its enter-tree settle,
- * read by /mnt/project-files/cpuparticles3d-633/oracle.gd with the properties each case names.
+ * set up with the properties each case names.
  */
 
 import { describe, expect, it } from 'vitest';
-import { PARTICLE_COLOR_OFFSET, PARTICLE_FLOATS } from './particleBuffer';
+import { PARTICLE_COLOR_OFFSET, PARTICLE_FLOATS } from '../../../shared/particles3d/particleBuffer';
 import { settleParticles } from './simulate';
 import { drawnBuffer, ROW_OF_FOUR, simInput as input } from './cpuparticles3d.testkit';
 import {

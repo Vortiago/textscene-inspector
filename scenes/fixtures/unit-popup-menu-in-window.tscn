@@ -1,0 +1,55 @@
+; One variable: the PopupMenu sits under a Window that authors `gui_embed_subwindows = true`. Entering the
+; tree resets that value to `force_native` (`window.cpp:1534-1537`), so the menu embeds in the root
+; viewport and draws over the frame, not inside the window.
+
+[gd_scene format=3]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Win" type="Window" parent="."]
+title = "Host"
+position = Vector2i(100, 100)
+size = Vector2i(400, 300)
+gui_embed_subwindows = true
+
+[node name="Menu" type="PopupMenu" parent="Win"]
+position = Vector2i(20, 10)
+visible = true
+item_count = 14
+item_0/text = "Item 1"
+item_0/id = 0
+item_1/text = "Item 2"
+item_1/id = 1
+item_2/text = "Item 3"
+item_2/id = 2
+item_3/text = "Item 4"
+item_3/id = 3
+item_4/text = "Item 5"
+item_4/id = 4
+item_5/text = "Item 6"
+item_5/id = 5
+item_6/text = "Item 7"
+item_6/id = 6
+item_7/text = "Item 8"
+item_7/id = 7
+item_8/text = "Item 9"
+item_8/id = 8
+item_9/text = "Item 10"
+item_9/id = 9
+item_10/text = "Item 11"
+item_10/id = 10
+item_11/text = "Item 12"
+item_11/id = 11
+item_12/text = "Item 13"
+item_12/id = 12
+item_13/text = "Item 14"
+item_13/id = 13

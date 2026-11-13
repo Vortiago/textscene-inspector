@@ -10,8 +10,18 @@ renders_as: a toggle-switch icon followed by a text run
 # CheckButton
 
 CheckButton is a labelled on-off switch. The previewer draws the theme's
-toggle-switch icon flush against the right edge and the label to its left, with no
-StyleBox chrome (CheckButton's own StyleBoxes are all a `StyleBoxEmpty`).
+toggle-switch icon against the right edge and the label to its left. The default StyleBoxes are
+empty. A themed one draws under the label as Button's does, and the toggle sits at the margin of the
+`normal` one. The theme colours `button_checked_color` and `button_unchecked_color` tint the toggle.
+`clip_text` zeroes the
+label's width in the minimum size, and `TextParagraph::draw` cuts the label to its paragraph
+box. The previewer does both, so a box narrower than the label shows only the glyphs that fit.
+A trimming `text_overrun_behavior` zeroes the width the same way. The previewer trims the label
+to the box, with an ellipsis where Godot adds one, as Button does. `autowrap_mode` wraps the label at
+its paragraph box and `autowrap_trim_flags` trims its edge spaces. The box grows to the wrapped height.
+Button's inherited `icon` draws beside the label with `icon_alignment`, `vertical_icon_alignment`, `expand_icon` and
+`icon_max_width`, ahead of the toggle. The minimum size and the wrap width include it.
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
 ## Linting
 
@@ -39,8 +49,3 @@ bundled font too (ADR-0069).
 
 A BMFont (`.fnt`, `.font`) as the theme font draws from its page images, with its outline set under an
 outline ring (ADR-0064).
-
-## Known limitations
-
-- **Not drawn** Button's inherited `icon` property (distinct from the toggle glyph) is
-  parsed but never drawn.

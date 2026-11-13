@@ -3,8 +3,10 @@ import { layerRawOverride } from './layerRawOverride';
 import { parsedNode, translated } from '../parser/testing/parserKit';
 import type { Camera3DProperties } from '../nodes/3d/camera3d/types';
 import type { NodeProperties } from '../nodes/node/types';
+import type { WindowProperties } from '../nodes/windows/window/types';
 import '../nodes/node/index';
 import '../nodes/3d/camera3d/index';
+import '../nodes/windows/window/index';
 
 describe('layerRawOverride', () => {
   it("parses the override with the base type's parser and keeps a base-only value", () => {
@@ -55,5 +57,57 @@ describe('layerRawOverride', () => {
     const layered = layerRawOverride(base, base, { use_in_baked_light: 'true' });
 
     expect(layered.rawProperties).toEqual({ gi_mode: '1' });
+  });
+
+  /** An override runs its setters after the base's, so `set_force_native` meets the base's `visible` (`window.cpp:1380-1386`). */
+  describe('an override of a Window, whose force_native setter reads visible', () => {
+    const forceNativeOf = (baseRaw: Record<string, string>, overrideRaw: Record<string, string>) => {
+      const base = parsedNode({ name: 'Dialog', type: 'Window' }, baseRaw);
+      return (layerRawOverride(base, base, overrideRaw).properties as WindowProperties).force_native;
+    };
+
+    it('keeps the force_native a hidden base took when the override shows the window', () => {
+      expect(forceNativeOf({ visible: 'false', force_native: 'true' }, { visible: 'true' })).toBe(true);
+    });
+
+    it('takes an override force_native on a base that hides the window after its refused line', () => {
+      expect(forceNativeOf({ force_native: 'true', visible: 'false' }, { force_native: 'true' })).toBe(true);
+    });
+
+    it('refuses an override force_native on a base that is visible', () => {
+      expect(forceNativeOf({}, { force_native: 'true' })).toBe(false);
+    });
+
+    it('takes an override force_native written below its own visible = false', () => {
+      expect(forceNativeOf({}, { visible: 'false', force_native: 'true' })).toBe(true);
+    });
+  });
+
+  /** Measured with `pnpm ref:diff` on Godot 4.6.3: the override's setters run over the size and background the base left. */
+  describe('an override of a Window whose setters read what the base left', () => {
+    const windowOf = (baseRaw: Record<string, string>, overrideRaw: Record<string, string>) => {
+      const base = parsedNode({ name: 'Win', type: 'Window' }, baseRaw);
+      return layerRawOverride(base, base, overrideRaw).properties as WindowProperties;
+    };
+
+    it('keeps the size a base cap took when the override lifts the cap', () => {
+      const base = { size: 'Vector2i(500, 350)', max_size: 'Vector2i(300, 200)' };
+      expect(windowOf(base, { max_size: 'Vector2i(0, 0)' }).size).toEqual({ x: 300, y: 200 });
+    });
+
+    it('takes an override size under the cap the base set', () => {
+      const base = { max_size: 'Vector2i(300, 200)' };
+      expect(windowOf(base, { size: 'Vector2i(500, 350)' }).size).toEqual({ x: 300, y: 200 });
+    });
+
+    it('takes an override transparent_bg over a base whose transparent line came last', () => {
+      const base = { transparent_bg: 'true', transparent: 'false' };
+      expect(windowOf(base, { transparent_bg: 'true' }).transparent_bg).toBe(true);
+    });
+
+    it('keeps the background the base left when the override writes neither key', () => {
+      const base = { transparent_bg: 'true', transparent: 'false' };
+      expect(windowOf(base, { title: '"Other"' }).transparent_bg).toBe(false);
+    });
   });
 });

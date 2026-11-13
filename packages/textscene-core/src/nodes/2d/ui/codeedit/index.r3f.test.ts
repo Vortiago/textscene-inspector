@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import './index.r3f';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CodeEdit } from './Component';
 import { codeEditMinimumSize } from './nativeSolver';
 
@@ -19,7 +20,9 @@ describe('CodeEdit index.r3f self-registration', () => {
   });
 
   it('declares CodeEdit size-dependent, matching TextEdit', () => {
-    expect(controlSolverRegistry.isSizeDependentMinimum('CodeEdit')).toBe(true);
+    expect(
+      controlSolverRegistry.readsTentativeRect({ node: { type: 'CodeEdit' } } as unknown as SolveNode)
+    ).toBe(true);
   });
 
   it('registers no container layout — a CodeEdit has no Control children to place', () => {

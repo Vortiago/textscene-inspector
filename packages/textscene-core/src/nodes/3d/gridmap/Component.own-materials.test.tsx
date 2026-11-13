@@ -11,13 +11,8 @@ import { fakeTiledUploads } from '../../../r3f/tiledUpload/fakeTiledUploads.test
 import { DEFAULT_MATERIAL_ROUGHNESS } from '../../../godot/rendering/materials/defaultMaterial';
 import { pendingMapStandIn } from '../../../r3f/materials/pendingMapStandIn';
 import { isInstancedMesh } from '../../../r3f/testing/threeNarrow';
-import { unconfiguredViewportTexture } from '../../../resources/textures/viewporttexture/unconfiguredViewportTexture';
-import {
-  drawnMaterials,
-  mountGridMap,
-  renderInstancedTile,
-  renderInstancedTiles,
-} from './testing/gridMapCorpus';
+import { texture2DPlaceholder } from '../../../resources/textures/texture2DPlaceholder';
+import { drawnMaterials, mountGridMap, renderInstancedTile } from './testing/gridMapCorpus';
 
 describe('<GridMap> tile with the ArrayMesh’s own surface material', () => {
   it('tints the instanced tile with the material inside the tile mesh’s .tres', async () => {
@@ -32,19 +27,18 @@ describe('<GridMap> tile with the ArrayMesh’s own surface material', () => {
 });
 
 describe('<GridMap> tile of two surfaces', () => {
-  it('draws each surface in its own batch, with its own material', async () => {
-    const batches = await renderInstancedTiles({
+  it('draws each surface with its own material', async () => {
+    const tile = await renderInstancedTile({
       materialLines: 'albedo_color = Color(1, 0, 0, 1)',
       secondMaterialLines: 'albedo_color = Color(0, 0, 1, 1)',
     });
-    const colours = batches.map((batch) => drawnMaterials(batch).map((m) => m.color.getHex()));
-    expect(colours).toEqual([[0xff0000], [0x0000ff]]);
+    expect(drawnMaterials(tile).map((m) => m.color.getHex())).toEqual([0xff0000, 0x0000ff]);
   });
 
   it("draws Godot's default material on a surface that names none, beside one that does", async () => {
-    const [unset, blue] = (
-      await renderInstancedTiles({ secondMaterialLines: 'albedo_color = Color(0, 0, 1, 1)' })
-    ).map((batch) => drawnMaterials(batch)[0]!);
+    const [unset, blue] = drawnMaterials(
+      await renderInstancedTile({ secondMaterialLines: 'albedo_color = Color(0, 0, 1, 1)' })
+    );
     expect(unset!.roughness).toBeCloseTo(DEFAULT_MATERIAL_ROUGHNESS, 5);
     expect(blue!.color.getHex()).toBe(0x0000ff);
   });
@@ -101,9 +95,7 @@ describe('<GridMap> tile material with a ViewportTexture', () => {
    */
   it("draws Godot's placeholder when the library is not local to scene", async () => {
     const tile = await renderInstancedTile(LOCAL_VIEWPORT_TILE);
-    expect((tile.material as THREE.MeshStandardMaterial).map?.image).toBe(
-      unconfiguredViewportTexture().image
-    );
+    expect((tile.material as THREE.MeshStandardMaterial).map?.image).toBe(texture2DPlaceholder().image);
   });
 
   it('looks the viewport up when the library is local to scene, so a missing one leaves the slot empty', async () => {

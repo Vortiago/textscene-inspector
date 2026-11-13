@@ -1,0 +1,35 @@
+; One variable: `width_curve`. The curve scales `width` at each point by its baked sample, and a
+; box cap takes the factor of its own end.
+[gd_scene load_steps=3 format=3]
+
+[sub_resource type="Curve" id="Curve_ramp"]
+_data = [Vector2(0, 0.25), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 2
+
+[sub_resource type="Curve" id="Curve_bump"]
+_data = [Vector2(0, 0.25), 0.0, 0.0, 0, 0, Vector2(0.5, 1), 0.0, 0.0, 0, 0, Vector2(1, 0.25), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[node name="Line2DWidthCurve" type="Node2D"]
+
+[node name="Ramp" type="Line2D" parent="."]
+points = PackedVector2Array(50, 60, 250, 60)
+width = 40.0
+width_curve = SubResource("Curve_ramp")
+
+[node name="BumpTwoPoints" type="Line2D" parent="."]
+points = PackedVector2Array(50, 140, 250, 140)
+width = 40.0
+width_curve = SubResource("Curve_bump")
+
+[node name="BumpThreePoints" type="Line2D" parent="."]
+points = PackedVector2Array(50, 220, 150, 220, 250, 220)
+width = 40.0
+width_curve = SubResource("Curve_bump")
+
+[node name="RampBoxCaps" type="Line2D" parent="."]
+points = PackedVector2Array(350, 60, 550, 60)
+width = 40.0
+width_curve = SubResource("Curve_ramp")
+begin_cap_mode = 1
+end_cap_mode = 1

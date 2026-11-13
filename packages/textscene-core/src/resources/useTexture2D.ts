@@ -17,8 +17,15 @@ import {
   resolveSubResourceRef,
 } from './SubResourceResolver.js';
 import { isLocalToScene } from './textures/viewporttexture/localToScene.js';
-import { unconfiguredViewportTexture } from './textures/viewporttexture/unconfiguredViewportTexture.js';
-import { atlasTextureSize } from './textures/atlastexture/decode.js';
+import { texture2DPlaceholder } from './textures/texture2DPlaceholder.js';
+import { gradientTextureSizeWithoutGradient } from './textures/gradienttexture2d/resolveGradientTexture.js';
+import {
+  atlasCellRect,
+  atlasRegionInCell,
+  atlasTextureLayout,
+  atlasTextureSize,
+} from './textures/atlastexture/decode.js';
+import type { Rect2 } from '../godot/math/rect2.js';
 import { imageSize, type ImageSize } from './formats/image/imagePixels.js';
 import {
   resolveAtlasTextureRef,
@@ -38,6 +45,7 @@ import { decodeCanvasTexture } from './textures/canvastexture/decode.js';
 import type { CanvasTextureData } from './textures/canvastexture/types.js';
 import { useByValue } from '../r3f/hooks/useByValue.js';
 import { sameData } from '../utils/sameData.js';
+import { useCanvasColorSpace } from '../r3f/canvasColorSpace';
 
 export interface Texture2DResult {
   /**
@@ -53,18 +61,39 @@ export interface Texture2DResult {
   /** True while the texture, or a file or build it waits on, is still on its way. */
   isArriving: boolean;
   /**
-   * The size Godot reports for the texture: its image's, an AtlasTexture's region's, or 0 by 0 for
-   * a ViewportTexture its scene never sets up, which samples the placeholder (`viewport.cpp:150-166`).
+   * The size Godot reports for the texture: its image's, an AtlasTexture's region's, 0 by 0 for
+   * a ViewportTexture its scene never sets up (`viewport.cpp:150-166`), or the `width` and `height`
+   * of a GradientTexture2D with no gradient (`gradient_texture.cpp:400`). Both sample the placeholder.
    * Undefined while there is no texture.
    */
   size?: ImageSize;
   /**
-   * Set when the slot reaches a ViewportTexture Godot never sets up, through any wrapper, whose
-   * `get_image()` is null (`viewport.cpp:180-186`). `texture` then samples the placeholder.
+   * Set when the slot reaches a texture whose `get_image()` is null, through any wrapper: a
+   * ViewportTexture Godot never sets up (`viewport.cpp:180-186`) or a GradientTexture2D with no
+   * gradient (`gradient_texture.cpp:229-233`). `texture` then samples the placeholder.
    */
   hasNoImage?: true;
   /** The CanvasTexture the slot names, directly or in its resource file. */
   canvasTexture?: CanvasTextureSlot;
+  /** For an AtlasTexture, where `texture`, the cut cell, lies in its atlas. */
+  atlasCell?: AtlasCell;
+}
+
+/**
+ * A cut cell in its atlas, for a reader that draws as Godot's 3D sprite does: the region alone,
+ * sampled from the atlas with the UVs of the atlas (`sprite_3d.cpp:100-150`).
+ */
+export interface AtlasCell extends AtlasCellRects {
+  /** The atlas itself, uncut. */
+  sheet: THREE.Texture;
+}
+
+interface AtlasCellRects {
+  sheetSize: ImageSize;
+  /** The cell in atlas pixels, margin and all. It can reach past the atlas. */
+  cell: Rect2;
+  /** The rectangle of the cell, in its pixels, that the region fills. */
+  region: Rect2;
 }
 
 /** A CanvasTexture and the resource tables its texture references resolve in. */
@@ -89,25 +118,47 @@ export interface CanvasTextureAtlas {
 export const NODE_PROPERTY = true;
 
 /**
- * The texture a slot draws. `view` is the ViewportTexture view the slot samples: a canvas item
- * samples the plain one. `isHeldLocally` is false when a resource between the node and `ref`, such
- * as the SpriteFrames that holds a frame, is not local to scene.
+ * The texture a slot draws. `view` is the ViewportTexture view the slot samples, and a canvas item's
+ * colour slot omits it to sample the view of its canvas's colour space. `isHeldLocally` is false when
+ * a resource between the node and `ref`, such as the SpriteFrames that holds a frame, is not local to
+ * scene.
  */
 export function useTexture2D(
   ref: string | undefined,
   externalResources: readonly TscnExternalResource[],
   internalResources: readonly TscnInternalResource[],
-  view: ViewportTextureView = 'plain',
+  view?: ViewportTextureView,
   isHeldLocally: boolean = NODE_PROPERTY
 ): Texture2DResult {
-  const slot = useTexture2DSlot(ref, externalResources, internalResources, view, isHeldLocally);
+  const canvasView = useCanvasColorSpace().viewportTextureView;
+  const slot = useTexture2DSlot(ref, externalResources, internalResources, view ?? canvasView, isHeldLocally);
   const { atlas, source, atlasResources } = slot;
   const cropped = useAtlasTextureCrop(atlas, source, atlasResources);
   // A sheet still loading, or a zero-area region that Godot's `get_rect_region` also declines,
   // draws nothing and is no resource error.
   const texture = atlas ? cropped : slot.result.texture;
   const size = useReportedSize(texture, atlas, slot.result);
-  return { ...slot.result, texture, size, canvasTexture: slot.canvasTexture };
+  const sheet = slot.result.texture;
+  const cellRects = useByValue(texture && atlas ? atlasCellRects(atlas, sheet) : undefined, sameData);
+  const atlasCell = useMemo(() => sheet && cellRects && { ...cellRects, sheet }, [sheet, cellRects]);
+  return {
+    ...slot.result,
+    texture,
+    size,
+    canvasTexture: slot.canvasTexture,
+    ...(atlasCell && { atlasCell }),
+  };
+}
+
+/** Where the cell `atlas` cuts lies in `sheet`'s image. Undefined for a cell that draws nothing. */
+function atlasCellRects(
+  atlas: AtlasTextureReference,
+  sheet: THREE.Texture | null | undefined
+): AtlasCellRects | undefined {
+  const sheetSize = imageSize(sheet?.image);
+  const layout = sheetSize && atlasTextureLayout(atlas.texture, sheetSize);
+  if (!layout) return undefined;
+  return { sheetSize, cell: atlasCellRect(layout), region: atlasRegionInCell(layout) };
 }
 
 /**
@@ -119,7 +170,7 @@ function useReportedSize(
   atlas: AtlasTextureReference | null,
   sheet: Texture2DResult
 ): ImageSize | undefined {
-  const sheetSize = sheet.hasNoImage ? NO_AREA : imageSize(sheet.texture?.image);
+  const sheetSize = sheet.hasNoImage ? sheet.size : imageSize(sheet.texture?.image);
   const size = texture && (atlas ? atlasTextureSize(atlas.texture, sheetSize ?? null) : sheetSize);
   const width = size?.width;
   const height = size?.height;
@@ -253,7 +304,12 @@ function useTexture2DSlot(
       resolveSubResourceRef(sourceRef, slot.internalResources),
     ].every((holder) => !holder || isLocalToScene(holder));
   const viewport = useViewportTextureSlot(isSetUp ? sourceRef : undefined, slot.internalResources, view);
-  const unconfigured = isViewport && !isSetUp ? unconfiguredViewportTexture() : null;
+  const gradientSize = useMemo(
+    () => gradientTextureSizeWithoutGradient(sourceRef, slot.internalResources),
+    [sourceRef, slot.internalResources]
+  );
+  const hasNoImage = (isViewport && !isSetUp) || gradientSize !== null;
+  const unconfigured = hasNoImage ? texture2DPlaceholder() : null;
 
   // Procedural first: the scene describes it, so no file round trip. A gradient resolves in the
   // same tick, a noise texture once its build lands. The procedural cache owns it, and this hook
@@ -312,7 +368,16 @@ function useTexture2DSlot(
 
   // A target arrives after first paint and is no file on its way, so only a cycle stops it.
   if (unconfigured)
-    return { ...peeled, result: { texture: source, missing: false, isArriving: false, hasNoImage: true } };
+    return {
+      ...peeled,
+      result: {
+        texture: source,
+        missing: false,
+        isArriving: false,
+        hasNoImage: true,
+        size: gradientSize ?? NO_AREA,
+      },
+    };
   if (isViewport)
     return { ...peeled, result: { texture: source, missing: viewport.cyclic, isArriving: false } };
   const sourceMissing =

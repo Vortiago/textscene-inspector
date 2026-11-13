@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import { createTestPanel, getExtensionUri, waitForMessage } from '../helpers/panelHelpers';
 import { getFixturePath } from '../helpers/fixtureHelpers';
 import { assertPanelActive, assertFullReloadSent } from '../helpers/assertionHelpers';
-import type { LoadTscnMessage } from '../../../protocol';
+import type { LoadTscnMessage, PreviewVisibilityMessage } from '../../../protocol';
 
 suite('Message Passing Tests', () => {
   setup(async () => {
@@ -40,6 +40,42 @@ suite('Message Passing Tests', () => {
 
     await waitForMessage(sentMessages, 'loadTscn');
     assertFullReloadSent(sentMessages);
+  });
+
+  function visibilityPosts(sentMessages: Array<{ type: string }>): boolean[] {
+    return sentMessages
+      .filter((m): m is PreviewVisibilityMessage => m.type === 'previewVisibility')
+      .map((m) => m.isVisible);
+  }
+
+  test('a panel created hidden posts previewVisibility false after ready', async function () {
+    this.timeout(10000);
+
+    const { sentMessages, triggerMessage } = createTestPanel(
+      getExtensionUri(),
+      getFixturePath('unit-empty-scene.tscn'),
+      { visible: false }
+    );
+
+    triggerMessage({ type: 'webviewReady' });
+
+    await waitForMessage(sentMessages, 'previewVisibility');
+    assert.deepStrictEqual(visibilityPosts(sentMessages), [false]);
+  });
+
+  test('a panel that hides and shows again posts previewVisibility for each change', async function () {
+    this.timeout(10000);
+
+    const { sentMessages, triggerMessage, setVisible } = createTestPanel(
+      getExtensionUri(),
+      getFixturePath('unit-empty-scene.tscn')
+    );
+    triggerMessage({ type: 'webviewReady' });
+
+    setVisible(false);
+    setVisible(true);
+
+    assert.deepStrictEqual(visibilityPosts(sentMessages), [true, false, true]);
   });
 
   test('webviewReady handshake: the scene text arrives once, and only after ready', async function () {

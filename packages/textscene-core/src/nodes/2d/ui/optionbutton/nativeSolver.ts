@@ -1,8 +1,8 @@
 /**
- * OptionButton's native rect solver and content layout: `get_minimum_size`, `_refresh_size_cache` and
- * `_notification` (`scene/gui/option_button.cpp`), with the defaults `scene/theme/default_theme.cpp:212-251`
- * registers for "OptionButton". Its "pressed" means an open popup, which a static preview never reaches, so
- * `get_draw_mode()` gives only `DRAW_NORMAL` or `DRAW_DISABLED`.
+ * What OptionButton adds to Button (`scene/gui/option_button.cpp`): the selected item as Button's text and
+ * icon (`:423-424`), the arrow it reserves as Button's `_internal_margin` (`:83-89,139-147`) and draws over
+ * it (`:91-135`), and its minimum size (`:50-68`, `:445-456`), with the defaults
+ * `scene/theme/default_theme.cpp:212-251` registers for "OptionButton".
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -16,207 +16,187 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { contentMarginSize, sidesSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
-  buttonTextRightShiftPx,
-  centredTextTopPx,
-  pickButtonStyleBox,
-  resolveButtonDrawState,
-  tintColor,
-  type ButtonDrawState,
+  isButtonNodeAutowrapped,
+  measuredContentMinimumSize,
+  resolveToggleDrawState,
 } from '../../../../r3f/controls/native/buttonBase';
+import { WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
+import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { themedIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import {
-  resolveTextTheme,
-  type ResolvedTextTheme,
-  type TextThemeDefaults,
-  type TextThemeKeys,
-} from '../../../../r3f/controls/native/textTheme';
+import type { Rgba } from '../../../../godot/math/math';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
-import type { OptionButtonProperties } from './types';
+import type { OptionButtonProperties, OptionItem } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_DISABLED_COLOR } from '../../../../godot/scene/theme';
+import {
+  BUTTON_DEFAULT_FONT_COLORS,
+  BUTTON_THEME_FONT_KEY,
+  buttonContentFacts,
+  buttonHSeparation,
+  buttonLargestMargin,
+  buttonMinimumSizeOf,
+  buttonNormalBox,
+  buttonShown,
+  buttonTextTheme,
+  buttonTextureSlotsOf,
+  type ReservingButtonClass,
+} from '../button/nativeSolver';
 
-// Re-exported so Component.tsx imports the shared Button pieces under one name.
-export { pickButtonStyleBox, resolveButtonDrawState, tintColor };
-
-/**
- * OptionButton's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:237`). This
- * module and `Component.tsx` both pass it to `resolveNodeFontMetrics`, so they shape in the same font.
- */
-export const OPTION_BUTTON_THEME_FONT_KEY = 'font';
-
-// Theme font colours
-
-/** OptionButton's `font_color` default (`default_theme.cpp:240`). */
-const OPTION_BUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-/** OptionButton's `font_disabled_color` default (`default_theme.cpp:245`). */
-const OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
-
-const OPTION_BUTTON_THEME_KEYS: Record<ButtonDrawState, TextThemeKeys> = {
-  normal: { sizeKey: 'font_size', colorKey: 'font_color' },
-  disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
-};
-
-/** OptionButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else OptionButton's literal (`resolveTextTheme`). */
-export function optionButtonTextTheme(
-  n: SolveNode,
-  props: OptionButtonProperties,
-  state: ButtonDrawState,
-  ctx: Pick<SolveContext, 'theme'>
-): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color:
-      state === 'disabled' ? OPTION_BUTTON_DEFAULT_DISABLED_FONT_COLOR : OPTION_BUTTON_DEFAULT_FONT_COLOR,
-  };
-  return resolveTextTheme(n, props, OPTION_BUTTON_THEME_KEYS[state], defaults);
-}
-
-// StyleBox chrome
-// OptionButton's chrome (`default_theme.cpp:212-215`) has `2*default_margin` by `default_margin` content
-// margins, unlike Button's (`theme.optionButtonMarginX/Y`). `nativeTheme.ts` builds it once per theme as
-// `theme.widgets.optionButton`, so solve and paint share one struct and `StyleBoxQuad` keeps its geometry.
-
-// Selected item
-
-/**
- * The bounds-guarded selected-item lookup: an out-of-range or absent
- * `selected` renders empty text rather than defaulting to item 0.
- */
-export function resolveOptionButtonSelectedText(props: OptionButtonProperties): string {
+/** The item `_select` copies the text and icon from (`option_button.cpp:423-424`), or none for an absent or out-of-range `selected`. */
+function selectedOptionItem(props: OptionButtonProperties): OptionItem | undefined {
   const items = props.items ?? [];
   const selectedIndex = props.selected ?? -1;
-  const item = selectedIndex >= 0 && selectedIndex < items.length ? items[selectedIndex] : undefined;
-  return item?.text ?? '';
+  return selectedIndex >= 0 && selectedIndex < items.length ? items[selectedIndex] : undefined;
 }
 
-// Arrow
-
-/** `option_button_arrow.svg`'s authored size (`native/themeIcons.ts`), 12x12, never run through `_fit_icon_size`. */
+/** `option_button_arrow.svg`'s authored size (`native/themeIcons.ts`), 12x12. The default theme rasterises it at the theme scale. */
 const OPTION_BUTTON_ARROW_NATURAL_SIZE: Vector2 = { x: 12, y: 12 };
 
-/** `BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_ICON, OptionButton, arrow_icon, "arrow")` (`option_button.cpp:620`), the one themeable icon slot. */
-export const optionButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
-  const themed = themedIcons.arrow;
-  const requests: TextureSlotRequest[] = [];
-  if (themed) requests.push(themedSlotRequest('arrow', themed));
-  return requests;
-};
+/** The slot of item `index`'s own icon, which `_refresh_size_cache` sizes the button by (`option_button.cpp:451`). */
+function optionItemIconSlotKey(index: number): string {
+  return `popup/item_${index}/icon`;
+}
 
 /**
  * `get_minimum_size` and `_notification` read `theme_cache.arrow_icon->get_size()` directly
  * (`option_button.cpp:62,131-133`), never through `_fit_icon_size` or `icon_max_width`, so a themed arrow
- * changes the reserved width and the draw position. The vendored size is the fallback.
+ * changes the reserved width and the draw position. The vendored size at the theme scale is the fallback.
  */
-export function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 {
-  return n.textureSlots.arrow ?? OPTION_BUTTON_ARROW_NATURAL_SIZE;
+function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>, theme: NativeTheme): Vector2 {
+  return themedIconSize(n.textureSlots, 'arrow', OPTION_BUTTON_ARROW_NATURAL_SIZE, theme.scale);
 }
-
-/** `h_separation`: OptionButton's default (`default_theme.cpp:249`, `round(4*scale)`) equals `theme.separation`. */
-export function optionButtonHSeparation(
-  constants: SolveNode['constants'],
-  ctx: Pick<SolveContext, 'theme'>
-): number {
-  return Math.max(0, constants.h_separation ?? ctx.theme.separation);
-}
-
-// Minimum size
 
 /**
- * `OptionButton::get_minimum_size` (`option_button.cpp:50-68`) at `fit_to_longest_item` true (`option_button.h`),
- * which is not parsed: the widest and tallest item text (`_refresh_size_cache`, `:451-458`) with the
- * stylebox minimum, plus the arrow width and `h_separation` unconditionally. CheckBox's
- * `if (content_size.width > 0 ...)` guard has no counterpart here.
+ * OptionButton as a Button: its font colours equal Button's (`default_theme.cpp:240-245`), its constructor
+ * aligns the text LEFT (`option_button.cpp:654`), `_select` gives Button the selected item's text and icon
+ * (`:423-424`), and the arrow is the internal margin of the trailing side (`:83-89,139-147`).
  */
-export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const props = n.node.properties as OptionButtonProperties;
-  const state = resolveButtonDrawState(props.disabled);
-  const styleBox = pickButtonStyleBox(n.styleBoxes, ctx.theme.widgets.optionButton, state, n.rtl);
-  const { x: marginX, y: marginY } = contentMarginSize(styleBox);
-
-  const { fontSizePx } = optionButtonTextTheme(n, props, state, ctx);
-  const fontMetrics = resolveNodeFontMetrics(n, OPTION_BUTTON_THEME_FONT_KEY);
-  const items = props.items ?? [];
-  const texts = items.length > 0 ? items.map((item) => item.text) : [''];
-
-  let textW = 0;
-  let textH = 0;
-  if (ctx.measureText) {
-    for (const text of texts) {
-      if (!text) continue;
-      const size = ctx.measureText(text, fontSizePx, 0, fontMetrics);
-      // Each item goes through `Button::get_minimum_size_for_text_and_icon` (`button.cpp:492`), whose
-      // `paragraph->get_size()` is ceiled (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`),
-      // so the max is over whole-pixel widths.
-      textW = Math.max(textW, shapedTextSizeWidthPx(size.x));
-      textH = Math.max(textH, size.y);
-    }
-  }
-
-  const hSeparation = optionButtonHSeparation(n.constants, ctx);
-  const arrow = optionButtonArrowSize(n);
-
-  const width = marginX + textW + arrow.x + hSeparation;
-  const height = marginY + Math.max(textH, arrow.y);
-
-  return { x: width, y: height };
+export const OPTION_BUTTON_CLASS: ReservingButtonClass = {
+  fontColors: BUTTON_DEFAULT_FONT_COLORS,
+  textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+  shown: (props) => {
+    const selected = selectedOptionItem(props);
+    return { text: selected?.text ?? '', icon: selected?.icon };
+  },
+  reservedElement: (n, theme) => ({ side: n.rtl ? 'left' : 'right', size: optionButtonArrowSize(n, theme) }),
 };
 
-// Content layout: text and arrow placement
+/**
+ * The selected item's icon as Button's `icon` (`option_button.cpp:424`), then every item's own icon, then
+ * the themeable `arrow` (`BIND_THEME_ITEM_CUSTOM(... "arrow")`, `:620`).
+ */
+export const optionButtonTextureSlots: TextureSlotsFn = buttonTextureSlotsOf(
+  OPTION_BUTTON_CLASS,
+  (node, themedIcons = {}) => {
+    const requests: TextureSlotRequest[] = [];
+    for (const [index, { icon }] of ((node.properties as OptionButtonProperties).items ?? []).entries()) {
+      if (icon) requests.push({ key: optionItemIconSlotKey(index), ref: icon });
+    }
+    if (themedIcons.arrow) requests.push(themedSlotRequest('arrow', themedIcons.arrow));
+    return requests;
+  }
+);
 
-interface OptionButtonContentInput {
-  /** The control's own solved rect size, Godot px. */
-  rectSize: Vector2;
-  /** The current draw-state StyleBox's content margins. */
-  styleMargin: { left: number; top: number; right: number; bottom: number };
-  arrowSize: Vector2;
-  /** `arrow_margin` theme constant, measured from the full rect edge, not the content-margin edge. */
-  arrowMargin: number;
-  /** `h_separation` theme constant, clamped to >= 0, part of the arrow's internal-margin reservation. */
-  hSeparation: number;
-  /** The selected item's shaped natural size, `(0, 0)` with no selection. */
-  textNaturalSize: Vector2;
-  /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the arrow to the left edge and the label against the right margin. */
-  rtl: boolean;
+const buttonMinimumSize = buttonMinimumSizeOf(OPTION_BUTTON_CLASS);
+
+/**
+ * `_cached_size` (`option_button.cpp:445-456`): the widest and tallest item, each through
+ * `Button::get_minimum_size_for_text_and_icon` with its own text and icon, floored at the `normal` box's
+ * minimum size.
+ */
+function longestItemMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
+  const props = n.node.properties as OptionButtonProperties;
+  const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
+  const { fontSizePx } = buttonTextTheme(n, props, state, ctx, OPTION_BUTTON_CLASS);
+  const fontMetrics = resolveNodeFontMetrics(n, BUTTON_THEME_FONT_KEY);
+
+  // The facts only an item's text and icon change, and equal texts measure alike.
+  const buttonFacts = buttonContentFacts(n, ctx.theme, OPTION_BUTTON_CLASS, { x: 0, y: 0 });
+  const padding = sidesSize(buttonFacts.styleMargin);
+  const measuredByText = new Map<string, Vector2>();
+  // An empty item text keeps the button's own paragraph, the selected item's text (`button.cpp:485-486`).
+  const selectedText = buttonShown(OPTION_BUTTON_CLASS, props).text;
+  const measure = (itemText: string): Vector2 => {
+    const text = itemText || selectedText;
+    if (!ctx.measureText || !text) return { x: 0, y: 0 };
+    const known = measuredByText.get(text);
+    if (known) return known;
+    const size = ctx.measureText(text, fontSizePx, 0, fontMetrics);
+    measuredByText.set(text, size);
+    return size;
+  };
+
+  const longest = contentMarginSize(buttonNormalBox(n, ctx.theme));
+  for (const [index, { text }] of (props.items ?? []).entries()) {
+    // `paragraph->get_size()` is ceiled (`text_paragraph.cpp:601-608` -> `text_server_adv.cpp:7524-7537`),
+    // so the max is over whole-pixel widths. `clip_text`, a trimming overrun or autowrap zeroes the
+    // width (`button.cpp:493-495`). An item shapes a fresh paragraph (`button.cpp:484-489`) and only the
+    // draw sets a width, on `text_buf` (`button.cpp:432`), so an item never wraps.
+    const facts = {
+      ...buttonFacts,
+      hasText: text.length > 0 || selectedText.length > 0,
+      iconNaturalSize: n.textureSlots[optionItemIconSlotKey(index)] ?? null,
+    };
+    const content = measuredContentMinimumSize(facts, measure(text), props);
+    longest.x = Math.max(longest.x, padding.x + content.x);
+    longest.y = Math.max(longest.y, padding.y + content.y);
+  }
+  return longest;
 }
 
-interface OptionButtonContentLayout {
-  /** Local to the control's top-left, Godot px. */
-  arrowRect: Rect2;
-  /** The text box's top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there. Always returned: the caller decides whether text draws. */
-  textOffset: Vector2;
+/** `fit_to_longest_item`, true unless the scene clears it (`option_button.h`). */
+function fitsToLongestItem(n: ShareNode): boolean {
+  return (n.node.properties as OptionButtonProperties).fitToLongestItem !== false;
+}
+
+/** Whether the minimum size reads the node's own width: a wrapping label, which only `fit_to_longest_item` off measures (`option_button.cpp:52-56`). */
+export function isOptionButtonSizeDependent(n: SolveNode): boolean {
+  return !fitsToLongestItem(n) && isButtonNodeAutowrapped(n);
 }
 
 /**
- * The arrow `ofs` (`option_button.cpp:122-131`) and Button's internal-margin text reservation
- * (`button.cpp:247-260,444-456`), which `layoutButtonContent` does not model. The one internal margin set
- * (`option_button.cpp:83-89,139-147`) is the arrow width, and `is_layout_rtl()` picks its side
- * (option_button.cpp:139-147), so the label keeps `arrowSize.x + h_separation` clear. The arrow reads only `arrow_margin` against the full control size.
+ * `OptionButton::get_minimum_size` (`option_button.cpp:50-68`): the longest item, or Button's own minimum
+ * with `fit_to_longest_item` off, plus the arrow width and `h_separation` unconditionally, inside the
+ * largest box of any draw state. CheckBox's `if (content_size.width > 0 ...)` guard has no counterpart here.
  */
-export function layoutOptionButtonContent(input: OptionButtonContentInput): OptionButtonContentLayout {
-  const { rectSize, styleMargin, arrowSize, arrowMargin, hSeparation, textNaturalSize, rtl } = input;
+export const optionButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
+  const minimumSize = fitsToLongestItem(n) ? longestItemMinimumSize(n, ctx) : buttonMinimumSize(n, ctx);
+  const padding = sidesSize(buttonLargestMargin(n, ctx.theme));
+  const arrow = optionButtonArrowSize(n, ctx.theme);
+  const hSeparation = Math.max(0, buttonHSeparation(n, ctx.theme));
+  return {
+    x: minimumSize.x + arrow.x + hSeparation,
+    y: Math.max(minimumSize.y - padding.y, arrow.y) + padding.y,
+  };
+};
 
-  const arrowRect: Rect2 = {
-    x: Math.floor(rtl ? arrowMargin : rectSize.x - arrowSize.x - arrowMargin),
+/**
+ * Where `OptionButton::_notification` draws the arrow in a box of `rectSize` (`option_button.cpp:122-131`):
+ * `arrow_margin` from the trailing edge of the whole control, not of the content, and from the leading
+ * edge under RTL. `int()` truncates the vertical centring.
+ */
+export function optionButtonArrowRect(n: ShareNode, theme: NativeTheme, rectSize: Vector2): Rect2 {
+  const arrowSize = optionButtonArrowSize(n, theme);
+  const arrowMargin = n.constants.arrow_margin ?? theme.separation;
+  return {
+    x: Math.floor(n.rtl ? arrowMargin : rectSize.x - arrowSize.x - arrowMargin),
     y: Math.floor(Math.abs((rectSize.y - arrowSize.y) / 2)),
     w: arrowSize.x,
     h: arrowSize.y,
   };
+}
 
-  const customElementHeight = rectSize.y - styleMargin.top - styleMargin.bottom;
-  const reserved = arrowSize.x + hSeparation;
-  const drawableWidth = rectSize.x - styleMargin.left - styleMargin.right - reserved;
-  // Under `rtl` the reservation moves to SIDE_LEFT and the constructor's `HORIZONTAL_ALIGNMENT_LEFT`
-  // (`:654`) swaps to RIGHT (`button.cpp:271-275`), so only that arm reads `h_separation`.
-  const textOffset: Vector2 = {
-    x: rtl
-      ? styleMargin.left + reserved + buttonTextRightShiftPx(textNaturalSize.x, drawableWidth)
-      : styleMargin.left,
-    y: centredTextTopPx(customElementHeight, textNaturalSize.y, styleMargin.top),
-  };
-
-  return { arrowRect, textOffset };
+/**
+ * The arrow's modulate (`option_button.cpp:98-118`): white, or the label's font colour of the draw state
+ * where the theme sets `modulate_arrow`, which the default theme leaves off (`default_theme.cpp:251`).
+ */
+export function optionButtonArrowColor(n: ShareNode, theme: NativeTheme): Rgba {
+  if (!n.constants.modulate_arrow) return WHITE_MODULATE;
+  const props = n.node.properties as OptionButtonProperties;
+  const state = resolveToggleDrawState(props.disabled, props.buttonPressed);
+  return buttonTextTheme(n, props, state, { theme }, OPTION_BUTTON_CLASS).color;
 }

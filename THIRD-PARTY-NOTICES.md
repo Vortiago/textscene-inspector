@@ -33,12 +33,13 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/3d/decal/decalAtlasLayout.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (`update_decal_atlas`: the cell sizes, the atlas size and each rectangle) |
 | `packages/textscene-core/src/r3f/areaLight/atlasMipmaps.ts` | `servers/rendering/renderer_rd/storage_rd/texture_storage.cpp` (the atlas's mip chain) and `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (the Gaussian blur) |
 | `packages/textscene-core/src/godot/rendering/lights/ltcTable.generated.ts` | `servers/rendering/storage/ltc/ltc_lut1.dds` and `ltc_lut2.dds` (Godot 4.7.2's LTC tables, which Eric Heitz fitted, baked by `scripts/godot-ltc/bake-ltc.mjs`) |
+| `packages/textscene-core/src/r3f/controls/native/themeIconRasters.generated.ts` | `scene/theme/icons/*.svg` rasterised by `modules/svg/image_loader_svg.cpp` (ThorVG) through `DPITexture::create_from_string`, baked by `scripts/godot-theme-icons/bake-theme-icons.mjs` |
 | `packages/textscene-core/src/resources/environment/godotToneMapping.ts` | `drivers/gles3/shaders/tonemap_inc.glsl` |
 | `packages/textscene-core/src/godot/rendering/environment/toneMapping.ts` | `servers/rendering/storage/environment_storage.cpp` (`environment_get_white` and the white of `environment_get_tonemap_parameters`) |
 | `packages/textscene-core/src/resources/environment/godotGlow.ts` | `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (`MODE_GLOW` bright pass under `FLAG_GLOW_FIRST_PASS`) and `.../effects/tonemap.glsl` (`gather_glow`, `apply_glow`, and `main()`'s pre/post-tonemap glow ordering) |
 | `packages/textscene-core/src/resources/environment/godotGlowPyramid.ts` | `servers/rendering/renderer_rd/shaders/effects/copy.glsl` (`MODE_GAUSSIAN_BLUR` under `MODE_GLOW`, the pyramid's blur) and `.../effects/tonemap.glsl` (`gather_glow` and the bicubic glow sample) |
 | `packages/textscene-core/src/utils/colorSpace.ts` | `core/math/color.h` (`Color::srgb_to_linear`, `Color::linear_to_srgb`) |
-| `packages/textscene-core/src/godot/math/color.ts` | `core/math/color_names.inc` (the X11 named-colour table, transcribed verbatim) and `core/math/color.cpp` (`Color::find_named_color`'s name normalisation, `Color::named`) |
+| `packages/textscene-core/src/godot/math/color.ts` | `core/math/color_names.inc` (the X11 named-colour table, transcribed verbatim) and `core/math/color.cpp` (`Color::find_named_color`'s name normalisation, `Color::named`, `Color::inverted`) |
 | `packages/textscene-core/src/resources/materials/standardmaterial3d/emission.ts` | `scene/resources/material.cpp` (`BaseMaterial3D::_update_shader` emission block, `set_emission_energy_multiplier`) |
 | `packages/textscene-core/src/nodes/3d/csg/smoothNormals.ts` | `modules/csg/csg_shape.cpp` (`CSGShape3D::update_shape` normal accumulation, `flip_faces`) and `core/math/plane.h` (`Plane(p1, p2, p3)`) |
 | `packages/textscene-core/src/nodes/3d/csg/csgbox3d/boxGeometry.ts` | `modules/csg/csg_shape.cpp` (`CSGBox3D::_build_brush`) |
@@ -84,8 +85,9 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/lighting2d/apartLight.ts` | `servers/rendering/renderer_rd/renderer_canvas_render_rd.cpp` (a positional light's height and a directional light's direction and height) |
 | `packages/textscene-core/src/r3f/lighting2d/normalMappedLighting.ts` | `servers/rendering/renderer_rd/shaders/canvas.glsl` (the normal map decode, `light_normal_compute` and the light loop) |
 | `packages/textscene-core/src/r3f/lighting2d/lightQuad.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_blend_compute`'s three blend modes and the `shadow_color` mix, `light_base_color` energy packing) |
-| `packages/textscene-core/src/r3f/lighting2d/lightQuadShaders.ts` | `drivers/gles3/shaders/canvas.glsl` (`light_shadow_compute`'s PCF5/PCF13 tap kernels and the `shadow_pos` quadrant block) |
-| `packages/textscene-core/src/r3f/lighting2d/shadowSampling.ts` | `drivers/gles3/rasterizer_canvas_gles3.cpp` (`shadow_pixel_size`, the shadow atlas's linear-filter and repeat-wrap state) |
+| `packages/textscene-core/src/r3f/lighting2d/lightQuadShaders.ts` | `servers/rendering/renderer_rd/shaders/canvas.glsl` (the `shadow_pos` quadrant block) |
+| `packages/textscene-core/src/r3f/lighting2d/shadowSampling.ts` | `servers/rendering/renderer_rd/renderer_canvas_render_rd.cpp` (the shadow atlas's `R32_SFLOAT` format and its nearest, repeat-on-u sampler) |
+| `packages/textscene-core/src/r3f/lighting2d/shadowTaps.ts` | `servers/rendering/renderer_rd/shaders/canvas.glsl` (`light_shadow_compute`'s NONE, PCF5 and PCF13 taps, `texture_shadow`), `servers/rendering/renderer_rd/renderer_canvas_render_rd.cpp` (`shadow_pixel_size`) |
 | `packages/textscene-core/src/r3f/lighting2d/itemLightList.ts` | `servers/rendering/renderer_rd/renderer_canvas_render_rd.cpp` (`canvas_render_items`'s per-item light list) |
 | `packages/textscene-core/src/r3f/lighting2d/lightCullKey.ts` | `drivers/gles3/rasterizer_canvas_gles3.cpp` (`_record_item_commands`'s per-item light test) and `servers/rendering/renderer_viewport.cpp` (`_draw_viewport`'s per-canvas `layer_min`/`layer_max` filter) |
 | `packages/textscene-core/src/r3f/canvasPaintOrder.ts` | `servers/rendering/renderer_canvas_cull.cpp` (`_attach_canvas_item_for_draw`'s per-`z_final` append order and `_cull_canvas_item`'s behind/ahead child split — the whole of Godot's canvas draw order) and `scene/main/canvas_layer.cpp` (`CanvasLayer::set_layer`) |
@@ -93,18 +95,47 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/lighting2d/canvasItemPlacement.tsx` | `servers/rendering/renderer_canvas_cull.cpp` (`_cull_canvas_item`'s `z_relative` accumulation and CLAMP, `_attach_canvas_item_for_draw`'s `ci->z_final`) |
 | `packages/textscene-core/src/r3f/lighting2d/shadowPolarMap.ts` | `drivers/gles3/rasterizer_canvas_gles3.cpp` (`RasterizerCanvasGLES3::light_update_shadow`'s four 90° projections and quadrant viewport packing, `occluder_polygon_set_shape`'s edge extrusion), `drivers/gles3/shaders/canvas_occlusion.glsl` (`depth = dot(direction, vtx.xy)`, `out_depth = depth / z_far`), `drivers/gles3/shaders/canvas.glsl` (the `pos_box` / `pos_rot` quadrant mapping) and `servers/rendering/renderer_viewport.cpp` (`radius_cache`, the `radius/1000` and `radius*1.1` clip planes) |
 | `packages/textscene-core/src/r3f/lighting2d/directionalShadowMap.ts` | `servers/rendering/renderer_rd/renderer_canvas_render_rd.cpp` (`light_update_directional_shadow`'s parallel projection across the clip rect's diagonal) and `servers/rendering/renderer_viewport.cpp` (the directional occluder cull swept by `max_distance`) |
-| `packages/textscene-core/src/r3f/lighting2d/directionalLightQuad.ts` | `servers/rendering/renderer_rd/shaders/canvas.glsl` (`texture_shadow`'s interpolated two-texel step, the directional shadow lookup and its PCF5/PCF13 taps) |
+| `packages/textscene-core/src/r3f/lighting2d/directionalLightQuad.ts` | `servers/rendering/renderer_rd/shaders/canvas.glsl` (the directional shadow lookup) |
 | `packages/textscene-core/src/r3f/controls/native/controlRectSolver.ts` | `scene/gui/control.cpp` (`Control::_size_changed`'s anchor/offset edge solve, its minimum-size floor with `GROW_DIRECTION_*` and its right-to-left position mirror, `Control::set_rect`/`_compute_offsets`'s inverse of that mirror, `Control::get_combined_minimum_size`, `get_anchorable_rect`) |
 | `packages/textscene-core/src/r3f/controls/native/buildSolveTree.ts` | `scene/main/canvas_item.cpp` (`CanvasItem::get_parent_item`'s direct-parent-only cast and `_enter_canvas`'s reparent-at-CanvasLayer fallback when it fails) and `scene/gui/container.cpp` (`Container::as_sortable_control`'s Control cast and `top_level` rejection, which bound the `visible` a container writes onto its children) |
 | `packages/textscene-core/src/r3f/controls/native/controlPixelSnap.ts` | `scene/gui/control.cpp` (`Control::_update_canvas_item_transform`'s whole-pixel translation snap and its `is_inside_tree` / 45°-rotation gates), `core/config/project_settings.cpp` (the `gui/common/snap_controls_to_pixels` default and `_GLOBAL_DEF`'s keep-the-loaded-value rule) and `main/main.cpp` (the `bool` read that booleanizes the setting) |
 | `packages/textscene-core/src/r3f/controls/native/controlClipGeometry.ts` | `servers/rendering/renderer_canvas_cull.cpp` (`_cull_canvas_item`'s clip-rect intersection with the enclosing clipper and the separate `final_clip_rect.position` / `.size` rounding that becomes the scissor) and `core/math/vector2.cpp` / `core/math/math_funcs.h` (`Vector2::round` → `Math::round`, half away from zero) |
 | `packages/textscene-core/src/r3f/controls/native/controlClipping.tsx` | `servers/rendering/renderer_canvas_cull.cpp` (`_cull_canvas_item`'s clip-rect intersection with the enclosing clipper and the separate `final_clip_rect.position` / `.size` rounding that becomes the scissor) and `core/math/vector2.cpp` / `core/math/math_funcs.h` (`Vector2::round` → `Math::round`, half away from zero) |
+| `packages/textscene-core/src/nodes/2d/bone2d/boneKite.ts` | `scene/2d/skeleton_2d.cpp` (the editor kite of `Bone2D::_editor_get_bone_shape` and its `NOTIFICATION_DRAW`) |
+| `packages/textscene-core/src/nodes/2d/polygon2d/polygonSkin.ts` | `scene/2d/polygon_2d.cpp` (the bone weights of `NOTIFICATION_DRAW`), `servers/rendering/rendering_server.cpp` (the 16-bit weight store) and `servers/rendering/renderer_rd/shaders/skeleton.glsl` (the 2D skin) |
+| `packages/textscene-core/src/nodes/2d/polygon2d/polygonShapes.ts` | `scene/2d/polygon_2d.cpp` (the `invert` ring of `NOTIFICATION_DRAW`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/skeletonRig.ts` | `scene/2d/skeleton_2d.cpp` (`Skeleton2D::_update_bone_setup`: the bone order and the bind pose) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/stackRun.ts` | `scene/2d/skeleton_2d.cpp` (`Skeleton2D::execute_modifications`: the override of each bone and the apply step), `scene/resources/2d/skeleton/skeleton_modification_stack_2d.cpp` (`SkeletonModificationStack2D::execute`) and `scene/resources/2d/skeleton/skeleton_modification_2d_stackholder.cpp` (`_execute`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/stackPose.ts` | `scene/2d/node_2d.cpp` (`Node2D::set_rotation`, `rotate`, `set_global_rotation`, `set_global_transform`, `get_angle_to` and `_update_xform_values`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/clampAngle.ts` | `scene/resources/2d/skeleton/skeleton_modification_2d.cpp` (`SkeletonModification2D::clamp_angle`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/lookAt.ts` | `scene/resources/2d/skeleton/skeleton_modification_2d_lookat.cpp` (`SkeletonModification2DLookAt::_execute`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/twoBoneIk.ts` | `scene/resources/2d/skeleton/skeleton_modification_2d_twoboneik.cpp` (`SkeletonModification2DTwoBoneIK::_execute`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/ccdIk.ts` | `scene/resources/2d/skeleton/skeleton_modification_2d_ccdik.cpp` (`SkeletonModification2DCCDIK::_execute` and `_execute_ccdik_joint`) |
+| `packages/textscene-core/src/nodes/2d/skeleton2d/modificationStack/fabrik.ts` | `scene/resources/2d/skeleton/skeleton_modification_2d_fabrik.cpp` (`SkeletonModification2DFABRIK::_execute`, `chain_backwards` and `chain_forwards`) |
 | `packages/textscene-core/src/nodes/2d/ui/margincontainer/nativeSolver.ts` | `scene/gui/margin_container.cpp` (`MarginContainer::get_minimum_size`, `MarginContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/centercontainer/nativeSolver.ts` | `scene/gui/center_container.cpp` (`CenterContainer::get_minimum_size`, `CenterContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
+| `packages/textscene-core/src/nodes/windows/window/embedding.ts` | `scene/main/viewport.cpp` (`Viewport::_sub_window_register`, `_sub_window_update_order`) |
+| `packages/textscene-core/src/nodes/windows/window/contentScale.ts` | `scene/main/window.cpp` (`Window::_update_viewport_size`'s content scale) and `scene/main/viewport.cpp` (`Viewport::_sub_window_update`'s target rect and black bars) |
+| `packages/textscene-core/src/nodes/windows/window/decoration.ts` | `scene/main/viewport.cpp` (`Viewport::_sub_window_update`'s title and close icon placement) |
+| `packages/textscene-core/src/nodes/windows/popuppanel/contentLayout.ts` | `scene/gui/popup.cpp` (`PopupPanel::_get_contents_minimum_size`, `_update_child_rects`) |
+| `packages/textscene-core/src/nodes/windows/popupmenu/menuItems.ts` | `scene/gui/popup_menu.cpp` (`PopupMenu::_get_item_icon_size`, the check icon sizes and the gutter width of `_get_contents_minimum_size`) |
+| `packages/textscene-core/src/nodes/windows/popupmenu/menuLayout.ts` | `scene/gui/popup_menu.cpp` (`PopupMenu::_get_item_height`, `_get_contents_minimum_size`, `_update_shadow_offsets`, the item rows of `_draw_items`) |
+| `packages/textscene-core/src/nodes/windows/popupmenu/menuDrawing.ts` | `scene/gui/popup_menu.cpp` (`PopupMenu::_draw_items`: separators, check marks, icons and text) |
+| `packages/textscene-core/src/nodes/windows/popupmenu/menuTheme.ts` | `scene/gui/popup_menu.cpp` (the `PopupMenu` theme items) and `scene/theme/default_theme.cpp` (the default menu panel and separator styles) |
+| `packages/textscene-core/src/nodes/windows/window/panelInsets.ts` | `scene/gui/popup.cpp` (`PopupPanel::_update_shadow_offsets`) and `scene/gui/popup_menu.cpp` (`PopupMenu::_update_shadow_offsets`) |
+| `packages/textscene-core/src/nodes/windows/window/contentFill.ts` | `scene/gui/popup.cpp` (`PopupPanel::_get_contents_minimum_size`, `_update_child_rects`) and `scene/gui/dialogs.cpp` (`AcceptDialog::_update_child_rects`, `_get_contents_minimum_size`) |
+| `packages/textscene-core/src/nodes/windows/acceptdialog/dialogLayout.ts` | `scene/gui/dialogs.cpp` (`AcceptDialog::_update_child_rects`, `_get_contents_minimum_size`) |
+| `packages/textscene-core/src/nodes/windows/acceptdialog/dialogParts.ts` | `scene/gui/dialogs.cpp` (`AcceptDialog::AcceptDialog`'s internal Label, Button row and panel, `_update_theme_item_cache`) |
+| `packages/textscene-core/src/nodes/windows/filedialog/body.ts` | `scene/gui/file_dialog.cpp` (`FileDialog::FileDialog`'s Control tree, `update_customization`, `_update_option_controls`) |
+| `packages/textscene-core/src/nodes/windows/filedialog/fileList.ts` | `scene/gui/file_dialog.cpp` (`FileDialog::update_file_list`: the folders then files, the hidden names, the first filter and the selected row) |
+| `packages/textscene-core/src/godot/string/fileNameOrder.ts` | `core/string/ustring.cpp` (`String::filenocasecmp_to`) |
+| `packages/textscene-core/src/godot/string/wildcard.ts` | `core/string/ustring.cpp` (`String::matchn`) |
+| `packages/textscene-core/src/godot/string/simpleUpper.ts` | `core/string/ustring.cpp` (`_find_upper`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/fitChildInRect.ts` | `scene/gui/container.cpp` (`Container::fit_child_in_rect`) and `scene/gui/control.h` (the `SizeFlags` bitmask, `Container::as_sortable_control`'s visibility test) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/boxContainerSolver.ts` | `scene/gui/box_container.cpp` (`BoxContainer::_resort`, `BoxContainer::get_minimum_size`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/splitContainerSolver.ts` | `scene/gui/split_container.cpp` (`SplitContainer::_update_default_dragger_positions`, `_update_dragger_positions`, `_get_valid_range`, `_get_separation`, `_resort`, `get_minimum_size`, `SplitContainerDragger::_notification`'s `NOTIFICATION_DRAW` icon-draw condition) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`) |
 | `packages/textscene-core/src/nodes/2d/ui/gridcontainer/nativeSolver.ts` | `scene/gui/grid_container.cpp` (`GridContainer::_notification`'s `NOTIFICATION_SORT_CHILDREN` handler, `GridContainer::get_minimum_size`), `scene/gui/container.cpp` (`Container::fit_child_in_rect`, `Container::as_sortable_control`) and `scene/gui/control.cpp` (`Control::set_rect`/`Control::_size_changed`'s minimum-size floor, which every `fit_child_in_rect` call re-triggers) |
+| `packages/textscene-core/src/r3f/canvasGroup/compositeRect.ts` | `servers/rendering/renderer_canvas_cull.cpp` (`_attach_canvas_item_for_draw`'s canvas group rect fit) |
 | `packages/textscene-core/src/nodes/2d/ui/graphelement/parser.ts` | `scene/gui/graph_element.cpp` (`GraphElement::set_selectable`'s forced `set_selected(false)`) |
 | `packages/textscene-core/src/nodes/2d/ui/graphelement/nativeSolver.ts` | `scene/gui/graph_element.cpp` (`GraphElement::_resort`, `GraphElement::get_minimum_size`) and `scene/gui/container.cpp` (`Container::fit_child_in_rect`, `Container::as_sortable_control`) |
 | `packages/textscene-core/src/nodes/2d/ui/graphelement/graphTitlebar.ts` | `scene/gui/graph_node.cpp` (`GraphNode`'s internal `titlebar_hbox`/`title_label` construction, `_resort`'s titlebar geometry) and `scene/gui/graph_frame.cpp` (the same shape) — `Label::_shape`'s OFF-autowrap minimum size and `Label::_get_line_rect`'s line placement |
@@ -140,10 +171,14 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/r3f/controls/native/buttonBase.ts` | `scene/gui/button.cpp` (`Button::_notification`'s `NOTIFICATION_DRAW` icon/text content-layout math and `Button::_fit_icon_size`) |
 | `packages/textscene-core/src/nodes/2d/ui/checkbox/nativeSolver.ts` | `scene/gui/check_box.cpp` (`CheckBox::get_minimum_size`, `get_icon_size`, `_notification`'s `NOTIFICATION_DRAW` icon placement, `is_radio`) and `scene/gui/base_button.cpp` (`BaseButton::get_draw_mode`) |
 | `packages/textscene-core/src/nodes/2d/ui/optionbutton/nativeSolver.ts` | `scene/gui/option_button.cpp` (`OptionButton::get_minimum_size`, `_refresh_size_cache`, `_notification`'s `NOTIFICATION_DRAW` arrow placement) |
-| `packages/textscene-core/src/nodes/2d/ui/tabbar/nativeSolver.ts` | `scene/gui/tab_bar.cpp` (`TabBar::get_minimum_size`, `TabBar::get_tab_width`, `TabBar::_update_cache`, `TabBar::_draw_tab`) and `scene/theme/default_theme.cpp` (TabBar's `tab_selected`/`tab_unselected`/`tab_disabled`/`tab_hovered` styleboxes and its `font_selected_color`/`font_unselected_color`/`font_disabled_color`/icon-colour theme defaults) |
+| `packages/textscene-core/src/nodes/2d/ui/tabbar/nativeSolver.ts` | `scene/gui/tab_bar.cpp` (`TabBar::get_minimum_size`, `TabBar::get_tab_width`, `TabBar::_update_cache`, `TabBar::ensure_tab_visible`, `TabBar::_ensure_no_over_offset`, `TabBar::_draw_tab`) and `scene/theme/default_theme.cpp` (TabBar's `font_selected_color`/`font_unselected_color`/`font_disabled_color`/icon-colour theme defaults) |
+| `packages/textscene-core/src/r3f/controls/native/tabStyleBoxes.ts` | `scene/theme/default_theme.cpp` (the `tab_selected`/`tab_unselected`/`tab_disabled`/`tab_hovered` styleboxes of `TabContainer` and `TabBar`) |
 | `packages/textscene-core/src/nodes/2d/ui/tabcontainer/nativeSolver.ts` | `scene/gui/tab_container.cpp` (`TabContainer::get_minimum_size`, `TabContainer::_repaint`, `TabContainer::_update_margins`, `TabContainer::_get_tab_height`/`_get_tab_rect`) |
+| `packages/textscene-core/src/nodes/2d/ui/tabcontainer/loadStrip.ts` | `scene/gui/tab_container.cpp` (`TabContainer::_update_margins`, `TabContainer::add_child_notify`) and `scene/gui/tab_bar.cpp` (`TabBar::ensure_tab_visible`, `TabBar::set_tab_hidden`) |
 | `packages/textscene-core/src/nodes/2d/ui/lineedit/nativeSolver.ts` | `scene/gui/line_edit.cpp` (`LineEdit::get_minimum_size`, `_notification`'s `NOTIFICATION_DRAW` content-rect/alignment/colour selection and its `right_icon`/clear-button inset and caret-fallback math, `LineEdit::_get_right_icon_size`) and `scene/theme/default_theme.cpp` (LineEdit's `normal`/`read_only` styleboxes, `font_color`/`font_placeholder_color`/`font_uneditable_color`/`caret_color`/`clear_button_color` theme defaults and the `caret_width` constant) |
 | `packages/textscene-core/src/nodes/2d/ui/textedit/nativeSolver.ts` | `scene/gui/text_edit.cpp` (`TextEdit::get_minimum_size`, `_update_scrollbars`'s `content_size_cache`, `_update_wrap_at_column`, `get_line_height`, `TextEdit::Text::get_line_height`, `adjust_viewport_to_caret`/`_adjust_viewport_to_caret_horizontally`'s own always-(0,0) trace, `_notification`'s `NOTIFICATION_DRAW` `left_margin`/`xmargin_beg`/`xmargin_end` row band, `TextEdit::Text::invalidate_cache`/`invalidate_all_lines`'s tab-align vector) and `scene/theme/default_theme.cpp` (TextEdit's reuse of LineEdit's `normal`/`read_only` styleboxes, `font_color`/`font_readonly_color`/`current_line_color`, the scaled `line_spacing` constant and the bare `wrap_offset`/content-size-pad literals) |
+| `packages/textscene-core/src/nodes/2d/ui/textedit/minimap.ts` | `scene/gui/text_edit.cpp` (the minimap arm of `NOTIFICATION_DRAW`: the view rectangle, the row bars, the tab stops and the wrapped-row indent) |
+| `packages/textscene-core/src/nodes/2d/ui/textedit/scrollBars.ts` | `scene/gui/text_edit.cpp` (`_update_scrollbars`'s bar rects, visible rows, total rows and ranges) |
 | `packages/textscene-core/src/nodes/2d/ui/codeedit/nativeSolver.ts` | `scene/gui/code_edit.cpp` (`CodeEdit::CodeEdit()`'s fixed gutter construction order and each gutter's own width setter, `_update_draw_main_gutter`, `_text_changed`'s line-number digit count, `_line_number_draw_callback`, `_update_line_number_gutter_width`, `set_line_numbers_zero_padded`) and `scene/theme/default_theme.cpp` (CodeEdit's reuse of TextEdit's/LineEdit's styleboxes and its own `line_number_color`) |
 | `packages/textscene-core/src/nodes/2d/ui/codeedit/delimiterRegions.ts` | `scene/gui/code_edit.cpp` (`_set_delimiters`'s per-type entry loop, `_add_delimiter`'s repeated-key refusal and longest-first insertion, `_update_delimiter_cache`, `_is_in_delimiter`, `get_delimiter_start_position`, `get_delimiter_end_position`, `_update_code_region_tags`) |
 | `packages/textscene-core/src/nodes/2d/ui/codeedit/lineFolding.ts` | `scene/gui/code_edit.cpp` (`can_fold_line`, `is_line_code_region_start`, `is_line_code_region_end`) and `scene/gui/text_edit.cpp` (`get_indent_level`) |
@@ -152,8 +187,11 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/tree/nativeSolver.ts` | `scene/gui/tree.cpp` (`Tree::_get_content_rect`, `Tree::_get_title_button_height`, `Tree::get_column_width`, `Tree::get_column_minimum_width`, restricted to the always-empty-of-items case a `.tscn` Tree is) and `scene/theme/default_theme.cpp` (Tree's `panel` and `title_button_normal` styleboxes) |
 | `packages/textscene-core/src/nodes/2d/ui/spinbox/nativeSolver.ts` | `scene/gui/spin_box.cpp` (`SpinBox::get_minimum_size`, `_compute_sizes`, `_get_widest_button_icon_width`, `_update_text`, `_update_buttons_state_for_current_value`), `scene/gui/range.h` (`Range`'s own `step` default), `core/math/math_funcs.cpp` (`Math::step_decimals`, `Math::range_step_decimals`), `core/string/ustring.cpp` (`String::num`'s trailing-zero trim) and `scene/theme/default_theme.cpp` (SpinBox's `buttons_width`/`field_and_buttons_separation` constants and `up`/`down` icon-modulate defaults) |
 | `packages/textscene-core/src/nodes/2d/ui/itemlist/nativeSolver.ts` | `scene/gui/item_list.cpp` (`ItemList::force_update_list_size`, `ItemList::get_minimum_size`, the per-item minsize inline in `force_update_list_size`, `_adjust_to_max_size`, `NOTIFICATION_DRAW`'s per-row icon/text placement and its `:1446-1459` row/column guide-line draw) and `scene/theme/default_theme.cpp` (ItemList's `panel`/`h_separation`/`v_separation`/`icon_margin`/`line_separation`/`font_color`/`guide_color` theme defaults) |
+| `packages/textscene-core/src/nodes/2d/ui/itemlist/labelDraw.ts` | `scene/resources/text_paragraph.cpp` (`TextParagraph::draw`'s per-line alignment shift) |
+| `packages/textscene-core/src/nodes/2d/ui/itemlist/scrollBars.ts` | `scene/gui/item_list.cpp` (`NOTIFICATION_DRAW`'s scrollbar anchors and bottom scroll-hint draw) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/sliderSolver.ts` | `scene/gui/slider.cpp` (`Slider::get_minimum_size`, `_notification`'s `NOTIFICATION_DRAW` track/`grabber_area`/grabber/tick rect math, including its per-axis `int` truncation vs `Math::round` asymmetry) and `scene/theme/default_theme.cpp` (HSlider/VSlider's `slider`/`grabber_area` styleboxes and grabber/tick icon registration) |
 | `packages/textscene-core/src/r3f/controls/native/styleBoxFlatGeometry.ts` | `scene/resources/style_box_flat.cpp` (`StyleBoxFlat::draw`, `draw_rounded_rectangle`, `adapt_values`, `set_inner_corner_radius`, `set_corner_scale`, including the anti-aliasing rings, `skew`, and the drop-shadow stage) |
+| `packages/textscene-core/src/r3f/controls/native/text/lineDrawClip.ts` | `scene/resources/text_paragraph.cpp` (`TextParagraph::draw`'s `clip_l`/`clip_r`) and `servers/text/text_server.cpp` (`shaped_text_draw`'s glyph clip) |
 | `packages/textscene-core/src/r3f/controls/native/text/TextRunMesh.tsx` | `scene/gui/label.cpp` (`Label::_notification`'s `ofs.y += asc` baseline anchoring) and the TextServer paragraph convention `Button::_notification`'s `text_buf->draw` shares; `modules/text_server_adv/text_server_adv.cpp` (`FT_Outline_Transform`'s synthesized-italic shear pivot) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/toolbar.ts` | `scene/gui/graph_edit.cpp` (the `menu_panel`/`menu_hbox` constructor assembly, the `set_show_*` setters and `GraphEdit::_update_zoom_label`) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/ToolbarChrome.tsx` | `scene/gui/graph_edit.cpp` (the toolbar's own `Button`/`Label` draw) and `scene/theme/default_theme.cpp` (the `FlatButton` variation) |
@@ -162,7 +200,7 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/scrollBars.ts` | `scene/gui/graph_edit.cpp` (`GraphEdit::_update_scrollbars`) and `scene/gui/scroll_bar.cpp` (grabber geometry) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/loadOrder.ts` | `scene/gui/graph_edit.cpp` (`GraphEdit::set_scroll_offset`, `set_zoom_custom`, `set_zoom_min`/`set_zoom_max` and the constructor's zoom bounds), `scene/gui/control.cpp` (`Control::_size_changed` out of tree) and `scene/resources/packed_scene.cpp` (`SceneState::instantiate`'s property order) |
 | `packages/textscene-core/src/nodes/2d/ui/graphedit/minimapConnections.ts` | `scene/gui/graph_edit.cpp` (`GraphEdit::_draw_minimap_connection_line`) |
-| `packages/textscene-core/src/nodes/2d/ui/graphedit/polylineStroke.ts` | `servers/rendering/renderer_canvas_cull.cpp` (`RendererCanvasCull::canvas_item_add_polyline`, `compute_polyline_segment_dir`, `compute_polyline_edge_offset_clamped`) |
+| `packages/textscene-core/src/godot/rendering/canvasPolyline.ts` | `servers/rendering/renderer_canvas_cull.cpp` (`RendererCanvasCull::canvas_item_add_polyline`, `compute_polyline_segment_dir`, `compute_polyline_edge_offset_clamped`) |
 | `packages/textscene-core/src/r3f/controls/native/text/bitmapTextPainter.ts` | `modules/text_server_adv/text_server_adv.cpp` (`TextServerAdvanced::_font_draw_glyph`'s bitmap glyph rectangle, pen floor and fixed-size scale) |
 | `packages/textscene-core/src/resources/formats/bmfont/parseDescriptor.ts` | `scene/resources/font.cpp` (`FontFile::_load_bitmap_font`'s text and binary descriptor reader and `_oem_to_unicode`) |
 | `packages/textscene-core/src/resources/formats/bmfont/pageFill.ts` | `scene/resources/font.cpp` (`FontFile::_load_bitmap_font`'s page channel layouts and `_convert_*` page converters) |
@@ -195,22 +233,46 @@ Godot Engine source, used under the MIT licence. Each carries the same notice in
 | `packages/textscene-core/src/nodes/2d/ui/textureprogressbar/radialFill.ts` | `scene/gui/texture_progress_bar.cpp` (`get_relative_center`, `draw_circular_progress` and its `radial_initial_angle`/`radial_fill_degrees` fan) and `core/math/math_funcs.h` (`Math::fposmod`) |
 | `packages/textscene-core/src/resources/curves/curve/sample.ts` | `scene/resources/curve.cpp` (`Curve::sample`, `Curve::sample_local_nocheck`, `Curve::get_index`) and `core/math/math_funcs.h` (`Math::bezier_interpolate`) |
 | `packages/textscene-core/src/resources/curves/curve/bakedSample.ts` | `scene/resources/curve.cpp` (`Curve::_bake`, `Curve::sample_baked`) |
-| `packages/textscene-core/src/nodes/shared/cpuparticles/godotRng.ts` | `core/math/random_pcg.h` (`RandomPCG::seed`, `RandomPCG::randf`), `thirdparty/misc/pcg.cpp` (`pcg32_random_r`, `pcg32_srandom_r` — see the PCG note below), `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (`idhash`, `rand_from_seed`) |
+| `packages/textscene-core/src/godot/math/randomPcg.ts` | `core/math/random_pcg.h` (`RandomPCG::seed`, `RandomPCG::randf`), `thirdparty/misc/pcg.cpp` (`pcg32_random_r`, `pcg32_srandom_r` — see the PCG note below) |
+| `packages/textscene-core/src/nodes/shared/cpuparticles/godotRng.ts` | `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (`idhash`, `rand_from_seed`) |
 | `packages/textscene-core/src/nodes/2d/cpuparticles2d/simulate.ts` | `scene/2d/cpu_particles_2d.cpp` (`_particles_process`: the cycle bookkeeping, the restart branch and its emission shapes, the alive branch, the appearance pass, `_update_particle_data_buffer` with `SortLifetime`, and the `_update_internal` preprocess loop) and `core/math/color.cpp` (the YIQ-style hue-rotation basis) |
 | `packages/textscene-core/src/nodes/3d/particles/cpuparticles3d/simulate.ts` | `scene/3d/cpu_particles_3d.cpp` (`_particles_process`, the emission shapes and `_update_particle_data_buffer`) |
 | `packages/textscene-core/src/nodes/shared/cpuparticles/process.ts` | `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (the `_update_internal` settle loop, the restart instant and the particle colour) |
+| `packages/textscene-core/src/nodes/shared/gpuparticles/parameters.ts` | `scene/resources/particle_process_material.cpp` (the generated shader's `rand_from_seed`, `hash` and the ordered display, dynamics and physical draws of `calculate_initial_*_params`) |
+| `packages/textscene-core/src/nodes/shared/gpuparticles/birth.ts` | `scene/resources/particle_process_material.cpp` (the generated shader's `start()`, `calculate_initial_position` and `get_random_direction_from_spread`) |
+| `packages/textscene-core/src/nodes/shared/gpuparticles/step.ts` | `scene/resources/particle_process_material.cpp` (the generated shader's `process()`) |
+| `packages/textscene-core/src/nodes/shared/gpuparticles/frames.ts` | `servers/rendering/renderer_rd/storage_rd/particles_storage.cpp` (`_particles_process` frame parameters) and `servers/rendering/renderer_rd/shaders/particles.glsl` (the restart test) |
+| `packages/textscene-core/src/nodes/shared/gpuparticles/settle.ts` | `servers/rendering/renderer_rd/storage_rd/particles_storage.cpp` (`update_particles` settle loop) and `servers/rendering/renderer_rd/shaders/particles_copy.glsl` (the instance buffer rows) |
+| `packages/textscene-core/src/nodes/shared/gpuparticles/instanceOrder.ts` | `servers/rendering/renderer_rd/shaders/particles_copy.glsl` (the order of the slots) and `servers/rendering/renderer_rd/storage_rd/particles_storage.cpp` (`particles_set_view_axis` lifetime split) |
+| `packages/textscene-core/src/nodes/shared/gpuparticles/instanceAlign.ts` | `servers/rendering/renderer_rd/shaders/particles_copy.glsl` (the `transform_align` cases) |
 | `packages/textscene-core/src/nodes/shared/cpuparticles/emissionPoints.ts` | `scene/2d/cpu_particles_2d.cpp` and `scene/3d/cpu_particles_3d.cpp` (the POINTS and DIRECTED_POINTS point pick, the normal turn and the point colour) and `core/math/math_funcs.h` (`Math::randf`) |
-| `packages/textscene-core/src/godot/math/transform2d.ts` | `core/math/transform_2d.cpp` (`Transform2D::operator*`, `Transform2D::affine_inverse`, the `Transform2D(rot, scale, skew, pos)` constructor) |
+| `packages/textscene-core/src/godot/math/transform2d.ts` | `core/math/transform_2d.cpp` (`Transform2D::operator*`, `Transform2D::affine_inverse`, the `Transform2D(rot, scale, skew, pos)` constructor, `get_rotation`, `get_skew`, `get_scale`, `set_rotation`, `set_scale`, `looking_at` and `interpolate_with`) |
 | `scripts/godot-ref/run.mjs` | `editor/plugins/node_3d_editor_plugin.cpp` (`Node3DEditor::_node_added` yield rule, `_load_default_preview_settings`, `_preview_settings_changed`, `Node3DEditorViewport::Cursor()`) |
 | `packages/textscene-core/src/nodes/2d/ui/videostreamplayer/nativeSolver.ts` | `scene/gui/video_stream_player.cpp` (`VideoStreamPlayer::get_minimum_size`) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpickerbutton/Component.tsx` | `scene/gui/color_picker.cpp` (`ColorPickerButton::_notification`'s `NOTIFICATION_DRAW`: the swatch rect from the "normal" StyleBox's offset/minimum size, the unconditional checkerboard, and the overbright check) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/AlphaCheckerboardQuad.tsx` | `scene/gui/color_picker.cpp` (`draw_texture_rect(theme_cache.background_icon, r, true)`'s tile semantics, ported the same way `nodes/2d/ui/texturerect/Component.tsx`'s `STRETCH_TILE` branch already does) |
 | `packages/textscene-core/src/nodes/2d/ui/shared/colorOverbright.ts` | `scene/gui/color_picker.cpp` (`is_color_overbright`) |
-| `packages/textscene-core/src/nodes/2d/ui/colorpicker/nativeSolver.ts` | `scene/gui/color_picker.cpp` (`ColorPicker::_set_pick_color`'s HSV derivation: `_copy_color_to_normalized_and_intensity`, `_copy_normalized_to_hsv_okhsl`; the constructor's `real_vbox` row order and every row-visibility setter; `create_slider`/`_update_controls`) and `core/math/color.cpp`/`.h` (`Color::get_h`/`get_s`/`get_v`, `Color::from_hsv`/`set_hsv`, `Color::inverted`, `Color::srgb_to_linear`/`linear_to_srgb`), `scene/gui/color_picker_shape.cpp` (`ColorPickerShape::draw_sv_square`'s cursor placement, `ColorPickerShapeRectangle::_hue_slider_draw`'s indicator line, `ColorPickerShapeRectangle::update_theme`), `scene/gui/spin_box.cpp` (`SpinBox::get_minimum_size`) and `scene/theme/default_theme.cpp` (ColorPicker's `sv_width`/`sv_height`/`h_width`/`margin`/`label_width` constants, the `color_hue` `GradientTexture2D`'s 7-stop hue gradient, and `make_flat_stylebox`'s default Button/LineEdit margins) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/nativeSolver.ts` | `scene/gui/color_picker.cpp` (`ColorPicker::_set_pick_color`'s HSV derivation: `_copy_color_to_normalized_and_intensity`, `_copy_normalized_to_hsv_okhsl`; the constructor's `real_vbox` row order and every row-visibility setter; `create_slider`/`_update_controls`) and `core/math/color.cpp`/`.h` (`Color::get_h`/`get_s`/`get_v`, `Color::from_hsv`/`set_hsv`, `Color::srgb_to_linear`/`linear_to_srgb`), `scene/gui/spin_box.cpp` (`SpinBox::get_minimum_size`) and `scene/theme/default_theme.cpp` (ColorPicker's `sv_width`/`sv_height`/`h_width`/`margin`/`label_width` constants, the `color_hue` `GradientTexture2D`'s 7-stop hue gradient, and `make_flat_stylebox`'s default Button/LineEdit margins) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/svGradient.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShape::draw_sv_square`'s two `draw_polygon` layers), `scene/gui/color_mode.cpp` (every `ColorMode::slider_draw` override's 2/3/7-stop polygons) and `scene/theme/default_theme.cpp` (the `color_hue` `GradientTexture2D`'s 7-stop hue gradient) |
-| `packages/textscene-core/src/nodes/2d/ui/colorpicker/colorModes.ts` | `scene/gui/color_mode.cpp`/`.h` (every `ColorMode` subclass: `get_slider_value`/`get_slider_max`/`get_alpha_slider_max`/`get_alpha_slider_value`/`slider_draw`), `scene/gui/color_picker.cpp` (`_copy_color_to_normalized_and_intensity`, `_update_text_value`, `_alpha_slider_draw`, `is_color_valid_hex`/`_append_hex`) and `core/math/color.cpp` (`Color::to_html`, `Color::srgb_to_linear`) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/colorModes.ts` | `scene/gui/color_mode.cpp`/`.h` (every `ColorMode` subclass: `get_slider_value`/`get_slider_max`/`get_alpha_slider_max`/`get_alpha_slider_value`/`slider_draw`), `scene/gui/color_picker.cpp` (`_copy_color_to_normalized_and_intensity`, `_update_text_value`, `_alpha_slider_draw`, `is_color_valid_hex`/`_append_hex`) and `core/math/color.cpp`/`.h` (`Color::to_html`, `Color::srgb_to_linear`/`linear_to_srgb` in float) |
 | `packages/textscene-core/src/nodes/2d/ui/colorpicker/okhsl.ts` | `core/math/color.cpp` (`Color::set_ok_hsl`/`get_ok_hsl_h`/`get_ok_hsl_s`/`get_ok_hsl_l`) and `thirdparty/misc/ok_color.h` (MIT, Copyright (c) 2021 Björn Ottosson — `srgb_to_okhsl`/`okhsl_to_srgb` and their shared helpers) |
-| `packages/textscene-core/src/nodes/2d/ui/colorpicker/Component.tsx` | `scene/gui/color_picker.cpp` (`ColorPicker::_sample_draw`, the constructor's `sample_hbc`/`mode_hbc`/`hex_hbc`/`swatches_vbc` layout) and `scene/gui/color_picker_shape.cpp` (`ColorPickerShape::draw_cursor`) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/Component.tsx` | `scene/gui/color_picker.cpp` (`ColorPicker::_sample_draw`, the constructor's `sample_hbc`/`mode_hbc`/`hex_hbc`/`swatches_vbc` layout) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/GradientMesh.tsx` | `scene/gui/color_picker_shape.cpp` and `scene/gui/color_mode.cpp` (the gradients the SV square, hue slider and channel sliders draw) |
+| `packages/textscene-core/src/nodes/2d/ui/shared/LabelledText.tsx` | `scene/gui/label.cpp`, `scene/gui/line_edit.cpp` and `scene/gui/button.cpp` (where each aligns its text) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/TextTypeScriptIcon.tsx` | `scene/gui/color_picker.cpp` (`ColorPicker::_update_text_value`) and `scene/gui/button.cpp` (icon placement) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/shapeRowLayout.ts` | `scene/gui/color_picker.cpp` (the `shape_container` HBoxContainer) and `scene/gui/color_picker_shape.cpp` (each shape's `_initialize_controls` and `update_theme`: the controls, their size flags and their `sv_width`/`h_width` minimum sizes) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/shapeDrawing.ts` | `scene/gui/color_picker.cpp` (`_copy_normalized_to_hsv_okhsl`) and `scene/gui/color_picker_shape.cpp` (`draw_cursor`, `draw_circle_cursor`, the cursor clamp of the rectangles, the value sliders' line) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/shapeFragment.ts` | `scene/gui/color_picker_shape.cpp` (the `canvas_item` shader frame each shape's fill runs in) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/shapeFillProgram.ts` | `drivers/gles3/shaders/canvas.glsl` (how `COLOR` replaces the vertex colour and the canvas modulation follows) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/okColorGlsl.ts` | `thirdparty/misc/ok_color_shader.h` (MIT, Copyright (c) 2021 Björn Ottosson: `okhsl_to_srgb` and its helpers, as GLSL, copied verbatim) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/hsvRectangle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeRectangle`: its draw functions, which use no shader) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/hsvWheel.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeWheel`: its shader's fragment body, copied verbatim, and its draw functions) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/vhsCircle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeVHSCircle`: its shader's fragment body, copied verbatim, and its draw functions) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/okhslCircle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeOKHSLCircle`: its shader's fragment body, copied verbatim, and its draw functions) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/okHsRectangle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeOKHSRectangle`: its shader's fragment body, copied verbatim, and its draw functions) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/okHlRectangle.ts` | `scene/gui/color_picker_shape.cpp` (`ColorPickerShapeOKHLRectangle`: its shader's fragment body, copied verbatim, and its draw functions) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/pickerShapes.ts` | `scene/gui/color_picker.cpp` (the `add_shape` order of the constructor, `set_picker_shape`'s range check) |
+| `packages/textscene-core/src/nodes/2d/ui/colorpicker/shapes/ShapeRow.tsx` | `scene/gui/color_picker_shape.cpp` (the draw order of the fill, the SV square, the cursors and the slider) |
 
 ### Reproduced values
 
@@ -227,7 +289,9 @@ CheckButton, FoldableContainer, TextEdit/CodeEdit, TabBar and ColorPicker/
 ColorPickerButton painters need the same indicator glyphs Godot's editor bakes into its
 built-in dark theme. Rather than redraw approximations, `packages/textscene-core/src/r3f/controls/native/themeIcons.ts`
 embeds unmodified copies of the actual SVG files, base64-encoded as `data:` URLs, from
-Godot 4.6.3's `scene/theme/icons/`:
+Godot 4.6.3's `scene/theme/icons/`. At theme scale 1 the previewer draws Godot's own ThorVG
+raster of each icon instead: `packages/textscene-core/src/r3f/controls/native/themeIconRasters.generated.ts`
+holds those rasters as PNG `data:` URLs, baked by `scripts/godot-theme-icons/bake-theme-icons.mjs`.
 
 | File | Godot theme key (`scene/theme/default_theme.cpp`) |
 |---|---|
@@ -266,6 +330,9 @@ Godot 4.6.3's `scene/theme/icons/`:
 | `scene/theme/icons/color_picker_overbright.svg` | `ColorPickerButton`/`ColorPicker` / `"overbright_indicator"` |
 | `scene/theme/icons/color_picker_cursor.svg` | `ColorPicker` / `"picker_cursor"` |
 | `scene/theme/icons/color_picker_cursor_bg.svg` | `ColorPicker` / `"picker_cursor_bg"` |
+| `scene/theme/icons/picker_shape_rectangle.svg` | `ColorPicker` / `"shape_rect"` |
+| `scene/theme/icons/picker_shape_rectangle_wheel.svg` | `ColorPicker` / `"shape_rect_wheel"` |
+| `scene/theme/icons/picker_shape_circle.svg` | `ColorPicker` / `"shape_circle"` |
 
 `packages/textscene-core/src/nodes/2d/ui/spinbox/icons.ts` embeds SpinBox's own pair the
 same way, kept in its own slice rather than `themeIcons.ts` since that module is
@@ -603,7 +670,7 @@ SOFTWARE.
 
 <https://www.pcg-random.org>
 
-`packages/textscene-core/src/nodes/shared/cpuparticles/godotRng.ts` reproduces the minimal
+`packages/textscene-core/src/godot/math/randomPcg.ts` reproduces the minimal
 PCG32 generator (`pcg32_random_r` / `pcg32_srandom_r`), because CPUParticles2D's particle
 layout IS that generator's output and a statistically-equivalent substitute would put
 every particle somewhere else. Godot vendors the same implementation under
@@ -624,6 +691,27 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
+```
+
+---
+
+## GNU C Library atan2f
+
+<https://sourceware.org/glibc/>
+
+`packages/textscene-core/src/godot/math/realAtan2.ts` ports `__ieee754_atan2f` and `__atanf`
+(`sysdeps/ieee754/flt-32/e_atan2f.c` and `s_atanf.c` of glibc 2.39), because Godot hands a
+`real_t` `atan2` to the C library, and a chain of bones that folds onto one line bends to the
+side the last bit of that angle picks. Both files carry the
+notice below, separately from Godot's own MIT licence above.
+
+```
+Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+
+Developed at SunPro, a Sun Microsystems, Inc. business.
+Permission to use, copy, modify, and distribute this
+software is freely granted, provided that this notice
+is preserved.
 ```
 
 ---

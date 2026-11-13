@@ -80,14 +80,10 @@ function rawPropertyLines(source: string): number[] {
 /**
  * Resolving a tint at all. A painter is handed its own-pixel tint
  * (`NativeControlComponentProps.tint`). Every hook that computes one sits above
- * it, `useControlOwnTint` included, since only the walker holds its input.
+ * it, `useCanvasItemState` included, since only the walker holds its input.
  */
 function wideTintLines(source: string): number[] {
-  return offendingLines(
-    source,
-    /\buseCanvasItemTint\b|\buseControlTint\b|\buseControlOwnTint\b/,
-    EXEMPT_MARKER
-  );
+  return offendingLines(source, /\buseCanvasItemTint\b|\buseCanvasItemState\b/, EXEMPT_MARKER);
 }
 
 /**
@@ -144,9 +140,8 @@ describe('Control painter view conformance', () => {
     expect(wideTintLines('  const tint = useCanvasItemTint({ modulate: WHITE, self_modulate: s });')).toEqual(
       [1]
     );
-    expect(wideTintLines('  const tint = useControlTint(a, b);')).toEqual([1]);
     // The walker calls this hook. A painter never does.
-    expect(wideTintLines('  const tint = useControlOwnTint(inherited, solveNode);')).toEqual([1]);
+    expect(wideTintLines('  const { tint } = useCanvasItemState(fields);')).toEqual([1]);
     expect(wideTintLines('  const { tint } = props;')).toEqual([]);
     // The module stays importable: `richtextlabel` needs `multiplyModulate`.
     expect(wideTintLines("import { multiplyModulate } from '../../canvasItemModulate';")).toEqual([]);

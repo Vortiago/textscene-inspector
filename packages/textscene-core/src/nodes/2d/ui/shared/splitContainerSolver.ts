@@ -8,6 +8,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
+import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { defineChannel } from '../../../../r3f/controls/native/solveHandoff';
@@ -339,22 +340,25 @@ export function splitGrabberThemeKey(nativeType: string, vertical: boolean): str
   return nativeType === 'SplitContainer' ? (vertical ? 'v_grabber' : 'h_grabber') : 'grabber';
 }
 
-/** `hsplitter.svg`/`vsplitter.svg`'s authored size (`native/themeIcons.ts`): 8px along the split axis, 48px across it. */
-function splitGrabberVendoredSize(vertical: boolean): Vector2 {
-  return vertical ? { x: 48, y: 8 } : { x: 8, y: 48 };
+/** `hsplitter.svg`/`vsplitter.svg`'s authored size (`native/themeIcons.ts`): 8px along the split axis, 48px across it, at the theme scale. */
+function splitGrabberVendoredSize(vertical: boolean, scale: number): Vector2 {
+  return scaledIconSizeOf(vertical ? { x: 48, y: 8 } : { x: 8, y: 48 }, scale);
 }
 
 /** The grabber icon's resolved size: themed (`SolveNode.textureSlots`, keyed by `splitGrabberThemeKey`) if a Theme touched it, else the vendored default. */
 export function splitGrabberIconSize(
   nativeType: string,
   vertical: boolean,
-  textureSlots: Readonly<Record<string, Vector2 | null>>
+  textureSlots: Readonly<Record<string, Vector2 | null>>,
+  scale: number
 ): Vector2 {
-  return textureSlots[splitGrabberThemeKey(nativeType, vertical)] ?? splitGrabberVendoredSize(vertical);
+  return (
+    textureSlots[splitGrabberThemeKey(nativeType, vertical)] ?? splitGrabberVendoredSize(vertical, scale)
+  );
 }
 
 function separationOf(n: SolveNode, ctx: SolveContext, vertical: boolean): number {
-  const iconSize = splitGrabberIconSize(n.node.type, vertical, n.textureSlots);
+  const iconSize = splitGrabberIconSize(n.node.type, vertical, n.textureSlots, ctx.theme.scale);
   // The along-axis extent only: `_get_separation`'s `MAX(theme_cache.separation,
   // vertical ? g->get_height() : g->get_width())` (`split_container.cpp:314-316`).
   const grabberExtent = vertical ? iconSize.y : iconSize.x;

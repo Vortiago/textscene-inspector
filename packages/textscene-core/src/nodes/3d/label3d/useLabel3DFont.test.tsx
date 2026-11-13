@@ -3,7 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TscnInternalResource } from '../../../parser/types';
 import { testBitmapMetrics } from '../../../r3f/controls/native/text/bitmapFontMetrics.testkit';
-import { withFallbacks } from '../../../r3f/controls/native/text/fontMetrics';
+import { withFallbacks, type FontMetrics } from '../../../r3f/controls/native/text/fontMetrics';
 import { settleUnrelatedFontLoad } from '../../../r3f/testing/settleFontWork';
 import { TEST_SCENE_FONT_METRICS } from '../../../r3f/controls/native/testing/sceneFontMetrics';
 
@@ -115,6 +115,15 @@ function settledMetrics(
   });
 }
 
+/** happy-dom has no `FontFace`, so no font file settles to a canvas face unless the loader says so. */
+async function importSettlingTo(face: FontMetrics) {
+  vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    peekSettledSceneFontMetrics: () => face,
+  }));
+  return importModules();
+}
+
 async function settle() {
   await act(async () => {
     for (let pass = 0; pass < 6; pass++) await new Promise((resolve) => setTimeout(resolve, 0));
@@ -197,12 +206,7 @@ describe('useLabel3DFont outlines', () => {
   });
 
   it('is ready, with no outlines, for an unvaried canvas face', async () => {
-    // happy-dom has no `FontFace`, so no font file settles to a canvas face unless the loader says so.
-    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
-      ...(await importOriginal<object>()),
-      peekSettledSceneFontMetrics: () => FILE_FACE,
-    }));
-    modules = await importModules();
+    modules = await importSettlingTo(FILE_FACE);
     const { result } = renderMetrics(undefined);
 
     await settle();
@@ -212,11 +216,7 @@ describe('useLabel3DFont outlines', () => {
 
   it('is the bitmap face of a BMFont, which draws from its page images and not the bundled font', async () => {
     const bitmap = testBitmapMetrics();
-    vi.doMock('../../../r3f/controls/native/text/sceneFontLoader', async (importOriginal) => ({
-      ...(await importOriginal<object>()),
-      peekSettledSceneFontMetrics: () => bitmap,
-    }));
-    modules = await importModules();
+    modules = await importSettlingTo(bitmap);
     const { result } = renderMetrics('SubResource("plain")');
 
     await settle();

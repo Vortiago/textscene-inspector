@@ -10,11 +10,15 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
+import {
+  flatCornerDetail,
+  flatStyleBox as makeFlatStyleBox,
+  ZERO_SIDES,
+} from '../../../../r3f/controls/native/styleBoxFlat';
+import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   controlSolverRegistry,
@@ -28,23 +32,18 @@ import type { GraphNodeProperties, GraphNodeSlot } from './types';
 import { lightened } from '../../../../godot/math/color';
 import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
-import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
-
-const ZERO_MARGIN = { left: 0, top: 0, right: 0, bottom: 0 };
 
 /** `graph_node.cpp` theme type variation for its internal title Label: `graph_node.cpp:1328`. */
 export const GRAPH_NODE_TITLE_VARIATION = 'GraphNodeTitleLabel';
 
-/** `GraphNodeTitleLabel`'s own `font_color` (`default_theme.cpp:819`). */
-export const GRAPH_NODE_TITLE_DEFAULT_COLOR = CONTROL_FONT_COLOR;
-
 function flatBox(
   bgColor: Rgba,
   margin: { left: number; top: number; right: number; bottom: number },
-  cornerRadius: number
+  cornerRadius: number,
+  cornerDetail: number
 ): StyleBoxFlatData {
-  return makeFlatStyleBox(bgColor, { contentMargin: margin, cornerRadius });
+  return makeFlatStyleBox(bgColor, { contentMargin: margin, cornerRadius, cornerDetail });
 }
 
 /**
@@ -55,20 +54,24 @@ function flatBox(
  */
 function defaultStyles(theme: NativeTheme) {
   // `make_flat_stylebox(style_normal_color, 18, 12, 18, 12)` scales literal margins,
-  // not `default_margin` (4). `NativeTheme` holds no raw scale, so it comes from
-  // `theme.contentMargin` (`Math.round(DEFAULT_CONTENT_MARGIN * scale)`), exact where
-  // that rounding is lossless, as at each scale the previewer's UI offers.
-  const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
+  // not `default_margin` (4).
+  const { scale } = theme;
   const panelMargin = {
     left: Math.round(18 * scale),
     top: Math.round(12 * scale),
     right: Math.round(18 * scale),
     bottom: Math.round(12 * scale),
   };
-  const panel = flatBox(theme.styleFill.normal, panelMargin, theme.cornerRadius);
+  const cornerDetail = flatCornerDetail(DEFAULT_CORNER_RADIUS, scale);
+  const panel = flatBox(theme.styleFill.normal, panelMargin, theme.cornerRadius, cornerDetail);
   // `graphn_sb_titlebar_selected = graphnode_normal->duplicate()` then
   // `set_bg_color(...)`: clones the panel's own margins, not the titlebar's.
-  const titlebarSelected = flatBox({ r: 1.0, g: 0.625, b: 0.625, a: 0.6 }, panelMargin, theme.cornerRadius);
+  const titlebarSelected = flatBox(
+    { r: 1.0, g: 0.625, b: 0.625, a: 0.6 },
+    panelMargin,
+    theme.cornerRadius,
+    cornerDetail
+  );
   const titlebar = flatBox(
     lightened(theme.styleFill.normal, 0.3),
     {
@@ -77,10 +80,11 @@ function defaultStyles(theme: NativeTheme) {
       right: theme.contentMargin,
       bottom: theme.contentMargin,
     },
-    theme.cornerRadius
+    theme.cornerRadius,
+    cornerDetail
   );
   // `make_empty_stylebox(0, 0, 0, 0)`: draws nothing, zero margin.
-  const slot = flatBox({ r: 0, g: 0, b: 0, a: 0 }, ZERO_MARGIN, 0);
+  const slot = flatBox({ r: 0, g: 0, b: 0, a: 0 }, ZERO_SIDES, 0, flatCornerDetail(0, scale));
   return { panel, panelSelected: panel, titlebar, titlebarSelected, slot };
 }
 
@@ -95,12 +99,11 @@ export function graphNodeStyles(n: SolveNode, theme: NativeTheme) {
   };
 }
 
-/** `theme_override_constants/separation`, else `Math.round(2 * scale)` (`default_theme.cpp`, GraphNode's own `separation`): scale recovered as `defaultStyles`'s own doc explains. */
+/** `theme_override_constants/separation`, else `Math.round(2 * scale)` (`default_theme.cpp`, GraphNode's own `separation`). */
 function separationOf(n: SolveNode, theme: NativeTheme): number {
   const override = n.constants.separation;
   if (override !== undefined) return override;
-  const scale = theme.contentMargin / DEFAULT_CONTENT_MARGIN;
-  return Math.round(2 * scale);
+  return Math.round(2 * theme.scale);
 }
 
 function hFlagsOf(n: SolveNode): number {
@@ -129,12 +132,7 @@ function graphNodeEffectiveSlot(slots: Map<number, GraphNodeSlot>, rawIndex: num
 
 export function graphNodeTitleTextMin(n: SolveNode, theme: NativeTheme): Vector2 {
   const props = n.node.properties as GraphNodeProperties;
-  const fontTheme = resolveTitleFontTheme(
-    n,
-    GRAPH_NODE_TITLE_VARIATION,
-    theme.fontSize,
-    GRAPH_NODE_TITLE_DEFAULT_COLOR
-  );
+  const fontTheme = resolveTitleFontTheme(n, GRAPH_NODE_TITLE_VARIATION, theme.fontSize);
   return titleTextMinimumSize(props.title ?? '', fontTheme);
 }
 

@@ -35,6 +35,7 @@ import type { Vector2 } from '../../../../godot/math/vector';
 import type { RichTextReveal } from './visibleCharacters';
 import { AutowrapMode, VisibleCharactersBehavior } from '../../../../godot/text/textServerEnums';
 import type { EnumValue } from '../../../../godot/classdb/enumNames.js';
+import { controlProps } from '../control/testing/controlProps';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
@@ -354,11 +355,11 @@ describe('richTextLabelMinimumSize — the faces of [b] and [i] spans', () => {
 describe('richTextLabelTextTheme', () => {
   it('reads the normal_font_size and default_color overrides', () => {
     const red = { r: 1, g: 0, b: 0, a: 1 };
-    const props = {
+    const props = controlProps({
       name: 'RTL',
       ...PARSED_DEFAULTS,
       themeOverrideFontSizes: { normal_font_size: 20 },
-    } as RichTextLabelProperties;
+    });
     const n = node({}, { colors: { default_color: red } });
     expect(richTextLabelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
       fontSizePx: 20,
@@ -367,11 +368,11 @@ describe('richTextLabelTextTheme', () => {
   });
 
   it("ignores Label's font_size and font_color keys", () => {
-    const props = {
+    const props = controlProps({
       name: 'RTL',
       ...PARSED_DEFAULTS,
       themeOverrideFontSizes: { font_size: 20 },
-    } as RichTextLabelProperties;
+    });
     const n = node({}, { colors: { font_color: { r: 1, g: 0, b: 0, a: 1 } } });
     expect(richTextLabelTextTheme(n, props, { theme: nativeTheme(1) })).toEqual({
       fontSizePx: 16,
@@ -542,13 +543,13 @@ describe('styledTextRuns', () => {
     it('an explicit bold_font_size override wins over the fallback', () => {
       const runs = styledTextRuns(
         node({}),
-        {
+        controlProps({
           name: 'RTL',
           ...PARSED_DEFAULTS,
           text: '[b]x[/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: 24 },
-        },
+        }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -559,13 +560,13 @@ describe('styledTextRuns', () => {
     it('a scene that ALSO overrides bold_font_size to match normal_font_size closes the gap (the fixture used to prove this against real Godot)', () => {
       const runs = styledTextRuns(
         node({}),
-        {
+        controlProps({
           name: 'RTL',
           ...PARSED_DEFAULTS,
           text: '[b]x[/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: NORMAL },
-        },
+        }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -576,13 +577,13 @@ describe('styledTextRuns', () => {
     it('an italics_font_size override applies only to italic-only runs, not to bold-only ones', () => {
       const runs = styledTextRuns(
         node({}),
-        {
+        controlProps({
           name: 'RTL',
           ...PARSED_DEFAULTS,
           text: '[b]x[/b][i]y[/i]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { italics_font_size: 20 },
-        },
+        }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -594,13 +595,13 @@ describe('styledTextRuns', () => {
     it('[b][i] combined reads bold_italics_font_size, NOT bold_font_size or italics_font_size', () => {
       const runs = styledTextRuns(
         node({}),
-        {
+        controlProps({
           name: 'RTL',
           ...PARSED_DEFAULTS,
           text: '[b][i]x[/i][/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: 20, italics_font_size: 22, bold_italics_font_size: 30 },
-        },
+        }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -657,13 +658,13 @@ describe('styledTextRuns', () => {
       };
       const runs = styledTextRuns(
         node({}, { themeChain: [theme] }),
-        {
+        controlProps({
           name: 'RTL',
           ...PARSED_DEFAULTS,
           text: '[b]x[/b]',
           bbcodeEnabled: true,
           themeOverrideFontSizes: { bold_font_size: 24 },
-        },
+        }),
         WHITE,
         NORMAL,
         FALLBACK
@@ -1969,7 +1970,7 @@ describe('RichTextLabel paragraph direction', () => {
   const INHERITED = 3;
 
   function runsOf(props: Partial<RichTextLabelProperties>, overrides: Partial<SolveNode> = {}) {
-    const all = { name: 'RTL', ...PARSED_DEFAULTS, bbcodeEnabled: true, ...props };
+    const all = { ...controlProps({ name: 'RTL', ...PARSED_DEFAULTS, bbcodeEnabled: true }), ...props };
     return styledTextRuns(node(all, overrides), all, WHITE, FONT_SIZE, FONT_SIZE);
   }
 

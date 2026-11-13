@@ -12,7 +12,9 @@ renders_as: one term over the whole light buffer that every lit CanvasItem multi
 DirectionalLight2D lights the whole canvas with `color` and `energy`, and draws nothing
 itself. It reaches every lit item on its canvas layers whatever the item's `light_mask` or
 `z_index`. The previewer adds it to the light buffer a PointLight2D uses. The three panels
-take one warm light, and the clear colour below them takes none.
+take one warm light, and the clear colour below them takes none. In a `use_hdr_2d` canvas the light
+adds to the linear albedo with no clamp, and its colour stays as authored (`canvas.glsl:715-760`).
+The SubViewport sheet shows it.
 
 ## Hard shadows: a parallel shadow map
 <!-- compare: image=unit-directionallight2d-shadow status=done fixture=unit-directionallight2d-shadow.tscn -->
@@ -35,6 +37,20 @@ the viewport's camera. Every occluder casts on every lit item: the directional p
 `shadow_filter = PCF5` averages five taps across the parallel map. The taps keep one width
 along the whole band, unlike a point light's penumbra, which widens with distance.
 
+## An occluder end on a bin centre
+<!-- compare: image=unit-directionallight2d-shadow-end-on-bin status=done fixture=unit-directionallight2d-shadow-end-on-bin.tscn -->
+
+An end that lands exactly on a bin centre covers that bin only from its left, the rasteriser's
+top-left rule, as on a PointLight2D's map. Here the end is the right side of the occluder, so the
+shadow stops one column short of it.
+
+## The shadow atlas size
+<!-- compare: image=unit-directionallight2d-shadow-atlas-size status=done fixture=shadow-atlas-size/unit-directionallight2d-shadow-atlas-size.tscn -->
+
+`rendering/2d/shadow_atlas/size` sets the bins in the parallel map, 2048 by default. A smaller
+size makes each PCF tap wider, so the penumbra widens. The previewer reads the setting and builds the
+map to that size.
+
 ## The eight-light cap and CanvasLayers
 <!-- compare: image=unit-directionallight2d-canvas-layer-cap status=done fixture=unit-directionallight2d-canvas-layer-cap.tscn -->
 
@@ -55,7 +71,8 @@ the square untinted by them.
 
 `height` tilts the light from the canvas plane, 0, toward the viewer, 1. A plain Sprite2D takes it
 head-on whatever the height. Two normal-mapped ones take it by their normals: Flat tilts to +x, and
-Dome sweeps from -x to +x. Each lands on Godot.
+Dome sweeps from -x to +x. Each lands on Godot. A Polygon2D, Line2D, AnimatedSprite2D,
+CPUParticles2D, MeshInstance2D, TileMapLayer or TileMap takes a normal map the same way.
 
 ## Linting
 

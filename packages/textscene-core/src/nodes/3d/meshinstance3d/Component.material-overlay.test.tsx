@@ -107,13 +107,23 @@ describe('MeshInstance3D — material_overlay', () => {
     expect(which(drawn[1]!)).toBe('overlay');
   });
 
-  it('draws the overlay after the surface, whichever pass they land in', async () => {
-    const drawn = meshes(await render({ materialOverlay: 'SubResource("Mat_overlay")' }));
+  // Explicit orders, not three's sort tie-breaks: those fall back to object or material id,
+  // creation order, which a re-parse can invert by remounting one material and not the other.
+  it('draws an opaque overlay after its opaque surface', async () => {
+    const drawn = meshes(await render({ materialOverlay: 'SubResource("Mat_node")' }));
 
-    // Explicit, not left to three's sort tie-breaks: those fall back to object or
-    // material id, creation order, which a re-parse can invert by remounting one
-    // material and not the other.
     expect(drawn[1]!.renderOrder).toBeGreaterThan(drawn[0]!.renderOrder);
+  });
+
+  it('draws an alpha-pass overlay before its alpha-pass surface, as Godot sorts the two', async () => {
+    const drawn = meshes(
+      await render({
+        materialOverride: 'SubResource("Mat_overlay")',
+        materialOverlay: 'SubResource("Mat_overlay")',
+      })
+    );
+
+    expect(drawn[1]!.renderOrder).toBeLessThan(drawn[0]!.renderOrder);
   });
 
   it('leaves shadow casting to the surface it covers', async () => {

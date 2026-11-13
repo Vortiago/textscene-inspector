@@ -1,14 +1,6 @@
-/**
- * MultiMeshInstance3D draws nothing, so the badge reads "not implemented". The
- * GeometryInstance3D base still mounts, for `visible`, the workspace split and the scene cull.
- */
+/** MultiMeshInstance3D draws its mesh at every drawn instance of its MultiMesh. */
 
 import { nodeComponentRegistry } from '../../../r3f/NodeComponentRegistry';
-import { undrawnGeometryInstance } from '../geometryinstance3d/Component';
-import { useMultiMeshInstance3DAabb } from './ownAabb';
+import { MultiMeshInstance3D } from './Component';
 
-nodeComponentRegistry.register({
-  typeName: 'MultiMeshInstance3D',
-  Component: undrawnGeometryInstance(useMultiMeshInstance3DAabb),
-  renderIntent: 'pending',
-});
+nodeComponentRegistry.register({ typeName: 'MultiMeshInstance3D', Component: MultiMeshInstance3D });

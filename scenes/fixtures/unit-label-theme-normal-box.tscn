@@ -1,0 +1,111 @@
+[gd_scene load_steps=3 format=3 uid="uid://unitlabelthemenorm"]
+
+; A Theme gives Label a `normal` box with a different margin on each side (label.cpp:141-142,472-512,591-616,757-775,983).
+; The box draws under the text, adds its minimum size in a container, narrows the wrap width, and offsets the
+; lines: left and right alignment take a margin and centring takes none. HeaderSmall is a Label variation, so it
+; finds the same box. The Theme is the one variable.
+
+[sub_resource type="StyleBoxFlat" id="Label_normal"]
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 14.0
+content_margin_bottom = 4.0
+bg_color = Color(0.5, 0.25, 0.1, 1)
+
+[sub_resource type="Theme" id="Theme_label"]
+Label/styles/normal = SubResource("Label_normal")
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+theme = SubResource("Theme_label")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+color = Color(0.12, 0.12, 0.2, 1)
+
+[node name="Left" type="Label" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 168.0
+offset_bottom = 68.0
+text = "Left top"
+
+[node name="Right" type="Label" parent="."]
+layout_mode = 0
+offset_left = 176.0
+offset_top = 8.0
+offset_right = 336.0
+offset_bottom = 68.0
+text = "Right top"
+horizontal_alignment = 2
+
+[node name="Centre" type="Label" parent="."]
+layout_mode = 0
+offset_left = 344.0
+offset_top = 8.0
+offset_right = 504.0
+offset_bottom = 68.0
+text = "Centre"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BottomRight" type="Label" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 76.0
+offset_right = 168.0
+offset_bottom = 136.0
+text = "Bottom right"
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="Wrapped" type="Label" parent="."]
+layout_mode = 0
+offset_left = 176.0
+offset_top = 76.0
+offset_right = 336.0
+offset_bottom = 156.0
+text = "A line that wraps inside the narrower width"
+autowrap_mode = 3
+
+[node name="Filled" type="Label" parent="."]
+layout_mode = 0
+offset_left = 344.0
+offset_top = 76.0
+offset_right = 504.0
+offset_bottom = 156.0
+text = "Fill both ways across this box"
+horizontal_alignment = 3
+vertical_alignment = 3
+autowrap_mode = 3
+
+[node name="Header" type="Label" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 144.0
+offset_right = 168.0
+offset_bottom = 204.0
+theme_type_variation = &"HeaderSmall"
+text = "Header"
+
+[node name="Row" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 212.0
+offset_right = 8.0
+offset_bottom = 212.0
+
+[node name="First" type="Label" parent="Row"]
+layout_mode = 2
+text = "Row one"
+
+[node name="Second" type="Label" parent="Row"]
+layout_mode = 2
+text = "Row two"

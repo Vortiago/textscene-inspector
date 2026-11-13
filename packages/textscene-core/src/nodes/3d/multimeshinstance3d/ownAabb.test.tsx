@@ -5,7 +5,7 @@ import type { TscnInternalResource, TscnNode } from '../../../parser/types';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../resources/testing/createFakeResourceLoader';
-import { useMultiMeshInstance3DAabb } from './ownAabb';
+import { useMultiMeshInstance3D } from './ownAabb';
 
 const BOX: TscnInternalResource = { id: 'box', type: 'BoxMesh', data: {} };
 
@@ -21,7 +21,7 @@ function renderAabb(resources: TscnInternalResource[]) {
     children: [],
     properties: {},
   };
-  return renderHook(() => useMultiMeshInstance3DAabb(node), {
+  return renderHook(() => useMultiMeshInstance3D(node).ownAabb, {
     wrapper: ({ children }: { children: ReactNode }) => (
       <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
         <SceneResourcesProvider internalResources={resources}>{children}</SceneResourcesProvider>
@@ -30,7 +30,7 @@ function renderAabb(resources: TscnInternalResource[]) {
   }).result.current;
 }
 
-describe('useMultiMeshInstance3DAabb', () => {
+describe('useMultiMeshInstance3D', () => {
   it('bounds the mesh under each instance transform', () => {
     const data = {
       transform_format: '1',

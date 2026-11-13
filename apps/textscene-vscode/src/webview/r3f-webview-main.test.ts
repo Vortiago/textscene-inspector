@@ -17,6 +17,7 @@ interface CapturedShellProps {
   initialViewportMode?: '2D' | '3D' | undefined;
   onNodeReveal?: (path: string, node: TscnNode) => void;
   onCaptureStateChange?: (state: PreviewCaptureState) => void;
+  isVisible?: boolean;
 }
 
 interface CapturedLogAdapter {
@@ -262,6 +263,25 @@ describe('initial viewport mode threading (__TEXTSCENE_CONFIG__)', () => {
     await mountFresh({ viewportMode: '2D' });
 
     expect(captured.shellProps?.initialViewportMode).toBe('2D');
+  });
+});
+
+describe('preview visibility', () => {
+  it('shows the preview until the host says otherwise', async () => {
+    await mountFresh();
+
+    expect(captured.shellProps?.isVisible).toBeUndefined();
+  });
+
+  it('hands the shell the visibility the host posts, hidden and shown again', async () => {
+    await mountFresh();
+
+    dispatch({ type: 'previewVisibility', isVisible: false });
+    await waitFor(() => captured.shellProps?.isVisible === false);
+    dispatch({ type: 'previewVisibility', isVisible: true });
+    await waitFor(() => captured.shellProps?.isVisible === true);
+
+    expect(captured.shellProps?.isVisible).toBe(true);
   });
 });
 

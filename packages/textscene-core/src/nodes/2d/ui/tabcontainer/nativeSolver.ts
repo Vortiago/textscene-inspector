@@ -19,6 +19,7 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { isTopLevelItem } from '../../../../r3f/canvasPaintOrder';
+import { internalChildThemeItems, type InternalThemeItems } from '../../../../r3f/controls/native/themeItems';
 import { isPromotedControl, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -28,7 +29,6 @@ import {
   TAB_ALIGNMENT_RIGHT,
   TAB_BAR_THEME_FONT_KEY,
   TAB_BAR_THEME_FONT_SIZE_KEY,
-  reconstructThemeScale,
   isTabUnselectable,
   resolveTabBarCurrentTab,
   tabBarMinimumSize,
@@ -37,6 +37,7 @@ import {
   resolveNodeFont,
   resolveNodeFontSizePx,
 } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { parseControlCanvasItem } from '../control/parser';
 import type { TabBarProperties, TabBarTabProperties } from '../tabbar/types';
 import type { TabContainerProperties, TabContainerTabOverride } from './types';
 
@@ -132,10 +133,16 @@ function internalTabBarThemeConstants(
   };
 }
 
+/** The bar icons the container does not push: `_on_theme_changed` sets the others (`tab_container.cpp:306-312`). */
+function tabBarOwnIcons(barItems: InternalThemeItems): SolveNode['icons'] {
+  return barItems.icons.close ? { close: barItems.icons.close } : {};
+}
+
 /**
  * A synthetic `SolveNode` for TabContainer's internal `TabBar`, with the scope of `n`. The bar is no
  * scene node (`memnew`d at `tab_container.cpp:1280`), and type `'TabBar'` reaches `tabBarMinimumSize`.
- * `tabCloseDisplayPolicy` is `SHOW_NEVER` and `maxTabWidth` 0, since TabContainer exposes neither.
+ * `tabCloseDisplayPolicy` is `SHOW_NEVER` and `maxTabWidth` 0, since TabContainer exposes neither,
+ * and its CanvasItem fields hold the Godot defaults.
  */
 export function buildInternalTabBarNode(
   n: SolveNode,
@@ -145,6 +152,7 @@ export function buildInternalTabBarNode(
 ): SolveNode {
   const barProps: TabBarProperties = {
     name: n.node.name,
+    ...parseControlCanvasItem({}, n.node.name),
     tabs: derivedTabs,
     currentTab: tabContainerCurrentTab(props, derivedTabs.length),
     tabAlignment: props.tabAlignment,
@@ -162,12 +170,14 @@ export function buildInternalTabBarNode(
       ),
     },
   };
+  const barItems = internalChildThemeItems(n, 'TabBar');
   return {
     ...n,
     node: { ...n.node, type: 'TabBar', properties: barProps, children: [] },
     children: [],
-    // `constants` remaps TabContainer's keys (`internalTabBarThemeConstants`). `colors` and
-    // `styleBoxes`, spread from `n`, use the same key names, so they need no remap.
+    // The container pushes every other item the bar reads (`tab_container.cpp:306-343`), so a bar
+    // theme entry for one never applies. Only the close icon comes from the bar's own lookup.
+    icons: { ...tabBarOwnIcons(barItems), ...n.icons },
     constants: internalTabBarThemeConstants(n.constants, theme),
     // `tab_bar->add_theme_font_override(font, theme_cache.tab_font)` (`:338`),
     // the font twin of the size push above.
@@ -205,7 +215,8 @@ export function tabHeaderHeight(barMinHeightPx: number, tabbarMargin: StyleMargi
  * `TabContainer::_update_margins` (`:405-460`) and `_repaint`'s vertical anchoring
  * (`:362-373`), as the rect the internal TabBar holds. Under `is_layout_rtl()` the margins
  * swap (`:412`) and `_size_changed` mirrors the inherited-direction bar (`control.cpp:1785-1787`),
- * so authored margins stay on their sides and `side_margin` moves to the opposite edge.
+ * so authored margins stay on their sides and `side_margin` moves to the opposite edge. `sideMargin` is
+ * the margin in effect: `resolveTabContainerStrip` returns 0 once RIGHT alignment reclaims it (`:450`).
  */
 export function tabBarRect(
   containerRect: Rect2,
@@ -224,9 +235,6 @@ export function tabBarRect(
   if (alignment === TAB_ALIGNMENT_LEFT) {
     offsetLeft = leftMargin + sideMargin;
   } else if (alignment === TAB_ALIGNMENT_RIGHT) {
-    // No popup is modelled, so the overflow case that reclaims `side_margin` (`get_clip_tabs() &&
-    // (offset_buttons_visible || total_tabs_width + side_margin > size.width)`, `:450`) is not
-    // reproduced. comparison.md records it.
     offsetRight = -rightMargin - sideMargin;
   }
 
@@ -275,7 +283,7 @@ const tabContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
     // `side_margin` widens the minimum only for LEFT or RIGHT alignment. No popup is
     // modelled, so the RIGHT branch's popup exception never applies (`tab_container.cpp:1039-1042`).
     if (alignment !== TAB_ALIGNMENT_CENTER) {
-      width += Math.round(SIDE_MARGIN_LITERAL * reconstructThemeScale(ctx.theme));
+      width += Math.round(SIDE_MARGIN_LITERAL * ctx.theme.scale);
     }
   }
 

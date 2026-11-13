@@ -47,4 +47,15 @@ export interface Polygon2DProperties extends Node2DProperties {
   textureScale: Vector2;
   /** UV rotation in radians, applied before the offset. */
   textureRotation: number;
+  /** The raw `NodePath("…")` of the Skeleton2D that deforms the polygon, from the polygon. */
+  skeleton?: string;
+  /** The bones that deform the polygon, in authored order. Empty draws the polygon undeformed. */
+  bones: Polygon2DBone[];
+}
+
+/** One `bones` entry: a bone path from the skeleton, and one weight for each vertex. */
+export interface Polygon2DBone {
+  /** The raw `NodePath("…")`, or the bare path text it converts from. */
+  path: string;
+  weights: Float32Array;
 }

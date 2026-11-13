@@ -37,8 +37,7 @@ interface Memoised<T> {
 // from `text/sceneFontLoader.ts`.
 // A `SolveNode` survives a theme change, so the key needs the theme too.
 export function defineShare<T>(compute: Share<T>): Share<T> {
-  // Theme identity is stable: both builders memoise it on the scale alone
-  // (`ControlCanvasLayer.tsx:65`, `ControlRasterPass.tsx:129`).
+  // Theme identity is stable: `nativeTheme` builds one theme per scale.
   const byNode = new WeakMap<ShareNode, WeakMap<NativeTheme, Memoised<T>>>();
   return (n, theme) => {
     let byTheme = byNode.get(n);

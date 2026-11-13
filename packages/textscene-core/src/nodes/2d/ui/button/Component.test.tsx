@@ -13,9 +13,6 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanvasWalker';
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
-import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
-import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
-import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import type { ButtonProperties } from './types';
 import { Button } from './Component';
 import { buttonMinimumSize } from './nativeSolver';
@@ -24,10 +21,20 @@ import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import {
+  findIconMeshes,
+  findTextMesh,
+  OWN_ICON_REF,
+  OWN_ICON_SCOPE,
+  renderUnloaded,
+  renderWithOwnIcon,
+  worldPosition,
+} from '../../../../r3f/controls/native/testing/ownIcon';
+import {
   bundledRunOf,
   bundledRunMeshes,
   bundledRuns,
   inkedGlyphCount,
+  inkedGlyphCounts,
 } from '../../../../r3f/controls/native/testing/bundledRunStub';
 import { findCanvasTextMesh } from '../../../../r3f/controls/native/testing/canvasTextMesh';
 
@@ -43,6 +50,9 @@ const THEME = nativeTheme(1);
 const RECT: Rect2 = { x: 0, y: 0, w: 120, h: 32 };
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
+
+/** How many glyphs of the first run of the bundled face draw ink. */
+const inkedCount = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
 
 function styleBox(overrides: Partial<StyleBoxFlatData> = {}): StyleBoxFlatData {
   return {
@@ -70,16 +80,8 @@ function solveNode(
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
   const node: TscnNode = controlNode('MyButton', 'Button', { name: 'MyButton', ...properties });
-  return { ...emptySolveNode(), path: 'MyButton', node, styleBoxes, resources: SCOPE };
+  return { ...emptySolveNode(), path: 'MyButton', node, styleBoxes, resources: OWN_ICON_SCOPE };
 }
-
-const ICON_PATH = 'res://icon.png';
-
-/** The scene scope a painter resolves its own refs in. Id `1` is the icon. */
-const SCOPE = {
-  externalResources: [{ id: '1', type: 'Texture2D', path: ICON_PATH }],
-  internalResources: [],
-};
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute, and `<TextRun>` and `<ControlQuad>` do not. */
 function findChromeMesh(scene: Rendered['scene']) {
@@ -87,19 +89,6 @@ function findChromeMesh(scene: Rendered['scene']) {
     .findAllByType('Mesh')
     .map((m) => m.instance as THREE.Mesh)
     .find((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined);
-}
-
-/**
- * The icon's `PlaneGeometry`, found by `.parameters.width`, which the chrome and text
- * geometries lack. `instanceof THREE.PlaneGeometry` fails with two three.js copies.
- */
-function findIconMesh(scene: Rendered['scene']) {
-  return scene
-    .findAllByType('Mesh')
-    .map((m) => m.instance as THREE.Mesh)
-    .find(
-      (m) => (m.geometry as unknown as { parameters?: { width?: number } }).parameters?.width !== undefined
-    );
 }
 
 describe('<Button> (isolated painter contract)', () => {
@@ -222,11 +211,11 @@ describe('<Button> (isolated painter contract)', () => {
 
   it('text_overrun_behavior trims the label to the content box, minus the style margins (button.cpp:424)', async () => {
     const narrow: Rect2 = { x: 0, y: 0, w: 30, h: 32 };
-    const untrimmed = await ReactThreeTestRenderer.create(
+    const whole = await ReactThreeTestRenderer.create(
       <Button
         {...painterEnv()}
         solveNode={solveNode({ text: 'AAAAAAAAAAAA' })}
-        rect={narrow}
+        rect={{ x: 0, y: 0, w: 300, h: 32 }}
         renderOrder={0}
       />
     );
@@ -238,8 +227,36 @@ describe('<Button> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    const inkedCount = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
-    expect(inkedCount(trimmed)).toBeLessThan(inkedCount(untrimmed));
+    expect(inkedCount(trimmed)).toBeLessThan(inkedCount(whole));
+  });
+});
+
+describe('<Button>: the label is cut to its paragraph box whatever clip_text says (TextParagraph::draw, text_paragraph.cpp:925-931)', () => {
+  afterEach(() => {
+    controlSolverRegistry.clear();
+  });
+
+  async function render(properties: Partial<ButtonProperties>, rect: Rect2) {
+    return ReactThreeTestRenderer.create(
+      <Button
+        {...painterEnv()}
+        solveNode={solveNode({ text: 'alpha bravo', ...properties })}
+        rect={rect}
+        renderOrder={0}
+      />
+    );
+  }
+
+  it('draws fewer glyphs than the whole label when the box is narrower than the text', async () => {
+    const whole = await render({}, { x: 0, y: 0, w: 140, h: 32 });
+    const clipped = await render({}, { x: 0, y: 0, w: 60, h: 32 });
+    expect(inkedCount(clipped)).toBeLessThan(inkedCount(whole));
+  });
+
+  it('draws the whole label when the box fits it', async () => {
+    const fitting = await render({ clipText: true }, { x: 0, y: 0, w: 140, h: 32 });
+    const unclipped = await render({}, { x: 0, y: 0, w: 140, h: 32 });
+    expect(inkedCount(fitting)).toBe(inkedCount(unclipped));
   });
 
   it('trims every row of an unwrapped label (text_paragraph.cpp:282-293)', async () => {
@@ -265,82 +282,61 @@ describe('<Button> (isolated painter contract)', () => {
         renderOrder={0}
       />
     );
-    expect(inkedGlyphCounts(renderer.scene)).toEqual([12]);
+    // AUTOWRAP_WORD finds no break in one word, so the untrimmed row is only cut by the draw box.
+    expect(inkedGlyphCounts(renderer.scene)).toEqual([2]);
   });
 });
 
-/** The inked glyphs of each text run, in draw order. */
-function inkedGlyphCounts(scene: Rendered['scene']): number[] {
-  return bundledRuns(scene).map(inkedGlyphCount);
-}
-
-describe('<Button> — icon (ControlQuad), via ResourceLoader/SceneResources', () => {
-  function fakeTexture(w: number, h: number): THREE.Texture {
-    const tex = new THREE.Texture();
-    (tex as unknown as { image: { width: number; height: number } }).image = { width: w, height: h };
-    return tex;
-  }
-
-  async function renderWithIcon(properties: Partial<ButtonProperties>, iconSize: { w: number; h: number }) {
-    const fake = createFakeResourceLoader();
-    fake.textures.seed(ICON_PATH, fakeTexture(iconSize.w, iconSize.h));
-    return ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider externalResources={[{ id: '1', type: 'Texture2D', path: ICON_PATH }]}>
-          <Button
-            {...painterEnv()}
-            solveNode={solveNode({ icon: 'ExtResource("1")', ...properties })}
-            rect={RECT}
-            renderOrder={0}
-          />
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    );
-  }
+describe('<Button>: icon (ControlQuad), via ResourceLoader/SceneResources', () => {
+  const buttonWith = (properties: Partial<ButtonProperties>, renderOrder = 0) => (
+    <Button
+      {...painterEnv()}
+      solveNode={{
+        ...solveNode({ icon: OWN_ICON_REF, ...properties }),
+        textureSize: { x: 16, y: 16 },
+      }}
+      rect={RECT}
+      renderOrder={renderOrder}
+    />
+  );
+  const firstIcon = (renderer: Rendered) => findIconMeshes(renderer.scene)[0];
 
   it('draws no icon quad at all when the node has no icon reference', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <Button {...painterEnv()} solveNode={solveNode({ text: 'Hi' })} rect={RECT} renderOrder={0} />
     );
-    expect(findIconMesh(renderer.scene)).toBeUndefined();
+    expect(firstIcon(renderer)).toBeUndefined();
   });
 
   it('draws the resolved icon texture as a ControlQuad once it loads', async () => {
-    const renderer = await renderWithIcon({}, { w: 16, h: 16 });
-    const mesh = findIconMesh(renderer.scene);
-    expect(mesh).toBeDefined();
-    const material = mesh!.material as THREE.MeshBasicMaterial;
+    const renderer = await renderWithOwnIcon(buttonWith({}), { w: 16, h: 16 });
+    const material = firstIcon(renderer)!.material as THREE.MeshBasicMaterial;
     expect(material.map).not.toBeNull();
   });
 
   it('tints the icon opaque white (icon_normal_color) in the NORMAL state', async () => {
-    const renderer = await renderWithIcon({}, { w: 16, h: 16 });
-    const material = findIconMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
+    const renderer = await renderWithOwnIcon(buttonWith({}), { w: 16, h: 16 });
+    const material = firstIcon(renderer)!.material as THREE.MeshBasicMaterial;
     expect(material.opacity).toBeCloseTo(1, 5);
   });
 
   it('tints the icon to 0.4 alpha (icon_disabled_color) in the DISABLED state', async () => {
-    const renderer = await renderWithIcon({ disabled: true }, { w: 16, h: 16 });
-    const material = findIconMesh(renderer.scene)!.material as THREE.MeshBasicMaterial;
+    const renderer = await renderWithOwnIcon(buttonWith({ disabled: true }), { w: 16, h: 16 });
+    const material = firstIcon(renderer)!.material as THREE.MeshBasicMaterial;
     expect(material.opacity).toBeCloseTo(0.4, 5);
   });
 
   it('forwards renderOrder to the icon mesh too', async () => {
-    const fake = createFakeResourceLoader();
-    fake.textures.seed(ICON_PATH, fakeTexture(16, 16));
-    const renderer = await ReactThreeTestRenderer.create(
-      <ResourceLoaderProvider loader={fake.loader}>
-        <SceneResourcesProvider externalResources={[{ id: '1', type: 'Texture2D', path: ICON_PATH }]}>
-          <Button
-            {...painterEnv()}
-            solveNode={solveNode({ icon: 'ExtResource("1")' })}
-            rect={RECT}
-            renderOrder={9}
-          />
-        </SceneResourcesProvider>
-      </ResourceLoaderProvider>
-    );
-    expect(findIconMesh(renderer.scene)!.renderOrder).toBe(9);
+    const renderer = await renderWithOwnIcon(buttonWith({}, 9), { w: 16, h: 16 });
+    expect(firstIcon(renderer)!.renderOrder).toBe(9);
+  });
+
+  it("lays the label out for the solver's icon size before the texture loads", async () => {
+    const painter = buttonWith({ text: 'Hi' });
+    const unloaded = await renderUnloaded(painter);
+    const loaded = await renderWithOwnIcon(painter, { w: 16, h: 16 });
+    expect(findIconMeshes(unloaded.scene)).toHaveLength(0);
+    expect(worldPosition(findTextMesh(unloaded.scene)!).x).toBe(worldPosition(findTextMesh(loaded.scene)!).x);
   });
 });
 
@@ -371,7 +367,7 @@ describe('<Button> registered through <ControlCanvasWalker> (end-to-end walker p
  * The scene-font (canvas-kind `FontMetrics`) path. Text placement (`button.cpp:233-456`)
  * has nothing font-kind-specific in it.
  */
-describe('<Button> — scene-font (canvas-kind FontMetrics) text path', () => {
+describe('<Button>: scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     controlSolverRegistry.clear();

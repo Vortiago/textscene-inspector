@@ -1,103 +1,35 @@
 /**
- * CheckBox's native (WebGL canvas) rect solver and content layout: `get_minimum_size`, `get_icon_size`
- * and `_notification` (`scene/gui/check_box.cpp`) with the theme defaults
- * (`scene/theme/default_theme.cpp:274-313`). It ports the placement itself: `buttonBase.ts` does not
- * model Button's `_internal_margin` (`Button::_set_internal_margin`, `check_box.cpp:96-101`).
+ * What CheckBox adds to Button (`scene/gui/check_box.cpp`): the check or radio icon it reserves as Button's
+ * `_internal_margin` (`:96-101`) and draws over it (`:107-142`), its minimum size (`:64-79`) and its theme
+ * defaults (`scene/theme/default_theme.cpp:274-313`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type {
-  MinimumSizeFn,
-  SolveContext,
-  TextureSlotRequest,
-  TextureSlotsFn,
-} from '../../../../r3f/controls/native/solverRegistry';
-import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
+import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
+import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import {
-  buttonTextRightShiftPx,
-  centredTextTopPx,
-  fitIconSize,
-  tintColor,
-} from '../../../../r3f/controls/native/buttonBase';
-import {
-  resolveTextTheme,
-  type ResolvedTextTheme,
-  type TextThemeDefaults,
-  type TextThemeKeys,
-} from '../../../../r3f/controls/native/textTheme';
+  BUTTON_DEFAULT_FONT_COLORS,
+  fittedThemedIconSize,
+  buttonNormalBox,
+  buttonTextureSlotsOf,
+  reservingMinimumSizeOf,
+  type ReservingButtonClass,
+} from '../button/nativeSolver';
 import type { CheckBoxIcons } from '../../../../r3f/controls/native/themeIcons';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { CheckBoxProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
-import {
-  CONTROL_FONT_COLOR,
-  CONTROL_FONT_DISABLED_COLOR,
-  CONTROL_FONT_PRESSED_COLOR,
-} from '../../../../godot/scene/theme';
+import type { Rect2 } from '../../../../godot/math/rect2';
+import type { Rgba } from '../../../../godot/math/math';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 
-/**
- * CheckBox's theme font key, `SceneStringName(font)`, registered under CheckBox's own type
- * (`scene/theme/default_theme.cpp:297`), so the lookup never walks to Button's. This module
- * and `Component.tsx` both pass it to `resolveNodeFontMetrics`, so they agree on the font.
- */
-export const CHECKBOX_THEME_FONT_KEY = 'font';
-
-// Re-exported so Component.tsx can build on the shared, Button-generic
-// pieces without importing `buttonBase.ts` a second time under a different name.
-export { fitIconSize, tintColor };
-
-/**
- * `BaseButton::get_draw_mode` (`scene/gui/base_button.cpp:325-358`) without input: `status.hovering`
- * and `status.press_attempt` stay false, so `DRAW_PRESSED` fires exactly when `button_pressed` is true, and `disabled`
- * wins first. Measured with `pnpm ref:godot --mode 2d`: a checked row's label reads (255,255,255),
- * `font_pressed_color`, not the `control_font_color` grey of `DRAW_NORMAL`.
- */
-type CheckBoxDrawState = 'normal' | 'pressed' | 'disabled';
-
-export function resolveCheckBoxDrawState(props: CheckBoxProperties): CheckBoxDrawState {
-  if (props.disabled) return 'disabled';
-  if (props.buttonPressed) return 'pressed';
-  return 'normal';
-}
-
-/** CheckBox's own `font_color` default (`default_theme.cpp:300`). */
-const CHECKBOX_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-/** CheckBox's own `font_pressed_color` default (`default_theme.cpp:301`). */
-const CHECKBOX_DEFAULT_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
-/** CheckBox's own `font_disabled_color` default (`default_theme.cpp:305`). */
-const CHECKBOX_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
-
-const CHECKBOX_THEME_KEYS: Record<CheckBoxDrawState, TextThemeKeys> = {
-  normal: { sizeKey: 'font_size', colorKey: 'font_color' },
-  pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
-  disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
-};
-
-/** Resolves CheckBox's theme font size and colour for `state`: overrides, else the ancestor Theme chain, the theme default or CheckBox's own literal. */
-export function checkBoxTextTheme(
-  n: SolveNode,
-  props: CheckBoxProperties,
-  state: CheckBoxDrawState,
-  ctx: Pick<SolveContext, 'theme'>
-): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color:
-      state === 'disabled'
-        ? CHECKBOX_DEFAULT_DISABLED_FONT_COLOR
-        : state === 'pressed'
-          ? CHECKBOX_DEFAULT_PRESSED_FONT_COLOR
-          : CHECKBOX_DEFAULT_FONT_COLOR,
-  };
-  return resolveTextTheme(n, props, CHECKBOX_THEME_KEYS[state], defaults);
-}
-
-type CheckBoxIconKey = keyof CheckBoxIcons;
+export type CheckBoxIconKey = keyof CheckBoxIcons;
 
 /**
  * `NOTIFICATION_DRAW` (`check_box.cpp:112-131`): a valid `button_group` swaps in the `radio_*`
@@ -116,8 +48,8 @@ export function resolveCheckBoxIconKey(props: CheckBoxProperties): CheckBoxIconK
   return disabled ? 'uncheckedDisabled' : 'unchecked';
 }
 
-/** Every vendored icon shares this authored size (`native/themeIcons.ts`: `checked.svg` et al, 16x16). */
-const CHECKBOX_ICON_NATURAL_SIZE: Vector2 = { x: 16, y: 16 };
+/** Every vendored icon shares this authored size (`native/themeIcons.ts`: `checked.svg` et al, 16x16). The default theme rasterises it at the theme scale. */
+export const CHECKBOX_ICON_NATURAL_SIZE: Vector2 = { x: 16, y: 16 };
 
 /**
  * Each `CheckBoxIconKey` to the Theme item name Godot registers it under (`check_box.cpp:157-164`),
@@ -137,149 +69,81 @@ export const CHECK_BOX_ICON_THEME_NAME: Record<CheckBoxIconKey, string> = {
 const CHECK_BOX_ICON_THEME_NAMES = Object.values(CHECK_BOX_ICON_THEME_NAME);
 
 /**
- * Which of CheckBox's 8 icon slots have a themed answer, for `SolveNode.textureSlots`. The walker
- * has already resolved the names (`SolveNode.icons`), and this turns them into size requests.
+ * Those of CheckBox's 8 icon slots that have a themed answer, for `SolveNode.textureSlots`. The walker has
+ * already resolved the names (`SolveNode.icons`), and this turns them into size requests. PopupMenu draws
+ * the same icons for a checkable item.
  */
-export const checkBoxTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
-  const requests: TextureSlotRequest[] = [];
-  for (const name of CHECK_BOX_ICON_THEME_NAMES) {
-    const themed = themedIcons[name];
-    if (themed) requests.push(themedSlotRequest(name, themed));
-  }
-  return requests;
-};
-
-/**
- * `CheckBox::get_icon_size` (`check_box.cpp:35-62`): the max over all 8 icons, whichever is showing.
- * A slot no theme touched falls back to the vendored default's size, since the default theme
- * registers all 8 (`default_theme.cpp:288-295`).
- */
-export function checkBoxIconNaturalSize(n: Pick<SolveNode, 'textureSlots'>): Vector2 {
-  let w = 0;
-  let h = 0;
-  for (const name of CHECK_BOX_ICON_THEME_NAMES) {
-    const size = n.textureSlots[name] ?? CHECKBOX_ICON_NATURAL_SIZE;
-    w = Math.max(w, size.x);
-    h = Math.max(h, size.y);
-  }
-  return { x: w, y: h };
+export function checkIconSlotRequests(themedIcons: Parameters<typeof themedSlotRequests>[1]) {
+  return themedSlotRequests(CHECK_BOX_ICON_THEME_NAMES, themedIcons);
 }
 
 /**
- * The size Godot draws the current icon at: its own, fitted, at the offset the largest icon sets
- * (`check_box.cpp:137-142`). An icon that reports size 0 draws nothing.
+ * `CheckBox::get_icon_size` (`check_box.cpp:35-62`): the largest of all 8 icons, whichever is showing,
+ * fitted to `icon_max_width`. The default theme registers all 8 (`default_theme.cpp:288-295`).
  */
-export function checkBoxDrawnIconSize(
+function checkBoxFittedIconSize(
   n: Pick<SolveNode, 'textureSlots' | 'constants'>,
-  key: CheckBoxIconKey
+  theme: NativeTheme
 ): Vector2 {
-  const own = n.textureSlots[CHECK_BOX_ICON_THEME_NAME[key]] ?? CHECKBOX_ICON_NATURAL_SIZE;
-  return fitIconSize(own, checkBoxIconMaxWidth(n.constants));
-}
-
-/** `check_v_offset` theme constant default (`default_theme.cpp:309`). */
-const DEFAULT_CHECK_V_OFFSET = 0;
-
-/** `icon_max_width`: CheckBox registers none, so Button's default (`0`, unclamped) applies through the shared `theme_override_constants` key. */
-export function checkBoxIconMaxWidth(constants: SolveNode['constants']): number {
-  return constants.icon_max_width ?? 0;
-}
-
-/** `h_separation`: CheckBox's default (`default_theme.cpp:308`, `round(4*scale)`) equals `theme.separation`. */
-export function checkBoxHSeparation(
-  constants: SolveNode['constants'],
-  ctx: Pick<SolveContext, 'theme'>
-): number {
-  return Math.max(0, constants.h_separation ?? ctx.theme.separation);
-}
-
-/** `check_v_offset`, a `theme_override_constants` key CheckBox reads directly (`check_box.cpp:137`). */
-export function checkBoxCheckVOffset(constants: SolveNode['constants']): number {
-  return constants.check_v_offset ?? DEFAULT_CHECK_V_OFFSET;
+  return fittedThemedIconSize(
+    n,
+    CHECK_BOX_ICON_THEME_NAMES,
+    scaledIconSizeOf(CHECKBOX_ICON_NATURAL_SIZE, theme.scale)
+  );
 }
 
 /**
- * `CheckBox::get_minimum_size` (`check_box.cpp:64-79`): Button's text-only floor plus the check
- * icon's width, and its height floors the result. `padding` is `_get_largest_stylebox_size()`,
- * which for CheckBox is `cbx_empty`'s uniform margin on every state, so both axes double
- * `theme.contentMargin`.
+ * CheckBox as a Button: its font colours equal Button's (`default_theme.cpp:300-305`), its constructor
+ * aligns the text LEFT (`check_box.cpp:174`), and the check is the internal margin of the leading side
+ * (`:96-101`).
  */
-export const checkBoxMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const props = n.node.properties as CheckBoxProperties;
-  const margin = ctx.theme.contentMargin;
-
-  const text = props.text ?? '';
-  const hasText = text.length > 0;
-  const state = resolveCheckBoxDrawState(props);
-  const { fontSizePx } = checkBoxTextTheme(n, props, state, ctx);
-  const fontMetrics = resolveNodeFontMetrics(n, CHECKBOX_THEME_FONT_KEY);
-  // `Button::get_minimum_size` (`button.cpp:492`) reads `paragraph->get_size()`, the ceiled
-  // extent (`text_paragraph.cpp:601-608`, `text_server_adv.cpp:7524-7537`). The icon and
-  // separation are added outside the ceil (`check_box.cpp:63-73`).
-  const measured =
-    hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
-  const textSize = { x: shapedTextSizeWidthPx(measured.x), y: measured.y };
-
-  const iconSize = fitIconSize(checkBoxIconNaturalSize(n), checkBoxIconMaxWidth(n.constants));
-  const hSeparation = checkBoxHSeparation(n.constants, ctx);
-
-  // Godot's guard is `content_size.width > 0 && tex_size.width > 0` (`check_box.cpp:70`): the
-  // measured width, not the authored string. An absent measurer makes `textSize.x` 0, and
-  // `h_separation` must not appear either.
-  const width = 2 * margin + textSize.x + (textSize.x > 0 ? hSeparation : 0) + iconSize.x;
-  const height = 2 * margin + Math.max(textSize.y, iconSize.y);
-
-  return { x: width, y: height };
+export const CHECK_BOX_CLASS: ReservingButtonClass = {
+  fontColors: BUTTON_DEFAULT_FONT_COLORS,
+  textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+  reservedElement: (n, theme) => ({ side: n.rtl ? 'right' : 'left', size: checkBoxFittedIconSize(n, theme) }),
 };
 
-interface CheckBoxContentInput {
-  /** The control's own solved rect size, Godot px. */
-  rectSize: Vector2;
-  /** `cbx_empty`'s uniform content margin, `theme.contentMargin` on all four sides. Every state shares this `StyleBoxEmpty` (`default_theme.cpp:276-277`), so nothing is drawn. */
-  margin: number;
-  /** The check icon's size, already fitted with `fitIconSize`. */
-  iconSize: Vector2;
-  checkVOffset: number;
-  hSeparation: number;
-  hasText: boolean;
-  /** The shaped text's natural (unwrapped) size, ignored when `hasText` is false. */
-  textNaturalSize: Vector2;
-  /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the check to the right edge and the label against it. */
-  rtl: boolean;
-}
+/** Button's `icon`, then the themed check icons. */
+export const checkBoxTextureSlots: TextureSlotsFn = buttonTextureSlotsOf(
+  CHECK_BOX_CLASS,
+  (_node, themedIcons = {}) => checkIconSlotRequests(themedIcons)
+);
 
-interface CheckBoxContentLayout {
-  /** The icon's top-left, local to the control's own top-left, Godot px. */
-  iconPosition: Vector2;
-  /** The text paragraph's box top-left, local Godot px, for `<TextRun>`, which anchors each line at its baseline from there. `null` when there is no text. */
-  textOffset: Vector2 | null;
+/** `CheckBox::get_minimum_size` (`check_box.cpp:64-79`): Button's, with the check reserved beside the content. */
+export const checkBoxMinimumSize: MinimumSizeFn = reservingMinimumSizeOf(CHECK_BOX_CLASS);
+
+/**
+ * Where `CheckBox::_notification` draws the icon `key` in a box of `rectSize` (`check_box.cpp:126-142`):
+ * at the `normal` box's leading margin, whatever the draw state, and at the trailing one under RTL.
+ * `int()` truncates the centring before `check_v_offset` is added (`:137`). The icon draws at its own
+ * fitted size, unrounded, at the offset the largest icon sets.
+ */
+export function checkBoxCheckRect(
+  n: ShareNode,
+  theme: NativeTheme,
+  key: CheckBoxIconKey,
+  rectSize: Vector2
+): Rect2 {
+  const { contentMargin } = buttonNormalBox(n, theme);
+  const reserved = checkBoxFittedIconSize(n, theme);
+  const drawn = fittedThemedIconSize(
+    n,
+    [CHECK_BOX_ICON_THEME_NAME[key]],
+    scaledIconSizeOf(CHECKBOX_ICON_NATURAL_SIZE, theme.scale)
+  );
+  return {
+    x: n.rtl ? rectSize.x - contentMargin.right - reserved.x : contentMargin.left,
+    y: Math.trunc((rectSize.y - reserved.y) / 2) + (n.constants.check_v_offset ?? 0),
+    w: drawn.x,
+    h: drawn.y,
+  };
 }
 
 /**
- * The icon `ofs` (`check_box.cpp:126-133`) and Button's internal-margin reservation
- * (`button.cpp:247-260,444-456`). The internal margin is always the icon's width
- * (`check_box.cpp:96-101`), never zero, so the gap is always `iconSize.x + h_separation`.
+ * The colour `CheckBox::_notification` draws the icon in (`check_box.cpp:139-142`): `checkbox_checked_color`
+ * or `checkbox_unchecked_color`, both white (`default_theme.cpp:312-313`). The disabled icons carry their own dimming.
  */
-export function layoutCheckBoxContent(input: CheckBoxContentInput): CheckBoxContentLayout {
-  const { rectSize, margin, iconSize, checkVOffset, hSeparation, hasText, textNaturalSize, rtl } = input;
-
-  // `int()` truncates the centring before the offset is added (`check_box.cpp:131-137`).
-  const iconPosition: Vector2 = {
-    x: rtl ? rectSize.x - margin - iconSize.x : margin,
-    y: Math.trunc((rectSize.y - iconSize.y) / 2) + checkVOffset,
-  };
-
-  let textOffset: Vector2 | null = null;
-  if (hasText) {
-    const reserved = iconSize.x + hSeparation;
-    const customElementHeight = rectSize.y - 2 * margin;
-    const drawableWidth = rectSize.x - 2 * margin - reserved;
-    // `rtl` moves the reservation to SIDE_RIGHT (`:98-100`) and the icon to the right margin
-    // (`:129`), and the constructor's LEFT alignment (`:174`) swaps to RIGHT (`button.cpp:271-275`).
-    const x = rtl ? margin + buttonTextRightShiftPx(textNaturalSize.x, drawableWidth) : margin + reserved;
-    const y = centredTextTopPx(customElementHeight, textNaturalSize.y, margin);
-    textOffset = { x, y };
-  }
-
-  return { iconPosition, textOffset };
+export function checkBoxCheckColor(props: CheckBoxProperties, colors: SolveNode['colors']): Rgba {
+  const key = props.buttonPressed ? 'checkbox_checked_color' : 'checkbox_unchecked_color';
+  return colors[key] ?? WHITE_MODULATE;
 }

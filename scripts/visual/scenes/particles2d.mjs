@@ -12,11 +12,15 @@ export const PARTICLES_2D_SCENES = [
   // A RING fills the band between its radii, in other places than Godot's unsaved RNG picks.
   { name: 'cpuparticles2d-ring', file: 'unit-cpuparticles2d-ring.tscn' },
   { name: 'cpuparticles2d-curves', file: 'unit-cpuparticles2d-curves.tscn' },
+  // The same scene with both Curves in a `.tres`: it must match the inline one.
+  { name: 'cpuparticles2d-curves-file', file: 'unit-cpuparticles2d-curves-file.tscn' },
   { name: 'cpuparticles2d-split-scale', file: 'unit-cpuparticles2d-split-scale.tscn' },
   // A crossed `_min`/`_max` pair and a lone `_min` load as Godot's paired setters leave them:
   // 100 and 100 for the velocity, 6 and 6 for the scale.
   { name: 'cpuparticles2d-crossed-range', file: 'unit-cpuparticles2d-crossed-range.tscn' },
   { name: 'cpuparticles2d-color-ramp', file: 'unit-cpuparticles2d-color-ramp.tscn' },
+  // The same scene with both Gradients in a `.tres`: it must match the inline one.
+  { name: 'cpuparticles2d-color-ramp-file', file: 'unit-cpuparticles2d-color-ramp-file.tscn' },
   // A scaled emitter whose particles must not scale with it: Godot's default
   // `local_coords = false` emits into world space.
   { name: 'cpuparticles2d-local-coords', file: 'unit-cpuparticles2d-local-coords.tscn' },
@@ -32,4 +36,7 @@ export const PARTICLES_2D_SCENES = [
   // one. Godot cannot draw this scene the same way twice. The previewer must,
   // and this baseline records our pose, which no reference can arbitrate.
   { name: 'cpuparticles2d-unseeded', file: 'unit-cpuparticles2d-unseeded.tscn' },
+  // A global-coords emitter's rotation leaves the normal, a local one's turns it. Godot 4.6.3
+  // `--mode 2d`: Global rgb(226) at (100,324), Local rgb(161) at (852,324) and rgb(226) at (952,224).
+  { name: 'cpuparticles2d-normal-map', file: 'unit-cpuparticles2d-normal-map.tscn', mode: '2d' },
 ];

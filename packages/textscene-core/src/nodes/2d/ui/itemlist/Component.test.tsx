@@ -16,13 +16,20 @@ import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
+import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { ItemList } from './Component';
-import { ITEM_LIST_THEME_FONT_KEY, shapeItemText } from './nativeSolver';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
+import { ICON_MODE_LEFT, ITEM_LIST_THEME_FONT_KEY, shapeItemListText } from './nativeSolver';
 
-const { ICON_MODE_LEFT } = ItemListIconMode;
-import type { ItemListProperties } from './types';
-import { bundledRunOf, bundledRunMeshes } from '../../../../r3f/controls/native/testing/bundledRunStub';
+import type { ItemListRuntimeProperties } from './types';
+import {
+  bundledRunOf,
+  bundledRunMeshes,
+  bundledRuns,
+  runPenExtentPx,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
 vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
@@ -38,7 +45,7 @@ const SCOPE = {
 
 type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
-function solveNode(properties: Partial<ItemListProperties>, rtl = false, iconSlots = {}): SolveNode {
+function solveNode(properties: Partial<ItemListRuntimeProperties>, rtl = false, iconSlots = {}): SolveNode {
   const node: TscnNode = controlNode('MyItemList', 'ItemList', {
     name: 'MyItemList',
     items: [],
@@ -71,7 +78,7 @@ function fakeTexture(w: number, h: number): THREE.Texture {
   return tex;
 }
 
-async function renderWithIconLoaded(properties: Partial<ItemListProperties>, rtl = false) {
+async function renderWithIconLoaded(properties: Partial<ItemListRuntimeProperties>, rtl = false) {
   const fake = createFakeResourceLoader();
   fake.textures.seed(ICON_PATH, fakeTexture(16, 16));
   return ReactThreeTestRenderer.create(
@@ -173,6 +180,68 @@ describe('<ItemList> — panel + rows', () => {
   });
 });
 
+describe('<ItemList> — a theme icon and a selected row (a dialog sets both)', () => {
+  const VENDORED = { name: 'file', vendoredUrl: 'data:image/svg+xml;base64,PHN2Zy8+' };
+  const render = (items: NonNullable<ItemListRuntimeProperties['items']>) =>
+    ReactThreeTestRenderer.create(
+      <ItemList {...painterEnv()} solveNode={solveNode({ items })} rect={RECT} renderOrder={0} />
+    );
+
+  it('draws the icon a row names by theme icon, with no item_N/icon', async () => {
+    const renderer = await render([{ text: 'a.png', themedIcon: VENDORED }]);
+    expect(findIconMeshes(renderer.scene).length).toBe(1);
+  });
+
+  it('draws a selected row on a background of its own, behind its label', async () => {
+    const plain = await render([{ text: 'a.png' }]);
+    const selected = await render([{ text: 'a.png', isSelected: true }]);
+    expect(findChromeMeshes(selected.scene).length).toBe(findChromeMeshes(plain.scene).length + 1);
+  });
+
+  it('draws the label of a selected row in font_selected_color, white by default', async () => {
+    const renderer = await render([{ text: 'a.png', isSelected: true }, { text: 'b.png' }]);
+    const [selected, plain] = bundledRuns(renderer.scene);
+    expect(selected!.tint).toMatchObject({ r: 1, g: 1, b: 1 });
+    expect(plain!.tint).not.toMatchObject({ r: 1, g: 1, b: 1 });
+  });
+
+  it('draws the cursor box over the current row of a multi-select list', async () => {
+    const items = [{ text: 'a.png', isSelected: true, isCurrent: true }];
+    const single = await ReactThreeTestRenderer.create(
+      <ItemList {...painterEnv()} solveNode={solveNode({ items })} rect={RECT} renderOrder={0} />
+    );
+    const multi = await ReactThreeTestRenderer.create(
+      <ItemList
+        {...painterEnv()}
+        solveNode={solveNode({ items, selectMode: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(findChromeMeshes(multi.scene).length).toBe(findChromeMeshes(single.scene).length + 1);
+  });
+
+  it('draws no cursor box over a row that is not current', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ItemList
+        {...painterEnv()}
+        solveNode={solveNode({ items: [{ text: 'a.png' }], selectMode: 1 })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(findChromeMeshes(renderer.scene).length).toBe(1);
+  });
+
+  it('draws the icon of a row in its modulate colour', async () => {
+    const renderer = await render([
+      { text: 'a', themedIcon: VENDORED, iconModulate: { r: 1, g: 0, b: 0, a: 1 } },
+    ]);
+    const mesh = findIconMeshes(renderer.scene)[0]!;
+    expect((mesh.material as THREE.MeshBasicMaterial).color.g).toBe(0);
+  });
+});
+
 describe('<ItemList> — row packing', () => {
   it('places a second column item to the right of the first, under max_columns=2', async () => {
     const renderer = await ReactThreeTestRenderer.create(
@@ -212,7 +281,7 @@ describe('<ItemList> — row packing', () => {
 describe('<ItemList> — RTL', () => {
   // rect.w 200, panel margin 4, h_separation/icon_margin 4, a 16x16 icon and
   // fixed_column_width 100 (so rect_cache.size.width is 100 + h_separation).
-  const RTL_ITEMS: Partial<ItemListProperties> = {
+  const RTL_ITEMS: Partial<ItemListRuntimeProperties> = {
     items: [{ text: 'Sword', icon: 'ExtResource("1")' }],
     fixedColumnWidth: 100,
   };
@@ -229,22 +298,25 @@ describe('<ItemList> — RTL', () => {
 
   // item_list.cpp:1664-1668: the LTR pen is 4 + (16 + 4) + 2 = 26; the RTL
   // pen is `200 - 104 + 16 - 26 + 4` = 90, and the line is then right-aligned
-  // inside its own `104 - 22` wide box (text_paragraph.cpp:916-921).
+  // inside its own `104 - 22` wide box by the ceiled line width (text_paragraph.cpp:886,916-921).
   it('moves the row label to Godot own RTL pen, right-aligned in its box', async () => {
     const node = solveNode(RTL_ITEMS, false, { item_0: { x: 16, y: 16 } });
-    const shaped = shapeItemText({
+    const shaped = shapeItemListText({
       text: 'Sword',
       fontSizePx: nativeTheme(1).fontSize,
       fontMetrics: resolveNodeFontMetrics(node, ITEM_LIST_THEME_FONT_KEY),
       iconMode: ICON_MODE_LEFT,
       locale: '',
       maxTextLines: 1,
-      fixedColumnWidth: 100,
-    }).shaped!;
+      widthPx: 100,
+    })!;
     const ltr = await renderWithIconLoaded(RTL_ITEMS);
     const rtl = await renderWithIconLoaded(RTL_ITEMS, true);
     expect(absoluteX(bundledRunMeshes(ltr.scene)[0]!)).toBeCloseTo(26, 5);
-    expect(absoluteX(bundledRunMeshes(rtl.scene)[0]!)).toBeCloseTo(90 + (82 - shaped.widthPx), 5);
+    expect(absoluteX(bundledRunMeshes(rtl.scene)[0]!)).toBeCloseTo(
+      90 + (82 - shapedTextSizeWidthPx(shaped.widthPx)),
+      5
+    );
   });
 });
 
@@ -273,5 +345,162 @@ describe('<ItemList> — row-relative vertical placement', () => {
       />
     );
     expect(absoluteY(bundledRunMeshes(renderer.scene)[0]!.parent!)).toBeCloseTo(4 + 2, 5);
+  });
+});
+
+function renderList(properties: Partial<ItemListRuntimeProperties>, rect: Rect2, children?: React.ReactNode) {
+  return ReactThreeTestRenderer.create(
+    <ItemList {...painterEnv()} solveNode={solveNode(properties)} rect={rect} renderOrder={0}>
+      {children}
+    </ItemList>
+  );
+}
+
+/**
+ * The draw pass sets each label's width again (`item_list.cpp:1625-1661`), so a label wraps and
+ * trims at the width its row has, not at the width the minimum-size pass gave it.
+ */
+describe('<ItemList> — labels fit their draw width', () => {
+  // A 64 px list holds a 56 px panel content width, so a TOP row's box is `56 - 2` px wide (`:1629-1632`).
+  it('re-wraps a TOP label at the row width, ending the last visible line in an ellipsis', async () => {
+    const renderer = await renderList(
+      { items: [{ text: 'Long word another' }], iconMode: ItemListIconMode.ICON_MODE_TOP, maxTextLines: 2 },
+      { x: 0, y: 0, w: 64, h: 100 }
+    );
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(2);
+  });
+
+  it('shows at most max_text_lines lines of a label wrapped at fixed_column_width', async () => {
+    const renderer = await renderList(
+      {
+        items: [{ text: 'Supercalifragilistic' }],
+        iconMode: ItemListIconMode.ICON_MODE_TOP,
+        maxTextLines: 2,
+        fixedColumnWidth: 56,
+      },
+      RECT
+    );
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(2);
+  });
+
+  // 80 px list, 72 px content: the label box is `177 - 2 - (177 - 72)` = 70 px (`:1657-1661`).
+  it('trims a LEFT label at the row width', async () => {
+    const renderer = await renderList(
+      { items: [{ text: 'A very long item name' }], iconMode: ICON_MODE_LEFT },
+      { x: 0, y: 0, w: 80, h: 100 }
+    );
+    expect(runPenExtentPx(bundledRuns(renderer.scene)[0]!)).toBeLessThanOrEqual(71);
+  });
+
+  // `:1676-1688`: a fixed-width column draws no label once its icon and separation fill it.
+  it('draws no LEFT label in a fixed_column_width the icon fills', async () => {
+    const renderer = await renderWithIconLoaded({
+      items: [{ text: 'Sword', icon: 'ExtResource("1")' }],
+      fixedColumnWidth: 10,
+    });
+    expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
+  });
+});
+
+/** `ItemList`'s constructor calls `set_clip_contents(true)` (`item_list.cpp:2482`). */
+describe('<ItemList> — clip_contents', () => {
+  it('clips every label to the list rect', async () => {
+    const renderer = await renderList({ items: [{ text: 'Sword' }] }, RECT);
+    for (const run of bundledRuns(renderer.scene)) expect(run.clippingPlanes).toHaveLength(4);
+  });
+
+  it('clips every icon to the list rect', async () => {
+    const renderer = await renderWithIconLoaded({ items: [{ text: 'Sword', icon: 'ExtResource("1")' }] });
+    expect((findIconMeshes(renderer.scene)[0]!.material as THREE.Material).clippingPlanes).toHaveLength(4);
+  });
+
+  it('clips its children to the list rect', async () => {
+    let planes: readonly THREE.Plane[] = [];
+    await renderList({ items: [] }, RECT, <ClipProbe onPlanes={(captured) => (planes = captured)} />);
+    expect(planes).toHaveLength(4);
+  });
+
+  it('draws unclipped under an authored clip_contents = false', async () => {
+    let planes: readonly THREE.Plane[] = [];
+    const renderer = await renderList(
+      { items: [{ text: 'Sword' }], clipContents: false },
+      RECT,
+      <ClipProbe onPlanes={(captured) => (planes = captured)} />
+    );
+    expect(planes).toHaveLength(0);
+    expect(bundledRuns(renderer.scene)[0]!.clippingPlanes ?? []).toHaveLength(0);
+  });
+});
+
+function ClipProbe({ onPlanes }: { onPlanes: (planes: readonly THREE.Plane[]) => void }) {
+  onPlanes(useControlClipPlanes());
+  return null;
+}
+
+describe('<ItemList> — scrollbars', () => {
+  const sixRows = Array.from({ length: 6 }, () => ({ text: 'Sword' }));
+  const twoRows = sixRows.slice(0, 2);
+
+  /** A track and a grabber per visible bar, over the panel's own chrome mesh. */
+  const chromeMeshCount = async (properties: Partial<ItemListRuntimeProperties>) =>
+    findChromeMeshes((await renderList(properties, RECT)).scene).length;
+
+  /** A guide line is the only 1 px tall `<ControlQuad>` of a list without icons. */
+  const guideLineWidths = async (properties: Partial<ItemListRuntimeProperties>) => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <ItemList {...painterEnv()} solveNode={solveNode(properties)} rect={RECT} renderOrder={0} />
+    );
+    return findIconMeshes(renderer.scene)
+      .map((m) => (m.geometry as unknown as { parameters: { width: number; height: number } }).parameters)
+      .filter((p) => p.height === 1)
+      .map((p) => p.width);
+  };
+
+  it('draws the vertical bar for rows past the list height', async () => {
+    expect(await chromeMeshCount({ items: sixRows })).toBe(3);
+  });
+
+  it('draws no bar while the rows fit', async () => {
+    expect(await chromeMeshCount({ items: twoRows })).toBe(1);
+  });
+
+  it('draws the horizontal bar only without wraparound_items and with wider rows', async () => {
+    const wide = { items: twoRows, maxColumns: 0, fixedColumnWidth: 120 };
+    expect(await chromeMeshCount({ ...wide, wraparoundItems: false })).toBe(3);
+    expect(await chromeMeshCount({ ...wide, wraparoundItems: true })).toBe(1);
+  });
+
+  it('draws only the rows that reach into the list, even with clip_contents = false (item_list.cpp:1493-1500)', async () => {
+    const renderer = await renderList({ items: sixRows, clipContents: false }, RECT);
+    // 100 px less the panel's 8 px holds four 23 px rows and the top of a fifth.
+    const drawn = bundledRunMeshes(renderer.scene).length;
+    expect(drawn).toBeGreaterThan(0);
+    expect(drawn).toBeLessThan(sixRows.length);
+  });
+
+  it('ends the guide lines before a visible vertical bar', async () => {
+    const withoutBar = await guideLineWidths({ items: twoRows });
+    const withBar = await guideLineWidths({ items: sixRows });
+    expect(withoutBar.length).toBeGreaterThan(0);
+    expect(withBar[0]).toBe(withoutBar[0]! - 8);
+  });
+});
+
+describe('<ItemList> — self_modulate', () => {
+  it('tints the panel and the rows with tint and both scroll bars with childTint', async () => {
+    const items = Array.from({ length: 12 }, (_, i) => ({ text: `Item ${i}` }));
+    const renderer = await ReactThreeTestRenderer.create(
+      <ItemList
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={solveNode({ items })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const split = countTintSplit(renderer.scene);
+    expect(split.own).toBeGreaterThan(0);
+    // The vertical bar's track and grabber.
+    expect(split.child).toBe(2);
   });
 });

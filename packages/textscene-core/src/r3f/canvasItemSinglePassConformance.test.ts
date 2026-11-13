@@ -18,7 +18,8 @@ import {
   type SourceFile,
 } from './testing/sourceScan';
 import { createCanvasTextMaterial } from './controls/native/text/canvasTextPainter';
-import { createLightQuadMaterial, createShadowColorQuadMaterial } from './lighting2d/lightQuad';
+import { createLightQuadMaterial } from './lighting2d/lightQuad';
+import { shadowSampling } from './lighting2d/testing/shadowSampling';
 
 /**
  * The 2D canvas alone, since a double-sided translucent 3D shell needs the split:
@@ -139,13 +140,20 @@ describe('Imperatively built canvas materials', () => {
     expect(oneSided.side).toBe(THREE.FrontSide);
   });
 
-  it('leaves both light-accumulation quads single-pass, where a second pass would double-count', () => {
+  it('leaves both light-accumulation quads, shadowed and not, single-pass, where a second pass would double-count', () => {
     const cookie = createLightQuadMaterial({ cookie: texture(), color: white, energy: 1, blendMode: 0 });
     expect(cookie.forceSinglePass).toBe(true);
     expect(cookie.side).toBe(THREE.DoubleSide);
 
-    const tint = createShadowColorQuadMaterial({ cookie: texture(), blendMode: 0, shadowColor: white });
-    expect(tint.forceSinglePass).toBe(true);
-    expect(tint.side).toBe(THREE.DoubleSide);
+    const shadow = shadowSampling({ shadowColor: white });
+    const shadowed = createLightQuadMaterial({
+      cookie: texture(),
+      color: white,
+      energy: 1,
+      blendMode: 0,
+      shadow,
+    });
+    expect(shadowed.forceSinglePass).toBe(true);
+    expect(shadowed.side).toBe(THREE.DoubleSide);
   });
 });

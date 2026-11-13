@@ -31,9 +31,19 @@ export const GEOMETRY_SCENES = [
   // A CPUParticles3D settled to a fixed seed: four boxes in a row, each an instance of the mesh
   // coloured through `vertex_color_use_as_albedo`.
   { name: 'cpuparticles3d-row', file: 'unit-cpuparticles3d-row.tscn' },
+  // GPUParticles3D settled to a fixed seed: a sphere, a sphere surface, a box and a ring of
+  // particles, each an unshaded dot coloured by the material.
+  { name: 'gpuparticles3d-shapes', file: 'unit-gpuparticles3d-shapes.tscn' },
+  // GPUParticles3D copied by the draw order and the alignment, through a camera turned 30 degrees:
+  // four flying quads, one per `transform_align`, and two clouds of lit alpha quads, by lifetime and by depth.
+  { name: 'gpuparticles3d-align-order', file: 'unit-gpuparticles3d-align-order.tscn' },
+  // A MultiMeshInstance3D with a buffer: four boxes in a row, each coloured by its instance colour.
+  { name: 'multimeshinstance3d-instances', file: 'unit-multi-mesh-instance-3d-instances.tscn' },
   // A DIRECTED_POINTS CPUParticles3D: a column of boxes above its one point, turned into the point's
   // normal frame and coloured from `emission_colors`.
   { name: 'cpuparticles3d-directed-points', file: 'unit-cpuparticles3d-directed-points.tscn' },
+  // The particles draw an ArrayMesh lines surface, one set of segments at each of four particles.
+  { name: 'array-mesh-lines-cpuparticles3d', file: 'unit-array-mesh-lines-cpuparticles3d.tscn' },
   // Points whose emission projects by world triplanar: each particle takes its own colour.
   { name: 'cpuparticles3d-triplanar-points', file: 'unit-cpuparticles3d-triplanar-points.tscn' },
   // An ArrayMesh triangle-strip surface, read as triangles as Godot reads it.
@@ -167,6 +177,9 @@ export const GEOMETRY_SCENES = [
   // before filtering, the opposite of the 2D canvas, so a procedural texture can
   // be right for Sprite2D and tagged wrongly here.
   { name: 'sprite3d-gradienttexture', file: 'unit-sprite3d-gradienttexture.tscn' },
+  // A GradientTexture2D with no gradient holds no image, so the sprite draws Godot's placeholder
+  // over a quad sized by the texture's width and height. Godot 4.6.3 `pnpm ref:diff` measures it within 1/255.
+  { name: 'sprite3d-gradient-no-gradient', file: 'unit-sprite3d-gradient-no-gradient.tscn' },
   { name: 'sprite3d-nested-modulate', file: 'unit-sprite3d-nested-modulate.tscn' },
   // The pass a default-`alpha_cut` sprite lands in, which Godot reads off the
   // generated shader: a texture with transparent texels in front of an opaque
@@ -177,6 +190,16 @@ export const GEOMETRY_SCENES = [
   // depth prepass cast, and a blended surface or one with no depth test casts nothing.
   { name: 'sprite3d-shadow', file: 'unit-sprite3d-shadow.tscn' },
   { name: 'label3d-shadow', file: 'unit-label3d-shadow.tscn' },
+  // The one variable: the `material_override` and `material_overlay` of a SpriteBase3D and of a
+  // Label3D, whose own materials every other scene of theirs draws. The sprite's override samples
+  // the frame and the flip the quad's UVs hold.
+  { name: 'sprite3d-instance-materials', file: 'unit-sprite3d-instance-materials.tscn' },
+  { name: 'label3d-instance-materials', file: 'unit-label3d-instance-materials.tscn' },
+  // The one variable: an AtlasTexture with a margin on a Sprite3D, under its own material and
+  // under a `material_override`. The quad covers the region alone, with the UVs of the atlas.
+  { name: 'sprite3d-atlas-instance-materials', file: 'unit-sprite3d-atlas-instance-materials.tscn' },
+  // The one variable: `outline_render_priority`, below the fill's priority and equal to it.
+  { name: 'label3d-outline-priority', file: 'unit-label3d-outline-priority.tscn' },
   // The one variable: `shaded`. An unshaded label, a shaded label and a shaded back face under one
   // coloured sun at N·L = 0.5.
   { name: 'label3d-shaded', file: 'unit-label3d-shaded.tscn', camera: 'Root/Camera3D' },

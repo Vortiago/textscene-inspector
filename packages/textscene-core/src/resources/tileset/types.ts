@@ -27,10 +27,31 @@ export interface TileGrid {
   tileSize: Vector2;
 }
 
-/** A resolved TileSet: grid shape plus its atlas sources, ready for pure lookups. */
+/** A resolved TileSet: grid shape plus its sources, ready for pure lookups. */
 export interface TileSetModel extends TileGrid {
   /** Atlas sources keyed by their `sources/N` id. */
   sources: Map<number, AtlasSourceModel>;
+  /** Scene-collection sources keyed by their `sources/N` id, in the id space of `sources`. */
+  sceneSources: Map<number, SceneCollectionSourceModel>;
+}
+
+/** A scene tile's `scene`, which resolves in the tables of the file that holds the TileSet. */
+export interface TileScene {
+  ref: string;
+  externalResources: readonly TscnExternalResource[];
+  internalResources: readonly TscnInternalResource[];
+}
+
+export interface SceneTileModel {
+  /** Null for a scene tile with no scene: it draws no instance. */
+  scene: TileScene | null;
+  /** The editor draws a placeholder circle for the tile. It changes nothing a game draws. */
+  displayPlaceholder: boolean;
+}
+
+/** A `TileSetScenesCollectionSource`: scene tiles keyed by scene id. Its only tile is at (0, 0). */
+export interface SceneCollectionSourceModel {
+  scenes: Map<number, SceneTileModel>;
 }
 
 /** An atlas source's `texture`, which resolves as any Texture2D slot does. */

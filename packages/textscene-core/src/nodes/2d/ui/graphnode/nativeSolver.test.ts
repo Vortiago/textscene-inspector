@@ -18,12 +18,13 @@ import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties } from './types';
 import { SizeFlags } from '../../../../godot/scene/control';
 import { ROOT_TEXTURE_SAMPLER } from '../../../../r3f/canvasItemTextureSampler';
+import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
 const graphNodeLayout = controlSolverRegistry.containerLayout('GraphNode')!;
 const graphNodeMinimumSize = controlSolverRegistry.minimumSize('GraphNode')!;
 
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
-  return 'rects' in result ? result.rects : result;
+  return normalizeContainerLayoutResult(result).rects;
 }
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {

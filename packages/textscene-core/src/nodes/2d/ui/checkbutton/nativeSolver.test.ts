@@ -12,16 +12,13 @@ import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { CheckButtonProperties } from './types';
 import {
   checkButtonMinimumSize,
-  checkButtonTextTheme,
-  resolveCheckButtonDrawState,
+  checkButtonToggleRect,
   resolveCheckButtonIconKey,
   checkButtonIconColor,
-  layoutCheckButtonContent,
-  checkButtonMarginX,
-  checkButtonMarginY,
-  checkButtonDrawnIconSize,
+  checkButtonTextureSlots,
 } from './nativeSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 
 const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
@@ -46,69 +43,6 @@ function ctx(withMeasurer = true): SolveContext {
     combinedMinimumSize: () => ({ x: 0, y: 0 }),
   };
 }
-
-describe('resolveCheckButtonDrawState', () => {
-  it('is "normal" when neither pressed nor disabled', () => {
-    expect(resolveCheckButtonDrawState({} as CheckButtonProperties)).toBe('normal');
-  });
-
-  it('is "pressed" when button_pressed is true and not disabled', () => {
-    expect(resolveCheckButtonDrawState({ buttonPressed: true } as CheckButtonProperties)).toBe('pressed');
-  });
-
-  it('is "disabled" when disabled is true, even if also pressed (disabled wins)', () => {
-    expect(
-      resolveCheckButtonDrawState({ buttonPressed: true, disabled: true } as CheckButtonProperties)
-    ).toBe('disabled');
-  });
-});
-
-describe('checkButtonTextTheme', () => {
-  it('resolves control_font_color for the normal state', () => {
-    // default_theme.cpp:101,340: control_font_color.
-    expect(checkButtonTextTheme(node({}), {} as CheckButtonProperties, 'normal', ctx()).color).toEqual({
-      r: 0.875,
-      g: 0.875,
-      b: 0.875,
-      a: 1,
-    });
-  });
-
-  it('resolves control_font_pressed_color (opaque white) for the pressed state', () => {
-    // default_theme.cpp:108,341: control_font_pressed_color.
-    expect(checkButtonTextTheme(node({}), {} as CheckButtonProperties, 'pressed', ctx()).color).toEqual({
-      r: 1,
-      g: 1,
-      b: 1,
-      a: 1,
-    });
-  });
-
-  it('resolves control_font_disabled_color (alpha 0.5) for the disabled state', () => {
-    // default_theme.cpp:106,345: control_font_disabled_color.
-    expect(checkButtonTextTheme(node({}), {} as CheckButtonProperties, 'disabled', ctx()).color).toEqual({
-      r: 0.875,
-      g: 0.875,
-      b: 0.875,
-      a: 0.5,
-    });
-  });
-
-  it('a theme_override_colors/font_color override wins over the default', () => {
-    const props: CheckButtonProperties = {
-      name: 'CB',
-      textDirection: 0,
-      language: '',
-      themeOverrideColors: { font_color: { r: 1, g: 0, b: 0, a: 1 } },
-    };
-    expect(checkButtonTextTheme(node(props), props, 'normal', ctx()).color).toEqual({
-      r: 1,
-      g: 0,
-      b: 0,
-      a: 1,
-    });
-  });
-});
 
 describe('resolveCheckButtonIconKey (check_button.cpp:105-127)', () => {
   it('unchecked, not disabled -> unchecked', () => {
@@ -149,7 +83,7 @@ describe('checkButtonIconColor (default_theme.cpp:352-353)', () => {
   });
 
   it('a theme_override_colors/button_checked_color override (already folded into n.colors) wins when checked', () => {
-    const props: CheckButtonProperties = { name: 'CB', textDirection: 0, language: '', buttonPressed: true };
+    const props = { buttonPressed: true } as CheckButtonProperties;
     expect(checkButtonIconColor(props, { button_checked_color: { r: 0, g: 1, b: 0, a: 1 } })).toEqual({
       r: 0,
       g: 1,
@@ -159,21 +93,7 @@ describe('checkButtonIconColor (default_theme.cpp:352-353)', () => {
   });
 });
 
-describe('checkButtonMarginX / checkButtonMarginY (default_theme.cpp:317)', () => {
-  it('marginY equals theme.contentMargin (round(4*scale))', () => {
-    expect(checkButtonMarginY(ctx())).toBe(4);
-  });
-
-  it('marginX is round(6*scale)', () => {
-    expect(checkButtonMarginX(ctx())).toBe(6);
-  });
-
-  it('marginX moves with a non-1 theme scale (default_theme.cpp:317: round(6*scale))', () => {
-    expect(checkButtonMarginX({ theme: nativeTheme(1.5) })).toBe(9);
-  });
-});
-
-describe('checkButtonMinimumSize (check_button.cpp:64-79) — no text', () => {
+describe('checkButtonMinimumSize (check_button.cpp:64-79): no text', () => {
   it('is 2*marginX(6) + icon(32x16) width, 2*marginY(4) + icon height — (44, 24)', () => {
     expect(checkButtonMinimumSize(node({}), ctx())).toEqual({ x: 44, y: 24 });
   });
@@ -190,7 +110,7 @@ describe('checkButtonMinimumSize (check_button.cpp:64-79) — no text', () => {
   });
 });
 
-describe('checkButtonMinimumSize — with text', () => {
+describe('checkButtonMinimumSize: with text', () => {
   it('adds text width + h_separation(4) alongside the icon width; height floors on the taller of text/icon', () => {
     const result = checkButtonMinimumSize(node({ text: 'AB' }), ctx());
     // width = 12 (2*marginX) + 22 (shaped text) + 4 (h_separation) + 32 (icon) = 70.
@@ -222,138 +142,132 @@ describe('checkButtonMinimumSize — with text', () => {
   });
 });
 
-describe('layoutCheckButtonContent (check_button.cpp:126-133 + button.cpp:247-260,444-456)', () => {
-  const BASE = {
-    rectSize: { x: 150, y: 28 },
-    marginX: 6,
-    marginY: 4,
-    iconSize: { x: 32, y: 16 },
-    checkVOffset: 0,
-    hSeparation: 4,
-    hasText: true,
-    textAlignment: 0,
-    textNaturalSize: { x: 90, y: 26 },
-    isTextRtl: false,
-    rtl: false,
-  };
+const RECT_SIZE = { x: 150, y: 28 };
+const THEME = nativeTheme(1);
 
-  it('ends an overflowing right-to-left CENTER label at the trailing edge (text_paragraph.cpp:908-910)', () => {
-    // The text box is 150 - 2*6 - (32+4) = 102 wide: 6 + (102 - 200) = -92.
-    const { textOffset } = layoutCheckButtonContent({
-      ...BASE,
-      textAlignment: 1,
-      textNaturalSize: { x: 200, y: 26 },
-      isTextRtl: true,
+describe('checkButtonToggleRect (check_button.cpp:129-145)', () => {
+  it('puts the toggle short of the right margin, vertically centred', () => {
+    // x = 150 - (32 + 6). y = (28 - 16) / 2.
+    expect(checkButtonToggleRect(node({}), THEME, 'unchecked', RECT_SIZE)).toEqual({
+      x: 112,
+      y: 6,
+      w: 32,
+      h: 16,
     });
-    expect(textOffset!.x).toBe(-92);
   });
 
-  it('icon sits flush against the RIGHT edge, vertically centred + check_v_offset', () => {
-    const { iconPosition } = layoutCheckButtonContent(BASE);
-    // x = 150 - (32+6) = 112. y = (28-16)/2 + 0 = 6.
-    expect(iconPosition).toEqual({ x: 112, y: 6 });
+  it('centres the toggle at the half pixel an odd height leaves, unrounded (check_button.cpp:140)', () => {
+    expect(checkButtonToggleRect(node({}), THEME, 'unchecked', { x: 150, y: 31 }).y).toBe(7.5);
   });
 
-  it('centres the icon at the half pixel an odd height leaves, unrounded (check_button.cpp:140)', () => {
-    const { iconPosition } = layoutCheckButtonContent({ ...BASE, rectSize: { x: 150, y: 31 } });
-    expect(iconPosition.y).toBe(7.5);
+  it('adds check_v_offset', () => {
+    const n = node({ themeOverrideConstants: { check_v_offset: 3 } });
+    expect(checkButtonToggleRect(n, THEME, 'unchecked', RECT_SIZE).y).toBe(9);
   });
 
-  it('LEFT-aligned text (the default) starts at marginX with no shift', () => {
-    const { textOffset } = layoutCheckButtonContent(BASE);
-    expect(textOffset!.x).toBe(6);
-    // customElementHeight = 28-8=20; y = floor((20-26)/2 + 4) = floor(1) = 1.
-    expect(textOffset!.y).toBe(1);
+  it('puts the toggle at the left margin under RTL (check_button.cpp:135-136)', () => {
+    const rtl = { ...node({}), rtl: true };
+    expect(checkButtonToggleRect(rtl, THEME, 'uncheckedMirrored', RECT_SIZE)).toMatchObject({ x: 6, y: 6 });
   });
 
-  it('CENTER-aligned text centres within the box left of the icon', () => {
-    const { textOffset } = layoutCheckButtonContent({ ...BASE, textAlignment: 1 });
-    // textBoxWidth = 150-6-36-6=102; shift=(102-90)/2=6; x=6+6=12.
-    expect(textOffset!.x).toBe(12);
+  it('scales the default margin with the theme: round(6 * scale) (default_theme.cpp:317)', () => {
+    // x = 150 - (48 + 9): the toggle is rasterised at the theme scale too.
+    expect(checkButtonToggleRect(node({}), nativeTheme(1.5), 'unchecked', RECT_SIZE).x).toBe(93);
   });
 
-  it('CENTER floors its own half (text_paragraph.cpp:904)', () => {
-    // textBoxWidth = 102, length 91: floor(11/2) = 5, not 5.5. x = 6 + 5.
-    const { textOffset } = layoutCheckButtonContent({
-      ...BASE,
-      textAlignment: 1,
-      textNaturalSize: { x: 91, y: 26 },
+  it('draws the vendored toggle at its authored size times the theme scale (default_theme.cpp:82-84)', () => {
+    expect(checkButtonToggleRect(node({}), nativeTheme(1.5), 'unchecked', RECT_SIZE)).toMatchObject({
+      w: 48,
+      h: 24,
     });
-    expect(textOffset!.x).toBe(11);
   });
 
-  it('CENTER does not shift an OVERFLOWING label at all (text_paragraph.cpp:902)', () => {
-    const { textOffset } = layoutCheckButtonContent({
-      ...BASE,
-      textAlignment: 1,
-      textNaturalSize: { x: 200, y: 26 },
-    });
-    expect(textOffset!.x).toBe(6);
+  it("reads the margin from the node's `normal` box, whatever the draw state", () => {
+    const normal = drawnStyleBox({ content_margin_left: '20', content_margin_right: '30' });
+    const pressed = drawnStyleBox({ content_margin_left: '1', content_margin_right: '1' });
+    const n = { ...node({ buttonPressed: true }), styleBoxes: { normal, pressed } };
+    expect(checkButtonToggleRect(n, THEME, 'checked', RECT_SIZE).x).toBe(150 - (32 + 30));
+    expect(checkButtonToggleRect({ ...n, rtl: true }, THEME, 'checkedMirrored', RECT_SIZE).x).toBe(20);
   });
 
-  it('RIGHT hugs the CEILED paragraph width, not the raw drawable (button.cpp:437)', () => {
-    // rect 150.5 -> textBoxWidth 102.5 -> text_buf_width 103; 103 - 90 = 13.
-    const { textOffset } = layoutCheckButtonContent({
-      ...BASE,
-      rectSize: { x: 150.5, y: 28 },
-      textAlignment: 2,
-    });
-    expect(textOffset!.x).toBeCloseTo(19, 10);
+  it('draws the current icon at its own size, at the offset the larger icon sets (check_button.cpp:133-145)', () => {
+    const n = { ...node({}), textureSlots: { checked: { x: 64, y: 40 } } };
+    // The larger icon is 64 by 40: x = 150 - (64 + 6), y = (28 - 40) / 2. The unchecked icon keeps its size.
+    expect(checkButtonToggleRect(n, THEME, 'unchecked', RECT_SIZE)).toEqual({ x: 80, y: -6, w: 32, h: 16 });
   });
 
-  it('RIGHT-aligned text sits flush against the reserved icon gap', () => {
-    const { textOffset } = layoutCheckButtonContent({ ...BASE, textAlignment: 2 });
-    // shift = 102-90=12; x=6+12=18.
-    expect(textOffset!.x).toBe(18);
-  });
-
-  it('returns textOffset: null when hasText is false (icon still positioned)', () => {
-    const { iconPosition, textOffset } = layoutCheckButtonContent({ ...BASE, hasText: false });
-    expect(textOffset).toBeNull();
-    expect(iconPosition).toEqual({ x: 112, y: 6 });
-  });
-
-  it('check_v_offset shifts the icon vertically', () => {
-    const { iconPosition } = layoutCheckButtonContent({ ...BASE, checkVOffset: 3 });
-    expect(iconPosition.y).toBe(9);
+  it('draws nothing for an icon that reports size 0, as an unset ViewportTexture does', () => {
+    const n = { ...node({}), textureSlots: { unchecked: { x: 0, y: 0 } } };
+    expect(checkButtonToggleRect(n, THEME, 'unchecked', RECT_SIZE)).toMatchObject({ w: 0, h: 0 });
   });
 });
 
-/**
- * The RTL arms: the toggle sits at `margin(SIDE_LEFT)` (check_button.cpp:135), the internal margin
- * reserves SIDE_LEFT (`:98-104`), and the constructor's LEFT alignment (`:174`) becomes RIGHT
- * through `Button::_notification`'s swap (`button.cpp:271-275`).
- */
-describe('layoutCheckButtonContent — RTL puts the toggle on the left', () => {
-  const BASE = {
-    rectSize: { x: 150, y: 28 },
-    marginX: 6,
-    marginY: 4,
-    iconSize: { x: 32, y: 16 },
-    checkVOffset: 0,
-    hSeparation: 4,
-    hasText: true,
-    textAlignment: 0,
-    textNaturalSize: { x: 90, y: 26 },
-    isTextRtl: false,
-    rtl: true,
-  };
+describe('checkButtonMinimumSize: the boxes of the draw states (check_button.cpp:68-83, button.cpp:55-95)', () => {
+  it('keeps the default `hover_pressed` box in the largest padding where every state box has no margin (default_theme.cpp:324)', () => {
+    const none = drawnStyleBox({});
+    const styleBoxes = { normal: none, pressed: none, hover: none, disabled: none };
+    // Measured in Godot 4.6.3: the content is max(0 - 8, 16) inside the padding 8, and 0 - 12 + 32 across.
+    expect(checkButtonMinimumSize({ ...node({}), styleBoxes }, ctx())).toEqual({ x: 32, y: 24 });
+  });
+});
 
-  it('draws the toggle at the left content margin, vertically unchanged', () => {
-    const { iconPosition } = layoutCheckButtonContent(BASE);
-    expect(iconPosition).toEqual({ x: 6, y: 6 });
+describe("checkButtonMinimumSize: Button's inherited icon (check_button.cpp:64-79, button.cpp:481-526)", () => {
+  const withIcon = (props: Partial<CheckButtonProperties>, size = { x: 12, y: 12 }): SolveNode => ({
+    ...node(props),
+    textureSize: size,
+    textureSlots: { icon: size },
   });
 
-  it('lays LEFT-aligned text out at the far end of the box right of the toggle', () => {
-    const { textOffset } = layoutCheckButtonContent(BASE);
-    // reserved = 32+4 = 36; drawable = 150-12-36 = 102; RIGHT shift = 102-90 = 12.
-    expect(textOffset!.x).toBe(6 + 36 + 12);
-    expect(textOffset!.y).toBe(1);
+  it('adds the icon and a separation between it and the toggle, though there is no text', () => {
+    // content = 12; the toggle adds h_separation 4 (the content is wider than 0) and 32: 12 + 12 + 4 + 32.
+    expect(checkButtonMinimumSize(withIcon({}), ctx())).toEqual({ x: 60, y: 8 + 16 });
   });
 
-  it('leaves CENTER alone and swaps RIGHT to flush against the toggle', () => {
-    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 1 }).textOffset!.x).toBe(6 + 36 + 6);
-    expect(layoutCheckButtonContent({ ...BASE, textAlignment: 2 }).textOffset!.x).toBe(6 + 36);
+  it('adds the icon, its separation to the text, and the toggle', () => {
+    const result = checkButtonMinimumSize(withIcon({ text: 'AB' }), ctx());
+    // 12 + (22 + 4 + 12) + 4 + 32.
+    expect(result).toEqual({ x: 12 + AB_SHAPED_WIDTH + 4 + 12 + 4 + 32, y: 8 + FONT_HEIGHT });
+  });
+
+  it('stacks the icon above the text for a TOP icon, and adds the font height again (button.cpp:497-502,517-521)', () => {
+    const result = checkButtonMinimumSize(withIcon({ text: 'AB', verticalIconAlignment: 0 }), ctx());
+    expect(result.y).toBe(8 + FONT_HEIGHT + 12 + FONT_HEIGHT);
+  });
+
+  it('adds no icon for expand_icon (button.cpp:497)', () => {
+    expect(checkButtonMinimumSize(withIcon({ expandIcon: true }), ctx())).toEqual(
+      checkButtonMinimumSize(node({}), ctx())
+    );
+  });
+
+  it('takes the icon and the toggle off the width a wrapping label shapes at (button.cpp:428-432)', () => {
+    // Wraps at 100 - 12 - 36 = 52 for the toggle alone: 'AB AB' is 46.6 px, one row. With a 12 px icon it
+    // is 52 - 16 = 36 px: two rows.
+    const tentative: SolveContext = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 100, h: 60 }) };
+    const props = { text: 'AB AB', autowrapMode: 2 };
+    expect(checkButtonMinimumSize(node(props), tentative).y).toBe(8 + FONT_HEIGHT);
+    expect(checkButtonMinimumSize(withIcon(props), tentative).y).toBe(8 + 2 * FONT_HEIGHT);
+  });
+});
+
+describe("checkButtonTextureSlots: Button's own icon property", () => {
+  const nodeWithIcon = (icon?: string) =>
+    controlNode('CB', 'CheckButton', { name: 'CB', ...(icon ? { icon } : {}) });
+
+  it('requests the icon ref first, so `textureSize` is the icon, as it is for a Button', () => {
+    expect(checkButtonTextureSlots(nodeWithIcon('ExtResource("1")'), {})).toEqual([
+      { key: 'icon', ref: 'ExtResource("1")' },
+    ]);
+  });
+
+  it('keeps the icon slot first without an icon, so `textureSize` is never a themed toggle icon', () => {
+    const themed = {
+      checked: { ref: 'ExtResource("2")', resources: solveNode().resources, isHeldLocally: true },
+    };
+    expect(checkButtonTextureSlots(nodeWithIcon(), themed).map((request) => request.key)).toEqual([
+      'icon',
+      'checked',
+    ]);
   });
 });
 
@@ -362,7 +276,7 @@ describe('layoutCheckButtonContent — RTL puts the toggle on the left', () => {
  * (`check_button.cpp:39-46`, `:109-120`): separate Theme entries the default theme fills with
  * the `toggle_*_mirrored` SVGs (`default_theme.cpp:332-335`), not a flip of the plain ones.
  */
-describe('resolveCheckButtonIconKey — RTL selects the mirrored variant', () => {
+describe('resolveCheckButtonIconKey: RTL selects the mirrored variant', () => {
   it('picks the mirrored twin of whichever state is showing', () => {
     expect(resolveCheckButtonIconKey({} as CheckButtonProperties, true)).toBe('uncheckedMirrored');
     expect(resolveCheckButtonIconKey({ buttonPressed: true } as CheckButtonProperties, true)).toBe(
@@ -381,7 +295,7 @@ describe('resolveCheckButtonIconKey — RTL selects the mirrored variant', () =>
   });
 });
 
-describe('checkButtonMinimumSize — RTL sizes off the mirrored icon pair', () => {
+describe('checkButtonMinimumSize: RTL sizes off the mirrored icon pair', () => {
   it('widens on a themed unchecked_mirrored, and ignores it under LTR', () => {
     const slots = { textureSlots: { unchecked_mirrored: { x: 40, y: 20 } } };
     expect(checkButtonMinimumSize({ ...node({}), ...slots, rtl: true }, ctx())).toEqual({ x: 52, y: 28 });
@@ -394,17 +308,67 @@ describe('checkButtonMinimumSize — RTL sizes off the mirrored icon pair', () =
   });
 });
 
-/** Godot draws the current icon at its own fitted size, placed by the larger (`check_button.cpp:133-145`). */
-describe('checkButtonDrawnIconSize', () => {
-  it("is the current icon's own size, not the larger icon's", () => {
-    const n = { textureSlots: { checked: { x: 64, y: 40 } }, constants: {} };
-    expect(checkButtonDrawnIconSize(n, 'unchecked')).toEqual(
-      checkButtonDrawnIconSize({ textureSlots: {}, constants: {} }, 'unchecked')
-    );
+describe('checkButtonMinimumSize: clip_text zeroes the text width (button.cpp:493-495)', () => {
+  it('keeps the icon, the margins and the text height, and drops the text width and the h_separation', () => {
+    const result = checkButtonMinimumSize(node({ text: 'AB', clipText: true }), ctx());
+    expect(result).toEqual({ x: 12 + 32, y: 8 + FONT_HEIGHT });
   });
 
-  it('is 0 for an icon that reports size 0, as an unset ViewportTexture does', () => {
-    const n = { textureSlots: { unchecked: { x: 0, y: 0 } }, constants: {} };
-    expect(checkButtonDrawnIconSize(n, 'unchecked')).toEqual({ x: 0, y: 0 });
+  it('keeps the whole text width without clip_text', () => {
+    const result = checkButtonMinimumSize(node({ text: 'AB', clipText: false }), ctx());
+    expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 4 + 32);
+  });
+});
+
+describe('checkButtonMinimumSize: a trimming text_overrun_behavior zeroes the text width (button.cpp:493-495)', () => {
+  it('drops the text width and the h_separation under OVERRUN_TRIM_ELLIPSIS', () => {
+    const result = checkButtonMinimumSize(node({ text: 'AB', overrunBehavior: 3 }), ctx());
+    expect(result).toEqual({ x: 12 + 32, y: 8 + FONT_HEIGHT });
+  });
+
+  it('keeps the whole text width under OVERRUN_NO_TRIMMING', () => {
+    const result = checkButtonMinimumSize(node({ text: 'AB', overrunBehavior: 0 }), ctx());
+    expect(result.x).toBe(12 + AB_SHAPED_WIDTH + 4 + 32);
+  });
+});
+
+describe('checkButtonMinimumSize: autowrap_mode wraps the label at the tentative width (button.cpp:429-432,493-495)', () => {
+  const text = 'alpha bravo charlie';
+
+  function minSize(props: Partial<CheckButtonProperties>, tentativeWidthPx?: number) {
+    const context: SolveContext = {
+      ...ctx(),
+      ...(tentativeWidthPx === undefined
+        ? {}
+        : { tentativeRect: () => ({ x: 0, y: 0, w: tentativeWidthPx, h: 40 }) }),
+    };
+    return checkButtonMinimumSize(node(props), context);
+  }
+
+  it('drops the text width and the h_separation, keeping the margins and the toggle', () => {
+    expect(minSize({ text, autowrapMode: 2 }).x).toBe(12 + 32);
+  });
+
+  it('grows to one font height per wrapped row at a narrow tentative width', () => {
+    expect(minSize({ text, autowrapMode: 2 }, 100).y).toBe(8 + 3 * FONT_HEIGHT);
+  });
+
+  it('stays one row high until a tentative width is known', () => {
+    expect(minSize({ text, autowrapMode: 2 }).y).toBe(8 + FONT_HEIGHT);
+  });
+
+  it('never wraps at AUTOWRAP_OFF, whatever the tentative width says', () => {
+    expect(minSize({ text }, 100).y).toBe(8 + FONT_HEIGHT);
+  });
+});
+
+describe('checkButtonMinimumSize at a theme scale (check_button.cpp:68-83)', () => {
+  const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+
+  it('reserves the toggle at its scaled size: the same minimum as a themed 48x24 toggle', () => {
+    const themed = { ...node({}), textureSlots: { unchecked: { x: 48, y: 24 } } };
+
+    expect(checkButtonMinimumSize(node({}), at15)).toEqual(checkButtonMinimumSize(themed, at15));
+    expect(checkButtonMinimumSize(node({}), at15).x).toBeGreaterThan(48);
   });
 });

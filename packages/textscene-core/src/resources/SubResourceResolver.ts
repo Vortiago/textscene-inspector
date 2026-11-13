@@ -72,8 +72,12 @@ export function parsedResourcePath(
   externalResources: readonly TscnExternalResource[]
 ): string | null {
   const path = resolveExtResourcePath(ref, externalResources);
-  if (!path) return null;
-  return isResourceFilePath(path) || fileExtension(path) === GODOT_SHADER_EXTENSION ? path : null;
+  return path && loadsAsParsedResource(path) ? path : null;
+}
+
+/** Whether the file at `path` loads as a ParsedResource: a resource file or a `.gdshader`. */
+export function loadsAsParsedResource(path: string): boolean {
+  return isResourceFilePath(path) || fileExtension(path) === GODOT_SHADER_EXTENSION;
 }
 
 /**
@@ -83,7 +87,7 @@ export function parsedResourcePath(
 export function isResourceFilePath(path: string): boolean {
   return (
     fileExtension(path) === GODOT_TEXT_RESOURCE_FILE_EXTENSION ||
-    resourceSliceRegistry.busTypeOfPath(path) === 'resource'
+    resourceSliceRegistry.byPath(path)?.busType === 'resource'
   );
 }
 
@@ -97,9 +101,9 @@ export function findSubResource(
 }
 
 /**
- * The first resource of `type` declared under `id`, in declaration order. The id map
- * answers when that id's first holder has the type. A file that repeats the id with
- * another type first falls back to the scan. An id the map lacks has no holder at all.
+ * The first resource declared under `id`, when it is of `type`. Godot keeps the first holder of a
+ * repeated id and skips the later sections (`resource_format_text.cpp:597-603`), so a later
+ * resource of `type` under the id never loads.
  */
 export function findSubResourceOfType(
   internalResources: readonly TscnInternalResource[],
@@ -107,9 +111,7 @@ export function findSubResourceOfType(
   type: string
 ): TscnInternalResource | undefined {
   const firstHolder = findSubResource(internalResources, id);
-  if (!firstHolder) return undefined;
-  if (firstHolder.id === id && firstHolder.type === type) return firstHolder;
-  return internalResources.find((r) => r.id === id && r.type === type);
+  return firstHolder?.type === type ? firstHolder : undefined;
 }
 
 /**

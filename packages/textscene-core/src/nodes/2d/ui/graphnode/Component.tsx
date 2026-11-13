@@ -14,12 +14,12 @@ import type * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { PositionedStyleBox } from '../../../../r3f/controls/native/PositionedStyleBox';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useTexture2D } from '../../../../resources/useTexture2D';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -36,8 +36,9 @@ import {
   RESIZER_SE_ICON,
   RESIZER_SE_ICON_SIZE,
 } from '../graphelement/graphIcons';
+import type { Vector2 } from '../../../../godot/math/vector';
+import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import {
-  GRAPH_NODE_TITLE_DEFAULT_COLOR,
   GRAPH_NODE_TITLE_VARIATION,
   graphNodeDrawRows,
   graphNodeStyles,
@@ -52,12 +53,14 @@ import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 /** Composes `own` (raw sRGB) with a widget's base colour, then converts the result to linear. */
 function useTintedColor(own: Rgba, base: Rgba): { color: THREE.Color; opacity: number } {
   const combined = useMemo(() => multiplyModulate(own, base), [own, base]);
-  const color = useGodotLinearColor(combined);
+  const color = useItemLinearColor(combined);
   return { color, opacity: combined.a };
 }
 
 interface PortProps {
   solveNode: SolveNode;
+  /** The default port icon's size at the theme scale, for a port with no icon of its own. */
+  defaultSize: Vector2;
   iconRef: string | undefined;
   slotColor: Rgba;
   tintOwn: Rgba;
@@ -68,31 +71,39 @@ interface PortProps {
 }
 
 /** One port icon. A dedicated component so its `useTexture2D` call keeps a stable hook count across a dynamic slot count. */
-function GraphNodePort({ solveNode, iconRef, slotColor, tintOwn, x, y, renderOrder }: PortProps) {
+function GraphNodePort({
+  solveNode,
+  defaultSize,
+  iconRef,
+  slotColor,
+  tintOwn,
+  x,
+  y,
+  renderOrder,
+}: PortProps) {
   const { externalResources, internalResources } = solveNode.resources;
   const custom = useTexture2D(iconRef, externalResources, internalResources);
   const defaultTexture = useNodeIcon(solveNode.icons.port, GRAPH_PORT_ICON);
   const texture = custom.texture ?? defaultTexture;
-  const size = custom.size ? { x: custom.size.width, y: custom.size.height } : GRAPH_PORT_ICON_SIZE;
+  const size = custom.size ? { x: custom.size.width, y: custom.size.height } : defaultSize;
   const { color, opacity } = useTintedColor(tintOwn, slotColor);
 
   return (
-    <CanvasItemGroup position={[x - size.x / 2, -(y - size.y / 2), 0]}>
-      <ControlQuad
-        width={size.x}
-        height={size.y}
-        color={color}
-        opacity={opacity}
-        map={texture}
-        renderOrder={renderOrder}
-      />
-    </CanvasItemGroup>
+    <PositionedIcon
+      rect={{ x: x - size.x / 2, y: y - size.y / 2, w: size.x, h: size.y }}
+      texture={texture}
+      color={color}
+      opacity={opacity}
+      renderOrder={renderOrder}
+      canvasKey={renderOrder}
+    />
   );
 }
 
 export function GraphNode({
   solveNode,
   tint,
+  childTint,
   rect,
   theme,
   renderOrder,
@@ -104,6 +115,8 @@ export function GraphNode({
   const clippingPlanes = useControlClipPlanes();
   const selected = props.selected === true;
   const styles = graphNodeStyles(solveNode, theme);
+  const portSize = scaledIconSizeOf(GRAPH_PORT_ICON_SIZE, theme.scale);
+  const resizerSize = scaledIconSizeOf(RESIZER_SE_ICON_SIZE, theme.scale);
   const panelStyle = selected ? styles.panelSelected : styles.panel;
   const titlebarStyle = selected ? styles.titlebarSelected : styles.titlebar;
 
@@ -121,13 +134,7 @@ export function GraphNode({
 
   const title = props.title ?? '';
   const fontTheme = useMemo(
-    () =>
-      resolveTitleFontTheme(
-        solveNode,
-        GRAPH_NODE_TITLE_VARIATION,
-        theme.fontSize,
-        GRAPH_NODE_TITLE_DEFAULT_COLOR
-      ),
+    () => resolveTitleFontTheme(solveNode, GRAPH_NODE_TITLE_VARIATION, theme.fontSize),
     [solveNode, theme.fontSize]
   );
   const titleLayout = useMemo(
@@ -142,10 +149,12 @@ export function GraphNode({
             titlebarBand.contentRect.w,
             titlebarBand.contentRect.h,
             undefined,
-            undefined
+            undefined,
+            undefined,
+            { contentMargin: fontTheme.box.contentMargin }
           )
         : [],
-    [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h]
+    [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h, fontTheme.box]
   );
   const titleLineLayouts = useMemo(
     () => (titleLayout ? titlePlacements.map((p) => soloLineLayout(p.line, titleLayout)) : []),
@@ -167,9 +176,10 @@ export function GraphNode({
   );
   const portHOffset = portHOffsetOf(solveNode.constants);
 
+  // The title is a Label child (`graph_node.cpp:1325-1330`, `graph_frame.cpp:351-357`): no `self_modulate`.
   const titleTintColor = useMemo(
-    () => multiplyModulate(tint.own, fontTheme.color),
-    [tint.own, fontTheme.color]
+    () => multiplyModulate(childTint.own, fontTheme.color),
+    [childTint.own, fontTheme.color]
   );
 
   const resizerTexture = useNodeIcon(
@@ -194,6 +204,12 @@ export function GraphNode({
         renderOrder={renderOrder}
       />
 
+      <PositionedStyleBox
+        box={fontTheme.box}
+        rect={titlebarBand.contentRect}
+        tint={childTint}
+        renderOrder={renderOrder}
+      />
       {titleLayout &&
         titlePlacements.map((placement, i) => (
           <CanvasItemGroup
@@ -229,6 +245,7 @@ export function GraphNode({
           {row.slot.leftEnabled && (
             <GraphNodePort
               solveNode={solveNode}
+              defaultSize={portSize}
               iconRef={row.slot.leftIcon}
               slotColor={row.slot.leftColor}
               tintOwn={tint.own}
@@ -240,6 +257,7 @@ export function GraphNode({
           {row.slot.rightEnabled && (
             <GraphNodePort
               solveNode={solveNode}
+              defaultSize={portSize}
               iconRef={row.slot.rightIcon}
               slotColor={row.slot.rightColor}
               tintOwn={tint.own}
@@ -251,16 +269,19 @@ export function GraphNode({
         </Fragment>
       ))}
       {resizerTexture && props.resizable === true && (
-        <CanvasItemGroup position={[rect.w - RESIZER_SE_ICON_SIZE.x, -(rect.h - RESIZER_SE_ICON_SIZE.y), 0]}>
-          <ControlQuad
-            width={RESIZER_SE_ICON_SIZE.x}
-            height={RESIZER_SE_ICON_SIZE.y}
-            color={resizerTint.color}
-            opacity={resizerTint.opacity}
-            map={resizerTexture}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+        <PositionedIcon
+          rect={{
+            x: rect.w - resizerSize.x,
+            y: rect.h - resizerSize.y,
+            w: resizerSize.x,
+            h: resizerSize.y,
+          }}
+          texture={resizerTexture}
+          color={resizerTint.color}
+          opacity={resizerTint.opacity}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
       )}
     </>
   );

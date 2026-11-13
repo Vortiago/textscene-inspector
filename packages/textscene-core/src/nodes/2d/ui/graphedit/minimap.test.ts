@@ -122,6 +122,26 @@ describe('minimapTransform (GraphEditMinimap::update_minimap, graph_edit.cpp:76-
   });
 });
 
+describe('minimapCameraRect with the constructor bounds', () => {
+  // `min_scroll_offset` and `max_scroll_offset` stay (0, 0) until `_update_scrollbars` runs, and
+  // `_get_graph_size` counts a zero extent as 1 (:121-128). The frame then outgrows the panel.
+  const zero = { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } };
+  const graphEditSize = { x: 500, y: 280 };
+  const t = minimapTransform({ x: 240, y: 160 }, zero);
+
+  it('starts at about (45, 5) inside the minimap, as Godot measures for a 500x280 GraphEdit', () => {
+    const r = minimapCameraRect(t, zero, { x: 0, y: 0 }, graphEditSize);
+    expect(Math.abs(r.x - 45)).toBeLessThanOrEqual(1);
+    expect(Math.abs(r.y - 5)).toBeLessThanOrEqual(1);
+  });
+
+  it('runs past the right and bottom edges of the minimap', () => {
+    const r = minimapCameraRect(t, zero, { x: 0, y: 0 }, graphEditSize);
+    expect(r.x + r.w).toBeGreaterThan(240);
+    expect(r.y + r.h).toBeGreaterThan(160);
+  });
+});
+
 describe('graphEditElements', () => {
   const theme = nativeTheme(1);
 

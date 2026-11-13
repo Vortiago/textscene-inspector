@@ -20,33 +20,48 @@ import { canvasLayerRanks } from '../../../r3f/canvasPaintOrder';
 import { Node } from '../../node/Component';
 import { World2DLightingBoundary } from '../../../r3f/lighting2d/World2DLightingBoundary';
 import { useCanvasModulateColor } from '../../../r3f/canvasModulate';
-import { SubViewportSamplerScope } from './SubViewportSamplerScope';
+import { SubViewportCanvasScope } from './SubViewportCanvasScope';
 import { useViewportContent } from './useViewportContent';
 import { useInheritedRtl } from './useInheritedRtl';
+import { useViewportThemeOwners } from '../../windows/window/useViewportThemeOwners';
+import { ControlYSortProvider } from '../../../r3f/contexts/ControlYSortContext';
 import { PendingSuspense } from '../../../resources/PendingSuspense';
 import type { SubViewportProperties } from './types';
 import type { Vector2 } from '../../../godot/math/vector';
-import { viewportSize, viewportTargetSize } from './targetSize';
+import { viewportPassSizes } from './targetSize';
+import { useStableVector2 } from '../../../r3f/hooks/useStableVector2';
 import { useInCanvasOverWorld } from './canvasOverWorldScope';
 import { ViewportCanvasScope } from '../../../r3f/viewportCanvasScope';
+import { viewportCanvasColorSpace } from './offscreenViewport';
 
 // Lazy: the Control painters register on import, and a viewport with no Controls never needs them.
 const ViewportControls = lazy(() =>
   import('./ViewportControls.js').then((m) => ({ default: m.ViewportControls }))
 );
 
-/** The Controls of a viewport beside its 2D items; the direction climb runs only for such a viewport. */
+/** The Controls of a viewport beside its 2D items; the climbs above it run only for such a viewport. */
 function MixedViewportControls({
   path,
-  nodes,
+  viewport,
   size,
 }: {
   path: string;
-  nodes: readonly TscnNode[];
+  viewport: TscnNode;
   size: Vector2;
 }) {
   const inheritedRtl = useInheritedRtl(path);
-  return <ViewportControls nodes={nodes} size={size} inheritedRtl={inheritedRtl} />;
+  const themeOwners = useViewportThemeOwners(path);
+  return (
+    <ViewportControls
+      path={path}
+      viewport={viewport}
+      size={size}
+      inheritedRtl={inheritedRtl}
+      themeOwners={themeOwners}
+      enclosingViewportSize={null}
+      sortsLocally={false}
+    />
+  );
 }
 
 /**
@@ -72,8 +87,8 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
   const canvasLayers = useMemo(() => canvasLayerRanks(node.children), [node]);
 
   // Only content this subsystem can rasterise gets an offscreen pass. A Control-only viewport
-  // is the native Control-raster pass's (`ControlRasterPass.tsx`), and an empty one has nothing
-  // to draw.
+  // is the native Control-raster pass's (`ControlRasterPass.tsx`), which clears a viewport with no
+  // Control too.
   const rasterizes = kind === '3d' || kind === '2d';
 
   // The subtree draws inline only for 3D content in a shared world in a 3D
@@ -83,17 +98,14 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
   const rendersInline = rasterizes ? kind === '3d' && !ownWorld3D && workspace === '3d' : !ownWorld3D;
   // On either path the subtree's canvas items are in this viewport's World2D, never the parent's.
   // So are its CanvasModulate and its lights: the parent canvas's tint stops at this viewport.
-  const forcedRect = useViewportRect(path);
-  const targetSize = viewportTargetSize(properties.size, forcedRect);
-  const authoredSize = viewportSize(properties.size, forcedRect);
+  const sizes = viewportPassSizes(node, useViewportRect(path));
   // Stable while the numbers are, so the pass and the light host do not follow a new object.
-  const size = useMemo(() => ({ x: targetSize.x, y: targetSize.y }), [targetSize.x, targetSize.y]);
-  // Godot lays Controls out by `size` (`viewport.cpp:1202-1210`); only the target is capped.
-  const layoutSize = useMemo(
-    () => ({ x: authoredSize.x, y: authoredSize.y }),
-    [authoredSize.x, authoredSize.y]
-  );
+  const size = useStableVector2(sizes.target);
+  // Godot lays Controls out by the visible rect (`viewport.cpp:1202-1216`). Only the target is capped.
+  const layoutSize = useStableVector2(sizes.layout);
+  const viewSize = useStableVector2(sizes.view);
   const canvasModulate = useCanvasModulateColor(node.children);
+  const canvasSpace = viewportCanvasColorSpace(properties);
   // A canvas holds the 2D items and Controls of a viewport, in one tree-order draw. A 2D pass draws
   // it in its portal. A 3D pass draws it over its world, in a scene of its own (`OffscreenViewportPass`),
   // so the world's portal holds the children alone and each workspace drops the other's nodes.
@@ -101,20 +113,22 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
     <ViewportSizeProvider size={layoutSize}>
       <LayerRanksProvider value={canvasLayers}>
         <ViewportCanvasScope>
-          <SubViewportSamplerScope properties={properties}>{inner}</SubViewportSamplerScope>
+          <SubViewportCanvasScope properties={properties}>{inner}</SubViewportCanvasScope>
         </ViewportCanvasScope>
       </LayerRanksProvider>
     </ViewportSizeProvider>
   );
+  // The viewport's own exchange between its y-sorts and its Control walk: its Controls are not the
+  // root canvas's, so their runs and origins stay out of that canvas's sort.
   const canvasContents = inViewport(
-    <>
+    <ControlYSortProvider>
       {holdsCanvasItems ? children : null}
       {holdsControls ? (
         <PendingSuspense>
-          <MixedViewportControls path={path} nodes={node.children} size={layoutSize} />
+          <MixedViewportControls path={path} viewport={node} size={layoutSize} />
         </PendingSuspense>
       ) : null}
-    </>
+    </ControlYSortProvider>
   );
   const contents = kind === '2d' ? canvasContents : inViewport(children);
   const drawsCanvasOverWorld = kind === '3d' && (holdsControls || holdsCanvasItems);
@@ -130,6 +144,7 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
             path={path}
             size={size}
             layoutSize={layoutSize}
+            viewSize={viewSize}
             kind={kind}
             rendersInline={rendersInline}
             canvasModulate={canvasModulate}
@@ -140,7 +155,9 @@ function SubViewportMount({ node, children }: NodeComponentProps) {
           </OffscreenViewportPass>
         ) : null}
         {rendersInline ? (
-          <World2DLightingBoundary canvasModulate={canvasModulate}>{contents}</World2DLightingBoundary>
+          <World2DLightingBoundary canvasModulate={canvasModulate} space={canvasSpace}>
+            {contents}
+          </World2DLightingBoundary>
         ) : null}
       </EnclosingViewportProvider>
     </Node>

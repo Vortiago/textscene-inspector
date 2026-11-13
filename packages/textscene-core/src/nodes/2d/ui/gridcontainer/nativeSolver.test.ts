@@ -15,13 +15,14 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import './nativeSolver';
 import { solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
 const gridContainerLayout = controlSolverRegistry.containerLayout('GridContainer')!;
 const gridContainerMinimumSize = controlSolverRegistry.minimumSize('GridContainer')!;
 
 /** `gridContainerLayout`'s `rects` half only: see `ContainerLayoutResult`'s own doc for why the union is here at all. */
 function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): ReadonlyMap<string, Rect2> {
-  return 'rects' in result ? result.rects : result;
+  return normalizeContainerLayoutResult(result).rects;
 }
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
@@ -30,6 +31,11 @@ function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
     path: name,
     node: controlNode(name, 'Control', { name, ...props }),
   };
+}
+
+/** A leaf at a scene path below the grid, as the solver core reads a `get_child(i)` of it. */
+function cell(name: string, props: Partial<ControlProperties> = {}): SolveNode {
+  return { ...leaf(name, props), path: `Grid/${name}` };
 }
 
 function grid(name: string, props: Partial<GridContainerProperties>, children: SolveNode[]): SolveNode {
@@ -286,8 +292,8 @@ describe('gridContainerLayout', () => {
       // 10px-wide cell, but each child's own combined minimum size (kept at
       // full precision, unlike the bookkeeping) is larger than that, so the
       // final rect grows past the cell to the child's own float minimum.
-      const r0 = leaf('R0', { customMinimumSize: { x: 10.7, y: 5 } });
-      const r1 = leaf('R1', { customMinimumSize: { x: 10.2, y: 5 } });
+      const r0 = cell('R0', { customMinimumSize: { x: 10.7, y: 5 } });
+      const r1 = cell('R1', { customMinimumSize: { x: 10.2, y: 5 } });
       const children = [r0, r1];
       const n = grid(
         'Grid',
@@ -300,14 +306,14 @@ describe('gridContainerLayout', () => {
       // second copy of the rule living in this slice.
       const solved = solveViaGrid(n, { x: 0, y: 0, w: 50, h: 50 });
 
-      expect(solved.get('R0')).toEqual({ x: 0, y: 0, w: 10.7, h: 5 });
-      expect(solved.get('R1')).toEqual({ x: 0, y: 5, w: 10.2, h: 5 });
+      expect(solved.get('Grid/R0')).toEqual({ x: 0, y: 0, w: 10.7, h: 5 });
+      expect(solved.get('Grid/R1')).toEqual({ x: 0, y: 5, w: 10.2, h: 5 });
     }
   );
 
   it('shifts position (not just size) when the re-floor fires under GROW_DIRECTION_BEGIN/BOTH (control.cpp:1776-1783) (oracle: scenario_i.tscn)', () => {
-    const beginNode = leaf('R0Begin', { customMinimumSize: { x: 10.7, y: 5 }, growHorizontal: 0 });
-    const bothNode = leaf('R1Both', { customMinimumSize: { x: 10.7, y: 5 }, growHorizontal: 2 });
+    const beginNode = cell('R0Begin', { customMinimumSize: { x: 10.7, y: 5 }, growHorizontal: 0 });
+    const bothNode = cell('R1Both', { customMinimumSize: { x: 10.7, y: 5 }, growHorizontal: 2 });
     const children = [beginNode, bothNode];
     const n = grid(
       'Grid',
@@ -320,13 +326,13 @@ describe('gridContainerLayout', () => {
     // BEGIN: pos.x += (10 - 10.7) = -0.7. Both: pos.x += 0.5*(10-10.7) = -0.35.
     // `closeTo`, not `toEqual`: 10.7 is inexact in binary, so JS yields
     // -0.6999999999999993, as Godot's float32 gives -0.69999980926514.
-    const begin = rects.get('R0Begin')!;
+    const begin = rects.get('Grid/R0Begin')!;
     expect(begin.x).toBeCloseTo(-0.7, 9);
     expect(begin.y).toBe(0);
     expect(begin.w).toBeCloseTo(10.7, 9);
     expect(begin.h).toBe(5);
 
-    const both = rects.get('R1Both')!;
+    const both = rects.get('Grid/R1Both')!;
     expect(both.x).toBeCloseTo(-0.35, 9);
     expect(both.y).toBe(5);
     expect(both.w).toBeCloseTo(10.7, 9);

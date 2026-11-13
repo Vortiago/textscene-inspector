@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
 import { repoRoot } from '../parser/testing/parserKit';
 import { ShadowCastingSetting } from '../godot/rendering/rendering';
-import { overlayDrawProps } from './materials/materialOverlay';
+import { extraDrawProps } from './materials/extraDraw';
 import { drawHookProps, shadowCastingEffects } from './shadowCasting';
 import { decomposeForR3F, node3dGroupSpread } from './nodeTransform';
 import { parseTransform3D } from '../utils/transform';
@@ -93,7 +93,7 @@ const SPREAD = /\{\.\.\./g;
 const SHEARED_BASIS = parseTransform3D('Transform3D(1, 0, 0, 0.6, 1, 0, 0, 0, 1, 0, 0, 0)');
 const SLOT_FREE_PROP_HELPERS: Readonly<Record<string, object>> = {
   drawHookProps: drawHookProps(shadowCastingEffects(ShadowCastingSetting.ON)),
-  overlayDrawProps: overlayDrawProps(shadowCastingEffects(ShadowCastingSetting.ON)),
+  extraDrawProps: extraDrawProps(1),
   node3dGroupSpread: node3dGroupSpread(decomposeForR3F(SHEARED_BASIS)),
 };
 const SLOT_FREE_SPREAD = new RegExp(
@@ -147,6 +147,8 @@ export function offTagMounts(source: string): OffTagMount[] {
 const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
   'packages/textscene-core/src/nodes/2d/camera2d/Component.tsx':
     'spreads the shared Node2D transform bag onto a `<group>`, which has no material slot',
+  'packages/textscene-core/src/nodes/2d/canvasgroup/Component.tsx':
+    'the composite rect: one material per group buffer, memoised on the buffer and disposed on replacement; the group colour travels as a uniform',
   'packages/textscene-core/src/nodes/2d/pathfollow2d/Component.tsx':
     'spreads the sampled curve transform onto a `<group>`, which has no material slot',
   'packages/textscene-core/src/nodes/2d/pointlight2d/Component.tsx':
@@ -159,6 +161,8 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     "mounts the light's aim target — an empty Object3D, added as a child",
   'packages/textscene-core/src/r3f/LiftedAncestors.tsx':
     "spreads a lifted ancestor's restored transform onto a `<group>`, which has no material slot",
+  'packages/textscene-core/src/r3f/YSortLayerGroup.tsx':
+    "spreads the layer's transform onto a `<group>`, which has no material slot",
   'packages/textscene-core/src/r3f/components/CanvasItem2D.tsx':
     "spreads the canvas item's transform onto a `<group>`, which has no material slot",
   'packages/textscene-core/src/r3f/components/CanvasItemGroup.tsx':
@@ -192,6 +196,8 @@ const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
     'one material per call, its shaders fixed at construction and owned by the caller that draws it; callers move only uniforms, and each `defines` change, the sky radiance layout and the volumetric fog integrate depth, sets `needsUpdate`',
   'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':
     'the depth prepass base, cloned per surface and never drawn itself, and never mutated',
+  'packages/textscene-core/src/nodes/2d/canvasgroup/compositeMaterial.ts':
+    'one material per group buffer, its shaders fixed at construction; a render moves only its colour uniform',
   'packages/textscene-core/src/r3f/opaqueSentinel.ts':
     "an opaque-list sentinel's material, which writes nothing and is never mutated",
   'packages/textscene-core/src/r3f/controls/native/text/canvasTextPainter.ts':
@@ -290,7 +296,7 @@ const CONSTRUCTED_MOUNT_EXEMPTIONS: Readonly<Record<string, string>> = {
     'an opaque-list sentinel: its material writes nothing and is never mutated, and its owner removes it with its scene',
   'packages/textscene-core/src/resources/sky/build.ts':
     'the sky cube: built once, consumed by a single cube render, disposed with the environment',
-  'packages/textscene-core/src/r3f/internal/glb-scene-root/GlbSurfaceMaterialOverride.tsx':
+  'packages/textscene-core/src/r3f/surfacedMeshDrawer/ClonedExtraDraws.tsx':
     'the next_pass chain sibling: the effect builds the draw beside a long-lived clone of the loader’s mesh and removes it when the link unmounts, so the material never passes through React',
 };
 
@@ -537,7 +543,7 @@ describe('Material factory conformance', () => {
     // One element, one offence, however many shapes it carries.
     expect(mounts('  <primitive object={m} {...rest} attach={a} />')).toEqual(['1:spread']);
     // A named prop helper's return is proven slot-free below, so its spread is not an offence.
-    expect(mounts('  <mesh {...drawHookProps(shadow)} {...overlayDrawProps(shadow)} />')).toEqual([]);
+    expect(mounts('  <mesh {...drawHookProps(shadow)} {...extraDrawProps(ordinal)} />')).toEqual([]);
     // Another spread beside it still names nothing.
     expect(mounts('  <mesh {...drawHookProps(shadow)} {...rest} />')).toEqual(['1:spread']);
     // A component of ours takes its props in its own body, which is scanned there.

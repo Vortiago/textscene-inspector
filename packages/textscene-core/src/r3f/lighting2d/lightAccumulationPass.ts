@@ -1,7 +1,7 @@
 /**
  * The pre-pass: for each item light list, show only the meshes of the lights on it and let the
- * mounted tree draw itself into that list's accumulators. Each list takes up to three passes:
- * `CanvasLightPass.tsx` says why.
+ * mounted tree draw itself into that list's accumulators. A list takes one pass over its summed
+ * buffers and one per light kept apart: `CanvasLightPass.tsx` says why.
  */
 
 import type * as THREE from 'three';
@@ -10,7 +10,7 @@ import {
   drawsInPass,
   type ApartLightPlan,
   type LightListEntry,
-  type PassKind,
+  type ListAttachments,
   type PassMeshRole,
 } from './itemLightList.js';
 import { listWindow, windowScissor } from './lightListWindow.js';
@@ -26,12 +26,17 @@ export interface PassMesh {
 
 /**
  * The lights of a list a normal-mapped item reads, each accumulated alone into a layer of its own
- * from a black seed, so the item can shade each one (`lightPassContext.ts`).
+ * from a black seed, so the item can shade each one (`lightPassContext.ts`). Attachment 0 holds the
+ * light, and attachment 1 the `shadow_color` while any light adds one, at the light's own layer.
  */
 interface ApartAccumulation extends ApartLightPlan {
   readonly target: THREE.WebGLArrayRenderTarget;
-  /** The `shadow_color` layers of the lights that add one, or null while none does. */
-  readonly shadowTintTarget: THREE.WebGLArrayRenderTarget | null;
+}
+
+/** The lights of a list summed in order, in one target whose attachments `attachments` places. */
+export interface SummedAccumulation {
+  readonly target: THREE.WebGLRenderTarget;
+  readonly attachments: ListAttachments;
 }
 
 /** One item light list and its accumulators. */
@@ -40,12 +45,8 @@ export interface AccumulationList {
   readonly entries: ReadonlyMap<number, LightListEntry>;
   /** The placements whose items read the list (`placementId`). */
   readonly placementIds: readonly string[];
-  /** The ordinary accumulator, or null when no ordinary item reads the list. */
-  readonly target: THREE.WebGLRenderTarget | null;
-  /** The unmodulated-seed accumulator, or null when no Light Only item reads the list. */
-  readonly lightOnlyTarget: THREE.WebGLRenderTarget | null;
-  /** The albedo-free `shadow_color` accumulator, or null. */
-  readonly shadowTintTarget: THREE.WebGLRenderTarget | null;
+  /** The summed buffers, or null when no ordinary or Light Only item reads the list. */
+  readonly summed: SummedAccumulation | null;
   /** The lights kept apart, or null while no normal-mapped item reads the list. */
   readonly apart: ApartAccumulation | null;
 }
@@ -82,14 +83,7 @@ function fitListTargets(
 ): void {
   const window = listWindow(list.placementIds, windows);
   const scissor = window ? windowScissor(window, camera, size) : null;
-  const targets = [
-    list.target,
-    list.lightOnlyTarget,
-    list.shadowTintTarget,
-    list.apart?.target,
-    list.apart?.shadowTintTarget,
-  ];
-  for (const target of targets) {
+  for (const target of [list.summed?.target, list.apart?.target]) {
     if (!target) continue;
     if (target.width !== size.x || target.height !== size.y) target.setSize(size.x, size.y, target.depth);
     target.scissorTest = scissor !== null;
@@ -97,19 +91,20 @@ function fitListTargets(
   }
 }
 
-function showListMeshes(passMeshes: ReadonlySet<PassMesh>, list: AccumulationList, kind: PassKind): void {
+function showListMeshes(passMeshes: ReadonlySet<PassMesh>, list: AccumulationList): void {
   for (const { mesh, ordinal, role } of passMeshes) {
-    mesh.visible = drawsInPass(list.entries.get(ordinal), role, kind);
+    mesh.visible = drawsInPass(list.entries.get(ordinal), role);
   }
 }
 
-function showLightMeshes(passMeshes: ReadonlySet<PassMesh>, entry: LightListEntry, kind: PassKind): void {
+function showLightMeshes(passMeshes: ReadonlySet<PassMesh>, entry: LightListEntry): void {
   for (const { mesh, ordinal, role } of passMeshes) {
-    mesh.visible = drawsInPass(ordinal === entry.ordinal ? entry : undefined, role, kind);
+    mesh.visible = drawsInPass(ordinal === entry.ordinal ? entry : undefined, role);
   }
 }
 
 const BLACK = [0, 0, 0] as const;
+const WHITE = [1, 1, 1] as const;
 
 type RenderPass = (
   target: THREE.WebGLRenderTarget,
@@ -117,15 +112,11 @@ type RenderPass = (
   layer: number
 ) => void;
 
-/** Each light alone, from black: its layer then holds only its own `light_color` and alpha. */
+/** Each light alone, from black: its layer then holds only its own `light_color`, alpha and tint. */
 function renderLightsApart(apart: ApartAccumulation, passMeshes: ReadonlySet<PassMesh>, render: RenderPass) {
   apart.entries.forEach((entry, layer) => {
-    showLightMeshes(passMeshes, entry, 'light');
+    showLightMeshes(passMeshes, entry);
     render(apart.target, BLACK, layer);
-    const tintLayer = apart.tintLayers[layer]!;
-    if (tintLayer < 0) return;
-    showLightMeshes(passMeshes, entry, 'tint');
-    render(apart.shadowTintTarget!, BLACK, tintLayer);
   });
 }
 
@@ -155,10 +146,6 @@ export function renderLightLists({
   const render = (target: THREE.WebGLRenderTarget, seedRgb: readonly [number, number, number], layer = 0) => {
     seed.set(seedRgb[0], seedRgb[1], seedRgb[2]);
     gl.setRenderTarget(target, layer);
-    // One clear per pass, not per light: each light stamps its own ref, so last frame's stamps
-    // are the only ones that could be mistaken for this frame's. Leaving them would make a light
-    // that has stopped casting keep the hole it cut.
-    gl.clear(false, false, true);
     gl.render(scene, camera);
     // Only visibility changes between the passes, so the first render's world matrices hold.
     scene.matrixWorldAutoUpdate = false;
@@ -172,17 +159,15 @@ export function renderLightLists({
     camera.layers.set(LIGHT_PASS_LAYER);
     for (const list of lists) {
       fitListTargets(list, windows, camera, resolution);
-      showListMeshes(passMeshes, list, 'light');
-      if (list.target) render(list.target, [canvasModulate.r, canvasModulate.g, canvasModulate.b]);
-      // Light Only skips `color *= canvas_modulation`, so its accumulation is the same lights
-      // over an unmodulated seed.
-      if (list.lightOnlyTarget) render(list.lightOnlyTarget, [1, 1, 1]);
-      if (list.shadowTintTarget) {
-        // `light_shadow_compute` runs after `light_color.rgb *= base_color.rgb` and its `mix`
-        // overwrites rgb, so the tint is albedo-free: Godot 4.6.3 adds the same 15/255 over 0.25
-        // and 0.75 albedo. The black seed zeroes it without touching the renderer's clear colour.
-        showListMeshes(passMeshes, list, 'tint');
-        render(list.shadowTintTarget, BLACK);
+      if (list.summed) {
+        showListMeshes(passMeshes, list);
+        // An ordinary buffer starts from the canvas modulate. A list only Light Only items read
+        // keeps that buffer in attachment 0, which starts from white.
+        const { plain } = list.summed.attachments;
+        render(
+          list.summed.target,
+          plain >= 0 ? [canvasModulate.r, canvasModulate.g, canvasModulate.b] : WHITE
+        );
       }
       if (list.apart) renderLightsApart(list.apart, passMeshes, render);
     }

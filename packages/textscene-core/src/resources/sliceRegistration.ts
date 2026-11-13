@@ -5,6 +5,7 @@
  * linter entry point can read it. Each slice's `index.ts` registers itself.
  */
 
+import type { ParsedResource } from '../parser/parsedResource';
 import { fileExtension } from './fileExtension';
 
 /**
@@ -14,7 +15,16 @@ import { fileExtension } from './fileExtension';
  * meaning in their own decode.
  */
 export type ResourceBusType =
-  'texture' | 'texture3d' | 'texture2darray' | 'scene' | 'glb' | 'resource' | 'arraymesh' | 'font' | 'theme';
+  | 'texture'
+  | 'texture3d'
+  | 'texture2darray'
+  | 'scene'
+  | 'glb'
+  | 'resource'
+  | 'arraymesh'
+  | 'font'
+  | 'theme'
+  | 'directory';
 
 interface ResourceSliceRegistration {
   /** Slice folder name under `resources/<category>/`, for example 'standardmaterial3d'. */
@@ -30,6 +40,16 @@ interface ResourceSliceRegistration {
   extensions?: readonly string[];
   /** Whether the provider must fetch bytes (not text) for this slice's files. */
   binaryBytes?: boolean;
+  /**
+   * Reads this slice's bytes into the ParsedResource its files give on the `resource` bus. A binary
+   * slice without it holds Godot's RSRC container.
+   */
+  parseBytes?: (bytes: ArrayBuffer) => ParsedResource | Promise<ParsedResource>;
+  /**
+   * The slice reads only this many leading bytes of its files, so a host reads no more. A video can
+   * run to hundreds of megabytes while its parse needs the first page of headers.
+   */
+  headBytes?: number;
   /**
    * Whether a cached value is shared scene-graph state that each consumer must
    * clone (an `Object3D` has one parent). Read by `useResource` per bus.
@@ -88,14 +108,16 @@ export function registerGenericResourceSlice(
   registerResourceSlice({ slice, kind: 'godot-text', typeNames, busType: 'resource', declaresNoProperties });
 }
 
+function byPath(path: string): ResourceSliceRegistration | null {
+  const extension = fileExtension(path);
+  return (extension !== null && byExtension.get(extension)) || null;
+}
+
 export const resourceSliceRegistry = {
   byTypeName: (typeName: string): ResourceSliceRegistration | null => byTypeName.get(typeName) ?? null,
   byExtension: (extension: string): ResourceSliceRegistration | null => byExtension.get(extension) ?? null,
-  /** The slot the slice claiming the path's extension loads it on, or null when no slice claims it. */
-  busTypeOfPath: (path: string): ResourceBusType | null => {
-    const extension = fileExtension(path);
-    return (extension !== null && byExtension.get(extension)?.busType) || null;
-  },
+  /** The slice claiming the path's extension, or null when no slice claims it. */
+  byPath,
   /** Whether the slice claiming `busType` marks its values clone-per-consumer. */
   clonesPerConsumer: (busType: ResourceBusType): boolean =>
     all.some((r) => r.busType === busType && r.clonePerConsumer === true),

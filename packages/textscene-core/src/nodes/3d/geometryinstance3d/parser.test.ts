@@ -55,6 +55,21 @@ describe('parseGeometryInstance3D', () => {
     });
   });
 
+  it('reads material_override and material_overlay as raw references', () => {
+    const parsed = parseGeometryInstance3D(HEADING, {
+      material_override: 'SubResource("Mat_1")',
+      material_overlay: 'ExtResource("2_overlay")',
+    });
+    expect(parsed.materialOverride).toBe('SubResource("Mat_1")');
+    expect(parsed.materialOverlay).toBe('ExtResource("2_overlay")');
+  });
+
+  it('holds no override and no overlay for a null reference', () => {
+    const parsed = parseGeometryInstance3D(HEADING, { material_override: 'null', material_overlay: 'null' });
+    expect(parsed.materialOverride).toBeUndefined();
+    expect(parsed.materialOverlay).toBeUndefined();
+  });
+
   it('defaults to no visibility range', () => {
     expect(parseGeometryInstance3D(HEADING, {}).visibilityRange).toEqual(NO_VISIBILITY_RANGE);
   });

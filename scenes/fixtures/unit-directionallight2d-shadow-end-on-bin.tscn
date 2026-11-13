@@ -1,0 +1,22 @@
+[gd_scene format=3]
+
+; Moves one variable: where the occluder's end falls. The end x 754.44839 lands on the centre of
+; bin 1300 of the 2048-bin parallel map across the 1152 by 648 viewport. The top-left rule leaves a
+; centre on the right side of the occluder uncovered, so the shadow stops one column short. No other
+; directional scene puts an end on a bin centre.
+
+[sub_resource type="OccluderPolygon2D" id="1"]
+closed = false
+polygon = PackedVector2Array(300, 200, 754.44839, 200)
+
+[node name="Root" type="Node2D"]
+
+[node name="Surface" type="Polygon2D" parent="."]
+color = Color(0.25, 0.25, 0.25, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Sun" type="DirectionalLight2D" parent="."]
+shadow_enabled = true
+
+[node name="Caster" type="LightOccluder2D" parent="."]
+occluder = SubResource("1")

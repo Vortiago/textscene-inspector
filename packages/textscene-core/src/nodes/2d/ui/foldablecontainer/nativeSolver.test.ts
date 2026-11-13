@@ -22,6 +22,7 @@ import {
 } from './nativeSolver';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { Vector2 } from '../../../../godot/math/vector';
+import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const MARGIN = 8; // content_margin 4, both sides.
@@ -61,7 +62,7 @@ const minSize = foldableContainerMinimumSize;
 
 function layoutRects(...args: Parameters<typeof foldableContainerLayout>): ReadonlyMap<string, Rect2> {
   const result = foldableContainerLayout(...args);
-  return 'rects' in result ? result.rects : result;
+  return normalizeContainerLayoutResult(result).rects;
 }
 
 /** The share both solver entry points and the painter call. */
@@ -244,6 +245,33 @@ describe('foldableContainerChildVisibility — `c->set_visible(!folded)` (foldab
       false,
       false,
     ]);
+  });
+});
+
+describe('foldableContainerTitleShape font size (default_theme.cpp:1322)', () => {
+  it.each([1, 1.5, 2])('is 16 px at theme scale %s, unscaled', (scale) => {
+    expect(foldableContainerTitleShape(node({}), nativeTheme(scale)).fontSizePx).toBe(16);
+  });
+
+  it('keeps an authored theme_override_font_sizes/font_size at any scale', () => {
+    const authored = node({ themeOverrideFontSizes: { font_size: 30 } });
+    expect(foldableContainerTitleShape(authored, nativeTheme(1.5)).fontSizePx).toBe(30);
+  });
+});
+
+describe('foldableContainerTitleShape title margin (make_flat_stylebox, default_theme.cpp:57-60)', () => {
+  it('scales with the theme: 6 px on every side at scale 1.5', () => {
+    const margin = { left: 6, top: 6, right: 6, bottom: 6 };
+    expect(foldableContainerTitleShape(node({}), nativeTheme(1.5)).titleStyle.contentMargin).toEqual(margin);
+  });
+});
+
+describe('foldableContainerTitleShape content panel margin (default_theme.cpp:1314)', () => {
+  it.each([1, 1.5, 2])('is 4 px on every side at theme scale %s, unscaled', (scale) => {
+    const margin = { left: 4, top: 4, right: 4, bottom: 4 };
+    expect(foldableContainerTitleShape(node({}), nativeTheme(scale)).panelStyle.contentMargin).toEqual(
+      margin
+    );
   });
 });
 

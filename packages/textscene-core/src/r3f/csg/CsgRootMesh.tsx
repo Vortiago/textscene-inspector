@@ -1,15 +1,13 @@
 /**
- * The mesh a CSG root draws: it loads the library, memoises the evaluation, mounts one material slot
- * per surface and publishes the status to the subtree. Publishing here, not through CsgPrimitive,
+ * The mesh a CSG root draws: it loads the library, memoises the evaluation, draws it through the
+ * surfaced mesh drawer and publishes the status to the subtree. Publishing here, not through CsgPrimitive,
  * spares the root subtree a re-render on each load transition.
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { visualLayersUserData } from '../visualLayers';
 import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
-import { SurfaceMaterialSlots } from '../materials/SurfaceMaterialSlots';
-import { NextPassChain } from '../materials/nextPass';
+import { SurfacedMeshDrawer } from '../surfacedMeshDrawer/SurfacedMeshDrawer';
 import { resolveMaterialSource, type MaterialSource } from '../materials/materialSource';
 import { CsgSubtreeProvider, type CsgSubtreeStatus } from '../contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';
@@ -19,17 +17,15 @@ import { getCachedEvaluation, setCachedEvaluation } from './csgEvaluationCache';
 import { loadCsgModule, type CsgModule } from './csgModule';
 import type { CsgGeometrySetup } from './useCsgGeometryContext';
 import { usePendingWhile } from '../../resources/usePendingWhile';
-import type { ShadowCastingEffects } from '../shadowCasting';
 
 interface CsgRootMeshProps {
   plan: CsgPlan;
   /** What the plan's solids build against. The boolean waits while a file a solid reads loads. */
   setup: CsgGeometrySetup;
-  /** The ROOT's `cast_shadow`; a contributor's own is absorbed with its solid. */
-  shadow: ShadowCastingEffects;
-  /** The ROOT's `layers`, as Godot draws the whole result as the root's instance. */
-  layers: number;
-  /** Set to the evaluated mesh while it draws, for the root's visibility range to measure. */
+  /**
+   * Set to the evaluated mesh while it draws, for the root's visibility range to measure. The mesh
+   * draws as the ROOT's instance, with its `cast_shadow` and `layers`: a contributor's are absorbed.
+   */
   meshRef: RefObject<THREE.Mesh | null>;
   /**
    * The root's own solid, drawn while the library loads or after it failed. Passed in
@@ -44,8 +40,6 @@ interface CsgRootMeshProps {
 export function CsgRootMesh({
   plan,
   setup: { context, isLoading },
-  shadow,
-  layers,
   meshRef,
   fallback,
   children,
@@ -111,32 +105,17 @@ export function CsgRootMesh({
   );
 
   const drawable = evaluation !== null && evaluation.geometry.getAttribute('position')?.count !== 0;
+  const parts = useMemo(
+    () =>
+      evaluation ? [{ geometry: evaluation.geometry as THREE.BufferGeometry, materials: surfaces }] : [],
+    [evaluation, surfaces]
+  );
 
   return (
     <>
       {drawable && (
-        <mesh
-          ref={meshRef}
-          castShadow={shadow.castShadow}
-          onBeforeRender={shadow.onBeforeRender}
-          onAfterRender={shadow.onAfterRender}
-          onBeforeShadow={shadow.onBeforeShadow}
-          onAfterShadow={shadow.onAfterShadow}
-          receiveShadow
-          userData={visualLayersUserData(layers)}
-          geometry={evaluation!.geometry as THREE.BufferGeometry}
-        >
-          <SurfaceMaterialSlots sources={surfaces} />
-          <NextPassChain
-            meshRef={meshRef}
-            sources={surfaces}
-            drawsPoints={false}
-            godotLayers={layers}
-            // The result draws as the root's own instance: a chain link casts nothing
-            // and is posed by the root's hooks, which it shares here.
-            shadow={shadow}
-          />
-        </mesh>
+        // The result draws as the root's own instance, so the root's base hands it its passes.
+        <SurfacedMeshDrawer parts={parts} body={{ ref: meshRef }} />
       )}
       {/*
         Wraps `children` even though the dispatcher created them: React context flows by

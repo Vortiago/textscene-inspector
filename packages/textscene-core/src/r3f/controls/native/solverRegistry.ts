@@ -13,6 +13,8 @@ import type { NativeTheme } from './nativeTheme';
 import type { FontMetrics } from './text/fontMetrics';
 import type { SealedHandoff } from './solveHandoff';
 import type { Vector2 } from '../../../godot/math/vector';
+import type { ParsedResource } from '../../../parser/parsedResource';
+import type { DirectoryListings } from '../../../resources/directoryListing';
 
 /**
  * Measures a run of text at a font size. `lineSpacingPx` is the caller's own
@@ -52,6 +54,12 @@ export interface SolveContext {
    * pass that runs only for a type registered with `registerSizeDependentMinimum`.
    */
   tentativeRect?(n: SolveNode): Rect2 | undefined;
+  /**
+   * The visible size of the viewport that embeds the window being wrapped
+   * (`Window::get_usable_parent_rect`, `window.cpp:2326-2340`), which a popup's contents minimum
+   * limits its height to. Absent outside a window wrap, where nothing limits it.
+   */
+  embedderSize?: Vector2;
 }
 
 /**
@@ -60,6 +68,16 @@ export interface SolveContext {
  * share (`solveHandoff.ts`), gated here by `ctx.measureText`, not a return value.
  */
 export type MinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vector2;
+
+/** Whether a node of a size-dependent type reads `SolveContext.tentativeRect` (`registerSizeDependentMinimum`). */
+export type SizeDependentPredicate = (n: SolveNode) => boolean;
+
+/**
+ * The contents minimum a window's own properties give when its `size` is applied at load, before its
+ * Controls and the tree exist (`Window::set_size` clamps in `_update_window_size`, `window.cpp:1183-1190`),
+ * or `null` where it sets none.
+ */
+export type LoadedMinimumSizeFn = (n: SolveNode, ctx: SolveContext) => Vector2 | null;
 
 /** A `ContainerLayoutFn`'s result when it also seals a solve handoff for its own painter. */
 export interface ContainerLayoutResult {
@@ -71,6 +89,17 @@ export interface ContainerLayoutResult {
    * `SolvedControl.meta` and `NativeControlComponentProps.meta`.
    */
   meta?: SealedHandoff;
+  /**
+   * The scale the layout writes onto a child, by path, such as GraphEdit's `set_scale(zoom, zoom)`.
+   * It replaces the child's authored scale. A child without an entry keeps its own.
+   */
+  childScales?: ReadonlyMap<string, Vector2>;
+  /**
+   * False when `Container::fit_child_in_rect` never runs, as in GraphEdit (`graph_edit.h:114`),
+   * a plain `Control` that only places its children: each child then keeps its own rotation and
+   * scale, except the `childScales` entry. Defaults to true.
+   */
+  resetsChildTransform?: boolean;
 }
 
 /**
@@ -108,26 +137,54 @@ export interface TextureSlotRequest {
   scope?: SolveNode['resources'];
   /** Whether every resource between the node and `ref` is local to scene, true when omitted. A themed icon sets its Theme's. */
   isHeldLocally?: boolean;
+  /**
+   * How the slot reads a size out of the resource file `ref` names, for a slot whose file is not a
+   * texture. A `VideoStreamPlayer`'s stream reports its picture size. Omitted, the file is a texture resource.
+   */
+  sizeOfFile?: (parsed: ParsedResource) => Vector2 | null;
 }
 
-/** The request for a themed icon: its ref, in its theme's scope, held as its theme holds it. */
+/**
+ * The request for a themed icon: its ref, in its theme's scope, held as its theme holds it. A pending or failed load
+ * gives `null`, and each consumer reads `textureSlots[name] ?? <default icon size>`, as `Theme::has_icon` refuses an
+ * invalid icon (`theme.cpp:306`).
+ */
 export function themedSlotRequest(key: string, themed: ThemedIconRef): TextureSlotRequest {
   return { key, ref: themed.ref, scope: themed.resources, isHeldLocally: themed.isHeldLocally };
+}
+
+/** The requests for those of `names` that have a themed answer. */
+export function themedSlotRequests(
+  names: Iterable<string>,
+  themedIcons: Readonly<Record<string, ThemedIconRef>>
+): TextureSlotRequest[] {
+  const requests: TextureSlotRequest[] = [];
+  for (const name of names) {
+    const themed = themedIcons[name];
+    if (themed) requests.push(themedSlotRequest(name, themed));
+  }
+  return requests;
 }
 
 /**
  * Which Texture2D-valued slots a type carries, given the live node and its theme
  * icons. A per-type fact on the slice, not a central list `buildSolveTree.ts`
  * would keep in sync with every Control type it walks. An unregistered type
- * keeps the single `texture` or `icon` slot.
+ * keeps the single `texture` or `icon` slot. `themedIcons` and `builtIcons` are
+ * optional because only a type with a themeable icon reads them. `buildSolveTree.ts`
+ * always passes both.
  */
-// `themedIcons` is optional because only a type with a themeable icon reads it,
-// and a slice's tests call its `TextureSlotsFn` with one argument.
-// `buildSolveTree.ts` always passes it.
 export type TextureSlotsFn = (
   node: TscnNode,
-  themedIcons?: Readonly<Record<string, ThemedIconRef>>
+  themedIcons?: Readonly<Record<string, ThemedIconRef>>,
+  builtIcons?: BuiltIconsFn
 ) => readonly TextureSlotRequest[];
+
+/**
+ * The theme icons a Control of `type` (with its `theme_type_variation`), built inside the node and
+ * never serialised, resolves through the node's theme chain. A dialog's buttons are such Controls.
+ */
+export type BuiltIconsFn = (type: string, variation?: string) => Readonly<Record<string, ThemedIconRef>>;
 
 /**
  * The `visible` a container writes onto one direct sortable Control child
@@ -145,6 +202,15 @@ export type ChildVisibilityFn = (
   count: number
 ) => boolean | undefined;
 
+/**
+ * How a type settles from the `res://` folders a host lists, such as a FileDialog's file list. `folders` names the folders to
+ * ask for given the answers so far, since one answer can lead to the next. `resolve` gives the node with every answer in.
+ */
+export interface DirectoryResolver {
+  folders(node: TscnNode, listings: DirectoryListings): readonly string[];
+  resolve(node: TscnNode, listings: DirectoryListings): TscnNode;
+}
+
 class ControlSolverRegistry {
   private readonly minimumSizeFns = createTypeRegistry<MinimumSizeFn>('controlSolverRegistry.minimumSize');
   private readonly containerLayoutFns = createTypeRegistry<ContainerLayoutFn>(
@@ -154,8 +220,14 @@ class ControlSolverRegistry {
   private readonly childVisibilityFns = createTypeRegistry<ChildVisibilityFn>(
     'controlSolverRegistry.childVisibility'
   );
+  private readonly loadedMinimumSizeFns = createTypeRegistry<LoadedMinimumSizeFn>(
+    'controlSolverRegistry.loadedMinimumSize'
+  );
+  private readonly directoryResolvers = createTypeRegistry<DirectoryResolver>(
+    'controlSolverRegistry.directoryResolver'
+  );
   private readonly canvasBoundaryTypes = new Set<string>();
-  private readonly sizeDependentMinimumTypes = new Set<string>();
+  private readonly sizeDependentMinimumTypes = new Map<string, SizeDependentPredicate>();
 
   /**
    * Declares a type in the Control walk that is not a `CanvasItem`, such as
@@ -178,16 +250,24 @@ class ControlSolverRegistry {
 
   /**
    * Declares a type whose `MinimumSizeFn` reads `SolveContext.tentativeRect`.
-   * A set, so `solveControlTree` decides on a second pass with a membership
-   * test during `assignPaintIndex` rather than a traversal of its own.
+   * `isDependent` narrows the type to the nodes whose minimum does read it: a Button
+   * that does not wrap costs its scene no second pass.
    */
-  registerSizeDependentMinimum(typeName: string): void {
-    this.sizeDependentMinimumTypes.add(typeName);
+  registerSizeDependentMinimum(typeName: string, isDependent: SizeDependentPredicate = () => true): void {
+    this.sizeDependentMinimumTypes.set(typeName, isDependent);
   }
 
-  /** Whether this type's `MinimumSizeFn` reads `SolveContext.tentativeRect` (see `registerSizeDependentMinimum`). */
-  isSizeDependentMinimum(typeName: string): boolean {
-    return this.sizeDependentMinimumTypes.has(typeName);
+  /** Whether this node's `MinimumSizeFn` reads `SolveContext.tentativeRect`: `solveControlTree` runs its second pass for one. */
+  readsTentativeRect(n: SolveNode): boolean {
+    return this.sizeDependentMinimumTypes.get(n.node.type)?.(n) ?? false;
+  }
+
+  registerLoadedMinimumSize(typeName: string, fn: LoadedMinimumSizeFn): void {
+    this.loadedMinimumSizeFns.register(typeName, fn);
+  }
+
+  loadedMinimumSize(typeName: string): LoadedMinimumSizeFn | undefined {
+    return this.loadedMinimumSizeFns.get(typeName);
   }
 
   registerContainerLayout(typeName: string, fn: ContainerLayoutFn): void {
@@ -196,6 +276,15 @@ class ControlSolverRegistry {
 
   registerTextureSlots(typeName: string, fn: TextureSlotsFn): void {
     this.textureSlotFns.register(typeName, fn);
+  }
+
+  registerDirectoryResolver(typeName: string, resolver: DirectoryResolver): void {
+    this.directoryResolvers.register(typeName, resolver);
+  }
+
+  /** This type's `DirectoryResolver`, or `undefined` for a type that lists no folder. */
+  directoryResolver(typeName: string): DirectoryResolver | undefined {
+    return this.directoryResolvers.get(typeName);
   }
 
   /** Declares a container that writes its children's `visible` (see `ChildVisibilityFn`). */
@@ -228,7 +317,9 @@ class ControlSolverRegistry {
   clear(): void {
     this.minimumSizeFns.clear();
     this.containerLayoutFns.clear();
+    this.loadedMinimumSizeFns.clear();
     this.textureSlotFns.clear();
+    this.directoryResolvers.clear();
     this.childVisibilityFns.clear();
     this.canvasBoundaryTypes.clear();
     this.sizeDependentMinimumTypes.clear();

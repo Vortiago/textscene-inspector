@@ -27,10 +27,12 @@ import {
   textEditDrawnLines,
   textEditDrawnGlyphs,
   textEditRowColorRuns,
+  textEditCapSpanAlpha,
 } from './nativeSolver';
 import { withVariation } from '../../../../r3f/controls/native/text/fontMetrics';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import type { TextEditProperties } from './types';
+import { controlProps } from '../control/testing/controlProps';
 import { controlBidiOptions } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { StructuredTextParser } from '../../../../godot/text/textServerEnums';
 import type { GlyphPlacement } from '../../../../r3f/controls/native/text/textLayout';
@@ -93,13 +95,19 @@ describe('textEditRowHeightPx', () => {
 describe('textEditWrapWidthPx', () => {
   // text_edit.cpp:8536-8543.
   it('subtracts style margins, gutters and the bare wrap_offset(10)', () => {
-    expect(textEditWrapWidthPx(300, 8, 0, 80, false)).toBe(300 - 8 - 10);
+    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 0)).toBe(300 - 8 - 10);
   });
   it('additionally subtracts the minimap width when draw_minimap is true', () => {
-    expect(textEditWrapWidthPx(300, 8, 0, 80, true)).toBe(300 - 8 - 80 - 10);
+    expect(textEditWrapWidthPx(300, 8, 0, 80, true, 0)).toBe(300 - 8 - 80 - 10);
   });
   it('truncates a fractional result toward zero, matching the C++ int assignment', () => {
-    expect(textEditWrapWidthPx(300.7, 8, 0, 80, false)).toBe(Math.trunc(300.7 - 8 - 10));
+    expect(textEditWrapWidthPx(300.7, 8, 0, 80, false, 0)).toBe(Math.trunc(300.7 - 8 - 10));
+  });
+  it('subtracts the vertical scroll bar width when one is given (:8541-8543)', () => {
+    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 8)).toBe(300 - 8 - 8 - 10);
+  });
+  it('subtracts nothing for a bar width of 0', () => {
+    expect(textEditWrapWidthPx(300, 8, 0, 80, false, 0)).toBe(300 - 8 - 10);
   });
 });
 
@@ -174,7 +182,7 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
   });
 
   it('adds the gutter band width into the width', () => {
-    const props: TextEditProperties = {
+    const props: TextEditProperties = controlProps({
       name: 'T',
       textDirection: 0,
       language: '',
@@ -182,7 +190,7 @@ describe('textEditMinimumSize with fit_content (text_edit.cpp:8601-8614)', () =>
       structuredTextBidiOverrideOptions: [],
       text: 'a',
       fitContentWidth: true,
-    };
+    });
     const box = THEME.widgets.lineEdit.normal;
     const withoutGutter = textEditMinimumSizeWith(node(props), ctx(), props, box, 0).x;
     expect(textEditMinimumSizeWith(node(props), ctx(), props, box, 5).x).toBe(withoutGutter + 5);
@@ -555,5 +563,17 @@ describe('textEditRowColorRuns — a decomposed character (text_edit.cpp:1674)',
       ['Ä', red],
       ['b', blue],
     ]);
+  });
+});
+
+describe('textEditCapSpanAlpha (text_edit.cpp:1666-1668)', () => {
+  const span = (a: number) => ({ startIndex: 0, endIndex: 1, color: { r: 1, g: 0, b: 0, a } });
+
+  it('lowers an alpha above the cap to it', () => {
+    expect(textEditCapSpanAlpha([span(1)], 0.5)[0]!.color.a).toBe(0.5);
+  });
+
+  it('keeps an alpha already below the cap', () => {
+    expect(textEditCapSpanAlpha([span(0.25)], 0.5)[0]!.color.a).toBe(0.25);
   });
 });

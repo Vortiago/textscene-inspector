@@ -11,27 +11,11 @@ import * as THREE from 'three';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
 import { useNodePath } from '../../../r3f/contexts/NodePathContext';
 import { CanvasSpaceProvider } from '../../../r3f/canvasRootScope';
-import type { Camera2DTag } from '../camera2d/cameraView';
-import { selectViewportCamera2D } from '../../viewport/subviewport/offscreenViewport';
-import {
-  parallaxLayerDelta,
-  parallaxLayerPose,
-  parallaxScroll,
-  parallaxViewFraming,
-  type ParallaxViewFraming,
-} from './parallaxScroll';
-import { isViewportPass, observeSceneCamera } from '../../../r3f/sceneRenderCamera';
+import { parallaxLayerDelta, parallaxLayerPose, parallaxScroll } from './parallaxScroll';
+import { currentCameraFraming } from './currentCameraFraming';
+import { observeSceneCamera } from '../../../r3f/sceneRenderCamera';
 import { ParallaxScrollProvider, type RegisteredParallaxLayer } from './scrollContext';
 import type { ParallaxBackgroundProperties } from './types';
-import { Camera2DAnchorMode } from '../../../godot/scene/camera2d';
-
-/** The identity canvas transform: a view whose top-left is the world origin. */
-const EDITOR_VIEW: ParallaxViewFraming = {
-  topLeft: { x: 0, y: 0 },
-  size: { x: 0, y: 0 },
-  zoom: 1,
-  centered: true,
-};
 
 export function ParallaxBackground({ node, children }: NodeComponentProps) {
   const props = node.properties as ParallaxBackgroundProperties;
@@ -57,34 +41,11 @@ export function ParallaxBackground({ node, children }: NodeComponentProps) {
       const group = groupRef.current;
       if (!group) return;
 
-      const viewportPass = isViewportPass(camera);
-
-      // Godot's `__cameras_<viewport>` group scope: the current Camera2D of this
-      // viewport, which for an offscreen pass is the scene being drawn.
-      const camera2d = viewportPass ? selectViewportCamera2D(scene) : null;
-      const tag = camera2d?.userData.camera2d as Camera2DTag | undefined;
-
-      const view =
-        viewportPass && tag
-          ? parallaxViewFraming(
-              {
-                left: camera.left,
-                right: camera.right,
-                top: camera.top,
-                bottom: camera.bottom,
-                x: camera.position.x,
-                y: camera.position.y,
-                zoom: camera.zoom,
-              },
-              tag.zoom.x || 1,
-              tag.anchor_mode !== Camera2DAnchorMode.FIXED_TOP_LEFT
-            )
-          : EDITOR_VIEW;
-
       // With no current Camera2D, `set_base_offset_and_scale` never runs and the
       // layers keep their authored pose: `_update_scroll` early-returns outside the
       // tree, and a `.tscn` applies properties before `add_child`.
-      const scroll = tag ? parallaxScroll(props, view) : null;
+      const view = currentCameraFraming(scene, camera);
+      const scroll = view ? parallaxScroll(props, view) : null;
       for (const layer of layers.values()) {
         if (!scroll) {
           layer.group.position.set(0, 0, 0);

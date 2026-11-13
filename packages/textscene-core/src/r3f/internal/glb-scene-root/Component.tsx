@@ -4,6 +4,7 @@
  * (ADR-0012) through a `THREE.AnimationMixer` rooted on the GLB object, since the clips bind to
  * the GLB's own node names.
  */
+import { useIsUnownedSubtree } from '../../contexts/UnownedSubtreeContext.js';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
@@ -42,7 +43,9 @@ import type { ReactNode } from 'react';
 import type { LiveNode } from '../../../resources/liveNode';
 import { useSceneResources } from '../../SceneResourcesContext';
 import { resolveMaterialSource } from '../../materials/materialSource';
-import { GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
+import { GlbMaterialOverlay, GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
+import { heldResource } from '../../../godot/scene/resourceLiteral';
+import { parseSurfaceMaterialOverrides } from '../../../nodes/3d/meshinstance3d/parser';
 import { GlbAttachedChildren } from './GlbAttachedChildren';
 import { importMaterialPath } from '../../../resources/formats/glb/glbProcessing';
 import { forEachSurfaceMaterial } from '../../../resources/formats/glb/surfaceMaterials';
@@ -78,7 +81,7 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
     if (object) applyGlbNodeOverrides(object, overrides, entries);
   }, [object, overrides, entries]);
 
-  // A `surface_material_override/0` needs an ExtResource resolved and a `.tres` loaded, which
+  // A `surface_material_override/N` needs an ExtResource resolved and a `.tres` loaded, which
   // the synchronous mutation above cannot do, so each one mounts its own slot component.
   const importMaterials = useGlbImportMaterials(object);
   const materialOverrides = useGlbMaterialOverrides(object, entries, overrides);
@@ -96,15 +99,17 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
 
   const registerNodeObject = selection?.registerNodeObject;
   const unregisterNodeObject = selection?.unregisterNodeObject;
+  // An unowned node has no Scene dock row, so a click on its objects selects its owner instead.
+  const isUnowned = useIsUnownedSubtree();
   useEffect(() => {
-    if (!registerNodeObject || !unregisterNodeObject || nodePath === null) return;
+    if (isUnowned || !registerNodeObject || !unregisterNodeObject || nodePath === null) return;
     for (const { relPath, object: obj } of entries) {
       registerNodeObject(joinPath(nodePath, relPath), obj);
     }
     return () => {
       for (const { relPath } of entries) unregisterNodeObject(joinPath(nodePath, relPath));
     };
-  }, [entries, nodePath, registerNodeObject, unregisterNodeObject]);
+  }, [entries, isUnowned, nodePath, registerNodeObject, unregisterNodeObject]);
 
   // `applyGlbNodeOverrides` writes `visible` during render, and the hidden-paths effect below then
   // assigns every entry's `visible`. Both write one field, so it resolves here, or an authored
@@ -252,10 +257,13 @@ function useGlbImportMaterials(object: THREE.Object3D | undefined): ReactNode {
   }, [object]);
 }
 
+const NO_SURFACE: ReadonlyMap<number, string> = new Map();
+
 /**
- * One `<GlbSurfaceMaterialOverride>` per override node with a `surface_material_override/0`. The
- * path resolves through `resolveGlbOverrideTarget`, as the transform overrides do, so a Godot path and a
- * three path that disagree about importer-synthesised levels land on one mesh.
+ * The materials each override node sets on its GLB mesh: `material_override`, else each
+ * `surface_material_override/N` on surface N (`render_forward_clustered.cpp:4206`, `:4264`), and
+ * `material_overlay` beside them. `resolveGlbOverrideTarget` finds the mesh, as for a transform
+ * override, so a Godot path and a three path that disagree on importer levels reach one mesh.
  */
 function useGlbMaterialOverrides(
   object: THREE.Object3D | undefined,
@@ -269,24 +277,42 @@ function useGlbMaterialOverrides(
 
     const slots: ReactNode[] = [];
     for (const override of overrides) {
-      const ref = override.rawProperties['surface_material_override/0'];
-      if (!ref || !isApplicableGlbOverride(override)) continue;
-
-      // A grafted override's ids belong to the outer scene that authored it, not the sub-scene it
-      // renders under, and its scope carries both pools.
-      const source = resolveMaterialSource(ref, override.scope ?? pools);
-      if (!source) continue;
+      const { material_override, material_overlay } = override.rawProperties;
+      const instanceOverride = heldResource(material_override);
+      const surfaceOverrides = instanceOverride
+        ? NO_SURFACE
+        : parseSurfaceMaterialOverrides(override.rawProperties);
+      const overlay = heldResource(material_overlay);
+      if (!instanceOverride && surfaceOverrides.size === 0 && !overlay) continue;
+      if (!isApplicableGlbOverride(override)) continue;
 
       const target = resolveGlbOverrideTarget(object, entries, override);
       if (!target) continue;
 
-      slots.push(
-        <GlbSurfaceMaterialOverride
-          key={joinPath(override.instanceSubPath ?? '', override.name)}
-          target={target}
-          source={source}
-        />
-      );
+      // A grafted override's ids belong to the outer scene that authored it, not the sub-scene it
+      // renders under, and its scope carries both pools.
+      const scope = override.scope ?? pools;
+      const key = joinPath(override.instanceSubPath ?? '', override.name);
+      const instanceSource = resolveMaterialSource(instanceOverride, scope);
+      if (instanceSource) {
+        slots.push(<GlbSurfaceMaterialOverride key={key} target={target} source={instanceSource} />);
+      }
+      for (const [surfaceIndex, reference] of surfaceOverrides) {
+        const source = resolveMaterialSource(reference, scope);
+        if (!source) continue;
+        slots.push(
+          <GlbSurfaceMaterialOverride
+            key={`${key}:surface ${surfaceIndex}`}
+            target={target}
+            source={source}
+            replaces={(_current, index) => index === surfaceIndex}
+          />
+        );
+      }
+      const overlaySource = resolveMaterialSource(overlay, scope);
+      if (overlaySource) {
+        slots.push(<GlbMaterialOverlay key={`${key}:overlay`} target={target} source={overlaySource} />);
+      }
     }
     return slots.length > 0 ? <>{slots}</> : null;
   }, [object, entries, overrides, pools]);

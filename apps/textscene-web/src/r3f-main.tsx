@@ -24,6 +24,7 @@ import { FileProblems } from './FileProblems';
 import { useSceneSource } from './useSceneSource';
 import { useFixtureSelection } from './useFixtureSelection';
 import { useCameraDeepLink } from './useCameraDeepLink';
+import { useDocumentVisibility } from './useDocumentVisibility';
 import { DEFAULT_FIXTURE, NO_FIXTURE } from './sceneSelection';
 import { useSourcePane } from './sourcePane';
 import { useSourceDiagnostics } from './useSourceDiagnostics';
@@ -66,6 +67,7 @@ export function R3FApp() {
 
   // `?camera=<node path>` deep-link: look through a scene Camera3D on open.
   const initialPreviewedCameraPath = useCameraDeepLink();
+  const isPageVisible = useDocumentVisibility();
 
   // One provider, bus, loader and job worker for the app's lifetime, so an uploaded
   // texture survives a fixture switch.
@@ -312,6 +314,7 @@ export function R3FApp() {
             // Opening a sub-scene loads it from the mirror, so without one the ⤢ button goes.
             onOpenSubScene={HAS_FIXTURES_MIRROR ? handleOpenSubScene : undefined}
             initialPreviewedCameraPath={initialPreviewedCameraPath}
+            isVisible={isPageVisible}
             toolbar={
               <Toolbar
                 fixtureFile={fixtureFile}

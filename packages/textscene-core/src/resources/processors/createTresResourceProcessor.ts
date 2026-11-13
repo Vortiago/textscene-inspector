@@ -2,7 +2,8 @@
  * The generic resource processor: a `.tres` or `.gdshader` file's text, or a binary resource's
  * bytes, through the FileEventBus into a `ParsedResource` (header type, ext/sub resources, raw
  * `[resource]` body) on the 'resource' bus slot. It is the one parse of a file: every slice that
- * decodes Godot text reads this slot's cache.
+ * decodes Godot text reads this slot's cache. A slice that claims an extension
+ * with `parseBytes` reads its own bytes.
  */
 
 import type { FileEventBus } from '../FileEventBus';
@@ -12,6 +13,11 @@ import { GODOT_SHADER_EXTENSION } from '../../godot/project/resourceFormats';
 import { parseShaderFile, parseTresFile, type ParsedResource } from '../../parser/parsedResource';
 import { parseBinaryResource } from '../formats/binaryresource/parse';
 import { fileExtension } from '../fileExtension';
+import { resourceSliceRegistry } from '../sliceRegistration';
+
+function bytesParser(path: string): (bytes: ArrayBuffer) => ParsedResource | Promise<ParsedResource> {
+  return resourceSliceRegistry.byPath(path)?.parseBytes ?? parseBinaryResource;
+}
 
 export function createTresResourceProcessor(
   fileEventBus: FileEventBus | undefined,
@@ -24,7 +30,7 @@ export function createTresResourceProcessor(
     // Every arrival, not `.tres` alone: a request this declines stays in flight, and a
     // peer waiting on it waits out its timeout. The parse fails other text at once.
     process: async (path, data) => {
-      if (typeof data !== 'string') return parseBinaryResource(data);
+      if (typeof data !== 'string') return bytesParser(path)(data);
       return fileExtension(path) === GODOT_SHADER_EXTENSION ? parseShaderFile(data) : parseTresFile(data);
     },
   });
