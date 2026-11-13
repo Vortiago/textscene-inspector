@@ -25,11 +25,10 @@ const placement = {
   properties: { position: { x: 0, y: 30 } },
   rawProperties: {},
   isUnowned: true,
-  ySortRoot: { pose: { ...TRANSFORM2D_IDENTITY, ty: 80 }, zIndex: 0, zAsRelative: true },
+  ySortRoot: { pose: { ...TRANSFORM2D_IDENTITY, ty: 80 } },
 } as unknown as LiveNode;
 const item = {
   sortY: 0,
-  effectiveZ: 0,
   treeOrder: 0,
   kind: 'node',
   node: placement,

@@ -48,6 +48,8 @@ export interface CanvasItemPassResult {
   readonly resources: SceneScope;
   /** The `visible` the item's container writes onto it, or undefined where none writes it. */
   readonly writtenVisible: boolean | undefined;
+  /** The item's own `visible`, as its container writes it or the file states it. */
+  readonly isVisible: boolean;
   /**
    * The `parent_visible_in_tree` the item sees, from whatever node is above it. It follows the scene
    * tree, `top_level` or not.
@@ -119,6 +121,7 @@ export const canvasItemPass: LiveScenePass<CanvasItemPassResult> = (tree) => {
       fields,
       resources: step.scope,
       writtenVisible,
+      isVisible,
       parentVisibleInTree: above.visibleInTree,
       inherited,
     });

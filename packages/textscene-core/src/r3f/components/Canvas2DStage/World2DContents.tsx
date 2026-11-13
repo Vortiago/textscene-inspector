@@ -25,7 +25,7 @@ import { CanvasFrameRender } from './CanvasFrameRender.js';
 import { PendingSuspense } from '../../../resources/PendingSuspense.js';
 import { ScreenshotBridge } from '../../ScreenshotBridge.js';
 import { useRootCanvasColorSpace } from '../../rootCanvasColorSpace.js';
-import { ControlYSortProvider } from '../../contexts/ControlYSortContext.js';
+import { YSortProvider } from '../../contexts/YSortContext.js';
 
 // Through the controls barrel, whose side-effect imports register every Control
 // type: the component file alone registers none. Lazy, so the registrations stay
@@ -79,7 +79,7 @@ export function World2DContents({
               function of `nodes` the dispatcher publishes to the items. */}
             <CanvasLighting2DProvider canvasModulate={canvasModulate} space={canvasSpace}>
               {/* One provider over both walks: a y-sorted node and the Controls beside it exchange origins and runs. */}
-              <ControlYSortProvider>
+              <YSortProvider>
                 <CanvasWorldScope>
                   <NodeDispatcher nodes={nodes} />
                 </CanvasWorldScope>
@@ -87,7 +87,7 @@ export function World2DContents({
                 <PendingSuspense>
                   <ControlCanvasLayer nodes={nodes} />
                 </PendingSuspense>
-              </ControlYSortProvider>
+              </YSortProvider>
               {/* A `ViewportTexture` consumer may sample its target whoever draws
                 the on-screen Controls. */}
               <ControlRasterLayer

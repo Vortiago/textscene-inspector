@@ -8,7 +8,11 @@ import { useMemo } from 'react';
 import { ZERO_RECT } from '../../../godot/math/rect2';
 import { CanvasItemGroup } from '../../components/CanvasItemGroup';
 import { canvasPieceSlot, type CanvasSlot } from '../../canvasItemState';
-import { controlComponentRegistry, type NativeControlComponentProps } from '../ControlComponentRegistry';
+import {
+  controlComponentRegistry,
+  NO_PIECE_SLOTS,
+  type NativeControlComponentProps,
+} from '../ControlComponentRegistry';
 import type { InternalControl } from './internalControls';
 import { childRectsOf, type SolvedControl } from './controlRectSolver';
 import { controlProps, type SolveNode } from './solveTree';
@@ -68,6 +72,7 @@ export function InternalControlGroup({ node, solved, slots, env }: InternalContr
           slot={slot}
           chromeSlot={slot}
           layerSlot={slot}
+          pieceSlots={NO_PIECE_SLOTS}
           childRects={childRects}
           meta={entry?.meta}
         />

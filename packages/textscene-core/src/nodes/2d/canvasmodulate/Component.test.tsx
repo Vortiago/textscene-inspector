@@ -6,7 +6,7 @@ import { CanvasModulate } from './Component';
 import { parseCanvasModulate } from './parser';
 import { useEnclosingCanvasState } from '../../../r3f/canvasItemPass/inheritedCanvasState';
 import { InheritedFrom, inheritedState } from '../../../r3f/testing/inheritedFrom';
-import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
+import { PaintRun } from '../../../r3f/testing/PaintRun';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../../../r3f/canvasPaintOrder';
 import type { Rgba } from '../../../godot/math/math';
 
@@ -136,7 +136,7 @@ describe('<CanvasModulate>', () => {
   // takes, so it sorts like a sprite sibling.
   it('draws at the sequence its enclosing paint range gives it, like any sibling', async () => {
     const renderer = await renderCM({ z_index: '5' }, (kid) => (
-      <PaintRangeProvider value={{ base: 37, size: 4 }}>{kid}</PaintRangeProvider>
+      <PaintRun value={{ base: 37, size: 4 }}>{kid}</PaintRun>
     ));
     expect(cmGroup(renderer).renderOrder).toBe(
       canvasRenderOrder({ layerRank: WORLD_RANK, zFinal: 5, sequence: 37 })
