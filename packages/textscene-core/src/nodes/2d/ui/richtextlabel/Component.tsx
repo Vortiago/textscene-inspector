@@ -19,6 +19,7 @@ import {
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useWindowedCanvas2DTexture } from '../../../../r3f/canvas2DTextureDecode';
 import { useResolvedTextureSampler } from '../../../../r3f/canvasItemTextureSampler';
+import { useNodeReference } from '../../../../resources/reading';
 import { WHOLE_FRAME, frameUvWindow } from '../../../../r3f/spriteFrame';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { clampAutowrapMode } from '../../../../r3f/controls/native/text/textLayout';
@@ -70,8 +71,7 @@ function RichTextImage({
 }) {
   const { spec, widthPx, heightPx } = placement;
   const toItemLinear = useItemLinearColorOf();
-  const { externalResources, internalResources } = resources;
-  const { texture: rawTexture } = useTexture2D(spec.path, externalResources, internalResources);
+  const { texture: rawTexture } = useTexture2D(useNodeReference(spec.path, resources));
 
   const regionWindow = useMemo(
     () =>

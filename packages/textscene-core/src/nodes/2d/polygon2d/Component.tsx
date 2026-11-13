@@ -11,6 +11,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import { useArrayColorOf, useItemLinearColorOf, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
+import { useNodeReference } from '../../../resources/reading';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import type { ImageSize } from '../../../resources/formats/image/imagePixels';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -29,16 +30,16 @@ import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 
 export function Polygon2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Polygon2DProperties;
-  const { externalResources, internalResources } = useSceneResources();
 
   // Either an image file or an inline procedural texture; `useCanvasItemTexture` hides
   // which, and owns the lifetime of the procedural one it rasterises.
+  const scope = useSceneResources();
   const {
     texture: resolvedTexture,
     size,
     sampler,
     canvasTexture,
-  } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
+  } = useCanvasItemTexture(props, useNodeReference(props.texture, scope));
   const texture = useCanvas2DTexture(resolvedTexture, sampler);
 
   const rings = useMemo(

@@ -30,6 +30,7 @@ import {
 import { useCanvasItemMerge } from '../../components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../materialProgramInputs';
 import { canvasMapProps, useOwnerCanvas2DTexture } from '../../canvas2DTextureDecode';
+import { referenceHeldBy } from '../../../resources/reading';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import type { Rgba } from '../../../godot/math/math';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease';
@@ -209,11 +210,7 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
   const canvasItemMerge = useCanvasItemMerge();
   const canvasSpace = useCanvasColorSpace();
   const { texture: rawTexture } = useTexture2D(
-    texture.texture,
-    texture.resources.externalResources,
-    texture.resources.internalResources,
-    undefined,
-    texture.isHeldLocally
+    referenceHeldBy(texture.texture, texture.resources, texture.isHeldLocally)
   );
 
   const geometry = useMemo(() => {

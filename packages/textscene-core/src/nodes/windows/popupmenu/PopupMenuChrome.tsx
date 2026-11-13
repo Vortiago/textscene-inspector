@@ -23,6 +23,7 @@ import type { CheckBoxIconKey } from '../../2d/ui/checkbox/nativeSolver';
 import { useCheckBoxIcon } from '../../2d/ui/checkbox/useCheckBoxIcon';
 import { ScrollBarChrome } from '../../2d/ui/shared/ScrollChrome';
 import { useTexture2D } from '../../../resources/useTexture2D';
+import { useNodeReference } from '../../../resources/reading';
 import { popupMenuDrawing, type RowDrawing } from './menuDrawing';
 import { menuModel, popupMenuGeometry } from './menuLayout';
 
@@ -63,8 +64,7 @@ function ItemIcon({
   tint,
   renderOrder,
 }: PartProps & { textureRef: string; rect: Rect2; solveNode: Solved }) {
-  const { externalResources, internalResources } = solveNode.resources;
-  const { texture: source } = useTexture2D(textureRef, externalResources, internalResources);
+  const { texture: source } = useTexture2D(useNodeReference(textureRef, solveNode.resources));
   const texture = useOwnerCanvas2DTexture(source);
   return (
     <PositionedIcon

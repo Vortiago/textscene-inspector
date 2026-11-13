@@ -1,17 +1,15 @@
 /**
  * The async seam for a procedural texture that builds as a worker job. A lookup
  * is ready from the cache, or pending with a build its holders start and
- * release. A build is keyed on its content, not its scene, so an edit that
+ * release. A build is keyed on its content, not its resource, so an edit that
  * leaves a texture unchanged reuses it instead of building it again.
  */
 
 import type * as THREE from 'three';
-import type { TscnInternalResource } from '../../parser/types';
-import { perObject } from '../../utils/perObject';
 import type { WorkerJobRunner } from '../../workers/WorkerJobRunner';
 import type { WorkerJobInput, WorkerJobName, WorkerJobOutput } from '../../workers/jobs';
 import { unlessAllocationFails } from './pixelAllocation';
-import { allocationLabel, findTypedSubResource } from './resolveProceduralSubResource';
+import { allocationLabel } from './rasterizedTexture';
 import {
   cachedProceduralTexture,
   cacheProceduralTexture,
@@ -72,55 +70,21 @@ export function resetProceduralTextures(): void {
 }
 
 /**
- * Resolves `ref` as an inline `[sub_resource]` of `typeName`. Null for every other
- * reference form, and for a resource the plan declines, which leaves the caller's
- * other paths untouched. `sourcesOf` names the objects the plan reads from outside the resource:
- * the plan builds again when one of them is another object. A ready texture is borrowed: pin `key`, never dispose it.
+ * The build `plan` describes, ready from the cache or pending. Null for no plan, which leaves the
+ * caller's other paths untouched. A caller plans once per decoded value, as a plan serialises its
+ * input. A ready texture is borrowed: pin `key`, never dispose it.
  */
-export function resolveProceduralSubResourceAsync(
-  ref: string | undefined,
-  internalResources: readonly TscnInternalResource[],
+export function proceduralBuild(
   typeName: string,
-  plan: (properties: Record<string, string>) => ProceduralBuildPlan | null,
-  sourcesOf: (properties: Record<string, string>) => readonly unknown[]
+  plan: ProceduralBuildPlan | null
 ): ProceduralTextureLookup | null {
-  const resource = findTypedSubResource(ref, internalResources, typeName);
-  if (!resource) return null;
-  const build = plannedBuild(resource, internalResources, plan, sourcesOf(resource.data));
-  if (!build) return null;
+  if (!plan) return null;
 
-  const key = build.contentKey + (build.derived?.suffix ?? '');
+  const key = plan.contentKey + (plan.derived?.suffix ?? '');
   const texture = cachedProceduralTexture(key);
   if (texture) return { status: 'ready', texture, key };
-  const label = allocationLabel(typeName, resource.id);
-  return { status: 'pending', key, start: (runner) => joinDerived(key, build, label, runner) };
-}
-
-/**
- * Written by `plannedBuild`, once per parse, sub-resource and set of sources. Each consumer of a
- * texture looks it up on every parse, and a plan decodes the resource and serialises its input.
- */
-const plansByParse = perObject<readonly TscnInternalResource[], Map<TscnInternalResource, PlannedSources>>(
-  () => new Map()
-);
-
-interface PlannedSources {
-  sources: readonly unknown[];
-  plan: ProceduralBuildPlan | null;
-}
-
-function plannedBuild(
-  resource: TscnInternalResource,
-  internalResources: readonly TscnInternalResource[],
-  plan: (properties: Record<string, string>) => ProceduralBuildPlan | null,
-  sources: readonly unknown[]
-): ProceduralBuildPlan | null {
-  const plans = plansByParse(internalResources);
-  const held = plans.get(resource);
-  if (held && held.sources.every((source, index) => source === sources[index])) return held.plan;
-  const planned = { sources, plan: plan(resource.data) };
-  plans.set(resource, planned);
-  return planned.plan;
+  const label = allocationLabel(typeName);
+  return { status: 'pending', key, start: (runner) => joinDerived(key, plan, label, runner) };
 }
 
 /**

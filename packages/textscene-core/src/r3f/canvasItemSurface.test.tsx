@@ -10,6 +10,7 @@ import { CanvasItemSurfaceSource } from './canvasItemSurface';
 import type { CanvasItemSurface } from './lighting2d/normalMappedLighting';
 import { decodeCanvasTexture } from '../resources/textures/canvastexture/decode';
 import type { CanvasTextureSlot } from '../resources/useTexture2D';
+import { referenceIn } from '../resources/reading/scopedReference.testkit';
 import type { TscnInternalResource } from '../parser/types';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
@@ -32,8 +33,18 @@ const MAP: TscnInternalResource[] = [
 
 const SAMPLER = { filter: CanvasItemTextureFilter.LINEAR, repeat: CanvasItemTextureRepeat.DISABLED };
 
-function slot(properties: Record<string, string>): CanvasTextureSlot {
-  return { texture: decodeCanvasTexture(properties), externalResources: [], internalResources: MAP };
+/** A CanvasTexture slot whose maps resolve in `internalResources`. */
+function slot(
+  properties: Record<string, string>,
+  internalResources: readonly TscnInternalResource[] = MAP
+): CanvasTextureSlot {
+  const map = (ref: string | undefined) =>
+    ref === undefined ? null : referenceIn(ref, [], internalResources);
+  return {
+    texture: decodeCanvasTexture(properties),
+    normalTexture: map(properties.normal_texture),
+    specularTexture: map(properties.specular_texture),
+  };
 }
 
 function surfaceOf(canvasTexture: CanvasTextureSlot): CanvasItemSurface | null {
@@ -78,7 +89,7 @@ describe('CanvasItemSurfaceSource', () => {
   it("cuts the normal map by the AtlasTexture's fraction of the diffuse sheet", () => {
     // The diffuse sheet is 8 by 8 and the map 4 by 4, so the left half of the diffuse is 2 texels.
     const atlas = {
-      reference: { id: 'AtlasTexture_half', texture: decodeAtlasTexture({ region: 'Rect2(0, 0, 4, 8)' }) },
+      texture: decodeAtlasTexture({ region: 'Rect2(0, 0, 4, 8)' }),
       sheetSize: { width: 8, height: 8 },
     };
     const surface = surfaceOf({
@@ -90,17 +101,14 @@ describe('CanvasItemSurfaceSource', () => {
 
   it('reads no normal map from a CanvasTexture, which Godot refuses to nest', () => {
     // `canvas_item.cpp:1801`: `set_normal_texture` refuses a CanvasTexture.
-    const nested: CanvasTextureSlot = {
-      ...slot({ normal_texture: 'SubResource("CanvasTexture_inner")' }),
-      internalResources: [
-        ...MAP,
-        {
-          id: 'CanvasTexture_inner',
-          type: 'CanvasTexture',
-          data: { diffuse_texture: 'SubResource("GradientTexture2D_flat")' },
-        },
-      ],
-    };
+    const nested = slot({ normal_texture: 'SubResource("CanvasTexture_inner")' }, [
+      ...MAP,
+      {
+        id: 'CanvasTexture_inner',
+        type: 'CanvasTexture',
+        data: { diffuse_texture: 'SubResource("GradientTexture2D_flat")' },
+      },
+    ]);
     expect(surfaceOf(nested)).toBeNull();
   });
 

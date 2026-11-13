@@ -5,7 +5,7 @@ import { PARTICLE_FLOATS } from '../particles3d/particleBuffer';
 import { decodeParticleProcessMaterial } from '../../../resources/materials/particleprocessmaterial/decode';
 import { decodeProcessSimulation } from '../../../resources/materials/particleprocessmaterial/simulation';
 import type { GpuEmitter } from './emitter';
-import { gpuSettleSeconds, settleGpuParticles } from './settle';
+import { gpuSettleSeconds, settleGpuParticles, type TrailRequest } from './settle';
 
 /** The constructor's values (`gpu_particles_3d.cpp:878-904`), with one particle so a test follows it. */
 const EMITTER: GpuEmitter = {
@@ -36,7 +36,8 @@ export const BASE_MATERIAL: Record<string, string> = {
 export function settle(
   emitter: Partial<GpuEmitter>,
   material: Record<string, string> = BASE_MATERIAL,
-  emissionTransform: Transform3D = identityTransform3D()
+  emissionTransform: Transform3D = identityTransform3D(),
+  trail?: TrailRequest
 ) {
   const settled = { ...EMITTER, ...emitter };
   return settleGpuParticles(
@@ -47,6 +48,7 @@ export function settle(
         simulation: decodeProcessSimulation(material),
       },
       emissionTransform,
+      trail,
     },
     gpuSettleSeconds(settled)
   );

@@ -26,6 +26,21 @@ export function writeTransformRows(buffer: Float32Array, at: number, t: Transfor
   buffer[at + 11] = origin.z;
 }
 
+/** The transform the three rows at `at` hold, the counterpart of {@link writeTransformRows}. */
+export function readTransformRows(buffer: Float32Array, at: number): Transform3D {
+  const row = (offset: number) => ({
+    x: buffer[at + offset]!,
+    y: buffer[at + offset + 1]!,
+    z: buffer[at + offset + 2]!,
+  });
+  return {
+    basis_x: row(0),
+    basis_y: row(4),
+    basis_z: row(8),
+    origin: { x: buffer[at + 3]!, y: buffer[at + 7]!, z: buffer[at + 11]! },
+  };
+}
+
 /** Column `column` of the 3×4 transform at `at`: 0 to 2 the basis axes, 3 the origin. */
 export function readTransformColumn(
   buffer: Float32Array,

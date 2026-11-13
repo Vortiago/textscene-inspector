@@ -88,6 +88,14 @@ export const CANVAS_2D_SCENES = [
   // Image. The header states why no other golden shows it.
   { name: 'sprite2d-imagetexture-tres', file: 'unit-sprite2d-imagetexture-tres.tscn' },
   { name: 'sprite2d-imagetexture-half-tres', file: 'unit-sprite2d-imagetexture-half-tres.tscn' },
+  // A texture resource file inside a Texture2D chain: the sheet of an AtlasTexture, a CanvasTexture
+  // and its diffuse map, and the Image of an ImageTexture. Each draws its inline twin beside it.
+  { name: 'sprite2d-atlastexture-over-texture-file', file: 'unit-atlas-texture-over-texture-file.tscn' },
+  {
+    name: 'sprite2d-canvastexture-file-over-texture-file',
+    file: 'unit-canvas-texture-file-over-texture-file.tscn',
+  },
+  { name: 'sprite2d-imagetexture-over-image-file', file: 'unit-image-texture-over-image-file.tscn' },
   // Six ImageTextures, one per S3TC and RGTC format. The header states why no other golden shows it.
   { name: 'sprite2d-block-compressed', file: 'unit-sprite2d-block-compressed.tscn' },
   // Native Control rendering (ADR-0037): Controls draw into the WebGL canvas

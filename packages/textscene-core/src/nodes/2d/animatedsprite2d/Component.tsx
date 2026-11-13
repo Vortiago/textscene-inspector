@@ -18,16 +18,11 @@ import { useAnimationTransport } from '../../../r3f/contexts/AnimationTransportC
 import { stepPlayback } from '../../../r3f/animation/stepPlayback';
 import { loopsUnderOverride } from '../../../r3f/animation/loopOverride';
 import { useIsSelected } from '../../../r3f/hooks/useIsSelected';
-import { useSpriteFrames } from '../../../resources/textures/spriteframes/useSpriteFrames';
+import { useFrameReference, useSpriteFrames } from '../../../resources/textures/spriteframes/useSpriteFrames';
 import { frameAtTime, clipDuration } from '../../../resources/textures/spriteframes/playback';
 import type { SpriteFramesAnimation } from '../../../resources/textures/spriteframes/types';
 import type { AnimatedSprite2DProperties } from './types';
-import type { TscnExternalResource, TscnInternalResource } from '../../../parser/types';
-import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
 import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
-
-const NO_EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [];
-const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
 
 export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as AnimatedSprite2DProperties;
@@ -141,20 +136,15 @@ export function AnimatedSprite2D({ node, children }: NodeComponentProps) {
 
   const canvasSpace = useCanvasColorSpace();
   // A frame's ids are scoped to its SpriteFrames' home, so the frame resolves
-  // against those pools: the scene's, or the .tres's.
+  // in those tables: the scene's, or the .tres's.
+  const frameReference = useFrameReference(resolved, frameRef);
   const {
     texture: frameTexture,
     size: frameSize,
     missing: frameMissing,
     sampler,
     canvasTexture,
-  } = useCanvasItemTexture(
-    props,
-    frameRef ?? undefined,
-    resolved?.externalResources ?? NO_EXTERNAL_RESOURCES,
-    resolved?.subResources ?? NO_INTERNAL_RESOURCES,
-    resolved ? isLocalToScene(resolved.resource) : undefined
-  );
+  } = useCanvasItemTexture(props, frameReference);
 
   // `useCanvas2DTexture` clones each frame texture with the item's sampler and disposes the clone
   // once it no longer draws, so playback leaks no GPU texture.

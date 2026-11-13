@@ -8,6 +8,7 @@
 import { boolOr, enumOr, floatOr, intOr } from '../../../parser/valueParsers';
 import { parseVector3 } from '../../../parser/vectors';
 import { warn } from '../../../logger';
+import type { ResourceKind } from '../../reading';
 import { type FastNoiseLiteData } from './types';
 import {
   FastNoiseLiteCellularDistanceFunction,
@@ -63,7 +64,14 @@ const WARP_FRACTAL_TYPES = [
   FastNoiseLiteDomainWarpFractalType.INDEPENDENT,
 ] as const;
 
-export function decodeFastNoiseLite(properties: Record<string, string>): FastNoiseLiteData {
+/** A FastNoiseLite from any origin: the `noise` of a noise texture. Another class generates nothing. */
+export const FAST_NOISE_LITE: ResourceKind<FastNoiseLiteData> = {
+  name: 'FastNoiseLite',
+  accepts: (type) => type === 'FastNoiseLite',
+  decode: (held) => decodeFastNoiseLite(held.properties),
+};
+
+function decodeFastNoiseLite(properties: Record<string, string>): FastNoiseLiteData {
   return {
     noiseType: enumOr(
       properties.noise_type,

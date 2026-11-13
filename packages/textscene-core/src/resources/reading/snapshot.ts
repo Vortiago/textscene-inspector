@@ -23,6 +23,7 @@ import {
 } from '../SubResourceResolver';
 import { isLocalToScene } from '../textures/viewporttexture/localToScene';
 import {
+  IMPORTED_FILE,
   NONE,
   PENDING,
   UNAVAILABLE,
@@ -55,7 +56,6 @@ interface FollowedRead {
 interface Decoded {
   readonly properties: Readonly<Record<string, string>>;
   readonly isBuiltIn: boolean;
-  readonly isHeldLocally: boolean;
   readonly reads: readonly FollowedRead[];
   /** The tables a reference the decode handed on resolves in, which the value holds. Null when it handed on none. */
   readonly handedTables: SceneResources | null;
@@ -105,10 +105,11 @@ function locate(files: CacheSource<ParsedResource>, reference: ScopedReference):
   if (parsed?.type === 'ExtResource' && !findExtResource(resources.externalResources, parsed.id)) {
     return UNAVAILABLE['unknown-id'];
   }
-  // The module reads resource files only. An image or a scene is no class a kind of this module accepts.
   const path = resolveExtResourcePath(ref, resources.externalResources);
   const filePath = path && resourceFilePath(path);
-  if (!path || !filePath || !loadsAsParsedResource(filePath)) return UNAVAILABLE['wrong-type'];
+  if (!path || !filePath) return UNAVAILABLE['wrong-type'];
+  // The module reads no file it does not parse: an image is held with no properties, for its reader to load.
+  if (!loadsAsParsedResource(filePath)) return importedFile(path, reference);
   const file = files.getCached(filePath);
   if (file === undefined) return PENDING;
   if (file === null) return UNAVAILABLE['missing-file'];
@@ -122,6 +123,24 @@ function locate(files: CacheSource<ParsedResource>, reference: ScopedReference):
     slot: path,
     resources: section.resources,
     origin: filePath,
+  };
+}
+
+const NO_PROPERTIES: Readonly<Record<string, string>> = Object.freeze({});
+
+function importedFile(path: string, reference: ScopedReference): Located {
+  return {
+    held: {
+      type: IMPORTED_FILE,
+      properties: NO_PROPERTIES,
+      address: path,
+      isLocalToScene: false,
+      isHeldLocally: reference.isHeldLocally,
+    },
+    key: path,
+    slot: path,
+    resources: reference.resources,
+    origin: undefined,
   };
 }
 
@@ -157,7 +176,9 @@ function decoded<T>(
   stack: readonly string[]
 ): Read<T> {
   const slots = slotsOf(kind);
-  const kept = slots.get(located.slot);
+  // A slot for each holding: a resource read both ways keeps both values, and its texture with them.
+  const slot = `${located.slot}|${located.held.isHeldLocally ? 'local' : 'shared'}`;
+  const kept = slots.get(slot);
   if (kept && stillHolds(kept, located, files, stack)) return kept.answer as Read<T>;
 
   const reads: FollowedRead[] = [];
@@ -179,10 +200,9 @@ function decoded<T>(
   // Pending spreads upward: the value waits for the file a nested read named, and is not kept.
   if (isWaiting) return PENDING;
   const answer: Read<T> = value === null ? UNAVAILABLE.undecodable : { status: 'loaded', value };
-  slots.set(located.slot, {
+  slots.set(slot, {
     properties: located.held.properties,
     isBuiltIn: located.held.address === null,
-    isHeldLocally: located.held.isHeldLocally,
     reads,
     handedTables,
     answer,
@@ -214,7 +234,6 @@ function stillHolds(
   stack: readonly string[]
 ): boolean {
   const { held } = located;
-  if (kept.isHeldLocally !== held.isHeldLocally) return false;
   const sameProperties = kept.isBuiltIn
     ? sameData(kept.properties, held.properties)
     : kept.properties === held.properties;

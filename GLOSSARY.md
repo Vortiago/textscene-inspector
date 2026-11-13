@@ -239,15 +239,16 @@ _Avoid_: decoding values at parse time.
 
 **Scoped reference** (`ScopedReference`, `resources/reading/scopedReference.ts`):
 A reference on its way to a read: the `SubResource`, `ExtResource` or `res://` text, the tables it resolves in, the file those tables belong to, and whether every holder passed on the way is local to scene.
-A node's own property starts one with `nodeReference`, in the tables of the file that wrote the node (ADR-0051).
+A node's own property starts one with `nodeReference`, in the tables of the file that wrote the node (ADR-0051). A caller that holds a resource's tables but no snapshot read yet starts one with `referenceHeldBy`, which the source scan lists.
 _Avoid_: a bare reference string handed past the tables it belongs to.
 
 **Held resource** (`HeldResource`, `resources/reading/read.ts`):
 A resource as a decode receives it: its class, its raw property strings, its address, and how it is held. It exposes no table, so a decode reads a nested reference only through `Follow`.
+A file the loader imports, not parses (an image, a mesh), is held as the class `IMPORTED_FILE`, with no properties and the file as its address.
 _Avoid_: "scoped resource" for this. A `ScopedResource` carries the tables.
 
 **Resource kind** (`ResourceKind`, `resources/reading/read.ts`):
-One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D`, `CURVE_3D`, `CURVE`, `GRADIENT`, `PARTICLE_PROCESS_MATERIAL`, `SHAPE_2D`, `OCCLUDER_POLYGON_2D` and `NAVIGATION_POLYGON` are kinds.
+One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D`, `CURVE_3D`, `CURVE`, `GRADIENT`, `PARTICLE_PROCESS_MATERIAL`, `SHAPE_2D`, `OCCLUDER_POLYGON_2D`, `NAVIGATION_POLYGON`, `FAST_NOISE_LITE`, `IMAGE`, `TEXTURE_2D` and `TEXTURE_3D` are kinds.
 _Avoid_: one decode for each origin.
 
 **Resource snapshot** (`ResourceSnapshot`, `resources/reading/read.ts`):
