@@ -1,6 +1,6 @@
 /**
- * The rows the emitter emits so far. `checkTranspiled` refuses each other row a tree holds, at
- * its place in the text, naming the issue that owns the row.
+ * The rows the emitter emits so far: those with a state in the instruction table. `checkTranspiled`
+ * refuses each other row a tree holds, at its place in the text, naming the issue that owns it.
  */
 
 import { instruction, keywordInstruction, notTranspiled } from './instructions.js';
@@ -9,10 +9,8 @@ import type { SourcePosition } from './shadingLanguageError.js';
 import type { Expression, FunctionNode, ShaderNode, Statement } from './shaderTree.js';
 import { shapeOf } from './types.js';
 
-/** The issues whose rows the emitter emits: each row the table gives one of them. */
-const TRANSPILED_OWNERS: ReadonlySet<string> = new Set(['#1823']);
-
-const isTranspiled = (row: InstructionRow) => TRANSPILED_OWNERS.has(row.owner);
+/** A row the emitter emits has a state on each target, which a probe against Godot backs. */
+const isTranspiled = (row: InstructionRow) => row.webgl2 !== undefined;
 
 export function checkTranspiled(shader: ShaderNode): void {
   for (const definition of shader.functions) checkFunction(definition);

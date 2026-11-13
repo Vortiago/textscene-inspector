@@ -3,22 +3,35 @@
  * readable table that names each row's state and, for an open row, the issue that owns it.
  */
 
+import { TARGETS, targetStates } from './targetStates.mjs';
+
 /** The fields of a row, in the order each line of the module holds them, tab-separated. */
-const ROW_FIELDS = ['id', 'family', 'source', 'owner', 'token', 'returns', 'args'];
+const ROW_FIELDS = ['id', 'family', 'source', 'owner', 'token', 'returns', 'args', ...TARGETS];
+
+/** The ids of the rows a probe names: the transpiled rows. */
+export const transpiledIds = (probes) => new Set(probes.flatMap((probe) => probe.rows));
 
 /**
  * The generated module: one row per line, so a diff names the rows that changed. The rows are
  * text that the module splits once: an array literal of every row, near 1,900 objects, is past
  * what TypeScript types (TS2590).
  */
-export function renderTableModule(rows) {
-  const lines = rows.map((row) =>
-    ROW_FIELDS.map((field) => fieldText(field === 'owner' ? owningIssue(row) : row[field])).join('\t')
-  );
+export function renderTableModule(rows, probes, version) {
+  const transpiled = transpiledIds(probes);
+  const lines = rows.map((row) => {
+    const fields = { ...row, owner: owningIssue(row), ...(transpiled.has(row.id) ? targetStates(row) : {}) };
+    return ROW_FIELDS.map((field) => fieldText(fields[field])).join('\t');
+  });
   return `/**
- * The instruction table of Godot 4.6.3's shading language, read from Godot's source.
+ * The instruction table of Godot ${version}'s shading language, read from Godot's source.
  * AUTO-GENERATED - Do not edit manually. Run: pnpm godot:shader-language
  */
+
+/** The Godot version whose source the table is read from, and whose rules the transpiler follows. */
+export const GODOT_VERSION = '${version}';
+
+/** A transpiled row's state on a target: \`native\`, or \`lowered: \` and the name of the lowering. */
+export type TargetState = string;
 
 /** One instruction: a type, a keyword, an operator signature, a function overload or a built-in. */
 export interface InstructionRow {
@@ -32,6 +45,10 @@ export interface InstructionRow {
   readonly token?: string;
   readonly returns?: string;
   readonly args?: readonly string[];
+  /** The state on WebGL 2 through three's handler. Only a transpiled row has one. */
+  readonly webgl2?: TargetState;
+  /** The state on WebGPURenderer. Only a transpiled row has one. */
+  readonly webgpu?: TargetState;
 }
 
 /**
@@ -43,7 +60,8 @@ ${lines.join('\n')}
 \`;
 
 function readRow(line: string): InstructionRow {
-  const [id = '', family = '', source = '', owner = '', token, returns, args] = line.split('\\t');
+  const [id = '', family = '', source = '', owner = '', token, returns, args, webgl2, webgpu] =
+    line.split('\\t');
   return {
     id,
     family,
@@ -52,6 +70,8 @@ function readRow(line: string): InstructionRow {
     ...(token ? { token } : {}),
     ...(returns ? { returns } : {}),
     ...(args ? { args: args === '()' ? [] : args.slice(1, -1).split(',') } : {}),
+    ...(webgl2 ? { webgl2 } : {}),
+    ...(webgpu ? { webgpu } : {}),
   };
 }
 
@@ -151,9 +171,10 @@ function functionOwner(row) {
 
 /**
  * The readable table: the count of transpiled rows, then one table per family with each row's
- * state. A row is transpiled when a probe names it, and the probe's name stands beside it.
+ * state. A row is transpiled when a probe names it, and the probe's name stands beside it, with
+ * the row's state on each target.
  */
-export function renderReadableTable(rows, probes) {
+export function renderReadableTable(rows, probes, version) {
   const probeOf = new Map();
   for (const probe of probes)
     for (const id of probe.rows) probeOf.set(id, [...(probeOf.get(id) ?? []), probe.name]);
@@ -163,21 +184,26 @@ export function renderReadableTable(rows, probes) {
     const familyRows = rows.filter((row) => row.family === family);
     const lines = familyRows.map((row) => {
       const names = probeOf.get(row.id);
-      const state = names
-        ? `transpiled (${names.map((name) => `\`${name}\``).join(', ')})`
-        : `open, ${owningIssue(row)}`;
-      return `| \`${row.id}\` | ${state} | \`${row.source}\` |`;
+      if (!names) return `| \`${row.id}\` | open, ${owningIssue(row)} | | | \`${row.source}\` |`;
+      const probeList = names.map((name) => `\`${name}\``).join(', ');
+      const states = targetStates(row);
+      return `| \`${row.id}\` | transpiled (${probeList}) | ${states.webgl2} | ${states.webgpu} | \`${row.source}\` |`;
     });
-    return `## ${family}\n\n| Instruction | State | Godot source |\n| --- | --- | --- |\n${lines.join('\n')}\n`;
+    return `## ${family}\n\n| Instruction | State | WebGL 2 | WebGPU | Godot source |\n| --- | --- | --- | --- | --- |\n${lines.join('\n')}\n`;
   });
   return `# Instruction table
 
-The shader package transpiles Godot 4.6.3's shading language instruction by instruction. This
+The shader package transpiles Godot ${version}'s shading language instruction by instruction. This
 table lists every instruction, read from Godot's source by \`pnpm godot:shader-language\`. Do
 not edit it by hand.
 
 A row is transpiled when a probe names it. The probe's record holds Godot's own answers, and the
 real-GL test checks the transpilation against them. An open row names the issue that transpiles it.
+
+A transpiled row states what the emitter writes for each target: \`native\` when its TSL node is the
+GLSL or WGSL operation itself, \`lowered\` with the name of the operations it writes instead. The
+probes run on WebGL 2. WebGPURenderer runs the same TSL nodes, and no probe runs there until the
+canvases draw on WebGPURenderer (#1788).
 
 ${transpiledCount} of ${rows.length} instructions transpiled.
 
