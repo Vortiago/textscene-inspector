@@ -1,7 +1,7 @@
 /** The one `onCreated` of every canvas: what its renderer needs before its first frame. */
 
 import type { RootState } from '@react-three/fiber';
-import { installNodesHandler } from '../../shaders/index.js';
+import { installNodesHandler } from '../../shaders/nodesHandler.js';
 import { installShaderPatches } from '../shaderPatch/installShaderPatches.js';
 
 /**
