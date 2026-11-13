@@ -12,7 +12,7 @@ const DOUBLE_NEGATION = {
 
 const CONSTANT_ARITHMETIC = {
   owner: '#1823',
-  cause: 'one unit in the last place off in arithmetic on literals and swizzles, not root-caused',
+  cause: 'a few units in the last place off in arithmetic on literals and swizzles, not root-caused',
 };
 
 const DIVISION_BY_ZERO_SUM = {
