@@ -18,6 +18,12 @@ export interface GPUParticles3DProperties extends GeometryInstance3DProperties {
   emitter: GpuEmitter;
   /** `draw_order`; a value no order names draws in index order, as the copy shader does. */
   drawOrder: number;
+  /** `trail_enabled`: each particle draws a trail through the bind poses of its mesh or skin. */
+  trailEnabled: boolean;
+  /** `trail_lifetime`, in seconds (`gpu_particles_3d.cpp:895`). */
+  trailLifetime: number;
+  /** The raw `draw_skin` reference, whose bind poses win over the mesh's. Undefined for none. */
+  drawSkin: string | undefined;
   /** `transform_align`; one of the four 4.6.3 accepts. */
   transformAlign: number;
   /** The raw mesh reference of each draw pass up to `draw_passes`; undefined for a pass with no mesh. */
