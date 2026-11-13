@@ -14,10 +14,12 @@ import {
   sortedPaintOf,
   ySortedPaint,
   type ExtraSortItems,
-  type ExtraSortItem,
   type SortInputs,
 } from '../canvasItemPass/ySort.js';
 import { useLiveScenePassSelection } from '../liveScenePass.js';
+import { sameData } from '../../utils/sameData.js';
+import { sameEntries } from '../../utils/sameEntries.js';
+import { useByValue } from '../hooks/useByValue.js';
 
 /** Control paths to the transform of their canvas item in their parent, written only by the Control walk. */
 export type ControlTransforms = ReadonlyMap<string, Transform2DColumns>;
@@ -30,7 +32,7 @@ export type ControlTransforms = ReadonlyMap<string, Transform2DColumns>;
 export type ControlLocalTransforms = ControlTransforms;
 
 const NO_TRANSFORMS: ControlTransforms = new Map();
-const NO_EXTRAS: ReadonlyMap<string, readonly ExtraSortItem[]> = new Map();
+const NO_EXTRAS: ExtraSortItems = new Map();
 const NO_YS: ReadonlyMap<string, number> = new Map();
 const NO_RUNS: ReadonlyMap<string, PaintRange> = new Map();
 const NO_PAINTS: ReadonlyMap<string, CanvasItemPaint> = new Map();
@@ -66,31 +68,8 @@ LocalTransformsContext.displayName = 'ControlLocalTransformsContext';
 SortedRunsContext.displayName = 'YSortRunsContext';
 PublishersContext.displayName = 'ControlYSortPublishers';
 
-function sameEntries<T>(
-  a: ReadonlyMap<string, T>,
-  b: ReadonlyMap<string, T>,
-  equal: (x: T, y: T) => boolean
-) {
-  if (a.size !== b.size) return false;
-  for (const [key, value] of a) {
-    const other = b.get(key);
-    if (other === undefined || !equal(value, other)) return false;
-  }
-  return true;
-}
-
 const sameSet = (a: ReadonlySet<string>, b: ReadonlySet<string>) =>
   a.size === b.size && [...a].every((path) => b.has(path));
-const sameRun = (a: PaintRange, b: PaintRange) => a.base === b.base && a.size === b.size;
-const sameExtras = (a: readonly ExtraSortItem[], b: readonly ExtraSortItem[]) =>
-  a.length === b.length &&
-  a.every(
-    (x, i) =>
-      x.id === b[i]!.id &&
-      x.size === b[i]!.size &&
-      x.origin.x === b[i]!.origin.x &&
-      x.origin.y === b[i]!.origin.y
-  );
 
 /**
  * The entries of every owner, merged, with the publisher that sets one owner's share. A publish
@@ -116,7 +95,7 @@ function useOwnedEntries<T>(none: ReadonlyMap<string, T>, equal: (x: T, y: T) =>
 export function YSortProvider({ children }: { children: ReactNode }) {
   const [transforms, publishTransforms] = useOwnedEntries(NO_TRANSFORMS, equalTransform2D);
   const [localTransforms, publishLocalTransforms] = useOwnedEntries(NO_TRANSFORMS, equalTransform2D);
-  const [extras, publishExtras] = useOwnedEntries(NO_EXTRAS, sameExtras);
+  const [extras, publishExtras] = useOwnedEntries(NO_EXTRAS, sameData);
   const [liveYs, publishLiveYs] = useOwnedEntries(NO_YS, Object.is);
   const publishers = useMemo(
     () => ({ publishTransforms, publishLocalTransforms, publishExtras, publishLiveYs }),
@@ -127,7 +106,9 @@ export function YSortProvider({ children }: { children: ReactNode }) {
     <PublishersContext.Provider value={publishers}>
       <TransformsContext.Provider value={transforms}>
         <LocalTransformsContext.Provider value={localTransforms}>
-          <SortedRuns inputs={{ origins: transforms, extras, liveYs }}>{children}</SortedRuns>
+          <SortedRuns origins={transforms} extras={extras} liveYs={liveYs}>
+            {children}
+          </SortedRuns>
         </LocalTransformsContext.Provider>
       </TransformsContext.Provider>
     </PublishersContext.Provider>
@@ -138,24 +119,24 @@ export function YSortProvider({ children }: { children: ReactNode }) {
  * The sort of the shared live tree over `inputs`. A component of its own below the local transforms,
  * so it reads the tree every drawn node reads, which composes through those transforms.
  */
-function SortedRuns({ inputs, children }: { inputs: SortInputs; children: ReactNode }) {
-  const { origins, extras, liveYs } = inputs;
+function SortedRuns({ origins, extras, liveYs, children }: SortInputs & { children: ReactNode }) {
   const results = useLiveScenePassSelection(canvasItemPass, wholeResults, Object.is);
   const paints = useLiveScenePassSelection(canvasPaintPass, wholeResults, Object.is);
+  const merged = useMemo(() => (results ? mergedSorters(results) : NO_PATHS), [results]);
+  /** Written only by the memo below: the last sort, which a frame with no pass results keeps. */
   const held = useRef<SortedRunsValue>({ runs: NO_RUNS, paints: NO_PAINTS, mergedSorters: NO_PATHS });
   const sorted = useMemo(() => {
     if (!results || !paints) return held.current;
     const runs = ySortedPaint(results, paints, { origins, extras, liveYs });
     // An unchanged sort keeps its identity, so a pose that moves no entry past another re-renders no item.
-    const merged = mergedSorters(results);
     const isUnchanged =
       held.current.paints === paints &&
-      sameEntries(held.current.runs, runs, sameRun) &&
+      sameEntries(held.current.runs, runs, sameData) &&
       sameSet(held.current.mergedSorters, merged);
     if (isUnchanged) return held.current;
     held.current = { runs, paints, mergedSorters: merged };
     return held.current;
-  }, [results, paints, origins, extras, liveYs]);
+  }, [results, paints, merged, origins, extras, liveYs]);
   return <SortedRunsContext.Provider value={sorted}>{children}</SortedRunsContext.Provider>;
 }
 
@@ -172,11 +153,6 @@ export function useSortedPaint(path: string | null, paint: CanvasItemPaint): Can
   );
 }
 
-/** The run of each sorted entry, by live path or extra id, empty where there is no provider. */
-export function useSortedRuns(): ReadonlyMap<string, PaintRange> {
-  return useContext(SortedRunsContext).runs;
-}
-
 /** The sorted runs with the tree-order paint they move, for a walk that places its own nodes. */
 export function useSortedRunsAndPaints(): SortedRunsValue {
   return useContext(SortedRunsContext);
@@ -189,17 +165,16 @@ export function useSortedRunsAndPaints(): SortedRunsValue {
  */
 export function useControlTransformsUnder(path: string | null): ControlTransforms {
   const published = useContext(TransformsContext);
-  const held = useRef<ControlTransforms>(NO_TRANSFORMS);
-  const prefix = `${path}/`;
   const scoped = new Map<string, Transform2DColumns>();
   // A null path reads nothing, so a sort with no Control below skips the scan.
   if (path !== null) {
+    const prefix = `${path}/`;
     for (const [key, transform] of published) if (key.startsWith(prefix)) scoped.set(key, transform);
   }
-  // Written during render, and only to the value an equal map would give.
-  if (!sameEntries(held.current, scoped, equalTransform2D)) held.current = scoped;
-  return held.current;
+  return useByValue<ControlTransforms>(scoped, sameTransforms);
 }
+
+const sameTransforms = (a: ControlTransforms, b: ControlTransforms) => sameEntries(a, b, equalTransform2D);
 
 /** The transform the Control walks published for the Control at `path`, or null before they solve it. */
 export function useControlTransform(path: string): Transform2DColumns | null {

@@ -6,7 +6,6 @@
 
 import type { TscnNode } from '../parser/types.js';
 import { isTopLevelItem, ysortsChildren } from './canvasPaintOrder.js';
-import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { DrawableCell } from '../resources/tileset/drawableCell.js';
 import {
@@ -26,24 +25,14 @@ import type { ControlTransforms } from './contexts/YSortContext.js';
 export interface YSortParent {
   /** `ysort_xform`: the item's transform in the sort root's space (`renderer_canvas_cull.cpp:131`). */
   toSortRoot: Transform2DColumns;
-  /**
-   * The z the pass buckets on: `_collect_ysort_children` carries `abs_z` down, and an item sorts
-   * only within its bucket. `EffectiveZContext` carries the same `accumulateCanvasItemZ` value on
-   * the ordinary walk.
-   */
-  effectiveZ: number;
 }
 
-/**
- * The sort root's own children. The pass starts at 0, not at the ambient z, so a root under a
- * `z_index`'d ancestor buckets from 0: only the relative order of the buckets reaches the draw.
- */
-export const Y_SORT_ROOT: YSortParent = { toSortRoot: TRANSFORM2D_IDENTITY, effectiveZ: 0 };
+/** The sort root's own children, in the root's space. */
+export const Y_SORT_ROOT: YSortParent = { toSortRoot: TRANSFORM2D_IDENTITY };
 
 /** A renderable item collected by the y-sort pass. */
 export interface YSortItem {
   sortY: number;
-  effectiveZ: number;
   treeOrder: number;
   kind: 'node' | 'tileGroup';
   /**
@@ -114,7 +103,7 @@ function toSortRootOf(
 
 /**
  * A child's sort y, the y of its origin in the sort root's space (`renderer_canvas_cull.h:115-123`),
- * and what it threads to its own children: its transform there and its z bucket. A TileMapLayer's
+ * and what it threads to its own children: its transform there. A TileMapLayer's
  * `y_sort_origin` moves only its rows (`tile_map_layer.cpp:547`), never the layer's own origin.
  */
 function itemSortKey(
@@ -127,14 +116,7 @@ function itemSortKey(
   // A scene tile sorts as its instance root, which sits inside the placement node that stands for it.
   const root = (child as LiveNode).ySortRoot;
   const sortY = root ? multiplyTransform2D(toSortRoot, root.pose).ty : toSortRoot.ty;
-
-  // The same accumulation the light cull uses: `_collect_ysort_children` (renderer_canvas_cull.cpp
-  // 143-148) and `_cull_canvas_item` (430-434) both run
-  // `CLAMP(p_z + z_index, CANVAS_ITEM_Z_MIN, CANVAS_ITEM_Z_MAX)` under `z_relative`
-  // and assign `z_index` unclamped otherwise. A second copy could drift from the lights.
-  const ownZ = accumulateCanvasItemZ(parent.effectiveZ, fields ?? { zIndex: 0 });
-  const effectiveZ = root ? accumulateCanvasItemZ(ownZ, root) : ownZ;
-  return { toSortRoot, sortY, effectiveZ };
+  return { toSortRoot, sortY };
 }
 
 /** The y-sort group of a y_sort_enabled canvas item that draws per tile row, or undefined. */
@@ -154,7 +136,6 @@ export function collectSortRootRows(node: TscnNode): YSortItem | null {
   if (!group) return null;
   return {
     sortY: 0,
-    effectiveZ: Y_SORT_ROOT.effectiveZ,
     treeOrder: 0,
     kind: 'tileGroup',
     tileData: {
@@ -215,7 +196,6 @@ export function collectYSortedItems(
     const isTileGroup = group !== undefined;
     items.push({
       sortY: key.sortY,
-      effectiveZ: key.effectiveZ,
       treeOrder: order++,
       kind: isTileGroup ? 'tileGroup' : 'node',
       ...(isTileGroup && {

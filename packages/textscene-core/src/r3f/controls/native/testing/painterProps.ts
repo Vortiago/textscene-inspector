@@ -10,7 +10,7 @@
 import { nativeTheme } from '../nativeTheme';
 import { WHITE_MODULATE, type OwnPixelTint } from '../../../canvasItemModulate';
 import { godotColorToLinear } from '../../../godotColor';
-import type { NativeControlComponentProps } from '../../ControlComponentRegistry';
+import { NO_PIECE_SLOTS, type NativeControlComponentProps } from '../../ControlComponentRegistry';
 import { wholeKeySlot } from '../../../canvasItemState';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
@@ -53,6 +53,7 @@ export function painterEnv(): Pick<
     // would draw chrome under the subtree.
     chromeSlot: wholeKeySlot(0),
     layerSlot: wholeKeySlot(0),
+    pieceSlots: NO_PIECE_SLOTS,
     // The `Viewport::snap_controls_to_pixels` initialiser (`scene/main/viewport.h`).
     snapToPixels: true,
     meta: undefined,

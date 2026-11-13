@@ -98,7 +98,7 @@ import {
 } from './solveTree';
 import { liveScenePassResults } from '../../liveScenePass';
 import { isTopLevelItem, WHOLE_CANVAS_RANGE, type PaintRange } from '../../canvasPaintOrder';
-import { canvasPaintPassFrom, WHOLE_CANVAS_PAINT } from '../../canvasItemPass/canvasItemPaint';
+import { canvasPaintPassFrom, WINDOW_CANVAS_PAINT } from '../../canvasItemPass/canvasItemPaint';
 import {
   builtControlIcons,
   resolveStyleBoxes,
@@ -676,8 +676,7 @@ function buildForest(
       path,
       node: withListedFolders(window),
       children: [],
-      // A Window draws its chrome on its own canvas, under its content.
-      paint: { ...WHOLE_CANVAS_PAINT, back: { base: WHOLE_CANVAS_RANGE.base, size: 0 } },
+      paint: WINDOW_CANVAS_PAINT,
       skippedTransform: null,
       parentVisibleInTree: true,
       // A Window is no CanvasItem, so its content starts a chain.

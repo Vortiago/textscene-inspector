@@ -8,6 +8,7 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { ScrollContainer } from './Component';
 import { scrollContainerLayout, scrollContainerMinimumSize } from './nativeSolver';
+import { scrollContainerInternalBackPieces } from './internalBackPieces';
 
 controlComponentRegistry.register({
   typeName: 'ScrollContainer',
@@ -16,3 +17,4 @@ controlComponentRegistry.register({
 });
 controlSolverRegistry.registerMinimumSize('ScrollContainer', scrollContainerMinimumSize);
 controlSolverRegistry.registerContainerLayout('ScrollContainer', scrollContainerLayout);
+controlSolverRegistry.registerInternalBackPieces('ScrollContainer', scrollContainerInternalBackPieces);

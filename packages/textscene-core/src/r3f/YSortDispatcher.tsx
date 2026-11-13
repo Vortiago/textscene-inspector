@@ -21,7 +21,7 @@ import {
 import { TileSetModels, tileSetRefsOf } from './ySortTileSetModels.js';
 import { LiftedAncestors, liftedPath } from './LiftedAncestors.js';
 import { YSortLayerGroup } from './YSortLayerGroup.js';
-import { compareSortY } from './ySortOrder.js';
+import { inSortOrder } from './ySortOrder.js';
 import { useLiveYSort } from './useLiveYSort.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import { isTopLevelItem, packPaintRanges, paintRangeSize } from './canvasPaintOrder.js';
@@ -37,6 +37,7 @@ import { canvasPaintPass, type CanvasItemPaint } from './canvasItemPass/canvasIt
 import type { ExtraSortItem } from './canvasItemPass/ySort.js';
 import { useLiveScenePassSelection } from './liveScenePass.js';
 import { joinPath } from '../utils/nodePath.js';
+import { sameData } from '../utils/sameData.js';
 import { TRANSFORM2D_IDENTITY, transform2DXform } from '../godot/math/transform2d.js';
 // Sorted children go back through the one dispatcher, so instances, selection,
 // hiding and the workspace split work under y-sort without a copy. The reverse
@@ -49,7 +50,7 @@ import {
   useControlTransformsUnder,
   usePublishLiveSortYs,
   usePublishSortExtras,
-  useSortedRuns,
+  useSortedRunsAndPaints,
 } from './contexts/YSortContext.js';
 
 /** Performs the y-sort pass on the children of a y_sort_enabled CanvasItem, and a TileMapLayer's rows. */
@@ -152,7 +153,7 @@ function useSortPieces(items: readonly YSortItem[], basePath: string): ReadonlyM
     () => (paints: ReadonlyMap<string, CanvasItemPaint>) => paths.map((path) => paints.has(path)),
     [paths]
   );
-  const held = useLiveScenePassSelection(canvasPaintPass, select, sameFlags);
+  const held = useLiveScenePassSelection(canvasPaintPass, select, sameData);
   return useMemo(
     () =>
       new Map(
@@ -184,7 +185,9 @@ function usePublishSortInputs(
     const extras = items.flatMap((item): ExtraSortItem[] => {
       const piece = pieces.get(item)!;
       if (piece.kind !== 'extra' || !item.node) return [];
-      return [{ id: piece.id, origin: { x: 0, y: item.sortY }, size: pieceSize(item) }];
+      return [
+        { id: piece.id, origin: { x: 0, y: item.sortY }, size: pieceSize(item), isInternalBack: false },
+      ];
     });
     publishExtras?.(owner, new Map([[basePath, extras]]));
   }, [items, pieces, basePath, publishExtras, owner]);
@@ -216,7 +219,7 @@ function usePieceFrames(
   paint: CanvasItemPaint,
   isOutsideTree: boolean
 ): ReadonlyMap<YSortItem, PaintFrame> {
-  const sortedRuns = useSortedRuns();
+  const sortedRuns = useSortedRunsAndPaints().runs;
   return useMemo(() => {
     if (isOutsideTree) return localSortFrames(liveItems, paint);
     return new Map(
@@ -231,10 +234,7 @@ function usePieceFrames(
 
 /** The runs of `items` packed in sort order after the node's own sequence, as one flat sort orders them. */
 function localSortFrames(items: readonly YSortItem[], paint: CanvasItemPaint): Map<YSortItem, PaintFrame> {
-  const sorted = items
-    .map((item, index) => ({ item, index }))
-    .sort((a, b) => compareSortY(a.item.sortY, b.item.sortY) || a.index - b.index)
-    .map(({ item }) => item);
+  const sorted = inSortOrder(items, (item) => item.sortY);
   const ranges = packPaintRanges(paint.range, sorted.map(pieceSize), paint.own + 1);
   return new Map(sorted.map((item, i) => [item, runFrame(ranges[i]!)]));
 }
@@ -246,10 +246,6 @@ function pieceSize(item: YSortItem): number {
 
 function itemPath(item: YSortItem, basePath: string): string {
   return item.node ? liftedPath(basePath, item.liftedPast, item.node.name) : basePath;
-}
-
-function sameFlags(a: readonly boolean[], b: readonly boolean[]): boolean {
-  return a.length === b.length && a.every((flag, i) => flag === b[i]);
 }
 
 /** Where the sort of the canvas item pass finds an item: a node by live path, or an extra by id. */

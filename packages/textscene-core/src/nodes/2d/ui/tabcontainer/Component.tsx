@@ -7,7 +7,10 @@
  */
 
 import { useMemo } from 'react';
-import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
+import {
+  NO_PIECE_SLOTS,
+  type NativeControlComponentProps,
+} from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
@@ -128,6 +131,7 @@ export function TabContainer({
             slot={stripSlot}
             chromeSlot={stripSlot}
             layerSlot={stripSlot}
+            pieceSlots={NO_PIECE_SLOTS}
             measureText={measureText}
             snapToPixels={snapToPixels}
             childRects={EMPTY_CHILD_RECTS}

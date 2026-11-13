@@ -13,7 +13,7 @@ import { threeMatrixFromTransform2D } from '../../node2dTransform';
 import type { NativeTheme } from './nativeTheme';
 import type { TextMeasurer } from './solverRegistry';
 import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
-import { controlComponentRegistry } from '../ControlComponentRegistry';
+import { controlComponentRegistry, NO_PIECE_SLOTS } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
 import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useTextureSamplerOver } from '../../canvasItemTextureSampler';
@@ -29,7 +29,7 @@ import {
 } from '../../canvasItemPass/inheritedCanvasState';
 import type { InheritedCanvasItemState } from '../../canvasItemPass/canvasItemPass';
 import type { CanvasItemPaint } from '../../canvasItemPass/canvasItemPaint';
-import { ysortsChildren } from '../../canvasPaintOrder';
+import { ysortsChildren, type PaintRange } from '../../canvasPaintOrder';
 import { isCanvasLayerType } from '../../canvasItemClass';
 import { CanvasRootScope } from '../../canvasRootScope';
 import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
@@ -39,8 +39,10 @@ import { snapControlsToPixelsEnabled, snappedControlOriginUnder } from './contro
 import {
   controlTransformsOf,
   forestInCanvasSort,
+  forestBackPiecesOf,
   forestInOwnSort,
   isInSharedTree,
+  piecesAtLivePaths,
   solvedDrawTransformOf,
   transformsAtLivePaths,
   type ForestSort,
@@ -48,6 +50,7 @@ import {
 import {
   usePublishControlLocalTransforms,
   usePublishControlTransforms,
+  usePublishSortExtras,
   useSortedRunsAndPaints,
 } from '../../contexts/YSortContext';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
@@ -56,6 +59,7 @@ import {
   ownAndBackSlots,
   wholeKeySlot,
   type CanvasItemState,
+  type CanvasSlot,
 } from '../../canvasItemState';
 
 interface ControlCanvasWalkerProps {
@@ -113,7 +117,8 @@ export function ControlCanvasWalker({
   // The one sort of the canvas sorts the Controls on where this solve puts them. A forest the shared
   // live tree does not hold, such as an unowned scene-tile root, sorts its own Controls instead, and
   // publishes nothing its paths could confuse. A layout effect, so the sort settles before the first paint.
-  const isSortedByCanvas = isInSharedTree(tree, livePath, useSortedRunsAndPaints().paints);
+  const canvasSort = useSortedRunsAndPaints();
+  const isSortedByCanvas = isInSharedTree(tree, livePath, canvasSort.paints);
   const publishToCanvas = usePublishControlTransforms();
   const publishTransforms = isSortedByCanvas ? publishToCanvas : null;
   const owner = useId();
@@ -124,6 +129,13 @@ export function ControlCanvasWalker({
     );
   }, [publishTransforms, owner, tree, solved, snapEnabled, livePath]);
   useLayoutEffect(() => () => publishTransforms?.(owner, null), [publishTransforms, owner]);
+  const pieces = useMemo(() => forestBackPiecesOf(tree, solved), [tree, solved]);
+  const publishToSort = usePublishSortExtras();
+  const publishPieces = isSortedByCanvas ? publishToSort : null;
+  useLayoutEffect(() => {
+    publishPieces?.(owner, piecesAtLivePaths(livePath, pieces));
+  }, [publishPieces, owner, pieces, livePath]);
+  useLayoutEffect(() => () => publishPieces?.(owner, null), [publishPieces, owner]);
   // Read by the live scene passes, which compose through a Control. Every walk publishes them, sorted or not.
   const publishLocalTransforms = usePublishControlLocalTransforms();
   useLayoutEffect(() => {
@@ -133,13 +145,12 @@ export function ControlCanvasWalker({
     );
   }, [publishLocalTransforms, owner, tree, solved, livePath]);
   useLayoutEffect(() => () => publishLocalTransforms?.(owner, null), [publishLocalTransforms, owner]);
-  const canvasSort = useSortedRunsAndPaints();
   const sort = useMemo(
     () =>
       isSortedByCanvas
-        ? forestInCanvasSort(tree, livePath, canvasSort)
-        : forestInOwnSort(tree, controlTransformsOf(tree, solved, snapEnabled)),
-    [isSortedByCanvas, canvasSort, tree, solved, snapEnabled, livePath]
+        ? forestInCanvasSort(tree, livePath, canvasSort, pieces)
+        : forestInOwnSort(tree, controlTransformsOf(tree, solved, snapEnabled), pieces),
+    [isSortedByCanvas, canvasSort, tree, solved, snapEnabled, livePath, pieces]
   );
 
   return (
@@ -254,6 +265,18 @@ function useControlState(
   });
 }
 
+/** The slot of each internal back piece a sort placed, by name, at the z of the Control that draws it. */
+function usePieceSlots(
+  runs: ReadonlyMap<string, PaintRange> | undefined,
+  state: Pick<CanvasItemState, 'keyAt'>
+): ReadonlyMap<string, CanvasSlot> {
+  const { keyAt } = state;
+  return useMemo(() => {
+    if (!runs) return NO_PIECE_SLOTS;
+    return new Map([...runs].map(([name, run]) => [name, wholeKeySlot(keyAt(run.base))]));
+  }, [runs, keyAt]);
+}
+
 /**
  * One Control, under the skipped Node2D chain it promoted past (`SolveNode.skippedTransform`), when
  * there is one. A product of ancestors can shear, so the chain's transform goes in as a whole matrix.
@@ -291,6 +314,7 @@ function ControlItemGroup({
   // sequence value the allocator holds after it (`internalBackRoom`).
   const backKey = state.keyAt(paint.back.base);
   const { slot, chromeSlot } = useMemo(() => ownAndBackSlots(renderOrder, backKey), [renderOrder, backKey]);
+  const pieceSlots = usePieceSlots(sort.pieceRuns.get(solveNode.path), state);
   const layerKey = state.keyAt(paint.layer);
   const layerSlot = useMemo(() => wholeKeySlot(layerKey), [layerKey]);
   // `is_visible_in_tree()` is `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`).
@@ -327,7 +351,8 @@ function ControlItemGroup({
       snapToPixels={snapToPixels}
       walkEnclosing={walkEnclosing}
     />
-  )); // Godot culls each entry of a sort with the clip of the sort root (`renderer_canvas_cull.cpp:458`).
+  ));
+  // Godot culls each entry of a sort with the clip of the sort root (`renderer_canvas_cull.cpp:458`).
   const childElements = sort.mergedSorters.has(solveNode.path) ? (
     <ControlClipProvider value={takenClip}>{ownChildren}</ControlClipProvider>
   ) : (
@@ -359,6 +384,7 @@ function ControlItemGroup({
         tint={tint}
         childTint={tint.internalChild}
         chromeSlot={chromeSlot}
+        pieceSlots={pieceSlots}
         layerSlot={layerSlot}
         theme={theme}
         measureText={measureText}

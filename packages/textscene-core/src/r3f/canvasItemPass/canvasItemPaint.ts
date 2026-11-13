@@ -54,6 +54,12 @@ export const WHOLE_CANVAS_PAINT: CanvasItemPaint = {
   behind: [],
 };
 
+/** The paint of a Window, which draws its chrome on its own canvas under its content. */
+export const WINDOW_CANVAS_PAINT: CanvasItemPaint = {
+  ...WHOLE_CANVAS_PAINT,
+  back: { base: WHOLE_CANVAS_RANGE.base, size: 0 },
+};
+
 /** What a visited node hands the nodes below it. */
 interface Above {
   /** The run each child owns, by the child as its group holds it. */

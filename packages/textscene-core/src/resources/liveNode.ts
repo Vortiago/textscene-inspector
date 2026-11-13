@@ -88,8 +88,6 @@ export interface LiveNode extends TscnNode {
 /** The instance root a placement node stands for, as the y-sort reads it. */
 export interface YSortRoot {
   pose: Transform2DColumns;
-  zIndex: number;
-  zAsRelative: boolean;
 }
 
 /** The host child `node` stands for: itself, or the child it is the re-anchored copy of. */

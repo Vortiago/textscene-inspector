@@ -5,7 +5,10 @@
  */
 import { useEffect, useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry.js';
+import {
+  NO_PIECE_SLOTS,
+  type NativeControlComponentProps,
+} from '../../../../r3f/controls/ControlComponentRegistry.js';
 import { painterView, type SolveNode } from '../../../../r3f/controls/native/solveTree.js';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad.js';
 import { ControlFallback } from '../../../../r3f/controls/native/ControlFallback.js';
@@ -164,6 +167,7 @@ function ViewportSurfaceNative({
           // The cycle branch renders no subtree, so the fallback's chrome takes its own slot.
           chromeSlot={slot}
           layerSlot={slot}
+          pieceSlots={NO_PIECE_SLOTS}
           theme={theme}
           // Threaded for the contract; the outline is a diagnostic and
           // deliberately draws in its own colour, untinted.

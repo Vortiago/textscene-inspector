@@ -13,7 +13,7 @@ import {
 } from '../../godot/math/transform2d';
 import { parentPathOf } from '../../utils/nodePath';
 import { packPaintRanges, type PaintRange } from '../canvasPaintOrder';
-import { compareSortY } from '../ySortOrder';
+import { inSortOrder } from '../ySortOrder';
 import type { CanvasItemPassResult } from './canvasItemPass';
 import type { CanvasItemPaint } from './canvasItemPaint';
 
@@ -26,6 +26,11 @@ export interface ExtraSortItem {
   /** The point it sorts on, in the space of the node that draws it. */
   readonly origin: Vector2;
   readonly size: number;
+  /**
+   * An `INTERNAL_MODE_BACK` child, such as a ScrollContainer's bar, which Godot collects after the
+   * authored children (`node.h:585-600`). Every other piece comes before them.
+   */
+  readonly isInternalBack: boolean;
 }
 
 /** The extra pieces of each node, by live path, in collection order. */
@@ -65,15 +70,16 @@ export function ySortedPaint(
   paints: ReadonlyMap<string, CanvasItemPaint>,
   inputs: SortInputs
 ): ReadonlyMap<string, PaintRange> {
-  const tree = new SortTree(results, paints, inputs);
   const runs = new Map<string, PaintRange>();
+  const roots = [...results].filter(([, result]) => isSortRoot(result, results));
+  if (roots.length === 0) return runs;
+  const tree = new SortTree(results, paints, inputs);
   // The results are in tree order, so an outer sort has placed the entry a nested root sits in.
-  for (const [path, result] of results) {
-    if (!tree.isSortRoot(result)) continue;
+  for (const [path] of roots) {
     const paint = paints.get(path);
     if (!paint) continue;
     const range = movedRange(path, paint.range, runs, paints);
-    const sorted = sortedEntries(tree.entriesOf(path));
+    const sorted = inSortOrder(tree.entriesOf(path), (entry) => entry.sortY);
     const packed = packPaintRanges(
       range,
       sorted.map((entry) => entry.size),
@@ -96,14 +102,6 @@ export function mergedSorters(results: ReadonlyMap<string, SortItem>): ReadonlyS
     if (result.fields.ySortEnabled && parent?.fields.ySortEnabled) merged.add(path);
   }
   return merged;
-}
-
-/** `SortArray` with `ItemYSort` is unstable, but `ysort_index` breaks every tie in collection order. */
-function sortedEntries(entries: readonly SortEntry[]): SortEntry[] {
-  return entries
-    .map((entry, index) => ({ entry, index }))
-    .sort((a, b) => compareSortY(a.entry.sortY, b.entry.sortY) || a.index - b.index)
-    .map(({ entry }) => entry);
 }
 
 /** `range` of the node at `path`, moved with the nearest entry above it that a sort has placed. */
@@ -136,6 +134,13 @@ function shiftAbove(
   return 0;
 }
 
+/** A `sort_y` item that no outer sort flattens: its parent item does not sort, or it has none. */
+function isSortRoot(result: SortItem, results: ReadonlyMap<string, SortItem>): boolean {
+  if (!result.fields.ySortEnabled || !result.isVisible) return false;
+  const parent = result.parent === null ? undefined : results.get(result.parent);
+  return !parent?.fields.ySortEnabled;
+}
+
 /** The pass's results read as Godot's `child_items` lists. */
 class SortTree {
   private readonly childItems = new Map<string, string[]>();
@@ -155,13 +160,6 @@ class SortTree {
     }
   }
 
-  /** A `sort_y` item that no outer sort flattens: its parent item does not sort, or it has none. */
-  isSortRoot(result: SortItem): boolean {
-    if (!result.fields.ySortEnabled || !result.isVisible) return false;
-    const parent = result.parent === null ? undefined : this.results.get(result.parent);
-    return !parent?.fields.ySortEnabled;
-  }
-
   /** The root as entry 0 at an identity transform, then its flattened subtree (`renderer_canvas_cull.cpp:446-452`). */
   entriesOf(root: string): SortEntry[] {
     const entries: SortEntry[] = [{ id: root, sortY: 0, size: this.bodySize(root) }];
@@ -169,12 +167,37 @@ class SortTree {
     return entries;
   }
 
-  /** `_collect_ysort_children` (`renderer_canvas_cull.cpp:110-160`), with the node's extra pieces first. */
+  /**
+   * `_collect_ysort_children` (`renderer_canvas_cull.cpp:110-160`): the node's extra pieces, its
+   * authored children, then its internal back pieces.
+   */
   private collect(path: string, toRoot: Transform2DColumns, entries: SortEntry[]): void {
-    for (const extra of this.inputs.extras.get(path) ?? []) {
+    const extras = this.inputs.extras.get(path) ?? [];
+    this.collectExtras(
+      extras.filter((extra) => !extra.isInternalBack),
+      toRoot,
+      entries
+    );
+    this.collectChildren(path, toRoot, entries);
+    this.collectExtras(
+      extras.filter((extra) => extra.isInternalBack),
+      toRoot,
+      entries
+    );
+  }
+
+  private collectExtras(
+    extras: readonly ExtraSortItem[],
+    toRoot: Transform2DColumns,
+    entries: SortEntry[]
+  ): void {
+    for (const extra of extras) {
       const sortY = this.inputs.liveYs.get(extra.id) ?? transform2DXform(toRoot, extra.origin).y;
       entries.push({ id: extra.id, sortY, size: extra.size });
     }
+  }
+
+  private collectChildren(path: string, toRoot: Transform2DColumns, entries: SortEntry[]): void {
     for (const child of this.childItems.get(path) ?? []) {
       const result = this.results.get(child)!;
       if (!result.isVisible) continue;
