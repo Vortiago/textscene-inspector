@@ -9,7 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { buildMaterial } from './buildMaterial.testkit';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 
 function withScale(scale: number, texture: THREE.Texture): THREE.MeshStandardMaterial {
   return buildMaterial(parseStandardMaterial3DScalars({ uv1_scale: `Vector3(${scale}, ${scale}, 1)` }), {

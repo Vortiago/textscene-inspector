@@ -2,17 +2,17 @@
  * One `SurfaceMaterialSlot` per surface of a mesh, each attached to its own draw group, and the
  * two rules every per-surface slot keeps: the default surface and the attach key.
  */
-import type { MaterialSource } from './materialSource';
+import type { ScopedReference } from '../../resources/reading';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 import type { ListedSurface } from './godotPoint';
 import type { ParticleProgram } from './godotParticles';
 
-const DEFAULT_SURFACE: readonly (MaterialSource | undefined)[] = [undefined];
+const DEFAULT_SURFACE: readonly (ScopedReference | undefined)[] = [undefined];
 
 /** The sources to draw: a mesh that declares no surface material still draws Godot's default one. */
 export function surfaceSources(
-  sources: readonly (MaterialSource | undefined)[]
-): readonly (MaterialSource | undefined)[] {
+  sources: readonly (ScopedReference | undefined)[]
+): readonly (ScopedReference | undefined)[] {
   return sources.length === 0 ? DEFAULT_SURFACE : sources;
 }
 
@@ -21,9 +21,9 @@ export function surfaceSources(
  * material (`render_forward_clustered.cpp:4206`).
  */
 export function overriddenSources(
-  sources: readonly (MaterialSource | undefined)[],
-  override: MaterialSource | undefined
-): readonly (MaterialSource | undefined)[] {
+  sources: readonly (ScopedReference | undefined)[],
+  override: ScopedReference | undefined
+): readonly (ScopedReference | undefined)[] {
   const own = surfaceSources(sources);
   return override ? own.map(() => override) : own;
 }
@@ -38,7 +38,7 @@ export function surfaceAttach(index: number, surfaceCount: number): string {
 
 interface SurfaceMaterialSlotsProps {
   /** `sources[i]` is the material of draw group `i`. */
-  sources: readonly (MaterialSource | undefined)[];
+  sources: readonly (ScopedReference | undefined)[];
   /** The mesh draws points or line segments, placed so, and each material also sizes the points. */
   listed?: ListedSurface;
   /** The mesh draws a particle emitter's instances: the patch that colours them and cuts the flipbook frame. */

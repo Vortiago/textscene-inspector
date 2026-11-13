@@ -54,6 +54,16 @@ export interface Follow {
   reference(ref: string | undefined): ScopedReference;
 }
 
+/**
+ * `ref` handed on as a reference, or null for a property that names nothing. A decode that hands
+ * on no reference keeps no tables, so its value is shared across the scopes that read it.
+ *
+ * @canonical An optional reference a decode hands on
+ */
+export function optionalReference(follow: Follow, ref: string | undefined): ScopedReference | null {
+  return ref === undefined ? null : follow.reference(ref);
+}
+
 /** One consistent view of what the loader holds. Every read records the files it touched. */
 export interface ResourceSnapshot {
   read<T>(reference: ScopedReference, kind: ResourceKind<T>): Read<T>;

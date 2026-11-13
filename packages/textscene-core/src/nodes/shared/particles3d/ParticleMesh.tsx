@@ -11,7 +11,6 @@ import { readyMaterial, useMaterial } from '../../../r3f/materials/useMaterial';
 import { useMeshContent } from '../../../r3f/meshes/meshContent';
 import { SurfacedMeshDrawer, type MeshPart } from '../../../r3f/surfacedMeshDrawer/SurfacedMeshDrawer';
 import { useInstanceDraw } from '../../../r3f/visibilityRange/geometryInstance';
-import { boolSlotValue } from '../../../godot/variant/variantBool';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { particleInstances } from './particleInstances';
 import { skinTrailGeometry } from './skinTrails';
@@ -49,9 +48,7 @@ export function ParticleMesh({ mesh, buffer, sections }: ParticleMeshProps) {
 function TrailPart({ part, buffer, sections }: { part: MeshPart; buffer: Float32Array; sections: number }) {
   const { override } = useInstanceDraw();
   const material = readyMaterial(useMaterial(override ?? part.materials[0]));
-  const isSkinned =
-    boolSlotValue(material?.resource.data.use_particle_trails) === true &&
-    part.geometry.hasAttribute('skinIndex');
+  const isSkinned = material?.data.usesParticleTrails === true && part.geometry.hasAttribute('skinIndex');
   return isSkinned ? (
     <SkinnedTrails part={part} buffer={buffer} sections={sections} />
   ) : (

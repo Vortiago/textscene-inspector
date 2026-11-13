@@ -6,7 +6,13 @@
 
 import { resolveViewportTexturePath } from '../../../r3f/viewportTexturePath';
 import { isTexturePath } from '../../formats/image/textureProcessing';
-import { IMPORTED_FILE, type Follow, type HeldResource, type ResourceKind } from '../../reading';
+import {
+  IMPORTED_FILE,
+  optionalReference,
+  type Follow,
+  type HeldResource,
+  type ResourceKind,
+} from '../../reading';
 import { decodeAtlasTexture } from '../atlastexture/decode';
 import { ATLAS_TEXTURE_TYPE } from '../atlastexture/types';
 import { decodeCanvasTexture } from '../canvastexture/decode';
@@ -26,18 +32,14 @@ export const TEXTURE_2D: ResourceKind<Texture2D> = {
   decode: (held, follow) => LAYERS[held.type]!(held, follow),
 };
 
-/** A map is null with no property, as `CanvasTexture` shades no normal map it was not given. */
-function mapReference(ref: string | undefined, follow: Follow) {
-  return ref === undefined ? null : follow.reference(ref);
-}
-
 const LAYERS: Readonly<Record<string, LayerDecode>> = {
   [CANVAS_TEXTURE_TYPE]: ({ properties }, follow) => ({
     form: 'canvas',
     canvasTexture: {
       texture: decodeCanvasTexture(properties),
-      normalTexture: mapReference(properties.normal_texture, follow),
-      specularTexture: mapReference(properties.specular_texture, follow),
+      // A map is null with no property, as `CanvasTexture` shades no normal map it was not given.
+      normalTexture: optionalReference(follow, properties.normal_texture),
+      specularTexture: optionalReference(follow, properties.specular_texture),
     },
     diffuse: follow.read(TEXTURE_2D, properties.diffuse_texture),
   }),

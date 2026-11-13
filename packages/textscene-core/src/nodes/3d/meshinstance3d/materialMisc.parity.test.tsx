@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
+import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars.testkit';
 import { standardMaterialBags } from '../../../resources/materials/standardmaterial3d/materialBag';
 import { StandardMaterialSlot } from '../../../r3f/materials/StandardMaterialSlot';
 import { SceneResourcesProvider } from '../../../r3f/SceneResourcesContext';

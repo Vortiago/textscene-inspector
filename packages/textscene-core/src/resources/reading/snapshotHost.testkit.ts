@@ -1,7 +1,7 @@
 /**
  * The conformance suite of a snapshot host: code that owns snapshots for a reader, requests and
  * pins the files its reads touched, runs it again when one of them changes, and reports a failed
- * file once. The hook host passes it, and so must each later host (the Control solve, the live
+ * file once, and an address that a loaded file does not declare. The hook host passes it, and so must each later host (the Control solve, the live
  * scene tree).
  */
 
@@ -94,6 +94,19 @@ export function describeSnapshotHost(
 
       expect(host.runs().at(-1)).toMatchObject({ status: 'unavailable', reason: 'missing-file' });
       expect(host.reported()).toEqual([A_FILE]);
+    });
+
+    it('answers unknown-id for an address the loaded file does not declare, and reports the address', async () => {
+      const { loader } = servedLoader({ [A_FILE]: resourceFile('') });
+      const host = makeHost(loader);
+      const address = `${A_FILE}::gone`;
+      const ext = `[ext_resource type="Resource" path="${address}" id="1_gone"]`;
+
+      host.run('ExtResource("1_gone")', sceneTables(ext), namedKind().kind);
+      await host.settle();
+
+      expect(host.runs().at(-1)).toMatchObject({ status: 'unavailable', reason: 'unknown-id' });
+      expect(host.reported()).toEqual([address]);
     });
 
     it('reports no Missing resource for a failed file the reader stopped reading', async () => {

@@ -19,7 +19,10 @@ export interface SnapshotSource {
   request(): void;
   /** `onStale` hears a load, a failure or a reload of a file the current snapshot read. */
   subscribe(onStale: () => void): () => void;
-  /** Each file the current snapshot read, with its answer, for the host's **Missing resource** report. */
+  /**
+   * Each file the current snapshot read, and each `file::id` address it found in a loaded file, with
+   * its answer, for the host's **Missing resource** report. An address the file does not declare answers null.
+   */
   files(): ReadonlyMap<string, CachedFile<ParsedResource>>;
 }
 
@@ -28,14 +31,20 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
   const settled = keptWhileReloading(cache);
   /** Written only by the snapshot's recording. A new snapshot starts it empty. */
   let reads = new Map<string, CachedFile<ParsedResource>>();
+  /** Written only by the snapshot's address listener. A new snapshot starts it empty. */
+  let addresses = new Map<string, ParsedResource | null>();
   /** Written only by `request` and the last unsubscribe: the files this source holds pinned. */
   const pinned = new Set<string>();
   let listeners = 0;
 
   const start = (): ResourceSnapshot => {
     reads = new Map();
-    const recorded = reads;
-    return snapshotOver(recordingReads(answeredOnce(settled), (path, answer) => recorded.set(path, answer)));
+    addresses = new Map();
+    const [recorded, found] = [reads, addresses];
+    return snapshotOver({
+      ...recordingReads(answeredOnce(settled), (path, answer) => recorded.set(path, answer)),
+      onAddress: (address, file) => found.set(address, file),
+    });
   };
   let snapshot = start();
   const isStale = () => {
@@ -75,7 +84,7 @@ export function loaderSnapshots(loader: ResourceLoader): SnapshotSource {
         pinned.clear();
       };
     },
-    files: () => reads,
+    files: () => new Map<string, CachedFile<ParsedResource>>([...reads, ...addresses]),
   };
 }
 
