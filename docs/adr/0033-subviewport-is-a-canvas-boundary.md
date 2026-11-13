@@ -175,7 +175,7 @@ which display real content.
     `ViewportTexture` on a `[sub_resource]` material is scene-scoped, but two
     *instances* of the same sub-scene share one material and so one viewport binding.
   - A **recursive** ViewportTexture, a viewport that samples its own target, is unsolved
-    and no corpus scene does it. `gui_in_3d` only looks like one: its `TextureRect`
+    (#1818). No corpus scene does it. `gui_in_3d` only looks like one: its `TextureRect`
     carries `ExtResource("2")` = `res://icon.webp`, while the quad's material carries
     `SubResource("2")` = the ViewportTexture. Same number, two id namespaces.
   - The resolved tree decides which rasteriser owns a target, so an `instance=` child
