@@ -7,7 +7,7 @@ import type { OverrideLayer } from '../../../core/NodeRegistry';
 import type { ParsedHeading } from '../../../parser/utils';
 import { unquoteString } from '../../../parser/utils';
 import { boolOr } from '../../../parser/valueParsers';
-import type { Vector2 } from '../../../godot/math/vector';
+import { VECTOR2_ZERO, vector2Equals } from '../../../godot/math/vector';
 import { boolSlotValue } from '../../../godot/variant/variantBool';
 import { constructorWritesSize, windowClassDefaults } from '../../../godot/scene/window';
 import { viewportParseContext } from '../../viewport/shared/parser';
@@ -64,10 +64,6 @@ const LINES_THAT_CACHE_THE_MINIMUM_EARLY: ReadonlySet<string> = new Set([
   'max_size',
 ]);
 
-function isZero({ x, y }: Vector2): boolean {
-  return x === 0 && y === 0;
-}
-
 /**
  * Whether the line `key` computes the minimum. A `min_size` or `max_size` line that leaves the
  * value at its default of zero asks for nothing: each setter returns first (`window.cpp:486-488,509-511`).
@@ -76,8 +72,8 @@ function cachesTheMinimumEarly(
   key: string,
   limits: Pick<WindowProperties, 'min_size' | 'max_size'>
 ): boolean {
-  if (key === 'min_size') return !isZero(limits.min_size);
-  if (key === 'max_size') return !isZero(limits.max_size);
+  if (key === 'min_size') return !vector2Equals(limits.min_size, VECTOR2_ZERO);
+  if (key === 'max_size') return !vector2Equals(limits.max_size, VECTOR2_ZERO);
   return LINES_THAT_CACHE_THE_MINIMUM_EARLY.has(key);
 }
 
@@ -106,14 +102,16 @@ function okTextOr(raw: string | undefined, fallback: string): string {
   return text === '' ? DEFAULT_OK_TEXT : text;
 }
 
+/** The visibility and the text a dialog holds before its lines run. */
+type TextState = Pick<DialogProperties, 'visible' | 'dialog_text'>;
+
 /**
- * The number of lines up to the first `dialog_text` line that changes the text of a visible dialog.
- * That line lays the Controls out with its text, so it computes their minimums (`dialogs.cpp:168-179`).
- * Infinity for none.
+ * The number of `lines`, run over `start`, up to the first `dialog_text` line that changes the text
+ * of a visible dialog. That line lays the Controls out with its text, so it computes their minimums
+ * (`dialogs.cpp:168-179`). Infinity for none.
  */
-function linesThroughVisibleText(type: string, lines: Record<string, string>): number {
-  let visible = windowClassDefaults(type).visible;
-  let text = '';
+function linesThroughVisibleText(lines: Record<string, string>, start: TextState): number {
+  let { visible, dialog_text: text } = start;
   for (const [line, [key, raw]] of Object.entries(lines).entries()) {
     if (key === 'visible') visible = boolSlotValue(raw) ?? visible;
     if (key !== 'dialog_text') continue;
@@ -145,7 +143,8 @@ function controlsAtLoad(
   if (lines_before_load_clamp === null) return null;
   const lines = override?.written ?? properties;
   const held = override?.held ?? CONSTRUCTED_CONTROLS;
-  const count = Math.min(lines_before_load_clamp, linesThroughVisibleText(type, lines));
+  const start = override?.held ?? { visible: windowClassDefaults(type).visible, dialog_text: '' };
+  const count = Math.min(lines_before_load_clamp, linesThroughVisibleText(lines, start));
   const before = Object.fromEntries(Object.entries(lines).slice(0, count));
   return {
     dialog_text: textOr(before.dialog_text, held.dialog_text),

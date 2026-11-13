@@ -108,12 +108,17 @@ function messageMinimumSize(dialog: SolveNode, ctx: SolveContext, width: number)
   });
 }
 
-/** The largest combined minimum among the dialog's own Controls: the authored ones and its class's body. */
-function largestChildMinimum(dialog: SolveNode, ctx: SolveContext): Vector2 {
+/** The largest combined minimum among the Controls of the dialog's class body, at least `floor`. */
+function largestBodyMinimum(dialog: SolveNode, ctx: SolveContext, floor: Vector2): Vector2 {
   return dialogBodyNodes(dialog, ctx.theme).reduce(
     (largest, body) => vector2Max(largest, ctx.combinedMinimumSize(body)),
-    largestLaidOutChildMinimum(dialog, ctx)
+    floor
   );
+}
+
+/** The largest combined minimum among the dialog's own Controls: the authored ones and its class's body. */
+function largestChildMinimum(dialog: SolveNode, ctx: SolveContext): Vector2 {
+  return largestBodyMinimum(dialog, ctx, largestLaidOutChildMinimum(dialog, ctx));
 }
 
 /**
@@ -161,10 +166,7 @@ const dialogAtLoad = perObject((dialog: SolveNode): SolveNode | null => {
 export const dialogLoadedMinimumSize: LoadedMinimumSizeFn = (dialog, ctx) => {
   const loaded = dialogAtLoad(dialog);
   if (!loaded) return null;
-  const body = dialogBodyNodes(dialog, ctx.theme).reduce(
-    (largest, node) => vector2Max(largest, ctx.combinedMinimumSize(node)),
-    VECTOR2_ZERO
-  );
+  const body = largestBodyMinimum(dialog, ctx, VECTOR2_ZERO);
   const message = messageMinimumSize(loaded, ctx, 0);
   return stackedMinimumSize(loaded, vector2Max(body, message), buttonRowMinimum(loaded, ctx));
 };

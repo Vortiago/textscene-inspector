@@ -31,7 +31,7 @@ import { popupMenuTheme, type PopupMenuTheme } from './menuTheme';
 import type { PopupMenuItem, PopupMenuProperties } from './types';
 
 /** The width of the internal ScrollContainer's vertical bar, which the minimum reserves whether or not it shows (`popup_menu.cpp:230`). */
-function scrollBarWidth(menu: PopupMenuTheme): number {
+function themeScrollBarWidth(menu: PopupMenuTheme): number {
   return scrollBarMinimumSize(true, menu.scrollBar).x;
 }
 
@@ -126,7 +126,7 @@ export const popupMenuContentsMinimumSize: MinimumSizeFn = (n, ctx) => {
   const model = menuModel(n, ctx);
   return contentsMinimumSize(n, model, {
     heightLimit: ctx.embedderSize?.y ?? Number.POSITIVE_INFINITY,
-    scrollBarWidth: scrollBarWidth(model.menu),
+    scrollBarWidth: themeScrollBarWidth(model.menu),
   });
 };
 
@@ -188,7 +188,7 @@ function verticalBar(
   isRtl: boolean,
   menu: PopupMenuTheme
 ): ScrollBarPlacement {
-  const width = scrollBarWidth(menu);
+  const width = themeScrollBarWidth(menu);
   const rect = { x: isRtl ? 0 : scroll.w - width, y: 0, w: width, h: scroll.h };
   return scrollBarPlacement(true, rect, menu.scrollBar, contentHeight, 0, contentHeight > scroll.h);
 }
