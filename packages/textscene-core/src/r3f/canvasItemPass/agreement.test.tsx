@@ -50,11 +50,13 @@ function AgreementProbe() {
     sampler: useContext(TextureSampler2DContext),
     material: useCanvasAncestorMaterial(INHERIT_PARENT_MATERIAL),
   };
-  const pass = useMemo(
-    () =>
-      inherited && { ...inherited, sampler: withViewportDefaults(inherited.sampler), material: passMaterial },
-    [inherited, passMaterial]
-  );
+  // Visibility and the clip owner reach the drawn tree as three's group flags and the canvas group
+  // pass, which a probe cannot read: `canvasItemPass.test.ts` and `buildSolveTree.test.tsx` hold them.
+  const pass = useMemo(() => {
+    if (!inherited) return undefined;
+    const { isVisibleInTree: _visible, clipOwner: _clipOwner, ...compared } = inherited;
+    return { ...compared, sampler: withViewportDefaults(inherited.sampler), material: passMaterial };
+  }, [inherited, passMaterial]);
   readings.set(parent, { drawn, pass });
   return null;
 }

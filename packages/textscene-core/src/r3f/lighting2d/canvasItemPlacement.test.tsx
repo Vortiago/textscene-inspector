@@ -59,12 +59,14 @@ describe('the y-sort pass and the light cull agree on z', () => {
       name: 'Root',
       type: 'Node2D',
       properties: {},
+      rawProperties: {},
       children: [
-        { name: 'Rel', type: 'Node2D', properties: { z_index: 3 }, children: [] },
+        { name: 'Rel', type: 'Node2D', properties: { z_index: 3 }, rawProperties: {}, children: [] },
         {
           name: 'Abs',
           type: 'Node2D',
           properties: { z_index: 3, z_as_relative: false },
+          rawProperties: {},
           children: [],
         },
       ],

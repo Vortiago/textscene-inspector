@@ -12,7 +12,11 @@ top_level = true
 use_parent_material = true
 texture_filter = 2
 texture_repeat = 3
-material = SubResource("Mat")`;
+material = SubResource("Mat")
+visible = false
+clip_children = 2
+y_sort_enabled = true
+show_behind_parent = true`;
 
 function parsedRoot(type: string, lines: string): TscnNode {
   const text = `[gd_scene format=3]
@@ -41,6 +45,10 @@ describe('canvasItemFieldsOf', () => {
       textureFilter: 2,
       textureRepeat: 3,
       materialRef: 'SubResource("Mat")',
+      isVisible: false,
+      clipChildren: 2,
+      ySortEnabled: true,
+      showsBehindParent: true,
     });
     expect(node2D!.local).toEqual({ a: 1, b: 0, c: 0, d: 1, tx: 30, ty: 40 });
   });
@@ -56,6 +64,10 @@ describe('canvasItemFieldsOf', () => {
       textureFilter: 0,
       textureRepeat: 0,
       isTopLevel: false,
+      isVisible: true,
+      clipChildren: 0,
+      ySortEnabled: false,
+      showsBehindParent: false,
     });
   });
 

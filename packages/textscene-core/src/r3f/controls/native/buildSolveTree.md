@@ -27,4 +27,4 @@ follows Godot. `NOTIFICATION_ENTER_CANVAS` climbs `CanvasItem` parents for a Con
 Visibility is a scene-tree rule, not a canvas one. `NOTIFICATION_ENTER_TREE` casts the direct
 parent with no `top_level` test (`canvas_item.cpp:311-316`), and `_handle_visibility_change`
 reaches top_level children too (`canvas_item.cpp:103-108`). So visibility crosses both breaks on
-`SolveNode.parentVisibleInTree`, and resets only where `childParentVisibleInTree` does.
+`SolveNode.parentVisibleInTree`, which the walk reads from the canvas item pass (`parentVisibleInTree`).

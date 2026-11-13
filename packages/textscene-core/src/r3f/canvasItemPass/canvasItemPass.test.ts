@@ -10,6 +10,7 @@ import { liveTreeOf } from '../liveSceneTree';
 import { contextOver } from '../liveSceneTree.testkit';
 import { canvasItemPass, type CanvasItemPassResult } from './canvasItemPass';
 import '../nodes/index';
+import '../controls/index';
 
 function parsed(body: string): TscnScene {
   return new TscnParser().parse(`[gd_scene format=3]\n\n${body}`);
@@ -230,5 +231,119 @@ remote_path = NodePath("../Held")
 `)
     );
     expect(resultAt(results, 'Root/Held').fields.local).toMatchObject({ tx: 70, ty: 80 });
+  });
+});
+
+describe('canvasItemPass: visibility in the tree', () => {
+  it('hides every item below a hidden one, a top_level item too', () => {
+    const results = passOver(
+      parsed(`[node name="Root" type="Node2D"]
+visible = false
+
+[node name="Child" type="Control" parent="."]
+
+[node name="Detached" type="Node2D" parent="Child"]
+top_level = true
+`)
+    );
+    expect(resultAt(results, 'Root').parentVisibleInTree).toBe(true);
+    expect(resultAt(results, 'Root').inherited.isVisibleInTree).toBe(false);
+    expect(resultAt(results, 'Root/Child/Detached').parentVisibleInTree).toBe(false);
+  });
+
+  it('resets below a CanvasLayer to the layer’s own visible (`canvas_item.cpp:325-329`)', () => {
+    const results = passOver(
+      parsed(`[node name="Root" type="Node2D"]
+visible = false
+
+[node name="Shown" type="CanvasLayer" parent="."]
+
+[node name="InShown" type="Node2D" parent="Shown"]
+
+[node name="Hidden" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="InHidden" type="Node2D" parent="Hidden"]
+`)
+    );
+    expect(resultAt(results, 'Root/Shown/InShown').parentVisibleInTree).toBe(true);
+    expect(resultAt(results, 'Root/Hidden/InHidden').parentVisibleInTree).toBe(false);
+  });
+
+  it('resets below any other node to true, so a Node2D below a hidden Node3D still shows', () => {
+    const results = passOver(
+      parsed(`[node name="Root" type="Node3D"]
+visible = false
+
+[node name="Item" type="Node2D" parent="."]
+`)
+    );
+    expect(resultAt(results, 'Root/Item').parentVisibleInTree).toBe(true);
+  });
+
+  it('takes the visible a TabContainer writes onto its pages (`tab_container.cpp:377-399`)', () => {
+    const results = passOver(
+      parsed(`[node name="Tabs" type="TabContainer"]
+current_tab = 1
+
+[node name="First" type="Control" parent="."]
+
+[node name="InFirst" type="Node2D" parent="First"]
+
+[node name="Second" type="Control" parent="."]
+visible = false
+
+[node name="InSecond" type="Node2D" parent="Second"]
+`)
+    );
+    expect(resultAt(results, 'Tabs/First/InFirst').parentVisibleInTree).toBe(false);
+    expect(resultAt(results, 'Tabs/Second/InSecond').parentVisibleInTree).toBe(true);
+  });
+});
+
+describe('canvasItemPass: clip owner', () => {
+  const CLIPPING = 'clip_children = 1';
+
+  it('names the nearest clipping item above, the item itself included', () => {
+    const results = passOver(
+      parsed(`[node name="Outer" type="Polygon2D"]
+${CLIPPING}
+
+[node name="Plain" type="Node2D" parent="."]
+
+[node name="Inner" type="Polygon2D" parent="Plain"]
+${CLIPPING}
+
+[node name="Leaf" type="Polygon2D" parent="Plain/Inner"]
+`)
+    );
+    expect(resultAt(results, 'Outer/Plain').inherited.clipOwner).toBe('Outer');
+    expect(resultAt(results, 'Outer/Plain/Inner').inherited.clipOwner).toBe('Outer/Plain/Inner');
+    expect(resultAt(results, 'Outer/Plain/Inner/Leaf').inherited.clipOwner).toBe('Outer/Plain/Inner');
+  });
+
+  it('skips a y-sorted owner, whose group holds no child (`renderer_canvas_cull.cpp:437-458`)', () => {
+    const results = passOver(
+      parsed(`[node name="Outer" type="Polygon2D"]
+${CLIPPING}
+
+[node name="Sorted" type="Polygon2D" parent="."]
+${CLIPPING}
+y_sort_enabled = true
+`)
+    );
+    expect(resultAt(results, 'Outer/Sorted').inherited.clipOwner).toBe('Outer');
+  });
+
+  it('names none at a chain start, which draws outside every owner’s group', () => {
+    const results = passOver(
+      parsed(`[node name="Owner" type="Polygon2D"]
+${CLIPPING}
+
+[node name="Detached" type="Node2D" parent="."]
+top_level = true
+`)
+    );
+    expect(resultAt(results, 'Owner/Detached').inherited.clipOwner).toBeNull();
   });
 });
