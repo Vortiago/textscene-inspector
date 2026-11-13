@@ -18,7 +18,7 @@ function summary(material: Material): unknown {
   if (material.form === 'declined') return material;
   if (material.form === 'sky') return { type: material.type, panorama: material.panorama?.ref };
   const textures = Object.entries(material.textures).map(([slot, reference]) => [slot, reference.ref]);
-  return { albedo: material.data.albedo, textures, nextPass: material.nextPass.ref };
+  return { albedo: material.data.albedo, textures, nextPass: material.nextPass?.ref };
 }
 
 const PAINT =

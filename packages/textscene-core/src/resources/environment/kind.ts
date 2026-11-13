@@ -4,14 +4,16 @@
  * the settings apply while a sky file still loads (**Progressive fill-in**). No THREE.
  */
 
-import type { ResourceKind, ScopedReference } from '../reading';
+import { optionalReference, type ResourceKind, type ScopedReference } from '../reading';
 import { decodeEnvironment } from './decode';
 import type { EnvironmentProperties } from './types';
 
 export interface DecodedEnvironment {
   readonly properties: EnvironmentProperties;
-  readonly sky: ScopedReference;
-  readonly glowMap: ScopedReference;
+  /** Null when the Environment names no Sky. */
+  readonly sky: ScopedReference | null;
+  /** Null when it names no `glow_map`. */
+  readonly glowMap: ScopedReference | null;
 }
 
 export const ENVIRONMENT: ResourceKind<DecodedEnvironment> = {
@@ -21,8 +23,8 @@ export const ENVIRONMENT: ResourceKind<DecodedEnvironment> = {
     const decoded = decodeEnvironment(properties);
     return {
       properties: decoded,
-      sky: follow.reference(decoded.sky),
-      glowMap: follow.reference(decoded.glow_map),
+      sky: optionalReference(follow, decoded.sky),
+      glowMap: optionalReference(follow, decoded.glow_map),
     };
   },
 };

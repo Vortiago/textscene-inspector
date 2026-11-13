@@ -102,8 +102,8 @@ function useClonedPass(source: ScopedReference | undefined) {
     return materialFromBag(bags ? bags.unfaded : MISSING_TEXTURE_MATERIAL);
   }, [isAbsent, bags]);
   useDisposeOnRelease(material);
-  const { material: resource } = loaded;
-  const walked = useMemo(() => loadedPassOf(resource), [resource]);
+  const { material: decoded } = loaded;
+  const walked = useMemo(() => loadedPassOf(decoded), [decoded]);
   return { material, loaded: walked };
 }
 

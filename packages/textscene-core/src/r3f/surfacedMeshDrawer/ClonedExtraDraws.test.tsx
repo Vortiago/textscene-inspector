@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { surfaceSlotsUnder } from '../../resources/formats/glb/surfaceMaterials';
-import { nodeMaterial } from '../materials/materialSource';
+import { nodeMaterial } from '../materials/materialReference';
 import { OVERLAY_ORDINAL_PAST_CHAINS, nextPassRenderOrder } from '../materials/passOrder';
 import { GLTF_SURFACE } from '../materials/surfaceTextures';
 import { useSurfaceMaterial } from '../materials/useSurfaceMaterial';

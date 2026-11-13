@@ -11,7 +11,7 @@ import { GODOT_DEFAULT_ALBEDO } from './godotDefaultMaterial';
 import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
-import { fileMaterial } from './surfaceMaterial.testkit';
+import { fileMaterial } from './materialReference';
 import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
 

@@ -11,7 +11,7 @@ import {
   type GeometryInstance3DProperties,
 } from '../../../nodes/3d/geometryinstance3d/types';
 import { instanceAs } from '../../../nodes/3d/testing/reactThreeTestInstance';
-import { nodeMaterial } from '../../materials/materialSource';
+import { nodeMaterial } from '../../materials/materialReference';
 import { SceneResourcesProvider, useSceneResources } from '../../SceneResourcesContext';
 import { withGeometryInstance } from '../../visibilityRange/geometryInstance';
 import type { MeshPart } from '../SurfacedMeshDrawer';

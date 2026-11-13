@@ -24,7 +24,7 @@ import type { NodeComponent, NodeComponentProps } from '../NodeComponentRegistry
 import { useParentType } from '../parentSpaceScope';
 import { rangedShadowCastingEffects, type ShadowCastingEffects } from '../shadowCasting';
 import { FadedSurfacesContext } from '../materials/swappedMaterials';
-import { nodeMaterial } from '../materials/materialSource';
+import { nodeMaterial } from '../materials/materialReference';
 import type { ScopedReference } from '../../resources/reading';
 import { useSceneResources } from '../SceneResourcesContext';
 import type { DrawnInstance } from '../surfaceDrawHooks';

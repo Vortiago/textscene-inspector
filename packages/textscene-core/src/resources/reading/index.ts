@@ -5,7 +5,7 @@
  */
 
 export type { Follow, HeldResource, Read, ResourceKind, ResourceSnapshot, UnavailableReason } from './read';
-export { IMPORTED_FILE } from './read';
+export { IMPORTED_FILE, optionalReference } from './read';
 export type { ScopedReference } from './scopedReference';
 export { nodeReference, referenceHeldBy, referenceKey } from './scopedReference';
 export { snapshotOver } from './snapshot';

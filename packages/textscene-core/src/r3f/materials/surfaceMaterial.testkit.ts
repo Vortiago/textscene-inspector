@@ -5,8 +5,8 @@
 import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { subResource } from '../../testing/subResource';
-import { nodeReference, type ScopedReference } from '../../resources/reading';
-import { NO_RESOURCES } from '../SceneResourcesContext';
+import type { ScopedReference } from '../../resources/reading';
+import { referenceIn } from '../../resources/reading/scopedReference.testkit';
 import type { SurfaceMaterial } from './useSurfaceMaterial';
 
 /** The material body for `properties`. */
@@ -21,12 +21,7 @@ export function inlineSource(
   externalResources: readonly TscnExternalResource[] = []
 ): ScopedReference {
   const tables = internalResources.includes(resource) ? internalResources : [resource, ...internalResources];
-  return nodeReference(`SubResource("${resource.id}")`, { internalResources: tables, externalResources });
-}
-
-/** A `res://` address as a node's material property. */
-export function fileMaterial(path: string): ScopedReference {
-  return nodeReference(path, NO_RESOURCES);
+  return referenceIn(`SubResource("${resource.id}")`, externalResources, tables);
 }
 
 /** A scene-held StandardMaterial3D with `properties`. */

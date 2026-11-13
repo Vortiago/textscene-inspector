@@ -6,7 +6,7 @@
  */
 
 import { nodeReference, referenceHeldBy, type ScopedReference } from '../../resources/reading';
-import type { SceneResources } from '../SceneResourcesContext';
+import { NO_RESOURCES, type SceneResources } from '../SceneResourcesContext';
 
 /**
  * `ref`, a material property of the node that `scope` wrote. Undefined when it names nothing,
@@ -14,6 +14,11 @@ import type { SceneResources } from '../SceneResourcesContext';
  */
 export function nodeMaterial(ref: string | undefined, scope: SceneResources): ScopedReference | undefined {
   return ref ? nodeReference(ref, scope) : undefined;
+}
+
+/** A `res://` material address a node holds as its own, such as an importer's remap of a surface. */
+export function fileMaterial(path: string): ScopedReference {
+  return nodeReference(path, NO_RESOURCES);
 }
 
 /**

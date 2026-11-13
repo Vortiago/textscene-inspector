@@ -17,7 +17,8 @@ import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
 import type { ScopedReference } from '../../resources/reading';
 import { subResource } from '../../testing/subResource';
 import { pendingMapStandIn } from './pendingMapStandIn';
-import { inlineMaterial, inlineSource, unfadedProps, fileMaterial } from './surfaceMaterial.testkit';
+import { inlineMaterial, inlineSource, unfadedProps } from './surfaceMaterial.testkit';
+import { fileMaterial } from './materialReference';
 import { useSurfaceMaterial } from './useSurfaceMaterial';
 
 const TRES_PATH = 'res://painted.tres';

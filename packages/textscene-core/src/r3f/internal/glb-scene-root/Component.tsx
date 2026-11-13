@@ -41,9 +41,8 @@ import { useAnimationDriverMount } from '../../animation/useAnimationDriverMount
 import { joinPath } from '../../../utils/nodePath';
 import type { ReactNode } from 'react';
 import type { LiveNode } from '../../../resources/liveNode';
-import { NO_RESOURCES, useSceneResources } from '../../SceneResourcesContext';
-import { nodeReference } from '../../../resources/reading';
-import { nodeMaterial } from '../../materials/materialSource';
+import { useSceneResources } from '../../SceneResourcesContext';
+import { fileMaterial, nodeMaterial } from '../../materials/materialReference';
 import { GlbMaterialOverlay, GlbSurfaceMaterialOverride } from './GlbSurfaceMaterialOverride';
 import { heldResource } from '../../../godot/scene/resourceLiteral';
 import { parseSurfaceMaterialOverrides } from '../../../nodes/3d/meshinstance3d/parser';
@@ -250,7 +249,7 @@ function useGlbImportMaterials(object: THREE.Object3D | undefined): ReactNode {
           <GlbSurfaceMaterialOverride
             key={`import:${path}`}
             target={object}
-            source={nodeReference(path, NO_RESOURCES)}
+            source={fileMaterial(path)}
             replaces={(material) => importMaterialPath(material) === path}
           />
         ))}

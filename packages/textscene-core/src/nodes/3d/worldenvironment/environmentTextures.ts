@@ -5,6 +5,7 @@
  * `core/io/resource.cpp:497-503`).
  */
 
+import { useMemo } from 'react';
 import type * as THREE from 'three';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { glowParamsFor, samplesGlowMap } from '../../../resources/environment/godotGlow';
@@ -28,6 +29,9 @@ export function useGlowMap(
   settings: EnvironmentSettings | null,
   glowMap: ScopedReference | null
 ): THREE.Texture | null {
-  const glow = settings && glowParamsFor(settings);
-  return useTexture2D(glow && samplesGlowMap(glow) ? glowMap : null, 'plain').texture;
+  const isSampled = useMemo(() => {
+    const glow = settings && glowParamsFor(settings);
+    return !!glow && samplesGlowMap(glow);
+  }, [settings]);
+  return useTexture2D(isSampled ? glowMap : null, 'plain').texture;
 }

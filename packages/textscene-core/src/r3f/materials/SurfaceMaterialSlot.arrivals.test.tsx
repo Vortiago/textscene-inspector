@@ -14,7 +14,8 @@ import { createFakeResourceLoader } from '../../resources/testing/createFakeReso
 import { SceneResourcesProvider } from '../SceneResourcesContext';
 import { fakeTiledUploads } from '../tiledUpload/fakeTiledUploads.testkit';
 import type { ScopedReference } from '../../resources/reading';
-import { inlineSource, fileMaterial } from './surfaceMaterial.testkit';
+import { inlineSource } from './surfaceMaterial.testkit';
+import { fileMaterial } from './materialReference';
 import { pendingMapStandIn } from './pendingMapStandIn';
 import { SurfaceMaterialSlot } from './SurfaceMaterialSlot';
 

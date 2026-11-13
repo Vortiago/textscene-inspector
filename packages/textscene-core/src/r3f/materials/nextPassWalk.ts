@@ -68,8 +68,7 @@ interface PassStep {
  */
 export function loadedPassOf(material: StandardMaterial | null): LoadedPass | null {
   if (!material) return null;
-  const { data, nextPass } = material;
-  return { readsStencil: data.readsStencil, nextSource: nextPass.ref === undefined ? undefined : nextPass };
+  return { readsStencil: material.data.readsStencil, nextSource: material.nextPass ?? undefined };
 }
 
 const ENDS: PassStep = { fate: 'ends', next: null };

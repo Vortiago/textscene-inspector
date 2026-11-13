@@ -10,8 +10,8 @@ describeKindFromEveryOrigin([
     expected: { backgroundMode: 2, sky: 'SubResource("sky")', glowMap: 'ExtResource("1_map")' },
     summarise: ({ properties, sky, glowMap }: DecodedEnvironment) => ({
       backgroundMode: properties.background_mode,
-      sky: sky.ref,
-      glowMap: glowMap.ref,
+      sky: sky?.ref,
+      glowMap: glowMap?.ref,
     }),
   },
 ]);

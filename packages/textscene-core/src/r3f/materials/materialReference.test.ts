@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { NO_RESOURCES } from '../SceneResourcesContext';
-import { heldMaterial, nodeMaterial } from './materialSource';
+import { heldMaterial, nodeMaterial } from './materialReference';
 
 describe('nodeMaterial', () => {
   it('names nothing for an absent property, so the slot keeps what the surface had', () => {

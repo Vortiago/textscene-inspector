@@ -6,7 +6,7 @@
  */
 
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
-import type { Follow, HeldResource, ResourceKind } from '../../reading';
+import { optionalReference, type Follow, type HeldResource, type ResourceKind } from '../../reading';
 import { decodeSkyMaterial } from '../../sky/decode';
 import { decodeStandardMaterial3D } from '../standardmaterial3d/decode';
 import type { TextureSlot } from '../standardmaterial3d/types';
@@ -30,7 +30,7 @@ function standardMaterial({ properties }: HeldResource, follow: Follow): Standar
     form: 'standard',
     data,
     textures: Object.fromEntries(slots.map(([slot, ref]) => [slot, follow.reference(ref)])),
-    nextPass: follow.reference(data.nextPass),
+    nextPass: optionalReference(follow, data.nextPass),
   };
 }
 
@@ -38,6 +38,6 @@ function standardMaterial({ properties }: HeldResource, follow: Follow): Standar
 function skyMaterial({ type, properties }: HeldResource, follow: Follow): SkyMaterial | null {
   const decoded = decodeSkyMaterial(type, properties);
   if (!decoded) return null;
-  const panorama = decoded.kind === 'panorama' ? follow.reference(decoded.panorama) : null;
+  const panorama = decoded.kind === 'panorama' ? optionalReference(follow, decoded.panorama) : null;
   return { form: 'sky', type, properties: decoded, panorama };
 }

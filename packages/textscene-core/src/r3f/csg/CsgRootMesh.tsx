@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import * as THREE from 'three';
 import { SurfacedMeshDrawer } from '../surfacedMeshDrawer/SurfacedMeshDrawer';
-import { nodeMaterial } from '../materials/materialSource';
+import { nodeMaterial } from '../materials/materialReference';
 import type { ScopedReference } from '../../resources/reading';
 import { CsgSubtreeProvider, type CsgSubtreeStatus } from '../contexts/CsgSubtreeContext';
 import { nodeComponentRegistry } from '../NodeComponentRegistry';

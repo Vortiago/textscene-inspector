@@ -13,7 +13,7 @@ import { transformFromNode3DProperties } from '../../../r3f/nodeTransform';
 import { useSceneResources, type SceneResources } from '../../../r3f/SceneResourcesContext';
 import { useResourceResolution } from '../../../resources/useSubOrExtResource';
 import { useMeshContent, type SurfacedMesh, type SurfacedPart } from '../../../r3f/meshes/meshContent';
-import { nodeMaterial } from '../../../r3f/materials/materialSource';
+import { nodeMaterial } from '../../../r3f/materials/materialReference';
 import type { ScopedReference } from '../../../resources/reading';
 import { SurfacedMeshDrawer, type MeshPart } from '../../../r3f/surfacedMeshDrawer/SurfacedMeshDrawer';
 import { isOutgrownBySkin, useSkinSkeleton } from '../../../r3f/meshes/skinSkeleton';

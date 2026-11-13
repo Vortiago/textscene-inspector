@@ -11,7 +11,7 @@ import type { Material, StandardMaterial } from '../../resources/materials/mater
 import { useReferencedResource, type Read, type ScopedReference } from '../../resources/reading';
 
 /** What a material reference loads to. */
-export type LoadedMaterial =
+type LoadedMaterial =
   /** A StandardMaterial3D to draw. */
   | { status: 'ready'; material: StandardMaterial }
   /** A material type this previewer does not build: Godot's default 3D surface (ADR-0041). */

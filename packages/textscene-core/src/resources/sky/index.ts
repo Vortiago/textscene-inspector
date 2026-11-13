@@ -8,7 +8,7 @@
 import { registerResourceSlice } from '../sliceRegistration';
 
 // The `resource` slot, not the material processor: its `BUILDABLE_MATERIAL_TYPES`
-// gate throws on a sky material, which `useSubOrExtResource` then never sees.
+// gate throws on a sky material, which the `SKY` kind then never reads.
 registerResourceSlice({
   slice: 'sky',
   kind: 'godot-text',

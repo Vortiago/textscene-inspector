@@ -25,7 +25,7 @@ import { useResource } from '../../resources/useResource';
 import type { ResourceResolution } from '../../resources/useSubOrExtResource';
 import { useProjectSettings } from '../contexts/ProjectSettingsContext';
 import type { ScopedReference } from '../../resources/reading';
-import { heldMaterial } from '../materials/materialSource';
+import { heldMaterial } from '../materials/materialReference';
 import { NO_RESOURCES } from '../SceneResourcesContext';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useUndrawnMeshReport } from '../contexts/UndrawnMeshesContext';

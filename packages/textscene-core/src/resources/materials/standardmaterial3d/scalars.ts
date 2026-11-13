@@ -86,9 +86,3 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
     readsStencil: data.readsStencil,
   };
 }
-
-/**
- * Raw Godot property strings → the scalars a material slot renders. The synchronous
- * entry point of every StandardMaterial3D-bearing node component. The caller resolves
- * external textures.
- */

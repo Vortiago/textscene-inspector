@@ -14,7 +14,7 @@ import { ResourceLoaderProvider } from '../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../resources/testing/createFakeResourceLoader';
 import { useMissingResources } from '../contexts/MissingResourcesContext';
 import { missingResourcesWrapper } from '../../resources/testing/missingResourcesWrapper';
-import { NO_RESOURCES } from '../SceneResourcesContext';
+import { fileMaterial } from './materialReference';
 import { inlineSource } from './surfaceMaterial.testkit';
 import { readyMaterial, useMaterial } from './useMaterial';
 
@@ -33,7 +33,11 @@ albedo_texture = ExtResource("1_grain")
 `;
 
 const SCENE_INTERNAL: TscnInternalResource[] = [
-  { id: 'Mat_body', type: 'StandardMaterial3D', data: { albedo_color: 'Color(0, 1, 0, 1)' } },
+  {
+    id: 'Mat_body',
+    type: 'StandardMaterial3D',
+    data: { albedo_color: 'Color(0, 1, 0, 1)', next_pass: 'SubResource("Shader_fx")' },
+  },
   { id: 'Shader_fx', type: 'ShaderMaterial', data: {} },
 ];
 const SCENE_EXTERNAL: TscnExternalResource[] = [];
@@ -41,11 +45,6 @@ const SCENE_EXTERNAL: TscnExternalResource[] = [];
 function inline(id: string): ScopedReference {
   const resource = SCENE_INTERNAL.find((entry) => entry.id === id)!;
   return inlineSource(resource, SCENE_INTERNAL, SCENE_EXTERNAL);
-}
-
-/** A `res://` address as a node's material property. */
-function file(path: string): ScopedReference {
-  return nodeReference(path, NO_RESOURCES);
 }
 
 function renderMaterial(source: ScopedReference | undefined, seeded: Record<string, string> = {}) {
@@ -58,7 +57,7 @@ function renderMaterial(source: ScopedReference | undefined, seeded: Record<stri
 }
 
 function MaterialReader({ path }: { path: string }) {
-  useMaterial(file(path));
+  useMaterial(fileMaterial(path));
   return null;
 }
 
@@ -89,8 +88,8 @@ describe('useMaterial', () => {
     const material = readyMaterial(result.current);
 
     expect(material?.data.albedo[1]).toBeCloseTo(1);
-    expect(material?.nextPass.resources.internalResources).toBe(SCENE_INTERNAL);
-    expect(material?.nextPass.origin).toBeUndefined();
+    expect(material?.nextPass?.resources.internalResources).toBe(SCENE_INTERNAL);
+    expect(material?.nextPass?.origin).toBeUndefined();
   });
 
   it('keeps one material across renders that rebuild an equal source', () => {
@@ -113,7 +112,7 @@ describe('useMaterial', () => {
   });
 
   it("reads a whole .tres as its [resource] body, each slot in the file's own tables", () => {
-    const { result } = renderMaterial(file(TRES_PATH), { [TRES_PATH]: PAINT_TRES });
+    const { result } = renderMaterial(fileMaterial(TRES_PATH), { [TRES_PATH]: PAINT_TRES });
     const albedo = readyMaterial(result.current)?.textures.albedo_texture;
 
     expect(readyMaterial(result.current)?.data.albedo[0]).toBeCloseTo(1);
@@ -123,15 +122,14 @@ describe('useMaterial', () => {
   });
 
   it("reads a sub-resource address as that [sub_resource], in its file's tables", () => {
-    const { result } = renderMaterial(file(`${TRES_PATH}::Inner_mat`), { [TRES_PATH]: PAINT_TRES });
+    const { result } = renderMaterial(fileMaterial(`${TRES_PATH}::Inner_mat`), { [TRES_PATH]: PAINT_TRES });
     const material = readyMaterial(result.current);
 
     expect(material?.data.albedo[2]).toBeCloseTo(1);
-    expect(material?.nextPass.origin).toBe(TRES_PATH);
   });
 
   it('answers absent while the file loads, then the material', () => {
-    const { result, fake } = renderMaterial(file(TRES_PATH));
+    const { result, fake } = renderMaterial(fileMaterial(TRES_PATH));
     expect(result.current).toEqual({ status: 'absent' });
 
     act(() => fake.resources._resolve(TRES_PATH, parseTresFile(PAINT_TRES)));
@@ -139,7 +137,7 @@ describe('useMaterial', () => {
   });
 
   it('answers absent for a file that fails to load, so nothing replaces what the surface had', () => {
-    const { result, fake } = renderMaterial(file(TRES_PATH));
+    const { result, fake } = renderMaterial(fileMaterial(TRES_PATH));
     act(() => fake.resources._fail(TRES_PATH, 'not found'));
 
     expect(result.current).toEqual({ status: 'absent' });
@@ -156,14 +154,14 @@ describe('useMaterial', () => {
   });
 
   it('answers absent for a sub-resource the file does not declare', () => {
-    const { result } = renderMaterial(file(`${TRES_PATH}::Missing`), { [TRES_PATH]: PAINT_TRES });
+    const { result } = renderMaterial(fileMaterial(`${TRES_PATH}::Missing`), { [TRES_PATH]: PAINT_TRES });
 
     expect(result.current).toEqual({ status: 'absent' });
   });
 
   it("declines a material type it does not build: Godot's default surface", () => {
     const orm = PAINT_TRES.replace('type="StandardMaterial3D" load_steps', 'type="ORMMaterial3D" load_steps');
-    const { result } = renderMaterial(file(TRES_PATH), { [TRES_PATH]: orm });
+    const { result } = renderMaterial(fileMaterial(TRES_PATH), { [TRES_PATH]: orm });
 
     expect(result.current).toEqual({ status: 'declined', type: 'ORMMaterial3D' });
   });
@@ -179,7 +177,7 @@ describe('useMaterial', () => {
       'type="StandardMaterial3D" load_steps',
       'type="ORMMaterial3D" load_steps'
     );
-    const fromFile = renderMaterial(file(TRES_PATH), { [TRES_PATH]: ormTres });
+    const fromFile = renderMaterial(fileMaterial(TRES_PATH), { [TRES_PATH]: ormTres });
 
     expect(fromScene.result.current).toEqual({ status: 'declined', type: 'ORMMaterial3D' });
     expect(fromFile.result.current).toEqual({ status: 'declined', type: 'ORMMaterial3D' });
@@ -192,7 +190,7 @@ describe('useMaterial', () => {
       'type="StandardMaterial3D" load_steps',
       'type="ShaderMaterial" load_steps'
     );
-    const fromFile = renderMaterial(file(TRES_PATH), { [TRES_PATH]: shaderTres });
+    const fromFile = renderMaterial(fileMaterial(TRES_PATH), { [TRES_PATH]: shaderTres });
 
     expect(fromScene.result.current).toEqual({ status: 'declined', type: 'ShaderMaterial' });
     expect(fromFile.result.current).toEqual({ status: 'declined', type: 'ShaderMaterial' });
