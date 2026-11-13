@@ -1,5 +1,5 @@
 /** The dialog's painter: the panel, the message and one Button group for each button, at the rects the layout gives. */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { heading } from '../../../parser/testing/parserKit';
@@ -13,6 +13,20 @@ import { wrappedWindowSize } from '../window/wrapControls';
 import { DialogChrome } from './DialogChrome';
 import { dialogGeometry } from './dialogLayout';
 import { parseDialog } from './parser';
+import { ControlCanvasWalker } from '../../../r3f/controls/native/ControlCanvasWalker';
+import {
+  controlComponentRegistry,
+  type NativeControlComponentProps,
+} from '../../../r3f/controls/ControlComponentRegistry';
+import { controlProps } from '../../2d/ui/control/testing/controlProps';
+import type { Rect2 } from '../../../godot/math/rect2';
+import { registerDialogControls } from './controls.r3f';
+import { registerDialogBody, syntheticControl, syntheticPath } from './dialogParts';
+
+// The walker reads `gui/common/snap_controls_to_pixels` off the project settings.
+vi.mock('../../../r3f/contexts/ProjectSettingsContext', () => ({
+  useProjectSettings: () => ({ settings: null, viewportSize: { width: 1152, height: 648 }, themeScale: 1 }),
+}));
 
 const THEME = nativeTheme(1);
 const EMBEDDER = { x: 1152, y: 648 };
@@ -76,5 +90,59 @@ describe('<DialogChrome>', () => {
     const before = groupXs();
     await renderer.update(element(withText('Select This Folder')));
     expect(groupXs()).not.toEqual(before);
+  });
+});
+
+/** What each `ChildRectProbe` painter was handed as `childRects`, in paint order. */
+const probedChildRects: ReadonlyMap<string, Rect2>[] = [];
+
+function ChildRectProbe({ childRects }: NativeControlComponentProps) {
+  probedChildRects.push(childRects);
+  return null;
+}
+
+controlComponentRegistry.register({ typeName: 'ChildRectProbe', Component: ChildRectProbe });
+registerDialogControls('ProbeDialog');
+registerDialogBody('ProbeDialog', (window) =>
+  syntheticControl(window, {
+    type: 'ChildRectProbe',
+    name: 'Probe',
+    properties: controlProps({ name: 'Probe', anchorRight: 1, anchorBottom: 1 }),
+    children: [
+      syntheticControl(window, {
+        type: 'Control',
+        name: 'Inner',
+        parentPath: syntheticPath(window.path, 'Probe'),
+        properties: controlProps({
+          name: 'Inner',
+          offsetLeft: 10,
+          offsetTop: 20,
+          offsetRight: 40,
+          offsetBottom: 60,
+        }),
+      }),
+    ],
+  })
+);
+
+/** An AcceptDialog's theme items on a class that registers the probe body. */
+function probeDialog() {
+  const window = dialog('AcceptDialog');
+  return { ...window, node: { ...window.node, type: 'ProbeDialog' } };
+}
+
+describe('a dialog body under the walker', () => {
+  it("hands a body Control's painter the rects of its children", async () => {
+    probedChildRects.length = 0;
+    await ReactThreeTestRenderer.create(
+      <ControlCanvasWalker
+        tree={[probeDialog()]}
+        generation={0}
+        viewport={{ x: 0, y: 0, w: 320, h: 200 }}
+        theme={THEME}
+        measurer={measureText}
+      />
+    );
+    expect(probedChildRects.at(-1)?.get('Dialog/@Probe/@Inner')).toEqual({ x: 10, y: 20, w: 30, h: 40 });
   });
 });
