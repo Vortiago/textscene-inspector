@@ -117,3 +117,40 @@ describe('a y-sorted Control in a SubViewport that also holds 2D content', () =>
     expect(compareKeys(sprite, low)).toBeLessThan(0);
   });
 });
+
+/** `Holder` (a Node2D at y 50) holds `Low`, and `Mid` (y 30) comes after it, in a Control-only viewport. */
+const PROMOTED_SCENE = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="View" type="SubViewport" parent="."]
+render_target_update_mode = 4
+size = Vector2i(400, 300)
+
+[node name="Panel" type="Control" parent="View"]
+y_sort_enabled = true
+layout_mode = 3
+anchors_preset = 0
+
+[node name="Holder" type="Node2D" parent="View/Panel"]
+position = Vector2(0, 50)
+
+[node name="Low" type="ColorRect" parent="View/Panel/Holder"]
+offset_top = -40.0
+offset_right = 100.0
+offset_bottom = 100.0
+
+[node name="Mid" type="ColorRect" parent="View/Panel"]
+offset_top = 30.0
+offset_right = 100.0
+offset_bottom = 130.0
+`;
+
+describe('a y-sorted Control in a Control-only SubViewport', () => {
+  beforeAll(() => Promise.all([import('./ViewportControls'), import('./CanvasOverWorld')]));
+
+  it('sorts a Control below a Node2D child at the Node2D child, not at its own y', async () => {
+    const portal = await portalSceneOf(PROMOTED_SCENE);
+    expect(compareKeys(paintKey(meshOf(portal, 'Mid')), paintKey(meshOf(portal, 'Low')))).toBeLessThan(0);
+  });
+});
