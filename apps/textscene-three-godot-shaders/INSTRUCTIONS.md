@@ -51,7 +51,7 @@ real-GL test checks the transpilation against them. An open row names the issue 
 
 | Instruction | State | Godot source |
 | --- | --- | --- |
-| `float literal` | transpiled (`literal-0`, `literal-1`, `literal-2`, `literal-3`, `literal-4`, `literal-5`, `literal-unfolded`, `literal-overflow`) | `servers/rendering/shader_language.h:59` |
+| `float literal` | transpiled (`literal-0`, `literal-1`, `literal-2`, `literal-3`, `literal-4`, `literal-5`, `literal-unfolded`, `literal-overflow`, `fold-sum`, `fold-chain`, `fold-difference-quotient`, `fold-vector-scalar`, `fold-quotient-vector`, `fold-swizzle`, `fold-negated-sum`, `fold-overflow`, `fold-negative-zero`, `fold-division-by-zero`, `fold-chain-add-div`, `fold-chain-div-div`, `fold-chain-mul-sub`, `fold-chain-sub-mul`, `fold-chain-mul-div`, `fold-chain-add-sub`, `fold-chain-div-add`, `fold-chain-div-mul`, `fold-chain-mul-add`, `fold-chain-mul-mul`, `fold-chain-sub-sub`, `fold-chain-add-add`, `fold-mixed-vector`, `fold-mixed-vector-scalar`, `fold-mixed-scalar-vector`, `fold-mixed-swizzle`) | `servers/rendering/shader_language.h:59` |
 | `int literal` | open, #1823 | `servers/rendering/shader_language.h:60` |
 | `uint literal` | open, #1823 | `servers/rendering/shader_language.h:61` |
 | `true` | open, #1823 | `servers/rendering/shader_language.cpp:284` |
@@ -214,8 +214,8 @@ real-GL test checks the transpilation against them. An open row names the issue 
 | `OP_NEGATE(uvec2)` | open, #1823 | `servers/rendering/shader_language.cpp:1614` |
 | `OP_NEGATE(uvec3)` | open, #1823 | `servers/rendering/shader_language.cpp:1614` |
 | `OP_NEGATE(uvec4)` | open, #1823 | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(float)` | transpiled (`negate-float`) | `servers/rendering/shader_language.cpp:1614` |
-| `OP_NEGATE(vec2)` | transpiled (`negate-vec2`) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(float)` | transpiled (`negate-float`, `negate-nested-scalar`, `negate-nested-triple`, `negate-nested-swizzle`, `negate-nested-sum`, `negate-nested-constant`) | `servers/rendering/shader_language.cpp:1614` |
+| `OP_NEGATE(vec2)` | transpiled (`negate-vec2`, `negate-nested-vector`, `negate-nested-constructor`, `negate-nested-constant-vector`) | `servers/rendering/shader_language.cpp:1614` |
 | `OP_NEGATE(vec3)` | transpiled (`negate-vec3`) | `servers/rendering/shader_language.cpp:1614` |
 | `OP_NEGATE(vec4)` | transpiled (`negate-vec4`) | `servers/rendering/shader_language.cpp:1614` |
 | `OP_ADD(int,int)` | open, #1823 | `servers/rendering/shader_language.cpp:1627` |

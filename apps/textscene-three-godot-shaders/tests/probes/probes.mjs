@@ -153,6 +153,101 @@ function literalProbes() {
   return [...group, plain, overflow];
 }
 
+/**
+ * Negation of an operand whose text Godot already starts with `-`: Godot writes the operand alone
+ * (`shader_compiler.cpp:1141`), so `-(-a)` draws as `-a`. A negated constant is folded first
+ * (`shader_language.cpp:7840`), so `-(-1.5)` draws as 1.5.
+ */
+function nestedNegationProbes() {
+  const cases = [
+    ['vector', 'vec2', 'vec2 probe(vec2 a) { return -(-a); }', vectors(2)],
+    ['scalar', 'float', 'float probe(float a) { return -(-a); }', scalars()],
+    ['triple', 'float', 'float probe(float a) { return -(-(-a)); }', scalars()],
+    ['constructor', 'vec2', 'vec2 probe(float a) { return -(-vec2(a, 0.499)); }', scalars()],
+    ['swizzle', 'float', 'float probe(vec2 a) { return -((-a).y); }', vectors(2)],
+    ['sum', 'float', 'float probe(float a, float b) { return -(-(a + b)); }', pairs()],
+    ['constant', 'float', 'float probe(float a) { return -(-1.5) + a; }', scalars()],
+    ['constant-vector', 'vec2', 'vec2 probe(float a) { return -(-vec2(1.5, 0.25)) * a; }', scalars()],
+  ];
+  return cases.map(([word, type, source, inputs]) => ({
+    name: `negate-nested-${word}`,
+    rows: [`OP_NEGATE(${type})`],
+    source,
+    inputs,
+  }));
+}
+
+/**
+ * Arithmetic of constants alone, which Godot's GLSL compiler folds in double precision from the
+ * text Godot writes, and rounds once. A fold in 32-bit floats lands one unit off on these values.
+ */
+function constantFoldingProbes() {
+  const cases = [
+    ['sum', 'float probe(float a) { return 58.656 + 74.377 + a; }'],
+    ['chain', 'float probe(float a) { return 0.1 + 0.2 + 0.3 + a; }'],
+    ['difference-quotient', 'float probe(float a) { return (33.135 - 0.886) / 69.143 * a; }'],
+    ['vector-scalar', 'vec4 probe(float a) { return vec3(58.656).bggr + 74.377 + a; }'],
+    ['quotient-vector', 'vec2 probe(float a) { return (71.543 + 54.854) / vec2(a, 0.5); }'],
+    ['swizzle', 'float probe(float a) { return ((68.452 * vec3(797.08) + vec2(51.97).t).zx).t + a; }'],
+    ['negated-sum', 'float probe(float a) { return -(0.1 + 0.2) + a; }'],
+    ['overflow', 'vec2 probe(float a) { return vec2(3e38 * 10.0, -(3e38 * 10.0)) + a; }'],
+    ['negative-zero', 'vec2 probe(float a) { return vec2(-0.0 * 1.0, a); }'],
+    ['division-by-zero', 'vec3 probe(float a) { return vec3(1.0 / 0.0, -1.0 / 0.0, a); }'],
+  ];
+  return [...cases, ...foldValueCheckCases()].map(([word, source]) => ({
+    name: `fold-${word}`,
+    rows: ['float literal'],
+    source,
+    inputs: scalars(),
+  }));
+}
+
+/**
+ * One chain of two operators for each pair of the four, with literals where a fold in 32-bit
+ * floats and glslang's fold in double precision give different floats. Each chain also runs as a
+ * vector, a vector with a scalar, and a swizzle of a constant vector.
+ */
+const FOLD_CHAINS = [
+  ['add-div', '(1.9335 + 590.3) / 0.3025'],
+  ['div-div', '(7425.1 / 0.33901) / 0.65885'],
+  ['mul-sub', '(8.4027 * 353.27) - 586.87'],
+  ['sub-mul', '(0.8625 - 52.507) * 29.5'],
+  ['mul-div', '(2451.2 * 119.05) / 3344.5'],
+  ['add-sub', '(51.329 + 7099.9) - 15.779'],
+  ['div-add', '(8422.0 / 0.43832) + 0.51635'],
+  ['div-mul', '(0.19178 / 784.84) * 790.63'],
+  ['mul-add', '(980.94 * 7332.8) + 6.1585'],
+  ['mul-mul', '(5.5115 * 0.48388) * 35.078'],
+  ['sub-sub', '(630.75 - 0.75847) - 27.71'],
+  ['add-add', '(0.75454 + 80.042) + 516.6'],
+];
+
+function foldValueCheckCases() {
+  const scalar = FOLD_CHAINS.map(([word, chain]) => [
+    `chain-${word}`,
+    `float probe(float a) { return ${chain} + a; }`,
+  ]);
+  const vectors = [
+    [
+      'mixed-vector',
+      'vec2 probe(float a) { return (vec2(1.9335, 8422.0) + vec2(590.3, 0.43832)) / vec2(0.3025, 784.84) + a; }',
+    ],
+    [
+      'mixed-vector-scalar',
+      'vec3 probe(float a) { return (vec3(8.4027, 2451.2, 980.94) * 353.27 - 586.87) * a; }',
+    ],
+    [
+      'mixed-scalar-vector',
+      'vec2 probe(float a) { return 0.8625 - vec2(52.507, 0.75847) * vec2(29.5, 27.71) + a; }',
+    ],
+    [
+      'mixed-swizzle',
+      'vec2 probe(float a) { return vec4(51.329, 7099.9, 630.75, 0.75847).yw - vec2(15.779, 27.71).yx + a; }',
+    ],
+  ];
+  return [...scalar, ...vectors];
+}
+
 /** A function of the whole family together: Godot's evaluation order and every form at once. */
 function combinedProbe() {
   return {
@@ -170,5 +265,7 @@ export const PROBES = [
   ...constructorProbes(),
   ...swizzleProbes(),
   ...literalProbes(),
+  ...nestedNegationProbes(),
+  ...constantFoldingProbes(),
   combinedProbe(),
 ];

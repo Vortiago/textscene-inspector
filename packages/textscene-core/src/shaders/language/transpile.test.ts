@@ -36,12 +36,18 @@ describe('transpileShadingLanguage', () => {
     expect(glsl).toMatch(/\* \w+ \) \/ \w+ \) - \w+/);
   });
 
-  it('writes a literal as the float Godot draws it with', () => {
-    expect(glslOf('float probe() { return 1e-20 + 0.1; }')).toContain('0.0 + 0.10000000149011612');
+  it('folds the arithmetic of constants in double precision from the text Godot writes, as glslang does', () => {
+    expect(glslOf('float probe() { return 58.656 + 74.377; }')).toContain('133.0330047607422');
   });
 
-  it('negates a zero literal, which keeps the sign of -0.0', () => {
-    expect(glslOf('float probe() { return -0.0; }')).toContain('- 0.0');
+  it('writes a negative zero constant as its bits, which three would write as 0.0', () => {
+    expect(glslOf('float probe() { return -0.0; }')).toContain('uintBitsToFloat( 2147483648u )');
+  });
+
+  it('writes a negation of a negation as Godot writes it: the inner one alone', () => {
+    expect(glslOf('float probe(float a) { return -(-a); }', [uniform(2)])).toMatch(
+      /= \( - \w+ \)|\( - nodeUniform/
+    );
   });
 
   it('emits a swizzle as its lanes in xyzw letters', () => {

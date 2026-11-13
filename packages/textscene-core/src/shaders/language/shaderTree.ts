@@ -8,13 +8,17 @@ import type { InstructionRow } from './instructionTable.generated.js';
 /** A Godot type name, `float` or `vec3`. */
 export type ValueType = string;
 
-export type Expression = FloatLiteral | ParameterRead | OperatorApplication | Construction | Swizzle;
+export type Expression = Constant | ParameterRead | OperatorApplication | Construction | Swizzle;
 
-export interface FloatLiteral {
-  readonly kind: 'float literal';
-  readonly type: 'float';
-  /** The 32-bit float the literal draws with: Godot's reader, then the text its compiler writes. */
-  readonly value: number;
+/**
+ * A literal, or a constructor or negation of constants, which Godot folds into one constant
+ * (`_reduce_expression`, `shader_language.cpp:7848` and `7909`).
+ */
+export interface Constant {
+  readonly kind: 'constant';
+  readonly type: ValueType;
+  /** One 32-bit float per lane, as Godot holds it (`Scalar::real`). */
+  readonly values: readonly number[];
 }
 
 export interface ParameterRead {

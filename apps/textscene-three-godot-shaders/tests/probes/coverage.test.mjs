@@ -24,6 +24,11 @@ const OPEN_ROWS_AT_MOST = 1821;
 const transpiledRows = new Set(PROBES.flatMap((probe) => probe.rows));
 
 describe('the instruction table coverage', () => {
+  it('names each probe once, as the record keys its answers by name', () => {
+    const names = PROBES.map((probe) => probe.name);
+    expect(names.filter((name, index) => names.indexOf(name) !== index)).toEqual([]);
+  });
+
   it('names only rows of the instruction table', () => {
     const ids = new Set(INSTRUCTION_TABLE.map((row) => row.id));
     expect([...transpiledRows].filter((row) => !ids.has(row))).toEqual([]);
