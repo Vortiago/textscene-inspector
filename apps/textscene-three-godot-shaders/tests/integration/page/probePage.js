@@ -57,8 +57,8 @@ function runProbe(spec) {
   const pixel = int(screenCoordinate.x);
   const row = pixel.div(size);
   const lane = pixel.mod(size);
-  const args = probe.parameters.map((parameter, index) =>
-    argument(parameter.type, spec.parameters[index], row)
+  const args = probe.arguments.map((functionArgument, index) =>
+    argument(functionArgument.type, spec.parameters[index], row)
   );
   const material = new NodeMaterial();
   material.fragmentNode = vec4(float(laneOf(probe.call(args), size, lane)), 0, 0, 1);

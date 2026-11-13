@@ -3,10 +3,15 @@
 import { describe, expect, it } from 'vitest';
 import { dropsNegation, GlslangFolding } from './godotGlsl.js';
 import { parse } from './parse.js';
-import type { Expression, OperatorApplication } from './shaderTree.js';
+import type { Expression, OperatorNode } from './shaderTree.js';
 import { tokenize } from './tokenizer.js';
 
-const resultOf = (source: string): Expression => parse(tokenize(source)).functions[0]!.result;
+/** The expression of the first statement, a `return`. */
+function resultOf(source: string): Expression {
+  const [statement] = parse(tokenize(source)).functions[0]!.body.statements;
+  if (statement?.kind !== 'control flow') throw new Error(`expected a return first in ${source}`);
+  return statement.expressions[0]!;
+}
 
 const bitsOf = (value: number) => new Uint32Array(new Float32Array([value]).buffer)[0];
 
@@ -20,13 +25,13 @@ describe('dropsNegation', () => {
     const negation = (
       result.kind === 'operator' && result.operands.length === 2 ? result.operands[0] : result
     )!;
-    expect(dropsNegation(negation as OperatorApplication)).toBe(true);
+    expect(dropsNegation(negation as OperatorNode)).toBe(true);
   });
 
   it('keeps the negation of a sum, whose text starts with a parenthesis', () => {
-    expect(
-      dropsNegation(resultOf('float f(float a, float b) { return -(a + b); }') as OperatorApplication)
-    ).toBe(false);
+    expect(dropsNegation(resultOf('float f(float a, float b) { return -(a + b); }') as OperatorNode)).toBe(
+      false
+    );
   });
 });
 
@@ -43,7 +48,7 @@ describe('GlslangFolding', () => {
     ).toEqual([2, 0.5]);
   });
 
-  it('folds nothing that reads a parameter', () => {
+  it('folds nothing that reads an argument', () => {
     expect(
       new GlslangFolding().lanesOf(resultOf('float f(float a) { return 1.0 + 2.0 + a; }'))
     ).toBeUndefined();

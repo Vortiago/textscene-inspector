@@ -6,14 +6,14 @@
 import { float, uint, uintBitsToFloat, vec2, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { dropsNegation, GlslangFolding } from './godotGlsl.js';
-import { operatorOfRow, type TranspiledOperator } from './operators.js';
-import type { Expression, FunctionDefinition, Parameter, ValueType } from './shaderTree.js';
+import type { Argument, Expression, FunctionNode, Statement, ValueType } from './shaderTree.js';
+import { swizzleLanes } from './swizzle.js';
 
-/** A function of the shader as TSL: `call` builds its result from one node per parameter. */
+/** A function of the shader as TSL: `call` builds its result from one node per argument. */
 export interface TranspiledFunction {
   readonly name: string;
   readonly returnType: ValueType;
-  readonly parameters: readonly Parameter[];
+  readonly arguments: readonly Argument[];
   call(args: readonly Node[]): Node;
 }
 
@@ -36,27 +36,40 @@ const CONSTRUCTORS: Readonly<Record<string, Constructor>> = {
 
 const LANE_LETTERS = 'xyzw';
 
-export function emitFunction(definition: FunctionDefinition): TranspiledFunction {
+/** `definition` as TSL. The tree holds only rows the transpiler transpiles (`checkTranspiled`). */
+export function emitFunction(definition: FunctionNode): TranspiledFunction {
   const folding = new GlslangFolding();
   return {
     name: definition.name,
     returnType: definition.returnType,
-    parameters: definition.parameters,
+    arguments: definition.arguments,
     call(args) {
-      if (args.length !== definition.parameters.length) {
+      if (args.length !== definition.arguments.length) {
         throw new Error(
-          `expected ${definition.parameters.length} arguments for ${definition.name}, got ${args.length}`
+          `expected ${definition.arguments.length} arguments for ${definition.name}, got ${args.length}`
         );
       }
-      return emit(definition.result, { args, folding });
+      const context: EmitContext = {
+        args: new Map(definition.arguments.map((argument, index) => [argument.name, args[index]!])),
+        folding,
+      };
+      return returned(definition.body.statements, context);
     },
   };
 }
 
 /** What emitting one call of a function reads: its argument nodes and its tree's folded constants. */
 interface EmitContext {
-  readonly args: readonly Node[];
+  readonly args: ReadonlyMap<string, Node>;
   readonly folding: GlslangFolding;
+}
+
+/** The value of the first `return`: the statements after it never run. */
+function returned(statements: readonly Statement[], context: EmitContext): Node {
+  for (const statement of statements) {
+    if (statement.kind === 'control flow') return emit(statement.expressions[0]!, context);
+  }
+  throw new Error('expected a return statement in a function that returns a value');
 }
 
 function emit(expression: Expression, context: EmitContext): Node {
@@ -65,19 +78,20 @@ function emit(expression: Expression, context: EmitContext): Node {
   switch (expression.kind) {
     case 'constant':
       throw new Error(`expected glslang to fold the constant ${expression.values.join(', ')}`);
-    case 'parameter':
-      return context.args[expression.index]!;
-    case 'operator': {
-      const op = operatorOfRow(expression.row.id);
-      if (op === 'OP_NEGATE' && dropsNegation(expression)) return emit(expression.operands[0]!, context);
-      const [first, second] = expression.operands.map((operand) => emit(operand, context));
-      return OPERATIONS[op](first as Node & ArithmeticNode, second!);
+    case 'variable':
+      return context.args.get(expression.name)!;
+    case 'member': {
+      const letters = swizzleLanes(expression)
+        .map((lane) => LANE_LETTERS[lane])
+        .join('');
+      return (emit(expression.owner, context) as unknown as Record<string, Node>)[letters]!;
     }
-    case 'constructor':
-      return CONSTRUCTORS[expression.type]!(...expression.args.map((arg) => emit(arg, context)));
-    case 'swizzle': {
-      const letters = expression.lanes.map((lane) => LANE_LETTERS[lane]).join('');
-      return (emit(expression.base, context) as unknown as Record<string, Node>)[letters]!;
+    case 'operator': {
+      if (expression.op === 'OP_NEGATE' && dropsNegation(expression))
+        return emit(expression.operands[0]!, context);
+      const operands = expression.operands.map((operand) => emit(operand, context));
+      if (expression.op === 'OP_CONSTRUCT') return CONSTRUCTORS[expression.type]!(...operands);
+      return OPERATIONS[expression.op]!(operands[0] as Node & ArithmeticNode, operands[1]!);
     }
   }
 }
@@ -98,7 +112,7 @@ function floatNode(value: number): Node {
 }
 
 /** The TSL operation of each operator, by Godot's enumerator. */
-const OPERATIONS: Readonly<Record<TranspiledOperator, (first: ArithmeticNode, second: Node) => Node>> = {
+const OPERATIONS: Readonly<Record<string, (first: ArithmeticNode, second: Node) => Node>> = {
   OP_ADD: (first, second) => first.add(second),
   OP_SUB: (first, second) => first.sub(second),
   OP_MUL: (first, second) => first.mul(second),

@@ -27,11 +27,11 @@ describe('tokenize', () => {
     ]);
   });
 
-  it('skips line and block comments, and counts their lines', () => {
+  it('skips line and block comments, and counts their lines and columns', () => {
     const tokens = tokenize('// one\n/* two\nthree */ x');
-    expect(tokens.map((token) => [token.type, token.line])).toEqual([
-      ['TK_IDENTIFIER', 3],
-      ['TK_EOF', 3],
+    expect(tokens.map((token) => [token.type, token.position.line, token.position.column])).toEqual([
+      ['TK_IDENTIFIER', 3, 10],
+      ['TK_EOF', 3, 11],
     ]);
   });
 

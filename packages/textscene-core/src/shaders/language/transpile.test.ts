@@ -21,7 +21,7 @@ describe('transpileShadingLanguage', () => {
     const probe = transpileShadingLanguage('vec2 probe(vec2 a, float b) { return a; }').functions.get(
       'probe'
     );
-    expect([probe?.returnType, probe?.parameters.map((parameter) => parameter.type)]).toEqual([
+    expect([probe?.returnType, probe?.arguments.map((argument) => argument.type)]).toEqual([
       'vec2',
       ['vec2', 'float'],
     ]);

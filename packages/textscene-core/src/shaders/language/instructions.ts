@@ -4,7 +4,7 @@
  */
 
 import { INSTRUCTION_TABLE, type InstructionRow } from './instructionTable.generated.js';
-import { ShadingLanguageError } from './shadingLanguageError.js';
+import { ShadingLanguageError, type SourcePosition } from './shadingLanguageError.js';
 
 const ROWS_BY_ID: ReadonlyMap<string, InstructionRow> = new Map(
   INSTRUCTION_TABLE.map((row) => [row.id, row])
@@ -50,6 +50,10 @@ export const KEYWORD_TOKENS: ReadonlyMap<string, string> = new Map(
 );
 
 /** The refusal of `row`, named `name` when the text names less than one row, as `sin` for `sin(float)`. */
-export function notTranspiled(row: InstructionRow, line: number, name = row.id): ShadingLanguageError {
-  return new ShadingLanguageError(`'${name}' is not transpiled yet (${row.owner})`, line);
+export function notTranspiled(
+  row: InstructionRow,
+  position: SourcePosition,
+  name = row.id
+): ShadingLanguageError {
+  return new ShadingLanguageError(`'${name}' is not transpiled yet (${row.owner})`, position);
 }

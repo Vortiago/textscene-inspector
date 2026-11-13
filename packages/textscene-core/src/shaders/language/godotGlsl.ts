@@ -5,20 +5,23 @@
  */
 
 import { godotConstantDouble } from './godotNumber.js';
-import { operatorOfRow } from './operators.js';
-import type { Expression, OperatorApplication } from './shaderTree.js';
+import type { Expression, OperatorNode } from './shaderTree.js';
+import { swizzleLanes } from './swizzle.js';
+import { shapeOf } from './types.js';
 
 const isNegation = (expression: Expression) =>
-  expression.kind === 'operator' && operatorOfRow(expression.row.id) === 'OP_NEGATE';
+  expression.kind === 'operator' && expression.op === 'OP_NEGATE';
 
 /**
- * Whether Godot's text of `expression` starts with `-`. A swizzle's text starts with its base's,
- * and a constant's with its sign.
+ * Whether Godot's text of `expression` starts with `-`. A swizzle's text starts with its owner's,
+ * and a scalar float constant's with its sign. A vector constant's text starts with its type.
  */
 function textStartsWithMinus(expression: Expression): boolean {
   if (isNegation(expression)) return true;
-  if (expression.kind === 'swizzle') return textStartsWithMinus(expression.base);
-  return expression.kind === 'constant' && expression.type === 'float' && signBit(expression.values[0]!);
+  if (expression.kind === 'member') return textStartsWithMinus(expression.owner);
+  return (
+    expression.kind === 'constant' && expression.type === 'float' && signBit(expression.values[0] as number)
+  );
 }
 
 const signBit = (value: number) => value < 0 || Object.is(value, -0);
@@ -27,13 +30,13 @@ const signBit = (value: number) => value < 0 || Object.is(value, -0);
  * Whether Godot writes the negation `negation` as its operand alone: it does when the operand's
  * text starts with `-` (`shader_compiler.cpp:1141`), so `-(-a)` draws as `-a`.
  */
-export function dropsNegation(negation: OperatorApplication): boolean {
+export function dropsNegation(negation: OperatorNode): boolean {
   return textStartsWithMinus(negation.operands[0]!);
 }
 
 /**
- * The lanes of each expression glslang folds to a constant, or nothing for one that reads a
- * parameter. glslang reads each constant of Godot's text as a double, folds the arithmetic of
+ * The lanes of each expression glslang folds to a constant, or nothing for one that reads an
+ * argument. glslang reads each constant of Godot's text as a double, folds the arithmetic of
  * constants in double precision, and rounds once, when it writes the SPIR-V constant. A fold in
  * 32-bit floats lands one unit off: `58.656 + 74.377` is 0x43050873 in Godot, 0x43050872 so.
  */
@@ -53,32 +56,31 @@ export class GlslangFolding {
   private fold(expression: Expression): readonly number[] | undefined {
     switch (expression.kind) {
       case 'constant':
-        return expression.values.map(godotConstantDouble);
-      case 'parameter':
+        return expression.values.map((value) => godotConstantDouble(value as number));
+      case 'variable':
         return undefined;
-      case 'swizzle': {
-        const base = this.lanesOf(expression.base);
-        return base && expression.lanes.map((lane) => base[lane]!);
-      }
-      case 'constructor': {
-        const args = expression.args.map((arg) => this.lanesOf(arg));
-        if (!args.every((arg) => arg !== undefined)) return undefined;
-        const lanes = args.flat();
-        return lanes.length === 1 ? Array(laneCountOf(expression.type)).fill(lanes[0]) : lanes;
+      case 'member': {
+        const owner = this.lanesOf(expression.owner);
+        return owner && swizzleLanes(expression).map((lane) => owner[lane]!);
       }
       case 'operator':
         return this.foldOperator(expression);
     }
   }
 
-  private foldOperator(expression: OperatorApplication): readonly number[] | undefined {
+  private foldOperator(expression: OperatorNode): readonly number[] | undefined {
     const operands = expression.operands.map((operand) => this.lanesOf(operand));
     if (!operands.every((operand) => operand !== undefined)) return undefined;
-    const op = operatorOfRow(expression.row.id);
-    if (op === 'OP_NEGATE')
+    if (expression.op === 'OP_CONSTRUCT') {
+      const lanes = operands.flat();
+      return lanes.length === 1 ? Array<number>(shapeOf(expression.type)!.lanes).fill(lanes[0]!) : lanes;
+    }
+    if (expression.op === 'OP_NEGATE') {
       return dropsNegation(expression) ? operands[0] : operands[0]!.map((lane) => -lane);
+    }
+    const apply = DOUBLE_OPERATIONS[expression.op];
+    if (!apply) return undefined;
     const [left, right] = operands as [readonly number[], readonly number[]];
-    const apply = DOUBLE_OPERATIONS[op];
     return Array.from({ length: Math.max(left.length, right.length) }, (_, lane) =>
       apply(laneAt(left, lane), laneAt(right, lane))
     );
@@ -88,11 +90,7 @@ export class GlslangFolding {
 /** A scalar operand stands for every lane of a vector one. */
 const laneAt = (lanes: readonly number[], lane: number) => lanes[lanes.length === 1 ? 0 : lane]!;
 
-const laneCountOf = (type: string) => (type === 'float' ? 1 : Number(type.slice(3)));
-
-const DOUBLE_OPERATIONS: Readonly<
-  Record<'OP_ADD' | 'OP_SUB' | 'OP_MUL' | 'OP_DIV', (a: number, b: number) => number>
-> = {
+const DOUBLE_OPERATIONS: Readonly<Record<string, (a: number, b: number) => number>> = {
   OP_ADD: (a, b) => a + b,
   OP_SUB: (a, b) => a - b,
   OP_MUL: (a, b) => a * b,

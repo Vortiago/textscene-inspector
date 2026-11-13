@@ -20,7 +20,7 @@ const isDigit = (char: string | undefined) => char !== undefined && char >= '0' 
  * The double `built_in_strtod` (`core/string/ustring.cpp:2365`) reads from `text`, step for step:
  * it is not correctly rounded, and the shader draws with what it gives.
  */
-function godotStrtod(text: string): number {
+export function godotStrtod(text: string): number {
   let position = 0;
   let sign = false;
   if (text[position] === '-') {
@@ -93,20 +93,26 @@ const MAX_DECIMALS = 32;
 
 /**
  * The text Godot's compiler writes for a float constant: `f2sp0(rtos(value))`
- * (`shader_compiler.cpp:180`, `core/string/ustring.cpp:1405`). `printf("%.<n>lf")` with 14
- * decimals less one for each power of ten over 10, the zeros after the first decimal trimmed, and
- * `.0` added to a text with no point.
+ * (`shader_compiler.cpp:180`), which adds `.0` to a text with no point.
  */
 function godotFloatText(value: number): string {
-  if (Number.isNaN(value)) return withPoint('nan');
-  if (!Number.isFinite(value)) return withPoint(value < 0 ? '-inf' : 'inf');
+  return withPoint(godotNumberText(value));
+}
+
+/**
+ * Godot's `rtos`, `String::num` with its default decimals (`core/string/ustring.cpp:1405`):
+ * `printf("%.<n>lf")` with 14 decimals less one for each power of ten over 10, and the zeros
+ * after the first decimal trimmed. Godot's messages write a number token this way.
+ */
+export function godotNumberText(value: number): string {
+  if (Number.isNaN(value)) return 'nan';
+  if (!Number.isFinite(value)) return value < 0 ? '-inf' : 'inf';
   let decimals = DEFAULT_DECIMALS;
   const magnitude = Math.abs(value);
   if (magnitude > 10) decimals -= Math.floor(Math.log10(magnitude));
   decimals = Math.min(decimals, MAX_DECIMALS);
   // `%lf` with no precision writes six decimals (`ustring.cpp:1435`).
-  const text = fixedPoint(value, decimals < 0 ? 6 : decimals);
-  return withPoint(trimZeros(text));
+  return trimZeros(fixedPoint(value, decimals < 0 ? 6 : decimals));
 }
 
 function withPoint(text: string): string {
@@ -172,4 +178,34 @@ export function godotConstantDouble(scalar: number): number {
   if (/inf|nan/.test(text))
     throw new Error(`Godot writes this constant as "${text}", which no GLSL compiler reads`);
   return Number(text);
+}
+
+/**
+ * The double Godot's tokenizer holds for an integer literal's text, suffix stripped
+ * (`shader_language.cpp:887`): `hex_to_int` for `0x`, the decimal reader otherwise.
+ */
+export function godotIntegerConstant(text: string): number {
+  return text.startsWith('0x') ? Number.parseInt(text.slice(2), 16) : godotStrtod(text);
+}
+
+/** The largest magnitude a double holds in a 64-bit integer, past which x86-64 gives its "indefinite" value. */
+const INT64_LIMIT = 2 ** 63;
+
+/**
+ * The `int` lane of an `int` literal: the double cast to a 32-bit integer
+ * (`shader_language.cpp:6002`). x86-64's `cvttsd2si` truncates, and gives -2^31 for a value out of range.
+ */
+export function godotIntScalar(constant: number): number {
+  const truncated = Math.trunc(constant);
+  return truncated >= -(2 ** 31) && truncated < 2 ** 31 ? truncated : -(2 ** 31);
+}
+
+/**
+ * The `uint` lane of a `uint` literal (`shader_language.cpp:6010`): x86-64 truncates the double to
+ * 64 bits and keeps the low 32, so a value past 2^32 wraps.
+ */
+export function godotUintScalar(constant: number): number {
+  const truncated = Math.trunc(constant);
+  if (Math.abs(truncated) >= INT64_LIMIT) return 0;
+  return Number(BigInt(truncated) & 0xffffffffn);
 }
