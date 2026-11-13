@@ -1,6 +1,6 @@
 /**
- * The user guide of the translator: an index of the coverage of each family of the instruction
- * table, and one chapter per family the translator reads. The rows, the probe sources and the
+ * The user guide of the transpiler: an index of the coverage of each family of the instruction
+ * table, and one chapter per family the transpiler reads. The rows, the probe sources and the
  * values come from the table, the probes and Godot's record, so the guide is stale only when they
  * change, and `--check` names it then.
  */
@@ -78,7 +78,7 @@ function sampleRows(entry, sizes) {
 
 function probeValues(probe, entry) {
   if (entry.rejected)
-    return 'Godot does not compile this shader: it draws nothing. The translator refuses it too.';
+    return 'Godot does not compile this shader: it draws nothing. The transpiler refuses it too.';
   if (entry.inputs.length === 0) {
     const literals =
       probe.source
@@ -125,39 +125,39 @@ function renderSection(section, rows, probes, record) {
 
 ${section.what}
 
-The translator emits \`${section.tsl}\`. Rows: ${rowList}. Godot source: \`${rows[0].source}\`.
+The transpiler emits \`${section.tsl}\`. Rows: ${rowList}. Godot source: \`${rows[0].source}\`.
 
 ${sectionProbes.map((probe) => renderProbe(probe, record)).join('\n')}`;
 }
 
-/** The rows a probe names, which are the translated rows. */
-const translatedIds = (probes) => new Set(probes.flatMap((probe) => probe.rows));
+/** The rows a probe names, which are the transpiled rows. */
+const transpiledIds = (probes) => new Set(probes.flatMap((probe) => probe.rows));
 
 /**
- * A chapter's sections, each with its translated rows. Throws for a translated row no section
- * holds, and for a section that holds no translated row.
+ * A chapter's sections, each with its transpiled rows. Throws for a transpiled row no section
+ * holds, and for a section that holds no transpiled row.
  */
 function chapterSections(chapters, rows, probes) {
-  const translated = translatedIds(probes);
-  const translatedRows = rows.filter((row) => translated.has(row.id));
+  const transpiled = transpiledIds(probes);
+  const transpiledRows = rows.filter((row) => transpiled.has(row.id));
   const placed = chapters.map((chapter) => ({
     chapter,
-    sections: chapter.sections.map((section) => ({ section, rows: translatedRows.filter(section.rows) })),
+    sections: chapter.sections.map((section) => ({ section, rows: transpiledRows.filter(section.rows) })),
   }));
   const covered = new Set(
     placed.flatMap(({ sections }) => sections.flatMap(({ rows: held }) => held.map((row) => row.id)))
   );
-  const missing = translatedRows.filter((row) => !covered.has(row.id)).map((row) => row.id);
+  const missing = transpiledRows.filter((row) => !covered.has(row.id)).map((row) => row.id);
   if (missing.length > 0) {
     throw new Error(
-      `expected a guide section in guideChapters.mjs for each translated row, found none for ${missing.join(', ')}`
+      `expected a guide section in guideChapters.mjs for each transpiled row, found none for ${missing.join(', ')}`
     );
   }
   // A section cites the Godot source of its first row, so a section with no row has nothing to cite.
   const empty = placed.flatMap(({ sections }) => sections.filter(({ rows: held }) => held.length === 0));
   if (empty.length > 0) {
     throw new Error(
-      `expected a translated row in each guide section, found none in ${empty.map(({ section }) => section.heading).join(', ')}`
+      `expected a transpiled row in each guide section, found none in ${empty.map(({ section }) => section.heading).join(', ')}`
     );
   }
   return placed;
@@ -171,15 +171,15 @@ function renderShowcase(showcase) {
     `<img src="showcase/${showcase.name}-${side}.png" width="${showcase.width * SHOWCASE_SCALE}" alt="${label}">`;
   return `## Showcase \`${showcase.name}\`
 
-Godot draws this shader. A plain three.js page draws the translation of its function \`pattern\` with the same UV. \`pnpm test:shaders:e2e\` draws both again and fails on any pixel over 2/255 apart.
+Godot draws this shader. A plain three.js page draws the transpilation of its function \`pattern\` with the same UV. \`pnpm test:shaders:e2e\` draws both again and fails on any pixel over 2/255 apart.
 
 \`\`\`glsl
 ${godotShader(showcase).trim()}
 \`\`\`
 
-| Godot | Translation on three.js |
+| Godot | Transpilation on three.js |
 | --- | --- |
-| ${image('godot', 'Godot')} | ${image('three', 'Translation')} |
+| ${image('godot', 'Godot')} | ${image('three', 'Transpilation')} |
 `;
 }
 
@@ -219,29 +219,29 @@ function rowCountNote(rows) {
 function driversNote(record) {
   return (
     `Godot draws the probes and showcases on Vulkan over lavapipe (\`${record.adapter}\`). ` +
-    `The translation draws in headless Chromium, WebGL 2 through ANGLE on Vulkan over the same lavapipe, ` +
+    `The transpilation draws in headless Chromium, WebGL 2 through ANGLE on Vulkan over the same lavapipe, ` +
     `and the run stops when the browser reports another renderer. "Bit-equal" is a claim about that pair.`
   );
 }
 
 function renderIndex(placed, rows, probes, record) {
-  const translated = translatedIds(probes);
+  const transpiled = transpiledIds(probes);
   const families = [...new Set(rows.map((row) => row.family))];
   const familyLines = families.map((family) => {
     const familyRows = rows.filter((row) => row.family === family);
-    const done = familyRows.filter((row) => translated.has(row.id)).length;
-    const owners = [...new Set(familyRows.filter((row) => !translated.has(row.id)).map(owningIssue))];
+    const done = familyRows.filter((row) => transpiled.has(row.id)).length;
+    const owners = [...new Set(familyRows.filter((row) => !transpiled.has(row.id)).map(owningIssue))];
     return `| ${family} | ${done} of ${familyRows.length} | ${owners.join(', ') || 'none'} |`;
   });
   const chapterLines = placed.map(
     ({ chapter, sections }) =>
       `- [${chapter.title}](${chapter.file}): ${sections.map(({ section }) => section.heading).join(', ')}.`
   );
-  return `# The shading language translator
+  return `# The shading language transpiler
 
-\`@textscene/three-godot-shaders\` translates Godot 4.6.3's shading language to three.js TSL nodes, instruction by instruction. This guide explains each instruction the translator reads, with the values Godot gave for it. A text that uses an instruction not translated yet fails with an error that names the instruction and the issue that translates it.
+\`@textscene/three-godot-shaders\` transpiles Godot 4.6.3's shading language to three.js TSL nodes, instruction by instruction. This guide explains each instruction the transpiler reads, with the values Godot gave for it. A text that uses an instruction not transpiled yet fails with an error that names the instruction and the issue that transpiles it.
 
-${translated.size} of ${rows.length} instructions translated. [INSTRUCTIONS.md](../INSTRUCTIONS.md) lists every row with its state. Generated by \`pnpm godot:shader-language\`: do not edit by hand.
+${transpiled.size} of ${rows.length} instructions transpiled. [INSTRUCTIONS.md](../INSTRUCTIONS.md) lists every row with its state. Generated by \`pnpm godot:shader-language\`: do not edit by hand.
 
 ${rowCountNote(rows)}
 
@@ -253,7 +253,7 @@ ${chapterLines.join('\n')}
 
 ## Coverage by family
 
-| Family | Translated | Open rows owned by |
+| Family | Transpiled | Open rows owned by |
 | --- | --- | --- |
 ${familyLines.join('\n')}
 `;

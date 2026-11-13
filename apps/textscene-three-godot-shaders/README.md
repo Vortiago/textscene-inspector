@@ -1,7 +1,7 @@
 # @textscene/three-godot-shaders
 
 `@textscene/three-godot-shaders` is Godot's shaders for a three.js `WebGLRenderer`: the scene shader
-as TSL node materials, the passes that feed it, and a translator for a shader in Godot's shading
+as TSL node materials, the passes that feed it, and a transpiler for a shader in Godot's shading
 language. It is the shader module of the
 [TextScene Inspector](https://github.com/Vortiago/textscene-inspector), bundled into one ES module
 with no React. three.js is its only peer dependency.
@@ -26,8 +26,8 @@ on it. By default a node material writes the renderer's tone mapping and `output
 
 ## The port
 
-The package translates Godot's shading language to TSL node objects, instruction by instruction,
-and Godot's own shaders and a user's shader run through the same translator
+The package transpiles Godot's shading language to TSL node objects, instruction by instruction,
+and Godot's own shaders and a user's shader run through the same transpiler
 ([#1451](https://github.com/Vortiago/textscene-inspector/issues/1451)). Each slice of the port
 probes its instructions against Godot's own answers, and adds them to the user guide in `guide/`
 with the values Godot gave.

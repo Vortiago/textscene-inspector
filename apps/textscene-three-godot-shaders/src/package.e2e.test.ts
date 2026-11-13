@@ -18,8 +18,8 @@ const repoRoot = resolve(packageDir, '../..');
 const bundleKey = 'dist/index.js';
 
 /** What a three.js app needs from the shader module. Core's internals stay out. */
-const PUBLIC_VALUE_EXPORTS = ['ShadingLanguageError', 'installNodesHandler', 'translateShadingLanguage'];
-const PUBLIC_TYPE_EXPORTS = ['NodeOutput', 'TranslatedFunction', 'TranslatedShader'];
+const PUBLIC_VALUE_EXPORTS = ['ShadingLanguageError', 'installNodesHandler', 'transpileShadingLanguage'];
+const PUBLIC_TYPE_EXPORTS = ['NodeOutput', 'TranspiledFunction', 'TranspiledShader'];
 
 /** The entry's value names, and the handler it gives a renderer with no GL context. */
 const CONSUMER_SCRIPT = `

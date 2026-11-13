@@ -1,5 +1,5 @@
 /**
- * The verdict of one probe: the translated function's result bits on a real GL context against
+ * The verdict of one probe: the transpiled function's result bits on a real GL context against
  * Godot's record. A lane passes when its bits equal Godot's, or when both are NaN, whose payload
  * GLSL ES 3.00 leaves to the device (section 4.5.1). The tolerance is zero units in the last
  * place: Godot and the page render on the same lavapipe driver.
@@ -32,7 +32,7 @@ export function compareProbe(entry, actual) {
   if (entry.rejected) {
     return actual.error
       ? { ...failed(`both reject: ${actual.error}`), passed: true }
-      : failed('Godot rejects the shader, the translation does not');
+      : failed('Godot rejects the shader, the transpilation does not');
   }
   if (actual.error) return failed(actual.error);
   const expected = entry.results.flat().map((text) => Number.parseInt(text, 16));
@@ -47,7 +47,7 @@ export function compareProbe(entry, actual) {
     if (want === got || (isNaNBits(want) && isNaNBits(got))) return;
     mismatches += 1;
     maxUlp = Math.max(maxUlp, ulpDistance(want, got));
-    if (!first) first = `lane ${index}: Godot ${hex(want)}, translation ${hex(got)}`;
+    if (!first) first = `lane ${index}: Godot ${hex(want)}, transpilation ${hex(got)}`;
   });
   return { passed: mismatches === 0, lanes: expected.length, mismatches, maxUlp, detail: first };
 }
@@ -56,7 +56,7 @@ export function compareProbe(entry, actual) {
 const failed = (detail) => ({ passed: false, lanes: 0, mismatches: 0, maxUlp: 0, detail });
 
 /**
- * The coverage verdict: a translated row is one a probe names, and each probe must have a record
+ * The coverage verdict: a transpiled row is one a probe names, and each probe must have a record
  * and pass. Answers one line for each failing probe, with the rows it leaves unproven.
  */
 export function coverageFailures(probes, verdicts) {

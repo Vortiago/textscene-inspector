@@ -1,9 +1,9 @@
 # Godot's shaders are one module that imports only three
 
 - Status: Accepted. The owner asked for the shape on 2026-11-12, and chose the package name, the
-  place of the shader translator, the first publish and the three range. Amended on 2026-11-13 by
+  place of the shader transpiler, the first publish and the three range. Amended on 2026-11-13 by
   the passes amendment below, which replaces each sentence that leaves a pass to the caller, and
-  by ADR-0076, the translator.
+  by ADR-0076, the transpiler.
 - Amends: ADR-0055 (where the node materials live).
 - Related: ADR-0038 (one owner for every program input), ADR-0039 (one material derivation, two
   adapters), ADR-0041 (an uncompiled shader draws Godot's default surface).
@@ -51,10 +51,10 @@ publishes it.**
   in its update callback, from the inputs of the renderer that draws. No node imports the owner of a
   value. The registration of a light node is page-wide, because three keeps the node class on the
   light class (r187 `src/lights/Light.js:18-22`). It happens in the install call, never on import.
-- **The translator of Godot's shading language lives in the module** (ADR-0076), under
+- **The transpiler of Godot's shading language lives in the module** (ADR-0076), under
   `shaders/language/`. Godot's own shaders and a user's `ShaderMaterial` both run through it. The
   surface outputs, the values Godot's `fragment()` writes, such as `ALBEDO`, are the seam between a
-  surface and the lighting model until the translated scene template reads them under the names
+  surface and the lighting model until the transpiled scene template reads them under the names
   Godot's compiler gives.
 - **The React mount stays in the renderer.** ADR-0039's two adapters remain: a plain object for the
   resource pipeline and a JSX element for React. Both take their material from the module.
@@ -95,5 +95,5 @@ supplies each pipeline input". Both are withdrawn.
 - The first publish, 0.1.0, is the package from which a plain three.js app draws a Godot scene, a
   user's `ShaderMaterial` included.
 
-The structure of the port follows Godot's shading language, with the translator first (ADR-0076).
+The structure of the port follows Godot's shading language, with the transpiler first (ADR-0076).
 The module boundary, the import rule and the package above still hold.

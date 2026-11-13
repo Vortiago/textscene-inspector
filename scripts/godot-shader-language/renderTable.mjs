@@ -1,5 +1,5 @@
 /**
- * The two files the instruction table writes: the TypeScript rows the translator reads, and the
+ * The two files the instruction table writes: the TypeScript rows the transpiler reads, and the
  * readable table that names each row's state and, for an open row, the issue that owns it.
  */
 
@@ -26,7 +26,7 @@ export interface InstructionRow {
   readonly family: string;
   /** Godot's \`file:line\` that defines it. */
   readonly source: string;
-  /** The issue that translates it, which an error for an open row names. */
+  /** The issue that transpiles it, which an error for an open row names. */
   readonly owner: string;
   /** Godot's token for a keyword. */
   readonly token?: string;
@@ -65,7 +65,7 @@ function fieldText(value) {
 }
 
 /**
- * The issue that owns an open row: the slice of the translator's plan that translates
+ * The issue that owns an open row: the slice of the transpiler's plan that transpiles
  * its family. A row this cannot place throws, so no open row is left without an owner.
  */
 export function owningIssue(row) {
@@ -108,7 +108,7 @@ export function owningIssue(row) {
 
 /**
  * `OP_CALL` is a call of a function: of a built-in, whose overload row owns it, or of the shader's
- * own function, whose parameters and their `in`, `out` and `inout` qualifiers its slice translates.
+ * own function, whose parameters and their `in`, `out` and `inout` qualifiers its slice transpiles.
  */
 function operatorOwner(row) {
   if (row.id === 'OP_CALL') return '#1825';
@@ -134,21 +134,21 @@ function functionOwner(row) {
 }
 
 /**
- * The readable table: the count of translated rows, then one table per family with each row's
- * state. A row is translated when a probe names it, and the probe's name stands beside it.
+ * The readable table: the count of transpiled rows, then one table per family with each row's
+ * state. A row is transpiled when a probe names it, and the probe's name stands beside it.
  */
 export function renderReadableTable(rows, probes) {
   const probeOf = new Map();
   for (const probe of probes)
     for (const id of probe.rows) probeOf.set(id, [...(probeOf.get(id) ?? []), probe.name]);
-  const translatedCount = rows.filter(({ id }) => probeOf.has(id)).length;
+  const transpiledCount = rows.filter(({ id }) => probeOf.has(id)).length;
   const families = [...new Set(rows.map(({ family }) => family))];
   const sections = families.map((family) => {
     const familyRows = rows.filter((row) => row.family === family);
     const lines = familyRows.map((row) => {
       const names = probeOf.get(row.id);
       const state = names
-        ? `translated (${names.map((name) => `\`${name}\``).join(', ')})`
+        ? `transpiled (${names.map((name) => `\`${name}\``).join(', ')})`
         : `open, ${owningIssue(row)}`;
       return `| \`${row.id}\` | ${state} | \`${row.source}\` |`;
     });
@@ -156,14 +156,14 @@ export function renderReadableTable(rows, probes) {
   });
   return `# Instruction table
 
-The shader package translates Godot 4.6.3's shading language instruction by instruction. This
+The shader package transpiles Godot 4.6.3's shading language instruction by instruction. This
 table lists every instruction, read from Godot's source by \`pnpm godot:shader-language\`. Do
 not edit it by hand.
 
-A row is translated when a probe names it. The probe's record holds Godot's own answers, and the
-real-GL test checks the translation against them. An open row names the issue that translates it.
+A row is transpiled when a probe names it. The probe's record holds Godot's own answers, and the
+real-GL test checks the transpilation against them. An open row names the issue that transpiles it.
 
-${translatedCount} of ${rows.length} instructions translated.
+${transpiledCount} of ${rows.length} instructions transpiled.
 
 ${sections.join('\n')}`;
 }

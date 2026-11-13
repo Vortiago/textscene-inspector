@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * The end to end layer of the shader package: `pnpm test:shaders:e2e [--update]`. Godot draws
- * each showcase, a plain three.js page draws its translation from the packed tarball, and the run
+ * each showcase, a plain three.js page draws its transpilation from the packed tarball, and the run
  * reports the pixels over 2/255 and the largest difference. It fails on any pixel over, and on a
  * guide image that no longer matches the renders; `--update` writes the guide images instead.
  */
@@ -26,7 +26,7 @@ function godotImages() {
   return output.images;
 }
 
-async function translationImages() {
+async function transpiledImages() {
   return withConsumerPage(
     { pageDir: join(import.meta.dirname, 'page'), module: 'showcasePage.js', harness: 'shaderEndToEnd' },
     async (page) => {
@@ -49,7 +49,7 @@ function writePng(path, { width, height }, pixels) {
 
 /**
  * The guide image's staleness against a render: nothing when every byte matches. A guide image is
- * a baseline, so it takes no tolerance. The 2/255 tolerance is for Godot against the translation.
+ * a baseline, so it takes no tolerance. The 2/255 tolerance is for Godot against the transpilation.
  */
 function staleImage(path, pixels) {
   if (!existsSync(path)) return `${path} is missing`;
@@ -71,12 +71,12 @@ function resultTable(results) {
 
 async function main() {
   const godot = godotImages();
-  const translation = await translationImages();
+  const transpilation = await transpiledImages();
   const update = process.argv.includes('--update');
   if (update) mkdirSync(SHOWCASE_DIR, { recursive: true });
   const failures = [];
   const results = SHOWCASES.map((showcase) => {
-    const ours = translation.get(showcase.name);
+    const ours = transpilation.get(showcase.name);
     const theirs = godot.get(showcase.name);
     if (!theirs) throw new Error(`expected Godot's image of showcase ${showcase.name}, found none`);
     const result = { showcase, ...compareImages(theirs, ours) };

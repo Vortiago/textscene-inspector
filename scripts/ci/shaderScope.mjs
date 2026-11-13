@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
 /** The branch the port lands on. A pull request into any other branch runs every job. */
-export const SHADER_BRANCH = 'feature/shader-translator';
+export const SHADER_BRANCH = 'feature/shader-transpiler';
 
 /**
  * The transpiler's own files. No file outside them imports one (`shaderScope.test.mjs` checks),

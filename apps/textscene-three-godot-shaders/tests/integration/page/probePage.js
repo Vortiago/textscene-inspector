@@ -1,5 +1,5 @@
 /**
- * The probe page: a plain three.js page that runs one translated probe function per call on a
+ * The probe page: a plain three.js page that runs one transpiled probe function per call on a
  * real GL context. Each pixel of a one-row float target holds one result lane, as the Godot
  * harness writes it (`scripts/godot-probes/probeShader.mjs`), and the page answers its bits.
  */
@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { NodeMaterial } from 'three/webgpu';
 import { float, int, screenCoordinate, select, uniformArray, vec2, vec3, vec4 } from 'three/tsl';
-import { installNodesHandler, translateShadingLanguage } from '@textscene/three-godot-shaders';
+import { installNodesHandler, transpileShadingLanguage } from '@textscene/three-godot-shaders';
 
 const LANES = { float: 1, vec2: 2, vec3: 3, vec4: 4 };
 const CONSTRUCT = { vec2, vec3, vec4 };
@@ -42,13 +42,13 @@ function laneOf(result, size, lane) {
 
 /**
  * The bits of each result lane of `spec`'s probe over its rows, or `{ error }` when the
- * translation refuses the source.
+ * transpilation refuses the source.
  */
 function runProbe(spec) {
   let probe;
   try {
-    probe = translateShadingLanguage(spec.source).functions.get('probe');
-    if (!probe) return { error: 'the translation has no function probe' };
+    probe = transpileShadingLanguage(spec.source).functions.get('probe');
+    if (!probe) return { error: 'the transpilation has no function probe' };
   } catch (error) {
     return { error: String(error.message ?? error) };
   }

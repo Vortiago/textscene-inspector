@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { godotSpawnPlan } from '../godot-ref/run.mjs';
 
-/** The only Godot release the probes and showcases compare with: the translator follows its source. */
+/** The only Godot release the probes and showcases compare with: the transpiler follows its source. */
 const GODOT_VERSION = '4.6.3';
 
 /** Frames a main script draws before it reads its viewports: the first frames compile the pipelines. */
