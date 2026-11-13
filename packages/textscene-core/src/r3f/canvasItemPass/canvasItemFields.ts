@@ -13,7 +13,7 @@ import {
   CanvasItemTextureFilter,
   CanvasItemTextureRepeat,
 } from '../../godot/scene/canvasItem';
-import { isCanvasItem, isControlType } from '../canvasPaintOrder';
+import { isCanvasItem, isControlType } from '../canvasItemClass';
 import { WHITE_MODULATE } from '../canvasItemModulate';
 import { node2DLocalTransform } from '../node2dTransform';
 import { perObject } from '../../utils/perObject';
@@ -33,8 +33,6 @@ export interface CanvasItemNodeFields {
   /** `texture_repeat`, where 0 is PARENT_NODE (`canvas_item.h:63-69`). */
   readonly textureRepeat: number;
   readonly isTopLevel: boolean;
-  /** The item's own `visible`, before a container writes it or its parents hide it. */
-  readonly isVisible: boolean;
   /** `clip_children`, a `CanvasItemClipChildrenMode` value. */
   readonly clipChildren: number;
   readonly ySortEnabled: boolean;
@@ -42,16 +40,12 @@ export interface CanvasItemNodeFields {
 }
 
 /**
- * Null for a node that is no CanvasItem.
+ * Null for a node that is no CanvasItem. Once for each node object, since the paint order asks a
+ * node's flags on each allocation.
  *
  * @canonical The CanvasItem fields a node states of itself, whichever parse produced it
  */
-export function canvasItemFieldsOf(node: TscnNode): CanvasItemNodeFields | null {
-  return fieldsByNode(node);
-}
-
-/** Once for each node object, since the paint order asks a node's flags on each allocation. */
-const fieldsByNode = perObject((node: TscnNode): CanvasItemNodeFields | null => {
+export const canvasItemFieldsOf = perObject((node: TscnNode): CanvasItemNodeFields | null => {
   if (isControlType(node.type)) return controlFieldsOf(node);
   if (!isCanvasItem(node)) return null;
   return node2DFieldsOf(node);
@@ -70,7 +64,6 @@ function controlFieldsOf(node: TscnNode): CanvasItemNodeFields {
     textureFilter: props.textureFilter ?? CanvasItemTextureFilter.PARENT_NODE,
     textureRepeat: props.textureRepeat ?? CanvasItemTextureRepeat.PARENT_NODE,
     isTopLevel: props.topLevel === true,
-    isVisible: props.visible !== false,
     clipChildren: props.clipChildren ?? CanvasItemClipChildrenMode.DISABLED,
     ySortEnabled: props.ySortEnabled === true,
     showsBehindParent: props.showBehindParent === true,
@@ -89,7 +82,6 @@ function node2DFieldsOf(node: TscnNode): CanvasItemNodeFields {
     textureFilter: props.texture_filter ?? CanvasItemTextureFilter.PARENT_NODE,
     textureRepeat: props.texture_repeat ?? CanvasItemTextureRepeat.PARENT_NODE,
     isTopLevel: props.top_level === true,
-    isVisible: props.visible !== false,
     clipChildren: props.clip_children ?? CanvasItemClipChildrenMode.DISABLED,
     ySortEnabled: props.y_sort_enabled === true,
     showsBehindParent: props.show_behind_parent === true,

@@ -16,6 +16,9 @@ import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../g
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import { clampCanvasItemZ, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPlacement';
 import { canvasItemFieldsOf, type CanvasItemNodeFields } from './canvasItemPass/canvasItemFields';
+import { isCanvasItem, isCanvasLayerType, isControlType } from './canvasItemClass';
+
+export { isCanvasItem, isCanvasLayerType, isControlType } from './canvasItemClass';
 
 /** How many distinct `z_final` buckets one canvas has. */
 const Z_BUCKET_COUNT = CANVAS_ITEM_Z_MAX - CANVAS_ITEM_Z_MIN + 1;
@@ -114,16 +117,6 @@ export function layerRankOf(declared: readonly number[], layer: number): number 
   return isDeclared ? below * 2 + 1 : below * 2;
 }
 
-/**
- * Whether this type starts a canvas of its own: `_enter_canvas` climbs to
- * `Object::cast_to<CanvasLayer>(n)` (`canvas_item.cpp:246-252`). Derived from
- * ClassDB, so a subclass such as `ParallaxBackground` (`parallax_background.h:34`)
- * counts. `controls/canvasBoundary.driftguard.test.ts` holds the Control walk to it.
- */
-export function isCanvasLayerType(type: string): boolean {
-  return descendsFromClass(type, 'CanvasLayer');
-}
-
 /** The `layer` a canvas-layer node declares, or Godot's own default of 1. */
 export function canvasLayerOf(node: TscnNode): number {
   const layer = (node.properties as { layer?: number }).layer;
@@ -206,19 +199,6 @@ export function listedChildOrder(parent: TscnNode, children: readonly TscnNode[]
   return [...frames, LISTED_LAYER, ...indices.filter((index) => !isFrame[index])];
 }
 
-/** Filled by `isControlType` and never cleared: a class's chain is fixed. */
-const controlTypes = new Map<string, boolean>();
-
-/** Cached, since every allocation sizes each subtree again and the chain walk is per call. */
-export function isControlType(type: string): boolean {
-  let isControl = controlTypes.get(type);
-  if (isControl === undefined) {
-    isControl = descendsFromClass(type, 'Control');
-    controlTypes.set(type, isControl);
-  }
-  return isControl;
-}
-
 /**
  * How many sequence values `node`'s subtree needs. Every node counts, not only
  * the canvas items: over-allocating is free, and a canvas-item test here would
@@ -237,15 +217,6 @@ export function paintRangeSize(node: TscnNode): number {
     for (const root of nestedCanvasRoots(node)) size += paintRangeSize(root);
   }
   return size;
-}
-
-/**
- * Whether `Object::cast_to<CanvasItem>` accepts this node. `get_parent_item()`
- * applies it to the direct parent (`canvas_item.cpp:565-571`) to decide whether
- * an item nests under it or parents at the canvas.
- */
-export function isCanvasItem(node: TscnNode): boolean {
-  return descendsFromClass(node.type, 'CanvasItem');
 }
 
 /**

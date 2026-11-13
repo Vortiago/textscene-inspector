@@ -247,7 +247,7 @@ top_level = true
 `)
     );
     expect(resultAt(results, 'Root').parentVisibleInTree).toBe(true);
-    expect(resultAt(results, 'Root').inherited.isVisibleInTree).toBe(false);
+    expect(resultAt(results, 'Root/Child').parentVisibleInTree).toBe(false);
     expect(resultAt(results, 'Root/Child/Detached').parentVisibleInTree).toBe(false);
   });
 

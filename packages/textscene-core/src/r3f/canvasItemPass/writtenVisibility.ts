@@ -1,14 +1,15 @@
 /**
  * The `visible` a container writes onto its children while it sorts them: a TabContainer shows only
- * its current page, and a folded FoldableContainer hides every child. The canvas item pass and the
- * Control walk both read it, so a hidden page hides its subtree for both.
+ * its current page, and a folded FoldableContainer hides every child. The canvas item pass reads it,
+ * and the Control walk reads the pass, so a hidden page hides its subtree for both.
  */
 
 import type { TscnNode } from '../../parser/types';
 import type { LiveStep, LiveTree } from '../liveSceneTree';
 import { controlSolverRegistry } from '../controls/native/solverRegistry';
 import { TWO_D_UI_TYPES } from '../controls/has2DUIContent';
-import { isCanvasLayerType, isTopLevelItem } from '../canvasPaintOrder';
+import { isTopLevelItem } from '../canvasPaintOrder';
+import { isCanvasLayerType } from '../canvasItemClass';
 
 /** A node that writes no child's `visible`. */
 export const NOTHING_WRITTEN: ReadonlyMap<TscnNode, boolean> = new Map();

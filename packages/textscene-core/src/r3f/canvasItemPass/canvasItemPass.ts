@@ -20,7 +20,9 @@ import { accumulateCanvasItemZ } from '../lighting2d/canvasItemPlacement';
 import { canvasItemFieldsOf, type CanvasItemNodeFields } from './canvasItemFields';
 import { NO_PARENT_MATERIAL, type CanvasAncestorMaterial } from './canvasAncestors';
 import { NOTHING_WRITTEN, writtenChildVisibility } from './writtenVisibility';
-import { clipsChildren, isCanvasLayerType } from '../canvasPaintOrder';
+import { clipsChildren } from '../canvasPaintOrder';
+import { isCanvasLayerType } from '../canvasItemClass';
+import { isShownCanvasNode } from '../canvasScopes';
 
 /** What a canvas item hands its children. */
 export interface InheritedCanvasItemState {
@@ -32,11 +34,6 @@ export interface InheritedCanvasItemState {
   readonly material: CanvasAncestorMaterial;
   /** The filter and repeat a child inherits. */
   readonly sampler: AmbientTextureSampler;
-  /**
-   * The authored `is_visible_in_tree()` of the item, which a child takes as its
-   * `parent_visible_in_tree`. It follows the scene tree, `top_level` or not.
-   */
-  readonly isVisibleInTree: boolean;
   /**
    * The live path of the item whose `clip_children` clips a child, this one or one above it in
    * the chain, or null. A chain start draws outside every owner's group.
@@ -50,16 +47,18 @@ export interface CanvasItemPassResult {
   readonly fields: CanvasItemNodeFields;
   /** The scope the item's material reference resolves in. */
   readonly resources: SceneScope;
-  /** The `parent_visible_in_tree` the item sees, from whatever node is above it. */
+  /** The `visible` the item's container writes onto it, or undefined where none writes it. */
+  readonly writtenVisible: boolean | undefined;
+  /**
+   * The `parent_visible_in_tree` the item sees, from whatever node is above it. It follows the scene
+   * tree, `top_level` or not.
+   */
   readonly parentVisibleInTree: boolean;
   readonly inherited: InheritedCanvasItemState;
 }
 
-/** The state a chain hands down, which a chain start takes fresh. */
-type ChainState = Omit<InheritedCanvasItemState, 'isVisibleInTree'>;
-
 /** What a chain start inherits: white, z 0, the root sampler, no material and no clip owner. */
-const CHAIN_START: ChainState = {
+const CHAIN_START: InheritedCanvasItemState = {
   modulate: WHITE_MODULATE,
   zFinal: 0,
   material: NO_PARENT_MATERIAL,
@@ -97,8 +96,9 @@ export const canvasItemPass: LiveScenePass<CanvasItemPassResult> = (tree) => {
   tree.fold<Above, void>(TREE_TOP, ({ raw, step, path }, above, descend) => {
     const node = patchedNode(step.node, patches.get(path));
     const fields = canvasItemFieldsOf(node);
-    const ownVisible = above.writes.get(raw) ?? fields?.isVisible ?? isVisibleNode(node);
-    const visibleInTree = visibilityHandedDown(node, fields, ownVisible, above.visibleInTree);
+    const writtenVisible = above.writes.get(raw);
+    const isVisible = writtenVisible ?? isShownCanvasNode(node);
+    const visibleInTree = visibilityHandedDown(node, fields, isVisible, above.visibleInTree);
     const writes = writtenChildVisibility(tree, step);
     if (!fields) {
       descend({ item: null, visibleInTree, writes });
@@ -106,14 +106,12 @@ export const canvasItemPass: LiveScenePass<CanvasItemPassResult> = (tree) => {
     }
     // `get_parent_item` returns null for a `top_level` item (`canvas_item.cpp:565-571`).
     const parent = fields.isTopLevel ? null : above.item;
-    const inherited: InheritedCanvasItemState = {
-      ...inheritedState(fields, step.scope, path, parent?.inherited ?? CHAIN_START),
-      isVisibleInTree: visibleInTree,
-    };
+    const inherited = inheritedState(fields, step.scope, path, parent?.inherited ?? CHAIN_START);
     results.set(path, {
       parent: parent?.path ?? null,
       fields,
       resources: step.scope,
+      writtenVisible,
       parentVisibleInTree: above.visibleInTree,
       inherited,
     });
@@ -131,17 +129,12 @@ export const canvasItemPass: LiveScenePass<CanvasItemPassResult> = (tree) => {
 function visibilityHandedDown(
   node: TscnNode,
   fields: CanvasItemNodeFields | null,
-  ownVisible: boolean,
+  isVisible: boolean,
   parentVisibleInTree: boolean
 ): boolean {
-  if (fields) return parentVisibleInTree && ownVisible;
-  if (isCanvasLayerType(node.type)) return ownVisible;
+  if (fields) return parentVisibleInTree && isVisible;
+  if (isCanvasLayerType(node.type)) return isVisible;
   return true;
-}
-
-/** The `visible` of a node that is no CanvasItem, such as a CanvasLayer. */
-function isVisibleNode(node: TscnNode): boolean {
-  return (node.properties as { visible?: boolean }).visible !== false;
 }
 
 /** What the item at `path` with `fields` hands its children down the chain, below one that hands it `above`. */
@@ -149,8 +142,8 @@ function inheritedState(
   fields: CanvasItemNodeFields,
   scope: SceneScope,
   path: string,
-  above: ChainState
-): ChainState {
+  above: InheritedCanvasItemState
+): InheritedCanvasItemState {
   return {
     ...linkState(fields, scope, above),
     // `renderer_canvas_cull.cpp:430-434`.
