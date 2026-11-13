@@ -33,7 +33,6 @@ describe('nativeTheme', () => {
     expect(theme.cornerRadius).toBe(6);
     expect(theme.contentMargin).toBe(8);
     expect(theme.separation).toBe(8);
-    expect(theme.sliderTrackThickness).toBe(16);
     expect(theme.sliderGrabberSize).toBe(32);
   });
 
@@ -297,50 +296,43 @@ describe('nativeTheme', () => {
       expect(nativeTheme(1.5).widgets.popupMenuPanel.cornerDetail).toBe(7);
     });
 
-    // The detail follows the Godot radius before the scale: 3 for most boxes, 4 for the slider,
+    // The detail follows the Godot radius before the scale: 3 for most boxes,
     // 10 for the scroll bar, 0 for the dialog panel and the flat menu button (clamped to 1).
     it.each([
-      [1, 5, 6, 6, 1],
-      [2, 10, 12, 12, 1],
-    ])(
-      'gives each widget the detail of its radius at scale %i',
-      (scale, defaultRadius, slider, scrollBar, none) => {
-        const { widgets } = nativeTheme(scale);
-        expect({
-          panel: widgets.panel.cornerDetail,
-          popupPanel: widgets.popupPanel.cornerDetail,
-          tooltipPanel: widgets.tooltipPanel.cornerDetail,
-          popupMenuPanel: widgets.popupMenuPanel.cornerDetail,
-          buttonNormal: widgets.button.normal.cornerDetail,
-          buttonFocus: widgets.button.focus.cornerDetail,
-          lineEdit: widgets.lineEdit.normal.cornerDetail,
-          sliderTrack: widgets.slider.track.cornerDetail,
-          sliderFill: widgets.slider.fill.cornerDetail,
-          scrollHorizontal: widgets.scrollBar.scrollHorizontal.cornerDetail,
-          scrollGrabber: widgets.scrollBar.grabber.cornerDetail,
-          dialogPanel: widgets.dialogPanel.cornerDetail,
-          flatMenuButton: widgets.flatMenuButton.normal.cornerDetail,
-          tabSelected: widgets.tabContainer.selected.cornerDetail,
-          tabHovered: widgets.tabContainer.hovered.cornerDetail,
-        }).toEqual({
-          panel: defaultRadius,
-          popupPanel: defaultRadius,
-          tooltipPanel: defaultRadius,
-          popupMenuPanel: defaultRadius,
-          buttonNormal: defaultRadius,
-          buttonFocus: defaultRadius,
-          lineEdit: defaultRadius,
-          sliderTrack: slider,
-          sliderFill: slider,
-          scrollHorizontal: scrollBar,
-          scrollGrabber: scrollBar,
-          dialogPanel: none,
-          flatMenuButton: none,
-          tabSelected: none,
-          tabHovered: none,
-        });
-      }
-    );
+      [1, 5, 6, 1],
+      [2, 10, 12, 1],
+    ])('gives each widget the detail of its radius at scale %i', (scale, defaultRadius, scrollBar, none) => {
+      const { widgets } = nativeTheme(scale);
+      expect({
+        panel: widgets.panel.cornerDetail,
+        popupPanel: widgets.popupPanel.cornerDetail,
+        tooltipPanel: widgets.tooltipPanel.cornerDetail,
+        popupMenuPanel: widgets.popupMenuPanel.cornerDetail,
+        buttonNormal: widgets.button.normal.cornerDetail,
+        buttonFocus: widgets.button.focus.cornerDetail,
+        lineEdit: widgets.lineEdit.normal.cornerDetail,
+        scrollHorizontal: widgets.scrollBar.scrollHorizontal.cornerDetail,
+        scrollGrabber: widgets.scrollBar.grabber.cornerDetail,
+        dialogPanel: widgets.dialogPanel.cornerDetail,
+        flatMenuButton: widgets.flatMenuButton.normal.cornerDetail,
+        tabSelected: widgets.tabContainer.selected.cornerDetail,
+        tabHovered: widgets.tabContainer.hovered.cornerDetail,
+      }).toEqual({
+        panel: defaultRadius,
+        popupPanel: defaultRadius,
+        tooltipPanel: defaultRadius,
+        popupMenuPanel: defaultRadius,
+        buttonNormal: defaultRadius,
+        buttonFocus: defaultRadius,
+        lineEdit: defaultRadius,
+        scrollHorizontal: scrollBar,
+        scrollGrabber: scrollBar,
+        dialogPanel: none,
+        flatMenuButton: none,
+        tabSelected: none,
+        tabHovered: none,
+      });
+    });
   });
 
   describe('the default type variations it models', () => {

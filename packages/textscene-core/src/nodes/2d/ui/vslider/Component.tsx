@@ -19,6 +19,7 @@ import {
   sliderTickRects,
   sliderTrackRect,
 } from '../shared/sliderSolver';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { SLIDER_DEFAULT_EDITABLE, sliderTickIndices } from '../shared/slider';
 import type { VSliderProperties } from './types';
 
@@ -27,15 +28,23 @@ export function VSlider({ solveNode, tint, rect, theme, renderOrder }: NativeCon
   const size = { x: rect.w, y: rect.h };
   const ratio = resolveSliderRatio(props, controlLayoutOrder(solveNode));
 
-  const trackBase = solveNode.styleBoxes.slider ?? theme.widgets.slider.track;
-  const fillBase = solveNode.styleBoxes.grabber_area ?? theme.widgets.slider.fill;
+  const trackBase = requiredThemeItem(solveNode.styleBoxes, 'slider');
+  const fillBase = requiredThemeItem(solveNode.styleBoxes, 'grabber_area');
 
   const grabberIconSize = sliderGrabberIconSize(theme, solveNode.textureSlots);
-  const trackRect = sliderTrackRect(true, size, theme);
-  const fillRect = sliderGrabberAreaRect(true, size, ratio, theme, grabberIconSize, solveNode.rtl);
+  const trackRect = sliderTrackRect(true, size, trackBase);
+  const fillRect = sliderGrabberAreaRect(true, size, ratio, trackBase, grabberIconSize, solveNode.rtl);
   const grabberRect = sliderGrabberRect(true, size, ratio, grabberIconSize, solveNode.rtl);
   const tickIndices = sliderTickIndices(props);
-  const tickRects = sliderTickRects(true, size, tickIndices, props.tickCount ?? 0, theme, grabberIconSize);
+  const tickRects = sliderTickRects(
+    true,
+    size,
+    tickIndices,
+    props.tickCount ?? 0,
+    theme,
+    grabberIconSize,
+    trackBase
+  );
 
   const editable = props.editable ?? SLIDER_DEFAULT_EDITABLE;
   const grabberTexture = useNodeIcon(

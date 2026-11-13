@@ -12,6 +12,7 @@
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
+import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { rangeRatio, type RangeProperties, type RangeValueOrder } from './range';
 import type { Vector2 } from '../../../../godot/math/vector';
 
@@ -23,15 +24,29 @@ import type { Vector2 } from '../../../../godot/math/vector';
  */
 const SLIDER_TICK_CROSS_AXIS = 8;
 
+/** `Size2i ss = slider_style->get_minimum_size()` (`slider.cpp:36`): the `slider` box's margins, each axis summed, then truncated. */
+function sliderStyleSize(slider: StyleBoxFlatData): Vector2 {
+  const { x, y } = contentMarginSize(slider);
+  return { x: Math.trunc(x), y: Math.trunc(y) };
+}
+
+/**
+ * The track's cross-axis thickness, `widget_width` or `widget_height` (`slider.cpp:296,328`): the `slider`
+ * box's minimum size on that axis, so the sum of two rounded margins.
+ */
+function trackThickness(vertical: boolean, slider: StyleBoxFlatData): number {
+  const size = sliderStyleSize(slider);
+  return vertical ? size.x : size.y;
+}
+
 /**
  * `Slider::get_minimum_size()` (`slider.cpp:35-44`): `Size2i(ss.width, MAX(ss.height, rs.height))`
- * horizontally, `ss` the `slider` style and `rs` the `grabber` icon. The style's margins are equal
- * (`make_flat_stylebox(color, 4, 4, 4, 4, 4)`, `default_theme.cpp:579`), so both are
- * `sliderTrackThickness`. A themed `grabber` need not be square, so it is a `Vector2`.
+ * horizontally, `ss` the `slider` style and `rs` the `grabber` icon. A themed `grabber` need not be
+ * square, so it is a `Vector2`.
  */
-export function sliderMinimumSize(vertical: boolean, theme: NativeTheme, grabber: Vector2): Vector2 {
-  const track = theme.sliderTrackThickness;
-  return vertical ? { x: Math.max(track, grabber.x), y: track } : { x: track, y: Math.max(track, grabber.y) };
+export function sliderMinimumSize(vertical: boolean, slider: StyleBoxFlatData, grabber: Vector2): Vector2 {
+  const ss = sliderStyleSize(slider);
+  return vertical ? { x: Math.max(ss.x, grabber.x), y: ss.y } : { x: ss.x, y: Math.max(ss.y, grabber.y) };
 }
 
 /**
@@ -63,13 +78,12 @@ const size2i = (size: Vector2): Vector2 => ({ x: Math.trunc(size.x), y: Math.tru
 
 /**
  * The `slider` StyleBox draw rect (`slider.cpp:333` horizontal, `slider.cpp:301` vertical), centred
- * at `(size.height - widget_height) / 2` with `widget_height` as `theme.sliderTrackThickness`. The vertical arm truncates
- * `size.width / 2` and `widget_width / 2` separately, as the C++ does, though `widget_width` is
- * always even here (`2 * round(margin * scale)`).
+ * at `(size.height - widget_height) / 2`. The vertical arm truncates `size.width / 2` and
+ * `widget_width / 2` separately, as the C++ does.
  */
-export function sliderTrackRect(vertical: boolean, rawSize: Vector2, theme: NativeTheme): Rect2 {
+export function sliderTrackRect(vertical: boolean, rawSize: Vector2, slider: StyleBoxFlatData): Rect2 {
   const size = size2i(rawSize);
-  const thickness = theme.sliderTrackThickness;
+  const thickness = trackThickness(vertical, slider);
   if (vertical) {
     return { x: Math.trunc(size.x / 2) - Math.trunc(thickness / 2), y: 0, w: thickness, h: size.y };
   }
@@ -86,7 +100,7 @@ export function sliderGrabberAreaRect(
   vertical: boolean,
   rawSize: Vector2,
   ratio: number,
-  theme: NativeTheme,
+  slider: StyleBoxFlatData,
   grabber: Vector2,
   /**
    * `Control::is_layout_rtl()`, which the vertical arm lacks. The draw branch (`:331`) reaches only
@@ -96,7 +110,7 @@ export function sliderGrabberAreaRect(
   rtl: boolean
 ): Rect2 {
   const size = size2i(rawSize);
-  const thickness = theme.sliderTrackThickness;
+  const thickness = trackThickness(vertical, slider);
   if (vertical) {
     const areasize = size.y - grabber.y;
     // `grabber->get_height() / 2` is an integer division (`slider.cpp:302`): an odd grabber
@@ -155,9 +169,11 @@ export function sliderTickRects(
   indices: readonly number[],
   tickCount: number,
   theme: NativeTheme,
-  grabber: Vector2
+  grabber: Vector2,
+  slider: StyleBoxFlatData
 ): Rect2[] {
   const size = size2i(rawSize);
+  const thickness = trackThickness(vertical, slider);
   // The 4px along-axis box of `hslider_tick.svg`/`vslider_tick.svg`, scaled by `default_theme_scale`.
   const along = theme.sliderTickBox;
   const cross = scaledIconSize(SLIDER_TICK_CROSS_AXIS, theme.scale);
@@ -170,7 +186,7 @@ export function sliderTickRects(
 
   if (vertical) {
     const areasize = size.y - grabberAlong;
-    const x = Math.trunc(theme.sliderTrackThickness + (size.x - theme.sliderTrackThickness) / 2);
+    const x = Math.trunc(thickness + (size.x - thickness) / 2);
     return indices.map((i) => ({
       x,
       y: Math.trunc((i * areasize) / divisions + grabberOffset),
@@ -179,7 +195,7 @@ export function sliderTickRects(
     }));
   }
   const areasize = size.x - grabberAlong;
-  const y = Math.trunc(theme.sliderTrackThickness + (size.y - theme.sliderTrackThickness) / 2);
+  const y = Math.trunc(thickness + (size.y - thickness) / 2);
   return indices.map((i) => ({
     x: Math.trunc((i * areasize) / divisions + grabberOffset),
     y,
@@ -187,8 +203,3 @@ export function sliderTickRects(
     h: cross,
   }));
 }
-
-// The `slider` track and `grabber_area` fill styleboxes (`default_theme.cpp:579-580`) are
-// precomputed per theme as `theme.widgets.slider.track`/`.fill`: a per-call build hands
-// `StyleBoxQuad` a fresh identity and rebuilds its `BufferGeometry` every render. Their zero
-// `contentMargin` is never read, as the thickness is `theme.sliderTrackThickness`.

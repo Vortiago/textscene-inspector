@@ -86,8 +86,6 @@ describe('scaledGodotTheme', () => {
       cornerRadius: 3, // default_corner_radius, default_theme.cpp:55
       contentMargin: 4, // default_margin, default_theme.cpp:54
       separation: 4, // Math::round(4 * scale), default_theme.cpp:1249
-      sliderTrackThickness: 8, // two margins of make_flat_stylebox(…, 4, 4, 4, 4, 4), default_theme.cpp:579
-      sliderCornerRadius: 4, // the corner radius of that call, default_theme.cpp:579
       sliderGrabberSize: 16, // the slider_grabber icon's 16x16 box
       sliderTickBox: 4, // the 4x8 canvas of hslider_tick.svg
     });
@@ -101,11 +99,7 @@ describe('scaledGodotTheme', () => {
       cornerRadius: 6,
       contentMargin: 8,
       separation: 8,
-      // The sliders grow with everything else: the styleboxes through
-      // `make_flat_stylebox`, the grabber and tick because `generate_icon`
-      // rasterises each SVG at the scale.
-      sliderTrackThickness: 16,
-      sliderCornerRadius: 8,
+      // The grabber and tick grow because `generate_icon` rasterises each SVG at the scale.
       sliderGrabberSize: 32,
       sliderTickBox: 8,
     });
@@ -134,8 +128,6 @@ describe('scaledGodotTheme', () => {
       cornerRadius: 2,
       contentMargin: 2,
       separation: 2,
-      sliderTrackThickness: 4,
-      sliderCornerRadius: 2,
       sliderGrabberSize: 8,
       sliderTickBox: 2,
     });

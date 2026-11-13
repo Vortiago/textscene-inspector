@@ -584,14 +584,14 @@ export function ColorPicker({
               <CanvasItemGroup position={[sliderBox.x, -sliderBox.y, 0]}>
                 {!isColorized &&
                   (() => {
-                    const trackRect = sliderTrackRect(false, sliderBoxSize, theme);
+                    const trackRect = sliderTrackRect(false, sliderBoxSize, theme.channelSlider.slider);
                     // Every internal slider is a child Control, so it resolves
                     // the picker's own `is_layout_rtl()` (`control.cpp:3551-3620`).
                     const fillRect = sliderGrabberAreaRect(
                       false,
                       sliderBoxSize,
                       row.ratio,
-                      theme,
+                      theme.channelSlider.slider,
                       grabberIconSize,
                       solveNode.rtl
                     );
@@ -606,7 +606,7 @@ export function ColorPicker({
                       <>
                         <CanvasItemGroup position={[trackRect.x, -trackRect.y, 0]}>
                           <StyleBoxQuad
-                            styleBox={theme.widgets.slider.track}
+                            styleBox={theme.channelSlider.slider}
                             rect={{ x: 0, y: 0, w: trackRect.w, h: trackRect.h }}
                             color={tint.own}
                             renderOrder={renderOrder}
@@ -614,7 +614,7 @@ export function ColorPicker({
                         </CanvasItemGroup>
                         <CanvasItemGroup position={[fillRect.x, -fillRect.y, 0]}>
                           <StyleBoxQuad
-                            styleBox={theme.widgets.slider.fill}
+                            styleBox={theme.channelSlider.grabberArea}
                             rect={{ x: 0, y: 0, w: fillRect.w, h: fillRect.h }}
                             color={tint.own}
                             renderOrder={renderOrder}

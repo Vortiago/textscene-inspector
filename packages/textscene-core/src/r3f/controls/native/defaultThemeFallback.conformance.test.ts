@@ -17,11 +17,15 @@ const MIGRATED_FOLDERS = [
   'checkbox',
   'checkbutton',
   'colorpickerbutton',
+  'hslider',
   'label',
   'linkbutton',
   'menubar',
   'menubutton',
   'optionbutton',
+  'panel',
+  'panelcontainer',
+  'vslider',
 ].map((folder) => join(SRC_ROOT, 'nodes/2d/ui', folder));
 
 const BUTTON_BASE = join(SRC_ROOT, 'r3f/controls/native/buttonBase.ts');

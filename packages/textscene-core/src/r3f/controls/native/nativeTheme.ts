@@ -12,7 +12,6 @@ import {
   DEFAULT_CONTENT_MARGIN,
   DEFAULT_CORNER_RADIUS,
   LINE_EDIT_BORDER_BOTTOM_WIDTH,
-  SLIDER_CORNER_RADIUS,
   scaledGodotTheme,
   scaledPx,
   STYLE_FILL,
@@ -122,15 +121,6 @@ interface NativeThemeWidgets {
     normal: StyleBoxFlatData;
     readOnly: StyleBoxFlatData;
   };
-  /**
-   * HSlider/VSlider's `slider` (track) and `grabber_area` (fill), both
-   * `make_flat_stylebox(color, 4, 4, 4, 4, 4)` (`default_theme.cpp:579-580`).
-   * `contentMargin` stays zero: the solver takes thickness from `sliderTrackThickness`.
-   */
-  slider: {
-    track: StyleBoxFlatData;
-    fill: StyleBoxFlatData;
-  };
   scrollBar: {
     /** HScrollBar's "scroll" (track) stylebox, `style_h_scrollbar`, `default_theme.cpp:543`. */
     scrollHorizontal: StyleBoxFlatData;
@@ -219,7 +209,6 @@ function buildNativeTheme(scale: number): NativeTheme {
   };
   const scrollBarCornerRadius = Math.round(SCROLL_BAR_CORNER_RADIUS * scale);
   const defaultDetail = flatCornerDetail(DEFAULT_CORNER_RADIUS, scale);
-  const sliderDetail = flatCornerDetail(SLIDER_CORNER_RADIUS, scale);
   const scrollBarDetail = flatCornerDetail(SCROLL_BAR_CORNER_RADIUS, scale);
 
   return {
@@ -277,12 +266,6 @@ function buildNativeTheme(scale: number): NativeTheme {
           scaled.cornerRadius,
           defaultDetail
         ),
-      },
-      slider: {
-        // default_theme.cpp:579-580: make_flat_stylebox(color, 4, 4, 4, 4, 4) for
-        // both `slider` and `grabber_area`; margins are never read back off these.
-        track: flatStyleBox(STYLE_FILL.normal, ZERO_SIDES, scaled.sliderCornerRadius, sliderDetail),
-        fill: flatStyleBox(STYLE_FILL.progress, ZERO_SIDES, scaled.sliderCornerRadius, sliderDetail),
       },
       scrollBar: {
         scrollHorizontal: flatStyleBox(

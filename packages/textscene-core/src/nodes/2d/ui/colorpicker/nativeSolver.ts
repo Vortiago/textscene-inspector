@@ -35,7 +35,7 @@ import {
 import { SizeFlags } from '../../../../godot/scene/control';
 import { ContainerAlignment } from '../../../../godot/scene/container';
 import { resortBoxContainer } from '../shared/boxContainerSolver';
-import { pickerChildTheme } from './pickerChildTheme';
+import { pickerChildTheme, type PickerTheme } from './pickerChildTheme';
 import { shapeRowHeight, shapeRowMinWidth } from './shapes/shapeRowLayout';
 import { drawnShapeVariant } from './shapes/pickerShapes';
 import { MODE_LINEAR, MODE_RGB } from './colorModes';
@@ -184,13 +184,13 @@ function lineRowHeight(box: StyleBoxFlatData, textHeightPx: number): number {
  * `btn_mode` has the icon, and its custom minimum floors only its width (`color_picker.cpp:124`).
  */
 function modeRowSize(
-  theme: Pick<NativeTheme, 'separation' | 'scale' | 'widgets'>,
+  theme: Pick<PickerTheme, 'separation' | 'scale' | 'widgets' | 'modeButtons'>,
   measure: TextWidthMeasurer | null,
   pressedMode: number
 ): Vector2 {
   const btnModeWidth = iconButtonWidth(theme, theme.widgets.flatMenuButton.normal);
-  const normalMarginY = contentMarginSize(theme.widgets.tabContainer.unselected).y;
-  const pressedMarginY = contentMarginSize(theme.widgets.tabContainer.selected).y;
+  const normalMarginY = contentMarginSize(theme.modeButtons.normal).y;
+  const pressedMarginY = contentMarginSize(theme.modeButtons.pressed).y;
   const btnModeHeight = colorPickerMenuButtonSize(theme).y;
   let height = Math.max(normalMarginY, pressedMarginY, btnModeHeight);
   if (!measure) return { x: btnModeWidth, y: height };
@@ -373,7 +373,7 @@ function swatchesRowSize(
  */
 export function colorPickerRows(
   width: number,
-  theme: NativeTheme,
+  theme: PickerTheme,
   valueFieldTheme: Pick<NativeTheme, 'widgets' | 'scale'>,
   props: Pick<
     ColorPickerProperties,
@@ -629,7 +629,7 @@ function modeButtonMinimumWidth(styleBox: StyleBoxFlatData, textWidth: number): 
  */
 export function modeRowButtonRects(
   mode: Rect2,
-  theme: NativeTheme,
+  theme: PickerTheme,
   rtl: boolean,
   labelWidths: readonly number[],
   pressedMode: number
@@ -662,14 +662,10 @@ export function modeRowButtonRects(
   return { buttons: rects.slice(0, MODE_BUTTON_COUNT), dropdown: rects[MODE_BUTTON_COUNT]! };
 }
 
-/**
- * `mode_button_normal` and `mode_button_pressed`: `BIND_THEME_ITEM_EXT` binds them to
- * `tab_unselected` and `tab_selected` of `TabContainer` (`color_picker.cpp:2060-2061`).
- * The `mode_button_hover` bind (`:2062`) is left out: a static preview never hovers.
- */
-export function modeButtonBox(theme: Pick<NativeTheme, 'widgets'>, index: number, pressedMode: number) {
-  const { selected, unselected } = theme.widgets.tabContainer;
-  return index === pressedMode ? selected : unselected;
+/** The box a `mode_btns` button draws: `mode_button_pressed` for the current mode. */
+export function modeButtonBox(theme: Pick<PickerTheme, 'modeButtons'>, index: number, pressedMode: number) {
+  const { normal, pressed } = theme.modeButtons;
+  return index === pressedMode ? pressed : normal;
 }
 
 interface SampleRowColumns {
@@ -764,8 +760,12 @@ export function swatchesRowRects(swatches: Rect2, theme: NativeTheme, rtl = fals
  * `SIZE_SHRINK_CENTER` down (`create_slider`, `color_picker.cpp:
  * 452-453`), so it has its natural height, centred in the taller cell.
  */
-export function colorPickerSliderBoxRect(cell: Rect2, theme: NativeTheme, grabber: Vector2): Rect2 {
-  const h = sliderMinimumSize(false, theme, grabber).y;
+export function colorPickerSliderBoxRect(
+  cell: Rect2,
+  theme: Pick<PickerTheme, 'channelSlider'>,
+  grabber: Vector2
+): Rect2 {
+  const h = sliderMinimumSize(false, theme.channelSlider.slider, grabber).y;
   // `Control::fit_child_in_rect` (`control.h`, `SIZE_SHRINK_CENTER`) floors:
   // `r.position.y += Math::floor((p_rect.size.y - minsize.y) / 2)`.
   const y = cell.y + Math.floor((cell.h - h) / 2);

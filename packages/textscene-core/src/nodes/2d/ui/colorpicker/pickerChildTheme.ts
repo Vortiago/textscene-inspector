@@ -13,14 +13,36 @@ import {
 } from '../../../../r3f/controls/native/themeItems';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { pickTabStyleBox } from '../tabbar/nativeSolver';
+import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { perObject } from '../../../../utils/perObject';
 import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
 import { LINE_EDIT_DEFAULT_FONT_COLOR, pickLineEditStyleBox } from '../lineedit/nativeSolver';
 
+/**
+ * `mode_button_normal` and `mode_button_pressed`: `BIND_THEME_ITEM_EXT` binds them to `tab_unselected`
+ * and `tab_selected` of `TabContainer` (`color_picker.cpp:2060-2061`). A static preview never
+ * hovers, so the `mode_button_hover` bind (`:2062`) is left out.
+ */
+export interface ModeButtonBoxes {
+  normal: StyleBoxFlatData;
+  pressed: StyleBoxFlatData;
+}
+
+/** The `slider` and `grabber_area` styleboxes of the internal channel `HSlider`s. */
+export interface ChannelSliderBoxes {
+  slider: StyleBoxFlatData;
+  grabberArea: StyleBoxFlatData;
+}
+
+/** The picker's theme, with the boxes of its internal TabContainer binds and HSliders. */
+export interface PickerTheme extends NativeTheme {
+  modeButtons: ModeButtonBoxes;
+  channelSlider: ChannelSliderBoxes;
+}
+
 export interface PickerChildTheme {
-  /** `theme` with the Button, FlatMenuButton, TabContainer and LineEdit styleboxes of the Theme chain. */
-  theme: NativeTheme;
+  /** `theme` with the Button, FlatMenuButton, TabContainer, HSlider and LineEdit styleboxes of the Theme chain. */
+  theme: PickerTheme;
   /** `theme` with the `SpinBox` inner LineEdit's styleboxes, for the slider value fields. */
   valueFieldTheme: NativeTheme;
   valueFieldColor: Rgba;
@@ -33,7 +55,7 @@ export interface PickerChildTheme {
   lineEditColor: Rgba;
 }
 
-function withLineEditBoxes(theme: NativeTheme, items: InternalThemeItems): NativeTheme {
+function withLineEditBoxes<T extends NativeTheme>(theme: T, items: InternalThemeItems): T {
   const { lineEdit } = theme.widgets;
   return {
     ...theme,
@@ -67,8 +89,9 @@ function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildThe
   const lineEdit = internalChildThemeItems(n, 'LineEdit');
   const valueField = spinBoxFieldThemeItems(n);
   const tabs = internalChildThemeItems(n, 'TabContainer');
+  const slider = internalChildThemeItems(n, 'HSlider');
   const { widgets } = theme;
-  const withBoxes: NativeTheme = {
+  const withBoxes: PickerTheme = {
     ...theme,
     widgets: {
       ...widgets,
@@ -81,11 +104,14 @@ function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildThe
         normal: pickButtonStyleBox(flatMenuButton.styleBoxes, 'normal', n.rtl),
         disabled: pickButtonStyleBox(flatMenuButton.styleBoxes, 'disabled', n.rtl),
       },
-      tabContainer: {
-        ...widgets.tabContainer,
-        unselected: pickTabStyleBox(tabs.styleBoxes, widgets.tabContainer, 'unselected'),
-        selected: pickTabStyleBox(tabs.styleBoxes, widgets.tabContainer, 'selected'),
-      },
+    },
+    modeButtons: {
+      normal: requiredThemeItem(tabs.styleBoxes, 'tab_unselected'),
+      pressed: requiredThemeItem(tabs.styleBoxes, 'tab_selected'),
+    },
+    channelSlider: {
+      slider: requiredThemeItem(slider.styleBoxes, 'slider'),
+      grabberArea: requiredThemeItem(slider.styleBoxes, 'grabber_area'),
     },
   };
   const result: PickerChildTheme = {
