@@ -33,6 +33,21 @@ drawn item reads it from the pass, through `useInheritedCanvasState(path)`.
 The context per facet, `CanvasItemChildScope` and `SkippedCanvasItemsScope` are gone.
 `SolveNode.skippedTransform` holds the transform, which the walk composes as a whole matrix.
 
+## Draw sequence
+
+The paint pass (`canvasPaintPass`) allocates, for each live path, the draw sequence of the item's own
+pixels and the runs its children, internal front and back children and listed layer take
+(`renderer_canvas_cull.cpp:477-490`). The world walk and the Control walk both read it, so the two
+walks cannot give one item two sequences.
+
+- It is a pass of its own beside `canvasItemPass`, because it allocates for every node, including a
+  node that is no canvas item, and a y-sort re-packs its runs after the fold.
+- A node type declares the room it holds with `registerPaintRoom` in its parser slice, not in
+  `index.r3f.ts`. The Control renderers load lazily, so a room registered with them would change the
+  numbers once they load.
+- A subtree outside the shared live tree, such as a scene tile's instance, takes a paint frame: a run
+  it allocates from with the same rule. A y-sort hands its rows a frame that shifts the pass's run.
+
 ## Measurement
 
 `scenes/fixtures/perf-modulate-200-sprites.tscn` holds one Node2D root with 200 Sprite2D descendants,

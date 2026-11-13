@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { isInZBucket, nearestGroupOrder, worldCanvasKey } from '../../../../r3f/testing/paintOrder';
 import { WHOLE_CANVAS_RANGE, type PaintRange } from '../../../../r3f/canvasPaintOrder';
-import { PaintRangeProvider } from '../../../../r3f/contexts/PaintOrderContext';
+import { PaintRun } from '../../../../r3f/testing/PaintRun';
 import { parseTileMap } from './parser';
 import { TileMap } from './Component';
 import { SceneResourcesProvider } from '../../../../r3f/SceneResourcesContext';
@@ -46,9 +46,9 @@ async function render(node: TscnNode, paintRange: PaintRange = WHOLE_CANVAS_RANG
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={fake.loader}>
       <SceneResourcesProvider internalResources={internals} externalResources={externals}>
-        <PaintRangeProvider value={paintRange}>
+        <PaintRun value={paintRange}>
           <TileMap node={node} />
-        </PaintRangeProvider>
+        </PaintRun>
       </SceneResourcesProvider>
     </ResourceLoaderProvider>
   );

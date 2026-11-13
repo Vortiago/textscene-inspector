@@ -10,7 +10,7 @@ import { offscreenRendererState } from '../../nodes/viewport/subviewport/offscre
 import type { TscnNode } from '../../parser/types';
 import { Polygon2D } from '../../nodes/2d/polygon2d/Component';
 import { parsePolygon2D } from '../../nodes/2d/polygon2d/parser';
-import { PaintRangeProvider } from '../contexts/PaintOrderContext';
+import { PaintRun } from '../testing/PaintRun';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../canvasPaintOrder';
 import {
   CanvasLighting2DContext,
@@ -68,11 +68,11 @@ function isShown(object: THREE.Object3D): boolean {
 async function drawParent(rawProps: Record<string, string>) {
   const renderer = await ReactThreeTestRenderer.create(
     <CanvasLighting2DContext.Provider value={LIGHTING}>
-      <PaintRangeProvider value={RUN}>
+      <PaintRun value={RUN}>
         <Polygon2D node={parentNode(rawProps)}>
           <ChildSquare />
         </Polygon2D>
-      </PaintRangeProvider>
+      </PaintRun>
     </CanvasLighting2DContext.Provider>
   );
   const scene = renderer.scene.instance as THREE.Scene;

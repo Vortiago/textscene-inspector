@@ -11,8 +11,9 @@ import { CanvasItem2D } from '../../../../r3f/components/CanvasItem2D';
 import { multiplyModulate, type CanvasItemTint } from '../../../../r3f/canvasItemModulate';
 import { layerQuadrants } from '../../../../resources/tileset/renderingQuadrants';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { allocateNodePaintRange, packPaintRanges } from '../../../../r3f/canvasPaintOrder';
-import { usePaintRange } from '../../../../r3f/contexts/PaintOrderContext';
+import { packPaintRanges } from '../../../../r3f/canvasPaintOrder';
+import { useNodePaint } from '../../../../r3f/canvasItemPass/nodePaint';
+import { useNodePath } from '../../../../r3f/contexts/NodePathContext';
 import { childCanvasPlace } from '../../../../r3f/canvasItemState';
 import { TileQuadrants } from '../../../../r3f/TileQuadrants';
 import { useTileSetModel, type TileSetStatus } from '../../../../r3f/useTileSetModel';
@@ -117,18 +118,19 @@ interface LayeredTileMapProps extends NodeComponentProps {
 
 function LayeredTileMap({ node, model, status, sceneTiles, children }: LayeredTileMapProps) {
   const props = node.properties as TileMapProperties;
-  const paintRange = usePaintRange();
   // The layers are internal front children in Godot, in no `.tscn` child list,
   // so they draw from the `front` run, between this node and its authored
   // children. Packed, so a squeezed run clamps them inside it.
-  const layerSequences = useMemo(() => {
-    const { front } = allocateNodePaintRange(paintRange, node);
-    return packPaintRanges(
-      front,
-      props.layers.map(() => 1),
-      front.base
-    ).map((run) => run.base);
-  }, [paintRange, node, props.layers]);
+  const { front } = useNodePaint(node, useNodePath());
+  const layerSequences = useMemo(
+    () =>
+      packPaintRanges(
+        front,
+        props.layers.map(() => 1),
+        front.base
+      ).map((run) => run.base),
+    [front, props.layers]
+  );
 
   // Parsed layers never change identity, so the batched geometries survive unrelated re-renders.
   // The quadrants depend on no paint-order input, so a move in the canvas keeps them too.
