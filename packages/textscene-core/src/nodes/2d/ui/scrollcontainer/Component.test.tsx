@@ -17,7 +17,7 @@ import { ScrollContainer } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { wholeKeySlot } from '../../../../r3f/canvasItemState';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 
 // Only `gui/common/snap_controls_to_pixels` comes from the project settings,
 // so no test needs the real provider's async load.
@@ -36,16 +36,16 @@ beforeEach(() => {
 });
 
 function leaf(name: string, props: Partial<ScrollContainerProperties> = {}): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'Control', { name, ...props }),
-  };
+  });
 }
 
 function scrollNode(props: Partial<ScrollContainerProperties> = {}, children: SolveNode[] = []): SolveNode {
   const node: TscnNode = controlNode('Scroll', 'ScrollContainer', { name: 'Scroll', ...props });
-  return { ...solveNode(), path: 'Scroll', node, children };
+  return withThemeItems({ ...solveNode(), path: 'Scroll', node, children });
 }
 
 /** World-space bounding box of a mesh's geometry, through its fresh matrixWorld. */

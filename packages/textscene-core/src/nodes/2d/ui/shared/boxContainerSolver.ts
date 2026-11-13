@@ -11,11 +11,8 @@
 
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type {
-  ContainerLayoutFn,
-  MinimumSizeFn,
-  SolveContext,
-} from '../../../../r3f/controls/native/solverRegistry';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import type { ContainerLayoutFn, MinimumSizeFn } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import type { BoxContainerProperties } from './boxContainer';
 import { fitChildInRect, hasFlag, isSortableControl } from './fitChildInRect';
@@ -208,8 +205,8 @@ export function boxContainerMinimumSize(
   return vertical ? { x: crossAxis, y: mainAxis } : { x: mainAxis, y: crossAxis };
 }
 
-function separationOf(n: SolveNode, ctx: SolveContext): number {
-  return n.constants.separation ?? ctx.theme.separation;
+function separationOf(n: SolveNode): number {
+  return requiredThemeItem(n.constants, 'separation');
 }
 
 /** `BoxContainer::AlignmentMode`: absent/out-of-range treated as `ALIGNMENT_BEGIN` (Godot default `0`, `box_container.h`). */
@@ -235,8 +232,8 @@ function toChildInput(node: SolveNode, minSize: Vector2): BoxChildInput {
  * separation or stretch share, and `controlRectSolver.ts` floors it to an unpainted zero rect.
  */
 export function makeBoxContainerLayout(vertical: boolean): ContainerLayoutFn {
-  return (n, children, contentRect, ctx) => {
-    const separation = separationOf(n, ctx);
+  return (n, children, contentRect) => {
+    const separation = separationOf(n);
     const alignment = alignmentOf(n);
     const sortable = children.filter(({ node }) => isSortableControl(node));
     const inputs = sortable.map(({ node, minSize }) => toChildInput(node, minSize));
@@ -259,7 +256,7 @@ export function makeBoxContainerLayout(vertical: boolean): ContainerLayoutFn {
 /** Builds the `MinimumSizeFn` for a box axis: this container's own contribution to `Control::get_combined_minimum_size` when it is itself a child. The same sortable-child filter as the layout (`BoxContainer::get_minimum_size` skips invisible children too). */
 export function makeBoxContainerMinimumSize(vertical: boolean): MinimumSizeFn {
   return (n, ctx) => {
-    const separation = separationOf(n, ctx);
+    const separation = separationOf(n);
     const childMinSizes = n.children.filter(isSortableControl).map((child) => ctx.combinedMinimumSize(child));
     return boxContainerMinimumSize(vertical, separation, childMinSizes);
   };

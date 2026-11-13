@@ -45,6 +45,19 @@ export function rect2Grow(r: Rect2, amount: number): Rect2 {
   return { x: r.x - amount, y: r.y - amount, w: r.w + amount * 2, h: r.h + amount * 2 };
 }
 
+/** `Rect2::grow_individual` (`rect2.h:238-246`): each edge moved out by its own side's amount. */
+export function rect2GrowIndividual(
+  r: Rect2,
+  sides: { left: number; top: number; right: number; bottom: number }
+): Rect2 {
+  return {
+    x: r.x - sides.left,
+    y: r.y - sides.top,
+    w: r.w + sides.left + sides.right,
+    h: r.h + sides.top + sides.bottom,
+  };
+}
+
 /** Whether both rects have the same position and size. */
 export function rect2Equals(a: Rect2, b: Rect2): boolean {
   return a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;

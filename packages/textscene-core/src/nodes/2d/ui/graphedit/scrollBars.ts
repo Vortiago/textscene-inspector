@@ -9,11 +9,11 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import {
   scrollBarMinimumSize,
   scrollBarRangePlacement,
+  type ScrollBarPairBoxes,
   type ScrollBarPlacement,
 } from '../shared/scrollBarSolver';
 import type { GraphScrollBounds } from './minimap';
@@ -61,17 +61,17 @@ export function hasUpdatedScrollBars(input: UpdatedScrollBarsInput): boolean {
  */
 export function graphEditConstructorScrollBars(
   graphEditSize: Vector2,
-  theme: NativeTheme
+  boxes: ScrollBarPairBoxes
 ): GraphEditScrollBars {
-  const hMin = scrollBarMinimumSize(false, theme);
-  const vMin = scrollBarMinimumSize(true, theme);
+  const hMin = scrollBarMinimumSize(false, boxes.horizontal);
+  const vMin = scrollBarMinimumSize(true, boxes.vertical);
   const range = { min: CONSTRUCTOR_SCROLL_MIN, max: CONSTRUCTOR_SCROLL_MAX, page: 0 };
   const middle = ratioOf(0, range.min, range.max);
   return {
     horizontal: scrollBarRangePlacement(
       false,
       { x: 0, y: graphEditSize.y - hMin.y, w: graphEditSize.x, h: hMin.y },
-      theme,
+      boxes.horizontal,
       range,
       middle,
       true
@@ -79,7 +79,7 @@ export function graphEditConstructorScrollBars(
     vertical: scrollBarRangePlacement(
       true,
       { x: graphEditSize.x - vMin.x, y: 0, w: vMin.x, h: graphEditSize.y },
-      theme,
+      boxes.vertical,
       range,
       middle,
       true
@@ -102,10 +102,10 @@ export function graphEditScrollBars(
   graphEditSize: Vector2,
   bounds: GraphScrollBounds,
   scrollOffset: Vector2,
-  theme: NativeTheme
+  boxes: ScrollBarPairBoxes
 ): GraphEditScrollBars {
-  const hMin = scrollBarMinimumSize(false, theme);
-  const vMin = scrollBarMinimumSize(true, theme);
+  const hMin = scrollBarMinimumSize(false, boxes.horizontal);
+  const vMin = scrollBarMinimumSize(true, boxes.vertical);
 
   const hVisible = bounds.max.x - bounds.min.x > graphEditSize.x;
   const vVisible = bounds.max.y - bounds.min.y > graphEditSize.y;
@@ -127,7 +127,7 @@ export function graphEditScrollBars(
     horizontal: scrollBarRangePlacement(
       false,
       hRect,
-      theme,
+      boxes.horizontal,
       { min: bounds.min.x, max: bounds.max.x, page: graphEditSize.x },
       ratioOf(scrollOffset.x, bounds.min.x, bounds.max.x),
       hVisible
@@ -135,7 +135,7 @@ export function graphEditScrollBars(
     vertical: scrollBarRangePlacement(
       true,
       vRect,
-      theme,
+      boxes.vertical,
       { min: bounds.min.y, max: bounds.max.y, page: graphEditSize.y },
       ratioOf(scrollOffset.y, bounds.min.y, bounds.max.y),
       vVisible

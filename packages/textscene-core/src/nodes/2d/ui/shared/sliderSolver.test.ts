@@ -7,6 +7,8 @@
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import {
   resolveSliderRatio,
   sliderGrabberAreaRect,
@@ -20,10 +22,15 @@ import {
 const theme = nativeTheme(1);
 const theme2x = nativeTheme(2);
 
+/** HSlider's `slider` box in the default theme table: `make_flat_stylebox(color, 4, 4, 4, 4, 4)` (`default_theme.cpp:579`). */
+const sliderAt = (scale: number) => defaultStyleBoxesOf(defaultThemeAt(scale)).HSlider!.slider!;
+const slider = sliderAt(1);
+const slider2x = sliderAt(2);
+
 /**
  * At `nativeTheme(1)` the grabber is the square 16x16 `slider_grabber.svg`, and `style_slider` is
  * `make_flat_stylebox(color, 4, 4, 4, 4, 4)` (`default_theme.cpp:579-580`), so the track is
- * 4 + 4 = 8 thick (`sliderTrackThickness`).
+ * 4 + 4 = 8 thick.
  */
 const grabberOf = (t: NativeTheme) => ({ x: t.sliderGrabberSize, y: t.sliderGrabberSize });
 
@@ -47,22 +54,22 @@ describe('resolveSliderRatio', () => {
 
 describe('sliderMinimumSize — Slider::get_minimum_size (slider.cpp:35-44)', () => {
   it('floors a HORIZONTAL slider at (track, MAX(track, grabber)) = (8, 16)', () => {
-    expect(sliderMinimumSize(false, theme, grabberOf(theme))).toEqual({ x: 8, y: 16 });
+    expect(sliderMinimumSize(false, slider, grabberOf(theme))).toEqual({ x: 8, y: 16 });
   });
 
   it('transposes that for VERTICAL: (MAX(track, grabber), track) = (16, 8)', () => {
-    expect(sliderMinimumSize(true, theme, grabberOf(theme))).toEqual({ x: 16, y: 8 });
+    expect(sliderMinimumSize(true, slider, grabberOf(theme))).toEqual({ x: 16, y: 8 });
   });
 
   it('scales with default_theme_scale — track doubles to 16, grabber to 32', () => {
-    expect(sliderMinimumSize(false, theme2x, grabberOf(theme2x))).toEqual({ x: 16, y: 32 });
+    expect(sliderMinimumSize(false, slider2x, grabberOf(theme2x))).toEqual({ x: 16, y: 32 });
   });
 
   it("floors on a themed grabber's own (possibly non-square) size, not the vendored 16x16", () => {
     // HORIZONTAL reads grabber HEIGHT only (slider.cpp:37: MAX(ss.height, rs.height)).
-    expect(sliderMinimumSize(false, theme, { x: 40, y: 24 })).toEqual({ x: 8, y: 24 });
+    expect(sliderMinimumSize(false, slider, { x: 40, y: 24 })).toEqual({ x: 8, y: 24 });
     // VERTICAL reads grabber WIDTH only (slider.cpp:39: MAX(ss.width, rs.width)).
-    expect(sliderMinimumSize(true, theme, { x: 40, y: 24 })).toEqual({ x: 40, y: 8 });
+    expect(sliderMinimumSize(true, slider, { x: 40, y: 24 })).toEqual({ x: 40, y: 8 });
   });
 });
 
@@ -83,19 +90,19 @@ describe('sliderGrabberIconSize — BIND_THEME_ITEM_CUSTOM(..., grabber_icon, "g
 describe('sliderTrackRect — the `slider` StyleBox draw rect', () => {
   it('runs the full WIDTH of a horizontal track, 8px thick, vertically centred (slider.cpp:333)', () => {
     // `Rect2i(Point2i(0, (size.height - widget_height) / 2), Size2i(size.width, widget_height))`
-    expect(sliderTrackRect(false, { x: 300, y: 40 }, theme)).toEqual({ x: 0, y: 16, w: 300, h: 8 });
+    expect(sliderTrackRect(false, { x: 300, y: 40 }, slider)).toEqual({ x: 0, y: 16, w: 300, h: 8 });
   });
 
   it('runs the full HEIGHT of a vertical track, 8px thick, horizontally centred (slider.cpp:301)', () => {
     // `Rect2i(Point2i(size.width / 2 - widget_width / 2, 0), Size2i(widget_width, size.height))`
-    expect(sliderTrackRect(true, { x: 40, y: 300 }, theme)).toEqual({ x: 16, y: 0, w: 8, h: 300 });
+    expect(sliderTrackRect(true, { x: 40, y: 300 }, slider)).toEqual({ x: 16, y: 0, w: 8, h: 300 });
   });
 });
 
 describe('sliderGrabberAreaRect — the `grabber_area` fill', () => {
   it('spans to the grabber CENTRE at value=min, so the stub still shows half the grabber (slider.cpp:334-338)', () => {
     // areasize = 300 - 16 = 284; p = 284*0 + 16/2 = 8.
-    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0, theme, grabberOf(theme), false)).toEqual({
+    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0, slider, grabberOf(theme), false)).toEqual({
       x: 0,
       y: 16,
       w: 8,
@@ -108,14 +115,12 @@ describe('sliderGrabberAreaRect — the `grabber_area` fill', () => {
     // p = areasize*0 + trunc(grabber/2).
     const odd = nativeTheme(1);
     const oddTheme = { ...odd, sliderGrabberSize: 15 };
-    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0, oddTheme, grabberOf(oddTheme), false).w).toBe(
-      7
-    );
+    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0, slider, grabberOf(oddTheme), false).w).toBe(7);
   });
 
   it('grows with the ratio on a HORIZONTAL slider, keeping the half-grabber term', () => {
     // p = 284*0.5 + 8 = 150.
-    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0.5, theme, grabberOf(theme), false)).toEqual({
+    expect(sliderGrabberAreaRect(false, { x: 300, y: 40 }, 0.5, slider, grabberOf(theme), false)).toEqual({
       x: 0,
       y: 16,
       w: 150,
@@ -126,7 +131,7 @@ describe('sliderGrabberAreaRect — the `grabber_area` fill', () => {
   it('is pinned to the BOTTOM on a VERTICAL slider, matching origin+height (slider.cpp:302)', () => {
     // areasize = 300 - 16 = 284; y = round(300 - 284*0.5 - 8) = round(150) = 150;
     // h = round(284*0.5 + 8) = round(150) = 150.
-    const rect = sliderGrabberAreaRect(true, { x: 40, y: 300 }, 0.5, theme, grabberOf(theme), false);
+    const rect = sliderGrabberAreaRect(true, { x: 40, y: 300 }, 0.5, slider, grabberOf(theme), false);
     expect(rect).toEqual({ x: 16, y: 150, w: 8, h: 150 });
   });
 });
@@ -185,7 +190,7 @@ describe('is_layout_rtl() — the ONE draw branch Slider reads it in (slider.cpp
   it('fills the `grabber_area` from the RIGHT edge inward, at its OWN truncated p (slider.cpp:335-337)', () => {
     // p = int(104 * (1 - 0.3) + 16/2) = int(80.8) = 80;
     // Rect2i(Point2i(p, (24-8)/2), Size2i(size.width - p, 8)).
-    expect(sliderGrabberAreaRect(false, size, 0.3, theme, grabber, true)).toEqual({
+    expect(sliderGrabberAreaRect(false, size, 0.3, slider, grabber, true)).toEqual({
       x: 80,
       y: 8,
       w: 40,
@@ -196,7 +201,7 @@ describe('is_layout_rtl() — the ONE draw branch Slider reads it in (slider.cpp
   it('is NOT the LTR fill mirrored — each direction truncates its own product (slider.cpp:335)', () => {
     // LTR p = int(104 * 0.3 + 8) = int(39.2) = 39, and 120 - 39 = 81, one px
     // past the 80 the RTL branch computes.
-    expect(sliderGrabberAreaRect(false, size, 0.3, theme, grabber, false)).toEqual({
+    expect(sliderGrabberAreaRect(false, size, 0.3, slider, grabber, false)).toEqual({
       x: 0,
       y: 8,
       w: 39,
@@ -216,8 +221,8 @@ describe('is_layout_rtl() — the ONE draw branch Slider reads it in (slider.cpp
 
   it('leaves a VERTICAL slider alone — slider.cpp:297-326 contains no is_layout_rtl() call', () => {
     const vSize = { x: 24, y: 120 };
-    expect(sliderGrabberAreaRect(true, vSize, 0.3, theme, grabber, true)).toEqual(
-      sliderGrabberAreaRect(true, vSize, 0.3, theme, grabber, false)
+    expect(sliderGrabberAreaRect(true, vSize, 0.3, slider, grabber, true)).toEqual(
+      sliderGrabberAreaRect(true, vSize, 0.3, slider, grabber, false)
     );
     expect(sliderGrabberRect(true, vSize, 0.3, grabber, true)).toEqual(
       sliderGrabberRect(true, vSize, 0.3, grabber, false)
@@ -227,25 +232,31 @@ describe('is_layout_rtl() — the ONE draw branch Slider reads it in (slider.cpp
 
 describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_BOTTOM_RIGHT (Godot default)', () => {
   it('draws the icon at its OWN measured size — 4 wide x 8 tall for hslider_tick, 8 x 4 for vslider_tick', () => {
-    expect(sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme, grabberOf(theme))[0]).toMatchObject({
+    expect(
+      sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme, grabberOf(theme), slider)[0]
+    ).toMatchObject({
       w: 4,
       h: 8,
     });
-    expect(sliderTickRects(true, { x: 40, y: 300 }, [1], 5, theme, grabberOf(theme))[0]).toMatchObject({
+    expect(
+      sliderTickRects(true, { x: 40, y: 300 }, [1], 5, theme, grabberOf(theme), slider)[0]
+    ).toMatchObject({
       w: 8,
       h: 4,
     });
   });
 
   it('scales the 8px cross axis by default_theme_scale, like every vendored icon', () => {
-    expect(sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme2x, grabberOf(theme2x))[0]!.h).toBe(16);
+    expect(
+      sliderTickRects(false, { x: 300, y: 40 }, [1], 5, theme2x, grabberOf(theme2x), slider2x)[0]!.h
+    ).toBe(16);
   });
 
   it('spaces interior ticks across the travel for a HORIZONTAL slider (slider.cpp:342-347)', () => {
     // grabber_offset = trunc(16/2) - trunc(4/2) = 8 - 2 = 6.
     // i=1 of [0,1,2,3,4] (5 ticks): ofs = trunc(1*284/4 + 6) = trunc(71+6) = 77.
     // y = trunc(8 + (40 - 8) / 2) = trunc(8 + 16) = 24.
-    const rects = sliderTickRects(false, { x: 300, y: 40 }, [1, 2, 3], 5, theme, grabberOf(theme));
+    const rects = sliderTickRects(false, { x: 300, y: 40 }, [1, 2, 3], 5, theme, grabberOf(theme), slider);
     expect(rects[0]).toEqual({ x: 77, y: 24, w: 4, h: 8 });
   });
 
@@ -253,17 +264,25 @@ describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_B
     // grabber_offset = trunc(16/2) - trunc(4/2) = 6.
     // i=0 of [0,1,2] (3 ticks, borders on): ofs = trunc(0*284/2 + 6) = 6.
     // x = trunc(8 + (40 - 8) / 2) = 24.
-    const rects = sliderTickRects(true, { x: 40, y: 300 }, [0, 1, 2], 3, theme, grabberOf(theme));
+    const rects = sliderTickRects(true, { x: 40, y: 300 }, [0, 1, 2], 3, theme, grabberOf(theme), slider);
     expect(rects[0]).toEqual({ x: 24, y: 6, w: 8, h: 4 });
   });
 
   it('returns one rect per painted index, in order', () => {
-    const rects = sliderTickRects(false, { x: 300, y: 40 }, [0, 1, 2, 3, 4], 5, theme, grabberOf(theme));
+    const rects = sliderTickRects(
+      false,
+      { x: 300, y: 40 },
+      [0, 1, 2, 3, 4],
+      5,
+      theme,
+      grabberOf(theme),
+      slider
+    );
     expect(rects).toHaveLength(5);
   });
 
   it('returns nothing for an empty index list (tick_count unset or <= 1)', () => {
-    expect(sliderTickRects(false, { x: 300, y: 40 }, [], 0, theme, grabberOf(theme))).toEqual([]);
+    expect(sliderTickRects(false, { x: 300, y: 40 }, [], 0, theme, grabberOf(theme), slider)).toEqual([]);
   });
 });
 
@@ -272,16 +291,16 @@ describe('sliderTickRects — the `tick` icon per painted index, TICK_POSITION_B
 // is integral.
 describe('slider draw rects — Size2i narrowing', () => {
   it('narrows the control size before the track rect reads it', () => {
-    const track = sliderTrackRect(false, { x: 200.6, y: 40.9 }, theme);
+    const track = sliderTrackRect(false, { x: 200.6, y: 40.9 }, slider);
     expect(track.w).toBe(200);
   });
 
   it('narrows it for the vertical track too', () => {
-    expect(sliderTrackRect(true, { x: 40.9, y: 200.6 }, theme).h).toBe(200);
+    expect(sliderTrackRect(true, { x: 40.9, y: 200.6 }, slider).h).toBe(200);
   });
 
   it('narrows it for the tick rects', () => {
-    const ticks = sliderTickRects(false, { x: 200.6, y: 40.9 }, [0, 1], 2, theme, grabberOf(theme));
+    const ticks = sliderTickRects(false, { x: 200.6, y: 40.9 }, [0, 1], 2, theme, grabberOf(theme), slider);
     expect(ticks.every((t) => Number.isInteger(t.x) && Number.isInteger(t.y))).toBe(true);
   });
 });

@@ -188,8 +188,7 @@ export function PopupMenuChrome({
       <CanvasItemGroup position={[geometry.scroll.x, -geometry.scroll.y, 0]}>
         <ScrollBarChrome
           bar={geometry.verticalBar}
-          track={theme.widgets.scrollBar.scrollVertical}
-          grabber={theme.widgets.scrollBar.grabber}
+          boxes={menu.scrollBar}
           color={tint.own}
           chromeSlot={orders.bars}
           snapToPixels={snapToPixels}

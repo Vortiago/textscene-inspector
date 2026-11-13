@@ -1,72 +1,35 @@
 /**
- * The one load step for a material: a scene material as it is, or a `.tres` through the
- * cached `.tres` parse, into the same shape. A slot renders what this returns and never
- * learns which file the material came from.
+ * The one load step for a material: a reference read with the `MATERIAL` kind, the same from the
+ * scene and from a file. A slot renders what this returns and never learns which file the material
+ * came from. The host requests the file and reports it when it is missing.
  */
 
 import { useEffect, useMemo } from 'react';
 import { warn } from '../../logger';
-import type { ParsedResource } from '../../parser/parsedResource';
-import type { TscnInternalResource } from '../../parser/types';
-import { fileResources, findSectionResource } from '../../resources/resourceSection';
-import { resourceFilePath } from '../../resources/subResourcePath';
-import { useResourceLoad, type ResourceStatus } from '../../resources/useResource';
-import { useMissingReport } from '../contexts/MissingResourcesContext';
-import { held, type MaterialResource, type MaterialSource } from './materialSource';
+import { MATERIAL } from '../../resources/materials/material/kind';
+import type { Material, StandardMaterial } from '../../resources/materials/material/types';
+import { useReferencedResource, type Read, type ScopedReference } from '../../resources/reading';
 
-/** What a material source loads to. */
+/** What a material reference loads to. */
 type LoadedMaterial =
   /** A StandardMaterial3D to draw. */
-  | { status: 'ready'; material: MaterialResource }
+  | { status: 'ready'; material: StandardMaterial }
   /** A material type this previewer does not build: Godot's default 3D surface (ADR-0041). */
   | { status: 'declined'; type: string }
-  /** No source, a file still loading or missing: nothing replaces what the surface had. */
+  /** No reference, a file still loading or a missing one: nothing replaces what the surface had. */
   | { status: 'absent' };
 
 const ABSENT: LoadedMaterial = { status: 'absent' };
 
 /** The material to draw, or null for Godot's default surface. */
-export function readyMaterial(loaded: LoadedMaterial): MaterialResource | null {
+export function readyMaterial(loaded: LoadedMaterial): StandardMaterial | null {
   return loaded.status === 'ready' ? loaded.material : null;
 }
 
-/** What `source` loads to. A ShaderMaterial is declined with a warning (ADR-0041). */
-export function useMaterial(source: MaterialSource | undefined): LoadedMaterial {
-  const address = source?.kind === 'file' ? source.path : '';
-  // Called with '' for an inline source, to keep the hook count stable. The `resource` bus
-  // parses whole files, so the hook loads the file and reports under the address itself.
-  const fileResult = useResourceLoad<ParsedResource>(resourceFilePath(address), 'resource');
-  const file = fileResult.value;
-  const body = useMemo(() => (file ? findSectionResource(file, address) : undefined), [file, address]);
-  useMissingReport(address, addressStatus(fileResult.status, body));
-
-  // Keyed on what the source holds, not the source object: a caller may build a new
-  // source each render, and a new material would rebind every texture.
-  const inline = source?.kind === 'inline' ? source.material : null;
-  const inlineResource = inline?.resource;
-  const inlineInternal = inline?.internalResources;
-  const inlineExternal = inline?.externalResources;
-  const isHeldLocally = source?.isHeldLocally ?? true;
-  const loaded = useMemo((): LoadedMaterial => {
-    const holding = held(isHeldLocally);
-    if (inlineResource && inlineInternal && inlineExternal) {
-      return ready({
-        resource: inlineResource,
-        internalResources: inlineInternal,
-        externalResources: inlineExternal,
-        ...holding,
-      });
-    }
-    if (!file || !body) return ABSENT;
-    return ready({
-      resource: body,
-      ...fileResources(file),
-      // The file's own address, so a chain's visited key holds the file an inline id
-      // resolves in: two files' ids of one name stay two keys.
-      origin: resourceFilePath(address),
-      ...holding,
-    });
-  }, [inlineResource, inlineInternal, inlineExternal, isHeldLocally, file, body, address]);
+/** What `reference` loads to. A ShaderMaterial is declined with a warning (ADR-0041). */
+export function useMaterial(reference: ScopedReference | undefined): LoadedMaterial {
+  const read = useReferencedResource(reference ?? null, MATERIAL);
+  const loaded = useMemo(() => loadedOf(read), [read]);
 
   useEffect(() => {
     if (loaded.status === 'declined' && loaded.type === 'ShaderMaterial') {
@@ -77,14 +40,10 @@ export function useMaterial(source: MaterialSource | undefined): LoadedMaterial 
   return loaded;
 }
 
-/** A loaded file without the named `[sub_resource]` fails the address, as Godot's load does. */
-function addressStatus(fileStatus: ResourceStatus, body: TscnInternalResource | undefined): ResourceStatus {
-  if (fileStatus !== 'loaded') return fileStatus;
-  return body ? 'loaded' : 'unavailable';
-}
-
-/** Ready for a StandardMaterial3D, declined for any other type. */
-function ready(material: MaterialResource): LoadedMaterial {
-  const { type } = material.resource;
-  return type === 'StandardMaterial3D' ? { status: 'ready', material } : { status: 'declined', type };
+function loadedOf(read: Read<Material>): LoadedMaterial {
+  if (read.status !== 'loaded') return ABSENT;
+  const material = read.value;
+  return material.form === 'standard'
+    ? { status: 'ready', material }
+    : { status: 'declined', type: material.type };
 }

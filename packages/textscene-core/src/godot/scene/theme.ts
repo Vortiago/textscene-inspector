@@ -75,7 +75,7 @@ export const DEFAULT_CORNER_RADIUS = 3;
 /** `default_margin` = 4 (px): the Button "normal" stylebox content margin (all sides). */
 export const DEFAULT_CONTENT_MARGIN = 4;
 
-/** BoxContainer `separation` and GridContainer `h_/v_separation` = 4 (px). */
+/** The 4 px spacing of the default theme's containers, before the theme scale. */
 const DEFAULT_SEPARATION = 4;
 
 /**
@@ -92,14 +92,6 @@ export const LINE_EDIT_BORDER_BOTTOM_WIDTH = 2;
  * percent wide: the default font's 'W' is about 0.94em.
  */
 export const LINE_EDIT_MINIMUM_CHARACTER_WIDTH = 4;
-
-/**
- * The `slider` and `grabber_area` styleboxes are `make_flat_stylebox(color, 4, 4, 4, 4, 4)`.
- * `StyleBox::get_minimum_size()` sums opposing margins, so the track is 8px thick:
- * the `widget_height`/`widget_width` that `Slider::_notification(NOTIFICATION_DRAW)` reads.
- */
-const SLIDER_STYLE_MARGIN = 4;
-export const SLIDER_CORNER_RADIUS = 4;
 
 /**
  * The `slider_grabber` icon: a 16x16 box Godot positions, holding
@@ -124,12 +116,8 @@ export interface ScaledGodotTheme {
   cornerRadius: number;
   /** The Button "normal" stylebox content margin (all sides), in px. */
   contentMargin: number;
-  /** BoxContainer `separation` / GridContainer `h_/v_separation`, in px. */
+  /** The containers' scaled 4 px spacing: a stand-in where a Control spaces its own internal rows (ItemList, TextEdit, ColorPicker, GraphEdit). */
   separation: number;
-  /** The sliders' `slider`/`grabber_area` stylebox thickness, in px. */
-  sliderTrackThickness: number;
-  /** Those styleboxes' corner radius, in px. */
-  sliderCornerRadius: number;
   /** The `slider_grabber` icon's box, in px. */
   sliderGrabberSize: number;
   /** The `tick` icon's box along the slider's main axis, in px. */
@@ -157,10 +145,6 @@ export function scaledGodotTheme(scale: number): ScaledGodotTheme {
     contentMargin: scaledPx(DEFAULT_CONTENT_MARGIN, scale),
     // `Math::round(4 * scale)`, default_theme.cpp:1249-1251.
     separation: scaledPx(DEFAULT_SEPARATION, scale),
-    // Twice a rounded margin, not the rounding of twice the margin: the two
-    // diverge at any scale whose margin lands on a half.
-    sliderTrackThickness: 2 * scaledPx(SLIDER_STYLE_MARGIN, scale),
-    sliderCornerRadius: scaledPx(SLIDER_CORNER_RADIUS, scale),
     sliderGrabberSize: scaledPx(SLIDER_GRABBER_SIZE, scale),
     sliderTickBox: scaledPx(SLIDER_TICK_BOX, scale),
   };

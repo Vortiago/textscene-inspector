@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
-import { controlNode, solveNode } from '../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../r3f/controls/native/testing/solveNode';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { createSolveContext } from '../../../r3f/controls/native/controlRectSolver';
 import { flatStyleBox } from '../../../r3f/controls/native/styleBoxFlat';
@@ -21,11 +21,18 @@ function shadowed(size: number, offset: { x: number; y: number }) {
 
 function popupPanel(children: SolveNode[], panel?: ReturnType<typeof shadowed>, rtl = false): SolveNode {
   const node = controlNode('Popup', 'PopupPanel', { name: 'Popup' });
-  return { ...solveNode(), path: 'Popup', node, children, rtl, styleBoxes: panel ? { panel } : {} };
+  return withThemeItems({
+    ...solveNode(),
+    path: 'Popup',
+    node,
+    children,
+    rtl,
+    styleBoxes: panel ? { panel } : {},
+  });
 }
 
 function shadowInsets(panel: ReturnType<typeof shadowed>, rtl: boolean) {
-  return popupPanelBox(popupPanel([], panel, rtl), THEME).insets;
+  return popupPanelBox(popupPanel([], panel, rtl)).insets;
 }
 
 function child(name: string): SolveNode {
@@ -34,7 +41,7 @@ function child(name: string): SolveNode {
 
 describe('popupPanelBox insets', () => {
   it('insets nothing for the default theme panel', () => {
-    expect(popupPanelBox(popupPanel([]), THEME).insets).toEqual({ left: 0, top: 0, right: 0, bottom: 0 });
+    expect(popupPanelBox(popupPanel([])).insets).toEqual({ left: 0, top: 0, right: 0, bottom: 0 });
   });
 
   it('insets nothing for a panel with no shadow (`popup.cpp:327-330`)', () => {

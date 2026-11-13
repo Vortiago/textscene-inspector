@@ -9,6 +9,7 @@
 import { useMemo } from 'react';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -28,9 +29,6 @@ import {
   tabbarStyleMargins,
 } from './nativeSolver';
 import { canvasSubOrder } from '../../../../r3f/canvasItemState';
-
-/** `default_theme.cpp:1223`: `theme->set_constant("side_margin", "TabContainer", round(8 * scale))`, the literal `nativeSolver.ts` uses for the minimum size. */
-const SIDE_MARGIN_LITERAL = 8;
 
 const EMPTY_CHILD_RECTS: NativeControlComponentProps['childRects'] = new Map();
 
@@ -76,17 +74,17 @@ export function TabContainer({
         containerWidthPx: rect.w,
         leftMarginPx: solveNode.rtl ? tabbarMargin.right : tabbarMargin.left,
         rightMarginPx: solveNode.rtl ? tabbarMargin.left : tabbarMargin.right,
-        sideMarginPx: Math.round(SIDE_MARGIN_LITERAL * theme.scale),
+        sideMarginPx: requiredThemeItem(solveNode.constants, 'side_margin'),
         rtl: solveNode.rtl,
       }),
-    [drawInputs, layoutInput, rect.w, solveNode.rtl, tabbarMargin, theme.scale]
+    [drawInputs, layoutInput, rect.w, solveNode.rtl, solveNode.constants, tabbarMargin]
   );
   const barRect = showsStrip
     ? tabBarRect(rect, barMinHeight, tabsPosition, alignment, strip.sideMarginPx, tabbarMargin, solveNode.rtl)
     : null;
   const contentBand = tabContentBand(rect, headerHeight, tabsPosition);
 
-  const tabbarBackground = solveNode.styleBoxes.tabbar_background;
+  const tabbarBackground = requiredThemeItem(solveNode.styleBoxes, 'tabbar_background');
   const headerBand = tabHeaderBand(rect, headerHeight, tabsPosition);
 
   // Godot's default (`all_tabs_in_front === false`, `INTERNAL_MODE_BACK`) draws the strip
@@ -101,12 +99,11 @@ export function TabContainer({
         <PanelChrome
           solveNode={solveNode}
           rect={{ x: 0, y: 0, w: contentBand.w, h: contentBand.h }}
-          theme={theme}
           tint={tint}
           renderOrder={renderOrder}
         />
       </CanvasItemGroup>
-      {tabbarBackground && headerHeight > 0 && (
+      {headerHeight > 0 && (
         <CanvasItemGroup position={[headerBand.x, -headerBand.y, 0]}>
           <StyleBoxQuad
             styleBox={tabbarBackground}

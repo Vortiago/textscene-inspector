@@ -244,6 +244,7 @@ export function decodeStandardMaterial3D(properties: Record<string, string>): St
     rimTint: rimEnabled
       ? clamp(floatOr(properties['rim_tint'], BASE_MATERIAL_3D_DEFAULTS.rimTint, CONTEXT), 0, 1)
       : 0,
+    usesParticleTrails: boolOr(properties['use_particle_trails'], false, CONTEXT),
     usesPointSize: boolOr(properties['use_point_size'], false, CONTEXT),
     pointSize: floatOr(properties['point_size'], BASE_MATERIAL_3D_DEFAULTS.pointSize, CONTEXT),
     billboardMode: intOr(properties['billboard_mode'], BillboardMode.BILLBOARD_DISABLED, CONTEXT),

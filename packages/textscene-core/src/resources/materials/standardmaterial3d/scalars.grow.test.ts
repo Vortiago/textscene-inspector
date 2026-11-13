@@ -3,10 +3,11 @@
  * and the `grow`/`grow_amount` pair whose shader line `material.cpp:1458-1461` emits. The
  * `readsStencil` decision mirrors `render_forward_clustered.cpp:4099-4114`'s read, and a
  * link that reads the stencil draws no coverage here, since the buffer itself is not
- * requested. The chain walk itself lives in `materialSource.test.ts`.
+ * requested. The chain walk itself lives in `nextPassWalk.test.ts`.
  */
 import { describe, expect, it } from 'vitest';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { decodeStandardMaterial3D } from './decode';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 
 const blueTresOutlinePass = {
   render_priority: '1',
@@ -20,24 +21,20 @@ const blueTresOutlinePass = {
   stencil_compare: '5',
 };
 
-describe('parseStandardMaterial3DScalars: next_pass', () => {
+describe('decodeStandardMaterial3D: next_pass', () => {
   it('carries the authored reference verbatim, undefined when absent', () => {
     // The raw string, as `textureSlots` does: resolving it needs the tables of
     // the file the material arrived in, so decode stops here.
-    expect(parseStandardMaterial3DScalars({}).nextPass).toBeUndefined();
+    expect(decodeStandardMaterial3D({}).nextPass).toBeUndefined();
     const reference = 'SubResource("StandardMaterial3D_1")';
-    expect(parseStandardMaterial3DScalars({ next_pass: reference }).nextPass).toBe(reference);
+    expect(decodeStandardMaterial3D({ next_pass: reference }).nextPass).toBe(reference);
   });
 
   it('carries a file reference and a malformed one alike', () => {
     // A lookup, not a validator: the chain resolver decides what a reference
     // names, and a malformed one ends the chain there.
-    expect(parseStandardMaterial3DScalars({ next_pass: 'ExtResource("7")' }).nextPass).toBe(
-      'ExtResource("7")'
-    );
-    expect(parseStandardMaterial3DScalars({ next_pass: 'Color(1, 0, 0, 1)' }).nextPass).toBe(
-      'Color(1, 0, 0, 1)'
-    );
+    expect(decodeStandardMaterial3D({ next_pass: 'ExtResource("7")' }).nextPass).toBe('ExtResource("7")');
+    expect(decodeStandardMaterial3D({ next_pass: 'Color(1, 0, 0, 1)' }).nextPass).toBe('Color(1, 0, 0, 1)');
   });
 });
 

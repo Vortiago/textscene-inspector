@@ -11,8 +11,14 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import type { FoldableContainerProperties } from './types';
 import { FoldableContainer } from './Component';
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunMeshes,
   bundledRuns,
@@ -33,7 +39,7 @@ function solveNode(properties: Partial<FoldableContainerProperties> = {}): Solve
     name: 'MyFoldableContainer',
     ...properties,
   });
-  return { ...emptySolveNode(), path: 'MyFoldableContainer', node };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyFoldableContainer', node });
 }
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute; `<TextRun>`/icon `<ControlQuad>` do not. */
@@ -238,6 +244,42 @@ describe('<FoldableContainer> chrome placement', () => {
     return mesh.getWorldPosition(new THREE.Vector3()).y;
   }
 
+  async function renderChrome(titlePosition: number) {
+    return ReactThreeTestRenderer.create(
+      <FoldableContainer
+        {...painterEnv()}
+        solveNode={solveNode({ folded: false, title: 'A', titlePosition })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+  }
+
+  /** `value` to 1/1000 px, with no negative zero. */
+  function roundMilli(value: number): number {
+    return Math.round(value * 1000) / 1000 + 0;
+  }
+
+  /** The world Y of every vertex of `mesh`, rounded to 1/1000 px and sorted. */
+  function worldVertexYs(scene: Rendered['scene'], mesh: THREE.Mesh): number[] {
+    scene.instance.updateMatrixWorld(true);
+    const position = (mesh.geometry as THREE.BufferGeometry).attributes.position!;
+    const v = new THREE.Vector3();
+    const ys: number[] = [];
+    for (let i = 0; i < position.count; i++) {
+      v.fromBufferAttribute(position, i).applyMatrix4(mesh.matrixWorld);
+      ys.push(roundMilli(v.y));
+    }
+    return ys.sort((a, b) => a - b);
+  }
+
+  /** The world Y span of `mesh`'s style rect, its anti-aliased feather left out. */
+  function worldYSpan(scene: Rendered['scene'], mesh: THREE.Mesh): { top: number; bottom: number } {
+    scene.instance.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(mesh);
+    return { top: Math.floor(box.max.y), bottom: Math.ceil(box.min.y) };
+  }
+
   it('draws the content panel BELOW the title bar, not over it (foldable_container.cpp:317-321)', async () => {
     // `Rect2 panel_rect(Point2(0, title_minimum_size.height), ...)`: the panel starts where
     // the title bar ends. `StyleBoxQuad` takes only a size, so the group supplies the offset.
@@ -257,17 +299,39 @@ describe('<FoldableContainer> chrome placement', () => {
 
   it('draws the title bar at the BOTTOM edge for title_position BOTTOM (foldable_container.cpp:437-439)', async () => {
     // `Rect2(0, (title_position == POSITION_TOP) ? 0 : get_size().height -
-    // title_minimum_size.height, ...)`; RECT.h is 80, so the title starts at 49.
+    // title_minimum_size.height, ...)`; RECT.h is 80, so the title spans 49 to 80.
+    const renderer = await renderChrome(1);
+    const [titleChrome, panelChrome] = findChromeMeshes(renderer.scene);
+    expect(worldYSpan(renderer.scene, titleChrome!)).toEqual({ top: -49, bottom: -80 });
+    expect(worldYSpan(renderer.scene, panelChrome!)).toEqual({ top: 0, bottom: -49 });
+  });
+
+  it('places the bottom title from the box margin on its outer, bottom edge (foldable_container.cpp:286)', async () => {
+    const tablePanel = defaultStyleBoxesOf(defaultThemeAt(1)).FoldableContainer!.title_panel!;
+    const lopsided = { ...tablePanel, contentMargin: { left: 4, top: 2, right: 4, bottom: 10 } };
+    const node = solveNode({ folded: false, title: 'A', titlePosition: 1 });
     const renderer = await ReactThreeTestRenderer.create(
       <FoldableContainer
         {...painterEnv()}
-        solveNode={solveNode({ folded: false, title: 'A', titlePosition: 1 })}
+        solveNode={{ ...node, styleBoxes: { ...node.styleBoxes, title_panel: lopsided } }}
         rect={RECT}
         renderOrder={0}
       />
     );
-    const [titleChrome, panelChrome] = findChromeMeshes(renderer.scene);
-    expect(worldY(renderer.scene, titleChrome!)).toBe(-49);
-    expect(worldY(renderer.scene, panelChrome!)).toBe(0);
+    // The title is 12 + 23 = 35 tall from y 45. The 16 px arrow centres in the 23 px row, 3.5 px
+    // down, below the bottom margin 10: its top is at 58.5 and its centre at 66.5.
+    const [arrow] = findIconMeshes(renderer.scene);
+    expect(worldY(renderer.scene, arrow!)).toBe(-66.5);
+  });
+
+  it('mirrors each box for title_position BOTTOM, so the rounded corners face away from the panel (foldable_container.cpp:523-532)', async () => {
+    const top = await renderChrome(0);
+    const bottom = await renderChrome(1);
+    const [topTitle, topPanel] = findChromeMeshes(top.scene);
+    const [bottomTitle, bottomPanel] = findChromeMeshes(bottom.scene);
+    // The top title spans 0 to -31 and the panel -31 to -80, so the mirror is y -> -80 - y.
+    const mirrored = (ys: number[]) => ys.map((y) => roundMilli(-80 - y)).sort((a, b) => a - b);
+    expect(worldVertexYs(bottom.scene, bottomTitle!)).toEqual(mirrored(worldVertexYs(top.scene, topTitle!)));
+    expect(worldVertexYs(bottom.scene, bottomPanel!)).toEqual(mirrored(worldVertexYs(top.scene, topPanel!)));
   });
 });

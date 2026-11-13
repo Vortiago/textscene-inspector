@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { programShader } from '../testing/patchedFragment';
 import { buildMaterial } from '../../resources/materials/standardmaterial3d/buildMaterial.testkit';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
+import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars.testkit';
 import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import type { StandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/types';
 import { growInjectionOf } from './godotGrow';

@@ -4,6 +4,8 @@
  * and order only: pixels are a golden-image concern (`pnpm ref:godot`).
  */
 
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import { describe, expect, it, vi } from 'vitest';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import * as THREE from 'three';
@@ -18,13 +20,20 @@ import { countTintSplit, splitTints } from '../../../../r3f/controls/native/test
 import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { wholeKeySlot } from '../../../../r3f/canvasItemState';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunMeshes,
   bundledRunOf,
   runGlyphs,
   runPenExtentPx,
 } from '../../../../r3f/controls/native/testing/bundledRunStub';
+
+/** Panel's `panel` box in the default theme table at scale 1 (`default_theme.cpp:134`). */
+const TABLE_PANEL = defaultStyleBoxesOf(defaultThemeAt(1)).Panel!.panel!;
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
 vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
@@ -38,7 +47,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function page(name: string, properties: Partial<ControlProperties> = {}): SolveNode {
   const node: TscnNode = controlNode(name, 'Control', { name, ...properties });
-  return { ...emptySolveNode(), path: name, node };
+  return withThemeItems({ ...emptySolveNode(), path: name, node });
 }
 
 function solveNode(properties: Partial<TabContainerProperties> = {}, children: SolveNode[] = []): SolveNode {
@@ -49,7 +58,7 @@ function solveNode(properties: Partial<TabContainerProperties> = {}, children: S
     children: children.map((c) => c.node),
     properties: { name: 'Tabs', ...properties } as TabContainerProperties,
   };
-  return { ...emptySolveNode(), path: 'Tabs', node, children };
+  return withThemeItems({ ...emptySolveNode(), path: 'Tabs', node, children });
 }
 
 function findChromeMeshes(scene: Rendered['scene']) {
@@ -176,8 +185,8 @@ describe('<TabContainer> (isolated painter contract)', () => {
 describe('<TabContainer> panel band', () => {
   /** Lopsided overrides, so a band drawn at the wrong offset cannot hide behind a symmetric one. */
   const STYLE_BOXES: SolveNode['styleBoxes'] = {
-    panel: { ...THEME.widgets.panel, contentMargin: { left: 6, top: 3, right: 26, bottom: 3 } },
-    tabbar_background: { ...THEME.widgets.panel, contentMargin: { left: 4, top: 6, right: 28, bottom: 2 } },
+    panel: { ...TABLE_PANEL, contentMargin: { left: 6, top: 3, right: 26, bottom: 3 } },
+    tabbar_background: { ...TABLE_PANEL, contentMargin: { left: 4, top: 6, right: 28, bottom: 2 } },
   };
 
   // `tab_selected`/`tab_unselected` carry a 4px top and bottom content margin
@@ -190,10 +199,10 @@ describe('<TabContainer> panel band', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <TabContainer
         {...painterEnv()}
-        solveNode={{
+        solveNode={withThemeItems({
           ...solveNode({ currentTab: 0, ...properties }, [page('Only')]),
           styleBoxes: STYLE_BOXES,
-        }}
+        })}
         rect={RECT}
         theme={THEME}
         renderOrder={0}

@@ -1,7 +1,6 @@
 /**
- * The material resource types `createMaterialFromContent` can build, which its guard
- * reads. A producer asks this before minting an address, or a present, correct file
- * shows as missing. THREE-free, so the decoders that read it do not import the renderer.
+ * The material resource types a mesh file's surface may name by a **Sub-resource path**, which
+ * `materialPathInFile` gates on. THREE-free, so the decoders that read it do not import the renderer.
  */
 export const BUILDABLE_MATERIAL_TYPES: ReadonlySet<string> = new Set([
   'StandardMaterial3D',

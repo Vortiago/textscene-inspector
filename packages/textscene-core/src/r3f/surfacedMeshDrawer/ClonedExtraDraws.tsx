@@ -10,7 +10,7 @@ import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmate
 import { materialFromBag } from '../../resources/materials/standardmaterial3d/build.js';
 import type { SurfaceSlot } from '../../resources/formats/glb/surfaceMaterials.js';
 import { extraDrawProps } from '../materials/extraDraw.js';
-import type { MaterialSource } from '../materials/materialSource.js';
+import type { ScopedReference } from '../../resources/reading/index.js';
 import { NOTHING_DRAWN, loadedPassOf, nextPassStep, type LinkPass } from '../materials/nextPassWalk.js';
 import { OVERLAY_ORDINAL_PAST_CHAINS, orderByPass } from '../materials/passOrder.js';
 import { GLTF_SURFACE } from '../materials/surfaceTextures.js';
@@ -34,7 +34,7 @@ export function isClonedExtraDraw(object: THREE.Object3D): boolean {
 }
 
 /** What `useSurfaceMaterial` gave the caller that drew a material on the clone. */
-type DrawnMaterial = Pick<ReturnType<typeof useSurfaceMaterial>, 'material' | 'scalars'>;
+type DrawnMaterial = Pick<ReturnType<typeof useSurfaceMaterial>, 'material'>;
 
 /**
  * The `next_pass` chain of a material that already drew the `covered` slots: the material a caller
@@ -47,14 +47,14 @@ export function ClonedChain({
 }: {
   /** The slots the material drew, or null while it drew none. */
   covered: readonly SurfaceSlot[] | null;
-  source: MaterialSource;
+  source: ScopedReference;
   /** The caller's own load of `source`, so the chain adds no second one. */
   drawn: DrawnMaterial;
 }) {
-  const { material, scalars } = drawn;
+  const { material } = drawn;
   const { next } = useMemo(
-    () => nextPassStep({ source, ordinal: 0, visited: NOTHING_DRAWN }, loadedPassOf(material, scalars)),
-    [source, material, scalars]
+    () => nextPassStep({ source, ordinal: 0, visited: NOTHING_DRAWN }, loadedPassOf(material)),
+    [source, material]
   );
   return next && <ClonedLink covered={covered} {...next} />;
 }
@@ -65,7 +65,7 @@ export function ClonedChain({
  * (`render_forward_clustered.cpp:4228-4241`). One material over a grouped geometry draws every
  * surface, so each holder takes one draw whatever its surface count.
  */
-export function ClonedOverlay({ slots, source }: { slots: readonly SurfaceSlot[]; source: MaterialSource }) {
+export function ClonedOverlay({ slots, source }: { slots: readonly SurfaceSlot[]; source: ScopedReference }) {
   const everyHolder = useMemo(() => slots.filter(isFirstOfHolder).map(asOneSurface), [slots]);
   const pass = useClonedPass(source);
   // The overlay draws whatever it reads, as its React draw does. Only a link skips the stencil.
@@ -91,7 +91,7 @@ function asOneSurface(slot: SurfaceSlot): SurfaceSlot {
  * One pass over a clone, built through the same `useSurfaceMaterial` load on the glTF surface: its
  * material, disposed with the pass, and what the walk reads of it once its resource is in.
  */
-function useClonedPass(source: MaterialSource | undefined) {
+function useClonedPass(source: ScopedReference | undefined) {
   const loaded = useSurfaceMaterial(source, GLTF_SURFACE);
   const { isAbsent, bags } = loaded;
   const material = useMemo(() => {
@@ -102,8 +102,8 @@ function useClonedPass(source: MaterialSource | undefined) {
     return materialFromBag(bags ? bags.unfaded : MISSING_TEXTURE_MATERIAL);
   }, [isAbsent, bags]);
   useDisposeOnRelease(material);
-  const { material: resource, scalars } = loaded;
-  const walked = useMemo(() => loadedPassOf(resource, scalars), [resource, scalars]);
+  const { material: decoded } = loaded;
+  const walked = useMemo(() => loadedPassOf(decoded), [decoded]);
   return { material, loaded: walked };
 }
 

@@ -54,6 +54,7 @@ import {
   textEditCapSpanAlpha,
 } from './nativeSolver';
 import { useTextEditRows } from './useTextEditRows';
+import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import type { TextEditRows } from './rows';
 import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { TEXT_EDIT_GLYPH_ICONS } from '../../../../r3f/controls/native/themeIcons';
@@ -154,6 +155,7 @@ export function TextEditBody({
     [tabSize, fontMetrics, fontSizePx]
   );
   const bidi = useControlBidiOptions(props, solveNode);
+  const scrollBarBoxes = internalScrollBarBoxes(solveNode);
   const { lineLayouts, wrapWidthPx, scrollBars } = useTextEditRows(
     {
       lines,
@@ -177,7 +179,7 @@ export function TextEditBody({
         indentWrappedLines: props.indentWrappedLines,
         bidi,
       },
-      theme,
+      scrollBarBoxes,
     },
     solvedRows
   );
@@ -403,16 +405,14 @@ export function TextEditBody({
       })}
       <ScrollBarChrome
         bar={scrollBars.horizontal}
-        track={theme.widgets.scrollBar.scrollHorizontal}
-        grabber={theme.widgets.scrollBar.grabber}
+        boxes={scrollBarBoxes.horizontal}
         color={childTint.own}
         chromeSlot={slot}
         snapToPixels={snapToPixels}
       />
       <ScrollBarChrome
         bar={scrollBars.vertical}
-        track={theme.widgets.scrollBar.scrollVertical}
-        grabber={theme.widgets.scrollBar.grabber}
+        boxes={scrollBarBoxes.vertical}
         color={childTint.own}
         chromeSlot={slot}
         snapToPixels={snapToPixels}

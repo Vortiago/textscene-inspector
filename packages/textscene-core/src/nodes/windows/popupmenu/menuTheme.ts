@@ -34,6 +34,8 @@ import {
 } from '../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import type { WindowProperties } from '../window/types';
 import { defaultSeparatorStyleBoxLine } from '../../2d/ui/separator/styleBoxLine';
+import { internalScrollBarBoxes } from '../../2d/ui/shared/scrollBarBoxes';
+import type { ScrollBarBoxes } from '../../2d/ui/shared/scrollBarSolver';
 
 /** A font and its size, as `theme_cache.font` and `font_size` hold them. */
 interface MenuFont {
@@ -52,6 +54,8 @@ export interface PopupMenuTheme {
   itemEndPadding: number;
   iconMaxWidth: number;
   isGutterCompact: boolean;
+  /** The boxes of the vertical bar of the menu's internal ScrollContainer (`popup_menu.cpp:3488`). */
+  scrollBar: ScrollBarBoxes;
   /** Each check icon's size: a theme's own, else the vendored default at the theme scale. */
   checkIconSizes: Readonly<Record<CheckBoxIconKey, Vector2>>;
   font: MenuFont;
@@ -98,6 +102,7 @@ export function popupMenuTheme(n: SolveNode, theme: NativeTheme): PopupMenuTheme
     itemEndPadding: n.constants.item_end_padding ?? scaledPx(defaults.itemEndPadding, theme.scale),
     iconMaxWidth: n.constants.icon_max_width ?? defaults.iconMaxWidth,
     isGutterCompact: (n.constants.gutter_compact ?? defaults.gutterCompact) !== 0,
+    scrollBar: internalScrollBarBoxes(n).vertical,
     checkIconSizes: checkIconSizesOf(n, theme),
     font: menuFont(n, theme, 'font', 'font_size'),
     separatorFont: menuFont(n, theme, 'font_separator', 'font_separator_size'),
@@ -105,6 +110,6 @@ export function popupMenuTheme(n: SolveNode, theme: NativeTheme): PopupMenuTheme
     fontDisabledColor: n.colors.font_disabled_color ?? defaults.fontDisabledColor,
     fontSeparatorColor: n.colors.font_separator_color ?? CONTROL_FONT_COLOR,
     outline: resolveTextOutline(n),
-    separatorOutline: resolveTextOutline(n, undefined, SEPARATOR_OUTLINE_NAMES),
+    separatorOutline: resolveTextOutline(n, SEPARATOR_OUTLINE_NAMES),
   };
 }

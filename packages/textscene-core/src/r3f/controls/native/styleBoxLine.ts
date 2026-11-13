@@ -47,6 +47,16 @@ function styleMargin(side: Side, vertical: boolean, thickness: number): number {
   return side === 'top' || side === 'bottom' ? half : 0;
 }
 
+/** {@link styleMargin} on every side. */
+export function lineStyleMargin(vertical: boolean, thickness: number): StyleBoxLineData['margin'] {
+  return {
+    left: styleMargin('left', vertical, thickness),
+    top: styleMargin('top', vertical, thickness),
+    right: styleMargin('right', vertical, thickness),
+    bottom: styleMargin('bottom', vertical, thickness),
+  };
+}
+
 /**
  * Resolves a StyleBox-slot ref to a `StyleBoxLineData`, or `null` for an absent
  * or malformed ref, a non-SubResource form, an unknown id, or a resource that

@@ -4,17 +4,17 @@
  * expected number is Godot's arithmetic worked by hand at theme scale 1.
  */
 import { describe, expect, it } from 'vitest';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { defaultScrollBarBoxes } from '../shared/testing/scrollBarBoxes';
 import { graphEditConstructorScrollBars, graphEditScrollBars, hasUpdatedScrollBars } from './scrollBars';
 
-const theme = nativeTheme(1);
+const boxes = defaultScrollBarBoxes(1);
 // One 120x64 GraphNode at (40, 56), zoom 1, in a 400x320 GraphEdit: the same
 // box `minimap.test.ts` derives: min (-400, -320), max (560, 440).
 const bounds = { min: { x: -400, y: -320 }, max: { x: 560, y: 440 } };
 const size = { x: 400, y: 320 };
 
 describe('graphEditScrollBars', () => {
-  const bars = graphEditScrollBars(size, bounds, { x: 0, y: 0 }, theme);
+  const bars = graphEditScrollBars(size, bounds, { x: 0, y: 0 }, boxes);
 
   it('shows both bars: the box is always the graph plus one GraphEdit rect each side (:491-492)', () => {
     // max - min = 960 > page 400 across, 760 > 320 down, so neither `hide()`
@@ -47,7 +47,7 @@ describe('graphEditScrollBars', () => {
   });
 
   it('moves the grabber with scroll_offset, clamping the ratio to [0, 1] (range.cpp:308-324)', () => {
-    const scrolled = graphEditScrollBars(size, bounds, { x: 560, y: 440 }, theme);
+    const scrolled = graphEditScrollBars(size, bounds, { x: 560, y: 440 }, boxes);
     // value == max: ratio 1, so the grabber sits at the far end of its travel.
     expect(scrolled.horizontal.grabberRect.x).toBeCloseTo(384, 6);
     expect(scrolled.vertical.grabberRect.y).toBeCloseTo(304, 6);
@@ -58,7 +58,7 @@ describe('graphEditScrollBars', () => {
       { x: 0, y: 0 },
       { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } },
       { x: 0, y: 0 },
-      theme
+      boxes
     );
     expect(degenerate.horizontal.visible).toBe(false);
     expect(degenerate.vertical.visible).toBe(false);
@@ -91,7 +91,7 @@ describe('hasUpdatedScrollBars (_update_scrollbars callers, graph_edit.cpp:414, 
 });
 
 describe('graphEditConstructorScrollBars (graph_edit.cpp:3218-3222, :841-852)', () => {
-  const bars = graphEditConstructorScrollBars({ x: 500, y: 280 }, theme);
+  const bars = graphEditConstructorScrollBars({ x: 500, y: 280 }, boxes);
 
   it('gives each bar the full length of its edge, and the bars overlap in the corner', () => {
     expect(bars.horizontal.rect).toEqual({ x: 0, y: 272, w: 500, h: 8 });

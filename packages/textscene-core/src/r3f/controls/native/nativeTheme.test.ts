@@ -33,7 +33,6 @@ describe('nativeTheme', () => {
     expect(theme.cornerRadius).toBe(6);
     expect(theme.contentMargin).toBe(8);
     expect(theme.separation).toBe(8);
-    expect(theme.sliderTrackThickness).toBe(16);
     expect(theme.sliderGrabberSize).toBe(32);
   });
 
@@ -55,33 +54,6 @@ describe('nativeTheme', () => {
       const { focus } = nativeTheme(1).widgets.button;
       expect([focus.drawCenter, focus.borderWidth.left, focus.expandMargin.left]).toEqual([false, 2, 2]);
       expect(nativeTheme(1.5).widgets.button.focus.borderWidth.left).toBe(3);
-    });
-
-    it('Panel: make_flat_stylebox(style_normal_color, 0, 0, 0, 0) — default_theme.cpp:134', () => {
-      const theme = nativeTheme(1);
-      expect(theme.widgets.panel).toEqual({
-        bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
-        borderColor: DEFAULT_BORDER_COLOR,
-        borderWidth: ZERO_SIDES,
-        cornerRadius: uniformCorners(3), // default_corner_radius, Math.round(3*1)
-        expandMargin: ZERO_SIDES,
-        contentMargin: ZERO_SIDES,
-        drawCenter: true,
-        borderBlend: false,
-        antiAliased: true, // StyleBoxFlat's own untouched default (style_box_flat.h:49)
-        aaSize: 1,
-        cornerDetail: 5,
-        skew: { x: 0, y: 0 },
-        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-        shadowSize: 0,
-        shadowOffset: { x: 0, y: 0 }, // StyleBoxFlat's own untouched default (style_box_flat.h:54)
-      });
-    });
-
-    it('PopupPanel: make_flat_stylebox(style_normal_color) with the default margin — default_theme.cpp:726', () => {
-      const { popupPanel } = nativeTheme(1).widgets;
-      expect(popupPanel.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
-      expect(popupPanel.contentMargin).toEqual({ left: 4, top: 4, right: 4, bottom: 4 });
     });
 
     it('Button normal/hover/pressed/disabled: make_flat_stylebox(color) with every default arg — default_theme.cpp:138-141', () => {
@@ -114,97 +86,15 @@ describe('nativeTheme', () => {
       });
     });
 
-    it('ScrollBar scroll: make_flat_stylebox(style_normal_color, ..., 10) per axis — default_theme.cpp:543-544', () => {
-      const theme = nativeTheme(1);
-      // style_h_scrollbar = make_flat_stylebox(style_normal_color, 0, 4, 0, 4, 10):
-      // 0 margin along the track axis (left/right), 4 across it (top/bottom).
-      expect(theme.widgets.scrollBar.scrollHorizontal).toEqual({
-        bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
-        borderColor: DEFAULT_BORDER_COLOR,
-        borderWidth: ZERO_SIDES,
-        cornerRadius: uniformCorners(10),
-        expandMargin: ZERO_SIDES,
-        contentMargin: { left: 0, top: 4, right: 0, bottom: 4 },
-        drawCenter: true,
-        borderBlend: false,
-        antiAliased: true,
-        aaSize: 1,
-        cornerDetail: 6,
-        skew: { x: 0, y: 0 },
-        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-        shadowSize: 0,
-        shadowOffset: { x: 0, y: 0 },
-      });
-      // style_v_scrollbar = make_flat_stylebox(style_normal_color, 4, 0, 4, 0, 10): transposed.
-      expect(theme.widgets.scrollBar.scrollVertical).toEqual({
-        bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
-        borderColor: DEFAULT_BORDER_COLOR,
-        borderWidth: ZERO_SIDES,
-        cornerRadius: uniformCorners(10),
-        expandMargin: ZERO_SIDES,
-        contentMargin: { left: 4, top: 0, right: 4, bottom: 0 },
-        drawCenter: true,
-        borderBlend: false,
-        antiAliased: true,
-        aaSize: 1,
-        cornerDetail: 6,
-        skew: { x: 0, y: 0 },
-        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-        shadowSize: 0,
-        shadowOffset: { x: 0, y: 0 },
-      });
-    });
-
-    it('ScrollBar grabber: make_flat_stylebox(style_progress_color, 4, 4, 4, 4, 10) — default_theme.cpp:545', () => {
-      const theme = nativeTheme(1);
-      expect(theme.widgets.scrollBar.grabber).toEqual({
-        bgColor: { r: 1, g: 1, b: 1, a: 0.4 },
-        borderColor: DEFAULT_BORDER_COLOR,
-        borderWidth: ZERO_SIDES,
-        cornerRadius: uniformCorners(10),
-        expandMargin: ZERO_SIDES,
-        contentMargin: uniform(4),
-        drawCenter: true,
-        borderBlend: false,
-        antiAliased: true,
-        aaSize: 1,
-        cornerDetail: 6,
-        skew: { x: 0, y: 0 },
-        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-        shadowSize: 0,
-        shadowOffset: { x: 0, y: 0 },
-      });
-    });
-
     it("scales widget geometry (margins, corner radii) at scale 2, per make_flat_stylebox's Math.round(x * scale)", () => {
       const theme = nativeTheme(2);
-      expect(theme.widgets.panel.cornerRadius).toEqual(uniformCorners(6));
       expect(theme.widgets.button.normal.contentMargin).toEqual(uniform(8));
       expect(theme.widgets.button.normal.cornerRadius).toEqual(uniformCorners(6));
-      expect(theme.widgets.scrollBar.scrollHorizontal.cornerRadius).toEqual(uniformCorners(20));
-      expect(theme.widgets.scrollBar.scrollHorizontal.contentMargin).toEqual({
-        left: 0,
-        top: 8,
-        right: 0,
-        bottom: 8,
-      });
-      expect(theme.widgets.scrollBar.grabber.cornerRadius).toEqual(uniformCorners(20));
     });
 
     it('does NOT scale widget fill colours', () => {
       const theme = nativeTheme(2);
       expect(theme.widgets.button.normal.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
-      expect(theme.widgets.scrollBar.grabber.bgColor).toEqual({ r: 1, g: 1, b: 1, a: 0.4 });
-    });
-
-    it('SplitContainer: separation 12, grabber extent 8, autohide true — default_theme.cpp:1258-1266', () => {
-      const theme = nativeTheme(1);
-      expect(theme.widgets.splitContainer).toEqual({ separation: 12, grabberExtent: 8, autohide: true });
-    });
-
-    it('scales SplitContainer separation and grabber extent at scale 2, but never autohide', () => {
-      const theme = nativeTheme(2);
-      expect(theme.widgets.splitContainer).toEqual({ separation: 24, grabberExtent: 16, autohide: true });
     });
 
     it(
@@ -297,50 +187,29 @@ describe('nativeTheme', () => {
       expect(nativeTheme(1.5).widgets.popupMenuPanel.cornerDetail).toBe(7);
     });
 
-    // The detail follows the Godot radius before the scale: 3 for most boxes, 4 for the slider,
-    // 10 for the scroll bar, 0 for the dialog panel and the flat menu button (clamped to 1).
+    // The detail follows the Godot radius before the scale: 3 for most boxes, 0 for the dialog panel
+    // and the flat menu button (clamped to 1).
     it.each([
-      [1, 5, 6, 6, 1],
-      [2, 10, 12, 12, 1],
-    ])(
-      'gives each widget the detail of its radius at scale %i',
-      (scale, defaultRadius, slider, scrollBar, none) => {
-        const { widgets } = nativeTheme(scale);
-        expect({
-          panel: widgets.panel.cornerDetail,
-          popupPanel: widgets.popupPanel.cornerDetail,
-          tooltipPanel: widgets.tooltipPanel.cornerDetail,
-          popupMenuPanel: widgets.popupMenuPanel.cornerDetail,
-          buttonNormal: widgets.button.normal.cornerDetail,
-          buttonFocus: widgets.button.focus.cornerDetail,
-          lineEdit: widgets.lineEdit.normal.cornerDetail,
-          sliderTrack: widgets.slider.track.cornerDetail,
-          sliderFill: widgets.slider.fill.cornerDetail,
-          scrollHorizontal: widgets.scrollBar.scrollHorizontal.cornerDetail,
-          scrollGrabber: widgets.scrollBar.grabber.cornerDetail,
-          dialogPanel: widgets.dialogPanel.cornerDetail,
-          flatMenuButton: widgets.flatMenuButton.normal.cornerDetail,
-          tabSelected: widgets.tabContainer.selected.cornerDetail,
-          tabHovered: widgets.tabContainer.hovered.cornerDetail,
-        }).toEqual({
-          panel: defaultRadius,
-          popupPanel: defaultRadius,
-          tooltipPanel: defaultRadius,
-          popupMenuPanel: defaultRadius,
-          buttonNormal: defaultRadius,
-          buttonFocus: defaultRadius,
-          lineEdit: defaultRadius,
-          sliderTrack: slider,
-          sliderFill: slider,
-          scrollHorizontal: scrollBar,
-          scrollGrabber: scrollBar,
-          dialogPanel: none,
-          flatMenuButton: none,
-          tabSelected: none,
-          tabHovered: none,
-        });
-      }
-    );
+      [1, 5, 1],
+      [2, 10, 1],
+    ])('gives each widget the detail of its radius at scale %i', (scale, defaultRadius, none) => {
+      const { widgets } = nativeTheme(scale);
+      expect({
+        popupMenuPanel: widgets.popupMenuPanel.cornerDetail,
+        buttonNormal: widgets.button.normal.cornerDetail,
+        buttonFocus: widgets.button.focus.cornerDetail,
+        lineEdit: widgets.lineEdit.normal.cornerDetail,
+        dialogPanel: widgets.dialogPanel.cornerDetail,
+        flatMenuButton: widgets.flatMenuButton.normal.cornerDetail,
+      }).toEqual({
+        popupMenuPanel: defaultRadius,
+        buttonNormal: defaultRadius,
+        buttonFocus: defaultRadius,
+        lineEdit: defaultRadius,
+        dialogPanel: none,
+        flatMenuButton: none,
+      });
+    });
   });
 
   describe('the default type variations it models', () => {
@@ -350,13 +219,9 @@ describe('nativeTheme', () => {
       expect(widgets.flatMenuButton.normal.bgColor.a).toBe(0);
     });
 
-    it('freezes the shared tab, FlatMenuButton and Button boxes, so an in-place margin edit throws', () => {
+    it('freezes the shared FlatMenuButton and Button boxes, so an in-place margin edit throws', () => {
       const { widgets } = nativeTheme(1);
-      for (const box of [
-        widgets.tabContainer.unselected,
-        widgets.flatMenuButton.normal,
-        widgets.button.normal,
-      ]) {
+      for (const box of [widgets.flatMenuButton.normal, widgets.button.normal]) {
         const margin = box.contentMargin as { left: number };
         expect(() => {
           margin.left += 1;

@@ -17,7 +17,11 @@ import {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { ControlProperties } from '../control/types';
 import { panelContainerLayout, panelContainerMinimumSize } from './nativeSolver';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
 /** The `rects` half of a `ContainerLayoutResult`. */
@@ -55,8 +59,8 @@ function solveNode(
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
   const name = path.split('/').pop()!;
-  const node: TscnNode = controlNode(name, 'Control', { name, ...properties });
-  return { ...emptySolveNode(), path, node, children, styleBoxes };
+  const node: TscnNode = controlNode(name, 'PanelContainer', { name, ...properties });
+  return withThemeItems({ ...emptySolveNode(), path, node, children, styleBoxes });
 }
 
 function ctx() {

@@ -10,7 +10,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
 import { programShader } from '../testing/patchedFragment';
 import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
+import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars.testkit';
 import type { ResolvedTextures } from '../../resources/materials/standardmaterial3d/types';
 
 type Maps = ResolvedTextures & { attach?: string };

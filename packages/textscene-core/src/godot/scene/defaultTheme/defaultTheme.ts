@@ -7,7 +7,10 @@
 import type { Rgba } from '../../math/math.js';
 import { scaledPx, DEFAULT_FONT_SIZE } from '../theme.js';
 import { buttonTypes } from './button.js';
+import { containerTypes } from './containers.js';
 import { labelTypes } from './label.js';
+import { rangeTypes } from './ranges.js';
+import { tabTypes } from './tabs.js';
 
 export interface Sides {
   readonly left: number;
@@ -16,13 +19,19 @@ export interface Sides {
   readonly bottom: number;
 }
 
+export interface Corners {
+  readonly topLeft: number;
+  readonly topRight: number;
+  readonly bottomRight: number;
+  readonly bottomLeft: number;
+}
+
 /** A `StyleBoxFlat` as `make_flat_stylebox` leaves it. Every length is scaled and rounded. */
 export interface DefaultFlatStyleBox {
   readonly kind: 'flat';
   readonly bgColor: Rgba;
   readonly contentMargin: Sides;
-  /** Every corner's radius. */
-  readonly cornerRadius: number;
+  readonly cornerRadius: Corners;
   readonly cornerDetail: number;
   readonly borderWidth: Sides;
   readonly borderColor: Rgba;
@@ -36,7 +45,18 @@ export interface DefaultEmptyStyleBox {
   readonly contentMargin: Sides;
 }
 
-export type DefaultStyleBox = DefaultFlatStyleBox | DefaultEmptyStyleBox;
+/** A `StyleBoxLine`: a rule across the box, as the separators set it. A margin of -1 or less is unset. */
+export interface DefaultLineStyleBox {
+  readonly kind: 'line';
+  readonly color: Rgba;
+  readonly thickness: number;
+  readonly vertical: boolean;
+  readonly growBegin: number;
+  readonly growEnd: number;
+  readonly contentMargin: Sides;
+}
+
+export type DefaultStyleBox = DefaultFlatStyleBox | DefaultEmptyStyleBox | DefaultLineStyleBox;
 
 /** The items of one type, keyed by item name as Godot keys them. Default icons and fonts are not here. */
 export interface DefaultThemeType {
@@ -72,7 +92,13 @@ function buildDefaultTheme(scale: number): DefaultTheme {
   return {
     scale,
     defaultFontSize: scaledPx(DEFAULT_FONT_SIZE, scale),
-    types: { ...buttonTypes(scale), ...labelTypes(scale) },
+    types: {
+      ...buttonTypes(scale),
+      ...labelTypes(scale),
+      ...rangeTypes(scale),
+      ...containerTypes(scale),
+      ...tabTypes(scale),
+    },
   };
 }
 

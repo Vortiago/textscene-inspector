@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 import { DiffuseMode } from '../../../godot/rendering/materials/diffuseMode';
 
 describe('parseStandardMaterial3DScalars: diffuse_mode', () => {

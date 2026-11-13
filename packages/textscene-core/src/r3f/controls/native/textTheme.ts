@@ -58,7 +58,7 @@ export function resolveTextTheme(
 }
 
 export interface TextOutlineTheme {
-  /** `font_outline_color`, sRGB. Godot's default is opaque black for most types (`default_theme.cpp:162` for Button) and white for FoldableContainer (`:1327`). */
+  /** `font_outline_color`, sRGB. Godot's default is opaque black for most types (`default_theme.cpp:162` for Button). */
   color: Rgba;
   /** `outline_size`, px. The default theme sets 0 for every type, so no outline draws until a scene sets it. */
   sizePx: number;
@@ -82,16 +82,15 @@ export const SEPARATOR_OUTLINE_NAMES: OutlineItemNames = {
 
 /**
  * The `font_outline_color` and `outline_size` theme items of a Control that draws its text through
- * `OutlinedTextRun` or a Label's effect layers. `defaultColor` is the type's default theme colour,
- * and `names` picks another pair of items for a Control that has two.
+ * `OutlinedTextRun` or a Label's effect layers. `names` picks another pair of items for a Control
+ * that has two.
  */
 export function resolveTextOutline(
   n: Pick<ShareNode, 'colors' | 'constants'>,
-  defaultColor: Rgba = DEFAULT_OUTLINE_COLOR,
   names: OutlineItemNames = ITEM_OUTLINE_NAMES
 ): TextOutlineTheme {
   return {
-    color: n.colors[names.color] ?? defaultColor,
+    color: n.colors[names.color] ?? DEFAULT_OUTLINE_COLOR,
     sizePx: n.constants[names.size] ?? 0,
   };
 }

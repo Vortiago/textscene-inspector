@@ -22,7 +22,7 @@ import {
   scrollContainerScrollBars,
   scrollContainerLayoutChannel,
 } from './nativeSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 
 /** The child-rects half of `scrollContainerLayout`. */
 function layoutRects(...args: Parameters<typeof scrollContainerLayout>): ReadonlyMap<string, Rect2> {
@@ -39,20 +39,20 @@ function ctx() {
 }
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'Control', { name, ...props }),
-  };
+  });
 }
 
 function scrollContainer(props: Partial<ScrollContainerProperties>, children: SolveNode[]): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: 'Scroll',
     node: controlNode('Scroll', 'ScrollContainer', { name: 'Scroll', ...props }),
     children,
-  };
+  });
 }
 
 describe('scrollContainerMinimumSize (scene/gui/scroll_container.cpp::get_minimum_size)', () => {
@@ -301,15 +301,15 @@ describe('wired through the registry + full solve, against the real fixture numb
     controlSolverRegistry.registerMinimumSize(TYPE, scrollContainerMinimumSize);
     controlSolverRegistry.registerContainerLayout(TYPE, scrollContainerLayout);
     try {
-      const content: SolveNode = {
+      const content: SolveNode = withThemeItems({
         ...solveNode(),
         path: 'Root/ScrollContainer/Content',
         node: controlNode('Content', 'VBoxContainer', {
           name: 'Content',
           customMinimumSize: { x: 399, y: 800 },
         }),
-      };
-      const scroll: SolveNode = {
+      });
+      const scroll: SolveNode = withThemeItems({
         ...solveNode(),
         path: 'Root/ScrollContainer',
         node: controlNode('ScrollContainer', TYPE, {
@@ -323,8 +323,8 @@ describe('wired through the registry + full solve, against the real fixture numb
           offsetBottom: -16,
         }),
         children: [content],
-      };
-      const root: SolveNode = {
+      });
+      const root: SolveNode = withThemeItems({
         ...solveNode(),
         path: 'Root',
         node: controlNode('Root', 'Control', {
@@ -334,7 +334,7 @@ describe('wired through the registry + full solve, against the real fixture numb
           anchorBottom: 1,
         }),
         children: [scroll],
-      };
+      });
 
       const viewport: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
       const solved = solveControlTree([root], viewport, ctx());

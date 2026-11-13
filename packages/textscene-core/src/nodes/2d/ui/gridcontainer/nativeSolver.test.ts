@@ -14,7 +14,7 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import './nativeSolver';
 import { solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { normalizeContainerLayoutResult } from '../../../../r3f/controls/native/controlRectSolver';
 
 const gridContainerLayout = controlSolverRegistry.containerLayout('GridContainer')!;
@@ -39,15 +39,14 @@ function cell(name: string, props: Partial<ControlProperties> = {}): SolveNode {
 }
 
 function grid(name: string, props: Partial<GridContainerProperties>, children: SolveNode[]): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'GridContainer', { name, ...props }),
     children,
-    // A local theme_override_constants/* now reaches `separationOf` through
-    // `n.constants` (the walker folds it in unconditionally), not props.
+    // A local theme_override_constants/* reaches `separationOf` through `n.constants`, not props.
     constants: props.themeOverrideConstants ?? {},
-  };
+  });
 }
 
 /** No registered per-type minimum size in these tests: only `custom_minimum_size` floors. */

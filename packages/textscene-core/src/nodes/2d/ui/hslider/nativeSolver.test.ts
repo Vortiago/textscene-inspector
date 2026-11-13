@@ -8,16 +8,16 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import './nativeSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 
 const hSliderMinimumSize = controlSolverRegistry.minimumSize('HSlider')!;
 
 function node(): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: 'S',
     node: controlNode('S', 'HSlider', { name: 'S' }),
-  };
+  });
 }
 
 function ctx(): SolveContext {

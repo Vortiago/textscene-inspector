@@ -12,7 +12,9 @@ import type {
 import type { Rgba } from '../../../godot/math/math';
 import { neutralStyleBox } from '../../../resources/styles/stylebox/decode';
 import { perObject } from '../../../utils/perObject';
+import { styleBoxLineBox } from './parseStyleBox';
 import { flatStyleBox, freezeStyleBox, ZERO_SIDES, type StyleBoxFlatData } from './styleBoxFlat';
+import { lineStyleMargin } from './styleBoxLine';
 
 /**
  * `StyleBox::get_margin` (`style_box.cpp:78-86`) for each side: a negative (unset) margin reads
@@ -31,6 +33,11 @@ function effectiveMargin(margin: Sides, styleMargin: Sides): Sides {
 const drawnBox = perObject((box: DefaultStyleBox): StyleBoxFlatData => {
   if (box.kind === 'empty')
     return freezeStyleBox(neutralStyleBox(effectiveMargin(box.contentMargin, ZERO_SIDES)));
+  if (box.kind === 'line') {
+    const { color, thickness, vertical, growBegin, growEnd } = box;
+    const margin = effectiveMargin(box.contentMargin, lineStyleMargin(vertical, thickness));
+    return freezeStyleBox(styleBoxLineBox({ color, thickness, vertical, growBegin, growEnd, margin }));
+  }
   return freezeStyleBox(
     flatStyleBox(box.bgColor, {
       contentMargin: effectiveMargin(box.contentMargin, box.borderWidth),

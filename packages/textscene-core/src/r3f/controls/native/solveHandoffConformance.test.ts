@@ -136,12 +136,10 @@ function tscn(
 function containerTree(type: string): SolveNode[] {
   const childNodes = ['A', 'B'].map((name) => tscn(name, 'Panel', { customMinimumSize: { x: 400, y: 400 } }));
   const root = tscn('Root', type, {}, childNodes);
-  const children = childNodes.map((node, i) => ({
-    ...solveNode(),
-    path: `Root/${['A', 'B'][i]!}`,
-    node,
-  }));
-  return [{ ...solveNode(), path: 'Root', node: root, children }];
+  const children = childNodes.map((node, i) =>
+    withThemeItems({ ...solveNode(), path: `Root/${['A', 'B'][i]!}`, node })
+  );
+  return [withThemeItems({ ...solveNode(), path: 'Root', node: root, children })];
 }
 
 const VIEWPORT = { x: 0, y: 0, w: 300, h: 300 };

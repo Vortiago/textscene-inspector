@@ -10,7 +10,7 @@
 
 import { clamp, round, type Rgba } from '../../math/math.js';
 import { DEFAULT_CONTENT_MARGIN, DEFAULT_CORNER_RADIUS } from '../theme.js';
-import type { DefaultEmptyStyleBox, DefaultFlatStyleBox, Sides } from './defaultTheme.js';
+import type { Corners, DefaultEmptyStyleBox, DefaultFlatStyleBox, Sides } from './defaultTheme.js';
 
 /** `StyleBoxFlat::set_corner_detail` clamps to 1..20 (`style_box_flat.cpp:129-130`). */
 export const CORNER_DETAIL_MIN = 1;
@@ -28,6 +28,11 @@ const UNSET_MARGIN = -1;
 /** Four sides of one value. */
 export function allSides(value: number): Sides {
   return { left: value, top: value, right: value, bottom: value };
+}
+
+/** Four corners of one radius. */
+function allCorners(radius: number): Corners {
+  return { topLeft: radius, topRight: radius, bottomRight: radius, bottomLeft: radius };
 }
 
 /** Each side times `scale`, rounded as `Math::round` rounds: a half away from zero. */
@@ -77,7 +82,7 @@ export function makeFlatStyleBox(
     kind: 'flat',
     bgColor,
     contentMargin: scaledSides(margin, scale),
-    cornerRadius: round(cornerRadius * scale),
+    cornerRadius: allCorners(round(cornerRadius * scale)),
     cornerDetail: flatCornerDetail(cornerRadius, scale),
     borderWidth: allSides(round(borderWidth * scale)),
     borderColor: FLAT_BORDER_COLOR,
@@ -93,6 +98,16 @@ export function withExpandMargin(
   expand: Sides
 ): DefaultFlatStyleBox {
   return { ...box, expandMargin: scaledSides(expand, scale) };
+}
+
+/** `set_corner_radius` on the named corners, unscaled as Godot sets them: `corner_detail` stays. */
+export function withCornerRadius(box: DefaultFlatStyleBox, corners: Partial<Corners>): DefaultFlatStyleBox {
+  return { ...box, cornerRadius: { ...box.cornerRadius, ...corners } };
+}
+
+/** `set_border_width` on each side, already scaled at the call site, and `set_border_color`. */
+export function withBorder(box: DefaultFlatStyleBox, width: Sides, color: Rgba): DefaultFlatStyleBox {
+  return { ...box, borderWidth: width, borderColor: color };
 }
 
 /** `make_empty_stylebox` (`default_theme.cpp:86-90`): unscaled margins, each -1 (unset) by default. */
