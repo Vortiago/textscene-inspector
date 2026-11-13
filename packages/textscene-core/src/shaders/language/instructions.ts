@@ -55,5 +55,5 @@ export function notTranspiled(
   position: SourcePosition,
   name = row.id
 ): ShadingLanguageError {
-  return new ShadingLanguageError(`'${name}' is not transpiled yet (${row.owner})`, position);
+  return new ShadingLanguageError(`'${name}' is not transpiled yet (${row.owner})`, position, row.owner);
 }

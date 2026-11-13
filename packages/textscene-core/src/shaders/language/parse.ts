@@ -159,7 +159,8 @@ class ShaderParser implements ExpressionScope {
       const owner = instruction('OP_CALL')!.owner;
       throw new ShadingLanguageError(
         `An overload of '${name}' is not transpiled yet (${owner})`,
-        token.position
+        token.position,
+        owner
       );
     }
     this.signatures.push({ name, types });

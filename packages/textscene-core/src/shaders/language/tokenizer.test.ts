@@ -1,6 +1,7 @@
 /** The tokenizer, against what Godot's `_get_token` (`shader_language.cpp:407`) gives. */
 
 import { describe, expect, it } from 'vitest';
+import { ShadingLanguageError } from './shadingLanguageError.js';
 import { tokenize } from './tokenizer.js';
 
 const types = (source: string) => tokenize(source).map((token) => token.type);
@@ -76,5 +77,23 @@ describe('tokenize', () => {
 
   it('refuses a character outside the language', () => {
     expect(() => tokenize('a $ b')).toThrow(/Unknown character/);
+  });
+});
+
+describe('preprocessor directives', () => {
+  it('refuses a directive as its row, with the issue that owns it', () => {
+    let error: unknown;
+    try {
+      tokenize('#define X 1\nfloat f() { return 1.0; }');
+    } catch (caught) {
+      error = caught;
+    }
+    expect(error).toBeInstanceOf(ShadingLanguageError);
+    expect((error as ShadingLanguageError).reason).toBe("'#define' is not transpiled yet (#1828)");
+    expect((error as ShadingLanguageError).owner).toBe('#1828');
+  });
+
+  it("gives Godot's message for an unknown directive", () => {
+    expect(() => tokenize('# frobnicate')).toThrow(/Unknown directive\./);
   });
 });

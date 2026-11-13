@@ -21,7 +21,9 @@ export class ShadingLanguageError extends Error {
   constructor(
     /** Godot's message, or the transpiler's for a construct it does not transpile yet. */
     readonly reason: string,
-    readonly position: SourcePosition
+    readonly position: SourcePosition,
+    /** The issue that transpiles the construct, for a construct not transpiled yet. Nothing for Godot's own refusal. */
+    readonly owner?: string
   ) {
     super(`${position.file ? `${position.file}:` : ''}${position.line}:${position.column}: ${reason}`);
     this.name = 'ShadingLanguageError';

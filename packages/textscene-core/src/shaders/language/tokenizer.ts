@@ -5,7 +5,7 @@
  * Godot's message.
  */
 
-import { KEYWORD_TOKENS } from './instructions.js';
+import { instruction, KEYWORD_TOKENS, notTranspiled } from './instructions.js';
 import { ShadingLanguageError, type SourcePosition } from './shadingLanguageError.js';
 
 export interface Token {
@@ -145,10 +145,13 @@ function skipComment(source: string, cursor: Cursor): boolean {
 function readToken(source: string, cursor: Cursor, char: string): Token {
   const position = positionOf(cursor);
   if (char === '"') return readString(source, cursor);
+  if (char === '#') throw directiveRefusal(source, cursor, position);
   if (char === '@') {
+    const owner = instruction('#include')!.owner;
     throw new ShadingLanguageError(
-      'An include marker comes from the preprocessor, which is not transpiled yet (#1828)',
-      position
+      `An include marker comes from the preprocessor, which is not transpiled yet (${owner})`,
+      position,
+      owner
     );
   }
   if (isDigit(char) || (char === '.' && isDigit(source[cursor.index + 1] ?? '')))
@@ -168,6 +171,17 @@ function readToken(source: string, cursor: Cursor, char: string): Token {
     code > 32 ? `Tokenizer: Unknown character #${code}: '${char}'` : `Tokenizer: Unknown character #${code}`,
     position
   );
+}
+
+/**
+ * The refusal of a preprocessor directive: Godot's preprocessor reads every `#` line before the
+ * shader is parsed (`process_directive`, `shader_preprocessor.cpp:377`), and it is not transpiled yet.
+ */
+function directiveRefusal(source: string, cursor: Cursor, position: SourcePosition): ShadingLanguageError {
+  const name = /^#[ \t]*(\w*)/.exec(source.slice(cursor.index))![1];
+  const row = instruction(`#${name}`);
+  if (!row) return new ShadingLanguageError('Unknown directive.', position);
+  return notTranspiled(row, position);
 }
 
 function readIdentifier(source: string, cursor: Cursor): Token {
