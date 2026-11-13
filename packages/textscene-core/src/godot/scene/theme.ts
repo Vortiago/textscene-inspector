@@ -63,6 +63,8 @@ export const STYLE_FILL = {
   popupHover: { r: 0.4, g: 0.4, b: 0.4, a: 1 },
   /** `style_progress_color`. */
   progress: { r: 1, g: 1, b: 1, a: 0.4 },
+  /** `style_hover_selected_color`. A hovered selected row of an ItemList or Tree. */
+  hoverSelected: { r: 1, g: 1, b: 1, a: 0.4 },
   /** `style_selected_color`. The selected row of an ItemList, Tree or TabBar. */
   selected: { r: 1, g: 1, b: 1, a: 0.3 },
   /** `style_focus_color`. The outline of a focused Button. */

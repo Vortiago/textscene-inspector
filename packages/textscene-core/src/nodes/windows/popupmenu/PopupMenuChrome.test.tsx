@@ -51,7 +51,10 @@ async function meshBounds(window: SolveNode) {
   });
 }
 
-const withPanel = (window: SolveNode): SolveNode => ({ ...window, styleBoxes: { panel: PLAIN_PANEL } });
+const withPanel = (window: SolveNode): SolveNode => ({
+  ...window,
+  styleBoxes: { ...window.styleBoxes, panel: PLAIN_PANEL },
+});
 
 describe('<PopupMenuChrome>', () => {
   it('draws the panel across the whole window', async () => {

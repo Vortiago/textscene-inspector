@@ -26,8 +26,12 @@ walk. It draws these parts:
 - The channel slider grid for the current `color_mode`, with the alpha and intensity rows
   that `edit_alpha` and `edit_intensity` add. Every channel and alpha row draws the stock
   `HSlider` chrome under its gradient band, with the `bar_arrow` grabber that
-  `_reset_sliders_theme` sets (`color_picker.cpp:628-651`). Intensity keeps the default
-  circle grabber, since that override skips it.
+  `_reset_sliders_theme` sets (`color_picker.cpp:628-651`). The grabber centres on the ratio
+  point while `center_slider_grabbers` is 1, and stays inside the bar at 0
+  (`color_picker.cpp:146-149`, `slider.cpp:328-329`). Intensity keeps the default circle
+  grabber, since that override skips it.
+- The picker's constants `margin`, `sv_width`, `sv_height`, `h_width` and `label_width` come from
+  the Theme chain. A Theme that sets them resizes the shape and the label column.
 - The value `SpinBox` of each row, with the `up`/`down` stepper icons beside it. Its column is
   the `LineEdit` minimum plus the stepper block (`spin_box.cpp:82-86`). The "W" advance stays
   unrounded, and `GridContainer` truncates the sum (`grid_container.cpp:290`).
@@ -94,5 +98,8 @@ raw `Color()` member default, because `ColorPicker::ColorPicker()` calls
 
 - **Approximated** The minimum size floors the channel-label column at `label_width`
   (10px), which the shape row's floor (290px, or 256px for the wheel) hides in every fixture.
+- **Approximated** A channel of 0.9 shows `229` in its value field and sets its grabber 1 px left,
+  where Godot shows `230`.
+- **Approximated** The value field's right edge has no anti-aliased column, where Godot's has one.
 - **Not drawn** Focus rings (`draw_focus_rect`/`draw_focus_circle`): a static previewer
   has no focus.

@@ -13,6 +13,7 @@ import { iconOnlyButtonIconRectIn } from '../../../../r3f/controls/native/button
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { COLOR_SCRIPT_ICON } from '../../../../r3f/controls/native/themeIcons';
 import { colorPickerButtonIconSize } from './nativeSolver';
+import type { PickerTheme } from './pickerChildTheme';
 import { buttonIconColor } from '../button/nativeSolver';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { iconModulate } from '../../../../r3f/controls/native/IconButton';
@@ -20,7 +21,7 @@ import { iconModulate } from '../../../../r3f/controls/native/IconButton';
 interface TextTypeScriptIconProps {
   rect: Rect2;
   solveNode: NativeControlComponentProps['solveNode'];
-  theme: NativeControlComponentProps['theme'];
+  theme: PickerTheme;
   buttonColors: NativeControlComponentProps['solveNode']['colors'];
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;
@@ -46,7 +47,7 @@ export function TextTypeScriptIcon({
   const iconPx = colorPickerButtonIconSize(theme);
   const iconRect = iconOnlyButtonIconRectIn(
     rect,
-    theme.widgets.button.disabled.contentMargin,
+    theme.button.disabled.contentMargin,
     { x: iconPx, y: iconPx },
     solveNode.rtl
   );

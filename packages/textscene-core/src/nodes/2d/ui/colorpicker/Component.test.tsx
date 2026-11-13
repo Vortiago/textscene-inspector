@@ -11,7 +11,11 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { themeResource } from '../../../../r3f/controls/native/testing/themeResource';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import { ColorPicker } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
@@ -28,7 +32,7 @@ const THEME = nativeTheme(1);
 
 function node(properties: Record<string, unknown>, themeChain: ThemeResource[] = []): SolveNode {
   const tscnNode: TscnNode = controlNode('P', 'ColorPicker', properties);
-  return { ...emptySolveNode(), path: 'P', node: tscnNode, themeChain };
+  return withThemeItems({ ...emptySolveNode(), path: 'P', node: tscnNode, themeChain });
 }
 
 /** Hides every row the shape and sample tests are not about, so their mesh counts stay isolated. */

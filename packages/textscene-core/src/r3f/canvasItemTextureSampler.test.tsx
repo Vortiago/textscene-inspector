@@ -2,22 +2,25 @@
  * `useInheritedTextureSampler`, the rule of the texture caches
  * (`scene/main/canvas_item.cpp:1625-1699`): PARENT_NODE (0,
  * `scene/main/canvas_item.h:52-69`) defers to the ambient, and a concrete value
- * wins. `ControlCanvasWalker.test.tsx` covers the propagation through the walker.
+ * wins. `ControlCanvasWalker.test.tsx` covers the propagation through the walker, and the canvas
+ * item pass the propagation through the tree.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import * as THREE from 'three';
 import {
-  ROOT_TEXTURE_SAMPLER,
-  TextureSampler2DContext,
   ViewportSamplerProvider,
   canvasItemViewSampler,
-  inheritTextureSampler,
   useCanvasTextureSampler,
   useInheritedTextureSampler,
-  type AmbientTextureSampler,
 } from './canvasItemTextureSampler';
+import {
+  ROOT_TEXTURE_SAMPLER,
+  inheritTextureSampler,
+  type AmbientTextureSampler,
+} from './textureSamplerInheritance';
+import { InheritedFrom, inheritedState } from './testing/inheritedFrom';
 import { applyViewSampler } from '../resources/textures/textureView';
 import { canvasColorSpaceOf } from './canvasColorSpace';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../godot/scene/canvasItem';
@@ -52,7 +55,7 @@ function resolveUnder(
   ownRepeat: number | undefined
 ) {
   const wrapper = ({ children }: { children: ReactNode }) => (
-    <TextureSampler2DContext.Provider value={ambient}>{children}</TextureSampler2DContext.Provider>
+    <InheritedFrom state={inheritedState({ sampler: ambient })}>{children}</InheritedFrom>
   );
   return renderHook(() => useInheritedTextureSampler(ownFilter, ownRepeat), { wrapper }).result.current;
 }

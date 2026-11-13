@@ -48,8 +48,8 @@ import {
   rightPortX,
 } from './nativeSolver';
 import type { GraphNodeProperties } from './types';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
 
 /** Composes `own` (raw sRGB) with a widget's base colour, then converts the result to linear. */
 function useTintedColor(own: Rgba, base: Rgba): { color: THREE.Color; opacity: number } {
@@ -114,7 +114,7 @@ export function GraphNode({
   // prop rather than reading them (`nativeClipCoverage.test.tsx`'s own doc).
   const clippingPlanes = useControlClipPlanes();
   const selected = props.selected === true;
-  const styles = graphNodeStyles(solveNode, theme);
+  const styles = graphNodeStyles(solveNode);
   const portSize = scaledIconSizeOf(GRAPH_PORT_ICON_SIZE, theme.scale);
   const resizerSize = scaledIconSizeOf(RESIZER_SE_ICON_SIZE, theme.scale);
   const panelStyle = selected ? styles.panelSelected : styles.panel;
@@ -183,8 +183,7 @@ export function GraphNode({
     props.resizable === true ? solveNode.icons.resizer : undefined,
     props.resizable === true ? RESIZER_SE_ICON : null
   );
-  // `resizer_color` defaults to `control_font_color` (`default_theme.cpp:808`).
-  const resizerTint = useTintedColor(tint.own, CONTROL_FONT_COLOR);
+  const resizerTint = useTintedColor(tint.own, requiredThemeItem(solveNode.colors, 'resizer_color'));
 
   return (
     <>

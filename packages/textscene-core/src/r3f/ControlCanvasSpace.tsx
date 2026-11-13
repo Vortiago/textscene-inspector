@@ -18,8 +18,7 @@ import { useCanvasItemVisible } from './canvasItemVisible.js';
 import { useControlTransform } from './contexts/ControlYSortContext.js';
 import { threeMatrixFromTransform2D } from './node2dTransform.js';
 import { useSceneResources } from './SceneResourcesContext.js';
-import { canvasStateOfDrawn } from './canvasItemPass/canvasStateBetween.js';
-import { CanvasAncestorsScope } from './canvasItemPass/CanvasAncestorsScope.js';
+import { CanvasParentProvider, useDrawnCanvasItem } from './canvasItemPass/inheritedCanvasState.js';
 
 interface ControlCanvasSpaceProps {
   node: TscnNode;
@@ -35,12 +34,11 @@ function SolvedControlSpace({ node, path, children }: ControlCanvasSpaceProps) {
     path,
     useWrittenVisible(path) ?? (node.properties as ControlProperties).visible
   );
-  const scope = useSceneResources();
-  const handedDown = useMemo(() => canvasStateOfDrawn([node], scope), [node, scope]);
+  const { handedDown } = useDrawnCanvasItem(node, path, useSceneResources());
   // paint-order-safe: outside every keyed item group, it only moves and hides the Node2D items below.
   return (
     <group visible={isVisible} matrix={matrix ?? undefined} matrixAutoUpdate={matrix === null}>
-      <CanvasAncestorsScope chain={handedDown}>{children}</CanvasAncestorsScope>
+      <CanvasParentProvider value={handedDown}>{children}</CanvasParentProvider>
     </group>
   );
 }

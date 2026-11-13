@@ -128,6 +128,23 @@
       }
     }
   },
+  "modulate-200-sprites": {
+    "drawCalls": 201,
+    "steps": {
+      "Scene draw": {
+        "drawCalls": 200,
+        "runs": 1
+      },
+      "Canvas copy": {
+        "drawCalls": 1,
+        "runs": 1
+      },
+      "Other": {
+        "drawCalls": 0,
+        "runs": 1
+      }
+    }
+  },
   "demo-3d-platformer": {
     "drawCalls": 308,
     "steps": {

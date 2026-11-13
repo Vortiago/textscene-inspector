@@ -2,7 +2,7 @@
  * The scope a canvas root (`isCanvasRoot`) draws in: the canvas itself, not the node above it.
  * `_render_canvas_item_tree` culls each root from the canvas transform, `Color(1, 1, 1, 1)`,
  * `p_z = 0` and a null material owner (`servers/rendering/renderer_canvas_cull.cpp:70-83`),
- * the four resets `CanvasLayerScope` publishes one canvas further in.
+ * the chain start `CanvasLayerScope` publishes one canvas further in.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -14,10 +14,7 @@ import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import type * as THREE from 'three';
 import type { TscnNode } from '../parser/types.js';
 import { isCanvasRoot } from './canvasPaintOrder.js';
-import { Modulate2DContext, WHITE_MODULATE } from './canvasItemModulate.js';
-import { ROOT_TEXTURE_SAMPLER, TextureSampler2DContext } from './canvasItemTextureSampler.js';
-import { EffectiveZProvider } from './lighting2d/canvasItemPlacement.js';
-import { CanvasItemMaterialProvider } from './components/canvasItemMaterialContext.js';
+import { CHAIN_START_PARENT, CanvasParentProvider } from './canvasItemPass/inheritedCanvasState.js';
 
 /**
  * The three-space transform the `<CanvasItem2D>` groups accumulate since the last object whose
@@ -67,13 +64,7 @@ export function CanvasRootScope({
 
   const scoped = (
     <CanvasSpaceProvider value={null}>
-      <Modulate2DContext.Provider value={WHITE_MODULATE}>
-        <TextureSampler2DContext.Provider value={ROOT_TEXTURE_SAMPLER}>
-          <CanvasItemMaterialProvider value={null}>
-            <EffectiveZProvider value={0}>{children}</EffectiveZProvider>
-          </CanvasItemMaterialProvider>
-        </TextureSampler2DContext.Provider>
-      </Modulate2DContext.Provider>
+      <CanvasParentProvider value={CHAIN_START_PARENT}>{children}</CanvasParentProvider>
     </CanvasSpaceProvider>
   );
 

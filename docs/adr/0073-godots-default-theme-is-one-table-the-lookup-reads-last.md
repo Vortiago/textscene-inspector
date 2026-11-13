@@ -41,7 +41,7 @@ and a copy that missed the theme scale drew the Control at scale 1.
 - A new default item is one line in the table, and the capture test says if it is wrong.
 - A change of the theme scale gives a new `ProjectFonts`, so the solve tree builds again with the
   table at that scale.
-- `NativeTheme.widgets` holds boxes for the Controls that still draw one by hand. Each entry goes
-  when its Control reads the table.
+- `NativeTheme` holds only the scaled metrics. Every box, colour and constant a Control draws
+  comes from the table.
 - An item that no theme holds reads the fallback theme's value: `Color()` for a colour and 0 for a
   constant.

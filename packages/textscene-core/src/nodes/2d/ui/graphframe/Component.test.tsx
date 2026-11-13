@@ -11,7 +11,11 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { parseStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { GraphFrame } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { GraphFrameProperties } from './types';
@@ -29,7 +33,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 /** The default `titlebar` is a `StyleBoxEmpty` (`make_empty_stylebox`), which paints no mesh, so a test of the band gives it a box. */
 function graphFrame(properties: Partial<GraphFrameProperties> = {}): SolveNode {
   const node: TscnNode = controlNode('F', 'GraphFrame', { name: 'F', ...properties });
-  return { ...emptySolveNode(), path: 'F', node, styleBoxes: { titlebar: drawnStyleBox() } };
+  return withThemeItems({ ...emptySolveNode(), path: 'F', node, styleBoxes: { titlebar: drawnStyleBox() } });
 }
 
 function chromeMeshes(scene: Rendered['scene']) {

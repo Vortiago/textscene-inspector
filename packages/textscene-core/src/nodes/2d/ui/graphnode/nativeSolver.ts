@@ -10,13 +10,10 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { flatStyleBox as makeFlatStyleBox, ZERO_SIDES } from '../../../../r3f/controls/native/styleBoxFlat';
-import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
-import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { graphElementStyles } from '../graphelement/graphElementStyles';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import {
   controlSolverRegistry,
   type ContainerLayoutFn,
@@ -26,81 +23,14 @@ import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildIn
 import { resolveTitleFontTheme, titleTextMinimumSize, titlebarGeometry } from '../graphelement/graphTitlebar';
 import { defaultGraphNodeSlot } from './parser';
 import type { GraphNodeProperties, GraphNodeSlot } from './types';
-import { lightened } from '../../../../godot/math/color';
-import type { Rgba } from '../../../../godot/math/math';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
 
 /** `graph_node.cpp` theme type variation for its internal title Label: `graph_node.cpp:1328`. */
 export const GRAPH_NODE_TITLE_VARIATION = 'GraphNodeTitleLabel';
 
-function flatBox(
-  bgColor: Rgba,
-  margin: { left: number; top: number; right: number; bottom: number },
-  cornerRadius: number,
-  cornerDetail: number
-): StyleBoxFlatData {
-  return makeFlatStyleBox(bgColor, { contentMargin: margin, cornerRadius, cornerDetail });
-}
-
-/**
- * GraphNode's default-theme StyleBoxes: `default_theme.cpp:788-802`. Not in
- * `nativeTheme.ts`'s `widgets` (no entry for GraphNode there); derived here
- * from `theme.styleFill`/`theme.cornerRadius`/`theme.contentMargin` the same
- * way `nativeTheme.ts` itself builds every other widget's.
- */
-function defaultStyles(theme: NativeTheme) {
-  // `make_flat_stylebox(style_normal_color, 18, 12, 18, 12)` scales literal margins,
-  // not `default_margin` (4).
-  const { scale } = theme;
-  const panelMargin = {
-    left: Math.round(18 * scale),
-    top: Math.round(12 * scale),
-    right: Math.round(18 * scale),
-    bottom: Math.round(12 * scale),
-  };
-  const cornerDetail = flatCornerDetail(DEFAULT_CORNER_RADIUS, scale);
-  const panel = flatBox(theme.styleFill.normal, panelMargin, theme.cornerRadius, cornerDetail);
-  // `graphn_sb_titlebar_selected = graphnode_normal->duplicate()` then
-  // `set_bg_color(...)`: clones the panel's own margins, not the titlebar's.
-  const titlebarSelected = flatBox(
-    { r: 1.0, g: 0.625, b: 0.625, a: 0.6 },
-    panelMargin,
-    theme.cornerRadius,
-    cornerDetail
-  );
-  const titlebar = flatBox(
-    lightened(theme.styleFill.normal, 0.3),
-    {
-      left: theme.contentMargin,
-      top: theme.contentMargin,
-      right: theme.contentMargin,
-      bottom: theme.contentMargin,
-    },
-    theme.cornerRadius,
-    cornerDetail
-  );
-  // `make_empty_stylebox(0, 0, 0, 0)`: draws nothing, zero margin.
-  const slot = flatBox({ r: 0, g: 0, b: 0, a: 0 }, ZERO_SIDES, 0, flatCornerDetail(0, scale));
-  return { panel, panelSelected: panel, titlebar, titlebarSelected, slot };
-}
-
-export function graphNodeStyles(n: SolveNode, theme: NativeTheme) {
-  const d = defaultStyles(theme);
-  return {
-    panel: n.styleBoxes.panel ?? d.panel,
-    panelSelected: n.styleBoxes.panel_selected ?? d.panelSelected,
-    titlebar: n.styleBoxes.titlebar ?? d.titlebar,
-    titlebarSelected: n.styleBoxes.titlebar_selected ?? d.titlebarSelected,
-    slot: n.styleBoxes.slot ?? d.slot,
-  };
-}
-
-/** `theme_override_constants/separation`, else `Math.round(2 * scale)` (`default_theme.cpp`, GraphNode's own `separation`). */
-function separationOf(n: SolveNode, theme: NativeTheme): number {
-  const override = n.constants.separation;
-  if (override !== undefined) return override;
-  return Math.round(2 * theme.scale);
+export function graphNodeStyles(n: SolveNode) {
+  return { ...graphElementStyles(n), slot: requiredThemeItem(n.styleBoxes, 'slot') };
 }
 
 function hFlagsOf(n: SolveNode): number {
@@ -137,8 +67,9 @@ export function graphNodeTitleTextMin(n: SolveNode): Vector2 {
 
 const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
-  const { panel, titlebar, slot } = graphNodeStyles(n, ctx.theme);
+  const { panel, titlebar, slot } = graphNodeStyles(n);
   const textMin = graphNodeTitleTextMin(n);
+  const separation = requiredThemeItem(n.constants, 'separation');
 
   let width = textMin.x + titlebar.contentMargin.left + titlebar.contentMargin.right;
   let height = textMin.y + titlebar.contentMargin.top + titlebar.contentMargin.bottom;
@@ -157,7 +88,7 @@ const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
     width = Math.max(width, w);
     // `i` counts every child, hidden ones included, so the sibling of a hidden leading child
     // still pays one `separation`.
-    if (i > 0) height += separationOf(n, ctx.theme);
+    if (i > 0) height += separation;
   });
 
   height += panel.contentMargin.top + panel.contentMargin.bottom;
@@ -180,10 +111,10 @@ interface StretchEntry {
   minSize: Vector2;
 }
 
-const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect, ctx) => {
+const graphNodeLayout: ContainerLayoutFn = (n, children, contentRect) => {
   const props = n.node.properties as GraphNodeProperties;
-  const { panel, titlebar, slot } = graphNodeStyles(n, ctx.theme);
-  const separation = separationOf(n, ctx.theme);
+  const { panel, titlebar, slot } = graphNodeStyles(n);
+  const separation = requiredThemeItem(n.constants, 'separation');
   const textMin = graphNodeTitleTextMin(n);
   const titlebarBand = titlebarGeometry(contentRect.w, textMin.y, titlebar);
   const titlebarBandHeight = titlebarBand.rect.h;
@@ -278,9 +209,9 @@ interface GraphNodeDrawRow {
   styleboxRect: Rect2 | null;
 }
 
-/** `theme_override_constants/port_h_offset`, else `0` (`default_theme.cpp`'s own literal, not scaled), as the `int` Godot stores (`graph_node.cpp:1011`). */
+/** `port_h_offset` as the `int` Godot stores (`graph_node.cpp:1011`). */
 export function portHOffsetOf(constants: Readonly<Record<string, number>>): number {
-  return Math.trunc(constants.port_h_offset ?? 0);
+  return Math.trunc(requiredThemeItem(constants, 'port_h_offset'));
 }
 
 /** The x of a right port: `Point2i(get_size().x - port_h_offset, slot_y)` (`graph_node.cpp:666`, `:1050`) keeps whole pixels. */

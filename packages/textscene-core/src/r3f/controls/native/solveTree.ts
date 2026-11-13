@@ -13,7 +13,8 @@ import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
 import type { PaintRange } from '../../canvasPaintOrder';
-import type { CanvasAncestors } from '../../canvasItemPass/canvasAncestors';
+import type { Transform2DColumns } from '../../../godot/math/transform2d';
+import type { CanvasInheritance } from '../../canvasItemPass/inheritedCanvasState';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rgba } from '../../../godot/math/math.js';
 import type { Vector2 } from '../../../godot/math/vector.js';
@@ -85,16 +86,15 @@ export interface SolveNode {
    */
   layerSequence: number;
   /**
-   * What the non-Control `CanvasItem` ancestors this node promoted past contribute,
-   * or `null` for none. Non-null tells the solver that `data.parent_canvas_item`
-   * is not a Control (`isPromotedControl`).
+   * The composed `Transform2D` of the non-Control `CanvasItem` ancestors this node promoted past,
+   * outermost first (`transform_2d.cpp:198-218`), or `null` for none. Never decomposed: composed
+   * ancestors can shear. Non-null tells the solver that `data.parent_canvas_item` is not a Control
+   * (`isPromotedControl`). The rest of what they hand down is in `inheritance`.
    */
-  // Transform, tint and z accumulate down `CanvasItem::get_parent_item()`, which
-  // casts only the direct parent and returns nullptr for `top_level`
-  // (`scene/main/canvas_item.cpp:565-571`). A plain `Node`, `Node3D` or `CanvasLayer`
-  // breaks the chain: `null`, and the node is hoisted to a canvas root. Visibility follows
-  // `parentVisibleInTree` instead, which a hoisted Control keeps too.
-  skippedAncestors: CanvasAncestors | null;
+  // The chain follows `CanvasItem::get_parent_item()`, which casts only the direct parent and
+  // returns nullptr for `top_level` (`scene/main/canvas_item.cpp:565-571`). A plain `Node`,
+  // `Node3D` or `CanvasLayer` breaks it: `null`, and the node is hoisted to a canvas root.
+  skippedTransform: Transform2DColumns | null;
   /**
    * `CanvasItem::parent_visible_in_tree`, the other half of `is_visible_in_tree()`
    * (`canvas_item.cpp:62-64`). It follows the scene tree with no `top_level` test
@@ -105,6 +105,8 @@ export interface SolveNode {
   // `Window`'s visibility, or `true` in a `SubViewport` (`canvas_item.cpp:330-350`).
   // So a Control under a hidden Node3D still draws.
   parentVisibleInTree: boolean;
+  /** Where the Control's modulate, `z_final`, material and sampler come from in the walk's tree. */
+  inheritance: CanvasInheritance;
   /**
    * `Control::is_layout_rtl()` (`scene/gui/control.cpp:3551-3620`), resolved on the
    * walk because an inherited node climbs past non-Controls the solve tree lacks.
@@ -201,7 +203,7 @@ export interface SolveNode {
  * sorts it (`container.cpp:143-155`, `box_container.cpp:58`).
  */
 export function isPromotedControl(n: SolveNode): boolean {
-  return n.skippedAncestors !== null;
+  return n.skippedTransform !== null;
 }
 
 /**
@@ -244,7 +246,7 @@ export function controlProps(n: ShareNode): ControlProperties {
 
 /**
  * A Control's properties minus the two the walker has consumed: `modulate` goes
- * into the ambient `Modulate2DContext` and `self_modulate` into `tint`, so a
+ * into what the Control hands down and `self_modulate` into `tint`, so a
  * painter that read either would apply it twice.
  */
 type PainterView<T> = Omit<T, 'modulate' | 'selfModulate'>;

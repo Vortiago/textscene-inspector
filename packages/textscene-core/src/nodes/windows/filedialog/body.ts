@@ -20,7 +20,6 @@ import {
   FILE_DIALOG_LIST_ICONS,
   FILE_DIALOG_SIDE_LIST_MINIMUM_WIDTH,
   FILE_DIALOG_THEME_ICONS,
-  FILE_DIALOG_THUMBNAIL_SIZE,
   type FileDialogListIcon,
   type FileDialogThemeIcon,
 } from '../../../godot/scene/fileDialog';
@@ -33,6 +32,7 @@ import type { ItemListProperties, ItemListRuntimeItem } from '../../2d/ui/itemli
 import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { themedIconSize } from '../../../r3f/controls/native/scaledSvgIcon';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../r3f/controls/native/themeItems';
 import { themedSlotRequests, type TextureSlotsFn } from '../../../r3f/controls/native/solverRegistry';
 import { perObject } from '../../../utils/perObject';
 import { builtButtonIconRequests, syntheticControl, syntheticPath } from '../acceptdialog/dialogParts';
@@ -201,8 +201,6 @@ function lowerToolbar({ props }: Dialog): Widget {
     ],
   });
 }
-
-const WHITE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
 /** The ItemList properties `update_file_list` sets for a display mode (`file_dialog.cpp:815-834`). */
 function fileListLayout({ props, listTheme }: Dialog): Partial<ItemListProperties> {
@@ -407,10 +405,10 @@ export function fileDialogBody(dialog: SolveNode, theme: NativeTheme): SolveNode
   if (known) return known;
   const props = dialog.node.properties as FileDialogProperties;
   const listTheme: FileListTheme = {
-    thumbnailSize: Math.trunc((dialog.constants.thumbnail_size ?? FILE_DIALOG_THUMBNAIL_SIZE) * theme.scale),
+    thumbnailSize: Math.trunc(requiredThemeItem(dialog.constants, 'thumbnail_size') * theme.scale),
     fileIconSize: iconSizeOf(dialog, 'file', theme.scale),
-    folderIconColor: dialog.colors.folder_icon_color ?? WHITE,
-    fileIconColor: dialog.colors.file_icon_color ?? WHITE,
+    folderIconColor: requiredThemeItem(dialog.colors, 'folder_icon_color'),
+    fileIconColor: requiredThemeItem(dialog.colors, 'file_icon_color'),
   };
   const body = build(
     dialog,

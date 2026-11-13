@@ -1,5 +1,5 @@
 /**
- * `<CanvasLayer>` render contract: it draws no chrome and republishes fresh
+ * `<CanvasLayer>` render contract: it draws no chrome, starts a chain, and republishes fresh
  * `CanvasLayerIndexProvider` and `CanvasModulateContext` scopes around its children,
  * as `NodeDispatcher.tsx`'s `PlainNode` does. Structure only, never pixels.
  */
@@ -11,13 +11,10 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CanvasLayer } from './Component';
 import { parseCanvasLayer } from './parser';
 import { threeMatrixFromTransform2D } from '../../../../r3f/node2dTransform';
-import {
-  EffectiveZProvider,
-  useCanvasLayerIndex,
-  useEffectiveZ,
-} from '../../../../r3f/lighting2d/canvasItemPlacement';
+import { useCanvasLayerIndex } from '../../../../r3f/lighting2d/canvasItemPlacement';
 import { CanvasModulateContext, useCanvasModulate } from '../../../../r3f/canvasModulate';
-import { Modulate2DContext, useParentModulate } from '../../../../r3f/canvasItemModulate';
+import { useEnclosingCanvasState } from '../../../../r3f/canvasItemPass/inheritedCanvasState';
+import { InheritedFrom, inheritedState } from '../../../../r3f/testing/inheritedFrom';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import { fireSceneRender } from '../../../../r3f/testing/fireSceneRender';
@@ -54,14 +51,9 @@ function LayerProbe({ testId }: { testId: string }) {
   return <group name={`probe:${testId}:layer=${layer}:r=${modulate.r}`} />;
 }
 
-function ZProbe({ testId }: { testId: string }) {
-  const z = useEffectiveZ();
-  return <group name={`zprobe:${testId}:z=${z}`} />;
-}
-
-function ModulateProbe({ testId }: { testId: string }) {
-  const m = useParentModulate();
-  return <group name={`mprobe:${testId}:r=${m.r}:a=${m.a}`} />;
+function InheritedProbe({ testId }: { testId: string }) {
+  const { modulate, zFinal } = useEnclosingCanvasState();
+  return <group name={`iprobe:${testId}:z=${zFinal}:r=${modulate.r}:a=${modulate.a}`} />;
 }
 
 async function renderLayer(raw: Record<string, string> = {}, rawChildren: TscnNode[] = [], testId = 'a') {
@@ -120,37 +112,21 @@ describe('<CanvasLayer>', () => {
   });
 
   it(
-    'resets EffectiveZProvider to 0 for its children regardless of any ambient z outside the layer ' +
-      '— a CanvasLayer starts its OWN canvas (renderer_canvas_cull.cpp culls each canvas independently), ' +
-      "mirroring NodeDispatcher.tsx's own CanvasLayer branch (`<EffectiveZProvider value={0}>`)",
-    async () => {
-      const renderer = await ReactThreeTestRenderer.create(
-        <EffectiveZProvider value={999}>
-          <CanvasLayer {...painterEnv()} solveNode={layerSolveNode({}, [])} rect={ZERO_RECT} renderOrder={0}>
-            <ZProbe testId="reset" />
-          </CanvasLayer>
-        </EffectiveZProvider>
-      );
-      const probe = renderer.scene.findAllByType('Group').map((g) => g.instance as { name: string })[0]!;
-      expect(probe.name).toBe('zprobe:reset:z=0');
-    }
-  );
-
-  it(
-    "resets Modulate2DContext to opaque white — an ancestor's `modulate` does NOT reach into a CanvasLayer subtree " +
+    "starts a chain: an ancestor's `modulate` and z do not reach into a CanvasLayer subtree " +
       '(CanvasLayer derives from Node, so `CanvasItem::get_parent_item()` returns null under it, ' +
       "`scene/main/canvas_item.cpp:565`; the child parents to the layer's own canvas RID, `canvas_item.cpp:264,269`, " +
-      'whose root items are seeded pure white, `servers/rendering/renderer_canvas_cull.cpp:82`)',
+      'whose root items are seeded pure white at z 0, `servers/rendering/renderer_canvas_cull.cpp:82`)',
     async () => {
+      const outside = inheritedState({ modulate: { r: 0.5, g: 0.5, b: 0.5, a: 0.5 }, zFinal: 999 });
       const renderer = await ReactThreeTestRenderer.create(
-        <Modulate2DContext.Provider value={{ r: 0.5, g: 0.5, b: 0.5, a: 0.5 }}>
+        <InheritedFrom state={outside}>
           <CanvasLayer {...painterEnv()} solveNode={layerSolveNode({}, [])} rect={ZERO_RECT} renderOrder={0}>
-            <ModulateProbe testId="reset" />
+            <InheritedProbe testId="reset" />
           </CanvasLayer>
-        </Modulate2DContext.Provider>
+        </InheritedFrom>
       );
       const probe = renderer.scene.findAllByType('Group').map((g) => g.instance as { name: string })[0]!;
-      expect(probe.name).toBe('mprobe:reset:r=1:a=1');
+      expect(probe.name).toBe('iprobe:reset:z=0:r=1:a=1');
     }
   );
 

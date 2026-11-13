@@ -19,7 +19,7 @@ changes no decision: ADR-0055 stays as it is until its owner decides.
   ceiling by 20,897 B.
 
 The recommendation is a port of the lit surface to TSL node materials under the handler, behind a
-switch, and a move to `WebGPURenderer` as a later and separate project.
+switch, and a move to `WebGPURenderer` as a later and separate project (#1788).
 
 ## What the prototype is
 

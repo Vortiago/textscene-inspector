@@ -5,6 +5,8 @@
  * not a line pitch, since it sets no `line_spacing`. Measured: a `content_margin` 6 button is 35.
  */
 import { CONTROL_FONT_COLOR } from '../../../../godot/scene/theme';
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -466,7 +468,9 @@ describe('buttonLabelShape at AUTOWRAP_OFF keeps one row per hard-break line (no
 describe('Button.expand_icon under autowrap shapes at the drawn width (button.cpp:332-345,428-432)', () => {
   it('wraps the minimum at the width the expanded icon leaves, as the painter does', () => {
     const theme = nativeTheme(1);
-    const { x: marginX, y: marginY } = contentMarginSize(theme.widgets.button.normal);
+    const { x: marginX, y: marginY } = contentMarginSize(
+      defaultStyleBoxesOf(defaultThemeAt(1)).Button!.normal!
+    );
     const rect = { x: 0, y: 0, w: 130, h: 40 };
     // `is_clipped` keeps the text's width out of the icon's, so a square icon takes the box height.
     const iconWidth = Math.round(rect.h - marginY);

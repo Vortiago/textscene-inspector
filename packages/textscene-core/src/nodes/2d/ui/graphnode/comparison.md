@@ -12,7 +12,7 @@ renders_as: a titled panel with slot rows and left/right port icons
 GraphNode is a titled container inside a GraphEdit whose children become slots with
 input and output ports. The previewer draws its panel/titlebar StyleBoxes, the title
 text and one left/right port icon per enabled slot side. It adds each slot's own StyleBox
-when `draw_stylebox` is set, and the resize handle when `resizable` is set. A Theme that sets `font_color` or the `normal` StyleBox on Label colours and boxes the title. Inside a GraphEdit
+when `draw_stylebox` is set, and the resize handle in `resizer_color` when `resizable` is set (`graph_node.cpp:699`). A Theme that sets `font_color` or the `normal` StyleBox on Label colours and boxes the title. Inside a GraphEdit
 it draws at the GraphEdit's `zoom`, over the connections and the frames.
 `self_modulate` tints the panel, the title bar box, the ports and the resizer. The title text is a child Label and draws without it (`graph_node.cpp:1325-1330`).
 

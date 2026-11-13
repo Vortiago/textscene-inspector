@@ -11,7 +11,7 @@ import { mayDrawStyleBox, StyleBoxQuad } from './StyleBoxQuad';
 import { flatStyleBox } from './styleBoxFlat';
 import { neutralStyleBox } from '../../../resources/styles/stylebox/decode';
 import { canvasColorSpaceOf, CanvasColorSpaceProvider } from '../../canvasColorSpace';
-import { TextureSampler2DContext } from '../../canvasItemTextureSampler';
+import { InheritedFrom, inheritedState } from '../../testing/inheritedFrom';
 import { CanvasItemTextureFilter } from '../../../godot/scene/canvasItem';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { StyleBoxLineBox, StyleBoxTextureBox } from './parseStyleBox';
@@ -394,11 +394,13 @@ describe('<StyleBoxQuad>', () => {
       fake.textures.seed(TEX, fakeTexture());
       const renderer = await ReactThreeTestRenderer.create(
         <ResourceLoaderProvider loader={fake.loader}>
-          <TextureSampler2DContext.Provider
-            value={{ filter: CanvasItemTextureFilter.NEAREST, repeat: undefined }}
+          <InheritedFrom
+            state={inheritedState({
+              sampler: { filter: CanvasItemTextureFilter.NEAREST, repeat: undefined },
+            })}
           >
             <StyleBoxQuad styleBox={textureBox()} rect={{ x: 0, y: 0, w: 100, h: 50 }} renderOrder={0} />
-          </TextureSampler2DContext.Provider>
+          </InheritedFrom>
         </ResourceLoaderProvider>
       );
       const mesh = renderer.scene.findByType('Mesh').instance as THREE.Mesh;
