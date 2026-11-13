@@ -57,4 +57,12 @@ describe('the section origins of a settled trail, as Godot 4.6.3 capture_aabb re
     expect(settled.trail).toEqual({ sections: 6, depth: 9, frameDelta: Math.fround(1 / 30) });
     expect(settled.buffer.length).toBe(settled.indices.length * 6 * 20);
   });
+
+  it('settles a trail_lifetime far beyond the steps of the settle without allocating its history', () => {
+    const settled = settle({ ...TRAIL_EMITTER, preprocess: 1 }, STRAIGHT_UP, undefined, {
+      sections: 6,
+      lifetime: 1e9,
+    });
+    expect(settled.buffer.length).toBe(6 * 20);
+  });
 });

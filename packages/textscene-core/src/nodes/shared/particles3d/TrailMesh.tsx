@@ -34,11 +34,15 @@ export function TrailMesh({ mesh, buffer, sections }: TrailMeshProps) {
   );
 }
 
-/** The flag is read on the material the part draws: `material_override` first, else the surface's. */
+/**
+ * The flag is read on the material the part draws: `material_override` first, else the surface's.
+ * A surface with no bone attributes cannot skin, so it draws whole at each section.
+ */
 function TrailPart({ part, buffer, sections }: { part: MeshPart } & Omit<TrailMeshProps, 'mesh'>) {
   const { override } = useInstanceDraw();
   const material = readyMaterial(useMaterial(override ?? part.materials[0]));
-  const isSkinned = material?.resource.data.use_particle_trails === 'true';
+  const isSkinned =
+    material?.resource.data.use_particle_trails === 'true' && part.geometry.hasAttribute('skinIndex');
   return isSkinned ? (
     <SkinnedTrails part={part} buffer={buffer} sections={sections} />
   ) : (

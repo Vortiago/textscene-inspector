@@ -122,9 +122,10 @@ export function settleGpuParticles(input: GpuSettleInput, seconds: number): Sett
   const steps = settleStepCount(Math.min(seconds, MAX_SETTLE_SECONDS), frameTime);
   // `H = max(1, int(trail_lifetime * fps))` (`particles_storage.cpp:1484`).
   const depth = trail ? Math.max(1, Math.trunc(trail.lifetime * trailFps)) : 1;
-  const stride = particleStride(emitter.amount, steps, depth);
+  const keptStates = Math.min(depth, steps + 1);
+  const stride = particleStride(emitter.amount, steps, keptStates);
   const particles = Array.from({ length: Math.ceil(emitter.amount / stride) }, inactiveParticle);
-  const history = trail ? startHistory(particles.length, depth) : null;
+  const history = trail ? startHistory(particles.length, depth, steps) : null;
   const birth: BirthContext = {
     simulation: material.simulation,
     emission: material.emission,
@@ -171,9 +172,9 @@ const TRAIL_FPS = 60;
 /** The history states one settle keeps: about 25 MB. A larger trail emitter keeps every nth particle. */
 const MAX_HISTORY_STATES = 250_000;
 
-function particleStride(amount: number, steps: number, depth: number): number {
+function particleStride(amount: number, steps: number, keptStates: number): number {
   const byTime = Math.ceil((amount * steps) / MAX_PARTICLE_STEPS);
-  const byHistory = Math.ceil((amount * depth) / MAX_HISTORY_STATES);
+  const byHistory = Math.ceil((amount * keptStates) / MAX_HISTORY_STATES);
   return Math.max(1, byTime, byHistory);
 }
 

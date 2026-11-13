@@ -20,19 +20,27 @@ function sectionDelay(section: number, historyDepth: number, sections: number): 
 
 /** The history of every particle slot. */
 export interface TrailHistory {
-  /** The steps kept for each slot. */
+  /** The steps of history, `H`, which place the sections. */
   depth: number;
+  /** The states kept for each slot: `depth`, or fewer when the settle runs fewer steps. */
+  ringSize: number;
   /** The steps each slot has run since its last start. */
   steps: Int32Array;
-  /** Per slot, `depth` states in a ring addressed by step number. */
+  /** Per slot, `ringSize` states in a ring addressed by step number. */
   states: Float32Array;
 }
 
-export function startHistory(slotCount: number, depth: number): TrailHistory {
+/**
+ * A slot never runs more than `settleSteps` steps, so its ring holds `min(depth, settleSteps + 1)`
+ * states: a `trail_lifetime` of 1e9 s allocates the steps it can use, not `depth`.
+ */
+export function startHistory(slotCount: number, depth: number, settleSteps: number): TrailHistory {
+  const ringSize = Math.min(depth, settleSteps + 1);
   return {
     depth,
+    ringSize,
     steps: new Int32Array(slotCount),
-    states: new Float32Array(slotCount * depth * STATE_FLOATS),
+    states: new Float32Array(slotCount * ringSize * STATE_FLOATS),
   };
 }
 
@@ -81,6 +89,6 @@ export function readSection(
   }
 }
 
-function stateAt({ depth }: TrailHistory, slot: number, step: number): number {
-  return (slot * depth + (step % depth)) * STATE_FLOATS;
+function stateAt({ ringSize }: TrailHistory, slot: number, step: number): number {
+  return (slot * ringSize + (step % ringSize)) * STATE_FLOATS;
 }
