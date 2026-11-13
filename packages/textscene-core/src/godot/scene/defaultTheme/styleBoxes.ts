@@ -50,7 +50,7 @@ function scaledSides(sides: Sides, scale: number): Sides {
  * scale`. `radius` is the radius before the theme scale. `set_corner_detail` takes an `int`, so the
  * product truncates, then clamps to 1..20 (`style_box_flat.cpp:129-130`).
  */
-export function flatCornerDetail(radius: number, scale: number): number {
+function flatCornerDetail(radius: number, scale: number): number {
   const detail = Math.trunc(Math.min(Math.ceil(1.5 * radius), MAX_UNSCALED_CORNER_DETAIL) * scale);
   return clamp(detail, CORNER_DETAIL_MIN, CORNER_DETAIL_MAX);
 }
