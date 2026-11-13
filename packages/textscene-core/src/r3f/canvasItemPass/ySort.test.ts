@@ -11,7 +11,7 @@ import { liveScenePassResults } from '../liveScenePass';
 import { canvasItemPass } from './canvasItemPass';
 import { canvasPaintPass } from './canvasItemPaint';
 import type { PaintRange } from '../canvasPaintOrder';
-import { NO_SORT_INPUTS, ySortedPaint, type ExtraSortItems, type SortOrigins } from './ySort';
+import { NO_SORT_INPUTS, sortedPaintOf, ySortedPaint, type ExtraSortItems, type SortOrigins } from './ySort';
 import '../nodes/index';
 import '../controls/index';
 
@@ -185,7 +185,7 @@ position = Vector2(0, 100)
 
   it("sorts a node's extra pieces at their origin, before its children in collection order", () => {
     const extras: ExtraSortItems = new Map([
-      ['Root', [{ id: 'row 50', origin: { x: 0, y: 50 }, size: 1, isInternalBack: false }]],
+      ['Root', [{ id: 'row 50', origin: { x: 0, y: 50 }, size: 1, followsChildren: false }]],
     ]);
     expect(
       sortedOrder(
@@ -203,7 +203,7 @@ position = Vector2(0, 50)
 
   it("sorts a node's internal back pieces after its children in collection order", () => {
     const extras: ExtraSortItems = new Map([
-      ['Root', [{ id: 'bar 50', origin: { x: 0, y: 50 }, size: 1, isInternalBack: true }]],
+      ['Root', [{ id: 'bar 50', origin: { x: 0, y: 50 }, size: 1, followsChildren: true }]],
     ]);
     expect(
       sortedOrder(
@@ -223,7 +223,7 @@ position = Vector2(0, 50)
     const extras: ExtraSortItems = new Map([
       [
         'Root',
-        [1, 2, 3].map((y) => ({ id: `row ${y}`, origin: { x: 0, y }, size: 1, isInternalBack: false })),
+        [1, 2, 3].map((y) => ({ id: `row ${y}`, origin: { x: 0, y }, size: 1, followsChildren: false })),
       ],
     ]);
     const runs = sortedRuns(
@@ -266,5 +266,65 @@ position = Vector2(0, 50)
     const leaf = runs.get('Root/Moved/Inner/Leaf')!;
     expect(leaf.base).toBeGreaterThanOrEqual(moved.base);
     expect(leaf.base + leaf.size).toBeLessThanOrEqual(moved.base + moved.size);
+  });
+});
+
+describe('sortedPaintOf: a merged entry whose pieces take their own runs', () => {
+  it('keeps its back pieces inside its run', () => {
+    const scene = parsed(`[node name="Root" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Scroll" type="ScrollContainer" parent="."]
+y_sort_enabled = true
+
+[node name="Content" type="ColorRect" parent="Scroll"]
+`);
+    const tree = liveTreeOf(scene.nodes, contextOver(scene, {}));
+    const paints = liveScenePassResults(canvasPaintPass, tree);
+    const pieces: ExtraSortItems = new Map([
+      [
+        'Root/Scroll',
+        ['a', 'b', 'c', 'd'].map((name) => ({
+          id: `Root/Scroll#${name}`,
+          origin: { x: 0, y: 0 },
+          size: 1,
+          followsChildren: true,
+        })),
+      ],
+    ]);
+    const runs = ySortedPaint(liveScenePassResults(canvasItemPass, tree), paints, {
+      ...NO_SORT_INPUTS,
+      extras: pieces,
+    });
+    const run = runs.get('Root/Scroll')!;
+    const drawn = sortedPaintOf('Root/Scroll', paints.get('Root/Scroll')!, runs, paints);
+    expect(drawn.back.base).toBeGreaterThanOrEqual(run.base);
+    expect(drawn.back.base).toBeLessThan(run.base + run.size);
+  });
+});
+
+describe('ySortedPaint: a live y', () => {
+  it('reads a live y in the space of the node that gave it', () => {
+    const extras: ExtraSortItems = new Map([
+      ['Root/Map', [{ id: 'tile', origin: { x: 0, y: 0 }, size: 1, followsChildren: false }]],
+    ]);
+    const scene = parsed(`[node name="Root" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Map" type="Node2D" parent="."]
+position = Vector2(0, 300)
+y_sort_enabled = true
+
+[node name="Ball" type="Polygon2D" parent="."]
+position = Vector2(0, 100)
+`);
+    const tree = liveTreeOf(scene.nodes, contextOver(scene, {}));
+    const runs = ySortedPaint(
+      liveScenePassResults(canvasItemPass, tree),
+      liveScenePassResults(canvasPaintPass, tree),
+      { origins: NO_ORIGINS, extras, liveYs: new Map([['tile', { y: 10, space: 'Root/Map' }]]) }
+    );
+    const order = [...runs].sort((a, b) => a[1].base - b[1].base).map(([id]) => id);
+    expect(order).toEqual(['Root', 'Root/Ball', 'Root/Map', 'tile']);
   });
 });

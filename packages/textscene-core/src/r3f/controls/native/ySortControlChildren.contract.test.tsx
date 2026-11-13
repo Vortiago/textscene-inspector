@@ -194,3 +194,26 @@ z_index = 5
     expect(compareKeys(keys.B2!, keys.B1!)).toBeLessThan(0);
   });
 });
+
+describe('a Control at the root of the walk, inside an entry the world sort moved', () => {
+  it('draws with the Node2D entry it hangs under, over a sibling that sorts above it', async () => {
+    const tscn = `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Holder" type="Node2D" parent="."]
+position = Vector2(0, 200)
+
+[node name="Low" type="ColorRect" parent="Holder"]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Ball" type="Polygon2D" parent="."]
+position = Vector2(0, 100)
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+`;
+    const keys = await paintKeysOf(tscn, ['Ball', 'Low']);
+    expect(compareKeys(keys.Ball!, keys.Low!)).toBeLessThan(0);
+  });
+});
