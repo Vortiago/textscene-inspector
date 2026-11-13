@@ -4,6 +4,7 @@
  */
 
 import { reduced } from './constants.js';
+import { operatorText } from './operators.js';
 import type { ConstantNode, Expression, FunctionNode, ShaderNode, Statement } from './shaderTree.js';
 import { shapeOf } from './types.js';
 
@@ -27,52 +28,7 @@ function printStatement(statement: Statement): string {
   return `${printExpression(statement)};`;
 }
 
-/** The text of a binary operator, by Godot's enumerator. */
-const BINARY_TEXT: Readonly<Record<string, string>> = {
-  OP_EQUAL: '==',
-  OP_NOT_EQUAL: '!=',
-  OP_LESS: '<',
-  OP_LESS_EQUAL: '<=',
-  OP_GREATER: '>',
-  OP_GREATER_EQUAL: '>=',
-  OP_AND: '&&',
-  OP_OR: '||',
-  OP_ADD: '+',
-  OP_SUB: '-',
-  OP_MUL: '*',
-  OP_DIV: '/',
-  OP_MOD: '%',
-  OP_SHIFT_LEFT: '<<',
-  OP_SHIFT_RIGHT: '>>',
-  OP_BIT_AND: '&',
-  OP_BIT_OR: '|',
-  OP_BIT_XOR: '^',
-  OP_ASSIGN: '=',
-  OP_ASSIGN_ADD: '+=',
-  OP_ASSIGN_SUB: '-=',
-  OP_ASSIGN_MUL: '*=',
-  OP_ASSIGN_DIV: '/=',
-  OP_ASSIGN_MOD: '%=',
-  OP_ASSIGN_SHIFT_LEFT: '<<=',
-  OP_ASSIGN_SHIFT_RIGHT: '>>=',
-  OP_ASSIGN_BIT_AND: '&=',
-  OP_ASSIGN_BIT_OR: '|=',
-  OP_ASSIGN_BIT_XOR: '^=',
-};
-
-/** The text of a prefix operator. */
-const PREFIX_TEXT: Readonly<Record<string, string>> = {
-  OP_NEGATE: '-',
-  OP_NOT: '!',
-  OP_BIT_INVERT: '~',
-  OP_INCREMENT: '++',
-  OP_DECREMENT: '--',
-};
-
-const POSTFIX_TEXT: Readonly<Record<string, string>> = {
-  OP_POST_INCREMENT: '++',
-  OP_POST_DECREMENT: '--',
-};
+const POSTFIX_OPERATORS = new Set(['OP_POST_INCREMENT', 'OP_POST_DECREMENT']);
 
 /**
  * The text of `expression`. A prefix operator stands without brackets, because the parser reduces
@@ -94,9 +50,9 @@ function printExpression(expression: Expression): string {
       if (op === 'OP_INDEX') return `${printOwner(operands[0]!)}[${texts[1]}]`;
       if (op === 'OP_SELECT_IF')
         return `(${texts[0]} ? ${printTernaryPart(operands[1]!)} : ${printTernaryPart(operands[2]!)})`;
-      if (POSTFIX_TEXT[op]) return `${printOwner(operands[0]!)}${POSTFIX_TEXT[op]}`;
-      if (PREFIX_TEXT[op]) return `${PREFIX_TEXT[op]}(${texts[0]})`;
-      return `(${texts[0]} ${BINARY_TEXT[op]} ${texts[1]})`;
+      if (POSTFIX_OPERATORS.has(op)) return `${printOwner(operands[0]!)}${operatorText(op)}`;
+      if (operands.length === 1) return `${operatorText(op)}(${texts[0]})`;
+      return `(${texts[0]} ${operatorText(op)} ${texts[1]})`;
     }
   }
 }

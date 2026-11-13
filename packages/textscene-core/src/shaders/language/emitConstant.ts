@@ -26,6 +26,7 @@ import {
   vec4,
 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
+import { INT32_MIN } from '../../godot/variant/intWidth.js';
 import type { Scalar } from './shaderTree.js';
 import { shapeOf, type ValueType } from './types.js';
 
@@ -57,9 +58,6 @@ export const CONSTRUCTORS: Readonly<Record<string, Constructor>> = Object.fromEn
   }).map(([name, constructor]) => [name, constructor as unknown as Constructor])
 );
 
-/** The smallest int: three writes an int constant as its decimal text, which has no literal for it. */
-const INT_MIN = -0x80000000;
-
 /** The constant of `type` with `lanes`, a matrix's columns one after the other. */
 export function constantNode(type: ValueType, lanes: readonly Scalar[]): Node {
   const shape = shapeOf(type)!;
@@ -77,7 +75,8 @@ function scalarNode(scalar: string, lane: Scalar): Node {
   if (scalar === 'bool') return bool(lane as boolean) as unknown as Node;
   if (scalar === 'uint') return uint(lane as number) as unknown as Node;
   if (scalar === 'int') {
-    if (lane === INT_MIN) return int(uint(0x80000000)) as unknown as Node;
+    // three writes an int constant as its decimal text, which has no literal for the least int.
+    if (lane === INT32_MIN) return int(uint(0x80000000)) as unknown as Node;
     return int(lane as number) as unknown as Node;
   }
   return floatNode(lane as number);

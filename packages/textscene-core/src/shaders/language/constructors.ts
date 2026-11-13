@@ -5,7 +5,8 @@
  */
 
 import { convertedScalar } from './constants.js';
-import { INSTRUCTION_TABLE, type InstructionRow } from './instructionTable.generated.js';
+import type { InstructionRow } from './instructionTable.generated.js';
+import { overloadInstructions } from './instructions.js';
 import type { ConstantNode, Expression } from './shaderTree.js';
 import { shapeOf } from './types.js';
 
@@ -21,10 +22,7 @@ export interface MatchedOverload {
 /** The overload of type `type` for `args`, or nothing when Godot finds none. */
 export function matchedConstructor(type: string, args: readonly Expression[]): MatchedOverload | undefined {
   if (args.length > MAX_ARGUMENTS) return undefined;
-  const row = INSTRUCTION_TABLE.find(
-    (candidate) =>
-      candidate.id.startsWith(`${type}(`) && candidate.args !== undefined && matches(candidate.args, args)
-  );
+  const row = overloadInstructions(type).find((candidate) => matches(candidate.args!, args));
   if (!row) return undefined;
   return { row, operands: args.map((arg, index) => converted(arg, row.args![index]!)) };
 }

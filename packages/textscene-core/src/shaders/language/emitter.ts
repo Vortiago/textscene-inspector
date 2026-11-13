@@ -7,7 +7,7 @@
 import { select } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { CONSTRUCTORS, constantNode } from './emitConstant.js';
-import { assignedOperator, columnOf, constructed, OPERATIONS } from './emitOperation.js';
+import { assignedOperator, columnOf, constructed, element, OPERATIONS } from './emitOperation.js';
 import { GlslangFolding } from './glslangFolding.js';
 import { glslExpression } from './godotText.js';
 import { isAssignOperator } from './operators.js';
@@ -214,10 +214,11 @@ class FunctionEmitter {
       const owner = this.place(target.operands[0]!);
       const index = target.operands[1]!;
       const indexNode = this.emit(index);
+      const known = this.folding.lanesOf(index)?.[0] as number | undefined;
+      const picked: ElementIndex = { node: indexNode, type: index.type, known };
       return {
         read: () => element(owner.read(), indexNode),
-        write: (value) =>
-          owner.write(withElement(owner.read(), target.operands[0]!.type, index, indexNode, value)),
+        write: (value) => owner.write(withElement(owner.read(), target.operands[0]!.type, picked, value)),
       };
     }
     throw new Error(`expected an argument, a swizzle or an element to assign to, got a ${target.kind}`);
@@ -229,9 +230,6 @@ const choose = (test: Node, onTrue: Node, onFalse: Node) =>
 
 const swizzle = (owner: Node, lanes: readonly number[]) =>
   (owner as unknown as Record<string, Node>)[lanes.map((lane) => LANE_LETTERS[lane]).join('')]!;
-
-const element = (owner: Node, index: Node) =>
-  (owner as unknown as { element(index: Node): Node }).element(index);
 
 /** Lane `lane` of a value of `lanes` lanes: a scalar is its own one lane. */
 const laneOf = (value: Node, lanes: number, lane: number) => (lanes === 1 ? value : swizzle(value, [lane]));
@@ -246,18 +244,25 @@ function withLanes(owner: Node, type: ValueType, lanes: readonly number[], value
   return CONSTRUCTORS[type]!(...components);
 }
 
+/** An index of an element write: its node, its type, and its value when glslang folds it. */
+interface ElementIndex {
+  readonly node: Node;
+  readonly type: ValueType;
+  readonly known: number | undefined;
+}
+
 /**
- * The vector or matrix `owner` with element `index` replaced by `value`. A constant index picks
+ * The vector or matrix `owner` with element `index` replaced by `value`. A folded index picks
  * its element. Another picks each element by comparing, as GLSL reads it at run time.
  */
-function withElement(owner: Node, type: ValueType, index: Expression, indexNode: Node, value: Node): Node {
+function withElement(owner: Node, type: ValueType, index: ElementIndex, value: Node): Node {
   const shape = shapeOf(type)!;
   const count = shape.columns ?? shape.lanes;
   const current = (position: number) =>
     shape.columns === undefined ? swizzle(owner, [position]) : columnOf(owner, position);
   const elements = Array.from({ length: count }, (_, position) => {
-    if (index.kind === 'constant') return index.values[0] === position ? value : current(position);
-    const isPicked = OPERATIONS.OP_EQUAL!([indexNode, constantNode(index.type, [position])], [index.type]);
+    if (index.known !== undefined) return index.known === position ? value : current(position);
+    const isPicked = OPERATIONS.OP_EQUAL!([index.node, constantNode(index.type, [position])], [index.type]);
     return choose(isPicked, value, current(position));
   });
   return CONSTRUCTORS[type]!(...elements);

@@ -1,12 +1,9 @@
 /** The tree check finds a node that breaks a fact of the tree. */
 
 import { describe, expect, it } from 'vitest';
-import { parse } from './parse.js';
+import { treeOf } from './parsedTree.testkit.js';
 import type { Expression, ShaderNode } from './shaderTree.js';
-import { tokenize } from './tokenizer.js';
 import { treeFault } from './treeCheck.js';
-
-const treeOf = (source: string) => parse(tokenize(source));
 
 /** `shader` with the value of its first function's return replaced by `change(value)`. */
 function withReturn(shader: ShaderNode, change: (value: Expression) => Expression): ShaderNode {

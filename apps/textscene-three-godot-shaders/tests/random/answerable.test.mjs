@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { transpilerVerdict } from '../verdicts/judge.mjs';
 import { isAnswerable } from './answerable.mjs';
 import { generatePrograms } from './programs.mjs';
 import { FIXED_SEED } from './randomSet.mjs';
@@ -38,6 +39,13 @@ describe('the trees Godot 4.6.3 gives values for', () => {
     expect(programs.filter((program) => !isAnswerable(program.tree)).map((program) => program.name)).toEqual(
       []
     );
+  });
+
+  it("agrees with the transpiler's port of Godot's evaluation on every program of the fixed set", () => {
+    const refused = generatePrograms({ seed: FIXED_SEED, count: 400 })
+      .map((program) => ({ program, verdict: transpilerVerdict(program.source) }))
+      .filter(({ verdict }) => verdict.accepted === false && verdict.owner === undefined);
+    expect(refused.map(({ program, verdict }) => `${program.name}: ${verdict.message}`)).toEqual([]);
   });
 
   it('is every candidate of a reduction', async () => {

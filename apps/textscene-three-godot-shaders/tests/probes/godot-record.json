@@ -22357,8 +22357,7 @@
    "inputs": [],
    "rejected": {
     "stage": "GLSL",
-    "message": "'inf' : undeclared identifier",
-    "line": 322
+    "message": "'inf' : undeclared identifier"
    }
   },
   "negate-nested-vector": {
@@ -37067,8 +37066,7 @@
    ],
    "rejected": {
     "stage": "GLSL",
-    "message": "'' :  syntax error, unexpected EQUAL, expecting RIGHT_PAREN or COMMA",
-    "line": 325
+    "message": "'' :  syntax error, unexpected EQUAL, expecting RIGHT_PAREN or COMMA"
    }
   },
   "unbracketed-negated": {
@@ -37145,8 +37143,7 @@
    ],
    "rejected": {
     "stage": "GLSL",
-    "message": "'assign' :  l-value required",
-    "line": 325
+    "message": "'assign' :  l-value required"
    }
   },
   "negation-text-decrement": {

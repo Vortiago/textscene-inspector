@@ -35,17 +35,21 @@ function smallerPrograms(program) {
   const subtrees = treeNodes(program.tree)
     .slice(1)
     .map((tree) => ({ returns: tree.type, tree: withoutSpareBrackets(tree) }));
-  return [...sameReturn, ...subtrees]
-    .filter((candidate) => isAnswerable(candidate.tree))
-    .map((candidate) => ({ ...candidate, size: treeNodes(candidate.tree).length }))
-    .sort((a, b) => a.size - b.size)
+  const candidates = [...sameReturn, ...subtrees]
     .map(({ returns, tree }) => ({
       ...program,
       returns,
       tree,
       rows: rowsOf(tree),
       source: programSource({ ...program, returns, tree }),
-    }));
+    }))
+    .filter((candidate) => isAnswerable(candidate.tree));
+  // A child of the root's type is both a replacement and a subtree: one run judges it once.
+  const unique = [...new Map(candidates.map((candidate) => [candidate.source, candidate])).values()];
+  return unique
+    .map((candidate) => ({ candidate, size: treeNodes(candidate.tree).length }))
+    .sort((a, b) => a.size - b.size)
+    .map(({ candidate }) => candidate);
 }
 
 /** The first literal of each type in `tree`. */

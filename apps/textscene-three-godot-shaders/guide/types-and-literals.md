@@ -459,7 +459,7 @@ float probe(float a) { return a * 0.1 + 1e-20 + 3.4028234e38 * 0.0; }
 float probe() { return 1e39; }
 ```
 
-Godot does not compile this shader: the GPU compiler refuses Godot's GLSL at line 322, `'inf' : undeclared identifier`. The transpiler refuses it too.
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'inf' : undeclared identifier`. The transpiler refuses it too.
 
 ### Probe `fold-sum`, 16 input rows
 

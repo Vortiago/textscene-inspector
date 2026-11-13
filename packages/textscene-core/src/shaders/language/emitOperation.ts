@@ -104,9 +104,13 @@ function isNotEqual(operands: readonly Node[], types: readonly ValueType[]): Nod
   return tsl(any)(tsl(notEqual)(operands[0]!, operands[1]!));
 }
 
+/** Element `index` of a vector or matrix node. */
+export const element = (owner: Node, index: Node) =>
+  (owner as unknown as { element(index: Node): Node }).element(index);
+
 /** Column `column` of a matrix node. */
 export const columnOf = (matrix: Node, column: number): Node =>
-  (matrix as unknown as { element(index: Node): Node }).element(int(column) as unknown as Node);
+  element(matrix, int(column) as unknown as Node);
 
 /** The operation of each operator that writes nothing, by Godot's enumerator. */
 export const OPERATIONS: Readonly<Record<string, Operation>> = {

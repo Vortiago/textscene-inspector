@@ -1,12 +1,9 @@
 /** The printer writes text the parser reads as the same tree. */
 
 import { describe, expect, it } from 'vitest';
-import { parse } from './parse.js';
+import { treeOf } from './parsedTree.testkit.js';
 import { printShader } from './printer.js';
 import type { ShaderNode } from './shaderTree.js';
-import { tokenize } from './tokenizer.js';
-
-const treeOf = (source: string) => parse(tokenize(source));
 
 /** `tree` without the positions, which differ between a text and its printed form. */
 const shapeOf = (tree: ShaderNode): unknown =>

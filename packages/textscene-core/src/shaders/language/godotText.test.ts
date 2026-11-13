@@ -1,18 +1,9 @@
 /** The tree GLSL reads from Godot's text, on parsed trees. */
 
 import { describe, expect, it } from 'vitest';
+import { returnedValue as resultOf } from './parsedTree.testkit.js';
 import { glslExpression } from './godotText.js';
-import { parse } from './parse.js';
 import type { Expression } from './shaderTree.js';
-import { tokenize } from './tokenizer.js';
-
-/** The expression of the last statement, a `return`. */
-function resultOf(source: string): Expression {
-  const statements = parse(tokenize(source)).functions[0]!.body.statements;
-  const statement = statements[statements.length - 1];
-  if (statement?.kind !== 'control flow') throw new Error(`expected a return last in ${source}`);
-  return statement.expressions[0]!;
-}
 
 /** A tree as nested calls: `OP_ASSIGN(a, OP_MUL(b, a))`. */
 function written(expression: Expression): string {

@@ -1443,7 +1443,7 @@ vec4 probe(vec4 a, float b) { return a * b; }
 vec2 probe(vec2 a, vec2 b) { return b * (a = b); }
 ```
 
-Godot does not compile this shader: the GPU compiler refuses Godot's GLSL at line 325, `'' :  syntax error, unexpected EQUAL, expecting RIGHT_PAREN or COMMA`. The transpiler refuses it too.
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'' :  syntax error, unexpected EQUAL, expecting RIGHT_PAREN or COMMA`. The transpiler refuses it too.
 
 ### Probe `folding-matrix-times-vector`, 16 input rows
 
@@ -3026,7 +3026,7 @@ vec2 probe(float a) { return -(-vec2(1.5, 0.25)) * a; }
 float probe(float a, float b) { return -(a = b); }
 ```
 
-Godot does not compile this shader: the GPU compiler refuses Godot's GLSL at line 325, `'assign' :  l-value required`. The transpiler refuses it too.
+Godot does not compile this shader: the GPU compiler refuses Godot's GLSL, `'assign' :  l-value required`. The transpiler refuses it too.
 
 ### Probe `negation-text-decrement`, 16 input rows
 

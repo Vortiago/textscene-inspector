@@ -14,12 +14,8 @@ const LANGUAGE_FAILURE = `SHADER ERROR: Invalid arguments to operator '+': 'vec2
 `;
 
 describe("Godot's reason for a probe it draws nothing for", () => {
-  it("reads the GPU compiler's first message and line of Godot's GLSL", () => {
-    expect(parseRejection(GLSL_FAILURE)).toEqual({
-      stage: 'GLSL',
-      message: "'inf' : undeclared identifier",
-      line: 322,
-    });
+  it("reads the GPU compiler's first message on Godot's GLSL, with no line", () => {
+    expect(parseRejection(GLSL_FAILURE)).toEqual({ stage: 'GLSL', message: "'inf' : undeclared identifier" });
   });
 
   it("reads Godot's own message and line of the probe's shader", () => {

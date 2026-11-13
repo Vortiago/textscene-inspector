@@ -5,7 +5,8 @@
  */
 
 import type { ConstantNode, Expression, OperatorNode, Scalar } from './shaderTree.js';
-import { shapeOf, type ValueType } from './types.js';
+import { unaryLane } from './glslangArithmetic.js';
+import { filledLanes, shapeOf, type ScalarKind, type ValueType } from './types.js';
 
 /**
  * The lane of the scalar constant `constant` as type `to`, or nothing where Godot converts none:
@@ -47,19 +48,10 @@ function reducedConstruction(construction: OperatorNode): Expression {
       values.push(value);
     } else return node;
   }
-  if (values.length === 1) return constantOf(construction, spread(values[0]!, construction.type));
+  if (values.length === 1) return constantOf(construction, filledLanes(values[0]!, construction.type));
   // Godot prints an error and keeps the constructor when the lanes do not fill the type (line 7898).
   if (values.length !== shape.lanes) return node;
   return constantOf(construction, values);
-}
-
-/** One lane filling a vector, or the diagonal of a matrix with zeros elsewhere (line 7882). */
-function spread(value: Scalar, type: ValueType): Scalar[] {
-  const shape = shapeOf(type)!;
-  if (shape.columns === undefined) return Array<Scalar>(shape.lanes).fill(value);
-  return Array.from({ length: shape.lanes }, (_, lane) =>
-    Math.floor(lane / shape.columns!) === lane % shape.columns! ? value : 0
-  );
 }
 
 function reducedNegation(negation: OperatorNode): Expression {
@@ -72,11 +64,8 @@ function reducedNegation(negation: OperatorNode): Expression {
 }
 
 /** Godot's negation of one lane: `!` for a bool, and an `int` or `uint` wraps as GLSL does (line 7920). */
-function negatedScalar(value: Scalar, scalar: string): Scalar {
-  if (scalar === 'bool') return !value;
-  if (scalar === 'int') return -(value as number) | 0;
-  if (scalar === 'uint') return (0 - (value as number)) >>> 0;
-  return -(value as number);
+function negatedScalar(value: Scalar, scalar: ScalarKind): Scalar {
+  return scalar === 'bool' ? !value : unaryLane('OP_NEGATE', scalar, value)!;
 }
 
 const constantOf = (node: OperatorNode, values: Scalar[]): ConstantNode => ({

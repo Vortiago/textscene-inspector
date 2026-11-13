@@ -4,13 +4,10 @@
  * a 32-bit signed integer, a `uint` lane a 32-bit unsigned one, and a `bool` lane a boolean.
  */
 
+import { INT32_MAX, INT32_MIN, toInt32, toUint32, UINT32_MAX } from '../../godot/variant/intWidth.js';
 import { godotIntScalar, godotUintScalar } from './godotNumber.js';
 import type { Scalar } from './shaderTree.js';
 import type { ScalarKind } from './types.js';
-
-const INT_MAX = 0x7fffffff;
-const INT_MIN = -0x80000000;
-const UINT_MAX = 0xffffffff;
 
 /** One lane of a binary operator. */
 type LaneOperation = (a: Scalar, b: Scalar) => Scalar;
@@ -22,7 +19,7 @@ export function convertedLane(value: Scalar, from: ScalarKind, to: ScalarKind): 
   const number = typeof value === 'boolean' ? Number(value) : value;
   if (to === 'float') return number;
   if (from === 'float') return to === 'int' ? godotIntScalar(number) : godotUintScalar(number);
-  return to === 'int' ? number | 0 : number >>> 0;
+  return to === 'int' ? toInt32(number) : toUint32(number);
 }
 
 /** The lane of a unary operator on a lane of kind `scalar`, or nothing for one glslang leaves. */
@@ -42,8 +39,8 @@ export function binaryLane(op: string, scalar: ScalarKind): LaneOperation | unde
 
 /** An integer result as its kind holds it: the low 32 bits, signed for `int`. */
 function wrapped(scalar: ScalarKind, value: number): number {
-  if (scalar === 'int') return value | 0;
-  return scalar === 'uint' ? value >>> 0 : value;
+  if (scalar === 'int') return toInt32(value);
+  return scalar === 'uint' ? toUint32(value) : value;
 }
 
 type Arithmetic = (scalar: ScalarKind, a: number, b: number) => number;
@@ -69,15 +66,15 @@ function divided(scalar: ScalarKind, a: number, b: number): number {
     if (a === 0 || Number.isNaN(a)) return NaN;
     return a > 0 ? Infinity : -Infinity;
   }
-  if (b === 0) return scalar === 'int' ? INT_MAX : UINT_MAX;
-  if (scalar === 'int' && a === INT_MIN && b === -1) return INT_MIN;
+  if (b === 0) return scalar === 'int' ? INT32_MAX : UINT32_MAX;
+  if (scalar === 'int' && a === INT32_MIN && b === -1) return INT32_MIN;
   return wrapped(scalar, Math.trunc(a / b));
 }
 
 /** `EOpMod`: a modulo by zero gives the left lane, and the least `int` modulo -1 gives zero. */
 function remainder(scalar: ScalarKind, a: number, b: number): number {
   if (b === 0) return a;
-  if (scalar === 'int' && a === INT_MIN && b === -1) return 0;
+  if (scalar === 'int' && a === INT32_MIN && b === -1) return 0;
   return wrapped(scalar, a % b);
 }
 

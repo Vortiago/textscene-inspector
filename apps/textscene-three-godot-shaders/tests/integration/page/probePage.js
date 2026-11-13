@@ -34,7 +34,6 @@ import {
 } from 'three/tsl';
 import { installNodesHandler, transpileShadingLanguage } from '@textscene/three-godot-shaders';
 
-const VECTOR_PREFIX = { bool: 'bvec', int: 'ivec', uint: 'uvec', float: 'vec' };
 const CONSTRUCT = {
   bvec2,
   bvec3,
@@ -52,19 +51,6 @@ const CONSTRUCT = {
   mat3,
   mat4,
 };
-
-/** The scalar kind, lane count and column count of each type, as the Godot harness reads it. */
-function shapeOf(type) {
-  if (type.startsWith('mat')) {
-    const columns = Number(type.slice(3));
-    return { scalar: 'float', lanes: columns * columns, columns };
-  }
-  for (const [scalar, prefix] of Object.entries(VECTOR_PREFIX)) {
-    if (type === scalar) return { scalar, lanes: 1 };
-    if (type.startsWith(prefix)) return { scalar, lanes: Number(type.slice(prefix.length)) };
-  }
-  throw new Error(`expected a probe type, got ${type}`);
-}
 
 const renderer = new THREE.WebGLRenderer({ canvas: document.createElement('canvas') });
 installNodesHandler(renderer, 'linear');
@@ -104,10 +90,10 @@ const BITS_OF = {
  * uniform array: three writes every uniform buffer through a `Float32Array`, and a float holds a
  * 16-bit integer exactly, where a float of the whole bits could lose a NaN's payload.
  */
-function argument(type, bits, row) {
+function argument(type, shape, bits, row) {
   const halves = bits.flatMap((value) => [value & 0xffff, value >>> 16]);
   const values = uniformArray(halves, 'float');
-  const { scalar, lanes: size, columns } = shapeOf(type);
+  const { scalar, lanes: size, columns } = shape;
   const laneBits = (lane) => {
     const index = row.mul(size).add(lane).mul(2);
     return uint(values.element(index)).bitOr(uint(values.element(index.add(1))).shiftLeft(uint(16)));
@@ -121,9 +107,9 @@ function argument(type, bits, row) {
   return CONSTRUCT[type](...columnVectors);
 }
 
-/** The bits of lane `lane` of `result`, a matrix's columns one after the other. */
-function laneBitsOf(result, type, lane) {
-  const { scalar, lanes: size, columns } = shapeOf(type);
+/** The bits of lane `lane` of `result` of `shape`, a matrix's columns one after the other. */
+function laneBitsOf(result, shape, lane) {
+  const { scalar, lanes: size, columns } = shape;
   const letters = ['x', 'y', 'z', 'w'];
   const components =
     size === 1
@@ -162,16 +148,17 @@ function runProbe(spec) {
 
 /** The bits of each result lane of `probe` over `spec`'s rows, drawn into a one-row target. */
 function resultBits(probe, spec) {
+  const shapeOf = (type) => spec.shapes[type];
   const size = shapeOf(probe.returnType).lanes;
   const width = spec.rows * size;
   const pixel = int(screenCoordinate.x);
   const row = pixel.div(size);
   const lane = pixel.mod(size);
   const args = probe.arguments.map((functionArgument, index) =>
-    argument(functionArgument.type, spec.parameters[index], row)
+    argument(functionArgument.type, shapeOf(functionArgument.type), spec.parameters[index], row)
   );
   const material = new NodeMaterial();
-  material.fragmentNode = colourOf(laneBitsOf(probe.call(args), probe.returnType, lane));
+  material.fragmentNode = colourOf(laneBitsOf(probe.call(args), shapeOf(probe.returnType), lane));
   quad.material = material;
   const target = new THREE.WebGLRenderTarget(width, 1, {
     type: THREE.UnsignedByteType,

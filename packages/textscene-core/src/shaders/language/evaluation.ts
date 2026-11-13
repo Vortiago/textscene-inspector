@@ -6,6 +6,8 @@
  * other lanes count only for whether a value is known.
  */
 
+import { INT32_MIN } from '../../godot/variant/intWidth.js';
+import { binaryLane } from './glslangArithmetic.js';
 import type { Expression, OperatorNode, Scalar } from './shaderTree.js';
 import { shapeOf } from './types.js';
 
@@ -30,8 +32,6 @@ const EVALUATED = new Set([
   'OP_BIT_OR',
   'OP_BIT_XOR',
 ]);
-
-const INT_MIN = -0x80000000;
 
 /** A value-known lane list, or nothing for a node whose values Godot does not know. */
 type Values = readonly Scalar[] | undefined;
@@ -124,49 +124,23 @@ function laneRefusal(node: OperatorNode, a: Scalar, b: Scalar): string | undefin
     scalar === 'int' || (scalar === 'uint' && (node.op === 'OP_MOD' || node.type === 'uint'));
   if (checksZero && b === 0)
     return node.op === 'OP_DIV' ? 'Division by zero error.' : 'Modulo by zero error.';
-  if (scalar === 'int' && a === INT_MIN && b === -1)
+  if (scalar === 'int' && a === INT32_MIN && b === -1)
     return abortMessage('the least `int` divided by -1 traps the CPU');
   return undefined;
 }
 
 /**
- * One lane of an `int` or `uint` result as C++ computes it. A `uint` vector divides as floats of
- * its bits, the branch Godot takes for it (line 2253). Other lanes only mark a known value.
+ * One lane of an `int` or `uint` result as C++ computes it, the arithmetic glslang folds with. A
+ * `uint` vector divides as floats of its bits, the branch Godot takes for it (line 2253). Other
+ * lanes only mark a known value.
  */
 function laneValue({ op, type }: OperatorNode, a: Scalar, b: Scalar): Scalar {
   const scalar = shapeOf(type)!.scalar;
   if (scalar !== 'int' && scalar !== 'uint') return 0;
   if (op === 'OP_DIV' && scalar === 'uint' && type !== 'uint') return bitsQuotient(a as number, b as number);
-  const result = integerLane(op, a as number, b as number);
-  return scalar === 'int' ? result | 0 : result >>> 0;
-}
-
-/** C++ arithmetic on 32-bit lanes: wrapping, a shift count taken modulo 32 as the CPU does. */
-function integerLane(op: string, a: number, b: number): number {
-  switch (op) {
-    case 'OP_ADD':
-      return a + b;
-    case 'OP_SUB':
-      return a - b;
-    case 'OP_MUL':
-      return Math.imul(a, b);
-    case 'OP_DIV':
-      return Math.trunc(a / b);
-    case 'OP_MOD':
-      return a % b;
-    case 'OP_SHIFT_LEFT':
-      return a << b;
-    case 'OP_SHIFT_RIGHT':
-      return a < 0 ? a >> b : a >>> b;
-    case 'OP_BIT_AND':
-      return a & b;
-    case 'OP_BIT_OR':
-      return a | b;
-    case 'OP_BIT_XOR':
-      return a ^ b;
-    default:
-      throw new Error(`expected an integer operator, got ${op}`);
-  }
+  const apply = binaryLane(op, scalar);
+  if (!apply) throw new Error(`expected an integer operator, got ${op}`);
+  return apply(a, b);
 }
 
 /** The bits of the 32-bit float quotient of the floats whose bits are `a` and `b`. */

@@ -8,7 +8,7 @@ import { binaryLane, convertedLane, unaryLane } from './glslangArithmetic.js';
 import { godotConstantDouble } from './godotNumber.js';
 import type { Expression, OperatorNode, Scalar } from './shaderTree.js';
 import { swizzleLanes } from './swizzle.js';
-import { shapeOf, type ScalarKind, type TypeShape } from './types.js';
+import { filledLanes, shapeOf, type ScalarKind, type TypeShape, type ValueType } from './types.js';
 
 type Lanes = readonly Scalar[];
 
@@ -55,7 +55,7 @@ export class GlslangFolding {
     const shape = shapeOf(node.type)!;
     switch (node.op) {
       case 'OP_CONSTRUCT':
-        return constructed(shape, operands, shapes);
+        return constructed(node.type, operands, shapes);
       case 'OP_INDEX':
         return element(operands[0]!, shapes[0]!, operands[1]![0] as number);
       case 'OP_SELECT_IF':
@@ -78,7 +78,8 @@ export class GlslangFolding {
  * A constructor of constants (`foldConstructor`): each lane converted to the type's scalar, one
  * scalar filling a vector or a matrix's diagonal. A matrix of a matrix is left to the GPU.
  */
-function constructed(shape: TypeShape, operands: readonly Lanes[], shapes: readonly TypeShape[]) {
+function constructed(type: ValueType, operands: readonly Lanes[], shapes: readonly TypeShape[]) {
+  const shape = shapeOf(type)!;
   const lanes = operands.flatMap((operand, index) =>
     operand
       .slice(0, shapes[index]!.lanes)
@@ -86,11 +87,7 @@ function constructed(shape: TypeShape, operands: readonly Lanes[], shapes: reado
   );
   if (lanes.length === shape.lanes) return lanes;
   if (lanes.length !== 1 || shapes[0]!.lanes !== 1) return undefined;
-  if (shape.columns === undefined) return Array<Scalar>(shape.lanes).fill(lanes[0]!);
-  const zero = convertedLane(0, 'float', shape.scalar);
-  return Array.from({ length: shape.lanes }, (_, lane) =>
-    lane % (shape.columns! + 1) === 0 ? lanes[0]! : zero
-  );
+  return filledLanes(lanes[0]!, type);
 }
 
 /** `owner[index]` (`foldDereference`): a vector's lane or a matrix's column. */

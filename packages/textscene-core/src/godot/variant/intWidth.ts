@@ -43,7 +43,8 @@ const UINT8_MAX = 255;
 export const INT32_MIN = -2147483648;
 /** The widest value an `int32_t` slot holds; above it only a `uint32_t` can. */
 export const INT32_MAX = 2147483647;
-const UINT32_MAX = 4294967295;
+/** The widest value a `uint32_t` slot holds. */
+export const UINT32_MAX = 4294967295;
 /**
  * int64's own range is [-2^63, 2^63), but past 2^53 a double no longer holds the integer the file
  * states. The reader's limit is the tighter of the two, so it is the bound, and `storedFromFloat`

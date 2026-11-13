@@ -1,19 +1,13 @@
 /** The parser, against the types, the folds and the messages of Godot's `_parse_expression` and `_parse_block`. */
 
 import { describe, expect, it } from 'vitest';
+import { returnedValue as resultOf } from './parsedTree.testkit.js';
 import { parse } from './parse.js';
 import type { Expression, Statement } from './shaderTree.js';
 import { tokenize } from './tokenizer.js';
 
 const statementsOf = (source: string): readonly Statement[] =>
   parse(tokenize(source)).functions[0]!.body.statements;
-
-/** The expression of the function's first `return`. */
-function resultOf(source: string): Expression {
-  const statement = statementsOf(source).find((candidate) => candidate.kind === 'control flow');
-  if (statement?.kind !== 'control flow') throw new Error(`expected a return in ${source}`);
-  return statement.expressions[0]!;
-}
 
 const refusal = (source: string) => () => parse(tokenize(source));
 

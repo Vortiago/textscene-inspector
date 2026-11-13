@@ -3,7 +3,7 @@
  * `stpq` of a vector of any scalar kind, and Godot's messages for letters that do not fit.
  */
 
-import { familyInstructions } from './instructions.js';
+import { instruction } from './instructions.js';
 import type { Expression, MemberNode } from './shaderTree.js';
 import { shapeOf, vectorType } from './types.js';
 
@@ -11,8 +11,6 @@ const LETTER_SETS = ['xyzw', 'rgba', 'stpq'];
 
 /** The longest swizzle Godot reads. */
 const MAX_LETTERS = 4;
-
-const SWIZZLE_ROWS = familyInstructions('swizzle');
 
 /**
  * The member `.letters` of `owner`, or Godot's message for it. Godot reads every letter before it
@@ -41,7 +39,7 @@ export function swizzled(owner: Expression, letters: string): MemberNode | strin
   }
   if (mixesSets) return `Cannot combine symbols from different sets in expression '.${letters}'.`;
   if (!isValid || set === undefined) return invalid;
-  const row = SWIZZLE_ROWS.find((candidate) => candidate.id === `${owner.type}.${set}`)!;
+  const row = instruction(`${owner.type}.${set}`)!;
   return {
     kind: 'member',
     type: vectorType(shape.scalar, letters.length),

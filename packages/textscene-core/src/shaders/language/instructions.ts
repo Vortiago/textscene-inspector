@@ -25,14 +25,31 @@ export function firstInstruction(prefix: string): InstructionRow | undefined {
   return INSTRUCTION_TABLE.find((row) => row.id.startsWith(prefix));
 }
 
-/** Every row of `family`, in the table's order. */
-export function familyInstructions(family: string): InstructionRow[] {
-  return INSTRUCTION_TABLE.filter((row) => row.family === family);
-}
+/** The first built-in variable row of each name, in the table's order. */
+const BUILT_INS_BY_NAME: ReadonlyMap<string, InstructionRow> = new Map(
+  INSTRUCTION_TABLE.filter((row) => row.family.startsWith('built-in'))
+    .reverse()
+    .map((row) => [row.id.slice(row.id.lastIndexOf('.') + 1), row])
+);
 
 /** The first built-in variable named `name` in any stage, `canvas_item.fragment.TIME` for `TIME`. */
 export function builtInInstruction(name: string): InstructionRow | undefined {
-  return INSTRUCTION_TABLE.find((row) => row.family.startsWith('built-in') && row.id.endsWith(`.${name}`));
+  return BUILT_INS_BY_NAME.get(name);
+}
+
+/** The rows with arguments of each name, `vec2(float,float)` under `vec2`. Written once, here. */
+const OVERLOADS = new Map<string, InstructionRow[]>();
+for (const row of INSTRUCTION_TABLE) {
+  if (row.args === undefined || !/^\w+\(/.test(row.id)) continue;
+  const name = row.id.slice(0, row.id.indexOf('('));
+  const rows = OVERLOADS.get(name);
+  if (rows) rows.push(row);
+  else OVERLOADS.set(name, [row]);
+}
+
+/** The rows of `name(...)` with arguments, in the table's order. */
+export function overloadInstructions(name: string): readonly InstructionRow[] {
+  return OVERLOADS.get(name) ?? [];
 }
 
 const ROWS_BY_TOKEN: ReadonlyMap<string, InstructionRow> = new Map(

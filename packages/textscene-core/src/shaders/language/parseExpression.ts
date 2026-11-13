@@ -111,13 +111,9 @@ export class ExpressionParser {
    * `:`, and so does the else part of a ternary inside another's then part.
    */
   private ternaryParts(entries: Entry[], part: TernaryPart | undefined): void {
-    this.reducedPart({ entries, endsAtColon: true });
+    this.unreducedExpression({ entries, endsAtColon: true });
     entries.push({ isOperator: true, op: 'OP_SELECT_ELSE', position: this.tokens.lastPosition() });
-    this.reducedPart({ entries, endsAtColon: part?.endsAtColon ?? false });
-  }
-
-  private reducedPart(part: TernaryPart): void {
-    reduced(this.unreducedExpression(part));
+    this.unreducedExpression({ entries, endsAtColon: part?.endsAtColon ?? false });
   }
 
   /** One operand, or nothing after a unary operator, which joins `entries` (`shader_language.cpp:5968`). */

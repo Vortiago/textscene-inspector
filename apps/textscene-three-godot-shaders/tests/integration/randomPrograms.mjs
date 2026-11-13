@@ -41,12 +41,15 @@ async function reduceAgainstGodot(page, program) {
       // One name each: Godot's output names each probe's pixels by its name.
       const named = candidates.map((candidate, index) => ({ ...candidate, name: `reduce-${index}` }));
       const { pixels } = runProbesInGodot(named);
-      const differs = [];
-      for (const candidate of named) {
+      // The reduction takes the first candidate that differs, so the page stops at it.
+      const differs = named.map(() => false);
+      for (const [index, candidate] of named.entries()) {
         const entry = recordEntry(candidate, pixels.get(candidate.name));
-        differs.push(
-          differsInBits(compareProbe(entry, await runOnPage(page, candidate), isFloatResult(candidate)))
-        );
+        const verdict = compareProbe(entry, await runOnPage(page, candidate), isFloatResult(candidate));
+        if (differsInBits(verdict)) {
+          differs[index] = true;
+          break;
+        }
       }
       return differs;
     });
