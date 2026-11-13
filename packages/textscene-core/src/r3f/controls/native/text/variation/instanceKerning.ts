@@ -29,7 +29,7 @@ import { FIXED_16_16_ONE } from '../fontMetrics';
 import type { SfntFile } from '../sfntTables';
 import { featureLookupsAt } from '../autofit/openTypeFeatures';
 import { featureSubstitutionOfInstance } from './instanceRecord';
-import { readFvarAxes } from './fvar';
+import { fvarAxesOf } from './fvar';
 import { itemDeltaFixed, readItemVariationStore, type ItemVariationStore } from './itemVariationStore';
 
 /** The kerning of a pair of glyphs in design units, with the fraction of its deltas. */
@@ -157,4 +157,4 @@ export function defaultKerningReader(sfnt: SfntFile): PairKerningReader | null {
 }
 
 /** The axes of `sfnt`: a font with no `fvar` has one instance, at no coordinates. */
-const axisCountOf = (sfnt: SfntFile): number => readFvarAxes(sfnt)?.length ?? 0;
+const axisCountOf = (sfnt: SfntFile): number => fvarAxesOf(sfnt)?.length ?? 0;

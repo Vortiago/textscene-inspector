@@ -17,8 +17,8 @@ import {
   getFontRunGlyphAdvancePx,
   getFontKerningAdjustmentPx,
   getFontLinePitchPx,
+  withFallbacks,
   withOutlines,
-  drawnOpentype,
   type OpentypeCoordinates,
   withVariation,
   type FontMetrics,
@@ -211,7 +211,11 @@ describe('withVariation at a variable-font instance', () => {
       !drawsInstance(opentype) || left.glyph === 0 || right.glyph === 0
         ? null
         : left.glyph * 10 + right.glyph,
+    advanceAtInstance: (glyph: number, fontSizePx: number, opentype: OpentypeCoordinates) =>
+      drawsInstance(opentype) ? glyph * 64 + fontSizePx : null,
   };
+  const SHAPED_A: LookupGlyph = { glyph: 1, codePoint: 0x41 };
+  const SHAPED_V: LookupGlyph = { glyph: 2, codePoint: 0x56 };
   const kerningPx = (face: FontMetrics, a: string, b: string) =>
     getFontKerningAdjustmentPx(face, { char: a }, { char: b }, UNIT_SIZE_PX);
 
@@ -227,7 +231,7 @@ describe('withVariation at a variable-font instance', () => {
 
   it('draws axis values at the default instance as the font itself, with its own kerning', () => {
     const face = withVariation(METRICS, { opentype: REGULAR, outlines: variableOutlines });
-    expect(drawnOpentype(face)).toBeUndefined();
+    expect(face.drawnOpentype).toBeUndefined();
     expect(kerningPx(face, 'A', 'V')).toBe(-256);
   });
 
@@ -242,8 +246,58 @@ describe('withVariation at a variable-font instance', () => {
   it('drops the instance under a variation of its own that sets no axis', () => {
     const atInstance = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
     const bold = withVariation(atInstance, { embolden: 1.2 });
-    expect(drawnOpentype(bold)).toBeUndefined();
+    expect(bold.drawnOpentype).toBeUndefined();
     expect(kerningPx(bold, 'A', 'V')).toBe(-256);
+  });
+
+  it('draws the axis values of an instance other than the default', () => {
+    const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    expect(face.drawnOpentype).toBe(BOLD);
+  });
+
+  it('answers the kerning of the instance from its own readers', () => {
+    const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    expect(face.getKerningAdjustmentUnits('A', 'V')).toBe(12);
+    expect(face.getGlyphKerningUnits?.(SHAPED_A, SHAPED_V)).toBe(12);
+  });
+
+  it('answers the kerning of the face from its own readers where the instance kerns nothing', () => {
+    const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    expect(face.getKerningAdjustmentUnits('A', 'x')).toBe(0);
+    expect(face.getGlyphKerningUnits?.(SHAPED_A, { glyph: 0, codePoint: 0x78 })).toBeNull();
+  });
+
+  it('answers the advance of the instance for a character and for a shaped glyph', () => {
+    const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    expect(face.getInstanceAdvance26_6?.({ char: 'V' }, 16)).toBe(2 * 64 + 16);
+    expect(face.getInstanceAdvance26_6?.({ char: 'V', glyph: 7 }, 16)).toBe(7 * 64 + 16);
+  });
+
+  it('answers no advance of the instance for a character the font has no glyph for', () => {
+    const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    expect(face.getInstanceAdvance26_6?.({ char: 'x' }, 16)).toBeNull();
+  });
+
+  it('kerns a pair with one shaped glyph by that glyph and the glyph of the instance for the other', () => {
+    const face = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    const kerning = getFontKerningAdjustmentPx(face, { char: 'A', glyph: 5 }, { char: 'V' }, UNIT_SIZE_PX);
+    expect(kerning).toBe(52);
+  });
+
+  it('answers for the default instance under a wrapper with outlines and no axis value', () => {
+    const atInstance = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    const plain = withVariation(atInstance, {});
+    expect(plain.getKerningAdjustmentUnits('A', 'V')).toBe(-256);
+    expect(plain.getGlyphKerningUnits).toBeUndefined();
+    expect(plain.getInstanceAdvance26_6).toBeUndefined();
+  });
+
+  // The bold of a project font with fallbacks wraps the fallback wrapper of the face at its instance.
+  it('answers for the default instance under a variation of a fallback wrapper of an instance', () => {
+    const atInstance = withVariation(METRICS, { opentype: BOLD, outlines: variableOutlines });
+    const bold = withVariation(withFallbacks(atInstance, [{ ...METRICS }]), { embolden: 1.2 });
+    expect(bold.getKerningAdjustmentUnits('A', 'V')).toBe(-256);
+    expect(bold.getInstanceAdvance26_6).toBeUndefined();
   });
 });
 
