@@ -121,7 +121,7 @@ jobs:
           socat -V > /dev/null
 
       - id: claude
-        uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe # v1.0.269
+        uses: anthropics/claude-code-action@9eb012b6d0900c2b9eede65ee1758cec4d2973e9 # v1.0.270
         env:
           # Strips every credential from a subprocess. Claude runs none, so this guards a
           # later change that hands it a command.
