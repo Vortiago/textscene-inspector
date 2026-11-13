@@ -6,7 +6,7 @@
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes.js';
 import { SubViewportUpdateMode } from '../../../godot/scene/viewport.js';
 import { isShownCanvasNode } from '../../../r3f/canvasScopes.js';
-import { isCanvasLayerType } from '../../../r3f/canvasPaintOrder.js';
+import { isCanvasLayerType } from '../../../r3f/canvasItemClass.js';
 import type { LiveTree } from '../../../r3f/liveSceneTree.js';
 import { parentPathOf } from '../../../utils/nodePath.js';
 import type { TscnNode } from '../../../parser/types.js';

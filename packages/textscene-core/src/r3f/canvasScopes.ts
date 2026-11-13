@@ -9,7 +9,7 @@ import { MAX_2D_DIRECTIONAL_LIGHTS } from '../godot/rendering/rendering.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import type { Rgba } from '../godot/math/math.js';
 import { perObject } from '../utils/perObject.js';
-import { isCanvasLayerType } from './canvasPaintOrder.js';
+import { isCanvasLayerType } from './canvasItemClass.js';
 import type { LiveTree } from './liveSceneTree.js';
 
 /**

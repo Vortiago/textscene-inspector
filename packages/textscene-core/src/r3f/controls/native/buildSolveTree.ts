@@ -64,7 +64,6 @@ import {
   isInjected,
   liveTreeOf,
   type CachedSceneSource,
-  type LiveChildGroup,
   type LiveTreeContext,
   type LiveLink,
   type LiveStep,
@@ -82,13 +81,8 @@ import {
 import type { WindowProperties } from '../../../nodes/windows/window/types';
 import { NO_OWNERS, type ThemeOwner } from '../../../nodes/windows/window/themeOwners';
 import { TWO_D_UI_TYPES } from '../has2DUIContent';
-import {
-  controlSolverRegistry,
-  type BuiltIconsFn,
-  type ChildVisibilityFn,
-  type TextureSlotRequest,
-} from './solverRegistry';
-import { canvasItemPass } from '../../canvasItemPass/canvasItemPass';
+import { controlSolverRegistry, type BuiltIconsFn, type TextureSlotRequest } from './solverRegistry';
+import { canvasItemPass, type CanvasItemPassResult } from '../../canvasItemPass/canvasItemPass';
 import { canvasStateBetween } from '../../canvasItemPass/canvasStateBetween';
 import type { CanvasAncestors } from '../../canvasItemPass/canvasAncestors';
 import {
@@ -107,11 +101,11 @@ import {
   internalBackRoom,
   listedChildOrder,
   internalFrontRoom,
-  isCanvasLayerType,
   isTopLevelItem,
   WHOLE_CANVAS_RANGE,
   type PaintRange,
 } from '../../canvasPaintOrder';
+import { isCanvasLayerType } from '../../canvasItemClass';
 import {
   builtControlIcons,
   resolveStyleBoxes,
@@ -197,11 +191,6 @@ interface Ancestry {
    */
   ancestorHidden: boolean;
   /**
-   * `CanvasItem::parent_visible_in_tree` for the children. Unlike `ancestorHidden`, it
-   * resets at a `CanvasLayer` and at every non-CanvasItem parent.
-   */
-  parentVisibleInTree: boolean;
-  /**
    * Where each root of the enclosing canvas draws: its pre-order rank among the
    * roots, not its nesting slot (`canvasRootRanges`). A node in the map takes
    * that run instead of its parent's.
@@ -213,12 +202,6 @@ interface Ancestry {
    * climb steps over them. No `Window`, the one other stop, is drawn here.
    */
   inheritedRtl: boolean | null;
-  /**
-   * The parent's `resolveChildVisibility` map, `undefined` where the container
-   * writes none. Applied as a property write, as Godot's is, so every reader of
-   * `visible` honours it.
-   */
-  childVisibility: ReadonlyMap<TscnNode, boolean> | undefined;
   /**
    * Below a window or a viewport: its Controls draw in that viewport, so the walk only looks for the
    * windows that still reach this forest's embedder.
@@ -266,16 +249,6 @@ function isCanvasItem(node: TscnNode): boolean {
 }
 
 /**
- * Whether a container's `set_visible` write reaches this direct child:
- * `Container::as_sortable_control(get_child(i), IGNORE)` casts to `Control` and
- * rejects `top_level` first (`container.cpp:143-146`). `CanvasLayer`, in
- * `TWO_D_UI_TYPES`, is no Control.
- */
-function isSortableChild(live: TscnNode): boolean {
-  return TWO_D_UI_TYPES.has(live.type) && !isTopLevelItem(live) && !isCanvasLayerType(live.type);
-}
-
-/**
  * The live paths that bound the skipped canvas items above a node: from below `above`, the nearest
  * Control or the forest's top, down to `parent`. A null `parent` is a parent that is a Control or no
  * canvas item, so nothing is skipped.
@@ -286,22 +259,6 @@ interface SkippedChain {
 }
 
 const NOTHING_SKIPPED: SkippedChain = { above: null, parent: null };
-
-/**
- * The `parent_visible_in_tree` a node's children inherit, by the three arms of
- * `NOTIFICATION_ENTER_TREE` (`canvas_item.cpp:311-350`): a `CanvasItem` gives
- * `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`), a `CanvasLayer`
- * its own `is_visible()`, and anything else the root Window's (or a SubViewport's) `true`.
- */
-function childParentVisibleInTree(
-  node: TscnNode,
-  ownVisible: boolean,
-  parentVisibleInTree: boolean
-): boolean {
-  if (descendsFromClass(node.type, 'CanvasItem')) return parentVisibleInTree && ownVisible;
-  if (isCanvasLayerType(node.type)) return ownVisible;
-  return true;
-}
 
 /** No provider (a headless or raster walk) hides nothing. */
 const NO_HIDDEN: ReadonlySet<string> = new Set();
@@ -350,6 +307,15 @@ function descendForWindows(
   return NOTHING_WALKED;
 }
 
+/**
+ * `node` with the `visible` its container writes, as a property write as Godot's is, so every reader
+ * of `visible` honours it. The node itself where nothing writes it.
+ */
+function withWrittenVisible(node: TscnNode, visible: boolean | undefined): TscnNode {
+  if (visible === undefined) return node;
+  return { ...node, properties: { ...node.properties, visible } };
+}
+
 /** The SolveNode forest for one nodes and resource-scope pair. Not a hook: `useBuildSolveTree` is. */
 function buildForest(
   nodes: readonly TscnNode[],
@@ -391,9 +357,16 @@ function buildForest(
   const foldedChains = new Map<string, CanvasAncestors>();
 
   /**
+   * What the canvas item pass binds at `path`. Undefined for a CanvasLayer or a window root, which
+   * is no CanvasItem: nothing above it hides it, and no container writes its `visible`.
+   */
+  function canvasItemAt(path: string): CanvasItemPassResult | undefined {
+    return liveScenePassResults(canvasItemPass, tree).get(path);
+  }
+
+  /**
    * What the skipped canvas items of `chain` hand a Control below them, one fold for the sibling
-   * Controls below one chain. The canvas item pass runs only for a Control below such an item, so a
-   * scene of Controls alone never runs it.
+   * Controls below one chain.
    */
   function skippedAncestorsOf({ above, parent }: SkippedChain): CanvasAncestors | null {
     if (parent === null) return null;
@@ -615,31 +588,6 @@ function buildForest(
   }
 
   /**
-   * The `visible` a registered container writes onto each direct sortable child,
-   * keyed by the raw child. The container numbers them in one `get_child(i)` loop
-   * (`tab_container.cpp:469-481`), so the count spans every group below the container.
-   */
-  function resolveChildVisibility(
-    fn: ChildVisibilityFn,
-    container: TscnNode,
-    groups: readonly LiveChildGroup[]
-  ): ReadonlyMap<TscnNode, boolean> {
-    const sortable: { raw: TscnNode; live: TscnNode }[] = [];
-    for (const group of groups) {
-      for (const child of group.children) {
-        const live = tree.stepOf(child, group.scope).node;
-        if (isSortableChild(live)) sortable.push({ raw: child, live });
-      }
-    }
-    const out = new Map<TscnNode, boolean>();
-    for (const [index, entry] of sortable.entries()) {
-      const written = fn(container, entry.live, index, sortable.length);
-      if (written !== undefined) out.set(entry.raw, written);
-    }
-    return out;
-  }
-
-  /**
    * `themeChain` with `owner`'s own `theme` in front. A Control and a Window own a theme
    * (`ThemeOwner::propagate_theme_changed`, `scene/theme/theme_owner.cpp`).
    */
@@ -760,16 +708,8 @@ function buildForest(
     descend: (ancestry: Ancestry) => WalkResult[]
   ): WalkResult {
     const { raw: node, step, path, group } = link;
-    const {
-      themeChain,
-      skippedChain,
-      canvasChainBroken,
-      ancestorHidden,
-      parentVisibleInTree,
-      canvasRoots,
-      inheritedRtl,
-      childVisibility,
-    } = ancestry;
+    const { themeChain, skippedChain, canvasChainBroken, ancestorHidden, canvasRoots, inheritedRtl } =
+      ancestry;
     const { isContentRoot } = ancestry;
     // A viewport owns its own World2D (ADR-0033): its Control subtree draws in its own target. The
     // collapsed type, since an instance's own node has none when its sub-scene root is the viewport.
@@ -847,24 +787,6 @@ function buildForest(
     const childCanvasChainBroken = isControl
       ? false
       : !isCanvasItem(collapsed) || topLevel || canvasChainBroken;
-    // Already filtered by `isSortableChild` when the parent built the map.
-    // The embedder applies a window's `visible`, so its own Controls always draw.
-    const writtenVisible = isContentRoot ? true : childVisibility?.get(node);
-    const live =
-      writtenVisible === undefined
-        ? collapsed
-        : { ...collapsed, properties: { ...collapsed.properties, visible: writtenVisible } };
-    // From `live`, not `collapsed`: a container wrote its child's `visible`
-    // before anything read it, so the page's subtree inherits the written value.
-    const childParentVisible = childParentVisibleInTree(
-      collapsed,
-      (live.properties as ControlProperties).visible !== false,
-      parentVisibleInTree
-    );
-    const childVisibilityFn = isControl ? controlSolverRegistry.childVisibility(collapsed.type) : undefined;
-    const writtenChildVisibility = childVisibilityFn
-      ? resolveChildVisibility(childVisibilityFn, collapsed, groups)
-      : undefined;
     // A CanvasLayer is a canvas of its own, so its roots are indexed by its
     // own counter (`canvas_layer.cpp:261-267`) over its own children.
     const childCanvasRoots = isCanvasLayerType(collapsed.type)
@@ -882,10 +804,8 @@ function buildForest(
             skippedChain: childSkippedChain,
             canvasChainBroken: childCanvasChainBroken,
             ancestorHidden: hidden,
-            parentVisibleInTree: childParentVisible,
             canvasRoots: childCanvasRoots,
             inheritedRtl: rtl,
-            childVisibility: writtenChildVisibility,
             windowsOnly: false,
             isContentRoot: false,
           })
@@ -894,6 +814,10 @@ function buildForest(
 
     // Not a Control: no SolveNode, and its Control descendants promote up.
     if (!isControl) return { nodes: children, hoisted: childHoisted };
+
+    const canvasItem = canvasItemAt(path);
+    // The embedder applies a window's `visible`, so its own Controls always draw.
+    const live = withWrittenVisible(collapsed, isContentRoot ? true : canvasItem?.writtenVisible);
 
     const themeScope = themeResolutionScope(
       collapsed.type,
@@ -928,7 +852,7 @@ function buildForest(
       // Unconditional, unlike `skippedAncestors` beside it: `top_level` and
       // a broken chain both reset the canvas facets and neither resets
       // this one (`SolveNode.parentVisibleInTree`).
-      parentVisibleInTree,
+      parentVisibleInTree: canvasItem?.parentVisibleInTree ?? true,
       rtl: rtl ?? layoutDirectionEnv.rootRtl,
       locale: layoutDirectionEnv.applicationLocale,
       hidden,
@@ -957,10 +881,8 @@ function buildForest(
         skippedChain: NOTHING_SKIPPED,
         canvasChainBroken: false,
         ancestorHidden: false,
-        parentVisibleInTree: true,
         canvasRoots: canvasRootRanges(nodes, rootRanges),
         inheritedRtl,
-        childVisibility: undefined,
         windowsOnly: false,
         isContentRoot: viewport !== null && isEmbeddedWindow(viewport.type),
       },

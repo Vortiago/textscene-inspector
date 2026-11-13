@@ -26,7 +26,8 @@ import {
   useResolvedCanvasItemMaterial,
 } from '../../components/canvasItemMaterialContext';
 import { INHERIT_PARENT_MATERIAL } from '../../canvasItemPass/canvasAncestors';
-import { isCanvasLayerType, ysortsChildren } from '../../canvasPaintOrder';
+import { ysortsChildren } from '../../canvasPaintOrder';
+import { isCanvasLayerType } from '../../canvasItemClass';
 import { CanvasRootScope } from '../../canvasRootScope';
 import { CanvasItemGroup, CanvasItemProvider } from '../../components/CanvasItemGroup';
 import { NodePathProvider } from '../../contexts/NodePathContext';

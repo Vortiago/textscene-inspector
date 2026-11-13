@@ -1,13 +1,14 @@
 # @textscene/three-godot-shaders
 
-`@textscene/three-godot-shaders` is Godot's scene shader as TSL node materials for a three.js
-`WebGLRenderer`. It is the shader module of the
+`@textscene/three-godot-shaders` is Godot's shaders for a three.js `WebGLRenderer`: the scene shader
+as TSL node materials, the passes that feed it, and a translator for a shader in Godot's shading
+language. It is the shader module of the
 [TextScene Inspector](https://github.com/Vortiago/textscene-inspector), bundled into one ES module
 with no React. three.js is its only peer dependency.
 
-The package is at 0.0.0 and has no release. The port of Godot's lit surface adds the node materials
-slice by slice ([#1451](https://github.com/Vortiago/textscene-inspector/issues/1451)), and the first
-release is 0.1.0.
+The package is at 0.0.0 and has no release. The port of Godot's shaders fills it
+([#1451](https://github.com/Vortiago/textscene-inspector/issues/1451)). The first release is 0.1.0:
+a plain three.js app then draws a Godot scene from the package alone, a user's shader included.
 
 ## Use
 

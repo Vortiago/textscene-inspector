@@ -5,7 +5,7 @@
  * is not in it, so a caller composes that transform.
  */
 
-import type { SceneScope } from '../../parser/types';
+import type { SceneScope, TscnNode } from '../../parser/types';
 import { liveScenePassResults, type LiveScenePass } from '../liveScenePass';
 import { liveNodePatches } from '../liveNodePatches';
 import { patchedNode } from '../nodePatch';
@@ -19,6 +19,10 @@ import {
 import { accumulateCanvasItemZ } from '../lighting2d/canvasItemPlacement';
 import { canvasItemFieldsOf, type CanvasItemNodeFields } from './canvasItemFields';
 import { NO_PARENT_MATERIAL, type CanvasAncestorMaterial } from './canvasAncestors';
+import { NOTHING_WRITTEN, writtenChildVisibility } from './writtenVisibility';
+import { clipsChildren } from '../canvasPaintOrder';
+import { isCanvasLayerType } from '../canvasItemClass';
+import { isShownCanvasNode } from '../canvasScopes';
 
 /** What a canvas item hands its children. */
 export interface InheritedCanvasItemState {
@@ -30,6 +34,11 @@ export interface InheritedCanvasItemState {
   readonly material: CanvasAncestorMaterial;
   /** The filter and repeat a child inherits. */
   readonly sampler: AmbientTextureSampler;
+  /**
+   * The live path of the item whose `clip_children` clips a child, this one or one above it in
+   * the chain, or null. A chain start draws outside every owner's group.
+   */
+  readonly clipOwner: string | null;
 }
 
 export interface CanvasItemPassResult {
@@ -38,22 +47,43 @@ export interface CanvasItemPassResult {
   readonly fields: CanvasItemNodeFields;
   /** The scope the item's material reference resolves in. */
   readonly resources: SceneScope;
+  /** The `visible` the item's container writes onto it, or undefined where none writes it. */
+  readonly writtenVisible: boolean | undefined;
+  /**
+   * The `parent_visible_in_tree` the item sees, from whatever node is above it. It follows the scene
+   * tree, `top_level` or not.
+   */
+  readonly parentVisibleInTree: boolean;
   readonly inherited: InheritedCanvasItemState;
 }
 
-/** What a chain start inherits: white, z 0, the root sampler and no material. */
+/** What a chain start inherits: white, z 0, the root sampler, no material and no clip owner. */
 const CHAIN_START: InheritedCanvasItemState = {
   modulate: WHITE_MODULATE,
   zFinal: 0,
   material: NO_PARENT_MATERIAL,
   sampler: ROOT_TEXTURE_SAMPLER,
+  clipOwner: null,
 };
 
-/** The parent canvas item a child of a visited node links to, null where the child starts a chain. */
+/** The parent canvas item a child of a visited node links to. */
 interface ParentItem {
   readonly path: string;
   readonly inherited: InheritedCanvasItemState;
 }
+
+/** What a visited node hands the nodes below it. */
+interface Above {
+  /** Null where a child starts a chain. */
+  readonly item: ParentItem | null;
+  /** The `parent_visible_in_tree` a child sees. */
+  readonly visibleInTree: boolean;
+  /** The `visible` the node writes onto its children, by the child as its group holds it. */
+  readonly writes: ReadonlyMap<TscnNode, boolean>;
+}
+
+/** The roots sit below the root Window, or below a SubViewport for a viewport's own tree: visible. */
+const TREE_TOP: Above = { item: null, visibleInTree: true, writes: NOTHING_WRITTEN };
 
 /**
  * Each canvas item of `tree`, by live path, read through the live property patches, so a pose a
@@ -63,36 +93,63 @@ interface ParentItem {
 export const canvasItemPass: LiveScenePass<CanvasItemPassResult> = (tree) => {
   const results = new Map<string, CanvasItemPassResult>();
   const patches = liveScenePassResults(liveNodePatches, tree);
-  tree.fold<ParentItem | null, void>(null, ({ step, path }, above, descend) => {
-    const fields = canvasItemFieldsOf(patchedNode(step.node, patches.get(path)));
+  tree.fold<Above, void>(TREE_TOP, ({ raw, step, path }, above, descend) => {
+    const node = patchedNode(step.node, patches.get(path));
+    const fields = canvasItemFieldsOf(node);
+    const writtenVisible = above.writes.get(raw);
+    const isVisible = writtenVisible ?? isShownCanvasNode(node);
+    const visibleInTree = visibilityHandedDown(node, fields, isVisible, above.visibleInTree);
+    const writes = writtenChildVisibility(tree, step);
     if (!fields) {
-      descend(null);
+      descend({ item: null, visibleInTree, writes });
       return;
     }
     // `get_parent_item` returns null for a `top_level` item (`canvas_item.cpp:565-571`).
-    const parent = fields.isTopLevel ? null : above;
-    const inherited = inheritedState(fields, step.scope, parent?.inherited ?? CHAIN_START);
+    const parent = fields.isTopLevel ? null : above.item;
+    const inherited = inheritedState(fields, step.scope, path, parent?.inherited ?? CHAIN_START);
     results.set(path, {
       parent: parent?.path ?? null,
       fields,
       resources: step.scope,
+      writtenVisible,
+      parentVisibleInTree: above.visibleInTree,
       inherited,
     });
-    descend({ path, inherited });
+    descend({ item: { path, inherited }, visibleInTree, writes });
   });
   return results;
 };
 
-/** What an item with `fields` hands its children, below an item that hands it `above`. */
+/**
+ * The `parent_visible_in_tree` a node's children take, by the three arms of
+ * `NOTIFICATION_ENTER_TREE` (`canvas_item.cpp:311-350`): a CanvasItem gives
+ * `visible && parent_visible_in_tree` (`canvas_item.cpp:62-64`), a CanvasLayer
+ * its own `is_visible()`, and anything else the root Window's (or a SubViewport's) `true`.
+ */
+function visibilityHandedDown(
+  node: TscnNode,
+  fields: CanvasItemNodeFields | null,
+  isVisible: boolean,
+  parentVisibleInTree: boolean
+): boolean {
+  if (fields) return parentVisibleInTree && isVisible;
+  if (isCanvasLayerType(node.type)) return isVisible;
+  return true;
+}
+
+/** What the item at `path` with `fields` hands its children down the chain, below one that hands it `above`. */
 function inheritedState(
   fields: CanvasItemNodeFields,
   scope: SceneScope,
+  path: string,
   above: InheritedCanvasItemState
 ): InheritedCanvasItemState {
   return {
     ...linkState(fields, scope, above),
     // `renderer_canvas_cull.cpp:430-434`.
     zFinal: accumulateCanvasItemZ(above.zFinal, fields),
+    // A clipping item culls its children inside its own group (`renderer_canvas_cull.cpp:471-484`).
+    clipOwner: clipsChildren(fields) ? path : above.clipOwner,
   };
 }
 

@@ -975,7 +975,7 @@ A render-only component with no parser and no linter (`GenericNodeFallback`, `GL
 _Avoid_: "default node".
 
 **Shader module** (`shaders/`, ADR-0072):
-Godot's scene shader as TSL node materials for a three.js `WebGLRenderer`, with no React. It imports only three.js, `godot/` and its own files, and `@textscene/three-godot-shaders` publishes it.
+Godot's shaders for a three.js `WebGLRenderer`, with no React: the scene shader as TSL node materials, the passes that feed it, and the translator that turns Godot's shading language into TSL for a user's shader. It imports only three.js, `godot/` and its own files, and `@textscene/three-godot-shaders` publishes it.
 _Avoid_: "TSL spike", "node materials folder". A node file under `r3f/`.
 
 **Lit surface form** (`LitSurfaceForm`, `r3f/litSurface/litSurfaceForm.ts`):
@@ -987,8 +987,8 @@ The values Godot's `fragment()` writes, such as `ALBEDO`, `ROUGHNESS` and `NORMA
 _Avoid_: "material inputs" for these.
 
 **Pipeline input** (ADR-0072):
-A value a pass of the caller makes and a node of the **Shader module** reads, such as the shadow atlas or the sky radiance. Each one is optional: without it, the surface draws what Godot draws without that feature.
-_Avoid_: a node that imports the owner of a value.
+A value a pass makes and a node of the **Shader module** reads, such as the shadow atlas or the sky radiance. The pass belongs to the **Shader module** too. Each one is optional: without it, the surface draws what Godot draws without that feature.
+_Avoid_: a node that imports the owner of a value. "host input": the caller of the package must supply none.
 
 ### Shell & editing
 

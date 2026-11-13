@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+; Moves one variable: the current tab of a TabContainer whose pages each hold a Polygon2D. The container
+; shows only the current page (tab_container.cpp:377-399), so Godot draws the blue polygon of the second
+; page: pixel (200, 80) is (0, 0, 255) and pixel (50, 80) is the panel.
+
+[node name="Root" type="Node2D"]
+
+[node name="Tabs" type="TabContainer" parent="."]
+offset_right = 400.0
+offset_bottom = 300.0
+current_tab = 1
+
+[node name="First" type="Control" parent="Tabs"]
+
+[node name="InFirst" type="Polygon2D" parent="Tabs/First"]
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Second" type="Control" parent="Tabs"]
+visible = false
+
+[node name="InSecond" type="Polygon2D" parent="Tabs/Second"]
+position = Vector2(150, 0)
+color = Color(0, 0, 1, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)

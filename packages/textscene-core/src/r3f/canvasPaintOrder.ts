@@ -11,11 +11,12 @@
 
 import type { TscnNode } from '../parser/types';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes';
-import { ruleInt } from '../godot/variant/intSlots';
 import { CanvasItemClipChildrenMode } from '../godot/scene/canvasItem';
 import { DEFAULT_CANVAS_LAYER, CANVAS_ITEM_Z_MAX, CANVAS_ITEM_Z_MIN } from '../godot/rendering/rendering';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary';
 import { clampCanvasItemZ, WORLD_CANVAS_LAYER } from './lighting2d/canvasItemPlacement';
+import { canvasItemFieldsOf, type CanvasItemNodeFields } from './canvasItemPass/canvasItemFields';
+import { isCanvasItem, isCanvasLayerType, isControlType } from './canvasItemClass';
 
 /** How many distinct `z_final` buckets one canvas has. */
 const Z_BUCKET_COUNT = CANVAS_ITEM_Z_MAX - CANVAS_ITEM_Z_MIN + 1;
@@ -114,16 +115,6 @@ export function layerRankOf(declared: readonly number[], layer: number): number 
   return isDeclared ? below * 2 + 1 : below * 2;
 }
 
-/**
- * Whether this type starts a canvas of its own: `_enter_canvas` climbs to
- * `Object::cast_to<CanvasLayer>(n)` (`canvas_item.cpp:246-252`). Derived from
- * ClassDB, so a subclass such as `ParallaxBackground` (`parallax_background.h:34`)
- * counts. `controls/canvasBoundary.driftguard.test.ts` holds the Control walk to it.
- */
-export function isCanvasLayerType(type: string): boolean {
-  return descendsFromClass(type, 'CanvasLayer');
-}
-
 /** The `layer` a canvas-layer node declares, or Godot's own default of 1. */
 export function canvasLayerOf(node: TscnNode): number {
   const layer = (node.properties as { layer?: number }).layer;
@@ -206,19 +197,6 @@ export function listedChildOrder(parent: TscnNode, children: readonly TscnNode[]
   return [...frames, LISTED_LAYER, ...indices.filter((index) => !isFrame[index])];
 }
 
-/** Filled by `isControlType` and never cleared: a class's chain is fixed. */
-const controlTypes = new Map<string, boolean>();
-
-/** Cached, since every allocation sizes each subtree again and the chain walk is per call. */
-export function isControlType(type: string): boolean {
-  let isControl = controlTypes.get(type);
-  if (isControl === undefined) {
-    isControl = descendsFromClass(type, 'Control');
-    controlTypes.set(type, isControl);
-  }
-  return isControl;
-}
-
 /**
  * How many sequence values `node`'s subtree needs. Every node counts, not only
  * the canvas items: over-allocating is free, and a canvas-item test here would
@@ -240,21 +218,13 @@ export function paintRangeSize(node: TscnNode): number {
 }
 
 /**
- * Whether `Object::cast_to<CanvasItem>` accepts this node. `get_parent_item()`
- * applies it to the direct parent (`canvas_item.cpp:565-571`) to decide whether
- * an item nests under it or parents at the canvas.
- */
-export function isCanvasItem(node: TscnNode): boolean {
-  return descendsFromClass(node.type, 'CanvasItem');
-}
-
-/**
- * `top_level`, under either casing: `Node2DProperties` keeps the `.tscn`
- * snake_case, and `ControlProperties` is camelCase.
+ * `top_level`. A Node3D has one too (`node_3d.cpp:1044`), which the CanvasItem reader does not read, so
+ * it is read here under the Node3D's snake case.
  */
 export function isTopLevelItem(node: TscnNode): boolean {
-  const props = node.properties as { top_level?: boolean; topLevel?: boolean };
-  return props.top_level === true || props.topLevel === true;
+  return (
+    canvasItemFieldsOf(node)?.isTopLevel ?? (node.properties as { top_level?: boolean }).top_level === true
+  );
 }
 
 /**
@@ -367,11 +337,9 @@ interface AllocatedPaintRange {
   tail: PaintRange;
 }
 
-/** `show_behind_parent`, under either casing the two parsers produce. */
+/** `show_behind_parent`, as the CanvasItem fields read it for a Control and a Node2D alike. */
 function drawsBehindParent(node: TscnNode): boolean {
-  const props = node.properties as { show_behind_parent?: boolean; showBehindParent?: boolean };
-  // A Control, whose properties are camelCase, honours the flag as a Node2D does.
-  return props.show_behind_parent === true || props.showBehindParent === true;
+  return canvasItemFieldsOf(node)?.showsBehindParent === true;
 }
 
 /** How a parent's own children split its range. */
@@ -459,18 +427,23 @@ export function allocatePaintRange(
  * it. A y-sorted item's children draw in the sort order, outside its group.
  */
 function drawsClipped(node: TscnNode): boolean {
-  const mode = ruleInt(node.rawProperties.clip_children ?? '0');
-  const isClipping = mode === CanvasItemClipChildrenMode.ONLY || mode === CanvasItemClipChildrenMode.AND_DRAW;
-  return isClipping && !ysortsChildren(node);
+  const fields = canvasItemFieldsOf(node);
+  return fields !== null && clipsChildren(fields);
 }
 
 /**
- * Whether `node` re-orders its children by `y_sort_enabled`, so the behind/ahead split does not
- * apply. Under either casing: a Control's properties are camelCase.
+ * Whether an item with `fields` clips its children to its own pixels. A y-sorted owner clips
+ * nothing: its children are culled beside it, after its group closes (`renderer_canvas_cull.cpp:437-458`).
  */
+export function clipsChildren(fields: CanvasItemNodeFields): boolean {
+  const mode = fields.clipChildren;
+  const isClipping = mode === CanvasItemClipChildrenMode.ONLY || mode === CanvasItemClipChildrenMode.AND_DRAW;
+  return isClipping && !fields.ySortEnabled;
+}
+
+/** Whether `node` re-orders its children by `y_sort_enabled`, so the behind/ahead split does not apply. */
 export function ysortsChildren(node: TscnNode): boolean {
-  const props = node.properties as { y_sort_enabled?: boolean; ySortEnabled?: boolean };
-  return props.y_sort_enabled === true || props.ySortEnabled === true;
+  return canvasItemFieldsOf(node)?.ySortEnabled === true;
 }
 
 /**

@@ -10,7 +10,6 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import type {
-  ChildVisibilityFn,
   ContainerLayoutFn,
   MinimumSizeFn,
   SolveContext,
@@ -33,8 +32,6 @@ import {
   TAB_ALIGNMENT_RIGHT,
   TAB_BAR_THEME_FONT_KEY,
   TAB_BAR_THEME_FONT_SIZE_KEY,
-  isTabUnselectable,
-  resolveTabBarCurrentTab,
   tabBarMinimumSize,
 } from '../tabbar/nativeSolver';
 import {
@@ -44,29 +41,7 @@ import {
 import { parseControlCanvasItem } from '../control/parser';
 import type { TabBarProperties, TabBarTabProperties } from '../tabbar/types';
 import type { TabContainerProperties, TabContainerTabOverride } from './types';
-
-/**
- * `TabContainer::get_current_tab()` for a loaded scene: the first `add_tab` (through
- * `add_child_notify`, `tab_container.cpp:640-655`) lands on the bar's own rule,
- * `resolveTabBarCurrentTab`. An authored `current_tab` waits in `setup_current_tab`
- * (`tab_container.cpp:743-746`) until `NOTIFICATION_ENTER_TREE` (`:222-225`).
- */
-function tabContainerCurrentTab(props: TabContainerProperties, tabCount: number): number {
-  return resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabCount, (i) =>
-    isTabUnselectable({
-      disabled: props.tabOverrides?.[i]?.disabled === true,
-      hidden: props.tabOverrides?.[i]?.hidden === true,
-    })
-  );
-}
-
-/**
- * `TabContainer::_repaint`'s visibility half: `show()` on the current page and `hide()` on
- * the rest (`tab_container.cpp:377-399`), as `NOTIFICATION_VISIBILITY_CHANGED` does (`:290-293`).
- * `add_child_notify` hides each page as it is added (`:651`), so an unauthored file shows one.
- */
-const tabContainerChildVisibility: ChildVisibilityFn = (container, _child, index, count) =>
-  index === tabContainerCurrentTab(container.properties as TabContainerProperties, count);
+import { tabContainerCurrentTab } from './childVisibility';
 
 /** `TabContainer::TabPosition` (`tab_container.h`): 0 TOP, 1 BOTTOM. */
 export const TABS_POSITION_TOP = 0;
@@ -253,7 +228,7 @@ export function tabHeaderBand(containerRect: Rect2, headerHeight: number, tabsPo
 
 /**
  * `TabContainer::_repaint` (`:359-403`): the content band before `panel_style`'s margin inset. Every page
- * gets it: `_repaint` insets only the current page and hides the rest (`:377-399`), as {@link tabContainerChildVisibility}
+ * gets it: `_repaint` insets only the current page and hides the rest (`:377-399`), as `tabContainerChildVisibility`
  * does. It sets `PRESET_FULL_RECT` and pixel offsets, never `fit_child_in_rect`, so only `Control::set_rect`'s
  * floor (`dispatchChildren` in `controlRectSolver.ts`) applies.
  */
@@ -309,7 +284,6 @@ const tabContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
 };
 
 controlSolverRegistry.registerMinimumSize('TabContainer', tabContainerMinimumSize);
-controlSolverRegistry.registerChildVisibility('TabContainer', tabContainerChildVisibility);
 controlSolverRegistry.registerTextureSlots('TabContainer', tabContainerTextureSlots);
 
 /** `NOTIFICATION_SORT_CHILDREN`: `_update_margins` and `_repaint`. */

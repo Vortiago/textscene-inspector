@@ -1072,7 +1072,7 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
 
   it('draws the children of a clip_children Control before it, as the world walk does', () => {
     const clipping = node('Clip', 'ColorRect', {
-      properties: { name: 'Clip' },
+      properties: { name: 'Clip', clipChildren: 1 },
       rawProperties: { clip_children: '1' },
       children: [label('Child')],
     });
@@ -1085,7 +1085,7 @@ describe('useBuildSolveTree — a Control whose CanvasItem chain is broken becom
   it('hands a clip_children Control the ranges of its show_behind_parent children', () => {
     const behind = node('Behind', 'ColorRect', { properties: { name: 'Behind', showBehindParent: true } });
     const clipping = node('Clip', 'ColorRect', {
-      properties: { name: 'Clip' },
+      properties: { name: 'Clip', clipChildren: 1 },
       rawProperties: { clip_children: '1' },
       children: [label('Front'), behind],
     });

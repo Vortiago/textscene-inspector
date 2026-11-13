@@ -14,12 +14,12 @@ import {
   allocateNodePaintRange,
   allocatePaintRange,
   canvasRootRanges,
-  isCanvasLayerType,
   canvasLayerRanks,
   hostsOwnCanvas,
   WHOLE_CANVAS_RANGE,
   ysortsChildren,
 } from './canvasPaintOrder.js';
+import { isCanvasLayerType } from './canvasItemClass.js';
 import { YSortDispatcher } from './YSortDispatcher.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import {
@@ -75,7 +75,6 @@ import { loneGlbRootPath } from '../resources/glbSceneRoot.js';
 import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
-import type { Node3DProperties } from '../nodes/base/node3d/types.js';
 
 // Lazy, as the 2D stage's own Control layer is: a canvas with no unowned Control loads none.
 const UnownedNodeControls = lazy(() => import('./controls/native/UnownedNodeControls.js'));
@@ -92,14 +91,15 @@ export interface NodeDispatcherProps {
 }
 
 /**
- * Whether Godot hides `node` itself: a Node3D whose `visible` is false hides its Node3D descendants
- * too (`node_3d.cpp:1132-1143`). A descendant of another family escapes to the world root first
- * (`parentSpaceScope.tsx`), so the wrapper hides only what Godot hides. `animatedVisible` is the
- * value an AnimationPlayer track pushes, null when none does.
+ * Whether Godot hides `node` and its subtree, which no component of its own hides: a Node3D whose
+ * `visible` is false hides its Node3D descendants (`node_3d.cpp:1132-1143`), and a hidden CanvasLayer
+ * hides its canvas items (`canvas_layer.cpp:49-64`, `canvas_item.cpp:325-329`). A descendant of another
+ * family escapes to the world root first (`parentSpaceScope.tsx`), so the wrapper hides only what
+ * Godot hides. `animatedVisible` is the value an AnimationPlayer track pushes, null when none does.
  */
-function isHiddenNode3D(node: TscnNode, animatedVisible: boolean | null): boolean {
-  if (spaceFamilyOf(node.type) !== 'Node3D') return false;
-  return !(animatedVisible ?? (node.properties as Node3DProperties).visible !== false);
+function hidesSubtree(node: TscnNode, animatedVisible: boolean | null): boolean {
+  if (spaceFamilyOf(node.type) !== 'Node3D' && !isCanvasLayerType(node.type)) return false;
+  return !(animatedVisible ?? (node.properties as { visible?: boolean }).visible !== false);
 }
 
 export function NodeDispatcher({ nodes }: NodeDispatcherProps) {
@@ -291,7 +291,7 @@ function PlainNode({
   );
   // A pushed `visible` takes the place of the authored one, as a GLB node's does.
   const animatedVisible = useAnimatedValueAt(path, 'visible', (value) => value[0] !== 0);
-  const isHidden = hiddenNodePaths.has(path) || isHiddenNode3D(node, animatedVisible);
+  const isHidden = hiddenNodePaths.has(path) || hidesSubtree(node, animatedVisible);
   const inheritedCanvasRoots = useCanvasRootRanges();
   // A CanvasLayer is a canvas of its own, so the roots below it are indexed by
   // its counter over its children (`canvas_layer.cpp:261-267`). So is a sub-viewport.

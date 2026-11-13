@@ -45,7 +45,7 @@ omission.
 ## Consequences
 
 - The 3D view does not signal an unsupported node type. The scene tree does. A "not rendered"
-  affordance in the tree is a possible follow-up, not part of this decision.
+  affordance in the tree is a possible follow-up (#1820), not part of this decision.
 - A transform-only group must still position its children, so every non-visual type needs at least
   the Node3D-level `transform` parsed. `GenericNodeFallback` reads the transform defensively (identity
   when absent). Children of an unparsed unknown type therefore land at the origin of their parent.

@@ -5,6 +5,8 @@
 
 export const CANVAS_2D_SCENES = [
   { name: 'polygon-2d', file: 'unit-polygon2d.tscn' },
+  // The one variable: a hidden CanvasLayer, which hides the Polygon2D and the Control below it. Godot 4.6.3 `--mode 2d`: 1/255.
+  { name: 'canvas-layer-hidden', file: 'unit-node2d-below-hidden-canvas-layer.tscn', mode: '2d' },
   // An INT component past int32 wraps as Godot stores it. Godot probes: (260,160) red, the square at
   // (200,100), and (660,360) blue, the square at (600,300). Refused, both sit at the origin.
   { name: 'int-wrap-position', file: 'edge-int-wrap-position.tscn' },

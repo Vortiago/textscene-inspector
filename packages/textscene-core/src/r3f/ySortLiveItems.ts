@@ -7,7 +7,7 @@
 import { Matrix4, Vector3, type Object3D } from 'three';
 import { multiplyTransform2D, type Transform2DColumns } from '../godot/math/transform2d.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
-import { isControlType } from './canvasPaintOrder.js';
+import { isControlType } from './canvasItemClass.js';
 import { pathsAlong } from './liveNodePatches.js';
 import type { LiveNode } from '../resources/liveNode.js';
 import type { Node2DLocalTransform } from '../nodes/base/node2d/types.js';
