@@ -7,8 +7,8 @@ name: Claude review
 # A review spends the repository owner's usage, so only the owner starts one:
 # - The owner's own pull request gets one review when it is ready, not one per push.
 # - The `claude-review` label starts a review of the owner's draft, so that ready means reviewed.
-#   Such a pull request gets no second review when it turns ready. Remove the label and add it
-#   again for another review.
+#   A pull request that carries the label gets no other review, so turning ready starts none.
+#   Remove the label and add it again for another review.
 # - The owner comments `/claude-review` on any pull request, a fork's included, to ask for a
 #   review or for another one.
 #
@@ -37,12 +37,11 @@ jobs:
     if: >-
       (github.event_name == 'pull_request' &&
        github.event.pull_request.user.login == github.repository_owner &&
-       (github.event.action == 'labeled'
-        && github.event.label.name == 'claude-review'
-        || github.event.action != 'labeled'
-        && !github.event.pull_request.draft
-        && !(github.event.action == 'ready_for_review'
-             && contains(github.event.pull_request.labels.*.name, 'claude-review')))) ||
+       ((github.event.action == 'labeled' &&
+         github.event.label.name == 'claude-review') ||
+        (github.event.action != 'labeled' &&
+         !github.event.pull_request.draft &&
+         !contains(github.event.pull_request.labels.*.name, 'claude-review')))) ||
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request &&
        github.event.comment.user.login == github.repository_owner &&

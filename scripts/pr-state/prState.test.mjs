@@ -23,7 +23,7 @@ function reportOf(change) {
 }
 
 /** A pull request at the local head, so no case reads a head warning unless it names another head. */
-function pullRequestWith(fields) {
+function pullRequestWith(fields = {}) {
   return {
     number: 7,
     draft: true,
@@ -254,7 +254,7 @@ describe('prStateReport', () => {
   });
 
   it('says when the pull request head has no check (edge case)', () => {
-    const report = reportOf({ pullRequest: pullRequestWith({}) });
+    const report = reportOf({ pullRequest: pullRequestWith() });
     expect(report).toContain('- Checks on its head: none');
     expect(report).toContain('## Checks not passed (0)\n\nNone.');
   });
@@ -314,7 +314,7 @@ describe('unownedLimitLines', () => {
 
   it('gives no line that only defers work (edge case)', () => {
     const todoDiff = additions('a.ts', 1, ['// TODO: merge the nested sort']);
-    expect(unownedLimitLines({ diff: todoDiff, pullRequest: pullRequestWith({}) })).toEqual([]);
+    expect(unownedLimitLines({ diff: todoDiff, pullRequest: pullRequestWith() })).toEqual([]);
   });
 });
 
