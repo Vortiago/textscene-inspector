@@ -1,8 +1,8 @@
 /**
  * What OptionButton adds to Button (`scene/gui/option_button.cpp`): the selected item as Button's text and
  * icon (`:423-424`), the arrow it reserves as Button's `_internal_margin` (`:83-89,139-147`) and draws over
- * it (`:91-135`), and its minimum size (`:50-68`, `:445-456`), with the defaults
- * `scene/theme/default_theme.cpp:212-251` registers for "OptionButton".
+ * it (`:91-135`), and its minimum size (`:50-68`, `:445-456`), with the table's
+ * `OptionButton` items as defaults.
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -71,7 +71,7 @@ function optionButtonArrowSize(n: Pick<SolveNode, 'textureSlots'>, theme: Native
 }
 
 /**
- * OptionButton as a Button: its font colours equal Button's (`default_theme.cpp:240-245`), its constructor
+ * OptionButton as a Button: its font colours equal Button's in the table, its constructor
  * aligns the text LEFT (`option_button.cpp:654`), `_select` gives Button the selected item's text and icon
  * (`:423-424`), and the arrow is the internal margin of the trailing side (`:83-89,139-147`).
  */
@@ -191,7 +191,7 @@ export function optionButtonArrowRect(n: ShareNode, theme: NativeTheme, rectSize
 
 /**
  * The arrow's modulate (`option_button.cpp:98-118`): white, or the label's font colour of the draw state
- * where the theme sets `modulate_arrow`, which the default theme leaves off (`default_theme.cpp:251`).
+ * where the theme sets `modulate_arrow`, which the table's `OptionButton/modulate_arrow` leaves off.
  */
 export function optionButtonArrowColor(n: ShareNode): Rgba {
   if (!requiredThemeItem(n.constants, 'modulate_arrow')) return WHITE_MODULATE;

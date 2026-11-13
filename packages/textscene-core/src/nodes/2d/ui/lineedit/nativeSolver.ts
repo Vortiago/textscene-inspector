@@ -46,7 +46,7 @@ import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 /**
- * LineEdit's own theme font key, `SceneStringName(font)` (`scene/theme/default_theme.cpp:419`). This
+ * LineEdit's own theme font key, `SceneStringName(font)`, which the default theme registers under LineEdit. This
  * module and `Component.tsx` both pass it to `resolveNodeFontMetrics`, so they shape in the same font.
  */
 export const LINE_EDIT_THEME_FONT_KEY = 'font';
@@ -96,7 +96,7 @@ export function resolveLineEditTextState(
   return editable === false ? 'read_only' : 'normal';
 }
 
-/** LineEdit reads one `font_size` key for every state (`default_theme.cpp:420`) but a colour key per text state (`:422,424,425`). */
+/** LineEdit reads one `font_size` key for every state but a colour key per text state, as the table's `LineEdit` items show. */
 const LINE_EDIT_THEME_KEYS: Record<LineEditTextState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
   read_only: { sizeKey: 'font_size', colorKey: 'font_uneditable_color' },

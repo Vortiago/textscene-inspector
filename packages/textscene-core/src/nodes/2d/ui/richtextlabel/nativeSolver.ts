@@ -1,7 +1,7 @@
 /**
  * RichTextLabel's native (WebGL canvas) solve: `get_minimum_size` (`scene/gui/rich_text_label.cpp:8036-8047`)
- * over `get_content_height` and `get_content_width` (`:7491-7522`), the theme keys of
- * `scene/theme/default_theme.cpp:1194-1211`, and the styled-run layout the painter draws.
+ * over `get_content_height` and `get_content_width` (`:7491-7522`), the table's
+ * `RichTextLabel` theme keys, and the styled-run layout the painter draws.
  * Pure math, no THREE or React.
  *
  * Portions ported from Godot Engine (MIT).
@@ -18,6 +18,7 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import { defaultConstant } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import {
   clampAutowrapMode,
   shapeText,
@@ -175,8 +176,11 @@ function resolveImageDimension(amount: number, inPercent: boolean, boxWidthPx: n
   return Math.trunc((boxWidthPx * amount) / 100);
 }
 
-/** `horizontal_rule` is a 2 x 2 white image (`default_theme.cpp:1187-1192`). */
+/** The default `horizontal_rule` icon is a 2 x 2 white image. */
 const RULE_TEXTURE_SIZE_PX: Vector2 = { x: 2, y: 2 };
+
+/** The table's `RichTextLabel/line_separation`, which the layout reads in place of Label's `line_spacing`. */
+const RICH_TEXT_LABEL_LINE_SEPARATION = defaultConstant('RichTextLabel', 'line_separation');
 
 /** `add_hr` makes an `ItemImage` of the `horizontal_rule` icon, centred on the text (`:4180-4184`). */
 const RULE_ALIGNMENT: ParsedImageAlignment = { imagePoint: 'center', textPoint: 'center' };
@@ -319,8 +323,8 @@ function contentWidthPx(layout: TextLayoutResult): number {
 
 /**
  * `RichTextLabel::get_minimum_size` (`rich_text_label.cpp:8036-8047`): zero
- * without `fit_content`, and `Size2(1, min_size.height)` under autowrap. `normal_style`
- * is empty (default_theme.cpp:1186), and empty text has height 0
+ * without `fit_content`, and `Size2(1, min_size.height)` under autowrap. The table's
+ * `RichTextLabel/normal` is empty, and empty text has height 0
  * (`:7491-7506`), unlike Label.
  */
 export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
@@ -350,7 +354,7 @@ export const richTextLabelMinimumSize: MinimumSizeFn = (n, ctx) => {
   // Wrapped at the control's width: `_validate_line_caches` resizes the lines, then
   // `update_minimum_size()` runs under `fit_content` (`rich_text_label.cpp:3873,3880`).
   // `tentativeRect` is `undefined` on the first pass, as in Godot's pre-resize state.
-  // The empty `normal` StyleBox (`default_theme.cpp:1186`) makes the text rect the control's.
+  // The table's empty `RichTextLabel/normal` StyleBox makes the text rect the control's.
   const wrapWidthPx = wraps ? availableWidthPx : undefined;
   const layout = shapeRichText(runs, resolveRichTextFaces(n, runs), {
     fontSizePx,
@@ -409,7 +413,7 @@ export interface StyledTextRun {
 }
 
 /**
- * `scene/theme/default_theme.cpp:1199-1202` gives each style its own font size,
+ * The table gives each style its own `RichTextLabel/*_font_size`,
  * -1, and `_find_font` (`rich_text_label.cpp:3226-3296`, `:3257`/`:3270`/`:3283`)
  * reads it with no fallback to `normal_font_size`. `Theme::get_font_size` in
  * `scene/resources/theme.cpp` (`:658-661`) sends `<= 0` to 16 (`scene/theme/theme_db.h:85`).
@@ -690,8 +694,8 @@ export function shapeRichText(
     fontSizePx,
     boxWidthPx,
     autowrapMode,
-    // `line_separation` and `paragraph_separation` are 0 (`default_theme.cpp:1217-1218`), not Label's 3.
-    lineSpacingPx: 0,
+    // No per-node theme-constant override is modelled, so the table's value holds.
+    lineSpacingPx: RICH_TEXT_LABEL_LINE_SEPARATION,
     fontSizePxAt: fontSizePxAtFromRuns(styledRuns),
     fontMetricsAt: fontMetricsAtFromRuns(styledRuns, faces),
     spanAt: spanAtFromRuns(styledRuns),
@@ -894,7 +898,7 @@ function lineMetricsOf(
     }
 
     const metrics = { topPx, ascentPx, descentPx, textAscentPx, textDescentPx };
-    // `line_separation` is 0 (`default_theme.cpp:1217`), so tops are a bare sum.
+    // `shapeText` carries `line_separation` in its own pitch, so these tops are a bare sum.
     topPx += ascentPx + descentPx;
     return metrics;
   });
@@ -1242,7 +1246,7 @@ interface UnderlineRectPx {
  * A `[u]` run's stroke rect, snapped to the pixels Godot's quad covers, or `null`
  * with no glyphs. The stroke centres `upos` below the baseline (`rich_text_label.cpp:1055`,
  * `:1242-1244`), `MAX(1.0, uth * base_scale)` thick (`:1243`). `baseScale` is the theme's default
- * base scale, the theme scale for the default theme (`default_theme.cpp:98`).
+ * base scale, the theme scale for the default theme (`make_default_theme`).
  */
 export function underlineRectPx(
   glyphs: readonly GlyphPlacement[],

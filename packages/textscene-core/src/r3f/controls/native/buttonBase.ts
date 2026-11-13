@@ -59,7 +59,7 @@ export function resolveToggleDrawState(
 /**
  * The box of `state` among `boxes`, a Control's resolved StyleBoxes. Under `rtl`, `<state>_mirrored`
  * comes first wherever a theme sets it (`button.cpp:101-148`). The default theme sets one for each
- * OptionButton state (`default_theme.cpp:230-233`), so an RTL OptionButton never reads a plain override.
+ * OptionButton state (the table's `OptionButton/*_mirrored`), so an RTL OptionButton never reads a plain override.
  */
 export function pickButtonStyleBox(
   boxes: Readonly<Record<string, StyleBoxFlatData>>,
@@ -104,7 +104,7 @@ export function tintColor(base: Rgba, tint: Rgba): Rgba {
 
 /**
  * `Button::_fit_icon_size` (`button.cpp:469-479`): clamps to `icon_max_width`,
- * keeping aspect. The default theme sets 0, no clamp (`default_theme.cpp:172`).
+ * keeping aspect. The table's `Button/icon_max_width` is 0, no clamp.
  */
 export function fitIconSize(size: Vector2, maxWidth: number): Vector2 {
   if (maxWidth > 0 && size.x > maxWidth) {
@@ -760,8 +760,8 @@ export function buttonIconSlotRequest(
 }
 
 /**
- * One `font_size` key for every draw state (`default_theme.cpp:153`), but a colour key per
- * state: `font_color` and `font_disabled_color` (`:156,161`).
+ * One `font_size` key for every draw state, but a colour key per
+ * state: `font_color` and `font_disabled_color`, as the table's `Button` items show.
  */
 export const BUTTON_THEME_KEYS: Record<ToggleDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },

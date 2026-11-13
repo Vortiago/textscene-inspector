@@ -42,7 +42,7 @@ import type { FileDialogOption, FileDialogProperties } from './parser';
 const EXPAND_FILL = String(SizeFlags.EXPAND | SizeFlags.FILL);
 const SHRINK_CENTER = String(SizeFlags.SHRINK_CENTER);
 
-/** The type variations the constructor sets (`file_dialog.cpp:2327-2576`), which the default theme defines (`default_theme.cpp:357-395`). */
+/** The type variations the constructor sets (`file_dialog.cpp:2327-2576`), which the table defines. */
 const FLAT_BUTTON = 'FlatButton';
 const FLAT_MENU_BUTTON = 'FlatMenuButton';
 const HEADER_SMALL = 'HeaderSmall';

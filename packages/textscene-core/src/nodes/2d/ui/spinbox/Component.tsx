@@ -127,7 +127,7 @@ export function SpinBox({
   const upIconPos = spinBoxArrowPosition(layout.upRect, upIconSize);
   const downIconPos = spinBoxArrowPosition(layout.downRect, downIconSize);
 
-  // StyleBoxEmpty in the default theme (`default_theme.cpp:625-641`), so each draws only under an
+  // StyleBoxEmpty in the table's `SpinBox` styles, so each draws only under an
   // override. `up_down_buttons_separator` has zero height (`SpinBoxLayout`) and never draws.
   const upBox = requiredThemeItem(
     solveNode.styleBoxes,
