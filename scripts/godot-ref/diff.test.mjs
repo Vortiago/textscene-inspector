@@ -57,6 +57,17 @@ describe('parseArgs', () => {
     expect(parseArgs(['a.tscn']).collisions).toBe(false);
   });
 
+  it('reads the lit surface form our side opens the scene with, unset by default', () => {
+    expect(parseArgs(['a.tscn', '--lit-surface', 'nodes']).litSurface).toBe('nodes');
+    expect(parseArgs(['a.tscn']).litSurface).toBeNull();
+  });
+
+  it('rejects a lit surface form the previewer does not know (error path)', () => {
+    expect(() => parseArgs(['a.tscn', '--lit-surface', 'node'])).toThrow(
+      '--lit-surface takes "nodes", got "node"'
+    );
+  });
+
   it('rejects a table flag with no file (error path)', () => {
     expect(() => parseArgs(['a.tscn', '--table'])).toThrow('--table needs a file path, got "undefined"');
   });
@@ -173,29 +184,34 @@ describe('diffOne', () => {
    * frame: a 2D scene off the 3D canvas is a different rectangle, a SIZE
    * MISMATCH with no number.
    */
-  async function askedCanvas2D(mode) {
+  async function askedCapture(mode, args = { frame: false, keep: false }) {
     const dir = await mkdtemp(join(tmpdir(), 'refdiff-'));
     const godotOut = join(dir, 'g.png');
     await writeFile(godotOut, solidPng(4, 4));
     let asked = null;
     try {
-      await diffOne(
-        { scenePath: '/x/s.tscn', fixtureName: 's.tscn', label: 's' },
-        { frame: false, keep: false },
-        {
-          render: async () => ({ out: godotOut, mode }),
-          capture: async (args) => {
-            asked = args;
-            return solidPng(4, 4);
-          },
-          outDir: dir,
-        }
-      );
+      await diffOne({ scenePath: '/x/s.tscn', fixtureName: 's.tscn', label: 's' }, args, {
+        render: async () => ({ out: godotOut, mode }),
+        capture: async (args) => {
+          asked = args;
+          return solidPng(4, 4);
+        },
+        outDir: dir,
+      });
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
-    return asked.canvas2D;
+    return asked;
   }
+
+  async function askedCanvas2D(mode) {
+    return (await askedCapture(mode)).canvas2D;
+  }
+
+  it('opens our side with the lit surface form the run asks for', async () => {
+    const asked = await askedCapture('3d', { frame: false, keep: false, litSurface: 'nodes' });
+    expect(asked.litSurface).toBe('nodes');
+  });
 
   it('captures our 2D canvas when the engine rendered the scene in 2D', async () => {
     expect(await askedCanvas2D('2d')).toBe(true);
