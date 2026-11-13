@@ -13,7 +13,7 @@ import { decodeTrailMeshBase } from './trailDecode';
  * `sections + 1` poses. Pose `i` is a translation by `-(section_length * sections / 2 - section_length * i)`
  * along Y: the bind is an inverse transform, so Y is negated (`primitive_meshes.cpp:2493-2501`, `:2869-2877`).
  */
-export function trailBindPoses(sections: number, sectionLength: number): Transform3D[] {
+function trailBindPoses(sections: number, sectionLength: number): Transform3D[] {
   const depth = storedReal(sectionLength * sections);
   return Array.from({ length: sections + 1 }, (_, index) => ({
     ...identityTransform3D(),

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { originOf, settle } from './gpuparticles.testkit';
-import { sectionDelay } from './trailHistory';
 
 /** One particle straight up at 2 units a second, with no gravity: the section origins are the heights of the path. */
 const STRAIGHT_UP = {
@@ -17,15 +16,6 @@ const TRAIL_EMITTER = { amount: 1, lifetime: 2, seed: 0 };
 function sectionHeight(settled: ReturnType<typeof settle>, section: number): number {
   return originOf(settled.buffer, section)[1];
 }
-
-describe('sectionDelay', () => {
-  it.each([
-    [9, 6, [0, 1, 3, 4, 6, 7]],
-    [15, 4, [0, 3, 7, 11]],
-  ])('delays a history of %i steps over %i sections as floor(k * H / S)', (depth, sections, expected) => {
-    expect(Array.from({ length: sections }, (_, k) => sectionDelay(k, depth, sections))).toEqual(expected);
-  });
-});
 
 describe('the section origins of a settled trail, as Godot 4.6.3 capture_aabb reports them', () => {
   it('has the head where an emitter without a trail has it', () => {

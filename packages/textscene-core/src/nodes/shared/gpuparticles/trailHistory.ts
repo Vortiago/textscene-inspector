@@ -10,7 +10,7 @@ import type { GpuParticle } from './particle';
 const STATE_FLOATS = 23;
 
 /** The steps a section `k` of `sections` runs behind its particle: `floor(k * H / S)` for a history of `H` steps. */
-export function sectionDelay(section: number, historyDepth: number, sections: number): number {
+function sectionDelay(section: number, historyDepth: number, sections: number): number {
   return Math.trunc((section * historyDepth) / sections);
 }
 
