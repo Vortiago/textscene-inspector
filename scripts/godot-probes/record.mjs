@@ -7,7 +7,7 @@
 import { LANE_COUNT, SENTINEL_BITS, parameterBits, probeSignature, probeWidth } from './probeShader.mjs';
 
 /** What a probe records when Godot draws nothing for it: its shader does not compile. */
-export const REJECTED = 'Godot rejects the shader: it draws nothing, not even the sentinel';
+const REJECTED = 'Godot rejects the shader: it draws nothing, not even the sentinel';
 
 export const hex = (bits) => bits.toString(16).padStart(8, '0');
 

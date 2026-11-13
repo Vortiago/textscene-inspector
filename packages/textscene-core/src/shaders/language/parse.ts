@@ -11,7 +11,15 @@ import {
   instruction,
   keywordInstruction,
   notTranslated,
+  signatureInstruction,
 } from './instructions.js';
+import {
+  BINARY_BY_TOKEN,
+  BINARY_LEVEL_COUNT,
+  BINARY_OPERATORS,
+  operatorText,
+  type TranslatedOperator,
+} from './operators.js';
 import type { InstructionRow } from './instructionTable.generated.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 import type { Expression, FunctionDefinition, Parameter, ShaderTree, ValueType } from './shaderTree.js';
@@ -20,22 +28,6 @@ import { godotLiteralFloat } from './godotNumber.js';
 
 /** The types the translator reads. Each other type is refused with the row that names it. */
 const TRANSLATED_TYPES: ReadonlySet<ValueType> = new Set(['float', 'vec2', 'vec3', 'vec4']);
-
-/** The binary operators the translator reads, by token, tightest first (`shader_language.cpp:7600`). */
-const BINARY_LEVELS: readonly (readonly string[])[] = [
-  ['TK_OP_MUL', 'TK_OP_DIV'],
-  ['TK_OP_ADD', 'TK_OP_SUB'],
-];
-
-const BINARY_TOKENS: ReadonlySet<string> = new Set(BINARY_LEVELS.flat());
-
-/** Godot's `get_operator_text` (`shader_language.cpp:44`) for the operators the translator reads. */
-const OPERATOR_TEXT: Readonly<Record<string, string>> = {
-  OP_ADD: '+',
-  OP_SUB: '-',
-  OP_MUL: '*',
-  OP_DIV: '/',
-};
 
 /** Godot's operator enumerator of an operator token: `TK_OP_ADD` is `OP_ADD`, `?` is `OP_SELECT_IF`. */
 const operatorOf = (token: string) => (token === 'TK_QUESTION' ? 'OP_SELECT_IF' : token.replace(/^TK_/, ''));
@@ -68,7 +60,7 @@ class Parser {
     this.parameters = this.parameterList();
     this.expect('TK_CURLY_BRACKET_OPEN', "Expected '{' to begin function.");
     const result = this.returnStatement(returnType);
-    this.expect('TK_CURLY_BRACKET_CLOSE', '', () => this.refuseStatement());
+    if (!this.accept('TK_CURLY_BRACKET_CLOSE')) this.refuseStatement();
     return { name, returnType, parameters: this.parameters, result };
   }
 
@@ -84,7 +76,7 @@ class Parser {
   }
 
   private returnStatement(returnType: ValueType): Expression {
-    this.expect('TK_CF_RETURN', '', () => this.refuseStatement());
+    if (!this.accept('TK_CF_RETURN')) this.refuseStatement();
     const result = this.expression();
     if (result.type !== returnType) this.fail(`Expected return with an expression of type '${returnType}'.`);
     this.expect('TK_SEMICOLON', "Expected ';' after return expression.");
@@ -105,14 +97,11 @@ class Parser {
   /** A type keyword the translator reads, or the refusal of the keyword's row. */
   private type(): ValueType {
     const token = this.next();
-    const row = keywordInstruction(token.type);
-    if (!row) this.fail(`Expected a type, found: '${token.text ?? token.type}'.`, token);
-    if (row.family !== 'data type' || !TRANSLATED_TYPES.has(row.id)) throw notTranslated(row, token.line);
-    return row.id;
+    return this.translatedType(token, `Expected a type, found: '${token.text ?? token.type}'.`);
   }
 
   private expression(): Expression {
-    return this.binary(BINARY_LEVELS.length - 1);
+    return this.binary(BINARY_LEVEL_COUNT - 1);
   }
 
   /** Left to right at each level, as Godot's priority loop reduces (`shader_language.cpp:7600`). */
@@ -121,10 +110,11 @@ class Parser {
     let left = operand();
     for (;;) {
       const token = this.peek();
-      if (BINARY_LEVELS[level]!.includes(token.type)) {
+      const op = BINARY_BY_TOKEN.get(token.type);
+      if (op && BINARY_OPERATORS[op].level === level) {
         this.next();
-        left = this.operator(operatorOf(token.type), [left, operand()], token);
-      } else if (isOperatorToken(token.type) && !BINARY_TOKENS.has(token.type)) {
+        left = this.operator(op, [left, operand()], token);
+      } else if (!op && isOperatorToken(token.type)) {
         this.next();
         this.refuseOperator(operatorOf(token.type), [left, this.unary()], token);
       } else return left;
@@ -145,19 +135,17 @@ class Parser {
   }
 
   /** The operator node of `op` over `operands`, typed by its row, or Godot's refusal. */
-  private operator(op: string, operands: Expression[], token: Token): Expression {
-    const row = instruction(`${op}(${operands.map((operand) => operand.type).join(',')})`);
-    if (!row) {
-      const types = operands.map((operand) => operand.type).join(', ');
-      this.fail(`Invalid arguments to operator '${OPERATOR_TEXT[op] ?? '-'}': '${types}'.`, token);
-    }
+  private operator(op: TranslatedOperator, operands: Expression[], token: Token): Expression {
+    const types = typesOf(operands);
+    const row = signatureInstruction(op, types);
+    if (!row) this.fail(`Invalid arguments to operator '${operatorText(op)}': '${types.join(', ')}'.`, token);
     if (!TRANSLATED_TYPES.has(row.returns!)) throw notTranslated(row, token.line);
     return { kind: 'operator', type: row.returns!, row, operands };
   }
 
   /** An operator the translator does not read: its exact row, or the operator's name. */
   private refuseOperator(op: string, operands: Expression[], token: Token): never {
-    const row = instruction(`${op}(${operands.map((operand) => operand.type).join(',')})`);
+    const row = signatureInstruction(op, typesOf(operands));
     if (row) throw notTranslated(row, token.line);
     throw notTranslated(instruction(op) ?? firstInstruction(`${op}(`)!, token.line, op);
   }
@@ -199,14 +187,20 @@ class Parser {
 
   /** A constructor, after its type keyword, or the refusal of the keyword's row. */
   private keywordExpression(token: Token): Expression {
-    const row = keywordInstruction(token.type);
-    if (!row) this.fail(`Expected expression, found: '${token.text ?? token.type}'.`, token);
-    if (row.family !== 'data type' || !TRANSLATED_TYPES.has(row.id)) throw notTranslated(row, token.line);
+    const type = this.translatedType(token, `Expected expression, found: '${token.text ?? token.type}'.`);
     this.expect('TK_PARENTHESIS_OPEN', "Expected '(' after the type name.");
     const args = this.argumentList();
-    const overload = instruction(`${row.id}(${args.map((arg) => arg.type).join(',')})`);
-    if (!overload) this.fail(`No matching constructor found for: '${row.id}'.`, token);
-    return { kind: 'constructor', type: row.id, row: overload, args };
+    const overload = signatureInstruction(type, typesOf(args));
+    if (!overload) this.fail(`No matching constructor found for: '${type}'.`, token);
+    return { kind: 'constructor', type, row: overload, args };
+  }
+
+  /** The type of a type keyword the translator reads, the refusal of its row, or Godot's `message`. */
+  private translatedType(token: Token, message: string): ValueType {
+    const row = keywordInstruction(token.type);
+    if (!row) this.fail(message, token);
+    if (row.family !== 'data type' || !TRANSLATED_TYPES.has(row.id)) throw notTranslated(row, token.line);
+    return row.id;
   }
 
   private identifierExpression(token: Token): Expression {
@@ -224,7 +218,7 @@ class Parser {
 
   /** A call: a built-in function's overload row, or `OP_CALL` for a function of the shader. */
   private refuseCall(name: string, args: readonly Expression[], token: Token): ShadingLanguageError {
-    const overload = instruction(`${name}(${args.map((arg) => arg.type).join(',')})`);
+    const overload = signatureInstruction(name, typesOf(args));
     if (overload) return notTranslated(overload, token.line);
     const anyOverload = firstInstruction(`${name}(`);
     if (anyOverload) return notTranslated(anyOverload, token.line, name);
@@ -283,11 +277,9 @@ class Parser {
     return true;
   }
 
-  /** The next token, which must be `type`; otherwise `refuse` runs, or Godot's `message` is thrown. */
-  private expect(type: string, message: string, refuse?: () => never): void {
-    if (this.accept(type)) return;
-    if (refuse) refuse();
-    this.fail(message);
+  /** The next token, which must be `type`; otherwise Godot's `message` is thrown. */
+  private expect(type: string, message: string): void {
+    if (!this.accept(type)) this.fail(message);
   }
 
   private identifier(message: string): string {
@@ -300,6 +292,8 @@ class Parser {
     throw new ShadingLanguageError(message, token.line);
   }
 }
+
+const typesOf = (expressions: readonly Expression[]) => expressions.map((expression) => expression.type);
 
 const SWIZZLE_ROWS = familyInstructions('swizzle');
 

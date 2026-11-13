@@ -9,25 +9,20 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PNG } from 'pngjs';
-import { runGodotProject } from '../../../../scripts/godot-probes/godotRun.mjs';
+import { requireGodotVersion, runGodotScript } from '../../../../scripts/godot-probes/godotRun.mjs';
 import { withConsumerPage, writeJobSummary } from '../consumer.mjs';
 import { compareImages, TOLERANCE_STEPS } from './compareImages.mjs';
-import { parseShowcaseOutput, showcaseProjectFiles } from './godotShowcases.mjs';
+import { MAIN_SCRIPT, parseShowcaseOutput, showcaseProjectFiles } from './godotShowcases.mjs';
 import { SHOWCASES } from './showcases.mjs';
 
 /** Where the guide shows each showcase's two images. */
-export const SHOWCASE_DIR = join(import.meta.dirname, '../../guide/showcase');
-
-/** The only Godot release the showcases compare with: the translator follows its source. */
-const GODOT_VERSION = '4.6.3';
+const SHOWCASE_DIR = join(import.meta.dirname, '../../guide/showcase');
 
 const showcaseImage = (name, side) => join(SHOWCASE_DIR, `${name}-${side}.png`);
 
 function godotImages() {
-  const output = parseShowcaseOutput(runGodotProject(showcaseProjectFiles(SHOWCASES)));
-  if (!output.godot.startsWith(`${GODOT_VERSION}-stable`)) {
-    throw new Error(`expected Godot ${GODOT_VERSION}, got ${output.godot}`);
-  }
+  const output = parseShowcaseOutput(runGodotScript(MAIN_SCRIPT, showcaseProjectFiles(SHOWCASES)));
+  requireGodotVersion(output.godot);
   return output.images;
 }
 

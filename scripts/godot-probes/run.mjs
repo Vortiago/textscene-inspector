@@ -11,37 +11,15 @@ import { pathToFileURL } from 'node:url';
 import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
 import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
-import {
-  MAIN_SCENE,
-  MAIN_SCRIPT,
-  PROJECT_GODOT,
-  parseProbeOutput,
-  probeData,
-  probeShaderFiles,
-} from './godotProject.mjs';
-import { runGodotProject } from './godotRun.mjs';
+import { MAIN_SCRIPT, parseProbeOutput, probeProjectFiles } from './godotProject.mjs';
+import { requireGodotVersion, runGodotScript } from './godotRun.mjs';
 import { renderRecord } from './record.mjs';
 
 const RECORD = join(REPO_ROOT, 'apps/textscene-three-godot-shaders/tests/probes/godot-record.json');
 
-/** The only Godot release the record may come from: the translator follows its source. */
-const GODOT_VERSION = '4.6.3';
-
-function projectFiles() {
-  return {
-    'project.godot': PROJECT_GODOT,
-    'main.tscn': MAIN_SCENE,
-    'main.gd': MAIN_SCRIPT,
-    'probes.json': JSON.stringify(probeData(PROBES)),
-    ...probeShaderFiles(PROBES),
-  };
-}
-
 function main() {
-  const output = parseProbeOutput(runGodotProject(projectFiles()));
-  if (!output.godot.startsWith(`${GODOT_VERSION}-stable`)) {
-    throw new Error(`expected Godot ${GODOT_VERSION}, got ${output.godot}`);
-  }
+  const output = parseProbeOutput(runGodotScript(MAIN_SCRIPT, probeProjectFiles(PROBES)));
+  requireGodotVersion(output.godot);
   const outputs = [[RECORD, renderRecord(output, PROBES)]];
   const options = { tool: 'godot-probes', summary: `${PROBES.length} probes` };
   if (process.argv.includes('--check')) checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });

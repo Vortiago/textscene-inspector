@@ -26,9 +26,9 @@ export function operatorSignatures({ header, language }, types) {
     if (UNTYPED_OPERATORS.includes(op)) return [{ op, args: [], returns: null, line: cases.functionLine }];
     const rule = cases.byOperator.get(op);
     if (!rule) throw new Error(`expected a case for ${op} in _validate_operator, found none`);
-    const arity = operandCount(rule.body);
-    return operandTuples(types, arity).flatMap((args) => {
-      const outcome = runCase(rule.body, order, op, args.map(typeIndex));
+    const statements = parseStatements(tokenize(rule.body));
+    return operandTuples(types, operandCount(rule.body)).flatMap((args) => {
+      const outcome = runCase(statements, order, op, args.map(typeIndex));
       if (!outcome.valid) return [];
       return [{ op, args, returns: order.types[outcome.returnType], line: rule.line }];
     });
@@ -83,15 +83,14 @@ function operandTuples(types, arity) {
   return operandTuples(types, arity - 1).flatMap((rest) => types.map((type) => [...rest, type]));
 }
 
-/** Runs one case body for operands of `operandTypes`, and answers `{ valid, returnType }`. */
-function runCase(body, order, op, operandTypes) {
+/** Runs one parsed case body for operands of `operandTypes`, and answers `{ valid, returnType }`. */
+function runCase(statements, order, op, operandTypes) {
   const state = {
     vars: { valid: false, ret_type: 0, ret_size: 0 },
     order,
     op: indexIn(order.operators, op),
     operandTypes,
   };
-  const statements = parseStatements(tokenize(body));
   try {
     runStatements(statements, state);
   } catch (signal) {

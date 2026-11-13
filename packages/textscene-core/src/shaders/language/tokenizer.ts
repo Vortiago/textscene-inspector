@@ -5,7 +5,7 @@
  * Godot's message.
  */
 
-import { INSTRUCTION_TABLE } from './instructionTable.generated.js';
+import { KEYWORD_TOKENS } from './instructions.js';
 import { ShadingLanguageError } from './shadingLanguageError.js';
 
 export interface Token {
@@ -15,11 +15,6 @@ export interface Token {
   readonly text?: string;
   readonly line: number;
 }
-
-/** Each keyword's text and token, from `keyword_list` (`shader_language.cpp:283`). */
-const KEYWORDS: ReadonlyMap<string, string> = new Map(
-  INSTRUCTION_TABLE.filter((row) => row.token !== undefined).map((row) => [row.id, row.token!])
-);
 
 /**
  * The operator and punctuation tokens, longest first, from the character switch of `_get_token`
@@ -163,7 +158,7 @@ function readIdentifier(source: string, cursor: Cursor): Token {
   const start = cursor.index;
   while (isIdentifierChar(source[cursor.index] ?? '')) cursor.index += 1;
   const text = source.slice(start, cursor.index);
-  const keyword = KEYWORDS.get(text);
+  const keyword = KEYWORD_TOKENS.get(text);
   if (keyword) return { type: keyword, line: cursor.line };
   // `shader_language.cpp:960`: Godot renames this prefix, which its compiler gives its own names.
   return { type: 'TK_IDENTIFIER', text: text.replace('dus_', '_'), line: cursor.line };

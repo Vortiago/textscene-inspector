@@ -1,6 +1,7 @@
 /**
  * Runs a scratch Godot project once, on lavapipe under xvfb as `pnpm ref:godot` does, and answers
- * its standard output. The probes and the end to end showcases both print their pixels there.
+ * its standard output. The probes and the end to end showcases both print their pixels there, from
+ * a main script that this module puts in a project of one scene.
  */
 
 import { spawnSync } from 'node:child_process';
@@ -9,14 +10,45 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { godotSpawnPlan } from '../godot-ref/run.mjs';
 
+/** The only Godot release the probes and showcases compare with: the translator follows its source. */
+const GODOT_VERSION = '4.6.3';
+
+/** Frames a main script draws before it reads its viewports: the first frames compile the pipelines. */
+export const FRAMES_BEFORE_READ = 4;
+
+const PROJECT_GODOT = `config_version=5
+
+[application]
+run/main_scene="res://main.tscn"
+
+[display]
+window/size/viewport_width=64
+window/size/viewport_height=64
+`;
+
+const MAIN_SCENE = `[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://main.gd" id="1"]
+
+[node name="Main" type="Node"]
+script = ExtResource("1")
+`;
+
 /**
- * Godot's standard output for a project of `files`, keyed by their names in the project.
+ * Godot's standard output for a project whose one scene runs `mainScript`, beside `files` keyed
+ * by their names in the project.
  * @canonical A scratch Godot project run once, its standard output read
  */
-export function runGodotProject(files) {
+export function runGodotScript(mainScript, files) {
   const directory = mkdtempSync(join(tmpdir(), 'godot-project-'));
   try {
-    for (const [name, text] of Object.entries(files)) writeFileSync(join(directory, name), text);
+    const project = {
+      'project.godot': PROJECT_GODOT,
+      'main.tscn': MAIN_SCENE,
+      'main.gd': mainScript,
+      ...files,
+    };
+    for (const [name, text] of Object.entries(project)) writeFileSync(join(directory, name), text);
     const plan = godotSpawnPlan(['--path', directory], { display: true });
     const result = spawnSync(plan.command, plan.argv, {
       encoding: 'utf8',
@@ -28,5 +60,12 @@ export function runGodotProject(files) {
     return result.stdout;
   } finally {
     rmSync(directory, { recursive: true, force: true });
+  }
+}
+
+/** Refuses an answer from any Godot but the pinned release. */
+export function requireGodotVersion(version) {
+  if (!version.startsWith(`${GODOT_VERSION}-stable`)) {
+    throw new Error(`expected Godot ${GODOT_VERSION}, got ${version}`);
   }
 }

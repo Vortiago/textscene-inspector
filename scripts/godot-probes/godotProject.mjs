@@ -1,37 +1,17 @@
 /**
- * The scratch Godot project that runs every probe at once: one SubViewport per probe, drawn for a
+ * The main script and files that run every probe at once: one SubViewport per probe, drawn for a
  * few frames, then each viewport's pixels printed as hex. The parse of that output is split from
  * the run, so its test needs no engine.
  */
 
+import { FRAMES_BEFORE_READ } from './godotRun.mjs';
 import { parameterBits, probeShader, probeWidth } from './probeShader.mjs';
-
-/** Frames the viewports draw before the read: the first frames compile the pipelines. */
-const FRAMES_BEFORE_READ = 4;
 
 /** The prefix of each output line that carries a probe's pixels. */
 const LINE_PREFIX = 'PROBE ';
 
-export const PROJECT_GODOT = `config_version=5
-
-[application]
-run/main_scene="res://main.tscn"
-
-[display]
-window/size/viewport_width=64
-window/size/viewport_height=64
-`;
-
-export const MAIN_SCENE = `[gd_scene load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://main.gd" id="1"]
-
-[node name="Main" type="Node"]
-script = ExtResource("1")
-`;
-
 /** The data file the script reads: each probe's name, width, shader file and parameter bits. */
-export function probeData(probes) {
+function probeData(probes) {
   return probes.map((probe, index) => ({
     name: probe.name,
     width: probeWidth(probe),
@@ -42,8 +22,13 @@ export function probeData(probes) {
 }
 
 /** The shader files, keyed by their file name in the project. */
-export function probeShaderFiles(probes) {
+function probeShaderFiles(probes) {
   return Object.fromEntries(probes.map((probe, index) => [`probe_${index}.gdshader`, probeShader(probe)]));
+}
+
+/** The files beside the main script, keyed by their names in the project. */
+export function probeProjectFiles(probes) {
+  return { 'probes.json': JSON.stringify(probeData(probes)), ...probeShaderFiles(probes) };
 }
 
 export const MAIN_SCRIPT = `extends Node

@@ -1,35 +1,15 @@
 /**
- * The scratch Godot project that draws every showcase: one SubViewport per showcase with a
+ * The main script and files that draw every showcase: one SubViewport per showcase with a
  * ColorRect that fills it, then each viewport's RGBA8 pixels printed as hex. The parse of that
  * output is split from the run, so its test needs no engine.
  */
 
+import { FRAMES_BEFORE_READ } from '../../../../scripts/godot-probes/godotRun.mjs';
 import { godotShader } from './showcases.mjs';
-
-/** Frames the viewports draw before the read: the first frames compile the pipelines. */
-const FRAMES_BEFORE_READ = 4;
 
 const LINE_PREFIX = 'SHOWCASE ';
 
-const PROJECT_GODOT = `config_version=5
-
-[application]
-run/main_scene="res://main.tscn"
-
-[display]
-window/size/viewport_width=64
-window/size/viewport_height=64
-`;
-
-const MAIN_SCENE = `[gd_scene load_steps=2 format=3]
-
-[ext_resource type="Script" path="res://main.gd" id="1"]
-
-[node name="Main" type="Node"]
-script = ExtResource("1")
-`;
-
-const MAIN_SCRIPT = `extends Node
+export const MAIN_SCRIPT = `extends Node
 
 func _ready() -> void:
 	var data: Array = JSON.parse_string(FileAccess.get_file_as_string("res://showcases.json"))
@@ -56,7 +36,7 @@ func _ready() -> void:
 	get_tree().quit()
 `;
 
-/** The project's files, keyed by their names in the project. */
+/** The files beside the main script, keyed by their names in the project. */
 export function showcaseProjectFiles(showcases) {
   const data = showcases.map((showcase, index) => ({
     name: showcase.name,
@@ -65,9 +45,6 @@ export function showcaseProjectFiles(showcases) {
     shader: `res://showcase_${index}.gdshader`,
   }));
   return {
-    'project.godot': PROJECT_GODOT,
-    'main.tscn': MAIN_SCENE,
-    'main.gd': MAIN_SCRIPT,
     'showcases.json': JSON.stringify(data),
     ...Object.fromEntries(
       showcases.map((showcase, index) => [`showcase_${index}.gdshader`, godotShader(showcase)])

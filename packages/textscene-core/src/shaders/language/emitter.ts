@@ -5,6 +5,7 @@
 
 import { float, vec2, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
+import { operatorOfRow, type TranslatedOperator } from './operators.js';
 import type { Expression, FunctionDefinition, Parameter, ValueType } from './shaderTree.js';
 
 /** A function of the shader as TSL: `call` builds its result from one node per parameter. */
@@ -58,11 +59,10 @@ function emit(expression: Expression, args: readonly Node[]): Node {
       return float(expression.value);
     case 'parameter':
       return args[expression.index]!;
-    case 'operator':
-      return emitOperator(
-        expression.row.id,
-        expression.operands.map((operand) => emit(operand, args))
-      );
+    case 'operator': {
+      const [first, second] = expression.operands.map((operand) => emit(operand, args));
+      return OPERATIONS[operatorOfRow(expression.row.id)](first as Node & ArithmeticNode, second!);
+    }
     case 'constructor':
       return CONSTRUCTORS[expression.type]!(...expression.args.map((arg) => emit(arg, args)));
     case 'swizzle': {
@@ -72,21 +72,11 @@ function emit(expression: Expression, args: readonly Node[]): Node {
   }
 }
 
-/** The TSL operation of an operator row, `OP_ADD(vec3,float)`. */
-function emitOperator(rowId: string, operands: readonly Node[]): Node {
-  const [first, second] = operands as [Node & ArithmeticNode, Node];
-  switch (rowId.slice(0, rowId.indexOf('('))) {
-    case 'OP_ADD':
-      return first.add(second);
-    case 'OP_SUB':
-      return first.sub(second);
-    case 'OP_MUL':
-      return first.mul(second);
-    case 'OP_DIV':
-      return first.div(second);
-    case 'OP_NEGATE':
-      return first.negate();
-    default:
-      throw new Error(`expected an operator the parser reads, got ${rowId}`);
-  }
-}
+/** The TSL operation of each operator, by Godot's enumerator. */
+const OPERATIONS: Readonly<Record<TranslatedOperator, (first: ArithmeticNode, second: Node) => Node>> = {
+  OP_ADD: (first, second) => first.add(second),
+  OP_SUB: (first, second) => first.sub(second),
+  OP_MUL: (first, second) => first.mul(second),
+  OP_DIV: (first, second) => first.div(second),
+  OP_NEGATE: (first) => first.negate(),
+};

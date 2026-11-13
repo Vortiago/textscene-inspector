@@ -10,7 +10,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
-import { parameterBits, probeSignature } from '../../../../scripts/godot-probes/probeShader.mjs';
+import { parameterBits } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { withConsumerPage, writeJobSummary } from '../consumer.mjs';
 import { PROBES } from '../probes/probes.mjs';
 import { compareProbe, coverageFailures } from './compare.mjs';
@@ -19,7 +19,6 @@ const RECORD = JSON.parse(readFileSync(join(import.meta.dirname, '../probes/godo
 
 /** What the page needs of a probe: its source, its row count and its parameters' bits. */
 function pageSpec(probe) {
-  probeSignature(probe.source);
   return { source: probe.source, rows: probe.inputs.length, parameters: parameterBits(probe) };
 }
 
