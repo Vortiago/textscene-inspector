@@ -103,7 +103,7 @@ function turned({ sin, cos }: Rotation, [x, y]: [number, number]): Vec2Node {
   return vec2(cos.mul(x).add(sin.mul(y)), sin.negate().mul(x).add(cos.mul(y)));
 }
 
-/** The lookup of one renderer's atlas, its functions built once for every light of the renderer. */
+/** The lookup of one renderer's atlas in one program, its functions built once for every light of the program. */
 export class SunShadow {
   constructor(
     private readonly rows: LightRows,

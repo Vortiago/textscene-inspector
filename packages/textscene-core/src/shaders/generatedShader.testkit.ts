@@ -42,11 +42,11 @@ export function generatedMaterialShader(material: NodeMaterial, lights: readonly
   return generatedMaterialProgram(material, lights).fragmentShader;
 }
 
-/** The two shaders of `material` on a mesh that `lights` light. */
-export function generatedMaterialProgram(
-  material: NodeMaterial,
-  lights: readonly THREE.Light[] = []
-): { vertexShader: string; fragmentShader: string } {
+/**
+ * A renderer that builds programs with no GL context. Two builds on one renderer share what three
+ * caches per backend, as two materials of one page do.
+ */
+export function unstartedRenderer(): WebGPURenderer {
   const renderer = new WebGPURenderer({ forceWebGL: true, canvas: document.createElement('canvas') });
   const backend = renderer.backend as unknown as UnstartedBackend;
   backend.extensions = { has: () => false };
@@ -57,6 +57,16 @@ export function generatedMaterialProgram(
   // A renderer that has not started holds null here, and the builder shares groups unless it is undefined.
   (renderer as unknown as { _bindings: undefined })._bindings = undefined;
   renderer.shadowMap.enabled = true;
+  return renderer;
+}
+
+/** The two shaders of `material` on a mesh that `lights` light, built on `renderer`. */
+export function generatedMaterialProgram(
+  material: NodeMaterial,
+  lights: readonly THREE.Light[] = [],
+  renderer = unstartedRenderer()
+): { vertexShader: string; fragmentShader: string } {
+  const backend = renderer.backend as unknown as UnstartedBackend;
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(), material);
   mesh.receiveShadow = true;
   const builder = backend.createNodeBuilder(mesh, renderer);

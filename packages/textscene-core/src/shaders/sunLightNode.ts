@@ -47,7 +47,7 @@ export class GodotSunLightNode extends DirectionalLightNode {
 
   /** The shadow at the fragment, or 1 for a light, a surface or a renderer that draws none. */
   private shadowOf(builder: NodeBuilder, pipeline: LitPipeline, slot: number): FloatNode {
-    const lookup = pipeline.sunShadow();
+    const lookup = pipeline.sunShadow(builder);
     const light = this.light!;
     const draws =
       lookup !== null &&

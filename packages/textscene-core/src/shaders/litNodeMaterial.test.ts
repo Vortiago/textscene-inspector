@@ -5,7 +5,11 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
 import { DiffuseMode } from '../godot/rendering/materials/diffuseMode.js';
 import { SpecularMode } from '../godot/rendering/materials/specularMode.js';
-import { generatedMaterialProgram, generatedMaterialShader } from './generatedShader.testkit.js';
+import {
+  generatedMaterialProgram,
+  generatedMaterialShader,
+  unstartedRenderer,
+} from './generatedShader.testkit.js';
 import { installGodotShading, type GodotShading } from './godotShading.js';
 import type { LitProgram } from './litNodeMaterial.js';
 import { MAX_SUNS, SPLIT_SLOTS, SUN_ROWS, type SplitShadowLayout } from './sunRows.js';
@@ -79,6 +83,37 @@ describe('GodotLitNodeMaterial', () => {
 
     expect(vertexShader).toContain('vec3 normalLocal;');
     expect(vertexShader).toContain('mat4 modelViewMatrix;');
+  });
+
+  it('declares the atlas in each program of one renderer, with its shadow functions', () => {
+    const shaded = shading(true);
+    const renderer = unstartedRenderer();
+    const sun = [shadowedSun()];
+    generatedMaterialProgram(
+      shaded.surfaceMaterial({ ...DEFAULT_PROGRAM, hasClearcoat: true }),
+      [],
+      renderer
+    );
+    const { fragmentShader } = generatedMaterialProgram(
+      shaded.surfaceMaterial(DEFAULT_PROGRAM),
+      sun,
+      renderer
+    );
+    generatedMaterialProgram(
+      shaded.surfaceMaterial({ ...DEFAULT_PROGRAM, hasClearcoat: true }),
+      sun,
+      renderer
+    );
+    const second = generatedMaterialProgram(
+      shaded.surfaceMaterial(DEFAULT_PROGRAM),
+      sun,
+      renderer
+    ).fragmentShader;
+
+    for (const shader of [fragmentShader, second]) {
+      const atlas = /texture\( (\w+), vec3\(/.exec(shader)?.[1];
+      expect(shader).toContain(`uniform sampler2DShadow ${atlas};`);
+    }
   });
 
   it('reads no shadow while the inputs hold no atlas', () => {

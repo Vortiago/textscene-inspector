@@ -5,6 +5,7 @@
  */
 
 import { uniform } from 'three/tsl';
+import type { NodeBuilder } from 'three/webgpu';
 import { LightRows } from './lightRows.js';
 import { GodotSkyLightingNode } from './skyLightingNode.js';
 import type { PipelineInputs } from './pipelineInputs.js';
@@ -18,18 +19,25 @@ export class LitPipeline {
 
   /** The caller writes `inputs` before a material first draws, as `pipelineInputs.ts` says. */
   constructor(readonly inputs: PipelineInputs) {}
-  /** Undefined until the first ask, then the lookup of the atlas the inputs held then, or null. */
-  private sunShadowLookup: SunShadow | null | undefined;
+  /**
+   * One lookup per program build. three caches a layout function's code per backend (r187
+   * `NodeBuilder.js:2759-2790`), so a later program that shared the lookup's functions would
+   * neither declare nor number the uniforms their bodies read.
+   */
+  private readonly sunShadowLookups = new WeakMap<NodeBuilder, SunShadow>();
   /** Null until the first ask, then the node of the sky the inputs held then. */
   private skyNode: GodotSkyLightingNode | null = null;
 
-  /** The directional shadow lookup, or null while the inputs hold no atlas. */
-  sunShadow(): SunShadow | null {
-    if (this.sunShadowLookup === undefined) {
-      const atlas = this.inputs.sunShadow;
-      this.sunShadowLookup = atlas ? new SunShadow(this.sunRows, atlas) : null;
+  /** The directional shadow lookup of the program `builder` builds, or null while the inputs hold no atlas. */
+  sunShadow(builder: NodeBuilder): SunShadow | null {
+    const atlas = this.inputs.sunShadow;
+    if (!atlas) return null;
+    let lookup = this.sunShadowLookups.get(builder);
+    if (!lookup) {
+      lookup = new SunShadow(this.sunRows, atlas);
+      this.sunShadowLookups.set(builder, lookup);
     }
-    return this.sunShadowLookup;
+    return lookup;
   }
 
   /** The sky's lighting node, which every lit material of the renderer shares. */
