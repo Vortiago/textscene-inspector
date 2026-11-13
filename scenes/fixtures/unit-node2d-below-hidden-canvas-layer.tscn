@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+; Moves one variable: the visible of a CanvasLayer above a Polygon2D and a Control. A hidden layer hides
+; every item below it (canvas_item.cpp:325-329), so Godot draws only the background: pixel (50, 150) is
+; (76, 76, 76).
+
+[node name="Root" type="Node2D"]
+
+[node name="Layer" type="CanvasLayer" parent="."]
+visible = false
+
+[node name="Leaf" type="Polygon2D" parent="Layer"]
+color = Color(0.3, 0.2, 0.6, 1)
+polygon = PackedVector2Array(0, 0, 200, 0, 200, 200, 0, 200)
+
+[node name="Panel" type="Control" parent="Layer"]
+offset_left = 250.0
+offset_right = 290.0
+offset_bottom = 40.0
+
+[node name="InPanel" type="Polygon2D" parent="Layer/Panel"]
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
