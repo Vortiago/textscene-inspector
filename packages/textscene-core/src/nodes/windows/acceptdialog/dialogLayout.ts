@@ -132,13 +132,8 @@ function contentRectAbove(
 }
 
 function dialogContentRect(dialog: SolveNode, size: Vector2, ctx: SolveContext): Rect2 {
-  const panel = dialogPanelBox(dialog, ctx.theme);
-  return contentRectAbove(
-    panel,
-    size,
-    buttonRow(dialog, ctx).minimum.y,
-    buttonsSeparation(dialog, ctx.theme)
-  );
+  const panel = dialogPanelBox(dialog);
+  return contentRectAbove(panel, size, buttonRow(dialog, ctx).minimum.y, buttonsSeparation(dialog));
 }
 
 /** Every visible Control of the tree under `root`, placed by the solve that laid it out inside the rect at `origin`. */
@@ -166,7 +161,7 @@ function placeBody(dialog: SolveNode, content: Rect2, ctx: SolveContext): Placed
  * at its minimum height, the content above it less the separation.
  */
 export function dialogGeometry(dialog: SolveNode, size: Vector2, ctx: SolveContext): DialogGeometry {
-  const panel = dialogPanelBox(dialog, ctx.theme);
+  const panel = dialogPanelBox(dialog);
   const margins = contentMarginSize(panel);
   const row = buttonRow(dialog, ctx);
 
@@ -176,7 +171,7 @@ export function dialogGeometry(dialog: SolveNode, size: Vector2, ctx: SolveConte
     w: size.x - margins.x,
     h: row.minimum.y,
   };
-  const content = contentRectAbove(panel, size, row.minimum.y, buttonsSeparation(dialog, ctx.theme));
+  const content = contentRectAbove(panel, size, row.minimum.y, buttonsSeparation(dialog));
 
   const rects = resortBoxContainer(
     false,
@@ -232,8 +227,8 @@ function largestChildMinimum(dialog: SolveNode, ctx: SolveContext): Vector2 {
  * Controls stacked above the button row and its separation, inside the panel's margins.
  */
 export const dialogContentsMinimumSize: MinimumSizeFn = (dialog, ctx) => {
-  const margins = contentMarginSize(dialogPanelBox(dialog, ctx.theme));
-  const separation = buttonsSeparation(dialog, ctx.theme);
+  const margins = contentMarginSize(dialogPanelBox(dialog));
+  const separation = buttonsSeparation(dialog);
   const row = buttonRow(dialog, ctx).minimum;
   const authored = largestChildMinimum(dialog, ctx);
   const widthWithoutMessage = Math.max(row.x, authored.x);

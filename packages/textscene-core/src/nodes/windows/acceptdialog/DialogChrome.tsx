@@ -37,7 +37,7 @@ export function DialogChrome(props: NativeControlComponentProps) {
       })),
     [geometry, solveNode]
   );
-  const panelBox = useMemo(() => dialogPanelBox(solveNode, theme), [solveNode, theme]);
+  const panelBox = useMemo(() => dialogPanelBox(solveNode), [solveNode]);
   const panelRect = useMemo(() => ({ x: 0, y: 0, w: rect.w, h: rect.h }), [rect.w, rect.h]);
   // The label is piece 0 and the body Controls follow in tree order, so the body draws over it.
   const drawnBody = useMemo(() => {

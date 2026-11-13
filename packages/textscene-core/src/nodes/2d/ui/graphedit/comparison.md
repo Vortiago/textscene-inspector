@@ -55,7 +55,7 @@ It also draws the three pieces of chrome that the GraphEdit C++ constructor buil
 are present in every GraphEdit, whatever the scene file says:
 
 - The **toolbar** at `(10, 10)`, a `PanelContainer` at its minimum size around an
-  `HBoxContainer`. Its widgets are the zoom label (`round(zoom * 100)%`), three zoom
+  `HBoxContainer`, spaced by `HBoxContainer`'s `separation` from the Theme chain (`graph_edit.cpp:3234`). Its widgets are the zoom label (`round(zoom * 100)%`), three zoom
   buttons, the grid and snapping toggles, the snapping-distance `SpinBox`, the minimap
   toggle and the arrange button. Each icon sits on a whole pixel (`button.cpp:405`). The
   SpinBox is four advances of `W` wide, as one glyph measures it (`line_edit.cpp:2451`). `show_menu`
@@ -75,9 +75,11 @@ are present in every GraphEdit, whatever the scene file says:
   in the corner, each grabber a dot at the middle. The minimap then reads zero bounds, and its
   camera frame runs past the minimap panel (`graphEdit.md`).
 - The **minimap**, anchored bottom-right, inset 12px, at `minimap_size` (at least 50 per
-  axis) and `minimap_opacity`, drawn only while `minimap_enabled`. Inside it are the
-  panel, one rect per visible GraphFrame and then GraphNode in its panel colour, every
-  connection, and the camera viewport rect. A connection is a 0.5px
+  axis) and `minimap_opacity`, drawn only while `minimap_enabled`. It holds the panel and one
+  rect per visible GraphFrame, then GraphNode. Each rect takes the `bg_color` of its `panel`, or of
+  `panel_selected` while it is selected (`graph_edit.cpp:1834-1864`). A frame with `tint_color_enabled`
+  takes its tint. Under a StyleBoxTexture or StyleBoxLine panel the rect keeps the minimap's `node`
+  fill. Over them the minimap draws every connection and the camera viewport rect. A connection is a 0.5px
   `draw_polyline_colors` polyline, with each point's colour lerped in minimap space and
   a feather that `connection_lines_antialiased` selects. All of it is letterboxed into
   the bounding box of the graph. Godot draws no connection in the settled minimap in two
@@ -143,3 +145,7 @@ lenient tree carries none of them, and a malformed one does not reach the tree.
 
 - **Approximated** The toolbar buttons and SpinBox draw their icons, pressed boxes, field,
   arrows and disabled state, but no hover or focus state.
+- **Approximated** A connection curve takes Godot's path and width, but its anti-aliased edge differs
+  from Godot's feather.
+- **Approximated** Under a StyleBoxEmpty panel, a GraphNode or GraphFrame fills its minimap rect clear,
+  where Godot keeps the minimap's `node` fill.

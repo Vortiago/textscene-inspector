@@ -4,7 +4,7 @@
 - Related: ADR-0039 (one StandardMaterial3D derivation, two adapters: "Godot's default
   3D surface" is that derivation's `null` input, which is why both adapters can express
   it), ADR-0031 (resource slices: the slice claims `ShaderMaterial`, so it routes here and
-  not to a missing-resources row).
+  not to a missing-resources row), ADR-0075 (a user's shader is part of the scene).
 
 ## Context
 
@@ -62,6 +62,9 @@ do now. The arrival-parity requirement applies to it unchanged: whatever a partl
 supported shader draws, its `.tres` and `[sub_resource]` forms must draw the same thing.
 Nothing here is a decision not to compile GLSL. That is a capability the previewer does
 not have, not a position, and this ADR survives it.
+
+ADR-0075 takes the position: a user's shader is part of the scene, and the renderer draws
+it. This surface then serves only the shader that the renderer cannot draw yet.
 
 This does not extend to 2D. `useCanvasItemMaterial` resolves an uncompiled shader to
 `null` on its own stated grounds, and the shapes differ: a `CanvasItemMaterial` modifies
