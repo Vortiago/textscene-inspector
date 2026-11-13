@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { SharedTextureRelease, releasedOnUnmount } from './sharedTexture';
@@ -7,6 +7,8 @@ import { defaultWhiteTexture } from './materials/defaultWhiteTexture';
 import { pendingMapStandIn } from './materials/pendingMapStandIn';
 import { installLtcTextures } from './areaLight/ltcTextures';
 import { installGodotIndirectSpecular } from './godotIndirectSpecular';
+import { dfgTable } from '../shaders/dfgTable';
+import { prepareLitShading } from './litSurface/litShading';
 
 /** A canvas with the release mounted, its renderer, and the unmount that ends it. */
 async function canvas() {
@@ -45,6 +47,16 @@ describe('SharedTextureRelease', () => {
     await unmount();
 
     expect(textures.map(disposeListeners)).toEqual([0, 0, 0, 0]);
+  });
+
+  it('frees the node lit surface’s DFG table when a canvas unmounts', async () => {
+    prepareLitShading({ setNodesHandler: () => undefined } as unknown as THREE.WebGLRenderer);
+    const dispose = vi.spyOn(dfgTable(), 'dispose');
+    const { unmount } = await canvas();
+
+    await unmount();
+
+    expect(dispose).toHaveBeenCalled();
   });
 
   it('lets a live canvas upload a shared texture again at its next draw (edge case)', async () => {

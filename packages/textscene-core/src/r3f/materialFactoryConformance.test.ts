@@ -177,6 +177,8 @@ const OFF_TAG_EXEMPTIONS: Readonly<Record<string, string>> = {
     'mounts the world root, a bare Object3D that R3F adds as a child and never routes to a material slot',
   'packages/textscene-core/src/r3f/preview/PreviewSun.tsx':
     "mounts the preview sun's aim target — an empty Object3D, added as a child",
+  'packages/textscene-core/src/r3f/litSurface/LitNodeMaterial.tsx':
+    'spreads the lit fields onto the node material, which mounts under `litMountKey` on its program and attach target, so a new program arrives as a new material',
 };
 
 /** `new THREE.SomethingMaterial(`, the imperative door. */
@@ -192,6 +194,8 @@ export function materialConstructorLines(source: string): number[] {
  * absent because its `new THREE.ShaderMaterial({…})` is inside a doc comment.
  */
 const IMPERATIVE_EXEMPTIONS: Readonly<Record<string, string>> = {
+  'packages/textscene-core/src/shaders/godotShading.ts':
+    'one node material per lit mount, its program fixed at construction; the mount is keyed by `litMountKey` on the program, so a new program arrives as a new material',
   'packages/textscene-core/src/r3f/fullScreenPass.ts':
     'one material per call, its shaders fixed at construction and owned by the caller that draws it; callers move only uniforms, and each `defines` change, the sky radiance layout and the volumetric fog integrate depth, sets `needsUpdate`',
   'packages/textscene-core/src/r3f/depthPrepass/depthPrepass.ts':

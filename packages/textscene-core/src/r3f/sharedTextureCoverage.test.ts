@@ -33,6 +33,8 @@ const FREED_OTHERWISE: Record<string, string> = {
     "A slot shows another texture's handle and its version stays 0, so no renderer uploads it.",
   'r3f/sky/environmentSwitch.ts':
     'The switch only turns on a program define. Its version stays 0, so no renderer uploads it.',
+  'shaders/dfgTable.ts':
+    'The shader module imports nothing of r3f (ADR-0072), so `prepareLitShading` hands the table to `releasedOnUnmount`.',
 };
 
 /** Every non-test `.ts` and `.tsx` file under `dir`, relative to `srcDir`. */

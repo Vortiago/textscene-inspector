@@ -75,7 +75,16 @@ const NEUTRAL_PROPS: Readonly<Record<string, (value: unknown) => boolean>> = {
 const TEXTURE_PROP = /^map$|Map$/;
 
 /** Props that draw nothing while their feature's own prop is neutral, such as a blend factor. */
-const DEPENDENT_PROP = /^(normalScale|sheenColor|sheenRoughness|anisotropyRotation|thickness|blend[A-Z]\w*)$/;
+const DEPENDENT_PROPS: ReadonlySet<string> = new Set([
+  'normalScale',
+  'sheenColor',
+  'sheenRoughness',
+  'anisotropyRotation',
+  'thickness',
+]);
+
+/** A blend factor, such as `blendSrc`, which draws nothing while the material does not blend. */
+const BLEND_PROP = /^blend[A-Z]\w*$/;
 
 /**
  * The cache key of each light-mode injection (`../lightModes.ts`), and the modes it compiles. A key
@@ -95,7 +104,7 @@ function cacheKeyOf(injection: ProgramInjection | undefined): string | undefined
 }
 
 function isCoveredProp(key: string, value: unknown): boolean {
-  if (FIELD_PROPS.has(key) || DEPENDENT_PROP.test(key)) return true;
+  if (FIELD_PROPS.has(key) || DEPENDENT_PROPS.has(key) || BLEND_PROP.test(key)) return true;
   if (TEXTURE_PROP.test(key)) return value == null;
   return NEUTRAL_PROPS[key]?.(value) ?? value === undefined;
 }

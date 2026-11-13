@@ -4,7 +4,10 @@ import * as THREE from 'three';
 import { dfgHalfFloats } from '../godot/rendering/materials/dfg.js';
 import { DFG_SIZE } from '../godot/rendering/materials/dfgTable.generated.js';
 
-/** Written only by the first call of `dfgTable`, and kept for the page's life, as the table never changes. */
+/**
+ * Written only by the first call of `dfgTable`, and kept for the page's life, as the table never
+ * changes. A caller that draws on a canvas frees its GL copies when the canvas unmounts.
+ */
 let table: THREE.DataTexture | null = null;
 
 /** The table, read at `(NdotV, roughness)` with Godot's linear clamped sampler. */
