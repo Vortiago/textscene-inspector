@@ -38,6 +38,7 @@ import {
   EXPAND_MODE_ORIGINAL_SIZE,
   shapeLineEditText,
   lineEditClearIconSize,
+  caretDrawWidthPx,
 } from './nativeSolver';
 import type { LineEditProperties } from './types';
 import { type Rgba } from '../../../../godot/math/math';
@@ -188,7 +189,7 @@ export function LineEdit({ solveNode, tint, rect, renderOrder, theme }: NativeCo
   };
 
   // Caret: only while caret_force_displayed
-  const caretWidthPx = requiredThemeItem(solveNode.constants, 'caret_width');
+  const caretWidthPx = caretDrawWidthPx(solveNode.constants, theme.scale);
   const caretColor = requiredThemeItem(solveNode.colors, 'caret_color');
   const tintedCaretColor = useMemo(() => tintColor(caretColor, tint.own), [caretColor, tint.own]);
   const caretLinearColor = useItemLinearColor(tintedCaretColor);

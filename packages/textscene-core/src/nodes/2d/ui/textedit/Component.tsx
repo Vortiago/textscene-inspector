@@ -55,6 +55,8 @@ import {
   textEditWrapOffsetPx,
 } from './nativeSolver';
 import { useTextEditRows } from './useTextEditRows';
+import { canvasSubOrder } from '../../../../r3f/canvasItemState';
+import { caretDrawWidthPx } from '../lineedit/nativeSolver';
 import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import type { TextEditRows } from './rows';
 import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
@@ -267,7 +269,7 @@ export function TextEditBody({
     rowBandTopPx(0),
     rowHeightPx,
     textHeightPx,
-    requiredThemeItem(solveNode.constants, 'caret_width')
+    caretDrawWidthPx(solveNode.constants, theme.scale)
   );
 
   // `text_ci` clips to the whole node rect (`:932-936`), not the content rect as LineEdit does.
@@ -298,17 +300,6 @@ export function TextEditBody({
             height={rowHeightPx}
             color={toItemLinear(tintedCurrentLineColor)}
             opacity={tintedCurrentLineColor.a}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
-      )}
-      {caretRect && (
-        <CanvasItemGroup position={[caretRect.x, -caretRect.y, 0]}>
-          <ControlQuad
-            width={caretRect.w}
-            height={caretRect.h}
-            color={toItemLinear(tintedCaretColor)}
-            opacity={tintedCaretColor.a}
             renderOrder={renderOrder}
           />
         </CanvasItemGroup>
@@ -393,6 +384,19 @@ export function TextEditBody({
           );
         });
       })}
+      {/* The caret draws after its row's glyphs (`text_edit.cpp:1764`). A text run tied on one key
+          can sort after it, so the caret takes a piece of the slot, below the scroll bars. */}
+      {caretRect && (
+        <CanvasItemGroup position={[caretRect.x, -caretRect.y, 0]}>
+          <ControlQuad
+            width={caretRect.w}
+            height={caretRect.h}
+            color={toItemLinear(tintedCaretColor)}
+            opacity={tintedCaretColor.a}
+            renderOrder={canvasSubOrder(slot).key}
+          />
+        </CanvasItemGroup>
+      )}
       <ScrollBarChrome
         bar={scrollBars.horizontal}
         boxes={scrollBarBoxes.horizontal}

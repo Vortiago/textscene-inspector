@@ -11,6 +11,7 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { TextEdit } from './Component';
+import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { TextEditProperties } from './types';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
@@ -627,5 +628,30 @@ describe('<TextEdit> — self_modulate', () => {
       />
     );
     expect(countTintSplit(renderer.scene)).toEqual({ own: 1, child: 3 });
+  });
+});
+
+describe('<TextEdit> — caret', () => {
+  async function renderCaret(caretWidth: number, scale: number) {
+    const base = solveNode({ text: 'hello', caretDrawWhenEditableDisabled: true, editable: false });
+    const node = { ...base, constants: { ...base.constants, caret_width: caretWidth } };
+    const renderer = await ReactThreeTestRenderer.create(
+      <TextEdit {...painterEnv()} theme={nativeTheme(scale)} solveNode={node} rect={RECT} renderOrder={0} />
+    );
+    const meshes = renderer.scene.findAllByType('Mesh').map((found) => found.instance as THREE.Mesh);
+    const caretIndex = meshes.findIndex(
+      (mesh) => (mesh.geometry as THREE.PlaneGeometry).parameters?.width === caretWidth * Math.max(1, scale)
+    );
+    return { caret: meshes[caretIndex], run: bundledRunMeshes(renderer.scene)[0] };
+  }
+
+  it('sorts the caret after the row text, over its first glyph (text_edit.cpp:1764)', async () => {
+    const { caret, run } = await renderCaret(4, 1);
+    expect(caret!.renderOrder).toBeGreaterThan(run!.renderOrder);
+  });
+
+  it('scales caret_width by the theme scale (text_edit.cpp:1766)', async () => {
+    const { caret } = await renderCaret(3, 2);
+    expect(caret).toBeDefined();
   });
 });
