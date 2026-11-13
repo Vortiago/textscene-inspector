@@ -5,7 +5,7 @@
  * default font: six lines, line 1 `a long line that runs past the`, `wrap_mode = 1`, 84 px high.
  */
 import { describe, expect, it } from 'vitest';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { defaultScrollBarBoxes } from '../shared/testing/scrollBarBoxes';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { solveTextEditRows } from './rows';
 
@@ -29,7 +29,7 @@ function solve(
     fitContentHeight: false,
     rtl: false,
     shape: { fontSizePx: 16, fontMetrics: OPEN_SANS_FONT_METRICS, wrapMode: 1 },
-    theme: nativeTheme(1),
+    scrollBarBoxes: defaultScrollBarBoxes(1),
     ...overrides,
   });
 }

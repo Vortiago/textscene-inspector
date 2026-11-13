@@ -50,6 +50,7 @@ import {
 } from './minimap';
 import { GraphEditMinimapChrome } from './MinimapChrome';
 import { minimapConnectionsOf } from './minimapConnections';
+import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import { graphEditConstructorScrollBars, graphEditScrollBars, hasUpdatedScrollBars } from './scrollBars';
 import { ScrollBarChrome } from '../shared/ScrollChrome';
 import { canvasSubOrders } from '../../../../r3f/canvasItemState';
@@ -239,9 +240,10 @@ export function GraphEdit({
     solvedSize: graphEditSize,
   });
   const bounds = hasUpdatedBars ? elements.bounds : CONSTRUCTOR_SCROLL_BOUNDS;
+  const scrollBarBoxes = internalScrollBarBoxes(solveNode);
   const scrollBars = hasUpdatedBars
-    ? graphEditScrollBars(graphEditSize, bounds, scrollOffset, theme)
-    : graphEditConstructorScrollBars(graphEditSize, theme);
+    ? graphEditScrollBars(graphEditSize, bounds, scrollOffset, scrollBarBoxes)
+    : graphEditConstructorScrollBars(graphEditSize, scrollBarBoxes);
   const topLayer = canvasSubOrders(chromeSlot, GRAPH_EDIT_TOP_LAYER);
   const minimapPanelRect = minimapRect(graphEditSize, props);
   const minimapXform = minimapTransform({ x: minimapPanelRect.w, y: minimapPanelRect.h }, bounds);
@@ -302,16 +304,14 @@ export function GraphEdit({
 
         <ScrollBarChrome
           bar={scrollBars.horizontal}
-          track={theme.widgets.scrollBar.scrollHorizontal}
-          grabber={theme.widgets.scrollBar.grabber}
+          boxes={scrollBarBoxes.horizontal}
           color={childTint.own}
           chromeSlot={topLayer.scrollBars}
           snapToPixels={snapToPixels}
         />
         <ScrollBarChrome
           bar={scrollBars.vertical}
-          track={theme.widgets.scrollBar.scrollVertical}
-          grabber={theme.widgets.scrollBar.grabber}
+          boxes={scrollBarBoxes.vertical}
           color={childTint.own}
           chromeSlot={topLayer.scrollBars}
           snapToPixels={snapToPixels}

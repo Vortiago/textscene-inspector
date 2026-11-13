@@ -247,15 +247,13 @@ describe('modeRowButtonRects', () => {
   });
 });
 
-const WIDE_PRESSED_THEME = themeWithWidgets({
-  tabContainer: {
-    ...THEME.widgets.tabContainer,
-    selected: {
-      ...THEME.widgets.tabContainer.selected,
-      contentMargin: { left: 30, top: 10, right: 30, bottom: 10 },
-    },
+const WIDE_PRESSED_THEME: typeof THEME = {
+  ...THEME,
+  modeButtons: {
+    ...THEME.modeButtons,
+    pressed: { ...THEME.modeButtons.pressed, contentMargin: { left: 30, top: 10, right: 30, bottom: 10 } },
   },
-});
+};
 
 describe('the slider rows with a SpinBox inner LineEdit box', () => {
   it('take their height from the value field theme, and the hex row from the plain LineEdit box', () => {
@@ -706,7 +704,7 @@ describe('modeButtonLabel', () => {
   const direction = { rtl: false, isTextRtl: false };
 
   it('centres the text in the drawable width after the style margins', () => {
-    const label = modeButtonLabel(box, THEME, THEME.widgets.tabContainer.unselected, {
+    const label = modeButtonLabel(box, THEME, THEME.modeButtons.normal, {
       size: text,
       direction,
     });
@@ -716,7 +714,7 @@ describe('modeButtonLabel', () => {
   });
 
   it.each([false, true])('starts the box at the left margin of the style (pressed: %s)', (isPressed) => {
-    const styleBox = isPressed ? THEME.widgets.tabContainer.selected : THEME.widgets.tabContainer.unselected;
+    const styleBox = isPressed ? THEME.modeButtons.pressed : THEME.modeButtons.normal;
     const label = modeButtonLabel(box, THEME, styleBox, { size: text, direction });
     expect(label.leftPx).toBe(box.x + styleBox.contentMargin.left);
   });

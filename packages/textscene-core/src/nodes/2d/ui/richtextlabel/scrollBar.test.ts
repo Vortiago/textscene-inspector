@@ -6,7 +6,7 @@
  * "stone and amber" / "light".
  */
 import { describe, expect, it } from 'vitest';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { defaultScrollBarBoxes } from '../shared/testing/scrollBarBoxes';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
@@ -19,7 +19,7 @@ import type { RichTextLabelProperties } from './types';
 const TEXT = 'Wave rift over quiet stone and amber light';
 const FONT_SIZE_PX = 16;
 const WHITE = { r: 1, g: 1, b: 1, a: 1 };
-const THEME = nativeTheme(1);
+const BAR = defaultScrollBarBoxes(1).vertical;
 
 /** Shapes `text` at the width the scrollbar logic asks for, as the painter does. */
 function shapingOf(text: string) {
@@ -51,7 +51,7 @@ function wrappedLines(
   const shaped = shapeBesideScrollBar(
     shapeAt,
     { ...box, scrollActive, rtl, scrollFollowing, scrollFollowingVisibleCharacters: false },
-    THEME
+    BAR
   );
   return { ...shaped, lines: shaped.layout.lines.map(visualChars) };
 }
@@ -125,7 +125,7 @@ describe('shapeBesideScrollBar (rich_text_label.cpp:3801-3830)', () => {
       scrollFollowing: true,
       scrollFollowingVisibleCharacters: false,
     };
-    expect(shapeBesideScrollBar(shorterBeside, box, THEME).scrollOffsetPx).toBe(0);
+    expect(shapeBesideScrollBar(shorterBeside, box, BAR).scrollOffsetPx).toBe(0);
   });
 
   it('keeps the text at its top without scroll_following', () => {
@@ -168,7 +168,7 @@ describe('shapeBesideScrollBar with scroll_following_visible_characters (rich_te
     return shapeBesideScrollBar(
       shapingOf(text),
       { ...box, scrollActive, rtl: false, scrollFollowing: false, scrollFollowingVisibleCharacters: true },
-      THEME
+      BAR
     );
   }
 

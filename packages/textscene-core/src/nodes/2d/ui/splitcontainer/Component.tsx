@@ -42,8 +42,7 @@ export function SplitContainer({
   // `dragger_visibility` or `autohide` is read. The painter checks it too, since it has no rect
   // to draw an icon between otherwise.
   const sortable = solveNode.children.filter(isSortableControl);
-  const drawsGrabber =
-    sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
+  const drawsGrabber = sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants);
   const icon = vertical ? SPLIT_CONTAINER_ICONS.vsplitter : SPLIT_CONTAINER_ICONS.hsplitter;
   const themeKey = splitGrabberThemeKey(solveNode.node.type, vertical);
   const texture = useNodeIcon(
@@ -56,10 +55,7 @@ export function SplitContainer({
   }
 
   const iconSize = splitGrabberIconSize(solveNode.node.type, vertical, solveNode.textureSlots, theme.scale);
-  const separation = resolveSplitSeparation(props, solveNode.constants, {
-    ...theme.widgets.splitContainer,
-    grabberExtent: vertical ? iconSize.y : iconSize.x,
-  });
+  const separation = resolveSplitSeparation(props, solveNode.constants, vertical ? iconSize.y : iconSize.x);
   const cached = splitContainerBoundaryChannel.open(meta)?.draggerPositions;
   const draggerPositions =
     cached ??

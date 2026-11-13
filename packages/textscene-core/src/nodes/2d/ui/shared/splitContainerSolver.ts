@@ -13,6 +13,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import { defineChannel } from '../../../../r3f/controls/native/solveHandoff';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type {
   ContainerLayoutFn,
   MinimumSizeFn,
@@ -308,12 +309,6 @@ function splitContainerMinimumSize(
   return vertical ? { x: crossAxis, y: mainAxis } : { x: mainAxis, y: crossAxis };
 }
 
-/** The `NativeTheme.widgets.splitContainer` fields `resolveSplitSeparation` reads. */
-interface SplitSeparationTheme {
-  separation: number;
-  grabberExtent: number;
-}
-
 /**
  * `SplitContainer::_get_separation` (`split_container.cpp:305-316`) without the out-of-scope
  * `touch_dragger_enabled`: `0` for `DRAGGER_HIDDEN_COLLAPSED`, else the theme separation floored
@@ -323,11 +318,11 @@ interface SplitSeparationTheme {
 export function resolveSplitSeparation(
   props: SplitContainerProperties,
   constants: SolveNode['constants'],
-  theme: SplitSeparationTheme
+  /** The grabber icon's extent along the split axis. */
+  grabberExtent: number
 ): number {
   if (props.draggerVisibility === DRAGGER_HIDDEN_COLLAPSED) return 0;
-  const themeSeparation = constants.separation ?? theme.separation;
-  return Math.max(themeSeparation, theme.grabberExtent);
+  return Math.max(requiredThemeItem(constants, 'separation'), grabberExtent);
 }
 
 /**
@@ -362,10 +357,7 @@ function separationOf(n: SolveNode, ctx: SolveContext, vertical: boolean): numbe
   // The along-axis extent only: `_get_separation`'s `MAX(theme_cache.separation,
   // vertical ? g->get_height() : g->get_width())` (`split_container.cpp:314-316`).
   const grabberExtent = vertical ? iconSize.y : iconSize.x;
-  return resolveSplitSeparation(n.node.properties as SplitContainerProperties, n.constants, {
-    ...ctx.theme.widgets.splitContainer,
-    grabberExtent,
-  });
+  return resolveSplitSeparation(n.node.properties as SplitContainerProperties, n.constants, grabberExtent);
 }
 
 /** `vertical` for a live node of any of the three split types. A `TextureSlotsFn` receives only the node, never the resolved flag. */
@@ -467,12 +459,6 @@ export function makeSplitContainerMinimumSize(vertical: boolean): MinimumSizeFn 
 
 // The grabber is the only chrome a SplitContainer draws.
 
-/** The `NativeTheme.widgets.splitContainer` fields the grabber-visibility test reads. */
-interface SplitGrabberTheme {
-  /** `default_theme.cpp:1264-1266`. `isSplitGrabberVisible` gates on it. */
-  autohide: boolean;
-}
-
 /**
  * `SplitContainerDragger::_notification(NOTIFICATION_DRAW)` (`split_container.cpp:260-273`) for
  * a still frame: `dragging || mouse_inside` is always false, so `dragger_visibility ==
@@ -480,15 +466,12 @@ interface SplitGrabberTheme {
  */
 export function isSplitGrabberVisible(
   props: SplitContainerProperties,
-  constants: SolveNode['constants'],
-  theme: SplitGrabberTheme
+  constants: SolveNode['constants']
 ): boolean {
   const draggerVisibility = props.draggerVisibility ?? DRAGGER_VISIBLE;
-  const autohideOverride = constants.autohide;
-  // `autohide` defaults to 1 on all three split types (`default_theme.cpp:1264-1266`), so
-  // without `theme_override_constants/autohide` the grabber is invisible. `pnpm ref:godot`
-  // reads the backdrop colour in the gap, never the grabber's grey.
-  const autohide = autohideOverride !== undefined ? autohideOverride !== 0 : theme.autohide;
+  // `autohide` is 1 on all three split types (`default_theme.cpp:1264-1266`), so an unthemed
+  // grabber is invisible. `pnpm ref:godot` reads the backdrop colour in the gap, never the grabber's grey.
+  const autohide = requiredThemeItem(constants, 'autohide') !== 0;
   // A collapsed container hides the dragger (`dragger->set_visible(!collapsed)`, `:726`), so no
   // draw runs. `split_bar_background` is an empty stylebox (`default_theme.cpp:1275-1277`).
   return props.collapsed !== true && draggerVisibility === DRAGGER_VISIBLE && !autohide;

@@ -16,7 +16,11 @@ import { controlComponentRegistry } from '../../../../r3f/controls/ControlCompon
 import type { ControlProperties } from '../control/types';
 import { PanelContainer } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 
 const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
 const ZERO_CORNERS = { topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0 };
@@ -52,7 +56,7 @@ function solveNode(
     name: 'MyPanelContainer',
     ...properties,
   });
-  return { ...emptySolveNode(), path: 'MyPanelContainer', node, styleBoxes };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyPanelContainer', node, styleBoxes });
 }
 
 const RECT = { x: 0, y: 0, w: 240, h: 80 };

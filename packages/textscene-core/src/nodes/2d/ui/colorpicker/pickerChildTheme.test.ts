@@ -137,8 +137,17 @@ describe('pickerChildTheme', () => {
         }),
         THEME
       );
-      expect(child.theme.widgets.tabContainer.unselected.contentMargin.left).toBe(10);
-      expect(child.theme.widgets.tabContainer.selected.contentMargin.bottom).toBe(9);
+      expect(child.theme.modeButtons.normal.contentMargin.left).toBe(10);
+      expect(child.theme.modeButtons.pressed.contentMargin.bottom).toBe(9);
+    });
+
+    it('gives the channel sliders the slider and grabber_area styleboxes of HSlider', () => {
+      const child = pickerChildTheme(
+        themed({ HSlider: { slider: 'SubResource("box")', grabber_area: 'SubResource("box")' } }),
+        THEME
+      );
+      expect(child.theme.channelSlider.slider.contentMargin.left).toBe(10);
+      expect(child.theme.channelSlider.grabberArea.contentMargin.bottom).toBe(9);
     });
 
     it('keeps the default styleboxes without an override', () => {

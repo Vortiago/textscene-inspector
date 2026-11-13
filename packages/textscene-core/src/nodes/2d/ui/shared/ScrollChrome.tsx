@@ -15,9 +15,8 @@ import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import { useOptionalIconTexture } from '../../../../r3f/controls/native/useIconTexture';
 import { SCROLL_HINT_ICONS } from '../../../../r3f/controls/native/themeIcons';
 import { applyUvWindow, flippedUvWindow, FULL_UV_WINDOW } from '../../../../r3f/uvWindow';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rgba } from '../../../../godot/math/math';
-import type { ScrollBarPlacement, ScrollHintPlacement } from './scrollBarSolver';
+import type { ScrollBarBoxes, ScrollBarPlacement, ScrollHintPlacement } from './scrollBarSolver';
 
 /**
  * `scroll_hint_vertical_color` and `scroll_hint_horizontal_color`: `Color(0, 0, 0)`
@@ -96,9 +95,8 @@ const SCROLL_BAR_DRAW_TRANSFORM: ControlDrawTransform = {
 
 interface ScrollBarChromeProps {
   bar: ScrollBarPlacement;
-  track: StyleBoxFlatData;
-  grabber: StyleBoxFlatData;
-  /** Raw sRGB, which `<StyleBoxQuad>` composes into `track` and `grabber`. */
+  boxes: ScrollBarBoxes;
+  /** Raw sRGB, which `<StyleBoxQuad>` composes into both boxes. */
   color: Rgba;
   /**
    * The slot the chrome draws inside, below the next sibling. ScrollContainer passes its
@@ -124,14 +122,7 @@ function scrollBarRenderOrders(chromeSlot: CanvasSlot): { track: number; grabber
  * `snappedControlOrigin` apart from the container, while `bar.rect` stays at
  * full precision for the reservation arithmetic.
  */
-export function ScrollBarChrome({
-  bar,
-  track,
-  grabber,
-  color,
-  chromeSlot,
-  snapToPixels,
-}: ScrollBarChromeProps) {
+export function ScrollBarChrome({ bar, boxes, color, chromeSlot, snapToPixels }: ScrollBarChromeProps) {
   if (!bar.visible) return null;
   const { track: trackKey, grabber: grabberKey } = scrollBarRenderOrders(chromeSlot);
   const origin = snappedControlOrigin(bar.rect, SCROLL_BAR_DRAW_TRANSFORM, snapToPixels);
@@ -140,9 +131,14 @@ export function ScrollBarChrome({
   // unrounded inside the bar's canvas item and inherits the bar's snap.
   return (
     <CanvasItemGroup position={[origin.x, -origin.y, 0]} renderOrder={trackKey}>
-      <StyleBoxQuad styleBox={track} color={color} rect={bar.rect} renderOrder={trackKey} />
+      <StyleBoxQuad styleBox={boxes.scroll} color={color} rect={bar.rect} renderOrder={trackKey} />
       <CanvasItemGroup position={[bar.grabberRect.x, -bar.grabberRect.y, 0]} renderOrder={grabberKey}>
-        <StyleBoxQuad styleBox={grabber} color={color} rect={bar.grabberRect} renderOrder={grabberKey} />
+        <StyleBoxQuad
+          styleBox={boxes.grabber}
+          color={color}
+          rect={bar.grabberRect}
+          renderOrder={grabberKey}
+        />
       </CanvasItemGroup>
     </CanvasItemGroup>
   );

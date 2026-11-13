@@ -12,7 +12,6 @@
 import type { Rect2 } from '../../../godot/math/rect2';
 import type { Vector2 } from '../../../godot/math/vector';
 import { ItemCheckableType } from '../../../godot/scene/popupMenu';
-import type { NativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type {
   LoadedMinimumSizeFn,
@@ -32,8 +31,8 @@ import { popupMenuTheme, type PopupMenuTheme } from './menuTheme';
 import type { PopupMenuItem, PopupMenuProperties } from './types';
 
 /** The width of the internal ScrollContainer's vertical bar, which the minimum reserves whether or not it shows (`popup_menu.cpp:230`). */
-function scrollBarWidth(theme: NativeTheme): number {
-  return scrollBarMinimumSize(true, theme).x;
+function scrollBarWidth(menu: PopupMenuTheme): number {
+  return scrollBarMinimumSize(true, menu.scrollBar).x;
 }
 
 /** The widest icon, ignoring whether the item is a separator: the minimum's reading (`popup_menu.cpp:245`). */
@@ -43,7 +42,6 @@ function widestIcon(items: readonly MenuItem[]): number {
 
 /** What a PopupMenu's size and geometry both read: its theme items and its measured items. */
 export interface MenuModel {
-  theme: NativeTheme;
   menu: PopupMenuTheme;
   items: readonly MenuItem[];
 }
@@ -63,7 +61,7 @@ function buildMenuModel(
   items: readonly PopupMenuItem[]
 ): MenuModel {
   const menu = popupMenuTheme(n, ctx.theme);
-  return { theme: ctx.theme, menu, items: menuItems(n, menu, ctx, items) };
+  return { menu, items: menuItems(n, menu, ctx, items) };
 }
 
 /**
@@ -89,7 +87,7 @@ function itemsTotalHeight(items: readonly MenuItem[], menu: PopupMenuTheme): num
  * reserved in a compact gutter, and a checkable item with an icon turns the compact gutter off
  * (`:246-250,268-277`). The height is limited to the embedder's and ceiled (`:280-286`).
  */
-function contentsMinimumSize(n: SolveNode, ctx: SolveContext, model: MenuModel, limit: number): Vector2 {
+function contentsMinimumSize(n: SolveNode, model: MenuModel, limit: number): Vector2 {
   const { menu, items } = model;
   const margins = contentMarginSize(menu.panel);
   const shadow = insetSize(shadowInsets(menu.panel, n.rtl));
@@ -109,7 +107,7 @@ function contentsMinimumSize(n: SolveNode, ctx: SolveContext, model: MenuModel, 
 
   const width =
     margins.x +
-    scrollBarWidth(ctx.theme) +
+    scrollBarWidth(menu) +
     shadow.x +
     menu.itemStartPadding +
     bodyWidth +
@@ -120,14 +118,14 @@ function contentsMinimumSize(n: SolveNode, ctx: SolveContext, model: MenuModel, 
 }
 
 export const popupMenuContentsMinimumSize: MinimumSizeFn = (n, ctx) =>
-  contentsMinimumSize(n, ctx, menuModel(n, ctx), ctx.embedderSize?.y ?? Number.POSITIVE_INFINITY);
+  contentsMinimumSize(n, menuModel(n, ctx), ctx.embedderSize?.y ?? Number.POSITIVE_INFINITY);
 
 /** The minimum of the items set when the `size` line is applied: the menu is not in the tree, so nothing limits its height. */
 export const popupMenuLoadedMinimumSize: LoadedMinimumSizeFn = (n, ctx) => {
   const { items, itemsAtSize } = n.node.properties as PopupMenuProperties;
   if (!itemsAtSize) return null;
   const model = itemsAtSize === items ? menuModel(n, ctx) : buildMenuModel(n, ctx, itemsAtSize);
-  return contentsMinimumSize(n, ctx, model, Number.POSITIVE_INFINITY);
+  return contentsMinimumSize(n, model, Number.POSITIVE_INFINITY);
 };
 
 export interface MenuRow {
@@ -175,20 +173,20 @@ function verticalBar(
   scroll: Rect2,
   contentHeight: number,
   isRtl: boolean,
-  theme: NativeTheme
+  menu: PopupMenuTheme
 ): ScrollBarPlacement {
-  const width = scrollBarWidth(theme);
+  const width = scrollBarWidth(menu);
   const rect = { x: isRtl ? 0 : scroll.w - width, y: 0, w: width, h: scroll.h };
-  return scrollBarPlacement(true, rect, theme, contentHeight, 0, contentHeight > scroll.h);
+  return scrollBarPlacement(true, rect, menu.scrollBar, contentHeight, 0, contentHeight > scroll.h);
 }
 
 /** The geometry of menu `n` in a window of `size`, from the same items its minimum reads. */
 export function popupMenuGeometry(n: SolveNode, size: Vector2, model: MenuModel): MenuGeometry {
-  const { theme, menu, items } = model;
+  const { menu, items } = model;
   const panel = panelRect(shadowInsets(menu.panel, n.rtl), n.rtl, size);
   const scroll = contentRect(panel, menu.panel);
   const contentHeight = itemsTotalHeight(items, menu);
-  const bar = verticalBar(scroll, contentHeight, n.rtl, theme);
+  const bar = verticalBar(scroll, contentHeight, n.rtl, menu);
   const reserved = bar.visible ? bar.rect.w : 0;
   const control = {
     x: scroll.x + (n.rtl ? reserved : 0),

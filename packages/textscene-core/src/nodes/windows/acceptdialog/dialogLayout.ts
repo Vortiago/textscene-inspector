@@ -13,7 +13,7 @@
 import type { Rect2 } from '../../../godot/math/rect2';
 import { type Vector2, vector2Max } from '../../../godot/math/vector';
 import { SizeFlags, DEFAULT_SIZE_FLAGS } from '../../../godot/scene/control';
-import { internalChildThemeItems } from '../../../r3f/controls/native/themeItems';
+import { internalChildThemeItems, requiredThemeItem } from '../../../r3f/controls/native/themeItems';
 import { controlProps, type SolveNode } from '../../../r3f/controls/native/solveTree';
 import { solveControlTree } from '../../../r3f/controls/native/controlRectSolver';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
@@ -82,8 +82,8 @@ interface ButtonRow {
 }
 
 /** The `separation` theme item of the row's HBoxContainer, resolved through the dialog's theme chain (`dialogs.cpp:486`). */
-function rowSeparation(dialog: SolveNode, ctx: SolveContext): number {
-  return internalChildThemeItems(dialog, 'HBoxContainer').constants.separation ?? ctx.theme.separation;
+function rowSeparation(dialog: SolveNode): number {
+  return requiredThemeItem(internalChildThemeItems(dialog, 'HBoxContainer').constants, 'separation');
 }
 
 /**
@@ -103,7 +103,7 @@ function buttonRow(dialog: SolveNode, ctx: SolveContext): ButtonRow {
     inputs.push(SPACER);
   }
   // The row's own `separation` theme item, not the dialog's `buttons_separation` (the gap above the row).
-  const separation = rowSeparation(dialog, ctx);
+  const separation = rowSeparation(dialog);
   return {
     inputs,
     separation,

@@ -9,6 +9,7 @@ import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { rangeRatio, RANGE_DEFAULT_MAX, RANGE_DEFAULT_MIN, RANGE_DEFAULT_PAGE } from '../shared/range';
+import { scrollBarBoxes } from '../shared/scrollBarBoxes';
 import {
   scrollBarGrabberGeometry,
   scrollBarGrabberRect,
@@ -16,7 +17,7 @@ import {
 } from '../shared/scrollBarSolver';
 import type { HScrollBarProperties } from './types';
 
-export function HScrollBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
+export function HScrollBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<HScrollBarProperties>(solveNode);
   const size = { x: rect.w, y: rect.h };
   const min = props.minValue ?? RANGE_DEFAULT_MIN;
@@ -24,18 +25,17 @@ export function HScrollBar({ solveNode, tint, rect, theme, renderOrder }: Native
   const page = props.page ?? RANGE_DEFAULT_PAGE;
   const ratio = rangeRatio(props, controlLayoutOrder(solveNode));
 
-  const trackBase = solveNode.styleBoxes.scroll ?? theme.widgets.scrollBar.scrollHorizontal;
-  const grabberBase = solveNode.styleBoxes.grabber ?? theme.widgets.scrollBar.grabber;
+  const boxes = scrollBarBoxes(solveNode.styleBoxes);
 
   const trackRect = scrollBarTrackRect(size);
-  const grabber = scrollBarGrabberGeometry(false, size.x, theme, min, max, page, ratio);
+  const grabber = scrollBarGrabberGeometry(false, size.x, boxes, min, max, page, ratio);
   const grabberRect = scrollBarGrabberRect(false, size, grabber);
 
   return (
     <>
       <CanvasItemGroup position={[trackRect.x, -trackRect.y, 0]}>
         <StyleBoxQuad
-          styleBox={trackBase}
+          styleBox={boxes.scroll}
           color={tint.own}
           rect={{ x: 0, y: 0, w: trackRect.w, h: trackRect.h }}
           renderOrder={renderOrder}
@@ -43,7 +43,7 @@ export function HScrollBar({ solveNode, tint, rect, theme, renderOrder }: Native
       </CanvasItemGroup>
       <CanvasItemGroup position={[grabberRect.x, -grabberRect.y, 0]}>
         <StyleBoxQuad
-          styleBox={grabberBase}
+          styleBox={boxes.grabber}
           color={tint.own}
           rect={{ x: 0, y: 0, w: grabberRect.w, h: grabberRect.h }}
           renderOrder={renderOrder}

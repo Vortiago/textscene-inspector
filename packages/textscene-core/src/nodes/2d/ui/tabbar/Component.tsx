@@ -9,8 +9,8 @@ import type { Plane } from 'three';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { TabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
 import { useIconModulate, useIconRefTexture } from '../../../../r3f/controls/native/useButtonIcon';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
@@ -75,13 +75,12 @@ export function useTabBarModel(solveNode: SolveNode, theme: NativeControlCompone
   const maxTabWidth = props.maxTabWidth ?? 0;
   const scrollToSelected = props.scrollToSelected ?? true;
   const closeDisplayPolicy = props.tabCloseDisplayPolicy ?? 0;
-  const hSeparation = solveNode.constants.h_separation ?? theme.separation;
+  const hSeparation = requiredThemeItem(solveNode.constants, 'h_separation');
   const tabSeparation = solveNode.constants.tab_separation ?? 0;
-  const iconMaxWidth = solveNode.constants.icon_max_width ?? 0;
+  const iconMaxWidth = requiredThemeItem(solveNode.constants, 'icon_max_width');
 
-  const defaults = theme.widgets.tabContainer;
-  const overrides = solveNode.styleBoxes;
-  const closeButtonMargin = theme.widgets.button.normal.contentMargin;
+  const styleBoxes = solveNode.styleBoxes;
+  const closeButtonMargin = requiredThemeItem(solveNode.styleBoxes, 'button_highlight').contentMargin;
   const closeIconSize = tabBarThemeIconSize(solveNode, 'close', theme.scale);
   const incrementIconSize = tabBarThemeIconSize(solveNode, 'increment', theme.scale);
   const decrementIconSize = tabBarThemeIconSize(solveNode, 'decrement', theme.scale);
@@ -108,7 +107,7 @@ export function useTabBarModel(solveNode: SolveNode, theme: NativeControlCompone
   const drawInputs: TabLayoutInput[] = useMemo(
     () =>
       computed.map(({ tab, state, iconSize, layout }, i) => {
-        const styleMinWidth = tabWidthStyleMinWidth(overrides, defaults, state);
+        const styleMinWidth = tabWidthStyleMinWidth(styleBoxes, state);
         const naturalTextWidth = shapedTextSizeWidthPx(layout.widthPx);
         const closeVisible = isCloseButtonVisible(closeDisplayPolicy, i, currentTab);
         const naturalWidth = tabContentWidth({
@@ -125,8 +124,7 @@ export function useTabBarModel(solveNode: SolveNode, theme: NativeControlCompone
       }),
     [
       computed,
-      overrides,
-      defaults,
+      styleBoxes,
       hSeparation,
       closeDisplayPolicy,
       currentTab,
@@ -165,8 +163,7 @@ export function useTabBarModel(solveNode: SolveNode, theme: NativeControlCompone
     currentTab,
     closeDisplayPolicy,
     hSeparation,
-    overrides,
-    defaults,
+    styleBoxes,
     closeButtonMargin,
     closeIconSize,
     incrementIconSize,
@@ -203,8 +200,7 @@ export function TabBarStrip({ solveNode, tint, rect, renderOrder, model, offset 
     currentTab,
     closeDisplayPolicy,
     hSeparation,
-    overrides,
-    defaults,
+    styleBoxes,
     closeButtonMargin,
     closeIconSize,
     incrementIconSize,
@@ -228,8 +224,7 @@ export function TabBarStrip({ solveNode, tint, rect, renderOrder, model, offset 
   const commonChromeProps = {
     currentTab,
     solveNode,
-    overrides,
-    defaults,
+    styleBoxes,
     tint,
     renderOrder,
     barHeight: rect.h,
@@ -286,8 +281,7 @@ interface TabBarTabChromeProps {
   entry: ComputedTab;
   currentTab: number;
   solveNode: SolveNode;
-  overrides: Readonly<Record<string, StyleBoxFlatData>>;
-  defaults: TabBarStyleBoxes;
+  styleBoxes: Readonly<Record<string, StyleBoxFlatData>>;
   tint: NativeControlComponentProps['tint'];
   renderOrder: number;
   barHeight: number;
@@ -309,8 +303,7 @@ function TabBarTabChrome({
   entry,
   currentTab,
   solveNode,
-  overrides,
-  defaults,
+  styleBoxes,
   tint,
   renderOrder,
   barHeight,
@@ -337,7 +330,7 @@ function TabBarTabChrome({
         : entry.layout,
     [item.truncated, item.textBudgetPx, entry.layout, fontMetrics, fontSizePx, rtl]
   );
-  const style = pickTabStyleBox(overrides, defaults, state);
+  const style = pickTabStyleBox(styleBoxes, state);
   const closeVisible = isCloseButtonVisible(closeDisplayPolicy, item.index, currentTab);
 
   const iconTexture = useIconRefTexture(solveNode, tab.icon);

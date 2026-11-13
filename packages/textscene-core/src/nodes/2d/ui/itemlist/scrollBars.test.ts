@@ -4,12 +4,11 @@
  * a 120x80 list, default theme, 4 px panel margins, 8 px bars.
  */
 import { describe, expect, it } from 'vitest';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { defaultScrollBarBoxes } from '../shared/testing/scrollBarBoxes';
 import { ItemListScrollHintMode } from '../../../../godot/scene/gui';
 import { itemListScrollBars } from './scrollBars';
 import type { ItemListScrollRange } from './nativeSolver';
 
-const theme = nativeTheme(1);
 const MARGINS = { left: 4, top: 4, right: 4, bottom: 4 };
 const HIDDEN: ItemListScrollRange = { visible: false, min: 0, max: 72, page: 72 };
 const OVERFLOWING_ROWS: ItemListScrollRange = { visible: true, min: 0, max: 138, page: 72 };
@@ -22,7 +21,7 @@ function scrollBars(overrides: Partial<Parameters<typeof itemListScrollBars>[0]>
     vertical: HIDDEN,
     horizontal: HIDDEN,
     rtl: false,
-    theme,
+    boxes: defaultScrollBarBoxes(1),
     scrollHintMode: ItemListScrollHintMode.SCROLL_HINT_MODE_DISABLED,
     ...overrides,
   });

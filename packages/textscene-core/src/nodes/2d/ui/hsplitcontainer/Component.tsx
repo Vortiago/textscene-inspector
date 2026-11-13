@@ -36,8 +36,7 @@ export function HSplitContainer({
   // Decided before the icon hook: `autohide` defaults true, and the hook order is
   // fixed, so this is what spares the common scene an image decode and a GPU texture.
   const sortable = solveNode.children.filter(isSortableControl);
-  const drawsGrabber =
-    sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants, theme.widgets.splitContainer);
+  const drawsGrabber = sortable.length >= 2 && isSplitGrabberVisible(props, solveNode.constants);
   const themeKey = splitGrabberThemeKey(solveNode.node.type, false);
   const texture = useNodeIcon(
     drawsGrabber ? solveNode.icons[themeKey] : undefined,
@@ -51,10 +50,7 @@ export function HSplitContainer({
   const iconSize = splitGrabberIconSize(solveNode.node.type, false, solveNode.textureSlots, theme.scale);
   // `grabberExtent` takes the icon's width, as `separationOf` in
   // `shared/splitContainerSolver.ts` does, so the icon lands on the solved boundary.
-  const separation = resolveSplitSeparation(props, solveNode.constants, {
-    ...theme.widgets.splitContainer,
-    grabberExtent: iconSize.x,
-  });
+  const separation = resolveSplitSeparation(props, solveNode.constants, iconSize.x);
   // The solver hands over `computed_split_offset`, built from each child's full
   // `combined_minimum_size`, through a channel opened by reference. The fallback
   // reads only `custom_minimum_size`, but the layout always seals a boundary, and

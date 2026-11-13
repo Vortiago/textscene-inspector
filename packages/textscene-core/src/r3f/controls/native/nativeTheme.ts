@@ -5,21 +5,18 @@
  * rather than setting a CSS `rgba(...)` background.
  */
 
-import { flatStyleBox as makeFlatStyleBox, freezeStyleBox, ZERO_SIDES } from './styleBoxFlat';
+import { flatStyleBox as makeFlatStyleBox, freezeStyleBox } from './styleBoxFlat';
 import { flatCornerDetail } from '../../../godot/scene/defaultTheme/styleBoxes';
 import { POPUP_MENU_DEFAULTS } from '../../../godot/scene/popupMenu';
 import {
-  DEFAULT_CONTENT_MARGIN,
   DEFAULT_CORNER_RADIUS,
   LINE_EDIT_BORDER_BOTTOM_WIDTH,
-  SLIDER_CORNER_RADIUS,
   scaledGodotTheme,
   scaledPx,
   STYLE_FILL,
   type ScaledGodotTheme,
 } from '../../../godot/scene/theme';
 import type { StyleBoxFlatData } from './styleBoxFlat';
-import { tabBarStyleBoxes, type TabBarStyleBoxes } from './tabStyleBoxes';
 import type { Rgba } from '../../../godot/math/math';
 import { defaultThemeAt } from '../../../godot/scene/defaultTheme/defaultTheme';
 import { defaultStyleBoxesOf } from './defaultThemeRecords';
@@ -43,7 +40,7 @@ interface NativeThemeStyleFill {
   popup: Rgba;
   /** `style_popup_hover_color` = `Color(0.4, 0.4, 0.4, 1)`. */
   popupHover: Rgba;
-  /** `style_progress_color` = `Color(1, 1, 1, 0.4)`, the sliders' filled `grabber_area`. */
+  /** `style_progress_color` = `Color(1, 1, 1, 0.4)`, ProgressBar's `fill`. */
   progress: Rgba;
 }
 
@@ -89,15 +86,10 @@ const LINE_EDIT_NORMAL_BORDER_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0.6 };
 const LINE_EDIT_READ_ONLY_BORDER_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 0.3 };
 
 /**
- * The default-theme StyleBoxFlat structs the Panel/Button/ScrollBar/
- * ScrollContainer Controls compose from.
+ * The default-theme StyleBoxFlat structs the Controls that do not yet read the default theme table
+ * compose from.
  */
 interface NativeThemeWidgets {
-  panel: StyleBoxFlatData;
-  /** PopupPanel's `panel`, `make_flat_stylebox(style_normal_color)` (`default_theme.cpp:726`). */
-  popupPanel: StyleBoxFlatData;
-  /** `TooltipPanel`'s `panel`: black at half alpha with margins `2 * default_margin` across and `0.5 * default_margin` down (`default_theme.cpp:1167-1168`). */
-  tooltipPanel: StyleBoxFlatData;
   /** PopupMenu's `panel`: `make_flat_stylebox(style_popup_color)` with a 2 px border (`default_theme.cpp:743-745`). */
   popupMenuPanel: StyleBoxFlatData;
   /** AcceptDialog's `panel`: a flush, square box in `style_popup_color` with an 8 px margin (`default_theme.cpp:693`). */
@@ -115,44 +107,10 @@ interface NativeThemeWidgets {
     normal: StyleBoxFlatData;
     disabled: StyleBoxFlatData;
   };
-  /** `TabContainer` and `TabBar` `tab_selected`, `tab_unselected`, `tab_disabled` and `tab_hovered` (`default_theme.cpp:974-985`). */
-  tabContainer: TabBarStyleBoxes;
   /** LineEdit's `normal`/`read_only` styleboxes, `default_theme.cpp:405-417`. */
   lineEdit: {
     normal: StyleBoxFlatData;
     readOnly: StyleBoxFlatData;
-  };
-  /**
-   * HSlider/VSlider's `slider` (track) and `grabber_area` (fill), both
-   * `make_flat_stylebox(color, 4, 4, 4, 4, 4)` (`default_theme.cpp:579-580`).
-   * `contentMargin` stays zero: the solver takes thickness from `sliderTrackThickness`.
-   */
-  slider: {
-    track: StyleBoxFlatData;
-    fill: StyleBoxFlatData;
-  };
-  scrollBar: {
-    /** HScrollBar's "scroll" (track) stylebox, `style_h_scrollbar`, `default_theme.cpp:543`. */
-    scrollHorizontal: StyleBoxFlatData;
-    /** VScrollBar's "scroll" (track) stylebox, `style_v_scrollbar`, `default_theme.cpp:544`: the same box, transposed. */
-    scrollVertical: StyleBoxFlatData;
-    /** `style_scrollbar_grabber`, `default_theme.cpp:545`, for both orientations. */
-    grabber: StyleBoxFlatData;
-  };
-  /**
-   * SplitContainer's theme entries (`default_theme.cpp:1258-1266`) hold no
-   * stylebox: the grabber is an icon (`native/themeIcons.ts`'s
-   * `SPLIT_CONTAINER_ICONS`), and `split_bar_background` (`:1275-1277`) is empty.
-   */
-  splitContainer: {
-    // No `minimum_grab_thickness` (`:1261-1263`): it only enlarges the mouse drag
-    // hitbox (`split_container.cpp:764-778`), and dragging is not modelled.
-    /** `separation` (`default_theme.cpp:1258-1260`), floored by the grabber icon's extent at the call site (`shared/splitContainerSolver.ts`'s `separationOf`, mirroring `SplitContainer::_get_separation`, `split_container.cpp:305-316`). */
-    separation: number;
-    /** The grabber icon's extent along the split axis (`native/themeIcons.ts`). It scales with the theme, since `generate_icon` rasterises through the same scale. */
-    grabberExtent: number;
-    /** `autohide` (`default_theme.cpp:1264-1266`): a 0/1 theme constant, not scaled. True hides the grabber icon without a hover or drag state (`shared/splitContainerSolver.ts`'s `isSplitGrabberVisible`). */
-    autohide: boolean;
   };
 }
 
@@ -161,21 +119,8 @@ export interface NativeTheme extends ScaledGodotTheme {
   widgets: NativeThemeWidgets;
 }
 
-/** ScrollBar's own corner radius (`default_theme.cpp:543-545` pass `10`, not `default_corner_radius`). */
-const SCROLL_BAR_CORNER_RADIUS = 10;
-
-/** SplitContainer's own `separation` (`default_theme.cpp:1258-1260` pass `12`, not BoxContainer's `4`). */
-const SPLIT_CONTAINER_SEPARATION = 12;
-
-/** `hsplitter.svg`/`vsplitter.svg`'s short dimension (`scene/theme/icons/`): 8px along the split axis, 48px across it. */
-const SPLIT_CONTAINER_GRABBER_EXTENT = 8;
-
-/** `autohide` (`default_theme.cpp:1264-1266`). */
-const SPLIT_CONTAINER_AUTOHIDE = true;
-
 // A widget reuses `contentMargin`/`cornerRadius` where its `default_theme.cpp` call passes
-// `default_margin` (4) or `default_corner_radius` (3). A call passing another
-// literal, such as ScrollBar's 10, gets its own scaled constant.
+// `default_margin` (4) or `default_corner_radius` (3).
 /** The AcceptDialog panel margin before the theme scale, which `default_theme.cpp:693` applies twice. */
 const DIALOG_PANEL_MARGIN = 8;
 
@@ -203,9 +148,6 @@ function buildNativeTheme(scale: number): NativeTheme {
     right: scaled.contentMargin,
     bottom: scaled.contentMargin,
   };
-  // default_theme.cpp TooltipPanel margins: 2 and 0.5 times the default content margin.
-  const tooltipAcross = scaledPx(2 * DEFAULT_CONTENT_MARGIN, scale);
-  const tooltipDown = scaledPx(0.5 * DEFAULT_CONTENT_MARGIN, scale);
   const tableBoxes = defaultStyleBoxesOf(defaultThemeAt(scale));
   const buttonBoxes = requiredThemeItem(tableBoxes, 'Button');
   const flatMenuButtonBoxes = requiredThemeItem(tableBoxes, 'FlatMenuButton');
@@ -217,24 +159,12 @@ function buildNativeTheme(scale: number): NativeTheme {
     right: dialogMargin,
     bottom: dialogMargin,
   };
-  const scrollBarCornerRadius = Math.round(SCROLL_BAR_CORNER_RADIUS * scale);
   const defaultDetail = flatCornerDetail(DEFAULT_CORNER_RADIUS, scale);
-  const sliderDetail = flatCornerDetail(SLIDER_CORNER_RADIUS, scale);
-  const scrollBarDetail = flatCornerDetail(SCROLL_BAR_CORNER_RADIUS, scale);
 
   return {
     ...scaled,
     styleFill: STYLE_FILL,
     widgets: {
-      // default_theme.cpp:134: make_flat_stylebox(style_normal_color, 0, 0, 0, 0).
-      panel: flatStyleBox(STYLE_FILL.normal, ZERO_SIDES, scaled.cornerRadius, defaultDetail),
-      popupPanel: flatStyleBox(STYLE_FILL.normal, buttonMargin, scaled.cornerRadius, defaultDetail),
-      tooltipPanel: flatStyleBox(
-        { r: 0, g: 0, b: 0, a: 0.5 },
-        { left: tooltipAcross, top: tooltipDown, right: tooltipAcross, bottom: tooltipDown },
-        scaled.cornerRadius,
-        defaultDetail
-      ),
       popupMenuPanel: {
         ...makeFlatStyleBox(STYLE_FILL.popup, {
           contentMargin: buttonMargin,
@@ -259,7 +189,6 @@ function buildNativeTheme(scale: number): NativeTheme {
         normal: requiredThemeItem(flatMenuButtonBoxes, 'normal'),
         disabled: requiredThemeItem(flatMenuButtonBoxes, 'disabled'),
       },
-      tabContainer: tabBarStyleBoxes(scale),
       lineEdit: {
         // default_theme.cpp:405-409: make_flat_stylebox(style_normal_color) + border.
         normal: lineEditStyleBox(
@@ -277,32 +206,6 @@ function buildNativeTheme(scale: number): NativeTheme {
           scaled.cornerRadius,
           defaultDetail
         ),
-      },
-      slider: {
-        // default_theme.cpp:579-580: make_flat_stylebox(color, 4, 4, 4, 4, 4) for
-        // both `slider` and `grabber_area`; margins are never read back off these.
-        track: flatStyleBox(STYLE_FILL.normal, ZERO_SIDES, scaled.sliderCornerRadius, sliderDetail),
-        fill: flatStyleBox(STYLE_FILL.progress, ZERO_SIDES, scaled.sliderCornerRadius, sliderDetail),
-      },
-      scrollBar: {
-        scrollHorizontal: flatStyleBox(
-          STYLE_FILL.normal,
-          { left: 0, top: scaled.contentMargin, right: 0, bottom: scaled.contentMargin },
-          scrollBarCornerRadius,
-          scrollBarDetail
-        ),
-        scrollVertical: flatStyleBox(
-          STYLE_FILL.normal,
-          { left: scaled.contentMargin, top: 0, right: scaled.contentMargin, bottom: 0 },
-          scrollBarCornerRadius,
-          scrollBarDetail
-        ),
-        grabber: flatStyleBox(STYLE_FILL.progress, buttonMargin, scrollBarCornerRadius, scrollBarDetail),
-      },
-      splitContainer: {
-        separation: Math.round(SPLIT_CONTAINER_SEPARATION * scale),
-        grabberExtent: Math.round(SPLIT_CONTAINER_GRABBER_EXTENT * scale),
-        autohide: SPLIT_CONTAINER_AUTOHIDE,
       },
     },
   };

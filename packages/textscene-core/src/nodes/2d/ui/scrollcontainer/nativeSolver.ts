@@ -24,10 +24,12 @@ import {
   SCROLL_HINT_HORIZONTAL_WIDTH,
   SCROLL_HINT_VERTICAL_HEIGHT,
   scrollBarPlacement,
-  scrollBarMinimumSize,
+  scrollBarThicknesses,
   type ScrollBarPlacement,
   type ScrollHintPlacement,
 } from '../shared/scrollBarSolver';
+import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { ScrollContainerProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
@@ -51,17 +53,10 @@ interface ScrollContainerMargins {
  * (`:474-475`), but these margins are unconditional: `get_minimum_size` (`:74-75`), `_update_scrollbars`
  * (`:583-585`), `_update_scrollbar_position` (`:289-306`) and `_reposition_children` (`:344-348`) read them.
  */
-function scrollContainerMargins(n: SolveNode, theme: SolveContext['theme']): ScrollContainerMargins {
-  // The default `panel` is a `StyleBoxEmpty` (`default_theme.cpp:655-657`), so every side is 0. It
-  // is never drawn: `default_theme.cpp:657` registers it `empty`, unlike Panel's grey fill. A
-  // node's `theme_override_styles/panel` or `/focus` wins over either default.
-  const panel = n.styleBoxes.panel?.contentMargin ?? { left: 0, top: 0, right: 0, bottom: 0 };
+function scrollContainerMargins(n: SolveNode): ScrollContainerMargins {
+  const panel = requiredThemeItem(n.styleBoxes, 'panel').contentMargin;
   if (props(n).drawFocusBorder !== true) return { ...panel };
-  // The default `focus` is `make_flat_stylebox(style_focus_color)` (`:659`), whose
-  // `set_content_margin_individual(Math::round(4 * scale) …)` (`:60`, `default_margin = 4` at
-  // `:54`) is `theme.contentMargin`.
-  const m = theme.contentMargin;
-  const focus = n.styleBoxes.focus?.contentMargin ?? { left: m, top: m, right: m, bottom: m };
+  const focus = requiredThemeItem(n.styleBoxes, 'focus').contentMargin;
   return {
     left: Math.max(panel.left, focus.left),
     top: Math.max(panel.top, focus.top),
@@ -72,18 +67,6 @@ function scrollContainerMargins(n: SolveNode, theme: SolveContext['theme']): Scr
 
 function props(n: SolveNode): ScrollContainerProperties {
   return n.node.properties as ScrollContainerProperties;
-}
-
-/**
- * The cross-axis thickness `_update_scrollbar_position` reserves for each embedded bar
- * (`h_scroll->get_combined_minimum_size().height` / `v_scroll->get_combined_minimum_size().width`,
- * `scroll_container.cpp:291-292`): `scrollBarMinimumSize`, the geometry a standalone bar uses.
- */
-function hScrollThickness(ctx: SolveContext): number {
-  return scrollBarMinimumSize(false, ctx.theme).y;
-}
-function vScrollThickness(ctx: SolveContext): number {
-  return scrollBarMinimumSize(true, ctx.theme).x;
 }
 
 /** `ScrollContainer::get_minimum_size`'s own child loop (`scroll_container.cpp:44-52`):
@@ -118,19 +101,19 @@ export const scrollContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   if (hMode === ScrollMode.DISABLED) {
     x = largest.x;
     if (vMode === ScrollMode.SHOW_ALWAYS || vMode === ScrollMode.RESERVE) {
-      x += vScrollThickness(ctx) + SCROLLBAR_SEPARATION;
+      x += scrollBarThicknesses(internalScrollBarBoxes(n)).verticalWidth + SCROLLBAR_SEPARATION;
     }
   }
   if (vMode === ScrollMode.DISABLED) {
     y = largest.y;
     if (hMode === ScrollMode.SHOW_ALWAYS || hMode === ScrollMode.RESERVE) {
-      y += hScrollThickness(ctx) + SCROLLBAR_SEPARATION;
+      y += scrollBarThicknesses(internalScrollBarBoxes(n)).horizontalHeight + SCROLLBAR_SEPARATION;
     }
   }
 
   // `min_size += margins.position + margins.size` (`scroll_container.cpp:74-75`) sits outside
   // both DISABLED branches, so it applies whatever the scroll modes say.
-  const margins = scrollContainerMargins(n, ctx.theme);
+  const margins = scrollContainerMargins(n);
   return { x: x + margins.left + margins.right, y: y + margins.top + margins.bottom };
 };
 
@@ -267,12 +250,13 @@ export function scrollContainerScrollBars(
   const hMode = p.horizontalScrollMode ?? ScrollMode.AUTO;
   const vMode = p.verticalScrollMode ?? ScrollMode.AUTO;
   const largest = largestChildMinSize(n, ctx);
-  const hThickness = hScrollThickness(ctx);
-  const vThickness = vScrollThickness(ctx);
+  const boxes = internalScrollBarBoxes(n);
+  // `_update_scrollbar_position` reserves each bar's combined minimum size (`scroll_container.cpp:291-292`).
+  const { horizontalHeight: hThickness, verticalWidth: vThickness } = scrollBarThicknesses(boxes);
 
   // `size -= margins.position + margins.size` (scroll_container.cpp:583-585):
   // every test and page below reads the margin-reduced extent, never the raw rect.
-  const margins = scrollContainerMargins(n, ctx.theme);
+  const margins = scrollContainerMargins(n);
   const innerW = rect.w - margins.left - margins.right;
   const innerH = rect.h - margins.top - margins.bottom;
 
@@ -334,7 +318,7 @@ export function scrollContainerScrollBars(
     horizontal: scrollBarPlacement(
       false,
       hRect,
-      ctx.theme,
+      boxes.horizontal,
       largest.x,
       scrollRatio(scroll.x, largest.x),
       hVisible
@@ -342,7 +326,7 @@ export function scrollContainerScrollBars(
     vertical: scrollBarPlacement(
       true,
       vRect,
-      ctx.theme,
+      boxes.vertical,
       largest.y,
       scrollRatio(scroll.y, largest.y),
       vVisible
@@ -364,7 +348,7 @@ export const scrollContainerLayout: ContainerLayoutFn = (n, children, rect, ctx)
   // if (rtl) ofs.x += width; }` (`:357-363`): the reserved strip leads under RTL. `set_rect`'s
   // `_compute_offsets` un-mirrors what `_size_changed` mirrors (`control.cpp:906-909`), so this is
   // the whole RTL move for a content child.
-  const margins = scrollContainerMargins(n, ctx.theme);
+  const margins = scrollContainerMargins(n);
   const ofsX = margins.left + (n.rtl ? rect.w - margins.left - margins.right - contentSize.x : 0);
   const ofsY = margins.top;
 

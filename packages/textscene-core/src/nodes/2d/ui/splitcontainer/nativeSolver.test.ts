@@ -11,7 +11,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { createSolveContext, solveControlTree } from '../../../../r3f/controls/native/controlRectSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import './nativeSolver';
 import '../hsplitcontainer/nativeSolver';
 import '../vsplitcontainer/nativeSolver';
@@ -34,7 +34,7 @@ function splitRoot(type: string, vertical: boolean | undefined, children: SolveN
   };
   if (vertical !== undefined) properties.vertical = vertical;
   const node: TscnNode = controlNode('Split', type, properties);
-  return { ...solveNode(), path: 'Split', node, children };
+  return withThemeItems({ ...solveNode(), path: 'Split', node, children });
 }
 
 describe('SplitContainer native layout — exact numbers', () => {

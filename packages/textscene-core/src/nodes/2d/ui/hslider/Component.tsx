@@ -18,6 +18,7 @@ import {
   sliderGrabberRect,
   sliderTickRects,
   sliderTrackRect,
+  sliderBoxes,
 } from '../shared/sliderSolver';
 import { SLIDER_DEFAULT_EDITABLE, sliderTickIndices } from '../shared/slider';
 import type { HSliderProperties } from './types';
@@ -30,15 +31,22 @@ export function HSlider({ solveNode, tint, rect, theme, renderOrder }: NativeCon
   const size = { x: rect.w, y: rect.h };
   const ratio = resolveSliderRatio(props, controlLayoutOrder(solveNode));
 
-  const trackBase = solveNode.styleBoxes.slider ?? theme.widgets.slider.track;
-  const fillBase = solveNode.styleBoxes.grabber_area ?? theme.widgets.slider.fill;
+  const { slider: trackBase, grabberArea: fillBase } = sliderBoxes(solveNode.styleBoxes);
 
   const grabberIconSize = sliderGrabberIconSize(theme, solveNode.textureSlots);
-  const trackRect = sliderTrackRect(false, size, theme);
-  const fillRect = sliderGrabberAreaRect(false, size, ratio, theme, grabberIconSize, solveNode.rtl);
+  const trackRect = sliderTrackRect(false, size, trackBase);
+  const fillRect = sliderGrabberAreaRect(false, size, ratio, trackBase, grabberIconSize, solveNode.rtl);
   const grabberRect = sliderGrabberRect(false, size, ratio, grabberIconSize, solveNode.rtl);
   const tickIndices = sliderTickIndices(props);
-  const tickRects = sliderTickRects(false, size, tickIndices, props.tickCount ?? 0, theme, grabberIconSize);
+  const tickRects = sliderTickRects(
+    false,
+    size,
+    tickIndices,
+    props.tickCount ?? 0,
+    theme,
+    grabberIconSize,
+    trackBase
+  );
 
   const editable = props.editable ?? SLIDER_DEFAULT_EDITABLE;
   const grabberTexture = useNodeIcon(

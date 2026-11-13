@@ -29,10 +29,9 @@ export function useTintedOutline({ color, sizePx }: TextOutlineTheme, ownTint: R
 /** The outline theme of `n`, tinted by {@link useTintedOutline}. */
 export function useTintedTextOutline(
   n: Pick<ShareNode, 'colors' | 'constants'>,
-  ownTint: Rgba,
-  defaultColor?: Rgba
+  ownTint: Rgba
 ): TextOutlineTheme {
-  return useTintedOutline(resolveTextOutline(n, defaultColor), ownTint);
+  return useTintedOutline(resolveTextOutline(n), ownTint);
 }
 
 type RunLookProps = Pick<TextRunProps, 'layout' | 'fontSizePx' | 'tint' | 'clippingPlanes' | 'renderOrder'>;

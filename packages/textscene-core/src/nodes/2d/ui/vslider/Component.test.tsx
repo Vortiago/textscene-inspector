@@ -11,15 +11,19 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { VSlider } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { SLIDER_TICK_ICONS } from '../../../../r3f/controls/native/themeIcons';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { themeIconSource } from '../../../../r3f/controls/native/themeIconSource';
 
 function solveNode(properties: Record<string, unknown>): SolveNode {
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'S',
     node: controlNode('S', 'VSlider', { name: 'S', ...properties }) as TscnNode,
-  };
+  });
 }
 
 const RECT = { x: 0, y: 0, w: 40, h: 300 };

@@ -41,7 +41,7 @@ type StateBoxes<B extends DefaultStyleBox = DefaultStyleBox> = Readonly<
  * `button_normal`, `button_hover`, `button_pressed` and `button_disabled` (`default_theme.cpp:138-141`),
  * or OptionButton's twins of them with its own `margin` (`:212-215`).
  */
-function buttonBoxes(scale: number, margin?: Sides): StateBoxes<DefaultFlatStyleBox> {
+export function buttonBoxes(scale: number, margin?: Sides): StateBoxes<DefaultFlatStyleBox> {
   const box = (color: Rgba) => makeFlatStyleBox(scale, color, { margin });
   return {
     normal: box(STYLE_FILL.normal),

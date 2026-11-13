@@ -11,7 +11,11 @@ import type { TscnNode, TscnInternalResource } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ControlProperties } from '../control/types';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { parseStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { SeparatorChrome } from './Component';
 
@@ -23,12 +27,12 @@ function sepNode(
   internalResources: readonly TscnInternalResource[] = []
 ): SolveNode {
   const node: TscnNode = controlNode('Sep', type, { name: 'Sep', ...properties });
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'Sep',
     node,
     resources: { externalResources: [], internalResources },
-  };
+  });
 }
 
 /** The wrapping group `SeparatorChrome` positions at the placement rect's own offset. */

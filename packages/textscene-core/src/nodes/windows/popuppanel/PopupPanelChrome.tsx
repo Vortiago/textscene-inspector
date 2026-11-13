@@ -8,8 +8,8 @@ import { StyleBoxQuad } from '../../../r3f/controls/native/StyleBoxQuad';
 import { panelRect } from '../window/panelInsets';
 import { popupPanelBox } from './contentLayout';
 
-export function PopupPanelChrome({ solveNode, rect, theme, tint, renderOrder }: NativeControlComponentProps) {
-  const { style, insets } = popupPanelBox(solveNode, theme);
+export function PopupPanelChrome({ solveNode, rect, tint, renderOrder }: NativeControlComponentProps) {
+  const { style, insets } = popupPanelBox(solveNode);
   const panel = panelRect(insets, solveNode.rtl, { x: rect.w, y: rect.h });
   // `StyleBoxQuad` draws from its group's origin, so the group carries the inset.
   return (

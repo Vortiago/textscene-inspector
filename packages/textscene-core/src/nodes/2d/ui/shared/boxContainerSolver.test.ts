@@ -23,7 +23,11 @@ import {
   resortBoxContainer,
   type BoxChildInput,
 } from './boxContainerSolver';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { SizeFlags } from '../../../../godot/scene/control';
 import { ROOT_TEXTURE_SAMPLER } from '../../../../r3f/canvasItemTextureSampler';
 
@@ -264,7 +268,7 @@ function solveNode(
   // `n.constants` (the walker folds it in unconditionally), not `node.properties`.
   const constants =
     (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
-  return { ...emptySolveNode(), path, node: tscnNode, children, constants };
+  return withThemeItems({ ...emptySolveNode(), path, node: tscnNode, children, constants });
 }
 
 describe('makeBoxContainerLayout / makeBoxContainerMinimumSize — registered end-to-end via solveControlTree', () => {

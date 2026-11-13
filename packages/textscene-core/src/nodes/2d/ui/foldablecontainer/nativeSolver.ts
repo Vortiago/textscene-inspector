@@ -11,8 +11,6 @@
  */
 import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import type { Rect2 } from '../../../../godot/math/rect2';
-import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
-import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type {
@@ -23,14 +21,10 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
-import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import {
-  DEFAULT_CONTENT_MARGIN,
-  DEFAULT_CORNER_RADIUS,
-  DEFAULT_FONT_SIZE,
-  STYLE_FILL,
-} from '../../../../godot/scene/theme';
 import { resolveTextTheme, type TextThemeKeys } from '../../../../r3f/controls/native/textTheme';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import {
@@ -44,16 +38,15 @@ import type { FoldableContainerProperties } from './types';
 import { TITLE_POSITION_BOTTOM, TITLE_POSITION_TOP } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 import { SizeFlags } from '../../../../godot/scene/control';
 
 /** `SceneStringName(font)` and `"font_size"`: the theme font keys of FoldableContainer (`foldable_container.cpp:568-569`). */
 const FOLDABLE_CONTAINER_THEME_FONT_KEY = 'font';
 
-/** `Math::round(2 * scale)` (`default_theme.cpp:1336`), from the raw, unrounded `gui/theme/default_theme_scale`. */
-export function foldableContainerHSeparation(theme: NativeTheme): number {
-  return Math.round(2 * theme.scale);
+/** `_get_h_separation` (`foldable_container.h:93`): the theme's `h_separation`, floored at 0. */
+export function foldableContainerHSeparation(n: Pick<SolveNode, 'constants'>): number {
+  return Math.max(requiredThemeItem(n.constants, 'h_separation'), 0);
 }
 
 /** The 16x16 size of the arrow icons (`scene/theme/icons/arrow_*.svg`), scaled as `generate_icon(..., scale)` rasterises them. */
@@ -62,86 +55,10 @@ function foldableContainerArrowSize(theme: NativeTheme): Vector2 {
   return { x: size, y: size };
 }
 
-/** The default `font_size` of FoldableContainer: the bare `default_font_size`, not the scaled default theme size (`default_theme.cpp:1322`). */
-const FOLDABLE_CONTAINER_DEFAULT_FONT_SIZE = DEFAULT_FONT_SIZE;
-
-/** The default `font_color` of FoldableContainer (`default_theme.cpp:1324`). */
-const FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-/** The default `collapsed_font_color` of FoldableContainer (`default_theme.cpp:1326`). */
-const FOLDABLE_CONTAINER_DEFAULT_COLLAPSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
-/** The default `font_outline_color` of FoldableContainer: white, not the black of most types (`default_theme.cpp:1327`). */
-export const FOLDABLE_CONTAINER_DEFAULT_OUTLINE_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
 const FOLDABLE_CONTAINER_TITLE_THEME_KEYS: Record<'expanded' | 'folded', TextThemeKeys> = {
   expanded: { sizeKey: 'font_size', colorKey: 'font_color' },
   folded: { sizeKey: 'font_size', colorKey: 'collapsed_font_color' },
 };
-
-type CornerRadius = StyleBoxFlatData['cornerRadius'];
-
-/**
- * `make_flat_stylebox` (`default_theme.cpp:57-70`), with the fields `StyleBoxFlatData` models.
- */
-function flatStyleBox(
-  bgColor: Rgba,
-  contentMargin: { left: number; top: number; right: number; bottom: number },
-  cornerRadius: CornerRadius,
-  cornerDetail: number
-): StyleBoxFlatData {
-  return makeFlatStyleBox(bgColor, { contentMargin, cornerRadius, cornerDetail });
-}
-
-/**
- * The corners of the title StyleBox: both styles start from a uniform `default_corner_radius`
- * (`default_theme.cpp:1302-1311`), and the unfolded one squares the edge that touches the panel
- * (`:1303-1304`). `_draw_flippable_stylebox` flips it for `POSITION_BOTTOM` (`:523-532`), and
- * choosing the corners from `title_position` gives the same result without the flip.
- */
-function titleStyleCornerRadius(radius: number, folded: boolean, titlePosition: number): CornerRadius {
-  if (folded) return { topLeft: radius, topRight: radius, bottomRight: radius, bottomLeft: radius };
-  return titlePosition === TITLE_POSITION_BOTTOM
-    ? { topLeft: 0, topRight: 0, bottomRight: radius, bottomLeft: radius }
-    : { topLeft: radius, topRight: radius, bottomRight: 0, bottomLeft: 0 };
-}
-
-/** The corners of the content panel, squared on the edge that touches the title (`default_theme.cpp:1313-1316`). */
-function panelCornerRadius(radius: number, titlePosition: number): CornerRadius {
-  return titlePosition === TITLE_POSITION_BOTTOM
-    ? { topLeft: radius, topRight: radius, bottomRight: 0, bottomLeft: 0 }
-    : { topLeft: 0, topRight: 0, bottomRight: radius, bottomLeft: radius };
-}
-
-function defaultTitleStyle(theme: NativeTheme, folded: boolean, titlePosition: number): StyleBoxFlatData {
-  const margin = {
-    left: theme.contentMargin,
-    top: theme.contentMargin,
-    right: theme.contentMargin,
-    bottom: theme.contentMargin,
-  };
-  // default_theme.cpp:1302,1311: both title styles fill with style_pressed_color.
-  return flatStyleBox(
-    STYLE_FILL.pressed,
-    margin,
-    titleStyleCornerRadius(theme.cornerRadius, folded, titlePosition),
-    flatCornerDetail(DEFAULT_CORNER_RADIUS, theme.scale)
-  );
-}
-
-/** The content panel resets its margins to the bare `default_margin`, so they do not scale (`default_theme.cpp:1314`). */
-function defaultPanelStyle(theme: NativeTheme, titlePosition: number): StyleBoxFlatData {
-  const margin = {
-    left: DEFAULT_CONTENT_MARGIN,
-    top: DEFAULT_CONTENT_MARGIN,
-    right: DEFAULT_CONTENT_MARGIN,
-    bottom: DEFAULT_CONTENT_MARGIN,
-  };
-  return flatStyleBox(
-    STYLE_FILL.normal,
-    margin,
-    panelCornerRadius(theme.cornerRadius, titlePosition),
-    flatCornerDetail(DEFAULT_CORNER_RADIUS, theme.scale)
-  );
-}
 
 export type FoldableContainerArrow = 'expanded' | 'expandedMirrored' | 'folded' | 'foldedMirrored';
 
@@ -181,8 +98,8 @@ function resolveArrowSize(
 export interface FoldableContainerTitleMetrics {
   folded: boolean;
   titlePosition: number;
-  titleStyle: StyleBoxFlatData;
-  panelStyle: StyleBoxFlatData;
+  titleStyle: ResolvedStyleBox;
+  panelStyle: ResolvedStyleBox;
   arrow: FoldableContainerArrow;
   /** The resolved size of the current arrow (`resolveArrowSize`). */
   arrowSize: Vector2;
@@ -220,16 +137,13 @@ function foldableContainerTitleMetrics(
   const folded = props.folded === true;
   const titlePosition = props.titlePosition ?? TITLE_POSITION_TOP;
 
-  const titleStyle = folded
-    ? (n.styleBoxes.title_collapsed_panel ?? defaultTitleStyle(ctx.theme, true, titlePosition))
-    : (n.styleBoxes.title_panel ?? defaultTitleStyle(ctx.theme, false, titlePosition));
-  const panelStyle = n.styleBoxes.panel ?? defaultPanelStyle(ctx.theme, titlePosition);
+  const titleStyle = requiredThemeItem(n.styleBoxes, folded ? 'title_collapsed_panel' : 'title_panel');
+  const panelStyle = requiredThemeItem(n.styleBoxes, 'panel');
   const arrow = titleArrow(folded, titlePosition, n.rtl);
 
   const stateKey = folded ? 'folded' : 'expanded';
   const { fontSizePx, color } = resolveTextTheme(n, props, FOLDABLE_CONTAINER_TITLE_THEME_KEYS[stateKey], {
-    fontSizePx: FOLDABLE_CONTAINER_DEFAULT_FONT_SIZE,
-    color: folded ? FOLDABLE_CONTAINER_DEFAULT_COLLAPSED_FONT_COLOR : FOLDABLE_CONTAINER_DEFAULT_FONT_COLOR,
+    fontSizePx: ctx.theme.fontSize,
   });
 
   const title = props.title ?? '';
@@ -254,7 +168,7 @@ function foldableContainerTitleMetrics(
   let height = titleMargin.y;
 
   if (hasTitle) {
-    width += foldableContainerHSeparation(ctx.theme);
+    width += foldableContainerHSeparation(n);
     const textHeight = layout ? layout.heightPx : 0;
     height += Math.max(textHeight, arrowSize.y);
     // foldable_container.cpp:455: only OVERRUN_NO_TRIMMING adds the text width.

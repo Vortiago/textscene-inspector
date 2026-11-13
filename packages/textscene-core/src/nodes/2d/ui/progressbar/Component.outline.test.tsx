@@ -7,7 +7,11 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { isCanvasFontMetrics } from '../../../../r3f/controls/native/text/runtimeFontMetrics';
 import { OPEN_SANS_CANVAS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansCanvasFontMetrics';
 import { TRIANGLE_OUTLINES } from '../../../../r3f/controls/native/testing/triangleOutlines';
@@ -51,13 +55,13 @@ vi.mock('../../../../r3f/controls/native/text/TextRunMesh', () => ({
 const RECT = { x: 0, y: 0, w: 100, h: 20 };
 
 function outlinedBar(): SolveNode {
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: 'P',
     node: controlNode('P', 'ProgressBar', { name: 'P', value: 50 }) as TscnNode,
     colors: { font_outline_color: { r: 1, g: 0, b: 0, a: 1 } },
     constants: { outline_size: 2 },
-  };
+  });
 }
 
 const strokeRuns = (): RunProps[] => scene.runs.filter((run) => run.strokeWidthPx);
