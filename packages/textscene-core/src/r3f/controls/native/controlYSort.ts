@@ -123,20 +123,19 @@ export interface ForestSort {
 export function forestInCanvasSort(
   tree: readonly SolveNode[],
   livePath: string,
-  canvas: Pick<SortedRunsValue, 'runs' | 'mergedSorters'>,
+  canvas: SortedRunsValue,
   pieces: ExtraSortItems
 ): ForestSort {
-  const paints = forestPaintsOf(tree);
-  const runs = new Map<string, PaintRange>();
+  const drawn = new Map<string, CanvasItemPaint>();
   const merged = new Set<string>();
-  for (const path of paints.keys()) {
+  // By live path, so a Control inside the run of a Node2D entry the sort moved moves with it.
+  for (const [path, paint] of forestPaintsOf(tree)) {
     const live = joinPath(livePath, path);
-    const run = canvas.runs.get(live);
-    if (run) runs.set(path, run);
+    drawn.set(path, sortedPaintOf(live, canvas.paints.get(live) ?? paint, canvas.runs, canvas.paints));
     if (canvas.mergedSorters.has(live)) merged.add(path);
   }
   return {
-    paints: drawnPaints(paints, runs),
+    paints: drawn,
     pieceRuns: pieceRunsOf(pieces, (id) => canvas.runs.get(joinPath(livePath, id))),
     mergedSorters: merged,
   };
