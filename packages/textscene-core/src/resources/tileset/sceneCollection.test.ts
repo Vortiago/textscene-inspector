@@ -106,14 +106,16 @@ describe('a TileSetScenesCollectionSource in a scene', () => {
     expect(model.sceneSources.get(2)!.scenes.get(1)).toEqual({ scene: null, displayPlaceholder: false });
   });
 
-  it('still warns for a source type it does not know', () => {
+  it('skips and warns for a source of a class that is no TileSetSource, as add_source refuses it', () => {
     const internals: TscnInternalResource[] = [
       { id: 'odd', type: 'TileSetMysterySource', data: {} },
       { id: 'ts', type: 'TileSet', data: { 'sources/0': 'SubResource("odd")' } },
     ];
     tileSetInScene('SubResource("ts")', internals, externals);
     expect(
-      warnSpy.mock.calls.some((call: unknown[]) => String(call[0]).includes('unsupported source type'))
+      warnSpy.mock.calls.some((call: unknown[]) =>
+        String(call[0]).includes('resource that is no TileSetSource')
+      )
     ).toBe(true);
   });
 });

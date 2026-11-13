@@ -83,7 +83,9 @@ function decodeSources(
 
 /** Why a source did not load, as a warning names it. */
 const UNREAD_REASONS: Readonly<Record<UnavailableReason, string>> = {
-  'wrong-type': 'unsupported source type',
+  // TileSetSource is abstract (`register_scene_types.cpp:944`), so this is a resource of another class,
+  // which casts to a null source that `add_source` refuses (`tile_set.cpp:477`).
+  'wrong-type': 'resource that is no TileSetSource',
   'unknown-id': 'unresolvable reference',
   'missing-file': 'missing file',
   cycle: 'cyclic reference',
