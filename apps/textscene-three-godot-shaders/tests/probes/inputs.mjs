@@ -155,6 +155,22 @@ export function laneBits(scalar, value) {
   }
 }
 
+/** The value whose lane bits `laneBits` gives as `bits`: its inverse, for inputs kept as bits. */
+export function laneOfBits(scalar, bits) {
+  switch (scalar) {
+    case 'float':
+      return new Float32Array(new Uint32Array([bits]).buffer)[0];
+    case 'int':
+      return bits | 0;
+    case 'uint':
+      return bits >>> 0;
+    case 'bool':
+      return bits !== 0;
+    default:
+      throw new Error(`expected a scalar kind of float, int, uint or bool, got ${scalar}`);
+  }
+}
+
 /** The lanes of an argument, a float as one lane. */
 export function lanesOf(argument) {
   return Array.isArray(argument) ? argument : [argument];

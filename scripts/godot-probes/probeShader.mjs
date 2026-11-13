@@ -5,7 +5,11 @@
  * 32 bits with no loss.
  */
 
-import { laneBits, lanesOf } from '../../apps/textscene-three-godot-shaders/tests/probes/inputs.mjs';
+import {
+  laneBits,
+  laneOfBits,
+  lanesOf,
+} from '../../apps/textscene-three-godot-shaders/tests/probes/inputs.mjs';
 
 /** The prefix of a vector type of each scalar kind, `ivec` for `int`. */
 export const VECTOR_PREFIX = { bool: 'bvec', int: 'ivec', uint: 'uvec', float: 'vec' };
@@ -60,6 +64,24 @@ export function parameterBits(probe) {
     probe.inputs.flatMap((row) =>
       lanesOf(row[index]).map((value) => laneBits(PROBE_TYPES[type].scalar, value))
     )
+  );
+}
+
+/**
+ * The input rows of a probe of `source` from `bits`, the hex bits of each parameter's lanes row
+ * after row as the record holds them: the inverse of `parameterBits`.
+ */
+export function inputRowsOfBits(source, bits) {
+  const { parameters } = probeSignature(source);
+  const rows = parameters.length === 0 ? 1 : bits[0].length / LANE_COUNT[parameters[0]];
+  return Array.from({ length: rows }, (_, row) =>
+    parameters.map((type, index) => {
+      const size = LANE_COUNT[type];
+      const lanes = bits[index]
+        .slice(row * size, (row + 1) * size)
+        .map((text) => laneOfBits(PROBE_TYPES[type].scalar, Number.parseInt(text, 16)));
+      return size === 1 ? lanes[0] : lanes;
+    })
   );
 }
 

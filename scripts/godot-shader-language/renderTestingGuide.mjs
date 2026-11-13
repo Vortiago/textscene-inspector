@@ -28,22 +28,23 @@ The same cases go through the transpiler's front end. On each one, it accepts wh
 function knownDifferenceRows(knownDifferences) {
   return Object.entries(knownDifferences).map(
     ([name, known]) =>
-      `| \`${name}\` | \`${cell(known.reduced)}\` | ${cell(known.lane)} | ${cell(known.cause)} | ${known.owner} |`
+      `| \`${name}\` | \`${cell(known.source)}\` | ${known.program ? `\`${known.program}\`` : 'none'} | ${cell(known.lane)} | ${cell(known.cause)} | ${known.owner} |`
   );
 }
 
 function randomSection({ programs, seed, transpiledRows, knownDifferences }) {
-  const known = Object.keys(knownDifferences).length;
+  const cases = Object.keys(knownDifferences).length;
+  const known = Object.values(knownDifferences).filter((each) => each.program !== undefined).length;
   return `## Random programs against Godot
 
 A generator writes random functions that are correct by type, from the signatures of the transpiled rows only, so each slice that transpiles rows gets random programs over them with no change to the generator. Operators take only the brackets Godot's priorities need, so a program tests the order of evaluation as a user's shader does.
 
 The fixed set has seed ${seed}: ${programs.length} programs, one rooted at each of the ${transpiledRows} transpiled rows, and the rest with random roots. Godot accepts every one. \`pnpm godot:probes\` records Godot's result bits, and \`pnpm test:shaders:gpu\` runs the transpiled text of each program on a real GL context and compares the bits, as for a probe. There is no tolerance: a lane passes when its bits equal Godot's, or when both are NaN.
 
-**${programs.length - known} of ${programs.length} random programs bit-equal with Godot.** A program that differs is reduced against a live Godot to a small program that still differs. The ${known} that differ now are listed below with their owner. The list only shrinks: a program that differs and is not listed fails the run, and a listed program that equals Godot fails it too.
+**${programs.length - known} of ${programs.length} random programs bit-equal with Godot, and ${cases} fixed known-difference cases.** A program that differs is reduced against a live Godot to a small program that still differs. Each known difference is a fixed case: its reduced program and its inputs, run on every pass whatever the seed, the set size or the generator. The list only shrinks: a case leaves it only when its own program equals Godot. A program of the set that differs and is no case's program fails the run.
 
-| Program | Reduced program | First lane that differs | Cause | Owner |
-| --- | --- | --- | --- | --- |
+| Case | Reduced program | Program of the set | First lane that differs | Cause | Owner |
+| --- | --- | --- | --- | --- | --- |
 ${knownDifferenceRows(knownDifferences).join('\n')}
 
 \`pnpm test:shaders:random --seed <n> --count <n>\` runs more programs with another seed against a live Godot, for a developer. No pipeline runs it.`;

@@ -13,6 +13,7 @@ import { pathToFileURL } from 'node:url';
 import { CORPUS } from '../../apps/textscene-three-godot-shaders/tests/corpus/corpus.mjs';
 import { OPERATOR_CASES } from '../../apps/textscene-three-godot-shaders/tests/operators/operatorCases.mjs';
 import { PROBES } from '../../apps/textscene-three-godot-shaders/tests/probes/probes.mjs';
+import { KNOWN_DIFFERENCE_CASES } from '../../apps/textscene-three-godot-shaders/tests/random/knownDifferences.mjs';
 import { RANDOM_PROGRAMS } from '../../apps/textscene-three-godot-shaders/tests/random/randomSet.mjs';
 import { checkGenerated, writeGenerated } from '../generatedFile.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
@@ -64,7 +65,8 @@ function endingRejection(probe) {
 }
 
 function main() {
-  const probes = [...PROBES, ...RANDOM_PROGRAMS];
+  const randomProbes = [...RANDOM_PROGRAMS, ...KNOWN_DIFFERENCE_CASES];
+  const probes = [...PROBES, ...randomProbes];
   const output = runProbesInGodot(probes.filter((probe) => !probe.endsGodot));
   const reasons = rejections(probes, output);
   const [operatorRecord, corpusRecord] = verdictRecords(
@@ -73,11 +75,11 @@ function main() {
   );
   const outputs = [
     [RECORD, renderRecord(output, PROBES, reasons)],
-    [RANDOM_RECORD, renderRecord(output, RANDOM_PROGRAMS, reasons)],
+    [RANDOM_RECORD, renderRecord(output, randomProbes, reasons)],
     [OPERATOR_RECORD, operatorRecord],
     [CORPUS_RECORD, corpusRecord],
   ];
-  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders`;
+  const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${KNOWN_DIFFERENCE_CASES.length} known-difference cases, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders`;
   const options = { tool: 'godot-probes', summary };
   if (process.argv.includes('--check')) checkGenerated(outputs, { ...options, command: 'pnpm godot:probes' });
   else writeGenerated(outputs, options);

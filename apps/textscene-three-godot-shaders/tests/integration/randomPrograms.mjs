@@ -6,7 +6,7 @@
 
 import { recordEntry } from '../../../../scripts/godot-probes/record.mjs';
 import { runProbesInGodot } from '../../../../scripts/godot-probes/godotProject.mjs';
-import { KNOWN_DIFFERENCES } from '../random/knownDifferences.mjs';
+import { KNOWN_PROGRAMS } from '../random/knownDifferences.mjs';
 import { reduceProgram } from '../random/reduce.mjs';
 import { compareProbe, isFloatResult } from './compare.mjs';
 import { runOnPage } from './pageRun.mjs';
@@ -21,7 +21,7 @@ export async function compareRandomPrograms(page, programs, entries) {
   for (const program of programs) {
     const actual = await runOnPage(page, program);
     const verdict = compareProbe(entries[program.name], actual, isFloatResult(program));
-    const isNew = differsInBits(verdict) && !(program.name in KNOWN_DIFFERENCES);
+    const isNew = differsInBits(verdict) && !KNOWN_PROGRAMS.has(program.name);
     const reduced = isNew ? await reduceAgainstGodot(page, program) : undefined;
     results.push({ program, verdict, isRefused: actual.error !== undefined, reduced });
   }
@@ -67,7 +67,7 @@ async function reduceAgainstGodot(page, program) {
 export function randomSummary(results) {
   const refused = results.filter(({ verdict, isRefused }) => isRefused && !verdict.passed).length;
   const differ = results.filter(({ verdict, isRefused }) => !isRefused && !verdict.passed);
-  const known = differ.filter(({ program }) => program.name in KNOWN_DIFFERENCES).length;
+  const known = differ.filter(({ program }) => KNOWN_PROGRAMS.has(program.name)).length;
   const equal = results.length - refused - differ.length;
   const maxUlp = Math.max(0, ...differ.map(({ verdict }) => verdict.maxUlp));
   return `${equal} of ${results.length} random programs bit-equal with Godot: ${differ.length} differ (${known} known with an owner, largest ${maxUlp} ULP), ${refused} refused.`;
@@ -76,16 +76,50 @@ export function randomSummary(results) {
 /** One line for each program that is not equal and not known, with its reduced program. */
 export function newDifferences(results) {
   return results
-    .filter(({ program, verdict }) => !verdict.passed && !(program.name in KNOWN_DIFFERENCES))
+    .filter(({ program, verdict }) => !verdict.passed && !KNOWN_PROGRAMS.has(program.name))
     .map(
       ({ program, verdict, reduced }) =>
         `${program.name} differs: ${verdict.detail}\n  reduced: ${(reduced ?? program).source}`
     );
 }
 
-/** One line for each known program that equals Godot now and must leave the list. */
-export function staleKnownDifferences(results) {
+/**
+ * One line for each program a case names that equals Godot now. The set changed under the name,
+ * so the case drops its `program` and stays: only its own fixed case can show the fault is gone.
+ */
+export function staleKnownPrograms(results) {
   return results
-    .filter(({ program, verdict }) => verdict.passed && program.name in KNOWN_DIFFERENCES)
-    .map(({ program }) => `${program.name} equals Godot now: remove it from knownDifferences.mjs`);
+    .filter(({ program, verdict }) => verdict.passed && KNOWN_PROGRAMS.has(program.name))
+    .map(
+      ({ program }) =>
+        `${program.name} equals Godot now: remove it as the program of its case in knownDifferences.mjs`
+    );
+}
+
+/** The verdict of each fixed case of `cases` against `entries`, Godot's answers by case name. */
+export async function compareKnownCases(page, cases, entries) {
+  const results = [];
+  for (const known of cases) {
+    const actual = await runOnPage(page, known);
+    results.push({ known, verdict: compareProbe(entries[known.name], actual, isFloatResult(known)) });
+  }
+  return results;
+}
+
+/** One line: the fixed cases, and how many still differ from Godot in their bits. */
+export const knownCaseSummary = (results) =>
+  `${results.filter(({ verdict }) => differsInBits(verdict)).length} of ${results.length} fixed known-difference cases still differ from Godot.`;
+
+/**
+ * One line for each fixed case that no longer differs in its bits: it equals Godot and leaves the
+ * list, or it fails in another way, which shows no fault any more.
+ */
+export function settledKnownCases(results) {
+  return results
+    .filter(({ verdict }) => !differsInBits(verdict))
+    .map(({ known, verdict }) =>
+      verdict.passed
+        ? `known difference ${known.known} equals Godot now: remove it from knownDifferences.mjs`
+        : `known difference ${known.known} no longer differs in its bits: ${verdict.detail}`
+    );
 }
