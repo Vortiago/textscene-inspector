@@ -228,14 +228,6 @@ export function lineEditStyleMinSize({ normal, readOnly }: LineEditField): Vecto
   return { x: Math.max(normalMargin.x, readOnlyMargin.x), y: Math.max(normalMargin.y, readOnlyMargin.y) };
 }
 
-/**
- * The caret's drawn width: `caret_width` times the theme's base scale, never below the authored width,
- * cast to int (`line_edit.cpp:1550`, `text_edit.cpp:1766`). The minimum size reads the bare constant.
- */
-export function caretDrawWidthPx(constants: SolveNode['constants'], baseScale: number): number {
-  return Math.trunc(requiredThemeItem(constants, 'caret_width') * Math.max(1, baseScale));
-}
-
 /** The text part of `LineEdit::get_minimum_size`'s width (`:2447-2451`): `minimum_character_width` ems of "W". */
 export function lineEditTextMinimumWidth(field: LineEditField, emWidthPx: number): number {
   return field.minimumCharacterWidth * emWidthPx;

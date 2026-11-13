@@ -4,6 +4,7 @@
  * the active icon, and the caret while `caret_force_displayed`, since a static preview never focuses and
  * `_validate_caret_can_draw()`'s other branch never fires. It draws the selection a dialog sets in `syntheticDraw`, and no IME. `ControlCanvasWalker` owns `visible`, `children` and the transform.
  */
+import { caretDrawWidthPx } from '../shared/caretWidth';
 import { useMemo } from 'react';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
@@ -38,7 +39,6 @@ import {
   EXPAND_MODE_ORIGINAL_SIZE,
   shapeLineEditText,
   lineEditClearIconSize,
-  caretDrawWidthPx,
 } from './nativeSolver';
 import type { LineEditProperties } from './types';
 import { type Rgba } from '../../../../godot/math/math';

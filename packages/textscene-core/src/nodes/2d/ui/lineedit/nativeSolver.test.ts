@@ -27,7 +27,6 @@ import {
   lineEditTextureSlots,
   LINE_EDIT_THEME_FONT_KEY,
   EXPAND_MODE_ORIGINAL_SIZE,
-  caretDrawWidthPx,
 } from './nativeSolver';
 import { OPEN_SANS_FONT_METRICS } from '../../../../r3f/controls/native/text/openSansFontMetrics';
 import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
@@ -982,20 +981,5 @@ describe('shapeLineEditText: direction, language and structured override (line_e
 
   it('keeps the FILE segments in logical order, left to right', () => {
     expect(visual({ text: 'שלום/abc', textDirection: 2, structuredTextBidiOverride: 2 })).toBe('םולש/abc');
-  });
-});
-
-describe('caretDrawWidthPx (line_edit.cpp:1550, text_edit.cpp:1766)', () => {
-  it('scales caret_width by the theme base scale', () => {
-    expect(caretDrawWidthPx({ caret_width: 4 }, 1.5)).toBe(6);
-    expect(caretDrawWidthPx({ caret_width: 1 }, 2)).toBe(2);
-  });
-
-  it('truncates a fractional width as the int cast does', () => {
-    expect(caretDrawWidthPx({ caret_width: 1 }, 1.5)).toBe(1);
-  });
-
-  it('keeps the authored width below scale 1', () => {
-    expect(caretDrawWidthPx({ caret_width: 3 }, 0.5)).toBe(3);
   });
 });
