@@ -18,7 +18,6 @@ import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { HAIRLINE_THICKNESS_PX, hairlineQuadStartPx } from '../../../../r3f/controls/native/hairline';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
-import { DEFAULT_CONTENT_MARGIN } from '../../../../godot/scene/theme';
 import {
   computeGridDots,
   computeGridLines,
@@ -58,6 +57,7 @@ import type { GraphEditProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { useStableVector2 } from '../../../../r3f/hooks/useStableVector2';
+import { shaderLineWidth } from './connectionStroke';
 
 /** Every internal Label and LineEdit reads the plain "font" theme key, as `Label` and `Button` do. */
 const GRAPH_EDIT_THEME_FONT_KEY = 'font';
@@ -159,9 +159,7 @@ export function GraphEdit({
   // `graph_edit.h:253`/`:252`: `lines_curvature = 0.5f`, `lines_thickness = 4.0f`.
   const curvature = props.connectionLinesCurvature ?? 0.5;
   const thickness = props.connectionLinesThickness ?? 4;
-  // `_get_shader_line_width` (`graph_edit.cpp:2632-2634`): `lines_thickness * base_scale + 4.0`,
-  // with `base_scale` recovered from `theme.contentMargin`.
-  const lineWidth = thickness * (theme.contentMargin / DEFAULT_CONTENT_MARGIN) + 4;
+  const lineWidth = shaderLineWidth(thickness, theme.scale);
   const rimColor = requiredThemeItem(solveNode.colors, 'connection_rim_color');
   // An endpoint keeps the full `* zoom` (`connectionEndpoints.ts`), as the walker scales each
   // GraphElement child by `zoom`.

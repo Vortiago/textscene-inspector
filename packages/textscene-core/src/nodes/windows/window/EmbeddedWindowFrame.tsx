@@ -174,7 +174,7 @@ function WindowDecoration({
     closeHOffset: requiredThemeItem(constants, 'close_h_offset'),
     closeVOffset: requiredThemeItem(constants, 'close_v_offset'),
   };
-  // `close` and the TabBar's `close` are one default icon, `icons["close"]` (`default_theme.cpp:685,1039`).
+  // `close` and the TabBar's `close` are one default icon, `icons["close"]`.
   const closeTexture = useNodeIcon(solveNode.icons.close, TAB_BAR_ICONS.close);
   const closeSize = iconSize(closeTexture, theme.scale);
   const rect: Rect2 = { x: 0, y: 0, w: size.x, h: size.y };

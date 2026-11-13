@@ -44,7 +44,7 @@ export function resolveTextTheme(
 }
 
 export interface TextOutlineTheme {
-  /** `font_outline_color`, sRGB. Godot's default is opaque black for most types (`default_theme.cpp:162` for Button). */
+  /** `font_outline_color`, sRGB. Godot's default is opaque black for most types, as the table's `Button/font_outline_color` is. */
   color: Rgba;
   /** `outline_size`, px. The default theme sets 0 for every type, so no outline draws until a scene sets it. */
   sizePx: number;

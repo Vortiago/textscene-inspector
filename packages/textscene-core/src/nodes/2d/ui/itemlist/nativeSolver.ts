@@ -55,7 +55,7 @@ export { ICON_MODE_LEFT };
 
 // --- Theme font ----------------------------------------------------------
 
-/** ItemList's own theme font key: `SceneStringName(font)` (`default_theme.cpp:951`). */
+/** ItemList's own theme font key, `SceneStringName(font)`, which the default theme registers under ItemList. */
 export const ITEM_LIST_THEME_FONT_KEY = 'font';
 
 const ITEM_LIST_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_color' };

@@ -3,7 +3,6 @@
  * `requiredThemeItem`. The tree build fills `n.colors`, `n.constants` and `n.styleBoxes` from the table, so
  * a direct read with a fallback of its own is a second copy of a Godot value.
  */
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { defaultThemeAt } from '../../../godot/scene/defaultTheme/defaultTheme';
@@ -11,68 +10,12 @@ import { isCommentLine, isProductionSource, reportOffenders, walkSources } from 
 
 const SRC_ROOT = join(import.meta.dirname, '../../..');
 
-/** The Control folders whose types the table holds. A folder joins this list with its types (ADR-0073). */
-const MIGRATED_FOLDERS = [
-  ...[
-    'boxcontainer',
-    'button',
-    'checkbox',
-    'checkbutton',
-    'codeedit',
-    'colorpicker',
-    'colorpickerbutton',
-    'flowcontainer',
-    'foldablecontainer',
-    'graphedit',
-    'graphelement',
-    'graphframe',
-    'graphnode',
-    'gridcontainer',
-    'hboxcontainer',
-    'hflowcontainer',
-    'hscrollbar',
-    'hseparator',
-    'hslider',
-    'hsplitcontainer',
-    'itemlist',
-    'label',
-    'lineedit',
-    'linkbutton',
-    'margincontainer',
-    'menubar',
-    'menubutton',
-    'optionbutton',
-    'panel',
-    'panelcontainer',
-    'progressbar',
-    'richtextlabel',
-    'scrollbar',
-    'scrollcontainer',
-    'separator',
-    'spinbox',
-    'splitcontainer',
-    'tabbar',
-    'tabcontainer',
-    'textedit',
-    'tree',
-    'vboxcontainer',
-    'vflowcontainer',
-    'vscrollbar',
-    'vseparator',
-    'vslider',
-    'vsplitcontainer',
-  ].map((folder) => join(SRC_ROOT, 'nodes/2d/ui', folder)),
-  ...['acceptdialog', 'confirmationdialog', 'filedialog', 'popupmenu', 'popuppanel', 'window'].map((folder) =>
-    join(SRC_ROOT, 'nodes/windows', folder)
-  ),
-];
+/** Every Control folder and the native renderer: each reads the default theme through the table (ADR-0073). */
+const SCANNED_TREES = ['nodes/2d/ui', 'nodes/windows', 'r3f/controls/native'].map((tree) =>
+  join(SRC_ROOT, tree)
+);
 
-const BUTTON_BASE = join(SRC_ROOT, 'r3f/controls/native/buttonBase.ts');
-
-const SOURCES = [
-  ...walkSources(MIGRATED_FOLDERS, isProductionSource),
-  { file: BUTTON_BASE, source: readFileSync(BUTTON_BASE, 'utf8') },
-];
+const SOURCES = walkSources(SCANNED_TREES, isProductionSource);
 
 type ItemKind = 'colors' | 'constants' | 'styleBoxes';
 

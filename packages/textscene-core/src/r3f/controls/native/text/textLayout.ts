@@ -100,7 +100,7 @@ export interface ShapeTextOptions {
   /**
    * The theme `line_spacing`, px. Required, because it is a per-control constant: Label 3
    * (`labelEffectiveTextTheme`), Button-family and LineEdit 0, RichTextLabel `line_separation` 0
-   * (`default_theme.cpp:1217`), Label3D its authored `line_spacing`. A miss is a 1-3 px shift.
+   * (the table's `RichTextLabel/line_separation`), Label3D its authored `line_spacing`. A miss is a 1-3 px shift.
    */
   lineSpacingPx: number;
   /**

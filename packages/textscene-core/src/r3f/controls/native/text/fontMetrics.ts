@@ -132,8 +132,8 @@ export function getFontAscentPx(
  * undershoots by about 1px, as measured against Godot. At Open Sans SemiBold 16 with
  * Label's spacing: ceil(2189*16/2048) + ceil(600*16/2048) + 3 = 18 + 5 + 3 = 26.
  */
-// `lineSpacingPx` has no default: `Math::round(3 * scale)` is Label's constant
-// (`scene/theme/default_theme.cpp:392`), and other controls read another key or none.
+// `lineSpacingPx` has no default: `Math::round(3 * scale)` is the table's
+// `Label/line_spacing`, and other controls read another key or none.
 export function getFontLinePitchPx(
   metrics: Pick<FontMetrics, 'ascent' | 'descent' | 'unitsPerEm' | 'pxPerUnit'>,
   fontSizePx: number,
