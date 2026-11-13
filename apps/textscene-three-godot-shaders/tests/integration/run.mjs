@@ -10,17 +10,16 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
-import { parameterBits } from '../../../../scripts/godot-probes/probeShader.mjs';
 import { withConsumerPage, writeJobSummary } from '../consumer.mjs';
 import { PROBES } from '../probes/probes.mjs';
+import { RANDOM_PROGRAMS } from '../random/randomSet.mjs';
 import { compareProbe, coverageFailures } from './compare.mjs';
+import { runOnPage } from './pageRun.mjs';
+import { compareRandomPrograms, randomFailures, randomSummary } from './randomPrograms.mjs';
 
-const RECORD = JSON.parse(readFileSync(join(import.meta.dirname, '../probes/godot-record.json'), 'utf8'));
-
-/** What the page needs of a probe: its source, its row count and its parameters' bits. */
-function pageSpec(probe) {
-  return { source: probe.source, rows: probe.inputs.length, parameters: parameterBits(probe) };
-}
+const readRecord = (path) => JSON.parse(readFileSync(join(import.meta.dirname, path), 'utf8'));
+const RECORD = readRecord('../probes/godot-record.json');
+const RANDOM_RECORD = readRecord('../random/godot-record.json');
 
 function verdictTable(verdicts) {
   const lines = PROBES.map((probe) => {
@@ -36,17 +35,21 @@ function verdictTable(verdicts) {
   ].join('\n');
 }
 
+async function probeVerdicts(page) {
+  const results = new Map();
+  for (const probe of PROBES) {
+    results.set(probe.name, compareProbe(RECORD.probes[probe.name], await runOnPage(page, probe)));
+  }
+  return results;
+}
+
 async function main() {
-  const verdicts = await withConsumerPage(
+  const { verdicts, random } = await withConsumerPage(
     { pageDir: join(import.meta.dirname, 'page'), module: 'probePage.js', harness: 'shaderProbes' },
-    async (page) => {
-      const results = new Map();
-      for (const probe of PROBES) {
-        const actual = await page.evaluate((spec) => globalThis.runProbe(spec), pageSpec(probe));
-        results.set(probe.name, compareProbe(RECORD.probes[probe.name], actual));
-      }
-      return results;
-    }
+    async (page) => ({
+      verdicts: await probeVerdicts(page),
+      random: await compareRandomPrograms(page, RANDOM_PROGRAMS, RANDOM_RECORD.probes),
+    })
   );
   const translated = new Set(PROBES.flatMap((probe) => probe.rows));
   const failures = coverageFailures(PROBES, verdicts);
@@ -56,9 +59,12 @@ async function main() {
   console.log(
     `[shader-probes] ${count}, ${PROBES.length} probes against Godot ${RECORD.godot} on ${RECORD.adapter}`
   );
-  writeJobSummary(`## Shader probes against Godot\n\n${count}.\n\n${table}\n`);
-  for (const failure of failures) console.error(`[shader-probes] ${failure}`);
-  process.exitCode = failures.length === 0 ? 0 : 1;
+  const randomLine = randomSummary(random);
+  console.log(`[shader-random] ${randomLine}`);
+  writeJobSummary(`## Shader probes against Godot\n\n${count}.\n\n${randomLine}\n\n${table}\n`);
+  const allFailures = [...failures, ...randomFailures(random)];
+  for (const failure of allFailures) console.error(`[shader-probes] ${failure}`);
+  process.exitCode = allFailures.length === 0 ? 0 : 1;
 }
 
 await main();

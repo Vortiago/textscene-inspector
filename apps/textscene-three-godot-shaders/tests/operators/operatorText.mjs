@@ -1,7 +1,7 @@
 /**
  * The shading language text of each of Godot's typed operators, as `get_operator_text` names
- * them (`shader_language.cpp:44`), and the place of its operands. The operator cases and the
- * random programs both write operators through it, so a test of any operator needs no list.
+ * them (`shader_language.cpp:44`), the place of its operands and its binding priority. The
+ * operator cases and the random programs both write operators through it.
  */
 
 const PREFIX = { OP_NOT: '!', OP_NEGATE: '-', OP_BIT_INVERT: '~', OP_INCREMENT: '++', OP_DECREMENT: '--' };
@@ -56,3 +56,47 @@ export function operatorExpression(op, operands) {
   if (op === 'OP_SELECT_IF') return `${operands[0]} ? ${operands[1]} : ${operands[2]}`;
   throw new Error(`expected an operator with operands, got ${op}`);
 }
+
+/**
+ * The priority of each operator in Godot's reduction loop (`shader_language.cpp:7500-7632`):
+ * the lowest binds first, and operators of one priority bind left to right. A postfix operator
+ * binds before the loop, as a member or an index does.
+ */
+const PRIORITY = {
+  OP_NOT: 3,
+  OP_NEGATE: 3,
+  OP_BIT_INVERT: 3,
+  OP_INCREMENT: 3,
+  OP_DECREMENT: 3,
+  OP_MUL: 4,
+  OP_DIV: 4,
+  OP_MOD: 4,
+  OP_ADD: 5,
+  OP_SUB: 5,
+  OP_SHIFT_LEFT: 6,
+  OP_SHIFT_RIGHT: 6,
+  OP_LESS: 7,
+  OP_LESS_EQUAL: 7,
+  OP_GREATER: 7,
+  OP_GREATER_EQUAL: 7,
+  OP_EQUAL: 8,
+  OP_NOT_EQUAL: 8,
+  OP_BIT_AND: 9,
+  OP_BIT_XOR: 10,
+  OP_BIT_OR: 11,
+  OP_AND: 12,
+  OP_OR: 14,
+  OP_SELECT_IF: 15,
+};
+
+/** The priority of `op`, or the loosest for an assignment, which always takes brackets here. */
+export function operatorPriority(op) {
+  if (op in POSTFIX) return 0;
+  return PRIORITY[op] ?? 16;
+}
+
+/** True for an operator written before its one operand. */
+export const isPrefix = (op) => op in PREFIX;
+
+/** True for an operator of two operands written between them. */
+export const isInfix = (op) => op in INFIX;
