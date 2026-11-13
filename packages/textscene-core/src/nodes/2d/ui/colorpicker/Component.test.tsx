@@ -421,3 +421,17 @@ describe('<ColorPicker> — self_modulate', () => {
     expect(split.child).toBeGreaterThan(10);
   });
 });
+
+describe('<ColorPicker> — value field arrows', () => {
+  it('draws each down arrow in SpinBox down_icon_modulate, apart from the up arrow (spin_box.cpp:441-442)', async () => {
+    const red = { r: 1, g: 0, b: 0, a: 1 };
+    const theme = themeResource({ colors: { SpinBox: { down_icon_modulate: red } } });
+    const renderer = await renderPicker({ ...ONLY_SLIDERS, colorMode: 0 }, { w: 400, h: 400 }, [theme]);
+    const redQuads = renderer.scene
+      .findAllByType('Mesh')
+      .map((mesh) => (mesh.instance as THREE.Mesh).material as THREE.MeshBasicMaterial)
+      .filter((material) => material.color?.r === 1 && material.color.g === 0 && material.color.b === 0);
+    // R, G, B, I and A: one down arrow each.
+    expect(redQuads).toHaveLength(5);
+  });
+});

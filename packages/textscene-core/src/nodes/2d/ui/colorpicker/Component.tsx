@@ -43,6 +43,7 @@ import {
   spinBoxArrowPosition,
   spinBoxIconColor,
   spinBoxLayout,
+  type SpinBoxButtonState,
 } from '../spinbox/nativeSolver';
 import { SPIN_BOX_ICONS } from '../spinbox/icons';
 import { isColorOverbright } from '../shared/colorOverbright';
@@ -122,6 +123,21 @@ import {
 } from './colorModes';
 import type { ColorPickerProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
+import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+
+/** A value field arrow's modulate, under the picker's own tint, in the item's linear space. */
+function useSpinArrowColor(
+  colors: SolveNode['colors'],
+  direction: 'up' | 'down',
+  state: SpinBoxButtonState,
+  tintOwn: Rgba
+) {
+  const modulate = useMemo(
+    () => multiplyModulate(tintOwn, spinBoxIconColor(colors, direction, state)),
+    [tintOwn, colors, direction, state]
+  );
+  return useItemLinearColor(modulate);
+}
 
 /** The picker's child Buttons keep the `text_direction` and `language` defaults. */
 const AUTO_TEXT_DIRECTION = { textDirection: TextDirection.TEXT_DIRECTION_AUTO, language: '' };
@@ -223,10 +239,6 @@ export function ColorPicker({
     [tint, child, toItemLinear]
   );
   const lineEditFontColor = useMemo(() => multiplyModulate(tint.own, child.lineEditColor), [tint.own, child]);
-  const spinArrowGrey = useMemo(
-    () => multiplyModulate(tint.own, spinBoxIconColor(child.spinBoxColors, 'up', 'normal')),
-    [tint.own, child]
-  );
   const valueFieldFontColor = useMemo(
     () => multiplyModulate(tint.own, child.valueFieldColor),
     [tint.own, child]
@@ -259,12 +271,11 @@ export function ColorPicker({
   const defaultGrabberTexture = useNodeIcon(solveNode.icons.grabber, SLIDER_GRABBER_ICONS.grabber);
   const spinUpTexture = useNodeIcon(solveNode.icons.up, SPIN_BOX_ICONS.up);
   const spinDownTexture = useNodeIcon(solveNode.icons.down, SPIN_BOX_ICONS.down);
-  const spinArrowColor = useItemLinearColor(spinArrowGrey);
-  const spinArrowDisabledGrey = useMemo(
-    () => multiplyModulate(tint.own, spinBoxIconColor(child.spinBoxColors, 'up', 'disabled')),
-    [tint.own, child]
-  );
-  const spinArrowDisabledColor = useItemLinearColor(spinArrowDisabledGrey);
+  // Each arrow takes its own direction's modulate (`spin_box.cpp:441-460`).
+  const spinUpColor = useSpinArrowColor(child.spinBoxColors, 'up', 'normal', tint.own);
+  const spinUpDisabledColor = useSpinArrowColor(child.spinBoxColors, 'up', 'disabled', tint.own);
+  const spinDownColor = useSpinArrowColor(child.spinBoxColors, 'down', 'normal', tint.own);
+  const spinDownDisabledColor = useSpinArrowColor(child.spinBoxColors, 'down', 'disabled', tint.own);
 
   const vertexTint = useVertexColorTint(tint.own);
   const baseTint = vertexTint.vertex;
@@ -739,7 +750,7 @@ export function ColorPicker({
                       <ControlQuad
                         width={arrowSize.x}
                         height={arrowSize.y}
-                        color={row.arrows.up === 'disabled' ? spinArrowDisabledColor : spinArrowColor}
+                        color={row.arrows.up === 'disabled' ? spinUpDisabledColor : spinUpColor}
                         opacity={tint.opacity}
                         map={spinUpTexture}
                         renderOrder={renderOrder}
@@ -749,7 +760,7 @@ export function ColorPicker({
                       <ControlQuad
                         width={arrowSize.x}
                         height={arrowSize.y}
-                        color={row.arrows.down === 'disabled' ? spinArrowDisabledColor : spinArrowColor}
+                        color={row.arrows.down === 'disabled' ? spinDownDisabledColor : spinDownColor}
                         opacity={tint.opacity}
                         map={spinDownTexture}
                         renderOrder={renderOrder}
