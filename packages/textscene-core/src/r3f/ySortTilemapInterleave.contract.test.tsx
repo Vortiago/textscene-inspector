@@ -140,7 +140,7 @@ describe('Y-sort TileMapLayer per-Y interleave (issue #74 dungeon symptom)', () 
   });
 
   it('draws a row over a sibling listed before the layer at the same y, in collection order', async () => {
-    const model = tileSetFromFile(parseTresFile(tilesetContent), TILESET_PATH)!;
+    const model = tileSetInFile(parseTresFile(tilesetContent), TILESET_PATH)!;
     const cells: PlacedCell[] = [
       { coords: { x: 0, y: 0 }, sourceId: 0, atlasCoords: { x: 0, y: 0 }, alternativeId: 0 },
     ];
