@@ -267,7 +267,7 @@ const STATEMENTS_CHAPTER = {
   file: 'statements.md',
   title: 'Functions and statements',
   intro:
-    "The statements of a function body this slice reads, and the nodes of Godot's tree that its expressions use. Local variables, `if`, loops and the other statements come with the statements slice (#1824).",
+    "The statements of a function body: local variables, blocks, `if`, the three loops, `switch`, `discard` and `return`, with arrays and structs, and the nodes of Godot's tree that hold them. Before the emitter, tree-to-tree lowerings rewrite each loop as `while (true)`, a `switch` as an `if` chain, and a `return` inside flow as a write of the result. Godot runs the printed text of each lowered tree, so each lowering is checked by Godot itself.",
   sections: [
     {
       heading: '`return`',
@@ -280,6 +280,60 @@ const STATEMENTS_CHAPTER = {
       rows: (row) => row.id === 'OP_EMPTY',
       what: 'An expression and a `;` before the `return` runs for its assignments and steps. A `;` alone is an empty statement.',
       tsl: 'nothing for `;`',
+    },
+    {
+      heading: 'Local variables and `const`',
+      rows: (row) => row.id === 'NODE_TYPE_VARIABLE_DECLARATION',
+      what: "`float b = a;` declares a local variable, and `int b = a, c = 2;` declares several. A variable without a value holds what GLSL leaves undefined until a write. `const float k = 2.5;` declares a constant, which Godot refuses to write. Godot refuses a name declared twice in one function, an argument's name included, and a variable read in its own initialiser.",
+      tsl: 'a TSL variable, `toVar()`',
+    },
+    {
+      heading: 'Blocks',
+      rows: (row) => row.id === 'NODE_TYPE_BLOCK',
+      what: '`{ ... }` runs its statements in order and opens a scope: a variable declared in it is gone after it. A block may declare a name of the block around it.',
+      tsl: 'its statements, in order',
+    },
+    {
+      heading: '`if` and `else`',
+      rows: (row) => /^(if|else|FLOW_OP_IF|NODE_TYPE_CONTROL_FLOW)$/.test(row.id),
+      what: '`if (c) s1 else s2` runs `s1` when `c` holds and `s2` when it does not. The condition must be a `bool`. An `else` belongs to the nearest `if` without one.',
+      tsl: '`If(c, ...).Else(...)`',
+    },
+    {
+      heading: 'Loops',
+      rows: (row) => /^(for|while|do|FLOW_OP_(FOR|WHILE|DO))$/.test(row.id),
+      what: '`for (init; c; step) s`, `while (c) s` and `do s while (c);` run `s` while `c` holds: `do` runs it once before the first test. A variable declared in `init` is gone after the loop. Each part of `for` may be empty, and an empty condition holds.',
+      tsl: '`Loop(true, ...)` over the lowered `while (true)`',
+    },
+    {
+      heading: '`break` and `continue`',
+      rows: (row) => /^(break|continue|FLOW_OP_(BREAK|CONTINUE))$/.test(row.id),
+      what: '`break` leaves the innermost loop or `switch`. `continue` goes to the next test of the innermost loop, and in a `for` it runs the step first. Godot refuses `continue` inside a `switch` and either word outside a loop.',
+      tsl: '`Break()` and `Continue()`',
+    },
+    {
+      heading: '`switch`',
+      rows: (row) => /^(switch|case|default|FLOW_OP_(SWITCH|CASE|DEFAULT))$/.test(row.id),
+      what: '`switch (a)` runs from the `case` whose integer constant equals `a`, or from `default`, until a `break`: a case without one falls through to the next. In Godot 4.6.3 a case without `break` that ends the `switch` takes the statements after the `switch` too, so Godot refuses such a function for its missing `return`.',
+      tsl: 'an `if` chain over the lowered `switch`',
+    },
+    {
+      heading: '`discard`',
+      rows: (row) => /^(discard|FLOW_OP_DISCARD)$/.test(row.id),
+      what: '`discard` drops the fragment: its pixel keeps what it held. It is allowed in a function the fragment function calls.',
+      tsl: '`Discard()`',
+    },
+    {
+      heading: 'Arrays',
+      rows: (row) => /^(NODE_TYPE_ARRAY|NODE_TYPE_ARRAY_CONSTRUCT|length\[array\]\(\))$/.test(row.id),
+      what: '`float v[3]` and `float[3] v` declare an array, `float[3](a, b, c)` and `float[](a, b, c)` construct one, and `{a, b, c}` initialises one. `v.length()` is the size. An index Godot folds out of range is refused.',
+      tsl: '`array(...)` in a variable, its elements by `element(i)`',
+    },
+    {
+      heading: 'Structs',
+      rows: (row) => /^(struct type|OP_STRUCT|NODE_TYPE_STRUCT)$/.test(row.id),
+      what: '`struct Pair { float x; vec2 y; };` declares a struct before the functions. `Pair(a, b)` constructs one from a value of each member, in order, and `p.x` reads or writes a member.',
+      tsl: 'a `struct(...)` layout and its members',
     },
     {
       heading: 'Tree nodes',

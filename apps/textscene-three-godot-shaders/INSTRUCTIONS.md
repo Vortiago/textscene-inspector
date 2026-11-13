@@ -12,7 +12,7 @@ GLSL or WGSL operation itself, `lowered` with the name of the operations it writ
 probes run on WebGL 2. WebGPURenderer runs the same TSL nodes, and no probe runs there until the
 canvases draw on WebGPURenderer (#1788).
 
-733 of 1889 instructions transpiled.
+763 of 1889 instructions transpiled.
 
 ## data type
 
@@ -50,7 +50,7 @@ canvases draw on WebGPURenderer (#1788).
 | `samplerCube` | open, #1829 | | | `servers/rendering/shader_language.h:239` |
 | `samplerCubeArray` | open, #1829 | | | `servers/rendering/shader_language.h:240` |
 | `samplerExternalOES` | open, #1829 | | | `servers/rendering/shader_language.h:241` |
-| `struct type` | open, #1824 | | | `servers/rendering/shader_language.h:242` |
+| `struct type` | transpiled (`statement-struct`, `statement-struct-member-write`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-nested`, `statement-struct-assign`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`, `statement-struct-wrong-argument`, `statement-struct-unknown-member`) | native | native | `servers/rendering/shader_language.h:242` |
 
 ## literal
 
@@ -104,18 +104,18 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `if` | open, #1824 | | | `servers/rendering/shader_language.cpp:351` |
-| `else` | open, #1824 | | | `servers/rendering/shader_language.cpp:352` |
-| `for` | open, #1824 | | | `servers/rendering/shader_language.cpp:353` |
-| `while` | open, #1824 | | | `servers/rendering/shader_language.cpp:354` |
-| `do` | open, #1824 | | | `servers/rendering/shader_language.cpp:355` |
-| `switch` | open, #1824 | | | `servers/rendering/shader_language.cpp:356` |
-| `case` | open, #1824 | | | `servers/rendering/shader_language.cpp:357` |
-| `default` | open, #1824 | | | `servers/rendering/shader_language.cpp:358` |
-| `break` | open, #1824 | | | `servers/rendering/shader_language.cpp:359` |
-| `continue` | open, #1824 | | | `servers/rendering/shader_language.cpp:360` |
+| `if` | transpiled (`statement-if`, `statement-if-else`, `statement-else-if`, `statement-dangling-else`, `statement-if-not-bool`, `statement-if-declares`, `statement-return-in-if`, `statement-return-in-loop`, `statement-return-missing-path`, `statement-discard`) | native | native | `servers/rendering/shader_language.cpp:351` |
+| `else` | transpiled (`statement-if-else`, `statement-else-if`, `statement-dangling-else`) | native | native | `servers/rendering/shader_language.cpp:352` |
+| `for` | transpiled (`loop-for-0-times`, `loop-for-1-times`, `loop-for-9-times`, `loop-for-argument-times`, `loop-for-break-continue`, `loop-for-continue-steps`, `loop-nested-break`, `loop-nested-continue`, `loop-for-scope`, `loop-for-empty-parts`, `loop-float-counter`, `statement-return-in-loop`, `statement-return-in-nested-loop`, `statement-switch-in-loop`, `statement-switch-in-loop-break`, `statement-discard-in-loop`, `statement-array-computed-index`) | native | native | `servers/rendering/shader_language.cpp:353` |
+| `while` | transpiled (`loop-while-0-times`, `loop-while-1-times`, `loop-while-9-times`, `loop-while-argument-times`, `loop-while-break-continue`, `loop-nested-break`, `statement-return-in-nested-loop`) | native | native | `servers/rendering/shader_language.cpp:354` |
+| `do` | transpiled (`loop-do-0-times`, `loop-do-1-times`, `loop-do-9-times`, `loop-do-argument-times`, `loop-do-break-continue`, `loop-do-continue-checks`) | native | native | `servers/rendering/shader_language.cpp:355` |
+| `switch` | transpiled (`statement-return-in-switch`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`) | native | native | `servers/rendering/shader_language.cpp:356` |
+| `case` | transpiled (`statement-return-in-switch`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`) | native | native | `servers/rendering/shader_language.cpp:357` |
+| `default` | transpiled (`statement-switch`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-default-last`, `statement-switch-uint-ended`) | native | native | `servers/rendering/shader_language.cpp:358` |
+| `break` | transpiled (`loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-nested-break`, `loop-break-outside`, `loop-for-empty-parts`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-fall-through-ended`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`) | native | native | `servers/rendering/shader_language.cpp:359` |
+| `continue` | transpiled (`loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-do-continue-checks`, `loop-for-continue-steps`, `loop-nested-continue`, `loop-continue-outside`, `statement-switch-in-loop`) | native | native | `servers/rendering/shader_language.cpp:360` |
 | `return` | transpiled (`type-bool`, `type-bvec2`, `type-bvec3`, `type-bvec4`, `type-int`, `type-ivec2`, `type-ivec3`, `type-ivec4`, `type-uint`, `type-uvec2`, `type-uvec3`, `type-uvec4`, `type-float`, `type-vec2`, `type-vec3`, `type-vec4`, `type-mat2`, `type-mat3`, `type-mat4`) | native | native | `servers/rendering/shader_language.cpp:361` |
-| `discard` | open, #1824 | | | `servers/rendering/shader_language.cpp:362` |
+| `discard` | transpiled (`statement-discard`, `statement-discard-in-loop`) | native | native | `servers/rendering/shader_language.cpp:362` |
 
 ## uniform hint
 
@@ -743,7 +743,7 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_POST_DECREMENT(vec4)` | transpiled (`post-decrement-vec4`) | lowered: written to the argument value | lowered: written to the argument value | `servers/rendering/shader_language.cpp:1614` |
 | `OP_CALL` | open, #1825 | | | `servers/rendering/shader_language.cpp:1558` |
 | `OP_CONSTRUCT` | transpiled (`construct-bvec2-bool`, `construct-bvec2-bool-bool`, `construct-bvec3-bool`, `construct-bvec3-bool-bool-bool`, `construct-bvec3-bvec2-bool`, `construct-bvec3-bool-bvec2`, `construct-bvec4-bool`, `construct-bvec4-bool-bool-bool-bool`, `construct-bvec4-bool-bvec2-bool`, `construct-bvec4-bvec2-bool-bool`, `construct-bvec4-bool-bool-bvec2`, `construct-bvec4-bool-bvec3`, `construct-bvec4-bvec3-bool`, `construct-bvec4-bvec2-bvec2`, `construct-ivec2-int`, `construct-ivec2-int-int`, `construct-ivec3-int`, `construct-ivec3-int-int-int`, `construct-ivec3-ivec2-int`, `construct-ivec3-int-ivec2`, `construct-ivec4-int`, `construct-ivec4-int-int-int-int`, `construct-ivec4-int-ivec2-int`, `construct-ivec4-ivec2-int-int`, `construct-ivec4-int-int-ivec2`, `construct-ivec4-int-ivec3`, `construct-ivec4-ivec3-int`, `construct-ivec4-ivec2-ivec2`, `construct-uvec2-uint`, `construct-uvec2-uint-uint`, `construct-uvec3-uint`, `construct-uvec3-uint-uint-uint`, `construct-uvec3-uvec2-uint`, `construct-uvec3-uint-uvec2`, `construct-uvec4-uint`, `construct-uvec4-uint-uint-uint-uint`, `construct-uvec4-uint-uvec2-uint`, `construct-uvec4-uvec2-uint-uint`, `construct-uvec4-uint-uint-uvec2`, `construct-uvec4-uint-uvec3`, `construct-uvec4-uvec3-uint`, `construct-uvec4-uvec2-uvec2`, `construct-mat2-vec2-vec2`, `construct-mat3-vec3-vec3-vec3`, `construct-mat4-vec4-vec4-vec4-vec4`, `construct-mat2-float`, `construct-mat3-float`, `construct-mat4-float`, `construct-int-bool`, `construct-int-int`, `construct-int-uint`, `construct-int-float`, `construct-float-bool`, `construct-float-int`, `construct-float-uint`, `construct-float-float`, `construct-uint-bool`, `construct-uint-int`, `construct-uint-uint`, `construct-uint-float`, `construct-bool-bool`, `construct-bool-int`, `construct-bool-uint`, `construct-bool-float`) | native | native | `servers/rendering/shader_language.cpp:1558` |
-| `OP_STRUCT` | open, #1824 | | | `servers/rendering/shader_language.cpp:1558` |
+| `OP_STRUCT` | transpiled (`statement-struct`, `statement-struct-member-write`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-nested`, `statement-struct-assign`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`, `statement-struct-wrong-argument`, `statement-struct-unknown-member`) | native | native | `servers/rendering/shader_language.cpp:1558` |
 | `OP_INDEX` | transpiled (`index-vector-read`, `index-vector-constant`, `index-uint-index`, `index-matrix-column`, `index-matrix-lane`, `index-vector-write`, `index-matrix-write`, `index-lane-write`, `index-member-write`, `index-folded-read`, `index-folded-write`, `index-folded-past-end`, `index-folded-write-past-end`) | native | native | `servers/rendering/shader_language.cpp:1558` |
 | `OP_EMPTY` | transpiled (`statement-empty`) | native | native | `servers/rendering/shader_language.cpp:1558` |
 
@@ -751,17 +751,17 @@ canvases draw on WebGPURenderer (#1788).
 
 | Instruction | State | WebGL 2 | WebGPU | Godot source |
 | --- | --- | --- | --- | --- |
-| `FLOW_OP_IF` | open, #1824 | | | `servers/rendering/shader_language.h:307` |
+| `FLOW_OP_IF` | transpiled (`statement-if`, `statement-if-else`, `statement-else-if`, `statement-dangling-else`, `statement-if-not-bool`, `statement-if-declares`, `statement-return-in-if`, `statement-return-in-loop`, `statement-return-missing-path`, `statement-discard`) | native | native | `servers/rendering/shader_language.h:307` |
 | `FLOW_OP_RETURN` | transpiled (`type-bool`, `type-bvec2`, `type-bvec3`, `type-bvec4`, `type-int`, `type-ivec2`, `type-ivec3`, `type-ivec4`, `type-uint`, `type-uvec2`, `type-uvec3`, `type-uvec4`, `type-float`, `type-vec2`, `type-vec3`, `type-vec4`, `type-mat2`, `type-mat3`, `type-mat4`, `statement-after-return`) | native | native | `servers/rendering/shader_language.h:308` |
-| `FLOW_OP_FOR` | open, #1824 | | | `servers/rendering/shader_language.h:309` |
-| `FLOW_OP_WHILE` | open, #1824 | | | `servers/rendering/shader_language.h:310` |
-| `FLOW_OP_DO` | open, #1824 | | | `servers/rendering/shader_language.h:311` |
-| `FLOW_OP_BREAK` | open, #1824 | | | `servers/rendering/shader_language.h:312` |
-| `FLOW_OP_SWITCH` | open, #1824 | | | `servers/rendering/shader_language.h:313` |
-| `FLOW_OP_CASE` | open, #1824 | | | `servers/rendering/shader_language.h:314` |
-| `FLOW_OP_DEFAULT` | open, #1824 | | | `servers/rendering/shader_language.h:315` |
-| `FLOW_OP_CONTINUE` | open, #1824 | | | `servers/rendering/shader_language.h:316` |
-| `FLOW_OP_DISCARD` | open, #1824 | | | `servers/rendering/shader_language.h:317` |
+| `FLOW_OP_FOR` | transpiled (`loop-for-0-times`, `loop-for-1-times`, `loop-for-9-times`, `loop-for-argument-times`, `loop-for-break-continue`, `loop-for-continue-steps`, `loop-nested-break`, `loop-nested-continue`, `loop-for-scope`, `loop-for-empty-parts`, `loop-float-counter`, `statement-return-in-loop`, `statement-return-in-nested-loop`, `statement-switch-in-loop`, `statement-switch-in-loop-break`, `statement-discard-in-loop`, `statement-array-computed-index`) | native | native | `servers/rendering/shader_language.h:309` |
+| `FLOW_OP_WHILE` | transpiled (`loop-while-0-times`, `loop-while-1-times`, `loop-while-9-times`, `loop-while-argument-times`, `loop-while-break-continue`, `loop-nested-break`, `statement-return-in-nested-loop`) | native | native | `servers/rendering/shader_language.h:310` |
+| `FLOW_OP_DO` | transpiled (`loop-do-0-times`, `loop-do-1-times`, `loop-do-9-times`, `loop-do-argument-times`, `loop-do-break-continue`, `loop-do-continue-checks`) | native | native | `servers/rendering/shader_language.h:311` |
+| `FLOW_OP_BREAK` | transpiled (`loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-nested-break`, `loop-break-outside`, `loop-for-empty-parts`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-fall-through-ended`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`) | native | native | `servers/rendering/shader_language.h:312` |
+| `FLOW_OP_SWITCH` | transpiled (`statement-return-in-switch`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`) | native | native | `servers/rendering/shader_language.h:313` |
+| `FLOW_OP_CASE` | transpiled (`statement-return-in-switch`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`) | native | native | `servers/rendering/shader_language.h:314` |
+| `FLOW_OP_DEFAULT` | transpiled (`statement-switch`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-default-last`, `statement-switch-uint-ended`) | native | native | `servers/rendering/shader_language.h:315` |
+| `FLOW_OP_CONTINUE` | transpiled (`loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-do-continue-checks`, `loop-for-continue-steps`, `loop-nested-continue`, `loop-continue-outside`, `statement-switch-in-loop`) | native | native | `servers/rendering/shader_language.h:316` |
+| `FLOW_OP_DISCARD` | transpiled (`statement-discard`, `statement-discard-in-loop`) | native | native | `servers/rendering/shader_language.h:317` |
 
 ## tree node
 
@@ -769,16 +769,16 @@ canvases draw on WebGPURenderer (#1788).
 | --- | --- | --- | --- | --- |
 | `NODE_TYPE_SHADER` | open, #1794 | | | `servers/rendering/shader_language.h:373` |
 | `NODE_TYPE_FUNCTION` | open, #1794 | | | `servers/rendering/shader_language.h:374` |
-| `NODE_TYPE_BLOCK` | open, #1824 | | | `servers/rendering/shader_language.h:375` |
+| `NODE_TYPE_BLOCK` | transpiled (`statement-block`, `statement-block-shadow`, `statement-block-out-of-scope`, `statement-if-declares`, `statement-switch-scope-ended`) | native | native | `servers/rendering/shader_language.h:375` |
 | `NODE_TYPE_VARIABLE` | transpiled (`type-bool`, `type-bvec2`, `type-bvec3`, `type-bvec4`, `type-int`, `type-ivec2`, `type-ivec3`, `type-ivec4`, `type-uint`, `type-uvec2`, `type-uvec3`, `type-uvec4`, `type-float`, `type-vec2`, `type-vec3`, `type-vec4`, `type-mat2`, `type-mat3`, `type-mat4`) | native | native | `servers/rendering/shader_language.h:376` |
-| `NODE_TYPE_VARIABLE_DECLARATION` | open, #1824 | | | `servers/rendering/shader_language.h:377` |
+| `NODE_TYPE_VARIABLE_DECLARATION` | transpiled (`statement-local`, `statement-local-list`, `statement-local-const`, `statement-local-const-write`, `statement-local-undeclared`, `statement-local-twice`, `statement-local-of-argument-name`, `statement-block`, `statement-block-shadow`, `statement-block-out-of-scope`, `statement-local-initialised-by-itself`, `loop-for-scope`, `statement-switch-scope`, `statement-switch-scope-ended`, `statement-array`, `statement-array-type-first`, `statement-array-initialiser-list`, `statement-array-length`, `statement-array-length-before-operator`, `statement-array-computed-index`, `statement-array-swizzle-write`, `statement-array-assign`, `statement-array-size-mismatch`, `statement-array-constant-index-past-end`, `statement-array-const`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`) | native | native | `servers/rendering/shader_language.h:377` |
 | `NODE_TYPE_CONSTANT` | transpiled (`statement-tree`) | native | native | `servers/rendering/shader_language.h:378` |
 | `NODE_TYPE_OPERATOR` | transpiled (`statement-sequence`) | native | native | `servers/rendering/shader_language.h:379` |
-| `NODE_TYPE_CONTROL_FLOW` | open, #1824 | | | `servers/rendering/shader_language.h:380` |
+| `NODE_TYPE_CONTROL_FLOW` | transpiled (`statement-if`, `statement-if-else`, `statement-else-if`, `statement-dangling-else`, `statement-if-not-bool`, `statement-if-declares`, `loop-for-0-times`, `loop-for-1-times`, `loop-for-9-times`, `loop-for-argument-times`, `loop-while-0-times`, `loop-while-1-times`, `loop-while-9-times`, `loop-while-argument-times`, `loop-do-0-times`, `loop-do-1-times`, `loop-do-9-times`, `loop-do-argument-times`, `loop-for-break-continue`, `loop-while-break-continue`, `loop-do-break-continue`, `loop-do-continue-checks`, `loop-for-continue-steps`, `loop-nested-break`, `loop-nested-break`, `loop-nested-continue`, `loop-for-scope`, `loop-for-empty-parts`, `loop-float-counter`, `statement-return-in-if`, `statement-return-in-loop`, `statement-return-in-loop`, `statement-return-in-nested-loop`, `statement-return-in-nested-loop`, `statement-return-in-switch`, `statement-return-missing-path`, `statement-switch`, `statement-switch-fall-through`, `statement-switch-default-first`, `statement-switch-uint`, `statement-switch-in-loop`, `statement-switch-in-loop`, `statement-switch-scope`, `statement-switch-fall-through-ended`, `statement-switch-default-last`, `statement-switch-uint-ended`, `statement-switch-in-loop-break`, `statement-switch-in-loop-break`, `statement-switch-scope-ended`, `statement-switch-case-negative`, `statement-switch-empty-case-at-end`, `statement-switch-twice`, `statement-switch-float`, `statement-switch-case-variable`, `statement-switch-case-folded`, `statement-discard`, `statement-discard-in-loop`, `statement-array-computed-index`) | native | native | `servers/rendering/shader_language.h:380` |
 | `NODE_TYPE_MEMBER` | transpiled (`statement-tree`) | native | native | `servers/rendering/shader_language.h:381` |
-| `NODE_TYPE_ARRAY` | open, #1824 | | | `servers/rendering/shader_language.h:382` |
-| `NODE_TYPE_ARRAY_CONSTRUCT` | open, #1824 | | | `servers/rendering/shader_language.h:383` |
-| `NODE_TYPE_STRUCT` | open, #1824 | | | `servers/rendering/shader_language.h:384` |
+| `NODE_TYPE_ARRAY` | transpiled (`statement-array`, `statement-array-type-first`, `statement-array-initialiser-list`, `statement-array-length`, `statement-array-length-before-operator`, `statement-array-computed-index`, `statement-array-swizzle-write`, `statement-array-assign`, `statement-array-size-mismatch`, `statement-array-constant-index-past-end`, `statement-array-const`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`) | native | native | `servers/rendering/shader_language.h:382` |
+| `NODE_TYPE_ARRAY_CONSTRUCT` | transpiled (`statement-array`, `statement-array-type-first`, `statement-array-assign`, `statement-array-size-mismatch`, `statement-array-const`, `statement-struct-array`, `statement-struct-array-unsized`) | native | native | `servers/rendering/shader_language.h:383` |
+| `NODE_TYPE_STRUCT` | transpiled (`statement-struct`, `statement-struct-member-write`, `statement-struct-array-member`, `statement-struct-array`, `statement-struct-nested`, `statement-struct-assign`, `statement-struct-array-elements`, `statement-struct-array-initialiser-list`, `statement-struct-array-unsized`, `statement-struct-wrong-argument`, `statement-struct-unknown-member`) | native | native | `servers/rendering/shader_language.h:384` |
 
 ## constructor
 
@@ -1409,7 +1409,7 @@ canvases draw on WebGPURenderer (#1788).
 | `fwidth(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3379` |
 | `fwidth(vec3)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3380` |
 | `fwidth(vec4)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3381` |
-| `length[array]()` | open, #1824 | | | `servers/rendering/shader_language.cpp:3400` |
+| `length[array]()` | transpiled (`statement-array-length`, `statement-array-length-before-operator`) | native | native | `servers/rendering/shader_language.cpp:3400` |
 | `packHalf2x16(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3412` |
 | `packUnorm2x16(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3413` |
 | `packSnorm2x16(vec2)` | open, #1827 | | | `servers/rendering/shader_language.cpp:3414` |
