@@ -1,7 +1,8 @@
 /**
  * The scope cuts of the repository's documents that name no owner, each with the reason it may stay.
  * `documents.test.mjs` fails on a cut that is not here, and on an entry no document holds any more,
- * so the table only shrinks.
+ * so the table only shrinks. `pnpm pr:state` does not read it: a change that adds or rewrites the
+ * first line of a cut gives the cut its owner.
  */
 
 /** ADR-0003 keeps why the DOM was chosen. ADR-0037 replaced its decision and its limits. */
@@ -93,3 +94,12 @@ export const KNOWN_UNOWNED_CUTS = [
     reason: NO_OWNER_FOUND_YET,
   },
 ];
+
+/**
+ * Whether the table holds the unowned cut that starts with `text` in the document at `path`.
+ *
+ * @param {{ path: string, text: string }} cut
+ */
+export function isKnownUnownedCut({ path, text }) {
+  return KNOWN_UNOWNED_CUTS.some((known) => known.path === path && text.startsWith(known.startsWith));
+}

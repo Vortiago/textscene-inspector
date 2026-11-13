@@ -4,7 +4,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { unownedScopeCuts } from './scopeCuts.mjs';
+import { isScopeCutDocument, unownedScopeCuts } from './scopeCuts.mjs';
 
 const lines = (...text) => text.join('\n');
 
@@ -128,9 +128,36 @@ describe('unownedScopeCuts', () => {
     expect(unownedScopeCuts(doc)).toEqual([]);
   });
 
+  it('reads a `~~~` line inside a block of three backticks as code (edge case)', () => {
+    const doc = lines('```', '~~~', 'The sky bake is deferred.', '```', '', 'The fog is deferred.');
+
+    expect(unownedScopeCuts(doc)).toEqual([{ line: 6, text: 'The fog is deferred.' }]);
+  });
+
+  it('reads no cut from an HTML comment, and keeps the line numbers after it', () => {
+    const template = lines('<!-- Say what is out of scope,', 'and why. -->', '', 'The fog is deferred.');
+
+    expect(unownedScopeCuts(template)).toEqual([{ line: 4, text: 'The fog is deferred.' }]);
+  });
+
   it('finds no cut in a text that puts nothing off', () => {
     expect(
       unownedScopeCuts('The pass draws later frames first.\n\n- The mount stays in the renderer.')
     ).toEqual([]);
+  });
+});
+
+describe('isScopeCutDocument', () => {
+  it.each(['README.md', 'docs/adr/0072-shaders.md', 'docs/webgpu-tsl-spike.md'])('reads %s', (path) => {
+    expect(isScopeCutDocument(path)).toBe(true);
+  });
+
+  it.each([
+    'packages/textscene-core/src/nodes/2d/ui/label/comparison.md',
+    'docs/comparison/sheets/complex-2d-gui.md',
+    'apps/textscene-web/README.md',
+    'docs/adr/template.txt',
+  ])('leaves a sheet, a document of a package and another file type out: %s', (path) => {
+    expect(isScopeCutDocument(path)).toBe(false);
   });
 });

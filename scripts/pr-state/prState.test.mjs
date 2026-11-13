@@ -415,6 +415,13 @@ describe('unownedScopeCutsOf', () => {
     expect(cutsWith(change)).toEqual([]);
   });
 
+  it('gives no cut of a sheet, whose limit lines take their owner from the body (edge case)', () => {
+    const text = 'The caret blink is deferred.';
+    const change = { diff: additions(SHEET, 1, [text]), documents: [{ path: SHEET, text }] };
+
+    expect(cutsWith(change)).toEqual([]);
+  });
+
   it('gives a cut of an issue the pull request closes, since the issue ends with the cut still open', () => {
     const closedIssues = [
       { number: 1457, body: '**Out of scope:**\n- The prepass: it is a whole program and stays.' },

@@ -7,14 +7,15 @@
  * issue the pull request closes names no owner.
  */
 
-import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import process from 'node:process';
 import { parseArgs } from 'node:util';
-import { git } from '../githooks/changes.mjs';
-import { changedEntries } from '../gitNameStatus.mjs';
+import { git, parseNameStatus } from '../githooks/changes.mjs';
+import { readGitHub } from '../readGitHub.mjs';
 import { REPO_ROOT } from '../repoRoot.mjs';
+import { readIssue } from '../scope-cuts/readIssues.mjs';
+import { UNOWNED_CUT_HINT } from '../scope-cuts/scopeCuts.mjs';
 import { coreTestOnlyExports, KEPT_TEST_ONLY_EXPORTS } from '../testOnlyExports.core.mjs';
 import {
   closedIssueNumbers,
@@ -29,15 +30,6 @@ import {
 /** A pull request into a feature branch passes that branch as `--base`. */
 const DEFAULT_BASE = 'origin/main';
 
-/** GitHub's answer to `gh api <args>`. */
-function readGitHub(...args) {
-  try {
-    return execFileSync('gh', ['api', ...args], { encoding: 'utf8' });
-  } catch (error) {
-    throw new Error(`read GitHub with \`gh api ${args.join(' ')}\`: ${error.message}`, { cause: error });
-  }
-}
-
 /** One `<name>\t<result>\t<start time>` line for each run: the conclusion, or the status of a run in progress. */
 const CHECK_RUN_LINES = '.check_runs[] | [.name, .conclusion // .status, .started_at] | @tsv';
 
@@ -49,23 +41,15 @@ function readPullRequest(number) {
   return {
     ...pullRequest,
     checks: parseCheckRuns(readGitHub(checkRuns, '--paginate', '--jq', CHECK_RUN_LINES)),
-    closedIssues: closedIssueNumbers(pullRequest.body).map(readIssue),
+    closedIssues: closedIssueNumbers(pullRequest.body).flatMap(readIssue),
   };
 }
 
-function readIssue(number) {
-  return { number, body: readGitHub(`repos/{owner}/{repo}/issues/${number}`, '--jq', '.body // ""') };
-}
-
-/** A sheet takes the owner of a limit line from the pull request body, not from the line. */
-const isDocument = ({ change, path }) =>
-  change !== 'removed' && path.endsWith('.md') && !path.endsWith('comparison.md');
-
-/** Each document the change adds or edits, read from the working tree. */
+/** Each Markdown file the change adds or edits, read from the working tree. */
 function readChangedDocuments(nameStatus) {
-  return changedEntries(nameStatus)
-    .filter(isDocument)
-    .map(({ path }) => ({ path, text: readFileSync(resolve(REPO_ROOT, path), 'utf8') }));
+  return parseNameStatus(nameStatus)
+    .changed.filter((path) => path.endsWith('.md'))
+    .map((path) => ({ path, text: readFileSync(resolve(REPO_ROOT, path), 'utf8') }));
 }
 
 function writeReport(report, file) {
@@ -125,8 +109,6 @@ if (change.pullRequest && unownedLimitLines(change).length > 0) {
   process.exitCode = 1;
 }
 if (change.pullRequest && unownedScopeCutsOf(change).length > 0) {
-  console.error(
-    'A scope cut has no owner: write an issue number, or "no issue:" with the reason, in its line.'
-  );
+  console.error(UNOWNED_CUT_HINT);
   process.exitCode = 1;
 }
