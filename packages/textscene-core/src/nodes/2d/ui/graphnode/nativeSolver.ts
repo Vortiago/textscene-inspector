@@ -12,6 +12,7 @@
 
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { graphElementStyles } from '../graphelement/graphElementStyles';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import {
   controlSolverRegistry,
@@ -29,14 +30,7 @@ import { DEFAULT_SIZE_FLAGS, SizeFlags } from '../../../../godot/scene/control';
 export const GRAPH_NODE_TITLE_VARIATION = 'GraphNodeTitleLabel';
 
 export function graphNodeStyles(n: SolveNode) {
-  const boxes = n.styleBoxes;
-  return {
-    panel: requiredThemeItem(boxes, 'panel'),
-    panelSelected: requiredThemeItem(boxes, 'panel_selected'),
-    titlebar: requiredThemeItem(boxes, 'titlebar'),
-    titlebarSelected: requiredThemeItem(boxes, 'titlebar_selected'),
-    slot: requiredThemeItem(boxes, 'slot'),
-  };
+  return { ...graphElementStyles(n), slot: requiredThemeItem(n.styleBoxes, 'slot') };
 }
 
 function hFlagsOf(n: SolveNode): number {
@@ -75,6 +69,7 @@ const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
   const props = n.node.properties as GraphNodeProperties;
   const { panel, titlebar, slot } = graphNodeStyles(n);
   const textMin = graphNodeTitleTextMin(n);
+  const separation = requiredThemeItem(n.constants, 'separation');
 
   let width = textMin.x + titlebar.contentMargin.left + titlebar.contentMargin.right;
   let height = textMin.y + titlebar.contentMargin.top + titlebar.contentMargin.bottom;
@@ -93,7 +88,7 @@ const graphNodeMinimumSize: MinimumSizeFn = (n, ctx) => {
     width = Math.max(width, w);
     // `i` counts every child, hidden ones included, so the sibling of a hidden leading child
     // still pays one `separation`.
-    if (i > 0) height += requiredThemeItem(n.constants, 'separation');
+    if (i > 0) height += separation;
   });
 
   height += panel.contentMargin.top + panel.contentMargin.bottom;

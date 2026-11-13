@@ -20,7 +20,6 @@ import {
   itemIconColor,
   itemIconDraw,
   itemIconPackedSize,
-  itemListGuideColor,
   itemListDrawClip,
   itemListGuideLines,
   itemListMirrorX,
@@ -840,18 +839,6 @@ describe('itemListDrawClip and what it keeps (item_list.cpp:1431-1441,1451,1493-
   it('keeps the separators up to the clip bottom, one on it included', () => {
     const clip = { x: -4, y: -4, w: 120, h: 80 };
     expect(itemListSeparatorsInClip([23, 46, 76, 77], clip)).toEqual([23, 46, 76]);
-  });
-});
-
-describe('itemListGuideColor', () => {
-  // default_theme.cpp:959: theme->set_color("guide_color", "ItemList", Color(0.7, 0.7, 0.7, 0.25)).
-  it('reads the default theme guide_color absent an override (happy path)', () => {
-    expect(itemListGuideColor(node())).toEqual({ r: 0.7, g: 0.7, b: 0.7, a: 0.25 });
-  });
-
-  it('a theme_override_colors/guide_color (already resolved onto n.colors) wins (error path)', () => {
-    const override = { r: 1, g: 0, b: 0, a: 1 };
-    expect(itemListGuideColor({ colors: { guide_color: override } })).toEqual(override);
   });
 });
 

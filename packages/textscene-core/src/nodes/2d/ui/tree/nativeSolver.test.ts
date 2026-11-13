@@ -3,8 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import {
-  pickTreePanelStyleBox,
-  pickTreeTitleButtonStyleBox,
   treeTitleButtonHeightPx,
   treeContentRect,
   treeColumnWidthPx,
@@ -12,19 +10,8 @@ import {
 } from './nativeSolver';
 
 const TREE_BOXES = defaultStyleBoxesOf(defaultThemeAt(1)).Tree!;
-const DEFAULT_PANEL = pickTreePanelStyleBox(TREE_BOXES);
-const TITLE_BUTTON = pickTreeTitleButtonStyleBox(TREE_BOXES);
-
-describe('pickTreePanelStyleBox / pickTreeTitleButtonStyleBox', () => {
-  it('reads `panel` and `title_button_normal`, the boxes `tree.cpp` draws the panel and a title with', () => {
-    expect(DEFAULT_PANEL).toBe(TREE_BOXES.panel);
-    expect(TITLE_BUTTON).toBe(TREE_BOXES.title_button_normal);
-  });
-  it('takes an override over the default', () => {
-    const override = { ...DEFAULT_PANEL, bgColor: { r: 1, g: 0, b: 0, a: 1 } };
-    expect(pickTreePanelStyleBox({ ...TREE_BOXES, panel: override })).toBe(override);
-  });
-});
+const DEFAULT_PANEL = TREE_BOXES.panel!;
+const TITLE_BUTTON = TREE_BOXES.title_button_normal!;
 
 describe('treeTitleButtonHeightPx', () => {
   it('is zero when column_titles_visible is unset', () => {

@@ -13,7 +13,7 @@ import { CONTROL_FONT_COLOR, scaledPx, STYLE_FILL } from '../theme.js';
 import { separatorLine } from './containers.js';
 import type { DefaultThemeType, DefaultThemeTypes } from './defaultTheme.js';
 import { allSides, makeFlatStyleBox, withBorder, withExpandMargin } from './styleBoxes.js';
-import { BLACK, POPUP_BORDER_COLOR, typeItems, WHITE } from './typeItems.js';
+import { BLACK, POPUP_BORDER_COLOR, typeItems, WHITE, whiteAt } from './typeItems.js';
 
 /**
  * Window (`default_theme.cpp:672-688`). `set_constant` takes an `int`, so `36 * scale`, `18 * scale` and
@@ -57,7 +57,7 @@ function acceptDialog(scale: number): DefaultThemeType {
 /** FileDialog (`default_theme.cpp:696-722`). Its icons are not in the table. */
 function fileDialog(): DefaultThemeType {
   return typeItems({
-    colors: { folder_icon_color: WHITE, file_icon_color: WHITE, file_disabled_color: { ...WHITE, a: 0.25 } },
+    colors: { folder_icon_color: WHITE, file_icon_color: WHITE, file_disabled_color: whiteAt(0.25) },
     constants: { thumbnail_size: 64 },
   });
 }

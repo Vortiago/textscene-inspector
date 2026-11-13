@@ -1,38 +1,9 @@
-/**
- * The default-theme data the native Control solver and painters read:
- * `ScaledGodotTheme` unchanged, plus the StyleBoxFlat fill colours as 0..1
- * `Color` components, because a native painter multiplies vertex colours
- * rather than setting a CSS `rgba(...)` background.
- */
+/** The scaled default-theme metrics the native Control solver and painters read, built once per project scale. */
 
-import { scaledGodotTheme, STYLE_FILL, type ScaledGodotTheme } from '../../../godot/scene/theme';
-import type { Rgba } from '../../../godot/math/math';
+import { scaledGodotTheme, type ScaledGodotTheme } from '../../../godot/scene/theme';
 
-/**
- * The default flat stylebox's fill by draw state, from `scene/theme/default_theme.cpp`'s
- * `fill_default_theme`, which scales every length it passes to `make_flat_stylebox` but never a
- * `Color` literal, so the colours are not scaled.
- */
-interface NativeThemeStyleFill {
-  /** `style_normal_color` = `Color(0.1, 0.1, 0.1, 0.6)`. */
-  normal: Rgba;
-  /** `style_hover_color` = `Color(0.225, 0.225, 0.225, 0.6)`. */
-  hover: Rgba;
-  /** `style_pressed_color` = `Color(0, 0, 0, 0.6)`. */
-  pressed: Rgba;
-  /** `style_disabled_color` = `Color(0.1, 0.1, 0.1, 0.3)`. */
-  disabled: Rgba;
-  /** `style_popup_color` = `Color(0.25, 0.25, 0.25, 1)`. */
-  popup: Rgba;
-  /** `style_popup_hover_color` = `Color(0.4, 0.4, 0.4, 1)`. */
-  popupHover: Rgba;
-  /** `style_progress_color` = `Color(1, 1, 1, 0.4)`, ProgressBar's `fill`. */
-  progress: Rgba;
-}
-
-export interface NativeTheme extends ScaledGodotTheme {
-  styleFill: NativeThemeStyleFill;
-}
+/** The default theme's scaled metrics, by project scale. Its theme items live in the default theme table. */
+export type NativeTheme = ScaledGodotTheme;
 
 /**
  * Written only by `nativeTheme`, never cleared. Keyed, not one entry: two open previews of
@@ -51,5 +22,5 @@ export function nativeTheme(scale: number): NativeTheme {
 }
 
 function buildNativeTheme(scale: number): NativeTheme {
-  return { ...scaledGodotTheme(scale), styleFill: STYLE_FILL };
+  return scaledGodotTheme(scale);
 }

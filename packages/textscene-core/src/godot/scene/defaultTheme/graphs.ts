@@ -11,26 +11,15 @@
 import type { Rgba } from '../../math/math.js';
 import { CONTROL_FONT_COLOR, scaledPx, STYLE_FILL } from '../theme.js';
 import { focusStyleBox } from './button.js';
-import type { DefaultFlatStyleBox, DefaultThemeType, DefaultThemeTypes, Sides } from './defaultTheme.js';
-import { allSides, makeEmptyStyleBox, makeFlatStyleBox, withBorder } from './styleBoxes.js';
-import { typeItems, WHITE } from './typeItems.js';
+import type { DefaultThemeType, DefaultThemeTypes, Sides } from './defaultTheme.js';
+import { lightened } from '../../math/color.js';
+import { allSides, makeEmptyStyleBox, makeFlatStyleBox, withBorder, withBorderColor } from './styleBoxes.js';
+import { typeItems, WHITE, whiteAt } from './typeItems.js';
 
 /** The wide margins of the GraphNode and GraphFrame panels (`default_theme.cpp:789`, `:830`). */
 const GRAPH_PANEL_MARGIN: Sides = { left: 18, top: 12, right: 18, bottom: 12 };
 
-/** `style_normal_color.lightened(0.3)`: GraphNode's `titlebar` (`default_theme.cpp:794`). */
-const lightened = ({ r, g, b, a }: Rgba, amount: number): Rgba => ({
-  r: r + (1 - r) * amount,
-  g: g + (1 - g) * amount,
-  b: b + (1 - b) * amount,
-  a,
-});
-
 const grey = (value: number, a: number): Rgba => ({ r: value, g: value, b: value, a });
-const whiteAt = (a: number): Rgba => ({ r: 1, g: 1, b: 1, a });
-
-/** Only the colour changes: `set_border_color` on a box whose border width stays as it is. */
-const withBorderColor = (box: DefaultFlatStyleBox, color: Rgba) => withBorder(box, box.borderWidth, color);
 
 function graphNode(scale: number): DefaultThemeType {
   const focus = focusStyleBox(scale);
@@ -43,6 +32,7 @@ function graphNode(scale: number): DefaultThemeType {
       panel: normal,
       panel_selected: withBorderColor(normal, grey(0.625, 0.6)),
       panel_focus: focus,
+      // `style_normal_color.lightened(0.3)` (`:794`).
       titlebar: makeFlatStyleBox(scale, lightened(STYLE_FILL.normal, 0.3)),
       // `graphn_sb_titlebar_selected` duplicates `graphnode_normal`, not the titlebar (`:795-796`).
       titlebar_selected: { ...normal, bgColor: { r: 1, g: 0.625, b: 0.625, a: 0.6 } },

@@ -17,7 +17,7 @@ import {
   type TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import {
   resolveTextTheme,
@@ -102,15 +102,6 @@ export function itemListSpacing(constants: SolveNode['constants']): ItemListSpac
     iconMargin: requiredThemeItem(constants, 'icon_margin'),
     lineSeparation: requiredThemeItem(constants, 'line_separation'),
   };
-}
-
-export function pickItemListPanelStyleBox(styleBoxes: SolveNode['styleBoxes']): StyleBoxFlatData {
-  return requiredThemeItem(styleBoxes, 'panel');
-}
-
-/** The `selected` box. `selected_focus` is the same box in the default theme (`default_theme.cpp:964-965`). */
-export function pickItemListSelectedStyleBox(styleBoxes: SolveNode['styleBoxes']): StyleBoxFlatData {
-  return requiredThemeItem(styleBoxes, 'selected');
 }
 
 // --- Icon geometry ---------------------------------------------------------
@@ -530,7 +521,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
 
   const { hSeparation } = spacing;
   const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
-  const panelMin = contentMarginSize(pickItemListPanelStyleBox(n.styleBoxes));
+  const panelMin = contentMarginSize(requiredThemeItem(n.styleBoxes, 'panel'));
   const tentative = ctx.tentativeRect?.(n);
   const barMinimums = scrollBarThicknesses(internalScrollBarBoxes(n));
   const packed = packItemListRows({
@@ -646,21 +637,12 @@ export function itemIconColor(disabled: boolean, tint: Rgba = WHITE): Rgba {
   return disabled ? { ...tint, a: tint.a * 0.5 } : tint;
 }
 
-/** `font_selected_color` (`item_list.cpp:1610-1611`). */
-export function itemListSelectedFontColor(n: Pick<SolveNode, 'colors'>): Rgba {
-  return requiredThemeItem(n.colors, 'font_selected_color');
-}
-
 /** `custom_fg` is likewise never authorable, so `txt_modulate` always resolves to `font_color`, dimmed on `disabled` (`item_list.cpp:1614-1622`). */
 export function itemTextColor(baseColor: Rgba, disabled: boolean): Rgba {
   return disabled ? { ...baseColor, a: baseColor.a * 0.5 } : baseColor;
 }
 
 // --- Row/column guide lines: item_list.cpp:1446-1459 -----------------------
-
-export function itemListGuideColor(n: Pick<SolveNode, 'colors'>): Rgba {
-  return requiredThemeItem(n.colors, 'guide_color');
-}
 
 interface ItemListGuideLine {
   /**
@@ -828,9 +810,4 @@ export function itemListCursorRect(input: {
   rtl: boolean;
 }): Rect2 {
   return itemListSelectedRect({ ...input, panelMarginLeft: 0, panelMarginRight: 0 });
-}
-
-/** The `cursor_unfocused` box (`item_list.cpp:2455`). */
-export function pickItemListCursorStyleBox(styleBoxes: SolveNode['styleBoxes']): StyleBoxFlatData {
-  return requiredThemeItem(styleBoxes, 'cursor_unfocused');
 }

@@ -31,8 +31,9 @@ import {
 import { RESIZER_SE_ICON, RESIZER_SE_ICON_SIZE } from '../graphelement/graphIcons';
 import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import { GRAPH_FRAME_TITLE_VARIATION, graphFrameStyles, graphFrameTitleTextMin } from './nativeSolver';
+import { GRAPH_FRAME_TITLE_VARIATION, graphFrameTitleTextMin } from './nativeSolver';
 import type { GraphFrameProperties } from './types';
+import { graphElementStyles } from '../graphelement/graphElementStyles';
 import { lightened } from '../../../../godot/math/color';
 import type { Rgba } from '../../../../godot/math/math';
 
@@ -66,7 +67,7 @@ export function GraphFrame({
   // prop rather than reading them (`nativeClipCoverage.test.tsx`'s own doc).
   const clippingPlanes = useControlClipPlanes();
   const selected = props.selected === true;
-  const styles = graphFrameStyles(solveNode);
+  const styles = graphElementStyles(solveNode);
   const resizerSize = scaledIconSizeOf(RESIZER_SE_ICON_SIZE, theme.scale);
   const basePanel = selected ? styles.panelSelected : styles.panel;
   // `:126`: the untinted arm draws `sb_panel_flat` alone, so a texture panel

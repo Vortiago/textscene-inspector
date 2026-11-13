@@ -5,6 +5,9 @@ import type { DefaultThemeType } from './defaultTheme.js';
 
 /** Frozen here, as the table that shares them is: no reader writes a colour it reads. */
 export const WHITE: Rgba = Object.freeze({ r: 1, g: 1, b: 1, a: 1 });
+
+/** `Color(1, 1, 1, a)`. */
+export const whiteAt = (a: number): Rgba => ({ ...WHITE, a });
 export const BLACK: Rgba = Object.freeze({ r: 0, g: 0, b: 0, a: 1 });
 export const CLEAR: Rgba = Object.freeze({ r: 0, g: 0, b: 0, a: 0 });
 

@@ -94,6 +94,13 @@ export const pickerChildTheme = (n: SolveNode, nativeTheme: NativeTheme): Picker
 
 const childThemesOf = perObject((_node: SolveNode) => new WeakMap<NativeTheme, PickerChildTheme>());
 
+function buttonBoxes(styleBoxes: SolveNode['styleBoxes'], rtl: boolean): ButtonBoxes {
+  return {
+    normal: pickButtonStyleBox(styleBoxes, 'normal', rtl),
+    disabled: pickButtonStyleBox(styleBoxes, 'disabled', rtl),
+  };
+}
+
 function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildTheme {
   const label = internalChildThemeItems(n, 'Label');
   const button = internalChildThemeItems(n, 'Button');
@@ -109,14 +116,8 @@ function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildThe
   const withBoxes: PickerTheme = {
     ...theme,
     sizes: pickerSizes(n.constants),
-    button: {
-      normal: pickButtonStyleBox(button.styleBoxes, 'normal', n.rtl),
-      disabled: pickButtonStyleBox(button.styleBoxes, 'disabled', n.rtl),
-    },
-    flatMenuButton: {
-      normal: pickButtonStyleBox(flatMenuButton.styleBoxes, 'normal', n.rtl),
-      disabled: pickButtonStyleBox(flatMenuButton.styleBoxes, 'disabled', n.rtl),
-    },
+    button: buttonBoxes(button.styleBoxes, n.rtl),
+    flatMenuButton: buttonBoxes(flatMenuButton.styleBoxes, n.rtl),
     modeButtons: {
       normal: pickTabStyleBox(tabs.styleBoxes, 'unselected'),
       pressed: pickTabStyleBox(tabs.styleBoxes, 'selected'),

@@ -17,7 +17,7 @@ import type { ControlProperties } from '../control/types';
 import type { GraphElementProperties } from '../graphelement/types';
 import type { GraphFrameProperties } from '../graphframe/types';
 import { graphNodeStyles } from '../graphnode/nativeSolver';
-import { graphFrameStyles } from '../graphframe/nativeSolver';
+import { graphElementStyles } from '../graphelement/graphElementStyles';
 import type { GraphEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -273,7 +273,7 @@ export function graphEditElements(
         wanted === 'GraphFrame'
           ? frameProps.tintColorEnabled
             ? (frameProps.tintColor ?? GRAPH_FRAME_DEFAULT_TINT)
-            : graphFrameStyles(e.node).panel.bgColor
+            : graphElementStyles(e.node).panel.bgColor
           : graphNodeStyles(e.node).panel.bgColor;
       minimapElements.push({ key: e.key, ...e.box, bgColor });
     }

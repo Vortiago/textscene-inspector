@@ -8,10 +8,9 @@
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import {
-  pickTreePanelStyleBox,
-  pickTreeTitleButtonStyleBox,
   treeTitleButtonHeightPx,
   treeContentRect,
   treeColumnWidthPx,
@@ -23,8 +22,8 @@ const TREE_COLUMNS_DEFAULT = 1;
 
 export function Tree({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TreeProperties>(solveNode);
-  const panelBox = pickTreePanelStyleBox(solveNode.styleBoxes);
-  const titleButtonBox = pickTreeTitleButtonStyleBox(solveNode.styleBoxes);
+  const panelBox = requiredThemeItem(solveNode.styleBoxes, 'panel');
+  const titleButtonBox = requiredThemeItem(solveNode.styleBoxes, 'title_button_normal');
 
   const columns = Math.max(1, props.columns ?? TREE_COLUMNS_DEFAULT);
   const titleHeightPx = treeTitleButtonHeightPx(props.columnTitlesVisible, titleButtonBox);

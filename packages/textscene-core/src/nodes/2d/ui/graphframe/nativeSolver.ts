@@ -12,7 +12,7 @@
 
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
+import { graphElementStyles } from '../graphelement/graphElementStyles';
 import {
   controlSolverRegistry,
   type ContainerLayoutFn,
@@ -26,16 +26,6 @@ import { DEFAULT_SIZE_FLAGS } from '../../../../godot/scene/control';
 
 /** `graph_frame.cpp` theme type variation for its internal title Label: `graph_frame.cpp:354`. */
 export const GRAPH_FRAME_TITLE_VARIATION = 'GraphFrameTitleLabel';
-
-export function graphFrameStyles(n: SolveNode) {
-  const boxes = n.styleBoxes;
-  return {
-    panel: requiredThemeItem(boxes, 'panel'),
-    panelSelected: requiredThemeItem(boxes, 'panel_selected'),
-    titlebar: requiredThemeItem(boxes, 'titlebar'),
-    titlebarSelected: requiredThemeItem(boxes, 'titlebar_selected'),
-  };
-}
 
 function hFlagsOf(n: SolveNode): number {
   return (n.node.properties as GraphFrameProperties).sizeFlagsHorizontal ?? DEFAULT_SIZE_FLAGS;
@@ -53,7 +43,7 @@ export function graphFrameTitleTextMin(n: SolveNode): Vector2 {
 // --- get_minimum_size ---------------------------------------------------------
 
 const graphFrameMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const { panel, titlebar } = graphFrameStyles(n);
+  const { panel, titlebar } = graphElementStyles(n);
   const textMin = graphFrameTitleTextMin(n);
 
   let width = textMin.x + titlebar.contentMargin.left + titlebar.contentMargin.right;
@@ -78,7 +68,7 @@ controlSolverRegistry.registerMinimumSize('GraphFrame', graphFrameMinimumSize);
 // --- _resort -------------------------------------------------------------------
 
 const graphFrameLayout: ContainerLayoutFn = (n, children, contentRect) => {
-  const { panel, titlebar } = graphFrameStyles(n);
+  const { panel, titlebar } = graphElementStyles(n);
   const textMin = graphFrameTitleTextMin(n);
   const titlebarBand = titlebarGeometry(contentRect.w, textMin.y, titlebar);
 

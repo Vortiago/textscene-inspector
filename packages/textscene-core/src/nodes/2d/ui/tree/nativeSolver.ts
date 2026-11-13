@@ -10,17 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { Rect2 } from '../../../../godot/math/rect2';
-
-export function pickTreePanelStyleBox(styleBoxes: SolveNode['styleBoxes']): StyleBoxFlatData {
-  return requiredThemeItem(styleBoxes, 'panel');
-}
-
-export function pickTreeTitleButtonStyleBox(styleBoxes: SolveNode['styleBoxes']): StyleBoxFlatData {
-  return requiredThemeItem(styleBoxes, 'title_button_normal');
-}
 
 /**
  * `Tree::_get_title_button_height` (`tree.cpp:4616-4624`) for a blank title, since none is

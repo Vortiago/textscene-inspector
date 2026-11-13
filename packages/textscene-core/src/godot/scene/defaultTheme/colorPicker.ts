@@ -8,40 +8,22 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { clamp } from '../../math/math.js';
 import { scaledPx, STYLE_FILL } from '../theme.js';
 import { focusStyleBox } from './button.js';
-import type { DefaultFlatStyleBox, DefaultThemeTypes } from './defaultTheme.js';
-import {
-  allSides,
-  CORNER_DETAIL_MAX,
-  CORNER_DETAIL_MIN,
-  makeFlatStyleBox,
-  withCornerRadius,
-} from './styleBoxes.js';
-import { typeItems, WHITE } from './typeItems.js';
-
-/** `set_corner_radius_all` and `set_corner_detail` on scaled values, clamped as `set_corner_detail` clamps. */
-function withCorners(box: DefaultFlatStyleBox, radius: number, detail: number): DefaultFlatStyleBox {
-  const rounded = withCornerRadius(box, {
-    topLeft: radius,
-    topRight: radius,
-    bottomRight: radius,
-    bottomLeft: radius,
-  });
-  return { ...rounded, cornerDetail: clamp(detail, CORNER_DETAIL_MIN, CORNER_DETAIL_MAX) };
-}
+import type { DefaultThemeTypes } from './defaultTheme.js';
+import { allSides, makeFlatStyleBox, withCornerRadiusAll } from './styleBoxes.js';
+import { typeItems, WHITE, whiteAt } from './typeItems.js';
 
 export function colorPickerTypes(scale: number): DefaultThemeTypes {
   const rounded = (length: number) => scaledPx(length, scale);
   const focus = focusStyleBox(scale);
-  const focusCircle = withCorners(
+  const focusCircle = withCornerRadiusAll(
     makeFlatStyleBox(scale, STYLE_FILL.focus, { drawCenter: false, borderWidth: 2 }),
     rounded(256),
     rounded(32)
   );
   // `set_anti_aliased(false)` (`:1158`) is not a field of the table's box.
-  const presetForeground = withCorners(
+  const presetForeground = withCornerRadiusAll(
     makeFlatStyleBox(scale, WHITE, { margin: allSides(2) }),
     rounded(2),
     rounded(2)
@@ -49,7 +31,7 @@ export function colorPickerTypes(scale: number): DefaultThemeTypes {
   return {
     ColorPicker: typeItems({
       styles: { sample_focus: focus, picker_focus_rectangle: focus, picker_focus_circle: focusCircle },
-      colors: { focused_not_editing_cursor_color: { ...WHITE, a: 0.275 } },
+      colors: { focused_not_editing_cursor_color: whiteAt(0.275) },
       constants: {
         margin: rounded(4),
         sv_width: rounded(256),

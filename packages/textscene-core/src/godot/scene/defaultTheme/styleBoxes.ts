@@ -105,6 +105,24 @@ export function withCornerRadius(box: DefaultFlatStyleBox, corners: Partial<Corn
   return { ...box, cornerRadius: { ...box.cornerRadius, ...corners } };
 }
 
+/** `set_corner_radius_all` and `set_corner_detail`, already scaled at the call site, clamped as `set_corner_detail` clamps. */
+export function withCornerRadiusAll(
+  box: DefaultFlatStyleBox,
+  radius: number,
+  detail: number
+): DefaultFlatStyleBox {
+  return {
+    ...box,
+    cornerRadius: allCorners(radius),
+    cornerDetail: clamp(detail, CORNER_DETAIL_MIN, CORNER_DETAIL_MAX),
+  };
+}
+
+/** `set_border_color` alone: the border width stays as it is. */
+export function withBorderColor(box: DefaultFlatStyleBox, color: Rgba): DefaultFlatStyleBox {
+  return { ...box, borderColor: color };
+}
+
 /** `set_border_width` on each side, already scaled at the call site, and `set_border_color`. */
 export function withBorder(box: DefaultFlatStyleBox, width: Sides, color: Rgba): DefaultFlatStyleBox {
   return { ...box, borderWidth: width, borderColor: color };

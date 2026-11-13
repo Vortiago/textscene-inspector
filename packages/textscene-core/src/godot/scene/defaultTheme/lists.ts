@@ -54,7 +54,7 @@ export function listTypes(scale: number): DefaultThemeTypes {
   const rounded = (length: number) => scaledPx(length, scale);
   const focus = focusStyleBox(scale);
   const button = buttonBoxes(scale);
-  const titleButton = (color: Rgba) => makeFlatStyleBox(scale, color);
+  const flat = (color: Rgba) => makeFlatStyleBox(scale, color);
   return {
     Tree: typeItems({
       styles: {
@@ -62,13 +62,13 @@ export function listTypes(scale: number): DefaultThemeTypes {
         panel: makeFlatStyleBox(scale, STYLE_FILL.normal, {
           margin: { left: 4, top: 4, right: 4, bottom: 5 },
         }),
-        hovered_dimmed: makeFlatStyleBox(scale, HOVERED_DIMMED_FILL),
+        hovered_dimmed: flat(HOVERED_DIMMED_FILL),
         // `:872` sets `button_hover` a second time, to `button_hover`, after `:870`'s translucent white.
         button_hover: button.hover,
         button_pressed: button.pressed,
-        title_button_normal: titleButton(STYLE_FILL.pressed),
-        title_button_pressed: titleButton(STYLE_FILL.hover),
-        title_button_hover: titleButton(STYLE_FILL.normal),
+        title_button_normal: flat(STYLE_FILL.pressed),
+        title_button_pressed: flat(STYLE_FILL.hover),
+        title_button_hover: flat(STYLE_FILL.normal),
         custom_button: button.normal,
         custom_button_pressed: button.pressed,
         custom_button_hover: button.hover,

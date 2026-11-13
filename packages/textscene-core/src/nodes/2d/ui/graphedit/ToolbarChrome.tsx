@@ -98,7 +98,6 @@ export function GraphEditToolbarChrome({
   slot,
 }: GraphEditToolbarProps) {
   const pieces = canvasSubOrders(slot, TOOLBAR_ITEM_PIECES);
-  const panelStyle = toolbarTheme.menuPanel;
   const labelColor = useMemo(
     () => multiplyModulate(tint.own, toolbarTheme.labelColor),
     [tint.own, toolbarTheme]
@@ -140,7 +139,7 @@ export function GraphEditToolbarChrome({
   return (
     <CanvasItemGroup position={[panelRect.x, -panelRect.y, 0]} renderOrder={slot.key}>
       <StyleBoxQuad
-        styleBox={panelStyle}
+        styleBox={toolbarTheme.menuPanel}
         color={tint.own}
         rect={{ x: 0, y: 0, w: panelRect.w, h: panelRect.h }}
         renderOrder={slot.key}
