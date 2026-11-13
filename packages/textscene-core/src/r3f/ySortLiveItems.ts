@@ -40,11 +40,6 @@ export function liveGroupChain(item: YSortItem, basePath: string, groupAt: Group
   return chain;
 }
 
-/** Where the sorted origin sits in the last group of the chain: a tile row's origin in its layer, or undefined. */
-export function liveRootPose(item: YSortItem): Transform2DColumns | undefined {
-  return item.tileData?.rowOrigin;
-}
-
 /** The y of the origin that `chain` places in the sort root's space. `rootPose` is a tile row's origin in its layer. */
 export function sortYOfChain(chain: readonly Object3D[], rootPose?: Transform2DColumns): number {
   toSortRoot.identity();

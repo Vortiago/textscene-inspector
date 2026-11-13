@@ -9,18 +9,11 @@ import type { SceneTileCell } from '../../../../resources/tileset/sceneTileCells
 import { useInstancedScenePaths } from '../../../../r3f/contexts/InstancedScenePathsContext';
 import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
 import { useLiveStepOf } from '../../../../r3f/useLiveSceneTree';
-
-/** What a layer draws for the scene tiles of its cells. */
-export interface SceneTileDrawing {
-  /** The instance children, in the order of the cells. */
-  instances: readonly TscnNode[];
-  /** The tiles the editor marks with a placeholder disc: no scene, a refused root or `display_placeholder`. */
-  placeholderTiles: readonly SceneTileCell[];
-}
+import type { SceneTiles } from '../../../../r3f/liveSceneTiles';
 
 const NO_TILES: readonly SceneTileCell[] = [];
 
-export function useSceneTiles(node: TscnNode): SceneTileDrawing {
+export function useSceneTiles(node: TscnNode): SceneTiles {
   const ambient = useSceneResources();
   const enclosingScenePaths = useInstancedScenePaths();
   const scope = useMemo<SceneScope>(
@@ -30,7 +23,7 @@ export function useSceneTiles(node: TscnNode): SceneTileDrawing {
   const step = useLiveStepOf(node, scope);
   return useMemo(
     () => ({
-      instances: step.groups.filter((group) => group.origin === 'tiles').flatMap((group) => group.children),
+      children: step.groups.filter((group) => group.origin === 'tiles').flatMap((group) => group.children),
       placeholderTiles: step.placeholderTiles ?? NO_TILES,
     }),
     [step]

@@ -7,13 +7,15 @@
 import type { SceneScope } from '../parser/types.js';
 import type { LiveNode } from '../resources/liveNode.js';
 import { descendsFromClass } from '../godot/classdb/classBaseTypes.js';
+import { isControlType } from './canvasItemClass.js';
+import { perObject } from '../utils/perObject.js';
 import { sceneTileCells, type SceneTileCell } from '../resources/tileset/sceneTileCells.js';
 import {
   sceneTilePlacement,
   type SceneRootKind,
   type SceneTilePlacement,
 } from '../resources/tileset/sceneTilePlacement.js';
-import type { TileSetModel } from '../resources/tileset/types.js';
+import type { TileGrid, TileSetModel } from '../resources/tileset/types.js';
 import type { SceneFile } from '../resources/formats/packedscene/kind.js';
 import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
@@ -49,6 +51,15 @@ export function sceneTileLayerCells(node: LiveNode): readonly PlacedCell[] | nul
   return null;
 }
 
+/** Whether `node` holds a tile layer with cells, read with no array built. */
+export function hasSceneTileCells(node: LiveNode): boolean {
+  if (node.type === 'TileMap') {
+    const { layers } = node.properties as Partial<TileMapProperties>;
+    return layers?.some((layer) => layer.enabled && layer.cells?.length) ?? false;
+  }
+  return (sceneTileLayerCells(node)?.length ?? 0) > 0;
+}
+
 /**
  * The scene tiles of `cells`. `rootOf` judges the scene a tile names, as the tree merges it. A
  * scene not yet loaded keeps its child, which draws nothing and shows no disc until it does.
@@ -60,24 +71,23 @@ export function sceneTilesOf(
   rootOf: (instance: LiveNode) => SceneTileRoot
 ): SceneTiles {
   const allTiles = model.sceneSources.size ? sceneTileCells(model, cells) : [];
-  const instances = new Map<SceneFile, LiveNode>();
-  const roots = new Map<SceneFile, SceneTileRoot>();
-  const rootOfScene = (scene: SceneFile): SceneTileRoot => {
-    let root = roots.get(scene);
-    if (root === undefined) {
+  const judged = new Map<SceneFile, JudgedScene>();
+  const judge = (scene: SceneFile): JudgedScene => {
+    let entry = judged.get(scene);
+    if (!entry) {
       const instance = instanceNode(scene, scope);
-      instances.set(scene, instance);
-      root = rootOf(instance);
-      roots.set(scene, root);
+      entry = { instance, root: rootOf(instance) };
+      judged.set(scene, entry);
     }
-    return root;
+    return entry;
   };
   const names = new TileNames();
   const children: LiveNode[] = [];
   const placeholderTiles: SceneTileCell[] = [];
   for (const sceneTile of allTiles) {
     const { cell, tile } = sceneTile;
-    const root = tile.scene && rootOfScene(tile.scene);
+    const scene = tile.scene && judge(tile.scene);
+    const root = scene && scene.root;
     // A scene that failed to load, or whose root is no CanvasItem, is no scene of the TileSet
     // (`tile_set.cpp:5828-5829`), so the tile gets a disc (`tile_map_layer.cpp:1683-1699`).
     const isSceneless = !root || root === 'failed' || root === 'no-canvas-item';
@@ -85,14 +95,20 @@ export function sceneTilesOf(
     // One Godot refuses to instantiate is valid (`:1631`), but `instantiate()` returns null (`:1632`).
     if (isSceneless || root === 'refused') continue;
     const placement = { grid: model, coords: cell.coords, alternativeId: cell.alternativeId };
-    children.push(tileChild(instances.get(tile.scene!)!, names.nameAt(cell.coords), placement));
+    children.push(tileChild(scene!.instance, names.nameAt(cell.coords), placement));
   }
   return { children, placeholderTiles };
 }
 
+/** The instance node of a scene, and what the tree says of its root. */
+interface JudgedScene {
+  readonly instance: LiveNode;
+  readonly root: SceneTileRoot;
+}
+
 /** The root kind of a merged instance root, or null for one that is no CanvasItem. */
 export function sceneRootKindOf(rootType: string): SceneRootKind | null {
-  if (descendsFromClass(rootType, 'Control')) return 'control';
+  if (isControlType(rootType)) return 'control';
   if (descendsFromClass(rootType, 'Node2D')) return 'node2d';
   return null;
 }
@@ -130,8 +146,29 @@ class TileNames {
   }
 }
 
-/** The instance of the scene file a tile names, which the tree judges once for every tile of it. */
+/**
+ * The instance of the scene file a tile names, which the tree judges once for every tile of it. The
+ * same scene and scope give the same node, so a rebuilt layer keeps the steps its tiles cached.
+ */
 function instanceNode(scene: SceneFile, scope: SceneScope): LiveNode {
+  const instances = instanceNodesOf(scene)(scope.internalResources)(scope.externalResources);
+  const key = scope.instancedScenePaths?.join('\n') ?? '';
+  let instance = instances.get(key);
+  if (!instance) {
+    instance = newInstanceNode(scene, scope);
+    instances.set(key, instance);
+  }
+  return instance;
+}
+
+/** By the pools of the scope, not the scope object: a tree built again makes a new scope over the same pools. */
+const instanceNodesOf = perObject((_scene: SceneFile) =>
+  perObject((_internal: SceneScope['internalResources']) =>
+    perObject((_external: SceneScope['externalResources']) => new Map<string, LiveNode>())
+  )
+);
+
+function newInstanceNode(scene: SceneFile, scope: SceneScope): LiveNode {
   return {
     name: scene.path,
     type: 'Node',
@@ -144,8 +181,27 @@ function instanceNode(scene: SceneFile, scope: SceneScope): LiveNode {
   };
 }
 
-/** The child one tile adds: the instance, named for its cell, which the edited scene does not own. */
+/**
+ * The child one tile adds: the instance, named for its cell, which the edited scene does not own. The
+ * same tile gives the same node, so a layer rebuilt for an edit elsewhere leaves its mounted tiles alone.
+ */
 function tileChild(instance: LiveNode, name: string, sceneTile: SceneTilePlacement): LiveNode {
+  const { grid, coords, alternativeId } = sceneTile;
+  const children = tileChildrenOf(instance)(grid);
+  const key = `${name}|${coords.x},${coords.y}|${alternativeId}`;
+  let child = children.get(key);
+  if (!child) {
+    child = newTileChild(instance, name, sceneTile);
+    children.set(key, child);
+  }
+  return child;
+}
+
+const tileChildrenOf = perObject((_instance: LiveNode) =>
+  perObject((_grid: TileGrid) => new Map<string, LiveNode>())
+);
+
+function newTileChild(instance: LiveNode, name: string, sceneTile: SceneTilePlacement): LiveNode {
   return {
     ...instance,
     name,

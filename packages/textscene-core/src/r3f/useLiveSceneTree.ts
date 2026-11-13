@@ -18,7 +18,7 @@ import {
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import { liveInstancePath, type LiveNode } from '../resources/liveNode.js';
 import { glbPathOf } from '../resources/glbSceneRoot.js';
-import { sceneTileLayerCells } from './liveSceneTiles.js';
+import { hasSceneTileCells } from './liveSceneTiles.js';
 import type { SceneGraph } from '../core/SceneGraph.js';
 import type { ResourceLoader } from '../resources/ResourceLoader.js';
 import type { ResourceType } from '../resources/ResourceEventBus.js';
@@ -346,9 +346,7 @@ export function useLiveStepOf(node: LiveNode, scope: SceneScope): LiveStep {
   const loader = useResourceLoader();
   const project = useProjectTreeSettings();
   const readsCaches =
-    liveInstancePath(node, scope) !== null ||
-    glbPathOf(node) !== undefined ||
-    (sceneTileLayerCells(node)?.length ?? 0) > 0;
+    liveInstancePath(node, scope) !== null || glbPathOf(node) !== undefined || hasSceneTileCells(node);
   const watched = readsCaches ? loader : null;
   const readAt = useCallback(
     (version: number) => loaderTreesOf(project)(watched, version).stepOf(node, scope),

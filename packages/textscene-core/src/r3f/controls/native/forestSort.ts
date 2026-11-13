@@ -6,7 +6,6 @@
  * Pure data: no React, no THREE.
  */
 
-import { VECTOR2_ZERO } from '../../../godot/math/vector';
 import { transform2DFromParts } from '../../../godot/math/transform2d';
 import { joinPath } from '../../../utils/nodePath';
 import { ysortsChildren, type PaintRange } from '../../canvasPaintOrder';
@@ -14,7 +13,7 @@ import type { ControlTransforms, SortedRunsValue } from '../../contexts/YSortCon
 import type { CanvasItemPaint } from '../../canvasItemPass/canvasItemPaint';
 import { sortedPaintOf, type ExtraSortItem, type ExtraSortItems } from '../../canvasItemPass/ySort';
 import type { SolvedControl } from './controlRectSolver';
-import { controlDrawTransformOf, controlItemOriginUnder } from './controlPixelSnap';
+import { controlDrawTransformOf, controlItemOrigin } from './controlPixelSnap';
 import { controlProps, type SolveNode } from './solveTree';
 import { controlSolverRegistry } from './solverRegistry';
 
@@ -45,7 +44,7 @@ export function controlTransformsOf(
     const entry = solved.get(node.path);
     if (!entry) return;
     const draw = solvedDrawTransformOf(node, entry);
-    const origin = controlItemOriginUnder(entry.rect, VECTOR2_ZERO, draw, snapToPixels);
+    const origin = controlItemOrigin(entry.rect, draw, snapToPixels);
     transforms.set(node.path, transform2DFromParts(draw.rotation, draw.scale, 0, origin));
   });
   return transforms;
@@ -166,14 +165,11 @@ function forestPaintsOf(tree: readonly SolveNode[]): ReadonlyMap<string, CanvasI
   return paints;
 }
 
-/** Visits every node of the forest in tree order, with the node above it, null for a root. */
-function eachSolveNode(
-  tree: readonly SolveNode[],
-  visit: (node: SolveNode, parent: SolveNode | null) => void
-): void {
-  const walk = (node: SolveNode, parent: SolveNode | null): void => {
-    visit(node, parent);
-    for (const child of node.children) walk(child, node);
+/** Visits every node of the forest in tree order. */
+function eachSolveNode(tree: readonly SolveNode[], visit: (node: SolveNode) => void): void {
+  const walk = (node: SolveNode): void => {
+    visit(node);
+    for (const child of node.children) walk(child);
   };
-  for (const root of tree) walk(root, null);
+  for (const root of tree) walk(root);
 }

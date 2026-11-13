@@ -170,6 +170,20 @@ describe('the scene tiles of a TileMapLayer', () => {
     expect(childPaths(tree, 'World/Layer')).toEqual(['World/Layer/Authored']);
   });
 
+  it('keep their node when the layer is built again, so a mounted tile stays mounted', () => {
+    const parse = (text: string) => new TscnParser().parse(text);
+    const main = parse(layerScene([{ x: 0, y: 0, tile: 1 }]));
+    const loaded = Object.fromEntries(Object.entries(SCENES).map(([path, text]) => [path, parse(text)]));
+    const ctx = contextOver(main, loaded);
+    // An edit of the layer gives it a new node, as the parser does for a changed section.
+    const edited = () => {
+      const [world] = main.nodes;
+      return [{ ...world!, children: world!.children.map((child) => ({ ...child })) }];
+    };
+    const tileOf = () => liveTreeOf(edited(), ctx).at('World/Layer/@SceneTile@0_0')!.raw;
+    expect(tileOf()).toBe(tileOf());
+  });
+
   it('are unowned, so a click on one selects no node of its own', () => {
     const tile = treeOf([{ x: 0, y: 0, tile: 1 }]).at('World/Layer/@SceneTile@0_0')!;
     expect(tile.raw.isUnowned).toBe(true);

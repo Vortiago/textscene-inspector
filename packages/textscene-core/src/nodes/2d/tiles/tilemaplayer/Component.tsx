@@ -17,7 +17,8 @@ import { YSortExtraChildrenProvider } from '../../../../r3f/ySortExtraChildren';
 import { useNodePath } from '../../../../r3f/contexts/NodePathContext';
 import { SceneTileInstances } from '../shared/SceneTileInstances';
 import { ScenePlaceholders } from '../shared/ScenePlaceholders';
-import { useSceneTiles, type SceneTileDrawing } from '../shared/useSceneTiles';
+import { useSceneTiles } from '../shared/useSceneTiles';
+import type { SceneTiles } from '../../../../r3f/liveSceneTiles';
 import type { TileMapLayerProperties } from './types';
 
 export function TileMapLayer({ node, children }: NodeComponentProps) {
@@ -47,7 +48,7 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
       }
     >
       {/* A scene tile is a child canvas item of the layer, so the sort takes it with the rows and children. */}
-      <YSortExtraChildrenProvider path={path} trailing={sceneTiles.instances}>
+      <YSortExtraChildrenProvider path={path} trailing={sceneTiles.children}>
         {children}
       </YSortExtraChildrenProvider>
     </CanvasItem2D>
@@ -57,7 +58,7 @@ export function TileMapLayer({ node, children }: NodeComponentProps) {
 interface QuadrantLayerProps extends NodeComponentProps {
   model: TileSetModel | null;
   status: TileSetStatus;
-  sceneTiles: SceneTileDrawing;
+  sceneTiles: SceneTiles;
 }
 
 function QuadrantLayer({ node, model, status, sceneTiles, children }: QuadrantLayerProps) {
@@ -104,7 +105,7 @@ function QuadrantLayer({ node, model, status, sceneTiles, children }: QuadrantLa
       )}
     >
       {children}
-      <SceneTileInstances node={node} instances={sceneTiles.instances} />
+      <SceneTileInstances node={node} instances={sceneTiles.children} />
     </CanvasItem2D>
   );
 }

@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { Object3D } from 'three';
-import { liveGroupChain, liveRootPose, sortYOfChain } from './ySortLiveItems';
+import { liveGroupChain, sortYOfChain } from './ySortLiveItems';
 import { TRANSFORM2D_IDENTITY } from '../godot/math/transform2d';
 import type { LiveNode } from '../resources/liveNode';
 import type { YSortItem } from './ySortItems';
@@ -49,6 +49,6 @@ describe('the root pose of a tile row', () => {
     } as YSortItem;
     const layerGroup = new Object3D();
     layerGroup.position.set(0, -100, 0);
-    expect(sortYOfChain([layerGroup], liveRootPose(row))).toBe(100 + 80);
+    expect(sortYOfChain([layerGroup], row.tileData?.rowOrigin)).toBe(100 + 80);
   });
 });

@@ -41,10 +41,10 @@ import {
 } from '../resources/reading';
 import type { SceneResources } from './SceneResourcesContext.js';
 import { TILE_SET } from '../resources/tileset/kind.js';
+import { isCanvasItem } from './canvasItemClass.js';
 import type { SceneTileCell } from '../resources/tileset/sceneTileCells.js';
 import {
   placedSceneTileRoot,
-  sceneRootKindOf,
   sceneTileLayerCells,
   sceneTilesOf,
   type SceneTileRoot,
@@ -504,35 +504,44 @@ function liveStep(node: LiveNode, groupScope: SceneScope, sources: TreeSources):
   const lookup = lookupInstance(node, own, sceneCache);
   const instanced = loadedInstance(lookup, own, sceneCache);
   const merged = collapseInstance(node, own, instanced, sceneCache);
-  if (merged === node) {
-    const groups = liveChildGroups(node, own, instanced, glbCache);
-    return withSceneTiles(
-      {
-        node,
-        isMerged: false,
-        instancePath,
-        scope: own,
-        isRefusedInstance: instanced?.isRefused ?? false,
-        isFailedInstance: lookup.scenePath !== null && lookup.cached === null,
-        groups,
-      },
-      sources
-    );
-  }
-  const root = node.sceneTile ? placedSceneTileRoot(merged, node.sceneTile) : merged;
-  const groups = mergedGroups(root, own, sceneCache, glbCache);
   return withSceneTiles(
-    {
-      node: root,
-      isMerged: true,
-      instancePath,
-      scope: groups[0]!.scope,
-      isRefusedInstance: false,
-      isFailedInstance: false,
-      groups,
-    },
+    merged === node
+      ? {
+          node,
+          isMerged: false,
+          instancePath,
+          scope: own,
+          isRefusedInstance: instanced?.isRefused ?? false,
+          isFailedInstance: lookup.scenePath !== null && lookup.cached === null,
+          groups: liveChildGroups(node, own, instanced, glbCache),
+        }
+      : mergedStep(
+          node.sceneTile ? placedSceneTileRoot(merged, node.sceneTile) : merged,
+          own,
+          instancePath,
+          sources
+        ),
     sources
   );
+}
+
+/** The step of an instance that merged into `root`, the root of the scene it instances. */
+function mergedStep(
+  root: LiveNode,
+  own: SceneScope,
+  instancePath: string | null,
+  { scenes, glbs }: TreeSources
+): LiveStep {
+  const groups = mergedGroups(root, own, scenes, glbs);
+  return {
+    node: root,
+    isMerged: true,
+    instancePath,
+    scope: groups[0]!.scope,
+    isRefusedInstance: false,
+    isFailedInstance: false,
+    groups,
+  };
 }
 
 /**
@@ -555,8 +564,8 @@ function withSceneTiles(step: LiveStep, sources: TreeSources): LiveStep {
 function sceneTileRoot(step: LiveStep): SceneTileRoot {
   if (step.isFailedInstance) return 'failed';
   if (step.isRefusedInstance) return 'refused';
-  if (step.isMerged) return sceneRootKindOf(step.node.type) ? 'canvas-item' : 'no-canvas-item';
-  return step.groups.some(isInjected) ? 'no-canvas-item' : 'pending';
+  if (step.isMerged) return isCanvasItem(step.node) ? 'canvas-item' : 'no-canvas-item';
+  return step.groups.some((group) => group.origin === 'glb') ? 'no-canvas-item' : 'pending';
 }
 
 /** Whether `group` holds GLB objects or scene tiles, which draw after the node's authored children. */

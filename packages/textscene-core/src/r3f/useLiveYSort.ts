@@ -8,7 +8,7 @@ import type { Object3D, Scene } from 'three';
 import { useOnMixerPose } from './contexts/AnimatedValueContext.js';
 import { useOptionalSelection } from './contexts/SelectionContext.js';
 import { trackTargetFinder } from './animation/trackTargets.js';
-import { liveGroupChain, liveRootPose, sortYOfChain, type GroupAt } from './ySortLiveItems.js';
+import { liveGroupChain, sortYOfChain, type GroupAt } from './ySortLiveItems.js';
 import { inSortOrder } from './ySortOrder.js';
 import { ySortItemId, type YSortItem } from './ySortItems.js';
 
@@ -122,7 +122,7 @@ function readMovedYs(
     }
     // A pose that moved none of the item's groups leaves its y as it was read.
     if (!chain || (posed && !hasPosedGroup(chain, posed))) continue;
-    const y = sortYOfChain(chain, liveRootPose(item));
+    const y = sortYOfChain(chain, item.tileData?.rowOrigin);
     if (y !== (liveRead.ys.get(id) ?? item.sortY)) moves.push([id, y]);
   }
   return moves;

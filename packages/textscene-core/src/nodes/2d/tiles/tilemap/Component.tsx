@@ -23,7 +23,8 @@ import type { TileMapLayerProperties } from '../tilemaplayer/types';
 import type { TileSetModel } from '../../../../resources/tileset/types';
 import { SceneTileInstances } from '../shared/SceneTileInstances';
 import { LayerPlaceholders } from './LayerPlaceholders';
-import { useSceneTiles, type SceneTileDrawing } from '../shared/useSceneTiles';
+import { useSceneTiles } from '../shared/useSceneTiles';
+import type { SceneTiles } from '../../../../r3f/liveSceneTiles';
 import { childCanvasItemProperties } from '../shared/childCanvasItem';
 import type { TileMapLayerData, TileMapProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
@@ -53,7 +54,7 @@ function YSortedTileMap({
   model,
   sceneTiles,
   children,
-}: { model: TileSetModel | null; sceneTiles: SceneTileDrawing } & NodeComponentProps) {
+}: { model: TileSetModel | null; sceneTiles: SceneTiles } & NodeComponentProps) {
   const props = node.properties as TileMapProperties;
   const path = useNodePath() ?? node.name;
   const layers = useMemo(() => layerNodesOf(node), [node]);
@@ -72,7 +73,7 @@ function YSortedTileMap({
         )
       }
     >
-      <YSortExtraChildrenProvider path={path} leading={layers} trailing={sceneTiles.instances}>
+      <YSortExtraChildrenProvider path={path} leading={layers} trailing={sceneTiles.children}>
         {children}
       </YSortExtraChildrenProvider>
     </CanvasItem2D>
@@ -111,7 +112,7 @@ function layerNodesOf(map: TscnNode): TscnNode[] {
 interface LayeredTileMapProps extends NodeComponentProps {
   model: TileSetModel | null;
   status: TileSetStatus;
-  sceneTiles: SceneTileDrawing;
+  sceneTiles: SceneTiles;
 }
 
 function LayeredTileMap({ node, model, status, sceneTiles, children }: LayeredTileMapProps) {
@@ -190,7 +191,7 @@ function LayeredTileMap({ node, model, status, sceneTiles, children }: LayeredTi
       )}
     >
       {children}
-      <SceneTileInstances node={node} instances={sceneTiles.instances} />
+      <SceneTileInstances node={node} instances={sceneTiles.children} />
     </CanvasItem2D>
   );
 }

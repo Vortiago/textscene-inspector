@@ -20,7 +20,7 @@ import type { CanvasItemPaint } from './canvasItemPaint';
 /** The transform in its parent of an item the tree does not place: a solved Control, or a pose a mixer wrote. */
 export type SortOrigins = ReadonlyMap<string, Transform2DColumns>;
 
-/** A piece a node draws that the tree does not list, such as a tile row or a scene tile. */
+/** A piece a node draws that the tree does not list, such as a tile row or a ScrollContainer's bar. */
 export interface ExtraSortItem {
   readonly id: string;
   /** The point it sorts on, in the space of the node that draws it. */
@@ -28,8 +28,7 @@ export interface ExtraSortItem {
   readonly size: number;
   /**
    * Whether Godot collects it after the node's authored children: an `INTERNAL_MODE_BACK` child such
-   * as a ScrollContainer's bar (`node.h:585-600`), or a scene tile the layer appends. Every other
-   * piece comes before them.
+   * as a ScrollContainer's bar (`node.h:585-600`). Every other piece comes before them.
    */
   readonly followsChildren: boolean;
 }

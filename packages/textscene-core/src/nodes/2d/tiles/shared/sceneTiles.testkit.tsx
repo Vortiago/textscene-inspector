@@ -285,7 +285,7 @@ tile_size = Vector2i(64, 64)
 sources/0 = SubResource("scenes")
 `;
 
-export const TILE_SCENES: Record<string, string> = {
+const TILE_SCENES: Record<string, string> = {
   'res://polygon.tscn': POLYGON_SCENE,
   'res://offset.tscn': OFFSET_SCENE,
   'res://control.tscn': CONTROL_SCENE,
