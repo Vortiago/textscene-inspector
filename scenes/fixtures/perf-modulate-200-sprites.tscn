@@ -1,0 +1,864 @@
+; A work budget scene: 200 Sprite2D below one Node2D root, three levels deep, in 10 rows of 20, with
+; an AnimationPlayer that plays a `modulate` track on the root. Every sprite draws in its own call,
+; so a change that batches or drops one shows in the budget.
+
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/sprite2d-marker.png" id="1_tex"]
+
+[sub_resource type="Animation" id="Animation_mod"]
+resource_name = "pulse"
+length = 2.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath(".:modulate")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {"times": PackedFloat32Array(0, 1, 2), "transitions": PackedFloat32Array(1, 1, 1), "update": 0, "values": [Color(1, 1, 1, 1), Color(1, 0.4, 0.4, 1), Color(1, 1, 1, 1)]}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_mod"]
+_data = {"pulse": SubResource("Animation_mod")}
+
+[node name="Parent" type="Node2D"]
+
+[node name="Pulse" type="AnimationPlayer" parent="."]
+libraries = {"": SubResource("AnimationLibrary_mod")}
+autoplay = "pulse"
+
+[node name="Band0" type="Node2D" parent="."]
+position = Vector2(0, 0)
+
+[node name="Row0" type="Node2D" parent="Band0"]
+position = Vector2(20, 20)
+
+[node name="Sprite0" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(0, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite1" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(48, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite2" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(96, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite3" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(144, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite4" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(192, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite5" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(240, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite6" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(288, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite7" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(336, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite8" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(384, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite9" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(432, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite10" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(480, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite11" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(528, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite12" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(576, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite13" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(624, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite14" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(672, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite15" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(720, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite16" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(768, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite17" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(816, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite18" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(864, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite19" type="Sprite2D" parent="Band0/Row0"]
+position = Vector2(912, 0)
+texture = ExtResource("1_tex")
+
+[node name="Row1" type="Node2D" parent="Band0"]
+position = Vector2(20, 68)
+
+[node name="Sprite0" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(0, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite1" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(48, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite2" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(96, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite3" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(144, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite4" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(192, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite5" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(240, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite6" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(288, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite7" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(336, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite8" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(384, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite9" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(432, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite10" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(480, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite11" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(528, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite12" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(576, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite13" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(624, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite14" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(672, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite15" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(720, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite16" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(768, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite17" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(816, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite18" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(864, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite19" type="Sprite2D" parent="Band0/Row1"]
+position = Vector2(912, 0)
+texture = ExtResource("1_tex")
+
+[node name="Row2" type="Node2D" parent="Band0"]
+position = Vector2(20, 116)
+
+[node name="Sprite0" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(0, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite1" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(48, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite2" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(96, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite3" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(144, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite4" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(192, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite5" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(240, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite6" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(288, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite7" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(336, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite8" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(384, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite9" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(432, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite10" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(480, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite11" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(528, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite12" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(576, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite13" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(624, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite14" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(672, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite15" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(720, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite16" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(768, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite17" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(816, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite18" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(864, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite19" type="Sprite2D" parent="Band0/Row2"]
+position = Vector2(912, 0)
+texture = ExtResource("1_tex")
+
+[node name="Row3" type="Node2D" parent="Band0"]
+position = Vector2(20, 164)
+
+[node name="Sprite0" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(0, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite1" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(48, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite2" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(96, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite3" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(144, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite4" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(192, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite5" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(240, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite6" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(288, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite7" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(336, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite8" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(384, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite9" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(432, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite10" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(480, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite11" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(528, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite12" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(576, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite13" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(624, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite14" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(672, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite15" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(720, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite16" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(768, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite17" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(816, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite18" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(864, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite19" type="Sprite2D" parent="Band0/Row3"]
+position = Vector2(912, 0)
+texture = ExtResource("1_tex")
+
+[node name="Row4" type="Node2D" parent="Band0"]
+position = Vector2(20, 212)
+
+[node name="Sprite0" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(0, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite1" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(48, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite2" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(96, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite3" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(144, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite4" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(192, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite5" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(240, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite6" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(288, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite7" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(336, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite8" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(384, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite9" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(432, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite10" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(480, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite11" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(528, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite12" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(576, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite13" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(624, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite14" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(672, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite15" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(720, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite16" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(768, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite17" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(816, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite18" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(864, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite19" type="Sprite2D" parent="Band0/Row4"]
+position = Vector2(912, 0)
+texture = ExtResource("1_tex")
+
+[node name="Band1" type="Node2D" parent="."]
+position = Vector2(0, 250)
+
+[node name="Row0" type="Node2D" parent="Band1"]
+position = Vector2(20, 20)
+
+[node name="Sprite0" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(0, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite1" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(48, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite2" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(96, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite3" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(144, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite4" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(192, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite5" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(240, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite6" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(288, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite7" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(336, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite8" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(384, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite9" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(432, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite10" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(480, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite11" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(528, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite12" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(576, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite13" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(624, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite14" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(672, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite15" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(720, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite16" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(768, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite17" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(816, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite18" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(864, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite19" type="Sprite2D" parent="Band1/Row0"]
+position = Vector2(912, 0)
+texture = ExtResource("1_tex")
+
+[node name="Row1" type="Node2D" parent="Band1"]
+position = Vector2(20, 68)
+
+[node name="Sprite0" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(0, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite1" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(48, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite2" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(96, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite3" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(144, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite4" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(192, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite5" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(240, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite6" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(288, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite7" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(336, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite8" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(384, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite9" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(432, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite10" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(480, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite11" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(528, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite12" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(576, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite13" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(624, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite14" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(672, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite15" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(720, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite16" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(768, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite17" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(816, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite18" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(864, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite19" type="Sprite2D" parent="Band1/Row1"]
+position = Vector2(912, 0)
+texture = ExtResource("1_tex")
+
+[node name="Row2" type="Node2D" parent="Band1"]
+position = Vector2(20, 116)
+
+[node name="Sprite0" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(0, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite1" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(48, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite2" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(96, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite3" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(144, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite4" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(192, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite5" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(240, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite6" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(288, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite7" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(336, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite8" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(384, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite9" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(432, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite10" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(480, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite11" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(528, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite12" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(576, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite13" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(624, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite14" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(672, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite15" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(720, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite16" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(768, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite17" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(816, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite18" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(864, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite19" type="Sprite2D" parent="Band1/Row2"]
+position = Vector2(912, 0)
+texture = ExtResource("1_tex")
+
+[node name="Row3" type="Node2D" parent="Band1"]
+position = Vector2(20, 164)
+
+[node name="Sprite0" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(0, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite1" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(48, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite2" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(96, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite3" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(144, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite4" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(192, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite5" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(240, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite6" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(288, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite7" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(336, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite8" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(384, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite9" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(432, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite10" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(480, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite11" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(528, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite12" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(576, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite13" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(624, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite14" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(672, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite15" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(720, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite16" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(768, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite17" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(816, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite18" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(864, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite19" type="Sprite2D" parent="Band1/Row3"]
+position = Vector2(912, 0)
+texture = ExtResource("1_tex")
+
+[node name="Row4" type="Node2D" parent="Band1"]
+position = Vector2(20, 212)
+
+[node name="Sprite0" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(0, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite1" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(48, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite2" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(96, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite3" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(144, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite4" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(192, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite5" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(240, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite6" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(288, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite7" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(336, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite8" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(384, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite9" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(432, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite10" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(480, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite11" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(528, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite12" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(576, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite13" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(624, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite14" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(672, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite15" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(720, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite16" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(768, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite17" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(816, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite18" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(864, 0)
+texture = ExtResource("1_tex")
+
+[node name="Sprite19" type="Sprite2D" parent="Band1/Row4"]
+position = Vector2(912, 0)
+texture = ExtResource("1_tex")

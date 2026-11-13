@@ -21,7 +21,11 @@ import { TextureRect } from './Component';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  linkedTree,
+  solveNode as emptySolveNode,
+} from '../../../../r3f/controls/native/testing/solveNode';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 const THEME = nativeTheme(1);
@@ -350,7 +354,7 @@ describe('<TextureRect> registered through <ControlCanvasWalker> (end-to-end wal
           externalResources={[{ id: '1', type: 'Texture2D', path: TEX }]}
         >
           <ControlCanvasWalker
-            tree={[grandparent]}
+            tree={[linkedTree(grandparent)]}
             generation={0}
             viewport={VIEWPORT}
             theme={THEME}

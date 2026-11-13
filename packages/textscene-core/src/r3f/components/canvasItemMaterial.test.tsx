@@ -15,8 +15,8 @@ import {
   type FakeResourceLoader,
 } from '../../resources/testing/createFakeResourceLoader';
 
-import type { Node2DProperties } from '../../nodes/base/node2d/types';
-import { useCanvasItemMaterial, useCanvasItemMaterialFile } from './canvasItemMaterialContext';
+import { useSceneResources } from '../SceneResourcesContext';
+import { useCanvasItemMaterialFile, useResolvedCanvasItemMaterial } from './canvasItemMaterial';
 import '../../resources/formats/binaryresource/index';
 import { CanvasItemMaterialBlendMode } from '../../godot/scene/canvasItemMaterial';
 
@@ -86,30 +86,28 @@ describe('useCanvasItemMaterialFile', () => {
   });
 });
 
-const nodeMaterial = (props: Partial<Node2DProperties>) =>
-  renderHook(() => useCanvasItemMaterial(props as Node2DProperties), { wrapper: wrapper(seededLoader()) })
-    .result.current;
+/** The material a node naming `ref` resolves to in the scene, below a parent that hands down none. */
+const nodeMaterial = (ref: string) =>
+  renderHook(
+    () =>
+      useResolvedCanvasItemMaterial({ ref, useParentMaterial: false }, useSceneResources(), { kind: 'none' }),
+    { wrapper: wrapper(seededLoader()) }
+  ).result.current;
 
-describe('useCanvasItemMaterial', () => {
+describe('useResolvedCanvasItemMaterial', () => {
   it("reads a node's ExtResource material from its .tres", () => {
-    expect(nodeMaterial({ materialPath: 'ExtResource("m")' })?.blendMode).toBe(
-      CanvasItemMaterialBlendMode.ADD
-    );
+    expect(nodeMaterial('ExtResource("m")')?.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
   });
 
   it("reads a node's SubResource material", () => {
-    expect(nodeMaterial({ materialPath: 'SubResource("sub")' })?.blendMode).toBe(
-      CanvasItemMaterialBlendMode.SUB
-    );
+    expect(nodeMaterial('SubResource("sub")')?.blendMode).toBe(CanvasItemMaterialBlendMode.SUB);
   });
 
   it("reads a node's ExtResource material from its binary .res", () => {
-    expect(nodeMaterial({ materialPath: 'ExtResource("bin")' })?.blendMode).toBe(
-      CanvasItemMaterialBlendMode.ADD
-    );
+    expect(nodeMaterial('ExtResource("bin")')?.blendMode).toBe(CanvasItemMaterialBlendMode.ADD);
   });
 
   it('gives null for an ExtResource id the scene does not declare', () => {
-    expect(nodeMaterial({ materialPath: 'ExtResource("missing")' })).toBeNull();
+    expect(nodeMaterial('ExtResource("missing")')).toBeNull();
   });
 });

@@ -14,12 +14,6 @@ import type { Rgba } from '../godot/math/math';
 
 export const WHITE_MODULATE: Rgba = { r: 1, g: 1, b: 1, a: 1 };
 
-export const Modulate2DContext = createContext<Rgba>(WHITE_MODULATE);
-
-export function useParentModulate(): Rgba {
-  return useContext(Modulate2DContext);
-}
-
 /**
  * Component-wise RGBA multiply (Godot composes modulate by multiplication), in double, not
  * `multiplyColor`: the double keeps our sRGB round trip on Godot's output at a half step, so
@@ -169,16 +163,17 @@ export function useVertexColorTint(own: Rgba): VertexColorTint {
   );
 }
 
-/** Resolve a CanvasItem's modulate/self_modulate into a material tint + child-context value. */
+/** A CanvasItem's modulate and self_modulate as its own pixels' tint and the product its children inherit. */
 export function useCanvasItemTint(
   props: { modulate: Rgba; self_modulate: Rgba },
+  /** The modulate product the item inherits. */
+  parent: Rgba,
   /**
    * A tint on this item's own pixels that is not passed on: the canvas modulate,
    * which Godot multiplies in per item in the base pass.
    */
   ownMultiplier: Rgba = WHITE_MODULATE
 ): CanvasItemTint {
-  const parent = useParentModulate();
   const inherited = useMemo(() => multiplyModulate(parent, props.modulate), [parent, props.modulate]);
   const self = useMemo(
     () => multiplyModulate(inherited, props.self_modulate),

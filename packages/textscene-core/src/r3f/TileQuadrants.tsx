@@ -11,7 +11,7 @@ import { quadrantCanvasItems, type TileCanvasItem } from '../resources/tileset/t
 import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
 import { LitCanvasItem } from './components/LitCanvasItemPixels';
 import { CanvasItemGroup, useCanvasItemKey } from './components/CanvasItemGroup';
-import { useCanvasItemMaterialFile } from './components/canvasItemMaterialContext';
+import { useCanvasItemMaterialFile } from './components/canvasItemMaterial';
 import type * as THREE from 'three';
 import { foldOwnPixelTint, WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';

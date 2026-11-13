@@ -12,7 +12,7 @@ import { canvasMapProps } from '../../canvas2DTextureDecode';
 import { canvasColorSpaceOf } from '../../canvasColorSpace';
 import { useIconTexture, useOptionalIconTexture, useNodeIcon } from './useIconTexture';
 import { fakeCanvasRenderer } from '../../testing/fakeCanvasRenderer';
-import { TextureSampler2DContext } from '../../canvasItemTextureSampler';
+import { InheritedFrom, inheritedState } from '../../testing/inheritedFrom';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../../../godot/scene/canvasItem';
 import type { ThemedIconRef } from './solveTree';
 import type { TscnInternalResource } from '../../../parser/types';
@@ -68,8 +68,12 @@ describe('useIconTexture', () => {
   it("samples with the owner's inherited filter and repeat (a Nearest parent makes the icon crisp)", () => {
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(
-        TextureSampler2DContext.Provider,
-        { value: { filter: CanvasItemTextureFilter.NEAREST, repeat: CanvasItemTextureRepeat.ENABLED } },
+        InheritedFrom,
+        {
+          state: inheritedState({
+            sampler: { filter: CanvasItemTextureFilter.NEAREST, repeat: CanvasItemTextureRepeat.ENABLED },
+          }),
+        },
         children
       );
 
@@ -89,12 +93,14 @@ describe('useIconTexture', () => {
         canvas.wrapper,
         null,
         createElement(
-          TextureSampler2DContext.Provider,
+          InheritedFrom,
           {
-            value: {
-              filter: CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC,
-              repeat: CanvasItemTextureRepeat.DISABLED,
-            },
+            state: inheritedState({
+              sampler: {
+                filter: CanvasItemTextureFilter.NEAREST_WITH_MIPMAPS_ANISOTROPIC,
+                repeat: CanvasItemTextureRepeat.DISABLED,
+              },
+            }),
           },
           children
         )

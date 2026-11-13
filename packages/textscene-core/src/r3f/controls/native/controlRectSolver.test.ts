@@ -8,14 +8,13 @@ import type { TscnNode } from '../../../parser/types';
 import type { ParsedHeading } from '../../../parser/utils';
 import { parseControl } from '../../../nodes/2d/ui/control/parser';
 import type { Rect2 } from '../../../godot/math/rect2';
+import { TRANSFORM2D_IDENTITY } from '../../../godot/math/transform2d';
 import type { SolveNode } from './solveTree';
-import type { CanvasAncestors } from '../../canvasItemPass/canvasAncestors';
 import { nativeTheme } from './nativeTheme';
 import { controlSolverRegistry, type ContainerLayoutFn, type SolveContext } from './solverRegistry';
 import { combinedMinimumSize, createSolveContext, solveControlTree } from './controlRectSolver';
 import { defineChannel } from './solveHandoff';
 import { controlNode, solveNode } from './testing/solveNode';
-import { ROOT_TEXTURE_SAMPLER } from '../../canvasItemTextureSampler';
 
 const VIEWPORT: Rect2 = { x: 0, y: 0, w: 1152, h: 648 };
 
@@ -410,16 +409,10 @@ describe('solveControlTree: a promoted Control anchors against its DIRECT parent
   // direct parent (canvas_item.cpp:565-571). Only `Control` overrides
   // `get_anchorable_rect` (control.cpp:1563-1566), and `CanvasItem`'s is a zero
   // rect (canvas_item.h:414), so a Control under a Node2D anchors against nothing.
-  const NODE2D_PARENT: CanvasAncestors = {
-    transform: { a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 },
-    modulate: { r: 1, g: 1, b: 1, a: 1 },
-    z: [],
-    sampler: ROOT_TEXTURE_SAMPLER,
-    material: { kind: 'none' },
-  };
+  const NODE2D_PARENT = TRANSFORM2D_IDENTITY;
 
   function promoted(path: string, properties: Props, children: SolveNode[] = []): SolveNode {
-    return { ...node(path, 'Control', properties, children), skippedAncestors: NODE2D_PARENT };
+    return { ...node(path, 'Control', properties, children), skippedTransform: NODE2D_PARENT };
   }
 
   it('anchors against a ZERO rect rather than the Control it was promoted to', () => {
