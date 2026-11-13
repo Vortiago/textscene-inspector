@@ -16,7 +16,6 @@ import { BUILDABLE_MATERIAL_TYPES } from '../../resources/materials/buildableMat
 import { RES_SCHEME } from '../../resources/resPath';
 import { resourceFilePath } from '../../resources/subResourcePath';
 import { findSubResource, type SceneResources } from '../SceneResourcesContext';
-import { NODE_PROPERTY } from '../../resources/useTexture2D';
 
 /** A material body and the resource tables its references resolve in: its owning file's. */
 export interface MaterialResource {
@@ -57,7 +56,7 @@ export type MaterialSource =
 export function resolveMaterialSource(
   ref: string | undefined,
   { internalResources, externalResources }: SceneResources,
-  isHeldLocally: boolean = NODE_PROPERTY,
+  isHeldLocally = true,
   origin?: string
 ): MaterialSource | undefined {
   if (!ref) return undefined;
@@ -85,7 +84,7 @@ export function resolveMaterialSource(
  */
 export function fileMaterialSources(
   materialPaths: readonly (string | null)[],
-  isHeldLocally: boolean = NODE_PROPERTY
+  isHeldLocally = true
 ): (MaterialSource | undefined)[] {
   return materialPaths.map((path) => (path ? fileMaterialSource(path, isHeldLocally) : undefined));
 }
@@ -121,7 +120,7 @@ export function resolveNextPass(
   return resolveMaterialSource(
     nextPass,
     { internalResources, externalResources },
-    isHeldLocally ?? NODE_PROPERTY,
+    isHeldLocally ?? true,
     // The link resolves in the same file's tables, so it keys by that file too.
     origin
   );

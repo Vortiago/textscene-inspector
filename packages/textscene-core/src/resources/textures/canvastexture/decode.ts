@@ -1,5 +1,5 @@
 /**
- * CanvasTexture decode: the texture references, the specular shading and the sampler override.
+ * CanvasTexture decode: the specular shading and the sampler override.
  * Every default is Godot's member initialiser (`scene/main/canvas_item.h:433-442`). No THREE.
  */
 
@@ -20,11 +20,8 @@ const TEXTURE_REPEATS = Object.values(CanvasItemTextureRepeat);
  */
 const SPECULAR_OFF_SHININESS = 0.999;
 
-export function decodeCanvasTexture(properties: Record<string, string>): CanvasTextureData {
+export function decodeCanvasTexture(properties: Readonly<Record<string, string>>): CanvasTextureData {
   return {
-    diffuseTexture: properties.diffuse_texture ?? null,
-    normalTexture: properties.normal_texture ?? null,
-    specularTexture: properties.specular_texture ?? null,
     specularColor: colorOr(properties.specular_color, WHITE),
     specularShininess: floatOr(properties.specular_shininess, 1, 'CanvasTexture specular_shininess'),
     textureFilter: enumOr(

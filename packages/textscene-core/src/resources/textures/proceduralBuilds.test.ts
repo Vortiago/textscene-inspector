@@ -1,19 +1,18 @@
 /**
  * The async seam for procedural textures: a lookup is ready from the cache, or
  * pending with a build that holders start and release. Builds are keyed on their
- * content, so a re-parse that leaves a texture unchanged reuses it.
+ * content, so a new decoded value with unchanged content reuses the texture.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import * as logger from '../../logger';
-import type { TscnInternalResource } from '../../parser/types';
 import { NOISE_PIXEL_CASES } from './noisetexture2d/pixelCases.testkit';
 import type { WorkerJobOutput } from '../../workers/jobs';
 import { fakeJobRunner as fakeRunner } from '../../workers/fakeJobRunner.testkit';
 import { pinProceduralTexture, unpinProceduralTexture } from './proceduralTextureCache';
 import {
   resetProceduralTextures,
-  resolveProceduralSubResourceAsync,
+  proceduralBuild,
   type ProceduralBuildPlan,
   type ProceduralTextureLookup,
 } from './proceduralBuilds';
@@ -22,36 +21,28 @@ import { textureWork } from './textureWork';
 const [pixelCase] = NOISE_PIXEL_CASES;
 if (!pixelCase) throw new Error('expected a noise pixel case');
 
-/** One `Fake` sub-resource whose `seed` is its whole content. */
-function scene(seed: string): TscnInternalResource[] {
-  return [
-    { id: 'tex', type: 'FakeTexture', data: { seed } },
-    { id: 'other', type: 'OtherTexture', data: {} },
-  ];
+/** A decoded fake texture whose `seed` is its whole content. Each call is a new decoded value. */
+interface FakeTexture {
+  readonly seed: string;
 }
+const scene = (seed: string): FakeTexture => ({ seed });
 
-const plan = (properties: Record<string, string>): ProceduralBuildPlan<'noise-texture-2d'> | null =>
-  properties.seed === 'declined'
+const plan = ({ seed }: FakeTexture): ProceduralBuildPlan<'noise-texture-2d'> | null =>
+  seed === 'declined'
     ? null
     : {
         job: 'noise-texture-2d',
         input: pixelCase,
-        contentKey: `FakeTexture:${properties.seed}`,
+        contentKey: `FakeTexture:${seed}`,
         wrap: ({ levels }) => new THREE.DataTexture(levels[0]!.data, 1, 1),
       };
 
-/** A plan that reads nothing from outside its resource. */
-const NO_SOURCES = () => [];
-
-function lookup(
-  resources: TscnInternalResource[],
-  ref = 'SubResource("tex")'
-): ProceduralTextureLookup | null {
-  return resolveProceduralSubResourceAsync(ref, resources, 'FakeTexture', plan, NO_SOURCES);
+function lookup(texture: FakeTexture): ProceduralTextureLookup | null {
+  return proceduralBuild('FakeTexture', plan(texture));
 }
 
-function pendingLookup(resources: TscnInternalResource[]) {
-  const found = lookup(resources);
+function pendingLookup(texture: FakeTexture) {
+  const found = lookup(texture);
   if (found?.status !== 'pending') throw new Error(`expected a pending lookup, got ${found?.status}`);
   return found;
 }
@@ -74,43 +65,16 @@ afterEach(async () => {
   resetProceduralTextures();
 });
 
-describe('resolveProceduralSubResourceAsync', () => {
-  it('plans again when a source the plan reads is another object', () => {
-    const counted = vi.fn(plan);
-    const resources = scene('1');
-    const lookupWith = (source: object) =>
-      resolveProceduralSubResourceAsync('SubResource("tex")', resources, 'FakeTexture', counted, () => [
-        source,
-      ]);
-    const first = {};
-    lookupWith(first);
-    lookupWith(first);
-    expect(counted).toHaveBeenCalledTimes(1);
-
-    lookupWith({});
-    expect(counted).toHaveBeenCalledTimes(2);
-  });
-
-  it('plans each sub-resource once per parse, however many consumers look it up', () => {
-    const counted = vi.fn(plan);
-    const resources = scene('1');
-    resolveProceduralSubResourceAsync('SubResource("tex")', resources, 'FakeTexture', counted, NO_SOURCES);
-    resolveProceduralSubResourceAsync('SubResource("tex")', resources, 'FakeTexture', counted, NO_SOURCES);
-    expect(counted).toHaveBeenCalledTimes(1);
-
-    resolveProceduralSubResourceAsync('SubResource("tex")', scene('1'), 'FakeTexture', counted, NO_SOURCES);
-    expect(counted).toHaveBeenCalledTimes(2);
-  });
-
+describe('proceduralBuild', () => {
   it('is pending for an unbuilt texture, then ready with the built texture', async () => {
     const { runner, runs } = fakeRunner();
-    const resources = scene('1');
-    const handle = pendingLookup(resources).start(runner);
+    const texture = scene('1');
+    const handle = pendingLookup(texture).start(runner);
     runs[0]?.resolve(output());
     const built = await handle.settled;
     handle.release();
 
-    const ready = lookup(resources);
+    const ready = lookup(texture);
     expect(ready).toMatchObject({ status: 'ready', key: 'FakeTexture:1' });
     expect(ready?.status === 'ready' && ready.texture).toBe(built);
   });
@@ -123,7 +87,7 @@ describe('resolveProceduralSubResourceAsync', () => {
     expect(runs).toHaveLength(1);
   });
 
-  it('reuses a built texture across a re-parse whose content is unchanged', async () => {
+  it('reuses a built texture for a new decoded value whose content is unchanged', async () => {
     const { runner, runs } = fakeRunner();
     const handle = pendingLookup(scene('1')).start(runner);
     runs[0]?.resolve(output());
@@ -209,7 +173,7 @@ describe('resolveProceduralSubResourceAsync', () => {
     runs[0]?.reject(new RangeError('Array buffer allocation failed'));
 
     expect(await handle.settled).toBeNull();
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('[FakeTexture] sub-resource "tex"'));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('[FakeTexture]'));
     expect(lookup(scene('1'))?.status).toBe('pending');
   });
 
@@ -238,15 +202,6 @@ describe('resolveProceduralSubResourceAsync', () => {
     unpinProceduralTexture(pending.key);
   });
 
-  it.each([
-    ['an ExtResource ref', 'ExtResource("1")'],
-    ['an unknown id', 'SubResource("missing")'],
-    ['another type', 'SubResource("other")'],
-    ['no ref', undefined],
-  ])('declines %s', (_label, ref) => {
-    expect(resolveProceduralSubResourceAsync(ref, scene('1'), 'FakeTexture', plan, NO_SOURCES)).toBeNull();
-  });
-
   it('declines what the plan declines', () => {
     expect(lookup(scene('declined'))).toBeNull();
   });
@@ -254,27 +209,19 @@ describe('resolveProceduralSubResourceAsync', () => {
 
 describe('a plan with a derived texture', () => {
   /** The built texture, then `derive` of it: the texture a holder that wants more draws. */
-  const derivedPlan =
-    (derive: (built: THREE.Texture) => THREE.Texture) => (properties: Record<string, string>) =>
-      plan(properties) && {
-        ...plan(properties)!,
-        derived: { suffix: ':derived', derive },
-      };
+  const derivedPlan = (texture: FakeTexture, derive: (built: THREE.Texture) => THREE.Texture) => {
+    const built = plan(texture);
+    return built && { ...built, derived: { suffix: ':derived', derive } };
+  };
 
   const cloned = (built: THREE.Texture) => built.clone();
 
-  function derivedLookup(resources: TscnInternalResource[], derive = cloned) {
-    return resolveProceduralSubResourceAsync(
-      'SubResource("tex")',
-      resources,
-      'FakeTexture',
-      derivedPlan(derive),
-      NO_SOURCES
-    );
+  function derivedLookup(texture: FakeTexture, derive = cloned) {
+    return proceduralBuild('FakeTexture', derivedPlan(texture, derive));
   }
 
-  function pendingDerived(resources: TscnInternalResource[], derive = cloned) {
-    const found = derivedLookup(resources, derive);
+  function pendingDerived(texture: FakeTexture, derive = cloned) {
+    const found = derivedLookup(texture, derive);
     if (found?.status !== 'pending') throw new Error(`expected a pending lookup, got ${found?.status}`);
     return found;
   }
@@ -288,20 +235,19 @@ describe('a plan with a derived texture', () => {
 
   it('settles on the derived texture, and caches the built one beside it', async () => {
     const { runner, runs } = fakeRunner();
-    const resources = scene('1');
-    const handle = pendingDerived(resources).start(runner);
+    const texture = scene('1');
+    const handle = pendingDerived(texture).start(runner);
     runs[0]?.resolve(output());
     const derived = await handle.settled;
 
     const built = lookup(scene('1'));
     expect(built?.status === 'ready' && built.texture).not.toBe(derived);
-    expect(derivedLookup(resources)).toMatchObject({ status: 'ready', texture: derived });
+    expect(derivedLookup(texture)).toMatchObject({ status: 'ready', texture: derived });
   });
 
   it('derives from the cached built texture without a run when only the derivation is new', async () => {
     const { runner, runs } = fakeRunner();
-    const resources = scene('1');
-    const first = pendingLookup(resources).start(runner);
+    const first = pendingLookup(scene('1')).start(runner);
     runs[0]?.resolve(output());
     const built = await first.settled;
     const derive = vi.fn(cloned);

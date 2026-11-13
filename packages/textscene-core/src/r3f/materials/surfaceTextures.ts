@@ -9,8 +9,9 @@ import type * as THREE from 'three';
 import { useMemo } from 'react';
 import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import { useAnisotropicFilteringLevel } from '../contexts/AnisotropicFilteringContext';
-import { NODE_PROPERTY, useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
-import { NO_RESOURCES } from '../SceneResourcesContext';
+import { referenceHeldBy } from '../../resources/reading';
+import { useTexture2DRid, type Texture2DResult } from '../../resources/useTexture2D';
+import { NO_RESOURCES, type SceneResources } from '../SceneResourcesContext';
 import { useTextureView } from '../useTextureView';
 import type {
   ResolvedTextures,
@@ -58,8 +59,8 @@ export function useSurfaceTextures(
   // Godot sets a slot's ViewportTexture up through each holder down to it, the material last.
   const isHeldLocally = material
     ? (material.isHeldLocally ?? true) && isLocalToScene(material.resource)
-    : NODE_PROPERTY;
-  const sources = useEachSlot(useSlotTexture, references, material, isHeldLocally);
+    : true;
+  const sources = useEachSlot(useSlotTexture, references, useMaterialTables(material), isHeldLocally);
   // The per-material half of every binding: UV set and transform, sampler filter and
   // wrapping. The per-slot half (which slots decode sRGB, which sample UV2) is `slotViewSampler`'s.
   const anisotropicFilteringLevel = useAnisotropicFilteringLevel();
@@ -112,18 +113,23 @@ type SlotMap = Pick<Texture2DResult, 'texture' | 'isArriving'>;
 function useSlotTexture(
   slot: TextureSlot,
   references: TextureSlotReferences | undefined,
-  material: MaterialResource | null,
+  tables: SceneResources,
   isHeldLocally: boolean
 ): Texture2DResult {
   const view = slotReadsSourceColor(slot) ? 'decoding' : 'plain';
-  const result = useTexture2DRid(
-    textureSlotReference(references, slot),
-    material?.externalResources ?? NO_RESOURCES.externalResources,
-    material?.internalResources ?? NO_RESOURCES.internalResources,
-    view,
-    isHeldLocally
-  );
+  const ref = textureSlotReference(references, slot);
+  const result = useTexture2DRid(referenceHeldBy(ref, tables, isHeldLocally), view);
   return result.namesTexture ? result : { ...result, texture: defaultWhiteTexture() };
+}
+
+/** The tables of the file that holds `material`, one object while they hold. */
+function useMaterialTables(material: MaterialResource | null): SceneResources {
+  const externalResources = material?.externalResources;
+  const internalResources = material?.internalResources;
+  return useMemo(
+    () => (externalResources && internalResources ? { externalResources, internalResources } : NO_RESOURCES),
+    [externalResources, internalResources]
+  );
 }
 
 function textureSlotReference(

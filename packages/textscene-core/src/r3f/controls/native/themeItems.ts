@@ -18,7 +18,7 @@ import type { SceneScope } from '../../liveSceneTree';
 import type { SolveNode, ThemedIconRef } from './solveTree';
 import { parseStyleBox, type ResolvedStyleBox } from './parseStyleBox';
 
-/** A node's own override is held by the node, not by a theme (`NODE_PROPERTY` in `useTexture2D.ts`, which a pure module cannot import). */
+/** A node's own override is held locally: the node holds it, not a theme. */
 const IS_HELD_BY_NODE = true;
 
 /** No ancestor or project theme: `mergeThemedRecord` returns the seed unchanged. */
