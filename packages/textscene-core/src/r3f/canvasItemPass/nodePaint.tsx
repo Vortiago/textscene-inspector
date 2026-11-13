@@ -111,7 +111,7 @@ export function contentFrames(run: PaintRange, content: readonly TscnNode[]): Pa
 }
 
 /** The frame of a subtree outside the shared live tree whose root owns `range`, with no canvas roots above. */
-export function runFrameAt(range: PaintRange): PaintFrame {
+function runFrameAt(range: PaintRange): PaintFrame {
   return { kind: 'run', range, canvasRoots: NO_CANVAS_ROOTS };
 }
 

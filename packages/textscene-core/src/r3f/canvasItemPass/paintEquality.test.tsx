@@ -167,7 +167,7 @@ describe('the paint pass gives the sequences the two walks give', () => {
 
     const world = [...worldPaints]
       .filter(([path]) => paint.has(path) && !sorted.has(path))
-      .map(([path, found]) => [path, found.own]);
+      .map(([path, found]) => [path, found.own] as const);
     const worldPass = world.map(([path]) => [path, paint.get(path)!.own]);
     expect(world).toEqual(worldPass);
 
