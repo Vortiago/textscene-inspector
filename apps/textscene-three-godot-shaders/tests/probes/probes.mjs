@@ -194,12 +194,58 @@ function constantFoldingProbes() {
     ['negative-zero', 'vec2 probe(float a) { return vec2(-0.0 * 1.0, a); }'],
     ['division-by-zero', 'vec3 probe(float a) { return vec3(1.0 / 0.0, -1.0 / 0.0, a); }'],
   ];
-  return cases.map(([word, source]) => ({
+  return [...cases, ...foldValueCheckCases()].map(([word, source]) => ({
     name: `fold-${word}`,
     rows: ['float literal'],
     source,
     inputs: scalars(),
   }));
+}
+
+/**
+ * One chain of two operators for each pair of the four, with literals where a fold in 32-bit
+ * floats and glslang's fold in double precision give different floats. Each chain also runs as a
+ * vector, a vector with a scalar, and a swizzle of a constant vector.
+ */
+const FOLD_CHAINS = [
+  ['add-div', '(1.9335 + 590.3) / 0.3025'],
+  ['div-div', '(7425.1 / 0.33901) / 0.65885'],
+  ['mul-sub', '(8.4027 * 353.27) - 586.87'],
+  ['sub-mul', '(0.8625 - 52.507) * 29.5'],
+  ['mul-div', '(2451.2 * 119.05) / 3344.5'],
+  ['add-sub', '(51.329 + 7099.9) - 15.779'],
+  ['div-add', '(8422.0 / 0.43832) + 0.51635'],
+  ['div-mul', '(0.19178 / 784.84) * 790.63'],
+  ['mul-add', '(980.94 * 7332.8) + 6.1585'],
+  ['mul-mul', '(5.5115 * 0.48388) * 35.078'],
+  ['sub-sub', '(630.75 - 0.75847) - 27.71'],
+  ['add-add', '(0.75454 + 80.042) + 516.6'],
+];
+
+function foldValueCheckCases() {
+  const scalar = FOLD_CHAINS.map(([word, chain]) => [
+    `chain-${word}`,
+    `float probe(float a) { return ${chain} + a; }`,
+  ]);
+  const vectors = [
+    [
+      'mixed-vector',
+      'vec2 probe(float a) { return (vec2(1.9335, 8422.0) + vec2(590.3, 0.43832)) / vec2(0.3025, 784.84) + a; }',
+    ],
+    [
+      'mixed-vector-scalar',
+      'vec3 probe(float a) { return (vec3(8.4027, 2451.2, 980.94) * 353.27 - 586.87) * a; }',
+    ],
+    [
+      'mixed-scalar-vector',
+      'vec2 probe(float a) { return 0.8625 - vec2(52.507, 0.75847) * vec2(29.5, 27.71) + a; }',
+    ],
+    [
+      'mixed-swizzle',
+      'vec2 probe(float a) { return vec4(51.329, 7099.9, 630.75, 0.75847).yw - vec2(15.779, 27.71).yx + a; }',
+    ],
+  ];
+  return [...scalar, ...vectors];
 }
 
 /** A function of the whole family together: Godot's evaluation order and every form at once. */

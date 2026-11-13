@@ -26,7 +26,9 @@ export const GUIDE_CHAPTERS = [
     title: 'Float and vector arithmetic',
     intro: `The float types \`float\`, \`vec2\`, \`vec3\` and \`vec4\`: their literals, the four arithmetic operators, negation, the vector constructors and swizzles. A function of this chapter's instructions transpiles to TSL nodes that compute what Godot computes, bit for bit, on the GPU that ran the probes.
 
-The GPU sets the edge cases, not the transpiler. On the probe GPU, an arithmetic operator reads a subnormal input as zero, negation keeps it, and \`0.0 / 0.0\` is NaN. The tables below show each case as Godot gave it.`,
+The GPU sets the edge cases, not the transpiler. On the probe GPU, an arithmetic operator reads a subnormal input as zero, negation keeps it, and \`0.0 / 0.0\` is NaN. The tables below show each case as Godot gave it.
+
+What to expect: a transpiled function gives Godot's result, bit for bit, except where a GPU driver rewrites inexact float arithmetic. A driver may regroup operations or replace \`x + -x\` with \`0.0\`. Godot and the browser hand the driver different code for the same function, so a rewrite can happen on one side only. On the probe GPU, \`vec2(a0 - a2) - vec2(0.875, a2)\` at \`a0 = 16777216.0\`, \`a2 = 0.5\` gives 16777215.0 in Godot. In the browser the driver computes \`(a0 - 0.875) - a2\`, and the first lane is 16777214.0. The same function on scalars gives the same result on both sides. Most such differences are one unit in the last place. Near infinity, zero and NaN, one side can give NaN where the other gives \`-0.0\`.`,
     sections: [
       {
         heading: 'Float literals',

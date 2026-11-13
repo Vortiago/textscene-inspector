@@ -12,7 +12,7 @@ export type Expression = Constant | ParameterRead | OperatorApplication | Constr
 
 /**
  * A literal, or a constructor or negation of constants, which Godot folds into one constant
- * (`_reduce_expression`, `shader_language.cpp:7840`).
+ * (`_reduce_expression`, `shader_language.cpp:7848` and `7909`).
  */
 export interface Constant {
   readonly kind: 'constant';

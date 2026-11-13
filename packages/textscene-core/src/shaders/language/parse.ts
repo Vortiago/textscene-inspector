@@ -328,7 +328,7 @@ class Parser {
 const typesOf = (expressions: readonly Expression[]) => expressions.map((expression) => expression.type);
 
 /**
- * `_reduce_expression` (`shader_language.cpp:7840`): a negation of a constant becomes the negated
+ * `_reduce_expression` (`shader_language.cpp:7909`): a negation of a constant becomes the negated
  * constant, through a chain of negations. It reaches no deeper, so `-(-1.5) + a` keeps both. A
  * constructor of constants is folded where it is read.
  */
@@ -340,7 +340,7 @@ function reduced(expression: Expression): Expression {
 }
 
 /**
- * Godot's fold of a constructor whose arguments are all constants (`shader_language.cpp:7850`):
+ * Godot's fold of a constructor whose arguments are all constants (`shader_language.cpp:7848`, read at line 6103):
  * their lanes in order, and one lane repeated for a single scalar.
  */
 function constructedConstant(type: ValueType, args: readonly Expression[]): Constant | undefined {
