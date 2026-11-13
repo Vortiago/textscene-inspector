@@ -60,7 +60,7 @@ export function graphNodePorts(
   const { rects: childRects } = normalizeContainerLayoutResult(result);
 
   const props = child.node.properties as GraphNodeProperties;
-  const { panel } = graphNodeStyles(child, theme);
+  const { panel } = graphNodeStyles(child);
   const bodyWidth = outerSize.x - panel.contentMargin.left - panel.contentMargin.right;
   const rows = [...graphNodeDrawRows(child, props, childRects, panel.contentMargin.left, bodyWidth)].sort(
     (a, b) => a.rawIndex - b.rawIndex

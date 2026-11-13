@@ -1,33 +1,23 @@
 /**
  * The **CanvasItem state** of one canvas item: its tint, `z_final`, draw-order key, material,
- * sampler and light mask, and the scope its descendants inherit. Godot draws a Control and a
- * Node2D by the one `_cull_canvas_item` walk (`servers/rendering/renderer_canvas_cull.cpp:303-489`),
+ * sampler and light mask. Godot draws a Control and a Node2D by the one `_cull_canvas_item` walk (`servers/rendering/renderer_canvas_cull.cpp:303-489`),
  * so `CanvasItem2D` and `ControlCanvasWalker` both take this state from here.
  */
 
-import { useMemo, type ReactNode } from 'react';
+import { useMemo } from 'react';
 import type { Rgba } from '../godot/math/math';
 import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
-import {
-  Modulate2DContext,
-  multiplyModulate,
-  useParentModulate,
-  useCanvasItemTint,
-  type CanvasItemTint,
-} from './canvasItemModulate';
+import { useCanvasItemTint, type CanvasItemTint } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
-import { TextureSampler2DContext, type CanvasItemTextureSampler } from './canvasItemTextureSampler';
+import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import { canvasKeyAtZ, canvasRenderOrder } from './canvasPaintOrder';
 import { useLayerRank, useNodePaintSequence, usePaintRange } from './contexts/PaintOrderContext';
 import type { TscnNode } from '../parser/types';
+import { useNodePath } from './contexts/NodePathContext';
+import { useInheritedCanvasState } from './canvasItemPass/inheritedCanvasState';
+import type { InheritedCanvasItemState } from './canvasItemPass/canvasItemPass';
 import type { Node2DProperties } from '../nodes/base/node2d/types';
-import { CanvasItemMaterialProvider } from './components/canvasItemMaterialContext';
-import {
-  EffectiveZProvider,
-  accumulateCanvasItemZ,
-  useCanvasLayerIndex,
-  useEffectiveZ,
-} from './lighting2d/canvasItemPlacement';
+import { accumulateCanvasItemZ, useCanvasLayerIndex } from './lighting2d/canvasItemPlacement';
 
 /** One canvas item's contribution to `p_z` (`renderer_canvas_cull.cpp:430-434`). */
 export interface CanvasItemZStep {
@@ -40,20 +30,10 @@ export function node2dZStep(props: Pick<Node2DProperties, 'z_index' | 'z_as_rela
   return { zIndex: props.z_index, zAsRelative: props.z_as_relative };
 }
 
-/**
- * Canvas items the walk descends through that draw no group of their own here, outermost first,
- * such as the Node2D chain a promoted Control was walked past. They sit between the ambient and
- * the item, so `SkippedCanvasItemsScope` folds them into the ambient the item reads.
- */
-export interface SkippedCanvasItems {
-  /** The product of their `modulate`. Their `self_modulate` never propagates. */
-  modulate: Rgba;
-  /** A list, not a sum: `p_z` clamps at every step, and an absolute step restarts it. */
-  z: readonly CanvasItemZStep[];
-}
-
 /** The parsed CanvasItem fields of one item, with its material and sampler already resolved. */
 export interface CanvasItemFields {
+  /** What the item's parent hands it (`useInheritedCanvasState`). */
+  inherited: InheritedCanvasItemState;
   modulate: Rgba;
   selfModulate: Rgba;
   zIndex: number;
@@ -82,16 +62,16 @@ export interface CanvasItemState {
 }
 
 /**
- * The CanvasItem state of one item, under the ambient its parent published.
+ * The CanvasItem state of one item, from its fields and what its parent hands it.
  *
  * @canonical The tint, z_final and draw-order key of a canvas item
  */
 export function useCanvasItemState(fields: CanvasItemFields): CanvasItemState {
-  const zFinal = useZFinal(fields);
+  const zFinal = stepZ(fields.inherited.zFinal, fields);
   // The canvas tint reaches the item's own pixels when its light mode admits it, never what its
   // children inherit. The light injection divides this value back out, so both read this one hook.
   const canvasModulate = useCanvasModulateFor(fields.material);
-  const tint = useCanvasItemTint(useTintInputs(fields), canvasModulate);
+  const tint = useCanvasItemTint(useTintInputs(fields), fields.inherited.modulate, canvasModulate);
   const keyAt = useCanvasKeyAt(zFinal);
   return {
     key: keyAt(fields.sequence),
@@ -109,7 +89,7 @@ export function useCanvasItemState(fields: CanvasItemFields): CanvasItemState {
  * gizmo, from its node and its own z step.
  */
 export function useCanvasKeyOfNode(node: TscnNode, own: CanvasItemZStep): number {
-  return useCanvasKeyAt(useZFinal(own))(useNodePaintSequence(node));
+  return useCanvasKeyAt(useNodeZFinal(own))(useNodePaintSequence(node));
 }
 
 /** The keys a canvas item's run spans, `[from, to)`, at its layer and `z_final`, and its own key. */
@@ -124,7 +104,7 @@ export interface CanvasRunKeys {
  * the node and its descendants at the node's `z_final`.
  */
 export function useCanvasRunKeysOfNode(node: TscnNode, own: CanvasItemZStep): CanvasRunKeys {
-  const keyAt = useCanvasKeyAt(useZFinal(own));
+  const keyAt = useCanvasKeyAt(useNodeZFinal(own));
   const sequence = useNodePaintSequence(node);
   const { base, size } = usePaintRange();
   return useMemo(() => runKeysOf(keyAt, keyAt(sequence), { base, size }), [keyAt, sequence, base, size]);
@@ -175,8 +155,9 @@ function useCanvasKeyAt(zFinal: number): (sequence: number) => number {
   );
 }
 
-function useZFinal(own: CanvasItemZStep): number {
-  return stepZ(useEffectiveZ(), own);
+/** The `z_final` of the node the dispatcher draws here, with its own z step `own`. */
+function useNodeZFinal(own: CanvasItemZStep): number {
+  return stepZ(useInheritedCanvasState(useNodePath()).zFinal, own);
 }
 
 /** `p_z` after one step (`renderer_canvas_cull.cpp:430-434`). */
@@ -190,44 +171,6 @@ function useTintInputs({ modulate, selfModulate }: CanvasItemFields): {
   self_modulate: Rgba;
 } {
   return useMemo(() => ({ modulate, self_modulate: selfModulate }), [modulate, selfModulate]);
-}
-
-/** The ambient below `skipped`: their modulate and z folded in, as if each drew its own group. */
-export function SkippedCanvasItemsScope({
-  skipped,
-  children,
-}: {
-  skipped: SkippedCanvasItems;
-  children: ReactNode;
-}) {
-  const parentModulate = useParentModulate();
-  const modulate = useMemo(
-    () => multiplyModulate(parentModulate, skipped.modulate),
-    [parentModulate, skipped.modulate]
-  );
-  const z = skipped.z.reduce(stepZ, useEffectiveZ());
-  return (
-    <Modulate2DContext.Provider value={modulate}>
-      <EffectiveZProvider value={z}>{children}</EffectiveZProvider>
-    </Modulate2DContext.Provider>
-  );
-}
-
-/** What an item's descendants inherit: its modulate, `z_final`, material and sampler. */
-export function CanvasItemChildScope({ state, children }: { state: CanvasItemState; children: ReactNode }) {
-  return (
-    <Modulate2DContext.Provider value={state.tint.inherited}>
-      <EffectiveZProvider value={state.zFinal}>
-        {/* Descendants inherit through `use_parent_material` what this item resolved, a null
-            included, which stops an inherited material. */}
-        <CanvasItemMaterialProvider value={state.material}>
-          <TextureSampler2DContext.Provider value={state.sampler}>
-            {children}
-          </TextureSampler2DContext.Provider>
-        </CanvasItemMaterialProvider>
-      </EffectiveZProvider>
-    </Modulate2DContext.Provider>
-  );
 }
 
 /**

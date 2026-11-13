@@ -22,6 +22,7 @@ import { lastPaintSequence, WHOLE_CANVAS_RANGE } from '../../../../r3f/canvasPai
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts.js';
 import { canvasPieceSlot, type CanvasSlot } from '../../../../r3f/canvasItemState';
 import { useCanvasColorSpace } from '../../../../r3f/canvasColorSpace';
+import { CHAIN_START_INHERITANCE } from '../../../../r3f/canvasItemPass/inheritedCanvasState';
 
 const NO_CHILD_RECTS: ReadonlyMap<string, Rect2> = new Map();
 
@@ -112,7 +113,8 @@ function ViewportSurfaceNative({
       node: viewport,
       children: [],
       // A SubViewport draws into its own render target, so no ancestor canvas item reaches in.
-      skippedAncestors: null,
+      skippedTransform: null,
+      inheritance: CHAIN_START_INHERITANCE,
       // A SubViewport draws into its own target, so this root orders nothing
       // against the enclosing canvas: it starts a fresh range.
       paintRange: WHOLE_CANVAS_RANGE,

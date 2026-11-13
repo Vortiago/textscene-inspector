@@ -142,7 +142,7 @@ const NON_CONTROL_ANCHORABLE_RECT: Rect2 = { x: 0, y: 0, w: 0, h: 0 };
 function parentAnchorableRect(n: SolveNode, parentRect: Rect2): Rect2 {
   // `Control::get_anchorable_rect` is `Rect2(Point2(), get_size())`
   // (`control.cpp:1563-1566`); the position never enters the anchor formula.
-  return n.skippedAncestors ? NON_CONTROL_ANCHORABLE_RECT : parentRect;
+  return n.skippedTransform ? NON_CONTROL_ANCHORABLE_RECT : parentRect;
 }
 
 // --- Phase 1: combined minimum size ------------------------------------------

@@ -4,7 +4,8 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnNode } from '../../../parser/types';
 import { CanvasModulate } from './Component';
 import { parseCanvasModulate } from './parser';
-import { Modulate2DContext, useParentModulate } from '../../../r3f/canvasItemModulate';
+import { useEnclosingCanvasState } from '../../../r3f/canvasItemPass/inheritedCanvasState';
+import { InheritedFrom, inheritedState } from '../../../r3f/testing/inheritedFrom';
 import { PaintRangeProvider } from '../../../r3f/contexts/PaintOrderContext';
 import { canvasRenderOrder, layerRankOf, layerRanks } from '../../../r3f/canvasPaintOrder';
 import type { Rgba } from '../../../godot/math/math';
@@ -23,12 +24,12 @@ function cmNode(name = 'CM', props: Record<string, string> = {}): TscnNode {
 }
 
 /**
- * Reads the Modulate2DContext value inside a CanvasModulate subtree and parks it on
+ * Reads the modulate a CanvasModulate hands its subtree and parks it on
  * a mesh's `userData`, with no module globals. `findByProps({ name:
  * 'modulate-reader' })` reads it back.
  */
 function ModulateReader() {
-  const modulate = useParentModulate();
+  const { modulate } = useEnclosingCanvasState();
   return <mesh name="modulate-reader" userData={{ modulate }} />;
 }
 
@@ -88,7 +89,9 @@ describe('<CanvasModulate>', () => {
 
   it('still inherits an ancestor modulate, as any Node2D does', async () => {
     const renderer = await renderCM({ color: 'Color(0.5, 0.5, 1, 1)' }, (kid) => (
-      <Modulate2DContext.Provider value={{ r: 0.5, g: 1, b: 0.5, a: 1 }}>{kid}</Modulate2DContext.Provider>
+      <InheritedFrom state={inheritedState({ modulate: { r: 0.5, g: 1, b: 0.5, a: 1 } })}>
+        {kid}
+      </InheritedFrom>
     ));
     const captured = readModulate(renderer);
     expect(captured.r).toBeCloseTo(0.5, 3);

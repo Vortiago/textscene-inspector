@@ -9,7 +9,6 @@ import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2';
 import { VECTOR2_ZERO, type Vector2 } from '../../../godot/math/vector';
 import { controlProps, type SolveNode } from './solveTree';
 import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
-import type { CanvasItemMaterialProperties } from '../../../resources/materials/canvasitemmaterial/types';
 import { threeMatrixFromTransform2D } from '../../node2dTransform';
 import type { NativeTheme } from './nativeTheme';
 import type { TextMeasurer } from './solverRegistry';
@@ -17,15 +16,18 @@ import { createSolveContext, solveControlTree, type SolvedControl } from './cont
 import { controlComponentRegistry } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
 import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
-import { useInheritedTextureSampler } from '../../canvasItemTextureSampler';
+import { useTextureSamplerOver } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
 import { ClipChildrenScope } from '../../canvasGroup/ClipChildrenScope';
 import { ClipMaskProvider } from '../../canvasGroup/ClipMaskContext';
+import { useResolvedCanvasItemMaterial } from '../../components/canvasItemMaterial';
 import {
-  useCanvasAncestorMaterial,
-  useResolvedCanvasItemMaterial,
-} from '../../components/canvasItemMaterialContext';
-import { INHERIT_PARENT_MATERIAL } from '../../canvasItemPass/canvasAncestors';
+  CanvasParentProvider,
+  inheritedAlong,
+  useEnclosingCanvasState,
+  useHandedDownParent,
+} from '../../canvasItemPass/inheritedCanvasState';
+import type { InheritedCanvasItemState } from '../../canvasItemPass/canvasItemPass';
 import { ysortsChildren } from '../../canvasPaintOrder';
 import { isCanvasLayerType } from '../../canvasItemClass';
 import { CanvasRootScope } from '../../canvasRootScope';
@@ -47,8 +49,6 @@ import {
 } from '../../contexts/ControlYSortContext';
 import { useProjectSettings } from '../../contexts/ProjectSettingsContext';
 import {
-  CanvasItemChildScope,
-  SkippedCanvasItemsScope,
   useCanvasItemState,
   ownAndBackSlots,
   wholeKeySlot,
@@ -173,13 +173,16 @@ function WalkRoot({
   isFirst,
   rootOffset,
   ...group
-}: Omit<ControlNodeGroupProps, 'rootOffset'> & { isFirst: boolean; rootOffset: Vector2 | undefined }) {
+}: Omit<ControlNodeGroupProps, 'rootOffset' | 'walkEnclosing'> & {
+  isFirst: boolean;
+  rootOffset: Vector2 | undefined;
+}) {
   const { solveNode } = group;
-  const hasSkippedAncestors = solveNode.skippedAncestors !== null;
+  const hasSkippedTransform = solveNode.skippedTransform !== null;
   const content = (
-    <ControlNodeGroup {...group} rootOffset={isFirst || hasSkippedAncestors ? rootOffset : undefined} />
+    <RootControlNodeGroup {...group} rootOffset={isFirst || hasSkippedTransform ? rootOffset : undefined} />
   );
-  if (!rootOffset || hasSkippedAncestors) return content;
+  if (!rootOffset || hasSkippedTransform) return content;
   return (
     <CanvasRootScope node={solveNode.node} parentIsCanvasItem={false}>
       {isFirst ? (
@@ -191,6 +194,11 @@ function WalkRoot({
   );
 }
 
+/** A root of the walk's tree, below the drawn item the walk sits in. */
+function RootControlNodeGroup(props: Omit<ControlNodeGroupProps, 'walkEnclosing'>) {
+  return <ControlNodeGroup {...props} walkEnclosing={useEnclosingCanvasState()} />;
+}
+
 interface ControlNodeGroupProps {
   solveNode: SolveNode;
   solved: ReadonlyMap<string, SolvedControl>;
@@ -200,26 +208,19 @@ interface ControlNodeGroupProps {
   snapToPixels: boolean;
   /** `ControlCanvasWalkerProps.rootOffset`, set on the roots `WalkRoot` chooses only. */
   rootOffset?: Vector2;
+  /**
+   * What the drawn item the walk's root sits in hands down. Each Control's `inheritance` holds every
+   * link up to that root, so the whole walk folds over this one state.
+   */
+  walkEnclosing: InheritedCanvasItemState;
 }
 
-/**
- * A Control's `CanvasItemMaterial`: its own, or with `use_parent_material` the parent item's. A
- * skipped Node2D chain above a promoted Control is that parent item, so it decides unless every
- * skipped ancestor defers to the Control above. Each reference resolves in the scope of the node
- * that names it: an instanced sub-scene names its materials in its file.
- */
-function useControlMaterial(
-  solveNode: SolveNode,
-  props: ControlProperties
-): CanvasItemMaterialProperties | null {
-  const useParentMaterial = props.useParentMaterial;
-  const skipped = solveNode.skippedAncestors?.material;
-  const ownOrAmbient = useResolvedCanvasItemMaterial(
-    { ref: props.materialPath, useParentMaterial },
-    solveNode.resources
-  );
-  const fromSkippedAncestors = useCanvasAncestorMaterial(skipped ?? INHERIT_PARENT_MATERIAL);
-  return useParentMaterial && skipped ? fromSkippedAncestors : ownOrAmbient;
+/** What a Control inherits along the walk's tree, below the drawn item that hands down `walkEnclosing`. */
+function useControlInheritance(
+  { inheritance }: SolveNode,
+  walkEnclosing: InheritedCanvasItemState
+): InheritedCanvasItemState {
+  return useMemo(() => inheritedAlong(inheritance, walkEnclosing), [inheritance, walkEnclosing]);
 }
 
 /**
@@ -227,38 +228,43 @@ function useControlMaterial(
  * runs both child loops with one `p_z` (`renderer_canvas_cull.cpp:471-490`). The draw sequence counts
  * all live siblings, so Controls interleave with Node2D items.
  */
-function useControlState(solveNode: SolveNode, props: ControlProperties): CanvasItemState {
+function useControlState(
+  solveNode: SolveNode,
+  props: ControlProperties,
+  inherited: InheritedCanvasItemState
+): CanvasItemState {
   return useCanvasItemState({
+    inherited,
     modulate: props.modulate ?? WHITE_MODULATE,
     selfModulate: props.selfModulate ?? WHITE_MODULATE,
     zIndex: props.zIndex,
     zAsRelative: props.zAsRelative,
-    material: useControlMaterial(solveNode, props),
-    // Own-or-ambient, not multiplicative: neither property has a self-only layer,
-    // so one fold serves this painter and the descendants.
-    sampler: useInheritedTextureSampler(
-      props.textureFilter,
-      props.textureRepeat,
-      solveNode.skippedAncestors?.sampler
+    // Each reference resolves in the scope of the node that names it: an instanced sub-scene names
+    // its materials in its file.
+    material: useResolvedCanvasItemMaterial(
+      { ref: props.materialPath, useParentMaterial: props.useParentMaterial },
+      solveNode.resources,
+      inherited.material
     ),
+    // Own-or-inherited, not multiplicative: neither property has a self-only layer,
+    // so one fold serves this painter and the descendants.
+    sampler: useTextureSamplerOver(props.textureFilter, props.textureRepeat, inherited.sampler),
     lightMask: props.lightMask,
     sequence: solveNode.paintSequence,
   });
 }
 
 /**
- * One Control, under the skipped Node2D chain it promoted past (`SolveNode.skippedAncestors`), when
+ * One Control, under the skipped Node2D chain it promoted past (`SolveNode.skippedTransform`), when
  * there is one. A product of ancestors can shear, so the chain's transform goes in as a whole matrix.
  */
 function ControlNodeGroup(props: ControlNodeGroupProps) {
-  const skipped = props.solveNode.skippedAncestors;
+  const skipped = props.solveNode.skippedTransform;
   if (!skipped) return <ControlItemGroup {...props} />;
   // paint-order-safe: outside the keyed item group, never between it and a mesh.
   return (
-    <group matrix={threeMatrixFromTransform2D(skipped.transform)} matrixAutoUpdate={false}>
-      <SkippedCanvasItemsScope skipped={skipped}>
-        <ControlItemGroup {...props} />
-      </SkippedCanvasItemsScope>
+    <group matrix={threeMatrixFromTransform2D(skipped)} matrixAutoUpdate={false}>
+      <ControlItemGroup {...props} />
     </group>
   );
 }
@@ -270,9 +276,12 @@ function ControlItemGroup({
   measureText,
   snapToPixels,
   rootOffset,
+  walkEnclosing,
 }: ControlNodeGroupProps) {
   const props = controlProps(solveNode);
-  const state = useControlState(solveNode, props);
+  const inherited = useControlInheritance(solveNode, walkEnclosing);
+  const state = useControlState(solveNode, props, inherited);
+  const handedDown = useHandedDownParent(solveNode.node, solveNode.path, solveNode.resources, inherited);
   const { key: renderOrder, tint } = state;
   // For chrome drawn after the whole subtree (Godot's `INTERNAL_MODE_BACK`), from the
   // sequence value the allocator holds after it (`internalBackRoom`).
@@ -311,6 +320,7 @@ function ControlItemGroup({
       theme={theme}
       measureText={measureText}
       snapToPixels={snapToPixels}
+      walkEnclosing={walkEnclosing}
     />
   ));
 
@@ -386,9 +396,9 @@ function ControlItemGroup({
       renderOrder={renderOrder}
     >
       <CanvasItemProvider value={renderOrder}>
-        {/* The painter sits in the scope too: Godot tests an item's light window against its
-            own `z_final`, and its descendants start from that value. */}
-        <CanvasItemChildScope state={state}>
+        {/* The painter sits inside too: it samples with the sampler the Control hands down,
+            which is the Control's own. */}
+        <CanvasParentProvider value={handedDown}>
           <OwnCanvasModulateProvider value={state.tint.canvasModulate}>
             {hasOwnTransform ? (
               <CanvasItemGroup
@@ -402,7 +412,7 @@ function ControlItemGroup({
               content
             )}
           </OwnCanvasModulateProvider>
-        </CanvasItemChildScope>
+        </CanvasParentProvider>
       </CanvasItemProvider>
     </group>
   );

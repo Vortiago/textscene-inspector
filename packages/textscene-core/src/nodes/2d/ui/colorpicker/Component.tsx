@@ -124,6 +124,7 @@ import {
 import type { ColorPickerProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 
 /** A value field arrow's modulate under the picker's own tint: its colour in the item's linear space and its alpha. */
 function useSpinArrowColor(
@@ -203,7 +204,7 @@ export function ColorPicker({
     />
   );
 
-  const contentWidth = Math.max(0, rect.w - 2 * theme.contentMargin);
+  const contentWidth = Math.max(0, rect.w - 2 * theme.sizes.margin);
   const rows = useMemo(
     () => colorPickerRows(contentWidth, theme, child.valueField, props, measure),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -457,13 +458,13 @@ export function ColorPicker({
   );
 
   return (
-    <CanvasItemGroup position={[theme.contentMargin, -theme.contentMargin, 0]}>
+    <CanvasItemGroup position={[theme.sizes.margin, -theme.sizes.margin, 0]}>
       {/* Sample row */}
       {rows.sample && sampleCols && sampleQuadRect && (
         <>
           <IconButton
             rect={sampleCols.pick}
-            box={theme.widgets.button.normal}
+            box={theme.button.normal}
             size={buttonIconPx}
             texture={pickIconTexture}
             tint={tint}
@@ -475,7 +476,7 @@ export function ColorPicker({
           {sampleCols.shape && (
             <IconButton
               rect={sampleCols.shape}
-              box={theme.widgets.flatMenuButton.normal}
+              box={theme.flatMenuButton.normal}
               size={buttonIconPx}
               texture={shapeIconTexture}
               tint={tint}
@@ -553,7 +554,7 @@ export function ColorPicker({
           )}
           <IconButton
             rect={modeCols.dropdown}
-            box={theme.widgets.flatMenuButton.normal}
+            box={theme.flatMenuButton.normal}
             size={buttonIconPx}
             texture={menuIconTexture}
             tint={tint}
@@ -675,12 +676,14 @@ export function ColorPicker({
                 )}
                 {isColorized &&
                   (() => {
-                    const offsetPx = Math.round(COLOR_PICKER_SLIDER_GRABBER_OFFSET * scale);
                     const gr = colorPickerChannelGrabberRect(
                       sliderBoxSize,
                       row.ratio,
-                      grabberIconSize,
-                      offsetPx,
+                      {
+                        size: grabberIconSize,
+                        offsetPx: Math.round(COLOR_PICKER_SLIDER_GRABBER_OFFSET * scale),
+                        isCentred: requiredThemeItem(solveNode.constants, 'center_slider_grabbers') !== 0,
+                      },
                       solveNode.rtl
                     );
                     return (
@@ -848,7 +851,7 @@ export function ColorPicker({
           })}
           <IconButton
             rect={swatchesCols.menuButton}
-            box={theme.widgets.flatMenuButton.normal}
+            box={theme.flatMenuButton.normal}
             size={buttonIconPx}
             texture={menuIconTexture}
             tint={tint}

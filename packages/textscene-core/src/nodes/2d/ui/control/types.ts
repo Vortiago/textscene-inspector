@@ -94,7 +94,7 @@ export interface ControlProperties {
   lightMask: number;
   /**
    * CanvasItem `material`, the raw reference a `CanvasItemMaterial` resolves from
-   * (`useCanvasItemMaterial`). Undefined when unset.
+   * (`useResolvedCanvasItemMaterial`). Undefined when unset.
    */
   materialPath?: string;
   /** CanvasItem `clip_children` (`canvas_item.h:71-74`), default `DISABLED`. */

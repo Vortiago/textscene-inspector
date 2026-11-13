@@ -10,7 +10,6 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import { scaledPx } from '../../../godot/scene/theme';
 import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import { AutowrapMode } from '../../../godot/text/textServerEnums';
 import type { TscnNode } from '../../../parser/types';
@@ -22,7 +21,11 @@ import {
   type TextureSlotRequest,
   type TextureSlotsFn,
 } from '../../../r3f/controls/native/solverRegistry';
-import { internalChildThemeItems, type InternalThemeItems } from '../../../r3f/controls/native/themeItems';
+import {
+  internalChildThemeItems,
+  requiredThemeItem,
+  type InternalThemeItems,
+} from '../../../r3f/controls/native/themeItems';
 import { perObject } from '../../../utils/perObject';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
 import { parseControlCanvasItem } from '../../2d/ui/control/parser';
@@ -39,17 +42,14 @@ export function dialogButtonRoles(dialogType: string): readonly DialogButtonRole
   return descendsFromClass(dialogType, 'ConfirmationDialog') ? ['cancel', 'ok'] : ['ok'];
 }
 
-/** The button gap before the theme scale (`default_theme.cpp:694`). */
-const BUTTONS_SEPARATION = 10;
-
-/** `theme_cache.panel_style`: `panel`, or the default theme's flush, square box (`default_theme.cpp:693`). */
-export function dialogPanelBox(n: SolveNode, theme: NativeTheme): ResolvedStyleBox {
-  return n.styleBoxes.panel ?? theme.widgets.dialogPanel;
+/** `theme_cache.panel_style` (`dialogs.cpp:442`). */
+export function dialogPanelBox(n: SolveNode): ResolvedStyleBox {
+  return requiredThemeItem(n.styleBoxes, 'panel');
 }
 
-/** `buttons_separation` (`dialogs.cpp:422`): the gap between the content and the button row. The default theme sets it to 10. */
-export function buttonsSeparation(n: SolveNode, theme: NativeTheme): number {
-  return n.constants.buttons_separation ?? scaledPx(BUTTONS_SEPARATION, theme.scale);
+/** `buttons_separation`: the gap between the content and the button row (`dialogs.cpp:246,307`). */
+export function buttonsSeparation(n: SolveNode): number {
+  return requiredThemeItem(n.constants, 'buttons_separation');
 }
 
 /** Written only by `internalControl`. A dialog node is replaced when the scene changes it, so each internal Control is built once per dialog node. */

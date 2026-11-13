@@ -1,8 +1,8 @@
 /**
  * The shared CanvasItem ritual of a 2D-canvas node (ADR-0006): a named <group>
- * with the Node2D transform, draw order, visibility and modulate context. `body`
- * draws the node's own pixels with the linear tint, inherited modulate ×
- * self_modulate, and scene children render inside the modulate provider.
+ * with the Node2D transform, draw order and visibility. `body` draws the node's own
+ * pixels with the linear tint, inherited modulate × self_modulate, and scene children
+ * render inside what the item hands down (`CanvasParentProvider`).
  */
 
 import { useMemo, useState, type ReactNode } from 'react';
@@ -13,20 +13,18 @@ import type { Node2DProperties } from '../../nodes/base/node2d/types';
 import { node2dGroupMatrix, node2dGroupProps, node2dGroupSpread } from '../node2dTransform';
 import { CanvasSpaceProvider, useCanvasSpace } from '../canvasRootScope';
 import { OwnCanvasModulateProvider, type CanvasItemTint } from '../canvasItemModulate';
-import { useNode2DTextureSampler } from '../canvasItemTextureSampler';
+import { useTextureSamplerOver } from '../canvasItemTextureSampler';
 import { CanvasItemSurfaceSource } from '../canvasItemSurface';
 import type { CanvasItemTexture } from '../canvasItemTexture';
 import { LitCanvasItemPixels, type CanvasItemPixelMaterial } from './LitCanvasItemPixels';
 import { useNodePaintSequence, usePaintRange } from '../contexts/PaintOrderContext';
 import { useAnimatedValue } from '../contexts/AnimatedValueContext';
 import { CanvasItemProvider } from './CanvasItemGroup';
-import { useCanvasItemMaterial } from './canvasItemMaterialContext';
-import {
-  CanvasItemChildScope,
-  node2dZStep,
-  useCanvasItemState,
-  type CanvasItemState,
-} from '../canvasItemState';
+import { useResolvedCanvasItemMaterial } from './canvasItemMaterial';
+import { CanvasParentProvider, useDrawnCanvasItem } from '../canvasItemPass/inheritedCanvasState';
+import { useNodePath } from '../contexts/NodePathContext';
+import { useSceneResources } from '../SceneResourcesContext';
+import { node2dZStep, useCanvasItemState, type CanvasItemState } from '../canvasItemState';
 import type { CanvasItemMaterialProperties } from '../../resources/materials/canvasitemmaterial/types';
 import type { CanvasItemSurface } from '../lighting2d/normalMappedLighting';
 import { ClipChildrenScope } from '../canvasGroup/ClipChildrenScope';
@@ -78,15 +76,23 @@ export function CanvasItem2D({
     const own = node2dGroupMatrix(local);
     return ambient ? ambient.clone().multiply(own) : own;
   }, [ambient, local]);
+  const path = useNodePath();
+  const scope = useSceneResources();
+  const { inherited, handedDown } = useDrawnCanvasItem(node, path, scope);
   // What this node's descendants inherit. Its own pixels sample through the same fold, which the
   // node's component takes before this group exists, so it repeats the call on its own properties.
-  const sampler = useNode2DTextureSampler(props);
+  const sampler = useTextureSamplerOver(props.texture_filter, props.texture_repeat, inherited.sampler);
   const [surface, setSurface] = useState<CanvasItemSurface | null>(null);
   const state = useCanvasItemState({
+    inherited,
     modulate: props.modulate,
     selfModulate: props.self_modulate,
     ...node2dZStep(props),
-    material: useCanvasItemMaterial(props),
+    material: useResolvedCanvasItemMaterial(
+      { ref: props.materialPath, useParentMaterial: props.use_parent_material },
+      scope,
+      inherited.material
+    ),
     sampler,
     lightMask: props.light_mask,
     sequence: useNodePaintSequence(node),
@@ -142,9 +148,9 @@ export function CanvasItem2D({
           />
         )}
       </CanvasItemProvider>
-      <CanvasItemChildScope state={state}>
+      <CanvasParentProvider value={handedDown}>
         <CanvasSpaceProvider value={canvasSpace}>{children}</CanvasSpaceProvider>
-      </CanvasItemChildScope>
+      </CanvasParentProvider>
     </group>
   );
 }

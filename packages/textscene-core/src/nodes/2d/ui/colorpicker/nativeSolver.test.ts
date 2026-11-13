@@ -7,7 +7,11 @@ import { spinBoxButtonsBlockWidth } from '../spinbox/nativeSolver';
 import { defaultLineEditField } from '../shared/testing/lineEditField';
 import { MODE_HSV, MODE_LINEAR, MODE_OKHSL, MODE_RGB } from './colorModes';
 import { pickerChildTheme } from './pickerChildTheme';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   colorPickerRows,
   colorPickerMinimumSize,
@@ -36,14 +40,14 @@ import { measureText as measureTextWithFont } from '../../../../r3f/controls/nat
 
 function node(properties: Record<string, unknown>): SolveNode {
   const tscnNode: TscnNode = controlNode('P', 'ColorPicker', properties);
-  return { ...emptySolveNode(), path: 'P', node: tscnNode };
+  return withThemeItems({ ...emptySolveNode(), path: 'P', node: tscnNode });
 }
 
 const THEME = pickerChildTheme(node({}), nativeTheme(1)).theme;
 
-/** `THEME` with some widget boxes replaced. */
-function themeWithWidgets(widgets: Partial<typeof THEME.widgets>): typeof THEME {
-  return { ...THEME, widgets: { ...THEME.widgets, ...widgets } };
+/** `THEME` with some button boxes replaced. */
+function themeWithButtons(boxes: Partial<Pick<typeof THEME, 'button' | 'flatMenuButton'>>): typeof THEME {
+  return { ...THEME, ...boxes };
 }
 const CTX: SolveContext = { theme: THEME, measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
 
@@ -304,11 +308,11 @@ describe('the pressed mode button with wider margins than the others', () => {
   });
 });
 
-const WIDE_FLAT_THEME = themeWithWidgets({
+const WIDE_FLAT_THEME = themeWithButtons({
   flatMenuButton: {
-    ...THEME.widgets.flatMenuButton,
+    ...THEME.flatMenuButton,
     normal: {
-      ...THEME.widgets.flatMenuButton.normal,
+      ...THEME.flatMenuButton.normal,
       contentMargin: { left: 14, top: 10, right: 14, bottom: 10 },
     },
   },
@@ -527,20 +531,31 @@ describe('colorPickerIntensityRatio', () => {
   });
 });
 
+/** The `bar_arrow` grabber at scale 1 with the default `center_slider_grabbers = 1`. */
+const CENTRED_GRABBER = { size: { x: 16, y: 16 }, offsetPx: 8, isCentred: true };
+
 describe('colorPickerChannelGrabberRect', () => {
   // slider.cpp:322-334,363, center_grabber=true branch: areasize is the full
   // width, grabber_shift = -grabber_width/2 centres the icon ON the ratio point.
   it('centres the 16px grabber on the ratio point, offset down by grabber_offset', () => {
-    const r = colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0.5, { x: 16, y: 16 }, 8);
+    const r = colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0.5, CENTRED_GRABBER);
     expect(r).toEqual({ x: 192, y: 8, w: 16, h: 16 }); // 0.5*400-8=192; 16/2-16/2+8=8
   });
 
+  it('keeps the grabber inside the bar when center_slider_grabbers is 0 (color_picker.cpp:146)', () => {
+    // areasize = 400 - 16 = 384 and grabber_shift = 0 (slider.cpp:328-329).
+    const edgeGrabber = { ...CENTRED_GRABBER, isCentred: false };
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0, edgeGrabber).x).toBe(0);
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0.5, edgeGrabber).x).toBe(192);
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 1, edgeGrabber).x).toBe(384);
+  });
+
   it('extends half off the left edge at ratio=0', () => {
-    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0, { x: 16, y: 16 }, 8).x).toBe(-8);
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0, CENTRED_GRABBER).x).toBe(-8);
   });
 
   it('extends half off the right edge at ratio=1', () => {
-    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 1, { x: 16, y: 16 }, 8).x).toBe(392);
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 1, CENTRED_GRABBER).x).toBe(392);
   });
 });
 
@@ -628,9 +643,9 @@ describe('RTL rows (box_container.cpp:184-192, grid_container.cpp:193-197,218-22
   it('colorPickerChannelGrabberRect reads the ratio from the right: slider.cpp:363', () => {
     // `(rtl ? 1 - ratio : ratio) * areasize + grabber_shift`, the same branch
     // the stock grabber already takes (`shared/sliderSolver.ts`).
-    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0, { x: 16, y: 16 }, 8, true).x).toBe(392);
-    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 1, { x: 16, y: 16 }, 8, true).x).toBe(-8);
-    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0.5, { x: 16, y: 16 }, 8, true).x).toBe(192);
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0, CENTRED_GRABBER, true).x).toBe(392);
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 1, CENTRED_GRABBER, true).x).toBe(-8);
+    expect(colorPickerChannelGrabberRect({ x: 400, y: 16 }, 0.5, CENTRED_GRABBER, true).x).toBe(192);
   });
 
   it('leaves every row where it was under LTR', () => {
@@ -736,7 +751,7 @@ describe('textTypeLabel', () => {
       size: { x: 10, y: 23 },
       direction: { rtl: false, isTextRtl: false },
     });
-    expect(label.leftPx).toBe(box.x + THEME.widgets.button.normal.contentMargin.left);
+    expect(label.leftPx).toBe(box.x + THEME.button.normal.contentMargin.left);
     expect(label.alignment).toBe(1);
   });
 });

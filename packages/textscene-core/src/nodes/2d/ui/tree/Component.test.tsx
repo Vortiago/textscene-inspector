@@ -14,13 +14,17 @@ import type { TreeProperties } from './types';
 import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 
 const RECT: Rect2 = { x: 0, y: 0, w: 300, h: 200 };
 
 function solveNode(properties: Partial<TreeProperties> = {}, rtl = false): SolveNode {
   const node: TscnNode = controlNode('MyTree', 'Tree', { name: 'MyTree', ...properties });
-  return { ...emptySolveNode(), path: 'MyTree', node, rtl };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyTree', node, rtl });
 }
 
 function findFillColor(mesh: THREE.Mesh): { r: number; g: number; b: number; a: number } {
@@ -175,10 +179,10 @@ describe('<Tree> — self_modulate', () => {
       <Tree
         {...painterEnv()}
         {...splitTints}
-        solveNode={{
+        solveNode={withThemeItems({
           ...solveNode({ columnTitlesVisible: true, columns: 2 }),
           styleBoxes: { title_button_normal: whiteStyleBox() },
-        }}
+        })}
         rect={RECT}
         renderOrder={0}
       />

@@ -5,7 +5,7 @@ import type { TscnNode } from '../../../parser/types';
 import { heading } from '../../../parser/testing/parserKit';
 import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { painterEnv } from '../../../r3f/controls/native/testing/painterProps';
-import { solveNode } from '../../../r3f/controls/native/testing/solveNode';
+import { solveNode, withThemeItems } from '../../../r3f/controls/native/testing/solveNode';
 import { bundledRuns } from '../../../r3f/controls/native/testing/bundledRunStub';
 import { measureText } from '../../../r3f/controls/native/text/measurer';
 import '../../../parser/TscnParser';
@@ -39,7 +39,7 @@ async function labelCount(entries: typeof ENTRIES) {
     properties: parseFileDialog(heading('FileDialog', { name: 'Dialog' }), lines),
   } as unknown as TscnNode;
   const node = resolveFileDialog(raw, { 'res://': { kind: 'listed', entries } });
-  const window = { ...solveNode(), path: 'Dialog', node };
+  const window = withThemeItems({ ...solveNode(), path: 'Dialog', node });
   const size = wrappedWindowSize(window, THEME, measureText, EMBEDDER);
   const renderer = await ReactThreeTestRenderer.create(
     <DialogChrome
