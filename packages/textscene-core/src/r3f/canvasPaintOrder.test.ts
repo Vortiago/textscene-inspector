@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import type { TscnNode } from '../parser/types';
 import {
   allocateNodePaintRange,
-  behindParentRanges,
+  behindRangesOf,
   allocatePaintRange,
   canvasKeyAtZ,
   canvasRenderOrder,
@@ -488,7 +488,7 @@ describe("GraphEdit's listed children", () => {
   });
 });
 
-describe('behindParentRanges', () => {
+describe('behindRangesOf', () => {
   it('lists the show_behind_parent children in child order, whatever the parent type', () => {
     const parent = node('Clip', 'Node2D', [
       node('Front', 'Sprite2D'),
@@ -496,6 +496,7 @@ describe('behindParentRanges', () => {
     ]);
     const range = { base: 0, size: paintRangeSize(parent) };
 
-    expect(behindParentRanges(range, parent)).toEqual([allocateNodePaintRange(range, parent).children[1]]);
+    const { children } = allocateNodePaintRange(range, parent);
+    expect(behindRangesOf(parent.children, children)).toEqual([children[1]]);
   });
 });

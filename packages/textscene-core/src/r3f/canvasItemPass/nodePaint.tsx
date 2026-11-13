@@ -58,11 +58,6 @@ export function useNodePaint(node: TscnNode, path: string | null): CanvasItemPai
   }, [frame, fromPass, node]);
 }
 
-/** The draw sequence of the node's own pixels. */
-export function useNodePaintSequence(node: TscnNode, path: string | null): number {
-  return useNodePaint(node, path).own;
-}
-
 /**
  * The frame each child of the node drawing `node` at `path` takes, by index, and the one its
  * injected content takes, or null where they read the pass themselves. A node the pass does not

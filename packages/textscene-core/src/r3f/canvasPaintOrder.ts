@@ -411,19 +411,11 @@ export function ysortsChildren(node: TscnNode): boolean {
  * A CanvasGroup draws its composite rect over the buffer its children fill, and a clipping item
  * draws its mask over it, so each child draws first (`renderer_canvas_cull.cpp:471-484`).
  */
-export function drawsEveryChildFirst(node: TscnNode): boolean {
+function drawsEveryChildFirst(node: TscnNode): boolean {
   return node.type === 'CanvasGroup' || drawsClipped(node);
 }
 
-/**
- * The ranges of the children of `node` that draw behind it, in child order. A clipping item that
- * draws nothing has no group, so these draw before its other children.
- */
-export function behindParentRanges(range: PaintRange, node: TscnNode): PaintRange[] {
-  return behindRangesOf(node.children, allocateNodePaintRange(range, node).children);
-}
-
-/** The `ranges` of the `show_behind_parent` `children`, for a caller that allocated the ranges itself. */
+/** The `ranges` of the `show_behind_parent` `children`, in child order, whatever the parent type. */
 export function behindRangesOf(children: readonly TscnNode[], ranges: readonly PaintRange[]): PaintRange[] {
   return ranges.filter((_, index) => drawsBehindParent(children[index]!));
 }
