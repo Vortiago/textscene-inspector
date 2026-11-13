@@ -57,6 +57,11 @@ function styleBoxKindOf(box: ResolvedStyleBox): 'flat' | 'line' | 'texture' {
   return 'styleBoxKind' in box ? box.styleBoxKind : 'flat';
 }
 
+/** Whether `<StyleBoxQuad>` can draw `box`: a line or texture box may, an empty or clear flat box never does. */
+export function mayDrawStyleBox(box: ResolvedStyleBox): boolean {
+  return styleBoxKindOf(box) !== 'flat' || isDrawn(box);
+}
+
 /**
  * A `StyleBoxLine` as a one-colour flat fill with no border, corner or shadow:
  * the two-triangle rect `StyleBoxLine::draw`'s `canvas_item_add_rect` paints.

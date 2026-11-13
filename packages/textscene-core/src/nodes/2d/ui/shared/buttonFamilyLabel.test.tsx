@@ -10,7 +10,11 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { inkedGlyphCounts } from '../../../../r3f/controls/native/testing/bundledRunStub';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { Button } from '../button/Component';
 import { CheckBox } from '../checkbox/Component';
 import { CheckButton } from '../checkbutton/Component';
@@ -23,7 +27,11 @@ vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
 }));
 
 function solveNode(type: string, properties: Record<string, unknown>): SolveNode {
-  return { ...emptySolveNode(), path: 'N', node: controlNode('N', type, { name: 'N', ...properties }) };
+  return withThemeItems({
+    ...emptySolveNode(),
+    path: 'N',
+    node: controlNode('N', type, { name: 'N', ...properties }),
+  });
 }
 
 async function inkedCount(

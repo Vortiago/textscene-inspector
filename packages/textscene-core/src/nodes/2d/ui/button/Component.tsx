@@ -10,6 +10,7 @@ import type { Rgba } from '../../../../godot/math/math';
 import { canvasPieceSlot, wholeKeySlot } from '../../../../r3f/canvasItemState';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
 import { useIconModulate, useIconRefTexture } from '../../../../r3f/controls/native/useButtonIcon';
 import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
@@ -53,7 +54,7 @@ export function ButtonPainter({
   buttonClass,
 }: ButtonPainterProps) {
   const props = painterView<ButtonProperties>(solveNode);
-  const { state, box } = buttonStyle(solveNode, theme);
+  const { state, box } = buttonStyle(solveNode);
 
   // `renderOrder` and the clip planes reach every mesh. `<TextRun>` builds its own
   // ShaderMaterial, so it takes the planes explicitly, or the label escapes an
@@ -62,13 +63,7 @@ export function ButtonPainter({
 
   // `tint.own` is raw sRGB. It goes to the chrome as is, and multiplies into the font
   // and icon colours before each one's single sRGB-to-linear conversion.
-  const { fontSizePx, color: baseFontColor } = buttonTextTheme(
-    solveNode,
-    props,
-    state,
-    { theme },
-    buttonClass
-  );
+  const { fontSizePx, color: baseFontColor } = buttonTextTheme(solveNode, props, state, { theme });
   const tintedFontColor = useMemo(() => tintColor(baseFontColor, tint.own), [baseFontColor, tint.own]);
   const textOutline = useTintedTextOutline(solveNode, tint.own);
 
@@ -126,7 +121,7 @@ export function ButtonPainter({
       {!props.flat && <StyleBoxQuad styleBox={box} color={tint.own} rect={rect} renderOrder={renderOrder} />}
       {props.hasFocus && (
         <StyleBoxQuad
-          styleBox={solveNode.styleBoxes.focus ?? theme.widgets.button.focus}
+          styleBox={requiredThemeItem(solveNode.styleBoxes, 'focus')}
           color={tint.own}
           rect={rect}
           renderOrder={renderOrder}

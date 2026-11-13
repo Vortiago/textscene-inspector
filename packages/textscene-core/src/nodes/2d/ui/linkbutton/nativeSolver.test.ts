@@ -15,24 +15,23 @@ import {
   linkButtonTextTheme,
   resolveLinkButtonDrawState,
   shouldUnderline,
-  linkButtonUnderlineSpacing,
   linkButtonUnderlineGeometry,
   linkButtonTextPlacement,
   linkButtonLabelShape,
 } from './nativeSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { controlProps } from '../control/testing/controlProps';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 function node(props: Partial<LinkButtonProperties>): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: 'L',
     node: controlNode('L', 'LinkButton', { name: 'L', ...props }),
     // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
     // fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
-  };
+  });
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -128,20 +127,6 @@ describe('shouldUnderline (link_button.cpp:249-278)', () => {
   it('disabled: underlines only on ALWAYS, same as normal', () => {
     expect(shouldUnderline('disabled', 0)).toBe(true);
     expect(shouldUnderline('disabled', 1)).toBe(false);
-  });
-});
-
-describe('linkButtonUnderlineSpacing (default_theme.cpp:210)', () => {
-  it('is round(2*scale)', () => {
-    expect(linkButtonUnderlineSpacing({}, ctx())).toBe(2);
-  });
-
-  it('a theme_override_constants/underline_spacing override (already folded into n.constants) wins over the theme default', () => {
-    expect(linkButtonUnderlineSpacing({ underline_spacing: 9 }, ctx())).toBe(9);
-  });
-
-  it('moves with a non-1 theme scale (default_theme.cpp:210: round(2*scale))', () => {
-    expect(linkButtonUnderlineSpacing({}, { theme: nativeTheme(2.5) })).toBe(5);
   });
 });
 

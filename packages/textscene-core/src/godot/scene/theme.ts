@@ -5,6 +5,13 @@
 
 import type { Rgba } from '../math/math.js';
 
+/**
+ * What the fallback theme answers for an item no theme holds, the last step of every lookup
+ * (`theme_owner.cpp:258-259`): a default `Color()`, opaque black, and a constant of 0.
+ */
+export const FALLBACK_THEME_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
+export const FALLBACK_THEME_CONSTANT = 0;
+
 /** `control_font_color` (`default_theme.cpp:101`), the `font_color` default of most Controls. */
 export const CONTROL_FONT_COLOR: Rgba = { r: 0.875, g: 0.875, b: 0.875, a: 1 };
 
@@ -117,10 +124,6 @@ export interface ScaledGodotTheme {
   cornerRadius: number;
   /** The Button "normal" stylebox content margin (all sides), in px. */
   contentMargin: number;
-  /** OptionButton "normal" horizontal content margin, in px. */
-  optionButtonMarginX: number;
-  /** OptionButton "normal" vertical content margin, in px. */
-  optionButtonMarginY: number;
   /** BoxContainer `separation` / GridContainer `h_/v_separation`, in px. */
   separation: number;
   /** The sliders' `slider`/`grabber_area` stylebox thickness, in px. */
@@ -147,16 +150,11 @@ export function scaledPx(base: number, scale: number): number {
 export function scaledGodotTheme(scale: number): ScaledGodotTheme {
   // JS and Godot rounding differ only on negative halves, which the
   // [0.5, 8] clamp in `projectThemeScale` rules out.
-  const contentMargin = scaledPx(DEFAULT_CONTENT_MARGIN, scale);
   return {
     scale,
     fontSize: scaledPx(DEFAULT_FONT_SIZE, scale),
     cornerRadius: scaledPx(DEFAULT_CORNER_RADIUS, scale),
-    contentMargin,
-    // The OptionButton styleboxes take `2 * default_margin` across and `default_margin`
-    // down (`default_theme.cpp:215`).
-    optionButtonMarginX: scaledPx(2 * DEFAULT_CONTENT_MARGIN, scale),
-    optionButtonMarginY: contentMargin,
+    contentMargin: scaledPx(DEFAULT_CONTENT_MARGIN, scale),
     // `Math::round(4 * scale)`, default_theme.cpp:1249-1251.
     separation: scaledPx(DEFAULT_SEPARATION, scale),
     // Twice a rounded margin, not the rounding of twice the margin: the two
@@ -166,37 +164,4 @@ export function scaledGodotTheme(scale: number): ScaledGodotTheme {
     sliderGrabberSize: scaledPx(SLIDER_GRABBER_SIZE, scale),
     sliderTickBox: scaledPx(SLIDER_TICK_BOX, scale),
   };
-}
-
-/** One type variation the default theme registers. */
-export interface DefaultThemeVariation {
-  /** `Theme::set_type_variation(variation, base)`: the type its lookup continues in. */
-  readonly base: string;
-  /** What the variation adds to `default_font_size` (the unscaled 16 px), where the default theme sets a size for it. `GraphFrameTitleLabel`'s literal 22 is 16 + 6 (`default_theme.cpp:848`). */
-  readonly fontSizeStep?: number;
-  /** The `font_color` the variation sets (`default_theme.cpp:819,849,1174`). */
-  readonly fontColor?: Rgba;
-}
-
-/**
- * The type variations the default theme registers (`default_theme.cpp:357-358`, `:394-401`, `:814`,
- * `:845`, `:1167-1171`), the one table the type chain, the font size and the Button boxes read. A Theme
- * that sets items for one is read for a Control that names it, though no scene Theme registers it.
- * Its boxes are `r3f/controls/native/defaultThemeItems.ts`.
- */
-export const DEFAULT_THEME_VARIATIONS: Readonly<Record<string, DefaultThemeVariation>> = {
-  FlatButton: { base: 'Button' },
-  FlatMenuButton: { base: 'MenuButton' },
-  HeaderSmall: { base: 'Label', fontSizeStep: 4 },
-  HeaderMedium: { base: 'Label', fontSizeStep: 8 },
-  HeaderLarge: { base: 'Label', fontSizeStep: 12 },
-  GraphNodeTitleLabel: { base: 'Label', fontColor: CONTROL_FONT_COLOR },
-  GraphFrameTitleLabel: { base: 'Label', fontSizeStep: 6, fontColor: LABEL_FONT_COLOR },
-  TooltipPanel: { base: 'PopupPanel' },
-  TooltipLabel: { base: 'Label', fontColor: CONTROL_FONT_COLOR },
-};
-
-/** `variation`'s entry in {@link DEFAULT_THEME_VARIATIONS}. Own keys only: a variation named `constructor` must not read `Object.prototype`. */
-export function defaultThemeVariation(variation: string): DefaultThemeVariation | undefined {
-  return Object.hasOwn(DEFAULT_THEME_VARIATIONS, variation) ? DEFAULT_THEME_VARIATIONS[variation] : undefined;
 }

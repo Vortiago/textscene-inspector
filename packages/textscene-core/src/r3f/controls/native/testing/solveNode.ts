@@ -7,8 +7,11 @@
 
 import type { TscnNode } from '../../../../parser/types';
 import type { ControlProperties } from '../../../../nodes/2d/ui/control/types';
-import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
+import { NO_PROJECT_FONTS, type ProjectFonts } from '../../../../resources/fonts/font/projectFonts';
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
 import type { SolveNode } from '../solveTree';
+import { mergeThemedRecord, themeResolutionScope } from '../../../../resources/styles/theme/lookup';
+import { defaultColorsOf, defaultConstantsOf, defaultStyleBoxesOf } from '../defaultThemeRecords';
 import {
   allocateNodePaintRange,
   behindRangesOf,
@@ -97,6 +100,28 @@ export function solveNode(): Pick<
     // No `internationalization/locale/test`.
     locale: '',
   };
+}
+
+/**
+ * `n` with the items the default theme gives its type and `theme_type_variation`, under the items `n`
+ * already holds, which stand in for its overrides and scene Themes. The tree build gives every node
+ * these, so a painter or solver reads them with no fallback.
+ */
+export function withThemeItems<T extends SolveNode>(n: T): T {
+  const variation = (n.node.properties as ControlProperties).themeTypeVariation;
+  const scope = themeResolutionScope(n.node.type, variation, n.themeChain, n.projectFonts);
+  const noSceneItems = () => undefined;
+  return {
+    ...n,
+    styleBoxes: mergeThemedRecord(scope, n.styleBoxes, noSceneItems, defaultStyleBoxesOf),
+    colors: mergeThemedRecord(scope, n.colors, noSceneItems, defaultColorsOf),
+    constants: mergeThemedRecord(scope, n.constants, noSceneItems, defaultConstantsOf),
+  };
+}
+
+/** No project Theme or font, under the default theme at `scale`, as `gui/theme/default_theme_scale` sets it. */
+export function projectFontsAt(scale: number): ProjectFonts {
+  return { ...NO_PROJECT_FONTS, defaultTheme: defaultThemeAt(scale) };
 }
 
 /**

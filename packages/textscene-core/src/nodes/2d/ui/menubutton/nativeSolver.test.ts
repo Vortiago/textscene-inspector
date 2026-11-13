@@ -1,5 +1,5 @@
 /**
- * Tests `menuButtonMinimumSize` and `MENU_BUTTON_CLASS` against Godot 4.6.3. Sizing reuses
+ * Tests `menuButtonMinimumSize` and the MenuButton text theme against Godot 4.6.3. Sizing reuses
  * `button/nativeSolver.test.ts`'s example, since MenuButton's StyleBoxes are Button's objects
  * (`default_theme.cpp:255-258`). The dedicated case is MenuButton's `font_disabled_color`,
  * `Color(1, 1, 1, 0.3)` (`:268`), not Button's `control_font_disabled_color` (`:161`).
@@ -11,22 +11,22 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { MenuButtonProperties } from './types';
 import { buttonTextTheme } from '../button/nativeSolver';
-import { MENU_BUTTON_CLASS, menuButtonMinimumSize } from './nativeSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { menuButtonMinimumSize } from './nativeSolver';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 
 const FONT_HEIGHT = 23;
 const AB_WIDTH = (1354 + 1350) * (16 / 2048);
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
 
 function node(props: Partial<MenuButtonProperties>): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: 'M',
     node: controlNode('M', 'MenuButton', { name: 'M', ...props }),
     // A local theme_override_colors/* reaches `resolveTextTheme` through `n.colors`, which the walker
     // fills unconditionally, not through props.
     colors: props.themeOverrideColors ?? {},
-  };
+  });
 }
 
 function ctx(): SolveContext {
@@ -56,15 +56,9 @@ describe('menuButtonMinimumSize', () => {
   });
 });
 
-describe('the text theme of MENU_BUTTON_CLASS', () => {
+describe('the text theme of a MenuButton', () => {
   const disabledTextTheme = (n: SolveNode) =>
-    buttonTextTheme(
-      n,
-      n.node.properties as MenuButtonProperties,
-      'disabled',
-      { theme: nativeTheme(1) },
-      MENU_BUTTON_CLASS
-    );
+    buttonTextTheme(n, n.node.properties as MenuButtonProperties, 'disabled', { theme: nativeTheme(1) });
 
   it("resolves MenuButton's OWN disabled font colour, not Button's control_font_disabled_color", () => {
     const n = node({ disabled: true });
@@ -73,7 +67,7 @@ describe('the text theme of MENU_BUTTON_CLASS', () => {
     expect(resolved.color).toEqual({ r: 1, g: 1, b: 1, a: 0.3 });
   });
 
-  it('honours a theme_override_colors/font_disabled_color override over the built-in literal', () => {
+  it('honours a theme_override_colors/font_disabled_color override over the default theme', () => {
     const n = node({
       disabled: true,
       themeOverrideColors: { font_disabled_color: { r: 0, g: 1, b: 0, a: 1 } },

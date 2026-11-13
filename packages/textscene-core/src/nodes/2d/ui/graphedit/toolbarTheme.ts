@@ -5,15 +5,12 @@
  * (`Control::get_theme_stylebox`, `control.cpp:3078`), not the GraphEdit's own.
  */
 import type { Rgba } from '../../../../godot/math/math';
-import { buildThemeTypeChain } from '../../../../resources/styles/theme/lookup';
 import { perObject } from '../../../../utils/perObject';
 import { pickButtonStyleBox, type ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
-import { buttonBoxesInChain, LABEL_NORMAL_BOX } from '../../../../r3f/controls/native/defaultThemeItems';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { internalChildThemeItems } from '../../../../r3f/controls/native/themeItems';
-import { LABEL_FONT_COLOR } from '../../../../godot/scene/theme';
+import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import { LINE_EDIT_DEFAULT_FONT_COLOR, pickLineEditStyleBox } from '../lineedit/nativeSolver';
 import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
 
@@ -21,7 +18,7 @@ import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
 const TOOLBAR_BUTTON_VARIATION = 'FlatButton';
 
 export interface GraphEditToolbarTheme {
-  /** The toolbar Buttons' box by draw state: the Theme chain's, else the default theme's `FlatButton`. */
+  /** The toolbar Buttons' box by draw state, which `FlatButton` sets in the default theme. */
   buttonBoxes: Readonly<Record<ToggleDrawState, StyleBoxFlatData>>;
   /** The Buttons' colours, which hold the `icon_*_color` items. */
   buttonColors: SolveNode['colors'];
@@ -46,14 +43,7 @@ function buildToolbarTheme(n: SolveNode, theme: NativeTheme): GraphEditToolbarTh
   const button = internalChildThemeItems(n, 'Button', TOOLBAR_BUTTON_VARIATION);
   const label = internalChildThemeItems(n, 'Label');
   const field = spinBoxFieldThemeItems(n);
-  const typeChain = buildThemeTypeChain(
-    'Button',
-    TOOLBAR_BUTTON_VARIATION,
-    n.themeChain,
-    n.projectFonts.projectTheme
-  );
-  const defaults = buttonBoxesInChain(theme, typeChain);
-  const buttonBox = (state: ToggleDrawState) => pickButtonStyleBox(button.styleBoxes, defaults, state, n.rtl);
+  const buttonBox = (state: ToggleDrawState) => pickButtonStyleBox(button.styleBoxes, state, n.rtl);
   const { lineEdit } = theme.widgets;
   const result: GraphEditToolbarTheme = {
     buttonBoxes: {
@@ -62,8 +52,8 @@ function buildToolbarTheme(n: SolveNode, theme: NativeTheme): GraphEditToolbarTh
       disabled: buttonBox('disabled'),
     },
     buttonColors: button.colors,
-    labelBox: label.styleBoxes.normal ?? LABEL_NORMAL_BOX,
-    labelColor: label.colors.font_color ?? LABEL_FONT_COLOR,
+    labelBox: requiredThemeItem(label.styleBoxes, 'normal'),
+    labelColor: requiredThemeItem(label.colors, 'font_color'),
     fieldBoxes: {
       normal: pickLineEditStyleBox(field.styleBoxes, lineEdit, 'normal'),
       readOnly: pickLineEditStyleBox(field.styleBoxes, lineEdit, 'read_only'),

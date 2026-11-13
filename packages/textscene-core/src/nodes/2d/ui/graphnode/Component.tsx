@@ -151,10 +151,10 @@ export function GraphNode({
             undefined,
             undefined,
             undefined,
-            { contentMargin: fontTheme.box.contentMargin }
+            { contentMargin: fontTheme.box.contentMargin, lineSpacingPx: fontTheme.lineSpacingPx }
           )
         : [],
-    [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h, fontTheme.box]
+    [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h, fontTheme]
   );
   const titleLineLayouts = useMemo(
     () => (titleLayout ? titlePlacements.map((p) => soloLineLayout(p.line, titleLayout)) : []),

@@ -12,7 +12,11 @@ import { controlSolverRegistry } from '../../../../r3f/controls/native/solverReg
 import type { MenuButtonProperties } from './types';
 import { MenuButton } from './Component';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunMeshes,
   bundledRuns,
@@ -30,7 +34,7 @@ const RECT: Rect2 = { x: 0, y: 0, w: 120, h: 32 };
 
 function solveNode(properties: Partial<MenuButtonProperties> = {}): SolveNode {
   const node: TscnNode = controlNode('MyMenuButton', 'MenuButton', { name: 'MyMenuButton', ...properties });
-  return { ...emptySolveNode(), path: 'MyMenuButton', node };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyMenuButton', node });
 }
 
 function findChromeMesh(scene: Rendered['scene']) {

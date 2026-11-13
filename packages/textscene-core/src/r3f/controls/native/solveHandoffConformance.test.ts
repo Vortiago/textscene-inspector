@@ -18,7 +18,7 @@ import {
 import type { Channel } from './solveHandoff';
 import { createSolveContext, solveControlTree } from './controlRectSolver';
 import { nativeTheme } from './nativeTheme';
-import { solveNode } from './testing/solveNode';
+import { solveNode, withThemeItems } from './testing/solveNode';
 import type { SolveNode } from './solveTree';
 import type { TscnNode } from '../../../parser/types';
 import { scrollContainerLayoutChannel } from '../../../nodes/2d/ui/scrollcontainer/nativeSolver';
@@ -214,7 +214,7 @@ describe('solve handoff conformance', () => {
   it('puts nothing on a minimum-size-only node — `MinimumSizeResult` no longer carries a handoff', () => {
     const label = tscn('Root', 'Label', { text: 'hello' });
     const solved = solveControlTree(
-      [{ ...solveNode(), path: 'Root', node: label }],
+      [withThemeItems({ ...solveNode(), path: 'Root', node: label })],
       VIEWPORT,
       createSolveContext(nativeTheme(1), () => ({ x: 0, y: 0 }))
     );

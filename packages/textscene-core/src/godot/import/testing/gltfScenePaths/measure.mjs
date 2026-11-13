@@ -13,8 +13,8 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { godotBinary } from '../../../testing/measureKit.mjs';
 import { CASES, CORPUS } from './cases.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -22,11 +22,6 @@ const REPOSITORY = resolve(HERE, '../../../../../../..');
 const OUTPUT = resolve(HERE, '../../gltfImportScene.godot.json');
 const NAMING_VERSIONS = [0, 1, 2];
 const TRIANGLE = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
-
-function godotBinary() {
-  const flag = process.argv.indexOf('--godot');
-  return flag === -1 ? 'godot' : process.argv[flag + 1];
-}
 
 function padded(bytes, fill) {
   const out = new Uint8Array(Math.ceil(bytes.length / 4) * 4).fill(fill);

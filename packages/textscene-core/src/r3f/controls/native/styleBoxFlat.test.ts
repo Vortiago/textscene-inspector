@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { contentRect, flatCornerDetail, flatStyleBox } from './styleBoxFlat';
+import { contentRect, flatStyleBox } from './styleBoxFlat';
 
 const BOX = flatStyleBox(
   { r: 0, g: 0, b: 0, a: 1 },
@@ -18,22 +18,6 @@ describe('contentRect', () => {
 
   it('goes negative when the margins exceed the rect, as Godot does', () => {
     expect(contentRect({ x: 0, y: 0, w: 5, h: 5 }, BOX)).toEqual({ x: 4, y: 2, w: -5, h: -5 });
-  });
-});
-
-describe('flatCornerDetail', () => {
-  // Rows are the radius before the theme scale; columns the scales 0.5, 1, 1.5, 2, 4.
-  // Expected values are the table of `MIN(ceil(1.5 * radius), 6) * scale` truncated, clamped to 1..20.
-  const SCALES = [0.5, 1, 1.5, 2, 4];
-  it.each([
-    [0, [1, 1, 1, 1, 1]],
-    [2, [1, 3, 4, 6, 12]],
-    [3, [2, 5, 7, 10, 20]],
-    [4, [3, 6, 9, 12, 20]],
-    [6, [3, 6, 9, 12, 20]],
-    [10, [3, 6, 9, 12, 20]],
-  ])('gives the Godot detail for radius %i', (radius, expected) => {
-    expect(SCALES.map((scale) => flatCornerDetail(radius, scale))).toEqual(expected);
   });
 });
 

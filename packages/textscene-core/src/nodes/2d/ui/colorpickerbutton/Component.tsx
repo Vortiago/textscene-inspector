@@ -30,8 +30,8 @@ export function ColorPickerButton(props: NativeControlComponentProps) {
   const swatchColor = useItemLinearColor(filled);
 
   // `Rect2(normal_style->get_offset(), get_size() - normal_style->get_minimum_size())`: the
-  // margins of "normal" in every draw state. `normal_style` binds Button's "normal" (`default_theme.cpp:1134`).
-  const normalStyle = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, 'normal');
+  // margins of "normal" in every draw state.
+  const normalStyle = pickButtonStyleBox(solveNode.styleBoxes, 'normal');
   const swatch = contentRect({ x: 0, y: 0, w: rect.w, h: rect.h }, normalStyle);
 
   // `BIND_THEME_ITEM_EXT` looks `overbright_indicator` up under "ColorPicker" (`color_picker.cpp:2546`),

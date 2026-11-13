@@ -6,11 +6,8 @@
 import { clamp } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
 import { boolOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
-import {
-  CORNER_DETAIL_MAX,
-  CORNER_DETAIL_MIN,
-  type StyleBoxFlatData,
-} from '../../../r3f/controls/native/styleBoxFlat';
+import { type StyleBoxFlatData } from '../../../r3f/controls/native/styleBoxFlat';
+import { CORNER_DETAIL_MAX, CORNER_DETAIL_MIN } from '../../../godot/scene/defaultTheme/styleBoxes';
 import { colorOr } from '../../../utils/colorParser';
 
 // An absent StyleBoxFlat key takes Godot's default (`r3f/controls/native/styleBoxFlat.ts` cites each field).

@@ -13,7 +13,11 @@ import { sRGBChannelToLinear } from '../../../../utils/colorSpace';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { LinkButton } from './Component';
 import type { LinkButtonProperties } from './types';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   bundledRunMeshes,
   bundledRuns,
@@ -31,7 +35,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function solveNode(properties: Partial<LinkButtonProperties> = {}): SolveNode {
   const node: TscnNode = controlNode('MyLinkButton', 'LinkButton', { name: 'MyLinkButton', ...properties });
-  return { ...emptySolveNode(), path: 'MyLinkButton', node };
+  return withThemeItems({ ...emptySolveNode(), path: 'MyLinkButton', node });
 }
 
 /** The underline stroke is a plain `MeshBasicMaterial`-backed `PlaneGeometry`, no `map`. */
