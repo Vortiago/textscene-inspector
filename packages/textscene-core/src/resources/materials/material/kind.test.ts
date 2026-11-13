@@ -16,6 +16,7 @@ import type { Material } from './types';
  */
 function summary(material: Material): unknown {
   if (material.form === 'declined') return material;
+  if (material.form === 'sky') return { type: material.type, panorama: material.panorama?.ref };
   const textures = Object.entries(material.textures).map(([slot, reference]) => [slot, reference.ref]);
   return { albedo: material.data.albedo, textures, nextPass: material.nextPass.ref };
 }
@@ -40,6 +41,13 @@ describeKindFromEveryOrigin([
     className: 'ORMMaterial3D',
     body: 'albedo_color = Color(0.1, 0.3, 0.9, 1)',
     expected: { form: 'declined', type: 'ORMMaterial3D' },
+  },
+  {
+    kind: MATERIAL,
+    className: 'PanoramaSkyMaterial',
+    body: 'panorama = ExtResource("1_sky")',
+    expected: { type: 'PanoramaSkyMaterial', panorama: 'ExtResource("1_sky")' },
+    summarise: summary,
   },
   {
     kind: MATERIAL,

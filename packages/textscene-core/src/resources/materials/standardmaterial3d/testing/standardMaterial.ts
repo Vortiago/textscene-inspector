@@ -6,7 +6,7 @@
 
 import type * as THREE from 'three';
 import { buildMaterial } from '../buildMaterial.testkit';
-import { parseStandardMaterial3DScalars } from '../scalars';
+import { parseStandardMaterial3DScalars } from '../scalars.testkit';
 
 export function standardMaterial(properties: Record<string, string> = {}): THREE.Material {
   return buildMaterial(parseStandardMaterial3DScalars(properties));

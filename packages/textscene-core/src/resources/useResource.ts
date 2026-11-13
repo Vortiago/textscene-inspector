@@ -39,11 +39,8 @@ export function useResource<T>(path: string, type: ResourceBusType): ResourceRes
   return result;
 }
 
-/**
- * `useResource` without the **Missing resource** report, for a caller that reads a
- * **Sub-resource path** out of a whole file and reports the address itself.
- */
-export function useResourceLoad<T>(path: string, type: ResourceBusType): ResourceResult<T> {
+/** The load `useResource` reports on. */
+function useResourceLoad<T>(path: string, type: ResourceBusType): ResourceResult<T> {
   const loader = useResourceLoader();
   // The request a result belongs to: the render that swaps the path or the bus still holds the
   // old request's result, whose value may be a disposed clone, so that render answers pending.

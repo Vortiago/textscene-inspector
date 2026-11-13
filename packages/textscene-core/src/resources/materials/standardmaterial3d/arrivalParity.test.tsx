@@ -29,7 +29,7 @@ import { materialTextureStates } from './textureBinding';
 import { bindSlotTexture } from './textureBinding.testkit';
 import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../godot/scene/viewport.js';
 import { decodeStandardMaterial3D } from './decode';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 import { mapSampledBy, programShader } from '../../../r3f/testing/patchedFragment';
 import { TEXTURE_SLOTS, type ResolvedTextures, type TextureSlot } from './types';
 

@@ -6,7 +6,6 @@
 
 import * as THREE from 'three';
 import { godotBlendState } from './blendState';
-import { decodeStandardMaterial3D } from './decode';
 import { textureChannelMask } from '../../../godot/rendering/materials/textureChannel';
 import { CullMode } from '../../../godot/rendering/materials/cullMode';
 import type { StandardMaterial3DData, StandardMaterial3DScalars } from './types';
@@ -93,8 +92,3 @@ export function standardMaterial3DScalars(data: StandardMaterial3DData): Standar
  * entry point of every StandardMaterial3D-bearing node component. The caller resolves
  * external textures.
  */
-export function parseStandardMaterial3DScalars(
-  properties: Record<string, string>
-): StandardMaterial3DScalars {
-  return standardMaterial3DScalars(decodeStandardMaterial3D(properties));
-}

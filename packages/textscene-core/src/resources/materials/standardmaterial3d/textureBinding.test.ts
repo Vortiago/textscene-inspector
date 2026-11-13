@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { materialTextureStates, slotReadsSourceColor } from './textureBinding';
 import { godotTextureFilterState } from '../../textures/godotTextureFilter';
 import { bindSlotTexture } from './textureBinding.testkit';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 import { DEFAULT_ANISOTROPIC_FILTERING_LEVEL } from '../../../godot/scene/viewport.js';
 import { TEXTURE_SLOTS, type TextureSlot } from './types';
 import { UV2_CHANNEL } from '../../meshes/uv2';

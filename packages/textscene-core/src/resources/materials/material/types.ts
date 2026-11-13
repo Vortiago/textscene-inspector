@@ -1,9 +1,11 @@
 /**
  * What a Material resource decodes to, from any origin: a StandardMaterial3D the previewer
- * builds, or another Material class it declines and draws as Godot's default surface (ADR-0041).
+ * builds on a surface, a sky material it builds as a sky, or another Material class it declines
+ * and draws as Godot's default surface (ADR-0041).
  */
 
 import type { ScopedReference } from '../../reading';
+import type { SkyProperties } from '../../sky/types';
 import type { StandardMaterial3DData, TextureSlot } from '../standardmaterial3d/types';
 
 export interface StandardMaterial {
@@ -15,10 +17,19 @@ export interface StandardMaterial {
   readonly nextPass: ScopedReference;
 }
 
+/** A ProceduralSkyMaterial, a PanoramaSkyMaterial or a PhysicalSkyMaterial: a Sky draws it. */
+export interface SkyMaterial {
+  readonly form: 'sky';
+  readonly type: string;
+  readonly properties: SkyProperties;
+  /** A PanoramaSkyMaterial's `panorama`, resolved in the material's own file. Null for any other sky. */
+  readonly panorama: ScopedReference | null;
+}
+
 /** A Material class this previewer does not build, such as a ShaderMaterial or an ORMMaterial3D. */
 export interface DeclinedMaterial {
   readonly form: 'declined';
   readonly type: string;
 }
 
-export type Material = StandardMaterial | DeclinedMaterial;
+export type Material = StandardMaterial | SkyMaterial | DeclinedMaterial;

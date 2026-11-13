@@ -29,7 +29,7 @@ import { withPointDraw, type ListedPlacement } from '../materials/godotPoint';
 import { withParticleDraw } from '../materials/godotParticlesProgram';
 import { SRGB_VERTEX_COLOR } from '../materials/godotVertexColor';
 import { growInjectionOf } from '../materials/godotGrow';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
+import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars.testkit';
 import { BillboardMode } from '../../godot/rendering/materials/billboardMode';
 import { triplanarInjection, triplanarUserData } from '../materials/godotTriplanar';
 import { worldTriplanarRecord } from '../testing/triplanarRecord';

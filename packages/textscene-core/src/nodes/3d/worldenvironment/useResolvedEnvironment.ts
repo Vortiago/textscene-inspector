@@ -1,80 +1,46 @@
 /**
  * Resolves `WorldEnvironment.environment` or `Camera3D.environment` → `Environment.sky` →
  * `Sky.sky_material`, in the `SubResource` or the `ExtResource` form at every level, as Godot does,
- * and the Environment's Texture2D slots under the node that holds it. A lost sky also loses the
- * ambient an Environment draws from it, so surfaces the sun does not reach go black.
+ * and the Environment's Texture2D slots. A lost sky also loses the ambient an Environment draws
+ * from it, so surfaces the sun does not reach go black.
  */
 
 import { useMemo } from 'react';
-import { NO_RESOURCES, useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useResourceResolution, useSubOrExtResource } from '../../../resources/useSubOrExtResource';
-import { decodeEnvironment } from '../../../resources/environment/decode';
 import { createEnvironmentSettings } from '../../../resources/environment/build';
+import { ENVIRONMENT } from '../../../resources/environment/kind';
+import { useNodeResource, useReferencedResource } from '../../../resources/reading';
+import { SKY } from '../../../resources/sky/kind';
 import { useProjectClearColorSrgb } from '../../../r3f/useProjectClearColor';
 import type { EnvironmentResolution } from '../../../r3f/environment/WorldEnvironmentScope';
 import { NO_RESOLUTION, PENDING_RESOLUTION } from '../../../r3f/environment/worldGroup';
-import { decodeSky, decodeSkyMaterial, skyMaterialRef } from '../../../resources/sky/decode';
-import type { TscnInternalResource } from '../../../parser/types';
-import type { Sky } from '../../../resources/sky/types';
-import { perObject } from '../../../utils/perObject';
-import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene';
 import { useGlowMap, usePanorama } from './environmentTextures';
 
 /**
- * One `Sky` for each Sky resource and material, whichever Environment or camera resolves it, as
- * Godot keeps one radiance for each Sky RID (`sky.h:251`). So viewports that draw one sky share
- * its bake. Null for a material this previewer cannot decode.
- */
-const skyOf = perObject((skyResource: TscnInternalResource) =>
-  perObject((material: TscnInternalResource): Sky | null => {
-    const decoded = decodeSkyMaterial(material.type, material.data);
-    return decoded ? decodeSky(skyResource.data, decoded) : null;
-  })
-);
-
-/**
- * A hook, not a pure function, because the external form loads through the resource pipeline.
  * The resolution is `pending` only while the Environment itself loads. The inline case resolves on
- * the first render, so an all-inline scene resolves in one pass. Each level applies as it resolves
- * (**Progressive fill-in**). Each level's references resolve in the pools of the level that holds
- * them, so a `.tres` reads its own sub-resources.
+ * the first render, so an all-inline scene resolves in one pass. The sky applies once it resolves
+ * (**Progressive fill-in**), and each level's references resolve in the file that holds them.
  */
 export function useResolvedEnvironment(environmentRef: string | undefined): EnvironmentResolution {
-  const { scoped: environment, status } = useResourceResolution(environmentRef, useSceneResources());
-  const envProps = useMemo(
-    () =>
-      environment?.resource.type === 'Environment' ? decodeEnvironment(environment.resource.data) : null,
-    [environment]
-  );
-
-  // Hooks run unconditionally with `undefined` when the level above did not resolve.
-  // `useSubOrExtResource` short-circuits that to "nothing", so rules of hooks holds
-  // whatever shape the chain takes.
-  const skyResource = useSubOrExtResource(envProps?.sky, environment?.resources ?? NO_RESOURCES);
-  const materialRef = skyMaterialRef(skyResource?.resource.type, skyResource?.resource.data);
-  const scopedMaterial = useSubOrExtResource(materialRef, skyResource?.resources ?? NO_RESOURCES);
-  const material = scopedMaterial?.resource;
-
-  const skyOwner = skyResource?.resource;
-  const sky = skyOwner && material ? skyOf(skyOwner)(material) : null;
+  const read = useNodeResource(environmentRef, ENVIRONMENT);
+  const environment = read.value;
+  const skyRead = useReferencedResource(environment?.sky ?? null, SKY);
+  const sky = skyRead.value?.sky ?? null;
 
   const clearColor = useProjectClearColorSrgb();
   // Apart from the sky, so a sky `.tres` that loads later keeps `settings`, and with it the
   // compositor's effect.
+  const properties = environment?.properties;
   const settings = useMemo(
-    () => (envProps ? createEnvironmentSettings(envProps, clearColor) : null),
-    [envProps, clearColor]
+    () => (properties ? createEnvironmentSettings(properties, clearColor) : null),
+    [properties, clearColor]
   );
 
-  const isPanoramaHeldLocally = [environment?.resource, skyOwner, material].every(
-    (holder) => !!holder && isLocalToScene(holder)
-  );
-  const panorama = usePanorama(sky, scopedMaterial, isPanoramaHeldLocally);
-  const glowMap = useGlowMap(settings, environment);
+  const panorama = usePanorama(skyRead.value?.panorama ?? null);
+  const glowMap = useGlowMap(settings, environment?.glowMap ?? null);
 
   return useMemo((): EnvironmentResolution => {
-    if (status === 'pending') return PENDING_RESOLUTION;
-    if (!settings || !environment) return NO_RESOLUTION;
+    if (read.status === 'pending') return PENDING_RESOLUTION;
+    if (!settings) return NO_RESOLUTION;
     return { status: 'resolved', environment: { settings, sky, panorama, glowMap } };
-  }, [status, settings, environment, sky, panorama, glowMap]);
+  }, [read.status, settings, sky, panorama, glowMap]);
 }

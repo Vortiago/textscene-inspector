@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { buildMaterial } from './buildMaterial.testkit';
 import { decodeStandardMaterial3D } from './decode';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 import type { ResolvedTextures } from './types';
 import { DRAWN_OPAQUE_PREPASS, opaquePrepassOf } from '../../../r3f/materials/opaquePrepass';
 import { heightmapSampledBy, patchedFragment, patchedUniforms } from '../../../r3f/testing/patchedFragment';

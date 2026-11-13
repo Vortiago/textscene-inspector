@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { decodeStandardMaterial3D } from './decode';
-import { parseStandardMaterial3DScalars } from './scalars';
+import { parseStandardMaterial3DScalars } from './scalars.testkit';
 
 const blueTresOutlinePass = {
   render_priority: '1',

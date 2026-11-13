@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { standardMaterialBags } from '../../resources/materials/standardmaterial3d/materialBag';
 import { StandardMaterialSlot } from './StandardMaterialSlot';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
+import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars.testkit';
 import { NodePathProvider } from '../contexts/NodePathContext';
 import { GEOMETRY_INSTANCE_DEFAULTS } from '../../nodes/3d/geometryinstance3d/types';
 import type { TscnNode } from '../../parser/types';
