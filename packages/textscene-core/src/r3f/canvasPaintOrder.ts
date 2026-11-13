@@ -343,7 +343,7 @@ function drawsBehindParent(node: TscnNode): boolean {
 }
 
 /** How a parent's own children split its range. */
-interface PaintRangeLayout {
+export interface PaintRangeLayout {
   /** `y_sort_enabled`: the children are re-packed in sort order after the parent. */
   sortsChildren?: boolean;
   /**
@@ -469,13 +469,18 @@ export function behindRangesOf(children: readonly TscnNode[], ranges: readonly P
 
 /** `allocatePaintRange` for `node`'s own children, with the layout the node declares. */
 export function allocateNodePaintRange(range: PaintRange, node: TscnNode): AllocatedPaintRange {
-  return allocatePaintRange(range, node.children, {
+  return allocatePaintRange(range, node.children, paintLayoutOf(node, node.children));
+}
+
+/** The layout `node` declares for `children`, the children it draws in its own run. */
+export function paintLayoutOf(node: TscnNode, children: readonly TscnNode[]): PaintRangeLayout {
+  return {
     sortsChildren: ysortsChildren(node),
     drawsChildrenFirst: drawsEveryChildFirst(node),
     frontRoom: internalFrontRoom(node),
     backRoom: internalBackRoom(node),
-    listedOrder: listedChildOrder(node, node.children),
-  });
+    listedOrder: listedChildOrder(node, children),
+  };
 }
 
 /**
