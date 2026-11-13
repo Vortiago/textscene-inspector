@@ -1,0 +1,36 @@
+; One variable: blend_mode = 1 (Add) on two overlapping Sprite2Ds under one textured PointLight2D, over
+; an opaque unlit Polygon2D. Godot's lit path does no sRGB conversion, so each item lands within one
+; level of the reference. The opaque Polygon2D keeps the clear colour out of the lit pixels.
+
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://textures/atlas-quadrants.png" id="1_tex"]
+[ext_resource type="Texture2D" path="res://textures/light2d.png" id="2_light"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_add"]
+blend_mode = 1
+
+[node name="Root" type="Node2D"]
+
+[node name="Backdrop" type="Polygon2D" parent="."]
+light_mask = 2
+color = Color(0.2, 0.2, 0.2, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Orange" type="Sprite2D" parent="."]
+material = SubResource("CanvasItemMaterial_add")
+position = Vector2(500, 280)
+modulate = Color(1, 0.5, 0.2, 1)
+texture = ExtResource("1_tex")
+
+[node name="Blue" type="Sprite2D" parent="."]
+material = SubResource("CanvasItemMaterial_add")
+position = Vector2(540, 320)
+modulate = Color(0.2, 0.5, 1, 0.5)
+texture = ExtResource("1_tex")
+
+[node name="Light" type="PointLight2D" parent="."]
+position = Vector2(520, 300)
+color = Color(1, 0.9, 0.7, 1)
+energy = 1.2
+texture = ExtResource("2_light")

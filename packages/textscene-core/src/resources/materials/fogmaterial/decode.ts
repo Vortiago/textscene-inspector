@@ -14,6 +14,5 @@ export function decodeFogMaterial(properties: Record<string, string>): FogMateri
     emission: colorOr(properties.emission, { r: 0, g: 0, b: 0, a: 1 }),
     heightFalloff: Math.max(0, floatOr(properties.height_falloff, 0, 'FogMaterial height_falloff')),
     edgeFade: Math.max(0, floatOr(properties.edge_fade, 0.1, 'FogMaterial edge_fade')),
-    densityTexture: properties.density_texture ?? null,
   };
 }

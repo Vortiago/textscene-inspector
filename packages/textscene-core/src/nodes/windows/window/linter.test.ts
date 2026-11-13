@@ -281,3 +281,51 @@ describe('Window content_scale_factor under integer stretch', () => {
     });
   });
 });
+
+describe('a ConfirmationDialog floor from its constructor', () => {
+  const dialogScene = (props: Record<string, number | string>): string =>
+    scene(node('ConfirmationDialog', props));
+
+  it('reports a max_size below the constructor min_size of (200, 70)', () => {
+    expectDiagnostic(dialogScene({ max_size: 'Vector2i(150, 60)' }), {
+      ruleName: 'window-max-size-below-min-size',
+      severity: 'info',
+      nodeType: 'ConfirmationDialog',
+    });
+  });
+
+  it('reports a size the constructor min_size raises, whatever a later min_size line says', () => {
+    expectDiagnostic(dialogScene({ size: 'Vector2i(100, 50)', min_size: 'Vector2i(0, 0)' }), {
+      ruleName: 'window-size-clamped-by-limits',
+      severity: 'warning',
+      contains: ['Vector2i(200, 70)'],
+    });
+  });
+
+  it('reports nothing for a size already above the constructor floor', () => {
+    expectNoDiagnostic(dialogScene({ size: 'Vector2i(300, 100)', max_size: 'Vector2i(400, 200)' }), {
+      ruleName: 'window-size-clamped-by-limits',
+    });
+  });
+});
+
+describe('Window force_native on a window that is visible when the line is read', () => {
+  const RULE = { ruleName: 'window-force-native-refused-while-visible' };
+
+  it('reports the refused line on a Window, which starts visible', () => {
+    expectDiagnostic(windowScene({ force_native: 'true' }), {
+      ...RULE,
+      severity: 'error',
+      nodeType: 'Window',
+      contains: ['force_native', 'visible'],
+    });
+  });
+
+  it('says nothing where a line above hides the window', () => {
+    expectNoDiagnostic(windowScene({ visible: 'false', force_native: 'true' }), RULE);
+  });
+
+  it('says nothing for force_native = false, which changes nothing', () => {
+    expectNoDiagnostic(windowScene({ force_native: 'false' }), RULE);
+  });
+});

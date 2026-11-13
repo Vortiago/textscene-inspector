@@ -1,0 +1,98 @@
+[gd_scene format=3]
+
+; The one variable: an ArrayMesh with LINES and LINE_STRIP surfaces in a MeshInstance3D, which Godot draws
+; as one pixel wide segments under the surface material. Left to right: the default material, a lit red
+; material, an unshaded green one, the red one with its node turned a half turn about Y, and a strip that
+; reads its vertex colours. Godot lights a line, which has no normal array, as a +Z normal in node space:
+; the sun, shining toward -Z, lights the first red box and not the turned one. Above them, a triangle
+; surface and a lines surface in one mesh: Godot draws both.
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_iu5tn"]
+_surfaces = [{
+"aabb": AABB(-0.4, -0.4, 0, 0.8, 0.8, 1e-05),
+"format": 34359742465,
+"index_count": 8,
+"index_data": PackedByteArray(0, 0, 1, 0, 1, 0, 2, 0, 2, 0, 3, 0, 3, 0, 0, 0),
+"primitive": 1,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(205, 204, 204, 190, 205, 204, 204, 190, 0, 0, 0, 0, 205, 204, 204, 62, 205, 204, 204, 190, 0, 0, 0, 0, 205, 204, 204, 62, 205, 204, 204, 62, 0, 0, 0, 0, 205, 204, 204, 190, 205, 204, 204, 62, 0, 0, 0, 0)
+}]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_px86u"]
+albedo_color = Color(1, 0.2, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7dfly"]
+shading_mode = 0
+albedo_color = Color(0.2, 1, 0.2, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0b51s"]
+albedo_color = Color(1, 0.2, 0.2, 1)
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_b015m"]
+_surfaces = [{
+"aabb": AABB(-0.4, -0.4, 0, 0.8, 0.8, 1e-05),
+"attribute_data": PackedByteArray(255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255),
+"format": 34359738377,
+"primitive": 2,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(205, 204, 204, 190, 205, 204, 204, 190, 0, 0, 0, 0, 205, 204, 204, 62, 205, 204, 204, 190, 0, 0, 0, 0, 205, 204, 204, 62, 205, 204, 204, 62, 0, 0, 0, 0, 205, 204, 204, 190, 205, 204, 204, 62, 0, 0, 0, 0)
+}]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d6wnh"]
+shading_mode = 0
+vertex_color_use_as_albedo = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ldi4j"]
+albedo_color = Color(0.3, 0.5, 1, 1)
+
+[sub_resource type="ArrayMesh" id="ArrayMesh_hvm06"]
+_surfaces = [{
+"aabb": AABB(-0.4, -0.4, 0, 0.8, 0.8, 1e-05),
+"format": 34359738369,
+"material": SubResource("StandardMaterial3D_ldi4j"),
+"primitive": 3,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 3,
+"vertex_data": PackedByteArray(205, 204, 204, 190, 205, 204, 204, 190, 0, 0, 0, 0, 205, 204, 204, 62, 205, 204, 204, 190, 0, 0, 0, 0, 0, 0, 0, 0, 205, 204, 204, 62, 0, 0, 0, 0)
+}, {
+"aabb": AABB(-0.6, -0.6, 0, 1.2, 1.2, 1e-05),
+"format": 34359738369,
+"primitive": 1,
+"uv_scale": Vector4(0, 0, 0, 0),
+"vertex_count": 4,
+"vertex_data": PackedByteArray(154, 153, 25, 191, 154, 153, 25, 191, 0, 0, 0, 0, 154, 153, 25, 63, 154, 153, 25, 63, 0, 0, 0, 0, 154, 153, 25, 191, 154, 153, 25, 63, 0, 0, 0, 0, 154, 153, 25, 63, 154, 153, 25, 191, 0, 0, 0, 0)
+}]
+
+[node name="Root" type="Node3D" unique_id=570446511]
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1726440457]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+
+[node name="Default" type="MeshInstance3D" parent="." unique_id=1196709409]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 0, 0)
+mesh = SubResource("ArrayMesh_iu5tn")
+
+[node name="Red" type="MeshInstance3D" parent="." unique_id=1223295754]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0, 0)
+mesh = SubResource("ArrayMesh_iu5tn")
+surface_material_override/0 = SubResource("StandardMaterial3D_px86u")
+
+[node name="Green" type="MeshInstance3D" parent="." unique_id=1909264433]
+mesh = SubResource("ArrayMesh_iu5tn")
+surface_material_override/0 = SubResource("StandardMaterial3D_7dfly")
+
+[node name="RedTurned" type="MeshInstance3D" parent="." unique_id=2000041577]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 1.2, 0, 0)
+mesh = SubResource("ArrayMesh_iu5tn")
+surface_material_override/0 = SubResource("StandardMaterial3D_0b51s")
+
+[node name="Strip" type="MeshInstance3D" parent="." unique_id=6870463]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.4, 0, 0)
+mesh = SubResource("ArrayMesh_b015m")
+surface_material_override/0 = SubResource("StandardMaterial3D_d6wnh")
+
+[node name="Mixed" type="MeshInstance3D" parent="." unique_id=413978796]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0)
+mesh = SubResource("ArrayMesh_hvm06")

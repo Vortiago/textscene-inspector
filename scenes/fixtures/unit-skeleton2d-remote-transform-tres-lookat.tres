@@ -1,0 +1,6 @@
+[gd_resource type="SkeletonModification2DLookAt" format=3]
+
+[resource]
+bone_index = 0
+bone2d_node = NodePath("Arm")
+target_nodepath = NodePath("../Target")

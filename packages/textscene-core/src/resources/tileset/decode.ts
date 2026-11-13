@@ -19,11 +19,13 @@ import { canvasItemMaterialOf } from '../materials/canvasitemmaterial/decode';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { findSubResource, parseResourceReference, resolveExtResourcePath } from '../SubResourceResolver';
 import { defaultTileData } from './types';
+import { resolveSceneCollectionSource } from './sceneCollection';
 import { TileLayout, TileOffsetAxis, TileShape } from '../../godot/scene/tileSet';
 import type {
   AlternativeTileModel,
   AtlasSourceModel,
   AtlasTileModel,
+  SceneCollectionSourceModel,
   TileTexture,
   TileMaterial,
   TileSetModel,
@@ -50,6 +52,7 @@ const SOURCE_KEY_RE = indexedKeyRegex('^sources/(#)$', 'is_valid_int');
 
 function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
   const sources = new Map<number, AtlasSourceModel>();
+  const sceneSources = new Map<number, SceneCollectionSourceModel>();
   const tileMaterial = tileMaterialResolver(data);
 
   // `sources/1`, `sources/01` and `sources/+1` are one source: `_set` drops the id
@@ -72,12 +75,17 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
       warn(`[TileSet] source ${key}: unresolvable reference "${value}" — skipped`);
       continue;
     }
-    if (sub.type !== 'TileSetAtlasSource') {
-      warn(`[TileSet] source ${key}: unsupported source type "${sub.type}" — skipped`);
-      continue;
-    }
 
-    sources.set(sourceId, resolveAtlasSource(sub, data, tileMaterial));
+    // One id names one source, so a source of the other kind under it goes.
+    if (sub.type === 'TileSetAtlasSource') {
+      sceneSources.delete(sourceId);
+      sources.set(sourceId, resolveAtlasSource(sub, data, tileMaterial));
+    } else if (sub.type === 'TileSetScenesCollectionSource') {
+      sources.delete(sourceId);
+      sceneSources.set(sourceId, resolveSceneCollectionSource(sub, data));
+    } else {
+      warn(`[TileSet] source ${key}: unsupported source type "${sub.type}" — skipped`);
+    }
   }
 
   const properties = data.tileSet.data;
@@ -99,6 +107,7 @@ function resolveTileSetModel(data: TileSetSourceData): TileSetModel {
     ) as EnumValue<typeof TileOffsetAxis>,
     tileSize: tileSetVec2i(properties.tile_size, { x: 16, y: 16 }, 'tile_size'),
     sources,
+    sceneSources,
   };
 }
 

@@ -1,105 +1,46 @@
 /**
- * CheckButton's native (WebGL canvas) rect solver and content layout: `get_minimum_size`,
- * `get_icon_size` and `_notification` (`scene/gui/check_button.cpp`) with the theme defaults
- * (`scene/theme/default_theme.cpp:316-353`). It ports the placement itself: `buttonBase.ts` does not
- * model Button's `_internal_margin` (`Button::_set_internal_margin`, `check_button.cpp:96-104`).
+ * What CheckButton adds to Button (`scene/gui/check_button.cpp`): the toggle icon it reserves as Button's
+ * `_internal_margin` (`:95-103`) and draws over it (`:107-147`), its minimum size (`:68-84`) and its theme
+ * defaults (`scene/theme/default_theme.cpp:316-353`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import type {
-  MinimumSizeFn,
-  SolveContext,
-  TextureSlotRequest,
-  TextureSlotsFn,
-} from '../../../../r3f/controls/native/solverRegistry';
-import { themedSlotRequest } from '../../../../r3f/controls/native/solverRegistry';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
+import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
+import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
+import { WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
+import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import {
-  buttonTextAlignShiftPx,
-  centredTextTopPx,
-  fitIconSize,
-  swapAlignmentSide,
-  tintColor,
-} from '../../../../r3f/controls/native/buttonBase';
-import {
-  resolveTextTheme,
-  type ResolvedTextTheme,
-  type TextThemeDefaults,
-  type TextThemeKeys,
-} from '../../../../r3f/controls/native/textTheme';
+  BUTTON_DEFAULT_FONT_COLORS,
+  fittedThemedIconSize,
+  buttonNormalBox,
+  buttonTextureSlotsOf,
+  reservingMinimumSizeOf,
+  type ReservingButtonClass,
+} from '../button/nativeSolver';
 import type { CheckButtonIcons } from '../../../../r3f/controls/native/themeIcons';
 import { CHECK_BUTTON_ICON_NATURAL_SIZE } from '../../../../r3f/controls/native/themeIcons';
-import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import type { CheckButtonProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
+import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Rgba } from '../../../../godot/math/math';
-import {
-  CONTROL_FONT_COLOR,
-  CONTROL_FONT_DISABLED_COLOR,
-  CONTROL_FONT_PRESSED_COLOR,
-} from '../../../../godot/scene/theme';
+import { HorizontalAlignment } from '../../../../godot/math/alignment';
 
-/** `SceneStringName(font)`, registered under CheckButton's own type (`scene/theme/default_theme.cpp:337`), not inherited from Button's. */
-export const CHECKBUTTON_THEME_FONT_KEY = 'font';
+export type CheckButtonIconKey = keyof CheckButtonIcons;
 
-export { fitIconSize, tintColor };
+/** The two properties that pick one of the eight icons. */
+type CheckButtonIconState = Pick<CheckButtonProperties, 'disabled' | 'buttonPressed'>;
 
 /**
- * `BaseButton::get_draw_mode()` (`base_button.cpp:325-358`) without input: `status.hovering` and
- * `status.press_attempt` stay false, so `button_pressed` alone selects pressed, and `disabled` wins.
- */
-type CheckButtonDrawState = 'normal' | 'pressed' | 'disabled';
-
-export function resolveCheckButtonDrawState(props: CheckButtonProperties): CheckButtonDrawState {
-  if (props.disabled) return 'disabled';
-  if (props.buttonPressed) return 'pressed';
-  return 'normal';
-}
-
-/** CheckButton's own `font_color` default (`default_theme.cpp:340`). */
-const CHECKBUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-/** CheckButton's own `font_pressed_color` default (`default_theme.cpp:341`). */
-const CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
-/** CheckButton's own `font_disabled_color` default (`default_theme.cpp:345`). */
-const CHECKBUTTON_DEFAULT_DISABLED_FONT_COLOR = CONTROL_FONT_DISABLED_COLOR;
-
-const CHECKBUTTON_THEME_KEYS: Record<CheckButtonDrawState, TextThemeKeys> = {
-  normal: { sizeKey: 'font_size', colorKey: 'font_color' },
-  pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
-  disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
-};
-
-/** Resolves CheckButton's theme font size and colour for `state`: overrides, else the ancestor Theme chain, the theme default or CheckButton's own literal. */
-export function checkButtonTextTheme(
-  n: SolveNode,
-  props: CheckButtonProperties,
-  state: CheckButtonDrawState,
-  ctx: Pick<SolveContext, 'theme'>
-): ResolvedTextTheme {
-  const defaults: TextThemeDefaults = {
-    fontSizePx: ctx.theme.fontSize,
-    color:
-      state === 'disabled'
-        ? CHECKBUTTON_DEFAULT_DISABLED_FONT_COLOR
-        : state === 'pressed'
-          ? CHECKBUTTON_DEFAULT_PRESSED_FONT_COLOR
-          : CHECKBUTTON_DEFAULT_FONT_COLOR,
-  };
-  return resolveTextTheme(n, props, CHECKBUTTON_THEME_KEYS[state], defaults);
-}
-
-type CheckButtonIconKey = keyof CheckButtonIcons;
-
-/**
- * `NOTIFICATION_DRAW` (`check_button.cpp:105-127`): `is_layout_rtl()` swaps in the `_mirrored`
+ * `NOTIFICATION_DRAW` (`check_button.cpp:107-131`): `is_layout_rtl()` swaps in the `_mirrored`
  * icon table, `is_disabled()` picks the `_disabled` variant, and `button_pressed` picks the
  * checked ("on") or unchecked ("off") icon.
  */
-export function resolveCheckButtonIconKey(props: CheckButtonProperties, rtl: boolean): CheckButtonIconKey {
+export function resolveCheckButtonIconKey(props: CheckButtonIconState, rtl: boolean): CheckButtonIconKey {
   const disabled = props.disabled === true;
   const checked = props.buttonPressed === true;
   if (rtl) {
@@ -110,7 +51,7 @@ export function resolveCheckButtonIconKey(props: CheckButtonProperties, rtl: boo
   return disabled ? 'uncheckedDisabled' : 'unchecked';
 }
 
-/** Each `CheckButtonIconKey` to the Theme item name Godot registers it under (`check_button.cpp:152-159`). */
+/** Each `CheckButtonIconKey` to the Theme item name Godot registers it under (`check_button.cpp:156-163`). */
 export const CHECK_BUTTON_ICON_THEME_NAME: Record<CheckButtonIconKey, string> = {
   checked: 'checked',
   unchecked: 'unchecked',
@@ -124,193 +65,79 @@ export const CHECK_BUTTON_ICON_THEME_NAME: Record<CheckButtonIconKey, string> = 
 
 const CHECK_BUTTON_ICON_THEME_NAMES = Object.values(CHECK_BUTTON_ICON_THEME_NAME);
 
-/** Which of CheckButton's 8 icon slots have a themed answer, as `checkBoxTextureSlots` does for CheckBox. */
-export const checkButtonTextureSlots: TextureSlotsFn = (_node, themedIcons = {}) => {
-  const requests: TextureSlotRequest[] = [];
-  for (const name of CHECK_BUTTON_ICON_THEME_NAMES) {
-    const themed = themedIcons[name];
-    if (themed) requests.push(themedSlotRequest(name, themed));
-  }
-  return requests;
-};
-
 /**
- * `CheckButton::get_icon_size` (`check_button.cpp:35-65`): the max over the two icons the current
- * `disabled` state and layout direction select, unlike CheckBox's max over all 8. A slot no theme
- * touched falls back to the vendored default's size.
+ * The colour `CheckButton::_notification` draws the toggle in (`check_button.cpp:142-145`):
+ * `button_checked_color` or `button_unchecked_color`, both white (`default_theme.cpp:352-353`). The
+ * `_disabled` icons carry their own dimming.
  */
-export function checkButtonIconNaturalSize(
-  n: Pick<SolveNode, 'textureSlots'>,
-  disabled: boolean,
-  rtl: boolean
-): Vector2 {
-  const names: readonly CheckButtonIconKey[] = rtl
-    ? disabled
-      ? ['checkedDisabledMirrored', 'uncheckedDisabledMirrored']
-      : ['checkedMirrored', 'uncheckedMirrored']
-    : disabled
-      ? ['checkedDisabled', 'uncheckedDisabled']
-      : ['checked', 'unchecked'];
-  let w = 0;
-  let h = 0;
-  for (const key of names) {
-    const size = n.textureSlots[CHECK_BUTTON_ICON_THEME_NAME[key]] ?? CHECK_BUTTON_ICON_NATURAL_SIZE;
-    w = Math.max(w, size.x);
-    h = Math.max(h, size.y);
-  }
-  return { x: w, y: h };
-}
-
-/**
- * The size Godot draws the current icon at: its own, fitted, at the offset the larger icon sets
- * (`check_button.cpp:133-145`). An icon that reports size 0 draws nothing.
- */
-export function checkButtonDrawnIconSize(
-  n: Pick<SolveNode, 'textureSlots' | 'constants'>,
-  key: CheckButtonIconKey
-): Vector2 {
-  const own = n.textureSlots[CHECK_BUTTON_ICON_THEME_NAME[key]] ?? CHECK_BUTTON_ICON_NATURAL_SIZE;
-  return fitIconSize(own, checkButtonIconMaxWidth(n.constants));
-}
-
-/** `button_checked_color` and `button_unchecked_color`, both `Color(1, 1, 1)` (`default_theme.cpp:352-353`) and overridable. Read whatever `disabled` says: the `_disabled` icons carry the dimming (`check_button.cpp:139-141`). */
-const CHECKBUTTON_ICON_MODULATE_DEFAULT: Rgba = { r: 1, g: 1, b: 1, a: 1 };
-
 export function checkButtonIconColor(props: CheckButtonProperties, colors: SolveNode['colors']): Rgba {
   const key = props.buttonPressed ? 'button_checked_color' : 'button_unchecked_color';
-  return colors[key] ?? CHECKBUTTON_ICON_MODULATE_DEFAULT;
+  return colors[key] ?? WHITE_MODULATE;
 }
-
-/** `cb_empty`'s Y content margin, `round(4*scale)` (`default_theme.cpp:317`), which equals `theme.contentMargin`. The margin is asymmetric: X is `round(6*scale)`. */
-export function checkButtonMarginY(ctx: Pick<SolveContext, 'theme'>): number {
-  return ctx.theme.contentMargin;
-}
-
-/** `cb_empty`'s X content margin, `round(6*scale)` (`default_theme.cpp:317`), from `theme.scale`: `theme.contentMargin` is a different literal. */
-export function checkButtonMarginX(ctx: Pick<SolveContext, 'theme'>): number {
-  return Math.round(6 * ctx.theme.scale);
-}
-
-/** `icon_max_width`: `check_button.cpp` binds none, so Button's default (`0`, unclamped) applies through the shared `theme_override_constants` key. */
-export function checkButtonIconMaxWidth(constants: SolveNode['constants']): number {
-  return constants.icon_max_width ?? 0;
-}
-
-/** `h_separation`: CheckButton's default (`default_theme.cpp:348`, `round(4*scale)`) equals `theme.separation`. */
-export function checkButtonHSeparation(
-  constants: SolveNode['constants'],
-  ctx: Pick<SolveContext, 'theme'>
-): number {
-  return Math.max(0, constants.h_separation ?? ctx.theme.separation);
-}
-
-/** `check_v_offset`, a `theme_override_constants` key CheckButton reads directly (`check_button.cpp:143`), default `0` (`default_theme.cpp:349`). */
-export function checkButtonCheckVOffset(constants: SolveNode['constants']): number {
-  return constants.check_v_offset ?? 0;
-}
-
-/** CheckButton's default text alignment is LEFT (`check_button.cpp:169`), over Button's CENTER. A scene's `alignment` still wins. */
-export const CHECKBUTTON_DEFAULT_ALIGNMENT_LEFT = 0;
 
 /**
- * `CheckButton::get_minimum_size` (`check_button.cpp:64-79`): Button's text-only floor plus the icon's
- * width, and `h_separation` only with text. Not `buttonMinimumSize`, whose flat stylebox is Button's:
- * the lookup is keyed by the node's own class, where every state is `cb_empty` (`default_theme.cpp:316-325`).
- * The inherited Button `icon` is not modelled (`comparison.md`).
+ * `CheckButton::get_icon_size` (`check_button.cpp:35-65`): the larger of the checked and unchecked icons
+ * that the node's `disabled` and layout direction select, unlike CheckBox's largest of all 8, fitted to
+ * `icon_max_width`.
  */
-export const checkButtonMinimumSize: MinimumSizeFn = (n, ctx) => {
-  const props = n.node.properties as CheckButtonProperties;
-  const marginX = checkButtonMarginX(ctx);
-  const marginY = checkButtonMarginY(ctx);
-
-  const text = props.text ?? '';
-  const hasText = text.length > 0;
-  const state = resolveCheckButtonDrawState(props);
-  const { fontSizePx } = checkButtonTextTheme(n, props, state, ctx);
-  const fontMetrics = resolveNodeFontMetrics(n, CHECKBUTTON_THEME_FONT_KEY);
-  // `Button::get_minimum_size` (`button.cpp:492`) reads `paragraph->get_size()`, the ceiled
-  // extent. The icon and separation are added outside the ceil (`check_button.cpp:66-77`).
-  const measured =
-    hasText && ctx.measureText ? ctx.measureText(text, fontSizePx, 0, fontMetrics) : { x: 0, y: 0 };
-  const textSize = { x: shapedTextSizeWidthPx(measured.x), y: measured.y };
-
-  const iconSize = fitIconSize(
-    checkButtonIconNaturalSize(n, state === 'disabled', n.rtl),
-    checkButtonIconMaxWidth(n.constants)
+function checkButtonFittedIconSize(
+  n: Pick<SolveNode, 'node' | 'textureSlots' | 'constants' | 'rtl'>,
+  theme: NativeTheme
+): Vector2 {
+  const { disabled } = n.node.properties as CheckButtonProperties;
+  const names = [true, false].map(
+    (buttonPressed) =>
+      CHECK_BUTTON_ICON_THEME_NAME[resolveCheckButtonIconKey({ disabled, buttonPressed }, n.rtl)]
   );
-  const hSeparation = checkButtonHSeparation(n.constants, ctx);
+  return fittedThemedIconSize(n, names, scaledIconSizeOf(CHECK_BUTTON_ICON_NATURAL_SIZE, theme.scale));
+}
 
-  const width = 2 * marginX + textSize.x + (textSize.x > 0 ? hSeparation : 0) + iconSize.x;
-  const height = 2 * marginY + Math.max(textSize.y, iconSize.y);
-
-  return { x: width, y: height };
+/**
+ * CheckButton as a Button: its font colours equal Button's (`default_theme.cpp:340-345`), its constructor
+ * aligns the text LEFT (`check_button.cpp:173`), and the toggle is the internal margin of the trailing
+ * side (`:95-103`).
+ */
+export const CHECK_BUTTON_CLASS: ReservingButtonClass = {
+  fontColors: BUTTON_DEFAULT_FONT_COLORS,
+  textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
+  reservedElement: (n, theme) => ({
+    side: n.rtl ? 'left' : 'right',
+    size: checkButtonFittedIconSize(n, theme),
+  }),
 };
 
-interface CheckButtonContentInput {
-  /** The control's own solved rect size, Godot px. */
-  rectSize: Vector2;
-  marginX: number;
-  marginY: number;
-  /** The check icon's size, already fitted with `fitIconSize`. */
-  iconSize: Vector2;
-  checkVOffset: number;
-  hSeparation: number;
-  hasText: boolean;
-  /** Text `alignment` (`HorizontalAlignment`). CheckButton's default is LEFT. */
-  textAlignment: number;
-  /** The shaped text's natural (unwrapped) size, ignored when `hasText` is false. */
-  textNaturalSize: Vector2;
-  /** Whether the shaped text infers RTL: an overflowing CENTER line then ends at the trailing edge. */
-  isTextRtl: boolean;
-  /** `Control::is_layout_rtl()` (`SolveNode.rtl`): moves the toggle to the left edge and swaps the label's alignment side. */
-  rtl: boolean;
-}
+/** Button's `icon`, then those of CheckButton's 8 icons that a theme sets. */
+export const checkButtonTextureSlots: TextureSlotsFn = buttonTextureSlotsOf(
+  CHECK_BUTTON_CLASS,
+  (_node, themedIcons = {}) => themedSlotRequests(CHECK_BUTTON_ICON_THEME_NAMES, themedIcons)
+);
 
-interface CheckButtonContentLayout {
-  /** The icon's top-left, local to the control's own top-left, Godot px. */
-  iconPosition: Vector2;
-  /** The text paragraph's box top-left, local Godot px. `null` when there is no text. */
-  textOffset: Vector2 | null;
-}
+/** `CheckButton::get_minimum_size` (`check_button.cpp:68-83`): Button's, with the toggle reserved beside the content. */
+export const checkButtonMinimumSize: MinimumSizeFn = reservingMinimumSizeOf(CHECK_BUTTON_CLASS);
 
 /**
- * The icon `ofs` (`check_button.cpp:129-137`) and Button's internal-margin reservation
- * (`button.cpp:247-260,444-456`): the internal margin is always the icon's width
- * (`check_button.cpp:96-104`), so the gap is always `iconSize.x + h_separation`. `rtl` moves both
- * to the left and swaps the alignment side (`button.cpp:271-275`, `check_button.cpp:174`).
+ * Where `CheckButton::_notification` draws the icon `key` in a box of `rectSize` (`check_button.cpp:129-145`):
+ * short of the `normal` box's trailing margin, whatever the draw state, and at the leading one under RTL.
+ * Unrounded: an odd height leaves the toggle on a half pixel (`:140`). The icon draws at its own fitted
+ * size, at the offset the larger icon sets.
  */
-export function layoutCheckButtonContent(input: CheckButtonContentInput): CheckButtonContentLayout {
-  const {
-    rectSize,
-    marginX,
-    marginY,
-    iconSize,
-    checkVOffset,
-    hSeparation,
-    hasText,
-    textAlignment,
-    textNaturalSize,
-    isTextRtl,
-    rtl,
-  } = input;
-
-  // Unrounded: an odd height leaves the icon on a half pixel (`check_button.cpp:135-140`).
-  const iconPosition: Vector2 = {
-    x: rtl ? marginX : rectSize.x - (iconSize.x + marginX),
-    y: (rectSize.y - iconSize.y) / 2 + checkVOffset,
+export function checkButtonToggleRect(
+  n: ShareNode,
+  theme: NativeTheme,
+  key: CheckButtonIconKey,
+  rectSize: Vector2
+): Rect2 {
+  const { contentMargin } = buttonNormalBox(n, theme);
+  const reserved = checkButtonFittedIconSize(n, theme);
+  const drawn = fittedThemedIconSize(
+    n,
+    [CHECK_BUTTON_ICON_THEME_NAME[key]],
+    scaledIconSizeOf(CHECK_BUTTON_ICON_NATURAL_SIZE, theme.scale)
+  );
+  return {
+    x: n.rtl ? contentMargin.left : rectSize.x - (reserved.x + contentMargin.right),
+    y: (rectSize.y - reserved.y) / 2 + (n.constants.check_v_offset ?? 0),
+    w: drawn.x,
+    h: drawn.y,
   };
-
-  let textOffset: Vector2 | null = null;
-  if (hasText) {
-    const reserved = iconSize.x + hSeparation;
-    const textBoxWidth = rectSize.x - 2 * marginX - reserved;
-    const customElementHeight = rectSize.y - 2 * marginY;
-    const align = rtl ? swapAlignmentSide(textAlignment) : textAlignment;
-    const shiftX = buttonTextAlignShiftPx(textNaturalSize.x, textBoxWidth, align, isTextRtl);
-    const x = marginX + (rtl ? reserved : 0) + shiftX;
-    const y = centredTextTopPx(customElementHeight, textNaturalSize.y, marginY);
-    textOffset = { x, y };
-  }
-
-  return { iconPosition, textOffset };
 }

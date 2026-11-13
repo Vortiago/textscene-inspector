@@ -19,7 +19,10 @@ import {
   type AmbientTextureSampler,
 } from './canvasItemTextureSampler';
 import { applyViewSampler } from '../resources/textures/textureView';
+import { canvasColorSpaceOf } from './canvasColorSpace';
 import { CanvasItemTextureFilter, CanvasItemTextureRepeat } from '../godot/scene/canvasItem';
+
+const LINEAR_CANVAS = canvasColorSpaceOf(true);
 
 // The root viewport takes its default from the project settings; nothing here needs the real provider's load.
 const projectSettingsMock = vi.hoisted(() => ({ settings: null as Record<string, string> | null }));
@@ -147,7 +150,10 @@ function singleLevelTexture(): THREE.Texture {
 
 describe('canvasItemViewSampler applied to a texture', () => {
   const sampleWith = (texture: THREE.Texture, filter: number, repeat = REPEAT_DISABLED) =>
-    applyViewSampler(texture, canvasItemViewSampler({ filter, repeat }));
+    applyViewSampler(
+      texture,
+      canvasItemViewSampler({ filter, repeat }, canvasColorSpaceOf(false).textureColorSpace)
+    );
 
   it('samples Nearest and Linear without mipmaps, even from a mipmapped texture (material_storage.cpp:2467-2476)', () => {
     const nearest = sampleWith(mipmappedTexture(), NEAREST);
@@ -214,14 +220,27 @@ describe('canvasItemViewSampler applied to a texture', () => {
 });
 
 describe('canvasItemViewSampler', () => {
+  it('samples the sRGB view in a linear canvas, which decodes before the filter (texture_storage.cpp:754)', () => {
+    expect(
+      canvasItemViewSampler({ filter: LINEAR, repeat: REPEAT_DISABLED }, LINEAR_CANVAS.textureColorSpace)
+        .colorSpace
+    ).toBe(THREE.SRGBColorSpace);
+  });
+
   it('samples the undecoded bytes the 2D canvas filters', () => {
-    expect(canvasItemViewSampler({ filter: LINEAR, repeat: REPEAT_DISABLED }).colorSpace).toBe(
-      THREE.NoColorSpace
-    );
+    expect(
+      canvasItemViewSampler(
+        { filter: LINEAR, repeat: REPEAT_DISABLED },
+        canvasColorSpaceOf(false).textureColorSpace
+      ).colorSpace
+    ).toBe(THREE.NoColorSpace);
   });
 
   it("writes the item's filter and repeat", () => {
-    const { filter, wrap } = canvasItemViewSampler({ filter: NEAREST, repeat: REPEAT_MIRROR });
+    const { filter, wrap } = canvasItemViewSampler(
+      { filter: NEAREST, repeat: REPEAT_MIRROR },
+      canvasColorSpaceOf(false).textureColorSpace
+    );
     expect([filter?.magFilter, wrap]).toEqual([THREE.NearestFilter, THREE.MirroredRepeatWrapping]);
   });
 });

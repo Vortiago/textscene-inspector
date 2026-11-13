@@ -22,6 +22,8 @@ export interface GodotSurface {
   normals?: Float32Array;
   /** `xyzw` per vertex, `w` the binormal sign, or undefined for a surface with no ARRAY_TANGENT. */
   tangents?: Float32Array;
+  /** The stored RGBA8 bytes per vertex, or undefined for a surface with no ARRAY_COLOR. */
+  colors?: Uint8Array;
   /** `uv` per vertex with V down, or undefined for a surface with no ARRAY_TEX_UV. */
   uvs?: Float32Array;
   /** `uv` per vertex with V down, or undefined for a surface with no ARRAY_TEX_UV2. */
@@ -30,12 +32,19 @@ export interface GodotSurface {
   bones?: SurfaceBones;
   /** Three per triangle, or one per drawn point. */
   indices: ArrayLike<number>;
-  /** Godot's `PRIMITIVE_POINTS`: one point per index, drawn at the material's point size. */
-  isPoints?: boolean;
+  /**
+   * `'points'` for Godot's `PRIMITIVE_POINTS`: one point per index, drawn at the material's point
+   * size. `'lines'` for `PRIMITIVE_LINES` and `PRIMITIVE_LINE_STRIP`: two indices per segment.
+   * Undefined for a triangle surface.
+   */
+  primitive?: 'points' | 'lines';
 }
 
-/** Set on the geometry of points surfaces, which a drawer mounts as `THREE.Points`. */
-const DRAWS_POINTS = 'godotDrawsPoints';
+/** What one three object draws of a Godot mesh: triangles, points or line segments. */
+export type SurfacePrimitive = 'triangles' | 'points' | 'lines';
+
+/** Set on the geometry of a points or lines surface, which a drawer mounts as `Points` or `LineSegments`. */
+const DRAWN_PRIMITIVE = 'godotPrimitive';
 
 /** Set on the geometry of skinned surfaces: the bones each surface addresses, in surface order. */
 const SURFACE_BONE_COUNTS = 'godotSurfaceBoneCounts';
@@ -49,9 +58,15 @@ export function surfaceBoneCounts(geometry: THREE.BufferGeometry): readonly numb
   return geometry.userData[SURFACE_BONE_COUNTS] as readonly number[] | undefined;
 }
 
-/** Whether `godotSurfacesGeometry` built `geometry` from points surfaces. */
-export function geometryDrawsPoints(geometry: THREE.BufferGeometry): boolean {
-  return geometry.userData[DRAWS_POINTS] === true;
+/** The primitive `godotSurfacesGeometry` built `geometry` for. */
+export function geometryPrimitive(geometry: THREE.BufferGeometry): SurfacePrimitive {
+  return (geometry.userData[DRAWN_PRIMITIVE] as SurfacePrimitive | undefined) ?? 'triangles';
+}
+
+/** Marks `target` as drawing the primitive `source` draws, for a geometry rebuilt from another. */
+export function copyDrawnPrimitive(source: THREE.BufferGeometry, target: THREE.BufferGeometry): void {
+  const primitive = geometryPrimitive(source);
+  if (primitive !== 'triangles') target.userData[DRAWN_PRIMITIVE] = primitive;
 }
 
 /** The surfaces one three object draws, as one geometry with a draw group per surface, in order. */
@@ -61,23 +76,26 @@ export interface SurfacePart<S extends GodotSurface> {
 }
 
 /**
- * Godot draws every surface of a mesh, but a three object draws one primitive type. So triangle
- * surfaces and points surfaces each become a part, triangles first, and a mesh of one kind has one.
+ * Godot draws every surface of a mesh, but a three object draws one primitive type. So triangle,
+ * points and line surfaces each become a part, in that order, and a mesh of one kind has one.
  */
 export function godotSurfaceParts<S extends GodotSurface>(surfaces: readonly S[]): SurfacePart<S>[] {
-  const triangles = surfaces.filter((surface) => !surface.isPoints);
-  const points = surfaces.filter((surface) => surface.isPoints);
-  return [triangles, points]
+  const parts = [undefined, 'points', 'lines'].map((primitive) =>
+    surfaces.filter((surface) => surface.primitive === primitive)
+  );
+  return parts
     .filter((part) => part.length > 0)
     .map((part) => ({ geometry: godotSurfacesGeometry(part), surfaces: part }));
 }
 
 /**
- * The surfaces of one primitive type as one geometry: all triangles or all points. Points draw as
- * `THREE.Points`, with their indices kept in order and a normal for every vertex.
+ * The surfaces of one primitive type as one geometry: all triangles, all points or all lines. Points
+ * and lines keep their indices in order and get a normal for every vertex, as Godot's default
+ * buffer gives one.
  */
 export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.BufferGeometry {
-  const isPoints = surfaces.length > 0 && surfaces.every((s) => s.isPoints);
+  const primitive = surfaces.length > 0 ? surfaces[0]!.primitive : undefined;
+  const isListed = primitive !== undefined && surfaces.every((s) => s.primitive === primitive);
   const geometry = new THREE.BufferGeometry();
 
   const vertexCountOf = (surface: GodotSurface) => surface.positions.length / 3;
@@ -93,11 +111,13 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
   const isSkinned = surfaces.length > 0 && surfaces.every((s) => s.bones);
 
   const positions = new Float32Array(totalVertices * 3);
+  // A surface with no colour reads white beside one that has colours (`mesh_storage.cpp:86-97`).
+  const colors = surfaces.some((s) => s.colors) ? new Uint8Array(totalVertices * 4).fill(255) : undefined;
   const uvs = hasUV ? new Float32Array(totalVertices * 2) : undefined;
   // UV2 keeps Godot's top-down V, which the UV2 binding samples, and a surface without one keeps
   // (0, 0), where Godot samples it.
   const uv2s = surfaces.some((s) => s.uv2s) ? new Float32Array(totalVertices * 2) : undefined;
-  const normals = useDecodedNormals || isPoints ? new Float32Array(totalVertices * 3) : undefined;
+  const normals = useDecodedNormals || isListed ? new Float32Array(totalVertices * 3) : undefined;
   // three builds `vBitangent = cross(normal, tangent) * w`, Godot's binormal
   // (`scene_forward_clustered.glsl:756`), so the tangents pass through as Godot wrote them.
   const tangents = useDecodedTangents ? new Float32Array(totalVertices * 4) : undefined;
@@ -112,6 +132,7 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     const vertexCount = vertexCountOf(surface);
     const indexCount = surface.indices.length;
     positions.set(surface.positions, vertexBase * 3);
+    if (colors && surface.colors) colors.set(surface.colors, vertexBase * 4);
     if (uvs) {
       if (surface.uvs) uvs.set(surface.uvs, vertexBase * 2);
       // Flip the whole range, including a surface with no UVs of its own: `hasUV`
@@ -134,8 +155,8 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     }
     // Re-base each surface's indices into the merged vertex array. A triangle's winding reverses:
     // Godot fronts triangles clockwise and three.js counter-clockwise, so without the swap every
-    // face is back-culled. A point has no winding.
-    if (isPoints) {
+    // face is back-culled. A point or a segment has no winding.
+    if (isListed) {
       for (let i = 0; i < indexCount; i++) indices[indexBase + i] = surface.indices[i]! + vertexBase;
     } else {
       for (let i = 0; i + 2 < indexCount; i += 3) {
@@ -150,6 +171,7 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
   });
 
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  if (colors) geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4, true));
   if (uvs) geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
   if (uv2s) geometry.setAttribute(UV2_ATTRIBUTE, new THREE.BufferAttribute(uv2s, 2));
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
@@ -163,7 +185,7 @@ export function godotSurfacesGeometry(surfaces: readonly GodotSurface[]): THREE.
     geometry.setAttribute('skinIndex', new THREE.BufferAttribute(skin.indices, 4));
     geometry.setAttribute('skinWeight', new THREE.BufferAttribute(skin.weights, 4));
   }
-  if (isPoints) geometry.userData[DRAWS_POINTS] = true;
+  if (isListed) geometry.userData[DRAWN_PRIMITIVE] = primitive;
   if (isSkinned) geometry.userData[SURFACE_BONE_COUNTS] = surfaces.map((s) => boneCountOf(s.bones));
 
   return geometry;

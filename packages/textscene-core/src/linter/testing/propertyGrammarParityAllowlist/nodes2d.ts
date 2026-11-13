@@ -1,10 +1,14 @@
 /**
- * 2D leaf slices, and the two physics nodes whose linter-only keys are runtime
+ * 2D leaf slices, and the physics nodes whose linter-only keys are runtime
  * simulation settings.
  */
 
 import { PARTICLE_PARAM_KEYS } from './particleParamKeys.js';
 import type { AsymmetryEntry } from './types.js';
+
+/** Godot 4.6.3 stores `antialiased` on Line2D and Polygon2D, and no draw reads it. */
+const GODOT_IGNORES_ANTIALIASED =
+  'Godot 4.6.3 stores antialiased and no draw reads it, so there is nothing to draw.';
 
 export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   AnimatedSprite2D: {
@@ -46,35 +50,21 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'Camera2D linter validates follow/drag/smoothing properties that only matter at runtime; the static previewer ignores them.',
   },
 
-  Line2D: {
-    renderGap: [
-      // The stroke appearance beyond its centreline: antialiasing, texture,
-      // gradient, width curve and caps. This draws a flat constant-width line.
-      'antialiased',
-      'gradient',
-      'texture',
-      'texture_mode',
-      'width_curve',
-      'begin_cap_mode',
-      'end_cap_mode',
-    ],
+  Parallax2D: {
+    linterOnly: ['autoscroll'],
     reason:
-      'points is parsed and now validated too; the remaining seven are the stroke appearance the renderer does not implement.',
+      '`_update_process` runs `autoscroll` only outside the editor (`parallax_2d.cpp:98-100`), and the preview freezes one frame, so it moves nothing.',
+  },
+
+  Line2D: {
+    linterOnly: ['antialiased'],
+    reason: GODOT_IGNORES_ANTIALIASED,
   },
 
   Polygon2D: {
-    linterOnly: [
-      // Display tweak with no rendering parity requirement.
-      'antialiased',
-    ],
-    renderGap: [
-      // Skeleton2D skinning: `bones` is the weight table and `skeleton` names
-      // the rig. Godot deforms the polygon by them; this draws the rest pose.
-      'bones',
-      'skeleton',
-    ],
-    reason:
-      'polygon/polygons/vertex_colors are parsed AND validated now; antialiased is a display tweak with no equivalent; bones/skeleton are the unimplemented Skeleton2D deformation.',
+    // `polygon_2d.cpp:395-401,507-514` draws a mesh and only stores the flag.
+    linterOnly: ['antialiased'],
+    reason: GODOT_IGNORES_ANTIALIASED,
   },
 
   CPUParticles2D: {
@@ -205,11 +195,22 @@ export const nodes2dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
 
   CollisionShape2D: {
     linterOnly: [
-      // Physics-behaviour properties with no visual counterpart.
-      'one_way_collision',
+      // The margin shifts the one-way surface in physics and draws nothing.
       'one_way_collision_margin',
     ],
     reason:
-      'CollisionShape2D one_way settings affect runtime physics only; the renderer reads shape/disabled/debug_color for visual display.',
+      'The one-way margin affects runtime physics only. The renderer reads shape, disabled, debug_color and one_way_collision for the outline and the arrow.',
+  },
+
+  Joint2D: {
+    linterOnly: ['node_a', 'node_b', 'bias', 'disable_collision'],
+    reason:
+      'They connect and steer the joint simulation (ADR-0005), which the previewer does not run. Godot draws the 2D joint marker without the bodies (pin_joint_2d.cpp:42-50), so the marker reads none of them.',
+  },
+
+  DampedSpringJoint2D: {
+    linterOnly: ['rest_length', 'stiffness', 'damping'],
+    reason:
+      'The spring parameters change how a running game moves the bodies (ADR-0005); the marker reads only length.',
   },
 };

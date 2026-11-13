@@ -18,6 +18,8 @@ const OUTSIDE_CORE = ['apps', 'packages/textscene-dev-kit', 'scripts'].map((dir)
 export const KEPT_TEST_ONLY_EXPORTS = [
   // `@react-three/test-renderer` cannot wrap a real `<Canvas>`, so a scene test mounts its contents.
   'r3f/TscnCanvas.tsx#TscnSceneContents',
+  // No runtime code lists the vendored icons, and the icon test checks each one against its raster.
+  'r3f/controls/native/themeIcons.ts#vendoredIconSvgUrls',
   // The builds and the cache are module state, so each test starts from the one reset that aborts
   // the builds in flight and clears the cache.
   'resources/textures/proceduralBuilds.ts#resetProceduralTextures',

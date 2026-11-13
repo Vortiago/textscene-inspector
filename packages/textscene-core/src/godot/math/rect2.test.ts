@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { rect2Intersection, rect2Intersects, rect2Merge } from './rect2';
+import {
+  rect2Equals,
+  rect2Grow,
+  rect2Intersection,
+  rect2Intersects,
+  rect2Merge,
+  rect2Touches,
+} from './rect2';
 
 const SQUARE = { x: 0, y: 0, w: 10, h: 10 };
 
@@ -46,5 +53,35 @@ describe('rect2Merge', () => {
 
   it('returns the outer rect when one holds the other', () => {
     expect(rect2Merge(SQUARE, { x: 2, y: 3, w: 4, h: 5 })).toEqual(SQUARE);
+  });
+});
+
+describe('rect2Touches', () => {
+  it('is true for rects that only touch, as borders count', () => {
+    expect(rect2Touches(SQUARE, { x: 10, y: 0, w: 5, h: 5 })).toBe(true);
+  });
+
+  it('is false for rects apart', () => {
+    expect(rect2Touches(SQUARE, { x: 10.5, y: 0, w: 5, h: 5 })).toBe(false);
+  });
+});
+
+describe('rect2Grow', () => {
+  it('moves each edge out by the amount', () => {
+    expect(rect2Grow({ x: 4, y: 6, w: 10, h: 2 }, 3)).toEqual({ x: 1, y: 3, w: 16, h: 8 });
+  });
+});
+
+describe('rect2Equals', () => {
+  it('is true for the same position and size', () => {
+    expect(rect2Equals(SQUARE, { x: 0, y: 0, w: 10, h: 10 })).toBe(true);
+  });
+
+  it('is false when one field differs', () => {
+    expect(rect2Equals(SQUARE, { x: 0, y: 0, w: 10, h: 11 })).toBe(false);
+  });
+
+  it('is false for a rect of the same size at another position', () => {
+    expect(rect2Equals(SQUARE, { x: 1, y: 0, w: 10, h: 10 })).toBe(false);
   });
 });

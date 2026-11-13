@@ -4,9 +4,9 @@
  * `<Canvas>` and no context provider: `<TscnCanvas>` and `<TscnPreviewShell>` own those.
  */
 
-import { Fragment, useCallback, useEffect, useMemo } from 'react';
+import { ControlCanvasSpace } from './ControlCanvasSpace.js';
+import { Fragment, lazy, useEffect, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import type * as THREE from 'three';
 import type { SceneScope, TscnNode } from '../parser/types.js';
 import type { LiveNode } from '../resources/liveNode.js';
 import { belowRoot, joinPath } from '../utils/nodePath.js';
@@ -18,7 +18,9 @@ import {
   canvasLayerRanks,
   hostsOwnCanvas,
   WHOLE_CANVAS_RANGE,
+  ysortsChildren,
 } from './canvasPaintOrder.js';
+import { YSortDispatcher } from './YSortDispatcher.js';
 import { isViewportBoundary } from '../nodes/viewport/subviewport/viewportBoundary.js';
 import {
   CanvasRootRangesProvider,
@@ -32,6 +34,7 @@ import { useViewportSelection } from './hooks/useViewportSelection.js';
 import { useCanvasWorkspace } from './contexts/CanvasWorkspaceContext.js';
 import { drawsInWorkspace } from './nodeWorkspaceVisibility.js';
 import { useAnimatedValueAt } from './contexts/AnimatedValueContext.js';
+import { useNodeObjectRegistration } from './hooks/useNodeObjectRegistration.js';
 import { NodePathProvider } from './contexts/NodePathContext.js';
 import { childOrders, TreeOrderProvider, useTreeOrder, type TreeOrder } from './contexts/TreeOrderContext.js';
 import { VisibilityParentScope } from './visibilityRange/VisibilityParentContext.js';
@@ -40,9 +43,11 @@ import {
   useInstancedScenePaths,
 } from './contexts/InstancedScenePathsContext.js';
 import { InstanceOwnerProvider } from './contexts/InstanceOwnersContext.js';
+import { UnownedSubtree } from './contexts/UnownedSubtreeContext.js';
 import { useLiveStepOf } from './useLiveSceneTree.js';
 import { useLiveDrawnNode } from './liveNodePatches.js';
 import { useResourceLoader } from '../resources/useResource.js';
+import { PendingSuspense } from '../resources/PendingSuspense.js';
 import { resolveInstancePath } from '../resources/SubResourceResolver.js';
 import { useInstancedScene } from './hooks/useInstancedScene.js';
 import { SceneResourcesProvider, useSceneResources } from './SceneResourcesContext.js';
@@ -71,6 +76,9 @@ import { prefetchCsgModule } from './csg/csgModule.js';
 import { warn } from '../logger.js';
 import { spaceFamilyOf } from '../godot/scene/parentSpace.js';
 import type { Node3DProperties } from '../nodes/base/node3d/types.js';
+
+// Lazy, as the 2D stage's own Control layer is: a canvas with no unowned Control loads none.
+const UnownedNodeControls = lazy(() => import('./controls/native/UnownedNodeControls.js'));
 
 /** Does this subtree contain anything that needs boolean evaluation? */
 function containsCsgShape(node: TscnNode): boolean {
@@ -163,7 +171,23 @@ export function DispatchedNode({ node, path }: DispatchedNodeProps): ReactNode {
     <PlainNode node={node} path={path} />
   );
 
-  return node.scope ? <OwnResourceScope scope={node.scope}>{dispatched}</OwnResourceScope> : dispatched;
+  const scoped = node.scope ? (
+    <OwnResourceScope scope={node.scope}>{dispatched}</OwnResourceScope>
+  ) : (
+    dispatched
+  );
+  if (!node.isUnowned) return scoped;
+  return (
+    <UnownedSubtree>
+      {scoped}
+      {/* The world walk draws no Control, and the scene's own Control forest never sees this node. */}
+      {node.hasControlRoot && (
+        <PendingSuspense>
+          <UnownedNodeControls node={node} />
+        </PendingSuspense>
+      )}
+    </UnownedSubtree>
+  );
 }
 
 /**
@@ -255,7 +279,7 @@ function PlainNode({
     () => childOrders(inlineBase, node.children.length),
     [inlineBase, node.children.length]
   );
-  const { hiddenNodePaths, registerNodeObject, unregisterNodeObject } = useSelection();
+  const { hiddenNodePaths } = useSelection();
   const workspace = useCanvasWorkspace();
   const paintRange = usePaintRange();
   // Before the early returns, for rules-of-hooks. Memoized: `allocateNodePaintRange`
@@ -281,29 +305,23 @@ function PlainNode({
   // Whether `Object::cast_to<CanvasItem>(get_parent())` succeeds for this node.
   const parentIsCanvasItem = useParentSpaceFamily() === 'CanvasItem';
 
-  const wrapperRef = useCallback(
-    (object: THREE.Object3D | null) => {
-      if (object) {
-        registerNodeObject(path, object);
-      } else {
-        unregisterNodeObject(path);
-      }
-    },
-    [path, registerNodeObject, unregisterNodeObject]
-  );
+  const wrapperRef = useNodeObjectRegistration(path);
 
   if (!drawsInWorkspace(node.type, workspace)) return null;
 
   // Each child gets its own run of draw-sequence values in Godot's walk order:
   // `show_behind_parent` children before this node, the rest after it. A run
   // covers the child's whole subtree, so nothing reaches a sibling's sequence.
-  const inlineChildren = node.children.map((child, i) => (
-    <PaintRangeProvider key={child.name} value={canvasRoots.get(child) ?? allocated.children[i]!}>
-      <TreeOrderProvider order={inlineOrders[i]!}>
-        <DispatchedNode node={child} path={joinPath(path, child.name)} />
-      </TreeOrderProvider>
-    </PaintRangeProvider>
-  ));
+  const sortsChildren = ysortsChildren(node);
+  const inlineChildren = sortsChildren
+    ? []
+    : node.children.map((child, i) => (
+        <PaintRangeProvider key={child.name} value={canvasRoots.get(child) ?? allocated.children[i]!}>
+          <TreeOrderProvider order={inlineOrders[i]!}>
+            <DispatchedNode node={child} path={joinPath(path, child.name)} />
+          </TreeOrderProvider>
+        </PaintRangeProvider>
+      ));
 
   const children: ReactNode[] = [];
   // Inside the node's own group, as a child, so the icon sits at its origin whatever the component draws.
@@ -311,8 +329,12 @@ function PlainNode({
   if (editorIcon) {
     children.push(<NodeEditorIcon key="__icon" node={node} registration={editorIcon} />);
   }
-  if (inlineChildren.length > 0) {
-    children.push(<Fragment key="__inline">{inlineChildren}</Fragment>);
+  if (node.children.length > 0) {
+    // The world walk sorts the children of any `y_sort_enabled` item, as `CanvasItem` does
+    // (`canvas_item.cpp:706-709`). A TileMap or TileMapLayer sorts its own rows with them instead.
+    children.push(
+      <Fragment key="__inline">{sortsChildren ? <YSortDispatcher node={node} /> : inlineChildren}</Fragment>
+    );
   }
   if (extraChildren) {
     // Injected sub-scene roots draw after the authored children, in the room
@@ -332,7 +354,7 @@ function PlainNode({
         <VisibilityParentScope node={node} path={path}>
           {/* paint-order-safe: the selection wrapper, outside the item's own group,
             which `<CanvasItem2D>` renders nearer to every mesh. A type that draws
-            without that ritual takes its key from `useCanvasItemRenderOrder`. */}
+            without that ritual takes its key from `useCanvasKeyOfNode`. */}
           <group ref={wrapperRef} visible={!isHidden}>
             {/* Inside the eye-toggle group: a top_level canvas root drops its
               ancestors' transform and tint but not their visibility. A root whose
@@ -344,31 +366,35 @@ function PlainNode({
                   merged instance, the sub-scene root's type. A y-sort reorder keeps it, since
                   every level it lifts past is a CanvasItem. */}
                 <ParentTypeProvider value={node.type}>
-                  <GuardedNodeComponent node={node}>
-                    {children.length > 0 ? (
-                      /* At every level, so a non-sprite parent overwrites with white:
+                  <ControlCanvasSpace node={node} path={path}>
+                    <GuardedNodeComponent node={node}>
+                      {children.length > 0 ? (
+                        /* At every level, so a non-sprite parent overwrites with white:
                        `sprite_3d.cpp:75` accumulates from the immediate parent only. */
-                      <SpriteBase3DChildAccum node={node}>
-                        {startsCanvas ? (
-                          <CanvasLayerScope node={node}>
-                            {/* `<CanvasLayerScope>` is shared with the Control walk's
+                        <SpriteBase3DChildAccum node={node}>
+                          {startsCanvas ? (
+                            <CanvasLayerScope node={node}>
+                              {/* `<CanvasLayerScope>` is shared with the Control walk's
                               `CanvasLayer` painter. A canvas root below draws on this
                               layer's canvas (`canvas_item.cpp:246-252`), so a node that
                               escapes inside it stays under the layer's own group. */}
-                            <WorldRoot>
-                              <CanvasRootRangesProvider value={canvasRoots}>
-                                {children}
-                              </CanvasRootRangesProvider>
-                            </WorldRoot>
-                          </CanvasLayerScope>
-                        ) : hostsCanvas ? (
-                          <CanvasRootRangesProvider value={canvasRoots}>{children}</CanvasRootRangesProvider>
-                        ) : (
-                          <>{children}</>
-                        )}
-                      </SpriteBase3DChildAccum>
-                    ) : null}
-                  </GuardedNodeComponent>
+                              <WorldRoot>
+                                <CanvasRootRangesProvider value={canvasRoots}>
+                                  {children}
+                                </CanvasRootRangesProvider>
+                              </WorldRoot>
+                            </CanvasLayerScope>
+                          ) : hostsCanvas ? (
+                            <CanvasRootRangesProvider value={canvasRoots}>
+                              {children}
+                            </CanvasRootRangesProvider>
+                          ) : (
+                            <>{children}</>
+                          )}
+                        </SpriteBase3DChildAccum>
+                      ) : null}
+                    </GuardedNodeComponent>
+                  </ControlCanvasSpace>
                 </ParentTypeProvider>
               </CanvasRootScope>
             </TopLevelScope>

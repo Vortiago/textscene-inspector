@@ -20,9 +20,11 @@ import { useLoadedFiles } from '../resources/useLoadedFiles';
 import { atlasTextureFiles, withTilesSizedAtLoad } from '../resources/tileset/sizedAtLoad';
 import { useSceneResources } from './SceneResourcesContext';
 
+export type TileSetStatus = 'pending' | 'loaded' | 'unavailable';
+
 interface TileSetModelResult {
   model: TileSetModel | null;
-  status: 'pending' | 'loaded' | 'unavailable';
+  status: TileSetStatus;
 }
 
 /** The TileSet `tileSetRef` names, with the tiles Godot creates once its atlas textures size it. */

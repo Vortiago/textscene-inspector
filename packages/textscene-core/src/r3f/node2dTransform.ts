@@ -7,14 +7,20 @@
  */
 
 import * as THREE from 'three';
+import { canvasFrameOf } from './canvasFrame';
 import type { Node2DLocalTransform } from '../nodes/base/node2d/types';
 import type { Vec3Tuple } from './nodeTransform';
-import { transform2DFromParts, type Transform2DColumns } from '../godot/math/transform2d.js';
+import {
+  mutableTransform2D,
+  transform2DFromParts,
+  type MutableTransform2D,
+  type Transform2DColumns,
+} from '../godot/math/transform2d.js';
 
 // F is its own inverse, so `F·M1·F · F·M2·F = F·(M1·M2)·F` composes through any
 // nesting with no global flip group: Godot `(100, 50)` sits at three.js `(100, -50)`.
 // Draw order is `renderOrder`, not depth (`canvasPaintOrder.ts`).
-interface Node2DGroupProps {
+export interface Node2DGroupProps {
   position: Vec3Tuple;
   rotation: Vec3Tuple;
   scale: Vec3Tuple;
@@ -37,6 +43,19 @@ export function node2dGroupProps(t: Node2DLocalTransform, z = 0): Node2DGroupPro
 
   const matrix = threeMatrixFromTransform2D(transform2DFromParts(t.rotation, t.scale, skew, t.position), z);
   return { position, rotation, scale, matrix };
+}
+
+/**
+ * {@link node2dGroupProps} of a hand-built or partly parsed bag, each absent part at its
+ * `node_2d.h:39-42` default, as {@link node2DLocalTransform} fills it.
+ */
+export function node2dGroupPropsOf(parts: Partial<Node2DLocalTransform>): Node2DGroupProps {
+  return node2dGroupProps({
+    position: parts.position ?? { x: 0, y: 0 },
+    rotation: parts.rotation ?? 0,
+    scale: parts.scale ?? { x: 1, y: 1 },
+    skew: parts.skew,
+  });
 }
 
 /**
@@ -96,15 +115,50 @@ export function threeMatrixFromTransform2D(t: Transform2DColumns, z = 0): THREE.
  * sign and the Y translation negates.
  */
 export function transform2DFromThreeMatrix(matrix: THREE.Matrix4): Transform2DColumns {
+  return transform2DFromThreeMatrixInto(mutableTransform2D(), matrix);
+}
+
+/** {@link transform2DFromThreeMatrix} written into `out`, for a render that allocates nothing. */
+function transform2DFromThreeMatrixInto(out: MutableTransform2D, matrix: THREE.Matrix4): MutableTransform2D {
   const e = matrix.elements;
-  return {
-    a: e[0]!,
-    b: 0 - e[1]!,
-    c: 0 - e[4]!,
-    d: e[5]!,
-    tx: e[12]!,
-    ty: 0 - e[13]!,
-  };
+  out.a = e[0]!;
+  out.b = 0 - e[1]!;
+  out.c = 0 - e[4]!;
+  out.d = e[5]!;
+  out.tx = e[12]!;
+  out.ty = 0 - e[13]!;
+  return out;
+}
+
+/** Written by {@link canvasTransformInto} and {@link transform2DWithin}, and read back before each returns. */
+const scratchMatrix = new THREE.Matrix4();
+
+/** The node's global transform in Godot pixels, written into `out`: its world matrix within the frame of its canvas. */
+export function canvasTransformInto(out: MutableTransform2D, object: THREE.Object3D): MutableTransform2D {
+  const frame = canvasFrameOf(object);
+  const matrix = frame
+    ? scratchMatrix.copy(frame.matrixWorld).invert().multiply(object.matrixWorld)
+    : object.matrixWorld;
+  return transform2DFromThreeMatrixInto(out, matrix);
+}
+
+/**
+ * The transform of `object` within `ancestor` in Godot pixels, or null where `ancestor` is not
+ * above it. The product of the local matrices between the two, not a world matrix through an
+ * inverse: a node then keeps the transform its file stores, to the last bit.
+ *
+ * @canonical The transform of a drawn 2D node within a drawn ancestor
+ */
+export function transform2DWithin(
+  object: THREE.Object3D,
+  ancestor: THREE.Object3D
+): Transform2DColumns | null {
+  scratchMatrix.copy(object.matrix);
+  for (let above = object.parent; above !== ancestor; above = above.parent) {
+    if (!above) return null;
+    scratchMatrix.premultiply(above.matrix);
+  }
+  return transform2DFromThreeMatrix(scratchMatrix);
 }
 
 /**

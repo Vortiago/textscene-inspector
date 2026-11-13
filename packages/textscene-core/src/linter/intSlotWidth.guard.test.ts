@@ -10,6 +10,7 @@ import { readFileSync } from 'node:fs';
 import { stripComments } from '@textscene/dev-kit';
 import { validatorRegistry } from './ValidatorRegistry.js';
 import { CLASS_BASE_TYPES } from '../godot/classdb/classBaseTypes.js';
+import { RESOURCE_BASE_TYPES_GENERATED } from '../godot/classdb/resourceBaseTypes.generated.js';
 import { everyValidator } from './testing/registryPopulation.js';
 import { allSourceFiles, srcLabel } from './testing/ruleNameScrape.js';
 import type { IntWidth } from '../godot/variant/intWidth.js';
@@ -30,12 +31,21 @@ const WIDTH_ARGUMENT = /^['"](uint8|int32|uint32|int64)['"]$/;
  * cross-check is possible.
  */
 const PROPERTY_READ =
-  /^\s*(?:[\w.?![\]]*\.)?(?:properties|props|rawProps|rawProperties|data)(?:\??\.(\w+)\b|\[\s*['"](\w+)['"]\s*\])/;
+  /^\s*(?:[\w.?![\]]*\.)?(properties|props|rawProps|rawProperties|data)(?:\??\.(\w+)\b|\[\s*['"](\w+)['"]\s*\])/;
 
-/** The key a property read names, or `undefined` when `expression` is not one. */
-function readKey(expression: string): string | undefined {
+/** The bag a resource decoder or a resource rule reads. Every other bag holds the properties of a node. */
+const RESOURCE_BAG = 'data';
+
+/** The slot a property read names: its key, and whether the bag is a resource's. */
+interface ReadSlot {
+  key: string;
+  isResource: boolean;
+}
+
+/** The slot a property read names, or `undefined` when `expression` is not one. */
+function readSlot(expression: string): ReadSlot | undefined {
   const match = PROPERTY_READ.exec(expression);
-  return match ? (match[1] ?? match[2]) : undefined;
+  return match ? { key: (match[2] ?? match[3])!, isResource: match[1] === RESOURCE_BAG } : undefined;
 }
 
 /** A call site's read of one property, as the guard compares it. */
@@ -45,6 +55,8 @@ interface IntRead {
   reader: string;
   key: string;
   width: IntWidth;
+  /** Set for a read out of a resource bag, and absent for a read of a node property. */
+  subject?: 'resource';
 }
 
 /** The balanced argument list of a call whose `(` sits at `open`. */
@@ -112,14 +124,15 @@ function widthTakingReaders(files: readonly string[]): string[] {
  * name disagree. A rule often lifts `const collisionMask = rawProps.collision_mask;` and
  * reads it later. One hop, only from a binding whose right side is the property read.
  */
-function localBindings(source: string): Map<string, string | null> {
-  const bound = new Map<string, string | null>();
+function localBindings(source: string): Map<string, ReadSlot | null> {
+  const bound = new Map<string, ReadSlot | null>();
   for (const match of source.matchAll(/\b(?:const|let|var)\s+(\w+)\s*(?::[^=;\n]+)?=\s*([^;]+);/g)) {
-    const key = readKey(match[2]!);
-    if (key === undefined) continue;
+    const slot = readSlot(match[2]!);
+    if (slot === undefined) continue;
     const name = match[1]!;
     const seen = bound.get(name);
-    bound.set(name, seen !== undefined && seen !== key ? null : key);
+    const agrees = seen === undefined || (seen?.key === slot.key && seen.isResource === slot.isResource);
+    bound.set(name, agrees ? slot : null);
   }
   return bound;
 }
@@ -136,13 +149,19 @@ export function intReadsIn(source: string, label: string, readers: readonly stri
     const first = args[0] ?? '';
     // Anything else (a subscript, a parameter, an expression) names no slot,
     // so there is no second declaration to disagree with.
-    const key = readKey(first) ?? (/^\w+$/.test(first) ? bound.get(first) : undefined);
-    if (key === undefined || key === null) continue;
+    const slot = readSlot(first) ?? (/^\w+$/.test(first) ? bound.get(first) : undefined);
+    if (slot === undefined || slot === null) continue;
     const width = args
       .map((arg) => WIDTH_ARGUMENT.exec(arg)?.[1] as IntWidth | undefined)
       .find((w) => w !== undefined);
     const line = stripped.slice(0, match.index).split('\n').length;
-    reads.push({ where: `${label}:${line}`, reader: match[1]!, key, width: width ?? IMPLIED_WIDTH });
+    reads.push({
+      where: `${label}:${line}`,
+      reader: match[1]!,
+      key: slot.key,
+      width: width ?? IMPLIED_WIDTH,
+      ...(slot.isResource ? { subject: 'resource' as const } : {}),
+    });
   }
   return reads;
 }
@@ -175,8 +194,17 @@ interface Declared {
 interface Declarations {
   /** The width declared for one class's slot, base chain walked. */
   forClass(type: string, key: string): IntWidth | undefined;
-  /** Every width declared for the key name, whoever declares it. */
-  forKey(key: string): Declared | undefined;
+  /**
+   * Every width declared for the key name by the classes of one kind: resource classes for a read
+   * out of a resource bag, and node classes for any other. A node rule never reads a resource, so
+   * `SkeletonModification2DJiggle.collision_mask` (`int`) does not split `Area2D.collision_mask`.
+   */
+  forKey(key: string, subject: IntRead['subject']): Declared | undefined;
+}
+
+/** Whether Godot's ClassDB puts `type` under Resource, as `resourceBaseTypes.generated.ts` records it. */
+function isResourceClass(type: string): boolean {
+  return type === 'Resource' || type in RESOURCE_BASE_TYPES_GENERATED;
 }
 
 /** Every int slot the registry can run, walked once for both consumers below. */
@@ -185,6 +213,7 @@ const INT_SLOTS = everyValidator((v) => v.intSlot !== undefined, { atLeast: 2000
 /** The live registry as a {@link Declarations}. */
 function registryDeclarations(): Declarations {
   const byKey = new Map<string, Declared>();
+  const slotOf = (key: string, isResource: boolean): string => `${isResource ? 'resource' : 'node'}:${key}`;
   // `everyValidator`, not `registeredKeys()` + `declarationFor`, which reaches roots
   // only and would skip every leaf int slot behind a wildcard dispatcher
   // (`TileMap.layer_#/*`, `Skeleton3D.bones/*`, `MenuButton.popup/item_#/*`).
@@ -194,14 +223,18 @@ function registryDeclarations(): Declarations {
     // The bare prefix is what a source read spells: `properties.settings`, never
     // the registration's `settings/*`. Everything else the subject carries.
     const readKey = key.replace(/\/\*{1,2}$/, '');
-    const entry = byKey.get(readKey) ?? { widths: new Set<IntWidth>(), types: [] };
+    const slot = slotOf(readKey, isResourceClass(nodeType));
+    const entry = byKey.get(slot) ?? { widths: new Set<IntWidth>(), types: [] };
     entry.widths.add(width);
     entry.types.push(nodeType);
-    byKey.set(readKey, entry);
+    byKey.set(slot, entry);
   }
   return {
     forClass: (type, key) => validatorRegistry.declarationFor(type, key)?.intSlot?.width,
-    forKey: (key) => byKey.get(key),
+    // The other kind where the bag's own declares no such key: a material decoder reads its resource
+    // through `properties`, and a read that finds no declaration is not checked.
+    forKey: (key, subject) =>
+      byKey.get(slotOf(key, subject === 'resource')) ?? byKey.get(slotOf(key, subject !== 'resource')),
   };
 }
 
@@ -228,7 +261,7 @@ export function verdictsFor(
 ): Verdicts {
   const out: Verdicts = { disagreements: [], unattributable: [], checked: 0 };
   for (const read of reads) {
-    const entry = declared.forKey(read.key);
+    const entry = declared.forKey(read.key, read.subject);
     if (entry === undefined) continue;
     const type = owner(read.where.replace(/:\d+$/, ''));
     // A helper shared across a family (`ui/shared/boxContainer.ts`) belongs to
@@ -367,6 +400,23 @@ describe('an int slot is read at the width its validator declares', () => {
       "nodes/shared/masks.ts:12 ruleInt(…light_mask) sits in no class's directory, " +
         'and light_mask is declared int32 and uint32 across 2 classes',
     ]);
+  });
+
+  it('holds a helper that reads a node to the node classes alone', () => {
+    const declared: Declarations = {
+      forClass: () => undefined,
+      forKey: (_key, subject) =>
+        subject === 'resource'
+          ? { widths: new Set<IntWidth>(['int32']), types: ['SkeletonModification2DJiggle'] }
+          : { widths: new Set<IntWidth>(['uint32']), types: ['Area2D'] },
+    };
+    const source = [
+      "const a = ruleInt(rawProps.collision_mask, null, 'uint32');",
+      'const b = slotInt(data.collision_mask, 1);',
+    ].join('\n');
+    const reads = intReadsIn(source, 'linter/physics/areaLinterRule.ts', ['ruleInt', 'slotInt']);
+    const verdicts = verdictsFor(reads, () => undefined, declared);
+    expect(verdicts).toEqual({ disagreements: [], unattributable: [], checked: 2 });
   });
 
   it('sweeps the whole tree, so a clean run is not an empty one', () => {

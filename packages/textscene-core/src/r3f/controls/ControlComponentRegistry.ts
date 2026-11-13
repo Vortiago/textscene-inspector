@@ -11,7 +11,8 @@ import type { NativeTheme } from './native/nativeTheme';
 import type { TextMeasurer } from './native/solverRegistry';
 import type { Rect2 } from '../../godot/math/rect2';
 import type { SolveNode } from './native/solveTree';
-import type { ControlOwnTint } from './native/controlTint';
+import type { OwnPixelTint } from '../canvasItemModulate';
+import type { CanvasSlot } from '../canvasItemState';
 import type { SealedHandoff } from './native/solveHandoff';
 
 /**
@@ -36,7 +37,13 @@ export interface NativeControlComponentProps {
    * Required, since an optional tint falls back to opaque white in silence. A test gets every
    * required prop from `painterEnv` (`native/testing/painterProps.ts`).
    */
-  tint: ControlOwnTint;
+  tint: OwnPixelTint;
+  /**
+   * The tint of the parts Godot draws through an internal child Control or a child canvas item: the
+   * inherited modulate without this node's `self_modulate`. A painter draws such a part with this
+   * and its own parts with `tint`.
+   */
+  childTint: OwnPixelTint;
   /**
    * Whether Controls in this viewport snap to whole pixels, as the walker resolved it. The project's
    * `gui/common/snap_controls_to_pixels` sets only the root window (`main/main.cpp`), and every other
@@ -62,19 +69,24 @@ export interface NativeControlComponentProps {
    */
   renderOrder: number;
   /**
-   * The key at the end of this node's contiguous run, for chrome that draws after the whole subtree
-   * like Godot's `INTERNAL_MODE_BACK` children: ScrollContainer's bars (`scene/gui/scroll_container.cpp:919,924`),
-   * and those of LineEdit, OptionButton, RichTextLabel and SplitContainer. The next sibling starts one
-   * past it, so add a fraction such as +0.25. Required, since a `renderOrder` fallback hides a bar.
+   * The slot `renderOrder` heads, which a painter's own pieces split (`canvasSubOrders`). A Control
+   * the walker places owns a whole key's slot. A painter that draws another painter hands it the
+   * piece it drew it from, so the inner painter's pieces stay inside that piece.
    */
-  subtreeChromeRenderOrder: number;
+  slot: CanvasSlot;
   /**
-   * The own clamped `z_final` (`accumulateCanvasItemZ`) that a 2D light's z window tests, since
-   * `_cull_canvas_item` passes the accumulated `p_z` on (`servers/rendering/renderer_canvas_cull.cpp`).
-   * Required though no painter reads it yet: `useCanvasItemLighting` falls back to `useEffectiveZ()`,
-   * the parent's z, so a lit painter passes this in, as `CanvasItem2D.tsx` does.
+   * The slot after this node's whole subtree, for chrome that draws there like Godot's
+   * `INTERNAL_MODE_BACK` children: ScrollContainer's bars (`scene/gui/scroll_container.cpp:919,924`).
+   * A slot, not a key, so a nested painter handed a piece splits only that piece (`canvasSubOrders`).
+   * Required, since a `renderOrder` fallback hides a bar.
    */
-  effectiveZ: number;
+  chromeSlot: CanvasSlot;
+  /**
+   * The slot of the listed layer the Control adds itself: GraphEdit's `connections_layer`, which
+   * draws after the GraphFrames and before the GraphNodes (`graph_edit.cpp:714-717`). Every other
+   * Control gets its own `slot`.
+   */
+  layerSlot: CanvasSlot;
   /**
    * The **solve handoff** the Control's `ContainerLayoutFn` sealed (`SolvedControl.meta`), or
    * `undefined`. Only the producing slice's channel opens it (`native/solveHandoff.ts`). A painter

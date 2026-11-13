@@ -4,7 +4,7 @@
  * `scaledGodotTheme` unchanged while colours are not scaled.
  */
 import { describe, expect, it } from 'vitest';
-import { scaledGodotTheme } from '../../../godot/scene/theme';
+import { DEFAULT_THEME_VARIATIONS, scaledGodotTheme } from '../../../godot/scene/theme';
 import { nativeTheme } from './nativeTheme';
 
 describe('nativeTheme', () => {
@@ -51,6 +51,12 @@ describe('nativeTheme', () => {
   const uniformCorners = (n: number) => ({ topLeft: n, topRight: n, bottomRight: n, bottomLeft: n });
 
   describe('widgets', () => {
+    it('Button focus: an uncentred 2 px ring flush outside the button, scaled with the theme (default_theme.cpp:142-144)', () => {
+      const { focus } = nativeTheme(1).widgets.button;
+      expect([focus.drawCenter, focus.borderWidth.left, focus.expandMargin.left]).toEqual([false, 2, 2]);
+      expect(nativeTheme(1.5).widgets.button.focus.borderWidth.left).toBe(3);
+    });
+
     it('Panel: make_flat_stylebox(style_normal_color, 0, 0, 0, 0) — default_theme.cpp:134', () => {
       const theme = nativeTheme(1);
       expect(theme.widgets.panel).toEqual({
@@ -64,12 +70,18 @@ describe('nativeTheme', () => {
         borderBlend: false,
         antiAliased: true, // StyleBoxFlat's own untouched default (style_box_flat.h:49)
         aaSize: 1,
-        cornerDetail: 8,
+        cornerDetail: 5,
         skew: { x: 0, y: 0 },
         shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
         shadowSize: 0,
         shadowOffset: { x: 0, y: 0 }, // StyleBoxFlat's own untouched default (style_box_flat.h:54)
       });
+    });
+
+    it('PopupPanel: make_flat_stylebox(style_normal_color) with the default margin — default_theme.cpp:726', () => {
+      const { popupPanel } = nativeTheme(1).widgets;
+      expect(popupPanel.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
+      expect(popupPanel.contentMargin).toEqual({ left: 4, top: 4, right: 4, bottom: 4 });
     });
 
     it('Button normal/hover/pressed/disabled: make_flat_stylebox(color) with every default arg — default_theme.cpp:138-141', () => {
@@ -84,7 +96,7 @@ describe('nativeTheme', () => {
         borderBlend: false,
         antiAliased: true,
         aaSize: 1,
-        cornerDetail: 8,
+        cornerDetail: 5,
         skew: { x: 0, y: 0 },
         shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
         shadowSize: 0,
@@ -117,7 +129,7 @@ describe('nativeTheme', () => {
         borderBlend: false,
         antiAliased: true,
         aaSize: 1,
-        cornerDetail: 8,
+        cornerDetail: 6,
         skew: { x: 0, y: 0 },
         shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
         shadowSize: 0,
@@ -135,7 +147,7 @@ describe('nativeTheme', () => {
         borderBlend: false,
         antiAliased: true,
         aaSize: 1,
-        cornerDetail: 8,
+        cornerDetail: 6,
         skew: { x: 0, y: 0 },
         shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
         shadowSize: 0,
@@ -156,7 +168,7 @@ describe('nativeTheme', () => {
         borderBlend: false,
         antiAliased: true,
         aaSize: 1,
-        cornerDetail: 8,
+        cornerDetail: 6,
         skew: { x: 0, y: 0 },
         shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
         shadowSize: 0,
@@ -211,7 +223,7 @@ describe('nativeTheme', () => {
           borderBlend: false,
           antiAliased: true,
           aaSize: 1,
-          cornerDetail: 8,
+          cornerDetail: 5,
           skew: { x: 0, y: 0 },
           shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
           shadowSize: 0,
@@ -236,7 +248,7 @@ describe('nativeTheme', () => {
           borderBlend: false,
           antiAliased: true,
           aaSize: 1,
-          cornerDetail: 8,
+          cornerDetail: 5,
           skew: { x: 0, y: 0 },
           shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
           shadowSize: 0,
@@ -251,6 +263,112 @@ describe('nativeTheme', () => {
       expect(theme.widgets.lineEdit.normal.cornerRadius).toEqual(uniformCorners(6));
       expect(theme.widgets.lineEdit.normal.borderWidth).toEqual({ left: 0, top: 0, right: 0, bottom: 2 });
       expect(theme.widgets.lineEdit.readOnly.borderWidth).toEqual({ left: 0, top: 0, right: 0, bottom: 2 });
+    });
+  });
+
+  describe('dialogPanel', () => {
+    it('scales the margin twice, as the call passes a scaled margin to make_flat_stylebox', () => {
+      expect(nativeTheme(1).widgets.dialogPanel.contentMargin).toEqual(uniform(8));
+      expect(nativeTheme(1.5).widgets.dialogPanel.contentMargin).toEqual(uniform(18));
+    });
+  });
+
+  describe('cache', () => {
+    it('returns the same theme for the same scale', () => {
+      expect(nativeTheme(1)).toBe(nativeTheme(1));
+    });
+
+    it('builds a new theme when the scale changes', () => {
+      const first = nativeTheme(1);
+      expect(nativeTheme(2)).not.toBe(first);
+      expect(nativeTheme(2).scale).toBe(2);
+    });
+
+    it('keeps the theme of a scale while another scale is asked for', () => {
+      const first = nativeTheme(1);
+      nativeTheme(2);
+      expect(nativeTheme(1)).toBe(first);
+    });
+  });
+
+  describe('corner detail', () => {
+    it('truncates the scaled detail to an int, as set_corner_detail does', () => {
+      expect(nativeTheme(1).widgets.popupMenuPanel.cornerDetail).toBe(5);
+      expect(nativeTheme(1.5).widgets.popupMenuPanel.cornerDetail).toBe(7);
+    });
+
+    // The detail follows the Godot radius before the scale: 3 for most boxes, 4 for the slider,
+    // 10 for the scroll bar, 0 for the dialog panel and the flat menu button (clamped to 1).
+    it.each([
+      [1, 5, 6, 6, 1],
+      [2, 10, 12, 12, 1],
+    ])(
+      'gives each widget the detail of its radius at scale %i',
+      (scale, defaultRadius, slider, scrollBar, none) => {
+        const { widgets } = nativeTheme(scale);
+        expect({
+          panel: widgets.panel.cornerDetail,
+          popupPanel: widgets.popupPanel.cornerDetail,
+          tooltipPanel: widgets.tooltipPanel.cornerDetail,
+          popupMenuPanel: widgets.popupMenuPanel.cornerDetail,
+          buttonNormal: widgets.button.normal.cornerDetail,
+          buttonFocus: widgets.button.focus.cornerDetail,
+          optionButton: widgets.optionButton.pressed.cornerDetail,
+          lineEdit: widgets.lineEdit.normal.cornerDetail,
+          sliderTrack: widgets.slider.track.cornerDetail,
+          sliderFill: widgets.slider.fill.cornerDetail,
+          scrollHorizontal: widgets.scrollBar.scrollHorizontal.cornerDetail,
+          scrollGrabber: widgets.scrollBar.grabber.cornerDetail,
+          dialogPanel: widgets.dialogPanel.cornerDetail,
+          flatMenuButton: widgets.flatMenuButton.normal.cornerDetail,
+          tabSelected: widgets.tabContainer.selected.cornerDetail,
+          tabHovered: widgets.tabContainer.hovered.cornerDetail,
+        }).toEqual({
+          panel: defaultRadius,
+          popupPanel: defaultRadius,
+          tooltipPanel: defaultRadius,
+          popupMenuPanel: defaultRadius,
+          buttonNormal: defaultRadius,
+          buttonFocus: defaultRadius,
+          optionButton: defaultRadius,
+          lineEdit: defaultRadius,
+          sliderTrack: slider,
+          sliderFill: slider,
+          scrollHorizontal: scrollBar,
+          scrollGrabber: scrollBar,
+          dialogPanel: none,
+          flatMenuButton: none,
+          tabSelected: none,
+          tabHovered: none,
+        });
+      }
+    );
+  });
+
+  describe('the default type variations it models', () => {
+    it('registers FlatMenuButton with a base type, as widgets.flatMenuButton holds its boxes', () => {
+      expect(DEFAULT_THEME_VARIATIONS.FlatMenuButton).toBeTruthy();
+      expect(nativeTheme(1).widgets.flatMenuButton).toBeDefined();
+    });
+
+    it('gives the FlatMenuButton boxes the margins of the Button box and no fill (default_theme.cpp:360-375)', () => {
+      const { widgets } = nativeTheme(1);
+      expect(widgets.flatMenuButton.normal.contentMargin).toEqual(widgets.button.normal.contentMargin);
+      expect(widgets.flatMenuButton.normal.bgColor.a).toBe(0);
+    });
+
+    it('freezes the shared tab, FlatMenuButton and Button boxes, so an in-place margin edit throws', () => {
+      const { widgets } = nativeTheme(1);
+      for (const box of [
+        widgets.tabContainer.unselected,
+        widgets.flatMenuButton.normal,
+        widgets.button.normal,
+      ]) {
+        const margin = box.contentMargin as { left: number };
+        expect(() => {
+          margin.left += 1;
+        }).toThrow(TypeError);
+      }
     });
   });
 });

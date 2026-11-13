@@ -21,7 +21,7 @@ import type { ImportSlices } from '../../godot/import/layeredTextureImport';
 import { readLayeredSlices } from './readLayeredSlices';
 import { importTexture2DArraySlices } from '../../parser/importParser';
 
-const isOpenExr = (path: string): boolean => resourceSliceRegistry.busTypeOfPath(path) === 'texture2darray';
+const isOpenExr = (path: string): boolean => resourceSliceRegistry.byPath(path)?.busType === 'texture2darray';
 
 /**
  * The layers of the image at `path`: RGBA half-float bits for an OpenEXR, else the red bytes of

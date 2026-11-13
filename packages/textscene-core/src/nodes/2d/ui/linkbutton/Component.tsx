@@ -8,7 +8,6 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { tintColor } from '../../../../r3f/controls/native/buttonBase';
@@ -18,11 +17,7 @@ import { getFontAscentPx } from '../../../../r3f/controls/native/text/fontMetric
 import { isDrawnRtl } from '../../../../r3f/controls/native/text/textBidiOptions';
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
-import {
-  overrunFlagsForBehavior,
-  trimTextBufferLineToWidth,
-} from '../../../../r3f/controls/native/text/textOverrun';
-import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { overrunFlagsForBehavior, trimSoloLine } from '../../../../r3f/controls/native/text/textOverrun';
 import {
   linkButtonLabelShape,
   linkButtonTextPlacement,
@@ -34,7 +29,7 @@ import {
   LINKBUTTON_THEME_FONT_KEY,
 } from './nativeSolver';
 import type { LinkButtonProperties } from './types';
-import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import { useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 
 export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
   const props = painterView<LinkButtonProperties>(solveNode);
@@ -56,25 +51,16 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
 
   // link_button.cpp:286-289: `text_buf->set_width(MAX(1, size.width))` for any `overrun_behavior` but
   // NO_TRIMMING, at the control's own rect, with no style margin.
-  const overrunFlags = useMemo(
-    () => overrunFlagsForBehavior(props.overrunBehavior ?? OverrunBehavior.OVERRUN_NO_TRIMMING),
-    [props.overrunBehavior]
-  );
+  const overrunFlags = useMemo(() => overrunFlagsForBehavior(props.overrunBehavior), [props.overrunBehavior]);
   const isLineDrawnRtl = isDrawnRtl(useControlBidiOptions(props, solveNode));
   const layout: TextLayoutResult | null = useMemo(() => {
-    if (!unshapedLayout || !overrunFlags.trim) return unshapedLayout;
-    const trimmedLine = trimTextBufferLineToWidth(
-      unshapedLayout.lines[0]!,
-      Math.max(1, rect.w),
-      overrunFlags,
-      {
-        fontMetrics,
-        fontSizePx,
-        ellipsisChar: props.ellipsisChar,
-        isDrawnRtl: isLineDrawnRtl,
-      }
-    );
-    return soloLineLayout(trimmedLine, unshapedLayout);
+    if (!unshapedLayout) return null;
+    return trimSoloLine(unshapedLayout, overrunFlags, Math.max(1, rect.w), {
+      fontMetrics,
+      fontSizePx,
+      ellipsisChar: props.ellipsisChar,
+      isDrawnRtl: isLineDrawnRtl,
+    });
   }, [unshapedLayout, overrunFlags, rect.w, fontMetrics, fontSizePx, props.ellipsisChar, isLineDrawnRtl]);
 
   // `link_button.cpp:289-303`: the paragraph origin, which RTL moves to the far edge. The underline
@@ -85,7 +71,7 @@ export function LinkButton({ solveNode, tint, rect, renderOrder, theme }: Native
   );
 
   // Underline: a solid stroke, per underline_mode and draw state
-  const underlineLinearColor = useGodotLinearColor(tintedFontColor);
+  const underlineLinearColor = useItemLinearColor(tintedFontColor);
   const underline = useMemo(() => {
     if (!layout || !shouldUnderline(state, props.underline)) return null;
     // The ascent of the font the text draws in: a `theme_override_fonts/font` scene font shapes at its

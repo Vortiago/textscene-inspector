@@ -1,0 +1,69 @@
+; One variable: a SubViewport with no content. Godot clears every viewport it draws to, so each consumer
+; shows the default clear colour, or what is behind it under `transparent_bg`
+; (`renderer_viewport.cpp:371`).
+
+[gd_scene format=3]
+
+[sub_resource type="ViewportTexture" id="VT"]
+viewport_path = NodePath("Loose")
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="Container" type="SubViewportContainer" parent="."]
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 240.0
+offset_bottom = 160.0
+
+[node name="Viewport" type="SubViewport" parent="Container"]
+size = Vector2i(200, 120)
+
+[node name="Transparent" type="SubViewportContainer" parent="."]
+offset_left = 280.0
+offset_top = 40.0
+offset_right = 480.0
+offset_bottom = 160.0
+
+[node name="Viewport" type="SubViewport" parent="Transparent"]
+transparent_bg = true
+size = Vector2i(200, 120)
+
+[node name="OnlyNode" type="SubViewportContainer" parent="."]
+offset_left = 520.0
+offset_top = 40.0
+offset_right = 720.0
+offset_bottom = 160.0
+
+[node name="Viewport" type="SubViewport" parent="OnlyNode"]
+size = Vector2i(200, 120)
+
+[node name="Timer" type="Timer" parent="OnlyNode/Viewport"]
+
+[node name="Stretch" type="SubViewportContainer" parent="."]
+offset_left = 760.0
+offset_top = 40.0
+offset_right = 960.0
+offset_bottom = 160.0
+stretch = true
+
+[node name="Viewport" type="SubViewport" parent="Stretch"]
+size = Vector2i(2, 2)
+
+[node name="Loose" type="SubViewport" parent="."]
+size = Vector2i(100, 60)
+
+[node name="Rect" type="TextureRect" parent="."]
+offset_left = 40.0
+offset_top = 200.0
+offset_right = 140.0
+offset_bottom = 260.0
+texture = SubResource("VT")

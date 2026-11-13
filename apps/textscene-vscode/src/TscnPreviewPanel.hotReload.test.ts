@@ -61,6 +61,37 @@ describe('TscnPreviewPanel dependency hot-reload', () => {
     ]);
   });
 
+  it('posts resourceChanged for a file created in the workspace though the webview never read it', async () => {
+    const { webview, panel } = await openReadyPreviewPanel(MINIMAL_TSCN);
+    (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({ uri: createMockUri('/workspace') });
+
+    await panel.handleDependencyChange(createMockUri('/workspace/textures/new.png'), 'created');
+
+    expect(resourceChangedCalls(webview)).toEqual([
+      { type: 'resourceChanged', path: 'res://textures/new.png' },
+    ]);
+  });
+
+  it('posts resourceChanged for a file deleted from the workspace though the webview never read it', async () => {
+    const { webview, panel } = await openReadyPreviewPanel(MINIMAL_TSCN);
+    (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({ uri: createMockUri('/workspace') });
+
+    await panel.handleDependencyChange(createMockUri('/workspace/textures/old.png'), 'deleted');
+
+    expect(resourceChangedCalls(webview)).toEqual([
+      { type: 'resourceChanged', path: 'res://textures/old.png' },
+    ]);
+  });
+
+  it('posts nothing for an edit to a file the webview never read', async () => {
+    const { webview, panel } = await openReadyPreviewPanel(MINIMAL_TSCN);
+    (vscode.workspace.getWorkspaceFolder as Mock).mockReturnValue({ uri: createMockUri('/workspace') });
+
+    await panel.handleDependencyChange(createMockUri('/workspace/textures/unread.png'), 'changed');
+
+    expect(resourceChangedCalls(webview)).toEqual([]);
+  });
+
   it.each([
     [
       'an import sidecar',

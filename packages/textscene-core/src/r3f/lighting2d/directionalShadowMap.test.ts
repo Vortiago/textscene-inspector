@@ -5,14 +5,18 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { SHADOW_MAP_BINS, SHADOW_MAP_FAR } from './shadowPolarMap';
+import { canvasShadowAtlasSize } from '../../godot/rendering/canvasShadowAtlas';
+import { SHADOW_MAP_FAR } from './shadowPolarMap';
 import {
   buildDirectionalShadowMap,
   ndcToShadowTransform,
   type DirectionalShadowView,
 } from './directionalShadowMap';
-import { type OccluderCullMode, type Quad2, type ShadowCasterEdges } from './shadowVolumes';
+import { type OccluderCullMode, type Quad2, type ShadowCasterEdges } from './shadowCasterEdges';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
+
+/** The size Godot uses when the project sets none. */
+const DEFAULT_ATLAS_SIZE = canvasShadowAtlasSize(undefined);
 
 /**
  * A 1000 px square view, the light travelling straight down (previewer -Y). The centre is
@@ -31,7 +35,7 @@ function squareView(
   direction = { x: 0, y: -1 },
   scale = { x: 1, y: 1 }
 ): DirectionalShadowView {
-  return { clip: SQUARE, direction, maxDistance, scale };
+  return { clip: SQUARE, direction, maxDistance, scale, bins: DEFAULT_ATLAS_SIZE };
 }
 
 function segment(
@@ -56,7 +60,7 @@ function segmentBounds(ax: number, ay: number, bx: number, by: number): Quad2 {
 
 /** The bin whose centre the across coordinate `x` of `squareView` lands in. */
 function binAt(x: number): number {
-  return Math.floor((0.5 + (x - 500) / (1000 * Math.SQRT2)) * SHADOW_MAP_BINS);
+  return Math.floor((0.5 + (x - 500) / (1000 * Math.SQRT2)) * DEFAULT_ATLAS_SIZE);
 }
 
 describe('buildDirectionalShadowMap: the projection', () => {
@@ -73,6 +77,40 @@ describe('buildDirectionalShadowMap: the projection', () => {
     expect(bins[879]).toBeCloseTo(0.4, 6);
     expect(bins[1168]).toBeCloseTo(0.4, 6);
     expect(bins[1169]).toBe(SHADOW_MAP_FAR);
+  });
+
+  it('fills the same share of a map of another size', () => {
+    // 200 / 1414.2 of 256 bins is 36 bins, centred on the middle bin.
+    const view = { ...squareView(), bins: 256 };
+    const { bins } = buildDirectionalShadowMap(view, [segment(400, 600, 600, 600)]);
+    expect(bins).toHaveLength(256);
+    expect(bins[128]).toBeCloseTo(0.4, 6);
+    expect(bins.filter((depth) => depth < SHADOW_MAP_FAR).length).toBeCloseTo(36, -1);
+    expect(bins[255]).toBe(SHADOW_MAP_FAR);
+  });
+
+  // `unit-directionallight2d-shadow-end-on-bin` pins the side against Godot 4.6.3: covering the bin
+  // there puts 448 px at 63/255 off, leaving it clear matches.
+  describe('an end on the centre of bin 1000, the top-left rule', () => {
+    // x at u = 1000.5 / 2048, the centre of bin 1000.
+    const endX = 500 + (1000.5 / DEFAULT_ATLAS_SIZE - 0.5) * 1000 * Math.SQRT2;
+
+    it('leaves the bin clear when the edge lies before the end', () => {
+      const { bins } = buildDirectionalShadowMap(squareView(), [segment(400, 600, endX, 600)]);
+      expect([bins[999], bins[1000]]).toEqual([expect.closeTo(0.4, 6), SHADOW_MAP_FAR]);
+    });
+
+    it('covers the bin when the edge lies after the end', () => {
+      const { bins } = buildDirectionalShadowMap(squareView(), [segment(endX, 600, 600, 600)]);
+      expect([bins[999], bins[1000]]).toEqual([SHADOW_MAP_FAR, expect.closeTo(0.4, 6)]);
+    });
+  });
+
+  it('gives a bin the snap adds past an end that end depth, not the line extended', () => {
+    // Window x 1000.501 is 0.001 px right of bin 1000's centre. Depth runs 0.2 there to 0.7.
+    const xAt = (windowX: number) => 500 + (windowX / DEFAULT_ATLAS_SIZE - 0.5) * 1000 * Math.SQRT2;
+    const { bins } = buildDirectionalShadowMap(squareView(), [segment(xAt(1000.501), 800, xAt(1000.6), 300)]);
+    expect(bins[1000]).toBeCloseTo(0.2, 6);
   });
 
   it('starts the band max_distance upstream of the view and deepens z_far by it', () => {
@@ -107,7 +145,7 @@ describe('buildDirectionalShadowMap: the projection', () => {
     const [m00, m01, m02, m10, m11, m12] = worldToShadow;
     const u = m00 * 300 + m01 * 500 + m02;
     expect(m10 * 300 + m11 * 500 + m12).toBeCloseTo(0.3, 12);
-    expect(bins[Math.floor(u * SHADOW_MAP_BINS)]).toBeCloseTo(0.3, 6);
+    expect(bins[Math.floor(u * DEFAULT_ATLAS_SIZE)]).toBeCloseTo(0.3, 6);
   });
 });
 

@@ -71,6 +71,7 @@ settings.local.json
 
 # Test fixtures copied to web app during build
 apps/textscene-web/public/fixtures/
+apps/textscene-web/public/fixtures-listing.json
 
 # Comparison gallery staged into the deploy bundle by `pnpm stage-gallery`
 apps/textscene-web/public/parity/

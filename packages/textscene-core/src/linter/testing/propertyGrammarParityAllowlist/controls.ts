@@ -7,6 +7,23 @@
 import type { AsymmetryEntry } from './types.js';
 
 export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
+  // FileDialog: each key below changes no pixel of a frozen frame. `filename_filter` shows its box only through
+  // `show_filename_filter` (`file_dialog.cpp:1222-1224`).
+  // The other linter-only keys gate a click or a pop-up. `current_*` are never saved (`PROPERTY_USAGE_NONE`,
+  // `file_dialog.cpp:2136-2138`), so a linter has nothing to check, and the parser reads them as the loader would.
+  FileDialog: {
+    linterOnly: ['deleting_enabled', 'filename_filter', 'overwrite_warning_enabled', 'use_native_dialog'],
+    parserOnly: ['current_dir', 'current_file', 'current_path'],
+    reason:
+      'No listed file exists to delete, filter or hide, and an overwrite is never asked. A system dialog replaces the drawn one only at run time. A key Godot never saves has no validator.',
+  },
+
+  // Dialogs: closing a dialog needs input, so a frozen frame never shows it.
+  AcceptDialog: {
+    linterOnly: ['dialog_close_on_escape', 'dialog_hide_on_ok'],
+    reason: 'An Escape press or an OK press closes the dialog, and a frozen frame has neither.',
+  },
+
   // Text-bearing leaves: carets, selection, context menus and virtual keyboards
   // have no frozen-frame surface.
 
@@ -93,14 +110,13 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     reason: 'The drag-area and dragger keys tune an interactive splitter a static frame never shows.',
   },
 
-  // Like the container bases, BaseButton has no parser.ts, so one entry covers
-  // Button and every button leaf below it. `disabled` is absent because
-  // button/parser.ts does read it: the preview dims a disabled button.
+  // Like the container bases, BaseButton has no parser.ts, so one entry covers Button and every
+  // button leaf below it. `disabled` and `button_pressed` are absent: the preview reads them.
+  // `toggle_mode` stays: only a Button reads it, and only together with `button_pressed`.
   BaseButton: {
     linterOnly: [
-      // Interaction state and press semantics, all meaningless in a still frame.
+      // Press semantics, all meaningless in a still frame.
       'toggle_mode',
-      'button_pressed',
       'action_mode',
       'button_mask',
       'keep_pressed_outside',
@@ -112,6 +128,22 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
     ],
     reason:
       'Interaction base with no parser of its own; press semantics, grouping and shortcuts describe behaviour under input, which a static preview never applies.',
+  },
+
+  // The editor never plays a stream (`video_stream_player.cpp:146`), so playback state and the
+  // audio keys leave the frame as it is. `stream` and `expand` size the node and are read.
+  VideoStreamPlayer: {
+    linterOnly: [
+      'audio_track',
+      'autoplay',
+      'buffering_msec',
+      'bus',
+      'loop',
+      'paused',
+      'speed_scale',
+      'volume_db',
+    ],
+    reason: 'Playback and audio keys change nothing in the editor, which never plays the stream.',
   },
 
   // Editing, list and graph tiers: an indexed family (`tab_#/*`, `slot/#/*`) is
@@ -155,7 +187,6 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       // authored scroll offset is inert.
       'scroll_horizontal',
       'scroll_vertical',
-      'scroll_past_end_of_file',
     ],
     reason:
       'Carets, selection, clipboard, word boundaries and virtual keyboards have no frozen-frame surface, and an authored scroll offset is snapped away before the first draw.',
@@ -316,5 +347,26 @@ export const controlAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'texture_click_mask',
     ],
     reason: 'The click mask is hit-testing only; it cannot change a frozen frame.',
+  },
+
+  PopupMenu: {
+    linterOnly: [
+      // The hide-on-selection flags, the search and the submenu delay act on input, which a frozen frame has none of.
+      'hide_on_item_selection',
+      'hide_on_checkable_item_selection',
+      'hide_on_state_item_selection',
+      'allow_search',
+      'submenu_popup_delay',
+      // `_pre_popup` shrinks the size when `popup()` runs (`popup_menu.cpp:3453-3454`). A loaded scene never calls it.
+      'shrink_height',
+      'shrink_width',
+      // Native and system menus are drawn by the OS, never on the canvas.
+      'prefer_native_menu',
+      'system_menu_id',
+      // Read through a computed key, as the identical family of OptionButton is.
+      'item_#/*',
+    ],
+    reason:
+      'Input handling, a runtime popup() shrink and OS-drawn native menus change nothing in a loaded still frame; the item family is read through a computed key the scrape cannot match.',
   },
 };

@@ -38,6 +38,35 @@ export const TILE_AND_TARGET_SCENES = [
     file: 'unit-tile-map-layer-texture-padding.tscn',
     mode: '2d',
   },
+  // The scenes of a TileSetScenesCollectionSource instantiated at their cells, and the editor's
+  // placeholder disc for the tiles that ask for it (Gizmos on). Verified against Godot 4.6.3.
+  { name: 'tile-map-layer-scene-tiles', file: 'unit-tile-map-layer-scene-tiles.tscn', mode: '2d' },
+  {
+    name: 'tile-map-layer-scene-tile-control-sort',
+    file: 'unit-tile-map-layer-scene-tile-control-sort.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'tile-map-layer-scene-tile-control-odd-grid',
+    file: 'unit-tile-map-layer-scene-tile-control-odd-grid.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'tile-map-layer-scene-tile-control-top-level',
+    file: 'unit-tile-map-layer-scene-tile-control-top-level.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'tile-map-layer-scene-tile-control-z',
+    file: 'unit-tile-map-layer-scene-tile-control-z.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'tile-map-layer-scene-tile-placeholders',
+    file: 'unit-tile-map-layer-scene-tile-placeholders.tscn',
+    mode: '2d',
+    gizmos: true,
+  },
   // A tile's own TileData. Each scene moves one property, and its header says why.
   { name: 'tile-map-layer-tile-modulate', file: 'unit-tile-map-layer-tile-modulate.tscn', mode: '2d' },
   { name: 'tile-map-layer-tile-material', file: 'unit-tile-map-layer-tile-material.tscn', mode: '2d' },
@@ -46,6 +75,42 @@ export const TILE_AND_TARGET_SCENES = [
     name: 'tile-map-layer-tile-y-sort-origin',
     file: 'unit-tile-map-layer-tile-y-sort-origin.tscn',
     mode: '2d',
+  },
+  // A y-sorted layer, rotated and scaled: each row draws through the layer's transform and sorts
+  // by its origin's y in the parent's space. Verified against Godot 4.6.3.
+  {
+    name: 'tile-map-layer-y-sort-transform',
+    file: 'unit-tile-map-layer-y-sort-transform.tscn',
+    mode: '2d',
+  },
+
+  // A y-sorted layer's child nodes sort with its tile rows, at the root of a sort and lifted into
+  // a y-sorted parent. Verified against Godot 4.6.3.
+  {
+    name: 'tile-map-layer-y-sort-children',
+    file: 'unit-tile-map-layer-y-sort-children.tscn',
+    mode: '2d',
+  },
+
+  // The child slides across a row: at 0.5 s it has passed row 1 and sits above row 2, so it
+  // draws over row 1 and under row 2. Verified against Godot 4.6.3 at that pose.
+  {
+    name: 'tile-map-layer-y-sort-animated-child',
+    file: 'unit-tile-map-layer-y-sort-animated-child.tscn',
+    mode: '2d',
+    select: 'World/Player',
+    animationTime: 0.5,
+  },
+
+  // The layer sits in a y-sorted parent and slides down: at 0.5 s its rows sort at y 132, 196 and
+  // 260, so the bar (240) draws over rows 0 and 1 and under row 2. Verified against Godot 4.6.3 at
+  // that pose, as a static scene with the layer at y 100.
+  {
+    name: 'tile-map-layer-y-sort-animated-layer',
+    file: 'unit-tile-map-layer-y-sort-animated-layer.tscn',
+    mode: '2d',
+    select: 'World/Player',
+    animationTime: 0.5,
   },
 
   // RemoteTransform3D and RemoteTransform2D copy their transform onto the node
@@ -57,6 +122,13 @@ export const TILE_AND_TARGET_SCENES = [
   // The pentagon is authored at the grey ghost and driven to the relay's
   // upper right.
   { name: 'remote-transform-2d', file: 'unit-remote-transform-2d.tscn', mode: '2d' },
+  // A relay below a Control that is offset, turned and scaled pushes the pose that includes it. Godot
+  // probe: green (76,204,102) at (145,92), the relay's place; the background at the origin.
+  { name: 'remote-transform-2d-control', file: 'unit-remote-transform-2d-control.tscn', mode: '2d' },
+  // The Control above the relay turns about a pivot, or a Container lays it out: the relay pushes the pose
+  // that includes the solved Control.
+  { name: 'remote-transform-2d-control-pivot', file: 'unit-remote-transform-2d-control-pivot.tscn', mode: '2d' },
+  { name: 'remote-transform-2d-control-container', file: 'unit-remote-transform-2d-control-container.tscn', mode: '2d' },
   // The same relays and targets inside an instanced scene stand where they do in their own files.
   { name: 'remote-transform-3d-instanced', file: 'unit-remote-transform-3d-instanced.tscn' },
   { name: 'remote-transform-2d-instanced', file: 'unit-remote-transform-2d-instanced.tscn', mode: '2d' },
@@ -92,6 +164,13 @@ export const TILE_AND_TARGET_SCENES = [
   // The same target in the emission slot over a black albedo: every material slot binds a
   // ViewportTexture. A slot that drops it leaves a black quad.
   { name: 'sub-viewport-texture-emission', file: 'unit-sub-viewport-texture-emission.tscn' },
+  // A 3D material reads a `use_hdr_2d` target's linear values with no decode. Godot 4.6.3: the HDR
+  // quad's blend rgb(187,188,0) and value above 1 rgb(255,255,136), against rgb(127,128,0) and
+  // rgb(255,252,100) on the sRGB quad.
+  { name: 'sub-viewport-hdr-2d-world', file: 'unit-sub-viewport-hdr-2d-world.tscn', camera: 'Root/Camera3D' },
+  // A 3D world in a `use_hdr_2d` SubViewport tonemaps with no sRGB encode: the container shows the
+  // 0.5 gray quad as byte 55, where the sRGB viewport shows 127.
+  { name: 'sub-viewport-hdr-3d-world', file: 'unit-sub-viewport-hdr-3d-world.tscn', mode: '2d' },
   // `tonemap_exposure` under LINEAR inside the target, with glow on the main view: the exposure
   // applies inside the target and again on the quad.
   { name: 'sub-viewport-shared-world-exposure', file: 'unit-sub-viewport-shared-world-exposure.tscn' },
@@ -157,6 +236,11 @@ export const TILE_AND_TARGET_SCENES = [
   // why no other golden shows them.
   { name: 'msaa-3d', file: 'msaa-3d/unit-msaa-3d.tscn' },
   { name: 'msaa-2d', file: 'msaa-2d/unit-msaa-2d.tscn', mode: '2d' },
+  // The root viewport's hdr_2d, from a Fixture project's project.godot: the root canvas draws linear
+  // half floats and the copy to the screen converts them to sRGB. Every other golden runs at the default, off.
+  { name: 'hdr-2d', file: 'hdr-2d/unit-hdr-2d.tscn', mode: '2d' },
+  // Lighting in that root: the linear albedo plus an unclamped light, with the authored light colour.
+  { name: 'hdr-2d-lights', file: 'hdr-2d/unit-hdr-2d-lights.tscn', mode: '2d' },
   { name: 'sub-viewport-msaa', file: 'unit-sub-viewport-msaa.tscn', mode: '2d' },
   // Alpha antialiasing's three modes on a scissor cut: under msaa_3d 2X, from its own Fixture project,
   // and at one sample, where the coverage is all or none.

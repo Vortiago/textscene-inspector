@@ -6,8 +6,9 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { TileSourceMesh } from './TileSourceMesh';
-import { LitCanvasItemPixels } from './components/LitCanvasItemPixels';
+import { LitCanvasItem } from './components/LitCanvasItemPixels';
 import { TILE_UV_BOUNDS_ATTRIBUTE } from './tileTexturePadding';
+import { TILE_NORMAL_ORIENTATION_ATTRIBUTE } from './tileNormalOrientation';
 import { ResourceLoaderProvider } from '../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../resources/testing/createFakeResourceLoader';
 import { drawableCellOf } from '../resources/tileset/testing/drawableCellOf';
@@ -16,14 +17,22 @@ import { TileShape } from '../godot/scene/tileSet';
 import { tileTextureAt } from '../resources/tileset/testing/tileTexture';
 import type { TscnInternalResource } from '../parser/types';
 import { imageSize } from '../resources/formats/image/imagePixels';
-import { unconfiguredViewportTexture } from '../resources/textures/viewporttexture/unconfiguredViewportTexture';
+import { texture2DPlaceholder } from '../resources/textures/texture2DPlaceholder';
 import { ViewportTextureProvider } from './contexts/ViewportTextureContext';
 import { NodePathProvider } from './contexts/NodePathContext';
 import { ViewportTexturePublisher, viewportEntry } from './testing/ViewportTexturePublisher';
 import { createCanvasTarget } from '../nodes/viewport/subviewport/offscreenViewport';
+import { WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
+import { canvasColorSpaceOf } from './canvasColorSpace';
 import { isLocalToScene } from '../resources/textures/viewporttexture/localToScene';
 
 const TEXTURE = 'res://tiles.png';
+const WHITE_TINT: VertexColorTint = {
+  vertex: WHITE_MODULATE,
+  color: new THREE.Color(1, 1, 1),
+  opacity: 1,
+  defines: canvasColorSpaceOf(false).defines,
+};
 const grid: TileGrid = {
   shape: TileShape.TILE_SHAPE_SQUARE,
   layout: 0,
@@ -56,7 +65,7 @@ async function render(source: AtlasSourceModel, texture: THREE.Texture | null, s
 
 /** `source` drawn at `Root/Tiles`, beside a SubViewport published at `Root/SubViewport`. */
 async function renderBesideViewport(source: AtlasSourceModel, isTransparent: boolean) {
-  const target = createCanvasTarget(32, 32, 'SubViewport');
+  const target = createCanvasTarget(32, 32, 'SubViewport', canvasColorSpaceOf(false));
   return ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
       <ViewportTextureProvider>
@@ -73,20 +82,16 @@ async function renderBesideViewport(source: AtlasSourceModel, isTransparent: boo
 
 function tileMesh(source: AtlasSourceModel, sampler: typeof DEFAULT_SAMPLER) {
   return (
-    <LitCanvasItemPixels material={null} lightMask={undefined} zFinal={0}>
-      {(pixelMaterial) => (
-        <TileSourceMesh
-          source={source}
-          cells={[drawableCellOf({ coords: { x: 0, y: 0 }, atlasCoords: { x: 1, y: 0 } })]}
-          grid={grid}
-          renderOrder={0}
-          color={new THREE.Color(1, 1, 1)}
-          opacity={1}
-          pixelMaterial={pixelMaterial}
-          sampler={sampler}
-        />
-      )}
-    </LitCanvasItemPixels>
+    <LitCanvasItem material={null} lightMask={undefined} zFinal={0}>
+      <TileSourceMesh
+        source={source}
+        cells={[drawableCellOf({ coords: { x: 0, y: 0 }, atlasCoords: { x: 1, y: 0 } })]}
+        grid={grid}
+        renderOrder={0}
+        tint={WHITE_TINT}
+        sampler={sampler}
+      />
+    </LitCanvasItem>
   );
 }
 
@@ -168,9 +173,7 @@ describe('TileSourceMesh texture slot', () => {
    */
   it("draws Godot's placeholder for an AtlasTexture over a ViewportTexture in a TileSet that is not local to scene", async () => {
     const renderer = await render(viewportWindowSource(false, 'false'), null);
-    expect(distinctTexels(mapTexels(renderer))).toEqual(
-      distinctTexels(unconfiguredViewportTexture().image.data!)
-    );
+    expect(distinctTexels(mapTexels(renderer))).toEqual(distinctTexels(texture2DPlaceholder().image.data!));
   });
 });
 
@@ -219,9 +222,7 @@ describe('TileSourceMesh padding a texture with no image at load', () => {
   it('samples the placeholder at the padded regions when Godot never sets the ViewportTexture up', async () => {
     const renderer = await render(viewportWindowSource(true, 'false'), null);
     const mesh = drawnMeshOf(renderer);
-    expect(distinctTexels(mapTexels(renderer))).toEqual(
-      distinctTexels(unconfiguredViewportTexture().image.data!)
-    );
+    expect(distinctTexels(mapTexels(renderer))).toEqual(distinctTexels(texture2DPlaceholder().image.data!));
     // Atlas (1,0) pads to (19, 1, 16, 16) of the 4×4 placeholder.
     expect(Array.from(mesh.geometry.getAttribute('uv').array)).toEqual([
       4.75, 0.75, 8.75, 0.75, 4.75, -3.25, 8.75, -3.25,
@@ -261,3 +262,52 @@ function distinctTexels(data: ArrayLike<number>): string[] {
     texels.add([data[i], data[i + 1], data[i + 2], data[i + 3]].join(','));
   return [...texels].sort();
 }
+
+/**
+ * A padded CanvasTexture whose diffuse windows a ViewportTexture Godot sets up, with a normal map.
+ * Measured on 4.6.3 (`unit-tilemaplayer-normal-map-padded-viewport.tscn`): every tile is black, the
+ * unrendered target, whatever its orientation.
+ */
+describe('TileSourceMesh padding a normal-mapped CanvasTexture over a live target', () => {
+  const tables: TscnInternalResource[] = [
+    ...GRADIENT_TABLES,
+    { id: 'Viewport', type: 'ViewportTexture', data: { viewport_path: 'NodePath("SubViewport")' } },
+    {
+      id: 'Window',
+      type: 'AtlasTexture',
+      data: {
+        atlas: 'SubResource("Viewport")',
+        region: 'Rect2(0, 0, 32, 32)',
+        resource_local_to_scene: 'true',
+      },
+    },
+    {
+      id: 'Mapped',
+      type: 'CanvasTexture',
+      data: {
+        diffuse_texture: 'SubResource("Window")',
+        normal_texture: 'SubResource("Ramp")',
+        resource_local_to_scene: 'true',
+      },
+    },
+  ];
+  const tileSet = { id: 'TileSet_1', type: 'TileSet', data: { resource_local_to_scene: 'true' } };
+  const source: AtlasSourceModel = {
+    ...sourceOf(true),
+    texture: {
+      ...tileTextureAt('SubResource("Mapped")'),
+      internalResources: tables,
+      isHeldLocally: isLocalToScene(tileSet),
+    },
+  };
+
+  it('draws the unrendered target through the stand-in', async () => {
+    const renderer = await renderBesideViewport(source, false);
+    expect(distinctTexels(mapTexels(renderer))).toEqual(['0,0,0,255']);
+  });
+
+  it('gives the stand-in geometry the tile orientations its normal map turns by', async () => {
+    const renderer = await renderBesideViewport(source, false);
+    expect(drawnMeshOf(renderer).geometry.getAttribute(TILE_NORMAL_ORIENTATION_ATTRIBUTE)?.itemSize).toBe(1);
+  });
+});

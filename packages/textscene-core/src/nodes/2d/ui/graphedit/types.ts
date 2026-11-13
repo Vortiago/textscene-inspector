@@ -29,6 +29,8 @@ export interface GraphEditProperties extends ControlProperties {
   zoomPlusDisabled?: boolean;
   /** A setter queued `_update_scroll_offset` while the file applied (`loadOrder.ts`): the settled frame has no minimap connection (`minimapConnections.ts`). */
   queuedScrollOffsetUpdate?: boolean;
+  /** `get_size()` before the node was parented (`loadOrder.ts`); the painter compares it with the solved size to know whether `NOTIFICATION_RESIZED` ran `_update_scrollbars` (`graph_edit.cpp:868`). */
+  outOfTreeSize?: { x: number; y: number };
   /** `show_grid`: `graph_edit.cpp:3070`. Default `true` (`graph_edit.h:200`). */
   showGrid?: boolean;
   /** `grid_pattern`: `graph_edit.cpp:3071`, `PROPERTY_HINT_ENUM "Lines,Dots"`. Default `0` (LINES, `graph_edit.h:201`). */

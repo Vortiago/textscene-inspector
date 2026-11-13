@@ -9,6 +9,7 @@ import * as THREE from 'three';
 import type { TscnNode } from '../../../../parser/types';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { VSplitContainer } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
 
@@ -125,7 +126,7 @@ describe('<VSplitContainer>', () => {
     const renderer = await ReactThreeTestRenderer.create(
       <VSplitContainer
         {...painterEnv()}
-        tint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 })}
+        childTint={painterTint({ r: 0.5, g: 0.5, b: 0.5, a: 0.5 })}
         solveNode={node}
         rect={{ x: 0, y: 0, w: 120, h: 300 }}
         renderOrder={0}
@@ -135,5 +136,21 @@ describe('<VSplitContainer>', () => {
       .material as THREE.MeshBasicMaterial;
     expect(material.color.r).toBeCloseTo(new THREE.Color().setRGB(0.5, 0.5, 0.5, THREE.SRGBColorSpace).r, 6);
     expect(material.opacity).toBeCloseTo(0.5, 6);
+  });
+});
+
+describe('<VSplitContainer> — self_modulate', () => {
+  it('tints the grabber icon with childTint, which has no self_modulate', async () => {
+    const node = split({ themeOverrideConstants: { autohide: 0 } }, bothExpandChildren());
+    const renderer = await ReactThreeTestRenderer.create(
+      <VSplitContainer
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={node}
+        rect={{ x: 0, y: 0, w: 400, h: 60 }}
+        renderOrder={0}
+      />
+    );
+    expect(countTintSplit(renderer.scene)).toEqual({ own: 0, child: 1 });
   });
 });

@@ -31,10 +31,10 @@ describe('defaultSeparatorStyleBoxLine', () => {
     });
   });
 
-  it('scales the content margin with the theme (default_margin = round(4 * scale))', () => {
+  it('keeps the content margin at the unscaled default_margin (default_theme.cpp:54,737)', () => {
     const box = defaultSeparatorStyleBoxLine('horizontal', nativeTheme(2));
-    expect(box.margin.left).toBe(8);
-    expect(box.margin.right).toBe(8);
+    expect(box.margin.left).toBe(4);
+    expect(box.margin.right).toBe(4);
   });
 
   it('scales the line thickness with the theme (default_theme.cpp:735: round(scale))', () => {

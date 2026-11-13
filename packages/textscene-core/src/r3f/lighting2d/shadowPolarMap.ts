@@ -1,8 +1,6 @@
 /**
- * Godot's per-light 2D shadow map, a 1D polar depth buffer, built on the CPU.
- * PCF5 and PCF13 average five or thirteen angular taps into a penumbra that a
- * binary stencil cannot represent, so a filtered light samples this map
- * (`lightQuad.ts`) and an unfiltered one keeps `shadowVolumes.ts`.
+ * Godot's per-light 2D shadow map, a 1D polar depth buffer, built on the CPU. Every shadowed
+ * PointLight2D samples it per fragment with Godot's taps (`shadowTaps.ts`).
  */
 
 /*
@@ -11,14 +9,8 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  */
 
-import { edgeCastsShadow, lightRectTest, type LightRect, type ShadowCasterEdges } from './shadowVolumes';
-
-/**
- * Texels in one light's map: the `rendering/2d/shadow_atlas/size` row (project
- * default 2048) that `light_update_shadow` (`drivers/gles3/rasterizer_canvas_gles3.cpp:1639`)
- * fills through four 90° frusta, so it is also the bins per full turn.
- */
-export const SHADOW_MAP_BINS = 2048;
+import { edgeCastsShadow, lightRectTest, type LightRect, type ShadowCasterEdges } from './shadowCasterEdges';
+import { coveredPixelRange } from '../../utils/coveredPixelRange';
 
 /**
  * What a bin holds where nothing occludes: Godot clears the row to `p_far`,
@@ -46,9 +38,6 @@ export function shadowMapZFarInv(radius: number): number {
 /** cos/sin of 45°, `canvas.glsl:824`'s quadrant-select rotation. */
 const SQRT1_2 = 0.7071067811865476;
 
-/** The four 90° frusta split the row evenly. */
-const BINS_PER_QUADRANT = SHADOW_MAP_BINS / 4;
-
 export interface ShadowPolarLight {
   /**
    * Previewer world (Godot pixels, Y negated) to light-local, as a row-major 2×3
@@ -56,12 +45,12 @@ export interface ShadowPolarLight {
    * the light's rotation and scale reach the map, and `offset` does not.
    */
   readonly worldToLocal: ArrayLike<number>;
-  /** The light's `rect_cache` in previewer world space, for the cull `buildShadowVolumes` shares. */
+  /** The light's `rect_cache` in previewer world space, which culls the occluders. */
   rect: LightRect;
   /**
    * Godot's `radius_cache`: `local_rect.size.length()` (`renderer_viewport.cpp:485`),
    * the full diagonal of the cookie's rect in light-local units. It sets only the
-   * near and far clips and the normalisation, not the `shadowVolumes.ts` reach.
+   * near and far clips and the normalisation.
    */
   readonly radius: number;
 }
@@ -96,11 +85,12 @@ function shadowMapCoord(x: number, yUp: number): number {
 /**
  * Bin `index`'s ray in Godot light-local space, its axis component 1 so the ray
  * parameter is the stored axis distance. The inverse of `shadowMapCoord`, taken
- * at the texel centre, where the rasteriser decides coverage.
+ * at the texel centre, where the rasteriser decides coverage. Each frustum fills
+ * `columns` (`floor(bins / 4)`, `renderer_canvas_render_rd.cpp:1095`).
  */
-function binRay(index: number, out: { x: number; y: number }): void {
-  const u = (index + 0.5) / SHADOW_MAP_BINS;
-  const quadrant = Math.floor(index / BINS_PER_QUADRANT);
+function binRay(index: number, columns: number, out: { x: number; y: number }): void {
+  const quadrant = Math.floor(index / columns);
+  const u = (quadrant + ((index % columns) + 0.5) / columns) / 4;
   // Quadrant 0 rasterises `(x, y, 0) → (y, 0, -x)` into `glViewport(0, …, size / 4, 2)`,
   // so a column lands at `(y/x) * (size/8) + (size/8)`: the texel `tex_ofs` addresses.
   if (quadrant === 0) {
@@ -123,18 +113,40 @@ function binRay(index: number, out: { x: number; y: number }): void {
 }
 
 /**
- * The map for one light: `SHADOW_MAP_BINS` normalised axis distances, and
- * `SHADOW_MAP_FAR` where nothing casts. `casters` are world-space occluders
- * narrowed by `shadow_item_cull_mask`, and the shared `lightRectTest` cull
- * keeps this map and `buildShadowVolumes` on one occluder set.
+ * The axis distance a bin past an end by less than the snap reads: the end's own. The rasteriser
+ * interpolates depth between the snapped ends, so it never extends the edge's line.
+ */
+function endDistance(
+  ray: { x: number; y: number },
+  ax: number,
+  ay: number,
+  ex: number,
+  ey: number,
+  t: number
+): number {
+  const [x, y] = t < 0 ? [ax, ay] : [ax + ex, ay + ey];
+  // The ray's axis component is exactly ±1, and its other one never is at a bin centre.
+  return Math.abs(ray.x) === 1 ? ray.x * x : ray.y * y;
+}
+
+/**
+ * The map for one light: `bins` normalised axis distances, and `SHADOW_MAP_FAR` where nothing
+ * casts. `bins` is the `rendering/2d/shadow_atlas/size` row, which `light_update_shadow`
+ * (`drivers/gles3/rasterizer_canvas_gles3.cpp:1639`) fills through four 90° frusta of `bins / 4`
+ * columns each, so it is also the bins per full turn. `casters` are world-space occluders
+ * narrowed by `shadow_item_cull_mask`, and `lightRectTest` drops those outside the light's rect.
  */
 export function buildShadowPolarMap(
   light: ShadowPolarLight,
-  casters: readonly ShadowCasterEdges[]
+  casters: readonly ShadowCasterEdges[],
+  bins: number
 ): Float32Array {
   // Built on the CPU from settled inputs, so the goldens see one exact texture.
   // A GPU raster carries the driver's fill-rule variance into the baseline.
-  const map = new Float32Array(SHADOW_MAP_BINS).fill(SHADOW_MAP_FAR);
+  // The `bins % 4` last texels are never drawn and keep the far value, so the frusta tile only `drawn`.
+  const columns = Math.floor(bins / 4);
+  const drawn = 4 * columns;
+  const map = new Float32Array(bins).fill(SHADOW_MAP_FAR);
 
   const near = light.radius * NEAR_SCALE;
   const far = light.radius * FAR_SCALE;
@@ -168,7 +180,7 @@ export function buildShadowPolarMap(
       const lay = m10 * wax + m11 * way + m12;
       const lbx = m00 * wbx + m01 * wby + m02;
       const lby = m10 * wbx + m11 * wby + m12;
-      if (!edgeCastsShadow(lax, lay, lbx, lby, 0, 0, cullMode)) continue;
+      if (!edgeCastsShadow(lax, lay, lbx, lby, cullMode)) continue;
 
       // Godot's Y-down local space, where the quadrant rule is stated. A
       // half-ported sign puts the penumbra on the wrong side of a rotated light.
@@ -186,21 +198,20 @@ export function buildShadowPolarMap(
       const start = forward <= 0.5 ? uA : uB;
       const span = forward <= 0.5 ? forward : 1 - forward;
 
-      // One bin of slack each side: the range is only a bound on the walk, and
-      // the `t` test below is what actually decides coverage.
-      const first = Math.ceil(start * SHADOW_MAP_BINS - 1.5);
-      const last = Math.floor((start + span) * SHADOW_MAP_BINS - 0.5) + 1;
+      // Godot extrudes the edge into a quad far past the row (`renderer_canvas_render_rd.cpp:1343-1368`),
+      // so its ends are vertical sides. Window x is `u * drawn` less a whole quadrant offset (ADR-0068).
+      const { first, last } = coveredPixelRange(start * drawn, (start + span) * drawn);
 
       for (let bin = first; bin <= last; bin += 1) {
-        const index = ((bin % SHADOW_MAP_BINS) + SHADOW_MAP_BINS) % SHADOW_MAP_BINS;
-        binRay(index, ray);
+        const index = bin % drawn;
+        binRay(index, columns, ray);
 
         // s·ray = A + t·e, solved by crossing with e and with ray in turn.
         const denominator = ray.x * ey - ray.y * ex;
         if (denominator === 0) continue;
         const t = (ax * ray.y - ay * ray.x) / denominator;
-        if (!(t >= 0) || !(t <= 1)) continue;
-        const distance = (ax * ey - ay * ex) / denominator;
+        const distance =
+          t >= 0 && t <= 1 ? (ax * ey - ay * ex) / denominator : endDistance(ray, ax, ay, ex, ey, t);
         // Outside the near and far planes the occluder is clipped away, so the
         // bin keeps whatever else reaches it.
         if (!(distance >= near) || !(distance <= far)) continue;

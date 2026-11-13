@@ -24,7 +24,7 @@ function isPositionalCanvasLight(node: TscnNode): boolean {
 }
 
 /** Whether a node is shown, reading the parsed `visible` a CanvasItem parser leaves unset by default. */
-function isShownCanvasNode(node: TscnNode): boolean {
+export function isShownCanvasNode(node: TscnNode): boolean {
   return (node.properties as { visible?: boolean }).visible !== false;
 }
 

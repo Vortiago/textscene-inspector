@@ -6,7 +6,11 @@
 import { clamp } from '../../../godot/math/math';
 import type { Vector2 } from '../../../godot/math/vector';
 import { boolOr, floatOr, intOr, vec2Or } from '../../../parser/valueParsers';
-import type { StyleBoxFlatData } from '../../../r3f/controls/native/styleBoxFlat';
+import {
+  CORNER_DETAIL_MAX,
+  CORNER_DETAIL_MIN,
+  type StyleBoxFlatData,
+} from '../../../r3f/controls/native/styleBoxFlat';
 import { colorOr } from '../../../utils/colorParser';
 
 // An absent StyleBoxFlat key takes Godot's default (`r3f/controls/native/styleBoxFlat.ts` cites each field).
@@ -25,9 +29,6 @@ const CONTENT_MARGIN_UNSET = -1;
 /** `StyleBoxFlat::set_aa_size`'s clamp range (`style_box_flat.cpp`), applied to every authored `aa_size`. */
 const AA_SIZE_MIN = 0.01;
 const AA_SIZE_MAX = 10;
-/** `StyleBoxFlat::set_corner_detail` (`style_box_flat.cpp:130`): CLAMP(detail, 1, 20). */
-const CORNER_DETAIL_MIN = 1;
-const CORNER_DETAIL_MAX = 20;
 
 /**
  * `StyleBox::get_margin` (`style_box.cpp:78-86`): the authored `content_margin_<side>`, or, when it

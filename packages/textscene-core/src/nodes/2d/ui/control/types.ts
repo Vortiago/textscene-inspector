@@ -66,40 +66,52 @@ export interface ControlProperties {
    * in `[-4096, 4096]` (`CANVAS_ITEM_Z_MIN`/`CANVAS_ITEM_Z_MAX`,
    * `servers/rendering/rendering_server.h:103-104`).
    */
-  zIndex?: number;
+  zIndex: number;
+  /**
+   * CanvasItem `z_as_relative`: whether `z_index` adds onto the parent's `z_final` or replaces it.
+   * Default `true` (`scene/main/canvas_item.h:102`).
+   */
+  zAsRelative: boolean;
   /**
    * CanvasItem `show_behind_parent`: the Control draws behind its parent. Default
    * `false` (`scene/main/canvas_item.h:113`, the `behind` field).
    */
-  showBehindParent?: boolean;
+  showBehindParent: boolean;
   /**
    * CanvasItem `top_level`: the Control is a canvas root. The `NOTIFICATION_ENTER_CANVAS`
    * climb does not start (`control.cpp:3876`), and no Container lays it out (`container.cpp:143-146`).
    */
-  topLevel?: boolean;
+  topLevel: boolean;
+  /**
+   * CanvasItem `y_sort_enabled`: the Control draws its children in y order
+   * (`canvas_item.cpp:706-709`). Default `false`.
+   */
+  ySortEnabled: boolean;
   /**
    * CanvasItem `light_mask`: the 2D lights that reach this Control, ANDed with a light's
    * `range_item_cull_mask`. Default `1` (`scene/main/canvas_item.h:98`). Children do not inherit it.
    */
-  lightMask?: number;
+  lightMask: number;
   /**
    * CanvasItem `material`, the raw reference a `CanvasItemMaterial` resolves from
    * (`useCanvasItemMaterial`). Undefined when unset.
    */
   materialPath?: string;
+  /** CanvasItem `clip_children` (`canvas_item.h:71-74`), default `DISABLED`. */
+  clipChildren: number;
   /** CanvasItem `use_parent_material` (`scene/main/canvas_item.h`), default `false`. */
-  useParentMaterial?: boolean;
+  useParentMaterial: boolean;
   /**
    * CanvasItem `texture_filter` (`scene/main/canvas_item.h:52-60`). Default `0` is
    * `TEXTURE_FILTER_PARENT_NODE` (`scene/main/canvas_item.h:123`): the ancestor's filter,
    * and at the top the viewport's.
    */
-  textureFilter?: number;
+  textureFilter: number;
   /**
    * CanvasItem `texture_repeat` (`scene/main/canvas_item.h:63-69`). Default `0` is
    * `TEXTURE_REPEAT_PARENT_NODE` (`scene/main/canvas_item.h:124`): the ancestor's mode.
    */
-  textureRepeat?: number;
+  textureRepeat: number;
 
   /** `theme_override_constants/<name>` to a number, for example separation. */
   themeOverrideConstants?: Record<string, number>;
@@ -126,3 +138,31 @@ export interface ControlProperties {
    */
   themeTypeVariation?: string;
 }
+
+/** The theme fields a theme owner holds: a Control or a Window (`scene/theme/theme_owner.cpp`). */
+export type ThemeOwnerFields = Pick<
+  ControlProperties,
+  | 'themeOverrideConstants'
+  | 'themeOverrideColors'
+  | 'themeOverrideFontSizes'
+  | 'themeOverrideStyles'
+  | 'themeOverrideIcons'
+  | 'themeOverrideFonts'
+  | 'theme'
+  | 'themeTypeVariation'
+>;
+
+/** The CanvasItem fields every Control holds, set or not. */
+export type ControlCanvasItemFields = Pick<
+  ControlProperties,
+  | 'zIndex'
+  | 'zAsRelative'
+  | 'showBehindParent'
+  | 'topLevel'
+  | 'ySortEnabled'
+  | 'lightMask'
+  | 'clipChildren'
+  | 'useParentMaterial'
+  | 'textureFilter'
+  | 'textureRepeat'
+>;

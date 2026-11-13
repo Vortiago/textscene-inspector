@@ -15,6 +15,7 @@ side the content continues past. `draw_focus_border` insets the content and both
 scrollbars by the focus style's margins. A right-to-left `layout_direction` moves
 the vertical scrollbar to the left edge and shifts the content past the strip it
 reserves.
+`self_modulate` does not tint the scroll bars or the scroll hints, which are child Controls (`scroll_container.cpp:909-924`).
 
 ## Linting
 

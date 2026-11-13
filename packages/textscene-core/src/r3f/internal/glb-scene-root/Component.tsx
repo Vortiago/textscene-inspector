@@ -4,6 +4,7 @@
  * (ADR-0012) through a `THREE.AnimationMixer` rooted on the GLB object, since the clips bind to
  * the GLB's own node names.
  */
+import { useIsUnownedSubtree } from '../../contexts/UnownedSubtreeContext.js';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import type { NodeComponentProps } from '../../NodeComponentRegistry';
@@ -98,15 +99,17 @@ export function GLBSceneRoot({ node, children }: NodeComponentProps) {
 
   const registerNodeObject = selection?.registerNodeObject;
   const unregisterNodeObject = selection?.unregisterNodeObject;
+  // An unowned node has no Scene dock row, so a click on its objects selects its owner instead.
+  const isUnowned = useIsUnownedSubtree();
   useEffect(() => {
-    if (!registerNodeObject || !unregisterNodeObject || nodePath === null) return;
+    if (isUnowned || !registerNodeObject || !unregisterNodeObject || nodePath === null) return;
     for (const { relPath, object: obj } of entries) {
       registerNodeObject(joinPath(nodePath, relPath), obj);
     }
     return () => {
       for (const { relPath } of entries) unregisterNodeObject(joinPath(nodePath, relPath));
     };
-  }, [entries, nodePath, registerNodeObject, unregisterNodeObject]);
+  }, [entries, isUnowned, nodePath, registerNodeObject, unregisterNodeObject]);
 
   // `applyGlbNodeOverrides` writes `visible` during render, and the hidden-paths effect below then
   // assigns every entry's `visible`. Both write one field, so it resolves here, or an authored

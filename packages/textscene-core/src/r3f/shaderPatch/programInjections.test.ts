@@ -25,7 +25,7 @@ import { GODOT_AMBIENT_OCCLUSION } from '../materials/godotAmbientOcclusion';
 import { GODOT_METALLIC_ROUGHNESS_CHANNELS } from '../materials/godotMetallicRoughnessChannels';
 import { mipmapBiasInjection, viewportSamplersUserData } from '../materials/godotMipmapBias';
 import { parallaxInjection, unshadedParallaxInjection } from '../materials/godotParallax';
-import { withPointDraw, type PointPlacement } from '../materials/godotPoint';
+import { withPointDraw, type ListedPlacement } from '../materials/godotPoint';
 import { withParticleDraw } from '../materials/godotParticlesProgram';
 import { SRGB_VERTEX_COLOR } from '../materials/godotVertexColor';
 import { growInjectionOf } from '../materials/godotGrow';
@@ -39,9 +39,11 @@ import { billboardInjections } from '../surfaceBillboard';
 import { surfaceAlphaProps } from '../materials/surfaceAlphaPatch';
 import { surfaceDepthMaterial } from '../materials/surfaceDepthMaterial';
 import { AtlasDepthMaterial, ParaboloidDepthMaterial } from '../positionalShadow/atlasDepthMaterials';
+import { createClipMask } from '../canvasGroup/clipMask';
 import { canvasItemLightingProps } from '../lighting2d/canvasItemLighting';
 import { LIGHTMAP_PROGRAM } from '../lightmap/lightmapProgram';
 import { TILE_TEXTURE_PADDING } from '../tileTexturePadding';
+import { TILE_NORMAL_ORIENTATION } from '../tileNormalOrientation';
 import { UNSHADED_ROUGHNESS } from '../screenSpaceEffects/unshadedRoughness';
 import { HEIGHTMAP_DEFAULTS } from '../../resources/materials/standardmaterial3d/types';
 import { GODOT_FOG_PARS_CHUNK } from '../fog/fogChunks';
@@ -113,7 +115,7 @@ type DepthBase = THREE.MeshDepthMaterial | THREE.MeshDistanceMaterial;
 const SOME_SURFACE_ALPHA = { readsAlbedoAlpha: false, opaqueAfterCut: false };
 const TRANSPARENT = { transparent: true };
 
-const pointBag = (samplesAlbedoAtPointCoord: boolean, placement: PointPlacement = 'mesh') =>
+const pointBag = (samplesAlbedoAtPointCoord: boolean, placement: ListedPlacement = 'mesh') =>
   withPointDraw(
     { materialClass: 'standard', props: { map: new THREE.Texture() } },
     { pixels: 4, pixelRatio: 1, samplesAlbedoAtPointCoord, placement }
@@ -235,16 +237,18 @@ const INJECTIONS: readonly InjectionCase[] = [
     'lighting2d/canvasItemLighting.ts',
     'canvas item lighting',
     ['basic'],
-    () => canvasItemLightingProps(lightUniforms()).injection
+    () => canvasItemLightingProps(lightUniforms(), false).injection
   ),
   injected(
     'lighting2d/normalMappedLighting.ts',
     'normal-mapped canvas item lighting',
     ['basic'],
-    () => normalMappedLightingProps(normalMappedUniforms(), 1).injection
+    () => normalMappedLightingProps(normalMappedUniforms(), 1, false).injection
   ),
+  injected('canvasGroup/clipMask.ts', 'clip children mask', ['basic'], () => createClipMask().injection),
   injected('lightmap/lightmapProgram.ts', 'lightmap read', LIT, () => LIGHTMAP_PROGRAM),
   injected('tileTexturePadding.ts', 'tile texture padding', COLOUR, () => TILE_TEXTURE_PADDING),
+  injected('tileNormalOrientation.ts', 'tile normal orientation', COLOUR, () => TILE_NORMAL_ORIENTATION),
 ];
 
 /** The program as `injection` leaves it. It throws when an anchor is missing or occurs twice. */

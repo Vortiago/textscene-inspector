@@ -16,4 +16,5 @@ registerResourceSlice({
 export { MULTI_MESH, type HeldMultiMesh } from './kind.js';
 export { multiMeshAabb } from './aabb.js';
 export { multiMeshInstanceArrays, type InstanceArrays } from './instanceBuffer.js';
-export type { DrawnInstances, MultiMeshData } from './types.js';
+export { multiMeshInstances } from './instanceRecords.js';
+export type { DrawnInstances, MultiMeshData, MultiMeshInstance } from './types.js';

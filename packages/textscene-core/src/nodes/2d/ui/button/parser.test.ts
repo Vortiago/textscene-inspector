@@ -59,3 +59,20 @@ describe('parseButton', () => {
     expect(p.textDirection).toBe(0);
   });
 });
+
+describe('parseButton button_pressed', () => {
+  const parse = (properties: Record<string, string>) =>
+    parseButton(h({ name: 'B', type: 'Button' }), properties).buttonPressed;
+
+  it('is on for a toggle whose button_pressed is true', () => {
+    expect(parse({ toggle_mode: 'true', button_pressed: 'true' })).toBe(true);
+  });
+
+  it('is off for a button that is no toggle, as BaseButton::set_pressed refuses it', () => {
+    expect(parse({ button_pressed: 'true' })).toBe(false);
+  });
+
+  it('is off when absent', () => {
+    expect(parse({})).toBe(false);
+  });
+});

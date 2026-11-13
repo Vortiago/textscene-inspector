@@ -15,7 +15,7 @@ import type { CachedSceneSource } from '../../../r3f/liveSceneTree';
 import '../../../r3f/nodes/index';
 import { contextOver, sourcesOver, sceneCacheOver } from '../../../r3f/liveSceneTree.testkit';
 import { liveTreeOf } from '../../../r3f/liveSceneTree';
-import { LTR_LAYOUT_ENV } from '../../../godot/scene/control';
+import { LTR_LAYOUT_ENV } from '../../../testing/ltrLayoutEnv';
 
 function parse(source: string): TscnScene {
   return new TscnParser().parse(source);
@@ -23,10 +23,15 @@ function parse(source: string): TscnScene {
 
 /** `collectControlRasterViewports` over a whole parsed scene, root scope. */
 function collect(scene: TscnScene, sceneCache?: CachedSceneSource) {
-  return collectControlRasterViewports(scene.nodes, sourcesOver(sceneCache), {
-    internalResources: scene.internalResources,
-    externalResources: scene.externalResources,
-  });
+  return collectControlRasterViewports(
+    scene.nodes,
+    sourcesOver(sceneCache),
+    {
+      internalResources: scene.internalResources,
+      externalResources: scene.externalResources,
+    },
+    LTR_LAYOUT_ENV
+  );
 }
 
 describe('collectControlRasterViewports', () => {
@@ -48,6 +53,19 @@ size = Vector2i(320, 240)
     expect(found[0]!.node.type).toBe('SubViewport');
   });
 
+  it('finds a sub-viewport that holds nothing, since Godot clears its target', () => {
+    const scene = parse(`[gd_scene format=3]
+
+[node name="Root" type="Control"]
+
+[node name="Container" type="SubViewportContainer" parent="."]
+
+[node name="Viewport" type="SubViewport" parent="Container"]
+size = Vector2i(200, 120)
+`);
+    expect(collect(scene).map((found) => found.path)).toEqual(['Root/Container/Viewport']);
+  });
+
   it('leaves 3D and 2D-world sub-viewports to the WebGL publisher', () => {
     const scene = parse(`[gd_scene format=3]
 
@@ -60,8 +78,6 @@ size = Vector2i(320, 240)
 [node name="World2D" type="SubViewport" parent="."]
 
 [node name="Sprite" type="Sprite2D" parent="World2D"]
-
-[node name="Blank" type="SubViewport" parent="."]
 `);
     expect(collect(scene)).toEqual([]);
   });
@@ -148,7 +164,8 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
       {
         internalResources: host.internalResources,
         externalResources: host.externalResources,
-      }
+      },
+      LTR_LAYOUT_ENV
     );
 
     expect(found.map((v) => v.path)).toEqual(['World/Refused/Own']);
@@ -195,10 +212,12 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 
   it('returns nothing for an empty tree rather than throwing', () => {
     expect(
-      collectControlRasterViewports([], sourcesOver(), {
-        internalResources: [],
-        externalResources: [],
-      })
+      collectControlRasterViewports(
+        [],
+        sourcesOver(),
+        { internalResources: [], externalResources: [] },
+        LTR_LAYOUT_ENV
+      )
     ).toEqual([]);
   });
 
@@ -215,8 +234,8 @@ bg_color = Color(0.9, 0.9, 0.9, 1)
 
 /**
  * In a parsed subtree an `instance=` child is an untyped childless `Node`, which
- * `viewportContentKind` reads as 3D. Both owners of a registry key classify the
- * subtree `resolveViewportSubtree` returns, or a key goes unpublished and its
+ * the viewport's content reads as 3D. Both owners of a registry key classify the
+ * subtree with its instances resolved, or a key goes unpublished and its
  * consumer stays blank.
  */
 describe('collectControlRasterViewports — an instanced Control sub-scene', () => {

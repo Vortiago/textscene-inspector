@@ -7,8 +7,10 @@
 import * as vscode from 'vscode';
 import { resourceContent } from '@textscene/core/resources/resourceProviderUtils';
 import { info, error } from '@textscene/core/logger';
+import type { DirectoryEntry } from '@textscene/core/resources/projectListing';
 import type { ResourceProvider } from '@textscene/core/resources/ResourceProvider';
 import {
+  forwardSlashes,
   isSamePath,
   isWithinRoot,
   pathKey,
@@ -38,18 +40,39 @@ export class VSCodeResourceProvider implements ResourceProvider {
     private documentUri: vscode.Uri
   ) {}
 
-  async loadResource(resourcePath: string, type?: string): Promise<string | ArrayBuffer> {
+  async loadResource(resourcePath: string, type?: string, maxBytes?: number): Promise<string | ArrayBuffer> {
     info(`[VSCodeResourceProvider] Loading ${type ?? 'file'}: ${resourcePath}`);
     try {
       const fsPath = await this.resolve(resourcePath);
       info(`[VSCodeResourceProvider] Resolved to: ${fsPath.fsPath}`);
       this.servedResources.set(pathKey(fsPath.fsPath, HOST_PATH_CASE), resourcePath);
       const fileData = await readWorkspaceFile(fsPath);
-      return resourceContent(fileData, type, resourcePath);
+      // The host reads the whole file, as `vscode.workspace.fs` has no ranged read and the web host build
+      // takes no Node builtin. Cutting here keeps the rest out of the base64 string and the webview.
+      return resourceContent(
+        maxBytes === undefined ? fileData : fileData.subarray(0, maxBytes),
+        type,
+        resourcePath
+      );
     } catch (cause) {
       const errorMsg = `Failed to load resource: ${resourcePath} (${cause instanceof Error ? cause.message : 'Unknown error'})`;
       error(`[VSCodeResourceProvider] ${errorMsg}`);
       throw new Error(errorMsg, { cause });
+    }
+  }
+
+  /**
+   * The entries of the `res://` folder `folder`, or null when the workspace has no such folder. A link to a folder is
+   * a folder.
+   */
+  async listDirectory(folder: string): Promise<DirectoryEntry[] | null> {
+    try {
+      const directory = await this.resolve(folder);
+      const entries = await vscode.workspace.fs.readDirectory(directory);
+      return entries.map(([name, type]) => ({ name, isDirectory: (type & vscode.FileType.Directory) !== 0 }));
+    } catch {
+      // A folder the host lacks or refuses, or one outside the workspace, is a folder Godot would refuse.
+      return null;
     }
   }
 
@@ -59,6 +82,19 @@ export class VSCodeResourceProvider implements ResourceProvider {
    */
   getServedResPath(fileUri: vscode.Uri): string | null {
     return this.servedResources.get(pathKey(fileUri.fsPath, HOST_PATH_CASE)) ?? null;
+  }
+
+  /**
+   * The `res://` path of `fileUri`, or null when it lies outside the scene's `res://` root, or the scene lies outside the
+   * workspace so no root exists. For a file the preview never loaded, whose creation or removal still edits a folder listing.
+   */
+  async resPathOf(fileUri: vscode.Uri): Promise<string | null> {
+    const root = await this.resRoot().catch(() => null);
+    if (root === null) return null;
+    const rootPath = forwardSlashes(root.fsPath);
+    const filePath = forwardSlashes(fileUri.fsPath);
+    if (filePath === rootPath || !isWithinRoot(rootPath, filePath, HOST_PATH_CASE)) return null;
+    return `${RES_SCHEME}${filePath.slice(rootPath.length).replace(/^\//, '')}`;
   }
 
   /** Every `res://` path `loadResource` served, for a caller that must re-fetch them all. */

@@ -1,10 +1,10 @@
 ; Every VideoStreamPlayer property the strict parser validates, at a valid value.
-; The .ogv target is a placeholder: nothing here decodes video, and the point of
+; The stream is a committed Theora clip. Nothing here decodes a frame, and the point of
 ; the fixture is the property grammar.
 
 [gd_scene load_steps=2 format=3 uid="uid://unit_video_stream_player"]
 
-[ext_resource type="VideoStream" path="res://video/test_clip.ogv" id="1_video"]
+[ext_resource type="VideoStream" path="res://video/clip-64x48.ogv" id="1_video"]
 
 [node name="Root" type="Control"]
 anchors_preset = 15

@@ -19,6 +19,7 @@ import {
   attachDiagnostics,
   clearDiagnostics,
   createCaptureContext,
+  errorReport,
   loggedErrors,
   openScene,
   PERFORMANCE_TESTIDS,
@@ -97,8 +98,9 @@ async function measureScene({ page, diagnostics }, baseUrl, scene) {
   const loading = await sceneStillLoading(page);
   if (loading) return { work: null, reason: loading };
   const { work, reason: unsteady } = await steadyWork(page);
-  const errors = loggedErrors(diagnostics);
-  if (errors.length > 0) return { work: null, reason: `console error(s): ${errors.join(' | ')}` };
+  if (loggedErrors(diagnostics).length > 0) {
+    return { work: null, reason: `console error(s): ${errorReport(diagnostics)}` };
+  }
   return { work, reason: unsteady };
 }
 

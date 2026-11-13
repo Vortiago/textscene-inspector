@@ -11,7 +11,7 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
-import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
+import { useLayoutEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { visualLayersUserData } from '../../../visualLayers';
 import * as THREE from 'three';
 import {
@@ -47,7 +47,8 @@ import {
   godotTextureFilterState,
   type TextureFilterState,
 } from '../../../../resources/textures/godotTextureFilter';
-import { sRGBToLinearRGB } from '../../../../utils/colorSpace';
+import { useItemLinearColor, WHITE_MODULATE } from '../../../canvasItemModulate';
+import { useCanvasColorSpace } from '../../../canvasColorSpace';
 import type { SurfaceBlend } from '../../../materials/surfaceBlend';
 import type { FadeVariants } from '../../../materials/fadeVariants';
 import { useSwappedMaterials } from '../../../materials/swappedMaterials';
@@ -203,6 +204,9 @@ function quadFacingPlusZ(vertexCount: number): THREE.BufferAttribute {
   return new THREE.BufferAttribute(normals, 3);
 }
 
+/** What `createCanvasTextMaterial` builds for either painter: a lit run takes the standard one. */
+type TextRunMaterial = THREE.MeshBasicMaterial | THREE.MeshStandardMaterial;
+
 /**
  * One built run: its geometry, and the texture this component holds and the last holder disposes.
  * `paint` builds a material for the run, one for each pass a GeometryInstance3D's fade can draw it in.
@@ -214,7 +218,7 @@ interface BuiltTextRun {
    * A BMFont run answers its `geometry`, which holds a quad for each glyph already.
    */
   buildGlyphGeometry: () => THREE.BufferGeometry;
-  paint: (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) => THREE.Material;
+  paint: (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) => TextRunMaterial;
   heldTexture: THREE.Texture;
 }
 
@@ -226,6 +230,8 @@ interface TextRunLook {
   side: THREE.Side | undefined;
   /** The lit Control around the run, or undefined for a run no 2D light reaches, such as Label3D's. */
   pixelMaterial: CanvasItemPixelMaterial | undefined;
+  /** `tint` as the item draws it, in linear (`useItemLinearColor`), for the BMFont painter. */
+  linearTint: THREE.Color;
 }
 
 /** How a run samples the raster it owns: its filter row, and whether a mip chain is built for it. */
@@ -321,18 +327,17 @@ function buildBitmapRun(
   sampling: RasterSampling,
   { strokeWidthPx = 0, glyphDrawer = 'canvasItem', originPhasePx }: CanvasTextPaintOptions
 ): BuiltTextRun {
-  const { tint, clippingPlanes, depthTest, side, pixelMaterial } = look;
+  const { tint, clippingPlanes, depthTest, side, pixelMaterial, linearTint } = look;
   const isOutlinePass = strokeWidthPx > 0;
   const sheet = isOutlinePass ? metrics.bitmap.outlineSheet : metrics.bitmap.sheet;
   const quads = buildBitmapQuads(layout, metrics, fontSizePx, sheet, { glyphDrawer, originPhasePx });
   const geometry = quadGeometry(quads);
   const { multipliesInLinear } = GLYPH_DRAWER_RULES[glyphDrawer];
   const texture = sheetTexture(sheet, sampling, multipliesInLinear);
-  const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
   const paint = (blend: SurfaceBlend | undefined, shading: SurfaceShading | undefined) =>
     createCanvasTextMaterial({
       map: texture,
-      color: new THREE.Color(r, g, b),
+      color: linearTint,
       opacity: tint.a,
       clippingPlanes,
       depthTest,
@@ -457,6 +462,14 @@ export function TextRunMesh({
     ? bitmapFloorsPen(glyphDrawer, fontSizePx, fontMetrics)
     : isCanvasFontMetrics(fontMetrics) && snapsGlyphsToItemPixels(glyphDrawer, fontSizePx, fontMetrics);
   const { x: phaseX, y: phaseY } = readsPhase ? originPhase(itemOrigin) : VECTOR2_ZERO;
+  const linearTint = useItemLinearColor(tint);
+  const isLinearCanvas = useCanvasColorSpace().isLinear;
+  // Godot's glyph is a white coverage mask that the rect modulate tints (`text_server_adv.cpp`
+  // `rasterize_bitmap`). A linear canvas converts that modulate unclamped, so a white raster takes
+  // the tint on its material, and a tint change repaints nothing.
+  const rasterColor = isCanvasFontMetrics(fontMetrics) && isLinearCanvas ? linearTint : null;
+  const builtTint = rasterColor ? { ...WHITE_MODULATE, a: tint.a } : tint;
+  const meshTint = isCanvasFontMetrics(fontMetrics) ? null : linearTint;
   if (blends && !swapped)
     throw new Error('expected blends only inside a GeometryInstance3D drawer, got none');
 
@@ -465,7 +478,7 @@ export function TextRunMesh({
       buildTextRun(
         layout,
         fontSizePx,
-        { tint, clippingPlanes, depthTest, side, pixelMaterial },
+        { tint: builtTint, clippingPlanes, depthTest, side, pixelMaterial, linearTint },
         { strokeWidthPx, glyphDrawer, originPhasePx: { x: phaseX, y: phaseY } },
         { textureFilter, mipmapped }
       ),
@@ -475,10 +488,11 @@ export function TextRunMesh({
     [
       layout,
       fontSizePx,
-      tint.r,
-      tint.g,
-      tint.b,
-      tint.a,
+      builtTint.r,
+      builtTint.g,
+      builtTint.b,
+      builtTint.a,
+      meshTint,
       clippingPlanes,
       depthTest,
       side,
@@ -499,6 +513,7 @@ export function TextRunMesh({
   );
   const material = usePaintedMaterial(run, blends?.unfaded, shading);
   const alphaPassMaterial = useAlphaPassMaterial(run, blends?.alphaPass, shading);
+  useRasterColor(rasterColor, material, alphaPassMaterial);
   const meshRef = useRef<THREE.Mesh | null>(null);
   const ownMaterial = <RunMaterials material={material} alphaPassMaterial={alphaPassMaterial} />;
 
@@ -510,17 +525,12 @@ export function TextRunMesh({
   useDisposeOnRelease(run.heldTexture);
   useNearestAnisotropy(run.heldTexture);
 
-  // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour:
-  // this run's `tint`, converted to linear once as for every `ControlQuad`.
+  // `draw_hex_code_box` (`text_server.cpp:771-812`) draws in its caller's colour, this run's `tint`.
   const hexBoxRects = useMemo(
     () =>
       GLYPH_DRAWER_RULES[glyphDrawer].drawsHexCodeBoxes ? collectHexCodeBoxRects(layout, fontSizePx) : [],
     [glyphDrawer, layout, fontSizePx]
   );
-  const hexBoxColor = useMemo(() => {
-    const [r, g, b] = sRGBToLinearRGB(tint.r, tint.g, tint.b);
-    return new THREE.Color(r, g, b);
-  }, [tint.r, tint.g, tint.b]);
   // Memoised, as R3F assigns a new `userData` object on each render and drops what it held.
   const userData = useMemo(
     () => ({
@@ -551,7 +561,7 @@ export function TextRunMesh({
           <ControlQuad
             width={r.w}
             height={r.h}
-            color={hexBoxColor}
+            color={linearTint}
             opacity={tint.a}
             renderOrder={renderOrder}
             drawHooks={shadow}
@@ -562,12 +572,25 @@ export function TextRunMesh({
   );
 }
 
+/** Sets the colour a white canvas raster multiplies by on each of its materials, or leaves them white. */
+function useRasterColor(
+  color: THREE.Color | null,
+  material: TextRunMaterial,
+  alphaPassMaterial: TextRunMaterial | null
+): void {
+  useLayoutEffect(() => {
+    if (!color) return;
+    material.color.copy(color);
+    alphaPassMaterial?.color.copy(color);
+  }, [color, material, alphaPassMaterial]);
+}
+
 /** The run's material for `blend`. */
 function usePaintedMaterial(
   run: BuiltTextRun,
   blend: SurfaceBlend | undefined,
   shading: SurfaceShading | undefined
-): THREE.Material {
+): TextRunMaterial {
   return useOwnedMaterial(run, blend, shading, () => run.paint(blend, shading));
 }
 
@@ -576,7 +599,7 @@ function useAlphaPassMaterial(
   run: BuiltTextRun,
   blend: SurfaceBlend | undefined,
   shading: SurfaceShading | undefined
-): THREE.Material | null {
+): TextRunMaterial | null {
   return useOwnedMaterial(run, blend, shading, () => (blend ? run.paint(blend, shading) : null));
 }
 

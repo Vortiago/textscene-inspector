@@ -10,7 +10,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { ReactElement } from 'react';
 import { CollisionGizmo } from './CollisionGizmo';
-import type { TscnInternalResource } from '../../../../parser/types';
+import type { Shape3DResource } from '../../../../resources/shapes/shape3d';
 import { settlePendingLoads } from '../../../../r3f/testing/settleLoads';
 import { ResourceLoaderProvider } from '../../../../resources/ResourceLoaderContext';
 import { createFakeResourceLoader } from '../../../../resources/testing/createFakeResourceLoader';
@@ -42,16 +42,16 @@ const WIDE_CUBE_POINTS = CUBE_POINTS.replace(/0\.5/g, '2');
 const ONE_TRIANGLE = 'PackedVector3Array(-0.5, 0, -0.5, 0.5, 0, -0.5, 0, 0, 0.5)';
 const OTHER_TRIANGLE = 'PackedVector3Array(-1, 0, -1, 1, 0, -1, 0, 0, 1)';
 
-function convex(points: string): TscnInternalResource {
-  return { id: 'Convex_1', type: 'ConvexPolygonShape3D', data: { points } };
+function convex(points: string): Shape3DResource {
+  return { type: 'ConvexPolygonShape3D', data: { points } };
 }
 
-function concave(data: string): TscnInternalResource {
-  return { id: 'Concave_1', type: 'ConcavePolygonShape3D', data: { data } };
+function concave(data: string): Shape3DResource {
+  return { type: 'ConcavePolygonShape3D', data: { data } };
 }
 
 /** A fresh colour per call: a parent re-render hands over a new one each time. */
-function gizmo(shape: TscnInternalResource): ReactElement {
+function gizmo(shape: Shape3DResource): ReactElement {
   return (
     <ResourceLoaderProvider loader={loader}>
       <CollisionGizmo shape={shape} color={new THREE.Color(0x00ff88)} />

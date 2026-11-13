@@ -3,8 +3,7 @@
  * and `linter.ts` (the delimiter-collision rule). They must agree: a form the rule cannot parse
  * finds no start keys and never fires, and nothing reports it.
  */
-import { packedArrayForms, stringArrayBodies } from '../../../../godot/variant/variantParser.js';
-import { unquoteString } from '../../../../parser/utils.js';
+import { packedArrayForms } from '../../../../godot/variant/variantParser.js';
 
 /**
  * `PackedInt32Array(24)`, `Array[int]([24])` or `[24]`. `line_length_guidelines` has a
@@ -30,16 +29,4 @@ export function arrayBody(value: string, forms: readonly RegExp[]): string | und
     if (match) return match[1]!.trim();
   }
   return undefined;
-}
-
-/**
- * `PackedStringArray("a")`, `Array[String](["a"])` or `["a"]` as unescaped elements, or `null` if malformed. The
- * four string-array getters return `TypedArray<String>` (code_edit.cpp:2036, :2065, :2222, :956), so the serializer
- * writes `Array[String]` (core/variant/variant_parser.cpp:2341-2344). The packed spelling reads back too, and a bare
- * `[…]` loads because `TypedArray<T>(const Array &)` converts element-wise (core/variant/typed_array.h:43-50).
- */
-export function parsePackedStringArray(value: string): string[] | null {
-  // `unquoteString`, not a `\\(.)` collapse: the tokenizer resolves `\\uXXXX` and
-  // `\\n`, `\\r`, `\\t` before any setter runs, so `\\u00ab` is one code point, not `u00ab`.
-  return stringArrayBodies(value)?.map(unquoteString) ?? null;
 }

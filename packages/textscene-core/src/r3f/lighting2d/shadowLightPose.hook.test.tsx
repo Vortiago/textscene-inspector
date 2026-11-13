@@ -58,6 +58,11 @@ function poses(published: Published): ShadowLightPose[] {
   return published.filter((p): p is ShadowLightPose => p !== null);
 }
 
+/** The world x of the shadow origin, for an unrotated, unscaled light. */
+function originX(pose: ShadowLightPose): number {
+  return -pose.worldToLocal[2];
+}
+
 describe('useShadowLightPose', () => {
   it('publishes once for a still light, however many frames run', async () => {
     const { renderer, published } = await mount({});
@@ -88,7 +93,7 @@ describe('useShadowLightPose', () => {
   it('publishes the light rect and origin its quad actually occupies', async () => {
     const { published } = await mount({ x: 400 });
     const pose = poses(published)[0]!;
-    expect(pose.x).toBeCloseTo(400, 6);
+    expect(originX(pose)).toBeCloseTo(400, 6);
     expect(pose.rect.minX).toBeCloseTo(350, 6);
     expect(pose.rect.maxX).toBeCloseTo(450, 6);
     expect(pose.radius).toBeCloseTo(Math.hypot(100, 60), 6);
@@ -108,7 +113,7 @@ describe('useShadowLightPose', () => {
 
     const seen = poses(published);
     expect(seen.length).toBeGreaterThan(1);
-    expect(seen[seen.length - 1]!.x).toBeCloseTo(250, 6);
+    expect(originX(seen[seen.length - 1]!)).toBeCloseTo(250, 6);
   });
 
   it('drops the cached inputs when the light is disabled and re-enabled', async () => {
@@ -128,7 +133,7 @@ describe('useShadowLightPose', () => {
       renderer.advanceFrames(2, 1 / 60);
     });
     expect(published[published.length - 1]).not.toBeNull();
-    expect(published[published.length - 1]!.x).toBeCloseTo(120, 6);
+    expect(originX(published[published.length - 1]!)).toBeCloseTo(120, 6);
   });
 
   it('radiates from the light NODE while the rect follows the offset cookie', async () => {
@@ -138,7 +143,7 @@ describe('useShadowLightPose', () => {
     // sideways on any light that authors an offset.
     const { published } = await mount({ x: 400, offsetX: 50 });
     const pose = poses(published)[0]!;
-    expect(pose.x).toBeCloseTo(400, 6);
+    expect(originX(pose)).toBeCloseTo(400, 6);
     expect(pose.rect.minX).toBeCloseTo(400, 6);
     expect(pose.rect.maxX).toBeCloseTo(500, 6);
   });

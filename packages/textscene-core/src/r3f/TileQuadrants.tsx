@@ -9,14 +9,15 @@ import type { DrawableCell } from '../resources/tileset/drawableCell';
 import type { TileMaterial, TileSetModel } from '../resources/tileset/types';
 import { quadrantCanvasItems, type TileCanvasItem } from '../resources/tileset/tileCanvasItems';
 import type { CanvasItemMaterialProperties } from '../resources/materials/canvasitemmaterial/types';
-import { LitCanvasItemPixels } from './components/LitCanvasItemPixels';
+import { LitCanvasItem } from './components/LitCanvasItemPixels';
 import { CanvasItemGroup, useCanvasItemKey } from './components/CanvasItemGroup';
 import { useCanvasItemMaterialFile } from './components/canvasItemMaterialContext';
-import { multiplyModulate } from './canvasItemModulate';
+import type * as THREE from 'three';
+import { foldOwnPixelTint, WHITE_MODULATE, type VertexColorTint } from './canvasItemModulate';
 import { useCanvasModulateFor } from './canvasModulate';
+import { useCanvasColorSpace, type CanvasColorSpace } from './canvasColorSpace';
 import { useGodotLinearColor } from './godotColor';
-import { canvasKeyAtZ } from './canvasPaintOrder';
-import { accumulateCanvasItemZ } from './lighting2d/canvasItemPlacement';
+import { childCanvasPlace } from './canvasItemState';
 import { TileSourceMesh } from './TileSourceMesh';
 import type { CanvasItemTextureSampler } from './canvasItemTextureSampler';
 import type { Rgba } from '../godot/math/math';
@@ -64,33 +65,55 @@ function drawnItems(quadrants: readonly (readonly DrawableCell[])[]): DrawnItem[
   });
 }
 
+/**
+ * Where a tile item's tint goes. A tile draws a rect, which converts `modulate × tint` to linear as
+ * one product (`renderer_canvas_render_rd.cpp:2425-2428`). A linear canvas decodes the vertex
+ * colours apart, so the tint goes into them and the material carries the canvas modulate alone.
+ */
+function tileTint(
+  self: Rgba,
+  canvasModulate: Rgba,
+  linearModulate: THREE.Color,
+  space: CanvasColorSpace
+): VertexColorTint {
+  const { own, color, opacity } = foldOwnPixelTint(self, canvasModulate, space, linearModulate);
+  const { defines } = space;
+  return space.isLinear
+    ? { vertex: own, color: linearModulate, opacity, defines }
+    : { vertex: WHITE_MODULATE, color, opacity, defines };
+}
+
 function TileItem({ item, layer }: { item: DrawnItem; layer: TileLayerItem }) {
   const material = useTileItemMaterial(item.material, layer.material);
-  // `z_as_relative` (`:356`), so the item's z accumulates onto the layer's.
-  const zFinal = accumulateCanvasItemZ(layer.zFinal, { z_index: item.zIndex });
-  const canvasKey = canvasKeyAtZ(useCanvasItemKey(), layer.zFinal, zFinal);
-  const own = multiplyModulate(layer.selfTint, useCanvasModulateFor(material));
-  const color = useGodotLinearColor(own);
+  const { key: canvasKey, zFinal } = childCanvasPlace(
+    { key: useCanvasItemKey(), zFinal: layer.zFinal },
+    item.zIndex
+  );
+  const canvasModulate = useCanvasModulateFor(material);
+  const linearModulate = useGodotLinearColor(canvasModulate);
+  const space = useCanvasColorSpace();
+  // Memoised on the values: a legacy TileMap layer hands a fresh `selfTint` on every render.
+  const { r, g, b, a } = layer.selfTint;
+  const tint = useMemo(
+    () => tileTint({ r, g, b, a }, canvasModulate, linearModulate, space),
+    [r, g, b, a, canvasModulate, linearModulate, space]
+  );
   return (
     <CanvasItemGroup renderOrder={canvasKey}>
-      <LitCanvasItemPixels material={material} lightMask={layer.lightMask} zFinal={zFinal}>
-        {(pixelMaterial) =>
-          item.runs.map(({ source, cells }, runIndex) => (
-            <TileSourceMesh
-              key={runIndex}
-              source={source}
-              cells={cells}
-              grid={layer.model}
-              renderOrder={item.firstOrder + runIndex}
-              color={color}
-              opacity={own.a}
-              name={layer.name}
-              pixelMaterial={pixelMaterial}
-              sampler={layer.sampler}
-            />
-          ))
-        }
-      </LitCanvasItemPixels>
+      <LitCanvasItem material={material} lightMask={layer.lightMask} zFinal={zFinal}>
+        {item.runs.map(({ source, cells }, runIndex) => (
+          <TileSourceMesh
+            key={runIndex}
+            source={source}
+            cells={cells}
+            grid={layer.model}
+            renderOrder={item.firstOrder + runIndex}
+            tint={tint}
+            name={layer.name}
+            sampler={layer.sampler}
+          />
+        ))}
+      </LitCanvasItem>
     </CanvasItemGroup>
   );
 }

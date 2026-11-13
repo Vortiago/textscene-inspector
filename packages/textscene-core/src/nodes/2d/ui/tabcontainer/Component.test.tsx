@@ -14,10 +14,17 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { ControlProperties } from '../control/types';
 import type { TabContainerProperties } from './types';
 import { TabContainer } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { nearestGroupOrder } from '../../../../r3f/testing/paintOrder';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
+import { wholeKeySlot } from '../../../../r3f/canvasItemState';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { bundledRunMeshes } from '../../../../r3f/controls/native/testing/bundledRunStub';
+import {
+  bundledRunMeshes,
+  bundledRunOf,
+  runGlyphs,
+  runPenExtentPx,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
 vi.mock('../../../../r3f/controls/native/text/BundledCanvasRun', async () => ({
@@ -115,7 +122,7 @@ describe('<TabContainer> (isolated painter contract)', () => {
     expect(bundledRunMeshes(renderer.scene)).toHaveLength(0);
   });
 
-  it("all_tabs_in_front flips the strip from the subtree-chrome slot to this node's own paint slot", async () => {
+  it("all_tabs_in_front flips the strip from the chrome slot to a piece of this node's own key", async () => {
     const behind = await ReactThreeTestRenderer.create(
       <TabContainer
         {...painterEnv()}
@@ -123,7 +130,8 @@ describe('<TabContainer> (isolated painter contract)', () => {
         rect={RECT}
         theme={THEME}
         renderOrder={5}
-        subtreeChromeRenderOrder={9}
+        slot={wholeKeySlot(5)}
+        chromeSlot={wholeKeySlot(9)}
       />
     );
     const front = await ReactThreeTestRenderer.create(
@@ -133,14 +141,17 @@ describe('<TabContainer> (isolated painter contract)', () => {
         rect={RECT}
         theme={THEME}
         renderOrder={5}
-        subtreeChromeRenderOrder={9}
+        slot={wholeKeySlot(5)}
+        chromeSlot={wholeKeySlot(9)}
       />
     );
     const stripMesh = (scene: Rendered['scene']) => bundledRunMeshes(scene)[0]!;
-    // Default (false): the strip draws at the subtree-chrome slot (9.5), after the
-    // current page, as Godot's INTERNAL_MODE_BACK does. true: this node's paint slot (5).
-    expect(stripMesh(behind.scene).renderOrder).toBeCloseTo(9.5, 5);
-    expect(stripMesh(front.scene).renderOrder).toBe(5);
+    // Default (false): the strip draws inside the chrome slot (9), after the current page, as
+    // Godot's INTERNAL_MODE_BACK does. true: INTERNAL_MODE_FRONT, after this node's own pixels (5)
+    // and before its first page (6).
+    const inSlot = (order: number, key: number) => key < order && order < key + 1;
+    expect(inSlot(stripMesh(behind.scene).renderOrder, 9)).toBe(true);
+    expect(inSlot(stripMesh(front.scene).renderOrder, 5)).toBe(true);
   });
 
   // three sorts by the nearest group's renderOrder before the mesh's own, so a strip text left in
@@ -153,10 +164,12 @@ describe('<TabContainer> (isolated painter contract)', () => {
         rect={RECT}
         theme={THEME}
         renderOrder={5}
-        subtreeChromeRenderOrder={9}
+        slot={wholeKeySlot(5)}
+        chromeSlot={wholeKeySlot(9)}
       />
     );
-    expect(nearestGroupOrder(bundledRunMeshes(behind.scene)[0]!)).toBeCloseTo(9.5, 5);
+    const groupOrder = nearestGroupOrder(bundledRunMeshes(behind.scene)[0]!);
+    expect(9 < groupOrder && groupOrder < 10).toBe(true);
   });
 });
 
@@ -234,5 +247,58 @@ describe('<TabContainer> internal strip at a font-size override', () => {
   it('the strip the container sizes still contains the glyphs that strip draws (tab_bar.cpp:82,677)', async () => {
     const overridden = await strip({ themeOverrideFontSizes: { font_size: 28 } });
     expect(overridden.textTop).toBeLessThanOrEqual(overridden.tabTop);
+  });
+});
+
+describe('<TabContainer> strip scrolled to the current page', () => {
+  const CONTAINER: Rect2 = { x: 0, y: 0, w: 260, h: 100 };
+  /** The right edge of the drawn titles, px: the furthest pen of any run. */
+  const titlesRightEdge = async (currentTab: number) => {
+    const pages = ['Inventory', 'Equipment', 'Journal', 'Settings'].map((name) => page(name));
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        solveNode={solveNode({ currentTab }, pages)}
+        rect={CONTAINER}
+        theme={THEME}
+        renderOrder={0}
+      />
+    );
+    let rightEdge = -Infinity;
+    for (const mesh of bundledRunMeshes(renderer.scene)) {
+      mesh.updateWorldMatrix(true, false);
+      const run = bundledRunOf(mesh)!;
+      const left =
+        new THREE.Vector3().setFromMatrixPosition(mesh.matrixWorld).x + (runGlyphs(run)[0]?.x ?? 0);
+      rightEdge = Math.max(rightEdge, left + runPenExtentPx(run));
+    }
+    return rightEdge;
+  };
+
+  it('draws the titles of the pages it scrolled in, not the first pages (tab_bar.cpp:1875-1920)', async () => {
+    expect(await titlesRightEdge(3)).not.toBeCloseTo(await titlesRightEdge(0), 0);
+  });
+
+  it('keeps every drawn title inside the bar beside the arrows', async () => {
+    const arrowsWidth = 2 * 16;
+    expect(await titlesRightEdge(3)).toBeLessThanOrEqual(CONTAINER.w - arrowsWidth);
+  });
+});
+
+describe('<TabContainer> — self_modulate', () => {
+  it('tints the panel with tint and the tab strip with childTint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <TabContainer
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={solveNode({ currentTab: 0 }, [page('General'), page('Advanced')])}
+        rect={RECT}
+        theme={THEME}
+        renderOrder={0}
+      />
+    );
+    const split = countTintSplit(renderer.scene);
+    expect(split.own).toBe(1);
+    expect(split.child).toBeGreaterThan(0);
   });
 });

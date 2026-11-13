@@ -13,13 +13,15 @@ import { NextPassChain } from './nextPass';
 import { ExtraDrawSiteContext } from './extraDraw';
 import { orderByPass } from './passOrder';
 import { SurfaceMaterialSlots, overriddenSources } from './SurfaceMaterialSlots';
+import type { SurfacePrimitive } from '../../resources/meshes/godotSurface';
+import { listedSlot } from '../meshes/sharedInstances';
 
 /** The draw a leaf mounts the passes in, which every extra draw copies. */
 interface BaseDraw {
   /** The base draw, whose geometry every extra draw shares, but for an overlay with an `overlayGeometry`. */
   meshRef: RefObject<THREE.Object3D | null>;
-  /** The base draws `THREE.Points`, so every extra draw does too. */
-  drawsPoints?: boolean;
+  /** What the base draws, so every extra draw draws it too. */
+  primitive?: SurfacePrimitive;
   /** The skeleton that skins the base, or null for an unskinned draw. */
   skeleton?: THREE.Skeleton | null;
   /**
@@ -56,7 +58,7 @@ const NO_CHAIN: readonly MaterialSource[] = [];
 export function InstancePasses(props: InstancePassesProps) {
   const {
     meshRef,
-    drawsPoints = false,
+    primitive = 'triangles',
     skeleton,
     laterSurfaces = 0,
     posedRef,
@@ -83,12 +85,12 @@ export function InstancePasses(props: InstancePassesProps) {
       {drawsOwnMaterial ? (
         ownMaterial
       ) : (
-        <SurfaceMaterialSlots sources={sources} points={drawsPoints ? 'mesh' : undefined} />
+        <SurfaceMaterialSlots sources={sources} {...listedSlot(primitive, 'mesh')} />
       )}
       <NextPassChain
         meshRef={meshRef}
         sources={drawsOwnMaterial ? NO_CHAIN : sources}
-        drawsPoints={drawsPoints}
+        primitive={primitive}
         skeleton={skeleton}
         godotLayers={layers}
         shadow={shadow}

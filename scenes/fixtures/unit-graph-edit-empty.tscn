@@ -1,0 +1,26 @@
+; A GraphEdit with no child, placed by offsets. Only `_update_scrollbars` writes the range of the two
+; scroll bars and the bounds the minimap reads, and nothing calls it after this load (graph_edit.cpp:464-528).
+; Godot draws the constructor state: full-length bars with a dot for a grabber, and a camera frame that
+; runs past the minimap. The one variable is the missing GraphElement child; unit-graph-edit.tscn
+; has the same GraphEdit with a child.
+
+[gd_scene load_steps=1 format=3 uid="uid://unitgrapheditempty"]
+
+[node name="Root" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Bg" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 1152.0
+offset_bottom = 648.0
+color = Color(0.2, 0.3, 0.5, 1)
+
+[node name="GraphEdit" type="GraphEdit" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 520.0
+offset_bottom = 300.0

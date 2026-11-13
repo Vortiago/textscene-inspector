@@ -12,17 +12,21 @@ import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import type { TextLayoutResult } from '../../../../r3f/controls/native/text/textLayout';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
 import * as logger from '../../../../logger';
 import type { ButtonProperties } from './types';
 import {
   buttonMinimumSize,
   buttonTextTheme,
   buttonIconColor,
+  BUTTON_CLASS,
   BUTTON_DEFAULT_FONT_COLOR,
-  BUTTON_THEME_FONT_KEY,
   buttonLabelShape,
+  buttonTextureSlots,
 } from './nativeSolver';
+import { resolveToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlProps } from '../control/testing/controlProps';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const minSize = buttonMinimumSize;
@@ -81,8 +85,8 @@ function ctx(withMeasurer = true): SolveContext {
   };
 }
 
-describe('buttonMinimumSize — StyleBox content margins + text, no icon', () => {
-  it('is exactly the default-theme button margin for empty text (8, 8) — content_margin=4 all sides', () => {
+describe('buttonMinimumSize: StyleBox content margins + text, no icon', () => {
+  it('is exactly the default-theme button margin for empty text (8, 8): content_margin=4 all sides', () => {
     expect(minSize(node({}), ctx())).toEqual({ x: 8, y: 8 });
   });
 
@@ -92,12 +96,12 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
     expect(result.y).toBe(8 + FONT_HEIGHT);
   });
 
-  it('treats an absent measurer as "text contributes nothing", NOT as the whole function failing — margin alone still returns', () => {
+  it('treats an absent measurer as "text contributes nothing", NOT as the whole function failing: margin alone still returns', () => {
     const result = minSize(node({ text: 'AB' }), ctx(false));
     expect(result).toEqual({ x: 8, y: 8 });
   });
 
-  it('clip_text zeroes the text width contribution, leaving only the margin (button.cpp:492-494)', () => {
+  it('clip_text zeroes the text width contribution, leaving only the margin (button.cpp:493-495)', () => {
     const result = minSize(node({ text: 'AB', clipText: true }), ctx());
     expect(result.x).toBe(8);
     expect(result.y).toBe(8 + FONT_HEIGHT);
@@ -166,7 +170,7 @@ describe('buttonMinimumSize — StyleBox content margins + text, no icon', () =>
   });
 });
 
-describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)', () => {
+describe('buttonMinimumSize: icon contribution (!expand_icon && icon present)', () => {
   it('vertical_icon_alignment CENTER (default): height is the MAX of icon/text, width ADDS icon width + h_separation', () => {
     // icon 20x20 (shorter than the 23px font height): height stays 23.
     // width: 21.125 (text) + 20 (icon) + 4 (h_separation default) = 45.125.
@@ -190,6 +194,17 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
       expect(result.y).toBe(8 + 61);
     }
   );
+
+  it('vertical_icon_alignment TOP under a wrapped label: the paragraph and the icon, then ONE line height (button.cpp:497-502,517-521)', () => {
+    const tentative: SolveContext = { ...ctx(), tentativeRect: () => ({ x: 0, y: 0, w: 60, h: 100 }) };
+    const wrapped = node(
+      { text: 'AB AB AB', autowrapMode: 2, verticalIconAlignment: 0 },
+      {},
+      { x: 10, y: 15 }
+    );
+    // 'AB AB AB' wraps to three rows of 23 at 60 - 8 - 10 - 4 = 38 px: 69 + 15 + 23, not 69 + 15 + 69.
+    expect(minSize(wrapped, tentative).y).toBe(8 + 3 * FONT_HEIGHT + 15 + FONT_HEIGHT);
+  });
 
   it('icon_alignment CENTER: width is the MAX of icon/text, no h_separation added', () => {
     const result = minSize(node({ text: 'AB', iconAlignment: 1 }, {}, { x: 30, y: 10 }), ctx());
@@ -226,9 +241,9 @@ describe('buttonMinimumSize — icon contribution (!expand_icon && icon present)
   });
 });
 
-describe('buttonLabelShape — the one shaping the solver and the painter share', () => {
+describe('buttonLabelShape: the one shaping the solver and the painter share', () => {
   const shape = (props: Partial<ButtonProperties>): TextLayoutResult | null =>
-    buttonLabelShape(node(props), ctx().theme);
+    buttonLabelShape(node(props), ctx().theme, BUTTON_CLASS);
 
   it('shapes the label', () => {
     const layout = shape({ text: 'AB' })!;
@@ -237,11 +252,11 @@ describe('buttonLabelShape — the one shaping the solver and the painter share'
     expect(layout.lines[0]?.text).toBe('AB');
   });
 
-  it('is null for empty text — the one case neither side draws', () => {
+  it('is null for empty text: the one case neither side draws', () => {
     expect(shape({})).toBeNull();
   });
 
-  it('shapes at boxWidthPx 0 / autowrap OFF / lineSpacingPx 0 — Button never wraps', () => {
+  it('shapes at boxWidthPx 0 / autowrap OFF / lineSpacingPx 0: Button never wraps', () => {
     // Single line ('AB' has no hard break), so widthPx/heightPx alone prove
     // this: an autowrap-constrained shape of 'AB' at a 0-width box would
     // have broken onto multiple lines instead.
@@ -250,16 +265,16 @@ describe('buttonLabelShape — the one shaping the solver and the painter share'
     expect(layout.heightPx).toBe(FONT_HEIGHT);
   });
 
-  it('ignores the readiness gate — that lives in the solver, and the painter shapes unconditionally', () => {
+  it('ignores the readiness gate: that lives in the solver, and the painter shapes unconditionally', () => {
     expect(minSize(node({ text: 'AB' }), ctx(false))).toEqual(minSize(node({}), ctx(false)));
-    expect(buttonLabelShape(node({ text: 'AB' }), ctx(false).theme)).not.toBeNull();
+    expect(buttonLabelShape(node({ text: 'AB' }), ctx(false).theme, BUTTON_CLASS)).not.toBeNull();
   });
 });
 
-describe('buttonLabelShape — direction and language (button.cpp:564-569)', () => {
+describe('buttonLabelShape: direction and language (button.cpp:564-569)', () => {
   /** The shaped line's glyph characters, left to right. */
   function visual(props: Partial<ButtonProperties>, overrides: Partial<SolveNode> = {}): string {
-    const layout = buttonLabelShape({ ...node(props), ...overrides }, ctx().theme)!;
+    const layout = buttonLabelShape({ ...node(props), ...overrides }, ctx().theme, BUTTON_CLASS)!;
     return visualChars(layout.lines[0]!);
   }
 
@@ -282,7 +297,7 @@ describe('buttonLabelShape — direction and language (button.cpp:564-569)', () 
   });
 });
 
-describe('buttonTextTheme — font_color / font_disabled_color key mapping', () => {
+describe('buttonTextTheme: font_color / font_disabled_color key mapping', () => {
   it('resolves the theme default control_font_color for the normal state', () => {
     expect(buttonTextTheme(node({}), {} as ButtonProperties, 'normal', ctx())).toEqual({
       fontSizePx: 16,
@@ -299,28 +314,28 @@ describe('buttonTextTheme — font_color / font_disabled_color key mapping', () 
   });
 
   it('a theme_override_colors/font_disabled_color override wins over the default disabled color', () => {
-    const props: ButtonProperties = {
+    const props: ButtonProperties = controlProps({
       name: 'B',
       textDirection: 0,
       language: '',
       themeOverrideColors: { font_disabled_color: { r: 1, g: 0, b: 0, a: 1 } },
-    };
+    });
     expect(buttonTextTheme(node(props), props, 'disabled', ctx()).color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
   it('theme_override_font_sizes/font_size overrides the theme default for BOTH states', () => {
-    const props: ButtonProperties = {
+    const props: ButtonProperties = controlProps({
       name: 'B',
       textDirection: 0,
       language: '',
       themeOverrideFontSizes: { font_size: 24 },
-    };
+    });
     expect(buttonTextTheme(node(props), props, 'normal', ctx()).fontSizePx).toBe(24);
     expect(buttonTextTheme(node(props), props, 'disabled', ctx()).fontSizePx).toBe(24);
   });
 });
 
-describe('buttonIconColor — icon_normal_color / icon_disabled_color (default_theme.cpp:164,169)', () => {
+describe('buttonIconColor: icon_normal_color / icon_disabled_color (default_theme.cpp:164,169)', () => {
   it('is opaque white for the normal state (icon_normal_color = Color(1,1,1,1))', () => {
     expect(buttonIconColor({}, 'normal')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
   });
@@ -339,7 +354,7 @@ describe('buttonIconColor — icon_normal_color / icon_disabled_color (default_t
   });
 });
 
-describe(`buttonMinimumSize — resolves this Button's own theme font key ("${BUTTON_THEME_FONT_KEY}", default_theme.cpp:152)`, () => {
+describe(`buttonMinimumSize: resolves this Button's own theme font key ("font", default_theme.cpp:152)`, () => {
   // Without a DOM, `peekSceneFontMetrics` always answers the bundled default, so a
   // resolved value cannot be observed. It warns for an unresolvable font (a FontFile with no bytes),
   // which proves the lookup found something.
@@ -355,7 +370,7 @@ describe(`buttonMinimumSize — resolves this Button's own theme font key ("${BU
     const unresolvableFont = fontFile(undefined);
     const n: SolveNode = {
       ...node({ text: 'A' }),
-      fontOverrides: { [BUTTON_THEME_FONT_KEY]: unresolvableFont },
+      fontOverrides: { font: unresolvableFont },
     };
     buttonMinimumSize(n, ctx());
     expect(warnSpy).toHaveBeenCalledTimes(1);
@@ -375,7 +390,7 @@ describe(`buttonMinimumSize — resolves this Button's own theme font key ("${BU
  * Expected widths are `get_combined_minimum_size()` (height 31) in Godot 4.6.3 on
  * `scenes/fixtures/complex-2d-gui.tscn` at 1152x648, whose buttons add only the default margin 4 a side.
  */
-describe('buttonMinimumSize — the shaped text extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
+describe('buttonMinimumSize: the shaped text extent is ceiled (text_server_adv.cpp:7524-7537)', () => {
   it.each([
     ['Apply', 52],
     ['Restore defaults', 135],
@@ -384,7 +399,7 @@ describe('buttonMinimumSize — the shaped text extent is ceiled (text_server_ad
     expect(minSize(node({ text }), ctx()).x).toBe(expected);
   });
 
-  it('adds the margin to the CEILED text width, not the ceil of the margined width — both are whole here, and the text is what carries the fraction', () => {
+  it('adds the margin to the CEILED text width, not the ceil of the margined width: both are whole here, and the text is what carries the fraction', () => {
     const withText = minSize(node({ text: 'Apply' }), ctx()).x;
     const empty = minSize(node({}), ctx()).x;
     expect(empty).toBe(8);
@@ -433,9 +448,44 @@ describe('Button.autowrap_mode (button.cpp:493,546-561)', () => {
   });
 });
 
-describe('buttonLabelShape — the wrap width and trim flags reach the shaper (button.cpp:428-432,546-561)', () => {
+describe('buttonLabelShape at AUTOWRAP_OFF keeps one row per hard-break line (no end glyph)', () => {
+  const rows = (text: string) =>
+    (buttonLabelShape(node({ text }), nativeTheme(1), BUTTON_CLASS)?.lines ?? []).map((l) => l.text);
+
+  it('keeps a trailing space on its row', () => {
+    expect(rows('ab ')).toEqual(['ab ']);
+  });
+
+  it('splits at a hard break and adds no blank row', () => {
+    expect(rows('ab\ncd')).toEqual(['ab', 'cd']);
+  });
+});
+
+describe('Button.expand_icon under autowrap shapes at the drawn width (button.cpp:332-345,428-432)', () => {
+  it('wraps the minimum at the width the expanded icon leaves, as the painter does', () => {
+    const theme = nativeTheme(1);
+    const { x: marginX, y: marginY } = contentMarginSize(theme.widgets.button.normal);
+    const rect = { x: 0, y: 0, w: 130, h: 40 };
+    // `is_clipped` keeps the text's width out of the icon's, so a square icon takes the box height.
+    const iconWidth = Math.round(rect.h - marginY);
+    const wrapWidth = Math.ceil(Math.max(1, rect.w - marginX - iconWidth - theme.separation));
+    const props = { text: 'alpha bravo charlie delta', autowrapMode: 2, expandIcon: true };
+    const expected = buttonLabelShape(node(props), theme, BUTTON_CLASS, wrapWidth)!.heightPx;
+
+    const size = buttonMinimumSize(node(props, {}, { x: 16, y: 16 }), {
+      ...ctx(),
+      tentativeRect: () => rect,
+    });
+
+    expect(size.y).toBe(expected + marginY);
+  });
+});
+
+describe('buttonLabelShape: the wrap width and trim flags reach the shaper (button.cpp:428-432,546-561)', () => {
   function rows(props: Partial<ButtonProperties>, boxWidthPx: number): string[] {
-    return (buttonLabelShape(node(props), nativeTheme(1), boxWidthPx)?.lines ?? []).map((l) => l.text);
+    return (buttonLabelShape(node(props), nativeTheme(1), BUTTON_CLASS, boxWidthPx)?.lines ?? []).map(
+      (l) => l.text
+    );
   }
 
   it('keeps one row at AUTOWRAP_OFF however narrow the box', () => {
@@ -450,12 +500,118 @@ describe('buttonLabelShape — the wrap width and trim flags reach the shaper (b
     expect(rows({ text: 'alphabravo', autowrapMode: 1 }, 50).length).toBeGreaterThan(1);
   });
 
-  it('keeps the trailing edge space when autowrap_trim_flags clears it (label.h:45)', () => {
+  it('keeps the leading space of a row an arbitrary break starts, as Button trims only end spaces by default (button.h:48)', () => {
+    expect(rows({ text: 'supercalifragilistic expialidocious', autowrapMode: 1 }, 142)).toEqual([
+      'supercalifragilistic',
+      ' expialidocious',
+    ]);
+  });
+
+  it('adds no row for a last grapheme wider than the box: TextParagraph appends no terminator (text_paragraph.cpp)', () => {
+    expect(rows({ text: 'ab', autowrapMode: 1 }, 1)).toEqual(['a', 'b']);
+  });
+
+  it('trims that leading space once autowrap_trim_flags asks for it', () => {
+    expect(
+      rows({ text: 'supercalifragilistic expialidocious', autowrapMode: 1, autowrapTrimFlags: 64 | 128 }, 142)
+    ).toEqual(['supercalifragilistic', 'expialidocious']);
+  });
+
+  it('keeps the trailing edge space when autowrap_trim_flags clears it (button.h:48)', () => {
     // BREAK_TRIM_START_EDGE_SPACES | BREAK_TRIM_END_EDGE_SPACES is 64 | 128.
     // Authoring 0 keeps both edges.
     expect(rows({ text: 'alpha bravo', autowrapMode: 2, autowrapTrimFlags: 0 }, 50)).toEqual([
       'alpha ',
       'bravo',
     ]);
+  });
+});
+
+describe('a pressed toggle Button (base_button.cpp:326-352, button.cpp:303-312)', () => {
+  it('draws pressed only for a toggle that is on, and disabled wins', () => {
+    expect(resolveToggleDrawState(false, true)).toBe('pressed');
+    expect(resolveToggleDrawState(false, false)).toBe('normal');
+    expect(resolveToggleDrawState(true, true)).toBe('disabled');
+  });
+
+  it('takes the pressed font colour: control_font_pressed_color, white (default_theme.cpp:108,155)', () => {
+    expect(buttonTextTheme(node({}), {} as ButtonProperties, 'pressed', ctx()).color).toEqual({
+      r: 1,
+      g: 1,
+      b: 1,
+      a: 1,
+    });
+  });
+
+  it('takes the icon_pressed_color override over the white default', () => {
+    const red = { r: 1, g: 0, b: 0, a: 1 };
+    expect(buttonIconColor({ icon_pressed_color: red }, 'pressed')).toEqual(red);
+    expect(buttonIconColor({}, 'pressed')).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+  });
+});
+
+describe('a Button on a default-theme type variation (default_theme.cpp:357-383)', () => {
+  const FLAT = { themeTypeVariation: 'FlatButton' };
+  const HEADER = { themeTypeVariation: 'HeaderSmall' };
+
+  it('keeps the Button margins on FlatButton, whose empty boxes copy them (:360-363)', () => {
+    expect(minSize(node(FLAT), ctx())).toEqual({ x: 8, y: 8 });
+  });
+
+  it('keeps the pressed margins on a pressed FlatButton toggle', () => {
+    expect(minSize(node({ ...FLAT, buttonPressed: true }), ctx())).toEqual({ x: 8, y: 8 });
+  });
+
+  it('drops the margins on a Label variation, whose empty normal box has none (:379)', () => {
+    expect(minSize(node(HEADER), ctx())).toEqual({ x: 0, y: 0 });
+  });
+
+  it('keeps the Button margins on a Label variation for the states Label sets no box for', () => {
+    expect(minSize(node({ ...HEADER, disabled: true }), ctx())).toEqual({ x: 8, y: 8 });
+    expect(minSize(node({ ...HEADER, buttonPressed: true }), ctx())).toEqual({
+      x: 8,
+      y: 8,
+    });
+  });
+
+  it("takes Label's white font_color on a Label variation, in the normal state only (:383)", () => {
+    const white = { r: 1, g: 1, b: 1, a: 1 };
+    expect(buttonTextTheme(node(HEADER), HEADER as ButtonProperties, 'normal', ctx()).color).toEqual(white);
+    expect(buttonTextTheme(node(HEADER), HEADER as ButtonProperties, 'disabled', ctx()).color).toEqual({
+      r: 0.875,
+      g: 0.875,
+      b: 0.875,
+      a: 0.5,
+    });
+  });
+
+  it("takes the Button's own font_color on FlatButton", () => {
+    expect(buttonTextTheme(node(FLAT), FLAT as ButtonProperties, 'normal', ctx()).color).toEqual(
+      BUTTON_DEFAULT_FONT_COLOR
+    );
+  });
+});
+
+describe('buttonTextureSlots (button.cpp:38-41,224-227)', () => {
+  const themed = { ref: 'ExtResource("9")', resources: solveNode().resources, isHeldLocally: true };
+  const slots = (properties: Record<string, unknown>, themedIcons = {}) =>
+    buttonTextureSlots(controlNode('B', 'Button', { name: 'B', ...properties }), themedIcons);
+
+  it("requests the Button's own icon", () => {
+    expect(slots({ icon: 'ExtResource("1")' })).toEqual([{ key: 'icon', ref: 'ExtResource("1")' }]);
+  });
+
+  it('requests the theme icon `icon`, in its own scope, for a Button without an icon', () => {
+    expect(slots({}, { icon: themed })).toEqual([
+      { key: 'icon', ref: 'ExtResource("9")', scope: themed.resources, isHeldLocally: true },
+    ]);
+  });
+
+  it("keeps the Button's own icon over the theme icon", () => {
+    expect(slots({ icon: 'ExtResource("1")' }, { icon: themed })[0]!.ref).toBe('ExtResource("1")');
+  });
+
+  it('requests an empty icon slot with neither', () => {
+    expect(slots({})).toEqual([{ key: 'icon', ref: '' }]);
   });
 });

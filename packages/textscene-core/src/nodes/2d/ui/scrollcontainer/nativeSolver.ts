@@ -21,9 +21,12 @@ import type {
 } from '../../../../r3f/controls/native/solverRegistry';
 import { fitChildInRect, hasFlag, isSortableControl } from '../shared/fitChildInRect';
 import {
-  scrollBarGrabberGeometry,
+  SCROLL_HINT_HORIZONTAL_WIDTH,
+  SCROLL_HINT_VERTICAL_HEIGHT,
+  scrollBarPlacement,
   scrollBarMinimumSize,
   type ScrollBarPlacement,
+  type ScrollHintPlacement,
 } from '../shared/scrollBarSolver';
 import type { ScrollContainerProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -130,24 +133,6 @@ export const scrollContainerMinimumSize: MinimumSizeFn = (n, ctx) => {
   const margins = scrollContainerMargins(n, ctx.theme);
   return { x: x + margins.left + margins.right, y: y + margins.top + margins.bottom };
 };
-
-/**
- * `scroll_hint_vertical.svg`/`scroll_hint_horizontal.svg` (`scene/theme/icons/`) are 32x24 and
- * 24x32 at scale 1. Only the extent across each fade is read (`get_height()` at
- * `scroll_container.cpp:627,636`, `get_width()` at `:643,652`): the other axis is anchored.
- */
-const SCROLL_HINT_VERTICAL_HEIGHT = 24;
-const SCROLL_HINT_HORIZONTAL_WIDTH = 24;
-
-/** One `scroll_hint_*` TextureRect that `_update_scroll_hints` left visible. */
-export interface ScrollHintPlacement {
-  /** This hint's rect relative to the ScrollContainer's own top-left, as the anchors compute it. A vertical hint is twice the container wide (`scroll_container.cpp:625`), cut back by the clip. */
-  rect: Rect2;
-  /** `true` for the `scroll_hint_vertical` icon (the fade runs down the rect), `false` for `scroll_hint_horizontal`. */
-  vertical: boolean;
-  flipH: boolean;
-  flipV: boolean;
-}
 
 /** Both hint nodes' states after `_update_scroll_hints` (`scroll_container.cpp:606-658`); `null` where `set_visible(false)` was called. */
 interface ScrollContainerHints {
@@ -334,27 +319,6 @@ export function scrollContainerScrollBars(
     y: settledScrollValue(p.scrollVertical ?? 0, largest.y, vRect.h),
   };
 
-  // scrollBarGrabberGeometry's `min` fixed at 0: ScrollContainer's embedded
-  // bars never author `min_value`, so `range` (largest.x/.y) IS `max`.
-  const hGrabber = scrollBarGrabberGeometry(
-    false,
-    hRect.w,
-    ctx.theme,
-    0,
-    largest.x,
-    hRect.w,
-    scrollRatio(scroll.x, largest.x)
-  );
-  const vGrabber = scrollBarGrabberGeometry(
-    true,
-    vRect.h,
-    ctx.theme,
-    0,
-    largest.y,
-    vRect.h,
-    scrollRatio(scroll.y, largest.y)
-  );
-
   return {
     contentSize,
     scroll,
@@ -366,16 +330,23 @@ export function scrollContainerScrollBars(
       largest,
       scroll
     ),
-    horizontal: {
-      visible: hVisible,
-      rect: hRect,
-      grabberRect: { x: hGrabber.offset, y: 0, w: hGrabber.size, h: hRect.h },
-    },
-    vertical: {
-      visible: vVisible,
-      rect: vRect,
-      grabberRect: { x: 0, y: vGrabber.offset, w: vRect.w, h: vGrabber.size },
-    },
+    // `min_value` is never authored, so `range` (largest.x/.y) is `max`.
+    horizontal: scrollBarPlacement(
+      false,
+      hRect,
+      ctx.theme,
+      largest.x,
+      scrollRatio(scroll.x, largest.x),
+      hVisible
+    ),
+    vertical: scrollBarPlacement(
+      true,
+      vRect,
+      ctx.theme,
+      largest.y,
+      scrollRatio(scroll.y, largest.y),
+      vVisible
+    ),
   };
 }
 

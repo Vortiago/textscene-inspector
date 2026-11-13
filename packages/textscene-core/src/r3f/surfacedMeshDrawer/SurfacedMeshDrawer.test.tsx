@@ -40,7 +40,7 @@ describe('<SurfacedMeshDrawer> at one place', () => {
   it('draws each part once, the first as the body and each later one inside it', async () => {
     const dots = new THREE.BufferGeometry();
     dots.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3));
-    dots.userData = { godotDrawsPoints: true };
+    dots.userData = { godotPrimitive: 'points' };
     function TwoParts() {
       const bodyRef = useRef<THREE.Mesh | null>(null);
       return (
@@ -81,7 +81,7 @@ describe('<SurfacedMeshDrawer> at one place', () => {
   it('keeps the body of an unplaced mesh the object its first part draws as, with no part drawn', async () => {
     const dots = new THREE.BufferGeometry();
     dots.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0], 3));
-    dots.userData = { godotDrawsPoints: true };
+    dots.userData = { godotPrimitive: 'points' };
     function UnplacedDots() {
       return <SurfacedMeshDrawer parts={useParts([boxOf(dots, 'Blue')])} isUnplaced />;
     }

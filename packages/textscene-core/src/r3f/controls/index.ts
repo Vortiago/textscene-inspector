@@ -31,6 +31,13 @@ import '../../nodes/2d/ui/canvaslayer/index.r3f';
 // canvas boundary for the Control walk. Its `index.r3f` registers both halves,
 // and the world barrel imports it too.
 import '../../nodes/2d/parallaxbackground/index.r3f';
+// The root of an embedded window's own Control canvas.
+import '../../nodes/windows/window/controls.r3f';
+import '../../nodes/windows/popuppanel/controls.r3f';
+import '../../nodes/windows/popupmenu/controls.r3f';
+import '../../nodes/windows/acceptdialog/controls.r3f';
+import '../../nodes/windows/confirmationdialog/controls.r3f';
+import '../../nodes/windows/filedialog/controls.r3f';
 import '../../nodes/2d/ui/codeedit/index.r3f';
 import '../../nodes/2d/ui/colorpicker/index.r3f';
 import '../../nodes/2d/ui/colorpickerbutton/index.r3f';

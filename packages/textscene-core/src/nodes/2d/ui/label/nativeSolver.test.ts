@@ -4,6 +4,7 @@
  * never from the code. At size 16: ascent ceil(2189*16/2048) = 18, descent
  * ceil(600*16/2048) = 5, line_spacing 3 (default_theme.cpp:392): pitch 26, font height 23.
  */
+import { ZERO_SIDES } from '../../../../r3f/controls/native/styleBoxFlat';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { fontFile } from '../../../../r3f/controls/native/text/sfntOutlines.testkit';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -377,18 +378,18 @@ describe('labelUnwrappedShape — the one shaping the solver and the painter sha
 
 describe("labelShapingWidthPx (label.cpp:581's `int width = get_size().width - style->get_minimum_size().width`)", () => {
   it('leaves a whole-pixel width alone — every container that hands out integers is unaffected', () => {
-    expect(labelShapingWidthPx(376)).toBe(376);
-    expect(labelShapingWidthPx(0)).toBe(0);
+    expect(labelShapingWidthPx(376, ZERO_SIDES)).toBe(376);
+    expect(labelShapingWidthPx(0, ZERO_SIDES)).toBe(0);
   });
 
   it('drops the fraction of a fractional width, so a word only just too wide for the whole pixel wraps', () => {
-    expect(labelShapingWidthPx(320.9)).toBe(320);
-    expect(labelShapingWidthPx(320.0001)).toBe(320);
+    expect(labelShapingWidthPx(320.9, ZERO_SIDES)).toBe(320);
+    expect(labelShapingWidthPx(320.0001, ZERO_SIDES)).toBe(320);
   });
 
   it('truncates a negative width toward zero, like the C++ conversion — a degenerate rect never becomes a wider one', () => {
-    expect(labelShapingWidthPx(-0.5)).toBe(-0);
-    expect(labelShapingWidthPx(-4.7)).toBe(-4);
+    expect(labelShapingWidthPx(-0.5, ZERO_SIDES)).toBe(-0);
+    expect(labelShapingWidthPx(-4.7, ZERO_SIDES)).toBe(-4);
   });
 });
 
@@ -1456,7 +1457,7 @@ describe('Label paragraph_spacing and the theme spacing constants (label.cpp:344
     );
     const shaped = shapeText(props.text ?? '', {
       fontSizePx: theme.fontSizePx,
-      boxWidthPx: labelShapingWidthPx(boxWidthPx),
+      boxWidthPx: labelShapingWidthPx(boxWidthPx, ZERO_SIDES),
       autowrapMode: clampAutowrapMode(props.autowrapMode, AutowrapMode.AUTOWRAP_OFF),
       lineSpacingPx: theme.lineSpacingPx,
       paragraphSeparator: LABEL_PARAGRAPH_SEPARATOR,

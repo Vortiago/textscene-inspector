@@ -10,6 +10,11 @@ export interface TileMapLayerProperties extends Node2DProperties {
   enabled: boolean;
   /** The cells each rendering quadrant holds along an axis (`rendering_quadrant_size`, default 16). */
   rendering_quadrant_size: number;
+  /**
+   * Whether the layer instantiates its scene tiles. False on the layer a TileMap stands in for: the
+   * TileMap holds the instances of all its layers (`tile_map_layer.cpp:1645-1652`). Not a Godot property.
+   */
+  drawsSceneTiles?: boolean;
   /** Cells decoded from `tile_map_data` at parse time, or null when undecodable (degrade). */
   cells?: PlacedCell[] | null;
 }

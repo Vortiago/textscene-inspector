@@ -7,15 +7,14 @@
 import {
   clearDiagnostics,
   describeFailedRequests,
+  errorReport,
   loggedErrors,
   openScene,
-  setDisplayToggle,
+  showDisplayOverlay,
+  FIT_QUIESCENCE_MS,
   settleCanvas,
 } from '../previewServer.mjs';
-
-// Greater than CameraFit's last load-time fit timer (1100 ms after mount), with margin for
-// render-loop latency under host contention.
-const PRE_SELECT_FIT_QUIESCENCE_MS = 1500;
+import { pausePlayer, seekPlayer } from './seekAnimation.mjs';
 
 /**
  * `reason` with the requests the page lost, so a scene that never loads names the chunk or file
@@ -46,21 +45,15 @@ export async function captureScene(pageState, baseUrl, scene) {
 
   if (scene.navigation) {
     // The navmesh overlay defaults on, but is set explicitly, so the baseline rests on no default.
-    const reason = await setDisplayToggle(page, 'Navigation', true);
+    const reason = await showDisplayOverlay(page, 'Navigation');
     if (reason) return { buffer: null, reason: withFailedRequests(reason, diagnostics) };
-    await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
-    await page.mouse.move(0, 0);
   }
 
   if (scene.collisions) {
     // "Visible Collision Shapes" is off by default (ADR-0005/0006), so every other golden hides a
     // CollisionShape gizmo.
-    const reason = await setDisplayToggle(page, 'Collisions', true);
+    const reason = await showDisplayOverlay(page, 'Collisions');
     if (reason) return { buffer: null, reason: withFailedRequests(reason, diagnostics) };
-    // Let CameraFit's load-time timers finish before changing what is on
-    // screen, and take the pointer off the toolbar so no hover is captured.
-    await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
-    await page.mouse.move(0, 0);
   }
 
   // A real tree selection makes a selected-only gizmo (PathFollow, light helpers, ADR-0056) render,
@@ -79,22 +72,29 @@ export async function captureScene(pageState, baseUrl, scene) {
     // last one lets it see the new gizmo and widen the frame, and host load picks the winner. The
     // row renders from the state that starts those timers, so this wait from it spends them all.
     // Selection never moves the camera (CameraFit in packages/textscene-core/src/r3f/TscnCanvas.tsx).
-    await page.waitForTimeout(PRE_SELECT_FIT_QUIESCENCE_MS);
+    await page.waitForTimeout(FIT_QUIESCENCE_MS);
     await row.click();
     // `.click()` hovers the row first and leaves its hover highlight on, so the pointer moves off
     // the tree and only the selection renders.
     await page.mouse.move(0, 0);
   }
 
+  // The pose at `animationTime` on the selected AnimationPlayer's first clip, which Godot's
+  // `seek` reaches too. A stopped player shows the rest pose, so only a seek puts a clip on screen.
+  if (scene.animationTime !== undefined) {
+    await pausePlayer(page);
+    await seekPlayer(page, scene.animationTime);
+    await page.mouse.move(0, 0);
+  }
+
   const result = await settleCanvas(page, canvas, { screenshotTimeout: scene.settleTimeout });
   if (!result.buffer) return { ...result, reason: withFailedRequests(result.reason, diagnostics) };
-  const errors = loggedErrors(diagnostics);
-  if (errors.length > 0) {
+  if (loggedErrors(diagnostics).length > 0) {
     // A console error in a settled, plausible capture is still a broken render: pixels cannot see a
     // swallowed resource failure that leaves the previous frame on screen.
     return {
       buffer: null,
-      reason: `console error(s) logged during capture: ${errors.join(' | ')}`,
+      reason: `console error(s) logged during capture: ${errorReport(diagnostics)}`,
       status: 'console-error',
     };
   }

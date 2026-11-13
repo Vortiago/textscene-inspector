@@ -1,0 +1,29 @@
+; One variable: `clip_children` is CLIP_ONLY (1) on a green Polygon2D parent. Its red child crosses the
+; parent's edge, so the child shows only over the parent, in the child's own colour, and the parent's
+; green never shows. Beside it the same pair with `clip_children` unset draws both. No other scene
+; clips children.
+
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Clipped" type="Polygon2D" parent="."]
+position = Vector2(100, 100)
+clip_children = 1
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Child" type="Polygon2D" parent="Clipped"]
+position = Vector2(50, 50)
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Plain" type="Polygon2D" parent="."]
+position = Vector2(400, 100)
+color = Color(0, 1, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)
+
+[node name="Child" type="Polygon2D" parent="Plain"]
+position = Vector2(50, 50)
+color = Color(1, 0, 0, 1)
+polygon = PackedVector2Array(0, 0, 100, 0, 100, 100, 0, 100)

@@ -8,7 +8,8 @@ import { literalText } from '../../godot/string/string';
 import { TscnParser } from '../../parser/TscnParser';
 import type { SceneResources } from '../../r3f/SceneResourcesContext';
 import type { Read, ResourceKind } from './read';
-import type { ScopedReference } from './scopedReference';
+import { nodeReference, type ScopedReference } from './scopedReference';
+import { staticSnapshot } from './staticSnapshot.testkit';
 
 /** What a test kind decodes: the name, the read of `next`, and the reference `later` names. */
 export interface Named {
@@ -56,4 +57,16 @@ export function sceneTables(text: string): SceneResources {
 /** A `.tres` that holds one `Resource` with `properties`, and the tables written before it. */
 export function resourceFile(properties: string, tables = ''): string {
   return `[gd_resource type="Resource" format=3]\n\n${tables}\n\n[resource]\n${properties}\n`;
+}
+
+/** The value `kind` loads at `ref` in a scene written as `sceneText`. Throws unless the read loads. */
+export function loadedValue<T>(
+  kind: ResourceKind<T>,
+  ref: string,
+  sceneText: string,
+  files: Readonly<Record<string, string>> = {}
+): T {
+  const read = staticSnapshot(files).read(nodeReference(ref, sceneTables(sceneText)), kind);
+  if (read.status !== 'loaded') throw new Error(`expected the ${kind.name} to load, got ${read.status}`);
+  return read.value;
 }

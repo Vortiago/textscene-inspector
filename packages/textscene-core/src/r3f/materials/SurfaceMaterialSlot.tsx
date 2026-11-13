@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import { MISSING_TEXTURE_MATERIAL } from '../../resources/materials/standardmaterial3d/materialBag';
 import { drawnBag, materialBagElement, StandardMaterialSlot } from './StandardMaterialSlot';
-import { pointDrawOf, type PointPlacement } from './godotPoint';
+import { pointDrawOf, type ListedSurface } from './godotPoint';
 import { particleDrawOf, type ParticleProgram } from './godotParticles';
 import type { MaterialSource } from './materialSource';
 import { useSurfaceMaterial } from './useSurfaceMaterial';
@@ -19,8 +19,11 @@ interface SurfaceMaterialSlotProps {
   source: MaterialSource | undefined;
   /** R3F attach key: `material` for a single surface, `material-N` for many (`surfaceAttach`). */
   attach?: string;
-  /** The surface draws `THREE.Points`, placed so, and its material also sizes each point. Undefined for triangles. */
-  points?: PointPlacement;
+  /**
+   * The surface draws points or line segments, placed so: its material also sizes each point, and
+   * declares the instance matrix at instances. Undefined for triangles.
+   */
+  listed?: ListedSurface;
   /** The surface draws a particle emitter's instances: the patch that colours them and cuts the flipbook frame. */
   particles?: ParticleProgram;
 }
@@ -32,18 +35,28 @@ interface SurfaceMaterialSlotProps {
  * never draws, a file that cannot load or a ViewportTexture in a pass cycle, draws the
  * magenta placeholder.
  */
-export function SurfaceMaterialSlot({ source, attach, points, particles }: SurfaceMaterialSlotProps) {
+export function SurfaceMaterialSlot({ source, attach, listed, particles }: SurfaceMaterialSlotProps) {
   const { scalars, bags } = useSurfaceMaterial(source);
   const pixelRatio = useThree((state) => state.viewport.dpr);
+  // Primitive and placement are strings: `listed` is a new object each render.
+  const primitive = listed?.primitive;
+  const placement = listed?.placement;
   const pointDraw = useMemo(
-    () => (points ? pointDrawOf(scalars, pixelRatio, points) : undefined),
-    [points, scalars, pixelRatio]
+    () => (primitive === 'points' && placement ? pointDrawOf(scalars, pixelRatio, placement) : undefined),
+    [primitive, placement, scalars, pixelRatio]
   );
   const particleDraw = useMemo(
     () => (particles ? { draw: particleDrawOf(scalars), program: particles } : undefined),
     [particles, scalars]
   );
-  const draws = useMemo(() => ({ pointDraw, particles: particleDraw }), [pointDraw, particleDraw]);
+  const draws = useMemo(
+    () => ({
+      pointDraw,
+      linePlacement: primitive === 'lines' ? placement : undefined,
+      particles: particleDraw,
+    }),
+    [pointDraw, primitive, placement, particleDraw]
+  );
   if (!bags) return materialBagElement(drawnBag(MISSING_TEXTURE_MATERIAL, draws), attach, null);
   return <StandardMaterialSlot bags={bags} attach={attach} draws={draws} />;
 }

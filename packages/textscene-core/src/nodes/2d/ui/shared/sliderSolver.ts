@@ -11,14 +11,15 @@
 
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
 import { rangeRatio, type RangeProperties, type RangeValueOrder } from './range';
 import type { Vector2 } from '../../../../godot/math/vector';
 
 /**
  * `tick.svg`'s cross-axis extent. `pnpm ref:godot` paints an 8px band at `default_theme_scale = 1`,
  * the declared canvas of `hslider_tick.svg`/`vslider_tick.svg` (`width="4" height="8"`/`width="8"
- * height="4"`): the path draws to `y="16"`/`x="16"`, but the rasteriser clips to the canvas. Not
- * scaled by `default_theme_scale`, like every vendored icon's literal size.
+ * height="4"`): the path draws to `y="16"`/`x="16"`, but the rasteriser clips to the canvas. The
+ * default theme rasterises the canvas at `default_theme_scale`.
  */
 const SLIDER_TICK_CROSS_AXIS = 8;
 
@@ -159,7 +160,7 @@ export function sliderTickRects(
   const size = size2i(rawSize);
   // The 4px along-axis box of `hslider_tick.svg`/`vslider_tick.svg`, scaled by `default_theme_scale`.
   const along = theme.sliderTickBox;
-  const cross = SLIDER_TICK_CROSS_AXIS;
+  const cross = scaledIconSize(SLIDER_TICK_CROSS_AXIS, theme.scale);
   const divisions = tickCount - 1;
   // `grabber_offset = grabber.width/2 - tick.width/2` horizontally and
   // `grabber.height/2 - tick.height/2` vertically (`slider.cpp:342-347,304-311`), on the axis

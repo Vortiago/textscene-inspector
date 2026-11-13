@@ -28,6 +28,13 @@ export type ResourceLoadErrorMessage = {
   error: string;
 };
 
+/** The answer to a webview `listDirectory`: the folder's entries, or null when the workspace has no such folder. */
+export type DirectoryListedMessage = {
+  type: 'directoryListed';
+  requestId: string;
+  entries: { name: string; isDirectory: boolean }[] | null;
+};
+
 /**
  * A watched dependency (texture, `.tres`, sub-scene) changed on disk. The webview
  * drops its cache for `path` and re-fetches it, since the main scene is unchanged.
@@ -53,13 +60,25 @@ export type CapturePingMessage = {
   pingId: string;
 };
 
+/**
+ * Whether the panel's tab shows. A hidden panel keeps its webview alive
+ * (`retainContextWhenHidden`), so the webview stops rendering until it shows again. Posted once
+ * after `webviewReady`, and on each change.
+ */
+export type PreviewVisibilityMessage = {
+  type: 'previewVisibility';
+  isVisible: boolean;
+};
+
 export type HostToWebviewMessage =
   | LoadTscnMessage
   | ResourceLoadedMessage
   | ResourceLoadErrorMessage
+  | DirectoryListedMessage
   | ResourceChangedMessage
   | CapturePreviewMessage
-  | CapturePingMessage;
+  | CapturePingMessage
+  | PreviewVisibilityMessage;
 
 /**
  * Anything can post to a webview, so a listener narrows before it reads: a
@@ -116,6 +135,15 @@ export type LoadResourceMessage = {
   path: string;
   /** Absent for a processor load: the byte layer reads a file without knowing its type. */
   resourceType?: string;
+  /** Absent for a file read whole: the byte layer asks for a file's leading bytes only when its parse needs no more. */
+  maxBytes?: number;
+  requestId: string;
+};
+
+/** Ask the host to list a `res://` folder, which has no trailing slash (`res://` is the root). */
+export type ListDirectoryMessage = {
+  type: 'listDirectory';
+  folder: string;
   requestId: string;
 };
 
@@ -175,6 +203,7 @@ export type WebviewToHostMessage =
   | JumpToNodeMessage
   | CopyNodePathMessage
   | LoadResourceMessage
+  | ListDirectoryMessage
   | LogMessage
   | PreviewCapturedMessage
   | PreviewCaptureErrorMessage

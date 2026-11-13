@@ -37,6 +37,14 @@ interface MeshInstance3DProps extends NodeComponentProps {
   gizmo?: (mesh: SurfacedMesh) => ReactNode;
 }
 
+/**
+ * The mesh a node's `mesh` property names, as the surfaces a draw mounts. MeshInstance2D reads it
+ * through here too, so the lookup of a mesh moves with this one entry.
+ */
+export function useMeshInstanceContent(meshRef: string | undefined, pools: SceneResources) {
+  return useMeshContent(useResourceResolution(meshRef, pools));
+}
+
 export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   const properties = node.properties as MeshInstance3DProperties;
   const pools = useSceneResources();
@@ -44,7 +52,7 @@ export function MeshInstance3D({ node, children, gizmo }: MeshInstance3DProps) {
   const transform = useMemo(() => transformFromNode3DProperties(properties), [properties]);
 
   // A `.glb` resolves to nothing and falls through to the placeholder.
-  const content = useMeshContent(useResourceResolution(properties.mesh, pools));
+  const content = useMeshInstanceContent(properties.mesh, pools);
 
   // `surface_material_override/N`, keyed by the mesh's own surface numbering. Godot applies them
   // to every kind of mesh alike.

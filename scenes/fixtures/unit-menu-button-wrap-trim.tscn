@@ -1,0 +1,40 @@
+; The one variable: how a MenuButton label that is wider than its box is fitted. MenuButton draws as
+; Button does (menu_button.cpp has no draw code), so autowrap_mode wraps it at the box and
+; text_overrun_behavior trims it (button.cpp:428-441). A box of 70 px is narrower than "alpha bravo charlie".
+
+[gd_scene format=3 uid="uid://unit_menu_button_wrap_trim"]
+
+[node name="Root" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="Wrapped" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 86.0
+offset_bottom = 96.0
+flat = false
+text = "alpha bravo charlie"
+autowrap_mode = 2
+
+[node name="TrimmedWord" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 120.0
+offset_top = 16.0
+offset_right = 190.0
+offset_bottom = 48.0
+flat = false
+text = "alpha bravo charlie"
+text_overrun_behavior = 2
+
+[node name="TrimmedEllipsis" type="MenuButton" parent="."]
+layout_mode = 1
+offset_left = 224.0
+offset_top = 16.0
+offset_right = 294.0
+offset_bottom = 48.0
+flat = false
+text = "alpha bravo charlie"
+text_overrun_behavior = 3

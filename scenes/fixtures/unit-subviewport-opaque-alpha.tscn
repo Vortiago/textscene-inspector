@@ -1,0 +1,45 @@
+; One variable: SUB and MUL items inside an opaque SubViewport lower the alpha its target stores.
+; Godot samples an opaque target's alpha as 1 (`swizzle_a = ONE`, `texture_storage.cpp:3641-3642`),
+; so the container shows the viewport opaque over the yellow behind it.
+
+[gd_scene format=3]
+
+[sub_resource type="CanvasItemMaterial" id="Sub"]
+blend_mode = 2
+
+[sub_resource type="CanvasItemMaterial" id="Mul"]
+blend_mode = 3
+
+[node name="Root" type="Node2D"]
+
+[node name="Back" type="Polygon2D" parent="."]
+color = Color(0.9, 0.8, 0.1, 1)
+polygon = PackedVector2Array(0, 0, 1152, 0, 1152, 648, 0, 648)
+
+[node name="Container" type="SubViewportContainer" parent="."]
+offset_left = 100.0
+offset_top = 100.0
+offset_right = 700.0
+offset_bottom = 500.0
+
+[node name="Viewport" type="SubViewport" parent="Container"]
+handle_input_locally = false
+size = Vector2i(600, 400)
+render_target_update_mode = 4
+
+[node name="Fill" type="Polygon2D" parent="Container/Viewport"]
+color = Color(0.3, 0.35, 0.4, 1)
+polygon = PackedVector2Array(0, 0, 600, 0, 600, 400, 0, 400)
+
+[node name="SubRect" type="ColorRect" parent="Container/Viewport"]
+material = SubResource("Sub")
+offset_left = 40.0
+offset_top = 40.0
+offset_right = 280.0
+offset_bottom = 180.0
+color = Color(0.1, 0.05, 0.2, 0.8)
+
+[node name="MulPoly" type="Polygon2D" parent="Container/Viewport"]
+material = SubResource("Mul")
+color = Color(0.7, 0.5, 0.3, 0.6)
+polygon = PackedVector2Array(320, 220, 560, 220, 560, 360, 320, 360)

@@ -20,6 +20,9 @@ import { PreviewCaptureQueue, type PreviewCapture } from './previewCaptureQueue'
 export { dispatchWebviewMessage } from './webviewDispatch';
 export type { WebviewMessageHandlers } from './webviewDispatch';
 
+/** What a watcher saw happen to a file. */
+export type FileChange = 'changed' | 'created' | 'deleted';
+
 export class TscnPreviewPanel {
   public static readonly viewType = 'tscnPreview';
 
@@ -44,6 +47,11 @@ export class TscnPreviewPanel {
    * dropped. Posts wait on this flag, and `webviewReady` replays `_previousContent`.
    */
   private _webviewReady = false;
+  /**
+   * The visibility last posted to the current document, so a view-state change that leaves it as
+   * it was posts nothing. Written by `_postVisibility`, cleared by `webviewReady`.
+   */
+  private _postedVisibility: boolean | null = null;
   /** Set by `dispose()`. `_webviewReady` stays true after it, so it is not this. */
   private _disposed = false;
   /** Set by a `webviewLoadFailed`, which loads the document once more. Cleared by `webviewReady`. */
@@ -98,12 +106,16 @@ export class TscnPreviewPanel {
     this._loadTscnContent(resource);
 
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+    this._panel.onDidChangeViewState(() => this._postVisibility(), null, this._disposables);
 
     const handlers: WebviewMessageHandlers = {
       webviewReady: (_msg) => {
         this._webviewReady = true;
         this._hasReloadedDocument = false;
         this._captures.webviewLoaded();
+        // A remounted tree has rendered nothing yet, so it hears the visibility again.
+        this._postedVisibility = null;
+        this._postVisibility();
         // Every remount, such as a move to another editor group, posts ready with
         // an empty tree. Replay always, so a ready webview holds the current text:
         // the `_previousContent` diff swallows a later re-read, which leaves the
@@ -125,7 +137,10 @@ export class TscnPreviewPanel {
         void writeClipboard(msg.nodePath);
       },
       loadResource: (msg) => {
-        void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId);
+        void this._handleLoadResource(msg.path, msg.resourceType, msg.requestId, msg.maxBytes);
+      },
+      listDirectory: (msg) => {
+        void this._handleListDirectory(msg.folder, msg.requestId);
       },
       log: (msg) => {
         relayWebviewLog(msg.level, msg.message, msg.args);
@@ -222,10 +237,11 @@ export class TscnPreviewPanel {
   /**
    * Tells the webview to re-fetch a watched dependency that changed on disk, since
    * the unchanged scene text makes `_loadTscnContent` no-op. A path missing from
-   * the served-resources map was never requested, so it has nothing to invalidate.
+   * the served-resources map was never requested, so an edit has nothing to invalidate;
+   * a created or deleted file still changes the listing of the folders above it.
    * A `project.godot` that moves the `res://` root re-fetches every served path.
    */
-  public async handleDependencyChange(fileUri: vscode.Uri): Promise<void> {
+  public async handleDependencyChange(fileUri: vscode.Uri, change: FileChange = 'changed'): Promise<void> {
     // A webview that is not ready yet loads everything fresh on mount.
     if (!this._webviewReady) {
       return;
@@ -238,7 +254,9 @@ export class TscnPreviewPanel {
       this._reloadUnderMovedRoot(provider);
       return;
     }
-    const resPath = provider.getServedResPath(fileUri);
+    // A file that appeared or went away edits a folder listing, even one never read as a resource. An edit cannot.
+    const resPath =
+      provider.getServedResPath(fileUri) ?? (change === 'changed' ? null : await provider.resPathOf(fileUri));
     if (resPath) {
       this.invalidateResource(resPath);
     }
@@ -269,6 +287,19 @@ export class TscnPreviewPanel {
       return;
     }
     this._postMessageToWebview({ type: 'resourceChanged', path: resPath });
+  }
+
+  /**
+   * Tells a ready webview whether the tab shows. `visible`, not `active`: a panel in an unfocused
+   * window still shows. A webview that is not ready hears it on `webviewReady`.
+   */
+  private _postVisibility(): void {
+    // Ready first: a disposed `WebviewPanel` throws on `visible`.
+    if (!this._webviewReady || this._disposed) return;
+    const isVisible = this._panel.visible;
+    if (this._postedVisibility === isVisible) return;
+    this._postedVisibility = isVisible;
+    this._postMessageToWebview({ type: 'previewVisibility', isVisible });
   }
 
   /** Sets a new document, which VS Code loads in place of the current one. */
@@ -351,7 +382,8 @@ export class TscnPreviewPanel {
   private async _handleLoadResource(
     resourcePath: string,
     resourceType: string | undefined,
-    requestId: string
+    requestId: string,
+    maxBytes: number | undefined
   ): Promise<void> {
     try {
       const provider = this._getResourceProvider();
@@ -359,7 +391,7 @@ export class TscnPreviewPanel {
         throw new Error('No workspace folder found');
       }
 
-      const content = await provider.loadResource(resourcePath, resourceType);
+      const content = await provider.loadResource(resourcePath, resourceType, maxBytes);
       const payload = encodeResourceResponse(content);
 
       this._postMessageToWebview({
@@ -367,6 +399,23 @@ export class TscnPreviewPanel {
         requestId,
         ...payload,
       });
+    } catch (error) {
+      this._postMessageToWebview({
+        type: 'resourceLoadError',
+        requestId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  private async _handleListDirectory(folder: string, requestId: string): Promise<void> {
+    try {
+      const provider = this._getResourceProvider();
+      if (!provider) {
+        throw new Error('No workspace folder found');
+      }
+      const entries = await provider.listDirectory(folder);
+      this._postMessageToWebview({ type: 'directoryListed', requestId, entries });
     } catch (error) {
       this._postMessageToWebview({
         type: 'resourceLoadError',

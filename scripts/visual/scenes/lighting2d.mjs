@@ -43,9 +43,8 @@ export const LIGHTING_2D_SCENES = [
   // `shadow_item_cull_mask & occluder.light_mask`: one occluder casts, its twin
   // is culled by the same light.
   { name: 'lightoccluder2d-shadow-mask', file: 'unit-lightoccluder2d-shadow-mask.tscn' },
-  // Two shadowed lights in one accumulation pass: each must clear the stencil
-  // before it stamps, or the first light's volume also cuts the second's.
-  { name: 'lightoccluder2d-two-lights', file: 'unit-lightoccluder2d-two-lights.tscn' },
+  // Two shadowed lights in one accumulation pass, each reading its own map.
+  { name: 'lightoccluder2d-two-lights', file: 'unit-lightoccluder2d-two-lights.tscn', mode: '2d' },
   // `shadow_filter`, which every occluder fixture above leaves at NONE, gives a stepped penumbra.
   // The occluder's top sits at the light's y, so a vertical probe crosses the umbra edge square on.
   // Godot 4.6.3 transect at x=676: 167 / 129 / 100 / 80 / 67 / 63 of 255, the five PCF5 levels
@@ -106,4 +105,32 @@ export const LIGHTING_2D_SCENES = [
     file: 'unit-directionallight2d-render-budget.tscn',
     settleTimeout: 120000,
   },
+  // Far from the light a polar bin spans several pixels: NONE's edge is a staircase of bins, and
+  // a PCF5 tap one bin wide mixes two bins, which shifts the edge by half a bin.
+  { name: 'pointlight2d-shadow-none-bins', file: 'unit-pointlight2d-shadow-none-bins.tscn', mode: '2d' },
+  { name: 'pointlight2d-shadow-pcf5-bins', file: 'unit-pointlight2d-shadow-pcf5-bins.tscn', mode: '2d' },
+  // The occluder's end lands exactly on a bin centre. Godot 4.6.3 `--mode 2d`: within 1/255 of ours.
+  { name: 'pointlight2d-shadow-end-on-bin', file: 'unit-pointlight2d-shadow-end-on-bin.tscn', mode: '2d' },
+  // The same for the parallel map. Godot 4.6.3 `--mode 2d`: 0 px off ours; covering the bin gives 448 px at 63.
+  {
+    name: 'directionallight2d-shadow-end-on-bin',
+    file: 'unit-directionallight2d-shadow-end-on-bin.tscn',
+    mode: '2d',
+  },
+  // `rendering/2d/shadow_atlas/size` 512 in the folder's project.godot: each PCF5 tap is four
+  // times as wide as at the 2048 default. Godot 4.6.3 `--mode 2d`: the point light is within 1/255
+  // of ours, the sun differs on 30 pixels by at most 1/255.
+  {
+    name: 'pointlight2d-shadow-atlas-size',
+    file: 'shadow-atlas-size/unit-pointlight2d-shadow-atlas-size.tscn',
+    mode: '2d',
+  },
+  {
+    name: 'directionallight2d-shadow-atlas-size',
+    file: 'shadow-atlas-size/unit-directionallight2d-shadow-atlas-size.tscn',
+    mode: '2d',
+  },
+  // A GradientTexture2D with no gradient holds no image, so the light draws Godot's 4 by 4 placeholder.
+  // Godot 4.6.3 `--mode 2d`: the 8 magenta texels at (548..551, 298..301) read rgb(152,25,152).
+  { name: 'pointlight2d-gradient-no-gradient', file: 'unit-pointlight2d-gradient-no-gradient.tscn', mode: '2d' },
 ];

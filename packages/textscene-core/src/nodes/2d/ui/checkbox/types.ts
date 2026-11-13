@@ -1,16 +1,9 @@
 /** CheckBox property definitions. */
 
-import type { ControlProperties } from '../control/types';
-import type { TextDirectionProperties } from '../../../../godot/text/paragraphDirection';
+import type { ButtonProperties } from '../button/types';
 
-/** The label shapes in `text_direction` and `language`, else the locale (`button.cpp:564-569`). */
-export interface CheckBoxProperties extends ControlProperties, TextDirectionProperties {
-  /** CheckBox label text. */
-  text?: string;
-  /** Whether the checkbox is in the checked/pressed state. */
-  buttonPressed?: boolean;
-  /** Disabled checkboxes render dimmed and non-interactive. */
-  disabled?: boolean;
+/** Button's properties, which a CheckBox parses and shapes its label with (`check_box.h:35`), plus its `button_group`. */
+export interface CheckBoxProperties extends ButtonProperties {
   /**
    * A `ButtonGroup` reference. Godot swaps the check glyph for the `radio_*`
    * icons when a CheckBox belongs to one (`check_box.cpp::is_radio`), so this

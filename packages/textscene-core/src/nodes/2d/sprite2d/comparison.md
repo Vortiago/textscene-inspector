@@ -1,7 +1,6 @@
 ---
 type: Sprite2D
 category: 2D
-status: done
 fixture: unit-sprite2d.tscn
 image: unit-sprite2d
 renders_as: an unlit textured quad
@@ -12,6 +11,15 @@ renders_as: an unlit textured quad
 Sprite2D draws a texture as a flat quad on the canvas. The previewer renders it as an
 unlit plane at the texture's pixel size, tinted by `modulate`. A Sprite2D with no texture draws
 nothing, as Godot does (`sprite_2d.cpp:159`). It samples with the `texture_filter` and `texture_repeat` inherited from its ancestors (see Node2D), unless its CanvasTexture sets its own. A CanvasTexture's `normal_texture` and `specular_texture` shade the sprite under PointLight2D and DirectionalLight2D (see those sheets), also through an AtlasTexture that cuts a cell of the CanvasTexture. A frame or region of a ViewportTexture blends its edge texels with the texels past it, as Godot's filter does. A texture that is set but fails to load draws a placeholder.
+
+## A GradientTexture2D with no gradient
+
+<!-- compare: image=unit-sprite2d-gradient-no-gradient status=done fixture=unit-sprite2d-gradient-no-gradient.tscn -->
+
+The texture never gets an image, so a Sprite2D draws Godot's 4 by 4 magenta and black placeholder
+(`gradient_texture.cpp:229-233`). Godot sizes the quad by the texture's `width` and `height`. It
+divides the source rectangle by the placeholder's size, so the sprite shows the corner texel
+stretched. A TextureRect shows the whole checkerboard.
 
 ## Linting
 

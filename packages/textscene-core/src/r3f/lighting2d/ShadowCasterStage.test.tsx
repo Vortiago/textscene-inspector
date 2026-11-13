@@ -1,7 +1,7 @@
 /**
  * The occluders' world snapshot follows the world matrices, which are not React values, and stays
- * referentially stable while nothing moves: a light memoises its shadow geometry on it, so a new
- * array per frame rebuilds every volume 60 times a second.
+ * referentially stable while nothing moves: a light memoises its shadow map on it, so a new
+ * array per frame rebuilds every map 60 times a second.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { ShadowCasterStage, useLightShadowCasters } from './ShadowCasterStage';
 import { useShadowCaster } from './shadowCasterRegistry';
-import { type OccluderCullMode } from './shadowVolumes';
+import { type OccluderCullMode } from './shadowCasterEdges';
 import type { WorldShadowCaster } from './shadowCasterRegistry';
 import { OccluderPolygon2DCullMode } from '../../godot/scene/lightOccluder2d';
 

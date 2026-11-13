@@ -10,7 +10,17 @@ renders_as: a collapsed dropdown box
 # OptionButton
 
 OptionButton is a dropdown that collapses to its selected item. The previewer draws
-that item's text and the theme's arrow inside the button's chrome.
+that item's text and the theme's arrow inside the button's chrome. `clip_text` zeroes each
+item's text width in the minimum size, and `TextParagraph::draw` cuts the label to its paragraph
+box. The previewer does both, so a box narrower than the item shows only the glyphs that fit.
+A trimming `text_overrun_behavior` zeroes the width the same way. The previewer trims the item
+to the box, with an ellipsis where Godot adds one, as Button does. `autowrap_mode` wraps the drawn
+item at its paragraph box. The box does not grow: Godot sizes every item as one line, so a wrapped
+item overflows the box above and below. The selected item's `icon` draws as Button's `icon` does.
+It follows `icon_alignment`, `vertical_icon_alignment`, `expand_icon` and `icon_max_width`. The minimum size takes the
+widest and tallest item with its own icon, or only the selected item where `fit_to_longest_item` is off. The theme
+constant `modulate_arrow` draws the arrow in the font colour of the button's state.
+The default-theme icons are Godot's own ThorVG rasters at theme scale 1, so their anti-aliased edges match. At another `gui/theme/default_theme_scale` the icons and the minimum size scale together. The browser rasters the scaled SVG, so the edge pixels differ by a rim.
 
 ## Linting
 
@@ -52,3 +62,4 @@ outline ring (ADR-0064).
 
 ## Known limitations
 
+None known.

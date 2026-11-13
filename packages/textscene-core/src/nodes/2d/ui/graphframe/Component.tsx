@@ -13,15 +13,15 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
+import { PositionedStyleBox } from '../../../../r3f/controls/native/PositionedStyleBox';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { isStyleBoxTexture, type ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
-import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
-import { useGodotLinearColor } from '../../../../r3f/godotColor';
+import { multiplyModulate, useItemLinearColor } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { useControlClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { soloLineLayout } from '../../../../r3f/controls/native/text/textLayout';
+import { PositionedIcon } from '../../../../r3f/controls/native/PositionedIcon';
 import {
   resolveTitleFontTheme,
   shapeTitleText,
@@ -29,10 +29,9 @@ import {
   titlebarGeometry,
 } from '../graphelement/graphTitlebar';
 import { RESIZER_SE_ICON, RESIZER_SE_ICON_SIZE } from '../graphelement/graphIcons';
+import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import {
   GRAPH_FRAME_RESIZER_COLOR,
-  GRAPH_FRAME_TITLE_DEFAULT_COLOR,
-  GRAPH_FRAME_TITLE_FONT_SIZE_PX,
   GRAPH_FRAME_TITLE_VARIATION,
   graphFrameStyles,
   graphFrameTitleTextMin,
@@ -58,13 +57,21 @@ function tintedPanel(base: ResolvedStyleBox, tintColor: Rgba, selected: boolean)
   };
 }
 
-export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
+export function GraphFrame({
+  solveNode,
+  tint,
+  childTint,
+  rect,
+  theme,
+  renderOrder,
+}: NativeControlComponentProps) {
   const props = painterView<GraphFrameProperties>(solveNode);
   // `<TextRun>` builds its own material, so it takes the ambient planes as a
   // prop rather than reading them (`nativeClipCoverage.test.tsx`'s own doc).
   const clippingPlanes = useControlClipPlanes();
   const selected = props.selected === true;
   const styles = graphFrameStyles(solveNode, theme);
+  const resizerSize = scaledIconSizeOf(RESIZER_SE_ICON_SIZE, theme.scale);
   const basePanel = selected ? styles.panelSelected : styles.panel;
   // `:126`: the untinted arm draws `sb_panel_flat` alone, so a texture panel
   // with tinting off draws nothing, as in the engine.
@@ -89,14 +96,8 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
 
   const title = props.title ?? '';
   const fontTheme = useMemo(
-    () =>
-      resolveTitleFontTheme(
-        solveNode,
-        GRAPH_FRAME_TITLE_VARIATION,
-        GRAPH_FRAME_TITLE_FONT_SIZE_PX,
-        GRAPH_FRAME_TITLE_DEFAULT_COLOR
-      ),
-    [solveNode]
+    () => resolveTitleFontTheme(solveNode, GRAPH_FRAME_TITLE_VARIATION, theme.fontSize),
+    [solveNode, theme.fontSize]
   );
   const titleLayout = useMemo(
     () => (title.length > 0 ? shapeTitleText(title, fontTheme) : null),
@@ -106,17 +107,28 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
     () =>
       titleLayout
         ? // `title_label` sets `HORIZONTAL_ALIGNMENT_CENTER` explicitly (`graph_frame.cpp:356`): alignment 1.
-          layoutLabelLines(titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h, 1, undefined)
+          layoutLabelLines(
+            titleLayout,
+            titlebarBand.contentRect.w,
+            titlebarBand.contentRect.h,
+            1,
+            undefined,
+            undefined,
+            {
+              contentMargin: fontTheme.box.contentMargin,
+            }
+          )
         : [],
-    [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h]
+    [titleLayout, titlebarBand.contentRect.w, titlebarBand.contentRect.h, fontTheme.box]
   );
   const titleLineLayouts = useMemo(
     () => (titleLayout ? titlePlacements.map((p) => soloLineLayout(p.line, titleLayout)) : []),
     [titlePlacements, titleLayout]
   );
+  // The title is a Label child (`graph_node.cpp:1325-1330`, `graph_frame.cpp:351-357`): no `self_modulate`.
   const titleTintColor = useMemo(
-    () => multiplyModulate(tint.own, fontTheme.color),
-    [tint.own, fontTheme.color]
+    () => multiplyModulate(childTint.own, fontTheme.color),
+    [childTint.own, fontTheme.color]
   );
 
   // `resizable && !autoshrink_enabled` (graph_frame.cpp:133, and `get_cursor_shape` at `:84`):
@@ -127,7 +139,7 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
     showResizer ? RESIZER_SE_ICON : null
   );
   const resizerCombined = useMemo(() => multiplyModulate(tint.own, GRAPH_FRAME_RESIZER_COLOR), [tint.own]);
-  const resizerColor = useGodotLinearColor(resizerCombined);
+  const resizerColor = useItemLinearColor(resizerCombined);
 
   return (
     <>
@@ -146,6 +158,12 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
         renderOrder={renderOrder}
       />
 
+      <PositionedStyleBox
+        box={fontTheme.box}
+        rect={titlebarBand.contentRect}
+        tint={childTint}
+        renderOrder={renderOrder}
+      />
       {titleLayout &&
         titlePlacements.map((placement, i) => (
           <CanvasItemGroup
@@ -167,16 +185,19 @@ export function GraphFrame({ solveNode, tint, rect, theme, renderOrder }: Native
         ))}
 
       {resizerTexture && (
-        <CanvasItemGroup position={[rect.w - RESIZER_SE_ICON_SIZE.x, -(rect.h - RESIZER_SE_ICON_SIZE.y), 0]}>
-          <ControlQuad
-            width={RESIZER_SE_ICON_SIZE.x}
-            height={RESIZER_SE_ICON_SIZE.y}
-            color={resizerColor}
-            opacity={resizerCombined.a}
-            map={resizerTexture}
-            renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
+        <PositionedIcon
+          rect={{
+            x: rect.w - resizerSize.x,
+            y: rect.h - resizerSize.y,
+            w: resizerSize.x,
+            h: resizerSize.y,
+          }}
+          texture={resizerTexture}
+          color={resizerColor}
+          opacity={resizerCombined.a}
+          renderOrder={renderOrder}
+          canvasKey={renderOrder}
+        />
       )}
     </>
   );

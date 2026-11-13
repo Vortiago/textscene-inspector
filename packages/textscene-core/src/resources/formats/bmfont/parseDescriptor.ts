@@ -12,6 +12,7 @@
 import { stringToInt } from '../../../godot/string/string';
 import type { BitmapGlyph } from '../../fonts/font/types';
 import { OEM_TO_UNICODE } from './oemTables';
+import { hasAsciiPrefix } from '../binaryresource/byteReader';
 
 /** The fixed size of a descriptor whose `info size` is 0 or absent (`font.cpp:1478`). */
 const DEFAULT_FIXED_SIZE = 16;
@@ -238,7 +239,7 @@ const BLOCK_HEADER_SIZE = 5;
 /** Bytes of a BMFont: `BMF` and a version byte for the binary format, else text. Throws on a file Godot refuses. */
 export function parseDescriptor(bytes: ArrayBuffer): BmfontDescriptor {
   const view = new Uint8Array(bytes);
-  const isBinary = BINARY_MAGIC.split('').every((char, index) => view[index] === char.charCodeAt(0));
+  const isBinary = hasAsciiPrefix(view, BINARY_MAGIC);
   const builder = new DescriptorBuilder(isBinary ? 'binary' : 'text');
   if (isBinary) parseBinary(bytes, builder);
   else parseText(new TextDecoder().decode(bytes), builder);

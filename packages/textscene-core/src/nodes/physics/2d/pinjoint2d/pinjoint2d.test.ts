@@ -1,28 +1,26 @@
 /**
- * PinJoint2D registration: it is parsed, and it draws nothing on purpose
- * (ADR-0008) rather than for want of an implementation.
+ * PinJoint2D registration: its own parser reads the properties its marker draws, and the node draws for
+ * every node, so its sheet may not claim `linter-only`.
  */
 
 import { describe, expect, it } from 'vitest';
 import { nodeRegistry } from '../../../../core/NodeRegistry';
 import { nodeComponentRegistry } from '../../../../r3f/NodeComponentRegistry';
 import { parseNode2D } from '../../../base/node2d/parser';
-import { Node2D } from '../../../base/node2d/Component';
+import { PinJoint2D } from './Component';
 import './index';
 import './index.r3f';
 
 describe('PinJoint2D registration', () => {
-  it('registers the Node2D base parser', () => {
-    const registration = nodeRegistry.getRegistration('PinJoint2D');
-    expect(registration).not.toBeNull();
-    expect(registration!.parser).toBe(parseNode2D);
+  it('registers its parser', () => {
+    expect(nodeRegistry.getRegistration('PinJoint2D')!.parser).toBe(parseNode2D);
   });
 
-  it('reuses the Node2D component so children keep their transform space', () => {
-    expect(nodeComponentRegistry.get('PinJoint2D')).toBe(Node2D);
+  it('registers its own component', () => {
+    expect(nodeComponentRegistry.get('PinJoint2D')).toBe(PinJoint2D);
   });
 
-  it('declares drawing nothing, so the sheet may claim linter-only', () => {
-    expect(nodeComponentRegistry.renderIntentOf('PinJoint2D')).toBe('transform-only');
+  it('draws, so the sheet may not claim linter-only', () => {
+    expect(nodeComponentRegistry.renderIntentOf('PinJoint2D')).toBe('draws');
   });
 });

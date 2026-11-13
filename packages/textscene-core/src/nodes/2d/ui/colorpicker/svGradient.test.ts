@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   svSquareBaseLayer,
   svSquareHueLayer,
-  hueStripGeometry,
+  verticalStripGeometry,
+  COLOR_HUE_STOPS,
   horizontalStripGeometry,
   linearizeStops,
 } from './svGradient';
@@ -57,25 +58,35 @@ describe('svSquareHueLayer', () => {
   });
 });
 
-describe('hueStripGeometry', () => {
+describe('verticalStripGeometry', () => {
   it('has 7 stops (14 vertices) and 6 quads (12 indices)', () => {
-    const g = hueStripGeometry(30, 256);
+    const g = verticalStripGeometry(30, 256, COLOR_HUE_STOPS);
     expect(g.positions).toHaveLength(7 * 2 * 3);
     expect(g.colors).toHaveLength(7 * 2 * 4);
     expect(g.indices).toHaveLength(6 * 2 * 3);
   });
 
   it('starts red at h=0 and returns to red at h=1 — default_theme.cpp:1104-1128', () => {
-    const g = hueStripGeometry(30, 256);
+    const g = verticalStripGeometry(30, 256, COLOR_HUE_STOPS);
     expect(g.colors.slice(0, 4)).toEqual([1, 0, 0, 1]);
     const lastStop = g.colors.length - 8;
     expect(g.colors.slice(lastStop, lastStop + 4)).toEqual([1, 0, 0, 1]);
   });
 
   it('runs top-to-bottom across the full height, y negated for three-space', () => {
-    const g = hueStripGeometry(30, 256);
+    const g = verticalStripGeometry(30, 256, COLOR_HUE_STOPS);
     const lastY = g.positions[g.positions.length - 2];
     expect(lastY).toBe(-256);
+  });
+
+  it('places a 3-stop value slider stop at half the height (color_picker_shape.cpp:1052-1069)', () => {
+    const white = { r: 1, g: 1, b: 1, a: 1 };
+    const grey = { r: 0.5, g: 0.5, b: 0.5, a: 1 };
+    const black = { r: 0, g: 0, b: 0, a: 1 };
+    const g = verticalStripGeometry(30, 256, [white, grey, black]);
+    expect(g.positions.slice(6, 9)).toEqual([0, -128, 0]);
+    expect(g.colors.slice(8, 12)).toEqual([0.5, 0.5, 0.5, 1]);
+    expect(g.indices).toHaveLength(2 * 6);
   });
 });
 

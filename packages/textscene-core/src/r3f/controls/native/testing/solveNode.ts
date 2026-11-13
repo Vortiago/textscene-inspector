@@ -9,7 +9,14 @@ import type { TscnNode } from '../../../../parser/types';
 import type { ControlProperties } from '../../../../nodes/2d/ui/control/types';
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
 import type { SolveNode } from '../solveTree';
-import { allocatePaintRange, WHOLE_CANVAS_RANGE, type PaintRange } from '../../../canvasPaintOrder';
+import {
+  allocateNodePaintRange,
+  behindRangesOf,
+  allocatePaintRange,
+  lastPaintSequence,
+  WHOLE_CANVAS_RANGE,
+  type PaintRange,
+} from '../../../canvasPaintOrder';
 
 /**
  * Frozen because every node this factory builds shares them, and `readonly` is
@@ -50,7 +57,10 @@ export function solveNode(): Pick<
   | 'icons'
   | 'resources'
   | 'paintRange'
+  | 'behindRanges'
   | 'paintSequence'
+  | 'backSequence'
+  | 'layerSequence'
   | 'skippedAncestors'
   | 'rtl'
   | 'locale'
@@ -76,7 +86,10 @@ export function solveNode(): Pick<
     // The whole canvas, which a lone Control owns. These defaults tie rather than
     // invent an order. A test asserting draw order uses `withPaintRanges`.
     paintRange: WHOLE_CANVAS_RANGE,
+    behindRanges: [],
     paintSequence: WHOLE_CANVAS_RANGE.base,
+    backSequence: lastPaintSequence(WHOLE_CANVAS_RANGE),
+    layerSequence: WHOLE_CANVAS_RANGE.base,
     // No skipped Node2D ancestor, the common case a hand-built tree states.
     skippedAncestors: null,
     // `LAYOUT_DIRECTION_INHERITED` all the way to a left-to-right root.
@@ -127,11 +140,15 @@ function shadowTree(n: SolveNode): TscnNode {
 
 /** Splits `own` between a node and its children through the production allocator. */
 function assignRange(node: SolveNode, own: PaintRange): SolveNode {
-  const allocated = allocatePaintRange(own, node.children.map(shadowTree));
+  const shadow = shadowTree(node);
+  const allocated = allocateNodePaintRange(own, shadow);
   return {
     ...node,
     paintRange: own,
+    behindRanges: behindRangesOf(shadow.children, allocated.children),
     paintSequence: allocated.self,
+    backSequence: allocated.back.base,
+    layerSequence: allocated.layer,
     children: node.children.map((child, i) => assignRange(child, allocated.children[i]!)),
   };
 }

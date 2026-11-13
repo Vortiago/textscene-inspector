@@ -26,6 +26,7 @@ import { withStubbedGl } from '../../../r3f/testing/stubbedGl';
 import { useCanvasModulateColor } from '../../../r3f/canvasModulate';
 
 import '../../../r3f/nodes/index';
+import { canvasColorSpaceOf } from '../../../r3f/canvasColorSpace';
 
 const SCENE = `[gd_scene format=3]
 [ext_resource type="Texture2D" path="${COOKIE}" id="1"]
@@ -38,6 +39,7 @@ polygon = PackedVector2Array(0, 0, 100, 0, 100, 100)
 texture = ExtResource("1")
 
 [node name="Viewport" type="SubViewport" parent="."]
+render_target_update_mode = 4
 size = Vector2i(200, 150)
 
 [node name="Floor" type="Polygon2D" parent="Viewport"]
@@ -86,7 +88,10 @@ interface Frame {
 /** The root canvas as the stage mounts it: its light pass over the tint its nodes give. */
 function TintedStage({ nodes }: { nodes: readonly TscnNode[] }) {
   return (
-    <CanvasLighting2DProvider canvasModulate={useCanvasModulateColor(nodes)}>
+    <CanvasLighting2DProvider
+      space={canvasColorSpaceOf(false)}
+      canvasModulate={useCanvasModulateColor(nodes)}
+    >
       <NodeDispatcher nodes={nodes} />
     </CanvasLighting2DProvider>
   );

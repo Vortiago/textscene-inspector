@@ -1,8 +1,8 @@
 /**
- * The WebGL Control mount point in the 2D viewport. `World2DContents` mounts it
- * beside `<NodeDispatcher>`, and it reads resources from the same ambient context
- * (ADR-0009). It feeds `buildSolveTree`, the project's viewport rect and theme
- * scale, and the layer-0 canvas modulate into `<ControlCanvasWalker>`.
+ * The WebGL Control mount point in the 2D viewport. `World2DContents` mounts it beside
+ * `<NodeDispatcher>`, and it reads resources from the same ambient context (ADR-0009).
+ * It feeds `buildSolveTree`, the project's viewport rect and theme scale, and the layer-0 canvas
+ * modulate into `<ControlCanvasWalker>`. The windows the root window embeds draw over the Controls.
  */
 import { useMemo } from 'react';
 import type { TscnNode } from '../../../parser/types';
@@ -16,6 +16,8 @@ import { useCanvasModulateColor, CanvasModulateContext } from '../../canvasModul
 import { canvasLayerRanks } from '../../canvasPaintOrder';
 import { LayerRanksProvider } from '../../contexts/PaintOrderContext';
 import { measureText } from './text/measurer';
+import { EmbeddedWindows } from '../../../nodes/windows/window/EmbeddedWindows';
+import { useStableVector2 } from '../../hooks/useStableVector2';
 
 interface ControlCanvasLayerProps {
   nodes: readonly TscnNode[];
@@ -37,11 +39,11 @@ function showRoots(nodes: readonly TscnNode[]): readonly TscnNode[] {
 export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
   const { externalResources, internalResources } = useSceneResources();
   const rootNodes = useMemo(() => showRoots(nodes), [nodes]);
-  const { tree, generation } = useBuildSolveTree(rootNodes, externalResources, internalResources);
+  const { tree, generation, windows } = useBuildSolveTree(rootNodes, externalResources, internalResources);
 
   // The project's `gui/theme/default_theme_scale`, not a constant scale 1.
   const { themeScale } = useProjectSettings();
-  const theme = useMemo(() => nativeTheme(themeScale), [themeScale]);
+  const theme = nativeTheme(themeScale);
   const viewport = useGameViewportRect();
   // A Control outside any `CanvasLayer` shares Godot's default canvas with the
   // world, so this scans the root list `NodeDispatcher` scans. The raw roots: a
@@ -52,6 +54,7 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
   // inherit them, and a different layer set would order Controls against the
   // world wrongly.
   const ranks = useMemo(() => canvasLayerRanks(rootNodes), [rootNodes]);
+  const embedderSize = useStableVector2({ x: viewport.w, y: viewport.h });
 
   return (
     <CanvasModulateContext.Provider value={canvasModulate}>
@@ -63,6 +66,7 @@ export function ControlCanvasLayer({ nodes }: ControlCanvasLayerProps) {
           theme={theme}
           measurer={measureText}
         />
+        <EmbeddedWindows windows={windows} embedderSize={embedderSize} forestPath="" theme={theme} />
       </LayerRanksProvider>
     </CanvasModulateContext.Provider>
   );

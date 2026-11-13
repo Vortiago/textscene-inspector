@@ -11,13 +11,7 @@
  */
 
 import type { Rect2 } from '../../../godot/math/rect2';
-import {
-  controlLayoutOrder,
-  controlProps,
-  isPromotedControl,
-  sortableView,
-  type SolveNode,
-} from './solveTree';
+import { controlLayoutOrder, controlProps, isLaidOutChild, sortableView, type SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import {
   controlSolverRegistry,
@@ -27,7 +21,7 @@ import {
 } from './solverRegistry';
 import type { SealedHandoff } from './solveHandoff';
 import { resolveControlLayout, type ControlLayoutOrder } from '../controlAnchors.js';
-import type { Vector2 } from '../../../godot/math/vector.js';
+import { type Vector2, vector2Max } from '../../../godot/math/vector.js';
 import { GrowDirection } from '../../../godot/scene/control.js';
 
 export interface SolvedControl {
@@ -40,6 +34,13 @@ export interface SolvedControl {
    * pure in `(n, theme)`, so both sides call a share (`solveHandoff.ts`).
    */
   meta?: SealedHandoff;
+  /** The scale the parent's layout wrote onto this node, or `undefined` to keep the authored one. */
+  scale?: Vector2;
+  /**
+   * True when the parent's layout reset this node to rotation 0 and scale 1, as
+   * `Container::fit_child_in_rect` does.
+   */
+  resetsChildTransform?: boolean;
 }
 
 // --- Anchors ---------------------------------------------------------------
@@ -111,7 +112,12 @@ function floorAtMinimumSize(
  * them (`:1775-1797`) touches neither `x` nor `w`.
  */
 function mirrorRectRtl(rect: Rect2, parentWidth: number): Rect2 {
-  return { ...rect, x: parentWidth - rect.x - rect.w };
+  return { ...rect, x: mirrorX(rect.x, rect.w, parentWidth) };
+}
+
+/** The left edge of a span of `width` at `x`, mirrored inside a parent `parentWidth` wide. */
+export function mirrorX(x: number, width: number, parentWidth: number): number {
+  return parentWidth - x - width;
 }
 
 /**
@@ -146,12 +152,21 @@ function parentAnchorableRect(n: SolveNode, parentRect: Rect2): Rect2 {
  * `instanceof Map`: TS cannot narrow a `ReadonlyMap` with `instanceof`, and no
  * `Map` has a `rects` own property, so the test is exact.
  */
-function normalizeContainerLayoutResult(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): {
+export function normalizeContainerLayoutResult(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): {
   rects: ReadonlyMap<string, Rect2>;
   meta: SealedHandoff | undefined;
+  childScales: ReadonlyMap<string, Vector2> | undefined;
+  resetsChildTransform: boolean;
 } {
-  if ('rects' in result) return { rects: result.rects, meta: result.meta };
-  return { rects: result, meta: undefined };
+  if ('rects' in result) {
+    return {
+      rects: result.rects,
+      meta: result.meta,
+      childScales: result.childScales,
+      resetsChildTransform: result.resetsChildTransform ?? true,
+    };
+  }
+  return { rects: result, meta: undefined, childScales: undefined, resetsChildTransform: true };
 }
 
 /**
@@ -163,7 +178,7 @@ export function combinedMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
   const typeFn = controlSolverRegistry.minimumSize(n.node.type);
   const typeMin = typeFn ? typeFn(sortableView(n), ctx) : { x: 0, y: 0 };
   const custom = controlProps(n).customMinimumSize ?? { x: 0, y: 0 };
-  return { x: Math.max(typeMin.x, custom.x), y: Math.max(typeMin.y, custom.y) };
+  return vector2Max(typeMin, custom);
 }
 
 /**
@@ -195,7 +210,8 @@ function presetTimeMinimumSize(n: SolveNode, ctx: SolveContext): Vector2 {
 export function createSolveContext(
   theme: NativeTheme,
   measureText: TextMeasurer | null = null,
-  tentativeRect?: (n: SolveNode) => Rect2 | undefined
+  tentativeRect?: (n: SolveNode) => Rect2 | undefined,
+  embedderSize?: Vector2
 ): SolveContext {
   const cache = new Map<string, Vector2>();
   const ctx: SolveContext = {
@@ -211,27 +227,24 @@ export function createSolveContext(
       return value;
     },
     tentativeRect,
+    embedderSize,
   };
   return ctx;
 }
 
 /**
- * Whether any node's type is registered through `registerSizeDependentMinimum`,
+ * Whether any node's minimum size reads `tentativeRect` (`registerSizeDependentMinimum`),
  * which alone makes `solveControlTree` run its second pass.
  */
 function hasSizeDependentMinimum(roots: readonly SolveNode[]): boolean {
   for (const node of roots) {
-    if (controlSolverRegistry.isSizeDependentMinimum(node.node.type)) return true;
+    if (controlSolverRegistry.readsTentativeRect(node)) return true;
     if (hasSizeDependentMinimum(node.children)) return true;
   }
   return false;
 }
 
 // --- Phase 2: top-down rect assignment ---------------------------------------
-
-function record(n: SolveNode, rect: Rect2, minSize: Vector2, out: Map<string, SolvedControl>): void {
-  out.set(n.path, { rect, minSize });
-}
 
 /**
  * Solves `n`'s own rect against `parentRect` on the free path
@@ -244,7 +257,8 @@ function solveFree(
   origin: Vector2,
   viewport: Rect2,
   ctx: SolveContext,
-  out: Map<string, SolvedControl>
+  out: Map<string, SolvedControl>,
+  resetsChildTransform?: boolean
 ): void {
   const minSize = ctx.combinedMinimumSize(n);
   let rect: Rect2;
@@ -261,7 +275,7 @@ function solveFree(
     );
     if (n.rtl) rect = mirrorRectRtl(rect, anchorable.w);
   }
-  record(n, rect, minSize, out);
+  out.set(n.path, { rect, minSize, resetsChildTransform });
   dispatchChildren(n, rect, { x: origin.x + rect.x, y: origin.y + rect.y }, viewport, ctx, out);
 }
 
@@ -288,23 +302,26 @@ function dispatchChildren(
     return;
   }
 
-  // A promoted child is no `get_child(i)` of this Container, so it stays free
-  // against the zero rect `parentAnchorableRect` gives it.
-  for (const child of n.children.filter(isPromotedControl)) {
-    solveFree(child, rect, origin, viewport, ctx, out);
-  }
+  const laidOut: SolveNode[] = [];
+  const unplaced: SolveNode[] = [];
+  for (const child of n.children) (isLaidOutChild(n, child) ? laidOut : unplaced).push(child);
 
-  const childEntries = n.children
-    .filter((child) => !isPromotedControl(child))
-    .map((child) => ({
-      node: child,
-      minSize: ctx.combinedMinimumSize(child),
-    }));
+  const childEntries = laidOut.map((child) => ({
+    node: child,
+    minSize: ctx.combinedMinimumSize(child),
+  }));
   // No container registers chrome yet; one that does insets its own content
   // rect before calling its ContainerLayoutFn.
-  const { rects: childRects, meta: containerMeta } = normalizeContainerLayoutResult(
-    containerFn(sortableView(n), childEntries, rect, ctx)
-  );
+  const {
+    rects: childRects,
+    meta: containerMeta,
+    childScales,
+    resetsChildTransform,
+  } = normalizeContainerLayoutResult(containerFn(sortableView(n), childEntries, rect, ctx));
+
+  // A child the layout does not place stays free against the rect `parentAnchorableRect` gives
+  // it: zero for a promoted one, the boundary's own for one a canvas boundary adopted.
+  for (const child of unplaced) solveFree(child, rect, origin, viewport, ctx, out, resetsChildTransform);
 
   // The caller has already recorded `n`, so the handoff is patched in.
   if (containerMeta !== undefined) {
@@ -336,7 +353,12 @@ function dispatchChildren(
       );
       childRect = child.rtl ? mirrorRectRtl(floored, rect.w) : floored;
     }
-    record(child, childRect, minSize, out);
+    out.set(child.path, {
+      rect: childRect,
+      minSize,
+      scale: childScales?.get(child.path),
+      resetsChildTransform,
+    });
     dispatchChildren(
       child,
       childRect,
@@ -373,7 +395,12 @@ export function solveControlTree(
   // it drives. Godot's `_size_changed`/`update_minimum_size` are reactive too, so
   // a scene that couples them through a container converges in neither.
 
-  const pass2Ctx = createSolveContext(ctx.theme, ctx.measureText, (n) => out.get(n.path)?.rect);
+  const pass2Ctx = createSolveContext(
+    ctx.theme,
+    ctx.measureText,
+    (n) => out.get(n.path)?.rect,
+    ctx.embedderSize
+  );
   const out2 = new Map<string, SolvedControl>();
   for (const root of roots) {
     solveFree(root, viewport, rootOrigin, viewport, pass2Ctx, out2);

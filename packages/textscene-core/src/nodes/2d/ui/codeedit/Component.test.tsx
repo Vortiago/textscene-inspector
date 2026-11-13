@@ -9,6 +9,7 @@ import type { TscnNode } from '../../../../parser/types';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { CodeEdit } from './Component';
+import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { CodeEditProperties } from './types';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
@@ -170,5 +171,60 @@ describe('<CodeEdit> — indent_size (text_edit.cpp:349-351)', () => {
       />
     );
     expect(bundledRunMeshes(wide.scene).length).toBeGreaterThan(bundledRunMeshes(narrow.scene).length);
+  });
+});
+
+/** Every `<StyleBoxQuad>` mesh: the panel, and a track and a grabber for each scroll bar. */
+function chromeMeshCount(scene: Rendered['scene']) {
+  return scene
+    .findAllByType('Mesh')
+    .map((m) => m.instance as THREE.Mesh)
+    .filter((m) => (m.geometry as THREE.BufferGeometry).attributes.color !== undefined).length;
+}
+
+const PANEL_MESHES = 1;
+const BAR_MESHES = 2;
+const SIX_LINES = 'one\ntwo\nthree\nfour\nfive\nsix';
+
+describe('<CodeEdit> — scroll bars (text_edit.cpp:8587-8656)', () => {
+  it('draws one vertical bar, a track and a grabber, for six rows in 100 px', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit {...painterEnv()} solveNode={solveNode({ text: SIX_LINES })} rect={RECT} renderOrder={0} />
+    );
+    expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES + BAR_MESHES);
+  });
+
+  it('draws no bar for two rows', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit {...painterEnv()} solveNode={solveNode({ text: 'one\ntwo' })} rect={RECT} renderOrder={0} />
+    );
+    expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES);
+  });
+
+  it('draws no bar under scroll_fit_content_height', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        solveNode={solveNode({ text: SIX_LINES, fitContentHeight: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(chromeMeshCount(renderer.scene)).toBe(PANEL_MESHES);
+  });
+});
+
+describe('<CodeEdit> — self_modulate', () => {
+  it('tints the box with tint and the text and the line numbers with childTint', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <CodeEdit
+        {...painterEnv()}
+        {...splitTints}
+        solveNode={solveNode({ text: 'a\nb', gutters_draw_line_numbers: true } as never)}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(countTintSplit(renderer.scene)).toEqual({ own: 1, child: 2 });
   });
 });

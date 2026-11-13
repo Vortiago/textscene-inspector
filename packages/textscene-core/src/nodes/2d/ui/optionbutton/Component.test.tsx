@@ -17,7 +17,21 @@ import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFont
 import { OptionButton } from './Component';
 import type { OptionButtonProperties } from './types';
 import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
-import { bundledRunMeshes, bundledRuns } from '../../../../r3f/controls/native/testing/bundledRunStub';
+import {
+  findIconMeshes,
+  findTextMesh,
+  OWN_ICON_REF,
+  OWN_ICON_SCOPE,
+  renderUnloaded,
+  renderWithOwnIcon,
+  worldPosition,
+} from '../../../../r3f/controls/native/testing/ownIcon';
+import {
+  bundledRunMeshes,
+  bundledRuns,
+  inkedGlyphCount,
+  inkedGlyphCounts,
+} from '../../../../r3f/controls/native/testing/bundledRunStub';
 import { findCanvasTextMesh } from '../../../../r3f/controls/native/testing/canvasTextMesh';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
@@ -85,6 +99,33 @@ describe('<OptionButton> (isolated painter contract)', () => {
     const mesh = findChromeMesh(renderer.scene)!;
     const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
     expect(color.getW(0)).toBeCloseTo(0.3, 5);
+  });
+
+  it('draws the pressed fill once button_pressed=true (style_pressed_color)', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <OptionButton
+        {...painterEnv()}
+        solveNode={solveNode({ buttonPressed: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    const mesh = findChromeMesh(renderer.scene)!;
+    const color = (mesh.geometry as THREE.BufferGeometry).attributes.color as THREE.BufferAttribute;
+    expect(color.getX(0)).toBeCloseTo(0, 5);
+    expect(color.getW(0)).toBeCloseTo(0.6, 5);
+  });
+
+  it('uses control_font_pressed_color for the label once button_pressed=true', async () => {
+    const renderer = await ReactThreeTestRenderer.create(
+      <OptionButton
+        {...painterEnv()}
+        solveNode={solveNode({ items: ITEMS, selected: 1, buttonPressed: true })}
+        rect={RECT}
+        renderOrder={0}
+      />
+    );
+    expect(bundledRuns(renderer.scene)[0]!.tint.r).toBeCloseTo(1, 5);
   });
 
   it('skips the chrome StyleBox when flat, keeping the arrow', async () => {
@@ -178,7 +219,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
     expect(textTint.r).toBeCloseTo(0.21875, 5);
   });
 
-  it('forwards renderOrder to every mesh (chrome, arrow, text)', async () => {
+  it('keeps every mesh inside its own unit of render order (chrome, arrow and text)', async () => {
     const renderer = await ReactThreeTestRenderer.create(
       <OptionButton
         {...painterEnv()}
@@ -189,7 +230,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
     );
     const meshes = renderer.scene.findAllByType('Mesh').map((m) => m.instance as THREE.Mesh);
     expect(meshes.length).toBeGreaterThanOrEqual(3);
-    for (const mesh of meshes) expect(mesh.renderOrder).toBe(7);
+    for (const mesh of meshes) expect(Math.floor(mesh.renderOrder)).toBe(7);
   });
 });
 
@@ -197,7 +238,7 @@ describe('<OptionButton> (isolated painter contract)', () => {
  * The scene-font path (canvas-kind `FontMetrics`) end to end. OptionButton's placement
  * (`option_button.cpp:113-121` plus Button's internal margin) has nothing font-kind-specific.
  */
-describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', () => {
+describe('<OptionButton>: scene-font (canvas-kind FontMetrics) text path', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     controlSolverRegistry.clear();
@@ -259,5 +300,96 @@ describe('<OptionButton> — scene-font (canvas-kind FontMetrics) text path', ()
     };
     expect(await arrowX(false)).toBe(134);
     expect(await arrowX(true)).toBe(4);
+  });
+});
+
+describe('<OptionButton>: text_overrun_behavior trims the label to its paragraph box (button.cpp:428-432)', () => {
+  const inkedCount = (r: Rendered) => inkedGlyphCount(bundledRuns(r.scene)[0]!);
+
+  async function render(properties: Partial<OptionButtonProperties>) {
+    return ReactThreeTestRenderer.create(
+      <OptionButton
+        {...painterEnv()}
+        solveNode={solveNode({ items: [{ text: 'AAAA BBBB CCCC', id: 0 }], selected: 0, ...properties })}
+        rect={{ x: 0, y: 0, w: 112, h: 32 }}
+        renderOrder={0}
+      />
+    );
+  }
+
+  it('draws only the whole words that fit under OVERRUN_TRIM_WORD', async () => {
+    // 'AAAA BBBB' is 88.6 px, wider than the 80 px box: the word trim keeps the 4 glyphs of 'AAAA',
+    // where the paragraph cut alone keeps the glyphs of 'BBB' too.
+    const trimmed = await render({ overrunBehavior: 2 });
+    const cut = await render({ overrunBehavior: 0 });
+    expect(inkedCount(trimmed)).toBe(4);
+    expect(inkedCount(cut)).toBeGreaterThan(4);
+  });
+});
+
+describe('<OptionButton>: autowrap_mode wraps the drawn label though the box keeps one line (button.cpp:428-432)', () => {
+  async function render(properties: Partial<OptionButtonProperties>) {
+    return ReactThreeTestRenderer.create(
+      <OptionButton
+        {...painterEnv()}
+        solveNode={solveNode({ items: [{ text: 'alpha bravo charlie', id: 0 }], selected: 0, ...properties })}
+        rect={{ x: 0, y: 0, w: 100, h: 40 }}
+        renderOrder={0}
+      />
+    );
+  }
+
+  it('draws three lines', async () => {
+    const wrapped = await render({ autowrapMode: 2 });
+    expect(inkedGlyphCounts(wrapped.scene)).toEqual([5, 5, 7]);
+  });
+
+  it('draws one line at AUTOWRAP_OFF', async () => {
+    const unwrapped = await render({});
+    expect(inkedGlyphCounts(unwrapped.scene)).toHaveLength(1);
+  });
+});
+
+describe("<OptionButton>: the selected item's icon (option_button.cpp:424, button.cpp:333-405)", () => {
+  const ICON_ITEMS = [
+    { text: 'Easy', id: 0 },
+    { text: 'Hard', id: 1, icon: OWN_ICON_REF },
+  ];
+  const painter = (selected: number) => (
+    <OptionButton
+      {...painterEnv()}
+      solveNode={{
+        ...solveNode({ items: ICON_ITEMS, selected }),
+        resources: OWN_ICON_SCOPE,
+        textureSize: { x: 12, y: 12 },
+        textureSlots: { icon: { x: 12, y: 12 } },
+      }}
+      rect={RECT}
+      renderOrder={0}
+    />
+  );
+  const groupOf = (mesh: THREE.Mesh) => mesh.parent!.position;
+
+  it('draws the icon at the left margin, ahead of the arrow', async () => {
+    const [icon, arrow] = findIconMeshes((await renderWithOwnIcon(painter(1), { w: 12, h: 12 })).scene);
+    expect([groupOf(icon!).x, groupOf(icon!).y]).toEqual([8, -10]);
+    expect(groupOf(arrow!).x).toBe(134);
+  });
+
+  it('moves the label past the icon and h_separation: 8 + 12 + 4', async () => {
+    const renderer = await renderWithOwnIcon(painter(1), { w: 12, h: 12 });
+    expect(worldPosition(findTextMesh(renderer.scene)!).x).toBe(24);
+  });
+
+  it('draws only the arrow for a selected item without an icon', async () => {
+    const renderer = await renderWithOwnIcon(painter(0), { w: 12, h: 12 });
+    expect(findIconMeshes(renderer.scene)).toHaveLength(1);
+  });
+
+  it("lays the label out for the solver's icon size before the texture loads", async () => {
+    const unloaded = await renderUnloaded(painter(1));
+    const loaded = await renderWithOwnIcon(painter(1), { w: 12, h: 12 });
+    expect(findIconMeshes(unloaded.scene)).toHaveLength(1);
+    expect(worldPosition(findTextMesh(unloaded.scene)!).x).toBe(worldPosition(findTextMesh(loaded.scene)!).x);
   });
 });

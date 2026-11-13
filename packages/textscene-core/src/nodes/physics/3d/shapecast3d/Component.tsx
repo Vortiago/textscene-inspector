@@ -7,16 +7,15 @@
 import type { NodeComponentProps } from '../../../../r3f/NodeComponentRegistry';
 import { Node3D } from '../../../base/node3d/Component';
 import { useGizmoDrawn } from '../../../../r3f/hooks/useGizmoState';
-import { useSceneResources } from '../../../../r3f/SceneResourcesContext';
-import { useSubOrExtResource } from '../../../../resources/useSubOrExtResource';
+import { useNodeResource } from '../../../../resources/reading';
+import { SHAPE_3D } from '../../../../resources/shapes/shape3d';
 import { ShapeCastGizmo } from './ShapeCastGizmo';
 import { DEFAULT_ENABLED, DEFAULT_TARGET_POSITION } from './types';
 import type { ShapeCast3DProperties } from './types';
 
 export function ShapeCast3D({ node, children }: NodeComponentProps) {
   const props = node.properties as ShapeCast3DProperties;
-  const sceneResources = useSceneResources();
-  const shape = useSubOrExtResource(props.shape, sceneResources)?.resource ?? null;
+  const shape = useNodeResource(props.shape, SHAPE_3D).value;
   const drawsGizmo = useGizmoDrawn('every-node');
   return (
     <Node3D node={node}>

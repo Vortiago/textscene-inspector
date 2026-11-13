@@ -6,4 +6,7 @@
 
 export type { Follow, HeldResource, Read, ResourceKind, ResourceSnapshot, UnavailableReason } from './read';
 export type { ScopedReference } from './scopedReference';
-export { useNodeResource } from './useNodeResource';
+export { nodeReference } from './scopedReference';
+export { snapshotOver } from './snapshot';
+export type { NodeRead } from './useNodeResource';
+export { useNodeResource, useSnapshotRead } from './useNodeResource';

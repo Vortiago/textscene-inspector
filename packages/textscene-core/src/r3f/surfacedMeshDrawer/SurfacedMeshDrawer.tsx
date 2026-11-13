@@ -7,7 +7,7 @@
 
 import { useRef, type ReactNode, type RefObject } from 'react';
 import type * as THREE from 'three';
-import { geometryDrawsPoints } from '../../resources/meshes/godotSurface';
+import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import { InstancePasses } from '../materials/InstancePasses';
 import type { MaterialSource } from '../materials/materialSource';
 import { drawnElementOf } from '../materials/nextPass';
@@ -88,7 +88,7 @@ function BodyParts({
   const [first, ...later] = parts;
   // The body is the first part's draw, and a mesh holds its triangles before its points.
   const { Drawn, skin } = drawnElementOf(
-    first !== undefined && geometryDrawsPoints(first.geometry),
+    first === undefined ? 'triangles' : geometryPrimitive(first.geometry),
     skeleton
   );
   const placed = body.transform ? node3dGroupSpread(body.transform) : AT_PARENT;
@@ -111,13 +111,13 @@ function BodyParts({
 }
 
 /**
- * A part after the first: the points of a mesh that also holds triangles. A child of the body, so
+ * A part after the first: the points or lines of a mesh that also holds triangles. A child of the body, so
  * it shares the body's place, with passes of its own, as Godot draws the overlay over every surface.
  */
 function LaterPart({ part }: { part: MeshPart }) {
   const { shadow, layers } = useInstanceDraw();
   const drawRef = useRef<DrawnBody | null>(null);
-  const Drawn = drawnTag(geometryDrawsPoints(part.geometry));
+  const Drawn = drawnTag(geometryPrimitive(part.geometry));
   return (
     <Drawn ref={drawRef} {...drawHookProps(shadow)} userData={visualLayersUserData(layers)}>
       <PartPasses part={part} drawRef={drawRef} />
@@ -141,7 +141,7 @@ function PartPasses({
       <InstancePasses
         meshRef={drawRef}
         sources={part.materials}
-        drawsPoints={geometryDrawsPoints(part.geometry)}
+        primitive={geometryPrimitive(part.geometry)}
         skeleton={skeleton}
       />
     </>

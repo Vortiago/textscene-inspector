@@ -14,32 +14,34 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import type { ItemListProperties } from './types';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import {
+  ICON_MODE_LEFT,
   itemIconColor,
   itemIconDraw,
   itemIconPackedSize,
   itemListGuideColor,
+  itemListDrawClip,
   itemListGuideLines,
-  isItemTextFillDrawn,
   itemListMirrorX,
-  itemListRightAlignOffsetPx,
+  itemListRowsInClip,
+  itemListCursorRect,
+  itemListSelectedRect,
+  itemListSeparatorsInClip,
+  itemListMaxColumnWidth,
   itemListRowTextX,
   itemListLineTextWidthPx,
   itemListWrappedTextWidthPx,
-  itemListSeparation,
+  itemListSpacing,
   itemMinimumSize,
   itemTextColor,
-  isItemTextWrapped,
+  isItemListTextWrapped,
   itemTextDrawOffset,
-  itemTextLineCenterOffset,
   packItemListRows,
-  trimItemListText,
-  shapeItemText,
+  shapeItemListText,
 } from './nativeSolver';
 import { ItemListIconMode } from '../../../../godot/scene/gui';
-
-const { ICON_MODE_TOP, ICON_MODE_LEFT } = ItemListIconMode;
 import type { Vector2 } from '../../../../godot/math/vector';
-import { OverrunBehavior } from '../../../../godot/text/textServerEnums';
+import type { ItemListScrollRange } from './nativeSolver';
+import { shapedTextSizeWidthPx } from '../../../../r3f/controls/native/text/textLayout';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 const itemListMinimumSize = controlSolverRegistry.minimumSize('ItemList')!;
@@ -67,123 +69,391 @@ function topTextItem(textHeight: number) {
     iconSize: { x: 0, y: 0 },
     hasText: true,
     textSize: { x: 10, y: textHeight },
-    iconMode: ICON_MODE_TOP,
+    iconMode: ItemListIconMode.ICON_MODE_TOP,
     maxTextLines: 1,
     fixedColumnWidth: 0,
   };
 }
 
-describe('itemListSeparation / line_separation', () => {
-  it('is round(4*scale) / round(2*scale) at scale 1 (happy path)', () => {
-    expect(itemListSeparation(nativeTheme(1))).toBe(4);
-    // default_theme.cpp:949 sets line_separation to round(2 * scale).
-    expect(itemMinimumSize(topTextItem(20), nativeTheme(1)).y).toBe(20 + 2 + 4);
+describe('itemListSpacing', () => {
+  it('is round(4*scale) and round(2*scale) at scale 1 (default_theme.cpp:945-948)', () => {
+    expect(itemListSpacing({}, nativeTheme(1))).toEqual({
+      hSeparation: 4,
+      vSeparation: 4,
+      iconMargin: 4,
+      lineSeparation: 2,
+    });
   });
 
-  it('scales with the project theme scale (edge case)', () => {
-    expect(itemListSeparation(nativeTheme(2))).toBe(8);
-    expect(itemMinimumSize(topTextItem(20), nativeTheme(2)).y).toBe(20 + 4 + 8);
+  it('scales with the project theme scale', () => {
+    expect(itemMinimumSize(topTextItem(20), itemListSpacing({}, nativeTheme(2))).y).toBe(20 + 4 + 8);
+  });
+
+  it('takes each constant the node overrides', () => {
+    const constants = { h_separation: 10, v_separation: 6, icon_margin: 3, line_separation: 1 };
+    expect(itemListSpacing(constants, nativeTheme(1))).toEqual({
+      hSeparation: 10,
+      vSeparation: 6,
+      iconMargin: 3,
+      lineSeparation: 1,
+    });
   });
 });
 
-describe('shapeItemText — direction (item_list.h:73-74)', () => {
+describe('shapeItemListText — direction (item_list.h:73-74)', () => {
   it('takes the direction of neutral text from the locale (`item_list.cpp:45`)', () => {
-    const layout = shapeItemText({
+    const layout = shapeItemListText({
       text: '123!',
       fontSizePx: 16,
       fontMetrics: OPEN_SANS_FONT_METRICS,
-      fixedColumnWidth: 0,
+      widthPx: 0,
       iconMode: ICON_MODE_LEFT,
       maxTextLines: 1,
       locale: 'he',
-    }).shaped;
+    });
     expect(visualChars(layout!.lines[0]!)).toBe('!123');
   });
 });
 
-describe('shapeItemText — wrapping (item_list.cpp:37-55)', () => {
+describe('shapeItemListText — wrapping (item_list.cpp:37-55)', () => {
   const wrapInput = {
     text: 'AA AA AA',
     fontSizePx: 16,
     fontMetrics: OPEN_SANS_FONT_METRICS,
-    fixedColumnWidth: 30,
+    widthPx: 30,
+    overrunBehavior: 0,
     locale: '',
   };
 
   it('wraps only TOP icon mode with max_text_lines > 0 (happy path)', () => {
     expect(
-      shapeItemText({ ...wrapInput, iconMode: ICON_MODE_TOP, maxTextLines: 2 }).shaped!.lines.length
+      shapeItemListText({ ...wrapInput, iconMode: ItemListIconMode.ICON_MODE_TOP, maxTextLines: 2 })!.lines
+        .length
     ).toBeGreaterThan(1);
   });
 
   it('never wraps LEFT icon mode, whatever max_text_lines (error path)', () => {
     expect(
-      shapeItemText({ ...wrapInput, iconMode: ICON_MODE_LEFT, maxTextLines: 2 }).shaped!.lines
+      shapeItemListText({ ...wrapInput, iconMode: ICON_MODE_LEFT, maxTextLines: 2 })!.lines
     ).toHaveLength(1);
   });
 
   it('never wraps TOP icon mode with max_text_lines <= 0 (edge case)', () => {
     expect(
-      shapeItemText({ ...wrapInput, iconMode: ICON_MODE_TOP, maxTextLines: 0 }).shaped!.lines
+      shapeItemListText({ ...wrapInput, iconMode: ItemListIconMode.ICON_MODE_TOP, maxTextLines: 0 })!.lines
     ).toHaveLength(1);
   });
 });
 
-describe('trimItemListText — overrun trim (item_list.h:131 default OVERRUN_TRIM_ELLIPSIS)', () => {
-  const FONT_SIZE_PX = 16;
+describe('shapeItemListText — overrun trim (item_list.h:131 default OVERRUN_TRIM_ELLIPSIS)', () => {
+  const baseInput = {
+    fontSizePx: 16,
+    fontMetrics: OPEN_SANS_FONT_METRICS,
+    iconMode: ICON_MODE_LEFT,
+    maxTextLines: 1,
+    locale: '',
+  };
 
-  function trimmedChars(
-    widthPx: number,
-    overrunBehavior?: number,
-    iconMode: number = ICON_MODE_LEFT
-  ): string {
-    const shape = { iconMode, maxTextLines: 1 };
-    const shaped = shapeItemText({
-      ...shape,
+  /** The characters the first line draws, left to right: `line.text` keeps the untrimmed source. */
+  const drawnChars = (layout: ReturnType<typeof shapeItemListText>) => visualChars(layout!.lines[0]!);
+
+  it('trims to the shape width by default, appending an ellipsis (matches text_overrun.test.ts derivation)', () => {
+    const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', widthPx: 100 });
+    expect(drawnChars(layout)).toBe('AAAAAAAA…');
+  });
+
+  it('is a no-op at an unconstrained shape width — nothing to trim against', () => {
+    const layout = shapeItemListText({ ...baseInput, text: 'AAAAAAAAAAAA', widthPx: 0 });
+    expect(drawnChars(layout)).toBe('AAAAAAAAAAAA');
+  });
+
+  it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed at a constrained width', () => {
+    const layout = shapeItemListText({
+      ...baseInput,
       text: 'AAAAAAAAAAAA',
-      fontSizePx: FONT_SIZE_PX,
-      fontMetrics: OPEN_SANS_FONT_METRICS,
-      fixedColumnWidth: 0,
-      locale: '',
-    }).shaped!;
-    const layout = trimItemListText(shaped, widthPx, { ...shape, fontSizePx: FONT_SIZE_PX, overrunBehavior });
-    return layout.lines[0]!.glyphs.map((glyph) => glyph.char).join('');
-  }
-
-  it('trims to the width by default, appending an ellipsis (matches text_overrun.test.ts derivation)', () => {
-    expect(trimmedChars(100)).toBe('AAAAAAAA…');
-  });
-
-  // text_server_adv.cpp:5958 trims only at a positive width, as a draw width past the icon can be.
-  it('leaves the text whole at a width of 0 or less', () => {
-    expect(trimmedChars(0)).toBe('AAAAAAAAAAAA');
-    expect(trimmedChars(-30)).toBe('AAAAAAAAAAAA');
-  });
-
-  it('OVERRUN_NO_TRIMMING (0) leaves the text untrimmed', () => {
-    expect(trimmedChars(100, OverrunBehavior.OVERRUN_NO_TRIMMING)).toBe('AAAAAAAAAAAA');
-  });
-
-  // text_paragraph.cpp:228-262: an autowrapped paragraph trims only a line that hides the next.
-  it('leaves wrapped TOP-mode text untrimmed', () => {
-    expect(trimmedChars(100, undefined, ICON_MODE_TOP)).toBe('AAAAAAAAAAAA');
+      widthPx: 100,
+      overrunBehavior: 0,
+    });
+    expect(drawnChars(layout)).toBe('AAAAAAAAAAAA');
   });
 
   // `unit-item-list-text-direction` in Godot 4.6.3: the fill keeps the visual left part.
   it('keeps the visual left part of an AUTO Hebrew item and ends in the ellipsis', () => {
-    const shape = { iconMode: ICON_MODE_LEFT, maxTextLines: 1 };
-    const shaped = shapeItemText({
-      ...shape,
-      text: 'שלום עולם רחב מאוד',
-      fontSizePx: FONT_SIZE_PX,
-      fontMetrics: OPEN_SANS_FONT_METRICS,
-      fixedColumnWidth: 0,
-      locale: '',
-    }).shaped!;
+    const text = 'שלום עולם רחב מאוד';
+    const whole = shapeItemListText({ ...baseInput, text, widthPx: 0 })!;
     const chars = visualChars(
-      trimItemListText(shaped, shaped.widthPx * 0.75, { ...shape, fontSizePx: FONT_SIZE_PX }).lines[0]!
+      shapeItemListText({ ...baseInput, text, widthPx: whole.widthPx * 0.75 })!.lines[0]!
     );
     expect([chars[0], chars.at(-1)]).toEqual(['ד', '…']);
+  });
+});
+
+/**
+ * Measured through `TextParagraph` with `ItemList::_shape_text`'s break flags, overrun behaviour and
+ * `max_lines_visible` (Godot 4.6.3, `item_list.cpp:37-55`), at the width each pass hands `set_width`.
+ * Widths are `shaped_text_get_width`, ceiled. Heights are one 23 px line each at 16 px Open Sans.
+ */
+describe('shapeItemListText — against TextParagraph (text_paragraph.cpp:225-266)', () => {
+  const LINE_HEIGHT_PX = 23;
+  const cases = [
+    // A word wider than the box breaks at the last glyph that fits (BREAK_GRAPHEME_BOUND wins).
+    {
+      name: 'breaks a long word per glyph',
+      text: 'Supercalifragilistic',
+      top: true,
+      overrun: 3,
+      max: 3,
+      width: 56,
+      lines: ['Superc', 'alifragi', 'listic'],
+      widths: [54, 54, 36],
+    },
+    // Three lines show, the fourth hides, so the last shown line ends in an ellipsis.
+    {
+      name: 'ends the last visible line in an ellipsis',
+      text: 'Healing potion bottle',
+      top: true,
+      overrun: 3,
+      max: 3,
+      width: 56,
+      lines: ['Healin', 'g potio', 'n bot…'],
+      widths: [50, 54, 54],
+    },
+    {
+      name: 'hides lines past max_text_lines',
+      text: 'Supercalifragilistic',
+      top: true,
+      overrun: 3,
+      max: 2,
+      width: 56,
+      lines: ['Superc', 'alifra…'],
+      widths: [54, 54],
+    },
+    {
+      name: 'a single visible line ends in the ellipsis',
+      text: 'Healing potion bottle',
+      top: true,
+      overrun: 3,
+      max: 1,
+      width: 56,
+      lines: ['Heali…'],
+      widths: [53],
+    },
+    {
+      name: 'OVERRUN_NO_TRIMMING hides lines without an ellipsis',
+      text: 'Supercalifragilistic',
+      top: true,
+      overrun: 0,
+      max: 2,
+      width: 56,
+      lines: ['Superc', 'alifragi'],
+      widths: [54, 54],
+    },
+    {
+      name: 'OVERRUN_TRIM_CHAR keeps the hidden-line cut without an ellipsis',
+      text: 'Healing potion bottle',
+      top: true,
+      overrun: 1,
+      max: 2,
+      width: 56,
+      lines: ['Healin', 'g potio'],
+      widths: [50, 54],
+    },
+    {
+      name: 'OVERRUN_TRIM_WORD_ELLIPSIS cuts at a word',
+      text: 'Healing potion bottle',
+      top: true,
+      overrun: 4,
+      max: 2,
+      width: 56,
+      lines: ['Healin', 'g po …'],
+      widths: [50, 50],
+    },
+    {
+      name: 'OVERRUN_TRIM_ELLIPSIS_FORCE',
+      text: 'Healing potion bottle',
+      top: true,
+      overrun: 5,
+      max: 2,
+      width: 56,
+      lines: ['Healin', 'g pot…'],
+      widths: [50, 53],
+    },
+    {
+      name: 're-wraps at a narrower width than the text',
+      text: 'Long word another',
+      top: true,
+      overrun: 3,
+      max: 2,
+      width: 54,
+      lines: ['Long', 'word…'],
+      widths: [38, 53],
+    },
+    {
+      name: 'trims edge spaces at a break',
+      text: 'AA   BB   CC',
+      top: true,
+      overrun: 3,
+      max: 3,
+      width: 30,
+      lines: ['AA', 'BB', 'CC'],
+      widths: [22, 22, 21],
+    },
+    {
+      name: 'breaks at a mandatory newline unconstrained',
+      text: 'AB\nCD',
+      top: true,
+      overrun: 3,
+      max: 3,
+      width: -1,
+      lines: ['AB', 'CD'],
+      widths: [22, 22],
+    },
+    {
+      name: 'keeps a LEFT label on one line across a newline',
+      text: 'AB\nCD',
+      top: false,
+      overrun: 3,
+      max: 1,
+      width: -1,
+      lines: ['AB\nCD'],
+      widths: [43],
+    },
+    {
+      name: 'draws a fitting LEFT label whole under OVERRUN_TRIM_ELLIPSIS_FORCE',
+      text: 'Short',
+      top: false,
+      overrun: 5,
+      max: 1,
+      width: 70,
+      lines: ['Short'],
+      widths: [42],
+    },
+    {
+      name: 'draws a fitting LEFT label whole under OVERRUN_TRIM_WORD_ELLIPSIS_FORCE',
+      text: 'Short',
+      top: false,
+      overrun: 6,
+      max: 1,
+      width: 70,
+      lines: ['Short'],
+      widths: [42],
+    },
+    {
+      name: 'cuts an overflowing LEFT label under 6 characters without an ellipsis',
+      text: 'Short',
+      top: false,
+      overrun: 3,
+      max: 1,
+      width: 30,
+      lines: ['Sho'],
+      widths: [29],
+    },
+    {
+      name: 'ends an overflowing short LEFT label in an ellipsis under OVERRUN_TRIM_ELLIPSIS_FORCE',
+      text: 'Short',
+      top: false,
+      overrun: 5,
+      max: 1,
+      width: 30,
+      lines: ['S…'],
+      widths: [22],
+    },
+    {
+      name: 'ends an overflowing short LEFT label in a word ellipsis under OVERRUN_TRIM_WORD_ELLIPSIS_FORCE',
+      text: 'A bc',
+      top: false,
+      overrun: 6,
+      max: 1,
+      width: 20,
+      lines: ['…'],
+      widths: [17],
+    },
+    {
+      name: 'trims a LEFT label with an ellipsis',
+      text: 'A very long item name',
+      top: false,
+      overrun: 3,
+      max: 1,
+      width: 70,
+      lines: ['A very l…'],
+      widths: [70],
+    },
+    {
+      name: 'trims a LEFT label per char',
+      text: 'A very long item name',
+      top: false,
+      overrun: 1,
+      max: 1,
+      width: 70,
+      lines: ['A very lo'],
+      widths: [67],
+    },
+    {
+      name: 'trims a LEFT label per word',
+      text: 'A very long item name',
+      top: false,
+      overrun: 2,
+      max: 1,
+      width: 70,
+      lines: ['A very'],
+      widths: [48],
+    },
+    {
+      name: 'forces the LEFT ellipsis',
+      text: 'A very long item name',
+      top: false,
+      overrun: 5,
+      max: 1,
+      width: 70,
+      lines: ['A very l…'],
+      widths: [70],
+    },
+    {
+      name: 'leaves a LEFT label whole at OVERRUN_NO_TRIMMING',
+      text: 'A very long item name',
+      top: false,
+      overrun: 0,
+      max: 1,
+      width: 70,
+      lines: ['A very long item name'],
+      widths: [173],
+    },
+    {
+      name: 'leaves a LEFT label whole at zero width',
+      text: 'A very long item name',
+      top: false,
+      overrun: 3,
+      max: 1,
+      width: 0,
+      lines: ['A very long item name'],
+      widths: [173],
+    },
+    {
+      name: 'leaves a LEFT label whole at negative width',
+      text: 'A very long item name',
+      top: false,
+      overrun: 3,
+      max: 1,
+      width: -8,
+      lines: ['A very long item name'],
+      widths: [173],
+    },
+  ];
+
+  it.each(cases)('$name', ({ text, top, overrun, max, width, lines, widths }) => {
+    const layout = shapeItemListText({
+      text,
+      fontSizePx: 16,
+      fontMetrics: OPEN_SANS_FONT_METRICS,
+      iconMode: top ? ItemListIconMode.ICON_MODE_TOP : ICON_MODE_LEFT,
+      maxTextLines: max,
+      locale: '',
+      widthPx: width,
+      overrunBehavior: overrun,
+    })!;
+    expect(layout.lines.map(visualChars)).toEqual(lines);
+    expect(layout.lines.map((line) => shapedTextSizeWidthPx(line.widthPx))).toEqual(widths);
+    expect(layout.heightPx).toBe(lines.length * LINE_HEIGHT_PX);
   });
 });
 
@@ -230,7 +500,7 @@ describe('itemIconDraw with fixed_icon_size (_adjust_to_max_size, item_list.cpp:
 });
 
 describe('itemMinimumSize', () => {
-  const theme = nativeTheme(1);
+  const spacing = itemListSpacing({}, nativeTheme(1));
 
   it('LEFT icon mode: icon width + text width, max of the two heights (happy path)', () => {
     const min = itemMinimumSize(
@@ -243,7 +513,7 @@ describe('itemMinimumSize', () => {
         maxTextLines: 1,
         fixedColumnWidth: 0,
       },
-      theme
+      spacing
     );
     // x = 16(icon) + 4(icon_margin) + 40(text) = 60; y = max(16, 20) = 20; then h/v separation 4.
     expect(min).toEqual({ x: 60 + 4, y: 20 + 4 });
@@ -256,11 +526,11 @@ describe('itemMinimumSize', () => {
         iconSize: { x: 16, y: 16 },
         hasText: true,
         textSize: { x: 40, y: 20 },
-        iconMode: ICON_MODE_TOP,
+        iconMode: ItemListIconMode.ICON_MODE_TOP,
         maxTextLines: 2,
         fixedColumnWidth: 0,
       },
-      theme
+      spacing
     );
     // x = max(16, 40) = 40; y = 16(icon) + 4(icon_margin) + 20(text) + 2(line_separation)*2 = 44; then h/v separation 4.
     expect(min).toEqual({ x: 40 + 4, y: 44 + 4 });
@@ -277,7 +547,7 @@ describe('itemMinimumSize', () => {
         maxTextLines: 1,
         fixedColumnWidth: 96,
       },
-      theme
+      spacing
     );
     expect(min.x).toBe(96 + 4);
   });
@@ -293,11 +563,31 @@ describe('itemMinimumSize', () => {
         maxTextLines: 1,
         fixedColumnWidth: 0,
       },
-      theme
+      spacing
     );
     expect(min).toEqual({ x: 14, y: 14 });
   });
 });
+
+/** The default theme's vertical scrollbar minimum width (`scrollBarMinimumSize(true, theme).x`). */
+const VERTICAL_BAR_MIN_WIDTH = 8;
+
+function packInput(overrides: Partial<Parameters<typeof packItemListRows>[0]>) {
+  return {
+    itemSizes: [],
+    maxColumnWidth: 0,
+    sameColumnWidth: false,
+    maxColumns: 1,
+    fitSize: Number.POSITIVE_INFINITY,
+    verticalBarMinWidth: VERTICAL_BAR_MIN_WIDTH,
+    rtl: false,
+    wraparoundItems: true,
+    autoWidth: false,
+    hSeparation: 4,
+    availableHeight: Number.POSITIVE_INFINITY,
+    ...overrides,
+  };
+}
 
 describe('packItemListRows', () => {
   const FOUR_ITEMS: Vector2[] = [
@@ -314,6 +604,8 @@ describe('packItemListRows', () => {
       sameColumnWidth: false,
       maxColumns: 2,
       fitSize: Number.POSITIVE_INFINITY,
+      verticalBarMinWidth: VERTICAL_BAR_MIN_WIDTH,
+      rtl: false,
       wraparoundItems: true,
       autoWidth: false,
       hSeparation: 4,
@@ -337,6 +629,8 @@ describe('packItemListRows', () => {
       sameColumnWidth: false,
       maxColumns: 0,
       fitSize: 25, // fits exactly one 20-wide item, not two
+      verticalBarMinWidth: VERTICAL_BAR_MIN_WIDTH,
+      rtl: false,
       wraparoundItems: true,
       autoWidth: false,
       hSeparation: 4,
@@ -354,6 +648,8 @@ describe('packItemListRows', () => {
       sameColumnWidth: false,
       maxColumns: 0,
       fitSize: 25,
+      verticalBarMinWidth: VERTICAL_BAR_MIN_WIDTH,
+      rtl: false,
       wraparoundItems: true,
       autoWidth: true,
       hSeparation: 4,
@@ -374,6 +670,8 @@ describe('packItemListRows', () => {
       sameColumnWidth: true,
       maxColumns: 2,
       fitSize: Number.POSITIVE_INFINITY,
+      verticalBarMinWidth: VERTICAL_BAR_MIN_WIDTH,
+      rtl: false,
       wraparoundItems: true,
       autoWidth: false,
       hSeparation: 4,
@@ -390,16 +688,68 @@ describe('packItemListRows', () => {
       sameColumnWidth: false,
       maxColumns: 1,
       fitSize: Number.POSITIVE_INFINITY,
+      verticalBarMinWidth: VERTICAL_BAR_MIN_WIDTH,
+      rtl: false,
       wraparoundItems: true,
       autoWidth: false,
       hSeparation: 4,
       availableHeight: 10,
     });
-    expect(result.verticalScrollbarVisible).toBe(true);
+    expect(result.vertical.visible).toBe(true);
+  });
+
+  // item_list.cpp:1854-1885 -- page = 80 less the panel's 8 px of vertical margin.
+  const rows = (count: number): Vector2[] => Array.from({ length: count }, () => ({ x: 40, y: 23 }));
+
+  it('shows the vertical bar for six 23 px rows in an 80 px list (happy path)', () => {
+    const result = packItemListRows(packInput({ itemSizes: rows(6), availableHeight: 72 }));
+    expect(result.vertical).toEqual({ visible: true, min: 0, max: 138, page: 72 });
+  });
+
+  it('hides the vertical bar for three rows in the same list (error path)', () => {
+    const result = packItemListRows(packInput({ itemSizes: rows(3), availableHeight: 72 }));
+    expect(result.vertical).toEqual({ visible: false, min: 0, max: 72, page: 72 });
+  });
+
+  it('shows the horizontal bar only without wraparound_items and with wider content (item_list.cpp:1856-1860)', () => {
+    const wide = { itemSizes: rows(4), maxColumns: 0, fitSize: 100, availableHeight: 72 };
+    const unwrapped = packItemListRows(packInput({ ...wide, wraparoundItems: false }));
+    expect(unwrapped.horizontal).toEqual({ visible: true, min: 0, max: 160, page: 100 });
+    const wrapped = packItemListRows(packInput({ ...wide, wraparoundItems: true }));
+    expect(wrapped.horizontal.visible).toBe(false);
+  });
+
+  it('mirrors the horizontal range under RTL without wraparound_items (item_list.cpp:1891-1893)', () => {
+    const result = packItemListRows(
+      packInput({ itemSizes: rows(4), maxColumns: 0, fitSize: 100, wraparoundItems: false, rtl: true })
+    );
+    expect(result.horizontal).toEqual({ visible: true, min: -60, max: 100, page: 100 });
+  });
+
+  describe('fit_size trim (item_list.cpp:1862-1863)', () => {
+    // Five 40 px items at max_columns 0. The first attempt overflows at 85 px and settles on two
+    // columns; the second attempt then runs at 85 - 8 = 77 px, where two columns no longer fit.
+    const sizes: Vector2[] = Array.from({ length: 5 }, () => ({ x: 40, y: 10 }));
+    const columnsOf = (overrides: Partial<Parameters<typeof packItemListRows>[0]>) =>
+      packItemListRows(packInput({ itemSizes: sizes, maxColumns: 0, fitSize: 85, ...overrides })).items.map(
+        (i) => i.column
+      );
+
+    it('takes the bar width off when the page holds the content', () => {
+      expect(columnsOf({ availableHeight: 100 })).toEqual([0, 0, 0, 0, 0]);
+    });
+
+    it('takes the bar width off under RTL even when the content overflows', () => {
+      expect(columnsOf({ availableHeight: 5, rtl: true })).toEqual([0, 0, 0, 0, 0]);
+    });
+
+    it('keeps fit_size when LTR content overflows the page', () => {
+      expect(columnsOf({ availableHeight: 5 })).toEqual([0, 1, 0, 1, 0]);
+    });
   });
 });
 
-describe('itemTextDrawOffset / itemTextLineCenterOffset', () => {
+describe('itemTextDrawOffset', () => {
   it('wrapped text centres the pen at half separation past the icon offset (happy path)', () => {
     const offset = itemTextDrawOffset(true, { x: 0, y: 20 }, { x: 100, y: 50 }, 10, 4, 6);
     expect(offset).toEqual({ x: 2, y: 23 });
@@ -408,20 +758,6 @@ describe('itemTextDrawOffset / itemTextLineCenterOffset', () => {
   it('a single line vertically centres the text block within the item rect (error path)', () => {
     const offset = itemTextDrawOffset(false, { x: 20, y: 0 }, { x: 100, y: 50 }, 20, 4, 6);
     expect(offset).toEqual({ x: 22, y: 15 });
-  });
-
-  it('itemTextLineCenterOffset centres a line no wider than its box', () => {
-    expect(itemTextLineCenterOffset(50, 20, false)).toBe(15);
-    expect(itemTextLineCenterOffset(50, 20, true)).toBe(15);
-  });
-
-  // `TextParagraph::draw` CENTER (`text_paragraph.cpp:900-913`).
-  it('itemTextLineCenterOffset keeps a wider LTR line at the origin', () => {
-    expect(itemTextLineCenterOffset(50, 80, false)).toBe(0);
-  });
-
-  it('itemTextLineCenterOffset moves a wider RTL line to the trailing edge', () => {
-    expect(itemTextLineCenterOffset(50, 80, true)).toBe(-30);
   });
 });
 
@@ -442,18 +778,61 @@ describe('itemListGuideLines', () => {
   // item_list.cpp:1447-1458: one hairline per row-packing separator, spanning the panel's own
   // content width, only outside TOP icon mode. Each quad starts half a pixel above its separator.
   it('one line per separator, spanning contentWidth, in LEFT icon mode (happy path)', () => {
-    expect(itemListGuideLines(ICON_MODE_LEFT, [24, 48], 100)).toEqual([
-      { y: 23.5, width: 100 },
-      { y: 47.5, width: 100 },
+    expect(itemListGuideLines(ICON_MODE_LEFT, [24, 48], 100, 0)).toEqual([
+      { y: 24, width: 100, x: 0 },
+      { y: 48, width: 100, x: 0 },
     ]);
   });
 
+  it('ends before a visible vertical bar, whose width the caller takes off contentWidth (item_list.cpp:1387-1389)', () => {
+    expect(itemListGuideLines(ICON_MODE_LEFT, [24], 92, 0)).toEqual([{ y: 24, width: 92, x: 0 }]);
+  });
+
+  it('starts past a visible vertical bar under RTL (item_list.cpp:1454-1455)', () => {
+    expect(itemListGuideLines(ICON_MODE_LEFT, [24], 92, 8)).toEqual([{ y: 24, width: 92, x: 8 }]);
+  });
+
   it('never draws in TOP icon mode, even with separators (error path)', () => {
-    expect(itemListGuideLines(ICON_MODE_TOP, [24, 48], 100)).toEqual([]);
+    expect(itemListGuideLines(ItemListIconMode.ICON_MODE_TOP, [24, 48], 100, 0)).toEqual([]);
   });
 
   it('no separators means no lines (edge case)', () => {
-    expect(itemListGuideLines(ICON_MODE_LEFT, [], 100)).toEqual([]);
+    expect(itemListGuideLines(ICON_MODE_LEFT, [], 100, 0)).toEqual([]);
+  });
+});
+
+describe('itemListDrawClip and what it keeps (item_list.cpp:1431-1441,1451,1493-1500)', () => {
+  const panelOffset = { x: 4, y: 4 };
+  const fits: ItemListScrollRange = { visible: false, min: 0, max: 0, page: 112 };
+
+  it('is the control size, moved by the panel offset into the content space (happy path)', () => {
+    expect(itemListDrawClip({ x: 120, y: 80 }, panelOffset, fits, true)).toEqual({
+      x: -4,
+      y: -4,
+      w: 120,
+      h: 80,
+    });
+  });
+
+  it('widens by what the horizontal bar scrolls without wraparound_items (edge case)', () => {
+    const scrolls: ItemListScrollRange = { visible: true, min: 0, max: 160, page: 112 };
+    expect(itemListDrawClip({ x: 120, y: 80 }, panelOffset, scrolls, false).w).toBe(168);
+    expect(itemListDrawClip({ x: 120, y: 80 }, panelOffset, scrolls, true).w).toBe(120);
+  });
+
+  it('keeps the rows that reach into the clip and drops the rest, a row that only touches its edge included (error path)', () => {
+    const clip = { x: -4, y: -4, w: 120, h: 80 }; // content space: the list ends at y 76
+    const rows = [
+      { rect: { x: 0, y: 0, w: 100, h: 23 } },
+      { rect: { x: 0, y: 69, w: 100, h: 23 } },
+      { rect: { x: 0, y: 76, w: 100, h: 23 } },
+    ];
+    expect(itemListRowsInClip(rows, clip)).toEqual([rows[0], rows[1]]);
+  });
+
+  it('keeps the separators up to the clip bottom, one on it included', () => {
+    const clip = { x: -4, y: -4, w: 120, h: 80 };
+    expect(itemListSeparatorsInClip([23, 46, 76, 77], clip)).toEqual([23, 46, 76]);
   });
 });
 
@@ -482,9 +861,48 @@ describe('itemListMinimumSize', () => {
     expect(result.y).toBe(0);
   });
 
+  it('adds the h_separation and v_separation the node overrides (item_list.cpp:1789-1790)', () => {
+    const items = [{ text: 'Sword' }, { text: 'Shield' }];
+    const plain = node({ autoWidth: true, autoHeight: true, maxColumns: 1, items });
+    const spaced = { ...plain, constants: { h_separation: 20, v_separation: 12 } };
+    const before = itemListMinimumSize(plain, ctx());
+    const after = itemListMinimumSize(spaced, ctx());
+    // Default 4 each: one column grows by 20 - 4, two rows by 2 * (12 - 4).
+    expect(after.x - before.x).toBe(16);
+    expect(after.y - before.y).toBe(16);
+  });
+
   it('contributes zero text size when no measurer is wired, never throwing (edge case)', () => {
     const n = node({ autoWidth: true, autoHeight: true, items: [{ text: 'Sword' }] });
     expect(() => itemListMinimumSize(n, ctx(false))).not.toThrow();
+  });
+
+  describe('scrollbar terms from the tentative rect (item_list.cpp:1883,1903)', () => {
+    const sixRows = Array.from({ length: 6 }, () => ({ text: 'Sword' }));
+    const withRect = (rect: { x: number; y: number; w: number; h: number }): SolveContext => ({
+      ...ctx(),
+      tentativeRect: () => rect,
+    });
+
+    it('auto_width adds the vertical bar width once the list overflows its height', () => {
+      const n = node({ autoWidth: true, items: sixRows });
+      const free = itemListMinimumSize(n, ctx());
+      const overflowing = itemListMinimumSize(n, withRect({ x: 0, y: 0, w: 120, h: 40 }));
+      expect(overflowing.x - free.x).toBe(8);
+    });
+
+    it('auto_width adds nothing while the rows fit the height', () => {
+      const n = node({ autoWidth: true, items: sixRows });
+      const roomy = itemListMinimumSize(n, withRect({ x: 0, y: 0, w: 120, h: 400 }));
+      expect(roomy.x).toBe(itemListMinimumSize(n, ctx()).x);
+    });
+
+    it('auto_height adds the horizontal bar height when wraparound_items is off and the rows are wider than the list', () => {
+      const n = node({ autoHeight: true, wraparoundItems: false, maxColumns: 0, items: sixRows });
+      const free = itemListMinimumSize(n, ctx());
+      const narrow = itemListMinimumSize(n, withRect({ x: 0, y: 0, w: 60, h: 100 }));
+      expect(narrow.y - free.y).toBe(8);
+    });
   });
 });
 
@@ -555,60 +973,86 @@ describe('itemListLineTextWidthPx / itemListWrappedTextWidthPx', () => {
   });
 });
 
-describe('itemListRightAlignOffsetPx', () => {
-  // text_paragraph.cpp:888,916-921: HORIZONTAL_ALIGNMENT_RIGHT shifts the
-  // line by `width - line_width`, and only while `width > 0`.
-  it('pushes a short line to the right edge of its box', () => {
-    expect(itemListRightAlignOffsetPx(78, 30)).toBe(48);
-  });
-  it('is zero for a box of zero or negative width', () => {
-    expect(itemListRightAlignOffsetPx(0, 30)).toBe(0);
-    expect(itemListRightAlignOffsetPx(-4, 30)).toBe(0);
-  });
-  it('goes negative for a line wider than its box, exactly as the engine does', () => {
-    expect(itemListRightAlignOffsetPx(30, 78)).toBe(-48);
-  });
-});
-
-// item_list.cpp:1676-1688: a LEFT-mode row draws its fill only when the text keeps room past the
-// icon. The outline above it draws regardless (:1672-1674).
-describe('isItemTextFillDrawn', () => {
-  const ROW = { iconWidthPx: 16, hSeparation: 4, rowWidthPx: 120, contentWidthPx: 200 };
-
-  it('draws the fill of a fixed column wider than the icon and separation', () => {
-    expect(isItemTextFillDrawn({ ...ROW, fixedColumnWidth: 120, wraparoundItems: true })).toBe(true);
-  });
-
-  it('hides the fill of a fixed column no wider than the icon and separation', () => {
-    expect(isItemTextFillDrawn({ ...ROW, rowWidthPx: 20, fixedColumnWidth: 20, wraparoundItems: true })).toBe(
-      false
-    );
-  });
-
-  it('hides the fill of a wraparound list no wider than the icon and separation', () => {
+/**
+ * `max_column_width` is the widest minimum width before `h_separation` joins it (`item_list.cpp:1786-1790`),
+ * and `same_column_width` adds the separation once (`:1826`).
+ */
+describe('itemListMaxColumnWidth', () => {
+  it('is the widest item width less the separation each width already carries', () => {
     expect(
-      isItemTextFillDrawn({ ...ROW, contentWidthPx: 20, fixedColumnWidth: 0, wraparoundItems: true })
-    ).toBe(false);
+      itemListMaxColumnWidth(
+        [
+          { x: 34, y: 10 },
+          { x: 20, y: 10 },
+        ],
+        4
+      )
+    ).toBe(30);
   });
-
-  it('draws the fill of a list without wraparound at any width', () => {
-    expect(
-      isItemTextFillDrawn({ ...ROW, contentWidthPx: 0, fixedColumnWidth: 0, wraparoundItems: false })
-    ).toBe(true);
+  it('subtracts nothing for a negative separation, which adds nothing', () => {
+    expect(itemListMaxColumnWidth([{ x: 34, y: 10 }], -4)).toBe(34);
+  });
+  it('is zero without items', () => {
+    expect(itemListMaxColumnWidth([], 4)).toBe(0);
   });
 });
 
 // item_list.cpp:1624: only TOP mode with max_text_lines above 0 draws the wrapped paragraph.
-describe('isItemTextWrapped', () => {
+describe('isItemListTextWrapped', () => {
   it('wraps TOP-mode text with max_text_lines above 0', () => {
-    expect(isItemTextWrapped(ICON_MODE_TOP, 2)).toBe(true);
+    expect(isItemListTextWrapped(ItemListIconMode.ICON_MODE_TOP, 2)).toBe(true);
   });
 
   it('draws TOP-mode text with max_text_lines 0 as a single line', () => {
-    expect(isItemTextWrapped(ICON_MODE_TOP, 0)).toBe(false);
+    expect(isItemListTextWrapped(ItemListIconMode.ICON_MODE_TOP, 0)).toBe(false);
   });
 
   it('draws LEFT-mode text as a single line', () => {
-    expect(isItemTextWrapped(ICON_MODE_LEFT, 2)).toBe(false);
+    expect(isItemListTextWrapped(ICON_MODE_LEFT, 2)).toBe(false);
+  });
+});
+
+describe('itemListSelectedRect (item_list.cpp:1502-1517)', () => {
+  const input = {
+    rowRect: { x: 0, y: 20, w: 50, h: 18 },
+    baseX: 4,
+    columnCount: 1,
+    contentWidth: 200,
+    controlWidth: 208,
+    panelMarginLeft: 4,
+    panelMarginRight: 4,
+    rtl: false,
+  };
+
+  it('runs a one-column row to the right edge of the content', () => {
+    expect(itemListSelectedRect(input)).toEqual({ x: 0, y: 0, w: 200, h: 18 });
+  });
+
+  it('keeps the width of a row in a list of several columns', () => {
+    expect(itemListSelectedRect({ ...input, columnCount: 3 }).w).toBe(50);
+  });
+
+  it('mirrors inside the control under RTL', () => {
+    const rowRect = { x: 10, y: 20, w: 50, h: 18 };
+    expect(itemListSelectedRect({ ...input, rowRect, rtl: true })).toEqual({ x: -10, y: 0, w: 190, h: 18 });
+  });
+});
+
+describe('itemListCursorRect (item_list.cpp:1486-1495,1698-1705)', () => {
+  const input = {
+    rowRect: { x: 10, y: 20, w: 50, h: 18 },
+    baseX: 4,
+    columnCount: 1,
+    contentWidth: 200,
+    controlWidth: 208,
+    rtl: false,
+  };
+
+  it('runs a one-column row to the right edge of the content', () => {
+    expect(itemListCursorRect(input)).toEqual({ x: 0, y: 0, w: 190, h: 18 });
+  });
+
+  it('mirrors inside the control under RTL without the panel margins', () => {
+    expect(itemListCursorRect({ ...input, rtl: true })).toEqual({ x: -10, y: 0, w: 190, h: 18 });
   });
 });

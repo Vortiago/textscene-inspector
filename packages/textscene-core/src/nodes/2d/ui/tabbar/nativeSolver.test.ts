@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { tabBarStyleBoxes } from '../../../../r3f/controls/native/tabStyleBoxes';
 import {
   computeTabBarDrawLayout,
+  ensureNoOverOffset,
+  measureTabSizes,
+  placeTabs,
+  type TabBarLayoutInput,
+  type TabLayoutInput,
   isCloseButtonVisible,
   layoutScrollArrows,
   layoutTabContent,
@@ -9,7 +15,6 @@ import {
   isTabUnselectable,
   resolveTabBarCurrentTab,
   tabBarMinimumSize,
-  tabBarStyleBoxes,
   tabBarThemeIconSize,
   tabBarFontSizePx,
   tabContentWidth,
@@ -22,6 +27,7 @@ import type { SolveContext } from '../../../../r3f/controls/native/solverRegistr
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
 import type { TabBarProperties } from './types';
+import { controlProps } from '../control/testing/controlProps';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
 
 describe('resolveTabDrawState', () => {
@@ -199,96 +205,66 @@ describe('isCloseButtonVisible', () => {
 });
 
 describe('computeTabBarDrawLayout', () => {
+  const tab = (naturalWidth: number, overrides: Partial<TabLayoutInput> = {}): TabLayoutInput => ({
+    disabled: false,
+    hidden: false,
+    naturalWidth,
+    naturalTextWidth: 10,
+    ...overrides,
+  });
+  /** A 200 px bar, left aligned and unclipped, 2 px between tabs and 16 px scroll icons. */
+  const layout = (tabs: TabLayoutInput[], input: Partial<TabBarLayoutInput> = {}) =>
+    computeTabBarDrawLayout(tabs, {
+      barWidthPx: 200,
+      alignment: 0,
+      clipTabs: false,
+      maxTabWidthPx: 0,
+      tabSeparation: 2,
+      incrementIconWidth: 16,
+      decrementIconWidth: 16,
+      currentTab: 0,
+      scrollToSelected: true,
+      ...input,
+    });
+
   it('lays out every tab left-to-right, one tab_separation apart, when nothing overflows', () => {
-    const layout = computeTabBarDrawLayout(
-      [
-        { disabled: false, hidden: false, naturalWidth: 30, naturalTextWidth: 10 },
-        { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
-        { disabled: false, hidden: false, naturalWidth: 50, naturalTextWidth: 10 },
-      ],
-      200,
-      0,
-      false,
-      0,
-      2,
-      16
-    );
-    expect(layout.items.map((i) => [i.ofs, i.width])).toEqual([
+    const out = layout([tab(30), tab(40), tab(50)]);
+    expect(out.items.map((i) => [i.ofs, i.width])).toEqual([
       [0, 30],
       [32, 40],
       [74, 50],
     ]);
-    expect(layout.maxDrawnTab).toBe(2);
-    expect(layout.missingRight).toBe(false);
-    expect(layout.buttonsVisible).toBe(false);
+    expect(out.maxDrawnTab).toBe(2);
+    expect(out.missingRight).toBe(false);
+    expect(out.buttonsVisible).toBe(false);
   });
 
   it('clips trailing tabs that overflow the bar, exposing the scroll arrows', () => {
-    const layout = computeTabBarDrawLayout(
-      [
-        { disabled: false, hidden: false, naturalWidth: 30, naturalTextWidth: 10 },
-        { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
-        { disabled: false, hidden: false, naturalWidth: 50, naturalTextWidth: 10 },
-      ],
-      60,
-      0,
-      true,
-      0,
-      2,
-      16
-    );
-    expect(layout.maxDrawnTab).toBe(0);
-    expect(layout.items).toHaveLength(1);
-    expect(layout.missingRight).toBe(true);
-    expect(layout.buttonsVisible).toBe(true);
+    const out = layout([tab(30), tab(40), tab(50)], { barWidthPx: 60, clipTabs: true });
+    expect(out.maxDrawnTab).toBe(0);
+    expect(out.items).toHaveLength(1);
+    expect(out.missingRight).toBe(true);
+    expect(out.buttonsVisible).toBe(true);
   });
 
   it('truncates a tab past max_tab_width: sizeTextless floors the text budget at 1px (tab_bar.cpp:1215-1222)', () => {
-    const layout = computeTabBarDrawLayout(
-      [{ disabled: false, hidden: false, naturalWidth: 30, naturalTextWidth: 15 }],
-      200,
-      0,
-      false,
-      20,
-      0,
-      16
-    );
-    expect(layout.items[0]).toMatchObject({ width: 20, textBudgetPx: 5, truncated: true });
+    const out = layout([tab(30, { naturalTextWidth: 15 })], { maxTabWidthPx: 20, tabSeparation: 0 });
+    expect(out.items[0]).toMatchObject({ width: 20, textBudgetPx: 5, truncated: true });
   });
 
   it('omits a hidden tab from the drawn items and its own space entirely', () => {
-    const layout = computeTabBarDrawLayout(
-      [
-        { disabled: false, hidden: true, naturalWidth: 30, naturalTextWidth: 10 },
-        { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
-      ],
-      200,
-      0,
-      false,
-      0,
-      2,
-      16
-    );
-    expect(layout.items).toHaveLength(1);
-    expect(layout.items[0]).toMatchObject({ index: 1, ofs: 0 });
+    const out = layout([tab(30, { hidden: true }), tab(40)]);
+    expect(out.items).toHaveLength(1);
+    expect(out.items[0]).toMatchObject({ index: 1, ofs: 0 });
   });
 
-  it('right-aligns the drawn run against the bar width when tab_alignment is RIGHT', () => {
-    const layout = computeTabBarDrawLayout(
-      [{ disabled: false, hidden: false, naturalWidth: 30, naturalTextWidth: 10 }],
-      100,
-      2,
-      false,
-      0,
-      0,
-      16
-    );
-    expect(layout.items[0]!.ofs).toBe(70);
+  it('right-aligns a tab against the bar edge', () => {
+    const out = layout([tab(30)], { barWidthPx: 100, alignment: 2, tabSeparation: 0 });
+    expect(out.items[0]!.ofs).toBe(70);
   });
 
   it('returns an empty layout for zero tabs', () => {
-    const layout = computeTabBarDrawLayout([], 100, 0, false, 0, 0, 16);
-    expect(layout).toEqual({
+    expect(layout([], { barWidthPx: 100, tabSeparation: 0 })).toEqual({
       items: [],
       offset: 0,
       maxDrawnTab: 0,
@@ -298,36 +274,123 @@ describe('computeTabBarDrawLayout', () => {
   });
 
   it('reserves incrementIconWidth + decrementIconWidth separately when they differ (a themed pair need not stay symmetric)', () => {
-    const tabs = [
-      { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
-      { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
-      { disabled: false, hidden: false, naturalWidth: 40, naturalTextWidth: 10 },
-    ];
-    // w reaches 120 at i=2 (> limit=100), clips there: w -= 40 -> 80, maxDrawnTab=1.
-    // A small reserved gap (limitMinusButtons=90) already fits under 80: no further shedding.
-    const small = computeTabBarDrawLayout(tabs, 100, 0, true, 0, 0, 5, 5);
+    const tabs = [tab(40), tab(40), tab(40)];
+    const clipped = { barWidthPx: 100, clipTabs: true, tabSeparation: 0 };
+    const small = layout(tabs, { ...clipped, incrementIconWidth: 5, decrementIconWidth: 5 });
     expect(small.maxDrawnTab).toBe(1);
     // A large reserved gap (limitMinusButtons=100-30-30=40) does not fit under 80:
     // the while-loop sheds tab 1 too, dropping maxDrawnTab to 0.
-    const large = computeTabBarDrawLayout(tabs, 100, 0, true, 0, 0, 30, 30);
+    const large = layout(tabs, { ...clipped, incrementIconWidth: 30, decrementIconWidth: 30 });
     expect(large.maxDrawnTab).toBe(0);
     // The two widths need not match, which a themed pair needs.
-    const asymmetric = computeTabBarDrawLayout(tabs, 100, 0, true, 0, 0, 55, 5);
+    const asymmetric = layout(tabs, { ...clipped, incrementIconWidth: 55, decrementIconWidth: 5 });
     expect(asymmetric.maxDrawnTab).toBe(0);
+  });
+
+  describe('scrolling to the current tab (ensure_tab_visible, tab_bar.cpp:1875-1920)', () => {
+    /** Four 40 px tabs in a 130 px bar: with 16 px arrows tabs 0 and 1 fit at offset 0. */
+    const tabs = [tab(40), tab(40), tab(40), tab(40)];
+    const clipped = { barWidthPx: 130, clipTabs: true, tabSeparation: 0 };
+
+    it('leaves the strip at tab 0 when the current tab is already drawn', () => {
+      const out = layout(tabs, { ...clipped, currentTab: 1 });
+      expect(out.offset).toBe(0);
+      expect(out.items.map((i) => i.index)).toEqual([0, 1]);
+    });
+
+    it('starts the strip one tab on when the current tab is the first one past the last drawn', () => {
+      const out = layout(tabs, { ...clipped, currentTab: 2 });
+      expect(out.offset).toBe(1);
+      expect(out.items.map((i) => [i.index, i.ofs])).toEqual([
+        [1, 0],
+        [2, 40],
+      ]);
+      expect(out).toMatchObject({ maxDrawnTab: 2, missingRight: true, buttonsVisible: true });
+    });
+
+    it('scrolls the last tab in beside the arrows, with nothing missing on the right', () => {
+      const out = layout(tabs, { ...clipped, currentTab: 3 });
+      expect(out).toMatchObject({ offset: 2, maxDrawnTab: 3, missingRight: false, buttonsVisible: true });
+      expect(out.items.map((i) => i.index)).toEqual([2, 3]);
+    });
+
+    it.each([
+      ['scroll_to_selected is off', { currentTab: 3, scrollToSelected: false }],
+      ['no tab is current', { currentTab: -1 }],
+    ])('keeps the strip at tab 0 when %s', (_name, input) => {
+      expect(layout(tabs, { ...clipped, ...input }).offset).toBe(0);
+    });
+
+    it('keeps the strip at tab 0 when the current tab is hidden', () => {
+      const hiddenCurrent = tabs.map((t, i) => (i === 3 ? { ...t, hidden: true } : t));
+      expect(layout(hiddenCurrent, { ...clipped, currentTab: 3 }).offset).toBe(0);
+    });
+
+    it('keeps the strip at tab 0 for a current tab past the last tab', () => {
+      expect(layout(tabs, { ...clipped, currentTab: tabs.length }).offset).toBe(0);
+    });
+
+    it('centres the scrolled strip in the space beside the arrows', () => {
+      const out = layout(tabs, { ...clipped, currentTab: 3, alignment: 1 });
+      // tab_bar.cpp:1273: (limit_minus_buttons - w) / 2 = (130 - 32 - 80) / 2.
+      expect(out.items[0]!.ofs).toBe(9);
+    });
+  });
+});
+
+describe('ensureNoOverOffset (TabBar::_ensure_no_over_offset, tab_bar.cpp:1827-1860)', () => {
+  /** Three or four 40 px tabs in a 130 px bar: with 16 px arrows, 98 px sit beside them. */
+  const pullBack = (tabCount: number, offset: number) => {
+    const tabs: TabLayoutInput[] = Array.from({ length: tabCount }, () => ({
+      disabled: false,
+      hidden: false,
+      naturalWidth: 40,
+      naturalTextWidth: 10,
+    }));
+    const input: TabBarLayoutInput = {
+      barWidthPx: 130,
+      alignment: 0,
+      clipTabs: true,
+      maxTabWidthPx: 0,
+      tabSeparation: 0,
+      incrementIconWidth: 16,
+      decrementIconWidth: 16,
+      currentTab: 0,
+      scrollToSelected: true,
+    };
+    const sizes = measureTabSizes(tabs, 0);
+    return ensureNoOverOffset(tabs, sizes, placeTabs(tabs, sizes, input, offset), offset, input);
+  };
+
+  it('pulls the strip back while the tabs before it still fit beside the arrows', () => {
+    expect(pullBack(4, 3)).toBe(2);
+  });
+
+  it('pulls the strip back to tab 0 once every earlier tab fits without the arrows', () => {
+    expect(pullBack(3, 2)).toBe(0);
+  });
+
+  it('leaves a strip at tab 0 alone', () => {
+    expect(pullBack(4, 0)).toBe(0);
   });
 });
 
 describe('tabBarThemeIconSize (BIND_THEME_ITEM_CUSTOM(..., close_icon, "close") et al., tab_bar.cpp:2160-2182)', () => {
   it('is the vendored 16x16 default when nothing themed it', () => {
-    expect(tabBarThemeIconSize({ textureSlots: {} }, 'close')).toEqual({ x: 16, y: 16 });
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'close', 1)).toEqual({ x: 16, y: 16 });
+  });
+
+  it('is the vendored default at the theme scale: 24x24 at 1.5, never below a pixel', () => {
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'close', 1.5)).toEqual({ x: 24, y: 24 });
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'increment', 0.01)).toEqual({ x: 1, y: 1 });
   });
 
   it('is the themed size when the walker resolved a "close"/"increment"/"decrement" slot', () => {
-    expect(tabBarThemeIconSize({ textureSlots: { close: { x: 24, y: 24 } } }, 'close')).toEqual({
+    expect(tabBarThemeIconSize({ textureSlots: { close: { x: 24, y: 24 } } }, 'close', 1)).toEqual({
       x: 24,
       y: 24,
     });
-    expect(tabBarThemeIconSize({ textureSlots: {} }, 'increment')).toEqual({ x: 16, y: 16 });
+    expect(tabBarThemeIconSize({ textureSlots: {} }, 'increment', 1)).toEqual({ x: 16, y: 16 });
   });
 });
 
@@ -337,11 +400,11 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
   }
 
   function node(overrides: Partial<SolveNode> = {}): SolveNode {
-    const props: TabBarProperties = {
+    const props: TabBarProperties = controlProps({
       name: 'T',
       tabs: [{ title: '', tooltip: '', disabled: false }],
       tabCloseDisplayPolicy: 2, // ALWAYS
-    };
+    });
     return {
       ...solveNode(),
       path: 'T',
@@ -355,6 +418,13 @@ describe('tabBarMinimumSize — a themed "close" icon widens both axes (tab_bar.
     // styleMinWidth(0, no styleboxes resolved) + closeButtonMarginLeft(0, no button style resolved) + close(16).
     expect(size.x).toBeGreaterThanOrEqual(16);
     expect(size.y).toBeGreaterThanOrEqual(16);
+  });
+
+  it('floors on the scaled close icon: the same minimum as a themed 24x24 close at scale 1.5', () => {
+    const at15: SolveContext = { ...ctx(), theme: nativeTheme(1.5) };
+    const themed = node({ textureSlots: { close: { x: 24, y: 24 } } });
+
+    expect(tabBarMinimumSize(node(), at15)).toEqual(tabBarMinimumSize(themed, at15));
   });
 
   it('widens on a themed "close" icon bigger than the vendored default', () => {
@@ -406,11 +476,11 @@ describe('tabBarMinimumSize — the tab buffer is shaped at theme_cache.font_siz
   }
 
   function node(props: Partial<TabBarProperties> = {}): SolveNode {
-    const properties: TabBarProperties = {
+    const properties: TabBarProperties = controlProps({
       name: 'T',
       tabs: [{ title: 'Map', tooltip: '', disabled: false }],
       ...props,
-    };
+    });
     return {
       ...solveNode(),
       path: 'T',
@@ -536,6 +606,7 @@ describe('layoutScrollArrows', () => {
     incrementIconSize: { x: 16, y: 16 },
     decrementIconSize: { x: 10, y: 10 },
     missingRight: true,
+    canScrollBack: false,
   };
 
   it('puts both arrows against the RIGHT edge under LTR, decrement first (tab_bar.cpp:581,587)', () => {
@@ -557,6 +628,16 @@ describe('layoutScrollArrows', () => {
     const rtl = layoutScrollArrows({ ...base, rtl: true });
     expect(rtl.decrement.dim).toBe(false);
     expect(rtl.increment.dim).toBe(true);
+  });
+
+  it('lights the arrow toward the start once the strip has scrolled past tab 0 (tab_bar.cpp:573-585)', () => {
+    const scrolled = { ...base, missingRight: false, canScrollBack: true };
+    const ltr = layoutScrollArrows({ ...scrolled, rtl: false });
+    expect(ltr.decrement.dim).toBe(false);
+    expect(ltr.increment.dim).toBe(true);
+    const rtl = layoutScrollArrows({ ...scrolled, rtl: true });
+    expect(rtl.decrement.dim).toBe(true);
+    expect(rtl.increment.dim).toBe(false);
   });
 
   it('dims both arrows once nothing is clipped off the end', () => {

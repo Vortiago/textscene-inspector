@@ -32,6 +32,7 @@ type UriHandler = (uri: unknown) => unknown;
 
 interface WatcherHandlers {
   change: UriHandler[];
+  create: UriHandler[];
   delete: UriHandler[];
 }
 
@@ -83,7 +84,7 @@ describe('Extension', () => {
 
     // A watcher mock, so the test captures each glob's change handlers.
     (vscode.workspace.createFileSystemWatcher as Mock) = vi.fn((pattern: string) => {
-      const handlers: WatcherHandlers = { change: [], delete: [] };
+      const handlers: WatcherHandlers = { change: [], create: [], delete: [] };
       watcherHandlers.set(pattern, handlers);
       const capture = (into: UriHandler[]) =>
         vi.fn((handler: UriHandler) => {
@@ -92,7 +93,7 @@ describe('Extension', () => {
         });
       return {
         onDidChange: capture(handlers.change),
-        onDidCreate: capture(handlers.change),
+        onDidCreate: capture(handlers.create),
         onDidDelete: capture(handlers.delete),
         dispose: vi.fn(),
       };
@@ -101,6 +102,10 @@ describe('Extension', () => {
 
   async function fireChange(pattern: string, uri: unknown): Promise<void> {
     await Promise.all(watcherHandlers.get(pattern)!.change.map((handler) => handler(uri)));
+  }
+
+  async function fireCreate(pattern: string, uri: unknown): Promise<void> {
+    await Promise.all(watcherHandlers.get(pattern)!.create.map((handler) => handler(uri)));
   }
 
   async function fireDelete(pattern: string, uri: unknown): Promise<void> {
@@ -504,7 +509,7 @@ describe('Extension', () => {
         activate(mockContext);
         const gdignore = createMockUri('/workspace/raw/.gdignore');
 
-        await fireChange(SCAN_STOP_FILES_PATTERN, gdignore);
+        await fireCreate(SCAN_STOP_FILES_PATTERN, gdignore);
         await fireDelete(SCAN_STOP_FILES_PATTERN, gdignore);
 
         expect(clear).toHaveBeenCalledTimes(2);
@@ -520,7 +525,7 @@ describe('Extension', () => {
       const projectUri = createMockUri('/workspace/project.godot');
       await fireChange(PROJECT_FILE_PATTERN, projectUri);
 
-      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(projectUri);
+      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(projectUri, 'changed');
     });
 
     it('routes a deleted project file to the panel', async () => {
@@ -530,7 +535,7 @@ describe('Extension', () => {
       const projectUri = createMockUri('/workspace/project.godot');
       await fireDelete(PROJECT_FILE_PATTERN, projectUri);
 
-      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(projectUri);
+      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(projectUri, 'deleted');
     });
 
     it('routes a changed dependency to the panel for re-fetch', async () => {
@@ -540,7 +545,17 @@ describe('Extension', () => {
       const depUri = createMockUri('/workspace/textures/wood.png');
       await fireChange(RESOURCE_FILES_PATTERN, depUri);
 
-      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(depUri);
+      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(depUri, 'changed');
+    });
+
+    it('routes a created dependency to the panel as a creation', async () => {
+      activate(mockContext);
+      openPanelFor('/workspace/scene.tscn');
+
+      const depUri = createMockUri('/workspace/textures/new.png');
+      await fireCreate(RESOURCE_FILES_PATTERN, depUri);
+
+      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(depUri, 'created');
     });
 
     it("re-reads a panel's own main scene (external change) instead of treating it as a dependency", async () => {
@@ -563,7 +578,7 @@ describe('Extension', () => {
       const depUri = createMockUri('/workspace/textures/wood.png');
       await fireDelete(RESOURCE_FILES_PATTERN, depUri);
 
-      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(depUri);
+      expect(mockPanel.handleDependencyChange).toHaveBeenCalledWith(depUri, 'deleted');
     });
 
     it('ignores deletion of the main scene so the panel silently holds its last render', async () => {

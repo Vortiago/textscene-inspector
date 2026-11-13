@@ -19,6 +19,8 @@ import { createTresResourceProcessor } from './processors/createTresResourceProc
 import { createArrayMeshProcessor, type ArrayMeshResource } from './processors/createArrayMeshProcessor';
 import { createFontProcessor } from './processors/createFontProcessor';
 import { createThemeProcessor } from './processors/createThemeProcessor';
+import { createDirectoryProcessor } from './processors/createDirectoryProcessor';
+import { foldersAbove, type DirectoryListing } from './directoryListing';
 import { runClearCachesSequence } from './clearCachesSequence';
 import { runProvideFileSequence } from './provideFileSequence';
 import type { FontResource } from './fonts/font/types';
@@ -67,6 +69,8 @@ export class ResourceLoader {
   readonly fonts: ResourceProcessor<FontResource>;
   /** Theme .tres, font-relevant fields resolved (default_font, <Type>/fonts/<name>); everything else raw. */
   readonly themes: ResourceProcessor<ThemeResource>;
+  /** The entries of each `res://` folder a Control lists, such as a FileDialog's file list. */
+  readonly directories: ResourceProcessor<DirectoryListing>;
 
   /** Type to processor. The named accessors above are entries of this map, so routing needs no per-type switch. */
   private readonly processors: Map<ResourceType, ResourceProcessor<unknown>>;
@@ -246,6 +250,12 @@ export class ResourceLoader {
         this.peerLoad({ busType: 'theme', key: themeKey }, this.fonts, 'font', address)
     );
 
+    this.directories = createDirectoryProcessor(this.eventBus, async (folder) => {
+      const listDirectory = this.provider?.listDirectory;
+      if (!listDirectory) throw new Error(`The resource provider cannot list ${folder}`);
+      return listDirectory.call(this.provider, folder);
+    });
+
     this.processors = new Map<ResourceType, ResourceProcessor<unknown>>([
       ['texture', this.textures as ResourceProcessor<unknown>],
       [
@@ -270,6 +280,7 @@ export class ResourceLoader {
       ['arraymesh', this.arrayMeshes as ResourceProcessor<unknown>],
       ['font', this.fonts as ResourceProcessor<unknown>],
       ['theme', this.themes as ResourceProcessor<unknown>],
+      ['directory', this.directories as ResourceProcessor<unknown>],
     ]);
   }
 
@@ -359,5 +370,11 @@ export class ResourceLoader {
       fileBus: this._fileEventBus ?? undefined,
       dependencies: this.dependencies,
     });
+    // A file that appeared or went away edits the listing of each folder above it. A dialog keeps showing the old
+    // listing until the new one arrives, so a refresh replaces it where a clear would draw the folder empty.
+    for (const folder of foldersAbove(path)) {
+      if (this.directories.isCached(folder) || this.directories.isLoading(folder))
+        this.directories.refresh(folder);
+    }
   }
 }

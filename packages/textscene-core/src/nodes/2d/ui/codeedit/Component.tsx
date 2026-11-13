@@ -10,8 +10,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ControlQuad } from '../../../../r3f/controls/native/controlQuad';
-import { godotColorToLinear } from '../../../../r3f/godotColor';
-import { multiplyModulate } from '../../../../r3f/canvasItemModulate';
+import { multiplyModulate, useItemLinearColorOf } from '../../../../r3f/canvasItemModulate';
 import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { shapeText } from '../../../../r3f/controls/native/text/textLayout';
 import { useNodeIcon } from '../../../../r3f/controls/native/useIconTexture';
@@ -20,13 +19,13 @@ import { ControlQuad as FoldQuad } from '../../../../r3f/controls/native/control
 import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useControlBidiOptions';
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { TextEditBody } from '../textedit/Component';
+import { useTextEditRows } from '../textedit/useTextEditRows';
 import {
   pickTextEditStyleBox,
   resolveTextEditStyleState,
   textEditTextTheme,
   textEditRowHeightPx,
-  textEditWrapWidthPx,
-  shapeTextEditLines,
+  textEditDrawnLines,
   textEditTabStopsPx,
   textEditRowBandTopPx,
   layoutTextEditDrawBand,
@@ -52,7 +51,8 @@ import type { CodeEditProperties } from './types';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
 export function CodeEdit(props: NativeControlComponentProps) {
-  const { solveNode, tint, rect, renderOrder, theme, measureText } = props;
+  const { solveNode, childTint, rect, renderOrder, theme, measureText } = props;
+  const toItemLinear = useItemLinearColorOf();
   const codeEditProps = painterView<CodeEditProperties>(solveNode);
   const state = resolveTextEditStyleState(codeEditProps.editable);
   const styleBox = pickTextEditStyleBox(solveNode.styleBoxes, theme.widgets.lineEdit, state);
@@ -69,54 +69,51 @@ export function CodeEdit(props: NativeControlComponentProps) {
   );
 
   const lineNumberColorTinted = useMemo(
-    () => multiplyModulate(tint.own, CODE_EDIT_LINE_NUMBER_COLOR),
-    [tint.own]
+    () => multiplyModulate(childTint.own, CODE_EDIT_LINE_NUMBER_COLOR),
+    [childTint.own]
   );
 
   // Line numbers draw once per buffer line, on its first wrapped row (text_edit.cpp:1410).
-  // The rows are shaped at `<TextEditBody>`'s wrap width, whose gutter band is
-  // `band.totalWidthPx`, or each number past the first sits beside the wrong row.
-  const wrapWidthPx = useMemo(
-    () =>
-      textEditWrapWidthPx(
-        rect.w,
-        styleBox.contentMargin.left + styleBox.contentMargin.right,
-        band.totalWidthPx,
-        codeEditProps.minimapWidth ?? 80,
-        codeEditProps.minimapDraw
-      ),
-    [rect.w, styleBox, band.totalWidthPx, codeEditProps.minimapWidth, codeEditProps.minimapDraw]
+  // The rows are shaped as `<TextEditBody>` shapes them, wrap width and scroll bar included, or each
+  // number past the first sits beside the wrong row.
+  const drawn = useMemo(
+    () => textEditDrawnLines(codeEditProps.text, codeEditProps.placeholderText),
+    [codeEditProps.text, codeEditProps.placeholderText]
   );
   const tabStopsPx = useMemo(
     () => textEditTabStopsPx(codeEditProps.indentSize, fontMetrics, fontSizePx),
     [codeEditProps.indentSize, fontMetrics, fontSizePx]
   );
   const bidi = useControlBidiOptions(codeEditProps, solveNode);
-  const lineLayouts = useMemo(
-    () =>
-      shapeTextEditLines(lines, {
-        fontSizePx,
-        fontMetrics,
-        wrapMode: codeEditProps.wrapMode,
-        autowrapMode: codeEditProps.autowrapMode,
-        wrapWidthPx,
-        tabStopsPx,
-        preserveControl: codeEditProps.drawControlChars,
-        indentWrappedLines: codeEditProps.indentWrappedLines,
-        bidi,
-      }),
-    [
-      lines,
+  const rows = useTextEditRows({
+    lines: drawn.lines,
+    isPlaceholder: drawn.isPlaceholder,
+    size: { x: rect.w, y: rect.h },
+    margins: styleBox.contentMargin,
+    rowHeightPx,
+    gutterBandWidthPx: band.totalWidthPx,
+    minimapWidthPx: codeEditProps.minimapWidth ?? 80,
+    drawMinimap: codeEditProps.minimapDraw,
+    scrollPastEndOfFile: codeEditProps.scrollPastEndOfFile === true,
+    fitContentHeight: codeEditProps.fitContentHeight === true,
+    rtl: solveNode.rtl,
+    shape: {
       fontSizePx,
-      codeEditProps.wrapMode,
-      codeEditProps.autowrapMode,
-      wrapWidthPx,
       fontMetrics,
+      wrapMode: codeEditProps.wrapMode,
+      autowrapMode: codeEditProps.autowrapMode,
       tabStopsPx,
-      codeEditProps.drawControlChars,
-      codeEditProps.indentWrappedLines,
+      preserveControl: codeEditProps.drawControlChars,
+      indentWrappedLines: codeEditProps.indentWrappedLines,
       bidi,
-    ]
+    },
+    theme,
+  });
+  // A placeholder paragraph replaces the buffer's single empty line, which starts at row 0.
+  const { lineLayouts } = rows;
+  const lineStartRows = useMemo(
+    () => (drawn.isPlaceholder ? [0] : lineLayouts.map(({ startRow }) => startRow)),
+    [drawn.isPlaceholder, lineLayouts]
   );
 
   const numerals = { locale: solveNode.locale, localizeNumeralSystem: codeEditProps.localizeNumeralSystem };
@@ -152,8 +149,8 @@ export function CodeEdit(props: NativeControlComponentProps) {
     ]
   );
   const guidelineColor = useMemo(
-    () => multiplyModulate(tint.own, CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR),
-    [tint.own]
+    () => multiplyModulate(childTint.own, CODE_EDIT_LINE_LENGTH_GUIDELINE_COLOR),
+    [childTint.own]
   );
 
   const foldContext = useMemo(
@@ -171,10 +168,13 @@ export function CodeEdit(props: NativeControlComponentProps) {
     band.mainWidthPx,
     band.lineNumberWidthPx
   );
-  const foldArrowColor = useMemo(() => multiplyModulate(tint.own, CODE_EDIT_CODE_FOLDING_COLOR), [tint.own]);
+  const foldArrowColor = useMemo(
+    () => multiplyModulate(childTint.own, CODE_EDIT_CODE_FOLDING_COLOR),
+    [childTint.own]
+  );
   const foldRegionColor = useMemo(
-    () => multiplyModulate(tint.own, CODE_EDIT_CODE_REGION_ICON_COLOR),
-    [tint.own]
+    () => multiplyModulate(childTint.own, CODE_EDIT_CODE_REGION_ICON_COLOR),
+    [childTint.own]
   );
   const canFoldIcon = useNodeIcon(
     solveNode.icons.can_fold,
@@ -195,13 +195,14 @@ export function CodeEdit(props: NativeControlComponentProps) {
       <TextEditBody
         {...props}
         gutterBandWidthPx={band.totalWidthPx}
+        rows={rows}
         tabSize={codeEditProps.indentSize}
         underlay={guidelines.map((guideline, i) => (
           <CanvasItemGroup key={i} position={[guideline.xPx, 0, 0]}>
             <ControlQuad
               width={1}
               height={rect.h}
-              color={godotColorToLinear(guidelineColor)}
+              color={toItemLinear(guidelineColor)}
               opacity={guideline.dimmed ? guidelineColor.a * 0.5 : guidelineColor.a}
               renderOrder={renderOrder}
             />
@@ -211,7 +212,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
       {band.foldDrawn &&
         canFoldIcon &&
         canFoldRegionIcon &&
-        lineLayouts.map(({ startRow }, lineIndex) => {
+        lineStartRows.map((startRow, lineIndex) => {
           if (!canFoldLine(foldContext, lineIndex, codeEditProps.lineFolding === true)) return null;
           const region = isLineCodeRegionStart(foldContext, lineIndex);
           const icon = codeEditFoldIconRect({
@@ -227,7 +228,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
                 renderOrder={renderOrder}
                 width={icon.w}
                 height={icon.h}
-                color={godotColorToLinear(color)}
+                color={toItemLinear(color)}
                 opacity={color.a}
                 map={region ? canFoldRegionIcon : canFoldIcon}
               />
@@ -235,7 +236,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
           );
         })}
       {band.lineNumbersDrawn &&
-        lineLayouts.map(({ startRow }, lineIndex) => {
+        lineStartRows.map((startRow, lineIndex) => {
           const text = codeEditLineNumberText(
             lineIndex,
             band.lineNumberDigits,

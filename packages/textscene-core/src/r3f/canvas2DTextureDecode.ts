@@ -1,8 +1,9 @@
 /**
- * The 2D canvas's texture colour space: a `NoColorSpace` retag and the define
+ * The 2D canvas's texture colour space: in an sRGB canvas, a `NoColorSpace` retag and the define
  * that multiplies its texels in sRGB, for the unlit 2D recipe (`meshBasicMaterial` + `map`) alone.
  * A canvas-content SubViewport target holds sRGB bytes already, so it takes the define with no
- * retag. A PointLight2D cookie and every 3D material slot state their own sampler (`textureView.ts`).
+ * retag. A linear canvas samples the decoding view and multiplies linear values with no define.
+ * A PointLight2D cookie and every 3D material slot state their own sampler (`textureView.ts`).
  */
 import * as THREE from 'three';
 import { useOwnedTextureView, useWindowedTextureView } from './useTextureView';
@@ -11,13 +12,16 @@ import { CANVAS_SRGB_DEFINES } from './canvasSrgbMultiply';
 import { holdsSrgbBytes } from './srgbByteTextures';
 import {
   canvasItemViewSampler,
+  useCanvasItemViewSampler,
   useResolvedTextureSampler,
   type CanvasItemTextureSampler,
 } from './canvasItemTextureSampler';
+import type { CanvasColorSpace } from './canvasColorSpace';
 
 /**
- * A 2D-only view of a cached texture, retagged `NoColorSpace`, and sampled by the item's `sampler`.
- * The canvas filters raw sRGB bytes, where 3D samples the sRGB view (`material_storage.cpp:1067,1073`).
+ * A 2D-only view of a cached texture in its canvas's texture colour space, sampled by the item's
+ * `sampler`. An sRGB canvas filters raw sRGB bytes, where 3D samples the sRGB view
+ * (`material_storage.cpp:1067,1073`).
  * Always a clone, since a sprite writes its frame's window on it and R3F retags a shared source of
  * the same tag. Returns `null` with nothing to show.
  */
@@ -29,7 +33,7 @@ export function useCanvas2DTexture(
   // WebGL uploads as `SRGB8_ALPHA8` (`WebGLTextures.js`), decoding before the filter.
   // The sampler states the wrap too: a file-loaded entry arrives clamped (ADR-0044), but a producer
   // can hand over Repeat, such as a seamless `NoiseTexture2D`, and Godot's item default is Disabled.
-  return useOwnedTextureView(texture, canvasItemViewSampler(sampler));
+  return useOwnedTextureView(texture, useCanvasItemViewSampler(sampler));
 }
 
 /** `useCanvas2DTexture` that shows `window`, as `useWindowedTextureView` does. */
@@ -38,7 +42,18 @@ export function useWindowedCanvas2DTexture(
   sampler: CanvasItemTextureSampler,
   window: UvWindow
 ): THREE.Texture | null {
-  return useWindowedTextureView(texture, canvasItemViewSampler(sampler), window);
+  return useWindowedTextureView(texture, useCanvasItemViewSampler(sampler), window);
+}
+
+/**
+ * `useCanvas2DTexture` for a map the canvas reads raw in either colour space: a normal or specular
+ * map (`texture_storage.cpp:767,780`).
+ */
+export function useRawCanvas2DTexture(
+  texture: THREE.Texture | null | undefined,
+  sampler: CanvasItemTextureSampler
+): THREE.Texture | null {
+  return useOwnedTextureView(texture, canvasItemViewSampler(sampler, THREE.NoColorSpace));
 }
 
 /** `useCanvas2DTexture` with the sampler the owning Control's painter inherits. */
@@ -47,16 +62,21 @@ export function useOwnerCanvas2DTexture(texture: THREE.Texture | null | undefine
 }
 
 /**
- * The `map` and `defines` of a `meshBasicMaterial` that samples `texture`: the sRGB-multiply define
- * is set for a `NoColorSpace` retag and for a texture that holds sRGB bytes. A define reaches the GPU
+ * The `map` and `defines` of a `meshBasicMaterial` that samples `texture` in a canvas of `space`:
+ * in an sRGB canvas, the sRGB-multiply define is set for a `NoColorSpace` retag and for a texture
+ * that holds sRGB bytes. A linear canvas multiplies the sample as it is. A define reaches the GPU
  * only on a newly mounted material, which `materialProgramInputs` arranges. Spread it into the
  * material's props, so no painter states the map without its define.
  */
-export function canvasMapProps(texture: THREE.Texture | null | undefined): {
+export function canvasMapProps(
+  texture: THREE.Texture | null | undefined,
+  space: CanvasColorSpace
+): {
   map: THREE.Texture | null;
-  defines: Record<string, string> | undefined;
+  defines: Readonly<Record<string, string>> | undefined;
 } {
   if (!texture) return { map: null, defines: undefined };
+  if (space.isLinear) return { map: texture, defines: undefined };
   const samplesSrgbBytes = texture.colorSpace === THREE.NoColorSpace || holdsSrgbBytes(texture);
   return { map: texture, defines: samplesSrgbBytes ? CANVAS_SRGB_DEFINES : undefined };
 }

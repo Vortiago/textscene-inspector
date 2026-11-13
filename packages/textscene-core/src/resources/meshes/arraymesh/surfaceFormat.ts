@@ -22,14 +22,16 @@ export const ARRAY_FLAG_USE_2D_VERTICES = 1 << 25;
 const ARRAY_FLAG_COMPRESS_ATTRIBUTES = 1 << 29;
 
 /** RGBA8 vertex colour in both layouts, which Godot writes before UV1 in the attribute record. */
-const COLOR_BYTES = 4;
+export const COLOR_BYTES = 4;
 
 /**
  * Godot `Mesh.PrimitiveType` (`servers/rendering_server.h`: POINTS 0, LINES 1, LINE_STRIP 2,
- * TRIANGLES 3, TRIANGLE_STRIP 4), the two this decoder reads. Any other read as triangles
- * fabricates faces.
+ * TRIANGLES 3, TRIANGLE_STRIP 4). Any other value reads no way, and a LINES surface read as
+ * triangles fabricates faces.
  */
 export const PRIMITIVE_POINTS = 0;
+export const PRIMITIVE_LINES = 1;
+export const PRIMITIVE_LINE_STRIP = 2;
 export const PRIMITIVE_TRIANGLES = 3;
 export const PRIMITIVE_TRIANGLE_STRIP = 4;
 
@@ -40,6 +42,8 @@ export const PRIMITIVE_TRIANGLE_STRIP = 4;
  */
 export interface SurfaceLayout {
   compressed: boolean;
+  /** Positions are 2×float32, whatever the compression (`rendering_server.cpp:1079-1084`). */
+  isPosition2D: boolean;
   /**
    * How the normal region stores the tangent. `frame`: compression folds it into the normal's
    * bytes as an axis-angle frame. `octahedral`: its own 2×uint16 after each normal. `none`: the
@@ -52,23 +56,41 @@ export interface SurfaceLayout {
   normalStride: number;
   /** Bytes per vertex in `attribute_data`, from the format, never derived. */
   attributeStride: number;
+  /** Whether each attribute record starts with an RGBA8 vertex colour. */
+  hasColor: boolean;
   /** Byte offset of UV1 within one attribute record, or -1 when the surface has none. */
   uvOffset: number;
   /** Byte offset of UV2 within one attribute record, or -1 when the surface has none. */
   uv2Offset: number;
 }
 
+/**
+ * A compressed 2D position record has no angle slot to carry a frame, so its normal is the
+ * octahedral axis alone (`rendering_server.cpp:1500-1506`).
+ */
+function tangentStorage(format: {
+  compressed: boolean;
+  isPosition2D: boolean;
+  hasNormal: boolean;
+  hasTangent: boolean;
+}): SurfaceLayout['tangent'] {
+  if (!format.hasNormal || !format.hasTangent) return 'none';
+  if (!format.compressed) return 'octahedral';
+  return format.isPosition2D ? 'none' : 'frame';
+}
+
 export function surfaceLayout(format: number): SurfaceLayout {
   const compressed = (format & ARRAY_FLAG_COMPRESS_ATTRIBUTES) !== 0;
+  const isPosition2D = (format & ARRAY_FLAG_USE_2D_VERTICES) !== 0;
   const hasNormal = (format & ARRAY_FORMAT_NORMAL) !== 0;
   const hasTangent = (format & ARRAY_FORMAT_TANGENT) !== 0;
   const hasColor = (format & ARRAY_FORMAT_COLOR) !== 0;
   const hasUV = (format & ARRAY_FORMAT_TEX_UV) !== 0;
   const hasUV2 = (format & ARRAY_FORMAT_TEX_UV2) !== 0;
 
-  // Compressed: 3×uint16 spanning the surface `aabb`, plus the tangent-frame
-  // angle. Uncompressed: 3×float32.
-  const positionStride = compressed ? 8 : 12;
+  // 2D: 2×float32. Else compressed: 3×uint16 spanning the surface `aabb`, plus the tangent-frame
+  // angle. Else 3×float32.
+  const positionStride = isPosition2D || compressed ? 8 : 12;
   // Each octahedral pair is 2×uint16. Compressed folds the tangent into the
   // normal's 4 bytes as an axis-angle frame. Uncompressed gives each pair its own 4.
   const normalStride = hasNormal ? (compressed ? 4 : 4 + (hasTangent ? 4 : 0)) : 0;
@@ -77,10 +99,12 @@ export function surfaceLayout(format: number): SurfaceLayout {
 
   return {
     compressed,
-    tangent: hasNormal && hasTangent ? (compressed ? 'frame' : 'octahedral') : 'none',
+    isPosition2D,
+    tangent: tangentStorage({ compressed, isPosition2D, hasNormal, hasTangent }),
     positionStride,
     normalStride,
     attributeStride: (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) + (hasUV2 ? uvBytes : 0),
+    hasColor,
     uvOffset: hasUV ? (hasColor ? COLOR_BYTES : 0) : -1,
     uv2Offset: hasUV2 ? (hasColor ? COLOR_BYTES : 0) + (hasUV ? uvBytes : 0) : -1,
   };

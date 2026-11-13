@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+; One variable: a GradientTexture2D that sets no gradient, on a Sprite3D. The texture never gets an
+; image (`gradient_texture.cpp:229-233`), so Godot draws its 4 by 4 magenta and black placeholder
+; over a quad sized by the texture's own width and height (200 by 120 at `pixel_size` 0.01).
+
+[sub_resource type="GradientTexture2D" id="T"]
+width = 200
+height = 120
+fill = 1
+
+[node name="Root" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+
+[node name="Sprite" type="Sprite3D" parent="."]
+pixel_size = 0.01
+shaded = false
+texture = SubResource("T")
