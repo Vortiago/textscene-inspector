@@ -26,11 +26,11 @@ export const isDrawn = (probe, viewportPixels) => drawnPixels(probe, viewportPix
 
 /**
  * One probe's record entry from the pixels of its viewport, with `rejection`, Godot's stage,
- * message and line, for a probe Godot draws nothing for.
+ * message and line, for a probe Godot draws nothing for or that ends Godot, which has no pixels.
  */
 export function recordEntry(probe, viewportPixels, rejection = NO_REASON) {
   const entry = { source: probe.source, inputs: parameterBits(probe).map((bits) => bits.map(hex)) };
-  if (!isDrawn(probe, viewportPixels)) return { ...entry, rejected: rejection };
+  if (probe.endsGodot || !isDrawn(probe, viewportPixels)) return { ...entry, rejected: rejection };
   const pixels = drawnPixels(probe, viewportPixels);
   const size = LANE_COUNT[probeSignature(probe.source).returns];
   const results = probe.inputs.map((_, row) => pixels.slice(row * size, (row + 1) * size).map(hex));

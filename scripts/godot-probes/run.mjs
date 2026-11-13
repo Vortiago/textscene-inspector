@@ -44,15 +44,28 @@ function verdictRecords(...sets) {
   });
 }
 
-/** Godot's reason for each probe it draws nothing for, by name, from a run of each alone. */
+/**
+ * Godot's reason for each probe it draws nothing for, by name, from a run of each alone. A probe
+ * that ends Godot runs alone from the start, since it would end the run of every probe.
+ */
 function rejections(probes, { pixels }) {
-  const rejected = probes.filter((probe) => !isDrawn(probe, pixels.get(probe.name)));
-  return new Map(rejected.map((probe) => [probe.name, godotRejection(probe)]));
+  const rejected = probes.filter((probe) => probe.endsGodot || !isDrawn(probe, pixels.get(probe.name)));
+  return new Map(rejected.map((probe) => [probe.name, endingRejection(probe)]));
+}
+
+/** Godot's reason for `probe`, which must be a crash exactly when the probe says it ends Godot. */
+function endingRejection(probe) {
+  const rejection = godotRejection(probe);
+  if ((rejection.stage === 'Godot') !== Boolean(probe.endsGodot))
+    throw new Error(
+      `expected ${probe.name} ${probe.endsGodot ? 'to end' : 'not to end'} Godot, got: ${rejection.message}`
+    );
+  return rejection;
 }
 
 function main() {
   const probes = [...PROBES, ...RANDOM_PROGRAMS];
-  const output = runProbesInGodot(probes);
+  const output = runProbesInGodot(probes.filter((probe) => !probe.endsGodot));
   const reasons = rejections(probes, output);
   const [operatorRecord, corpusRecord] = verdictRecords(
     OPERATOR_CASES.map(({ id, godotText }) => ({ id, text: godotText })),

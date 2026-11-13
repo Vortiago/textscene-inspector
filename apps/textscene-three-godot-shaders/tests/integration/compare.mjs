@@ -27,14 +27,23 @@ function isNaNBits(bits) {
   return (bits & 0x7f800000) === 0x7f800000 && (bits & 0x7fffff) !== 0;
 }
 
+/** The transpiler's refusal of an expression that ends Godot as Godot evaluates it. */
+const ABORT_REFUSAL = /aborts on this expression/;
+
 /**
  * The verdict of `actual` (the page's answer: `{ bits }` per lane, or `{ error, isRefusal }`)
  * against the record `entry`: `{ passed, lanes, mismatches, maxUlp, detail }`. A shader Godot
- * rejects passes only when the transpiler refuses it. Two NaN lanes match only where the result
+ * rejects passes only when the transpiler refuses it, and one that ends Godot only when the
+ * refusal says so. Two NaN lanes match only where the result
  * is a float: an int or a bool lane matches bit for bit.
  */
 export function compareProbe(entry, actual, isFloatResult = true) {
   if (entry === undefined) return failed('no record from Godot');
+  if (entry.rejected?.stage === 'Godot') {
+    return ABORT_REFUSAL.test(actual.error ?? '')
+      ? { ...failed(`Godot ends, the transpiler refuses: ${actual.error}`), passed: true }
+      : failed(`Godot ends on the shader, the transpiler does not say so: ${actual.error ?? 'it draws'}`);
+  }
   if (entry.rejected) {
     return actual.isRefusal
       ? { ...failed(`both reject: ${actual.error}`), passed: true }

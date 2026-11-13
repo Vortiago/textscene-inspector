@@ -178,6 +178,22 @@ function foldingProbes() {
   return cases.map(([word, row, source]) => probeOf(`folding-${word}`, [row], source));
 }
 
+/**
+ * The expressions of constants Godot 4.6.3 ends on as it evaluates them: `mat4 * vec4` reads the
+ * vector past its last lane (`shader_language.cpp:2406`), and the least `int` over -1 traps the
+ * CPU (`shader_language.cpp:2245`). Each runs alone in Godot, and the transpiler refuses each.
+ */
+function godotEndingProbes() {
+  const cases = [
+    ['matrix-times-vector', 'OP_MUL(mat4,vec4)', 'vec4 probe(vec4 a) { return mat4(2.0) * vec4(1.0) + a; }'],
+    ['least-int-over-minus-one', 'OP_DIV(int,int)', 'int probe(int a) { return ((1 << 31) / (0 - 1)) ^ a; }'],
+  ];
+  return cases.map(([word, row, source]) => ({
+    ...probeOf(`ends-godot-${word}`, [row], source),
+    endsGodot: true,
+  }));
+}
+
 export const LANGUAGE_PROBES = [
   ...typeProbes(),
   ...precisionProbes(),
@@ -188,4 +204,5 @@ export const LANGUAGE_PROBES = [
   ...unbracketedProbes(),
   ...negationTextProbes(),
   ...foldingProbes(),
+  ...godotEndingProbes(),
 ];

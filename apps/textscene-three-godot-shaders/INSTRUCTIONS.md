@@ -344,9 +344,9 @@ canvases draw on WebGPURenderer (#1788).
 | `OP_MUL(mat3,vec3)` | transpiled (`folding-matrix-times-vector`, `mul-mat3-vec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat3,mat3)` | transpiled (`mul-mat3-mat3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat4,float)` | transpiled (`mul-mat4-float`) | lowered: column by column | lowered: column by column | `servers/rendering/shader_language.cpp:1627` |
-| `OP_MUL(mat4,vec4)` | transpiled (`mul-mat4-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_MUL(mat4,vec4)` | transpiled (`ends-godot-matrix-times-vector`, `mul-mat4-vec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_MUL(mat4,mat4)` | transpiled (`mul-mat4-mat4`) | native | native | `servers/rendering/shader_language.cpp:1627` |
-| `OP_DIV(int,int)` | transpiled (`div-int-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
+| `OP_DIV(int,int)` | transpiled (`ends-godot-least-int-over-minus-one`, `div-int-int`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(int,ivec2)` | transpiled (`div-int-ivec2`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(int,ivec3)` | transpiled (`div-int-ivec3`) | native | native | `servers/rendering/shader_language.cpp:1627` |
 | `OP_DIV(int,ivec4)` | transpiled (`div-int-ivec4`) | native | native | `servers/rendering/shader_language.cpp:1627` |

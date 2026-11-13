@@ -98,6 +98,8 @@ function sampleRows(entry, parameters, returns) {
 
 /** Godot's reason for a probe it does not compile, and that the transpiler refuses it too. */
 function rejectionText({ stage, message, line }) {
+  if (stage === 'Godot')
+    return `Godot ends as it compiles this shader: ${message}. The transpiler refuses it with a message that says so.`;
   const where =
     stage === 'GLSL' ? "the GPU compiler refuses Godot's GLSL" : `Godot refuses it at line ${line}`;
   return `Godot does not compile this shader: ${where}, \`${message}\`. The transpiler refuses it too.`;

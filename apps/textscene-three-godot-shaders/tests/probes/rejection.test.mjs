@@ -26,6 +26,11 @@ describe("Godot's reason for a probe it draws nothing for", () => {
     });
   });
 
+  it("reads the signal of Godot's crash report before any shader error", () => {
+    const crash = `SHADER ERROR: Unknown.\n          at: (null) (:3)\nhandle_crash: Program crashed with signal 8\nEngine version: Godot Engine v4.6.3.stable.official\n`;
+    expect(parseRejection(crash)).toEqual({ stage: 'Godot', message: 'Godot ends with signal 8' });
+  });
+
   it('throws on output that names no error', () => {
     expect(() => parseRejection('GODOT 4.6.3-stable\n')).toThrow(/expected Godot's shader error/);
   });
