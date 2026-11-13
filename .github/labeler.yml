@@ -22,7 +22,9 @@ renderer:
           - packages/textscene-core/src/**/Component.*
           - packages/textscene-core/src/**/index.r3f.ts
           - packages/textscene-core/src/resources/**/build.*
+          - packages/textscene-core/src/shaders/**
           - apps/textscene-renderer/**
+          - apps/textscene-three-godot-shaders/**
 
 linter:
   - changed-files:
@@ -44,6 +46,7 @@ core:
           - '!packages/textscene-core/src/**/Component.*'
           - '!packages/textscene-core/src/**/index.r3f.ts'
           - '!packages/textscene-core/src/resources/**/build.*'
+          - '!packages/textscene-core/src/shaders/**'
           - '!packages/textscene-core/src/linter/**'
           - '!packages/textscene-core/src/**/linter.*'
           - '!packages/textscene-core/src/**/linterParser.*'

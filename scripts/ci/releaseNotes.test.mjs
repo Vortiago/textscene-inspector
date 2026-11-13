@@ -28,6 +28,13 @@ describe('releaseSources', () => {
     expect(releaseSources('renderer')).toEqual(['apps/textscene-renderer', 'packages/textscene-core']);
   });
 
+  it('lists core for the shader package, which bundles it', () => {
+    expect(releaseSources('shaders')).toEqual([
+      'apps/textscene-three-godot-shaders',
+      'packages/textscene-core',
+    ]);
+  });
+
   it('includes the web previewer in the extension release, which ships its build', () => {
     expect(releaseSources('vscode')).toContain('apps/textscene-web');
   });

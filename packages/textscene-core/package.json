@@ -27,6 +27,11 @@
       "types": "./dist/godot/index.d.ts",
       "import": "./dist/godot/index.js"
     },
+    "./shaders": {
+      "@textscene/source": "./src/shaders/index.ts",
+      "types": "./dist/shaders/index.d.ts",
+      "import": "./dist/shaders/index.js"
+    },
     "./languageFeatures": {
       "@textscene/source": "./src/languageFeatures/index.ts",
       "types": "./dist/languageFeatures/index.d.ts",
