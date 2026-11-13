@@ -16,6 +16,7 @@ import {
   type DirectionalShadowAtlasRect,
   type DirectionalShadowFade,
 } from '../../godot/rendering/lights/directionalShadow.js';
+import { NO_BLEND } from '../../shaders/sunRows.js';
 import {
   directionalShadowBoxFitter,
   viewSlice,
@@ -27,12 +28,6 @@ export interface DirectionalShadowSplitFitInput extends Omit<DirectionalShadowFi
   /** The light's share of Godot's atlas. Each split counts its texels against its own part of it. */
   lightRect: DirectionalShadowAtlasRect;
 }
-
-/**
- * The blend start of a slot that does not blend into the next split. A real blend start is negative
- * for a negative split offset, which Godot's setter keeps, so the marker sits far below any depth.
- */
-export const NO_BLEND = -1e30;
 
 /**
  * One slot of the shader's per-split data, `sunShadowCascade[slot]`. The split end is Godot's

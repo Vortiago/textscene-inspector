@@ -11,8 +11,7 @@
 
 import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
-import { SPLIT_SLOTS } from './splitShadow.js';
-import { NO_BLEND } from './fitDirectionalShadowSplits.js';
+import { BLENDS_ABOVE, SPLIT_SLOTS } from '../../shaders/sunRows.js';
 import { DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM } from './shadowAtlas.js';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch.js';
 import {
@@ -44,11 +43,8 @@ const LOOKUP_BLOCK_END = '\n\t#endif';
 /** The name of the per-split lookup the patch adds, which marks a chunk it has patched. */
 const SPLIT_LOOKUP = 'getSunShadowSplit(';
 
-/**
- * A slot blends while its blend start lies above this. Half of `NO_BLEND`, so the float32 rounding
- * of the uniform cannot carry the marker across it, and a negative blend start still blends.
- */
-const BLENDS_ABOVE = (NO_BLEND / 2).toExponential();
+/** `BLENDS_ABOVE` as a GLSL literal. */
+const BLENDS_ABOVE_LITERAL = BLENDS_ABOVE.toExponential();
 
 /**
  * A slot's world-to-atlas matrix, read from its rows. Its fourth row is always (0, 0, 0, 1)
@@ -142,7 +138,7 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\t\tint first = shadowIndex * SUN_LIGHT_CASCADES;
 \t\t\tvec4 light = ${SUN_SOFT_SHADOWS}[ shadowIndex ];
 \t\t\tfloat depth = vSunShadowWorldPosition.w;
-\t\t\tint blendMax = sunShadowCascade[ first ].w > ${BLENDS_ABOVE} ? 2 : 1;
+\t\t\tint blendMax = sunShadowCascade[ first ].w > ${BLENDS_ABOVE_LITERAL} ? 2 : 1;
 \t\t\tint blended = 0;
 \t\t\tfloat shadow = 1.0;
 \t\t\tfor ( int split = 0; split < SUN_LIGHT_CASCADES; split ++ ) {
@@ -230,11 +226,11 @@ const GODOT_LOOKUP = `${GODOT_SLOT_MATRIX}${GODOT_SUN_PCF}\t\tfloat ${SPLIT_LOOK
 \t\t\t\t: 3;
 \t\t\tvec4 selected = sunShadowCascade[ first + split ];
 
-\t\t\tbool blendsSplits = sunShadowCascade[ first ].w > ${BLENDS_ABOVE};
+\t\t\tbool blendsSplits = sunShadowCascade[ first ].w > ${BLENDS_ABOVE_LITERAL};
 \t\t\tfloat radiusScale = blendsSplits ? 1.0 : sunShadowCascade[ first ].x / selected.x;
 \t\t\tfloat shadow = getSunShadowSplit( shadowMap, sunLightShadow, first + split, radiusScale );
 
-\t\t\tif ( split < 3 && selected.w > ${BLENDS_ABOVE} && depth > selected.w ) {
+\t\t\tif ( split < 3 && selected.w > ${BLENDS_ABOVE_LITERAL} && depth > selected.w ) {
 
 \t\t\t\tfloat next = getSunShadowSplit( shadowMap, sunLightShadow, first + split + 1, 1.0 );
 \t\t\t\tshadow = mix( shadow, next, smoothstep( selected.w, selected.x, depth ) );

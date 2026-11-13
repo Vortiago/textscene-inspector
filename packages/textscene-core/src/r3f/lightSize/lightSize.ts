@@ -9,20 +9,10 @@
 import type * as THREE from 'three';
 import { isPositionalKind, slotValues, type ShadedLightKind, type SlottedLights } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
-import { declaredLightOf } from '../directionalShadow/splitSun.js';
-import { userDataDeclaration } from '../userDataDeclaration.js';
+import { declaredLightOf } from '../../shaders/lights/declaredLight.js';
+import { lightSizeDeclaration as declaration } from '../../shaders/lights/lightDeclarations.js';
 
 export const LIGHT_SIZES = 'godotLightSizes';
-
-/** The size a light carries to the writer. */
-interface LightSizeDeclaration {
-  size: number;
-}
-
-const declaration = userDataDeclaration<LightSizeDeclaration>(
-  'godotLightSize',
-  ({ size }) => typeof size === 'number'
-);
 
 /** The `userData` entry that declares a light's size, to merge into its `userData`. */
 export function lightSizeUserData(size: number): Record<string, unknown> {

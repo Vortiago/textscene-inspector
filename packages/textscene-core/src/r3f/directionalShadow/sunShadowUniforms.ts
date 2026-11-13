@@ -7,7 +7,7 @@
  */
 
 import * as THREE from 'three';
-import { SPLIT_SLOTS } from './splitShadow.js';
+import { SPLIT_SLOTS } from '../../shaders/sunRows.js';
 import { isSplitSun, type SplitSunLight } from './splitSun.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
 import { writeVec4 } from '../writeVec4.js';

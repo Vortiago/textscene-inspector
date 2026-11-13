@@ -16,6 +16,8 @@ import type { FadeVariants } from './fadeVariants';
 import { bindLightmap, LIGHTMAP_PROGRAM, readsLightmap } from '../lightmap/lightmapProgram';
 import type { LightmapAssignment } from '../lightmap/sceneLightmaps';
 import { useInstanceLightmap } from '../visibilityRange/geometryInstance';
+import { LitNodeMaterial } from '../litSurface/LitNodeMaterial';
+import { litSurfaceMaterial } from '../litSurface/litSurfaceMaterial';
 
 interface StandardMaterialSlotProps {
   /** The surface's derived bags, textures bound. */
@@ -56,8 +58,8 @@ export function drawnBag(
 }
 
 /**
- * A derived bag as its class's JSX tag, reading `lightmap` where it reads one. The missing-texture
- * placeholder mounts through it too.
+ * A derived bag as its class's JSX tag, reading `lightmap` where it reads one, or as the shader
+ * module's lit material where the port covers it. The missing-texture placeholder mounts through it too.
  */
 export function materialBagElement(
   bag: StandardMaterialBag,
@@ -76,6 +78,9 @@ export function materialBagElement(
     bindHeightmap(material, heightmapTexture);
     bindLightmap(material, readLightmap);
   };
+  // A surface that reads a lightmap keeps the classic material: the port draws no lightmap yet.
+  const lit = readLightmap ? null : litSurfaceMaterial(bag);
+  if (lit) return <LitNodeMaterial key={lit.key} lit={lit} attach={attach} />;
   const injection = composeInjections([bag.injection, readLightmap ? LIGHTMAP_PROGRAM : undefined]);
   // `attach` and the ref first: they are the mount's own props and must never shadow a derived
   // one. The key comes from the same merged bag it travels with (ADR-0038): a program input

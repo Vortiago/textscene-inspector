@@ -3,7 +3,7 @@
  * spot's cone exponent, which three's penumbra only approximates.
  */
 
-import { userDataDeclaration } from '../userDataDeclaration.js';
+import { userDataDeclaration } from '../../shaders/lights/userDataDeclaration.js';
 
 interface FogLightDeclaration {
   /** `light_volumetric_fog_energy`: how strongly the medium scatters this light. */

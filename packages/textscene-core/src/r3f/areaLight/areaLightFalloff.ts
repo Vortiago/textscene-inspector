@@ -12,7 +12,7 @@ import type { SceneLight } from '../directionalShadow/lightLists.js';
 import { slottedLights } from '../lightSlots.js';
 import { LightUniformArrays, type LightArrays } from '../shaderPatch/lightUniformArrays.js';
 import { writeVec4 } from '../writeVec4.js';
-import { userDataDeclaration } from '../userDataDeclaration.js';
+import { userDataDeclaration } from '../../shaders/lights/userDataDeclaration.js';
 import { writeAreaLightShadowUniforms } from './areaLightShadowUniforms.js';
 import { areaTexturePlacement } from './areaLightAtlas.js';
 

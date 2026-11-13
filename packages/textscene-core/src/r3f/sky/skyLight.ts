@@ -6,7 +6,7 @@
 
 import type * as THREE from 'three';
 import { LIGHT_INTENSITY_SCALE } from '../lightConstants.js';
-import { userDataDeclaration } from '../userDataDeclaration.js';
+import { userDataDeclaration } from '../../shaders/lights/userDataDeclaration.js';
 import { perObject } from '../../utils/perObject.js';
 
 interface SkyLightDeclaration {

@@ -4,7 +4,7 @@
  * Godot's renderer owns directional shadow setup.
  */
 
-import { userDataDeclaration } from '../userDataDeclaration.js';
+import { userDataDeclaration } from '../../shaders/lights/userDataDeclaration.js';
 
 export interface DirectionalShadowDeclaration {
   /** `directional_shadow_max_distance`. Zero or less leaves the camera's far plane in charge. */

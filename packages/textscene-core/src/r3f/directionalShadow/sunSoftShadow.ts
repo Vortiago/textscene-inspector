@@ -8,7 +8,8 @@
 import type * as THREE from 'three';
 import type { SceneLight } from './lightLists.js';
 import { readDirectionalShadowDeclaration, type DirectionalShadowDeclaration } from './declaration.js';
-import { declaredLightOf, isSplitSun } from './splitSun.js';
+import { declaredLightOf } from '../../shaders/lights/declaredLight.js';
+import { isSplitSun } from './splitSun.js';
 import { slottedLights } from '../lightSlots.js';
 
 /** The declaration of the light a slotted directional light or sun shades for. */

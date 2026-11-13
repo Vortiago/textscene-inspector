@@ -11,7 +11,8 @@ import {
   writeSunShadowUniforms,
 } from './sunShadowUniforms';
 import { SplitSunLight } from './splitSun';
-import { NO_SHADOW_FADE, SPLIT_SLOTS } from './splitShadow';
+import { SPLIT_SLOTS } from '../../shaders/sunRows.js';
+import { NO_SHADOW_FADE } from './splitShadow';
 import { litUniformArray } from '../testing/litUniformArray';
 
 /** Floats one slot takes: three vec4 rows. */

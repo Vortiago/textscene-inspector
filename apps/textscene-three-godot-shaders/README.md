@@ -13,15 +13,27 @@ release is 0.1.0.
 
 ```ts
 import * as THREE from 'three';
-import { installNodesHandler } from '@textscene/three-godot-shaders';
+import { installGodotShading } from '@textscene/three-godot-shaders';
 
 const renderer = new THREE.WebGLRenderer();
-installNodesHandler(renderer);
+const shading = installGodotShading(renderer);
+const material = shading.surfaceMaterial({ diffuseMode: 0, specularMode: 0, hasClearcoat: false });
+material.color.set(0.8, 0.8, 0.8);
+material.roughness = 0.4;
 ```
 
-`installNodesHandler` gives the renderer three's `WebGLNodesHandler`, so a TSL node material draws
-on it. By default a node material writes the renderer's tone mapping and `outputColorSpace`. Pass
-`'linear'` when your app tone maps and encodes the frame itself.
+`installGodotShading` gives the renderer three's `WebGLNodesHandler`, so a TSL node material draws
+on it, and shades every `THREE.DirectionalLight` as Godot's directional light. `surfaceMaterial`
+makes a lit material with Godot's light: `diffuseMode` and `specularMode` take Godot's
+`BaseMaterial3D` enum values. The material's fields are those of a `MeshStandardMaterial`, plus
+Godot's `specular`.
+
+By default a node material writes the renderer's tone mapping and `outputColorSpace`. Pass
+`{ output: 'linear' }` when your app tone maps and encodes the frame itself.
+
+`shading.inputs` takes what your pipeline draws: Godot's sky radiance layers and Godot's directional
+shadow atlas. Each input is optional. Without one, the surface draws what Godot draws without that
+feature.
 
 ## Licence
 

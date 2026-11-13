@@ -8,12 +8,12 @@ import * as THREE from 'three';
 import type { DirectionalShadowBox } from './fitDirectionalShadowBox';
 import { cameraSliceCorners } from './fitDirectionalShadowBox.testkit';
 import {
-  NO_BLEND,
   fitDirectionalShadowSplits,
   type DirectionalShadowSplitFitInput,
   type DirectionalShadowSplits,
 } from './fitDirectionalShadowSplits';
 import type { DirectionalShadowDeclaration } from './declaration';
+import { NO_BLEND } from '../../shaders/sunRows.js';
 
 const ATLAS_SIZE = 4096;
 const WHOLE_ATLAS = { x: 0, y: 0, width: ATLAS_SIZE, height: ATLAS_SIZE };

@@ -4,5 +4,15 @@
  * become a promise to every consumer.
  */
 
-export { installNodesHandler } from '@textscene/core/shaders';
-export type { NodeOutput } from '@textscene/core/shaders';
+export { installGodotShading } from '@textscene/core/shaders';
+export type {
+  GodotLitNodeMaterial,
+  GodotShading,
+  GodotShadingOptions,
+  LitProgram,
+  NodeOutput,
+  PipelineInputs,
+  SkyInputs,
+  SplitShadowLayout,
+  SunShadowInputs,
+} from '@textscene/core/shaders';

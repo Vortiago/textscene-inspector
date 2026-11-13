@@ -18,22 +18,38 @@ const repoRoot = resolve(packageDir, '../..');
 const bundleKey = 'dist/index.js';
 
 /** What a three.js app needs from the shader module. Core's internals stay out. */
-const PUBLIC_VALUE_EXPORTS = ['installNodesHandler'];
-const PUBLIC_TYPE_EXPORTS = ['NodeOutput'];
+const PUBLIC_VALUE_EXPORTS = ['installGodotShading'];
+const PUBLIC_TYPE_EXPORTS = [
+  'GodotLitNodeMaterial',
+  'GodotShading',
+  'GodotShadingOptions',
+  'LitProgram',
+  'NodeOutput',
+  'PipelineInputs',
+  'SkyInputs',
+  'SplitShadowLayout',
+  'SunShadowInputs',
+];
 
-/** The entry's value names, and the handler it gives a renderer with no GL context. */
+/** The entry's value names, the handler it gives a renderer with no GL context, and a lit material. */
 const CONSUMER_SCRIPT = `
 import * as entry from '@textscene/three-godot-shaders';
 let handler = null;
-entry.installNodesHandler({ setNodesHandler: (given) => { handler = given; } });
-console.log(JSON.stringify({ exports: Object.keys(entry).sort(), handler: handler?.constructor.name }));
+const shading = entry.installGodotShading({ setNodesHandler: (given) => { handler = given; } });
+const material = shading.surfaceMaterial({ diffuseMode: 0, specularMode: 0, hasClearcoat: false });
+console.log(JSON.stringify({
+  exports: Object.keys(entry).sort(),
+  handler: handler?.constructor.name,
+  material: material.type,
+}));
 `;
 
 const CONSUMER_TYPES = `
 import type { WebGLRenderer } from 'three';
-import { installNodesHandler, type NodeOutput } from '@textscene/three-godot-shaders';
-export function install(renderer: WebGLRenderer, output: NodeOutput): void {
-  installNodesHandler(renderer, output);
+import { installGodotShading, type GodotLitNodeMaterial, type NodeOutput } from '@textscene/three-godot-shaders';
+export function litMaterial(renderer: WebGLRenderer, output: NodeOutput): GodotLitNodeMaterial {
+  const shading = installGodotShading(renderer, { output });
+  return shading.surfaceMaterial({ diffuseMode: 0, specularMode: 0, hasClearcoat: false });
 }
 `;
 
@@ -67,7 +83,7 @@ type Metafile = {
 
 let metafile: Metafile;
 let consumerDir: string;
-let consumerRun: { exports: string[]; handler: string };
+let consumerRun: { exports: string[]; handler: string; material: string };
 
 beforeAll(() => {
   run('pnpm', ['--filter', '@textscene/three-godot-shaders', 'build'], repoRoot);
@@ -114,6 +130,10 @@ describe('@textscene/three-godot-shaders tarball beside three.js alone', () => {
 
   it('installs a nodes handler', () => {
     expect(consumerRun.handler).toBe('WebGLNodesHandler');
+  });
+
+  it('makes a lit material', () => {
+    expect(consumerRun.material).toBe('GodotLitNodeMaterial');
   });
 
   it('ships the licence and the notices, and no metafile', () => {

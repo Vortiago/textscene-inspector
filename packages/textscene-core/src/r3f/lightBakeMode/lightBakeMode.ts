@@ -6,10 +6,10 @@
 
 import type * as THREE from 'three';
 import { BakeMode } from '../../godot/scene/light.js';
-import { declaredLightOf } from '../directionalShadow/splitSun.js';
+import { declaredLightOf } from '../../shaders/lights/declaredLight.js';
 import { slotValues, type SlottedLights } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
-import { userDataDeclaration } from '../userDataDeclaration.js';
+import { userDataDeclaration } from '../../shaders/lights/userDataDeclaration.js';
 
 export const LIGHT_STATICS = 'godotLightStatics';
 export const AREA_LIGHT_STATICS = 'godotAreaLightStatics';

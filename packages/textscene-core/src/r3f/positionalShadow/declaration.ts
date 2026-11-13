@@ -4,7 +4,7 @@
  * normal bias, as Godot's atlas owns the slot.
  */
 
-import { userDataDeclaration } from '../userDataDeclaration.js';
+import { userDataDeclaration } from '../../shaders/lights/userDataDeclaration.js';
 
 export interface PositionalShadowDeclaration {
   /** `shadow_normal_bias`, in ten texels of the light's slot. */

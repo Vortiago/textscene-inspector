@@ -6,22 +6,12 @@
  */
 
 import type * as THREE from 'three';
-import { declaredLightOf } from '../directionalShadow/splitSun.js';
+import { declaredLightOf } from '../../shaders/lights/declaredLight.js';
+import { lightSpecularDeclaration as declaration } from '../../shaders/lights/lightDeclarations.js';
 import { slotValues, type SlottedLights } from '../lightSlots.js';
 import { LightUniformArrays } from '../shaderPatch/lightUniformArrays.js';
-import { userDataDeclaration } from '../userDataDeclaration.js';
 
 export const LIGHT_SPECULARS = 'godotLightSpeculars';
-
-/** The specular amount a light carries to the writer. */
-interface LightSpecularDeclaration {
-  amount: number;
-}
-
-const declaration = userDataDeclaration<LightSpecularDeclaration>(
-  'godotLightSpecular',
-  ({ amount }) => typeof amount === 'number'
-);
 
 /** The `userData` entry that declares a light's specular amount, to merge into its `userData`. */
 export function lightSpecularUserData(amount: number): Record<string, unknown> {

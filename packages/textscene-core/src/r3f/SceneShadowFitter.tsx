@@ -1,7 +1,8 @@
 /**
  * The scene-level light pass before each render of a scene: it fits every declared shadow and writes
  * the area lights' uniforms, the sun shadows' soft shadow angles, every light's specular amount and
- * size, and the blocker searches every lit material compiles. Godot fits a directional shadow to
+ * size, the soft shadow flag the node materials read, and the blocker searches every lit material
+ * compiles. Godot fits a directional shadow to
  * whichever camera renders, and gives an omni or spot light its slot in the atlas of the viewport
  * that renders it. So the pass rides `scene.onBeforeRender`: the main view, a SubViewport pass and a
  * screenshot each get their own, whatever order they render in.
@@ -34,6 +35,7 @@ import {
   searchesDirectionalBlockers,
   setSunSoftShadowAngles,
 } from './directionalShadow/sunSoftShadow.js';
+import { writeDirectionalSoftShadows } from './litSurface/classicInputs.js';
 
 /**
  * One render's light pass, the directional fit first. It changes no omni, spot or area light, so
@@ -55,6 +57,7 @@ function prepareSceneLights(
   const shadedLights = sceneLights(scene);
   const drawsSoftShadows = drawsDirectionalSoftShadows(shadedLights, camera);
   setSunSoftShadowAngles(shadedLights, drawsSoftShadows);
+  writeDirectionalSoftShadows(drawsSoftShadows);
   const slotted = slottedLights(shadedLights, camera);
   writeLightSpecularUniforms(slotted);
   writeLightBakeModeUniforms(slotted);

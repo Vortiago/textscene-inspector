@@ -7,7 +7,7 @@
 
 import * as THREE from 'three';
 import { releasedOnUnmount } from '../sharedTexture.js';
-import { userDataDeclaration } from '../userDataDeclaration.js';
+import { userDataDeclaration } from '../../shaders/lights/userDataDeclaration.js';
 import { buildAreaLightAtlas, type AreaLightAtlas, type AreaTexturePlacement } from './atlasLayout.js';
 import { mipSize } from '../../resources/processing/mipChain.js';
 import { AtlasHolders } from '../textureAtlas/atlasHolders.js';

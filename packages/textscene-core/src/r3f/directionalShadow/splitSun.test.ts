@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as THREE from 'three';
+import { declaredLightOf } from '../../shaders/lights/declaredLight.js';
 import {
   SplitSunLight,
   attachSplitSun,
-  declaredLightOf,
   followDeclaredLight,
   isSplitSun,
   releaseSplitSun,

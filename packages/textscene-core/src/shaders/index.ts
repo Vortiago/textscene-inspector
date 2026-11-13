@@ -17,4 +17,8 @@
  * - The lighting model reads only the surface outputs, the values Godot's `fragment()` writes.
  */
 
-export { installNodesHandler, type NodeOutput } from './nodesHandler.js';
+export { installGodotShading, type GodotShading, type GodotShadingOptions } from './godotShading.js';
+export type { GodotLitNodeMaterial, LitProgram } from './litNodeMaterial.js';
+export type { NodeOutput } from './nodesHandler.js';
+export type { PipelineInputs, SkyInputs, SunShadowInputs } from './pipelineInputs.js';
+export type { SplitShadowLayout } from './sunRows.js';

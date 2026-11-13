@@ -7,22 +7,15 @@
 
 import * as THREE from 'three';
 import {
-  DIRECTIONAL_SHADOW_MAX_SPLITS,
   DIRECTIONAL_SHADOW_SIZE_DEFAULT,
   directionalShadowSplitAtlasRect,
   type DirectionalShadowAtlasRect,
   type DirectionalShadowFade,
 } from '../../godot/rendering/lights/directionalShadow.js';
+import { SPLIT_SLOTS } from '../../shaders/sunRows.js';
 import { cameraFrustum } from '../cameraFrustum.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { holdDirectionalShadowAtlas, releaseDirectionalShadowAtlas } from './shadowAtlas.js';
-
-/**
- * Every shadow on the sun path holds this many slots, because the shader finds a light's slots at
- * `shadowIndex * SUN_LIGHT_CASCADES` (`splitShadowChunk.ts`). A light with fewer splits leaves the
- * slots past its last split undrawn.
- */
-export const SPLIT_SLOTS = DIRECTIONAL_SHADOW_MAX_SPLITS;
 
 /** The `up` of every split camera, which three's `lookAt` rolls the split boxes by. */
 export const SPLIT_CAMERA_UP: Readonly<THREE.Vector3> = new THREE.Vector3(0, 1, 0);

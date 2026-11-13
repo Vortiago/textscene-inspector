@@ -18,6 +18,11 @@ export class SplitSunLight extends THREE.Light {
 
   readonly shadow = new DirectionalSplitShadow();
 
+  /** The declared light the sun shades for, whose declarations it reads (`shaders/lights/declaredLight.ts`). */
+  get declaredLight(): THREE.Object3D | null {
+    return this.parent;
+  }
+
   constructor() {
     super();
     this.name = 'DirectionalShadowSplits';
@@ -55,14 +60,6 @@ const splitSuns = new WeakMap<THREE.DirectionalLight, SplitSunLight>();
 export function splitSunOf(light: THREE.DirectionalLight): SplitSunLight | null {
   const sun = splitSuns.get(light);
   return sun?.parent === light ? sun : null;
-}
-
-/**
- * The light whose declaration `light` reads: a split sun reads the light it shades for. Nothing for
- * a split sun off its light.
- */
-export function declaredLightOf(light: THREE.Light): THREE.Object3D | null {
-  return isSplitSun(light) ? light.parent : light;
 }
 
 /** The light's split sun, attached on the first call. The declared light stops shading then. */

@@ -9,7 +9,8 @@ import {
 import { isDropped } from './droppedLight';
 import { sceneLights } from './lightLists';
 import { splitSunOf } from './splitSun';
-import { NO_SHADOW_FADE, SPLIT_SLOTS } from './splitShadow';
+import { SPLIT_SLOTS } from '../../shaders/sunRows.js';
+import { NO_SHADOW_FADE } from './splitShadow';
 import { directionalShadowAtlasDepth } from './shadowAtlas';
 import { WebGLLights } from 'three/src/renderers/webgl/WebGLLights.js';
 import type { WebGLExtensions } from 'three/src/renderers/webgl/WebGLExtensions.js';
