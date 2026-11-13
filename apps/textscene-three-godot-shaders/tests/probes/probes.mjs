@@ -160,18 +160,18 @@ function literalProbes() {
  */
 function nestedNegationProbes() {
   const cases = [
-    ['vector', 'vec2 probe(vec2 a) { return -(-a); }', vectors(2)],
-    ['scalar', 'float probe(float a) { return -(-a); }', scalars()],
-    ['triple', 'float probe(float a) { return -(-(-a)); }', scalars()],
-    ['constructor', 'vec2 probe(float a) { return -(-vec2(a, 0.499)); }', scalars()],
-    ['swizzle', 'float probe(vec2 a) { return -((-a).y); }', vectors(2)],
-    ['sum', 'float probe(float a, float b) { return -(-(a + b)); }', pairs()],
-    ['constant', 'float probe(float a) { return -(-1.5) + a; }', scalars()],
-    ['constant-vector', 'vec2 probe(float a) { return -(-vec2(1.5, 0.25)) * a; }', scalars()],
+    ['vector', 'vec2', 'vec2 probe(vec2 a) { return -(-a); }', vectors(2)],
+    ['scalar', 'float', 'float probe(float a) { return -(-a); }', scalars()],
+    ['triple', 'float', 'float probe(float a) { return -(-(-a)); }', scalars()],
+    ['constructor', 'vec2', 'vec2 probe(float a) { return -(-vec2(a, 0.499)); }', scalars()],
+    ['swizzle', 'float', 'float probe(vec2 a) { return -((-a).y); }', vectors(2)],
+    ['sum', 'float', 'float probe(float a, float b) { return -(-(a + b)); }', pairs()],
+    ['constant', 'float', 'float probe(float a) { return -(-1.5) + a; }', scalars()],
+    ['constant-vector', 'vec2', 'vec2 probe(float a) { return -(-vec2(1.5, 0.25)) * a; }', scalars()],
   ];
-  return cases.map(([word, source, inputs]) => ({
+  return cases.map(([word, type, source, inputs]) => ({
     name: `negate-nested-${word}`,
-    rows: [],
+    rows: [`OP_NEGATE(${type})`],
     source,
     inputs,
   }));
@@ -194,7 +194,12 @@ function constantFoldingProbes() {
     ['negative-zero', 'vec2 probe(float a) { return vec2(-0.0 * 1.0, a); }'],
     ['division-by-zero', 'vec3 probe(float a) { return vec3(1.0 / 0.0, -1.0 / 0.0, a); }'],
   ];
-  return cases.map(([word, source]) => ({ name: `fold-${word}`, rows: [], source, inputs: scalars() }));
+  return cases.map(([word, source]) => ({
+    name: `fold-${word}`,
+    rows: ['float literal'],
+    source,
+    inputs: scalars(),
+  }));
 }
 
 /** A function of the whole family together: Godot's evaluation order and every form at once. */

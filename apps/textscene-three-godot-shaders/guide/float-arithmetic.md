@@ -31,6 +31,8 @@ void fragment() {
 
 A literal such as `2.5`, `.5`, `1e-3` or `2.5f`. Godot reads the text with its own decimal reader, keeps a 32-bit float, and writes the float back into the GLSL it compiles with 14 decimals (`shader_compiler.cpp:180`). So a value under `1e-14` draws as `0.0`, a value with more digits draws with fewer, and a literal past the float range, such as `1e39`, fails to compile. The transpiler gives each literal the float that this chain gives.
 
+Arithmetic of literals alone, such as `58.656 + 74.377`, never reaches the GPU as arithmetic. Godot's GLSL compiler, glslang, reads each number of Godot's text as a double, folds the arithmetic in double precision and rounds the result once. The transpiler folds the same arithmetic the same way, so the result can differ by one unit from the same sum in 32-bit floats. Godot also folds a constructor of literals, and a negated literal at the top of an expression, into one constant (`shader_language.cpp:7840`).
+
 The transpiler emits `float(value)`. Rows: `float literal`. Godot source: `servers/rendering/shader_language.h:59`.
 
 ### Probe `literal-0`, no input
@@ -134,6 +136,166 @@ float probe() { return 1e39; }
 ```
 
 Godot does not compile this shader: it draws nothing. The transpiler refuses it too.
+
+### Probe `fold-sum`, 16 input rows
+
+```glsl
+float probe(float a) { return 58.656 + 74.377 + a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `133.033` |
+| `-0.0` | `133.033` |
+| `1.0` | `134.033` |
+| `1e-40` | `133.033` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `fold-chain`, 16 input rows
+
+```glsl
+float probe(float a) { return 0.1 + 0.2 + 0.3 + a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `0.6` |
+| `-0.0` | `0.6` |
+| `1.0` | `1.6` |
+| `1e-40` | `0.6` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `fold-difference-quotient`, 16 input rows
+
+```glsl
+float probe(float a) { return (33.135 - 0.886) / 69.143 * a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `0.0` |
+| `-0.0` | `-0.0` |
+| `1.0` | `0.4664102` |
+| `1e-40` | `0.0` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `fold-vector-scalar`, 16 input rows
+
+```glsl
+vec4 probe(float a) { return vec3(58.656).bggr + 74.377 + a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `(133.033, 133.033, 133.033, 133.033)` |
+| `-0.0` | `(133.033, 133.033, 133.033, 133.033)` |
+| `1.0` | `(134.033, 134.033, 134.033, 134.033)` |
+| `1e-40` | `(133.033, 133.033, 133.033, 133.033)` |
+| `inf` | `(inf, inf, inf, inf)` |
+| `-inf` | `(-inf, -inf, -inf, -inf)` |
+| `NaN` | `(NaN, NaN, NaN, NaN)` |
+
+### Probe `fold-quotient-vector`, 16 input rows
+
+```glsl
+vec2 probe(float a) { return (71.543 + 54.854) / vec2(a, 0.5); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `(inf, 252.79399)` |
+| `-0.0` | `(-inf, 252.79399)` |
+| `1.0` | `(126.396996, 252.79399)` |
+| `1e-40` | `(inf, 252.79399)` |
+| `inf` | `(0.0, 252.79399)` |
+| `-inf` | `(-0.0, 252.79399)` |
+| `NaN` | `(NaN, 252.79399)` |
+
+### Probe `fold-swizzle`, 16 input rows
+
+```glsl
+float probe(float a) { return ((68.452 * vec3(797.08) + vec2(51.97).t).zx).t + a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `54613.695` |
+| `-0.0` | `54613.695` |
+| `1.0` | `54614.695` |
+| `1e-40` | `54613.695` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `fold-negated-sum`, 16 input rows
+
+```glsl
+float probe(float a) { return -(0.1 + 0.2) + a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `-0.3` |
+| `-0.0` | `-0.3` |
+| `1.0` | `0.7` |
+| `1e-40` | `-0.3` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `fold-overflow`, 16 input rows
+
+```glsl
+vec2 probe(float a) { return vec2(3e38 * 10.0, -(3e38 * 10.0)) + a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `(inf, -inf)` |
+| `-0.0` | `(inf, -inf)` |
+| `1.0` | `(inf, -inf)` |
+| `1e-40` | `(inf, -inf)` |
+| `inf` | `(inf, NaN)` |
+| `-inf` | `(NaN, -inf)` |
+| `NaN` | `(NaN, NaN)` |
+
+### Probe `fold-negative-zero`, 16 input rows
+
+```glsl
+vec2 probe(float a) { return vec2(-0.0 * 1.0, a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `(-0.0, 0.0)` |
+| `-0.0` | `(-0.0, -0.0)` |
+| `1.0` | `(-0.0, 1.0)` |
+| `1e-40` | `(-0.0, 1e-40)` |
+| `inf` | `(-0.0, inf)` |
+| `-inf` | `(-0.0, -inf)` |
+| `NaN` | `(-0.0, NaN)` |
+
+### Probe `fold-division-by-zero`, 16 input rows
+
+```glsl
+vec3 probe(float a) { return vec3(1.0 / 0.0, -1.0 / 0.0, a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `(inf, -inf, 0.0)` |
+| `-0.0` | `(inf, -inf, -0.0)` |
+| `1.0` | `(inf, -inf, 1.0)` |
+| `1e-40` | `(inf, -inf, 1e-40)` |
+| `inf` | `(inf, -inf, inf)` |
+| `-inf` | `(inf, -inf, -inf)` |
+| `NaN` | `(inf, -inf, NaN)` |
 
 ## `+` (OP_ADD)
 
@@ -839,7 +1001,7 @@ vec4 probe(vec4 a, float b) { return a / b; }
 
 ## Negation `-a` (OP_NEGATE)
 
-`-a` flips the sign of each lane, `0.0` and NaN included.
+`-a` flips the sign of each lane, `0.0` and NaN included. When the text Godot writes for `a` already starts with a minus, Godot writes `a` alone (`shader_compiler.cpp:1141`). So `-(-a)` draws as `-a`, `-((-a).y)` as `-a.y` and `-(-1.5) + b` as `-1.5 + b`. The transpiler draws them as Godot does.
 
 The transpiler emits `a.negate()`. Rows: `OP_NEGATE(float)`, `OP_NEGATE(vec2)`, `OP_NEGATE(vec3)`, `OP_NEGATE(vec4)`. Godot source: `servers/rendering/shader_language.cpp:1614`.
 
@@ -909,6 +1071,136 @@ vec4 probe(vec4 a) { return -a; }
 | `(inf, 1.0, 1e-7, 1e-40)` | `(-inf, -1.0, -1e-7, -1e-40)` |
 | `(-inf, -1.0, 123456.79, inf)` | `(inf, 1.0, -123456.79, -inf)` |
 | `(NaN, 0.5, 16777216.0, -inf)` | `(NaN, -0.5, -16777216.0, inf)` |
+
+### Probe `negate-nested-vector`, 16 input rows
+
+```glsl
+vec2 probe(vec2 a) { return -(-a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `(-0.0, 2.75)` |
+| `(-0.0, 0.33333334)` | `(0.0, -0.33333334)` |
+| `(1.0, 1e-7)` | `(-1.0, -1e-7)` |
+| `(1e-7, 1e-40)` | `(-1e-7, -1e-40)` |
+| `(123456.79, inf)` | `(-123456.79, -inf)` |
+| `(16777216.0, -inf)` | `(-16777216.0, inf)` |
+| `(3e+38, NaN)` | `(-3e+38, NaN)` |
+| `(1e-40, -0.0)` | `(-1e-40, 0.0)` |
+
+### Probe `negate-nested-scalar`, 16 input rows
+
+```glsl
+float probe(float a) { return -(-a); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `-0.0` |
+| `-0.0` | `0.0` |
+| `1.0` | `-1.0` |
+| `1e-40` | `-1e-40` |
+| `inf` | `-inf` |
+| `-inf` | `inf` |
+| `NaN` | `NaN` |
+
+### Probe `negate-nested-triple`, 16 input rows
+
+```glsl
+float probe(float a) { return -(-(-a)); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `-0.0` |
+| `-0.0` | `0.0` |
+| `1.0` | `-1.0` |
+| `1e-40` | `-1e-40` |
+| `inf` | `-inf` |
+| `-inf` | `inf` |
+| `NaN` | `NaN` |
+
+### Probe `negate-nested-constructor`, 16 input rows
+
+```glsl
+vec2 probe(float a) { return -(-vec2(a, 0.499)); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `(-0.0, -0.499)` |
+| `-0.0` | `(0.0, -0.499)` |
+| `1.0` | `(-1.0, -0.499)` |
+| `1e-40` | `(-1e-40, -0.499)` |
+| `inf` | `(-inf, -0.499)` |
+| `-inf` | `(inf, -0.499)` |
+| `NaN` | `(NaN, -0.499)` |
+
+### Probe `negate-nested-swizzle`, 16 input rows
+
+```glsl
+float probe(vec2 a) { return -((-a).y); }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `(0.0, -2.75)` | `2.75` |
+| `(1.0, 1e-7)` | `-1e-7` |
+| `(1e-7, 1e-40)` | `-1e-40` |
+| `(123456.79, inf)` | `-inf` |
+| `(16777216.0, -inf)` | `inf` |
+| `(3e+38, NaN)` | `NaN` |
+| `(-3e+38, 0.0)` | `-0.0` |
+| `(1e-40, -0.0)` | `0.0` |
+
+### Probe `negate-nested-sum`, 256 input rows
+
+```glsl
+float probe(float a, float b) { return -(-(a + b)); }
+```
+
+| `a` | `b` | Godot gives |
+| --- | --- | --- |
+| `0.0` | `0.0` | `-0.0` |
+| `-0.0` | `-0.0` | `0.0` |
+| `1.0` | `1.0` | `-2.0` |
+| `1e-40` | `inf` | `-inf` |
+| `inf` | `-inf` | `NaN` |
+| `-inf` | `1e-40` | `inf` |
+| `NaN` | `NaN` | `NaN` |
+
+### Probe `negate-nested-constant`, 16 input rows
+
+```glsl
+float probe(float a) { return -(-1.5) + a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `-1.5` |
+| `-0.0` | `-1.5` |
+| `1.0` | `-0.5` |
+| `1e-40` | `-1.5` |
+| `inf` | `inf` |
+| `-inf` | `-inf` |
+| `NaN` | `NaN` |
+
+### Probe `negate-nested-constant-vector`, 16 input rows
+
+```glsl
+vec2 probe(float a) { return -(-vec2(1.5, 0.25)) * a; }
+```
+
+| `a` | Godot gives |
+| --- | --- |
+| `0.0` | `(0.0, 0.0)` |
+| `-0.0` | `(-0.0, -0.0)` |
+| `1.0` | `(1.5, 0.25)` |
+| `1e-40` | `(0.0, 0.0)` |
+| `inf` | `(inf, inf)` |
+| `-inf` | `(-inf, -inf)` |
+| `NaN` | `(NaN, NaN)` |
 
 ## Vector constructors
 

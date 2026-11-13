@@ -31,14 +31,16 @@ The GPU sets the edge cases, not the transpiler. On the probe GPU, an arithmetic
       {
         heading: 'Float literals',
         rows: (row) => row.id === 'float literal',
-        what: `A literal such as \`2.5\`, \`.5\`, \`1e-3\` or \`2.5f\`. Godot reads the text with its own decimal reader, keeps a 32-bit float, and writes the float back into the GLSL it compiles with 14 decimals (\`shader_compiler.cpp:180\`). So a value under \`1e-14\` draws as \`0.0\`, a value with more digits draws with fewer, and a literal past the float range, such as \`1e39\`, fails to compile. The transpiler gives each literal the float that this chain gives.`,
+        what: `A literal such as \`2.5\`, \`.5\`, \`1e-3\` or \`2.5f\`. Godot reads the text with its own decimal reader, keeps a 32-bit float, and writes the float back into the GLSL it compiles with 14 decimals (\`shader_compiler.cpp:180\`). So a value under \`1e-14\` draws as \`0.0\`, a value with more digits draws with fewer, and a literal past the float range, such as \`1e39\`, fails to compile. The transpiler gives each literal the float that this chain gives.
+
+Arithmetic of literals alone, such as \`58.656 + 74.377\`, never reaches the GPU as arithmetic. Godot's GLSL compiler, glslang, reads each number of Godot's text as a double, folds the arithmetic in double precision and rounds the result once. The transpiler folds the same arithmetic the same way, so the result can differ by one unit from the same sum in 32-bit floats. Godot also folds a constructor of literals, and a negated literal at the top of an expression, into one constant (\`shader_language.cpp:7840\`).`,
         tsl: 'float(value)',
       },
       ...ARITHMETIC.map(arithmeticSection),
       {
         heading: 'Negation `-a` (OP_NEGATE)',
         rows: (row) => row.id.startsWith('OP_NEGATE('),
-        what: '`-a` flips the sign of each lane, `0.0` and NaN included.',
+        what: '`-a` flips the sign of each lane, `0.0` and NaN included. When the text Godot writes for `a` already starts with a minus, Godot writes `a` alone (`shader_compiler.cpp:1141`). So `-(-a)` draws as `-a`, `-((-a).y)` as `-a.y` and `-(-1.5) + b` as `-1.5 + b`. The transpiler draws them as Godot does.',
         tsl: 'a.negate()',
       },
       {
