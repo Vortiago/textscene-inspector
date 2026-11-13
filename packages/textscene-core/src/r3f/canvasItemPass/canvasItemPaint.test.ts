@@ -120,6 +120,54 @@ layer_2/name = "c"
   });
 });
 
+describe('canvasPaintPass: canvases', () => {
+  it('draws a Control authored last over an earlier Polygon2D sibling, in tree order', () => {
+    const paint = paintOver(
+      parsed(`[node name="Root" type="Node2D"]
+
+[node name="Ball" type="Polygon2D" parent="."]
+
+[node name="Background" type="ColorRect" parent="."]
+`)
+    );
+    expect(inPaintOrder(paint)).toEqual(['Root', 'Root/Ball', 'Root/Background']);
+  });
+
+  it('draws a canvas item under a plain Node over a sibling authored after it', () => {
+    // Its parent is no CanvasItem, so it parents at the canvas (`canvas_item.cpp:246-267`) and
+    // draws at its pre-order rank among the roots, after the root it hangs under.
+    const paint = paintOver(
+      parsed(`[node name="Root" type="Node2D"]
+
+[node name="Holder" type="Node" parent="."]
+
+[node name="Detached" type="Polygon2D" parent="Holder"]
+
+[node name="Ball" type="Polygon2D" parent="."]
+`)
+    );
+    expect(paintAt(paint, 'Root/Holder/Detached').own).toBeGreaterThan(paintAt(paint, 'Root/Ball').own);
+  });
+
+  it("starts a SubViewport's children at the beginning of the sequence, in tree order", () => {
+    const paint = paintOver(
+      parsed(`[node name="Root" type="Node2D"]
+
+[node name="Before" type="Polygon2D" parent="."]
+
+[node name="View" type="SubViewport" parent="."]
+
+[node name="Shape" type="Polygon2D" parent="View"]
+
+[node name="Panel" type="ColorRect" parent="View"]
+`)
+    );
+    const shape = paintAt(paint, 'Root/View/Shape');
+    expect(shape.own).toBeLessThan(paintAt(paint, 'Root/Before').own);
+    expect(shape.own).toBeLessThan(paintAt(paint, 'Root/View/Panel').own);
+  });
+});
+
 describe('canvasPaintPass: instances', () => {
   const part = parsed(`[node name="Part" type="Node2D"]
 
