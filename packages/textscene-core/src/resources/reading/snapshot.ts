@@ -73,6 +73,19 @@ export function snapshotOver(files: CacheSource<ParsedResource>): ResourceSnapsh
   return { read: (reference, kind) => readAt(files, reference, kind, []) };
 }
 
+/** The loader's answer before any file loads, which `mayName` reads against. */
+const NOTHING_LOADED: CacheSource<ParsedResource> = { getCached: () => undefined };
+
+/**
+ * Whether `reference` can name a `kind` before any file loads: false for an unknown id and for a
+ * resource of another class, as Godot refuses the property. A file still to load can name one.
+ */
+export function mayName(reference: ScopedReference, kind: ResourceKind<unknown>): boolean {
+  const found = locate(NOTHING_LOADED, reference);
+  if (!('held' in found)) return found.status === 'pending';
+  return kind.accepts(found.held.type);
+}
+
 function readAt<T>(
   files: CacheSource<ParsedResource>,
   reference: ScopedReference,
