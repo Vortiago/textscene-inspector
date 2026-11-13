@@ -218,6 +218,8 @@ export interface StandardMaterial3DData {
   rimTint: number;
   /** Height mapping, null when `heightmap_enabled` is off or triplanar mapping overrides it. */
   heightmap: Heightmap | null;
+  /** `use_particle_trails` (default false): the shader skins each trail section to its particle. */
+  usesParticleTrails: boolean;
   /** `use_point_size` (default false): the shader writes `point_size` as POINT_SIZE and samples albedo at POINT_COORD. */
   usesPointSize: boolean;
   /** `point_size` in pixels (default 1). The setter checks no range, as the inspector's 0.1-128 is only a hint. */
