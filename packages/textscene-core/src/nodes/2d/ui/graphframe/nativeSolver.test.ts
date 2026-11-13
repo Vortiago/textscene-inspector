@@ -10,7 +10,7 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import './nativeSolver';
 import type { GraphFrameProperties } from './types';
@@ -24,20 +24,20 @@ function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): Read
 }
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'Control', { name, ...props }),
-  };
+  });
 }
 
 function graphFrame(name: string, props: Partial<GraphFrameProperties>, children: SolveNode[]): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'GraphFrame', { name, ...props }),
     children,
-  };
+  });
 }
 
 function ctx(): SolveContext {

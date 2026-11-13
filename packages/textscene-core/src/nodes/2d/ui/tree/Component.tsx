@@ -21,10 +21,10 @@ import type { TreeProperties } from './types';
 
 const TREE_COLUMNS_DEFAULT = 1;
 
-export function Tree({ solveNode, tint, rect, renderOrder, theme }: NativeControlComponentProps) {
+export function Tree({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<TreeProperties>(solveNode);
-  const panelBox = pickTreePanelStyleBox(solveNode.styleBoxes, theme);
-  const titleButtonBox = pickTreeTitleButtonStyleBox(solveNode.styleBoxes, theme);
+  const panelBox = pickTreePanelStyleBox(solveNode.styleBoxes);
+  const titleButtonBox = pickTreeTitleButtonStyleBox(solveNode.styleBoxes);
 
   const columns = Math.max(1, props.columns ?? TREE_COLUMNS_DEFAULT);
   const titleHeightPx = treeTitleButtonHeightPx(props.columnTitlesVisible, titleButtonBox);

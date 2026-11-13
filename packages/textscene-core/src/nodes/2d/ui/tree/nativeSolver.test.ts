@@ -1,6 +1,7 @@
 /** Tree's draw-time geometry against `scene/gui/tree.cpp` (Godot 4.6.3), for the always-empty case (`nativeSolver.ts`). */
 import { describe, expect, it } from 'vitest';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import {
   pickTreePanelStyleBox,
   pickTreeTitleButtonStyleBox,
@@ -10,40 +11,27 @@ import {
   treeTitleButtonX,
 } from './nativeSolver';
 
-const THEME = nativeTheme(1);
-
-const DEFAULT_PANEL = pickTreePanelStyleBox({}, THEME);
-
-describe('pickTreePanelStyleBox default panel', () => {
-  // default_theme.cpp:860: make_flat_stylebox(style_normal_color, 4, 4, 4, 5).
-  it('has a taller bottom margin than its other three sides', () => {
-    const box = DEFAULT_PANEL;
-    expect(box.contentMargin.left).toBe(4);
-    expect(box.contentMargin.top).toBe(4);
-    expect(box.contentMargin.right).toBe(4);
-    expect(box.contentMargin.bottom).toBe(5);
-  });
-  it('fills with style_normal_color (alpha 0.6)', () => {
-    expect(DEFAULT_PANEL.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
-  });
-});
+const TREE_BOXES = defaultStyleBoxesOf(defaultThemeAt(1)).Tree!;
+const DEFAULT_PANEL = pickTreePanelStyleBox(TREE_BOXES);
+const TITLE_BUTTON = pickTreeTitleButtonStyleBox(TREE_BOXES);
 
 describe('pickTreePanelStyleBox / pickTreeTitleButtonStyleBox', () => {
-  it('falls back to the default title button stylebox when no override is present', () => {
-    expect(pickTreeTitleButtonStyleBox({}, THEME)).toBe(THEME.widgets.button.pressed);
+  it('reads `panel` and `title_button_normal`, the boxes `tree.cpp` draws the panel and a title with', () => {
+    expect(DEFAULT_PANEL).toBe(TREE_BOXES.panel);
+    expect(TITLE_BUTTON).toBe(TREE_BOXES.title_button_normal);
   });
-  it('prefers a theme_override_styles override over the default', () => {
+  it('takes an override over the default', () => {
     const override = { ...DEFAULT_PANEL, bgColor: { r: 1, g: 0, b: 0, a: 1 } };
-    expect(pickTreePanelStyleBox({ panel: override }, THEME)).toBe(override);
+    expect(pickTreePanelStyleBox({ ...TREE_BOXES, panel: override })).toBe(override);
   });
 });
 
 describe('treeTitleButtonHeightPx', () => {
   it('is zero when column_titles_visible is unset', () => {
-    expect(treeTitleButtonHeightPx(undefined, THEME.widgets.button.pressed)).toBe(0);
+    expect(treeTitleButtonHeightPx(undefined, TITLE_BUTTON)).toBe(0);
   });
   it("is the title button's own content-margin height when visible, even with a blank title", () => {
-    const box = THEME.widgets.button.pressed;
+    const box = TITLE_BUTTON;
     expect(treeTitleButtonHeightPx(true, box)).toBe(box.contentMargin.top + box.contentMargin.bottom);
   });
 });
@@ -69,16 +57,16 @@ describe('treeContentRect', () => {
 
 describe('treeColumnWidthPx', () => {
   it('splits the content width evenly across columns when titles are hidden (zero minimum each)', () => {
-    const box = THEME.widgets.button.pressed;
+    const box = TITLE_BUTTON;
     expect(treeColumnWidthPx(300, 3, false, box)).toBe(100);
   });
   it("floors each column at the title button's own L+R margin once titles are visible", () => {
-    const box = THEME.widgets.button.pressed;
+    const box = TITLE_BUTTON;
     const width = treeColumnWidthPx(300, 3, true, box);
     expect(width).toBeGreaterThanOrEqual(box.contentMargin.left + box.contentMargin.right);
   });
   it('stays at the bare minimum width when the content rect is too narrow to expand at all', () => {
-    const box = THEME.widgets.button.pressed;
+    const box = TITLE_BUTTON;
     const minWidth = box.contentMargin.left + box.contentMargin.right;
     expect(treeColumnWidthPx(minWidth * 3, 3, true, box)).toBe(minWidth);
   });

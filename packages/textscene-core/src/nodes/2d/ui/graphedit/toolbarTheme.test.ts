@@ -3,6 +3,8 @@
  * (`Control::get_theme_stylebox`, `control.cpp:3078`): `FlatButton` over `Button`, `Label`, and the
  * SpinBox's `SpinBoxInnerLineEdit` over `LineEdit`.
  */
+import { defaultThemeAt } from '../../../../godot/scene/defaultTheme/defaultTheme';
+import { defaultStyleBoxesOf } from '../../../../r3f/controls/native/defaultThemeRecords';
 import { describe, expect, it } from 'vitest';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { isDrawn } from '../../../../r3f/controls/native/styleBoxFlat';
@@ -32,7 +34,9 @@ describe('graphEditToolbarTheme', () => {
     it('draws no FlatButton box but the pressed one, and keeps the Button margins in every state', () => {
       const { normal, pressed, disabled } = items.buttonBoxes;
       expect([isDrawn(normal), isDrawn(pressed), isDrawn(disabled)]).toEqual([false, true, false]);
-      expect(normal.contentMargin).toEqual(THEME.widgets.button.normal.contentMargin);
+      expect(normal.contentMargin).toEqual(
+        defaultStyleBoxesOf(defaultThemeAt(1)).Button!.normal!.contentMargin
+      );
     });
 
     it('draws the zoom label and the field in their own default colours', () => {

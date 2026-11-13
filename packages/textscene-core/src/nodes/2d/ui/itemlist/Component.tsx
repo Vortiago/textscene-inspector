@@ -226,7 +226,6 @@ export function ItemList({
   rect,
   renderOrder,
   slot,
-  theme,
   snapToPixels,
   children,
 }: NativeControlComponentProps) {
@@ -239,18 +238,18 @@ export function ItemList({
   const iconScale = props.iconScale ?? 1;
   const fixedIconSizeSet = !!(props.fixedIconSize && props.fixedIconSize.x > 0 && props.fixedIconSize.y > 0);
 
-  const panelBox = pickItemListPanelStyleBox(solveNode.styleBoxes, theme);
+  const panelBox = pickItemListPanelStyleBox(solveNode.styleBoxes);
   const panelMargin = contentMarginSize(panelBox);
 
   const { fontSizePx, color: baseFontColor } = itemListTextTheme(solveNode, props);
   const fontMetrics = resolveNodeFontMetrics(solveNode, ITEM_LIST_THEME_FONT_KEY);
 
   const selectedFontColor = itemListSelectedFontColor(solveNode);
-  const selectedBox = pickItemListSelectedStyleBox(solveNode.styleBoxes, theme);
-  const cursorBox = pickItemListCursorStyleBox(solveNode.styleBoxes, theme);
+  const selectedBox = pickItemListSelectedStyleBox(solveNode.styleBoxes);
+  const cursorBox = pickItemListCursorStyleBox(solveNode.styleBoxes);
   const drawsCursor = itemListDrawsCursor(props.selectMode ?? 0);
 
-  const spacing = useMemo(() => itemListSpacing(solveNode.constants, theme), [solveNode.constants, theme]);
+  const spacing = useMemo(() => itemListSpacing(solveNode.constants), [solveNode.constants]);
   const { hSeparation, vSeparation, iconMargin } = spacing;
   const wraparoundItems = props.wraparoundItems !== false;
   // Under RTL the panel and guide lines stay, and only each row's icon and label

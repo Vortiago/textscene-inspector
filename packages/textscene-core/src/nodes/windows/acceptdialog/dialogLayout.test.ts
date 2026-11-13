@@ -10,7 +10,7 @@ import { nativeTheme } from '../../../r3f/controls/native/nativeTheme';
 import { flatStyleBox } from '../../../r3f/controls/native/styleBoxFlat';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import { measureText } from '../../../r3f/controls/native/text/measurer';
-import { controlNode, solveNode } from '../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../r3f/controls/native/testing/solveNode';
 import '../../../r3f/controls/index';
 import { wrappedWindowSize } from '../window/wrapControls';
 import { dialogGeometry } from './dialogLayout';
@@ -40,13 +40,19 @@ function dialog(
       properties
     ),
   };
-  return { ...solveNode(), path: 'Dialog', node: node as unknown as TscnNode, children, ...themeItems };
+  return withThemeItems({
+    ...solveNode(),
+    path: 'Dialog',
+    node: node as unknown as TscnNode,
+    children,
+    ...themeItems,
+  });
 }
 
 /** A ColorRect with a custom minimum size, as the oracle adds it. */
 function authoredBox(name = 'Box', minimum = { x: 120, y: 50 }): SolveNode {
   const node = controlNode(name, 'ColorRect', { name, customMinimumSize: minimum });
-  return { ...solveNode(), path: `Dialog/${name}`, node };
+  return withThemeItems({ ...solveNode(), path: `Dialog/${name}`, node });
 }
 
 function sizeOf(window: SolveNode) {

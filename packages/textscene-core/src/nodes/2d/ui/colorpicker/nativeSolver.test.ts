@@ -7,7 +7,11 @@ import { spinBoxButtonsBlockWidth } from '../spinbox/nativeSolver';
 import { defaultLineEditField } from '../shared/testing/lineEditField';
 import { MODE_HSV, MODE_LINEAR, MODE_OKHSL, MODE_RGB } from './colorModes';
 import { pickerChildTheme } from './pickerChildTheme';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   colorPickerRows,
   colorPickerMinimumSize,
@@ -36,14 +40,14 @@ import { measureText as measureTextWithFont } from '../../../../r3f/controls/nat
 
 function node(properties: Record<string, unknown>): SolveNode {
   const tscnNode: TscnNode = controlNode('P', 'ColorPicker', properties);
-  return { ...emptySolveNode(), path: 'P', node: tscnNode };
+  return withThemeItems({ ...emptySolveNode(), path: 'P', node: tscnNode });
 }
 
 const THEME = pickerChildTheme(node({}), nativeTheme(1)).theme;
 
-/** `THEME` with some widget boxes replaced. */
-function themeWithWidgets(widgets: Partial<typeof THEME.widgets>): typeof THEME {
-  return { ...THEME, widgets: { ...THEME.widgets, ...widgets } };
+/** `THEME` with some button boxes replaced. */
+function themeWithButtons(boxes: Partial<Pick<typeof THEME, 'button' | 'flatMenuButton'>>): typeof THEME {
+  return { ...THEME, ...boxes };
 }
 const CTX: SolveContext = { theme: THEME, measureText: null, combinedMinimumSize: () => ({ x: 0, y: 0 }) };
 
@@ -304,11 +308,11 @@ describe('the pressed mode button with wider margins than the others', () => {
   });
 });
 
-const WIDE_FLAT_THEME = themeWithWidgets({
+const WIDE_FLAT_THEME = themeWithButtons({
   flatMenuButton: {
-    ...THEME.widgets.flatMenuButton,
+    ...THEME.flatMenuButton,
     normal: {
-      ...THEME.widgets.flatMenuButton.normal,
+      ...THEME.flatMenuButton.normal,
       contentMargin: { left: 14, top: 10, right: 14, bottom: 10 },
     },
   },
@@ -736,7 +740,7 @@ describe('textTypeLabel', () => {
       size: { x: 10, y: 23 },
       direction: { rtl: false, isTextRtl: false },
     });
-    expect(label.leftPx).toBe(box.x + THEME.widgets.button.normal.contentMargin.left);
+    expect(label.leftPx).toBe(box.x + THEME.button.normal.contentMargin.left);
     expect(label.alignment).toBe(1);
   });
 });

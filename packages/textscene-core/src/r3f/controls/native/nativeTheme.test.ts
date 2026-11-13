@@ -21,7 +21,7 @@ describe('nativeTheme', () => {
 
   it('carries every ScaledGodotTheme field verbatim at scale 1', () => {
     const theme = nativeTheme(1);
-    const { styleFill: _styleFill, widgets: _widgets, ...scaledFields } = theme;
+    const { styleFill: _styleFill, ...scaledFields } = theme;
     expect(scaledFields).toEqual(scaledGodotTheme(1));
   });
 
@@ -36,73 +36,12 @@ describe('nativeTheme', () => {
     expect(theme.sliderGrabberSize).toBe(32);
   });
 
-  it('does NOT scale style fill colours — default_theme_scale only touches geometry', () => {
+  it('does not scale style fill colours: default_theme_scale only touches geometry', () => {
     // fill_default_theme scales every length it passes to make_flat_stylebox,
     // never a Color literal, so style_normal_color stays Color(0.1, 0.1, 0.1, 0.6)
     // at any scale.
     const theme = nativeTheme(2);
     expect(theme.styleFill.normal).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
-  });
-
-  const DEFAULT_BORDER_COLOR = { r: 0.8, g: 0.8, b: 0.8, a: 1 }; // style_box_flat.h:40, unset by make_flat_stylebox
-  const ZERO_SIDES = { left: 0, top: 0, right: 0, bottom: 0 };
-  const uniform = (n: number) => ({ left: n, top: n, right: n, bottom: n });
-  const uniformCorners = (n: number) => ({ topLeft: n, topRight: n, bottomRight: n, bottomLeft: n });
-
-  describe('widgets', () => {
-    it('Button focus: an uncentred 2 px ring flush outside the button, scaled with the theme (default_theme.cpp:142-144)', () => {
-      const { focus } = nativeTheme(1).widgets.button;
-      expect([focus.drawCenter, focus.borderWidth.left, focus.expandMargin.left]).toEqual([false, 2, 2]);
-      expect(nativeTheme(1.5).widgets.button.focus.borderWidth.left).toBe(3);
-    });
-
-    it('Button normal/hover/pressed/disabled: make_flat_stylebox(color) with every default arg — default_theme.cpp:138-141', () => {
-      const theme = nativeTheme(1);
-      const shared = {
-        borderColor: DEFAULT_BORDER_COLOR,
-        borderWidth: ZERO_SIDES,
-        cornerRadius: uniformCorners(3), // default_corner_radius
-        expandMargin: ZERO_SIDES,
-        contentMargin: uniform(4), // default_margin
-        drawCenter: true,
-        borderBlend: false,
-        antiAliased: true,
-        aaSize: 1,
-        cornerDetail: 5,
-        skew: { x: 0, y: 0 },
-        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-        shadowSize: 0,
-        shadowOffset: { x: 0, y: 0 },
-      };
-      expect(theme.widgets.button.normal).toEqual({ ...shared, bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 } });
-      expect(theme.widgets.button.hover).toEqual({
-        ...shared,
-        bgColor: { r: 0.225, g: 0.225, b: 0.225, a: 0.6 },
-      });
-      expect(theme.widgets.button.pressed).toEqual({ ...shared, bgColor: { r: 0, g: 0, b: 0, a: 0.6 } });
-      expect(theme.widgets.button.disabled).toEqual({
-        ...shared,
-        bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.3 },
-      });
-    });
-
-    it("scales widget geometry (margins, corner radii) at scale 2, per make_flat_stylebox's Math.round(x * scale)", () => {
-      const theme = nativeTheme(2);
-      expect(theme.widgets.button.normal.contentMargin).toEqual(uniform(8));
-      expect(theme.widgets.button.normal.cornerRadius).toEqual(uniformCorners(6));
-    });
-
-    it('does NOT scale widget fill colours', () => {
-      const theme = nativeTheme(2);
-      expect(theme.widgets.button.normal.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
-    });
-  });
-
-  describe('dialogPanel', () => {
-    it('scales the margin twice, as the call passes a scaled margin to make_flat_stylebox', () => {
-      expect(nativeTheme(1).widgets.dialogPanel.contentMargin).toEqual(uniform(8));
-      expect(nativeTheme(1.5).widgets.dialogPanel.contentMargin).toEqual(uniform(18));
-    });
   });
 
   describe('cache', () => {
@@ -120,53 +59,6 @@ describe('nativeTheme', () => {
       const first = nativeTheme(1);
       nativeTheme(2);
       expect(nativeTheme(1)).toBe(first);
-    });
-  });
-
-  describe('corner detail', () => {
-    it('truncates the scaled detail to an int, as set_corner_detail does', () => {
-      expect(nativeTheme(1).widgets.popupMenuPanel.cornerDetail).toBe(5);
-      expect(nativeTheme(1.5).widgets.popupMenuPanel.cornerDetail).toBe(7);
-    });
-
-    // The detail follows the Godot radius before the scale: 3 for most boxes, 0 for the dialog panel
-    // and the flat menu button (clamped to 1).
-    it.each([
-      [1, 5, 1],
-      [2, 10, 1],
-    ])('gives each widget the detail of its radius at scale %i', (scale, defaultRadius, none) => {
-      const { widgets } = nativeTheme(scale);
-      expect({
-        popupMenuPanel: widgets.popupMenuPanel.cornerDetail,
-        buttonNormal: widgets.button.normal.cornerDetail,
-        buttonFocus: widgets.button.focus.cornerDetail,
-        dialogPanel: widgets.dialogPanel.cornerDetail,
-        flatMenuButton: widgets.flatMenuButton.normal.cornerDetail,
-      }).toEqual({
-        popupMenuPanel: defaultRadius,
-        buttonNormal: defaultRadius,
-        buttonFocus: defaultRadius,
-        dialogPanel: none,
-        flatMenuButton: none,
-      });
-    });
-  });
-
-  describe('the default type variations it models', () => {
-    it('gives the FlatMenuButton boxes the margins of the Button box and no fill (default_theme.cpp:360-375)', () => {
-      const { widgets } = nativeTheme(1);
-      expect(widgets.flatMenuButton.normal.contentMargin).toEqual(widgets.button.normal.contentMargin);
-      expect(widgets.flatMenuButton.normal.bgColor.a).toBe(0);
-    });
-
-    it('freezes the shared FlatMenuButton and Button boxes, so an in-place margin edit throws', () => {
-      const { widgets } = nativeTheme(1);
-      for (const box of [widgets.flatMenuButton.normal, widgets.button.normal]) {
-        const margin = box.contentMargin as { left: number };
-        expect(() => {
-          margin.left += 1;
-        }).toThrow(TypeError);
-      }
     });
   });
 });

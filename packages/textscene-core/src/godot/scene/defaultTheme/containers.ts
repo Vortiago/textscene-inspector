@@ -1,6 +1,6 @@
 /**
  * The default theme's containers, panels and separators (`scene/theme/default_theme.cpp:133-134`,
- * `:653-670`, `:726`, `:734-740`, `:1066-1069`, `:1165-1168`, `:1236-1323`).
+ * `:653-670`, `:734-740`, `:1066-1069`, `:1165-1168`, `:1236-1323`).
  *
  * Portions ported from Godot Engine (MIT).
  * Copyright (c) 2014-present Godot Engine contributors.
@@ -58,13 +58,13 @@ function panelOf(scale: number): DefaultThemeType {
 
 /**
  * `separator_horizontal` and its vertical twin (`default_theme.cpp:734-740`): `set_content_margin_individual`
- * takes `default_margin` unscaled, and only the thickness scales.
+ * takes `default_margin` unscaled, and only the thickness scales. HSeparator, VSeparator and PopupMenu share it.
  */
-function separator(scale: number, vertical: boolean): DefaultThemeType {
+export function separatorLine(scale: number, vertical: boolean): DefaultLineStyleBox {
   const along = vertical
     ? { left: 0, top: 4, right: 0, bottom: 4 }
     : { left: 4, top: 0, right: 4, bottom: 0 };
-  const line: DefaultLineStyleBox = {
+  return {
     kind: 'line',
     color: SEPARATOR_COLOR,
     thickness: scaledPx(1, scale),
@@ -73,7 +73,13 @@ function separator(scale: number, vertical: boolean): DefaultThemeType {
     growEnd: 1,
     contentMargin: along,
   };
-  return typeItems({ styles: { separator: line }, constants: { separation: scaledPx(4, scale) } });
+}
+
+function separator(scale: number, vertical: boolean): DefaultThemeType {
+  return typeItems({
+    styles: { separator: separatorLine(scale, vertical) },
+    constants: { separation: scaledPx(4, scale) },
+  });
 }
 
 /** One type with these constants and no other item. */
@@ -143,7 +149,6 @@ export function containerTypes(scale: number): DefaultThemeTypes {
   return {
     Panel: panelOf(scale),
     PanelContainer: panelOf(scale),
-    PopupPanel: typeItems({ styles: { panel: makeFlatStyleBox(scale, STYLE_FILL.normal) } }),
     TooltipPanel: typeItems({
       styles: {
         panel: makeFlatStyleBox(scale, TOOLTIP_FILL, { margin: { left: 8, top: 2, right: 8, bottom: 2 } }),

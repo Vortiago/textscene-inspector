@@ -114,7 +114,7 @@ export function GraphNode({
   // prop rather than reading them (`nativeClipCoverage.test.tsx`'s own doc).
   const clippingPlanes = useControlClipPlanes();
   const selected = props.selected === true;
-  const styles = graphNodeStyles(solveNode, theme);
+  const styles = graphNodeStyles(solveNode);
   const portSize = scaledIconSizeOf(GRAPH_PORT_ICON_SIZE, theme.scale);
   const resizerSize = scaledIconSizeOf(RESIZER_SE_ICON_SIZE, theme.scale);
   const panelStyle = selected ? styles.panelSelected : styles.panel;

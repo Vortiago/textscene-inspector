@@ -9,7 +9,7 @@ import type { NativeControlComponentProps } from '../../../../r3f/controls/Contr
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import type { SeparatorOrientation } from './styleBoxLine';
+import type { SeparatorOrientation } from './orientation';
 import { separatorPlacementRect } from './separatorPlacement';
 
 interface SeparatorChromeProps extends NativeControlComponentProps {

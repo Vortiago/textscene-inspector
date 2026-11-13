@@ -18,6 +18,8 @@ import { spinBoxFieldThemeItems } from '../spinbox/nativeSolver';
 const TOOLBAR_BUTTON_VARIATION = 'FlatButton';
 
 export interface GraphEditToolbarTheme {
+  /** The GraphEdit's own `menu_panel`, which `_update_theme_item_cache` gives the toolbar PanelContainer (`graph_edit.cpp:837`). */
+  menuPanel: StyleBoxFlatData;
   /** The toolbar Buttons' box by draw state, which `FlatButton` sets in the default theme. */
   buttonBoxes: Readonly<Record<ToggleDrawState, StyleBoxFlatData>>;
   /** The Buttons' colours, which hold the `icon_*_color` items. */
@@ -45,6 +47,7 @@ function buildToolbarTheme(n: SolveNode, theme: NativeTheme): GraphEditToolbarTh
   const field = spinBoxFieldThemeItems(n);
   const buttonBox = (state: ToggleDrawState) => pickButtonStyleBox(button.styleBoxes, state, n.rtl);
   const result: GraphEditToolbarTheme = {
+    menuPanel: requiredThemeItem(n.styleBoxes, 'menu_panel'),
     buttonBoxes: {
       normal: buttonBox('normal'),
       pressed: buttonBox('pressed'),

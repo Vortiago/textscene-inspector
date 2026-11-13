@@ -13,8 +13,7 @@
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
-import { contentMarginSize, contentRect, flatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
-import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
+import { contentMarginSize, contentRect } from '../../../../r3f/controls/native/styleBoxFlat';
 import { resolveToggleDrawState, type ToggleDrawState } from '../../../../r3f/controls/native/buttonBase';
 import {
   boxContainerMinimumSize,
@@ -31,7 +30,6 @@ import type { GraphEditToolbarTheme } from './toolbarTheme';
 import type { GraphEditProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { SizeFlags } from '../../../../godot/scene/control';
-import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
 
 /** `menu_panel->set_position(Vector2(10, 10))` (`graph_edit.cpp:3232`): unscaled. */
 const GRAPH_EDIT_MENU_POSITION: Vector2 = { x: 10, y: 10 };
@@ -92,27 +90,6 @@ export interface ToolbarTextMetrics {
   emSpaceWidthPx: number;
   /** `font->get_height(font_size)`: `Label`'s and `LineEdit`'s own minimum-height floor. */
   fontHeightPx: number;
-}
-
-/**
- * `graph_toolbar_style` (`default_theme.cpp:1290-1291`):
- * `make_flat_stylebox(Color(0.24, 0.24, 0.24, 0.6), 4, 2, 4, 2)`.
- */
-export function graphEditMenuPanelStyleBox(theme: NativeTheme): StyleBoxFlatData {
-  const { scale } = theme;
-  return flatStyleBox(
-    { r: 0.24, g: 0.24, b: 0.24, a: 0.6 },
-    {
-      contentMargin: {
-        left: Math.round(4 * scale),
-        top: Math.round(2 * scale),
-        right: Math.round(4 * scale),
-        bottom: Math.round(2 * scale),
-      },
-      cornerRadius: theme.cornerRadius,
-      cornerDetail: flatCornerDetail(DEFAULT_CORNER_RADIUS, scale),
-    }
-  );
 }
 
 /**
@@ -249,7 +226,7 @@ export function graphEditToolbar(
     theme.separation,
     entries.map((e) => e.box.minSize)
   );
-  const panelStyle = graphEditMenuPanelStyleBox(theme);
+  const panelStyle = items.menuPanel;
   const panelMargin = contentMarginSize(panelStyle);
   const panelRect: Rect2 = {
     x: GRAPH_EDIT_MENU_POSITION.x,

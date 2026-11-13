@@ -11,7 +11,11 @@ import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 import { painterEnv } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import { GraphNode } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import { defaultGraphNodeSlot } from './parser';
@@ -35,7 +39,7 @@ type Rendered = Awaited<ReturnType<typeof ReactThreeTestRenderer.create>>;
 
 function graphNode(properties: Partial<GraphNodeProperties> = {}, children: SolveNode[] = []): SolveNode {
   const node: TscnNode = controlNode('N', 'GraphNode', { name: 'N', slots: new Map(), ...properties });
-  return { ...emptySolveNode(), path: 'N', node, children };
+  return withThemeItems({ ...emptySolveNode(), path: 'N', node, children });
 }
 
 /** A StyleBoxQuad chrome mesh carries a `color` vertex attribute; a ControlQuad (icon/text) does not. */
@@ -163,10 +167,10 @@ describe('<GraphNode> (isolated painter contract)', () => {
       node: controlNode('c', 'Control', { name: 'c' }),
     };
     const slots = new Map([[0, { ...defaultGraphNodeSlot(), drawStylebox: true }]]);
-    const drawn = {
+    const drawn = withThemeItems({
       ...graphNode({ slots }, [child]),
       styleBoxes: { titlebar: drawnStyleBox(), slot: drawnStyleBox() },
-    };
+    });
     const renderer = await ReactThreeTestRenderer.create(
       <GraphNode
         {...painterEnv()}
@@ -217,7 +221,10 @@ describe('<GraphNode> — self_modulate', () => {
       <GraphNode
         {...painterEnv()}
         {...splitTints}
-        solveNode={{ ...graphNode({ title: 'Hello' }), styleBoxes: { titlebar: drawnStyleBox() } }}
+        solveNode={withThemeItems({
+          ...graphNode({ title: 'Hello' }),
+          styleBoxes: { titlebar: drawnStyleBox() },
+        })}
         rect={RECT}
         renderOrder={0}
       />

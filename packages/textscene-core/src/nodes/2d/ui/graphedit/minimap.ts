@@ -13,7 +13,6 @@
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { sortableView } from '../../../../r3f/controls/native/solveTree';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { ControlProperties } from '../control/types';
 import type { GraphElementProperties } from '../graphelement/types';
 import type { GraphFrameProperties } from '../graphframe/types';
@@ -239,8 +238,7 @@ export function graphEditElements(
   graphEdit: SolveNode,
   childRects: ReadonlyMap<string, Rect2>,
   zoom: number,
-  graphEditSize: Vector2,
-  theme: NativeTheme
+  graphEditSize: Vector2
 ): GraphEditElementView {
   const boxes: { key: string; box: GraphElementBox; type: string; visible: boolean; node: SolveNode }[] = [];
   for (const child of sortableView(graphEdit).children) {
@@ -275,8 +273,8 @@ export function graphEditElements(
         wanted === 'GraphFrame'
           ? frameProps.tintColorEnabled
             ? (frameProps.tintColor ?? GRAPH_FRAME_DEFAULT_TINT)
-            : graphFrameStyles(e.node, theme).panel.bgColor
-          : graphNodeStyles(e.node, theme).panel.bgColor;
+            : graphFrameStyles(e.node).panel.bgColor
+          : graphNodeStyles(e.node).panel.bgColor;
       minimapElements.push({ key: e.key, ...e.box, bgColor });
     }
   }

@@ -11,7 +11,7 @@ import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import type { ContainerLayoutResult, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import { graphNodeDrawRows, rightPortX } from './nativeSolver';
 import { defaultGraphNodeSlot } from './parser';
@@ -28,11 +28,11 @@ function asMap(result: ReadonlyMap<string, Rect2> | ContainerLayoutResult): Read
 }
 
 function leaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'Control', { name, ...props }),
-  };
+  });
 }
 
 function hiddenLeaf(name: string, props: Partial<ControlProperties> = {}): SolveNode {
@@ -59,13 +59,13 @@ function graphNode(
   children: SolveNode[],
   styleBoxes: Readonly<Record<string, StyleBoxFlatData>> = {}
 ): SolveNode {
-  return {
+  return withThemeItems({
     ...solveNode(),
     path: name,
     node: controlNode(name, 'GraphNode', { name, slots: new Map(), ...props }),
     children,
     styleBoxes,
-  };
+  });
 }
 
 function ctx(): SolveContext {

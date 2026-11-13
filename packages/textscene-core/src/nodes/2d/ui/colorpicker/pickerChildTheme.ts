@@ -26,8 +26,41 @@ export interface ModeButtonBoxes {
   pressed: StyleBoxFlatData;
 }
 
-/** The picker's theme, with the boxes of its internal TabContainer binds, HSliders and hex LineEdit. */
+/** A Button's `normal` and `disabled` boxes: a static preview draws no other state of an internal Button. */
+export interface ButtonBoxes {
+  normal: StyleBoxFlatData;
+  disabled: StyleBoxFlatData;
+}
+
+/** The ColorPicker's own constants (`color_picker.cpp:145-165`, `color_picker_shape.cpp:465-509`). */
+export interface PickerSizes {
+  /** `margin`: the `content_margin` of `internal_margin` on every side. */
+  margin: number;
+  svWidth: number;
+  svHeight: number;
+  /** `h_width`: the width of the hue or value slider beside the shape. */
+  hWidth: number;
+  /** `label_width`: the floor of the channel label column. */
+  labelWidth: number;
+}
+
+function pickerSizes(constants: SolveNode['constants']): PickerSizes {
+  return {
+    margin: requiredThemeItem(constants, 'margin'),
+    svWidth: requiredThemeItem(constants, 'sv_width'),
+    svHeight: requiredThemeItem(constants, 'sv_height'),
+    hWidth: requiredThemeItem(constants, 'h_width'),
+    labelWidth: requiredThemeItem(constants, 'label_width'),
+  };
+}
+
+/** The picker's theme, with its own constants and the boxes of its internal Buttons, TabContainer binds, HSliders and hex LineEdit. */
 export interface PickerTheme extends NativeTheme {
+  sizes: PickerSizes;
+  /** The internal Buttons' boxes: the screen picker, the preset and the text type buttons. */
+  button: ButtonBoxes;
+  /** The internal MenuButtons' boxes, which take the `FlatMenuButton` variation. */
+  flatMenuButton: ButtonBoxes;
   modeButtons: ModeButtonBoxes;
   /** The hex field's boxes, a plain `LineEdit`. */
   lineEdit: LineEditField;
@@ -73,20 +106,16 @@ function buildPickerChildTheme(n: SolveNode, theme: NativeTheme): PickerChildThe
   const valueField = spinBoxFieldThemeItems(n);
   const tabs = internalChildThemeItems(n, 'TabContainer');
   const slider = internalChildThemeItems(n, 'HSlider');
-  const { widgets } = theme;
   const withBoxes: PickerTheme = {
     ...theme,
-    widgets: {
-      ...widgets,
-      button: {
-        ...widgets.button,
-        normal: pickButtonStyleBox(button.styleBoxes, 'normal', n.rtl),
-        disabled: pickButtonStyleBox(button.styleBoxes, 'disabled', n.rtl),
-      },
-      flatMenuButton: {
-        normal: pickButtonStyleBox(flatMenuButton.styleBoxes, 'normal', n.rtl),
-        disabled: pickButtonStyleBox(flatMenuButton.styleBoxes, 'disabled', n.rtl),
-      },
+    sizes: pickerSizes(n.constants),
+    button: {
+      normal: pickButtonStyleBox(button.styleBoxes, 'normal', n.rtl),
+      disabled: pickButtonStyleBox(button.styleBoxes, 'disabled', n.rtl),
+    },
+    flatMenuButton: {
+      normal: pickButtonStyleBox(flatMenuButton.styleBoxes, 'normal', n.rtl),
+      disabled: pickButtonStyleBox(flatMenuButton.styleBoxes, 'disabled', n.rtl),
     },
     modeButtons: {
       normal: pickTabStyleBox(tabs.styleBoxes, 'unselected'),

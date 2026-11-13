@@ -10,8 +10,6 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { useMemo } from 'react';
-import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
-import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
@@ -29,8 +27,7 @@ import {
   GRAPH_EDIT_MINIMAP_RESIZER_ICON,
 } from '../../../../r3f/controls/native/themeIcons';
 import { scaledIconSize } from '../../../../r3f/controls/native/scaledSvgIcon';
-import { DEFAULT_CORNER_RADIUS } from '../../../../godot/scene/theme';
-import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
+import { requiredThemeItem, type InternalThemeItems } from '../../../../r3f/controls/native/themeItems';
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { ResolvedConnection } from './connectionEndpoints';
 import type { MinimapTransform, GraphScrollBounds, MinimapElement } from './minimap';
@@ -41,25 +38,6 @@ import { canvasSubOrders, type CanvasSlot } from '../../../../r3f/canvasItemStat
 
 /** `draw_polyline_colors(points, colors, 0.5, lines_antialiased)` (`graph_edit.cpp:1611`). */
 const MINIMAP_LINE_WIDTH = 0.5;
-
-/** `StyleBoxFlat`'s unset border colour (`style_box_flat.h:40`), which every minimap box keeps. */
-const MINIMAP_BORDER_COLOR: Rgba = { r: 0.8, g: 0.8, b: 0.8, a: 1 };
-
-/** The radius of a minimap `node` box before the theme scale (`default_theme.cpp:1347`). */
-const MINIMAP_NODE_CORNER_RADIUS = 2;
-
-/** `GraphEditMinimap`'s `resizer_color` (`default_theme.cpp:1350`). */
-const RESIZER_COLOR: Rgba = { r: 1, g: 1, b: 1, a: 0.85 };
-
-function flatBox(
-  bgColor: Rgba,
-  cornerRadius: number,
-  cornerDetail: number,
-  borderWidth: number,
-  borderColor: Rgba
-): StyleBoxFlatData {
-  return makeFlatStyleBox(bgColor, { cornerRadius, cornerDetail, borderWidth, borderColor });
-}
 
 interface MinimapConnectionsProps {
   connections: readonly ResolvedConnection[];
@@ -161,6 +139,8 @@ interface GraphEditMinimapProps {
   /** `connection_lines_antialiased`. */
   connectionLinesAntialiased: boolean;
   icons: NativeControlComponentProps['solveNode']['icons'];
+  /** The internal `GraphEditMinimap`'s own items: `panel`, `camera`, `node` and `resizer_color`. */
+  items: InternalThemeItems;
   theme: NativeControlComponentProps['theme'];
   tint: NativeControlComponentProps['tint'];
   slot: CanvasSlot;
@@ -182,6 +162,7 @@ export function GraphEditMinimapChrome({
   curvature,
   connectionLinesAntialiased,
   icons,
+  items,
   theme,
   tint,
   slot,
@@ -196,39 +177,16 @@ export function GraphEditMinimapChrome({
     [tint.own, opacity]
   );
 
-  // `default_theme.cpp:1342`: make_flat_stylebox(Color(0.24, 0.24, 0.24), 0, 0, 0, 0).
-  const panelStyle = useMemo(
-    () =>
-      flatBox(
-        { r: 0.24, g: 0.24, b: 0.24, a: 1 },
-        theme.cornerRadius,
-        flatCornerDetail(DEFAULT_CORNER_RADIUS, scale),
-        0,
-        MINIMAP_BORDER_COLOR
-      ),
-    [theme.cornerRadius, scale]
-  );
-  // `default_theme.cpp:1343-1345`: make_flat_stylebox(Color(0.65, 0.65, 0.65, 0.2), 0, 0, 0, 0, 0),
-  // then `set_border_width_all(1)` and `set_border_color(Color(0.65, 0.65, 0.65, 0.45))`, both unscaled.
-  const cameraStyle = useMemo(
-    () =>
-      flatBox({ r: 0.65, g: 0.65, b: 0.65, a: 0.2 }, 0, flatCornerDetail(0, scale), 1, {
-        r: 0.65,
-        g: 0.65,
-        b: 0.65,
-        a: 0.45,
-      }),
-    [scale]
-  );
-  // `default_theme.cpp:1347`: make_flat_stylebox(Color(1, 1, 1), 0, 0, 0, 0, 2). Each element replaces the bg.
-  const nodeCornerRadius = Math.round(MINIMAP_NODE_CORNER_RADIUS * scale);
-  const nodeCornerDetail = flatCornerDetail(MINIMAP_NODE_CORNER_RADIUS, scale);
+  const panelStyle = requiredThemeItem(items.styleBoxes, 'panel');
+  const cameraStyle = requiredThemeItem(items.styleBoxes, 'camera');
+  const nodeStyle = requiredThemeItem(items.styleBoxes, 'node');
+  const resizerModulate = requiredThemeItem(items.colors, 'resizer_color');
 
   const resizerTexture = useNodeIcon(icons.resizer, GRAPH_EDIT_MINIMAP_RESIZER_ICON);
   const resizerColor = useItemLinearColor(
-    useMemo(() => multiplyModulate(modulated, RESIZER_COLOR), [modulated])
+    useMemo(() => multiplyModulate(modulated, resizerModulate), [modulated, resizerModulate])
   );
-  const resizerOpacity = modulated.a * RESIZER_COLOR.a;
+  const resizerOpacity = modulated.a * resizerModulate.a;
 
   const cameraRect = minimapCameraRect(transform, bounds, scrollOffset, graphEditSize);
 
@@ -243,7 +201,8 @@ export function GraphEditMinimapChrome({
 
       {elements.map((element) => {
         const nodeRect = minimapNodeRect(transform, bounds, element, zoom);
-        const style = flatBox(element.bgColor, nodeCornerRadius, nodeCornerDetail, 0, MINIMAP_BORDER_COLOR);
+        // `_minimap_draw` duplicates the `node` box and sets each element's colour on it (`graph_edit.cpp:1832-1840`).
+        const style = { ...nodeStyle, bgColor: element.bgColor };
         return (
           <CanvasItemGroup key={element.key} position={[nodeRect.x, -nodeRect.y, 0]}>
             <StyleBoxQuad
