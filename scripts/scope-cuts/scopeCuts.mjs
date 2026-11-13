@@ -21,7 +21,6 @@ export const UNOWNED_CUT_HINT =
 const OPENS_CUT_LIST = /^(?:#{1,6}\s+)?\**out of scope\b[^:*]*:?\**:?$/i;
 
 const FENCE = /^\s*(```|~~~)/;
-const HTML_COMMENT = /<!--[\s\S]*?-->/g;
 const CODE_SPAN = /`[^`]*`/g;
 const HEADING = /^#{1,6}\s/;
 const LIST_ITEM = /^(\s*)(?:[-*+]|\d+\.)\s+/;
@@ -37,25 +36,29 @@ export function isScopeCutDocument(path) {
   return path.endsWith('.md') && isAtRootOrUnderDocs && !isSheetPath(path);
 }
 
-/** A comment keeps its line count and loses its text, so each line after it keeps its number. */
-const withoutHtmlComments = (markdown) =>
-  markdown.replace(HTML_COMMENT, (comment) => '\n'.repeat(comment.split('\n').length - 1));
+/** The test for the line that ends the block `text` opens, or null when `text` opens no block. */
+function closedBy(text) {
+  const fence = FENCE.exec(text)?.[1];
+  if (fence) return (line) => FENCE.exec(line)?.[1] === fence;
+  if (text.trimStart().startsWith('<!--') && !text.includes('-->')) return (line) => line.includes('-->');
+  return null;
+}
 
 /**
- * The lines of `markdown` with each fenced code block emptied. A fence ends only on the marker
- * that opened it, so a `~~~` line inside a block of three backticks is code.
+ * The lines of `markdown` with each fenced code block and each HTML comment emptied, so each line
+ * keeps its number. A fence ends only on the marker that opened it. A comment starts a line, as in
+ * an issue template: `<!--` inside a sentence or a code span is text.
  */
 function proseLines(markdown) {
-  let openFence = null;
-  return withoutHtmlComments(markdown)
-    .split('\n')
-    .map((text) => {
-      const fence = FENCE.exec(text)?.[1];
-      if (openFence === null && fence === undefined) return text;
-      if (openFence === null) openFence = fence;
-      else if (fence === openFence) openFence = null;
+  let endsBlock = null;
+  return markdown.split('\n').map((text) => {
+    if (endsBlock) {
+      if (endsBlock(text)) endsBlock = null;
       return '';
-    });
+    }
+    endsBlock = closedBy(text);
+    return endsBlock || text.trimStart().startsWith('<!--') ? '' : text;
+  });
 }
 
 /** @returns {'heading' | 'item' | 'paragraph'} a table row reads as a paragraph of one line. */

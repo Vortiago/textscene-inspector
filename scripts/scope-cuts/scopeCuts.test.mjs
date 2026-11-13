@@ -140,6 +140,12 @@ describe('unownedScopeCuts', () => {
     expect(unownedScopeCuts(template)).toEqual([{ line: 4, text: 'The fog is deferred.' }]);
   });
 
+  it('reads `<!--` in a code span as text, so the lines up to the next comment stay prose (edge case)', () => {
+    const doc = lines('A comment starts with `<!--`.', '', 'The fog is deferred.', '', '<!-- A note. -->');
+
+    expect(unownedScopeCuts(doc)).toEqual([{ line: 3, text: 'The fog is deferred.' }]);
+  });
+
   it('finds no cut in a text that puts nothing off', () => {
     expect(
       unownedScopeCuts('The pass draws later frames first.\n\n- The mount stays in the renderer.')
