@@ -8,6 +8,7 @@ import type { ParsedHeading } from '../../../parser/utils';
 import { unquoteString } from '../../../parser/utils';
 import { boolOr } from '../../../parser/valueParsers';
 import type { Vector2 } from '../../../godot/math/vector';
+import { boolSlotValue } from '../../../godot/variant/variantBool';
 import { constructorWritesSize, windowClassDefaults } from '../../../godot/scene/window';
 import { viewportParseContext } from '../../viewport/shared/parser';
 import { parseWindow } from '../window/parser';
@@ -114,42 +115,13 @@ function linesThroughVisibleText(type: string, lines: Record<string, string>): n
   let visible = windowClassDefaults(type).visible;
   let text = '';
   for (const [line, [key, raw]] of Object.entries(lines).entries()) {
-    if (key === 'visible') visible = boolOr(raw, visible);
+    if (key === 'visible') visible = boolSlotValue(raw) ?? visible;
     if (key !== 'dialog_text') continue;
-    const changes = textOr(raw, text) !== text;
-    text = textOr(raw, text);
-    if (changes && visible) return line + 1;
+    const next = textOr(raw, text);
+    if (next !== text && visible) return line + 1;
+    text = next;
   }
   return Number.POSITIVE_INFINITY;
-}
-
-/**
- * The lines that ran before the internal Controls first computed their minimums: before the first
- * size write that clamped the dialog, or an earlier visible text line. Null when no write clamped it.
- */
-function linesBeforeTheControlsCache(
-  type: string,
-  lines: Record<string, string>,
-  { load_clamp_line }: WindowProperties
-): Record<string, string> | null {
-  if (load_clamp_line === null) return null;
-  const count = Math.max(0, Math.min(load_clamp_line, linesThroughVisibleText(type, lines)));
-  return Object.fromEntries(Object.entries(lines).slice(0, count));
-}
-
-function dialogControlsAtLoad(
-  type: string,
-  lines: Record<string, string>,
-  window: WindowProperties,
-  held: DialogControlsAtLoad
-): DialogControlsAtLoad | null {
-  const before = linesBeforeTheControlsCache(type, lines, window);
-  if (!before) return null;
-  return {
-    dialog_text: textOr(before.dialog_text, held.dialog_text),
-    ok_button_text: okTextOr(before.ok_button_text, held.ok_button_text),
-    dialog_autowrap: boolOr(before.dialog_autowrap, held.dialog_autowrap),
-  };
 }
 
 const CONSTRUCTED_CONTROLS: DialogControlsAtLoad = {
@@ -158,17 +130,28 @@ const CONSTRUCTED_CONTROLS: DialogControlsAtLoad = {
   dialog_autowrap: false,
 };
 
-/** An instanced base's cache stands, since its Controls keep it. Otherwise the lines write it over what they hold. */
+/**
+ * What the internal Controls held when they first computed their minimums: the lines before the first
+ * clamping size write, or before an earlier visible text line, over what the Controls held. An
+ * instanced base's cache stands, since its Controls keep it. Null when no size write clamped the dialog.
+ */
 function controlsAtLoad(
   type: string,
   properties: Record<string, string>,
-  window: WindowProperties,
+  { lines_before_load_clamp }: WindowProperties,
   override: OverrideLayer<DialogProperties> | undefined
 ): DialogControlsAtLoad | null {
-  if (!override) return dialogControlsAtLoad(type, properties, window, CONSTRUCTED_CONTROLS);
-  return (
-    override.held.controls_at_load ?? dialogControlsAtLoad(type, override.written, window, override.held)
-  );
+  if (override?.held.controls_at_load) return override.held.controls_at_load;
+  if (lines_before_load_clamp === null) return null;
+  const lines = override?.written ?? properties;
+  const held = override?.held ?? CONSTRUCTED_CONTROLS;
+  const count = Math.min(lines_before_load_clamp, linesThroughVisibleText(type, lines));
+  const before = Object.fromEntries(Object.entries(lines).slice(0, count));
+  return {
+    dialog_text: textOr(before.dialog_text, held.dialog_text),
+    ok_button_text: okTextOr(before.ok_button_text, held.ok_button_text),
+    dialog_autowrap: boolOr(before.dialog_autowrap, held.dialog_autowrap),
+  };
 }
 
 export function parseDialog(

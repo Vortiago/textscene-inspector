@@ -6,7 +6,6 @@ import { describe, expect, it } from 'vitest';
 import { heading } from '../../../parser/testing/parserKit';
 import { SubViewportClearMode, SubViewportUpdateMode } from '../../../godot/scene/viewport';
 import { parseWindow } from './parser';
-import { BEFORE_THE_LINES } from './types';
 
 describe('parseWindow', () => {
   it('reads the title, position and size of a Window', () => {
@@ -175,11 +174,11 @@ describe('parseWindow', () => {
   });
 });
 
-describe('the load clamp line', () => {
+describe('the lines before the load clamp', () => {
   const clampLine = (type: string, properties: Record<string, string>) =>
-    parseWindow(heading(type, { name: 'W' }), properties).load_clamp_line;
+    parseWindow(heading(type, { name: 'W' }), properties).lines_before_load_clamp;
 
-  it('is the first size line a wrapping window reads', () => {
+  it('counts the lines before the first size line a wrapping window reads', () => {
     expect(clampLine('Popup', { visible: 'true', size: 'Vector2i(50, 50)', wrap_controls: 'false' })).toBe(1);
   });
 
@@ -196,7 +195,7 @@ describe('the load clamp line', () => {
   });
 
   it('is the constructor for a class whose constructor writes a size', () => {
-    expect(clampLine('ConfirmationDialog', { size: 'Vector2i(50, 50)' })).toBe(BEFORE_THE_LINES);
+    expect(clampLine('ConfirmationDialog', { size: 'Vector2i(50, 50)' })).toBe(0);
   });
 });
 

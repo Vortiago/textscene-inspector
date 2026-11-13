@@ -32,12 +32,11 @@ export interface WindowProperties extends SubViewportProperties, ThemeOwnerField
   exclusive: boolean;
   wrap_controls: boolean;
   /**
-   * Where the first size write that clamped the window to its contents minimum before it entered the
-   * tree ran: one that ran while `wrap_controls` was on (`window.cpp:1183-1190,2244-2251`). It is the
-   * line's index among the lines the parse replays, {@link BEFORE_THE_LINES} for the constructor or
-   * an instanced base, and null when no write clamped.
+   * How many of the replayed lines ran before the first size write that clamped the window to its
+   * contents minimum outside the tree: one that ran while `wrap_controls` was on
+   * (`window.cpp:1183-1190,2244-2251`). 0 for the constructor or an instanced base. Null for none.
    */
-  load_clamp_line: number | null;
+  lines_before_load_clamp: number | null;
   /**
    * Whether the size the lines leave still holds a load clamp: a `size` write while `wrap_controls`
    * is off replaces the clamped size, and a later wrapping write clamps it again.
@@ -50,6 +49,3 @@ export interface WindowProperties extends SubViewportProperties, ThemeOwnerField
   /** The `content_scale_*` keys (`contentScale.ts`). */
   content_scale: ContentScale;
 }
-
-/** A {@link WindowProperties.load_clamp_line} before every line: the constructor's write, or an instanced base's. */
-export const BEFORE_THE_LINES = -1;

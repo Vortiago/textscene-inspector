@@ -6,7 +6,7 @@
 import type { OverrideLayer } from '../../../core/NodeRegistry';
 import type { ParsedHeading } from '../../../parser/utils';
 import { unquoteString } from '../../../parser/utils';
-import type { Vector2 } from '../../../godot/math/vector';
+import { type Vector2, vector2Equals } from '../../../godot/math/vector';
 import { boolSlotValue } from '../../../godot/variant/variantBool';
 import { boolOr, floatOr, intOr, parseOptionalVector2i, vec2iOr } from '../../../parser/valueParsers';
 import {
@@ -25,7 +25,7 @@ import { SubViewportClearMode, SubViewportUpdateMode } from '../../../godot/scen
 import { parseViewport, viewportParseContext } from '../../viewport/shared/parser';
 import { parseThemeOwnerFields } from '../../2d/ui/control/themeOwnerParser';
 import { DEFAULT_CONTENT_SCALE, type ContentScale } from './contentScale';
-import { BEFORE_THE_LINES, type WindowProperties } from './types';
+import type { WindowProperties } from './types';
 
 /** Frozen: every parsed window shares it as a default, so no reader may write through it. */
 const ORIGIN = Object.freeze({ x: 0, y: 0 });
@@ -93,21 +93,17 @@ function windowReplay(
   };
 }
 
-/** Where the lines clamp the window to its contents minimum before it enters the tree. */
-interface LoadClamp {
-  firstLine: number | null;
-  isKept: boolean;
-}
+type LoadClamp = Pick<WindowProperties, 'lines_before_load_clamp' | 'keeps_load_clamp'>;
 
 /**
- * {@link WindowProperties.load_clamp_line} and {@link WindowProperties.keeps_load_clamp}. Each size
+ * {@link WindowProperties.lines_before_load_clamp} and {@link WindowProperties.keeps_load_clamp}. Each size
  * write asks for the contents minimum while `wrap_controls` is on, but a `min_size` or `max_size`
  * write that leaves its limit unchanged asks for nothing (`window.cpp:486-488,509-511`).
  */
 function replayLoadClamp(replay: WindowReplay): LoadClamp {
   const clamp: LoadClamp = replay.clampsBeforeTheLines
-    ? { firstLine: BEFORE_THE_LINES, isKept: true }
-    : { firstLine: null, isKept: false };
+    ? { lines_before_load_clamp: 0, keeps_load_clamp: true }
+    : { lines_before_load_clamp: null, keeps_load_clamp: false };
   let { wrapsControls } = replay;
   const limits: Record<'min_size' | 'max_size', Vector2> = { min_size: ORIGIN, max_size: ORIGIN };
   for (const write of replay.size) if (write.key !== 'size') limits[write.key] = clampLimitSize(write.value);
@@ -118,9 +114,9 @@ function replayLoadClamp(replay: WindowReplay): LoadClamp {
     if (!value) continue;
     const asks = key === 'size' || writeLimit(limits, key, clampLimitSize(value));
     if (asks && wrapsControls) {
-      clamp.firstLine ??= line;
-      clamp.isKept = true;
-    } else if (key === 'size') clamp.isKept = false;
+      clamp.lines_before_load_clamp ??= line;
+      clamp.keeps_load_clamp = true;
+    } else if (key === 'size') clamp.keeps_load_clamp = false;
   }
   return clamp;
 }
@@ -133,7 +129,7 @@ function writeLimit(
 ): boolean {
   const held = limits[key];
   limits[key] = value;
-  return held.x !== value.x || held.y !== value.y;
+  return !vector2Equals(held, value);
 }
 
 /** The `content_scale_*` keys. A setter refuses a negative size or a factor at or below 0 (`window.cpp:1716,1774`). */
@@ -164,10 +160,6 @@ function replayTransparentBackground(
   const keys = Object.keys(properties);
   const isFlagLast = keys.indexOf('transparent') > keys.indexOf('transparent_bg');
   return isFlagLast ? flag : boolOr(properties.transparent_bg, held, context);
-}
-
-function loadClampProperties({ firstLine, isKept }: LoadClamp) {
-  return { load_clamp_line: firstLine, keeps_load_clamp: isKept };
 }
 
 export function parseWindow(
@@ -208,7 +200,7 @@ export function parseWindow(
     always_on_top: boolOr(properties.always_on_top, false, context),
     exclusive: boolOr(properties.exclusive, defaults.exclusive, context),
     wrap_controls: boolOr(properties.wrap_controls, defaults.wrapControls, context),
-    ...loadClampProperties(replayLoadClamp(replay)),
+    ...replayLoadClamp(replay),
     force_native:
       properties.force_native !== undefined && replayForceNative(replay.forceNative, replay.properties),
     min_size: clampLimitSize(vec2iOr(properties.min_size, defaults.minSize, context)),

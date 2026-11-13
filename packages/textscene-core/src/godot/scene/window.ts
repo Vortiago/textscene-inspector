@@ -3,7 +3,7 @@
 import { enumNamesByValue } from '../classdb/enumNames.js';
 import { boolSlotValue } from '../variant/variantBool.js';
 import { findInClassChain } from '../classdb/classBaseTypes.js';
-import { type Vector2, vector2Max } from '../math/vector.js';
+import { type Vector2, VECTOR2_ZERO, vector2Equals, vector2Max } from '../math/vector.js';
 
 /**
  * `Window::Mode` without `MODE_`, each member the `DisplayServer::WindowMode` it aliases
@@ -123,7 +123,7 @@ export function windowClassDefaults(type: string): WindowClassDefaults {
  */
 export function constructorWritesSize(type: string): boolean {
   const { minSize, size } = windowClassDefaults(type);
-  return minSize.x !== 0 || minSize.y !== 0 || size !== undefined;
+  return !vector2Equals(minSize, VECTOR2_ZERO) || size !== undefined;
 }
 
 /** The two properties `set_force_native` reads and writes. */

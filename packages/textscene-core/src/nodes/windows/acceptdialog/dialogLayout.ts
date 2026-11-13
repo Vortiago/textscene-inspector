@@ -11,7 +11,8 @@
  */
 
 import type { Rect2 } from '../../../godot/math/rect2';
-import { type Vector2, vector2Max } from '../../../godot/math/vector';
+import { type Vector2, VECTOR2_ZERO, vector2Max } from '../../../godot/math/vector';
+import { perObject } from '../../../utils/perObject';
 import type { SolveNode } from '../../../r3f/controls/native/solveTree';
 import type { InternalLayoutFn } from '../../../r3f/controls/native/internalControls';
 import type { ResolvedStyleBox } from '../../../r3f/controls/native/parseStyleBox';
@@ -140,15 +141,16 @@ export const dialogContentsMinimumSize: MinimumSizeFn = (dialog, ctx) => {
 /**
  * The dialog as its message and buttons were when they first computed their minimums, under its own
  * path so a solve context keeps those minimums apart. It is an AcceptDialog: ConfirmationDialog
- * writes its size before it adds Cancel (`dialogs.cpp:528-533`), so its row holds only OK.
+ * writes its size before it adds Cancel (`dialogs.cpp:528-533`), so its row holds only OK. Kept per
+ * dialog node, so the internal Controls built from it are built once.
  */
-function dialogAtLoad(dialog: SolveNode): SolveNode | null {
+const dialogAtLoad = perObject((dialog: SolveNode): SolveNode | null => {
   const props = dialog.node.properties as DialogProperties;
   if (!props.controls_at_load) return null;
   const properties = { ...props, ...props.controls_at_load, has_unwrapped_message_minimum: false };
   const node = { ...dialog.node, type: 'AcceptDialog', properties };
   return { ...dialog, path: `${dialog.path}@load`, node, children: [] };
-}
+});
 
 /**
  * The contents minimum a size write reads at load. The class's body is built after the cached
@@ -161,7 +163,7 @@ export const dialogLoadedMinimumSize: LoadedMinimumSizeFn = (dialog, ctx) => {
   if (!loaded) return null;
   const body = dialogBodyNodes(dialog, ctx.theme).reduce(
     (largest, node) => vector2Max(largest, ctx.combinedMinimumSize(node)),
-    { x: 0, y: 0 }
+    VECTOR2_ZERO
   );
   const message = messageMinimumSize(loaded, ctx, 0);
   return stackedMinimumSize(loaded, vector2Max(body, message), buttonRowMinimum(loaded, ctx));
