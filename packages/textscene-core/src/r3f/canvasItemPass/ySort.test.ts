@@ -184,7 +184,9 @@ position = Vector2(0, 100)
   });
 
   it("sorts a node's extra pieces at their origin, before its children in collection order", () => {
-    const extras: ExtraSortItems = new Map([['Root', [{ id: 'row 50', origin: { x: 0, y: 50 }, size: 1 }]]]);
+    const extras: ExtraSortItems = new Map([
+      ['Root', [{ id: 'row 50', origin: { x: 0, y: 50 }, size: 1, isInternalBack: false }]],
+    ]);
     expect(
       sortedOrder(
         `[node name="Root" type="Node2D"]
@@ -199,9 +201,30 @@ position = Vector2(0, 50)
     ).toEqual(['Root', 'row 50', 'Root/Tie']);
   });
 
+  it("sorts a node's internal back pieces after its children in collection order", () => {
+    const extras: ExtraSortItems = new Map([
+      ['Root', [{ id: 'bar 50', origin: { x: 0, y: 50 }, size: 1, isInternalBack: true }]],
+    ]);
+    expect(
+      sortedOrder(
+        `[node name="Root" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Tie" type="Polygon2D" parent="."]
+position = Vector2(0, 50)
+`,
+        NO_ORIGINS,
+        extras
+      )
+    ).toEqual(['Root', 'Root/Tie', 'bar 50']);
+  });
+
   it("draws a node's extra pieces from the room its run reserves, so each child keeps its whole run", () => {
     const extras: ExtraSortItems = new Map([
-      ['Root', [1, 2, 3].map((y) => ({ id: `row ${y}`, origin: { x: 0, y }, size: 1 }))],
+      [
+        'Root',
+        [1, 2, 3].map((y) => ({ id: `row ${y}`, origin: { x: 0, y }, size: 1, isInternalBack: false })),
+      ],
     ]);
     const runs = sortedRuns(
       `[node name="Root" type="TileMapLayer"]
