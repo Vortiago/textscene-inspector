@@ -167,11 +167,19 @@ describe('settleGpuParticles over the life of an emitter', () => {
 describe('settleGpuParticles over a large emitter', () => {
   const large = { amount: 500_000, lifetime: 5, preprocess: 0 };
 
-  it('settles every nth particle once the steps pass the budget, so the main thread is not held', () => {
-    const started = performance.now();
-    const rows = settle(large).buffer.length / PARTICLE_FLOATS;
-    expect(performance.now() - started).toBeLessThan(10_000);
-    expect(rows).toBeLessThan(large.amount / 10);
-    expect(rows).toBeGreaterThan(0);
-  });
+  const SETTLE_BUDGET_MS = 10_000;
+
+  // The timeout is past the budget: under the default of 5 s, a slow CI runner ends the test
+  // before it can compare the time with the budget.
+  it(
+    'settles every nth particle once the steps pass the budget, so the main thread is not held',
+    { timeout: 2 * SETTLE_BUDGET_MS },
+    () => {
+      const started = performance.now();
+      const rows = settle(large).buffer.length / PARTICLE_FLOATS;
+      expect(performance.now() - started).toBeLessThan(SETTLE_BUDGET_MS);
+      expect(rows).toBeLessThan(large.amount / 10);
+      expect(rows).toBeGreaterThan(0);
+    }
+  );
 });
