@@ -37,6 +37,7 @@ export function painterEnv(): Pick<
   | 'slot'
   | 'chromeSlot'
   | 'layerSlot'
+  | 'pieceSlots'
   | 'snapToPixels'
   | 'meta'
   | 'tint'
@@ -53,6 +54,7 @@ export function painterEnv(): Pick<
     // would draw chrome under the subtree.
     chromeSlot: wholeKeySlot(0),
     layerSlot: wholeKeySlot(0),
+    // No y-sort collects a piece, so each draws in `chromeSlot`.
     pieceSlots: NO_PIECE_SLOTS,
     // The `Viewport::snap_controls_to_pixels` initialiser (`scene/main/viewport.h`).
     snapToPixels: true,
