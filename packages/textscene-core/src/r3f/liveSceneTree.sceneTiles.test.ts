@@ -125,6 +125,17 @@ describe('the scene tiles of a TileMapLayer', () => {
     expect((root.properties as Node2DProperties).position).toEqual({ x: 80 + 5, y: 48 + 3 });
   });
 
+  it('carry the pose of a Node2D root in the layer, which a y-sort sorts the tile on', () => {
+    const tile = treeOf([{ x: 2, y: 1, tile: 1 }]).at('World/Layer/@SceneTile@2_1')!.raw;
+    expect([tile.placedPose?.tx, tile.placedPose?.ty]).toEqual([80 + 5, 48 + 3]);
+  });
+
+  it('carry no pose for a Control root, which the Control walk places', () => {
+    expect(
+      treeOf([{ x: 1, y: 0, tile: 2 }]).at('World/Layer/@SceneTile@1_0')!.raw.placedPose
+    ).toBeUndefined();
+  });
+
   it('flip a Node2D root by the transform bits of the alternative', () => {
     // TRANSFORM_FLIP_H is 1 << 12 (`tile_set.h:291`), and the scene id is the alternative without it.
     const root = treeOf([{ x: 0, y: 0, tile: 1 | (1 << 12) }]).at('World/Layer/@SceneTile@0_0')!.step.node;

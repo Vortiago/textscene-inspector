@@ -21,7 +21,11 @@ import type { PlacedCell } from '../nodes/2d/tiles/shared/tileData.js';
 import type { TileMapLayerProperties } from '../nodes/2d/tiles/tilemaplayer/types.js';
 import type { TileMapProperties } from '../nodes/2d/tiles/tilemap/types.js';
 import type { Node2DProperties } from '../nodes/base/node2d/types.js';
-import { multiplyTransform2D, transform2DDecompose } from '../godot/math/transform2d.js';
+import {
+  multiplyTransform2D,
+  transform2DDecompose,
+  type Transform2DColumns,
+} from '../godot/math/transform2d.js';
 import { node2DLocalTransform } from './node2dTransform.js';
 import type { Vector2 } from '../godot/math/vector.js';
 
@@ -68,7 +72,7 @@ export function sceneTilesOf(
   model: TileSetModel,
   cells: readonly PlacedCell[],
   scope: SceneScope,
-  rootOf: (instance: LiveNode) => SceneTileRoot
+  rootOf: (instance: LiveNode) => JudgedRoot
 ): SceneTiles {
   const allTiles = model.sceneSources.size ? sceneTileCells(model, cells) : [];
   const judged = new Map<SceneFile, JudgedScene>();
@@ -76,7 +80,7 @@ export function sceneTilesOf(
     let entry = judged.get(scene);
     if (!entry) {
       const instance = instanceNode(scene, scope);
-      entry = { instance, root: rootOf(instance) };
+      entry = { instance, ...rootOf(instance) };
       judged.set(scene, entry);
     }
     return entry;
@@ -95,15 +99,21 @@ export function sceneTilesOf(
     // One Godot refuses to instantiate is valid (`:1631`), but `instantiate()` returns null (`:1632`).
     if (isSceneless || root === 'refused') continue;
     const placement = { grid: model, coords: cell.coords, alternativeId: cell.alternativeId };
-    children.push(tileChild(scene!.instance, names.nameAt(cell.coords), placement));
+    const pose = scene!.rootNode && placedNode2DPose(scene!.rootNode, placement);
+    children.push(tileChild(scene!.instance, names.nameAt(cell.coords), placement, pose ?? undefined));
   }
   return { children, placeholderTiles };
 }
 
-/** The instance node of a scene, and what the tree says of its root. */
-interface JudgedScene {
-  readonly instance: LiveNode;
+/** What the tree says of a tile's scene, and the root it merges, null while it merges none. */
+export interface JudgedRoot {
   readonly root: SceneTileRoot;
+  readonly rootNode: LiveNode | null;
+}
+
+/** The instance node of a scene, and what the tree says of its root. */
+interface JudgedScene extends JudgedRoot {
+  readonly instance: LiveNode;
 }
 
 /** The root kind of a merged instance root, or null for one that is no CanvasItem. */
@@ -126,9 +136,20 @@ export function placedSceneTileRoot(
   if (!kind) return root;
   const placement = sceneTilePlacement(grid, coords, alternativeId, kind);
   if (kind === 'control') return { ...root, controlPositionShift: { x: placement.tx, y: placement.ty } };
-  const own = node2DLocalTransform(root.properties as Partial<Node2DProperties>);
-  const placed = transform2DDecompose(multiplyTransform2D(placement, own));
+  const placed = transform2DDecompose(placedNode2DTransform(root, placement));
   return { ...root, properties: { ...root.properties, ...placed } };
+}
+
+/** The transform of a Node2D `root` in its layer once placed at its cell, or null for any other root. */
+function placedNode2DPose(root: LiveNode, sceneTile: SceneTilePlacement): Transform2DColumns | null {
+  if (sceneRootKindOf(root.type) !== 'node2d') return null;
+  const { grid, coords, alternativeId } = sceneTile;
+  return placedNode2DTransform(root, sceneTilePlacement(grid, coords, alternativeId, 'node2d'));
+}
+
+/** `xform * own transform` (`tile_map_layer.cpp:1706-1723`). */
+function placedNode2DTransform(root: LiveNode, placement: Transform2DColumns): Transform2DColumns {
+  return multiplyTransform2D(placement, node2DLocalTransform(root.properties as Partial<Node2DProperties>));
 }
 
 /**
@@ -185,13 +206,19 @@ function newInstanceNode(scene: SceneFile, scope: SceneScope): LiveNode {
  * The child one tile adds: the instance, named for its cell, which the edited scene does not own. The
  * same tile gives the same node, so a layer rebuilt for an edit elsewhere leaves its mounted tiles alone.
  */
-function tileChild(instance: LiveNode, name: string, sceneTile: SceneTilePlacement): LiveNode {
+function tileChild(
+  instance: LiveNode,
+  name: string,
+  sceneTile: SceneTilePlacement,
+  placedPose: Transform2DColumns | undefined
+): LiveNode {
   const { grid, coords, alternativeId } = sceneTile;
   const children = tileChildrenOf(instance)(grid);
-  const key = `${name}|${coords.x},${coords.y}|${alternativeId}`;
+  const pose = placedPose ? Object.values(placedPose).join(',') : '';
+  const key = `${name}|${coords.x},${coords.y}|${alternativeId}|${pose}`;
   let child = children.get(key);
   if (!child) {
-    child = newTileChild(instance, name, sceneTile);
+    child = newTileChild(instance, name, sceneTile, placedPose);
     children.set(key, child);
   }
   return child;
@@ -201,12 +228,18 @@ const tileChildrenOf = perObject((_instance: LiveNode) =>
   perObject((_grid: TileGrid) => new Map<string, LiveNode>())
 );
 
-function newTileChild(instance: LiveNode, name: string, sceneTile: SceneTilePlacement): LiveNode {
+function newTileChild(
+  instance: LiveNode,
+  name: string,
+  sceneTile: SceneTilePlacement,
+  placedPose: Transform2DColumns | undefined
+): LiveNode {
   return {
     ...instance,
     name,
     properties: { ...instance.properties, name },
     isUnowned: true,
     sceneTile,
+    ...(placedPose && { placedPose }),
   };
 }

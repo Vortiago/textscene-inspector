@@ -47,6 +47,7 @@ import {
   placedSceneTileRoot,
   sceneTileLayerCells,
   sceneTilesOf,
+  type JudgedRoot,
   type SceneTileRoot,
 } from './liveSceneTiles.js';
 
@@ -554,7 +555,10 @@ function withSceneTiles(step: LiveStep, sources: TreeSources): LiveStep {
   const tileSetRef = (step.node.properties as { tile_set?: string }).tile_set;
   const read = snapshotOver(sources.resources).read(nodeReference(tileSetRef, step.scope), TILE_SET);
   if (read.status !== 'loaded') return step;
-  const rootOf = (instance: LiveNode) => sceneTileRoot(liveStep(instance, step.scope, sources));
+  const rootOf = (instance: LiveNode): JudgedRoot => {
+    const judged = liveStep(instance, step.scope, sources);
+    return { root: sceneTileRoot(judged), rootNode: judged.isMerged ? judged.node : null };
+  };
   const tiles = sceneTilesOf(read.value, cells, step.scope, rootOf);
   const group: LiveChildGroup = { origin: 'tiles', children: tiles.children, scope: step.scope };
   return { ...step, groups: [...step.groups, group], placeholderTiles: tiles.placeholderTiles };

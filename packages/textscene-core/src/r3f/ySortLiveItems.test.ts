@@ -1,10 +1,11 @@
 /**
  * The live sort of an item reads the poses on the groups between the sort root and it. A scene
- * tile's instance and a Control read none: the canvas item pass sorts them where they are placed.
+ * tile's instance reads them up to its layer, then its placed root. A Control reads none: the
+ * Control walk places it.
  */
 import { describe, it, expect } from 'vitest';
 import { Object3D } from 'three';
-import { liveGroupChain, sortYOfChain } from './ySortLiveItems';
+import { liveGroupChain, liveRootPose, sortYOfChain } from './ySortLiveItems';
 import { TRANSFORM2D_IDENTITY } from '../godot/math/transform2d';
 import type { LiveNode } from '../resources/liveNode';
 import type { YSortItem } from './ySortItems';
@@ -30,7 +31,19 @@ describe('the live group chain', () => {
     expect(paths).toEqual(['Root/Layer', 'Root/Layer/Sprite']);
   });
 
-  it("reads no group for a scene tile's instance, which registers none", () => {
+  it("reads the groups up to the layer of a scene tile's instance, which registers none", () => {
+    const paths: string[] = [];
+    const tile = {
+      ...layer,
+      name: '@SceneTile@0_0',
+      isUnowned: true,
+      placedPose: TRANSFORM2D_IDENTITY,
+    } as LiveNode;
+    liveGroupChain(itemOf(tile, [layer]), 'Root', (path) => (paths.push(path), new Object3D()));
+    expect(paths).toEqual(['Root/Layer']);
+  });
+
+  it('reads no group for a scene tile whose root is a Control, which the Control walk places', () => {
     const tile = { ...layer, name: '@SceneTile@0_0', isUnowned: true } as LiveNode;
     expect(liveGroupChain(itemOf(tile, [layer]), 'Root', () => new Object3D())).toBeNull();
   });
@@ -49,6 +62,20 @@ describe('the root pose of a tile row', () => {
     } as YSortItem;
     const layerGroup = new Object3D();
     layerGroup.position.set(0, -100, 0);
-    expect(sortYOfChain([layerGroup], row.tileData?.rowOrigin)).toBe(100 + 80);
+    expect(sortYOfChain([layerGroup], liveRootPose(row))).toBe(100 + 80);
+  });
+});
+
+describe('the root pose of a scene tile', () => {
+  it('sorts on the layer pose moved by the mixer plus the placed root of the tile', () => {
+    const tile = {
+      ...layer,
+      name: '@SceneTile@0_0',
+      isUnowned: true,
+      placedPose: { ...TRANSFORM2D_IDENTITY, ty: 51 },
+    } as LiveNode;
+    const layerGroup = new Object3D();
+    layerGroup.position.set(0, -100, 0);
+    expect(sortYOfChain([layerGroup], liveRootPose(itemOf(tile, [layer])))).toBe(100 + 51);
   });
 });

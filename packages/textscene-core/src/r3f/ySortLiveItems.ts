@@ -24,13 +24,15 @@ const rootOrigin = new Vector3();
  * at the group of its layer. Null where the item has no 2D pose to read: the rows of a layer that
  * is the sort root, which sort in the layer's own space, a Node3D, a node whose group is not
  * mounted, and a Control, which the Control walk places and the world walk leaves at the
- * identity. A scene tile's instance has no registered group: the pass sorts it at its placed root.
+ * identity. A scene tile's instance registers no group, so its chain ends at its layer and
+ * {@link liveRootPose} adds its placed root. One with a Control root reads none.
  */
 export function liveGroupChain(item: YSortItem, basePath: string, groupAt: GroupAt): Object3D[] | null {
   const node = item.node as LiveNode | undefined;
   if (!node || item.tileData?.rootsSort || descendsFromClass(node.type, 'Node3D')) return null;
-  if (isControlType(node.type) || node.isUnowned) return null;
-  const paths = pathsAlong([...item.liftedPast, node], basePath);
+  if (isControlType(node.type)) return null;
+  if (node.isUnowned && !node.placedPose) return null;
+  const paths = pathsAlong(node.isUnowned ? item.liftedPast : [...item.liftedPast, node], basePath);
   const chain: Object3D[] = [];
   for (const path of paths) {
     const group = groupAt(path);
@@ -38,6 +40,11 @@ export function liveGroupChain(item: YSortItem, basePath: string, groupAt: Group
     chain.push(group);
   }
   return chain;
+}
+
+/** Where the sorted origin sits in the last group of the chain: a tile row's origin, or a scene tile's root. */
+export function liveRootPose(item: YSortItem): Transform2DColumns | undefined {
+  return item.tileData?.rowOrigin ?? (item.node as LiveNode | undefined)?.placedPose;
 }
 
 /** The y of the origin that `chain` places in the sort root's space. `rootPose` is a tile row's origin in its layer. */

@@ -5,6 +5,7 @@
  */
 
 import type { TscnNode } from '../parser/types.js';
+import type { LiveNode } from '../resources/liveNode.js';
 import { isTopLevelItem, ysortsChildren } from './canvasPaintOrder.js';
 import { nodeComponentRegistry } from './NodeComponentRegistry.js';
 import type { DrawableCell } from '../resources/tileset/drawableCell.js';
@@ -167,11 +168,14 @@ export function collectYSortedItems(
     // RemoteTransform2D pushes.
     // A child sorts on the y of its origin in the sort root's space (`renderer_canvas_cull.h:115-123`).
     // A TileMapLayer's `y_sort_origin` moves only its rows (`tile_map_layer.cpp:547`), never this origin.
-    const toSortRoot = toSortRootOf(
-      canvasItemFieldsOf(patchedNode(child, live.patches.get(childPoses.path))),
-      parent,
-      live.controlTransforms?.get(childPoses.path)
-    );
+    const placedPose = (child as LiveNode).placedPose;
+    const toSortRoot = placedPose
+      ? multiplyTransform2D(parent.toSortRoot, placedPose)
+      : toSortRootOf(
+          canvasItemFieldsOf(patchedNode(child, live.patches.get(childPoses.path))),
+          parent,
+          live.controlTransforms?.get(childPoses.path)
+        );
     // A y-sorted child, a Control included, merges its own children into this sort.
     const isYSort = ysortsChildren(child);
 
