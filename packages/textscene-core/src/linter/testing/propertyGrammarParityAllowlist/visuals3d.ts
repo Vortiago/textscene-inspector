@@ -132,7 +132,6 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
   GPUParticles3D: {
     renderGap: [
       'collision_base_size',
-      'draw_order',
       'draw_pass_1',
       'draw_pass_2',
       'draw_pass_3',
@@ -144,7 +143,6 @@ export const visuals3dAsymmetries: Readonly<Record<string, AsymmetryEntry>> = {
       'sub_emitter',
       'trail_enabled',
       'trail_lifetime',
-      'transform_align',
     ],
     reason:
       'GPUParticles3D draws one simulated pose, so the keys of the draw passes, the trail and the sub-emitter are not read. Its parser reads the emitter keys, visibility_aabb and process_material. speed_scale is not read: the settle of the engine runs at a speed scale of 1 (particles_storage.cpp:1555-1563).',

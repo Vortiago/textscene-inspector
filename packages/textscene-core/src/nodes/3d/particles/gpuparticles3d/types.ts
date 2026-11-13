@@ -16,6 +16,10 @@ export interface GPUParticles3DProperties extends GeometryInstance3DProperties {
   /** The raw `process_material` reference, which the particles and the emission gizmo read. Undefined for none. */
   processMaterial: string | undefined;
   emitter: GpuEmitter;
+  /** `draw_order`; a value no order names draws in index order, as the copy shader does. */
+  drawOrder: number;
+  /** `transform_align`; one of the four 4.6.3 accepts. */
+  transformAlign: number;
   /** The raw mesh reference of each draw pass up to `draw_passes`; undefined for a pass with no mesh. */
   drawPasses: Array<string | undefined>;
 }
