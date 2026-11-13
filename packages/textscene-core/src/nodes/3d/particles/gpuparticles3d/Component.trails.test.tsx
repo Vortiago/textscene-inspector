@@ -22,6 +22,15 @@ const TRAIL_MATERIAL: TscnInternalResource = {
   type: 'StandardMaterial3D',
   data: { use_particle_trails: 'true' },
 };
+const SKIN: TscnInternalResource = {
+  id: 'Skin',
+  type: 'Skin',
+  data: {
+    bind_count: '2',
+    'bind/0/pose': 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)',
+    'bind/1/pose': 'Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)',
+  },
+};
 const PLAIN_MATERIAL: TscnInternalResource = { id: 'Plain', type: 'StandardMaterial3D', data: {} };
 
 function ribbon(material: TscnInternalResource): TscnInternalResource {
@@ -32,11 +41,15 @@ function ribbon(material: TscnInternalResource): TscnInternalResource {
   };
 }
 
-async function meshesOf(material: TscnInternalResource, properties: Record<string, string>) {
+async function meshesOf(
+  material: TscnInternalResource,
+  properties: Record<string, string>,
+  skin: TscnInternalResource = SKIN
+) {
   const renderer = await ReactThreeTestRenderer.create(
     <ResourceLoaderProvider loader={createFakeResourceLoader().loader}>
       <SceneResourcesProvider
-        internalResources={[ALONG_X, BOX, ribbon(material), TRAIL_MATERIAL, PLAIN_MATERIAL]}
+        internalResources={[ALONG_X, BOX, ribbon(material), TRAIL_MATERIAL, PLAIN_MATERIAL, skin]}
         externalResources={[]}
       >
         <GPUParticles3D
@@ -79,6 +92,17 @@ describe('<GPUParticles3D> trail draw', () => {
 
   it('draws the plain instances while trail_enabled is off (edge case)', async () => {
     const [instanced] = await meshesOf(TRAIL_MATERIAL, { trail_enabled: 'false' });
+    expect((instanced as THREE.InstancedMesh).count).toBe(4);
+  });
+
+  it('takes the sections from draw_skin before the poses of the mesh', async () => {
+    const [instanced] = await meshesOf(PLAIN_MATERIAL, { draw_skin: 'SubResource("Skin")' });
+    expect((instanced as THREE.InstancedMesh).count).toBe(4 * 2);
+  });
+
+  it('draws plain instances for a draw_skin of one bind, which makes no trail (edge case)', async () => {
+    const lone = { ...SKIN, data: { bind_count: '1' } };
+    const [instanced] = await meshesOf(PLAIN_MATERIAL, { draw_skin: 'SubResource("Skin")' }, lone);
     expect((instanced as THREE.InstancedMesh).count).toBe(4);
   });
 });
