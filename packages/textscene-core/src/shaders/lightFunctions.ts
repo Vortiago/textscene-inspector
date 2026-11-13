@@ -7,6 +7,7 @@
 
 import { float, max, min, select, vec2, vec3 } from 'three/tsl';
 import { SpecularMode } from '../godot/rendering/materials/specularMode.js';
+import { GODOT_QUICK_HASH_MAGIC } from '../godot/rendering/quickHash.js';
 import {
   backlightLight,
   clearcoatSpecularNL,
@@ -203,5 +204,6 @@ export function lightCompute(surface: LitSurfaceTerms, light: LightTerms): Light
 
 /** `quick_hash` (`:278-281`), interleaved gradient noise. */
 export function quickHash(pos: Vec2Node): FloatNode {
-  return pos.dot(vec2(0.06711056, 0.00583715)).fract().mul(52.9829189).fract();
+  const [x, y, scale] = GODOT_QUICK_HASH_MAGIC;
+  return pos.dot(vec2(x, y)).fract().mul(scale).fract();
 }

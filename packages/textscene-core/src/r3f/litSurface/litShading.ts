@@ -9,7 +9,7 @@ import { installGodotShading, type GodotShading } from '../../shaders/godotShadi
 import { SplitSunLight } from '../directionalShadow/splitSun.js';
 import { classicPipelineInputs } from './classicInputs.js';
 
-/** Written only by `prepareLitShading`, on the first canvas. Kept for the page's life. */
+/** Written by each `prepareLitShading`, which returns the one shading of the page's inputs every time. Kept for the page's life. */
 let shading: GodotShading | null = null;
 
 /**

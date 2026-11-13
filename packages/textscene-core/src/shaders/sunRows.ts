@@ -23,6 +23,9 @@ export const SPLIT_SLOTS = DIRECTIONAL_SHADOW_MAX_SPLITS;
 /** The rows of one slot matrix the lookup reads. Its fourth row is always (0, 0, 0, 1). */
 export const SLOT_MATRIX_ROWS = 3;
 
+/** The row after the split matrices. */
+const MATRICES_END = 2 + SPLIT_SLOTS + SPLIT_SLOTS * SLOT_MATRIX_ROWS;
+
 /** Each field's first row in a light's slot. */
 export const SUN_ROW = {
   /** The view-space direction towards the light, and its size offset `A`. */
@@ -34,16 +37,19 @@ export const SUN_ROW = {
   /** Three rows per split slot: the slot's world-to-atlas matrix. */
   matrices: 2 + SPLIT_SLOTS,
   /** The fade's two depths, the shadow's opacity and its filter radius. */
-  shadow: 2 + SPLIT_SLOTS + SPLIT_SLOTS * SLOT_MATRIX_ROWS,
+  shadow: MATRICES_END,
   /** The atlas size in texels, and the soft shadow angle. */
-  atlas: 3 + SPLIT_SLOTS + SPLIT_SLOTS * SLOT_MATRIX_ROWS,
+  atlas: MATRICES_END + 1,
   /** Each split slot's range start, for the blocker search. */
-  rangeBegins: 4 + SPLIT_SLOTS + SPLIT_SLOTS * SLOT_MATRIX_ROWS,
+  rangeBegins: MATRICES_END + 2,
   /** The world-space direction towards the light. */
-  worldDirection: 5 + SPLIT_SLOTS + SPLIT_SLOTS * SLOT_MATRIX_ROWS,
+  worldDirection: MATRICES_END + 3,
 } as const;
 
 export const SUN_ROWS = SUN_ROW.worldDirection + 1;
+
+/** How far a blocker sits towards the light at least, in both the patch and the node lookup. */
+export const SUN_PANCAKE = 1e-4;
 
 /**
  * The blend start of a slot that does not blend into the next split. A real blend start is negative

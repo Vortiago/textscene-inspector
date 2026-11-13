@@ -11,7 +11,7 @@
 
 import { installChunkEdits, type ChunkEdit } from '../shaderPatch/chunkPatch.js';
 import { installSoftShadowFilter } from '../shadowFilter/softShadowFilter.js';
-import { BLENDS_ABOVE, SPLIT_SLOTS } from '../../shaders/sunRows.js';
+import { BLENDS_ABOVE, SPLIT_SLOTS, SUN_PANCAKE } from '../../shaders/sunRows.js';
 import { DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM } from './shadowAtlas.js';
 import { DIRECTIONAL_SOFT_SHADOWS } from '../shadowFilter/softShadowSearch.js';
 import {
@@ -97,7 +97,7 @@ const GODOT_SUN_SOFT_SHADOW = `
 \t\tuniform sampler2D ${DIRECTIONAL_SHADOW_ATLAS_COLOUR_UNIFORM};
 \t\tuniform vec4 ${SUN_SOFT_SHADOWS}[ NUM_SUN_LIGHT_SHADOWS ];
 \t\tuniform vec4 ${SUN_RANGE_BEGINS}[ NUM_SUN_LIGHT_SHADOWS ];
-\t\tconst float GODOT_SUN_PANCAKE = 1e-4;
+\t\tconst float GODOT_SUN_PANCAKE = ${SUN_PANCAKE.toExponential()};
 \t\tfloat godotSunBlockerShadow( sampler2DShadow atlas, vec3 coord, vec2 texScale, float lightSide ) {
 \t\t\tmat2 rotation = godotDiskRotation();
 \t\t\tfloat blockerSum = 0.0;

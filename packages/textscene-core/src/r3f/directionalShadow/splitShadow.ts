@@ -12,7 +12,7 @@ import {
   type DirectionalShadowAtlasRect,
   type DirectionalShadowFade,
 } from '../../godot/rendering/lights/directionalShadow.js';
-import { SPLIT_SLOTS } from '../../shaders/sunRows.js';
+import { SPLIT_SLOTS, type SplitShadowLayout } from '../../shaders/sunRows.js';
 import { cameraFrustum } from '../cameraFrustum.js';
 import { confineShadowScissor, type LightShadowInternals } from '../sharedAtlasShadow.js';
 import { holdDirectionalShadowAtlas, releaseDirectionalShadowAtlas } from './shadowAtlas.js';
@@ -46,7 +46,7 @@ const ThreeLightShadow = THREE.LightShadow as unknown as new (
 /** The fade of a sun no fit has placed: ends that do not ascend fade nothing. */
 export const NO_SHADOW_FADE: DirectionalShadowFade = { from: 0, to: 0 };
 
-export class DirectionalSplitShadow extends ThreeLightShadow {
+export class DirectionalSplitShadow extends ThreeLightShadow implements SplitShadowLayout {
   /** How many slots draw a split: 1, 2 or 4. */
   splitCount = SPLIT_SLOTS;
 

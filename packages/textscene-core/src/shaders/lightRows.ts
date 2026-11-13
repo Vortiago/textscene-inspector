@@ -36,7 +36,7 @@ export class LightRows {
   ) {
     this.values = Array.from({ length: rowsPerLight * lightCount }, () => new THREE.Vector4());
     this.slots = Array.from({ length: lightCount }, () => null);
-    this.array = uniformArray<'vec4'>(this.values, 'vec4').onRenderUpdate((frame) => this.update(frame));
+    this.array = uniformArray<'vec4'>(this.values, 'vec4').onFrameUpdate((frame) => this.update(frame));
   }
 
   /**

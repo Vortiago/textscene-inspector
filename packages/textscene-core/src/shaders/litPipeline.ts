@@ -14,7 +14,7 @@ import { MAX_SUNS, SUN_ROWS } from './sunRows.js';
 export class LitPipeline {
   readonly sunRows = new LightRows(SUN_ROWS, MAX_SUNS);
   /** `emissive_exposure_normalization` for the render that draws, 1 while the inputs hold none. */
-  readonly emissionExposure = uniform(1).onRenderUpdate(() => this.inputs.emissionExposure?.[0] ?? 1);
+  readonly emissionExposure = uniform(1).onFrameUpdate(() => this.inputs.emissionExposure?.[0] ?? 1);
 
   /** The caller writes `inputs` before a material first draws, as `pipelineInputs.ts` says. */
   constructor(readonly inputs: PipelineInputs) {}

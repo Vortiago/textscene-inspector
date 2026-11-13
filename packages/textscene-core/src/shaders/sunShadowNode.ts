@@ -43,27 +43,63 @@ import {
 import { quickHash } from './lightFunctions.js';
 import type { LightRows } from './lightRows.js';
 import type { SunShadowInputs } from './pipelineInputs.js';
-import type { FloatNode, IntNode, IVec2Node, Vec2Node, Vec3Node } from './nodeTypes.js';
-import { BLENDS_ABOVE, SLOT_MATRIX_ROWS, SPLIT_SLOTS, SUN_ROW } from './sunRows.js';
+import type { FloatNode, IntNode, IVec2Node, Vec2Node, Vec3Node, Vec4Node } from './nodeTypes.js';
+import { BLENDS_ABOVE, SLOT_MATRIX_ROWS, SPLIT_SLOTS, SUN_PANCAKE, SUN_ROW } from './sunRows.js';
 
 /** Soft Low, Godot's default quality (`rendering_server.cpp:3706`, `:3710`). */
 const PCF_KERNEL = vogelDisk(SOFT_LOW_SHADOW_SAMPLES);
 const PENUMBRA_KERNEL = vogelDisk(SOFT_LOW_PENUMBRA_SAMPLES);
 
-/** How far a blocker sits towards the light at least, as the patch pancakes it. */
-const SUN_PANCAKE = 1e-4;
+/**
+ * What the lookup reads of the fragment. The caller reads it and passes it in: three builds a layout
+ * function in a flow whose vars it drops (r187 `NodeBuilder.js:3068-3098`), so a varying first read
+ * there leaves its vertex vars undeclared.
+ */
+interface ShadowFragment {
+  /** The world position. */
+  position: Vec3Node;
+  /** The world normal the normal bias moves along, as three's shadow chunk takes it. */
+  normal: Vec3Node;
+  /** The camera depth, which picks the split. */
+  depth: FloatNode;
+}
 
-/** The world normal the vertex stage hands the lookup's normal bias, as three's shadow chunk does. */
-const shadowWorldNormal = varying(
-  transformNormalToView(normalLocal).transformNormalByInverseViewMatrix(cameraViewMatrix),
-  'vGodotSunShadowWorldNormal'
-);
+/** The layout inputs of a `ShadowFragment`, in its order. */
+const FRAGMENT_INPUTS = [
+  { name: 'position', type: 'vec3' },
+  { name: 'normal', type: 'vec3' },
+  { name: 'depth', type: 'float' },
+] as const;
 
-/** The fragment's camera depth, which picks the split. */
-const viewDepth = positionView.z.negate();
+/** A `ShadowFragment` as a layout function's trailing arguments. */
+type FragmentArgs = [position: Vec3Node, normal: Vec3Node, depth: FloatNode];
 
-/** A kernel tap turned by the fragment's rotation (`scene_forward_lights_inc.glsl:292-298`). */
-function turned(sin: FloatNode, cos: FloatNode, [x, y]: [number, number]): Vec2Node {
+/** The inputs of a function that takes the light's first row and the fragment. */
+const FIRST_AND_FRAGMENT = [{ name: 'first', type: 'int' }, ...FRAGMENT_INPUTS];
+
+function shadowFragment(): ShadowFragment {
+  const normal = varying(
+    transformNormalToView(normalLocal).transformNormalByInverseViewMatrix(cameraViewMatrix),
+    'vGodotSunShadowWorldNormal'
+  );
+  return { position: positionWorld, normal, depth: positionView.z.negate() };
+}
+
+/** The fragment's kernel rotation, from its screen hash (`scene_forward_lights_inc.glsl:292-298`). */
+interface Rotation {
+  sin: FloatNode;
+  cos: FloatNode;
+}
+
+function fragmentRotation(): Rotation {
+  const turn = quickHash(screenCoordinate)
+    .mul(2 * Math.PI)
+    .toVar();
+  return { sin: turn.sin().toVar(), cos: turn.cos().toVar() };
+}
+
+/** A kernel tap turned by the fragment's rotation. */
+function turned({ sin, cos }: Rotation, [x, y]: [number, number]): Vec2Node {
   return vec2(cos.mul(x).add(sin.mul(y)), sin.negate().mul(x).add(cos.mul(y)));
 }
 
@@ -76,10 +112,11 @@ export class SunShadow {
 
   /** The shadow of the light whose rows start at `first`, faded out at the end of its last split. */
   shadow(first: number): FloatNode {
-    return this.fadedShadow(int(first));
+    const { position, normal, depth } = shadowFragment();
+    return this.fadedShadow(int(first), position, normal, depth);
   }
 
-  private field(first: IntNode, field: number, offset: IntNode | number = 0): ReturnType<LightRows['at']> {
+  private field(first: IntNode, field: number, offset: IntNode | number = 0): Vec4Node {
     return this.rows.at(first.add(field).add(offset));
   }
 
@@ -150,14 +187,10 @@ export class SunShadow {
 
   /** `sample_directional_pcf_shadow` (`scene_forward_lights_inc.glsl:283-308`) at Soft Low's taps. */
   private readonly pcf = Fn(([pixelSize, coord]: [Vec2Node, Vec3Node]) => {
-    const turn = quickHash(screenCoordinate)
-      .mul(2 * Math.PI)
-      .toVar();
-    const sin = turn.sin().toVar();
-    const cos = turn.cos().toVar();
+    const rotation = fragmentRotation();
     const shadow = float(0).toVar();
     for (const tap of PCF_KERNEL) {
-      shadow.addAssign(this.compare(coord.xy.add(pixelSize.mul(turned(sin, cos, tap))), coord.z));
+      shadow.addAssign(this.compare(coord.xy.add(pixelSize.mul(turned(rotation, tap))), coord.z));
     }
     return shadow.mul(1 / PCF_KERNEL.length);
   }).setLayout({
@@ -170,26 +203,36 @@ export class SunShadow {
   });
 
   /** One split's PCF shadow (`:2443`), unshadowed outside the split's share of the atlas. */
-  private readonly pcfSplit = Fn(([first, slot, radiusScale]: [IntNode, IntNode, FloatNode]) => {
-    const split = this.field(first, SUN_ROW.splits, slot).toVar();
-    const position = positionWorld.add(shadowWorldNormal.mul(split.z));
-    const coord = this.coordOf(first, slot, position).toVar();
-    coord.z.addAssign(split.y);
-    const result = float(1).toVar();
-    If(this.isInside(coord), () => {
-      const atlasRow = this.field(first, SUN_ROW.atlas).toVar();
-      const shadowRow = this.field(first, SUN_ROW.shadow).toVar();
-      const pixelSize = vec2(1).div(atlasRow.xy).mul(shadowRow.w.mul(radiusScale));
-      result.assign(mix(1, this.pcf(pixelSize, coord), shadowRow.z));
-    });
-    return result;
-  }).setLayout({
+  private readonly pcfSplit = Fn(
+    ([first, slot, radiusScale, worldPosition, normal]: [
+      IntNode,
+      IntNode,
+      FloatNode,
+      Vec3Node,
+      Vec3Node,
+    ]) => {
+      const split = this.field(first, SUN_ROW.splits, slot).toVar();
+      const position = worldPosition.add(normal.mul(split.z));
+      const coord = this.coordOf(first, slot, position).toVar();
+      coord.z.addAssign(split.y);
+      const result = float(1).toVar();
+      If(this.isInside(coord), () => {
+        const atlasRow = this.field(first, SUN_ROW.atlas).toVar();
+        const shadowRow = this.field(first, SUN_ROW.shadow).toVar();
+        const pixelSize = vec2(1).div(atlasRow.xy).mul(shadowRow.w.mul(radiusScale));
+        result.assign(mix(1, this.pcf(pixelSize, coord), shadowRow.z));
+      });
+      return result;
+    }
+  ).setLayout({
     name: 'godotSunPcfSplit',
     type: 'float',
     inputs: [
       { name: 'first', type: 'int' },
       { name: 'slot', type: 'int' },
       { name: 'radiusScale', type: 'float' },
+      FRAGMENT_INPUTS[0],
+      FRAGMENT_INPUTS[1],
     ],
   });
 
@@ -197,9 +240,8 @@ export class SunShadow {
    * The split by camera depth, its filter narrowed against the first split's, blended into the next
    * over its blend band (`:2399-2478`).
    */
-  private readonly splitShadow = Fn(([first]: [IntNode]) => {
+  private readonly splitShadow = Fn(([first, position, normal, depth]: [IntNode, ...FragmentArgs]) => {
     const splitEnd = (slot: number) => this.field(first, SUN_ROW.splits, slot).x;
-    const depth = viewDepth.toVar();
     const slot = int(SPLIT_SLOTS - 1).toVar();
     If(depth.lessThan(splitEnd(0)), () => {
       slot.assign(0);
@@ -213,33 +255,29 @@ export class SunShadow {
     const selected = this.field(first, SUN_ROW.splits, slot).toVar();
     const blendsSplits = this.field(first, SUN_ROW.splits).w.greaterThan(BLENDS_ABOVE);
     const radiusScale = select(blendsSplits, float(1), splitEnd(0).div(selected.x));
-    const shadow = this.pcfSplit(first, slot, radiusScale).toVar();
+    const shadow = this.pcfSplit(first, slot, radiusScale, position, normal).toVar();
     const blendsHere = slot
       .lessThan(SPLIT_SLOTS - 1)
       .and(selected.w.greaterThan(BLENDS_ABOVE))
       .and(depth.greaterThan(selected.w));
     If(blendsHere, () => {
-      const next = this.pcfSplit(first, slot.add(1), float(1));
+      const next = this.pcfSplit(first, slot.add(1), float(1), position, normal);
       shadow.assign(mix(shadow, next, smoothstep(selected.w, selected.x, depth)));
     });
     return shadow;
-  }).setLayout({ name: 'godotSunSplitShadow', type: 'float', inputs: [{ name: 'first', type: 'int' }] });
+  }).setLayout({ name: 'godotSunSplitShadow', type: 'float', inputs: FIRST_AND_FRAGMENT });
 
   /**
    * `sample_directional_soft_shadow` (`scene_forward_lights_inc.glsl:381-424`): the blocker search,
    * then the penumbra filter it scales. `lightSide` is the depth of the light's side of the range.
    */
   private readonly blockerShadow = Fn(([coord, texScale, lightSide]: [Vec3Node, Vec2Node, FloatNode]) => {
-    const turn = quickHash(screenCoordinate)
-      .mul(2 * Math.PI)
-      .toVar();
-    const sin = turn.sin().toVar();
-    const cos = turn.cos().toVar();
+    const rotation = fragmentRotation();
     const pancaked = lightSide.add(float(SUN_PANCAKE).mul(lightSide.oneMinus())).toVar();
     const blockerSum = float(0).toVar();
     const blockerCount = float(0).toVar();
     for (const tap of PENUMBRA_KERNEL) {
-      const uv = coord.xy.add(turned(sin, cos, tap).mul(texScale));
+      const uv = coord.xy.add(turned(rotation, tap).mul(texScale));
       const blocker = max(this.rawDepth(uv), pancaked).toVar();
       If(blocker.lessThan(coord.z), () => {
         blockerSum.addAssign(blocker);
@@ -252,7 +290,7 @@ export class SunShadow {
       const penumbra = texScale.mul(coord.z.sub(blockerAverage).div(blockerAverage.sub(lightSide))).toVar();
       const sum = float(0).toVar();
       for (const tap of PENUMBRA_KERNEL) {
-        sum.addAssign(this.compare(coord.xy.add(turned(sin, cos, tap).mul(penumbra)), coord.z));
+        sum.addAssign(this.compare(coord.xy.add(turned(rotation, tap).mul(penumbra)), coord.z));
       }
       shadow.assign(sum.div(PENUMBRA_KERNEL.length));
     });
@@ -268,30 +306,36 @@ export class SunShadow {
   });
 
   /** One split's soft shadow (`:2312-2324`), unshadowed outside the split's share of the atlas. */
-  private readonly softSplit = Fn(([first, slot, rangeBegin]: [IntNode, IntNode, FloatNode]) => {
-    const split = this.field(first, SUN_ROW.splits, slot).toVar();
-    const toLight = this.field(first, SUN_ROW.worldDirection).xyz.toVar();
-    const angle = this.field(first, SUN_ROW.atlas).z;
-    const shadowRow = this.field(first, SUN_ROW.shadow).toVar();
-    const position = positionWorld.add(shadowWorldNormal.mul(split.z)).toVar();
-    const coord = this.coordOf(first, slot, position).toVar();
-    coord.z.addAssign(split.y);
-    const result = float(1).toVar();
-    If(this.isInside(coord), () => {
-      const uvScale = vec2(this.scaleOf(first, slot, 0), this.scaleOf(first, slot, 1));
-      const testRadius = toLight.dot(position.sub(cameraPosition)).sub(rangeBegin).mul(angle);
-      const texScale = uvScale.mul(testRadius).mul(shadowRow.w);
-      const lightSide = coord.z.sub(this.scaleOf(first, slot, 2).mul(rangeBegin.sub(toLight.dot(position))));
-      result.assign(mix(1, this.blockerShadow(coord, texScale, lightSide), shadowRow.z));
-    });
-    return result;
-  }).setLayout({
+  private readonly softSplit = Fn(
+    ([first, slot, rangeBegin, worldPosition, normal]: [IntNode, IntNode, FloatNode, Vec3Node, Vec3Node]) => {
+      const split = this.field(first, SUN_ROW.splits, slot).toVar();
+      const toLight = this.field(first, SUN_ROW.worldDirection).xyz.toVar();
+      const angle = this.field(first, SUN_ROW.atlas).z;
+      const shadowRow = this.field(first, SUN_ROW.shadow).toVar();
+      const position = worldPosition.add(normal.mul(split.z)).toVar();
+      const coord = this.coordOf(first, slot, position).toVar();
+      coord.z.addAssign(split.y);
+      const result = float(1).toVar();
+      If(this.isInside(coord), () => {
+        const uvScale = vec2(this.scaleOf(first, slot, 0), this.scaleOf(first, slot, 1));
+        const testRadius = toLight.dot(position.sub(cameraPosition)).sub(rangeBegin).mul(angle);
+        const texScale = uvScale.mul(testRadius).mul(shadowRow.w);
+        const lightSide = coord.z.sub(
+          this.scaleOf(first, slot, 2).mul(rangeBegin.sub(toLight.dot(position)))
+        );
+        result.assign(mix(1, this.blockerShadow(coord, texScale, lightSide), shadowRow.z));
+      });
+      return result;
+    }
+  ).setLayout({
     name: 'godotSunSoftSplit',
     type: 'float',
     inputs: [
       { name: 'first', type: 'int' },
       { name: 'slot', type: 'int' },
       { name: 'rangeBegin', type: 'float' },
+      FRAGMENT_INPUTS[0],
+      FRAGMENT_INPUTS[1],
     ],
   });
 
@@ -299,10 +343,9 @@ export class SunShadow {
    * The soft shadow of a light with an angular size (`:2310-2398`): the first split the depth lies
    * in, blended with the next one while the light blends its splits.
    */
-  private readonly softShadow = Fn(([first]: [IntNode]) => {
+  private readonly softShadow = Fn(([first, position, normal, depth]: [IntNode, ...FragmentArgs]) => {
     const splitRow = (slot: number) => this.field(first, SUN_ROW.splits, slot);
     const rangeBegins = this.field(first, SUN_ROW.rangeBegins).toVar();
-    const depth = viewDepth.toVar();
     const blendMax = select(splitRow(0).w.greaterThan(BLENDS_ABOVE), int(2), int(1)).toVar();
     const blended = int(0).toVar();
     const shadow = float(1).toVar();
@@ -311,7 +354,7 @@ export class SunShadow {
       const reachesSlot = slot < SPLIT_SLOTS - 1 ? depth.lessThan(splitRow(slot).x) : null;
       const takes = reachesSlot ? blended.lessThan(blendMax).and(reachesSlot) : blended.lessThan(blendMax);
       If(takes, () => {
-        const splitShadow = this.softSplit(first, int(slot), rangeBeginOf[slot]!).toVar();
+        const splitShadow = this.softSplit(first, int(slot), rangeBeginOf[slot]!, position, normal).toVar();
         If(blended.equal(0), () => {
           shadow.assign(splitShadow);
         }).Else(() => {
@@ -322,24 +365,30 @@ export class SunShadow {
       });
     }
     return shadow;
-  }).setLayout({ name: 'godotSunSoftShadow', type: 'float', inputs: [{ name: 'first', type: 'int' }] });
+  }).setLayout({ name: 'godotSunSoftShadow', type: 'float', inputs: FIRST_AND_FRAGMENT });
 
   /**
    * The shadow, the soft one for a light with an angle, faded out between the fade's two depths
    * (`:2491`). Ends that do not ascend fade nothing, which covers a light no fit has placed.
    */
-  private readonly fadedShadow = Fn(([first]: [IntNode]) => {
+  private readonly fadedShadow = Fn(([first, position, normal, depth]: [IntNode, ...FragmentArgs]) => {
     const shadowRow = this.field(first, SUN_ROW.shadow).toVar();
     const fadeOut = select(
       shadowRow.y.greaterThan(shadowRow.x),
-      smoothstep(shadowRow.x, shadowRow.y, viewDepth),
+      smoothstep(shadowRow.x, shadowRow.y, depth),
       float(0)
     ).toVar();
     const shadow = float(1).toVar();
     If(fadeOut.lessThan(1), () => {
       const hasAngle = this.field(first, SUN_ROW.atlas).z.greaterThan(0);
-      shadow.assign(select(hasAngle, this.softShadow(first), this.splitShadow(first)));
+      shadow.assign(
+        select(
+          hasAngle,
+          this.softShadow(first, position, normal, depth),
+          this.splitShadow(first, position, normal, depth)
+        )
+      );
     });
     return mix(shadow, 1, fadeOut);
-  }).setLayout({ name: 'godotSunShadow', type: 'float', inputs: [{ name: 'first', type: 'int' }] });
+  }).setLayout({ name: 'godotSunShadow', type: 'float', inputs: FIRST_AND_FRAGMENT });
 }

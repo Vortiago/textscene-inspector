@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { DiffuseMode } from '../../godot/rendering/materials/diffuseMode.js';
 import { SpecularMode } from '../../godot/rendering/materials/specularMode.js';
 import type { StandardMaterialBag } from '../../resources/materials/standardmaterial3d/materialBag.js';
-import type { GodotLitNodeMaterial, LitProgram } from '../../shaders/litNodeMaterial.js';
+import { litProgramKey, type GodotLitNodeMaterial, type LitProgram } from '../../shaders/litNodeMaterial.js';
 import { lightModesInjection, type LightModes } from '../lightModes.js';
 import type { ProgramInjection } from '../materialProgramInputs.js';
 import { litShading } from './litShading.js';
@@ -139,7 +139,7 @@ export function litSurfaceMaterial(bag: StandardMaterialBag): LitSurfaceMaterial
   const program: LitProgram = { ...modes, hasClearcoat: (fields.clearcoat ?? 0) > 0 };
   return {
     program,
-    key: `lit:${program.diffuseMode}:${program.specularMode}:${program.hasClearcoat}`,
+    key: `lit:${litProgramKey(program)}`,
     fields,
     create: () => applyFields(shading.surfaceMaterial(program), fields),
   };

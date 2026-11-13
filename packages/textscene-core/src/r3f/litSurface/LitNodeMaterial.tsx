@@ -3,8 +3,9 @@
  * R3F diffs the bag's fields onto it as it diffs a classic material's props.
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { MaterialAttach } from '../materials/swappedMaterials';
+import { useDisposeOnRelease } from '../useDisposeOnRelease';
 import type { LitSurfaceMaterial } from './litSurfaceMaterial';
 
 interface LitNodeMaterialProps {
@@ -15,6 +16,6 @@ interface LitNodeMaterialProps {
 
 export function LitNodeMaterial({ lit, attach }: LitNodeMaterialProps) {
   const [material] = useState(() => lit.create());
-  useEffect(() => () => material.dispose(), [material]);
+  useDisposeOnRelease(material);
   return <primitive object={material} attach={attach} {...lit.fields} />;
 }

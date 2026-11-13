@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { MeshStandardNodeMaterial } from 'three/webgpu';
 import { DiffuseMode } from '../godot/rendering/materials/diffuseMode.js';
 import { SpecularMode } from '../godot/rendering/materials/specularMode.js';
-import { generatedMaterialShader } from './generatedShader.testkit.js';
+import { generatedMaterialProgram, generatedMaterialShader } from './generatedShader.testkit.js';
 import { installGodotShading, type GodotShading } from './godotShading.js';
 import type { LitProgram } from './litNodeMaterial.js';
 import { MAX_SUNS, SPLIT_SLOTS, SUN_ROWS, type SplitShadowLayout } from './sunRows.js';
@@ -71,6 +71,14 @@ describe('GodotLitNodeMaterial', () => {
 
   it('reads the shadow of a sun that casts one with a split layout', () => {
     expect(litShader(DEFAULT_PROGRAM, [shadowedSun()], true)).toContain('godotSunShadow(');
+  });
+
+  it('declares the vertex vars that feed the shadow’s normal bias', () => {
+    const material = shading(true).surfaceMaterial(DEFAULT_PROGRAM);
+    const { vertexShader } = generatedMaterialProgram(material, [shadowedSun()]);
+
+    expect(vertexShader).toContain('vec3 normalLocal;');
+    expect(vertexShader).toContain('mat4 modelViewMatrix;');
   });
 
   it('reads no shadow while the inputs hold no atlas', () => {

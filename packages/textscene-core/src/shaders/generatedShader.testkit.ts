@@ -15,6 +15,7 @@ interface ProgramBuilder {
   camera: THREE.Camera;
   lightsNode: LightsNode;
   build(): void;
+  vertexShader: string | null;
   fragmentShader: string | null;
 }
 
@@ -38,6 +39,14 @@ export function generatedFragmentShader(fragmentNode: Node): string {
 
 /** The fragment shader of `material` on a mesh that `lights` light. */
 export function generatedMaterialShader(material: NodeMaterial, lights: readonly THREE.Light[] = []): string {
+  return generatedMaterialProgram(material, lights).fragmentShader;
+}
+
+/** The two shaders of `material` on a mesh that `lights` light. */
+export function generatedMaterialProgram(
+  material: NodeMaterial,
+  lights: readonly THREE.Light[] = []
+): { vertexShader: string; fragmentShader: string } {
   const renderer = new WebGPURenderer({ forceWebGL: true, canvas: document.createElement('canvas') });
   const backend = renderer.backend as unknown as UnstartedBackend;
   backend.extensions = { has: () => false };
@@ -56,7 +65,7 @@ export function generatedMaterialShader(material: NodeMaterial, lights: readonly
   builder.camera = new THREE.PerspectiveCamera();
   builder.lightsNode = new LightsNode().setLights([...lights]);
   buildReportingErrors(builder);
-  return builder.fragmentShader ?? '';
+  return { vertexShader: builder.vertexShader ?? '', fragmentShader: builder.fragmentShader ?? '' };
 }
 
 /**

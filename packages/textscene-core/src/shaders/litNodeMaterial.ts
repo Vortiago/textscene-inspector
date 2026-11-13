@@ -33,6 +33,11 @@ export interface LitProgram {
   hasClearcoat: boolean;
 }
 
+/** The key of `program`: two materials compile one program exactly when their keys match. */
+export function litProgramKey({ diffuseMode, specularMode, hasClearcoat }: LitProgram): string {
+  return `${diffuseMode}:${specularMode}:${hasClearcoat}`;
+}
+
 export class GodotLitNodeMaterial extends NodeMaterial {
   static override get type(): string {
     return 'GodotLitNodeMaterial';
@@ -62,8 +67,7 @@ export class GodotLitNodeMaterial extends NodeMaterial {
   }
 
   override customProgramCacheKey(): string {
-    const { diffuseMode, specularMode, hasClearcoat } = this.program;
-    return `${super.customProgramCacheKey()}:${diffuseMode}:${specularMode}:${hasClearcoat}`;
+    return `${super.customProgramCacheKey()}:${litProgramKey(this.program)}`;
   }
 
   override setupLightingModel(): GodotLightingModel {

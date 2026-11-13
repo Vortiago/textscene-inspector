@@ -63,11 +63,11 @@ export class GodotSkyLightingNode extends LightingNode {
   constructor(private readonly sky: SkyInputs | null) {
     super();
     if (!sky) return;
-    this.layout.onRenderUpdate((_frame, self) => self.value.fromArray(sky.shown, 0));
-    this.energy.onRenderUpdate((_frame, self) => self.value.fromArray(sky.shown, 4));
-    this.toSky.onRenderUpdate((_frame, self) => self.value.fromArray(sky.rotation));
-    this.intensity.onRenderUpdate(({ scene }) => scene?.environmentIntensity ?? 1);
-    this.shows.onRenderUpdate(({ scene }) => (scene?.environment ? 1 : 0));
+    this.layout.onFrameUpdate((_frame, self) => self.value.fromArray(sky.shown, 0));
+    this.energy.onFrameUpdate((_frame, self) => self.value.fromArray(sky.shown, 4));
+    this.toSky.onFrameUpdate((_frame, self) => self.value.fromArray(sky.rotation));
+    this.intensity.onFrameUpdate(({ scene }) => scene?.environmentIntensity ?? 1);
+    this.shows.onFrameUpdate(({ scene }) => (scene?.environment ? 1 : 0));
   }
 
   override setup(builder: NodeBuilder): undefined {

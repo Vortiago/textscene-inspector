@@ -22,8 +22,8 @@ function shadowShader(rowsFromBottom: boolean): string {
 describe('SunShadow', () => {
   const shader = shadowShader(true);
 
-  it('calls one function per step, with the light’s first row', () => {
-    expect(shader).toContain(`godotSunShadow( ${SUN_ROWS} )`);
+  it('calls one function per step, with the light’s first row and the fragment', () => {
+    expect(shader).toMatch(new RegExp(`godotSunShadow\\( ${SUN_ROWS}, \\w+, \\w+, `));
     for (const name of [
       'godotSunSplitShadow',
       'godotSunPcfSplit',
