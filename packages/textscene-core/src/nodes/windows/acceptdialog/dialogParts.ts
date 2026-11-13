@@ -108,6 +108,11 @@ export function cachedMessageLabelNode(dialog: SolveNode): SolveNode {
   return cachedMessageLabels(dialog);
 }
 
+/** The name a button of `role` carries in the row, and so in its path. */
+export function dialogButtonName(role: DialogButtonRole): string {
+  return role === 'ok' ? 'OkButton' : 'CancelButton';
+}
+
 /** The label of a button: the OK text, or the Cancel text only a ConfirmationDialog carries. */
 function dialogButtonText(dialog: SolveNode, role: DialogButtonRole): string {
   const props = dialog.node.properties as DialogProperties & Partial<ConfirmationDialogProperties>;
@@ -119,7 +124,7 @@ function dialogButtonText(dialog: SolveNode, role: DialogButtonRole): string {
  * (`dialogs.cpp:228-235`). The OK button holds the dialog's focus (`dialogs.cpp:60-68`).
  */
 function dialogButtonSpec(dialog: SolveNode, role: DialogButtonRole): InternalControlSpec {
-  const name = role === 'ok' ? 'OkButton' : 'CancelButton';
+  const name = dialogButtonName(role);
   const properties: Partial<ButtonProperties> = {
     text: dialogButtonText(dialog, role),
     customMinimumSize: {

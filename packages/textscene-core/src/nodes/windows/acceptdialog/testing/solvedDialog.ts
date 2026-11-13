@@ -6,7 +6,13 @@ import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { internalControlsOf } from '../../../../r3f/controls/native/internalControls';
 import { controlProps, type SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { measureText } from '../../../../r3f/controls/native/text/measurer';
-import { dialogButtonRoles, type DialogButtonRole } from '../dialogParts';
+import {
+  buttonRowNode,
+  dialogBodyNodes,
+  dialogButtonName,
+  dialogButtonRoles,
+  type DialogButtonRole,
+} from '../dialogParts';
 
 interface PlacedControl {
   control: SolveNode;
@@ -42,13 +48,11 @@ export function solvedDialog(dialog: SolveNode, size: Vector2, theme: NativeThem
     { x: 0, y: 0, w: size.x, h: size.y },
     createSolveContext(theme, measureText)
   );
-  const [label, ...rest] = internalControlsOf(dialog, theme).map(({ node }) => node);
-  const row = rest.at(-1)!;
+  const label = internalControlsOf(dialog, theme)[0]!.node;
+  const row = buttonRowNode(dialog, theme);
   const rowRect = solved.get(row.path)!.rect;
   const buttons = dialogButtonRoles(dialog.node.type).map((role) => {
-    const button = row.children.find(
-      (child) => child.node.name === (role === 'ok' ? 'OkButton' : 'CancelButton')
-    )!;
+    const button = row.children.find((child) => child.node.name === dialogButtonName(role))!;
     const rect = solved.get(button.path)!.rect;
     return {
       role,
@@ -56,6 +60,6 @@ export function solvedDialog(dialog: SolveNode, size: Vector2, theme: NativeThem
       rect: { ...rect, x: rowRect.x + rect.x, y: rowRect.y + rect.y },
     };
   });
-  const body = rest.slice(0, -1).flatMap((root) => placeVisible(root, solved, { x: 0, y: 0 }));
-  return { content: solved.get(label!.path)!.rect, row: rowRect, buttons, body };
+  const body = dialogBodyNodes(dialog, theme).flatMap((root) => placeVisible(root, solved, { x: 0, y: 0 }));
+  return { content: solved.get(label.path)!.rect, row: rowRect, buttons, body };
 }

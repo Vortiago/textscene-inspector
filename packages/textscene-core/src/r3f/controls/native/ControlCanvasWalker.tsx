@@ -12,11 +12,11 @@ import type { ControlProperties } from '../../../nodes/2d/ui/control/types';
 import { threeMatrixFromTransform2D } from '../../node2dTransform';
 import type { NativeTheme } from './nativeTheme';
 import type { TextMeasurer } from './solverRegistry';
-import { createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
-import { controlComponentRegistry, type NativeControlComponentProps } from '../ControlComponentRegistry';
+import { childRectsOf, createSolveContext, solveControlTree, type SolvedControl } from './controlRectSolver';
+import { controlComponentRegistry } from '../ControlComponentRegistry';
 import { ControlFallback } from './ControlFallback';
 import { internalControlsOf, type InternalControl } from './internalControls';
-import { InternalControlGroup, internalControlSlots } from './InternalControlGroup';
+import { InternalControlGroup, internalControlSlots, type InternalPainterEnv } from './InternalControlGroup';
 import { OwnCanvasModulateProvider, WHITE_MODULATE } from '../../canvasItemModulate';
 import { useTextureSamplerOver } from '../../canvasItemTextureSampler';
 import { LitCanvasItemPixels } from '../../components/LitCanvasItemPixels';
@@ -277,7 +277,7 @@ interface InternalControlsProps {
   solved: ReadonlyMap<string, SolvedControl>;
   slot: CanvasSlot;
   chromeSlot: CanvasSlot;
-  env: Pick<NativeControlComponentProps, 'theme' | 'measureText' | 'snapToPixels' | 'tint' | 'childTint'>;
+  env: InternalPainterEnv;
 }
 
 /** The internal Controls of one Control, mounted only for a class that builds some. */
@@ -352,13 +352,7 @@ function ControlItemGroup({
   ));
 
   // Only this node's DIRECT children, so a painter cannot reach across the tree.
-  const childRects = useMemo(() => {
-    const out = new Map<string, Rect2>();
-    for (const child of solveNode.children) {
-      out.set(child.path, solved.get(child.path)?.rect ?? ZERO_RECT);
-    }
-    return out;
-  }, [solveNode.children, solved]);
+  const childRects = useMemo(() => childRectsOf(solveNode.children, solved), [solveNode.children, solved]);
 
   const internals = internalControlsOf(solveNode, theme);
 
@@ -393,7 +387,7 @@ function ControlItemGroup({
           solved={solved}
           slot={slot}
           chromeSlot={chromeSlot}
-          // The parent's tint, which #1486 replaces with what a child item inherits.
+          // The parent's tint, not the one a child item inherits.
           env={{ theme, measureText, snapToPixels, tint, childTint: tint.internalChild }}
         />
       )}

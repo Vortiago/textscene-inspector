@@ -7,8 +7,8 @@ import type { OverrideLayer } from '../../../core/NodeRegistry';
 import type { ParsedHeading } from '../../../parser/utils';
 import { unquoteString } from '../../../parser/utils';
 import { boolOr } from '../../../parser/valueParsers';
-import { descendsFromClass } from '../../../godot/classdb/classBaseTypes';
 import type { Vector2 } from '../../../godot/math/vector';
+import { windowClassDefaults } from '../../../godot/scene/window';
 import { viewportParseContext } from '../../viewport/shared/parser';
 import { parseWindow } from '../window/parser';
 import type { WindowProperties } from '../window/types';
@@ -48,27 +48,44 @@ const LINES_THAT_CACHE_THE_MINIMUM_EARLY: ReadonlySet<string> = new Set([
   'max_size',
 ]);
 
-/** A `min_size` line that leaves the value as it is asks for nothing: `set_min_size` returns first (`window.cpp:509-511`). */
-function cachesTheMinimumEarly(key: string, minSize: Vector2): boolean {
-  if (key === 'min_size') return minSize.x !== 0 || minSize.y !== 0;
-  return LINES_THAT_CACHE_THE_MINIMUM_EARLY.has(key);
+function isZero({ x, y }: Vector2): boolean {
+  return x === 0 && y === 0;
 }
 
 /**
- * Whether `dialog_text` is the first line after `visible = true` that settles the label's cached minimum.
- * A ConfirmationDialog's constructor sets `min_size` (`dialogs.cpp:531`), so its minimum is always cached early.
+ * A constructor that writes a size computes the minimum before any line: ConfirmationDialog's
+ * `set_min_size` (`dialogs.cpp:531`) and FileDialog's `set_size` (`file_dialog.cpp:2284`).
  */
+function constructorCachesTheMinimum(type: string): boolean {
+  const { minSize, size } = windowClassDefaults(type);
+  return !isZero(minSize) || size !== undefined;
+}
+
+/**
+ * Whether the line `key` computes the minimum. A `min_size` or `max_size` line that leaves the
+ * value at its default of zero asks for nothing: each setter returns first (`window.cpp:486-488,509-511`).
+ */
+function cachesTheMinimumEarly(
+  key: string,
+  limits: Pick<WindowProperties, 'min_size' | 'max_size'>
+): boolean {
+  if (key === 'min_size') return !isZero(limits.min_size);
+  if (key === 'max_size') return !isZero(limits.max_size);
+  return LINES_THAT_CACHE_THE_MINIMUM_EARLY.has(key);
+}
+
+/** Whether `dialog_text` is the first line after `visible = true` that settles the label's cached minimum. */
 function readsTextUnwrappedWhileVisible(
   type: string,
   properties: Record<string, string>,
-  minSize: Vector2
+  limits: Pick<WindowProperties, 'min_size' | 'max_size'>
 ): boolean {
-  if (descendsFromClass(type, 'ConfirmationDialog')) return false;
+  if (constructorCachesTheMinimum(type)) return false;
   if (properties.visible === undefined || !boolOr(properties.visible, false)) return false;
   const keys = Object.keys(properties);
   const textAt = keys.indexOf('dialog_text');
   if (textAt < keys.indexOf('visible')) return false;
-  return !keys.slice(0, textAt).some((key) => cachesTheMinimumEarly(key, minSize));
+  return !keys.slice(0, textAt).some((key) => cachesTheMinimumEarly(key, limits));
 }
 
 /** A quoted text property, or `fallback` when the scene line is absent. An empty string stays empty. */
@@ -95,7 +112,7 @@ export function parseDialog(
     has_unwrapped_message_minimum: readsTextUnwrappedWhileVisible(
       heading.attributes.type ?? '',
       properties,
-      windowProperties.min_size
+      windowProperties
     ),
   };
 }

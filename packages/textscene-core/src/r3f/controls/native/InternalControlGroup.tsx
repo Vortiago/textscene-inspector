@@ -5,16 +5,16 @@
  * back slot, in tree order.
  */
 import { useMemo } from 'react';
-import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2';
+import { ZERO_RECT } from '../../../godot/math/rect2';
 import { CanvasItemGroup } from '../../components/CanvasItemGroup';
 import { canvasPieceSlot, type CanvasSlot } from '../../canvasItemState';
 import { controlComponentRegistry, type NativeControlComponentProps } from '../ControlComponentRegistry';
 import type { InternalControl } from './internalControls';
-import type { SolvedControl } from './controlRectSolver';
+import { childRectsOf, type SolvedControl } from './controlRectSolver';
 import { controlProps, type SolveNode } from './solveTree';
 
 /** What every internal Control's painter takes from its parent's. */
-type InternalPainterEnv = Pick<
+export type InternalPainterEnv = Pick<
   NativeControlComponentProps,
   'theme' | 'measureText' | 'snapToPixels' | 'tint' | 'childTint'
 >;
@@ -50,11 +50,7 @@ interface InternalControlGroupProps {
 
 /** One internal Control and its subtree. A Control with `visible` false draws nothing. */
 export function InternalControlGroup({ node, solved, slots, env }: InternalControlGroupProps) {
-  const childRects = useMemo(() => {
-    const out = new Map<string, Rect2>();
-    for (const child of node.children) out.set(child.path, solved.get(child.path)?.rect ?? ZERO_RECT);
-    return out;
-  }, [node.children, solved]);
+  const childRects = useMemo(() => childRectsOf(node.children, solved), [node.children, solved]);
   if (controlProps(node).visible === false) return null;
 
   const entry = solved.get(node.path);

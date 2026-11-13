@@ -10,7 +10,7 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { Rect2 } from '../../../godot/math/rect2';
+import { ZERO_RECT, type Rect2 } from '../../../godot/math/rect2';
 import { controlLayoutOrder, controlProps, isLaidOutChild, sortableView, type SolveNode } from './solveTree';
 import type { NativeTheme } from './nativeTheme';
 import {
@@ -42,6 +42,14 @@ export interface SolvedControl {
    * `Container::fit_child_in_rect` does.
    */
   resetsChildTransform?: boolean;
+}
+
+/** The solved rect of each of `children`, by path, for the painter of their parent. Zero for one the solve missed. */
+export function childRectsOf(
+  children: readonly SolveNode[],
+  solved: ReadonlyMap<string, SolvedControl>
+): ReadonlyMap<string, Rect2> {
+  return new Map(children.map((child) => [child.path, solved.get(child.path)?.rect ?? ZERO_RECT]));
 }
 
 // --- Anchors ---------------------------------------------------------------

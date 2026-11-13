@@ -61,14 +61,12 @@ function dialogContentRect(dialog: SolveNode, size: Vector2, ctx: SolveContext):
 }
 
 /** The row's rect (`dialogs.cpp:238-242`): on the bottom edge inside the panel margins, at its minimum height. */
-function buttonRowRect(dialog: SolveNode, size: Vector2, ctx: SolveContext): Rect2 {
-  const panel = dialogPanelBox(dialog);
-  const height = buttonRowMinimum(dialog, ctx).y;
+function buttonRowRect(panel: ResolvedStyleBox, size: Vector2, rowHeight: number): Rect2 {
   return {
     x: panel.contentMargin.left,
-    y: size.y - panel.contentMargin.bottom - height,
+    y: size.y - panel.contentMargin.bottom - rowHeight,
     w: size.x - contentMarginSize(panel).x,
-    h: height,
+    h: rowHeight,
   };
 }
 
@@ -78,8 +76,10 @@ function buttonRowRect(dialog: SolveNode, size: Vector2, ctx: SolveContext): Rec
  */
 export const dialogInternalLayout: InternalLayoutFn = (dialog, internals, rect, ctx) => {
   const size = { x: rect.w, y: rect.h };
-  const content = dialogContentRect(dialog, size, ctx);
-  const row = buttonRowRect(dialog, size, ctx);
+  const panel = dialogPanelBox(dialog);
+  const rowHeight = buttonRowMinimum(dialog, ctx).y;
+  const content = contentRectAbove(panel, size, rowHeight, buttonsSeparation(dialog));
+  const row = buttonRowRect(panel, size, rowHeight);
   return new Map(
     internals.map((internal) => [internal.node.path, takesContentRect(internal) ? content : row])
   );
