@@ -9,6 +9,7 @@ import { painterView, controlLayoutOrder } from '../../../../r3f/controls/native
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { rangeRatio, RANGE_DEFAULT_MAX, RANGE_DEFAULT_MIN, RANGE_DEFAULT_PAGE } from '../shared/range';
+import { scrollBarBoxes } from '../shared/scrollBarBoxes';
 import {
   scrollBarGrabberGeometry,
   scrollBarGrabberRect,
@@ -16,7 +17,7 @@ import {
 } from '../shared/scrollBarSolver';
 import type { VScrollBarProperties } from './types';
 
-export function VScrollBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
+export function VScrollBar({ solveNode, tint, rect, renderOrder }: NativeControlComponentProps) {
   const props = painterView<VScrollBarProperties>(solveNode);
   const size = { x: rect.w, y: rect.h };
   const min = props.minValue ?? RANGE_DEFAULT_MIN;
@@ -24,18 +25,17 @@ export function VScrollBar({ solveNode, tint, rect, theme, renderOrder }: Native
   const page = props.page ?? RANGE_DEFAULT_PAGE;
   const ratio = rangeRatio(props, controlLayoutOrder(solveNode));
 
-  const trackBase = solveNode.styleBoxes.scroll ?? theme.widgets.scrollBar.scrollVertical;
-  const grabberBase = solveNode.styleBoxes.grabber ?? theme.widgets.scrollBar.grabber;
+  const boxes = scrollBarBoxes(solveNode.styleBoxes);
 
   const trackRect = scrollBarTrackRect(size);
-  const grabber = scrollBarGrabberGeometry(true, size.y, theme, min, max, page, ratio);
+  const grabber = scrollBarGrabberGeometry(true, size.y, boxes, min, max, page, ratio);
   const grabberRect = scrollBarGrabberRect(true, size, grabber);
 
   return (
     <>
       <CanvasItemGroup position={[trackRect.x, -trackRect.y, 0]}>
         <StyleBoxQuad
-          styleBox={trackBase}
+          styleBox={boxes.scroll}
           color={tint.own}
           rect={{ x: 0, y: 0, w: trackRect.w, h: trackRect.h }}
           renderOrder={renderOrder}
@@ -43,7 +43,7 @@ export function VScrollBar({ solveNode, tint, rect, theme, renderOrder }: Native
       </CanvasItemGroup>
       <CanvasItemGroup position={[grabberRect.x, -grabberRect.y, 0]}>
         <StyleBoxQuad
-          styleBox={grabberBase}
+          styleBox={boxes.grabber}
           color={tint.own}
           rect={{ x: 0, y: 0, w: grabberRect.w, h: grabberRect.h }}
           renderOrder={renderOrder}

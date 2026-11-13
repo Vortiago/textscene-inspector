@@ -17,6 +17,7 @@ const MIGRATED_FOLDERS = [
   'checkbox',
   'checkbutton',
   'colorpickerbutton',
+  'hscrollbar',
   'hslider',
   'label',
   'linkbutton',
@@ -25,6 +26,7 @@ const MIGRATED_FOLDERS = [
   'optionbutton',
   'panel',
   'panelcontainer',
+  'vscrollbar',
   'vslider',
 ].map((folder) => join(SRC_ROOT, 'nodes/2d/ui', folder));
 

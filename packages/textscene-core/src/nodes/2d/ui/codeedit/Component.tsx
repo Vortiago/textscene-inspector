@@ -20,6 +20,7 @@ import { useControlBidiOptions } from '../../../../r3f/controls/native/text/useC
 import { resolveNodeFontMetrics } from '../../../../r3f/controls/native/text/resolveNodeFontMetrics';
 import { TextEditBody } from '../textedit/Component';
 import { useTextEditRows } from '../textedit/useTextEditRows';
+import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import {
   pickTextEditStyleBox,
   resolveTextEditStyleState,
@@ -107,7 +108,7 @@ export function CodeEdit(props: NativeControlComponentProps) {
       indentWrappedLines: codeEditProps.indentWrappedLines,
       bidi,
     },
-    theme,
+    scrollBarBoxes: internalScrollBarBoxes(solveNode),
   });
   // A placeholder paragraph replaces the buffer's single empty line, which starts at row 0.
   const { lineLayouts } = rows;

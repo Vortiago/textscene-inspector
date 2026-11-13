@@ -10,7 +10,7 @@ type TextEditRowsInput = Parameters<typeof solveTextEditRows>[0];
  */
 export function useTextEditRows(input: TextEditRowsInput, solved?: TextEditRows): TextEditRows {
   const { lines, isPlaceholder, rowHeightPx, gutterBandWidthPx, minimapWidthPx, drawMinimap } = input;
-  const { scrollPastEndOfFile, fitContentHeight, rtl, theme } = input;
+  const { scrollPastEndOfFile, fitContentHeight, rtl, scrollBarBoxes } = input;
   const { x: width, y: height } = input.size;
   const { left, top, right, bottom } = input.margins;
   const { fontSizePx, fontMetrics, wrapMode, autowrapMode, tabStopsPx } = input.shape;
@@ -40,7 +40,7 @@ export function useTextEditRows(input: TextEditRowsInput, solved?: TextEditRows)
           indentWrappedLines,
           bidi,
         },
-        theme,
+        scrollBarBoxes,
       }),
     [
       lines,
@@ -66,7 +66,7 @@ export function useTextEditRows(input: TextEditRowsInput, solved?: TextEditRows)
       preserveControl,
       indentWrappedLines,
       bidi,
-      theme,
+      scrollBarBoxes,
       solved,
     ]
   );

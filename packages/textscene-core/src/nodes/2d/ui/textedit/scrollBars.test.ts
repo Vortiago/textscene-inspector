@@ -4,11 +4,11 @@
  * with the default font (line height 27), in a 240x84 box with 4 px style margins.
  */
 import { describe, expect, it } from 'vitest';
-import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import { defaultScrollBarBoxes } from '../shared/testing/scrollBarBoxes';
 import { scrollBarGrabberGeometry } from '../shared/scrollBarSolver';
 import { textEditScrollBars } from './scrollBars';
 
-const theme = nativeTheme(1);
+const boxes = defaultScrollBarBoxes(1);
 const MARGINS = { left: 4, top: 4, right: 4, bottom: 4 };
 
 function bars(overrides: Partial<Parameters<typeof textEditScrollBars>[0]> = {}) {
@@ -23,14 +23,22 @@ function bars(overrides: Partial<Parameters<typeof textEditScrollBars>[0]> = {})
     scrollPastEndOfFile: false,
     fitContentHeight: false,
     rtl: false,
-    theme,
+    scrollBarBoxes: boxes,
     ...overrides,
   });
 }
 
 /** The grabber a bar of this `max` and `page` gets, the value-0 end of its travel. */
 function grabberOf(isVertical: boolean, lengthPx: number, max: number, page: number) {
-  return scrollBarGrabberGeometry(isVertical, lengthPx, theme, 0, max, page, 0);
+  return scrollBarGrabberGeometry(
+    isVertical,
+    lengthPx,
+    isVertical ? boxes.vertical : boxes.horizontal,
+    0,
+    max,
+    page,
+    0
+  );
 }
 
 describe('textEditScrollBars: the vertical bar', () => {

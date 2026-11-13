@@ -39,6 +39,7 @@ import {
 } from './nativeSolver';
 import { resolveRichTextFaces } from './styleFaces';
 import { shapeBesideScrollBar } from './scrollBar';
+import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import { countedCharacters, richTextReveal, truncateRunsToCharacters } from './visibleCharacters';
 import type { RichTextLabelProperties } from './types';
 import type { Rgba } from '../../../../godot/math/math';
@@ -226,6 +227,7 @@ function useShapedRichText(
     ]
   );
 
+  const scrollBarBoxes = internalScrollBarBoxes(solveNode).vertical;
   const shaped = useMemo(
     () =>
       shapeBesideScrollBar(
@@ -234,9 +236,9 @@ function useShapedRichText(
           return { runs, layout: shapeAtWidth(runs, wrapWidthPx) };
         },
         box,
-        theme
+        scrollBarBoxes
       ),
-    [runsAt, runsAtRectWidth, rect.w, shapeAtWidth, box, theme]
+    [runsAt, runsAtRectWidth, rect.w, shapeAtWidth, box, scrollBarBoxes]
   );
 
   const { visibleCharacters, visibleRatio, visibleRatioDrives, visibleCharactersBehavior } = props;
@@ -396,8 +398,7 @@ function RichTextBody({
         // over the text, under any regular child.
         <ScrollBarChrome
           bar={scrollBar}
-          track={theme.widgets.scrollBar.scrollVertical}
-          grabber={theme.widgets.scrollBar.grabber}
+          boxes={internalScrollBarBoxes(solveNode).vertical}
           color={childTint.own}
           chromeSlot={slot}
           snapToPixels={snapToPixels}

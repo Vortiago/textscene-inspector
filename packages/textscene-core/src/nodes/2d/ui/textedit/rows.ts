@@ -4,7 +4,7 @@
  * so the rows are shaped without the bar first and again beside it where it shows.
  */
 import type { Vector2 } from '../../../../godot/math/vector';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
+import type { ScrollBarPairBoxes } from '../shared/scrollBarSolver';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   shapeTextEditLines,
@@ -30,7 +30,7 @@ interface TextEditRowsInput {
   rtl: boolean;
   /** Everything the shaping reads, but the wrap width and the placeholder flag. */
   shape: Omit<TextEditShapeOptions, 'wrapWidthPx' | 'placeholder'>;
-  theme: NativeTheme;
+  scrollBarBoxes: ScrollBarPairBoxes;
 }
 
 export interface TextEditRows {
@@ -65,7 +65,7 @@ export function solveTextEditRows(input: TextEditRowsInput): TextEditRows {
       scrollPastEndOfFile: input.scrollPastEndOfFile,
       fitContentHeight: input.fitContentHeight,
       rtl: input.rtl,
-      theme: input.theme,
+      scrollBarBoxes: input.scrollBarBoxes,
     });
     return { lineLayouts, wrapWidthPx, scrollBars };
   };

@@ -11,11 +11,11 @@
  */
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Vector2 } from '../../../../godot/math/vector';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   scrollBarMinimumSize,
   scrollBarRangePlacement,
+  type ScrollBarPairBoxes,
   type ScrollBarPlacement,
 } from '../shared/scrollBarSolver';
 
@@ -37,7 +37,7 @@ interface TextEditScrollBarsInput {
   fitContentHeight: boolean;
   /** `is_layout_rtl()`: `Control::_size_changed` mirrors each bar about the control's width (`control.cpp:1785-1787`). */
   rtl: boolean;
-  theme: NativeTheme;
+  scrollBarBoxes: ScrollBarPairBoxes;
 }
 
 export interface TextEditScrollBars {
@@ -60,9 +60,9 @@ function mirrorX(x: number, width: number, parentWidth: number, rtl: boolean): n
  * whether or not that bar shows (`:8596-8597`).
  */
 export function textEditScrollBars(input: TextEditScrollBarsInput): TextEditScrollBars {
-  const { size, margins, rowHeightPx, theme } = input;
-  const hMin = scrollBarMinimumSize(false, theme);
-  const vMin = scrollBarMinimumSize(true, theme);
+  const { size, margins, rowHeightPx, scrollBarBoxes } = input;
+  const hMin = scrollBarMinimumSize(false, scrollBarBoxes.horizontal);
+  const vMin = scrollBarMinimumSize(true, scrollBarBoxes.vertical);
 
   const visibleWidthPx = Math.trunc(size.x - (margins.left + margins.right));
   const totalWidthPx = input.widestRowPx + input.gutterBandWidthPx + input.minimapWidthPx;
@@ -95,7 +95,7 @@ export function textEditScrollBars(input: TextEditScrollBarsInput): TextEditScro
     horizontal: scrollBarRangePlacement(
       false,
       horizontalRect,
-      theme,
+      scrollBarBoxes.horizontal,
       { min: 0, max: totalWidthPx, page: visibleWidthPx },
       0,
       hasHorizontal
@@ -103,7 +103,7 @@ export function textEditScrollBars(input: TextEditScrollBarsInput): TextEditScro
     vertical: scrollBarRangePlacement(
       true,
       verticalRect,
-      theme,
+      scrollBarBoxes.vertical,
       { min: 0, max: totalRows, page: visibleRows + fractionalRows },
       0,
       hasVertical

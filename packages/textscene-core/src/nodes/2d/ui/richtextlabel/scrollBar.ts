@@ -10,11 +10,11 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import {
   scrollBarGrabberGeometry,
   scrollBarGrabberRect,
   scrollBarMinimumSize,
+  type ScrollBarBoxes,
   type ScrollBarPlacement,
 } from '../shared/scrollBarSolver';
 import { RANGE_DEFAULT_MAX, clampRangeValue } from '../shared/range';
@@ -60,11 +60,11 @@ function scrollBarPlacement(
   contentHeightPx: number,
   scrollOffsetPx: number,
   widthPx: number,
-  theme: NativeTheme
+  boxes: ScrollBarBoxes
 ): ScrollBarPlacement {
   const size = { x: widthPx, y: box.h };
   const ratio = scrollOffsetPx / contentHeightPx;
-  const grabber = scrollBarGrabberGeometry(true, size.y, theme, 0, contentHeightPx, box.h, ratio);
+  const grabber = scrollBarGrabberGeometry(true, size.y, boxes, 0, contentHeightPx, box.h, ratio);
   return {
     visible: true,
     rect: { x: box.rtl ? 0 : box.w - widthPx, y: 0, w: size.x, h: size.y },
@@ -91,7 +91,8 @@ function scrollOffsetOf(box: RichTextBox, contentHeightPx: number): number {
 export function shapeBesideScrollBar(
   shapeAt: (wrapWidthPx: number) => RichTextShape,
   box: RichTextBox,
-  theme: NativeTheme
+  /** The boxes of the `VScrollBar` the label creates inside itself (`rich_text_label.cpp:8207`). */
+  boxes: ScrollBarBoxes
 ): RichTextShapeBesideScrollBar {
   const full = shapeAt(box.w);
   const fullHeightPx = richTextContentHeightPx(full.runs, full.layout);
@@ -108,7 +109,7 @@ export function shapeBesideScrollBar(
       scrollBar: null,
     };
   }
-  const { x: barWidthPx } = scrollBarMinimumSize(true, theme);
+  const { x: barWidthPx } = scrollBarMinimumSize(true, boxes);
   const wrapWidthPx = box.w - barWidthPx;
   const beside = shapeAt(wrapWidthPx);
   const contentHeightPx = richTextContentHeightPx(beside.runs, beside.layout);
@@ -121,6 +122,6 @@ export function shapeBesideScrollBar(
     contentHeightPx,
     textOriginXPx: box.rtl ? barWidthPx : 0,
     scrollOffsetPx,
-    scrollBar: scrollBarPlacement(box, contentHeightPx, scrollOffsetPx, barWidthPx, theme),
+    scrollBar: scrollBarPlacement(box, contentHeightPx, scrollOffsetPx, barWidthPx, boxes),
   };
 }

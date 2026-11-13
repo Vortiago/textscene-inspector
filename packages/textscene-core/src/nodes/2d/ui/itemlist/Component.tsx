@@ -76,6 +76,7 @@ import {
 } from './nativeSolver';
 import { ScrollBarChrome, ScrollHintChrome, SCROLL_HINT_MODULATE } from '../shared/ScrollChrome';
 import { itemListScrollBars } from './scrollBars';
+import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 import { itemListDrawnLabel, isItemListLabelFillDrawn } from './labelDraw';
 import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
@@ -316,7 +317,8 @@ export function ItemList({
 
   const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
   const pageWidth = rect.w - panelMargin.x;
-  const verticalBarMinWidth = useMemo(() => itemListBarMinimums(theme).verticalWidth, [theme]);
+  const scrollBarBoxes = internalScrollBarBoxes(solveNode);
+  const verticalBarMinWidth = itemListBarMinimums(scrollBarBoxes).verticalWidth;
 
   const packed = useMemo(
     () =>
@@ -388,10 +390,10 @@ export function ItemList({
         vertical: packed.vertical,
         horizontal: packed.horizontal,
         rtl,
-        theme,
+        boxes: scrollBarBoxes,
         scrollHintMode: props.scrollHintMode ?? 0,
       }),
-    [rect.w, rect.h, panelMargins, packed, rtl, theme, props.scrollHintMode]
+    [rect.w, rect.h, panelMargins, packed, rtl, scrollBarBoxes, props.scrollHintMode]
   );
   // Both scroll bars and the hint are child Controls: no `self_modulate` (`item_list.cpp:2472,2476`).
   const hintColor = useMemo(() => childTint.color.clone().multiply(SCROLL_HINT_MODULATE), [childTint.color]);
@@ -592,16 +594,14 @@ export function ItemList({
       />
       <ScrollBarChrome
         bar={scrollBars.horizontal}
-        track={theme.widgets.scrollBar.scrollHorizontal}
-        grabber={theme.widgets.scrollBar.grabber}
+        boxes={scrollBarBoxes.horizontal}
         color={childTint.own}
         chromeSlot={slot}
         snapToPixels={snapToPixels}
       />
       <ScrollBarChrome
         bar={scrollBars.vertical}
-        track={theme.widgets.scrollBar.scrollVertical}
-        grabber={theme.widgets.scrollBar.grabber}
+        boxes={scrollBarBoxes.vertical}
         color={childTint.own}
         chromeSlot={slot}
         snapToPixels={snapToPixels}

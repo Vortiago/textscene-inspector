@@ -11,12 +11,13 @@
 import type { Rect2 } from '../../../../godot/math/rect2';
 import type { Vector2 } from '../../../../godot/math/vector';
 import { ItemListScrollHintMode } from '../../../../godot/scene/gui';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import {
   SCROLL_HINT_VERTICAL_HEIGHT,
   scrollBarGrabberGeometry,
   scrollBarGrabberRect,
+  type ScrollBarBoxes,
+  type ScrollBarPairBoxes,
   type ScrollBarPlacement,
   type ScrollHintPlacement,
 } from '../shared/scrollBarSolver';
@@ -30,7 +31,7 @@ interface ItemListScrollBarsInput {
   vertical: ItemListScrollRange;
   horizontal: ItemListScrollRange;
   rtl: boolean;
-  theme: NativeTheme;
+  boxes: ScrollBarPairBoxes;
   scrollHintMode: number;
 }
 
@@ -52,13 +53,13 @@ function placement(
   vertical: boolean,
   rect: Rect2,
   range: ItemListScrollRange,
-  theme: NativeTheme
+  boxes: ScrollBarBoxes
 ): ScrollBarPlacement {
   const length = vertical ? rect.h : rect.w;
   const grabber = scrollBarGrabberGeometry(
     vertical,
     length,
-    theme,
+    boxes,
     range.min,
     range.max,
     range.page,
@@ -94,8 +95,8 @@ function bottomHintPlacement(
 }
 
 export function itemListScrollBars(input: ItemListScrollBarsInput): ItemListScrollBars {
-  const { size, margins, rtl, theme } = input;
-  const minimums = itemListBarMinimums(theme);
+  const { size, margins, rtl, boxes } = input;
+  const minimums = itemListBarMinimums(boxes);
   const verticalWidth = input.vertical.visible ? minimums.verticalWidth : 0;
   const horizontalHeight = input.horizontal.visible ? minimums.horizontalHeight : 0;
 
@@ -119,8 +120,8 @@ export function itemListScrollBars(input: ItemListScrollBarsInput): ItemListScro
   };
 
   return {
-    vertical: placement(true, verticalRect, input.vertical, theme),
-    horizontal: placement(false, horizontalRect, input.horizontal, theme),
+    vertical: placement(true, verticalRect, input.vertical, boxes.vertical),
+    horizontal: placement(false, horizontalRect, input.horizontal, boxes.horizontal),
     bottomHint: bottomHintPlacement(size, input.vertical, input.scrollHintMode),
   };
 }

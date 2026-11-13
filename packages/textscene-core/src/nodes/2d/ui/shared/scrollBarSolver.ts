@@ -11,20 +11,29 @@
  */
 
 import type { Rect2 } from '../../../../godot/math/rect2';
-import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import { contentMarginSize } from '../../../../r3f/controls/native/styleBoxFlat';
+import { contentMarginSize, type StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Vector2 } from '../../../../godot/math/vector';
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
-/** This axis' track StyleBox: `scroll_style` (`scroll_bar.cpp`'s `theme_cache.scroll_style`). */
-function trackStyleBox(vertical: boolean, theme: NativeTheme) {
-  return vertical ? theme.widgets.scrollBar.scrollVertical : theme.widgets.scrollBar.scrollHorizontal;
+/**
+ * One bar's `scroll` (track) and `grabber` StyleBoxes, as `scroll_bar.cpp`'s `theme_cache` reads them.
+ * An HScrollBar and a VScrollBar each read their own type's items.
+ */
+export interface ScrollBarBoxes {
+  scroll: StyleBoxFlatData;
+  grabber: StyleBoxFlatData;
+}
+
+/** The boxes of a host's two internal bars. */
+export interface ScrollBarPairBoxes {
+  horizontal: ScrollBarBoxes;
+  vertical: ScrollBarBoxes;
 }
 
 /** The grabber StyleBox's along-axis minimum: `get_grabber_min_size()` (`scroll_bar.cpp:473-477`). */
-function grabberMinAlong(vertical: boolean, theme: NativeTheme): number {
-  const m = contentMarginSize(theme.widgets.scrollBar.grabber);
+function grabberMinAlong(vertical: boolean, boxes: ScrollBarBoxes): number {
+  const m = contentMarginSize(boxes.grabber);
   return vertical ? m.y : m.x;
 }
 
@@ -33,9 +42,9 @@ function grabberMinAlong(vertical: boolean, theme: NativeTheme): number {
  * The default theme sets all six `increment`/`decrement` icons to an empty `ImageTexture` on both
  * bars (`default_theme.cpp:557-562,572-577`), so `native/themeIcons.ts` vendors none.
  */
-export function scrollBarMinimumSize(vertical: boolean, theme: NativeTheme): Vector2 {
-  const track = contentMarginSize(trackStyleBox(vertical, theme));
-  const grabber = grabberMinAlong(vertical, theme);
+export function scrollBarMinimumSize(vertical: boolean, boxes: ScrollBarBoxes): Vector2 {
+  const track = contentMarginSize(boxes.scroll);
+  const grabber = grabberMinAlong(vertical, boxes);
   if (vertical) {
     // minsize.width = MAX(incr.width, bg.minwidth); minsize.height = incr.height + decr.height + bg.minheight + grabber_min_size.
     return { x: Math.max(0, track.x), y: track.y + grabber };
@@ -45,10 +54,10 @@ export function scrollBarMinimumSize(vertical: boolean, theme: NativeTheme): Vec
 }
 
 /** `ScrollBar::get_area_size` (`scroll_bar.cpp:491-513`): the grabber's travel along the bar. */
-function scrollBarAreaSize(vertical: boolean, barLength: number, theme: NativeTheme): number {
-  const track = contentMarginSize(trackStyleBox(vertical, theme));
+function scrollBarAreaSize(vertical: boolean, barLength: number, boxes: ScrollBarBoxes): number {
+  const track = contentMarginSize(boxes.scroll);
   const trackAlong = vertical ? track.y : track.x;
-  return barLength - trackAlong - grabberMinAlong(vertical, theme);
+  return barLength - trackAlong - grabberMinAlong(vertical, boxes);
 }
 
 /** One bar as its owner draws it: where it sits and where its grabber sits inside it. */
@@ -75,7 +84,7 @@ interface ScrollBarGrabberGeometry {
 export function scrollBarGrabberGeometry(
   vertical: boolean,
   barLength: number,
-  theme: NativeTheme,
+  boxes: ScrollBarBoxes,
   min: number,
   max: number,
   page: number,
@@ -85,12 +94,12 @@ export function scrollBarGrabberGeometry(
   // scroll_bar.cpp:481-483: "if (range <= 0) return 0", a literal zero grabber size, not the
   // grabber's minimum-size floor.
   if (range <= 0) return { size: 0, offset: 0 };
-  const areaSize = scrollBarAreaSize(vertical, barLength, theme);
+  const areaSize = scrollBarAreaSize(vertical, barLength, boxes);
   // `Range::set_page`'s CLAMP (`range.cpp:254-256`) bounds the stored page to [0, range] before the
   // draw reads it, and `get_page() > 0 ? get_page() : 0` (`scroll_bar.cpp:485`) guards only a
   // negative. No setter chain runs here, so one clamp stands for both.
   const clampedPage = clamp(page, 0, range);
-  const size = (clampedPage / range) * areaSize + grabberMinAlong(vertical, theme);
+  const size = (clampedPage / range) * areaSize + grabberMinAlong(vertical, boxes);
   const offset = areaSize * ratio;
   return { size, offset };
 }
@@ -99,13 +108,13 @@ export function scrollBarGrabberGeometry(
 export function scrollBarRangePlacement(
   vertical: boolean,
   rect: Rect2,
-  theme: NativeTheme,
+  boxes: ScrollBarBoxes,
   range: { min: number; max: number; page: number },
   ratio: number,
   visible: boolean
 ): ScrollBarPlacement {
   const length = vertical ? rect.h : rect.w;
-  const grabber = scrollBarGrabberGeometry(vertical, length, theme, range.min, range.max, range.page, ratio);
+  const grabber = scrollBarGrabberGeometry(vertical, length, boxes, range.min, range.max, range.page, ratio);
   return { visible, rect, grabberRect: scrollBarGrabberRect(vertical, { x: rect.w, y: rect.h }, grabber) };
 }
 
@@ -116,13 +125,13 @@ export function scrollBarRangePlacement(
 export function scrollBarPlacement(
   vertical: boolean,
   rect: Rect2,
-  theme: NativeTheme,
+  boxes: ScrollBarBoxes,
   range: number,
   ratio: number,
   visible: boolean
 ): ScrollBarPlacement {
   const length = vertical ? rect.h : rect.w;
-  return scrollBarRangePlacement(vertical, rect, theme, { min: 0, max: range, page: length }, ratio, visible);
+  return scrollBarRangePlacement(vertical, rect, boxes, { min: 0, max: range, page: length }, ratio, visible);
 }
 
 /**

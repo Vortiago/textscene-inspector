@@ -46,7 +46,8 @@ import {
   type TextLineLayout,
 } from '../../../../r3f/controls/native/text/textLayout';
 import { rect2Intersects, type Rect2 } from '../../../../godot/math/rect2';
-import { scrollBarMinimumSize } from '../shared/scrollBarSolver';
+import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
+import { scrollBarMinimumSize, type ScrollBarPairBoxes } from '../shared/scrollBarSolver';
 import type { ItemListRuntimeItem, ItemListRuntimeProperties } from './types';
 import type { Vector2 } from '../../../../godot/math/vector';
 import type { Rgba } from '../../../../godot/math/math';
@@ -524,10 +525,13 @@ export function packItemListRows(input: ItemListPackInput): ItemListPackResult {
 }
 
 /** The two scrollbars' minimum sizes, each read once per solve or draw: width of the vertical bar, height of the horizontal one. */
-export function itemListBarMinimums(theme: NativeTheme): { verticalWidth: number; horizontalHeight: number } {
+export function itemListBarMinimums(boxes: ScrollBarPairBoxes): {
+  verticalWidth: number;
+  horizontalHeight: number;
+} {
   return {
-    verticalWidth: scrollBarMinimumSize(true, theme).x,
-    horizontalHeight: scrollBarMinimumSize(false, theme).y,
+    verticalWidth: scrollBarMinimumSize(true, boxes.vertical).x,
+    horizontalHeight: scrollBarMinimumSize(false, boxes.horizontal).y,
   };
 }
 
@@ -593,7 +597,7 @@ const itemListMinimumSize: MinimumSizeFn = (n, ctx) => {
   const maxColumnWidth = itemListMaxColumnWidth(itemSizes, hSeparation);
   const panelMin = contentMarginSize(pickItemListPanelStyleBox(n.styleBoxes, ctx.theme));
   const tentative = ctx.tentativeRect?.(n);
-  const barMinimums = itemListBarMinimums(ctx.theme);
+  const barMinimums = itemListBarMinimums(internalScrollBarBoxes(n));
   const packed = packItemListRows({
     itemSizes,
     maxColumnWidth,

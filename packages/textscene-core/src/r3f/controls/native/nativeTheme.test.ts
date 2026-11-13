@@ -113,87 +113,16 @@ describe('nativeTheme', () => {
       });
     });
 
-    it('ScrollBar scroll: make_flat_stylebox(style_normal_color, ..., 10) per axis — default_theme.cpp:543-544', () => {
-      const theme = nativeTheme(1);
-      // style_h_scrollbar = make_flat_stylebox(style_normal_color, 0, 4, 0, 4, 10):
-      // 0 margin along the track axis (left/right), 4 across it (top/bottom).
-      expect(theme.widgets.scrollBar.scrollHorizontal).toEqual({
-        bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
-        borderColor: DEFAULT_BORDER_COLOR,
-        borderWidth: ZERO_SIDES,
-        cornerRadius: uniformCorners(10),
-        expandMargin: ZERO_SIDES,
-        contentMargin: { left: 0, top: 4, right: 0, bottom: 4 },
-        drawCenter: true,
-        borderBlend: false,
-        antiAliased: true,
-        aaSize: 1,
-        cornerDetail: 6,
-        skew: { x: 0, y: 0 },
-        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-        shadowSize: 0,
-        shadowOffset: { x: 0, y: 0 },
-      });
-      // style_v_scrollbar = make_flat_stylebox(style_normal_color, 4, 0, 4, 0, 10): transposed.
-      expect(theme.widgets.scrollBar.scrollVertical).toEqual({
-        bgColor: { r: 0.1, g: 0.1, b: 0.1, a: 0.6 },
-        borderColor: DEFAULT_BORDER_COLOR,
-        borderWidth: ZERO_SIDES,
-        cornerRadius: uniformCorners(10),
-        expandMargin: ZERO_SIDES,
-        contentMargin: { left: 4, top: 0, right: 4, bottom: 0 },
-        drawCenter: true,
-        borderBlend: false,
-        antiAliased: true,
-        aaSize: 1,
-        cornerDetail: 6,
-        skew: { x: 0, y: 0 },
-        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-        shadowSize: 0,
-        shadowOffset: { x: 0, y: 0 },
-      });
-    });
-
-    it('ScrollBar grabber: make_flat_stylebox(style_progress_color, 4, 4, 4, 4, 10) — default_theme.cpp:545', () => {
-      const theme = nativeTheme(1);
-      expect(theme.widgets.scrollBar.grabber).toEqual({
-        bgColor: { r: 1, g: 1, b: 1, a: 0.4 },
-        borderColor: DEFAULT_BORDER_COLOR,
-        borderWidth: ZERO_SIDES,
-        cornerRadius: uniformCorners(10),
-        expandMargin: ZERO_SIDES,
-        contentMargin: uniform(4),
-        drawCenter: true,
-        borderBlend: false,
-        antiAliased: true,
-        aaSize: 1,
-        cornerDetail: 6,
-        skew: { x: 0, y: 0 },
-        shadowColor: { r: 0, g: 0, b: 0, a: 0.6 },
-        shadowSize: 0,
-        shadowOffset: { x: 0, y: 0 },
-      });
-    });
-
     it("scales widget geometry (margins, corner radii) at scale 2, per make_flat_stylebox's Math.round(x * scale)", () => {
       const theme = nativeTheme(2);
       expect(theme.widgets.panel.cornerRadius).toEqual(uniformCorners(6));
       expect(theme.widgets.button.normal.contentMargin).toEqual(uniform(8));
       expect(theme.widgets.button.normal.cornerRadius).toEqual(uniformCorners(6));
-      expect(theme.widgets.scrollBar.scrollHorizontal.cornerRadius).toEqual(uniformCorners(20));
-      expect(theme.widgets.scrollBar.scrollHorizontal.contentMargin).toEqual({
-        left: 0,
-        top: 8,
-        right: 0,
-        bottom: 8,
-      });
-      expect(theme.widgets.scrollBar.grabber.cornerRadius).toEqual(uniformCorners(20));
     });
 
     it('does NOT scale widget fill colours', () => {
       const theme = nativeTheme(2);
       expect(theme.widgets.button.normal.bgColor).toEqual({ r: 0.1, g: 0.1, b: 0.1, a: 0.6 });
-      expect(theme.widgets.scrollBar.grabber.bgColor).toEqual({ r: 1, g: 1, b: 1, a: 0.4 });
     });
 
     it('SplitContainer: separation 12, grabber extent 8, autohide true — default_theme.cpp:1258-1266', () => {
@@ -296,12 +225,12 @@ describe('nativeTheme', () => {
       expect(nativeTheme(1.5).widgets.popupMenuPanel.cornerDetail).toBe(7);
     });
 
-    // The detail follows the Godot radius before the scale: 3 for most boxes,
-    // 10 for the scroll bar, 0 for the dialog panel and the flat menu button (clamped to 1).
+    // The detail follows the Godot radius before the scale: 3 for most boxes, 0 for the dialog panel
+    // and the flat menu button (clamped to 1).
     it.each([
-      [1, 5, 6, 1],
-      [2, 10, 12, 1],
-    ])('gives each widget the detail of its radius at scale %i', (scale, defaultRadius, scrollBar, none) => {
+      [1, 5, 1],
+      [2, 10, 1],
+    ])('gives each widget the detail of its radius at scale %i', (scale, defaultRadius, none) => {
       const { widgets } = nativeTheme(scale);
       expect({
         panel: widgets.panel.cornerDetail,
@@ -311,8 +240,6 @@ describe('nativeTheme', () => {
         buttonNormal: widgets.button.normal.cornerDetail,
         buttonFocus: widgets.button.focus.cornerDetail,
         lineEdit: widgets.lineEdit.normal.cornerDetail,
-        scrollHorizontal: widgets.scrollBar.scrollHorizontal.cornerDetail,
-        scrollGrabber: widgets.scrollBar.grabber.cornerDetail,
         dialogPanel: widgets.dialogPanel.cornerDetail,
         flatMenuButton: widgets.flatMenuButton.normal.cornerDetail,
         tabSelected: widgets.tabContainer.selected.cornerDetail,
@@ -325,8 +252,6 @@ describe('nativeTheme', () => {
         buttonNormal: defaultRadius,
         buttonFocus: defaultRadius,
         lineEdit: defaultRadius,
-        scrollHorizontal: scrollBar,
-        scrollGrabber: scrollBar,
         dialogPanel: none,
         flatMenuButton: none,
         tabSelected: none,

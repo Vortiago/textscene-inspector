@@ -121,14 +121,6 @@ interface NativeThemeWidgets {
     normal: StyleBoxFlatData;
     readOnly: StyleBoxFlatData;
   };
-  scrollBar: {
-    /** HScrollBar's "scroll" (track) stylebox, `style_h_scrollbar`, `default_theme.cpp:543`. */
-    scrollHorizontal: StyleBoxFlatData;
-    /** VScrollBar's "scroll" (track) stylebox, `style_v_scrollbar`, `default_theme.cpp:544`: the same box, transposed. */
-    scrollVertical: StyleBoxFlatData;
-    /** `style_scrollbar_grabber`, `default_theme.cpp:545`, for both orientations. */
-    grabber: StyleBoxFlatData;
-  };
   /**
    * SplitContainer's theme entries (`default_theme.cpp:1258-1266`) hold no
    * stylebox: the grabber is an icon (`native/themeIcons.ts`'s
@@ -150,9 +142,6 @@ export interface NativeTheme extends ScaledGodotTheme {
   styleFill: NativeThemeStyleFill;
   widgets: NativeThemeWidgets;
 }
-
-/** ScrollBar's own corner radius (`default_theme.cpp:543-545` pass `10`, not `default_corner_radius`). */
-const SCROLL_BAR_CORNER_RADIUS = 10;
 
 /** SplitContainer's own `separation` (`default_theme.cpp:1258-1260` pass `12`, not BoxContainer's `4`). */
 const SPLIT_CONTAINER_SEPARATION = 12;
@@ -207,9 +196,7 @@ function buildNativeTheme(scale: number): NativeTheme {
     right: dialogMargin,
     bottom: dialogMargin,
   };
-  const scrollBarCornerRadius = Math.round(SCROLL_BAR_CORNER_RADIUS * scale);
   const defaultDetail = flatCornerDetail(DEFAULT_CORNER_RADIUS, scale);
-  const scrollBarDetail = flatCornerDetail(SCROLL_BAR_CORNER_RADIUS, scale);
 
   return {
     ...scaled,
@@ -266,21 +253,6 @@ function buildNativeTheme(scale: number): NativeTheme {
           scaled.cornerRadius,
           defaultDetail
         ),
-      },
-      scrollBar: {
-        scrollHorizontal: flatStyleBox(
-          STYLE_FILL.normal,
-          { left: 0, top: scaled.contentMargin, right: 0, bottom: scaled.contentMargin },
-          scrollBarCornerRadius,
-          scrollBarDetail
-        ),
-        scrollVertical: flatStyleBox(
-          STYLE_FILL.normal,
-          { left: scaled.contentMargin, top: 0, right: scaled.contentMargin, bottom: 0 },
-          scrollBarCornerRadius,
-          scrollBarDetail
-        ),
-        grabber: flatStyleBox(STYLE_FILL.progress, buttonMargin, scrollBarCornerRadius, scrollBarDetail),
       },
       splitContainer: {
         separation: Math.round(SPLIT_CONTAINER_SEPARATION * scale),

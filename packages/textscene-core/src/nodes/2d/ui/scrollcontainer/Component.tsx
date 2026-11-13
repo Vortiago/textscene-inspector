@@ -11,6 +11,7 @@ import { measureText } from '../../../../r3f/controls/native/text/measurer';
 import { ControlClipProvider, useWorldClipPlanes } from '../../../../r3f/controls/native/controlClipping';
 import { ScrollBarChrome, ScrollHintChrome, SCROLL_HINT_MODULATE } from '../shared/ScrollChrome';
 import { scrollContainerScrollBars, scrollContainerLayoutChannel } from './nativeSolver';
+import { internalScrollBarBoxes } from '../shared/scrollBarBoxes';
 
 export function ScrollContainer({
   solveNode,
@@ -43,6 +44,7 @@ export function ScrollContainer({
   // The bars and hints are all child Controls (`scroll_container.cpp:909-924`), so the container's
   // `self_modulate` stays off them. The hint's `modulate` composes onto the child tint, in the order
   // `<StyleBoxQuad>` composes a fill.
+  const scrollBarBoxes = internalScrollBarBoxes(solveNode);
   const hintColor = useMemo(() => childTint.color.clone().multiply(SCROLL_HINT_MODULATE), [childTint.color]);
 
   return (
@@ -63,16 +65,14 @@ export function ScrollContainer({
         {/* `INTERNAL_MODE_BACK` children (`scroll_container.cpp:919,924`): the bars paint after every descendant. */}
         <ScrollBarChrome
           bar={layout.horizontal}
-          track={theme.widgets.scrollBar.scrollHorizontal}
-          grabber={theme.widgets.scrollBar.grabber}
+          boxes={scrollBarBoxes.horizontal}
           color={childTint.own}
           chromeSlot={chromeSlot}
           snapToPixels={snapToPixels}
         />
         <ScrollBarChrome
           bar={layout.vertical}
-          track={theme.widgets.scrollBar.scrollVertical}
-          grabber={theme.widgets.scrollBar.grabber}
+          boxes={scrollBarBoxes.vertical}
           color={childTint.own}
           chromeSlot={chromeSlot}
           snapToPixels={snapToPixels}
