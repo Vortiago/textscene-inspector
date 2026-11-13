@@ -27,7 +27,6 @@ import {
   labelMinimumSize,
   labelShapingWidthPx,
   labelUnwrappedShape,
-  LABEL_LINE_SPACING_PX,
   LABEL_PARAGRAPH_SEPARATOR,
   labelTextTheme,
   layoutLabelLines,
@@ -1070,11 +1069,11 @@ describe('labelEffectiveTextTheme', () => {
       projectFonts: projectFontsAt(scale),
     }).constants;
 
-  it('falls back to the theme-resolved values absent label_settings (happy path)', () => {
+  it('falls back to the theme-resolved values absent label_settings, line_spacing 3 at scale 1 (default_theme.cpp:392)', () => {
     expect(labelEffectiveTextTheme(themeResolved, null, labelConstantsAt(1))).toEqual({
       fontSizePx: 40,
       color: { r: 1, g: 0, b: 0, a: 1 },
-      lineSpacingPx: LABEL_LINE_SPACING_PX,
+      lineSpacingPx: 3,
       paragraphSpacingPx: 0,
     });
   });

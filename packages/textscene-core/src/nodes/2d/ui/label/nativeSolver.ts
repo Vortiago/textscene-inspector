@@ -61,12 +61,10 @@ const LABEL_THEME_KEYS: TextThemeKeys = { sizeKey: 'font_size', colorKey: 'font_
 const LABEL_THEME_FONT_KEY = 'font';
 
 /**
- * `scene/theme/default_theme.cpp:392` sets Label's `line_spacing` to `Math::round(3 * scale)`,
- * 3 at UI scale 1.0. The Button family and LineEdit read no such key, RichTextLabel has its own
- * `line_separation` (0), and Label3D uses the authored value. The solve pass and `Component.tsx` shape
- * against this one constant, so they agree on the line pitch.
+ * Label's `line_spacing` at theme scale 1 (`scene/theme/default_theme.cpp:392`): the spacing
+ * `layoutLabelLines` assumes when its caller passes none. A Label reads its own from `n.constants`.
  */
-export const LABEL_LINE_SPACING_PX = 3;
+const LABEL_LINE_SPACING_PX = 3;
 
 /** Label's `paragraph_spacing`: the default theme sets none, so a lookup ends at the fallback theme. */
 const LABEL_PARAGRAPH_SPACING_PX = FALLBACK_THEME_CONSTANT;

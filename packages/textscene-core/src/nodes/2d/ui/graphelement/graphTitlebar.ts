@@ -26,7 +26,7 @@ import {
 } from '../../../../r3f/controls/native/text/textLayout';
 import type { ResolvedStyleBox } from '../../../../r3f/controls/native/parseStyleBox';
 import { internalChildThemeItems, requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import { layoutLabelLines, LABEL_LINE_SPACING_PX, LABEL_PARAGRAPH_SEPARATOR } from '../label/nativeSolver';
+import { layoutLabelLines, LABEL_PARAGRAPH_SEPARATOR } from '../label/nativeSolver';
 import type { Rgba } from '../../../../godot/math/math';
 import { AutowrapMode } from '../../../../godot/text/textServerEnums';
 
@@ -39,6 +39,8 @@ interface TitlebarFontTheme {
   fontMetrics: FontMetrics;
   /** `title_label`'s `normal` box: the Theme chain's, else Label's empty one. */
   box: ResolvedStyleBox;
+  /** `title_label`'s `line_spacing`, which each title variation scales its own way (`default_theme.cpp:822-826,852-856`). */
+  lineSpacingPx: number;
 }
 
 /**
@@ -64,6 +66,7 @@ export function resolveTitleFontTheme(
     color: requiredThemeItem(items.colors, 'font_color'),
     fontMetrics,
     box: requiredThemeItem(items.styleBoxes, 'normal'),
+    lineSpacingPx: requiredThemeItem(items.constants, 'line_spacing'),
   };
 }
 
@@ -77,7 +80,7 @@ export function shapeTitleText(text: string, fontTheme: TitlebarFontTheme): Text
     fontSizePx: fontTheme.fontSizePx,
     boxWidthPx: 0,
     autowrapMode: AutowrapMode.AUTOWRAP_OFF,
-    lineSpacingPx: LABEL_LINE_SPACING_PX,
+    lineSpacingPx: fontTheme.lineSpacingPx,
     fontMetrics: fontTheme.fontMetrics,
     paragraphSeparator: LABEL_PARAGRAPH_SEPARATOR,
   });
@@ -98,7 +101,7 @@ function shapedTitleTextSize(text: string, fontTheme: TitlebarFontTheme): { x: n
     return { x: 1, y: getFontLinePitchPx(fontTheme.fontMetrics, fontTheme.fontSizePx, 0) };
   }
   const layout = shapeTitleText(text, fontTheme);
-  const height = Math.max(layout.heightPx - LABEL_LINE_SPACING_PX, 0);
+  const height = Math.max(layout.heightPx - fontTheme.lineSpacingPx, 0);
   return { x: shapedTextSizeWidthPx(layout.widthPx), y: height };
 }
 
