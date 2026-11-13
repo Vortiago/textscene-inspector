@@ -3,16 +3,11 @@
  * test mounts one drawn item. Test-only, like the rest of `testing/`.
  */
 
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import type { PaintRange } from '../canvasPaintOrder';
-import { PaintFrameProvider } from '../canvasItemPass/nodePaint';
-
-const NO_CANVAS_ROOTS = new Map();
+import { PaintFrameProvider, runFrameAt } from '../canvasItemPass/nodePaint';
 
 export function PaintRun({ value, children }: { value: PaintRange; children: ReactNode }) {
-  return (
-    <PaintFrameProvider value={{ kind: 'run', range: value, canvasRoots: NO_CANVAS_ROOTS }}>
-      {children}
-    </PaintFrameProvider>
-  );
+  const frame = useMemo(() => runFrameAt(value), [value]);
+  return <PaintFrameProvider value={frame}>{children}</PaintFrameProvider>;
 }

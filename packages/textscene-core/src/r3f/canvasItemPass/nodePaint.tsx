@@ -22,11 +22,12 @@ import { canvasPaintPass, type CanvasItemPaint } from './canvasItemPaint';
 
 /**
  * How a subtree finds its paint. `tree`: each node reads the pass at its live path, moved by
- * `shift`, the distance a y-sort moved the run it sits in. `run`: the subtree is outside the
- * shared live tree, and its root owns `range`, where the roots of `canvasRoots` take theirs.
+ * `shift`, the distance a y-sort moved the pass's run `moved`. A canvas root below keeps its run
+ * outside `moved`, so no sort moves it. `run`: the subtree is outside the shared live tree, and its
+ * root owns `range`, where the roots of `canvasRoots` take theirs.
  */
 export type PaintFrame =
-  | { readonly kind: 'tree'; readonly shift: number }
+  | { readonly kind: 'tree'; readonly shift: number; readonly moved: PaintRange }
   | {
       readonly kind: 'run';
       readonly range: PaintRange;
@@ -34,7 +35,7 @@ export type PaintFrame =
     };
 
 /** The frame of a node that reads the pass at its live path, as the pass's tree order places it. */
-export const IN_TREE_ORDER: PaintFrame = { kind: 'tree', shift: 0 };
+export const IN_TREE_ORDER: PaintFrame = { kind: 'tree', shift: 0, moved: WHOLE_CANVAS_RANGE };
 const NO_CANVAS_ROOTS: ReadonlyMap<TscnNode, PaintRange> = new Map();
 
 const PaintFrameContext = createContext<PaintFrame>(IN_TREE_ORDER);
@@ -53,7 +54,7 @@ export function useNodePaint(node: TscnNode, path: string | null): CanvasItemPai
   const frame = useContext(PaintFrameContext);
   const fromPass = useLiveScenePass(canvasPaintPass, frame.kind === 'tree' ? path : null);
   return useMemo(() => {
-    if (frame.kind === 'tree' && fromPass) return shifted(fromPass, frame.shift);
+    if (frame.kind === 'tree' && fromPass) return shifted(fromPass, shiftOf(frame, fromPass.range));
     return localPaint(frame.kind === 'run' ? frame.range : WHOLE_CANVAS_RANGE, node).paint;
   }, [frame, fromPass, node]);
 }
@@ -106,27 +107,35 @@ export function useRootPaintFrames(roots: readonly TscnNode[]): readonly PaintFr
 
 /** The frames of `content`, drawn one after another from `run`, as scene tiles draw after the layer's children. */
 export function contentFrames(run: PaintRange, content: readonly TscnNode[]): PaintFrame[] {
-  return allocatePaintRange(run, content).children.map((range) => ({
-    kind: 'run',
-    range,
-    canvasRoots: NO_CANVAS_ROOTS,
-  }));
+  return allocatePaintRange(run, content).children.map(runFrameAt);
+}
+
+/** The frame of a subtree outside the shared live tree whose root owns `range`, with no canvas roots above. */
+export function runFrameAt(range: PaintRange): PaintFrame {
+  return { kind: 'run', range, canvasRoots: NO_CANVAS_ROOTS };
 }
 
 /**
  * The frame of the item at `path` that a y-sort re-packed into `range`: the pass's own paint moved
- * to `range`, or `range` itself outside the shared tree.
+ * to `range` when the sort packed its whole subtree. A y-sorted item's body, whose children sort as
+ * items of their own, and a row take `range` itself, as does an item outside the shared tree.
  */
 export function useRepackedFrame(path: string, range: PaintRange): PaintFrame {
   const frame = useContext(PaintFrameContext);
   const fromPass = useLiveScenePass(canvasPaintPass, frame.kind === 'tree' ? path : null);
-  return useMemo(
-    () =>
-      frame.kind === 'tree' && fromPass
-        ? { kind: 'tree', shift: range.base - fromPass.range.base }
-        : { kind: 'run', range, canvasRoots: frame.kind === 'run' ? frame.canvasRoots : NO_CANVAS_ROOTS },
-    [frame, fromPass, range]
-  );
+  return useMemo(() => {
+    if (frame.kind === 'tree' && fromPass?.range.size === range.size) {
+      return { kind: 'tree', shift: range.base - fromPass.range.base, moved: fromPass.range };
+    }
+    return { kind: 'run', range, canvasRoots: frame.kind === 'run' ? frame.canvasRoots : NO_CANVAS_ROOTS };
+  }, [frame, fromPass, range]);
+}
+
+/** The shift of a `tree` frame for a node owning `range`: none for a run outside the moved one. */
+function shiftOf(frame: { shift: number; moved: PaintRange }, range: PaintRange): number {
+  const { moved } = frame;
+  const isInside = range.base >= moved.base && range.base + range.size <= moved.base + moved.size;
+  return isInside ? frame.shift : 0;
 }
 
 function shifted(paint: CanvasItemPaint, shift: number): CanvasItemPaint {

@@ -21,7 +21,7 @@ import { useLiveTreeSelection } from '../useLiveSceneTree';
 import { ControlCanvasLayer } from '../controls/native/ControlCanvasLayer';
 import type { SolveNode } from '../controls/native/solveTree';
 import { ysortsChildren } from '../canvasPaintOrder';
-import { canvasPaintPass } from './canvasItemPaint';
+import { canvasPaintPass, type CanvasItemPaint } from './canvasItemPaint';
 
 import '../nodes/index';
 import '../controls/index';
@@ -30,7 +30,7 @@ import '../controls/index';
  * Written by the mocked readers during one mount, and cleared before the next. The last write wins:
  * an instance draws its node as authored until its sub-scene loads.
  */
-const worldSequences = new Map<string, number>();
+const worldPaints = new Map<string, CanvasItemPaint>();
 const controlNodes = new Map<string, SolveNode>();
 
 vi.mock('./nodePaint', async (importOriginal) => {
@@ -39,7 +39,7 @@ vi.mock('./nodePaint', async (importOriginal) => {
     ...original,
     useNodePaint: (node: TscnNode, path: string | null) => {
       const paint = original.useNodePaint(node, path);
-      if (path !== null) worldSequences.set(path, paint.own);
+      if (path !== null) worldPaints.set(path, paint);
       return paint;
     },
   };
@@ -104,11 +104,15 @@ afterEach(async () => {
   renderer = null;
 });
 
-/** Mounts `name` with both walks and returns the live tree they draw. */
-async function mounted(name: string): Promise<LiveTree> {
-  worldSequences.clear();
+/** Mounts the fixture `name` with both walks and returns the live tree they draw. */
+function mounted(name: string): Promise<LiveTree> {
+  return mountedText(name, readFileSync(resolve(fixturesDir(), name), 'utf8'));
+}
+
+/** Mounts the scene `text`, saved as `name`, with both walks and returns the live tree they draw. */
+async function mountedText(name: string, text: string): Promise<LiveTree> {
+  worldPaints.clear();
   controlNodes.clear();
-  const text = readFileSync(resolve(fixturesDir(), name), 'utf8');
   const { sceneGraph, error } = parseTscnContent(text, `res://${name}`);
   if (!sceneGraph) throw new Error(`expected ${name} to parse, got ${error}`);
   const fake = createFakeResourceLoader();
@@ -161,7 +165,9 @@ describe('the paint pass gives the sequences the two walks give', () => {
     const paint = liveScenePassResults(canvasPaintPass, tree);
     const sorted = sortedPaths(tree);
 
-    const world = [...worldSequences].filter(([path]) => paint.has(path) && !sorted.has(path));
+    const world = [...worldPaints]
+      .filter(([path]) => paint.has(path) && !sorted.has(path))
+      .map(([path, found]) => [path, found.own]);
     const worldPass = world.map(([path]) => [path, paint.get(path)!.own]);
     expect(world).toEqual(worldPass);
 
@@ -178,5 +184,67 @@ describe('the paint pass gives the sequences the two walks give', () => {
     });
     expect(controlFound).toEqual(controlPass);
     expect(world.length + controls.length).toBeGreaterThan(0);
+  });
+});
+
+describe('a y-sort moves the runs of the items it sorts, and only those', () => {
+  it('gives each sorted item a run of its own, with its pieces inside it', async () => {
+    // A y-sorted CanvasGroup's children are items of their own, so its body draws its own pixels
+    // in a run of one value, as `_cull_canvas_item` draws a sorted item (`renderer_canvas_cull.cpp:477-490`).
+    await mountedText(
+      'zz-sorted-group.tscn',
+      `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Group" type="CanvasGroup" parent="."]
+position = Vector2(0, 100)
+y_sort_enabled = true
+
+[node name="Inner" type="Polygon2D" parent="Group"]
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+
+[node name="Ball" type="Polygon2D" parent="."]
+position = Vector2(0, 200)
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+`
+    );
+    const items = ['Root/Group', 'Root/Group/Inner', 'Root/Ball'].map((path) => worldPaints.get(path)!);
+    for (const item of items) {
+      for (const piece of [item.own, item.back.base, item.tail.base]) {
+        expect(piece).toBeGreaterThanOrEqual(item.range.base);
+        expect(piece).toBeLessThanOrEqual(item.range.base + item.range.size);
+      }
+    }
+    const ranges = items.map((item) => item.range).sort((x, y) => x.base - y.base);
+    for (let i = 1; i < ranges.length; i++) {
+      expect(ranges[i]!.base).toBeGreaterThanOrEqual(ranges[i - 1]!.base + ranges[i - 1]!.size);
+    }
+  });
+
+  it('leaves a top_level item below a sorted item at its own canvas run', async () => {
+    // A top_level item parents at the canvas (`canvas_item.cpp:246-267`), so the sort of the
+    // item it hangs under does not move it.
+    const tree = await mountedText(
+      'zz-sorted-top-level.tscn',
+      `[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+y_sort_enabled = true
+
+[node name="Mid" type="Node2D" parent="."]
+position = Vector2(0, 100)
+
+[node name="Top" type="Polygon2D" parent="Mid"]
+top_level = true
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+
+[node name="Ball" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, 0, 8, 0, 8, 8)
+`
+    );
+    const paint = liveScenePassResults(canvasPaintPass, tree);
+    expect(worldPaints.get('Root/Mid/Top')!.own).toBe(paint.get('Root/Mid/Top')!.own);
   });
 });
