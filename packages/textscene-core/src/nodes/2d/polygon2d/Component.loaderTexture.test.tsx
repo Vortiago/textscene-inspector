@@ -19,7 +19,7 @@ import { createFakeResourceLoader } from '../../../resources/testing/createFakeR
 import { createTextureFromBuffer } from '../../../resources/formats/image/textureProcessing';
 import { DEFAULT_TEXTURE_IMPORT } from '../../../godot/import/textureImport';
 import { buildMaterial } from '../../../resources/materials/standardmaterial3d/buildMaterial.testkit';
-import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars';
+import { parseStandardMaterial3DScalars } from '../../../resources/materials/standardmaterial3d/scalars.testkit';
 import type { ParsedHeading } from '../../../parser/utils';
 import type { TscnNode } from '../../../parser/types';
 import { settleLoads } from '../../../r3f/testing/settleLoads';

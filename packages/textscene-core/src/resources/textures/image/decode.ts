@@ -1,11 +1,9 @@
 /**
- * Decodes an `Image` sub-resource, the pixels an ImageTexture or ImageTexture3D saves inline
+ * Decodes an `Image` resource, the pixels an ImageTexture or ImageTexture3D saves in text
  * (`core/io/image.cpp:3335-3358`), in its own row order, top row first. No THREE.
  */
 
-import type { TscnInternalResource } from '../../../parser/types';
 import type { ImageSize } from '../../formats/image/imagePixels';
-import { resolveSubResourceRef } from '../../SubResourceResolver';
 import { literalText } from '../../../godot/string/string.js';
 import { parseGodotInt } from '../../../godot/variant/intReader.js';
 import { boolSlotValue } from '../../../godot/variant/variantBool.js';
@@ -19,6 +17,7 @@ import {
 import { warn } from '../../../logger';
 import { lowerLevelSizes } from '../../processing/mipChain';
 import { BLOCK_FORMATS, blockBytes, decodeBlocks } from './blocks/decodeBlocks';
+import type { SavedImage } from './kind';
 
 /** A channel no source byte fills: 0, or 255 for alpha. */
 const ZERO = -1;
@@ -107,35 +106,25 @@ const readFormat = dictStringField('format');
 const readMipmaps = dictBoolField('mipmaps');
 const readData = dictCallField('data', 'PackedByteArray');
 
-/** The top level of the `Image` sub-resource `ref` names. Null for a reference to anything else. */
-export function decodeImageRef(
-  ref: string | undefined,
-  resources: readonly TscnInternalResource[]
-): DecodedImage | null {
-  return openImageRef(ref, resources)?.image ?? null;
+/** The top level of `image`. */
+export function decodeImage(image: SavedImage): DecodedImage | null {
+  return openImage(image)?.image ?? null;
 }
 
 /**
- * The `Image` sub-resource `ref` names, with the levels it stores below the top one. Unlike
- * `initialize_data`, it accepts bytes short of the levels, and keeps the top level alone.
+ * `image` with the levels it stores below the top one. Unlike `initialize_data`, it accepts bytes
+ * short of the levels, and keeps the top level alone.
  */
-export function decodeMipmappedImageRef(
-  ref: string | undefined,
-  resources: readonly TscnInternalResource[]
-): MipmappedImage | null {
-  const open = openImageRef(ref, resources);
+export function decodeMipmappedImage(image: SavedImage): MipmappedImage | null {
+  const open = openImage(image);
   if (!open) return null;
-  const { image, reader, bytes, hasMipmaps } = open;
-  return { ...image, levels: hasMipmaps ? decodeLevels(bytes, image, reader) : [] };
+  const { image: top, reader, bytes, hasMipmaps } = open;
+  return { ...top, levels: hasMipmaps ? decodeLevels(bytes, top, reader) : [] };
 }
 
-/** The size of the `Image` sub-resource `ref` names, read without its pixels. */
-export function imageRefSize(
-  ref: string | undefined,
-  resources: readonly TscnInternalResource[]
-): ImageSize | null {
-  const dictionary = imageDictionary(ref, resources);
-  const header = dictionary === null ? null : readHeader(dictionary);
+/** The size of `image`, read without its pixels. */
+export function savedImageSize(image: SavedImage): ImageSize | null {
+  const header = readHeader(image.dictionary);
   return header && { width: header.width, height: header.height };
 }
 
@@ -155,12 +144,6 @@ function readHeader(dictionary: string): ImageHeader | null {
   return { width, height, format: literalText(format), body };
 }
 
-/** The serialised `data` Dictionary of the `Image` sub-resource `ref` names, or null for a reference to anything else. */
-function imageDictionary(ref: string | undefined, resources: readonly TscnInternalResource[]): string | null {
-  const resource = resolveSubResourceRef(ref, resources);
-  return resource?.type === 'Image' ? (resource.data.data ?? '') : null;
-}
-
 /** An `Image` whose top level is decoded, with what a read of its lower levels needs. */
 interface OpenImage {
   image: DecodedImage;
@@ -170,14 +153,13 @@ interface OpenImage {
 }
 
 /**
- * Null for a reference to anything but an `Image`, for an image Godot refuses (`initialize_data`
- * fails without enough bytes) or for one in a format this does not decode: the integer formats,
- * which a float sampler cannot read, and the block formats no decoder handles.
+ * Null for an image Godot refuses (`initialize_data` fails without enough bytes) or for one in a
+ * format this does not decode: the integer formats, which a float sampler cannot read, and the
+ * block formats no decoder handles.
  */
-function openImageRef(ref: string | undefined, resources: readonly TscnInternalResource[]): OpenImage | null {
-  const dictionary = imageDictionary(ref, resources);
-  const header = dictionary === null ? null : readHeader(dictionary);
-  if (dictionary === null || !header) return null;
+function openImage({ dictionary }: SavedImage): OpenImage | null {
+  const header = readHeader(dictionary);
+  if (!header) return null;
   const { width, height, format, body } = header;
   const reader = formatReader(format);
   if (!reader) {

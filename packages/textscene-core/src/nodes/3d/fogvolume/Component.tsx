@@ -19,7 +19,6 @@ import {
   type FogVolumeFill,
 } from '../../../r3f/fog/fogVolumeObject';
 import type { NodeComponentProps } from '../../../r3f/NodeComponentRegistry';
-import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext';
 import { FOG_VOLUME_MATERIAL, type FogVolumeMaterial } from '../../../resources/materials/fogmaterial';
 import { useNodeResource, type Read } from '../../../resources/reading';
 import { useTexture3D } from '../../../resources/useTexture3D';
@@ -63,8 +62,7 @@ function withDensityTexture(fill: FogVolumeFill, texture: THREE.Data3DTexture | 
 
 /** The density texture of a FogMaterial, once built or loaded. It resolves in the tables of the FogMaterial. */
 function useDensityTexture(material: FogVolumeMaterial | null): THREE.Data3DTexture | null {
-  const reference = material?.kind === 'material' ? material.densityTexture : null;
-  return useTexture3D(reference?.ref, reference?.resources ?? NO_RESOURCES);
+  return useTexture3D(material?.kind === 'material' ? material.densityTexture : null);
 }
 
 export function FogVolume({ node, children }: NodeComponentProps) {

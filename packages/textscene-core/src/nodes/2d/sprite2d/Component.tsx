@@ -12,6 +12,7 @@ import { CanvasItem2D } from '../../../r3f/components/CanvasItem2D';
 import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasItemPixels';
 import { frameSizePx, frameUvWindow } from '../../../r3f/spriteFrame';
 import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
+import { useNodeReference } from '../../../resources/reading';
 import { canvasMapProps, useWindowedCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { materialProgramInputs } from '../../../r3f/materialProgramInputs';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
@@ -22,7 +23,6 @@ import { useCanvasColorSpace } from '../../../r3f/canvasColorSpace';
 
 export function Sprite2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Sprite2DProperties;
-  const { externalResources, internalResources } = useSceneResources();
 
   // An active AnimationPlayer can drive the sheet `frame` (ADR-0016), and `null`
   // means none does. The registry carries a numeric tuple (ADR-0017), here a 1-tuple.
@@ -30,6 +30,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
 
   // With `texture_repeat` Disabled, an overrunning `region_rect` stretches its edge texels,
   // where Sprite3D tiles.
+  const scope = useSceneResources();
   const {
     texture: sourceTexture,
     size: reportedSize,
@@ -37,7 +38,7 @@ export function Sprite2D({ node, children }: NodeComponentProps) {
     hasNoImage,
     sampler,
     canvasTexture,
-  } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
+  } = useCanvasItemTexture(props, useNodeReference(props.texture, scope));
 
   // A driven `frame` overrides the authored `frame` and any authored
   // `frame_coords` (in Godot the two are the same value), so the animation wins.

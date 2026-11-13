@@ -14,18 +14,17 @@ import { TextRun } from '../../../../r3f/controls/native/text/TextRun';
 import { pickButtonStyleBox, tintColor } from '../../../../r3f/controls/native/buttonBase';
 import { resolveTextTheme } from '../../../../r3f/controls/native/textTheme';
 import { MENU_BAR_TEXT_THEME_KEYS, layoutMenuBarItems, menuBarTitleShapes } from './nativeSolver';
-import { BUTTON_DEFAULT_FONT_COLOR } from '../button/nativeSolver';
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { MenuBarProperties } from './types';
 
 export function MenuBar({ solveNode, tint, rect, theme, renderOrder }: NativeControlComponentProps) {
   const props = painterView<MenuBarProperties>(solveNode);
   // Under `is_layout_rtl()`, `_draw_menu_item` prefers the `normal_mirrored` box where the theme
   // defines one (`menu_bar.cpp:437-500`).
-  const style = pickButtonStyleBox(solveNode.styleBoxes, theme.widgets.button, 'normal', solveNode.rtl);
+  const style = pickButtonStyleBox(solveNode.styleBoxes, 'normal', solveNode.rtl);
 
   const { fontSizePx, color: baseFontColor } = resolveTextTheme(solveNode, props, MENU_BAR_TEXT_THEME_KEYS, {
     fontSizePx: theme.fontSize,
-    color: BUTTON_DEFAULT_FONT_COLOR,
   });
   // `tint.own` goes raw to `<StyleBoxQuad>`'s `color` and multiplies the font colour before its one
   // sRGB-to-linear conversion, as in `Button`.
@@ -36,9 +35,7 @@ export function MenuBar({ solveNode, tint, rect, theme, renderOrder }: NativeCon
   const titles = menuBarTitleShapes(solveNode, theme);
 
   const clippingPlanes = useControlClipPlanes();
-  // menu_bar.cpp:194: `Math::round(4 * scale)`, MenuBar's own theme constant, equal to but separate
-  // from Button's `theme.separation`.
-  const hSeparation = solveNode.constants.h_separation ?? theme.separation;
+  const hSeparation = requiredThemeItem(solveNode.constants, 'h_separation');
 
   // Items run from the leading edge, which RTL moves to the right, mirrored inside the bar.
   const items = layoutMenuBarItems(titles, hSeparation, rect.w, solveNode.rtl);

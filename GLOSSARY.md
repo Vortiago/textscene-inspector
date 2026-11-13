@@ -171,11 +171,15 @@ A **Cluster** that HarfBuzz's normalisation draws as other characters of the fac
 _Avoid_: "composed glyph", which names one step of it.
 
 **Project fonts** (`resources/fonts/font/projectFonts.ts`):
-The two files the **Project settings** name for every font lookup: the project theme (`gui/theme/custom`) and the **Project default font**. The Control solve tree, TextMesh and Label3D each resolve them from one source.
+The two files the **Project settings** name for every font lookup, the project theme (`gui/theme/custom`) and the **Project default font**, with the **Default theme table** at the project's `gui/theme/default_theme_scale`. The Control solve tree, TextMesh and Label3D each resolve them from one source.
 _Avoid_: "theme context", which Godot's `ThemeContext` also names.
 
-**Default-theme variation** (`DEFAULT_THEME_VARIATIONS` in `godot/scene/theme.ts`):
-A `theme_type_variation` that Godot's default theme registers, such as `FlatButton` or `HeaderSmall`, with its base type. A Control that names one reads its items under the variation and its base before its own class, after every scene and project Theme. The table holds the base, the font size and the font colour. `r3f/controls/native/defaultThemeItems.ts` holds the boxes.
+**Default theme table** (`defaultThemeAt` in `godot/scene/defaultTheme/defaultTheme.ts`):
+Godot's default theme (`ThemeDB.get_default_theme()`) at one theme scale: the colours, constants, font sizes and StyleBoxes of each type it holds, as plain data. The theme lookup reads it last, after every scene and project Theme, so a Control reads `n.colors`, `n.constants` and `n.styleBoxes` with no fallback of its own. `defaultTheme.godot.json` holds Godot's own values, and a test compares the table with them.
+_Avoid_: "fallback theme", which Godot's `ThemeDB.get_fallback_theme()` names: the theme a lookup reads after the default theme, which answers `Color()` or 0 for an item no theme holds.
+
+**Default-theme variation** (`DEFAULT_THEME_VARIATION_BASES` in `godot/scene/defaultTheme/variations.ts`):
+A `theme_type_variation` that Godot's default theme registers, such as `FlatButton` or `HeaderSmall`, with its base type. A Control that names one reads its items under the variation and its base before its own class, after every scene and project Theme. The **Default theme table** holds its items.
 _Avoid_: "style variant". "scene variation" for one a scene Theme registers, which `ThemeResource.typeVariations` holds.
 
 **Style face** (`nodes/2d/ui/richtextlabel/styleFaces.ts`):
@@ -235,15 +239,16 @@ _Avoid_: decoding values at parse time.
 
 **Scoped reference** (`ScopedReference`, `resources/reading/scopedReference.ts`):
 A reference on its way to a read: the `SubResource`, `ExtResource` or `res://` text, the tables it resolves in, the file those tables belong to, and whether every holder passed on the way is local to scene.
-A node's own property starts one with `nodeReference`, in the tables of the file that wrote the node (ADR-0051).
+A node's own property starts one with `nodeReference`, in the tables of the file that wrote the node (ADR-0051). A caller that holds a resource's tables but no snapshot read yet starts one with `referenceHeldBy`, which the source scan lists.
 _Avoid_: a bare reference string handed past the tables it belongs to.
 
 **Held resource** (`HeldResource`, `resources/reading/read.ts`):
 A resource as a decode receives it: its class, its raw property strings, its address, and how it is held. It exposes no table, so a decode reads a nested reference only through `Follow`.
+A file the loader imports, not parses (an image, a mesh), is held as the class `IMPORTED_FILE`, with no properties and the file as its address.
 _Avoid_: "scoped resource" for this. A `ScopedResource` carries the tables.
 
 **Resource kind** (`ResourceKind`, `resources/reading/read.ts`):
-One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D`, `CURVE_3D`, `CURVE`, `GRADIENT`, `PARTICLE_PROCESS_MATERIAL`, `SHAPE_2D`, `OCCLUDER_POLYGON_2D` and `NAVIGATION_POLYGON` are kinds.
+One decode for one family of Godot classes, for every origin, with the classes it accepts. `CURVE_2D`, `CURVE_3D`, `CURVE`, `GRADIENT`, `PARTICLE_PROCESS_MATERIAL`, `SHAPE_2D`, `OCCLUDER_POLYGON_2D`, `NAVIGATION_POLYGON`, `FAST_NOISE_LITE`, `IMAGE`, `TEXTURE_2D`, `TEXTURE_3D`, `MATERIAL`, `SKY`, `ENVIRONMENT` and `CAMERA_ATTRIBUTES` are kinds. `MATERIAL` accepts every Material class and declines one the previewer does not build, the same from either arrival (ADR-0041).
 _Avoid_: one decode for each origin.
 
 **Resource snapshot** (`ResourceSnapshot`, `resources/reading/read.ts`):

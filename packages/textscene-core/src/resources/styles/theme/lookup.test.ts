@@ -12,6 +12,7 @@ import {
 import { NO_PROJECT_FONTS } from '../../fonts/font/projectFonts';
 import { NO_RESOURCES } from '../../../r3f/SceneResourcesContext';
 import type { ThemeResource } from './types';
+import { defaultThemeAt, type DefaultTheme } from '../../../godot/scene/defaultTheme/defaultTheme';
 import type { FontResource, FontVariationResource } from '../../fonts/font/types';
 
 /** The base a FontVariation or SystemFont draws over. */
@@ -195,6 +196,7 @@ describe('resolveThemeFontIn', () => {
     expect(
       resolveThemeFontIn(
         themeResolutionScope('Label', undefined, [theme(), theme()], {
+          ...NO_PROJECT_FONTS,
           projectTheme: theme(),
           projectDefaultFont: null,
         }),
@@ -206,6 +208,7 @@ describe('resolveThemeFontIn', () => {
 
   it("the project's default font is the last rung, when no theme defines the key", () => {
     const scope = themeResolutionScope('Label', undefined, [theme()], {
+      ...NO_PROJECT_FONTS,
       projectTheme: theme(),
       projectDefaultFont: FONT_A,
     });
@@ -215,6 +218,7 @@ describe('resolveThemeFontIn', () => {
   it("a theme's default_font wins over the project's default font (theme_owner.cpp:227-254)", () => {
     const ancestor = theme({ defaultFont: FONT_B });
     const scope = themeResolutionScope('Label', undefined, [ancestor], {
+      ...NO_PROJECT_FONTS,
       projectTheme: null,
       projectDefaultFont: FONT_A,
     });
@@ -224,6 +228,7 @@ describe('resolveThemeFontIn', () => {
   it("the project theme's default_font wins over the project's default font", () => {
     const project = theme({ defaultFont: FONT_B });
     const scope = themeResolutionScope('Label', undefined, [], {
+      ...NO_PROJECT_FONTS,
       projectTheme: project,
       projectDefaultFont: FONT_A,
     });
@@ -232,6 +237,7 @@ describe('resolveThemeFontIn', () => {
 
   it("an override authored to nothing (null) stops the walk before the project's default font", () => {
     const scope = themeResolutionScope('Label', undefined, [], {
+      ...NO_PROJECT_FONTS,
       projectTheme: null,
       projectDefaultFont: FONT_A,
     });
@@ -279,7 +285,11 @@ describe('findThemeFontIn', () => {
   it('is undefined where no theme and no override define the font', () => {
     expect(
       findThemeFontIn(
-        themeResolutionScope('Label', undefined, [], { projectTheme: null, projectDefaultFont: FONT_A }),
+        themeResolutionScope('Label', undefined, [], {
+          ...NO_PROJECT_FONTS,
+          projectTheme: null,
+          projectDefaultFont: FONT_A,
+        }),
         'font',
         undefined
       )
@@ -289,6 +299,7 @@ describe('findThemeFontIn', () => {
   it('is the font a theme defines, and the override that wins, null included', () => {
     const ancestor = theme({ fonts: { Label: { font: FONT_B } } });
     const scope = themeResolutionScope('Label', undefined, [ancestor], {
+      ...NO_PROJECT_FONTS,
       projectTheme: null,
       projectDefaultFont: FONT_A,
     });
@@ -302,6 +313,7 @@ describe('findThemeFontIn', () => {
 describe('resolveThemeFontIn — a FontVariation with no base_font', () => {
   it("takes the project's custom_font as its base", () => {
     const scope = themeResolutionScope('Label', undefined, [], {
+      ...NO_PROJECT_FONTS,
       projectTheme: null,
       projectDefaultFont: FONT_A,
     });
@@ -311,6 +323,7 @@ describe('resolveThemeFontIn — a FontVariation with no base_font', () => {
   it("takes the project theme's default_font before the project's custom_font", () => {
     const project = theme({ defaultFont: FONT_B });
     const scope = themeResolutionScope('Label', undefined, [], {
+      ...NO_PROJECT_FONTS,
       projectTheme: project,
       projectDefaultFont: FONT_A,
     });
@@ -320,6 +333,7 @@ describe('resolveThemeFontIn — a FontVariation with no base_font', () => {
   it('does not take an ancestor theme default_font, since a scene ancestor is not in the default context', () => {
     const ancestor = theme({ defaultFont: FONT_B });
     const scope = themeResolutionScope('Label', undefined, [ancestor], {
+      ...NO_PROJECT_FONTS,
       projectTheme: null,
       projectDefaultFont: FONT_A,
     });
@@ -329,6 +343,7 @@ describe('resolveThemeFontIn — a FontVariation with no base_font', () => {
   it('applies to a variation a theme supplies, not only to an override', () => {
     const ancestor = theme({ fonts: { Label: { font: BARE_VARIATION } } });
     const scope = themeResolutionScope('Label', undefined, [ancestor], {
+      ...NO_PROJECT_FONTS,
       projectTheme: null,
       projectDefaultFont: FONT_A,
     });
@@ -348,6 +363,7 @@ describe('resolveThemeFontIn — a SystemFont', () => {
 
   it("is the project's custom_font", () => {
     const scope = themeResolutionScope('Label', undefined, [], {
+      ...NO_PROJECT_FONTS,
       projectTheme: null,
       projectDefaultFont: FONT_A,
     });
@@ -357,6 +373,7 @@ describe('resolveThemeFontIn — a SystemFont', () => {
   it("is the project theme's SystemFont font, where a bare FontVariation takes its FontVariation font", () => {
     const project = theme({ fonts: { SystemFont: { font: FONT_B }, FontVariation: { font: FONT_A } } });
     const scope = themeResolutionScope('Label', undefined, [], {
+      ...NO_PROJECT_FONTS,
       projectTheme: project,
       projectDefaultFont: null,
     });
@@ -371,6 +388,7 @@ describe('resolveThemeFontIn — a SystemFont', () => {
 
   it("as the project theme's default_font, skips itself and takes the project's custom_font", () => {
     const scope = themeResolutionScope('Label', undefined, [], {
+      ...NO_PROJECT_FONTS,
       projectTheme: theme({ defaultFont: SYSTEM_FONT }),
       projectDefaultFont: FONT_A,
     });
@@ -379,6 +397,7 @@ describe('resolveThemeFontIn — a SystemFont', () => {
 
   it("as the project's custom_font, draws no face: every default Godot tries is itself", () => {
     const scope = themeResolutionScope('Label', undefined, [], {
+      ...NO_PROJECT_FONTS,
       projectTheme: null,
       projectDefaultFont: SYSTEM_FONT,
     });
@@ -389,10 +408,12 @@ describe('resolveThemeFontIn — a SystemFont', () => {
 describe('themeResolutionScope — the default fonts', () => {
   it('resolves a font with no face to one object for two ProjectFonts objects of the same fonts, as each solve tree build makes', () => {
     const first = themeResolutionScope('Label', undefined, [], {
+      ...NO_PROJECT_FONTS,
       projectTheme: null,
       projectDefaultFont: FONT_A,
     });
     const second = themeResolutionScope('Label', undefined, [], {
+      ...NO_PROJECT_FONTS,
       projectTheme: null,
       projectDefaultFont: FONT_A,
     });
@@ -442,6 +463,7 @@ describe('resolveThemeFontSizeIn', () => {
     expect(
       resolveThemeFontSizeIn(
         themeResolutionScope('Label', undefined, [theme()], {
+          ...NO_PROJECT_FONTS,
           projectTheme: theme(),
           projectDefaultFont: null,
         }),
@@ -477,24 +499,92 @@ describe('resolveThemeFontSizeIn', () => {
   });
 });
 
+const RED = { r: 1, g: 0, b: 0, a: 1 };
+
+/** One kind of item for each type of the default theme. */
+function typeItems<K extends 'colors' | 'constants' | 'styles'>(theme: DefaultTheme, kind: K) {
+  return Object.fromEntries(Object.entries(theme.types).map(([type, items]) => [type, items[kind]]));
+}
+const defaultColors = (d: DefaultTheme) => typeItems(d, 'colors');
+const defaultConstants = (d: DefaultTheme) => typeItems(d, 'constants');
+
 describe('mergeThemedRecord', () => {
   it('a local override wins unconditionally, even where a theme also defines the name', () => {
     const ancestor = theme({ colors: { Label: { font_color: { r: 1, g: 0, b: 0, a: 1 } } } });
     const merged = mergeThemedRecord(
       themeResolutionScope('Label', undefined, [ancestor], NO_PROJECT_FONTS),
       { font_color: { r: 0, g: 1, b: 0, a: 1 } },
-      (t) => t.colors
+      (t) => t.colors,
+      defaultColors
     );
     expect(merged.font_color).toEqual({ r: 0, g: 1, b: 0, a: 1 });
   });
 
-  it('a gap name (no override, no theme entry) is simply absent from the result', () => {
+  it('a gap name (no override, no theme entry, not in the default theme) is absent from the result', () => {
     const merged = mergeThemedRecord(
       themeResolutionScope('Label', undefined, [theme()], NO_PROJECT_FONTS),
       {},
-      (t) => t.colors
+      (t) => t.colors,
+      defaultColors
     );
-    expect(merged.font_color).toBeUndefined();
+    expect(merged.unknown_color).toBeUndefined();
+  });
+
+  it('takes a name no theme sets from the default theme, the last rung (theme_owner.cpp:247-257)', () => {
+    const merged = mergeThemedRecord(
+      themeResolutionScope('Button', undefined, [theme()], NO_PROJECT_FONTS),
+      {},
+      (t) => t.constants,
+      defaultConstants
+    );
+    expect(merged.h_separation).toBe(4);
+  });
+
+  it('takes the default theme at the project scale', () => {
+    const projectFonts = { ...NO_PROJECT_FONTS, defaultTheme: defaultThemeAt(1.5) };
+    const merged = mergeThemedRecord(
+      themeResolutionScope('Button', undefined, [], projectFonts),
+      {},
+      (t) => t.constants,
+      defaultConstants
+    );
+    expect(merged.h_separation).toBe(6);
+  });
+
+  it('lets the project theme win over the default theme, and an override win over both', () => {
+    const projectFonts = {
+      ...NO_PROJECT_FONTS,
+      projectTheme: theme({ constants: { Button: { h_separation: 8 } } }),
+    };
+    const scope = themeResolutionScope('Button', undefined, [], projectFonts);
+    expect(mergeThemedRecord(scope, {}, (t) => t.constants, defaultConstants).h_separation).toBe(8);
+    expect(
+      mergeThemedRecord(scope, { h_separation: 2 }, (t) => t.constants, defaultConstants).h_separation
+    ).toBe(2);
+  });
+
+  it('asks the default theme after a farther ancestor matches only a base type', () => {
+    // Every Theme is asked for every type before the default theme is asked for any (`theme_owner.cpp:234-257`).
+    const ancestor = theme({ colors: { BaseButton: { font_color: RED } } });
+    const merged = mergeThemedRecord(
+      themeResolutionScope('Button', undefined, [ancestor], NO_PROJECT_FONTS),
+      {},
+      (t) => t.colors,
+      defaultColors
+    );
+    expect(merged.font_color).toEqual(RED);
+  });
+
+  it('resolves a variation that only the default theme registers through the same walk', () => {
+    const scope = themeResolutionScope('Button', 'FlatButton', [], NO_PROJECT_FONTS);
+    const merged = mergeThemedRecord(
+      scope,
+      {},
+      () => undefined,
+      (d) => typeItems(d, 'styles')
+    );
+    expect(merged.normal).toEqual({ kind: 'empty', contentMargin: { left: 4, top: 4, right: 4, bottom: 4 } });
+    expect(merged.focus).toBe(defaultThemeAt(1).types.Button!.styles.focus);
   });
 
   it('a nearer owner matching only a BASE type beats a farther owner matching the EXACT type (owners outer, types inner)', () => {
@@ -504,7 +594,7 @@ describe('mergeThemedRecord', () => {
     const farther = theme({ colors: { PanelContainer: { font_color: { r: 0, g: 1, b: 0, a: 1 } } } });
     const scope = themeResolutionScope('PanelContainer', undefined, [nearest, farther], NO_PROJECT_FONTS);
     expect(scope.typeChain).toEqual(['PanelContainer', 'Container', ...CONTROL_ANCESTRY]);
-    const merged = mergeThemedRecord(scope, {}, (t) => t.colors);
+    const merged = mergeThemedRecord(scope, {}, (t) => t.colors, defaultColors);
     expect(merged.font_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
 
@@ -519,7 +609,8 @@ describe('mergeThemedRecord', () => {
     const merged = mergeThemedRecord(
       themeResolutionScope('Panel', 'title_panel', [t], NO_PROJECT_FONTS),
       {},
-      (theme) => theme.colors
+      (theme) => theme.colors,
+      defaultColors
     );
     expect(merged.font_color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
@@ -532,7 +623,8 @@ describe('mergeThemedRecord', () => {
         projectTheme: project,
       }),
       {},
-      (t) => t.constants
+      (t) => t.constants,
+      defaultConstants
     );
     expect(merged.h_separation).toBe(8);
   });
@@ -546,6 +638,7 @@ describe('fontForNode', () => {
   const FONT_REF = 'ExtResource("f")';
   const loadedFont = (path: string) => (path === 'res://own.ttf' ? FONT_A : undefined);
   const projectFonts = {
+    ...NO_PROJECT_FONTS,
     projectTheme: theme({ fonts: { TextMesh: { font: FONT_B } } }),
     projectDefaultFont: FONT_B,
   };
@@ -609,8 +702,10 @@ describe('the default theme font size of a Label type variation (default_theme.c
     expect(sizeOf('HeaderSmall', [own])).toBe(40);
   });
 
-  it('reaches a default theme variation through the base a scene Theme registers', () => {
+  it('answers default_font_size for a scene variation based on HeaderLarge, as Godot 4.6.3 measures', () => {
+    // The default theme registers no `MyHeader`, so `has_font_size` answers its default size there,
+    // before HeaderLarge is asked (`theme.cpp:668-670`, `:1021-1026`).
     const own = theme({ typeVariations: { MyHeader: 'HeaderLarge' } });
-    expect(sizeOf('MyHeader', [own])).toBe(28);
+    expect(sizeOf('MyHeader', [own])).toBe(16);
   });
 });

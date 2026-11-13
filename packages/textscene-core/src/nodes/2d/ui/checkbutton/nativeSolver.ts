@@ -8,14 +8,13 @@
  * Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
  * See THIRD-PARTY-NOTICES.md.
  */
+import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { MinimumSizeFn, TextureSlotsFn } from '../../../../r3f/controls/native/solverRegistry';
 import { themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
 import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
-import { WHITE_MODULATE } from '../../../../r3f/canvasItemModulate';
 import type { NativeTheme } from '../../../../r3f/controls/native/nativeTheme';
 import { scaledIconSizeOf } from '../../../../r3f/controls/native/scaledSvgIcon';
 import {
-  BUTTON_DEFAULT_FONT_COLORS,
   fittedThemedIconSize,
   buttonNormalBox,
   buttonTextureSlotsOf,
@@ -72,7 +71,7 @@ const CHECK_BUTTON_ICON_THEME_NAMES = Object.values(CHECK_BUTTON_ICON_THEME_NAME
  */
 export function checkButtonIconColor(props: CheckButtonProperties, colors: SolveNode['colors']): Rgba {
   const key = props.buttonPressed ? 'button_checked_color' : 'button_unchecked_color';
-  return colors[key] ?? WHITE_MODULATE;
+  return requiredThemeItem(colors, key);
 }
 
 /**
@@ -98,7 +97,6 @@ function checkButtonFittedIconSize(
  * side (`:95-103`).
  */
 export const CHECK_BUTTON_CLASS: ReservingButtonClass = {
-  fontColors: BUTTON_DEFAULT_FONT_COLORS,
   textAlignment: HorizontalAlignment.HORIZONTAL_ALIGNMENT_LEFT,
   reservedElement: (n, theme) => ({
     side: n.rtl ? 'left' : 'right',
@@ -127,7 +125,7 @@ export function checkButtonToggleRect(
   key: CheckButtonIconKey,
   rectSize: Vector2
 ): Rect2 {
-  const { contentMargin } = buttonNormalBox(n, theme);
+  const { contentMargin } = buttonNormalBox(n);
   const reserved = checkButtonFittedIconSize(n, theme);
   const drawn = fittedThemedIconSize(
     n,
@@ -136,7 +134,7 @@ export function checkButtonToggleRect(
   );
   return {
     x: n.rtl ? contentMargin.left : rectSize.x - (reserved.x + contentMargin.right),
-    y: (rectSize.y - reserved.y) / 2 + (n.constants.check_v_offset ?? 0),
+    y: (rectSize.y - reserved.y) / 2 + requiredThemeItem(n.constants, 'check_v_offset'),
     w: drawn.x,
     h: drawn.y,
   };

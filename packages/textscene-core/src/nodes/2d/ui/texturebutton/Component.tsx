@@ -14,6 +14,7 @@ import {
   useInheritedTextureSampler,
 } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D, type Texture2DResult } from '../../../../resources/useTexture2D';
+import { useNodeReference } from '../../../../resources/reading';
 import { rectTextureSampler, sampledDraw } from '../texturerect/rectTexture';
 import {
   resolveTextureButtonDrawState,
@@ -33,14 +34,14 @@ export function TextureButton({ solveNode, tint, rect, renderOrder }: NativeCont
 
   // The node's own scope, not the ambient provider's: a TextureButton that
   // arrived through an instanced sub-scene names ids from that scene.
-  const { externalResources, internalResources } = solveNode.resources;
+  const scope = solveNode.resources;
   // Every hook call is unconditional, since hooks cannot branch on `slot`. A plain
   // lookup then picks the result that draws. `texture_focused` needs focus, which a
   // static preview never holds, and `texture_click_mask` only hit-tests, so neither loads.
-  const normal = useTexture2D(props.textureNormal, externalResources, internalResources);
-  const pressedTex = useTexture2D(props.texturePressed, externalResources, internalResources);
-  const hoverTex = useTexture2D(props.textureHover, externalResources, internalResources);
-  const disabledTex = useTexture2D(props.textureDisabled, externalResources, internalResources);
+  const normal = useTexture2D(useNodeReference(props.textureNormal, scope));
+  const pressedTex = useTexture2D(useNodeReference(props.texturePressed, scope));
+  const hoverTex = useTexture2D(useNodeReference(props.textureHover, scope));
+  const disabledTex = useTexture2D(useNodeReference(props.textureDisabled, scope));
 
   const bySlot: Record<TextureButtonSlot, Texture2DResult> = {
     textureNormal: normal,

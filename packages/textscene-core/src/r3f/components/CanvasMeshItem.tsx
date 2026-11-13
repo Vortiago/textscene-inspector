@@ -14,6 +14,7 @@ import { geometryPrimitive } from '../../resources/meshes/godotSurface';
 import type { MultiMeshInstance } from '../../resources/meshes/multimesh';
 import { canvasMapProps, useCanvas2DTexture } from '../canvas2DTextureDecode';
 import { useCanvasItemTexture } from '../canvasItemTexture';
+import { useNodeReference } from '../../resources/reading';
 import { instanceColorDefines, useCanvasColorSpace, type CanvasColorSpace } from '../canvasColorSpace';
 import { sRGBChannelToLinear } from '../../utils/colorSpace';
 import { canvasMeshGeometry } from '../meshes/canvasMeshGeometry';
@@ -41,14 +42,14 @@ interface CanvasMeshItemProps {
 }
 
 export function CanvasMeshItem({ node, props, mesh, instances, children }: CanvasMeshItemProps) {
-  const pools = useSceneResources();
+  const scope = useSceneResources();
   const {
     texture: sourceTexture,
     missing: textureMissing,
     isArriving: textureArriving,
     sampler,
     canvasTexture,
-  } = useCanvasItemTexture(props, props.texture, pools.externalResources, pools.internalResources);
+  } = useCanvasItemTexture(props, useNodeReference(props.texture, scope));
   const texture = useCanvas2DTexture(sourceTexture, sampler);
 
   return (

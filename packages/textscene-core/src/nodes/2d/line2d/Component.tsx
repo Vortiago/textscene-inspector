@@ -12,6 +12,7 @@ import type { CanvasItemPixelMaterial } from '../../../r3f/components/LitCanvasI
 import { useArrayColorOf, WHITE_MODULATE, type CanvasItemTint } from '../../../r3f/canvasItemModulate';
 import { useCanvas2DTexture } from '../../../r3f/canvas2DTextureDecode';
 import { useCanvasItemTexture } from '../../../r3f/canvasItemTexture';
+import { useNodeReference } from '../../../resources/reading';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
 import { bottomUpV } from '../../../godot/math/uv';
 import { storedReal } from '../../../godot/math/real';
@@ -30,14 +31,13 @@ export function Line2D({ node, children }: NodeComponentProps) {
   const props = node.properties as Line2DProperties;
   const widthCurve = useNodeResource(props.widthCurve, CURVE).value;
   const gradient = useNodeResource(props.gradient, GRADIENT).value;
-
-  const { externalResources, internalResources } = useSceneResources();
+  const scope = useSceneResources();
   const {
     texture: resolvedTexture,
     size,
     sampler,
     canvasTexture,
-  } = useCanvasItemTexture(props, props.texture, externalResources, internalResources);
+  } = useCanvasItemTexture(props, useNodeReference(props.texture, scope));
   const texture = useCanvas2DTexture(resolvedTexture, sampler);
   // `Size2::aspect` of the texture, and 1 without one (`line_builder.h:51`).
   const hasTexture = texture !== null;

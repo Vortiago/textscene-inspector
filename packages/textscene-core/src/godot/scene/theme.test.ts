@@ -85,8 +85,6 @@ describe('scaledGodotTheme', () => {
       fontSize: 16, // default_font_size, default_theme.cpp:50
       cornerRadius: 3, // default_corner_radius, default_theme.cpp:55
       contentMargin: 4, // default_margin, default_theme.cpp:54
-      optionButtonMarginX: 8, // 2 * default_margin, default_theme.cpp:215
-      optionButtonMarginY: 4, // default_margin, default_theme.cpp:215
       separation: 4, // Math::round(4 * scale), default_theme.cpp:1249
       sliderTrackThickness: 8, // two margins of make_flat_stylebox(…, 4, 4, 4, 4, 4), default_theme.cpp:579
       sliderCornerRadius: 4, // the corner radius of that call, default_theme.cpp:579
@@ -102,8 +100,6 @@ describe('scaledGodotTheme', () => {
       fontSize: 32,
       cornerRadius: 6,
       contentMargin: 8,
-      optionButtonMarginX: 16,
-      optionButtonMarginY: 8,
       separation: 8,
       // The sliders grow with everything else: the styleboxes through
       // `make_flat_stylebox`, the grabber and tick because `generate_icon`
@@ -137,8 +133,6 @@ describe('scaledGodotTheme', () => {
       fontSize: 8,
       cornerRadius: 2,
       contentMargin: 2,
-      optionButtonMarginX: 4,
-      optionButtonMarginY: 2,
       separation: 2,
       sliderTrackThickness: 4,
       sliderCornerRadius: 2,

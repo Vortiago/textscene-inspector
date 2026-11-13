@@ -17,6 +17,7 @@ import {
   useInheritedTextureSampler,
   type CanvasItemTextureSampler,
 } from '../../../../r3f/canvasItemTextureSampler';
+import { useNodeReference, type ScopedReference } from '../../../../resources/reading';
 import { useTexture2D } from '../../../../resources/useTexture2D';
 import { useOwnedTextureView } from '../../../../r3f/useTextureView';
 import { regionUvWindow } from '../../../../r3f/uvWindow';
@@ -62,12 +63,10 @@ function useLayerSize(
 
 /** One decoded, sampler-configured texture: `TextureRect`'s load path, once per slot. */
 function useLayerTexture(
-  ref: string | undefined,
-  externalResources: NativeControlComponentProps['solveNode']['resources']['externalResources'],
-  internalResources: NativeControlComponentProps['solveNode']['resources']['internalResources'],
+  reference: ScopedReference,
   sampler: CanvasItemTextureSampler
 ): { texture: THREE.Texture | null; size: ImageSize | undefined } {
-  const { texture: raw, size } = useTexture2D(ref, externalResources, internalResources);
+  const { texture: raw, size } = useTexture2D(reference);
   return { texture: useCanvas2DTexture(raw, sampler), size };
 }
 
@@ -93,10 +92,10 @@ export function TextureProgressBar({ solveNode, tint, rect, renderOrder }: Nativ
   const props = painterView<TextureProgressBarProperties>(solveNode);
   const sampler = useInheritedTextureSampler(props.textureFilter, props.textureRepeat);
 
-  const { externalResources, internalResources } = solveNode.resources;
-  const under = useLayerTexture(props.textureUnder, externalResources, internalResources, sampler);
-  const progress = useLayerTexture(props.textureProgress, externalResources, internalResources, sampler);
-  const over = useLayerTexture(props.textureOver, externalResources, internalResources, sampler);
+  const scope = solveNode.resources;
+  const under = useLayerTexture(useNodeReference(props.textureUnder, scope), sampler);
+  const progress = useLayerTexture(useNodeReference(props.textureProgress, scope), sampler);
+  const over = useLayerTexture(useNodeReference(props.textureOver, scope), sampler);
   const underTexture = under.texture;
   const progressTexture = progress.texture;
   const overTexture = over.texture;

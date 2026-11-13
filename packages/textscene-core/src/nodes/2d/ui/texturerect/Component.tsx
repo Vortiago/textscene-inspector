@@ -14,6 +14,7 @@ import {
   useInheritedTextureSampler,
 } from '../../../../r3f/canvasItemTextureSampler';
 import { useTexture2D } from '../../../../resources/useTexture2D';
+import { useNodeReference } from '../../../../resources/reading';
 import { textureRectDraw } from './nativeSolver';
 import { rectTextureSampler, sampledDraw } from './rectTexture';
 import type { TextureRectProperties } from './types';
@@ -27,10 +28,10 @@ export function TextureRect({ solveNode, tint, rect, renderOrder }: NativeContro
 
   // The node's own scope, not the ambient provider's: a TextureRect that
   // arrived through an instanced sub-scene names ids from that scene.
-  const { externalResources, internalResources } = solveNode.resources;
+  const scope = solveNode.resources;
   // `useTexture2D`, not the path-only resolver: `texture` may be an inline
   // procedural texture, which has no path and rasterises out of the scene.
-  const { texture: rawTexture, size } = useTexture2D(props.texture, externalResources, internalResources);
+  const { texture: rawTexture, size } = useTexture2D(useNodeReference(props.texture, scope));
 
   const draw = useMemo(
     () =>

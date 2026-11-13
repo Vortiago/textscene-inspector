@@ -11,7 +11,7 @@ import { drawnTag } from '../meshes/meshContent';
 import { perObject } from '../../utils/perObject';
 import { boxlessUserData } from '../bounds';
 import { extraDrawProps } from '../materials/extraDraw';
-import type { MaterialSource } from '../materials/materialSource';
+import type { ScopedReference } from '../../resources/reading';
 import { NextPassChain, type ChainDrawFactory, type ChainDrawSpec } from '../materials/nextPass';
 import { orderByPass } from '../materials/passOrder';
 import { SurfaceMaterialSlot } from '../materials/SurfaceMaterialSlot';
@@ -94,7 +94,7 @@ function OwnInstancedDraw({
   shadow,
 }: {
   placed: PartAtInstances;
-  sources: readonly (MaterialSource | undefined)[];
+  sources: readonly (ScopedReference | undefined)[];
   shadow: ShadowCastingEffects;
 }) {
   const { geometry, particles } = placed;

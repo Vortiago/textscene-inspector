@@ -5,19 +5,14 @@
  */
 
 import { useMemo } from 'react';
-import type { TscnExternalResource, TscnInternalResource, TscnNode } from '../../../parser/types';
+import type { TscnNode } from '../../../parser/types';
 import { EMPTY_AABB, type Aabb } from '../../../godot/math/aabb';
 import { frameSizePx, WHOLE_FRAME } from '../../../r3f/spriteFrame';
-import { useSpriteFrames } from '../../../resources/textures/spriteframes/useSpriteFrames';
+import { useFrameReference, useSpriteFrames } from '../../../resources/textures/spriteframes/useSpriteFrames';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { spriteQuadAabb, spriteQuadRect } from '../sprite3d/quad';
 import { selectedFrameTexture } from './frameSelection';
 import type { AnimatedSprite3DProperties } from './types';
-import { isLocalToScene } from '../../../resources/textures/viewporttexture/localToScene.js';
-
-/** Stable empty pools, so the frame texture's memo holds between renders. */
-const NO_EXTERNAL_RESOURCES: readonly TscnExternalResource[] = [];
-const NO_INTERNAL_RESOURCES: readonly TscnInternalResource[] = [];
 
 /** The box in node space, or null while the SpriteFrames or the frame texture loads. */
 export function useAnimatedSprite3DAabb(node: TscnNode): Aabb | null {
@@ -28,13 +23,7 @@ export function useAnimatedSprite3DAabb(node: TscnNode): Aabb | null {
     texture,
     size: reportedSize,
     missing,
-  } = useTexture2D(
-    frameRef ?? undefined,
-    spriteFrames?.externalResources ?? NO_EXTERNAL_RESOURCES,
-    spriteFrames?.subResources ?? NO_INTERNAL_RESOURCES,
-    'plain',
-    spriteFrames ? isLocalToScene(spriteFrames.resource) : undefined
-  );
+  } = useTexture2D(useFrameReference(spriteFrames, frameRef), 'plain');
   const isPending = status === 'pending' || (frameRef !== null && !missing && !texture);
 
   return useMemo(() => {

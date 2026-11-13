@@ -10,10 +10,8 @@
  * See THIRD-PARTY-NOTICES.md.
  */
 import { useMemo } from 'react';
-import {
-  flatCornerDetail,
-  flatStyleBox as makeFlatStyleBox,
-} from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatStyleBox as makeFlatStyleBox } from '../../../../r3f/controls/native/styleBoxFlat';
+import { flatCornerDetail } from '../../../../godot/scene/defaultTheme/styleBoxes';
 import * as THREE from 'three';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
 import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';

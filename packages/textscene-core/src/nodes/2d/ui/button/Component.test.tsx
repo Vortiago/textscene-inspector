@@ -19,7 +19,11 @@ import { buttonMinimumSize } from './nativeSolver';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
 import { TEST_SCENE_FONT_METRICS } from '../../../../r3f/controls/native/testing/sceneFontMetrics';
 import * as sceneFontLoader from '../../../../r3f/controls/native/text/sceneFontLoader';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   findIconMeshes,
   findTextMesh,
@@ -80,7 +84,13 @@ function solveNode(
   styleBoxes: Record<string, StyleBoxFlatData> = {}
 ): SolveNode {
   const node: TscnNode = controlNode('MyButton', 'Button', { name: 'MyButton', ...properties });
-  return { ...emptySolveNode(), path: 'MyButton', node, styleBoxes, resources: OWN_ICON_SCOPE };
+  return withThemeItems({
+    ...emptySolveNode(),
+    path: 'MyButton',
+    node,
+    styleBoxes,
+    resources: OWN_ICON_SCOPE,
+  });
 }
 
 /** Every `<StyleBoxQuad>` mesh carries a `color` vertex attribute, and `<TextRun>` and `<ControlQuad>` do not. */

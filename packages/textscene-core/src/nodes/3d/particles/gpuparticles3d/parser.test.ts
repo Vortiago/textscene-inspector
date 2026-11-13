@@ -137,4 +137,22 @@ describe('parseGPUParticles3D', () => {
   it('keeps DISABLED for the LOCAL_BILLBOARD that 4.6.3 refuses (edge case)', () => {
     expect(parse({ transform_align: '4' }).transformAlign).toBe(0);
   });
+
+  it("keeps the constructor's trail: off, 0.3 seconds, no skin", () => {
+    const { trailEnabled, trailLifetime, drawSkin } = parse({});
+    expect([trailEnabled, trailLifetime, drawSkin]).toEqual([false, 0.3, undefined]);
+  });
+
+  it('reads trail_enabled, trail_lifetime and the draw_skin reference', () => {
+    const { trailEnabled, trailLifetime, drawSkin } = parse({
+      trail_enabled: 'true',
+      trail_lifetime: '0.5',
+      draw_skin: 'SubResource("Skin_1")',
+    });
+    expect([trailEnabled, trailLifetime, drawSkin]).toEqual([true, 0.5, 'SubResource("Skin_1")']);
+  });
+
+  it('keeps 0.3 for a trail_lifetime the setter refuses (edge case)', () => {
+    expect(parse({ trail_lifetime: '0.005' }).trailLifetime).toBe(0.3);
+  });
 });

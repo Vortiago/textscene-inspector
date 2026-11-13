@@ -7,7 +7,9 @@ import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { texture2DPlaceholder } from '../../../resources/textures/texture2DPlaceholder';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import { StyleBoxQuad } from './StyleBoxQuad';
+import { mayDrawStyleBox, StyleBoxQuad } from './StyleBoxQuad';
+import { flatStyleBox } from './styleBoxFlat';
+import { neutralStyleBox } from '../../../resources/styles/stylebox/decode';
 import { canvasColorSpaceOf, CanvasColorSpaceProvider } from '../../canvasColorSpace';
 import { TextureSampler2DContext } from '../../canvasItemTextureSampler';
 import { CanvasItemTextureFilter } from '../../../godot/scene/canvasItem';
@@ -430,5 +432,15 @@ describe('<StyleBoxQuad>', () => {
       );
       expect(() => renderer.scene.findByType('Mesh')).toThrow();
     });
+  });
+});
+
+describe('mayDrawStyleBox', () => {
+  it('is false for an empty box, which draws nothing', () => {
+    expect(mayDrawStyleBox(neutralStyleBox(ZERO_SIDES))).toBe(false);
+  });
+
+  it('is true for a filled flat box', () => {
+    expect(mayDrawStyleBox(flatStyleBox({ r: 1, g: 0, b: 0, a: 1 }))).toBe(true);
   });
 });

@@ -17,9 +17,15 @@ export type Read<T> =
 
 export type UnavailableReason = 'missing-file' | 'unknown-id' | 'wrong-type' | 'undecodable' | 'cycle';
 
+/**
+ * The class of a held resource that is a file the loader imports, such as an image: no resource
+ * file, so it has no properties, and its address is the file.
+ */
+export const IMPORTED_FILE = 'ImportedFile';
+
 /** A resource as a decode receives it. It exposes no table. */
 export interface HeldResource {
-  /** The Godot class. */
+  /** The Godot class, or {@link IMPORTED_FILE}. */
   readonly type: string;
   /** The raw value strings of the resource. */
   readonly properties: Readonly<Record<string, string>>;
@@ -46,6 +52,16 @@ export interface Follow {
   read<U>(kind: ResourceKind<U>, ref: string | undefined): Read<U>;
   /** The same reference, not read: for a value a consumer reads later (a surface's material). */
   reference(ref: string | undefined): ScopedReference;
+}
+
+/**
+ * `ref` handed on as a reference, or null for a property that names nothing. A decode that hands
+ * on no reference keeps no tables, so its value is shared across the scopes that read it.
+ *
+ * @canonical An optional reference a decode hands on
+ */
+export function optionalReference(follow: Follow, ref: string | undefined): ScopedReference | null {
+  return ref === undefined ? null : follow.reference(ref);
 }
 
 /** One consistent view of what the loader holds. Every read records the files it touched. */

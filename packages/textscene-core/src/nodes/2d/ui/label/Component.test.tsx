@@ -14,7 +14,11 @@ import { ControlCanvasWalker } from '../../../../r3f/controls/native/ControlCanv
 import { controlComponentRegistry } from '../../../../r3f/controls/ControlComponentRegistry';
 import { Label } from './Component';
 import { painterEnv, painterTint } from '../../../../r3f/controls/native/testing/painterProps';
-import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import {
+  controlNode,
+  solveNode as emptySolveNode,
+  withThemeItems,
+} from '../../../../r3f/controls/native/testing/solveNode';
 import {
   inkedGlyphCount,
   onlyBundledRun,
@@ -39,7 +43,7 @@ function solveNode(path: string, properties: Record<string, unknown>): SolveNode
   const colors = (properties as { themeOverrideColors?: SolveNode['colors'] }).themeOverrideColors ?? {};
   const constants =
     (properties as { themeOverrideConstants?: SolveNode['constants'] }).themeOverrideConstants ?? {};
-  return { ...emptySolveNode(), path, node: tscnNode, colors, constants };
+  return withThemeItems({ ...emptySolveNode(), path, node: tscnNode, colors, constants });
 }
 
 async function render(properties: Record<string, unknown>, rect: Rect2 = { x: 0, y: 0, w: 200, h: 200 }) {

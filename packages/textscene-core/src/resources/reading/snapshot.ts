@@ -23,6 +23,7 @@ import {
 } from '../SubResourceResolver';
 import { isLocalToScene } from '../textures/viewporttexture/localToScene';
 import {
+  IMPORTED_FILE,
   NONE,
   PENDING,
   UNAVAILABLE,
@@ -55,7 +56,6 @@ interface FollowedRead {
 interface Decoded {
   readonly properties: Readonly<Record<string, string>>;
   readonly isBuiltIn: boolean;
-  readonly isHeldLocally: boolean;
   readonly reads: readonly FollowedRead[];
   /** The tables a reference the decode handed on resolves in, which the value holds. Null when it handed on none. */
   readonly handedTables: SceneResources | null;
@@ -68,13 +68,32 @@ interface Decoded {
  */
 const slotsOf = perObject((_kind: ResourceKind<unknown>) => new Map<string, Decoded>());
 
-/** A snapshot over `files`, the loader's answer for each file path: undefined while it loads, null once it failed. */
-export function snapshotOver(files: CacheSource<ParsedResource>): ResourceSnapshot {
+/** The loader's answer for each file path, undefined while it loads and null once it failed. */
+export interface FileSource extends CacheSource<ParsedResource> {
+  /** Hears each `file::id` address a read found in a loaded file: the file, or null when it declares no such id. */
+  readonly onAddress?: (address: string, file: ParsedResource | null) => void;
+}
+
+/** A snapshot over `files`. */
+export function snapshotOver(files: FileSource): ResourceSnapshot {
   return { read: (reference, kind) => readAt(files, reference, kind, []) };
 }
 
+/** The loader's answer before any file loads, which `mayName` reads against. */
+const NOTHING_LOADED: FileSource = { getCached: () => undefined };
+
+/**
+ * Whether `reference` can name a `kind` before any file loads: false for an unknown id and for a
+ * resource of another class, as Godot refuses the property. A file still to load can name one.
+ */
+export function mayName(reference: ScopedReference, kind: ResourceKind<unknown>): boolean {
+  const found = locate(NOTHING_LOADED, reference);
+  if (!('held' in found)) return found.status === 'pending';
+  return kind.accepts(found.held.type);
+}
+
 function readAt<T>(
-  files: CacheSource<ParsedResource>,
+  files: FileSource,
   reference: ScopedReference,
   kind: ResourceKind<T>,
   stack: readonly string[]
@@ -86,7 +105,7 @@ function readAt<T>(
   return decoded(files, found, kind, [...stack, found.key]);
 }
 
-function locate(files: CacheSource<ParsedResource>, reference: ScopedReference): Located | Read<never> {
+function locate(files: FileSource, reference: ScopedReference): Located | Read<never> {
   const { ref, resources } = reference;
   if (!holdsResource(ref)) return NONE;
   const parsed = parseResourceReference(ref!);
@@ -105,15 +124,17 @@ function locate(files: CacheSource<ParsedResource>, reference: ScopedReference):
   if (parsed?.type === 'ExtResource' && !findExtResource(resources.externalResources, parsed.id)) {
     return UNAVAILABLE['unknown-id'];
   }
-  // The module reads resource files only. An image or a scene is no class a kind of this module accepts.
   const path = resolveExtResourcePath(ref, resources.externalResources);
   const filePath = path && resourceFilePath(path);
-  if (!path || !filePath || !loadsAsParsedResource(filePath)) return UNAVAILABLE['wrong-type'];
+  if (!path || !filePath) return UNAVAILABLE['wrong-type'];
+  // The module reads no file it does not parse: an image is held with no properties, for its reader to load.
+  if (!loadsAsParsedResource(filePath)) return importedFile(path, reference);
   const file = files.getCached(filePath);
   if (file === undefined) return PENDING;
   if (file === null) return UNAVAILABLE['missing-file'];
   // Scoped per parse, so the tables keep their identity while the file holds.
   const section = scopedSection(file, path);
+  if (path !== filePath) files.onAddress?.(path, section ? file : null);
   if (!section) return UNAVAILABLE['unknown-id'];
   const { type, data } = section.resource;
   return {
@@ -122,6 +143,24 @@ function locate(files: CacheSource<ParsedResource>, reference: ScopedReference):
     slot: path,
     resources: section.resources,
     origin: filePath,
+  };
+}
+
+const NO_PROPERTIES: Readonly<Record<string, string>> = Object.freeze({});
+
+function importedFile(path: string, reference: ScopedReference): Located {
+  return {
+    held: {
+      type: IMPORTED_FILE,
+      properties: NO_PROPERTIES,
+      address: path,
+      isLocalToScene: false,
+      isHeldLocally: reference.isHeldLocally,
+    },
+    key: path,
+    slot: path,
+    resources: reference.resources,
+    origin: undefined,
   };
 }
 
@@ -151,13 +190,15 @@ function nestedReference(holder: Located, ref: string | undefined): ScopedRefere
 }
 
 function decoded<T>(
-  files: CacheSource<ParsedResource>,
+  files: FileSource,
   located: Located,
   kind: ResourceKind<T>,
   stack: readonly string[]
 ): Read<T> {
   const slots = slotsOf(kind);
-  const kept = slots.get(located.slot);
+  // A slot for each holding: a resource read both ways keeps both values, and its texture with them.
+  const slot = `${located.slot}|${located.held.isHeldLocally ? 'local' : 'shared'}`;
+  const kept = slots.get(slot);
   if (kept && stillHolds(kept, located, files, stack)) return kept.answer as Read<T>;
 
   const reads: FollowedRead[] = [];
@@ -179,10 +220,9 @@ function decoded<T>(
   // Pending spreads upward: the value waits for the file a nested read named, and is not kept.
   if (isWaiting) return PENDING;
   const answer: Read<T> = value === null ? UNAVAILABLE.undecodable : { status: 'loaded', value };
-  slots.set(located.slot, {
+  slots.set(slot, {
     properties: located.held.properties,
     isBuiltIn: located.held.address === null,
-    isHeldLocally: located.held.isHeldLocally,
     reads,
     handedTables,
     answer,
@@ -207,14 +247,8 @@ function decodeOnce<T>(kind: ResourceKind<T>, held: HeldResource, follow: Follow
  * strings, since each parse of the scene allocates it anew. A file resource is confirmed by the
  * object its parse holds, so a reload gives a new value. The slot already names the class.
  */
-function stillHolds(
-  kept: Decoded,
-  located: Located,
-  files: CacheSource<ParsedResource>,
-  stack: readonly string[]
-): boolean {
+function stillHolds(kept: Decoded, located: Located, files: FileSource, stack: readonly string[]): boolean {
   const { held } = located;
-  if (kept.isHeldLocally !== held.isHeldLocally) return false;
   const sameProperties = kept.isBuiltIn
     ? sameData(kept.properties, held.properties)
     : kept.properties === held.properties;

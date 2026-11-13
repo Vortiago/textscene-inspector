@@ -1,202 +1,60 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { NO_FILES, poolsOf } from '../../testing/loadedFiles';
-import { gradientTextureSizeWithoutGradient, resolveGradientTexture2D } from './resolveGradientTexture';
+import { loadedValue } from '../../reading/reading.testkit';
+import { gradientTexture2D } from './resolveGradientTexture';
 import { proceduralTextureKey } from '../proceduralTextureCache';
-import { parseTresFile } from '../../../parser/parsedResource';
-import type { TscnInternalResource } from '../../../parser/types';
+import { TEXTURE_2D } from '../texture2d/kind';
+import type { GradientTexture2DSource } from '../texture2d/types';
 
-const coinResources: TscnInternalResource[] = [
-  {
-    id: 'Gradient_cd1ha',
-    type: 'Gradient',
-    data: {
-      interpolation_mode: '2',
-      offsets: 'PackedFloat32Array(0, 0.642276, 1)',
-      colors: 'PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)',
-    },
-  },
-  {
-    id: 'GradientTexture2D_qhu5r',
-    type: 'GradientTexture2D',
-    data: {
-      gradient: 'SubResource("Gradient_cd1ha")',
-      fill: '1',
-      fill_from: 'Vector2(0.5, 0.5)',
-      fill_to: 'Vector2(0.5, 0.01)',
-    },
-  },
-];
-
-describe('resolveGradientTexture2D', () => {
-  it('rasterises a SubResource(GradientTexture2D) into a DataTexture', () => {
-    const resolved = resolveGradientTexture2D(
-      'SubResource("GradientTexture2D_qhu5r")',
-      poolsOf(coinResources),
-      NO_FILES
-    );
-    expect(resolved!.texture).toBeInstanceOf(THREE.DataTexture);
-    expect(resolved!.texture.image.width).toBe(64);
-  });
-
-  it('pairs the texture with the cache key that holds it resident', () => {
-    const resolved = resolveGradientTexture2D(
-      'SubResource("GradientTexture2D_qhu5r")',
-      poolsOf(coinResources),
-      NO_FILES
-    );
-    expect(resolved!.key).toBe(proceduralTextureKey(coinResources, 'GradientTexture2D_qhu5r'));
-    // Same scene, same sub-resource: one entry, one key, one rasterisation.
-    const again = resolveGradientTexture2D(
-      'SubResource("GradientTexture2D_qhu5r")',
-      poolsOf(coinResources),
-      NO_FILES
-    );
-    expect(again!.key).toBe(resolved!.key);
-    expect(again!.texture).toBe(resolved!.texture);
-  });
-
-  it('rasterises a width Godot refuses at its 64 default, without throwing', () => {
-    const [gradient, texture] = coinResources;
-    const resources: TscnInternalResource[] = [
-      gradient!,
-      { ...texture!, id: 'GradientTexture2D_wide', data: { ...texture!.data, width: '100000' } },
-    ];
-
-    const resolved = resolveGradientTexture2D(
-      'SubResource("GradientTexture2D_wide")',
-      poolsOf(resources),
-      NO_FILES
-    );
-
-    expect(resolved!.texture.image.width).toBe(64);
-  });
-
-  it('returns null for an ExtResource reference (async image path)', () => {
-    expect(resolveGradientTexture2D('ExtResource("3")', poolsOf(coinResources), NO_FILES)).toBeNull();
-  });
-
-  // A null result carries no key, so a consumer has nothing to pin.
-  it('returns null for a SubResource of a different type', () => {
-    const resources: TscnInternalResource[] = [{ id: 'CanvasTexture_x', type: 'CanvasTexture', data: {} }];
-    expect(
-      resolveGradientTexture2D('SubResource("CanvasTexture_x")', poolsOf(resources), NO_FILES)
-    ).toBeNull();
-  });
-
-  it('returns null when the gradient reference cannot be resolved', () => {
-    const resources: TscnInternalResource[] = [
-      {
-        id: 'GradientTexture2D_orphan',
-        type: 'GradientTexture2D',
-        data: { gradient: 'SubResource("Missing")', fill: '1' },
-      },
-    ];
-    expect(
-      resolveGradientTexture2D('SubResource("GradientTexture2D_orphan")', poolsOf(resources), NO_FILES)
-    ).toBeNull();
-  });
-
-  it('returns null for undefined / malformed references', () => {
-    expect(resolveGradientTexture2D(undefined, poolsOf(coinResources), NO_FILES)).toBeNull();
-    expect(resolveGradientTexture2D('res://foo.png', poolsOf(coinResources), NO_FILES)).toBeNull();
-  });
-});
-
-describe('gradientTextureSizeWithoutGradient', () => {
-  const textureWith = (data: Record<string, string>): TscnInternalResource[] => [
-    { id: 'T', type: 'GradientTexture2D', data },
-  ];
-
-  it('is the width and height of a texture that sets no gradient or sets null', () => {
-    expect(
-      gradientTextureSizeWithoutGradient('SubResource("T")', textureWith({ width: '32', height: '16' }))
-    ).toEqual({ width: 32, height: 16 });
-    expect(gradientTextureSizeWithoutGradient('SubResource("T")', textureWith({ gradient: 'null' }))).toEqual(
-      { width: 64, height: 64 }
-    );
-  });
-
-  it('is null once a gradient is named, even one that does not resolve', () => {
-    expect(
-      gradientTextureSizeWithoutGradient(
-        'SubResource("T")',
-        textureWith({ gradient: 'SubResource("Missing")' })
-      )
-    ).toBeNull();
-  });
-
-  it('is null for another reference form or resource type', () => {
-    expect(gradientTextureSizeWithoutGradient(undefined, textureWith({}))).toBeNull();
-    expect(gradientTextureSizeWithoutGradient('ExtResource("1")', textureWith({}))).toBeNull();
-    expect(
-      gradientTextureSizeWithoutGradient('SubResource("C")', [{ id: 'C', type: 'CanvasTexture', data: {} }])
-    ).toBeNull();
-  });
-});
-
-/** The gradient block, as `.tres` section text. */
-const GRADIENT_SECTION = `[sub_resource type="Gradient" id="Gradient_cd1ha"]
+const GRADIENT = `[sub_resource type="Gradient" id="Gradient_cd1ha"]
 interpolation_mode = 2
 offsets = PackedFloat32Array(0, 0.642276, 1)
 colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.180392, 1, 1, 1, 0)
 `;
 
-/** The texture's own properties, identical to the inline scene form's. */
-const TEXTURE_PROPERTIES = `gradient = SubResource("Gradient_cd1ha")
+/** A radial GradientTexture2D over the gradient, with `extra` property lines. */
+function coinScene(extra = ''): string {
+  return `${GRADIENT}
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_qhu5r"]
+gradient = SubResource("Gradient_cd1ha")
 fill = 1
 fill_from = Vector2(0.5, 0.5)
 fill_to = Vector2(0.5, 0.01)
-`;
-
-/**
- * A material `.tres` carrying the same texture as a `[sub_resource]`, where the
- * reference resolves against the material file's table, not a scene's.
- */
-const MATERIAL_FILE = `[gd_resource type="StandardMaterial3D" load_steps=3 format=3 uid="uid://cmat000"]
-
-${GRADIENT_SECTION}
-[sub_resource type="GradientTexture2D" id="GradientTexture2D_qhu5r"]
-${TEXTURE_PROPERTIES}
-[resource]
-albedo_texture = SubResource("GradientTexture2D_qhu5r")
-roughness = 0.4
-`;
-
-/** The rasterised bytes: a comparison that ignores cache and texture identity. */
-function pixels(texture: THREE.DataTexture): Uint8Array {
-  return texture.image.data as Uint8Array;
+${extra}`;
 }
 
-describe('a GradientTexture2D inside a material .tres', () => {
-  it('resolves against the material file’s own sub-resource table', () => {
-    // The texture is in no scene's table, so it resolves in the file that carries it.
-    const parsed = parseTresFile(MATERIAL_FILE);
-    const resolved = resolveGradientTexture2D(
-      parsed.properties.albedo_texture,
-      poolsOf(parsed.subResources),
-      NO_FILES
-    );
+function gradientSource(sceneText: string): GradientTexture2DSource {
+  const source = loadedValue(TEXTURE_2D, 'SubResource("GradientTexture2D_qhu5r")', sceneText);
+  if (source.form !== 'gradient') throw new Error(`expected a gradient source, got ${source.form}`);
+  return source;
+}
+
+describe('gradientTexture2D', () => {
+  it('rasterises a GradientTexture2D into a DataTexture', () => {
+    const resolved = gradientTexture2D(gradientSource(coinScene()));
 
     expect(resolved!.texture).toBeInstanceOf(THREE.DataTexture);
-    expect(resolved!.key).toBe(proceduralTextureKey(parsed.subResources, 'GradientTexture2D_qhu5r'));
+    expect(resolved!.texture.image.width).toBe(64);
   });
 
-  it('rasterises the same pixels the inline scene form does', () => {
-    // The material file's [sub_resource] and the scene's inline one must produce
-    // the same pixels, wherever the gradient was saved.
-    const parsed = parseTresFile(MATERIAL_FILE);
-    const inMaterial = resolveGradientTexture2D(
-      parsed.properties.albedo_texture,
-      poolsOf(parsed.subResources),
-      NO_FILES
-    );
-    const inline = resolveGradientTexture2D(
-      'SubResource("GradientTexture2D_qhu5r")',
-      poolsOf(coinResources),
-      NO_FILES
-    );
+  it('rasterises one decoded value once, under the key that holds it resident', () => {
+    const source = gradientSource(coinScene());
+    const resolved = gradientTexture2D(source);
+    const again = gradientTexture2D(source);
 
-    expect(pixels(inMaterial!.texture)).toEqual(pixels(inline!.texture));
+    expect(resolved!.key).toBe(proceduralTextureKey(source, 'GradientTexture2D'));
+    expect(again!.texture).toBe(resolved!.texture);
+  });
+
+  it('rasterises a width Godot refuses at its 64 default, without throwing', () => {
+    const resolved = gradientTexture2D(gradientSource(coinScene('width = 100000')));
+
+    expect(resolved!.texture.image.width).toBe(64);
+  });
+
+  it('gives no texture for a GradientTexture2D with no gradient', () => {
+    const source = gradientSource(`[sub_resource type="GradientTexture2D" id="GradientTexture2D_qhu5r"]\n`);
+
+    expect(gradientTexture2D(source)).toBeNull();
   });
 });

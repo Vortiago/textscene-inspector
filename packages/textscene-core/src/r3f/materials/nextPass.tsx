@@ -21,7 +21,7 @@ import {
   type RefObject,
 } from 'react';
 import * as THREE from 'three';
-import type { MaterialSource } from './materialSource';
+import type { ScopedReference } from '../../resources/reading';
 import { NOTHING_DRAWN, loadedPassOf, nextPassStep } from './nextPassWalk';
 import { extraDrawProps, useExtraDrawRef } from './extraDraw';
 import { useDrawnGeometry } from './drawnGeometry';
@@ -34,7 +34,6 @@ import { surfaceAttach, surfaceSources } from './SurfaceMaterialSlots';
 import { useOneSurfaceStartingMaterial } from './useOneSurfaceStartingMaterial';
 import type { ShadowCastingEffects } from '../shadowCasting';
 import { visualLayersUserData } from '../visualLayers';
-import { parseStandardMaterial3DScalars } from '../../resources/materials/standardmaterial3d/scalars';
 
 /**
  * The element and bind props of a draw the base draws: `THREE.Points` for a points
@@ -82,7 +81,7 @@ function ChainDraw({
   shadow,
 }: {
   geometry: THREE.BufferGeometry;
-  source: MaterialSource;
+  source: ScopedReference;
   ordinal: number;
   /** Where this link's slot attaches across the part's draw groups. */
   attach: string;
@@ -112,7 +111,7 @@ function ChainDraw({
 /** The props every pass of a chain reads. */
 type PassProps = {
   /** The pass material, resolved against the tables of the file that wrote it. */
-  source: MaterialSource | undefined;
+  source: ScopedReference | undefined;
   /** The draw position: the surface's own draw is 0, each link its index. */
   ordinal: number;
   /** False for a starting pass, whose draw the part's surface slot mounts. */
@@ -144,7 +143,7 @@ export type ChainDrawSpec = Omit<
   PassProps,
   'source' | 'ordinal' | 'drawsSelf' | 'visited' | 'geometry' | 'draw' | 'onOrdinal'
 > & {
-  source: MaterialSource;
+  source: ScopedReference;
   ordinal: number;
   geometry: THREE.BufferGeometry;
 };
@@ -166,10 +165,7 @@ function NextPassLink(props: PassProps) {
   const loaded = useMaterial(source);
   const material = readyMaterial(loaded);
   // Stable between loads: a re-render of an already-loaded link re-scans nothing.
-  const loadedPass = useMemo(
-    () => material && loadedPassOf(material, parseStandardMaterial3DScalars(material.resource.data)),
-    [material]
-  );
+  const loadedPass = useMemo(() => loadedPassOf(material), [material]);
   // One step until the pass changes, so the pass after it walks with one visited set.
   const step = useMemo(
     () => nextPassStep({ source, ordinal, visited }, loadedPass),
@@ -251,9 +247,9 @@ export function NextPassChain({
   /** The geometry every extra draw shares, where the owner holds it directly. */
   geometry?: THREE.BufferGeometry | null;
   /** The per-group starting materials, override applied. */
-  sources: readonly (MaterialSource | undefined)[];
+  sources: readonly (ScopedReference | undefined)[];
   /** `material_overlay`, drawn at the ordinal one past the surface chains. Undefined for none. */
-  overlay?: MaterialSource;
+  overlay?: ScopedReference;
   /** The geometry the overlay fills, where the base draws a stand-in. Omitted, the base's own. */
   overlayGeometry?: THREE.BufferGeometry;
   /** Renders each pass's own draw when the owner's object is instanced or placed. */

@@ -74,8 +74,10 @@ describe('useSpriteFrames — in-scene SubResource', () => {
     const frames = result.current.spriteFrames!;
     expect([...frames.animations.keys()]).toEqual(['right']);
     expect(frames.animations.get('right')!.durations).toEqual([1, 2]);
-    expect(frames.subResources).toEqual([SPRITE_FRAMES_SUB]);
-    expect(frames.externalResources).toEqual(SCENE_EXT);
+    expect(frames.resources).toEqual({
+      internalResources: [SPRITE_FRAMES_SUB],
+      externalResources: SCENE_EXT,
+    });
   });
 
   it('never requests a file for the embedded home', () => {
@@ -136,8 +138,8 @@ describe('useSpriteFrames — external .tres', () => {
     expect(walk.fps).toBe(8);
     expect(walk.loop).toBe(false);
     // The file's tables, not the scene's: the frame's atlas id is scoped to it.
-    expect(frames.subResources.map((r) => r.type)).toEqual(['AtlasTexture']);
-    expect(frames.externalResources.map((r) => r.path)).toEqual(['res://sheet.png']);
+    expect(frames.resources.internalResources.map((r) => r.type)).toEqual(['AtlasTexture']);
+    expect(frames.resources.externalResources.map((r) => r.path)).toEqual(['res://sheet.png']);
   });
 
   it('decodes a late arrival (upload recovery) without remounting', () => {

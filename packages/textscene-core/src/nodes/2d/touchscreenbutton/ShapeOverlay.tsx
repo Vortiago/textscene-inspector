@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import { CanvasItemGroup } from '../../../r3f/components/CanvasItemGroup';
 import { useViewportMode } from '../../../r3f/contexts/ViewportModeContext';
 import { useSceneResources } from '../../../r3f/SceneResourcesContext';
-import { useNodeResource } from '../../../resources/reading';
+import { useNodeReference, useNodeResource } from '../../../resources/reading';
 import { SHAPE_2D } from '../../../resources/shapes/shape2d';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import { ShapeGizmo2D } from '../../physics/2d/collisionshape2d/ShapeGizmo2D';
@@ -16,14 +16,10 @@ import { DEFAULT_COLLISION_DEBUG_COLOR } from '../../physics/shared/debugColor';
 import type { TouchScreenButtonProperties } from './types';
 
 export function ShapeOverlay({ props }: { props: TouchScreenButtonProperties }) {
-  const sceneResources = useSceneResources();
   const { showCollisions } = useViewportMode();
   const shape = useNodeResource(props.shape, SHAPE_2D);
-  const { texture } = useTexture2D(
-    props.texture_normal,
-    sceneResources.externalResources,
-    sceneResources.internalResources
-  );
+  const scope = useSceneResources();
+  const { texture } = useTexture2D(useNodeReference(props.texture_normal, scope));
   const parts = useMemo(
     () => (shape.value ? [{ drawing: shape.value, colour: DEFAULT_COLLISION_DEBUG_COLOR }] : []),
     [shape.value]

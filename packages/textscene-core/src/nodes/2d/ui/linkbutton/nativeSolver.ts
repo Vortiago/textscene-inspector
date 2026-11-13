@@ -12,7 +12,6 @@
 import { isTextWidthClipped } from '../../../../r3f/controls/native/text/textOverrun';
 import type { MinimumSizeFn, SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { defineShare, type ShareNode } from '../../../../r3f/controls/native/solveHandoff';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { shapeButtonLabel } from '../../../../r3f/controls/native/buttonBase';
 import {
   resolveTextTheme,
@@ -31,9 +30,8 @@ import {
   getUnderlineThicknessPx,
 } from '../../../../r3f/controls/native/text/openSansMetrics';
 import type { LinkButtonProperties } from './types';
-import type { Rgba } from '../../../../godot/math/math';
-import { CONTROL_FONT_COLOR, CONTROL_FONT_PRESSED_COLOR } from '../../../../godot/scene/theme';
 import { LinkButtonUnderlineMode } from '../../../../godot/scene/gui';
+import { FALLBACK_THEME_COLOR } from '../../../../godot/scene/theme';
 
 /** `SceneStringName(font)`, registered for "LinkButton" at `default_theme.cpp:200`. */
 export const LINKBUTTON_THEME_FONT_KEY = 'font';
@@ -53,25 +51,13 @@ export function resolveLinkButtonDrawState(props: LinkButtonProperties): LinkBut
   return 'normal';
 }
 
-/** LinkButton's `font_color` default (`default_theme.cpp:203`). */
-const LINKBUTTON_DEFAULT_FONT_COLOR = CONTROL_FONT_COLOR;
-/** LinkButton's `font_pressed_color` default (`default_theme.cpp:204`). */
-const LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR = CONTROL_FONT_PRESSED_COLOR;
-/**
- * Neither LinkButton's `default_theme.cpp` block (`:196-210`) nor an ancestor in its `scene/theme/theme_db.cpp`
- * type chain registers `font_disabled_color`, so `ThemeOwner::get_theme_item_in_types` falls through to
- * the fallback theme's `get_theme_item(..., StringName())`: a default `Color()`, opaque black, not
- * `control_font_disabled_color`.
- */
-const LINKBUTTON_DEFAULT_DISABLED_FONT_COLOR: Rgba = { r: 0, g: 0, b: 0, a: 1 };
-
 const LINKBUTTON_THEME_KEYS: Record<LinkButtonDrawState, TextThemeKeys> = {
   normal: { sizeKey: 'font_size', colorKey: 'font_color' },
   pressed: { sizeKey: 'font_size', colorKey: 'font_pressed_color' },
   disabled: { sizeKey: 'font_size', colorKey: 'font_disabled_color' },
 };
 
-/** LinkButton's theme font size and colour for `state`: its overrides, else the ancestor Theme chain, else the theme default, else LinkButton's literal (`resolveTextTheme`). */
+/** LinkButton's theme font size and colour for `state`: its overrides, else the Theme chain, else the default theme table, else the fallback theme (`resolveTextTheme`). */
 export function linkButtonTextTheme(
   n: ShareNode,
   props: LinkButtonProperties,
@@ -80,12 +66,9 @@ export function linkButtonTextTheme(
 ): ResolvedTextTheme {
   const defaults: TextThemeDefaults = {
     fontSizePx: ctx.theme.fontSize,
-    color:
-      state === 'disabled'
-        ? LINKBUTTON_DEFAULT_DISABLED_FONT_COLOR
-        : state === 'pressed'
-          ? LINKBUTTON_DEFAULT_PRESSED_FONT_COLOR
-          : LINKBUTTON_DEFAULT_FONT_COLOR,
+    // The default theme table answers `font_color` and `font_pressed_color`. No theme sets LinkButton a
+    // `font_disabled_color` (`default_theme.cpp:196-210`), so the fallback theme answers it.
+    ...(state === 'disabled' && { color: FALLBACK_THEME_COLOR }),
   };
   return resolveTextTheme(n, props, LINKBUTTON_THEME_KEYS[state], defaults);
 }
@@ -99,16 +82,6 @@ export function shouldUnderline(state: LinkButtonDrawState, underlineMode: numbe
   const mode = underlineMode ?? LinkButtonUnderlineMode.UNDERLINE_MODE_ALWAYS;
   if (state === 'pressed') return mode !== LinkButtonUnderlineMode.UNDERLINE_MODE_NEVER;
   return mode === LinkButtonUnderlineMode.UNDERLINE_MODE_ALWAYS;
-}
-
-/** `underline_spacing` theme constant, `round(2*scale)` (`default_theme.cpp:210`). */
-export function linkButtonUnderlineSpacing(
-  constants: SolveNode['constants'],
-  ctx: Pick<SolveContext, 'theme'>
-): number {
-  const override = constants.underline_spacing;
-  if (override !== undefined) return override;
-  return Math.round(2 * ctx.theme.scale);
 }
 
 interface UnderlineGeometry {

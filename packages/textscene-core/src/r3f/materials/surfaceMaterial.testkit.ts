@@ -1,25 +1,27 @@
 /**
- * An inline StandardMaterial3D source, and the three props a test reads off the bags that
+ * A scene-held StandardMaterial3D reference, and the three props a test reads off the bags that
  * `useSurfaceMaterial` hands back.
  */
 import type * as THREE from 'three';
 import type { TscnExternalResource, TscnInternalResource } from '../../parser/types';
 import { subResource } from '../../testing/subResource';
-import type { MaterialSource } from './materialSource';
+import type { ScopedReference } from '../../resources/reading';
+import { referenceIn } from '../../resources/reading/scopedReference.testkit';
 import type { SurfaceMaterial } from './useSurfaceMaterial';
 
-/** The material body for `properties`. Keep one across renders: the source is keyed on its identity. */
+/** The material body for `properties`. */
 export function standardMaterialResource(properties: Record<string, string>): TscnInternalResource {
   return subResource('StandardMaterial3D', 'Material_a', properties);
 }
 
-/** `resource` as a scene-held material whose references resolve in the given tables. */
+/** `resource` as a node's material property, in the scene tables that hold it and `internalResources`. */
 export function inlineSource(
   resource: TscnInternalResource,
   internalResources: readonly TscnInternalResource[] = [],
   externalResources: readonly TscnExternalResource[] = []
-): MaterialSource {
-  return { kind: 'inline', material: { resource, internalResources, externalResources } };
+): ScopedReference {
+  const tables = internalResources.includes(resource) ? internalResources : [resource, ...internalResources];
+  return referenceIn(`SubResource("${resource.id}")`, externalResources, tables);
 }
 
 /** A scene-held StandardMaterial3D with `properties`. */
@@ -27,7 +29,7 @@ export function inlineMaterial(
   properties: Record<string, string>,
   internalResources: readonly TscnInternalResource[] = [],
   externalResources: readonly TscnExternalResource[] = []
-): MaterialSource {
+): ScopedReference {
   return inlineSource(standardMaterialResource(properties), internalResources, externalResources);
 }
 

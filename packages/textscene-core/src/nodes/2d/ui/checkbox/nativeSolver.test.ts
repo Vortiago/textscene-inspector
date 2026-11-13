@@ -20,7 +20,7 @@ import {
   checkBoxTextureSlots,
 } from './nativeSolver';
 import { BUTTON_THEME_FONT_KEY } from '../button/nativeSolver';
-import { controlNode, solveNode } from '../../../../r3f/controls/native/testing/solveNode';
+import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import { drawnStyleBox } from '../../../../r3f/controls/native/testing/drawnStyleBox';
 
 // 'A' advances 1354 design units and 'B' 1350, so at 16px 'A' is 10.578125 and 'AB' 21.125.
@@ -31,16 +31,17 @@ const AB_WIDTH = (1354 + 1350) * (16 / 2048); // 21.125
 const AB_SHAPED_WIDTH = Math.ceil(AB_WIDTH); // 22
 const FONT_HEIGHT = 23;
 
-function node(props: Partial<CheckBoxProperties>): SolveNode {
-  return {
+function node(props: Partial<CheckBoxProperties>, styleBoxes: SolveNode['styleBoxes'] = {}): SolveNode {
+  return withThemeItems({
     ...solveNode(),
     path: 'C',
     node: controlNode('C', 'CheckBox', { name: 'C', ...props }),
+    styleBoxes,
     // A local theme_override_colors/* reaches `resolveTextTheme` through
     // `n.colors` (the walker folds it in unconditionally), not props.
     colors: props.themeOverrideColors ?? {},
     constants: props.themeOverrideConstants ?? {},
-  };
+  });
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -216,10 +217,11 @@ describe('checkBoxCheckRect (check_box.cpp:126-142)', () => {
 
 describe('checkBoxCheckColor (check_box.cpp:139-142)', () => {
   const RED = { r: 1, g: 0, b: 0, a: 1 };
-  const colors = { checkbox_checked_color: RED };
+  const defaultColors = node({}).colors;
+  const colors = node({ themeOverrideColors: { checkbox_checked_color: RED } }).colors;
 
   it('is white by default (default_theme.cpp:312-313)', () => {
-    expect(checkBoxCheckColor({ buttonPressed: true } as CheckBoxProperties, {})).toEqual({
+    expect(checkBoxCheckColor({ buttonPressed: true } as CheckBoxProperties, defaultColors)).toEqual({
       r: 1,
       g: 1,
       b: 1,
@@ -242,15 +244,12 @@ describe('checkBoxMinimumSize: the boxes of the draw states (check_box.cpp:64-79
       content_margin_bottom: '2',
     });
     // 20 + check 16 across. Down, the content is max(0 + 4 - 8, 16) inside the largest padding 8.
-    expect(checkBoxMinimumSize({ ...node({}), styleBoxes: { normal } }, ctx())).toEqual({ x: 36, y: 24 });
+    expect(checkBoxMinimumSize(node({}, { normal }), ctx())).toEqual({ x: 36, y: 24 });
   });
 
   it('lays out in the largest margins of every state under align_to_largest_stylebox', () => {
     const pressed = drawnStyleBox({ content_margin_left: '30', content_margin_right: '30' });
-    const n = {
-      ...node({ themeOverrideConstants: { align_to_largest_stylebox: 1 } }),
-      styleBoxes: { pressed },
-    };
+    const n = node({ themeOverrideConstants: { align_to_largest_stylebox: 1 } }, { pressed });
     // The unpressed box takes the pressed box's 60 px across.
     expect(checkBoxMinimumSize(n, ctx()).x).toBe(60 + 16);
   });
@@ -259,7 +258,7 @@ describe('checkBoxMinimumSize: the boxes of the draw states (check_box.cpp:64-79
     const none = drawnStyleBox({});
     const styleBoxes = { normal: none, pressed: none, hover: none, disabled: none };
     // Measured in Godot 4.6.3: the content is max(0 - 8, 16) inside the padding 8, and 0 - 8 + 16 across.
-    expect(checkBoxMinimumSize({ ...node({}), styleBoxes }, ctx())).toEqual({ x: 16, y: 24 });
+    expect(checkBoxMinimumSize(node({}, styleBoxes), ctx())).toEqual({ x: 16, y: 24 });
   });
 });
 

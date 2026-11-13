@@ -4,14 +4,14 @@
  * FastNoiseLite, one slice after another, each slice's rows from the top.
  */
 import { describe, expect, it } from 'vitest';
-import { decodeFastNoiseLite } from '../../noise/fastnoiselite/decode';
+import { fastNoiseLiteOf } from '../../noise/fastnoiselite/fastNoiseLite.testkit';
 import { type Gradient } from '../gradienttexture2d/types';
 import { decodeNoiseTexture3D } from './decode';
 import { noiseTexture3DTexels, type NoiseTexture3DInput } from './texels';
 import { GradientInterpolationMode } from '../../../godot/scene/gradientTexture';
 
 function input(properties: Record<string, string>, colorRamp: Gradient | null = null): NoiseTexture3DInput {
-  return { tex: decodeNoiseTexture3D(properties), noise: decodeFastNoiseLite({}), colorRamp };
+  return { tex: decodeNoiseTexture3D(properties), noise: fastNoiseLiteOf({}), colorRamp };
 }
 
 const SIZE = { width: '4', height: '3', depth: '5' };

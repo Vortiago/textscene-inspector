@@ -31,6 +31,15 @@ export function parseGPUParticles3D(
       GPU_PARTICLES_DEFAULT_VISIBILITY_AABB,
     processMaterial: properties.process_material,
     drawOrder: intOr(properties.draw_order, GpuDrawOrder.INDEX, `${name}.draw_order`),
+    trailEnabled: boolOr(properties.trail_enabled, false, `${name}.trail_enabled`),
+    // `set_trail_lifetime` refuses a value below 0.01 - CMP_EPSILON (`gpu_particles_3d.cpp:247-250`).
+    trailLifetime: settableFloatOr(
+      properties.trail_lifetime,
+      0.3,
+      { min: 0.00999 },
+      `${name}.trail_lifetime`
+    ),
+    drawSkin: heldResource(properties.draw_skin),
     transformAlign: parseTransformAlign(properties.transform_align, `${name}.transform_align`),
     emitter: parseEmitter(properties, name),
     drawPasses: parseDrawPasses(properties, name),

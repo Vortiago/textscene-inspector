@@ -11,7 +11,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import type { TscnInternalResource, TscnNode } from '../parser/types';
 import { createFakeResourceLoader } from './testing/createFakeResourceLoader';
 import { painterEnv } from '../r3f/controls/native/testing/painterProps';
-import { solveNode as emptySolveNode } from '../r3f/controls/native/testing/solveNode';
+import { solveNode as emptySolveNode, withThemeItems } from '../r3f/controls/native/testing/solveNode';
 import type { SolveNode } from '../r3f/controls/native/solveTree';
 import type { Rect2 } from '../godot/math/rect2';
 import { Sprite2D } from '../nodes/2d/sprite2d/Component';
@@ -107,12 +107,12 @@ function node(type: string, properties: TscnNode['properties']): TscnNode {
 function solveNodeFor(n: TscnNode): SolveNode {
   // The same pools `provide` puts in the ambient context: a Control painter
   // resolves its own refs in its own scope, and here the two are one scene.
-  return {
+  return withThemeItems({
     ...emptySolveNode(),
     path: n.name,
     node: n,
     resources: { internalResources: GRADIENT_RESOURCES, externalResources: [] },
-  };
+  });
 }
 
 const heading = (type: string) => ({ type: 'node', attributes: { type, name: 'N' } });

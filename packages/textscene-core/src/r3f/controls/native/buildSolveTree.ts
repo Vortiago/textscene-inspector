@@ -28,7 +28,6 @@ import {
 import { useResourceLoader } from '../../../resources/useResource';
 import { useCacheVersion } from '../../../resources/useCacheVersion';
 import type { ResourceType } from '../../../resources/ResourceEventBus';
-import { NODE_PROPERTY } from '../../../resources/useTexture2D';
 import {
   extResourceTexture2DSize,
   inlineTexture2DSize,
@@ -581,7 +580,8 @@ function buildForest(
     if (slotsFn) {
       const requests = slotsFn(node, themedIcons, builtIconsOf(ownScope, themeChain));
       const slots: Record<string, Vector2 | null> = {};
-      for (const { key, ref, scope, isHeldLocally = NODE_PROPERTY, sizeOfFile } of requests) {
+      // A node's own slot is held locally: `make_local_resource` sets it up (`packed_scene.cpp:701-704`).
+      for (const { key, ref, scope, isHeldLocally = true, sizeOfFile } of requests) {
         slots[key] = ref
           ? resolveTextureRefSize(
               ref,
@@ -604,9 +604,7 @@ function buildForest(
     const props = node.properties as Record<string, unknown>;
     const ref = props.texture ?? props.icon;
     const size =
-      typeof ref === 'string' && ref !== ''
-        ? resolveTextureRefSize(ref, ext, int, path, NODE_PROPERTY)
-        : null;
+      typeof ref === 'string' && ref !== '' ? resolveTextureRefSize(ref, ext, int, path, true) : null;
     return { size, slots: EMPTY_TEXTURE_SLOTS };
   }
 

@@ -30,6 +30,7 @@ import {
 import { useCanvasItemMerge } from '../../components/LitCanvasItemPixels';
 import { materialProgramInputs } from '../../materialProgramInputs';
 import { canvasMapProps, useOwnerCanvas2DTexture } from '../../canvas2DTextureDecode';
+import { referenceHeldBy } from '../../../resources/reading';
 import { useTexture2D } from '../../../resources/useTexture2D';
 import type { Rgba } from '../../../godot/math/math';
 import { useDisposeOnRelease } from '../../useDisposeOnRelease';
@@ -54,6 +55,11 @@ interface StyleBoxQuadProps {
 
 function styleBoxKindOf(box: ResolvedStyleBox): 'flat' | 'line' | 'texture' {
   return 'styleBoxKind' in box ? box.styleBoxKind : 'flat';
+}
+
+/** Whether `<StyleBoxQuad>` can draw `box`: a line or texture box may, an empty or clear flat box never does. */
+export function mayDrawStyleBox(box: ResolvedStyleBox): boolean {
+  return styleBoxKindOf(box) !== 'flat' || isDrawn(box);
 }
 
 /**
@@ -204,11 +210,7 @@ function StyleBoxTextureMesh({ texture, rect, tint, renderOrder, clippingPlanes 
   const canvasItemMerge = useCanvasItemMerge();
   const canvasSpace = useCanvasColorSpace();
   const { texture: rawTexture } = useTexture2D(
-    texture.texture,
-    texture.resources.externalResources,
-    texture.resources.internalResources,
-    undefined,
-    texture.isHeldLocally
+    referenceHeldBy(texture.texture, texture.resources, texture.isHeldLocally)
   );
 
   const geometry = useMemo(() => {

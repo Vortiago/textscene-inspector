@@ -9,27 +9,13 @@ import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { godotBinary, rounded } from '../../../testing/measureKit.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUTPUT = resolve(HERE, '../../animationTrackSampler.godot.json');
+/** A `real_t` reads back as the same float from nine significant digits. */
 const SIGNIFICANT_DIGITS = 9;
-
-function godotBinary() {
-  const flag = process.argv.indexOf('--godot');
-  return flag === -1 ? 'godot' : process.argv[flag + 1];
-}
-
-/** A `real_t` prints with the digits that read back as the same float. */
-function rounded(value) {
-  if (Array.isArray(value)) return value.map(rounded);
-  if (typeof value === 'number') return Number(value.toPrecision(SIGNIFICANT_DIGITS));
-  if (value !== null && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, rounded(entry)]));
-  }
-  return value;
-}
 
 /** One line for each key and sample, so a regenerated file diffs by case. */
 function formatted(cases) {
@@ -49,7 +35,7 @@ try {
     encoding: 'utf8',
   });
   const json = stdout.slice(stdout.indexOf('SAMPLES\n') + 'SAMPLES\n'.length);
-  writeFileSync(OUTPUT, formatted(rounded(JSON.parse(json))));
+  writeFileSync(OUTPUT, formatted(rounded(JSON.parse(json), SIGNIFICANT_DIGITS)));
 } finally {
   rmSync(project, { recursive: true, force: true });
 }

@@ -15,7 +15,6 @@ import { controlNode, solveNode as emptySolveNode } from '../../../../r3f/contro
 import { GraphFrame } from './Component';
 import { countTintSplit, splitTints } from '../../../../r3f/controls/native/testing/tintSplit';
 import type { GraphFrameProperties } from './types';
-import { NODE_PROPERTY } from '../../../../resources/useTexture2D';
 import { bundledRunOf, bundledRunMeshes } from '../../../../r3f/controls/native/testing/bundledRunStub';
 
 // A run of the bundled face is a stub mesh that carries its props, so no test decodes the font.
@@ -73,7 +72,7 @@ function texturePanel(properties: Partial<GraphFrameProperties> = {}): SolveNode
             },
           },
         ],
-        NODE_PROPERTY
+        true
       )!,
     },
   };
