@@ -9,7 +9,8 @@ import { transpileShadingLanguage } from '../../../../packages/textscene-core/sr
 
 /**
  * The owner in a refusal of a construct not transpiled yet, as `notTranspiled` and the overload
- * refusal write it (`shaders/language/instructions.ts`): `'sin' is not transpiled yet (#1825)`.
+ * refusal write it (`shaders/language/instructions.ts`): the issue number in brackets after
+ * `is not transpiled yet`.
  */
 const NOT_TRANSPILED = /is not transpiled yet \((#\d+)\)/;
 
