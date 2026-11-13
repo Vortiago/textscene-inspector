@@ -1,7 +1,6 @@
 /**
- * Two facts of the GLSL Godot draws with that the tree alone does not show: the negation Godot's
- * compiler leaves out of its text, and the constants its GLSL compiler, glslang, folds. The
- * emitter follows both, so the GPU computes what Godot's GLSL computes.
+ * The constants Godot's GLSL compiler, glslang, folds, which the tree alone does not show. The
+ * emitter writes each folded constant, so the GPU reads what Godot's GLSL holds.
  */
 
 import { godotConstantDouble } from './godotNumber.js';
@@ -9,36 +8,11 @@ import type { Expression, OperatorNode } from './shaderTree.js';
 import { swizzleLanes } from './swizzle.js';
 import { shapeOf } from './types.js';
 
-const isNegation = (expression: Expression) =>
-  expression.kind === 'operator' && expression.op === 'OP_NEGATE';
-
 /**
- * Whether Godot's text of `expression` starts with `-`. A swizzle's text starts with its owner's,
- * and a scalar float constant's with its sign. A vector constant's text starts with its type.
- */
-function textStartsWithMinus(expression: Expression): boolean {
-  if (isNegation(expression)) return true;
-  if (expression.kind === 'member') return textStartsWithMinus(expression.owner);
-  return (
-    expression.kind === 'constant' && expression.type === 'float' && signBit(expression.values[0] as number)
-  );
-}
-
-const signBit = (value: number) => value < 0 || Object.is(value, -0);
-
-/**
- * Whether Godot writes the negation `negation` as its operand alone: it does when the operand's
- * text starts with `-` (`shader_compiler.cpp:1141`), so `-(-a)` draws as `-a`.
- */
-export function dropsNegation(negation: OperatorNode): boolean {
-  return textStartsWithMinus(negation.operands[0]!);
-}
-
-/**
- * The lanes of each expression glslang folds to a constant, or nothing for one that reads an
- * argument. glslang reads each constant of Godot's text as a double, folds the arithmetic of
- * constants in double precision, and rounds once, when it writes the SPIR-V constant. A fold in
- * 32-bit floats lands one unit off: `58.656 + 74.377` is 0x43050873 in Godot, 0x43050872 so.
+ * The lanes of each float scalar or vector expression glslang folds to a constant, or nothing for
+ * one that reads an argument or holds another type. glslang reads Godot's float constants as
+ * doubles, folds in double precision and rounds once. A fold in 32-bit floats lands one unit off:
+ * `58.656 + 74.377` is 0x43050873 in Godot, 0x43050872 so.
  */
 export class GlslangFolding {
   /** Filled by `lanesOf` as it walks a function's tree, which never changes. */
@@ -54,6 +28,8 @@ export class GlslangFolding {
   }
 
   private fold(expression: Expression): readonly number[] | undefined {
+    const shape = shapeOf(expression.type);
+    if (shape?.scalar !== 'float' || shape.columns !== undefined) return undefined;
     switch (expression.kind) {
       case 'constant':
         return expression.values.map((value) => godotConstantDouble(value as number));
@@ -75,9 +51,7 @@ export class GlslangFolding {
       const lanes = operands.flat();
       return lanes.length === 1 ? Array<number>(shapeOf(expression.type)!.lanes).fill(lanes[0]!) : lanes;
     }
-    if (expression.op === 'OP_NEGATE') {
-      return dropsNegation(expression) ? operands[0] : operands[0]!.map((lane) => -lane);
-    }
+    if (expression.op === 'OP_NEGATE') return operands[0]!.map((lane) => -lane);
     const apply = DOUBLE_OPERATIONS[expression.op];
     if (!apply) return undefined;
     const [left, right] = operands as [readonly number[], readonly number[]];

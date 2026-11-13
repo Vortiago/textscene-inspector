@@ -29,9 +29,12 @@ export const LANE_COUNT = Object.fromEntries(
  */
 export const SENTINEL_BITS = 0xc0ffee01;
 
+/** The precision words a type may follow, which leave the type's lanes as they are. */
+const PRECISION = /\b(?:lowp|mediump|highp)\s+/g;
+
 /** The return type, the parameter types and the parameter names of the probe's `probe` function. */
 export function probeSignature(source) {
-  const match = /^(\w+) probe\(([^)]*)\)/.exec(source);
+  const match = /^(\w+) probe\(([^)]*)\)/.exec(source.replace(PRECISION, ''));
   if (!match) throw new Error(`expected a probe source that starts with "<type> probe(", got ${source}`);
   const declarations =
     match[2].trim() === '' ? [] : match[2].split(',').map((parameter) => parameter.trim().split(/\s+/));

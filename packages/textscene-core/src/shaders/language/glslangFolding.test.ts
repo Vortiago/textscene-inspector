@@ -1,9 +1,9 @@
-/** The negation Godot's text leaves out, and the constants glslang folds, on parsed trees. */
+/** The constants glslang folds, on parsed trees. */
 
 import { describe, expect, it } from 'vitest';
-import { dropsNegation, GlslangFolding } from './godotGlsl.js';
+import { GlslangFolding } from './glslangFolding.js';
 import { parse } from './parse.js';
-import type { Expression, OperatorNode } from './shaderTree.js';
+import type { Expression } from './shaderTree.js';
 import { tokenize } from './tokenizer.js';
 
 /** The expression of the first statement, a `return`. */
@@ -14,26 +14,6 @@ function resultOf(source: string): Expression {
 }
 
 const bitsOf = (value: number) => new Uint32Array(new Float32Array([value]).buffer)[0];
-
-describe('dropsNegation', () => {
-  it.each([
-    ['a negation', 'float f(float a) { return -(-a); }'],
-    ['a swizzle of a negation', 'float f(vec2 a) { return -((-a).y); }'],
-    ['a negative constant', 'float f(float a) { return -(-1.5) + a; }'],
-  ])('drops the negation of %s, whose text starts with a minus', (_, source) => {
-    const result = resultOf(source);
-    const negation = (
-      result.kind === 'operator' && result.operands.length === 2 ? result.operands[0] : result
-    )!;
-    expect(dropsNegation(negation as OperatorNode)).toBe(true);
-  });
-
-  it('keeps the negation of a sum, whose text starts with a parenthesis', () => {
-    expect(dropsNegation(resultOf('float f(float a, float b) { return -(a + b); }') as OperatorNode)).toBe(
-      false
-    );
-  });
-});
 
 describe('GlslangFolding', () => {
   it('folds a sum of constants in double precision and leaves the rounding to the emitter', () => {

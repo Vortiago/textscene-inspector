@@ -30,7 +30,7 @@ import type { Argument, ConstantNode, Expression, OperatorNode, Scalar } from '.
 import { swizzled } from './swizzle.js';
 import type { TokenCursor } from './tokenCursor.js';
 import type { Token } from './tokenizer.js';
-import { shapeOf } from './types.js';
+import { elementType, shapeOf } from './types.js';
 
 /** What an identifier names where the expression stands. */
 export interface ExpressionScope {
@@ -231,8 +231,9 @@ export class ExpressionParser {
     const index = this.expression();
     if (index.type !== 'int' && index.type !== 'uint')
       this.tokens.fail('Only integer expressions are allowed for indexing.');
-    const shape = shapeOf(owner.type);
-    if (!shape || shape.lanes === 1) this.tokens.fail(`An object of type '${owner.type}' can't be indexed.`);
+    const type = elementType(owner.type);
+    if (type === undefined) this.tokens.fail(`An object of type '${owner.type}' can't be indexed.`);
+    const shape = shapeOf(owner.type)!;
     const size = shape.columns ?? shape.lanes;
     if (index.kind === 'constant') {
       // Godot reads the constant's lane as unsigned, so -1 is out of range as 4294967295.
@@ -242,7 +243,7 @@ export class ExpressionParser {
     this.tokens.expect('TK_BRACKET_CLOSE', "Expected a ']'.");
     return {
       kind: 'operator',
-      type: shape.columns === undefined ? shape.scalar : `vec${shape.columns}`,
+      type,
       op: 'OP_INDEX',
       row: instruction('OP_INDEX')!,
       operands: [owner, index],

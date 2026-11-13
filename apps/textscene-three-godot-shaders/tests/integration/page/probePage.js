@@ -73,6 +73,15 @@ const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
 const scene = new THREE.Scene();
 scene.add(quad);
 
+/** The info log of the program the last render failed to compile. Cleared before each render. */
+let shaderError;
+renderer.debug.onShaderError = (gl, program, vertexShader, fragmentShader) => {
+  shaderError = [fragmentShader, vertexShader]
+    .map((shader) => gl.getShaderInfoLog(shader))
+    .join('')
+    .trim();
+};
+
 /** A lane of each scalar kind from its 32 bits, and the 32 bits of a lane. */
 const LANE_OF_BITS = {
   float: (bits) => uintBitsToFloat(bits),
@@ -136,16 +145,20 @@ function colourOf(bits) {
 
 /**
  * The bits of each result lane of `spec`'s probe over its rows, or `{ error }` when the
- * transpilation refuses the source.
+ * transpilation refuses the source or the GL context refuses the program.
  */
 function runProbe(spec) {
-  let probe;
   try {
-    probe = transpileShadingLanguage(spec.source).functions.get('probe');
+    const probe = transpileShadingLanguage(spec.source).functions.get('probe');
     if (!probe) return { error: 'the transpilation has no function probe' };
+    return { bits: resultBits(probe, spec) };
   } catch (error) {
     return { error: String(error.message ?? error) };
   }
+}
+
+/** The bits of each result lane of `probe` over `spec`'s rows, drawn into a one-row target. */
+function resultBits(probe, spec) {
   const size = shapeOf(probe.returnType).lanes;
   const width = spec.rows * size;
   const pixel = int(screenCoordinate.x);
@@ -161,15 +174,20 @@ function runProbe(spec) {
     type: THREE.UnsignedByteType,
     format: THREE.RGBAFormat,
   });
-  renderer.setRenderTarget(target);
-  renderer.render(scene, camera);
-  const pixels = new Uint8Array(width * 4);
-  renderer.readRenderTargetPixels(target, 0, 0, width, 1, pixels);
-  renderer.setRenderTarget(null);
-  target.dispose();
-  material.dispose();
-  const view = new DataView(pixels.buffer);
-  return { bits: Array.from({ length: width }, (_, index) => view.getUint32(index * 4, true)) };
+  try {
+    renderer.setRenderTarget(target);
+    shaderError = undefined;
+    renderer.render(scene, camera);
+    if (shaderError !== undefined) throw new Error(`the GL context refuses the program: ${shaderError}`);
+    const pixels = new Uint8Array(width * 4);
+    renderer.readRenderTargetPixels(target, 0, 0, width, 1, pixels);
+    const view = new DataView(pixels.buffer);
+    return Array.from({ length: width }, (_, index) => view.getUint32(index * 4, true));
+  } finally {
+    renderer.setRenderTarget(null);
+    target.dispose();
+    material.dispose();
+  }
 }
 
 globalThis.runProbe = runProbe;

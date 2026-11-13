@@ -47,3 +47,10 @@ export const VALUE_TYPES: readonly ValueType[] = [...SHAPES.keys()];
 export function vectorType(scalar: ScalarKind, lanes: number): ValueType {
   return lanes === 1 ? scalar : `${VECTOR_PREFIX[scalar]}${lanes}`;
 }
+
+/** The type `owner[i]` reads: a vector's scalar or a matrix's column, or nothing for a scalar. */
+export function elementType(owner: ValueType): ValueType | undefined {
+  const shape = shapeOf(owner);
+  if (!shape || shape.lanes === 1) return undefined;
+  return shape.columns === undefined ? shape.scalar : `vec${shape.columns}`;
+}

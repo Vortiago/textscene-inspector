@@ -9,16 +9,10 @@ import type { SourcePosition } from './shadingLanguageError.js';
 import type { Expression, FunctionNode, ShaderNode, Statement } from './shaderTree.js';
 import { shapeOf } from './types.js';
 
-const TRANSPILED_TYPES: ReadonlySet<string> = new Set(['float', 'vec2', 'vec3', 'vec4']);
+/** The issues whose rows the emitter emits: each row the table gives one of them. */
+const TRANSPILED_OWNERS: ReadonlySet<string> = new Set(['#1823']);
 
-const TRANSPILED_OPERATORS: ReadonlySet<string> = new Set([
-  'OP_ADD',
-  'OP_SUB',
-  'OP_MUL',
-  'OP_DIV',
-  'OP_NEGATE',
-  'OP_CONSTRUCT',
-]);
+const isTranspiled = (row: InstructionRow) => TRANSPILED_OWNERS.has(row.owner);
 
 export function checkTranspiled(shader: ShaderNode): void {
   for (const definition of shader.functions) checkFunction(definition);
@@ -38,34 +32,25 @@ function checkStatement(statement: Statement): void {
 function checkExpression(expression: Expression): void {
   switch (expression.kind) {
     case 'constant':
-      if (!TRANSPILED_TYPES.has(expression.type))
-        throw notTranspiled(literalRow(expression.type), expression.position);
+      checkRow(literalRow(expression.type), expression.position);
       return;
     case 'variable':
       return;
     case 'member':
-      if (!TRANSPILED_TYPES.has(expression.owner.type))
-        throw notTranspiled(expression.row, expression.position);
+      checkRow(expression.row, expression.position);
       return checkExpression(expression.owner);
     case 'operator':
       expression.operands.forEach(checkExpression);
-      if (
-        !TRANSPILED_OPERATORS.has(expression.op) ||
-        !rowTypes(expression.row).every((type) => TRANSPILED_TYPES.has(type))
-      ) {
-        throw notTranspiled(expression.row, expression.position);
-      }
+      checkRow(expression.row, expression.position);
   }
 }
 
-/** The types a row returns and takes. A generic row, `OP_INDEX`, has none, so it is refused. */
-function rowTypes(row: InstructionRow): string[] {
-  if (row.returns === undefined) return ['generic'];
-  return [row.returns, ...(row.args ?? [])];
+function checkType(type: string, position: SourcePosition): void {
+  checkRow(instruction(type)!, position);
 }
 
-function checkType(type: string, position: SourcePosition): void {
-  if (!TRANSPILED_TYPES.has(type)) throw notTranspiled(instruction(type)!, position);
+function checkRow(row: InstructionRow, position: SourcePosition): void {
+  if (!isTranspiled(row)) throw notTranspiled(row, position);
 }
 
 /** The literal row of a constant's scalar kind: `int literal`, or `true` for a bool. */

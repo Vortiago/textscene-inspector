@@ -35,6 +35,12 @@ script = ExtResource("1")
 `;
 
 /**
+ * Room for Godot's output: each probe prints its viewport's pixels as hex, and several hundred
+ * probes pass the 1 MiB that `spawnSync` allows by default.
+ */
+const MAX_OUTPUT_BYTES = 256 * 1024 * 1024;
+
+/**
  * Godot's standard output for a project whose one scene runs `mainScript`, beside `files` keyed
  * by their names in the project.
  * @canonical A scratch Godot project run once, its standard output read
@@ -54,6 +60,7 @@ export function runGodotScript(mainScript, files) {
       encoding: 'utf8',
       env: plan.env,
       timeout: plan.timeoutMs,
+      maxBuffer: MAX_OUTPUT_BYTES,
     });
     if (result.error) throw new Error(`run godot: ${result.error.message}`);
     if (result.status !== 0) throw new Error(`godot exited with ${result.status}:\n${result.stderr}`);
