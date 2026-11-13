@@ -25,24 +25,33 @@ const OPERATOR_RECORD = join(TESTS, 'operators/godot-verdicts.json');
 const RANDOM_RECORD = join(TESTS, 'random/godot-record.json');
 const CORPUS_RECORD = join(TESTS, 'corpus/godot-verdicts.json');
 
-/** The record of Godot's verdict on each of `cases`, `{ id, text }`. */
-function verdictRecord(cases) {
+/** The record of Godot's verdict on each case of each set, `{ id, text }`, from one Godot run. */
+function verdictRecords(...sets) {
+  const cases = sets.flat();
   const { godot, verdicts } = godotVerdicts(cases.map((each) => each.text));
   requireGodotVersion(godot);
-  return renderVerdictRecord(
-    godot,
-    cases.map((each) => each.id),
-    verdicts
-  );
+  let next = 0;
+  return sets.map((set) => {
+    const ofSet = verdicts.slice(next, (next += set.length));
+    return renderVerdictRecord(
+      godot,
+      set.map((each) => each.id),
+      ofSet
+    );
+  });
 }
 
 function main() {
   const output = runProbesInGodot([...PROBES, ...RANDOM_PROGRAMS]);
+  const [operatorRecord, corpusRecord] = verdictRecords(
+    OPERATOR_CASES.map(({ id, godotText }) => ({ id, text: godotText })),
+    CORPUS
+  );
   const outputs = [
     [RECORD, renderRecord(output, PROBES)],
     [RANDOM_RECORD, renderRecord(output, RANDOM_PROGRAMS)],
-    [OPERATOR_RECORD, verdictRecord(OPERATOR_CASES.map(({ id, godotText }) => ({ id, text: godotText })))],
-    [CORPUS_RECORD, verdictRecord(CORPUS)],
+    [OPERATOR_RECORD, operatorRecord],
+    [CORPUS_RECORD, corpusRecord],
   ];
   const summary = `${PROBES.length} probes, ${RANDOM_PROGRAMS.length} random programs, ${OPERATOR_CASES.length} operator cases, ${CORPUS.length} corpus shaders`;
   const options = { tool: 'godot-probes', summary };

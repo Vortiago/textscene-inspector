@@ -9,6 +9,9 @@ export const TESTING_FILE = 'testing.md';
 
 const count = (items, test) => items.filter(test).length;
 
+/** The source a corpus shader comes from: the first part of its id, the `rejected/` prefix left out. */
+const sourceOf = (shader) => shader.id.replace(/^rejected\//, '').split('/')[0];
+
 function operatorSection(operatorCases, operatorRecord) {
   const accepted = count(operatorCases, (test) => operatorRecord.cases[test.id] === 'accepted');
   const rows = count(operatorCases, (test) => test.row !== undefined);
@@ -53,9 +56,9 @@ function stateCounts(states) {
 function corpusSection({ corpus, corpusRecord, states, knownMismatches }) {
   const accepted = corpus.filter((shader) => corpusRecord.cases[shader.id] === 'accepted');
   const translated = count(accepted, (shader) => states[shader.id] === 'translated');
-  const sources = [...new Set(corpus.map((shader) => shader.id.replace(/^rejected\//, '').split('/')[0]))];
+  const sources = [...new Set(corpus.map(sourceOf))];
   const sourceLines = sources.map((source) => {
-    const shaders = corpus.filter((shader) => shader.id.replace(/^rejected\//, '').startsWith(`${source}/`));
+    const shaders = corpus.filter((shader) => sourceOf(shader) === source);
     const types = [...new Set(shaders.map((shader) => shader.shaderType))].join(', ');
     return `| ${source} | ${count(shaders, (shader) => !shader.changedFrom)} | ${count(shaders, (shader) => shader.changedFrom)} | ${types} |`;
   });

@@ -61,17 +61,19 @@ export function randomSummary(results) {
   return `${equal} of ${results.length} random programs bit-equal with Godot: ${differ.length} differ (${known} known with an owner, largest ${maxUlp} ULP), ${refused} refused.`;
 }
 
-/**
- * One line per failure: a program that is not equal and not known, with its reduced program,
- * or a known one that is equal now and must leave the list.
- */
-export function randomFailures(results) {
-  return results.flatMap(({ program, verdict, reduced }) => {
-    const known = KNOWN_DIFFERENCES[program.name];
-    if (verdict.passed)
-      return known ? [`${program.name} equals Godot now: remove it from knownDifferences.mjs`] : [];
-    if (known) return [];
-    const smallest = reduced ?? program;
-    return [`${program.name} differs: ${verdict.detail}\n  reduced: ${smallest.source}`];
-  });
+/** One line for each program that is not equal and not known, with its reduced program. */
+export function newDifferences(results) {
+  return results
+    .filter(({ program, verdict }) => !verdict.passed && !(program.name in KNOWN_DIFFERENCES))
+    .map(
+      ({ program, verdict, reduced }) =>
+        `${program.name} differs: ${verdict.detail}\n  reduced: ${(reduced ?? program).source}`
+    );
+}
+
+/** One line for each known program that equals Godot now and must leave the list. */
+export function staleKnownDifferences(results) {
+  return results
+    .filter(({ program, verdict }) => verdict.passed && program.name in KNOWN_DIFFERENCES)
+    .map(({ program }) => `${program.name} equals Godot now: remove it from knownDifferences.mjs`);
 }

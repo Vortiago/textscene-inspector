@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { treeNodes } from './programTree.mjs';
 import { generatePrograms } from './programs.mjs';
+import { FIXED_SEED } from './randomSet.mjs';
 import { reduceProgram } from './reduce.mjs';
 
 const FAULTY_ROW = 'OP_DIV(vec3,float)';
@@ -11,7 +12,7 @@ const differsWithFault = async (programs) => programs.map((program) => program.r
 const nodeCount = (program) => treeNodes(program.tree).length;
 
 /** A large program of the fixed set that has the faulty row. */
-const LARGE_FAULTY = generatePrograms({ seed: 1847, count: 400 })
+const LARGE_FAULTY = generatePrograms({ seed: FIXED_SEED, count: 400 })
   .filter((program) => program.rows.includes(FAULTY_ROW))
   .sort((a, b) => nodeCount(b) - nodeCount(a))[0];
 

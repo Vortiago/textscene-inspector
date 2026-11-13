@@ -5,7 +5,7 @@
  */
 
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
-import { operatorExpression } from './operatorText.mjs';
+import { operatorExpression, operatorOf } from './operatorText.mjs';
 
 const TYPED_OPERATOR_ROWS = INSTRUCTION_TABLE.filter((row) => row.family === 'operator' && row.args?.length);
 
@@ -13,9 +13,7 @@ const TYPED_OPERATOR_ROWS = INSTRUCTION_TABLE.filter((row) => row.family === 'op
 const VALUE_TYPES = [...new Set(TYPED_OPERATOR_ROWS.flatMap((row) => row.args))];
 
 /** The operand count of each operator that has typed rows. */
-const ARITY = new Map(
-  TYPED_OPERATOR_ROWS.map((row) => [row.id.slice(0, row.id.indexOf('(')), row.args.length])
-);
+const ARITY = new Map(TYPED_OPERATOR_ROWS.map((row) => [operatorOf(row), row.args.length]));
 
 const ROWS_BY_ID = new Map(TYPED_OPERATOR_ROWS.map((row) => [row.id, row]));
 

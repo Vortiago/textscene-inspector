@@ -11,7 +11,7 @@ import { parseArgs } from 'node:util';
 import { runProbesInGodot } from '../../../../scripts/godot-probes/godotProject.mjs';
 import { recordEntry } from '../../../../scripts/godot-probes/record.mjs';
 import { withConsumerPage } from '../consumer.mjs';
-import { compareRandomPrograms, randomFailures, randomSummary } from '../integration/randomPrograms.mjs';
+import { compareRandomPrograms, newDifferences, randomSummary } from '../integration/randomPrograms.mjs';
 import { generatePrograms } from './programs.mjs';
 
 const { values } = parseArgs({
@@ -35,6 +35,6 @@ const results = await withConsumerPage(
   (page) => compareRandomPrograms(page, programs, entries)
 );
 console.log(`[shader-random] seed ${seed}: ${randomSummary(results)}`);
-const failures = randomFailures(results).filter((line) => !line.includes('equals Godot now'));
+const failures = newDifferences(results);
 for (const failure of failures) console.error(`[shader-random] ${failure}`);
 process.exitCode = failures.length === 0 ? 0 : 1;

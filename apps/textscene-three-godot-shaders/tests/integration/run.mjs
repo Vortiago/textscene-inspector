@@ -15,7 +15,12 @@ import { PROBES } from '../probes/probes.mjs';
 import { RANDOM_PROGRAMS } from '../random/randomSet.mjs';
 import { compareProbe, coverageFailures } from './compare.mjs';
 import { runOnPage } from './pageRun.mjs';
-import { compareRandomPrograms, randomFailures, randomSummary } from './randomPrograms.mjs';
+import {
+  compareRandomPrograms,
+  newDifferences,
+  randomSummary,
+  staleKnownDifferences,
+} from './randomPrograms.mjs';
 
 const readRecord = (path) => JSON.parse(readFileSync(join(import.meta.dirname, path), 'utf8'));
 const RECORD = readRecord('../probes/godot-record.json');
@@ -62,7 +67,7 @@ async function main() {
   const randomLine = randomSummary(random);
   console.log(`[shader-random] ${randomLine}`);
   writeJobSummary(`## Shader probes against Godot\n\n${count}.\n\n${randomLine}\n\n${table}\n`);
-  const allFailures = [...failures, ...randomFailures(random)];
+  const allFailures = [...failures, ...newDifferences(random), ...staleKnownDifferences(random)];
   for (const failure of allFailures) console.error(`[shader-probes] ${failure}`);
   process.exitCode = allFailures.length === 0 ? 0 : 1;
 }

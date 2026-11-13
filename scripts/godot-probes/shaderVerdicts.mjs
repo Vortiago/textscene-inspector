@@ -11,10 +11,7 @@ const DONE = 'VERDICTS DONE';
 
 /**
  * The texts go in one JSON file: a `.gdshader` file in the project would be read as a resource
- * too, and a `Shader` set from a string compiles the same way.
- */
-/**
- * The markers go to standard error, as Godot's errors do, so the two keep their order:
+ * too, and a `Shader` set from a string compiles the same way. The markers go to standard error, as Godot's errors do, so the two keep their order:
  * `xvfb-run` joins standard error to standard output (`/usr/bin/xvfb-run:184`).
  */
 const VERDICT_SCRIPT = `extends Node

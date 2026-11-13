@@ -20,11 +20,10 @@ const COMMITTED_STATES = existsSync(STATES_FILE) ? JSON.parse(readFileSync(STATE
 
 const SHADER_TYPES = ['spatial', 'canvas_item', 'particles', 'sky', 'fog'];
 
-const OUTCOMES = CORPUS.map((shader) => ({
-  shader,
-  godot: verdictOfText(RECORD.cases[shader.id]),
-  outcome: judge(verdictOfText(RECORD.cases[shader.id]), transpilerVerdict(shader.text)),
-}));
+const OUTCOMES = CORPUS.map((shader) => {
+  const godot = verdictOfText(RECORD.cases[shader.id]);
+  return { shader, godot, outcome: judge(godot, transpilerVerdict(shader.text)) };
+});
 
 /** A state as `states.json` holds it: the owner beside a shader not translated yet. */
 const stateText = ({ state, owner }) => (owner ? `${state} (${owner})` : state);

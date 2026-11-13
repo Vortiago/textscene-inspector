@@ -25,31 +25,48 @@ export async function reduceProgram(program, stillDiffers) {
 
 /** Every program one step smaller than `program`, the smallest first. */
 function smallerPrograms(program) {
-  const size = treeNodes(program.tree).length;
-  const trees = replacements(program.tree, program);
-  return trees
-    .map((tree) => ({ ...program, tree, rows: rowsOf(tree), source: programSource({ ...program, tree }) }))
-    .filter((candidate) => treeNodes(candidate.tree).length < size)
-    .sort((a, b) => treeNodes(a.tree).length - treeNodes(b.tree).length);
+  const literals = literalsByType(program.tree);
+  return replacements(program.tree, program.parameters, literals)
+    .map((tree) => ({ tree, size: treeNodes(tree).length }))
+    .sort((a, b) => a.size - b.size)
+    .map(({ tree }) => ({
+      ...program,
+      tree,
+      rows: rowsOf(tree),
+      source: programSource({ ...program, tree }),
+    }));
+}
+
+/** The first literal of each type in `tree`. */
+function literalsByType(tree) {
+  const literals = new Map();
+  for (const node of treeNodes(tree)) {
+    if (node.kind === 'literal' && !literals.has(node.type)) literals.set(node.type, node);
+  }
+  return literals;
 }
 
 /** Each tree that `node`'s tree becomes when one of its nodes is replaced by a smaller one. */
-function replacements(node, program) {
-  const here = [...childrenOf(node).filter((child) => child.type === node.type), ...leavesOf(node, program)];
+// Each replacement is a child or a leaf in place of a node that is not a leaf, so every tree is smaller.
+function replacements(node, parameters, literals) {
+  const here = [
+    ...childrenOf(node).filter((child) => child.type === node.type),
+    ...leavesOf(node, parameters, literals),
+  ];
   const below = childrenOf(node).flatMap((child, index) =>
-    replacements(child, program).map((smaller) => withChild(node, index, smaller))
+    replacements(child, parameters, literals).map((smaller) => withChild(node, index, smaller))
   );
   return [...here.map(withoutSpareBrackets), ...below];
 }
 
 /** The parameters of `node`'s type, and a literal of it when the program holds one. */
-function leavesOf(node, program) {
+function leavesOf(node, parameters, literals) {
   if (node.kind === 'parameter' || node.kind === 'literal') return [];
-  const parameters = program.parameters.flatMap((type, index) =>
+  const ofType = parameters.flatMap((type, index) =>
     type === node.type ? [{ kind: 'parameter', type, index }] : []
   );
-  const literal = treeNodes(program.tree).find((each) => each.kind === 'literal' && each.type === node.type);
-  return literal ? [...parameters, literal] : parameters;
+  const literal = literals.get(node.type);
+  return literal ? [...ofType, literal] : ofType;
 }
 
 /** `node` with no spare brackets: they belonged to its old place in the tree. */

@@ -89,11 +89,17 @@ const PRIORITY = {
   OP_SELECT_IF: 15,
 };
 
-/** The priority of `op`, or the loosest for an assignment, which always takes brackets here. */
+/** The priority of an assignment, which always takes brackets here. */
+export const LOOSEST = 16;
+
+/** The priority of `op`, or the loosest for an assignment. */
 export function operatorPriority(op) {
   if (op in POSTFIX) return 0;
-  return PRIORITY[op] ?? 16;
+  return PRIORITY[op] ?? LOOSEST;
 }
+
+/** The name of a row's operator or function: `OP_ADD` for `OP_ADD(vec3,float)`, `vec3` for `vec3(vec2,float)`. */
+export const operatorOf = (row) => row.id.slice(0, row.id.indexOf('('));
 
 /** True for an operator written before its one operand. */
 export const isPrefix = (op) => op in PREFIX;

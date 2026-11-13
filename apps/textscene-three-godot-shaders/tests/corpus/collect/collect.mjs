@@ -7,11 +7,11 @@
  * rejected shader made by one change to each valid one. It needs Godot, xvfb and git.
  */
 
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { REPO_ROOT } from '../../../../../scripts/repoRoot.mjs';
+import { fetchShallow } from '../../../../../scripts/vendor-git.mjs';
 import { docsShaders, inlineShaders, oneChange } from './corpusSources.mjs';
 import { generatorShaders } from './generatorShaders.mjs';
 
@@ -38,37 +38,29 @@ const FIXTURE_LICENCE = 'MIT, this repository';
 /** The directories of this repository whose shaders join the corpus. */
 const FIXTURE_DIRS = ['scenes/fixtures'];
 
-/** A shallow clone of `repository` at its commit in a new directory, which the caller removes. */
+/** A shallow copy of `repository` at its commit, with no `.git`, in a new directory the caller removes. */
 function checkout({ url, commit }) {
   const directory = mkdtempSync(join(tmpdir(), 'shader-corpus-'));
-  const git = (...args) => execFileSync('git', args, { cwd: directory, stdio: 'ignore' });
-  git('init', '-q');
-  git('fetch', '-q', '--depth', '1', url, commit);
-  git('checkout', '-q', 'FETCH_HEAD');
+  fetchShallow(url, commit, directory);
   return directory;
 }
 
 function filesUnder(directory, pattern) {
   return readdirSync(directory, { recursive: true })
-    .filter((path) => pattern.test(path) && !path.split('/').includes('.git'))
+    .filter((path) => pattern.test(path))
     .sort();
 }
 
 /** The shaders of a project: each `.gdshader` file, and each Shader written inside a scene or resource. */
 function projectShaders(root, prefix, licence, source) {
-  const files = filesUnder(root, /\.gdshader$/).map((path) => ({
-    id: `${prefix}/${path}`,
-    text: readFileSync(join(root, path), 'utf8'),
-    source: { ...source, path },
-    licence,
-  }));
+  const shader = (id, text, path) => ({ id, text, source: { ...source, path }, licence });
+  const files = filesUnder(root, /\.gdshader$/).map((path) =>
+    shader(`${prefix}/${path}`, readFileSync(join(root, path), 'utf8'), path)
+  );
   const inline = filesUnder(root, /\.(tscn|tres)$/).flatMap((path) =>
-    inlineShaders(readFileSync(join(root, path), 'utf8')).map((text, index) => ({
-      id: `${prefix}/${path}#${index}`,
-      text,
-      source: { ...source, path },
-      licence,
-    }))
+    inlineShaders(readFileSync(join(root, path), 'utf8')).map((text, index) =>
+      shader(`${prefix}/${path}#${index}`, text, path)
+    )
   );
   return [...files, ...inline];
 }

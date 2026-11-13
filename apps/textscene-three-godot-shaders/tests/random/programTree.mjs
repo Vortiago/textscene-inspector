@@ -5,10 +5,16 @@
  * operator order as a user's shader does.
  */
 
-import { isInfix, isPrefix, operatorExpression, operatorPriority } from '../operators/operatorText.mjs';
+import {
+  LOOSEST,
+  isInfix,
+  isPrefix,
+  operatorExpression,
+  operatorPriority,
+} from '../operators/operatorText.mjs';
 
 /** The name of parameter `index`. */
-export const parameterName = (index) => `a${index}`;
+const parameterName = (index) => `a${index}`;
 
 /** The text of `node`. */
 export function expressionText(node) {
@@ -59,9 +65,6 @@ function needsBrackets(operand, parent, position) {
   if (!isInfix(operand.op) || priority === LOOSEST) return true;
   return priority > parentPriority || (priority === parentPriority && position === 1);
 }
-
-/** The priority of an assignment, which always takes brackets here. */
-const LOOSEST = 16;
 
 /** Every node of `node`'s tree, `node` first. */
 export function treeNodes(node) {

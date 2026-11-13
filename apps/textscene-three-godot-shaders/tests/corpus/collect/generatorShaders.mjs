@@ -85,7 +85,7 @@ export function generatorShaders() {
 }
 
 /** The generator lines of Godot's output, each distinct code once, in the order Godot wrote them. */
-export function parseGeneratorOutput(output) {
+function parseGeneratorOutput(output) {
   const byCode = new Map();
   for (const line of output.split('\n').filter((text) => text.startsWith(LINE_PREFIX))) {
     const shader = JSON.parse(line.slice(LINE_PREFIX.length));

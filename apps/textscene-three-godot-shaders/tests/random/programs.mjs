@@ -7,18 +7,15 @@
 
 import { INSTRUCTION_TABLE } from '../../../../packages/textscene-core/src/shaders/language/instructionTable.generated.ts';
 import { LANE_COUNT } from '../../../../scripts/godot-probes/probeShader.mjs';
-import { WRITES_OPERAND } from '../operators/operatorText.mjs';
+import { WRITES_OPERAND, operatorOf } from '../operators/operatorText.mjs';
 import { FLOAT_VALUES } from '../probes/inputs.mjs';
 import { PROBES } from '../probes/probes.mjs';
 import { programSource, rowsOf } from './programTree.mjs';
 import { seededRandom } from './seededRandom.mjs';
 
 /** The rows a probe names, each once: the translated rows, as the coverage test counts them. */
-export const TRANSLATED_ROWS = (() => {
-  const ids = new Set(PROBES.flatMap((probe) => probe.rows));
-  const rows = new Map(INSTRUCTION_TABLE.filter((row) => ids.has(row.id)).map((row) => [row.id, row]));
-  return [...rows.values()];
-})();
+const PROBED_IDS = new Set(PROBES.flatMap((probe) => probe.rows));
+export const TRANSLATED_ROWS = INSTRUCTION_TABLE.filter((row) => PROBED_IDS.has(row.id));
 
 /** The types the probe harness passes in and reads out. */
 const HARNESS_TYPES = Object.keys(LANE_COUNT);
@@ -83,15 +80,25 @@ function floatLiteralText(random) {
  */
 function producersByType(rows) {
   const producers = new Map();
-  const add = (type, producer) => producers.set(type, [...(producers.get(type) ?? []), producer]);
+  const add = (type, producer) => {
+    if (!producers.has(type)) producers.set(type, []);
+    producers.get(type).push(producer);
+  };
   for (const row of rows) {
     if (row.family === 'swizzle') {
       const [base, letters] = row.id.split('.');
       for (let size = 1; size <= 4; size += 1) {
-        add(vectorType(componentType(base), size), { row, kind: 'swizzle', base, letters, size });
+        add(vectorType(componentType(base), size), {
+          row,
+          kind: 'swizzle',
+          base,
+          letters,
+          size,
+          inputs: [base],
+        });
       }
     } else if (row.family in PRODUCER_KINDS && row.args?.length) {
-      add(row.returns, { row, kind: PRODUCER_KINDS[row.family], args: row.args });
+      add(row.returns, { row, kind: PRODUCER_KINDS[row.family], args: row.args, inputs: row.args });
     }
   }
   return producers;
@@ -121,7 +128,7 @@ class ProgramWriter {
       changed = false;
       for (const [type, producers] of this.producers) {
         for (const producer of producers) {
-          const inputs = producer.kind === 'swizzle' ? [producer.base] : producer.args;
+          const { inputs } = producer;
           if (!inputs.every((input) => depths.has(input))) continue;
           const depth = 1 + Math.max(...inputs.map((input) => depths.get(input)));
           if (depth < (depths.get(type) ?? Infinity)) {
@@ -194,11 +201,12 @@ class ProgramWriter {
 
   /** Whether `producer`'s inputs can be built in `depth - 1`, and its operand can be written. */
   fits(producer, depth) {
-    const inputs = producer.kind === 'swizzle' ? [producer.base] : producer.args;
     if (producer.kind === 'operator' && WRITES_OPERAND.has(operatorOf(producer.row))) {
       if (!this.parameters.includes(producer.args[0])) return false;
     }
-    return inputs.every((input) => (this.minDepth.get(input) ?? Infinity) <= depth - 1 || this.leaf(input));
+    return producer.inputs.every(
+      (input) => (this.minDepth.get(input) ?? Infinity) <= depth - 1 || this.leaf(input)
+    );
   }
 
   applied(producer, depth) {
@@ -259,9 +267,6 @@ class ProgramWriter {
     return (sign * this.random.below(100000)) / 10 ** this.random.below(5);
   }
 }
-
-/** The name of a row's operator or function: `OP_ADD` for `OP_ADD(vec3,float)`, `vec3` for `vec3(vec2,float)`. */
-const operatorOf = (row) => row.id.slice(0, row.id.indexOf('('));
 
 /**
  * The programs of `seed`: one rooted at each translated row, so every row is in the set, then
