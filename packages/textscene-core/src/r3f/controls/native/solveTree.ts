@@ -13,7 +13,7 @@ import type { FontResource } from '../../../resources/fonts/font/types';
 import type { ThemeResource } from '../../../resources/styles/theme/types';
 import type { LabelSettingsResource } from '../../../resources/styles/labelsettings/types';
 import type { PaintRange } from '../../canvasPaintOrder';
-import type { CanvasAncestors } from '../../canvasAncestors';
+import type { CanvasAncestors } from '../../canvasItemPass/canvasAncestors';
 import type { StyleBoxFlatData } from './styleBoxFlat';
 import type { Rgba } from '../../../godot/math/math.js';
 import type { Vector2 } from '../../../godot/math/vector.js';

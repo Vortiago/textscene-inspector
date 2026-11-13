@@ -51,8 +51,8 @@ export function localYSortShifts(tree: readonly SolveNode[], transforms: Control
     // Z compares as absolute values, so the items start from the root's own z.
     const rootProps = controlProps(root);
     const rootZ = accumulateCanvasItemZ(0, {
-      z_index: rootProps.zIndex ?? 0,
-      z_as_relative: rootProps.zAsRelative,
+      zIndex: rootProps.zIndex ?? 0,
+      zAsRelative: rootProps.zAsRelative,
     });
     collect(root, TRANSFORM2D_IDENTITY, rootZ, items, nested);
     const sorted = items
@@ -80,10 +80,7 @@ export function localYSortShifts(tree: readonly SolveNode[], transforms: Control
       const own = transforms.get(child.path);
       const toSortRoot = own ? multiplyTransform2D(toRoot, own) : toRoot;
       const props = controlProps(child);
-      const z = accumulateCanvasItemZ(parentZ, {
-        z_index: props.zIndex ?? 0,
-        z_as_relative: props.zAsRelative,
-      });
+      const z = accumulateCanvasItemZ(parentZ, { zIndex: props.zIndex ?? 0, zAsRelative: props.zAsRelative });
       const item = { node: child, sortY: toSortRoot.ty, z };
       out.push(item);
       if (ysortsChildren(child.node)) collect(child, toSortRoot, z, out, nested);

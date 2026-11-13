@@ -24,10 +24,10 @@ export const WORLD_CANVAS_LAYER = 0;
  */
 export function accumulateCanvasItemZ(
   parentZ: number,
-  props: { z_index: number; z_as_relative?: boolean }
+  step: { zIndex: number; zAsRelative?: boolean }
 ): number {
-  if (props.z_as_relative === false) return props.z_index;
-  return clampCanvasItemZ(parentZ + props.z_index);
+  if (step.zAsRelative === false) return step.zIndex;
+  return clampCanvasItemZ(parentZ + step.zIndex);
 }
 
 /** A z held inside the canvas z window, as `_cull_canvas_item` clamps a relative sum. */
