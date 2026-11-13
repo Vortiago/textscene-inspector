@@ -1,5 +1,5 @@
 /**
- * Parses the vendored Godot 4.6.3 shading language sources into the rows of the instruction table.
+ * Parses Godot 4.6.3's shading language sources into the rows of the instruction table.
  * Each function takes a file's text and answers rows, so a test runs on an excerpt. A construct
  * of a table this does not understand throws: a row is never dropped in silence.
  */
@@ -233,19 +233,16 @@ export function preprocessorDirectives(preprocessorCpp) {
   return [...directives, { name: 'defined', line: lineAt(preprocessorCpp, defined) }, ...pragmas];
 }
 
-/** The texts of the vendored files the table reads. */
+/** The files the table reads, as paths in Godot's tree, which a row's citation names too. */
 export const SOURCE_FILES = {
-  header: 'shader_language.h',
-  language: 'shader_language.cpp',
-  types: 'shader_types.cpp',
-  preprocessor: 'shader_preprocessor.cpp',
+  header: 'servers/rendering/shader_language.h',
+  language: 'servers/rendering/shader_language.cpp',
+  types: 'servers/rendering/shader_types.cpp',
+  preprocessor: 'servers/rendering/shader_preprocessor.cpp',
 };
 
-/** Godot's directory of each vendored file, for the citation of a row. */
-const SOURCE_DIRECTORY = 'servers/rendering';
-
 function cite(file, line) {
-  return `${SOURCE_DIRECTORY}/${file}:${line}`;
+  return `${file}:${line}`;
 }
 
 /**

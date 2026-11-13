@@ -30,6 +30,7 @@ cd godot-4.6.3 && git sparse-checkout set scene doc/classes modules servers \
 - A member tagged `overrides="…"` is a default override, not a new property.
 - A property flagged `PROPERTY_USAGE_NONE` never reaches a `.tscn`.
 - Write each value as a literal with its source line as a comment. Nothing may read the checkout (`scripts/godot-source-decoupling.test.mjs`).
+- A generator that parses Godot's source, such as `pnpm godot:shader-language`, reads it through `scripts/godotSource.mjs`. The CI image holds the source at `/opt/godot-source`, at the tag of its Godot binary. To run the generator outside the image, pass the clone: `pnpm godot:shader-language --godot-source <clone>`. The decoupling test names the generators that may read it.
 - `pnpm ref:godot` runs the `godot` on PATH. Check that `godot --version` matches the clone.
 - A `file.cpp:line` is 4.6.3-relative unless its comment names another release. Moving the pin means a sweep of every citation.
 - The published class reference is 4.7, so `AreaLight3D` has no citable `ADD_PROPERTY` hint.
