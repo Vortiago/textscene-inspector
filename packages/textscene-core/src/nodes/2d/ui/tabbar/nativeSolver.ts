@@ -17,7 +17,7 @@ import type {
   TextureSlotsFn,
 } from '../../../../r3f/controls/native/solverRegistry';
 import { controlSolverRegistry, themedSlotRequests } from '../../../../r3f/controls/native/solverRegistry';
-import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
+import type { ShareNode, SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
 import type { StyleBoxFlatData } from '../../../../r3f/controls/native/styleBoxFlat';
 import type { Rect2 } from '../../../../godot/math/rect2';
@@ -98,7 +98,7 @@ const TAB_BAR_FONT_COLOR_KEYS: Record<TabDrawState, string> = {
  * both the minimum size (`:82`) and the draw (`:677`).
  */
 export function tabBarFontSizePx(
-  n: SolveNode,
+  n: ShareNode,
   props: Pick<TabBarProperties, 'themeOverrideFontSizes'>
 ): number {
   return resolveNodeFontSizePx(

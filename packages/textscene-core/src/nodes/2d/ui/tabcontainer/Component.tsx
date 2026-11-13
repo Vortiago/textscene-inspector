@@ -1,99 +1,28 @@
 /**
  * `<TabContainer>`: the native (WebGL canvas) painter for `TabContainer::_notification(NOTIFICATION_DRAW)`
- * (`tab_container.cpp:247` to `:277`). It draws `panel` behind the content band, `tabbar_background`
- * across the full-width header band (`:262`, empty by default), and the strip through `<TabBarStrip>`
- * on the synthetic node from `buildInternalTabBarNode`, at the offset `resolveTabContainerStrip` finds.
- * No popup menu (`get_popup()`) is modelled.
+ * (`tab_container.cpp:247` to `:277`). It draws `panel` behind the content band and `tabbar_background`
+ * across the full-width header band (`:262`, empty by default). The internal TabBar draws the strip
+ * (`internalControls.ts`). No popup menu (`get_popup()`) is modelled.
  */
 
-import { useMemo } from 'react';
-import {
-  NO_PIECE_SLOTS,
-  type NativeControlComponentProps,
-} from '../../../../r3f/controls/ControlComponentRegistry';
+import type { NativeControlComponentProps } from '../../../../r3f/controls/ControlComponentRegistry';
 import { painterView } from '../../../../r3f/controls/native/solveTree';
 import { requiredThemeItem } from '../../../../r3f/controls/native/themeItems';
-import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import { PanelChrome } from '../../../../r3f/controls/native/PanelChrome';
 import { StyleBoxQuad } from '../../../../r3f/controls/native/StyleBoxQuad';
 import { CanvasItemGroup } from '../../../../r3f/components/CanvasItemGroup';
-import { TAB_ALIGNMENT_LEFT, tabBarMinimumSize } from '../tabbar/nativeSolver';
-import { TabBarStrip, useTabBarModel } from '../tabbar/Component';
-import { resolveTabContainerStrip } from './loadStrip';
 import type { TabContainerProperties } from './types';
-import {
-  TABS_POSITION_TOP,
-  buildInternalTabBarNode,
-  deriveTabContainerTabs,
-  tabBarRect,
-  tabContentBand,
-  tabHeaderBand,
-  tabHeaderHeight,
-  tabbarStyleMargins,
-} from './nativeSolver';
-import { canvasSubOrder } from '../../../../r3f/canvasItemState';
+import { TABS_POSITION_TOP, tabContentBand, tabHeaderBand } from './tabLayout';
+import { tabHeaderHeightChannel } from './nativeSolver';
 
-const EMPTY_CHILD_RECTS: NativeControlComponentProps['childRects'] = new Map();
-
-export function TabContainer({
-  solveNode,
-  tint,
-  childTint,
-  rect,
-  theme,
-  renderOrder,
-  slot,
-  chromeSlot,
-  measureText,
-  snapToPixels,
-}: NativeControlComponentProps) {
+export function TabContainer({ solveNode, tint, rect, renderOrder, meta }: NativeControlComponentProps) {
   const props = painterView<TabContainerProperties>(solveNode);
-  const tabsVisible = props.tabsVisible ?? true;
   const tabsPosition = props.tabsPosition ?? TABS_POSITION_TOP;
-  const alignment = props.tabAlignment ?? TAB_ALIGNMENT_LEFT;
-  const allTabsInFront = props.allTabsInFront ?? false;
-
-  const derivedTabs = useMemo(
-    () => deriveTabContainerTabs(solveNode, props.tabOverrides),
-    [solveNode, props.tabOverrides]
-  );
-  const syntheticBar = useMemo(
-    () => buildInternalTabBarNode(solveNode, derivedTabs, props),
-    [solveNode, derivedTabs, props]
-  );
-
-  const barCtx: Pick<SolveContext, 'theme' | 'measureText'> = { theme, measureText };
-  const barMinHeight = tabBarMinimumSize(syntheticBar, barCtx as SolveContext).y;
-
-  const tabbarMargin = tabbarStyleMargins(solveNode.styleBoxes);
-  const showsStrip = tabsVisible && derivedTabs.length > 0;
-  const headerHeight = showsStrip ? tabHeaderHeight(barMinHeight, tabbarMargin) : 0;
-
-  const barModel = useTabBarModel(syntheticBar, theme);
-  const { drawInputs, layoutInput } = barModel;
-  const strip = useMemo(
-    () =>
-      resolveTabContainerStrip(drawInputs, layoutInput, {
-        containerWidthPx: rect.w,
-        leftMarginPx: solveNode.rtl ? tabbarMargin.right : tabbarMargin.left,
-        rightMarginPx: solveNode.rtl ? tabbarMargin.left : tabbarMargin.right,
-        sideMarginPx: requiredThemeItem(solveNode.constants, 'side_margin'),
-        rtl: solveNode.rtl,
-      }),
-    [drawInputs, layoutInput, rect.w, solveNode.rtl, solveNode.constants, tabbarMargin]
-  );
-  const barRect = showsStrip
-    ? tabBarRect(rect, barMinHeight, tabsPosition, alignment, strip.sideMarginPx, tabbarMargin, solveNode.rtl)
-    : null;
+  // Absent only for a pair the solve did not see, which draws no header.
+  const headerHeight = tabHeaderHeightChannel.open(meta) ?? 0;
   const contentBand = tabContentBand(rect, headerHeight, tabsPosition);
-
-  const tabbarBackground = requiredThemeItem(solveNode.styleBoxes, 'tabbar_background');
   const headerBand = tabHeaderBand(rect, headerHeight, tabsPosition);
-
-  // Godot's default (`all_tabs_in_front === false`, `INTERNAL_MODE_BACK`) draws the strip
-  // after every page, on top, from the chrome slot. With `true` (`INTERNAL_MODE_FRONT`) it draws
-  // after the container's own pixels and before the pages, from a piece of its own key.
-  const stripSlot = canvasSubOrder(allTabsInFront ? slot : chromeSlot);
+  const tabbarBackground = requiredThemeItem(solveNode.styleBoxes, 'tabbar_background');
 
   return (
     <>
@@ -113,29 +42,6 @@ export function TabContainer({
             color={tint.own}
             rect={{ x: 0, y: 0, w: headerBand.w, h: headerBand.h }}
             renderOrder={renderOrder}
-          />
-        </CanvasItemGroup>
-      )}
-      {barRect && (
-        // The strip's own group key: three sorts by the nearest group's order first.
-        <CanvasItemGroup position={[barRect.x, -barRect.y, 0]} renderOrder={stripSlot.key}>
-          <TabBarStrip
-            solveNode={syntheticBar}
-            model={barModel}
-            offset={strip.offset}
-            // The strip is a TabBar child Control (`tab_container.cpp:247`): no `self_modulate`.
-            tint={childTint}
-            rect={{ x: 0, y: 0, w: barRect.w, h: barRect.h }}
-            theme={theme}
-            renderOrder={stripSlot.key}
-            slot={stripSlot}
-            chromeSlot={stripSlot}
-            layerSlot={stripSlot}
-            pieceSlots={NO_PIECE_SLOTS}
-            measureText={measureText}
-            snapToPixels={snapToPixels}
-            childRects={EMPTY_CHILD_RECTS}
-            meta={undefined}
           />
         </CanvasItemGroup>
       )}
