@@ -14,7 +14,6 @@ import {
   layoutTabContent,
   pickTabStyleBox,
   resolveTabDrawState,
-  tabBarMinimumSize,
   tabBarThemeIconSize,
   tabBarFontSizePx,
   tabContentWidth,
@@ -23,12 +22,15 @@ import {
   shapeTabLabel,
 } from './nativeSolver';
 import { nativeTheme } from '../../../../r3f/controls/native/nativeTheme';
-import type { SolveContext } from '../../../../r3f/controls/native/solverRegistry';
+import { controlSolverRegistry, type SolveContext } from '../../../../r3f/controls/native/solverRegistry';
 import type { SolveNode } from '../../../../r3f/controls/native/solveTree';
 import { controlNode, solveNode, withThemeItems } from '../../../../r3f/controls/native/testing/solveNode';
 import type { TabBarProperties } from './types';
 import { controlProps } from '../control/testing/controlProps';
 import { visualChars } from '../../../../r3f/controls/native/text/textLayout.testkit';
+
+/** `TabBar::get_minimum_size`, as the solver reads it. */
+const tabBarMinimumSize = controlSolverRegistry.minimumSize('TabBar')!;
 
 describe('resolveTabDrawState', () => {
   it('picks selected for the current tab', () => {

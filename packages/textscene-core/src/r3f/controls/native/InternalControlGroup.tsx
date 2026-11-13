@@ -109,7 +109,7 @@ export function InternalControls({ internals, solved, slot, chromeSlot, env }: I
  * pixels from its own `modulate` and `self_modulate` over what its parent hands down, as
  * `useCanvasItemState` does for an authored Control.
  */
-export function InternalControlGroup({ node, solved, slots, env }: InternalControlGroupProps) {
+function InternalControlGroup({ node, solved, slots, env }: InternalControlGroupProps) {
   const childRects = useMemo(() => childRectsOf(node.children, solved), [node.children, solved]);
   const props = controlProps(node);
   const tintInputs = useMemo(

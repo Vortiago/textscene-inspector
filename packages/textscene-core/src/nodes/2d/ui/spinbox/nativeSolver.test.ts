@@ -18,7 +18,6 @@ import {
   spinBoxLayout,
   rangeStepDecimals,
   formatGodotNumber,
-  spinBoxDisplayText,
   spinBoxUpButtonState,
   spinBoxDownButtonState,
   spinBoxIconColor,
@@ -29,6 +28,8 @@ import { controlProps } from '../control/testing/controlProps';
 import type { ThemeResource } from '../../../../resources/styles/theme/types';
 import type { TscnInternalResource } from '../../../../parser/types';
 import '../lineedit/index.r3f';
+import { internalControlsOf } from '../../../../r3f/controls/native/internalControls';
+import type { LineEditProperties } from '../lineedit/types';
 
 // At font size 16 with no theme in the chain: 'W' advances 1936*(16/2048) = 15.125
 // (`openSansMetrics.ts`'s hmtx), and the line is ceil(2189*16/2048) + ceil(600*16/2048) = 23 with
@@ -42,6 +43,12 @@ function node(props: Partial<SpinBoxProperties> = {}): SolveNode {
     path: 'S',
     node: controlNode('S', 'SpinBox', { name: 'S', ...props }),
   };
+}
+
+/** The text `_update_text` writes into the field of a SpinBox with `props`, in `locale` (`spin_box.cpp:88-114`). */
+function fieldText(props: Partial<SpinBoxProperties>, locale = ''): string {
+  const [field] = internalControlsOf({ ...node(props), locale }, nativeTheme(1));
+  return (field!.node.node.properties as LineEditProperties).text ?? '';
 }
 
 function ctx(withMeasurer = true): SolveContext {
@@ -157,19 +164,17 @@ describe('formatGodotNumber', () => {
   });
 });
 
-describe('spinBoxDisplayText', () => {
+describe("the field's text", () => {
   it('wraps the formatted value in prefix/suffix, space-separated (happy path)', () => {
-    expect(
-      spinBoxDisplayText(controlProps({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }), 5.5, '')
-    ).toBe('$ 5.5 kg');
+    expect(fieldText({ prefix: '$', suffix: 'kg', step: 0.25, value: 5.5 })).toBe('$ 5.5 kg');
   });
 
   it('omits an absent prefix/suffix entirely, not as an empty wrap (error path)', () => {
-    expect(spinBoxDisplayText(controlProps({ name: 'S' }), 5, '')).toBe('5');
+    expect(fieldText({ value: 5 })).toBe('5');
   });
 
   it('falls back to step=1 (Range default) when unset (edge case)', () => {
-    expect(spinBoxDisplayText(controlProps({ name: 'S' }), 5.5, '')).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
+    expect(fieldText({ value: 5.5 })).toBe('6'); // step_decimals(1) = 0, so String::num rounds with %.0lf
   });
 });
 
@@ -255,17 +260,13 @@ describe('spinBoxMinimumSize', () => {
   });
 });
 
-describe('spinBoxDisplayText with a locale (spin_box.cpp:91-93)', () => {
+describe("the field's text in a locale (spin_box.cpp:91-93)", () => {
   it('writes the value in the digits of the locale, and keeps the prefix and suffix as they are', () => {
-    expect(
-      spinBoxDisplayText(controlProps({ name: 'S', prefix: '$', suffix: 'kg', step: 0.25 }), 5.5, 'ar')
-    ).toBe('$ ٥٫٥ kg');
+    expect(fieldText({ prefix: '$', suffix: 'kg', step: 0.25, value: 5.5 }, 'ar')).toBe('$ ٥٫٥ kg');
   });
 
   it('writes ASCII digits while localize_numeral_system is off', () => {
-    expect(spinBoxDisplayText(controlProps({ name: 'S', localizeNumeralSystem: false }), 5.5, 'ar')).toBe(
-      '6'
-    );
+    expect(fieldText({ localizeNumeralSystem: false, value: 5.5 }, 'ar')).toBe('6');
   });
 });
 

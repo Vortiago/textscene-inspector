@@ -96,7 +96,7 @@ function pushedConstants(constants: SolveNode['constants']): SolveNode['constant
 }
 
 /** Every theme item the container pushes onto its bar, resolved on the container. */
-export function tabBarPushedItems(container: SolveNode): PushedThemeItems {
+function tabBarPushedItems(container: SolveNode): PushedThemeItems {
   const props = container.node.properties as TabContainerProperties;
   return {
     styleBoxes: pick(container.styleBoxes, PUSHED_STYLE_BOXES),

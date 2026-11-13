@@ -14,7 +14,6 @@ import { systemFont } from '../../../../r3f/controls/native/text/sfntOutlines.te
 import { NO_PROJECT_FONTS } from '../../../../resources/fonts/font/projectFonts';
 import type { TabBarProperties } from '../tabbar/types';
 import type { TabContainerProperties } from './types';
-import { tabBarPushedItems } from './internalControls';
 import { controlSolverRegistry } from '../../../../r3f/controls/native/solverRegistry';
 import './nativeSolver';
 
@@ -99,32 +98,50 @@ describe('the TabBar a TabContainer builds', () => {
 });
 
 describe('the theme items a TabContainer pushes onto its TabBar', () => {
-  it('pushes every item of _on_theme_changed (tab_container.cpp:314-344)', () => {
-    const pushed = tabBarPushedItems(container());
-    expect(Object.keys(pushed.styleBoxes!).sort()).toEqual(
-      ['tab_disabled', 'tab_focus', 'tab_hovered', 'tab_selected', 'tab_unselected'].sort()
-    );
-    expect(Object.keys(pushed.icons!).sort()).toEqual(
-      ['decrement', 'decrement_highlight', 'drop_mark', 'increment', 'increment_highlight'].sort()
-    );
-    expect(Object.keys(pushed.colors!).sort()).toEqual(
-      [
-        'drop_mark_color',
-        'font_disabled_color',
-        'font_hovered_color',
-        'font_outline_color',
-        'font_selected_color',
-        'font_unselected_color',
-        'icon_disabled_color',
-        'icon_hovered_color',
-        'icon_selected_color',
-        'icon_unselected_color',
-      ].sort()
-    );
-    expect(Object.keys(pushed.constants!).sort()).toEqual(
-      ['h_separation', 'icon_max_width', 'outline_size', 'tab_separation'].sort()
-    );
-    expect(Object.keys(pushed.fontOverrides!)).toEqual(['font']);
+  const PUSHED_STYLE_BOXES = ['tab_disabled', 'tab_focus', 'tab_hovered', 'tab_selected', 'tab_unselected'];
+  const PUSHED_ICONS = ['decrement', 'decrement_highlight', 'drop_mark', 'increment', 'increment_highlight'];
+  const PUSHED_COLORS = [
+    'drop_mark_color',
+    'font_disabled_color',
+    'font_hovered_color',
+    'font_outline_color',
+    'font_selected_color',
+    'font_unselected_color',
+    'icon_disabled_color',
+    'icon_hovered_color',
+    'icon_selected_color',
+    'icon_unselected_color',
+  ];
+  /** The bar's name of each constant, keyed by the container's: `icon_separation` lands as `h_separation`. */
+  const PUSHED_CONSTANTS: Record<string, string> = {
+    icon_separation: 'h_separation',
+    icon_max_width: 'icon_max_width',
+    outline_size: 'outline_size',
+    tab_separation: 'tab_separation',
+  };
+
+  it("gives the bar the container's colours of _on_theme_changed (tab_container.cpp:314-344)", () => {
+    const n = container();
+    const bar = barOf({
+      ...n,
+      colors: { ...n.colors, ...Object.fromEntries(PUSHED_COLORS.map((name) => [name, RED])) },
+    });
+    for (const name of PUSHED_COLORS) expect(bar.colors[name], name).toEqual(RED);
+  });
+
+  it("gives the bar the container's constants of _on_theme_changed", () => {
+    const n = container();
+    const constants = Object.fromEntries(Object.keys(PUSHED_CONSTANTS).map((name) => [name, 77]));
+    const bar = barOf({ ...n, constants: { ...n.constants, ...constants } });
+    for (const name of Object.values(PUSHED_CONSTANTS)) expect(bar.constants[name], name).toBe(77);
+  });
+
+  it("gives the bar the container's own style boxes, icons and font of _on_theme_changed", () => {
+    const n = container();
+    const bar = barOf(n);
+    for (const name of PUSHED_STYLE_BOXES) expect(bar.styleBoxes[name], name).toBe(n.styleBoxes[name]);
+    for (const name of PUSHED_ICONS) expect(bar.icons[name], name).toEqual(n.icons[name]);
+    expect(Object.keys(bar.fontOverrides)).toContain('font');
   });
 
   it("resolves the bar's own theme items the container does not push, such as TabBar/icons/close", () => {

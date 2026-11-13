@@ -225,7 +225,7 @@ export function shapeTabLabel(
  * summed width with the widest tab plus the scroll arrows (`:117-119`). Only
  * `_update_cache` reads `max_tab_width`.
  */
-export const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
+const tabBarMinimumSize = (n: SolveNode, ctx: SolveContext): Vector2 => {
   const props = n.node.properties as TabBarProperties;
   const tabs = props.tabs ?? [];
   const currentTab = resolveTabBarCurrentTab(props.currentTab, props.deselectEnabled, tabs.length, (i) =>
