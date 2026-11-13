@@ -15,6 +15,11 @@ interface LightBuilder {
   lightsNode: LightsNode;
 }
 
+/** Godot's `sc_use_directional_soft_shadows` for the material `builder` builds. */
+function searchesDirectionalBlockers(material: NodeBuilder['material']): boolean {
+  return (material as { searchesDirectionalBlockers?: boolean }).searchesDirectionalBlockers === true;
+}
+
 export class GodotSunLightNode extends DirectionalLightNode {
   static get type(): string {
     return 'GodotSunLightNode';
@@ -47,7 +52,7 @@ export class GodotSunLightNode extends DirectionalLightNode {
 
   /** The shadow at the fragment, or 1 for a light, a surface or a renderer that draws none. */
   private shadowOf(builder: NodeBuilder, pipeline: LitPipeline, slot: number): FloatNode {
-    const lookup = pipeline.sunShadow(builder);
+    const lookup = pipeline.sunShadow(builder, searchesDirectionalBlockers(builder.material));
     const light = this.light!;
     const draws =
       lookup !== null &&

@@ -105,9 +105,11 @@ function turned({ sin, cos }: Rotation, [x, y]: [number, number]): Vec2Node {
 
 /** The lookup of one renderer's atlas in one program, its functions built once for every light of the program. */
 export class SunShadow {
+  /** `searchesBlockers` is Godot's `sc_use_directional_soft_shadows`: without it the program compiles no search. */
   constructor(
     private readonly rows: LightRows,
-    private readonly atlas: SunShadowInputs
+    private readonly atlas: SunShadowInputs,
+    private readonly searchesBlockers: boolean
   ) {}
 
   /** The shadow of the light whose rows start at `first`, faded out at the end of its last split. */
@@ -367,6 +369,14 @@ export class SunShadow {
     return shadow;
   }).setLayout({ name: 'godotSunSoftShadow', type: 'float', inputs: FIRST_AND_FRAGMENT });
 
+  /** The soft shadow for a light with an angle while the program searches, else the split's PCF shadow. */
+  private unfadedShadow(first: IntNode, ...fragment: FragmentArgs): FloatNode {
+    const pcf = this.splitShadow(first, ...fragment);
+    if (!this.searchesBlockers) return pcf;
+    const hasAngle = this.field(first, SUN_ROW.atlas).z.greaterThan(0);
+    return select(hasAngle, this.softShadow(first, ...fragment), pcf);
+  }
+
   /**
    * The shadow, the soft one for a light with an angle, faded out between the fade's two depths
    * (`:2491`). Ends that do not ascend fade nothing, which covers a light no fit has placed.
@@ -380,14 +390,7 @@ export class SunShadow {
     ).toVar();
     const shadow = float(1).toVar();
     If(fadeOut.lessThan(1), () => {
-      const hasAngle = this.field(first, SUN_ROW.atlas).z.greaterThan(0);
-      shadow.assign(
-        select(
-          hasAngle,
-          this.softShadow(first, position, normal, depth),
-          this.splitShadow(first, position, normal, depth)
-        )
-      );
+      shadow.assign(this.unfadedShadow(first, position, normal, depth));
     });
     return mix(shadow, 1, fadeOut);
   }).setLayout({ name: 'godotSunShadow', type: 'float', inputs: FIRST_AND_FRAGMENT });

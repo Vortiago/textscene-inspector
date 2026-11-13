@@ -15,7 +15,7 @@ function shadowShader(rowsFromBottom: boolean): string {
   const rows = new LightRows(SUN_ROWS, MAX_SUNS);
   const depth = new THREE.DepthTexture(4, 4);
   depth.compareFunction = THREE.LessEqualCompare;
-  const lookup = new SunShadow(rows, { depth, colour: new THREE.Texture(), rowsFromBottom });
+  const lookup = new SunShadow(rows, { depth, colour: new THREE.Texture(), rowsFromBottom }, true);
   return generatedFragmentShader(vec4(vec3(lookup.shadow(SUN_ROWS)), 1));
 }
 

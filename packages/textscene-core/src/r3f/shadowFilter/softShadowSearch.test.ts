@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { DiffuseMode } from '../../godot/rendering/materials/diffuseMode';
+import { SpecularMode } from '../../godot/rendering/materials/specularMode';
+import { GodotLitNodeMaterial } from '../../shaders/litNodeMaterial';
+import { LitPipeline } from '../../shaders/litPipeline';
 import {
   DIRECTIONAL_SOFT_SHADOWS,
   LIGHT_SOFT_SHADOWS,
@@ -91,6 +95,21 @@ describe('defineSoftShadowSearch', () => {
     expect(drawn.defines).toEqual({ STANDARD: '' });
     expect(elsewhere.defines).toBe(shared);
     expect(shared).toHaveProperty(LIGHT_SOFT_SHADOWS);
+  });
+
+  it('turns the directional search on a lit node material, which compiles it as a branch of its own', () => {
+    const program = {
+      diffuseMode: DiffuseMode.DIFFUSE_BURLEY,
+      specularMode: SpecularMode.SPECULAR_SCHLICK_GGX,
+      hasClearcoat: false,
+    };
+    const material = new GodotLitNodeMaterial(new LitPipeline({}), program);
+    const scene = sceneWith(material);
+    defineSoftShadowSearch(scene, DIRECTIONAL);
+    expect(material.searchesDirectionalBlockers).toBe(true);
+    expect(material.version).toBe(1);
+    defineSoftShadowSearch(scene, NO_SEARCH);
+    expect(material.searchesDirectionalBlockers).toBe(false);
   });
 
   it('leaves an unlit material alone (error case)', () => {

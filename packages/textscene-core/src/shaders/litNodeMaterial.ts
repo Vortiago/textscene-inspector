@@ -52,6 +52,11 @@ export class GodotLitNodeMaterial extends NodeMaterial {
   emissiveIntensity = 1;
   clearcoat = 0;
   clearcoatRoughness = 0;
+  /**
+   * Godot's `sc_use_directional_soft_shadows`: whether the program compiles the blocker search. The
+   * caller turns it on while any directional light of the page needs it, and marks the material for a new program.
+   */
+  searchesDirectionalBlockers = false;
   /** The emission three's `setupLighting` adds (r187 `NodeMaterial.js:1131-1136`), which its types leave out. */
   declare emissiveNode: Node | null;
 
@@ -67,7 +72,7 @@ export class GodotLitNodeMaterial extends NodeMaterial {
   }
 
   override customProgramCacheKey(): string {
-    return `${super.customProgramCacheKey()}:${litProgramKey(this.program)}`;
+    return `${super.customProgramCacheKey()}:${litProgramKey(this.program)}:${this.searchesDirectionalBlockers}`;
   }
 
   override setupLightingModel(): GodotLightingModel {

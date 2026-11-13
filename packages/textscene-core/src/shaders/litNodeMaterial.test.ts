@@ -116,6 +116,30 @@ describe('GodotLitNodeMaterial', () => {
     }
   });
 
+  it('compiles the blocker search only while the material searches directional blockers', () => {
+    const material = shading(true).surfaceMaterial(DEFAULT_PROGRAM);
+    const plain = generatedMaterialShader(material, [shadowedSun()]);
+    material.searchesDirectionalBlockers = true;
+    const searching = generatedMaterialShader(material, [shadowedSun()]);
+
+    expect(plain).not.toContain('godotSunSoftShadow');
+    expect(searching).toContain('godotSunSoftShadow');
+  });
+
+  it('gives the blocker search a program of its own', () => {
+    const material = shading().surfaceMaterial(DEFAULT_PROGRAM);
+    const plainKey = material.customProgramCacheKey();
+    material.searchesDirectionalBlockers = true;
+
+    expect(material.customProgramCacheKey()).not.toBe(plainKey);
+  });
+
+  it('builds under an area light, which has no port yet and adds nothing', () => {
+    const lit = litShader(DEFAULT_PROGRAM, [new THREE.RectAreaLight()]);
+
+    expect(lit).not.toContain('ltc_1');
+  });
+
   it('reads no shadow while the inputs hold no atlas', () => {
     expect(litShader(DEFAULT_PROGRAM, [shadowedSun()])).not.toContain('godotSunShadow(');
   });

@@ -4,15 +4,16 @@
  */
 
 import * as THREE from 'three';
+import { GodotAreaLightNode } from './areaLightNode.js';
 import { GodotLitNodeMaterial, type LitProgram } from './litNodeMaterial.js';
 import { LitPipeline } from './litPipeline.js';
 import { installNodesHandler, type NodeOutput } from './nodesHandler.js';
 import type { PipelineInputs } from './pipelineInputs.js';
 import { GodotSunLightNode } from './sunLightNode.js';
 
-/** A light class as the sun node registers on it. three types `registerNode` for one known light class. */
-interface SunLightClass {
-  registerNode(lightNodeClass: typeof GodotSunLightNode): void;
+/** A light class as a light node registers on it. three types `registerNode` for one known light class. */
+interface LightClass {
+  registerNode(lightNodeClass: typeof GodotSunLightNode | typeof GodotAreaLightNode): void;
 }
 
 export interface GodotShadingOptions {
@@ -67,8 +68,9 @@ export function installGodotShading(
   options: GodotShadingOptions = {}
 ): GodotShading {
   for (const lightClass of [THREE.DirectionalLight, ...(options.sunLights ?? [])]) {
-    (lightClass as unknown as SunLightClass).registerNode(GodotSunLightNode);
+    (lightClass as unknown as LightClass).registerNode(GodotSunLightNode);
   }
+  (THREE.RectAreaLight as unknown as LightClass).registerNode(GodotAreaLightNode);
   const installed = shadings.get(renderer);
   if (installed) return installed;
   installNodesHandler(renderer, options.output);

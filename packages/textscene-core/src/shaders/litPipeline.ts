@@ -29,12 +29,12 @@ export class LitPipeline {
   private skyNode: GodotSkyLightingNode | null = null;
 
   /** The directional shadow lookup of the program `builder` builds, or null while the inputs hold no atlas. */
-  sunShadow(builder: NodeBuilder): SunShadow | null {
+  sunShadow(builder: NodeBuilder, searchesBlockers: boolean): SunShadow | null {
     const atlas = this.inputs.sunShadow;
     if (!atlas) return null;
     let lookup = this.sunShadowLookups.get(builder);
     if (!lookup) {
-      lookup = new SunShadow(this.sunRows, atlas);
+      lookup = new SunShadow(this.sunRows, atlas, searchesBlockers);
       this.sunShadowLookups.set(builder, lookup);
     }
     return lookup;

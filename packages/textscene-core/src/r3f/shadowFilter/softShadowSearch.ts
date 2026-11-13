@@ -6,6 +6,7 @@
  */
 
 import type * as THREE from 'three';
+import { GodotLitNodeMaterial } from '../../shaders/litNodeMaterial.js';
 
 export const LIGHT_SOFT_SHADOWS = 'GODOT_USE_LIGHT_SOFT_SHADOWS';
 export const DIRECTIONAL_SOFT_SHADOWS = 'GODOT_USE_DIRECTIONAL_SOFT_SHADOWS';
@@ -70,7 +71,18 @@ function syncDefine(material: DefinedMaterial, name: string, isDefined: boolean)
   material.needsUpdate = true;
 }
 
+/** The node material's own switch for the search: a node program reads no defines. */
+function searchOn(material: GodotLitNodeMaterial, searches: boolean): void {
+  if (material.searchesDirectionalBlockers === searches) return;
+  material.searchesDirectionalBlockers = searches;
+  material.needsUpdate = true;
+}
+
 function defineOn(material: THREE.Material, search: SoftShadowSearch): void {
+  if (material instanceof GodotLitNodeMaterial) {
+    searchOn(material, search.directional);
+    return;
+  }
   if (!readsLights(material)) return;
   syncDefine(material, LIGHT_SOFT_SHADOWS, search.positional);
   syncDefine(material, DIRECTIONAL_SOFT_SHADOWS, search.directional);
